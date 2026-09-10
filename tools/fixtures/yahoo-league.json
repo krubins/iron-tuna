@@ -1,0 +1,9 @@
+{
+  "_note": "The flattened shape PROVIDER_YAHOO.pull hands to yahooNormalize, built from Yahoo Fantasy Sports API v2 resources (league/settings, league/standings, league/teams/roster, league/scoreboard, league/transactions). Yahoo stat_ids: 4 pass yds, 5 pass TD, 6 INT, 8 rush yds, 10 rush TD, 11 rec, 12 rec yds, 13 rec TD, 18 fum lost.",
+  "league": { "league_key": "449.l.12345", "league_id": "12345", "name": "Yahoo Test League", "season": "2026", "num_teams": 10, "is_finished": "0", "draft_status": "postdraft" },
+  "settings": {
+    "uses_faab": "1", "playoff_start_week": "15", "num_playoff_teams": "6", "is_keeper_league": "0",
+    "roster_positions": [{ "roster_position": { "position": "QB", "count": 1 } }, { "roster_position": { "position": "WR", "count": 3 } }, { "roster_position": { "position": "RB", "count": 2 } }, { "roster_position": { "position": "TE", "count": 1 } }, { "roster_position": { "position": "W/R/T", "count": 1 } }, { "roster_position": { "position": "K", "count": 1 } }, { "roster_position": { "position": "DEF", "count": 1 } }, { "roster_position": { "position": "BN", "count": 6 } }, { "roster_position": { "position": "IR", "count": 2 } }],
+    "stat_modifiers": { "stats": [{ "stat": { "stat_id": 4, "value": "0.04" } }, { "stat": { "stat_id": 5, "value": "6" } }, { "stat": { "stat_id": 6, "value": "-2" } }, { "stat": { "stat_id": 8, "value": "0.1" } }, { "stat": { "stat_id": 10, "value": "6" } }, { "stat": { "stat_id": 11, "value": "0.5" } }, { "stat": { "stat_id": 12, "value": "0.1" } }, { "stat": { "stat_id": 13, "value": "6" } }, { "stat": { "stat_id": 18, "value": "-2" } }, { "stat": { "stat_id": 78, "value": "1" } }] }
+  }
+}

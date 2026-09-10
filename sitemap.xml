@@ -24,6 +24,7 @@
   <url><loc>https://irontuna.com/dollar-endgame-handcuffs</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://irontuna.com/auction-watch-2026-06-19</loc><lastmod>2026-06-19</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
   <url><loc>https://irontuna.com/privacy</loc><lastmod>2026-08-19</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://irontuna.com/data</loc><lastmod>2026-09-09</lastmod><changefreq>monthly</changefreq><priority>0.3</priority></url>
   <url><loc>https://irontuna.com/support</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
   <url><loc>https://irontuna.com/auction-watch-2026-06-21</loc><lastmod>2026-06-21</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
   <url><loc>https://irontuna.com/auction-watch-2026-06-22</loc><lastmod>2026-06-22</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
@@ -130,8 +131,8 @@
   <url><loc>https://irontuna.com/auction-watch-2026-09-08</loc><lastmod>2026-09-08</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
   <url><loc>https://irontuna.com/waiver-watch-2026-09-01</loc><lastmod>2026-09-01</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
   <url><loc>https://irontuna.com/weekly-intel</loc><lastmod>2026-09-03</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://irontuna.com/in-season/rankings</loc><lastmod>2026-09-03</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://irontuna.com/in-season/vegas-edge</loc><lastmod>2026-09-03</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/rankings</loc><lastmod>2026-09-03</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/vegas-edge</loc><lastmod>2026-09-03</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://irontuna.com/what-they-arent-telling-you</loc><lastmod>2026-09-03</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://irontuna.com/game-intel</loc><lastmod>2026-09-03</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://irontuna.com/waivers</loc><lastmod>2026-09-03</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
@@ -140,4 +141,25 @@
   <url><loc>https://irontuna.com/dfs</loc><lastmod>2026-09-03</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://irontuna.com/my-league</loc><lastmod>2026-09-03</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://irontuna.com/waiver-watch-2026-09-08</loc><lastmod>2026-09-08</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/my-week</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/hidden-value</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/in-season/desk</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/previews</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/season-long-dst-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/season-long-flex-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/season-long-k-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/season-long-qb-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/season-long-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/season-long-rb-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/season-long-te-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/season-long-wr-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/stats</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/weekly-dst-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/weekly-flex-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/weekly-k-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/weekly-qb-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/weekly-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/weekly-rb-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/weekly-te-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/weekly-wr-rankings</loc><lastmod>2026-09-09</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
 </urlset>

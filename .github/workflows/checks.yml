@@ -78,6 +78,12 @@ jobs:
       - name: Parse it-season.js
         run: node --check it-season.js
 
+      # /it-ranks.js is the board behind all sixteen per-position rankings pages.
+      # A syntax error there leaves every one of them saying "Reading the
+      # board..." forever, with no console anyone is watching.
+      - name: Parse it-ranks.js
+        run: node --check it-ranks.js
+
       # /it-trade.js is the Trade Finder's engine and the FAAB Advisor's roster
       # parser. A syntax error there leaves both pages with a button that does
       # nothing.
@@ -115,7 +121,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "it-ranks.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -200,8 +206,26 @@ jobs:
             exit 1
           fi
 
+      # The rankings section — the ribbon under the hero and the fourteen
+      # per-position pages under its two menus — is generated from one link set
+      # and one position list, for the same reason the chrome is. Same contract:
+      # rebuilding here must produce no diff.
+      - name: The rankings ribbon and its per-position pages are rebuilt from their source
+        run: |
+          if ! node tools/build-ranks.mjs --check; then
+            echo "::error::the rankings section is stale — run 'node tools/build-ranks.mjs' and commit the result"
+            exit 1
+          fi
+
       - name: Every destination is reachable and the chrome is well-formed
         run: node tools/test-chrome.mjs
+
+      # The ribbon's link set, the gate over the pages it reaches, and the board
+      # that fills them. Three failures in here are silent — a hand-edited
+      # ribbon, a dropdown clipped inside a scroll container, and a page left out
+      # of POST_DRAFT_PAGES — so all three are asserted rather than reviewed.
+      - name: The rankings ribbon, its pages and the consensus-vs-odds board
+        run: node tools/test-ranks.mjs
 
       # The newsroom (§68) bylines what it generates. These are the static story
       # pages it does not touch — the 83 dated drop pages, the evergreen guides,
@@ -270,6 +294,15 @@ jobs:
       # calendar rule fails rather than looking plausible.
       - name: The NFL season and week service
         run: node tools/test-season.mjs
+
+      # The ESPN scoreboard's game lines. ESPN writes a spread as the home
+      # side's handicap and the spine writes it as a home margin, so an
+      # inverted sign would flip every implied team total while still looking
+      # like a plausible number -- nothing else in this file would catch it.
+      # The check parses a stored scoreboard payload and demands all sixteen
+      # games agree with nflverse's own lines for the same week.
+      - name: ESPN game lines, and the sign convention against a second feed
+        run: node tools/test-espn-lines.mjs
 
       # One scoring engine, three copies (worker, it-league.js, index.html),
       # checked against each other on 400 randomised stat lines rather than a
@@ -536,6 +569,22 @@ jobs:
       # pro-rating applied exactly once. Skips the live pull without network.
       - name: Worker availability refresh
         run: node tools/test-worker-availability.mjs
+
+      # Sync My League (docs/league-sync.md): the provider adapters against
+      # Sleeper- and Yahoo-shaped fixtures, the player-id crosswalk and its
+      # miss log, the idempotent sync into an in-memory D1, OAuth sealing,
+      # expiry and refresh, disconnect, and every personalised module (the
+      # league board with TE premium, best lineup incl. superflex, the pickup
+      # advisor on the room's actual free agents, matchup, intel, trades,
+      # playoffs) on 10-, 12- and 14-team rooms. No network: fetch is stubbed.
+      - name: "Sync My League: providers, crosswalk, sync and the personalised modules"
+        run: node tools/test-league-sync.mjs
+
+      # Every deployed script that the pages load. it-sync.js is loaded by
+      # nine in-season pages; a syntax error there takes the league strip and
+      # the personalised modules off all of them at once.
+      - name: Parse it-sync.js
+        run: node --check it-sync.js
 
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one

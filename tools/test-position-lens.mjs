@@ -166,7 +166,15 @@ console.log('\na reader who has never opened the app');
   const s = await read(page);
   ok('the switch is offered anyway', s.shown === true);
   ok('and it opens on the site\u2019s own edition', s.on === 'auction');
-  ok('the standfirst still ends where it shipped', /New drops land through Labor Day\.$/.test(s.sub.trim()), s.sub);
+  // This used to pin the standfirst's tail to "New drops land through Labor
+  // Day." — the sentence SUB_TAIL appended to whichever edition's lead was in
+  // front of it. That deadline passed with the 2026 season opener and the tail
+  // is now empty, so the thing worth holding is what the tail was there to
+  // prove: the standfirst is the edition's OWN authored line, whole, with
+  // nothing left over from the other edition appended to it.
+  ok('the standfirst is the edition\u2019s own line, whole',
+     /^Every story is a stat-backed call from the 2026 research set, read as an auction/.test(s.sub.trim())
+     && !/snake/i.test(s.sub) && !/Labor Day/.test(s.sub), s.sub);
   ok('the calls are translated anyway', s.lines.length > 0, `${s.lines.length} lines`);
   ok('and never as the reader\u2019s own league',
      s.labels.length === 1 && s.labels[0] === 'Default league', s.labels.join());
@@ -235,6 +243,7 @@ console.log('\nthe whole page follows the edition');
   ok('nothing on the page still sells a best ball room',
      await page.$$eval('a', as => as.every(x => !/^\/bestball/.test(x.getAttribute('href') || ''))));
 
+  const campAuction = (await read(page)).camp;
   await pick(page, 'snake');
   const b = await read(page);
   ok('snake re-points every story', b.drops.join() === '/snake', b.drops.join());
@@ -245,7 +254,14 @@ console.log('\nthe whole page follows the edition');
      (await page.$$eval('#allocGrid a', as => as.every(x => /snake/.test(x.getAttribute('href'))))),
      b.allocHead);
   ok('The Build says the dollars are the auction solve', b.buildTag === 'Auction solve', b.buildTag);
-  ok('the camp desk stops calling itself auction-only', !/auction-relevant/.test(b.camp), b.camp);
+  // The camp desk's standing note is edition-specific. It used to be the word
+  // "auction-relevant" that had to change; the note is now season-neutral on
+  // both editions (the run did not stop when camp did), so what is asserted is
+  // the property that actually matters: the two editions do not print the same
+  // sentence, and neither of them tells a snake reader they are drafting an
+  // auction. `campAuction` is captured before the switch, above.
+  ok('the camp desk re-words itself for the edition', b.camp !== campAuction && !!b.camp, b.camp);
+  ok('and never calls a snake reader an auction one', !/auction/i.test(b.camp), b.camp);
   // The rewrite covers exactly two families of URL. Anything else that starts
   // "/auction-" has no twin in the other edition, so it must survive untouched —
   // and no link may be invented: every /snake* href has to be a page that
@@ -262,7 +278,7 @@ console.log('\nthe whole page follows the edition');
   ok('switching back restores the page as authored',
      back.drops.join() === '/auction' && back.app.join() === '/auctiondraft' &&
      back.mgr === 'Auction Manager' && back.allocHead === 'Asset Allocation' &&
-     /auction-relevant/.test(back.camp) && back.buildTag === '');
+     back.camp === campAuction && back.buildTag === '');
   ok('and the authored guides come back whole',
      await page.$$eval('#allocGrid .alloc-card', c => c.length === 4));
   ok('nothing on the page threw', errors.length === 0, errors[0]);

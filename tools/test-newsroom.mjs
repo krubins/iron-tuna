@@ -35,7 +35,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normaliseCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normaliseCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => null, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -63,7 +63,11 @@ console.log('\nthe staff and the one rivalry');
   ok('every analyst has a voice, a philosophy and assignments', Object.values(A).every(a => a.voice.length > 40 && a.philosophy && a.assignments.length));
   ok('the disclosure says they are AI personas, not people', /AI-powered editorial personas, not people/.test(H.AI_DISCLOSURE));
   const flags = H.flagReport({});
-  ok('every flag defaults on', Object.values(flags).every(f => f.on && f.source === 'default'));
+  // The three provider connectors (docs/league-sync.md) default OFF on purpose:
+  // Sleeper until its commercial licence is in writing, Yahoo and ESPN until
+  // configured. Every other flag is the intended product and defaults on.
+  ok('every flag defaults on, except the provider connectors', Object.entries(flags).every(([k, f]) => (f.on || /^(SLEEPER|YAHOO|ESPN)_SYNC$/.test(k)) && f.source === 'default'));
+  ok('the provider connectors default off', ['SLEEPER_SYNC', 'YAHOO_SYNC', 'ESPN_SYNC'].every(k => flags[k] && !flags[k].on));
   ok('a flag reads off the env', !H.flagOn({ FLAG_RIVALRY: '0' }, 'RIVALRY') && H.flagOn({ FLAG_RIVALRY: 'on' }, 'RIVALRY') && !H.flagOn({}, 'NOPE'));
 }
 
@@ -212,6 +216,29 @@ console.log('\nthe fact check');
   const mv = H.factCheck(miss, packet);
   ok('a missing lens or section is caught', mv.problems.includes('missing:dfs') && mv.problems.includes('missing:weekly.tradeAway'));
   ok('every kind has weekly and DFS sections', Object.keys(H.CONTENT_KINDS).every(k => H.sectionsFor(k, 'weekly').length >= 4 && H.sectionsFor(k, 'dfs').length >= 3));
+}
+
+// The first live Thursday preview (2026-09-09) was held over headline words:
+// every phrase below was reported as a player the packet did not contain, and
+// the front page ran a draft-season auction story in its place for a day.
+console.log('\nthe fact check reads prose as prose');
+{
+  const packet = H._finishBrief({ meta: { kind: 'tnf-preview', lens: 'both' }, rivalry: null,
+    players: [{ name: 'Puka Nacua', targets: 12 }, { name: 'Isaac Guerendo', status: 'PUP' }, { name: 'Zach Charbonnet', status: 'PUP' }, { name: 'Sam Darnold', team: 'SEA' }],
+    game: { spread: 3.5, total: 48.5, impliedHome: 26, impliedAway: 24.5, seasonAverage: 22.5, lastWeek: 22.4 } });
+  const v = s => H.validateDraft(s, packet.allowed);
+  ok('a title-case headline is not a list of players', v('Two Slates, Two Very Different Implied Totals: Follow the Market Away From New England').ok, JSON.stringify(v('Two Slates, Two Very Different Implied Totals: Follow the Market Away From New England').names));
+  ok('a possessive is the name it belongs to', v("Guerendo's PUP stint and Charbonnet's PUP stint leave Iron Tuna's board thin.").ok, JSON.stringify(v("Guerendo's PUP stint and Charbonnet's PUP stint leave Iron Tuna's board thin.").names));
+  ok('two sentences meeting at a full stop are two sentences', v('Start Nacua. Reasonable DST options exist. Vegas. Team totals agree.').ok, JSON.stringify(v('Start Nacua. Reasonable DST options exist. Vegas. Team totals agree.').names));
+  ok('a verb in front of a packet name is a verb', v('Expect Nacua to lead. Bench Sam Darnold if Price sits.').ok, JSON.stringify(v('Expect Nacua to lead. Bench Sam Darnold if Price sits.').names));
+  ok('a word the draft also uses in lower case is prose', v('Strong Vegas Fade candidates: the fade list is short and every strong number is priced.').ok);
+  ok('a club and an acronym are never names', v('Every Patriots receiver and every NE back is a Classified Strong Vegas fade.').ok, JSON.stringify(v('Every Patriots receiver and every NE back is a Classified Strong Vegas fade.').names));
+  const bad = v('Jerry Jeudy is the play, and Marvin Harrison Jr. is not in this packet.');
+  ok('a player the packet lacks is still caught', !bad.ok && bad.names.includes('Jerry Jeudy') && bad.names.some(n => /Marvin Harrison/.test(n)), JSON.stringify(bad.names));
+  ok('a spread reads from either side and a small difference is arithmetic', v('The spread is -3.5, the totals sit 1.5 points apart, the implied gap is 0.1.').ok, JSON.stringify(v('The spread is -3.5, the totals sit 1.5 points apart, the implied gap is 0.1.').numbers));
+  const num = v('He ran for 155 yards and 26.4 points.');
+  ok('a large number the packet lacks is still caught, and a packet number is not', !num.ok && num.numbers.includes('155') && !num.numbers.includes('26'), JSON.stringify(num.numbers));
+  ok('the writer is told to write the headline in sentence case', /sentence case/i.test(H.NEWSROOM_SYSTEM) && /Never Title Case/.test(H.NEWSROOM_SYSTEM));
 }
 
 console.log('\nbreaking news');

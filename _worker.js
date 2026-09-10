@@ -63,9 +63,30 @@ async function rl(env, request, bucket, max, ttlSec) {
 // the browser either way. tools/test-asset-routing.mjs and tools/test-seo.mjs
 // both read this set, so a page added to the section cannot be left ungated or
 // advertised in the sitemap while the gate is shut.
+// The section ribbon's five destinations are gated with the rest of the
+// section, and so is every per-position rankings page under the two rankings
+// menus. They are listed rather than matched by prefix because this set is also
+// what tools/test-seo.mjs reads to decide which pages must stay out of the
+// sitemap while the gate is shut: a page the worker serves the gate's BODY at
+// must not also be advertised as a URL of its own, or the crawler is handed the
+// same body under twenty addresses. tools/build-ranks.mjs generates the pages
+// from the same position list, so adding a position is one edit there and one
+// here.
+//
+// EVERY ENTRY IS A LITERAL STRING. tools/test-seo.mjs and
+// tools/test-asset-routing.mjs both read this set by lifting the text between
+// the brackets out of this file and splitting it on commas, so a computed entry
+// (a .map(), a spread) would parse as one nonsense route and leave the real
+// ones unlisted — which is a page silently ungated and advertised in the
+// sitemap while the gate is shut. Spell them out.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
-  '/fantasy']);
+  '/fantasy', '/stats', '/hidden-value', '/previews',
+  '/weekly-rankings', '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
+  '/weekly-te-rankings', '/weekly-flex-rankings', '/weekly-k-rankings', '/weekly-dst-rankings',
+  '/season-long-rankings', '/season-long-qb-rankings', '/season-long-rb-rankings',
+  '/season-long-wr-rankings', '/season-long-te-rankings', '/season-long-flex-rankings',
+  '/season-long-k-rankings', '/season-long-dst-rankings']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
@@ -3134,11 +3155,81 @@ async function fetchScheduleNflverse() {
   return { season, games };
 }
 
+// What ESPN last said to the worker, kept for the job log. On September 9
+// the hourly refresh reported live:0 with no error while the same scoreboard
+// URL answered sixteen Week 1 games from outside Cloudflare, and the depth
+// chart job failed all thirty-two fetches every morning since the 4th. The
+// worker's own view of the response (status, type, event count, the first
+// bytes when there are no events) is the only way to see the difference.
+// The 12:00Z refresh on September 9 recorded what ESPN says to the worker:
+// 403, text/html, for the scoreboard, while the injuries feed on the same
+// host answered 800 rows an hour earlier. The two requests differed in two
+// ways: the injuries fetch sends a plain user agent and no `cf` cache
+// options, the scoreboard sent a user agent with a URL in it through
+// Cloudflare's cache (`cf.cacheTtl`). Every ESPN fetch is now shaped like
+// the one that works; the 403 body's first bytes are kept when it recurs.
+let _ESPN_LAST = null;
+const ESPN_HEADERS = { 'user-agent': 'iron-tuna-schedule/1.0', 'accept': 'application/json' };
 async function _espnEvents(qs) {
-  const r = await fetch(ESPN_SCOREBOARD + (qs ? '?' + qs : ''), { cf: { cacheTtl: 300 } });
-  if (!r.ok) throw new Error('espn ' + r.status);
-  const j = await r.json();
-  return Array.isArray(j && j.events) ? j.events : [];
+  const url = ESPN_SCOREBOARD + (qs ? '?' + qs : '');
+  const r = await fetch(url, { headers: ESPN_HEADERS });
+  const type = r.headers.get('content-type') || null;
+  if (!r.ok) { let head = null; try { head = (await r.text()).slice(0, 160); } catch (e) {} _ESPN_LAST = { qs, status: r.status, type, events: null, head }; throw new Error('espn ' + r.status); }
+  const text = await r.text();
+  let j = null; try { j = JSON.parse(text); } catch (e) { _ESPN_LAST = { qs, status: r.status, type, events: null, head: text.slice(0, 120) }; throw new Error('espn: not json'); }
+  const events = Array.isArray(j && j.events) ? j.events : [];
+  _ESPN_LAST = { qs, status: r.status, type, events: events.length, week: j && j.week && j.week.number || null, head: events.length ? null : text.slice(0, 120) };
+  return events;
+}
+// ESPN's scoreboard carries one bookmaker's game lines with an OPEN and a
+// CLOSE for the moneyline, the spread and the total. That open is the book's
+// own number, not the first line this worker happened to record, which is the
+// one thing a snapshot history cannot reconstruct after the fact: a history
+// that starts on Thursday has no way to know where the market opened on Sunday
+// night, and the book does.
+//
+// SIGN. ESPN writes the spread as the HOME side's handicap, so Seattle -3 is
+// -3; the spine writes the same game as a home margin of +3. Everything here
+// is flipped into the spine's convention on the way out, so _seasonDecorate
+// stays the only place that knows which way a spread points. Totals arrive as
+// a side-prefixed string ("o44.5"); the prefix is dropped, because the over
+// and the under quote the same number.
+function _espnLine(v) {
+  const n = parseFloat(String(v == null ? '' : v).replace(/^[ou]/i, ''));
+  return Number.isFinite(n) ? n : null;
+}
+// -0 is a real value in JS and it prints as "-0". A pick'em has to survive the
+// flip as 0 or every even game reads as a typo.
+const _espnFlip = n => (n == null ? null : n === 0 ? 0 : -n);
+function _espnOdds(comp) {
+  const list = (comp && comp.odds) || [];
+  if (!list.length) return null;
+  // ESPN ranks its books with `priority`, 1 being the one it shows. An entry
+  // with no priority sorts last rather than winning the tie by arriving first.
+  let o = null, best = Infinity;
+  for (const e of list) {
+    if (!e) continue;
+    const raw = e.provider ? Number(e.provider.priority) : NaN;
+    const p = Number.isFinite(raw) ? raw : 99;
+    if (p < best) { best = p; o = e; }
+  }
+  if (!o) return null;
+  const ps = o.pointSpread || {}, tot = o.total || {};
+  const at = (node, when) => (node && node[when]) ? node[when] : null;
+  const psNow = at(ps.home, 'close'), psOpen = at(ps.home, 'open');
+  const toNow = at(tot.over, 'close'), toOpen = at(tot.over, 'open');
+  // The top-level `spread` and `overUnder` are the current numbers already
+  // parsed; the close nodes carry the same values as strings. Either does, so
+  // the parsed one is preferred and the node is the fallback.
+  const spread = _espnLine(o.spread != null ? o.spread : (psNow ? psNow.line : null));
+  const total = _espnLine(o.overUnder != null ? o.overUnder : (toNow ? toNow.line : null));
+  if (spread == null && total == null) return null;
+  const name = o.provider ? (o.provider.name || o.provider.displayName || null) : null;
+  return {
+    name: name || null,
+    spread: _espnFlip(spread), spreadOpen: _espnFlip(_espnLine(psOpen ? psOpen.line : null)),
+    total, totalOpen: _espnLine(toOpen ? toOpen.line : null)
+  };
 }
 function _espnGame(ev) {
   const comp = (ev && ev.competitions || [])[0] || {};
@@ -3153,11 +3244,17 @@ function _espnGame(ev) {
   if (!h || !a) return null;
   const st = (((ev.status || comp.status || {}).type) || {}).name || '';
   const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+  const bk = _espnOdds(comp);
   return {
     id: 'espn-' + ev.id, type: ESPN_SEASONTYPE[(ev.season || {}).type] || '',
     week: ((ev.week || {}).number) || 0, kickoff, home: h, away: a,
     homeScore: num(home.score), awayScore: num(away.score),
-    spread: null, total: null, status: ESPN_STATUS[st] || null, src: 'espn'
+    // `spread`/`total` are the fixture's line in the spine's convention, so a
+    // game the spine has not priced can still carry one. `book` keeps the same
+    // numbers attributed and paired with their open, which is what movement
+    // and the "who said so" line on the board both need.
+    spread: bk ? bk.spread : null, total: bk ? bk.total : null, book: bk,
+    status: ESPN_STATUS[st] || null, src: 'espn'
   };
 }
 // The preseason, which the spine does not carry at all, plus whatever the
@@ -3204,6 +3301,15 @@ function mergeSchedule(spine, live) {
       if (g.status) t.status = g.status;
       if (g.homeScore != null) t.homeScore = g.homeScore;
       if (g.awayScore != null) t.awayScore = g.awayScore;
+      // The spine keeps the line where it has one: games.csv is a consensus
+      // number and the scoreboard quotes a single book. Where the spine is
+      // blank -- the preseason, and any fixture the CSV has not priced yet --
+      // one book beats no book, and `lineSrc` says which it was. The book's
+      // own open/current pair rides along either way, because the spine has no
+      // concept of an opening line to be overwritten.
+      if (t.spread == null && g.spread != null) { t.spread = g.spread; t.lineSrc = 'espn'; }
+      if (t.total == null && g.total != null) { t.total = g.total; t.lineSrc = 'espn'; }
+      if (g.book) t.book = g.book;
       t.src = t.src + '+espn';
       updated++;
     } else if (g.type && Object.prototype.hasOwnProperty.call(SEASON_ORDER, g.type === 'POST' ? 'WC' : g.type)) {
@@ -3280,6 +3386,10 @@ function _seasonDecorate(g, at) {
     home: g.home, away: g.away, homeScore: g.homeScore, awayScore: g.awayScore,
     spread: g.spread == null ? null : g.spread, total: g.total == null ? null : g.total,
     impliedHome: imp.home, impliedAway: imp.away,
+    // One named book's open and current, in the same convention as `spread`
+    // above. Null on a fixture no book has posted, which is not the same fact
+    // as a line of zero and must not print as one.
+    book: g.book || null, lineSrc: g.lineSrc || null,
     status: s.status, statusSource: s.source
   };
 }
@@ -3430,13 +3540,14 @@ async function runScheduleRefresh(env) {
   catch (e) { liveError = (e && e.message) || 'failed'; }
   const merged = mergeSchedule(spine.games, live);
   const provider = 'nflverse' + (live.length ? '+espn' : '');
+  const espn = _ESPN_LAST;
   await scheduleCacheWrite(env, spine.season, merged.games, provider);
   _SEASON_CACHE = null; _SEASON_AT = 0;
   return {
     ok: true, season: spine.season, provider,
     spine: spine.games.length, live: live.length,
     statusUpdated: merged.updated, preseasonAdded: merged.added,
-    games: merged.games.length, liveError
+    games: merged.games.length, liveError, espn
   };
 }
 async function seasonPayload(env, opts) {
@@ -3526,6 +3637,27 @@ const PROVIDER_ODDS = [
       market: r.market, line: r.line, overOdds: r.overOdds, underOdds: r.underOdds,
       gameId: r.gameId || null, ts: Date.now()
     })) },
+  { name: 'espn-gamelines', free: true, subjectType: 'game',
+    fetch: async (env) => {
+      // The schedule refresh already merged the book's lines onto every game,
+      // so this reads them rather than pulling the scoreboard a second time.
+      // Rows go in under the BOOK's name, not 'consensus': a real bookmaker
+      // sitting beside the consensus row is what lets the store say the two
+      // disagree, and it is the only game-line row that moves intraday.
+      const cached = await scheduleCacheRead(env);
+      if (!cached) return [];
+      const out = [], ts = Date.now();
+      for (const g of cached.games) {
+        const b = g.book;
+        if (!b || !b.name) continue;
+        const book = String(b.name).toLowerCase().replace(/[^a-z0-9]+/g, '') || 'book';
+        if (b.spread != null) out.push({ book, subjectType: 'game', subject: g.id,
+          market: 'spread', line: b.spread, overOdds: null, underOdds: null, gameId: g.id, ts });
+        if (b.total != null) out.push({ book, subjectType: 'game', subject: g.id,
+          market: 'total', line: b.total, overOdds: null, underOdds: null, gameId: g.id, ts });
+      }
+      return out;
+    } },
   { name: 'nflverse-gamelines', free: true, subjectType: 'game',
     fetch: async (env) => {
       // The schedule refresh already pulled this file minutes ago; read the
@@ -4052,6 +4184,34 @@ async function marketHistoryGames(env, gameIds) {
     return out;
   } catch (e) { return {}; }
 }
+// How far a game's line has moved, and off what. THE BOOK'S OWN OPEN WINS: the
+// snapshot store can only call "open" the first row it recorded, so a history
+// that starts on Thursday reports a Sunday-to-Thursday move as no move at all.
+// The scoreboard hands over the book's real opener, and one book measured
+// against itself is a truer move than a consensus measured against its own
+// first sighting. The store is the fallback, and `source` says which was used
+// so nothing downstream has to guess.
+function _gameLineMove(g, gm) {
+  const b = (g && g.book) || null;
+  // Open, current and move always come from the SAME source. Mixing them --
+  // the book's open against the store's current, say -- would produce a move
+  // no one quoted, off two numbers taken hours apart.
+  const one = (mkt, open, cur) => {
+    if (open != null && cur != null) return { move: _oddsRound(cur - open), open, current: cur, source: 'book' };
+    const h = gm && gm[mkt];
+    if (h && h.movement != null) return { move: h.movement, open: h.open, current: h.current, source: 'snapshots' };
+    return { move: null, open: null, current: null, source: null };
+  };
+  const sp = one('spread', b && b.spreadOpen, b && b.spread);
+  const to = one('total', b && b.totalOpen, b && b.total);
+  return {
+    spread: sp.move, total: to.move,
+    spreadOpen: sp.open, spreadCurrent: sp.current,
+    totalOpen: to.open, totalCurrent: to.current,
+    source: sp.source || to.source || null,
+    book: (sp.source === 'book' || to.source === 'book') && b ? b.name : null
+  };
+}
 async function snapshotStatus(env) {
   if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
   try {
@@ -4386,9 +4546,16 @@ async function runUsageRefresh(env, season) {
     if (r.week > maxWeek) maxWeek = r.week;
     const k = key(r.name, r.position);
     const rec = players[k] || (players[k] = { name: r.name, position: r.position, team: r.team,
-      latest: null, season: { games: 0, targets: 0, carries: 0, receptions: 0, airYards: 0, tds: 0, points: 0 } });
+      latest: null, season: { games: 0, targets: 0, carries: 0, receptions: 0, airYards: 0, tds: 0, points: 0, stats: {} } });
     rec.team = r.team;
     rec.season.games++;
+    // The RAW season stat line, accumulated week by week. Points are not stored
+    // with it on purpose: a season total is only worth something at a stated
+    // scoring, and this cache is built once for every reader. /api/stats scores
+    // this line at the preset the reader asked for. A cache written before this
+    // field existed simply has no `stats`, and every consumer treats that as
+    // "no season line yet" rather than as zeroes.
+    _addStats(rec.season.stats || (rec.season.stats = {}), r.stats);
     rec.season.targets += r.usage.targets || 0;
     rec.season.carries += r.usage.carries || 0;
     rec.season.receptions += r.usage.receptions || 0;
@@ -4622,6 +4789,76 @@ async function rankingsPayload(env) {
   };
   _RANK_CACHE = out; _RANK_AT = Date.now();
   return out;
+}
+
+// -- what has actually happened ---------------------------------------------
+// PRODUCTION, NOT PROJECTION. Every other board on this site is a forecast;
+// this one is the season that has been played, read straight off the usage
+// overlay (nflverse weekly stats and snap counts) and scored at the reader's
+// setting. Nothing here is modelled, blended or shrunk, and no odds touch it.
+//
+// Two lines per player: the SEASON line, accumulated week by week in
+// runUsageRefresh, and the LATEST week, kept whole so a page can print the game
+// that just happened beside the season it belongs to. Points are computed here
+// rather than stored, because a season total is only worth something at a
+// stated scoring and one cache serves every reader.
+//
+// A cache written before season.stats existed has no season line. That is
+// returned as null and prints as a dash — never as zero, which would read as a
+// player who did nothing rather than as a number nobody has.
+async function statsPayload(env, opts) {
+  const o = opts || {};
+  const preset = SCORING_PRESETS[o.preset] ? o.preset : 'ppr';
+  const rules = scoringRules(preset, null);
+  const usage = await usageCacheRead(env);
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  if (!usage || !usage.players) {
+    return { ok: false, error: 'no_usage', note: 'No weekly stats have been published yet this season.',
+             season: sched ? sched.season : null, week: state.ok ? state.week.label : null };
+  }
+  const wantPos = o.position ? String(o.position).toUpperCase() : null;
+  const posMatch = p => !wantPos || wantPos === 'ALL' || p === wantPos ||
+    (wantPos === 'FLEX' && (p === 'RB' || p === 'WR' || p === 'TE')) || (wantPos === 'DST' && p === 'DEF');
+  const players = [];
+  for (const [key, u] of Object.entries(usage.players)) {
+    if (!u || !u.position || !posMatch(u.position)) continue;
+    const sea = u.season || null;
+    const seaStats = sea && sea.stats && Object.keys(sea.stats).length ? sea.stats : null;
+    const games = sea ? sea.games || 0 : 0;
+    const seasonPts = seaStats ? _oddsRound(scoreStats(seaStats, u.position, rules)) : null;
+    const last = u.latest || null;
+    const lastPts = last && last.stats ? _oddsRound(scoreStats(last.stats, u.position, rules)) : null;
+    players.push({
+      key, name: u.name, position: u.position === 'DEF' ? 'DST' : u.position, team: teamKey(u.team),
+      games,
+      season: sea ? { games, targets: sea.targets || 0, carries: sea.carries || 0, receptions: sea.receptions || 0,
+                      airYards: _oddsRound(sea.airYards || 0), tds: sea.tds || 0,
+                      stats: seaStats ? _roundStats(seaStats) : null,
+                      points: seasonPts, ppg: seasonPts != null && games ? _oddsRound(seasonPts / games) : null } : null,
+      latest: last ? { week: last.week, opponent: last.opponent, stats: _roundStats(last.stats || {}),
+                       usage: last.usage || {}, points: lastPts } : null
+    });
+  }
+  // Rank within position on season points, and across RB/WR/TE for FLEX. A
+  // player with no season line is unranked rather than last.
+  const groups = {};
+  for (const r of players) if (r.season && r.season.points != null) (groups[r.position] = groups[r.position] || []).push(r);
+  for (const g of Object.values(groups)) g.sort((a, b) => b.season.points - a.season.points || (a.name < b.name ? -1 : 1)).forEach((r, i) => { r.rank = i + 1; });
+  players.filter(r => /^(RB|WR|TE)$/.test(r.position) && r.season && r.season.points != null)
+    .sort((a, b) => b.season.points - a.season.points || (a.name < b.name ? -1 : 1)).forEach((r, i) => { r.flexRank = i + 1; });
+  players.sort((a, b) => (b.season && b.season.points != null ? b.season.points : -1) - (a.season && a.season.points != null ? a.season.points : -1) || (a.name < b.name ? -1 : 1));
+  const limit = Math.max(1, Math.min(600, parseInt(o.limit, 10) || 300));
+  return {
+    ok: players.length > 0, source: 'nflverse weekly stats and snap counts',
+    season: usage.season || (sched ? sched.season : null),
+    throughWeek: usage.throughWeek || null,
+    currentWeek: state.ok && state.week.type === 'REG' ? state.week.number : null,
+    week: state.ok ? state.week.label : null,
+    updatedAt: usage.updatedAt || null,
+    scoring: { preset, label: SCORING_PRESET_LABEL[preset] || 'PPR' },
+    players: players.slice(0, limit)
+  };
 }
 
 // The odds pull, snapshotted. Runs the odds providers through the registry and
@@ -5149,7 +5386,7 @@ async function boardsContext(env, opts) {
 let _BOARDS_MEMO = new Map();
 async function boardsPayload(env, opts) {
   const o = opts || {};
-  const key = [o.horizon, o.position, o.preset, o.through].join('|');
+  const key = [o.horizon, o.position, o.preset, o.through, o.customKey || ''].join('|');
   const hit = _BOARDS_MEMO.get(key);
   if (hit && Date.now() - hit.at < 300000) return hit.out;
   const ctx = await boardsContext(env, o);
@@ -5327,10 +5564,13 @@ function detectInsights(input) {
   const games = (state && state.ok && state.games) || [];
   for (const g of games) {
     const gm = gameMarkets && gameMarkets[g.id];
-    if (!gm) continue;
-    const sp = gm.spread, tot = gm.total;
-    const spMove = sp && sp.open != null && sp.current != null ? sp.current - sp.open : 0;
-    const totMove = tot && tot.open != null && tot.current != null ? tot.current - tot.open : 0;
+    // A game the store has never seen can still have moved, because the book
+    // ships its own opener with the current line; `_gameLineMove` prefers that
+    // and falls back to the store, so this no longer skips on an empty history.
+    const lm = _gameLineMove(g, gm);
+    if (!gm && lm.source == null) continue;
+    const spMove = lm.spread == null ? 0 : lm.spread;
+    const totMove = lm.total == null ? 0 : lm.total;
     if (Math.abs(spMove) < INSIGHT_T.spreadMove && Math.abs(totMove) < INSIGHT_T.totalMove) continue;
     // spread is the HOME margin: rising means the home side is more favoured.
     const favouredMore = spMove > 0 ? g.home : spMove < 0 ? g.away : null;
@@ -5352,8 +5592,9 @@ function detectInsights(input) {
       : totMove <= -INSIGHT_T.totalMove ? 'The market expects less scoring in this game than it did when the line opened.'
       : 'The spread has moved without a matching move in the player markets.';
     out.push(_insight('game_script_change', { key: g.id, team: favouredMore || g.home, game: g.away + ' at ' + g.home, home: g.home, away: g.away },
-      { spreadOpen: sp ? sp.open : null, spreadCurrent: sp ? sp.current : null, spreadMove: _oddsRound(spMove),
-        totalOpen: tot ? tot.open : null, totalCurrent: tot ? tot.current : null, totalMove: _oddsRound(totMove),
+      { spreadOpen: lm.spreadOpen, spreadCurrent: lm.spreadCurrent, spreadMove: _oddsRound(spMove),
+        totalOpen: lm.totalOpen, totalCurrent: lm.totalCurrent, totalMove: _oddsRound(totMove),
+        moveSource: lm.source, moveBook: lm.book,
         favouredMore, corroborating, interpretation: story },
       Math.max(Math.abs(spMove), Math.abs(totMove)), corroborating.length >= 2 ? 'HIGH' : corroborating.length ? 'MEDIUM' : 'LOW', ts));
   }
@@ -5366,7 +5607,8 @@ function detectInsights(input) {
 // The primary product: what the money says this week, in six boards, each one
 // a plain sort over data the engine already holds. `basis` on every board says
 // whether a number is a quoted market or derived from the game lines, because
-// on a week with no player props (today) every player board is the latter.
+// on a week where no priced props reach the feed (today) every player board is
+// the latter. Books have props posted; this build is not carrying them.
 const EDGE_CONTRACT = 1;
 function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const players = (week && week.players) || [];
@@ -5435,7 +5677,8 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const GAP_AGREE = 2.0;
   const gameEnvironments = ((state && state.ok && state.games) || []).map(g => {
     const gm = gameMarkets && gameMarkets[g.id];
-    const mv = gm ? { spread: gm.spread ? _oddsRound((gm.spread.current || 0) - (gm.spread.open || 0)) : null, total: gm.total ? _oddsRound((gm.total.current || 0) - (gm.total.open || 0)) : null } : null;
+    const lm = _gameLineMove(g, gm);
+    const mv = (lm.spread != null || lm.total != null) ? lm : null;
     const mh = modelPts.has(g.home) ? modelPts.get(g.home) : null;
     const ma = modelPts.has(g.away) ? modelPts.get(g.away) : null;
     const itTotal = (mh != null && ma != null) ? _oddsRound(mh + ma) : null;
@@ -5448,7 +5691,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   }).filter(g => g.total != null).sort((a, b) => b.total - a.total);
   const hidden = (insights && insights.insights || []).filter(i => i.type === 'game_script_change');
   return { ok: true, contract: EDGE_CONTRACT, week: state && state.ok ? state.week.label : null, hasProps,
-           note: hasProps ? null : 'No sportsbook has a player prop on this board yet. Every player number here is derived from the posted game lines; the game board is quoted.',
+           note: hasProps ? null : 'No priced player prop has reached this board. Books post props; none are in the feed behind this build, so every player number here is derived from the posted game lines. The game board is quoted.',
            vsExperts, movers: movers.slice(0, 40), tdBoard, volumeBoard, gameEnvironments, hiddenSignals: hidden };
 }
 
@@ -5678,7 +5921,7 @@ const ESPN_SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl
 const ESPN_DEPTH = t => 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/' + encodeURIComponent(t) + '/depthcharts';
 const RED_ZONE_YARDS = 20, GOAL_LINE_YARDS = 5;
 async function fetchGameSummaryEspn(eventId) {
-  const r = await fetch(ESPN_SUMMARY + encodeURIComponent(String(eventId)), { cf: { cacheTtl: 120 } });
+  const r = await fetch(ESPN_SUMMARY + encodeURIComponent(String(eventId)), { headers: ESPN_HEADERS });
   if (!r.ok) throw new Error('espn summary ' + r.status);
   return await r.json();
 }
@@ -5804,8 +6047,8 @@ function gameUsageByTeam(game) {
 const DEPTH_ROW = 6;
 const DEPTH_MAX_AGE_MS = 7 * 86400000;
 async function fetchDepthChartEspn(team) {
-  const r = await fetch(ESPN_DEPTH(team), { cf: { cacheTtl: 3600 } });
-  if (!r.ok) throw new Error('espn depth ' + r.status);
+  const r = await fetch(ESPN_DEPTH(team), { headers: ESPN_HEADERS });
+  if (!r.ok) throw new Error('espn depth ' + r.status + ' for ' + team);
   const j = await r.json();
   const groups = Array.isArray(j.depthchart) ? j.depthchart : [];
   const off = groups.find(g => g.positions && (g.positions.qb || g.positions.rb)) || null;
@@ -5821,11 +6064,14 @@ async function runDepthChartRefresh(env) {
   const sched = await scheduleCacheRead(env);
   const clubs = new Set();
   for (const g of (sched && sched.games) || []) if (g.type === 'REG') { clubs.add(g.home); clubs.add(g.away); }
-  const teams = {}; let failed = 0;
+  const teams = {}; let failed = 0, firstError = null;
   for (const t of clubs) {
-    try { teams[t] = await fetchDepthChartEspn(t); } catch (e) { failed++; }
+    try { teams[t] = await fetchDepthChartEspn(t); } catch (e) { failed++; if (!firstError) firstError = (e && e.message) || 'failed'; }
   }
-  if (Object.keys(teams).length < 24) return { ok: false, error: 'thin', got: Object.keys(teams).length, failed };
+  // Every morning since September 4 this returned got:0 failed:32 and said
+  // nothing else; the same URL answers 200 from outside the worker. The first
+  // error is kept so the log can say what ESPN actually said to the worker.
+  if (Object.keys(teams).length < 24) return { ok: false, error: 'thin', got: Object.keys(teams).length, failed, firstError };
   await oddsCacheInit(env);
   await env.LEADS_DB.prepare('INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)')
     .bind(DEPTH_ROW, JSON.stringify({ asOf: Date.now(), teams }), 'espn-depth', Object.keys(teams).length, Date.now()).run();
@@ -5926,7 +6172,10 @@ const CONTENT_KINDS = {
     summary: 'Targets, air yards and deployment: the receiver whose opportunity moved before his points did.', absorbs: ['opportunity-report'] },
   'tnf-preview': { title: 'Thursday Night Football Preview', day: 'Thu', hour: 6, minute: 0, retro: false, subject: 'current', anchor: 'targets',
     analyst: 'dalton', dfsAnalyst: 'dalton', lens: 'both', optional: true, preview: true, updates: 'until-kickoff', updateHours: 14,
-    targets: (gs) => gs.filter(g => g.dow === 'Thu'),
+    // The midweek games: Thursday's, and a Wednesday opener when there is one.
+    // The slot follows the first of them (contentDue), and so does the title.
+    targets: (gs) => gs.filter(g => g.dow === 'Wed' || g.dow === 'Thu'),
+    titleFor: (days) => days.length && days.some(d => d !== 'Thu') ? (days.length > 1 ? 'Midweek Kickoff Preview' : 'Opening Night Preview') : 'Thursday Night Football Preview',
     summary: 'Start/sit and the full showdown for the Thursday game, updated if late news changes it.', absorbs: ['tnf-preview'] },
   'underrated': { title: 'Most Underrated Player on the Board', subtitle: "What the Experts Aren't Telling You", day: 'Thu', hour: 7, minute: 0, retro: false, subject: 'current',
     analyst: 'vega', dfsAnalyst: 'vega', lens: 'both', rivalry: true, targets: () => [],
@@ -5939,11 +6188,15 @@ const CONTENT_KINDS = {
     summary: 'Only when a tight end story is worth your time.', absorbs: [] },
   'tnf-what-matters': { title: 'Thursday Night: What Matters', day: 'Fri', hour: 6, minute: 0, retro: false, subject: 'current',
     analyst: 'raines', dfsAnalyst: 'park', lens: 'both', optional: true,
-    targets: (gs) => gs.filter(g => g.dow === 'Thu'),
+    targets: (gs) => gs.filter(g => g.dow === 'Wed' || g.dow === 'Thu'),
+    titleFor: (days) => days.length && days.some(d => d !== 'Thu') ? 'Midweek Football: What Matters' : 'Thursday Night: What Matters',
     summary: 'Usage, role and sustainability from the Thursday game. Not a recap.', absorbs: ['tnf-aftermath'] },
   'weekend-preview': { title: 'Weekend Preview', day: 'Fri', hour: 7, minute: 0, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', preview: true,
-    targets: (gs) => gs.filter(g => g.dow !== 'Thu'),
+    // The weekend: everything after the midweek games. A Wednesday opener is
+    // the midweek preview's, and a preview is not ready once any target has
+    // kicked off, so it must not be here on Friday.
+    targets: (gs) => gs.filter(g => g.dow !== 'Wed' && g.dow !== 'Thu'),
     summary: 'The hard start/sits, the matchups, the movers and the weather. For DFS, the whole slate.', absorbs: ['final-read', 'weekend-game-plan'] },
   'kickers-defenses': { title: 'Kickers & Defenses', day: 'Fri', hour: 8, minute: 0, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', targets: () => [],
@@ -6029,6 +6282,9 @@ function contentSubjectWeek(K, state, now) {
 }
 // Is a piece due, and is it ready? Pure. `state` is the season service's
 // answer; `sched` the schedule cache; `now` the instant asked about.
+// The title a piece carries: the kind's, unless the kind names one for the
+// days its target games fall on (a Wednesday opener is not Thursday night).
+const kindTitle = (K, d) => (K && K.titleFor && d && Array.isArray(d.targetDays)) ? K.titleFor(d.targetDays) : (K ? K.title : '');
 function contentDue(kind, now, state, sched) {
   const K = CONTENT_KINDS[kind];
   if (!K) return { due: false, ready: false, reason: 'unknown_kind' };
@@ -6056,8 +6312,14 @@ function contentDue(kind, now, state, sched) {
   // days: the half day is what keeps a kickoff the schedule stores at
   // midnight from pulling the slot a week early, which the first live tick did.
   const prevGames = !K.retro && K.anchor !== 'targets' && anchorWeek > 1 ? weekGames(sched, anchorWeek - 1, now) : [];
+  // A piece about specific games takes its slot from the FIRST of them: the
+  // Thursday preview runs Thursday morning, and when the season opens on a
+  // Wednesday (2026 did, NE at SEA the night before SF and the Rams) the same
+  // piece runs Wednesday morning and covers both midweek games.
+  const firstTarget = targets.length ? targets.slice().sort((a, b) => a.kickoff - b.kickoff)[0] : null;
+  const slotDay = K.anchor === 'targets' && firstTarget ? firstTarget.dow : K.day;
   let dueAt;
-  if (K.anchor === 'targets' && targets.length) dueAt = _nextEt(K.day, K.hour, Math.min(...targets.map(g => g.kickoff)) - 24 * 3600000, K.minute || 0);
+  if (K.anchor === 'targets' && firstTarget) dueAt = _nextEt(slotDay, K.hour, firstTarget.kickoff - 24 * 3600000, K.minute || 0);
   else if (K.retro) dueAt = _nextEt(K.day, K.hour, Math.max(...ags.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
   else if (prevGames.length) dueAt = _nextEt(K.day, K.hour, Math.max(...prevGames.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
   else dueAt = _nextEt(K.day, K.hour, Math.min(...ags.map(g => g.kickoff)) - 132 * 3600000, K.minute || 0);
@@ -6085,7 +6347,7 @@ function contentDue(kind, now, state, sched) {
     ready = notFinal.length === 0;
     if (!ready) reason = 'games_not_final:' + notFinal.map(g => g.away + '@' + g.home).join(',');
   }
-  return { due, ready, reason, week, anchorWeek, dueAt, targets: targets.map(g => g.id),
+  return { due, ready, reason, week, anchorWeek, dueAt, targets: targets.map(g => g.id), targetDays: targets.map(g => g.dow), slotDay,
            updatesUntil: K.updates ? dueAt + (K.updateHours || 6) * 3600000 : null,
            excluded: K.partial ? gs.filter(g => g.dow === 'Sun' && !feedFinal(g)).map(g => g.away + '@' + g.home) : [] };
 }
@@ -6383,20 +6645,47 @@ function _sectionSpec(kind) {
 }
 // Every capitalised two-or-three-word name and every number in the draft must
 // be in the brief. Small integers are allowed (ordinals, counts of things).
+// Capitalised words that are not people: the words a headline or a sentence
+// starts with, the clubs, the site's own names, the vocabulary of the desk.
+// A run of capitalised words is a NAME only if two or more of its words are
+// none of these (and not an all-caps abbreviation, and not a possessive of
+// something allowed). The first live preview was held on "Two Slates",
+// "Implied Totals", "Every Patriots", "Guerendo's PUP" and "Brown. Vegas".
+const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Out Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trade Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Back Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Best Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Clear Obvious Likely Unlikely Possible Probable Certain Sure Different Same Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Over Under Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Strong Moderate Mild Slight Fade Fades Lean Leans Buy Buys Sell Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modelled Modeled Not Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas').split(/\s+/));
+const _nameTokens = (run) => run.split(/\s+/).map(t => t.replace(/['\u2019]s$/, '')).filter(t => t && !/^[A-Z0-9.&-]+$/.test(t) && !NOT_A_NAME.has(t.replace(/[.,]+$/, '')));
 function validateDraft(text, allowed) {
   const names = new Set(allowed.names || []), nums = new Set(allowed.numbers || []);
   const bad = { names: [], numbers: [] };
   const OK_WORDS = new Set(['Iron Tuna', 'Market Delta', 'Monday Night', 'Sunday Night', 'Thursday Night', 'Red Zone', 'Vegas Edge', 'What We', 'Fantasy Playoffs', 'Rest Of', 'Next Three', 'Week One']);
-  for (const m of String(text).matchAll(/\b([A-Z][a-z'.-]+(?:\s[A-Z][A-Za-z'.-]+){1,2})\b/g)) {
+  const known = n => names.has(n) || OK_WORDS.has(n) || [...names].some(x => x.includes(n) || n.includes(x));
+  // A sentence ends where a lower-case word meets its full stop, so "Brown.
+  // Vegas" is two sentences and not a man. An initial ("A.J.") is not a
+  // sentence end.
+  const bounded = String(text).replace(/([a-z0-9)][.!?;:])\s+(?=[A-Z])/g, '$1\n');
+  for (const m of bounded.matchAll(/\b([A-Z][a-z'\u2019.-]+(?:\s[A-Z][A-Za-z'\u2019.-]+){1,2})\b/g)) {
     const n = m[1];
-    if (names.has(n) || OK_WORDS.has(n)) continue;
-    if ([...names].some(x => x.includes(n) || n.includes(x))) continue;
+    if (known(n)) continue;
     if (/^(What|Why|The|This|That|His|Their|A|An|In|On|At|For|With|And|But|Not|No|He|She|It|They|We|Both)\b/.test(n)) continue;
+    const toks = _nameTokens(n);
+    if (toks.length < 2) continue;
+    const core = toks.join(' ');
+    if (known(core)) continue;
+    // Two allowed surnames next to each other ("Stevenson and McCaffrey"
+    // without the "and", a list) are not a third person.
+    if (toks.every(t => [...names].some(x => x.split(/\s+/).includes(t)))) continue;
     bad.names.push(n);
   }
+  // A number the packet does not carry is still allowed when it is a signed
+  // form of one it does (a spread quoted from the other side), or, below ten,
+  // the difference or sum of two packet numbers: "18.6, 1.5 below consensus
+  // 20.1" is arithmetic on the packet, not a new fact.
+  const vals = [...nums].map(Number).filter(Number.isFinite);
+  const grid = new Set(vals.map(x => x.toFixed(1)));
+  const arithmetic = a => a < 10 && vals.some(x => grid.has((x - a).toFixed(1)) || grid.has((x + a).toFixed(1)));
   for (const m of String(text).matchAll(/-?\d+(?:\.\d+)?/g)) {
-    const v = m[0]; const num = Number(v);
-    if (nums.has(v) || (Number.isInteger(num) && Math.abs(num) <= 20)) continue;
+    const v = m[0]; const num = Number(v), abs = Math.abs(num);
+    if (nums.has(v) || nums.has(String(abs)) || (Number.isInteger(num) && abs <= 20)) continue;
+    if (arithmetic(abs)) continue;
     bad.numbers.push(v);
   }
   bad.names = [...new Set(bad.names)]; bad.numbers = [...new Set(bad.numbers)];
@@ -6438,7 +6727,17 @@ const NEWSROOM_FLAGS = {
   ANALYST_PERSONAS:      { dflt: true,  note: 'bylines and voices; off publishes every piece under Iron Tuna' },
   RIVALRY:               { dflt: true,  note: 'the single Vega/Brooks rivalry line, when the numbers earn it' },
   BREAKING_NEWS:         { dflt: true,  note: 'the significance-scored breaking-news scan and pieces' },
-  PERSONALIZED_RANKINGS: { dflt: true,  note: 'rankings re-scored at the saved league on the pages' }
+  PERSONALIZED_RANKINGS: { dflt: true,  note: 'rankings re-scored at the saved league on the pages' },
+  // League sync (docs/league-sync.md). A provider flag gates connecting AND the
+  // scheduled refresh of leagues already connected on it.
+  LEAGUE_SYNC:           { dflt: true,  note: 'Sync My League: the league model, My Leagues, and every personalised module' },
+  SLEEPER_SYNC:          { dflt: false, note: 'the Sleeper connector; OFF until Sleeper’s commercial licence is in writing (docs/data-sources.md R2)' },
+  YAHOO_SYNC:            { dflt: false, note: 'the Yahoo OAuth connector; needs YAHOO_CLIENT_ID, YAHOO_CLIENT_SECRET and LEAGUE_TOKEN_KEY' },
+  ESPN_SYNC:             { dflt: false, note: 'the ESPN connector; no supported path exists, the adapter is a placeholder' },
+  PERSONALIZED_WAIVERS:  { dflt: true,  note: 'the Pickup Advisor on the players actually available in a synced league' },
+  PERSONALIZED_LINEUP:   { dflt: true,  note: 'Best Lineup, Your Matchup, roster alerts and playoff readiness from a synced roster' },
+  PERSONALIZED_TRADES:   { dflt: true,  note: 'trade partners and targets across a synced league’s rosters' },
+  PERSONALIZED_STORIES:  { dflt: true,  note: 'the On Your Roster / Available in Your League callouts on stories and player cards' }
 };
 function flagOn(env, name) {
   const f = NEWSROOM_FLAGS[name]; if (!f) return false;
@@ -6520,6 +6819,98 @@ function analystFor(env, id) {
   return ANALYSTS[id] || ANALYST_HOUSE;
 }
 const AI_DISCLOSURE = 'Iron Tuna’s analysts are AI-powered editorial personas, not people. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls. Every number they print is computed from the site’s own data (the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries you load); a piece whose prose named something the data does not contain is held, not published. The personalities are a way of organising the analysis. The facts are the site’s.';
+
+// ── per-analyst head meta ──────────────────────────────────────────────────
+// /analysts/<id> is eight URLs served from ONE shell (analyst.html), which the
+// browser fills in from /api/analyst. The shell ships with the index page's
+// canonical, so without this every one of those eight URLs told a crawler "I am
+// really /analysts" while sitemap.xml advertised all eight — a self-cancelling
+// pair of signals, and the reason none of them could rank. The head is rewritten
+// here, at the edge, rather than in the page: the crawlers robots.txt invites by
+// name do not run JavaScript, so a title written by the client is a title they
+// never see.
+//
+// The copy is drawn from the ANALYSTS table itself, so a persona whose beat or
+// philosophy is edited there cannot leave a stale description behind.
+//
+// The personas are AI, and the meta says so in the same words the page does.
+// Nothing here describes them as people.
+function analystSeo(env, pathname) {
+  const m = /^\/analysts\/([a-z]+)\/?$/.exec(pathname);
+  if (!m) return null;
+  const a = ANALYSTS[m[1]];
+  if (!a) return null;                       // an unknown id keeps the shell's own meta
+  if (!flagOn(env, 'ANALYST_PERSONAS')) return null;   // personas off: every piece is Iron Tuna's
+  const url = 'https://irontuna.com/analysts/' + a.id;
+  // The specialty list is written sentence-case ("DFS salary and ownership",
+  // "Sportsbook props"). Lower-casing the whole string turns DFS into dfs; not
+  // lower-casing it drops capitals mid-sentence. So only the first word gives up
+  // its capital, and only when it is not an acronym.
+  const beat = a.specialty
+    .map((t) => (/^[A-Z]{2,}\b/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1)))
+    .join(', ');
+  // No pronouns in the generated copy. The table writes about the male-named
+  // personas as "he" and about Lena Park with none at all, so a template that
+  // picked one would be guessing about half the desk to save four characters.
+  const desc = a.name + ' is Iron Tuna\u2019s ' + a.role + ', an AI analyst persona covering '
+    + beat + '. ' + a.philosophy + ' Every published call, and how it turned out, is on this page.';
+  return {
+    analyst: a,
+    title: a.name + ', ' + a.role + ' | Iron Tuna',
+    desc,
+    url,
+    ogt: a.name + ' \u2014 ' + a.role,
+    ogd: a.philosophy + ' ' + a.name + ' is an AI analyst persona on Iron Tuna\u2019s in-season desk.',
+  };
+}
+
+// The persona header, PRE-RENDERED — same reason as the AI disclosure already
+// pre-rendered in analyst.html, and deliberately byte-for-byte the markup the
+// page's own script writes into #anHead on hydration, so filling it here costs
+// no flash and no second layout.
+//
+// Without it the shell a crawler is handed reads "Reading the desk…" and nothing
+// else, which is why the page was noindex; the 8 URLs were in sitemap.xml all
+// the same. Pre-rendering the header is what makes dropping the noindex honest.
+function analystHeader(a) {
+  const e = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return '<span class="an-av">' + e(a.avatar) + '</span><div><h1>' + e(a.name)
+    + '</h1><p>' + e(a.role) + ' &middot; <span class="dk-ai">AI analyst persona</span></p></div>';
+}
+
+// ProfilePage, NOT Person. These are software; the page says so in its first
+// paragraph and the markup must not say otherwise to win a rich result. The
+// subject is therefore a Thing with the disclosure in its description, and the
+// publisher — the only actual entity here — is Iron Tuna.
+function analystLd(a, url) {
+  return '<script type="application/ld+json">' + JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    '@id': url,
+    url,
+    name: a.name + ', ' + a.role,
+    inLanguage: 'en-US',
+    isPartOf: { '@id': 'https://irontuna.com/#website' },
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Iron Tuna', item: 'https://irontuna.com/' },
+        { '@type': 'ListItem', position: 2, name: 'The Analysts', item: 'https://irontuna.com/analysts' },
+        { '@type': 'ListItem', position: 3, name: a.name },
+      ],
+    },
+    mainEntity: {
+      '@type': 'Thing',
+      name: a.name,
+      alternateName: a.role,
+      description: a.philosophy + ' ' + AI_DISCLOSURE,
+      additionalType: 'https://schema.org/SoftwareApplication',
+      subjectOf: { '@id': 'https://irontuna.com/#organization' },
+    },
+    about: a.specialty.map((t) => ({ '@type': 'Thing', name: t })),
+    publisher: { '@id': 'https://irontuna.com/#organization' },
+  }).replace(/</g, '\\u003c') + '</' + 'script>';
+}
 
 // ── data freshness ─────────────────────────────────────────────────────────
 // Every packet carries where each input came from and how old it is, graded
@@ -6920,10 +7311,8 @@ function packetLastMinute(ctx, games) {
   }
   const lineMoves = [];
   for (const g of games) {
-    const mv = ctx.gameMarkets && ctx.gameMarkets[g.id];
-    const dS = mv && mv.spread ? _oddsRound((mv.spread.current || 0) - (mv.spread.open || 0)) : null;
-    const dT = mv && mv.total ? _oddsRound((mv.total.current || 0) - (mv.total.open || 0)) : null;
-    lineMoves.push({ game: g.away + ' at ' + g.home, kickoff: g.kickoff, spread: g.spread, total: g.total, impliedHome: g.impliedHome, impliedAway: g.impliedAway, spreadMove: dS, totalMove: dT, started: g.state.status !== 'upcoming' });
+    const lm = _gameLineMove(g, ctx.gameMarkets && ctx.gameMarkets[g.id]);
+    lineMoves.push({ game: g.away + ' at ' + g.home, kickoff: g.kickoff, spread: g.spread, total: g.total, impliedHome: g.impliedHome, impliedAway: g.impliedAway, spreadMove: lm.spread, totalMove: lm.total, moveSource: lm.source, moveBook: lm.book, started: g.state.status !== 'upcoming' });
   }
   const propMoves = W.filter(p => teams.has(p.team) && p.marketDelta && p.marketDelta.significant && /^props/.test(p.vegas.basis)).sort((a, b) => Math.abs(b.marketDelta.rank || 0) - Math.abs(a.marketDelta.rank || 0)).slice(0, 12).map(p => _rowFor(p));
   const hash = inactives.map(r => r.name + ':' + r.status).concat(questionable.map(r => r.name + ':' + r.status)).sort().join('|');
@@ -7187,7 +7576,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   const rivalry = rivalryGate(env, kind, facts.disagreements || (facts.candidates ? facts.candidates : []), budget);
   const analyst = analystFor(env, K.analyst), dfsAnalyst = analystFor(env, K.dfsAnalyst || 'park'), marketAnalyst = K.marketAnalyst ? analystFor(env, K.marketAnalyst) : null;
   const packet = {
-    meta: { kind, title: K.title, subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
+    meta: { kind, title: kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
             analyst: analyst.id, analystName: analyst.name, dfsAnalyst: dfsAnalyst.id, dfsAnalystName: dfsAnalyst.name, marketAnalyst: marketAnalyst ? marketAnalyst.id : null, marketAnalystName: marketAnalyst ? marketAnalyst.name : null,
             lens: flagOn(env, 'DFS_CONTENT') ? K.lens : 'weekly', scoring: 'PPR (the reader’s league re-scores the tables on the page)', excludedGames: d.excluded || [] },
     freshness: freshnessReport(ctx.stamps, kind, Date.now()),
@@ -7220,6 +7609,7 @@ TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manage
 COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
 THE RIVALRY, when the packet carries one: exactly one line, intellectual, never personal. Acceptable: "Brooks still has him WR17. The receiving market appears considerably less worried." Not acceptable: insults, claims a colleague does not understand football, manufactured heat.
 STYLE. Direct, analytical, actionable, confident, concise. Take positions. No introductions, no restating the box score, no hedging padding, no em dashes (use a period, a colon or a comma). Never write "it's worth noting", "buckle up", "dive in", "game-changer", "in conclusion", "at the end of the day", "ever-evolving", "look no further". The analyst's personality is noticeable in the prose and never overrides the facts.
+HEADLINE AND DEK in sentence case: capitalise the first word and proper nouns (players, clubs, Vegas, Iron Tuna) and nothing else. Never Title Case. The headline names a player or a game and says what to do about it; the dek is one sentence carrying the finding and a number from the packet.
 PUBLISH LESS. If the packet genuinely carries nothing a reader should act on, return {"skip":"<one sentence why>"} instead of filler.
 OUTPUT: a single JSON object, no prose outside it, in exactly the shape requested.`;
 const AI_PHRASES = [/it'?s worth noting/i, /buckle up/i, /dive in/i, /game-?changer/i, /in conclusion/i, /at the end of the day/i, /ever-evolving/i, /look no further/i, /—/];
@@ -7304,7 +7694,7 @@ async function writeNewsroomPiece(env, kind, packet) {
   const K = CONTENT_KINDS[kind];
   const lenses = packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly'];
   const shape = '{"headline":"...","dek":"one sentence, the finding","' + lenses.map(l => l + '":' + _lensShape(kind, l)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
-  const user = 'KIND: ' + kind + ' (' + K.title + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
+  const user = 'KIND: ' + kind + ' (' + ((packet.meta && packet.meta.title) || K.title) + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
     'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
     '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
   let attempt = await llmText(env, NEWSROOM_SYSTEM, user, 6000, WRITER_TIMEOUT_MS);
@@ -7425,6 +7815,15 @@ async function produceContent(env, kind, opts) {
     if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: packet.reason, checked: packet.checked || null }, body: null, analyst: K.analyst, lens: K.lens });
     return { ok: true, kind, week, status: 'skipped', reason: packet.reason };
   }
+  // A draft the fact check held is checked again against the fresh packet
+  // before the writer is asked for another. The check is code and the code
+  // changes: the first live preview was held on title-case headline words
+  // and sentence boundaries, and once the rule learned them the draft it had
+  // held was right. Nothing is rewritten; the row is published as it stands.
+  if (latest && latest.status === 'held' && latest.body && latest.body !== 'null' && !o.force) {
+    const revived = await revalidateHeld(env, kind, latest, packet, d, season);
+    if (revived) return revived;
+  }
   if (latest && !o.force && !retry && K.updates && !updateWanted(K, latest, d, packet, Date.now())) return { ok: false, kind, week, error: 'exists', note: 'no update wanted' };
   const written = await writeNewsroomPiece(env, kind, packet);
   if (written.status === 'skipped') { if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: 'writer_declined', note: written.skip }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped', reason: 'writer_declined', note: written.skip }; }
@@ -7434,7 +7833,7 @@ async function produceContent(env, kind, opts) {
   if (status === 'published' && !auto.on) { status = 'held'; violations.push('awaiting_approval: ' + auto.reason); }
   const version = latest && latest.version ? latest.version + 1 : (latest ? 2 : 1);
   // A retry of a transport failure is the same edition, not an update.
-  const title = K.title + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
+  const title = kindTitle(K, d) + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
   const analyst = packet.meta.analyst;
   const rivalry = packet.rivalry && written.body && written.body.rivalryLine ? { ...packet.rivalry, line: String(written.body.rivalryLine).slice(0, 300) } : null;
   await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title, status, brief: packet, body: written.body, violations, model: written.model, analyst, lens: packet.meta.lens, version, rivalry,
@@ -7445,6 +7844,24 @@ async function produceContent(env, kind, opts) {
     calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, list, rivalry);
   }
   return { ok: true, kind, week, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
+}
+async function revalidateHeld(env, kind, latest, packet, d, season) {
+  let body = null; try { body = JSON.parse(latest.body); } catch (e) { return null; }
+  if (!body || typeof body !== 'object') return null;
+  let vio = []; try { vio = JSON.parse(latest.violations || '[]') || []; } catch (e) { vio = []; }
+  // Held for approval is the editor's call, never the tick's.
+  if (vio.some(v => /^awaiting_approval/.test(String(v)))) return null;
+  const fc = factCheck(body, packet);
+  if (!fc.ok) return null;
+  const auto = await autoPublishOn(env);
+  if (!auto.on) return null;
+  try { await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ?, violations = ? WHERE id = ?').bind('published', Date.now(), null, latest.id).run(); }
+  catch (e) { return null; }
+  const analyst = packet.meta.analyst, week = d.week;
+  const rivalry = packet.rivalry && body.rivalryLine ? { ...packet.rivalry, line: String(body.rivalryLine).slice(0, 300) } : null;
+  let calls = { stored: 0 };
+  try { calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, normaliseCalls(body.calls, packet, analyst, 'weekly'), rivalry); } catch (e) {}
+  return { ok: true, kind, week, status: 'published', version: latest.version || 1, revalidated: true, heldOn: vio.length, analyst, rivalry: !!rivalry, calls: calls.stored, sections: Object.keys(body) };
 }
 async function runContentTick(env) {
   const out = [];
@@ -7505,11 +7922,38 @@ async function newsroomFeedPayload(env, lens, limit) {
 // The front page's lead, in the regular season: the newest published piece,
 // in the shape the lead painter already understands.
 async function deskLeadPayload(env) {
-  const feed = await newsroomFeedPayload(env, 'weekly', 6);
+  // Twelve, not six: the front page's Top Headlines column is six slots wide
+  // and the lead itself takes the first row off this list, so six left it one
+  // short of ever filling the column from the desk alone.
+  const feed = await newsroomFeedPayload(env, 'weekly', 12);
   if (!feed.ok || !feed.pieces.length) return null;
   const [cur, ...rest] = feed.pieces;
   const row = p => ({ slug: 'desk:' + p.kind + ':' + p.week, url: p.url, title: p.headline || p.title + ' · Week ' + p.week, dek: p.dek || '', label: p.title, category: 'desk', analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], names: [], cast: [] });
   return { ok: true, source: 'desk', story: row(cur), recent: rest.map(row) };
+}
+// The regular season with nothing published yet: the lead is the desk's NEXT
+// piece, named and timed, in the same shape. Never a draft-season story. The
+// alternative, which the front page ran on the Wednesday of Week 1, was a
+// six-hour-old auction price above the week's slate: a reader was being told
+// the wrong month. Pure apart from the clock, so tools/test-newsroom.mjs can
+// hold it to the calendar.
+function deskNextPayload(state, sched, now) {
+  let best = null;
+  for (const [kind, K] of Object.entries(CONTENT_KINDS)) {
+    if (K.unscheduled) continue;
+    let d = null;
+    try { d = contentDue(kind, now, state, sched); } catch (e) { continue; }
+    if (!d || d.skip || !Number.isFinite(d.dueAt) || d.dueAt === Number.MAX_SAFE_INTEGER || d.dueAt <= now) continue;
+    if (!best || d.dueAt < best.at) best = { kind, K, at: d.dueAt, week: d.week };
+  }
+  if (!best) return null;
+  const p = etParts(best.at);
+  const day = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' }[p.dow] || p.dow;
+  const when = day + ' at ' + (p.hour % 12 || 12) + ':' + String(p.minute).padStart(2, '0') + ' ' + (p.hour < 12 ? 'AM' : 'PM') + ' ET';
+  const a = ANALYSTS[best.K.analyst] || ANALYST_HOUSE;
+  const story = { slug: 'desk:next:' + best.kind, url: '/in-season/desk', title: 'Next from the desk: ' + best.K.title, dek: (best.K.summary || '') + ' Publishes ' + when + '.',
+                  label: 'The Desk', category: 'desk', placeholder: true, analyst: a.name, analystId: a.id, createdAt: best.at, players: [], names: [], cast: [] };
+  return { ok: true, source: 'desk-next', story, recent: [] };
 }
 
 // ── author pages, disagreements ────────────────────────────────────────────
@@ -7716,9 +8160,10 @@ async function newsroomAdmin(env, action, body) {
 async function newsroomStatus(env) {
   const auto = await autoPublishOn(env);
   const et = etParts(Date.now());
+  let tick = null; try { tick = await tickHealth(env, Date.now()); } catch (e) { tick = null; }
   const legacy = Object.entries(LEGACY_CONTENT).map(([k, v]) => ({ kind: k, ...v }));
   return { autoPublish: auto, flags: flagReport(env), audit: newsroomAudit(null), legacy, routines: ROUTINE_MIGRATION, events: (await newsEventsPayload(env, 20)).map(e => ({ at: e.created_at, type: e.type, player: e.player, team: e.team, position: e.position, score: e.score, handled: e.handled, detail: e.detail })),
-           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role })), rivalry: RIVALRY, et, draftSocial: env && env.DRAFT_SEASON_SOCIAL === '1' };
+           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role })), rivalry: RIVALRY, et, tick, draftSocial: env && env.DRAFT_SEASON_SOCIAL === '1' };
 }
 
 // -- DFS -------------------------------------------------------------------------
@@ -7759,6 +8204,28 @@ async function dfsReady(env) {
 // A DST row on either site names the club; the board names the club's
 // defence. Both resolve to the team key.
 const _dfsPos = p => { const u = String(p || '').toUpperCase(); return u === 'DEF' || u === 'D' || u === 'D/ST' ? 'DST' : u; };
+// Which contest a salary file is for. Both sites sell single-game contests out
+// of a file with the same columns as the main slate, and the difference is a
+// multiplier slot the classic roster does not have: DraftKings prices the
+// captain as a second CPT row for the same player, FanDuel an MVP. Priced
+// against the classic cap and roster, that file builds a lineup nobody can
+// enter, so the reader upload names it and stops rather than quietly costing
+// someone an entry fee.
+//
+// The test is structural as well as by name, because the slot token is the
+// operators' to rename and the repeated player row is the shape of a captain
+// file whatever they call it. One shared name between two players on a slate
+// happens; a file where a quarter of the rows repeat a player does not.
+const DFS_MULTIPLIER_SLOT = /\b(CPT|MVP)\b/;
+function dfsSlateShape(rows) {
+  const list = rows || [];
+  if (!list.length) return 'classic';
+  if (list.some(r => DFS_MULTIPLIER_SLOT.test(r.rosterPosition || ''))) return 'single-game';
+  const seen = new Set();
+  let dup = 0;
+  for (const r of list) { const k = _oddsNorm(r.name) + '|' + r.position; if (seen.has(k)) dup++; else seen.add(k); }
+  return dup * 4 > list.length ? 'single-game' : 'classic';
+}
 // ── the CSV each lobby exports ─────────────────────────────────────────────
 // DraftKings: Position, Name + ID, Name, ID, Roster Position, Salary, Game Info, TeamAbbrev, AvgPointsPerGame
 // FanDuel:    Id, Position, First Name, Nickname, Last Name, FPPG, Played, Salary, Game, Team, Opponent, Injury Indicator, Injury Details, Tier, Roster Position
@@ -7769,7 +8236,7 @@ function parseDfsCsv(site, text) {
   const idx = k => head.findIndex(h => h.toLowerCase() === k.toLowerCase());
   const rows = [];
   if (site === 'dk') {
-    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info');
+    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info'), iRoster = idx('Roster Position');
     if (iPos < 0 || iName < 0 || iSal < 0) return { rows: [], error: 'not a DraftKings salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
@@ -7777,15 +8244,17 @@ function parseDfsCsv(site, text) {
       const game = String(f[iGame] || '');
       const m = /^([A-Z]{2,3})@([A-Z]{2,3})/.exec(game);
       const opp = m ? (teamKey(m[1]) === team ? teamKey(m[2]) : teamKey(m[1])) : null;
-      rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null });
+      rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null });
     }
   } else if (site === 'fd') {
-    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id');
+    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position');
     if (iPos < 0 || iSal < 0 || (iNick < 0 && iFirst < 0)) return { rows: [], error: 'not a FanDuel salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
       const name = iNick >= 0 && f[iNick] ? f[iNick] : ((f[iFirst] || '') + ' ' + (f[iLast] || '')).trim();
-      rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null });
+      rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null });
     }
   } else return { rows: [], error: 'unknown site' };
   const good = rows.filter(r => r.name && r.position && Number.isFinite(r.salary) && r.salary > 0);
@@ -7856,7 +8325,7 @@ function buildDfsSlate(site, salaries, week, opts) {
   };
   return { ok: rows.length > 0, contract: DFS_CONTRACT, site, label: S.label, cap: S.cap, slots: S.slots, flex: S.flex, scoring: 'site', players: rows.sort((a, b) => b.salary - a.salary),
            medianVegasPerK: _oddsRound(med * 100) / 100, unmatched: rows.filter(r => !r.onBoard).length, boards,
-           hasProps: on.some(r => /^props/.test(r.vegasBasis)), note: on.some(r => /^props/.test(r.vegasBasis)) ? null : 'No sportsbook has a player prop on this slate yet; every Vegas number is the game line’s environment applied to the player’s line.' };
+           hasProps: on.some(r => /^props/.test(r.vegasBasis)), note: on.some(r => /^props/.test(r.vegasBasis)) ? null : 'No priced player prop has reached this slate. Books post props; none are in the feed behind this build, so every Vegas number is the game line’s environment applied to the player’s line.' };
 }
 // Game stacks: every game on the slate ranked by total, with each side's
 // QB and his two most-targeted pass catchers, and the bring-back on the
@@ -7914,26 +8383,66 @@ const JOB_FNS = {
   'job-prune':            env => jobPrune(env, JOB_KEEP_DAYS),
   'news-scan':            env => runNewsScan(env),
   'calls-grade':          env => runCallsGrade(env),
-  'content-tick':         env => runContentTick(env)
+  'content-tick':         env => runContentTick(env),
+  'league-sync':          env => runLeagueSync(env)
 };
 const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
+// How long a job may run before the log calls it dead. A cron invocation has
+// fifteen minutes of wall clock in total; the desk tick, which may write two
+// pieces with a retry each at 170 s a call, gets most of it, and every other
+// job a few minutes. A job past its deadline is logged as a failure and the
+// tick moves on; the work itself is not cancelled (the runtime has no way to
+// cancel a promise), it is simply no longer waited for.
+const JOB_DEADLINE_MS = { 'content-tick': 13 * 60000 };
+const JOB_DEADLINE_DEFAULT_MS = 4 * 60000;
+// A row that opened and never closed is an invocation that died: the runtime
+// killed it at the duration limit, or evicted it. Nothing closes such a row,
+// so the board counts it as a failure once it is older than any deadline.
+const JOB_DIED_AFTER_MS = 16 * 60000;
 // Run one job and log it. Never throws: a job that throws is a logged
 // failure, and the caller gets { ok:false, error }.
+//
+// The row is OPENED before the job runs and CLOSED after it, in two writes.
+// On September 8 and 9 the cron went silent three times for two hours and
+// more, and each gap began with a tick whose news-scan logged and whose
+// content-tick did not. A log written only at the end cannot say whether the
+// runtime killed that invocation or the cron never fired the next ones; a
+// row that is open with nothing after it says the first, no row says the
+// second. When the open write fails (no id comes back), the job still runs
+// and the row is written whole at the end, the way it always was.
 async function jobRun(env, name, trigger, fn) {
   const f = fn || JOB_FNS[name];
   if (!f) return { ok: false, error: 'unknown_job', job: name };
   const started = Date.now();
-  let result = null, error = null;
+  const id = await jobOpen(env, { job: name, trigger: trigger || null, started });
+  const limit = JOB_DEADLINE_MS[name] || JOB_DEADLINE_DEFAULT_MS;
+  let result = null, error = null, timer = null;
+  const deadline = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('deadline: ' + name + ' still running after ' + Math.round(limit / 1000) + ' s')), limit); });
   try {
-    result = await f(env);
+    result = await Promise.race([f(env), deadline]);
     if (result && result.ok === false) error = String(result.error || result.reason || 'failed');
   } catch (e) { error = (e && e.message) || 'failed'; result = { ok: false, error }; }
-  await jobLog(env, { job: name, trigger: trigger || null, started, finished: Date.now(), ok: error ? 0 : 1, error, summary: _jobSummary(result) });
+  finally { clearTimeout(timer); }
+  await jobLog(env, { id, job: name, trigger: trigger || null, started, finished: Date.now(), ok: error ? 0 : 1, error, summary: _jobSummary(result) });
   return result == null ? { ok: true } : result;
+}
+async function jobOpen(env, r) {
+  if (!(await jobReady(env))) return null;
+  try {
+    const res = await env.LEADS_DB.prepare('INSERT INTO job_runs (job, trigger, started_at, finished_at, ok, error, summary) VALUES (?, ?, ?, NULL, NULL, NULL, NULL)')
+      .bind(r.job, r.trigger, r.started).run();
+    const id = res && res.meta && res.meta.last_row_id;
+    return Number.isFinite(id) && id > 0 ? id : null;
+  } catch (e) { return null; }
 }
 async function jobLog(env, r) {
   if (!(await jobReady(env))) return false;
   try {
+    if (r.id) {
+      await env.LEADS_DB.prepare('UPDATE job_runs SET finished_at = ?, ok = ?, error = ?, summary = ? WHERE id = ?')
+        .bind(r.finished, r.ok, r.error, r.summary, r.id).run();
+      return true;
+    }
     await env.LEADS_DB.prepare('INSERT INTO job_runs (job, trigger, started_at, finished_at, ok, error, summary) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .bind(r.job, r.trigger, r.started, r.finished, r.ok, r.error, r.summary).run();
     return true;
@@ -7959,15 +8468,37 @@ async function jobBoard(env, now) {
     const lastOkAny = {}; for (const r of (older.results || [])) lastOkAny[r.job] = r.last_ok;
     const seen = new Set(rows.map(r => r.job));
     const all = names.concat(Array.from(seen).filter(j => !names.includes(j)));
+    const bad = r => r.ok === 0 || _jobDied(r, at);
     return { ok: true, jobs: all.map(j => {
       const mine = rows.filter(r => r.job === j);
       const last = mine[0] || null, ok = mine.find(r => r.ok === 1) || null;
-      return { job: j, last: last ? _jobRow(last) : null, lastOk: ok ? ok.started_at : (lastOkAny[j] || null), failures7d: mine.filter(r => r.ok === 0).length };
-    }), failed: rows.filter(r => r.ok === 0).slice(0, 40).map(_jobRow) };
+      return { job: j, last: last ? _jobRow(last, at) : null, lastOk: ok ? ok.started_at : (lastOkAny[j] || null), failures7d: mine.filter(bad).length };
+    }), failed: rows.filter(bad).slice(0, 40).map(r => _jobRow(r, at)) };
   } catch (e) { return { ...empty, error: (e && e.message) || 'failed' }; }
 }
-const _jobRow = r => ({ job: r.job, trigger: r.trigger, startedAt: r.started_at, finishedAt: r.finished_at, ok: r.ok === 1, error: r.error || null,
-                        ms: r.finished_at && r.started_at ? r.finished_at - r.started_at : null, summary: r.summary || null });
+const _jobDied = (r, at) => r.finished_at == null && r.ok == null && (at - r.started_at) > JOB_DIED_AFTER_MS;
+const _jobRow = (r, at) => {
+  const died = _jobDied(r, Number.isFinite(at) ? at : Date.now());
+  return { job: r.job, trigger: r.trigger, startedAt: r.started_at, finishedAt: r.finished_at, ok: r.ok === 1, unfinished: r.finished_at == null, died,
+           error: died ? 'did not finish: the invocation died before the job closed its row' : (r.error || null),
+           ms: r.finished_at && r.started_at ? r.finished_at - r.started_at : null, summary: r.summary || null };
+};
+// The cron's pulse. content-tick runs every quarter hour, so its newest row
+// is the last time the cron reached the worker at all; the silence is how
+// long ago that was. died24h counts rows that opened and never closed.
+const TICK_SILENT_MIN = 20;
+async function tickHealth(env, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const out = { lastAt: null, lastOk: null, silentMinutes: null, silent: false, died24h: 0, silentAfterMin: TICK_SILENT_MIN };
+  try {
+    if (!(await jobReady(env))) return out;
+    const r = await env.LEADS_DB.prepare("SELECT started_at, finished_at, ok FROM job_runs WHERE job = 'content-tick' ORDER BY started_at DESC LIMIT 1").first();
+    if (r) { out.lastAt = r.started_at; out.lastOk = r.ok === 1; out.silentMinutes = Math.max(0, Math.round((at - r.started_at) / 60000)); out.silent = out.silentMinutes > TICK_SILENT_MIN; }
+    const d = await env.LEADS_DB.prepare('SELECT COUNT(*) AS n FROM job_runs WHERE finished_at IS NULL AND ok IS NULL AND started_at > ? AND started_at < ?').bind(at - 86400000, at - JOB_DIED_AFTER_MS).first();
+    out.died24h = d && Number.isFinite(+d.n) ? +d.n : 0;
+  } catch (e) {}
+  return out;
+}
 
 // ── the assessment ─────────────────────────────────────────────────────────
 // Pure. Takes what the caches and the log say and returns what is missing or
@@ -8171,6 +8702,9 @@ const JOB_SCHEDULE = [
   { job: 'snapshot-prune',       days: ['Sun'],                hours: [4],                            phase: 2 },
   { job: 'analytics-prune',      days: ['Sun'],                hours: [4],                            phase: 2 },
   { job: 'job-prune',            days: ['Sun'],                hours: [4],                            phase: 2 },
+  // Connected leagues that are due (leagueNextSyncAt decides per league:
+  // hourly on Sunday, three-hourly Tue/Wed for waivers, six-hourly otherwise).
+  { job: 'league-sync',          days: null,                   hours: 'hourly',                       phase: 2 },
   // phase 3: the desk, which reads everything above. Quarter-hourly so a
   // 12:15 and a 7:30 slot exist in Eastern time; a tick with nothing due
   // costs one pure evaluation per kind.
@@ -8354,6 +8888,10 @@ async function leadStoryPayload(env) {
       if (st && st.ok && st.phase === 'regular') {
         const desk = await deskLeadPayload(env);
         if (desk && desk.ok) { _LEAD_CACHE = desk; _LEAD_AT = now; return desk; }
+        // Nothing published yet: name the next piece rather than reach back
+        // into the draft-season archive for a story about a different month.
+        const next = deskNextPayload(st, sched, now);
+        if (next && next.ok) { _LEAD_CACHE = next; _LEAD_AT = now; return next; }
       }
     }
   } catch (e) {}
@@ -8724,6 +9262,1720 @@ async function pruneAnalytics(env, keepDays) {
   return { pruned: true, keepDays, pageViews: (a.meta && a.meta.changes) || 0, events: (b.meta && b.meta.changes) || 0 };
 }
 
+// ══ LEAGUE SYNC ════════════════════════════════════════════════════════════
+// "Sync My League": a reader connects a fantasy league and every in-season
+// surface reads their exact scoring, roster, opponents and free-agent pool.
+//
+// The shape of it, and the one rule: nothing downstream knows which platform
+// a league came from. Provider adapters (LEAGUE_PROVIDERS) pull and normalise
+// into the Iron Tuna league model (LEAGUE_CONTRACT); leagueSync writes that
+// model into D1 idempotently, keyed on provider IDs; and the personalisation
+// modules (leagueBoard, leaguePickups, leagueLineup, leagueMatchup,
+// leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailability) read ONLY the
+// local model plus the site's own boards. External calls happen on connect,
+// on Sync Now, and on the league-sync job. See docs/league-sync.md.
+//
+// Provider terms are not a footnote. Sleeper's API is free for non-commercial
+// use only (docs/data-sources.md R2, Addendum 13.5), so the Sleeper connector
+// is behind FLAG_SLEEPER_SYNC, default OFF, until a licence is in writing.
+// Yahoo is OAuth 2.0 with the reader's consent and needs client credentials;
+// it is behind FLAG_YAHOO_SYNC. ESPN has no supported path (see LEAGUE_PROVIDERS.espn).
+const LEAGUE_CONTRACT = 1;
+const LEAGUE_DDL = [
+  'CREATE TABLE IF NOT EXISTS leagues (id TEXT PRIMARY KEY, email TEXT NOT NULL, provider TEXT NOT NULL, provider_league_id TEXT NOT NULL, name TEXT, season INTEGER, sport TEXT, num_teams INTEGER, status TEXT, settings TEXT, overrides TEXT, user_team_id TEXT, is_default INTEGER DEFAULT 0, created_at INTEGER, updated_at INTEGER, last_sync_at INTEGER, last_ok_at INTEGER, sync_status TEXT, last_error TEXT, next_sync_at INTEGER, failures INTEGER DEFAULT 0)',
+  'CREATE UNIQUE INDEX IF NOT EXISTS ux_leagues_owner ON leagues (email, provider, provider_league_id)',
+  'CREATE INDEX IF NOT EXISTS ix_leagues_due ON leagues (next_sync_at)',
+  'CREATE TABLE IF NOT EXISTS league_teams (league_id TEXT NOT NULL, team_id TEXT NOT NULL, name TEXT, manager TEXT, owner_id TEXT, wins INTEGER, losses INTEGER, ties INTEGER, points_for REAL, points_against REAL, standing INTEGER, faab_left INTEGER, waiver_position INTEGER, updated_at INTEGER, PRIMARY KEY (league_id, team_id))',
+  'CREATE TABLE IF NOT EXISTS league_roster_players (league_id TEXT NOT NULL, team_id TEXT NOT NULL, provider_player_id TEXT NOT NULL, player_key TEXT, name TEXT, position TEXT, nfl_team TEXT, slot TEXT, slot_label TEXT, updated_at INTEGER, PRIMARY KEY (league_id, provider_player_id))',
+  'CREATE INDEX IF NOT EXISTS ix_lrp_team ON league_roster_players (league_id, team_id)',
+  'CREATE TABLE IF NOT EXISTS league_matchups (league_id TEXT NOT NULL, week INTEGER NOT NULL, team_id TEXT NOT NULL, matchup_id TEXT, opponent_id TEXT, points REAL, opponent_points REAL, played INTEGER, updated_at INTEGER, PRIMARY KEY (league_id, week, team_id))',
+  'CREATE TABLE IF NOT EXISTS league_transactions (league_id TEXT NOT NULL, provider_txn_id TEXT NOT NULL, type TEXT, team_id TEXT, adds TEXT, drops TEXT, faab INTEGER, status TEXT, ts INTEGER, week INTEGER, PRIMARY KEY (league_id, provider_txn_id))',
+  'CREATE TABLE IF NOT EXISTS league_snapshots (league_id TEXT NOT NULL, season INTEGER, week INTEGER, kind TEXT NOT NULL, payload TEXT, built_at INTEGER, PRIMARY KEY (league_id, season, week, kind))',
+  'CREATE TABLE IF NOT EXISTS league_sync_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, league_id TEXT, provider TEXT, trigger TEXT, started_at INTEGER, finished_at INTEGER, ok INTEGER, error TEXT, summary TEXT, unmatched INTEGER)',
+  'CREATE INDEX IF NOT EXISTS ix_league_sync_runs ON league_sync_runs (league_id, started_at)',
+  'CREATE TABLE IF NOT EXISTS provider_connections (email TEXT NOT NULL, provider TEXT NOT NULL, provider_user_id TEXT, display_name TEXT, access_enc TEXT, refresh_enc TEXT, expires_at INTEGER, scopes TEXT, status TEXT, created_at INTEGER, updated_at INTEGER, PRIMARY KEY (email, provider))',
+  'CREATE TABLE IF NOT EXISTS player_id_map (provider TEXT NOT NULL, provider_player_id TEXT NOT NULL, player_key TEXT, name TEXT, position TEXT, nfl_team TEXT, confidence TEXT, updated_at INTEGER, PRIMARY KEY (provider, provider_player_id))',
+  'CREATE TABLE IF NOT EXISTS player_map_misses (provider TEXT NOT NULL, provider_player_id TEXT NOT NULL, name TEXT, position TEXT, nfl_team TEXT, count INTEGER, last_seen INTEGER, PRIMARY KEY (provider, provider_player_id))'
+];
+let _LEAGUE_READY = false;
+async function leagueReady(env) {
+  if (_LEAGUE_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { for (const q of LEAGUE_DDL) await env.LEADS_DB.prepare(q).run(); _LEAGUE_READY = true; return true; } catch (e) { return false; }
+}
+// Sync cadence, in New York time. A league is re-read when it is due, never
+// on a page view: Sunday late morning to kickoff hourly (inactives, lineup
+// moves), Tuesday and Wednesday every three hours (waivers clear overnight),
+// otherwise every six. A failing provider backs off by doubling, capped at a day.
+const LEAGUE_SYNC_MIN_GAP_MS = 2 * 60 * 1000;         // Sync Now, per league
+const LEAGUE_SYNC_BATCH = 40;                          // leagues per job tick
+const LEAGUE_STALE_MS = 12 * 3600 * 1000;              // "may be outdated" after this
+function leagueNextSyncAt(now, failures) {
+  if (failures > 0) return now + Math.min(24 * 3600000, 15 * 60000 * Math.pow(2, Math.min(7, failures - 1)));
+  const et = etParts(now);
+  let h = 6;
+  if (et.dow === 'Sun' && et.hour >= 8 && et.hour < 16) h = 1;
+  else if (et.dow === 'Tue' || et.dow === 'Wed') h = 3;
+  return now + h * 3600000;
+}
+// The session behind a request: the same cookie /api/auth/me reads, checked
+// against the sessions table so a signed-out device stays signed out.
+async function leagueSessionEmail(request, env) {
+  if (!env || !env.AUTH_SECRET) return null;
+  const o = await readToken(env.AUTH_SECRET, parseCookie(request.headers.get('Cookie'))['it_sess']);
+  if (!o || o.t !== 'sess' || !o.e) return null;
+  if (env.LEADS_DB && o.sid) { try { const row = await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE id=?').bind(o.sid).first(); if (!row) return null; } catch (e) {} }
+  return String(o.e).toLowerCase();
+}
+// Secrets at rest. OAuth tokens are sealed with AES-GCM under a key derived
+// from LEAGUE_TOKEN_KEY; without that secret no OAuth provider can connect,
+// and the admin board says so. A token never goes to the browser.
+let _LEAGUE_AES = null, _LEAGUE_AES_FOR = '';
+async function leagueAesKey(env) {
+  const secret = env && env.LEAGUE_TOKEN_KEY;
+  if (!secret) return null;
+  if (_LEAGUE_AES && _LEAGUE_AES_FOR === secret) return _LEAGUE_AES;
+  const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
+  _LEAGUE_AES = await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  _LEAGUE_AES_FOR = secret;
+  return _LEAGUE_AES;
+}
+async function leagueSeal(env, text) {
+  const key = await leagueAesKey(env);
+  if (!key) throw new Error('no_token_key');
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(String(text))));
+  const out = new Uint8Array(iv.length + ct.length); out.set(iv, 0); out.set(ct, iv.length);
+  return 'v1.' + b64urlEncode(out);
+}
+async function leagueOpen(env, sealed) {
+  const key = await leagueAesKey(env);
+  if (!key || !sealed || !String(sealed).startsWith('v1.')) return null;
+  try {
+    const buf = b64urlToBytes(String(sealed).slice(3));
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
+    return new TextDecoder().decode(pt);
+  } catch (e) { return null; }
+}
+// -- the player pool and the canonical key ----------------------------------
+// The site ranks by _oddsNorm(name)|position and always has; that IS the
+// canonical Iron Tuna player key. A provider's id maps onto it, or is a
+// recorded miss. Nothing is matched by display name where an id exists.
+const LEAGUE_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
+function leaguePos(p) { const u = String(p || '').toUpperCase(); return u === 'DST' || u === 'D/ST' || u === 'D' ? 'DEF' : u === 'PK' ? 'K' : u; }
+function leaguePlayerKey(name, pos) { return _oddsNorm(name) + '|' + leaguePos(pos); }
+let _LEAGUE_POOL = null;
+function leaguePoolIndex() {
+  if (_LEAGUE_POOL) return _LEAGUE_POOL;
+  const byKey = new Map(), byLast = new Map(), defByTeam = new Map();
+  for (const p of PROJECTIONS) {
+    const pos = leaguePos(p.position);
+    const row = { name: p.name, position: pos, team: teamKey(p.team), key: leaguePlayerKey(p.name, pos) };
+    byKey.set(row.key, row);
+    if (pos === 'DEF') { defByTeam.set(row.team, row); continue; }
+    const last = _oddsNorm(String(p.name).trim().split(/\s+/).slice(-1)[0]);
+    const lk = last + '|' + pos;
+    if (!byLast.has(lk)) byLast.set(lk, []);
+    byLast.get(lk).push(row);
+  }
+  _LEAGUE_POOL = { byKey, byLast, defByTeam };
+  return _LEAGUE_POOL;
+}
+// One provider player -> one key, or a miss with a reason. `hint` is what the
+// provider knows: name, position, team. Exact name|position first; then a
+// unique surname at the position on the same club; a defence by its club.
+function leagueResolvePlayer(hint) {
+  const pool = leaguePoolIndex();
+  const pos = leaguePos(hint && hint.position);
+  const name = String((hint && hint.name) || '').trim();
+  const team = teamKey(hint && hint.team);
+  if (!LEAGUE_POSITIONS.has(pos)) return { key: null, confidence: 'none', reason: 'position ' + (pos || '?') + ' is not ranked' };
+  if (pos === 'DEF') {
+    const d = team ? pool.defByTeam.get(team) : null;
+    if (d) return { key: d.key, name: d.name, confidence: 'exact', reason: 'defence by club' };
+    return { key: null, confidence: 'none', reason: 'no defence for club ' + (team || '?') };
+  }
+  if (!name) return { key: null, confidence: 'none', reason: 'no name' };
+  const exact = pool.byKey.get(leaguePlayerKey(name, pos));
+  if (exact) return { key: exact.key, name: exact.name, confidence: 'exact', reason: 'name and position' };
+  const last = _oddsNorm(name.split(/\s+/).slice(-1)[0]);
+  const cands = (pool.byLast.get(last + '|' + pos) || []).filter(r => !team || r.team === team);
+  if (cands.length === 1) {
+    // The surname matched on the same club; the first name must at least agree
+    // on its initial, so "Mike Evans" cannot land on "Zach Evans".
+    const fi = _oddsNorm(name)[0], ci = _oddsNorm(cands[0].name)[0];
+    if (fi === ci) return { key: cands[0].key, name: cands[0].name, confidence: 'surname+team', reason: 'surname, position and club' };
+  }
+  return { key: null, confidence: 'none', reason: 'not on the board' };
+}
+// Resolve every player a league carries, writing the map rows and the misses.
+// Confidence 'none' rows are misses: they stay on the roster by name so the
+// reader sees the player, but no projection is ever attached to them.
+async function leagueMapPlayers(env, provider, players) {
+  const out = new Map();
+  const ts = Date.now();
+  const writes = [];
+  let unmatched = 0;
+  const seen = new Set();
+  for (const p of players || []) {
+    const id = String(p.providerPlayerId || '');
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const r = leagueResolvePlayer(p);
+    out.set(id, r);
+    if (!env || !env.LEADS_DB) continue;
+    if (r.key) {
+      writes.push(env.LEADS_DB.prepare('INSERT INTO player_id_map (provider, provider_player_id, player_key, name, position, nfl_team, confidence, updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(provider, provider_player_id) DO UPDATE SET player_key=excluded.player_key, name=excluded.name, position=excluded.position, nfl_team=excluded.nfl_team, confidence=excluded.confidence, updated_at=excluded.updated_at')
+        .bind(provider, id, r.key, p.name || null, leaguePos(p.position) || null, teamKey(p.team) || null, r.confidence, ts));
+    } else if (LEAGUE_POSITIONS.has(leaguePos(p.position))) {
+      unmatched++;
+      writes.push(env.LEADS_DB.prepare('INSERT INTO player_map_misses (provider, provider_player_id, name, position, nfl_team, count, last_seen) VALUES (?,?,?,?,?,1,?) ON CONFLICT(provider, provider_player_id) DO UPDATE SET count=count+1, last_seen=excluded.last_seen, name=excluded.name, nfl_team=excluded.nfl_team')
+        .bind(provider, id, p.name || null, leaguePos(p.position) || null, teamKey(p.team) || null, ts));
+    }
+  }
+  for (let i = 0; i < writes.length; i += 50) { try { await env.LEADS_DB.batch(writes.slice(i, i + 50)); } catch (e) { for (const s of writes.slice(i, i + 50)) { try { await s.run(); } catch (e2) {} } } }
+  return { map: out, unmatched };
+}
+// -- the normalised settings ------------------------------------------------
+// Roster slots the lineup engine understands, with what may fill each. A
+// slot the engine does not know (IDP, a "DL") is kept under roster.other and
+// counted in the roster size, never in a lineup.
+const LEAGUE_SLOT_ELIG = {
+  QB: ['QB'], RB: ['RB'], WR: ['WR'], TE: ['TE'], K: ['K'], DEF: ['DEF'],
+  FLEX: ['RB', 'WR', 'TE'], SFLEX: ['QB', 'RB', 'WR', 'TE'], REC_FLEX: ['WR', 'TE'], WRRB_FLEX: ['RB', 'WR']
+};
+const LEAGUE_SLOT_ORDER = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'WRRB_FLEX', 'REC_FLEX', 'FLEX', 'SFLEX'];
+function leagueEmptyRoster() { return { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0, FLEX: 0, SFLEX: 0, REC_FLEX: 0, WRRB_FLEX: 0, BN: 0, IR: 0, TAXI: 0, other: {} }; }
+function leagueRosterSize(r) { let n = 0; for (const k of Object.keys(r || {})) { if (k === 'other') { for (const v of Object.values(r.other || {})) n += Number(v) || 0; } else n += Number(r[k]) || 0; } return n; }
+function leagueStarterSlots(r) { const out = []; for (const s of LEAGUE_SLOT_ORDER) for (let i = 0; i < (Number(r && r[s]) || 0); i++) out.push(s); return out; }
+// Default settings for a manual league, and the base every provider fills in.
+function leagueDefaultSettings() {
+  return {
+    scoring: { ...SCORING_BASE, ...SCORING_KDEF, passingYardsThreshold: 0 },
+    extras: { tePremium: 0, unsupported: {}, notes: [] },
+    roster: { ...leagueEmptyRoster(), QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, K: 1, DEF: 1, BN: 6 },
+    faab: null, waiverType: 'unknown', playoffWeekStart: 15, playoffTeams: 6, leagueType: 'redraft'
+  };
+}
+// A settings object, made safe whatever came in (a provider payload, a manual
+// form, a hand-edited override). Unknown scoring keys are preserved under
+// extras.unsupported rather than dropped.
+function leagueNormalizeSettings(s) {
+  const d = leagueDefaultSettings();
+  const inp = s && typeof s === 'object' ? s : {};
+  const scoring = { ...d.scoring };
+  for (const k of Object.keys(inp.scoring || {})) {
+    const v = inp.scoring[k];
+    if (k in d.scoring) {
+      if (Array.isArray(d.scoring[k])) { if (Array.isArray(v)) scoring[k] = v; }
+      else if (Number.isFinite(Number(v))) scoring[k] = Number(v);
+    } else d.extras.unsupported[k] = v;
+  }
+  const extras = { ...d.extras, ...(inp.extras || {}) };
+  extras.unsupported = { ...d.extras.unsupported, ...((inp.extras && inp.extras.unsupported) || {}) };
+  extras.tePremium = Number.isFinite(Number(extras.tePremium)) ? Number(extras.tePremium) : 0;
+  extras.notes = Array.isArray(extras.notes) ? extras.notes.slice(0, 20) : [];
+  const roster = leagueEmptyRoster();
+  for (const k of Object.keys(inp.roster || {})) {
+    if (k === 'other') { for (const [lab, n] of Object.entries(inp.roster.other || {})) roster.other[String(lab).slice(0, 12)] = Math.max(0, Math.floor(Number(n) || 0)); }
+    else if (k in roster) roster[k] = Math.max(0, Math.min(20, Math.floor(Number(inp.roster[k]) || 0)));
+  }
+  if (!Object.keys(inp.roster || {}).length) Object.assign(roster, d.roster);
+  const faab = inp.faab == null || inp.faab === '' ? null : Math.max(0, Math.floor(Number(inp.faab) || 0));
+  return {
+    scoring, extras, roster, faab,
+    waiverType: ['faab', 'priority', 'none', 'unknown'].includes(inp.waiverType) ? inp.waiverType : (faab != null ? 'faab' : d.waiverType),
+    playoffWeekStart: Math.max(12, Math.min(18, Math.floor(Number(inp.playoffWeekStart) || d.playoffWeekStart))),
+    playoffTeams: Math.max(0, Math.min(16, Math.floor(Number(inp.playoffTeams) || d.playoffTeams))),
+    leagueType: ['redraft', 'keeper', 'dynasty'].includes(inp.leagueType) ? inp.leagueType : d.leagueType
+  };
+}
+// Synced settings with the reader's corrections laid over them. The result
+// says which fields are overridden, so a page can label "your correction".
+function leagueEffectiveSettings(settings, overrides) {
+  const base = leagueNormalizeSettings(settings);
+  const o = overrides && typeof overrides === 'object' ? overrides : {};
+  const overridden = [];
+  if (o.scoring && typeof o.scoring === 'object') { for (const k of Object.keys(o.scoring)) if (k in base.scoring && Number.isFinite(Number(o.scoring[k]))) { base.scoring[k] = Number(o.scoring[k]); overridden.push('scoring.' + k); } }
+  if (o.extras && Number.isFinite(Number(o.extras.tePremium))) { base.extras.tePremium = Number(o.extras.tePremium); overridden.push('extras.tePremium'); }
+  if (o.roster && typeof o.roster === 'object') { for (const k of Object.keys(o.roster)) if (k in base.roster && k !== 'other') { base.roster[k] = Math.max(0, Math.min(20, Math.floor(Number(o.roster[k]) || 0))); overridden.push('roster.' + k); } }
+  if (o.faab != null && o.faab !== '') { base.faab = Math.max(0, Math.floor(Number(o.faab) || 0)); base.waiverType = 'faab'; overridden.push('faab'); }
+  base.overridden = overridden;
+  return base;
+}
+// Points at the league's scoring: the shared engine, plus what it does not
+// model. TE premium is a per-reception bonus on tight ends only.
+function leagueScore(stats, position, settings, games) {
+  const pos = leaguePos(position);
+  let pts = scoreAny(stats, pos, settings.scoring, games);
+  if (pos === 'TE' && settings.extras && settings.extras.tePremium) pts += (Number(settings.extras.tePremium) || 0) * ((stats && stats.rec) || 0);
+  return pts;
+}
+// A stable fingerprint of a league's scoring, for the boards memo.
+function leagueScoringKey(settings) {
+  const s = settings.scoring || {};
+  const parts = Object.keys(s).sort().map(k => k + '=' + JSON.stringify(s[k]));
+  parts.push('te=' + ((settings.extras && settings.extras.tePremium) || 0));
+  let h = 0; const str = parts.join(';');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return 'L' + (h >>> 0).toString(36);
+}
+// A settings summary in words: "PPR · TE premium · 12 teams · Superflex".
+function leagueSettingsLabel(settings, numTeams) {
+  const s = settings.scoring || {};
+  const rec = Number(s.receptionPoints) || 0;
+  const bits = [rec >= 0.9 ? 'PPR' : rec >= 0.4 ? 'Half PPR' : rec > 0 ? rec + ' PPR' : 'Standard'];
+  if (settings.extras && settings.extras.tePremium) bits.push('TE premium');
+  if (Number(s.passingTD) === 6) bits.push('6-pt pass TD');
+  if (numTeams) bits.push(numTeams + ' teams');
+  if (settings.roster && settings.roster.SFLEX) bits.push('Superflex');
+  if (settings.leagueType === 'dynasty') bits.push('Dynasty'); else if (settings.leagueType === 'keeper') bits.push('Keeper');
+  return bits.join(' · ');
+}
+// -- the provider adapters --------------------------------------------------
+// Every adapter has the same face and the same exit: discover() lists the
+// leagues a connection can see, pull() reads one league's raw payloads, and
+// normalize() turns them into the LEAGUE_CONTRACT shape with players carrying
+// only providerPlayerId/name/position/team. Keys are resolved afterwards by
+// leagueMapPlayers, once, for every provider alike.
+class LeagueProviderError extends Error {
+  constructor(code, message, status) { super(message || code); this.code = code; this.status = status || null; }
+}
+async function leagueFetchJson(url, init, label) {
+  let r;
+  try { r = await fetch(url, init); }
+  catch (e) { throw new LeagueProviderError('provider_unavailable', label + ' did not answer'); }
+  if (r.status === 401 || r.status === 403) throw new LeagueProviderError('expired_authorization', label + ' refused the request', r.status);
+  if (r.status === 404) throw new LeagueProviderError('league_not_found', label + ' has no such league', 404);
+  if (r.status === 429) throw new LeagueProviderError('rate_limited', label + ' rate limit', 429);
+  if (!r.ok) throw new LeagueProviderError('provider_unavailable', label + ' answered ' + r.status, r.status);
+  try { return await r.json(); } catch (e) { throw new LeagueProviderError('provider_unavailable', label + ' sent something that is not JSON'); }
+}
+// ── Sleeper ────────────────────────────────────────────────────────────────
+// Read-only, no key, public league data. The players file is the one big
+// pull (cached six hours, as /api/faab/players already does); it also carries
+// ESPN, Yahoo and gsis ids, which is what seeds the other crosswalks.
+const SLEEPER_API = 'https://api.sleeper.app/v1';
+let _SLEEPER_PLAYERS = null, _SLEEPER_PLAYERS_AT = 0;
+async function sleeperPlayers(env) {
+  if (_SLEEPER_PLAYERS && Date.now() - _SLEEPER_PLAYERS_AT < 6 * 3600000) return _SLEEPER_PLAYERS;
+  const all = await leagueFetchJson(SLEEPER_API + '/players/nfl', { cf: { cacheTtl: 21600, cacheEverything: true } }, 'Sleeper');
+  const out = {};
+  for (const id in all) {
+    const p = all[id];
+    if (!p || !LEAGUE_POSITIONS.has(p.position)) continue;
+    const name = p.position === 'DEF' ? ((p.team || id) + ' DEF') : (p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim());
+    out[id] = { name, position: p.position, team: p.team || (p.position === 'DEF' ? id : null), injury: p.injury_status || null,
+                espn: p.espn_id != null ? String(p.espn_id) : null, yahoo: p.yahoo_id != null ? String(p.yahoo_id) : null, gsis: p.gsis_id || null };
+  }
+  _SLEEPER_PLAYERS = out; _SLEEPER_PLAYERS_AT = Date.now();
+  return out;
+}
+function _sleeperPer(v) { const n = Number(v); return n > 0 ? 1 / n : 0; }
+function _sleeperBonuses(ss, stem, ats) {
+  const out = [];
+  for (const at of ats) { const v = Number(ss['bonus_' + stem + '_' + at]); if (Number.isFinite(v) && v) out.push({ at, points: v }); }
+  return out;
+}
+// Sleeper's scoring_settings, into scoringRules' fields. Every key consumed is
+// named in SLEEPER_SCORING_KEYS; anything else with a value is preserved in
+// extras.unsupported so a league with IDP or a return-yardage rule is not
+// quietly scored as if it had none.
+const SLEEPER_SCORING_KEYS = new Set(['pass_yd', 'pass_td', 'pass_int', 'pass_2pt', 'rush_yd', 'rush_td', 'rush_2pt', 'rec_yd', 'rec_td', 'rec_2pt', 'rec',
+  'bonus_rec_rb', 'bonus_rec_wr', 'bonus_rec_te', 'fum_lost', 'fum_rec_td', 'kr_td', 'pr_td', 'st_td', 'def_st_td', 'def_td', 'sack', 'int', 'fum_rec', 'safe', 'blk_kick',
+  'xpm', 'xpmiss', 'fgm', 'fgmiss', 'fgm_0_19', 'fgm_20_29', 'fgm_30_39', 'fgm_40_49', 'fgm_50p', 'fgmiss_0_19', 'fgmiss_20_29', 'fgmiss_30_39', 'fgmiss_40_49', 'fgmiss_50p',
+  'pts_allow_0', 'pts_allow_1_6', 'pts_allow_7_13', 'pts_allow_14_20', 'pts_allow_21_27', 'pts_allow_28_34', 'pts_allow_35p',
+  'bonus_pass_yd_300', 'bonus_pass_yd_400', 'bonus_rush_yd_100', 'bonus_rush_yd_200', 'bonus_rec_yd_100', 'bonus_rec_yd_200', 'fum', 'fum_rec_2pt', 'def_2pt', 'st_2pt', 'def_st_fum_rec', 'def_st_ff', 'st_fum_rec', 'st_ff', 'ff', 'pass_sack', 'pass_cmp', 'pass_inc', 'pass_att', 'rush_att', 'rec_tgt', 'pass_cmp_40p', 'pass_td_40p', 'rush_40p', 'rec_40p', 'rush_td_40p', 'rec_td_40p', 'pass_td_50p', 'rush_td_50p', 'rec_td_50p', 'rec_0_4', 'rec_5_9', 'rec_10_19', 'rec_20_29', 'rec_30_39', 'rec_40p', 'sack_yd', 'idp_tkl', 'idp_sack', 'idp_int', 'idp_ff', 'idp_fum_rec', 'idp_def_td', 'idp_pass_def', 'idp_safe', 'idp_blk_kick', 'idp_tkl_loss', 'idp_qb_hit', 'idp_tkl_ast', 'idp_tkl_solo', 'yds_allow_0_100', 'yds_allow_100_199', 'yds_allow_200_299', 'yds_allow_300_349', 'yds_allow_350_399', 'yds_allow_400_449', 'yds_allow_450_499', 'yds_allow_500_549', 'yds_allow_550p', 'def_kr_td', 'def_pr_td', 'def_forced_punts', 'def_3_and_out', 'def_4_and_stop', 'def_pass_def', 'tkl', 'tkl_solo', 'tkl_ast', 'tkl_loss', 'qb_hit', 'pass_def', 'fum_ret_yd', 'int_ret_yd', 'kr_yd', 'pr_yd', 'bonus_fd_qb', 'bonus_fd_rb', 'bonus_fd_wr', 'bonus_fd_te', 'bonus_rush_rec_yd_100', 'bonus_rush_rec_yd_200', 'bonus_pass_cmp_25', 'pass_fd', 'rush_fd', 'rec_fd', 'fgm_yds', 'fgm_yds_over_30']);
+// The subset above that the engine actually MODELS; the rest are recorded.
+const SLEEPER_MODELLED = new Set(['pass_yd', 'pass_td', 'pass_int', 'pass_2pt', 'rush_yd', 'rush_td', 'rush_2pt', 'rec_yd', 'rec_td', 'rec_2pt', 'rec', 'bonus_rec_rb', 'bonus_rec_wr', 'bonus_rec_te', 'fum_lost', 'fum_rec_td', 'kr_td', 'pr_td', 'st_td', 'def_st_td', 'def_td', 'sack', 'int', 'fum_rec', 'safe',
+  'xpm', 'xpmiss', 'fgm_0_19', 'fgm_20_29', 'fgm_30_39', 'fgm_40_49', 'fgm_50p', 'fgmiss', 'fgmiss_0_19', 'fgmiss_20_29', 'fgmiss_30_39', 'fgmiss_40_49', 'fgmiss_50p', 'fgm',
+  'pts_allow_0', 'pts_allow_1_6', 'pts_allow_7_13', 'pts_allow_14_20', 'pts_allow_21_27', 'pts_allow_28_34', 'pts_allow_35p',
+  'bonus_pass_yd_300', 'bonus_pass_yd_400', 'bonus_rush_yd_100', 'bonus_rush_yd_200', 'bonus_rec_yd_100', 'bonus_rec_yd_200']);
+function sleeperScoring(ss) {
+  ss = ss || {};
+  const n = (k, d) => (Number.isFinite(Number(ss[k])) && ss[k] != null ? Number(ss[k]) : d);
+  const rec = n('rec', 0);
+  const scoring = {
+    passingYardsPerPoint: _sleeperPer(ss.pass_yd), passingYardsThreshold: 0, passingYardBonuses: _sleeperBonuses(ss, 'pass_yd', [300, 400]),
+    passingTD: n('pass_td', 4), passingInt: n('pass_int', -1), passing2pt: n('pass_2pt', 2),
+    rushingYardsPerPoint: _sleeperPer(ss.rush_yd), rushingYardsThreshold: 0, rushingYardBonuses: _sleeperBonuses(ss, 'rush_yd', [100, 200]),
+    rushingTD: n('rush_td', 6), rushing2pt: n('rush_2pt', 2),
+    receivingYardsPerPoint: _sleeperPer(ss.rec_yd), receivingYardsThreshold: 0, receivingYardBonuses: _sleeperBonuses(ss, 'rec_yd', [100, 200]),
+    receivingTD: n('rec_td', 6), receiving2pt: n('rec_2pt', 2),
+    receptionPoints: rec + n('bonus_rec_wr', 0), receptionBonuses: [], rbReceptionPoints: rec + n('bonus_rec_rb', 0), rbReceptionBonuses: [],
+    fumbleLost: n('fum_lost', -2), fumble2pt: n('fum_rec_2pt', 2),
+    individualFumbleRecoveryTD: n('fum_rec_td', 6), individualKickReturnTD: n('kr_td', 6), individualPuntReturnTD: n('pr_td', 6),
+    // Kicker: Sleeper bins 0-19/20-29/30-39/40-49/50+; the engine's five tiers
+    // are 0-24/25-34/35-44/45-49/50+. The nearest bin fills each tier.
+    fieldGoalTiers: [
+      { min: 0, max: 24, points: n('fgm_0_19', n('fgm_20_29', n('fgm', 3))), missPoints: n('fgmiss_0_19', n('fgmiss', -1)) },
+      { min: 25, max: 34, points: n('fgm_20_29', n('fgm', 3)), missPoints: n('fgmiss_20_29', n('fgmiss', -1)) },
+      { min: 35, max: 44, points: n('fgm_30_39', n('fgm', 3)), missPoints: n('fgmiss_30_39', n('fgmiss', -1)) },
+      { min: 45, max: 49, points: n('fgm_40_49', n('fgm', 4)), missPoints: n('fgmiss_40_49', n('fgmiss', -1)) },
+      { min: 50, max: 999, points: n('fgm_50p', n('fgm', 5)), missPoints: n('fgmiss_50p', n('fgmiss', -1)) }],
+    extraPoint: n('xpm', 1), missedExtraPoint: n('xpmiss', -1),
+    defensiveFumbleRecovery: n('fum_rec', 2), defensiveTD: n('def_td', 6), interception: n('int', 2), sackPoints: n('sack', 1), sackBonuses: [],
+    safety: n('safe', 2), specialTeamsTD: n('st_td', n('def_st_td', 6)), specialTeams2pt: 2, specialTeamsSafety1pt: 1,
+    pointsAllowed: [{ min: 0, max: 0, points: n('pts_allow_0', 10) }, { min: 1, max: 6, points: n('pts_allow_1_6', 7) }, { min: 7, max: 13, points: n('pts_allow_7_13', 4) },
+                    { min: 14, max: 20, points: n('pts_allow_14_20', 1) }, { min: 21, max: 27, points: n('pts_allow_21_27', 0) }, { min: 28, max: 34, points: n('pts_allow_28_34', -1) }, { min: 35, max: 999, points: n('pts_allow_35p', -4) }]
+  };
+  const unsupported = {};
+  for (const k of Object.keys(ss)) if (!SLEEPER_MODELLED.has(k) && Number(ss[k])) unsupported[k] = Number(ss[k]);
+  const notes = [];
+  if (Object.keys(unsupported).length) notes.push('Rules Iron Tuna does not model are kept but not scored: ' + Object.keys(unsupported).join(', ') + '.');
+  if (ss.fgm_0_19 != null || ss.fgm_20_29 != null) notes.push('Kicker distances use the nearest of Sleeper’s bins in Iron Tuna’s five tiers.');
+  return { scoring, extras: { tePremium: n('bonus_rec_te', 0), unsupported, notes } };
+}
+// roster_positions ['QB','RB','RB','WR','WR','TE','FLEX','K','DEF','BN',...]
+// into slot counts. IR and taxi come from settings, not the array.
+const SLEEPER_SLOT = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', FLEX: 'FLEX', SUPER_FLEX: 'SFLEX', REC_FLEX: 'REC_FLEX', WRRB_FLEX: 'WRRB_FLEX', BN: 'BN', IR: 'IR' };
+function sleeperRoster(positions, settings) {
+  const r = leagueEmptyRoster();
+  for (const p of positions || []) { const s = SLEEPER_SLOT[p]; if (s) r[s]++; else r.other[p] = (r.other[p] || 0) + 1; }
+  if (settings) { r.IR = Number(settings.reserve_slots) || r.IR; r.TAXI = Number(settings.taxi_slots) || 0; }
+  return r;
+}
+function sleeperNormalize(raw, ctx) {
+  const lg = raw.league || {};
+  const st = lg.settings || {};
+  const sc = sleeperScoring(lg.scoring_settings);
+  const roster = sleeperRoster(lg.roster_positions, st);
+  const waiverType = st.waiver_type === 2 ? 'faab' : st.waiver_type === 1 ? 'priority' : st.waiver_type === 0 ? 'priority' : 'unknown';
+  const settings = leagueNormalizeSettings({
+    scoring: sc.scoring, extras: sc.extras, roster,
+    faab: waiverType === 'faab' ? (Number(st.waiver_budget) || 100) : null, waiverType,
+    playoffWeekStart: Number(st.playoff_week_start) || 15, playoffTeams: Number(st.playoff_teams) || 6,
+    leagueType: st.type === 2 ? 'dynasty' : st.type === 1 ? 'keeper' : 'redraft'
+  });
+  const users = new Map();
+  for (const u of raw.users || []) users.set(String(u.user_id), u);
+  const players = raw.players || {};
+  const teams = [], rosters = [];
+  // Which starter index is which slot: the roster_positions array minus BN/IR.
+  const starterSlots = (lg.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR');
+  const byRoster = new Map();
+  for (const ro of raw.rosters || []) {
+    const rid = String(ro.roster_id);
+    byRoster.set(rid, ro);
+    const owner = users.get(String(ro.owner_id)) || null;
+    const rs = ro.settings || {};
+    const fpts = (Number(rs.fpts) || 0) + (Number(rs.fpts_decimal) || 0) / 100;
+    const fpa = (Number(rs.fpts_against) || 0) + (Number(rs.fpts_against_decimal) || 0) / 100;
+    teams.push({
+      teamId: rid, ownerId: ro.owner_id ? String(ro.owner_id) : null,
+      name: (owner && owner.metadata && owner.metadata.team_name) || (owner && owner.display_name ? owner.display_name + '’s team' : 'Team ' + rid),
+      manager: owner ? (owner.display_name || owner.username || null) : null,
+      wins: Number(rs.wins) || 0, losses: Number(rs.losses) || 0, ties: Number(rs.ties) || 0,
+      pointsFor: Math.round(fpts * 100) / 100, pointsAgainst: Math.round(fpa * 100) / 100,
+      faabLeft: settings.faab != null ? Math.max(0, settings.faab - (Number(rs.waiver_budget_used) || 0)) : null,
+      waiverPosition: Number(rs.waiver_position) || null
+    });
+    const list = [];
+    const starters = ro.starters || [], reserve = new Set((ro.reserve || []).map(String)), taxi = new Set((ro.taxi || []).map(String));
+    const starterSet = new Map();
+    starters.forEach((pid, i) => { if (pid && pid !== '0') starterSet.set(String(pid), starterSlots[i] || 'FLEX'); });
+    for (const pid of ro.players || []) {
+      const id = String(pid);
+      const meta = players[id] || null;
+      const slot = starterSet.has(id) ? 'starter' : reserve.has(id) ? 'ir' : taxi.has(id) ? 'taxi' : 'bench';
+      list.push({ providerPlayerId: id, name: meta ? meta.name : ('Sleeper #' + id), position: meta ? meta.position : null, team: meta ? meta.team : null,
+                  slot, slotLabel: slot === 'starter' ? (SLEEPER_SLOT[starterSet.get(id)] || starterSet.get(id)) : slot.toUpperCase() });
+    }
+    rosters.push({ teamId: rid, players: list });
+  }
+  // Standings: record, then points for.
+  teams.slice().sort((a, b) => (b.wins - a.wins) || (a.losses - b.losses) || (b.pointsFor - a.pointsFor)).forEach((t, i) => { t.standing = i + 1; });
+  const matchups = [];
+  for (const [week, rows] of Object.entries(raw.matchups || {})) {
+    const byM = new Map();
+    for (const m of rows || []) { const k = String(m.matchup_id); if (!byM.has(k)) byM.set(k, []); byM.get(k).push(m); }
+    for (const [mid, pair] of byM) for (const m of pair) {
+      const opp = pair.find(x => x !== m) || null;
+      matchups.push({ week: Number(week), matchupId: mid, teamId: String(m.roster_id), opponentId: opp ? String(opp.roster_id) : null,
+                      points: Number(m.points) || 0, opponentPoints: opp ? (Number(opp.points) || 0) : null, played: Number(week) < (ctx.currentWeek || 0) ? 1 : 0 });
+    }
+  }
+  const transactions = [];
+  for (const t of raw.transactions || []) {
+    if (!t || t.status !== 'complete') continue;
+    const txp = pid => ({ providerPlayerId: String(pid), name: players[pid] ? players[pid].name : null, position: players[pid] ? players[pid].position : null, team: players[pid] ? players[pid].team : null });
+    const adds = Object.entries(t.adds || {}).map(([pid, rid]) => ({ ...txp(pid), teamId: String(rid) }));
+    const drops = Object.entries(t.drops || {}).map(([pid, rid]) => ({ ...txp(pid), teamId: String(rid) }));
+    transactions.push({ providerTxnId: String(t.transaction_id), type: t.type === 'free_agent' ? 'add' : t.type, teamId: t.roster_ids && t.roster_ids.length ? String(t.roster_ids[0]) : null,
+                        adds, drops, faab: t.settings && t.settings.waiver_bid != null ? Number(t.settings.waiver_bid) : null, status: t.status, ts: Number(t.status_updated || t.created) || null, week: Number(t.leg) || null });
+  }
+  // The reader's team: the roster they own or co-own.
+  let userTeamId = null;
+  if (ctx.userId) for (const ro of raw.rosters || []) if (String(ro.owner_id) === String(ctx.userId) || (ro.co_owners || []).map(String).includes(String(ctx.userId))) userTeamId = String(ro.roster_id);
+  return {
+    provider: 'sleeper', providerLeagueId: String(lg.league_id), name: lg.name || 'Sleeper league', season: Number(lg.season) || null, sport: 'nfl',
+    numTeams: Number(lg.total_rosters) || teams.length, status: lg.status === 'in_season' ? 'in_season' : lg.status === 'complete' ? 'complete' : lg.status === 'pre_draft' || lg.status === 'drafting' ? 'pre_draft' : 'unknown',
+    settings, userTeamId, teams, rosters, matchups, transactions
+  };
+}
+const PROVIDER_SLEEPER = {
+  id: 'sleeper', label: 'Sleeper', auth: 'public', flag: 'SLEEPER_SYNC',
+  terms: 'Sleeper’s API is free for non-commercial use only; commercial use needs a licence in writing (docs/data-sources.md R2).',
+  needs: env => true,
+  // input: { username } or { leagueId }
+  async discover(env, conn, input) {
+    const season = input.season;
+    if (input.leagueId) {
+      const lg = await leagueFetchJson(SLEEPER_API + '/league/' + encodeURIComponent(input.leagueId), { cf: { cacheTtl: 60 } }, 'Sleeper');
+      return { user: null, leagues: [{ providerLeagueId: String(lg.league_id), name: lg.name, season: Number(lg.season), numTeams: lg.total_rosters, status: lg.status }] };
+    }
+    const u = String(input.username || '').trim();
+    if (!u || !/^[A-Za-z0-9_.-]{1,40}$/.test(u)) throw new LeagueProviderError('bad_input', 'Enter your Sleeper username.');
+    let user;
+    try { user = await leagueFetchJson(SLEEPER_API + '/user/' + encodeURIComponent(u), { cf: { cacheTtl: 60 } }, 'Sleeper'); }
+    catch (e) { if (e.code === 'league_not_found') throw new LeagueProviderError('user_not_found', 'Sleeper has no user by that name.'); throw e; }
+    if (!user || !user.user_id) throw new LeagueProviderError('user_not_found', 'Sleeper has no user by that name.');
+    const list = await leagueFetchJson(SLEEPER_API + '/user/' + encodeURIComponent(user.user_id) + '/leagues/nfl/' + encodeURIComponent(season), { cf: { cacheTtl: 60 } }, 'Sleeper');
+    return { user: { id: String(user.user_id), name: user.display_name || user.username || u },
+             leagues: (list || []).map(lg => ({ providerLeagueId: String(lg.league_id), name: lg.name, season: Number(lg.season), numTeams: lg.total_rosters, status: lg.status })) };
+  },
+  async pull(env, conn, providerLeagueId, ctx) {
+    const base = SLEEPER_API + '/league/' + encodeURIComponent(providerLeagueId);
+    const opt = { cf: { cacheTtl: 60 } };
+    const [league, rosters, users, players] = await Promise.all([
+      leagueFetchJson(base, opt, 'Sleeper'), leagueFetchJson(base + '/rosters', opt, 'Sleeper'), leagueFetchJson(base + '/users', opt, 'Sleeper'), sleeperPlayers(env)
+    ]);
+    const cur = ctx.currentWeek || 1;
+    const weeks = ctx.firstSync ? Array.from({ length: Math.min(18, cur + 1) }, (_, i) => i + 1) : [cur - 1, cur, cur + 1].filter(w => w >= 1 && w <= 18);
+    const matchups = {};
+    await Promise.all(weeks.map(async w => { try { matchups[w] = await leagueFetchJson(base + '/matchups/' + w, opt, 'Sleeper'); } catch (e) { matchups[w] = []; } }));
+    const txWeeks = [cur - 1, cur].filter(w => w >= 1);
+    const transactions = [];
+    await Promise.all(txWeeks.map(async w => { try { const t = await leagueFetchJson(base + '/transactions/' + w, opt, 'Sleeper'); for (const x of t || []) transactions.push(x); } catch (e) {} }));
+    return { league, rosters, users, players, matchups, transactions };
+  },
+  normalize: sleeperNormalize
+};
+// ── Yahoo ──────────────────────────────────────────────────────────────────
+// OAuth 2.0 with the reader's consent, read-only fantasy scope. Iron Tuna
+// never sees a Yahoo password: the reader authorises on Yahoo's page, Yahoo
+// hands back a code, the worker exchanges it server-side and seals the tokens
+// (leagueSeal) before they touch D1. The browser never receives a token.
+const YAHOO_AUTH = 'https://api.login.yahoo.com/oauth2/request_auth';
+const YAHOO_TOKEN = 'https://api.login.yahoo.com/oauth2/get_token';
+const YAHOO_API = 'https://fantasysports.yahooapis.com/fantasy/v2';
+const YAHOO_SCOPE = 'fspt-r';
+function yahooConfigured(env) { return !!(env && env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET && env.LEAGUE_TOKEN_KEY); }
+function yahooRedirect(env, origin) { return (env && env.YAHOO_REDIRECT_URI) || (origin + '/api/oauth/yahoo/callback'); }
+async function yahooTokenExchange(env, params) {
+  const body = new URLSearchParams(params).toString();
+  const auth = 'Basic ' + btoa(env.YAHOO_CLIENT_ID + ':' + env.YAHOO_CLIENT_SECRET);
+  let r;
+  try { r = await fetch(YAHOO_TOKEN, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: auth }, body }); }
+  catch (e) { throw new LeagueProviderError('provider_unavailable', 'Yahoo did not answer'); }
+  let j = null; try { j = await r.json(); } catch (e) {}
+  if (!r.ok || !j || !j.access_token) throw new LeagueProviderError(r.status === 400 || r.status === 401 ? 'expired_authorization' : 'provider_unavailable', 'Yahoo refused the token exchange' + (j && j.error ? ' (' + j.error + ')' : ''), r.status);
+  return { accessToken: j.access_token, refreshToken: j.refresh_token || params.refresh_token || null, expiresAt: Date.now() + (Number(j.expires_in) || 3600) * 1000, guid: j.xoauth_yahoo_guid || null };
+}
+async function yahooConnectionSave(env, email, tok, existing) {
+  if (!(await leagueReady(env))) return false;
+  const now = Date.now();
+  const access = await leagueSeal(env, tok.accessToken);
+  const refresh = tok.refreshToken ? await leagueSeal(env, tok.refreshToken) : (existing && existing.refresh_enc) || null;
+  await env.LEADS_DB.prepare('INSERT INTO provider_connections (email, provider, provider_user_id, display_name, access_enc, refresh_enc, expires_at, scopes, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(email, provider) DO UPDATE SET provider_user_id=COALESCE(excluded.provider_user_id, provider_connections.provider_user_id), access_enc=excluded.access_enc, refresh_enc=excluded.refresh_enc, expires_at=excluded.expires_at, status=excluded.status, updated_at=excluded.updated_at')
+    .bind(email, 'yahoo', tok.guid || (existing && existing.provider_user_id) || null, null, access, refresh, tok.expiresAt, YAHOO_SCOPE, 'connected', now, now).run();
+  return true;
+}
+async function leagueConnectionRead(env, email, provider) {
+  if (!(await leagueReady(env))) return null;
+  try { return await env.LEADS_DB.prepare('SELECT * FROM provider_connections WHERE email=? AND provider=?').bind(email, provider).first(); } catch (e) { return null; }
+}
+// A usable Yahoo access token: the stored one while it is fresh, else a
+// refresh. A refresh that fails marks the connection expired, which is what
+// the UI turns into "Reconnect Yahoo".
+async function yahooAccessToken(env, email) {
+  const conn = await leagueConnectionRead(env, email, 'yahoo');
+  if (!conn || conn.status === 'disconnected') throw new LeagueProviderError('expired_authorization', 'Yahoo is not connected');
+  if (conn.expires_at && conn.expires_at - Date.now() > 120000) {
+    const t = await leagueOpen(env, conn.access_enc);
+    if (t) return t;
+  }
+  const refresh = await leagueOpen(env, conn.refresh_enc);
+  if (!refresh) { await leagueConnectionStatus(env, email, 'yahoo', 'expired'); throw new LeagueProviderError('expired_authorization', 'Your Yahoo connection needs to be renewed.'); }
+  try {
+    const tok = await yahooTokenExchange(env, { grant_type: 'refresh_token', refresh_token: refresh, redirect_uri: yahooRedirect(env, 'https://irontuna.com') });
+    await yahooConnectionSave(env, email, tok, conn);
+    return tok.accessToken;
+  } catch (e) {
+    if (e.code === 'expired_authorization') await leagueConnectionStatus(env, email, 'yahoo', 'expired');
+    throw e;
+  }
+}
+async function leagueConnectionStatus(env, email, provider, status) {
+  if (!(await leagueReady(env))) return;
+  try { await env.LEADS_DB.prepare('UPDATE provider_connections SET status=?, updated_at=? WHERE email=? AND provider=?').bind(status, Date.now(), email, provider).run(); } catch (e) {}
+}
+// Revoke and forget. Yahoo has no server-side revoke endpoint for OAuth 2.0
+// tokens; the sealed tokens are deleted, which is the same outcome for us.
+async function leagueConnectionDelete(env, email, provider) {
+  if (!(await leagueReady(env))) return;
+  try { await env.LEADS_DB.prepare('DELETE FROM provider_connections WHERE email=? AND provider=?').bind(email, provider).run(); } catch (e) {}
+}
+async function yahooGet(env, email, path) {
+  const token = await yahooAccessToken(env, email);
+  return leagueFetchJson(YAHOO_API + path + (path.includes('?') ? '&' : '?') + 'format=json', { headers: { authorization: 'Bearer ' + token } }, 'Yahoo');
+}
+// Yahoo's JSON is XML wearing a JSON coat: arrays of one-key objects, and
+// collections keyed "0","1",... with a "count". These two read it plainly.
+function yList(node) {
+  if (!node || typeof node !== 'object') return [];
+  const out = [];
+  for (const k of Object.keys(node)) if (/^\d+$/.test(k)) out.push(node[k]);
+  return out;
+}
+function yMerge(node) {
+  if (Array.isArray(node)) { const o = {}; for (const x of node) { if (Array.isArray(x)) Object.assign(o, yMerge(x)); else if (x && typeof x === 'object') Object.assign(o, x); } return o; }
+  return node && typeof node === 'object' ? node : {};
+}
+// Yahoo stat ids the engine models. Anything else is preserved as
+// extras.unsupported['yahoo_stat_<id>'].
+const YAHOO_STAT = {
+  4: ['passYdPer'], 5: ['passingTD'], 6: ['passingInt'], 8: ['rushYdPer'], 10: ['rushingTD'], 11: ['rec'], 12: ['recYdPer'], 13: ['receivingTD'],
+  15: ['returnTD'], 16: ['twoPt'], 18: ['fumbleLost'], 19: ['fg0'], 20: ['fg1'], 21: ['fg2'], 22: ['fg3'], 23: ['fg4'], 29: ['extraPoint'], 30: ['missedExtraPoint'],
+  32: ['sackPoints'], 33: ['interception'], 34: ['defensiveFumbleRecovery'], 35: ['defensiveTD'], 36: ['safety'], 37: ['blockKick'], 49: ['specialTeamsTD'],
+  50: ['pa0'], 51: ['pa1'], 52: ['pa2'], 53: ['pa3'], 54: ['pa4'], 55: ['pa5'], 56: ['pa6'],
+  57: ['fgMiss0'], 58: ['fgMiss1'], 59: ['fgMiss2'], 60: ['fgMiss3'], 61: ['fgMiss4']
+};
+function yahooScoring(stats, positionTypes) {
+  const d = leagueDefaultSettings().scoring;
+  const scoring = { ...d, passingInt: -1, passingYardsThreshold: 0, passingYardsPerPoint: 25, rushingYardsPerPoint: 10, receivingYardsPerPoint: 10, receptionPoints: 0, rbReceptionPoints: 0 };
+  const unsupported = {};
+  const fg = [null, null, null, null, null], fgm = [null, null, null, null, null], pa = [null, null, null, null, null, null, null];
+  let tePrem = 0;
+  for (const s of stats || []) {
+    const id = Number(s.stat_id), v = Number(s.value);
+    if (!Number.isFinite(v)) continue;
+    const m = YAHOO_STAT[id];
+    if (!m) { unsupported['yahoo_stat_' + id] = v; continue; }
+    const f = m[0];
+    if (f === 'passYdPer') scoring.passingYardsPerPoint = v > 0 ? 1 / v : 0;
+    else if (f === 'rushYdPer') scoring.rushingYardsPerPoint = v > 0 ? 1 / v : 0;
+    else if (f === 'recYdPer') scoring.receivingYardsPerPoint = v > 0 ? 1 / v : 0;
+    else if (f === 'rec') {
+      // Position-specific reception values arrive as separate rows on the
+      // same stat id, each carrying the position it applies to.
+      const pos = s.position ? String(s.position).toUpperCase() : null;
+      if (pos === 'RB') scoring.rbReceptionPoints = v;
+      else if (pos === 'TE') tePrem = v;
+      else { scoring.receptionPoints = v; if (!s.position) scoring.rbReceptionPoints = v; }
+    }
+    else if (f === 'returnTD') { scoring.individualKickReturnTD = v; scoring.individualPuntReturnTD = v; }
+    else if (f === 'twoPt') { scoring.passing2pt = v; scoring.rushing2pt = v; scoring.receiving2pt = v; }
+    else if (/^fg\d$/.test(f)) fg[Number(f[2])] = v;
+    else if (/^fgMiss\d$/.test(f)) fgm[Number(f[6])] = v;
+    else if (/^pa\d$/.test(f)) pa[Number(f[2])] = v;
+    else if (f === 'blockKick') unsupported.yahoo_blocked_kick = v;
+    else scoring[f] = v;
+  }
+  if (fg.some(x => x != null)) scoring.fieldGoalTiers = scoring.fieldGoalTiers.map((t, i) => ({ ...t, points: fg[i] != null ? fg[i] : t.points, missPoints: fgm[i] != null ? fgm[i] : t.missPoints }));
+  if (pa.some(x => x != null)) scoring.pointsAllowed = scoring.pointsAllowed.map((t, i) => ({ ...t, points: pa[i] != null ? pa[i] : t.points }));
+  if (tePrem && tePrem > scoring.receptionPoints) { tePrem = tePrem - scoring.receptionPoints; } else tePrem = 0;
+  const notes = [];
+  if (Object.keys(unsupported).length) notes.push('Yahoo stat categories Iron Tuna does not model are kept but not scored: ' + Object.keys(unsupported).join(', ') + '.');
+  return { scoring, extras: { tePremium: tePrem, unsupported, notes } };
+}
+const YAHOO_SLOT = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', 'W/R/T': 'FLEX', 'Q/W/R/T': 'SFLEX', 'W/R': 'WRRB_FLEX', 'W/T': 'REC_FLEX', BN: 'BN', IR: 'IR' };
+function yahooNormalize(raw, ctx) {
+  const L = raw.league || {};
+  const S = raw.settings || {};
+  const sc = yahooScoring((S.stat_modifiers && S.stat_modifiers.stats ? S.stat_modifiers.stats.map(x => ({ ...(x.stat || x) })) : []), S.stat_categories);
+  const roster = leagueEmptyRoster();
+  for (const rp of (S.roster_positions || [])) {
+    const p = rp.roster_position || rp;
+    const s = YAHOO_SLOT[String(p.position)];
+    const n = Number(p.count) || 1;
+    if (s) roster[s] += n; else roster.other[String(p.position)] = (roster.other[String(p.position)] || 0) + n;
+  }
+  const usesFaab = String(S.uses_faab) === '1' || S.uses_faab === true;
+  const settings = leagueNormalizeSettings({
+    scoring: sc.scoring, extras: sc.extras, roster, faab: usesFaab ? 100 : null, waiverType: usesFaab ? 'faab' : 'priority',
+    playoffWeekStart: Number(S.playoff_start_week) || 15, playoffTeams: Number(S.num_playoff_teams) || 6,
+    leagueType: S.is_keeper_league ? 'keeper' : 'redraft'
+  });
+  const teams = [], rosters = [];
+  let userTeamId = null;
+  for (const t of raw.teams || []) {
+    const id = String(t.team_id);
+    const mgr = (t.managers && t.managers[0] && (t.managers[0].manager || t.managers[0])) || null;
+    const st = t.team_standings || {};
+    const ot = st.outcome_totals || {};
+    if (String(t.is_owned_by_current_login) === '1' || t.is_owned_by_current_login === true) userTeamId = id;
+    teams.push({
+      teamId: id, ownerId: mgr && mgr.guid ? String(mgr.guid) : null, name: t.name || ('Team ' + id), manager: mgr ? (mgr.nickname || null) : null,
+      wins: Number(ot.wins) || 0, losses: Number(ot.losses) || 0, ties: Number(ot.ties) || 0,
+      pointsFor: Number(st.points_for) || 0, pointsAgainst: Number(st.points_against) || 0, standing: Number(st.rank) || null,
+      faabLeft: t.faab_balance != null ? Number(t.faab_balance) : null, waiverPosition: t.waiver_priority != null ? Number(t.waiver_priority) : null
+    });
+    const list = [];
+    for (const p of t.roster || []) {
+      const sel = String((p.selected_position && p.selected_position.position) || p.selected_position || '').toUpperCase();
+      const slot = sel === 'BN' ? 'bench' : sel === 'IR' || sel === 'IL' ? 'ir' : sel ? 'starter' : 'bench';
+      list.push({ providerPlayerId: String(p.player_id || (p.player_key || '').split('.').pop()), name: p.name && p.name.full ? p.name.full : (p.name || null),
+                  position: leaguePos(p.primary_position || p.display_position), team: p.editorial_team_abbr ? String(p.editorial_team_abbr).toUpperCase() : null,
+                  slot, slotLabel: slot === 'starter' ? (YAHOO_SLOT[sel] || sel) : slot.toUpperCase() });
+    }
+    rosters.push({ teamId: id, players: list });
+  }
+  if (!teams.some(t => t.standing)) teams.slice().sort((a, b) => (b.wins - a.wins) || (a.losses - b.losses) || (b.pointsFor - a.pointsFor)).forEach((t, i) => { t.standing = i + 1; });
+  const matchups = [];
+  for (const m of raw.matchups || []) {
+    const pair = m.teams || [];
+    if (pair.length !== 2) continue;
+    for (let i = 0; i < 2; i++) {
+      const me = pair[i], opp = pair[1 - i];
+      matchups.push({ week: Number(m.week), matchupId: String(m.week) + ':' + pair.map(x => x.team_id).sort().join('v'), teamId: String(me.team_id), opponentId: String(opp.team_id),
+                      points: Number(me.points) || 0, opponentPoints: Number(opp.points) || 0, played: m.status === 'postevent' ? 1 : 0 });
+    }
+  }
+  const transactions = [];
+  for (const t of raw.transactions || []) {
+    const adds = [], drops = [];
+    for (const p of t.players || []) {
+      const td = p.transaction_data || {};
+      const row = { providerPlayerId: String(p.player_id), teamId: td.destination_team_key ? String(td.destination_team_key).split('.').pop() : (td.source_team_key ? String(td.source_team_key).split('.').pop() : null), name: p.name && p.name.full ? p.name.full : null };
+      if (td.type === 'add') adds.push(row); else if (td.type === 'drop') drops.push(row); else if (td.type === 'trade') adds.push(row);
+    }
+    transactions.push({ providerTxnId: String(t.transaction_id || t.transaction_key), type: t.type === 'add/drop' ? 'add' : (t.type || 'add'), teamId: adds[0] ? adds[0].teamId : (drops[0] ? drops[0].teamId : null),
+                        adds, drops, faab: t.faab_bid != null ? Number(t.faab_bid) : null, status: t.status || 'complete', ts: t.timestamp ? Number(t.timestamp) * 1000 : null, week: null });
+  }
+  return {
+    provider: 'yahoo', providerLeagueId: String(L.league_key || L.league_id), name: L.name || 'Yahoo league', season: Number(L.season) || null, sport: 'nfl',
+    numTeams: Number(L.num_teams) || teams.length, status: String(L.is_finished) === '1' ? 'complete' : L.draft_status === 'predraft' ? 'pre_draft' : 'in_season',
+    settings, userTeamId, teams, rosters, matchups, transactions
+  };
+}
+// Walk Yahoo's nested resources into flat objects the normaliser reads.
+function yahooFlattenLeague(node) { return yMerge(node); }
+const PROVIDER_YAHOO = {
+  id: 'yahoo', label: 'Yahoo', auth: 'oauth2', flag: 'YAHOO_SYNC',
+  terms: 'Yahoo Fantasy Sports API under the Yahoo Developer Network terms; OAuth 2.0 with the reader’s consent, read-only scope fspt-r. Requires an app registered with Yahoo (YAHOO_CLIENT_ID / YAHOO_CLIENT_SECRET) and LEAGUE_TOKEN_KEY for sealed storage.',
+  needs: env => yahooConfigured(env),
+  async discover(env, conn, input) {
+    const j = await yahooGet(env, conn.email, '/users;use_login=true/games;game_keys=nfl/leagues');
+    const leagues = [];
+    const users = yList(((j || {}).fantasy_content || {}).users || {});
+    for (const u of users) {
+      const user = yMerge((u || {}).user);
+      for (const g of yList(user.games || {})) {
+        const game = yMerge((g || {}).game);
+        for (const l of yList(game.leagues || {})) {
+          const lg = yMerge((l || {}).league);
+          if (!lg.league_key) continue;
+          if (input.season && Number(lg.season) !== Number(input.season)) continue;
+          leagues.push({ providerLeagueId: String(lg.league_key), name: lg.name, season: Number(lg.season), numTeams: Number(lg.num_teams) || null, status: String(lg.is_finished) === '1' ? 'complete' : 'in_season' });
+        }
+      }
+    }
+    return { user: { id: conn.provider_user_id || null, name: conn.display_name || null }, leagues };
+  },
+  async pull(env, conn, providerLeagueId, ctx) {
+    const key = String(providerLeagueId);
+    if (!/^[a-z0-9.]+$/i.test(key)) throw new LeagueProviderError('league_not_found', 'That is not a Yahoo league key');
+    const [meta, standings, rosters, scoreboard, tx] = await Promise.all([
+      yahooGet(env, conn.email, '/league/' + key + '/settings'),
+      yahooGet(env, conn.email, '/league/' + key + '/standings'),
+      yahooGet(env, conn.email, '/league/' + key + '/teams/roster'),
+      yahooGet(env, conn.email, '/league/' + key + '/scoreboard' + (ctx.currentWeek ? ';week=' + ctx.currentWeek : '')),
+      yahooGet(env, conn.email, '/league/' + key + '/transactions;types=add,drop,trade;count=60').catch(() => null)
+    ]);
+    const lgA = yMerge((((meta || {}).fantasy_content || {}).league) || []);
+    const league = { ...lgA };
+    const settings = yMerge(lgA.settings);
+    const teams = [];
+    const stA = yMerge((((standings || {}).fantasy_content || {}).league) || []);
+    const byId = new Map();
+    for (const t of yList(yMerge(stA.standings).teams || {})) { const tm = yMerge((t || {}).team); byId.set(String(tm.team_id), { ...tm, managers: yList(tm.managers || {}).map(m => yMerge(m)) }); }
+    const roA = yMerge((((rosters || {}).fantasy_content || {}).league) || []);
+    for (const t of yList(roA.teams || {})) {
+      const tm = yMerge((t || {}).team);
+      const base = byId.get(String(tm.team_id)) || { ...tm, managers: yList(tm.managers || {}).map(m => yMerge(m)) };
+      const roster = [];
+      for (const p of yList(yMerge(tm.roster).players || {})) { const pl = yMerge((p || {}).player); roster.push({ ...pl, selected_position: yMerge(pl.selected_position) }); }
+      teams.push({ ...base, roster });
+    }
+    const matchups = [];
+    const sbA = yMerge((((scoreboard || {}).fantasy_content || {}).league) || []);
+    for (const m of yList(yMerge(sbA.scoreboard).matchups || {})) {
+      const mm = yMerge((m || {}).matchup);
+      const pair = yList(mm.teams || {}).map(t => { const tm = yMerge((t || {}).team); return { team_id: tm.team_id, points: Number((yMerge(tm.team_points) || {}).total) || 0 }; });
+      matchups.push({ week: Number(mm.week), status: mm.status, teams: pair });
+    }
+    const transactions = [];
+    if (tx) {
+      const txA = yMerge((((tx || {}).fantasy_content || {}).league) || []);
+      for (const t of yList(txA.transactions || {})) {
+        const tt = yMerge((t || {}).transaction);
+        transactions.push({ ...tt, players: yList(tt.players || {}).map(p => { const pl = yMerge((p || {}).player); return { ...pl, transaction_data: yMerge(pl.transaction_data) }; }) });
+      }
+    }
+    return { league, settings, teams, matchups, transactions };
+  },
+  normalize: yahooNormalize
+};
+// ── ESPN ───────────────────────────────────────────────────────────────────
+// Investigated 2026-09-09. ESPN publishes no fantasy API and no OAuth. The
+// only technical route is the undocumented lm-api-reads endpoint, which is
+// already red-listed here for injuries and depth charts (docs/data-sources.md
+// R1), and a PRIVATE league additionally needs the reader's espn_s2 and SWID
+// session cookies, which are login credentials by another name. That fails
+// three rules at once: no undocumented endpoints, no user credentials, no
+// commercial redisplay without terms. So: the adapter exists so the UI and
+// the model have a place for ESPN, it reports why it cannot connect, and the
+// manual league is the fallback. Adding a real adapter later touches this
+// object and nothing downstream.
+const PROVIDER_ESPN = {
+  id: 'espn', label: 'ESPN', auth: 'unavailable', flag: 'ESPN_SYNC',
+  terms: 'No public API, no OAuth; the undocumented endpoint needs the reader’s session cookies for private leagues and has no commercial terms. Not implemented; manual setup is the fallback.',
+  unavailable: 'ESPN does not offer a supported way to read your league. Set your ESPN league up manually and Iron Tuna will use it the same way.',
+  needs: env => false,
+  async discover() { throw new LeagueProviderError('unsupported_provider', PROVIDER_ESPN.unavailable); },
+  async pull() { throw new LeagueProviderError('unsupported_provider', PROVIDER_ESPN.unavailable); },
+  normalize(raw) { throw new LeagueProviderError('unsupported_provider', PROVIDER_ESPN.unavailable); }
+};
+// ── Manual ─────────────────────────────────────────────────────────────────
+// The fallback that always works: the reader types the settings and pastes
+// the rosters, and the result is the same model every module reads. A
+// manual league syncs nothing; its "sync" is the form.
+const PROVIDER_MANUAL = {
+  id: 'manual', label: 'Manual', auth: 'none', flag: null, terms: 'The reader’s own entry. Nothing is fetched.',
+  needs: env => true,
+  async discover() { return { user: null, leagues: [] }; },
+  async pull() { throw new LeagueProviderError('manual_league', 'A manual league is edited, not synced.'); },
+  normalize(raw) { return raw; }
+};
+const LEAGUE_PROVIDERS = { sleeper: PROVIDER_SLEEPER, yahoo: PROVIDER_YAHOO, espn: PROVIDER_ESPN, manual: PROVIDER_MANUAL };
+// What a reader may connect right now, and why not otherwise. Presence only,
+// never a key.
+function leagueProviderReport(env) {
+  const out = {};
+  for (const [id, p] of Object.entries(LEAGUE_PROVIDERS)) {
+    const flagOk = !p.flag || flagOn(env, p.flag);
+    const configured = p.needs(env);
+    out[id] = { id, label: p.label, auth: p.auth, enabled: flagOk && configured && p.auth !== 'unavailable',
+                reason: p.auth === 'unavailable' ? p.unavailable : !flagOk ? 'off (FLAG_' + p.flag + ')' : !configured ? 'not configured' : null, terms: p.terms };
+  }
+  return out;
+}
+// -- storage: the model in D1, idempotently ---------------------------------
+// Provider ids are the primary keys, so a sync that runs twice writes the
+// same rows twice. Rows a sync did not touch (a dropped player, a team that
+// left) are removed by their stale updated_at, so nothing accumulates.
+function leagueRowToLeague(row) {
+  let settings = null, overrides = null;
+  try { settings = JSON.parse(row.settings || 'null'); } catch (e) {}
+  try { overrides = JSON.parse(row.overrides || 'null'); } catch (e) {}
+  const eff = leagueEffectiveSettings(settings || {}, overrides || {});
+  const now = Date.now();
+  return {
+    id: row.id, provider: row.provider, providerLeagueId: row.provider_league_id, name: row.name, season: row.season, sport: row.sport || 'nfl',
+    numTeams: row.num_teams, status: row.status, userTeamId: row.user_team_id, isDefault: !!row.is_default,
+    settings: eff, synced: leagueNormalizeSettings(settings || {}), overrides: overrides || {}, label: leagueSettingsLabel(eff, row.num_teams),
+    sync: { provider: row.provider, status: row.sync_status || (row.provider === 'manual' ? 'manual' : 'never'), lastAt: row.last_sync_at || null, lastOkAt: row.last_ok_at || null,
+            error: row.last_error || null, nextAt: row.next_sync_at || null, failures: row.failures || 0,
+            stale: row.provider !== 'manual' && (!row.last_ok_at || now - row.last_ok_at > LEAGUE_STALE_MS) },
+    createdAt: row.created_at, updatedAt: row.updated_at
+  };
+}
+async function leagueList(env, email) {
+  if (!(await leagueReady(env))) return [];
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE email=? ORDER BY is_default DESC, created_at ASC').bind(email).all();
+    return (q.results || []).map(leagueRowToLeague);
+  } catch (e) { return []; }
+}
+async function leagueRow(env, email, id) {
+  if (!(await leagueReady(env)) || !id) return null;
+  try { return await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE id=? AND email=?').bind(id, email).first(); } catch (e) { return null; }
+}
+// The whole league: teams, rosters, this week's matchups, recent transactions.
+async function leagueLoad(env, email, id) {
+  const row = await leagueRow(env, email, id);
+  if (!row) return null;
+  const L = leagueRowToLeague(row);
+  try {
+    const [t, r, m, x] = await Promise.all([
+      env.LEADS_DB.prepare('SELECT * FROM league_teams WHERE league_id=? ORDER BY standing ASC, team_id ASC').bind(id).all(),
+      env.LEADS_DB.prepare('SELECT * FROM league_roster_players WHERE league_id=? ORDER BY team_id, slot, position, name').bind(id).all(),
+      env.LEADS_DB.prepare('SELECT * FROM league_matchups WHERE league_id=? ORDER BY week ASC').bind(id).all(),
+      env.LEADS_DB.prepare('SELECT * FROM league_transactions WHERE league_id=? ORDER BY ts DESC LIMIT 80').bind(id).all()
+    ]);
+    L.teams = (t.results || []).map(row => ({ teamId: row.team_id, name: row.name, manager: row.manager, ownerId: row.owner_id, wins: row.wins, losses: row.losses, ties: row.ties, pointsFor: row.points_for, pointsAgainst: row.points_against, standing: row.standing, faabLeft: row.faab_left, waiverPosition: row.waiver_position, isUser: row.team_id === L.userTeamId }));
+    const byTeam = new Map();
+    for (const p of r.results || []) {
+      if (!byTeam.has(p.team_id)) byTeam.set(p.team_id, []);
+      byTeam.get(p.team_id).push({ providerPlayerId: p.provider_player_id, key: p.player_key, name: p.name, position: p.position, team: p.nfl_team, slot: p.slot, slotLabel: p.slot_label });
+    }
+    L.rosters = L.teams.map(tm => ({ teamId: tm.teamId, players: byTeam.get(tm.teamId) || [] }));
+    L.matchups = (m.results || []).map(row => ({ week: row.week, matchupId: row.matchup_id, teamId: row.team_id, opponentId: row.opponent_id, points: row.points, opponentPoints: row.opponent_points, played: !!row.played }));
+    L.transactions = (x.results || []).map(row => { let adds = [], drops = []; try { adds = JSON.parse(row.adds || '[]'); drops = JSON.parse(row.drops || '[]'); } catch (e) {} return { providerTxnId: row.provider_txn_id, type: row.type, teamId: row.team_id, adds, drops, faab: row.faab, status: row.status, ts: row.ts, week: row.week }; });
+  } catch (e) { L.teams = L.teams || []; L.rosters = L.rosters || []; L.matchups = []; L.transactions = []; L.loadError = (e && e.message) || 'load failed'; }
+  return L;
+}
+// Write a normalised league (teams, rosters, matchups, transactions) under a
+// league row. Keys come from `keyMap` (providerPlayerId -> resolution).
+async function leagueWriteModel(env, leagueId, model, keyMap, ts) {
+  const db = env.LEADS_DB;
+  const w = [];
+  for (const t of model.teams || []) w.push(db.prepare('INSERT INTO league_teams (league_id, team_id, name, manager, owner_id, wins, losses, ties, points_for, points_against, standing, faab_left, waiver_position, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(league_id, team_id) DO UPDATE SET name=excluded.name, manager=excluded.manager, owner_id=excluded.owner_id, wins=excluded.wins, losses=excluded.losses, ties=excluded.ties, points_for=excluded.points_for, points_against=excluded.points_against, standing=excluded.standing, faab_left=excluded.faab_left, waiver_position=excluded.waiver_position, updated_at=excluded.updated_at')
+    .bind(leagueId, t.teamId, t.name || null, t.manager || null, t.ownerId || null, t.wins || 0, t.losses || 0, t.ties || 0, t.pointsFor || 0, t.pointsAgainst || 0, t.standing || null, t.faabLeft, t.waiverPosition, ts));
+  for (const ro of model.rosters || []) for (const p of ro.players || []) {
+    const res = keyMap.get(String(p.providerPlayerId)) || {};
+    w.push(db.prepare('INSERT INTO league_roster_players (league_id, team_id, provider_player_id, player_key, name, position, nfl_team, slot, slot_label, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(league_id, provider_player_id) DO UPDATE SET team_id=excluded.team_id, player_key=excluded.player_key, name=excluded.name, position=excluded.position, nfl_team=excluded.nfl_team, slot=excluded.slot, slot_label=excluded.slot_label, updated_at=excluded.updated_at')
+      .bind(leagueId, ro.teamId, String(p.providerPlayerId), res.key || null, res.name || p.name || null, leaguePos(p.position) || null, teamKey(p.team) || null, p.slot || 'bench', p.slotLabel || null, ts));
+  }
+  for (const m of model.matchups || []) w.push(db.prepare('INSERT INTO league_matchups (league_id, week, team_id, matchup_id, opponent_id, points, opponent_points, played, updated_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(league_id, week, team_id) DO UPDATE SET matchup_id=excluded.matchup_id, opponent_id=excluded.opponent_id, points=excluded.points, opponent_points=excluded.opponent_points, played=excluded.played, updated_at=excluded.updated_at')
+    .bind(leagueId, m.week, m.teamId, m.matchupId || null, m.opponentId || null, m.points || 0, m.opponentPoints, m.played ? 1 : 0, ts));
+  for (const x of model.transactions || []) w.push(db.prepare('INSERT INTO league_transactions (league_id, provider_txn_id, type, team_id, adds, drops, faab, status, ts, week) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(league_id, provider_txn_id) DO UPDATE SET status=excluded.status, adds=excluded.adds, drops=excluded.drops, faab=excluded.faab')
+    .bind(leagueId, x.providerTxnId, x.type || null, x.teamId || null, JSON.stringify((x.adds || []).map(a => ({ id: a.providerPlayerId, team: a.teamId, name: a.name, key: (keyMap.get(String(a.providerPlayerId)) || {}).key || null }))), JSON.stringify((x.drops || []).map(a => ({ id: a.providerPlayerId, team: a.teamId, name: a.name, key: (keyMap.get(String(a.providerPlayerId)) || {}).key || null }))), x.faab, x.status || null, x.ts || null, x.week || null));
+  for (let i = 0; i < w.length; i += 40) { try { await db.batch(w.slice(i, i + 40)); } catch (e) { for (const s of w.slice(i, i + 40)) await s.run(); } }
+  // Whatever this sync did not touch is gone from the provider.
+  await db.prepare('DELETE FROM league_roster_players WHERE league_id=? AND updated_at < ?').bind(leagueId, ts).run();
+  await db.prepare('DELETE FROM league_teams WHERE league_id=? AND updated_at < ?').bind(leagueId, ts).run();
+}
+// A weekly snapshot of rosters and standings, one row per league per week,
+// so "you dropped him two weeks ago" and "your rank moved" can be facts.
+async function leagueSnapshot(env, leagueId, model, season, week, ts) {
+  if (!week) return;
+  const payload = { teams: (model.teams || []).map(t => ({ teamId: t.teamId, name: t.name, wins: t.wins, losses: t.losses, pointsFor: t.pointsFor, standing: t.standing })),
+                    rosters: (model.rosters || []).map(r => ({ teamId: r.teamId, players: (r.players || []).map(p => [p.providerPlayerId, p.slot]) })) };
+  try { await env.LEADS_DB.prepare('INSERT INTO league_snapshots (league_id, season, week, kind, payload, built_at) VALUES (?,?,?,?,?,?) ON CONFLICT(league_id, season, week, kind) DO UPDATE SET payload=excluded.payload, built_at=excluded.built_at')
+    .bind(leagueId, season || null, week, 'weekly', JSON.stringify(payload).slice(0, 200000), ts).run(); } catch (e) {}
+}
+async function leagueRunLog(env, r) {
+  try { await env.LEADS_DB.prepare('INSERT INTO league_sync_runs (league_id, provider, trigger, started_at, finished_at, ok, error, summary, unmatched) VALUES (?,?,?,?,?,?,?,?,?)')
+    .bind(r.leagueId, r.provider, r.trigger || null, r.started, r.finished, r.ok ? 1 : 0, r.error || null, r.summary || null, r.unmatched || 0).run(); } catch (e) {}
+}
+// The current NFL week from the site's own season service, so a league and
+// a story never disagree about what week it is.
+async function leagueWeekContext(env) {
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  const cur = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  return { season: sched ? sched.season : new Date().getUTCFullYear(), currentWeek: cur, state };
+}
+// -- the sync ----------------------------------------------------------------
+// pull -> normalise -> map players -> write -> snapshot -> log. Never throws;
+// a provider failure is a logged run and a scheduled retry, and the league
+// the reader already has is left exactly as it was.
+async function leagueSync(env, row, trigger) {
+  const started = Date.now();
+  const provider = LEAGUE_PROVIDERS[row.provider];
+  const base = { leagueId: row.id, provider: row.provider, trigger, started };
+  if (!provider) return { ok: false, error: 'unknown_provider' };
+  if (row.provider === 'manual') return { ok: true, manual: true };
+  if (provider.flag && !flagOn(env, provider.flag)) { const r = { ...base, finished: Date.now(), ok: false, error: 'provider_disabled' }; await leagueRunLog(env, r); await leagueSyncState(env, row, false, 'provider_disabled', started); return { ok: false, error: 'provider_disabled' }; }
+  let model = null, unmatched = 0, error = null, code = null;
+  try {
+    const ctx = await leagueWeekContext(env);
+    const conn = provider.auth === 'oauth2' ? { ...(await leagueConnectionRead(env, row.email, row.provider) || {}), email: row.email } : { email: row.email };
+    let userId = null;
+    try { const meta = JSON.parse(row.overrides || '{}'); userId = meta.__providerUserId || null; } catch (e) {}
+    const raw = await provider.pull(env, conn, row.provider_league_id, { ...ctx, firstSync: !row.last_ok_at, userId });
+    model = provider.normalize(raw, { ...ctx, userId });
+    const allPlayers = [];
+    for (const r of model.rosters || []) for (const p of r.players || []) allPlayers.push(p);
+    for (const x of model.transactions || []) for (const p of [...(x.adds || []), ...(x.drops || [])]) if (!allPlayers.some(q => q.providerPlayerId === p.providerPlayerId)) allPlayers.push({ ...p, position: p.position || null });
+    const mapped = await leagueMapPlayers(env, row.provider, allPlayers);
+    unmatched = mapped.unmatched;
+    const ts = Date.now();
+    await leagueWriteModel(env, row.id, model, mapped.map, ts);
+    await leagueSnapshot(env, row.id, model, model.season || ctx.season, ctx.currentWeek, ts);
+    // The league row: name, size, status, settings (the reader's overrides are
+    // a separate column and are never touched here), the user's team if the
+    // provider identified it and the reader has not chosen one by hand.
+    const keepTeam = row.user_team_id && (model.teams || []).some(t => t.teamId === row.user_team_id);
+    await env.LEADS_DB.prepare('UPDATE leagues SET name=?, season=?, num_teams=?, status=?, settings=?, user_team_id=?, updated_at=?, last_sync_at=?, last_ok_at=?, sync_status=?, last_error=NULL, next_sync_at=?, failures=0 WHERE id=?')
+      .bind(model.name || row.name, model.season || row.season, model.numTeams || row.num_teams, model.status || row.status, JSON.stringify(model.settings), keepTeam ? row.user_team_id : (model.userTeamId || row.user_team_id || null), ts, ts, ts, 'ok', leagueNextSyncAt(ts, 0), row.id).run();
+  } catch (e) {
+    error = (e && e.message) || 'failed'; code = (e && e.code) || 'sync_failed';
+    await leagueSyncState(env, row, false, code + ': ' + error, started);
+  }
+  const finished = Date.now();
+  const r = { ...base, finished, ok: !error, error: error ? code + ': ' + error : null, unmatched,
+              summary: model ? JSON.stringify({ teams: (model.teams || []).length, players: (model.rosters || []).reduce((n, r) => n + (r.players || []).length, 0), matchups: (model.matchups || []).length, transactions: (model.transactions || []).length, unmatched, ms: finished - started }) : null };
+  await leagueRunLog(env, r);
+  return { ok: !error, error: r.error, code, unmatched, durationMs: finished - started, userTeamId: model ? model.userTeamId : null, teams: model ? (model.teams || []).length : 0 };
+}
+async function leagueSyncState(env, row, ok, error, at) {
+  const failures = ok ? 0 : (Number(row.failures) || 0) + 1;
+  try { await env.LEADS_DB.prepare('UPDATE leagues SET last_sync_at=?, sync_status=?, last_error=?, next_sync_at=?, failures=? WHERE id=?')
+    .bind(at, ok ? 'ok' : 'failed', error || null, leagueNextSyncAt(at, failures), failures, row.id).run(); } catch (e) {}
+}
+// The job: every connected league that is due, a few at a time, with the
+// provider's flag respected and a per-league backoff on failure.
+async function runLeagueSync(env) {
+  if (!(await leagueReady(env))) return { ok: false, error: 'no_db' };
+  const now = Date.now();
+  let rows = [];
+  try { rows = (await env.LEADS_DB.prepare("SELECT * FROM leagues WHERE provider != 'manual' AND (next_sync_at IS NULL OR next_sync_at <= ?) ORDER BY next_sync_at ASC LIMIT ?").bind(now, LEAGUE_SYNC_BATCH).all()).results || []; }
+  catch (e) { return { ok: false, error: (e && e.message) || 'query failed' }; }
+  const results = [];
+  for (let i = 0; i < rows.length; i += 3) {
+    const part = await Promise.all(rows.slice(i, i + 3).map(r => leagueSync(env, r, 'job').then(x => ({ id: r.id, provider: r.provider, ok: x.ok, error: x.error || null, ms: x.durationMs }))));
+    results.push(...part);
+  }
+  return { ok: true, due: rows.length, synced: results.filter(r => r.ok).length, failed: results.filter(r => !r.ok).length, results: results.slice(0, 20) };
+}
+// -- creating leagues --------------------------------------------------------
+async function leagueCreateRow(env, email, provider, providerLeagueId, name, season, opts) {
+  if (!(await leagueReady(env))) throw new LeagueProviderError('no_db', 'No database');
+  const now = Date.now();
+  const existing = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE email=? AND provider=? AND provider_league_id=?').bind(email, provider, String(providerLeagueId)).first();
+  if (existing) return { row: existing, created: false };
+  const count = await env.LEADS_DB.prepare('SELECT COUNT(*) AS n FROM leagues WHERE email=?').bind(email).first();
+  if (count && count.n >= 12) throw new LeagueProviderError('too_many_leagues', 'Twelve leagues is the limit per account.');
+  const id = crypto.randomUUID();
+  const overrides = opts && opts.providerUserId ? { __providerUserId: String(opts.providerUserId) } : {};
+  await env.LEADS_DB.prepare('INSERT INTO leagues (id, email, provider, provider_league_id, name, season, sport, num_teams, status, settings, overrides, user_team_id, is_default, created_at, updated_at, sync_status, next_sync_at, failures) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)')
+    .bind(id, email, provider, String(providerLeagueId), name || null, season || null, 'nfl', (opts && opts.numTeams) || null, 'unknown', JSON.stringify((opts && opts.settings) || leagueDefaultSettings()), JSON.stringify(overrides), (opts && opts.userTeamId) || null, count && count.n === 0 ? 1 : 0, now, now, provider === 'manual' ? 'manual' : 'never', now, 0).run();
+  const row = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE id=?').bind(id).first();
+  return { row, created: true };
+}
+// A manual league from the form: settings, a roster for the reader's team,
+// and optionally the other rosters as pasted text already resolved on the
+// client into names. Players are resolved by name here, the one place name
+// matching is allowed, because there is no id to prefer.
+async function leagueManualUpsert(env, email, body, existingRow) {
+  const settings = leagueNormalizeSettings(body.settings || {});
+  const name = String(body.name || 'My league').slice(0, 80);
+  const numTeams = Math.max(2, Math.min(20, Math.floor(Number(body.numTeams) || 12)));
+  const teams = [], rosters = [];
+  const inTeams = Array.isArray(body.teams) && body.teams.length ? body.teams : [{ name: body.teamName || 'My team', players: body.players || [], isUser: true }];
+  inTeams.slice(0, 20).forEach((t, i) => {
+    const id = String(t.teamId || ('m' + (i + 1)));
+    teams.push({ teamId: id, name: String(t.name || ('Team ' + (i + 1))).slice(0, 60), manager: null, wins: Number(t.wins) || 0, losses: Number(t.losses) || 0, ties: 0, pointsFor: Number(t.pointsFor) || 0, pointsAgainst: 0, faabLeft: t.faabLeft != null ? Number(t.faabLeft) : (settings.faab != null ? settings.faab : null), waiverPosition: null });
+    const players = [];
+    for (const p of (Array.isArray(t.players) ? t.players : []).slice(0, 40)) {
+      const nm = typeof p === 'string' ? p : (p && p.name);
+      if (!nm) continue;
+      const pos = typeof p === 'object' && p.position ? leaguePos(p.position) : null;
+      players.push({ providerPlayerId: 'name:' + _oddsNorm(nm) + '|' + (pos || '?'), name: String(nm).slice(0, 60), position: pos, team: typeof p === 'object' ? p.team : null, slot: typeof p === 'object' && p.slot ? p.slot : 'bench', slotLabel: typeof p === 'object' && p.slotLabel ? p.slotLabel : null });
+    }
+    rosters.push({ teamId: id, players });
+  });
+  teams.slice().sort((a, b) => (b.wins - a.wins) || (b.pointsFor - a.pointsFor)).forEach((t, i) => { t.standing = i + 1; });
+  const userTeamId = String((inTeams.find(t => t.isUser) || {}).teamId || (inTeams.findIndex(t => t.isUser) >= 0 ? 'm' + (inTeams.findIndex(t => t.isUser) + 1) : 'm1'));
+  const model = { provider: 'manual', name, season: null, numTeams, status: 'in_season', settings, userTeamId, teams, rosters, matchups: [], transactions: [] };
+  // Names without a position: try every position the board carries.
+  const players = [];
+  for (const r of rosters) for (const p of r.players) {
+    if (p.position) { players.push(p); continue; }
+    let hit = null;
+    for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) { const res = leagueResolvePlayer({ name: p.name, position: pos, team: p.team }); if (res.key) { hit = { ...res, pos }; break; } }
+    if (hit) { p.position = hit.pos; p.name = hit.name; }
+    players.push(p);
+  }
+  const mapped = await leagueMapPlayers(env, 'manual', players);
+  const ctx = await leagueWeekContext(env);
+  let row = existingRow;
+  if (!row) row = (await leagueCreateRow(env, email, 'manual', 'manual-' + crypto.randomUUID().slice(0, 8), name, ctx.season, { numTeams, settings, userTeamId })).row;
+  const ts = Date.now();
+  await leagueWriteModel(env, row.id, model, mapped.map, ts);
+  await env.LEADS_DB.prepare('UPDATE leagues SET name=?, season=?, num_teams=?, status=?, settings=?, user_team_id=?, updated_at=?, last_sync_at=?, last_ok_at=?, sync_status=?, last_error=NULL WHERE id=?')
+    .bind(name, ctx.season, numTeams, 'in_season', JSON.stringify(settings), userTeamId, ts, ts, ts, 'manual', row.id).run();
+  return { id: row.id, unmatched: mapped.unmatched, unresolved: players.filter(p => !(mapped.map.get(p.providerPlayerId) || {}).key).map(p => p.name) };
+}
+async function leagueSetDefault(env, email, id) {
+  if (!(await leagueReady(env))) return false;
+  try {
+    await env.LEADS_DB.batch([env.LEADS_DB.prepare('UPDATE leagues SET is_default=0 WHERE email=?').bind(email), env.LEADS_DB.prepare('UPDATE leagues SET is_default=1 WHERE email=? AND id=?').bind(email, id)]);
+    return true;
+  } catch (e) { return false; }
+}
+// Disconnect: the league and everything imported under it is deleted. If it
+// was the reader's last league on an OAuth provider, the sealed tokens go too.
+async function leagueDisconnect(env, email, row) {
+  const db = env.LEADS_DB;
+  const id = row.id;
+  await db.batch(['league_roster_players', 'league_teams', 'league_matchups', 'league_transactions', 'league_snapshots'].map(t => db.prepare('DELETE FROM ' + t + ' WHERE league_id=?').bind(id)));
+  await db.prepare('DELETE FROM leagues WHERE id=? AND email=?').bind(id, email).run();
+  let tokensRemoved = false;
+  if (LEAGUE_PROVIDERS[row.provider] && LEAGUE_PROVIDERS[row.provider].auth === 'oauth2') {
+    const left = await db.prepare('SELECT COUNT(*) AS n FROM leagues WHERE email=? AND provider=?').bind(email, row.provider).first();
+    if (!left || !left.n) { await leagueConnectionDelete(env, email, row.provider); tokensRemoved = true; }
+  }
+  if (row.is_default) { const first = await db.prepare('SELECT id FROM leagues WHERE email=? ORDER BY created_at ASC LIMIT 1').bind(email).first(); if (first) await leagueSetDefault(env, email, first.id); }
+  return { ok: true, removed: ['league settings', 'teams', 'rosters', 'matchups', 'transactions', 'weekly snapshots'], tokensRemoved, retained: ['the sync log (no league data, kept 45 days for the health board)'] };
+}
+// -- personalisation ---------------------------------------------------------
+// Every module below reads the local model and the site's own boards, scored
+// at the league's rules, and answers the reader's questions in the order the
+// spec asks them: what to do, why, who to replace, is he actually available,
+// how much does it help, short-term or rest-of-season, and playoff impact.
+// Confidence is graded from the margin, never asserted: a half-point edge is
+// a lean, not an order.
+const LEAGUE_HORIZONS = ['week', 'next3', 'ros', 'playoffs'];
+function leagueRankRows(rows) {
+  const rankIn = (list, field) => { list.slice().sort((x, y) => y[field].points - x[field].points || (x.name < y.name ? -1 : 1)).forEach((r, i) => { r[field].rank = i + 1; }); };
+  const groups = {};
+  for (const r of rows) (groups[r.position] = groups[r.position] || []).push(r);
+  for (const g of Object.values(groups)) for (const f of ['consensus', 'vegas', 'ironTuna']) rankIn(g, f);
+  const flex = rows.filter(r => r.position === 'RB' || r.position === 'WR' || r.position === 'TE');
+  for (const f of ['consensus', 'vegas', 'ironTuna']) flex.slice().sort((x, y) => y[f].points - x[f].points || (x.name < y.name ? -1 : 1)).forEach((r, i) => { r[f].flexRank = i + 1; });
+}
+// The board at the league's scoring, with TE premium applied and every row
+// stamped with who owns him here. Rows are copies: boardsPayload memoises
+// its own output and must not be written to.
+async function leagueBoard(env, L, horizon, through) {
+  const hz = LEAGUE_HORIZONS.includes(horizon) ? horizon : 'week';
+  const custom = { ...L.settings.scoring };
+  const out = await boardsPayload(env, { horizon: hz, position: 'ALL', preset: 'custom', custom, through: through || null, customKey: leagueScoringKey(L.settings) });
+  if (!out || !out.ok) return out || { ok: false, error: 'no_board' };
+  const te = Number(L.settings.extras && L.settings.extras.tePremium) || 0;
+  const idx = leagueRosterIndex(L);
+  const rows = out.players.map(p => {
+    const r = { ...p, consensus: { ...p.consensus }, vegas: { ...p.vegas }, ironTuna: { ...p.ironTuna } };
+    if (te && r.pos === 'TE') {
+      for (const f of ['consensus', 'vegas', 'ironTuna']) r[f].points = _oddsRound(p[f].points + te * (((p[f].stats || {}).rec) || 0));
+      const perWeek = te * ((((p.ironTuna.stats || {}).rec) || 0) / Math.max(1, p.games || 1));
+      r.weeks = (p.weeks || []).map(w => w.ironTunaPts != null ? { ...w, ironTunaPts: _oddsRound(w.ironTunaPts + perWeek), consensusPts: _oddsRound((w.consensusPts || 0) + perWeek), vegasPts: _oddsRound((w.vegasPts || 0) + perWeek) } : w);
+    }
+    const st = idx.get(r.key);
+    r.roster = st ? { status: st.isUser ? 'mine' : 'rostered', teamId: st.teamId, teamName: st.teamName, slot: st.slot, slotLabel: st.slotLabel, isUser: st.isUser, isOpponent: st.isOpponent }
+                  : { status: idx.waiver.has(r.key) ? 'waiver' : 'available', teamId: null, teamName: null, slot: null, isUser: false, isOpponent: false };
+    return r;
+  });
+  leagueRankRows(rows);
+  return { ...out, scoring: { preset: 'league', label: L.label }, league: { id: L.id, name: L.name, provider: L.provider, userTeamId: L.userTeamId }, players: rows };
+}
+// key -> where he is in this league. `waiver` is derived: a player dropped in
+// the last two days has not cleared waivers yet in most rooms.
+function leagueRosterIndex(L) {
+  const m = new Map();
+  const names = new Map(L.teams.map(t => [t.teamId, t.name]));
+  const oppId = leagueOpponentId(L);
+  for (const r of L.rosters || []) for (const p of r.players || []) if (p.key) m.set(p.key, { teamId: r.teamId, teamName: names.get(r.teamId) || r.teamId, slot: p.slot, slotLabel: p.slotLabel, isUser: r.teamId === L.userTeamId, isOpponent: r.teamId === oppId });
+  m.waiver = new Set();
+  const cutoff = Date.now() - 2 * 86400000;
+  for (const x of L.transactions || []) if (x.ts && x.ts >= cutoff) for (const d of x.drops || []) if (d.key && !m.has(d.key)) m.waiver.add(d.key);
+  return m;
+}
+function leagueCurrentMatchup(L) {
+  if (!L.userTeamId) return null;
+  const mine = (L.matchups || []).filter(m => m.teamId === L.userTeamId);
+  if (!mine.length) return null;
+  const upcoming = mine.filter(m => !m.played).sort((a, b) => a.week - b.week);
+  return upcoming[0] || mine.sort((a, b) => b.week - a.week)[0];
+}
+function leagueOpponentId(L) { const m = leagueCurrentMatchup(L); return m ? m.opponentId : null; }
+// A roster joined to a board: every player on it with his board row, or a
+// placeholder row that scores nothing and says why.
+function leagueJoin(L, board, teamId) {
+  const byKey = new Map((board.players || []).map(p => [p.key, p]));
+  const ro = (L.rosters || []).find(r => r.teamId === teamId);
+  const out = [];
+  for (const p of (ro ? ro.players : [])) {
+    const row = p.key ? byKey.get(p.key) : null;
+    out.push({ key: p.key, name: p.name, position: leaguePos(p.position), team: p.team, slot: p.slot, slotLabel: p.slotLabel, providerPlayerId: p.providerPlayerId,
+               row: row || null, points: row ? row.ironTuna.points : 0, ranked: !!row,
+               injury: row ? row.injury : null, bye: row && row.weeks && row.weeks.length === 1 && row.weeks[0].bye ? true : false,
+               out: row && row.weeks && row.weeks.length === 1 && row.weeks[0].out ? true : false });
+  }
+  return out;
+}
+// The lineup engine. Greedy into named slots, then the flex slots in order of
+// how restrictive they are (WR/RB, then WR/TE, then FLEX, then Superflex),
+// which is optimal when every flex is a superset of a named slot's pool. IR
+// and taxi players are never started; a player on a bye or ruled out scores
+// zero and is benched by arithmetic rather than by rule.
+function leagueOptimize(players, roster, pts) {
+  const slots = leagueStarterSlots(roster);
+  const rows = players.filter(p => p.slot !== 'ir' && p.slot !== 'taxi' && LEAGUE_POSITIONS.has(p.position)).map(p => ({ p, pos: p.position, v: Math.max(0, Number(pts ? pts(p) : p.points) || 0), slot: null }));
+  rows.sort((a, b) => b.v - a.v || (a.p.name < b.p.name ? -1 : 1));
+  const starters = [];
+  const used = new Set();
+  for (const s of slots) {
+    const elig = LEAGUE_SLOT_ELIG[s] || [];
+    const pick = rows.find(r => !used.has(r) && elig.includes(r.pos));
+    if (pick) { used.add(pick); pick.slot = s; starters.push(pick); } else starters.push({ p: null, pos: null, v: 0, slot: s, empty: true });
+  }
+  const bench = rows.filter(r => !used.has(r));
+  const total = starters.reduce((n, r) => n + r.v, 0);
+  return { slots, starters, bench, total: _oddsRound(total) };
+}
+function leagueConfidence(margin, base) {
+  const rel = base > 0 ? margin / base : 0;
+  if (margin >= 3 || rel >= 0.25) return 'Strong';
+  if (margin >= 1.2 || rel >= 0.1) return 'Moderate';
+  return 'Lean';
+}
+function _lgWhy(row) {
+  if (!row) return '';
+  if (row.injury && row.injury.status) return row.injury.status + (row.injury.note ? ' (' + row.injury.note + ')' : '');
+  if (row.why && row.why.summary) return row.why.summary;
+  const w = row.weeks && row.weeks[0];
+  if (w && w.env && w.env.implied != null) return 'implied team total ' + w.env.implied + (w.opponent ? ' vs ' + w.opponent : '');
+  return '';
+}
+// Best lineup for the current week, the decisions that were close, and the
+// changes against what the provider says is currently starting.
+async function leagueLineup(env, L, board) {
+  const b = board || await leagueBoard(env, L, 'week');
+  if (!b.ok) return { ok: false, error: b.error || 'no_board' };
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team', note: 'Pick which team is yours on My Leagues.' };
+  const mine = leagueJoin(L, b, L.userTeamId);
+  const opt = leagueOptimize(mine, L.settings.roster);
+  const decisions = [];
+  for (const s of opt.starters) {
+    if (!s.p) { decisions.push({ slot: s.slot, empty: true, note: 'No eligible player for this slot.' }); continue; }
+    const elig = LEAGUE_SLOT_ELIG[s.slot] || [];
+    const alt = opt.bench.find(r => elig.includes(r.pos));
+    if (!alt) continue;
+    const margin = _oddsRound(s.v - alt.v);
+    const flexy = s.slot === 'FLEX' || s.slot === 'SFLEX' || s.slot === 'REC_FLEX' || s.slot === 'WRRB_FLEX';
+    if (!flexy && margin >= 3) continue;
+    const conf = leagueConfidence(margin, s.v);
+    decisions.push({ slot: s.slot, start: { name: s.p.name, position: s.pos, team: s.p.team, projected: _oddsRound(s.v), why: _lgWhy(s.p.row) },
+                     sit: { name: alt.p.name, position: alt.pos, team: alt.p.team, projected: _oddsRound(alt.v), why: _lgWhy(alt.p.row) },
+                     margin, confidence: conf, recommendation: (conf === 'Lean' ? 'Lean ' : 'Start ') + s.p.name,
+                     reason: s.p.name + ' projects ' + _oddsRound(s.v) + ' to ' + alt.p.name + '’s ' + _oddsRound(alt.v) + ' at your scoring' + (conf === 'Lean' ? '; close enough that late news should decide it.' : '.') });
+  }
+  const currentStarters = new Set(mine.filter(p => p.slot === 'starter').map(p => p.key || p.name));
+  const changes = [];
+  for (const s of opt.starters) if (s.p && !currentStarters.has(s.p.key || s.p.name)) changes.push({ action: 'start', name: s.p.name, position: s.pos, slot: s.slot, projected: _oddsRound(s.v) });
+  for (const r of opt.bench) if (currentStarters.has(r.p.key || r.p.name)) changes.push({ action: 'bench', name: r.p.name, position: r.pos, projected: _oddsRound(r.v), reason: r.p.bye ? 'bye week' : r.p.out ? 'ruled out' : 'outprojected' });
+  const currentTotal = _oddsRound(mine.filter(p => p.slot === 'starter').reduce((n, p) => n + p.points, 0));
+  return {
+    ok: true, contract: LEAGUE_CONTRACT, week: b.currentWeek, analyst: 'dalton',
+    lineup: opt.starters.map(s => ({ slot: s.slot, name: s.p ? s.p.name : null, position: s.pos, team: s.p ? s.p.team : null, projected: _oddsRound(s.v), why: s.p ? _lgWhy(s.p.row) : null, empty: !!s.empty })),
+    bench: opt.bench.map(r => ({ name: r.p.name, position: r.pos, team: r.p.team, projected: _oddsRound(r.v), ranked: r.p.ranked, bye: r.p.bye, out: r.p.out, slot: r.p.slot })),
+    reserve: mine.filter(p => p.slot === 'ir' || p.slot === 'taxi').map(p => ({ name: p.name, position: p.position, slot: p.slot })),
+    projectedTotal: opt.total, currentTotal, improvement: _oddsRound(opt.total - currentTotal), decisions, changes,
+    unranked: mine.filter(p => !p.ranked && p.slot !== 'ir').map(p => p.name)
+  };
+}
+// The pickup advisor for THIS room: only players nobody here owns, measured
+// by what they add to the reader's own lineup and bench, with a drop that
+// actually costs less than the add is worth. Tyler Grant's desk.
+let _LEAGUE_PICK_MEMO = new Map();
+async function leaguePickups(env, L, opts) {
+  const o = opts || {};
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team' };
+  // Matchup, intel and the summary all ask the same question inside one
+  // request; a minute of memo per league keeps that to one search.
+  const mk = [L.id, L.updatedAt, L.userTeamId, leagueScoringKey(L.settings), JSON.stringify(L.settings.roster), L.settings.faab, L.settings.waiverType, (L.transactions || []).length, (L.rosters || []).reduce((n, r) => n + (r.players || []).length, 0), o.perPosition || 14].join('|');
+  const hit = _LEAGUE_PICK_MEMO.get(mk);
+  if (hit && Date.now() - hit.at < 60000) return { ...hit.out, pickups: hit.out.pickups.slice(0, o.limit || 20) };
+  const out = await _leaguePickups(env, L, { ...o, limit: 60 });
+  if (out && out.ok) { if (_LEAGUE_PICK_MEMO.size > 50) _LEAGUE_PICK_MEMO = new Map(); _LEAGUE_PICK_MEMO.set(mk, { at: Date.now(), out }); return { ...out, pickups: out.pickups.slice(0, o.limit || 20) }; }
+  return out;
+}
+async function _leaguePickups(env, L, opts) {
+  const o = opts || {};
+  const [bw, b3, br] = await Promise.all([leagueBoard(env, L, 'week'), leagueBoard(env, L, 'next3'), leagueBoard(env, L, 'ros')]);
+  if (!bw.ok || !b3.ok || !br.ok) return { ok: false, error: 'no_board' };
+  const idx = leagueRosterIndex(L);
+  const roster = L.settings.roster;
+  const usable = new Set(Object.keys(LEAGUE_SLOT_ELIG).filter(s => roster[s] > 0).flatMap(s => LEAGUE_SLOT_ELIG[s]));
+  const rosWeeks = Math.max(1, (br.horizon && br.horizon.weeks && br.horizon.weeks.length) || 1);
+  const mineW = leagueJoin(L, bw, L.userTeamId), mine3 = leagueJoin(L, b3, L.userTeamId), mineR = leagueJoin(L, br, L.userTeamId);
+  const baseW = leagueOptimize(mineW, roster).total, base3 = leagueOptimize(mine3, roster).total, baseR = leagueOptimize(mineR, roster);
+  const ptsOf = (b, key) => { const r = b.players.find(p => p.key === key); return r ? r.ironTuna.points : 0; };
+  const byKeyW = new Map(bw.players.map(p => [p.key, p])), byKey3 = new Map(b3.players.map(p => [p.key, p]));
+  const avail = br.players.filter(p => (p.roster.status === 'available' || p.roster.status === 'waiver') && usable.has(p.pos) && p.games > 0);
+  avail.sort((a, b) => b.ironTuna.points - a.ironTuna.points);
+  const cands = [];
+  const perPos = {};
+  for (const p of avail) { perPos[p.pos] = (perPos[p.pos] || 0) + 1; if (perPos[p.pos] <= (o.perPosition || 14)) cands.push(p); }
+  const rosterFull = leagueRosterSize(roster) > 0 && mineR.length >= leagueRosterSize(roster);
+  const benchR = baseR.bench.filter(r => r.p.slot !== 'ir').sort((a, b) => a.v - b.v);
+  const teamRow = (L.teams || []).find(t => t.teamId === L.userTeamId) || {};
+  const budget = L.settings.faab != null ? (teamRow.faabLeft != null ? teamRow.faabLeft : L.settings.faab) : null;
+  const rows = [];
+  for (const c of cands) {
+    const cw = byKeyW.get(c.key), c3 = byKey3.get(c.key);
+    const add = key => ({ key, name: c.name, position: c.pos, team: c.team, slot: 'bench', points: 0, ranked: true, row: c });
+    const gainW = _oddsRound(leagueOptimize(mineW.concat([{ ...add(c.key), points: cw ? cw.ironTuna.points : 0, row: cw }]), roster).total - baseW);
+    const gain3 = _oddsRound(leagueOptimize(mine3.concat([{ ...add(c.key), points: c3 ? c3.ironTuna.points : 0, row: c3 }]), roster).total - base3);
+    const gainR = _oddsRound(leagueOptimize(mineR.concat([{ ...add(c.key), points: c.ironTuna.points, row: c }]), roster).total - baseR.total);
+    // The drop: the least valuable bench player he could replace, never the
+    // only quarterback in a one-QB room, never a kicker for a receiver.
+    let drop = null;
+    if (rosterFull) {
+      const pool = benchR.filter(r => {
+        if (r.pos === 'QB' && roster.SFLEX === 0 && mineR.filter(p => p.position === 'QB').length <= 1) return false;
+        if ((r.pos === 'K' || r.pos === 'DEF') && r.pos !== c.pos) return false;
+        return true;
+      });
+      drop = pool[0] || null;
+    }
+    const dropR = drop ? drop.v : 0;
+    const benchGain = _oddsRound(c.ironTuna.points - dropR);
+    const stash = gainW <= 0.2 && gain3 <= 0.5 && benchGain > 0;
+    const ppg = 0.5 * (gain3 / 3) + 0.5 * (gainR / rosWeeks) + 0.15 * Math.max(0, benchGain / rosWeeks);
+    let priority = ppg >= 3 ? 'High' : ppg >= 1.5 ? 'Medium' : ppg >= 0.5 ? 'Low' : stash ? 'Stash' : null;
+    if (!priority) continue;
+    if (drop && c.ironTuna.points <= dropR * 1.1 && gainR <= 0 && gain3 <= 0) continue;   // does not improve the roster
+    const inj = c.injury && c.injury.status ? c.injury.status : null;
+    const faabPct = { High: [0.2, 0.35], Medium: [0.08, 0.18], Low: [0.02, 0.06], Stash: [0.01, 0.04] }[priority];
+    const faab = budget != null ? { low: Math.max(1, Math.round(budget * faabPct[0])), high: Math.max(1, Math.round(budget * faabPct[1])), budget } : null;
+    const why = [];
+    if (gainW > 0) why.push('starts for you this week (+' + gainW + ' at ' + (cw && cw.weeks && cw.weeks[0] && cw.weeks[0].opponent ? 'vs ' + cw.weeks[0].opponent : 'your scoring') + ')');
+    if (gain3 > 0) why.push('+' + gain3 + ' to your lineup over the next three weeks');
+    if (gainR > 0) why.push('+' + gainR + ' rest of season');
+    if (drop) why.push('projects ' + c.ironTuna.points + ' rest of season to ' + drop.p.name + '’s ' + _oddsRound(dropR));
+    if (stash) why.push('a stash: does not start for you now, but your best bench upgrade at ' + c.pos);
+    if (c.roleTrend && c.roleTrend.applied && c.roleTrend.label) why.push('usage trend: ' + c.roleTrend.label);
+    rows.push({ key: c.key, name: c.name, position: c.pos, team: c.team, status: c.roster.status, injury: inj, priority, score: _oddsRound(ppg),
+                projected: { week: cw ? cw.ironTuna.points : 0, next3: c3 ? c3.ironTuna.points : 0, ros: c.ironTuna.points, rosRank: c.ironTuna.rank },
+                gain: { week: gainW, next3: gain3, ros: gainR, bench: benchGain }, cracksLineup: gainW > 0, stash,
+                drop: drop ? { name: drop.p.name, position: drop.pos, team: drop.p.team, ros: _oddsRound(dropR) } : (rosterFull ? null : { open: true }),
+                faab, why: why.join('; ') + '.', byes: c.byes || [] });
+  }
+  const order = { High: 0, Medium: 1, Low: 2, Stash: 3 };
+  rows.sort((a, b) => order[a.priority] - order[b.priority] || b.score - a.score);
+  return { ok: true, contract: LEAGUE_CONTRACT, analyst: 'grant', week: bw.currentWeek, league: { id: L.id, name: L.name, numTeams: L.numTeams, faab: L.settings.faab, waiverType: L.settings.waiverType, budgetLeft: budget },
+           rosterFull, rosterSize: leagueRosterSize(roster), rostered: mineR.length, pickups: rows.slice(0, o.limit || 20), availableCount: avail.length };
+}
+// This week's matchup: both best lineups at the league's scoring, the slots
+// that swing it, the opponent's injury exposure, and who on waivers helps.
+async function leagueMatchup(env, L) {
+  const b = await leagueBoard(env, L, 'week');
+  if (!b.ok) return { ok: false, error: 'no_board' };
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team' };
+  const m = leagueCurrentMatchup(L);
+  const oppId = m ? m.opponentId : null;
+  const names = new Map(L.teams.map(t => [t.teamId, t]));
+  const mine = leagueOptimize(leagueJoin(L, b, L.userTeamId), L.settings.roster);
+  const theirs = oppId ? leagueOptimize(leagueJoin(L, b, oppId), L.settings.roster) : null;
+  const diff = theirs ? _oddsRound(mine.total - theirs.total) : null;
+  const swing = [];
+  if (theirs) for (let i = 0; i < mine.starters.length; i++) {
+    const a = mine.starters[i], o = theirs.starters[i];
+    if (!a || !o || a.slot !== o.slot) continue;
+    const d = _oddsRound(a.v - o.v);
+    if (Math.abs(d) >= 3) swing.push({ slot: a.slot, mine: a.p ? { name: a.p.name, projected: _oddsRound(a.v) } : null, theirs: o.p ? { name: o.p.name, projected: _oddsRound(o.v) } : null, edge: d });
+  }
+  swing.sort((x, y) => Math.abs(y.edge) - Math.abs(x.edge));
+  const risk = (opt) => opt.starters.filter(s => s.p && s.p.injury && s.p.injury.status && /out|doubtful|questionable|ir|pup|sus/i.test(String(s.p.injury.status))).map(s => ({ name: s.p.name, position: s.pos, status: s.p.injury.status, projected: _oddsRound(s.v) }));
+  let upgrades = [];
+  try { const pk = await leaguePickups(env, L, { limit: 40 }); if (pk.ok) upgrades = pk.pickups.filter(p => p.cracksLineup).slice(0, 3).map(p => ({ name: p.name, position: p.position, gainThisWeek: p.gain.week, drop: p.drop && p.drop.name ? p.drop.name : null })); } catch (e) {}
+  const verdict = diff == null ? 'no opponent found this week' : Math.abs(diff) < 4 ? 'toss-up' : Math.abs(diff) < 10 ? (diff > 0 ? 'lean you' : 'lean opponent') : (diff > 0 ? 'you are favored' : 'opponent is favored');
+  return { ok: true, contract: LEAGUE_CONTRACT, week: m ? m.week : b.currentWeek, analyst: 'dalton',
+           you: { teamId: L.userTeamId, name: (names.get(L.userTeamId) || {}).name || 'You', projected: mine.total, record: names.get(L.userTeamId) ? [names.get(L.userTeamId).wins, names.get(L.userTeamId).losses] : null, injuryRisk: risk(mine) },
+           opponent: theirs ? { teamId: oppId, name: (names.get(oppId) || {}).name || 'Opponent', manager: (names.get(oppId) || {}).manager || null, projected: theirs.total, record: names.get(oppId) ? [names.get(oppId).wins, names.get(oppId).losses] : null, injuryRisk: risk(theirs),
+                               lineup: theirs.starters.map(s => ({ slot: s.slot, name: s.p ? s.p.name : null, position: s.pos, projected: _oddsRound(s.v) })) } : null,
+           edge: diff, verdict, swing: swing.slice(0, 5), upgrades,
+           note: 'Projected totals are the best lineup each side could set at your scoring, not the lineup they have set. Treat a gap under four points as a coin flip.' };
+}
+// Last-minute intel for this roster: who on it is out, doubtful or
+// questionable and the move that answers it; the opponent's exposure; and
+// nothing about the other twenty-nine teams' injuries. Mike Raines's desk.
+async function leagueIntel(env, L) {
+  const b = await leagueBoard(env, L, 'week');
+  if (!b.ok) return { ok: false, error: 'no_board' };
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team' };
+  const mine = leagueJoin(L, b, L.userTeamId);
+  const roster = L.settings.roster;
+  const opt = leagueOptimize(mine, roster);
+  const flagged = p => p.row && p.row.injury && p.row.injury.status ? String(p.row.injury.status) : (p.out ? 'Out' : null);
+  const sev = s => /out|ir|pup|sus|nfi|dnr/i.test(s) ? 3 : /doubtful/i.test(s) ? 2 : /questionable/i.test(s) ? 1 : 0;
+  const alerts = [];
+  const currentStarters = new Set(mine.filter(p => p.slot === 'starter').map(p => p.key || p.name));
+  for (const p of mine) {
+    const st = flagged(p);
+    if (!st || p.slot === 'ir') continue;
+    const isStarter = currentStarters.has(p.key || p.name) || opt.starters.some(s => s.p === p);
+    const s = sev(st);
+    if (!isStarter && s < 3) continue;
+    let action = null;
+    if (isStarter) {
+      // The replacement: whoever the best lineup starts that the provider's
+      // current lineup does not (the injured man already scores nothing, so
+      // the optimiser has benched him by arithmetic); failing that, whoever
+      // steps in when he is removed outright.
+      let repl = opt.starters.filter(s2 => s2.p && s2.p !== p && !currentStarters.has(s2.p.key || s2.p.name)).map(s2 => s2.p)[0] || null;
+      if (!repl) { const without = leagueOptimize(mine.filter(x => x !== p), roster); repl = without.starters.filter(s2 => s2.p && !opt.starters.some(s3 => s3.p === s2.p)).map(s2 => s2.p)[0] || null; }
+      action = s >= 2 ? (repl ? 'Start ' + repl.name + ' (' + _oddsRound(repl.points) + ' projected) in place of ' + p.name + '.' : 'No bench replacement projects to score; check the waiver wire.')
+                      : (repl ? 'Monitor. If ' + p.name + ' is ruled out, ' + repl.name + ' (' + _oddsRound(repl.points) + ') is your best replacement.' : 'Monitor; there is no bench replacement on this roster.');
+    } else action = 'On your bench: no lineup move needed. ' + (s >= 3 ? 'Consider an IR slot if your league allows.' : '');
+    alerts.push({ priority: isStarter ? 1 : 2, tag: 'AFFECTS YOUR ROSTER', name: p.name, position: p.position, team: p.team, status: st, note: p.row && p.row.injury ? p.row.injury.note || '' : '', starter: isStarter, action });
+  }
+  const oppId = leagueOpponentId(L);
+  if (oppId) {
+    const theirs = leagueJoin(L, b, oppId);
+    const topt = leagueOptimize(theirs, roster);
+    for (const s of topt.starters) {
+      if (!s.p) continue;
+      const st = flagged(s.p);
+      if (!st || sev(st) < 2) continue;
+      alerts.push({ priority: 4, tag: 'YOUR OPPONENT IS AFFECTED', name: s.p.name, position: s.pos, team: s.p.team, status: st, starter: true, action: 'Your opponent’s ' + s.pos + ' (' + _oddsRound(s.v) + ' projected) is ' + st.toLowerCase() + '.' });
+    }
+  }
+  // Available players who became actionable: the top waiver adds whose
+  // lineup gain this week is real, so the alert can say who to add.
+  try { const pk = await leaguePickups(env, L, { limit: 30 }); if (pk.ok) for (const p of pk.pickups.filter(x => x.cracksLineup).slice(0, 3)) alerts.push({ priority: 3, tag: 'AVAILABLE IN YOUR LEAGUE', name: p.name, position: p.position, team: p.team, status: p.status, action: 'Add ' + p.name + (p.drop && p.drop.name ? ' for ' + p.drop.name : '') + ': +' + p.gain.week + ' to your lineup this week.' }); } catch (e) {}
+  alerts.sort((a, b) => a.priority - b.priority);
+  return { ok: true, contract: LEAGUE_CONTRACT, week: b.currentWeek, analyst: 'raines', alerts, asOf: Date.now(), quiet: alerts.length === 0 };
+}
+// Trade partners who exist. Every roster is known, so the search is over
+// real managers: what they have that the reader needs, what the reader has
+// that they need, and whether a package improves BOTH best lineups on the
+// rest-of-season board. One-sided offers are not proposed. Also hands the
+// client the rosters and points so the Trade Finder's engine can search
+// wider packages in the browser.
+async function leagueTrades(env, L, opts) {
+  const o = opts || {};
+  const [br, b3] = await Promise.all([leagueBoard(env, L, 'ros'), leagueBoard(env, L, 'next3')]);
+  if (!br.ok) return { ok: false, error: 'no_board' };
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team' };
+  const roster = L.settings.roster;
+  const rosWeeks = Math.max(1, (br.horizon.weeks || []).length);
+  const teams = L.teams.map(t => ({ ...t, players: leagueJoin(L, br, t.teamId) }));
+  const pts3 = new Map(b3.players.map(p => [p.key, p.ironTuna.points]));
+  const lineup = pl => leagueOptimize(pl, roster);
+  // Positional strength: the average of a team's starters at each position
+  // against the league's average of the same, per game.
+  const posStrength = t => { const opt = lineup(t.players); const by = {}; for (const s of opt.starters) if (s.p) (by[s.pos] = by[s.pos] || []).push(s.v); const out = {}; for (const [k, v] of Object.entries(by)) out[k] = v.reduce((a, b) => a + b, 0) / v.length; return { opt, strength: out }; };
+  const strengths = new Map(teams.map(t => [t.teamId, posStrength(t)]));
+  const avg = {};
+  for (const pos of ['QB', 'RB', 'WR', 'TE']) { const vals = teams.map(t => strengths.get(t.teamId).strength[pos]).filter(v => v != null); avg[pos] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0; }
+  const me = teams.find(t => t.teamId === L.userTeamId);
+  const myS = strengths.get(L.userTeamId);
+  const need = pos => avg[pos] > 0 ? ((myS.strength[pos] || 0) - avg[pos]) / avg[pos] : 0;
+  const needs = ['QB', 'RB', 'WR', 'TE'].filter(p => roster[p] > 0 || (p === 'QB' ? roster.SFLEX > 0 : true)).map(p => ({ position: p, delta: _oddsRound(need(p) * 100) })).sort((a, b) => a.delta - b.delta);
+  const depth = (t, pos) => { const s = strengths.get(t.teamId); const starters = new Set(s.opt.starters.map(x => x.p)); return t.players.filter(p => p.position === pos && !starters.has(p) && p.slot !== 'ir').sort((a, b) => b.points - a.points); };
+  const trades = [], targets = [];
+  const minGain = (o.minGain != null ? Number(o.minGain) : 0.75) * rosWeeks;
+  for (const t of teams) {
+    if (t.teamId === L.userTeamId) continue;
+    const ts = strengths.get(t.teamId);
+    const theirNeed = pos => avg[pos] > 0 ? ((ts.strength[pos] || 0) - avg[pos]) / avg[pos] : 0;
+    for (const n of needs.slice(0, 2)) {
+      if (n.delta > -5) continue;      // not a need
+      const pos = n.position;
+      const theirBench = depth(t, pos);
+      const theirStarters = ts.opt.starters.filter(s => s.p && s.pos === pos).map(s => s.p);
+      const cands = theirBench.slice(0, 2).concat(theirStarters.slice(0, 2)).filter(p => p.ranked);
+      for (const target of cands) {
+        const surplus = theirBench.length > 0 && theirBench[0].points >= 0.6 * (theirStarters[0] ? theirStarters[0].points : 0);
+        const wantPos = ['QB', 'RB', 'WR', 'TE'].filter(p => theirNeed(p) < -0.05 && p !== pos).sort((a, b) => theirNeed(a) - theirNeed(b));
+        let label = surplus ? 'ROSTER MATCH' : theirStarters.includes(target) ? (theirBench.length ? 'EXPENSIVE BUT WORTH ASKING' : 'UNLIKELY TO BE AVAILABLE') : 'BUY LOW';
+        if (target.row && target.row.marketDelta && target.row.marketDelta.points >= 3 && target.row.vegas.rank < target.row.consensus.rank) label = 'BUY LOW';
+        targets.push({ name: target.name, position: pos, team: target.team, owner: t.name, ownerTeamId: t.teamId, ros: target.points, rosRank: target.row ? target.row.ironTuna.rank : null, label, ownerNeeds: wantPos });
+        // Offers: one of mine at what they need, or two-for-one with a bench piece.
+        const mine = me.players.filter(p => p.ranked && p.slot !== 'ir' && (wantPos.includes(p.position) || !wantPos.length)).sort((a, b) => b.points - a.points).slice(0, 5);
+        const myBench = lineup(me.players).bench.map(r => r.p).filter(p => p.ranked).slice(0, 4);
+        const packages = [];
+        for (const m of mine) { packages.push([m]); for (const x of myBench) if (x !== m) packages.push([m, x]); }
+        const baseMe = lineup(me.players).total, baseThem = lineup(t.players).total;
+        for (const pk of packages) {
+          const meAfter = lineup(me.players.filter(p => !pk.includes(p)).concat([target])).total;
+          const themAfter = lineup(t.players.filter(p => p !== target).concat(pk)).total;
+          const gMe = _oddsRound(meAfter - baseMe), gThem = _oddsRound(themAfter - baseThem);
+          if (gMe < minGain || gThem < minGain) continue;
+          const tilt = Number(o.tilt) || 0;
+          trades.push({ partner: t.name, partnerTeamId: t.teamId, receive: [{ name: target.name, position: pos, ros: target.points }], give: pk.map(p => ({ name: p.name, position: p.position, ros: p.points })),
+                        yourGain: gMe, theirGain: gThem, perWeek: { you: _oddsRound(gMe / rosWeeks), them: _oddsRound(gThem / rosWeeks) },
+                        valueExchanged: { receive: target.points, give: _oddsRound(pk.reduce((n, p) => n + p.points, 0)) },
+                        shortTerm: { receive: pts3.get(target.key) || 0, give: _oddsRound(pk.reduce((n, p) => n + (pts3.get(p.key) || 0), 0)) },
+                        why: ['You need ' + pos + ' (' + n.delta + '% below the league average starter).', t.name + (surplus ? ' has ' + pos + ' depth.' : ' would be giving up a starter.')].concat(wantPos.length ? [t.name + ' needs ' + wantPos.join('/') + '.'] : []).concat(['Your best lineup improves by ' + _oddsRound(gMe / rosWeeks) + ' a week; theirs by ' + _oddsRound(gThem / rosWeeks) + '.']),
+                        score: _oddsRound(gMe + tilt * 0 + Math.min(gMe, gThem)) });
+        }
+      }
+    }
+  }
+  trades.sort((a, b) => b.score - a.score);
+  const seenT = new Set();
+  const uniqTargets = targets.filter(t => { const k = t.name + '|' + t.owner; if (seenT.has(k)) return false; seenT.add(k); return true; });
+  const found = new Set(trades.map(t => t.receive[0].name + '|' + t.partner));
+  for (const t of uniqTargets) if (found.has(t.name + '|' + t.owner)) t.label = 'BEST FIT';
+  const labelOrder = { 'BEST FIT': 0, 'ROSTER MATCH': 1, 'BUY LOW': 2, 'EXPENSIVE BUT WORTH ASKING': 3, 'UNLIKELY TO BE AVAILABLE': 4 };
+  uniqTargets.sort((a, b) => labelOrder[a.label] - labelOrder[b.label] || b.ros - a.ros);
+  return { ok: true, contract: LEAGUE_CONTRACT, analyst: 'brooks', horizon: br.horizon, needs, trades: trades.slice(0, o.limit || 10), targets: uniqTargets.slice(0, 16),
+           // For the browser engine: every roster with points on each horizon.
+           teams: teams.map(t => ({ teamId: t.teamId, name: t.name, isUser: t.teamId === L.userTeamId, players: t.players.map(p => ({ id: p.key || p.name, name: p.name, pos: p.position, team: p.team, ranked: p.ranked, slot: p.slot, ros: p.points, next3: pts3.get(p.key) || 0 })) })),
+           slots: { QB: roster.QB, RB: roster.RB, WR: roster.WR, TE: roster.TE, FLEX: roster.FLEX + roster.REC_FLEX + roster.WRRB_FLEX, SFLEX: roster.SFLEX } };
+}
+// Playoff readiness: the fantasy-playoff board over this roster, position by
+// position against the room, schedules that help or hurt, and the bench
+// moves worth making before everyone else notices.
+async function leaguePlayoffs(env, L) {
+  const b = await leagueBoard(env, L, 'playoffs');
+  if (!b.ok) return { ok: false, error: 'no_board' };
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team' };
+  const roster = L.settings.roster;
+  const mine = leagueJoin(L, b, L.userTeamId);
+  const opt = leagueOptimize(mine, roster);
+  const teams = L.teams.map(t => ({ t, opt: leagueOptimize(leagueJoin(L, b, t.teamId), roster) }));
+  const posAvg = {};
+  for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) { const vals = teams.map(x => { const s = x.opt.starters.filter(s => s.p && s.pos === pos); return s.length ? s.reduce((n, r) => n + r.v, 0) / s.length : null; }).filter(v => v != null); posAvg[pos] = vals.length ? vals.reduce((a, b2) => a + b2, 0) / vals.length : 0; }
+  const positions = [];
+  for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) {
+    const s = opt.starters.filter(r => r.p && r.pos === pos);
+    if (!s.length) continue;
+    const mineAvg = s.reduce((n, r) => n + r.v, 0) / s.length;
+    const rel = posAvg[pos] ? (mineAvg - posAvg[pos]) / posAvg[pos] : 0;
+    positions.push({ position: pos, projectedPerStarter: _oddsRound(mineAvg), leagueAverage: _oddsRound(posAvg[pos]), delta: _oddsRound(rel * 100), grade: rel >= 0.15 ? 'strong' : rel <= -0.15 ? 'weak' : 'average', starters: s.map(r => r.p.name) });
+  }
+  const sched = mine.filter(p => p.row && p.row.scheduleDifficulty).map(p => ({ name: p.name, position: p.position, playoffPoints: p.points, schedule: p.row.scheduleDifficulty.label, byes: p.row.byes || [] }));
+  const rank = teams.slice().sort((a, b2) => b2.opt.total - a.opt.total).findIndex(x => x.t.teamId === L.userTeamId) + 1;
+  const bench = opt.bench.filter(r => r.p.slot !== 'ir').sort((a, b2) => a.v - b2.v);
+  const usable = new Set(Object.keys(LEAGUE_SLOT_ELIG).filter(s => roster[s] > 0).flatMap(s => LEAGUE_SLOT_ELIG[s]));
+  const moves = b.players.filter(p => p.roster.status !== 'mine' && p.roster.status !== 'rostered' && usable.has(p.pos) && p.games > 0)
+    .map(p => { const gain = _oddsRound(leagueOptimize(mine.concat([{ key: p.key, name: p.name, position: p.pos, team: p.team, slot: 'bench', points: p.ironTuna.points, ranked: true, row: p }]), roster).total - opt.total); const worst = bench.find(r => (r.pos === p.pos) || (r.pos !== 'K' && r.pos !== 'DEF' && p.pos !== 'K' && p.pos !== 'DEF')); return { name: p.name, position: p.pos, team: p.team, playoffPoints: p.ironTuna.points, lineupGain: gain, benchGain: worst ? _oddsRound(p.ironTuna.points - worst.v) : p.ironTuna.points, drop: worst ? worst.p.name : null, schedule: p.scheduleDifficulty ? p.scheduleDifficulty.label : null }; })
+    .filter(m => m.lineupGain > 0 || m.benchGain > 2).sort((a, b2) => b2.lineupGain - a.lineupGain || b2.benchGain - a.benchGain).slice(0, 6);
+  const dst = b.players.filter(p => p.pos === 'DEF' && p.roster.status !== 'mine' && p.roster.status !== 'rostered').sort((a, b2) => b2.ironTuna.points - a.ironTuna.points).slice(0, 3).map(p => ({ name: p.name, playoffPoints: p.ironTuna.points, schedule: p.scheduleDifficulty ? p.scheduleDifficulty.label : null }));
+  return { ok: true, contract: LEAGUE_CONTRACT, analyst: 'brooks', weeks: b.horizon.weeks, playoffWeekStart: L.settings.playoffWeekStart, projectedTotal: opt.total, rankInLeague: rank, of: teams.length,
+           positions, strong: positions.filter(p => p.grade === 'strong').map(p => p.position), weak: positions.filter(p => p.grade === 'weak').map(p => p.position),
+           favorable: sched.filter(s => s.schedule === 'Easy').sort((a, b2) => b2.playoffPoints - a.playoffPoints).slice(0, 6), concerning: sched.filter(s => s.schedule === 'Hard').sort((a, b2) => b2.playoffPoints - a.playoffPoints).slice(0, 6),
+           benchMoves: moves, dstStreaming: dst, benchSpots: roster.BN, note: 'Playoff weeks are ' + (b.horizon.weeks || []).join(', ') + '. Rankings this far out are graded LOW by the market side; treat them as direction, not distance.' };
+}
+// "Is player X available in league Y?", for any surface. Accepts keys or
+// names; names go through the same resolver every provider uses.
+function leagueAvailabilityLookup(L, items) {
+  const idx = leagueRosterIndex(L);
+  const oppId = leagueOpponentId(L);
+  const names = new Map(L.teams.map(t => [t.teamId, t.name]));
+  const out = [];
+  for (const it of items || []) {
+    let key = it.key || null;
+    if (!key && it.name) { for (const pos of it.position ? [leaguePos(it.position)] : ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) { const r = leagueResolvePlayer({ name: it.name, position: pos, team: it.team }); if (r.key) { key = r.key; break; } } }
+    if (!key) { out.push({ name: it.name || null, key: null, status: 'unknown' }); continue; }
+    const st = idx.get(key);
+    out.push({ name: it.name || key, key, status: st ? (st.isUser ? 'mine' : 'rostered') : (idx.waiver.has(key) ? 'waiver' : 'available'),
+               teamName: st ? st.teamName : null, teamId: st ? st.teamId : null, slot: st ? st.slot : null, isUser: !!(st && st.isUser), isOpponent: !!(st && st.teamId === oppId),
+               label: st ? (st.isUser ? 'On your roster' + (st.slot === 'starter' ? ' (starting)' : st.slot === 'ir' ? ' (IR)' : ' (bench)') : (st.teamId === oppId ? 'On your opponent’s roster' : 'Rostered by ' + (names.get(st.teamId) || st.teamName))) : (idx.waiver.has(key) ? 'On waivers in your league' : 'Available in your league') });
+  }
+  return out;
+}
+// A one-screen summary: the module cards on My Week and the strip on every
+// page read this rather than each calling four modules.
+async function leagueSummary(env, L) {
+  const [lineup, matchup, intel, pickups] = await Promise.all([leagueLineup(env, L).catch(() => ({ ok: false })), leagueMatchup(env, L).catch(() => ({ ok: false })), leagueIntel(env, L).catch(() => ({ ok: false })), leaguePickups(env, L, { limit: 3 }).catch(() => ({ ok: false }))]);
+  return { ok: true, contract: LEAGUE_CONTRACT, league: { id: L.id, name: L.name, provider: L.provider, label: L.label, sync: L.sync, userTeamId: L.userTeamId },
+           lineup: lineup.ok ? { projectedTotal: lineup.projectedTotal, improvement: lineup.improvement, decisions: lineup.decisions.slice(0, 3), changes: lineup.changes.slice(0, 4) } : null,
+           matchup: matchup.ok ? { opponent: matchup.opponent ? matchup.opponent.name : null, you: matchup.you.projected, them: matchup.opponent ? matchup.opponent.projected : null, verdict: matchup.verdict } : null,
+           alerts: intel.ok ? intel.alerts.slice(0, 4) : [], pickups: pickups.ok ? pickups.pickups.slice(0, 3) : [] };
+}
+// -- the routes ---------------------------------------------------------------
+// Everything under /api/leagues, /api/oauth/<provider> and /api/admin/league-sync.
+// Returns a Response, or null when the path is not ours.
+const LEAGUE_ERRORS = {
+  expired_authorization: 'Your connection to this provider needs to be renewed.',
+  league_not_found: 'That league could not be found. Check the league ID or URL, and that the season is right.',
+  user_not_found: 'No user by that name. Check the spelling of your username.',
+  rate_limited: 'The provider is limiting requests right now. Try again in a minute.',
+  provider_unavailable: 'The provider is temporarily unavailable. Your last successful sync is still in use.',
+  unsupported_provider: 'This provider cannot be synced.',
+  provider_disabled: 'This provider is not enabled on Iron Tuna yet.',
+  no_token_key: 'OAuth connections are not configured on this server.',
+  too_many_leagues: 'Twelve leagues is the limit per account.',
+  too_soon: 'That league was synced less than two minutes ago.',
+  not_signed_in: 'Sign in to connect a league.',
+  no_db: 'League sync is not available right now.'
+};
+function leagueErr(code, detail, status, c) {
+  return json({ ok: false, error: code, message: LEAGUE_ERRORS[code] || detail || code, detail: detail || null }, status || 400, c);
+}
+function leaguePublic(L) {
+  // What a page needs about a league: never another reader's email.
+  const { createdAt, updatedAt, ...rest } = L; return rest;
+}
+async function leagueRoutes(request, env, url, ctx) {
+  const path = url.pathname.replace(/\/+$/, '');
+  const isLeague = path === '/api/leagues' || path.startsWith('/api/leagues/') || path.startsWith('/api/oauth/') || path === '/api/admin/league-sync';
+  if (!isLeague) return null;
+  const c = { ...corsHeaders(request.headers.get('Origin')), 'cache-control': 'no-store' };
+  if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+  if (!flagOn(env, 'LEAGUE_SYNC')) return leagueErr('provider_disabled', 'League sync is off', 404, c);
+  const readBody = async () => { try { return await request.json(); } catch (e) { return {}; } };
+
+  // Provider availability is public: the connect page decides what to show.
+  if (path === '/api/leagues/providers') return json({ ok: true, contract: LEAGUE_CONTRACT, providers: leagueProviderReport(env) }, 200, c);
+
+  // Admin: metrics and recent runs, never a token.
+  if (path === '/api/admin/league-sync') {
+    if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+    if (!(await leagueReady(env))) return json({ ok: false, error: 'no_db' }, 503, c);
+    let ran = null;
+    if (url.searchParams.get('run') === '1') ran = await jobRun(env, 'league-sync', 'admin');
+    const resync = url.searchParams.get('resync');
+    if (resync) { const row = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE id=?').bind(resync).first(); ran = row ? await leagueSync(env, row, 'admin') : { ok: false, error: 'no such league' }; }
+    const db = env.LEADS_DB, since = Date.now() - 7 * 86400000;
+    const q = async (sql, ...args) => { try { return (await db.prepare(sql).bind(...args).all()).results || []; } catch (e) { return []; } };
+    const byProvider = await q('SELECT provider, COUNT(*) AS n, SUM(CASE WHEN sync_status=\'ok\' OR sync_status=\'manual\' THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN sync_status=\'failed\' THEN 1 ELSE 0 END) AS failed FROM leagues GROUP BY provider');
+    const runs = await q('SELECT provider, COUNT(*) AS n, SUM(ok) AS ok, AVG(finished_at - started_at) AS avg_ms, SUM(unmatched) AS unmatched FROM league_sync_runs WHERE started_at >= ? GROUP BY provider', since);
+    const recent = await q('SELECT r.id, r.league_id, r.provider, r.trigger, r.started_at, r.finished_at, r.ok, r.error, r.summary, r.unmatched, l.name FROM league_sync_runs r LEFT JOIN leagues l ON l.id = r.league_id ORDER BY r.started_at DESC LIMIT 40');
+    const failing = await q('SELECT id, provider, provider_league_id, name, sync_status, last_error, last_ok_at, failures, next_sync_at FROM leagues WHERE sync_status=\'failed\' ORDER BY failures DESC LIMIT 40');
+    const misses = await q('SELECT provider, provider_player_id, name, position, nfl_team, count, last_seen FROM player_map_misses ORDER BY count DESC, last_seen DESC LIMIT 40');
+    const conns = await q('SELECT provider, status, COUNT(*) AS n FROM provider_connections GROUP BY provider, status');
+    const leagues = await q('SELECT id, provider, provider_league_id, name, season, num_teams, sync_status, last_ok_at, last_sync_at, next_sync_at, failures, last_error, user_team_id FROM leagues ORDER BY updated_at DESC LIMIT 60');
+    const rateLimited = recent.filter(r => /rate_limited/.test(String(r.error || ''))).length;
+    return json({ ok: true, contract: LEAGUE_CONTRACT, providers: leagueProviderReport(env), flags: Object.fromEntries(['LEAGUE_SYNC', 'SLEEPER_SYNC', 'YAHOO_SYNC', 'ESPN_SYNC', 'PERSONALIZED_WAIVERS', 'PERSONALIZED_LINEUP', 'PERSONALIZED_TRADES', 'PERSONALIZED_STORIES'].map(k => [k, flagOn(env, k)])),
+                  tokenKey: !!env.LEAGUE_TOKEN_KEY, metrics: { byProvider, runs7d: runs.map(r => ({ ...r, successRate: r.n ? Math.round(100 * r.ok / r.n) : null, avgMs: r.avg_ms != null ? Math.round(r.avg_ms) : null })), rateLimited7d: rateLimited },
+                  recent, failing, misses, connections: conns, leagues, ran }, 200, c);
+  }
+
+  // Yahoo OAuth. The state is a signed token bound to the signed-in reader, so
+  // a callback cannot attach someone else's Yahoo account to this session.
+  if (path === '/api/oauth/yahoo/start' || path === '/api/oauth/yahoo/callback' || path === '/api/oauth/yahoo/disconnect') {
+    const email = await leagueSessionEmail(request, env);
+    if (!email) return path === '/api/oauth/yahoo/callback' ? Response.redirect(url.origin + '/my-league?yahoo=signin', 302) : leagueErr('not_signed_in', null, 401, c);
+    const rep = leagueProviderReport(env).yahoo;
+    if (path === '/api/oauth/yahoo/disconnect') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+      await leagueConnectionDelete(env, email, 'yahoo');
+      return json({ ok: true, removed: 'Yahoo tokens deleted. Your Yahoo leagues on Iron Tuna stay until you disconnect them, but they will no longer refresh.' }, 200, c);
+    }
+    if (!rep.enabled) return path === '/api/oauth/yahoo/callback' ? Response.redirect(url.origin + '/my-league?yahoo=off', 302) : leagueErr('provider_disabled', rep.reason, 503, c);
+    if (path === '/api/oauth/yahoo/start') {
+      const nonce = crypto.randomUUID();
+      const state = await makeToken(env.AUTH_SECRET, { t: 'yst', e: email, n: nonce, exp: Date.now() + 15 * 60000 });
+      const q = new URLSearchParams({ client_id: env.YAHOO_CLIENT_ID, redirect_uri: yahooRedirect(env, url.origin), response_type: 'code', scope: YAHOO_SCOPE, state });
+      return Response.redirect(YAHOO_AUTH + '?' + q.toString(), 302);
+    }
+    // callback
+    const st = await readToken(env.AUTH_SECRET, url.searchParams.get('state') || '');
+    if (!st || st.t !== 'yst' || st.e !== email || !(st.exp > Date.now())) return Response.redirect(url.origin + '/my-league?yahoo=state', 302);
+    const code = url.searchParams.get('code');
+    if (!code) return Response.redirect(url.origin + '/my-league?yahoo=denied', 302);
+    try {
+      const tok = await yahooTokenExchange(env, { grant_type: 'authorization_code', code, redirect_uri: yahooRedirect(env, url.origin) });
+      await yahooConnectionSave(env, email, tok, null);
+      return Response.redirect(url.origin + '/my-league?yahoo=connected', 302);
+    } catch (e) { return Response.redirect(url.origin + '/my-league?yahoo=failed&why=' + encodeURIComponent((e && e.code) || 'error'), 302); }
+  }
+
+  const email = await leagueSessionEmail(request, env);
+  if (!email) return leagueErr('not_signed_in', null, 401, c);
+  if (!(await leagueReady(env))) return leagueErr('no_db', null, 503, c);
+
+  if (path === '/api/leagues') {
+    const list = await leagueList(env, email);
+    const yahoo = await leagueConnectionRead(env, email, 'yahoo');
+    return json({ ok: true, contract: LEAGUE_CONTRACT, leagues: list.map(leaguePublic), defaultId: (list.find(l => l.isDefault) || list[0] || {}).id || null,
+                  connections: { yahoo: yahoo ? { status: yahoo.status, expiresAt: yahoo.expires_at } : null }, providers: leagueProviderReport(env) }, 200, c);
+  }
+  if (path === '/api/leagues/connect') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    if (await rl(env, request, 'lgconnect', 30, 600)) return leagueErr('rate_limited', null, 429, c);
+    const body = await readBody();
+    const pid = String(body.provider || '').toLowerCase();
+    const provider = LEAGUE_PROVIDERS[pid];
+    const rep = leagueProviderReport(env)[pid];
+    if (!provider || pid === 'manual') return leagueErr('unsupported_provider', 'Unknown provider', 400, c);
+    if (!rep.enabled) return leagueErr(provider.auth === 'unavailable' ? 'unsupported_provider' : 'provider_disabled', rep.reason, 503, c);
+    const ctx = await leagueWeekContext(env);
+    const conn = provider.auth === 'oauth2' ? { ...(await leagueConnectionRead(env, email, pid) || {}), email } : { email };
+    if (provider.auth === 'oauth2' && (!conn.access_enc || conn.status === 'disconnected')) return leagueErr('expired_authorization', null, 409, c);
+    try {
+      // Step 1: discover. Step 2 (leagueId present): import.
+      if (!body.leagueId) {
+        const d = await provider.discover(env, conn, { username: body.username, leagueId: body.lookupLeagueId, season: body.season || ctx.season });
+        const mine = await leagueList(env, email);
+        return json({ ok: true, step: 'leagues', provider: pid, user: d.user, season: body.season || ctx.season,
+                      leagues: d.leagues.map(l => ({ ...l, connected: mine.some(m => m.provider === pid && m.providerLeagueId === l.providerLeagueId) })) }, 200, c);
+      }
+      const lid = String(body.leagueId).slice(0, 80);
+      const { row, created } = await leagueCreateRow(env, email, pid, lid, body.name || null, body.season || ctx.season, { providerUserId: body.providerUserId || null });
+      const r = await leagueSync(env, row, 'connect');
+      if (!r.ok && created && /league_not_found|unsupported_provider/.test(String(r.error))) { await leagueDisconnect(env, email, row); return leagueErr(r.code || 'sync_failed', r.error, 404, c); }
+      const L = await leagueLoad(env, email, row.id);
+      return json({ ok: r.ok, step: 'done', created, sync: r, league: L ? leaguePublic(L) : null, needsTeam: !!(L && !L.userTeamId), teams: L ? L.teams : [] }, r.ok ? 200 : 502, c);
+    } catch (e) { return leagueErr((e && e.code) || 'sync_failed', (e && e.message) || 'failed', e && e.code === 'expired_authorization' ? 409 : e && e.code === 'league_not_found' || e && e.code === 'user_not_found' ? 404 : 502, c); }
+  }
+  if (path === '/api/leagues/manual') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    const body = await readBody();
+    let existing = null;
+    if (body.id) { existing = await leagueRow(env, email, String(body.id)); if (!existing || existing.provider !== 'manual') return leagueErr('league_not_found', null, 404, c); }
+    try {
+      const r = await leagueManualUpsert(env, email, body, existing);
+      const L = await leagueLoad(env, email, r.id);
+      return json({ ok: true, league: L ? leaguePublic(L) : null, unmatched: r.unmatched, unresolved: r.unresolved }, 200, c);
+    } catch (e) { return leagueErr((e && e.code) || 'manual_failed', (e && e.message) || 'failed', 400, c); }
+  }
+  const m = path.match(/^\/api\/leagues\/([A-Za-z0-9-]{8,64})(?:\/([a-z]+))?$/);
+  if (!m) return json({ ok: false, error: 'not_found' }, 404, c);
+  const id = m[1], action = m[2] || null;
+  const row = await leagueRow(env, email, id);
+  if (!row) return leagueErr('league_not_found', 'No such league on this account', 404, c);
+  if (!action) {
+    const L = await leagueLoad(env, email, id);
+    return json({ ok: true, contract: LEAGUE_CONTRACT, league: leaguePublic(L) }, 200, c);
+  }
+  if (action === 'sync') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    if (row.provider === 'manual') return json({ ok: true, manual: true, message: 'A manual league is edited, not synced.' }, 200, c);
+    if (row.last_sync_at && Date.now() - row.last_sync_at < LEAGUE_SYNC_MIN_GAP_MS && !url.searchParams.get('force')) return leagueErr('too_soon', null, 429, c);
+    const r = await leagueSync(env, row, 'user');
+    const L = await leagueLoad(env, email, id);
+    return json({ ok: r.ok, sync: r, message: r.ok ? null : (LEAGUE_ERRORS[r.code] || r.error), league: L ? leaguePublic(L) : null }, r.ok ? 200 : 502, c);
+  }
+  if (action === 'default') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    await leagueSetDefault(env, email, id);
+    return json({ ok: true, defaultId: id }, 200, c);
+  }
+  if (action === 'team') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    const body = await readBody();
+    const t = await env.LEADS_DB.prepare('SELECT team_id FROM league_teams WHERE league_id=? AND team_id=?').bind(id, String(body.teamId || '')).first();
+    if (!t) return json({ ok: false, error: 'no_such_team' }, 400, c);
+    await env.LEADS_DB.prepare('UPDATE leagues SET user_team_id=?, updated_at=? WHERE id=?').bind(t.team_id, Date.now(), id).run();
+    return json({ ok: true, userTeamId: t.team_id }, 200, c);
+  }
+  if (action === 'overrides') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    const body = await readBody();
+    let cur = {}; try { cur = JSON.parse(row.overrides || '{}'); } catch (e) {}
+    const next = { __providerUserId: cur.__providerUserId };
+    if (body.clear) { /* back to the synced settings */ }
+    else {
+      const o = body.overrides && typeof body.overrides === 'object' ? body.overrides : body;
+      if (o.scoring && typeof o.scoring === 'object') { next.scoring = {}; for (const k of Object.keys(o.scoring)) if (k in SCORING_BASE || k in SCORING_KDEF) { const v = Number(o.scoring[k]); if (Number.isFinite(v)) next.scoring[k] = v; } }
+      if (o.extras && Number.isFinite(Number(o.extras.tePremium))) next.extras = { tePremium: Number(o.extras.tePremium) };
+      if (o.roster && typeof o.roster === 'object') { next.roster = {}; for (const k of Object.keys(o.roster)) if (k in leagueEmptyRoster() && k !== 'other') next.roster[k] = Math.max(0, Math.min(20, Math.floor(Number(o.roster[k]) || 0))); }
+      if (o.faab != null && o.faab !== '') next.faab = Math.max(0, Math.floor(Number(o.faab) || 0));
+    }
+    await env.LEADS_DB.prepare('UPDATE leagues SET overrides=?, updated_at=? WHERE id=?').bind(JSON.stringify(next), Date.now(), id).run();
+    const L = await leagueLoad(env, email, id);
+    return json({ ok: true, league: leaguePublic(L) }, 200, c);
+  }
+  if (action === 'disconnect') {
+    if (request.method !== 'POST' && request.method !== 'DELETE') return json({ error: 'Method not allowed' }, 405, c);
+    const r = await leagueDisconnect(env, email, row);
+    return json(r, 200, c);
+  }
+  // Everything below reads the model.
+  const L = await leagueLoad(env, email, id);
+  if (!L) return leagueErr('league_not_found', null, 404, c);
+  try {
+    if (action === 'board') {
+      if (!flagOn(env, 'PERSONALIZED_RANKINGS')) return leagueErr('provider_disabled', 'Personalised rankings are off', 404, c);
+      const thr = url.searchParams.get('through');
+      const out = await leagueBoard(env, L, String(url.searchParams.get('horizon') || 'week').toLowerCase(), thr && /^1[0-8]$/.test(thr) ? parseInt(thr, 10) : null);
+      const pos = String(url.searchParams.get('pos') || 'ALL').toUpperCase();
+      if (out.ok && pos !== 'ALL') out.players = out.players.filter(p => p.position === pos || (pos === 'FLEX' && ['RB', 'WR', 'TE'].includes(p.position)));
+      return json(out, out.ok ? 200 : 503, c);
+    }
+    if (action === 'availability') {
+      const names = String(url.searchParams.get('names') || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 60);
+      const keys = String(url.searchParams.get('keys') || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 60);
+      const items = names.map(n => ({ name: n })).concat(keys.map(k => ({ key: k })));
+      return json({ ok: true, contract: LEAGUE_CONTRACT, league: { id: L.id, name: L.name }, players: leagueAvailabilityLookup(L, items) }, 200, c);
+    }
+    if (action === 'advice') {
+      const mod = String(url.searchParams.get('module') || 'summary').toLowerCase();
+      const gate = { pickups: 'PERSONALIZED_WAIVERS', lineup: 'PERSONALIZED_LINEUP', matchup: 'PERSONALIZED_LINEUP', intel: 'PERSONALIZED_LINEUP', trades: 'PERSONALIZED_TRADES', playoffs: 'PERSONALIZED_LINEUP', summary: 'LEAGUE_SYNC' }[mod];
+      if (!gate) return json({ ok: false, error: 'unknown_module' }, 400, c);
+      if (!flagOn(env, gate)) return leagueErr('provider_disabled', 'That module is off', 404, c);
+      const out = mod === 'pickups' ? await leaguePickups(env, L, { limit: parseInt(url.searchParams.get('limit') || '20', 10) || 20 })
+        : mod === 'lineup' ? await leagueLineup(env, L) : mod === 'matchup' ? await leagueMatchup(env, L) : mod === 'intel' ? await leagueIntel(env, L)
+        : mod === 'trades' ? await leagueTrades(env, L, { limit: 10, minGain: url.searchParams.get('minGain') }) : mod === 'playoffs' ? await leaguePlayoffs(env, L) : await leagueSummary(env, L);
+      return json({ ...out, league: out.league || { id: L.id, name: L.name, provider: L.provider, label: L.label, sync: L.sync }, stale: L.sync.stale }, out.ok ? 200 : 503, c);
+    }
+  } catch (e) { return json({ ok: false, error: 'module_failed', detail: String((e && e.message) || e).slice(0, 200) }, 500, c); }
+  return json({ ok: false, error: 'not_found' }, 404, c);
+}
+// ══ /LEAGUE SYNC ═══════════════════════════════════════════════════════════
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -8753,6 +11005,11 @@ export default {
     // lane read are still on Vegas Edge and Game Intel, one lane over.
     if (/^\/(in-season\/)?wagers\/?$/.test(url.pathname)) {
       return new Response(null, { status: 301, headers: { 'Location': IN_SEASON_HUB + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
+    }
+    // Sync My League: /api/leagues/*, /api/oauth/*, /api/admin/league-sync.
+    if (url.pathname.startsWith('/api/leagues') || url.pathname.startsWith('/api/oauth/') || url.pathname === '/api/admin/league-sync') {
+      const lr = await leagueRoutes(request, env, url, ctx);
+      if (lr) return lr;
     }
     if (url.pathname === '/api/projections') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
@@ -8824,6 +11081,19 @@ export default {
       const out = await rankingsPayload(env);
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=900' });
     }
+    // What has actually been played, scored at the reader's setting. The one
+    // board on this site that is not a forecast — see statsPayload.
+    if (url.pathname === '/api/stats') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const preset = String(url.searchParams.get('scoring') || '').toLowerCase();
+      const out = await statsPayload(env, {
+        preset: SCORING_PRESETS[preset] ? preset : 'ppr',
+        position: url.searchParams.get('pos') || 'ALL',
+        limit: url.searchParams.get('limit')
+      });
+      return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=900' });
+    }
     // One record per player per week: projections, the money, usage and
     // context in one shape. Every in-season surface reads this rather than
     // joining the four itself.
@@ -8870,6 +11140,59 @@ export default {
         slate.stackScores = dfsStackScores(slate.stacks);
       }
       return json(slate, 200, { ...c, 'cache-control': 'public, max-age=300' });
+    }
+    // The reader's own lobby export, priced and then thrown away.
+    //
+    // /api/dfs above serves the desk's import: one main slate a week, the same
+    // rows for everybody. A reader entering a different contest already has the
+    // salary file, because the site they play on hands it to them on the
+    // contest page. This takes that file, runs it through the same parser and
+    // the same slate builder, and hands back the boards. It is the CSV path of
+    // docs/data-sources.md carried to where it belongs: the act of obtaining
+    // the data stays with the person already entitled to it.
+    //
+    // It STORES NOTHING. dfs_salaries is keyed by site and week with no reader
+    // on it, so one reader's upload written there would be what every other
+    // reader is shown. The parse is per request, the response is uncacheable,
+    // and the file itself never leaves the reader's browser except to be
+    // scored. Importing to the shared table stays an admin action.
+    if (url.pathname === '/api/dfs/slate') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false, error: 'method', note: 'POST { site, csv } to price a salary file.' }, 405, c);
+      if (await rl(env, request, 'dfsup', 60, 600)) return json({ ok: false, error: 'too_many', note: 'That is a lot of files in ten minutes. Wait a moment and try again.' }, 429, c);
+      // Measure the body before parsing it. The admin import can take the JSON
+      // straight because a key gets you there; anyone at all gets here, and a
+      // request.json() on an unbounded body is memory spent before the first
+      // check runs. The headroom over the CSV cap below is JSON escaping.
+      let raw = '';
+      try { raw = await request.text(); } catch (e) { return json({ ok: false, error: 'bad_body' }, 400, c); }
+      if (raw.length > 1400000) return json({ ok: false, error: 'too_big',
+        note: 'That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.' }, 413, c);
+      let b = {}; try { b = JSON.parse(raw); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); }
+      const site = DFS_SITES[b.site] ? b.site : null;
+      if (!site) return json({ ok: false, error: 'site', note: 'Choose DraftKings or FanDuel before reading a file.' }, 400, c);
+      const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 1000000));
+      if (parsed.error) return json({ ok: false, error: parsed.error,
+        note: 'That file did not read as a ' + DFS_SITES[site].label + ' salary export. Download it from the contest lobby and upload it unchanged.' }, 400, c);
+      if (dfsSlateShape(parsed.rows) === 'single-game') return json({ ok: false, error: 'single_game',
+        note: 'That is a single-game file: it prices a captain or MVP at a multiplier the classic roster does not have. Every board here is built for the classic cap, so pricing it would show you a lineup you cannot enter. Upload a main-slate export instead.' }, 400, c);
+      const sched = await scheduleCacheRead(env);
+      const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+      const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
+      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, {});
+      slate.week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      // No salariesAsOf: the reader's file has no import time, and a timestamp
+      // for when they happened to press the button would say nothing true.
+      slate.source = 'upload'; slate.salariesAsOf = null;
+      slate.stacks = buildDfsStacks(slate, state);
+      if (flagOn(env, 'DFS_CONTENT')) {
+        const contest = DFS_CONTESTS[b.contest] ? b.contest : 'gpp';
+        const m = dfsMetrics(slate.players, contest);
+        slate.metrics = { contest: m.contest, label: m.label, note: m.note, sortBy: m.sortBy, ownershipBasis: m.ownershipBasis, medianPerK: m.medianPerK, contests: Object.fromEntries(Object.entries(DFS_CONTESTS).map(([k, v]) => [k, v.label])) };
+        slate.stackScores = dfsStackScores(slate.stacks);
+      }
+      return json(slate, 200, { ...c, 'cache-control': 'no-store' });
     }
     // The newsroom: the public feed the homes read, the staff, one analyst,
     // the Fantasy/Market blend, and the Vega/Brooks disagreements.
@@ -9774,8 +12097,11 @@ export default {
       return json({ ok: true, ...providerReport(env), kinds: Object.keys(PROVIDERS), ran }, 200, c);
     }
     // DFS salaries: GET reports what is loaded; POST { site, csv, slate? }
-    // imports a lobby CSV for the current week; ?refresh=1 pulls the configured
-    // site feeds now.
+    // imports a lobby CSV for the current week. There is no feed refresh here.
+    // The operator endpoints were removed on 2026-09-06 (docs/data-sources.md)
+    // and a licensed feed, if one is ever configured, has no import job yet:
+    // providerRun(env, 'dfs') is reachable only from /api/admin/providers, and
+    // that route reports what it fetched without storing it.
     if (url.pathname === '/api/admin/dfs') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
@@ -10326,10 +12652,24 @@ export default {
       // target, or the assets layer answers with a 307 back to this same path.
       else if (/^\/player(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/player', url).toString(), request);
       else if (/^\/(auctiondraft|snakedraft|bestball|hub)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request);
-      // /in-season/<page> is the section's canonical URL; the pages live at the
-      // root because the chrome and SEO generators walk the root. Extensionless
-      // target, as above. The gate below sees the SAME name, so a section page
-      // cannot be reached ungated by adding the prefix.
+      // /in-season/<page> is an ALIAS, not the canonical URL. This comment used to
+      // claim the opposite, and two pages believed it: rankings.html and
+      // vegas-edge.html canonicalised to /in-season/<name> while the shared
+      // chrome — the one link set in tools/build-chrome.mjs, stamped onto ~150
+      // pages — linked them bare, 331 and 470 times against 6 and 5. Every one
+      // of those links pointed at a URL its own target disowned. The nine other
+      // section pages were bare on both sides all along, so the two were
+      // corrected to match them rather than the nine migrated to match the two.
+      //
+      // The prefix still serves, because it is linked from outside and printed in
+      // older copy; the canonical tag on each page is what says which of the two
+      // addresses is the page. /in-season/desk is the exception and is genuinely
+      // prefixed on both sides: it is the parent of /in-season/desk/<kind>/<week>
+      // and the chrome links it that way.
+      //
+      // The pages live at the root because the chrome and SEO generators walk the
+      // root. Extensionless target, as above. The gate below sees the SAME name,
+      // so a section page cannot be reached ungated by adding the prefix.
       else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)
                && !(POST_DRAFT_PAGES.has(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request))) {
         __assetReq = new Request(new URL(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, ''), url).toString(), request);
@@ -10386,7 +12726,9 @@ export default {
           ogd: 'Ceiling-weighted best ball values, live stack detection, and championship-week edges tuned to your exact roster as you draft. Free to try.'
         }
       };
-      const __m = __SPA_SEO[__seoKey];
+      // The SPA format routes take their meta from the table above; /analysts/<id>
+      // builds its own from the staff table, and both land in the same rewriter.
+      const __m = __SPA_SEO[__seoKey] || analystSeo(env, __seoKey);
       if (__m) {
         let __html = await resp.text();
         const __ix = __html.indexOf('</head>');
@@ -10402,6 +12744,18 @@ export default {
             .replace(/(<meta name="twitter:title" content=")[^"]*(")/, '$1' + __esc(__m.ogt) + '$2')
             .replace(/(<meta name="twitter:description" content=")[^"]*(")/, '$1' + __esc(__m.ogd) + '$2');
           __html = __h + __html.slice(__ix);
+        }
+        // An analyst URL additionally becomes indexable and gets a body. The
+        // shell is noindex as it ships and must stay that way at /analysts
+        // itself and at any id the staff table does not know; only a matched
+        // persona, with its header pre-rendered below, earns the index.
+        if (__m.analyst) {
+          __html = __html
+            .replace(/<meta name="robots" content="noindex"\s*\/?>/,
+              '<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">')
+            .replace('<div class="an-head" id="anHead"></div>',
+              '<div class="an-head" id="anHead">' + analystHeader(__m.analyst) + '</div>')
+            .replace('</head>', analystLd(__m.analyst, __m.url) + '\n</head>');
         }
         const __r = new Response(__html, resp);
         __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -10427,6 +12781,7 @@ export default {
     // York time, says what is due this hour; runScheduledTick runs it phase
     // by phase through the job log, and the desk tick goes last.
     if (event.cron === '*/15 * * * *' || event.cron === '0 * * * *') {
+      console.log('tick start:', event.cron, new Date(event.scheduledTime || Date.now()).toISOString());
       ctx.waitUntil(runScheduledTick(env, Date.now(), event.cron)
         .then(r => console.log('tick:', JSON.stringify(r).slice(0, 600)))
         .catch(e => console.error('tick failed:', e && e.message)));

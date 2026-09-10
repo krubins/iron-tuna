@@ -34,6 +34,11 @@ const ALLOWED = {
   'api.the-odds-api.com':     { kind: 'content', why: 'paid odds feed; commercial display terms pending (docs/data-sources.md R3)' },
   'site.api.espn.com':        { kind: 'content', why: 'REMEDIATION PENDING: undocumented endpoints, no commercial licence (R1)' },
   'api.sleeper.app':          { kind: 'content', why: 'REMEDIATION PENDING: non-commercial grant only (R2)' },
+  // League sync (docs/league-sync.md). Sleeper league reads ride on the row
+  // above and are gated by FLAG_SLEEPER_SYNC (default off) for the same R2
+  // reason. Yahoo is OAuth 2.0 with the reader's consent, read-only scope.
+  'api.login.yahoo.com':      { kind: 'service', why: 'Yahoo OAuth 2.0 authorisation and token endpoints (league sync)' },
+  'fantasysports.yahooapis.com': { kind: 'content', why: 'Yahoo Fantasy Sports API, the reader’s own leagues under their OAuth grant (R7)' },
   'static.www.nfl.com':       { kind: 'content', why: 'REMEDIATION PENDING: hot-linked league imagery, rights unreviewed (R4)' },
   'api.stripe.com':           { kind: 'service', why: 'payments' },
   'api.resend.com':           { kind: 'service', why: 'transactional mail' },
@@ -45,6 +50,12 @@ const ALLOWED = {
   'graph.threads.net':        { kind: 'service', why: 'our own posting' },
   'api.indexnow.org':         { kind: 'service', why: 'search index ping' },
   'github.com':               { kind: 'service', why: 'links only, never fetched' },
+  // A JSON-LD @context is a vocabulary identifier, not an endpoint. It is
+  // printed into the ProfilePage block the worker builds for /analysts/<id>
+  // and read by a crawler that already knows the vocabulary; nothing on this
+  // side ever fetches it. Listed because this test matches host STRINGS, and
+  // a rule that let an unexplained host through would not be worth having.
+  'schema.org':               { kind: 'service', why: 'JSON-LD vocabulary identifier, never fetched' },
   'irontuna.com':             { kind: 'own',     why: 'us' },
   'www.irontuna.com':         { kind: 'own',     why: 'us' },
   // Green sources from Addendum 13.1. Listed ahead of use so adopting them in

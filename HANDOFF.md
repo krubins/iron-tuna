@@ -198,6 +198,7 @@ Providers run in priority order and their overlays are **merged, earlier wins pe
 | Provider | Needs | What it gives |
 |---|---|---|
 | `the-odds-api` | `ODDS_API_KEY` (paid tier) | Per-player season props. Optional upgrade. |
+| `espn-gamelines` | nothing | One named book's game spread and total, **with that book's own opening line**. Free. |
 | **`nflverse`** | **nothing** | **Game lines → team scoring environment. This is the one that actually runs.** |
 
 **nflverse is free, keyless, and CC BY 4.0** (attribution only — credited in the `front.html` footer; keep that credit if you keep the data). It is fetched from a GitHub release asset, so no sportsbook ToS is involved: DraftKings' internal JSON is keyless too but their terms prohibit automated access, which is why it is not used here.
@@ -678,6 +679,9 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   lead pool, so it never repeats the lead. *(If the rail ever looks stale, the cause is
   usually a new page added without re-running `build-front.mjs` — that is exactly how it
   got stuck showing July 22.)*
+- **In the regular season the rail is a different feed entirely** — the desk plus this
+  fortnight's reports, never the drop pages. See "Top Headlines in the regular season
+  (2026-09-09)" below.
 > **Routing note (merge of PR #39 and #40):** both branches fixed `?screen=cheat`
 > landing on the draft board. PR #40's fix sent phones to `'tiers'`, which was right
 > against the *old* mobile tab bar where `'tiers'` was the tab labelled "Cheat". PR #39
@@ -730,17 +734,41 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   cases come from `/api/vegas-column`, not from `STORIES`, so `build-front.mjs` does not
   touch it and it never needs a copy refresh. Full contract in **§9c**.
 - **The lead carries artwork** (`#leadArt`), an inline SVG plate in the featured team's
-  colours. **No club logo, wordmark or player likeness is reproduced** — none of that is
-  ours to publish. What is used is a team's colours (a fact, not a creative work) plus the
-  abbreviation, drawn as original geometry. `TEAM_ART` in `front.html` holds the palette;
-  `inkOn()` picks the type colour from the background's luminance, because white on
-  Pittsburgh's yellow is unreadable.
-  - The team comes from `story.team`, set by `build-front.mjs` from **the headline only**.
-    The body fallback that works for topics is too loose here: "Offensive-line dispersion
-    matters more this year" is a league-wide piece that cites Buffalo in paragraph three,
-    and body matching handed it Buffalo's colours. League-wide stories get the neutral
-    plate — currently 17 of 20 deep dives name a team, and the 3 that don't are the two
-    rule-change pieces and the dispersion one, correctly.
+  colours. The geometry is original — a team's colours (a fact, not a creative work) plus
+  the abbreviation and the club name — and it is what always draws. `TEAM_ART` in
+  `front.html` holds the palette; `inkOn()` picks the type colour from the background's
+  luminance, because white on Pittsburgh's yellow is unreadable.
+  - **Club marks are referenced, not reproduced.** `logoUrl()` points an SVG `<image>` at
+    ESPN's own logo host, the same posture as the player photographs in the band above,
+    disclosed in the same row on `/data` and claiming no rights and no affiliation. A mark
+    that will not load (blocked, moved, 404) removes itself and its badge, and the type
+    slides back to its `data-x0` position, so the plate is whole either way. Backing this
+    out is deleting `logoUrl` and the `<image>`: nothing else depends on it.
+  - The badge under a mark is a **rounded square the size of the file**, not a disc, and
+    the same shape clips the image. The files are square: a circle either crops their
+    corners or leaves the art rattling around inside a badge too big for it, and both
+    read as a mark that does not fit its space. A square fits either kind of file — art
+    on a transparent ground gets a clean tile, art baked onto its own opaque square lands
+    flush against the edges.
+  - **Three layouts.** A **fixture** ("NE at SEA" / "Raiders vs Jaguars") splits the plate
+    between the two clubs, with the connector in the centre badge so the order still reads
+    — "at" means the first club is the visitor. One club gets the single plate. Neither
+    gets the neutral `NFL / LEAGUE-WIDE` plate.
+  - The team comes from `story.team` where `build-front.mjs` set one, from **the headline
+    only**. The body fallback that works for topics is too loose here: "Offensive-line
+    dispersion matters more this year" is a league-wide piece that cites Buffalo in
+    paragraph three, and body matching handed it Buffalo's colours. A generated desk piece
+    arrives with no team at all, so `firstTeam()` reads its headline under the same rule.
+    The **dek is read for one thing only**: a fixture. "NE at SEA" in the dek of a game
+    preview is the subject of the piece, not a rival cited in passing. A fixture also has
+    to be the headline club's own game, so a slate piece led by New England does not get
+    San Francisco's plate because SF-at-LA happens to be the first game its dek lists.
+    "LA" is deliberately not a key — it names two clubs — and neither is a bare "New York".
+  - The strap (the topic, bottom right) rides a chip measured to its own type by
+    `fitStrap()`, re-measured once `document.fonts.ready` resolves. It used to be bare type
+    anchored to the right edge, long enough to run off the accent wedge onto the plate
+    behind it: "THURSDAY NIGHT FOOTBALL PREVIEW" was set in the wedge's dark ink and its
+    first eight characters landed on a near-black field, invisible.
 - **Odds impact on every player row** (`vegasRankEl` / `vegasRankShifts` in `index.html`,
   wired into **`Cheatsheet`** and **`PlayersRail`** — the cheat sheet and the auction
   manager). The old `vegasFlagEl` "V" badge only said *that* the odds mattered, and only on
@@ -6516,7 +6544,7 @@ order; every adapter normalises into Iron Tuna's schema before returning.
 | Kind | Adapters (in order) | Needs |
 |---|---|---|
 | `schedule` | nflverse games.csv, ESPN scoreboard | nothing |
-| `odds` | The Odds API v4 (per-event player props), nflverse game lines | `ODDS_API_KEY` for the first |
+| `odds` | The Odds API v4 (per-event player props), ESPN scoreboard game lines, nflverse game lines | `ODDS_API_KEY` for the first |
 | `projection` | the committed board | nothing |
 | `consensus` | the committed board, scored odds-blind | nothing |
 | `stats` / `snaps` | nflverse `stats_player_week_<yr>.csv`, `snap_counts_<yr>.csv` | nothing |
@@ -8139,7 +8167,464 @@ days). And `_namesOf` collected names only under keys that looked like
 names, so a correct draft naming a receiver the packet stored as `absent`
 was held; every string in a packet is a fact now.
 
-## 69. September 9: the static pages join the masthead
+### 68m. The cron went silent, and the log could not say why
+
+Between the first live tick and the next morning the `*/15` trigger reached
+the worker on an ordinary quarter-hour rhythm and then, three times, did not:
+21:00 to 23:30Z on September 8, 04:31 to 06:45Z and 07:31 onward on
+September 9, each silence two hours or more. D1 was not the cause (page views
+kept writing through every gap) and neither was a deploy (none coincided).
+Two of the three gaps began with a tick whose `news-scan` row was written
+and whose `content-tick` row was not, which a log written only at the end
+cannot distinguish from a cron that never fired again.
+
+So the log changed shape. `jobRun` now OPENS the row before the job (job,
+trigger, started_at, everything else NULL) and CLOSES it after (finished_at,
+ok, error, summary, by id). A row that is open with nothing after it is an
+invocation the runtime killed; no row at all is a cron that never fired. When
+the open write returns no id the row is written whole at the end, as before,
+so a fake D1 in a test and a degraded D1 in production both still get a log.
+The board (`jobBoard`, `_jobRow`) reports `unfinished` and `died` (open and
+older than `JOB_DIED_AFTER_MS`, 16 minutes) and counts a death as a failure;
+`tickHealth` is the pulse the control centre shows (last tick, minutes of
+silence, deaths in the last day), red past `TICK_SILENT_MIN` (20 minutes).
+
+Every job also runs under a deadline now (`JOB_DEADLINE_MS`: 13 minutes for
+the desk tick, 4 for the rest), inside the runtime's fifteen. A job past it
+is a logged failure with `deadline:` in the error and the tick moves on; the
+promise itself is not cancelled, only no longer waited for. And the scheduled
+handler logs `tick start` before it does anything, so the Cloudflare log has
+a line for every invocation that reached the worker.
+
+What this does not do is fix the cron. If the next gap shows open rows, the
+invocation is dying and the deadline plus the log will say in which job; if
+it shows nothing, the trigger is not firing and the answer is in the
+dashboard's Cron Events for the worker, which the repo cannot read.
+
+### 68n. A Wednesday opener, and what ESPN says to the worker
+
+The 2026 season opened on a Wednesday (NE at SEA, September 9, 8:20 PM ET)
+with a second game on Thursday (SF and the Rams). The calendar previewed
+only Thursday games, so the opener would have had no preview at all. A
+piece about specific games now takes its SLOT from the first of them:
+`contentDue` uses the first target's weekday in place of the kind's `day`
+when `anchor` is `targets`, so the Thursday preview runs Thursday morning
+in an ordinary week and Wednesday morning in this one, covering both
+midweek games; `tnf-preview` and `tnf-what-matters` target Wednesday and
+Thursday games alike, and `titleFor(days)` retitles them (Midweek Kickoff
+Preview, Midweek Football: What Matters) when the slate is not Thursday's.
+`kindTitle(K, d)` is the one place the title is decided, and `contentDue`
+returns `targetDays` and `slotDay` so the packet and the row can use it.
+
+Two feeds looked wrong the same morning. The hourly schedule refresh has
+reported `live: 0` with no error, and the depth chart job `got: 0,
+failed: 32`, every day since September 4, while both ESPN URLs answer in
+full from outside Cloudflare. Every ESPN fetch now sends a user agent and
+an accept header (the injuries feed always did, and it is the one ESPN
+feed that has worked), `_espnEvents` records what ESPN returned (status,
+content type, event count, the first bytes of an eventless body) and the
+refresh writes it into its summary as `espn`; the depth chart job keeps
+its `firstError`. If the next refresh still shows nothing, the summary
+says what the worker was actually given. Until statuses arrive from ESPN,
+no game is ever `final` and no retrospective piece is ever ready.
+
+---
+
+### 68p. September 9: The Desk showed an auction story on the front page
+
+Ken's report on the Wednesday of Week 1: "The story on The Desk is still
+auction focused. This should be focused on this week's matchups." The lead
+is the newest published desk piece in the regular season (68a); every Week 1
+piece was held (68l, 68m), and the retired lead-story Routine (68a) was still
+running every six hours, so the fallback to the `lead_story` archive was
+never empty: "Bid Carnell Tate to $13" sat above the Week 1 slate. 68m's
+checker and `revalidateHeld` published the Thursday preview at 12:45Z. This
+section is the rest:
+
+- **The Routine is off.** `trig_011LYewcPUQikF8izFsN2LAr` ("lead story
+  refresh (every 6h)") was disabled from a session on 2026-09-09. Its prompt
+  stays in `tools/lead-story-routine-prompt.md` for the 2027 draft season.
+- **No auction story in the regular season.** With nothing published,
+  `leadStoryPayload` serves `deskNextPayload`: the next piece on the
+  calendar, named and timed in ET, `placeholder: true`, linking to
+  `/in-season/desk`. The archive is reached only outside the regular season.
+- **`front.html` paints a desk lead as a desk lead:** "The Desk" badge, the
+  byline and publish time instead of the Routine's six-hour countdown, no
+  default-league pricing note (a desk piece quotes no dollars; the note was
+  printing "12 teams, $200" under a matchup preview), "More from the desk", a
+  five-minute re-look, and the section's more-link goes to `/in-season/desk`
+  under `html[data-season="in"]`.
+- **`NEWSROOM_SYSTEM` asks for sentence-case headlines**, so the checker
+  meets fewer title-case runs in the first place.
+- `tools/test-newsroom.mjs` holds every phrase from the September 9 hold
+  against the checker; `tools/test-dry-run.mjs` asserts the Wednesday
+  placeholder.
+
+---
+
+## Sync My League (2026-09-09)
+
+**What it is.** A reader connects the fantasy league they actually play in and every in-season surface reads their exact scoring, their roster, every other roster, the free-agent pool, their opponent and the standings. It is infrastructure, not a page: the model lives in D1 and the pages read it. The long record (audit, design, provider terms, deliverables, env vars, deployment) is `docs/league-sync.md`; this is the map.
+
+**Where it lives.**
+- `_worker.js`, the marked region `// ══ LEAGUE SYNC` … `// ══ /LEAGUE SYNC` just above `export default`. Adapters (`LEAGUE_PROVIDERS`: sleeper, yahoo, espn placeholder, manual), the normalised model (`leagueNormalizeSettings`, `leagueEffectiveSettings`, `leagueScore`), the crosswalk (`leagueResolvePlayer`, `leagueMapPlayers`, tables `player_id_map` / `player_map_misses`), storage (`leagueWriteModel`, `leagueLoad`), the sync (`leagueSync`, job `league-sync` → `runLeagueSync`, cadence `leagueNextSyncAt`), the modules (`leagueBoard`, `leagueLineup`, `leaguePickups`, `leagueMatchup`, `leagueIntel`, `leagueTrades`, `leaguePlayoffs`, `leagueAvailabilityLookup`, `leagueSummary`) and the routes (`leagueRoutes`: `/api/leagues*`, `/api/oauth/yahoo/*`, `/api/admin/league-sync`). The fetch handler dispatches to `leagueRoutes` first.
+- Three touches outside the region: eight flags appended to `NEWSROOM_FLAGS` (`LEAGUE_SYNC`, `SLEEPER_SYNC`, `YAHOO_SYNC`, `ESPN_SYNC`, `PERSONALIZED_WAIVERS/LINEUP/TRADES/STORIES`), the `league-sync` row in `JOB_FNS` and `JOB_SCHEDULE` (hourly, phase 2; the job decides per league), and `boardsPayload`'s memo key now includes `o.customKey` so a league's custom scoring does not collide with another's.
+- `it-sync.js` — the client library (`ITSync`): loads `/api/leagues` once a minute per tab, the active-league selector, the sync strip, the acquisition CTA, and the On Your Roster / Available in Your League callouts on any `/player/` link.
+- `my-league.html` is **My Leagues** (connect flow, league cards, Sync now, default, pick my team, Review settings with corrections, Disconnect, manual league form); `my-week.html` is **My Week** (best lineup, matchup, alerts, pickups, trade matches, playoff readiness). Hooks on `rankings.html` (a "Your league (synced)" scoring preset reading `/board`, roster badges), `faab.html` (the synced Pickup Advisor above the Sleeper/manual flow), `trade-finder.html` (load every roster from the league; the desk's own matches), `player.html` (the league line under the club), `fantasy.html` / `in-season.html` (strip, CTA, week card), `lead.html` / `desk.html` (story callouts), `admin.html` (the League sync card).
+
+**Rules.**
+- Nothing downstream knows which provider a league came from. Add a provider by adding an adapter with `discover/pull/normalize`; touch nothing else.
+- Provider ids are primary keys everywhere; a sync that runs twice writes the same rows. Rows a sync did not touch are deleted by their stale `updated_at`.
+- A provider failure never deletes a league. It is a logged run (`league_sync_runs`), a `failed` status the UI shows next to the last good sync, and a retry with doubling backoff capped at a day.
+- The reader's corrections (`leagues.overrides`) are never written by a sync. `leagueEffectiveSettings` lays them over the synced settings and names them.
+- No display-name matching where an id exists. A provider id that cannot be resolved is a recorded miss and stays on the roster by name, scored 0, never guessed.
+- OAuth tokens are sealed (AES-GCM under `LEAGUE_TOKEN_KEY`) before D1 and never reach the browser. Disconnecting the last league on an OAuth provider deletes the tokens.
+- **Sleeper is off by default** (`FLAG_SLEEPER_SYNC`). Their API is non-commercial-only and this is a paid product (docs/data-sources.md R2, R7). Turn it on only with their licence in writing. Yahoo is off until an app is registered (`YAHOO_CLIENT_ID`, `YAHOO_CLIENT_SECRET`, `LEAGUE_TOKEN_KEY`). ESPN has no supported path and the adapter says so.
+
+**Tests.** `node tools/test-league-sync.mjs` (in CI): fixtures in `tools/fixtures/`, the network stubbed, an in-memory D1, the real scoring engine and the real PROJECTIONS pool. `tools/test-jobs.mjs`, `test-health.mjs` and `test-newsroom.mjs` know the new job and the three off-by-default flags. `tools/test-data-sources.mjs` allowlists the two Yahoo hosts.
+
+### 68o. The first real draft, and what the fact check got wrong
+
+The first writer run on production (the Week 1 midweek preview, 11:45Z on
+September 9, 201 seconds for two lenses and one retry) produced a sound
+draft, grounded and honest about the feeds it lacked, and the fact check
+held it on twenty-three violations, every one a false positive: "Two
+Slates", "Implied Totals" and "Market Away From" from a title-case
+headline; "Brown. Vegas" and "Nacua. Reasonable" across a full stop;
+"Guerendo's PUP", "Every Patriots", "Reasonable DST", "Iron Tuna's"; and
+numbers that were arithmetic on the packet (18.6 is 1.5 below 20.1) or the
+spread quoted from the other side (-3.5).
+
+`validateDraft` now ends a sentence where a lower-case word meets its full
+stop before it looks for names (an initial is not a sentence end), strips a
+possessive, drops all-caps abbreviations and every word in `NOT_A_NAME`
+(the words a headline starts with, the clubs and cities, the desk's own
+vocabulary), and calls a run of capitals a name only if two or more words
+survive and the pair is not made of allowed surnames. A number is allowed
+as the signed form of a packet number or, below ten, as the difference or
+sum of two packet numbers. A real player the packet lacks is still caught,
+and so is a number that is neither in the packet nor arithmetic on it.
+
+And a held draft is not thrown away when the check improves:
+`revalidateHeld` runs the fact check on the stored body against a fresh
+packet before the writer is asked again, and publishes the row as it stands
+(calls recorded) when it passes and the desk is auto-publishing. A row held
+for approval stays the editor's. The Week 1 preview passes the new check
+with its real packet (35 allowed names, 152 numbers); the first tick after
+this deploys publishes it.
+
+The 12:00Z refresh answered the question in §68n: ESPN returns 403 with an
+HTML body to the worker's scoreboard request, while the injuries feed on
+the same host answered 800 rows an hour earlier. The requests differed in
+two ways, a user agent carrying a URL and `cf.cacheTtl` on the failing
+ones; every ESPN fetch is now shaped like the one that works (plain user
+agent, no cache options), and a 403 body's first bytes are kept in the
+refresh summary if it recurs.
+
+---
+
+## The news well: the lead story moves under the hero (2026-09-09)
+
+**What changed.** Ken's note: "Right under the hero, include a main story
+with a picture on the left, and then 5-6 stories in a column on the right
+spaced so that the lowest story is aligned with the bottom of the lead
+story." The Desk's lead was four screens down, inside chapter 01, behind
+the lane tabs; the first thing under the hero was the market-vs-consensus
+plate. The lead is now the first SECTION under the hero band, and the plate
+is the second. (The section ribbon of §69 landed in the same hour and sits
+between the hero and this well — it is a navigation band, not a chapter,
+so the numbering below is unchanged.)
+
+**Where it lives.** `<section class="fp-sec fp-well">` in `front.html`,
+between the hero band and the "Where the experts and the market disagree
+most" section, and deliberately ABOVE `.topbars`: the lead story belongs to
+the site, not to Weekly Fantasy or to DFS, so a reader who opens the DFS
+lane still sees what the desk published this morning. The `#today` sec-head
+("The Desk", with its two season-specific more-links) moved up with it.
+Chapter 01 now opens on The Newsroom.
+
+**The markup moved and the JavaScript did not.** Every id inside the well is
+the one `renderLead`, `paintGeneratedLead` and the rail already wrote to
+(`leadMedia`, `leadCast`, `leadBody`, `leadTitle`, `leadAlso`, `leadCtrls`,
+`railList`). Three deliberate changes on top of the move:
+
+- **The picture is a COLUMN, not a band.** `.fp-well .lead` is a two-column
+  grid: `.lead-media` is the left cell spanning both rows, the body and the
+  draft-season carousel controls stack in the right one. The first face runs
+  as one plate that takes whatever height the story leaves it (`flex: 1 1
+  auto`, `min-height: 186px`), the second stands under it caption-sized, and
+  the rest are hidden — a picture column, not a contact sheet. A story that
+  names nobody has no column at all: `renderCast` puts `.nopic` on the card
+  when it hides the band, and the markup ships with it so an unpainted card
+  never holds a 292px gutter open. Under 900px the whole thing reverts to
+  the band-across-the-top the rest of the site uses, every face visible.
+- **Six headlines, spaced to the lead's height.** `RAIL_MAX` is 6, down from
+  9. `.fp-well .rail` is a flex column stretched to the lead beside it and
+  its `<ul>` spreads its items over that height, so the sixth headline's
+  rule closes level with the lead card. That is the alignment the request
+  asked for; it is CSS, not a measured height, so it survives any headline
+  length.
+- **The column is the desk's, not the drop pages'.** In the regular season
+  the `STORIES` library is a July and August auction shelf, and six draft-day
+  calls standing beside a story about this week read as an archive. When
+  `/api/lead-story` returns retired stories, `paintDeskRail` gives them the
+  column (repriced through `it-league.js` exactly as they were in the card),
+  tops up to six from the drop pages only if the desk is thin, and retitles
+  the column "More from the desk". The drop-page rail paints first and is
+  replaced when the fetch lands, so the column is never empty in flight.
+  The "More from the desk" list that used to sit INSIDE the lead card is
+  gone: it and the column were the same five headlines four inches apart,
+  which the two-column well made impossible to miss.
+
+**Two smaller fixes it forced.** The generated lead's kicker printed THE
+DESK twice (the rank badge and the category label are the same word for a
+desk piece) — survivable four screens down, not at the top of the page, so
+the second badge is dropped when it repeats the first. And `.lead-also:empty`
+is `display:none`, because an empty list is otherwise a stray rule across the
+foot of the story.
+
+**Checked:** `test-css-tokens`, `test-seo`, `test-chrome`, `test-it-league`,
+`test-lead-story`, `test-content`, the front.html parse gate, and
+`build-front.mjs` / `build-seo.mjs` re-run clean (no generated-block drift).
+Rendered in Chromium at 1360px and 430px against a stubbed `/api/lead-story`
+(desk lead + five retired stories), against the draft-season fallback
+rotation, and against a lead that names nobody.
+
+---
+
+## 69. September 2026: the rankings ribbon, and a page per position
+
+Under the hero on the front page there is now a **section ribbon** with five
+destinations — **Stats**, **This Week's Rankings**, **Season Long Rankings**,
+**Hidden Value**, **Previews**. The two rankings items drop every position down
+on hover, and each position has a page of its own.
+
+### The pages
+
+| URL | What it is |
+|---|---|
+| `/weekly-rankings` | this week, every position pooled |
+| `/weekly-<pos>-rankings` | this week, one position (`qb rb wr te flex k dst`) |
+| `/season-long-rankings` | rest of season, every position pooled |
+| `/season-long-<pos>-rankings` | rest of season, one position |
+| `/stats` | what has actually been played |
+| `/hidden-value` | where the two boards disagree most |
+| `/previews` | every game this week, off the market |
+
+That is sixteen rankings pages and three lane pages, nineteen in all. Every one
+of them is in `POST_DRAFT_PAGES` in `_worker.js`, so the whole section is gated
+with the rest of the in-season tools and stays out of the sitemap while the gate
+is shut.
+
+### Every board is Fantasy Consensus vs. Betting Odds
+
+The point of the section. Each row prints the same player twice:
+
+- **Fantasy Consensus** — the projection consensus at the chosen scoring, nudged
+  by the live usage role trend once three games have earned it. No odds in it.
+- **Betting Odds** — the same player priced off the sportsbook. The `basis`
+  under the number says which of three things it is, every row: `props` (a
+  quoted player prop), `gamelines` (the posted game line's scoring environment
+  applied to his line), `ratings` (a fixture no book has posted yet, projected
+  from fitted team ratings and graded LOW).
+
+The Gap column is the second minus the first, in points and in rank slots, and
+the verdict beside it is `marketDelta.classification` — the site's own standing
+thresholds, shipped in the payload. **Nothing about the gap is re-derived in the
+browser**; that is how two pages come to name different players as the widest
+disagreement on the board.
+
+### The season-long drawer
+
+On a season-long board every row opens into **every remaining week**: opponent,
+both columns, Iron Tuna's blend, and the odds basis, week by week to the end of
+the season, with a total that has to match the row above it. A bye and an
+absence get a row of their own rather than being skipped, so the weeks still
+read 2..18. The data is `players[].weeks[]` out of `/api/boards`, which
+`buildBoards` has always carried — nothing new was computed for this.
+
+**The board is scored on the SERVER.** Unlike `/rankings`, which ships stat
+lines and re-scores them in the browser with `it-league.js`, these pages ask
+`/api/boards?...&scoring=<preset>` and re-fetch when the preset changes. The
+reason is the drawer: there is no per-week stat line in the payload, so a
+browser re-score would leave the weeks disagreeing with the row they sum to.
+One edge-cached fetch per preset instead of two engines to keep in step.
+
+### `/api/stats` (new)
+
+The one board on the site that is not a forecast. `statsPayload` reads the usage
+overlay — nflverse weekly stats and snap counts — and scores it at the preset
+asked for. Two lines per player: the **season**, and the **latest week** kept
+whole.
+
+`runUsageRefresh` now accumulates `season.stats` (the raw stat line, week by
+week) alongside the counting stats it already kept. Points are NOT stored with
+it: a season total is only worth something at a stated scoring, and one cache
+serves every reader. A cache written before this field existed simply has no
+`stats`, and that is returned as `null` and printed as a dash — never as zero.
+
+### How it is generated
+
+`tools/build-ranks.mjs`, on the same sentinel discipline as `build-chrome.mjs`:
+
+```
+node tools/build-ranks.mjs          # writes
+node tools/build-ranks.mjs --check  # CI gate
+```
+
+It owns three things and nothing else:
+
+- `<!--ranks:ribbon-->…<!--/ranks:ribbon-->` — the ribbon, on every page that
+  carries the sentinel (front page, `/rankings`, all nineteen section pages).
+- `/* ranks:css */…/* /ranks:css */` — the ribbon's stylesheet, injected into
+  **both** `site.css` and `front.html`'s inline `<style>`, because front.html
+  links no shared sheet. One block, two palettes: every colour reads through a
+  local alias with the other file's token as the fallback
+  (`var(--ink, var(--text, #111820))`), which is also the one form
+  `test-css-tokens.mjs` accepts unconditionally.
+- the sixteen rankings pages, **scaffolded once** and then left alone apart from
+  their ribbon — `build-chrome.mjs` and `build-seo.mjs` own regions of the same
+  files, so regenerating a whole page on every run would undo those two.
+
+Order after adding a position: `build-ranks` → `build-chrome` → `build-seo`. The
+position list is in the tool AND as literal strings in `POST_DRAFT_PAGES`; the
+comment there says why (two test suites parse that set out of the source text,
+so a `.map()` in it would leave every real route unlisted).
+
+### Two traps this hit, written down so it is not hit again
+
+1. **`overflow-x: auto` with `overflow-y: visible` computes to
+   `overflow-y: auto`.** The first cut of the ribbon was a sideways scroller
+   with the dropdowns inside it, and the menus were clipped at the band's 46px —
+   visible to `isVisible()`, invisible to a reader. front.html's own ribbon had
+   already learned this and parents its search menu to `<body>`. The band now
+   wraps at desktop width and only becomes a scroller below 860px, where the
+   menus (and their carets) are off anyway.
+2. **`build-seo.mjs` adds the GA4 destination to an existing Google tag but
+   never writes the tag itself.** A scaffolded page ships with both configs in
+   its `<head>` or it is silently untagged forever. The template carries them.
+
+### Tests
+
+`tools/test-ranks.mjs` (37 assertions, in CI). It holds the three things that
+fail silently here: the ribbon is compared byte for byte across every page that
+carries it, the desktop row is asserted not to be a scroll container, and every
+page in the section is checked against `POST_DRAFT_PAGES` and against
+`build-chrome.mjs`'s `IN_SEASON` set. `it-ranks.js` gets its own parse step and
+joins the control-byte scan.
+
+---
+
+## Top Headlines in the regular season (2026-09-09)
+
+**The report.** Ken: "The Top Headlines seem to have stopped as nothing is more
+recent than Sep. 6." It had stopped, and it was going to stay stopped.
+
+**Why.** The column has two feeds and both went quiet in the same week:
+
+| Feed | State on September 9 |
+|---|---|
+| `STORIES` — the drop-page library baked into `front.html` | last insight drop **2026-09-03**, and no more are coming: the draft season is over |
+| the desk, through `/api/lead-story` → `deskLeadPayload` | exactly **one** published piece (`tnf-preview`, Week 1), and the lead takes it, so `recent` was empty |
+
+`paintDeskRail` answered an empty desk by returning `false` and leaving whatever
+was already painted, which was the drop-page list. So a September 3 auction
+price sat under a heading that says Top Headlines, on the site's front door, in
+Week 1 — the same failure as the lead story in §68p, one column to the right.
+Camp reports had been taken out of the rail on 2026-09-05 (they were a second
+copy of a row the Training Camp desk already showed), which was right in the
+draft season and wrong the moment `html[data-season="in"]` hid that desk.
+
+**The rule now.** In the regular season the column is the desk plus any dated
+report inside `RAIL_FRESH_MS` (14 days), merged and sorted **strictly newest
+first**, and the draft-season drop pages are not eligible at all. Out of season
+nothing changed: the desk's retired stories, topped up by the drop-page library.
+
+- `railMerge(deskItems, reportItems, fallbackItems, inSeason)` in `front.html` is
+  pure and is the whole rule; `tools/test-lead-story.mjs` lifts it out of the
+  page and holds it (16 assertions).
+- `railReportItems(now)` is the in-season backfill, off the `REPORTS` array the
+  camp desk already carries, age-capped so it cannot become the next frozen feed.
+- An in-season column with nothing current in it is painted **empty** and the
+  box takes itself off the page (the lead goes full width). A Top Headlines box
+  holding six pre-season auction calls is worse than no box.
+- The heading only says "More from the desk" when every line under it is the
+  desk's; a mixed column says Top Headlines.
+- Two witnesses tell the page the season has turned: the lead payload's own
+  `category: 'desk'` (a piece **or** the `deskNextPayload` placeholder), and
+  `ITSeason`'s `phase === 'regular'` stamp, which calls `railSeasonPaint()` so a
+  failed `/api/lead-story` cannot strand a reader on last month's shelf.
+- `deskLeadPayload` now asks `newsroomFeedPayload` for **12** pieces, not 6: the
+  lead takes the first row, and six left the column one short of ever filling
+  from the desk alone.
+
+**What makes it keep moving.** The desk publishes on the calendar (16 kinds,
+several a day in season) and the front page re-looks every five minutes while a
+desk lead is up, so each new piece pushes the reports down and out. Nothing here
+needs `build-front.mjs` to be re-run; the drop-page library is now only the
+draft-season feed.
+
+**Watch this.** The pieces are what fill the column, so a desk that does not
+publish is now visible on the front page as a shorter column. On the day this
+was written three Week 1 rows sat `held` with `["The operation was aborted"]`
+and no body — a transport failure in the writer run, retried by `heldRetryable`,
+not a fact-check hold. If the column ever thins out, look at `content_pieces`
+first.
+
+---
+
+## The masthead is the cover page's, on every page (2026-09-09)
+
+Two changes, one about a link and one about the chrome under it.
+
+**`/dfs` came out of the front page's jump ribbon.** `front.html`'s masthead row
+now reads Fantasy · In-Season · Draft · The Desk. The page still links `/dfs`
+from its footer tools row and the DFS lane still opens from the lane tabs, so
+nothing is unreachable and the URL is untouched. The generated nav on every
+other page keeps DFS — `tools/test-chrome.mjs`'s `MUST_NAV` requires it, and the
+ask was about the front page's ribbon only.
+
+**Everything else on the site now wears the front page's masthead.** Before
+this, `/` was a black band with a 3px teal rule and the metal wordmark, and the
+other 155 pages were a white bar with grey sentence-case links. Clicking off the
+cover page looked like leaving the site. The band moved into `site.css`
+(`--mast`, `--mast-ink`, `--mast-ink-hi`, `--mast-dim`, `--mast-accent`), so it
+is one rule set rather than a second copy that can drift, and `--header-h` went
+56px → 64px to match the cover page's row (`weekly-intel.html`'s sticky
+sub-ribbon reads that token and followed it).
+
+Two things this touched that are easy to get wrong on the way back:
+
+- **The wordmark inverted again, and that is the point.** §27c's rule was "the
+  wordmark is light-on-dark and vanishes on white", and the wordmark-only mark
+  landed the same day on the dark-ink stops for a white bar. There is no white
+  bar now, so every page is back on the light stops — the same seven the cover
+  page uses. `test-reading-view`'s two wordmark assertions were inverted with
+  them. **The reading pages' white SURFACE is untouched**: `--bg` is still
+  `#fff`, the type is still near-black, `--teal` is still `#0e7c63`. The band
+  was never part of the reading view.
+- **The phone masthead is a width problem, not a colour one.** The brand, the
+  CTA and the disclosure button need more than a 360px screen has; the CTA is
+  tightened to `--fs-3xs` there and the wordmark SVG scales on its viewBox, so
+  the name no longer runs under the button. Setting the wordmark as TYPE instead
+  of the SVG was tried first and fails at 320px — type cannot shrink to fit.
+
+`lead.html`, `the-tell.html` and `play-caller-premium.html` no longer paint a
+`header.site{}` of their own; they take the shared band like everything else,
+and `test-reading-view` asserts that they do not paint one rather than that they
+paint it white.
+
+**The nav dropdown opened under the rankings ribbon**, which paints an opaque
+white band across its first item or two. That predated the band — it did the
+same under the white bar — and it is fixed here. `header.site` is a stacking
+context (`position:sticky` with a `z-index`), so the menu inside it cannot rise
+past the header's own layer however high its own `z-index` goes: at 30 the whole
+menu was under `.rk-ribbon`'s 45. The header is 50 now, which is also the right
+order on its own terms — a sticky site header belongs over an in-page band that
+scrolls under it. Nothing else on a chrome page sits between 30 and 49, and the
+skip link (100) still clears it.
+
+## 70. September 9: the static pages join the masthead
 
 §68 gave the site a masthead — eight analysts, a fixed beat each, an author page
 and a standing AI disclosure — and bylined everything the newsroom generates. It
