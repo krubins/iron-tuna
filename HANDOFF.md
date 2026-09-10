@@ -8796,3 +8796,46 @@ offence question rather than a roster one, so it sits with the offence analyst.
 - Hubs, archives, the `SoftwareApplication` landing pages and the in-season
   dashboards are **not** bylined, and the test asserts they are not. A byline on
   a table recomputed on every load is the one kind that lies.
+
+### 68p. The invocation dies, and the cron does not
+
+With the job log opening a row before each job (§68m), the second night
+answered the question the first could not. Between 13:30Z on September 9
+and 10:00Z on September 10 the `*/15` trigger reached the worker every
+quarter hour; six times a `content-tick` row opened and never closed (the
+invocation died inside the job, with nothing due), and after each death
+every tick for the next hour or two opened its FIRST job's row
+(`news-scan`, `schedule-refresh`) and died there too, until the pattern
+lifted on its own. The four-minute job deadline never fired in any of
+them: the runtime killed the isolate outright, which is not an exception
+and not a timeout.
+
+Cloudflare documents this shape for the CPU limit: a cron on an interval
+under an hour gets 30 seconds of CPU per invocation on the paid plan, with
+"built-in flexibility" for an occasional overrun that is withdrawn once a
+Worker overruns consistently, after which "its execution will be
+terminated according to the limit configured." `wrangler.jsonc` now sets
+`limits.cpu_ms` to 300000, the documented maximum. What burns the CPU is
+not yet known: a tick with nothing due is sixteen `contentDue` calls, and
+the ticks that died were exactly those. The dashboard's Invocation
+Statuses (Metrics, Errors) name the outcome per invocation (`exceededCpu`,
+`exceededMemory`, `scriptThrew`), which the repo cannot read; that is the
+next thing to look at if deaths continue under the higher limit.
+
+The stanza did not deploy. Workers Builds refused the branch (build
+db0e0105, 10:30Z on September 10) with the only code change being
+`limits`, while main's builds were green nine hours earlier; Cloudflare's
+configuration reference says limits are only supported on the Standard
+usage model. So this worker is on a legacy model, and on the Bundled model
+a cron invocation gets 50 ms of CPU, which would kill a tick that does
+sixteen `contentDue` walks on a cold isolate, exactly the ticks that died.
+The stanza is out of `wrangler.jsonc` (a comment there says why) and the
+fix is the owner's: switch the worker to the Standard usage model in the
+dashboard (Workers, iron-tuna, Settings, Usage Model), then put
+`"limits": { "cpu_ms": 300000 }` back. On Standard the default is already
+30 seconds, which alone should end the deaths.
+
+Also seen: the Week 1 midweek preview published at 12:45Z on September 9
+by revalidation (§68o); the reshaped ESPN fetch (§68n) answered 200 with
+sixteen events at 13:00Z and the depth charts loaded all thirty-two clubs
+at 10:00Z the next morning, the first success since September 4.
