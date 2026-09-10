@@ -315,6 +315,8 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .rail a.hl{font-size:14px;font-weight:700;line-height:1.35;display:block}
 .rail a.hl:hover{color:var(--brand)}
 .rail .hl-meta{font-size:11.5px;color:var(--ink-3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.hl-meta.nfl-wide{display:flex;align-items:center;gap:6px}
+.hl-nfl-logo{display:block;width:18px;height:18px;object-fit:contain;flex:0 0 auto}
 
 /* ── story grid modules ──────────────────────────────────────────────────
    Five positions used to sit in five narrow auto-fit columns, which at any
@@ -3658,7 +3660,10 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     rail.innerHTML = '';
     items.forEach(function(it){
       var el = document.createElement('li');
-      el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta">' + esc(it.meta) + '</div>';
+      var nflWide = isNflLeagueWide(it.label) || isNflLeagueWide(String(it.meta || '').split(' · ')[0]);
+      el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta' + (nflWide ? ' nfl-wide' : '') + '">' +
+        (nflWide ? '<img class="hl-nfl-logo" src="' + NFL_LOGO_URL + '" alt="" aria-hidden="true">' : '') +
+        esc(it.meta) + '</div>';
       rail.appendChild(el);
     });
     // Early in a season the lead rotation can hold every story there is, leaving
@@ -3695,6 +3700,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       return {
         title: rr ? rr.text : o.title,
         url: o.url,
+        label: o.label || 'The Desk',
         meta: (o.label || 'The Desk') + (when ? ' · ' + when : ''),
         desk: 1,
         at: +o.createdAt || 0
