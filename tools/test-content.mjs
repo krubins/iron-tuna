@@ -84,27 +84,29 @@ const due = (kind, when, finalIds) => { const sc = withStatus(finalIds || []); r
   ok('and names the game still being played', sun.excluded.includes('III@JJJ'), JSON.stringify(sun.excluded));
   ok('and carries an update window into Monday morning', sun.updatesUntil === sun.dueAt + 12 * 3600000);
   ok('Sunday 7:15 is not yet due', !due('what-sunday-taught-us', ET(2026, 9, 13, 19, 15), ['w1-e1']).due);
-  // Monday 6 AM: the MNF preview, before the game; the early rankings, about NEXT week.
-  const mnf = due('mnf-preview', ET(2026, 9, 14, 6, 10), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
-  ok('the MNF preview is due Monday morning, before kickoff, about the Monday game', mnf.due && mnf.ready && mnf.week === 1 && mnf.targets.join() === 'w1-mnf', JSON.stringify(mnf));
-  ok('the Monday after a week with no Monday game, the clock has turned and the preview is simply not due', !due('mnf-preview', ET(2026, 9, 21, 6, 0), ['w2-thu', 'w2-e1', 'w2-snf']).due && due('mnf-preview', ET(2026, 9, 28, 6, 0), ['w2-thu', 'w2-e1', 'w2-snf', 'w3-e1']).due);
+  // Monday: the brief is written overnight, embargoed, then published at 6 AM.
+  const earlyPre = due('early-rankings', ET(2026, 9, 14, 3, 15), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
+  ok('the Monday Morning Brief is eligible to generate at 3:15 AM but is not yet publishable', earlyPre.generateDue && !earlyPre.due && earlyPre.ready && earlyPre.week === 2, JSON.stringify(earlyPre));
   const early = due('early-rankings', ET(2026, 9, 14, 6, 0), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
-  ok('the early rankings are due Monday 6 AM and are about Week 2 while the clock still says Week 1', early.due && early.ready && early.week === 2 && H.nflSeasonState(withStatus([]), ET(2026, 9, 14, 6, 0)).week.number === 1, JSON.stringify(early));
-  ok('and are not due on Sunday night', !due('early-rankings', ET(2026, 9, 13, 23, 0), []).due);
-  const qb = due('quarterback-monday', ET(2026, 9, 14, 7, 0), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
-  ok('Quarterback Monday is due at 7 and is about the played week', qb.due && qb.ready && qb.week === 1);
+  ok('the Monday Morning Brief publishes at 6 AM and is about Week 2 while the clock still says Week 1', early.due && early.ready && early.week === 2 && H.nflSeasonState(withStatus([]), ET(2026, 9, 14, 6, 0)).week.number === 1, JSON.stringify(early));
+  ok('the retired standalone MNF preview is no longer on the active calendar', due('mnf-preview', ET(2026, 9, 14, 6, 0), []).reason === 'unknown_kind');
+  const qbPre = due('quarterback-monday', ET(2026, 9, 14, 4, 15), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
+  const qb = due('quarterback-monday', ET(2026, 9, 14, 12, 15), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
+  ok('Quarterback Monday can be written at 4:15 AM and publishes at 12:15 PM', qbPre.generateDue && !qbPre.due && qb.due && qb.week === 1);
   // Tuesday: ROS rankings about the coming week; Tailback Tuesday about the played one.
   const ros = due('ros-rankings', ET(2026, 9, 15, 7, 0), wk1);
   ok('ROS rankings are due Tuesday 7 AM about the coming week', ros.due && ros.ready && ros.week === 2, JSON.stringify(ros));
   ok('and not on Monday', !due('ros-rankings', ET(2026, 9, 14, 7, 0), wk1.slice(0, 5)).due);
-  const tb = due('tailback-tuesday', ET(2026, 9, 15, 8, 0), wk1);
-  ok('Tailback Tuesday is due at 8 about the played week', tb.due && tb.ready && tb.week === 1);
+  const tbPre = due('tailback-tuesday', ET(2026, 9, 15, 2, 15), wk1);
+  const tb = due('tailback-tuesday', ET(2026, 9, 15, 13, 15), wk1);
+  ok('Tailback Tuesday can be written at 2:15 AM and publishes at 1:15 PM', tbPre.generateDue && !tbPre.due && tb.due && tb.ready && tb.week === 1);
   ok('the ROS piece anchors on Monday night when there is a Monday game, so Tuesday 6:45 is early', !due('ros-rankings', ET(2026, 9, 15, 6, 45), wk1).due);
   // Wednesday.
   const pick = due('pickup-advisor', ET(2026, 9, 16, 6, 0), wk1);
   ok('the Pickup Advisor is due Wednesday 6 AM about the coming week', pick.due && pick.ready && pick.week === 2);
-  const wo = due('wideout-wednesday', ET(2026, 9, 16, 8, 0), wk1);
-  ok('Wideout Wednesday is due at 8 about the played week', wo.due && wo.ready && wo.week === 1);
+  const woPre = due('wideout-wednesday', ET(2026, 9, 16, 2, 15), wk1);
+  const wo = due('wideout-wednesday', ET(2026, 9, 16, 13, 15), wk1);
+  ok('Wideout Wednesday can be written at 2:15 AM and publishes at 1:15 PM', woPre.generateDue && !woPre.due && wo.due && wo.ready && wo.week === 1);
   // Thursday: preview before the game, then the forward pieces.
   const prev = due('tnf-preview', ET(2026, 9, 17, 6, 30), wk1);
   ok('the TNF preview is due Thursday 6 AM, before kickoff', prev.due && prev.ready && prev.week === 2 && prev.targets.join() === 'w2-thu', JSON.stringify(prev));
@@ -122,26 +124,28 @@ const due = (kind, when, finalIds) => { const sc = withStatus(finalIds || []); r
   const wafter = wdue('tnf-what-matters', ET(2026, 9, 11, 6, 0), ['w1-wed', 'w1-thu']);
   ok('What Matters runs Friday once both midweek games are final, under a midweek title', wafter.due && wafter.ready && wafter.targets.length === 2 && H.kindTitle(H.CONTENT_KINDS['tnf-what-matters'], wafter) === 'Midweek Football: What Matters', JSON.stringify(wafter));
   ok('and waits while Thursday is still to be played', !wdue('tnf-what-matters', ET(2026, 9, 11, 6, 0), ['w1-wed']).ready);
-  const mnfw = wdue('mnf-preview', ET(2026, 9, 14, 6, 10), ['w1-wed', 'w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
-  ok('the Monday preview is untouched by a Wednesday opener', mnfw.due && mnfw.ready && mnfw.slotDay === 'Mon' && mnfw.targets.join() === 'w1-mnf');
-  const wkd = wdue('weekend-preview', ET(2026, 9, 11, 7, 0), ['w1-wed', 'w1-thu']);
-  ok('the Weekend Preview on Friday leaves the played midweek games out and is ready', wkd.due && wkd.ready && !wkd.targets.includes('w1-wed') && !wkd.targets.includes('w1-thu') && wkd.targets.includes('w1-e1'), JSON.stringify(wkd));
-  ok('Underrated, the Trade Desk and Tight End Thursday follow at 7, 8 and 9', due('underrated', ET(2026, 9, 17, 7, 0), wk1).due && !due('underrated', ET(2026, 9, 17, 6, 45), wk1).due && due('trade-desk', ET(2026, 9, 17, 8, 0), wk1).week === 2 && due('tight-end-thursday', ET(2026, 9, 17, 9, 0), wk1).week === 1);
+  const wkdPre = wdue('weekend-preview', ET(2026, 9, 11, 2, 15), ['w1-wed', 'w1-thu']);
+  const wkd = wdue('weekend-preview', ET(2026, 9, 11, 11, 15), ['w1-wed', 'w1-thu']);
+  ok('the Weekend Preview is written overnight, publishes at 11:15, and leaves played midweek games out', wkdPre.generateDue && !wkdPre.due && wkd.due && wkd.ready && !wkd.targets.includes('w1-wed') && !wkd.targets.includes('w1-thu') && wkd.targets.includes('w1-e1'), JSON.stringify(wkd));
+  ok('Thursday publication is staggered at 10:15, 1:45 and 4:45', due('underrated', ET(2026, 9, 17, 10, 15), wk1).due && !due('underrated', ET(2026, 9, 17, 10, 0), wk1).due && due('trade-desk', ET(2026, 9, 17, 13, 45), wk1).week === 2 && due('tight-end-thursday', ET(2026, 9, 17, 16, 45), wk1).week === 1);
   // Friday.
   const after = due('tnf-what-matters', ET(2026, 9, 18, 6, 30), wk1.concat(['w2-thu']));
   ok('Thursday Night: What Matters is due Friday 6 AM once the game is final', after.due && after.ready && after.targets.join() === 'w2-thu', JSON.stringify(after));
   ok('and not before it is', !due('tnf-what-matters', ET(2026, 9, 18, 6, 30), wk1).ready);
-  const wp = due('weekend-preview', ET(2026, 9, 18, 7, 30), wk1.concat(['w2-thu']));
-  ok('the Weekend Preview covers the games still to come', wp.due && wp.ready && !wp.targets.includes('w2-thu') && wp.targets.length === 2, JSON.stringify(wp));
-  ok('Kickers & Defenses is due Friday 8 AM', due('kickers-defenses', ET(2026, 9, 18, 8, 0), wk1).due && !due('kickers-defenses', ET(2026, 9, 18, 7, 45), wk1).due);
+  const wp = due('weekend-preview', ET(2026, 9, 18, 11, 15), wk1.concat(['w2-thu']));
+  ok('the Weekend Preview covers the games still to come at 11:15 AM', wp.due && wp.ready && !wp.targets.includes('w2-thu') && wp.targets.length === 2, JSON.stringify(wp));
+  ok('Kickers & Defenses publishes Friday at 2:45 PM after a 3:15 AM generation slot', due('kickers-defenses', ET(2026, 9, 18, 3, 15), wk1).generateDue && !due('kickers-defenses', ET(2026, 9, 18, 3, 15), wk1).due && due('kickers-defenses', ET(2026, 9, 18, 14, 45), wk1).due);
   // The forward anchor is the week before: a Week 2 Friday piece is not due
   // on the Tuesday the clock turns to Week 2, and a Week 1 opener the
   // schedule stores at midnight does not pull the Week 1 slots a week early.
   ok('a Week 2 forward piece is not due on Tuesday of Week 2', !due('weekend-preview', ET(2026, 9, 15, 9, 0), wk1).due && !due('underrated', ET(2026, 9, 15, 9, 0), wk1).due && !due('kickers-defenses', ET(2026, 9, 16, 9, 0), wk1).due);
   const midnight = (finalIds) => { const sc = withStatus(finalIds || []); sc.games = sc.games.map(x => x.id === 'w1-thu' ? { ...x, kickoff: ET(2026, 9, 10, 0, 0) } : x); return sc; };
   const dm = (kind, when) => { const sc = midnight([]); return H.contentDue(kind, when, H.nflSeasonState(sc, when), sc); };
-  ok('a midnight-stored Week 1 opener does not make the Week 1 Friday pieces due the Friday before', !dm('weekend-preview', ET(2026, 9, 8, 15, 0)).due && !dm('kickers-defenses', ET(2026, 9, 8, 15, 0)).due && dm('weekend-preview', ET(2026, 9, 11, 7, 0)).due);
-  ok('and the Week 1 Thursday pieces are due on the Thursday, not the Thursday before', !dm('underrated', ET(2026, 9, 3, 8, 0)).due && dm('underrated', ET(2026, 9, 10, 7, 0)).due);
+  ok('a midnight-stored Week 1 opener does not make the Week 1 Friday pieces due the Friday before', !dm('weekend-preview', ET(2026, 9, 8, 15, 0)).due && !dm('kickers-defenses', ET(2026, 9, 8, 15, 0)).due && dm('weekend-preview', ET(2026, 9, 11, 11, 15)).due);
+  ok('and the Week 1 Thursday pieces are due on the Thursday, not the Thursday before', !dm('underrated', ET(2026, 9, 3, 10, 15)).due && dm('underrated', ET(2026, 9, 10, 10, 15)).due);
+  const mmPre = due('market-movers', ET(2026, 9, 19, 5, 15), wk1.concat(['w2-thu']));
+  const mm = due('market-movers', ET(2026, 9, 19, 11, 30), wk1.concat(['w2-thu']));
+  ok('Market Movers can be written Saturday at 5:15 AM and publishes at 11:30 AM', mmPre.generateDue && !mmPre.due && mm.due && mm.ready);
   ok('a breaking piece is never due on the clock', due('breaking', ET(2026, 9, 18, 8, 0), wk1).reason === 'unscheduled');
   ok('nothing is due before a game has been played', !due('what-sunday-taught-us', ET(2026, 9, 1, 12, 0), []).due && !due('early-rankings', ET(2026, 9, 1, 12, 0), []).due);
   ok('nothing is due in the offseason', due('ros-rankings', ET(2026, 5, 1, 12, 0), []).reason === 'not_regular_season');
