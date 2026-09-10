@@ -123,7 +123,7 @@ const LINE_BLOCKED_HTML = `<!doctype html>
 <p class="is-eyebrow">Iron Tuna &middot; The Line</p>
 <h1>The Line is not available in Washington</h1>
 <p class="is-lede">This page reads the week&rsquo;s games against the posted betting number and puts hypothetical stakes on them. Washington State regulates online gambling activity more strictly than any other state, so Iron Tuna does not serve the page to readers there.</p>
-<p>Nothing is being withheld from you that carries a football number. <a href="/previews">Previews</a> has every game on the slate with its spread, its total and the points each offence is implied to score; <a href="/weekly-rankings">this week&rsquo;s rankings</a> price the players inside those games; <a href="/hidden-value">Hidden Value</a> shows where the market and the fantasy consensus disagree. None of those is a wagering page and all of them are open.</p>
+<p>Nothing is being withheld from you that carries a football number. <a href="/previews">Previews</a> has every game on the slate with its spread, its total and the points each offense is implied to score; <a href="/weekly-rankings">this week&rsquo;s rankings</a> price the players inside those games; <a href="/hidden-value">Hidden Value</a> shows where the market and the fantasy consensus disagree. None of those is a wagering page and all of them are open.</p>
 <p class="is-note">If you believe you are seeing this in error, it is because the network you are on places you in Washington. Iron Tuna takes no wagers, holds no funds and is not a sportsbook. If gambling has stopped being entertainment, the National Problem Gambling Helpline is 1-800-GAMBLER (1-800-426-2537), free and confidential, 24 hours a day.</p>
 <p><a href="/">Back to Iron Tuna</a></p>
 </main>

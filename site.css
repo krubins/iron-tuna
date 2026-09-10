@@ -513,7 +513,7 @@ footer.site a:hover { color: var(--text) }
 .byline .dot { opacity: .5 }
 /* The analyst’s name is a link to their page, which is where the standing AI
    disclosure lives — but it reads as a byline first. It takes the byline’s own
-   colour rather than the site link colour, and only announces itself on hover. */
+   color rather than the site link color, and only announces itself on hover. */
 .byline b a { color: inherit; text-decoration: none }
 .byline b a:hover { color: var(--teal); text-decoration: underline }
 
@@ -861,7 +861,7 @@ footer.site a:hover { color: var(--text) }
    paints late, and on these three pages the live numbers are already directly
    below it.
 
-   The plate's colours are the front page's hero band, restated: #2dd4a3 is the
+   The plate's colors are the front page's hero band, restated: #2dd4a3 is the
    teal that only works on the dark ground, gold is a fill and a figure. */
 .it-viz {
   margin: var(--space-5) 0; padding: clamp(16px, 2.4vw, 22px) clamp(16px, 2.4vw, 24px) clamp(14px, 2vw, 18px);
@@ -892,7 +892,7 @@ footer.site a:hover { color: var(--text) }
 .it-viz-line { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke }
 .it-viz-line.teal { stroke: #2dd4a3 }
 .it-viz-line.gold { stroke: #f2a900 }
-/* The point the panel is about: a gold disc with a halo, centred on its own
+/* The point the panel is about: a gold disc with a halo, centered on its own
    coordinates, and the flag beside it. */
 .it-viz-dot { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #f2a900; box-shadow: 0 0 0 5px rgba(242, 169, 0, .22) }
 .it-viz-flag { position: absolute; transform: translate(-50%, -100%); margin-top: -12px; white-space: nowrap; font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .04em; color: #f2a900 }

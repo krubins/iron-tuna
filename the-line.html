@@ -452,7 +452,7 @@
   }
 
   // The model's own margin, quoted the way the book quotes one: the club it
-  // favours, and the number it favours them by. Printing a raw home margin
+  // favors, and the number it favors them by. Printing a raw home margin
   // instead ("−2.6 FFF") reads as the home side laying points it is actually
   // receiving, which is the one number on this page nobody may misread.
   function modelSpread(g) {
@@ -506,7 +506,7 @@
     var rows = reads.map(function (r) {
       return '<tr' + (best === r ? ' class="on"' : '') + '>' +
         '<td>' + e(r.kind) + '</td>' +
-        '<td class="num">' + (r.kind === 'Total' ? n1(g.total) : (g.favourite ? e(g.favourite) + ' ' + line(-Math.abs(g.spread)) : 'Pick&rsquo;em')) + '</td>' +
+        '<td class="num">' + (r.kind === 'Total' ? n1(g.total) : (g.favorite ? e(g.favorite) + ' ' + line(-Math.abs(g.spread)) : 'Pick&rsquo;em')) + '</td>' +
         '<td class="num">' + (r.kind === 'Total' ? n1(g.ironTunaTotal) : modelSpread(g)) + '</td>' +
         '<td class="num">' + signed(r.edge) + '</td>' +
         '<td class="num">' + (num(r.edge) ? r.conf : '&mdash;') + '</td>' +
@@ -532,7 +532,7 @@
     return '<article class="tl-game">' +
       '<div class="tl-head"><h3>' + e(g.game) + '</h3><span class="tl-kick">' + e(kick(g.kickoff)) +
         (live ? '' : ' &middot; closed') + '</span></div>' +
-      '<p class="tl-say">The book has ' + (g.favourite ? e(g.favourite) + ' by ' + n1(Math.abs(g.spread)) : 'this one pick&rsquo;em') +
+      '<p class="tl-say">The book has ' + (g.favorite ? e(g.favorite) + ' by ' + n1(Math.abs(g.spread)) : 'this one pick&rsquo;em') +
         ' inside a total of ' + n1(g.total) + ', which implies ' + n1(g.impliedAway) + ' for ' + e(g.away) +
         ' and ' + n1(g.impliedHome) + ' for ' + e(g.home) + '.' +
         (num(g.ironTunaTotal) ? ' Iron Tuna&rsquo;s own expectation for the same fixture is ' + n1(g.ironTunaTotal) + '.' : ' Iron Tuna has no fitted number for this fixture, so it reads nothing into it.') +

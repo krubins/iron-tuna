@@ -18,7 +18,7 @@
 //      entertainment only, the helpline) are what makes the page publishable at
 //      all. Both are asserted here rather than trusted.
 //
-// The behavioural half runs the page's OWN arithmetic — the real source text is
+// The behavioral half runs the page's OWN arithmetic — the real source text is
 // lifted out of the-line.html and evaluated — so a staking rule that drifts in
 // the script fails here rather than on the reader's screen.
 import fs from 'node:fs';
@@ -146,7 +146,7 @@ const api = new Function(page.slice(s0, s1) +
 const GAME = (over = {}) => Object.assign({
   id: 'x', game: 'AAA at BBB', home: 'BBB', away: 'AAA', kickoff: Date.now() + 864e5, status: 'upcoming',
   total: 44, spread: 3, impliedHome: 23.5, impliedAway: 20.5,
-  ironTunaTotal: 44, ironTunaHome: 23.5, ironTunaAway: 20.5, favourite: 'BBB', movement: null,
+  ironTunaTotal: 44, ironTunaHome: 23.5, ironTunaAway: 20.5, favorite: 'BBB', movement: null,
 }, over);
 const readOf = (g, kind) => api.gameReads(g).find(r => r.kind === kind);
 

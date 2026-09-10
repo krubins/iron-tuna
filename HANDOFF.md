@@ -8753,7 +8753,7 @@ They are now stamped from the **same roster**, by `tools/build-bylines.mjs`.
 
 ### Where the assignments come from
 
-Three of the five families were not a judgement call. `ROUTINE_MIGRATION` already
+Three of the five families were not a judgment call. `ROUTINE_MIGRATION` already
 records where each retired Routine’s work went, and the destination kind in
 `CONTENT_KINDS` already names its analyst, so the mapping was followed rather
 than invented:
@@ -8767,7 +8767,7 @@ than invented:
 | the seven strategy guides | (none — assigned on beat) | Waiver and Roster Strategy |
 
 The stacking guide is the one exception inside a family: correlation is an
-offence question rather than a roster one, so it sits with the offence analyst.
+offense question rather than a roster one, so it sits with the offense analyst.
 
 ### The rules it keeps
 

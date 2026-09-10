@@ -183,7 +183,7 @@ console.log('\nthe rivalry column on the record');
     };
     // D1's bind() returns a NEW bound statement rather than mutating the
     // prepared one, and a batch of ten statements built off one prepare only
-    // works because of that. The fake copies the behaviour, or the test would
+    // works because of that. The fake copies the behavior, or the test would
     // pass against a shim the real thing does not match.
     const stmt = (sql, b) => ({ sql, b,
       bind: (...a) => stmt(sql, a),

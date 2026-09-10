@@ -17,7 +17,7 @@
 // comment like this one.
 //
 // WHERE THE ASSIGNMENTS COME FROM. Three of the five families are not a
-// judgement call at all — `ROUTINE_MIGRATION` in `_worker.js` already records
+// judgment call at all — `ROUTINE_MIGRATION` in `_worker.js` already records
 // where each retired Routine's work went, and the destination kind in
 // `CONTENT_KINDS` already names its analyst. Those three are that mapping,
 // followed rather than invented:
@@ -28,8 +28,8 @@
 //
 // The two that had no retired Routine behind them are assigned on beat:
 // the priced-call drop pages to the rankings analyst, the strategy guides to the
-// roster-strategy analyst, and the stacking guide to the offence analyst because
-// correlation is an offence question rather than a roster one.
+// roster-strategy analyst, and the stacking guide to the offense analyst because
+// correlation is an offense question rather than a roster one.
 
 import fs from 'fs';
 import path from 'path';
