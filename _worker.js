@@ -4484,7 +4484,14 @@ const MARKET_CONTRACT = 1;
 let _MARKET_MEMO = { key: '', at: 0, out: null };
 let _EDGE_MEMO = { key: '', at: 0, out: null };
 const MARKET_ROW = 5;                       // odds_overlay row 5: the usage overlay
+const MARKET_PRIOR_ROW = 7;                 // row 7: the same overlay for LAST season
 const MARKET_MAX_AGE_MS = 14 * 86400000;
+// Last season is finished. Its overlay is not stale at a fortnight the way a
+// live one is -- it is rebuilt only when the season it holds stops being last
+// season -- so it is kept for a year and a bit: long enough that a rebuild
+// that fails cannot blank the board, short enough that a row nobody has
+// rebuilt through a whole season stops being served as "last year".
+const MARKET_PRIOR_MAX_AGE_MS = 400 * 86400000;
 const MARKET_MEMO_MS = 300000;
 
 // Implied points for both sides of a game, from the spread and the total. The
@@ -4500,48 +4507,47 @@ function marketImplied(game) {
 // The usage overlay: one D1 row holding the latest weekly line for every
 // player the stats feed carries. Built by the cron, because the weekly file is
 // ~9MB and the snaps file ~2.5MB and neither belongs on a request path.
-async function usageCacheWrite(env, payload) {
+//
+// Two rows, same shape: MARKET_ROW is the season being played, and
+// MARKET_PRIOR_ROW is the one before it, kept whole so /stats can show what
+// last year actually was rather than only what this year has been so far.
+async function usageCacheWrite(env, payload, row) {
   await oddsCacheInit(env);
+  const id = row || MARKET_ROW;
   await env.LEADS_DB.prepare(
     'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)'
-  ).bind(MARKET_ROW, JSON.stringify(payload), 'nflverse-usage',
+  ).bind(id, JSON.stringify(payload), id === MARKET_PRIOR_ROW ? 'nflverse-usage-prior' : 'nflverse-usage',
          Object.keys(payload.players || {}).length, Date.now()).run();
 }
-let _USAGE_CACHE = null, _USAGE_AT = 0;
-async function usageCacheRead(env) {
-  if (_USAGE_CACHE && Date.now() - _USAGE_AT < MARKET_MEMO_MS) return _USAGE_CACHE;
+const _USAGE_MEMO = new Map();              // row -> { at, payload }
+async function usageCacheRead(env, row) {
+  const id = row || MARKET_ROW;
+  const memo = _USAGE_MEMO.get(id);
+  if (memo && Date.now() - memo.at < MARKET_MEMO_MS) return memo.payload;
   if (!env || !env.LEADS_DB) return null;
   try {
-    const row = await env.LEADS_DB.prepare('SELECT payload, updated_at FROM odds_overlay WHERE id=?')
-      .bind(MARKET_ROW).first();
-    if (!row || !row.payload) return null;
-    if (!row.updated_at || Date.now() - row.updated_at > MARKET_MAX_AGE_MS) return null;
-    const j = JSON.parse(row.payload);
+    const got = await env.LEADS_DB.prepare('SELECT payload, updated_at FROM odds_overlay WHERE id=?')
+      .bind(id).first();
+    if (!got || !got.payload) return null;
+    if (!got.updated_at || Date.now() - got.updated_at > (id === MARKET_PRIOR_ROW ? MARKET_PRIOR_MAX_AGE_MS : MARKET_MAX_AGE_MS)) return null;
+    const j = JSON.parse(got.payload);
     if (!j || !j.players) return null;
-    _USAGE_CACHE = { ...j, updatedAt: row.updated_at };
-    _USAGE_AT = Date.now();
-    return _USAGE_CACHE;
+    const out = { ...j, updatedAt: got.updated_at };
+    _USAGE_MEMO.set(id, { at: Date.now(), payload: out });
+    return out;
   } catch (e) { return null; }
 }
-// Pull the weekly stats and the snap counts, keep the LATEST week each player
-// appears in, and index by the site's own player key. Season-to-date totals
-// ride along so a surface can say "he has averaged 6 targets" without a second
-// pass over 9MB of CSV.
-async function runUsageRefresh(env, season) {
-  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
-  const yr = season || (await scheduleCacheRead(env) || {}).season || new Date().getUTCFullYear();
-  let weekly = [], snaps = [], err = null;
-  try { weekly = await fetchStatsNflverseWeekly(yr); }
-  catch (e) { err = 'weekly: ' + ((e && e.message) || 'failed'); }
-  try { snaps = await fetchSnapsNflverse(yr); } catch (e) { err = (err ? err + '; ' : '') + 'snaps: ' + ((e && e.message) || 'failed'); }
-  // No games played yet is not a failure. It is September.
-  if (!weekly.length && !snaps.length) {
-    return { ok: true, season: yr, players: 0, weeks: 0, note: 'no weekly stats published yet', error: err };
-  }
+// Fold one season's weekly stat lines and snap counts into the overlay shape:
+// the season line accumulated week by week, and the LATEST week that player
+// appears in kept whole, indexed by the site's own player key. Season-to-date
+// totals ride along so a surface can say "he has averaged 6 targets" without a
+// second pass over 9MB of CSV. This season and last season differ only in
+// which year is asked for and which row it lands in, so both fold here.
+function buildUsageOverlay(season, weekly, snaps) {
   const players = {};
   const key = (n, p) => _oddsNorm(n) + '|' + p;
   let maxWeek = 0;
-  for (const r of weekly) {
+  for (const r of weekly || []) {
     if (r.seasonType !== 'REG' || !r.week) continue;
     if (r.week > maxWeek) maxWeek = r.week;
     const k = key(r.name, r.position);
@@ -4565,17 +4571,66 @@ async function runUsageRefresh(env, season) {
       rec.latest = { week: r.week, opponent: r.opponent, stats: r.stats, usage: r.usage };
     }
   }
-  for (const s of snaps) {
+  for (const s of snaps || []) {
     if (s.seasonType !== 'REG' || !s.week) continue;
     const k = key(s.name, s.position);
     const rec = players[k];
     if (!rec || !rec.latest || rec.latest.week !== s.week) continue;
     rec.latest.usage = { ...rec.latest.usage, snaps: s.snaps, snapPct: s.snapPct };
   }
-  const payload = { season: yr, throughWeek: maxWeek, players, builtAt: Date.now() };
-  await usageCacheWrite(env, payload);
-  _USAGE_CACHE = null; _USAGE_AT = 0;
-  return { ok: true, season: yr, players: Object.keys(players).length, throughWeek: maxWeek,
+  return { season, throughWeek: maxWeek, players, builtAt: Date.now() };
+}
+// Pull the weekly stats and the snap counts for the season being played.
+async function runUsageRefresh(env, season) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  const yr = season || (await scheduleCacheRead(env) || {}).season || new Date().getUTCFullYear();
+  let weekly = [], snaps = [], err = null;
+  try { weekly = await fetchStatsNflverseWeekly(yr); }
+  catch (e) { err = 'weekly: ' + ((e && e.message) || 'failed'); }
+  try { snaps = await fetchSnapsNflverse(yr); } catch (e) { err = (err ? err + '; ' : '') + 'snaps: ' + ((e && e.message) || 'failed'); }
+  // No games played yet is not a failure. It is September.
+  if (!weekly.length && !snaps.length) {
+    return { ok: true, season: yr, players: 0, weeks: 0, note: 'no weekly stats published yet', error: err };
+  }
+  const payload = buildUsageOverlay(yr, weekly, snaps);
+  await usageCacheWrite(env, payload, MARKET_ROW);
+  _USAGE_MEMO.delete(MARKET_ROW);
+  return { ok: true, season: yr, players: Object.keys(payload.players).length, throughWeek: payload.throughWeek,
+           weekly: weekly.length, snaps: snaps.length, error: err };
+}
+// The same pull for LAST season, into its own row. It runs daily and does
+// almost nothing: a season that is over does not change, so a row that already
+// holds the right year and a full eighteen weeks is left alone rather than
+// re-fetching 11MB of finished CSV every morning. It rebuilds when the year
+// rolls over (the schedule feed flips to the next season in the spring), when
+// the row is missing, when it is old enough for usageCacheRead to stop serving
+// it, or when an operator asks for it with { force: true }.
+const PRIOR_SEASON_WEEKS = 18;
+async function runPriorUsageRefresh(env, opts) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  const o = opts || {};
+  const current = o.season || (await scheduleCacheRead(env) || {}).season || new Date().getUTCFullYear();
+  const yr = current - 1;
+  if (!o.force) {
+    const have = await usageCacheRead(env, MARKET_PRIOR_ROW);
+    if (have && have.season === yr && (have.throughWeek || 0) >= PRIOR_SEASON_WEEKS) {
+      return { ok: true, season: yr, skipped: 'already built', players: Object.keys(have.players || {}).length,
+               throughWeek: have.throughWeek };
+    }
+  }
+  let weekly = [], snaps = [], err = null;
+  try { weekly = await fetchStatsNflverseWeekly(yr); }
+  catch (e) { err = 'weekly: ' + ((e && e.message) || 'failed'); }
+  try { snaps = await fetchSnapsNflverse(yr); } catch (e) { err = (err ? err + '; ' : '') + 'snaps: ' + ((e && e.message) || 'failed'); }
+  // Nothing published for that year is not a failure either: it is a feed that
+  // has not been posted, and the row it would have replaced stays as it is.
+  if (!weekly.length && !snaps.length) {
+    return { ok: true, season: yr, players: 0, weeks: 0, note: 'no weekly stats published for ' + yr, error: err };
+  }
+  const payload = buildUsageOverlay(yr, weekly, snaps);
+  await usageCacheWrite(env, payload, MARKET_PRIOR_ROW);
+  _USAGE_MEMO.delete(MARKET_PRIOR_ROW);
+  return { ok: true, season: yr, players: Object.keys(payload.players).length, throughWeek: payload.throughWeek,
            weekly: weekly.length, snaps: snaps.length, error: err };
 }
 
@@ -4803,19 +4858,45 @@ async function rankingsPayload(env) {
 // rather than stored, because a season total is only worth something at a
 // stated scoring and one cache serves every reader.
 //
+// TWO SEASONS. `season: 'prior'` (or last season's year) reads the second
+// overlay row instead of the live one, so the same board serves "what he has
+// done" and "what he did last year" with the same arithmetic. Which seasons
+// are actually on hand is answered in `seasons`, not assumed: a page builds
+// its buttons from that list, so it can never offer a year the store has not
+// been given.
+//
 // A cache written before season.stats existed has no season line. That is
-// returned as null and prints as a dash — never as zero, which would read as a
+// returned as null and prints as a dash -- never as zero, which would read as a
 // player who did nothing rather than as a number nobody has.
 async function statsPayload(env, opts) {
   const o = opts || {};
   const preset = SCORING_PRESETS[o.preset] ? o.preset : 'ppr';
   const rules = scoringRules(preset, null);
-  const usage = await usageCacheRead(env);
   const sched = await scheduleCacheRead(env);
   const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  const [live, prior] = await Promise.all([usageCacheRead(env), usageCacheRead(env, MARKET_PRIOR_ROW)]);
+  // The seasons that exist in the store, newest first. A year is on this list
+  // only if its overlay is actually there to be served.
+  const seasons = [];
+  if (live && live.players) seasons.push({ key: 'current', season: live.season || (sched ? sched.season : null), throughWeek: live.throughWeek || null, complete: false });
+  // Not if it is the same year as the live row: in the weeks after a season
+  // ends the live row still holds it, and two buttons reading 2025 would be a
+  // choice between a thing and itself.
+  if (prior && prior.players && !(live && live.players && live.season === prior.season)) {
+    seasons.push({ key: 'prior', season: prior.season || null, throughWeek: prior.throughWeek || null, complete: (prior.throughWeek || 0) >= PRIOR_SEASON_WEEKS });
+  }
+  // Ask for last season by name or by year; anything else is this one.
+  const asked = String(o.season == null ? '' : o.season).toLowerCase();
+  const wantPrior = asked === 'prior' || asked === 'last' ||
+    (/^\d{4}$/.test(asked) && prior && String(prior.season) === asked && (!live || String(live.season) !== asked));
+  const seasonKey = wantPrior ? 'prior' : 'current';
+  const usage = wantPrior ? prior : live;
   if (!usage || !usage.players) {
-    return { ok: false, error: 'no_usage', note: 'No weekly stats have been published yet this season.',
-             season: sched ? sched.season : null, week: state.ok ? state.week.label : null };
+    return { ok: false, error: 'no_usage', seasonKey, seasons,
+             note: wantPrior ? 'Last season\u2019s stat lines have not been loaded yet.'
+                             : 'No weekly stats have been published yet this season.',
+             season: wantPrior ? (seasons.find(x => x.key === 'prior') || {}).season || null : (sched ? sched.season : null),
+             week: wantPrior ? null : (state.ok ? state.week.label : null) };
   }
   const wantPos = o.position ? String(o.position).toUpperCase() : null;
   const posMatch = p => !wantPos || wantPos === 'ALL' || p === wantPos ||
@@ -4851,10 +4932,15 @@ async function statsPayload(env, opts) {
   const limit = Math.max(1, Math.min(600, parseInt(o.limit, 10) || 300));
   return {
     ok: players.length > 0, source: 'nflverse weekly stats and snap counts',
-    season: usage.season || (sched ? sched.season : null),
+    season: usage.season || (wantPrior ? null : (sched ? sched.season : null)),
+    seasonKey, seasons,
+    // A finished season has no "current week" and no live week label: those
+    // belong to the season being played, and printing this week's label over
+    // last year's board would date it wrongly.
+    complete: wantPrior ? (usage.throughWeek || 0) >= PRIOR_SEASON_WEEKS : false,
     throughWeek: usage.throughWeek || null,
-    currentWeek: state.ok && state.week.type === 'REG' ? state.week.number : null,
-    week: state.ok ? state.week.label : null,
+    currentWeek: !wantPrior && state.ok && state.week.type === 'REG' ? state.week.number : null,
+    week: wantPrior ? null : (state.ok ? state.week.label : null),
     updatedAt: usage.updatedAt || null,
     scoring: { preset, label: SCORING_PRESET_LABEL[preset] || 'PPR' },
     players: players.slice(0, limit)
@@ -8376,6 +8462,7 @@ const JOB_FNS = {
   'availability-refresh': env => runAvailabilityRefresh(env),
   'market-snapshot':      env => runMarketSnapshot(env),
   'usage-refresh':        env => runUsageRefresh(env),
+  'usage-prior-refresh':  env => runPriorUsageRefresh(env),
   'depth-charts':         env => runDepthChartRefresh(env),
   'ros-snapshot':         env => runRosSnapshot(env),
   'snapshot-prune':       env => snapshotPrune(env, SNAP_KEEP_DAYS),
@@ -8582,8 +8669,9 @@ async function healthPayload(env, opts) {
   const sched = await scheduleCacheRead(env);
   const state = sched ? nflSeasonState(sched, now) : { ok: false, error: 'no_schedule' };
   const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
-  const [odds, snaps, usage, avail, depth, rosList, next3List, playoffList, dk, fd, jobs] = await Promise.all([
+  const [odds, snaps, usage, usagePrior, avail, depth, rosList, next3List, playoffList, dk, fd, jobs] = await Promise.all([
     oddsCacheRead(env).catch(() => null), snapshotStatus(env).catch(() => null), usageCacheRead(env).catch(() => null),
+    usageCacheRead(env, MARKET_PRIOR_ROW).catch(() => null),
     availabilityCacheRead(env).catch(() => null), _overlayRowMeta(env, DEPTH_ROW),
     rosSnapshots(env, 'ros', 1), rosSnapshots(env, 'next3', 1), rosSnapshots(env, 'playoffs', 1),
     dfsSalariesRead(env, 'dk', sched ? sched.season : null, week).catch(() => null), dfsSalariesRead(env, 'fd', sched ? sched.season : null, week).catch(() => null),
@@ -8595,6 +8683,10 @@ async function healthPayload(env, opts) {
     odds: odds ? { updatedAt: odds.updatedAt, provider: odds.provider, matched: odds.matched } : null,
     snapshots: snaps && snaps.ok ? { last: snaps.last, first: snaps.first, rows: snaps.rows, subjects: snaps.subjects, books: snaps.books } : null,
     usage: usage ? { updatedAt: usage.updatedAt, season: usage.season, throughWeek: usage.throughWeek, players: Object.keys(usage.players || {}).length } : null,
+    // Last season's copy of the same overlay, which /stats serves behind its
+    // season buttons. Missing is not a fault -- the daily job builds it -- but
+    // an operator should be able to see whether it is there.
+    usagePrior: usagePrior ? { updatedAt: usagePrior.updatedAt, season: usagePrior.season, throughWeek: usagePrior.throughWeek, players: Object.keys(usagePrior.players || {}).length } : null,
     availability: avail ? { updatedAt: avail.updatedAt, asOf: avail.asOf, matched: avail.matched } : null,
     depthCharts: depth,
     rankings: { ros: snapMeta(rosList[0]), next3: snapMeta(next3List[0]), playoffs: snapMeta(playoffList[0]) },
@@ -8693,6 +8785,9 @@ const JOB_SCHEDULE = [
   { job: 'availability-refresh', days: ['Sun'],                hours: [10, 11, 12], minutes: [0, 15, 30, 45], phase: 1 },
   { job: 'availability-refresh', days: ['Mon', 'Thu'],         hours: [18, 19], minutes: [0, 30],      phase: 1 },
   { job: 'usage-refresh',        days: ['Tue', 'Wed'],         hours: [6],                            phase: 1 },
+  // Last season does not change, so this one costs a read and returns: it
+  // re-fetches only when the year has rolled over or the row is not there.
+  { job: 'usage-prior-refresh',  days: null,                   hours: [5],                            phase: 1 },
   { job: 'depth-charts',         days: null,                   hours: [6],                            phase: 1 },
   { job: 'depth-charts',         days: ['Sun'],                hours: [11],                           phase: 1 },
   // phase 2: derived from the pulls
@@ -11090,6 +11185,9 @@ export default {
       const out = await statsPayload(env, {
         preset: SCORING_PRESETS[preset] ? preset : 'ppr',
         position: url.searchParams.get('pos') || 'ALL',
+        // ?season=prior (or last season's year) reads the finished season
+        // instead of the one being played. Anything else is this season.
+        season: url.searchParams.get('season'),
         limit: url.searchParams.get('limit')
       });
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=900' });
