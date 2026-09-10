@@ -1,5 +1,8 @@
 # Iron Tuna — Project Handoff
 
+Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
+[docs/TUNA-MARKET-SIGNAL.md](docs/TUNA-MARKET-SIGNAL.md).
+
 Fantasy-football auction draft assistant. Live at **https://irontuna.com**.
 This document is everything you need to pick the project up in Claude Code (or any editor).
 
@@ -8286,8 +8289,8 @@ section is the rest:
 **What it is.** A reader connects the fantasy league they actually play in and every in-season surface reads their exact scoring, their roster, every other roster, the free-agent pool, their opponent and the standings. It is infrastructure, not a page: the model lives in D1 and the pages read it. The long record (audit, design, provider terms, deliverables, env vars, deployment) is `docs/league-sync.md`; this is the map.
 
 **Where it lives.**
-- `_worker.js`, the marked region `// ══ LEAGUE SYNC` … `// ══ /LEAGUE SYNC` just above `export default`. Adapters (`LEAGUE_PROVIDERS`: sleeper, yahoo, espn placeholder, manual), the normalized model (`leagueNormalizeSettings`, `leagueEffectiveSettings`, `leagueScore`), the crosswalk (`leagueResolvePlayer`, `leagueMapPlayers`, tables `player_id_map` / `player_map_misses`), storage (`leagueWriteModel`, `leagueLoad`), the sync (`leagueSync`, job `league-sync` → `runLeagueSync`, cadence `leagueNextSyncAt`), the modules (`leagueBoard`, `leagueLineup`, `leaguePickups`, `leagueMatchup`, `leagueIntel`, `leagueTrades`, `leaguePlayoffs`, `leagueAvailabilityLookup`, `leagueSummary`) and the routes (`leagueRoutes`: `/api/leagues*`, `/api/oauth/yahoo/*`, `/api/admin/league-sync`). The fetch handler dispatches to `leagueRoutes` first.
-- Three touches outside the region: eight flags appended to `NEWSROOM_FLAGS` (`LEAGUE_SYNC`, `SLEEPER_SYNC`, `YAHOO_SYNC`, `ESPN_SYNC`, `PERSONALIZED_WAIVERS/LINEUP/TRADES/STORIES`), the `league-sync` row in `JOB_FNS` and `JOB_SCHEDULE` (hourly, phase 2; the job decides per league), and `boardsPayload`'s memo key now includes `o.customKey` so a league's custom scoring does not collide with another's.
+- `_worker.js`, the marked region `// ══ LEAGUE SYNC` … `// ══ /LEAGUE SYNC` just above `export default`. Adapters (`LEAGUE_PROVIDERS`: sleeper, yahoo, CBS, espn placeholder, manual), the normalized model (`leagueNormalizeSettings`, `leagueEffectiveSettings`, `leagueScore`), the crosswalk (`leagueResolvePlayer`, `leagueMapPlayers`, tables `player_id_map` / `player_map_misses`), storage (`leagueWriteModel`, `leagueLoad`), the sync (`leagueSync`, job `league-sync` → `runLeagueSync`, cadence `leagueNextSyncAt`), the modules (`leagueBoard`, `leagueLineup`, `leaguePickups`, `leagueMatchup`, `leagueIntel`, `leagueTrades`, `leaguePlayoffs`, `leagueAvailabilityLookup`, `leagueSummary`) and the routes (`leagueRoutes`: `/api/leagues*`, `/api/oauth/yahoo/*`, `/api/admin/league-sync`). The fetch handler dispatches to `leagueRoutes` first.
+- Three touches outside the region: nine flags appended to `NEWSROOM_FLAGS` (`LEAGUE_SYNC`, `SLEEPER_SYNC`, `YAHOO_SYNC`, `CBS_SYNC`, `ESPN_SYNC`, `PERSONALIZED_WAIVERS/LINEUP/TRADES/STORIES`), the `league-sync` row in `JOB_FNS` and `JOB_SCHEDULE` (hourly, phase 2; the job decides per league), and `boardsPayload`'s memo key now includes `o.customKey` so a league's custom scoring does not collide with another's.
 - `it-sync.js` — the client library (`ITSync`): loads `/api/leagues` once a minute per tab, the active-league selector, the sync strip, the acquisition CTA, and the On Your Roster / Available in Your League callouts on any `/player/` link.
 - `my-league.html` is **My Leagues** (connect flow, league cards, Sync now, default, pick my team, Review settings with corrections, Disconnect, manual league form); `my-week.html` is **My Week** (best lineup, matchup, alerts, pickups, trade matches, playoff readiness). Hooks on `rankings.html` (a "Your league (synced)" scoring preset reading `/board`, roster badges), `faab.html` (the synced Pickup Advisor above the Sleeper/manual flow), `trade-finder.html` (load every roster from the league; the desk's own matches), `player.html` (the league line under the club), `fantasy.html` / `in-season.html` (strip, CTA, week card), `lead.html` / `desk.html` (story callouts), `admin.html` (the League sync card).
 
@@ -8297,10 +8300,10 @@ section is the rest:
 - A provider failure never deletes a league. It is a logged run (`league_sync_runs`), a `failed` status the UI shows next to the last good sync, and a retry with doubling backoff capped at a day.
 - The reader's corrections (`leagues.overrides`) are never written by a sync. `leagueEffectiveSettings` lays them over the synced settings and names them.
 - No display-name matching where an id exists. A provider id that cannot be resolved is a recorded miss and stays on the roster by name, scored 0, never guessed.
-- OAuth tokens are sealed (AES-GCM under `LEAGUE_TOKEN_KEY`) before D1 and never reach the browser. Disconnecting the last league on an OAuth provider deletes the tokens.
-- **Sleeper is off by default** (`FLAG_SLEEPER_SYNC`). Their API is non-commercial-only and this is a paid product (docs/data-sources.md R2, R7). Turn it on only with their license in writing. Yahoo is off until an app is registered (`YAHOO_CLIENT_ID`, `YAHOO_CLIENT_SECRET`, `LEAGUE_TOKEN_KEY`). ESPN has no supported path and the adapter says so.
+- OAuth tokens and CBS league tokens are sealed with AES-GCM under `LEAGUE_TOKEN_KEY` before D1 and never return to the browser. CBS tokens are stored per league in `league_provider_tokens`; a successful full pull is required before save/rotation, and disconnecting that league deletes its token.
+- **CBS is off by default** (`FLAG_CBS_SYNC`). The implementation is fixture-tested but not live-tested; verify response shapes and permitted commercial access before enabling it. CBS connection uses a reader-supplied league access token and never requests their CBS password. **Sleeper is off by default** (`FLAG_SLEEPER_SYNC`) pending a written commercial license. Yahoo is off until an app is registered (`YAHOO_CLIENT_ID`, `YAHOO_CLIENT_SECRET`, `LEAGUE_TOKEN_KEY`). ESPN has no supported path and the adapter says so.
 
-**Tests.** `node tools/test-league-sync.mjs` (in CI): fixtures in `tools/fixtures/`, the network stubbed, an in-memory D1, the real scoring engine and the real PROJECTIONS pool. `tools/test-jobs.mjs`, `test-health.mjs` and `test-newsroom.mjs` know the new job and the three off-by-default flags. `tools/test-data-sources.mjs` allowlists the two Yahoo hosts.
+**Tests.** `node tools/test-league-sync.mjs` (145 assertions in CI): Sleeper, Yahoo and synthetic CBS fixtures, stubbed network, in-memory D1, real scoring engine and PROJECTIONS pool. CBS coverage includes credential redaction, hostname validation, per-league token encryption/rotation/deletion, scheduled sync, idempotency and partial/error responses. `node tools/test-cbs-ui.mjs` checks the masked connection form and retry flow. `tools/test-data-sources.mjs` allowlists the validated CBS league hostname suffix.
 
 ### 68o. The first real draft, and what the fact check got wrong
 
@@ -8794,6 +8797,49 @@ offence question rather than a roster one, so it sits with the offence analyst.
   dashboards are **not** bylined, and the test asserts they are not. A byline on
   a table recomputed on every load is the one kind that lies.
 
+### 68p. The invocation dies, and the cron does not
+
+With the job log opening a row before each job (§68m), the second night
+answered the question the first could not. Between 13:30Z on September 9
+and 10:00Z on September 10 the `*/15` trigger reached the worker every
+quarter hour; six times a `content-tick` row opened and never closed (the
+invocation died inside the job, with nothing due), and after each death
+every tick for the next hour or two opened its FIRST job's row
+(`news-scan`, `schedule-refresh`) and died there too, until the pattern
+lifted on its own. The four-minute job deadline never fired in any of
+them: the runtime killed the isolate outright, which is not an exception
+and not a timeout.
+
+Cloudflare documents this shape for the CPU limit: a cron on an interval
+under an hour gets 30 seconds of CPU per invocation on the paid plan, with
+"built-in flexibility" for an occasional overrun that is withdrawn once a
+Worker overruns consistently, after which "its execution will be
+terminated according to the limit configured." `wrangler.jsonc` now sets
+`limits.cpu_ms` to 300000, the documented maximum. What burns the CPU is
+not yet known: a tick with nothing due is sixteen `contentDue` calls, and
+the ticks that died were exactly those. The dashboard's Invocation
+Statuses (Metrics, Errors) name the outcome per invocation (`exceededCpu`,
+`exceededMemory`, `scriptThrew`), which the repo cannot read; that is the
+next thing to look at if deaths continue under the higher limit.
+
+The stanza did not deploy. Workers Builds refused the branch (build
+db0e0105, 10:30Z on September 10) with the only code change being
+`limits`, while main's builds were green nine hours earlier; Cloudflare's
+configuration reference says limits are only supported on the Standard
+usage model. So this worker is on a legacy model, and on the Bundled model
+a cron invocation gets 50 ms of CPU, which would kill a tick that does
+sixteen `contentDue` walks on a cold isolate, exactly the ticks that died.
+The stanza is out of `wrangler.jsonc` (a comment there says why) and the
+fix is the owner's: switch the worker to the Standard usage model in the
+dashboard (Workers, iron-tuna, Settings, Usage Model), then put
+`"limits": { "cpu_ms": 300000 }` back. On Standard the default is already
+30 seconds, which alone should end the deaths.
+
+Also seen: the Week 1 midweek preview published at 12:45Z on September 9
+by revalidation (§68o); the reshaped ESPN fetch (§68n) answered 200 with
+sixteen events at 13:00Z and the depth charts loaded all thirty-two clubs
+at 10:00Z the next morning, the first success since September 4.
+
 ---
 
 ## 71. September 10: the depth charts became a page
@@ -8821,12 +8867,16 @@ QB3/RB5/WR6/TE3 against the coach's QB2/RB4/WR5/TE2, and the test fails if the
 page is ever the shallower of the two: the whole point of the page is the name
 under the name.
 
-**The daily job stopped depending on ESPN.** `runDepthChartRefresh` has
-returned `got: 0, failed: 32` every morning since September 4 (§68n). It now
-falls back to `fetchDepthChartsSleeper()` — the same player file, folded into
-`fetchDepthChartEspn`'s shape — for every club ESPN did not answer for, so the
-recap's "what we already knew", the news desk's depth events and the health
-board are fed by whichever source answered. The row records which: `source` is
+**The daily job stopped depending on ESPN alone.** It had returned
+`got: 0, failed: 32` every morning from September 4 until the reshaped fetch
+(§68n) brought all thirty-two clubs back at 10:00Z on September 10 — six
+mornings in which the site's stored depth charts were whatever the last good
+run left. `runDepthChartRefresh` now falls back to
+`fetchDepthChartsSleeper()` — the same player file the page reads, folded into
+`fetchDepthChartEspn`'s shape — for every club ESPN did not answer for, and
+no-ops entirely on a morning ESPN answers in full. The recap's "what we
+already knew", the news desk's depth events and the health board are fed by
+whichever source answered. The row records which: `source` is
 `espn-depth`, `espn+sleeper` or `sleeper-depth`, and `/api/admin/providers`
 stamps that instead of the hard-coded `espn-depth` it used to claim.
 

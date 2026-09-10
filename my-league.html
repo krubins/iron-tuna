@@ -80,12 +80,13 @@ p{color:var(--sec);margin:0 0 16px}
 
 <section id="connect">
 <h2>Sync my league</h2>
+<p class="is-note">CBS Sportsline, when enabled, uses a league access token that Iron Tuna encrypts separately for each league. Disconnecting deletes that league&rsquo;s token. We never ask for your CBS password.</p>
 <p>Connect the league you actually play in and Iron Tuna imports its exact scoring, every roster, the free-agent pool, your opponent and the standings. Rankings, the Pickup Advisor, Best Lineup, the Trade Finder and the stories then read <em>your</em> league instead of a default one. Nothing is re-typed.</p>
 <div id="lsStatus" class="is-note" style="margin:0 0 12px"></div>
 <div id="lsList"></div>
 <div id="lsConnect" hidden></div>
 <div id="lsManual" hidden></div>
-<p class="is-note" id="lsPrivacy">What Iron Tuna imports: league settings and scoring, team names and manager display names, rosters, matchups, standings and transactions, from the provider you choose. Sleeper leagues are read by league ID from Sleeper&rsquo;s public API. Yahoo leagues are read after you authorize Iron Tuna on Yahoo&rsquo;s own site: Iron Tuna never sees your Yahoo password, asks for read-only access, and encrypts the tokens Yahoo issues. The data is used only to personalize your guidance and is never shown to unrelated users. Disconnecting a league stops syncing and deletes the imported data. Full details in the <a href="/privacy">privacy policy</a>.</p>
+<p class="is-note" id="lsPrivacy">What Iron Tuna imports: league settings and scoring, team names and manager display names, rosters, matchups, standings and transactions, from the provider you choose. Sleeper leagues are read by league ID from Sleeper&rsquo;s public API. Yahoo leagues are read after you authorize Iron Tuna on Yahoo&rsquo;s own site. CBS Sportsline leagues, when enabled, are read with the league access token you provide. Iron Tuna never asks for a Yahoo or CBS password and encrypts provider tokens at rest. The data is used only to personalize your guidance and is never shown to unrelated users. Disconnecting a league stops syncing and deletes the imported data and that CBS league&rsquo;s token. Full details in the <a href="/privacy">privacy policy</a>.</p>
 </section>
 
 <h2>Your in-season settings</h2>
@@ -268,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var P = (st && st.providers) || {};
     var el = $('lsConnect'); el.hidden = false;
     el.innerHTML = '<div class="is-card"><h3>Which platform?</h3><div class="is-btns">' +
-      ['sleeper', 'yahoo', 'espn'].map(function (k) { var p = P[k] || { label: k, enabled: false }; return '<button type="button" class="is-btn ' + (p.enabled ? 'primary' : 'sec') + '" data-prov="' + k + '">' + esc(p.label) + (p.enabled ? '' : ' (unavailable)') + '</button>'; }).join('') +
+      ['sleeper', 'yahoo', 'cbs', 'espn'].map(function (k) { var p = P[k] || { label: k, enabled: false }; return '<button type="button" class="is-btn ' + (p.enabled ? 'primary' : 'sec') + '" data-prov="' + k + '">' + esc(p.label) + (p.enabled ? '' : ' (unavailable)') + '</button>'; }).join('') +
       '<button type="button" class="is-btn sec" data-prov="manual">Enter it by hand</button></div><div id="lsFlow" style="margin-top:12px"></div></div>';
     el.querySelectorAll('[data-prov]').forEach(function (b) { b.addEventListener('click', function () { flow(b.getAttribute('data-prov')); }); });
     if (provider) flow(provider);
@@ -285,6 +286,24 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!u && !lid) { $('lsFound').innerHTML = '<p class="is-note" style="color:var(--danger)">Enter your username or a league ID.</p>'; return; }
         $('lsFound').innerHTML = '<p class="is-note">Asking Sleeper…</p>';
         ITSync.api('/api/leagues/connect', { method: 'POST', body: lid ? { provider: 'sleeper', lookupLeagueId: lid, username: u || undefined } : { provider: 'sleeper', username: u } }).then(function (j) { discovered('sleeper', j); });
+      });
+      return;
+    }
+    if (k === 'cbs') {
+      f.innerHTML = '<p>Connect or reconnect a CBS Sportsline football league with its league ID and access token. Iron Tuna encrypts the token and only reads league data. Use your league access token, never your CBS password.</p><div class="is-field"><label for="lsCbsId">CBS league ID or URL</label><input class="is-input" id="lsCbsId" placeholder="your-league.football.cbssports.com" spellcheck="false" autocomplete="off"></div><div class="is-field"><label for="lsCbsToken">League access token</label><input class="is-input" id="lsCbsToken" type="password" autocomplete="off" spellcheck="false" maxlength="8192"></div><p class="is-note">Use a token from your authorized CBS league session. If you do not have one, use manual setup. Tokens are not saved on this device. To renew access, reconnect here using the same league ID and a new token.</p><button type="button" class="is-btn primary" id="lsCbsConnect">Sync this league</button>';
+      $('lsCbsConnect').addEventListener('click', function () {
+        var b = this, id = $('lsCbsId').value.trim(), token = $('lsCbsToken').value.trim();
+        if (!id || !token) { note('Enter the CBS league ID and access token.', true); return; }
+        b.disabled = true; b.textContent = 'Importing…';
+        $('lsCbsToken').value = '';
+        var pending = ITSync.api('/api/leagues/connect', { method: 'POST', body: { provider: 'cbs', leagueId: id, accessToken: token } });
+        token = '';
+        pending.then(function (r) {
+          if (!r || !r.ok) { b.disabled = false; b.textContent = 'Sync this league'; note(esc((r && (r.detail || r.message || r.error)) || 'The import failed. Enter the token again to retry.'), true); return; }
+          note('<b>Synced.</b> ' + esc(r.league.name) + (r.needsTeam ? ' Choose your team below.' : ''));
+          $('lsConnect').hidden = true;
+          reload().then(function () { if (r.needsTeam) panel(r.league.id, 'teams'); });
+        });
       });
       return;
     }

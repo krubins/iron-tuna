@@ -1307,6 +1307,204 @@ const CAMPAIGN_NURTURE = {
 };
 
 // ════════════════════════════════════════════════════════════════════════════
+// TUNA MARKET SIGNAL START
+// Self-contained section: tools/test-tuna-market.mjs executes this deployed code.
+const TMS_SOURCE = 'https://the-odds-api.com/';
+const tmsInt = (v, fallback, min, max) => Number.isFinite(Number(v)) && v !== '' && v != null ? Math.max(min, Math.min(max, Math.floor(Number(v)))) : fallback;
+const tmsList = v => String(v || '').split(',').map(s => s.trim()).filter(Boolean);
+const tmsKey = r => JSON.stringify([r.provider, r.event, r.book, r.market, r.player, r.side]);
+const tmsGroup = r => JSON.stringify([r.provider, r.event, r.market, r.player, r.side, r.line]);
+function tmsNormalize(events, observed, provider = 'the-odds-api', source = TMS_SOURCE) {
+  if (!Array.isArray(events)) throw new Error('invalid_schema');
+  const rows = [];
+  for (const e of events) {
+    if (!e.id || !e.sport_key || !Number.isFinite(Date.parse(e.commence_time))) continue;
+    for (const b of e.bookmakers || []) for (const m of b.markets || []) {
+      // Alternate ladders need their own identity; do not mix them with main lines.
+      if (!b.key || !m.key || m.key.includes('alternate')) continue;
+      const updated = Date.parse(m.last_update || b.last_update);
+      if (!Number.isFinite(updated) || updated > observed + 60000) continue;
+      for (const o of m.outcomes || []) {
+        if (!o.name || typeof o.price !== 'number' || !Number.isFinite(o.price) || o.price <= 1) continue;
+        if (o.point != null && (typeof o.point !== 'number' || !Number.isFinite(o.point))) continue;
+        if (m.key !== 'h2h' && o.point == null) continue;
+        if (m.key.startsWith('player_') && !o.description) continue;
+        rows.push({ provider, source, event: String(e.id), sport: e.sport_key,
+          matchup: `${e.away_team || ''} at ${e.home_team || ''}`, starts: Date.parse(e.commence_time),
+          book: b.key, market: m.key, player: o.description || '', side: o.name,
+          line: o.point ?? null, price: o.price, updated, observed });
+      }
+    }
+  }
+  return rows;
+}
+async function tmsHttp(path, params, env, request = fetch) {
+  const url = new URL('https://api.the-odds-api.com/v4/' + path);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  url.searchParams.set('apiKey', env.ODDS_API_KEY);
+  let res;
+  try { res = await request(url.toString(), { signal: AbortSignal.timeout(12000) }); }
+  catch { throw new Error('provider_timeout_or_network'); }
+  if (!res.ok) {
+    const error = new Error(res.status === 429 ? 'rate_limited' : res.status === 401 || res.status === 403 ? 'credentials_or_plan' : 'provider_http_' + res.status);
+    const retry = res.headers.get('retry-after');
+    error.retryMs = Math.min(86400000, Math.max(60000, Number(retry) * 1000 || Date.parse(retry) - Date.now() || 900000));
+    throw error;
+  }
+  let data;
+  try { data = await res.json(); } catch { throw new Error('invalid_json'); }
+  return { data, remaining: res.headers.get('x-requests-remaining'), used: res.headers.get('x-requests-used') };
+}
+// Adapter contract: pull(env, observed) -> { rows, quota }. Never merge provider event IDs.
+const TMS_PROVIDERS = {
+  'the-odds-api': { async pull(env, observed) {
+    if (!env.ODDS_API_KEY) throw new Error('missing_odds_api_key');
+    const sport = String(env.TMS_SPORT || 'americanfootball_nfl');
+    if (!/^[a-z0-9_]+$/.test(sport)) throw new Error('invalid_sport');
+    const params = { regions: 'us', markets: 'h2h,spreads,totals', oddsFormat: 'decimal' };
+    const result = await tmsHttp(`sports/${sport}/odds`, params, env);
+    const rows = tmsNormalize(result.data, observed);
+    // Explicit event selection avoids automatically purchasing an entire slate of props.
+    const ids = tmsList(env.TMS_PROP_EVENT_IDS).slice(0, 2);
+    const markets = tmsList(env.TMS_PROP_MARKETS).filter(m => /^player_[a-z_]+$/.test(m) && !m.includes('alternate')).slice(0, 6);
+    let quota = { remaining: result.remaining, used: result.used };
+    for (const id of ids) {
+      if (!markets.length || (quota.remaining !== null && Number(quota.remaining) < markets.length)) break;
+      const next = await tmsHttp(`sports/${sport}/events/${encodeURIComponent(id)}/odds`, { ...params, markets: markets.join(',') }, env);
+      rows.push(...tmsNormalize([next.data], observed));
+      quota = { remaining: next.remaining, used: next.used };
+    }
+    return { rows, quota };
+  } },
+  // Licensed feeds use the admin ingestion contract; no undocumented vendor endpoints.
+  'licensed-import': { push: true }
+};
+async function tmsReady(env) {
+  if (!env.LEADS_DB) throw new Error('storage_unavailable');
+  await env.LEADS_DB.batch([
+    env.LEADS_DB.prepare('CREATE TABLE IF NOT EXISTS tuna_market_snapshots (provider TEXT NOT NULL, event TEXT NOT NULL, observed INTEGER NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(provider,event,observed))'),
+    env.LEADS_DB.prepare('CREATE INDEX IF NOT EXISTS tuna_market_time ON tuna_market_snapshots(observed)'),
+    env.LEADS_DB.prepare('CREATE TABLE IF NOT EXISTS tuna_market_state (id TEXT PRIMARY KEY, next_poll INTEGER NOT NULL DEFAULT 0, status TEXT, updated INTEGER)')
+  ]);
+}
+async function tmsStore(env, rows, now) {
+  const groups = new Map();
+  for (const row of rows) {
+    const key = JSON.stringify([row.provider, row.event]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+  const statements = [...groups.values()].map(group => env.LEADS_DB.prepare('INSERT OR IGNORE INTO tuna_market_snapshots(provider,event,observed,payload) VALUES(?,?,?,?)').bind(group[0].provider, group[0].event, now, JSON.stringify(group)));
+  for (let i = 0; i < statements.length; i += 50) await env.LEADS_DB.batch(statements.slice(i, i + 50));
+  const cutoff = now - tmsInt(env.TMS_RETENTION_DAYS, 30, 1, 90) * 86400000;
+  await env.LEADS_DB.prepare('DELETE FROM tuna_market_snapshots WHERE observed < ?').bind(cutoff).run();
+}
+async function tmsPoll(env, now = Date.now()) {
+  if (env.TMS_ENABLED !== '1') return { status: 'disabled' };
+  await tmsReady(env);
+  const db = env.LEADS_DB;
+  await db.prepare("INSERT OR IGNORE INTO tuna_market_state(id,next_poll) VALUES('poll',0)").run();
+  const interval = tmsInt(env.TMS_INTERVAL_MINUTES, 360, 15, 1440) * 60000;
+  // Atomic D1 lease covers both scheduled and admin refreshes across isolates.
+  const lock = await db.prepare("UPDATE tuna_market_state SET next_poll=? WHERE id='poll' AND next_poll<=?").bind(now + interval, now).run();
+  if (!lock.meta?.changes) return { status: 'cooldown' };
+  let status;
+  try {
+    const provider = TMS_PROVIDERS[env.TMS_PROVIDER || 'the-odds-api'];
+    if (!provider?.pull) throw new Error('invalid_pull_provider');
+    const result = await provider.pull(env, now);
+    await tmsStore(env, result.rows, now);
+    status = { status: result.rows.length ? 'ok' : 'empty', rows: result.rows.length, quota: result.quota };
+  } catch (e) {
+    // Never persist URLs, API response bodies, or credentials in errors.
+    const code = /^[a-z_0-9]+$/.test(e.message) ? e.message : 'ingestion_failed';
+    status = { status: 'error', code };
+    await db.prepare("UPDATE tuna_market_state SET next_poll=? WHERE id='poll'").bind(now + Math.max(interval, e.retryMs || 0)).run();
+  }
+  await db.prepare("UPDATE tuna_market_state SET status=?,updated=? WHERE id='poll'").bind(JSON.stringify(status), now).run();
+  return status;
+}
+function tmsSignals(rows, now, sharpBooks = []) {
+  const series = new Map();
+  for (const r of rows) {
+    const key = tmsKey(r);
+    if (!series.has(key)) series.set(key, []);
+    series.get(key).push(r);
+  }
+  const items = [];
+  for (const history of series.values()) {
+    history.sort((a, b) => a.observed - b.observed);
+    const first = history[0], last = history[history.length - 1];
+    if (last.starts <= now) continue; // Prematch only: do not mix live state with pregame.
+    const comparable = first.updated < last.updated && first.observed < last.observed;
+    const stale = now - last.updated > 3600000 || now - last.observed > 3600000;
+    const lineDelta = comparable && first.line !== null && last.line !== null ? last.line - first.line : null;
+    const probabilityDelta = comparable && first.line === last.line ? (1 / last.price - 1 / first.price) * 100 : null;
+    items.push({ ...last, firstObserved: first.observed, firstLine: first.line,
+      lineDelta, probabilityDelta, stale, comparable, history: history.slice(-24).map(r => ({ at: r.observed, updated: r.updated, line: r.line, price: r.price })) });
+  }
+  for (const item of items) {
+    const peers = items.filter(r => !r.stale && tmsGroup(r) === tmsGroup(item));
+    item.books = new Set(peers.map(r => r.book)).size;
+    item.consensusProbability = peers.length ? peers.reduce((n, r) => n + 100 / r.price, 0) / peers.length : null;
+    const sharp = peers.filter(r => sharpBooks.includes(r.book));
+    item.sharpGap = !item.stale && sharp.length ? sharp.reduce((n, r) => n + 100 / r.price, 0) / sharp.length - 100 / item.price : null;
+    const split = item.split;
+    item.publicSplit = split && now - split.at <= 3600000 ? split : null;
+    // Descriptive magnitude, not probability of winning, +EV, or proof of sharp money.
+    item.score = item.stale || !item.comparable ? null : !item.lineDelta && !item.probabilityDelta ? 0 : Math.round(Math.min(100,
+      Math.min(60, Math.abs(item.probabilityDelta || 0) * 12) +
+      (item.lineDelta ? 20 : 0) + Math.min(10, Math.max(0, item.books - 1) * 2) +
+      Math.min(10, Math.abs(item.sharpGap || 0) * 2)));
+    delete item.split;
+  }
+  return items.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+}
+async function tmsRoutes(request, env, url) {
+  if (!url.pathname.startsWith('/api/tuna-market')) return null;
+  const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
+  try {
+    if (url.pathname === '/api/tuna-market/refresh' || url.pathname === '/api/tuna-market/import') {
+      if (request.method !== 'POST') return json({ error: 'method' }, 405);
+      if (!adminOk(env, (request.headers.get('Authorization') || '').replace(/^Bearer /, ''))) return json({ error: 'forbidden' }, 403);
+      if (env.TMS_ENABLED !== '1') return json({ status: 'disabled' }, 503);
+      if (url.pathname.endsWith('/refresh')) return json(await tmsPoll(env));
+      // Explicitly licensed, normalized source; reject arbitrary URLs and oversized bodies.
+      if (env.TMS_LICENSED_IMPORT !== '1') return json({ error: 'licensed_import_disabled' }, 403);
+      const reader = request.body?.getReader();
+      if (!reader) return json({ error: 'empty_body' }, 400);
+      const chunks = []; let size = 0;
+      while (true) { const { done, value } = await reader.read(); if (done) break; size += value.length; if (size > 500000) { await reader.cancel(); return json({ error: 'too_large' }, 413); } chunks.push(value); }
+      const bytes = new Uint8Array(size); let offset = 0; for (const c of chunks) { bytes.set(c, offset); offset += c.length; }
+      let data; try { data = JSON.parse(new TextDecoder().decode(bytes)); } catch { return json({ error: 'invalid_json' }, 400); }
+      const now = Date.now();
+      if (!data.source || !/^https:\/\/[^\s]+$/.test(data.source) || !Array.isArray(data.events) || data.events.length > 20) return json({ error: 'invalid_import' }, 400);
+      const rows = tmsNormalize(data.events, now, 'licensed-import', data.source);
+      // Splits are outcome-specific percentages with their own source/sample timestamp.
+      for (const r of rows) {
+        const s = (data.splits || []).find(s => s.event === r.event && s.market === r.market && (s.player || '') === r.player && s.side === r.side && s.line === r.line && s.book === r.book);
+        if (s && typeof s.tickets === 'number' && typeof s.money === 'number' && s.tickets >= 0 && s.tickets <= 100 && s.money >= 0 && s.money <= 100 && Number.isFinite(s.at) && s.at <= now && s.at >= now - 86400000) r.split = { tickets: s.tickets, money: s.money, at: s.at, source: data.source };
+      }
+      await tmsReady(env); await tmsStore(env, rows, now);
+      return json({ status: 'ok', rows: rows.length });
+    }
+    if (url.pathname !== '/api/tuna-market') return json({ error: 'not_found' }, 404);
+    if (request.method !== 'GET') return json({ error: 'method' }, 405);
+    if (env.TMS_ENABLED !== '1') return json({ status: 'disabled', items: [] });
+    await tmsReady(env);
+    const now = Date.now();
+    const records = await env.LEADS_DB.prepare('SELECT payload FROM tuna_market_snapshots WHERE observed>=? ORDER BY observed DESC LIMIT 1000').bind(now - 86400000).all();
+    const rows = (records.results || []).flatMap(r => JSON.parse(r.payload));
+    const kind = url.searchParams.get('kind'), player = (url.searchParams.get('player') || '').toLowerCase().slice(0, 100);
+    const items = tmsSignals(rows, now, tmsList(env.TMS_SHARP_BOOKS)).filter(r => (!kind || (kind === 'props' ? !!r.player : !r.player)) && (!player || r.player.toLowerCase().includes(player)));
+    const state = await env.LEADS_DB.prepare("SELECT status,updated,next_poll FROM tuna_market_state WHERE id='poll'").first();
+    return json({ status: items.length ? 'ok' : 'collecting', windowHours: 24, truncated: records.results?.length === 1000,
+      health: state ? { ...JSON.parse(state.status || '{}'), updated: state.updated, nextPoll: state.next_poll } : null,
+      total: items.length, items: items.slice(0, 200) });
+  } catch { return json({ error: 'market_temporarily_unavailable', items: [] }, 503); }
+}
+// TUNA MARKET SIGNAL END
+
 // Vegas-weighted projections
 // ════════════════════════════════════════════════════════════════════════════
 // A daily cron pulls season-long player props, converts them to expected stat
@@ -6909,6 +7107,7 @@ const NEWSROOM_FLAGS = {
   LEAGUE_SYNC:           { dflt: true,  note: 'Sync My League: the league model, My Leagues, and every personalized module' },
   SLEEPER_SYNC:          { dflt: false, note: 'the Sleeper connector; OFF until Sleeper’s commercial license is in writing (docs/data-sources.md R2)' },
   YAHOO_SYNC:            { dflt: false, note: 'the Yahoo OAuth connector; needs YAHOO_CLIENT_ID, YAHOO_CLIENT_SECRET and LEAGUE_TOKEN_KEY' },
+  CBS_SYNC:              { dflt: false, note: 'CBS league-token connector; needs LEAGUE_TOKEN_KEY and verified CBS access' },
   ESPN_SYNC:             { dflt: false, note: 'the ESPN connector; no supported path exists, the adapter is a placeholder' },
   PERSONALIZED_WAIVERS:  { dflt: true,  note: 'the Pickup Advisor on the players actually available in a synced league' },
   PERSONALIZED_LINEUP:   { dflt: true,  note: 'Best Lineup, Your Matchup, roster alerts and playoff readiness from a synced roster' },
@@ -9806,9 +10005,12 @@ async function pruneAnalytics(env, keepDays) {
 // use only (docs/data-sources.md R2, Addendum 13.5), so the Sleeper connector
 // is behind FLAG_SLEEPER_SYNC, default OFF, until a license is in writing.
 // Yahoo is OAuth 2.0 with the reader's consent and needs client credentials;
-// it is behind FLAG_YAHOO_SYNC. ESPN has no supported path (see LEAGUE_PROVIDERS.espn).
+// it is behind FLAG_YAHOO_SYNC. CBS uses a reader-supplied per-league token,
+// sealed under LEAGUE_TOKEN_KEY, and is behind FLAG_CBS_SYNC. ESPN has no
+// supported path (see LEAGUE_PROVIDERS.espn).
 const LEAGUE_CONTRACT = 1;
 const LEAGUE_DDL = [
+  'CREATE TABLE IF NOT EXISTS league_provider_tokens (email TEXT NOT NULL, provider TEXT NOT NULL, provider_league_id TEXT NOT NULL, access_enc TEXT NOT NULL, updated_at INTEGER, PRIMARY KEY (email, provider, provider_league_id))',
   'CREATE TABLE IF NOT EXISTS leagues (id TEXT PRIMARY KEY, email TEXT NOT NULL, provider TEXT NOT NULL, provider_league_id TEXT NOT NULL, name TEXT, season INTEGER, sport TEXT, num_teams INTEGER, status TEXT, settings TEXT, overrides TEXT, user_team_id TEXT, is_default INTEGER DEFAULT 0, created_at INTEGER, updated_at INTEGER, last_sync_at INTEGER, last_ok_at INTEGER, sync_status TEXT, last_error TEXT, next_sync_at INTEGER, failures INTEGER DEFAULT 0)',
   'CREATE UNIQUE INDEX IF NOT EXISTS ux_leagues_owner ON leagues (email, provider, provider_league_id)',
   'CREATE INDEX IF NOT EXISTS ix_leagues_due ON leagues (next_sync_at)',
@@ -10568,6 +10770,161 @@ const PROVIDER_ESPN = {
 // The fallback that always works: the reader types the settings and pastes
 // the rosters, and the result is the same model every module reads. A
 // manual league syncs nothing; its "sync" is the form.
+// CBS uses a league-specific access token supplied by the reader. No login,
+// mobile client credentials, token refresh, or write endpoints are used here.
+function cbsLeagueId(input) {
+  let id = String(input || '').trim().toLowerCase();
+  const m = id.match(/^(?:https:\/\/)?([a-z0-9][a-z0-9-]{0,62})\.football\.cbssports\.com(?:\/[^?#]*)?$/);
+  if (m) id = m[1];
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(id)) throw new LeagueProviderError('league_not_found', 'Enter a CBS league ID or football league URL.');
+  return id;
+}
+function cbsError(code) {
+  const messages = { expired_authorization: 'CBS access expired or was refused. Reconnect this league with a new access token.', rate_limited: 'CBS is rate limiting requests. Try again later.', league_not_found: 'CBS could not find that league.', provider_unavailable: 'CBS could not complete the request. Try again later.', invalid_response: 'CBS returned incomplete or unsupported league data. The previous sync is retained.' };
+  return new LeagueProviderError(code, messages[code] || messages.invalid_response);
+}
+const CBS_RESOURCES = new Set(['details', 'rules', 'teams', 'rosters', 'schedules', 'standings/overall', 'transactions/waiver-order', 'transaction-list/log']);
+async function cbsGet(env, id, token, resource, params = {}) {
+  if (!flagOn(env, 'CBS_SYNC') || !env.LEAGUE_TOKEN_KEY) throw new LeagueProviderError('provider_disabled', 'CBS sync needs FLAG_CBS_SYNC and LEAGUE_TOKEN_KEY.');
+  id = cbsLeagueId(id);
+  if (!CBS_RESOURCES.has(resource)) throw cbsError('invalid_response');
+  if (!token) throw cbsError('expired_authorization');
+  const url = new URL('https://' + id + '.football.cbssports.com/api/league/' + resource);
+  url.search = new URLSearchParams({ version: '3.0', response_format: 'json', sport: 'football', league_id: id, ...params }).toString();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    // Never cache credentials or follow a redirect carrying Authorization.
+    const res = await fetch(url.toString(), { method: 'GET', headers: { Authorization: token, Accept: 'application/json' }, redirect: 'error', cache: 'no-store', signal: controller.signal });
+    const text = await res.text();
+    let data = null;
+    try { data = JSON.parse(text); } catch (e) { /* CBS also sends plain text. */ }
+    const item = data && Array.isArray(data.results) ? data.results[0] : data;
+    const status = !res.ok ? res.status : Number(item && item.statusCode) || res.status;
+    if (status === 401 || status === 403) throw cbsError('expired_authorization');
+    if (status === 429) throw cbsError('rate_limited');
+    if (status === 404) throw cbsError('league_not_found');
+    if (status >= 500 || status >= 300 && status < 400) throw cbsError('provider_unavailable');
+    if (status >= 400 || !item || !item.body || item.body.type === 'error' || item.body.error) {
+      if (/unauthori[sz]ed|invalid.*token|expired.*token|access.denied/i.test(text)) throw cbsError('expired_authorization');
+      throw cbsError('invalid_response');
+    }
+    return item.body;
+  } catch (e) {
+    // Never let an upstream body, URL, header, or native fetch error reach logs.
+    if (e instanceof LeagueProviderError) throw e;
+    throw cbsError('provider_unavailable');
+  } finally { clearTimeout(timer); }
+}
+function cbsList(value) { if (!Array.isArray(value)) throw cbsError('invalid_response'); return value; }
+function cbsNumber(value) { const n = Number(String(value ?? '').replace(/[$,]/g, '')); return Number.isFinite(n) ? n : 0; }
+const CBS_SLOT = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DST: 'DEF', D: 'DEF', DEF: 'DEF', 'RB-WR-TE': 'FLEX', 'QB-RB-WR-TE': 'SFLEX', 'RB-WR': 'WRRB_FLEX', 'WR-TE': 'REC_FLEX', FLEX: 'SFLEX', RS: 'BN', I: 'IR' };
+function cbsSettings(rules, details) {
+  if (!rules || !rules.roster) throw cbsError('invalid_response');
+  const roster = leagueEmptyRoster();
+  for (const p of cbsList(rules.roster.positions)) {
+    const slot = CBS_SLOT[p.abbr];
+    if (slot) roster[slot] += cbsNumber(p.max_active); else roster.other[String(p.abbr)] = cbsNumber(p.max_active);
+  }
+  for (const s of cbsList(rules.roster.statuses)) {
+    if (s.description === 'Reserve Players') roster.BN = cbsNumber(s.max);
+    if (s.description === 'Injured Players') roster.IR = cbsNumber(s.max);
+  }
+  // CBS rules vary by scoring group. Import simple points-per-stat rules;
+  // preserve bonuses/ranges/position-specific rules for explicit correction.
+  const scoring = leagueDefaultSettings().scoring, unsupported = {}, notes = [];
+  for (const k of Object.keys(scoring)) scoring[k] = Array.isArray(scoring[k]) ? [] : 0;
+  const map = { PaYd: 'passingYardsPerPoint', PaTD: 'passingTD', PaInt: 'passingInt', RuYd: 'rushingYardsPerPoint', RuTD: 'rushingTD', ReYd: 'receivingYardsPerPoint', ReTD: 'receivingTD', Rec: 'receptionPoints', FL: 'fumbleLost', Pa2P: 'passing2pt', Ru2P: 'rushing2pt', Re2P: 'receiving2pt' };
+  const categories = Array.isArray(rules.scoring) ? rules.scoring : rules.scoring && rules.scoring.categories;
+  if (!Array.isArray(categories) || !categories.length) throw cbsError('invalid_response');
+  const recognized = new Set();
+  for (const [i, rule] of categories.entries()) {
+    const key = map[rule.abbr], points = Number(rule.points), units = Number(rule.per ?? 1);
+    if (!key || rule.points == null || !Number.isFinite(points) || !(units > 0) || rule.position || rule.ranges || rule.bonus || recognized.has(key)) { unsupported['cbs_' + i + '_' + String(rule.abbr || 'rule')] = rule; continue; }
+    recognized.add(key);
+    scoring[key] = /YardsPerPoint$/.test(key) ? (points > 0 ? units / points : 0) : points / units;
+    if (key === 'receptionPoints') scoring.rbReceptionPoints = scoring[key];
+  }
+  if (!recognized.size) throw cbsError('invalid_response');
+  if (Object.keys(unsupported).length) notes.push('Some CBS scoring rules are retained but not scored. Review scoring corrections before using recommendations.');
+  const budget = rules.transactions && rules.transactions.add_drop_faab_starting_budget;
+  const faab = budget ? cbsNumber(budget.value) : null;
+  return leagueNormalizeSettings({ scoring, extras: { unsupported, notes }, roster, faab, waiverType: faab > 0 ? 'faab' : 'priority', playoffWeekStart: cbsNumber(details.regular_season_periods) + 1, playoffTeams: cbsNumber(rules.schedule && rules.schedule.num_playoff_teams && rules.schedule.num_playoff_teams.value) });
+}
+function cbsPlayer(p) {
+  if (!p || p.id == null) throw cbsError('invalid_response');
+  const slot = p.roster_status === 'A' ? 'starter' : p.roster_status === 'I' ? 'ir' : 'bench';
+  return { providerPlayerId: String(p.id), name: p.fullname || p.name || null, position: leaguePos(p.position), team: p.pro_team || null, slot, slotLabel: slot === 'starter' ? CBS_SLOT[p.roster_pos] || p.roster_pos || leaguePos(p.position) : slot.toUpperCase() };
+}
+function cbsNormalize(raw, ctx) {
+  const L = raw.details.league_details;
+  if (!L || !L.name || L.sport && !['football', 'nfl'].includes(String(L.sport).toLowerCase())) throw cbsError('invalid_response');
+  const settings = cbsSettings(raw.rules.rules, L);
+  const standings = raw.standings.overall_standings;
+  const st = cbsList(standings.teams || (standings.divisions && standings.divisions.flatMap(d => cbsList(d.teams))));
+  const waivers = raw.waivers.faab_order || raw.waivers.waiver_order;
+  const w = cbsList(waivers && waivers.teams);
+  const teams = cbsList(raw.teams.teams).map(t => {
+    if (t.id == null) throw cbsError('invalid_response');
+    const s = st.find(x => String(x.id) === String(t.id)) || {}, a = w.find(x => String(x.id) === String(t.id)) || {};
+    return { teamId: String(t.id), name: t.name, manager: (t.owners || []).map(o => o.name).filter(Boolean).join(', ') || null, ownerId: null,
+      wins: cbsNumber(s.wins), losses: cbsNumber(s.losses), ties: cbsNumber(s.ties), pointsFor: cbsNumber(s.points_scored), pointsAgainst: cbsNumber(s.points_against), standing: cbsNumber(s.order) || null, faabLeft: a.budget_remaining == null ? null : cbsNumber(a.budget_remaining), waiverPosition: cbsNumber(a.order) || null };
+  });
+  const rosters = cbsList(raw.rosters.rosters && raw.rosters.rosters.teams).map(t => ({ teamId: String(t.id), players: cbsList(t.players).map(cbsPlayer) }));
+  if (!teams.length || teams.length !== Number(L.num_teams) || new Set(teams.map(t => t.teamId)).size !== teams.length || rosters.length !== teams.length || teams.some(t => !rosters.some(r => r.teamId === t.teamId) || !st.some(s => String(s.id) === t.teamId))) throw cbsError('invalid_response');
+  const ids = rosters.flatMap(r => r.players.map(p => p.providerPlayerId));
+  if (new Set(ids).size !== ids.length) throw cbsError('invalid_response');
+  const matchups = [];
+  for (const period of cbsList(raw.schedules.schedule && raw.schedules.schedule.periods)) {
+    const week = Number(period.period || String(period.label || '').replace(/\D/g, ''));
+    if (!(week >= 1 && week <= 18)) throw cbsError('invalid_response');
+    for (const m of cbsList(period.matchups)) {
+      const pair = [m.home_team, m.away_team];
+      if (pair.some(t => !t || t.id == null)) continue; // bye
+      for (let i = 0; i < 2; i++) matchups.push({ week, matchupId: week + ':' + pair.map(t => t.id).sort().join('v'), teamId: String(pair[i].id), opponentId: String(pair[1-i].id), points: cbsNumber(pair[i].points), opponentPoints: cbsNumber(pair[1-i].points), played: week < Number(L.current_period) ? 1 : 0 });
+    }
+  }
+  const transactions = cbsList(raw.transactions.transaction_log).map(t => {
+    if (t.id == null) throw cbsError('invalid_response');
+    const adds = [], drops = [], teamId = t.team && t.team.id != null ? String(t.team.id) : null;
+    for (const move of cbsList(t.moves)) {
+      if (!move.player) continue;
+      const p = { ...cbsPlayer(move.player), teamId };
+      if (['won', 'add', 'trade'].includes(move.type)) adds.push(p);
+      if (move.type === 'drop') drops.push(p);
+    }
+    return { providerTxnId: String(t.id), type: t.moves.some(m => m.type === 'trade') ? 'trade' : adds.length ? 'add' : 'drop', teamId, adds, drops, faab: t.bid == null ? null : cbsNumber(t.bid), status: 'complete', ts: Number.isFinite(Date.parse(t.date)) ? Date.parse(t.date) : null, week: null };
+  });
+  return { name: L.name, season: Number(L.season) || ctx.season, numTeams: teams.length, status: 'in_season', userTeamId: null, settings, teams, rosters, matchups, transactions };
+}
+const PROVIDER_CBS = {
+  id: 'cbs', label: 'CBS Sportsline', auth: 'league_token', flag: 'CBS_SYNC',
+  terms: 'Reader-supplied league access token, encrypted at rest. Read-only requests. Disabled until CBS access and commercial terms have been verified.',
+  needs: env => !!(env && env.LEAGUE_TOKEN_KEY),
+  async discover(env, conn, input) {
+    const id = cbsLeagueId(input.leagueId);
+    const body = await cbsGet(env, id, conn.token, 'details');
+    const L = body.league_details;
+    if (!L || !L.name) throw cbsError('invalid_response');
+    return { user: null, leagues: [{ providerLeagueId: id, name: L.name, season: Number(L.season) || input.season, numTeams: Number(L.num_teams) }] };
+  },
+  async pull(env, conn, id, ctx) {
+    id = cbsLeagueId(id);
+    let token = conn.token;
+    if (!token) {
+      const saved = await env.LEADS_DB.prepare('SELECT access_enc FROM league_provider_tokens WHERE email=? AND provider=? AND provider_league_id=?').bind(conn.email, 'cbs', id).first();
+      token = saved && await leagueOpen(env, saved.access_enc);
+    }
+    if (!token) throw cbsError('expired_authorization');
+    const details = await cbsGet(env, id, token, 'details');
+    const period = Number(details.league_details && details.league_details.current_period) || ctx.currentWeek || 1;
+    const raw = { details };
+    // Bound fanout; all resources are required so a partial response never erases a good sync.
+    for (const [key, resource, params] of [['rules', 'rules', {}], ['teams', 'teams', {}], ['rosters', 'rosters', { team_id: 'all', period }], ['schedules', 'schedules', { period: 'all' }], ['standings', 'standings/overall', { period }], ['waivers', 'transactions/waiver-order', {}], ['transactions', 'transaction-list/log', { filter: 'all_but_lineup' }]]) raw[key] = await cbsGet(env, id, token, resource, params);
+    return raw;
+  },
+  normalize: cbsNormalize
+};
 const PROVIDER_MANUAL = {
   id: 'manual', label: 'Manual', auth: 'none', flag: null, terms: 'The reader’s own entry. Nothing is fetched.',
   needs: env => true,
@@ -10575,7 +10932,7 @@ const PROVIDER_MANUAL = {
   async pull() { throw new LeagueProviderError('manual_league', 'A manual league is edited, not synced.'); },
   normalize(raw) { return raw; }
 };
-const LEAGUE_PROVIDERS = { sleeper: PROVIDER_SLEEPER, yahoo: PROVIDER_YAHOO, espn: PROVIDER_ESPN, manual: PROVIDER_MANUAL };
+const LEAGUE_PROVIDERS = { sleeper: PROVIDER_SLEEPER, yahoo: PROVIDER_YAHOO, cbs: PROVIDER_CBS, espn: PROVIDER_ESPN, manual: PROVIDER_MANUAL };
 // What a reader may connect right now, and why not otherwise. Presence only,
 // never a key.
 function leagueProviderReport(env) {
@@ -10689,7 +11046,7 @@ async function leagueWeekContext(env) {
 // pull -> normalize -> map players -> write -> snapshot -> log. Never throws;
 // a provider failure is a logged run and a scheduled retry, and the league
 // the reader already has is left exactly as it was.
-async function leagueSync(env, row, trigger) {
+async function leagueSync(env, row, trigger, preparedRaw) {
   const started = Date.now();
   const provider = LEAGUE_PROVIDERS[row.provider];
   const base = { leagueId: row.id, provider: row.provider, trigger, started };
@@ -10702,7 +11059,7 @@ async function leagueSync(env, row, trigger) {
     const conn = provider.auth === 'oauth2' ? { ...(await leagueConnectionRead(env, row.email, row.provider) || {}), email: row.email } : { email: row.email };
     let userId = null;
     try { const meta = JSON.parse(row.overrides || '{}'); userId = meta.__providerUserId || null; } catch (e) {}
-    const raw = await provider.pull(env, conn, row.provider_league_id, { ...ctx, firstSync: !row.last_ok_at, userId });
+    const raw = preparedRaw || await provider.pull(env, conn, row.provider_league_id, { ...ctx, firstSync: !row.last_ok_at, userId });
     model = provider.normalize(raw, { ...ctx, userId });
     const allPlayers = [];
     for (const r of model.rosters || []) for (const p of r.players || []) allPlayers.push(p);
@@ -10720,6 +11077,7 @@ async function leagueSync(env, row, trigger) {
       .bind(model.name || row.name, model.season || row.season, model.numTeams || row.num_teams, model.status || row.status, JSON.stringify(model.settings), keepTeam ? row.user_team_id : (model.userTeamId || row.user_team_id || null), ts, ts, ts, 'ok', leagueNextSyncAt(ts, 0), row.id).run();
   } catch (e) {
     error = (e && e.message) || 'failed'; code = (e && e.code) || 'sync_failed';
+    if (row.provider === 'cbs') error = cbsError(code).message;
     await leagueSyncState(env, row, false, code + ': ' + error, started);
   }
   const finished = Date.now();
@@ -10822,6 +11180,10 @@ async function leagueDisconnect(env, email, row) {
   await db.batch(['league_roster_players', 'league_teams', 'league_matchups', 'league_transactions', 'league_snapshots'].map(t => db.prepare('DELETE FROM ' + t + ' WHERE league_id=?').bind(id)));
   await db.prepare('DELETE FROM leagues WHERE id=? AND email=?').bind(id, email).run();
   let tokensRemoved = false;
+  if (row.provider === 'cbs') {
+    await db.prepare('DELETE FROM league_provider_tokens WHERE email=? AND provider=? AND provider_league_id=?').bind(email, 'cbs', row.provider_league_id).run();
+    tokensRemoved = true;
+  }
   if (LEAGUE_PROVIDERS[row.provider] && LEAGUE_PROVIDERS[row.provider].auth === 'oauth2') {
     const left = await db.prepare('SELECT COUNT(*) AS n FROM leagues WHERE email=? AND provider=?').bind(email, row.provider).first();
     if (!left || !left.n) { await leagueConnectionDelete(env, email, row.provider); tokensRemoved = true; }
@@ -11392,6 +11754,27 @@ async function leagueRoutes(request, env, url, ctx) {
     const conn = provider.auth === 'oauth2' ? { ...(await leagueConnectionRead(env, email, pid) || {}), email } : { email };
     if (provider.auth === 'oauth2' && (!conn.access_enc || conn.status === 'disconnected')) return leagueErr('expired_authorization', null, 409, c);
     try {
+      if (pid === 'cbs') {
+        const lid = cbsLeagueId(body.leagueId || body.lookupLeagueId);
+        const token = typeof body.accessToken === 'string' ? body.accessToken.trim() : '';
+        if (!token || token.length > 8192 || /[\s\x00-\x1f\x7f]/.test(token)) return leagueErr('expired_authorization', 'Enter a valid CBS league access token.', 400, c);
+        // Verify the entire import before replacing an existing token or creating rows.
+        const raw = await provider.pull(env, { email, token }, lid, ctx);
+        const model = provider.normalize(raw, ctx);
+        const sealed = await leagueSeal(env, token);
+        const { row, created } = await leagueCreateRow(env, email, pid, lid, model.name, model.season, {});
+        const r = await leagueSync(env, row, 'connect', raw);
+        // Rotate the saved credential only after the new credential completed a
+        // full import. A rejected or structurally incomplete reconnect leaves
+        // the last known-good token and league data in place.
+        if (!r.ok) {
+          if (created) await leagueDisconnect(env, email, row);
+          return leagueErr(r.code || 'sync_failed', cbsError(r.code).message, 502, c);
+        }
+        await env.LEADS_DB.prepare('INSERT INTO league_provider_tokens (email, provider, provider_league_id, access_enc, updated_at) VALUES (?,?,?,?,?) ON CONFLICT(email, provider, provider_league_id) DO UPDATE SET access_enc=excluded.access_enc, updated_at=excluded.updated_at').bind(email, pid, lid, sealed, Date.now()).run();
+        const L = await leagueLoad(env, email, row.id);
+        return json({ ok: r.ok, step: 'done', created, sync: r, league: L ? leaguePublic(L) : null, needsTeam: !!(L && !L.userTeamId), teams: L ? L.teams : [] }, r.ok ? 200 : 502, c);
+      }
       // Step 1: discover. Step 2 (leagueId present): import.
       if (!body.leagueId) {
         const d = await provider.discover(env, conn, { username: body.username, leagueId: body.lookupLeagueId, season: body.season || ctx.season });
@@ -11405,7 +11788,7 @@ async function leagueRoutes(request, env, url, ctx) {
       if (!r.ok && created && /league_not_found|unsupported_provider/.test(String(r.error))) { await leagueDisconnect(env, email, row); return leagueErr(r.code || 'sync_failed', r.error, 404, c); }
       const L = await leagueLoad(env, email, row.id);
       return json({ ok: r.ok, step: 'done', created, sync: r, league: L ? leaguePublic(L) : null, needsTeam: !!(L && !L.userTeamId), teams: L ? L.teams : [] }, r.ok ? 200 : 502, c);
-    } catch (e) { return leagueErr((e && e.code) || 'sync_failed', (e && e.message) || 'failed', e && e.code === 'expired_authorization' ? 409 : e && e.code === 'league_not_found' || e && e.code === 'user_not_found' ? 404 : 502, c); }
+    } catch (e) { return leagueErr((e && e.code) || 'sync_failed', pid === 'cbs' ? cbsError(e && e.code).message : (e && e.message) || 'failed', e && e.code === 'expired_authorization' ? 409 : e && e.code === 'league_not_found' || e && e.code === 'user_not_found' ? 404 : 502, c); }
   }
   if (path === '/api/leagues/manual') {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
@@ -11506,6 +11889,8 @@ async function leagueRoutes(request, env, url, ctx) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const marketResponse = await tmsRoutes(request, env, url);
+    if (marketResponse) return marketResponse;
     // ?preview=<LEADS_EXPORT_KEY> on a closed in-season route: park the key in a
     // cookie and bounce to the clean URL, so the owner can walk the section
     // without re-appending the secret and without it ending up in a shared link
@@ -12645,7 +13030,8 @@ export default {
         if (!site) return json({ ok: false, error: 'site must be dk or fd' }, 400, c);
         const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 2000000));
         if (parsed.error) return json({ ok: false, error: parsed.error }, 400, c);
-        out.imported = await dfsStore(env, site, parsed.rows, { season: sched ? sched.season : null, week: b.week != null ? Number(b.week) : week, slate: b.slate || 'main', source: 'csv' });
+        const source = site === 'dk' && b.source === 'draftkings-automation' ? b.source : 'csv';
+        out.imported = await dfsStore(env, site, parsed.rows, { season: sched ? sched.season : null, week: b.week != null ? Number(b.week) : week, slate: b.slate || 'main', source });
       }
       for (const site of Object.keys(DFS_SITES)) {
         const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
@@ -13341,6 +13727,7 @@ export default {
     // York time, says what is due this hour; runScheduledTick runs it phase
     // by phase through the job log, and the desk tick goes last.
     if (event.cron === '*/15 * * * *' || event.cron === '0 * * * *') {
+      ctx.waitUntil(tmsPoll(env).catch(() => console.error('Tuna Market Signal storage unavailable')));
       console.log('tick start:', event.cron, new Date(event.scheduledTime || Date.now()).toISOString());
       ctx.waitUntil(runScheduledTick(env, Date.now(), event.cron)
         .then(r => console.log('tick:', JSON.stringify(r).slice(0, 600)))
