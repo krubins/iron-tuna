@@ -37,7 +37,7 @@ function gtag_report_conversion(url) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0a0a" />
-  <title>Iron Tuna: Fantasy, DFS and betting-market reads for every NFL week</title>
+  <title>Iron Tuna: Custom Auction Values &amp; AI Auction Draft Assistant</title>
 <script>(function(){try{var p=location.pathname;if(p.indexOf("/snakedraft")===0)document.title="Iron Tuna: Snake Draft Rankings & AI Draft Assistant";else if(p.indexOf("/auctiondraft")===0)document.title="Iron Tuna: Custom Auction Values & AI Auction Draft Assistant";else if(p.indexOf("/bestball")===0)document.title="Iron Tuna: Best Ball Rankings, Stacks & AI Draft Assistant";}catch(e){}})();</script>
   <meta name="description" content="Your league, the daily-fantasy salary and the sportsbook each put a number on the same player. Iron Tuna reads the betting market first, the consensus projections second, and your league’s scoring on top of both — then prints where they disagree. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup." />
   <meta name="keywords" content="fantasy football rankings, weekly fantasy rankings, start sit, FAAB bids, waiver wire, DFS values, DraftKings values, FanDuel values, NFL model vs market, implied team totals, player props, fantasy football auction values, auction draft, superflex" />
@@ -49,14 +49,18 @@ function gtag_report_conversion(url) {
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Iron Tuna: three prices on every player" />
   <meta name="twitter:description" content="Your league, the DFS salary and the sportsbook each price the same player. Iron Tuna prints where they disagree — every week, at your scoring." />
-  <link rel="canonical" href="https://irontuna.com/" />
-  <meta property="og:url" content="https://irontuna.com/" />
+  <link rel="canonical" href="https://irontuna.com/auctiondraft" />
+<!--seo:meta-->
+<meta property="og:locale" content="en_US">
+<meta name="twitter:site" content="@irontunafantasy">
+<!--/seo:meta-->
+  <meta property="og:url" content="https://irontuna.com/auctiondraft" />
   <meta property="og:image" content="https://irontuna.com/og.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="Iron Tuna: fantasy, DFS and betting-market reads for every NFL week" />
   <meta name="twitter:image" content="https://irontuna.com/og.png" />
-  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Iron Tuna" />
@@ -621,7 +625,7 @@ input:focus, select:focus { border-color: var(--accent); }
 /* "Highlight recommended players" (the models box). The model's own buys get a
    heavier name, half a point of type and a wash of the model's gold; the $1-$2
    endgame shortlist gets a sky bar of its own, because it is a different claim.
-   Both are declared before .rail-target so a favourite still wins the row. */
+   Both are declared before .rail-target so a favorite still wins the row. */
 .rail-row.rail-rec { background: rgba(227,181,58,0.13); box-shadow: inset 0 0 0 1px rgba(227,181,58,0.30); }
 .rail-row.rail-rec .rr-name { font-weight: 700; font-size: 15px; }
 .rail-row.rail-upside { border-left-color: #7dd3fc; background: rgba(125,211,252,0.15); }
@@ -1242,7 +1246,7 @@ input:focus, select:focus { border-color: var(--accent); }
    buys get a heavier name, half a point of type and a wash of the model's gold
    — enough to pull the eye, not enough to take the sheet over. The $1-$2
    endgame shortlist gets its own sky bar because it answers a different
-   question. Both sit before .cheat-target so a favourite still wins its green. */
+   question. Both sit before .cheat-target so a favorite still wins its green. */
 .cheat-row.cheat-rec { background: rgba(227,181,58,0.10); }
 .cheat-row.cheat-rec .cheat-name { font-weight: 700; font-size: 1.045em; }
 .cheat-row.cheat-rec .cheat-val, .cheat-row.cheat-rec .cheat-ppg { font-weight: 700; }
@@ -1379,7 +1383,7 @@ input:focus, select:focus { border-color: var(--accent); }
 /* A needs chip carries two things at once. Hue is the POSITION, on the same
    palette as .position-tag so RB is the same teal here as on every board in the
    app; the border and the weight carry how URGENT the hole is. A position the
-   league config invents that has no colour here still renders as a chip, just
+   league config invents that has no color here still renders as a chip, just
    in the neutral base. */
 .bi-chip { font-family: var(--font-mono); font-size: 11px; font-weight: 600; border-radius: 3px; padding: 1px 5px; border: 1px solid transparent; white-space: nowrap; background: var(--bg-elev); color: var(--text-secondary); }
 .bi-chip.bi-p-QB  { background: rgba(217, 70, 239, 0.15); color: var(--pos-qb); }
@@ -1710,7 +1714,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-ai-body { font-size: 15.5px; line-height: 1.65; color: var(--text-secondary); margin: 0; }
 .lp-ai-body b { color: var(--gold-text); }
 /* Stacking the ribbon put a 104px sticky bar on top of a 844px phone screen, and
-   the links wrapped inside it into two centred lines of different lengths. One
+   the links wrapped inside it into two centered lines of different lengths. One
    line that scrolls sideways costs 46px and reads as a bar rather than a pile;
    Sign in stays pinned to the right so the CTA is never the thing that scrolls
    out of reach. */
@@ -1860,9 +1864,9 @@ input:focus, select:focus { border-color: var(--accent); }
   /* Zero exclusion means a heading long enough to reach the corner runs under
      the ✕ and gets clipped, so reserve the corner explicitly. Adjacent-sibling
      is deliberate: it matches only the heading the ✕ actually sits on, which in
-     every modal is the left-aligned one. The two centred headings (Upgrade,
+     every modal is the left-aligned one. The two centered headings (Upgrade,
      post-purchase) sit below a 🔒 / 🎉 rather than beside the ✕, so they never
-     match and their centring is untouched — padding would have shifted it. */
+     match and their centering is untouched — padding would have shifted it. */
   .modal-close + .section-title { padding-right: 42px; }
 }
 /* Tied to the bottom tab bar, which only exists below 760px. A fixed backdrop is
@@ -2505,7 +2509,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .itl-clock {
   display: flex; flex-wrap: wrap; align-items: stretch; margin: 24px 0 0;
   border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-panel);
-  font-family: var(--font-mono); font-size: 13px; line-height: 20px; letter-spacing: 0.06em; text-transform: uppercase;
+  font-family: var(--font-body); font-size: 13px; line-height: 20px; letter-spacing: 0.06em; text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
 .itl-clock > span { padding: 8px 16px; border-left: 1px solid var(--border-subtle); }
@@ -2708,6 +2712,8 @@ a.itl-card:hover { border-color: var(--positive); }
   ]
 }
   </script>
+
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://irontuna.com/auctiondraft","name":"Iron Tuna: Custom Auction Values & AI Auction Draft Assistant","description":"Your league, the daily-fantasy salary and the sportsbook each put a number on the same player. Iron Tuna reads the betting market first, the consensus projections second, and your league’s scoring on top of both — then prints where they disagree. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup.","url":"https://irontuna.com/auctiondraft","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/auctiondraft"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"Iron Tuna: Custom Auction Values & AI Auction Draft Assistant"}]}]}</script>
 </head>
 <body>
   <div id="root"></div>
@@ -3574,7 +3580,7 @@ function calculateVORP(players, replacement) {
 //
 // NOT FITTED. There is no ex-ante preseason projection set in the repo (the
 // PROJ_2025 table is within 1.5% of ACT_2025 and is not one), so these are
-// judgement calls stated as such. tools/backtest-projections.mjs reports the
+// judgment calls stated as such. tools/backtest-projections.mjs reports the
 // fitted values as soon as tools/sources/preseason-<year>.json exists; move
 // these to what it prints and say so here.
 const POS_RELIABILITY = {
@@ -3675,7 +3681,7 @@ function remainingDemand(teams, config) {
 // on top keeps the PRE-DRAFT ordering and gaps and merely scales them — so when
 // the twelve best running backs are gone it still prices RB13 against a
 // replacement who has been off the board for an hour. This runs the same
-// pipeline (replacement -> VORP -> dollars -> whole-dollar renormalisation) over
+// pipeline (replacement -> VORP -> dollars -> whole-dollar renormalization) over
 // the undrafted pool and the remaining demand, so the gaps re-open where the
 // board has thinned and close where it is deep.
 //
@@ -3965,7 +3971,7 @@ function applyPriceOverrides(players, overrides, draftedIds, config) {
 // the curve scaled by (teams x budget) / this, so the constant is only honest if
 // the curve actually adds up to it — sum the 1-QB set over a full board (12 x the
 // 16 roster spots, with the min bid past the end of each position's curve) and it
-// must come to exactly 1440. It did not: the set totalled $1298, so every price
+// must come to exactly 1440. It did not: the set totaled $1298, so every price
 // off it was ~10% light. In-app that was invisible, because renormalizeToBudget
 // silently stretched the column back to the league's budget; but /it-league.js and
 // the worker's /api/vegas-column publish the RAW curve, so off-app copy quoted WR1
@@ -3993,7 +3999,7 @@ const LEAGUE_CURVE_BUDGET = 1440;
 // $120-a-team scale as LEAGUE_MARKET_CURVE; renormalizeToBudget rescales the
 // whole board, so what matters is the shape and its level against RB/WR, not
 // the raw total. No superflex auction data lives in the repo — this is a
-// judgement of shape, stated as such; tools/test-qb-curve.mjs pins the two
+// judgment of shape, stated as such; tools/test-qb-curve.mjs pins the two
 // invariants (dearer than 1-QB at QB1 and QB7, and still a falling row).
 const SUPERFLEX_QB_CURVE = [44, 40, 37, 34, 31, 29, 27, 25, 23, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1];
 // The premium curve is OPT-IN: a league is priced as 1-QB unless it says otherwise.
@@ -4121,7 +4127,7 @@ function blendedVegasMarketPrices(players, config, projOverrides) {
   const board = wx => {
     const src = applyVegasWeight(players, wx);
     // Overrides ride along here too. Market price is drawn off its own pair of
-    // boards, so skipping them would leave the Proj column honouring your read
+    // boards, so skipping them would leave the Proj column honoring your read
     // while the price column quietly ignored it.
     return applyProjOverrides(normalizeToLastYear(src.map(p => ({
       ...p,
@@ -4141,15 +4147,15 @@ function blendedVegasMarketPrices(players, config, projOverrides) {
   const m1 = priceWorld(1);
   if (w >= 1) return m1;
   // Each player's price is the straight line between his two worlds. But the
-  // lines cross: a book favourite's blend can out-price the player ranked just
+  // lines cross: a book favorite's blend can out-price the player ranked just
   // above him on the blended board, and the market column must never rise as
   // you read down it. Monotonicity is restored with the UPPER envelope — walk
   // each position from the bottom and carry the running max — because that is
   // the one repair that never pushes anybody below his own line: the reader's
   // complaint was a price dipping below both of its extremes, and averaging
   // repairs (pool-adjacent-violators) reintroduce exactly that for the player
-  // being averaged down. The envelope instead lifts the cheaper neighbour up
-  // to the favourite's money — priced as one tier, which is how a room treats
+  // being averaged down. The envelope instead lifts the cheaper neighbor up
+  // to the favorite's money — priced as one tier, which is how a room treats
   // adjacent players anyway — and renormalizeToBudget downstream absorbs the
   // few lifted dollars across the board. At either extreme the slot walk is
   // already monotone and the envelope is the identity.
@@ -4370,7 +4376,7 @@ function openStarterNeed(team, pos, config) {
 // position-only read misses — WHICH slot each hole is. A manager with no backs
 // is shopping for an RB1 and will pay whatever it takes; a manager with three is
 // shopping for an RB4 and will not go past a dollar or two. Same position,
-// opposite bidding behaviour, so the slot number IS the intel.
+// opposite bidding behavior, so the slot number IS the intel.
 //
 // The slot a hole carries is the row the next player bought there would take:
 // owned players hold slots 1..n ordered by projection, so the first open slot is
@@ -6243,7 +6249,7 @@ function _liveNorm(s) {
 // the depth charts off it without threading a prop through every render site.
 let LIVE_STATUS = null;
 // The feed's shape version, and it has to be in the URL: /api/live is served
-// with a six-hour public cache that Cloudflare's edge AND the browser honour,
+// with a six-hour public cache that Cloudflare's edge AND the browser honor,
 // so bumping the worker's own cache key (the same number, in _worker.js) left
 // every reader on the pre-depth-chart payload for up to six hours -- injury
 // tags present, slots absent, and the coach saying the chart "did not load".
@@ -7314,7 +7320,7 @@ function CliffWatch({
       className: "cw-detail"
     }, t.body)), r.prem > 0 && React.createElement("span", {
       className: "cw-prem",
-      title: "Your You $ at this position already carries this premium. It is the most the cliff is worth paying, not a licence to chase."
+      title: "Your You $ at this position already carries this premium. It is the most the cliff is worth paying, not a license to chase."
     }, "+$", r.prem, React.createElement("span", {
       className: "cw-prem-sub"
     }, "in You $")), React.createElement("button", {
@@ -9497,7 +9503,7 @@ function SettingsModal({
 //
 // Without `dpp` the caller has no pool to convert against (boardValue only ever
 // sees the config), so it falls back to a share of the budget: the same rate the
-// colour has always used, now moved by the squeeze where a room is known.
+// color has always used, now moved by the squeeze where a room is known.
 //
 // Either way it is capped at 15% of the budget, because a bidding ceiling that
 // can eat a sixth of the roster's money is not a ceiling.
@@ -9518,7 +9524,7 @@ function cliffSqueeze(count, demand) {
   if (!demand || demand <= 0) return 1;
   return Math.max(0, Math.min(1, (demand - Math.max(1, count) + 1) / demand));
 }
-// What a player is worth on YOUR board for colouring purposes: his Value, plus
+// What a player is worth on YOUR board for coloring purposes: his Value, plus
 // the cliff premium when the optimal plan actually wants him in an open
 // starting slot.
 //
@@ -9563,7 +9569,7 @@ function costColor(price, value) {
 // sits from where he ranks. diff = ADP - valueRank. Positive = he tends to
 // fall past his rank (a value you can wait on) -> green; negative = he goes
 // earlier than his rank (you'd have to reach) -> amber. Returns null (no tint)
-// when the gap is small. Colour is on the ADP number, never the player name.
+// when the gap is small. Color is on the ADP number, never the player name.
 function adpValueColor(diff) {
   if (diff == null || Math.abs(diff) < 4) return null;
   const t = 0.35 + 0.65 * Math.min(1, (Math.abs(diff) - 4) / 14);
@@ -9963,7 +9969,7 @@ function TeamsBoard({
         color: 'var(--text-muted)',
         marginTop: 2
       },
-      title: "Every player this team has bought, starters and bench, totalled in points per game — the sum of the pts/gm on the rows below. The Starters line above counts only the starting slots."
+      title: "Every player this team has bought, starters and bench, totaled in points per game — the sum of the pts/gm on the rows below. The Starters line above counts only the starting slots."
     }, "All ", team.roster.length, " · ", ((proj.rosterPoints || 0) / games).toFixed(1)), React.createElement("div", {
       style: {
         fontSize: 12,
@@ -9971,7 +9977,7 @@ function TeamsBoard({
         color: 'var(--text-muted)',
         marginTop: 2
       },
-      title: "The players not in a starting slot, totalled in points per game. Starters in hand plus bench is the All line above; the gold Starters line is a forecast and does not add up with these."
+      title: "The players not in a starting slot, totaled in points per game. Starters in hand plus bench is the All line above; the gold Starters line is a forecast and does not add up with these."
     }, "Bench ", Math.max(0, team.roster.length - proj.filledStarters), " · ", (Math.max(0, (proj.rosterPoints || 0) - (proj.draftedStarterPoints || 0)) / games).toFixed(1)), !isCollapsed && React.createElement(React.Fragment, null, !isNonAuction && React.createElement("div", {
       style: {
         fontSize: 12,
@@ -12054,7 +12060,7 @@ function BiddingIntelModal({
     className: "bi-total"
   }, React.createElement("b", null, holes), " starting slot", holes === 1 ? "" : "s", " still open")), React.createElement("div", {
     className: "bi-legend"
-  }, "Colour is the position · ", chip({ label: "RB2", pos: "RB", kind: "starter" }), " starter · ", chip({ label: "WR3", pos: "WR", kind: "flex" }), " could take the flex · ", chip({ label: "RB4", pos: "RB", kind: "bench" }), " bench"), React.createElement("div", {
+  }, "Color is the position · ", chip({ label: "RB2", pos: "RB", kind: "starter" }), " starter · ", chip({ label: "WR3", pos: "WR", kind: "flex" }), " could take the flex · ", chip({ label: "RB4", pos: "RB", kind: "bench" }), " bench"), React.createElement("div", {
     className: "bi-table",
     style: {
       // The money columns only exist in an auction, so the grid has to lose
@@ -13417,7 +13423,7 @@ function Cheatsheet({
     onClick: () => setHighlight(null)
   }, "clear")), ((config.format || 'auction') === 'snake' ? React.createElement("div", { className: "cheat-whb no-print" }, React.createElement("div", { className: "cheat-whb-h" }, "Will he be available?"), React.createElement("div", { className: "cheat-whb-sub" }, "Odds a player lasts to your next pick \u2014 from the live board, ADP, and position runs."), React.createElement("div", { className: "cheat-whb-in" }, React.createElement("div", { className: "whb-ac" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQ, onChange: e => { setWhbQ(e.target.value); setWhbShow(true); }, onFocus: () => setWhbShow(true), onBlur: () => setTimeout(() => setWhbShow(false), 170) }), (whbShow && (whbQ || "").trim()) ? React.createElement("div", { className: "whb-ac-list" }, (players || []).filter(function (p) { return p.name && p.name.toLowerCase().indexOf((whbQ || "").toLowerCase().trim()) >= 0; }).slice(0, 6).map(function (p) { return React.createElement("div", { key: p.id, className: "whb-ac-item", onMouseDown: function () { setWhbQ(p.name); setWhbShow(false); } }, p.name, React.createElement("span", { className: "whb-ac-pos" }, " " + p.position)); })) : null), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbR, onChange: e => setWhbR(e.target.value) })), whbResultCheat ? (whbResultCheat.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResultCheat.err) : whbResultCheat.drafted ? React.createElement("div", { className: "whb-res" }, whbResultCheat.player.name + " is already off the board.") : whbResultCheat.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResultCheat.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResultCheat.odds + "%"), " chance " + whbResultCheat.player.name + " (ADP " + (whbResultCheat.player.adp != null ? Math.round(whbResultCheat.player.adp) : "?") + ") is still there at your round " + whbResultCheat.round + " pick (overall #" + whbResultCheat.targetPick + ").")) : React.createElement("div", { className: "whb-res whb-hint" }, "Enter a player and a round.")) : null), ((config.format || 'auction') === 'snake' && !introDismissed ? React.createElement("div", { className: "cheat-intro no-print" }, React.createElement("span", { className: "ci-new" }, "NEW"), React.createElement("span", { className: "ci-body" }, "The ", React.createElement("b", { style: { color: '#34c759' } }, "Rank"), " number is tinted: ", React.createElement("b", { style: { color: '#34c759' } }, "green = a value"), " at his slot, ", React.createElement("b", { style: { color: '#e0a83c' } }, "amber = going early"), ". Tier breaks show as a line."), React.createElement("button", { className: "ci-x", onClick: () => { try { localStorage.setItem('it_snake_cheat_intro', '1'); } catch (e) {} setIntroDismissed(true); } }, "Got it \u00d7")) : null), ((config.format || 'auction') === 'snake' && _recPick ? React.createElement("div", { className: "cheat-recpick no-print" }, React.createElement("span", { className: "crp-tag" }, "YOUR PICK " + _recPick.label), React.createElement("span", { className: "crp-body" }, "Best on the board: ", React.createElement("b", null, _recPick.name), " ", React.createElement("em", null, _recPick.pos), " \u00b7 ", _recPick.av, "% he returns to you")) : null), ((config.format || 'auction') === 'snake' && _needs ? React.createElement("div", { className: "cheat-needs no-print" }, React.createElement("span", { className: "cn-label" }, "Your starters"), _needs.map(n => React.createElement("span", { key: n.pos, className: "cn-slot" + (n.met ? " met" : " open") }, n.pos, " ", n.have, "/", n.need, n.met ? " \u2713" : ""))) : null), React.createElement("div", {
     className: "cheat-legend no-print"
-  }, (config.format || 'auction') === 'snake' ? React.createElement(React.Fragment, null, "Each column lists a position’s best players. ", React.createElement("b", null, "#"), " his rank at that position · ", React.createElement("b", null, "ADP"), " overall pick he usually goes · ", React.createElement("b", null, "AVAILABLE"), " chance he is still there after your next pick · ", React.createElement("b", null, "PPG"), " projected points per game", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = a value at his ADP"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = going early"), ".")) : config.format === 'bestball' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " best-ball draft slot · ", React.createElement("b", null, "CEILING"), " his upside per game · ", React.createElement("b", null, "STACK"), " ★ pairs a QB you roster · ", React.createElement("b", null, "SURVIVES%"), " odds he lasts to your next pick", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = falls to you (value)"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = goes early"), ".")) : React.createElement(React.Fragment, null, React.createElement("b", null, "PROJ"), " likely auction price · ", React.createElement("b", null, "VALUE"), " true worth at your scoring · ", React.createElement("b", null, "YOU"), " the most you should pay, given your roster & budget", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "Name colour"), ": ", React.createElement("span", { style: { color: '#2dd4a3', fontWeight: 700 } }, "green = Proj under his worth to you"), " (Value, plus a scarcity premium when your plan needs him and the drop behind him is real), ", React.createElement("span", { style: { color: '#ef4444', fontWeight: 700 } }, "red = Proj above it"), ". All dollar values are scaled to a ", React.createElement("b", null, "$", config.budget || 200, " budget"), " per team (", config.teams, " teams). Change it under Your League and every price recalculates."))), React.createElement("div", {
+  }, (config.format || 'auction') === 'snake' ? React.createElement(React.Fragment, null, "Each column lists a position’s best players. ", React.createElement("b", null, "#"), " his rank at that position · ", React.createElement("b", null, "ADP"), " overall pick he usually goes · ", React.createElement("b", null, "AVAILABLE"), " chance he is still there after your next pick · ", React.createElement("b", null, "PPG"), " projected points per game", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP color"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = a value at his ADP"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = going early"), ".")) : config.format === 'bestball' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " best-ball draft slot · ", React.createElement("b", null, "CEILING"), " his upside per game · ", React.createElement("b", null, "STACK"), " ★ pairs a QB you roster · ", React.createElement("b", null, "SURVIVES%"), " odds he lasts to your next pick", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP color"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = falls to you (value)"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = goes early"), ".")) : React.createElement(React.Fragment, null, React.createElement("b", null, "PROJ"), " likely auction price · ", React.createElement("b", null, "VALUE"), " true worth at your scoring · ", React.createElement("b", null, "YOU"), " the most you should pay, given your roster & budget", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "Name color"), ": ", React.createElement("span", { style: { color: '#2dd4a3', fontWeight: 700 } }, "green = Proj under his worth to you"), " (Value, plus a scarcity premium when your plan needs him and the drop behind him is real), ", React.createElement("span", { style: { color: '#ef4444', fontWeight: 700 } }, "red = Proj above it"), ". All dollar values are scaled to a ", React.createElement("b", null, "$", config.budget || 200, " budget"), " per team (", config.teams, " teams). Change it under Your League and every price recalculates."))), React.createElement("div", {
     className: "cheat-print-head only-print"
   }, React.createElement("div", {
     className: "cph-title"
@@ -13608,7 +13614,7 @@ function Cheatsheet({
       style: {
         color: nameColor
       },
-      // nameTitle is the whole reason the name is the colour it is. It was
+      // nameTitle is the whole reason the name is the color it is. It was
       // computed here and then never rendered, so every explanation of red and
       // green — including the scarcity premium — was invisible. It leads now,
       // and the bye week rides along behind it.
@@ -16155,8 +16161,8 @@ function computeTeamStarters(team, players, config, roleOverrides) {
 //
 // The rules the cards established and every reader of this has to keep:
 // a rival is planned at the house allocation (0.55) rather than whatever the
-// reader has dialled in for himself, and only the reader's own role overrides,
-// draft model and favourites steer his own plan. Snake and best ball answer
+// reader has dialed in for himself, and only the reader's own role overrides,
+// draft model and favorites steer his own plan. Snake and best ball answer
 // from a draft plan off the team's own slot instead of a budget.
 //
 // Returns the plan and the config it was built against as well, because the
@@ -16313,7 +16319,7 @@ function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
 // Fill the open starter slots with the highest-scoring distinct set of players a
 // dollar budget can buy. This is a multiple-choice knapsack, so it is solved
 // exactly: one "exactly k players" knapsack per position, then a max-plus
-// combine across positions, maximised over every way of handing the FLEX slots
+// combine across positions, maximized over every way of handing the FLEX slots
 // out to the positions they accept. The greedy points-per-dollar climb this
 // replaced stranded budget and could be beaten outright once part of the board
 // was gone.
@@ -17051,7 +17057,7 @@ function upsideScores(players, myTeam, games) {
     const cur = best.get(k);
     if (!cur || (p.projectedPoints || 0) > (cur.projectedPoints || 0)) best.set(k, p);
   });
-  // A bench body on a good offence is playing for more points than the same
+  // A bench body on a good offense is playing for more points than the same
   // body on a bad one, whatever his own projection says.
   const teamPts = {};
   pool.forEach(p => { if (p.team) teamPts[p.team] = (teamPts[p.team] || 0) + (p.projectedPoints || 0); });
@@ -17094,7 +17100,7 @@ function upsideScores(players, myTeam, games) {
       why.push(yrs === 0 ? 'a rookie' : yrs != null ? 'year ' + (yrs + 1) + ', the breakout window' : 'age ' + age + ', still climbing');
     }
     const r = offRank.get(p.team);
-    if (own > 0 && r != null && r <= topOff) { pts += own * 0.16; why.push('on a top-' + topOff + ' offence'); }
+    if (own > 0 && r != null && r <= topOff) { pts += own * 0.16; why.push('on a top-' + topOff + ' offense'); }
     const soft = typeof scheduleSoftness === 'function' ? scheduleSoftness(p.team, pos) : null;
     if (own > 0 && soft && soft.late) { pts += own * 0.10; why.push('soft in Weeks 15-17'); }
     // What cuts it back: his own age cliff, and his own injury. Both make the
@@ -17607,7 +17613,7 @@ function PlayersRail({
   }, [focusPlayer]);
   // A rail row is both a click target (opens the card) and a drag handle
   // (re-ranks the player). The drag only *begins* once the pointer has really
-  // travelled: anything shorter stays a plain click, so the browser fires its
+  // traveled: anything shorter stays a plain click, so the browser fires its
   // own click event and the card opens. Beginning the drag on pointerdown is
   // what used to eat the click - a few pixels of hand jitter and the card
   // never came up.
@@ -19482,7 +19488,7 @@ function normalizeToLastYear(scored, config) {
   //
   // What it must not do: inflate the top of a position because last year's top
   // players scored more than this year's top players are PROJECTED to. It did.
-  // The realised top-K of a season is the set that got lucky as well as good —
+  // The realized top-K of a season is the set that got lucky as well as good —
   // every projection is a mean, every actual is a draw, and the K best draws
   // always beat the K best means. Comparing the two told every position it was
   // "projected too low", and by different amounts: a top-13 slice at QB and TE
@@ -19536,7 +19542,7 @@ function valueAdjustTier(rank) {
 }
 // The per-player multiplier a reader's tier instruction ("value elite RBs 15%
 // more") applies, keyed by id, so the live re-solve (revalueRemaining) can
-// honour it on values it computes fresh. Null when there is nothing to apply.
+// honor it on values it computes fresh. Null when there is nothing to apply.
 function valueAdjustMultipliers(players, valueAdjust) {
   if (!valueAdjust || !Object.keys(valueAdjust).length) return null;
   const byPos = {};
@@ -20654,7 +20660,7 @@ function buildCoachContext(q, ctx) {
     depth: p.depthPos ? (/WR$/.test(p.depthPos) ? 'WR' : p.depthPos) + (p.depthOrder != null ? p.depthOrder : '') : undefined,
     injury: injuryLine(p),
     flag: (() => {
-      // The same number the board colours the name with, so the export and the
+      // The same number the board colors the name with, so the export and the
       // screen can never disagree about why a player is red.
       const _b = boardValue(p, p.inflatedValue != null ? p.inflatedValue : p.auctionValue, config);
       if (p.marketValue == null || _b == null) return 'fair';
@@ -20915,7 +20921,7 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   // roster status, and the manager's own news desk, all on one line per player
   // and collected into injuryReport. The model is told what a missing field
   // means so it neither invents a designation nor calls a tagged player healthy.
-  const _injuryCtx = " INJURY REPORT: the injuryReport field in the JSON below lists every player on the board carrying an injury designation, a roster status other than Active, or a news-desk entry, best projection first, and every player elsewhere in the data carries the same text in his injury field. The designations (Questionable, Doubtful, Out, IR, PUP, Sus) come from the same live feed as the depth charts and override your memory; the body part and note are the feed's, and the updated date says how fresh the designation is. A news desk entry is news this manager pasted in themselves, already priced into his projection by the percent shown, and when it disagrees with the feed the news desk wins. A player with no injury field is healthy as far as the feed knows: never assert an injury the data does not show, and if asked about one you cannot see, say the report does not show it. The risk field already counts an injury designation, so do not double-penalise. When an injured starter comes up, use the depth chart to name who benefits."
+  const _injuryCtx = " INJURY REPORT: the injuryReport field in the JSON below lists every player on the board carrying an injury designation, a roster status other than Active, or a news-desk entry, best projection first, and every player elsewhere in the data carries the same text in his injury field. The designations (Questionable, Doubtful, Out, IR, PUP, Sus) come from the same live feed as the depth charts and override your memory; the body part and note are the feed's, and the updated date says how fresh the designation is. A news desk entry is news this manager pasted in themselves, already priced into his projection by the percent shown, and when it disagrees with the feed the news desk wins. A player with no injury field is healthy as far as the feed knows: never assert an injury the data does not show, and if asked about one you cannot see, say the report does not show it. The risk field already counts an injury designation, so do not double-penalize. When an injured starter comes up, use the depth chart to name who benefits."
   // The room: rival budgets and holes, who can outbid the manager on a given
   // player, positional inflation, and what just sold. All of it used to be
   // dropped on the floor by buildCoachContext, which left the coach answering
@@ -21904,7 +21910,7 @@ function ValueCoach({
       const t = q.toLowerCase();
       if (/\b(cancel|nevermind|never mind|forget it|stop|no thanks)\b/.test(t)) {
         setPending(null);
-        push('bot', 'Cancelled, nothing changed.');
+        push('bot', 'Canceled, nothing changed.');
         return;
       }
       if (/\b(just|simply)?\s*(apply|do it|as[- ]?is|leave it|don.?t rebalance|no rebalance|keep the rest|without rebalanc)\b/.test(t)) {
@@ -22924,7 +22930,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   }
   if (key === 'ideal') {
     // "The single highest-scoring starting lineup you can afford" is a plain
-    // optimisation, so solve it directly instead of taking the best of the
+    // optimization, so solve it directly instead of taking the best of the
     // shape presets. The presets each hold money back for bench depth, which
     // left roughly a fifth of the budget unspent and cost ~5 points a game.
     // Players the user has locked stay locked; nothing else is constrained.
@@ -23428,9 +23434,12 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
 
   const FOOT = [
     ['In-Season', [['/in-season', 'Overview'], ['/fantasy', 'Fantasy'], ['/dfs', 'DFS'], ['/my-league', 'My League']]],
-    ['Draft', [['/fantasy-football-auction-values', 'Auction values'], ['/auctiondraft?screen=board', 'Draft manager'], ['/snakedraft', 'Snake board'], ['/superflex-auction-values', 'Superflex & 2QB'], ['/guides', 'Strategy library']]],
+    ['Draft Tools', [['/fantasy-football-auction-values', 'Auction values'], ['/auctiondraft?screen=board', 'Draft manager'], ['/snakedraft', 'Snake board'], ['/superflex-auction-values', 'Superflex & 2QB'], ['/guides', 'Strategy library']]],
     ['Read', [['/in-season/desk', 'The Desk'], ['/the-pick', 'The Pick'], ['/auction-insights', 'Insights'], ['/insights-vault', 'Insight Vault']]],
-    ['Company', [['/faq', 'FAQ'], ['/support', 'Support'], ['/creators', 'Creators & affiliates'], ['/privacy', 'Privacy'], ['/terms', 'Terms']]]
+    // The Admin link is the only way into /admin from the site; it is a plain
+    // footer link because the page itself is what gates access (export key),
+    // and rel=nofollow keeps a noindex page out of the crawl.
+    ['Company', [['/faq', 'FAQ'], ['/support', 'Support'], ['/creators', 'Creators & affiliates'], ['/privacy', 'Privacy'], ['/terms', 'Terms'], ['/data', 'Data & sources'], ['/admin', 'Admin', 'nofollow']]]
   ];
 
   // ── 03 · where the experts and the market disagree most ──────────────────
@@ -23496,7 +23505,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
 
         // ── hero ──────────────────────────────────────────────────────────
         h('section', { className: 'itl-hero' },
-          h('span', { className: 'itl-eyebrow' }, 'Fantasy · DFS — read against the betting market'),
+          h('span', { className: 'itl-eyebrow' }, 'The betting market knows'),
           h('h1', { className: 'itl-h1' },
             h('span', null, 'Three prices on every player.'),
             h('span', { className: 'accent' }, 'Read them before kickoff.')),
@@ -23575,7 +23584,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
       h('footer', { className: 'itl-foot' }, h('div', { className: 'itl-wrap' },
         FOOT.map(([head, links]) => h('div', { key: head },
           h('h2', null, head),
-          links.map(([href, label]) => h('a', { key: href, href }, label)))),
+          links.map(([href, label, rel]) => h('a', { key: href, href, rel }, label)))),
         h('div', { className: 'itl-legal' },
           h('p', null, 'Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.'),
           // Kept in step with LEGAL in tools/build-chrome.mjs by hand: this
@@ -23585,13 +23594,13 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
           h('p', null, h('b', null, 'For social and entertainment purposes only.'), ' Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. ', h('b', null, '21+.'), ' Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text ', h('b', null, '1-800-GAMBLER'), '.'),
           h('p', null, 'Iron Tuna™ · © 2026 Iron Tuna · Game lines & player data via nflverse (CC BY 4.0) · ',
             h('a', { href: '#', onClick: (e) => { e.preventDefault(); setReferOpen(true); }, style: { display: 'inline' } }, 'Share & Earn'), ' · ',
-            h('a', { href: '/admin', style: { display: 'inline' } }, 'Admin'))))),
+            h('a', { href: '/data', style: { display: 'inline' } }, 'Data & sources'))))),
     ),
     referOpen && h(ReferralModal, { account, setAccount, onClose: () => setReferOpen(false) }));
 }
 // Which lane a desk piece belongs to, for the tag on its card. Mirrors
 // CONTENT_KINDS in _worker.js — keep the keys in step with it; anything it does
-// not name falls back to "Desk" rather than being mislabelled.
+// not name falls back to "Desk" rather than being mislabeled.
 const DESK_TAG = {
   'team-recaps': 'Fantasy',
   'mnf-breakdown': 'Fantasy',
@@ -24112,9 +24121,9 @@ function App() {
     // the auction/draft board.
     //
     // NOTE: PR #40 fixed the same bug by sending phones to 'tiers'. That was right against
-    // the OLD mobile tab bar, where 'tiers' was the tab labelled "Cheat". This branch
+    // the OLD mobile tab bar, where 'tiers' was the tab labeled "Cheat". This branch
     // relabels those tabs ('prep' = Cheat, 'tiers' = Tiers), so phones now go to 'prep'
-    // like every other device — otherwise the CTA would land on a tab labelled "Tiers"
+    // like every other device — otherwise the CTA would land on a tab labeled "Tiers"
     // showing the VORP tier view rather than the cheat sheet.
     if (screenParam === 'cheat') return 'prep';
     if (screenParam === 'board') return 'board';
@@ -24223,15 +24232,15 @@ function App() {
       && (!savedSource || savedSource === 'Projections 2026')
       && !initialState.players.some(p => p && p.vegas);
     if (savedFresh && !oddsOnly) return;
-    let cancelled = false;
+    let canceled = false;
     (async () => {
       try {
         const data = await fetchBaselineProjections();
-        if (!cancelled && data && data.length && oddsOnly) {
+        if (!canceled && data && data.length && oddsOnly) {
           const baseline = buildInitialPlayers(data);
           setPlayers(prev => graftVegasOdds(prev, baseline));
           setProjLoadFailed(false);
-        } else if (!cancelled && data && data.length) {
+        } else if (!canceled && data && data.length) {
           let players0 = buildInitialPlayers(data);
           if (liveStatusRef.current) players0 = applyLiveStatus(players0, liveStatusRef.current);
           setPlayers(players0);
@@ -24243,24 +24252,24 @@ function App() {
             count: data.length,
             when: Date.now()
           });
-        } else if (!cancelled && !(data && data.length)) {
+        } else if (!canceled && !(data && data.length)) {
           // The saved board is current and usable; only the odds are missing, so
           // a failed fetch is nothing the reader needs to see.
           if (!oddsOnly) setProjLoadFailed(true);
         }
       } catch (e) {
-        if (!cancelled && !oddsOnly) setProjLoadFailed(true);
+        if (!canceled && !oddsOnly) setProjLoadFailed(true);
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [projRetryNonce]);
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     (async () => {
       const live = await fetchLiveStatus();
-      if (cancelled || !live) return;
+      if (canceled || !live) return;
       liveStatusRef.current = live;
       setPlayers(prev => applyLiveStatus(prev, live));
       setDataInfo(di => di ? {
@@ -24269,7 +24278,7 @@ function App() {
       } : di);
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
   const [starred, setStarred] = useState(() => new Set(initialState?.starred || []));
@@ -24536,19 +24545,19 @@ function App() {
     // priced WR21 above WR16 purely for being outside the window.
     //
     // Fix: carry the window's own discount past its edge instead of dropping it.
-    // Players the optimiser never priced keep the shape of the ones it did —
+    // Players the optimizer never priced keep the shape of the ones it did —
     // scaled by the discount at the edge, and never allowed to exceed the
-    // cheapest player the optimiser actually priced.
+    // cheapest player the optimizer actually priced.
     const _pre = valuedPlayers.map(p => {
       let worthPrice = null;
-      let personalValue = null;                      // null = the optimiser never saw them
+      let personalValue = null;                      // null = the optimizer never saw them
       if (!draftedIds.has(p.id) && p.position !== 'K' && p.position !== 'DEF' && relevant.has(p.id)) {
         worthPrice = switchPrice(p, switchBasePts, myTeam, valuedPlayers, config, draftedIds, roleOverrides, targets, planOpts);
         if (worthPrice != null) personalValue = Math.max(minBid, Math.min(maxBid, Math.round(worthPrice)));
       }
       return { p, worthPrice, personalValue };
     });
-    // Per position: how much the optimiser discounted the cheapest players it
+    // Per position: how much the optimizer discounted the cheapest players it
     // priced, and what it priced them at. The median over the bottom of the
     // window rather than the single last player, so one odd line cannot set the
     // slope for the whole tail.
@@ -24578,12 +24587,12 @@ function App() {
         const e = _edge[p.position];
         const base = Math.max(minBid, p.auctionValue || minBid);
         pv = e ? Math.max(minBid, Math.round(base * e.ratio)) : base;
-        // The seam must never step UP: nobody the optimiser skipped can be worth
+        // The seam must never step UP: nobody the optimizer skipped can be worth
         // more to you than the cheapest player it actually priced.
         if (e && e.cap != null) pv = Math.min(pv, e.cap);
         pv = Math.max(minBid, pv);
       }
-      // Kickers and defenses skip the optimiser (they are a starter each and the
+      // Kickers and defenses skip the optimizer (they are a starter each and the
       // gap between K1 and K12 is noise), so You fell back to VALUE there and read
       // ABOVE the going rate — $31 against a $24 Proj at K. Paying over the room
       // for a kicker is a pure leak: You is the going rate or VALUE, whichever
@@ -24624,7 +24633,7 @@ function App() {
       // the plan. If the slot is filled, the cliff is somebody else's problem
       // and the premium is correctly zero.
       //
-      // It is the same premium the board colours with (scarcityPremium), which
+      // It is the same premium the board colors with (scarcityPremium), which
       // keeps the number the row is graded against and the number you are told
       // to bid telling one story.
       let cliffPrem = 0;
@@ -24740,7 +24749,7 @@ function App() {
   }, [_starPersonalized, youShifts]);
   const modelFitIds = useMemo(() => modelTargetIds(draftModel, teams.find(t => t.isMine), personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors),
     [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors]);
-  // What "highlight recommended players" emphasises. With no model picked the
+  // What "highlight recommended players" emphasizes. With no model picked the
   // models box already shows the Ideal Team, so the emphasis follows what the
   // box is showing rather than going blank and reading as a broken checkbox.
   const recFitIds = useMemo(() => {

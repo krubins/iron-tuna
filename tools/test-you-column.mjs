@@ -7,7 +7,7 @@
 // Everyone below that silently fell back to `auctionValue` — the VALUE column —
 // so You fell all the way down the board and then JUMPED BACK UP at rank 21.
 // It priced WR21 above WR16 for no reason other than being outside the window.
-// A cutoff in an internal optimisation must never be visible in a price.
+// A cutoff in an internal optimization must never be visible in a price.
 //
 // This drives the REAL app in Chromium against a stubbed projections payload,
 // because the logic lives inside a React useMemo and cannot be lifted out.
@@ -118,7 +118,7 @@ for (const pos of POS) {
   }
 }
 
-console.log('\nthe optimiser window is invisible in the You column');
+console.log('\nthe optimizer window is invisible in the You column');
 // The window is the top 20 per position. The bug was a step UP as the board
 // crossed out of it, so that seam is checked explicitly and hard.
 for (const pos of POS) {

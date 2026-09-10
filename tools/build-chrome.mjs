@@ -52,7 +52,7 @@ const APP = 'https://irontuna.com/';
 //
 // A best-ball page deliberately resolves to the AUCTION sheet rather than the
 // best-ball room: that line is retired (§27c), so there is no reason to keep
-// funnelling readers into it. The pages still serve, and their one button now
+// funneling readers into it. The pages still serve, and their one button now
 // points at the thing the site actually sells.
 const APP_BY_FORMAT = {
   auction: APP + 'auctiondraft?screen=cheat',
@@ -60,97 +60,164 @@ const APP_BY_FORMAT = {
   bestball: APP + 'auctiondraft?screen=cheat',
 };
 
-// Auction first, and best ball is off every surface (§27c). The bestball-*
-// pages still SERVE at the URLs they were indexed at and stay in sitemap.xml —
-// they are simply no longer linked from anywhere, which is how a content line is
-// retired without breaking a URL or throwing away its ranking. Do not put them
-// back here without also putting them back in the sitemap and the front page.
+// IN-SEASON FIRST. The 2026 season is under way, so the three things the
+// product is now about lead the nav in the order the site is organized in:
+// Fantasy, DFS, Market Intel. The desk (the columns and the AI analysts) is
+// next, and the draft tools — which are the same working tools they always
+// were, and matter again every offseason — sit behind one "Draft Tools" menu
+// rather than owning the first two slots.
+//
+// NOTHING WAS RETIRED TO DO THIS. Every destination the old nav reached is
+// still here; the auction values page, the guides, both insight editions and
+// the Insight Vault simply live under Draft Tools now. tools/test-chrome.mjs
+// asserts the full destination set on every page (MUST_NAV), so dropping one
+// by accident fails the build rather than going unnoticed.
+//
+// Best ball stays off every surface (§27c). The bestball-* pages still SERVE at
+// the URLs they were indexed at and stay in sitemap.xml — they are simply no
+// longer linked, which is how a content line is retired without breaking a URL
+// or throwing away its ranking. Do not put them back here without also putting
+// them back in the sitemap and the front page.
 const NAV = [
-  { label: 'Auction Values', href: '/fantasy-football-auction-values' },
-  { label: 'Strategy', href: '/guides' },
   {
-    label: 'Insights', href: '/auction-insights', children: [
-      { label: 'Auction', href: '/auction-insights' },
-      { label: 'Snake', href: '/snake-insights' },
-      { label: 'Insight Vault', href: '/insights-vault' },
-    ],
-  },
-  { label: 'The Pick', href: '/the-pick' },
-  { label: 'Columns', href: '/play-caller-premium' },
-  // The in-season section, in its two lanes. The parent points at /in-season,
-  // which is the section's hub AND the gate the tools serve behind while
-  // POST_DRAFT_OPEN is unset — so the link works in both states and nothing has
-  // to change here when the section opens. /post-draft, the name the hub used
-  // to carry, redirects here in the worker.
-  //
-  // THE WAGERS LANE IS GONE. /wagers is retired and 301s to /in-season in the
-  // worker; the odds the site still reads live on Vegas Edge and Game Intel,
-  // which are Fantasy-lane tools and stay exactly where they were.
-  //
-  // THE TOOLS ARE NOT LISTED HERE ANY MORE and that is deliberate. Eleven
-  // in-season destinations in a hover menu is the same problem the canonical
-  // nav was built to fix, one level down. Each lane page lists its own tools —
-  // Fantasy carries Rankings, Waivers, Trade Finder, Weekly Intel, Game Intel,
-  // Vegas Edge, Player Intel and the Desk — so every one of them is two clicks
-  // from any page and none has been retired.
-  // They all stay in sitemap.xml. Do not put them back here without first
-  // taking something else out.
-  {
-    label: 'In-Season', href: '/in-season', children: [
-      { label: 'Overview', href: '/in-season' },
-      { label: 'Fantasy', href: '/fantasy' },
-      { label: 'DFS', href: '/dfs' },
-      { label: 'The Desk', href: '/in-season/desk' },
-      { label: 'Analysts', href: '/analysts' },
+    label: 'Fantasy', href: '/fantasy', children: [
+      { label: 'This week', href: '/fantasy' },
+      { label: 'In-Season hub', href: '/in-season' },
+      { label: 'Rankings', href: '/rankings' },
+      { label: 'Weekly Intel', href: '/weekly-intel' },
+      { label: 'Waivers & FAAB', href: '/waivers' },
+      { label: 'Trade Finder', href: '/trade-finder' },
       { label: 'My Leagues', href: '/my-league' },
       { label: 'My Week', href: '/my-week' },
+    ],
+  },
+  { label: 'DFS', href: '/dfs' },
+  // MARKET INTEL is the standing name for the betting-market lane. The pages
+  // keep the names they were indexed under — Vegas Edge, Game Intel — because
+  // renaming a URL to tidy a label costs inbound links and buys nothing. This
+  // is the group heading only, and it is the same phrase the site already uses
+  // for the market model ("Market Intelligence", the Vega board).
+  {
+    label: 'Market Intel', href: '/vegas-edge', children: [
+      { label: 'Vegas Edge', href: '/vegas-edge' },
+      { label: 'Game Intel', href: '/game-intel' },
+      { label: 'Player Intel', href: '/player-intel' },
+      { label: 'The whole board', href: '/what-they-arent-telling-you' },
+    ],
+  },
+  {
+    label: 'The Desk', href: '/in-season/desk', children: [
+      { label: 'The Desk', href: '/in-season/desk' },
+      { label: 'The Analysts', href: '/analysts' },
+      { label: 'The Pick', href: '/the-pick' },
+      { label: 'The Tell', href: '/the-tell' },
+      { label: 'Play-Caller Premium', href: '/play-caller-premium' },
+    ],
+  },
+  {
+    label: 'Draft Tools', href: '/fantasy-football-auction-values', children: [
+      { label: 'Auction values', href: '/fantasy-football-auction-values' },
+      { label: 'Superflex & 2QB', href: '/superflex-auction-values' },
+      { label: 'Salary cap & keepers', href: '/salary-cap-draft-tool' },
+      { label: 'Strategy guides', href: '/guides' },
+      { label: 'Auction insights', href: '/auction-insights' },
+      { label: 'Snake insights', href: '/snake-insights' },
+      { label: 'Insight Vault', href: '/insights-vault' },
     ],
   },
   { label: 'FAQ', href: '/faq' },
   { label: 'Free cheat sheet', href: '{app}', cta: true },
 ];
 
-// On an IN-SEASON page the header button is "Save my league", not "Free cheat
-// sheet". A reader on the waiver board in October is not there to build a draft
-// sheet, and the one thing that improves every number in front of them is
-// saving their scoring and their FAAB budget. The draft CTA is still one click
-// away in the nav and owns the whole of §05 on the homepage.
+// Where the header button says "Save my league" instead of "Free cheat sheet".
+// A reader on the waiver board in October is not there to build a draft sheet,
+// and the one thing that improves every number in front of them is saving their
+// scoring and their FAAB budget. The draft CTA is still one click away in the
+// nav and owns the whole of §05 on the homepage.
+//
+// The list is the in-season pages PLUS the pages that belong to no lane at all
+// — FAQ, support, the two legal documents, /data, the creator page and the
+// daily column. In September a Terms of Service page whose only button says
+// "Free cheat sheet" is the site telling a visitor it is still July. The draft
+// LANDING pages (auction values, the guides, both insight editions) keep the
+// draft button, because a reader who arrived on one searched for exactly that.
+//
+// tools/test-chrome.mjs reads this set out of this file rather than copying it,
+// so adding a page here is one edit, not two.
 const IN_SEASON_CTA = { label: 'Save my league', href: '/in-season#league', cta: true };
+//
+// The rankings section — the ribbon's six destinations and the fourteen
+// per-position pages under its two menus — is in-season by definition, so every
+// one of them is listed here. tools/build-ranks.mjs generates the pages; this
+// set is what gives them the season's call to action rather than the draft one.
 const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-league.html', 'my-week.html',
   'weekly-intel.html', 'rankings.html', 'vegas-edge.html', 'game-intel.html', 'waivers.html',
   'trade-finder.html', 'faab.html', 'player-intel.html', 'desk.html', 'what-they-arent-telling-you.html',
-  'post-draft.html', 'analysts.html', 'analyst.html']);
+  'post-draft.html', 'analysts.html', 'analyst.html',
+  'stats.html', 'hidden-value.html', 'previews.html', 'the-line.html',
+  'weekly-rankings.html', 'weekly-qb-rankings.html', 'weekly-rb-rankings.html', 'weekly-wr-rankings.html',
+  'weekly-te-rankings.html', 'weekly-flex-rankings.html', 'weekly-k-rankings.html', 'weekly-dst-rankings.html',
+  'season-long-rankings.html', 'season-long-qb-rankings.html', 'season-long-rb-rankings.html',
+  'season-long-wr-rankings.html', 'season-long-te-rankings.html', 'season-long-flex-rankings.html',
+  'season-long-k-rankings.html', 'season-long-dst-rankings.html',
+  'faq.html', 'support.html', 'terms.html', 'privacy.html', 'data.html', 'creators.html',
+  'the-pick.html']);
 
+// The footer reads in the same order as the nav: the season first, the draft
+// tools after it, then the reading, the company and the legal shelf. "Data &
+// sources" is the public inventory of every external feed and the license it is
+// used under (data.html) — an acquirer, a licensing partner and a curious
+// reader all want the same page, and burying it would be the wrong instinct.
 const FOOT_COLS = [
-  {
-    h: 'Draft', links: [
-      { label: 'Auction values', href: '/fantasy-football-auction-values' },
-      { label: 'Auction Manager', href: APP + 'auctiondraft?screen=board' },
-      { label: 'Superflex & 2QB', href: '/superflex-auction-values' },
-      { label: 'Salary cap & keepers', href: '/salary-cap-draft-tool' },
-      { label: 'Snake board', href: APP + 'snakedraft' },
-    ],
-  },
-  {
-    h: 'Read', links: [
-      { label: 'Auction insights', href: '/auction-insights' },
-      { label: 'The Pick', href: '/the-pick' },
-      { label: 'Auction Watch', href: '/auction-watch' },
-      { label: 'Guides', href: '/guides' },
-      { label: 'Play-Caller Premium', href: '/play-caller-premium' },
-      { label: 'The Tell', href: '/the-tell' },
-      { label: 'Insight Vault', href: '/insights-vault' },
-    ],
-  },
   {
     h: 'In-Season', links: [
       { label: 'Overview', href: '/in-season' },
       { label: 'Fantasy', href: '/fantasy' },
       { label: 'DFS', href: '/dfs' },
-      { label: 'The Desk', href: '/in-season/desk' },
-      { label: 'The analysts (AI)', href: '/analysts' },
+      { label: 'Rankings', href: '/rankings' },
+      // The section ribbon's own destinations. The ribbon itself is only on the
+      // front page and the rankings section, so the footer is how every OTHER
+      // page on the site reaches them.
+      { label: 'This week’s rankings', href: '/weekly-rankings' },
+      { label: 'Season long rankings', href: '/season-long-rankings' },
+      { label: 'Stats', href: '/stats' },
+      { label: 'Waivers & FAAB', href: '/waivers' },
       { label: 'My Leagues', href: '/my-league' },
       { label: 'My Week', href: '/my-week' },
+    ],
+  },
+  {
+    h: 'Market Intel', links: [
+      { label: 'Vegas Edge', href: '/vegas-edge' },
+      { label: 'Hidden Value', href: '/hidden-value' },
+      { label: 'Previews', href: '/previews' },
+      { label: 'The Line', href: '/the-line' },
+      { label: 'Game Intel', href: '/game-intel' },
+      { label: 'Player Intel', href: '/player-intel' },
+      { label: 'The whole board', href: '/what-they-arent-telling-you' },
+      { label: 'Trade Finder', href: '/trade-finder' },
+    ],
+  },
+  {
+    h: 'Read', links: [
+      { label: 'The Desk', href: '/in-season/desk' },
+      { label: 'The analysts (AI)', href: '/analysts' },
+      { label: 'The Pick', href: '/the-pick' },
+      { label: 'The Tell', href: '/the-tell' },
+      { label: 'Play-Caller Premium', href: '/play-caller-premium' },
+      { label: 'Auction insights', href: '/auction-insights' },
+      { label: 'Insight Vault', href: '/insights-vault' },
+    ],
+  },
+  {
+    h: 'Draft Tools', links: [
+      { label: 'Auction values', href: '/fantasy-football-auction-values' },
+      { label: 'Auction Manager', href: APP + 'auctiondraft?screen=board' },
+      { label: 'Superflex & 2QB', href: '/superflex-auction-values' },
+      { label: 'Salary cap & keepers', href: '/salary-cap-draft-tool' },
+      { label: 'Snake board', href: APP + 'snakedraft' },
+      { label: 'Strategy guides', href: '/guides' },
+      { label: 'Auction Watch', href: '/auction-watch' },
     ],
   },
   {
@@ -164,6 +231,7 @@ const FOOT_COLS = [
     h: 'Legal', links: [
       { label: 'Privacy', href: '/privacy' },
       { label: 'Terms', href: '/terms' },
+      { label: 'Data & sources', href: '/data' },
     ],
   },
 ];
@@ -287,7 +355,7 @@ function putFoot(html, file) {
   }
   // The three legal pages carry a bare <footer> rather than <footer class="site">,
   // and they are exactly the pages where the Privacy/Terms links matter, so match
-  // either shape and normalise both onto the canonical one.
+  // either shape and normalize both onto the canonical one.
   const m = html.match(/<footer(?: class="site")?>[\s\S]*?<\/footer>/);
   if (!m) return html;
   return html.replace(m[0], () => `<footer class="site"><div class="wrap">\n  ${block}\n</div></footer>`);
@@ -356,7 +424,7 @@ const OWNED = [
   /footer\.site a\{[^}]*\}\n?/g,
   // superseded by site.css: the focus ring and the dropdown clamp added earlier
   /\n?\/\* Visible keyboard focus \(WCAG 2\.4\.7\)[\s\S]*?\[tabindex\]:focus-visible\{[^}]*\}\n?/g,
-  /\n?\/\* The dropdown is centred on its trigger[\s\S]*?@media \(max-width:560px\)\{\.nav-dd \.nav-dd-menu\{[^}]*\}\}\n?/g,
+  /\n?\/\* The dropdown is centered on its trigger[\s\S]*?@media \(max-width:560px\)\{\.nav-dd \.nav-dd-menu\{[^}]*\}\}\n?/g,
 ];
 function stripOwned(html) {
   const i = html.indexOf('<style>'), j = html.indexOf('</style>');

@@ -1,13 +1,16 @@
 /* Iron Tuna — the DFS lineup builder.
  *
  * Runs in the browser (and in node for its tests): a slate of priced players
- * in, N lineups out, under a salary cap and the site's roster, honouring
+ * in, N lineups out, under a salary cap and the site's roster, honoring
  * locks, exclusions, a QB stack, a bring-back, and a per-team maximum. The
- * objective is whichever projection the mode names: Iron Tuna, Vegas,
- * Consensus, or Vegas Edge (the Vegas line plus its Market Delta, which is
- * the market's disagreement with the consensus counted twice on purpose).
+ * objective is whichever number the mode names: Iron Tuna, Vegas, Consensus,
+ * Vegas Edge (the Vegas line plus its Market Delta, which is the market's
+ * disagreement with the consensus counted twice on purpose), or one of the
+ * three contest shapes -- floor, ceiling, leverage -- which exist because the
+ * best lineup in a double-up is not the best lineup in a 150,000-entry
+ * tournament.
  *
- * The method is a randomised greedy fill followed by single- and pair-swap
+ * The method is a randomized greedy fill followed by single- and pair-swap
  * improvement, repeated; it is not an exact solver and does not claim to be. For a nine-
  * slot roster it lands within a fraction of a point of the exact optimum on
  * every fixture in tools/test-dfs.mjs, and it runs in milliseconds, which is
@@ -17,11 +20,45 @@
  */
 (function (root) {
   'use strict';
+  // Floor and ceiling come off the slate when the server has computed them
+  // (dfsMetrics writes floor/ceiling/ownership onto every priced row). When it
+  // has not, they are reconstructed here from the same positional variance the
+  // server uses, so a mode never silently degrades into the median projection.
+  // These multipliers are HAND-SYNCED with DFS_VARIANCE in _worker.js.
+  var VARIANCE = { QB: { floor: 0.62, ceil: 1.55 }, RB: { floor: 0.55, ceil: 1.75 }, WR: { floor: 0.45, ceil: 1.95 },
+                   TE: { floor: 0.45, ceil: 1.9 }, DST: { floor: 0.4, ceil: 2.1 }, K: { floor: 0.5, ceil: 1.6 } };
+  function band(p) { return VARIANCE[p.position] || VARIANCE.WR; }
+  function ceilOf(p) { return isFinite(p.ceiling) && p.ceiling > 0 ? p.ceiling : p.ironTunaPoints * band(p).ceil; }
+  function floorOf(p) { return isFinite(p.floor) && p.floor > 0 ? p.floor : p.ironTunaPoints * band(p).floor; }
+  function ownOf(p) { return isFinite(p.ownership) && p.ownership > 0 ? p.ownership : null; }
+
+  // The objective a mode climbs. The first four are projections; the last three
+  // are contest shapes, and they exist because "the best lineup" is a different
+  // lineup in a double-up than it is in a 150,000-entry tournament.
+  //
+  //   floor    — cash games. The worst plausible Sunday is what has to clear
+  //              the line, so the roster is built on floors, not medians.
+  //   ceiling  — small-field tournaments. The median stops mattering once you
+  //              have to beat 200 people rather than 50% of them.
+  //   leverage — large-field GPP. Ceiling discounted by how many other entries
+  //              are expected to own the same player: a 22-point ceiling nobody
+  //              is on is worth more than a 24-point ceiling half the field has.
+  //              The discount is bounded so it tilts the roster toward the
+  //              longer shots without handing every slot to an unownable body.
   var MODES = {
     ironTuna: { label: 'Iron Tuna optimal', pts: function (p) { return p.ironTunaPoints; } },
     vegas: { label: 'Vegas optimal', pts: function (p) { return p.vegasPoints; } },
     consensus: { label: 'Consensus optimal', pts: function (p) { return p.consensusPoints; } },
-    vegasEdge: { label: 'Vegas Edge', pts: function (p) { return p.vegasPoints + (p.marketDelta && p.marketDelta.points > 0 ? p.marketDelta.points : 0); } }
+    vegasEdge: { label: 'Vegas Edge', pts: function (p) { return p.vegasPoints + (p.marketDelta && p.marketDelta.points > 0 ? p.marketDelta.points : 0); } },
+    floor: { label: 'Safest floor', pts: function (p) { return floorOf(p); } },
+    ceiling: { label: 'Highest ceiling', pts: function (p) { return ceilOf(p); } },
+    leverage: { label: 'Ceiling per point of ownership', pts: function (p) {
+      var own = ownOf(p), c = ceilOf(p);
+      if (own == null) return c;
+      // 12% is the reference ownership: at 12 the multiplier is 1, chalk is
+      // discounted toward 0.72 and a contrarian body is lifted toward 1.35.
+      return c * Math.min(1.35, Math.max(0.72, Math.pow(12 / Math.max(2, own), 0.35)));
+    } }
   };
   function mulberry(seed) { var a = seed >>> 0; return function () { a += 0x6D2B79F5; var t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
@@ -206,14 +243,25 @@
       }
       if (!bestL) break;
       var salary = bestL.reduce(function (s, p) { return s + p.salary; }, 0);
-      results.push({ key: bestL.map(function (p) { return p.id; }).sort().join('|'), players: bestL.map(function (p, i) { return { slot: cfg.slots[i], id: p.id, name: p.name, position: p.position, team: p.team, opponent: p.opponent, salary: p.salary, points: Math.round(mode.pts(p) * 10) / 10 }; }),
-        salary: salary, remaining: cfg.cap - salary, points: Math.round(bestS * 10) / 10, mode: o.mode || 'ironTuna' });
+      // The objective is `points`, and it is not always a projection: in the
+      // leverage mode it is a discounted ceiling, which is a ranking number and
+      // not a total anybody should read as "what this lineup scores". So the
+      // real projection, the floor, the ceiling and the modeled ownership ride
+      // alongside it and the page prints those.
+      var owned = bestL.map(ownOf).filter(function (v) { return v != null; });
+      results.push({ key: bestL.map(function (p) { return p.id; }).sort().join('|'), players: bestL.map(function (p, i) { return { slot: cfg.slots[i], id: p.id, name: p.name, position: p.position, team: p.team, opponent: p.opponent, salary: p.salary, points: Math.round(mode.pts(p) * 10) / 10,
+          proj: Math.round(p.ironTunaPoints * 10) / 10, floor: Math.round(floorOf(p) * 10) / 10, ceiling: Math.round(ceilOf(p) * 10) / 10, ownership: ownOf(p), leverage: isFinite(p.leverage) ? p.leverage : null }; }),
+        salary: salary, remaining: cfg.cap - salary, points: Math.round(bestS * 10) / 10, mode: o.mode || 'ironTuna',
+        projPoints: Math.round(bestL.reduce(function (s, p) { return s + p.ironTunaPoints; }, 0) * 10) / 10,
+        floorPoints: Math.round(bestL.reduce(function (s, p) { return s + floorOf(p); }, 0) * 10) / 10,
+        ceilingPoints: Math.round(bestL.reduce(function (s, p) { return s + ceilOf(p); }, 0) * 10) / 10,
+        ownership: owned.length === bestL.length ? Math.round(owned.reduce(function (s, v) { return s + v; }, 0) * 10) / 10 : null });
       bestL.forEach(function (p) { used[p.id] = (used[p.id] || 0) + 1; });
     }
     return { ok: results.length > 0, mode: mode.label, lineups: results, poolSize: pool.length, cap: cfg.cap,
              note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? '' : 's') + ' satisfy the constraints.' : null };
   }
-  var api = { MODES: MODES, build: build, valid: valid };
+  var api = { MODES: MODES, build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.ITDfs = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -3,12 +3,12 @@
 // _worker.js with the real scoring engine, the real PROJECTIONS pool and the
 // real token helpers, stubs the network with Sleeper- and Yahoo-shaped
 // fixtures and the boards with a deterministic board built off PROJECTIONS,
-// and drives the whole thing through a small in-memory D1: normalisation,
+// and drives the whole thing through a small in-memory D1: normalization,
 // scoring import (PPR, half, standard, TE premium, unusual bonuses), roster
 // import (superflex, 10/12/14 teams), player-id matching and the miss log,
 // idempotent re-sync, multiple leagues and the default, OAuth expiry and
 // refresh, disconnect, availability, the pickup advisor, the lineup
-// optimiser, the matchup, intel, trades, playoffs, a provider outage, a
+// optimizer, the matchup, intel, trades, playoffs, a provider outage, a
 // partial sync, a stale league, and the routes' auth gate.
 //   node tools/test-league-sync.mjs
 import fs from 'fs';
@@ -220,7 +220,7 @@ const req = (method, url, body, cookie) => new Request('https://irontuna.com' + 
 async function session(env, email) { const tok = await H.makeToken(env.AUTH_SECRET, { sid: 's-' + email, e: email, t: 'sess', exp: Date.now() + 3600000 }); env.LEADS_DB.t.sessions = env.LEADS_DB.t.sessions || new Map(); env.LEADS_DB.t.sessions.set('s-' + email, { id: 's-' + email, email }); return 'it_sess=' + tok; }
 async function route(env, method, url, body, cookie) { const r = await H.leagueRoutes(new Request('https://irontuna.com' + url, { method, headers: { cookie: cookie || '', 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }), env, new URL('https://irontuna.com' + url), {}); return r ? { status: r.status, body: await r.json().catch(() => null), headers: r.headers } : null; }
 
-console.log('\nsettings normalisation');
+console.log('\nsettings normalization');
 {
   const sc = H.sleeperScoring(FIX.league.scoring_settings);
   ok('Sleeper pass_yd 0.04 becomes 25 yards per point, no threshold', sc.scoring.passingYardsPerPoint === 25 && sc.scoring.passingYardsThreshold === 0);
@@ -248,7 +248,7 @@ console.log('\nsettings normalisation');
   ok('Yahoo stat ids map: 6-pt pass TD, -2 INT, half PPR, 25 yd/pt passing', y.scoring.passingTD === 6 && y.scoring.passingInt === -2 && y.scoring.receptionPoints === 0.5 && y.scoring.passingYardsPerPoint === 25);
   ok('an unknown Yahoo stat id is preserved as unsupported', y.extras.unsupported.yahoo_stat_78 === 1);
   const yn = H.yahooNormalize({ league: YFIX.league, settings: YFIX.settings, teams: [{ team_id: '1', name: 'Mine', is_owned_by_current_login: '1', managers: [{ nickname: 'Ken', guid: 'GUID1' }], team_standings: { rank: 2, outcome_totals: { wins: 3, losses: 1 }, points_for: 400 }, roster: [{ player_id: '30123', name: { full: pick('WR', 0).name }, primary_position: 'WR', editorial_team_abbr: pick('WR', 0).team.toLowerCase(), selected_position: { position: 'WR' } }, { player_id: '30124', name: { full: pick('RB', 0).name }, primary_position: 'RB', editorial_team_abbr: pick('RB', 0).team, selected_position: { position: 'BN' } }] }], matchups: [{ week: 5, status: 'midevent', teams: [{ team_id: '1', points: 10 }, { team_id: '2', points: 12 }] }], transactions: [] }, { currentWeek: 5 });
-  ok('Yahoo normalises: W/R/T is FLEX, 3 WR, FAAB on, the user team found, starters and bench read', yn.settings.roster.FLEX === 1 && yn.settings.roster.WR === 3 && yn.settings.faab === 100 && yn.userTeamId === '1' && yn.rosters[0].players[0].slot === 'starter' && yn.rosters[0].players[1].slot === 'bench' && yn.matchups[0].opponentId === '2');
+  ok('Yahoo normalizes: W/R/T is FLEX, 3 WR, FAAB on, the user team found, starters and bench read', yn.settings.roster.FLEX === 1 && yn.settings.roster.WR === 3 && yn.settings.faab === 100 && yn.userTeamId === '1' && yn.rosters[0].players[0].slot === 'starter' && yn.rosters[0].players[1].slot === 'bench' && yn.matchups[0].opponentId === '2');
   ok('yMerge folds Yahoo array-of-objects into one object', H.yMerge([{ a: 1 }, [{ b: 2 }], { c: 3 }]).b === 2 && H.yList({ 0: 'x', 1: 'y', count: 2 }).length === 2);
 }
 
@@ -258,7 +258,7 @@ console.log('\nplayer-id matching');
   ok('exact name and position resolve to the canonical key', H.leagueResolvePlayer({ name: wr.name, position: 'WR', team: wr.team }).key === H._oddsNorm(wr.name) + '|WR');
   ok('a suffix does not break the match', H.leagueResolvePlayer({ name: wr.name + ' Jr.', position: 'WR' }).key === H._oddsNorm(wr.name) + '|WR');
   ok('the wrong position is a miss, not a guess', H.leagueResolvePlayer({ name: wr.name, position: 'TE' }).key === null);
-  ok('a defence resolves by club', H.leagueResolvePlayer({ name: 'HOU DEF', position: 'DEF', team: 'HOU' }).key === H._oddsNorm('Houston Texans') + '|DEF');
+  ok('a defense resolves by club', H.leagueResolvePlayer({ name: 'HOU DEF', position: 'DEF', team: 'HOU' }).key === H._oddsNorm('Houston Texans') + '|DEF');
   ok('an unknown name is a miss with a reason', H.leagueResolvePlayer({ name: 'Nobody Atall', position: 'RB', team: 'BUF' }).key === null && /not on the board/.test(H.leagueResolvePlayer({ name: 'Nobody Atall', position: 'RB' }).reason));
   ok('an unranked position is refused', /not ranked/.test(H.leagueResolvePlayer({ name: 'Some Linebacker', position: 'LB' }).reason));
   const db = fakeDb(); const env = { LEADS_DB: db };
@@ -319,7 +319,7 @@ let leagueId = null;
   ok('a forced sync runs', forced.status === 200 && forced.body.sync.ok);
   // Overrides survive a sync
   const ov = await route(env, 'POST', '/api/leagues/' + leagueId + '/overrides', { overrides: { scoring: { passingTD: 6 }, roster: { BN: 7 } } }, cookie);
-  ok('a correction is applied and labelled', ov.body.league.settings.scoring.passingTD === 6 && ov.body.league.settings.overridden.includes('scoring.passingTD') && ov.body.league.synced.scoring.passingTD === 4);
+  ok('a correction is applied and labeled', ov.body.league.settings.scoring.passingTD === 6 && ov.body.league.settings.overridden.includes('scoring.passingTD') && ov.body.league.synced.scoring.passingTD === 4);
   await H.leagueSync(env, [...db.t.leagues.values()][0], 'test');
   const L3 = await H.leagueLoad(env, 'ken@example.com', leagueId);
   ok('the correction survives the next sync', L3.settings.scoring.passingTD === 6 && L3.settings.roster.BN === 7 && L3.overrides.scoring.passingTD === 6);
@@ -363,7 +363,7 @@ let leagueId = null;
   ok('ESPN says plainly that it cannot be synced and points to manual', espn.status === 503 && /manual/i.test(espn.body.detail));
 }
 
-console.log('\npersonalisation on the synced league');
+console.log('\npersonalization on the synced league');
 {
   const L = await H.leagueLoad(env, 'ken@example.com', leagueId);
   const wk = await H.leagueBoard(env, L, 'week');

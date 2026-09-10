@@ -151,8 +151,8 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('// ── the scoring engine ─', 'const COLUMN_SCORING = {') + '\n' + cut('function _oddsImpliedProb(', '// The Odds API v4. WRITTEN') + '\n' +
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
-  cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade };'
+  cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
+  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, fakeFetch, stub, 'x', async () => {}, {}, {}, async () => null, availabilityTable, availabilityCacheRead, async () => null, availabilityReport, async () => null, stub, stub, {}, {}, p => p, async (id) => { const norm = RAW; return norm; });
 const db = fakeDb(clock);
 const env = { LEADS_DB: db, LLM_API_KEY: 'test', LLM_PROVIDER: 'anthropic' };
@@ -258,6 +258,19 @@ console.log('\nthe pause, the approval and the hallucinating writer');
   ok('a first draft naming a player the packet lacks is sent back once and the retry publishes clean', h.ok && h.status === 'published' && modelLog.length === 2 && modelLog[1].retry === true, JSON.stringify([h.status, modelLog]));
   modelMode = 'clean';
   ok('the writer was never asked to write a retired kind', modelLog.every(m => H.CONTENT_KINDS[m.kind]));
+  Date.now = realNow;
+}
+
+console.log('\nthe lead before the first piece');
+{
+  // Wednesday of Week 1, nothing published: the lead names the next piece on
+  // the calendar and its slot, never a draft-season story.
+  const wed = ET(2026, 9, 9, 9, 0);
+  Date.now = () => wed;
+  const st = H.nflSeasonState(scheduleAt(wed), wed);
+  const nx = H.deskNextPayload(st, scheduleAt(wed), wed);
+  ok('the lead names the next piece and when it publishes', nx && nx.ok && nx.story.placeholder === true && nx.story.category === 'desk' && /^Next from the desk: /.test(nx.story.title) && /Publishes (Wednesday|Thursday) at \d{1,2}:\d{2} (AM|PM) ET\.$/.test(nx.story.dek) && nx.story.url === '/in-season/desk', JSON.stringify(nx && nx.story));
+  ok('and it is the earliest slot still to come', nx && nx.story.createdAt > wed && Object.keys(H.CONTENT_KINDS).filter(k => !H.CONTENT_KINDS[k].unscheduled).every(k => { const d = H.contentDue(k, wed, st, scheduleAt(wed)); return !(Number.isFinite(d.dueAt) && d.dueAt > wed && d.dueAt < nx.story.createdAt); }));
   Date.now = realNow;
 }
 

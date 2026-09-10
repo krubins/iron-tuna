@@ -22,13 +22,13 @@
  *      their OWN horizon. That last clause is the feature: a team chasing a
  *      playoff spot is scored on the next three weeks, a team that has
  *      clinched on weeks 15-17, and a trade can be right for both at once.
- *      The tilt is a slider from "even" to "favour my side" — but the floor
+ *      The tilt is a slider from "even" to "favor my side" — but the floor
  *      never moves: a trade the other side does not gain from is not offered.
  *
  * Points come from the caller. The engine is handed a function
  * points(player, horizonKey) and never sees a stat line, so the scoring is
  * whatever it-league.js says the reader plays, and this file cannot drift
- * from it. Kickers and defences are recognised by the parser (so a "Bills
+ * from it. Kickers and defenses are recognized by the parser (so a "Bills
  * D/ST" line does not become a team name) and ignored by the search.
  */
 (function (root, factory) {
@@ -64,7 +64,7 @@
 
   // ── the pool ──────────────────────────────────────────────────────────────
   // players: [{ name, pos, team, ... }]. pos is one of QB/RB/WR/TE/K/DEF (a
-  // board that says DST is normalised). The index keeps the caller's objects.
+  // board that says DST is normalized). The index keeps the caller's objects.
   function makePool(players) {
     var list = [], byFull = {}, byLast = {}, folded = [];
     (players || []).forEach(function (p) {
@@ -80,7 +80,7 @@
       (byLast[last] = byLast[last] || []).push(row);
       if (pos === 'DEF') {
         // "Bills D/ST", "Buffalo", "BUF DEF" all mean the same roster line, so
-        // a defence answers to its city, its nickname and its abbreviation.
+        // a defense answers to its city, its nickname and its abbreviation.
         var city = row.w.slice(0, -1).join(' ');
         [city, row.w[row.w.length - 1], row.team.toLowerCase()].forEach(function (k) {
           if (!k) return;
@@ -136,8 +136,10 @@
       if (r.w.length < 2 && r.pos !== 'DEF') continue;      // a bare surname in the pool is not a name to match on
       if (hay.indexOf(' ' + r.f + ' ') >= 0 && okPos(r)) return r;
     }
-    // A defence by city or abbreviation: "Buffalo D/ST", "BUF DEF".
+    // A defense by city or abbreviation: "Buffalo D/ST", "BUF DEF".
     var w = f.split(' ');
+    // Both spellings stay in the accept list: this reads a reader's pasted
+    // roster, and what they typed is not the site's copy to correct.
     if (w.some(function (x) { return x === 'def' || x === 'dst' || x === 'defense' || x === 'defence'; })) {
       for (var d = 0; d < w.length; d++) {
         var cityRow = pool.byFull[w[d] + ' def'] || pool.byFull[w[d]];

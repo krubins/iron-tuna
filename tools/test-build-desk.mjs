@@ -43,9 +43,9 @@ ok('the bench ledger is present', !!(A.bench && A.bench.players && A.bench.playe
    'run node tools/build-front-analysis.mjs');
 // Every body the roster carries, per position, starters and bench together. The
 // shape card is drawn from this whole-roster view, not from posCost alone: the
-// DEF bar once read "$1" on a $120 board for a roster that carries TWO defences
+// DEF bar once read "$1" on a $120 board for a roster that carries TWO defenses
 // at a $1 minimum each, because the row was the starter on its own and the
-// second defence sat inside BENCH with nothing to say so.
+// second defense sat inside BENCH with nothing to say so.
 const bodies = {};
 const addBody = (pos, price) => { bodies[pos] = bodies[pos] || { n: 0, dollars: 0 }; bodies[pos].n++; bodies[pos].dollars += price; };
 A.lineup.forEach(l => addBody(l.pos, l.price));
@@ -98,10 +98,10 @@ ok('the bench figure is derived by subtraction, not rescaled on its own',
    'use budgetShown - startersShown; fmtMoney(bench.cost) can round to a dollar more than the budget');
 ok('the shape card charts the whole roster per position, bench tail included',
    /id="shapeCard"/.test(build) && /bar-tail/.test(build) && /r\.starters \+ r\.bench/.test(build),
-   'a DEF bar drawn from posCost alone reads "$1" for a roster that carries two defences');
+   'a DEF bar drawn from posCost alone reads "$1" for a roster that carries two defenses');
 ok('the shape card floors every position at a dollar a body',
    /Math\.max\(shapeRows\[i\]\.n, Math\.floor\(x\)\)/.test(build),
-   'a $1 minimum bid times two defences is $2, whatever money() rounds the rescale to');
+   'a $1 minimum bid times two defenses is $2, whatever money() rounds the rescale to');
 
 // ── 3. the page as a browser draws it (skips without playwright) ────────────
 let chromium = null;
@@ -168,7 +168,7 @@ if (!chromium) {
        `covers ${span.toFixed(2)}%`);
     // The shape card: whole roster per position, adding to the budget, and never
     // a position printed below a dollar a body. $50 is where the floor bites:
-    // two defences at $3 on the $200 board rescale to $0.75, and must print $2.
+    // two defenses at $3 on the $200 board rescale to $0.75, and must print $2.
     const rows = seen.shape.map(r => `${r.pos}×${r.n} $${r.val}`).join(', ');
     ok(`${label}: the shape card has a row per position`,
        seen.shape.length === Object.keys(bodies).length, rows);

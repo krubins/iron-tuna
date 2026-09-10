@@ -2,7 +2,7 @@
 //
 // tools/live-board.mjs is what every check of a published dollar figure runs
 // through, and it has gone silently wrong three times -- 2026-08-25 (curve
-// re-cut), 08-31 (pricing and normalisation changed), 09-03 (_colScore moved
+// re-cut), 08-31 (pricing and normalization changed), 09-03 (_colScore moved
 // into scoreStats, so the lift threw ReferenceError). Every one of those days
 // the suite was green, because NOTHING imported live-board.mjs. This file is
 // what closes that: it imports it, builds a board, and proves the numbers are
@@ -205,7 +205,7 @@ try {
 
 // 5. Things the worker gained that the harness must not quietly ignore. These
 //    are warnings against the repo worker, which has both.
-ok('season normalisation is in play', !!NORM, 'COLUMN_NORM absent from ' + WORKER_PATH);
+ok('season normalization is in play', !!NORM, 'COLUMN_NORM absent from ' + WORKER_PATH);
 ok('availability is in play', hasAvailability, 'no availability table in ' + WORKER_PATH);
 
 console.log(failed ? '\n' + failed + ' failure(s)' : '\nall checks passed');

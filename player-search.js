@@ -15,7 +15,7 @@
  * already has both, correctly, for the reader who has a saved board AND for the
  * reader who has not (its DEFAULT_BOARD). Duplicating either here would be a
  * second answer to "what is he worth", which is exactly the bug the board
- * colour history in HANDOFF.md §20 is a monument to. So the suggestion list is
+ * color history in HANDOFF.md §20 is a monument to. So the suggestion list is
  * ORDERED by /it-league.js's dollars when that file is present, and falls back
  * to the index's own order (the projections' order) when it is not.
  *
@@ -92,7 +92,7 @@
     return typeof v === 'number' ? v : -1;
   }
 
-  // Kickers and defences are priced by the app but carry no editorial and no
+  // Kickers and defenses are priced by the app but carry no editorial and no
   // headshot, so they answer a deliberate search and never crowd out a skill
   // player who matches the same letters.
   function tierOf(p) { return (p.p === 'K' || p.p === 'DEF') ? 1 : 0; }
@@ -393,7 +393,7 @@
 
   // Full names, longest first — alternation is ordered, so "Kenneth Walker III"
   // is tried before "Kenneth Walker" and a man is never linked by half his
-  // name. Club defences are dropped: "Kansas City Chiefs" in a sentence is a
+  // name. Club defenses are dropped: "Kansas City Chiefs" in a sentence is a
   // team, not a player mention. Built once, on the first page that asks.
   var fullRe = null, fullMap = null;
   function fullIndex() {
@@ -466,7 +466,7 @@
     return out;
   }
 
-  // Underline only, in the reader's own text colour: a story is prose, and a
+  // Underline only, in the reader's own text color: a story is prose, and a
   // paragraph where every third name is painted brand-teal stops being one.
   // The tokens are the ones every page on the site already defines, each with a
   // literal fallback for the pages that do not.

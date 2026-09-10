@@ -126,7 +126,7 @@ const rb = pos => players.filter(p => p.position === pos);
   ok('the cheap tail is left alone', rbs.filter(p => p.marketValue < 5 && m.has(p.id)).length === 0);
   ok('nothing is moved past the floor or the cap', [...m.entries()].every(([id, v]) => v >= Math.round(byId.get(id).marketValue * 0.9) && v <= Math.round(byId.get(id).marketValue * 1.12)));
 }
-// ── 4. the plan honours the expected prices ─────────────────────────────────
+// ── 4. the plan honors the expected prices ─────────────────────────────────
 {
   const teams = freshTeams();
   const drafted = new Set();

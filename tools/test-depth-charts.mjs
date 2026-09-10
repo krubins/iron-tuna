@@ -119,7 +119,7 @@ const liveBody = worker.slice(liveStart, liveStart + 3000);
 ok('_worker.js serves /api/live', liveStart > 0);
 ok('/api/live carries depth_chart_position and depth_chart_order as d',
   /rec\.d = \[p\.depth_chart_position, p\.depth_chart_order\]/.test(liveBody));
-ok('/api/live leaves team defences without a slot', /p\.position !== 'DEF' && p\.depth_chart_position/.test(liveBody));
+ok('/api/live leaves team defenses without a slot', /p\.position !== 'DEF' && p\.depth_chart_position/.test(liveBody));
 ok('/api/live bumped its edge-cache key past the shape without d',
   /'\/api\/live\?v=3'/.test(liveBody) && !/'\/api\/live\?v=2'/.test(liveBody));
 // The worker's key only clears the worker's cache. The edge and the browser
@@ -183,7 +183,7 @@ ok('a player without d, a player without a team, and an unparseable rank all sta
   && !Object.values(table).flatMap(t => Object.values(t).flat()).includes('Old Team Guy'));
 ok('KC carries the QB tag too, body part lower-cased, the note kept off the chart',
   JSON.stringify(table.KC.QB) === JSON.stringify(['Patrick Mahomes (Q, knee - acl)', 'Justin Fields']), JSON.stringify(table.KC.QB));
-ok('the same payload is folded once (memoised by identity)', depthChartsFromLive(live) === table);
+ok('the same payload is folded once (memoized by identity)', depthChartsFromLive(live) === table);
 ok('a payload with no slots folds to null, not an empty table', depthChartsFromLive({ 'Jake Elliott': { t: 'PHI', i: null, s: null } }) === null);
 ok('no payload folds to null', depthChartsFromLive(null) === null);
 

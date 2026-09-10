@@ -1,0 +1,2887 @@
+{
+ "_source": "site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard, pulled 2026-09-09",
+ "_trimmed": "Only the fields _espnGame and _espnOdds read. Bookmaker deep-links, tracking params and logos removed.",
+ "events": [
+  {
+   "id": "401872656",
+   "date": "2026-09-10T00:20Z",
+   "shortName": "NE @ SEA",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Wed, September 9th at 8:20 PM EDT",
+     "shortDetail": "9/9 - 8:20 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "SEA"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "NE"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Wed, September 9th at 8:20 PM EDT",
+       "shortDetail": "9/9 - 8:20 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1,
+        "displayName": "DraftKings"
+       },
+       "details": "SEA -3",
+       "overUnder": 44.5,
+       "spread": -3.0,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "17",
+         "uid": "s:20~l:28~t:17",
+         "abbreviation": "NE",
+         "name": "Patriots",
+         "displayName": "New England Patriots",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/ne.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "26",
+         "uid": "s:20~l:28~t:26",
+         "abbreviation": "SEA",
+         "name": "Seahawks",
+         "displayName": "Seattle Seahawks",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/sea.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-166"
+         },
+         "open": {
+          "odds": "-192"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+140"
+         },
+         "open": {
+          "odds": "+160"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-3",
+          "odds": "-118"
+         },
+         "open": {
+          "line": "-3.5",
+          "odds": "-110"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+3",
+          "odds": "-102"
+         },
+         "open": {
+          "line": "+3.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o44.5",
+          "odds": "-105"
+         },
+         "open": {
+          "line": "o44.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u44.5",
+          "odds": "-115"
+         },
+         "open": {
+          "line": "u44.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872657",
+   "date": "2026-09-11T00:35Z",
+   "shortName": "SF VS LAR",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Thu, September 10th at 8:35 PM EDT",
+     "shortDetail": "9/10 - 8:35 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "LAR"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "SF"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Thu, September 10th at 8:35 PM EDT",
+       "shortDetail": "9/10 - 8:35 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "LAR -3.5",
+       "overUnder": 48.5,
+       "spread": -3.5,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "25",
+         "uid": "s:20~l:28~t:25",
+         "abbreviation": "SF",
+         "name": "49ers",
+         "displayName": "San Francisco 49ers",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/sf.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "14",
+         "uid": "s:20~l:28~t:14",
+         "abbreviation": "LAR",
+         "name": "Rams",
+         "displayName": "Los Angeles Rams",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/lar.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-198"
+         },
+         "open": {
+          "odds": "-155"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+164"
+         },
+         "open": {
+          "odds": "+130"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-3.5",
+          "odds": "-118"
+         },
+         "open": {
+          "line": "-2.5",
+          "odds": "-120"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+3.5",
+          "odds": "-102"
+         },
+         "open": {
+          "line": "+2.5",
+          "odds": "+100"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o48.5",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "o48.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u48.5",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "u48.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872925",
+   "date": "2026-09-13T17:00Z",
+   "shortName": "TB @ CIN",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 1:00 PM EDT",
+     "shortDetail": "9/13 - 1:00 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "CIN"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "TB"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 1:00 PM EDT",
+       "shortDetail": "9/13 - 1:00 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "CIN -3.5",
+       "overUnder": 50.5,
+       "spread": -3.5,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "27",
+         "uid": "s:20~l:28~t:27",
+         "abbreviation": "TB",
+         "name": "Buccaneers",
+         "displayName": "Tampa Bay Buccaneers",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/tb.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "4",
+         "uid": "s:20~l:28~t:4",
+         "abbreviation": "CIN",
+         "name": "Bengals",
+         "displayName": "Cincinnati Bengals",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/cin.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-198"
+         },
+         "open": {
+          "odds": "-198"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+164"
+         },
+         "open": {
+          "odds": "+164"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-3.5",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "-3.5",
+          "odds": "-110"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+3.5",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "+3.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o50.5",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "o50.5",
+          "odds": "-115"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u50.5",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "u50.5",
+          "odds": "-105"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872923",
+   "date": "2026-09-13T17:00Z",
+   "shortName": "NO @ DET",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 1:00 PM EDT",
+     "shortDetail": "9/13 - 1:00 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "DET"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "NO"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 1:00 PM EDT",
+       "shortDetail": "9/13 - 1:00 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "DET -7",
+       "overUnder": 49.5,
+       "spread": -7.0,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "18",
+         "uid": "s:20~l:28~t:18",
+         "abbreviation": "NO",
+         "name": "Saints",
+         "displayName": "New Orleans Saints",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/no.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "8",
+         "uid": "s:20~l:28~t:8",
+         "abbreviation": "DET",
+         "name": "Lions",
+         "displayName": "Detroit Lions",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/det.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-310"
+         },
+         "open": {
+          "odds": "-325"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+250"
+         },
+         "open": {
+          "odds": "+260"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-7",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "-7",
+          "odds": "-110"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+7",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "+7",
+          "odds": "-110"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o49.5",
+          "odds": "-118"
+         },
+         "open": {
+          "line": "o48.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u49.5",
+          "odds": "-102"
+         },
+         "open": {
+          "line": "u48.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872924",
+   "date": "2026-09-13T17:00Z",
+   "shortName": "NYJ @ TEN",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 1:00 PM EDT",
+     "shortDetail": "9/13 - 1:00 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "TEN"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "NYJ"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 1:00 PM EDT",
+       "shortDetail": "9/13 - 1:00 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "TEN -1.5",
+       "overUnder": 38.5,
+       "spread": -1.5,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "20",
+         "uid": "s:20~l:28~t:20",
+         "abbreviation": "NYJ",
+         "name": "Jets",
+         "displayName": "New York Jets",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/nyj.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "10",
+         "uid": "s:20~l:28~t:10",
+         "abbreviation": "TEN",
+         "name": "Titans",
+         "displayName": "Tennessee Titans",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/ten.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-122"
+         },
+         "open": {
+          "odds": "-170"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+102"
+         },
+         "open": {
+          "odds": "+142"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-1.5",
+          "odds": "-110"
+         },
+         "open": {
+          "line": "-3",
+          "odds": "-115"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+1.5",
+          "odds": "-110"
+         },
+         "open": {
+          "line": "+3",
+          "odds": "-105"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o38.5",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "o39.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u38.5",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "u39.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872659",
+   "date": "2026-09-13T17:00Z",
+   "shortName": "BAL @ IND",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 1:00 PM EDT",
+     "shortDetail": "9/13 - 1:00 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "IND"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "BAL"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 1:00 PM EDT",
+       "shortDetail": "9/13 - 1:00 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "BAL -3.5",
+       "overUnder": 47.5,
+       "spread": 3.5,
+       "awayTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "33",
+         "uid": "s:20~l:28~t:33",
+         "abbreviation": "BAL",
+         "name": "Ravens",
+         "displayName": "Baltimore Ravens",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/bal.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "homeTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "11",
+         "uid": "s:20~l:28~t:11",
+         "abbreviation": "IND",
+         "name": "Colts",
+         "displayName": "Indianapolis Colts",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/ind.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "+145"
+         },
+         "open": {
+          "odds": "+154"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "-175"
+         },
+         "open": {
+          "odds": "-185"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "+3.5",
+          "odds": "-115"
+         },
+         "open": {
+          "line": "+3.5",
+          "odds": "-110"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "-3.5",
+          "odds": "-105"
+         },
+         "open": {
+          "line": "-3.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o47.5",
+          "odds": "-115"
+         },
+         "open": {
+          "line": "o49.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u47.5",
+          "odds": "-105"
+         },
+         "open": {
+          "line": "u49.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872658",
+   "date": "2026-09-13T17:00Z",
+   "shortName": "ATL @ PIT",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 1:00 PM EDT",
+     "shortDetail": "9/13 - 1:00 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "PIT"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "ATL"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 1:00 PM EDT",
+       "shortDetail": "9/13 - 1:00 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "PIT -3.5",
+       "overUnder": 42.5,
+       "spread": -3.5,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "1",
+         "uid": "s:20~l:28~t:1",
+         "abbreviation": "ATL",
+         "name": "Falcons",
+         "displayName": "Atlanta Falcons",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/atl.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "23",
+         "uid": "s:20~l:28~t:23",
+         "abbreviation": "PIT",
+         "name": "Steelers",
+         "displayName": "Pittsburgh Steelers",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/pit.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-185"
+         },
+         "open": {
+          "odds": "-175"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+154"
+         },
+         "open": {
+          "odds": "+145"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-3.5",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "-3",
+          "odds": "-120"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+3.5",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "+3",
+          "odds": "+100"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o42.5",
+          "odds": "-105"
+         },
+         "open": {
+          "line": "o42.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u42.5",
+          "odds": "-115"
+         },
+         "open": {
+          "line": "u42.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872661",
+   "date": "2026-09-13T17:00Z",
+   "shortName": "CHI @ CAR",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 1:00 PM EDT",
+     "shortDetail": "9/13 - 1:00 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "CAR"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "CHI"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 1:00 PM EDT",
+       "shortDetail": "9/13 - 1:00 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "CHI -3",
+       "overUnder": 46.5,
+       "spread": 3.0,
+       "awayTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "3",
+         "uid": "s:20~l:28~t:3",
+         "abbreviation": "CHI",
+         "name": "Bears",
+         "displayName": "Chicago Bears",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/chi.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "homeTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "29",
+         "uid": "s:20~l:28~t:29",
+         "abbreviation": "CAR",
+         "name": "Panthers",
+         "displayName": "Carolina Panthers",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/car.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "+136"
+         },
+         "open": {
+          "odds": "+114"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "-162"
+         },
+         "open": {
+          "odds": "-135"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "+3",
+          "odds": "-102"
+         },
+         "open": {
+          "line": "+2.5",
+          "odds": "-110"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "-3",
+          "odds": "-118"
+         },
+         "open": {
+          "line": "-2.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o46.5",
+          "odds": "-115"
+         },
+         "open": {
+          "line": "o44.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u46.5",
+          "odds": "-105"
+         },
+         "open": {
+          "line": "u44.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872922",
+   "date": "2026-09-13T17:00Z",
+   "shortName": "CLE @ JAX",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 1:00 PM EDT",
+     "shortDetail": "9/13 - 1:00 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "JAX"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "CLE"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 1:00 PM EDT",
+       "shortDetail": "9/13 - 1:00 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "JAX -8.5",
+       "overUnder": 40.5,
+       "spread": -8.5,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "5",
+         "uid": "s:20~l:28~t:5",
+         "abbreviation": "CLE",
+         "name": "Browns",
+         "displayName": "Cleveland Browns",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/cle.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "30",
+         "uid": "s:20~l:28~t:30",
+         "abbreviation": "JAX",
+         "name": "Jaguars",
+         "displayName": "Jacksonville Jaguars",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/jax.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-470"
+         },
+         "open": {
+          "odds": "-285"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+360"
+         },
+         "open": {
+          "odds": "+230"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-8.5",
+          "odds": "-110"
+         },
+         "open": {
+          "line": "-7",
+          "odds": "-110"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+8.5",
+          "odds": "-110"
+         },
+         "open": {
+          "line": "+7",
+          "odds": "-110"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o40.5",
+          "odds": "-110"
+         },
+         "open": {
+          "line": "o40.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u40.5",
+          "odds": "-110"
+         },
+         "open": {
+          "line": "u40.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872660",
+   "date": "2026-09-13T17:00Z",
+   "shortName": "BUF @ HOU",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 1:00 PM EDT",
+     "shortDetail": "9/13 - 1:00 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "HOU"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "BUF"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 1:00 PM EDT",
+       "shortDetail": "9/13 - 1:00 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "BUF -1.5",
+       "overUnder": 44.5,
+       "spread": 1.5,
+       "awayTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "2",
+         "uid": "s:20~l:28~t:2",
+         "abbreviation": "BUF",
+         "name": "Bills",
+         "displayName": "Buffalo Bills",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/buf.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "homeTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "34",
+         "uid": "s:20~l:28~t:34",
+         "abbreviation": "HOU",
+         "name": "Texans",
+         "displayName": "Houston Texans",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/hou.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-102"
+         },
+         "open": {
+          "odds": "-108"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "-118"
+         },
+         "open": {
+          "odds": "-112"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "+1.5",
+          "odds": "-118"
+         },
+         "open": {
+          "line": "+1.5",
+          "odds": "-122"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "-1.5",
+          "odds": "-102"
+         },
+         "open": {
+          "line": "-1.5",
+          "odds": "+102"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o44.5",
+          "odds": "-115"
+         },
+         "open": {
+          "line": "o45.5",
+          "odds": "-105"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u44.5",
+          "odds": "-105"
+         },
+         "open": {
+          "line": "u45.5",
+          "odds": "-115"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872928",
+   "date": "2026-09-13T20:25Z",
+   "shortName": "MIA @ LV",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 4:25 PM EDT",
+     "shortDetail": "9/13 - 4:25 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "LV"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "MIA"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 4:25 PM EDT",
+       "shortDetail": "9/13 - 4:25 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "LV -3",
+       "overUnder": 40.5,
+       "spread": -3.0,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "15",
+         "uid": "s:20~l:28~t:15",
+         "abbreviation": "MIA",
+         "name": "Dolphins",
+         "displayName": "Miami Dolphins",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/mia.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "13",
+         "uid": "s:20~l:28~t:13",
+         "abbreviation": "LV",
+         "name": "Raiders",
+         "displayName": "Las Vegas Raiders",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/lv.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-166"
+         },
+         "open": {
+          "odds": "-180"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+140"
+         },
+         "open": {
+          "odds": "+150"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-3",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "-3",
+          "odds": "-120"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+3",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "+3",
+          "odds": "+100"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o40.5",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "o41.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u40.5",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "u41.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872927",
+   "date": "2026-09-13T20:25Z",
+   "shortName": "GB @ MIN",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 4:25 PM EDT",
+     "shortDetail": "9/13 - 4:25 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "MIN"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "GB"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 4:25 PM EDT",
+       "shortDetail": "9/13 - 4:25 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "MIN -1.5",
+       "overUnder": 46.5,
+       "spread": -1.5,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "9",
+         "uid": "s:20~l:28~t:9",
+         "abbreviation": "GB",
+         "name": "Packers",
+         "displayName": "Green Bay Packers",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/gb.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "16",
+         "uid": "s:20~l:28~t:16",
+         "abbreviation": "MIN",
+         "name": "Vikings",
+         "displayName": "Minnesota Vikings",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/min.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-120"
+         },
+         "open": {
+          "odds": "+105"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+100"
+         },
+         "open": {
+          "odds": "-125"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-1.5",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "+1.5",
+          "odds": "-110"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+1.5",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "-1.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o46.5",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "o44.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u46.5",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "u44.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872929",
+   "date": "2026-09-13T20:25Z",
+   "shortName": "WSH @ PHI",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 4:25 PM EDT",
+     "shortDetail": "9/13 - 4:25 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "PHI"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "WSH"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 4:25 PM EDT",
+       "shortDetail": "9/13 - 4:25 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "PHI -5.5",
+       "overUnder": 44.5,
+       "spread": -5.5,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "28",
+         "uid": "s:20~l:28~t:28",
+         "abbreviation": "WSH",
+         "name": "Commanders",
+         "displayName": "Washington Commanders",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/wsh.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "21",
+         "uid": "s:20~l:28~t:21",
+         "abbreviation": "PHI",
+         "name": "Eagles",
+         "displayName": "Philadelphia Eagles",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/phi.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-218"
+         },
+         "open": {
+          "odds": "-238"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+180"
+         },
+         "open": {
+          "odds": "+195"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-5.5",
+          "odds": "-108"
+         },
+         "open": {
+          "line": "-5.5",
+          "odds": "-110"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+5.5",
+          "odds": "-112"
+         },
+         "open": {
+          "line": "+5.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o44.5",
+          "odds": "-105"
+         },
+         "open": {
+          "line": "o46.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u44.5",
+          "odds": "-115"
+         },
+         "open": {
+          "line": "u46.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872926",
+   "date": "2026-09-13T20:25Z",
+   "shortName": "ARI @ LAC",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 4:25 PM EDT",
+     "shortDetail": "9/13 - 4:25 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "LAC"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "ARI"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 4:25 PM EDT",
+       "shortDetail": "9/13 - 4:25 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "LAC -9.5",
+       "overUnder": 47.5,
+       "spread": -9.5,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "22",
+         "uid": "s:20~l:28~t:22",
+         "abbreviation": "ARI",
+         "name": "Cardinals",
+         "displayName": "Arizona Cardinals",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/ari.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "24",
+         "uid": "s:20~l:28~t:24",
+         "abbreviation": "LAC",
+         "name": "Chargers",
+         "displayName": "Los Angeles Chargers",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/lac.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-500"
+         },
+         "open": {
+          "odds": "-625"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+380"
+         },
+         "open": {
+          "odds": "+470"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-9.5",
+          "odds": "-115"
+         },
+         "open": {
+          "line": "-11.5",
+          "odds": "-110"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+9.5",
+          "odds": "-105"
+         },
+         "open": {
+          "line": "+11.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o47.5",
+          "odds": "-102"
+         },
+         "open": {
+          "line": "o45.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u47.5",
+          "odds": "-118"
+         },
+         "open": {
+          "line": "u45.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872930",
+   "date": "2026-09-14T00:20Z",
+   "shortName": "DAL @ NYG",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sun, September 13th at 8:20 PM EDT",
+     "shortDetail": "9/13 - 8:20 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "NYG"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "DAL"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sun, September 13th at 8:20 PM EDT",
+       "shortDetail": "9/13 - 8:20 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "DAL -3",
+       "overUnder": 48.5,
+       "spread": 3.0,
+       "awayTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "6",
+         "uid": "s:20~l:28~t:6",
+         "abbreviation": "DAL",
+         "name": "Cowboys",
+         "displayName": "Dallas Cowboys",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/dal.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "homeTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "19",
+         "uid": "s:20~l:28~t:19",
+         "abbreviation": "NYG",
+         "name": "Giants",
+         "displayName": "New York Giants",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/nyg.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "+136"
+         },
+         "open": {
+          "odds": "+110"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "-162"
+         },
+         "open": {
+          "odds": "-130"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "+3",
+          "odds": "-115"
+         },
+         "open": {
+          "line": "+2.5",
+          "odds": "-115"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "-3",
+          "odds": "-105"
+         },
+         "open": {
+          "line": "-2.5",
+          "odds": "-105"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o48.5",
+          "odds": "-105"
+         },
+         "open": {
+          "line": "o48.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u48.5",
+          "odds": "-115"
+         },
+         "open": {
+          "line": "u48.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401872931",
+   "date": "2026-09-15T00:15Z",
+   "shortName": "DEN @ KC",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "week": {
+    "number": 1
+   },
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Mon, September 14th at 8:15 PM EDT",
+     "shortDetail": "9/14 - 8:15 PM EDT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "KC"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "DEN"
+       }
+      }
+     ],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Mon, September 14th at 8:15 PM EDT",
+       "shortDetail": "9/14 - 8:15 PM EDT"
+      },
+      "isTBDFlex": false
+     },
+     "odds": [
+      {
+       "provider": {
+        "id": "100",
+        "name": "DraftKings",
+        "priority": 1
+       },
+       "details": "KC -3",
+       "overUnder": 43.5,
+       "spread": -3.0,
+       "awayTeamOdds": {
+        "favorite": false,
+        "underdog": true,
+        "team": {
+         "id": "7",
+         "uid": "s:20~l:28~t:7",
+         "abbreviation": "DEN",
+         "name": "Broncos",
+         "displayName": "Denver Broncos",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/den.png"
+        },
+        "favoriteAtOpen": false
+       },
+       "homeTeamOdds": {
+        "favorite": true,
+        "underdog": false,
+        "team": {
+         "id": "12",
+         "uid": "s:20~l:28~t:12",
+         "abbreviation": "KC",
+         "name": "Chiefs",
+         "displayName": "Kansas City Chiefs",
+         "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/kc.png"
+        },
+        "favoriteAtOpen": true
+       },
+       "moneyline": {
+        "displayName": "Moneyline",
+        "shortDisplayName": "ML",
+        "home": {
+         "close": {
+          "odds": "-155"
+         },
+         "open": {
+          "odds": "-155"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+130"
+         },
+         "open": {
+          "odds": "+130"
+         }
+        }
+       },
+       "pointSpread": {
+        "displayName": "Spread",
+        "shortDisplayName": "Spread",
+        "home": {
+         "close": {
+          "line": "-3",
+          "odds": "+100"
+         },
+         "open": {
+          "line": "-2.5",
+          "odds": "-120"
+         }
+        },
+        "away": {
+         "close": {
+          "line": "+3",
+          "odds": "-120"
+         },
+         "open": {
+          "line": "+2.5",
+          "odds": "+100"
+         }
+        }
+       },
+       "total": {
+        "displayName": "Total",
+        "shortDisplayName": "Total",
+        "over": {
+         "close": {
+          "line": "o43.5",
+          "odds": "-110"
+         },
+         "open": {
+          "line": "o42.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u43.5",
+          "odds": "-110"
+         },
+         "open": {
+          "line": "u42.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "header": {
+        "logo": {
+         "dark": "https://a.espncdn.com/i/espnbet/dark/espn-bet-square-off.svg",
+         "light": "https://a.espncdn.com/i/espnbet/espn-bet-square-off.svg",
+         "exclusivesLogoDark": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg",
+         "exclusivesLogoLight": "https://a.espncdn.com/i/espnbet/espn-bet-square-mint.svg"
+        },
+        "text": "Game Odds"
+       },
+       "footer": {
+        "disclaimer": "GAMBLING PROBLEM? CALL 1-800-GAMBLER or 1-800-MY-RESET, (800) 327-5050 or visit gamblinghelplinema.org (MA). Call 877-8-HOPENY/text HOPENY (467369) (NY). Call 888-789-7777/visit ccpg.org (CT), or visit www.mdgamblinghelp.org (MD), 1-800-981-0023 (PR). 21+ and present in most states. (18+ DC/KY/NH/PR/WY). Void in ONT. Eligibility restrictions apply. Terms: draftkings.com/sportsbook. On behalf of Boot Hill Casino (KS). Pass-thru of per wager tax may apply in IL."
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

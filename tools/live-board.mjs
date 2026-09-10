@@ -191,7 +191,7 @@ export const VEGAS_WEIGHT = S.VEGAS_WEIGHT;
 // The worker re-levels each position's points to last season's top-K mean
 // before it serves them, so the points on a reader's sheet are NOT raw
 // stat-line scores. OPTIONAL: a worker built before 2026-08-31 has no such
-// constant, and a board built from one must not normalise. Absent means
+// constant, and a board built from one must not normalize. Absent means
 // absent, never "assume the new way".
 export const NORM = S.COLUMN_NORM || null;
 export const price = (pos, rankIndex) => S._colPrice(pos, rankIndex);
@@ -225,7 +225,7 @@ export function board(overlayPath, useOdds = true) {
     // The two odds worlds, rebuilt from the triples blendProjections writes:
     // vegas[k] = [committed, marketImplied, blended]. No overlay means no
     // triples, so both worlds equal the blend. pts0/pts1 stay RAW -- the worker
-    // normalises only pts, and normalisation is flat per position so it cannot
+    // normalizes only pts, and normalization is flat per position so it cannot
     // move either world's rank anyway.
     const st = p.projectedStats || {};
     const w0 = { ...st }, w1 = { ...st };

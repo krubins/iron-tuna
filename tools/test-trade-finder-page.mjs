@@ -33,7 +33,7 @@ const ok = (n, c, x = '') => { if (c) { pass++; console.log(`  ok   ${n}`); } el
 
 // ── the fixture league ─────────────────────────────────────────────────────
 // Names are the site's own (tools/faab-fixture-names.json), so the FAAB manual
-// mode — which resolves against it-league.js's default board — recognises them
+// mode — which resolves against it-league.js's default board — recognizes them
 // too. Season stat lines fall off by rank; horizons scale them by week count.
 const NAMES = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'faab-fixture-names.json'), 'utf8'));
 const CUR = 5, ROS_WEEKS = 13, PLAYOFF = [15, 16, 17];
@@ -132,8 +132,8 @@ ok('four teams, from four blocks', teams.length === 4, teams.map(t => t.name).jo
 ok('the first team keeps its name and not its owner line', teams[0].name === 'Iron Tuna (Ken)', teams[0].name);
 ok('"Team: Clinched" is named Clinched', teams[2].name === 'Clinched', teams[2].name);
 ok('the reader’s roster landed in full', teams[0].chips.length === 12, String(teams[0].chips.length));
-ok('the defence and kicker are shown as ignored, not as teams', teams[0].chips.some(c => /Bills/.test(c)) && !teams.some(t => /Bills/.test(t.name)));
-ok('nothing unrecognised', teams.every(t => t.fix === 0));
+ok('the defense and kicker are shown as ignored, not as teams', teams[0].chips.some(c => /Bills/.test(c)) && !teams.some(t => /Bills/.test(t.name)));
+ok('nothing unrecognized', teams.every(t => t.fix === 0));
 ok('the status line counts it', /4 teams, 4\d players placed/.test(await page.textContent('#tf-read-status')), await page.textContent('#tf-read-status'));
 
 // ── the screenshot path ────────────────────────────────────────────────────
@@ -180,11 +180,11 @@ const evenTop = trades[0];
 // does not fall, and the other side still gains.
 await page.$eval('#tf-tilt', el => { el.value = '100'; el.dispatchEvent(new Event('input', { bubbles: true })); });
 await page.click('#tf-find');
-await page.waitForFunction(() => /In your favour/.test(document.getElementById('tf-bar').textContent), null, { timeout: 15000 });
+await page.waitForFunction(() => /In your favor/.test(document.getElementById('tf-bar').textContent), null, { timeout: 15000 });
 trades = await read();
 ok('tilted, the top trade gains the reader at least as much', trades[0].sides[0].gain >= evenTop.sides[0].gain - 0.05, `${trades[0].sides[0].gain} vs ${evenTop.sides[0].gain}`);
 ok('and every partner still gains', trades.every(t => t.sides[1].gain > 0));
-ok('the bar says so', /In your favour/.test(await page.textContent('#tf-bar')));
+ok('the bar says so', /In your favor/.test(await page.textContent('#tf-bar')));
 
 // Horizons: the reader on the playoff weeks, the partners on the next three.
 await page.$eval('#tf-tilt', el => { el.value = '50'; el.dispatchEvent(new Event('input', { bubbles: true })); });
@@ -242,7 +242,7 @@ console.log('\nthe FAAB Advisor, entered by hand');
   ok('no recommended bid exceeds the money left', r.rows.every(x => x.max <= 80));
   ok('no going rate exceeds the richest rival', r.rows.every(x => x.going == null || x.going <= 100));
   ok('a $0 rival is never the competition', !r.rows.some(x => /Bubble Boys/.test(x.vs)));
-  ok('the unrecognised name is reported', /Not recognised.*Someone Unknown/.test(r.note), r.note.slice(-120));
+  ok('the unrecognized name is reported', /Not recognized.*Someone Unknown/.test(r.note), r.note.slice(-120));
   ok('and the note says rivals’ holes were assumed', /assumed to have a hole/.test(r.note));
   const goingBefore = r.rows[0].going;
 

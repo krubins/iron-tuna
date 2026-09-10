@@ -90,7 +90,7 @@ const server = http.createServer((req, res) => {
 });
 await new Promise(r => server.listen(PORT, '127.0.0.1', r));
 
-// Honour CHROMIUM_PATH like tools/test-position-lens.mjs does, so this runs on a
+// Honor CHROMIUM_PATH like tools/test-position-lens.mjs does, so this runs on a
 // box whose Chromium came from somewhere other than `npx playwright install`
 // (a preinstalled browser, a different Playwright build number).
 const CHROME = process.env.CHROMIUM_PATH
@@ -187,7 +187,7 @@ const data = await page.evaluate(() => {
   // `posCost` is the STARTERS' spend by position; the bench is a row of its own
   // here and in the front page's spend bar and key. The "shape" card on that
   // page folds the bench back into each position from `bench.players` (a
-  // roster that carries two defences must never chart DEF at one dollar), so
+  // roster that carries two defenses must never chart DEF at one dollar), so
   // keep `bench.players[].pos` and `.price` — that card is built from them.
   //
   // Shares are of the WHOLE budget, and the bench is one of the rows. They used
@@ -271,7 +271,7 @@ console.log(`front.html: $${data.spend} lineup at ${data.ppg} pts/gm + $${data.b
 //
 // Those two stories need data this repo does not have. There is no consensus ADP
 // in the product (adpRedraft is null for every player; attachProvisionalAdp
-// synthesises a rank from Iron Tuna's own auctionValue) and no odds feed at all,
+// synthesizes a rank from Iron Tuna's own auctionValue) and no odds feed at all,
 // so writing either story from what is in here would mean comparing the model to
 // itself. Add a real source and the desk turns itself on. Shape:
 //

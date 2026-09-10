@@ -55,7 +55,7 @@ for (const row of rows) {
   try { payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload; }
   catch (e) { console.error('row ' + id + ': unparseable payload, skipped'); continue; }
   if (id === 1) {
-    // Player odds, keyed "<normalised name>|POS". Split by the suffix.
+    // Player odds, keyed "<normalized name>|POS". Split by the suffix.
     for (const pos of ['QB', 'RB', 'WR', 'TE']) {
       const slice = {};
       for (const [k, v] of Object.entries(payload)) if (k.endsWith('|' + pos)) slice[k] = v;

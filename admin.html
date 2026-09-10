@@ -565,7 +565,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       (d.includeMe ? ' · including your own visits' : '');
 
     // Today's headline is a real unique count, so it leads. Everything wider than
-    // a day is user-days and is labelled that way rather than passed off as people.
+    // a day is user-days and is labeled that way rather than passed off as people.
     var avg = u.avgPerDay || 0;
     var vs = u.yesterday == null ? 'first day in the window'
       : u.today === u.yesterday ? 'level with yesterday'
@@ -787,7 +787,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     $('nrBadge').textContent = auto.on ? 'auto-publishing' : 'PAUSED';
     $('nrBadge').style.background = auto.on ? '#e6f4ee' : '#fde8e8'; $('nrBadge').style.color = auto.on ? '#0e6b4a' : '#9b1c1c';
     $('nrPause').hidden = !auto.on; $('nrResume').hidden = !!auto.on;
-    $('nrAuto').textContent = auto.on ? 'Validated pieces publish on their slot.' : 'Paused: ' + (auto.reason || '') + '. Pieces are held for approval.';
+    var t = n.tick || {};
+    var pulse = t.lastAt ? ('Last tick ' + new Date(t.lastAt).toLocaleString() + ' (' + t.silentMinutes + ' min ago' + (t.lastOk === false ? ', which failed' : '') + ').' + (t.died24h ? ' ' + t.died24h + ' job row(s) opened and never closed in the last day: an invocation the runtime killed.' : '')) : 'No tick has logged yet.';
+    $('nrAuto').innerHTML = esc(auto.on ? 'Validated pieces publish on their slot.' : 'Paused: ' + (auto.reason || '') + '. Pieces are held for approval.') + '<br>' +
+      (t.silent ? '<b style="color:#9b1c1c">CRON SILENT for ' + esc(String(t.silentMinutes)) + ' minutes.</b> The worker has not been reached by its */15 trigger; check the Cron Events log in the Cloudflare dashboard. ' : '') + esc(pulse);
     var f = n.flags || {};
     $('nrFlags').innerHTML = '<tr><th>Flag</th><th>State</th><th>Source</th><th>What it does</th></tr>' + Object.keys(f).map(function(k){ return '<tr><td><b>FLAG_' + esc(k) + '</b></td><td>' + (f[k].on ? pill('on', 'ok') : pill('off', 'bad')) + '</td><td>' + esc(f[k].source) + '</td><td style="color:var(--muted)">' + esc(f[k].note) + '</td></tr>'; }).join('');
     var a = n.audit || {};

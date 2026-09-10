@@ -17,7 +17,7 @@
 //     ]
 //   }
 //
-// Recognised markets (season-long totals):
+// Recognized markets (season-long totals):
 //   passYd  passTD  passInt  rushYd  rushTD  recYd  recTD  rec
 //   scrimmageTD   — combined rush+rec TDs, split using the player's current
 //                   projection ratio rather than an invented split.
@@ -30,11 +30,11 @@
 //
 // 1. DE-VIG. Both sides carry juice, so raw implied probabilities sum to >1.
 //    We convert each side's American price to an implied probability and
-//    normalise them to sum to 1 (multiplicative method). What survives is the
+//    normalize them to sum to 1 (multiplicative method). What survives is the
 //    market's honest opinion of P(over).
 //
 // 2. MEDIAN -> MEAN. The line sits near the market's MEDIAN outcome; fantasy
-//    scoring needs the MEAN. Modelling a season total as roughly normal,
+//    scoring needs the MEAN. Modeling a season total as roughly normal,
 //        E[X] = line + sigma * PHI^-1(P(over))
 //    At a balanced price (P = 0.5) the mean is the line, which is the common
 //    case; the correction only bites when a book prices one side hard. sigma

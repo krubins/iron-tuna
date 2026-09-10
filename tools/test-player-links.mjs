@@ -15,7 +15,7 @@
 //   - a word that is also ordinary English ("Likely", "Love", "Price") is left
 //     as text where a sentence has just begun, because a capital letter after a
 //     full stop says nothing about which one it is;
-//   - a club's defence is not a player mention.
+//   - a club's defense is not a player mention.
 //
 // It runs the REAL player-search.js in as much of a browser as it needs, so the
 // index under test is the shipped one, and finishes with a sweep over every
@@ -180,7 +180,7 @@ console.log('\nfull names');
   const w = load();
   const b = block(w, 'call', 'Kansas City is no longer a pure pass funnel, say the Kansas City Chiefs.');
   w.ITPlayerSearch.linkAllPlayers(w.document);
-  ok('a club defence is not a player mention', slugs(b).length === 0, slugs(b).join());
+  ok('a club defense is not a player mention', slugs(b).length === 0, slugs(b).join());
 }
 
 // ── 2. a name already inside a link is left alone ──────────────────────────
