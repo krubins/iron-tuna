@@ -183,7 +183,7 @@ What the odds move is then a RANK STORY, not a second price: "the odds have him 
 
 **And name the board's number for every dollar figure you print, not just the headline one.** If you tell the reader to bid $15 on a player the board prices at $10, say the board says $10 and say why you disagree. A recommendation that differs from the sheet is the whole point of the column; a recommendation that differs from the sheet *silently* is the bug this column has now shipped four times, because the reader has their own sheet open and it contradicts you with no explanation. This applies to secondary players and throwaway asides, not only to the player in the headline.
 
-**Name the board beside any point total you print.** Prices and ranks are quantised by the curve and almost never move; point totals move every single refresh, by a tenth or two, forever. A story that says a player scores 322.8 points is stale within a day, and a reader who checks will find 322.7 and conclude the desk cannot count. There is always a board that number is true of — say which — "322.8 points on the August 28 board", not "322.8 points".
+**Name the board beside any point total you print.** Prices and ranks are quantized by the curve and almost never move; point totals move every single refresh, by a tenth or two, forever. A story that says a player scores 322.8 points is stale within a day, and a reader who checks will find 322.7 and conclude the desk cannot count. There is always a board that number is true of — say which — "322.8 points on the August 28 board", not "322.8 points".
 
 If you deviate from any of this, say so in the method line.
 

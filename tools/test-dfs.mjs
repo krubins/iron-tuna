@@ -20,7 +20,7 @@ const _oddsRound = v => Math.round(v * 10) / 10;
 function _csvSplit(line) { const out = []; let cur = '', q = false; for (let i = 0; i < line.length; i++) { const c = line[i]; if (q) { if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; } else if (c === '"') q = true; else if (c === ',') { out.push(cur); cur = ''; } else cur += c; } out.push(cur); return out; }
 const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch',
   cut('// ── the scoring engine ─', 'const COLUMN_SCORING = {') + '\n' + cut('const _median = arr =>', '// How far apart the books are') + '\n' +
-  cut('// -- kickers and defences, scored', '// -- the three boards') + '\n' + cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
+  cut('// -- kickers and defenses, scored', '// -- the three boards') + '\n' + cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
   'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
@@ -31,7 +31,7 @@ console.log('\nthe lobby CSVs');
   const a = H.parseDfsCsv('dk', dk);
   ok('a DraftKings CSV parses', !a.error && a.rows.length === 3, a.error);
   ok('the opponent comes out of Game Info', a.rows[0].opponent === 'NYJ' && a.rows[1].opponent === 'GB');
-  ok('a defence is a DST with its club', a.rows[2].position === 'DST' && a.rows[2].team === 'CHI');
+  ok('a defense is a DST with its club', a.rows[2].position === 'DST' && a.rows[2].team === 'CHI');
   const fd = 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n1,QB,Josh,Josh Allen,Allen,24.1,1,9200,BUF@NYJ,BUF,NYJ,,,,QB\n2,D,,Chicago Bears,,7,1,4000,CHI@MIN,CHI,MIN,,,,D\n';
   const b = H.parseDfsCsv('fd', fd);
   ok('a FanDuel CSV parses', !b.error && b.rows.length === 2, b.error);
@@ -156,9 +156,9 @@ console.log('\nthe optimizer');
   rec(0, new Set(), 0, 0);
   ok('it finds the exact optimum on a slate small enough to enumerate', near(L.points, Math.round(best * 10) / 10, 0.11), L.points + ' vs ' + best);
   const locked = DFS.build(players, { ...base, mode: 'ironTuna', lock: ['aaronrodgers|QB'] });
-  ok('a lock is honoured', locked.lineups[0].players.some(p => p.id === 'aaronrodgers|QB'));
+  ok('a lock is honored', locked.lineups[0].players.some(p => p.id === 'aaronrodgers|QB'));
   const excluded = DFS.build(players, { ...base, mode: 'ironTuna', exclude: ['jahmyrgibbs|RB'] });
-  ok('an exclusion is honoured', !excluded.lineups[0].players.some(p => p.id === 'jahmyrgibbs|RB'));
+  ok('an exclusion is honored', !excluded.lineups[0].players.some(p => p.id === 'jahmyrgibbs|RB'));
   const stacked = DFS.build(players, { ...base, mode: 'vegas', stack: true, stackSize: 1 });
   const qb = stacked.lineups[0].players.find(p => p.slot === 'QB');
   ok('a QB stack puts a pass-catcher from his team in the lineup', stacked.lineups[0].players.some(p => p.team === qb.team && /WR|TE/.test(p.position)), JSON.stringify(stacked.lineups[0].players.map(p => p.name)));
@@ -167,9 +167,9 @@ console.log('\nthe optimizer');
   ok('a bring-back adds a player from the opponent', bb.lineups[0].players.some(p => p.team === qb2.opponent && p.position !== 'DST'), qb2.opponent + ' ' + JSON.stringify(bb.lineups[0].players.map(p => p.team)));
   const capped = DFS.build(players, { ...base, mode: 'ironTuna', maxPerTeam: 2 });
   const counts = {}; capped.lineups[0].players.forEach(p => { counts[p.team] = (counts[p.team] || 0) + 1; });
-  ok('a per-team maximum is honoured', Object.values(counts).every(n => n <= 2), JSON.stringify(counts));
+  ok('a per-team maximum is honored', Object.values(counts).every(n => n <= 2), JSON.stringify(counts));
   const tight = DFS.build(players, { ...base, cap: 48500, mode: 'ironTuna' });
-  ok('a lower cap is honoured', tight.ok && tight.lineups[0].salary <= 48500, JSON.stringify(tight.note));
+  ok('a lower cap is honored', tight.ok && tight.lineups[0].salary <= 48500, JSON.stringify(tight.note));
   const noRoster = DFS.build(players, { ...base, cap: 45000, mode: 'ironTuna' });
   ok('a cap just under the cheapest roster returns no lineup and says so, never a lineup over the cap', noRoster.ok === false && noRoster.lineups.length === 0 && /0 distinct/.test(noRoster.note));
   const many = DFS.build(players, { ...base, mode: 'ironTuna', lineups: 3 });
@@ -198,10 +198,10 @@ console.log('\nthe optimizer');
   ok('the floor is under the projection and the ceiling over it',
      floorL.lineups[0].floorPoints < floorL.lineups[0].projPoints && floorL.lineups[0].projPoints < floorL.lineups[0].ceilingPoints,
      JSON.stringify({ f: floorL.lineups[0].floorPoints, p: floorL.lineups[0].projPoints, c: floorL.lineups[0].ceilingPoints }));
-  ok('the ceiling mode maximises the ceiling, and the floor mode does not beat it there',
+  ok('the ceiling mode maximizes the ceiling, and the floor mode does not beat it there',
      ceilL.lineups[0].ceilingPoints >= floorL.lineups[0].ceilingPoints - 1e-9,
      ceilL.lineups[0].ceilingPoints + ' vs ' + floorL.lineups[0].ceilingPoints);
-  ok('the floor mode maximises the floor, and the ceiling mode does not beat it there',
+  ok('the floor mode maximizes the floor, and the ceiling mode does not beat it there',
      floorL.lineups[0].floorPoints >= ceilL.lineups[0].floorPoints - 1e-9,
      floorL.lineups[0].floorPoints + ' vs ' + ceilL.lineups[0].floorPoints);
   ok('every shape still respects the cap and fills the roster',
@@ -217,7 +217,7 @@ console.log('\nthe optimizer');
   ok('ownership moves the leverage build off the chalk',
      chalkFree.ok && heavy(chalkFree.lineups[0]) <= heavy(DFS.build(owned, { ...base, mode: 'ceiling' }).lineups[0]),
      'leverage kept ' + heavy(chalkFree.lineups[0]) + ' chalk bodies');
-  ok('a lineup reports its total modelled ownership when the board carries it',
+  ok('a lineup reports its total modeled ownership when the board carries it',
      typeof chalkFree.lineups[0].ownership === 'number' && chalkFree.lineups[0].ownership > 0);
 }
 console.log(`\n${pass} passed, ${fail} failed`);

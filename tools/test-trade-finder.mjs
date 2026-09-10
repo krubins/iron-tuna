@@ -16,7 +16,7 @@
 //     team chasing a spot are scored on different weeks, and if the engine
 //     quietly used one horizon for both, the feature that justifies the page is
 //     a label with nothing behind it.
-//   - A paste that turns a slot label or a defence into a team. "QB - BUF (3)"
+//   - A paste that turns a slot label or a defense into a team. "QB - BUF (3)"
 //     and "Bills D/ST" are not managers, and a parser that promotes them
 //     silently produces a 14-team league out of a 12-team paste.
 //   - A lineup filled in the wrong order. Flex must take the best of what the
@@ -67,9 +67,9 @@ console.log('\nthe resolver');
   ok('an ambiguous surname resolves to nothing', r('Brown') === null);
   ok('the position hint settles an ambiguous surname', r('Brown RB') === 'Chase Brown');
   ok('a position hint rejects a mismatch', r('Josh Allen RB') === null);
-  ok('a defence by nickname', r('Bills D/ST') === 'Buffalo Bills');
-  ok('a defence by city', r('Buffalo DEF') === 'Buffalo Bills');
-  ok('a defence by abbreviation', r('BAL DST') === 'Baltimore Ravens');
+  ok('a defense by nickname', r('Bills D/ST') === 'Buffalo Bills');
+  ok('a defense by city', r('Buffalo DEF') === 'Buffalo Bills');
+  ok('a defense by abbreviation', r('BAL DST') === 'Baltimore Ravens');
   ok('a kicker by surname and position', r('Tucker K BAL') === 'Justin Tucker');
   ok('nothing from noise', r('QB - BUF (3)') === null && r('Bye: 7') === null);
   ok('a name the board does not carry', r('Random Person WR') === null);
@@ -119,7 +119,7 @@ Kittle
   ok('a slot line with a club and a bye is not a team', !r.teams.some(t => /SEA/.test(t.name)));
   ok('"Bench" is not a team', !r.teams.some(t => /bench/i.test(t.name)));
   ok('"Proj 118.4" is not a team', !r.teams.some(t => /Proj/.test(t.name)));
-  ok('a defence is a player, not a team', !r.teams.some(t => /Bills/.test(t.name)) && names(r.teams[0]).includes('Buffalo Bills'));
+  ok('a defense is a player, not a team', !r.teams.some(t => /Bills/.test(t.name)) && names(r.teams[0]).includes('Buffalo Bills'));
   ok('"Team: X" opens a team called X', r.teams[2].name === 'Third Wheel', r.teams[2].name);
   ok('a table row resolves off its player cell', names(r.teams[0]).includes('Josh Allen') && names(r.teams[0]).includes('Bijan Robinson'));
   ok('every awkward name on team one landed', ['Kenneth Walker III', 'Ja\'Marr Chase', 'Marvin Harrison Jr.', 'Brock Bowers', 'Jaylen Waddle', 'Justin Tucker', 'James Cook'].every(n => names(r.teams[0]).includes(n)), names(r.teams[0]).join(', '));
@@ -142,7 +142,7 @@ console.log('\nthe lineup');
   const starters = L.starters.map(r => r.p.id).sort().join(',');
   ok('the named slots take the best at each position', /QB1/.test(starters) && /RB1/.test(starters) && /RB2/.test(starters) && /WR1/.test(starters) && /WR2/.test(starters) && /TE1/.test(starters), starters);
   ok('flex takes the best of what is left, whatever the position', L.starters.find(r => r.slot === 'FLEX').p.id === 'RB3', starters);
-  ok('kickers and defences are not in the lineup', !/K1|D1/.test(starters));
+  ok('kickers and defenses are not in the lineup', !/K1|D1/.test(starters));
   const startPts = 20 + 15 + 14 + 16 + 12 + 9 + 13;
   ok('starters add up', near(L.total - L.benchValue, startPts), String(L.total - L.benchValue));
   // The bench: WR3 (11) at .25, TE2 (8) at .15, QB2 (18) at .08 x .3 in a 1-QB league.
@@ -159,7 +159,7 @@ console.log('\nthe trade search');
 {
   // Six teams. Team 0 (the reader) is deep at RB and thin at WR; team 1 is the
   // mirror image. Team 2 is balanced and good; team 3 is weak everywhere; teams
-  // 4 and 5 are filler. Points differ by horizon: `late` favours certain
+  // 4 and 5 are filler. Points differ by horizon: `late` favors certain
   // players in the playoff weeks, so a horizon switch changes the answer.
   const mk = (id, pos, ros, late, week) => ({ id, name: id, pos, ros, late: late == null ? ros * 3 / 12 : late, week: week == null ? ros / 12 : week });
   const teams = [

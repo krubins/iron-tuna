@@ -198,7 +198,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 
 /* ── player lookup, in the ribbon ── */
 /* The field is the one control on the page that is always on screen, so it is
-   drawn quietly: a hairline box that only takes the brand colour once it has
+   drawn quietly: a hairline box that only takes the brand color once it has
    the reader's attention. */
 .rb-search{position:relative;display:flex;align-items:center;gap:6px;flex:0 0 auto;margin:0 8px 0 0;padding:0 9px;height:30px;border:1px solid var(--line);border-radius:4px;background:var(--card)}
 .rb-search:focus-within{border-color:var(--brand);box-shadow:0 0 0 2px rgba(14,124,99,.14)}
@@ -279,7 +279,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    a cutout headshot cropped to a disc loses the shoulders, loses the jersey,
    and turns a news photo into a contacts-list avatar. The band now runs them
    as portrait plates — a rectangle the photo actually fills, standing on the
-   club's colour, with the name set underneath the way a caption sits under a
+   club's color, with the name set underneath the way a caption sits under a
    picture in print. Same photos, same fallback, no circles anywhere. */
 .lead-media{position:relative;display:flex;align-items:flex-end;gap:20px;padding:32px 28px 18px;background:radial-gradient(120% 150% at 8% 0%,#1c2731 0%,#0e1418 62%);border-bottom:3px solid var(--brand);overflow:hidden}
 .lead-media[hidden]{display:none}
@@ -290,9 +290,9 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    fills it — behind the photos, never in front of a name. */
 .lm-mark{position:absolute;right:22px;bottom:-18px;z-index:0;font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:106px;line-height:1;letter-spacing:.03em;pointer-events:none;user-select:none}
 .lm-face{display:flex;flex-direction:column;align-items:flex-start;min-width:0;max-width:168px}
-/* The plate. `--tc` is the club colour the JS hands it; the wash is the same
-   colour at low alpha so a transparent-background cutout has something to sit
-   against instead of a grey hole. */
+/* The plate. `--tc` is the club color the JS hands it; the wash is the same
+   color at low alpha so a transparent-background cutout has something to sit
+   against instead of a gray hole. */
 .lm-shot{position:relative;flex:0 0 auto;width:104px;height:116px;border-radius:5px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(168deg,var(--tc-wash,rgba(255,255,255,.10)) 0%,#1b242d 78%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 8px 18px rgba(0,0,0,.34)}
 .lm-shot>*{grid-area:1/1}
 .lm-shot img{width:100%;height:100%;object-fit:cover;object-position:50% 8%;display:block}
@@ -652,7 +652,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 }
 
 /* ── the masthead on a phone ──────────────────────────────────────────────
-   Nine links in a centred wrapping row came out as three ragged lines of
+   Nine links in a centered wrapping row came out as three ragged lines of
    different lengths — the single choppiest thing on the page. They are the
    same nine links here, but each on the line that suits it: the wordmark and
    the section jumps share one row (the jumps scroll sideways rather than
@@ -707,7 +707,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   .sec-head .sec-more{margin-left:0;font-size:11.5px}
 }
 
-/* A 40px plate vertically centred against a four-line block floats in the
+/* A 40px plate vertically centered against a four-line block floats in the
    middle of the text on a narrow column. Line it up with the headline. */
 @media(max-width:900px){
   .pm-rest a{align-items:start}
@@ -727,7 +727,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 /* ── the claim strip ───────────────────────────────────────────────────────
    Every general fantasy site ranks players; an auction is priced in dollars,
    and almost nobody builds for it. The strip says the niche in one line, in
-   the brand colour, directly under the masthead. */
+   the brand color, directly under the masthead. */
 .dominant{background:var(--brand);color:#fff;border-bottom:1px solid rgba(0,0,0,.12)}
 .dominant-rule{background:rgba(255,255,255,.4)}
 
@@ -848,9 +848,9 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 /* ── the hero and the claim strip on a phone ──────────────────────────────
    The claim is longer than the line it replaced, and on a 390px screen a
    single unwrapped line pushed the whole document into a sideways scroll. It
-   wraps to centred lines here instead, and the rules that flanked it go.
+   wraps to centered lines here instead, and the rules that flanked it go.
    The screenshot is the other half: scaled to a 390px column the sheet is a
-   grey smear, so the frame keeps the image at half size and shows the left of
+   gray smear, so the frame keeps the image at half size and shows the left of
    it — one readable column of real dollars rather than four illegible ones. */
 @media(max-width:620px){
   .dominant-text{text-align:center;font-size:clamp(15px,4.6vw,21px);letter-spacing:.05em;line-height:1.15}
@@ -894,15 +894,15 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   display: flex; flex-wrap: wrap; align-items: stretch; margin: 22px 0 0;
   border: 1px solid rgba(255, 255, 255, .14); border-radius: 10px;
   background: rgba(255, 255, 255, .04);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: 12.5px; line-height: 20px; letter-spacing: .06em; text-transform: uppercase;
-  font-variant-numeric: tabular-nums; color: #cfdad6;
+  font-weight: 700; font-variant-numeric: tabular-nums; color: #cfdad6;
 }
 .fp-clock > span { padding: 7px 14px; border-left: 1px solid rgba(255, 255, 255, .14) }
 .fp-clock > span:first-child { border-left: 0 }
-.fp-clock .its-phase { color: var(--teal, #2dd4a3); font-weight: 700 }
+.fp-clock .its-phase { color: var(--teal, #2dd4a3) }
 .fp-clock .its-phase.its-off { color: #97a5a0 }
-.fp-clock .its-week { color: #fff; font-weight: 700 }
+.fp-clock .its-week { color: #fff }
 .fp-clock .its-state { color: #fff }
 .fp-clock .its-counts, .fp-clock .its-next, .fp-clock .its-note { color: #97a5a0; text-transform: none; letter-spacing: .01em }
 .fp-clock .its-note { flex: 1 }
@@ -920,7 +920,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-h1 .fp-accent { color: var(--teal, #2dd4a3) }
 .fp-h1 em { display: inline; font-style: normal }
 /* The lede sits under the headline and the buttons under the lede, all on the
-   same left edge. The muted grey is the band's secondary ink (.hb-dek), so the
+   same left edge. The muted gray is the band's secondary ink (.hb-dek), so the
    claim keeps the white and the paragraph does not compete with it. */
 .fp-lede { font-size: 17.5px; line-height: 28px; margin: 20px 0 0; max-width: 58ch; color: #b3c1bd }
 .fp-hero .hb-ctas { margin-top: 26px }
@@ -967,7 +967,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 
 /* ── the lead story plate, on light ──────────────────────────────────────
    Everything inside carries .hb-* classes written for the dark hero band, so
-   each colour is restated here against the page's ink scale. Nothing below
+   each color is restated here against the page's ink scale. Nothing below
    changes the dark band's own rendering: every selector is scoped to the
    plate. */
 .fp-lead-plate { border: 1px solid var(--line, #e1e7ea); border-radius: 14px; background: var(--card, #fff); padding: clamp(18px, 2.6vw, 28px); box-shadow: 0 10px 30px rgba(15, 23, 25, .05) }
@@ -999,7 +999,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    the lead's height with its items spread, so the last headline sits on the
    lead's bottom rule rather than stopping halfway and leaving a hole.
 
-   No new colours and no new components: this is the .lead and .rail the page
+   No new colors and no new components: this is the .lead and .rail the page
    already had, composed differently and scoped to .fp-well so the same classes
    keep their old rendering anywhere else they are used. */
 .fp-well { padding-top: clamp(22px, 3vw, 38px) }
@@ -1076,7 +1076,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    cannot tell where a subject ends, so the whole middle of the page reads as
    one undifferentiated run.
 
-   Three things fix it, and none of them is a new colour:
+   Three things fix it, and none of them is a new color:
 
      1. A DECK. The first thing under the lead is now what to actually do,
         per lane, with the answer already on the card. The front page had no
@@ -1086,13 +1086,13 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
         thirteen .sec-heads become subheads inside three subjects instead of
         thirteen peers.
      3. A ZONE. One chapter sits on white inside a rounded container while the
-        others sit on the page's grey ground, which gives the column a visible
-        seam without a full-bleed band and without touching the ground colour.
+        others sit on the page's gray ground, which gives the column a visible
+        seam without a full-bleed band and without touching the ground color.
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── the DFS lane's lineup ───────────────────────────────────────────────────
    The contest chips, then the solved roster on the page's one dark surface.
-   Dark because it is the answer: on a grey page of white cards, an inverted
+   Dark because it is the answer: on a gray page of white cards, an inverted
    board is the only thing that cannot be scrolled past. */
 .dfs-shape { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px }
 .dfs-shape button {
@@ -1182,14 +1182,14 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-zone .sec-head::after, .fp-chapbody .sec-head::after { width: 40px; background: var(--brand, #0e7c63) }
 .fp-chapbody > .sec-head:first-child, .fp-zone > .sec-head:first-child { margin-top: 0 }
 
-/* One chapter on white inside the page's grey ground. A seam, without a
+/* One chapter on white inside the page's gray ground. A seam, without a
    full-bleed band and without a 100vw rule that can put a scrollbar on the
    page at some width. */
 .fp-zone {
   background: var(--card, #fff); border: 1px solid var(--line, #e1e7ea); border-radius: 16px;
   padding: clamp(20px, 2.6vw, 34px); box-shadow: 0 10px 30px rgba(15, 23, 25, .04);
 }
-/* Every white card inside the white zone flips to the page's grey, so a card
+/* Every white card inside the white zone flips to the page's gray, so a card
    is still a card once the ground under it changed. Left as one list on
    purpose: these are exactly the modules chapter 02 contains, and a module
    added to the chapter later has to be added here or it will render as a
@@ -1209,7 +1209,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-cols p { font-size: 14.5px; line-height: 23px; margin: 8px 0 0; opacity: .86 }
 
 .fp-gap-foot { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px }
-/* Gold is the one conversion colour on this page (Save my league). A reading
+/* Gold is the one conversion color on this page (Save my league). A reading
    link that is merely the next page gets the brand green, not a second gold. */
 .hb-btn.brand { background: var(--brand, #0e7c63); color: #fff }
 .hb-btn.brand:hover { background: var(--brand-dark, #0a6151); filter: none }
@@ -1536,7 +1536,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
      It is NOT the sticky ribbon further down the page — that one is a set of
      in-page anchors for the sections of this page, and it stays where it is.
      This band navigates AWAY, to the boards, which is why it sits at the top
-     rather than travelling with the reader.
+     rather than traveling with the reader.
 
      Generated by tools/build-ranks.mjs from one link set, so the same band is
      on the rankings pages, the stats page, Hidden Value and Previews. -->
@@ -1546,11 +1546,11 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     <a class="rkr-link rkr-item" href="/stats">Stats</a>
     <span class="rkr-item rkr-has-menu">
       <a class="rkr-link" href="/weekly-rankings">This Week&rsquo;s Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-rankings">Overall</a><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defence / special teams</a></span>
+      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-rankings">Overall</a><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defense / special teams</a></span>
     </span>
     <span class="rkr-item rkr-has-menu">
       <a class="rkr-link" href="/season-long-rankings">Season Long Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-rankings">Overall</a><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defence / special teams</a></span>
+      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-rankings">Overall</a><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defense / special teams</a></span>
     </span>
     <a class="rkr-link rkr-item" href="/hidden-value">Hidden Value</a>
     <a class="rkr-link rkr-item" href="/previews">Previews</a>
@@ -1629,7 +1629,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
      The plate is a LIGHT surface. The .hb-* card and button styles were written
      for the dark hero band (white type, white borders, #8b9c97 notes), and they
      were rendering white-on-white here. The overrides below restate every one
-     of those colours against the page's ink scale. -->
+     of those colors against the page's ink scale. -->
 <section class="fp-sec" aria-labelledby="gapHead">
   <div class="wrap">
     <div class="sec-head"><h2 id="gapHead">Where the experts and the market disagree most</h2><a class="sec-more" href="/vegas-edge">The whole board &rarr;</a></div>
@@ -1809,7 +1809,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   <div class="vs-wrap" id="vegasWrap" hidden>
     <div class="vs-thesis">
       <h3>Why the odds get a vote</h3>
-      <p>A sportsbook posts a number with <b>its own money behind it</b>. Get it wrong and sharp bettors take the other side until it moves, so every line is priced off repeatable trends, statistical modelling, and injury and usage news the moment it lands &mdash; then corrected in public, continuously.</p>
+      <p>A sportsbook posts a number with <b>its own money behind it</b>. Get it wrong and sharp bettors take the other side until it moves, so every line is priced off repeatable trends, statistical modeling, and injury and usage news the moment it lands &mdash; then corrected in public, continuously.</p>
       <p>A ranking carries no such penalty. <b>Anyone with a TikTok account and a hunch can publish a top 200</b>, never revisit it, and pay nothing when it misses. That is not an argument that the book is always right. It is an argument that when a priced market and an unpriced list disagree, <b>the disagreement is worth a look</b>.</p>
       <p><b>Iron Tuna&rsquo;s prices already carry the odds</b> &mdash; every value on your cheat sheet is blended toward the market. Almost no ranking or ADP list does that. So each case here is the gap between what the consensus is charging you and <b>what the lines say the player is worth</b>.</p>
       <ol>
@@ -1936,7 +1936,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     <a class="fp-act" href="/dfs#values">
       <span class="fp-act-k">The board behind it</span>
       <span class="fp-act-h">Value, ceiling and <em>leverage</em></span>
-      <p>Every priced player with his floor, his ceiling, his modelled ownership and what the market disagrees with the consensus about.</p>
+      <p>Every priced player with his floor, his ceiling, his modeled ownership and what the market disagrees with the consensus about.</p>
       <span class="fp-act-go">Vegas Values &rarr;</span>
     </a>
     <a class="fp-act flat" href="/dfs#stacks">
@@ -1993,7 +1993,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   <p class="dfs-empty" id="dfsStacksEmpty">Reading the game lines&hellip;</p>
 
   <div class="sec-head" id="dfsTd"><h2>TD Board</h2><a class="sec-more" href="/dfs#td">The whole board &rarr;</a></div>
-  <p class="sec-sub">Players by the probability of scoring at least once, with the salary it costs to own that chance. Quoted where a book prices it, derived where none does, and labelled either way.</p>
+  <p class="sec-sub">Players by the probability of scoring at least once, with the salary it costs to own that chance. Quoted where a book prices it, derived where none does, and labeled either way.</p>
   <div class="dfs-scroll" id="dfsTdWrap" hidden>
     <table class="dfs-table" id="dfsTdTable">
       <thead><tr><th>#</th><th>Player</th><th class="num">Salary</th><th class="num">Anytime TD</th><th class="num">TD % per $1K</th><th class="num">Team total</th><th>Basis</th></tr></thead>
@@ -2005,7 +2005,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   <div class="dfs-cards">
     <div class="dfs-card"><h3><a href="/dfs#builder">Lineup Builder</a></h3><p>Build lineups against the cap on Iron Tuna, Vegas or consensus points, with stacks, bring-backs and a per-team cap.</p></div>
     <div class="dfs-card"><h3><a href="/dfs?site=pk">Pick&rsquo;em board</a></h3><p>Higher or lower on a posted stat line, read against the sportsbook median the model disagrees with.</p></div>
-    <div class="dfs-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
+    <div class="dfs-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offense is implied to score.</p></div>
     <div class="dfs-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much. 21+.</p></div>
   </div>
 
@@ -2358,7 +2358,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
 
 
   // ── the lead's artwork ─────────────────────────────────────────────────────
-  // A geometric field in the featured club's own colours — colours are a fact,
+  // A geometric field in the featured club's own colors — colors are a fact,
   // not a creative work — carrying the abbreviation, the club name and the
   // strap. That part is drawn here, as SVG, and always draws.
   //
@@ -2403,7 +2403,25 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
   }
   function inkOn(hex) { return lum(hex) > 0.34 ? '#101317' : '#ffffff'; }
+  // The house teal is the masthead's accent, and on a plate built out of a
+  // club's own colors it reads as a third team: the "AT" disc and the strap
+  // were teal between New England's navy and Seattle's green, answering to
+  // neither. It now dresses only the neutral league-wide plate, which has no
+  // club colors to sit against. Wherever a club is on the plate the furniture
+  // — badge, connector, strap — is drawn in the one neutral the club marks
+  // already sit on, so it reads as a set and never competes with the colors
+  // it sits between.
   var PLATE_TEAL = '#2dd4a3';
+  var PLATE_INK = '#101317';
+  // The ground a chip needs to stay legible over the field it straddles. The
+  // connector and the strap both cross the seam of a fixture plate, so they
+  // are measured against BOTH halves at once rather than against whichever one
+  // happens to be under their left edge.
+  function chipOn() {
+    var t = 0, n = 0;
+    for (var i = 0; i < arguments.length; i++) { if (arguments[i]) { t += lum(arguments[i]); n++; } }
+    return (n && t / n > 0.34) ? PLATE_INK : '#ffffff';
+  }
   // ESPN's path segment is the club abbreviation this file already uses, with
   // one exception it spells its own way.
   var LOGO_ID = { WAS: 'wsh' };
@@ -2480,17 +2498,21 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     // A plate that has not been laid out yet measures zero. Estimating from the
     // character count keeps the chip roughly right rather than collapsing it.
     if (!w) w = (txt.textContent || '').length * 8.4;
-    var pad = 13, x = +txt.getAttribute('x'), anchor = txt.getAttribute('text-anchor');
+    // The type is tracked out, so the measured width carries one trailing
+    // letter-space that belongs to no letter. Left in, it hangs the chip to the
+    // right of the words it wraps.
+    w = Math.max(0, w - 13 * 0.16);
+    var pad = 14, x = +txt.getAttribute('x'), anchor = txt.getAttribute('text-anchor');
     if (anchor === 'middle') x -= w / 2;
     else if (anchor === 'end') x -= w;
     chip.setAttribute('x', Math.max(6, x - pad));
     chip.setAttribute('width', Math.min(708, w + pad * 2));
-    chip.setAttribute('y', +txt.getAttribute('y') - 18);
-    chip.setAttribute('height', 26);
+    chip.setAttribute('y', +txt.getAttribute('y') - 19);
+    chip.setAttribute('height', 28);
   }
   function strapSvg(x, anchor, fill, sub) {
-    return '<rect class="strap-c" x="' + (x - 40) + '" y="94" width="80" height="26" rx="4" fill="' + fill + '"/>' +
-           '<text class="strap-t" x="' + x + '" y="112"' + (anchor ? ' text-anchor="' + anchor + '"' : '') +
+    return '<rect class="strap-c" x="' + (x - 40) + '" y="111" width="80" height="28" rx="9" fill="' + fill + '"/>' +
+           '<text class="strap-t" x="' + x + '" y="130"' + (anchor ? ' text-anchor="' + anchor + '"' : '') +
            ' fill="' + inkOn(fill) + '" style="font:800 13px Inter,Arial,sans-serif;letter-spacing:.16em">' + esc(sub) + '</text>';
   }
   // A club block: the mark, then the type that sits beside it. They travel in
@@ -2553,26 +2575,33 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var svg;
     if (pair) {
       var a = pair[0], b = pair[1], A = TEAM_ART[a], B = TEAM_ART[b];
-      // Two clubs whose primaries are the same colour (three of them are the
+      // Two clubs whose primaries are the same color (three of them are the
       // same near-black) would read as one field. The second takes its own
       // secondary instead, so the plate still says "two teams".
       var bgA = A[1], bgB = B[1] === A[1] ? B[2] : B[1];
+      // One neutral for every piece of furniture on this plate: the connector
+      // and the strap both cross the seam, so both are chosen against the two
+      // halves together.
+      var chip = chipOn(bgA, bgB), chipInk = inkOn(chip);
       svg =
-        '<svg viewBox="0 0 720 132" role="img" aria-label="' + esc(A[0]) + ' ' + pair[2].toLowerCase() + ' ' + esc(B[0]) + ' \u2014 ' + esc(sub) + '">' +
-          '<rect width="360" height="132" fill="' + bgA + '"/>' +
-          '<rect x="360" width="360" height="132" fill="' + bgB + '"/>' +
-          '<path d="M300 0 L340 0 L180 132 L140 132 Z" fill="' + inkOn(bgA) + '" opacity="0.06"/>' +
-          '<path d="M540 0 L580 0 L420 132 L380 132 Z" fill="' + inkOn(bgB) + '" opacity="0.06"/>' +
-          '<rect x="356" width="8" height="132" fill="#0b0d10"/>' +
-          clubSvg(a, 34, 12, 80,
-            '<text x="126" data-x0="34" y="56" fill="' + inkOn(bgA) + '" style="font:800 34px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(a) + '</text>' +
-            '<text x="128" data-x0="36" y="78" fill="' + inkOn(bgA) + '" opacity="0.72" style="font:700 10px Inter,Arial,sans-serif;letter-spacing:.12em">' + esc(A[0].toUpperCase()) + '</text>') +
-          clubSvg(b, 606, 12, 80,
-            '<text x="594" data-x0="686" y="56" text-anchor="end" fill="' + inkOn(bgB) + '" style="font:800 34px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(b) + '</text>' +
-            '<text x="592" data-x0="684" y="78" text-anchor="end" fill="' + inkOn(bgB) + '" opacity="0.72" style="font:700 10px Inter,Arial,sans-serif;letter-spacing:.12em">' + esc(B[0].toUpperCase()) + '</text>') +
-          '<circle cx="360" cy="50" r="21" fill="' + PLATE_TEAL + '"/>' +
-          '<text x="360" y="55" text-anchor="middle" fill="' + inkOn(PLATE_TEAL) + '" style="font:800 13px Inter,Arial,sans-serif;letter-spacing:.06em">' + pair[2] + '</text>' +
-          strapSvg(360, 'middle', PLATE_TEAL, sub) +
+        '<svg viewBox="0 0 720 150" role="img" aria-label="' + esc(A[0]) + ' ' + pair[2].toLowerCase() + ' ' + esc(B[0]) + ' \u2014 ' + esc(sub) + '">' +
+          '<rect width="360" height="150" fill="' + bgA + '"/>' +
+          '<rect x="360" width="360" height="150" fill="' + bgB + '"/>' +
+          '<path d="M300 0 L340 0 L180 150 L140 150 Z" fill="' + inkOn(bgA) + '" opacity="0.06"/>' +
+          '<path d="M540 0 L580 0 L420 150 L380 150 Z" fill="' + inkOn(bgB) + '" opacity="0.06"/>' +
+          '<rect x="356" width="8" height="150" fill="#0b0d10"/>' +
+          clubSvg(a, 34, 20, 82,
+            '<text x="131" data-x0="34" y="61" fill="' + inkOn(bgA) + '" style="font:800 34px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(a) + '</text>' +
+            '<text x="133" data-x0="36" y="83" fill="' + inkOn(bgA) + '" opacity="0.72" style="font:700 10px Inter,Arial,sans-serif;letter-spacing:.12em">' + esc(A[0].toUpperCase()) + '</text>') +
+          clubSvg(b, 604, 20, 82,
+            '<text x="589" data-x0="686" y="61" text-anchor="end" fill="' + inkOn(bgB) + '" style="font:800 34px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(b) + '</text>' +
+            '<text x="587" data-x0="684" y="83" text-anchor="end" fill="' + inkOn(bgB) + '" opacity="0.72" style="font:700 10px Inter,Arial,sans-serif;letter-spacing:.12em">' + esc(B[0].toUpperCase()) + '</text>') +
+          // The connector echoes the badges rather than fighting them: the same
+          // softened corners, sitting on the seam, centered on the two marks'
+          // own center line so the three read as one row.
+          '<rect x="335" y="45" width="50" height="32" rx="10" fill="' + chip + '"/>' +
+          '<text x="360" y="66" text-anchor="middle" fill="' + chipInk + '" style="font:800 13px Inter,Arial,sans-serif;letter-spacing:.06em">' + pair[2] + '</text>' +
+          strapSvg(360, 'middle', chip, sub) +
         '</svg>';
     } else {
       var t = one ? TEAM_ART[one] : null;
@@ -2581,20 +2610,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       var accent = t ? t[2] : PLATE_TEAL;
       var mark = t ? one : 'NFL';
       var ink = inkOn(bg);
+      // The strap lands half on the plate and half on the accent wedge. Drawn
+      // in the accent it dissolved into that wedge and only its type survived;
+      // the same neutral the fixture plate uses gives it one edge over both.
+      var chip = chipOn(bg, accent);
       svg =
-        '<svg viewBox="0 0 720 132" role="img" aria-label="' + esc(name) + ' \u2014 ' + esc(sub) + '">' +
-          '<rect width="720" height="132" fill="' + bg + '"/>' +
-          '<path d="M470 0 L720 0 L720 132 L560 132 Z" fill="' + accent + '" opacity="0.92"/>' +
-          '<path d="M420 0 L500 0 L340 132 L260 132 Z" fill="' + ink + '" opacity="0.06"/>' +
-          '<path d="M300 0 L340 0 L180 132 L140 132 Z" fill="' + ink + '" opacity="0.06"/>' +
+        '<svg viewBox="0 0 720 150" role="img" aria-label="' + esc(name) + ' \u2014 ' + esc(sub) + '">' +
+          '<rect width="720" height="150" fill="' + bg + '"/>' +
+          '<path d="M470 0 L720 0 L720 150 L560 150 Z" fill="' + accent + '" opacity="0.92"/>' +
+          '<path d="M420 0 L500 0 L340 150 L260 150 Z" fill="' + ink + '" opacity="0.06"/>' +
+          '<path d="M300 0 L340 0 L180 150 L140 150 Z" fill="' + ink + '" opacity="0.06"/>' +
           (function () {
             var type =
-              '<text x="' + (t ? 140 : 34) + '" data-x0="34" y="86" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
-              '<text x="' + (t ? 142 : 34) + '" data-x0="34" y="110" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>';
+              '<text x="' + (t ? 144 : 34) + '" data-x0="34" y="84" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
+              '<text x="' + (t ? 146 : 34) + '" data-x0="34" y="108" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>';
             // No club, no mark: the league-wide plate is the geometry alone.
-            return t ? clubSvg(one, 28, 18, 96, type) : type;
+            return t ? clubSvg(one, 28, 26, 92, type) : type;
           })() +
-          strapSvg(686, 'end', accent, sub) +
+          strapSvg(686, 'end', chip, sub) +
         '</svg>';
     }
     host.innerHTML = svg;
@@ -2625,8 +2658,8 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // tighter crop, then the NFL's own headshot. If both miss — a rookie whose
   // photo has not posted, or a blocker eating the request — the plate falls back
   // to initials, so a dead image never leaves a hole in the front page.
-  // The club colour reads the palette the plate above already defines, rather
-  // than carrying a second copy of it. Whichever of the two club colours holds
+  // The club color reads the palette the plate above already defines, rather
+  // than carrying a second copy of it. Whichever of the two club colors holds
   // more light wins, because a near-black primary (Chicago's navy,
   // Jacksonville's black) is invisible on this band; when both are that dark
   // the photo plate keeps its default trim.
@@ -2640,8 +2673,8 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var parts = n.replace(/\s+(?:Jr\.?|Sr\.?|I{2,3}|IV|V)$/i, '').trim().split(/\s+/);
     return ((parts[0] || '')[0] || '') + ((parts[parts.length - 1] || '')[0] || '');
   }
-  // The club colour again, this time at low alpha, so the plate behind a
-  // transparent cutout is tinted rather than a flat grey rectangle.
+  // The club color again, this time at low alpha, so the plate behind a
+  // transparent cutout is tinted rather than a flat gray rectangle.
   function tint(hex, a){
     var c = hex.replace('#', '');
     return 'rgba(' + parseInt(c.slice(0, 2), 16) + ',' + parseInt(c.slice(2, 4), 16) + ','
@@ -2690,7 +2723,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     // PLAYERS is this page's own cast, built from the players the AUTHORED drop
     // pages name. A generated lead can name anybody on the board, so it also
     // ships the faces it needs (`s.cast`, from LEAD_FACES in the worker). Prefer
-    // the local entry, fall back to the one that travelled with the story: a
+    // the local entry, fall back to the one that traveled with the story: a
     // four-player story used to render one photo because three of its names had
     // never appeared in a drop page.
     var sent = {};
@@ -2705,7 +2738,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     if (!keys.length){ band.hidden = true; if (card) card.classList.add('nopic'); return; }
     keys.forEach(function(k){ cast.appendChild(faceEl(PLAYERS[k] || sent[k])); });
     // `tm` means the story named nobody and this is that club's headline player,
-    // so the band is labelled with the team instead of claiming the story is
+    // so the band is labeled with the team instead of claiming the story is
     // about him. The club's full name comes from the plate's own palette.
     var stand = s.tm && TEAM_ART[s.tm];
     document.getElementById('leadMediaLabel').textContent = stand ? stand[0] : 'In this story';
@@ -2880,7 +2913,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     document.getElementById('leadTitle').innerHTML =
       '<a href="' + esc(s.url) + '">' + esc(rt ? rt.text : s.title) + '</a>';
     // The dek IS the finding, in the desk's own words. It is not a "play" line
-    // in the drop pages' sense, so it is not labelled as one.
+    // in the drop pages' sense, so it is not labeled as one.
     document.getElementById('leadPlay').innerHTML = esc(rd ? rd.text : (s.dek || ''));
     document.getElementById('leadStat').innerHTML = '';
     // Whose dollars these are, said out loud. A reader with no league saved is
@@ -3085,7 +3118,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var rawM = L.score(it.statsMarket || it.statsIronTuna, pos);
     if (!(rawI > 0) || !isFinite(rawC) || !isFinite(rawM)) return null;
     var p = L.hasBoard ? L.findPlayer(it.name, pos) : null;
-    // The saved board carries the app's season normalisation (and any per-player
+    // The saved board carries the app's season normalization (and any per-player
     // shaping) baked into its points, so a raw score of a stat line sits on a
     // different scale. Calibrating on THIS player's own row puts both boards
     // back on the reader's scale and applies the identical adjustment to each,
@@ -3121,7 +3154,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // data or nothing: a card is drawn only when every number on it exists, and
   // when the digest has no case the grid stays hidden and the note says so.
   // The TD card's percentage is DERIVED (Poisson on the blended season line
-  // over the games he can play), never a quoted book price, and it is labelled
+  // over the games he can play), never a quoted book price, and it is labeled
   // that way on the card because no free feed carries an anytime-TD market.
   function hbRank(b, key) {
     var v = b && b[key];
@@ -3359,8 +3392,8 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       : 'Basis: money lines and game totals, converted to implied team points. Team-level signal &mdash; it prices the offense, not the individual target share.';
     if (vsMeta && vsMeta.asOf) basis += ' Lines as of ' + new Date(vsMeta.asOf).toISOString().slice(0, 10) + '.';
     // Say exactly whose league the money is in. A price is meaningless without
-    // the budget behind it, and a personalised card that does not say it is
-    // personalised is just a number the reader cannot reconcile with anything.
+    // the budget behind it, and a personalized card that does not say it is
+    // personalized is just a number the reader cannot reconcile with anything.
     var L = window.ITLeague;
     if (my) {
       basis += ' Prices and points shown for ' + esc(L.label());
@@ -3732,7 +3765,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       // on every row read as wallpaper and buried the stories. It belongs to the
       // first story in the card that actually tailors, NOT unconditionally to the
       // lead: not every call carries a stat line the library can re-price, and
-      // pinning the line to the lead alone silently drops the personalisation off
+      // pinning the line to the lead alone silently drops the personalization off
       // the whole section whenever the five newest calls happen not to tailor.
       // That is exactly what it did — all five modules came back bare.
       function yoursEl(s){
@@ -4145,7 +4178,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var benchShown = fullySpent ? budgetShown - startersShown
       : bench ? (myBudget != null ? buildL.money(bench.cost) : bench.cost) : 0;
     // A position can hold real dollars and still round to 0% of the budget (the
-    // $1 defence is half a percent). Say so rather than printing "0%".
+    // $1 defense is half a percent). Say so rather than printing "0%".
     function pctOf(share, dollars) { return dollars > 0 && !share ? '&lt;1%' : share + '%'; }
     if (myBudget != null) {
       document.getElementById('buildBudget').textContent = '$' + myBudget;
@@ -4160,7 +4193,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
           (fullySpent ? ' &mdash; the whole <b>$' + budgetShown + '</b> is committed, with nothing left on the board' : '')
         : '') +
       '. It puts <b>' + (rb.share || 0) +
-      '% of the budget on running backs</b> and fills the starting quarterback, tight end, kicker and defence for <b>' +
+      '% of the budget on running backs</b> and fills the starting quarterback, tight end, kicker and defense for <b>' +
       fmtMoney(cheapSide) + ' combined</b>.';
     document.getElementById('rosterStrip').innerHTML = A.lineup.map(function(l){
       return '<div class="rs" data-pos="' + esc(l.pos) + '">' +
@@ -4210,7 +4243,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
 
     var top2 = A.lineup.slice().sort(function(a, b){ return b.price - a.price; }).slice(0, 2);
     var blurb = [
-      'The single biggest cheque the build writes, and it still clears.',
+      'The single biggest check the build writes, and it still clears.',
       'The second anchor. ' + (rb.n || 0) + ' backs take ' + (rb.share || 0) + '% of the budget between them.'
     ];
     document.getElementById('buildSide').innerHTML =
@@ -4226,8 +4259,8 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     // `posCost` is the STARTING LINEUP's spend by position, and the bench is a
     // row of its own in the spend bar and its key above. That is the ledger,
     // and it is right. Drawn the same way in this card, the DEF bar read "$1"
-    // on a $120 board, for a roster that has to carry two defences at a $1
-    // minimum each. The second defence was real and paid for: it was sitting
+    // on a $120 board, for a roster that has to carry two defenses at a $1
+    // minimum each. The second defense was real and paid for: it was sitting
     // inside the BENCH bar with nothing to say so, and the $2 starter rescaled
     // to $1.20 rounded down on top of it. So this card charts each position's
     // whole seat count, starters plus bench (the bench as a lighter tail of the
@@ -4282,8 +4315,8 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
             '<span class="bar-track"><span class="bar-fill" style="width:' + (r.edge / maxEdge * 100) + '%;background:' + (POS_INK[r.pos] || '#8b939c') + '"></span></span>' +
             '<span class="bar-val">' + r.edge + '</span></div>';
         }).join('') + '</div>' +
-        '<p class="bnote">Top player to replacement-level starter, in a ' + A.teams + '-team league. An elite defence beats a waiver defence by ' +
-        A.repl[A.repl.length - 1].edge + ' a game, which is why the build spends ' + fmtMoney(defCost) + ' on its starting defence.</p></div>' +
+        '<p class="bnote">Top player to replacement-level starter, in a ' + A.teams + '-team league. An elite defense beats a waiver defense by ' +
+        A.repl[A.repl.length - 1].edge + ' a game, which is why the build spends ' + fmtMoney(defCost) + ' on its starting defense.</p></div>' +
       '<div class="bcard" id="shapeCard"><h4>The shape of a winning $' + budgetShown + '</h4>' +
         '<p>The optimum is not balanced. It starts <b>' + (rb.n || 0) + ' running backs for ' + fmtMoney(rb.dollars || 0) +
         '</b> and refuses to pay retail anywhere the replacement line sits close behind.</p>' +
@@ -4543,7 +4576,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     single: { mode: 'ironTuna', stack: true, bring: false, maxTeam: 4, head: 'The single-entry roster', key: 'projPoints', keyLabel: 'Projected',
             why: 'The best roster the cap buys, with the quarterback correlated once so the ceiling is real. The optimal lineup, nothing given away for leverage.' },
     gpp: { mode: 'leverage', stack: true, bring: true, maxTeam: 4, head: 'The large-field roster', key: 'ceilingPoints', keyLabel: 'Ceiling',
-            why: 'A big field pays almost everything to the top fraction of a percent, so the median is worth nothing. Ceiling discounted by modelled ownership, stacked and brought back \u2014 the build that carries longshots on purpose.' }
+            why: 'A big field pays almost everything to the top fraction of a percent, so the median is worth nothing. Ceiling discounted by modeled ownership, stacked and brought back \u2014 the build that carries longshots on purpose.' }
   };
   var shape = 'single';
   function tagFor(p, qb) {

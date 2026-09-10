@@ -1,7 +1,7 @@
 /* Iron Tuna — the DFS lineup builder.
  *
  * Runs in the browser (and in node for its tests): a slate of priced players
- * in, N lineups out, under a salary cap and the site's roster, honouring
+ * in, N lineups out, under a salary cap and the site's roster, honoring
  * locks, exclusions, a QB stack, a bring-back, and a per-team maximum. The
  * objective is whichever number the mode names: Iron Tuna, Vegas, Consensus,
  * Vegas Edge (the Vegas line plus its Market Delta, which is the market's
@@ -10,7 +10,7 @@
  * best lineup in a double-up is not the best lineup in a 150,000-entry
  * tournament.
  *
- * The method is a randomised greedy fill followed by single- and pair-swap
+ * The method is a randomized greedy fill followed by single- and pair-swap
  * improvement, repeated; it is not an exact solver and does not claim to be. For a nine-
  * slot roster it lands within a fraction of a point of the exact optimum on
  * every fixture in tools/test-dfs.mjs, and it runs in milliseconds, which is
@@ -246,7 +246,7 @@
       // The objective is `points`, and it is not always a projection: in the
       // leverage mode it is a discounted ceiling, which is a ranking number and
       // not a total anybody should read as "what this lineup scores". So the
-      // real projection, the floor, the ceiling and the modelled ownership ride
+      // real projection, the floor, the ceiling and the modeled ownership ride
       // alongside it and the page prints those.
       var owned = bestL.map(ownOf).filter(function (v) { return v != null; });
       results.push({ key: bestL.map(function (p) { return p.id; }).sort().join('|'), players: bestL.map(function (p, i) { return { slot: cfg.slots[i], id: p.id, name: p.name, position: p.position, team: p.team, opponent: p.opponent, salary: p.salary, points: Math.round(mode.pts(p) * 10) / 10,

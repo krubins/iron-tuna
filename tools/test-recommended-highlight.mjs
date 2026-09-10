@@ -15,7 +15,7 @@
 //     what makes the box a real off switch rather than a label.
 //
 //  3. The emphasis is small. Half a point of type and a wash of the model's
-//     gold, and a favourite's green still outranks it, because the point is to
+//     gold, and a favorite's green still outranks it, because the point is to
 //     move the eye, not to repaint the sheet.
 //
 //  4. The $1-$2 endgame shortlist stays null until the manager is actually
@@ -26,7 +26,7 @@
 //     whole reason it exists: at a dollar the projections are noise, so the
 //     backup who inherits a workhorse's role has to beat the capped veteran
 //     who out-projects him. A shortlist that just re-sorted PPG would be the
-//     board again with a different colour.
+//     board again with a different color.
 //
 // Pure node — no browser, no npm deps. Every function under test is lifted out
 // of index.html by name, so this tracks the shipped source rather than a copy.
@@ -180,13 +180,13 @@ console.log('\nchecked, the model’s own buys stand out; unchecked, nothing mov
      cheatClasses({ on: true, upside: true }).includes('cheat-upside') &&
      railClasses({ on: true, upside: true }).includes('rail-upside') &&
      !cheatClasses({ on: false, upside: true }).includes('cheat-upside'));
-  // A favourite is a decision the manager made; a recommendation is one the
+  // A favorite is a decision the manager made; a recommendation is one the
   // model made. The decision wins the row.
-  ok('a favourite still keeps his own mark alongside it',
+  ok('a favorite still keeps his own mark alongside it',
      railClasses({ on: true, recommended: true, targeted: true }).includes('rail-target'));
 }
 
-// ── 3. the emphasis is small, and it loses to a favourite ──────────────────
+// ── 3. the emphasis is small, and it loses to a favorite ──────────────────
 console.log('\nthe emphasis is a nudge, not a repaint');
 {
   const rule = sel => {
@@ -203,7 +203,7 @@ console.log('\nthe emphasis is a nudge, not a repaint');
   ok('the wash is faint', alpha && +alpha <= 0.14, bg);
 
   const at = s => SRC.search(new RegExp('^' + s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'm'));
-  ok("a favourite's green still outranks the recommendation wash",
+  ok("a favorite's green still outranks the recommendation wash",
      at('.cheat-row.cheat-target {') > at('.cheat-row.cheat-rec {'));
   ok('the same holds on the auction board',
      at('.rail-row.rail-target {') > at('.rail-row.rail-rec {'));

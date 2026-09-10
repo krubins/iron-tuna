@@ -69,11 +69,11 @@
     <a class="rkr-link rkr-item" href="/stats" aria-current="page">Stats</a>
     <span class="rkr-item rkr-has-menu">
       <a class="rkr-link" href="/weekly-rankings">This Week&rsquo;s Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-rankings">Overall</a><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defence / special teams</a></span>
+      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-rankings">Overall</a><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defense / special teams</a></span>
     </span>
     <span class="rkr-item rkr-has-menu">
       <a class="rkr-link" href="/season-long-rankings">Season Long Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-rankings">Overall</a><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defence / special teams</a></span>
+      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-rankings">Overall</a><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defense / special teams</a></span>
     </span>
     <a class="rkr-link rkr-item" href="/hidden-value">Hidden Value</a>
     <a class="rkr-link rkr-item" href="/previews">Previews</a>
@@ -83,11 +83,16 @@
 <main id="main" class="wrap wide">
 <p class="is-eyebrow">In-Season &middot; Stats</p>
 <h1>What has actually been played</h1>
-<p class="is-lede">Every other board on this site is a forecast. This one is not. It is the season as it has been played &mdash; the weekly stat lines and snap counts, accumulated week by week and scored at the setting you choose. Nothing here is modelled, blended or shrunk, and no odds touch it.</p>
+<p class="is-lede">Every other board on this site is a forecast. This one is not. It is the season as it has been played &mdash; the weekly stat lines and snap counts, accumulated week by week and scored at the setting you choose. Nothing here is modeled, blended or shrunk, and no odds touch it.</p>
 <div class="its-strip" data-season-strip></div>
 
 <div class="rk-board" id="stBoard">
   <div class="rk-tools">
+    <!-- The season buttons are built from the payload for the same reason the
+         position buttons are: the store holds this season and last, and a
+         button for a year nobody has loaded is a control that empties the
+         table. /api/stats says which seasons it can actually serve. -->
+    <div class="rk-seg2" id="stSeason" role="group" aria-label="Season"></div>
     <div class="rk-seg2" id="stScoring" role="group" aria-label="Scoring">
       <button type="button" data-preset="standard">Standard</button>
       <button type="button" data-preset="half">Half PPR</button>
@@ -116,15 +121,18 @@
 <h2>Why a stats page sits beside the rankings</h2>
 <p>A ranking is an argument about the weeks ahead. A stat line is a record of the weeks behind. They answer different questions, and the mistake worth avoiding is treating either as the other: a receiver who has scored on a quarter of his catches has a real number on this page and an unrepeatable one, and a back with sixty carries and no touchdowns has the opposite problem. Read this page for what a player has been given &mdash; targets, carries, snaps &mdash; and read the rankings for what he is likely to do with it next.</p>
 
+<h2>Last season, on the same board</h2>
+<p>The season buttons switch the whole board between the season being played and the one before it. Last year&rsquo;s is the finished article &mdash; every regular-season week, the same usage columns, scored at the same setting you picked here &mdash; so a three-game sample and a full eighteen-week record can be read side by side without leaving the page. It is the honest way to ask whether a fast start is new: put last year next to it. The week view on a finished season is each player&rsquo;s final week rather than the league&rsquo;s latest.</p>
+
 <h2>Where the numbers come from</h2>
-<p>Weekly stat lines and snap counts come from nflverse, refreshed after each week&rsquo;s games are final, and are accumulated here week by week. Points are computed at the scoring you pick rather than stored, so the same underlying line serves a standard league and a full-PPR one. A player whose season line has not been published yet shows a dash rather than a zero, because those two say very different things.</p>
+<p>Weekly stat lines and snap counts come from nflverse, refreshed after each week&rsquo;s games are final, and are accumulated here week by week. Last season is pulled from the same feed and kept whole, because a finished season does not change. Points are computed at the scoring you pick rather than stored, so the same underlying line serves a standard league and a full-PPR one. A player whose season line has not been published yet shows a dash rather than a zero, because those two say very different things.</p>
 
 <h2>The rest of the section</h2>
 <div class="is-grid">
   <div class="is-card"><h3><a href="/weekly-rankings">This week&rsquo;s rankings</a></h3><p>The fantasy consensus and the betting market on the same player, for the week ahead.</p></div>
   <div class="is-card"><h3><a href="/season-long-rankings">Season long rankings</a></h3><p>The same two columns over the rest of the season, with every remaining week openable.</p></div>
   <div class="is-card"><h3><a href="/hidden-value">Hidden Value</a></h3><p>Where those two columns disagree by enough to act on.</p></div>
-  <div class="is-card"><h3><a href="/previews">Previews</a></h3><p>Every game this week with its line, its total and the points each offence is implied to score.</p></div>
+  <div class="is-card"><h3><a href="/previews">Previews</a></h3><p>Every game this week with its line, its total and the points each offense is implied to score.</p></div>
   <div class="is-card"><h3><a href="/player-intel">Player Intel</a></h3><p>One player at a time: his market, his usage and his week.</p></div>
   <div class="is-card"><h3><a href="/rankings">The full rankings tool</a></h3><p>Every horizon, every board and your own league&rsquo;s scoring in one place.</p></div>
 </div>
@@ -217,7 +225,8 @@
   // lines per player: the season, accumulated week by week, and the latest week
   // kept whole. Both are shipped in one payload, so the Season / Latest toggle
   // is a re-render rather than a round trip; only the scoring preset refetches.
-  var cache = {}, preset = 'ppr', pos = 'ALL', view = 'season', q = '';
+  var cache = {}, season = 'current', preset = 'ppr', pos = 'ALL', view = 'season', q = '';
+  var ckey = function () { return season + '|' + preset; };
   var $ = function (id) { return document.getElementById(id); };
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
@@ -282,13 +291,39 @@
     if (pos !== 'ALL' && list.indexOf(pos) < 0) pos = 'ALL';
   }
 
+  // One button per season the store can actually serve, newest first, labeled
+  // with the year rather than with "this" and "last" — a reader comparing two
+  // seasons wants to see which two. One season on hand is no choice, and no
+  // choice is drawn.
+  function seasons(j) {
+    var list = (j && j.seasons ? j.seasons : []).filter(function (s) { return s && s.season; });
+    var host = $('stSeason');
+    // Two seasons is a choice worth drawing. One is too, if it is not the one
+    // on screen — before Week 1 the only stat lines in the store are last
+    // year's, and the reader needs a way to them.
+    var draw = list.length > 1 || (list.length === 1 && list[0].key !== season);
+    var want = (draw ? list.map(function (s) { return s.key + ':' + s.season; }).join(',') : '') + '|' + season;
+    if (host.getAttribute('data-built') === want) return;
+    host.setAttribute('data-built', want);
+    host.innerHTML = !draw ? '' : list.map(function (s) {
+      return '<button type="button" data-season="' + e(s.key) + '">' + e(s.season) + '</button>';
+    }).join('');
+  }
+
   function render() {
-    var j = cache[preset];
+    var j = cache[ckey()];
     if (!j) { load(); return; }
+    var prior = j.seasonKey === 'prior';
+    seasons(j);
     positions(j);
+    press($('stSeason'), 'data-season', season);
     press($('stScoring'), 'data-preset', preset);
     press($('stPos'), 'data-pos', pos);
     press($('stView'), 'data-view', view);
+    // On a finished season "latest" is each player's own last game, not the
+    // league's newest week, and the button says which it is.
+    var vlatest = $('stView').querySelector('[data-view="latest"]');
+    if (vlatest) vlatest.textContent = prior ? 'Final week' : 'Latest week';
 
     var rows = j.players.filter(function (p) {
       if (pos !== 'ALL' && p.position !== pos) return false;
@@ -316,8 +351,9 @@
     if (!rows.length) $('stEmpty').textContent = 'Nothing matches that filter.';
 
     $('stStamp').innerHTML = 'Scored at <b>' + e(j.scoring ? j.scoring.label : preset) + '</b> &middot; ' +
-      (view === 'season' ? 'season to date' : 'the latest week played') +
-      (j.throughWeek ? ' &middot; through week ' + e(j.throughWeek) : '') +
+      (view === 'season' ? (prior ? 'the full season' : 'season to date')
+                         : (prior ? 'each player&rsquo;s final week' : 'the latest week played')) +
+      (j.throughWeek ? ' &middot; ' + (prior ? e(j.throughWeek) + ' weeks played' : 'through week ' + e(j.throughWeek)) : '') +
       (j.season ? ' &middot; ' + e(j.season) + ' season' : '') +
       ' &middot; ' + rows.length + ' player' + (rows.length === 1 ? '' : 's');
     $('stFoot').innerHTML = 'Source: ' + e(j.source || 'nflverse') + '. Points are computed at the scoring you choose rather than stored, ' +
@@ -328,14 +364,23 @@
     $('stEmpty').hidden = false;
     $('stEmpty').textContent = 'Reading the stat lines…';
     $('stTable').hidden = true;
-    fetch('/api/stats?scoring=' + encodeURIComponent(preset) + '&limit=600').then(function (r) { return r.json(); }).then(function (j) {
+    var asked = ckey();
+    fetch('/api/stats?scoring=' + encodeURIComponent(preset) + '&season=' + encodeURIComponent(season) + '&limit=600').then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok || !j.players) {
-        // Before Week 1 this is the honest answer, not a failure.
+        if (asked !== ckey()) return;
+        // Before Week 1 this is the honest answer, not a failure. The season
+        // buttons are redrawn from the answer, so a reader who asked for a
+        // season the store has not got can get back to one it has — but only
+        // from an answer that carries the list, never wiped by one that does
+        // not.
+        if (j && j.seasons) { seasons(j); press($('stSeason'), 'data-season', season); }
         $('stEmpty').textContent = (j && j.note) || 'No weekly stats have been published yet this season.';
         $('stStamp').textContent = '';
         return;
       }
-      cache[preset] = j;
+      cache[asked] = j;
+      // A slow answer for a season the reader has since left is kept, not drawn.
+      if (asked !== ckey()) return;
       render();
     }).catch(function () {
       $('stEmpty').textContent = 'The stat feed did not answer. Nothing is shown rather than a line that may be stale.';
@@ -343,6 +388,7 @@
   }
 
   function boot() {
+    $('stSeason').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; season = b.getAttribute('data-season'); render(); });
     $('stScoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; preset = b.getAttribute('data-preset'); render(); });
     $('stPos').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; pos = b.getAttribute('data-pos'); render(); });
     $('stView').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; view = b.getAttribute('data-view'); render(); });

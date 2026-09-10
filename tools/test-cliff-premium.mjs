@@ -148,8 +148,8 @@ console.log('\nthe premium rises as the tier drains');
   ok('it never runs away with the budget', P(1, 12, 100000) <= 30);
   ok('it scales with the budget, not with dollars',
      scarcityPremium({ count: 1, gapPts: 30, demand: 12 }, 400) > scarcityPremium({ count: 1, gapPts: 30, demand: 12 }, 200));
-  // The colour path calls this with the old shape and must be untouched by all
-  // of the above (tools/test-board-colour.mjs pins the rest of that contract).
+  // The color path calls this with the old shape and must be untouched by all
+  // of the above (tools/test-board-color.mjs pins the rest of that contract).
   // Given the board's own dollars per point, the premium IS the price of the
   // drop, weighted by the squeeze. No tuned constant, and it moves with the
   // board rather than with the size of the wallet.
@@ -209,7 +209,7 @@ console.log('\nthe alert, and how loud it is');
 
 console.log('\nwhere the premium actually lands');
 {
-  // The bid, not just the colour. These are the three lines that make the You
+  // The bid, not just the color. These are the three lines that make the You
   // column carry the cliff, and each of them has been reverted before.
   ok('the personalization reads the flags against the real room',
      /scarcityFlags\(valuedPlayers, new Set\(draftHistory\.map\(d => d\.playerId\)\), config, teams\)/.test(idx));

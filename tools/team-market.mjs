@@ -3,7 +3,7 @@
 // A spread and a total together price BOTH sides of a game: the home side is
 // total/2 + spread/2 and the away side total/2 - spread/2. That pair is the
 // market's expectation for how many points a team scores and concedes, which is
-// exactly the quantity a kicker's volume and a defence's points-allowed line are
+// exactly the quantity a kicker's volume and a defense's points-allowed line are
 // made of.
 //
 // ── Why a ratings fit and not an average ────────────────────────────────────
@@ -11,14 +11,14 @@
 // the season is priced. Averaging those games and multiplying by 17 asks a team
 // to be judged on whoever it happened to draw in September. Fitting instead
 //
-//     points(offence i vs defence j, at home h) = mu + off_i + def_j + hfa*h
+//     points(offense i vs defense j, at home h) = mu + off_i + def_j + hfa*h
 //
-// separates "this offence is good" from "those first six defences were bad",
+// separates "this offense is good" from "those first six defenses were bad",
 // and the fitted ratings then project across the WHOLE 17-game schedule, which
 // the file carries in full whether or not a line has been posted yet.
 //
 // A small ridge keeps the fit stable while a team has only a handful of priced
-// games. mu and hfa are never penalised — shrinking the intercept would drag the
+// games. mu and hfa are never penalized — shrinking the intercept would drag the
 // league's whole scoring level down with it.
 //
 // HAND-SYNCED with the "team market ratings" block in _worker.js, which runs the
@@ -89,7 +89,7 @@ export function parseSeasonGames(text) {
 }
 
 // Solve A x = b in place by Gaussian elimination with partial pivoting. The
-// system is 2n+2 wide (an offence and a defence rating per club, plus mu and
+// system is 2n+2 wide (an offense and a defense rating per club, plus mu and
 // hfa), which is 66 today — small enough that a dense solve is the simplest
 // thing that works.
 function solve(A, b) {

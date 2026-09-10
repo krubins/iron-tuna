@@ -23,9 +23,9 @@
 // anchor is a loud failure rather than a quiet half-render.
 // tools/test-it-league.mjs asserts the anchors are still in the pages.
 //
-// Two things here are stand-ins, and both are labelled as such in the output:
+// Two things here are stand-ins, and both are labeled as such in the output:
 // the desk story (real stories come from D1, so a sample one ships in the flags)
-// and, under --board, the reader's board — synthesised from the site's own rows
+// and, under --board, the reader's board — synthesized from the site's own rows
 // at their budget, because a real one is built by the app from their scoring.
 
 import fs from 'fs';
@@ -224,7 +224,7 @@ const rule = (s) => '\n' + bold(s) + '\n' + '─'.repeat(Math.min(72, s.length +
 function whoIsReading(L, o) {
   if (!L.has) return 'a reader with no league saved — the desk’s own dollars';
   return 'a reader on ' + L.label('auction') + (L.hasBoard ? ', with a board' : ', no board built')
-       + (L.hasBoard ? ' (synthesised at their budget; scoring not re-scored)' : '');
+       + (L.hasBoard ? ' (synthesized at their budget; scoring not re-scored)' : '');
 }
 
 function report(o, store) {

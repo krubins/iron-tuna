@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The job schedule (Step 30): one table in New York time, read by the hourly
-// tick. Pins the table against the spec, the daylight-saving behaviour, the
+// tick. Pins the table against the spec, the daylight-saving behavior, the
 // phase order, the env override and its validation, the report, and the tick.
 //   node tools/test-jobs.mjs
 import fs from 'fs';
@@ -14,7 +14,7 @@ const cut = (a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i); if (i <
 
 // Real ET clock helpers from the worker; stubbed jobs that record their runs.
 const runs = [];
-const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick', 'league-sync'].map(j => [j, async () => ({ ok: true })]));
+const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'usage-prior-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick', 'league-sync'].map(j => [j, async () => ({ ok: true })]));
 const jobRun = async (env, name, trigger) => {
   const rec = { job: name, trigger, started: Date.now() }; runs.push(rec);
   if (name === 'schedule-refresh') await new Promise(r => setTimeout(r, 30));
@@ -65,6 +65,7 @@ console.log('\nwhat is due, and daylight saving');
   ok('the order is phase 1, then 2, then 3, with the desk last', wed7.every((x, i) => i === 0 || x.phase >= wed7[i - 1].phase) && wed7[wed7.length - 1].job === 'content-tick');
   ok('a job with two entries is due once', due(ET(2026, 9, 13, 13, 0, true)).filter(j => j === 'market-snapshot').length === 1);
   ok('Sunday 4 AM prunes', ['snapshot-prune', 'analytics-prune', 'job-prune'].every(j => due(ET(2026, 9, 13, 4, 0, true)).includes(j)));
+  ok('last season is rebuilt daily at 5 AM, before this season\'s pull', due(ET(2026, 9, 17, 5, 0, true)).includes('usage-prior-refresh') && !due(ET(2026, 9, 17, 6, 0, true)).includes('usage-prior-refresh'));
   ok('the weekly stats pull is Tuesday and Wednesday 6 AM', due(ET(2026, 9, 15, 6, 0, true)).includes('usage-refresh') && due(ET(2026, 9, 16, 6, 0, true)).includes('usage-refresh') && !due(ET(2026, 9, 17, 6, 0, true)).includes('usage-refresh'));
   ok('an hourly job runs on the hour and not at a quarter past; a quarter-hourly job runs both', due(ET(2026, 9, 15, 6, 0, true)).includes('ros-snapshot') && !due(ET(2026, 9, 15, 6, 15, true)).includes('ros-snapshot') && due(ET(2026, 9, 15, 6, 15, true)).includes('content-tick') && !due(ET(2026, 9, 15, 7, 0, true)).includes('ros-snapshot'));
 }

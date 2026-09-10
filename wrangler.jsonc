@@ -17,7 +17,7 @@
     //
     // The three weekday social crons (13:00 / 16:00 / 19:00 UTC: auction, snake
     // and best-ball insight threads) are retired for the regular season and are
-    // NOT here; scheduled() still recognises their strings and refuses to post
+    // NOT here; scheduled() still recognizes their strings and refuses to post
     // in the regular season unless DRAFT_SEASON_SOCIAL=1. Put them back for 2027.
     "crons": ["*/15 * * * *"]
   }

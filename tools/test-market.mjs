@@ -292,7 +292,7 @@ console.log('\nmarket agreement');
 // ── 3. sportsbook markets into fantasy projections ─────────────────────────
 console.log('\nAmerican odds into probability');
 {
-  ok('a favourite price is over even money', near(M._oddsImpliedProb(-200), 2 / 3, 1e-9));
+  ok('a favorite price is over even money', near(M._oddsImpliedProb(-200), 2 / 3, 1e-9));
   ok('an underdog price is under it', near(M._oddsImpliedProb(150), 0.4, 1e-9));
   const p = M._oddsDevigOver(-110, -110);
   ok('a balanced pair de-vigs to a coin flip', near(p, 0.5, 1e-9), String(p));
@@ -341,7 +341,7 @@ console.log('\nthe projection itself');
     anytimeTD: [{ book: 'dk', overOdds: -110, underOdds: -110 }, { book: 'fd', overOdds: -110, underOdds: -110 }]
   }, 'WR', R, { asOf: Date.now() });
   ok('a fully priced receiver gets a full projection', full.ok && full.status === 'full', JSON.stringify(full.status));
-  ok('it is labelled a Vegas projection', full.label === 'Vegas projection');
+  ok('it is labeled a Vegas projection', full.label === 'Vegas projection');
   ok('the stats are the market\'s, in Iron Tuna keys',
      near(full.stats.recYd, 80.5, 0.6) && near(full.stats.rec, 6.5, 0.1), JSON.stringify(full.stats));
   ok('the TD is expected VALUE, not a fractional touchdown',

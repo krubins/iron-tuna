@@ -35,7 +35,7 @@ const W = new Function('PROJECTIONS', '_xb64encode', 'PROJ_KEY', 'fetch', `
 
 // ── a deterministic fixture ────────────────────────────────────────────────
 // Sixteen clubs, a double round robin, and a spread that makes the first club
-// the best offence and the last the worst. Half the fixtures carry no line, so
+// the best offense and the last the worst. Half the fixtures carry no line, so
 // the schedule-complete projection is doing real work rather than averaging.
 const CLUBS = ['AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH',
                'BA', 'BB', 'BC', 'BD', 'BE', 'BF', 'BG', 'BH'];
@@ -72,7 +72,7 @@ console.log('\nthe fit recovers what the fixture put in');
   ok('with essentially no residual', r.rmse < 0.05, 'rmse ' + r.rmse.toFixed(4));
   ok('home field comes back out', near(r.hfa, 0.75, 0.05), String(r.hfa.toFixed(3)));
   const t = seasonTotals(fixture, r);
-  ok('the best offence outscores the worst', t.AA.pf > t.BH.pf + 50, (t.AA.pf - t.BH.pf).toFixed(0));
+  ok('the best offense outscores the worst', t.AA.pf > t.BH.pf + 50, (t.AA.pf - t.BH.pf).toFixed(0));
   ok('and concedes less than it scores', t.AA.pa < t.AA.pf);
   const pf = CLUBS.reduce((a, c) => a + t[c].pf, 0), pa = CLUBS.reduce((a, c) => a + t[c].pa, 0);
   ok('points for and against balance', near(pf, pa, 1e-6), pf.toFixed(2) + ' vs ' + pa.toFixed(2));
@@ -90,12 +90,12 @@ console.log('\na season too thin to fit is refused, not guessed');
   ok('and the worker throws rather than serving a fit off ten games', threw);
 }
 
-console.log('\nthe kicker and defence models are one model');
+console.log('\nthe kicker and defense models are one model');
 {
   ok('league constants agree', JSON.stringify(W.KDEF_LEAGUE) === JSON.stringify(LEAGUE),
     JSON.stringify(W.KDEF_LEAGUE));
   ok('kicker constants agree', JSON.stringify(W.K_MODEL) === JSON.stringify(K_MODEL));
-  ok('the defence constants the worker uses agree',
+  ok('the defense constants the worker uses agree',
     W.D_MODEL.paOwnView === D_MODEL.paOwnView, String(W.D_MODEL.paOwnView));
   for (const pts of [300, 391, 460]) {
     const a = marketKicker(pts), b = W.marketKicker(pts);

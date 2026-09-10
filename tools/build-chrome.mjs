@@ -52,7 +52,7 @@ const APP = 'https://irontuna.com/';
 //
 // A best-ball page deliberately resolves to the AUCTION sheet rather than the
 // best-ball room: that line is retired (§27c), so there is no reason to keep
-// funnelling readers into it. The pages still serve, and their one button now
+// funneling readers into it. The pages still serve, and their one button now
 // points at the thing the site actually sells.
 const APP_BY_FORMAT = {
   auction: APP + 'auctiondraft?screen=cheat',
@@ -61,7 +61,7 @@ const APP_BY_FORMAT = {
 };
 
 // IN-SEASON FIRST. The 2026 season is under way, so the three things the
-// product is now about lead the nav in the order the site is organised in:
+// product is now about lead the nav in the order the site is organized in:
 // Fantasy, DFS, Market Intel. The desk (the columns and the AI analysts) is
 // next, and the draft tools — which are the same working tools they always
 // were, and matter again every offseason — sit behind one "Draft Tools" menu
@@ -165,7 +165,7 @@ const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-lea
 
 // The footer reads in the same order as the nav: the season first, the draft
 // tools after it, then the reading, the company and the legal shelf. "Data &
-// sources" is the public inventory of every external feed and the licence it is
+// sources" is the public inventory of every external feed and the license it is
 // used under (data.html) — an acquirer, a licensing partner and a curious
 // reader all want the same page, and burying it would be the wrong instinct.
 const FOOT_COLS = [
@@ -354,7 +354,7 @@ function putFoot(html, file) {
   }
   // The three legal pages carry a bare <footer> rather than <footer class="site">,
   // and they are exactly the pages where the Privacy/Terms links matter, so match
-  // either shape and normalise both onto the canonical one.
+  // either shape and normalize both onto the canonical one.
   const m = html.match(/<footer(?: class="site")?>[\s\S]*?<\/footer>/);
   if (!m) return html;
   return html.replace(m[0], () => `<footer class="site"><div class="wrap">\n  ${block}\n</div></footer>`);
@@ -423,7 +423,7 @@ const OWNED = [
   /footer\.site a\{[^}]*\}\n?/g,
   // superseded by site.css: the focus ring and the dropdown clamp added earlier
   /\n?\/\* Visible keyboard focus \(WCAG 2\.4\.7\)[\s\S]*?\[tabindex\]:focus-visible\{[^}]*\}\n?/g,
-  /\n?\/\* The dropdown is centred on its trigger[\s\S]*?@media \(max-width:560px\)\{\.nav-dd \.nav-dd-menu\{[^}]*\}\}\n?/g,
+  /\n?\/\* The dropdown is centered on its trigger[\s\S]*?@media \(max-width:560px\)\{\.nav-dd \.nav-dd-menu\{[^}]*\}\}\n?/g,
 ];
 function stripOwned(html) {
   const i = html.indexOf('<style>'), j = html.indexOf('</style>');

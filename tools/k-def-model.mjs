@@ -1,10 +1,10 @@
-// What the market's team totals say a kicker and a defence are worth.
+// What the market's team totals say a kicker and a defense are worth.
 //
 // Neither position has a season-long prop market, so nothing here comes from a
 // player line. Both are made almost entirely of team scoring environment, and
 // the game lines price that directly (tools/team-market.mjs), so the same file
 // that moves a running back's touchdowns can move a kicker's extra points and a
-// defence's points allowed.
+// defense's points allowed.
 //
 // ── Every constant below was measured, not chosen ───────────────────────────
 // Fitted over the 64 real team-seasons in nflverse stats_team_reg_2024.csv and
@@ -15,7 +15,7 @@
 //   fg_att   =  29.7  + 0.0120 * points      r = 0.14
 //
 // Extra points are very nearly a restatement of the team total. FIELD GOALS ARE
-// NOT: a kicker on a bad offence trades touchdowns for field goals, so the two
+// NOT: a kicker on a bad offense trades touchdowns for field goals, so the two
 // effects cancel and team quality explains almost nothing about make volume.
 // Any kicker board with a wide spread in projected field goals is asserting a
 // signal that is not in the data.
@@ -62,21 +62,21 @@ export const K_MODEL = {
   pctOwnView: 0.35, pctMin: 0.82, pctMax: 0.90
 };
 
-// ── defence ────────────────────────────────────────────────────────────────
+// ── defense ────────────────────────────────────────────────────────────────
 export const D_MODEL = {
   // Points allowed is the one defensive stat the market prices directly and the
   // one that dominates the fantasy line. Anchor on it and keep a sixth of our
   // own disagreement — enough for a real roster opinion to show, not enough to
   // put a 520-point season on a board.
   paOwnView: 0.15,
-  // Deviations are measured from the POOL's own mean and re-centred on the
+  // Deviations are measured from the POOL's own mean and re-centered on the
   // league's, so a feed that runs hot across the board is corrected rather than
   // shrunk toward its own bias.
   sackKeep: 0.35,      // yoy r 0.33
   fumRecKeep: 0.35,    // yoy r 0.01 — even this is generous
   // Defensive touchdowns are the position's biggest single scoring event and its
   // least predictable. Real clubs average 1.5 and six to eight of them score
-  // NONE, so a board that floors every defence at 2 invents about thirty
+  // NONE, so a board that floors every defense at 2 invents about thirty
   // touchdowns a season. The small tilt that remains follows takeaways, which is
   // the only thing a return score can come from.
   tdTilt: 0.8, tdMin: 1.0, tdMax: 2.2

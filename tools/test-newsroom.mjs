@@ -37,8 +37,8 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('// ── the scoring engine ─', 'const COLUMN_SCORING = {') + '\n' + cut('function _oddsImpliedProb(', '// The Odds API v4. WRITTEN') + '\n' +
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
-  cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normaliseCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
+  cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -55,7 +55,7 @@ console.log('\nthe migration');
   ok('the worth-gated pieces are the positional and QB features', ['quarterback-monday', 'tailback-tuesday', 'wideout-wednesday', 'tight-end-thursday'].every(k => H.CONTENT_KINDS[k].gate === 'worth'));
   ok('the Routines table names the two Pick Routines as retired and The Tell as retained', H.ROUTINE_MIGRATION.filter(r => /The Pick/.test(r.name)).every(r => r.disposition === 'retired') && H.ROUTINE_MIGRATION.find(r => /The Tell/.test(r.name)).disposition === 'retained');
   ok('the wrangler triggers are the single quarter-hour tick', /"crons": \["\*\/15 \* \* \* \*"\]/.test(fs.readFileSync(path.join(ROOT, 'wrangler.jsonc'), 'utf8')));
-  ok('the worker still recognises the old social crons and gates them', /draftSocialAllowed\(env\)/.test(cut('  async scheduled(event, env, ctx) {', '\nfunction originAllowed(')));
+  ok('the worker still recognizes the old social crons and gates them', /draftSocialAllowed\(env\)/.test(cut('  async scheduled(event, env, ctx) {', '\nfunction originAllowed(')));
 }
 
 console.log('\nthe staff and the one rivalry');
@@ -67,7 +67,7 @@ console.log('\nthe staff and the one rivalry');
   ok('the disclosure says they are AI personas, not people', /AI-powered editorial personas, not people/.test(H.AI_DISCLOSURE));
   const flags = H.flagReport({});
   // The three provider connectors (docs/league-sync.md) default OFF on purpose:
-  // Sleeper until its commercial licence is in writing, Yahoo and ESPN until
+  // Sleeper until its commercial license is in writing, Yahoo and ESPN until
   // configured. Every other flag is the intended product and defaults on.
   ok('every flag defaults on, except the provider connectors', Object.entries(flags).every(([k, f]) => (f.on || /^(SLEEPER|YAHOO|ESPN)_SYNC$/.test(k)) && f.source === 'default'));
   ok('the provider connectors default off', ['SLEEPER_SYNC', 'YAHOO_SYNC', 'ESPN_SYNC'].every(k => flags[k] && !flags[k].on));
@@ -301,8 +301,8 @@ console.log('\nthe DFS metrics');
   ok('value is indexed to the slate median', m.rows.some(r => r.value === 100) || Math.abs(_median(m.rows.map(r => r.value)) - 100) <= 1, JSON.stringify(m.rows.map(r => r.value)));
   ok('the cheap productive receiver is a value; the cheap unproductive one is not', B.value > 110 && C.value < 90, B.value + ' ' + C.value);
   ok('floor is below the projection and ceiling above it', m.rows.every(r => r.floor < r.ironTunaPoints && r.ceiling > r.ironTunaPoints));
-  ok('ownership is modelled and labelled', m.rows.every(r => r.ownershipBasis === 'modelled' && r.ownership >= 0 && r.ownership <= 42) && m.ownershipBasis === 'modelled');
-  ok('the value play draws more modelled ownership than the tax', B.ownership > C.ownership);
+  ok('ownership is modeled and labeled', m.rows.every(r => r.ownershipBasis === 'modeled' && r.ownership >= 0 && r.ownership <= 42) && m.ownershipBasis === 'modeled');
+  ok('the value play draws more modeled ownership than the tax', B.ownership > C.ownership);
   ok('leverage is ceiling over ownership', m.rows.every(r => Math.abs(r.leverage - Math.round(r.ceiling / Math.max(1, r.ownership) * 10) / 10) < 0.11));
   ok('every metric the spec names is on the row', ['value', 'ownership', 'leverage', 'ceiling', 'floor', 'tournamentScore', 'cashScore'].every(k => typeof B[k] === 'number'));
   ok('contest types change the emphasis, not the numbers', H.dfsMetrics(rows, 'cash').sortBy === 'cashScore' && H.dfsMetrics(rows, 'gpp').sortBy === 'leverage' && H.dfsMetrics(rows, 'nonsense').contest === 'gpp' && Object.keys(H.DFS_CONTESTS).length === 5);
@@ -350,7 +350,7 @@ console.log('\nthe packet the writer sees');
 console.log('\nanalyst memory');
 {
   const packet = H._finishBrief({ meta: { kind: 'trade-desk' }, players: [{ name: 'CeeDee Lamb', team: 'DAL', position: 'WR' }], playerIndex: { 'CeeDee Lamb': { key: 'ceedeelamb|WR', team: 'DAL', position: 'WR' } } });
-  const calls = H.normaliseCalls([{ player: 'CeeDee Lamb', direction: 'buy', recommendation: 'trade for him', confidence: 'high', rationale: 'targets', evidence: ['12 targets'] }, { player: 'Jerry Jeudy', direction: 'buy' }, { player: 'CeeDee Lamb', direction: 'moon' }], packet, 'brooks', 'weekly');
+  const calls = H.normalizeCalls([{ player: 'CeeDee Lamb', direction: 'buy', recommendation: 'trade for him', confidence: 'high', rationale: 'targets', evidence: ['12 targets'] }, { player: 'Jerry Jeudy', direction: 'buy' }, { player: 'CeeDee Lamb', direction: 'moon' }], packet, 'brooks', 'weekly');
   ok('a call on a player the packet contains is kept, keyed and stamped with the analyst', calls.length === 1 && calls[0].playerKey === 'ceedeelamb|WR' && calls[0].analyst === 'brooks' && calls[0].confidence === 'HIGH');
   ok('a call on a player the packet does not contain is dropped, and so is a direction the vocabulary lacks', !calls.some(c => c.player === 'Jerry Jeudy') && calls.length === 1);
   ok('a bullish call hits when the actual beats the projection and misses when it does not', H.gradeCall({ direction: 'buy' }, 20, 15).outcome === 'hit' && H.gradeCall({ direction: 'buy' }, 8, 15).outcome === 'miss' && H.gradeCall({ direction: 'sell' }, 8, 15).outcome === 'hit');
@@ -431,7 +431,7 @@ console.log('\nbreaking news');
 console.log('\nthe draft-season social guard');
 {
   ok('the env override allows the threads', (await H.draftSocialAllowed({ DRAFT_SEASON_SOCIAL: '1' })).ok);
-  ok('with no schedule the guard falls open (preseason behaviour is unchanged)', (await H.draftSocialAllowed({})).ok);
+  ok('with no schedule the guard falls open (preseason behavior is unchanged)', (await H.draftSocialAllowed({})).ok);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

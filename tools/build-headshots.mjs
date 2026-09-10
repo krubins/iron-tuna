@@ -24,7 +24,7 @@ const SRC = 'https://github.com/nflverse/nflverse-data/releases/download/players
 const POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'FB']);
 const MIN_LAST_SEASON = 2024;
 // nflverse and the app's own PROJECTIONS block disagree on a few club codes.
-// Normalise to the projections' spelling so one team lookup hits in both.
+// Normalize to the projections' spelling so one team lookup hits in both.
 const TEAM_FIX = { LA: 'LAR', JAC: 'JAX', WSH: 'WAS', SD: 'LAC', OAK: 'LV', STL: 'LAR' };
 const team = t => TEAM_FIX[t] || t || '';
 
