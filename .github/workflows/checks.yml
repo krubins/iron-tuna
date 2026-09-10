@@ -227,6 +227,25 @@ jobs:
       - name: The rankings ribbon, its pages and the consensus-vs-odds board
         run: node tools/test-ranks.mjs
 
+      # The newsroom (§68) bylines what it generates. These are the static story
+      # pages it does not touch — the 83 dated drop pages, the evergreen guides,
+      # the coaching column, The Pick — stamped from the SAME roster so the site
+      # has one masthead rather than two. Same contract as the three gates above:
+      # rebuilding here must produce no diff.
+      - name: The analyst byline is stamped on every static story page
+        run: |
+          if ! node tools/build-bylines.mjs --check; then
+            echo "::error::the analyst bylines are stale — run 'node tools/build-bylines.mjs' and commit the result"
+            exit 1
+          fi
+
+      # The roster lives in _worker.js and nowhere else, and the byline links to
+      # /analysts/<id>, which is a rewrite rather than a file — so nothing that
+      # walks the directory can tell you the link resolves. This pins both, and
+      # fails if any analyst name is ever copied into a second file.
+      - name: One masthead, read from the worker roster
+        run: node tools/test-bylines.mjs
+
       # The scrolling cheat-sheet insights are hand-written prose with no build
       # step, so nothing used to notice when a note outlived the roster it
       # described — by August 2026 eight of the eleven backfield notes named
