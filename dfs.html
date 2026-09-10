@@ -1014,7 +1014,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mode = b.getAttribute('data-mode'); press(this, 'data-mode', mode); tuned = true; build(); });
     $('dfTune').addEventListener('change', function (ev) { if (ev.target.closest('#dfMode')) return; tuned = true; build(); });
     $('dfBuild').addEventListener('click', function () { tuned = true; build(); });
-    $('dfPool').addEventListener('click', function (ev) { var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); tuned = true; build(); });
+    $('dfPool').addEventListener('click', function (ev) { if (ev.target.closest('.df-player-link')) return; var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); tuned = true; build(); });
     document.addEventListener('click', function (ev) {
       var player = ev.target.closest('.df-player-link');
       if (player) {
