@@ -1474,7 +1474,16 @@ function tmsSignals(rows, now, sharpBooks = []) {
 }
 async function tmsRoutes(request, env, url) {
   if (!url.pathname.startsWith('/api/tuna-market')) return null;
-  if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
+  const tmsCf = request && request.cf || {};
+  const tmsCountry = String(tmsCf.country || '').toUpperCase();
+  const tmsRegion = String(tmsCf.regionCode || '').toUpperCase();
+  const tmsRegionName = String(tmsCf.region || '').trim().toLowerCase();
+  if (tmsCountry === 'US' && (tmsRegion === 'WA' || tmsRegionName === 'washington')) {
+    return Response.json(
+      { ok: false, error: 'jurisdiction_unavailable', jurisdiction: 'US-WA', message: 'Betting Market Intel is not available in Washington.' },
+      { status: 451, headers: { 'cache-control': 'no-store', 'vary': 'CF-IPCountry' } }
+    );
+  }
   const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
   try {
     if (url.pathname === '/api/tuna-market/refresh' || url.pathname === '/api/tuna-market/import') {
