@@ -57,7 +57,7 @@ const H = new Function(
   cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' +
   cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
-  cut('// -- kickers and defences, scored', '// -- the insight detection engine') + '\n' +
+  cut('// -- kickers and defenses, scored', '// -- the insight detection engine') + '\n' +
   'return { scoringRules, scoreStats, scoreAny, scoreKickerStats, scoreDefenseStats, SCORING_KDEF, ' +
   'nflSeasonState, teamRatingsFrom, weekEnvironment, weeklyStats, horizonWeeks, marketDelta, MARKET_DELTA, ' +
   'explainDelta, roleTrendFrom, buildBoards, HORIZONS, IT_BLEND, marketHistoryFrom, marketPropsFrom, _oddsProjectionIndex };'
@@ -65,7 +65,7 @@ const H = new Function(
   { passYd: 0.2, passTD: 0.28, passInt: 0.35, rushYd: 0.3, rushTD: 0.4, recYd: 0.3, recTD: 0.4, rec: 0.28, scrimmageTD: 0.4 }, {});
 
 // ── the fixture season ─────────────────────────────────────────────────────
-// AAA and BBB are strong offences at home, CCC and DDD weak. Weeks 1-14 are
+// AAA and BBB are strong offenses at home, CCC and DDD weak. Weeks 1-14 are
 // posted (the ratings fit needs 24 priced games, the production floor); 15-18
 // are not. Every club has one bye. AAA's week-3 line is a
 // SHOOTOUT (total 54 vs a 44 norm) so its environment factor must read > 1.
@@ -128,11 +128,11 @@ console.log('\nweekly stat lines');
   const out = H.weeklyStats(full, 'RB', 15, { factor: 1, allowedFactor: 1 });
   ok('a player who misses games is divided by the games he plays', near(out.rushYd, 1200 / 15));
   const d = H.weeklyStats(POOL[7].projectedStats, 'DEF', 17, { factor: 1, allowedFactor: 0.8 });
-  ok('a defence facing a weak week allows fewer points', near(d.ptsAllowed, (340 / 17) * 0.8));
+  ok('a defense facing a weak week allows fewer points', near(d.ptsAllowed, (340 / 17) * 0.8));
   ok('and gets more sacks and takeaways', d.sacks > 40 / 17);
 }
 
-console.log('\nkickers and defences score like the app');
+console.log('\nkickers and defenses score like the app');
 {
   const app = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const lift = (h) => { const i = app.indexOf('\n' + h); const e = app.indexOf('\n}', i); return app.slice(i, e + 2); };
@@ -142,7 +142,7 @@ console.log('\nkickers and defences score like the app');
   const k = POOL[6].projectedStats, dst = POOL[7].projectedStats;
   ok('a kicker scores the same in the worker and the app', near(H.scoreKickerStats(k, H.SCORING_KDEF), APP.scoreKicker(k, cfg)),
      H.scoreKickerStats(k, H.SCORING_KDEF) + ' vs ' + APP.scoreKicker(k, cfg));
-  ok('a defence scores the same in the worker and the app', near(H.scoreDefenseStats(dst, H.SCORING_KDEF, 17), APP.scoreDefense(dst, cfg, 17)),
+  ok('a defense scores the same in the worker and the app', near(H.scoreDefenseStats(dst, H.SCORING_KDEF, 17), APP.scoreDefense(dst, cfg, 17)),
      H.scoreDefenseStats(dst, H.SCORING_KDEF, 17) + ' vs ' + APP.scoreDefense(dst, cfg, 17));
   const lg = fs.readFileSync(path.join(ROOT, 'it-league.js'), 'utf8');
   const L = new Function('SCORING_DEFAULTS', 'cfg', lg.slice(lg.indexOf('  function yardageScore('), lg.indexOf('  // The client\'s qbIsPremium')) + '\nreturn { score };')({}, null);
@@ -163,7 +163,7 @@ console.log('\nthe three boards, this week');
   ok('ranks are within position', rb.map(p => p.consensus.rank).sort().join(',') === '1,2');
   ok('FLEX pools RB, WR and TE', b.players.filter(p => p.ironTuna.flexRank).length === 5 &&
      b.players.filter(p => p.position === 'QB' || p.position === 'K' || p.position === 'DST').every(p => !p.ironTuna.flexRank));
-  ok('a defence is a DST on the board', b.players.some(p => p.position === 'DST' && p.pos === 'DEF'));
+  ok('a defense is a DST on the board', b.players.some(p => p.position === 'DST' && p.pos === 'DEF'));
   const beta = b.players.find(p => p.name === 'Beta Back');
   ok('consensus is the flat per-game line', near(beta.consensus.stats.rushYd, _oddsRound(1200 / 17), 0.06));
   ok('with no prop the Vegas basis is the game line, graded MEDIUM', beta.vegas.basis === 'gamelines' && beta.vegas.confidence === 'MEDIUM', beta.vegas.basis + ' ' + beta.vegas.confidence);

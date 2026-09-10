@@ -32,12 +32,12 @@ const ok = (name, cond, extra = '') => {
 // of, and "own" is us.
 const ALLOWED = {
   'api.the-odds-api.com':     { kind: 'content', why: 'paid odds feed; commercial display terms pending (docs/data-sources.md R3)' },
-  'site.api.espn.com':        { kind: 'content', why: 'REMEDIATION PENDING: undocumented endpoints, no commercial licence (R1)' },
+  'site.api.espn.com':        { kind: 'content', why: 'REMEDIATION PENDING: undocumented endpoints, no commercial license (R1)' },
   'api.sleeper.app':          { kind: 'content', why: 'REMEDIATION PENDING: non-commercial grant only (R2)' },
   // League sync (docs/league-sync.md). Sleeper league reads ride on the row
   // above and are gated by FLAG_SLEEPER_SYNC (default off) for the same R2
   // reason. Yahoo is OAuth 2.0 with the reader's consent, read-only scope.
-  'api.login.yahoo.com':      { kind: 'service', why: 'Yahoo OAuth 2.0 authorisation and token endpoints (league sync)' },
+  'api.login.yahoo.com':      { kind: 'service', why: 'Yahoo OAuth 2.0 authorization and token endpoints (league sync)' },
   'fantasysports.yahooapis.com': { kind: 'content', why: 'Yahoo Fantasy Sports API, the reader’s own leagues under their OAuth grant (R7)' },
   'static.www.nfl.com':       { kind: 'content', why: 'REMEDIATION PENDING: hot-linked league imagery, rights unreviewed (R4)' },
   'api.stripe.com':           { kind: 'service', why: 'payments' },
@@ -102,7 +102,7 @@ for (const f of DEPLOYED) {
 console.log('\nthe inventory is kept');
 const docPath = path.join(ROOT, 'docs', 'data-sources.md');
 ok('docs/data-sources.md exists', fs.existsSync(docPath),
-   'Section 14.1 needs one place that lists every source and its licence');
+   'Section 14.1 needs one place that lists every source and its license');
 if (fs.existsSync(docPath)) {
   const doc = fs.readFileSync(docPath, 'utf8');
   for (const h of [...hosts].sort()) {

@@ -156,7 +156,7 @@ for (const c of changes) {
 if (FETCH) {
   const feed = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries';
   // Node's fetch ignores HTTPS_PROXY, and the sandbox's egress needs it, so try
-  // fetch first and fall back to curl, which honours the proxy and its CA bundle.
+  // fetch first and fall back to curl, which honors the proxy and its CA bundle.
   let j = null;
   try {
     const r = await fetch(feed, { headers: { 'user-agent': 'iron-tuna-availability/1.0' } });

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Guards the committed kicker and defence rows in _worker.js.
+// Guards the committed kicker and defense rows in _worker.js.
 //
 //   node tools/test-k-def.mjs
 //
@@ -12,7 +12,7 @@
 //      than the spread of outcomes, because it is an average over seasons that
 //      have not happened. The board that this file replaced failed exactly here:
 //      it put 318 to 520 points allowed on a 32-club board, which is the spread
-//      of a season that HAS happened, and floored every defence at two return
+//      of a season that HAS happened, and floored every defense at two return
 //      touchdowns when six to eight clubs really score none.
 //
 // The league figures below come from nflverse stats_team_reg_2024.csv and
@@ -54,7 +54,7 @@ const mean = arr => arr.reduce((x, y) => x + y, 0) / arr.length;
 
 console.log('\ncoverage');
 {
-  ok('every club has a defence', D.length === 32, String(D.length));
+  ok('every club has a defense', D.length === 32, String(D.length));
   // A club the board prices on one side and not the other is a hole a reader
   // falls into: two clubs used to have no kicker at all.
   ok('every club has a kicker', K.length === 32, String(K.length));
@@ -73,7 +73,7 @@ console.log('\nkickers look like expectations');
   ok('field goal volume sits at the league level', Math.abs(mean(fg) - LEAGUE.fgMade) < 1.5, mean(fg).toFixed(1));
   // Team quality explains almost nothing about make volume (r = 0.15 over 64
   // team-seasons), so a wide board is asserting a signal that is not there.
-  // Realised sd is about 6; an expectation has to be far under that.
+  // Realized sd is about 6; an expectation has to be far under that.
   ok('and is not spread like a season of outcomes', sd(fg) < 2.5, 'sd ' + sd(fg).toFixed(2));
   // Extra points ARE nearly the team total (r = 0.96), so this one is allowed
   // real spread — just not more than the outcomes carry.
@@ -90,15 +90,15 @@ console.log('\nkickers look like expectations');
   ok('and converts extra points at it too', Math.abs(xpPct - LEAGUE.xpPct) < 0.015, (100 * xpPct).toFixed(1) + '%');
 }
 
-console.log('\ndefences look like expectations');
+console.log('\ndefenses look like expectations');
 {
   const pa = D.map(r => r.stats.ptsAllowed);
   ok('points allowed sit at the league level', Math.abs(mean(pa) - LEAGUE.points) < 15, mean(pa).toFixed(0));
-  // Realised season spread was sd 49 (2023), 52 (2024) and 61 (2025), and
+  // Realized season spread was sd 49 (2023), 52 (2024) and 61 (2025), and
   // year-over-year club correlation is 0.45 at best. An expectation carrying the
   // full outcome spread is selling noise as information.
   ok('and are not spread like a season of outcomes', sd(pa) < 40, 'sd ' + sd(pa).toFixed(1));
-  ok('but still separate the good defences from the bad', sd(pa) > 12, 'sd ' + sd(pa).toFixed(1));
+  ok('but still separate the good defenses from the bad', sd(pa) > 12, 'sd ' + sd(pa).toFixed(1));
   ok('no club is projected outside anything ever seen',
     Math.min(...pa) > 250 && Math.max(...pa) < 560, Math.min(...pa) + '..' + Math.max(...pa));
 
@@ -155,8 +155,8 @@ console.log('\nthe rows still reproduce the model over their own snapshot');
       if (Math.abs(m.pa - r.stats.ptsAllowed) > D_TOL) dBad.push(`${r.team} PA ${r.stats.ptsAllowed} vs market ${m.pa.toFixed(0)}`);
     }
     ok(`every kicker sits within ${K_TOL} of the market snapshot`, kBad.length === 0, kBad.slice(0, 4).join('; '));
-    ok(`every defence sits within ${D_TOL} of the market snapshot`, dBad.length === 0, dBad.slice(0, 4).join('; '));
-    // A defence that is 15% of the way from the market toward its own old view
+    ok(`every defense sits within ${D_TOL} of the market snapshot`, dBad.length === 0, dBad.slice(0, 4).join('; '));
+    // A defense that is 15% of the way from the market toward its own old view
     // has to track the market almost exactly. If it does not, the anchor is not
     // doing its job.
     const corr = (x, y) => { const n = x.length, mx = x.reduce((p, q) => p + q) / n, my = y.reduce((p, q) => p + q) / n;

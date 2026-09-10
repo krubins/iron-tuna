@@ -29,7 +29,7 @@
 // Fifth, THE SITE MUST NOT CONTRADICT ITSELF ABOUT WHERE A PAGE LIVES. Every
 // signal that names a URL — the canonical, og:url, the JSON-LD, the sitemap
 // entry — has to name the SAME one, and only one page may name it. Where they
-// disagreed, they cancelled: sitemap.xml advertised eight /analysts/<id> URLs
+// disagreed, they canceled: sitemap.xml advertised eight /analysts/<id> URLs
 // whose shell was noindex and canonicalised to /analysts, and creators.html
 // declared itself a duplicate of the front page while being listed as
 // /creators. Neither failure shows up as an error anywhere; the pages just
@@ -145,7 +145,7 @@ console.log('\nstructured data');
   // THE FLOOR. Before this, 52 pages carried no structured data at all —
   // /rankings, /dfs, /stats, /previews, /vegas-edge, /waivers, /trade-finder,
   // /faab and every per-position rankings board among them, which is to say the
-  // whole in-season product. A page with no markup is not penalised; it simply
+  // whole in-season product. A page with no markup is not penalized; it simply
   // arrives as prose to be guessed at rather than as a stated subject with a
   // stated publisher, and the guess is what loses.
   const indexable = pages.filter((f) => !/<meta name="robots"[^>]*noindex/.test(read(f)) && f !== ADMIN);
@@ -173,7 +173,7 @@ console.log('\nstructured data');
   ok('most pages take their markup from build-seo', generated.length > 140, String(generated.length));
 
   const orphan = generated.filter((f) => !read(f).includes(ORG));
-  ok('every generated graph names the one organisation', orphan.length === 0, orphan.slice(0, 6).join(', '));
+  ok('every generated graph names the one organization', orphan.length === 0, orphan.slice(0, 6).join(', '));
 
   const unmoored = generated.filter((f) => f !== FRONT).filter((f) => {
     const page = graphs(f).find((n) => n['@type'] !== 'BreadcrumbList');

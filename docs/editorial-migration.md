@@ -99,7 +99,7 @@ same facts.
   weekday social crons are removed. The quarter-hour tick is what makes a
   12:15 PM and a 7:30 PM slot possible in Eastern time without a UTC cron
   that drifts an hour every November.
-- `scheduled()` still recognises the old social cron strings, and refuses to
+- `scheduled()` still recognizes the old social cron strings, and refuses to
   post draft-season insight threads during the regular season unless
   `DRAFT_SEASON_SOCIAL=1` is set. The code is kept for 2027.
 - `JOB_SCHEDULE` entries gain `minutes`. The data pulls stay on their hourly

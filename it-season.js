@@ -71,7 +71,7 @@
   }
 
   var STATUS_LABEL = { upcoming: 'Upcoming', in_progress: 'In progress', completed: 'Final',
-                       postponed: 'Postponed', canceled: 'Cancelled' };
+                       postponed: 'Postponed', canceled: 'Canceled' };
   function statusLabel(s) { return STATUS_LABEL[s] || s; }
 
   // The one line every in-season page opens with: what part of the season it

@@ -304,7 +304,7 @@ p{color:var(--sec);margin:0 0 16px}
   <p class="is-note" id="dfContestNote"></p>
   <div class="rk-seg" id="dfBoard" role="group"><button type="button" data-board="metrics">Value &amp; Leverage</button><button type="button" data-board="bestVegasValues">Best Vegas Values</button><button type="button" data-board="tdUpside">TD Upside</button><button type="button" data-board="volumeValues">Volume Values</button><button type="button" data-board="expensiveFades">Expensive Fades</button></div>
   <div class="is-scroll"><table class="is-table" id="dfMetrics" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Proj</th><th class="num">Value</th><th class="num">Floor</th><th class="num">Ceiling</th><th class="num">Own% <small>(model)</small></th><th class="num">Leverage</th><th class="num">Cash</th><th class="num">Tourney</th><th>Chalk</th></tr></thead><tbody></tbody></table></div>
-  <p class="is-note" id="dfMetricsNote" hidden>Ownership is a model, not a feed: a logistic of value and salary tier, labelled as such everywhere it appears. Every metric’s method is written down in <code>docs/dfs-metrics.md</code>. Sorted for the contest type you chose.</p>
+  <p class="is-note" id="dfMetricsNote" hidden>Ownership is a model, not a feed: a logistic of value and salary tier, labeled as such everywhere it appears. Every metric’s method is written down in <code>docs/dfs-metrics.md</code>. Sorted for the contest type you chose.</p>
   <div class="is-scroll"><table class="is-table" id="dfValues" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Vegas</th><th class="num">Iron Tuna</th><th class="num">Consensus</th><th>Market Delta</th><th class="num">TD %</th><th class="num">Team total</th><th class="num">VVS</th></tr></thead><tbody></tbody></table></div>
 </section>
 
@@ -316,7 +316,7 @@ p{color:var(--sec);margin:0 0 16px}
 
 <section id="sec-td" hidden>
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">04</span><h2>TD Board</h2></div></div>
-  <p>Players by the probability of scoring at least once, with the salary it costs to own that chance. Quoted where a book prices it, derived where none does, and labelled either way.</p>
+  <p>Players by the probability of scoring at least once, with the salary it costs to own that chance. Quoted where a book prices it, derived where none does, and labeled either way.</p>
   <div class="is-scroll"><table class="is-table" id="dfTd" hidden><thead><tr><th>#</th><th>Player</th><th class="num">Salary</th><th class="num">Anytime TD</th><th class="num">TD % per $1K</th><th class="num">Team total</th><th>Basis</th></tr></thead><tbody></tbody></table></div>
 </section>
 
@@ -324,7 +324,7 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="is-grid">
   <div class="is-card"><h3><a href="/in-season">Overview</a></h3><p>This week&rsquo;s readings across both lanes, and the one place to save your league.</p></div>
   <div class="is-card"><h3><a href="/fantasy">Fantasy</a></h3><p>Your league, re-scored every week: rankings, start/sit, waiver prices and trades.</p></div>
-  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
+  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offense is implied to score.</p></div>
   <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
   <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
 </div>
@@ -640,7 +640,7 @@ p{color:var(--sec);margin:0 0 16px}
     var cls = function (v) { return v > 0 ? 'color:var(--teal)' : v < 0 ? 'color:var(--danger)' : ''; };
     host.innerHTML = '<h3 class="df-h3">' + (contra ? 'The contrarian swap' : 'The next best body') + ' <em>every slot</em></h3>'
       + '<p class="df-sub">' + (contra
-          ? 'The highest-ceiling player at each seat that fewer entries are modelled to own than the one in the roster. This is where a large-field lineup buys its leverage; take one or two, not nine.'
+          ? 'The highest-ceiling player at each seat that fewer entries are modeled to own than the one in the roster. This is where a large-field lineup buys its leverage; take one or two, not nine.'
           : 'What the seat is worth if the player in it is ruled out, or if you simply disagree. A swap that costs almost nothing is a slot the solve is indifferent about; one that costs three points is a slot the roster is built on.') + '</p>'
       + '<div class="is-plate"><div class="is-scroll"><table class="is-table"><thead><tr><th>Slot</th><th>In the roster</th><th>Swap to</th><th class="num">\u0394 Proj</th><th class="num">\u0394 Ceiling</th><th class="num">\u0394 Salary</th><th class="num">Own</th></tr></thead><tbody>'
       + rows.map(function (r) {

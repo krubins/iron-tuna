@@ -8,7 +8,7 @@
 // default league, exactly as _worker.js does for the Vegas column. If the app
 // changes one of those and this copy is left behind, the front page starts
 // quoting readers dollars their own cheat sheet disagrees with — which is worse
-// than not personalising at all. The first block lifts all three copies out of
+// than not personalizing at all. The first block lifts all three copies out of
 // their real files and fails loudly when they diverge.
 //
 // The rest runs the REAL it-league.js in a stub DOM against a stub league, so
@@ -146,7 +146,7 @@ console.log('\nscoring port matches the client function');
   ok('every real player scores identically in both copies', worst < 1e-9, `worst ${worst} on ${worstOf}`);
 }
 
-// ── 3. no saved league means nothing is personalised ───────────────────────
+// ── 3. no saved league means nothing is personalized ───────────────────────
 // A reader who has never opened the app must be shown the page's own numbers.
 console.log('\nno league saved');
 {
@@ -291,7 +291,7 @@ console.log('\nthe reading format');
   ok('the reader’s choice outranks the saved league', L.readingFormat() === 'auction');
   ok('a tailored line follows the switch',
      /\$/.test(L.tailor('+10% to +20% versus price', 'Bravo Wideout', 'WR', L.readingFormat())));
-  ok('an unrecognised format is refused rather than taken',
+  ok('an unrecognized format is refused rather than taken',
      L.setReadingFormat('cricket') === 'auction' && L.readingFormat() === 'auction');
   ok('the choice is written where the next page will find it',
      store.iron_tuna_reading_format_v1 === 'auction');
@@ -319,7 +319,7 @@ console.log('\nthe reading format');
     ok('and best ball reads in slots underneath', n.readingFormat() === 'snake');
     ok('a tailored line follows the edition',
        !/\$\d/.test(n.tailor('+10% to +20% versus price', 'Bravo Wideout', 'WR', n.readingFormat())));
-    ok('an unrecognised edition is refused rather than taken',
+    ok('an unrecognized edition is refused rather than taken',
        n.setEdition('kickball') === 'bestball' && n.edition() === 'bestball');
     ok('the choice is written where the next page will find it',
        s2.iron_tuna_edition_v1 === 'bestball');
@@ -382,7 +382,7 @@ console.log('\nthe default board');
       players: [{ n: someone.n, pos: 'WR', v: 99, pts: 400 }, { n: 'Filler Wideout', pos: 'WR', v: 5, pts: 100 }] })
   }).L;
   ok('a saved board wins over the site\u2019s', /is \$99 on your sheet/.test(own.tailor('+10% versus price', someone.n, 'WR')));
-  ok('and is labelled as theirs', own.tailorLabel() === 'Your league');
+  ok('and is labeled as theirs', own.tailorLabel() === 'Your league');
 
   // A league saved but no board built — the app writes both, so this is the
   // reader who set their league up and never opened the sheet. The site's board
@@ -397,7 +397,7 @@ console.log('\nthe default board');
      new RegExp('prices at \\$' + Math.round(someone.v * 0.6) + ' in your 12-team, \\$120 auction').test(short), short);
   ok('and is never shown the desk\u2019s league instead of their own',
      !/\$200/.test(short) && !/12-team, \$200/.test(short), short);
-  ok('and the line is labelled as theirs, because it is',
+  ok('and the line is labeled as theirs, because it is',
      halfPot.tailorLabel() === 'Your league');
 
   // The share of a budget is a share of THEIR budget, against the prices THEIR
@@ -515,7 +515,7 @@ console.log('\ndeclarative markup');
 
 // ── 8. the pages and the worker agree on the wire contract ─────────────────
 // The column's payload is publicly cached; the client only renders items whose
-// shape it recognises. If the worker adds a field and the page asks for the old
+// shape it recognizes. If the worker adds a field and the page asks for the old
 // contract, readers get an empty column until the cache expires.
 console.log('\nwire contract');
 {
@@ -567,7 +567,7 @@ console.log('\nwire contract');
 }
 
 // ── 9. end to end: the shipped stat lines reproduce the printed numbers ────
-// The whole personalisation rests on one claim — that points are a pure
+// The whole personalization rests on one claim — that points are a pure
 // function of a stat line and a scoring system, so a page holding the stat line
 // can rebuild the number the server printed. This proves it on the REAL column,
 // built by the REAL worker, off the real projection pool: at the site's own
@@ -650,7 +650,7 @@ console.log('\nfront.html myCase');
   const j = front.indexOf('\n  }', i);
   ok('myCase was found in front.html', i > 0 && j > i);
   const myCase = new Function('window', front.slice(i, j + 4) + '\n;return myCase;')({ ITLeague: null });
-  ok('no library, no personalisation', myCase({ position: 'WR' }) === null);
+  ok('no library, no personalization', myCase({ position: 'WR' }) === null);
 
   const board = { ts: 1, sv: 2, teams: 12, budget: 400, format: 'auction', players: [
     { n: 'Top Wideout', pos: 'WR', v: 70, pts: 320 },
@@ -952,7 +952,7 @@ console.log('\nthe sheet figure lands on the reader’s own row');
   ok('and its stored True Value cannot reach the page as a market price',
      !/\$44/.test((old.repriceCopy('The consensus sheet says $' + SITE_MC
         + ' for Tetairoa McMillan.', ['Tetairoa McMillan']) || {}).text || ''));
-  ok('but the league it names is still honoured',
+  ok('but the league it names is still honored',
      old.config && old.config.teams === 12 && old.config.budget === 200);
 }
 

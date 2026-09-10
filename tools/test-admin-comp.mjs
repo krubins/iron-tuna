@@ -126,7 +126,7 @@ let happyLink = null;
   resetMail();
   const j = await jsonOf(await call(env, `/api/admin/comp?key=${KEY}&email=Friend@Example.com`));
   ok('the request succeeds', j && j.ok === true, JSON.stringify(j));
-  ok('the address is normalised to lowercase', j.email === 'friend@example.com', j.email);
+  ok('the address is normalized to lowercase', j.email === 'friend@example.com', j.email);
   ok('it reports the account as entitled', j.entitled === true);
   ok('it reports that something changed', j.changed === true);
   ok('it reports the mail as sent', j.sent === true && j.emailError === null, JSON.stringify({ sent: j.sent, err: j.emailError }));
@@ -190,7 +190,7 @@ console.log('\nsend=0 (hand the link over yourself)');
   ok('nothing was emailed', mail.calls.length === 0 && j.sent === false);
   ok('the note says nothing was emailed', /Nothing was emailed/i.test(j.note || ''), j.note);
   ok('the link is still returned to pass on', /\/api\/auth\/verify\?token=/.test(j.link || ''), j.link);
-  ok('the shorter lifetime is honoured', j.days === 1 && new Date(j.expiresAt).getTime() - Date.now() <= 86400e3, j.expiresAt);
+  ok('the shorter lifetime is honored', j.days === 1 && new Date(j.expiresAt).getTime() - Date.now() <= 86400e3, j.expiresAt);
 }
 
 // ── the send that quietly fails ────────────────────────────────────────────

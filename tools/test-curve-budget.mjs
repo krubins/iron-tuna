@@ -139,7 +139,7 @@ const rostered = [];
 Object.entries(config.roster).forEach(([pos, c]) => (byPos[pos] || []).slice(0, c.total * config.teams).forEach(p => rostered.push(p)));
 const sum = (l, k) => l.reduce((s, p) => s + (p[k] || 0), 0);
 
-// The RAW curve, priced the way it-league.js and the worker price it: no renormalisation.
+// The RAW curve, priced the way it-league.js and the worker price it: no renormalization.
 const rawCurveTotal = (() => {
   const scale = totalLeagueBudget(config) / LEAGUE_CURVE_BUDGET, MIN = config.valuation.minBid;
   let total = 0;
@@ -249,8 +249,8 @@ for (const [name, src, re] of [['_worker.js', worker, /COLUMN_CURVE_BUDGET\s*=\s
 }
 
 // ── 5. a superflex reader's it-league quotes land on the app's SF board ────
-// it-league.js swaps to SUPERFLEX_QB_CURVE and renormalises when the saved
-// league is QB-premium. The app renormalises by largest remainder, the library
+// it-league.js swaps to SUPERFLEX_QB_CURVE and renormalizes when the saved
+// league is QB-premium. The app renormalizes by largest remainder, the library
 // by a flat factor, so parity is within a dollar — the bug this guards against
 // was a whole QB tier ($47 quoted against a $69 sheet).
 console.log('\nsuperflex parity with the app');

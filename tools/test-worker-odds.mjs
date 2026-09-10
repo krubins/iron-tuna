@@ -150,7 +150,7 @@ console.log('\nscrimmageTD split');
   ok('combined market is not passed through', s.scrimmageTD === undefined);
 }
 
-console.log('\nfail-safe behaviour');
+console.log('\nfail-safe behavior');
 {
   const noDb = await W.runOddsRefresh({});
   ok('no database is a no-op, not a throw', noDb.ok === false && noDb.error === 'no_db');
@@ -313,7 +313,7 @@ console.log('\nteam-env overlay maths');
   ok('too few priced teams yields nothing rather than garbage',
     R.buildTeamEnvOverlay({ BUF: { pf: 425, pa: 390 }, KC: { pf: 408, pa: 380 } }).matched === 0);
 
-  // ── kickers and defences ────────────────────────────────────────────────
+  // ── kickers and defenses ────────────────────────────────────────────────
   // Neither is scaled by the offensive factor: the market's implied points ARE
   // the estimate, so a club the market and the projections already agree about
   // still gets a line here — and only on the stats each position really has.
@@ -324,17 +324,17 @@ console.log('\nteam-env overlay maths');
     const kOv = kRows.map(p => kd[R._oddsNorm(p.name) + '|K']);
     const dOv = dRows.map(p => kd[R._oddsNorm(p.name) + '|DEF']);
     ok('every kicker in the pool is priced', kOv.every(Boolean), String(kOv.filter(Boolean).length) + '/' + kRows.length);
-    ok('every defence in the pool is priced', dOv.every(Boolean), String(dOv.filter(Boolean).length) + '/' + dRows.length);
+    ok('every defense in the pool is priced', dOv.every(Boolean), String(dOv.filter(Boolean).length) + '/' + dRows.length);
     ok('a kicker gets exactly the four stats a kicker line has',
       kOv.every(o => Object.keys(o).sort().join(',') === 'fgMade,fgMissed,xpMade,xpMissed'),
       JSON.stringify(kOv[0]));
-    ok('a defence gets points allowed and nothing a book has no opinion about',
+    ok('a defense gets points allowed and nothing a book has no opinion about',
       dOv.every(o => Object.keys(o).join(',') === 'ptsAllowed'), JSON.stringify(dOv[0]));
     ok('no projected make rate falls under the model floor',
       kOv.every(o => o.fgMade / (o.fgMade + o.fgMissed) >= R.K_MODEL.pctMin - 1e-9),
       String(Math.min(...kOv.map(o => o.fgMade / (o.fgMade + o.fgMissed))).toFixed(3)));
     // Every club in `agree` carries the same 391 points against, so the market
-    // side is identical and only the committed row can separate two defences.
+    // side is identical and only the committed row can separate two defenses.
     const spread = Math.max(...dOv.map(o => o.ptsAllowed)) - Math.min(...dOv.map(o => o.ptsAllowed));
     const commSpread = Math.max(...dRows.map(p => p.projectedStats.ptsAllowed))
                      - Math.min(...dRows.map(p => p.projectedStats.ptsAllowed));
@@ -352,7 +352,7 @@ console.log('\nteam-env overlay maths');
   }
 }
 
-console.log('\nkicker and defence model');
+console.log('\nkicker and defense model');
 {
   // pat_made = -17.0 + 0.1396 * points, fg_made = 24.3 + 0.0126 * points.
   const m = R.marketKicker(400);
@@ -404,11 +404,11 @@ try {
     Math.min(...pf).toFixed(1) + '..' + Math.max(...pf).toFixed(1));
   // Scored and conceded are the same pool of points seen from the two ends, so
   // the league means have to agree. They diverging is the signature of a fit
-  // that has drifted (a penalised intercept, a half-parsed schedule).
+  // that has drifted (a penalized intercept, a half-parsed schedule).
   ok('points for and against balance across the league',
     Math.abs(pf.reduce((a, b) => a + b, 0) - pa.reduce((a, b) => a + b, 0)) < 1,
     (pf.reduce((a, b) => a + b, 0) / n).toFixed(2) + ' vs ' + (pa.reduce((a, b) => a + b, 0) / n).toFixed(2));
-  // Defences are the point of the schedule-complete fit: a spread as wide as a
+  // Defenses are the point of the schedule-complete fit: a spread as wide as a
   // season of OUTCOMES would mean the ratings had not shrunk anything.
   const paSd = (a => { const m = a.reduce((x, y) => x + y, 0) / a.length;
     return Math.sqrt(a.reduce((x, v) => x + (v - m) ** 2, 0) / a.length); })(Object.values(totals).map(v => v.pa));

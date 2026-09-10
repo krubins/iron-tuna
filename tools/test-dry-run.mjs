@@ -151,7 +151,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('// ── the scoring engine ─', 'const COLUMN_SCORING = {') + '\n' + cut('function _oddsImpliedProb(', '// The Odds API v4. WRITTEN') + '\n' +
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
-  cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
+  cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
   'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, fakeFetch, stub, 'x', async () => {}, {}, {}, async () => null, availabilityTable, availabilityCacheRead, async () => null, availabilityReport, async () => null, stub, stub, {}, {}, p => p, async (id) => { const norm = RAW; return norm; });
 const db = fakeDb(clock);

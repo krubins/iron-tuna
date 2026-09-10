@@ -158,7 +158,7 @@ console.log('\nan auction league');
 // ── 3. no league: both readings, on the site's own board ───────────────────
 // These are the readers least able to translate a bare percentage themselves,
 // so they get the most of it — dollars, the share of a budget, and the draft
-// slots — off the site's default board, labelled as the site's, never as theirs.
+// slots — off the site's default board, labeled as the site's, never as theirs.
 // No switch: with both readings in the line there is nothing to switch between.
 console.log('\na reader who has never opened the app');
 {

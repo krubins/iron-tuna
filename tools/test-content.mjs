@@ -28,7 +28,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('// ── the scoring engine ─', 'const COLUMN_SCORING = {') + '\n' + cut('function _oddsImpliedProb(', '// The Odds API v4. WRITTEN') + '\n' +
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
-  cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
+  cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
   'return { normalizeGameSummary, gameUsageByTeam, contentDue, kindTitle, CONTENT_KINDS, lastPlayedWeek, etParts, nflSeasonState, _oddsProjectionIndex, briefForGames, briefTeamRecaps, briefWtaty, validateDraft, _finishBrief, _nextEt, scoringRules, detectInsights, briefFinalRead, briefGamePlan };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {});
 

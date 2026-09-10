@@ -178,12 +178,12 @@ console.log('\none player');
 
   ok('a kicker is told why there is nothing to compare',
      R.buildPlayerOdds(OVERLAY, CTX, 'Any Kicker', 'K').reason === 'unpriced_position');
-  ok('so is a defence',
-     R.buildPlayerOdds(OVERLAY, CTX, 'Any Defence', 'DEF').reason === 'unpriced_position');
+  ok('so is a defense',
+     R.buildPlayerOdds(OVERLAY, CTX, 'Any Defense', 'DEF').reason === 'unpriced_position');
   ok('a name off the board is refused rather than guessed',
      R.buildPlayerOdds(OVERLAY, CTX, 'Nobody Whatsoever', 'WR').reason === 'off_board');
   ok('an empty name is refused', R.buildPlayerOdds(OVERLAY, CTX, '', 'WR').reason === 'no_player');
-  ok('a matched player is found through the same normalisation the odds use',
+  ok('a matched player is found through the same normalization the odds use',
      !!R.buildPlayerOdds(OVERLAY, CTX, priced.name.toUpperCase() + ' Jr.', priced.position).player
      || R._oddsNorm(priced.name + ' Jr.') !== R._oddsNorm(priced.name));
   ok('no overlay means no answer, never a made-up one',

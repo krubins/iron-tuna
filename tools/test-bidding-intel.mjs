@@ -119,7 +119,7 @@ const kindOf = (r, label) => (r.needs.find(n => n.label === label) || {}).kind;
   // starting slots, so he has taken the flex and nothing left is a flex slot.
   const r = intel([mgr('t1', 'Flex used', [['rbA', 10], ['rbB', 10], ['wrA', 10], ['wrB', 10], ['wrC', 10], ['teA', 10]])])[0];
   ok('a manager one over at a position has spent his flex', r.flexOpen === 0, String(r.flexOpen));
-  ok('nothing on his sheet is still labelled flex', !r.needs.some(n => n.kind === 'flex'), r.needs.map(n => n.label + ':' + n.kind).join(','));
+  ok('nothing on his sheet is still labeled flex', !r.needs.some(n => n.kind === 'flex'), r.needs.map(n => n.label + ':' + n.kind).join(','));
 }
 // ── 4. the max bid is the ceiling nobody can go past ────────────────────────
 {
@@ -287,13 +287,13 @@ const r1Chips = () => 3;
   const chips = classes.filter(c => c.startsWith('bi-chip'));
   ok('every needs chip is tagged with its position', chips.length > 0 && chips.every(c => /\bbi-p-[A-Z]+\b/.test(c)), chips.join(' | '));
   ok('every needs chip still says how urgent the hole is', chips.every(c => /\bbi-(starter|flex|bench)\b/.test(c)), chips.join(' | '));
-  ok('the legend shows the coding rather than only naming it', chips.length >= r1Chips(el) && /Colour is the position/.test(txt), txt.slice(0, 500));
-  // A position the stylesheet has no colour for renders in the neutral base and
+  ok('the legend shows the coding rather than only naming it', chips.length >= r1Chips(el) && /Color is the position/.test(txt), txt.slice(0, 500));
+  // A position the stylesheet has no color for renders in the neutral base and
   // nobody notices — so the palette is checked against the positions the app
   // actually ships, not against whatever this fixture happens to use.
   const css = idx.slice(idx.indexOf('<style>'), idx.indexOf('</style>'));
   const unstyled = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(pos => !css.includes('.bi-chip.bi-p-' + pos));
-  ok('every position the app ships has a chip colour', unstyled.length === 0, 'missing: ' + unstyled.join(','));
+  ok('every position the app ships has a chip color', unstyled.length === 0, 'missing: ' + unstyled.join(','));
   ok('the panel never prints', classes.some(c => c.includes('no-print')));
 }
 

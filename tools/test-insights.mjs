@@ -30,7 +30,7 @@
 // The roster rules run against FANTASY_FACTS, not PERF_NOTES. PERF_NOTES is
 // dated ("updated: Aug 19, 2026") and reports news, so it is allowed to discuss
 // a player precisely because he just left the board — the Pearsall note exists
-// to say he is off it. Undated advice gets no such licence.
+// to say he is off it. Undated advice gets no such license.
 
 import fs from 'fs';
 import path from 'path';
@@ -95,7 +95,7 @@ const ENTRY_YEAR = {
 };
 
 // ── reading names out of prose ────────────────────────────────────────────
-// One normaliser for both sides, so "A.J. Brown", "RJ Harvey" and "Brown's"
+// One normalizer for both sides, so "A.J. Brown", "RJ Harvey" and "Brown's"
 // reduce the same way whether they come from the pool or from a sentence.
 // Words, not characters: matching on token runs is what keeps "Love" from
 // landing inside "Loveland" and "Rookie Jadarian" from reading as a name.
@@ -144,7 +144,7 @@ const TEAMS = {
   Eagles: 'PHI', Steelers: 'PIT', '49ers': 'SF', Seahawks: 'SEA',
   Buccaneers: 'TB', Titans: 'TEN', Commanders: 'WAS', Washington: 'WAS'
 };
-// Capitalised words that are not people. Cities read exactly like names
+// Capitalized words that are not people. Cities read exactly like names
 // ("Green Bay", "New Orleans"), and the coaches are the ones this prose names —
 // a coach the list has not met is reported until somebody adds him, which is
 // the right way round for a check that is looking for names it does not know.
@@ -172,11 +172,11 @@ const teamInLabel = label => {
 // are functions rather than inline assertions so the fixtures at the bottom can
 // re-run them against the notes that shipped wrong.
 
-// Two capitalised words in a row that the pool did not claim. Initials ("A.J.")
+// Two capitalized words in a row that the pool did not claim. Initials ("A.J.")
 // and all-caps first names ("RJ") count; a full stop between them does not, so
 // "Minnesota. Buy both" stays a sentence boundary rather than becoming a person.
 // Internal capitals are ordinary in these names — MarShawn, TreVeyon, McCaffrey
-// — so the shape is "starts capitalised", not "capitalised then lower case".
+// — so the shape is "starts capitalized", not "capitalized then lower case".
 const CAPPED = /^(?:(?:[A-Z]\.){1,3}|[A-Z][A-Za-z’'-]*)$/;
 // A surname carries lower case somewhere, which is what separates "Lloyd" and
 // "McCaffrey" from the abbreviations this prose is full of — RB, PPR, TE.

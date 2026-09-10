@@ -82,7 +82,7 @@ if (!board.ok) { console.error('FAIL: board did not build — ' + board.error); 
 // different Sundays if one of them gets there on receptions and the other on
 // scores.
 //
-// Every event count is modelled Poisson over 17 games, which is what makes the
+// Every event count is modeled Poisson over 17 games, which is what makes the
 // arithmetic below fall out of the projection set alone with no fitted
 // constants: for a Poisson count with mean m, points = k * count carries
 // variance k^2 * m. Summing the independent pieces gives a per-game standard
@@ -176,7 +176,7 @@ console.log(`\nteams priced ${teams}   players the overlay moved ${matched}   po
 // in tools/lead-story-routine-prompt.md.
 //
 // So: what the odds do to a player is a RANK story with ONE price attached.
-// The columns below are labelled to make writing it the other way awkward.
+// The columns below are labeled to make writing it the other way awkward.
 const BID = r => r.draftable && (r.priceConsensus >= 5 || r.priceIronTuna >= 5 || r.rankConsensus <= 24);
 
 console.log('\n══ RANKINGS vs ODDS ══  positional rank on the committed sheet minus rank on the odds board');
@@ -208,7 +208,7 @@ console.log('\n══ THE BIGGEST RANK MOVES, WITH THE ONE PRICE ══  board$ 
   }
 }
 
-console.log('\n══ WEEK-TO-WEEK SHAPE ══  modelled per-game spread; lower is steadier');
+console.log('\n══ WEEK-TO-WEEK SHAPE ══  modeled per-game spread; lower is steadier');
 const draftable = rows.filter(r => BID(r) && r.spread != null);
 for (const scope of [['FLEX (RB/WR/TE)', r => r.position !== 'QB'], ['QB', r => r.position === 'QB']]) {
   const pool = draftable.filter(scope[1]);

@@ -20,7 +20,7 @@
 //                         WebApplication on everything else indexable. Google
 //                         will not show a rich result for a page whose subject
 //                         it has to infer from prose. All of it hangs off ONE
-//                         organisation @id and ONE website @id, so ~160 pages
+//                         organization @id and ONE website @id, so ~160 pages
 //                         read as one publisher rather than as 160.
 //   4. sitemap.xml      — a <lastmod> on every URL, and an entry for every page
 //                         that has none. Without the lastmod a crawler cannot
@@ -62,7 +62,7 @@ const NO_TAG = new Set(['admin.html']);
 // Every page repeats the publisher and the site rather than pointing at a
 // definition on another page, because a crawler grades one page at a time and
 // an @id it has not fetched resolves to nothing. What the ids buy is that all
-// ~160 copies are recognisably ONE organisation and ONE website instead of 160
+// ~160 copies are recognizably ONE organization and ONE website instead of 160
 // unrelated ones — which is the difference between a site that answer engines
 // can attribute and a pile of pages that merely share a domain.
 const ORG_ID = SITE + '/#organization';
@@ -149,7 +149,7 @@ const COLUMN_PAGES = {
 // pages carrying no structured data at all — among them /rankings, /dfs,
 // /stats, /previews, /vegas-edge, /waivers, /trade-finder, /faab and all sixteen
 // per-position rankings boards, which is to say the entire in-season product and
-// most of what the site is searched for. A page with no markup is not penalised,
+// most of what the site is searched for. A page with no markup is not penalized,
 // but it arrives at an answer engine as prose to be guessed at rather than as a
 // stated subject with a stated publisher, and it is the guess that loses.
 //

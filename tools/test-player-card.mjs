@@ -16,7 +16,7 @@
 //   2. THE TWO BOARDS DISAGREE ABOUT WHAT `v` MEANS. On the reader's own saved
 //      board `v` is auctionValue — the VBD number, what he is WORTH. On the
 //      site's default board in /it-league.js it is the market curve at his slot —
-//      the GOING RATE. Labelling both "worth" would have the site telling a
+//      the GOING RATE. Labeling both "worth" would have the site telling a
 //      reader the price is the value, which is the exact confusion the cheat
 //      sheet's Proj / Value split exists to end. The card labels each for the
 //      board that answered, and that is asserted here.
@@ -94,7 +94,7 @@ if (rows) {
   const badSlug = rows.filter((r) => !/^[a-z0-9][a-z0-9-]*$/.test(r[0]));
   ok('every slug is URL-safe', badSlug.length === 0, badSlug.slice(0, 5).map((r) => r[0]).join(', '));
 
-  // Skill players carry a photo id; kickers and defences are expected not to.
+  // Skill players carry a photo id; kickers and defenses are expected not to.
   const skill = rows.filter((r) => ['QB', 'RB', 'WR', 'TE'].includes(r[3]));
   const faced = skill.filter((r) => r[4] || r[5]).length;
   ok('most skill players carry a headshot id', faced / skill.length > 0.9,
@@ -123,7 +123,7 @@ ok('the card loads /it-league.js before it loads the lookup',
    tagAt('/it-league.js') > 0 && tagAt('/it-league.js') < tagAt('/player-search.js'));
 
 // ── the two boards mean different things by `v` ────────────────────────────
-console.log('\nthe going rate is never labelled as worth');
+console.log('\nthe going rate is never labeled as worth');
 // The fact this rests on, asserted at the source rather than assumed: the
 // default board's dollar figure is read off the market curve.
 ok('/it-league.js prices its default board off the market curve',
@@ -210,7 +210,7 @@ ok('the ribbon renders the shared widget', app.includes('function RibbonPlayerSe
 ok('both dark ribbons carry it',
    (app.match(/React\.createElement\(RibbonPlayerSearch,/g) || []).length === 2,
    String((app.match(/React\.createElement\(RibbonPlayerSearch,/g) || []).length));
-ok('the app calls mount() and honours its teardown',
+ok('the app calls mount() and honors its teardown',
    /return window\.ITPlayerSearch\.mount\(/.test(app));
 ok('the dark ribbon is still sticky', /\.lp-ribbon \{[^}]*position: sticky/.test(app));
 // The menu is parented to <body>, so it inherits nothing from .lp-ribbon and

@@ -91,7 +91,7 @@ export function board(overlayPath, useOdds = true) {
       }
       return { n: p.name, team: p.team, raw: score(st, pos), rec: st.rec || 0 };
     });
-    // Score, then normalise, then round, then sort — the worker's order.
+    // Score, then normalize, then round, then sort — the worker's order.
     const f = normFactor(pos, rows.map(r => r.raw));
     for (const r of rows) { r.pts = round(r.raw > 0 ? r.raw * f : r.raw); delete r.raw; }
     rows.sort((a, b) => b.pts - a.pts);

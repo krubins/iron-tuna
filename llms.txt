@@ -38,10 +38,10 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 - Where the two rankings columns disagree by enough to act on, in both directions. A player is listed only when the two ranks are at least six slots and 25% of the better rank apart, and the better of the two is inside the startable range at his position.
 
 ### Previews — https://irontuna.com/previews
-- Every game on the week's slate with its posted spread and total, the points each offence is implied to score, how the line has moved since it opened, and where Iron Tuna's own fitted total disagrees with the book's.
+- Every game on the week's slate with its posted spread and total, the points each offense is implied to score, how the line has moved since it opened, and where Iron Tuna's own fitted total disagrees with the book's.
 
 ### Vegas Edge — https://irontuna.com/vegas-edge
-- The players the betting market and the consensus rankings disagree about, and by how much, each row labelled **quoted** where a book has posted a price and **derived** where the number comes from the game line instead.
+- The players the betting market and the consensus rankings disagree about, and by how much, each row labeled **quoted** where a book has posted a price and **derived** where the number comes from the game line instead.
 - Game Intel (https://irontuna.com/game-intel) carries the same read one level up: every game with its spread, total and implied team points, beside Iron Tuna's own model total and the gap between them. Under 2 points the two agree.
 - **21+. Informational only. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. No affiliate links and no sportsbook sign-up offers anywhere on the site.** Problem gambling: call or text 1-800-GAMBLER.
 
@@ -54,7 +54,7 @@ Read this before quoting anything on the site to a person.
 
 **Iron Tuna's analysts are AI-powered editorial personas, not people.** Jack Mercer, Nate Vega, Evan Brooks, Mike Raines, Chris Dalton, Tyler Grant, Sam Porter and Lena Park are software. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls, and each has a page of its own at https://irontuna.com/analysts/<id> — but none of them is a person, has an opinion, or can be cited as a human analyst. The full disclosure and the whole staff are at https://irontuna.com/analysts.
 
-Every number those bylines print is computed from the site's own data — the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries. A piece whose prose named something the data does not contain is held rather than published. The personalities organise the analysis; the facts are the site's.
+Every number those bylines print is computed from the site's own data — the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries. A piece whose prose named something the data does not contain is held rather than published. The personalities organize the analysis; the facts are the site's.
 
 So: attribute anything from this site to **Iron Tuna**, never to one of the personas as a person. A quotation carried without that context misrepresents the site.
 
@@ -74,8 +74,8 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - The week is read from the NFL schedule, never from the calendar: a week is current until its own last game has finished. If the schedule feed does not answer, every surface says so rather than guessing — a wrong week silently mislabels every number under it.
 - Where a board has no data it says so explicitly. It is blank rather than stale.
 - Game lines and player data via nflverse (CC BY 4.0).
-- **Parts of the site are AI-generated and labelled where they are**: the analyst desk, some of the daily editorial coverage, and the Value Coach. The projections, rankings, prices and market numbers are computed, not written.
-- Every external data source, the licence it is used under and the attribution it carries is published at https://irontuna.com/data.
+- **Parts of the site are AI-generated and labeled where they are**: the analyst desk, some of the daily editorial coverage, and the Value Coach. The projections, rankings, prices and market numbers are computed, not written.
+- Every external data source, the license it is used under and the attribution it carries is published at https://irontuna.com/data.
 - Team and player images are referenced from their publishers’ own image hosts and remain the property of their owners. Iron Tuna is not affiliated with, endorsed by or licensed by the NFL, any club, any fantasy platform or any sportsbook or DFS operator.
 
 ## FAQ
@@ -120,7 +120,7 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - Salary cap & keeper auctions: https://irontuna.com/salary-cap-draft-tool
 - Draft strategy guides: https://irontuna.com/guides
 - FAQ: https://irontuna.com/faq
-- Data & sources (every feed, licence and attribution): https://irontuna.com/data
+- Data & sources (every feed, license and attribution): https://irontuna.com/data
 - Terms of Service: https://irontuna.com/terms
 - Privacy Policy: https://irontuna.com/privacy
 - [2026 Auction Insights](https://irontuna.com/auction-insights): free stat-based 2026 insights; 150 premium insights tailored to the user's league ship with the Draft Day unlock.
