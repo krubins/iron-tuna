@@ -19,6 +19,9 @@ jobs:
 
       # A single bad escape silently white-screens the whole app, so parsing the
       # deployed files is the highest-value check in the repo.
+      - name: Tuna Market Signal
+        run: node tools/test-tuna-market.mjs
+
       - name: Parse _worker.js
         run: node --check _worker.js
 

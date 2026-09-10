@@ -1307,6 +1307,204 @@ const CAMPAIGN_NURTURE = {
 };
 
 // ════════════════════════════════════════════════════════════════════════════
+// TUNA MARKET SIGNAL START
+// Self-contained section: tools/test-tuna-market.mjs executes this deployed code.
+const TMS_SOURCE = 'https://the-odds-api.com/';
+const tmsInt = (v, fallback, min, max) => Number.isFinite(Number(v)) && v !== '' && v != null ? Math.max(min, Math.min(max, Math.floor(Number(v)))) : fallback;
+const tmsList = v => String(v || '').split(',').map(s => s.trim()).filter(Boolean);
+const tmsKey = r => JSON.stringify([r.provider, r.event, r.book, r.market, r.player, r.side]);
+const tmsGroup = r => JSON.stringify([r.provider, r.event, r.market, r.player, r.side, r.line]);
+function tmsNormalize(events, observed, provider = 'the-odds-api', source = TMS_SOURCE) {
+  if (!Array.isArray(events)) throw new Error('invalid_schema');
+  const rows = [];
+  for (const e of events) {
+    if (!e.id || !e.sport_key || !Number.isFinite(Date.parse(e.commence_time))) continue;
+    for (const b of e.bookmakers || []) for (const m of b.markets || []) {
+      // Alternate ladders need their own identity; do not mix them with main lines.
+      if (!b.key || !m.key || m.key.includes('alternate')) continue;
+      const updated = Date.parse(m.last_update || b.last_update);
+      if (!Number.isFinite(updated) || updated > observed + 60000) continue;
+      for (const o of m.outcomes || []) {
+        if (!o.name || typeof o.price !== 'number' || !Number.isFinite(o.price) || o.price <= 1) continue;
+        if (o.point != null && (typeof o.point !== 'number' || !Number.isFinite(o.point))) continue;
+        if (m.key !== 'h2h' && o.point == null) continue;
+        if (m.key.startsWith('player_') && !o.description) continue;
+        rows.push({ provider, source, event: String(e.id), sport: e.sport_key,
+          matchup: `${e.away_team || ''} at ${e.home_team || ''}`, starts: Date.parse(e.commence_time),
+          book: b.key, market: m.key, player: o.description || '', side: o.name,
+          line: o.point ?? null, price: o.price, updated, observed });
+      }
+    }
+  }
+  return rows;
+}
+async function tmsHttp(path, params, env, request = fetch) {
+  const url = new URL('https://api.the-odds-api.com/v4/' + path);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  url.searchParams.set('apiKey', env.ODDS_API_KEY);
+  let res;
+  try { res = await request(url.toString(), { signal: AbortSignal.timeout(12000) }); }
+  catch { throw new Error('provider_timeout_or_network'); }
+  if (!res.ok) {
+    const error = new Error(res.status === 429 ? 'rate_limited' : res.status === 401 || res.status === 403 ? 'credentials_or_plan' : 'provider_http_' + res.status);
+    const retry = res.headers.get('retry-after');
+    error.retryMs = Math.min(86400000, Math.max(60000, Number(retry) * 1000 || Date.parse(retry) - Date.now() || 900000));
+    throw error;
+  }
+  let data;
+  try { data = await res.json(); } catch { throw new Error('invalid_json'); }
+  return { data, remaining: res.headers.get('x-requests-remaining'), used: res.headers.get('x-requests-used') };
+}
+// Adapter contract: pull(env, observed) -> { rows, quota }. Never merge provider event IDs.
+const TMS_PROVIDERS = {
+  'the-odds-api': { async pull(env, observed) {
+    if (!env.ODDS_API_KEY) throw new Error('missing_odds_api_key');
+    const sport = String(env.TMS_SPORT || 'americanfootball_nfl');
+    if (!/^[a-z0-9_]+$/.test(sport)) throw new Error('invalid_sport');
+    const params = { regions: 'us', markets: 'h2h,spreads,totals', oddsFormat: 'decimal' };
+    const result = await tmsHttp(`sports/${sport}/odds`, params, env);
+    const rows = tmsNormalize(result.data, observed);
+    // Explicit event selection avoids automatically purchasing an entire slate of props.
+    const ids = tmsList(env.TMS_PROP_EVENT_IDS).slice(0, 2);
+    const markets = tmsList(env.TMS_PROP_MARKETS).filter(m => /^player_[a-z_]+$/.test(m) && !m.includes('alternate')).slice(0, 6);
+    let quota = { remaining: result.remaining, used: result.used };
+    for (const id of ids) {
+      if (!markets.length || (quota.remaining !== null && Number(quota.remaining) < markets.length)) break;
+      const next = await tmsHttp(`sports/${sport}/events/${encodeURIComponent(id)}/odds`, { ...params, markets: markets.join(',') }, env);
+      rows.push(...tmsNormalize([next.data], observed));
+      quota = { remaining: next.remaining, used: next.used };
+    }
+    return { rows, quota };
+  } },
+  // Licensed feeds use the admin ingestion contract; no undocumented vendor endpoints.
+  'licensed-import': { push: true }
+};
+async function tmsReady(env) {
+  if (!env.LEADS_DB) throw new Error('storage_unavailable');
+  await env.LEADS_DB.batch([
+    env.LEADS_DB.prepare('CREATE TABLE IF NOT EXISTS tuna_market_snapshots (provider TEXT NOT NULL, event TEXT NOT NULL, observed INTEGER NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(provider,event,observed))'),
+    env.LEADS_DB.prepare('CREATE INDEX IF NOT EXISTS tuna_market_time ON tuna_market_snapshots(observed)'),
+    env.LEADS_DB.prepare('CREATE TABLE IF NOT EXISTS tuna_market_state (id TEXT PRIMARY KEY, next_poll INTEGER NOT NULL DEFAULT 0, status TEXT, updated INTEGER)')
+  ]);
+}
+async function tmsStore(env, rows, now) {
+  const groups = new Map();
+  for (const row of rows) {
+    const key = JSON.stringify([row.provider, row.event]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+  const statements = [...groups.values()].map(group => env.LEADS_DB.prepare('INSERT OR IGNORE INTO tuna_market_snapshots(provider,event,observed,payload) VALUES(?,?,?,?)').bind(group[0].provider, group[0].event, now, JSON.stringify(group)));
+  for (let i = 0; i < statements.length; i += 50) await env.LEADS_DB.batch(statements.slice(i, i + 50));
+  const cutoff = now - tmsInt(env.TMS_RETENTION_DAYS, 30, 1, 90) * 86400000;
+  await env.LEADS_DB.prepare('DELETE FROM tuna_market_snapshots WHERE observed < ?').bind(cutoff).run();
+}
+async function tmsPoll(env, now = Date.now()) {
+  if (env.TMS_ENABLED !== '1') return { status: 'disabled' };
+  await tmsReady(env);
+  const db = env.LEADS_DB;
+  await db.prepare("INSERT OR IGNORE INTO tuna_market_state(id,next_poll) VALUES('poll',0)").run();
+  const interval = tmsInt(env.TMS_INTERVAL_MINUTES, 360, 15, 1440) * 60000;
+  // Atomic D1 lease covers both scheduled and admin refreshes across isolates.
+  const lock = await db.prepare("UPDATE tuna_market_state SET next_poll=? WHERE id='poll' AND next_poll<=?").bind(now + interval, now).run();
+  if (!lock.meta?.changes) return { status: 'cooldown' };
+  let status;
+  try {
+    const provider = TMS_PROVIDERS[env.TMS_PROVIDER || 'the-odds-api'];
+    if (!provider?.pull) throw new Error('invalid_pull_provider');
+    const result = await provider.pull(env, now);
+    await tmsStore(env, result.rows, now);
+    status = { status: result.rows.length ? 'ok' : 'empty', rows: result.rows.length, quota: result.quota };
+  } catch (e) {
+    // Never persist URLs, API response bodies, or credentials in errors.
+    const code = /^[a-z_0-9]+$/.test(e.message) ? e.message : 'ingestion_failed';
+    status = { status: 'error', code };
+    await db.prepare("UPDATE tuna_market_state SET next_poll=? WHERE id='poll'").bind(now + Math.max(interval, e.retryMs || 0)).run();
+  }
+  await db.prepare("UPDATE tuna_market_state SET status=?,updated=? WHERE id='poll'").bind(JSON.stringify(status), now).run();
+  return status;
+}
+function tmsSignals(rows, now, sharpBooks = []) {
+  const series = new Map();
+  for (const r of rows) {
+    const key = tmsKey(r);
+    if (!series.has(key)) series.set(key, []);
+    series.get(key).push(r);
+  }
+  const items = [];
+  for (const history of series.values()) {
+    history.sort((a, b) => a.observed - b.observed);
+    const first = history[0], last = history[history.length - 1];
+    if (last.starts <= now) continue; // Prematch only: do not mix live state with pregame.
+    const comparable = first.updated < last.updated && first.observed < last.observed;
+    const stale = now - last.updated > 3600000 || now - last.observed > 3600000;
+    const lineDelta = comparable && first.line !== null && last.line !== null ? last.line - first.line : null;
+    const probabilityDelta = comparable && first.line === last.line ? (1 / last.price - 1 / first.price) * 100 : null;
+    items.push({ ...last, firstObserved: first.observed, firstLine: first.line,
+      lineDelta, probabilityDelta, stale, comparable, history: history.slice(-24).map(r => ({ at: r.observed, updated: r.updated, line: r.line, price: r.price })) });
+  }
+  for (const item of items) {
+    const peers = items.filter(r => !r.stale && tmsGroup(r) === tmsGroup(item));
+    item.books = new Set(peers.map(r => r.book)).size;
+    item.consensusProbability = peers.length ? peers.reduce((n, r) => n + 100 / r.price, 0) / peers.length : null;
+    const sharp = peers.filter(r => sharpBooks.includes(r.book));
+    item.sharpGap = !item.stale && sharp.length ? sharp.reduce((n, r) => n + 100 / r.price, 0) / sharp.length - 100 / item.price : null;
+    const split = item.split;
+    item.publicSplit = split && now - split.at <= 3600000 ? split : null;
+    // Descriptive magnitude, not probability of winning, +EV, or proof of sharp money.
+    item.score = item.stale || !item.comparable ? null : !item.lineDelta && !item.probabilityDelta ? 0 : Math.round(Math.min(100,
+      Math.min(60, Math.abs(item.probabilityDelta || 0) * 12) +
+      (item.lineDelta ? 20 : 0) + Math.min(10, Math.max(0, item.books - 1) * 2) +
+      Math.min(10, Math.abs(item.sharpGap || 0) * 2)));
+    delete item.split;
+  }
+  return items.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+}
+async function tmsRoutes(request, env, url) {
+  if (!url.pathname.startsWith('/api/tuna-market')) return null;
+  const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
+  try {
+    if (url.pathname === '/api/tuna-market/refresh' || url.pathname === '/api/tuna-market/import') {
+      if (request.method !== 'POST') return json({ error: 'method' }, 405);
+      if (!adminOk(env, (request.headers.get('Authorization') || '').replace(/^Bearer /, ''))) return json({ error: 'forbidden' }, 403);
+      if (env.TMS_ENABLED !== '1') return json({ status: 'disabled' }, 503);
+      if (url.pathname.endsWith('/refresh')) return json(await tmsPoll(env));
+      // Explicitly licensed, normalized source; reject arbitrary URLs and oversized bodies.
+      if (env.TMS_LICENSED_IMPORT !== '1') return json({ error: 'licensed_import_disabled' }, 403);
+      const reader = request.body?.getReader();
+      if (!reader) return json({ error: 'empty_body' }, 400);
+      const chunks = []; let size = 0;
+      while (true) { const { done, value } = await reader.read(); if (done) break; size += value.length; if (size > 500000) { await reader.cancel(); return json({ error: 'too_large' }, 413); } chunks.push(value); }
+      const bytes = new Uint8Array(size); let offset = 0; for (const c of chunks) { bytes.set(c, offset); offset += c.length; }
+      let data; try { data = JSON.parse(new TextDecoder().decode(bytes)); } catch { return json({ error: 'invalid_json' }, 400); }
+      const now = Date.now();
+      if (!data.source || !/^https:\/\/[^\s]+$/.test(data.source) || !Array.isArray(data.events) || data.events.length > 20) return json({ error: 'invalid_import' }, 400);
+      const rows = tmsNormalize(data.events, now, 'licensed-import', data.source);
+      // Splits are outcome-specific percentages with their own source/sample timestamp.
+      for (const r of rows) {
+        const s = (data.splits || []).find(s => s.event === r.event && s.market === r.market && (s.player || '') === r.player && s.side === r.side && s.line === r.line && s.book === r.book);
+        if (s && typeof s.tickets === 'number' && typeof s.money === 'number' && s.tickets >= 0 && s.tickets <= 100 && s.money >= 0 && s.money <= 100 && Number.isFinite(s.at) && s.at <= now && s.at >= now - 86400000) r.split = { tickets: s.tickets, money: s.money, at: s.at, source: data.source };
+      }
+      await tmsReady(env); await tmsStore(env, rows, now);
+      return json({ status: 'ok', rows: rows.length });
+    }
+    if (url.pathname !== '/api/tuna-market') return json({ error: 'not_found' }, 404);
+    if (request.method !== 'GET') return json({ error: 'method' }, 405);
+    if (env.TMS_ENABLED !== '1') return json({ status: 'disabled', items: [] });
+    await tmsReady(env);
+    const now = Date.now();
+    const records = await env.LEADS_DB.prepare('SELECT payload FROM tuna_market_snapshots WHERE observed>=? ORDER BY observed DESC LIMIT 1000').bind(now - 86400000).all();
+    const rows = (records.results || []).flatMap(r => JSON.parse(r.payload));
+    const kind = url.searchParams.get('kind'), player = (url.searchParams.get('player') || '').toLowerCase().slice(0, 100);
+    const items = tmsSignals(rows, now, tmsList(env.TMS_SHARP_BOOKS)).filter(r => (!kind || (kind === 'props' ? !!r.player : !r.player)) && (!player || r.player.toLowerCase().includes(player)));
+    const state = await env.LEADS_DB.prepare("SELECT status,updated,next_poll FROM tuna_market_state WHERE id='poll'").first();
+    return json({ status: items.length ? 'ok' : 'collecting', windowHours: 24, truncated: records.results?.length === 1000,
+      health: state ? { ...JSON.parse(state.status || '{}'), updated: state.updated, nextPoll: state.next_poll } : null,
+      total: items.length, items: items.slice(0, 200) });
+  } catch { return json({ error: 'market_temporarily_unavailable', items: [] }, 503); }
+}
+// TUNA MARKET SIGNAL END
+
 // Vegas-weighted projections
 // ════════════════════════════════════════════════════════════════════════════
 // A daily cron pulls season-long player props, converts them to expected stat
@@ -11640,6 +11838,8 @@ async function leagueRoutes(request, env, url, ctx) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const marketResponse = await tmsRoutes(request, env, url);
+    if (marketResponse) return marketResponse;
     // ?preview=<LEADS_EXPORT_KEY> on a closed in-season route: park the key in a
     // cookie and bounce to the clean URL, so the owner can walk the section
     // without re-appending the secret and without it ending up in a shared link
@@ -13476,6 +13676,7 @@ export default {
     // York time, says what is due this hour; runScheduledTick runs it phase
     // by phase through the job log, and the desk tick goes last.
     if (event.cron === '*/15 * * * *' || event.cron === '0 * * * *') {
+      ctx.waitUntil(tmsPoll(env).catch(() => console.error('Tuna Market Signal storage unavailable')));
       console.log('tick start:', event.cron, new Date(event.scheduledTime || Date.now()).toISOString());
       ctx.waitUntil(runScheduledTick(env, Date.now(), event.cron)
         .then(r => console.log('tick:', JSON.stringify(r).slice(0, 600)))

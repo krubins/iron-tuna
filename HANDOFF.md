@@ -1,5 +1,8 @@
 # Iron Tuna — Project Handoff
 
+Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
+[docs/TUNA-MARKET-SIGNAL.md](docs/TUNA-MARKET-SIGNAL.md).
+
 Fantasy-football auction draft assistant. Live at **https://irontuna.com**.
 This document is everything you need to pick the project up in Claude Code (or any editor).
 

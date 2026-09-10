@@ -18,7 +18,8 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 | Host | Used for | Call sites | License status |
 |---|---|---|---|
 | `<league>.football.cbssports.com` | Reader-authorized CBS league settings, teams, rosters, standings, schedules, waiver order and transaction log | `PROVIDER_CBS`, `cbsGet`; validated league subdomain, fixed HTTPS `/api/league/` resources | **Off by default (`FLAG_CBS_SYNC`).** Token access and commercial terms still require live verification. No CBS login/password collection or provider writes. See docs/league-sync.md CBS addendum. |
-| `api.the-odds-api.com` | NFL odds, totals, spreads | `ODDS_API_BASE`, `_worker.js:1575` | **Paid, terms unconfirmed.** See item R3. |
+| `api.the-odds-api.com` | NFL odds, totals, spreads, supported props, and prospective Tuna Market Signal snapshots | `ODDS_API_BASE`, `TMS_PROVIDERS` | **Green for analytical UI use.** Current terms permit storage and derived/display use, while prohibiting standalone raw-data redistribution. See R3. |
+| `the-odds-api.com` | Tuna Market Signal source-attribution link | `TMS_SOURCE` | Identification link only; the Worker does not fetch this host. |
 | `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts, **and the game lines the scoreboard carries** | `_worker.js:1353`, `:3061`, `:5656`, `:5657`, `_espnOdds` | **Red.** Undocumented endpoints, no commercial license. The odds block adds a bookmaker's spread, total and opening line to what is taken. No page names the book; the name reaches the JSON API only. See R1. |
 | `api.sleeper.app` | NFL player id/metadata map | `_worker.js:7732`, `:7763` | **Red for a paid product.** Non-commercial grant only. See R2. |
 | `api.sleeper.app` (league sync) | A reader's Sleeper league: settings, rosters, users, matchups, transactions | `PROVIDER_SLEEPER` in the LEAGUE SYNC region | **Red for a paid product, so behind `FLAG_SLEEPER_SYNC` (default off).** Same R2 license question; see R7. |
@@ -108,15 +109,17 @@ there is no free replacement for it), send the licensing inquiry Addendum 13.5
 describes and **get the answer in writing before shipping anything else against
 their API.** Attribution is requested by their docs either way.
 
-### R3 — The Odds API: get commercial display terms in writing
+### R3 — The Odds API analytical display rights *(CLOSED 2026-09-10)*
 
-**Where:** `_worker.js:1575`, `env.ODDS_API_KEY`.
+**Where:** `ODDS_API_BASE`, `TMS_PROVIDERS`, `env.ODDS_API_KEY`.
 
-Already in production. Their public FAQ does not address redisplay. Email
-team@the-odds-api.com, ask specifically about displaying derived lines in a paid
-subscription product, and save the reply. Addendum 13.2 and 14.6.
-
-This is the cheapest item on the list and it is currently unanswered.
+The provider's terms dated August 31, 2026 expressly permit storing data,
+displaying it in user-facing commercial websites and analytical dashboards, and
+displaying derived values. They prohibit reselling or redistributing the data as
+a standalone raw feed. Tuna Market Signal serves bounded derived dashboard data
+for Iron Tuna and does not expose a raw provider passthrough. Recheck the terms
+when changing product scope or subscription plan and retain the dated review in
+`docs/TUNA-MARKET-SIGNAL.md`.
 
 ### R4 — NFL.com and ESPN imagery  *(OPEN — owner decision required)*
 
