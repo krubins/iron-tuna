@@ -110,8 +110,9 @@ img{max-width:100%}
    two writers overwriting each other. It sets data-lane on the ribbon and CSS
    does the rest, which also leaves a section hidden for being empty hidden
    when its lane comes back. */
-.ribbon[data-lane="dfs"] a[data-lane="fantasy"],
-.ribbon[data-lane="fantasy"] a[data-lane="dfs"]{display:none}
+.ribbon[data-lane="fantasy"] a[data-lane]:not([data-lane="fantasy"]),
+.ribbon[data-lane="dfs"] a[data-lane]:not([data-lane="dfs"]),
+.ribbon[data-lane="market"] a[data-lane]:not([data-lane="market"]){display:none}
 /* The regular season. it-season.js stamps html[data-season="in"] off /api/season,
    and the draft-season bands (The Pick, The Build, Asset Allocation, the cheat-sheet
    Vegas column, Position Intel, Just Posted, Training Camp) leave the front page
@@ -167,7 +168,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dg-foot{grid-column:1/-1;border-top:1px solid var(--line,#e6ebef);padding-top:12px}
 @media(max-width:800px){.dg-wrap{grid-template-columns:1fr}}
 /* Auction or snake is a question about a draft. It has no answer on a slate. */
-.ribbon[data-lane="dfs"] .ed-switch{display:none}
+.ribbon[data-lane="dfs"] .ed-switch,.ribbon[data-lane="market"] .ed-switch{display:none}
 
 /* ── section headers ── */
 .sec-head{display:flex;align-items:baseline;gap:14px;margin:34px 0 14px;border-bottom:2px solid var(--ink);padding-bottom:8px;position:relative}
@@ -1246,7 +1247,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The panes are two siblings in <main>; nothing is fetched for DFS until the
    DFS tab is opened for the first time, so the fantasy reader pays nothing
    for a lane they never look at. */
-.lane-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--mast); border-bottom: 1px solid var(--line) }
+.lane-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--mast); border-bottom: 1px solid var(--line) }
 .lane-tab { appearance: none; border: 0; background: none; cursor: pointer; font: inherit; color: #8d99a1;
   font-family: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif; font-size: clamp(19px, 2.4vw, 26px); letter-spacing: .1em;
   line-height: 1; text-transform: uppercase; padding: 15px 10px 12px; border-bottom: 4px solid transparent; transition: color .12s, background .12s }
@@ -1289,7 +1290,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dfs-stack h3 { font-size: 15px; margin-bottom: 6px }
 .dfs-stack p { font-size: 13px; line-height: 20px; color: var(--ink-2); margin-top: 6px }
 .dfs-empty { font-size: 13.5px; color: var(--ink-3); margin-top: 12px }
-@media (max-width: 560px) { .lane-tab { letter-spacing: .05em; padding: 13px 6px 10px } }
+@media (max-width: 560px) { .lane-tab { letter-spacing: .035em; padding: 13px 4px 10px; font-size: 10.5px } }
 
 /* The section ribbon under the hero. This page links no shared stylesheet, so
    the block below is INJECTED here by tools/build-ranks.mjs — the identical
@@ -1663,8 +1664,9 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
      kept in the URL (?lane=dfs) and in this browser, so a shared link opens on
      the lane it was shared from. -->
 <div class="lane-tabs" role="tablist" aria-label="Choose a lane">
-  <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Weekly Fantasy</button>
+  <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Season Long</button>
   <button class="lane-tab" type="button" role="tab" id="laneTabDfs" data-lane="dfs" aria-controls="laneDfs" aria-selected="false" tabindex="-1">DFS</button>
+  <button class="lane-tab" type="button" role="tab" id="laneTabMarket" data-lane="market" aria-controls="laneMarket" aria-selected="false" tabindex="-1">Betting Market Intel</button>
 </div>
 
 <div class="ribbon" data-lane="fantasy"><div class="wrap">
@@ -1691,6 +1693,10 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   <a href="#dfsValues" data-lane="dfs">Vegas Values</a>
   <a href="#dfsStacks" data-lane="dfs">Game Stacks</a>
   <a href="#dfsTd" data-lane="dfs">TD Board</a>
+  <a href="#marketGames" data-lane="market">Game Markets</a>
+  <a href="#marketProps" data-lane="market">Player Props</a>
+  <a href="#marketLine" data-lane="market">The Line</a>
+  <a href="#marketMethod" data-lane="market">How We Read It</a>
   <span class="rb-spacer"></span>
   <!-- Player lookup. It lives in the ribbon because the ribbon is the one band
        that stays on screen the whole way down the page, so "look a player up"
@@ -2013,6 +2019,80 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   </div><!-- /chapter 02 -->
 
   </div><!-- /#laneDfs -->
+
+  <!-- ── Betting Market Intel lane ─────────────────────────────────────────
+       A read-only market board. It uses the same /api/vegas-edge payload as
+       The Line and the fantasy market overlays, so a spread or prop cannot be
+       quoted differently on the homepage. Market observations and Iron Tuna
+       projections are deliberately labeled as different things. -->
+  <div class="lane-pane" id="laneMarket" role="tabpanel" aria-labelledby="laneTabMarket" hidden>
+
+    <div class="fp-deck">
+      <a class="fp-act" href="#marketGames">
+        <span class="fp-act-k">Game markets</span>
+        <span class="fp-act-h">Spreads, totals and <em>Tuna Edge</em></span>
+        <p>The posted market beside Iron Tuna&rsquo;s projection for the same game, including what has moved since the first stored observation.</p>
+        <span class="fp-act-go">Read the board &rarr;</span>
+      </a>
+      <a class="fp-act" href="#marketProps">
+        <span class="fp-act-k">Player props</span>
+        <span class="fp-act-h">The prop versus <em>our projection</em></span>
+        <p>Quoted player markets only where the feed actually carries one. Derived Iron Tuna numbers are never presented as sportsbook odds.</p>
+        <span class="fp-act-go">Read the props &rarr;</span>
+      </a>
+      <a class="fp-act gold" href="/the-line">
+        <span class="fp-act-k">The column</span>
+        <span class="fp-act-h"><em>The Line</em></span>
+        <p>Every game on the slate against the posted number, with the model disagreement explained and the market movement beside it.</p>
+        <span class="fp-act-go">Open The Line &rarr;</span>
+      </a>
+    </div>
+
+    <div class="fp-chap" id="marketGames"><div class="fp-chap-top"><span class="fp-chap-n">01</span><h2>Game markets</h2></div>
+      <p class="fp-chap-dek">The market number is the input. Iron Tuna&rsquo;s projection is our independent output. Tuna Edge is simply the difference between the two, not a guarantee or a bet recommendation.</p></div>
+    <div class="fp-chapbody">
+      <p class="dfs-note" id="marketStamp"><b>21+ market information.</b> Iron Tuna does not accept wagers or place bets. Availability is jurisdiction-dependent. Market prices move, so verify any number at its source before relying on it.</p>
+      <div class="dfs-scroll" id="marketGamesWrap" hidden>
+        <table class="dfs-table" id="marketGamesTable">
+          <thead><tr><th>Game</th><th>Spread</th><th class="num">O/U</th><th>Market implied</th><th>Iron Tuna Projection</th><th>Tuna Edge</th><th>Movement</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="dfs-empty" id="marketGamesEmpty">Reading the current game markets&hellip;</p>
+    </div>
+
+    <div class="fp-chap" id="marketProps"><div class="fp-chap-top"><span class="fp-chap-n">02</span><h2>Player props</h2></div>
+      <p class="fp-chap-dek">Quoted player markets where the feed carries them, translated into comparable probabilities and set beside Iron Tuna&rsquo;s model. No market is manufactured to fill an empty row.</p></div>
+    <div class="fp-chapbody">
+      <div class="dfs-scroll" id="marketPropsWrap" hidden>
+        <table class="dfs-table" id="marketPropsTable">
+          <thead><tr><th>Player</th><th>Prop</th><th>Market price</th><th class="num">Market probability</th><th class="num">Iron Tuna Projection</th><th class="num">Tuna Edge</th><th>Basis</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="dfs-empty" id="marketPropsEmpty">Reading quoted player props&hellip;</p>
+    </div>
+
+    <div class="fp-chap" id="marketLine"><div class="fp-chap-top"><span class="fp-chap-n">03</span><h2>The Line</h2></div>
+      <p class="fp-chap-dek">The widest model-versus-market disagreements on the current slate. The full column keeps every game, including the ones where the model and the market agree.</p></div>
+    <div class="fp-chapbody">
+      <div class="dfs-cards" id="marketLineCards"></div>
+      <p class="dfs-empty" id="marketLineEmpty">Reading The Line&hellip;</p>
+      <p><a class="sec-more" href="/the-line">Open the full The Line column &rarr;</a></p>
+    </div>
+
+    <div class="fp-chap" id="marketMethod"><div class="fp-chap-top"><span class="fp-chap-n">04</span><h2>How Iron Tuna reads the market</h2></div>
+      <p class="fp-chap-dek">Iron Tuna&rsquo;s proprietary formulas translate spreads, over/unders, player props and related betting information into projections. The model then blends that market read with other projection inputs and evaluates line movement before deciding how much weight the movement deserves.</p></div>
+    <div class="fp-chapbody">
+      <div class="dfs-cards">
+        <div class="dfs-card"><span class="dfs-tag">1. Observe</span><h3>The posted market</h3><p>Totals, spreads and player props are observations. They are kept separate from anything Iron Tuna derives from them.</p></div>
+        <div class="dfs-card"><span class="dfs-tag">2. Translate</span><h3>Odds into projections</h3><p>Iron Tuna converts market prices into expected football outcomes, then scores those outcomes into fantasy terms where applicable.</p></div>
+        <div class="dfs-card"><span class="dfs-tag">3. Filter</span><h3>Signal versus noise</h3><p>Movement gets context. Broad, corroborated movement can earn more weight; popularity-driven or isolated movement can be discounted rather than blindly followed.</p></div>
+      </div>
+      <p class="dfs-note"><b>Methodology note:</b> a sportsbook line is not an Iron Tuna projection, and an Iron Tuna projection is not a sportsbook quote. The source and basis should remain visible anywhere the two appear together.</p>
+    </div>
+
+  </div><!-- /#laneMarket -->
 
   <!-- The method, one band above the close. It sat between the lead and the
        desk, which put an explainer in front of the reporting a reader came
@@ -4397,11 +4477,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
      down, and the lane switch keeps working even if a feed throws. -->
 <script>
 (function () {
-  var LANES = { fantasy: 1, dfs: 1 };
+  var LANES = { fantasy: 1, dfs: 1, market: 1 };
   var tabs = [].slice.call(document.querySelectorAll('.lane-tab'));
   var ribbon = document.querySelector('.ribbon');
-  var panes = { fantasy: document.getElementById('laneFantasy'), dfs: document.getElementById('laneDfs') };
-  if (!tabs.length || !panes.fantasy || !panes.dfs) return;
+  var panes = { fantasy: document.getElementById('laneFantasy'), dfs: document.getElementById('laneDfs'), market: document.getElementById('laneMarket') };
+  if (!tabs.length || !panes.fantasy || !panes.dfs || !panes.market) return;
 
   var lane = 'fantasy';
 
@@ -4417,6 +4497,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       if (hash) {
         var target = document.getElementById(hash);
         if (target && panes.dfs.contains(target)) return 'dfs';
+        if (target && panes.market.contains(target)) return 'market';
         if (target && panes.fantasy.contains(target)) return 'fantasy';
       }
       var saved = localStorage.getItem('it.lane');
@@ -4430,6 +4511,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     lane = next;
     panes.fantasy.hidden = next !== 'fantasy';
     panes.dfs.hidden = next !== 'dfs';
+    panes.market.hidden = next !== 'market';
     // Anything else in the main column that belongs to one lane — the "Drafting
     // soon?" band at the foot of the page — goes with it. The bands with no
     // data-lane (the method, the closing band) are the page's own furniture and
@@ -4457,6 +4539,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       } catch (err) {}
     }
     if (next === 'dfs') loadSlate();
+    if (next === 'market') loadMarket();
   }
 
   tabs.forEach(function (t) {
@@ -4479,9 +4562,129 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     if (!a) return;
     var target = document.getElementById(a.getAttribute('href').slice(1));
     if (!target) return;
-    var want = panes.dfs.contains(target) ? 'dfs' : panes.fantasy.contains(target) ? 'fantasy' : null;
+    var want = panes.dfs.contains(target) ? 'dfs' : panes.market.contains(target) ? 'market' : panes.fantasy.contains(target) ? 'fantasy' : null;
     if (want && want !== lane) setLane(want);
   });
+
+  // ── Betting Market Intel ──────────────────────────────────────────────────
+  // Same payload as /the-line. No market is fetched directly from a vendor by
+  // the browser and no derived probability is relabeled as a sportsbook quote.
+  var marketLoaded = false, marketLoading = false;
+
+  function marketNum(v) { return v != null && isFinite(Number(v)); }
+  function marketN1(v) { return marketNum(v) ? (Math.round(Number(v) * 10) / 10).toFixed(1) : '—'; }
+  function marketSigned(v) {
+    if (!marketNum(v)) return '—';
+    var n = Math.round(Number(v) * 10) / 10;
+    return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(1);
+  }
+  function marketAmer(pct) {
+    if (!marketNum(pct) || Number(pct) <= 0 || Number(pct) >= 100) return '—';
+    var p = Number(pct) / 100;
+    var v = p >= .5 ? -Math.round(100 * p / (1 - p)) : Math.round(100 * (1 - p) / p);
+    return (v > 0 ? '+' : '') + v;
+  }
+  function marketSpread(g) {
+    if (!g || !marketNum(g.spread)) return '—';
+    if (!g.favourite) return Number(g.spread) === 0 ? 'Pick\'em' : marketSigned(g.spread);
+    return e(g.favourite) + ' −' + Math.abs(Number(g.spread)).toFixed(1);
+  }
+  function marketMove(g) {
+    var bits = [];
+    if (g && g.movement && marketNum(g.movement.total) && Number(g.movement.total) !== 0) bits.push('O/U ' + marketSigned(g.movement.total));
+    if (g && g.movement && marketNum(g.movement.spread) && Number(g.movement.spread) !== 0) bits.push('spread ' + marketSigned(g.movement.spread));
+    return bits.length ? bits.join(' · ') : 'No stored move';
+  }
+  function renderMarket(j) {
+    var games = (j && j.gameEnvironments) || [];
+    var props = ((j && j.tdBoard) || []).filter(function (p) {
+      return p && p.basis === 'anytime-td-market' && marketNum(p.probability) && marketNum(p.expectedTds);
+    });
+
+    var gbody = $('marketGamesTable').querySelector('tbody');
+    gbody.innerHTML = games.map(function (g) {
+      var totalEdge = marketNum(g.ironTunaTotal) && marketNum(g.total) ? Number(g.ironTunaTotal) - Number(g.total) : null;
+      var edge = totalEdge == null ? '—' : (totalEdge > 0 ? 'Over ' : totalEdge < 0 ? 'Under ' : 'Even ') + marketSigned(totalEdge);
+      var implied = marketNum(g.impliedAway) && marketNum(g.impliedHome)
+        ? e(g.away) + ' ' + marketN1(g.impliedAway) + ' / ' + e(g.home) + ' ' + marketN1(g.impliedHome)
+        : '—';
+      var tuna = marketNum(g.ironTunaAway) && marketNum(g.ironTunaHome)
+        ? e(g.away) + ' ' + marketN1(g.ironTunaAway) + ' / ' + e(g.home) + ' ' + marketN1(g.ironTunaHome) +
+          (marketNum(g.ironTunaTotal) ? ' (' + marketN1(g.ironTunaTotal) + ' total)' : '')
+        : '—';
+      return '<tr><td><b>' + e(g.away) + ' @ ' + e(g.home) + '</b></td>' +
+        '<td>' + marketSpread(g) + '</td>' +
+        '<td class="num">' + marketN1(g.total) + '</td>' +
+        '<td>' + implied + '</td>' +
+        '<td>' + tuna + '</td>' +
+        '<td><b>' + edge + '</b></td>' +
+        '<td>' + e(marketMove(g)) + '</td></tr>';
+    }).join('');
+    $('marketGamesWrap').hidden = !games.length;
+    $('marketGamesEmpty').hidden = !!games.length;
+    if (!games.length) $('marketGamesEmpty').textContent = 'No current game market reached the feed. Nothing stale is substituted.';
+
+    var pbody = $('marketPropsTable').querySelector('tbody');
+    pbody.innerHTML = props.slice(0, 20).map(function (p) {
+      var model = (1 - Math.exp(-Number(p.expectedTds))) * 100;
+      var edge = model - Number(p.probability);
+      return '<tr><td><b>' + e(p.name) + '</b><small>' + e((p.position || '') + (p.team ? ' · ' + p.team : '')) + '</small></td>' +
+        '<td>Anytime TD</td>' +
+        '<td><b>' + e(marketAmer(p.probability)) + '</b></td>' +
+        '<td class="num">' + marketN1(p.probability) + '%</td>' +
+        '<td class="num">' + marketN1(model) + '%</td>' +
+        '<td class="num"><b>' + marketSigned(edge) + ' pp</b></td>' +
+        '<td><small>Quoted market vs. Iron Tuna model</small></td></tr>';
+    }).join('');
+    $('marketPropsWrap').hidden = !props.length;
+    $('marketPropsEmpty').hidden = !!props.length;
+    if (!props.length) $('marketPropsEmpty').textContent = 'No quoted player prop reached the current feed. Iron Tuna does not manufacture sportsbook prices to fill the table.';
+
+    var ranked = games.map(function (g) {
+      var totalEdge = marketNum(g.ironTunaTotal) && marketNum(g.total) ? Number(g.ironTunaTotal) - Number(g.total) : null;
+      var modelMargin = marketNum(g.ironTunaHome) && marketNum(g.ironTunaAway) ? Number(g.ironTunaHome) - Number(g.ironTunaAway) : null;
+      var spreadEdge = marketNum(modelMargin) && marketNum(g.spread) ? modelMargin - Number(g.spread) : null;
+      var best = Math.abs(totalEdge || 0) >= Math.abs(spreadEdge || 0)
+        ? { kind: 'Total', edge: totalEdge, market: marketN1(g.total), model: marketN1(g.ironTunaTotal) }
+        : { kind: 'Spread', edge: spreadEdge, market: marketSpread(g), model: marketNum(modelMargin) ? (modelMargin >= 0 ? e(g.home) + ' by ' + marketN1(modelMargin) : e(g.away) + ' by ' + marketN1(Math.abs(modelMargin))) : '—' };
+      return { g: g, best: best, mag: marketNum(best.edge) ? Math.abs(Number(best.edge)) : -1 };
+    }).filter(function (x) { return x.mag >= 0; }).sort(function (a,b) { return b.mag - a.mag; }).slice(0, 4);
+
+    $('marketLineCards').innerHTML = ranked.map(function (x) {
+      var g=x.g, r=x.best;
+      return '<div class="dfs-card"><span class="dfs-tag">' + e(r.kind) + ' · Tuna Edge ' + marketSigned(r.edge) + '</span>' +
+        '<h3>' + e(g.away) + ' @ ' + e(g.home) + '</h3>' +
+        '<p>Market: <b>' + r.market + '</b>. Iron Tuna: <b>' + r.model + '</b>. ' + e(marketMove(g)) + '.</p>' +
+        '<p><a href="/the-line">Read the full game in The Line &rarr;</a></p></div>';
+    }).join('');
+    $('marketLineEmpty').hidden = !!ranked.length;
+    if (!ranked.length) $('marketLineEmpty').textContent = 'The model and market board has no complete comparison yet.';
+
+    if (j && j.asOf) {
+      try { $('marketStamp').innerHTML += ' Market data as of <b>' + e(new Date(j.asOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + ' ET</b>.'; } catch (err) {}
+    }
+  }
+  function marketBlank(msg) {
+    $('marketGamesWrap').hidden = true; $('marketGamesEmpty').hidden = false; $('marketGamesEmpty').textContent = msg;
+    $('marketPropsWrap').hidden = true; $('marketPropsEmpty').hidden = false; $('marketPropsEmpty').textContent = msg;
+    $('marketLineCards').innerHTML = ''; $('marketLineEmpty').hidden = false; $('marketLineEmpty').textContent = msg;
+  }
+  function loadMarket() {
+    if (marketLoaded || marketLoading) return;
+    marketLoading = true;
+    fetch('/api/vegas-edge', { credentials: 'omit' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        marketLoading = false;
+        if (!j || !j.ok) { marketBlank('The market board did not answer. Nothing stale is shown in its place.'); return; }
+        marketLoaded = true;
+        renderMarket(j);
+      })
+      .catch(function () {
+        marketLoading = false;
+        marketBlank('The market board is temporarily unavailable. Nothing stale is shown in its place.');
+      });
+  }
 
   // ── the slate ────────────────────────────────────────────────────────────
   var $ = function (id) { return document.getElementById(id); };
@@ -4621,20 +4824,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       return '<tr><td><span class="sl' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
         + '<td><b>' + e(p.name) + '</b>' + tagFor(p, qb) + '<small>' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? ' vs ' + p.opponent : '')) + '</small></td>'
         + '<td class="num">' + money(p.salary) + '</td>'
+        + '<td class="num">' + (p.operatorFppg == null ? '—' : n1(p.operatorFppg)) + '</td>'
         + '<td class="num">' + n1(p.proj) + '</td>'
-        + '<td class="num">' + n1(p.ceiling) + '</td></tr>';
+        + '<td class="num">' + (p.projectionVsFppg == null ? '—' : ((p.projectionVsFppg > 0 ? '+' : '') + n1(p.projectionVsFppg))) + '</td></tr>';
     }).join('');
+    var hasFppg = l.players.every(function (p) { return p.operatorFppg != null && isFinite(Number(p.operatorFppg)); });
+    var dkFppg = hasFppg ? l.players.reduce(function (sum, p) { return sum + Number(p.operatorFppg); }, 0) : null;
+    var tunaEdge = dkFppg == null ? null : l.projPoints - dkFppg;
     host.innerHTML = '<div class="fp-board">'
       + '<div class="fp-board-head"><h3>' + e(sh.head) + '</h3><span>' + e((s.label || '') + (s.week ? ' \u00b7 Week ' + s.week : '')) + '</span></div>'
       + '<div class="fp-board-stats">'
-        + tile(n1(l[sh.key]), sh.keyLabel, true)
-        + tile(n1(l.projPoints), 'Projected')
+        + tile(dkFppg == null ? '—' : n1(dkFppg), 'DraftKings FPPG')
+        + tile(n1(l.projPoints), 'Iron Tuna Projection', true)
+        + tile(tunaEdge == null ? '—' : ((tunaEdge > 0 ? '+' : '') + n1(tunaEdge)), 'Tuna Edge')
         + tile(money(l.salary), 'Salary used')
-        + (l.ownership != null ? tile(n1(l.ownership) + '%', 'Total own') : tile(money(l.remaining), 'Left over'))
       + '</div>'
       + '<div class="fp-board-meter"><i style="width:' + pct + '%"></i></div>'
       + '<div class="fp-board-cap"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div>'
-      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">Proj</th><th class="num">Ceiling</th></tr></thead><tbody>' + rows + '</tbody></table>'
+      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">DraftKings FPPG</th><th class="num">Iron Tuna Projection</th><th class="num">Tuna Edge</th></tr></thead><tbody>' + rows + '</tbody></table>'
       + '<div class="fp-board-foot"><span>Solved against the cap on the same market numbers the board below prints. Nothing here enters a contest.</span>'
       + '<a href="/dfs">Lock, exclude and build twenty &rarr;</a></div></div>';
   }
