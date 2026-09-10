@@ -7018,27 +7018,23 @@ const CONTENT_KINDS = {
     targets: (gs) => gs.filter(g => g.dow === 'Sun' && g.status === 'final'),
     summary: 'Not a recap. Signal, noise, role changes and misleading box scores, and what they say about next week.',
     absorbs: ['what-changed-today', 'snf-what-we-learned', 'team-recaps'] },
-  'mnf-preview': { title: 'Monday Night Football Preview', day: 'Mon', hour: 6, minute: 0, retro: false, subject: 'current', anchor: 'targets',
-    analyst: 'dalton', dfsAnalyst: 'dalton', lens: 'both', optional: true, preview: true,
-    targets: (gs) => gs.filter(g => g.dow === 'Mon'),
-    summary: 'Start/sit and the showdown slate for the Monday game.', absorbs: [] },
-  'early-rankings': { title: 'Early Rankings for Next Week', day: 'Mon', hour: 6, minute: 0, retro: true, subject: 'nextPlayed',
+  'early-rankings': { title: 'Monday Morning Brief', day: 'Mon', hour: 6, minute: 0, retro: true, subject: 'nextPlayed',
     analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
-    summary: 'Every position ranked for the coming week, with the Fantasy Analysis / Market Intelligence slider.', absorbs: [] },
-  'quarterback-monday': { title: 'Quarterback Monday', day: 'Mon', hour: 7, minute: 0, retro: true, subject: 'played',
+    summary: 'The Monday night preview and every position ranked for the coming week, with the Fantasy Analysis / Market Intelligence slider.', absorbs: [] },
+  'quarterback-monday': { title: 'Quarterback Monday', day: 'Mon', hour: 12, minute: 15, retro: true, subject: 'played',
     analyst: 'dalton', dfsAnalyst: 'park', lens: 'both', gate: 'worth', targets: () => [],
     summary: 'One quarterback story that matters, or nothing.', absorbs: [] },
   'ros-rankings': { title: 'Rest-of-Season Rankings', day: 'Tue', hour: 7, minute: 0, retro: true, subject: 'current',
     analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
     dfsTitle: 'Early Price Inefficiency Board',
     summary: 'Next 3, until the playoffs, playoffs only, rest of season: one engine, four horizons.', absorbs: ['rankings-update', 'mnf-breakdown'] },
-  'tailback-tuesday': { title: 'Tailback Tuesday', day: 'Tue', hour: 8, minute: 0, retro: true, subject: 'played',
+  'tailback-tuesday': { title: 'Tailback Tuesday', day: 'Tue', hour: 13, minute: 15, retro: true, subject: 'played',
     analyst: 'brooks', altAnalyst: 'raines', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
     summary: 'The running back development that changes a ranking, argued from the workload.', absorbs: ['opportunity-report'] },
   'pickup-advisor': { title: 'Pickup Advisor', day: 'Wed', hour: 6, minute: 0, retro: true, subject: 'current',
     analyst: 'grant', dfsAnalyst: 'park', lens: 'both', targets: () => [], dfsTitle: 'First-Look DFS Value & Leverage Report',
     summary: 'Priority adds, mid-level adds, deep adds, stashes and do-not-chase, for 10, 12 and 14 teams.', absorbs: ['waiver-watch'] },
-  'wideout-wednesday': { title: 'Wideout Wednesday', day: 'Wed', hour: 8, minute: 0, retro: true, subject: 'played',
+  'wideout-wednesday': { title: 'Wideout Wednesday', day: 'Wed', hour: 13, minute: 15, retro: true, subject: 'played',
     analyst: 'raines', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
     summary: 'Targets, air yards and deployment: the receiver whose opportunity moved before his points did.', absorbs: ['opportunity-report'] },
   'tnf-preview': { title: 'Thursday Night Football Preview', day: 'Thu', hour: 6, minute: 0, retro: false, subject: 'current', anchor: 'targets',
@@ -7048,13 +7044,13 @@ const CONTENT_KINDS = {
     targets: (gs) => gs.filter(g => g.dow === 'Wed' || g.dow === 'Thu'),
     titleFor: (days) => days.length && days.some(d => d !== 'Thu') ? (days.length > 1 ? 'Midweek Kickoff Preview' : 'Opening Night Preview') : 'Thursday Night Football Preview',
     summary: 'Start/sit and the full showdown for the Thursday game, updated if late news changes it.', absorbs: ['tnf-preview'] },
-  'underrated': { title: 'Most Underrated Player on the Board', subtitle: "What the Experts Aren't Telling You", day: 'Thu', hour: 7, minute: 0, retro: false, subject: 'current',
+  'underrated': { title: 'Most Underrated Player on the Board', subtitle: "What the Experts Aren't Telling You", day: 'Thu', hour: 10, minute: 15, retro: false, subject: 'current',
     analyst: 'vega', dfsAnalyst: 'vega', lens: 'both', rivalry: true, targets: () => [],
     summary: 'One player the consensus has wrong, argued from the market and the usage. The DFS pick may differ.', absorbs: ['what-they-arent-telling-you', 'the-pick'] },
-  'trade-desk': { title: 'Trade Desk', day: 'Thu', hour: 8, minute: 0, retro: false, subject: 'current',
+  'trade-desk': { title: 'Trade Desk', day: 'Thu', hour: 13, minute: 45, retro: false, subject: 'current',
     analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
     summary: 'Five to target, five to trade away. For DFS, five to attack and five to fade.', absorbs: [] },
-  'tight-end-thursday': { title: 'Tight End Thursday', day: 'Thu', hour: 9, minute: 0, retro: true, subject: 'played',
+  'tight-end-thursday': { title: 'Tight End Thursday', day: 'Thu', hour: 16, minute: 45, retro: true, subject: 'played',
     analyst: 'brooks', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
     summary: 'Only when a tight end story is worth your time.', absorbs: [] },
   'tnf-what-matters': { title: 'Thursday Night: What Matters', day: 'Fri', hour: 6, minute: 0, retro: false, subject: 'current',
@@ -7062,16 +7058,20 @@ const CONTENT_KINDS = {
     targets: (gs) => gs.filter(g => g.dow === 'Wed' || g.dow === 'Thu'),
     titleFor: (days) => days.length && days.some(d => d !== 'Thu') ? 'Midweek Football: What Matters' : 'Thursday Night: What Matters',
     summary: 'Usage, role and sustainability from the Thursday game. Not a recap.', absorbs: ['tnf-aftermath'] },
-  'weekend-preview': { title: 'Weekend Preview', day: 'Fri', hour: 7, minute: 0, retro: false, subject: 'current',
+  'weekend-preview': { title: 'Weekend Preview', day: 'Fri', hour: 11, minute: 15, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', preview: true,
     // The weekend: everything after the midweek games. A Wednesday opener is
     // the midweek preview's, and a preview is not ready once any target has
     // kicked off, so it must not be here on Friday.
     targets: (gs) => gs.filter(g => g.dow !== 'Wed' && g.dow !== 'Thu'),
     summary: 'The hard start/sits, the matchups, the movers and the weather. For DFS, the whole slate.', absorbs: ['final-read', 'weekend-game-plan'] },
-  'kickers-defenses': { title: 'Kickers & Defenses', day: 'Fri', hour: 8, minute: 0, retro: false, subject: 'current',
+  'kickers-defenses': { title: 'Kickers & Defenses', day: 'Fri', hour: 14, minute: 45, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', targets: () => [],
     summary: 'Streaming defenses, defenses to avoid, kicker rankings. DFS: DST only.', absorbs: [] },
+  'market-movers': { title: 'Market Movers', day: 'Sat', hour: 11, minute: 30, retro: false, subject: 'current',
+    analyst: 'vega', dfsAnalyst: 'park', lens: 'both', preview: true,
+    targets: (gs) => gs.filter(g => g.dow === 'Sun' || g.dow === 'Mon'),
+    summary: 'The biggest late-week player-prop, game-total and injury-driven moves before Sunday, with the fantasy and DFS implications.', absorbs: [] },
   'breaking': { title: 'Breaking', day: null, hour: null, minute: null, retro: false, subject: 'current', unscheduled: true,
     analyst: 'mercer', dfsAnalyst: 'park', lens: 'both', targets: () => [],
     summary: 'A significant development, scored and verified before anything is written.', absorbs: [] }
@@ -7105,8 +7105,7 @@ const LEGACY_CONTENT = {
 const NEWSROOM_SECTIONS = {
   'last-minute-intel':     { weekly: ['whatChanged', 'movesUp', 'movesDown', 'startSit', 'replacements', 'longerTerm'], dfs: ['projectionImpact', 'ownershipImpact', 'cashGame', 'tournaments', 'stacks', 'pivots', 'lateSwap'] },
   'what-sunday-taught-us': { weekly: ['signal', 'noise', 'roleChanges', 'concerns', 'buy', 'watchThis', 'waiversAndTrades'], dfs: ['emergingChalk', 'priceInefficiencies', 'roleChangesForPricing', 'touchdownRegression', 'stackImplications', 'leverage'] },
-  'mnf-preview':           { weekly: ['startSit', 'expectations', 'matchups', 'injuries', 'usage', 'marketSignals', 'risk'], dfs: ['captainOptions', 'value', 'ownership', 'contrarianCaptains', 'correlation', 'gameScripts', 'fades'] },
-  'early-rankings':        { weekly: ['overview', 'quarterbacks', 'runningBacks', 'wideReceivers', 'tightEnds', 'flex', 'kickersAndDefenses', 'whereWeDisagree'], dfs: ['rawVsSalary', 'earlyValues', 'earlyChalk', 'leverage', 'cashVsTournament'] },
+  'early-rankings':        { weekly: ['mondayNight', 'overview', 'quarterbacks', 'runningBacks', 'wideReceivers', 'tightEnds', 'flex', 'kickersAndDefenses', 'whereWeDisagree'], dfs: ['mondayNightShowdown', 'rawVsSalary', 'earlyValues', 'earlyChalk', 'leverage', 'cashVsTournament'] },
   'quarterback-monday':    { weekly: ['theStory', 'whatTheNumbersSay', 'whatToDo', 'buySell'], dfs: ['stacks', 'bringBacks', 'ownership', 'salaryAndRushingUpside', 'gameEnvironment'] },
   'ros-rankings':          { weekly: ['whatMondayChanged', 'next3', 'untilPlayoffs', 'playoffsOnly', 'restOfSeason', 'majorMovers', 'whereWeDisagree'], dfs: ['priceInefficiencyBoard', 'whyThePriceIsWrong', 'initialOwnership', 'leverage'] },
   'tailback-tuesday':      { weekly: ['theDevelopment', 'workloadEvidence', 'rankingImpact', 'tradesAndWaivers', 'restOfSeason'], dfs: ['salary', 'workloadPerDollar', 'touchdownEquity', 'ownership', 'chalkVsLeverage', 'stacking'] },
@@ -7119,6 +7118,7 @@ const NEWSROOM_SECTIONS = {
   'tnf-what-matters':      { weekly: ['usageAndRole', 'injuries', 'sustainability', 'calledBackAndNearMisses', 'nextWeek', 'waiversAndTrades'], dfs: ['futurePricing', 'emergingChalk', 'stackRelationships', 'salaryInefficiency', 'roleChanges'] },
   'weekend-preview':       { weekly: ['injurySituations', 'difficultStartSits', 'matchups', 'marketMovers', 'weather', 'sundayContingencies'], dfs: ['slateOverview', 'bestGameEnvironments', 'coreStacks', 'contrarianStacks', 'values', 'chalk', 'fades', 'ownership', 'leverage', 'injuryContingencies', 'salarySavers', 'lateSwap', 'contestTypes'] },
   'kickers-defenses':      { weekly: ['streamingDefenses', 'defensesToAvoid', 'kickerRankings', 'teamTotalsAndWeather', 'upcomingSchedule'], dfs: ['dstSalary', 'pressureAndTurnovers', 'ownership', 'leverage'] },
+  'market-movers':          { weekly: ['playerLineMoves', 'gameLineMoves', 'injuryDrivenMoves', 'whatToDoSunday'], dfs: ['lateWeekValues', 'ownershipImpact', 'stacks', 'leverage', 'lateSwapPrep'] },
   'breaking':              { weekly: ['whatHappened', 'whoMovesUp', 'whoMovesDown', 'rankingImpact', 'whatToDo'], dfs: ['projectionImpact', 'salaryValue', 'ownershipImpact', 'pivots', 'lateSwap'] }
 };
 // Sections that are lists of OBJECTS rather than of sentences, and their fields.
@@ -7795,9 +7795,10 @@ const FRESHNESS_REQ = {
   'last-minute-intel':   { schedule: 1,  availability: 1.5, odds: 12, snapshots: 4, usage: 24 * 9, depth: 30, dfs: 72 },
   'what-sunday-taught-us': { schedule: 1.5, availability: 12, odds: 48, snapshots: 12, usage: 24 * 9, depth: 48, dfs: 24 * 8 },
   'breaking':            { schedule: 2,  availability: 1,   odds: 12, snapshots: 6, usage: 24 * 9, depth: 30, dfs: 72 },
-  'mnf-preview':         { schedule: 6,  availability: 8,   odds: 24, snapshots: 8, usage: 24 * 9, depth: 36, dfs: 72 },
+  'early-rankings':      { schedule: 6,  availability: 8,   odds: 24, snapshots: 8, usage: 24 * 9, depth: 36, dfs: 72 },
   'tnf-preview':         { schedule: 6,  availability: 8,   odds: 24, snapshots: 8, usage: 24 * 9, depth: 36, dfs: 72 },
-  'weekend-preview':     { schedule: 6,  availability: 12,  odds: 24, snapshots: 12, usage: 24 * 9, depth: 36, dfs: 24 * 4 }
+  'weekend-preview':     { schedule: 6,  availability: 12,  odds: 24, snapshots: 12, usage: 24 * 9, depth: 36, dfs: 24 * 4 },
+  'market-movers':        { schedule: 3,  availability: 6,   odds: 12, snapshots: 6, usage: 24 * 9, depth: 24, dfs: 72 }
 };
 function freshnessReport(stamps, kind, now) {
   const req = { ...FRESHNESS_REQ.default, ...(FRESHNESS_REQ[kind] || {}) };
@@ -8691,6 +8692,19 @@ function packetWeekend(games, ctx) {
   const gp = briefGamePlan('weekend-preview', games, ctx); delete gp.allowed;
   return { ...fr, cards: gp.cards, weather: 'unavailable: no licensed weather feed is configured', dfs: _dfsBlock(ctx, null) };
 }
+function packetMarketMovers(games, ctx) {
+  const moves = ((ctx.signals && ctx.signals.insights) || []).filter(i => i.type === 'line_movement')
+    .sort((a, b) => (b.magnitude || 0) - (a.magnitude || 0)).slice(0, 16);
+  const gameLineMoves = games.map(g => _gameCard(g, ctx)).filter(c => c.movement && (c.movement.spread || c.movement.total))
+    .sort((a, b) => Math.max(Math.abs((b.movement && b.movement.spread) || 0), Math.abs((b.movement && b.movement.total) || 0)) -
+                    Math.max(Math.abs((a.movement && a.movement.spread) || 0), Math.abs((a.movement && a.movement.total) || 0))).slice(0, 10);
+  const fr = briefFinalRead(ctx); delete fr.allowed;
+  const injuryDrivenMoves = (fr.injuryDrivenOpportunity || []).slice(0, 10);
+  if (!moves.length && !gameLineMoves.length && !injuryDrivenMoves.length) return { skip: true, reason: 'no_late_week_moves_clear_the_bar' };
+  return { playerLineMoves: moves, gameLineMoves, injuryDrivenMoves, injuries: (ctx.injuriesList || []).slice(0, 30),
+           note: 'Late-week movement uses the latest stored market snapshots and current injury picture. It does not invent a Friday baseline when the feed did not store one.',
+           dfs: _dfsBlock(ctx, null) };
+}
 function packetKDst(ctx) {
   const W = (ctx.week && ctx.week.players) || [];
   const row = p => _rowFor(p, { pointsAllowedFactor: null });
@@ -8728,8 +8742,18 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   const summariesFor = async (gs) => { const out = []; for (const g of gs) { try { const s = await gameSummaryFor(env, g, ctx.nameIndex); if (s && s.final) out.push(s); } catch (e) {} } return out; };
   if (kind === 'last-minute-intel') facts = packetLastMinute(ctx, games);
   else if (kind === 'what-sunday-taught-us') { const s = await summariesFor(games); if (!s.length && !o.force) return { skip: true, reason: 'no_box_scores' }; facts = packetSundayTaught(games, s, ctx); }
-  else if (kind === 'mnf-preview' || kind === 'tnf-preview') facts = packetShowdown(kind, games, ctx);
-  else if (kind === 'early-rankings') facts = packetRankings(ctx, d.week);
+  else if (kind === 'tnf-preview') facts = packetShowdown(kind, games, ctx);
+  else if (kind === 'early-rankings') {
+    const rankings = packetRankings(ctx, d.week);
+    const mondayGames = anchorGames.filter(g => g.dow === 'Mon');
+    const mondayNight = mondayGames.length ? packetShowdown('mnf-preview', mondayGames, ctx) : { note: 'No Monday night game this week.' };
+    if (rankings.skip && !mondayGames.length) facts = rankings;
+    else {
+      if (mondayNight.allowed) delete mondayNight.allowed;
+      facts = { ...(rankings.skip ? {} : rankings), mondayNight, mondayNightShowdown: mondayNight.showdown || mondayNight.dfs || null,
+                disagreements: rankings.disagreements || [], dfs: rankings.dfs || _dfsBlock(ctx, null) };
+    }
+  }
   else if (kind === 'quarterback-monday') facts = packetQb(ctx);
   else if (kind === 'ros-rankings') {
     const [next3, ros, untilPlayoffs, playoffs, rosUpdate] = await Promise.all([
@@ -8749,6 +8773,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   else if (kind === 'tnf-what-matters') { const s = await summariesFor(games); if (!s.length && !o.force) return { skip: true, reason: 'no_box_scores' }; facts = briefForGames(kind, games, s, ctx); delete facts.allowed; facts.dfs = _dfsBlock(ctx, null); }
   else if (kind === 'weekend-preview') facts = packetWeekend(games, ctx);
   else if (kind === 'kickers-defenses') facts = packetKDst(ctx);
+  else if (kind === 'market-movers') facts = packetMarketMovers(games, ctx);
   else if (kind === 'breaking') facts = packetBreaking(ctx, o.events || []);
   if (!facts) return { skip: true, reason: 'no_builder' };
   if (facts.skip) return facts;
