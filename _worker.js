@@ -6989,7 +6989,11 @@ function blendBoard(board, w) {
 // `minGap` positions AND at least `minPct` of the better rank, on players
 // somebody would start. The candidates for the one rivalry.
 const BLEND_DISAGREE = { minGap: 6, minPct: 0.25, startable: { QB: 16, RB: 36, WR: 48, TE: 16, K: 12, DST: 12 } };
-function blendDisagreements(rows, limit) {
+// `opts` relaxes the two thresholds for the rivalry column, which needs five
+// picks a side and would otherwise print three in a week the boards agree.
+function blendDisagreements(rows, limit, opts) {
+  const minGap = opts && opts.minGap != null ? opts.minGap : BLEND_DISAGREE.minGap;
+  const minPct = opts && opts.minPct != null ? opts.minPct : BLEND_DISAGREE.minPct;
   const out = [];
   for (const r of rows) {
     if (!r.blend) continue;
@@ -6997,12 +7001,166 @@ function blendDisagreements(rows, limit) {
     const best = Math.min(a, b);
     if (best > (BLEND_DISAGREE.startable[r.position] || 24)) continue;
     const gap = Math.abs(a - b);
-    if (gap < BLEND_DISAGREE.minGap || gap < best * BLEND_DISAGREE.minPct) continue;
+    if (gap < minGap || gap < best * minPct) continue;
+    // The one market that moved most, so a pitch can name a line rather than
+    // assert that the market "knows" something.
+    const driver = ((r.why && r.why.drivers) || []).filter(d => d && d.delta && d.from != null && d.to != null)
+      .sort((x, y) => Math.abs(y.pct || 0) - Math.abs(x.pct || 0))[0] || null;
     out.push({ name: r.name, position: r.position, team: r.team, key: r.key, fantasyRank: a, marketRank: b, gap, higher: a < b ? 'fantasy' : 'market',
                fantasyPoints: r.blend.fantasy, marketPoints: r.blend.market, marketBasis: r.blend.marketBasis, marketConfidence: r.blend.marketConfidence,
+               roleFactor: r.blend.roleFactor, driver: driver ? { label: driver.label, from: driver.from, to: driver.to } : null,
                why: r.why ? r.why.summary : '' });
   }
   return out.sort((x, y) => y.gap - x.gap).slice(0, limit || 20);
+}
+
+// ── Vega vs. Brooks, the column ────────────────────────────────────────────
+// The band under the newsroom used to be a table of rank gaps with a note
+// beside it, which is a report of an argument rather than the argument. It is
+// a column now: each man takes five players he expects to beat the other
+// man's ranking on, and makes the case in his own voice.
+//
+// The two lists cannot be the same list, because a player only qualifies for
+// the man whose end of the slider has him higher — Vega picks from the rows
+// the market ranks above the consensus, Brooks from the rows the consensus
+// ranks above the market — and a pick is used once. Everything in a pitch
+// except its last sentence is read off the row: the points at both ends, both
+// ranks, what the market is priced from, whether the usage trend has been
+// earned, and the one line that actually moved. Neither of them can claim
+// something the board does not show. The needle at the end is fixed prose,
+// chosen by a hash of the player, the week and the man, so the same player
+// does not draw the same jab every week and no two picks in one column draw
+// the same jab at all.
+const RIVALRY_PICKS = 5;
+// Widest gaps first; if a side is short of five the thresholds relax once,
+// rather than the column printing three picks and looking abandoned.
+const RIVALRY_LOOSE = { minGap: 3, minPct: 0.1 };
+const RIV_BASIS = {
+  props: 'his own posted props',
+  'props-partial': 'the props the books have actually posted on him',
+  'props+gamelines': 'his props and the game total',
+  gamelines: 'his club’s team total and the game total',
+  'gamelines+ratings': 'the game lines and a fitted team rating',
+  ratings: 'a fitted team rating, with no player market posted',
+  none: 'no posted market at all'
+};
+const RIV_STANDFIRST = {
+  vega: 'Five the books already have ahead of Evan’s board. Every one of them is a number somebody took a position on, against a number somebody typed.',
+  brooks: 'Five my board has ahead of Nate’s screen. A sportsbook is not trying to win your league; it is trying to get even money on both sides of a market.'
+};
+const RIV_NEEDLE = {
+  vega: [
+    'Evan will have him there too in about three weeks, once it is safe.',
+    'A line is a forecast with money behind it. A ranking is a forecast with a byline behind it.',
+    'Evan wants to watch him earn it. The books have already paid him.',
+    'This is the part where the board catches up and somebody calls it a bold call.',
+    'Waiting for confirmation is a fine hobby. It is not an edge.',
+    'The market moved on Tuesday. The rankings will move on Friday.',
+    'I do not need him to look the part. I need him to be priced wrong.'
+  ],
+  brooks: [
+    'Nate found a number a book set to balance its action and called it football.',
+    'The line is one input. Nate has promoted it to the whole argument.',
+    'Nate is early on everything, which is a generous way of saying he is often wrong first.',
+    'Being early and being right are two different achievements. He collects the first one.',
+    'The market is not reading the depth chart this week. I am.',
+    'When the line and the role disagree, take the role. It is the one getting the touches.',
+    'He is welcome to the closing line. I will take the workload.'
+  ]
+};
+function _rivHash(s) { let h = 5381; const t = String(s); for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h; }
+function _rivNeedle(side, seed, used) {
+  const bank = RIV_NEEDLE[side];
+  for (let i = 0; i < bank.length; i++) { const j = (seed + i) % bank.length; if (!used.has(j)) { used.add(j); return bank[j]; } }
+  return bank[seed % bank.length];
+}
+// The evidence sentence. Vega argues from what is priced; Brooks argues from
+// role and schedule, and from how thin the market Nate is quoting actually is.
+// Each branch carries two phrasings and takes them by the pick's position in
+// the column, because five picks that happen to share a branch used to open
+// with the same eight words five times.
+const _cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
+// "an 8.4-point player", "an 11-point player", "a 12-point player".
+const _rivA = n => (/^(8|11|18)(\.|$)/.test(String(n)) ? 'an ' : 'a ') + n;
+function _rivEvidence(d, side, i) {
+  const basis = RIV_BASIS[d.marketBasis] || RIV_BASIS.none;
+  const alt = (i || 0) % 2 === 1;
+  if (side === 'vega') {
+    if (d.driver) {
+      // from/to are already in the driver's own units -- yards, receptions,
+      // or the American price on the anytime touchdown.
+      const move = d.driver.label + ' from ' + d.driver.from + ' to ' + d.driver.to;
+      return alt ? 'The line moved first: ' + move.charAt(0).toLowerCase() + move.slice(1) + '. ' + _cap(basis) + ' now put him at ' + d.marketPoints + ' points a week; the consensus is still at ' + d.fantasyPoints + '.'
+                 : move + ' is a market telling you what it expects, and ' + basis + ' price him at ' + d.marketPoints + ' points a week against the consensus’ ' + d.fantasyPoints + '.';
+    }
+    return alt ? d.marketPoints + ' points a week is what ' + basis + ' imply. The ranking says ' + d.fantasyPoints + '.'
+               : 'Priced off ' + basis + ', he is ' + _rivA(d.marketPoints) + '-point player this week. The consensus projects ' + d.fantasyPoints + '.';
+  }
+  if (d.roleFactor > 1) {
+    return alt ? 'His role moved before the line did: ' + d.fantasyPoints + ' points at the workload he is actually getting, while ' + basis + ' still have him at ' + d.marketPoints + '.'
+               : 'The usage has already earned the bump: ' + d.fantasyPoints + ' points at the role he is playing now, before the schedule ahead of him is priced in.';
+  }
+  if (d.marketBasis === 'ratings' || d.marketBasis === 'none') {
+    return alt ? 'There is no player market on him to read. Nate’s number comes off ' + basis + ', which is a projection of the market, not the market.'
+               : 'No book has posted a player market on him. Nate is ranking him off ' + basis + ' and presenting it as a read.';
+  }
+  if (d.marketConfidence === 'LOW') {
+    return alt ? _cap(basis) + ', graded low confidence, with the books disagreeing among themselves. I have ' + d.fantasyPoints + ' points; he has ' + d.marketPoints + '.'
+               : 'The market he is quoting is graded low confidence: ' + basis + ', and the books do not agree with each other on it. My number is ' + d.fantasyPoints + ' points, his is ' + d.marketPoints + '.';
+  }
+  return alt ? 'Talent, workload and schedule get him to ' + d.fantasyPoints + ' points. ' + _cap(basis) + ' get Nate to ' + d.marketPoints + '.'
+             : d.fantasyPoints + ' points of talent, workload and schedule, against ' + d.marketPoints + ' from ' + basis + '.';
+}
+function _rivGap(d, side) {
+  const mine = side === 'vega' ? d.marketRank : d.fantasyRank;
+  const theirs = side === 'vega' ? d.fantasyRank : d.marketRank;
+  const who = side === 'vega' ? 'Brooks' : 'Vega';
+  return 'I have him ' + d.position + mine + '; ' + who + ' has him ' + d.position + theirs + ', ' + d.gap + ' place' + (d.gap === 1 ? '' : 's') + ' lower.';
+}
+function rivalryColumn(id, cands, week) {
+  const a = ANALYSTS[id], other = ANALYSTS[ANALYSTS[id].rivalry];
+  const used = new Set();
+  return {
+    id, name: a.name, avatar: a.avatar, role: a.role, url: '/analysts/' + id,
+    label: id === 'vega' ? 'Market Intelligence' : 'Fantasy Analysis',
+    against: { id: other.id, name: other.name, avatar: other.avatar, url: '/analysts/' + other.id },
+    standfirst: RIV_STANDFIRST[id],
+    picks: cands.map((d, i) => {
+      const mine = id === 'vega' ? d.marketRank : d.fantasyRank;
+      const theirs = id === 'vega' ? d.fantasyRank : d.marketRank;
+      return { name: d.name, position: d.position, team: d.team, key: d.key,
+               mineRank: mine, theirsRank: theirs, gap: d.gap,
+               minePoints: id === 'vega' ? d.marketPoints : d.fantasyPoints,
+               theirsPoints: id === 'vega' ? d.fantasyPoints : d.marketPoints,
+               marketBasis: d.marketBasis, marketConfidence: d.marketConfidence,
+               pitch: _rivEvidence(d, id, i) + ' ' + _rivGap(d, id) + ' ' + _rivNeedle(id, _rivHash(id + '|' + (d.key || d.name) + '|' + week), used) };
+    })
+  };
+}
+// Both columns off one board. `rows` are blended rows; the week only seeds the
+// needles, so the same board on the same week always reads the same.
+function rivalryColumns(rows, opts) {
+  const o = opts || {};
+  const want = Math.max(1, o.picks || RIVALRY_PICKS);
+  const week = o.week == null ? '' : String(o.week);
+  const startable = rows.filter(r => /^(QB|RB|WR|TE)$/.test(r.position));
+  const tight = blendDisagreements(startable, 400);
+  const loose = blendDisagreements(startable, 400, RIVALRY_LOOSE);
+  const side = id => {
+    const wants = id === 'vega' ? 'market' : 'fantasy';
+    // Vega does not pitch a player no book has priced: that is the one claim
+    // his method cannot make.
+    const his = list => list.filter(d => d.higher === wants && !(id === 'vega' && (d.marketBasis === 'none' || !(d.marketPoints > 0))));
+    const seen = new Set(), picks = [];
+    for (const list of [his(tight), his(loose)]) for (const d of list) {
+      if (picks.length >= want) break;
+      const k = d.key || d.name;
+      if (seen.has(k)) continue;
+      seen.add(k); picks.push(d);
+    }
+    return rivalryColumn(id, picks, week);
+  };
+  return { vega: side('vega'), brooks: side('brooks') };
 }
 
 // ── DFS metrics ────────────────────────────────────────────────────────────
@@ -7984,10 +8142,11 @@ async function disagreementsPayload(env, horizon) {
   if (!board.ok) return { ok: false, error: board.error || 'no_board' };
   const b = blendBoard(board, 0.5);
   const rows = blendDisagreements(b.players.filter(p => /^(QB|RB|WR|TE)$/.test(p.position)), 12);
+  const columns = rivalryColumns(b.players, { week: b.currentWeek });
   let recent = [];
   if (await contentReady(env)) { await newsroomReady(env); try { recent = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 5").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null } : null; }).filter(Boolean); } catch (e) {} }
   return { ok: true, horizon: b.horizon, currentWeek: b.currentWeek, pair: { brooks: { name: ANALYSTS.brooks.name, label: 'Fantasy Analysis', url: '/analysts/brooks' }, vega: { name: ANALYSTS.vega.name, label: 'Market Intelligence', url: '/analysts/vega' } },
-           disagreements: rows.map(r => ({ ...r, brooksRank: r.fantasyRank, vegaRank: r.marketRank })), recentLines: recent, thresholds: BLEND_DISAGREE };
+           columns, disagreements: rows.map(r => ({ ...r, brooksRank: r.fantasyRank, vegaRank: r.marketRank })), recentLines: recent, thresholds: BLEND_DISAGREE };
 }
 
 // ── breaking news ──────────────────────────────────────────────────────────

@@ -35,7 +35,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normaliseCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normaliseCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => null, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -102,6 +102,44 @@ const rows = [
   const d = H.blendDisagreements(H.blendBoard({ ok: true, players: big }, 0.5).players, 5);
   ok('a disagreement needs a six-place gap and a quarter of the rank, on a startable player', d.length === 1 && d[0].fantasyRank === 31 && d[0].marketRank === 9 && d[0].higher === 'market' && d[0].gap >= 6, JSON.stringify(d.map(x => [x.name, x.fantasyRank, x.marketRank])));
   ok('a two-place disagreement is not one', !H.blendDisagreements(H.blendBoard({ ok: true, players: rows }, 0.5).players, 5).some(x => x.name === 'Javonte Williams'));
+}
+
+console.log('\nthe rivalry column');
+{
+  // A board wide enough to rank on: the two ends are pulled apart on every
+  // fourth player, in both directions, so each man has candidates of his own.
+  const pool = [];
+  const shape = { QB: 20, RB: 40, WR: 55, TE: 20 };
+  let n = 0;
+  for (const [ps, cnt] of Object.entries(shape)) for (let i = 0; i < cnt; i++, n++) {
+    const base = (ps === 'QB' ? 21 : ps === 'RB' ? 20 : ps === 'WR' ? 19 : 14) - i * 0.35;
+    const swing = n % 5 === 0 ? 4.6 : n % 4 === 0 ? -3.8 : n % 7 === 0 ? 2.9 : 0.3;
+    pool.push({ name: 'Player ' + n + ' Smith', position: ps, team: 'T' + (n % 8), key: 'p' + n + '|' + ps,
+      consensus: { points: base }, vegas: { points: base + swing, basis: n % 5 === 0 ? 'props' : n % 5 === 1 ? 'gamelines' : n % 5 === 2 ? 'props-partial' : n % 5 === 3 ? 'ratings' : 'props+gamelines', confidence: n % 7 === 0 ? 'LOW' : 'HIGH' },
+      roleTrend: n % 6 === 0 ? { applied: true, factor: 1.1 } : null,
+      why: n % 4 === 0 ? { summary: 'x', drivers: [{ kind: 'volume', label: 'Receiving yards', from: 54.5, to: 63.5, delta: 9, pct: 16.5 }] } : null });
+  }
+  const b = H.blendBoard({ ok: true, players: pool, currentWeek: 3 }, 0.5);
+  const c = H.rivalryColumns(b.players, { week: 3 });
+  ok('both men file a column of five', c.vega.picks.length === H.RIVALRY_PICKS && c.brooks.picks.length === H.RIVALRY_PICKS, JSON.stringify([c.vega.picks.length, c.brooks.picks.length]));
+  ok('each column is bylined to its man and points at the other', c.vega.name === 'Nate Vega' && c.vega.against.name === 'Evan Brooks' && c.brooks.against.name === 'Nate Vega' && c.vega.url === '/analysts/vega');
+  ok('a man only pitches players his own end of the slider has higher', c.vega.picks.every(p => p.mineRank < p.theirsRank) && c.brooks.picks.every(p => p.mineRank < p.theirsRank));
+  ok('the two columns cannot be the same column', !c.vega.picks.some(p => c.brooks.picks.some(q => q.key === p.key)));
+  ok('nobody is pitched twice in one column', new Set(c.vega.picks.map(p => p.key)).size === 5 && new Set(c.brooks.picks.map(p => p.key)).size === 5);
+  ok('every pitch names both ranks and ends on the needle', c.vega.picks.every(p => p.pitch.indexOf(p.position + p.mineRank) > 0 && p.pitch.indexOf(p.position + p.theirsRank) > 0 && /[.!]$/.test(p.pitch)) && c.brooks.picks.every(p => p.pitch.indexOf(p.position + p.mineRank) > 0 && p.pitch.indexOf(p.position + p.theirsRank) > 0));
+  ok('no two picks in a column draw the same jab', new Set(c.vega.picks.map(p => p.pitch.split('. ').pop())).size === 5 && new Set(c.brooks.picks.map(p => p.pitch.split('. ').pop())).size === 5);
+  ok('the same board on the same week reads the same', JSON.stringify(H.rivalryColumns(b.players, { week: 3 })) === JSON.stringify(c));
+  ok('the needles move with the week', JSON.stringify(H.rivalryColumns(b.players, { week: 4 })) !== JSON.stringify(c));
+  ok('Vega never pitches a player no book has priced', c.vega.picks.every(p => p.marketBasis !== 'none'));
+  ok('each man names his rival, not himself', c.vega.picks.every(p => /Brooks|Evan/.test(p.pitch)) && c.brooks.picks.every(p => /Vega|Nate/.test(p.pitch)));
+  // A week the two ends agree on: the relaxed pass still has to find five, and
+  // a board with nothing in it must not invent anybody.
+  const calm = H.blendBoard({ ok: true, players: pool.map((p, i) => ({ ...p, vegas: { ...p.vegas, points: p.consensus.points + (i % 9 === 0 ? 1.4 : i % 8 === 0 ? -1.2 : 0.05) } })), currentWeek: 3 }, 0.5);
+  const cc = H.rivalryColumns(calm.players, { week: 3 });
+  ok('a quiet week still fills both columns off the relaxed pass', cc.vega.picks.length === 5 && cc.brooks.picks.length === 5, JSON.stringify([cc.vega.picks.length, cc.brooks.picks.length]));
+  const flat = H.blendBoard({ ok: true, players: pool.map(p => ({ ...p, roleTrend: null, vegas: { ...p.vegas, points: p.consensus.points } })), currentWeek: 3 }, 0.5);
+  const cf = H.rivalryColumns(flat.players, { week: 3 });
+  ok('two identical boards produce no picks rather than invented ones', cf.vega.picks.length === 0 && cf.brooks.picks.length === 0, JSON.stringify([cf.vega.picks.length, cf.brooks.picks.length]));
 }
 
 console.log('\nthe rivalry gate');
