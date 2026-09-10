@@ -100,10 +100,24 @@ const IN_SEASON_HUB = '/in-season';
 // component that depends on /api/vegas-edge, /api/signals or /api/tuna-market
 // receives a jurisdiction-unavailable response instead of current market data.
 //
-// /the-line is also blocked as a page because its entire purpose is to read the
-// slate against posted wagering numbers.
-const LINE_PATHS = new Set(['/the-line', '/the-line/', '/the-line.html', '/in-season/the-line', '/in-season/the-line/']);
-function LINE_GEOFENCED(pathname) { return LINE_PATHS.has(String(pathname || '')); }
+// Dedicated betting-market pages are blocked as pages as well. The fantasy
+// and DFS products can still use Iron Tuna's derived projections, but a reader
+// in Washington does not receive the current betting-market board, props,
+// spreads, totals, movement dashboard or The Line.
+const WA_MARKET_PAGE_PATHS = new Set([
+  '/the-line', '/the-line/', '/the-line.html', '/in-season/the-line', '/in-season/the-line/',
+  '/vegas-edge', '/vegas-edge/', '/vegas-edge.html', '/in-season/vegas-edge', '/in-season/vegas-edge/',
+  '/game-intel', '/game-intel/', '/game-intel.html', '/in-season/game-intel', '/in-season/game-intel/',
+  '/player-intel', '/player-intel/', '/player-intel.html',
+  '/what-they-arent-telling-you', '/what-they-arent-telling-you/', '/what-they-arent-telling-you.html',
+  '/in-season/what-they-arent-telling-you', '/in-season/what-they-arent-telling-you/',
+  '/hidden-value', '/hidden-value/', '/hidden-value.html',
+  '/previews', '/previews/', '/previews.html'
+]);
+function WA_MARKET_PAGE_GEOFENCED(pathname) {
+  const p = String(pathname || '');
+  return WA_MARKET_PAGE_PATHS.has(p) || /^\/in-season\/player(?:\/|$)/.test(p);
+}
 function IS_WASHINGTON(request) {
   const cf = request && request.cf || {};
   const country = String(cf.country || '').toUpperCase();
@@ -117,24 +131,23 @@ function WA_MARKET_BLOCK() {
     { status: 451, headers: { 'cache-control': 'no-store', 'vary': 'CF-IPCountry' } }
   );
 }
-// Served with the fence's own 451. It links to /previews, which is the same
-// slate with the wagering read taken off it, so a Washington reader still gets
-// the football.
-const LINE_BLOCKED_HTML = `<!doctype html>
+// Served with the fence's own 451. Washington readers retain the non-market
+// fantasy and DFS tools, but not the betting-market section itself.
+const WA_MARKET_BLOCKED_HTML = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>The Line is not available in Washington | Iron Tuna</title>
+<title>Betting Market Intel is not available in Washington | Iron Tuna</title>
 <link rel="icon" href="/tuna-mark.png">
 <link rel="stylesheet" href="/site.css">
 </head>
 <body>
 <main id="main" class="wrap">
-<p class="is-eyebrow">Iron Tuna &middot; The Line</p>
-<h1>The Line is not available in Washington</h1>
-<p class="is-lede">This page reads the week&rsquo;s games against the posted betting number and puts hypothetical stakes on them. Washington State regulates online gambling activity more strictly than any other state, so Iron Tuna does not serve the page to readers there.</p>
+<p class="is-eyebrow">Iron Tuna &middot; Betting Market Intel</p>
+<h1>Betting Market Intel is not available in Washington</h1>
+<p class="is-lede">Iron Tuna does not serve its betting-market section, current odds, props, spreads, totals or line-movement data to requests located in Washington State.</p>
 <p>The fantasy tools remain available. <a href="/weekly-rankings">This week&rsquo;s rankings</a>, <a href="/season-long-rankings">season-long rankings</a>, waiver tools and league-specific analysis continue to work without transmitting the current betting-market board.</p>
 <p class="is-note">If you believe you are seeing this in error, it is because the network you are on places you in Washington. Iron Tuna takes no wagers, holds no funds and is not a sportsbook. If gambling has stopped being entertainment, the National Problem Gambling Helpline is 1-800-MY-RESET, free and confidential.</p>
 <p><a href="/">Back to Iron Tuna</a></p>
@@ -142,6 +155,13 @@ const LINE_BLOCKED_HTML = `<!doctype html>
 </body>
 </html>
 `;
+function stripWashingtonMarketLane(html) {
+  return String(html || '')
+    .replace(/\s*<button class="lane-tab"[^>]*id="laneTabMarket"[\s\S]*?<\/button>/, '')
+    .replace(/\s*<a href="#market[^"]*" data-lane="market">[\s\S]*?<\/a>/g, '')
+    .replace(/\s*<div class="lane-pane" id="laneMarket"[\s\S]*?<\/div><!-- \/#laneMarket -->/, '')
+    .replace(/grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/, 'grid-template-columns: repeat(2, minmax(0, 1fr))');
+}
 function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
 function postDraftPreview(env, url, request) {
   if (adminOk(env, url.searchParams.get('preview'))) return true;
@@ -14046,23 +14066,11 @@ export default {
         (blk, y, mo, dd) => ((y + '-' + mo + '-' + dd) !== '2026-07-04' && Date.now() < Date.UTC(+y, +mo - 1, +dd, 13, 0, 0) ? '' : blk));
       return new Response(__xml, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
     }
-    // ── /the-line is geofenced out of Washington State ────────────────────────
-    // The Line reads the week's games against the posted number and puts
-    // HYPOTHETICAL stakes on the ones it disagrees with. No wager is taken, no
-    // money is held and nothing is settled — but Washington treats online
-    // gambling activity more strictly than any other state (Wash. Rev. Code
-    // ch. 9.46), so the page is simply not served there rather than argued
-    // about. The block is at the EDGE, before the asset layer, because the ribbon
-    // link is baked into ~20 static pages and cannot be varied per request.
-    //
-    // regionCode is checked with the country, because "WA" is also Western
-    // Australia. A request Cloudflare cannot place gets the page: the fence is
-    // for readers who ARE in Washington, not for everyone the edge cannot see.
-    // The response is uncacheable and Vary-marked, so no shared cache can hand
-    // one region's answer to another.
-    if (LINE_GEOFENCED(url.pathname)) {
-      if (IS_WASHINGTON(request)) {
-        return new Response(LINE_BLOCKED_HTML, {
+    // ── betting-market pages are geofenced out of Washington State ───────────
+    // This is evaluated at the edge before the asset layer. A direct URL, an
+    // old bookmark or a hand-typed alias therefore gets the same 451 as a click.
+    if (IS_WASHINGTON(request) && WA_MARKET_PAGE_GEOFENCED(url.pathname)) {
+        return new Response(WA_MARKET_BLOCKED_HTML, {
           status: 451,
           headers: {
             'content-type': 'text/html; charset=utf-8',
@@ -14070,7 +14078,6 @@ export default {
             'vary': 'CF-IPCountry',
           },
         });
-      }
     }
     let __assetReq = request;
     // "/" serves the news-style front page (front.html); the classic SPA hub moved to /hub.
@@ -14146,8 +14153,21 @@ export default {
         __assetReq = new Request(new URL(IN_SEASON_HUB, url).toString(), request);
       }
     } catch (e) {}
-    const resp = await env.ASSETS.fetch(__assetReq);
-    const ct = resp.headers.get('content-type') || '';
+    let resp = await env.ASSETS.fetch(__assetReq);
+    let ct = resp.headers.get('content-type') || '';
+    // "/" is shared by all three top-level products. In Washington the page
+    // itself is rewritten at the edge so the Betting Market Intel tab and pane
+    // never reach the browser. This is server-side removal, not CSS hiding.
+    if (IS_WASHINGTON(request) && ct.includes('text/html') &&
+        (url.pathname === '/' || url.pathname === '/front' || url.pathname === '/front/' || url.pathname === '/front.html')) {
+      let waHtml = await resp.text();
+      waHtml = stripWashingtonMarketLane(waHtml);
+      resp = new Response(waHtml, resp);
+      resp.headers.set('cache-control', 'private, no-store');
+      resp.headers.set('vary', 'CF-IPCountry');
+      resp.headers.delete('content-length');
+      ct = resp.headers.get('content-type') || 'text/html';
+    }
     // Count the view off the response path — a slow or failed D1 write must never
     // hold up the page. Only real, successful HTML loads count.
     if (resp.ok && ct.includes('text/html') && request.method === 'GET') ctx.waitUntil(logPageView(env, request, url));
