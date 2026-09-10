@@ -4477,11 +4477,12 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
      down, and the lane switch keeps working even if a feed throws. -->
 <script>
 (function () {
-  var LANES = { fantasy: 1, dfs: 1, market: 1 };
   var tabs = [].slice.call(document.querySelectorAll('.lane-tab'));
   var ribbon = document.querySelector('.ribbon');
   var panes = { fantasy: document.getElementById('laneFantasy'), dfs: document.getElementById('laneDfs'), market: document.getElementById('laneMarket') };
-  if (!tabs.length || !panes.fantasy || !panes.dfs || !panes.market) return;
+  var LANES = { fantasy: 1, dfs: 1 };
+  if (panes.market) LANES.market = 1;
+  if (!tabs.length || !panes.fantasy || !panes.dfs) return;
 
   var lane = 'fantasy';
 
@@ -4497,7 +4498,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       if (hash) {
         var target = document.getElementById(hash);
         if (target && panes.dfs.contains(target)) return 'dfs';
-        if (target && panes.market.contains(target)) return 'market';
+        if (target && panes.market && panes.market.contains(target)) return 'market';
         if (target && panes.fantasy.contains(target)) return 'fantasy';
       }
       var saved = localStorage.getItem('it.lane');
@@ -4511,7 +4512,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     lane = next;
     panes.fantasy.hidden = next !== 'fantasy';
     panes.dfs.hidden = next !== 'dfs';
-    panes.market.hidden = next !== 'market';
+    if (panes.market) panes.market.hidden = next !== 'market';
     // Anything else in the main column that belongs to one lane — the "Drafting
     // soon?" band at the foot of the page — goes with it. The bands with no
     // data-lane (the method, the closing band) are the page's own furniture and
@@ -4562,7 +4563,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     if (!a) return;
     var target = document.getElementById(a.getAttribute('href').slice(1));
     if (!target) return;
-    var want = panes.dfs.contains(target) ? 'dfs' : panes.market.contains(target) ? 'market' : panes.fantasy.contains(target) ? 'fantasy' : null;
+    var want = panes.dfs.contains(target) ? 'dfs' : panes.market && panes.market.contains(target) ? 'market' : panes.fantasy.contains(target) ? 'fantasy' : null;
     if (want && want !== lane) setLane(want);
   });
 
