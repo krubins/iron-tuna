@@ -1,37 +1,92 @@
 #!/usr/bin/env node
-// Download the nearest upcoming NFL Sunday 1 PM ET Classic main slate from
-// DraftKings and pass it through Iron Tuna's existing admin CSV importer.
+// Download every DraftKings NFL Classic salary pool available for the target
+// Thursday-through-Monday week, merge them into one weekly player set, and
+// pass it through Iron Tuna's existing admin CSV importer.
 
 import { pathToFileURL } from 'url';
 
 export const LOBBY_URL = 'https://www.draftkings.com/lobby/getcontests?sport=NFL';
 export const DRAFTABLES_URL = id => `https://api.draftkings.com/draftgroups/v1/draftgroups/${id}/draftables`;
 const MIN_PLAYERS = 40;
+const DAY_MS = 86400000;
+const WEEKDAY = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
 const nyParts = value => Object.fromEntries(new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York', weekday: 'short', year: 'numeric', month: '2-digit',
   day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
 }).formatToParts(new Date(value)).filter(p => p.type !== 'literal').map(p => [p.type, p.value]));
 
-export function selectMainSlate(lobby, now = Date.now()) {
-  const groups = Array.isArray(lobby && lobby.DraftGroups) ? lobby.DraftGroups : [];
-  const eligible = groups.filter(group => {
-    const p = nyParts(group.StartDate);
-    return String(group.Sport || '').toUpperCase() === 'NFL' && Number(group.ContestTypeId) === 21 &&
-      Number(group.GameCount) > 1 && p.weekday === 'Sun' && Number(p.hour) === 13 &&
-      Number(p.minute) === 0 && new Date(group.StartDate).getTime() > now;
-  });
-  if (!eligible.length) throw new Error('No upcoming Sunday 1 PM ET NFL Classic slate was found.');
+const nyDay = value => {
+  const p = nyParts(value);
+  return Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day));
+};
 
-  // The main slate has no suffix. DraftKings also exposes Early Only and
-  // Sun-Mon groups at 1 PM; prefer the unsuffixed group, then the most games.
-  eligible.sort((a, b) => {
-    const aMain = String(a.ContestStartTimeSuffix || '').trim() === '' ? 1 : 0;
-    const bMain = String(b.ContestStartTimeSuffix || '').trim() === '' ? 1 : 0;
-    return new Date(a.StartDate) - new Date(b.StartDate) || bMain - aMain ||
-      Number(b.GameCount || 0) - Number(a.GameCount || 0);
+export function targetWeekWindow(now = Date.now()) {
+  const p = nyParts(now);
+  const weekday = WEEKDAY[p.weekday];
+  if (!Number.isInteger(weekday)) throw new Error('Could not determine the New York weekday.');
+  const today = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day));
+  // Tuesday/Wednesday prepare the coming NFL week. Thursday through Monday
+  // stay on the current NFL week that began on Thursday.
+  const delta = weekday === 2 || weekday === 3 ? 4 - weekday : -((weekday - 4 + 7) % 7);
+  const thursday = today + delta * DAY_MS;
+  return { startDay: thursday, endDay: thursday + 4 * DAY_MS };
+}
+
+export function selectWeeklySlates(lobby, now = Date.now()) {
+  const groups = Array.isArray(lobby && lobby.DraftGroups) ? lobby.DraftGroups : [];
+  const { startDay, endDay } = targetWeekWindow(now);
+  const eligible = groups.filter(group => {
+    const start = new Date(group.StartDate).getTime();
+    if (!Number.isFinite(start)) return false;
+    const localDay = nyDay(start);
+    return String(group.Sport || '').toUpperCase() === 'NFL' && Number(group.ContestTypeId) === 21 &&
+      Number(group.GameCount) > 1 && localDay >= startDay && localDay <= endDay;
   });
-  return eligible[0];
+  if (!eligible.length) throw new Error('No NFL Classic multi-game salary pools were found for the target Thursday-through-Monday week.');
+
+  // Read every Classic game set for the week so players from Thursday,
+  // Sunday night and Monday are not lost when they are absent from the
+  // Sunday 1 PM main slate. Start with the broadest group so its salary wins
+  // if DraftKings exposes an overlapping player at different salaries.
+  const unique = new Map();
+  for (const group of eligible) {
+    const id = Number(group.DraftGroupId);
+    if (Number.isInteger(id) && id > 0 && !unique.has(id)) unique.set(id, group);
+  }
+  const selected = [...unique.values()].sort((a, b) =>
+    Number(b.GameCount || 0) - Number(a.GameCount || 0) ||
+    new Date(a.StartDate) - new Date(b.StartDate) ||
+    String(a.ContestStartTimeSuffix || '').localeCompare(String(b.ContestStartTimeSuffix || ''))
+  );
+  if (!selected.length) throw new Error('The target NFL week had no valid DraftKings draft-group IDs.');
+  return selected;
+}
+
+const playerKey = row => {
+  const position = String(row.position || '').toUpperCase();
+  const competition = row.competition || (Array.isArray(row.competitions) && row.competitions[0]) || {};
+  return `${row.playerId || row.playerDkId || row.displayName}|${position}|${competition.competitionId || competition.name || ''}`;
+};
+
+export function mergeDraftablePayloads(entries) {
+  const players = new Map();
+  let salaryConflicts = 0;
+  for (const entry of entries) {
+    const raw = Array.isArray(entry && entry.payload && entry.payload.draftables) ? entry.payload.draftables : [];
+    for (const row of raw) {
+      const key = playerKey(row);
+      const current = players.get(key);
+      if (!current) {
+        players.set(key, row);
+      } else if (Number(current.salary) > 0 && Number(row.salary) > 0 && Number(current.salary) !== Number(row.salary)) {
+        // Entries arrive broadest-slate first. Keep that canonical salary and
+        // count the discrepancy rather than silently changing it later.
+        salaryConflicts++;
+      }
+    }
+  }
+  return { draftables: [...players.values()], salaryConflicts };
 }
 
 const csvCell = value => {
@@ -45,7 +100,7 @@ export function draftablesToCsv(payload, minimum = MIN_PLAYERS) {
   for (const row of raw) {
     const position = String(row.position || '').toUpperCase();
     const competition = row.competition || (Array.isArray(row.competitions) && row.competitions[0]) || {};
-    const key = `${row.playerId || row.playerDkId || row.displayName}|${position}|${competition.competitionId || competition.name || ''}`;
+    const key = playerKey(row);
     if (!players.has(key) && /^(QB|RB|WR|TE|DST)$/.test(position) && Number.isInteger(Number(row.salary)) && Number(row.salary) > 0) {
       players.set(key, { ...row, position, competition });
     }
@@ -69,7 +124,7 @@ export function draftablesToCsv(payload, minimum = MIN_PLAYERS) {
 }
 
 async function getJson(url) {
-  const response = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'IronTuna-DraftKings-Salary-Importer/1.0' } });
+  const response = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'IronTuna-DraftKings-Salary-Importer/1.1' } });
   if (!response.ok) throw new Error(`${new URL(url).hostname} returned HTTP ${response.status}.`);
   return response.json();
 }
@@ -77,12 +132,23 @@ async function getJson(url) {
 export async function run(env = process.env, now = Date.now()) {
   const forcedId = String(env.INPUT_DRAFT_GROUP_ID || env.DRAFTKINGS_DRAFT_GROUP_ID || '').trim();
   const lobby = forcedId ? null : await getJson(LOBBY_URL);
-  const slate = forcedId ? { DraftGroupId: Number(forcedId), GameCount: null, StartDate: null } : selectMainSlate(lobby, now);
-  if (!Number.isInteger(Number(slate.DraftGroupId)) || Number(slate.DraftGroupId) <= 0) throw new Error('The DraftKings draft group ID is invalid.');
+  const slates = forcedId ? [{ DraftGroupId: Number(forcedId), GameCount: null, StartDate: null, ContestStartTimeSuffix: 'forced' }] : selectWeeklySlates(lobby, now);
+  if (!slates.every(slate => Number.isInteger(Number(slate.DraftGroupId)) && Number(slate.DraftGroupId) > 0)) {
+    throw new Error('A DraftKings draft group ID is invalid.');
+  }
 
-  const converted = draftablesToCsv(await getJson(DRAFTABLES_URL(slate.DraftGroupId)), Number(env.MIN_DK_PLAYERS || MIN_PLAYERS));
+  const payloads = await Promise.all(slates.map(async slate => ({ slate, payload: await getJson(DRAFTABLES_URL(slate.DraftGroupId)) })));
+  const merged = mergeDraftablePayloads(payloads);
+  const converted = draftablesToCsv(merged, Number(env.MIN_DK_PLAYERS || MIN_PLAYERS));
   const dryRun = /^(1|true|yes)$/i.test(String(env.INPUT_DRY_RUN || ''));
-  const result = { draftGroupId: Number(slate.DraftGroupId), games: slate.GameCount, start: slate.StartDate, players: converted.rows.length, dryRun };
+  const result = {
+    draftGroupIds: slates.map(slate => Number(slate.DraftGroupId)),
+    groups: slates.length,
+    maxGames: Math.max(...slates.map(slate => Number(slate.GameCount || 0))),
+    players: converted.rows.length,
+    salaryConflicts: merged.salaryConflicts,
+    dryRun
+  };
   if (dryRun) return result;
 
   const key = String(env.IRON_TUNA_ADMIN_KEY || '').trim();
@@ -91,7 +157,7 @@ export async function run(env = process.env, now = Date.now()) {
   endpoint.searchParams.set('key', key);
   const week = String(env.INPUT_WEEK || '').trim();
   const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
-    site: 'dk', csv: converted.csv, slate: 'main', source: 'draftkings-automation', ...(week ? { week: Number(week) } : {})
+    site: 'dk', csv: converted.csv, slate: 'weekly', source: 'draftkings-automation', ...(week ? { week: Number(week) } : {})
   }) });
   const body = await response.json().catch(() => ({}));
   if (!response.ok || !body.ok || !body.imported || body.imported.rows < MIN_PLAYERS) {
