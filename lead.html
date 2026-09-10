@@ -86,6 +86,8 @@ footer.site a{color:var(--muted)}
 /* ── the generated insight ── */
 .meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;margin-top:42px}
 .cat{background:rgba(14,124,99,.10);color:var(--teal);border:1px solid rgba(14,124,99,.34);border-radius:4px;padding:3px 9px;font-weight:700}
+.cat.nfl-wide{display:inline-flex;align-items:center;gap:6px}
+.cat-nfl-logo{display:block;width:20px;height:20px;object-fit:contain;flex:0 0 auto}
 .stamp{color:var(--muted);font-weight:700}
 .stamp:before{content:"\00b7";margin-right:8px}
 .body{margin-top:6px}
@@ -314,7 +316,15 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
           + (L.has ? '' : ' <a href="/auctiondraft?screen=cheat">Set up your league &rarr;</a>');
         yours.hidden = false;
       }
-      document.getElementById('cat').textContent = s.label || 'Insight';
+      var cat = document.getElementById('cat');
+      var catLabel = s.label || 'Insight';
+      var nflWide = /^NFL\s+League-Wide$/i.test(String(catLabel).trim());
+      cat.classList.toggle('nfl-wide', nflWide);
+      if (nflWide) {
+        cat.innerHTML = '<img class="cat-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' + esc(catLabel);
+      } else {
+        cat.textContent = catLabel;
+      }
       document.getElementById('stamp').textContent = stamp(s.createdAt);
       document.getElementById('metaRow').hidden = false;
       // The body is written by the desk's own run and stored as an HTML
