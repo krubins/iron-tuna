@@ -29,17 +29,14 @@
       for (const r of data.items) {
         const card = el('article', null, output); card.className = 'tms-card';
         el('h3', `${r.player || r.matchup} · ${r.side}`, card);
-        el('p', `${r.market.replaceAll('_', ' ')} · ${r.book} · ${r.player ? r.matchup : r.sport}`, card);
+        el('p', `${r.market.replaceAll('_', ' ')} · ${r.player ? r.matchup : r.sport}`, card);
         el('strong', r.score == null ? (r.stale ? 'Stale observation — unscored' : 'Waiting for a second updated quote') : `Movement score ${r.score}/100`, card);
-        el('p', `Line ${r.line ?? '—'} · Decimal odds ${r.price.toFixed(2)} · Line change ${fmt(r.lineDelta)} · Implied probability change ${fmt(r.probabilityDelta, ' pp')}`, card);
-        el('p', `Same-line sportsbook consensus: ${r.consensusProbability == null ? 'Unavailable' : r.consensusProbability.toFixed(1) + '%'} (${r.books} books). Reference-book gap: ${fmt(r.sharpGap, ' pp')}. Prices include margin.`, card);
+        el('p', `Line change ${fmt(r.lineDelta)} · Implied probability change ${fmt(r.probabilityDelta, ' pp')}`, card);
+        el('p', `Sportsbook consensus: ${r.consensusProbability == null ? 'Unavailable' : r.consensusProbability.toFixed(1) + '%'} across ${r.books} books. Consensus gap: ${fmt(r.sharpGap, ' pp')}. Prices include margin.`, card);
         el('p', r.publicSplit ? `Public splits: ${r.publicSplit.tickets}% tickets / ${r.publicSplit.money}% money, reported ${new Date(r.publicSplit.at).toLocaleString()}.` : 'Public betting splits: unavailable; sportsbook consensus is not public bet volume.', card);
-        el('small', `Source: ${r.provider} · Book updated ${new Date(r.updated).toLocaleString()} · Collected ${new Date(r.observed).toLocaleString()}`, card);
-        const source = el('a', 'Source website', card); source.href = r.source; source.rel = 'noopener noreferrer'; source.target = '_blank';
-        const details = el('details', null, card); el('summary', 'Observed history', details);
-        el('p', 'First observed within this window, not the sportsbook opening line. Price changes are compared only at an unchanged line.', details);
-        const list = el('ul', null, details);
-        for (const point of r.history) el('li', `${new Date(point.at).toLocaleString()}: line ${point.line ?? '—'}, decimal odds ${point.price.toFixed(2)}`, list);
+        el('small', `Latest market update ${new Date(r.updated).toLocaleString()} · Signal collected ${new Date(r.observed).toLocaleString()}`, card);
+        const details = el('details', null, card); el('summary', 'How to read this signal', details);
+        el('p', 'The public signal is derived from stored sportsbook observations. Book identity, raw current prices and raw quote history stay server-side; the score describes movement and consensus, not a guaranteed edge or confirmed sharp action.', details);
       }
     } catch { status.textContent = 'Market signals are temporarily unavailable. Try again later.'; }
     finally { button.disabled = false; }
