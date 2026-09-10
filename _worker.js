@@ -7194,7 +7194,7 @@ function contentDue(kind, now, state, sched) {
   if (K.anchor === 'targets' && firstTarget) dueAt = _nextEt(slotDay, K.hour, firstTarget.kickoff - 24 * 3600000, K.minute || 0);
   else if (K.retro) dueAt = _nextEt(K.day, K.hour, Math.max(...ags.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
   else if (prevGames.length) dueAt = _nextEt(K.day, K.hour, Math.max(...prevGames.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
-  else dueAt = _nextEt(K.day, K.hour, Math.min(...ags.map(g => g.kickoff)) - 132 * 3600000, K.minute || 0);
+  else dueAt = _nextEt(K.day, K.hour, Math.min(...ags.map(g => g.kickoff)) - 24 * 3600000, K.minute || 0);
   const due = now >= dueAt;
   // Publication and model-generation are separate clocks. Most desk pieces are
   // pre-written overnight and embargoed until dueAt. Time-sensitive Sunday
