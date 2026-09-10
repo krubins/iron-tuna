@@ -141,7 +141,11 @@ ok('the homepage market tab is removed server-side for Washington',
 ok('the current market APIs are also fenced in Washington',
   /IS_WASHINGTON\(request\)[\s\S]{0,180}api\/vegas-edge/.test(worker) &&
   /IS_WASHINGTON\(request\)[\s\S]{0,180}api\/signals/.test(worker) &&
-  /api\/tuna-market[\s\S]{0,500}tmsCountry === 'US'[\s\S]{0,100}tmsRegion === 'WA'/.test(worker));
+  /api\/tuna-market[\s\S]{0,500}tmsCountry === 'US'[\s\S]{0,100}tmsRegion === 'WA'/.test(worker) &&
+  /api\/vegas-column[\s\S]{0,120}IS_WASHINGTON\(request\)/.test(worker) &&
+  /api\/market'\)[\s\S]{0,120}IS_WASHINGTON\(request\)/.test(worker) &&
+  /api\/market\/movement[\s\S]{0,120}IS_WASHINGTON\(request\)/.test(worker) &&
+  /api\/player-odds[\s\S]{0,120}IS_WASHINGTON\(request\)/.test(worker));
 
 // ── the page's own arithmetic, run ──────────────────────────────────────────
 // The real source, lifted and evaluated. Nothing is paraphrased: a rule that
