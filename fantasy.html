@@ -55,6 +55,29 @@ section{margin:0 0 var(--space-6)}
    the deck it dates rather than floating between the headline and the board. */
 .fn-top{max-width:760px}
 .fn-top .is-lede{margin-bottom:var(--space-3)}
+/* Vega vs. Brooks. Not a table of gaps any more: two columns, five picks each,
+   each man arguing the players he expects to beat the other man's ranking on.
+   The ranks ride above each pitch as a chip for scanning and inside the pitch
+   as well, so a paragraph read on its own still says what it is arguing. */
+.fn-riv{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5) var(--space-6);padding:var(--space-4)}
+.fn-riv-col{min-width:0}
+.fn-riv-head{display:flex;align-items:center;gap:var(--space-2);padding-bottom:var(--space-2);border-bottom:2px solid var(--teal)}
+.fn-riv-av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:var(--fs-3xs);flex:none}
+.fn-riv-head b{display:block;font-size:var(--fs-md);line-height:1.2}
+.fn-riv-head a{color:inherit}
+.fn-riv-head small{display:block;font-size:var(--fs-3xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
+.fn-riv-rec{margin-left:auto;text-align:right;font-size:var(--fs-3xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);line-height:1.35}
+.fn-riv-rec b{display:block;font-size:var(--fs-md);letter-spacing:0;color:var(--text)}
+.fn-riv-stand{margin:var(--space-3) 0 0;font-size:var(--fs-sm);line-height:1.55;font-style:italic;color:var(--muted)}
+.fn-riv-foot{grid-column:1/-1;border-top:1px solid var(--line);padding-top:var(--space-3);font-size:var(--fs-sm);line-height:1.55;color:var(--sec)}
+.fn-riv-foot p{margin:0 0 var(--space-2)}.fn-riv-foot p:last-child{margin:0}.fn-riv-foot b{color:var(--text)}
+.fn-riv-pick{padding:var(--space-3) 0;border-top:1px solid var(--line)}
+.fn-riv-pick h3{margin:0;font-size:var(--fs-md);line-height:1.3}
+.fn-riv-pick h3 small{font-weight:400;font-size:var(--fs-3xs);color:var(--muted);margin-left:6px}
+.fn-riv-ranks{margin:2px 0 4px;font-size:var(--fs-3xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.fn-riv-ranks b{color:var(--text)}.fn-riv-ranks i{font-style:normal;font-weight:400;margin:0 5px}
+.fn-riv-pick p{margin:0;font-size:var(--fs-sm);line-height:1.55;color:var(--sec)}
+@media(max-width:760px){.fn-riv{grid-template-columns:1fr}}
 .fn-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:var(--space-3)}
 .fn-tool{display:block;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-md);
   padding:var(--space-4) var(--space-5);color:var(--sec);transition:border-color .12s ease,box-shadow .12s ease}
@@ -242,10 +265,10 @@ section{margin:0 0 var(--space-6)}
   </section>
 
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>Vega vs. Brooks</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
-    <p>Where <a href="/analysts/brooks">Fantasy Analysis</a> and <a href="/analysts/vega">Market Intelligence</a> rank the same player apart this week, and what the market is reading that the ranking is not.</p></div>
+    <p>The desk&rsquo;s one standing argument. <a href="/analysts/vega">Market Intelligence</a> and <a href="/analysts/brooks">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p></div>
   <section id="disagree">
     <div class="is-plate">
-      <div class="is-scroll" id="fnDisWrap" hidden><table class="is-table"><thead><tr><th>Player</th><th class="num">Brooks</th><th class="num">Vega</th><th>Market basis</th><th>Why</th></tr></thead><tbody id="fnDisBody"></tbody></table></div>
+      <div class="fn-riv" id="fnDisWrap" hidden></div>
       <p class="is-plate-state is-empty" id="fnDisEmpty">Reading the boards&hellip;</p>
     </div>
   </section>
@@ -592,8 +615,38 @@ section{margin:0 0 var(--space-6)}
     $('fnDeskEmpty').hidden = true;
   }).catch(function () { $('fnDeskEmpty').textContent = 'The desk did not answer.'; });
   fetch('/api/disagreements', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
-    if (!j || !j.ok || !j.disagreements.length) { $('fnDisEmpty').textContent = 'The two methods agree within six places on every startable player this week.'; return; }
-    $('fnDisBody').innerHTML = j.disagreements.slice(0, 10).map(function (d) { return '<tr><td class="is-who">' + e(d.name) + ' <small>' + e(d.position + ' \u00b7 ' + d.team) + '</small></td><td class="num">' + e(d.position + d.brooksRank) + '</td><td class="num">' + e(d.position + d.vegaRank) + '</td><td>' + e(d.marketBasis) + '</td><td>' + e(d.why || '') + '</td></tr>'; }).join('');
+    var cols = (j && j.ok && j.columns) || {};
+    var wrote = ['vega', 'brooks'].filter(function (k) { return cols[k] && cols[k].picks && cols[k].picks.length; });
+    if (!wrote.length) { $('fnDisEmpty').textContent = 'The two methods agree within six places on every startable player this week. Neither of them has a case to make.'; return; }
+    var r3 = function (rec) { return rec.hit + '\u2013' + rec.miss + (rec.push ? '\u2013' + rec.push : ''); };
+    // The scoreboard under the two columns: how the last settled week went, and
+    // whether what is above it is on the record yet.
+    var foot = function (j) {
+      var lw = j.lastWeek, told = '';
+      if (lw) {
+        var line = function (k, name) {
+          var w = lw[k]; if (!w || !w.of) return '';
+          var best = w.best ? ' ' + e(w.best.player) + ' finished ' + e(w.best.position + w.best.finish) + ' against ' + e(w.best.position + w.best.theirs) + '.' : '';
+          return '<b>' + e(name) + ' went ' + e(w.hit) + ' of ' + e(w.of) + '</b>' + (w.push ? ' (' + e(w.push) + ' pushed)' : '') + '.' + best;
+        };
+        var v = line('vega', 'Vega'), b = line('brooks', 'Brooks');
+        if (v || b) told = '<p>Week ' + e(lw.week) + ', settled on the real finishes: ' + [v, b].filter(Boolean).join(' ') + '</p>';
+      }
+      return '<div class="fn-riv-foot">' + told + '<p>' + (j.locked
+        ? 'These ten picks were locked before kickoff and go on each man&rsquo;s record: a pick is a hit only if the player finishes ahead of the rank the other one gave him.'
+        : 'This week&rsquo;s column is a live read of the two boards. It locks on Thursday morning, before the first kickoff, and only then does it go on the record.') + '</p></div>';
+    };
+    $('fnDisWrap').innerHTML = wrote.map(function (k) {
+      var c = cols[k];
+      var rec = c.record && c.record.graded ? '<span class="fn-riv-rec" title="Hit, miss and push on every column pick graded this season"><b>' + e(r3(c.record)) + '</b>on the record</span>' : '';
+      return '<div class="fn-riv-col"><div class="fn-riv-head"><span class="fn-riv-av">' + e(c.avatar) + '</span><div><b><a href="' + e(c.url) + '">' + e(c.name) + '</a></b><small>' + e(c.label) + '</small></div>' + rec + '</div>' +
+        '<p class="fn-riv-stand">' + e(c.standfirst) + '</p>' +
+        c.picks.map(function (p) {
+          return '<article class="fn-riv-pick"><h3>' + e(p.name) + '<small>' + e(p.position + ' \u00b7 ' + p.team) + '</small></h3>' +
+            '<p class="fn-riv-ranks"><b>' + e(c.avatar + ' ' + p.position + p.mineRank) + '</b><i>against</i>' + e(c.against.avatar + ' ' + p.position + p.theirsRank) + '</p>' +
+            '<p>' + e(p.pitch) + '</p></article>';
+        }).join('') + '</div>';
+    }).join('') + foot(j);
     $('fnDisWrap').hidden = false; $('fnDisEmpty').hidden = true;
   }).catch(function () { $('fnDisEmpty').textContent = 'The boards did not answer.'; });
 })();

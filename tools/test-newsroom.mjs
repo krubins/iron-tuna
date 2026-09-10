@@ -22,6 +22,9 @@ const _oddsNorm = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
 const _oddsRound = v => Math.round(v * 10) / 10;
 const _median = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : 0; };
 const stub = () => { throw new Error('not needed'); };
+// Two stubs the rivalry-column tests below set: the weekly stats file the
+// grader reads, and the board the weekly build runs on.
+let USAGE = null, BOARD = null;
 const POOL = [
   { name: 'CeeDee Lamb', position: 'WR', team: 'DAL', projectedStats: {} }, { name: 'Javonte Williams', position: 'RB', team: 'DAL', projectedStats: {} },
   { name: 'Saquon Barkley', position: 'RB', team: 'PHI', projectedStats: {} }, { name: 'Jalen Hurts', position: 'QB', team: 'PHI', projectedStats: {} },
@@ -35,8 +38,8 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
-)(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => null, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
+)(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
 {
@@ -102,6 +105,165 @@ const rows = [
   const d = H.blendDisagreements(H.blendBoard({ ok: true, players: big }, 0.5).players, 5);
   ok('a disagreement needs a six-place gap and a quarter of the rank, on a startable player', d.length === 1 && d[0].fantasyRank === 31 && d[0].marketRank === 9 && d[0].higher === 'market' && d[0].gap >= 6, JSON.stringify(d.map(x => [x.name, x.fantasyRank, x.marketRank])));
   ok('a two-place disagreement is not one', !H.blendDisagreements(H.blendBoard({ ok: true, players: rows }, 0.5).players, 5).some(x => x.name === 'Javonte Williams'));
+}
+
+console.log('\nthe rivalry column');
+{
+  // A board wide enough to rank on: the two ends are pulled apart on every
+  // fourth player, in both directions, so each man has candidates of his own.
+  const pool = [];
+  const shape = { QB: 20, RB: 40, WR: 55, TE: 20 };
+  let n = 0;
+  for (const [ps, cnt] of Object.entries(shape)) for (let i = 0; i < cnt; i++, n++) {
+    const base = (ps === 'QB' ? 21 : ps === 'RB' ? 20 : ps === 'WR' ? 19 : 14) - i * 0.35;
+    const swing = n % 5 === 0 ? 4.6 : n % 4 === 0 ? -3.8 : n % 7 === 0 ? 2.9 : 0.3;
+    pool.push({ name: 'Player ' + n + ' Smith', position: ps, team: 'T' + (n % 8), key: 'p' + n + '|' + ps,
+      consensus: { points: base }, vegas: { points: base + swing, basis: n % 5 === 0 ? 'props' : n % 5 === 1 ? 'gamelines' : n % 5 === 2 ? 'props-partial' : n % 5 === 3 ? 'ratings' : 'props+gamelines', confidence: n % 7 === 0 ? 'LOW' : 'HIGH' },
+      roleTrend: n % 6 === 0 ? { applied: true, factor: 1.1 } : null,
+      why: n % 4 === 0 ? { summary: 'x', drivers: [{ kind: 'volume', label: 'Receiving yards', from: 54.5, to: 63.5, delta: 9, pct: 16.5 }] } : null });
+  }
+  const b = H.blendBoard({ ok: true, players: pool, currentWeek: 3 }, 0.5);
+  const c = H.rivalryColumns(b.players, { week: 3 });
+  ok('both men file a column of five', c.vega.picks.length === H.RIVALRY_PICKS && c.brooks.picks.length === H.RIVALRY_PICKS, JSON.stringify([c.vega.picks.length, c.brooks.picks.length]));
+  ok('each column is bylined to its man and points at the other', c.vega.name === 'Nate Vega' && c.vega.against.name === 'Evan Brooks' && c.brooks.against.name === 'Nate Vega' && c.vega.url === '/analysts/vega');
+  ok('a man only pitches players his own end of the slider has higher', c.vega.picks.every(p => p.mineRank < p.theirsRank) && c.brooks.picks.every(p => p.mineRank < p.theirsRank));
+  ok('the two columns cannot be the same column', !c.vega.picks.some(p => c.brooks.picks.some(q => q.key === p.key)));
+  ok('nobody is pitched twice in one column', new Set(c.vega.picks.map(p => p.key)).size === 5 && new Set(c.brooks.picks.map(p => p.key)).size === 5);
+  ok('every pitch names both ranks and ends on the needle', c.vega.picks.every(p => p.pitch.indexOf(p.position + p.mineRank) > 0 && p.pitch.indexOf(p.position + p.theirsRank) > 0 && /[.!]$/.test(p.pitch)) && c.brooks.picks.every(p => p.pitch.indexOf(p.position + p.mineRank) > 0 && p.pitch.indexOf(p.position + p.theirsRank) > 0));
+  ok('no two picks in a column draw the same jab', new Set(c.vega.picks.map(p => p.pitch.split('. ').pop())).size === 5 && new Set(c.brooks.picks.map(p => p.pitch.split('. ').pop())).size === 5);
+  ok('the same board on the same week reads the same', JSON.stringify(H.rivalryColumns(b.players, { week: 3 })) === JSON.stringify(c));
+  ok('the needles move with the week', JSON.stringify(H.rivalryColumns(b.players, { week: 4 })) !== JSON.stringify(c));
+  ok('Vega never pitches a player no book has priced', c.vega.picks.every(p => p.marketBasis !== 'none'));
+  ok('each man names his rival, not himself', c.vega.picks.every(p => /Brooks|Evan/.test(p.pitch)) && c.brooks.picks.every(p => /Vega|Nate/.test(p.pitch)));
+  ok('the pitches clear the same phrasing bar the writer is held to, em dashes included', ['vega', 'brooks'].every(k => !H.AI_PHRASES.some(re => re.test(c[k].standfirst)) && c[k].picks.every(p => !H.AI_PHRASES.some(re => re.test(p.pitch)))));
+  // A week the two ends agree on: the relaxed pass still has to find five, and
+  // a board with nothing in it must not invent anybody.
+  const calm = H.blendBoard({ ok: true, players: pool.map((p, i) => ({ ...p, vegas: { ...p.vegas, points: p.consensus.points + (i % 9 === 0 ? 1.4 : i % 8 === 0 ? -1.2 : 0.05) } })), currentWeek: 3 }, 0.5);
+  const cc = H.rivalryColumns(calm.players, { week: 3 });
+  ok('a quiet week still fills both columns off the relaxed pass', cc.vega.picks.length === 5 && cc.brooks.picks.length === 5, JSON.stringify([cc.vega.picks.length, cc.brooks.picks.length]));
+  const flat = H.blendBoard({ ok: true, players: pool.map(p => ({ ...p, roleTrend: null, vegas: { ...p.vegas, points: p.consensus.points } })), currentWeek: 3 }, 0.5);
+  const cf = H.rivalryColumns(flat.players, { week: 3 });
+  ok('two identical boards produce no picks rather than invented ones', cf.vega.picks.length === 0 && cf.brooks.picks.length === 0, JSON.stringify([cf.vega.picks.length, cf.brooks.picks.length]));
+}
+
+console.log('\nthe rivalry column on the record');
+{
+  // A fake D1 that answers exactly the statements this feature issues. Table
+  // rows are plain objects; anything else throws, so a query that changes
+  // shape fails here instead of silently returning nothing in production.
+  const fakeDb = () => {
+    const t = { rivalry_columns: [], analyst_calls: [] };
+    let nextId = 1;
+    const run = (sql, b) => {
+      if (/^CREATE /.test(sql)) return { success: true };
+      if (/^INSERT INTO rivalry_columns/.test(sql)) {
+        if (t.rivalry_columns.some(r => r.season === b[0] && r.week === b[1])) throw new Error('UNIQUE constraint failed');
+        t.rivalry_columns.push({ season: b[0], week: b[1], payload: b[2], built_at: b[3] }); return { success: true };
+      }
+      if (/^INSERT INTO analyst_calls/.test(sql)) {
+        const k = ['season', 'week', 'analyst', 'player_key', 'player', 'team', 'position', 'kind', 'slug', 'lens', 'direction', 'recommendation', 'rank', 'confidence', 'rationale', 'evidence', 'rivalry', 'created_at'];
+        const row = { id: nextId++, outcome: null, outcome_note: null, outcome_at: null };
+        k.forEach((n, i) => { row[n] = b[i]; });
+        t.analyst_calls.push(row); return { success: true };
+      }
+      if (/^UPDATE analyst_calls SET outcome/.test(sql)) {
+        const row = t.analyst_calls.find(r => r.id === b[3]);
+        if (row) { row.outcome = b[0]; row.outcome_note = b[1]; row.outcome_at = b[2]; }
+        return { success: true };
+      }
+      throw new Error('unexpected write: ' + sql.slice(0, 60));
+    };
+    const all = (sql, b) => {
+      if (/FROM rivalry_columns/.test(sql)) return { results: t.rivalry_columns.filter(r => r.season === b[0] && r.week === b[1]) };
+      if (/FROM analyst_calls WHERE outcome IS NULL/.test(sql)) return { results: t.analyst_calls.filter(r => r.outcome == null && r.week != null && r.week <= b[0]) };
+      if (/FROM analyst_calls WHERE kind = \? AND season = \?/.test(sql)) {
+        return { results: t.analyst_calls.filter(r => r.kind === b[0] && r.season === b[1]).sort((x, y) => y.week - x.week || x.id - y.id) };
+      }
+      throw new Error('unexpected read: ' + sql.slice(0, 60));
+    };
+    // D1's bind() returns a NEW bound statement rather than mutating the
+    // prepared one, and a batch of ten statements built off one prepare only
+    // works because of that. The fake copies the behaviour, or the test would
+    // pass against a shim the real thing does not match.
+    const stmt = (sql, b) => ({ sql, b,
+      bind: (...a) => stmt(sql, a),
+      async run() { return run(sql, b); },
+      async all() { return all(sql, b); },
+      async first() { return (await this.all()).results[0] || null; } });
+    return { t, prepare: sql => stmt(sql, []),
+      async batch(list) { const done = []; for (const x of list) done.push(await run(x.sql, x.b)); return done; } };
+  };
+  const shape = { QB: 20, RB: 40, WR: 55, TE: 20 };
+  const pool = [];
+  let n = 0;
+  for (const [ps, cnt] of Object.entries(shape)) for (let i = 0; i < cnt; i++, n++) {
+    const base = (ps === 'QB' ? 21 : ps === 'RB' ? 20 : ps === 'WR' ? 19 : 14) - i * 0.35;
+    const swing = n % 5 === 0 ? 4.6 : n % 4 === 0 ? -3.8 : n % 7 === 0 ? 2.9 : 0.3;
+    pool.push({ name: 'Player ' + n + ' Smith', position: ps, team: 'T' + (n % 8), key: 'p' + n + '|' + ps,
+      consensus: { points: base }, vegas: { points: base + swing, basis: n % 5 === 3 ? 'ratings' : 'props', confidence: 'HIGH' },
+      roleTrend: n % 6 === 0 ? { applied: true, factor: 1.1 } : null, why: null });
+  }
+  BOARD = { ok: true, players: pool, season: 2026, currentWeek: 3 };
+  H.setBoards(async () => BOARD);
+  const db = fakeDb();
+  const env = { LEADS_DB: db };
+  const built = await H.runRivalryColumn(env);
+  ok('the week is built once and stored', built.ok && built.week === 3 && built.picks === 10 && built.calls === 10, JSON.stringify(built));
+  ok('the stored payload is the column the reader gets', (await H.rivalryColumnRead(env, 2026, 3)).columns.vega.picks.length === 5);
+  const again = await H.runRivalryColumn(env);
+  ok('a second run that week changes nothing', again.already === true && db.t.analyst_calls.length === 10, JSON.stringify(again));
+  const one = db.t.analyst_calls[0];
+  ok('a pick is filed as the claim it makes, against a named rank', one.kind === H.RIVALRY_COLUMN_KIND && one.direction === 'up' && /finishes ahead of/.test(one.recommendation) && JSON.parse(one.rivalry).theirsRank > one.rank);
+  ok('both men are on the record for the week', new Set(db.t.analyst_calls.map(r => r.analyst)).size === 2 && db.t.analyst_calls.every(r => r.week === 3 && r.season === 2026));
+
+  // The week's real finishes: the pitched players score in a spread that makes
+  // some claims true and some false, and one of them does not play at all.
+  const picked = db.t.analyst_calls.map(r => ({ key: r.player_key, position: r.position, theirs: JSON.parse(r.rivalry).theirsRank }));
+  const players = {};
+  for (const p of pool) players[p.key] = { name: p.name, position: p.position, latest: { week: 3, stats: { recYd: 10, rec: 1 } }, season: { games: 3, points: 30 } };
+  // Give every pitched player but one a line good enough to finish first in his
+  // position; the odd one out is scratched.
+  picked.forEach((p, i) => { if (i === 0) delete players[p.key]; else players[p.key].latest.stats = { recYd: 400 - i * 2, rec: 20, recTD: 3 }; });
+  USAGE = { season: 2026, throughWeek: 3, players };
+  const graded = await H.runCallsGrade(env);
+  ok('every pick is settled once the week publishes', graded.ok && graded.rivalry === 10 && db.t.analyst_calls.every(r => r.outcome), JSON.stringify(graded));
+  ok('a player who did not play loses the claim', db.t.analyst_calls[0].outcome === 'miss' && /did not play/.test(db.t.analyst_calls[0].outcome_note));
+  ok('a pick that finishes ahead of the rival’s rank is a hit', db.t.analyst_calls.slice(1).every(r => r.outcome === 'hit') && /finished/.test(db.t.analyst_calls[1].outcome_note));
+  ok('the note names the finish and the rank it beat', /finished [A-Z]+\d+ on [\d.]+ points; (Nate Vega|Evan Brooks) had him [A-Z]+\d+/.test(db.t.analyst_calls[1].outcome_note), db.t.analyst_calls[1].outcome_note);
+
+  // The stats file moves on: week 3's picks are no longer gradeable from it,
+  // and a player who played on must not read as a scratch.
+  const late = fakeDb();
+  for (const r of db.t.analyst_calls) late.t.analyst_calls.push({ ...r, id: r.id, outcome: null, outcome_note: null });
+  USAGE = { season: 2026, throughWeek: 4, players };
+  const missed = await H.runCallsGrade({ LEADS_DB: late });
+  ok('a week the stats file has moved past is left pending, not guessed', missed.ok && missed.rivalry === 0 && late.t.analyst_calls.every(r => !r.outcome), JSON.stringify(missed));
+  USAGE = { season: 2026, throughWeek: 3, players };
+
+  const led = await H.rivalryLedger(env, 2026);
+  ok('the ledger totals each man’s graded picks', led.vega.graded === 5 && led.brooks.graded === 5 && led.vega.hit + led.vega.miss + led.vega.push === 5);
+  ok('the ledger settles on the last graded week and names the widest win', led.lastWeek.week === 3 && led.lastWeek.vega.of === 5 && led.lastWeek.brooks.of === 5 && led.lastWeek.vega.best && led.lastWeek.vega.best.finish < led.lastWeek.vega.best.theirs, JSON.stringify(led.lastWeek && led.lastWeek.vega));
+
+  // A finish exactly on the rival's number is a push, not a win.
+  ok('the exact rank is a push', H.gradeRivalryCall({ week: 3, position: 'WR', rivalry: { theirsRank: 12, against: 'brooks' } }, { rank: 12, points: 9.9 }).outcome === 'push');
+  ok('a finish behind the rival’s rank is a miss', H.gradeRivalryCall({ week: 3, position: 'WR', rivalry: { theirsRank: 12, against: 'brooks' } }, { rank: 19, points: 4.1 }).outcome === 'miss');
+  ok('a pick with no rival rank is not graded at all', H.gradeRivalryCall({ week: 3, position: 'WR', rivalry: {} }, { rank: 4, points: 22 }) === null);
+  const finishes = H.weekFinishRanks(USAGE, 3, H.scoringRules('ppr'));
+  ok('the finish table ranks inside the position, best first', finishes[picked[1].key].rank >= 1 && Object.values(finishes).every(f => f.rank >= 1) && !finishes[picked[0].key]);
+  ok('a week nobody has played yet has no finish table', Object.keys(H.weekFinishRanks(USAGE, 9, H.scoringRules('ppr'))).length === 0);
+  USAGE = null; BOARD = null;
+}
+
+console.log('\nthe rivalry column on the calendar');
+{
+  const src2 = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8');
+  ok('the build is a registered job', /'rivalry-column':\s+env => runRivalryColumn\(env\)/.test(src2));
+  ok('it runs Thursday morning, before the first kickoff, and retries after', /\{ job: 'rivalry-column',\s+days: \['Thu', 'Fri', 'Sat'\],\s+hours: \[8\]/.test(src2));
+  ok('the grader still runs after the weekly stats land', /\{ job: 'calls-grade',\s+days: \['Tue', 'Wed'\],\s+hours: \[6\]/.test(src2));
+  ok('the store is created with the rest of the desk', /CREATE TABLE IF NOT EXISTS rivalry_columns/.test(src2));
+  const payloadSrc = src2.slice(src2.indexOf('async function disagreementsPayload'), src2.indexOf('// ── breaking news'));
+  ok('a page load reads the stored column and never writes one', /rivalryColumnRead\(env/.test(payloadSrc) && !/INSERT INTO rivalry_columns/.test(payloadSrc) && !/runRivalryColumn\(/.test(payloadSrc));
+  ok('a page load says whether what it is showing is locked', /locked: !!stored/.test(payloadSrc));
 }
 
 console.log('\nthe rivalry gate');

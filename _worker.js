@@ -7114,7 +7114,11 @@ function blendBoard(board, w) {
 // `minGap` positions AND at least `minPct` of the better rank, on players
 // somebody would start. The candidates for the one rivalry.
 const BLEND_DISAGREE = { minGap: 6, minPct: 0.25, startable: { QB: 16, RB: 36, WR: 48, TE: 16, K: 12, DST: 12 } };
-function blendDisagreements(rows, limit) {
+// `opts` relaxes the two thresholds for the rivalry column, which needs five
+// picks a side and would otherwise print three in a week the boards agree.
+function blendDisagreements(rows, limit, opts) {
+  const minGap = opts && opts.minGap != null ? opts.minGap : BLEND_DISAGREE.minGap;
+  const minPct = opts && opts.minPct != null ? opts.minPct : BLEND_DISAGREE.minPct;
   const out = [];
   for (const r of rows) {
     if (!r.blend) continue;
@@ -7122,12 +7126,174 @@ function blendDisagreements(rows, limit) {
     const best = Math.min(a, b);
     if (best > (BLEND_DISAGREE.startable[r.position] || 24)) continue;
     const gap = Math.abs(a - b);
-    if (gap < BLEND_DISAGREE.minGap || gap < best * BLEND_DISAGREE.minPct) continue;
+    if (gap < minGap || gap < best * minPct) continue;
+    // The one market that moved most, so a pitch can name a line rather than
+    // assert that the market "knows" something.
+    const driver = ((r.why && r.why.drivers) || []).filter(d => d && d.delta && d.from != null && d.to != null)
+      .sort((x, y) => Math.abs(y.pct || 0) - Math.abs(x.pct || 0))[0] || null;
     out.push({ name: r.name, position: r.position, team: r.team, key: r.key, fantasyRank: a, marketRank: b, gap, higher: a < b ? 'fantasy' : 'market',
                fantasyPoints: r.blend.fantasy, marketPoints: r.blend.market, marketBasis: r.blend.marketBasis, marketConfidence: r.blend.marketConfidence,
+               roleFactor: r.blend.roleFactor, driver: driver ? { label: driver.label, from: driver.from, to: driver.to } : null,
                why: r.why ? r.why.summary : '' });
   }
   return out.sort((x, y) => y.gap - x.gap).slice(0, limit || 20);
+}
+
+// ── Vega vs. Brooks, the column ────────────────────────────────────────────
+// The band under the newsroom used to be a table of rank gaps with a note
+// beside it, which is a report of an argument rather than the argument. It is
+// a column now: each man takes five players he expects to beat the other
+// man's ranking on, and makes the case in his own voice.
+//
+// The two lists cannot be the same list, because a player only qualifies for
+// the man whose end of the slider has him higher — Vega picks from the rows
+// the market ranks above the consensus, Brooks from the rows the consensus
+// ranks above the market — and a pick is used once. Everything in a pitch
+// except its last sentence is read off the row: the points at both ends, both
+// ranks, what the market is priced from, whether the usage trend has been
+// earned, and the one line that actually moved. Neither of them can claim
+// something the board does not show. The needle at the end is fixed prose,
+// chosen by a hash of the player, the week and the man, so the same player
+// does not draw the same jab every week and no two picks in one column draw
+// the same jab at all.
+const RIVALRY_PICKS = 5;
+// Widest gaps first; if a side is short of five the thresholds relax once,
+// rather than the column printing three picks and looking abandoned.
+const RIVALRY_LOOSE = { minGap: 3, minPct: 0.1 };
+const RIV_BASIS = {
+  props: 'his own posted props',
+  'props-partial': 'the props the books have actually posted on him',
+  'props+gamelines': 'his props and the game total',
+  gamelines: 'his club’s team total and the game total',
+  'gamelines+ratings': 'the game lines and a fitted team rating',
+  ratings: 'a fitted team rating, with no player market posted',
+  none: 'no posted market at all'
+};
+const RIV_STANDFIRST = {
+  vega: 'Five the books already have ahead of Evan’s board. Every one of them is a number somebody took a position on, against a number somebody typed.',
+  brooks: 'Five my board has ahead of Nate’s screen. A sportsbook is not trying to win your league; it is trying to get even money on both sides of a market.'
+};
+const RIV_NEEDLE = {
+  vega: [
+    'Evan will have him there too in about three weeks, once it is safe.',
+    'A line is a forecast with money behind it. A ranking is a forecast with a byline behind it.',
+    'Evan wants to watch him earn it. The books have already paid him.',
+    'This is the part where the board catches up and somebody calls it a bold call.',
+    'Waiting for confirmation is a fine hobby. It is not an edge.',
+    'The market moved on Tuesday. The rankings will move on Friday.',
+    'I do not need him to look the part. I need him to be priced wrong.'
+  ],
+  brooks: [
+    'Nate found a number a book set to balance its action and called it football.',
+    'The line is one input. Nate has promoted it to the whole argument.',
+    'Nate is early on everything, which is a generous way of saying he is often wrong first.',
+    'Being early and being right are two different achievements. He collects the first one.',
+    'The market is not reading the depth chart this week. I am.',
+    'When the line and the role disagree, take the role. It is the one getting the touches.',
+    'He is welcome to the closing line. I will take the workload.'
+  ]
+};
+function _rivHash(s) { let h = 5381; const t = String(s); for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h; }
+function _rivNeedle(side, seed, used) {
+  const bank = RIV_NEEDLE[side];
+  for (let i = 0; i < bank.length; i++) { const j = (seed + i) % bank.length; if (!used.has(j)) { used.add(j); return bank[j]; } }
+  return bank[seed % bank.length];
+}
+// The evidence sentence. Vega argues from what is priced; Brooks argues from
+// role and schedule, and from how thin the market Nate is quoting actually is.
+// Each branch carries two phrasings and takes them by the pick's position in
+// the column, because five picks that happen to share a branch used to open
+// with the same eight words five times.
+const _cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
+// "an 8.4-point player", "an 11-point player", "a 12-point player".
+const _rivA = n => (/^(8|11|18)(\.|$)/.test(String(n)) ? 'an ' : 'a ') + n;
+function _rivEvidence(d, side, i) {
+  const basis = RIV_BASIS[d.marketBasis] || RIV_BASIS.none;
+  const alt = (i || 0) % 2 === 1;
+  if (side === 'vega') {
+    if (d.driver) {
+      // from/to are already in the driver's own units -- yards, receptions,
+      // or the American price on the anytime touchdown.
+      const move = d.driver.label + ' from ' + d.driver.from + ' to ' + d.driver.to;
+      return alt ? 'The line moved first: ' + move.charAt(0).toLowerCase() + move.slice(1) + '. ' + _cap(basis) + ' now put him at ' + d.marketPoints + ' points a week; the consensus is still at ' + d.fantasyPoints + '.'
+                 : move + ' is a market telling you what it expects, and ' + basis + ' price him at ' + d.marketPoints + ' points a week against the consensus’ ' + d.fantasyPoints + '.';
+    }
+    return alt ? d.marketPoints + ' points a week is what ' + basis + ' imply. The ranking says ' + d.fantasyPoints + '.'
+               : 'Priced off ' + basis + ', he is ' + _rivA(d.marketPoints) + '-point player this week. The consensus projects ' + d.fantasyPoints + '.';
+  }
+  if (d.roleFactor > 1) {
+    return alt ? 'His role moved before the line did: ' + d.fantasyPoints + ' points at the workload he is actually getting, while ' + basis + ' still have him at ' + d.marketPoints + '.'
+               : 'The usage has already earned the bump: ' + d.fantasyPoints + ' points at the role he is playing now, before the schedule ahead of him is priced in.';
+  }
+  if (d.marketBasis === 'ratings' || d.marketBasis === 'none') {
+    return alt ? 'There is no player market on him to read. Nate’s number comes off ' + basis + ', which is a projection of the market, not the market.'
+               : 'No book has posted a player market on him. Nate is ranking him off ' + basis + ' and presenting it as a read.';
+  }
+  if (d.marketConfidence === 'LOW') {
+    return alt ? _cap(basis) + ', graded low confidence, with the books disagreeing among themselves. I have ' + d.fantasyPoints + ' points; he has ' + d.marketPoints + '.'
+               : 'The market he is quoting is graded low confidence: ' + basis + ', and the books do not agree with each other on it. My number is ' + d.fantasyPoints + ' points, his is ' + d.marketPoints + '.';
+  }
+  return alt ? 'Talent, workload and schedule get him to ' + d.fantasyPoints + ' points. ' + _cap(basis) + ' get Nate to ' + d.marketPoints + '.'
+             : d.fantasyPoints + ' points of talent, workload and schedule, against ' + d.marketPoints + ' from ' + basis + '.';
+}
+// The two ranks, in the sentence, three ways: the chip above the pitch is for
+// scanning, but a paragraph forwarded on its own still has to say what it is
+// arguing, and five picks cannot all say it the same way.
+function _rivGap(d, side, i) {
+  const mine = side === 'vega' ? d.marketRank : d.fantasyRank;
+  const theirs = side === 'vega' ? d.fantasyRank : d.marketRank;
+  const who = side === 'vega' ? 'Brooks' : 'Vega';
+  const at = n => d.position + n;
+  const places = d.gap + ' place' + (d.gap === 1 ? '' : 's');
+  const v = (i || 0) % 3;
+  if (v === 0) return 'I have him ' + at(mine) + '; ' + who + ' has him ' + at(theirs) + ', ' + places + ' lower.';
+  if (v === 1) return who + ' ranks him ' + at(theirs) + '. He is ' + at(mine) + ' on my board, and I am not giving those ' + places + ' back.';
+  return at(mine) + ' on my board against ' + who + '’s ' + at(theirs) + ': ' + places + ' of daylight, and one of us is about to look silly.';
+}
+function rivalryColumn(id, cands, week) {
+  const a = ANALYSTS[id], other = ANALYSTS[ANALYSTS[id].rivalry];
+  const used = new Set();
+  return {
+    id, name: a.name, avatar: a.avatar, role: a.role, url: '/analysts/' + id,
+    label: id === 'vega' ? 'Market Intelligence' : 'Fantasy Analysis',
+    against: { id: other.id, name: other.name, avatar: other.avatar, url: '/analysts/' + other.id },
+    standfirst: RIV_STANDFIRST[id],
+    picks: cands.map((d, i) => {
+      const mine = id === 'vega' ? d.marketRank : d.fantasyRank;
+      const theirs = id === 'vega' ? d.fantasyRank : d.marketRank;
+      return { name: d.name, position: d.position, team: d.team, key: d.key,
+               mineRank: mine, theirsRank: theirs, gap: d.gap,
+               minePoints: id === 'vega' ? d.marketPoints : d.fantasyPoints,
+               theirsPoints: id === 'vega' ? d.fantasyPoints : d.marketPoints,
+               marketBasis: d.marketBasis, marketConfidence: d.marketConfidence,
+               pitch: _rivEvidence(d, id, i) + ' ' + _rivGap(d, id, i) + ' ' + _rivNeedle(id, _rivHash(id + '|' + (d.key || d.name) + '|' + week), used) };
+    })
+  };
+}
+// Both columns off one board. `rows` are blended rows; the week only seeds the
+// needles, so the same board on the same week always reads the same.
+function rivalryColumns(rows, opts) {
+  const o = opts || {};
+  const want = Math.max(1, o.picks || RIVALRY_PICKS);
+  const week = o.week == null ? '' : String(o.week);
+  const startable = rows.filter(r => /^(QB|RB|WR|TE)$/.test(r.position));
+  const tight = blendDisagreements(startable, 400);
+  const loose = blendDisagreements(startable, 400, RIVALRY_LOOSE);
+  const side = id => {
+    const wants = id === 'vega' ? 'market' : 'fantasy';
+    // Vega does not pitch a player no book has priced: that is the one claim
+    // his method cannot make.
+    const his = list => list.filter(d => d.higher === wants && !(id === 'vega' && (d.marketBasis === 'none' || !(d.marketPoints > 0))));
+    const seen = new Set(), picks = [];
+    for (const list of [his(tight), his(loose)]) for (const d of list) {
+      if (picks.length >= want) break;
+      const k = d.key || d.name;
+      if (seen.has(k)) continue;
+      seen.add(k); picks.push(d);
+    }
+    return rivalryColumn(id, picks, week);
+  };
+  return { vega: side('vega'), brooks: side('brooks') };
 }
 
 // ── DFS metrics ────────────────────────────────────────────────────────────
@@ -7195,6 +7361,7 @@ function dfsStackScores(stacks) {
 const CALLS_DDL = [
   'CREATE TABLE IF NOT EXISTS analyst_calls (id INTEGER PRIMARY KEY AUTOINCREMENT, season INTEGER, week INTEGER, analyst TEXT NOT NULL, player_key TEXT, player TEXT NOT NULL, team TEXT, position TEXT, kind TEXT, slug TEXT, lens TEXT, direction TEXT, recommendation TEXT, rank INTEGER, confidence TEXT, rationale TEXT, evidence TEXT, rivalry TEXT, created_at INTEGER NOT NULL, outcome TEXT, outcome_note TEXT, outcome_at INTEGER)',
   'CREATE INDEX IF NOT EXISTS ix_calls_player ON analyst_calls (player_key, created_at)',
+  'CREATE TABLE IF NOT EXISTS rivalry_columns (season INTEGER NOT NULL, week INTEGER NOT NULL, payload TEXT NOT NULL, built_at INTEGER NOT NULL, PRIMARY KEY (season, week))',
   'CREATE INDEX IF NOT EXISTS ix_calls_analyst ON analyst_calls (analyst, created_at)',
   'CREATE TABLE IF NOT EXISTS newsroom_settings (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)',
   'CREATE TABLE IF NOT EXISTS news_events (id INTEGER PRIMARY KEY AUTOINCREMENT, season INTEGER, week INTEGER, type TEXT NOT NULL, player_key TEXT, player TEXT, team TEXT, position TEXT, detail TEXT, score INTEGER NOT NULL, handled TEXT, created_at INTEGER NOT NULL)',
@@ -7263,25 +7430,170 @@ function gradeCall(call, actualPts, projectedPts) {
   const push = Math.abs(diff) < 1.5;
   return { outcome: push ? 'push' : hit ? 'hit' : 'miss', note: actualPts + ' actual vs ' + projectedPts + ' projected (' + (diff >= 0 ? '+' : '') + diff + ')' };
 }
+// Everyone who has a scored line for `week`, ranked inside his own position on
+// what he actually did that week. A player with no line for that week is
+// simply absent: he did not play, which is worse than any rank on the board.
+function weekFinishRanks(usage, week, rules) {
+  const by = {};
+  for (const [k, u] of Object.entries((usage && usage.players) || {})) {
+    if (!u || !u.latest || u.latest.week !== week) continue;
+    const pos = u.position || 'WR';
+    (by[pos] = by[pos] || []).push({ key: k, points: _oddsRound(scoreStats(u.latest.stats, pos, rules)) });
+  }
+  const out = {};
+  for (const [pos, list] of Object.entries(by)) {
+    list.sort((a, b) => b.points - a.points || (a.key < b.key ? -1 : 1));
+    list.forEach((r, i) => { out[r.key] = { position: pos, rank: i + 1, points: r.points }; });
+  }
+  return out;
+}
+// A rivalry-column pick is one specific claim -- "this player finishes ahead
+// of where the other man ranked him" -- so it is graded on that claim and on
+// nothing else: the player's actual finish inside his position that week
+// against the rank the rival published. A tie is a push. A player who did not
+// play loses the claim; that is the risk the pitch took.
+function gradeRivalryCall(call, finish) {
+  const rv = call.rivalry || {};
+  const theirs = Number(rv.theirsRank);
+  if (!theirs) return null;
+  const pos = call.position || rv.position || '';
+  const rival = (ANALYSTS[rv.against] || {}).name || 'the other man';
+  if (!finish) return { outcome: 'miss', note: 'no scored line in week ' + call.week + ': he did not play' };
+  const line = 'finished ' + pos + finish.rank + ' on ' + finish.points + ' points; ' + rival + ' had him ' + pos + theirs;
+  return { outcome: finish.rank === theirs ? 'push' : finish.rank < theirs ? 'hit' : 'miss', note: line };
+}
 async function runCallsGrade(env) {
   if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
   const usage = await usageCacheRead(env);
   if (!usage || !usage.players) return { ok: true, graded: 0, note: 'no usage file yet' };
   let rows;
-  try { rows = (await env.LEADS_DB.prepare('SELECT id, week, player_key, position, direction, lens FROM analyst_calls WHERE outcome IS NULL AND week IS NOT NULL AND week <= ? ORDER BY created_at DESC LIMIT 200').bind(usage.throughWeek).all()).results || []; } catch (e) { return { ok: false, error: 'read_failed' }; }
+  try { rows = (await env.LEADS_DB.prepare('SELECT id, week, player_key, position, direction, lens, kind, rivalry FROM analyst_calls WHERE outcome IS NULL AND week IS NOT NULL AND week <= ? ORDER BY created_at DESC LIMIT 200').bind(usage.throughWeek).all()).results || []; } catch (e) { return { ok: false, error: 'read_failed' }; }
   const rules = scoringRules('ppr');
-  let graded = 0;
+  const finishes = {};                                             // week -> the whole field, ranked, built once
+  let graded = 0, rivalry = 0;
   for (const r of rows) {
     const u = usage.players[r.player_key];
-    if (!u || !u.latest || u.latest.week !== r.week) continue;      // the file has a later week; only the exact week counts
-    const actual = _oddsRound(scoreStats(u.latest.stats, r.position || 'WR', rules));
-    const projected = u.season && u.season.games ? _oddsRound(u.season.points / u.season.games) : null;
-    const g = gradeCall(r, actual, projected);
+    let g;
+    if (r.kind === RIVALRY_COLUMN_KIND) {
+      // Only the week the file is CURRENTLY through can be graded: the cache
+      // keeps one line per player, so an older week is represented by whoever
+      // has not played since, and a pitched player who played on would read as
+      // a scratch. A pick outside that window is left pending, not guessed at.
+      if (r.week !== usage.throughWeek) continue;
+      // Inside it the finish table decides, so a player with no line IS
+      // gradeable (he did not play, and the claim loses) where a directional
+      // call would be skipped.
+      const table = finishes[r.week] || (finishes[r.week] = weekFinishRanks(usage, r.week, rules));
+      if (!Object.keys(table).length) continue;                     // the week has not published
+      let rv = null; try { rv = r.rivalry ? JSON.parse(r.rivalry) : null; } catch (e) {}
+      g = gradeRivalryCall({ ...r, rivalry: rv }, table[r.player_key] || null);
+      if (g) rivalry++;
+    } else {
+      if (!u || !u.latest || u.latest.week !== r.week) continue;    // the file has a later week; only the exact week counts
+      const actual = _oddsRound(scoreStats(u.latest.stats, r.position || 'WR', rules));
+      const projected = u.season && u.season.games ? _oddsRound(u.season.points / u.season.games) : null;
+      g = gradeCall(r, actual, projected);
+    }
     if (!g) continue;
     try { await env.LEADS_DB.prepare('UPDATE analyst_calls SET outcome = ?, outcome_note = ?, outcome_at = ? WHERE id = ?').bind(g.outcome, g.note, Date.now(), r.id).run(); graded++; } catch (e) {}
   }
-  return { ok: true, graded, candidates: rows.length };
+  return { ok: true, graded, rivalry, candidates: rows.length };
+}
+
+// ── the rivalry column, built once a week and put on the record ────────────
+// The column is an artifact of the week, not a live recompute. It is built
+// on Thursday morning, before the first kickoff, and stored: picks that moved
+// every time the odds moved could not be graded, and a scoreboard nobody can
+// lose is not a rivalry. Every pick goes into analyst_calls as the claim it
+// actually makes -- this player finishes ahead of where the other man ranked
+// him -- and runCallsGrade settles it on the week's real finishes.
+const RIVALRY_COLUMN_KIND = 'rivalry-column';
+async function runRivalryColumn(env) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  await newsroomReady(env);
+  const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
+  if (!board.ok) return { ok: false, error: board.error || 'no_board' };
+  const week = board.currentWeek, season = board.season;
+  if (!week) return { ok: true, skipped: 'no regular-season week' };
+  // Once a week, and once only: a rebuild would move picks that are already on
+  // the record.
+  try {
+    const has = await env.LEADS_DB.prepare('SELECT built_at FROM rivalry_columns WHERE season = ? AND week = ?').bind(season, week).first();
+    if (has) return { ok: true, week, already: true, builtAt: has.built_at };
+  } catch (e) { return { ok: false, error: 'read_failed' }; }
+  const columns = rivalryColumns(blendBoard(board, 0.5).players, { week });
+  const picks = ['vega', 'brooks'].reduce((n, k) => n + columns[k].picks.length, 0);
+  if (!picks) return { ok: true, week, skipped: 'the two boards agree on every startable player' };
+  const payload = { season, week, columns, builtAt: Date.now() };
+  const slug = 'rivalry-' + season + '-w' + week;
+  const call = env.LEADS_DB.prepare('INSERT INTO analyst_calls (season, week, analyst, player_key, player, team, position, kind, slug, lens, direction, recommendation, rank, confidence, rationale, evidence, rivalry, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const writes = [env.LEADS_DB.prepare('INSERT INTO rivalry_columns (season, week, payload, built_at) VALUES (?, ?, ?, ?)').bind(season, week, JSON.stringify(payload), payload.builtAt)];
+  for (const id of ['vega', 'brooks']) {
+    const col = columns[id];
+    for (const p of col.picks) {
+      const rivalry = { pair: RIVALRY_PAIR.slice(), player: p.name, position: p.position, team: p.team, key: p.key,
+                        pitchedBy: id, against: col.against.id, mineRank: p.mineRank, theirsRank: p.theirsRank,
+                        brooks: { rank: id === 'brooks' ? p.mineRank : p.theirsRank }, vega: { rank: id === 'vega' ? p.mineRank : p.theirsRank },
+                        claim: p.position + p.theirsRank };
+      writes.push(call.bind(season, week, id, p.key, p.name, p.team, p.position, RIVALRY_COLUMN_KIND, slug, 'weekly', 'up',
+        'finishes ahead of ' + col.against.name + '’s ' + p.position + p.theirsRank, p.mineRank, p.gap >= 12 ? 'HIGH' : 'MEDIUM', p.pitch,
+        JSON.stringify(['his own rank ' + p.position + p.mineRank, col.against.name + ' ' + p.position + p.theirsRank, 'market basis ' + p.marketBasis]),
+        JSON.stringify(rivalry), Date.now()));
+    }
+  }
+  // One batch: the stored column and the picks it puts on the record go in
+  // together or not at all. A half-written week would be unrepeatable, because
+  // the guard above would read the column row and decline to build again.
+  try { await env.LEADS_DB.batch(writes); }
+  catch (e) { return { ok: false, error: 'write_failed' }; }
+  return { ok: true, week, picks, calls: writes.length - 1 };
+}
+// The stored column for a week, or null. Never builds: a reader must not be
+// able to make the week's picks by loading a page early.
+async function rivalryColumnRead(env, season, week) {
+  if (!env || !env.LEADS_DB || !week) return null;
+  try {
+    const row = await env.LEADS_DB.prepare('SELECT payload, built_at FROM rivalry_columns WHERE season = ? AND week = ?').bind(season, week).first();
+    if (!row) return null;
+    const p = JSON.parse(row.payload);
+    return { ...p, builtAt: row.built_at };
+  } catch (e) { return null; }
+}
+// The running score. Every graded pick either man has made, and the last week
+// that has been settled in full, so the band can say how the picks went rather
+// than only what they were.
+async function rivalryLedger(env, season) {
+  const empty = { vega: { hit: 0, miss: 0, push: 0, graded: 0, pending: 0 }, brooks: { hit: 0, miss: 0, push: 0, graded: 0, pending: 0 }, lastWeek: null };
+  if (!env || !env.LEADS_DB) return empty;
+  let rows = [];
+  try {
+    rows = ((await env.LEADS_DB.prepare('SELECT analyst, week, player, position, rank, outcome, outcome_note, rivalry FROM analyst_calls WHERE kind = ? AND season = ? ORDER BY week DESC, id ASC').bind(RIVALRY_COLUMN_KIND, season).all()).results) || [];
+  } catch (e) { return empty; }
+  const out = { ...empty, vega: { ...empty.vega }, brooks: { ...empty.brooks } };
+  let settled = null;
+  for (const r of rows) {
+    const rec = out[r.analyst];
+    if (!rec) continue;
+    if (!r.outcome) { rec.pending++; continue; }
+    rec.graded++;
+    if (rec[r.outcome] != null) rec[r.outcome]++;
+    if (settled == null) settled = r.week;                          // rows are newest week first
+  }
+  if (settled != null) {
+    const week = settled;
+    const of = id => rows.filter(r => r.week === week && r.analyst === id && r.outcome);
+    out.lastWeek = { week, vega: _rivWeekLine(of('vega')), brooks: _rivWeekLine(of('brooks')) };
+  }
+  return out;
+}
+function _rivWeekLine(rows) {
+  const hit = rows.filter(r => r.outcome === 'hit').length;
+  const push = rows.filter(r => r.outcome === 'push').length;
+  const best = rows.filter(r => r.outcome === 'hit').map(r => { let rv = null; try { rv = JSON.parse(r.rivalry || 'null'); } catch (e) {} const m = /finished ([A-Z]+)(\d+)/.exec(r.outcome_note || ''); return { player: r.player, position: r.position, finish: m ? Number(m[2]) : null, theirs: rv ? Number(rv.theirsRank) : null }; })
+    .filter(x => x.finish != null && x.theirs != null).sort((a, b) => (b.theirs - b.finish) - (a.theirs - a.finish))[0] || null;
+  return { hit, push, of: rows.length, best,
+           picks: rows.map(r => ({ player: r.player, position: r.position, rank: r.rank, outcome: r.outcome, note: r.outcome_note })) };
 }
 
 // ── the one rivalry ────────────────────────────────────────────────────────
@@ -8082,6 +8394,7 @@ function deskNextPayload(state, sched, now) {
 }
 
 // ── author pages, disagreements ────────────────────────────────────────────
+let _RIV_MEMO = { key: '', at: 0, out: null };
 async function analystsPayload(env) {
   return { ok: true, disclosure: AI_DISCLOSURE, rivalry: RIVALRY_PAIR, personas: flagOn(env, 'ANALYST_PERSONAS'),
            analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role, avatar: a.avatar, specialty: a.specialty, personality: a.personality, philosophy: a.philosophy, assignments: a.assignments, rivalry: a.rivalry, url: '/analysts/' + a.id })) };
@@ -8105,13 +8418,36 @@ async function analystPayload(env, id) {
            pieces, calls, record, headToHead, columns };
 }
 async function disagreementsPayload(env, horizon) {
-  const board = await boardsPayload(env, { horizon: HORIZONS[horizon] ? horizon : 'week', position: 'ALL', preset: 'ppr' });
+  const want = HORIZONS[horizon] ? horizon : 'week';
+  const board = await boardsPayload(env, { horizon: want, position: 'ALL', preset: 'ppr' });
   if (!board.ok) return { ok: false, error: board.error || 'no_board' };
   const b = blendBoard(board, 0.5);
   const rows = blendDisagreements(b.players.filter(p => /^(QB|RB|WR|TE)$/.test(p.position)), 12);
+  // The week's column comes off the record when the Thursday build has run, so
+  // what the reader sees is what was graded. Before that -- Wednesday, or a
+  // week the build has not reached -- the band shows a live read of the same
+  // two boards and says so; nothing here writes.
+  const ready = await contentReady(env);
+  if (ready) await newsroomReady(env);
+  // The stored column changes once a week and the ledger once, on grading day,
+  // so the front page's busiest band does not need two D1 reads a visit.
+  const memoKey = board.season + '|' + b.currentWeek;
+  let riv = _RIV_MEMO.key === memoKey && Date.now() - _RIV_MEMO.at < 300000 ? _RIV_MEMO.out : null;
+  if (!riv) {
+    riv = { stored: ready ? await rivalryColumnRead(env, board.season, b.currentWeek) : null,
+            ledger: ready ? await rivalryLedger(env, board.season) : null };
+    _RIV_MEMO = { key: memoKey, at: Date.now(), out: riv };
+  }
+  // The column that went on the record is the WEEK's. A caller asking for rest
+  // of season gets the same two men reading that board live, not last
+  // Thursday's picks under a rest-of-season heading.
+  const stored = want === 'week' ? riv.stored : null, ledger = riv.ledger;
+  const columns = stored ? JSON.parse(JSON.stringify(stored.columns)) : rivalryColumns(b.players, { week: b.currentWeek });
+  if (ledger) for (const id of ['vega', 'brooks']) if (columns[id]) { columns[id].record = ledger[id]; }
   let recent = [];
-  if (await contentReady(env)) { await newsroomReady(env); try { recent = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 5").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null } : null; }).filter(Boolean); } catch (e) {} }
+  if (ready) { try { recent = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 5").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null } : null; }).filter(Boolean); } catch (e) {} }
   return { ok: true, horizon: b.horizon, currentWeek: b.currentWeek, pair: { brooks: { name: ANALYSTS.brooks.name, label: 'Fantasy Analysis', url: '/analysts/brooks' }, vega: { name: ANALYSTS.vega.name, label: 'Market Intelligence', url: '/analysts/vega' } },
+           columns, locked: !!stored, lockedAt: stored ? stored.builtAt : null, lastWeek: ledger ? ledger.lastWeek : null,
            disagreements: rows.map(r => ({ ...r, brooksRank: r.fantasyRank, vegaRank: r.marketRank })), recentLines: recent, thresholds: BLEND_DISAGREE };
 }
 
@@ -8509,6 +8845,7 @@ const JOB_FNS = {
   'job-prune':            env => jobPrune(env, JOB_KEEP_DAYS),
   'news-scan':            env => runNewsScan(env),
   'calls-grade':          env => runCallsGrade(env),
+  'rivalry-column':       env => runRivalryColumn(env),
   'content-tick':         env => runContentTick(env),
   'league-sync':          env => runLeagueSync(env)
 };
@@ -8832,6 +9169,11 @@ const JOB_SCHEDULE = [
   // phase 2: derived from the pulls
   { job: 'ros-snapshot',         days: ['Tue'],                hours: [6],                            phase: 2 },
   { job: 'calls-grade',          days: ['Tue', 'Wed'],         hours: [6],                            phase: 2 },
+  // The week's column, built after the morning odds pull and before the first
+  // kickoff, once. Friday and Saturday are retries: the builder is a no-op
+  // once the week is on the record, so a Thursday outage costs a late column
+  // rather than the week.
+  { job: 'rivalry-column',       days: ['Thu', 'Fri', 'Sat'],  hours: [8],                            phase: 2 },
   { job: 'news-scan',            days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 2 },
   { job: 'snapshot-prune',       days: ['Sun'],                hours: [4],                            phase: 2 },
   { job: 'analytics-prune',      days: ['Sun'],                hours: [4],                            phase: 2 },

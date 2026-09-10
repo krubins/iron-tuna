@@ -8053,9 +8053,9 @@ and at `w`. `/api/blend?horizon=&pos=&scoring=&w=` serves it;
 `/rankings` has the fourth board, **Fantasy ↔ Market**, with a slider that
 recomputes in the browser from the same two components (the same shrink
 table, `tools/test-vegas-weight.mjs`-style discipline: a calculation, never
-a reorder). `/api/disagreements` lists where the two ends disagree and the
-recent rivalry lines; the front page and `/fantasy` print it as **Vega vs.
-Brooks**.
+a reorder). `/api/disagreements` lists where the two ends disagree, and carries the
+week's **Vega vs. Brooks** column (§68q); the front page and `/fantasy`
+print that column.
 
 ### 68g. The writer and the fact check
 
@@ -8339,6 +8339,56 @@ two ways, a user agent carrying a URL and `cf.cacheTtl` on the failing
 ones; every ESPN fetch is now shaped like the one that works (plain user
 agent, no cache options), and a 403 body's first bytes are kept in the
 refresh summary if it recurs.
+
+---
+
+### 68q. Vega vs. Brooks, the column on the record
+
+The band the front page and `/fantasy` print under the newsroom is not a
+table of rank gaps. Each man files five picks a week — the players his own
+end of the slider ranks ahead of the other man's board — with a pitch in his
+own voice. `rivalryColumns(rows, { week })` builds both: a player qualifies
+only for the man who has him higher, so the two lists cannot be the same
+list, and Vega never pitches a player no book has priced (`marketBasis` of
+`none` is dropped from his side), because that is the one claim his method
+cannot make. If a week is quiet the thresholds relax once
+(`RIVALRY_LOOSE`, gap 3 and 10%) rather than the column printing three
+picks; if the two boards agree on everything, neither man gets a column.
+
+Everything in a pitch except its last sentence is read off the board row:
+the points at both ends, both ranks, the market basis, whether the usage
+role trend has been earned, and the one line that moved (`driver`, the
+biggest mover out of `explainDelta`). The needle at the end is fixed prose
+from `RIV_NEEDLE`, chosen by a hash of the player, the week and the man, so
+no two picks in a column draw the same jab. `tools/test-newsroom.mjs` holds
+the pitches to `AI_PHRASES`, the same phrasing bar the model is held to.
+
+**The column is an artifact of the week, not a live recompute.** The
+`rivalry-column` job (Thu/Fri/Sat 8 AM ET, phase 2; Friday and Saturday are
+retries, the builder is a no-op once the week is stored) writes the column
+to `rivalry_columns (season, week, payload, built_at)` and files each pick
+into `analyst_calls` as `kind = 'rivalry-column'` with the rivalry JSON
+carrying `mineRank`, `theirsRank` and who pitched it. A page load READS that
+row (`rivalryColumnRead`) and never writes one; before the Thursday build
+the band shows a live read of the same two boards and the footer says so
+(`locked: false`).
+
+`runCallsGrade` settles a rivalry pick on the claim it actually made: the
+player's real finish inside his position that week (`weekFinishRanks`)
+against the rank the rival published. Ahead of it is a hit, level is a
+push, behind it is a miss, and a player who did not play loses. Only the
+week the usage file is CURRENTLY through can be graded — the cache keeps one
+line per player, so an older week is represented by whoever has not played
+since — and a pick outside that window stays pending rather than being
+guessed at. `rivalryLedger` totals it: each man's record rides in the column
+head, and the last settled week is a sentence in the footer.
+
+**Checked:** `test-newsroom` (the build, the second run that changes
+nothing, the grader on a fake D1 and a fixture stats file, the ledger, and
+the phrasing bar), `test-jobs` (the new entry, Thursday 8 AM, phase 2),
+`test-css-tokens`, `test-seo`, `test-chrome`, both parse gates, and
+`build-front.mjs` / `build-seo.mjs` / `build-chrome.mjs` / `build-ranks.mjs`
+re-run clean. Rendered in Chromium at 1120px and 500px.
 
 ---
 
