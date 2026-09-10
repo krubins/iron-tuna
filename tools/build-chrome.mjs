@@ -146,7 +146,7 @@ const NAV = [
 // so adding a page here is one edit, not two.
 const IN_SEASON_CTA = { label: 'Save my league', href: '/in-season#league', cta: true };
 //
-// The rankings section — the ribbon's five destinations and the fourteen
+// The rankings section — the ribbon's six destinations and the fourteen
 // per-position pages under its two menus — is in-season by definition, so every
 // one of them is listed here. tools/build-ranks.mjs generates the pages; this
 // set is what gives them the season's call to action rather than the draft one.
@@ -154,7 +154,7 @@ const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-lea
   'weekly-intel.html', 'rankings.html', 'vegas-edge.html', 'game-intel.html', 'waivers.html',
   'trade-finder.html', 'faab.html', 'player-intel.html', 'desk.html', 'what-they-arent-telling-you.html',
   'post-draft.html', 'analysts.html', 'analyst.html',
-  'stats.html', 'hidden-value.html', 'previews.html',
+  'stats.html', 'hidden-value.html', 'previews.html', 'the-line.html',
   'weekly-rankings.html', 'weekly-qb-rankings.html', 'weekly-rb-rankings.html', 'weekly-wr-rankings.html',
   'weekly-te-rankings.html', 'weekly-flex-rankings.html', 'weekly-k-rankings.html', 'weekly-dst-rankings.html',
   'season-long-rankings.html', 'season-long-qb-rankings.html', 'season-long-rb-rankings.html',
@@ -191,6 +191,7 @@ const FOOT_COLS = [
       { label: 'Vegas Edge', href: '/vegas-edge' },
       { label: 'Hidden Value', href: '/hidden-value' },
       { label: 'Previews', href: '/previews' },
+      { label: 'The Line', href: '/the-line' },
       { label: 'Game Intel', href: '/game-intel' },
       { label: 'Player Intel', href: '/player-intel' },
       { label: 'The whole board', href: '/what-they-arent-telling-you' },

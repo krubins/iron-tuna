@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18397866361');
+  gtag('config', 'G-KLBZBZSJ25');
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Line: Every Game This Week, Priced Against the Market | Iron Tuna</title>
+<meta name="description" content="Every game on this week's slate read off the posted spread, total and prices, with the player props that reached the feed, where Iron Tuna thinks the number is wrong, and a hypothetical stake on the ones it is confident about. Entertainment only, and no wager is recommended.">
+<link rel="canonical" href="https://irontuna.com/the-line">
+<!--seo:meta-->
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<meta property="og:site_name" content="Iron Tuna">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:site" content="@irontunafantasy">
+<meta name="twitter:title" content="The Line | Iron Tuna">
+<meta name="twitter:description" content="Every game this week against the posted number, with Iron Tuna's confidence on all of them and a hypothetical stake on the few it is sure about. Not a wagering recommendation.">
+<meta name="twitter:image" content="https://irontuna.com/og.png">
+<!--/seo:meta-->
+<meta property="og:type" content="website">
+<meta property="og:title" content="The Line | Iron Tuna">
+<meta property="og:description" content="Every game this week against the posted number, with Iron Tuna's confidence on all of them and a hypothetical stake on the few it is sure about. Not a wagering recommendation.">
+<meta property="og:url" content="https://irontuna.com/the-line">
+<meta property="og:image" content="https://irontuna.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/tuna-mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site.css">
+<style>
+/* Most of this page is site.css (.is-* and .rk-*). What is here is the column's
+   own furniture: the standing notice, the ticket, and the per-game block with
+   its verdict chip and its arrow row. tools/build-chrome.mjs also anchors the
+   shared stylesheet link on this block. */
+.tl-warn{border:1px solid var(--line,#e3e8ec);border-left:4px solid var(--gold,#f2a900);background:var(--panel,#f7f9fa);border-radius:10px;padding:14px 16px;margin:18px 0}
+.tl-warn p{margin:0 0 8px;font-size:14px;line-height:1.55;color:var(--sec,#39454f)}
+.tl-warn p:last-child{margin-bottom:0}
+.tl-warn b{color:var(--text,#111820)}
+.tl-ticket{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 6px}
+.tl-stat{flex:1 1 150px;background:var(--panel,#f7f9fa);border:1px solid var(--line,#e3e8ec);border-radius:10px;padding:12px 14px}
+.tl-stat .k{display:block;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#6b7a85)}
+.tl-stat .v{display:block;font-size:22px;font-weight:800;color:var(--text,#111820);line-height:1.3}
+.tl-game{border-top:1px solid var(--line,#e3e8ec);padding:22px 0 6px}
+.tl-game:first-of-type{border-top:0}
+.tl-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:2px}
+.tl-head h3{margin:0;font-size:clamp(19px,2.4vw,23px);line-height:1.2}
+.tl-kick{color:var(--muted,#6b7a85);font-size:13px}
+.tl-mkt{width:100%;border-collapse:collapse;font-size:14px;margin:12px 0 6px}
+.tl-mkt th,.tl-mkt td{padding:8px 10px;border-bottom:1px solid var(--line,#e3e8ec);text-align:left;vertical-align:top}
+.tl-mkt th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#6b7a85);font-weight:700}
+.tl-mkt td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tl-mkt tr.on td{background:rgba(14,124,99,.05)}
+.tl-chip{display:inline-block;border-radius:4px;padding:3px 9px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;white-space:nowrap}
+.tl-chip.hot{background:rgba(14,124,99,.10);color:var(--teal,#0e7c63);border:1px solid rgba(14,124,99,.34)}
+.tl-chip.warm{background:rgba(150,110,0,.10);color:var(--goldink,#7a5300);border:1px solid rgba(150,110,0,.30)}
+.tl-chip.pass{background:var(--elev,#eef2f5);color:var(--sec,#39454f);border:1px solid var(--line2,#ccd6dc)}
+.tl-chip.shut{background:rgba(192,50,47,.07);color:var(--danger,#c0322f);border:1px solid rgba(192,50,47,.28)}
+.tl-say{color:var(--sec,#39454f);margin:8px 0}
+.tl-bet{background:var(--panel,#f7f9fa);border:1px solid var(--line,#e3e8ec);border-radius:10px;padding:11px 14px;margin:10px 0 0;color:var(--text,#111820);font-size:14.5px}
+.tl-bet b{color:var(--teal,#0e7c63)}
+.tl-bet.none{color:var(--sec,#39454f)}
+.tl-bet.none b{color:var(--sec,#39454f)}
+.tl-arrows{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+.tl-arrow{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line,#e3e8ec);border-radius:20px;padding:5px 12px;font-size:13.5px;background:var(--bg,#fff);color:var(--sec,#39454f)}
+.tl-arrow b{color:var(--text,#111820);font-weight:700}
+.tl-arrow .g{font-size:14px;font-weight:800;line-height:1}
+.tl-arrow.up{border-color:rgba(14,124,99,.34)}
+.tl-arrow.up .g{color:var(--teal,#0e7c63)}
+.tl-arrow.down{border-color:rgba(192,50,47,.28)}
+.tl-arrow.down .g{color:var(--danger,#c0322f)}
+.tl-arrow.flat .g{color:var(--muted,#6b7a85)}
+.tl-sub{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#6b7a85);margin:14px 0 0}
+@media(max-width:620px){.tl-mkt{display:block;overflow-x:auto;white-space:nowrap}}
+</style>
+
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://irontuna.com/the-line","name":"The Line: Every Game This Week, Priced Against the Market","description":"Every game on this week's slate read off the posted spread, total and prices, with the player props that reached the feed, where Iron Tuna thinks the number is wrong, and a hypothetical stake on the ones it is confident about. Entertainment only, and no wager is recommended.","url":"https://irontuna.com/the-line","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/the-line"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"Market Intel","item":"https://irontuna.com/vegas-edge"},{"@type":"ListItem","position":3,"name":"The Line: Every Game This Week, Priced Against the Market"}]}]}</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site"><div class="wrap">
+    <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+    <!--chrome:nav-->
+    <nav class="nav" id="sitenav" aria-label="Main">
+      <span class="nav-dd"><a href="/fantasy">Fantasy</a><span class="nav-dd-menu"><a href="/fantasy">This week</a><a href="/in-season">In-Season hub</a><a href="/rankings">Rankings</a><a href="/weekly-intel">Weekly Intel</a><a href="/waivers">Waivers &amp; FAAB</a><a href="/trade-finder">Trade Finder</a><a href="/my-league">My Leagues</a><a href="/my-week">My Week</a></span></span>
+      <a href="/dfs">DFS</a>
+      <span class="nav-dd"><a href="/vegas-edge">Market Intel</a><span class="nav-dd-menu"><a href="/vegas-edge">Vegas Edge</a><a href="/game-intel">Game Intel</a><a href="/player-intel">Player Intel</a><a href="/what-they-arent-telling-you">The whole board</a></span></span>
+      <span class="nav-dd"><a href="/in-season/desk">The Desk</a><span class="nav-dd-menu"><a href="/in-season/desk">The Desk</a><a href="/analysts">The Analysts</a><a href="/the-pick">The Pick</a><a href="/the-tell">The Tell</a><a href="/play-caller-premium">Play-Caller Premium</a></span></span>
+      <span class="nav-dd"><a href="/fantasy-football-auction-values">Draft Tools</a><span class="nav-dd-menu"><a href="/fantasy-football-auction-values">Auction values</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a><a href="/guides">Strategy guides</a><a href="/auction-insights">Auction insights</a><a href="/snake-insights">Snake insights</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/faq">FAQ</a>
+    </nav>
+    <a class="cta" href="/in-season#league">Save my league</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
+    <!--/chrome:nav-->
+</div></header>
+<!--ranks:ribbon-->
+<nav class="rk-ribbon" aria-label="Rankings and intel">
+  <div class="rk-ribbon-in">
+    <a class="rkr-link rkr-item" href="/stats">Stats</a>
+    <span class="rkr-item rkr-has-menu">
+      <a class="rkr-link" href="/weekly-rankings">This Week&rsquo;s Rankings</a>
+      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-rankings">Overall</a><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defence / special teams</a></span>
+    </span>
+    <span class="rkr-item rkr-has-menu">
+      <a class="rkr-link" href="/season-long-rankings">Season Long Rankings</a>
+      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-rankings">Overall</a><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defence / special teams</a></span>
+    </span>
+    <a class="rkr-link rkr-item" href="/hidden-value">Hidden Value</a>
+    <a class="rkr-link rkr-item" href="/previews">Previews</a>
+    <a class="rkr-link rkr-item" href="/the-line" aria-current="page">The Line</a>
+  </div>
+</nav>
+<!--/ranks:ribbon-->
+<main id="main" class="wrap wide">
+<p class="is-eyebrow">In-Season &middot; The Line</p>
+<h1>The Line</h1>
+<p class="is-lede">Every game on this week&rsquo;s slate, read against the number the market has posted on it. The spread, the total, the price where a book has quoted one, the player props that reached this feed &mdash; and beside them the one figure Iron Tuna has that the book does not, its own expected points for the same fixture. Where the two disagree by enough to be worth saying, Iron Tuna says so and puts a hypothetical stake behind it. Where they do not, it says that instead, which is most weeks and most games.</p>
+
+<div class="tl-warn" role="note">
+  <p><b>This page does not recommend any wager.</b> Nothing here is betting advice, financial advice or a suggestion that you place money on anything. The stakes below are hypothetical, unfunded, and settled nowhere.</p>
+  <p><b>This page is written by software.</b> An AI model should not be relied on for a wagering decision, and its confidence in a number is not evidence that the number is right. Read this for entertainment. If you do bet, be of legal age, use a licensed operator in a jurisdiction that allows it, and risk only what you can lose.</p>
+  <p><b>Not available in Washington State.</b> Requests from Washington are blocked at the edge and get a notice instead of this page. If gambling has stopped being entertainment, the National Problem Gambling Helpline is <b>1-800-GAMBLER</b> (1-800-426-2537), free and confidential, 24 hours a day.</p>
+</div>
+
+<div class="its-strip" data-season-strip></div>
+
+<div class="tl-ticket" id="tlTicket" hidden>
+  <div class="tl-stat"><span class="k">This week</span><span class="v" id="tlWeek">&mdash;</span></div>
+  <div class="tl-stat"><span class="k">Games priced</span><span class="v" id="tlGames">&mdash;</span></div>
+  <div class="tl-stat"><span class="k">Hypothetical plays</span><span class="v" id="tlPlays">&mdash;</span></div>
+  <div class="tl-stat"><span class="k">Hypothetical stake</span><span class="v" id="tlStake">&mdash;</span></div>
+</div>
+<p class="is-note" id="tlStamp"></p>
+
+<div class="rk-board">
+  <div class="rk-tools">
+    <div class="rk-seg2" id="tlSort" role="group" aria-label="Order">
+      <button type="button" data-sort="edge">Biggest disagreement</button>
+      <button type="button" data-sort="kickoff">Kickoff</button>
+      <button type="button" data-sort="total">Highest total</button>
+    </div>
+    <div class="rk-seg2" id="tlFilter" role="group" aria-label="Which games">
+      <button type="button" data-filter="all">Every game</button>
+      <button type="button" data-filter="bets">Only the ones with a stake</button>
+    </div>
+  </div>
+  <div id="tlGamesWrap"></div>
+  <p class="is-empty" id="tlEmpty">Reading this week&rsquo;s board&hellip;</p>
+</div>
+
+<h2>How Iron Tuna sizes a wager</h2>
+<p>The whole method is one comparison, run twice per game. The book posts a total and a spread. Iron Tuna carries its own expected points for both clubs in the same fixture, fitted from club ratings off the games that do carry a line, which gives it its own total and its own margin. The difference between the two, in points, is the edge. Everything below follows from that number and nothing else.</p>
+<div class="is-scroll"><table class="is-table">
+<caption>The staking ladder. It is fixed, published in advance, and applied the same way to every game on the board.</caption>
+<thead><tr><th scope="col">Edge on the posted number</th><th scope="col">Confidence</th><th scope="col" class="num">Hypothetical stake</th></tr></thead>
+<tbody>
+<tr><td>4.0 points or more</td><td>High</td><td class="num">$100</td></tr>
+<tr><td>3.0 to 3.9 points</td><td>Moderate</td><td class="num">$60</td></tr>
+<tr><td>2.0 to 2.9 points</td><td>Slight</td><td class="num">$30</td></tr>
+<tr><td>Under 2.0 points</td><td>Pass</td><td class="num">No wager</td></tr>
+</tbody>
+</table></div>
+<ol>
+  <li><b>One stake per game at most.</b> Where the total and the spread both clear the threshold, the larger edge is the one that gets the money and the other is stated and left alone.</li>
+  <li><b>An anytime-touchdown prop is staked separately and smaller</b> &mdash; $50 at ten percentage points of disagreement, $25 at six &mdash; and only where a book actually quoted the player. One player&rsquo;s touchdown is a coin landing once; a game total is sixty minutes of arithmetic, and the money says so. Where the model rates a player <em>below</em> his quoted price the row reads <b>Price short</b> and takes no wager, because only the yes side of an anytime touchdown is reliably posted.</li>
+  <li><b>Confidence is printed on every game, including the passes.</b> It is a conviction score on Iron Tuna&rsquo;s own scale, where a five-point edge reads 100. <b>It is not a probability of winning</b>, and no reading of it should be treated as one.</li>
+  <li><b>Under 2.0 points, there is no bet.</b> That is the same threshold the rest of the site uses to call the model and the book in agreement, and most of the slate sits inside it every week. A week with no wager on it is a normal week, not a broken page.</li>
+  <li><b>A game that has kicked off is closed.</b> Iron Tuna does not price a game it can already see, and no in-play number appears here.</li>
+  <li><b>A missing number prints as missing.</b> Where a book has posted no line, or the model has no rating for a club, the row says so rather than showing a zero.</li>
+</ol>
+
+<h2>The arrows</h2>
+<p>Under each game is a row of the fantasy players in it, each with an arrow. The arrow is not a prediction of a stat line and it is not tied to a wager. It says which way the betting market has that player relative to what the fantasy consensus projects for him this week: <b>up</b> where the market prices him for more than the consensus expects, <b>down</b> where it prices him for less, and <b>level</b> where the two are close enough that the site does not flag the gap. A player&rsquo;s quoted anytime-touchdown price is shown beside his name where a book has posted one.</p>
+
+<h2>The rest of the section</h2>
+<div class="is-grid">
+  <div class="is-card"><h3><a href="/previews">Previews</a></h3><p>The same slate without the wagering read: line, total and implied points, game by game.</p></div>
+  <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>Movers, the touchdown board and market-implied volume for the whole week.</p></div>
+  <div class="is-card"><h3><a href="/hidden-value">Hidden Value</a></h3><p>The players the market and the consensus rate furthest apart.</p></div>
+  <div class="is-card"><h3><a href="/weekly-rankings">This week&rsquo;s rankings</a></h3><p>Every position, consensus beside the market price.</p></div>
+  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>What a game line actually does to a fantasy roster.</p></div>
+  <div class="is-card"><h3><a href="/stats">Stats</a></h3><p>What has been played, rather than what is priced.</p></div>
+</div>
+
+<p class="is-note">Iron Tuna is a fantasy football site. It takes no wagers, holds no funds, is not a sportsbook and is not affiliated with one. Odds and props shown here are whatever reached this site&rsquo;s market feed and may be stale, incomplete, or different from anything a book will actually quote you. Nothing on this page is an offer, an inducement or a recommendation to gamble. Void where prohibited; not available in Washington State.</p>
+</main>
+<footer class="site"><div class="wrap">
+  <!--chrome:foot-->
+  <div class="foot-cols">
+    <div class="foot-col">
+     <h2>In-Season</h2>
+     <ul>
+      <li><a href="/in-season">Overview</a></li>
+      <li><a href="/fantasy">Fantasy</a></li>
+      <li><a href="/dfs">DFS</a></li>
+      <li><a href="/rankings">Rankings</a></li>
+      <li><a href="/weekly-rankings">This week’s rankings</a></li>
+      <li><a href="/season-long-rankings">Season long rankings</a></li>
+      <li><a href="/stats">Stats</a></li>
+      <li><a href="/waivers">Waivers &amp; FAAB</a></li>
+      <li><a href="/my-league">My Leagues</a></li>
+      <li><a href="/my-week">My Week</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Market Intel</h2>
+     <ul>
+      <li><a href="/vegas-edge">Vegas Edge</a></li>
+      <li><a href="/hidden-value">Hidden Value</a></li>
+      <li><a href="/previews">Previews</a></li>
+      <li><a href="/the-line">The Line</a></li>
+      <li><a href="/game-intel">Game Intel</a></li>
+      <li><a href="/player-intel">Player Intel</a></li>
+      <li><a href="/what-they-arent-telling-you">The whole board</a></li>
+      <li><a href="/trade-finder">Trade Finder</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Read</h2>
+     <ul>
+      <li><a href="/in-season/desk">The Desk</a></li>
+      <li><a href="/analysts">The analysts (AI)</a></li>
+      <li><a href="/the-pick">The Pick</a></li>
+      <li><a href="/the-tell">The Tell</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/auction-insights">Auction insights</a></li>
+      <li><a href="/insights-vault">Insight Vault</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Draft Tools</h2>
+     <ul>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
+      <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
+      <li><a href="/guides">Strategy guides</a></li>
+      <li><a href="/auction-watch">Auction Watch</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Company</h2>
+     <ul>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/support">Support</a></li>
+      <li><a href="/creators">Creators &amp; affiliates</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Legal</h2>
+     <ul>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/terms">Terms</a></li>
+      <li><a href="/data">Data &amp; sources</a></li>
+     </ul>
+    </div>
+  </div>
+  <div class="foot-note">
+   <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
+   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-GAMBLER</b>.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
+  </div>
+  <!--/chrome:foot-->
+</div></footer>
+<script src="/it-season.js" defer></script>
+<script>
+(function () {
+  'use strict';
+  // THE LINE ADDS NO DATA. Every number on this page comes out of
+  // /api/vegas-edge — the same payload /previews reads — which carries this
+  // week's game environments (the posted total and spread, each side's implied
+  // points, the site's own fitted expectation for the same fixture, and the
+  // movement off the opening line), the anytime-touchdown board, and the
+  // players the betting market and the fantasy consensus rate furthest apart.
+  //
+  // What this page contributes is the arithmetic in read(), prop() and stake(),
+  // and it is deliberately trivial: an edge is the model's number minus the
+  // book's, a stake is a lookup on the size of that edge, and the ladder is
+  // printed on the page above so a reader can check any call against the
+  // numbers sitting next to it. Nothing here is generated prose over invented
+  // facts — a missing number prints as missing and takes no wager with it.
+  //
+  // The 2.0-point floor is the site's own agreement threshold (GAP_AGREE in
+  // _worker.js). Under it the model and the book are called to agree, so under
+  // it there is no bet, and most of the slate is under it most weeks.
+  var GAP = 2.0;
+  var LADDER = [
+    { at: 4.0, stake: 100, label: 'High' },
+    { at: 3.0, stake: 60, label: 'Moderate' },
+    { at: GAP, stake: 30, label: 'Slight' }
+  ];
+  // A prop is one player's touchdown, not sixty minutes of arithmetic, so it is
+  // staked smaller and off a percentage-point disagreement rather than points.
+  var PROP_LADDER = [
+    { at: 10, stake: 50, label: 'Moderate' },
+    { at: 6, stake: 25, label: 'Slight' }
+  ];
+  var FULL_EDGE = 5.0;   // the edge that reads 100 on the conviction scale
+  var PROP_FULL = 15;    // the same, in percentage points, for a prop
+
+  var games = [], td = [], byTeam = {}, hasProps = false, week = '', sort = 'edge', filter = 'all';
+  var $ = function (id) { return document.getElementById(id); };
+  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var num = function (v) { return v != null && isFinite(v); };
+  var n1 = function (v) { return num(v) ? (Math.round(v * 10) / 10).toFixed(1) : '&mdash;'; };
+  var signed = function (v) { return num(v) ? (v > 0 ? '+' : v < 0 ? '−' : '') + (Math.round(Math.abs(v) * 10) / 10).toFixed(1) : '&mdash;'; };
+  var money = function (v) { return '$' + Math.round(v); };
+  var line = function (v) { return num(v) ? (v > 0 ? '+' : v < 0 ? '−' : '') + (Math.round(Math.abs(v) * 10) / 10).toFixed(1) : '&mdash;'; };
+
+  // A quoted probability turned back into the price it came from. Only ever
+  // applied to a book-quoted number: a probability the site DERIVED is a model
+  // output and printing it as odds would sell it as a price somebody posted.
+  function amer(pct) {
+    if (!num(pct) || pct <= 0 || pct >= 100) return null;
+    var p = pct / 100;
+    var v = p >= 0.5 ? -Math.round(100 * p / (1 - p)) : Math.round(100 * (1 - p) / p);
+    return (v > 0 ? '+' : '') + v;
+  }
+  function kick(ts) {
+    if (!ts) return '';
+    try {
+      return new Date(ts).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET';
+    } catch (x) { return ''; }
+  }
+  function press(host, attr, val) {
+    [].forEach.call(host.querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false');
+    });
+  }
+  // A game already under way is not priced here, whatever the feed still
+  // carries for it. Iron Tuna does not bet a game it can watch.
+  function open(g) {
+    if (g.status && g.status !== 'pre' && g.status !== 'upcoming') return false;
+    return !g.kickoff || g.kickoff > Date.now();
+  }
+  function rung(edge, ladder) {
+    var a = Math.abs(edge);
+    for (var i = 0; i < ladder.length; i++) if (a >= ladder[i].at) return ladder[i];
+    return null;
+  }
+  function conviction(edge, full) {
+    return Math.max(0, Math.min(100, Math.round(Math.abs(edge) / full * 100)));
+  }
+
+  // ── one market on one game ────────────────────────────────────────────────
+  // `edge` is always the model's number minus the book's, so a positive edge
+  // means the model is higher: more points on a total, more home margin on a
+  // spread. `side` is the bet that edge implies, named the way a ticket would.
+  function read(kind, edge, side, live) {
+    if (!num(edge)) return { kind: kind, edge: null, conf: 0, label: 'No read', stake: 0, side: null, why: 'the model has no number for this fixture' };
+    var r = rung(edge, LADDER);
+    var conf = conviction(edge, FULL_EDGE);
+    if (!live) return { kind: kind, edge: edge, conf: conf, label: 'Closed', stake: 0, side: side, why: 'the game has kicked off' };
+    if (!r) return { kind: kind, edge: edge, conf: conf, label: 'Pass', stake: 0, side: side, why: 'inside the ' + GAP.toFixed(1) + '-point floor, which is agreement' };
+    return { kind: kind, edge: edge, conf: conf, label: r.label, stake: r.stake, side: side, why: null };
+  }
+
+  function gameReads(g) {
+    var live = open(g), out = [];
+    var totEdge = (num(g.ironTunaTotal) && num(g.total)) ? Math.round((g.ironTunaTotal - g.total) * 10) / 10 : null;
+    out.push(read('Total', totEdge, num(g.total) ? (totEdge > 0 ? 'Over ' + n1(g.total) : 'Under ' + n1(g.total)) : null, live));
+    // The feed signs a spread as the HOME margin (see _seasonDecorate in
+    // _worker.js), so the home side's line is its negative and the model's own
+    // margin is its expected points minus the visitor's.
+    var mMar = (num(g.ironTunaHome) && num(g.ironTunaAway)) ? g.ironTunaHome - g.ironTunaAway : null;
+    var sprEdge = (num(mMar) && num(g.spread)) ? Math.round((mMar - g.spread) * 10) / 10 : null;
+    var side = null;
+    if (num(g.spread) && num(sprEdge)) side = sprEdge > 0 ? g.home + ' ' + line(-g.spread) : g.away + ' ' + line(g.spread);
+    out.push(read('Spread', sprEdge, side, live));
+    return out;
+  }
+
+  // ── the anytime-touchdown props for one game ──────────────────────────────
+  // Only a price a book actually posted is treated as a market. Where the board
+  // says the number was derived from the game line, it is shown as the model's
+  // own expectation and never staked — the site does not sell its own arithmetic
+  // back to the reader as somebody's price.
+  function props(g) {
+    var live = open(g), rows = [];
+    for (var i = 0; i < td.length; i++) {
+      var p = td[i];
+      if (p.team !== g.home && p.team !== g.away) continue;
+      if (p.basis !== 'anytime-td-market' || !num(p.probability) || !num(p.expectedTds)) continue;
+      var model = Math.round((1 - Math.exp(-p.expectedTds)) * 1000) / 10;
+      var edge = Math.round((model - p.probability) * 10) / 10;
+      var r = rung(edge, PROP_LADDER);
+      rows.push({
+        name: p.name, position: p.position, team: p.team, market: p.probability, model: model, edge: edge,
+        price: amer(p.probability), conf: conviction(edge, PROP_FULL),
+        // Only the "yes" side of an anytime touchdown is reliably quoted, so a
+        // model that is LOWER than the book gets a stated confidence and no
+        // wager rather than a bet nobody can actually place.
+        stake: (live && r && edge > 0) ? r.stake : 0,
+        label: !live ? 'Closed' : (edge < 0 ? (r ? 'Price short' : 'Pass') : (r ? r.label : 'Pass'))
+      });
+    }
+    rows.sort(function (a, b) { return Math.abs(b.edge) - Math.abs(a.edge); });
+    return rows.slice(0, 2);
+  }
+
+  // ── the arrows ────────────────────────────────────────────────────────────
+  // Direction comes from the payload's own significant market-vs-consensus
+  // deltas (vsExperts). A player with no flagged delta is level, which is a
+  // statement about the two boards agreeing, not a projection of his week.
+  function arrows(g) {
+    var picked = [], seen = {};
+    function add(list, dir) {
+      for (var i = 0; i < list.length && picked.length < 6; i++) {
+        var p = list[i];
+        if (p.team !== g.home && p.team !== g.away) continue;
+        if (seen[p.name]) continue;
+        seen[p.name] = 1;
+        picked.push({ name: p.name, position: p.position, team: p.team, dir: dir,
+          slots: p.delta ? p.delta.rank : null, points: p.delta ? p.delta.points : null });
+      }
+    }
+    add(byTeam.up || [], 'up');
+    add(byTeam.down || [], 'down');
+    for (var t = 0; t < td.length && picked.length < 4; t++) {
+      var q = td[t];
+      if (q.team !== g.home && q.team !== g.away) continue;
+      if (seen[q.name]) continue;
+      seen[q.name] = 1;
+      picked.push({ name: q.name, position: q.position, team: q.team, dir: 'flat', slots: null, points: null });
+    }
+    var prices = {};
+    for (var k = 0; k < td.length; k++) if (td[k].basis === 'anytime-td-market') prices[td[k].name] = td[k].probability;
+    for (var m = 0; m < picked.length; m++) picked[m].price = prices[picked[m].name] != null ? amer(prices[picked[m].name]) : null;
+    return picked;
+  }
+
+  function arrowHtml(a) {
+    var glyph = a.dir === 'up' ? '▲' : a.dir === 'down' ? '▼' : '—';
+    var says = a.dir === 'flat'
+      ? 'the two boards agree on him'
+      : (a.slots ? Math.abs(a.slots) + ' rank slot' + (Math.abs(a.slots) === 1 ? '' : 's') + ' ' + (a.dir === 'up' ? 'above' : 'below') : (a.dir === 'up' ? 'above' : 'below') + ' his rank');
+    return '<span class="tl-arrow ' + a.dir + '"><span class="g" aria-hidden="true">' + glyph + '</span><b>' + e(a.name) + '</b> ' +
+      e(a.position || '') + ' &middot; ' + e(says) + (a.price ? ' &middot; TD ' + e(a.price) : '') + '</span>';
+  }
+
+  // The model's own margin, quoted the way the book quotes one: the club it
+  // favours, and the number it favours them by. Printing a raw home margin
+  // instead ("−2.6 FFF") reads as the home side laying points it is actually
+  // receiving, which is the one number on this page nobody may misread.
+  function modelSpread(g) {
+    if (!num(g.ironTunaHome) || !num(g.ironTunaAway)) return '&mdash;';
+    var m = g.ironTunaHome - g.ironTunaAway;
+    if (Math.abs(m) < 0.05) return 'Pick&rsquo;em';
+    return e(m > 0 ? g.home : g.away) + ' ' + line(-Math.abs(m));
+  }
+
+  function chip(label) {
+    var cls = label === 'High' ? 'hot' : label === 'Moderate' || label === 'Slight' ? 'warm' : label === 'Closed' ? 'shut' : 'pass';
+    return '<span class="tl-chip ' + cls + '">' + e(label) + '</span>';
+  }
+
+  // The wager, in one sentence, in the site's own voice. Only ever assembled
+  // from numbers already printed in the table above it.
+  function ticketLine(best, top, ps) {
+    var bits = [];
+    if (best && best.stake) {
+      bits.push('<b>Iron Tuna stakes ' + money(best.stake) + '</b> on <b>' + e(best.side) + '</b> &mdash; ' +
+        best.label.toLowerCase() + ' confidence, conviction ' + best.conf + ' of 100, off a ' +
+        Math.abs(best.edge).toFixed(1) + '-point disagreement with the posted ' + best.kind.toLowerCase() + '.');
+    }
+    for (var i = 0; i < ps.length; i++) {
+      if (!ps[i].stake) continue;
+      bits.push('<b>' + money(ps[i].stake) + '</b> on <b>' + e(ps[i].name) + ' to score</b> at ' + e(ps[i].price) +
+        ' &mdash; the model has him at ' + n1(ps[i].model) + '% against the book&rsquo;s ' + n1(ps[i].market) + '%.');
+    }
+    if (bits.length) return '<p class="tl-bet">' + bits.join(' ') + '</p>';
+    var why = top && top.why ? top.why : 'no market on this game clears the floor';
+    // A closed game gets no confidence sentence. "Closed" is a fact about the
+    // clock, not a reading of the number, and printing it as one would be the
+    // page claiming a conviction it is not allowed to act on.
+    var conf = (top && num(top.edge) && top.label !== 'Closed')
+      ? ' Confidence on the closest one, the ' + top.kind.toLowerCase() +
+        ': ' + top.label.toLowerCase() + ', conviction ' + top.conf + ' of 100.' : '';
+    return '<p class="tl-bet none"><b>No wager.</b> Iron Tuna passes: ' + e(why) + '.' + conf + '</p>';
+  }
+
+  function gameHtml(g) {
+    var reads = gameReads(g), ps = props(g), live = open(g);
+    // One stake per game: the larger disagreement is the one that gets the
+    // money. `top` is the strongest read whether or not it clears the floor,
+    // because a pass still has to explain itself.
+    var best = null, top = null;
+    for (var i = 0; i < reads.length; i++) {
+      var r = reads[i];
+      if (num(r.edge) && (!top || Math.abs(r.edge) > Math.abs(top.edge))) top = r;
+      if (r.stake && (!best || Math.abs(r.edge) > Math.abs(best.edge))) best = r;
+    }
+    var rows = reads.map(function (r) {
+      return '<tr' + (best === r ? ' class="on"' : '') + '>' +
+        '<td>' + e(r.kind) + '</td>' +
+        '<td class="num">' + (r.kind === 'Total' ? n1(g.total) : (g.favourite ? e(g.favourite) + ' ' + line(-Math.abs(g.spread)) : 'Pick&rsquo;em')) + '</td>' +
+        '<td class="num">' + (r.kind === 'Total' ? n1(g.ironTunaTotal) : modelSpread(g)) + '</td>' +
+        '<td class="num">' + signed(r.edge) + '</td>' +
+        '<td class="num">' + (num(r.edge) ? r.conf : '&mdash;') + '</td>' +
+        '<td>' + chip(r.label) + '</td>' +
+        '<td class="num">' + (r.stake ? money(r.stake) : '&mdash;') + '</td>' +
+        '</tr>';
+    }).join('');
+    var propRows = ps.map(function (p) {
+      return '<tr>' +
+        '<td>' + e(p.name) + ' anytime TD</td>' +
+        '<td class="num">' + e(p.price || '&mdash;') + ' &middot; ' + n1(p.market) + '%</td>' +
+        '<td class="num">' + n1(p.model) + '%</td>' +
+        '<td class="num">' + signed(p.edge) + '</td>' +
+        '<td class="num">' + p.conf + '</td>' +
+        '<td>' + chip(p.label) + '</td>' +
+        '<td class="num">' + (p.stake ? money(p.stake) : '&mdash;') + '</td>' +
+        '</tr>';
+    }).join('');
+    var mv = [];
+    if (g.movement && num(g.movement.total)) mv.push('the total has moved ' + signed(g.movement.total));
+    if (g.movement && num(g.movement.spread)) mv.push('the spread has moved ' + signed(g.movement.spread));
+    var ar = arrows(g);
+    return '<article class="tl-game">' +
+      '<div class="tl-head"><h3>' + e(g.game) + '</h3><span class="tl-kick">' + e(kick(g.kickoff)) +
+        (live ? '' : ' &middot; closed') + '</span></div>' +
+      '<p class="tl-say">The book has ' + (g.favourite ? e(g.favourite) + ' by ' + n1(Math.abs(g.spread)) : 'this one pick&rsquo;em') +
+        ' inside a total of ' + n1(g.total) + ', which implies ' + n1(g.impliedAway) + ' for ' + e(g.away) +
+        ' and ' + n1(g.impliedHome) + ' for ' + e(g.home) + '.' +
+        (num(g.ironTunaTotal) ? ' Iron Tuna&rsquo;s own expectation for the same fixture is ' + n1(g.ironTunaTotal) + '.' : ' Iron Tuna has no fitted number for this fixture, so it reads nothing into it.') +
+        (mv.length ? ' Since the line opened, ' + mv.join(' and ') + '.' : '') + '</p>' +
+      '<div class="is-scroll"><table class="tl-mkt">' +
+      '<thead><tr><th scope="col">Market</th><th scope="col" class="num">Posted</th><th scope="col" class="num">Iron Tuna</th>' +
+      '<th scope="col" class="num">Edge</th><th scope="col" class="num">Conviction</th><th scope="col">Confidence</th><th scope="col" class="num">Stake</th></tr></thead>' +
+      '<tbody>' + rows + propRows + '</tbody></table></div>' +
+      ticketLine(best, top, ps) +
+      (ar.length ? '<p class="tl-sub">The fantasy players in this game</p><div class="tl-arrows">' + ar.map(arrowHtml).join('') + '</div>' : '') +
+      '</article>';
+  }
+
+  function edgeOf(g) {
+    var r = gameReads(g), m = 0;
+    for (var i = 0; i < r.length; i++) if (num(r[i].edge)) m = Math.max(m, Math.abs(r[i].edge));
+    return m;
+  }
+  function staked(g) {
+    var r = gameReads(g), s = 0, best = 0;
+    for (var i = 0; i < r.length; i++) best = Math.max(best, r[i].stake);
+    s += best;
+    var ps = props(g);
+    for (var j = 0; j < ps.length; j++) s += ps[j].stake;
+    return s;
+  }
+
+  function render() {
+    press($('tlSort'), 'data-sort', sort);
+    press($('tlFilter'), 'data-filter', filter);
+    var rows = games.slice();
+    if (sort === 'kickoff') rows.sort(function (a, b) { return (a.kickoff || 0) - (b.kickoff || 0); });
+    else if (sort === 'total') rows.sort(function (a, b) { return (b.total || 0) - (a.total || 0); });
+    else rows.sort(function (a, b) { return edgeOf(b) - edgeOf(a); });
+    if (filter === 'bets') rows = rows.filter(function (g) { return staked(g) > 0; });
+
+    $('tlGamesWrap').innerHTML = rows.map(gameHtml).join('');
+    $('tlEmpty').hidden = !!rows.length;
+    if (!rows.length) {
+      $('tlEmpty').textContent = filter === 'bets'
+        ? 'Nothing on this week’s board clears the floor. That is a normal week, not an empty page — switch back to every game to read the passes.'
+        : 'No game on this week’s slate carries a posted line yet.';
+    }
+
+    var plays = 0, stake = 0;
+    for (var i = 0; i < games.length; i++) {
+      var r = gameReads(games[i]), b = 0;
+      for (var k = 0; k < r.length; k++) b = Math.max(b, r[k].stake);
+      if (b) { plays++; stake += b; }
+      var ps = props(games[i]);
+      for (var j = 0; j < ps.length; j++) if (ps[j].stake) { plays++; stake += ps[j].stake; }
+    }
+    $('tlWeek').textContent = week || '—';
+    $('tlGames').textContent = games.length;
+    $('tlPlays').textContent = plays;
+    $('tlStake').textContent = '$' + stake;
+    $('tlTicket').hidden = false;
+    $('tlStamp').innerHTML = games.length + ' game' + (games.length === 1 ? '' : 's') + ' with a posted line' +
+      ' &middot; ' + plays + ' hypothetical play' + (plays === 1 ? '' : 's') + ' &middot; ' +
+      (hasProps
+        ? 'player props are quoted in this week&rsquo;s feed'
+        : 'no priced player prop reached this feed, so every player number here is derived from the game lines and none of them is staked') + '.';
+  }
+
+  function boot() {
+    $('tlSort').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sort = b.getAttribute('data-sort'); render(); });
+    $('tlFilter').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; filter = b.getAttribute('data-filter'); render(); });
+    fetch('/api/vegas-edge').then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) {
+        $('tlEmpty').textContent = 'The market board did not answer. Nothing is shown rather than a line that may be stale.';
+        return;
+      }
+      games = j.gameEnvironments || [];
+      td = j.tdBoard || [];
+      hasProps = !!j.hasProps;
+      week = j.week || '';
+      byTeam = { up: (j.vsExperts && j.vsExperts.buys) || [], down: (j.vsExperts && j.vsExperts.fades) || [] };
+      render();
+    }).catch(function () {
+      $('tlEmpty').textContent = 'The market board did not answer. Nothing is shown rather than a line that may be stale.';
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+</body>
+</html>

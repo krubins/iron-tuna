@@ -76,7 +76,7 @@ const pageFile = (cat, pos) => cat.slug + '-' + pos.slug + '-rankings.html';
 const pageHref = (cat, pos) => '/' + cat.slug + '-' + pos.slug + '-rankings';
 
 // ── the ribbon ───────────────────────────────────────────────────────────────
-// Five destinations. Two of them carry every position under them, which is the
+// Six destinations. Two of them carry every position under them, which is the
 // whole reason this band exists: a reader who wants receivers this week should
 // not have to load a rankings page and then work a segmented control.
 //
@@ -111,6 +111,7 @@ function ribbonHtml(current) {
     menuHtml(CATEGORIES[1]),
     link('/hidden-value', 'Hidden Value'),
     link('/previews', 'Previews'),
+    link('/the-line', 'The Line'),
     '  </div>',
     '</nav>',
     RIBBON_CLOSE,

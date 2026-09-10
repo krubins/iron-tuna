@@ -181,7 +181,7 @@ const PARENT = {
   'my-league.html': IN_SEASON, 'my-week.html': IN_SEASON, 'weekly-intel.html': IN_SEASON,
   'rankings.html': IN_SEASON,
   'vegas-edge.html': MARKET, 'game-intel.html': MARKET, 'hidden-value.html': MARKET,
-  'previews.html': MARKET, 'what-they-arent-telling-you.html': MARKET,
+  'previews.html': MARKET, 'the-line.html': MARKET, 'what-they-arent-telling-you.html': MARKET,
   'desk.html': IN_SEASON, 'analysts.html': READ, 'play-caller-premium.html': READ,
   'insights.html': READ, 'insights-vault.html': READ,
   'auction-insights.html': READ, 'snake-insights.html': READ, 'bestball-insights.html': READ,

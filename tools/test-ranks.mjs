@@ -107,8 +107,8 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
 
   const rib = read('front.html').match(RIB)[1];
   const links = [...rib.matchAll(/<a[^>]*class="rkr-link[^"]*"[^>]*>([\s\S]*?)<\/a>/g)].map((m) => m[1].trim());
-  ok('it carries the five destinations, in order',
-    links.join('|') === 'Stats|This Week&rsquo;s Rankings|Season Long Rankings|Hidden Value|Previews', links.join('|'));
+  ok('it carries the six destinations, in order',
+    links.join('|') === 'Stats|This Week&rsquo;s Rankings|Season Long Rankings|Hidden Value|Previews|The Line', links.join('|'));
 
   const menus = [...rib.matchAll(/<span class="rkr-menu"[^>]*>([\s\S]*?)<\/span>/g)].map((m) => m[1]);
   ok('two of them drop down', menus.length === 2, String(menus.length));
