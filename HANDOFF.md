@@ -9032,3 +9032,49 @@ feeds report the SAME book, `snapshotWrite` keeps the first (SGO) and drops the
 second rather than averaging — two reports of one book's line is not two
 sources, and blurring them would invent a number that book never posted.
 
+
+
+---
+
+## 73. September 10: write overnight, publish throughout the day
+
+The newsroom now has **two clocks**. Do not collapse them in a later merge.
+
+- `CONTENT_KINDS.hour/minute` is the **publication schedule** readers see.
+- `CONTENT_KINDS.generateHour/generateMinute` is the preferred **model-compute schedule**.
+- A prewritten piece is stored as `status = 'scheduled'` with
+  `brief.meta.publishAt`; public list, piece and newsroom-feed APIs hide it.
+- `publishScheduledContent` releases the embargo on the quarter-hour tick with
+  a D1 update and records analyst calls. It makes **no LLM call**.
+- Before publication, prewritable pieces may call the model only from 00:00
+  through 05:59 ET. Failed attempts can retry in that window. After 06:00 they
+  wait until the publication slot, which is the last-resort fallback if no
+  overnight draft exists.
+- Exceptions are deliberately time-sensitive: Sunday Last-Minute Intel,
+  Sunday evening What Sunday Taught Us and breaking news are written when the
+  event is current, not overnight.
+
+The publication cadence is now:
+
+| Day | Publication |
+|---|---|
+| Sun | 12:15 PM Last-Minute Intel; 7:30 PM What Sunday Taught Us |
+| Mon | 6:00 AM Monday Morning Brief; 12:15 PM Quarterback Monday |
+| Tue | 7:00 AM ROS Rankings; 1:15 PM Tailback Tuesday |
+| Wed | 6:00 AM Pickup Advisor; 1:15 PM Wideout Wednesday |
+| Thu | 6:00 AM TNF Preview; 10:15 AM Underrated; 1:45 PM Trade Desk; 4:45 PM Tight End Thursday |
+| Fri | 6:00 AM Thursday Night: What Matters; 11:15 AM Weekend Preview; 2:45 PM Kickers & Defenses |
+| Sat | 11:30 AM Market Movers |
+
+Preferred write slots are Mon 3:15/4:15, Tue 1:15/2:15, Wed 1:15/2:15,
+Thu 1:15/2:15/3:15/4:15, Fri 1:15/2:15/3:15, and Sat 5:15, all ET.
+
+The old standalone `mnf-preview` package is now a legacy merged kind. Its
+showdown and start/sit material lives inside **Monday Morning Brief**, so the
+site does not publish two articles at 6 AM.
+
+This work was intentionally isolated on branch
+`chatgpt/stagger-newsroom-schedule-20260910` because another development
+branch was active at the same time. Rebase or merge deliberately. The tests in
+`tools/test-content.mjs`, `tools/test-newsroom.mjs` and
+`tools/test-dry-run.mjs` treat the write/publication split as a contract.
