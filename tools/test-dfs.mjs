@@ -136,6 +136,17 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
   ok('a stack is priced', stacks[1].away.stackSalary > 0 && stacks[1].away.stackVegasPoints > 0);
 }
 
+console.log('\nthe DFS page explanations');
+{
+  const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+  ok('the contest cards explain Cash, Single Entry and Large Field', /<b>Cash<\/b>[\s\S]*<b>Single Entry<\/b>[\s\S]*<b>Large Field<\/b>/.test(page));
+  ok('the contest cards explain how the objectives change', page.includes('How they differ:') && page.includes('floor and safety toward ceiling, correlation and leverage'));
+  ok('player names expose a calculation drawer', page.includes('id="dfPlayerModal"') && page.includes('function openPlayerCalc') && page.includes('df-player-link'));
+  ok('the player drawer labels modeled ownership as a model', page.includes('Modeled ownership') && page.includes('not an operator or third-party ownership feed'));
+  const scripts = [...page.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
+  ok('every inline DFS script parses', (() => { try { scripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
+}
+
 console.log('\nthe optimizer');
 {
   const players = slate.players.filter(p => p.onBoard).map(p => ({ ...p, id: p.key }));
