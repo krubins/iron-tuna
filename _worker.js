@@ -12459,6 +12459,7 @@ export default {
     // projections key, and there is nothing paid here — this is the free column,
     // and it ships numbers the site already publishes on the cheat sheet.
     if (url.pathname === '/api/vegas-column') {
+      if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       const c = corsHeaders(request.headers.get('Origin'));
       const now = Date.now();
@@ -12537,6 +12538,7 @@ export default {
     // context in one shape. Every in-season surface reads this rather than
     // joining the four itself.
     if (url.pathname === '/api/market') {
+      if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const w = url.searchParams.get('week');
@@ -12720,6 +12722,7 @@ export default {
     // Line movement for one market. `subject` is the player's name as the book
     // published it, or a game id; `market` is an Iron Tuna stat key.
     if (url.pathname === '/api/market/movement') {
+      if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const subject = String(url.searchParams.get('subject') || '').slice(0, 80);
@@ -12775,6 +12778,7 @@ export default {
     // board is built once per isolate and every card slices it, so the cost of
     // the extra URLs is a map lookup, not a rebuild and not a D1 read.
     if (url.pathname === '/api/player-odds') {
+      if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       const c = corsHeaders(request.headers.get('Origin'));
       const now = Date.now();
