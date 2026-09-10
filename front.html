@@ -2382,7 +2382,25 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
   }
   function inkOn(hex) { return lum(hex) > 0.34 ? '#101317' : '#ffffff'; }
+  // The house teal is the masthead's accent, and on a plate built out of a
+  // club's own colours it reads as a third team: the "AT" disc and the strap
+  // were teal between New England's navy and Seattle's green, answering to
+  // neither. It now dresses only the neutral league-wide plate, which has no
+  // club colours to sit against. Wherever a club is on the plate the furniture
+  // — badge, connector, strap — is drawn in the one neutral the club marks
+  // already sit on, so it reads as a set and never competes with the colours
+  // it sits between.
   var PLATE_TEAL = '#2dd4a3';
+  var PLATE_INK = '#101317';
+  // The ground a chip needs to stay legible over the field it straddles. The
+  // connector and the strap both cross the seam of a fixture plate, so they
+  // are measured against BOTH halves at once rather than against whichever one
+  // happens to be under their left edge.
+  function chipOn() {
+    var t = 0, n = 0;
+    for (var i = 0; i < arguments.length; i++) { if (arguments[i]) { t += lum(arguments[i]); n++; } }
+    return (n && t / n > 0.34) ? PLATE_INK : '#ffffff';
+  }
   // ESPN's path segment is the club abbreviation this file already uses, with
   // one exception it spells its own way.
   var LOGO_ID = { WAS: 'wsh' };
@@ -2459,17 +2477,21 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     // A plate that has not been laid out yet measures zero. Estimating from the
     // character count keeps the chip roughly right rather than collapsing it.
     if (!w) w = (txt.textContent || '').length * 8.4;
-    var pad = 13, x = +txt.getAttribute('x'), anchor = txt.getAttribute('text-anchor');
+    // The type is tracked out, so the measured width carries one trailing
+    // letter-space that belongs to no letter. Left in, it hangs the chip to the
+    // right of the words it wraps.
+    w = Math.max(0, w - 13 * 0.16);
+    var pad = 14, x = +txt.getAttribute('x'), anchor = txt.getAttribute('text-anchor');
     if (anchor === 'middle') x -= w / 2;
     else if (anchor === 'end') x -= w;
     chip.setAttribute('x', Math.max(6, x - pad));
     chip.setAttribute('width', Math.min(708, w + pad * 2));
-    chip.setAttribute('y', +txt.getAttribute('y') - 18);
-    chip.setAttribute('height', 26);
+    chip.setAttribute('y', +txt.getAttribute('y') - 19);
+    chip.setAttribute('height', 28);
   }
   function strapSvg(x, anchor, fill, sub) {
-    return '<rect class="strap-c" x="' + (x - 40) + '" y="94" width="80" height="26" rx="4" fill="' + fill + '"/>' +
-           '<text class="strap-t" x="' + x + '" y="112"' + (anchor ? ' text-anchor="' + anchor + '"' : '') +
+    return '<rect class="strap-c" x="' + (x - 40) + '" y="111" width="80" height="28" rx="9" fill="' + fill + '"/>' +
+           '<text class="strap-t" x="' + x + '" y="130"' + (anchor ? ' text-anchor="' + anchor + '"' : '') +
            ' fill="' + inkOn(fill) + '" style="font:800 13px Inter,Arial,sans-serif;letter-spacing:.16em">' + esc(sub) + '</text>';
   }
   // A club block: the mark, then the type that sits beside it. They travel in
@@ -2536,22 +2558,29 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       // same near-black) would read as one field. The second takes its own
       // secondary instead, so the plate still says "two teams".
       var bgA = A[1], bgB = B[1] === A[1] ? B[2] : B[1];
+      // One neutral for every piece of furniture on this plate: the connector
+      // and the strap both cross the seam, so both are chosen against the two
+      // halves together.
+      var chip = chipOn(bgA, bgB), chipInk = inkOn(chip);
       svg =
-        '<svg viewBox="0 0 720 132" role="img" aria-label="' + esc(A[0]) + ' ' + pair[2].toLowerCase() + ' ' + esc(B[0]) + ' \u2014 ' + esc(sub) + '">' +
-          '<rect width="360" height="132" fill="' + bgA + '"/>' +
-          '<rect x="360" width="360" height="132" fill="' + bgB + '"/>' +
-          '<path d="M300 0 L340 0 L180 132 L140 132 Z" fill="' + inkOn(bgA) + '" opacity="0.06"/>' +
-          '<path d="M540 0 L580 0 L420 132 L380 132 Z" fill="' + inkOn(bgB) + '" opacity="0.06"/>' +
-          '<rect x="356" width="8" height="132" fill="#0b0d10"/>' +
-          clubSvg(a, 34, 12, 80,
-            '<text x="126" data-x0="34" y="56" fill="' + inkOn(bgA) + '" style="font:800 34px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(a) + '</text>' +
-            '<text x="128" data-x0="36" y="78" fill="' + inkOn(bgA) + '" opacity="0.72" style="font:700 10px Inter,Arial,sans-serif;letter-spacing:.12em">' + esc(A[0].toUpperCase()) + '</text>') +
-          clubSvg(b, 606, 12, 80,
-            '<text x="594" data-x0="686" y="56" text-anchor="end" fill="' + inkOn(bgB) + '" style="font:800 34px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(b) + '</text>' +
-            '<text x="592" data-x0="684" y="78" text-anchor="end" fill="' + inkOn(bgB) + '" opacity="0.72" style="font:700 10px Inter,Arial,sans-serif;letter-spacing:.12em">' + esc(B[0].toUpperCase()) + '</text>') +
-          '<circle cx="360" cy="50" r="21" fill="' + PLATE_TEAL + '"/>' +
-          '<text x="360" y="55" text-anchor="middle" fill="' + inkOn(PLATE_TEAL) + '" style="font:800 13px Inter,Arial,sans-serif;letter-spacing:.06em">' + pair[2] + '</text>' +
-          strapSvg(360, 'middle', PLATE_TEAL, sub) +
+        '<svg viewBox="0 0 720 150" role="img" aria-label="' + esc(A[0]) + ' ' + pair[2].toLowerCase() + ' ' + esc(B[0]) + ' \u2014 ' + esc(sub) + '">' +
+          '<rect width="360" height="150" fill="' + bgA + '"/>' +
+          '<rect x="360" width="360" height="150" fill="' + bgB + '"/>' +
+          '<path d="M300 0 L340 0 L180 150 L140 150 Z" fill="' + inkOn(bgA) + '" opacity="0.06"/>' +
+          '<path d="M540 0 L580 0 L420 150 L380 150 Z" fill="' + inkOn(bgB) + '" opacity="0.06"/>' +
+          '<rect x="356" width="8" height="150" fill="#0b0d10"/>' +
+          clubSvg(a, 34, 20, 82,
+            '<text x="131" data-x0="34" y="61" fill="' + inkOn(bgA) + '" style="font:800 34px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(a) + '</text>' +
+            '<text x="133" data-x0="36" y="83" fill="' + inkOn(bgA) + '" opacity="0.72" style="font:700 10px Inter,Arial,sans-serif;letter-spacing:.12em">' + esc(A[0].toUpperCase()) + '</text>') +
+          clubSvg(b, 604, 20, 82,
+            '<text x="589" data-x0="686" y="61" text-anchor="end" fill="' + inkOn(bgB) + '" style="font:800 34px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(b) + '</text>' +
+            '<text x="587" data-x0="684" y="83" text-anchor="end" fill="' + inkOn(bgB) + '" opacity="0.72" style="font:700 10px Inter,Arial,sans-serif;letter-spacing:.12em">' + esc(B[0].toUpperCase()) + '</text>') +
+          // The connector echoes the badges rather than fighting them: the same
+          // softened corners, sitting on the seam, centred on the two marks'
+          // own centre line so the three read as one row.
+          '<rect x="335" y="45" width="50" height="32" rx="10" fill="' + chip + '"/>' +
+          '<text x="360" y="66" text-anchor="middle" fill="' + chipInk + '" style="font:800 13px Inter,Arial,sans-serif;letter-spacing:.06em">' + pair[2] + '</text>' +
+          strapSvg(360, 'middle', chip, sub) +
         '</svg>';
     } else {
       var t = one ? TEAM_ART[one] : null;
@@ -2560,20 +2589,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       var accent = t ? t[2] : PLATE_TEAL;
       var mark = t ? one : 'NFL';
       var ink = inkOn(bg);
+      // The strap lands half on the plate and half on the accent wedge. Drawn
+      // in the accent it dissolved into that wedge and only its type survived;
+      // the same neutral the fixture plate uses gives it one edge over both.
+      var chip = chipOn(bg, accent);
       svg =
-        '<svg viewBox="0 0 720 132" role="img" aria-label="' + esc(name) + ' \u2014 ' + esc(sub) + '">' +
-          '<rect width="720" height="132" fill="' + bg + '"/>' +
-          '<path d="M470 0 L720 0 L720 132 L560 132 Z" fill="' + accent + '" opacity="0.92"/>' +
-          '<path d="M420 0 L500 0 L340 132 L260 132 Z" fill="' + ink + '" opacity="0.06"/>' +
-          '<path d="M300 0 L340 0 L180 132 L140 132 Z" fill="' + ink + '" opacity="0.06"/>' +
+        '<svg viewBox="0 0 720 150" role="img" aria-label="' + esc(name) + ' \u2014 ' + esc(sub) + '">' +
+          '<rect width="720" height="150" fill="' + bg + '"/>' +
+          '<path d="M470 0 L720 0 L720 150 L560 150 Z" fill="' + accent + '" opacity="0.92"/>' +
+          '<path d="M420 0 L500 0 L340 150 L260 150 Z" fill="' + ink + '" opacity="0.06"/>' +
+          '<path d="M300 0 L340 0 L180 150 L140 150 Z" fill="' + ink + '" opacity="0.06"/>' +
           (function () {
             var type =
-              '<text x="' + (t ? 140 : 34) + '" data-x0="34" y="86" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
-              '<text x="' + (t ? 142 : 34) + '" data-x0="34" y="110" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>';
+              '<text x="' + (t ? 144 : 34) + '" data-x0="34" y="84" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
+              '<text x="' + (t ? 146 : 34) + '" data-x0="34" y="108" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>';
             // No club, no mark: the league-wide plate is the geometry alone.
-            return t ? clubSvg(one, 28, 18, 96, type) : type;
+            return t ? clubSvg(one, 28, 26, 92, type) : type;
           })() +
-          strapSvg(686, 'end', accent, sub) +
+          strapSvg(686, 'end', chip, sub) +
         '</svg>';
     }
     host.innerHTML = svg;
