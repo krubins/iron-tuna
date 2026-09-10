@@ -1,6 +1,13 @@
-name: DraftKings salaries
+name: DraftKings weekly salaries
 
 on:
+  # This push trigger causes an immediate production import when this fix lands
+  # on main. It can be removed after the first successful run if desired.
+  push:
+    branches: [main]
+    paths:
+      - 'tools/import-draftkings-salaries.mjs'
+      - '.github/workflows/draftkings-salaries.yml'
   schedule:
     # Tuesday morning in New York (9 AM EST / 10 AM EDT).
     - cron: '0 14 * * 2'
@@ -36,7 +43,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Find and import the Sunday main slate
+      - name: Find and import the full weekly Classic player pool
         env:
           IRON_TUNA_ADMIN_KEY: ${{ secrets.IRON_TUNA_ADMIN_KEY }}
           IRON_TUNA_ADMIN_URL: ${{ vars.IRON_TUNA_ADMIN_URL }}
