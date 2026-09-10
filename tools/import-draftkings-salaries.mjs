@@ -113,14 +113,17 @@ export function draftablesToCsv(payload, minimum = MIN_PLAYERS) {
   }
 
   const header = ['Position', 'Name + ID', 'Name', 'ID', 'Roster Position', 'Salary', 'Game Info', 'TeamAbbrev', 'AvgPointsPerGame'];
+  let fppgRows = 0;
   const lines = rows.sort((a, b) => b.salary - a.salary || String(a.displayName).localeCompare(String(b.displayName))).map(row => {
     const id = row.playerDkId || row.playerId || row.draftableId;
     const roster = /^(RB|WR|TE)$/.test(row.position) ? `${row.position}/FLEX` : row.position;
     const stat = (Array.isArray(row.draftStatAttributes) ? row.draftStatAttributes : []).find(x => Number(x.id) === 90);
+    const fppg = stat && Number.isFinite(Number(stat.value)) ? Number(stat.value) : null;
+    if (fppg != null) fppgRows++;
     return [row.position, `${row.displayName} (${id})`, row.displayName, id, roster, row.salary,
-      row.competition.name || '', row.teamAbbreviation || '', stat ? stat.value : ''].map(csvCell).join(',');
+      row.competition.name || '', row.teamAbbreviation || '', fppg == null ? '' : fppg].map(csvCell).join(',');
   });
-  return { csv: [header.join(','), ...lines, ''].join('\n'), rows };
+  return { csv: [header.join(','), ...lines, ''].join('\n'), rows, fppgRows };
 }
 
 async function getJson(url) {
@@ -146,6 +149,7 @@ export async function run(env = process.env, now = Date.now()) {
     groups: slates.length,
     maxGames: Math.max(...slates.map(slate => Number(slate.GameCount || 0))),
     players: converted.rows.length,
+    fppgPlayers: converted.fppgRows,
     salaryConflicts: merged.salaryConflicts,
     dryRun
   };
