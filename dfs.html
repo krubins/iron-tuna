@@ -165,6 +165,19 @@ p{color:var(--sec);margin:0 0 16px}
 .df-calc:first-child{border-top:0}.df-calc h3{font-size:14px;margin:0 0 5px}.df-calc p{font-size:13px;line-height:1.55;margin:0}
 .df-formula{font-family:var(--font-mono);font-size:11.5px;color:var(--sec);background:var(--panel);border-radius:7px;padding:8px 10px;margin-top:7px;overflow-wrap:anywhere}
 .df-player-foot{font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin-top:10px}
+.df-whatif{border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--panel);padding:14px 16px;margin:14px 0 16px}
+.df-whatif.active{border-color:var(--teal);box-shadow:inset 0 0 0 1px var(--teal)}
+.df-whatif-head{display:flex;gap:16px;align-items:flex-start;justify-content:space-between}
+.df-whatif-head b{display:block;color:var(--text);font-size:15px;margin:2px 0 3px}
+.df-whatif-head p{font-size:12.5px;line-height:1.5;margin:0;max-width:72ch}
+.df-whatif-search{position:relative;max-width:560px;margin-top:10px}
+.df-whatif-search input{width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line2);border-radius:8px;background:var(--bg);color:var(--text)}
+.df-whatif-list{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 4px);background:var(--bg);border:1px solid var(--line2);border-radius:8px;box-shadow:0 14px 30px rgba(0,0,0,.14);max-height:280px;overflow:auto}
+.df-whatif-list button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);font:inherit;padding:9px 11px;cursor:pointer;text-align:left}
+.df-whatif-list button:last-child{border-bottom:0}.df-whatif-list button:hover,.df-whatif-list button:focus{background:var(--panel)}
+.df-whatif-list small{color:var(--muted);white-space:nowrap}
+.df-edge-up{color:var(--teal);font-weight:700}.df-edge-down{color:var(--danger);font-weight:700}.df-edge-flat{color:var(--muted)}
+.df-player-actions{margin-top:14px}
 @media(max-width:560px){.df-player-sheet{width:100vw;padding:18px}.df-player-grid{grid-template-columns:1fr 1fr}}
 </style>
 
@@ -296,6 +309,21 @@ p{color:var(--sec);margin:0 0 16px}
 <section id="sec-lineup">
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>This week’s lineup</h2><a class="is-sec-more" href="#values">The board behind it &rarr;</a></div></div>
   <p class="df-sub">Solved against the cap for the contest shape above, on the same market numbers that price the season-long board. <b>Nothing on this page enters a contest</b> &mdash; it builds a roster to read and copy.</p>
+  <div class="df-whatif" id="dfWhatIf">
+    <div class="df-whatif-head">
+      <div>
+        <span class="df-player-kicker">What if?</span>
+        <b>I particularly favor one player</b>
+        <p>Start typing a player. Pick a match and Iron Tuna will force that player into the lineup, then re-solve every other slot under the same contest rules and salary cap.</p>
+      </div>
+      <button class="btn alt" type="button" id="dfWhatIfClear" hidden>Clear</button>
+    </div>
+    <div class="df-whatif-search">
+      <input id="dfWhatIfInput" type="search" autocomplete="off" spellcheck="false" placeholder="Start typing a player name…" aria-label="Player to force into the lineup" aria-controls="dfWhatIfList" aria-autocomplete="list">
+      <div class="df-whatif-list" id="dfWhatIfList" role="listbox" hidden></div>
+    </div>
+    <p class="is-note" id="dfWhatIfState">As you type, matching players will appear below just like the cheat-sheet What If box.</p>
+  </div>
   <div id="dfLineups"></div>
 
   <!-- ── the branches ─────────────────────────────────────────────────────────
@@ -318,7 +346,7 @@ p{color:var(--sec);margin:0 0 16px}
       <button class="btn" type="button" id="dfBuild">Rebuild</button>
     </div>
     <p class="is-note">Click a name in the pool to lock him into every lineup, twice to exclude him, again to clear.</p>
-    <div class="is-scroll"><table class="is-table" id="dfPool"><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num">Vegas</th><th class="num">Consensus</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+    <div class="is-scroll"><table class="is-table" id="dfPool"><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfPoolFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Vegas</th><th class="num">Consensus</th><th>Status</th></tr></thead><tbody></tbody></table></div>
   </details>
 </section>
 
@@ -340,9 +368,9 @@ p{color:var(--sec);margin:0 0 16px}
   <p>The Vegas Value Score is market-implied points per $1,000 of salary, indexed to the slate’s median: 100 is an ordinary price, 130 is a bargain. Every row carries the salary, the three projections, Market Delta, the TD probability and the team total.</p>
   <p class="is-note" id="dfContestNote"></p>
   <div class="rk-seg" id="dfBoard" role="group"><button type="button" data-board="metrics">Value &amp; Leverage</button><button type="button" data-board="bestVegasValues">Best Vegas Values</button><button type="button" data-board="tdUpside">TD Upside</button><button type="button" data-board="volumeValues">Volume Values</button><button type="button" data-board="expensiveFades">Expensive Fades</button></div>
-  <div class="is-scroll"><table class="is-table" id="dfMetrics" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Proj</th><th class="num">Value</th><th class="num">Floor</th><th class="num">Ceiling</th><th class="num">Own% <small>(model)</small></th><th class="num">Leverage</th><th class="num">Cash</th><th class="num">Tourney</th><th>Chalk</th></tr></thead><tbody></tbody></table></div>
-  <p class="is-note" id="dfMetricsNote" hidden>Ownership is a model, not a feed: a logistic of value and salary tier, labeled as such everywhere it appears. Every metric’s method is written down in <code>docs/dfs-metrics.md</code>. Sorted for the contest type you chose.</p>
-  <div class="is-scroll"><table class="is-table" id="dfValues" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Vegas</th><th class="num">Iron Tuna</th><th class="num">Consensus</th><th>Market Delta</th><th class="num">TD %</th><th class="num">Team total</th><th class="num">VVS</th></tr></thead><tbody></tbody></table></div>
+  <div class="is-scroll"><table class="is-table" id="dfMetrics" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfMetricsFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Value</th><th class="num">Floor</th><th class="num">Ceiling</th><th class="num">Own% <small>(model)</small></th><th class="num">Leverage</th><th class="num">Cash</th><th class="num">Tourney</th><th>Chalk</th></tr></thead><tbody></tbody></table></div>
+  <p class="is-note" id="dfMetricsNote" hidden><b>DK FPPG is DraftKings&rsquo; historical fantasy-points-per-game average, not a projection.</b> IT Edge is Iron Tuna&rsquo;s forward projection minus that historical baseline. Ownership is a model, not a feed. Every metric&rsquo;s method is written down in <code>docs/dfs-metrics.md</code>.</p>
+  <div class="is-scroll"><table class="is-table" id="dfValues" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfValuesFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Vegas</th><th class="num">Consensus</th><th>Market Delta</th><th class="num">TD %</th><th class="num">Team total</th><th class="num">VVS</th></tr></thead><tbody></tbody></table></div>
 </section>
 
 <section id="sec-stacks" hidden>
@@ -465,6 +493,7 @@ p{color:var(--sec);margin:0 0 16px}
   var SECS = { lineup: 1, values: 1, stacks: 1, td: 1, dash: 1 };
   var SEC_IDS = ['lineup', 'values', 'stacks', 'td', 'dash'];
   var site = 'dk', sec = 'lineup', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
+  var whatIfKey = null, whatIfName = '';
   // A reader who has opened the fine-tune panel and moved something owns the
   // build from then on: the shape switch still re-sorts every other section,
   // but it stops overwriting settings they chose by hand.
@@ -513,6 +542,23 @@ p{color:var(--sec);margin:0 0 16px}
   } catch (err) {}
   function press(host, attr, val) { [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); }); }
   function show() { SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = k !== sec; }); press($('dfNav'), 'data-sec', sec); }
+  function fppgLabel() { return site === 'dk' ? 'DK FPPG' : site === 'fd' ? 'FD FPPG' : 'FPPG'; }
+  function fppgText(p) { return p && p.operatorFppg != null && isFinite(p.operatorFppg) ? n1(p.operatorFppg) : '—'; }
+  function fppgEdge(p) {
+    if (!p) return null;
+    if (p.projectionVsFppg != null && isFinite(p.projectionVsFppg)) return Number(p.projectionVsFppg);
+    var proj = p.ironTunaPoints != null ? p.ironTunaPoints : p.proj;
+    if (proj == null || p.operatorFppg == null || !isFinite(proj) || !isFinite(p.operatorFppg)) return null;
+    return Number(proj) - Number(p.operatorFppg);
+  }
+  function edgeHtml(p) {
+    var d = fppgEdge(p); if (d == null) return '—';
+    var cls = d > .05 ? 'df-edge-up' : d < -.05 ? 'df-edge-down' : 'df-edge-flat';
+    return '<span class="' + cls + '">' + (d > 0 ? '+' : '') + n1(d) + '</span>';
+  }
+  function refreshFppgHeads() {
+    ['dfPoolFppgHead','dfMetricsFppgHead','dfValuesFppgHead'].forEach(function (id) { var el = $(id); if (el) el.textContent = fppgLabel(); });
+  }
   function delta(d) { if (!d) return '—'; var cls = /BUY|HIGHER/.test(d.classification) ? 'buy' : /FADE|LOWER/.test(d.classification) ? 'fade' : 'agree'; return '<span class="rk-conf" style="' + (cls === 'buy' ? 'color:var(--teal)' : cls === 'fade' ? 'color:var(--danger)' : '') + '">' + e(d.classification) + (d.points != null ? ' ' + (d.points > 0 ? '+' : '') + d.points : '') + '</span>'; }
   function envTable(s) {
     var rows = []; var seen = {}; var totals = {};
@@ -564,6 +610,8 @@ p{color:var(--sec);margin:0 0 16px}
     var cash = Number(p.cashScore);
     var tourney = Number(p.tournamentScore);
     var leverage = Number(p.leverage);
+    var operatorFppg = p.operatorFppg == null ? null : Number(p.operatorFppg);
+    var projectionEdge = fppgEdge(p);
     var ownFactor = Number.isFinite(own) && own > 0 ? Math.max(.6, Math.min(1.6, 12 / own)) : null;
     var medianProjPerK = Number.isFinite(value) && value > 0 && salaryK > 0 && proj > 0 ? (proj / salaryK) / (value / 100) : null;
     var medianFloorPerK = Number.isFinite(cash) && cash > 0 && salaryK > 0 && floor > 0 ? (floor / salaryK) / (cash / 100) : null;
@@ -581,6 +629,8 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfPlayerSub').textContent = [p.position, p.team, p.opponent ? ('vs ' + p.opponent) : '', money(p.salary)].filter(Boolean).join(' · ');
     var boxes = [
       metricBox(n1(p.ironTunaPoints), 'Iron Tuna proj'),
+      metricBox(operatorFppg != null && isFinite(operatorFppg) ? n1(operatorFppg) : '—', fppgLabel()),
+      metricBox(projectionEdge == null ? '—' : (projectionEdge > 0 ? '+' : '') + n1(projectionEdge), 'IT edge vs FPPG'),
       metricBox(n1(p.vegasPoints), 'Market proj'),
       metricBox(n1(p.consensusPoints), 'Consensus'),
       metricBox(money(p.salary), 'Salary'),
@@ -593,19 +643,22 @@ p{color:var(--sec);margin:0 0 16px}
     var rows = '';
     rows += calcRow('1. Projection', 'Iron Tuna starts with the consensus projection, moves it toward the betting-market projection according to market confidence, and applies the current usage-role adjustment where enough season data exists.',
       'Consensus ' + n1(p.consensusPoints) + ' pts  →  Market ' + n1(p.vegasPoints) + ' pts  →  Iron Tuna ' + n1(p.ironTunaPoints) + ' pts');
-    if (Number.isFinite(value) && salaryK > 0) rows += calcRow('2. Salary value', 'Projection per $1,000 is compared with the slate median. A score of 100 is ordinary value; above 100 is cheaper than the slate norm.',
+    rows += calcRow('2. ' + fppgLabel() + ' comparison', fppgLabel() + ' is the operator’s historical fantasy-points-per-game average, not its projection for this matchup. The difference below is the simple visual edge: Iron Tuna’s forward projection minus that historical baseline.',
+      operatorFppg != null && isFinite(operatorFppg) ? 'Iron Tuna ' + n1(proj) + ' − ' + fppgLabel() + ' ' + n1(operatorFppg) + ' = ' + (projectionEdge > 0 ? '+' : '') + n1(projectionEdge) + ' pts' : fppgLabel() + ' was not supplied for this player.');
+    if (Number.isFinite(value) && salaryK > 0) rows += calcRow('3. Salary value', 'Projection per $1,000 is compared with the slate median. A score of 100 is ordinary value; above 100 is cheaper than the slate norm.',
       n1(proj) + ' ÷ ' + salaryK.toFixed(1) + 'K = ' + (proj / salaryK).toFixed(2) + ' pts/$1K; median ≈ ' + (medianProjPerK ? medianProjPerK.toFixed(2) : '—') + '; Value = ' + value);
-    if (Number.isFinite(floor) && Number.isFinite(ceil)) rows += calcRow('3. Floor and ceiling', 'Floor and ceiling widen the projection by position and market confidence. More volatile positions get a wider range.',
+    if (Number.isFinite(floor) && Number.isFinite(ceil)) rows += calcRow('4. Floor and ceiling', 'Floor and ceiling widen the projection by position and market confidence. More volatile positions get a wider range.',
       'Floor ' + n1(floor) + '  ←  Projection ' + n1(proj) + '  →  Ceiling ' + n1(ceil));
-    if (Number.isFinite(own)) rows += calcRow('4. Modeled ownership', 'Ownership is Iron Tuna’s estimate based on relative value, salary rank within position, and touchdown probability. It is not a sportsbook or DFS-platform ownership feed.',
+    if (Number.isFinite(own)) rows += calcRow('5. Modeled ownership', 'Ownership is Iron Tuna’s estimate based on relative value, salary rank within position, and touchdown probability. It is not a sportsbook or DFS-platform ownership feed.',
       'Modeled ownership = ' + n1(own) + '%');
-    if (Number.isFinite(leverage) && Number.isFinite(own) && own > 0) rows += calcRow('5. Leverage', 'Leverage measures ceiling points for each point of expected ownership. Higher means more upside relative to how commonly the player is expected to appear.',
+    if (Number.isFinite(leverage) && Number.isFinite(own) && own > 0) rows += calcRow('6. Leverage', 'Leverage measures ceiling points for each point of expected ownership. Higher means more upside relative to how commonly the player is expected to appear.',
       n1(ceil) + ' ceiling ÷ ' + n1(own) + '% own = ' + n1(leverage));
-    if (Number.isFinite(cash) && Number.isFinite(floor) && salaryK > 0) rows += calcRow('6. Cash score', 'Cash score compares floor per $1,000 with the slate norm. It rewards stable points for the price and does not discount chalk.',
+    if (Number.isFinite(cash) && Number.isFinite(floor) && salaryK > 0) rows += calcRow('7. Cash score', 'Cash score compares floor per $1,000 with the slate norm. It rewards stable points for the price and does not discount chalk.',
       n1(floor) + ' ÷ ' + salaryK.toFixed(1) + 'K = ' + (floor / salaryK).toFixed(2) + '; median ≈ ' + (medianFloorPerK ? medianFloorPerK.toFixed(2) : '—') + '; Cash = ' + cash);
-    if (Number.isFinite(tourney)) rows += calcRow('7. Tournament score', 'Tournament score starts with indexed ceiling value, then adjusts for modeled ownership. Lower ownership can boost the score; high ownership can reduce it.',
+    if (Number.isFinite(tourney)) rows += calcRow('8. Tournament score', 'Tournament score starts with indexed ceiling value, then adjusts for modeled ownership. Lower ownership can boost the score; high ownership can reduce it.',
       (tournamentBase ? 'Indexed ceiling ≈ ' + tournamentBase.toFixed(1) + ' × ownership factor ' + ownFactor.toFixed(2) + ' = ' : '') + tourney);
     rows += calcRow('Selected contest: ' + sh.head, selected, '');
+    rows += '<div class="df-player-actions"><button class="btn alt" type="button" data-player-whatif="' + e(p.key || '') + '">What if I build with ' + e(p.name) + '?</button></div>';
 
     $('dfPlayerBody').innerHTML = '<div class="df-player-grid">' + boxes + '</div>' + rows;
     $('dfPlayerModal').hidden = false;
@@ -623,7 +676,7 @@ p{color:var(--sec);margin:0 0 16px}
     if (board !== 'metrics') return;
     var key = m && m.sortBy ? m.sortBy : 'leverage';
     rows.sort(function (a, b) { return (b[key] || 0) - (a[key] || 0); });
-    $('dfMetrics').querySelector('tbody').innerHTML = rows.slice(0, 40).map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num"><b>' + e(p.value) + '</b></td><td class="num">' + n1(p.floor) + '</td><td class="num">' + n1(p.ceiling) + '</td><td class="num">' + n1(p.ownership) + '%</td><td class="num">' + n1(p.leverage) + '</td><td class="num">' + e(p.cashScore) + '</td><td class="num">' + e(p.tournamentScore) + '</td><td>' + e(p.chalk || '') + '</td></tr>'; }).join('');
+    $('dfMetrics').querySelector('tbody').innerHTML = rows.slice(0, 40).map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num"><b>' + e(p.value) + '</b></td><td class="num">' + n1(p.floor) + '</td><td class="num">' + n1(p.ceiling) + '</td><td class="num">' + n1(p.ownership) + '%</td><td class="num">' + n1(p.leverage) + '</td><td class="num">' + e(p.cashScore) + '</td><td class="num">' + e(p.tournamentScore) + '</td><td>' + e(p.chalk || '') + '</td></tr>'; }).join('');
     $('dfMetrics').hidden = !rows.length;
   }
   function desk() {
@@ -643,12 +696,12 @@ p{color:var(--sec);margin:0 0 16px}
     if (board === 'metrics') { metrics(s); press($('dfBoard'), 'data-board', board); return; }
     $('dfMetrics').hidden = true; $('dfMetricsNote').hidden = true;
     var list = s.boards[board] || [];
-    $('dfValues').querySelector('tbody').innerHTML = list.map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? ' ' + (p.home === false ? '@' : 'vs ') + p.opponent : '')) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.vegasPoints) + '</b> <span class="is-status">' + e(p.vegasBasis) + '</span></td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + delta(p.marketDelta) + '</td><td class="num">' + n1(p.tdProbability) + '%</td><td class="num">' + n1(p.teamTotal) + '</td><td class="num"><b>' + e(p.vegasValueScore) + '</b></td></tr>'; }).join('');
+    $('dfValues').querySelector('tbody').innerHTML = list.map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? ' ' + (p.home === false ? '@' : 'vs ') + p.opponent : '')) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.ironTunaPoints) + '</b></td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + ' <span class="is-status">' + e(p.vegasBasis) + '</span></td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + delta(p.marketDelta) + '</td><td class="num">' + n1(p.tdProbability) + '%</td><td class="num">' + n1(p.teamTotal) + '</td><td class="num"><b>' + e(p.vegasValueScore) + '</b></td></tr>'; }).join('');
     $('dfValues').hidden = !list.length; press($('dfBoard'), 'data-board', board);
   }
   function pool(s) {
     var on = s.players.filter(function (p) { return p.onBoard; });
-    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '') + '</td></tr>'; }).join('');
+    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '') + '</td></tr>'; }).join('');
   }
   // ── the shape switch ──────────────────────────────────────────────────────
   // Writes the preset into the fine-tune controls rather than solving off a
@@ -696,12 +749,14 @@ p{color:var(--sec);margin:0 0 16px}
         + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></td>'
         + '<td class="num">' + money(p.salary) + '</td>'
         + '<td class="num">' + n1(p.proj) + '</td>'
+        + '<td class="num">' + fppgText(p) + '</td>'
+        + '<td class="num">' + edgeHtml(p) + '</td>'
         + '<td class="num">' + n1(p.ceiling) + '</td>'
         + '<td class="num">' + (p.ownership == null ? '\u2014' : n1(p.ownership) + '%') + '</td></tr>';
     }).join('');
     var meter = '<div class="df-meterwrap"><div class="is-meter' + (l.remaining < 400 ? ' tight' : '') + '"><i style="width:' + pct + '%"></i></div>'
       + '<div class="df-caplab"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div></div>';
-    var table = '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">Proj</th><th class="num">Ceiling</th><th class="num">Own</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    var table = '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num">' + e(fppgLabel()) + '</th><th class="num">IT Edge</th><th class="num">Ceiling</th><th class="num">Own</th></tr></thead><tbody>' + rows + '</tbody></table>';
     var sub = e((slate.label || '') + (slate.week ? ' \u00b7 Week ' + slate.week : '') + ' \u00b7 ' + (ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode));
     var foot = '<button class="btn alt" type="button" data-copy="' + i + '">Copy this lineup</button>'
       + '<span class="df-copy">' + e(l.players.map(function (p) { return p.name; }).join(' \u00b7 ')) + '</span>';
@@ -782,14 +837,64 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   var built = null;
+  function whatIfPlayers() {
+    return (slate && slate.players || []).filter(function (p) { return p.onBoard && p.key; }).sort(function (a, b) { return (b.ironTunaPoints || 0) - (a.ironTunaPoints || 0); });
+  }
+  function whatIfMatches(value) {
+    var q = String(value || '').trim().toLowerCase();
+    if (!q) return [];
+    return whatIfPlayers().filter(function (p) {
+      return String(p.name || '').toLowerCase().indexOf(q) >= 0 ||
+             String(p.team || '').toLowerCase().indexOf(q) >= 0 ||
+             String(p.position || '').toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 10);
+  }
+  function renderWhatIfList() {
+    var box = $('dfWhatIfList'), value = $('dfWhatIfInput').value;
+    var list = whatIfMatches(value);
+    if (!value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
+    box.innerHTML = list.map(function (p) {
+      return '<button type="button" role="option" data-whatif-key="' + e(p.key) + '"><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' · ' + p.team) + '</small></span><small>' + money(p.salary) + ' · IT ' + n1(p.ironTunaPoints) + '</small></button>';
+    }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
+    box.hidden = false;
+  }
+  function setWhatIf(p) {
+    if (!p || !p.key) return;
+    whatIfKey = p.key; whatIfName = p.name || 'Selected player';
+    if (marks[whatIfKey] === 'excl') delete marks[whatIfKey];
+    $('dfWhatIfInput').value = p.name + ' (' + p.position + ' · ' + p.team + ')';
+    $('dfWhatIfList').hidden = true;
+    $('dfWhatIfClear').hidden = false;
+    $('dfWhatIf').classList.add('active');
+    $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is forced into the lineup. Every other slot is re-solved around that choice.';
+    build();
+  }
+  function chooseBestWhatIf() {
+    var value = $('dfWhatIfInput').value.trim();
+    var list = whatIfMatches(value);
+    if (!list.length) return;
+    var q = value.toLowerCase();
+    var exact = list.find(function (p) { return p.name.toLowerCase() === q; });
+    setWhatIf(exact || list[0]);
+  }
+  function clearWhatIf(rebuild) {
+    whatIfKey = null; whatIfName = '';
+    $('dfWhatIfInput').value = '';
+    $('dfWhatIfList').hidden = true; $('dfWhatIfList').innerHTML = '';
+    $('dfWhatIfClear').hidden = true; $('dfWhatIf').classList.remove('active');
+    $('dfWhatIfState').textContent = 'As you type, matching players will appear below just like the cheat-sheet What If box.';
+    if (rebuild) build();
+  }
   function build() {
     if (!slate || !window.ITDfs) return;
     var players = slate.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
     var lock = [], excl = []; for (var k in marks) { if (marks[k] === 'lock') lock.push(k); else if (marks[k] === 'excl') excl.push(k); }
+    if (whatIfKey && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey);
     var sh = SHAPES[contest] || SHAPES.single;
     var r = ITDfs.build(players, { mode: mode, cap: parseInt($('dfCap').value, 10) || slate.cap, slots: slate.slots, flex: slate.flex, lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked, maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
     built = r.ok ? r : null;
     if (!r.ok) {
+      if (whatIfKey) $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is selected, but no legal lineup fits the current cap and constraints.';
       $('dfLineups').innerHTML = '<p class="is-empty">No lineup satisfies those constraints under that cap. Loosen one in the fine-tune panel below.</p>';
       $('dfPivots').innerHTML = '';
       return;
@@ -819,6 +924,7 @@ p{color:var(--sec);margin:0 0 16px}
   function render() {
     if (!slate) return;
     $('dfCap').value = slate.cap;
+    refreshFppgHeads();
     applyShape();
     dashboard(slate); envTable(slate); values(slate); pool(slate); stacks(slate); tdBoard(slate);
     // The lineup solves on load. It is the reason the page exists, and a Build
@@ -894,6 +1000,7 @@ p{color:var(--sec);margin:0 0 16px}
 
   function slateOk(j) {
     slate = j;
+    if (whatIfKey && !(j.players || []).some(function (p) { return p.key === whatIfKey; })) clearWhatIf(false);
     var stamp = j.source === 'upload'
       ? 'Priced from your own ' + (j.label || 'salary') + ' file. It was read in this browser and stored nowhere on the site.'
       : 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
@@ -957,7 +1064,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfUp').hidden = false;
     $('dfShape').hidden = false; $('dfShapeNote').hidden = false;
     applyShape();
-    $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '.';
+    $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
     show();
     var mine = upGet(site);
     $('dfUpClear').hidden = !mine;
@@ -966,7 +1073,20 @@ p{color:var(--sec);margin:0 0 16px}
   }
   document.addEventListener('DOMContentLoaded', function () {
     press($('dfMode'), 'data-mode', mode); applyShape(); show();
-    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; load(); });
+    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; clearWhatIf(false); load(); });
+    $('dfWhatIfInput').addEventListener('input', renderWhatIfList);
+    $('dfWhatIfInput').addEventListener('focus', renderWhatIfList);
+    $('dfWhatIfInput').addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); chooseBestWhatIf(); }
+      if (ev.key === 'Escape') $('dfWhatIfList').hidden = true;
+    });
+    $('dfWhatIfList').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-whatif-key]'); if (!b) return;
+      var key = b.getAttribute('data-whatif-key');
+      var p = whatIfPlayers().find(function (x) { return x.key === key; });
+      setWhatIf(p);
+    });
+    $('dfWhatIfClear').addEventListener('click', function () { clearWhatIf(true); });
     // The salary file. The server caps the body at a million characters, so a
     // file past that is refused here rather than truncated into a CSV that
     // parses and quietly leaves half the slate off the board.
@@ -1016,6 +1136,11 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfBuild').addEventListener('click', function () { tuned = true; build(); });
     $('dfPool').addEventListener('click', function (ev) { if (ev.target.closest('.df-player-link')) return; var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); tuned = true; build(); });
     document.addEventListener('click', function (ev) {
+      var wi = ev.target.closest('[data-player-whatif]');
+      if (wi) {
+        var p0 = whatIfPlayers().find(function (p) { return p.key === wi.getAttribute('data-player-whatif'); });
+        closePlayerCalc(); setWhatIf(p0); return;
+      }
       var player = ev.target.closest('.df-player-link');
       if (player) {
         ev.preventDefault(); ev.stopPropagation();
