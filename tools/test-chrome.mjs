@@ -209,7 +209,7 @@ console.log('\nthe disclaimer is on every page, in full');
     'informational and may differ at the venue',
     'not a sportsbook or exchange',
     'Availability varies by state',
-    '1-800-GAMBLER',
+    '1-800-MY-RESET',
   ];
   // allPages is every page carrying <header class="site">, which is every page
   // the chrome generator writes. THE THREE IT EXCLUDES ARE THE THREE THAT MATTER
