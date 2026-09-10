@@ -7020,7 +7020,7 @@ const CONTENT_KINDS = {
     absorbs: ['what-changed-today', 'snf-what-we-learned', 'team-recaps'] },
   'early-rankings': { title: 'Monday Morning Brief', day: 'Mon', hour: 6, minute: 0, generateHour: 3, generateMinute: 15, retro: true, subject: 'nextPlayed',
     analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
-    summary: 'The Monday night preview and every position ranked for the coming week, with the Fantasy Analysis / Market Intelligence slider.', absorbs: [] },
+    summary: 'The Monday night preview and every position ranked for the coming week, with the Fantasy Analysis / Market Intelligence slider.', absorbs: ['mnf-preview'] },
   'quarterback-monday': { title: 'Quarterback Monday', day: 'Mon', hour: 12, minute: 15, generateHour: 4, generateMinute: 15, retro: true, subject: 'played',
     analyst: 'dalton', dfsAnalyst: 'park', lens: 'both', gate: 'worth', targets: () => [],
     summary: 'One quarterback story that matters, or nothing.', absorbs: [] },
@@ -7081,6 +7081,7 @@ const CONTENT_KINDS = {
 // if any of these is ever runnable again. Rows the old kinds wrote stay in
 // content_pieces and stay readable at their old URLs; nothing is deleted.
 const LEGACY_CONTENT = {
+  'mnf-preview':                  { title: 'Monday Night Football Preview', slot: 'Mon 6 AM', disposition: 'merged', destination: 'early-rankings', reason: 'Combined into the Monday Morning Brief so Monday does not publish two stories at once.' },
   'team-recaps':                 { title: 'Team-by-Team Recaps', slot: 'Mon 7 AM', disposition: 'retired', destination: 'what-sunday-taught-us', reason: 'A conventional recap. Its per-club usage data feeds What Sunday Taught Us.' },
   'mnf-breakdown':               { title: 'Monday Night: What We Learned', slot: 'Tue 7 AM', disposition: 'merged', destination: 'ros-rankings', reason: 'What Monday night changed opens the Tuesday rankings.' },
   'what-they-arent-telling-you': { title: "What They Aren't Telling You", slot: 'Tue 7 AM', disposition: 'merged', destination: 'underrated', reason: 'Same premise, one player, Thursday, Nate Vega.' },
@@ -9099,7 +9100,7 @@ async function publishScheduledContent(env, now) {
   let rows = [];
   try { rows = ((await env.LEADS_DB.prepare("SELECT * FROM content_pieces WHERE status = 'scheduled' ORDER BY created_at ASC").all()).results || []); }
   catch (e) { return { ok: false, published: 0, error: 'query_failed' }; }
-  let published = 0;
+  let published = 0; const pieces = [];
   for (const row of rows) {
     let packet = null, body = null, rivalry = null;
     try { packet = JSON.parse(row.brief || 'null'); body = JSON.parse(row.body || 'null'); rivalry = row.rivalry ? JSON.parse(row.rivalry) : null; } catch (e) {}
@@ -9108,13 +9109,14 @@ async function publishScheduledContent(env, now) {
     try {
       await env.LEADS_DB.prepare("UPDATE content_pieces SET status = 'published', published_at = ? WHERE id = ? AND status = 'scheduled'").bind(at, row.id).run();
       published++;
+      pieces.push({ ok: true, kind: row.kind, week: row.week, status: 'published', version: row.version || 1, released: true });
       try {
         const list = normalizeCalls(body.calls, packet, row.analyst, 'weekly');
         await recordCalls(env, { season: row.season, week: row.week, kind: row.kind, slug: row.slug }, list, rivalry);
       } catch (e) {}
     } catch (e) {}
   }
-  return { ok: true, published };
+  return { ok: true, published, pieces };
 }
 async function runContentTick(env) {
   // Releasing an embargo is a database update, not a model call. Do it first
@@ -9125,7 +9127,7 @@ async function runContentTick(env) {
     if (CONTENT_KINDS[kind].unscheduled) continue;
     try { out.push(await produceContent(env, kind)); } catch (e) { out.push({ ok: false, kind, error: (e && e.message) || 'failed' }); }
   }
-  return { ok: true, at: Date.now(), releases, results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? (r.due || r.generateDue) : false)) };
+  return { ok: true, at: Date.now(), releases, results: (releases.pieces || []).concat(out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? (r.due || r.generateDue) : false))) };
 }
 const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, dfsAnalyst: d.id, dfsName: d.name }; };
 const _pieceUrl = (row) => '/in-season/desk/' + row.kind + '/' + row.week;
