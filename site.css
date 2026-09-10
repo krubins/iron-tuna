@@ -839,3 +839,88 @@ footer.site a:hover { color: var(--text) }
 .rk-game dd { margin: 0; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text); text-align: right }
 .rk-game .rk-agree { color: var(--teal) }
 .rk-game .rk-diverge { color: var(--goldink) }
+
+/* ══ THE PRODUCT PANEL ══════════════════════════════════════════════════════
+   The front page sells three readings inside one picture (front.html, .fp-viz):
+   the projection against the market, the FAAB Advisor pricing a claim off every
+   rival's remaining budget, and the model against the book on a game line. A
+   reader who clicked one of them used to land on a page with no picture at all,
+   so the thing they clicked did not survive the click. This is that card, on
+   its own page, one per page, directly under the lede.
+
+   HTML AND CSS, NOT ONE INLINE SVG. The front page draws its version as a
+   single SVG because the three cards and the mark have to hold one composition;
+   here there is only one card, and an SVG's type does not reflow — at 320px the
+   front page's own labels fall under 7px, which is why that panel hides itself
+   on a phone. Every label below is real HTML at a real font size, so the panel
+   works at every width and a screen reader gets the aria-label rather than a
+   pile of stray <text> nodes.
+
+   THE NUMBERS ARE ILLUSTRATIVE and each panel says so on its foot line. Nothing
+   here fetches: a picture of the product that waits on /api is a picture that
+   paints late, and on these three pages the live numbers are already directly
+   below it.
+
+   The plate's colours are the front page's hero band, restated: #2dd4a3 is the
+   teal that only works on the dark ground, gold is a fill and a figure. */
+.it-viz {
+  margin: var(--space-5) 0; padding: clamp(16px, 2.4vw, 22px) clamp(16px, 2.4vw, 24px) clamp(14px, 2vw, 18px);
+  border-radius: var(--radius-lg); border: 1px solid rgba(255, 255, 255, .13);
+  background:
+    radial-gradient(120% 130% at 44% 40%, rgba(45, 212, 163, .20), rgba(45, 212, 163, 0) 62%),
+    linear-gradient(160deg, #16453c 0%, #0d2723 55%, #081311 100%);
+  box-shadow: 0 18px 44px rgba(8, 19, 17, .22);
+  color: #e9eeec; overflow: hidden;
+}
+.it-viz-kicker { margin: 0; font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .17em; text-transform: uppercase; color: #2dd4a3 }
+.it-viz-sub { margin: 4px 0 0; font-size: var(--fs-xs); font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #8fb3ab }
+/* The chart takes the width it is given and the readings sit beside it; under
+   620px the readings drop below the chart rather than squeezing it to a strip. */
+.it-viz-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto); gap: clamp(14px, 2.4vw, 22px); align-items: end; margin-top: clamp(14px, 2vw, 18px) }
+.it-viz-body.solo { grid-template-columns: minmax(0, 1fr) }
+.it-viz-foot { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .10); font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #7d938d }
+.it-viz-foot i { font-style: normal; color: #5f7871 }
+
+/* ── the line chart ───────────────────────────────────────────────────────
+   preserveAspectRatio="none" so the shape stretches to whatever box it lands
+   in, and non-scaling-stroke so the line stays 2px while it does. That is what
+   lets the callout be positioned in per-cent: the x of a point in the viewBox
+   is the same per-cent of the box at every width. */
+.it-viz-chart { position: relative; height: clamp(104px, 15vw, 138px) }
+.it-viz-chart svg { display: block; width: 100%; height: 100% }
+.it-viz-grid { stroke: rgba(255, 255, 255, .08); stroke-width: 1; vector-effect: non-scaling-stroke; fill: none }
+.it-viz-line { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke }
+.it-viz-line.teal { stroke: #2dd4a3 }
+.it-viz-line.gold { stroke: #f2a900 }
+/* The point the panel is about: a gold disc with a halo, centred on its own
+   coordinates, and the flag beside it. */
+.it-viz-dot { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #f2a900; box-shadow: 0 0 0 5px rgba(242, 169, 0, .22) }
+.it-viz-flag { position: absolute; transform: translate(-50%, -100%); margin-top: -12px; white-space: nowrap; font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .04em; color: #f2a900 }
+.it-viz-axis { display: flex; justify-content: space-between; margin: 8px 0 0; font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #6f857f }
+
+/* ── the readings beside it ─────────────────────────────────────────────── */
+.it-viz-tiles { display: grid; gap: 10px }
+.it-viz-tile { border-radius: var(--radius-sm); border: 1px solid rgba(45, 212, 163, .30); background: rgba(255, 255, 255, .06); padding: 9px 12px }
+.it-viz-tile.gold { border-color: rgba(242, 169, 0, .34) }
+.it-viz-tile span { display: block; font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #7d938d }
+.it-viz-tile b { display: block; margin-top: 2px; font-size: var(--fs-xl); font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; color: #ffffff }
+.it-viz-tile.gold b { color: #f2a900 }
+
+/* ── the bars ─────────────────────────────────────────────────────────────
+   One column per manager. The bar's height is a per-cent of the middle row,
+   which is why the row is a definite height and the value and the name sit in
+   rows of their own rather than inside the bar. */
+.it-viz-bars, .it-viz-names { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(8px, 1.8vw, 20px); text-align: center }
+.it-viz-bars { border-bottom: 1px solid rgba(255, 255, 255, .12) }
+.it-viz-bar { display: grid; grid-template-rows: 16px minmax(0, 1fr); height: clamp(112px, 15vw, 142px) }
+.it-viz-bar i { align-self: end; justify-self: center; display: block; width: min(100%, 72px); height: var(--h); border-radius: 4px 4px 0 0; background: rgba(45, 212, 163, .72) }
+.it-viz-bar b { font-size: var(--fs-2xs); font-weight: 800; color: #8fb3ab; line-height: 16px }
+.it-viz-names { margin-top: 7px; font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #6f857f }
+.it-viz-bar.you i { background: #f2a900 }
+.it-viz-bar.you b { color: #f2a900 }
+.it-viz-names span:first-child { color: #b3c1bd }
+
+@media (max-width: 620px) {
+  .it-viz-body { grid-template-columns: minmax(0, 1fr) }
+  .it-viz-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+}

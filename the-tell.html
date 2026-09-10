@@ -150,6 +150,32 @@ table.ledger td:first-child,table.grade td:first-child{font-weight:700;color:var
 <h1>The Tell</h1>
 <p class="byline">By <b>Artie Kesselman</b> <span class="bl-sep">&middot;</span> a weekly column <span class="bl-sep">&middot;</span> new edition every Tuesday through the season</p>
 <p class="lede">Every ranking has a tell: the one number inside it that says whether the rest will hold. This column is about finding it. Same board everyone else is reading, opened up and sorted into the parts that hold and the parts that are a coin flip somebody wrote down to one decimal place.</p>
+<!-- The picture the front page sells this column with (front.html, .fp-viz —
+     the "projection vs. market" card), redrawn here as its own panel so the
+     thing a reader clicked survives the click. The line is illustrative and the
+     foot line says so; the real ledger is the table below. -->
+<figure class="it-viz" role="img" aria-label="An illustration of the column: a projection line rising against the market read across eight weeks, with the widest gap of the run marked at plus 3.1 points.">
+  <p class="it-viz-kicker">Projection vs. market</p>
+  <p class="it-viz-sub">Where the rank and the number behind it come apart</p>
+  <div class="it-viz-body solo">
+    <div>
+      <div class="it-viz-chart">
+        <svg viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <defs><linearGradient id="itvTellFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2dd4a3" stop-opacity="0.42"/><stop offset="1" stop-color="#2dd4a3" stop-opacity="0"/>
+          </linearGradient></defs>
+          <g class="it-viz-grid"><path d="M0 25 H300"/><path d="M0 50 H300"/><path d="M0 75 H300"/></g>
+          <path d="M0 82 L42.9 68.7 L85.7 76.3 L128.6 50.8 L171.4 59.3 L214.3 28.2 L257.1 36.7 L300 14 L300 100 L0 100 Z" fill="url(#itvTellFill)"/>
+          <polyline class="it-viz-line teal" points="0,82 42.9,68.7 85.7,76.3 128.6,50.8 171.4,59.3 214.3,28.2 257.1,36.7 300,14"/>
+        </svg>
+        <span class="it-viz-dot" style="left:71.4%;top:28.2%"></span>
+        <span class="it-viz-flag" style="left:71.4%;top:28.2%">+3.1 pts</span>
+      </div>
+      <div class="it-viz-axis"><span>W1</span><span>W3</span><span>W5</span><span>W7</span></div>
+    </div>
+  </div>
+  <p class="it-viz-foot">The Tell &middot; rank vs. projection <i>&middot; illustrative</i></p>
+</figure>
 <div class="cta-row"><a class="btn" href="https://irontuna.com/">Build My Free Auction Sheet</a><a class="btn alt" href="/fantasy-football-auction-values">See the whole board</a></div>
 
 <div class="method">
