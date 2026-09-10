@@ -31,6 +31,7 @@ const ok = (name, cond, extra = '') => {
 // "service" hosts are vendors Iron Tuna is a paying or authenticated customer
 // of, and "own" is us.
 const ALLOWED = {
+  'football.cbssports.com': { kind: 'content', why: 'CBS reader-authorized league API; validated league subdomain only, FLAG_CBS_SYNC off until access and commercial terms verified (R7)' },
   'api.the-odds-api.com':     { kind: 'content', why: 'paid odds feed; commercial display terms pending (docs/data-sources.md R3)' },
   'site.api.espn.com':        { kind: 'content', why: 'REMEDIATION PENDING: undocumented endpoints, no commercial license (R1)' },
   'api.sleeper.app':          { kind: 'content', why: 'REMEDIATION PENDING: non-commercial grant only (R2)' },
@@ -110,6 +111,7 @@ if (fs.existsSync(docPath)) {
     ok(`${h} is in the inventory`, doc.includes(h),
        'a content source the worker reaches but the /data page would not list');
   }
+  ok('dynamic CBS league hosts are in the inventory', doc.includes('football.cbssports.com'));
 }
 
 // Section 14.4. Naming a binding in a status label ("no LLM_API_KEY") is fine

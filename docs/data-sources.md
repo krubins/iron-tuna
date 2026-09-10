@@ -7,7 +7,7 @@ This file is the **inventory of what the code actually does today**, not a plan.
 Every external host reached by `_worker.js` is listed. When you add or remove a
 source, edit this file in the same commit.
 
-Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) published 2026-09-09; keep the two in step.
+Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) published 2026-09-09; keep the two in step.
 
 ---
 
@@ -17,6 +17,7 @@ Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) 
 
 | Host | Used for | Call sites | License status |
 |---|---|---|---|
+| `<league>.football.cbssports.com` | Reader-authorized CBS league settings, teams, rosters, standings, schedules, waiver order and transaction log | `PROVIDER_CBS`, `cbsGet`; validated league subdomain, fixed HTTPS `/api/league/` resources | **Off by default (`FLAG_CBS_SYNC`).** Token access and commercial terms still require live verification. No CBS login/password collection or provider writes. See docs/league-sync.md CBS addendum. |
 | `api.the-odds-api.com` | NFL odds, totals, spreads | `ODDS_API_BASE`, `_worker.js:1575` | **Paid, terms unconfirmed.** See item R3. |
 | `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts, **and the game lines the scoreboard carries** | `_worker.js:1353`, `:3061`, `:5656`, `:5657`, `_espnOdds` | **Red.** Undocumented endpoints, no commercial license. The odds block adds a bookmaker's spread, total and opening line to what is taken. No page names the book; the name reaches the JSON API only. See R1. |
 | `api.sleeper.app` | NFL player id/metadata map | `_worker.js:7732`, `:7763` | **Red for a paid product.** Non-commercial grant only. See R2. |
@@ -27,6 +28,7 @@ Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) 
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
 | DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
 | DFS lobby CSV (reader upload) | A reader's own salary file, for any classic slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/dfs/slate` | **Green.** Same file, obtained by the reader from a lobby they are already in. Parsed per request and stored nowhere; single-game files are refused rather than mispriced against the classic cap. |
+| DraftKings lobby + draftables (scheduled repository workflow) | DraftKings NFL Sunday Classic main-slate salaries | `tools/import-draftkings-salaries.mjs`, `.github/workflows/draftkings-salaries.yml` → `POST /api/admin/dfs` | **Red / owner-directed exception.** Undocumented, keyless operator endpoints; automated access may conflict with operator terms and can change without notice. Runs once weekly outside the deployed Worker, validates 40+ players and all five positions before importing. |
 
 ### Infrastructure — not content, no data-licensing question
 
@@ -48,10 +50,12 @@ reach them. They still belong in this table so the list is complete.
 | `api.draftkings.com` | 2026-09-06 | Operator's own data; terms prohibit systematic retrieval. Addendum 13.3 / 13.7. |
 | `api.fanduel.com` | 2026-09-06 | Same. |
 
-Both were behind unset env vars and had never run against the live services, so
-removing them changed no behavior. The `dfs-refresh` cron job went with them:
-with no site feeds left, the CSV import is the only path, and it is an admin
-action, not a scheduled one.
+Both Worker-side integrations were behind unset env vars and had never run
+against the live services, so removing them changed no behavior. The old
+`dfs-refresh` Worker cron went with them. DraftKings was later added as an
+owner-directed, once-weekly repository workflow that stays outside the deployed
+Worker and sends a validated CSV through the existing admin import. FanDuel
+remains absent.
 
 ---
 
@@ -167,6 +171,7 @@ See `docs/league-sync.md` Part 3 for the full record. In short:
 
 - **Sleeper.** The league connector uses the same API as the players map and inherits R2 exactly: free for non-commercial use, and Iron Tuna is a paid product. The connector is complete and tested against fixtures but ships **off** (`FLAG_SLEEPER_SYNC`). Turn it on only with Sleeper's written license in `docs/`. Attribution string in §3 applies.
 - **Yahoo.** OAuth 2.0 under the Yahoo Developer Network terms of use. The reader authorizes Iron Tuna to read their own fantasy data (scope `fspt-r`); no password is ever seen and tokens are sealed at rest (`LEAGUE_TOKEN_KEY`). Register an app at developer.yahoo.com, set `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`, and confirm the YDN terms permit use in a paid product before enabling `FLAG_YAHOO_SYNC`. Rate limits are per-app and undocumented; the connector caches for a minute and syncs on the job clock, never per page view.
+- **CBS Sportsline.** The connector uses a reader-supplied token scoped to one CBS football league. It calls only a fixed read-resource allowlist on the validated `<league>.football.cbssports.com` host, puts the token in the Authorization header, refuses redirects, and seals one token per league with `LEAGUE_TOKEN_KEY`. It never collects a CBS username/password or calls the mobile login endpoint. The implementation is synthetic-fixture-tested but not live-tested and ships **off** (`FLAG_CBS_SYNC`). Keep it off until a controlled live pass validates response shapes and CBS confirms permitted access and commercial use.
 - **ESPN.** No supported path. Not implemented; the adapter is a documented placeholder and manual setup is the fallback. Do not add the `lm-api-reads` host.
 
 ### R6 — Schema note for the free-tier delay model
