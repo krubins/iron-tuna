@@ -7018,57 +7018,57 @@ const CONTENT_KINDS = {
     targets: (gs) => gs.filter(g => g.dow === 'Sun' && g.status === 'final'),
     summary: 'Not a recap. Signal, noise, role changes and misleading box scores, and what they say about next week.',
     absorbs: ['what-changed-today', 'snf-what-we-learned', 'team-recaps'] },
-  'early-rankings': { title: 'Monday Morning Brief', day: 'Mon', hour: 6, minute: 0, retro: true, subject: 'nextPlayed',
+  'early-rankings': { title: 'Monday Morning Brief', day: 'Mon', hour: 6, minute: 0, generateHour: 3, generateMinute: 15, retro: true, subject: 'nextPlayed',
     analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
     summary: 'The Monday night preview and every position ranked for the coming week, with the Fantasy Analysis / Market Intelligence slider.', absorbs: [] },
-  'quarterback-monday': { title: 'Quarterback Monday', day: 'Mon', hour: 12, minute: 15, retro: true, subject: 'played',
+  'quarterback-monday': { title: 'Quarterback Monday', day: 'Mon', hour: 12, minute: 15, generateHour: 4, generateMinute: 15, retro: true, subject: 'played',
     analyst: 'dalton', dfsAnalyst: 'park', lens: 'both', gate: 'worth', targets: () => [],
     summary: 'One quarterback story that matters, or nothing.', absorbs: [] },
-  'ros-rankings': { title: 'Rest-of-Season Rankings', day: 'Tue', hour: 7, minute: 0, retro: true, subject: 'current',
+  'ros-rankings': { title: 'Rest-of-Season Rankings', day: 'Tue', hour: 7, minute: 0, generateHour: 1, generateMinute: 15, retro: true, subject: 'current',
     analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
     dfsTitle: 'Early Price Inefficiency Board',
     summary: 'Next 3, until the playoffs, playoffs only, rest of season: one engine, four horizons.', absorbs: ['rankings-update', 'mnf-breakdown'] },
-  'tailback-tuesday': { title: 'Tailback Tuesday', day: 'Tue', hour: 13, minute: 15, retro: true, subject: 'played',
+  'tailback-tuesday': { title: 'Tailback Tuesday', day: 'Tue', hour: 13, minute: 15, generateHour: 2, generateMinute: 15, retro: true, subject: 'played',
     analyst: 'brooks', altAnalyst: 'raines', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
     summary: 'The running back development that changes a ranking, argued from the workload.', absorbs: ['opportunity-report'] },
-  'pickup-advisor': { title: 'Pickup Advisor', day: 'Wed', hour: 6, minute: 0, retro: true, subject: 'current',
+  'pickup-advisor': { title: 'Pickup Advisor', day: 'Wed', hour: 6, minute: 0, generateHour: 1, generateMinute: 15, retro: true, subject: 'current',
     analyst: 'grant', dfsAnalyst: 'park', lens: 'both', targets: () => [], dfsTitle: 'First-Look DFS Value & Leverage Report',
     summary: 'Priority adds, mid-level adds, deep adds, stashes and do-not-chase, for 10, 12 and 14 teams.', absorbs: ['waiver-watch'] },
-  'wideout-wednesday': { title: 'Wideout Wednesday', day: 'Wed', hour: 13, minute: 15, retro: true, subject: 'played',
+  'wideout-wednesday': { title: 'Wideout Wednesday', day: 'Wed', hour: 13, minute: 15, generateHour: 2, generateMinute: 15, retro: true, subject: 'played',
     analyst: 'raines', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
     summary: 'Targets, air yards and deployment: the receiver whose opportunity moved before his points did.', absorbs: ['opportunity-report'] },
-  'tnf-preview': { title: 'Thursday Night Football Preview', day: 'Thu', hour: 6, minute: 0, retro: false, subject: 'current', anchor: 'targets',
+  'tnf-preview': { title: 'Thursday Night Football Preview', day: 'Thu', hour: 6, minute: 0, generateHour: 1, generateMinute: 15, retro: false, subject: 'current', anchor: 'targets',
     analyst: 'dalton', dfsAnalyst: 'dalton', lens: 'both', optional: true, preview: true, updates: 'until-kickoff', updateHours: 14,
     // The midweek games: Thursday's, and a Wednesday opener when there is one.
     // The slot follows the first of them (contentDue), and so does the title.
     targets: (gs) => gs.filter(g => g.dow === 'Wed' || g.dow === 'Thu'),
     titleFor: (days) => days.length && days.some(d => d !== 'Thu') ? (days.length > 1 ? 'Midweek Kickoff Preview' : 'Opening Night Preview') : 'Thursday Night Football Preview',
     summary: 'Start/sit and the full showdown for the Thursday game, updated if late news changes it.', absorbs: ['tnf-preview'] },
-  'underrated': { title: 'Most Underrated Player on the Board', subtitle: "What the Experts Aren't Telling You", day: 'Thu', hour: 10, minute: 15, retro: false, subject: 'current',
+  'underrated': { title: 'Most Underrated Player on the Board', subtitle: "What the Experts Aren't Telling You", day: 'Thu', hour: 10, minute: 15, generateHour: 2, generateMinute: 15, retro: false, subject: 'current',
     analyst: 'vega', dfsAnalyst: 'vega', lens: 'both', rivalry: true, targets: () => [],
     summary: 'One player the consensus has wrong, argued from the market and the usage. The DFS pick may differ.', absorbs: ['what-they-arent-telling-you', 'the-pick'] },
-  'trade-desk': { title: 'Trade Desk', day: 'Thu', hour: 13, minute: 45, retro: false, subject: 'current',
+  'trade-desk': { title: 'Trade Desk', day: 'Thu', hour: 13, minute: 45, generateHour: 3, generateMinute: 15, retro: false, subject: 'current',
     analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
     summary: 'Five to target, five to trade away. For DFS, five to attack and five to fade.', absorbs: [] },
-  'tight-end-thursday': { title: 'Tight End Thursday', day: 'Thu', hour: 16, minute: 45, retro: true, subject: 'played',
+  'tight-end-thursday': { title: 'Tight End Thursday', day: 'Thu', hour: 16, minute: 45, generateHour: 4, generateMinute: 15, retro: true, subject: 'played',
     analyst: 'brooks', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
     summary: 'Only when a tight end story is worth your time.', absorbs: [] },
-  'tnf-what-matters': { title: 'Thursday Night: What Matters', day: 'Fri', hour: 6, minute: 0, retro: false, subject: 'current',
+  'tnf-what-matters': { title: 'Thursday Night: What Matters', day: 'Fri', hour: 6, minute: 0, generateHour: 1, generateMinute: 15, retro: false, subject: 'current',
     analyst: 'raines', dfsAnalyst: 'park', lens: 'both', optional: true,
     targets: (gs) => gs.filter(g => g.dow === 'Wed' || g.dow === 'Thu'),
     titleFor: (days) => days.length && days.some(d => d !== 'Thu') ? 'Midweek Football: What Matters' : 'Thursday Night: What Matters',
     summary: 'Usage, role and sustainability from the Thursday game. Not a recap.', absorbs: ['tnf-aftermath'] },
-  'weekend-preview': { title: 'Weekend Preview', day: 'Fri', hour: 11, minute: 15, retro: false, subject: 'current',
+  'weekend-preview': { title: 'Weekend Preview', day: 'Fri', hour: 11, minute: 15, generateHour: 2, generateMinute: 15, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', preview: true,
     // The weekend: everything after the midweek games. A Wednesday opener is
     // the midweek preview's, and a preview is not ready once any target has
     // kicked off, so it must not be here on Friday.
     targets: (gs) => gs.filter(g => g.dow !== 'Wed' && g.dow !== 'Thu'),
     summary: 'The hard start/sits, the matchups, the movers and the weather. For DFS, the whole slate.', absorbs: ['final-read', 'weekend-game-plan'] },
-  'kickers-defenses': { title: 'Kickers & Defenses', day: 'Fri', hour: 14, minute: 45, retro: false, subject: 'current',
+  'kickers-defenses': { title: 'Kickers & Defenses', day: 'Fri', hour: 14, minute: 45, generateHour: 3, generateMinute: 15, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', targets: () => [],
     summary: 'Streaming defenses, defenses to avoid, kicker rankings. DFS: DST only.', absorbs: [] },
-  'market-movers': { title: 'Market Movers', day: 'Sat', hour: 11, minute: 30, retro: false, subject: 'current',
+  'market-movers': { title: 'Market Movers', day: 'Sat', hour: 11, minute: 30, generateHour: 5, generateMinute: 15, retro: false, subject: 'current',
     analyst: 'vega', dfsAnalyst: 'park', lens: 'both', preview: true,
     targets: (gs) => gs.filter(g => g.dow === 'Sun' || g.dow === 'Mon'),
     summary: 'The biggest late-week player-prop, game-total and injury-driven moves before Sunday, with the fantasy and DFS implications.', absorbs: [] },
@@ -7195,7 +7195,14 @@ function contentDue(kind, now, state, sched) {
   else if (prevGames.length) dueAt = _nextEt(K.day, K.hour, Math.max(...prevGames.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
   else dueAt = _nextEt(K.day, K.hour, Math.min(...ags.map(g => g.kickoff)) - 132 * 3600000, K.minute || 0);
   const due = now >= dueAt;
-  if (K.optional && !targets.length) return { due, ready: false, reason: 'no_such_game', week, skip: true };
+  // Publication and model-generation are separate clocks. Most desk pieces are
+  // pre-written overnight and embargoed until dueAt. Time-sensitive Sunday
+  // pieces and breaking news have no generateHour, so they are written at the
+  // publication event itself. Generation stays on the same Eastern calendar
+  // day as publication, even across DST.
+  const generateAt = K.generateHour == null ? dueAt : _nextEt(slotDay, K.generateHour, dueAt - 23 * 3600000, K.generateMinute || 0);
+  const generateDue = now >= generateAt;
+  if (K.optional && !targets.length) return { due, generateDue, generateAt, ready: false, reason: 'no_such_game', week, skip: true };
   // FINAL MEANS THE FEED SAID FINAL. The season service's clock infers that a
   // game is over three and three-quarter hours after kickoff, which is right
   // for "what week is it" and wrong for "may I write about this game": a
@@ -7218,7 +7225,7 @@ function contentDue(kind, now, state, sched) {
     ready = notFinal.length === 0;
     if (!ready) reason = 'games_not_final:' + notFinal.map(g => g.away + '@' + g.home).join(',');
   }
-  return { due, ready, reason, week, anchorWeek, dueAt, targets: targets.map(g => g.id), targetDays: targets.map(g => g.dow), slotDay,
+  return { due, generateDue, generateAt, ready, reason, week, anchorWeek, dueAt, targets: targets.map(g => g.id), targetDays: targets.map(g => g.dow), slotDay,
            updatesUntil: K.updates ? dueAt + (K.updateHours || 6) * 3600000 : null,
            excluded: K.partial ? gs.filter(g => g.dow === 'Sun' && !feedFinal(g)).map(g => g.away + '@' + g.home) : [] };
 }
@@ -8785,7 +8792,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   const rivalry = rivalryGate(env, kind, facts.disagreements || (facts.candidates ? facts.candidates : []), budget);
   const analyst = analystFor(env, K.analyst), dfsAnalyst = analystFor(env, K.dfsAnalyst || 'park'), marketAnalyst = K.marketAnalyst ? analystFor(env, K.marketAnalyst) : null;
   const packet = {
-    meta: { kind, title: kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
+    meta: { kind, title: kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(), publishAt: d.dueAt || Date.now(),
             analyst: analyst.id, analystName: analyst.name, dfsAnalyst: dfsAnalyst.id, dfsAnalystName: dfsAnalyst.name, marketAnalyst: marketAnalyst ? marketAnalyst.id : null, marketAnalystName: marketAnalyst ? marketAnalyst.name : null,
             lens: flagOn(env, 'DFS_CONTENT') ? K.lens : 'weekly', scoring: 'PPR (the reader’s league re-scores the tables on the page)', excludedGames: d.excluded || [] },
     freshness: freshnessReport(ctx.stamps, kind, Date.now()),
@@ -9010,8 +9017,15 @@ async function produceContent(env, kind, opts) {
   const sched = await scheduleCacheRead(env);
   const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
   const d = contentDue(kind, Date.now(), state, sched);
-  if (K.unscheduled) { if (!o.events && !o.force) return { ok: false, kind, error: 'unscheduled_needs_event' }; d.due = true; d.ready = true; if (d.week == null && state.ok) d.week = state.week.number; }
-  if (!o.force && (!d.due || !d.ready)) return { ok: false, kind, ...d };
+  if (K.unscheduled) { if (!o.events && !o.force) return { ok: false, kind, error: 'unscheduled_needs_event' }; d.due = true; d.generateDue = true; d.ready = true; d.dueAt = Date.now(); if (d.week == null && state.ok) d.week = state.week.number; }
+  const etNow = etParts(Date.now());
+  const overnight = etNow.hour >= 0 && etNow.hour < 6;
+  // Before publication, pre-writable packages may call the model only in the
+  // midnight-to-6am ET window. If the overnight attempt fails, retries stay in
+  // that window. Once the window closes, the system waits until the actual
+  // publication slot, when generation is allowed as a last-resort fallback.
+  const canGenerate = d.due || (K.generateHour != null && d.generateDue && overnight);
+  if (!o.force && (!canGenerate || !d.ready)) return { ok: false, kind, ...d };
   if (d.week == null) return { ok: false, kind, error: 'no_week' };
   const season = sched.season, week = d.week;
   const latest = await contentLatest(env, kind, season, week);
@@ -9040,6 +9054,7 @@ async function produceContent(env, kind, opts) {
   let status = written.status;
   const violations = written.violations.slice();
   if (status === 'published' && !auto.on) { status = 'held'; violations.push('awaiting_approval: ' + auto.reason); }
+  else if (status === 'published' && !d.due && !K.unscheduled) status = 'scheduled';
   const version = latest && latest.version ? latest.version + 1 : (latest ? 2 : 1);
   // A retry of a transport failure is the same edition, not an update.
   const title = kindTitle(K, d) + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
@@ -9064,21 +9079,53 @@ async function revalidateHeld(env, kind, latest, packet, d, season) {
   if (!fc.ok) return null;
   const auto = await autoPublishOn(env);
   if (!auto.on) return null;
-  try { await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ?, violations = ? WHERE id = ?').bind('published', Date.now(), null, latest.id).run(); }
+  const publishNow = !!d.due;
+  const nextStatus = publishNow ? 'published' : 'scheduled';
+  try { await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ?, violations = ? WHERE id = ?').bind(nextStatus, publishNow ? Date.now() : null, null, latest.id).run(); }
   catch (e) { return null; }
   const analyst = packet.meta.analyst, week = d.week;
   const rivalry = packet.rivalry && body.rivalryLine ? { ...packet.rivalry, line: String(body.rivalryLine).slice(0, 300) } : null;
   let calls = { stored: 0 };
-  try { calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, normalizeCalls(body.calls, packet, analyst, 'weekly'), rivalry); } catch (e) {}
-  return { ok: true, kind, week, status: 'published', version: latest.version || 1, revalidated: true, heldOn: vio.length, analyst, rivalry: !!rivalry, calls: calls.stored, sections: Object.keys(body) };
+  if (publishNow) {
+    try { calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, normalizeCalls(body.calls, packet, analyst, 'weekly'), rivalry); } catch (e) {}
+  }
+  return { ok: true, kind, week, status: nextStatus, version: latest.version || 1, revalidated: true, heldOn: vio.length, analyst, rivalry: !!rivalry, calls: calls.stored, sections: Object.keys(body) };
+}
+async function publishScheduledContent(env, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  if (!(await contentReady(env)) || !(await newsroomReady(env))) return { ok: false, published: 0 };
+  const auto = await autoPublishOn(env);
+  if (!auto.on) return { ok: true, published: 0, paused: true };
+  let rows = [];
+  try { rows = ((await env.LEADS_DB.prepare("SELECT * FROM content_pieces WHERE status = 'scheduled' ORDER BY created_at ASC").all()).results || []); }
+  catch (e) { return { ok: false, published: 0, error: 'query_failed' }; }
+  let published = 0;
+  for (const row of rows) {
+    let packet = null, body = null, rivalry = null;
+    try { packet = JSON.parse(row.brief || 'null'); body = JSON.parse(row.body || 'null'); rivalry = row.rivalry ? JSON.parse(row.rivalry) : null; } catch (e) {}
+    const publishAt = packet && packet.meta && Number(packet.meta.publishAt);
+    if (!publishAt || publishAt > at || !body) continue;
+    try {
+      await env.LEADS_DB.prepare("UPDATE content_pieces SET status = 'published', published_at = ? WHERE id = ? AND status = 'scheduled'").bind(at, row.id).run();
+      published++;
+      try {
+        const list = normalizeCalls(body.calls, packet, row.analyst, 'weekly');
+        await recordCalls(env, { season: row.season, week: row.week, kind: row.kind, slug: row.slug }, list, rivalry);
+      } catch (e) {}
+    } catch (e) {}
+  }
+  return { ok: true, published };
 }
 async function runContentTick(env) {
+  // Releasing an embargo is a database update, not a model call. Do it first
+  // so a story written overnight appears on its daytime publication slot.
+  const releases = await publishScheduledContent(env, Date.now());
   const out = [];
   for (const kind of Object.keys(CONTENT_KINDS)) {
     if (CONTENT_KINDS[kind].unscheduled) continue;
     try { out.push(await produceContent(env, kind)); } catch (e) { out.push({ ok: false, kind, error: (e && e.message) || 'failed' }); }
   }
-  return { ok: true, at: Date.now(), results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? r.due : false)) };
+  return { ok: true, at: Date.now(), releases, results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? (r.due || r.generateDue) : false)) };
 }
 const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, dfsAnalyst: d.id, dfsName: d.name }; };
 const _pieceUrl = (row) => '/in-season/desk/' + row.kind + '/' + row.week;
@@ -9096,11 +9143,11 @@ async function contentListPayload(env, season, week) {
   await newsroomReady(env);
   try {
     const q = week != null
-      ? await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek FROM content_pieces WHERE season = ? AND week = ? AND status != 'unpublished' ORDER BY created_at DESC").bind(season, week).all()
-      : await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 80").all();
+      ? await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek FROM content_pieces WHERE season = ? AND week = ? AND status NOT IN ('unpublished','scheduled') ORDER BY created_at DESC").bind(season, week).all()
+      : await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek FROM content_pieces WHERE status NOT IN ('unpublished','scheduled') ORDER BY created_at DESC LIMIT 80").all();
     const pieces = (q.results || []).map(r => ({ ...r, byline: _bylineOf(r), url: _pieceUrl(r), legacy: !CONTENT_KINDS[r.kind] }));
     return { ok: true, contract: CONTENT_CONTRACT, disclosure: AI_DISCLOSURE,
-             kinds: Object.entries(CONTENT_KINDS).filter(([k, v]) => !v.unscheduled).map(([k, v]) => ({ kind: k, title: v.title, subtitle: v.subtitle || null, day: v.day, hour: v.hour, minute: v.minute || 0, analyst: v.analyst, analystName: (ANALYSTS[v.analyst] || ANALYST_HOUSE).name, dfsAnalyst: v.dfsAnalyst, lens: v.lens, summary: v.summary, gate: v.gate || null, updates: v.updates || null })),
+             kinds: Object.entries(CONTENT_KINDS).filter(([k, v]) => !v.unscheduled).map(([k, v]) => ({ kind: k, title: v.title, subtitle: v.subtitle || null, day: v.day, hour: v.hour, minute: v.minute || 0, generateHour: v.generateHour == null ? null : v.generateHour, generateMinute: v.generateMinute || 0, analyst: v.analyst, analystName: (ANALYSTS[v.analyst] || ANALYST_HOUSE).name, dfsAnalyst: v.dfsAnalyst, lens: v.lens, summary: v.summary, gate: v.gate || null, updates: v.updates || null })),
              pieces };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
@@ -9111,7 +9158,7 @@ async function contentPiecePayload(env, kind, season, week) {
     const row = week != null
       ? await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first()
       : await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? ORDER BY created_at DESC LIMIT 1').bind(kind).first();
-    if (!row || row.status === 'unpublished') return { ok: false, error: 'not_found', kind };
+    if (!row || row.status === 'unpublished' || row.status === 'scheduled') return { ok: false, error: 'not_found', kind };
     const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
     const K = CONTENT_KINDS[kind];
     const brief = parse(row.brief);
