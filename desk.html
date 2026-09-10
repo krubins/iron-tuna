@@ -141,6 +141,7 @@ p{color:var(--sec);margin:0 0 16px}
       <li><a href="/weekly-rankings">This week’s rankings</a></li>
       <li><a href="/season-long-rankings">Season long rankings</a></li>
       <li><a href="/stats">Stats</a></li>
+      <li><a href="/weekly-wrap">Weekly Wrap Up</a></li>
       <li><a href="/waivers">Waivers &amp; FAAB</a></li>
       <li><a href="/my-league">My Leagues</a></li>
       <li><a href="/my-week">My Week</a></li>
@@ -230,12 +231,17 @@ p{color:var(--sec);margin:0 0 16px}
     usageAndRole: 'Usage and role', sustainability: 'Sustainability', calledBackAndNearMisses: 'Called back and near misses', nextWeek: 'Next week', futurePricing: 'Future pricing', stackRelationships: 'Stack relationships', salaryInefficiency: 'Salary inefficiency',
     injurySituations: 'Injury situations', difficultStartSits: 'Difficult start / sits', marketMovers: 'Market movers', weather: 'Weather', sundayContingencies: 'Sunday contingencies', slateOverview: 'Slate overview', bestGameEnvironments: 'Best game environments', coreStacks: 'Core stacks', contrarianStacks: 'Contrarian stacks', values: 'Values', injuryContingencies: 'Injury contingencies', salarySavers: 'Salary savers', contestTypes: 'Contest-type differences',
     streamingDefenses: 'Streaming defenses', defensesToAvoid: 'Defenses to avoid', kickerRankings: 'Kicker rankings', teamTotalsAndWeather: 'Team totals and weather', upcomingSchedule: 'Upcoming schedule', dstSalary: 'DST salary', pressureAndTurnovers: 'Pressure and turnovers',
-    whatHappened: 'What happened', whoMovesUp: 'Who moves up', whoMovesDown: 'Who moves down', salaryValue: 'Salary value' };
+    whatHappened: 'What happened', whoMovesUp: 'Who moves up', whoMovesDown: 'Who moves down', salaryValue: 'Salary value',
+    theGame: 'The game', whatScored: 'What scored', usageBehindIt: 'The usage behind it', nextWeekSignals: 'What it says about next week',
+    components: 'The findings', waiverAndTrade: 'Waivers and trades', wrap: 'The short version', priceImpact: 'Price impact', usageForPricing: 'Usage the price has not caught' };
   var lbl = function (k) { return LABEL[k] || words(k); };
   function wanted() {
-    var m = location.pathname.match(/^\/in-season\/desk\/([a-z-]+)(?:\/(\d{1,2}))?\/?$/);
+    // A per-game piece carries a fourth segment, the slugified game id:
+    // /in-season/desk/game-recap/1/2026-01-ne-sea
+    var m = location.pathname.match(/^\/in-season\/desk\/([a-z-]+)(?:\/(\d{1,2})(?:\/([a-z0-9-]{1,40}))?)?\/?$/);
     var qs = new URLSearchParams(location.search);
-    return { kind: m ? m[1] : (qs.get('kind') || ''), week: m && m[2] ? m[2] : (qs.get('week') || ''), lens: qs.get('lens') };
+    return { kind: m ? m[1] : (qs.get('kind') || ''), week: m && m[2] ? m[2] : (qs.get('week') || ''),
+             game: m && m[3] ? m[3] : (qs.get('game') || ''), lens: qs.get('lens') };
   }
   // Which lens to open on: the URL says, else where the reader came from,
   // else the lane they last chose on the front page.
@@ -254,11 +260,22 @@ p{color:var(--sec);margin:0 0 16px}
     var latest = {};
     (j.pieces || []).forEach(function (p) { if (!latest[p.kind]) latest[p.kind] = p; });
     var order = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    var kinds = (j.kinds || []).slice().sort(function (a, b) { return (order.indexOf(a.day) - order.indexOf(b.day)) || (a.hour - b.hour) || (a.minute - b.minute); });
+    // A per-game package has no weekday and no hour, so it sorts to the front
+    // of the week rather than into a slot that does not exist.
+    var kinds = (j.kinds || []).slice().sort(function (a, b) {
+      if (!!a.perGame !== !!b.perGame) return a.perGame ? -1 : 1;
+      if (a.perGame) return 0;
+      return (order.indexOf(a.day) - order.indexOf(b.day)) || (a.hour - b.hour) || (a.minute - b.minute);
+    });
     $('dkList').innerHTML = '<div class="dk-grid">' + kinds.map(function (k) {
       var p = latest[k.kind];
-      var when = k.day + ' ' + (k.hour % 12 === 0 ? 12 : k.hour % 12) + ':' + (k.minute < 10 ? '0' : '') + k.minute + (k.hour < 12 ? ' AM' : ' PM') + ' ET';
-      return '<a class="dk-card" href="/in-season/desk/' + e(k.kind) + '"><span class="when">' + e(when) + (k.gate ? ' &middot; only when there is a story' : '') + '</span><h3>' + e(k.title) + '</h3>' +
+      var when = k.perGame ? 'Every game, when it goes final'
+        : k.day + ' ' + (k.hour % 12 === 0 ? 12 : k.hour % 12) + ':' + (k.minute < 10 ? '0' : '') + k.minute + (k.hour < 12 ? ' AM' : ' PM') + ' ET';
+      // The recap card leads to the Weekly Wrap Up, which lists every game of
+      // the week. /in-season/desk/game-recap would land on whichever single
+      // game was written last, which is not an index of anything.
+      var href = k.perGame ? '/weekly-wrap' : '/in-season/desk/' + e(k.kind);
+      return '<a class="dk-card" href="' + href + '"><span class="when">' + e(when) + (k.gate ? ' &middot; only when there is a story' : '') + '</span><h3>' + e(k.title) + '</h3>' +
         '<span class="dk-by">' + e(k.analystName) + (k.lens === 'both' ? ' &middot; Weekly + DFS' : '') + '</span>' +
         (p ? '<span class="st ' + e(p.status) + '">Week ' + e(p.week) + ' &middot; ' + e(p.status) + (p.version > 1 ? ' &middot; update ' + e(p.version) : '') + '</span>' : '<span class="st">Not yet this season</span>') + '</a>';
     }).join('') + '</div>';
@@ -275,8 +292,22 @@ p{color:var(--sec);margin:0 0 16px}
     return '<div class="is-scroll"><table class="is-table"><thead><tr>' + cols.map(function (c) { return '<th>' + e(words(c)) + '</th>'; }).join('') + '<th>Why</th></tr></thead><tbody>' +
       rows.map(function (r) { return '<tr>' + cols.map(function (c) { var v = r[c]; if (Array.isArray(v)) v = v.join(', '); return '<td' + (typeof v === 'number' ? ' class="num"' : '') + '>' + e(v == null ? '—' : v) + '</td>'; }).join('') + '<td>' + e(r.why || '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
   }
+  // The findings a recap breaks into. Each one is anchored, because the front
+  // page's headline column links straight at them once a later game's recap
+  // has taken the lead: /in-season/desk/game-recap/1/<game>#component-2 is a
+  // headline in the rail and a heading here, and they have to be the same
+  // sentence for the reader who followed the link.
+  function componentsHtml(rows) {
+    return '<h2>' + e(lbl('components')) + '</h2><ol class="dk-parts">' + rows.map(function (c, i) {
+      var n = c.n || i + 1;
+      return '<li id="component-' + e(n) + '"><h3>' + e(c.headline || '') + '</h3>' +
+        (c.player ? '<p class="dk-conf">' + e(c.player) + '</p>' : '') +
+        (c.why ? '<p>' + e(c.why) + '</p>' : '') + '</li>';
+    }).join('') + '</ol>';
+  }
   function section(key, val) {
     if (val == null) return '';
+    if (key === 'components' && Array.isArray(val) && val.length && typeof val[0] === 'object') return componentsHtml(val);
     var h = '<h2>' + e(lbl(key)) + '</h2>';
     if (Array.isArray(val) && val.every(function (x) { return typeof x === 'string'; })) return val.length ? h + '<ul>' + val.map(function (s) { return '<li>' + e(s) + '</li>'; }).join('') + '</ul>' : '';
     if (Array.isArray(val) && val.every(function (x) { return x && typeof x === 'object'; })) return val.length ? h + objTable(key, val) : '';
@@ -339,11 +370,19 @@ p{color:var(--sec);margin:0 0 16px}
     [].forEach.call($('dkTabs').querySelectorAll('button'), function (b) { var on = b.getAttribute('data-lens') === lens; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.classList.toggle('on', on); });
     var title = lens === 'dfs' && j.dfsTitle ? j.dfsTitle : (j.headline || j.title);
     $('dkTitle').textContent = title;
-    $('dkKicker').innerHTML = (lens === 'dfs' ? 'DFS' : 'Weekly Fantasy') + ' &middot; ' + e(j.title) + ' &middot; Week ' + e(j.week) + (j.version > 1 ? ' &middot; update ' + e(j.version) : '');
+    // A per-game piece's stored title already carries the week ("NE at SEA ·
+    // Week 1"), so the kicker names the matchup and adds the week once.
+    var kick = j.matchup || String(j.title || '').replace(/\s*·\s*Week\s*\d+.*$/, '');
+    $('dkKicker').innerHTML = (lens === 'dfs' ? 'DFS' : 'Weekly Fantasy') + ' &middot; ' + e(kick) + ' &middot; Week ' + e(j.week) + (j.version > 1 ? ' &middot; update ' + e(j.version) : '');
     $('dkBody').innerHTML = byline(j, lens) + (j.dek ? '<p class="dk-dek">' + e(j.dek) + '</p>' : '') + (lens === 'weekly' ? rivalryBox(j) : '') +
       (j.status === 'published' ? lensBody(j, lens, j.sections ? j.sections[lens] : null) + (lens === 'weekly' ? callsBox(j) : '') : '');
     if (lens === 'dfs' && j.brief && j.brief.dfs && j.brief.dfs.note) $('dkBody').innerHTML += '<p class="is-note">' + e(j.brief.dfs.note) + '</p>';
-    try { history.replaceState(null, '', location.pathname + (lens === 'dfs' ? '?lens=dfs' : '')); } catch (x) {}
+    // Keep the hash. The body is painted after the page loads, so the browser
+    // has already given up on scrolling to #component-2 by the time the
+    // heading exists; dropping the hash as well would leave a reader who
+    // followed a headline from the front page at the top of the story.
+    try { history.replaceState(null, '', location.pathname + (lens === 'dfs' ? '?lens=dfs' : '') + (location.hash || '')); } catch (x) {}
+    if (location.hash) { try { var at = document.getElementById(location.hash.slice(1)); if (at) at.scrollIntoView(); } catch (x) {} }
     track('desk_lens', { kind: j.kind, week: j.week, lens: lens });
   }
   function piece(j, want) {
@@ -378,7 +417,7 @@ p{color:var(--sec);margin:0 0 16px}
   function boot() {
     var w = wanted();
     if (w.kind) {
-      fetch('/api/content/piece?kind=' + encodeURIComponent(w.kind) + (w.week ? '&week=' + encodeURIComponent(w.week) : '')).then(function (r) { return r.json(); }).then(function (j) {
+      fetch('/api/content/piece?kind=' + encodeURIComponent(w.kind) + (w.week ? '&week=' + encodeURIComponent(w.week) : '') + (w.game ? '&game=' + encodeURIComponent(w.game) : '')).then(function (r) { return r.json(); }).then(function (j) {
         if (!j || !j.ok) { $('dkEmpty').textContent = 'That piece has not been produced yet this season. It appears when its games are final and its hour comes round.'; return; }
         piece(j, w);
       }).catch(function () { $('dkEmpty').textContent = 'The desk did not answer.'; });

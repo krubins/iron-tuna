@@ -77,7 +77,13 @@ function fakeDb(clock) {
         if (args[0] === 6) return { payload: JSON.stringify(DEPTH), updated_at: clock.now() - 3600000 };
         return null;
       }
+      // A per-game kind asks for one game's row; the real table has a game_id
+      // column and the query binds it, so matching on kind/season/week alone
+      // would hand back another game's recap and the week would write one
+      // piece instead of one per game.
+      if (/SELECT id, status, version, brief, body, violations, created_at FROM content_pieces WHERE kind = \? AND season = \? AND week = \? AND game_id = \?/.test(sql)) { const l = T.content_pieces.filter(r => r.kind === args[0] && r.season === args[1] && r.week === args[2] && r.game_id === args[3]).sort((a, b) => b.created_at - a.created_at); return l[0] || null; }
       if (/SELECT id, status, version, brief, body, violations, created_at FROM content_pieces WHERE kind = \? AND season = \? AND week = \?/.test(sql)) { const l = T.content_pieces.filter(r => r.kind === args[0] && r.season === args[1] && r.week === args[2]).sort((a, b) => b.created_at - a.created_at); return l[0] || null; }
+      if (/SELECT \* FROM content_pieces WHERE kind = \? AND slug = \?/.test(sql)) { const l = T.content_pieces.filter(r => r.kind === args[0] && r.slug === args[1]).sort((a, b) => b.created_at - a.created_at); return l[0] || null; }
       if (/SELECT \* FROM content_pieces WHERE kind = \? AND season = \? AND week = \?/.test(sql)) { const l = T.content_pieces.filter(r => r.kind === args[0] && r.season === args[1] && r.week === args[2]).sort((a, b) => b.created_at - a.created_at); return l[0] || null; }
       if (/SELECT \* FROM content_pieces WHERE kind = \? ORDER BY/.test(sql)) { const l = T.content_pieces.filter(r => r.kind === args[0]).sort((a, b) => b.created_at - a.created_at); return l[0] || null; }
       if (/FROM newsroom_settings WHERE key = \?/.test(sql)) return T.newsroom_settings[args[0]] || null;
@@ -92,6 +98,8 @@ function fakeDb(clock) {
       if (/FROM content_pieces WHERE status = 'published' AND analyst = \?/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published' && r.analyst === args[0]).sort((a, b) => b.published_at - a.published_at).slice(0, 12) };
       if (/FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published' && r.rivalry).sort((a, b) => b.published_at - a.published_at).slice(0, 10) };
       if (/FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT \?/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published').sort((a, b) => b.published_at - a.published_at).slice(0, args[0]) };
+      // The Weekly Wrap Up: every published recap of one week.
+      if (/FROM content_pieces WHERE kind = 'game-recap' AND season = \? AND week = \? AND status = 'published'/.test(sql)) return { results: T.content_pieces.filter(r => r.kind === 'game-recap' && r.season === args[0] && r.week === args[1] && r.status === 'published').sort((a, b) => b.published_at - a.published_at) };
       if (/FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 80/.test(sql)) return { results: T.content_pieces.filter(r => r.status !== 'unpublished').sort((a, b) => b.created_at - a.created_at) };
       return { results: [] };
     }
@@ -123,11 +131,17 @@ function fakeModel(body) {
   const nu = i => nums[i % nums.length] || '';
   const bad = modelMode === 'hallucinate' && !retry;
   const sentence = i => (bad && i === 0 ? 'Jerry Jeudy had 155 yards. ' : '') + nm(i) + ' carries ' + nu(i) + ' into the week. Start him.';
-  const objSecs = { target: ['player', 'position', 'team', 'why'], tradeAway: ['player', 'position', 'team', 'why'], attack: ['player', 'position', 'team', 'salary', 'why'], fade: ['player', 'position', 'team', 'salary', 'why'], priorityAdds: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], midLevelAdds: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], deepAdds: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], speculativeStashes: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], doNotChase: ['player', 'position', 'team', 'why'], movesUp: ['player', 'position', 'team', 'from', 'to', 'why'], movesDown: ['player', 'position', 'team', 'from', 'to', 'why'], signal: ['player', 'team', 'label', 'why'], noise: ['player', 'team', 'label', 'why'], roleChanges: ['player', 'team', 'label', 'why'], buy: ['player', 'team', 'label', 'why'], concerns: ['player', 'team', 'label', 'why'], watchThis: ['player', 'team', 'label', 'why'], whoMovesUp: ['player', 'position', 'team', 'why'], whoMovesDown: ['player', 'position', 'team', 'why'], pivots: ['player', 'position', 'team', 'salary', 'why'], captainOptions: ['player', 'position', 'team', 'salary', 'why'], contrarianCaptains: ['player', 'position', 'team', 'salary', 'why'], streamingDefenses: ['team', 'opponent', 'why'], defensesToAvoid: ['team', 'opponent', 'why'], kickerRankings: ['player', 'team', 'rank', 'why'], priceInefficiencyBoard: ['player', 'position', 'team', 'salary', 'projection', 'value', 'why'], earlyValues: ['player', 'position', 'team', 'salary', 'why'], likelyChalk: ['player', 'position', 'team', 'salary', 'why'], goodChalk: ['player', 'position', 'team', 'salary', 'why'], badChalk: ['player', 'position', 'team', 'salary', 'why'], coreStacks: ['game', 'players', 'why'], contrarianStacks: ['game', 'players', 'why'], stacks: ['game', 'players', 'why'], initialStacks: ['game', 'players', 'why'] };
+  const objSecs = { target: ['player', 'position', 'team', 'why'], tradeAway: ['player', 'position', 'team', 'why'], attack: ['player', 'position', 'team', 'salary', 'why'], fade: ['player', 'position', 'team', 'salary', 'why'], priorityAdds: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], midLevelAdds: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], deepAdds: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], speculativeStashes: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], doNotChase: ['player', 'position', 'team', 'why'], movesUp: ['player', 'position', 'team', 'from', 'to', 'why'], movesDown: ['player', 'position', 'team', 'from', 'to', 'why'], signal: ['player', 'team', 'label', 'why'], noise: ['player', 'team', 'label', 'why'], roleChanges: ['player', 'team', 'label', 'why'], buy: ['player', 'team', 'label', 'why'], concerns: ['player', 'team', 'label', 'why'], watchThis: ['player', 'team', 'label', 'why'], whoMovesUp: ['player', 'position', 'team', 'why'], whoMovesDown: ['player', 'position', 'team', 'why'], pivots: ['player', 'position', 'team', 'salary', 'why'], captainOptions: ['player', 'position', 'team', 'salary', 'why'], contrarianCaptains: ['player', 'position', 'team', 'salary', 'why'], streamingDefenses: ['team', 'opponent', 'why'], defensesToAvoid: ['team', 'opponent', 'why'], kickerRankings: ['player', 'team', 'rank', 'why'], priceInefficiencyBoard: ['player', 'position', 'team', 'salary', 'projection', 'value', 'why'], earlyValues: ['player', 'position', 'team', 'salary', 'why'], likelyChalk: ['player', 'position', 'team', 'salary', 'why'], goodChalk: ['player', 'position', 'team', 'salary', 'why'], badChalk: ['player', 'position', 'team', 'salary', 'why'], coreStacks: ['game', 'players', 'why'], contrarianStacks: ['game', 'players', 'why'], stacks: ['game', 'players', 'why'], initialStacks: ['game', 'players', 'why'],
+    // The recap's three layers and its findings, mirrored from
+    // NEWSROOM_OBJECT_SECTIONS so the fake writer answers the shape the
+    // real _lensShape asked it for.
+    whatScored: ['player', 'position', 'team', 'points', 'line', 'why'], usageBehindIt: ['player', 'position', 'team', 'targets', 'carries', 'share', 'why'],
+    nextWeekSignals: ['player', 'position', 'team', 'signal', 'evidence', 'why'], components: ['headline', 'player', 'why'] };
   const shape = /SHAPE[^\n]*\n(\{[^\n]*\})/.exec(user)[1];
   const S = JSON.parse(shape);
   const lensKeys = (lens) => Object.keys(S[lens] || {});
-  const fill = (lens) => Object.fromEntries(lensKeys(lens).map((k, i) => [k, objSecs[k] ? [{ player: nm(i), position: 'WR', team: 'AAA', why: sentence(i), salary: nu(i), faabPct: '10', holdFor: 'three weeks', from: 'WR12', to: 'WR9', label: 'SIGNAL', game: 'AAA at BBB', players: nm(i), opponent: 'BBB', rank: 3, projection: nu(i), value: nu(i + 1) }] : [sentence(i), nm(i + 1) + ' is the pivot at ' + nu(i + 1) + '.']]));
+  const fill = (lens) => Object.fromEntries(lensKeys(lens).map((k, i) => [k, objSecs[k] ? [{ player: nm(i), position: 'WR', team: 'AAA', why: sentence(i), salary: nu(i), faabPct: '10', holdFor: 'three weeks', from: 'WR12', to: 'WR9', label: 'SIGNAL', game: 'AAA at BBB', players: nm(i), opponent: 'BBB', rank: 3, projection: nu(i), value: nu(i + 1),
+    headline: nm(i) + ' carries ' + nu(i) + ' into the week', points: nu(i), line: nu(i) + ' yards', targets: 7, carries: 12, share: nu(i), signal: 'usage up', evidence: nu(i) }] : [sentence(i), nm(i + 1) + ' is the pivot at ' + nu(i + 1) + '.']]));
   const out = { headline: nm(0) + ' is the story of the week', dek: 'What ' + nm(0) + ' told us about next week.', weekly: fill('weekly'), calls: [{ player: nm(0), direction: 'start', recommendation: 'start him', rank: null, confidence: 'HIGH', rationale: nu(0) + ' says so', evidence: [nu(0)] }], rivalryLine: null };
   if (S.dfs) out.dfs = fill('dfs');
   if (packet.rivalry) { const line = 'Brooks has ' + packet.rivalry.player + ' at ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; Vega, reading the market, has him ' + packet.rivalry.position + packet.rivalry.vega.rank + '.'; out.rivalryLine = line; out.weekly[lensKeys('weekly')[0]].push(line); }
@@ -152,7 +166,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade, weeklyWrapPayload };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, fakeFetch, stub, 'x', async () => {}, {}, {}, async () => null, availabilityTable, availabilityCacheRead, async () => null, availabilityReport, async () => null, stub, stub, {}, {}, p => p, async (id) => { const norm = RAW; return norm; });
 const db = fakeDb(clock);
 const env = { LEADS_DB: db, LLM_API_KEY: 'test', LLM_PROVIDER: 'anthropic' };
@@ -207,7 +221,11 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('the Pickup Advisor published Wednesday 6:00', at('pickup-advisor', 2)[0] && at('pickup-advisor', 2)[0].at === 'Wed 6:00');
   ok('Thursday: the TNF preview at 6 (published), Underrated at 7 and the Trade Desk at 8 (skipped: no usage, no priced disagreement)', at('tnf-preview', 2)[0] && at('tnf-preview', 2)[0].at === 'Thu 6:00' && at('tnf-preview', 2)[0].status === 'published' && at('underrated', 2)[0] && at('underrated', 2)[0].at === 'Thu 7:00' && at('trade-desk', 2)[0] && at('trade-desk', 2)[0].at === 'Thu 8:00', JSON.stringify([at('tnf-preview', 2), at('underrated', 2), at('trade-desk', 2)]));
   ok('Friday: Thursday Night What Matters at 6 and the Weekend Preview at 7 (published), Kickers & Defenses at 8 (skipped: no K or DST in the pool)', at('tnf-what-matters', 2)[0] && at('tnf-what-matters', 2)[0].at === 'Fri 6:00' && at('tnf-what-matters', 2)[0].status === 'published' && at('weekend-preview', 2)[0] && at('weekend-preview', 2)[0].at === 'Fri 7:00' && at('weekend-preview', 2)[0].status === 'published' && at('kickers-defenses', 2)[0] && at('kickers-defenses', 2)[0].at === 'Fri 8:00', JSON.stringify([at('tnf-what-matters', 2), at('weekend-preview', 2), at('kickers-defenses', 2)]));
-  ok('nothing published twice for the same kind and week except the two live pieces', Object.keys(H.CONTENT_KINDS).every(k => k === 'last-minute-intel' || k === 'what-sunday-taught-us' || k === 'tnf-preview' || [1, 2].every(w => at(k, w).filter(x => x.status !== 'skipped').length <= 1)));
+  // One row per kind per week, except the live-updating pieces, which
+  // version on one slug, and the per-game kinds, whose unit is the GAME:
+  // for those the same rule is one row per game, checked on the game id.
+  ok('nothing published twice for the same kind and week except the live pieces and the per-game ones', Object.keys(H.CONTENT_KINDS).every(k => k === 'last-minute-intel' || k === 'what-sunday-taught-us' || k === 'tnf-preview' || H.CONTENT_KINDS[k].perGame || [1, 2].every(w => at(k, w).filter(x => x.status !== 'skipped').length <= 1)));
+  ok('and a per-game kind is one row per game, not one per week', Object.keys(H.CONTENT_KINDS).filter(k => H.CONTENT_KINDS[k].perGame).every(k => [1, 2].every(w => { const rows = at(k, w).filter(x => x.status !== 'skipped'); const ids = db.T.content_pieces.filter(r => r.kind === k && r.week === w && r.status !== 'skipped').map(r => r.game_id); return new Set(ids).size === rows.length; })));
   ok('no retired kind ran', P.every(r => H.CONTENT_KINDS[r.kind]) && Object.keys(H.LEGACY_CONTENT).every(k => !P.some(r => r.kind === k)));
   const pub = P.filter(r => r.status === 'published');
   ok('every published piece carries both lenses, a headline, a byline and a version', pub.length >= 9 && pub.every(r => { const b = JSON.parse(r.body); return b.weekly && b.dfs && r.headline && r.analyst && r.version >= 1; }), String(pub.length));
@@ -237,8 +255,34 @@ console.log('\nthe feeds and the front page');
   ok('the packet the page shows hides the allowed list and the index', piece.brief && !piece.brief.allowed && !piece.brief.playerIndex && piece.brief.freshness);
   const a = await H.analystPayload(env, 'brooks');
   ok('an analyst page lists recent pieces and the record of calls', a.ok && a.pieces.length >= 1 && Array.isArray(a.calls) && a.headToHead !== null);
+  // ── the per-game recaps, the lead, the rail and the Weekly Wrap Up ───────
+  const recaps = db.T.content_pieces.filter(r => r.kind === 'game-recap');
+  ok('a recap was written per game, not per week', new Set(recaps.map(r => r.game_id)).size === recaps.length && recaps.length >= 4, recaps.length + ' recaps, ' + new Set(recaps.map(r => r.game_id)).size + ' games');
+  ok('every recap names its own game in its slug, its title and its column', recaps.every(r => r.game_id && r.slug.includes(String(r.game_id).toLowerCase().replace(/[^a-z0-9]+/g, '-')) && /\sat\s/.test(r.title)));
+  ok('no two recaps of the same week share a slug', (() => { const w1 = recaps.filter(r => r.week === 1).map(r => r.slug); return new Set(w1).size === w1.length; })());
+  ok('a recap only ever covers a game the feed marked final', recaps.every(r => { const b = JSON.parse(r.brief); return b && b.box && b.box.final === true; }));
+  ok('a recap packet carries the three layers and the wrap facts', recaps.every(r => { const b = JSON.parse(r.brief); return Array.isArray(b.whatScored) && Array.isArray(b.usage) && Array.isArray(b.forwardSignals) && b.wrapFacts && b.wrapFacts.matchup; }));
+  const pubRecaps = recaps.filter(r => r.status === 'published');
+  ok('a published recap stores its findings and its short summary', pubRecaps.length >= 1 && pubRecaps.every(r => r.components && JSON.parse(r.components).length >= 1 && r.wrap), pubRecaps.length + ' published');
+  {
+    // The lead is whatever published last. Once a recap is pushed down, the
+    // rail stops printing it as one row and prints its findings instead.
+    const l = await H.deskLeadPayload(env);
+    const parts = l.recent.filter(r => /:c\d+$/.test(r.slug));
+    ok('a recap pushed off the lead breaks into component headlines in the rail', parts.length >= 1 && parts.every(r => r.title && /#component-\d+$/.test(r.url)), JSON.stringify(l.recent.map(r => r.slug).slice(0, 8)));
+    ok('a per-game row in the rail is labeled by its matchup, not by the kind', l.recent.concat([l.story]).filter(r => /^desk:game-recap:/.test(r.slug)).every(r => /\sat\s/.test(r.label) && !/^Game Recap$/.test(r.label)));
+  }
+  {
+    const wrap = await H.weeklyWrapPayload(env, 1);
+    ok('the Weekly Wrap Up lists every game of the week', wrap.ok && wrap.week === 1 && wrap.counts.games === 6 && wrap.games.length === 6);
+    ok('each wrapped game carries its own recap\'s summary and a link to it', wrap.games.filter(g => g.recap).every(g => g.recap.wrap && /^\/in-season\/desk\/game-recap\/1\//.test(g.recap.url)) && wrap.games.some(g => g.recap));
+    ok('a game with no recap yet says so rather than showing an empty card', wrap.games.filter(g => !g.recap).every(g => !!g.pending));
+    ok('the wrap never invents a summary the recap did not write', wrap.games.filter(g => g.recap).every(g => { const row = recaps.find(r => r.game_id === g.id); return row && g.recap.wrap === (row.wrap || row.dek); }));
+  }
   const list = await H.contentListPayload(env, 2026, null);
-  ok('the desk list carries every calendar kind with its analyst and slot', list.ok && list.kinds.length === 16 && list.kinds.every(k => k.analystName && k.day));
+  ok('the desk list carries every calendar kind with its analyst, and a slot where it has one', list.ok && list.kinds.length === 17
+    && list.kinds.every(k => k.analystName) && list.kinds.every(k => k.perGame ? k.day == null : !!k.day)
+    && list.kinds.filter(k => k.perGame).length === 1);
   Date.now = realNow;
 }
 

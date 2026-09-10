@@ -50,7 +50,30 @@ console.log('\nthe migration');
   ok('every package absorbs what the table says it absorbs', Object.entries(H.LEGACY_CONTENT).filter(([k, v]) => v.disposition === 'merged' && H.CONTENT_KINDS[v.destination]).every(([k, v]) => (H.CONTENT_KINDS[v.destination].absorbs || []).includes(k)));
   ok('two crons that both run the tick are a problem', !H.newsroomAudit(['*/15 * * * *', '0 * * * *']).ok);
   ok('no cron is a problem', !H.newsroomAudit([]).ok);
-  ok('sixteen scheduled packages and one unscheduled', Object.values(H.CONTENT_KINDS).filter(k => !k.unscheduled).length === 16 && H.CONTENT_KINDS.breaking.unscheduled === true);
+  ok('seventeen scheduled packages and one unscheduled', Object.values(H.CONTENT_KINDS).filter(k => !k.unscheduled).length === 17 && H.CONTENT_KINDS.breaking.unscheduled === true);
+  ok('the game recap is the one per-game package, and carries no clock slot', H.CONTENT_KINDS['game-recap'].perGame === true
+    && H.CONTENT_KINDS['game-recap'].day === null && H.CONTENT_KINDS['game-recap'].hour === null
+    && Object.values(H.CONTENT_KINDS).filter(k => k.perGame).length === 1);
+  ok('a per-game kind with a clock slot as well is a problem', (() => {
+    // The audit reads CONTENT_KINDS directly, so the check is made against a
+    // temporarily slotted copy and put back.
+    const K = H.CONTENT_KINDS['game-recap']; const day = K.day, hour = K.hour;
+    K.day = 'Sun'; K.hour = 19;
+    const bad = H.newsroomAudit(['*/15 * * * *']);
+    K.day = day; K.hour = hour;
+    return !bad.ok && bad.problems.some(p => /per-game kind also carries a clock slot/.test(p));
+  })());
+  ok('the recap targets only games the feed has marked final', (() => {
+    const gs = [{ id: 'a', status: 'final' }, { id: 'b', status: 'in' }, { id: 'c', status: null }];
+    const t = H.CONTENT_KINDS['game-recap'].targets(gs);
+    return t.length === 1 && t[0].id === 'a';
+  })());
+  ok('the recap asks for the three layers, the findings and the wrap', (() => {
+    const w = H.sectionsFor('game-recap', 'weekly');
+    return ['whatScored', 'usageBehindIt', 'nextWeekSignals', 'components', 'wrap'].every(k => w.includes(k))
+      && w.indexOf('whatScored') < w.indexOf('usageBehindIt') && w.indexOf('usageBehindIt') < w.indexOf('nextWeekSignals')
+      && H.sectionsFor('game-recap', 'dfs').includes('wrap');
+  })());
   ok('every package has a primary analyst on the staff and both lenses', Object.values(H.CONTENT_KINDS).every(k => H.ANALYSTS[k.analyst] && k.lens === 'both'));
   ok('the worth-gated pieces are the positional and QB features', ['quarterback-monday', 'tailback-tuesday', 'wideout-wednesday', 'tight-end-thursday'].every(k => H.CONTENT_KINDS[k].gate === 'worth'));
   ok('the Routines table names the two Pick Routines as retired and The Tell as retained', H.ROUTINE_MIGRATION.filter(r => /The Pick/.test(r.name)).every(r => r.disposition === 'retired') && H.ROUTINE_MIGRATION.find(r => /The Tell/.test(r.name)).disposition === 'retained');
