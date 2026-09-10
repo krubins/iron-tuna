@@ -7052,6 +7052,7 @@ nothing, and says so, because the hourly tick already fires at that minute.
 | `odds-refresh` | daily 7 AM | 1 |
 | `availability-refresh` | daily 7 AM, 11 AM, 1 PM, 7 PM | 1 |
 | `usage-refresh` | Tue, Wed 6 AM | 1 |
+| `usage-prior-refresh` (last season, rebuilt only when it changes) | daily 5 AM | 1 |
 | `depth-charts` | daily 6 AM | 1 |
 | `dfs-refresh` | Tue, Thu, Sat 9 AM | 1 |
 | `ros-snapshot` (Next 3, ROS, Weeks 15 to 17) | Wed 7 AM | 2 |
@@ -8462,6 +8463,39 @@ week) alongside the counting stats it already kept. Points are NOT stored with
 it: a season total is only worth something at a stated scoring, and one cache
 serves every reader. A cache written before this field existed simply has no
 `stats`, and that is returned as `null` and printed as a dash — never as zero.
+
+### Last season, on the same board
+
+`/stats` serves TWO seasons. The overlay has a second row — `odds_overlay` row
+7, `MARKET_PRIOR_ROW`, same shape as row 5 — holding last season whole, and
+`/api/stats?season=prior` (or `?season=<year>`) reads it instead of the live
+one. Everything downstream is unchanged: the same fold (`buildUsageOverlay`,
+shared by both refreshes), the same scoring at the reader's preset, the same
+ranks, computed within the season being shown.
+
+Three things are worth knowing:
+
+- **The page never assumes a year exists.** The payload carries `seasons: [{
+  key, season, throughWeek, complete }]` — only the seasons actually in the
+  store — and `stats.html` builds its season buttons from that list, the way it
+  already built its position buttons. One season on hand draws no buttons,
+  unless the one on hand is not the one on screen (before Week 1 the only stat
+  lines are last year's, and the reader still needs a way to them).
+- **`usage-prior-refresh` costs almost nothing.** It runs daily at 5 AM and
+  returns immediately when the row already holds the right year and a full
+  eighteen weeks: a finished season does not change, so re-fetching 11 MB of
+  CSV every morning would be waste. It rebuilds when the year rolls over (the
+  schedule feed flips to the next season in the spring), when the row is
+  missing or half-built, or on `{ force: true }`.
+- **Last season does not go stale at a fortnight.** `usageCacheRead` takes the
+  row it is reading: row 5 keeps the 14-day limit, row 7 gets 400 days, so a
+  refresh that fails cannot blank last year's board — but a row nobody rebuilt
+  through a whole season stops being served as "last year".
+
+On a finished season the week view is each player's own final week, not the
+league's latest, and the button and the stamp say so. `tools/test-stats.mjs`
+(45 assertions) pins the fold, the row selection, the scoring at both presets,
+the empty answers, the skip rule and the page's wiring.
 
 ### How it is generated
 
