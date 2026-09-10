@@ -66,6 +66,20 @@ jobs:
             console.log("player.html PARSE OK (" + blocks.length + " blocks)");
           '
 
+      # /the-line renders a wagering column out of the market payload, and its
+      # whole script is inline. A syntax error there leaves the page saying
+      # "Reading this week's board..." under a masthead that promises a bet.
+      - name: Parse the the-line.html scripts
+        run: |
+          node -e '
+            const fs = require("fs");
+            const h = fs.readFileSync("the-line.html", "utf8");
+            const blocks = [...h.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+            if (!blocks.length) { console.error("no <script> blocks found"); process.exit(1); }
+            blocks.forEach(b => new Function(b[1]));
+            console.log("the-line.html PARSE OK (" + blocks.length + " blocks)");
+          '
+
       # The lookup index and the widget that reads it ship as one plain file,
       # loaded by front.html and player.html alike, so a syntax error there
       # takes out the search box on every page at once.
@@ -408,6 +422,17 @@ jobs:
       # same fact on one page is how a page contradicts itself.
       - name: The Tell, against the numbers it quotes
         run: node tools/test-the-tell.mjs
+
+      # "The Line" is the only page on the site that puts a number on a bet, and
+      # it is written by software with nobody between the model and the reader.
+      # This holds the staking ladder in its prose to the one in its script (two
+      # statements of the same rule on one page is how a page starts lying), the
+      # no-bet floor to the worker's own agreement threshold, the standing
+      # disclosures to being present at all, and the Washington geofence -- which
+      # lives in _worker.js and is invisible from the page -- to fencing every
+      # form of the path, with a 451 that no cache may keep.
+      - name: The Line, its staking ladder and its Washington fence
+        run: node tools/test-the-line.mjs
 
       # Who coaches whom is handed to the Value Coach as authoritative and told to
       # override the model's own memory, so a wrong row is stated as confidently as

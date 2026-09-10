@@ -8411,11 +8411,23 @@ on hover, and each position has a page of its own.
 | `/stats` | what has actually been played |
 | `/hidden-value` | where the two boards disagree most |
 | `/previews` | every game this week, off the market |
+| `/the-line` | the same games against the posted number, with hypothetical stakes |
 
-That is sixteen rankings pages and three lane pages, nineteen in all. Every one
+That is sixteen rankings pages and four lane pages, twenty in all. Every one
 of them is in `POST_DRAFT_PAGES` in `_worker.js`, so the whole section is gated
 with the rest of the in-season tools and stays out of the sitemap while the gate
 is shut.
+
+`/the-line` carries one thing none of the others do: a **geofence**. It prices
+the week against the betting number and puts hypothetical, unfunded stakes on
+the games it disagrees with, so `_worker.js` refuses it to Washington State
+(`LINE_PATHS` / `LINE_GEOFENCED`, checked on `request.cf.country` **and**
+`regionCode`, answered 451 with `cache-control: no-store`). The fence is in the
+worker rather than on the page because the ribbon link is baked into ~20 static
+files and cannot vary per request. The staking ladder is printed in the page's
+own prose AND applied in its script, and `tools/test-the-line.mjs` holds the two
+to each other, to the worker's `GAP_AGREE` floor, and to the standing
+disclosures being present at all.
 
 ### Every board is Fantasy Consensus vs. Betting Odds
 

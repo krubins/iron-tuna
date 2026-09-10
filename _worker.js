@@ -81,7 +81,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // sitemap while the gate is shut. Spell them out.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
-  '/fantasy', '/stats', '/hidden-value', '/previews',
+  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line',
   '/weekly-rankings', '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
   '/weekly-te-rankings', '/weekly-flex-rankings', '/weekly-k-rankings', '/weekly-dst-rankings',
   '/season-long-rankings', '/season-long-qb-rankings', '/season-long-rb-rankings',
@@ -91,6 +91,45 @@ const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/r
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
 const IN_SEASON_HUB = '/in-season';
+
+// ── the Washington fence on /the-line ────────────────────────────────────────
+// /the-line prices the week's games against the posted number and puts
+// hypothetical, unfunded stakes on the ones it disagrees with. Washington
+// regulates online gambling activity more strictly than any other state
+// (Wash. Rev. Code ch. 9.46), so the page is not served there at all rather
+// than relying on the disclaimers printed on it. It is a fence on the PAGE, not
+// on the data: /api/vegas-edge is the same market payload /previews reads and
+// is not gated, because a spread on a preview page is not a wagering surface.
+//
+// Every form the assets layer would answer for the page has to be listed, or
+// the fence is one trailing slash wide. The gate below sees these same names.
+const LINE_PATHS = new Set(['/the-line', '/the-line/', '/the-line.html', '/in-season/the-line', '/in-season/the-line/']);
+function LINE_GEOFENCED(pathname) { return LINE_PATHS.has(String(pathname || '')); }
+// Served with the fence's own 451. It links to /previews, which is the same
+// slate with the wagering read taken off it, so a Washington reader still gets
+// the football.
+const LINE_BLOCKED_HTML = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>The Line is not available in Washington | Iron Tuna</title>
+<link rel="icon" href="/tuna-mark.png">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<main id="main" class="wrap">
+<p class="is-eyebrow">Iron Tuna &middot; The Line</p>
+<h1>The Line is not available in Washington</h1>
+<p class="is-lede">This page reads the week&rsquo;s games against the posted betting number and puts hypothetical stakes on them. Washington State regulates online gambling activity more strictly than any other state, so Iron Tuna does not serve the page to readers there.</p>
+<p>Nothing is being withheld from you that carries a football number. <a href="/previews">Previews</a> has every game on the slate with its spread, its total and the points each offence is implied to score; <a href="/weekly-rankings">this week&rsquo;s rankings</a> price the players inside those games; <a href="/hidden-value">Hidden Value</a> shows where the market and the fantasy consensus disagree. None of those is a wagering page and all of them are open.</p>
+<p class="is-note">If you believe you are seeing this in error, it is because the network you are on places you in Washington. Iron Tuna takes no wagers, holds no funds and is not a sportsbook. If gambling has stopped being entertainment, the National Problem Gambling Helpline is 1-800-GAMBLER (1-800-426-2537), free and confidential, 24 hours a day.</p>
+<p><a href="/">Back to Iron Tuna</a></p>
+</main>
+</body>
+</html>
+`;
 function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
 function postDraftPreview(env, url, request) {
   if (adminOk(env, url.searchParams.get('preview'))) return true;
@@ -12722,6 +12761,36 @@ export default {
       __xml = __xml.replace(/<url><loc>https:\/\/irontuna\.com\/(?:auction|snake|bestball)-insights-(\d{4})-(\d{2})-(\d{2})<\/loc>[\s\S]*?<\/url>\s*/g,
         (blk, y, mo, dd) => ((y + '-' + mo + '-' + dd) !== '2026-07-04' && Date.now() < Date.UTC(+y, +mo - 1, +dd, 13, 0, 0) ? '' : blk));
       return new Response(__xml, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
+    }
+    // ── /the-line is geofenced out of Washington State ────────────────────────
+    // The Line reads the week's games against the posted number and puts
+    // HYPOTHETICAL stakes on the ones it disagrees with. No wager is taken, no
+    // money is held and nothing is settled — but Washington treats online
+    // gambling activity more strictly than any other state (Wash. Rev. Code
+    // ch. 9.46), so the page is simply not served there rather than argued
+    // about. The block is at the EDGE, before the asset layer, because the ribbon
+    // link is baked into ~20 static pages and cannot be varied per request.
+    //
+    // regionCode is checked with the country, because "WA" is also Western
+    // Australia. A request Cloudflare cannot place gets the page: the fence is
+    // for readers who ARE in Washington, not for everyone the edge cannot see.
+    // The response is uncacheable and Vary-marked, so no shared cache can hand
+    // one region's answer to another.
+    if (LINE_GEOFENCED(url.pathname)) {
+      const __cf = request.cf || {};
+      const __ctry = String(__cf.country || '').toUpperCase();
+      const __reg = String(__cf.regionCode || '').toUpperCase();
+      const __regName = String(__cf.region || '').trim().toLowerCase();
+      if (__ctry === 'US' && (__reg === 'WA' || __regName === 'washington')) {
+        return new Response(LINE_BLOCKED_HTML, {
+          status: 451,
+          headers: {
+            'content-type': 'text/html; charset=utf-8',
+            'cache-control': 'no-store',
+            'vary': 'CF-IPCountry',
+          },
+        });
+      }
     }
     let __assetReq = request;
     // "/" serves the news-style front page (front.html); the classic SPA hub moved to /hub.
