@@ -1,8 +1,10 @@
 # DFS metrics: what each number is and how it is computed
 
-Every metric the DFS lens prints is computed in `dfsMetrics()` in `_worker.js`
-and carries a `basis`. None of them is a feed. The salaries are the lobby CSV
-the operator exported (see `docs/data-sources.md` §13.3); everything else is
+The contest scores and model metrics the DFS lens prints are computed in
+`dfsMetrics()` in `_worker.js`. Salary and operator FPPG are source observations:
+DraftKings supplies `AvgPointsPerGame` with its salary data and FanDuel supplies
+`FPPG`. Iron Tuna stores that historical average unchanged, labels it as historical,
+and shows it beside the forward-looking Iron Tuna projection. The other metrics are
 derived from the Iron Tuna week board at the site's own scoring rules.
 
 | Metric | Definition | Notes |
