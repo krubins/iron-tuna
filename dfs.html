@@ -738,6 +738,7 @@ p{color:var(--sec);margin:0 0 16px}
     var qb = null; for (var k = 0; k < l.players.length; k++) if (l.players[k].slot === 'QB') qb = l.players[k];
     var full = l.salary + Math.max(0, l.remaining);
     var pct = Math.min(100, Math.round((l.salary / full) * 100));
+    var keys = sh.keys || ['projPoints', 'ceilingPoints'];
     var stat = function (v, label, key) { return '<div class="is-stat' + (key ? ' key' : '') + '"><b>' + v + '</b><span>' + label + '</span></div>'; };
     var allHaveFppg = l.players.every(function (p) { return p.operatorFppg != null && isFinite(Number(p.operatorFppg)); });
     var dkFppg = allHaveFppg ? l.players.reduce(function (sum, p) { return sum + Number(p.operatorFppg); }, 0) : null;
@@ -745,7 +746,7 @@ p{color:var(--sec);margin:0 0 16px}
     var stats = stat(dkFppg == null ? '—' : n1(dkFppg), 'DraftKings FPPG')
       + stat(n1(l.projPoints), 'Iron Tuna Projection', true)
       + stat(lineupEdge == null ? '—' : (lineupEdge > 0 ? '+' : '') + n1(lineupEdge), 'Tuna Edge')
-      + stat(money(l.salary).replace('
+      + stat(money(l.salary), 'Salary used');
     var rows = l.players.map(function (p) {
       return '<tr><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
         + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></td>'
