@@ -8797,6 +8797,7 @@ offence question rather than a roster one, so it sits with the offence analyst.
   dashboards are **not** bylined, and the test asserts they are not. A byline on
   a table recomputed on every load is the one kind that lies.
 
+
 ### 68p. The invocation dies, and the cron does not
 
 With the job log opening a row before each job (§68m), the second night
@@ -8839,7 +8840,6 @@ Also seen: the Week 1 midweek preview published at 12:45Z on September 9
 by revalidation (§68o); the reshaped ESPN fetch (§68n) answered 200 with
 sixteen events at 13:00Z and the depth charts loaded all thirty-two clubs
 at 10:00Z the next morning, the first success since September 4.
-
 ---
 
 ## 71. September 10: the depth charts became a page
@@ -8885,3 +8885,150 @@ stamps that instead of the hard-coded `espn-depth` it used to claim.
 depth charts reported "never loaded" on the mornings the job worked. The
 payload now carries both and the health summary sends `updatedAt`, the source
 and a club count instead of shipping all 32 charts into the admin payload.
+
+---
+
+## 72. September 10: SportsGameOdds becomes the market feed
+
+Every market-implied number on the site — the spread and total under
+`/the-line` and `/previews`, the Betting Odds column on all sixteen rankings
+boards, the player arrows and anytime-touchdown prices, Vegas Edge and Hidden
+Value — has until now been derived from **game lines only**. The Odds API
+adapter for player props has been in `_worker.js` since the market engine was
+built and has never had a key, so `basis` on a board row has read `gamelines`
+or `ratings` and never `props`.
+
+`api.sportsgameodds.com` replaces both halves of that. It is the only source
+here that answers the site's two market questions with one subscription:
+
+| | Before | After, with `SGO_API_KEY` set |
+|---|---|---|
+| Player props | none configured | per book, per market, per game |
+| Game spread / total | ESPN's undocumented scoreboard | SGO, on the fixtures that have not kicked off |
+| The opening line | ESPN's one named book | SGO's anchor book |
+| `basis` on a board row | `gamelines` / `ratings` | `props` where a book quoted the player |
+
+### What actually changed
+
+**One adapter, two fetchers.** `fetchOddsSgo` returns player props in the row
+shape every odds provider here emits; `fetchGameLinesSgo` returns the week's
+spreads and totals in the shape `_espnOdds` already returned, so
+`_gameLineMove` reads it unchanged. Both go through `_sgoEvents`, one paged
+`/events` read with the key in an `x-api-key` header.
+
+**The props reach the product through the snapshot store, not the season
+overlay.** SGO is deliberately **not** in `ODDS_PROVIDERS`. Every row it
+returns is a game line, `buildVegasOverlay` rejects those by design (a prop for
+Sunday is not a season total), and listing it would spend a paid pull on rows
+that get thrown away. It is in `PROVIDER_ODDS`, which `runMarketSnapshot` runs
+on the job clock, and from there the weekly board reads it as `ctx.weekMarkets`.
+That is the path that puts `props` under a player's number.
+
+**The game lines are merged, not substituted.** `mergeGameLines` matches on the
+two clubs within a two-day window — the same rule `mergeSchedule` uses, and for
+the same reason — and then applies one rule: **the number of record is the one a
+reader could still bet into.** A fixture that has not kicked off is repriced off
+the paid feed and marked `lineSrc: 'sportsgameodds'`. A game already played
+keeps the spine's own closing line, because that is the historical record and a
+live feed has nothing truer to say about a game that is over. The book pair
+rides along either way, because it belongs to the book and not to the fixture.
+
+**`espn-gamelines` is now `book-gamelines`.** The provider reads whatever book
+the schedule refresh merged on. With a key that is SGO; without one it is still
+ESPN. The old name would have been a lie half the time.
+
+### Three traps, and what stops each
+
+1. **The sign.** A book quotes the home side's handicap (`-2.5`); the spine
+   writes the same game as a home margin (`+2.5`). An unflipped spread inverts
+   every favorite on the site and nothing on the page would look wrong.
+   `parseSgoEventLine` flips it, `-0` included, and the test asserts a pick'em
+   survives as `0`.
+2. **The pairing.** SGO ships each side of a market as its own entry keyed by
+   `{statID}-{statEntityID}-{periodID}-{betTypeID}-{sideID}`. An over whose
+   under is lost is a line with no price to de-vig; a market read from both
+   sides is one book counted twice in the consensus. The parser anchors on one
+   side (`over`, or `yes` for an anytime touchdown) and looks the other up.
+3. **The pair behind a move.** Open, current and movement must come from ONE
+   book or "it opened at 46.5 and it is 48.5 now" is a sentence about two of
+   them. `_sgoBookPair` picks the first book in name order that quotes both, so
+   the same fixture picks the same book on every run. The printed number stays
+   the consensus, which is the shape the page already prints.
+
+### It has never run against the live service
+
+There is no key, and `api.sportsgameodds.com` is unreachable from the sandbox
+this repo is developed in. The adapter is written to SGO's published v2
+documentation and to the field names in their own TypeScript SDK
+(`sports-odds-api@2.1.0`), and `tools/test-sgo.mjs` holds all of it — parsing,
+pairing, the sign, the merge rule, paging, and the key never leaving a header —
+to `tools/fixtures/sgo-nfl-week.json`. **Treat the first real pull as a test.**
+`/api/admin/market-status` reports the row count and the provider list; check
+both before believing a number the feed produced.
+
+**Licensing is open.** `docs/data-sources.md` R8 is the question R3 has now
+answered for the other feed, asked of this one: a paid subscription licenses
+*use*, not necessarily *redisplay* in a paid product. R3 closed on 2026-09-10
+with The Odds API's terms in writing, so it is the template for the SGO
+inquiry rather than a fellow unknown. Two things hold the exposure down and neither settles it —
+no page names a book (the printed line is SGO's consensus; the anchor book's
+name reaches `book.name` on the API payloads and is rendered nowhere), and
+nothing is passed through raw. Send the email.
+
+**R1 got smaller.** The reason the ESPN swap had to trade the opening line away
+is gone: SGO carries an opener under a documented API. `_espnOdds` is still the
+live source while the key is unset, so take it out in the same commit that
+turns the key on — not before.
+
+### The printed line is now an average, not a winner
+
+Adding a third source made the old rule indefensible. A fixture can be priced
+by the spine's own column in `games.csv`, by the scoreboard's single named
+book, and by the paid feed's consensus, and the site used to resolve that by
+**precedence**: the spine won, ESPN filled blanks, and SGO replaced both on an
+upcoming game. Three estimates of the same number, two of them thrown away, and
+the printed line jumping whenever the winner changed.
+
+`lineConsensus` replaces it. Each layer records its own quote in `g.quotes` —
+`mergeSchedule` seeds `nflverse` and records `espn`, `mergeGameLines` records
+`sportsgameodds` — and the number the site prints is their **mean**. The pass
+runs on every schedule refresh whether or not the paid feed is configured,
+because the spine and the scoreboard are two sources on their own.
+
+**This changes displayed lines today, with no key set.** ESPN used to fill only
+what `games.csv` left blank; it now averages with it on every upcoming fixture.
+Expect the spread and total under `/the-line` and `/previews` to shift by a
+fraction of a point against what the same build printed yesterday.
+
+Four things to know about it:
+
+- **It fails softly.** A source that goes stale or starts quoting nonsense
+  moves the line by a fraction of its error instead of becoming the line. That
+  is the main reason to prefer a mean here over any winner.
+- **It is not a bettable number, and does not pretend to be.** 2.5 and 3
+  average to 2.8, the site's usual one decimal on a derived figure.
+  `lineSources` (and the `lineSrc` string beside it, now always populated)
+  rides on every game payload, so an average is never shown that a reader
+  cannot take apart. Sources are listed per FIXTURE, not per market.
+- **It freezes at kickoff.** A game that has started keeps the spine's own
+  number, which by then is the closing line and the historical record every
+  backtest reads. Averaging a live feed's last-seen value into a played game
+  would quietly rewrite history.
+- **The book pair is NOT averaged and cannot be.** `g.book` stays one book's
+  open and current, so `_gameLineMove` keeps a single source behind every
+  movement figure. The printed line beside it is the consensus. Those are two
+  different questions and `lineConsensus` is the one place that says so.
+
+**The equal weighting is a judgment call, not arithmetic.** `games.csv` is
+itself a consensus and ESPN's number is one book, so a 50/50 mean slightly
+double-counts that book. Weighting them is a defensible future change; nothing
+here assumes equal weight beyond the mean itself.
+
+**The props side already averaged and was left alone.** Books are the sources
+there, not feeds: `buildVegasOverlay` takes the mean across books for the
+season overlay and `vegasCountMarket` the median for the weekly one, and two
+configured providers simply contribute more books to the same pool. Where both
+feeds report the SAME book, `snapshotWrite` keeps the first (SGO) and drops the
+second rather than averaging — two reports of one book's line is not two
+sources, and blurring them would invent a number that book never posted.
+

@@ -38,7 +38,7 @@ const lifted = [
   slice('const ESPN_SEASONTYPE =', '// games.csv writes a fixture'),
   slice('function _espnLine(v) {', 'function _espnGame(ev) {'),
   slice('function _espnGame(ev) {', '// The preseason, which the spine does not carry'),
-  slice('function mergeSchedule(spine, live) {', '// ── the clock'),
+  slice("// One source's own quote for one fixture", '// ── the clock'),
   slice('function _gameLineMove(g, gm) {', 'async function snapshotStatus')
 ].join('\n');
 
@@ -46,10 +46,10 @@ const lifted = [
 const stubs = `
 const TEAM_ALIAS = { LAR:'LA', JAC:'JAX', WSH:'WAS', LVR:'LV', OAK:'LV', SD:'LAC', STL:'LA' };
 const teamKey = t => { const u = String(t || '').toUpperCase(); return TEAM_ALIAS[u] || u || null; };
-const _oddsRound = n => Math.round(n * 100) / 100;
+const _oddsRound = v => Math.round(v * 10) / 10;   // the worker's own, one decimal
 const SEASON_ORDER = { PRE:0, REG:1, WC:2, DIV:3, CON:4, SB:5 };
 `;
-const api = 'export { _espnLine, _espnOdds, _espnGame, mergeSchedule, _gameLineMove };';
+const api = 'export { _espnLine, _espnOdds, _espnGame, mergeSchedule, lineConsensus, _gameLineMove };';
 const M = await import('data:text/javascript,' + encodeURIComponent(stubs + lifted + api));
 
 const teamKey = t => { const u = String(t || '').toUpperCase(); return ({ LAR:'LA', JAC:'JAX', WSH:'WAS', LVR:'LV', OAK:'LV', SD:'LAC', STL:'LA' })[u] || u || null; };
@@ -124,7 +124,8 @@ const two = M._espnOdds({ odds: [
   { provider: { priority: 1, name: 'Shown' }, spread: -3, overUnder: 44 }] });
 ok(two.name === 'Shown' && two.spread === 3, "ESPN's own priority picks the book");
 
-// 5. The merge. The spine owns the line; ESPN fills only what it left blank.
+// 5. The merge. Each source RECORDS its quote; the spine's number stands until
+//    lineConsensus averages them, and ESPN still fills a blank on its own.
 head('5. merge precedence');
 const spine = [
   { id: 'a', type: 'REG', week: 1, kickoff: Date.parse('2026-09-10T00:20Z'), home: 'SEA', away: 'NE', spread: 3, total: 44.5, src: 'nflverse' },
@@ -138,8 +139,42 @@ ok(priced.spread === 3 && priced.total === 44.5, 'the spine keeps its own line')
 ok(!priced.lineSrc, 'a spine line is not flagged as ESPN');
 ok(priced.book && priced.book.spreadOpen === 3.5, "the book's pair rides along on a spine-priced game");
 ok(blank.spread === 3.5 && blank.total === 50.5 && blank.lineSrc === 'espn', 'ESPN fills a blank and says so');
+ok(priced.quotes && priced.quotes.nflverse.spread === 3 && priced.quotes.espn.spread === 3,
+   'both sources are recorded side by side rather than one winning');
 console.log(`  spine-priced ${priced.away}@${priced.home}: line ${priced.spread}/${priced.total}, book opened ${priced.book.spreadOpen}`);
 console.log(`  gap-filled   ${blank.away}@${blank.home}: line ${blank.spread}/${blank.total} from ${blank.lineSrc}`);
+
+// 6. The consensus. The two feeds here priced NE@SEA identically, which is the
+//    case worth asserting on real numbers: agreeing sources must average to the
+//    number they agree on and still name both. The arithmetic of a DISAGREEMENT
+//    is then checked on quotes chosen so a mean, a median and any single winner
+//    would all give different answers.
+head('6. the consensus line');
+const BEFORE = Date.parse('2026-09-09T00:00Z');
+const con = M.lineConsensus(M.mergeSchedule(spine, live).games, BEFORE);
+const cp = con.games.find(g => g.away === 'NE'), cb = con.games.find(g => g.away === 'TB');
+ok(cp.spread === 3 && cp.total === 44.5, 'two agreeing sources average to the number they agree on',
+   `${cp.spread}/${cp.total}`);
+ok(cp.lineSrc === 'espn+nflverse' && cp.lineSources.join() === 'espn,nflverse',
+   'and the payload names both', String(cp.lineSrc));
+ok(cb.lineSrc === 'espn' && cb.spread === 3.5, 'a lone quote averages to itself and says so alone');
+ok(con.averaged === 2 && con.blended === 1, 'the counts separate a blend from a lone quote',
+   `${con.averaged}/${con.blended}`);
+
+const dis = M.mergeSchedule([{ ...spine[0], spread: 2, total: 40 }], live).games.find(g => g.away === 'NE');
+dis.quotes.sportsgameodds = { spread: 4, total: 47 };
+M.lineConsensus([dis], BEFORE);
+ok(dis.spread === 3 && dis.total === 43.8, 'three disagreeing sources are a mean, not a winner',
+   `${dis.spread}/${dis.total}`);
+ok(dis.lineSources.length === 3 && dis.lineSrc === 'espn+nflverse+sportsgameodds', 'and all three are named');
+ok(dis.book && dis.book.spreadOpen === 3.5,
+   'the book pair is untouched by the average: one source still stands behind the move');
+
+const played = M.lineConsensus(M.mergeSchedule(spine, live).games, Date.parse('2026-09-20T00:00Z'));
+const pp = played.games.find(g => g.away === 'NE');
+ok(pp.spread === 3 && pp.total === 44.5 && played.averaged === 0,
+   "a game already kicked off keeps the spine's closing line, unaveraged");
+console.log(`  ${dis.away}@${dis.home}: ${Object.entries(dis.quotes).map(([k, q]) => k + ' ' + q.spread + '/' + q.total).join(' + ')} -> ${dis.spread}/${dis.total}`);
 
 console.log(failures ? `\n${failures} FAILURE${failures === 1 ? '' : 'S'}` : '\nAll checks passed.');
 process.exit(failures ? 1 : 0);

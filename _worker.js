@@ -1908,6 +1908,307 @@ async function fetchOddsTheOddsApi(env) {
   return rows;
 }
 
+// SportsGameOdds v2. WRITTEN TO THE PUBLISHED v2 DOCUMENTATION AND TO THE
+// OFFICIAL TypeScript SDK'S TYPES (sports-odds-api@2.1.0), AND NOT YET RUN
+// AGAINST THE LIVE SERVICE: no key is configured, and the host is unreachable
+// from the sandbox this repo is developed in. Same posture as The Odds API
+// above, and the same consequence — every shape below is asserted against a
+// committed fixture (tools/fixtures/sgo-nfl-week.json) rather than trusted.
+//
+// It is registered in PROVIDER_ODDS ahead of every other odds source, and its
+// game lines are merged onto the schedule ahead of ESPN's, because it is the
+// only feed here that answers both halves of the question this site asks:
+//   1. PLAYER PROPS, per book. Without them the "Betting Odds" column is a
+//      team-wide inference off the game line, which is what it has been.
+//   2. GAME LINES WITH THE BOOK'S OWN OPENER. That opener is the one number a
+//      snapshot history cannot reconstruct after the fact, and it is why
+//      ESPN's undocumented scoreboard was carrying it (docs/data-sources.md
+//      R1). SGO carries the same pair under a documented, paid API, so the
+//      movement column survives dropping ESPN rather than degrading with it.
+//
+// SHAPE. One /events call returns the week's games. Each carries an `odds` map
+// keyed by an oddID of the form
+//     {statID}-{statEntityID}-{periodID}-{betTypeID}-{sideID}
+// and EVERY SIDE IS ITS OWN ENTRY, so an over and its under are two keys that
+// have to be paired back together before either is worth anything. Each entry
+// carries the consensus (`bookOdds`, `bookOverUnder`, `bookSpread`) plus a
+// `byBookmaker` map of each book's own number; with includeOpenCloseOdds the
+// per-book entries also carry that book's opener.
+const SGO_API_BASE = 'https://api.sportsgameodds.com/v2';
+const SGO_LEAGUE = 'NFL';
+const SGO_PAGE_LIMIT = 50;                // events per page
+const SGO_MAX_PAGES = 4;                  // a week is 13-16 games; never more than this
+// statID -> the site's own market key. Everything absent from this table is
+// ignored rather than guessed at, which is what keeps a renamed or newly added
+// SGO market out of the projections until someone has looked at it.
+const SGO_PROP_MARKETS = {
+  passing_yards: 'passYd', passing_touchdowns: 'passTD', passing_interceptions: 'passInt',
+  rushing_yards: 'rushYd', rushing_attempts: 'rushAtt', rushing_touchdowns: 'rushTD',
+  receiving_yards: 'recYd', receiving_receptions: 'rec', receiving_touchdowns: 'recTD'
+};
+// The anytime-touchdown market is a yes/no on the same statID a total-TDs
+// over/under uses, so the BET TYPE is what tells them apart, not the stat.
+const SGO_TD_STAT = 'touchdowns';
+const SGO_GAME_SPREAD = 'points-home-game-sp-home';
+const SGO_GAME_TOTAL = 'points-all-game-ou-over';
+// A book quotes a handicap: the home side at -3. The spine writes the same
+// game as a home margin of +3. Flipped here so _seasonDecorate stays the only
+// place that knows which way a spread points. -0 prints as "-0", so a pick'em
+// has to survive the flip as 0.
+const _sgoFlip = n => (n == null ? null : n === 0 ? 0 : -n);
+const _sgoNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+const _sgoSlug = s => String(s || '').toUpperCase().replace(/[^A-Z]/g, '');
+// Club names to the site's own abbreviations, read off the DEF rows in
+// PROJECTIONS rather than written out again: those rows already pair every
+// full club name with its key, so a relocation or a rename is one edit in the
+// place the rest of the site already reads.
+let _SGO_CLUBS = null;
+function _sgoClubIndex() {
+  if (_SGO_CLUBS) return _SGO_CLUBS;
+  const m = new Map();
+  for (const p of PROJECTIONS) {
+    if (p && p.position === 'DEF' && p.name && p.team) m.set(_sgoSlug(p.name), teamKey(p.team));
+  }
+  return (_SGO_CLUBS = m);
+}
+// SGO identifies a club three ways and any of them may be the one present.
+// The full name is tried first because it is the only one whose spelling this
+// repo already owns; `names.short` is accepted last, and only when it actually
+// looks like an abbreviation, so a long name arriving in a short field cannot
+// become a two-letter club key.
+function sgoTeamKey(side) {
+  if (!side) return null;
+  const idx = _sgoClubIndex();
+  const names = side.names || {};
+  const byLong = idx.get(_sgoSlug(names.long));
+  if (byLong) return byLong;
+  const byId = idx.get(_sgoSlug(String(side.teamID || '').replace(/_NFL$/i, '')));
+  if (byId) return byId;
+  const short = teamKey(names.short || '');
+  return /^[A-Z]{2,4}$/.test(short) ? short : null;
+}
+// A player prop's statEntityID IS the playerID. The event's own `players` map
+// is the authority on the name; the id is the fallback, and it has to be
+// stripped of its disambiguating suffix ("JOSH_ALLEN_1_NFL") or _oddsNorm
+// keeps the league on the end of the name and matches nobody.
+function sgoPlayerName(ev, id) {
+  const rec = ev && ev.players ? ev.players[id] : null;
+  if (rec) {
+    if (rec.name) return rec.name;
+    if (rec.firstName || rec.lastName) return [rec.firstName, rec.lastName].filter(Boolean).join(' ');
+  }
+  const raw = String(id || '');
+  if (!raw || /^(?:home|away|all|side\d*)$/i.test(raw)) return null;
+  const stripped = raw.replace(/_\d+_[A-Z]+$/, '').replace(/_/g, ' ').trim();
+  return stripped || null;
+}
+// The five oddID parts. They are ALSO flat fields on the entry, so those are
+// preferred and the id is only parsed when a field is missing: the id is a
+// display key and the fields are the data.
+const SGO_ODDID_RE = /^([^-]+)-([^-]+)-([^-]+)-([^-]+)-([^-]+)$/;
+function sgoParts(o) {
+  const m = SGO_ODDID_RE.exec(String((o && o.oddID) || ''));
+  const at = i => (m ? m[i] : null);
+  return {
+    statID: o && o.statID != null ? o.statID : at(1),
+    statEntityID: o && o.statEntityID != null ? o.statEntityID : at(2),
+    periodID: o && o.periodID != null ? o.periodID : at(3),
+    betTypeID: o && o.betTypeID != null ? o.betTypeID : at(4),
+    sideID: o && o.sideID != null ? o.sideID : at(5)
+  };
+}
+// The other side of a two-sided market. `opposingOddID` is authoritative when
+// it is there; otherwise the side is swapped in the key, which is the only
+// thing that differs between the pair.
+function sgoOpposite(odds, o, side, otherSide) {
+  if (o && o.opposingOddID && odds[o.opposingOddID]) return odds[o.opposingOddID];
+  const id = String((o && o.oddID) || '');
+  const swapped = id.replace(new RegExp('-' + side + '$'), '-' + otherSide);
+  return swapped !== id ? (odds[swapped] || null) : null;
+}
+// One event's player props into the row shape every odds provider here emits.
+// Pure, so the fixture drives it without the network.
+//
+// ONE ROW PER BOOK, never one per market. The season overlay averages the
+// books into a consensus and the snapshot store wants each book's own number;
+// collapsing them here would make line movement unanswerable, which is the
+// whole product. The consensus figures are used only when a response carries
+// no per-book detail at all.
+function parseSgoEventProps(ev) {
+  const rows = [];
+  const odds = (ev && ev.odds) || {};
+  const ts = Date.now();
+  const home = sgoTeamKey(ev && ev.teams && ev.teams.home);
+  const away = sgoTeamKey(ev && ev.teams && ev.teams.away);
+  const commence = (ev && ev.status && ev.status.startsAt) || null;
+  for (const o of Object.values(odds)) {
+    if (!o || o.cancelled) continue;
+    const p = sgoParts(o);
+    if (p.periodID !== 'game') continue;                 // a first-half line is not this week's total
+    const anytimeTd = p.statID === SGO_TD_STAT && p.betTypeID === 'yn';
+    const stat = anytimeTd ? 'anytimeTD' : (p.betTypeID === 'ou' ? SGO_PROP_MARKETS[p.statID] : null);
+    if (!stat) continue;
+    // Anchor on ONE side of the pair so the market is emitted once. The other
+    // side is looked up rather than iterated to.
+    const anchor = anytimeTd ? 'yes' : 'over';
+    const other = anytimeTd ? 'no' : 'under';
+    if (p.sideID !== anchor) continue;
+    const player = sgoPlayerName(ev, p.statEntityID);
+    if (!player) continue;
+    const opp = sgoOpposite(odds, o, anchor, other) || {};
+    const books = o.byBookmaker && Object.keys(o.byBookmaker).length ? o.byBookmaker : null;
+    const oppBooks = opp.byBookmaker || {};
+    const emit = (book, line, overOdds, underOdds) => {
+      // An anytime-TD carries no line worth storing (it is a price, not a
+      // number); every other market is worthless without one.
+      if (!anytimeTd && line == null) return;
+      if (overOdds == null && underOdds == null) return;
+      rows.push({
+        player, position: null, team: null, market: stat,
+        line: anytimeTd ? 1 : line, overOdds, underOdds,
+        book, gameId: (ev && ev.eventID) || null, commence,
+        home, away, scope: 'game', ts
+      });
+    };
+    if (books) {
+      for (const [id, b] of Object.entries(books)) {
+        if (!b || b.available === false) continue;
+        const ob = oppBooks[id] || {};
+        emit(String(b.bookmakerID || id), _sgoNum(b.overUnder), _sgoNum(b.odds),
+             ob.available === false ? null : _sgoNum(ob.odds));
+      }
+    } else {
+      emit('sgo-consensus', _sgoNum(o.bookOverUnder != null ? o.bookOverUnder : o.fairOverUnder),
+           _sgoNum(o.bookOdds != null ? o.bookOdds : o.fairOdds),
+           _sgoNum(opp.bookOdds != null ? opp.bookOdds : opp.fairOdds));
+    }
+  }
+  return rows;
+}
+// One book's own current-and-open pair for one market, or null when it does not
+// quote both. Both ends or neither: half a pair is not a movement.
+function _sgoBookPair(entry, id, field) {
+  const b = (entry && entry.byBookmaker && entry.byBookmaker[id]) || null;
+  if (!b || b.available === false) return null;
+  const current = _sgoNum(b[field]);
+  const open = _sgoNum(b['open' + field[0].toUpperCase() + field.slice(1)]);
+  return (current != null && open != null) ? { current, open } : null;
+}
+// THE ANCHOR BOOK: the one every move on this fixture is measured against.
+// _gameLineMove's rule is that open, current and move come from ONE source, so
+// a book that quotes BOTH markets is preferred and a book quoting one is the
+// fallback. Books are considered in name order, so the same fixture picks the
+// same book on every run and this hour's move is measured against the same
+// opener last hour's was.
+function _sgoAnchor(sp, to) {
+  const ids = [...new Set([
+    ...Object.keys((sp && sp.byBookmaker) || {}),
+    ...Object.keys((to && to.byBookmaker) || {})
+  ])].sort();
+  let partial = null;
+  for (const id of ids) {
+    const spread = _sgoBookPair(sp, id, 'spread'), total = _sgoBookPair(to, id, 'overUnder');
+    if (spread && total) return { name: id, spread, total };
+    if (!partial && (spread || total)) partial = { name: id, spread, total };
+  }
+  return partial;
+}
+// One event's GAME line: the number the site PRINTS, and separately the book
+// pair the movement is computed FROM.
+//
+// These are two different things and conflating them is how a page comes to
+// report a move nobody quoted. The printed spread and total are SGO's
+// CONSENSUS -- no page here attributes a line to a book, and a consensus is the
+// same shape as the spine's own column beside it. The `book` block is the
+// anchor book ALONE, current and open together, which is exactly what
+// _espnOdds returned from ESPN's single named book and what _gameLineMove
+// reads. A response with no per-book detail yields no block at all, which is
+// honest: _gameLineMove then falls back to the snapshot store's first sighting.
+function parseSgoEventLine(ev) {
+  const odds = (ev && ev.odds) || {};
+  const sp = odds[SGO_GAME_SPREAD] || null;
+  const to = odds[SGO_GAME_TOTAL] || null;
+  const anchor = _sgoAnchor(sp, to);
+  const spread = _sgoNum(sp && sp.bookSpread != null ? sp.bookSpread
+                       : (anchor && anchor.spread ? anchor.spread.current : null));
+  const total = _sgoNum(to && to.bookOverUnder != null ? to.bookOverUnder
+                      : (anchor && anchor.total ? anchor.total.current : null));
+  if (spread == null && total == null) return null;
+  const book = anchor ? {
+    name: anchor.name,
+    spread: _sgoFlip(anchor.spread ? anchor.spread.current : null),
+    spreadOpen: _sgoFlip(anchor.spread ? anchor.spread.open : null),
+    total: anchor.total ? anchor.total.current : null,
+    totalOpen: anchor.total ? anchor.total.open : null
+  } : null;
+  return { spread: _sgoFlip(spread), total, book };
+}
+// One event into the schedule shape mergeGameLines matches on.
+function parseSgoEventGame(ev) {
+  const home = sgoTeamKey(ev && ev.teams && ev.teams.home);
+  const away = sgoTeamKey(ev && ev.teams && ev.teams.away);
+  if (!home || !away) return null;
+  const kickoff = Date.parse((ev.status && ev.status.startsAt) || '');
+  if (!Number.isFinite(kickoff)) return null;
+  const l = parseSgoEventLine(ev);
+  if (!l) return null;
+  return { id: 'sgo-' + (ev.eventID || home + away + kickoff), home, away, kickoff,
+           spread: l.spread, total: l.total, book: l.book };
+}
+// The paged /events read, shared by both fetchers below. `oddIDs` narrows the
+// response to the markets actually wanted, which is what keeps a props pull
+// from downloading every alternate line in the book.
+async function _sgoEvents(env, params) {
+  const key = env && env.SGO_API_KEY;
+  if (!key) throw new Error('no SGO_API_KEY');
+  const out = [];
+  let cursor = '';
+  for (let page = 0; page < SGO_MAX_PAGES; page++) {
+    const q = new URLSearchParams({ leagueID: SGO_LEAGUE, limit: String(SGO_PAGE_LIMIT), ...params });
+    if (cursor) q.set('cursor', cursor);
+    const r = await fetch(SGO_API_BASE + '/events?' + q.toString(), {
+      headers: { 'x-api-key': key, accept: 'application/json' }, cf: { cacheTtl: 0 } });
+    if (!r.ok) {
+      // A first page that fails is a failed pull; a later one that fails has
+      // already returned games, and losing the rest of the slate is better
+      // than losing all of it.
+      if (!out.length) throw new Error('sgo events ' + r.status);
+      break;
+    }
+    let j = null;
+    try { j = await r.json(); } catch (e) { break; }
+    const data = Array.isArray(j && j.data) ? j.data : [];
+    for (const ev of data) if (ev) out.push(ev);
+    cursor = (j && j.nextCursor) || '';
+    if (!cursor || !data.length) break;
+  }
+  return out;
+}
+// Player props for every game with odds on the board. Every row is a GAME line,
+// never a season line: they feed the weekly projection and the snapshot store,
+// and buildVegasOverlay must never see them, which `scope: 'game'` is for.
+async function fetchOddsSgo(env) {
+  const oddIDs = [
+    ...Object.keys(SGO_PROP_MARKETS).map(s => s + '-PLAYER_ID-game-ou-over'),
+    SGO_TD_STAT + '-PLAYER_ID-game-yn-yes'
+  ].join(',');
+  const events = await _sgoEvents(env, { oddsAvailable: 'true', includeOpposingOdds: 'true', oddID: oddIDs });
+  const rows = [];
+  for (const ev of events) for (const row of parseSgoEventProps(ev)) rows.push(row);
+  return rows;
+}
+// The week's game lines, with each anchor book's opener. Asked for by oddID so
+// the response is two markets a game rather than the whole board.
+async function fetchGameLinesSgo(env) {
+  const events = await _sgoEvents(env, {
+    oddsPresent: 'true', includeOpenCloseOdds: 'true',
+    oddID: SGO_GAME_SPREAD + ',' + SGO_GAME_TOTAL
+  });
+  const out = [];
+  for (const ev of events) { const g = parseSgoEventGame(ev); if (g) out.push(g); }
+  return out;
+}
+
 const NFLVERSE_GAMES_URL = 'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv';
 const TEAM_ALIAS = { LAR: 'LA', JAC: 'JAX', WSH: 'WAS', LVR: 'LV', OAK: 'LV', SD: 'LAC', STL: 'LA' };
 const teamKey = t => { const u = String(t || '').toUpperCase(); return TEAM_ALIAS[u] || u; };
@@ -2247,6 +2548,12 @@ function buildTeamEnvOverlay(marketTotals) {
 // per player+stat. Player props (when a key is configured) are strictly better
 // than a team-wide inference, so they go first and the free team-environment
 // provider fills in every stat and player the props did not cover.
+//
+// SportsGameOdds is deliberately NOT here even when its key is set. Every row
+// it returns is a GAME line, and buildVegasOverlay rejects those by design (a
+// prop for Sunday is not a season total), so listing it would spend a paid pull
+// on rows this build throws away. Its props reach the product through
+// PROVIDER_ODDS and the snapshot store, which is the weekly path.
 const ODDS_PROVIDERS = [
   { name: 'the-odds-api', kind: 'props',   fn: fetchOddsTheOddsApi,   needs: env => !!env.ODDS_API_KEY },
   { name: 'nflverse',     kind: 'teamenv', fn: fetchTeamEnvNflverse }
@@ -3513,8 +3820,16 @@ async function fetchScheduleEspn(season) {
 // exact kickoff instant. Matched on the two clubs within a two-day window rather
 // than on week number, because ESPN and nflverse number the postseason rounds
 // differently and a round mismatch would put a live score on the wrong game.
+// One source's own quote for one fixture, kept beside the others rather than
+// resolved against them. lineConsensus below is what turns them into the
+// number the site prints.
+function _lineQuote(g, src, spread, total) {
+  if (spread == null && total == null) return;
+  (g.quotes = g.quotes || {})[src] = { spread: spread == null ? null : spread, total: total == null ? null : total };
+}
 function mergeSchedule(spine, live) {
   const games = (spine || []).map(g => ({ ...g }));
+  for (const g of games) _lineQuote(g, 'nflverse', g.spread, g.total);
   const byPair = new Map();
   games.forEach((g, i) => {
     const k = g.away + '@' + g.home;
@@ -3538,12 +3853,14 @@ function mergeSchedule(spine, live) {
       if (g.status) t.status = g.status;
       if (g.homeScore != null) t.homeScore = g.homeScore;
       if (g.awayScore != null) t.awayScore = g.awayScore;
-      // The spine keeps the line where it has one: games.csv is a consensus
-      // number and the scoreboard quotes a single book. Where the spine is
-      // blank -- the preseason, and any fixture the CSV has not priced yet --
-      // one book beats no book, and `lineSrc` says which it was. The book's
+      // The scoreboard's number is RECORDED, not resolved: games.csv is a
+      // consensus and the scoreboard quotes a single book, and lineConsensus
+      // averages the two rather than either winning. The blank-fill below is
+      // what happens with no consensus pass -- the preseason, and any fixture
+      // the CSV has not priced yet, where one book beats no book. The book's
       // own open/current pair rides along either way, because the spine has no
       // concept of an opening line to be overwritten.
+      _lineQuote(t, 'espn', g.spread, g.total);
       if (t.spread == null && g.spread != null) { t.spread = g.spread; t.lineSrc = 'espn'; }
       if (t.total == null && g.total != null) { t.total = g.total; t.lineSrc = 'espn'; }
       if (g.book) t.book = g.book;
@@ -3554,12 +3871,110 @@ function mergeSchedule(spine, live) {
       // game with no match is left out rather than guessed into a round, since
       // the spine gains the bracket within a day of it being set.
       if (g.type !== 'PRE') continue;
-      games.push({ ...g, espnId: /^espn-/.test(g.id) ? g.id.slice(5) : null });
+      const add = { ...g, espnId: /^espn-/.test(g.id) ? g.id.slice(5) : null };
+      _lineQuote(add, 'espn', g.spread, g.total);
+      games.push(add);
       added++;
     }
   }
   games.sort((a, b) => a.kickoff - b.kickoff || (a.id < b.id ? -1 : 1));
   return { games, updated, added };
+}
+
+// The paid feed's game lines onto the schedule. Matched the way the live layer
+// is -- the two clubs within a two-day window rather than the week number,
+// because feeds number the postseason rounds differently and a round mismatch
+// would price the wrong game.
+//
+// Like the scoreboard's, this feed's number is RECORDED rather than resolved:
+// it is one more quote on the fixture, and lineConsensus averages it with the
+// others. What this function alone decides is the BOOK PAIR, which is not a
+// quote and cannot be averaged -- it is one book's open and current, the two
+// numbers every movement figure is computed from, and it goes over whole
+// (null included). Leaving the previous feed's pair on a fixture this one is
+// now pricing would measure the move against a book that is no longer behind
+// the number beside it.
+function mergeGameLines(games, lines, at) {
+  const out = (games || []).map(g => ({ ...g }));
+  const byPair = new Map();
+  out.forEach((g, i) => {
+    const k = g.away + '@' + g.home;
+    if (!byPair.has(k)) byPair.set(k, []);
+    byPair.get(k).push(i);
+  });
+  const WINDOW = 2 * 86400000;
+  let quoted = 0, booked = 0;
+  for (const l of lines || []) {
+    if (!l) continue;
+    const cands = byPair.get(l.away + '@' + l.home) || [];
+    let best = -1, bestGap = WINDOW;
+    for (const i of cands) {
+      const gap = Math.abs(out[i].kickoff - l.kickoff);
+      if (gap < bestGap) { bestGap = gap; best = i; }
+    }
+    if (best < 0) continue;
+    const t = out[best];
+    t.book = l.book || null;
+    if (l.book) booked++;
+    if (l.spread != null || l.total != null) { _lineQuote(t, 'sportsgameodds', l.spread, l.total); quoted++; }
+  }
+  return { games: out, quoted, booked };
+}
+
+// ── the consensus line ─────────────────────────────────────────────────────
+// A fixture can be priced by three sources at once: the spine's own column in
+// games.csv, the scoreboard's single named book, and the paid feed's consensus.
+// Each records its own quote in `g.quotes`; this is where they become the one
+// number the site prints, and that number is their MEAN.
+//
+// WHY A MEAN RATHER THAN A WINNER. Every one of these is an estimate of the
+// same thing. Picking one throws away the others' evidence for no reason a
+// reader could defend, and it makes the site's line jump whenever the winner
+// changes. The mean also fails softly: a source that goes stale or starts
+// quoting nonsense moves the line by a fraction of its error instead of
+// becoming the line.
+//
+// WHAT IT IS NOT. It is not a number any book posts, and it does not pretend
+// to be -- 2.5 and 3 average to 2.8, the site's usual one decimal on a derived
+// figure. `lineSources` rides on every payload beside it, so an average is
+// never shown that a reader cannot take apart. The sources are listed per
+// FIXTURE, not per market: a club priced on the spread by two sources and on
+// the total by one names both, because both are behind the fixture's line.
+//
+// FROZEN AT KICKOFF. A game that has started keeps whatever it already had,
+// which is the spine's own number: by then that is the closing line and the
+// historical record every backtest reads. A live feed's last-seen value has
+// nothing truer to say about a game that is over, and averaging one in would
+// quietly rewrite history.
+//
+// THE BOOK PAIR IS NOT AVERAGED and never can be. `g.book` stays one book's
+// open and current so _gameLineMove keeps one source behind every move; the
+// printed line beside it is this consensus. Those are two different questions
+// and this is the one place that says so.
+const LINE_MARKETS = ['spread', 'total'];
+function lineConsensus(games, at) {
+  const now = at == null ? Date.now() : at;
+  let averaged = 0, blended = 0;
+  for (const g of games || []) {
+    if (!g || !g.quotes) continue;
+    if (g.status === 'final' || g.status === 'in_progress' || now >= g.kickoff) continue;
+    const used = new Set();
+    for (const mkt of LINE_MARKETS) {
+      const vals = [];
+      for (const [src, q] of Object.entries(g.quotes)) {
+        const v = q ? q[mkt] : null;
+        if (Number.isFinite(v)) { vals.push(v); used.add(src); }
+      }
+      if (!vals.length) continue;
+      g[mkt] = _oddsRound(vals.reduce((a, c) => a + c, 0) / vals.length);
+    }
+    if (!used.size) continue;
+    g.lineSources = [...used].sort();
+    g.lineSrc = g.lineSources.join('+');
+    averaged++;
+    if (used.size > 1) blended++;
+  }
+  return { games: games || [], averaged, blended };
 }
 
 // ── the clock ──────────────────────────────────────────────────────────────
@@ -3626,7 +4041,7 @@ function _seasonDecorate(g, at) {
     // One named book's open and current, in the same convention as `spread`
     // above. Null on a fixture no book has posted, which is not the same fact
     // as a line of zero and must not print as one.
-    book: g.book || null, lineSrc: g.lineSrc || null,
+    book: g.book || null, lineSrc: g.lineSrc || null, lineSources: g.lineSources || null,
     status: s.status, statusSource: s.source
   };
 }
@@ -3775,8 +4190,24 @@ async function runScheduleRefresh(env) {
   let live = [], liveError = null;
   try { live = await fetchScheduleEspn(spine.season); }
   catch (e) { liveError = (e && e.message) || 'failed'; }
-  const merged = mergeSchedule(spine.games, live);
-  const provider = 'nflverse' + (live.length ? '+espn' : '');
+  let merged = mergeSchedule(spine.games, live);
+  // The paid line feed, when there is a key for it. Fail-safe like the live
+  // layer above: a pull that throws leaves the schedule exactly as the spine
+  // and the scoreboard built it rather than costing the refresh.
+  let lines = [], linesError = null;
+  if (env.SGO_API_KEY) {
+    try {
+      lines = await fetchGameLinesSgo(env);
+      const relined = mergeGameLines(merged.games, lines, Date.now());
+      merged = { ...merged, games: relined.games };
+    } catch (e) { linesError = (e && e.message) || 'failed'; }
+  }
+  // Every source that priced a fixture, averaged into the one number the site
+  // prints. Runs whether or not the paid feed is configured: the spine and the
+  // scoreboard are two sources on their own.
+  const consensus = lineConsensus(merged.games, Date.now());
+  merged = { ...merged, games: consensus.games };
+  const provider = 'nflverse' + (live.length ? '+espn' : '') + (lines.length ? '+sportsgameodds' : '');
   const espn = _ESPN_LAST;
   await scheduleCacheWrite(env, spine.season, merged.games, provider);
   _SEASON_CACHE = null; _SEASON_AT = 0;
@@ -3784,6 +4215,8 @@ async function runScheduleRefresh(env) {
     ok: true, season: spine.season, provider,
     spine: spine.games.length, live: live.length,
     statusUpdated: merged.updated, preseasonAdded: merged.added,
+    lines: lines.length, linesError,
+    linesAveraged: consensus.averaged, linesBlended: consensus.blended,
     games: merged.games.length, liveError, espn
   };
 }
@@ -3863,10 +4296,18 @@ const PROVIDER_SCHEDULE = [
 ];
 
 // ── odds ───────────────────────────────────────────────────────────────────
-// The Odds API is the only per-player book feed, and it is the one paid
-// upgrade. Without it the game-line provider still prices every club's scoring
-// environment, which is what the site runs on today.
+// Two per-player book feeds, both paid, tried in order: SportsGameOdds first
+// because it prices the game lines as well as the players, then The Odds API.
+// With neither key set the game-line providers still price every club's
+// scoring environment, which is what the site runs on today.
 const PROVIDER_ODDS = [
+  { name: 'sportsgameodds', free: false, needs: env => !!(env && env.SGO_API_KEY),
+    subjectType: 'player',
+    fetch: async (env) => (await fetchOddsSgo(env)).map(r => ({
+      book: r.book || 'unknown', subjectType: 'player', subject: r.player,
+      market: r.market, line: r.line, overOdds: r.overOdds, underOdds: r.underOdds,
+      gameId: r.gameId || null, ts: Date.now()
+    })) },
   { name: 'the-odds-api', free: false, needs: env => !!(env && env.ODDS_API_KEY),
     subjectType: 'player',
     fetch: async (env) => (await fetchOddsTheOddsApi(env)).map(r => ({
@@ -3874,10 +4315,13 @@ const PROVIDER_ODDS = [
       market: r.market, line: r.line, overOdds: r.overOdds, underOdds: r.underOdds,
       gameId: r.gameId || null, ts: Date.now()
     })) },
-  { name: 'espn-gamelines', free: true, subjectType: 'game',
+  { name: 'book-gamelines', free: true, subjectType: 'game',
     fetch: async (env) => {
       // The schedule refresh already merged the book's lines onto every game,
-      // so this reads them rather than pulling the scoreboard a second time.
+      // so this reads them rather than pulling the feed a second time. WHICH
+      // book that is depends on what was configured -- SportsGameOdds where
+      // there is a key, ESPN's scoreboard otherwise -- and the row is written
+      // under the book's own name either way, which is the point.
       // Rows go in under the BOOK's name, not 'consensus': a real bookmaker
       // sitting beside the consensus row is what lets the store say the two
       // disagree, and it is the only game-line row that moves intraday.
