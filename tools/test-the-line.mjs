@@ -104,19 +104,22 @@ ok('and they are the same number', gapAgree && pageGap && parseFloat(gapAgree[1]
 ok('the prose quotes that floor too', new RegExp('Under ' + parseFloat(pageGap[1]).toFixed(1) + ' points').test(flat));
 
 // ── the Washington fence ────────────────────────────────────────────────────
-// The fence is in the worker because the ribbon link is baked into static pages
-// and cannot be varied per request. None of it is visible from the page.
+// The fence is in the worker because static links and direct URLs must not be
+// enough to bypass it. The homepage itself is rewritten before it reaches a
+// Washington browser, and the dedicated market pages return 451.
 console.log('\nthe Washington fence');
-const paths = worker.match(/const LINE_PATHS = new Set\(\[([^\]]*)\]\)/);
-ok('the worker lists the paths it fences', !!paths);
-const fenced = paths ? paths[1].split(',').map(s => s.trim().replace(/^'|'$/g, '')) : [];
-for (const p of ['/the-line', '/the-line/', '/the-line.html']) {
+const paths = worker.match(/const WA_MARKET_PAGE_PATHS = new Set\(\[([\s\S]*?)\]\);/);
+ok('the worker lists the betting-market pages it fences', !!paths);
+const fenced = paths ? [...paths[1].matchAll(/'([^']+)'/g)].map(m => m[1]) : [];
+for (const p of ['/the-line', '/vegas-edge', '/game-intel', '/player-intel', '/what-they-arent-telling-you', '/hidden-value', '/previews']) {
   ok(`it fences ${p}`, fenced.includes(p), fenced.join(' '));
 }
-ok('it fences the /in-season alias as well', fenced.includes('/in-season/the-line'));
-const fence = worker.slice(worker.indexOf('if (LINE_GEOFENCED(url.pathname))'), worker.indexOf('let __assetReq = request;'));
+ok('it fences the /in-season market aliases as well',
+  fenced.includes('/in-season/the-line') && fenced.includes('/in-season/vegas-edge') && fenced.includes('/in-season/game-intel'));
+const fenceStart = worker.indexOf("if (IS_WASHINGTON(request) && WA_MARKET_PAGE_GEOFENCED(url.pathname))");
+const fence = worker.slice(fenceStart, worker.indexOf('let __assetReq = request;'));
 ok('the fence runs before the asset layer is asked for anything',
-  worker.indexOf('if (LINE_GEOFENCED(url.pathname))') < worker.indexOf('let __assetReq = request;'));
+  fenceStart >= 0 && fenceStart < worker.indexOf('let __assetReq = request;'));
 const waHelper = worker.slice(worker.indexOf('function IS_WASHINGTON(request)'), worker.indexOf('function WA_MARKET_BLOCK()'));
 ok('it reads the country as well as the region code, because WA is also Western Australia',
   /country === 'US'/.test(waHelper) && /region === 'WA'/.test(waHelper));
@@ -126,10 +129,15 @@ ok('the fenced answer is never cached', /'cache-control': 'no-store'/.test(fence
 ok('and it varies on the country, so no shared cache crosses regions', /'vary': 'CF-IPCountry'/.test(fence));
 ok('a reader the edge cannot place is not fenced',
   !/country !== 'US'/.test(waHelper) && /country === 'US' &&/.test(waHelper));
-ok('the notice served in Washington says why', /not available in Washington/i.test(worker.match(/const LINE_BLOCKED_HTML = `([\s\S]*?)`;/)[1]));
-ok('and it is not indexable', /noindex,nofollow/.test(worker.match(/const LINE_BLOCKED_HTML = `([\s\S]*?)`;/)[1]));
-ok('it still sends the reader to fantasy football pages',
-  /href="\/weekly-rankings"/.test(worker.match(/const LINE_BLOCKED_HTML = `([\s\S]*?)`;/)[1]));
+const blocked = worker.match(/const WA_MARKET_BLOCKED_HTML = `([\s\S]*?)`;/);
+ok('the notice served in Washington says why', blocked && /not available in Washington/i.test(blocked[1]));
+ok('and it is not indexable', blocked && /noindex,nofollow/.test(blocked[1]));
+ok('it still sends the reader to fantasy football pages', blocked && /href="\/weekly-rankings"/.test(blocked[1]));
+ok('the homepage market tab is removed server-side for Washington',
+  /function stripWashingtonMarketLane\(html\)/.test(worker) &&
+  /id="laneTabMarket"/.test(worker) &&
+  /id="laneMarket"/.test(worker) &&
+  /stripWashingtonMarketLane\(waHtml\)/.test(worker));
 ok('the current market APIs are also fenced in Washington',
   /IS_WASHINGTON\(request\)[\s\S]{0,180}api\/vegas-edge/.test(worker) &&
   /IS_WASHINGTON\(request\)[\s\S]{0,180}api\/signals/.test(worker) &&
