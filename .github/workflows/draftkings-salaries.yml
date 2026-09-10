@@ -1,0 +1,46 @@
+name: DraftKings salaries
+
+on:
+  schedule:
+    # Tuesday morning in New York (9 AM EST / 10 AM EDT).
+    - cron: '0 14 * * 2'
+  workflow_dispatch:
+    inputs:
+      draft_group_id:
+        description: Optional DraftKings draft group override
+        required: false
+        type: string
+      week:
+        description: Optional NFL week override
+        required: false
+        type: string
+      dry_run:
+        description: Discover and validate without importing
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: draftkings-salaries
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Find and import the Sunday main slate
+        env:
+          IRON_TUNA_ADMIN_KEY: ${{ secrets.IRON_TUNA_ADMIN_KEY }}
+          IRON_TUNA_ADMIN_URL: ${{ vars.IRON_TUNA_ADMIN_URL }}
+          INPUT_DRAFT_GROUP_ID: ${{ inputs.draft_group_id }}
+          INPUT_WEEK: ${{ inputs.week }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: node tools/import-draftkings-salaries.mjs
