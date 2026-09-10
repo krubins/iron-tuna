@@ -66,11 +66,11 @@ console.log('\nthe staff and the one rivalry');
   ok('every analyst has a voice, a philosophy and assignments', Object.values(A).every(a => a.voice.length > 40 && a.philosophy && a.assignments.length));
   ok('the disclosure says they are AI personas, not people', /AI-powered editorial personas, not people/.test(H.AI_DISCLOSURE));
   const flags = H.flagReport({});
-  // The three provider connectors (docs/league-sync.md) default OFF on purpose:
-  // Sleeper until its commercial license is in writing, Yahoo and ESPN until
-  // configured. Every other flag is the intended product and defaults on.
-  ok('every flag defaults on, except the provider connectors', Object.entries(flags).every(([k, f]) => (f.on || /^(SLEEPER|YAHOO|ESPN)_SYNC$/.test(k)) && f.source === 'default'));
-  ok('the provider connectors default off', ['SLEEPER_SYNC', 'YAHOO_SYNC', 'ESPN_SYNC'].every(k => flags[k] && !flags[k].on));
+  // The four provider connectors (docs/league-sync.md) default OFF on purpose:
+  // Sleeper pending its commercial license; Yahoo and CBS pending configuration
+  // and terms validation; ESPN because no supported path exists.
+  ok('every flag defaults on, except the provider connectors', Object.entries(flags).every(([k, f]) => (f.on || /^(SLEEPER|YAHOO|CBS|ESPN)_SYNC$/.test(k)) && f.source === 'default'));
+  ok('the provider connectors default off', ['SLEEPER_SYNC', 'YAHOO_SYNC', 'CBS_SYNC', 'ESPN_SYNC'].every(k => flags[k] && !flags[k].on));
   ok('a flag reads off the env', !H.flagOn({ FLAG_RIVALRY: '0' }, 'RIVALRY') && H.flagOn({ FLAG_RIVALRY: 'on' }, 'RIVALRY') && !H.flagOn({}, 'NOPE'));
 }
 

@@ -72,7 +72,7 @@
   function select(id) { write('localStorage', ACTIVE_KEY, id); if (cur) { cur.activeId = id; emit(); } }
   function invalidate() { write('sessionStorage', CACHE_KEY, null); cur = null; }
   function onChange(fn) { if (typeof fn === 'function') listeners.push(fn); }
-  function providerLabel(p) { return { sleeper: 'Sleeper', yahoo: 'Yahoo', espn: 'ESPN', manual: 'Manual' }[p] || p; }
+  function providerLabel(p) { return { sleeper: 'Sleeper', yahoo: 'Yahoo', cbs: 'CBS Sportsline', espn: 'ESPN', manual: 'Manual' }[p] || p; }
   function syncLine(L) {
     if (!L) return '';
     var s = L.sync || {};

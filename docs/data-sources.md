@@ -7,7 +7,7 @@ This file is the **inventory of what the code actually does today**, not a plan.
 Every external host reached by `_worker.js` is listed. When you add or remove a
 source, edit this file in the same commit.
 
-Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) published 2026-09-09; keep the two in step.
+Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) published 2026-09-09; keep the two in step.
 
 ---
 
@@ -17,6 +17,7 @@ Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) 
 
 | Host | Used for | Call sites | License status |
 |---|---|---|---|
+| `<league>.football.cbssports.com` | Reader-authorized CBS league settings, teams, rosters, standings, schedules, waiver order and transaction log | `PROVIDER_CBS`, `cbsGet`; validated league subdomain, fixed HTTPS `/api/league/` resources | **Off by default (`FLAG_CBS_SYNC`).** Token access and commercial terms still require live verification. No CBS login/password collection or provider writes. See docs/league-sync.md CBS addendum. |
 | `api.the-odds-api.com` | NFL odds, totals, spreads | `ODDS_API_BASE`, `_worker.js:1575` | **Paid, terms unconfirmed.** See item R3. |
 | `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts, **and the game lines the scoreboard carries** | `_worker.js:1353`, `:3061`, `:5656`, `:5657`, `_espnOdds` | **Red.** Undocumented endpoints, no commercial license. The odds block adds a bookmaker's spread, total and opening line to what is taken. No page names the book; the name reaches the JSON API only. See R1. |
 | `api.sleeper.app` | NFL player id/metadata map | `_worker.js:7732`, `:7763` | **Red for a paid product.** Non-commercial grant only. See R2. |
@@ -167,6 +168,7 @@ See `docs/league-sync.md` Part 3 for the full record. In short:
 
 - **Sleeper.** The league connector uses the same API as the players map and inherits R2 exactly: free for non-commercial use, and Iron Tuna is a paid product. The connector is complete and tested against fixtures but ships **off** (`FLAG_SLEEPER_SYNC`). Turn it on only with Sleeper's written license in `docs/`. Attribution string in §3 applies.
 - **Yahoo.** OAuth 2.0 under the Yahoo Developer Network terms of use. The reader authorizes Iron Tuna to read their own fantasy data (scope `fspt-r`); no password is ever seen and tokens are sealed at rest (`LEAGUE_TOKEN_KEY`). Register an app at developer.yahoo.com, set `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`, and confirm the YDN terms permit use in a paid product before enabling `FLAG_YAHOO_SYNC`. Rate limits are per-app and undocumented; the connector caches for a minute and syncs on the job clock, never per page view.
+- **CBS Sportsline.** The connector uses a reader-supplied token scoped to one CBS football league. It calls only a fixed read-resource allowlist on the validated `<league>.football.cbssports.com` host, puts the token in the Authorization header, refuses redirects, and seals one token per league with `LEAGUE_TOKEN_KEY`. It never collects a CBS username/password or calls the mobile login endpoint. The implementation is synthetic-fixture-tested but not live-tested and ships **off** (`FLAG_CBS_SYNC`). Keep it off until a controlled live pass validates response shapes and CBS confirms permitted access and commercial use.
 - **ESPN.** No supported path. Not implemented; the adapter is a documented placeholder and manual setup is the fallback. Do not add the `lm-api-reads` host.
 
 ### R6 — Schema note for the free-tier delay model
