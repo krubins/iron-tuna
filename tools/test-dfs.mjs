@@ -128,7 +128,8 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
   ok('the boards are there', slate.boards.bestVegasValues.length > 0 && slate.boards.tdUpside.length > 0 && slate.boards.volumeValues.length > 0);
   ok('expensive fades are pricey players the market is lower on', slate.boards.expensiveFades.every(p => p.salary >= 6000 && p.marketDelta.points < 0) && slate.boards.expensiveFades.some(p => p.name === 'Breece Hall'));
   ok('the TD basis is said', slate.players.filter(p => p.onBoard).every(p => p.tdBasis === 'derived' || p.tdBasis === 'anytime-td-market'));
-  ok('with no prop on the slate the note says so', slate.hasProps === false && /No sportsbook/.test(slate.note));
+  ok('with no prop on the slate the note says so, without claiming what the books have posted',
+     slate.hasProps === false && /No priced player prop has reached this slate/.test(slate.note) && !/No sportsbook/.test(slate.note));
   const stacks = H.buildDfsStacks(slate, STATE);
   ok('stacks rank games by total', stacks[0].game === 'DET at GB' && stacks[0].total === 51);
   ok('each side has a QB, catchers, a back and a bring-back', stacks[1].away.qb.name === 'Josh Allen' && stacks[1].away.catchers.length >= 2 && stacks[1].bringBack.home);
