@@ -183,6 +183,18 @@ p{color:var(--sec);margin:0 0 16px}
 .df-dk-find{display:block;margin-top:10px;padding-top:9px;border-top:1px solid var(--line);font-family:var(--font-mono);font-size:11.5px;line-height:1.5;color:var(--muted)}
 .df-dk-find b{display:inline;font-size:inherit;margin:0;color:var(--teal)}
 .df-dk-lobby-note{font-size:13px;line-height:1.6;color:var(--sec);margin:8px 0 14px;padding:10px 12px;border-left:3px solid var(--teal);background:var(--panel)}
+.df-game-style{margin:14px 0 18px;border:1px solid var(--line2);border-radius:12px;background:var(--panel);padding:14px 16px}
+.df-game-style-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.df-game-style-head b{font-size:16px;color:var(--text)}
+.df-game-style-head span{font-size:12px;color:var(--muted);font-family:var(--font-mono);letter-spacing:.07em;text-transform:uppercase}
+.df-game-style-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.df-game-style-card{display:block;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:13px 14px;color:var(--text);text-decoration:none}
+.df-game-style-card:hover{border-color:var(--teal);text-decoration:none}
+.df-game-style-card[aria-current="true"]{border-color:var(--teal);box-shadow:inset 0 0 0 1px var(--teal);background:rgba(14,124,99,.06)}
+.df-game-style-card b{display:block;font-size:17px;margin:0 0 4px}
+.df-game-style-card span{display:block;font-size:13px;line-height:1.5;color:var(--sec)}
+.df-game-style-card small{display:block;margin-top:7px;font-family:var(--font-mono);font-size:10.5px;line-height:1.45;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+@media(max-width:620px){.df-game-style-options{grid-template-columns:1fr}}
 .df-advanced-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0 8px}
 .df-advanced-toggle{appearance:none;border:1px solid var(--teal);border-radius:999px;background:transparent;color:var(--teal);font:700 13px/1 var(--font-body);letter-spacing:.03em;padding:10px 15px;cursor:pointer}
 .df-advanced-toggle[aria-expanded="true"]{background:var(--teal);color:#fff}
@@ -266,6 +278,22 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="rk-seg" id="dfNav" role="group" aria-label="Section"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
 </div>
 
+<div class="df-game-style" id="dfGameStyle">
+  <div class="df-game-style-head"><span>Step 1</span><b>DraftKings Game Style</b></div>
+  <div class="df-game-style-options">
+    <a class="df-game-style-card" href="/dfs?site=dk" aria-current="true">
+      <b>Classic</b>
+      <span>Build one weekly NFL lineup under DraftKings&rsquo; $50,000 salary cap. This is the game style Iron Tuna&rsquo;s DFS optimizer below is solving.</span>
+      <small>Choose this in DraftKings &rarr; then match the contest type below</small>
+    </a>
+    <a class="df-game-style-card" href="/bestball-insights">
+      <b>Best Ball</b>
+      <span>Draft a season or multiweek roster by snake draft. DraftKings automatically counts your highest-scoring eligible players each week, with no weekly lineup management.</span>
+      <small>Different strategy &rarr; open Iron Tuna Best Ball</small>
+    </a>
+  </div>
+</div>
+
 <!-- ── the contest shape ──────────────────────────────────────────────────────
      One question, one control, above everything it governs. It used to be a
      bare four-word segmented control buried inside Vegas Values, where it
@@ -280,7 +308,7 @@ p{color:var(--sec);margin:0 0 16px}
   <button class="df-shape" type="button" data-contest="gpp"><i>Look for the M / entry limit</i><b>Multi-Entry Tournament</b><span>The ceiling/leverage roster for large, top-heavy fields. Accept more volatility, stacks and lower-owned upside.</span></button>
 </div>
 <p class="is-note" id="dfShapeNote"></p>
-<p class="df-dk-lobby-note"><b>Match Iron Tuna to DraftKings:</b> these recommendations are for the <b>Classic</b> salary-cap game style. In the DraftKings lobby, choose <b>50/50 &amp; Double Ups</b> for the cash build; choose a tournament marked <b>[Single Entry]</b> for the one-lineup tournament build; or choose a contest identified as a <b>Multi-Entry Tournament</b> with an entry maximum for the large-field portfolio build. DraftKings&rsquo; <b>GPP</b> means Guaranteed Prize Pool. It describes the prize pool, not by itself whether the contest is single-entry or multi-entry.</p>
+<p class="df-dk-lobby-note"><b>Step 2, after choosing Classic:</b> match the contest you are entering. Choose <b>50/50 &amp; Double Ups</b> for the cash build; choose a tournament marked <b>[Single Entry]</b> for the one-lineup tournament build; or choose a <b>Multi-Entry Tournament</b> with an entry maximum for the portfolio build. DraftKings&rsquo; <b>GPP</b> means Guaranteed Prize Pool. It describes the prize pool, not by itself whether the contest is single-entry or multi-entry.</p>
 <p class="df-shape-diff"><b>The strategy difference:</b> 50/50 &amp; Double Ups ask, “How do I avoid a bad lineup and beat the payout line?” A Single Entry tournament asks, “What is my best one lineup?” A large Multi-Entry Tournament asks, “What collection of lineups can finish near the very top if the slate breaks my way?”</p>
 <div class="df-strategy-compare" aria-label="DraftKings contest strategy">
   <div class="df-strategy-card"><b>50/50 &amp; Double Ups = chalk and value consistency</b><p><strong>Objective:</strong> finish above the payout cutoff, not first. The roster leans toward <strong>chalk</strong>: players with the strongest combination of role, projection, floor and salary value, meaning the best collective chance of producing more fantasy points than their prices require. It deliberately avoids low-probability longshots whose outcomes can be slate-winning or lineup-killing.</p><span class="df-dk-find"><b>In DraftKings:</b> use the “50/50 &amp; Double Ups” contest filter. A Double Up pays nearly half the field the same amount, roughly doubling a winning entry fee.</span></div>
@@ -1248,6 +1276,7 @@ p{color:var(--sec);margin:0 0 16px}
       SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = true; });
       $('sec-pickem').hidden = false;
       $('dfUp').hidden = true;
+      $('dfGameStyle').hidden = true;
       $('dfStrategyGuide').hidden = true;
       $('dfNote').textContent = '';
       loadPickem();
@@ -1256,6 +1285,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('sec-pickem').hidden = true;
     $('dfNav').hidden = false;
     $('dfUp').hidden = false;
+    $('dfGameStyle').hidden = site !== 'dk';
     $('dfStrategyGuide').hidden = false;
     applyShape();
     $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
