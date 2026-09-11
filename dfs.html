@@ -127,8 +127,8 @@ p{color:var(--sec);margin:0 0 16px}
    under each player, and a detailed read beside the table on wide screens. */
 .df-explain-summary{margin:0 var(--space-5) var(--space-4);padding:15px 17px;border:1px solid rgba(255,255,255,.13);
   border-radius:10px;background:rgba(255,255,255,.055)}
-.df-explain-summary h4{margin:0 0 7px;font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:#46d6ac}
-.df-explain-summary p{margin:0;color:#d5e2df;font-size:13.5px;line-height:1.62}
+.df-explain-summary h4{margin:0 0 8px;font-size:15px;text-transform:uppercase;letter-spacing:.09em;color:#46d6ac}
+.df-explain-summary p{margin:0;color:#d5e2df;font-size:16px;line-height:1.66}
 .df-lead-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(285px,.85fr);gap:18px;align-items:start;padding:0 var(--space-5) var(--space-4)}
 .df-lead-table{min-width:0;overflow:auto;border:1px solid rgba(255,255,255,.09);border-radius:9px}
 .df-lead-table table{margin:0}
@@ -173,8 +173,26 @@ p{color:var(--sec);margin:0 0 16px}
 .df-up-state.bad{color:var(--danger)}
 .df-up [hidden]{display:none}
 .df-up textarea{width:100%;margin:10px 0 0;font:12px/1.4 ui-monospace,monospace;padding:8px;border:1px solid var(--line2);border-radius:8px;background:var(--bg);color:var(--text)}
-.df-shape-diff{font-size:12.5px;color:var(--muted);margin:-4px 0 14px;line-height:1.55}
+.df-shape-diff{font-size:14px;color:var(--muted);margin:2px 0 14px;line-height:1.6}
 .df-shape-diff b{color:var(--sec)}
+.df-strategy-compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0 16px}
+.df-strategy-card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:15px 16px}
+.df-strategy-card b{display:block;color:var(--text);font-size:17px;margin-bottom:7px}
+.df-strategy-card p{margin:0;font-size:14px;line-height:1.62;color:var(--sec)}
+.df-strategy-card strong{color:var(--text)}
+.df-advanced-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0 8px}
+.df-advanced-toggle{appearance:none;border:1px solid var(--teal);border-radius:999px;background:transparent;color:var(--teal);font:700 13px/1 var(--font-body);letter-spacing:.03em;padding:10px 15px;cursor:pointer}
+.df-advanced-toggle[aria-expanded="true"]{background:var(--teal);color:#fff}
+.df-advanced-head span{font-size:13px;color:var(--muted)}
+.df-advanced-panel{border:1px solid var(--line2);border-radius:12px;background:var(--panel);padding:15px;margin:0 0 18px}
+.df-advanced-panel[hidden]{display:none}
+.df-advanced-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.df-advanced-item{border:1px solid var(--line);border-radius:9px;background:var(--bg);padding:13px 14px}
+.df-advanced-item h3{font-size:15px;margin:0 0 6px}
+.df-advanced-item p{font-size:13px;line-height:1.58;margin:0;color:var(--sec)}
+.df-advanced-item .btn{margin-top:9px;padding:8px 12px;font-size:12px}
+.df-advanced-caution{font-size:12px;color:var(--muted);margin:12px 0 0}
+@media(max-width:760px){.df-strategy-compare,.df-advanced-grid{grid-template-columns:1fr}}
 .df-player-link{appearance:none;border:0;padding:0;background:none;color:inherit;font:inherit;font-weight:700;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:rgba(14,124,99,.35);text-underline-offset:2px}
 .df-player-link:hover,.df-player-link:focus{color:var(--teal);text-decoration-color:var(--teal)}
 .is-board .df-player-link{color:#fff}.is-board .df-player-link:hover,.is-board .df-player-link:focus{color:#46d6ac}
@@ -252,14 +270,35 @@ p{color:var(--sec);margin:0 0 16px}
      three sections further down behind a Build button they had to know to
      press. The shape now drives the solve, the sort and the copy on every
      section, so there is no second control anywhere that can disagree with it. -->
+<div id="dfStrategyGuide">
 <div class="df-shapes" id="dfShape" role="group" aria-label="What contest is this for">
-  <button class="df-shape" type="button" data-contest="cash"><i>50/50 &middot; Double-up</i><b>Cash</b><span>Goal: beat roughly half the field. Favor dependable floor and salary value; popular players are fine.</span></button>
-  <button class="df-shape" type="button" data-contest="single"><i>One lineup &middot; Small field</i><b>Single Entry</b><span>Goal: make one balanced lineup. Blend projection and ceiling, add correlation, and use leverage selectively.</span></button>
-  <button class="df-shape" type="button" data-contest="3max"><i>Three lineups</i><b>3-Max</b><span>Goal: keep a strong core but vary key pivots. You want three related lineups, not the same bet three times.</span></button>
-  <button class="df-shape" type="button" data-contest="gpp"><i>Many entries &middot; Top-heavy prizes</i><b>Large Field</b><span>Goal: maximize first-place upside. Favor ceiling, stacks and lower ownership, even when that adds volatility.</span></button>
+  <button class="df-shape" type="button" data-contest="cash"><i>50/50 &middot; Double-up</i><b>Cash</b><span>The chalk/value roster. Favor players most likely to beat what their salaries require and avoid fragile longshots.</span></button>
+  <button class="df-shape" type="button" data-contest="single"><i>One lineup &middot; One decision</i><b>Single Entry</b><span>The best one-shot roster. Keep a strong value core, then add enough ceiling, correlation and selective leverage to win.</span></button>
+  <button class="df-shape" type="button" data-contest="gpp"><i>Large field &middot; Top-heavy prizes</i><b>Large Field</b><span>The ceiling/leverage roster. Accept more volatility, stacks and lower-owned upside because first-place separation matters.</span></button>
 </div>
 <p class="is-note" id="dfShapeNote"></p>
-<p class="df-shape-diff"><b>How they differ:</b> as the field gets larger and payouts get more top-heavy, the build shifts from floor and safety toward ceiling, correlation and leverage.</p>
+<p class="df-shape-diff"><b>The basic difference:</b> Cash asks, “How do I avoid a bad lineup and beat the payout line?” Single Entry asks, “What is my best one lineup?” Large Field asks, “What lineup can beat thousands of entries if the slate breaks my way?”</p>
+<div class="df-strategy-compare" aria-label="Cash, Single Entry and Large Field strategy">
+  <div class="df-strategy-card"><b>Cash = chalk and value consistency</b><p><strong>Objective:</strong> finish above a broad payout cutoff, not first. The roster leans toward <strong>chalk</strong>: players with the strongest combination of role, projection, floor and salary value, meaning the best collective chance of producing more fantasy points than their prices require. It deliberately avoids low-probability longshots whose outcomes can be slate-winning or lineup-killing. Popularity itself is not the reason to use a player. Well-priced, dependable players are often popular for good reasons.</p></div>
+  <div class="df-strategy-card"><b>Single Entry = your best one shot</b><p><strong>Objective:</strong> beat the entire field with one lineup, without a second roster to rescue a bad call. Start with the same strong value base as Cash, but accept more ceiling and correlation because merely finishing above average is not enough. A quarterback stack can turn one correct game read into points at multiple positions, while leverage is used selectively where a lower-owned player has comparable underlying value. Avoid being contrarian just to be different.</p></div>
+  <div class="df-strategy-card"><b>Large Field = ceiling and separation</b><p><strong>Objective:</strong> finish near the very top of a large, top-heavy field. The roster gives up some median safety to gain first-place paths: higher ceilings, correlated stacks, bring-backs and lower-owned pivots that can separate you from thousands of similar entries. This is where calculated longshots belong, but they should still have a plausible role and market-supported path to upside. The goal is not randomness. It is differentiated upside.</p></div>
+</div>
+<div class="df-advanced-head">
+  <button class="df-advanced-toggle" id="dfAdvancedToggle" type="button" aria-expanded="false" aria-controls="dfAdvanced">Advanced</button>
+  <span>Multiple lineups, diversification, exposure, duplication and late swap.</span>
+</div>
+<div class="df-advanced-panel" id="dfAdvanced" hidden>
+  <div class="df-advanced-grid">
+    <div class="df-advanced-item"><h3>3-Max: one core, three paths</h3><p>Keep the players you are most confident in, then vary the uncertain pieces. The objective is neither three unrelated lottery tickets nor the same fragile bet three times. It is one strong core with three different ways for the slate to break in your favor.</p><button class="btn alt" type="button" data-advanced-contest="3max">Use 3-Max</button></div>
+    <div class="df-advanced-item"><h3>Multi-lineup portfolio</h3><p>When entering many lineups, treat them as a portfolio rather than independent guesses. Keep conviction players across several rosters, but spread secondary exposures so one injury, game failure or chalk bust does not sink every entry.</p><button class="btn alt" type="button" data-advanced-lineups="10">Build 10 diversified lineups</button></div>
+    <div class="df-advanced-item"><h3>Hedge game scripts</h3><p>If one group of lineups assumes a game shoots out, another group can lean away from that assumption or emphasize a different high-total game. That reduces the number of entries depending on the same story. It is diversification, not a guaranteed financial hedge, and both sides can still lose.</p></div>
+    <div class="df-advanced-item"><h3>Ownership and duplication</h3><p>Do not chase low ownership in every slot. Concentrate leverage where the projection sacrifice is small, and avoid constructions so obvious that a first-place finish is likely to be split with many identical lineups.</p></div>
+    <div class="df-advanced-item"><h3>Exposure limits</h3><p>Across many lineups, cap how much of the portfolio depends on uncertain players or one game environment. High-conviction values can appear often; volatile leverage plays should occupy a smaller share unless your edge is unusually strong.</p></div>
+    <div class="df-advanced-item"><h3>Late swap</h3><p>If early players disappoint, later slots may need more ceiling and lower ownership. If early players smash, the remaining slots can become more conservative. The correct posture changes with your live position relative to the field.</p></div>
+  </div>
+  <p class="df-advanced-caution">Multiple lineups can reduce concentration in one outcome, but they do not eliminate contest risk or guarantee a profit. Iron Tuna builds lineups for analysis and copying; it does not submit entries.</p>
+</div>
+</div>
 <p class="is-note" id="dfNote"></p>
 <p class="is-note" id="dfSiteNote"></p>
 
@@ -535,27 +574,25 @@ p{color:var(--sec);margin:0 0 16px}
   // fine-tune controls below and the build reads the controls, so there is one
   // source of truth for what was solved and a reader can always see it.
   //
-  // The four map to how the money is actually distributed. A double-up pays
-  // the top half a flat amount, so the roster only has to clear a line: floors.
-  // A large field pays the top 0.1% almost everything, so the median is worth
-  // nothing and the question becomes ceiling per point of ownership: the
-  // longshots. The two in between move along that line.
+  // The three primary choices map to the reader's payout problem: Cash,
+  // Single Entry and Large Field. 3-Max remains an Advanced preset because it
+  // is a portfolio construction rather than a separate basic payout objective.
   var SHAPES = {
     cash: { mode: 'floor', stack: false, bring: false, maxTeam: 3, n: 1,
-            head: 'The double-up roster',
-            why: 'A cash game pays the top half a flat amount, so this roster only has to clear a line \u2014 it is built on floors, not ceilings. Chalk is fine here, and correlation is a liability: stacking a game raises the ceiling and lowers the floor, which is the wrong trade.',
+            head: 'Cash: the chalk and value-consistency roster',
+            why: 'The objective is to finish above a broad payout cutoff, not to finish first. This roster favors the players with the strongest combined chance of beating what their salaries require: stable roles, dependable volume, strong floors and good points-per-dollar value. Those players often become chalk because the field sees the same value. Iron Tuna does not avoid them for being popular. It avoids fragile longshots whose range includes both a slate-winning spike and a lineup-killing miss.',
             keys: ['floorPoints', 'projPoints'] },
     single: { mode: 'ironTuna', stack: true, bring: false, maxTeam: 4, n: 1,
-            head: 'The single-entry roster',
-            why: 'Single Entry gives you one lineup and no portfolio to rescue a bad bet. The optimizer balances median projection with ceiling, adds useful quarterback correlation, and takes leverage only where it does not give away too much raw projection.',
+            head: 'Single Entry: the best one-shot roster',
+            why: 'You get one lineup and no portfolio to rescue a bad call. The build keeps the high-probability value core that matters in Cash, but it needs more ceiling because finishing merely above average does not win a single-entry tournament. It adds useful quarterback correlation and takes selective leverage where a lower-owned alternative can create separation without surrendering too much projection.',
             keys: ['projPoints', 'ceilingPoints'] },
     '3max': { mode: 'ceiling', stack: true, bring: false, maxTeam: 4, n: 3,
-            head: 'The 3-max core',
-            why: 'Three entries off one spine. The first is the build; the two under it keep the core and move the leverage, so three wrong calls cannot all be the same wrong call.',
+            head: '3-Max: one core, three paths',
+            why: 'Three entries let you keep the players you are most confident in while varying the uncertain pieces. The goal is not three unrelated lottery tickets and not the same lineup three times. It is one strong core with three different paths for the slate to break in your favor.',
             keys: ['ceilingPoints', 'projPoints'] },
     gpp: { mode: 'leverage', stack: true, bring: true, maxTeam: 4, n: 3,
-            head: 'The large-field roster',
-            why: 'A big field pays almost everything to the top fraction of a percent, so the median is worth nothing. This is ceiling discounted by how many other entries are expected to own the same player, stacked and brought back \u2014 the build that carries longshots on purpose.',
+            head: 'Large Field: the ceiling and leverage roster',
+            why: 'A large, top-heavy field rewards first-place upside far more than median safety. This build intentionally accepts more volatility in exchange for ceiling, correlated stacks, bring-backs and lower-owned leverage. Calculated longshots belong here when they have a real role and a plausible path to a spike game. The purpose is not to be random; it is to build a lineup that can separate from thousands of entries when its game assumptions are right.',
             keys: ['ceilingPoints', 'projPoints'] }
   };
   var contest = 'single';
@@ -802,7 +839,7 @@ p{color:var(--sec);margin:0 0 16px}
       return 'Supplies the salary relief that keeps the premium core intact while still projecting ' + n1(pproj(p)) + ' points' + (marketEdge != null && marketEdge > .7 ? '; the betting market is also ahead of consensus here' : '') + '.';
     }
     if (contest === 'cash' && pfloor(p) / Math.max(1, pproj(p)) >= .72) {
-      return 'Adds a relatively tight floor-to-projection range, which helps this cash build avoid relying on a spike outcome to get over the line.';
+      return 'Fits the chalk/value thesis: a relatively tight floor-to-projection range makes him more likely to beat what the salary requires without needing a spike outcome.';
     }
     if ((contest === 'gpp' || contest === '3max') && own != null && own <= 8) {
       return 'Adds lower-owned ceiling to the roster, giving the build a way to separate from the field without abandoning projection.';
@@ -811,7 +848,7 @@ p{color:var(--sec);margin:0 0 16px}
       return 'Fits the Tuna Edge thesis: the betting-market projection is ' + n1(marketEdge) + ' points above consensus, so the build is buying that disagreement.';
     }
     if (own != null && own >= 20 && contest === 'cash') {
-      return 'Uses popular volume rather than fighting it; in cash, ownership is acceptable when the role and projection support the salary.';
+      return 'Chalk for a reason: the role, projection and salary support the popularity, so the roster accepts the crowd rather than replacing a high-probability value with a longshot.';
     }
     return 'Balances ' + money(p.salary) + ' of salary with ' + n1(pproj(p)) + ' projected points' + (own != null ? ' at ' + n1(own) + '% modeled ownership' : '') + ', fitting the roster without forcing a weaker punt elsewhere.';
   }
@@ -825,12 +862,12 @@ p{color:var(--sec);margin:0 0 16px}
       .sort(function (a, b) { return (Number(b.vegasPoints)-Number(b.consensusPoints)) - (Number(a.vegasPoints)-Number(a.consensusPoints)); })[0];
     var marketGap = market ? Number(market.vegasPoints) - Number(market.consensusPoints) : 0;
     var objective = contest === 'cash'
-      ? 'This roster is trying to maximize the chance of clearing the cash line, so it prioritizes dependable points per dollar, floor and role certainty over uniqueness.'
+      ? 'This is the chalk and value-consistency roster. It is trying to maximize the chance of clearing the cash line by combining players most likely to return more fantasy points than their salaries require. It prioritizes dependable volume, floor, role certainty and points per dollar over uniqueness, and deliberately avoids fragile longshots whose best outcomes can win a slate but whose misses can destroy the lineup.'
       : contest === 'gpp'
-      ? 'This roster is trying to create a first-place outcome in a large field, so it accepts more volatility in exchange for ceiling, correlation and ownership leverage.'
+      ? 'This is the ceiling and leverage roster. It is trying to create a first-place outcome in a large field, so it accepts more volatility in exchange for higher ceilings, correlated scoring and lower-owned paths that can separate it from thousands of entries. Longshots are acceptable only when the role and upside make the risk rational.'
       : contest === '3max'
-      ? 'This is the lead build for a three-entry portfolio, balancing ceiling with enough diversification that every entry does not depend on the same fragile outcome.'
-      : 'This single-entry build balances raw projection with ceiling and useful correlation because there is no second lineup to rescue an overaggressive bet.';
+      ? 'This is the lead build for a three-entry portfolio. It keeps a high-ceiling core while spreading the most uncertain decisions across three related lineups, so one wrong leverage call does not have to be the same wrong call in every entry.'
+      : 'This is the best one-shot roster. It keeps the strongest projection and salary-value core, then adds enough ceiling and useful correlation to win a single-entry field. Because there is no second lineup to rescue an overaggressive bet, it uses leverage selectively rather than chasing low ownership for its own sake.';
     var anchors = sorted.slice(0,2).map(function (p) { return p.name; }).join(' and ');
     var relation = catchers.length
       ? 'The lineup pairs ' + qb.name + ' with ' + catchers.map(function (p) { return p.name; }).join(' and ') + (backs.length ? ', with ' + backs.map(function (p) { return p.name; }).join(' and ') + ' on the other side' : '') + ', creating intentional passing-game correlation.'
@@ -1207,7 +1244,7 @@ p{color:var(--sec);margin:0 0 16px}
       SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = true; });
       $('sec-pickem').hidden = false;
       $('dfUp').hidden = true;
-      $('dfShape').hidden = true; $('dfShapeNote').hidden = true;
+      $('dfStrategyGuide').hidden = true;
       $('dfNote').textContent = '';
       loadPickem();
       return;
@@ -1215,7 +1252,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('sec-pickem').hidden = true;
     $('dfNav').hidden = false;
     $('dfUp').hidden = false;
-    $('dfShape').hidden = false; $('dfShapeNote').hidden = false;
+    $('dfStrategyGuide').hidden = false;
     applyShape();
     $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
     show();
@@ -1271,890 +1308,30 @@ p{color:var(--sec);margin:0 0 16px}
     });
     $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
     $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); if (slate) values(slate); });
-    // The shape switch is the page's primary control: it re-solves the roster,
-    // re-sorts the values table (the server sorts that one, hence the reload)
-    // and re-labels the branches.
-    $('dfShape').addEventListener('click', function (ev) {
-      var b = ev.target.closest('button'); if (!b) return;
-      contest = b.getAttribute('data-contest');
-      applyShape(); load();
-      try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'dfs_contest', uid: localStorage.getItem('it.uid') || '', props: { path: location.pathname, contest: contest, site: site } })], { type: 'application/json' })); } catch (x) {}
+    $('dfAdvancedToggle').addEventListener('click', function () {
+      var open = $('dfAdvanced').hidden;
+      $('dfAdvanced').hidden = !open;
+      this.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
-    desk();
-    // Anything moved by hand in the fine-tune panel takes the build off the
-    // preset and rebuilds immediately, so the roster on screen always matches
-    // the controls under it.
-    $('dfMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mode = b.getAttribute('data-mode'); press(this, 'data-mode', mode); tuned = true; build(); });
-    $('dfTune').addEventListener('change', function (ev) { if (ev.target.closest('#dfMode')) return; tuned = true; build(); });
-    $('dfBuild').addEventListener('click', function () { tuned = true; build(); });
-    $('dfPool').addEventListener('click', function (ev) { if (ev.target.closest('.df-player-link')) return; var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); tuned = true; build(); });
-    document.addEventListener('click', function (ev) {
-      var wi = ev.target.closest('[data-player-whatif]');
-      if (wi) {
-        var p0 = whatIfPlayers().find(function (p) { return p.key === wi.getAttribute('data-player-whatif'); });
-        closePlayerCalc(); setWhatIf(p0); return;
-      }
-      var player = ev.target.closest('.df-player-link');
-      if (player) {
-        ev.preventDefault(); ev.stopPropagation();
-        openPlayerCalc(findSlatePlayer(player));
+    $('dfAdvanced').addEventListener('click', function (ev) {
+      var cbtn = ev.target.closest('[data-advanced-contest]');
+      if (cbtn) {
+        contest = cbtn.getAttribute('data-advanced-contest');
+        tuned = false;
+        applyShape();
+        load();
         return;
       }
-      if (ev.target.closest('[data-player-close]')) closePlayerCalc();
-    });
-    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !$('dfPlayerModal').hidden) closePlayerCalc(); });
-    // Copy takes the roster to the clipboard as names, which is what every
-    // lobby's paste box wants. It copies; it does not enter anything.
-    $('dfLineups').addEventListener('click', function (ev) {
-      var b = ev.target.closest('button[data-copy]'); if (!b || !built) return;
-      var l = built.lineups[parseInt(b.getAttribute('data-copy'), 10)]; if (!l) return;
-      var text = l.players.map(function (p) { return p.slot + '  ' + p.name + '  ' + money(p.salary); }).join('\n');
-      var done = function () { var was = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = was; }, 1600); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () {});
-      else done();
-    });
-    load();
-  });
-})();
-</script>
-<!--chrome:navjs--><script>
-(function(){
-  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
-  if(!h||!b) return;
-  function set(open){
-    h.setAttribute('data-nav-open', open?'1':'0');
-    b.setAttribute('aria-expanded', open?'true':'false');
-  }
-  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
-  /* Escape closes it, and focus goes back to the button that opened it. */
-  document.addEventListener('keydown',function(e){
-    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
-  });
-  /* A tap outside the open menu closes it. */
-  document.addEventListener('click',function(e){
-    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
-  });
-})();
-</script><!--/chrome:navjs-->
-</body>
-</html>
-, '
-    var rows = l.players.map(function (p) {
-      return '<tr><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
-        + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></td>'
-        + '<td class="num">' + money(p.salary) + '</td>'
-        + '<td class="num">' + n1(p.proj) + '</td>'
-        + '<td class="num">' + fppgText(p) + '</td>'
-        + '<td class="num">' + edgeHtml(p) + '</td>'
-        + '<td class="num">' + n1(p.ceiling) + '</td>'
-        + '<td class="num">' + (p.ownership == null ? '\u2014' : n1(p.ownership) + '%') + '</td></tr>';
-    }).join('');
-    var meter = '<div class="df-meterwrap"><div class="is-meter' + (l.remaining < 400 ? ' tight' : '') + '"><i style="width:' + pct + '%"></i></div>'
-      + '<div class="df-caplab"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div></div>';
-    var table = '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num">' + e(fppgLabel()) + '</th><th class="num">IT Edge</th><th class="num">Ceiling</th><th class="num">Own</th></tr></thead><tbody>' + rows + '</tbody></table>';
-    var sub = e((slate.label || '') + (slate.week ? ' \u00b7 Week ' + slate.week : '') + ' \u00b7 ' + (ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode));
-    var foot = '<button class="btn alt" type="button" data-copy="' + i + '">Copy this lineup</button>'
-      + '<span class="df-copy">' + e(l.players.map(function (p) { return p.name; }).join(' \u00b7 ')) + '</span>';
-    // The lead roster is the one dark board on the page.
-    if (lead) {
-      return '<div class="is-board">'
-        + '<div class="is-board-head"><h3>' + e(sh.head) + '</h3><span class="is-board-sub">' + sub + '</span></div>'
-        + '<div class="is-stats">' + stats + '</div>' + meter + table
-        + '<div class="is-board-foot">' + foot + '</div></div>';
-    }
-    return '<div class="df-card">'
-      + '<div class="df-card-head"><h4>Alternate ' + i + '</h4><span class="df-why">' + n1(l[keys[0]]) + ' ' + e((STAT_LABEL[keys[0]] || 'pts').toLowerCase()) + '</span></div>'
-      + '<div class="is-stats">' + stats + '</div>' + meter + table
-      + '<div class="df-card-foot">' + foot + '</div></div>';
-  }
-
-  // ── the branches ──────────────────────────────────────────────────────────
-  // What else fits in each seat. In every shape but the big field the answer
-  // worth printing is the next best body -- the cost of moving off the solve,
-  // which is also where the roster is thin. In a large field the useful answer
-  // is the opposite one: the highest ceiling at the slot that FEWER entries
-  // will own than the incumbent, which is the swap that buys leverage rather
-  // than points.
-  function pivotRows(l, players) {
-    var inL = {}; l.players.forEach(function (p) { inL[p.id] = 1; });
-    var pts = (ITDfs.MODES[mode] || ITDfs.MODES.ironTuna).pts;
-    var flex = slate.flex || ['RB', 'WR', 'TE'];
-    var cap = parseInt($('dfCap').value, 10) || slate.cap;
-    var contra = contest === 'gpp';
-    var out = [];
-    l.players.forEach(function (cur) {
-      var room = cap - l.salary + cur.salary;
-      var cands = players.filter(function (q) {
-        if (inL[q.id] || q.salary > room) return false;
-        if (!(cur.slot === q.position || (cur.slot === 'FLEX' && flex.indexOf(q.position) >= 0))) return false;
-        if (!isFinite(pts(q)) || pts(q) <= 0) return false;
-        if (contra && cur.ownership != null && q.ownership != null && q.ownership >= cur.ownership) return false;
-        return true;
-      });
-      if (!cands.length) return;
-      cands.sort(function (a, b) { return contra ? (ITDfs.ceilingOf(b) - ITDfs.ceilingOf(a)) : (pts(b) - pts(a)); });
-      var alt = cands[0];
-      out.push({ slot: cur.slot, out: cur, into: alt,
-                 dProj: (alt.ironTunaPoints || 0) - (cur.proj || 0),
-                 dCeil: ITDfs.ceilingOf(alt) - (cur.ceiling || 0),
-                 dSal: alt.salary - cur.salary,
-                 own: alt.ownership });
-    });
-    // Worth reading first: in a big field the biggest ceiling gained, elsewhere
-    // the swap that costs the least.
-    out.sort(function (a, b) { return contra ? (b.dCeil - a.dCeil) : (b.dProj - a.dProj); });
-    return out;
-  }
-
-  function renderPivots(l, players) {
-    var host = $('dfPivots');
-    if (!l) { host.innerHTML = ''; return; }
-    var rows = pivotRows(l, players);
-    if (!rows.length) { host.innerHTML = ''; return; }
-    var contra = contest === 'gpp';
-    var sign = function (v, suffix) { return (v > 0 ? '+' : '') + (Math.round(v * 10) / 10) + (suffix || ''); };
-    var cls = function (v) { return v > 0 ? 'color:var(--teal)' : v < 0 ? 'color:var(--danger)' : ''; };
-    host.innerHTML = '<h3 class="df-h3">' + (contra ? 'The contrarian swap' : 'The next best body') + ' <em>every slot</em></h3>'
-      + '<p class="df-sub">' + (contra
-          ? 'The highest-ceiling player at each seat that fewer entries are modeled to own than the one in the roster. This is where a large-field lineup buys its leverage; take one or two, not nine.'
-          : 'What the seat is worth if the player in it is ruled out, or if you simply disagree. A swap that costs almost nothing is a slot the solve is indifferent about; one that costs three points is a slot the roster is built on.') + '</p>'
-      + '<div class="is-plate"><div class="is-scroll"><table class="is-table"><thead><tr><th>Slot</th><th>In the roster</th><th>Swap to</th><th class="num">\u0394 Proj</th><th class="num">\u0394 Ceiling</th><th class="num">\u0394 Salary</th><th class="num">Own</th></tr></thead><tbody>'
-      + rows.map(function (r) {
-          return '<tr><td>' + slotChip(r.slot) + '</td>'
-            + '<td>' + e(r.out.name) + ' <span class="is-status">' + money(r.out.salary) + '</span></td>'
-            + '<td><b>' + e(r.into.name) + '</b> <span class="is-status">' + e(r.into.position + ' \u00b7 ' + r.into.team) + '</span></td>'
-            + '<td class="num" style="' + cls(r.dProj) + '">' + sign(r.dProj) + '</td>'
-            + '<td class="num" style="' + cls(r.dCeil) + '">' + sign(r.dCeil) + '</td>'
-            + '<td class="num">' + (r.dSal > 0 ? '+' : '') + money(r.dSal).replace('$-', '-$') + '</td>'
-            + '<td class="num">' + (r.own == null ? '\u2014' : n1(r.own) + '%') + '</td></tr>';
-        }).join('')
-      + '</tbody></table></div></div>';
-  }
-
-  var built = null;
-  function whatIfPlayers() {
-    return (slate && slate.players || []).filter(function (p) { return p.onBoard && p.key; }).sort(function (a, b) { return (b.ironTunaPoints || 0) - (a.ironTunaPoints || 0); });
-  }
-  function whatIfMatches(value) {
-    var q = String(value || '').trim().toLowerCase();
-    if (!q) return [];
-    return whatIfPlayers().filter(function (p) {
-      return String(p.name || '').toLowerCase().indexOf(q) >= 0 ||
-             String(p.team || '').toLowerCase().indexOf(q) >= 0 ||
-             String(p.position || '').toLowerCase().indexOf(q) >= 0;
-    }).slice(0, 10);
-  }
-  function renderWhatIfList() {
-    var box = $('dfWhatIfList'), value = $('dfWhatIfInput').value;
-    var list = whatIfMatches(value);
-    if (!value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
-    box.innerHTML = list.map(function (p) {
-      return '<button type="button" role="option" data-whatif-key="' + e(p.key) + '"><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' · ' + p.team) + '</small></span><small>' + money(p.salary) + ' · IT ' + n1(p.ironTunaPoints) + '</small></button>';
-    }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
-    box.hidden = false;
-  }
-  function setWhatIf(p) {
-    if (!p || !p.key) return;
-    whatIfKey = p.key; whatIfName = p.name || 'Selected player';
-    if (marks[whatIfKey] === 'excl') delete marks[whatIfKey];
-    $('dfWhatIfInput').value = p.name + ' (' + p.position + ' · ' + p.team + ')';
-    $('dfWhatIfList').hidden = true;
-    $('dfWhatIfClear').hidden = false;
-    $('dfWhatIf').classList.add('active');
-    $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is forced into the lineup. Every other slot is re-solved around that choice.';
-    build();
-  }
-  function chooseBestWhatIf() {
-    var value = $('dfWhatIfInput').value.trim();
-    var list = whatIfMatches(value);
-    if (!list.length) return;
-    var q = value.toLowerCase();
-    var exact = list.find(function (p) { return p.name.toLowerCase() === q; });
-    setWhatIf(exact || list[0]);
-  }
-  function clearWhatIf(rebuild) {
-    whatIfKey = null; whatIfName = '';
-    $('dfWhatIfInput').value = '';
-    $('dfWhatIfList').hidden = true; $('dfWhatIfList').innerHTML = '';
-    $('dfWhatIfClear').hidden = true; $('dfWhatIf').classList.remove('active');
-    $('dfWhatIfState').textContent = 'As you type, matching players will appear below just like the cheat-sheet What If box.';
-    if (rebuild) build();
-  }
-  function build() {
-    if (!slate || !window.ITDfs) return;
-    var players = slate.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
-    var lock = [], excl = []; for (var k in marks) { if (marks[k] === 'lock') lock.push(k); else if (marks[k] === 'excl') excl.push(k); }
-    if (whatIfKey && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey);
-    var sh = SHAPES[contest] || SHAPES.single;
-    var r = ITDfs.build(players, { mode: mode, cap: parseInt($('dfCap').value, 10) || slate.cap, slots: slate.slots, flex: slate.flex, lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked, maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
-    built = r.ok ? r : null;
-    if (!r.ok) {
-      if (whatIfKey) $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is selected, but no legal lineup fits the current cap and constraints.';
-      $('dfLineups').innerHTML = '<p class="is-empty">No lineup satisfies those constraints under that cap. Loosen one in the fine-tune panel below.</p>';
-      $('dfPivots').innerHTML = '';
-      return;
-    }
-    var lead = r.lineups[0];
-    var alts = r.lineups.slice(1);
-    $('dfLineups').innerHTML = lineupCard(lead, 0, sh, true)
-      + (alts.length ? '<h3 class="df-h3">Branch off it <em>' + alts.length + ' more</em></h3><p class="df-sub">' + (contest === 'gpp'
-            ? 'The same core, re-solved to sit on different players. Entering a large field with one lineup is entering it with one opinion.'
-            : 'The next best rosters under the same rules, for a second and third entry.') + '</p>'
-          + '<div class="df-alts">' + alts.map(function (l, i) { return lineupCard(l, i + 1, sh, false); }).join('') + '</div>' : '')
-      + (r.note ? '<p class="is-note">' + e(r.note) + '</p>' : '');
-    renderPivots(lead, players);
-  }
-
-  function stacks(s) {
-    $('dfStacks').innerHTML = (s.stacks || []).map(function (g) {
-      var sideHtml = function (x, label) { return '<div><b>' + e(x.team) + '</b> <span class="is-status">' + label + '</span><br>QB: ' + (x.qb ? e(x.qb.name) + ' ' + money(x.qb.salary) + ' · ' + n1(x.qb.vegasPoints) : '—') + '<br>Catchers: ' + x.catchers.map(function (c) { return playerButton(c) + ' ' + money(c.salary) + ' · ' + n1(c.vegasPoints); }).join('; ') + '<br>Back: ' + (x.back ? e(x.back.name) + ' ' + money(x.back.salary) : '—') + '<br><b>QB + 2 stack:</b> ' + money(x.stackSalary) + ' for ' + n1(x.stackVegasPoints) + ' Vegas pts</div>'; };
-      return '<div class="df-stack"><h3>' + e(g.game) + ' · total ' + n1(g.total) + ' · implied ' + n1(g.impliedAway) + '–' + n1(g.impliedHome) + '</h3><div class="side">' + sideHtml(g.away, 'away') + sideHtml(g.home, 'home') + '</div><p class="is-note">Bring-back: ' + (g.bringBack.home ? e(g.bringBack.home.name) : '—') + ' for an away stack, ' + (g.bringBack.away ? e(g.bringBack.away.name) : '—') + ' for a home stack.</p></div>';
-    }).join('') || '<p class="is-empty">No game on this slate carries a posted total yet.</p>';
-  }
-  function tdBoard(s) {
-    var list = s.players.filter(function (p) { return p.onBoard && p.position !== 'DST'; }).sort(function (a, b) { return b.tdProbability - a.tdProbability; }).slice(0, 40);
-    $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
-    $('dfTd').hidden = !list.length;
-  }
-  function render() {
-    if (!slate) return;
-    $('dfCap').value = slate.cap;
-    refreshFppgHeads();
-    applyShape();
-    dashboard(slate); envTable(slate); values(slate); pool(slate); stacks(slate); tdBoard(slate);
-    // The lineup solves on load. It is the reason the page exists, and a Build
-    // button a reader has to find first is a page that answers nothing until
-    // they guess right.
-    build();
-  }
-
-  // ── pick'em ──────────────────────────────────────────────────────────────
-  // Underdog, PrizePicks and Sleeper are higher/lower on a posted stat line, so
-  // there is no salary and no cap and none of the sections above apply. The
-  // board is the market's implied line for the one stat each position is really
-  // priced on, against the model's own, off the same /api/boards every other
-  // surface reads.
-  var PICKEM = { pk: 'Underdog / PrizePicks', sl: 'Sleeper picks' };
-  var PRIMARY = { QB: ['passYd', 'Pass yds'], RB: ['rushYd', 'Rush yds'], WR: ['recYd', 'Rec yds'], TE: ['recYd', 'Rec yds'] };
-  var LEAN_PCT = 0.05;
-  var pickemLoaded = false;
-  function isPickem() { return site === 'pk' || site === 'sl'; }
-  function pickem(board) {
-    var rows = [];
-    (board && board.players || []).forEach(function (p) {
-      var m = PRIMARY[p.position];
-      if (!m || !p.vegas || !p.ironTuna || !p.games) return;
-      var line = p.vegas.stats ? p.vegas.stats[m[0]] : null;
-      var model = p.ironTuna.stats ? p.ironTuna.stats[m[0]] : null;
-      // QUOTED ONLY. With no posted prop the "line" is the game line applied to
-      // the player, which is what the model is built from too — so comparing
-      // them produces rounding, and a pick'em board of rounding is the worst
-      // thing this site could ship.
-      if (!(p.vegas.basis && p.vegas.basis.indexOf('props') === 0)) return;
-      if (line == null || model == null || line < 20) return;
-      var per = p.games || 1, l = line / per, mo = model / per;
-      rows.push({ name: p.name, pos: p.position, team: p.team, label: m[1], line: l, model: mo, pct: (mo - l) / l });
-    });
-    rows.sort(function (a, b) { return Math.abs(b.pct) - Math.abs(a.pct); });
-    rows = rows.slice(0, 14);
-    if (!rows.length) {
-      $('pkState').textContent = 'No priced player prop has reached this board for the week, so there is no posted line to read the model against. Books have props up; this build is not carrying them. The board is blank rather than filled with the model compared to itself.';
-      return;
-    }
-    $('pkBody').innerHTML = rows.map(function (r) {
-      var lean = Math.abs(r.pct) < LEAN_PCT ? '<span class="is-tag is-flat">No lean</span>'
-        : '<span class="is-tag is-accent">' + (r.pct > 0 ? 'Over' : 'Under') + '</span>';
-      return '<tr><td class="is-who">' + e(r.name) + ' <small>' + e(r.pos + ' \u00b7 ' + r.team) + '</small></td>' +
-        '<td>' + e(r.label) + '</td><td class="num">' + n1(r.line) + '</td>' +
-        '<td class="num"><span class="is-val">' + n1(r.model) + '</span></td>' +
-        '<td class="num">' + (r.pct > 0 ? '+' : '') + (r.pct * 100).toFixed(0) + '%</td>' +
-        '<td>' + lean + '</td></tr>';
-    }).join('');
-    $('pkWrap').hidden = false;
-    $('pkState').hidden = true;
-  }
-  function loadPickem() {
-    $('pkVenue').textContent = PICKEM[site] || 'Pick’em';
-    if (pickemLoaded) return;
-    pickemLoaded = true;
-    fetch('/api/boards?horizon=week&pos=ALL&scoring=ppr', { credentials: 'omit' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) { if (j && j.ok) pickem(j); else $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; })
-      .catch(function () { $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; });
-  }
-  // ── the reader's own salary file ─────────────────────────────────────────
-  // Held in this browser and nowhere else: kept in memory for the session and
-  // mirrored to localStorage so a reload does not lose it. Storage can throw
-  // (private windows, a file past the quota), so every touch is guarded and
-  // the in-memory copy is what the page actually reads.
-  var upMem = {};
-  function upKey(s) { return 'it.dfs.csv.' + s; }
-  function upGet(s) { if (upMem[s]) return upMem[s]; try { return localStorage.getItem(upKey(s)) || ''; } catch (err) { return ''; } }
-  function upSet(s, csv) { upMem[s] = csv || ''; try { if (csv) localStorage.setItem(upKey(s), csv); else localStorage.removeItem(upKey(s)); } catch (err) {} }
-  function upState(msg, bad) { var el = $('dfUpState'); el.textContent = msg; el.className = 'df-up-state' + (bad ? ' bad' : ''); }
-
-  function slateOk(j) {
-    slate = j;
-    if (whatIfKey && !(j.players || []).some(function (p) { return p.key === whatIfKey; })) clearWhatIf(false);
-    var stamp = j.source === 'upload'
-      ? 'Priced from your own ' + (j.label || 'salary') + ' file. It was read in this browser and stored nowhere on the site.'
-      : 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
-    $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + e(stamp);
-    render();
-  }
-  function slateNone(msg, label) {
-    slate = null;
-    $('dfNote').textContent = msg;
-    $('dfEmpty').textContent = 'No ' + (label || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.';
-    $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
-    $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
-    $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted. Upload your own contest\u2019s salary file above and the roster builds off that.</p>';
-    $('dfPivots').innerHTML = ''; built = null;
-  }
-  // Price the reader's file. A file the parser refuses is theirs to fix, so the
-  // reason is printed and the page falls back to the site's own slate rather
-  // than sitting on a blank board — and a refused file is not kept.
-  function loadUpload(csv) {
-    upState('Reading your file\u2026', false);
-    fetch('/api/dfs/slate', { method: 'POST', headers: { 'content-type': 'application/json' },
-                              body: JSON.stringify({ site: site, csv: csv, contest: contest }) })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (!j || !j.ok) {
-          upSet(site, ''); $('dfUpClear').hidden = true;
-          upState((j && j.note) || 'That file could not be read.', true);
-          loadSite();
-          return;
-        }
-        upSet(site, csv);
-        $('dfUpClear').hidden = false;
-        upState('Your file: ' + j.players.length + ' priced rows'
-                + (j.unmatched ? ' \u00b7 ' + j.unmatched + ' of them are not on this week\u2019s board' : '')
-                + '. Stored in this browser only.', false);
-        slateOk(j);
-      })
-      .catch(function () { upState('The slate did not answer. Your file was not read.', true); });
-  }
-  function loadSite() {
-    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label); return; }
-      slateOk(j);
-    }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
-  }
-  function load() {
-    press($('dfSite'), 'data-site', site);
-    if (isPickem()) {
-      $('dfSiteNote').textContent = 'Higher or lower on a posted stat line; the board shows where the model leans. No cap, no salaries.';
-      $('dfNav').hidden = true;
-      SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = true; });
-      $('sec-pickem').hidden = false;
-      $('dfUp').hidden = true;
-      $('dfShape').hidden = true; $('dfShapeNote').hidden = true;
-      $('dfNote').textContent = '';
-      loadPickem();
-      return;
-    }
-    $('sec-pickem').hidden = true;
-    $('dfNav').hidden = false;
-    $('dfUp').hidden = false;
-    $('dfShape').hidden = false; $('dfShapeNote').hidden = false;
-    applyShape();
-    $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
-    show();
-    var mine = upGet(site);
-    $('dfUpClear').hidden = !mine;
-    if (!mine) upState('Playing a different slate? Export the salary CSV from your contest lobby and price it here. It stays in this browser.', false);
-    if (mine) loadUpload(mine); else loadSite();
-  }
-  document.addEventListener('DOMContentLoaded', function () {
-    press($('dfMode'), 'data-mode', mode); applyShape(); show();
-    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; clearWhatIf(false); load(); });
-    $('dfWhatIfInput').addEventListener('input', renderWhatIfList);
-    $('dfWhatIfInput').addEventListener('focus', renderWhatIfList);
-    $('dfWhatIfInput').addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter') { ev.preventDefault(); chooseBestWhatIf(); }
-      if (ev.key === 'Escape') $('dfWhatIfList').hidden = true;
-    });
-    $('dfWhatIfList').addEventListener('click', function (ev) {
-      var b = ev.target.closest('button[data-whatif-key]'); if (!b) return;
-      var key = b.getAttribute('data-whatif-key');
-      var p = whatIfPlayers().find(function (x) { return x.key === key; });
-      setWhatIf(p);
-    });
-    $('dfWhatIfClear').addEventListener('click', function () { clearWhatIf(true); });
-    // The salary file. The server caps the body at a million characters, so a
-    // file past that is refused here rather than truncated into a CSV that
-    // parses and quietly leaves half the slate off the board.
-    $('dfUpFile').addEventListener('change', function (ev) {
-      var f = ev.target.files && ev.target.files[0];
-      ev.target.value = '';
-      if (!f) return;
-      if (f.size > 1000000) { upState('That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.', true); return; }
-      var fr = new FileReader();
-      fr.onload = function () { marks = {}; loadUpload(String(fr.result || '')); };
-      fr.onerror = function () { upState('That file could not be read from your computer.', true); };
-      fr.readAsText(f);
-    });
-    $('dfUpPaste').addEventListener('click', function () {
-      var open = $('dfUpText').hidden;
-      $('dfUpText').hidden = !open; $('dfUpReadRow').hidden = !open;
-      if (open) $('dfUpText').focus();
-    });
-    $('dfUpRead').addEventListener('click', function () {
-      var csv = $('dfUpText').value;
-      if (!csv.trim()) { upState('Paste the salary CSV first.', true); return; }
-      marks = {}; loadUpload(csv);
-    });
-    $('dfUpClear').addEventListener('click', function () {
-      upSet(site, ''); marks = {};
-      $('dfUpClear').hidden = true; $('dfUpText').value = ''; $('dfUpText').hidden = true; $('dfUpReadRow').hidden = true;
-      upState('Back on the site\u2019s slate. Your file is gone from this browser.', false);
-      loadSite();
-    });
-    $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
-    $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); if (slate) values(slate); });
-    // The shape switch is the page's primary control: it re-solves the roster,
-    // re-sorts the values table (the server sorts that one, hence the reload)
-    // and re-labels the branches.
-    $('dfShape').addEventListener('click', function (ev) {
-      var b = ev.target.closest('button'); if (!b) return;
-      contest = b.getAttribute('data-contest');
-      applyShape(); load();
-      try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'dfs_contest', uid: localStorage.getItem('it.uid') || '', props: { path: location.pathname, contest: contest, site: site } })], { type: 'application/json' })); } catch (x) {}
-    });
-    desk();
-    // Anything moved by hand in the fine-tune panel takes the build off the
-    // preset and rebuilds immediately, so the roster on screen always matches
-    // the controls under it.
-    $('dfMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mode = b.getAttribute('data-mode'); press(this, 'data-mode', mode); tuned = true; build(); });
-    $('dfTune').addEventListener('change', function (ev) { if (ev.target.closest('#dfMode')) return; tuned = true; build(); });
-    $('dfBuild').addEventListener('click', function () { tuned = true; build(); });
-    $('dfPool').addEventListener('click', function (ev) { if (ev.target.closest('.df-player-link')) return; var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); tuned = true; build(); });
-    document.addEventListener('click', function (ev) {
-      var wi = ev.target.closest('[data-player-whatif]');
-      if (wi) {
-        var p0 = whatIfPlayers().find(function (p) { return p.key === wi.getAttribute('data-player-whatif'); });
-        closePlayerCalc(); setWhatIf(p0); return;
+      var lbtn = ev.target.closest('[data-advanced-lineups]');
+      if (lbtn) {
+        contest = 'gpp';
+        tuned = false;
+        applyShape();
+        $('dfN').value = Math.max(1, Math.min(20, parseInt(lbtn.getAttribute('data-advanced-lineups'), 10) || 10));
+        tuned = true;
+        load();
       }
-      var player = ev.target.closest('.df-player-link');
-      if (player) {
-        ev.preventDefault(); ev.stopPropagation();
-        openPlayerCalc(findSlatePlayer(player));
-        return;
-      }
-      if (ev.target.closest('[data-player-close]')) closePlayerCalc();
     });
-    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !$('dfPlayerModal').hidden) closePlayerCalc(); });
-    // Copy takes the roster to the clipboard as names, which is what every
-    // lobby's paste box wants. It copies; it does not enter anything.
-    $('dfLineups').addEventListener('click', function (ev) {
-      var b = ev.target.closest('button[data-copy]'); if (!b || !built) return;
-      var l = built.lineups[parseInt(b.getAttribute('data-copy'), 10)]; if (!l) return;
-      var text = l.players.map(function (p) { return p.slot + '  ' + p.name + '  ' + money(p.salary); }).join('\n');
-      var done = function () { var was = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = was; }, 1600); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () {});
-      else done();
-    });
-    load();
-  });
-})();
-</script>
-<!--chrome:navjs--><script>
-(function(){
-  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
-  if(!h||!b) return;
-  function set(open){
-    h.setAttribute('data-nav-open', open?'1':'0');
-    b.setAttribute('aria-expanded', open?'true':'false');
-  }
-  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
-  /* Escape closes it, and focus goes back to the button that opened it. */
-  document.addEventListener('keydown',function(e){
-    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
-  });
-  /* A tap outside the open menu closes it. */
-  document.addEventListener('click',function(e){
-    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
-  });
-})();
-</script><!--/chrome:navjs-->
-</body>
-</html>
-), 'Salary used');
-    var rows = l.players.map(function (p) {
-      return '<tr><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
-        + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></td>'
-        + '<td class="num">' + money(p.salary) + '</td>'
-        + '<td class="num">' + n1(p.proj) + '</td>'
-        + '<td class="num">' + fppgText(p) + '</td>'
-        + '<td class="num">' + edgeHtml(p) + '</td>'
-        + '<td class="num">' + n1(p.ceiling) + '</td>'
-        + '<td class="num">' + (p.ownership == null ? '\u2014' : n1(p.ownership) + '%') + '</td></tr>';
-    }).join('');
-    var meter = '<div class="df-meterwrap"><div class="is-meter' + (l.remaining < 400 ? ' tight' : '') + '"><i style="width:' + pct + '%"></i></div>'
-      + '<div class="df-caplab"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div></div>';
-    var table = '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num">' + e(fppgLabel()) + '</th><th class="num">IT Edge</th><th class="num">Ceiling</th><th class="num">Own</th></tr></thead><tbody>' + rows + '</tbody></table>';
-    var sub = e((slate.label || '') + (slate.week ? ' \u00b7 Week ' + slate.week : '') + ' \u00b7 ' + (ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode));
-    var foot = '<button class="btn alt" type="button" data-copy="' + i + '">Copy this lineup</button>'
-      + '<span class="df-copy">' + e(l.players.map(function (p) { return p.name; }).join(' \u00b7 ')) + '</span>';
-    // The lead roster is the one dark board on the page.
-    if (lead) {
-      return '<div class="is-board">'
-        + '<div class="is-board-head"><h3>' + e(sh.head) + '</h3><span class="is-board-sub">' + sub + '</span></div>'
-        + '<div class="is-stats">' + stats + '</div>' + meter + table
-        + '<div class="is-board-foot">' + foot + '</div></div>';
-    }
-    return '<div class="df-card">'
-      + '<div class="df-card-head"><h4>Alternate ' + i + '</h4><span class="df-why">' + n1(l[keys[0]]) + ' ' + e((STAT_LABEL[keys[0]] || 'pts').toLowerCase()) + '</span></div>'
-      + '<div class="is-stats">' + stats + '</div>' + meter + table
-      + '<div class="df-card-foot">' + foot + '</div></div>';
-  }
-
-  // ── the branches ──────────────────────────────────────────────────────────
-  // What else fits in each seat. In every shape but the big field the answer
-  // worth printing is the next best body -- the cost of moving off the solve,
-  // which is also where the roster is thin. In a large field the useful answer
-  // is the opposite one: the highest ceiling at the slot that FEWER entries
-  // will own than the incumbent, which is the swap that buys leverage rather
-  // than points.
-  function pivotRows(l, players) {
-    var inL = {}; l.players.forEach(function (p) { inL[p.id] = 1; });
-    var pts = (ITDfs.MODES[mode] || ITDfs.MODES.ironTuna).pts;
-    var flex = slate.flex || ['RB', 'WR', 'TE'];
-    var cap = parseInt($('dfCap').value, 10) || slate.cap;
-    var contra = contest === 'gpp';
-    var out = [];
-    l.players.forEach(function (cur) {
-      var room = cap - l.salary + cur.salary;
-      var cands = players.filter(function (q) {
-        if (inL[q.id] || q.salary > room) return false;
-        if (!(cur.slot === q.position || (cur.slot === 'FLEX' && flex.indexOf(q.position) >= 0))) return false;
-        if (!isFinite(pts(q)) || pts(q) <= 0) return false;
-        if (contra && cur.ownership != null && q.ownership != null && q.ownership >= cur.ownership) return false;
-        return true;
-      });
-      if (!cands.length) return;
-      cands.sort(function (a, b) { return contra ? (ITDfs.ceilingOf(b) - ITDfs.ceilingOf(a)) : (pts(b) - pts(a)); });
-      var alt = cands[0];
-      out.push({ slot: cur.slot, out: cur, into: alt,
-                 dProj: (alt.ironTunaPoints || 0) - (cur.proj || 0),
-                 dCeil: ITDfs.ceilingOf(alt) - (cur.ceiling || 0),
-                 dSal: alt.salary - cur.salary,
-                 own: alt.ownership });
-    });
-    // Worth reading first: in a big field the biggest ceiling gained, elsewhere
-    // the swap that costs the least.
-    out.sort(function (a, b) { return contra ? (b.dCeil - a.dCeil) : (b.dProj - a.dProj); });
-    return out;
-  }
-
-  function renderPivots(l, players) {
-    var host = $('dfPivots');
-    if (!l) { host.innerHTML = ''; return; }
-    var rows = pivotRows(l, players);
-    if (!rows.length) { host.innerHTML = ''; return; }
-    var contra = contest === 'gpp';
-    var sign = function (v, suffix) { return (v > 0 ? '+' : '') + (Math.round(v * 10) / 10) + (suffix || ''); };
-    var cls = function (v) { return v > 0 ? 'color:var(--teal)' : v < 0 ? 'color:var(--danger)' : ''; };
-    host.innerHTML = '<h3 class="df-h3">' + (contra ? 'The contrarian swap' : 'The next best body') + ' <em>every slot</em></h3>'
-      + '<p class="df-sub">' + (contra
-          ? 'The highest-ceiling player at each seat that fewer entries are modeled to own than the one in the roster. This is where a large-field lineup buys its leverage; take one or two, not nine.'
-          : 'What the seat is worth if the player in it is ruled out, or if you simply disagree. A swap that costs almost nothing is a slot the solve is indifferent about; one that costs three points is a slot the roster is built on.') + '</p>'
-      + '<div class="is-plate"><div class="is-scroll"><table class="is-table"><thead><tr><th>Slot</th><th>In the roster</th><th>Swap to</th><th class="num">\u0394 Proj</th><th class="num">\u0394 Ceiling</th><th class="num">\u0394 Salary</th><th class="num">Own</th></tr></thead><tbody>'
-      + rows.map(function (r) {
-          return '<tr><td>' + slotChip(r.slot) + '</td>'
-            + '<td>' + e(r.out.name) + ' <span class="is-status">' + money(r.out.salary) + '</span></td>'
-            + '<td><b>' + e(r.into.name) + '</b> <span class="is-status">' + e(r.into.position + ' \u00b7 ' + r.into.team) + '</span></td>'
-            + '<td class="num" style="' + cls(r.dProj) + '">' + sign(r.dProj) + '</td>'
-            + '<td class="num" style="' + cls(r.dCeil) + '">' + sign(r.dCeil) + '</td>'
-            + '<td class="num">' + (r.dSal > 0 ? '+' : '') + money(r.dSal).replace('$-', '-$') + '</td>'
-            + '<td class="num">' + (r.own == null ? '\u2014' : n1(r.own) + '%') + '</td></tr>';
-        }).join('')
-      + '</tbody></table></div></div>';
-  }
-
-  var built = null;
-  function whatIfPlayers() {
-    return (slate && slate.players || []).filter(function (p) { return p.onBoard && p.key; }).sort(function (a, b) { return (b.ironTunaPoints || 0) - (a.ironTunaPoints || 0); });
-  }
-  function whatIfMatches(value) {
-    var q = String(value || '').trim().toLowerCase();
-    if (!q) return [];
-    return whatIfPlayers().filter(function (p) {
-      return String(p.name || '').toLowerCase().indexOf(q) >= 0 ||
-             String(p.team || '').toLowerCase().indexOf(q) >= 0 ||
-             String(p.position || '').toLowerCase().indexOf(q) >= 0;
-    }).slice(0, 10);
-  }
-  function renderWhatIfList() {
-    var box = $('dfWhatIfList'), value = $('dfWhatIfInput').value;
-    var list = whatIfMatches(value);
-    if (!value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
-    box.innerHTML = list.map(function (p) {
-      return '<button type="button" role="option" data-whatif-key="' + e(p.key) + '"><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' · ' + p.team) + '</small></span><small>' + money(p.salary) + ' · IT ' + n1(p.ironTunaPoints) + '</small></button>';
-    }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
-    box.hidden = false;
-  }
-  function setWhatIf(p) {
-    if (!p || !p.key) return;
-    whatIfKey = p.key; whatIfName = p.name || 'Selected player';
-    if (marks[whatIfKey] === 'excl') delete marks[whatIfKey];
-    $('dfWhatIfInput').value = p.name + ' (' + p.position + ' · ' + p.team + ')';
-    $('dfWhatIfList').hidden = true;
-    $('dfWhatIfClear').hidden = false;
-    $('dfWhatIf').classList.add('active');
-    $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is forced into the lineup. Every other slot is re-solved around that choice.';
-    build();
-  }
-  function chooseBestWhatIf() {
-    var value = $('dfWhatIfInput').value.trim();
-    var list = whatIfMatches(value);
-    if (!list.length) return;
-    var q = value.toLowerCase();
-    var exact = list.find(function (p) { return p.name.toLowerCase() === q; });
-    setWhatIf(exact || list[0]);
-  }
-  function clearWhatIf(rebuild) {
-    whatIfKey = null; whatIfName = '';
-    $('dfWhatIfInput').value = '';
-    $('dfWhatIfList').hidden = true; $('dfWhatIfList').innerHTML = '';
-    $('dfWhatIfClear').hidden = true; $('dfWhatIf').classList.remove('active');
-    $('dfWhatIfState').textContent = 'As you type, matching players will appear below just like the cheat-sheet What If box.';
-    if (rebuild) build();
-  }
-  function build() {
-    if (!slate || !window.ITDfs) return;
-    var players = slate.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
-    var lock = [], excl = []; for (var k in marks) { if (marks[k] === 'lock') lock.push(k); else if (marks[k] === 'excl') excl.push(k); }
-    if (whatIfKey && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey);
-    var sh = SHAPES[contest] || SHAPES.single;
-    var r = ITDfs.build(players, { mode: mode, cap: parseInt($('dfCap').value, 10) || slate.cap, slots: slate.slots, flex: slate.flex, lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked, maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
-    built = r.ok ? r : null;
-    if (!r.ok) {
-      if (whatIfKey) $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is selected, but no legal lineup fits the current cap and constraints.';
-      $('dfLineups').innerHTML = '<p class="is-empty">No lineup satisfies those constraints under that cap. Loosen one in the fine-tune panel below.</p>';
-      $('dfPivots').innerHTML = '';
-      return;
-    }
-    var lead = r.lineups[0];
-    var alts = r.lineups.slice(1);
-    $('dfLineups').innerHTML = lineupCard(lead, 0, sh, true)
-      + (alts.length ? '<h3 class="df-h3">Branch off it <em>' + alts.length + ' more</em></h3><p class="df-sub">' + (contest === 'gpp'
-            ? 'The same core, re-solved to sit on different players. Entering a large field with one lineup is entering it with one opinion.'
-            : 'The next best rosters under the same rules, for a second and third entry.') + '</p>'
-          + '<div class="df-alts">' + alts.map(function (l, i) { return lineupCard(l, i + 1, sh, false); }).join('') + '</div>' : '')
-      + (r.note ? '<p class="is-note">' + e(r.note) + '</p>' : '');
-    renderPivots(lead, players);
-  }
-
-  function stacks(s) {
-    $('dfStacks').innerHTML = (s.stacks || []).map(function (g) {
-      var sideHtml = function (x, label) { return '<div><b>' + e(x.team) + '</b> <span class="is-status">' + label + '</span><br>QB: ' + (x.qb ? e(x.qb.name) + ' ' + money(x.qb.salary) + ' · ' + n1(x.qb.vegasPoints) : '—') + '<br>Catchers: ' + x.catchers.map(function (c) { return playerButton(c) + ' ' + money(c.salary) + ' · ' + n1(c.vegasPoints); }).join('; ') + '<br>Back: ' + (x.back ? e(x.back.name) + ' ' + money(x.back.salary) : '—') + '<br><b>QB + 2 stack:</b> ' + money(x.stackSalary) + ' for ' + n1(x.stackVegasPoints) + ' Vegas pts</div>'; };
-      return '<div class="df-stack"><h3>' + e(g.game) + ' · total ' + n1(g.total) + ' · implied ' + n1(g.impliedAway) + '–' + n1(g.impliedHome) + '</h3><div class="side">' + sideHtml(g.away, 'away') + sideHtml(g.home, 'home') + '</div><p class="is-note">Bring-back: ' + (g.bringBack.home ? e(g.bringBack.home.name) : '—') + ' for an away stack, ' + (g.bringBack.away ? e(g.bringBack.away.name) : '—') + ' for a home stack.</p></div>';
-    }).join('') || '<p class="is-empty">No game on this slate carries a posted total yet.</p>';
-  }
-  function tdBoard(s) {
-    var list = s.players.filter(function (p) { return p.onBoard && p.position !== 'DST'; }).sort(function (a, b) { return b.tdProbability - a.tdProbability; }).slice(0, 40);
-    $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
-    $('dfTd').hidden = !list.length;
-  }
-  function render() {
-    if (!slate) return;
-    $('dfCap').value = slate.cap;
-    refreshFppgHeads();
-    applyShape();
-    dashboard(slate); envTable(slate); values(slate); pool(slate); stacks(slate); tdBoard(slate);
-    // The lineup solves on load. It is the reason the page exists, and a Build
-    // button a reader has to find first is a page that answers nothing until
-    // they guess right.
-    build();
-  }
-
-  // ── pick'em ──────────────────────────────────────────────────────────────
-  // Underdog, PrizePicks and Sleeper are higher/lower on a posted stat line, so
-  // there is no salary and no cap and none of the sections above apply. The
-  // board is the market's implied line for the one stat each position is really
-  // priced on, against the model's own, off the same /api/boards every other
-  // surface reads.
-  var PICKEM = { pk: 'Underdog / PrizePicks', sl: 'Sleeper picks' };
-  var PRIMARY = { QB: ['passYd', 'Pass yds'], RB: ['rushYd', 'Rush yds'], WR: ['recYd', 'Rec yds'], TE: ['recYd', 'Rec yds'] };
-  var LEAN_PCT = 0.05;
-  var pickemLoaded = false;
-  function isPickem() { return site === 'pk' || site === 'sl'; }
-  function pickem(board) {
-    var rows = [];
-    (board && board.players || []).forEach(function (p) {
-      var m = PRIMARY[p.position];
-      if (!m || !p.vegas || !p.ironTuna || !p.games) return;
-      var line = p.vegas.stats ? p.vegas.stats[m[0]] : null;
-      var model = p.ironTuna.stats ? p.ironTuna.stats[m[0]] : null;
-      // QUOTED ONLY. With no posted prop the "line" is the game line applied to
-      // the player, which is what the model is built from too — so comparing
-      // them produces rounding, and a pick'em board of rounding is the worst
-      // thing this site could ship.
-      if (!(p.vegas.basis && p.vegas.basis.indexOf('props') === 0)) return;
-      if (line == null || model == null || line < 20) return;
-      var per = p.games || 1, l = line / per, mo = model / per;
-      rows.push({ name: p.name, pos: p.position, team: p.team, label: m[1], line: l, model: mo, pct: (mo - l) / l });
-    });
-    rows.sort(function (a, b) { return Math.abs(b.pct) - Math.abs(a.pct); });
-    rows = rows.slice(0, 14);
-    if (!rows.length) {
-      $('pkState').textContent = 'No priced player prop has reached this board for the week, so there is no posted line to read the model against. Books have props up; this build is not carrying them. The board is blank rather than filled with the model compared to itself.';
-      return;
-    }
-    $('pkBody').innerHTML = rows.map(function (r) {
-      var lean = Math.abs(r.pct) < LEAN_PCT ? '<span class="is-tag is-flat">No lean</span>'
-        : '<span class="is-tag is-accent">' + (r.pct > 0 ? 'Over' : 'Under') + '</span>';
-      return '<tr><td class="is-who">' + e(r.name) + ' <small>' + e(r.pos + ' \u00b7 ' + r.team) + '</small></td>' +
-        '<td>' + e(r.label) + '</td><td class="num">' + n1(r.line) + '</td>' +
-        '<td class="num"><span class="is-val">' + n1(r.model) + '</span></td>' +
-        '<td class="num">' + (r.pct > 0 ? '+' : '') + (r.pct * 100).toFixed(0) + '%</td>' +
-        '<td>' + lean + '</td></tr>';
-    }).join('');
-    $('pkWrap').hidden = false;
-    $('pkState').hidden = true;
-  }
-  function loadPickem() {
-    $('pkVenue').textContent = PICKEM[site] || 'Pick’em';
-    if (pickemLoaded) return;
-    pickemLoaded = true;
-    fetch('/api/boards?horizon=week&pos=ALL&scoring=ppr', { credentials: 'omit' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) { if (j && j.ok) pickem(j); else $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; })
-      .catch(function () { $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; });
-  }
-  // ── the reader's own salary file ─────────────────────────────────────────
-  // Held in this browser and nowhere else: kept in memory for the session and
-  // mirrored to localStorage so a reload does not lose it. Storage can throw
-  // (private windows, a file past the quota), so every touch is guarded and
-  // the in-memory copy is what the page actually reads.
-  var upMem = {};
-  function upKey(s) { return 'it.dfs.csv.' + s; }
-  function upGet(s) { if (upMem[s]) return upMem[s]; try { return localStorage.getItem(upKey(s)) || ''; } catch (err) { return ''; } }
-  function upSet(s, csv) { upMem[s] = csv || ''; try { if (csv) localStorage.setItem(upKey(s), csv); else localStorage.removeItem(upKey(s)); } catch (err) {} }
-  function upState(msg, bad) { var el = $('dfUpState'); el.textContent = msg; el.className = 'df-up-state' + (bad ? ' bad' : ''); }
-
-  function slateOk(j) {
-    slate = j;
-    if (whatIfKey && !(j.players || []).some(function (p) { return p.key === whatIfKey; })) clearWhatIf(false);
-    var stamp = j.source === 'upload'
-      ? 'Priced from your own ' + (j.label || 'salary') + ' file. It was read in this browser and stored nowhere on the site.'
-      : 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
-    $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + e(stamp);
-    render();
-  }
-  function slateNone(msg, label) {
-    slate = null;
-    $('dfNote').textContent = msg;
-    $('dfEmpty').textContent = 'No ' + (label || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.';
-    $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
-    $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
-    $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted. Upload your own contest\u2019s salary file above and the roster builds off that.</p>';
-    $('dfPivots').innerHTML = ''; built = null;
-  }
-  // Price the reader's file. A file the parser refuses is theirs to fix, so the
-  // reason is printed and the page falls back to the site's own slate rather
-  // than sitting on a blank board — and a refused file is not kept.
-  function loadUpload(csv) {
-    upState('Reading your file\u2026', false);
-    fetch('/api/dfs/slate', { method: 'POST', headers: { 'content-type': 'application/json' },
-                              body: JSON.stringify({ site: site, csv: csv, contest: contest }) })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (!j || !j.ok) {
-          upSet(site, ''); $('dfUpClear').hidden = true;
-          upState((j && j.note) || 'That file could not be read.', true);
-          loadSite();
-          return;
-        }
-        upSet(site, csv);
-        $('dfUpClear').hidden = false;
-        upState('Your file: ' + j.players.length + ' priced rows'
-                + (j.unmatched ? ' \u00b7 ' + j.unmatched + ' of them are not on this week\u2019s board' : '')
-                + '. Stored in this browser only.', false);
-        slateOk(j);
-      })
-      .catch(function () { upState('The slate did not answer. Your file was not read.', true); });
-  }
-  function loadSite() {
-    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label); return; }
-      slateOk(j);
-    }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
-  }
-  function load() {
-    press($('dfSite'), 'data-site', site);
-    if (isPickem()) {
-      $('dfSiteNote').textContent = 'Higher or lower on a posted stat line; the board shows where the model leans. No cap, no salaries.';
-      $('dfNav').hidden = true;
-      SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = true; });
-      $('sec-pickem').hidden = false;
-      $('dfUp').hidden = true;
-      $('dfShape').hidden = true; $('dfShapeNote').hidden = true;
-      $('dfNote').textContent = '';
-      loadPickem();
-      return;
-    }
-    $('sec-pickem').hidden = true;
-    $('dfNav').hidden = false;
-    $('dfUp').hidden = false;
-    $('dfShape').hidden = false; $('dfShapeNote').hidden = false;
-    applyShape();
-    $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
-    show();
-    var mine = upGet(site);
-    $('dfUpClear').hidden = !mine;
-    if (!mine) upState('Playing a different slate? Export the salary CSV from your contest lobby and price it here. It stays in this browser.', false);
-    if (mine) loadUpload(mine); else loadSite();
-  }
-  document.addEventListener('DOMContentLoaded', function () {
-    press($('dfMode'), 'data-mode', mode); applyShape(); show();
-    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; clearWhatIf(false); load(); });
-    $('dfWhatIfInput').addEventListener('input', renderWhatIfList);
-    $('dfWhatIfInput').addEventListener('focus', renderWhatIfList);
-    $('dfWhatIfInput').addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter') { ev.preventDefault(); chooseBestWhatIf(); }
-      if (ev.key === 'Escape') $('dfWhatIfList').hidden = true;
-    });
-    $('dfWhatIfList').addEventListener('click', function (ev) {
-      var b = ev.target.closest('button[data-whatif-key]'); if (!b) return;
-      var key = b.getAttribute('data-whatif-key');
-      var p = whatIfPlayers().find(function (x) { return x.key === key; });
-      setWhatIf(p);
-    });
-    $('dfWhatIfClear').addEventListener('click', function () { clearWhatIf(true); });
-    // The salary file. The server caps the body at a million characters, so a
-    // file past that is refused here rather than truncated into a CSV that
-    // parses and quietly leaves half the slate off the board.
-    $('dfUpFile').addEventListener('change', function (ev) {
-      var f = ev.target.files && ev.target.files[0];
-      ev.target.value = '';
-      if (!f) return;
-      if (f.size > 1000000) { upState('That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.', true); return; }
-      var fr = new FileReader();
-      fr.onload = function () { marks = {}; loadUpload(String(fr.result || '')); };
-      fr.onerror = function () { upState('That file could not be read from your computer.', true); };
-      fr.readAsText(f);
-    });
-    $('dfUpPaste').addEventListener('click', function () {
-      var open = $('dfUpText').hidden;
-      $('dfUpText').hidden = !open; $('dfUpReadRow').hidden = !open;
-      if (open) $('dfUpText').focus();
-    });
-    $('dfUpRead').addEventListener('click', function () {
-      var csv = $('dfUpText').value;
-      if (!csv.trim()) { upState('Paste the salary CSV first.', true); return; }
-      marks = {}; loadUpload(csv);
-    });
-    $('dfUpClear').addEventListener('click', function () {
-      upSet(site, ''); marks = {};
-      $('dfUpClear').hidden = true; $('dfUpText').value = ''; $('dfUpText').hidden = true; $('dfUpReadRow').hidden = true;
-      upState('Back on the site\u2019s slate. Your file is gone from this browser.', false);
-      loadSite();
-    });
-    $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
-    $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); if (slate) values(slate); });
     // The shape switch is the page's primary control: it re-solves the roster,
     // re-sorts the values table (the server sorts that one, hence the reload)
     // and re-labels the branches.
