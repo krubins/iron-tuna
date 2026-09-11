@@ -367,7 +367,7 @@ console.log('\nthe packet the writer sees');
   const now = Date.now();
   ok('a piece held with no draft is retried after forty minutes', H.heldRetryable({ status: 'held', body: null, version: 1, created_at: now - 50 * 60000 }, now) && !H.heldRetryable({ status: 'held', body: null, version: 1, created_at: now - 10 * 60000 }, now));
   ok('a piece held by the fact check, with a draft, is not retried', !H.heldRetryable({ status: 'held', body: '{"weekly":{}}', version: 1, created_at: now - 3 * 3600000 }, now));
-  ok('nor a published piece, nor a sixth attempt', !H.heldRetryable({ status: 'published', body: null, version: 1, created_at: 0 }, now) && !H.heldRetryable({ status: 'held', body: null, version: 6, created_at: 0 }, now));
+  ok('nor a published piece, nor an eleventh attempt (a sixth is allowed: the Week 1 Weekend Preview needed more than six)', !H.heldRetryable({ status: 'published', body: null, version: 1, created_at: 0 }, now) && H.heldRetryable({ status: 'held', body: null, version: 6, created_at: 0 }, now) && !H.heldRetryable({ status: 'held', body: null, version: 10, created_at: 0 }, now));
 }
 
 console.log('\nanalyst memory');

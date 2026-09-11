@@ -9395,6 +9395,7 @@ COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (
 THE RIVALRY, when the packet carries one: exactly one line, intellectual, never personal. Acceptable: "Brooks still has him WR17. The receiving market appears considerably less worried." Not acceptable: insults, claims a colleague does not understand football, manufactured heat.
 STYLE. Direct, analytical, actionable, confident, concise. Take positions. No introductions, no restating the box score, no hedging padding, no em dashes (use a period, a colon or a comma). Never write "it's worth noting", "buckle up", "dive in", "game-changer", "in conclusion", "at the end of the day", "ever-evolving", "look no further". The analyst's personality is noticeable in the prose and never overrides the facts.
 HEADLINE AND DEK in sentence case: capitalize the first word and proper nouns (players, clubs, Vegas, Iron Tuna) and nothing else. Never Title Case. The headline names a player or a game and says what to do about it; the dek is one sentence carrying the finding and a number from the packet.
+LENGTH. At most six items per section, each one to three sentences. When the packet is large, choose what matters; never enumerate the whole slate. The whole answer must close its JSON.
 PUBLISH LESS. If the packet genuinely carries nothing a reader should act on, return {"skip":"<one sentence why>"} instead of filler.
 OUTPUT: a single JSON object, no prose outside it, in exactly the shape requested.`;
 const AI_PHRASES = [/it'?s worth noting/i, /buckle up/i, /dive in/i, /game-?changer/i, /in conclusion/i, /at the end of the day/i, /ever-evolving/i, /look no further/i, /—/];
@@ -9537,7 +9538,7 @@ async function contentLatest(env, kind, season, week, gameId) {
 // provider error, no key), not on the fact check. It is retried on a later
 // tick, at most every forty minutes and at most six times; a piece held
 // because its prose failed the check is not retried: that is the editor's.
-const RETRY_HELD_AFTER_MS = 40 * 60000, RETRY_HELD_MAX = 6;
+const RETRY_HELD_AFTER_MS = 40 * 60000, RETRY_HELD_MAX = 10;
 function heldRetryable(latest, now) {
   if (!latest || latest.status !== 'held') return false;
   if (latest.body && latest.body !== 'null') return false;
@@ -10888,8 +10889,24 @@ function jobScheduleReport(sched, now) {
 // The hourly tick. Phase 1 runs in parallel and finishes before phase 2
 // starts; the desk goes last. Nothing here throws: every job is a logged
 // row, and the tick's own answer lists them.
+// One invocation per quarter hour. From 20:15Z on September 11 the trigger
+// fired twice a slot, thirty seconds apart, and both ran the whole tick; on
+// a Sunday that is two writers on the same piece. The slot is claimed with
+// one insert on a primary key; the second claimant sees the row and stops.
+// Without a database (a test's bare env) every claim succeeds.
+async function tickClaim(env, at) {
+  if (!env || !env.LEADS_DB) return true;
+  try { if (typeof newsroomReady === 'function') await newsroomReady(env); } catch (e) {}
+  const slot = Math.floor(at / 900000);
+  try {
+    await env.LEADS_DB.prepare('INSERT INTO newsroom_settings (key, value, updated_at) VALUES (?, ?, ?)').bind('tick:' + slot, String(at), at).run();
+  } catch (e) { return false; }
+  try { await env.LEADS_DB.prepare("DELETE FROM newsroom_settings WHERE key LIKE 'tick:%' AND updated_at < ?").bind(at - 2 * 86400000).run(); } catch (e) {}
+  return true;
+}
 async function runScheduledTick(env, now, trigger) {
   const at = Number.isFinite(now) ? now : Date.now();
+  if (!(await tickClaim(env, at))) return { ok: true, at, et: etParts(at), skipped: 'duplicate invocation for this quarter-hour', due: [], ran: [], scheduleErrors: [] };
   const sched = jobScheduleFrom(env);
   const due = jobsDueAt(sched.entries, at);
   const ran = [];
