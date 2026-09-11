@@ -9066,3 +9066,229 @@ feeds report the SAME book, `snapshotWrite` keeps the first (SGO) and drops the
 second rather than averaging — two reports of one book's line is not two
 sources, and blurring them would invent a number that book never posted.
 
+---
+
+---
+
+## 73. September 10: a recap for every game, and the Weekly Wrap Up
+
+Ken's ask: *"Each week look at the schedule of games. When each game ends,
+post a story (which should be the lead headline) giving a fantasy recap
+addressing (A) obvious things such as point generating stats; (B) second
+level items like targets and carries that don't impact the score but
+demonstrate usage; and (C) next level information that signals usage for the
+future. The story should post as the top and lead story. When it is pushed
+down by the next, the individual components can become headlines. And a
+shorter summary of each game should be included as a Weekly Wrap Up."*
+
+The calendar built in §68 had one retrospective piece per SLATE (What Sunday
+Taught Us, Thursday Night: What Matters). This adds one per GAME.
+
+### 73a. The package
+
+`game-recap` in `CONTENT_KINDS`, Mike Raines on the weekly lens and Lena Park
+on DFS, and the first package in the calendar with **`perGame: true`**. It has
+`day: null, hour: null` because it has no weekday slot at all: it fires off
+the feed's own `final`, one piece per game, so a Thursday night game is
+recapped Thursday night and a Sunday one o'clock game at four.
+
+The three layers the ask names are the sections, in that order:
+
+| Section | Layer | What it is |
+|---|---|---|
+| `theGame` | — | the finding, in a sentence |
+| `whatScored` | **A** | fantasy points and the line that produced them, against what the board projected |
+| `usageBehindIt` | **B** | targets, carries and share. None of it scores; all of it predicts |
+| `nextWeekSignals` | **C** | opportunity that has not turned into points yet, red-zone and goal-line work, roles that moved |
+| `components` | — | the story broken into its own findings (see 70c) |
+| `waiverAndTrade` | — | what to do about it |
+| `wrap` | — | the two sentences the Weekly Wrap Up collects |
+
+`packetGameRecap(game, summary, ctx)` builds all of it from the stored box
+score (`gameSummaryFor` / `normalizeGameSummary`, which already carried
+targets, carries, red-zone touches and goal-line carries) plus the season's
+usage file, the depth chart and the board. Every entry in the forward layer
+names the computed flag that put it there, so the writer argues from a number
+rather than from the shape of a stat line. `wrapFacts` is the short list the
+`wrap` section is built from, so the wrap and the story cannot drift apart.
+
+### 73b. One row per game
+
+`content_pieces` was keyed `(kind, season, week)` and now also carries
+`game_id`, `components` and `wrap` (guarded `ALTER TABLE` in `newsroomReady`,
+plus `ix_content_game`). `_slugOf` takes a fourth argument and `_pieceUrl`
+a fourth path segment: `/in-season/desk/game-recap/1/2026-01-ne-sea`. The
+segment is the slugified game id and `_gameSlug` is idempotent, so the segment
+read back off the path rebuilds the stored slug exactly and
+`contentPiecePayload` looks the piece up by it, with no reverse mapping.
+
+`contentDue` returns early for a per-game kind: due and ready the moment any
+game of its week is final, `dueAt` the last such kickoff so `deskNextPayload`
+(which only looks forward) passes over it. `runPerGameKind` walks the week's
+final games oldest first and produces at most `RECAPS_PER_TICK` (**2**) a
+tick. A single piece took 130 seconds on the first live run (§68l), the desk
+tick has thirteen minutes, and it also walks the sixteen other packages, so
+writing a whole Sunday afternoon in one invocation would blow the deadline —
+and a job past its deadline is abandoned mid-flight rather than cancelled
+(§68m), which is the worst outcome available here. The cost is that the last
+of nine one o'clock games is recapped a little over an hour after it ends
+rather than immediately; oldest-first means the wait is always spent on the
+game that has waited longest. **This is the one number to tune if recaps run
+late**, and it should go up once the worker is on the Standard usage model
+(the CPU-limits note at the end of the previous section).
+
+### 73c. The lead, and what happens when it is pushed down
+
+The front-page lead is already the newest published desk piece
+(`deskLeadPayload`, §68p), so a recap published at the final whistle **is** the
+lead with no extra plumbing. Two things were added on top:
+
+- **A recap that is no longer the lead breaks into its components.** While it
+  leads it runs whole, under its own headline. The moment a later game's recap
+  takes the lead, the rail stops printing it as one row and prints its
+  findings instead, each a headline of its own linking to
+  `#component-<n>` on the piece. That is the ask's "the individual components
+  can become headlines". `_componentsOf` lifts them out of the body at publish
+  so the front page reads a column rather than parsing every piece's prose;
+  `desk.html` renders them as an anchored ordered list, keeps the hash through
+  its own `replaceState`, and scrolls to it after painting (the body is painted
+  after load, so the browser has already given up on the anchor by then).
+- **A per-game row is labeled by its matchup.** Six rows all reading "Game
+  Recap" say nothing about which game, so the feed carries the row's own title
+  and `deskLeadPayload` uses it. The lead also gets its faces now, from the
+  players its components name, guarded so the desk payload does not depend on
+  the draft-season lead block being loaded.
+
+### 73d. The Weekly Wrap Up
+
+`/weekly-wrap`, served by `/api/weekly-wrap` (`weeklyWrapPayload`). It is
+**derived, never written**: a game's summary there is the `wrap` section of
+that game's own recap, so there is no second draft to fact-check and no way
+for the short form to say something the long form does not. Games with no
+recap yet are listed with the reason, so the page reads as a full slate from
+Thursday morning rather than appearing a game at a time.
+
+Where it is reachable from: `POST_DRAFT_PAGES` (so it is gated with the rest
+of the section), `build-chrome.mjs`'s `IN_SEASON` set, the footer's In-Season
+column, `llms.txt`, the sitemap, a **Weekly Wrap Up** more-link on the front
+page's Desk section head (in season only, beside "The whole desk"), and the
+desk index, where the recap card points here rather than at
+`/in-season/desk/game-recap` — that URL lands on whichever single game was
+written last, which is not an index of anything.
+
+### 73d-i. The admin board
+
+A per-game kind holds one row per game of a week, so "the latest piece for
+this kind and week" is whichever game happened to be written last. Every
+editorial action therefore takes a game: `contentAdmin` and `_latestPiece`
+(preview, publish, unpublish, regenerate, edit), `newsroomAdmin`'s `approve`
+(which refuses without one for a per-game kind) and `run`, the
+`/api/admin/content` and `/api/admin/newsroom` routes, and the buttons in the
+Editorial table, which carry `data-game`. The table's Slot column reads "each
+game, when final" instead of a weekday it does not have, and its Week column
+carries an `n/m recapped` count.
+
+### 73e. "We told you so", and the freeze that makes it provable
+
+Ken's follow-up: where Iron Tuna advised of a significant over- or
+underperformance against the expert rankings and it happened, say so in the
+recap, and if it is big enough, in the headline.
+
+**The problem is evidence, not phrasing.** The boards are recomputed
+continuously. Reading them after the whistle and calling the difference a
+prediction is how a desk ends up quoting itself from numbers that did not
+exist when it supposedly spoke. So the claim is built on a frozen record and
+on nothing else:
+
+- **`week_board_snapshots (season, week, game_id, taken_at, kickoff, payload)`**
+  holds, per game, what all three boards said about the two clubs' players.
+- **`board-freeze`** is a new phase-2 job on every quarter hour. It acts only
+  on a game kicking off inside the next two hours (`BOARD_FREEZE_LEAD_MS`) and
+  only once per game, so a tick with nothing imminent costs one schedule read.
+  A game already under way is never frozen: whatever the board says then has
+  seen part of the result.
+- **`_vindication(freeze, scoredByKey, week)`** grades it. Iron Tuna's weekly
+  projection against the CONSENSUS one — which is what "expert rankings" means
+  here — higher is a called overperformance, lower a called underperformance,
+  and the call lands when the player's actual points finish on Iron Tuna's
+  side of the consensus number. **No frozen row, no block, and the story makes
+  no claim about having called anything.**
+
+Two gates, both arithmetic in the packet rather than the writer's judgement:
+a disagreement counts as a call at all at `CALLED_MIN_PTS` (2.0) **and**
+`CALLED_MIN_RANKS` (4); it may reach the headline only at
+`CALLED_HEADLINE_PTS` (6.0) **and** `CALLED_HEADLINE_RANKS` (8).
+
+**The misses ride along with the hits.** `calledIt.misses` is in the packet
+and the writer is told to print at least one when it is not empty. A section
+that lists the wins and hides the losses in the same box score is not a
+record, and the reader has the box score. Only a hit may ever be the headline.
+
+The section is `weCalledIt`, second in the weekly lens. Where
+`calledIt.headline` is set the writer may open with **`YOU'RE WELCOME:`** —
+spelled with the apostrophe, at most once, only for that player, and only if
+the game has no bigger story. `calledIt` is exempt from `compactForWriter`'s
+whole-block drop, because the voice block promises it.
+
+### 73f. A defect this found
+
+`briefForGames` matched box-score players to board rows on `key`. The two
+sides key differently: a board row is `_oddsNorm(name)|POSITION`
+(`boardsPayload`) and a box-score line is `_oddsNorm(name)` alone
+(`normalizeGameSummary`), because ESPN's box score carries no position. The
+map therefore never returned a row, `exp` was null for every player, and
+`winners` and `losers` came back **empty every week** in What Sunday Taught Us
+and Thursday Night: What Matters. Both now match on the normalized name
+(`_boardByNorm` / `_boardRowFor`), with the team breaking a tie between two
+players of the same name.
+
+### 73g. Tests
+
+`tools/test-newsroom.mjs` gained thirteen assertions on the vindication block:
+no frozen board means no claim; a called over- and a called underperformance
+graded in both directions; a disagreement too small in points or in ranks
+counted as no call at all; a frozen player absent from the box score skipped
+rather than graded; only a wide enough hit reaching the headline; a miss never
+reaching it however large; the hits ordered by margin; the writer handed the
+misses and told to print one; "YOU'RE WELCOME" offered only on a
+headline-sized hit and never misspelled; and `_freezeRows` keeping all three
+boards while dropping a bye, an inactive, a kicker and the other clubs.
+`tools/test-jobs.mjs` carries `board-freeze` at every quarter hour. Three more
+hold the contract that a section is asked for and required together: the list
+`_lensShape` hands the writer and the list `factCheck` holds it to both come
+from `sectionsFor(kind, lens, packet)`, so a recap with nothing called is not
+held for omitting the section it was told to omit, and one that DID call
+something still is.
+
+`tools/test-dry-run.mjs` runs `board-freeze` on every tick of the simulated
+fortnight, as the schedule does, and then asserts the whole chain: a board
+frozen for every game before its kickoff and never after, inside the two-hour
+window, once per game; every frozen row carrying all three boards for the two
+clubs; every recap reading that row rather than reporting none; every graded
+call naming both boards, the actual and its direction; every hit finishing on
+Iron Tuna's side of the consensus and every miss not; the headline call, where
+there is one, being a hit that clears the wider bar; and the section present
+exactly on the recaps that called something.
+
+Also in `tools/test-newsroom.mjs`: seventeen scheduled packages, the one per-game kind
+carries no clock slot (and the audit fails if it ever gains one), the recap
+targets only games the feed marked final, and the sections carry the three
+layers in order plus the findings and the wrap.
+
+`tools/test-dry-run.mjs`, over the same simulated fortnight: a recap per game
+rather than per week, each naming its own game in its slug, title and column;
+no two recaps of a week sharing a slug; a recap only ever covering a final
+game; the packet carrying the three layers; a published recap storing its
+findings and its summary; a pushed-down recap appearing in the rail as
+component headlines pointing at `#component-<n>`; a per-game rail row labeled
+by its matchup; and the Weekly Wrap Up listing all six games of the week, each
+carrying its own recap's summary and never one the recap did not write. The
+fake D1 honors `game_id` and the slug lookup, and the fake writer answers the
+recap's object sections.
+
+One cost worth knowing: the fixture fortnight has six games a week, so the dry
+run now drives twelve more pieces through the whole pipeline than it did, and
+takes about five and a half minutes. The `nothing published twice` rule gained
+a per-game exception and, beside it, the stricter rule that actually holds for
+those kinds — one row per GAME, checked on the game id.
+

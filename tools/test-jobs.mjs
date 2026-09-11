@@ -14,7 +14,7 @@ const cut = (a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i); if (i <
 
 // Real ET clock helpers from the worker; stubbed jobs that record their runs.
 const runs = [];
-const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'usage-prior-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick', 'league-sync'].map(j => [j, async () => ({ ok: true })]));
+const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'usage-prior-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'board-freeze', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick', 'league-sync'].map(j => [j, async () => ({ ok: true })]));
 const jobRun = async (env, name, trigger) => {
   const rec = { job: name, trigger, started: Date.now() }; runs.push(rec);
   if (name === 'schedule-refresh') await new Promise(r => setTimeout(r, 30));
@@ -55,7 +55,7 @@ console.log('\nwhat is due, and daylight saving');
   ok('Tuesday 6 AM Eastern in December (11:00Z) runs it too', due(ET(2026, 12, 15, 6, 0, false)).includes('ros-snapshot') && ET(2026, 12, 15, 6, 0, false) === Date.UTC(2026, 11, 15, 11));
   ok('and 10:00Z in December, which is 5 AM Eastern, does not', !due(Date.UTC(2026, 11, 15, 10)).includes('ros-snapshot'));
   ok('Wednesday 6 AM does not run it', !due(ET(2026, 9, 16, 6, 0, true)).includes('ros-snapshot'));
-  ok('a quarter past the hour runs the quarter-hourly jobs and nothing else', due(ET(2026, 9, 15, 6, 15, true)).join() === 'news-scan,content-tick');
+  ok('a quarter past the hour runs the quarter-hourly jobs and nothing else', due(ET(2026, 9, 15, 6, 15, true)).join() === 'board-freeze,news-scan,content-tick');
   ok('Sunday 12:15 PM pulls the injury list before the desk tick', (() => { const d = due(ET(2026, 9, 13, 12, 15, true)); return d.indexOf('availability-refresh') >= 0 && d.indexOf('availability-refresh') < d.indexOf('content-tick') && d.includes('schedule-refresh'); })());
   ok('a Sunday 12:30 in December (17:30Z) is the same Eastern quarter', due(Date.UTC(2026, 11, 13, 17, 30)).includes('availability-refresh'));
   ok('every hour runs the schedule refresh and the desk tick', [3, 11, 17, 23].every(h => { const d = due(ET(2026, 9, 14, h, 0, true)); return d.includes('schedule-refresh') && d.includes('content-tick'); }));
@@ -128,7 +128,7 @@ console.log('\nthe tick');
   ok('the next quarter-hour is a new claim', !(await H.runScheduledTick(lenv, ET(2026, 9, 13, 12, 30, true), '*/15 * * * *')).skipped);
   ok('with no database every claim succeeds', await H.tickClaim({}, Date.now()) === true);
   const quiet = await H.runScheduledTick({}, ET(2026, 9, 14, 15, 0, true), 'x'); // Mon 3 PM
-  ok('a quiet hour runs only the hourly jobs', quiet.due.join() === 'schedule-refresh,news-scan,league-sync,content-tick');
+  ok('a quiet hour runs only the hourly jobs', quiet.due.join() === 'schedule-refresh,board-freeze,news-scan,league-sync,content-tick');
   ok('a bad override is on the tick\'s answer', (await H.runScheduledTick({ JOB_SCHEDULE_JSON: '[1]' }, ET(2026, 9, 14, 15, 0, true), 'x')).scheduleErrors.length === 1);
 }
 

@@ -776,9 +776,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     $('hlthEditorial').innerHTML = '<tr><th>Piece</th><th>Slot (ET)</th><th>Week</th><th>Gate</th><th>Latest</th><th></th></tr>' + (j.editorial || []).map(function(e){
       var gate = e.due && e.ready ? pill('due · ready', 'ok') : e.due ? pill('due · waiting', 'warn') + ' ' + esc(e.reason || '') : pill('not due', '') + ' ' + esc(e.reason || '');
       var p = e.piece, latest = p ? (p.status === 'published' ? pill('published', 'ok') : p.status === 'held' ? pill('held', 'warn') + ' ' + p.violations + ' violation' + (p.violations === 1 ? '' : 's') : pill(p.status, '')) + ' <span style="color:var(--muted)">wk ' + p.week + ', ' + esc(new Date(p.createdAt).toLocaleString()) + '</span>' : '<span style="color:var(--muted)">none</span>';
-      var b = function(act, label){ return '<button class="btn" type="button" data-act="' + act + '" data-kind="' + esc(e.kind) + '" data-week="' + (p ? p.week : (e.week == null ? '' : e.week)) + '">' + label + '</button> '; };
+      // A per-game kind's buttons act on ONE game: the newest recap of the
+      // week. Without it, Approve would publish whichever game was written
+      // last and Generate would rewrite the week's first final game forever.
+      var gameAttr = e.perGame ? ' data-game="' + esc((p && p.game) || '') + '"' : '';
+      var b = function(act, label){ return '<button class="btn" type="button" data-act="' + act + '" data-kind="' + esc(e.kind) + '" data-week="' + (p ? p.week : (e.week == null ? '' : e.week)) + '"' + gameAttr + '>' + label + '</button> '; };
       var acts = (p ? b('preview', 'Preview') + b('edit', 'Edit') + (p.status === 'published' ? b('unpublish', 'Unpublish') : (p.status === 'held' ? b('approve', 'Approve') : b('publish', 'Publish'))) : '') + b('regenerate', p ? 'Regenerate' : 'Generate');
-      return '<tr><td><b>' + esc(e.title) + '</b>' + (e.optional ? ' <span style="color:var(--muted)">optional</span>' : '') + (e.gate ? ' <span style="color:var(--muted)">worth-gated</span>' : '') + (e.updates ? ' <span style="color:var(--muted)">live updates</span>' : '') + (e.analystName ? '<br><span style="color:var(--muted)">' + esc(e.analystName) + (e.lens === 'both' ? ' · Weekly + DFS' : '') + '</span>' : '') + '</td><td>' + esc(e.unscheduled ? 'on news' : e.day + ' ' + e.hour + ':' + (e.minute < 10 ? '0' : '') + (e.minute || 0)) + '</td><td>' + (e.week == null ? '—' : e.week) + '</td><td>' + gate + '</td><td>' + latest + '</td><td style="white-space:nowrap">' + acts + '</td></tr>'; }).join('');
+      return '<tr><td><b>' + esc(e.title) + '</b>' + (e.optional ? ' <span style="color:var(--muted)">optional</span>' : '') + (e.gate ? ' <span style="color:var(--muted)">worth-gated</span>' : '') + (e.updates ? ' <span style="color:var(--muted)">live updates</span>' : '') + (e.analystName ? '<br><span style="color:var(--muted)">' + esc(e.analystName) + (e.lens === 'both' ? ' · Weekly + DFS' : '') + '</span>' : '') + '</td><td>' + esc(e.unscheduled ? 'on news' : e.perGame ? 'each game, when final' : e.day + ' ' + e.hour + ':' + (e.minute < 10 ? '0' : '') + (e.minute || 0)) + '</td><td>' + (e.week == null ? '—' : e.week) + (e.games ? ' <span style="color:var(--muted)">' + e.games.written + '/' + e.games.final + ' recapped</span>' : '') + '</td><td>' + gate + '</td><td>' + latest + '</td><td style="white-space:nowrap">' + acts + '</td></tr>'; }).join('');
     nrRender(j.newsroom);
   }
   function nrRender(n){
@@ -848,10 +852,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       .catch(function(e){ $('hlthMeta').textContent = 'Network error: ' + ((e && e.message) || ''); });
   }
   function hlthMsg(id, kind, html){ $(id).className = 'result ' + kind; $(id).querySelector('.msg').innerHTML = html; }
-  function hlthAction(act, kind, week, body){
+  function hlthAction(act, kind, week, body, game){
     var key = getKey(); if (!key) { showGate('Session locked. Enter the key again.'); return Promise.resolve(null); }
     var payload = { action: act, kind: kind };
     if (week !== '' && week != null) payload.week = Number(week);
+    if (game) payload.game = game;
     if (body) payload.body = body;
     return fetch('/api/admin/content?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }).then(function(r){ return r.json(); });
   }
@@ -877,13 +882,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   $('hlthEditorial').addEventListener('click', function(ev){
     var b = ev.target.closest('button[data-act]'); if (!b) return;
     var act = b.getAttribute('data-act'), kind = b.getAttribute('data-kind'), week = b.getAttribute('data-week');
+    var game = b.getAttribute('data-game') || '';
     if (act === 'regenerate' && !confirm('Generate a fresh draft of ' + kind + ' now, past the due/ready gate? This calls the writer and stores a new row.')) return;
     if (act === 'unpublish' && !confirm('Take ' + kind + ' (week ' + week + ') off the public desk?')) return;
     var was = b.textContent; b.disabled = true; b.textContent = 'Working…';
     hlthMsg('hlthPieceResult', '', esc(act) + ' ' + esc(kind) + '…');
     var run = act === 'approve'
-      ? fetch('/api/admin/newsroom?key=' + encodeURIComponent(getKey()), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'approve', kind: kind, week: week }) }).then(function(r){ return r.json(); }).then(function(j){ if (j && j.ok) { hlthMsg('hlthPieceResult', 'ok', '<b>Approved</b> ' + esc(kind) + ' for week ' + esc(week) + '; ' + esc(j.calls) + ' calls recorded.'); hlthLoad(); } else hlthMsg('hlthPieceResult', 'bad', '<b>approve failed.</b> ' + esc((j && j.error) || '')); return null; })
-      : hlthAction(act, kind, week);
+      ? fetch('/api/admin/newsroom?key=' + encodeURIComponent(getKey()), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'approve', kind: kind, week: week, game: game || undefined }) }).then(function(r){ return r.json(); }).then(function(j){ if (j && j.ok) { hlthMsg('hlthPieceResult', 'ok', '<b>Approved</b> ' + esc(kind) + ' for week ' + esc(week) + '; ' + esc(j.calls) + ' calls recorded.'); hlthLoad(); } else hlthMsg('hlthPieceResult', 'bad', '<b>approve failed.</b> ' + esc((j && j.error) || '')); return null; })
+      : hlthAction(act, kind, week, null, game);
     run.then(function(j){
       if (!j) return;
       if (!j.ok) { hlthMsg('hlthPieceResult', 'bad', '<b>' + esc(act) + ' failed.</b> ' + esc(j.note || j.error || j.reason || '')); return; }
@@ -897,7 +903,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   $('hlthEditorSave').addEventListener('click', function(){
     if (!hlthOpen) return;
     var body; try { body = JSON.parse($('hlthEditorBody').value); } catch(e){ hlthMsg('hlthPieceResult', 'bad', '<b>Not saved.</b> The body is not valid JSON: ' + esc(e.message)); return; }
-    hlthAction('edit', hlthOpen.kind, hlthOpen.week, body).then(function(j){
+    hlthAction('edit', hlthOpen.kind, hlthOpen.week, body, hlthOpen.game).then(function(j){
       if (!j) return;
       if (!j.ok) { hlthMsg('hlthPieceResult', 'bad', '<b>Not saved.</b> ' + esc(j.note || j.error || '')); return; }
       hlthOpen = j.piece;
