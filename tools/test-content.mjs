@@ -204,6 +204,9 @@ console.log('\nthe validator');
   const th = H._finishBrief({ players: [{ name: 'Puka Nacua', yards: 1600, season: 2026 }] });
   ok('a thousand with a separator is one number', H.validateDraft('Nacua went for 1,600 yards.', th.allowed).ok, JSON.stringify(H.validateDraft('Nacua went for 1,600 yards.', th.allowed)));
   ok('and a thousand the packet lacks is caught whole, not by its tail', ['1900', '1,900'].includes(H.validateDraft('He is on pace for 1,900.', th.allowed).numbers.join()));
+  const pay = H._finishBrief({ players: [{ name: 'Josh Allen', salary: 7000 }, { name: 'Trevor Lawrence', salary: 5800 }, { name: 'Bo Nix', salary: 4700 }, { name: 'Sam Darnold', salary: 4000 }] });
+  ok('money is arithmetic on money: a dollar difference of two packet salaries passes', H.validateDraft('Lawrence saves $1,200 against Allen; the 700-dollar difference between Nix and Darnold is real.', pay.allowed).ok, JSON.stringify(H.validateDraft('Lawrence saves $1,200 against Allen; the 700-dollar difference between Nix and Darnold is real.', pay.allowed)));
+  ok('but a bare number that only happens to be a salary difference is still caught', H.validateDraft('He is on pace for 1,200 yards.', pay.allowed).numbers.join() === '1200');
   const nn = H.validateDraft('He ran for 155 yards, 4.7 per carry.', wk.allowed);
   ok('a number that is neither in the packet nor arithmetic on it is still caught', nn.numbers.join() === '155,4.7', JSON.stringify(nn));
   // Week 1's Kickers & Defenses was held on "number:600" for "salary 2,600".

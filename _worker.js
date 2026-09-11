@@ -7975,10 +7975,18 @@ function validateDraft(text, allowed) {
   const vals = [...nums].map(Number).filter(Number.isFinite);
   const grid = new Set(vals.map(x => x.toFixed(1)));
   const arithmetic = a => a < 10 && vals.some(x => grid.has((x - a).toFixed(1)) || grid.has((x + a).toFixed(1)));
-  for (const m of String(text).matchAll(_NUM_RE)) {
-    const v = m[0].replace(/,/g, ''); const num = Number(v), abs = Math.abs(num);
+  // Money is arithmetic on money: "$800 savings" and "the 700-dollar
+  // difference" are two packet salaries subtracted, and a salary-scale
+  // packet number (a thousand or more) minus or plus another is allowed when
+  // the draft marks the result as dollars. A bare "1,500" is not.
+  const big = vals.filter(x => Number.isInteger(x) && Math.abs(x) >= 1000);
+  const bigSet = new Set(big);
+  const moneyArithmetic = a => Number.isInteger(a) && big.some(x => bigSet.has(x - a) || bigSet.has(x + a));
+  for (const m of String(text).matchAll(/(\$)?(-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?)(-dollar|\s?dollars?)?/g)) {
+    const v = m[2].replace(/,/g, ''); const num = Number(v), abs = Math.abs(num);
     if (nums.has(v) || nums.has(String(abs)) || (Number.isInteger(num) && abs <= 20)) continue;
     if (arithmetic(abs)) continue;
+    if ((m[1] || m[3]) && moneyArithmetic(abs)) continue;
     bad.numbers.push(v);
   }
   bad.names = [...new Set(bad.names)]; bad.numbers = [...new Set(bad.numbers)];
