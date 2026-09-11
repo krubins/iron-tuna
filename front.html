@@ -4975,6 +4975,108 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
             why: 'A big field pays almost everything to the top fraction of a percent, so the median is worth nothing. Ceiling discounted by modeled ownership, stacked and brought back \u2014 the build that carries longshots on purpose.' }
   };
   var shape = 'single';
+  var frontGameStyle = '', frontGameChoice = '', frontPayout = '', frontGameKeys = {};
+  var FRONT_SINGLE = { 'showdown-captain':1, 'in-game-showdown':1, 'snake-showdown':1, 'madden-showdown-captain':1 };
+  var FRONT_PAYOUT_SHAPE = { h2h:'cash', '50-50':'cash', 'double-up':'cash', satellite:'cash', multiplier:'single', 'tournament-single':'single', 'tournament-multi':'gpp', private:'single' };
+
+  function frontGameKey(a,b){ a=String(a||'').toUpperCase(); b=String(b||'').toUpperCase(); return a&&b?[a,b].sort().join('|'):''; }
+  function frontPlayerGameKey(p){ return p ? frontGameKey(p.team,p.opponent) : ''; }
+  function frontKickoff(x){
+    var raw=x&&(x.startTime||x.gameStart||x.gameTime||x.kickoff||x.commenceTime||x.startDate||x.start);
+    if(!raw) return null; var d=new Date(raw); return isNaN(d.getTime())?null:d;
+  }
+  function frontHourET(d){
+    if(!d) return null;
+    try { var p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false}).formatToParts(d).filter(function(x){return x.type==='hour';})[0]; return p?parseInt(p.value,10):null; }
+    catch(e){ return null; }
+  }
+  function frontKickText(d){
+    if(!d) return '';
+    try{return d.toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short',hour:'numeric',minute:'2-digit'})+' ET';}catch(e){return '';}
+  }
+  function frontGames(s){
+    var map={};
+    (s&&s.stacks||[]).forEach(function(g){
+      if(!g||!g.home||!g.away)return;
+      var k=frontGameKey(g.home.team,g.away.team); if(!k)return;
+      map[k]={key:k,label:(g.game||g.away.team+' @ '+g.home.team),start:frontKickoff(g),players:0};
+    });
+    (s&&s.players||[]).forEach(function(p){
+      if(!p.onBoard||!p.team||!p.opponent)return;
+      var k=frontPlayerGameKey(p); if(!k)return;
+      if(!map[k]) map[k]={key:k,label:p.home===false?p.team+' @ '+p.opponent:p.home===true?p.opponent+' @ '+p.team:p.team+' vs '+p.opponent,start:frontKickoff(p),players:0};
+      map[k].players++;
+      if(!map[k].start) map[k].start=frontKickoff(p);
+    });
+    return Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){
+      if(a.start&&b.start&&a.start-b.start)return a.start-b.start;
+      return a.label.localeCompare(b.label);
+    });
+  }
+  function frontSelectedKeys(){ return Object.keys(frontGameKeys).filter(function(k){return frontGameKeys[k];}); }
+  function frontSetKeys(keys){ frontGameKeys={}; (keys||[]).forEach(function(k){frontGameKeys[k]=1;}); }
+  function frontPopulateGames(s){
+    var sel=$('dfsGames'); if(!sel)return;
+    if(!frontGameStyle){ sel.disabled=true; sel.innerHTML='<option value="">Select Game Style first…</option>'; return; }
+    if(frontGameStyle==='best-ball'){ sel.disabled=false; sel.innerHTML='<option value="">Select Games…</option><option value="season">Season-long player pool</option>'; if(frontGameChoice==='season')sel.value='season'; return; }
+    var games=frontGames(s), single=!!FRONT_SINGLE[frontGameStyle], html='<option value="">Select Games…</option>';
+    var all=games.map(function(g){return g.key;}), early=[], late=[], prime=[];
+    games.forEach(function(g){var h=frontHourET(g.start); if(h!=null){if(h>=12&&h<15)early.push(g.key);else if(h>=15&&h<19)late.push(g.key);else if(h>=19||h<1)prime.push(g.key);}});
+    if(!single){
+      if(all.length)html+='<option value="all">All listed games</option>';
+      if(early.length)html+='<option value="early">1 PM ET games</option>';
+      if(late.length)html+='<option value="late">4 PM / late afternoon games</option>';
+      if(prime.length)html+='<option value="prime">Primetime games</option>';
+    }
+    games.forEach(function(g){html+='<option value="game:'+e(g.key)+'">'+e(g.label)+(g.start?' · '+e(frontKickText(g.start)):'')+'</option>';});
+    sel.innerHTML=html; sel.disabled=!games.length;
+    sel.dataset.all=JSON.stringify(all); sel.dataset.early=JSON.stringify(early); sel.dataset.late=JSON.stringify(late); sel.dataset.prime=JSON.stringify(prime);
+    if(frontGameChoice&&[].some.call(sel.options,function(o){return o.value===frontGameChoice;}))sel.value=frontGameChoice; else frontGameChoice='';
+  }
+  function frontApplyGameChoice(){
+    var sel=$('dfsGames'); frontGameChoice=sel.value; var keys=[];
+    if(/^game:/.test(frontGameChoice))keys=[frontGameChoice.slice(5)];
+    else if(frontGameChoice&&frontGameChoice!=='season'){try{keys=JSON.parse(sel.dataset[frontGameChoice]||'[]');}catch(e){keys=[];}}
+    frontSetKeys(keys);
+    $('dfsPayout').disabled=!frontGameChoice;
+    if(!frontGameChoice){frontPayout='';$('dfsPayout').value='';}
+    frontUpdateState();
+  }
+  function frontSetupReady(){ return !!(frontGameStyle&&frontGameChoice&&frontPayout); }
+  function frontFiltered(s){
+    if(!s||!s.ok||frontGameChoice==='season'||!frontSelectedKeys().length)return s;
+    var q={}; for(var k in s)q[k]=s[k];
+    q.players=(s.players||[]).filter(function(p){return frontGameKeys[frontPlayerGameKey(p)];});
+    q.stacks=(s.stacks||[]).filter(function(g){return g&&g.home&&g.away&&frontGameKeys[frontGameKey(g.home.team,g.away.team)];});
+    q.boards={}; Object.keys(s.boards||{}).forEach(function(n){q.boards[n]=(s.boards[n]||[]).filter(function(p){return frontGameKeys[frontPlayerGameKey(p)];});});
+    q.label=(s.label||'DraftKings')+' · '+frontSelectedKeys().length+' selected game'+(frontSelectedKeys().length===1?'':'s');
+    return q;
+  }
+  function frontUpdateState(){
+    var state=$('dfsSetupState'); if(!state)return;
+    if(!frontGameStyle){state.className='dfs-setup-state';state.textContent='Start with Game Style.';return;}
+    if(!frontGameChoice){state.className='dfs-setup-state';state.textContent='Now select the Games / player pool.';return;}
+    if(!frontPayout){state.className='dfs-setup-state';state.textContent='Finally select the Payout Structure.';return;}
+    state.className='dfs-setup-state ready';
+    state.textContent=$('dfsGameStyle').options[$('dfsGameStyle').selectedIndex].text+' · '+$('dfsGames').options[$('dfsGames').selectedIndex].text+' · '+$('dfsPayout').options[$('dfsPayout').selectedIndex].text;
+  }
+  function frontPotw(s){
+    if(!s||!s.ok||!window.ITDfs||!s.slots)return;
+    var pool=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
+    var base={cap:s.cap,slots:s.slots,flex:s.flex,lineups:1,seed:23,maxPerTeam:4};
+    var safe=ITDfs.build(pool,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:3}));
+    var ceil=ITDfs.build(pool,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
+    var lev=ITDfs.build(pool,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
+    if(!safe.ok||!ceil.ok)return;
+    var S=safe.lineups[0],T=ceil.lineups[0],L=lev.ok?lev.lineups[0]:T;
+    var rec='Head-to-Head', why='The safest build still gives up too much projection when we chase additional ceiling. This week, the better trade is maximizing the chance of beating one opponent rather than paying for volatility.';
+    if(L.projPoints>=S.projPoints*.97&&L.ceilingPoints>=S.ceilingPoints*1.10){rec='Tournament - Multi-Entry';why='The leverage build keeps nearly all of the safe roster’s projection while buying materially more ceiling and separation. The larger payoff is worth taking more variance this week.';}
+    else if(T.projPoints>=S.projPoints*.975&&T.ceilingPoints>=S.ceilingPoints*1.07){rec='Tournament - Single Entry';why='The ceiling build adds meaningful upside without giving away much core projection. That makes a one-entry tournament a better risk/reward trade than the usual head-to-head baseline.';}
+    else if(T.projPoints>=S.projPoints*.99){rec='Multiplier';why='The slate supports a modest step up the payout curve without requiring large-field volatility. The extra payoff compensates for the smaller winning band better than a full tournament does.';}
+    $('dfsPotwTitle').textContent=rec;
+    $('dfsPotwCopy').textContent=why+' The recommendation asks which contest shape offers the strongest return tradeoff over many repetitions, not simply which one is easiest to win once.';
+  }
+
   function tagFor(p, qb) {
     if (qb && p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE')) return '<span class="tg stack">stack</span>';
     if (qb && p.team === qb.opponent && p.position !== 'DST') return '<span class="tg stack">bring-back</span>';
@@ -4986,6 +5088,9 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   function buildLineup(s) {
     var host = $('dfsBuild'), note = $('dfsShapeNote');
     if (!host) return;
+    if (site === 'dk' && !frontSetupReady()) { host.innerHTML='<p class="dfs-empty"><b>Complete Game Style, Games and Payout Structure above.</b> The lineup will be built from that exact contest setup.</p>'; if(note)note.textContent=''; return; }
+    if (site === 'dk' && frontGameStyle !== 'classic') { host.innerHTML='<p class="dfs-empty"><b>'+e($('dfsGameStyle').options[$('dfsGameStyle').selectedIndex].text)+' selected.</b> This homepage preview uses the Classic optimizer only. Open the full DFS sheet for format-specific analysis.</p>'; if(note)note.textContent=''; return; }
+    s = frontFiltered(s);
     var sh = SHAPES[shape] || SHAPES.single;
     if (note) note.textContent = sh.why;
     if (s && s.ok && s.slots && !window.ITDfs && !buildLineup.waiting) {
@@ -5037,16 +5142,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       + '<div class="fp-board-foot"><span>Solved against the cap on the same market numbers the board below prints. Nothing here enters a contest.</span>'
       + '<a href="/dfs">Lock, exclude and build twenty &rarr;</a></div></div>';
   }
-  var shapeHost = $('dfsShape');
-  if (shapeHost) shapeHost.addEventListener('click', function (ev) {
-    var b = ev.target.closest('button'); if (!b) return;
-    shape = b.getAttribute('data-contest');
-    [].forEach.call(this.querySelectorAll('button'), function (x) {
-      x.setAttribute('aria-pressed', x.getAttribute('data-contest') === shape ? 'true' : 'false');
-    });
-    buildLineup(slates[site]);
-  });
-
   function render(s) {
     if (!s || !s.ok) {
       $('dfsNote').textContent = (s && s.note) || 'No salaries are loaded for this week.';
@@ -5054,10 +5149,12 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       buildLineup(s);
       return;
     }
+    frontPopulateGames(s); frontUpdateState(); frontPotw(s);
     var stamp = '';
     try { stamp = new Date(s.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (err) {}
     $('dfsNote').textContent = (s.note ? s.note + ' ' : '') + (stamp ? 'Salaries as of ' + stamp + ' ET.' : '');
-    buildLineup(s); cards(s); values(s); stacks(s); tdBoard(s);
+    var view=frontFiltered(s);
+    buildLineup(s); cards(view); values(view); stacks(view); tdBoard(view);
   }
 
   function loadSlate() {
@@ -5076,10 +5173,21 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       });
   }
 
+  $('dfsGameStyle').addEventListener('change', function(){
+    frontGameStyle=this.value; frontGameChoice=''; frontPayout=''; frontGameKeys={};
+    $('dfsPayout').value=''; $('dfsPayout').disabled=true;
+    frontPopulateGames(slates[site]||{players:[],stacks:[]}); frontUpdateState(); buildLineup(slates[site]);
+  });
+  $('dfsGames').addEventListener('change', function(){ frontApplyGameChoice(); if(slates[site])render(slates[site]); });
+  $('dfsPayout').addEventListener('change', function(){
+    frontPayout=this.value; shape=FRONT_PAYOUT_SHAPE[frontPayout]||'single'; frontUpdateState(); if(slates[site])render(slates[site]);
+  });
+
   $('dfsSite').addEventListener('click', function (ev) {
     var b = ev.target.closest('button');
     if (!b) return;
     site = b.getAttribute('data-site');
+    frontGameChoice=''; frontPayout=''; frontGameKeys={}; $('dfsGames').value=''; $('dfsPayout').value=''; $('dfsPayout').disabled=true;
     [].forEach.call(this.querySelectorAll('button'), function (x) {
       x.setAttribute('aria-pressed', x.getAttribute('data-site') === site ? 'true' : 'false');
     });
