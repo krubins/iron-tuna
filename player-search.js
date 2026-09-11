@@ -156,6 +156,144 @@
 
   function href(p) { return '/player/' + p.k; }
 
+  // ── player photos wherever the player is the object on the page ─────────
+  // Reuse the same identity index and ESPN -> NFL -> initials fallback that
+  // powers the player lookup and player card.
+  var FOCUS_STYLE_ID = 'it-player-focus-css';
+
+  function ensureFocusStyle() {
+    var doc = root.document;
+    if (!doc || !doc.head || doc.getElementById(FOCUS_STYLE_ID)) return;
+    var s = doc.createElement('style');
+    s.id = FOCUS_STYLE_ID;
+    s.textContent =
+      '.it-player-face{display:inline-grid;place-items:center;position:relative;overflow:hidden;'
+      + 'width:34px;height:34px;min-width:34px;border-radius:7px;background:var(--elev,#edf1f2);'
+      + 'vertical-align:middle;color:var(--muted,#738087);font-style:normal;font-weight:800;'
+      + 'font-size:10px;line-height:1;margin-right:9px}'
+      + '.it-player-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;'
+      + 'object-position:top center}'
+      + '.it-player-face i{font-style:normal;font-size:10px;font-weight:800;color:inherit}'
+      + 'td.it-player-cell{white-space:normal}'
+      + 'td.it-player-cell>.it-player-face{margin-top:-2px;margin-bottom:-2px}'
+      + '.it-story-focus{display:inline-flex;align-items:center;vertical-align:middle;margin:0 10px 3px 0}'
+      + '.it-story-focus .it-player-face{width:52px;height:52px;min-width:52px;border-radius:10px;'
+      + 'margin-right:0;border:1px solid var(--line,rgba(127,127,127,.2));background:var(--elev,#edf1f2)}'
+      + '.it-story-focus .it-player-face+ .it-player-face{margin-left:-10px}'
+      + '@media(max-width:620px){.it-story-focus .it-player-face{width:42px;height:42px;min-width:42px;'
+      + 'border-radius:8px}.it-player-face{width:30px;height:30px;min-width:30px;margin-right:7px}}';
+    doc.head.appendChild(s);
+  }
+
+  function explicitPlayer(node) {
+    if (!node || !node.getAttribute) return null;
+    var k = node.getAttribute('data-player') || node.getAttribute('data-player-focus') || '';
+    if (k && byKey[k]) return byKey[k];
+    var a = node.matches && node.matches('a[href*="/player/"]') ? node
+      : (node.querySelector ? node.querySelector('a[data-player],a[href*="/player/"]') : null);
+    if (!a) return null;
+    k = (a.getAttribute('data-player') || '').trim();
+    if (k && byKey[k]) return byKey[k];
+    var hrefv = a.getAttribute('href') || '';
+    var m = hrefv.match(/\/player\/([^?/#]+)/);
+    return m && byKey[m[1]] ? byKey[m[1]] : null;
+  }
+
+  function mentionsIn(text, limit) {
+    fullIndex();
+    var found = scan(String(text || ''), fullRe, function (t) { return fullMap[fold(t)] || null; });
+    var out = [], seen = {};
+    for (var i = 0; i < found.length && out.length < (limit || 6); i++) {
+      if (seen[found[i].p.k]) continue;
+      seen[found[i].p.k] = 1;
+      out.push(found[i]);
+    }
+    return out;
+  }
+
+  function decorateTables(scope) {
+    var where = scope || root.document;
+    if (!where || !where.querySelectorAll) return 0;
+    ensureFocusStyle();
+    var tables = [];
+    if (where.nodeType === 1 && where.matches && where.matches('table')) tables.push(where);
+    var q = where.querySelectorAll('table');
+    for (var ti = 0; ti < q.length; ti++) tables.push(q[ti]);
+    var made = 0;
+
+    tables.forEach(function (table) {
+      var cells = table.querySelectorAll('tbody td');
+      for (var i = 0; i < cells.length; i++) {
+        var td = cells[i];
+        if (td.querySelector(':scope > .it-player-face')) continue;
+        var p = explicitPlayer(td);
+        if (!p) {
+          var hits = mentionsIn(td.textContent || '', 2);
+          if (hits.length && hits[0].s <= 12) p = hits[0].p;
+        }
+        if (!p) continue;
+        var face = faceEl(p, 'it-player-face it-table-face');
+        face.setAttribute('aria-hidden', 'true');
+        td.insertBefore(face, td.firstChild);
+        td.classList.add('it-player-cell');
+        made++;
+      }
+    });
+    return made;
+  }
+
+  function decorateStories(scope) {
+    var where = scope || root.document;
+    if (!where || !where.querySelectorAll) return 0;
+    ensureFocusStyle();
+    var heads = [], seenHead = [];
+
+    function addHead(h, unit) {
+      if (!h || seenHead.indexOf(h) >= 0) return;
+      if (h.closest && (h.closest('table,nav,footer,.pc-head,.pl-menu') || h.querySelector('.it-story-focus'))) return;
+      seenHead.push(h);
+      heads.push({ h: h, unit: unit || null });
+    }
+
+    var units = [];
+    if (where.nodeType === 1 && where.matches && where.matches(UNITS)) units.push(where);
+    var q = where.querySelectorAll(UNITS);
+    for (var i = 0; i < q.length; i++) units.push(q[i]);
+    units.forEach(function (unit) { addHead(unit.querySelector('h1,h2,h3'), unit); });
+
+    var generic = where.querySelectorAll('main h1,main h2,main h3');
+    for (i = 0; i < generic.length; i++) addHead(generic[i], null);
+
+    var made = 0;
+    heads.forEach(function (item) {
+      var h = item.h, unit = item.unit;
+      var hits = mentionsIn(h.textContent || '', 4), focus = [];
+      for (var j = 0; j < hits.length && focus.length < 3; j++) focus.push(hits[j].p);
+
+      if (!focus.length && unit) {
+        var one = unit.getAttribute('data-player-focus') || '';
+        if (one && byKey[one]) focus.push(byKey[one]);
+        if (!focus.length) {
+          var cast = (unit.getAttribute('data-players') || '').trim().split(/\s+/).filter(Boolean);
+          if (cast.length === 1 && byKey[cast[0]]) focus.push(byKey[cast[0]]);
+        }
+      }
+      if (!focus.length) return;
+
+      var group = root.document.createElement('span');
+      group.className = 'it-story-focus';
+      group.setAttribute('aria-hidden', 'true');
+      focus.forEach(function (p) { group.appendChild(faceEl(p, 'it-player-face it-story-face')); });
+      h.insertBefore(group, h.firstChild);
+      made++;
+    });
+    return made;
+  }
+
+  function decorateAll(scope) {
+    return decorateTables(scope) + decorateStories(scope);
+  }
+
   // ── the box ───────────────────────────────────────────────────────────────
   // The menu is appended to <body> and positioned in viewport coordinates,
   // never nested under the input. The one place this box has to work is the
@@ -651,7 +789,10 @@
     fold: fold,
     mount: mount,
     linkPlayers: linkPlayers,
-    linkAllPlayers: linkAllPlayers
+    linkAllPlayers: linkAllPlayers,
+    decorateTables: decorateTables,
+    decorateStories: decorateStories,
+    decorateAll: decorateAll
   };
 
   function boot() {
@@ -663,6 +804,22 @@
     // /play-caller-premium. Pages that paint their stories from data call
     // linkAllPlayers again once they have.
     linkAllPlayers(root.document);
+    decorateAll(root.document);
+
+    if (root.MutationObserver && root.document.body && !root.__itPlayerFocusObserver) {
+      var queued = false;
+      root.__itPlayerFocusObserver = new root.MutationObserver(function (list) {
+        var changed = false;
+        for (var i = 0; i < list.length && !changed; i++) changed = !!list[i].addedNodes.length;
+        if (!changed || queued) return;
+        queued = true;
+        root.setTimeout(function () {
+          queued = false;
+          decorateAll(root.document);
+        }, 0);
+      });
+      root.__itPlayerFocusObserver.observe(root.document.body, { childList: true, subtree: true });
+    }
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', boot);
   else boot();
