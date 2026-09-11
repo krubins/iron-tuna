@@ -2130,7 +2130,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
       <p class="dfs-note" id="marketStamp"><b>21+ market information.</b> Iron Tuna does not accept wagers or place bets. Betting Market Intel is not available in Washington, where market-data requests are blocked at the edge. Market prices move, so verify any number at its source before relying on it.</p>
       <div class="dfs-scroll" id="marketGamesWrap" hidden>
         <table class="dfs-table" id="marketGamesTable">
-          <thead><tr><th>Game</th><th>Spread</th><th class="num">O/U</th><th>Market implied</th><th>Iron Tuna Projection</th><th>Tuna Edge</th><th>Movement</th></tr></thead>
+          <thead><tr><th>Game</th><th>Spread</th><th class="num">O/U</th><th title="The points each team is expected to score, calculated from the market spread and game total.">Market implied</th><th title="Iron Tuna’s independent estimate of the points each team will score.">Iron Tuna Projection</th><th title="Iron Tuna’s projected game total minus the market total; positive means Over and negative means Under.">Tuna Edge</th><th title="The change in the market total or spread from the stored opening line to the current line.">Movement</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -4744,6 +4744,10 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         : 'No fresh, confirmed prop movement is available yet. Unchanged or stale markets are omitted.';
     }
   }
+  function marketHelpCell(content, explanation) {
+    var safe = String(explanation).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return '<td tabindex="0" title="' + safe + '" aria-label="' + safe + '">' + content + '</td>';
+  }
   function renderMarket(j, signal) {
     var games = (j && j.gameEnvironments) || [];
     var props = ((j && j.tdBoard) || []).filter(function (p) {
@@ -4764,10 +4768,10 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       return '<tr><td><b>' + e(g.away) + ' @ ' + e(g.home) + '</b></td>' +
         '<td>' + marketSpread(g) + '</td>' +
         '<td class="num">' + marketN1(g.total) + '</td>' +
-        '<td>' + implied + '</td>' +
-        '<td>' + tuna + '</td>' +
-        '<td><b>' + edge + '</b></td>' +
-        '<td>' + e(marketMove(g)) + '</td></tr>';
+        marketHelpCell(implied, implied === '—' ? 'Market-implied team scores are unavailable.' : 'The market implies ' + g.away + ' will score ' + marketN1(g.impliedAway) + ' points and ' + g.home + ' ' + marketN1(g.impliedHome) + ' points.') +
+        marketHelpCell(tuna, tuna === '—' ? 'Iron Tuna team projections are unavailable.' : 'Iron Tuna projects ' + g.away + ' to score ' + marketN1(g.ironTunaAway) + ' points and ' + g.home + ' ' + marketN1(g.ironTunaHome) + ' points.') +
+        marketHelpCell('<b>' + edge + '</b>', totalEdge == null ? 'A projection and market total are both needed to calculate Tuna Edge.' : totalEdge === 0 ? 'Iron Tuna’s projected total matches the market total.' : 'Iron Tuna’s projected total is ' + marketN1(Math.abs(totalEdge)) + ' points ' + (totalEdge > 0 ? 'above' : 'below') + ' the market total, indicating an ' + (totalEdge > 0 ? 'Over' : 'Under') + ' lean.') +
+        marketHelpCell(e(marketMove(g)), marketMove(g) === 'No stored move' ? 'No nonzero change is recorded; opening comparisons may be unavailable or unchanged.' : marketMove(g) + ' points versus the stored opening line; plus means an increase and minus means a decrease.') + '</tr>';
     }).join('');
     $('marketGamesWrap').hidden = !games.length;
     $('marketGamesEmpty').hidden = !!games.length;
