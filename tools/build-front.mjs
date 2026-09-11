@@ -666,13 +666,18 @@ front = front.replace(/var TELL = \[[\s\S]*?\];\n/, 'var TELL = ' + JSON.stringi
 // So the same markup the client would produce is written into the page at build
 // time. The client render replaces campNote/campFeat and clears campList before
 // refilling it, so what a reader sees is unchanged and the two cannot drift.
+//
+// The front page dropped its camp desk in September 2026 (the whole run from The
+// Play-Caller Premium down to the Draft Tools band came off the page), so the
+// write is conditional on the markup still being there. /auction-watch below is
+// the archive and is unaffected: that is where every report is linked now.
 const escText = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
   'August', 'September', 'October', 'November', 'December'];
 const fmtDate = (d) => { const p = d.split('-'); return `${MONTHS[+p[1] - 1]} ${+p[2]}, ${p[0]}`; };
 const fmtShort = (d) => { const p = d.split('-'); return `${MONTHS[+p[1] - 1].slice(0, 3)} ${+p[2]}`; };
 
-if (reports.length) {
+if (reports.length && /<ul class="camp-list" id="campList">/.test(front)) {
   const f = reports[0];
   // Season-neutral wording. The run started as camp reports and did not stop
   // when the season did: the September entries are Week 1 scratches, snap

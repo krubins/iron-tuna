@@ -9032,3 +9032,54 @@ feeds report the SAME book, `snapshotWrite` keeps the first (SGO) and drops the
 second rather than averaging — two reports of one book's line is not two
 sources, and blurring them would invent a number that book never posted.
 
+
+---
+
+## 73. September 11: the front page ends at Position Intel
+
+The fantasy lane of `front.html` used to run on for another four screens after
+Position Intel: The Play-Caller Premium, then a whole chapter 03 ("Build the
+team") carrying the Draft Tools band, The Build, Asset Allocation and Player
+Signals, then the method band and the closing league-save band. All of it came
+off the page. The lane now ends at Position Intel and hands straight to the
+black Draft Tools band at the foot of the page, which stays.
+
+What went with it:
+
+| Removed | Also removed |
+|---|---|
+| `#coaching` (The Play-Caller Premium) + `#pcpGrid` | the coaching-column render block |
+| chapter 03: `#draft` (Draft Tools band), `#build` (The Build), `#allocation` (Asset Allocation), `#camp` (Player Signals) | the camp-desk, The Build and preseason-strip render blocks |
+| `#method` (How the number is made) and `.fp-close` | the ribbon's `#build`, `#allocation` and `#camp` links |
+| `tools/test-build-desk.mjs` (its subject is gone) | its CI step in `.github/workflows/checks.yml` |
+
+The pages themselves are untouched and still reachable: `/play-caller-premium`,
+`/auctiondraft`, `/auction-budget-allocation`, `/auction-nomination-strategy`,
+`/dollar-endgame-handcuffs`, `/auction-watch`, `/guides`. The footer tools row
+and the nav already carried every one of them, which is why cutting the bands
+costs no link.
+
+**The DFS lane is untouched.** It sits between Player Signals and the method
+band in the DOM but is a separate `.lane-pane`, so none of it was in the visual
+run that came off the page.
+
+Things that had to move with it:
+
+- **`tools/build-front.mjs`** writes the static camp desk (the markup a crawler
+  that never runs JS reads) into `front.html` and *aborts* if it cannot find
+  `#campList`. That write is now conditional on the markup still being there.
+  `/auction-watch` is unaffected and is where every report is linked now.
+- **`tools/test-seo.mjs`** pinned the front page's camp desk — the featured
+  report, the archive link, the client render's list clear. Those four
+  assertions are one now: the front page must not carry the camp archive.
+- **`tools/test-position-lens.mjs`** read `#allocHead`, `#campNote` and
+  `#buildTag` to prove the edition switch moves the whole page. It reads the
+  drop links, the app links and the room name, which are what is left.
+- **The season CSS** (`html[data-season="in"]`) hid The Build, Asset Allocation
+  and Training Camp once the games started. Those selectors are gone; The Pick,
+  the Vegas column, Position Intel and Just Posted still have theirs.
+
+`ANALYSIS`, `COLUMN` and `PRESEASON` are still declared in `front.html` and
+still rewritten by `build-front.mjs`. Nothing reads them on the page any more.
+They were left in place because the build script asserts on the declarations,
+and because the data is what any future rebuild of these bands would want.

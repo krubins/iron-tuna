@@ -103,10 +103,7 @@ const read = page => page.evaluate(() => ({
             .map(a => a.getAttribute('href') || '')
             .filter(h => /^\/(auctiondraft|snakedraft)(\?|$)/.test(h))
             .map(h => h.split('?')[0]))],
-  mgr: document.getElementById('navMgr').textContent,
-  allocHead: document.getElementById('allocHead').textContent,
-  camp: document.getElementById('campNote').textContent,
-  buildTag: document.getElementById('buildTag').hidden ? '' : document.getElementById('buildTag').textContent
+  mgr: document.getElementById('navMgr').textContent
 }));
 const pick = (page, ed) => page.click('#edSwitch a[data-ed="' + ed + '"]');
 
@@ -226,16 +223,15 @@ console.log('\nthe lead and the modules agree');
 // The complaint that put this switch in the ribbon was that a reader who came
 // for another draft was still handed the auction site. So the test is not "the
 // switch has two buttons": it is that ONE click moves the drop links, the
-// app links, the button that names the room, the guides module and the camp
-// desk's standing note together.
+// app links and the button that names the room together. (The guides module and
+// the camp desk used to be asserted here too; both came off the front page with
+// the run from The Play-Caller Premium down to the Draft Tools band.)
 console.log('\nthe whole page follows the edition');
 {
   const { page, ctx } = await open({});
   const a = await read(page);
   ok('auction opens on the auction room', a.app.join() === '/auctiondraft', a.app.join());
   ok('and names it', a.mgr === 'Auction Manager', a.mgr);
-  ok('the auction keeps its allocation guides', a.allocHead === 'Asset Allocation', a.allocHead);
-  ok('and The Build needs no tag to say which currency it is in', a.buildTag === '', a.buildTag);
 
   // The switch offers exactly two editions now, and the site sells one of them.
   ok('the switch offers auction and snake, and nothing else',
@@ -243,31 +239,15 @@ console.log('\nthe whole page follows the edition');
   ok('nothing on the page still sells a best ball room',
      await page.$$eval('a', as => as.every(x => !/^\/bestball/.test(x.getAttribute('href') || ''))));
 
-  const campAuction = (await read(page)).camp;
   await pick(page, 'snake');
   const b = await read(page);
   ok('snake re-points every story', b.drops.join() === '/snake', b.drops.join());
   ok('every app link lands in the draft room', b.app.join() === '/snakedraft', b.app.join());
   ok('the room is named honestly', b.mgr === 'Draft Room', b.mgr);
-  ok('the guides are the ones snake actually has',
-     b.allocHead === 'Draft Strategy' &&
-     (await page.$$eval('#allocGrid a', as => as.every(x => /snake/.test(x.getAttribute('href'))))),
-     b.allocHead);
-  ok('The Build says the dollars are the auction solve', b.buildTag === 'Auction solve', b.buildTag);
-  // The camp desk's standing note is edition-specific. It used to be the word
-  // "auction-relevant" that had to change; the note is now season-neutral on
-  // both editions (the run did not stop when camp did), so what is asserted is
-  // the property that actually matters: the two editions do not print the same
-  // sentence, and neither of them tells a snake reader they are drafting an
-  // auction. `campAuction` is captured before the switch, above.
-  ok('the camp desk re-words itself for the edition', b.camp !== campAuction && !!b.camp, b.camp);
-  ok('and never calls a snake reader an auction one', !/auction/i.test(b.camp), b.camp);
   // The rewrite covers exactly two families of URL. Anything else that starts
   // "/auction-" has no twin in the other edition, so it must survive untouched —
   // and no link may be invented: every /snake* href has to be a page that
   // exists (the room, the drop pages, the snake strategy guide).
-  ok('the camp reports keep the URLs they were published at',
-     await page.$$eval('a', as => as.some(x => /^\/auction-watch-/.test(x.getAttribute('href') || ''))));
   ok('and no link is invented for a page that does not exist',
      await page.$$eval('a', as => as.map(x => x.getAttribute('href') || '')
        .filter(h => h.indexOf('/snake') === 0)
@@ -277,10 +257,7 @@ console.log('\nthe whole page follows the edition');
   const back = await read(page);
   ok('switching back restores the page as authored',
      back.drops.join() === '/auction' && back.app.join() === '/auctiondraft' &&
-     back.mgr === 'Auction Manager' && back.allocHead === 'Asset Allocation' &&
-     back.camp === campAuction && back.buildTag === '');
-  ok('and the authored guides come back whole',
-     await page.$$eval('#allocGrid .alloc-card', c => c.length === 4));
+     back.mgr === 'Auction Manager');
   ok('nothing on the page threw', errors.length === 0, errors[0]);
   await ctx.close();
 }
