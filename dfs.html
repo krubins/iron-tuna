@@ -180,6 +180,9 @@ p{color:var(--sec);margin:0 0 16px}
 .df-strategy-card b{display:block;color:var(--text);font-size:17px;margin-bottom:7px}
 .df-strategy-card p{margin:0;font-size:14px;line-height:1.62;color:var(--sec)}
 .df-strategy-card strong{color:var(--text)}
+.df-dk-find{display:block;margin-top:10px;padding-top:9px;border-top:1px solid var(--line);font-family:var(--font-mono);font-size:11.5px;line-height:1.5;color:var(--muted)}
+.df-dk-find b{display:inline;font-size:inherit;margin:0;color:var(--teal)}
+.df-dk-lobby-note{font-size:13px;line-height:1.6;color:var(--sec);margin:8px 0 14px;padding:10px 12px;border-left:3px solid var(--teal);background:var(--panel)}
 .df-advanced-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0 8px}
 .df-advanced-toggle{appearance:none;border:1px solid var(--teal);border-radius:999px;background:transparent;color:var(--teal);font:700 13px/1 var(--font-body);letter-spacing:.03em;padding:10px 15px;cursor:pointer}
 .df-advanced-toggle[aria-expanded="true"]{background:var(--teal);color:#fff}
@@ -271,17 +274,18 @@ p{color:var(--sec);margin:0 0 16px}
      press. The shape now drives the solve, the sort and the copy on every
      section, so there is no second control anywhere that can disagree with it. -->
 <div id="dfStrategyGuide">
-<div class="df-shapes" id="dfShape" role="group" aria-label="What contest is this for">
-  <button class="df-shape" type="button" data-contest="cash"><i>50/50 &middot; Double-up</i><b>Cash</b><span>The chalk/value roster. Favor players most likely to beat what their salaries require and avoid fragile longshots.</span></button>
-  <button class="df-shape" type="button" data-contest="single"><i>One lineup &middot; One decision</i><b>Single Entry</b><span>The best one-shot roster. Keep a strong value core, then add enough ceiling, correlation and selective leverage to win.</span></button>
-  <button class="df-shape" type="button" data-contest="gpp"><i>Large field &middot; Top-heavy prizes</i><b>Large Field</b><span>The ceiling/leverage roster. Accept more volatility, stacks and lower-owned upside because first-place separation matters.</span></button>
+<div class="df-shapes" id="dfShape" role="group" aria-label="DraftKings contest type">
+  <button class="df-shape" type="button" data-contest="cash"><i>DraftKings lobby filter</i><b>50/50 &amp; Double Ups</b><span>The chalk/value roster. Favor players most likely to beat what their salaries require and avoid fragile longshots.</span></button>
+  <button class="df-shape" type="button" data-contest="single"><i>Look for [Single Entry]</i><b>Tournament &middot; Single Entry</b><span>The best one-shot roster. Keep a strong value core, then add enough ceiling, correlation and selective leverage to win.</span></button>
+  <button class="df-shape" type="button" data-contest="gpp"><i>Look for the M / entry limit</i><b>Multi-Entry Tournament</b><span>The ceiling/leverage roster for large, top-heavy fields. Accept more volatility, stacks and lower-owned upside.</span></button>
 </div>
 <p class="is-note" id="dfShapeNote"></p>
-<p class="df-shape-diff"><b>The basic difference:</b> Cash asks, “How do I avoid a bad lineup and beat the payout line?” Single Entry asks, “What is my best one lineup?” Large Field asks, “What lineup can beat thousands of entries if the slate breaks my way?”</p>
-<div class="df-strategy-compare" aria-label="Cash, Single Entry and Large Field strategy">
-  <div class="df-strategy-card"><b>Cash = chalk and value consistency</b><p><strong>Objective:</strong> finish above a broad payout cutoff, not first. The roster leans toward <strong>chalk</strong>: players with the strongest combination of role, projection, floor and salary value, meaning the best collective chance of producing more fantasy points than their prices require. It deliberately avoids low-probability longshots whose outcomes can be slate-winning or lineup-killing. Popularity itself is not the reason to use a player. Well-priced, dependable players are often popular for good reasons.</p></div>
-  <div class="df-strategy-card"><b>Single Entry = your best one shot</b><p><strong>Objective:</strong> beat the entire field with one lineup, without a second roster to rescue a bad call. Start with the same strong value base as Cash, but accept more ceiling and correlation because merely finishing above average is not enough. A quarterback stack can turn one correct game read into points at multiple positions, while leverage is used selectively where a lower-owned player has comparable underlying value. Avoid being contrarian just to be different.</p></div>
-  <div class="df-strategy-card"><b>Large Field = ceiling and separation</b><p><strong>Objective:</strong> finish near the very top of a large, top-heavy field. The roster gives up some median safety to gain first-place paths: higher ceilings, correlated stacks, bring-backs and lower-owned pivots that can separate you from thousands of similar entries. This is where calculated longshots belong, but they should still have a plausible role and market-supported path to upside. The goal is not randomness. It is differentiated upside.</p></div>
+<p class="df-dk-lobby-note"><b>Match Iron Tuna to DraftKings:</b> these recommendations are for the <b>Classic</b> salary-cap game style. In the DraftKings lobby, choose <b>50/50 &amp; Double Ups</b> for the cash build; choose a tournament marked <b>[Single Entry]</b> for the one-lineup tournament build; or choose a contest identified as a <b>Multi-Entry Tournament</b> with an entry maximum for the large-field portfolio build. DraftKings&rsquo; <b>GPP</b> means Guaranteed Prize Pool. It describes the prize pool, not by itself whether the contest is single-entry or multi-entry.</p>
+<p class="df-shape-diff"><b>The strategy difference:</b> 50/50 &amp; Double Ups ask, “How do I avoid a bad lineup and beat the payout line?” A Single Entry tournament asks, “What is my best one lineup?” A large Multi-Entry Tournament asks, “What collection of lineups can finish near the very top if the slate breaks my way?”</p>
+<div class="df-strategy-compare" aria-label="DraftKings contest strategy">
+  <div class="df-strategy-card"><b>50/50 &amp; Double Ups = chalk and value consistency</b><p><strong>Objective:</strong> finish above the payout cutoff, not first. The roster leans toward <strong>chalk</strong>: players with the strongest combination of role, projection, floor and salary value, meaning the best collective chance of producing more fantasy points than their prices require. It deliberately avoids low-probability longshots whose outcomes can be slate-winning or lineup-killing.</p><span class="df-dk-find"><b>In DraftKings:</b> use the “50/50 &amp; Double Ups” contest filter. A Double Up pays nearly half the field the same amount, roughly doubling a winning entry fee.</span></div>
+  <div class="df-strategy-card"><b>Tournament &middot; Single Entry = your best one shot</b><p><strong>Objective:</strong> beat the entire tournament field with one lineup, without a second roster to rescue a bad call. Start with the same strong value base as the cash build, but accept more ceiling and correlation because merely finishing above average is not enough. Use leverage selectively rather than being contrarian just to be different.</p><span class="df-dk-find"><b>In DraftKings:</b> look for “[Single Entry]” in the contest title/details. DraftKings limits you to one lineup in that contest.</span></div>
+  <div class="df-strategy-card"><b>Multi-Entry Tournament = ceiling and separation</b><p><strong>Objective:</strong> finish near the very top of a large, top-heavy tournament. The roster gives up some median safety to gain first-place paths: higher ceilings, correlated stacks, bring-backs and lower-owned pivots. This is where calculated longshots belong, but only when they still have a plausible role and market-supported path to upside.</p><span class="df-dk-find"><b>In DraftKings:</b> look for the “M” multi-entry indicator and the contest&rsquo;s entry maximum. DraftKings may display it as “Multi-Entry Tournament (20 Entries Max)” or another stated maximum.</span></div>
 </div>
 <div class="df-advanced-head">
   <button class="df-advanced-toggle" id="dfAdvancedToggle" type="button" aria-expanded="false" aria-controls="dfAdvanced">Advanced</button>
@@ -289,8 +293,8 @@ p{color:var(--sec);margin:0 0 16px}
 </div>
 <div class="df-advanced-panel" id="dfAdvanced" hidden>
   <div class="df-advanced-grid">
-    <div class="df-advanced-item"><h3>3-Max: one core, three paths</h3><p>Keep the players you are most confident in, then vary the uncertain pieces. The objective is neither three unrelated lottery tickets nor the same fragile bet three times. It is one strong core with three different ways for the slate to break in your favor.</p><button class="btn alt" type="button" data-advanced-contest="3max">Use 3-Max</button></div>
-    <div class="df-advanced-item"><h3>Multi-lineup portfolio</h3><p>When entering many lineups, treat them as a portfolio rather than independent guesses. Keep conviction players across several rosters, but spread secondary exposures so one injury, game failure or chalk bust does not sink every entry.</p><button class="btn alt" type="button" data-advanced-lineups="10">Build 10 diversified lineups</button></div>
+    <div class="df-advanced-item"><h3>Multi-Entry Tournament (3 Entries Max)</h3><p>DraftKings treats this as a multi-entry contest with a three-lineup maximum. Keep the players you are most confident in, then vary the uncertain pieces. The objective is neither three unrelated lottery tickets nor the same fragile bet three times.</p><button class="btn alt" type="button" data-advanced-contest="3max">Build 3 lineups</button></div>
+    <div class="df-advanced-item"><h3>Multi-Entry Tournament (20 Entries Max)</h3><p>DraftKings uses the multi-entry designation and states the maximum number of entries for that contest. When entering many lineups, treat them as a portfolio rather than independent guesses. Keep conviction players across several rosters, but spread secondary exposures so one injury, game failure or chalk bust does not sink every entry.</p><button class="btn alt" type="button" data-advanced-lineups="20">Build 20 lineups</button></div>
     <div class="df-advanced-item"><h3>Hedge game scripts</h3><p>If one group of lineups assumes a game shoots out, another group can lean away from that assumption or emphasize a different high-total game. That reduces the number of entries depending on the same story. It is diversification, not a guaranteed financial hedge, and both sides can still lose.</p></div>
     <div class="df-advanced-item"><h3>Ownership and duplication</h3><p>Do not chase low ownership in every slot. Concentrate leverage where the projection sacrifice is small, and avoid constructions so obvious that a first-place finish is likely to be split with many identical lineups.</p></div>
     <div class="df-advanced-item"><h3>Exposure limits</h3><p>Across many lineups, cap how much of the portfolio depends on uncertain players or one game environment. High-conviction values can appear often; volatile leverage plays should occupy a smaller share unless your edge is unusually strong.</p></div>
@@ -579,19 +583,19 @@ p{color:var(--sec);margin:0 0 16px}
   // is a portfolio construction rather than a separate basic payout objective.
   var SHAPES = {
     cash: { mode: 'floor', stack: false, bring: false, maxTeam: 3, n: 1,
-            head: 'Cash: the chalk and value-consistency roster',
+            head: '50/50 & Double Ups: the chalk and value-consistency roster',
             why: 'The objective is to finish above a broad payout cutoff, not to finish first. This roster favors the players with the strongest combined chance of beating what their salaries require: stable roles, dependable volume, strong floors and good points-per-dollar value. Those players often become chalk because the field sees the same value. Iron Tuna does not avoid them for being popular. It avoids fragile longshots whose range includes both a slate-winning spike and a lineup-killing miss.',
             keys: ['floorPoints', 'projPoints'] },
     single: { mode: 'ironTuna', stack: true, bring: false, maxTeam: 4, n: 1,
-            head: 'Single Entry: the best one-shot roster',
+            head: 'Tournament · Single Entry: the best one-shot roster',
             why: 'You get one lineup and no portfolio to rescue a bad call. The build keeps the high-probability value core that matters in Cash, but it needs more ceiling because finishing merely above average does not win a single-entry tournament. It adds useful quarterback correlation and takes selective leverage where a lower-owned alternative can create separation without surrendering too much projection.',
             keys: ['projPoints', 'ceilingPoints'] },
     '3max': { mode: 'ceiling', stack: true, bring: false, maxTeam: 4, n: 3,
-            head: '3-Max: one core, three paths',
+            head: 'Multi-Entry Tournament (3 Entries Max): one core, three paths',
             why: 'Three entries let you keep the players you are most confident in while varying the uncertain pieces. The goal is not three unrelated lottery tickets and not the same lineup three times. It is one strong core with three different paths for the slate to break in your favor.',
             keys: ['ceilingPoints', 'projPoints'] },
     gpp: { mode: 'leverage', stack: true, bring: true, maxTeam: 4, n: 3,
-            head: 'Large Field: the ceiling and leverage roster',
+            head: 'Multi-Entry Tournament: the ceiling and leverage roster',
             why: 'A large, top-heavy field rewards first-place upside far more than median safety. This build intentionally accepts more volatility in exchange for ceiling, correlated stacks, bring-backs and lower-owned leverage. Calculated longshots belong here when they have a real role and a plausible path to a spike game. The purpose is not to be random; it is to build a lineup that can separate from thousands of entries when its game assumptions are right.',
             keys: ['ceilingPoints', 'projPoints'] }
   };
