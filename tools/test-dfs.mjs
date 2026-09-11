@@ -159,9 +159,24 @@ console.log('\nthe DFS page explanations');
   ok('the player drawer labels modeled ownership as a model', page.includes('Modeled ownership') && page.includes('not an operator or third-party ownership feed'));
   ok('DraftKings FPPG is always paired with the Iron Tuna projection and edge', page.includes('DraftKings FPPG') && page.includes('Iron Tuna Projection') && page.includes('Tuna Edge') && page.includes('historical fantasy-points-per-game average'));
   ok('the DFS What If box autocompletes from typed player names', page.includes('id="dfWhatIfInput"') && page.includes('function renderWhatIfList') && page.includes("addEventListener('input', renderWhatIfList)") && page.includes('data-whatif-key'));
-  ok('the What If selection becomes an optimizer lock', page.includes("if (whatIfKey && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey)"));
+  ok('the What If selection becomes an optimizer lock only when the player is eligible for the selected games', page.includes("if (whatIfKey && eligible[whatIfKey] && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey)"));
   const scripts = [...page.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
   ok('every inline DFS script parses', (() => { try { scripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
+}
+
+console.log('\nthe homepage DFS lane');
+{
+  const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
+  ok('homepage DFS begins with Game Style, Games and Payout Structure dropdowns', front.indexOf('id="dfsGameStyle"') < front.indexOf('id="dfsGames"') && front.indexOf('id="dfsGames"') < front.indexOf('id="dfsPayout"'));
+  ok('homepage Game Style carries all DraftKings formats', ['Flash Draft','Classic','Showdown Captain Mode','Pick6','Best Ball','Tiers','In-Game Showdown','Single Stat - Total Yards','Single Stat - Touchdowns','Snake','Snake Showdown','Madden Classic','Madden Showdown Captain Mode'].every(x => front.includes('>'+x+'</option>')));
+  ok('homepage Games offers time windows and individual games from the live slate', front.includes('1 PM ET games') && front.includes('4 PM / late afternoon games') && front.includes('Primetime games') && front.includes("games.forEach(function(g){html+='<option value=\"game:"));
+  ok('homepage payout choice maps into cash, single-entry and tournament optimizer objectives', front.includes("h2h:'cash'") && front.includes("'double-up':'cash'") && front.includes("multiplier:'single'") && front.includes("'tournament-multi':'gpp'"));
+  ok('homepage game selection filters the actual eligible player pool', front.includes('function frontFiltered(s)') && front.includes('frontGameKeys[frontPlayerGameKey(p)]'));
+  ok('homepage includes Play of the Week and both DFS Academy articles', front.includes('id="dfsPotwTitle"') && front.includes('/dfs-getting-started') && front.includes('/dfs-strategy-guide'));
+  ok('the retired Cash Single entry Large field chips are no longer visible markup', !front.includes('Cash <small>Floors</small>') && !front.includes('Single entry <small>Best roster</small>') && !front.includes('Large field <small>Longshots</small>'));
+  ok('league-wide NFL story art always includes the NFL shield path', front.includes('var hasLeagueMark = !t;') && front.includes('function nflSvg(type)') && front.includes('NFL_LOGO_URL'));
+  const frontScripts = [...front.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
+  ok('every inline homepage script still parses', (() => { try { frontScripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
 }
 
 console.log('\nthe optimizer');
