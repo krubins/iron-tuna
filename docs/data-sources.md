@@ -7,7 +7,7 @@ This file is the **inventory of what the code actually does today**, not a plan.
 Every external host reached by `_worker.js` is listed. When you add or remove a
 source, edit this file in the same commit.
 
-Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) published 2026-09-09; keep the two in step.
+Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) published 2026-09-09; keep the two in step.
 
 ---
 
@@ -17,7 +17,12 @@ Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) 
 
 | Host | Used for | Call sites | License status |
 |---|---|---|---|
-| `api.the-odds-api.com` | NFL odds, totals, spreads | `ODDS_API_BASE`, `_worker.js:1575` | **Paid, terms unconfirmed.** See item R3. |
+| `<league>.football.cbssports.com` | Reader-authorized CBS league settings, teams, rosters, standings, schedules, waiver order and transaction log | `PROVIDER_CBS`, `cbsGet`; validated league subdomain, fixed HTTPS `/api/league/` resources | **Off by default (`FLAG_CBS_SYNC`).** Token access and commercial terms still require live verification. No CBS login/password collection or provider writes. See docs/league-sync.md CBS addendum. |
+| `api.sportsgameodds.com` | NFL player props, and one of the three quotes averaged into the game spread and total behind `/the-line`, `/previews` and every weekly board | `SGO_API_BASE`, `fetchOddsSgo`, `fetchGameLinesSgo` | **Paid, terms unconfirmed.** See item R8. |
+| `api.prop-line.com` | Tuna Market Signal current NFL game lines and fantasy-relevant player props; paid tiers also supply native opening/latest movement and cross-book steam | `TMS_PROVIDERS.propline`, `tmsPropLineHttp` | **Green for end-user analytical display.** Terms effective 2026-04-27 permit apps/websites to surface derived insights and individual values, while prohibiting bulk redistribution. Default integration excludes exchanges. |
+| `prop-line.com` | PropLine source-attribution link displayed with market results | `TMS_PROPLINE_SOURCE` | Link only; the worker does not fetch this website. Data use is covered by the API inventory entry above. |
+| `api.the-odds-api.com` | NFL odds, totals, spreads, supported props, and prospective Tuna Market Signal snapshots | `ODDS_API_BASE`, `TMS_PROVIDERS` | **Green for analytical UI use.** Current terms permit storage and derived/display use, while prohibiting standalone raw-data redistribution. See R3. |
+| `the-odds-api.com` | Tuna Market Signal source-attribution link | `TMS_SOURCE` | Identification link only; the Worker does not fetch this host. |
 | `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts, **and the game lines the scoreboard carries** | `_worker.js:1353`, `:3061`, `:5656`, `:5657`, `_espnOdds` | **Red.** Undocumented endpoints, no commercial license. The odds block adds a bookmaker's spread, total and opening line to what is taken. No page names the book; the name reaches the JSON API only. See R1. |
 | `api.sleeper.app` | NFL player id/metadata map | `_worker.js:7732`, `:7763` | **Red for a paid product.** Non-commercial grant only. See R2. |
 | `api.sleeper.app` (league sync) | A reader's Sleeper league: settings, rosters, users, matchups, transactions | `PROVIDER_SLEEPER` in the LEAGUE SYNC region | **Red for a paid product, so behind `FLAG_SLEEPER_SYNC` (default off).** Same R2 license question; see R7. |
@@ -27,6 +32,7 @@ Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) 
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
 | DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
 | DFS lobby CSV (reader upload) | A reader's own salary file, for any classic slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/dfs/slate` | **Green.** Same file, obtained by the reader from a lobby they are already in. Parsed per request and stored nowhere; single-game files are refused rather than mispriced against the classic cap. |
+| DraftKings lobby + draftables (scheduled repository workflow) | DraftKings NFL weekly Classic salaries across the Thursday-through-Monday game window | `tools/import-draftkings-salaries.mjs`, `.github/workflows/draftkings-salaries.yml` → `POST /api/admin/dfs` | **Red / owner-directed exception.** Undocumented, keyless operator endpoints; automated access may conflict with operator terms and can change without notice. The workflow merges all available multi-game Classic pools for the target NFL week, excludes Showdown/single-game pricing, validates 40+ players and all five positions, then imports the combined player set. It authenticates with a short-lived GitHub Actions identity token restricted to this repository, workflow and `main` branch. |
 
 ### Infrastructure — not content, no data-licensing question
 
@@ -48,10 +54,13 @@ reach them. They still belong in this table so the list is complete.
 | `api.draftkings.com` | 2026-09-06 | Operator's own data; terms prohibit systematic retrieval. Addendum 13.3 / 13.7. |
 | `api.fanduel.com` | 2026-09-06 | Same. |
 
-Both were behind unset env vars and had never run against the live services, so
-removing them changed no behavior. The `dfs-refresh` cron job went with them:
-with no site feeds left, the CSV import is the only path, and it is an admin
-action, not a scheduled one.
+Both Worker-side integrations were behind unset env vars and had never run
+against the live services, so removing them changed no behavior. The old
+`dfs-refresh` Worker cron went with them. DraftKings was later added as an
+owner-directed, once-weekly repository workflow that stays outside the deployed
+Worker. It merges the available multi-game Classic salary pools across the
+Thursday-through-Monday NFL week and sends a validated combined CSV through the
+existing admin import. FanDuel remains absent.
 
 ---
 
@@ -74,7 +83,17 @@ not a feature loss. The one gap is live in-game scoreboard state, which nflverse
 does not publish in real time — decide whether `/game-intel` needs live scores or
 whether post-game data is enough, because that answer changes the size of R1.
 
-**The scoreboard's odds block is a second gap, added deliberately.** `_espnOdds`
+**The scoreboard's odds block was the second gap, and SportsGameOdds closes
+it.** Where `SGO_API_KEY` is set, `runScheduleRefresh` merges SGO's spread and
+total onto every fixture that has not kicked off, and the `book` pair
+(`_gameLineMove`'s open/current source) is SGO's anchor book rather than ESPN's.
+That removes the reason R1 had to trade the opening line away: the swap can now
+drop `_espnOdds` without losing movement. **It is not done yet** — the key is
+unset, so ESPN is still the live source today, and the paragraph below still
+describes what happens with no key. Take the ESPN odds block out in the same
+commit that turns the key on, not before.
+
+**The original note, still true with no key:** `_espnOdds`
 reads the spread and total ESPN carries from one named book, plus that book's
 own opening line, and the site now displays the movement between them. nflverse
 publishes closing lines in `games.csv` and no opener at all, so this one is not
@@ -104,15 +123,48 @@ there is no free replacement for it), send the licensing inquiry Addendum 13.5
 describes and **get the answer in writing before shipping anything else against
 their API.** Attribution is requested by their docs either way.
 
-### R3 — The Odds API: get commercial display terms in writing
+### R3 — The Odds API analytical display rights *(CLOSED 2026-09-10)*
 
-**Where:** `_worker.js:1575`, `env.ODDS_API_KEY`.
+**Where:** `ODDS_API_BASE`, `TMS_PROVIDERS`, `env.ODDS_API_KEY`.
 
-Already in production. Their public FAQ does not address redisplay. Email
-team@the-odds-api.com, ask specifically about displaying derived lines in a paid
-subscription product, and save the reply. Addendum 13.2 and 14.6.
+The provider's terms dated August 31, 2026 expressly permit storing data,
+displaying it in user-facing commercial websites and analytical dashboards, and
+displaying derived values. They prohibit reselling or redistributing the data as
+a standalone raw feed. Tuna Market Signal serves bounded derived dashboard data
+for Iron Tuna and does not expose a raw provider passthrough. Recheck the terms
+when changing product scope or subscription plan and retain the dated review in
+`docs/TUNA-MARKET-SIGNAL.md`.
 
-This is the cheapest item on the list and it is currently unanswered.
+### R8 — SportsGameOdds: get commercial display terms in writing  *(added 2026-09-10)*
+
+**Where:** `SGO_API_BASE` and the adapter beneath it, `env.SGO_API_KEY`.
+
+The question R3 just answered, asked of the other feed. A paid subscription is
+a licence to **use** the feed; it is not automatically a licence to
+**redisplay** derived numbers in a paid product, and nothing in SGO's public
+documentation addresses redisplay. R3 is the template: The Odds API's terms of
+August 31, 2026 expressly permit storing, displaying and deriving, and prohibit
+redistributing a standalone raw feed. Ask SGO the same question in the same
+words, and save the dated reply in `docs/`. Until it arrives this row is the
+only unconfirmed odds source on the list.
+
+Two things reduce the exposure while that is unanswered, and neither settles it:
+
+- **No page names a book.** The printed spread and total are SGO's consensus,
+  the same shape as the `games.csv` number beside them, and `lineConsensus`
+  then averages that consensus with the spine's and the scoreboard's, so the
+  printed line is not any one source's number at all. The anchor book's name
+  reaches `book.name` and `moveBook` on the API payloads and is rendered
+  nowhere. Anything that starts printing it changes this answer.
+- **Nothing is passed through raw.** Every prop becomes an expected stat line
+  server-side before it reaches a browser (§14.2).
+
+**The adapter has never run against the live service.** It is written to SGO's
+published v2 documentation and to the field names in their own TypeScript SDK
+(`sports-odds-api@2.1.0`), and it is held to a committed fixture by
+`tools/test-sgo.mjs`. Treat the first real pull as a test: check
+`/api/admin/market-status` for the row count and the club-match rate before
+believing any number it produces.
 
 ### R4 — NFL.com and ESPN imagery  *(OPEN — owner decision required)*
 
@@ -167,6 +219,7 @@ See `docs/league-sync.md` Part 3 for the full record. In short:
 
 - **Sleeper.** The league connector uses the same API as the players map and inherits R2 exactly: free for non-commercial use, and Iron Tuna is a paid product. The connector is complete and tested against fixtures but ships **off** (`FLAG_SLEEPER_SYNC`). Turn it on only with Sleeper's written license in `docs/`. Attribution string in §3 applies.
 - **Yahoo.** OAuth 2.0 under the Yahoo Developer Network terms of use. The reader authorizes Iron Tuna to read their own fantasy data (scope `fspt-r`); no password is ever seen and tokens are sealed at rest (`LEAGUE_TOKEN_KEY`). Register an app at developer.yahoo.com, set `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`, and confirm the YDN terms permit use in a paid product before enabling `FLAG_YAHOO_SYNC`. Rate limits are per-app and undocumented; the connector caches for a minute and syncs on the job clock, never per page view.
+- **CBS Sportsline.** The connector uses a reader-supplied token scoped to one CBS football league. It calls only a fixed read-resource allowlist on the validated `<league>.football.cbssports.com` host, puts the token in the Authorization header, refuses redirects, and seals one token per league with `LEAGUE_TOKEN_KEY`. It never collects a CBS username/password or calls the mobile login endpoint. The implementation is synthetic-fixture-tested but not live-tested and ships **off** (`FLAG_CBS_SYNC`). Keep it off until a controlled live pass validates response shapes and CBS confirms permitted access and commercial use.
 - **ESPN.** No supported path. Not implemented; the adapter is a documented placeholder and manual setup is the fallback. Do not add the `lm-api-reads` host.
 
 ### R6 — Schema note for the free-tier delay model
@@ -212,5 +265,5 @@ anyway; it costs nothing.
    server-side, return an Iron Tuna shape.
 3. API keys are `env` bindings. Never in client code, never in the repo.
 4. Cache. It protects the quota and every green license here permits it.
-5. Keep the written record. When The Odds API or Sleeper answers, save the
-   email — `docs/` is a fine home for a text copy.
+5. Keep the written record. Preserve dated provider terms and licensing confirmations in `docs/`.
+6. PropLine's default bookmaker allowlist is sportsbook-only. Do not add exchanges to that path without a separate product and legal decision.

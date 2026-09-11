@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => { if (cond) { pass++; console.log(`  ok   ${name}`); } else { fail++; console.log(`  FAIL ${name}${extra ? ' — ' + extra : ''}`); } };
-const src = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8');
+const src = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8').replace(/\r\n/g, '\n');
 const cut = (a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i); if (i < 0 || j < 0) { console.error('FAIL: cut ' + a.slice(0, 40)); process.exit(1); } return src.slice(i, j); };
 const fnCut = (a) => { const i = src.indexOf(a); if (i < 0) { console.error('FAIL: fn ' + a.slice(0, 40)); process.exit(1); } const j = src.indexOf('\n}\n', i); return src.slice(i, j + 3); };
 const cutLine = (a) => { const i = src.indexOf(a); if (i < 0) { console.error('FAIL: line ' + a.slice(0, 40)); process.exit(1); } return src.slice(i, src.indexOf('\n', i) + 1); };
@@ -45,10 +45,25 @@ if (!_oddsRoundSrc) { console.error('FAIL: _oddsRound not found'); process.exit(
 // ── the network, stubbed ───────────────────────────────────────────────────
 const FIX = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/sleeper-league.json'), 'utf8'));
 const YFIX = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/yahoo-league.json'), 'utf8'));
+const CFIX = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/cbs-league.json'), 'utf8'));
+const cbsNet = { mode: '', raw: CFIX, requests: [] };
 const net = { calls: [], down: false, notFound: false, rate: false, yahooExpired: false, yahooRefreshed: 0, playersOnly: false };
 const sleeperWorld = { league: null, rosters: [], users: [], players: {}, matchups: {}, transactions: {} };
 async function fakeFetch(url, init) {
   net.calls.push(url);
+  if (/\.football\.cbssports\.com\/api\/league\//.test(url)) {
+    cbsNet.requests.push({ url, init });
+    const response = (body, status = 200) => ({ ok: status < 300, status, text: async () => typeof body === 'string' ? body : JSON.stringify(body) });
+    if (cbsNet.mode === 'network') throw new Error('fetch failed with secret ' + init.headers.Authorization);
+    if (cbsNet.mode === 'plain') return response('invalid access token ' + init.headers.Authorization, 403);
+    if (cbsNet.mode === 'expired200') return response({ statusCode: 401, body: { error: init.headers.Authorization } });
+    if (cbsNet.mode === 'malformed') return response('<html>' + init.headers.Authorization + '</html>');
+    if (cbsNet.mode === 'rate') return response('slow down', 429);
+    if (cbsNet.mode === 'missing') return response('not found', 404);
+    const resource = new URL(url).pathname.split('/api/league/')[1];
+    const key = { 'standings/overall': 'standings', 'transactions/waiver-order': 'waivers', 'transaction-list/log': 'transactions' }[resource] || resource;
+    return response({ statusCode: 200, body: cbsNet.raw[key] });
+  }
   const j = (o, status) => ({ ok: !status || status < 400, status: status || 200, json: async () => o });
   if (net.down) throw new Error('ECONNRESET');
   if (url.startsWith('https://api.sleeper.app/v1/players/nfl')) return j(sleeperWorld.players);
@@ -79,7 +94,7 @@ async function fakeFetch(url, init) {
 // Enough SQL for the region: INSERT ... ON CONFLICT (upsert by the table's
 // primary key), UPDATE ... WHERE, DELETE ... WHERE, SELECT with simple
 // conjunctions, COUNT(*), ORDER BY (ignored) and LIMIT (ignored).
-const PK = { leagues: ['id'], league_teams: ['league_id', 'team_id'], league_roster_players: ['league_id', 'provider_player_id'], league_matchups: ['league_id', 'week', 'team_id'],
+const PK = { league_provider_tokens: ['email', 'provider', 'provider_league_id'], leagues: ['id'], league_teams: ['league_id', 'team_id'], league_roster_players: ['league_id', 'provider_player_id'], league_matchups: ['league_id', 'week', 'team_id'],
   league_transactions: ['league_id', 'provider_txn_id'], league_snapshots: ['league_id', 'season', 'week', 'kind'], league_sync_runs: ['id'], provider_connections: ['email', 'provider'],
   player_id_map: ['provider', 'provider_player_id'], player_map_misses: ['provider', 'provider_player_id'], sessions: ['id'] };
 function fakeDb() {
@@ -469,10 +484,13 @@ console.log('\nmanual leagues');
 
 console.log('\nYahoo OAuth');
 {
-  const noKey = { ...env, LEAGUE_TOKEN_KEY: undefined };
-  ok('without LEAGUE_TOKEN_KEY, Yahoo is reported unconfigured', !H.leagueProviderReport(noKey).yahoo.enabled && H.leagueProviderReport(noKey).yahoo.reason === 'not configured');
+  const noKey = { ...env, LEAGUE_TOKEN_KEY: undefined, AUTH_SECRET: undefined };
+  ok('without either encryption source, Yahoo is reported unconfigured', !H.leagueProviderReport(noKey).yahoo.enabled && H.leagueProviderReport(noKey).yahoo.reason === 'not configured');
   const sealed = await H.leagueSeal(env, 'secret-token');
   ok('tokens are sealed at rest and open again only with the key', sealed.startsWith('v1.') && !sealed.includes('secret-token') && (await H.leagueOpen(env, sealed)) === 'secret-token' && (await H.leagueOpen({ LEAGUE_TOKEN_KEY: 'other' }, sealed)) === null);
+  const fallbackEnv = { AUTH_SECRET: 'auth-only' };
+  const fallbackSealed = await H.leagueSeal(fallbackEnv, 'fallback-token');
+  ok('AUTH_SECRET supplies a domain-separated fallback encryption key', fallbackSealed.startsWith('v1.') && !fallbackSealed.includes('fallback-token') && (await H.leagueOpen(fallbackEnv, fallbackSealed)) === 'fallback-token' && (await H.leagueOpen({ AUTH_SECRET: 'other' }, fallbackSealed)) === null);
   const start = await route(env, 'GET', '/api/oauth/yahoo/start', null, cookie);
   const loc = start.headers.get('location') || '';
   ok('start redirects to Yahoo with the client id, the read-only scope and a signed state', start.status === 302 && loc.startsWith('https://api.login.yahoo.com/oauth2/request_auth') && /client_id=cid/.test(loc) && /scope=fspt-r/.test(loc) && /state=/.test(loc) && !/client_secret/.test(loc));
@@ -496,6 +514,64 @@ console.log('\nYahoo OAuth');
   net.yahooExpired = false;
   const off = await route(env, 'POST', '/api/oauth/yahoo/disconnect', null, cookie);
   ok('disconnecting Yahoo deletes the tokens', off.body.ok && !(await H.leagueConnectionRead(env, 'ken@example.com', 'yahoo')));
+}
+
+console.log('\nCBS token connector, end to end');
+{
+  const ce = { ...env, FLAG_CBS_SYNC: '1' };
+  const con = (id = 'fixture', token = 'CBS-secret-one') => route(ce, 'POST', '/api/leagues/connect', { provider: 'cbs', leagueId: id, accessToken: token }, cookie);
+  const saved = (id = 'fixture') => db.t.league_provider_tokens.get('ken@example.com|cbs|' + id);
+  ok('CBS is off by default', !H.leagueProviderReport(env).cbs.enabled);
+  ok('CBS needs the encryption key even when enabled', !H.leagueProviderReport({ FLAG_CBS_SYNC: '1' }).cbs.enabled);
+  ok('CBS can use the existing AUTH_SECRET as its separated encryption source', H.leagueProviderReport({ FLAG_CBS_SYNC: '1', AUTH_SECRET: 'auth-only' }).cbs.enabled);
+  const callsBefore = cbsNet.requests.length;
+  const off = await route(env, 'POST', '/api/leagues/connect', { provider: 'cbs', leagueId: 'fixture', accessToken: 'secret' }, cookie);
+  ok('disabled connect makes no CBS requests', off.status === 503 && cbsNet.requests.length === callsBefore);
+  const anon = await route(ce, 'POST', '/api/leagues/connect', { provider: 'cbs', leagueId: 'fixture', accessToken: 'secret' });
+  ok('CBS connect requires sign-in', anon.status === 401);
+  for (const id of ['https://evil.example', 'fixture.football.cbssports.com.evil.test', 'fixture@evil.test', 'fixture/path', '-fixture', 'https://fixture.football.cbssports.com/?token=secret']) {
+    const r = await con(id);
+    ok('invalid league input is rejected without a fetch: ' + id, r.status === 404 && cbsNet.requests.length === callsBefore);
+  }
+  const r = await con('https://Fixture.football.cbssports.com/');
+  ok('CBS connects into the existing model and asks for the user team', r.body.ok && r.body.needsTeam && r.body.league.provider === 'cbs', JSON.stringify(r.body));
+  const id = r.body.league.id;
+  let L = await H.leagueLoad(ce, 'ken@example.com', id);
+  ok('CBS imports scoring, superflex, IR and FAAB', L.settings.scoring.passingYardsPerPoint === 25 && L.settings.scoring.passingTD === 6 && L.settings.scoring.receptionPoints === 0.5 && L.settings.roster.SFLEX === 1 && L.settings.roster.IR === 2 && L.settings.faab === 200);
+  ok('unsupported scoring is retained and labeled', Object.keys(L.settings.extras.unsupported).length === 1 && L.settings.extras.notes.length > 0);
+  ok('CBS stores teams, roster slots, standings and waiver balance', L.teams.length === 2 && L.teams[0].faabLeft === 153 && L.teams[0].pointsFor === 440.5 && L.rosters.some(t => t.players.some(p => p.slot === 'ir')));
+  ok('token is encrypted and absent from API responses', saved().access_enc.startsWith('v1.') && await H.leagueOpen(ce, saved().access_enc) === 'CBS-secret-one' && !JSON.stringify(r.body).includes('CBS-secret-one') && !JSON.stringify(r.body).includes('access_enc'));
+  ok('all CBS reads use HTTPS, header auth, no redirects and no credential URL', cbsNet.requests.length === 8 && cbsNet.requests.every(x => new URL(x.url).origin === 'https://fixture.football.cbssports.com' && !x.url.includes('secret') && x.init.headers.Authorization === 'CBS-secret-one' && x.init.redirect === 'error' && x.init.method === 'GET' && x.init.cache === 'no-store'));
+  const team = await route(ce, 'POST', '/api/leagues/' + id + '/team', { teamId: '1' }, cookie);
+  ok('CBS uses the existing team chooser', team.body.ok);
+  const row = [...db.t.leagues.values()].find(x => x.id === id);
+  const sync = await H.leagueSync(ce, row, 'job');
+  ok('scheduled CBS sync decrypts its saved token and keeps team selection', sync.ok && (await H.leagueLoad(ce, 'ken@example.com', id)).userTeamId === '1');
+  ok('resync is idempotent', [...db.t.league_roster_players.values()].filter(x => x.league_id === id).length === 4 && [...db.t.league_transactions.values()].filter(x => x.league_id === id).length === 1 && [...db.t.league_matchups.values()].filter(x => x.league_id === id).length === 4);
+  const other = await con('second', 'CBS-secret-two');
+  ok('separate leagues retain separate encrypted tokens', other.body.ok && await H.leagueOpen(ce, saved('second').access_enc) === 'CBS-secret-two' && await H.leagueOpen(ce, saved().access_enc) === 'CBS-secret-one');
+  const forbidden = await route(ce, 'GET', '/api/leagues/' + id, null, await session(ce, 'other@example.com'));
+  ok('another account cannot read CBS data', forbidden.status === 404);
+  for (const [mode, expected] of [['plain', 'expired_authorization'], ['expired200', 'expired_authorization'], ['rate', 'rate_limited'], ['missing', 'league_not_found'], ['malformed', 'invalid_response'], ['network', 'provider_unavailable']]) {
+    cbsNet.mode = mode;
+    const before = JSON.stringify([...db.t.league_roster_players.values()].filter(x => x.league_id === id));
+    const result = await H.leagueSync(ce, row, 'job');
+    ok('CBS ' + mode + ' failure is classified, redacted, and preserves rosters', !result.ok && result.code === expected && !JSON.stringify(result).includes('CBS-secret') && JSON.stringify([...db.t.league_roster_players.values()].filter(x => x.league_id === id)) === before);
+  }
+  const badReconnect = await con('fixture', 'rejected-secret');
+  ok('failed reconnect does not replace a saved token', !badReconnect.body.ok && await H.leagueOpen(ce, saved().access_enc) === 'CBS-secret-one');
+  cbsNet.mode = '';
+  cbsNet.raw = structuredClone(CFIX); cbsNet.raw.rosters.rosters.teams.pop();
+  const partial = await H.leagueSync(ce, row, 'job');
+  ok('a partial roster fails before any imported rows are deleted', !partial.ok && [...db.t.league_roster_players.values()].filter(x => x.league_id === id).length === 4);
+  cbsNet.raw = CFIX;
+  const reconnected = await con('fixture', 'CBS-renewed');
+  ok('reconnect rotates the token without duplicating the league', reconnected.body.ok && !reconnected.body.created && reconnected.body.league.id === id && await H.leagueOpen(ce, saved().access_enc) === 'CBS-renewed');
+  const noKey = await H.leagueSync({ ...ce, LEAGUE_TOKEN_KEY: 'wrong' }, row, 'job');
+  ok('a wrong encryption key fails closed', !noKey.ok && noKey.code === 'expired_authorization');
+  const dc = await route(ce, 'POST', '/api/leagues/' + id + '/disconnect', null, cookie);
+  ok('disconnect deletes only this league token', dc.body.tokensRemoved && !saved() && !!saved('second'));
+  ok('CBS sync logs never include tokens', !JSON.stringify([...db.t.league_sync_runs.values()]).includes('CBS-secret'));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

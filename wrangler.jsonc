@@ -3,7 +3,17 @@
   "main": "_worker.js",
   "compatibility_date": "2025-05-01",
   "assets": { "directory": ".", "binding": "ASSETS", "run_worker_first": true },
-  "vars": { "LLM_PROVIDER": "anthropic", "LLM_MODEL": "claude-sonnet-4-6", "POST_DRAFT_OPEN": "1" },
+  // Automated newsroom prose is pinned separately so a future interactive-model
+  // upgrade cannot spend Opus on stories or move numeric work into the LLM.
+  "vars": { "LLM_PROVIDER": "anthropic", "LLM_MODEL": "claude-sonnet-4-6", "NEWSROOM_LLM_MODEL": "claude-sonnet-4-6", "POST_DRAFT_OPEN": "1", "FLAG_CBS_SYNC": "1", "TMS_ENABLED": "1", "TMS_PROVIDER": "propline", "PROPLINE_MOVEMENT": "0", "TMS_INTERVAL_MINUTES": "60" },
+  // CPU time per invocation. A "limits": { "cpu_ms": 300000 } stanza was
+  // pushed on 2026-09-10 and Workers Builds refused the deploy (build
+  // db0e0105); limits are only accepted on the Standard usage model. The
+  // job log shows this worker's invocations being killed mid-job with no
+  // exception (HANDOFF.md §68p), which is what a CPU limit does, and on the
+  // legacy Bundled model a cron invocation gets 50 ms of CPU. Switch the
+  // worker to Standard in the dashboard (Settings, Usage Model) and then put
+  // the stanza back; until then it must stay out or main will not deploy.
   "d1_databases": [
     { "binding": "LEADS_DB", "database_name": "iron-tuna-leads", "database_id": "75f7c43a-69cc-48eb-aa78-6ecfd91af2fb" }
   ],
