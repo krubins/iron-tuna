@@ -142,8 +142,10 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
 console.log('\nthe DFS page explanations');
 {
   const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
-  ok('the primary contest cards use DraftKings lobby terminology', page.includes('<b>50/50 &amp; Double Ups</b>') && page.includes('<b>Tournament &middot; Single Entry</b>') && page.includes('<b>Multi-Entry Tournament</b>') && !/<button class="df-shape"[^>]*data-contest="3max"/.test(page));
-  ok('the DraftKings translation explains where to find each contest', page.includes('Match Iron Tuna to DraftKings:') && page.includes('use the “50/50 &amp; Double Ups” contest filter') && page.includes('look for “[Single Entry]”') && page.includes('look for the “M” multi-entry indicator'));
+  ok('DraftKings game style is selected before contest type', page.includes('DraftKings Game Style') && page.includes('<b>Classic</b>') && page.includes('<b>Best Ball</b>') && page.includes('This is the game style Iron Tuna&rsquo;s DFS optimizer below is solving.'));
+  ok('Best Ball routes away from the weekly optimizer', page.includes('href="/bestball-insights"') && page.includes('DraftKings automatically counts your highest-scoring eligible players each week'));
+  ok('the primary Classic contest cards use DraftKings lobby terminology', page.includes('<b>50/50 &amp; Double Ups</b>') && page.includes('<b>Tournament &middot; Single Entry</b>') && page.includes('<b>Multi-Entry Tournament</b>') && !/<button class="df-shape"[^>]*data-contest="3max"/.test(page));
+  ok('the DraftKings Classic translation explains the second step', page.includes('Step 2, after choosing Classic:') && page.includes('50/50 &amp; Double Ups') && page.includes('[Single Entry]') && page.includes('Multi-Entry Tournament'));
   ok('cash is explicitly the chalk and value-consistency roster', page.includes('50/50 &amp; Double Ups = chalk and value consistency') && page.includes('This is the chalk and value-consistency roster.') && page.includes('fragile longshots'));
   ok('single entry is explained as the best one-shot roster', page.includes('Tournament &middot; Single Entry = your best one shot') && page.includes('best one-shot roster'));
   ok('multi-entry tournaments are explained as ceiling and separation', page.includes('Multi-Entry Tournament = ceiling and separation') && page.includes('ceiling and leverage roster'));
