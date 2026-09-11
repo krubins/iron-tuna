@@ -10,9 +10,17 @@ pinned to one desk and restored 73 seconds later, and nobody could see what had
 changed or when. Edit here, then push the same text to the Routine
 (`update_trigger`), and the diff is in the history either way.
 
-VERIFIED LIVE 2026-09-09T11:30Z: the body below is byte-identical to the
-Routine's prompt (47,183 chars, sha256 9c578c415408...), read back from the
-Routine and diffed against this file.
+VERIFIED LIVE 2026-09-11 (D1 clock 21:25Z): the body below is byte-identical
+to the Routine's prompt (47,183 chars, sha256 9c578c415408...), read back from
+the Routine and diffed against this file.
+
+DO NOT RUN A SITE-WIDE TEXT PASS OVER THE BODY BELOW. On 2026-09-10 the
+American-spelling pass (77d6e6c) changed "quantised" to "quantized" in this
+file. The Routine holds its own copy and was not touched, so the canonical
+record silently stopped matching what runs, and the next audit read it as a
+discrepancy. The body has been put back to the Routine's text. Everything below
+the marker is the Routine's, verbatim, and only changes when the Routine
+changes.
 
 SYNCED FROM THE LIVE COPY, NOT PUSHED TO IT. On 2026-09-09 the audit found the
 Routine's prompt had gained a "WHOSE BYLINE THIS RUN CARRIES" section (+17
@@ -237,7 +245,7 @@ State in the method line that you ran this check and what it returned. If a figu
 
 **And name the board's number for every dollar figure you print, not just the headline one.** If you tell the reader to bid $15 on a player the board prices at $10, say the board says $10 and say why you disagree. A recommendation that differs from the sheet is the whole point of the column; a recommendation that differs from the sheet *silently* is the bug this column has now shipped four times, because the reader has their own sheet open and it contradicts you with no explanation. This applies to secondary players and throwaway asides, not only to the player in the headline.
 
-**Name the board beside any point total you print.** Prices and ranks are quantized by the curve and almost never move; point totals move every single refresh, by a tenth or two, forever. A story that says a player scores 322.8 points is stale within a day, and a reader who checks will find 322.7 and conclude the desk cannot count. There is always a board that number is true of — say which — "322.8 points on the August 28 board", not "322.8 points".
+**Name the board beside any point total you print.** Prices and ranks are quantised by the curve and almost never move; point totals move every single refresh, by a tenth or two, forever. A story that says a player scores 322.8 points is stale within a day, and a reader who checks will find 322.7 and conclude the desk cannot count. There is always a board that number is true of — say which — "322.8 points on the August 28 board", not "322.8 points".
 
 If you deviate from any of this, say so in the method line.
 

@@ -10224,3 +10224,134 @@ Americanized. No code.
 - **§79a unchanged**: Collins and Wilson still the only inverted tie whose two
   slot prices differ ($27 vs $28). Fourth day.
 - Overlay snapshot taken for 09-10; 09-07 through 09-10 now on disk.
+
+## 83. September 11: the player-odds feed has stopped, and this session's clock lies
+
+The column is still paused. Two findings underneath it, one of them in my own
+tooling, and one correction to how these audits read the time.
+
+### 83a. This session's clock is ~10 hours behind. Use D1's.
+
+The scheduled trigger reported firing at **11:20Z**. D1, asked directly, says
+`datetime('now')` is **21:24Z** the same day. Everything this session infers
+about elapsed time from its own clock is wrong by about ten hours.
+
+I nearly filed two overlay rows as "timestamped in the future" on the strength
+of that. They were not; they were four and zero hours old against a clock I had
+wrong. **Ask the database what time it is before calling anything stale or
+future-dated**, and compute ages from the data's own timestamps. The snapshot
+tool now does exactly that — every age it prints is relative to the newest row
+in the table, never to this machine.
+
+### 83b. The player-odds feed has not refreshed in 34 hours
+
+Ages measured against the newest row in `odds_overlay`:
+
+| row | provider | age |
+|---|---|---|
+| **1** | **nflverse (player odds — this is what the board blends)** | **34.0h** |
+| **2** | **teamctx** | **34.0h** |
+| 3 | espn-injuries | 4.0h |
+| 4 | nflverse+espn | 0.0h |
+| **6** | **espn-depth** | **35.0h** |
+
+Rows 3 and 4 are current. Rows 1, 2 and 6 stopped at roughly 09-10 10:00–11:00Z
+and have not moved since. Confirmed independently: re-running the snapshot
+today produced `qb/rb/wr/te-0910` **byte-identical** to yesterday's — the
+player odds really are frozen, not merely slow.
+
+This lands the day after §74, which moved the market feed to SportsGameOdds and
+retired the 11:00Z daily trigger in favour of an hourly tick driven by
+`JOB_SCHEDULE` in New York time. The new rows are the ones that are current;
+the older pulls are the ones that stopped. That is the shape of a migration
+that moved some jobs and left others behind, but I cannot prove intent from
+here — it may be deliberate if row 1 is being replaced by row 4.
+
+Why it matters now: **the lead-story prompt treats an overlay older than 36
+hours as stale and requires a run to say so.** Row 1 is at 34 hours and rising,
+so it crosses that line within two hours of this writing. With the Routine
+paused there is no run to notice, and the board a reader sees will simply keep
+blending older and older odds without anything saying so.
+
+### 83c. The pinned story keeps moving — through availability, not odds
+
+Row 94 has been the front page since 09-09. Its own board (09-08) still
+reproduces every figure exactly. Against the board a reader sees **now**
+(09-10 odds, because that is the freshest there is, plus the 09-11 injury feed):
+
+| | story | live now | |
+|---|---|---|---|
+| Carnell Tate | $11, WR25 | WR**24** $11 | rank moved |
+| Cam Ward | $1, QB26 | QB26 $1 | unchanged |
+| **Tony Pollard** | **$5, RB29** | **RB27 $6** | **rank and price moved** |
+| Wan'Dale Robinson | $3, WR38 | WR**37** $3 | rank moved |
+
+Yesterday only Pollard had moved; today three of four have. **The odds have
+been frozen for 34 hours, so none of this is odds drift — it is the injury
+feed.** Row 3 keeps refreshing (16 rows on 09-06, 14 on 09-10, 13 today), and
+every player who comes off it re-enters at his full projection and pushes the
+others down a rank.
+
+So "the odds are stale" does not mean "the board is still". A frozen feed and a
+live availability table together make a board that moves for reasons no story
+can anticipate — and the one figure a reader acts on, Pollard's price, is now
+$6, exactly the bid the story recommends.
+
+Reported, not edited (§78). But this is the second day of drift on a story
+nobody can replace while the Routine is off.
+
+### 83d. My snapshot tool destroyed a file, and is fixed
+
+`tools/overlay-snapshot.mjs` stamped **every** output with row 1's date. With
+row 1 frozen at 09-10, today's run wrote the 09-11 injury feed into
+`avail-0910.json` and overwrote yesterday's. A snapshot tool that silently
+replaces an older snapshot is worse than none.
+
+Three changes:
+
+1. **Each file is stamped by its own source row's date.** The feeds do not
+   share a cadence, and today proves it — the odds slices are 09-10 and the
+   availability is 09-11.
+2. **An existing file is never overwritten.** Identical content is a no-op;
+   differing content under the same stamp is refused, written to
+   `<name>-<day>.new.json`, and reported.
+3. **Every row's age is printed** on each run, so a feed that has quietly
+   stopped is visible without anyone going looking.
+
+The corrupted `avail-0910.json` was removed rather than left to be read as
+yesterday's data. Yesterday's 14-row injury feed is gone; nothing depended on
+it.
+
+### 83e. §79a's tie is now costing $2, not $1
+
+Collins and Wilson still tie — at **231.5** now, not 229.8 — and are still the
+only inverted pair whose slot prices differ. But the gap has widened: the slots
+are **$28 and $30**, and both players are served at **$30**. The static block
+in `it-league.js` would quote Wilson $28.
+
+So the discrepancy between the two boards the site ships has **doubled while
+the repair has been open**. Not because anything got worse, only because the
+pair drifted up the curve into a steeper part of it — which is exactly the
+generalization §79a predicted.
+
+### 83f. The prompt copy diverged, and it was the spelling pass
+
+The repo copy stopped matching the Routine: one word, `quantized` against the
+Routine's `quantised`. The 09-10 American-spelling pass (`77d6e6c`) edited the
+prompt body in this repo; the Routine holds its own copy and was not touched.
+
+Put back to the Routine's text, per the standing rule that this file mirrors
+what runs and is never pushed the other way without Ken. The header now warns
+against running site-wide text passes over the body. **If the American spelling
+is wanted in the live prompt, it has to go to the Routine deliberately.**
+
+### 83g. The rest
+
+- CI **76/76** after merging 121 commits.
+- Pipeline functions and `boardPayload` both unchanged since 09-10.
+- Repo vs deployed: 1380 player-rows, **0 differences**.
+- Harness self-test: 23 checks, all pass.
+- Routine still `enabled: false`, unchanged since 09-09 13:05Z. `lead_story_run`
+  still ends at 58; `lead_story` still ends at 95; no new audit rows beyond the
+  66/67 swap. Tamper predicates clean.
+- §81's byline mapping still absent from repo and deployed — third day.
