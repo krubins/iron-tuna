@@ -142,8 +142,12 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
 console.log('\nthe DFS page explanations');
 {
   const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
-  ok('the contest cards explain Cash, Single Entry and Large Field', /<b>Cash<\/b>[\s\S]*<b>Single Entry<\/b>[\s\S]*<b>Large Field<\/b>/.test(page));
-  ok('the contest cards explain how the objectives change', page.includes('How they differ:') && page.includes('floor and safety toward ceiling, correlation and leverage'));
+  ok('the primary contest cards are Cash, Single Entry and Large Field', /<b>Cash<\/b>[\s\S]*<b>Single Entry<\/b>[\s\S]*<b>Large Field<\/b>/.test(page) && !/<button class="df-shape"[^>]*data-contest="3max"/.test(page));
+  ok('cash is explicitly the chalk and value-consistency roster', page.includes('Cash = chalk and value consistency') && page.includes('This is the chalk and value-consistency roster.') && page.includes('fragile longshots'));
+  ok('single entry is explained as the best one-shot roster', page.includes('Single Entry = your best one shot') && page.includes('best one-shot roster'));
+  ok('large field is explained as ceiling and separation', page.includes('Large Field = ceiling and separation') && page.includes('ceiling and leverage roster'));
+  ok('advanced strategy exposes multi-lineup and hedging concepts', page.includes('id="dfAdvancedToggle"') && page.includes('3-Max: one core, three paths') && page.includes('Multi-lineup portfolio') && page.includes('Hedge game scripts') && page.includes('Exposure limits') && page.includes('Late swap'));
+  ok('the lead roster has a larger summary, side breakdown, and player fit lines', page.includes('.df-explain-summary p{margin:0;color:#d5e2df;font-size:16px') && page.includes('Lineup Breakdown') && page.includes('class="df-fit"'));
   ok('player names expose a calculation drawer', page.includes('id="dfPlayerModal"') && page.includes('function openPlayerCalc') && page.includes('df-player-link'));
   ok('the player drawer labels modeled ownership as a model', page.includes('Modeled ownership') && page.includes('not an operator or third-party ownership feed'));
   ok('DraftKings FPPG is always paired with the Iron Tuna projection and edge', page.includes('DraftKings FPPG') && page.includes('Iron Tuna Projection') && page.includes('Tuna Edge') && page.includes('historical fantasy-points-per-game average'));
