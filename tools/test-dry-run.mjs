@@ -4,7 +4,7 @@
 // rivalry budget, the breaking-news scan, the tick) runs against a fake D1,
 // a fake model behind the writer, a fixture season and a small projection
 // pool, with the clock advanced a quarter hour at a time from the Thursday
-// opener of Week 1 to the Friday of Week 2. It asserts what the week
+// opener of Week 1 through Saturday of Week 2. It asserts what the week
 // produced, in both lenses, and what it did not.
 //   node tools/test-dry-run.mjs
 import fs from 'fs';
@@ -66,6 +66,7 @@ function fakeDb(clock) {
       else if (/INSERT INTO news_events/.test(sql)) T.news_events.push({ id: ids++, score: args[8], player: args[4], type: args[2], handled: null });
       else if (/INSERT OR REPLACE INTO news_state/.test(sql)) T.news_state = { payload: args[0] };
       else if (/INSERT INTO job_runs/.test(sql)) T.job_runs.push({ job: args[0], ok: args[4] });
+      else if (/UPDATE content_pieces SET status = 'published'/.test(sql)) { const r = T.content_pieces.find(x => x.id === args[args.length - 1]); if (r && r.status === 'scheduled') { r.status = 'published'; r.published_at = args[0]; } }
       else if (/UPDATE content_pieces SET status/.test(sql)) { const r = T.content_pieces.find(x => x.id === args[args.length - 1]); if (r) { r.status = args[0]; if (args.length > 2) r.published_at = args[1]; } }
       else if (/UPDATE news_events SET handled/.test(sql)) T.news_events.forEach(e => { if (e.handled == null && e.score >= args[1]) e.handled = args[0]; });
       else if (/INSERT OR REPLACE INTO game_summaries/.test(sql)) T.summaries[args[0]] = { payload: args[5], final: args[4] };
@@ -87,12 +88,13 @@ function fakeDb(clock) {
       return null;
     },
     async all() {
+      if (/FROM content_pieces WHERE status = 'scheduled'/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'scheduled').sort((a, b) => a.created_at - b.created_at) };
       if (/SELECT kind, rivalry FROM content_pieces/.test(sql)) { const kinds = args.slice(1, -1); return { results: T.content_pieces.filter(r => r.status === 'published' && kinds.includes(r.kind)).sort((a, b) => b.created_at - a.created_at).slice(0, args[args.length - 1]) }; }
       if (/FROM analyst_calls WHERE player_key IN/.test(sql)) { const keys = args.slice(0, -1); return { results: T.analyst_calls.filter(c => keys.includes(c.player_key)).sort((a, b) => b.created_at - a.created_at).slice(0, args[args.length - 1]) }; }
       if (/FROM content_pieces WHERE status = 'published' AND analyst = \?/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published' && r.analyst === args[0]).sort((a, b) => b.published_at - a.published_at).slice(0, 12) };
       if (/FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published' && r.rivalry).sort((a, b) => b.published_at - a.published_at).slice(0, 10) };
       if (/FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT \?/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published').sort((a, b) => b.published_at - a.published_at).slice(0, args[0]) };
-      if (/FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 80/.test(sql)) return { results: T.content_pieces.filter(r => r.status !== 'unpublished').sort((a, b) => b.created_at - a.created_at) };
+      if (/FROM content_pieces WHERE status NOT IN \('unpublished','scheduled'\) ORDER BY created_at DESC LIMIT 80/.test(sql)) return { results: T.content_pieces.filter(r => r.status !== 'unpublished' && r.status !== 'scheduled').sort((a, b) => b.created_at - a.created_at) };
       return { results: [] };
     }
   });
@@ -175,7 +177,7 @@ console.log('\nthe week, a quarter hour at a time');
 const timeline = [];
 const scans = [];
 const errors = new Set();
-const start = ET(2026, 9, 10, 6, 0), end = ET(2026, 9, 18, 9, 0);
+const start = ET(2026, 9, 10, 6, 0), end = ET(2026, 9, 19, 12, 0);
 for (clock.t = start; clock.t <= end; clock.t += 900000) {
   const et = H.etParts(clock.t);
   if (et.dow === 'Sun' && et.hour === 11 && et.minute === 45 && et.dow === 'Sun') { availability['calrunner|RB'] = { status: 'Out', gamesOut: 1, note: 'ankle, ruled out' }; }
@@ -189,6 +191,8 @@ for (clock.t = start; clock.t <= end; clock.t += 900000) {
 Date.now = realNow;
 const P = db.T.content_pieces;
 const at = (kind, week) => timeline.filter(x => x.kind === kind && x.week === week);
+const pubAt = (kind, week) => at(kind, week).filter(x => x.status === 'published');
+const genAt = (kind, week) => at(kind, week).filter(x => x.status === 'scheduled');
 console.log('  ' + timeline.map(x => x.at + ' ' + x.kind + ' w' + x.week + ' ' + x.status + (x.version > 1 ? ' v' + x.version : '') + (x.rivalry ? ' [rivalry]' : '')).join('\n  '));
 for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.kind + ' w' + r.week + ': ' + String(r.violations).slice(0, 300));
 {
@@ -197,17 +201,17 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('the 11:45 scratch, before the intel slot, scored as breaking news and produced a Breaking piece; the 12:45 one refreshed Last-Minute Intel instead of a second story', scans.length === 2 && scans[0].handled.via === 'breaking' && scans[1].handled.via === 'last-minute-intel', JSON.stringify(scans.map(s => [s.at, s.handled && s.handled.via])));
   ok('below-threshold changes are logged and produce nothing', db.T.news_events.length >= 2 && db.T.news_events.every(e => e.score < 60 ? !e.handled : true));
   ok('What Sunday Taught Us published at 7:30 PM with the finals it had and updated as the late and night games went final: three versions, one slug', at('what-sunday-taught-us', 1)[0] && at('what-sunday-taught-us', 1)[0].at === 'Sun 19:30' && at('what-sunday-taught-us', 1).length === 3 && P.filter(r => r.kind === 'what-sunday-taught-us').every(r => r.slug === P.find(x => x.kind === 'what-sunday-taught-us').slug), JSON.stringify(at('what-sunday-taught-us', 1)));
-  ok('the MNF preview and the early rankings published Monday 6:00, the preview about the Monday game and the rankings about Week 2', at('mnf-preview', 1)[0] && at('mnf-preview', 1)[0].at === 'Mon 6:00' && at('early-rankings', 2)[0] && at('early-rankings', 2)[0].at === 'Mon 6:00' && at('early-rankings', 2)[0].status === 'published', JSON.stringify([at('mnf-preview', 1), at('early-rankings', 2)]));
-  ok('the Week 2 MNF preview waited for its own Monday', !at('mnf-preview', 2).length || at('mnf-preview', 2)[0].at === 'Mon 6:00');
+  ok('the Monday Morning Brief was written at 3:15 AM and released at 6:00 AM, with no standalone MNF story', genAt('early-rankings', 2)[0] && genAt('early-rankings', 2)[0].at === 'Mon 3:15' && pubAt('early-rankings', 2)[0] && pubAt('early-rankings', 2)[0].at === 'Mon 6:00' && !at('mnf-preview', 1).length, JSON.stringify([at('mnf-preview', 1), at('early-rankings', 2)]));
   ok('Quarterback Monday was skipped: nothing worth publishing with no usage file', at('quarterback-monday', 1)[0] && at('quarterback-monday', 1)[0].status === 'skipped');
   if (!at('ros-rankings', 2)[0]) { Date.now = () => ET(2026, 9, 15, 7, 0); console.log('  DEBUG ros-rankings: ' + JSON.stringify(await H.produceContent(env, 'ros-rankings', {})).slice(0, 600)); Date.now = () => clock.t; }
-  ok('the ROS rankings published Tuesday 7:00 about Week 2', at('ros-rankings', 2)[0] && at('ros-rankings', 2)[0].at === 'Tue 7:00', JSON.stringify(at('ros-rankings', 2)));
+  ok('the ROS rankings were written Tuesday 1:15 AM and published at 7:00 AM', genAt('ros-rankings', 2)[0] && genAt('ros-rankings', 2)[0].at === 'Tue 1:15' && pubAt('ros-rankings', 2)[0] && pubAt('ros-rankings', 2)[0].at === 'Tue 7:00', JSON.stringify(at('ros-rankings', 2)));
   ok('Tailback Tuesday and Tight End Thursday were skipped rather than padded (no usage file, no priced beneficiary)', ['tailback-tuesday', 'tight-end-thursday'].every(k => at(k, 1)[0] && at(k, 1)[0].status === 'skipped'));
-  ok('Wideout Wednesday ran: a top receiver was ruled out with a priced beneficiary on the depth chart', at('wideout-wednesday', 1)[0] && at('wideout-wednesday', 1)[0].status === 'published' && JSON.parse(P.find(r => r.kind === 'wideout-wednesday').brief).absences.length >= 1);
-  ok('the Pickup Advisor published Wednesday 6:00', at('pickup-advisor', 2)[0] && at('pickup-advisor', 2)[0].at === 'Wed 6:00');
-  ok('Thursday: the TNF preview at 6 (published), Underrated at 7 and the Trade Desk at 8 (skipped: no usage, no priced disagreement)', at('tnf-preview', 2)[0] && at('tnf-preview', 2)[0].at === 'Thu 6:00' && at('tnf-preview', 2)[0].status === 'published' && at('underrated', 2)[0] && at('underrated', 2)[0].at === 'Thu 7:00' && at('trade-desk', 2)[0] && at('trade-desk', 2)[0].at === 'Thu 8:00', JSON.stringify([at('tnf-preview', 2), at('underrated', 2), at('trade-desk', 2)]));
-  ok('Friday: Thursday Night What Matters at 6 and the Weekend Preview at 7 (published), Kickers & Defenses at 8 (skipped: no K or DST in the pool)', at('tnf-what-matters', 2)[0] && at('tnf-what-matters', 2)[0].at === 'Fri 6:00' && at('tnf-what-matters', 2)[0].status === 'published' && at('weekend-preview', 2)[0] && at('weekend-preview', 2)[0].at === 'Fri 7:00' && at('weekend-preview', 2)[0].status === 'published' && at('kickers-defenses', 2)[0] && at('kickers-defenses', 2)[0].at === 'Fri 8:00', JSON.stringify([at('tnf-what-matters', 2), at('weekend-preview', 2), at('kickers-defenses', 2)]));
-  ok('nothing published twice for the same kind and week except the two live pieces', Object.keys(H.CONTENT_KINDS).every(k => k === 'last-minute-intel' || k === 'what-sunday-taught-us' || k === 'tnf-preview' || [1, 2].every(w => at(k, w).filter(x => x.status !== 'skipped').length <= 1)));
+  ok('Wideout Wednesday was written at 2:15 AM and released at 1:15 PM', genAt('wideout-wednesday', 1)[0] && genAt('wideout-wednesday', 1)[0].at === 'Wed 2:15' && pubAt('wideout-wednesday', 1)[0] && pubAt('wideout-wednesday', 1)[0].at === 'Wed 13:15' && JSON.parse(P.find(r => r.kind === 'wideout-wednesday').brief).absences.length >= 1);
+  ok('the Pickup Advisor was written Wednesday 1:15 AM and published at 6:00 AM', genAt('pickup-advisor', 2)[0] && genAt('pickup-advisor', 2)[0].at === 'Wed 1:15' && pubAt('pickup-advisor', 2)[0] && pubAt('pickup-advisor', 2)[0].at === 'Wed 6:00');
+  ok('Thursday: TNF Preview writes at 1:15 and releases at 6; the later discretionary pieces do not publish in a morning burst', genAt('tnf-preview', 2)[0] && genAt('tnf-preview', 2)[0].at === 'Thu 1:15' && pubAt('tnf-preview', 2)[0] && pubAt('tnf-preview', 2)[0].at === 'Thu 6:00' && (!pubAt('underrated', 2)[0] || pubAt('underrated', 2)[0].at === 'Thu 10:15') && (!pubAt('trade-desk', 2)[0] || pubAt('trade-desk', 2)[0].at === 'Thu 13:45'), JSON.stringify([at('tnf-preview', 2), at('underrated', 2), at('trade-desk', 2)]));
+  ok('Friday: What Matters publishes at 6, Weekend Preview at 11:15, and K/D waits until 2:45 if it has a story', pubAt('tnf-what-matters', 2)[0] && pubAt('tnf-what-matters', 2)[0].at === 'Fri 6:00' && pubAt('weekend-preview', 2)[0] && pubAt('weekend-preview', 2)[0].at === 'Fri 11:15' && (!pubAt('kickers-defenses', 2)[0] || pubAt('kickers-defenses', 2)[0].at === 'Fri 14:45'), JSON.stringify([at('tnf-what-matters', 2), at('weekend-preview', 2), at('kickers-defenses', 2)]));
+  ok('Saturday Market Movers uses the 5:15 AM generation slot and does not publish before 11:30', !genAt('market-movers', 2).length || genAt('market-movers', 2)[0].at === 'Sat 5:15' && (!pubAt('market-movers', 2).length || pubAt('market-movers', 2)[0].at === 'Sat 11:30'));
+  ok('nothing published twice for the same kind and week except the two live pieces', Object.keys(H.CONTENT_KINDS).every(k => k === 'last-minute-intel' || k === 'what-sunday-taught-us' || [1, 2].every(w => pubAt(k, w).length <= 1)));
   ok('no retired kind ran', P.every(r => H.CONTENT_KINDS[r.kind]) && Object.keys(H.LEGACY_CONTENT).every(k => !P.some(r => r.kind === k)));
   const pub = P.filter(r => r.status === 'published');
   ok('every published piece carries both lenses, a headline, a byline and a version', pub.length >= 9 && pub.every(r => { const b = JSON.parse(r.body); return b.weekly && b.dfs && r.headline && r.analyst && r.version >= 1; }), String(pub.length));
@@ -220,6 +224,8 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   const later = pub.filter(r => JSON.parse(r.brief).priorCalls && JSON.parse(r.brief).priorCalls.length);
   ok('later packets carry the desk\'s prior calls on the players they name', later.length >= 1);
   ok('the model was asked in each analyst\'s voice, and never for a retired kind', modelLog.every(m => H.CONTENT_KINDS[m.kind]) && new Set(modelLog.map(m => m.kind)).size >= 10);
+  const prewritten = timeline.filter(x => x.status === 'scheduled');
+  ok('every prewritten story consumed its model run between midnight and 6 AM ET', prewritten.length >= 6 && prewritten.every(x => { const h = Number(x.at.split(' ')[1].split(':')[0]); return h >= 0 && h < 6; }), JSON.stringify(prewritten.map(x => x.at + ' ' + x.kind)));
   ok('the draft-season social threads were refused all week', !(await H.draftSocialAllowed(env)).ok);
 }
 
@@ -250,7 +256,7 @@ console.log('\nthe feeds and the front page');
   tnfRow.title = tnfTitle;
   const piece = await H.contentPiecePayload(env, 'early-rankings', 2026, 2);
   ok('a piece payload carries both lenses, the sections for each, the byline and the disclosure', piece.ok && piece.body.weekly && piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length && piece.byline.name === 'Evan Brooks' && piece.byline.dfsName === 'Lena Park' && /AI-powered/.test(piece.disclosure));
-  ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Early Rankings for Next Week', JSON.stringify(piece.title));
+  ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Monday Morning Brief', JSON.stringify(piece.title));
   ok('the packet the page shows hides the allowed list and the index', piece.brief && !piece.brief.allowed && !piece.brief.playerIndex && piece.brief.freshness);
   const a = await H.analystPayload(env, 'brooks');
   ok('an analyst page lists recent pieces and the record of calls', a.ok && a.pieces.length >= 1 && Array.isArray(a.calls) && a.headToHead !== null);

@@ -69,29 +69,40 @@ the same `LEGACY_CONTENT` table so the two cannot disagree.
 
 ## 2. The calendar after migration
 
-All times America/New_York. One canonical research packet per package; every
-package with `lens: both` publishes a Weekly Fantasy and a DFS lens from the
-same facts.
+All times America/New_York. **Write time and publication time are deliberately
+separate.** Except for time-sensitive stories, Claude generates the package
+between midnight and 6 AM ET and stores it under a `scheduled` embargo. The
+quarter-hour worker releases it at the publication time without a second model
+call. If overnight generation fails, retries remain in the overnight window;
+after 6 AM the next permitted model call is the publication slot itself as a
+last-resort fallback.
 
-| Kind | Slot (ET) | Primary analyst | Market / DFS voice | Lens | Absorbs |
-|---|---|---|---|---|---|
-| `last-minute-intel` | Sun 12:15 PM, live updates to kickoff | Mike Raines | Lena Park | both | camp desk's injury tracking |
-| `what-sunday-taught-us` | Sun 7:30 PM, updated as late games go final | Jack Mercer | Lena Park | both | `what-changed-today`, `snf-what-we-learned`, `team-recaps` data |
-| `mnf-preview` | Mon 6 AM | Chris Dalton | Chris Dalton (showdown) | both | — |
-| `early-rankings` | Mon 6 AM | Evan Brooks | Nate Vega | both | — |
-| `quarterback-monday` | Mon 7 AM, only when there is a story | Chris Dalton | Lena Park | both | Play-Caller Premium's scheme beat |
-| `ros-rankings` | Tue 7 AM | Evan Brooks | Nate Vega | both (DFS: Early Price Inefficiency Board) | `rankings-update`, `mnf-breakdown` |
-| `tailback-tuesday` | Tue 8 AM, only when there is a story | Evan Brooks | Lena Park | both | `opportunity-report` (backfields) |
-| `pickup-advisor` | Wed 6 AM | Tyler Grant | Lena Park (First-Look DFS Value & Leverage) | both | Waiver Watch |
-| `wideout-wednesday` | Wed 8 AM, only when there is a story | Mike Raines | Lena Park | both | `opportunity-report` (targets) |
-| `tnf-preview` | Thu 6 AM | Chris Dalton | Chris Dalton (showdown) | both | itself, re-bylined |
-| `underrated` | Thu 7 AM | Nate Vega | Nate Vega | both | `what-they-arent-telling-you`, The Pick |
-| `trade-desk` | Thu 8 AM | Evan Brooks | Nate Vega | both (DFS: attack / fade) | — |
-| `tight-end-thursday` | Thu 9 AM, only when there is a story | Evan Brooks | Lena Park | both | — |
-| `tnf-what-matters` | Fri 6 AM | Mike Raines | Lena Park | both | `tnf-aftermath` |
-| `weekend-preview` | Fri 7 AM | Sam Porter | Lena Park | both | `final-read`, `weekend-game-plan` |
-| `kickers-defenses` | Fri 8 AM | Sam Porter | Lena Park | both (DFS: DST only) | — |
-| `breaking` | unscheduled, significance-scored | Jack Mercer | Lena Park | both | — |
+One canonical research packet per package; every package with `lens: both`
+publishes a Weekly Fantasy and a DFS lens from the same facts.
+
+| Kind | Preferred write time (ET) | Publication time (ET) | Primary analyst | Market / DFS voice | Lens |
+|---|---:|---:|---|---|---|
+| `last-minute-intel` | at publication, because inactives are time-sensitive | Sun 12:15 PM, live updates to kickoff | Mike Raines | Lena Park | both |
+| `what-sunday-taught-us` | at publication, because Sunday games must finish first | Sun 7:30 PM, updated as later games go final | Jack Mercer | Lena Park | both |
+| `early-rankings` / **Monday Morning Brief** | Mon 3:15 AM | Mon 6:00 AM | Evan Brooks, with Chris Dalton for MNF | Nate Vega / Lena Park | both |
+| `quarterback-monday` | Mon 4:15 AM | Mon 12:15 PM | Chris Dalton | Lena Park | both |
+| `ros-rankings` | Tue 1:15 AM | Tue 7:00 AM | Evan Brooks | Nate Vega | both |
+| `tailback-tuesday` | Tue 2:15 AM | Tue 1:15 PM | Evan Brooks | Lena Park | both |
+| `pickup-advisor` | Wed 1:15 AM | Wed 6:00 AM | Tyler Grant | Lena Park | both |
+| `wideout-wednesday` | Wed 2:15 AM | Wed 1:15 PM | Mike Raines | Lena Park | both |
+| `tnf-preview` | Thu 1:15 AM | Thu 6:00 AM | Chris Dalton | Chris Dalton | both |
+| `underrated` | Thu 2:15 AM | Thu 10:15 AM | Nate Vega | Nate Vega | both |
+| `trade-desk` | Thu 3:15 AM | Thu 1:45 PM | Evan Brooks | Nate Vega | both |
+| `tight-end-thursday` | Thu 4:15 AM | Thu 4:45 PM | Evan Brooks | Lena Park | both |
+| `tnf-what-matters` | Fri 1:15 AM, once TNF is final | Fri 6:00 AM | Mike Raines | Lena Park | both |
+| `weekend-preview` | Fri 2:15 AM | Fri 11:15 AM | Sam Porter | Lena Park | both |
+| `kickers-defenses` | Fri 3:15 AM | Fri 2:45 PM | Sam Porter | Lena Park | both |
+| `market-movers` | Sat 5:15 AM | Sat 11:30 AM | Nate Vega | Lena Park | both |
+| `breaking` | immediately when significant news clears the threshold | immediately | Jack Mercer | Lena Park | both |
+
+The former standalone `mnf-preview` package is retired as a separate
+publication. Its showdown/start-sit material is folded into the Monday Morning
+Brief so Monday does not dump two stories at 6 AM.
 
 ## 3. Scheduler changes
 
@@ -105,6 +116,14 @@ same facts.
 - `JOB_SCHEDULE` entries gain `minutes`. The data pulls stay on their hourly
   rows; the schedule refresh and the content tick run every quarter hour on
   game days so a 12:15 piece sees the 11:30 inactives.
+- For editorial packages, `CONTENT_KINDS.hour/minute` is the **publication**
+  schedule. `generateHour/generateMinute` is the preferred model-compute
+  schedule. Those fields must not be conflated.
+- Prewritten pieces are stored as `scheduled` and are not returned by the
+  public list, piece or newsroom-feed APIs before their embargo expires.
+- Sunday Last-Minute Intel, Sunday evening analysis, breaking news and any
+  missed overnight fallback are exceptions because freshness is more important
+  than avoiding daytime compute.
 
 ## 4. Duplicate prevention
 
