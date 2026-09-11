@@ -31,8 +31,11 @@
         el('h3', `${r.player || r.matchup} · ${r.side}`, card);
         el('p', `${r.market.replaceAll('_', ' ')} · ${r.player ? r.matchup : r.sport}`, card);
         el('strong', r.score == null ? (r.stale ? 'Stale observation — unscored' : 'Waiting for a second updated quote') : `Movement score ${r.score}/100`, card);
-        el('p', `Line change ${fmt(r.lineDelta)} · Implied probability change ${fmt(r.probabilityDelta, ' pp')}`, card);
-        el('p', `Sportsbook consensus: ${r.consensusProbability == null ? 'Unavailable' : r.consensusProbability.toFixed(1) + '%'} across ${r.books} books. Consensus gap: ${fmt(r.sharpGap, ' pp')}. Prices include margin.`, card);
+        const openLine = r.consensusOpeningLine == null ? 'Unavailable' : r.consensusOpeningLine.toFixed(1);
+        const currentLine = r.consensusLine == null ? 'Unavailable' : r.consensusLine.toFixed(1);
+        el('p', `Consensus line: ${openLine} to ${currentLine}. Line change ${fmt(r.consensusLineDelta ?? r.lineDelta)} · Implied probability change ${fmt(r.probabilityDelta, ' pp')}`, card);
+        el('p', `Sportsbook consensus: ${r.consensusProbability == null ? 'Unavailable' : r.consensusProbability.toFixed(1) + '%'} across ${r.marketBooks ?? r.books} books. Consensus gap: ${fmt(r.sharpGap, ' pp')}. Prices include margin.`, card);
+        if (r.steamScore != null) el('p', `Cross-book steam score ${r.steamScore.toFixed(1)}/100${r.booksMoved != null && r.booksQuoting != null ? ` · ${r.booksMoved} of ${r.booksQuoting} books moving` : ''}${r.movementDirection ? ` · ${r.movementDirection}` : ''}. Source: ${r.sourceName || 'market feed'}.`, card);
         el('p', r.publicSplit ? `Public splits: ${r.publicSplit.tickets}% tickets / ${r.publicSplit.money}% money, reported ${new Date(r.publicSplit.at).toLocaleString()}.` : 'Public betting splits: unavailable; sportsbook consensus is not public bet volume.', card);
         el('small', `Latest market update ${new Date(r.updated).toLocaleString()} · Signal collected ${new Date(r.observed).toLocaleString()}`, card);
         const details = el('details', null, card); el('summary', 'How to read this signal', details);

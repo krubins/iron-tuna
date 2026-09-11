@@ -2079,7 +2079,19 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
       <p class="dfs-empty" id="marketPropsEmpty">Reading quoted player props&hellip;</p>
     </div>
 
-    <div class="fp-chap" id="marketLine"><div class="fp-chap-top"><span class="fp-chap-n">03</span><h2>The Line</h2></div>
+    <div class="fp-chap" id="marketMoves"><div class="fp-chap-top"><span class="fp-chap-n">03</span><h2>Prop &amp; line movement</h2></div>
+      <p class="fp-chap-dek">Where the market opened, where the sportsbook consensus sits now, and whether multiple books are moving together. PropLine supplies the opening/current history and cross-book steam signal when the configured plan includes movement data.</p></div>
+    <div class="fp-chapbody">
+      <div class="dfs-scroll" id="marketMovesWrap" hidden>
+        <table class="dfs-table" id="marketMovesTable">
+          <thead><tr><th>Player</th><th>Market</th><th class="num">Open</th><th class="num">Current</th><th class="num">Line move</th><th class="num">Price move</th><th>Books</th><th>Steam</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="dfs-empty" id="marketMovesEmpty">Reading prop and line movement&hellip;</p>
+    </div>
+
+    <div class="fp-chap" id="marketLine"><div class="fp-chap-top"><span class="fp-chap-n">04</span><h2>The Line</h2></div>
       <p class="fp-chap-dek">The widest model-versus-market disagreements on the current slate. The full column keeps every game, including the ones where the model and the market agree.</p></div>
     <div class="fp-chapbody">
       <div class="dfs-cards" id="marketLineCards"></div>
@@ -2087,7 +2099,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
       <p><a class="sec-more" href="/the-line">Open the full The Line column &rarr;</a></p>
     </div>
 
-    <div class="fp-chap" id="marketMethod"><div class="fp-chap-top"><span class="fp-chap-n">04</span><h2>How Iron Tuna reads the market</h2></div>
+    <div class="fp-chap" id="marketMethod"><div class="fp-chap-top"><span class="fp-chap-n">05</span><h2>How Iron Tuna reads the market</h2></div>
       <p class="fp-chap-dek">Iron Tuna&rsquo;s proprietary formulas translate spreads, over/unders, player props and related betting information into projections. The model then blends that market read with other projection inputs and evaluates line movement before deciding how much weight the movement deserves.</p></div>
     <div class="fp-chapbody">
       <div class="dfs-cards">
@@ -4622,7 +4634,47 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     if (g && g.movement && marketNum(g.movement.spread) && Number(g.movement.spread) !== 0) bits.push('spread ' + marketSigned(g.movement.spread));
     return bits.length ? bits.join(' · ') : 'No stored move';
   }
-  function renderMarket(j) {
+  function marketLabel(v) {
+    return String(v || '').replace(/^player_/, '').replaceAll('_', ' ').replace(/\b\w/g, function (m) { return m.toUpperCase(); });
+  }
+  function renderMarketMoves(signal) {
+    var items = (signal && signal.items) || [], by = {};
+    items.forEach(function (r) {
+      if (!r || !r.player || r.stale || !r.comparable) return;
+      var moving = marketNum(r.consensusLineDelta) && Number(r.consensusLineDelta) !== 0 ||
+        marketNum(r.probabilityDelta) && Number(r.probabilityDelta) !== 0 ||
+        marketNum(r.steamScore) && Number(r.steamScore) > 0;
+      if (!moving) return;
+      var key = [r.event, r.player, r.market, r.side].join('|');
+      var weight = (marketNum(r.steamScore) ? Number(r.steamScore) * 2 : 0) + (marketNum(r.score) ? Number(r.score) : 0);
+      if (!by[key] || weight > by[key].weight) by[key] = { row: r, weight: weight };
+    });
+    var rows = Object.keys(by).map(function (k) { return by[k]; })
+      .sort(function (a, b) { return b.weight - a.weight; }).slice(0, 30).map(function (x) { return x.row; });
+    var body = $('marketMovesTable').querySelector('tbody');
+    body.innerHTML = rows.map(function (r) {
+      var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.booksQuoting) ? Number(r.booksQuoting) : marketNum(r.books) ? Number(r.books) : null;
+      var steam = marketNum(r.steamScore)
+        ? '<b>' + marketN1(r.steamScore) + '/100</b>' + (marketNum(r.booksMoved) && marketNum(r.booksQuoting) ? '<small>' + e(r.booksMoved + ' of ' + r.booksQuoting + ' books moving' + (r.movementDirection ? ' ' + r.movementDirection : '')) + '</small>' : '')
+        : (marketNum(r.score) ? 'Movement ' + e(String(r.score)) + '/100' : '—');
+      return '<tr><td><b>' + e(r.player) + '</b><small>' + e(r.matchup || '') + '</small></td>' +
+        '<td>' + e(marketLabel(r.market)) + '<small>' + e(r.side || '') + '</small></td>' +
+        '<td class="num">' + marketN1(r.consensusOpeningLine) + '</td>' +
+        '<td class="num"><b>' + marketN1(r.consensusLine) + '</b></td>' +
+        '<td class="num"><b>' + marketSigned(r.consensusLineDelta) + '</b></td>' +
+        '<td class="num">' + (marketNum(r.probabilityDelta) ? marketSigned(r.probabilityDelta) + ' pp' : '—') + '</td>' +
+        '<td>' + (books == null ? '—' : e(String(books))) + '</td>' +
+        '<td>' + steam + '<small>' + e(r.sourceName || 'Market feed') + '</small></td></tr>';
+    }).join('');
+    $('marketMovesWrap').hidden = !rows.length;
+    $('marketMovesEmpty').hidden = !!rows.length;
+    if (!rows.length) {
+      $('marketMovesEmpty').textContent = signal && signal.status === 'disabled'
+        ? 'Prop and line movement is awaiting provider configuration.'
+        : 'No fresh, confirmed prop movement is available yet. Unchanged or stale markets are omitted.';
+    }
+  }
+  function renderMarket(j, signal) {
     var games = (j && j.gameEnvironments) || [];
     var props = ((j && j.tdBoard) || []).filter(function (p) {
       return p && p.basis === 'anytime-td-market' && marketNum(p.probability) && marketNum(p.expectedTds);
@@ -4667,6 +4719,8 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     $('marketPropsEmpty').hidden = !!props.length;
     if (!props.length) $('marketPropsEmpty').textContent = 'No quoted player prop reached the current feed. Iron Tuna does not manufacture sportsbook prices to fill the table.';
 
+    renderMarketMoves(signal);
+
     var ranked = games.map(function (g) {
       var totalEdge = marketNum(g.ironTunaTotal) && marketNum(g.total) ? Number(g.ironTunaTotal) - Number(g.total) : null;
       var modelMargin = marketNum(g.ironTunaHome) && marketNum(g.ironTunaAway) ? Number(g.ironTunaHome) - Number(g.ironTunaAway) : null;
@@ -4694,14 +4748,17 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   function marketBlank(msg) {
     $('marketGamesWrap').hidden = true; $('marketGamesEmpty').hidden = false; $('marketGamesEmpty').textContent = msg;
     $('marketPropsWrap').hidden = true; $('marketPropsEmpty').hidden = false; $('marketPropsEmpty').textContent = msg;
+    $('marketMovesWrap').hidden = true; $('marketMovesEmpty').hidden = false; $('marketMovesEmpty').textContent = msg;
     $('marketLineCards').innerHTML = ''; $('marketLineEmpty').hidden = false; $('marketLineEmpty').textContent = msg;
   }
   function loadMarket() {
     if (marketLoaded || marketLoading) return;
     marketLoading = true;
-    fetch('/api/vegas-edge', { credentials: 'omit' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
+    Promise.all([
+      fetch('/api/vegas-edge', { credentials: 'omit' }).then(function (r) { return r.json(); }),
+      fetch('/api/tuna-market?kind=props', { credentials: 'omit' }).then(function (r) { return r.json(); }).catch(function () { return null; })
+    ]).then(function (parts) {
+        var j = parts[0], signal = parts[1];
         marketLoading = false;
         if (j && j.error === 'jurisdiction_unavailable') {
           marketLoaded = true;
@@ -4710,7 +4767,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         }
         if (!j || !j.ok) { marketBlank('The market board did not answer. Nothing stale is shown in its place.'); return; }
         marketLoaded = true;
-        renderMarket(j);
+        renderMarket(j, signal);
       })
       .catch(function () {
         marketLoading = false;
