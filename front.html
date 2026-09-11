@@ -1101,7 +1101,27 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The contest chips, then the solved roster on the page's one dark surface.
    Dark because it is the answer: on a gray page of white cards, an inverted
    board is the only thing that cannot be scrolled past. */
-.dfs-shape { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px }
+.dfs-setup{margin:0 0 24px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:0 10px 26px rgba(15,23,25,.05)}
+.dfs-setup-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:13px}
+.dfs-setup-title span{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--brand)}
+.dfs-setup-title b{font-size:17px}
+.dfs-setup-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.dfs-select label{display:block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.dfs-select select{width:100%;min-height:44px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:700 14px Inter,Arial,sans-serif;padding:9px 34px 9px 11px}
+.dfs-select select:disabled{opacity:.48;cursor:not-allowed;background:#f1f3f3}
+.dfs-select small{display:block;margin-top:6px;color:var(--ink-3);font-size:11px;line-height:1.4}
+.dfs-setup-state{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+.dfs-setup-state.ready{color:var(--brand);font-weight:800}
+.dfs-quickread{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin:0 0 26px}
+.dfs-potw,.dfs-learn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.dfs-potw{border-top:3px solid var(--gold)}
+.dfs-potw .k,.dfs-learn .k{display:block;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--brand);margin-bottom:4px}
+.dfs-potw .k{color:var(--gold-ink)}
+.dfs-potw h3,.dfs-learn h3{font-size:19px;line-height:1.2;margin-bottom:6px}
+.dfs-potw p,.dfs-learn p{font-size:13px;line-height:1.55;color:var(--ink-2)}
+.dfs-learn a{display:block;font-weight:800;color:var(--brand);margin-top:8px;font-size:12px}
+@media(max-width:760px){.dfs-setup-grid{grid-template-columns:1fr}.dfs-quickread{grid-template-columns:1fr}}
+.dfs-shape { display: none !important; flex-wrap: wrap; gap: 10px; margin: 0 0 14px }
 .dfs-shape button {
   appearance: none; font: inherit; cursor: pointer; text-align: left;
   background: var(--card, #fff); border: 1px solid var(--line, #e1e7ea); border-radius: 10px;
@@ -1930,16 +1950,69 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
        and the note says which site had no salaries loaded. -->
   <div class="lane-pane" id="laneDfs" role="tabpanel" aria-labelledby="laneTabDfs" hidden>
 
-  <!-- ── the lineup ───────────────────────────────────────────────────────────
-       The DFS lane used to open on four summary tiles — how many players are
-       priced, what the median dollar buys — and the roster a reader could
-       actually enter was not on this page at all. It is the first thing now,
-       solved on the same slate the tiles are counting, and the contest chips
-       above it are the branch: the same cap solved for a double-up, for one
-       entry, or for a field big enough that the median is worth nothing.
+  <!-- The homepage DFS lane mirrors /dfs: define the DraftKings contest first. -->
+  <div class="dfs-setup" id="dfsSetup">
+    <div class="dfs-setup-title"><span>DraftKings DFS Setup</span><b>Match the contest you are entering</b></div>
+    <div class="dfs-setup-grid">
+      <div class="dfs-select">
+        <label for="dfsGameStyle">First · Game Style</label>
+        <select id="dfsGameStyle">
+          <option value="">Select Game Style…</option>
+          <option value="flash-draft">Flash Draft</option>
+          <option value="classic">Classic</option>
+          <option value="showdown-captain">Showdown Captain Mode</option>
+          <option value="pick6">Pick6</option>
+          <option value="best-ball">Best Ball</option>
+          <option value="tiers">Tiers</option>
+          <option value="in-game-showdown">In-Game Showdown</option>
+          <option value="single-stat-yards">Single Stat - Total Yards</option>
+          <option value="single-stat-touchdowns">Single Stat - Touchdowns</option>
+          <option value="snake">Snake</option>
+          <option value="snake-showdown">Snake Showdown</option>
+          <option value="madden-classic">Madden Classic</option>
+          <option value="madden-showdown-captain">Madden Showdown Captain Mode</option>
+        </select>
+        <small>The roster/scoring format.</small>
+      </div>
+      <div class="dfs-select">
+        <label for="dfsGames">Second · Games</label>
+        <select id="dfsGames" disabled><option value="">Select Game Style first…</option></select>
+        <small>The games and players actually available in that contest.</small>
+      </div>
+      <div class="dfs-select">
+        <label for="dfsPayout">Third · Payout Structure</label>
+        <select id="dfsPayout" disabled>
+          <option value="">Select Games first…</option>
+          <option value="h2h">Head-to-Head</option>
+          <option value="50-50">50/50</option>
+          <option value="double-up">Double Up</option>
+          <option value="multiplier">Multiplier (3x / 5x / 10x)</option>
+          <option value="tournament-single">Tournament - Single Entry</option>
+          <option value="tournament-multi">Tournament - Multi-Entry</option>
+          <option value="satellite">Satellite / Qualifier</option>
+          <option value="private">League / Private Contest</option>
+        </select>
+        <small>How much risk the roster should accept for the available payoff.</small>
+      </div>
+    </div>
+    <p class="dfs-setup-state" id="dfsSetupState">Start with Game Style.</p>
+  </div>
 
-       It shares dfs-optimizer.js with /dfs, so the two surfaces cannot solve
-       the same slate differently. Nothing here enters a contest. -->
+  <div class="dfs-quickread">
+    <div class="dfs-potw">
+      <span class="k">Play of the Week</span>
+      <h3 id="dfsPotwTitle">Waiting for this week&rsquo;s slate</h3>
+      <p id="dfsPotwCopy">Iron Tuna compares the safest roster with the additional ceiling available farther up the payout curve, and recommends the contest where the added payoff best compensates for the added risk.</p>
+    </div>
+    <div class="dfs-learn">
+      <span class="k">DFS Academy</span>
+      <h3>Understand the contest before building the lineup.</h3>
+      <p>Start with the structure, then learn how stacks, correlation, leverage and ownership change by contest.</p>
+      <a href="/dfs-getting-started">Starting out: how DFS contests work →</a>
+      <a href="/dfs-strategy-guide">Strategy: stacks, leverage and correlation →</a>
+    </div>
+  </div>
+
   <div class="fp-deck" id="dfsDeck">
     <a class="fp-act" href="/dfs">
       <span class="fp-act-k">The whole sheet</span>
@@ -1964,11 +2037,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   <div class="fp-chap" id="dfsLineup"><div class="fp-chap-top"><span class="fp-chap-n">01</span><h2>The lineup</h2></div>
     <p class="fp-chap-dek">One slate, one cap, solved. Pick the contest you are entering and the roster below is re-solved for it &mdash; floors for a double-up, ceiling discounted by ownership for a large field.</p></div>
 
-  <div class="dfs-shape" id="dfsShape" role="group" aria-label="What contest is this for">
-    <button type="button" data-contest="cash">Cash <small>Floors</small></button>
-    <button type="button" data-contest="single" aria-pressed="true">Single entry <small>Best roster</small></button>
-    <button type="button" data-contest="gpp">Large field <small>Longshots</small></button>
-  </div>
+  <div class="dfs-shape" id="dfsShape" aria-hidden="true"></div>
   <p class="dfs-note" id="dfsShapeNote"></p>
   <div id="dfsBuild"></div>
 
@@ -2735,7 +2804,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
           '<path d="M420 0 L500 0 L340 150 L260 150 Z" fill="' + ink + '" opacity="0.06"/>' +
           '<path d="M300 0 L340 0 L180 150 L140 150 Z" fill="' + ink + '" opacity="0.06"/>' +
           (function () {
-            var hasLeagueMark = !t && nflWide;
+            var hasLeagueMark = !t;
             var type =
               '<text x="' + (t ? 144 : hasLeagueMark ? 146 : 34) + '" data-x0="34" y="84" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
               '<text x="' + (t ? 146 : hasLeagueMark ? 148 : 34) + '" data-x0="34" y="108" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>';
