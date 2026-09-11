@@ -2138,11 +2138,11 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     </div>
 
     <div class="fp-chap" id="marketProps"><div class="fp-chap-top"><span class="fp-chap-n">02</span><h2>Player props</h2></div>
-      <p class="fp-chap-dek">The sportsbook consensus across the fantasy-relevant markets PropLine carries: passing, rushing and receiving yards, receptions, touchdowns, interceptions and anytime-TD prices. Opening and current numbers stay separate so movement is visible instead of overwritten.</p></div>
+      <p class="fp-chap-dek">The sportsbook consensus across the fantasy-relevant markets PropLine carries: passing, rushing and receiving yards, receptions, touchdowns, interceptions and anytime-TD prices. The baseline is our first observation within the stored window, not necessarily the sportsbook opening line.</p></div>
     <div class="fp-chapbody">
       <div class="dfs-scroll" id="marketPropsWrap" hidden>
         <table class="dfs-table" id="marketPropsTable">
-          <thead><tr><th>Player</th><th>Prop</th><th class="num">Current line</th><th class="num">Over / Yes</th><th class="num">Open</th><th class="num">Move</th><th>Books</th><th>Source</th></tr></thead>
+          <thead><tr><th>Player</th><th>Prop</th><th class="num">Current line</th><th class="num">Over / Yes</th><th class="num">Baseline</th><th class="num">Move</th><th>Books</th><th>Source</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -2150,11 +2150,11 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     </div>
 
     <div class="fp-chap" id="marketMoves"><div class="fp-chap-top"><span class="fp-chap-n">03</span><h2>Prop &amp; line movement</h2></div>
-      <p class="fp-chap-dek">Where the market opened, where the sportsbook consensus sits now, and whether multiple books are moving together. PropLine supplies the opening/current history and cross-book steam signal when the configured plan includes movement data.</p></div>
+      <p class="fp-chap-dek">Changes between stored PropLine quotes, collected hourly. Baselines are first observations within the last 24 hours; paid provider opening history, when available, is labeled separately. Line move is the median change at comparable books. Agreement counts books moving in the same direction, not confirmed sharp money or a real-time steam alert. Changes between polls can be missed.</p></div>
     <div class="fp-chapbody">
       <div class="dfs-scroll" id="marketMovesWrap" hidden>
         <table class="dfs-table" id="marketMovesTable">
-          <thead><tr><th>Player</th><th>Market</th><th class="num">Open</th><th class="num">Current</th><th class="num">Line move</th><th class="num">Price move</th><th>Books</th><th>Steam</th></tr></thead>
+          <thead><tr><th>Player</th><th>Market</th><th class="num">Baseline</th><th class="num">Current</th><th class="num">Line move</th><th class="num">Price move</th><th>Books</th><th>Agreement / signal</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -4726,10 +4726,10 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.booksQuoting) ? Number(r.booksQuoting) : marketNum(r.books) ? Number(r.books) : null;
       var steam = marketNum(r.steamScore)
         ? '<b>' + marketN1(r.steamScore) + '/100</b>' + (marketNum(r.booksMoved) && marketNum(r.booksQuoting) ? '<small>' + e(r.booksMoved + ' of ' + r.booksQuoting + ' books moving' + (r.movementDirection ? ' ' + r.movementDirection : '')) + '</small>' : '')
-        : (marketNum(r.score) ? 'Movement ' + e(String(r.score)) + '/100' : '—');
+        : (r.observedBooksCompared > 0 ? e(r.observedBooksMoved + ' of ' + r.observedBooksCompared + ' books · ' + r.observedDirection) + '<small>' + e(r.observedMovementMetric === 'line' ? 'Observed line changes' : 'Observed price changes') + '</small>' : 'Awaiting comparable quotes');
       return '<tr><td><b>' + e(r.player) + '</b><small>' + e(r.matchup || '') + '</small></td>' +
         '<td>' + e(marketLabel(r.market)) + '<small>' + e(r.side || '') + '</small></td>' +
-        '<td class="num">' + marketN1(r.consensusOpeningLine) + '</td>' +
+        '<td class="num">' + marketN1(r.consensusOpeningLine) + '<small>' + e(r.historyBasis === 'provider-opening' ? 'Provider opening' : 'First observed') + '</small></td>' +
         '<td class="num"><b>' + marketN1(r.consensusLine) + '</b></td>' +
         '<td class="num"><b>' + marketSigned(r.consensusLineDelta) + '</b></td>' +
         '<td class="num">' + (marketNum(r.probabilityDelta) ? marketSigned(r.probabilityDelta) + ' pp' : '—') + '</td>' +
@@ -4796,14 +4796,14 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       pbody.innerHTML = broadProps.map(function (r) {
         var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : null;
         var pct = marketNum(r.consensusProbability) ? marketN1(r.consensusProbability) + '%' : '—';
-        var move = marketNum(r.consensusLineDelta) && Number(r.consensusLineDelta) !== 0 ? marketSigned(r.consensusLineDelta) : 'No line move';
+        var move = !marketNum(r.consensusLineDelta) ? 'Awaiting comparison' : Number(r.consensusLineDelta) !== 0 ? marketSigned(r.consensusLineDelta) : 'No line move';
         var source = r.sourceName || 'Market feed';
         if (marketNum(r.steamScore) && Number(r.steamScore) > 0) source += ' · steam ' + marketN1(r.steamScore);
         return '<tr><td><b>' + e(r.player) + '</b><small>' + e(r.matchup || '') + '</small></td>' +
           '<td>' + e(marketLabel(r.market)) + '<small>' + e(r.side || '') + '</small></td>' +
           '<td class="num"><b>' + marketN1(r.consensusLine) + '</b></td>' +
           '<td class="num">' + pct + '</td>' +
-          '<td class="num">' + marketN1(r.consensusOpeningLine) + '</td>' +
+          '<td class="num">' + marketN1(r.consensusOpeningLine) + '<small>' + e(r.historyBasis === 'provider-opening' ? 'Provider opening' : 'First observed') + '</small></td>' +
           '<td class="num"><b>' + e(move) + '</b></td>' +
           '<td>' + (books == null ? '—' : e(String(books))) + '</td>' +
           '<td><small>' + e(source) + '</small></td></tr>';
