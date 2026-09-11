@@ -142,8 +142,9 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
 console.log('\nthe DFS page explanations');
 {
   const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
-  ok('DraftKings game style is selected before contest type', page.includes('DraftKings Game Style') && page.includes('<b>Classic</b>') && page.includes('<b>Best Ball</b>') && page.includes('This is the game style Iron Tuna&rsquo;s DFS optimizer below is solving.'));
-  ok('Best Ball routes away from the weekly optimizer', page.includes('href="/bestball-insights"') && page.includes('DraftKings automatically counts your highest-scoring eligible players each week'));
+  ok('DraftKings game style is a functional first-step selector', page.includes('DraftKings Game Style') && page.includes('data-game-style="classic"') && page.includes('data-game-style="bestball"') && page.includes("gameStyle = b.getAttribute('data-game-style') === 'bestball' ? 'bestball' : 'classic'"));
+  ok('Classic reveals contest structure as step two', page.includes('Choose Your Classic Contest Structure') && page.includes("$('dfStrategyGuide').hidden = bestBall || isPickem()") && page.includes("if (gameStyle === 'classic') load()"));
+  ok('Best Ball hides the Classic optimizer path and exposes Best Ball tools', page.includes('id="dfBestBallPath" hidden') && page.includes('href="/bestball-insights"') && page.includes('href="/best-ball-draft-strategy"') && page.includes("var bestBall = site === 'dk' && gameStyle === 'bestball'") && page.includes("SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = bestBall"));
   ok('the primary Classic contest cards use DraftKings lobby terminology', page.includes('<b>50/50 &amp; Double Ups</b>') && page.includes('<b>Tournament &middot; Single Entry</b>') && page.includes('<b>Multi-Entry Tournament</b>') && !/<button class="df-shape"[^>]*data-contest="3max"/.test(page));
   ok('the DraftKings Classic translation explains the second step', page.includes('Step 2, after choosing Classic:') && page.includes('50/50 &amp; Double Ups') && page.includes('[Single Entry]') && page.includes('Multi-Entry Tournament'));
   ok('cash is explicitly the chalk and value-consistency roster', page.includes('50/50 &amp; Double Ups = chalk and value consistency') && page.includes('This is the chalk and value-consistency roster.') && page.includes('fragile longshots'));
