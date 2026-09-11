@@ -168,6 +168,34 @@ function postDraftPreview(env, url, request) {
   try { return adminOk(env, parseCookie(request.headers.get('Cookie'))['it_pd_preview']); } catch (e) { return false; }
 }
 function adminOk(env, key) { return !!env.LEADS_EXPORT_KEY && timingSafeEq(String(key || ''), env.LEADS_EXPORT_KEY); }
+let _GITHUB_OIDC_KEYS = null;
+let _GITHUB_OIDC_KEYS_AT = 0;
+const _b64urlBytes = value => Uint8Array.from(atob(String(value || '').replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(String(value || '').length / 4) * 4, '=')), c => c.charCodeAt(0));
+async function githubDfsWorkflowOk(request) {
+  try {
+    const auth = String(request.headers.get('authorization') || '');
+    if (!auth.startsWith('Bearer ') || auth.length > 12000) return false;
+    const token = auth.slice(7), parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const header = JSON.parse(new TextDecoder().decode(_b64urlBytes(parts[0])));
+    const claims = JSON.parse(new TextDecoder().decode(_b64urlBytes(parts[1])));
+    const now = Math.floor(Date.now() / 1000);
+    if (header.alg !== 'RS256' || !header.kid || claims.iss !== 'https://token.actions.githubusercontent.com' ||
+        claims.aud !== 'iron-tuna-dfs-import' || claims.repository !== 'krubins/iron-tuna' ||
+        claims.ref !== 'refs/heads/main' || claims.workflow_ref !== 'krubins/iron-tuna/.github/workflows/draftkings-salaries.yml@refs/heads/main' ||
+        Number(claims.exp) < now || Number(claims.nbf || claims.iat) > now + 30) return false;
+    if (!_GITHUB_OIDC_KEYS || Date.now() - _GITHUB_OIDC_KEYS_AT > 3600000) {
+      const response = await fetch('https://token.actions.githubusercontent.com/.well-known/jwks');
+      if (!response.ok) return false;
+      _GITHUB_OIDC_KEYS = (await response.json()).keys || [];
+      _GITHUB_OIDC_KEYS_AT = Date.now();
+    }
+    const jwk = _GITHUB_OIDC_KEYS.find(key => key.kid === header.kid);
+    if (!jwk) return false;
+    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    return crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, _b64urlBytes(parts[2]), new TextEncoder().encode(parts[0] + '.' + parts[1]));
+  } catch (e) { return false; }
+}
 const json = (obj, status, c) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json', ...SEC, ...c } });
 
 // ── auth helpers (magic-link login + device cap) ──
@@ -13783,7 +13811,7 @@ export default {
     // that route reports what it fetched without storing it.
     if (url.pathname === '/api/admin/dfs') {
       const c = corsHeaders(request.headers.get('Origin'));
-      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!adminOk(env, url.searchParams.get('key') || '') && !(await githubDfsWorkflowOk(request))) return json({ ok: false, error: 'forbidden' }, 403, c);
       const sched = await scheduleCacheRead(env);
       const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
       const week = state.ok && state.week.type === 'REG' ? state.week.number : null;

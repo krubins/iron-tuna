@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { draftablesToCsv, mergeDraftablePayloads, selectWeeklySlates, targetWeekWindow } from './import-draftkings-salaries.mjs';
+import { draftablesToCsv, githubOidcToken, mergeDraftablePayloads, selectWeeklySlates, targetWeekWindow } from './import-draftkings-salaries.mjs';
 
 let pass = 0, fail = 0;
 const ok = (name, condition, extra = '') => {
@@ -59,6 +59,20 @@ ok('skill positions retain FLEX eligibility', converted.csv.includes(',RB/FLEX,'
 ok('defenses retain DST eligibility', converted.csv.includes(',DST,'));
 ok('a short response cannot overwrite good data', (() => { try { draftablesToCsv({ draftables: draftables.slice(0, 10) }); return false; } catch { return true; } })());
 ok('a missing position is rejected', (() => { try { draftablesToCsv({ draftables: draftables.filter(x => x.position !== 'DST') }, 20); return false; } catch { return true; } })());
+
+console.log('\nthe GitHub identity request');
+const realFetch = globalThis.fetch;
+let tokenRequest;
+globalThis.fetch = async (url, options) => {
+  tokenRequest = { url: String(url), auth: options.headers.authorization };
+  return new Response(JSON.stringify({ value: 'signed-token' }), { headers: { 'content-type': 'application/json' } });
+};
+const token = await githubOidcToken({ ACTIONS_ID_TOKEN_REQUEST_URL: 'https://actions.example/token?job=1', ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token' });
+globalThis.fetch = realFetch;
+ok('the workflow requests the narrow importer audience', new URL(tokenRequest.url).searchParams.get('audience') === 'iron-tuna-dfs-import');
+ok('the workflow authenticates its token request', tokenRequest.auth === 'Bearer request-token');
+ok('the signed token is returned for the import', token === 'signed-token');
+ok('running outside GitHub Actions is rejected', await githubOidcToken({}).then(() => false, () => true));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
