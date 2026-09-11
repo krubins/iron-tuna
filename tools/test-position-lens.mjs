@@ -103,7 +103,7 @@ const read = page => page.evaluate(() => ({
             .map(a => a.getAttribute('href') || '')
             .filter(h => /^\/(auctiondraft|snakedraft)(\?|$)/.test(h))
             .map(h => h.split('?')[0]))],
-  mgr: document.getElementById('navMgr').textContent,
+  sync: document.getElementById('navSync').textContent,
   allocHead: document.getElementById('allocHead').textContent,
   camp: document.getElementById('campNote').textContent,
   buildTag: document.getElementById('buildTag').hidden ? '' : document.getElementById('buildTag').textContent
@@ -226,14 +226,14 @@ console.log('\nthe lead and the modules agree');
 // The complaint that put this switch in the ribbon was that a reader who came
 // for another draft was still handed the auction site. So the test is not "the
 // switch has two buttons": it is that ONE click moves the drop links, the
-// app links, the button that names the room, the guides module and the camp
+// app links, the persistent league-sync button, the guides module and the camp
 // desk's standing note together.
 console.log('\nthe whole page follows the edition');
 {
   const { page, ctx } = await open({});
   const a = await read(page);
   ok('auction opens on the auction room', a.app.join() === '/auctiondraft', a.app.join());
-  ok('and names it', a.mgr === 'Auction Manager', a.mgr);
+  ok('and keeps free league sync in the masthead', a.sync === 'Sync My League', a.sync);
   ok('the auction keeps its allocation guides', a.allocHead === 'Asset Allocation', a.allocHead);
   ok('and The Build needs no tag to say which currency it is in', a.buildTag === '', a.buildTag);
 
@@ -248,7 +248,7 @@ console.log('\nthe whole page follows the edition');
   const b = await read(page);
   ok('snake re-points every story', b.drops.join() === '/snake', b.drops.join());
   ok('every app link lands in the draft room', b.app.join() === '/snakedraft', b.app.join());
-  ok('the room is named honestly', b.mgr === 'Draft Room', b.mgr);
+  ok('league sync stays in the masthead', b.sync === 'Sync My League', b.sync);
   ok('the guides are the ones snake actually has',
      b.allocHead === 'Draft Strategy' &&
      (await page.$$eval('#allocGrid a', as => as.every(x => /snake/.test(x.getAttribute('href'))))),
@@ -277,7 +277,7 @@ console.log('\nthe whole page follows the edition');
   const back = await read(page);
   ok('switching back restores the page as authored',
      back.drops.join() === '/auction' && back.app.join() === '/auctiondraft' &&
-     back.mgr === 'Auction Manager' && back.allocHead === 'Asset Allocation' &&
+     back.sync === 'Sync My League' && back.allocHead === 'Asset Allocation' &&
      back.camp === campAuction && back.buildTag === '');
   ok('and the authored guides come back whole',
      await page.$$eval('#allocGrid .alloc-card', c => c.length === 4));
