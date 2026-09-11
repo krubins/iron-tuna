@@ -54,6 +54,7 @@ const ALLOWED = {
   'upload.twitter.com':       { kind: 'service', why: 'our own posting' },
   'graph.threads.net':        { kind: 'service', why: 'our own posting' },
   'api.indexnow.org':         { kind: 'service', why: 'search index ping' },
+  'token.actions.githubusercontent.com': { kind: 'service', why: 'verify the signed identity of the DraftKings GitHub Actions workflow' },
   'github.com':               { kind: 'service', why: 'links only, never fetched' },
   // A JSON-LD @context is a vocabulary identifier, not an endpoint. It is
   // printed into the ProfilePage block the worker builds for /analysts/<id>

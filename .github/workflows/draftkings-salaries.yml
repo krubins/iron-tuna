@@ -29,6 +29,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: draftkings-salaries
@@ -45,7 +46,6 @@ jobs:
           node-version: '22'
       - name: Find and import the full weekly Classic player pool
         env:
-          IRON_TUNA_ADMIN_KEY: ${{ secrets.IRON_TUNA_ADMIN_KEY }}
           IRON_TUNA_ADMIN_URL: ${{ vars.IRON_TUNA_ADMIN_URL }}
           INPUT_DRAFT_GROUP_ID: ${{ inputs.draft_group_id }}
           INPUT_WEEK: ${{ inputs.week }}

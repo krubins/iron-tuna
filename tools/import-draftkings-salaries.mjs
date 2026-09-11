@@ -132,6 +132,18 @@ async function getJson(url) {
   return response.json();
 }
 
+export async function githubOidcToken(env) {
+  const requestUrl = String(env.ACTIONS_ID_TOKEN_REQUEST_URL || '');
+  const requestToken = String(env.ACTIONS_ID_TOKEN_REQUEST_TOKEN || '');
+  if (!requestUrl || !requestToken) throw new Error('GitHub Actions OIDC credentials are unavailable.');
+  const url = new URL(requestUrl);
+  url.searchParams.set('audience', 'iron-tuna-dfs-import');
+  const response = await fetch(url, { headers: { authorization: `Bearer ${requestToken}` } });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.value) throw new Error('GitHub Actions could not issue an identity token.');
+  return body.value;
+}
+
 export async function run(env = process.env, now = Date.now()) {
   const forcedId = String(env.INPUT_DRAFT_GROUP_ID || env.DRAFTKINGS_DRAFT_GROUP_ID || '').trim();
   const lobby = forcedId ? null : await getJson(LOBBY_URL);
@@ -155,12 +167,10 @@ export async function run(env = process.env, now = Date.now()) {
   };
   if (dryRun) return result;
 
-  const key = String(env.IRON_TUNA_ADMIN_KEY || '').trim();
-  if (!key) throw new Error('IRON_TUNA_ADMIN_KEY is required unless dry-run is enabled.');
   const endpoint = new URL(env.IRON_TUNA_ADMIN_URL || 'https://irontuna.com/api/admin/dfs');
-  endpoint.searchParams.set('key', key);
+  const identityToken = await githubOidcToken(env);
   const week = String(env.INPUT_WEEK || '').trim();
-  const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+  const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${identityToken}` }, body: JSON.stringify({
     site: 'dk', csv: converted.csv, slate: 'weekly', source: 'draftkings-automation', ...(week ? { week: Number(week) } : {})
   }) });
   const body = await response.json().catch(() => ({}));
