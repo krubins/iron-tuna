@@ -1511,7 +1511,8 @@ const TMS_PROVIDERS = {
       return e.id && Number.isFinite(starts) && starts > observed - 3600000 && starts < observed + 9 * 86400000;
     }).slice(0, 20);
     let quota = { remaining: eventResult.remaining ?? game.remaining, used: eventResult.used ?? game.used, limit: eventResult.limit ?? game.limit };
-    let movementAvailable = env.PROPLINE_MOVEMENT !== '0';
+    // Free current odds plus our own snapshots are the default. Paid history is opt-in.
+    let movementAvailable = env.PROPLINE_MOVEMENT === '1';
     for (const e of events) {
       let currentEventId = String(e.id);
       if (markets.length) {
@@ -1619,8 +1620,8 @@ function tmsSignals(rows, now, sharpBooks = []) {
     history.sort((a, b) => a.observed - b.observed);
     const first = history[0], last = history[history.length - 1];
     if (last.starts <= now) continue;
-    const nativeOpen = Number.isFinite(Number(last.openingAt)) && Number(last.openingAt) < last.updated &&
-      (last.openingLine != null || Number.isFinite(Number(last.openingPrice)));
+    const nativeOpen = tmsNumberOrNull(last.openingAt) != null && Number(last.openingAt) < last.updated &&
+      (last.openingLine != null || tmsNumberOrNull(last.openingPrice) != null);
     const firstObserved = nativeOpen ? Number(last.openingAt) : first.observed;
     const firstLine = nativeOpen ? last.openingLine : first.line;
     const firstPrice = nativeOpen ? last.openingPrice : first.price;
@@ -1630,10 +1631,11 @@ function tmsSignals(rows, now, sharpBooks = []) {
     const probabilityDelta = comparable && firstLine === last.line && Number.isFinite(Number(firstPrice))
       ? (1 / last.price - 1 / firstPrice) * 100 : null;
     items.push({ ...last, firstObserved, firstLine, lineDelta, probabilityDelta, stale, comparable,
+      historyBasis: nativeOpen ? 'provider-opening' : 'first-observed',
       movementDirection: last.consensusDirection || last.nativeDirection || null,
-      steamScore: Number.isFinite(Number(last.steamScore)) ? Number(last.steamScore) : null,
-      booksMoved: Number.isFinite(Number(last.booksMoved)) ? Number(last.booksMoved) : null,
-      booksQuoting: Number.isFinite(Number(last.booksQuoting)) ? Number(last.booksQuoting) : null,
+      steamScore: tmsNumberOrNull(last.steamScore),
+      booksMoved: tmsNumberOrNull(last.booksMoved),
+      booksQuoting: tmsNumberOrNull(last.booksQuoting),
       history: history.slice(-24).map(r => ({ at: r.observed, updated: r.updated, line: r.line, price: r.price })) });
   }
   for (const item of items) {
@@ -1660,16 +1662,29 @@ function tmsSignals(rows, now, sharpBooks = []) {
   for (const group of groups.values()) {
     const fresh = group.filter(r => !r.stale);
     const use = fresh.length ? fresh : group;
-    const consensusLine = tmsMedian(use.map(r => Number(r.line)).filter(Number.isFinite));
-    const consensusOpeningLine = tmsMedian(use.map(r => Number(r.firstLine)).filter(Number.isFinite));
+    const consensusLine = tmsMedian(use.map(r => tmsNumberOrNull(r.line)));
+    const consensusOpeningLine = tmsMedian(use.map(r => tmsNumberOrNull(r.firstLine)));
     const marketBooks = new Set(use.map(r => r.book)).size;
-    const steamScore = Math.max(...use.map(r => Number.isFinite(Number(r.steamScore)) ? Number(r.steamScore) : -1));
-    const booksMoved = Math.max(...use.map(r => Number.isFinite(Number(r.booksMoved)) ? Number(r.booksMoved) : -1));
-    const booksQuoting = Math.max(...use.map(r => Number.isFinite(Number(r.booksQuoting)) ? Number(r.booksQuoting) : -1));
+    const steamScore = Math.max(...use.map(r => r.steamScore ?? -1));
+    const booksMoved = Math.max(...use.map(r => r.booksMoved ?? -1));
+    const booksQuoting = Math.max(...use.map(r => r.booksQuoting ?? -1));
+    // Compare like-for-like book observations; exclude stale and single quotes.
+    // Line direction and fixed-line price direction are separate measurements.
+    const compared = fresh.filter(r => r.comparable);
+    const lineMoves = compared.filter(r => r.lineDelta != null);
+    const measured = lineMoves.some(r => r.lineDelta !== 0) ? lineMoves : compared.filter(r => r.probabilityDelta != null);
+    const metric = lineMoves.some(r => r.lineDelta !== 0) ? 'line' : 'implied-probability';
+    const delta = r => metric === 'line' ? r.lineDelta : r.probabilityDelta;
+    const up = new Set(measured.filter(r => delta(r) > 0).map(r => r.book)).size;
+    const down = new Set(measured.filter(r => delta(r) < 0).map(r => r.book)).size;
     for (const item of group) {
       item.consensusLine = consensusLine;
       item.consensusOpeningLine = consensusOpeningLine;
-      item.consensusLineDelta = consensusLine != null && consensusOpeningLine != null ? consensusLine - consensusOpeningLine : null;
+      item.consensusLineDelta = tmsMedian(compared.map(r => r.lineDelta));
+      item.observedBooksCompared = new Set(measured.map(r => r.book)).size;
+      item.observedBooksMoved = Math.max(up, down);
+      item.observedDirection = up === down ? (up ? 'mixed' : 'unchanged') : up > down ? 'up' : 'down';
+      item.observedMovementMetric = metric;
       item.marketBooks = marketBooks;
       if (steamScore >= 0) item.steamScore = steamScore;
       if (booksMoved >= 0) item.booksMoved = booksMoved;
@@ -1719,6 +1734,8 @@ async function tmsRoutes(request, env, url) {
     if (url.pathname !== '/api/tuna-market') return json({ error: 'not_found' }, 404);
     if (request.method !== 'GET') return json({ error: 'method' }, 405);
     if (env.TMS_ENABLED !== '1') return json({ status: 'disabled', items: [] });
+    const selectedProvider = env.TMS_PROVIDER || (env.PROPLINE_API_KEY ? 'propline' : 'the-odds-api');
+    if (selectedProvider === 'propline' && !env.PROPLINE_API_KEY) return json({ status: 'disabled', items: [] });
     await tmsReady(env);
     const now = Date.now();
     const records = await env.LEADS_DB.prepare('SELECT payload FROM tuna_market_snapshots WHERE observed>=? ORDER BY observed DESC LIMIT 1000').bind(now - 86400000).all();
@@ -1734,6 +1751,9 @@ async function tmsRoutes(request, env, url) {
       event: r.event, sport: r.sport, market: r.market, player: r.player, matchup: r.matchup, side: r.side,
       sourceName: r.provider === 'propline' ? 'PropLine' : r.provider === 'the-odds-api' ? 'The Odds API' : 'Licensed market feed',
       observed: r.observed, updated: r.updated, stale: r.stale, comparable: r.comparable, score: r.score,
+      firstObserved: r.firstObserved, historyBasis: r.historyBasis,
+      observedBooksCompared: r.observedBooksCompared, observedBooksMoved: r.observedBooksMoved,
+      observedDirection: r.observedDirection, observedMovementMetric: r.observedMovementMetric,
       lineDelta: r.lineDelta, probabilityDelta: r.probabilityDelta, movementDirection: r.movementDirection,
       consensusLine: r.consensusLine, consensusOpeningLine: r.consensusOpeningLine, consensusLineDelta: r.consensusLineDelta,
       consensusProbability: r.consensusProbability, books: r.books, marketBooks: r.marketBooks, sharpGap: r.sharpGap,

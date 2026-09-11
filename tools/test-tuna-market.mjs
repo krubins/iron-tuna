@@ -53,6 +53,42 @@ assert.equal(plSignal.consensusLineDelta, 2);
 assert.equal(plSignal.steamScore, 72.5);
 assert.equal(plSignal.booksMoved, 6);
 assert.equal(plSignal.booksQuoting, 8);
+assert.equal(plSignal.historyBasis, 'provider-opening');
+// Free snapshots must not fabricate a provider opening or a zero steam score.
+const freeOld = { ...old[0], provider: 'propline', steamScore: null, openingAt: null, openingPrice: null };
+const freeNew = { ...latest[0], provider: 'propline', steamScore: null, openingAt: null, openingPrice: null };
+const freeSignal = api.tmsSignals([freeOld, freeNew,
+  { ...freeOld, book: 'second' }, { ...freeNew, book: 'second' },
+  { ...freeOld, book: 'third' }, { ...freeNew, book: 'third', line: 49.5 },
+  { ...freeNew, book: 'new-book', line: 100 }], now)[0];
+assert.equal(freeSignal.historyBasis, 'first-observed');
+assert.equal(freeSignal.steamScore, null);
+assert.equal(freeSignal.observedBooksCompared, 3);
+assert.equal(freeSignal.observedBooksMoved, 2);
+assert.equal(freeSignal.observedDirection, 'up');
+assert.equal(freeSignal.consensusLineDelta, 1); // New book cannot fabricate movement.
+const singleFree = api.tmsSignals([freeNew], now)[0];
+assert.equal(singleFree.consensusLineDelta, null);
+assert.equal(singleFree.observedBooksCompared, 0);
+const noPoint = api.tmsSignals([{ ...freeOld, line: null }, { ...freeNew, line: null }], now)[0];
+assert.equal(noPoint.consensusLine, null);
+assert.equal(noPoint.consensusOpeningLine, null);
+const freePaths = [];
+const freeApi = new Function('fetch', section + '\nreturn TMS_PROVIDERS.propline;')(async (url, init) => {
+  const path = new URL(url).pathname;
+  freePaths.push(path);
+  assert.equal(new URL(url).searchParams.has('apiKey'), false);
+  assert.equal(init.headers['X-API-Key'], 'private-test-key');
+  assert.equal(path.endsWith('/movement'), false);
+  const data = path.endsWith('/events') ? Array.from({ length: 20 }, (_, i) => ({ ...propLineFixture[0], id: 'event-' + i }))
+    : path.includes('/events/') ? propLineFixture[0] : propLineFixture;
+  return Response.json(data, { headers: { 'x-daily-remaining': String(1000 - freePaths.length), 'x-daily-limit': '1000' } });
+});
+const freePull = await freeApi.pull({ PROPLINE_API_KEY: 'private-test-key' }, now);
+assert.equal(freePaths.length, 22);
+assert.ok(freePull.rows.length > 0);
+assert.equal(JSON.stringify(freePull).includes('private-test-key'), false);
+assert.equal(freePaths.length * 24, 528); // Hourly max-event polls stay inside 1,000/day.
 assert.equal(api.tmsSignals([...old, ...api.tmsNormalize(fixture(now - 1800000), now)], now)[0].score, null);
 const differentProvider = { ...latest[0], provider: 'licensed-import' };
 assert.equal(api.tmsSignals([...old, differentProvider], now).every(r => r.score === null), true);
@@ -60,6 +96,9 @@ await api.tmsReady(env); await api.tmsStore(env, old, now - 1800000); await api.
 assert.equal(db.prepare('SELECT COUNT(*) AS n FROM tuna_market_snapshots').get().n, 2);
 const req = (path, init) => { const request = new Request('https://irontuna.com' + path, init); return api.tmsRoutes(request, env, new URL(request.url)); };
 let result = await (await req('/api/tuna-market?kind=props&player=test')).json(); assert.equal(result.items.length, 1);
+assert.equal(result.items[0].historyBasis, 'first-observed');
+assert.equal(result.items[0].steamScore, null);
+assert.equal(result.items[0].observedBooksCompared, 1);
 assert.equal((await req('/api/tuna-market/refresh', { method: 'POST' })).status, 403);
 response = Response.json(fixture(now), { headers: { 'x-requests-remaining': '499' } });
 await Promise.all([api.tmsPoll(env, now), api.tmsPoll(env, now)]); assert.equal(calls, 1);

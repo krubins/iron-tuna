@@ -52,7 +52,7 @@ Use Cloudflare Worker secrets. Never put provider keys in frontend code or GitHu
 | `TMS_INTERVAL_MINUTES` | 60 PropLine / 360 Odds API | Poll interval, clamped 15–1440 minutes |
 | `TMS_BOOKMAKERS` | sportsbook allowlist above | PropLine books, max 12 |
 | `TMS_PROP_MARKETS` | fantasy core list | PropLine player-prop markets, max 12 |
-| `PROPLINE_MOVEMENT` | on | Set `0` to skip PropLine movement/history calls |
+| `PROPLINE_MOVEMENT` | off | Set `1` only with paid movement access; free mode uses stored snapshots |
 | `TMS_PROP_EVENT_IDS` | empty | The Odds API fallback only, explicit event IDs |
 | `TMS_SHARP_BOOKS` | empty | Optional reference books used by the existing gap heuristic |
 | `TMS_RETENTION_DAYS` | 30 | Snapshot retention, clamped 1–90 days |
@@ -64,6 +64,36 @@ Default PropLine prop markets are:
 Historical movement and steam require a PropLine tier that exposes those features.
 If movement is unavailable, current game lines and props still collect and Iron Tuna
 continues building prospective history from its own snapshots.
+
+### Free production setup
+
+The deployment configuration now selects `TMS_ENABLED=1`, `TMS_PROVIDER=propline`,
+`PROPLINE_MOVEMENT=0`, and `TMS_INTERVAL_MINUTES=60`. Supply `PROPLINE_API_KEY`
+as a secret on the production deployment; never commit it. Until the secret exists,
+the public endpoint reports disabled and the page shows awaiting configuration.
+
+No paid subscription is needed. Each hourly poll uses two discovery/game requests
+plus at most 20 event-prop requests: at most 528 requests per 24 hours, below the
+free 1,000/day allowance when this key is dedicated to this collector. Visitor reads
+only access D1 and do not spend provider quota. Do not reduce the interval without
+recalculating this budget. Paid movement endpoints are never called in free mode.
+
+The public comparison window is 24 hours. A baseline is the first stored observation
+in that window, not a guaranteed sportsbook opening line. A second updated quote is
+needed to measure movement. Observed agreement compares fresh, comparable books
+within the same provider/event/player/market/side; it measures line changes separately
+from price changes at an unchanged line. New or stale books cannot manufacture a move.
+The public median line delta uses paired per-book changes, excluding incomparable
+quotes. `observedBooksMoved`, `observedBooksCompared`, `observedDirection`, and
+`observedMovementMetric` are Iron Tuna calculations, never PropLine steam scores.
+`historyBasis` distinguishes provider openings from first-observed baselines.
+Hourly snapshots can miss brief moves and reversals between polls.
+
+After setting the secret, allow the next scheduled collection or use the authenticated
+`POST /api/tuna-market/refresh`. Verify `sourceName: PropLine` and current props in
+`GET /api/tuna-market?kind=props`. Initially `comparable` may be false; later changed
+quotes should produce observed movement with `steamScore: null`. Check the homepage
+Betting Market Intel lane for Baseline, Current, and Agreement / signal columns.
 
 ## Provider behavior
 
