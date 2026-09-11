@@ -200,6 +200,11 @@ console.log('\nthe validator');
   ok('a difference of two packet numbers is allowed, and so is the signed spread', ar.ok, JSON.stringify(ar));
   const nn = H.validateDraft('He ran for 155 yards, 4.7 per carry.', wk.allowed);
   ok('a number that is neither in the packet nor arithmetic on it is still caught', nn.numbers.join() === '155,4.7', JSON.stringify(nn));
+  // Week 1's Kickers & Defenses was held on "number:600" for "salary 2,600".
+  const sal = H._finishBrief({ players: [{ name: 'Cameron Dicker', salary: 4600 }], lines: ['Atlanta Falcons DST: DraftKings salary 2,600.'] });
+  const sv = H.validateDraft('Dicker costs 4,600 and the Falcons DST 2,600.', sal.allowed);
+  ok('a salary with a thousands separator is one number', sv.ok, JSON.stringify(sv));
+  ok('a separated number the packet lacks is caught whole', H.validateDraft('He costs 5,900.', sal.allowed).numbers.join() === '5900');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
