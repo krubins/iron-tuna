@@ -19,6 +19,9 @@ jobs:
 
       # A single bad escape silently white-screens the whole app, so parsing the
       # deployed files is the highest-value check in the repo.
+      - name: Tuna Market Signal
+        run: node tools/test-tuna-market.mjs
+
       - name: Parse _worker.js
         run: node --check _worker.js
 
@@ -318,6 +321,17 @@ jobs:
       - name: ESPN game lines, and the sign convention against a second feed
         run: node tools/test-espn-lines.mjs
 
+      # The paid odds feed. Nothing in this repo has ever reached
+      # api.sportsgameodds.com — the adapter is written to their published v2
+      # docs and to the field names in their own SDK — so a committed fixture is
+      # the only thing between a schema assumption and a wrong betting line.
+      # Same sign trap as the step above, plus two of its own: SGO ships each
+      # side of a market as a separate entry (an over whose under is lost is a
+      # line with no price), and open and current have to come from ONE book or
+      # the movement column is a sentence about two of them.
+      - name: The SportsGameOdds adapter, against its fixture
+        run: node tools/test-sgo.mjs
+
       # One scoring engine, three copies (worker, it-league.js, index.html),
       # checked against each other on 400 randomized stat lines rather than a
       # handful of chosen ones. A drift here means the same player is worth
@@ -339,6 +353,12 @@ jobs:
       - name: The three boards, Market Delta and the explainer
         run: node tools/test-boards.mjs
 
+      # Numeric fantasy outputs are software outputs, not model opinions. This
+      # fails if an LLM call leaks into ranking/projection/DFS code or if the
+      # automated newsroom stops using its dedicated Sonnet model.
+      - name: AI never calculates rankings, projections or DFS values
+        run: node tools/test-ai-boundary.mjs
+
       # The insight rules (deterministic, data-carrying, and returning nothing
       # from the usage rules until games have been played), Vegas Edge's six
       # boards, and the Wednesday movers' reasons.
@@ -356,6 +376,8 @@ jobs:
         run: node tools/test-dfs.mjs
       - name: DraftKings main-slate importer
         run: node tools/test-draftkings-import.mjs
+      - name: DraftKings workflow authentication
+        run: node tools/test-draftkings-auth.mjs
       - name: The health board, the job log and the editorial actions
         run: node tools/test-health.mjs
       - name: The job schedule in New York time

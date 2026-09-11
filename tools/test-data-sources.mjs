@@ -31,8 +31,12 @@ const ok = (name, cond, extra = '') => {
 // "service" hosts are vendors Iron Tuna is a paying or authenticated customer
 // of, and "own" is us.
 const ALLOWED = {
+  'api.prop-line.com':        { kind: 'content', why: 'PropLine game lines, player props and movement for end-user analytical display; no bulk redistribution (docs/data-sources.md)' },
+  'prop-line.com':            { kind: 'content', why: 'PropLine source-attribution link; never fetched by the worker (docs/data-sources.md)' },
   'football.cbssports.com': { kind: 'content', why: 'CBS reader-authorized league API; validated league subdomain only, FLAG_CBS_SYNC off until access and commercial terms verified (R7)' },
-  'api.the-odds-api.com':     { kind: 'content', why: 'paid odds feed; commercial display terms pending (docs/data-sources.md R3)' },
+  'api.sportsgameodds.com':   { kind: 'content', why: 'paid odds feed: player props and one of the quotes behind /the-line; display terms pending (docs/data-sources.md R8)' },
+  'api.the-odds-api.com':     { kind: 'content', why: 'documented odds feed; stored and derived UI use permitted (docs/data-sources.md R3)' },
+  'the-odds-api.com':         { kind: 'content', why: 'source-attribution link; never fetched by the worker (docs/data-sources.md R3)' },
   'site.api.espn.com':        { kind: 'content', why: 'REMEDIATION PENDING: undocumented endpoints, no commercial license (R1)' },
   'api.sleeper.app':          { kind: 'content', why: 'REMEDIATION PENDING: non-commercial grant only (R2)' },
   // League sync (docs/league-sync.md). Sleeper league reads ride on the row
@@ -50,6 +54,7 @@ const ALLOWED = {
   'upload.twitter.com':       { kind: 'service', why: 'our own posting' },
   'graph.threads.net':        { kind: 'service', why: 'our own posting' },
   'api.indexnow.org':         { kind: 'service', why: 'search index ping' },
+  'token.actions.githubusercontent.com': { kind: 'service', why: 'verify the signed identity of the DraftKings GitHub Actions workflow' },
   'github.com':               { kind: 'service', why: 'links only, never fetched' },
   // A JSON-LD @context is a vocabulary identifier, not an endpoint. It is
   // printed into the ProfilePage block the worker builds for /analysts/<id>
@@ -117,7 +122,7 @@ if (fs.existsSync(docPath)) {
 // Section 14.4. Naming a binding in a status label ("no LLM_API_KEY") is fine
 // and /admin does it; what must never appear client-side is a binding actually
 // read, or a secret written out as a literal.
-const KEYS = '(?:ODDS_API_KEY|CFBD_API_KEY|DFS_SALARY_API_KEY|LLM_API_KEY|STRIPE_SECRET_KEY|RESEND_API_KEY|AUTH_SECRET|TURNSTILE_SECRET|X_API_SECRET)';
+const KEYS = '(?:SGO_API_KEY|ODDS_API_KEY|CFBD_API_KEY|DFS_SALARY_API_KEY|LLM_API_KEY|STRIPE_SECRET_KEY|RESEND_API_KEY|AUTH_SECRET|TURNSTILE_SECRET|X_API_SECRET)';
 const KEY_READ = new RegExp(`env\\s*\\.\\s*${KEYS}|\\b${KEYS}\\s*[:=]\\s*['"\`][^'"\`]`, 'i');
 const SECRET_LITERAL = /\b(sk-[A-Za-z0-9]{16,}|sk_live_[A-Za-z0-9]{8,}|rk_live_[A-Za-z0-9]{8,}|re_[A-Za-z0-9]{16,})\b/;
 

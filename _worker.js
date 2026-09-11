@@ -92,50 +92,110 @@ const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/r
 // carry and 301s here — see the redirect at the top of fetch().
 const IN_SEASON_HUB = '/in-season';
 
-// ── the Washington fence on /the-line ────────────────────────────────────────
-// /the-line prices the week's games against the posted number and puts
-// hypothetical, unfunded stakes on the ones it disagrees with. Washington
-// regulates online gambling activity more strictly than any other state
-// (Wash. Rev. Code ch. 9.46), so the page is not served there at all rather
-// than relying on the disclaimers printed on it. It is a fence on the PAGE, not
-// on the data: /api/vegas-edge is the same market payload /previews reads and
-// is not gated, because a spread on a preview page is not a wagering surface.
+// ── Washington betting-market fence ───────────────────────────────────────────
+// Washington's Gambling Act expressly treats betting odds and changes in betting
+// odds as "gambling information." Iron Tuna therefore does not transmit its
+// current betting-market payloads to requests Cloudflare places in Washington.
+// This is an edge control, not a disclaimer. Fantasy pages still load, but any
+// component that depends on /api/vegas-edge, /api/signals or /api/tuna-market
+// receives a jurisdiction-unavailable response instead of current market data.
 //
-// Every form the assets layer would answer for the page has to be listed, or
-// the fence is one trailing slash wide. The gate below sees these same names.
-const LINE_PATHS = new Set(['/the-line', '/the-line/', '/the-line.html', '/in-season/the-line', '/in-season/the-line/']);
-function LINE_GEOFENCED(pathname) { return LINE_PATHS.has(String(pathname || '')); }
-// Served with the fence's own 451. It links to /previews, which is the same
-// slate with the wagering read taken off it, so a Washington reader still gets
-// the football.
-const LINE_BLOCKED_HTML = `<!doctype html>
+// Dedicated betting-market pages are blocked as pages as well. The fantasy
+// and DFS products can still use Iron Tuna's derived projections, but a reader
+// in Washington does not receive the current betting-market board, props,
+// spreads, totals, movement dashboard or The Line.
+const WA_MARKET_PAGE_PATHS = new Set([
+  '/the-line', '/the-line/', '/the-line.html', '/in-season/the-line', '/in-season/the-line/',
+  '/vegas-edge', '/vegas-edge/', '/vegas-edge.html', '/in-season/vegas-edge', '/in-season/vegas-edge/',
+  '/game-intel', '/game-intel/', '/game-intel.html', '/in-season/game-intel', '/in-season/game-intel/',
+  '/player-intel', '/player-intel/', '/player-intel.html',
+  '/what-they-arent-telling-you', '/what-they-arent-telling-you/', '/what-they-arent-telling-you.html',
+  '/in-season/what-they-arent-telling-you', '/in-season/what-they-arent-telling-you/',
+  '/hidden-value', '/hidden-value/', '/hidden-value.html',
+  '/previews', '/previews/', '/previews.html'
+]);
+function WA_MARKET_PAGE_GEOFENCED(pathname) {
+  const p = String(pathname || '');
+  return WA_MARKET_PAGE_PATHS.has(p) || /^\/in-season\/player(?:\/|$)/.test(p);
+}
+function IS_WASHINGTON(request) {
+  const cf = request && request.cf || {};
+  const country = String(cf.country || '').toUpperCase();
+  const region = String(cf.regionCode || '').toUpperCase();
+  const regionName = String(cf.region || '').trim().toLowerCase();
+  return country === 'US' && (region === 'WA' || regionName === 'washington');
+}
+function WA_MARKET_BLOCK() {
+  return Response.json(
+    { ok: false, error: 'jurisdiction_unavailable', jurisdiction: 'US-WA', message: 'Betting Market Intel is not available in Washington.' },
+    { status: 451, headers: { 'cache-control': 'no-store', 'vary': 'CF-IPCountry' } }
+  );
+}
+// Served with the fence's own 451. Washington readers retain the non-market
+// fantasy and DFS tools, but not the betting-market section itself.
+const WA_MARKET_BLOCKED_HTML = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>The Line is not available in Washington | Iron Tuna</title>
+<title>Betting Market Intel is not available in Washington | Iron Tuna</title>
 <link rel="icon" href="/tuna-mark.png">
 <link rel="stylesheet" href="/site.css">
 </head>
 <body>
 <main id="main" class="wrap">
-<p class="is-eyebrow">Iron Tuna &middot; The Line</p>
-<h1>The Line is not available in Washington</h1>
-<p class="is-lede">This page reads the week&rsquo;s games against the posted betting number and puts hypothetical stakes on them. Washington State regulates online gambling activity more strictly than any other state, so Iron Tuna does not serve the page to readers there.</p>
-<p>Nothing is being withheld from you that carries a football number. <a href="/previews">Previews</a> has every game on the slate with its spread, its total and the points each offence is implied to score; <a href="/weekly-rankings">this week&rsquo;s rankings</a> price the players inside those games; <a href="/hidden-value">Hidden Value</a> shows where the market and the fantasy consensus disagree. None of those is a wagering page and all of them are open.</p>
-<p class="is-note">If you believe you are seeing this in error, it is because the network you are on places you in Washington. Iron Tuna takes no wagers, holds no funds and is not a sportsbook. If gambling has stopped being entertainment, the National Problem Gambling Helpline is 1-800-GAMBLER (1-800-426-2537), free and confidential, 24 hours a day.</p>
+<p class="is-eyebrow">Iron Tuna &middot; Betting Market Intel</p>
+<h1>Betting Market Intel is not available in Washington</h1>
+<p class="is-lede">Iron Tuna does not serve its betting-market section, current odds, props, spreads, totals or line-movement data to requests located in Washington State.</p>
+<p>The fantasy tools remain available. <a href="/weekly-rankings">This week&rsquo;s rankings</a>, <a href="/season-long-rankings">season-long rankings</a>, waiver tools and league-specific analysis continue to work without transmitting the current betting-market board.</p>
+<p class="is-note">If you believe you are seeing this in error, it is because the network you are on places you in Washington. Iron Tuna takes no wagers, holds no funds and is not a sportsbook. If gambling has stopped being entertainment, the National Problem Gambling Helpline is 1-800-MY-RESET, free and confidential.</p>
 <p><a href="/">Back to Iron Tuna</a></p>
 </main>
 </body>
 </html>
 `;
+function stripWashingtonMarketLane(html) {
+  return String(html || '')
+    .replace(/\s*<button class="lane-tab"[^>]*id="laneTabMarket"[\s\S]*?<\/button>/, '')
+    .replace(/\s*<a href="#market[^"]*" data-lane="market">[\s\S]*?<\/a>/g, '')
+    .replace(/\s*<div class="lane-pane" id="laneMarket"[\s\S]*?<\/div><!-- \/#laneMarket -->/, '')
+    .replace(/grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/, 'grid-template-columns: repeat(2, minmax(0, 1fr))');
+}
 function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
 function postDraftPreview(env, url, request) {
   if (adminOk(env, url.searchParams.get('preview'))) return true;
   try { return adminOk(env, parseCookie(request.headers.get('Cookie'))['it_pd_preview']); } catch (e) { return false; }
 }
 function adminOk(env, key) { return !!env.LEADS_EXPORT_KEY && timingSafeEq(String(key || ''), env.LEADS_EXPORT_KEY); }
+let _GITHUB_OIDC_KEYS = null;
+let _GITHUB_OIDC_KEYS_AT = 0;
+const _b64urlBytes = value => Uint8Array.from(atob(String(value || '').replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(String(value || '').length / 4) * 4, '=')), c => c.charCodeAt(0));
+async function githubDfsWorkflowOk(request) {
+  try {
+    const auth = String(request.headers.get('authorization') || '');
+    if (!auth.startsWith('Bearer ') || auth.length > 12000) return false;
+    const token = auth.slice(7), parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const header = JSON.parse(new TextDecoder().decode(_b64urlBytes(parts[0])));
+    const claims = JSON.parse(new TextDecoder().decode(_b64urlBytes(parts[1])));
+    const now = Math.floor(Date.now() / 1000);
+    if (header.alg !== 'RS256' || !header.kid || claims.iss !== 'https://token.actions.githubusercontent.com' ||
+        claims.aud !== 'iron-tuna-dfs-import' || claims.repository !== 'krubins/iron-tuna' ||
+        claims.ref !== 'refs/heads/main' || claims.workflow_ref !== 'krubins/iron-tuna/.github/workflows/draftkings-salaries.yml@refs/heads/main' ||
+        Number(claims.exp) < now || Number(claims.nbf || claims.iat) > now + 30) return false;
+    if (!_GITHUB_OIDC_KEYS || Date.now() - _GITHUB_OIDC_KEYS_AT > 3600000) {
+      const response = await fetch('https://token.actions.githubusercontent.com/.well-known/jwks');
+      if (!response.ok) return false;
+      _GITHUB_OIDC_KEYS = (await response.json()).keys || [];
+      _GITHUB_OIDC_KEYS_AT = Date.now();
+    }
+    const jwk = _GITHUB_OIDC_KEYS.find(key => key.kid === header.kid);
+    if (!jwk) return false;
+    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    return crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, _b64urlBytes(parts[2]), new TextEncoder().encode(parts[0] + '.' + parts[1]));
+  } catch (e) { return false; }
+}
 const json = (obj, status, c) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json', ...SEC, ...c } });
 
 // ── auth helpers (magic-link login + device cap) ──
@@ -186,11 +246,11 @@ async function chargeEmail(env, ch) {
 async function sendLoginEmail(env, email, link) {
   if (!env.RESEND_API_KEY) return;
   const from = env.EMAIL_FROM || 'Iron Tuna <login@irontuna.com>';
-  const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">Sign in to Iron Tuna</h2><p>Tap to unlock your purchase on this device:</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Sign in to Iron Tuna</a></p><p style="color:#667;font-size:13px">This link expires in 15 minutes and can be used once. If you did not request it, ignore this email.</p></div>';
+  const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">Sign in to Iron Tuna</h2><p>Tap to sign in on this device. League sync is free; any paid tools you already own will be unlocked too.</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Sign in to Iron Tuna</a></p><p style="color:#667;font-size:13px">This link expires in 15 minutes and can be used once. If you did not request it, ignore this email.</p></div>';
   try { await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ from: from, to: email, subject: 'Your Iron Tuna sign-in link', html: html }) }); } catch (e) {}
 }
-// The comp email is deliberately not sendLoginEmail. That one says "unlock your
-// purchase", which is the wrong sentence for someone who never bought anything,
+// The comp email is deliberately not sendLoginEmail. It explains the full paid
+// bundle granted by an admin, while the self-serve email covers free accounts too,
 // and it swallows every failure — fine for a self-serve login that answers
 // ok:true either way, useless for an admin who needs to know whether the thing
 // they just sent actually left the building. So this one reports what happened.
@@ -1307,6 +1367,434 @@ const CAMPAIGN_NURTURE = {
 };
 
 // ════════════════════════════════════════════════════════════════════════════
+// TUNA MARKET SIGNAL START
+// Self-contained section: tools/test-tuna-market.mjs executes this deployed code.
+const TMS_SOURCE = 'https://the-odds-api.com/';
+const TMS_PROPLINE_SOURCE = 'https://prop-line.com/';
+const TMS_PROPLINE_API = 'https://api.prop-line.com/v1/';
+const TMS_PROPLINE_BOOKS = 'draftkings,fanduel,pinnacle,bovada,betmgm,betrivers,fanatics,hardrock';
+const TMS_PROPLINE_MARKETS = 'player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td';
+const tmsInt = (v, fallback, min, max) => Number.isFinite(Number(v)) && v !== '' && v != null ? Math.max(min, Math.min(max, Math.floor(Number(v)))) : fallback;
+const tmsList = v => String(v || '').split(',').map(s => s.trim()).filter(Boolean);
+const tmsKey = r => JSON.stringify([r.provider, r.event, r.book, r.market, r.player, r.side]);
+const tmsGroup = r => JSON.stringify([r.provider, r.event, r.market, r.player, r.side, r.line]);
+function tmsNormalize(events, observed, provider = 'the-odds-api', source = TMS_SOURCE) {
+  if (!Array.isArray(events)) throw new Error('invalid_schema');
+  const rows = [];
+  for (const e of events) {
+    if (!e.id || !e.sport_key || !Number.isFinite(Date.parse(e.commence_time))) continue;
+    for (const b of e.bookmakers || []) for (const m of b.markets || []) {
+      // Alternate ladders need their own identity; do not mix them with main lines.
+      if (!b.key || !m.key || m.key.includes('alternate')) continue;
+      const updated = Date.parse(m.last_update || b.last_update);
+      if (!Number.isFinite(updated) || updated > observed + 60000) continue;
+      for (const o of m.outcomes || []) {
+        if (!o.name || typeof o.price !== 'number' || !Number.isFinite(o.price) || o.price <= 1) continue;
+        if (o.point != null && (typeof o.point !== 'number' || !Number.isFinite(o.point))) continue;
+        if (m.key !== 'h2h' && o.point == null && !/(^|_)anytime_td$/.test(m.key)) continue;
+        if (m.key.startsWith('player_') && !o.description) continue;
+        rows.push({ provider, source, event: String(e.id), sport: e.sport_key,
+          matchup: `${e.away_team || ''} at ${e.home_team || ''}`, starts: Date.parse(e.commence_time),
+          book: b.key, market: m.key, player: o.description || '', side: o.name,
+          line: o.point ?? null, price: o.price, updated, observed });
+      }
+    }
+  }
+  return rows;
+}
+function tmsAmericanToDecimal(price) {
+  const n = Number(price);
+  if (!Number.isFinite(n) || (n > -100 && n < 100)) return null;
+  return n > 0 ? 1 + n / 100 : 1 + 100 / Math.abs(n);
+}
+function tmsNormalizePropline(events, observed) {
+  if (!Array.isArray(events)) throw new Error('invalid_schema');
+  const converted = events.map(e => ({ ...e, bookmakers: (e.bookmakers || []).map(b => ({
+    ...b, markets: (b.markets || []).map(m => ({ ...m, outcomes: (m.outcomes || []).map(o => {
+      const price = tmsAmericanToDecimal(o.price);
+      return price == null ? { ...o, price: NaN } : { ...o, price };
+    }) }))
+  })) }));
+  return tmsPrimaryPropRows(tmsNormalize(converted, observed, 'propline', TMS_PROPLINE_SOURCE));
+}
+function tmsNumberOrNull(v) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function tmsPrimaryPropRows(rows) {
+  const keep = [], groups = new Map();
+  for (const row of rows) {
+    if (!row.player) { keep.push(row); continue; }
+    const key = JSON.stringify([row.provider, row.event, row.book, row.market, row.player]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+  for (const group of groups.values()) {
+    const byLine = new Map();
+    for (const row of group) {
+      const key = row.line == null ? 'null' : String(row.line);
+      if (!byLine.has(key)) byLine.set(key, []);
+      byLine.get(key).push(row);
+    }
+    if (byLine.size === 1) { keep.push(...group); continue; }
+    let best = null;
+    for (const lineRows of byLine.values()) {
+      const over = lineRows.find(r => /^(over|yes)$/i.test(r.side));
+      const under = lineRows.find(r => /^(under|no)$/i.test(r.side));
+      let score = 10;
+      if (over && under) {
+        const po = 1 / over.price, pu = 1 / under.price;
+        score = Math.abs(po / (po + pu) - 0.5);
+      } else if (over) score = Math.abs(1 / over.price - 0.5) + 1;
+      else if (under) score = Math.abs(1 / under.price - 0.5) + 1;
+      if (!best || score < best.score) best = { score, rows: lineRows };
+    }
+    if (best) keep.push(...best.rows);
+  }
+  return keep;
+}
+async function tmsPropLineHttp(path, params, env, request = fetch) {
+  const url = new URL(TMS_PROPLINE_API + path);
+  for (const [k, v] of Object.entries(params || {})) if (v != null && v !== '') url.searchParams.set(k, v);
+  let res;
+  try { res = await request(url.toString(), { headers: { 'X-API-Key': env.PROPLINE_API_KEY }, signal: AbortSignal.timeout(12000) }); }
+  catch { throw new Error('provider_timeout_or_network'); }
+  if (!res.ok) {
+    const error = new Error(res.status === 429 ? 'rate_limited' : res.status === 401 || res.status === 403 ? 'credentials_or_plan' : 'provider_http_' + res.status);
+    const retry = res.headers.get('retry-after');
+    error.retryMs = Math.min(86400000, Math.max(60000, Number(retry) * 1000 || Date.parse(retry) - Date.now() || 900000));
+    throw error;
+  }
+  let data;
+  try { data = await res.json(); } catch { throw new Error('invalid_json'); }
+  return { data, remaining: res.headers.get('x-daily-remaining'), used: res.headers.get('x-daily-used'), limit: res.headers.get('x-daily-limit') };
+}
+const tmsMovementKey = (book, market, player, side, line) => JSON.stringify([book || '', market || '', player || '', side || '', line == null ? null : Number(line)]);
+function tmsApplyPropLineMovement(rows, movement) {
+  if (!movement || movement.redacted || !Array.isArray(movement.bookmakers)) return rows;
+  const steam = Array.isArray(movement.steam) ? movement.steam : [];
+  const meta = new Map();
+  for (const b of movement.bookmakers) for (const m of b.markets || []) for (const o of m.outcomes || []) {
+    const player = o.description || '';
+    const openingPrice = tmsAmericanToDecimal(o.open_price);
+    const openingAt = Date.parse(o.open_at);
+    const latestAt = Date.parse(o.latest_at);
+    const s = steam.find(x => x && x.market === m.key && x.name === o.name &&
+      ((x.description || '') === player || (!player && !x.description)));
+    const latestLine = tmsNumberOrNull(o.latest_point);
+    meta.set(tmsMovementKey(b.key, m.key, player, o.name, latestLine), {
+      openingLine: tmsNumberOrNull(o.open_point),
+      openingPrice,
+      openingAt: Number.isFinite(openingAt) ? openingAt : null,
+      nativeDirection: o.direction || null,
+      nativeProbShift: tmsNumberOrNull(o.prob_shift) == null ? null : tmsNumberOrNull(o.prob_shift) * 100,
+      nativePointShift: tmsNumberOrNull(o.point_shift),
+      nativeSnapshots: tmsNumberOrNull(o.num_snapshots),
+      latestAt: Number.isFinite(latestAt) ? latestAt : null,
+      steamScore: s ? tmsNumberOrNull(s.steam_score) : null,
+      booksQuoting: s ? tmsNumberOrNull(s.books_quoting) : null,
+      booksMoved: s ? tmsNumberOrNull(s.books_moved) : null,
+      consensusDirection: s?.consensus_direction || null,
+      consensusPointShift: s ? tmsNumberOrNull(s.consensus_point_shift) : null,
+      avgProbShift: s && tmsNumberOrNull(s.avg_prob_shift) != null ? tmsNumberOrNull(s.avg_prob_shift) * 100 : null
+    });
+  }
+  for (const row of rows) {
+    const m = meta.get(tmsMovementKey(row.book, row.market, row.player, row.side, row.line));
+    if (m) Object.assign(row, m);
+  }
+  return rows;
+}
+async function tmsHttp(path, params, env, request = fetch) {
+  const url = new URL('https://api.the-odds-api.com/v4/' + path);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  url.searchParams.set('apiKey', env.ODDS_API_KEY);
+  let res;
+  try { res = await request(url.toString(), { signal: AbortSignal.timeout(12000) }); }
+  catch { throw new Error('provider_timeout_or_network'); }
+  if (!res.ok) {
+    const error = new Error(res.status === 429 ? 'rate_limited' : res.status === 401 || res.status === 403 ? 'credentials_or_plan' : 'provider_http_' + res.status);
+    const retry = res.headers.get('retry-after');
+    error.retryMs = Math.min(86400000, Math.max(60000, Number(retry) * 1000 || Date.parse(retry) - Date.now() || 900000));
+    throw error;
+  }
+  let data;
+  try { data = await res.json(); } catch { throw new Error('invalid_json'); }
+  return { data, remaining: res.headers.get('x-requests-remaining'), used: res.headers.get('x-requests-used') };
+}
+// Adapter contract: pull(env, observed) -> { rows, quota }. Never merge provider event IDs.
+const TMS_PROVIDERS = {
+  'propline': { async pull(env, observed) {
+    if (!env.PROPLINE_API_KEY) throw new Error('missing_propline_api_key');
+    const sport = String(env.TMS_SPORT || 'americanfootball_nfl');
+    if (!/^[a-z0-9_]+$/.test(sport)) throw new Error('invalid_sport');
+    const bookmakers = tmsList(env.TMS_BOOKMAKERS || TMS_PROPLINE_BOOKS).filter(v => /^[a-z0-9_]+$/.test(v)).slice(0, 12).join(',');
+    const markets = tmsList(env.TMS_PROP_MARKETS || TMS_PROPLINE_MARKETS).filter(v => /^[a-z0-9_]+$/.test(v)).slice(0, 12);
+    const game = await tmsPropLineHttp('sports/' + sport + '/odds', { markets: 'h2h,spreads,totals', bookmakers }, env);
+    const rows = tmsNormalizePropline(game.data, observed);
+    const eventResult = await tmsPropLineHttp('sports/' + sport + '/events', {}, env);
+    const events = (Array.isArray(eventResult.data) ? eventResult.data : []).filter(e => {
+      const starts = Date.parse(e.commence_time);
+      return e.id && Number.isFinite(starts) && starts > observed - 3600000 && starts < observed + 9 * 86400000;
+    }).slice(0, 20);
+    let quota = { remaining: eventResult.remaining ?? game.remaining, used: eventResult.used ?? game.used, limit: eventResult.limit ?? game.limit };
+    // Free current odds plus our own snapshots are the default. Paid history is opt-in.
+    let movementAvailable = env.PROPLINE_MOVEMENT === '1';
+    for (const e of events) {
+      let currentEventId = String(e.id);
+      if (markets.length) {
+        const current = await tmsPropLineHttp('sports/' + sport + '/events/' + encodeURIComponent(e.id) + '/odds', { markets: markets.join(','), bookmakers }, env);
+        currentEventId = String(current.data?.id || e.id);
+        rows.push(...tmsNormalizePropline([current.data], observed));
+        quota = { remaining: current.remaining, used: current.used, limit: current.limit };
+      }
+      if (movementAvailable) {
+        try {
+          const movement = await tmsPropLineHttp('sports/' + sport + '/events/' + encodeURIComponent(e.id) + '/movement', { markets: ['h2h','spreads','totals', ...markets].join(','), bookmakers }, env);
+          const movementEventId = String(movement.data?.id || currentEventId);
+          if (movement.data?.redacted) movementAvailable = false;
+          else tmsApplyPropLineMovement(rows.filter(r => r.event === movementEventId), movement.data);
+          quota = { remaining: movement.remaining, used: movement.used, limit: movement.limit };
+        } catch (err) {
+          if (!['credentials_or_plan', 'provider_http_402', 'provider_http_404'].includes(err.message)) throw err;
+        }
+      }
+    }
+    return { rows, quota, provider: 'propline' };
+  } },
+  'the-odds-api': { async pull(env, observed) {
+    if (!env.ODDS_API_KEY) throw new Error('missing_odds_api_key');
+    const sport = String(env.TMS_SPORT || 'americanfootball_nfl');
+    if (!/^[a-z0-9_]+$/.test(sport)) throw new Error('invalid_sport');
+    const params = { regions: 'us', markets: 'h2h,spreads,totals', oddsFormat: 'decimal' };
+    const result = await tmsHttp('sports/' + sport + '/odds', params, env);
+    const rows = tmsNormalize(result.data, observed);
+    const ids = tmsList(env.TMS_PROP_EVENT_IDS).slice(0, 2);
+    const markets = tmsList(env.TMS_PROP_MARKETS).filter(m => /^player_[a-z_]+$/.test(m) && !m.includes('alternate')).slice(0, 6);
+    let quota = { remaining: result.remaining, used: result.used };
+    for (const id of ids) {
+      if (!markets.length || (quota.remaining !== null && Number(quota.remaining) < markets.length)) break;
+      const next = await tmsHttp('sports/' + sport + '/events/' + encodeURIComponent(id) + '/odds', { ...params, markets: markets.join(',') }, env);
+      rows.push(...tmsNormalize([next.data], observed));
+      quota = { remaining: next.remaining, used: next.used };
+    }
+    return { rows, quota, provider: 'the-odds-api' };
+  } },
+  'licensed-import': { push: true }
+};
+async function tmsReady(env) {
+  if (!env.LEADS_DB) throw new Error('storage_unavailable');
+  await env.LEADS_DB.batch([
+    env.LEADS_DB.prepare('CREATE TABLE IF NOT EXISTS tuna_market_snapshots (provider TEXT NOT NULL, event TEXT NOT NULL, observed INTEGER NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(provider,event,observed))'),
+    env.LEADS_DB.prepare('CREATE INDEX IF NOT EXISTS tuna_market_time ON tuna_market_snapshots(observed)'),
+    env.LEADS_DB.prepare('CREATE TABLE IF NOT EXISTS tuna_market_state (id TEXT PRIMARY KEY, next_poll INTEGER NOT NULL DEFAULT 0, status TEXT, updated INTEGER)')
+  ]);
+}
+async function tmsStore(env, rows, now) {
+  const groups = new Map();
+  for (const row of rows) {
+    const key = JSON.stringify([row.provider, row.event]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+  const statements = [...groups.values()].map(group => env.LEADS_DB.prepare('INSERT OR IGNORE INTO tuna_market_snapshots(provider,event,observed,payload) VALUES(?,?,?,?)').bind(group[0].provider, group[0].event, now, JSON.stringify(group)));
+  for (let i = 0; i < statements.length; i += 50) await env.LEADS_DB.batch(statements.slice(i, i + 50));
+  const cutoff = now - tmsInt(env.TMS_RETENTION_DAYS, 30, 1, 90) * 86400000;
+  await env.LEADS_DB.prepare('DELETE FROM tuna_market_snapshots WHERE observed < ?').bind(cutoff).run();
+}
+async function tmsPoll(env, now = Date.now()) {
+  if (env.TMS_ENABLED !== '1') return { status: 'disabled' };
+  await tmsReady(env);
+  const db = env.LEADS_DB;
+  await db.prepare("INSERT OR IGNORE INTO tuna_market_state(id,next_poll) VALUES('poll',0)").run();
+  const providerName = env.TMS_PROVIDER || (env.PROPLINE_API_KEY ? 'propline' : 'the-odds-api');
+  const interval = tmsInt(env.TMS_INTERVAL_MINUTES, providerName === 'propline' ? 60 : 360, 15, 1440) * 60000;
+  // Atomic D1 lease covers both scheduled and admin refreshes across isolates.
+  const lock = await db.prepare("UPDATE tuna_market_state SET next_poll=? WHERE id='poll' AND next_poll<=?").bind(now + interval, now).run();
+  if (!lock.meta?.changes) return { status: 'cooldown' };
+  let status;
+  try {
+    const provider = TMS_PROVIDERS[providerName];
+    if (!provider?.pull) throw new Error('invalid_pull_provider');
+    const result = await provider.pull(env, now);
+    await tmsStore(env, result.rows, now);
+    status = { status: result.rows.length ? 'ok' : 'empty', rows: result.rows.length, quota: result.quota };
+  } catch (e) {
+    // Never persist URLs, API response bodies, or credentials in errors.
+    const code = /^[a-z_0-9]+$/.test(e.message) ? e.message : 'ingestion_failed';
+    status = { status: 'error', code };
+    await db.prepare("UPDATE tuna_market_state SET next_poll=? WHERE id='poll'").bind(now + Math.max(interval, e.retryMs || 0)).run();
+  }
+  await db.prepare("UPDATE tuna_market_state SET status=?,updated=? WHERE id='poll'").bind(JSON.stringify(status), now).run();
+  return status;
+}
+function tmsMedian(values) {
+  const xs = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!xs.length) return null;
+  const m = Math.floor(xs.length / 2);
+  return xs.length % 2 ? xs[m] : (xs[m - 1] + xs[m]) / 2;
+}
+function tmsMarketKey(r) { return JSON.stringify([r.provider, r.event, r.market, r.player, r.side]); }
+function tmsSignals(rows, now, sharpBooks = []) {
+  const series = new Map();
+  for (const r of rows) {
+    const key = tmsKey(r);
+    if (!series.has(key)) series.set(key, []);
+    series.get(key).push(r);
+  }
+  const items = [];
+  for (const history of series.values()) {
+    history.sort((a, b) => a.observed - b.observed);
+    const first = history[0], last = history[history.length - 1];
+    if (last.starts <= now) continue;
+    const nativeOpen = tmsNumberOrNull(last.openingAt) != null && Number(last.openingAt) < last.updated &&
+      (last.openingLine != null || tmsNumberOrNull(last.openingPrice) != null);
+    const firstObserved = nativeOpen ? Number(last.openingAt) : first.observed;
+    const firstLine = nativeOpen ? last.openingLine : first.line;
+    const firstPrice = nativeOpen ? last.openingPrice : first.price;
+    const comparable = nativeOpen || (first.updated < last.updated && first.observed < last.observed);
+    const stale = now - last.updated > 3600000 || now - last.observed > 3600000;
+    const lineDelta = comparable && firstLine !== null && last.line !== null ? last.line - firstLine : null;
+    const probabilityDelta = comparable && firstLine === last.line && Number.isFinite(Number(firstPrice))
+      ? (1 / last.price - 1 / firstPrice) * 100 : null;
+    items.push({ ...last, firstObserved, firstLine, lineDelta, probabilityDelta, stale, comparable,
+      historyBasis: nativeOpen ? 'provider-opening' : 'first-observed',
+      movementDirection: last.consensusDirection || last.nativeDirection || null,
+      steamScore: tmsNumberOrNull(last.steamScore),
+      booksMoved: tmsNumberOrNull(last.booksMoved),
+      booksQuoting: tmsNumberOrNull(last.booksQuoting),
+      history: history.slice(-24).map(r => ({ at: r.observed, updated: r.updated, line: r.line, price: r.price })) });
+  }
+  for (const item of items) {
+    const peers = items.filter(r => !r.stale && tmsGroup(r) === tmsGroup(item));
+    item.books = new Set(peers.map(r => r.book)).size;
+    item.consensusProbability = peers.length ? peers.reduce((n, r) => n + 100 / r.price, 0) / peers.length : null;
+    const sharp = peers.filter(r => sharpBooks.includes(r.book));
+    item.sharpGap = !item.stale && sharp.length ? sharp.reduce((n, r) => n + 100 / r.price, 0) / sharp.length - 100 / item.price : null;
+    const split = item.split;
+    item.publicSplit = split && now - split.at <= 3600000 ? split : null;
+    item.score = item.stale || !item.comparable ? null : !item.lineDelta && !item.probabilityDelta && !item.steamScore ? 0 : Math.round(Math.min(100,
+      Math.min(60, Math.abs(item.probabilityDelta || 0) * 12) +
+      (item.lineDelta ? 20 : 0) + Math.min(10, Math.max(0, item.books - 1) * 2) +
+      Math.min(10, Math.abs(item.sharpGap || 0) * 2) +
+      Math.min(20, Math.max(0, item.steamScore || 0) / 5)));
+    delete item.split;
+  }
+  const groups = new Map();
+  for (const item of items) {
+    const key = tmsMarketKey(item);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  for (const group of groups.values()) {
+    const fresh = group.filter(r => !r.stale);
+    const use = fresh.length ? fresh : group;
+    const consensusLine = tmsMedian(use.map(r => tmsNumberOrNull(r.line)));
+    const consensusOpeningLine = tmsMedian(use.map(r => tmsNumberOrNull(r.firstLine)));
+    const marketBooks = new Set(use.map(r => r.book)).size;
+    const steamScore = Math.max(...use.map(r => r.steamScore ?? -1));
+    const booksMoved = Math.max(...use.map(r => r.booksMoved ?? -1));
+    const booksQuoting = Math.max(...use.map(r => r.booksQuoting ?? -1));
+    // Compare like-for-like book observations; exclude stale and single quotes.
+    // Line direction and fixed-line price direction are separate measurements.
+    const compared = fresh.filter(r => r.comparable);
+    const lineMoves = compared.filter(r => r.lineDelta != null);
+    const measured = lineMoves.some(r => r.lineDelta !== 0) ? lineMoves : compared.filter(r => r.probabilityDelta != null);
+    const metric = lineMoves.some(r => r.lineDelta !== 0) ? 'line' : 'implied-probability';
+    const delta = r => metric === 'line' ? r.lineDelta : r.probabilityDelta;
+    const up = new Set(measured.filter(r => delta(r) > 0).map(r => r.book)).size;
+    const down = new Set(measured.filter(r => delta(r) < 0).map(r => r.book)).size;
+    for (const item of group) {
+      item.consensusLine = consensusLine;
+      item.consensusOpeningLine = consensusOpeningLine;
+      item.consensusLineDelta = tmsMedian(compared.map(r => r.lineDelta));
+      item.observedBooksCompared = new Set(measured.map(r => r.book)).size;
+      item.observedBooksMoved = Math.max(up, down);
+      item.observedDirection = up === down ? (up ? 'mixed' : 'unchanged') : up > down ? 'up' : 'down';
+      item.observedMovementMetric = metric;
+      item.marketBooks = marketBooks;
+      if (steamScore >= 0) item.steamScore = steamScore;
+      if (booksMoved >= 0) item.booksMoved = booksMoved;
+      if (booksQuoting >= 0) item.booksQuoting = booksQuoting;
+    }
+  }
+  return items.sort((a, b) => (b.steamScore ?? -1) - (a.steamScore ?? -1) || (b.score ?? -1) - (a.score ?? -1));
+}
+async function tmsRoutes(request, env, url) {
+  if (!url.pathname.startsWith('/api/tuna-market')) return null;
+  const tmsCf = request && request.cf || {};
+  const tmsCountry = String(tmsCf.country || '').toUpperCase();
+  const tmsRegion = String(tmsCf.regionCode || '').toUpperCase();
+  const tmsRegionName = String(tmsCf.region || '').trim().toLowerCase();
+  if (tmsCountry === 'US' && (tmsRegion === 'WA' || tmsRegionName === 'washington')) {
+    return Response.json(
+      { ok: false, error: 'jurisdiction_unavailable', jurisdiction: 'US-WA', message: 'Betting Market Intel is not available in Washington.' },
+      { status: 451, headers: { 'cache-control': 'no-store', 'vary': 'CF-IPCountry' } }
+    );
+  }
+  const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
+  try {
+    if (url.pathname === '/api/tuna-market/refresh' || url.pathname === '/api/tuna-market/import') {
+      if (request.method !== 'POST') return json({ error: 'method' }, 405);
+      if (!adminOk(env, (request.headers.get('Authorization') || '').replace(/^Bearer /, ''))) return json({ error: 'forbidden' }, 403);
+      if (env.TMS_ENABLED !== '1') return json({ status: 'disabled' }, 503);
+      if (url.pathname.endsWith('/refresh')) return json(await tmsPoll(env));
+      // Explicitly licensed, normalized source; reject arbitrary URLs and oversized bodies.
+      if (env.TMS_LICENSED_IMPORT !== '1') return json({ error: 'licensed_import_disabled' }, 403);
+      const reader = request.body?.getReader();
+      if (!reader) return json({ error: 'empty_body' }, 400);
+      const chunks = []; let size = 0;
+      while (true) { const { done, value } = await reader.read(); if (done) break; size += value.length; if (size > 500000) { await reader.cancel(); return json({ error: 'too_large' }, 413); } chunks.push(value); }
+      const bytes = new Uint8Array(size); let offset = 0; for (const c of chunks) { bytes.set(c, offset); offset += c.length; }
+      let data; try { data = JSON.parse(new TextDecoder().decode(bytes)); } catch { return json({ error: 'invalid_json' }, 400); }
+      const now = Date.now();
+      if (!data.source || !/^https:\/\/[^\s]+$/.test(data.source) || !Array.isArray(data.events) || data.events.length > 20) return json({ error: 'invalid_import' }, 400);
+      const rows = tmsNormalize(data.events, now, 'licensed-import', data.source);
+      // Splits are outcome-specific percentages with their own source/sample timestamp.
+      for (const r of rows) {
+        const s = (data.splits || []).find(s => s.event === r.event && s.market === r.market && (s.player || '') === r.player && s.side === r.side && s.line === r.line && s.book === r.book);
+        if (s && typeof s.tickets === 'number' && typeof s.money === 'number' && s.tickets >= 0 && s.tickets <= 100 && s.money >= 0 && s.money <= 100 && Number.isFinite(s.at) && s.at <= now && s.at >= now - 86400000) r.split = { tickets: s.tickets, money: s.money, at: s.at, source: data.source };
+      }
+      await tmsReady(env); await tmsStore(env, rows, now);
+      return json({ status: 'ok', rows: rows.length });
+    }
+    if (url.pathname !== '/api/tuna-market') return json({ error: 'not_found' }, 404);
+    if (request.method !== 'GET') return json({ error: 'method' }, 405);
+    if (env.TMS_ENABLED !== '1') return json({ status: 'disabled', items: [] });
+    const selectedProvider = env.TMS_PROVIDER || (env.PROPLINE_API_KEY ? 'propline' : 'the-odds-api');
+    if (selectedProvider === 'propline' && !env.PROPLINE_API_KEY) return json({ status: 'disabled', items: [] });
+    await tmsReady(env);
+    const now = Date.now();
+    const records = await env.LEADS_DB.prepare('SELECT payload FROM tuna_market_snapshots WHERE observed>=? ORDER BY observed DESC LIMIT 1000').bind(now - 86400000).all();
+    const rows = (records.results || []).flatMap(r => JSON.parse(r.payload));
+    const kind = url.searchParams.get('kind'), player = (url.searchParams.get('player') || '').toLowerCase().slice(0, 100);
+    const items = tmsSignals(rows, now, tmsList(env.TMS_SHARP_BOOKS)).filter(r => (!kind || (kind === 'props' ? !!r.player : !r.player)) && (!player || r.player.toLowerCase().includes(player)));
+    const state = await env.LEADS_DB.prepare("SELECT status,updated,next_poll FROM tuna_market_state WHERE id='poll'").first();
+    // Public output is a transformed market signal, not a substitute odds feed.
+    // Keep book identity, raw current price/line, source URL and observation
+    // history server-side. The user-facing product is the movement/consensus
+    // analysis Iron Tuna derives from those observations.
+    const publicItems = items.slice(0, 200).map(r => ({
+      event: r.event, sport: r.sport, market: r.market, player: r.player, matchup: r.matchup, side: r.side,
+      sourceName: r.provider === 'propline' ? 'PropLine' : r.provider === 'the-odds-api' ? 'The Odds API' : 'Licensed market feed',
+      observed: r.observed, updated: r.updated, stale: r.stale, comparable: r.comparable, score: r.score,
+      firstObserved: r.firstObserved, historyBasis: r.historyBasis,
+      observedBooksCompared: r.observedBooksCompared, observedBooksMoved: r.observedBooksMoved,
+      observedDirection: r.observedDirection, observedMovementMetric: r.observedMovementMetric,
+      lineDelta: r.lineDelta, probabilityDelta: r.probabilityDelta, movementDirection: r.movementDirection,
+      consensusLine: r.consensusLine, consensusOpeningLine: r.consensusOpeningLine, consensusLineDelta: r.consensusLineDelta,
+      consensusProbability: r.consensusProbability, books: r.books, marketBooks: r.marketBooks, sharpGap: r.sharpGap,
+      steamScore: r.steamScore, booksMoved: r.booksMoved, booksQuoting: r.booksQuoting,
+      publicSplit: r.publicSplit
+    }));
+    return json({ status: items.length ? 'ok' : 'collecting', windowHours: 24, truncated: records.results?.length === 1000,
+      health: state ? { ...JSON.parse(state.status || '{}'), updated: state.updated, nextPoll: state.next_poll } : null,
+      total: items.length, items: publicItems });
+  } catch { return json({ error: 'market_temporarily_unavailable', items: [] }, 503); }
+}
+// TUNA MARKET SIGNAL END
+
 // Vegas-weighted projections
 // ════════════════════════════════════════════════════════════════════════════
 // A daily cron pulls season-long player props, converts them to expected stat
@@ -1710,6 +2198,307 @@ async function fetchOddsTheOddsApi(env) {
   return rows;
 }
 
+// SportsGameOdds v2. WRITTEN TO THE PUBLISHED v2 DOCUMENTATION AND TO THE
+// OFFICIAL TypeScript SDK'S TYPES (sports-odds-api@2.1.0), AND NOT YET RUN
+// AGAINST THE LIVE SERVICE: no key is configured, and the host is unreachable
+// from the sandbox this repo is developed in. Same posture as The Odds API
+// above, and the same consequence — every shape below is asserted against a
+// committed fixture (tools/fixtures/sgo-nfl-week.json) rather than trusted.
+//
+// It is registered in PROVIDER_ODDS ahead of every other odds source, and its
+// game lines are merged onto the schedule ahead of ESPN's, because it is the
+// only feed here that answers both halves of the question this site asks:
+//   1. PLAYER PROPS, per book. Without them the "Betting Odds" column is a
+//      team-wide inference off the game line, which is what it has been.
+//   2. GAME LINES WITH THE BOOK'S OWN OPENER. That opener is the one number a
+//      snapshot history cannot reconstruct after the fact, and it is why
+//      ESPN's undocumented scoreboard was carrying it (docs/data-sources.md
+//      R1). SGO carries the same pair under a documented, paid API, so the
+//      movement column survives dropping ESPN rather than degrading with it.
+//
+// SHAPE. One /events call returns the week's games. Each carries an `odds` map
+// keyed by an oddID of the form
+//     {statID}-{statEntityID}-{periodID}-{betTypeID}-{sideID}
+// and EVERY SIDE IS ITS OWN ENTRY, so an over and its under are two keys that
+// have to be paired back together before either is worth anything. Each entry
+// carries the consensus (`bookOdds`, `bookOverUnder`, `bookSpread`) plus a
+// `byBookmaker` map of each book's own number; with includeOpenCloseOdds the
+// per-book entries also carry that book's opener.
+const SGO_API_BASE = 'https://api.sportsgameodds.com/v2';
+const SGO_LEAGUE = 'NFL';
+const SGO_PAGE_LIMIT = 50;                // events per page
+const SGO_MAX_PAGES = 4;                  // a week is 13-16 games; never more than this
+// statID -> the site's own market key. Everything absent from this table is
+// ignored rather than guessed at, which is what keeps a renamed or newly added
+// SGO market out of the projections until someone has looked at it.
+const SGO_PROP_MARKETS = {
+  passing_yards: 'passYd', passing_touchdowns: 'passTD', passing_interceptions: 'passInt',
+  rushing_yards: 'rushYd', rushing_attempts: 'rushAtt', rushing_touchdowns: 'rushTD',
+  receiving_yards: 'recYd', receiving_receptions: 'rec', receiving_touchdowns: 'recTD'
+};
+// The anytime-touchdown market is a yes/no on the same statID a total-TDs
+// over/under uses, so the BET TYPE is what tells them apart, not the stat.
+const SGO_TD_STAT = 'touchdowns';
+const SGO_GAME_SPREAD = 'points-home-game-sp-home';
+const SGO_GAME_TOTAL = 'points-all-game-ou-over';
+// A book quotes a handicap: the home side at -3. The spine writes the same
+// game as a home margin of +3. Flipped here so _seasonDecorate stays the only
+// place that knows which way a spread points. -0 prints as "-0", so a pick'em
+// has to survive the flip as 0.
+const _sgoFlip = n => (n == null ? null : n === 0 ? 0 : -n);
+const _sgoNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+const _sgoSlug = s => String(s || '').toUpperCase().replace(/[^A-Z]/g, '');
+// Club names to the site's own abbreviations, read off the DEF rows in
+// PROJECTIONS rather than written out again: those rows already pair every
+// full club name with its key, so a relocation or a rename is one edit in the
+// place the rest of the site already reads.
+let _SGO_CLUBS = null;
+function _sgoClubIndex() {
+  if (_SGO_CLUBS) return _SGO_CLUBS;
+  const m = new Map();
+  for (const p of PROJECTIONS) {
+    if (p && p.position === 'DEF' && p.name && p.team) m.set(_sgoSlug(p.name), teamKey(p.team));
+  }
+  return (_SGO_CLUBS = m);
+}
+// SGO identifies a club three ways and any of them may be the one present.
+// The full name is tried first because it is the only one whose spelling this
+// repo already owns; `names.short` is accepted last, and only when it actually
+// looks like an abbreviation, so a long name arriving in a short field cannot
+// become a two-letter club key.
+function sgoTeamKey(side) {
+  if (!side) return null;
+  const idx = _sgoClubIndex();
+  const names = side.names || {};
+  const byLong = idx.get(_sgoSlug(names.long));
+  if (byLong) return byLong;
+  const byId = idx.get(_sgoSlug(String(side.teamID || '').replace(/_NFL$/i, '')));
+  if (byId) return byId;
+  const short = teamKey(names.short || '');
+  return /^[A-Z]{2,4}$/.test(short) ? short : null;
+}
+// A player prop's statEntityID IS the playerID. The event's own `players` map
+// is the authority on the name; the id is the fallback, and it has to be
+// stripped of its disambiguating suffix ("JOSH_ALLEN_1_NFL") or _oddsNorm
+// keeps the league on the end of the name and matches nobody.
+function sgoPlayerName(ev, id) {
+  const rec = ev && ev.players ? ev.players[id] : null;
+  if (rec) {
+    if (rec.name) return rec.name;
+    if (rec.firstName || rec.lastName) return [rec.firstName, rec.lastName].filter(Boolean).join(' ');
+  }
+  const raw = String(id || '');
+  if (!raw || /^(?:home|away|all|side\d*)$/i.test(raw)) return null;
+  const stripped = raw.replace(/_\d+_[A-Z]+$/, '').replace(/_/g, ' ').trim();
+  return stripped || null;
+}
+// The five oddID parts. They are ALSO flat fields on the entry, so those are
+// preferred and the id is only parsed when a field is missing: the id is a
+// display key and the fields are the data.
+const SGO_ODDID_RE = /^([^-]+)-([^-]+)-([^-]+)-([^-]+)-([^-]+)$/;
+function sgoParts(o) {
+  const m = SGO_ODDID_RE.exec(String((o && o.oddID) || ''));
+  const at = i => (m ? m[i] : null);
+  return {
+    statID: o && o.statID != null ? o.statID : at(1),
+    statEntityID: o && o.statEntityID != null ? o.statEntityID : at(2),
+    periodID: o && o.periodID != null ? o.periodID : at(3),
+    betTypeID: o && o.betTypeID != null ? o.betTypeID : at(4),
+    sideID: o && o.sideID != null ? o.sideID : at(5)
+  };
+}
+// The other side of a two-sided market. `opposingOddID` is authoritative when
+// it is there; otherwise the side is swapped in the key, which is the only
+// thing that differs between the pair.
+function sgoOpposite(odds, o, side, otherSide) {
+  if (o && o.opposingOddID && odds[o.opposingOddID]) return odds[o.opposingOddID];
+  const id = String((o && o.oddID) || '');
+  const swapped = id.replace(new RegExp('-' + side + '$'), '-' + otherSide);
+  return swapped !== id ? (odds[swapped] || null) : null;
+}
+// One event's player props into the row shape every odds provider here emits.
+// Pure, so the fixture drives it without the network.
+//
+// ONE ROW PER BOOK, never one per market. The season overlay averages the
+// books into a consensus and the snapshot store wants each book's own number;
+// collapsing them here would make line movement unanswerable, which is the
+// whole product. The consensus figures are used only when a response carries
+// no per-book detail at all.
+function parseSgoEventProps(ev) {
+  const rows = [];
+  const odds = (ev && ev.odds) || {};
+  const ts = Date.now();
+  const home = sgoTeamKey(ev && ev.teams && ev.teams.home);
+  const away = sgoTeamKey(ev && ev.teams && ev.teams.away);
+  const commence = (ev && ev.status && ev.status.startsAt) || null;
+  for (const o of Object.values(odds)) {
+    if (!o || o.cancelled) continue;
+    const p = sgoParts(o);
+    if (p.periodID !== 'game') continue;                 // a first-half line is not this week's total
+    const anytimeTd = p.statID === SGO_TD_STAT && p.betTypeID === 'yn';
+    const stat = anytimeTd ? 'anytimeTD' : (p.betTypeID === 'ou' ? SGO_PROP_MARKETS[p.statID] : null);
+    if (!stat) continue;
+    // Anchor on ONE side of the pair so the market is emitted once. The other
+    // side is looked up rather than iterated to.
+    const anchor = anytimeTd ? 'yes' : 'over';
+    const other = anytimeTd ? 'no' : 'under';
+    if (p.sideID !== anchor) continue;
+    const player = sgoPlayerName(ev, p.statEntityID);
+    if (!player) continue;
+    const opp = sgoOpposite(odds, o, anchor, other) || {};
+    const books = o.byBookmaker && Object.keys(o.byBookmaker).length ? o.byBookmaker : null;
+    const oppBooks = opp.byBookmaker || {};
+    const emit = (book, line, overOdds, underOdds) => {
+      // An anytime-TD carries no line worth storing (it is a price, not a
+      // number); every other market is worthless without one.
+      if (!anytimeTd && line == null) return;
+      if (overOdds == null && underOdds == null) return;
+      rows.push({
+        player, position: null, team: null, market: stat,
+        line: anytimeTd ? 1 : line, overOdds, underOdds,
+        book, gameId: (ev && ev.eventID) || null, commence,
+        home, away, scope: 'game', ts
+      });
+    };
+    if (books) {
+      for (const [id, b] of Object.entries(books)) {
+        if (!b || b.available === false) continue;
+        const ob = oppBooks[id] || {};
+        emit(String(b.bookmakerID || id), _sgoNum(b.overUnder), _sgoNum(b.odds),
+             ob.available === false ? null : _sgoNum(ob.odds));
+      }
+    } else {
+      emit('sgo-consensus', _sgoNum(o.bookOverUnder != null ? o.bookOverUnder : o.fairOverUnder),
+           _sgoNum(o.bookOdds != null ? o.bookOdds : o.fairOdds),
+           _sgoNum(opp.bookOdds != null ? opp.bookOdds : opp.fairOdds));
+    }
+  }
+  return rows;
+}
+// One book's own current-and-open pair for one market, or null when it does not
+// quote both. Both ends or neither: half a pair is not a movement.
+function _sgoBookPair(entry, id, field) {
+  const b = (entry && entry.byBookmaker && entry.byBookmaker[id]) || null;
+  if (!b || b.available === false) return null;
+  const current = _sgoNum(b[field]);
+  const open = _sgoNum(b['open' + field[0].toUpperCase() + field.slice(1)]);
+  return (current != null && open != null) ? { current, open } : null;
+}
+// THE ANCHOR BOOK: the one every move on this fixture is measured against.
+// _gameLineMove's rule is that open, current and move come from ONE source, so
+// a book that quotes BOTH markets is preferred and a book quoting one is the
+// fallback. Books are considered in name order, so the same fixture picks the
+// same book on every run and this hour's move is measured against the same
+// opener last hour's was.
+function _sgoAnchor(sp, to) {
+  const ids = [...new Set([
+    ...Object.keys((sp && sp.byBookmaker) || {}),
+    ...Object.keys((to && to.byBookmaker) || {})
+  ])].sort();
+  let partial = null;
+  for (const id of ids) {
+    const spread = _sgoBookPair(sp, id, 'spread'), total = _sgoBookPair(to, id, 'overUnder');
+    if (spread && total) return { name: id, spread, total };
+    if (!partial && (spread || total)) partial = { name: id, spread, total };
+  }
+  return partial;
+}
+// One event's GAME line: the number the site PRINTS, and separately the book
+// pair the movement is computed FROM.
+//
+// These are two different things and conflating them is how a page comes to
+// report a move nobody quoted. The printed spread and total are SGO's
+// CONSENSUS -- no page here attributes a line to a book, and a consensus is the
+// same shape as the spine's own column beside it. The `book` block is the
+// anchor book ALONE, current and open together, which is exactly what
+// _espnOdds returned from ESPN's single named book and what _gameLineMove
+// reads. A response with no per-book detail yields no block at all, which is
+// honest: _gameLineMove then falls back to the snapshot store's first sighting.
+function parseSgoEventLine(ev) {
+  const odds = (ev && ev.odds) || {};
+  const sp = odds[SGO_GAME_SPREAD] || null;
+  const to = odds[SGO_GAME_TOTAL] || null;
+  const anchor = _sgoAnchor(sp, to);
+  const spread = _sgoNum(sp && sp.bookSpread != null ? sp.bookSpread
+                       : (anchor && anchor.spread ? anchor.spread.current : null));
+  const total = _sgoNum(to && to.bookOverUnder != null ? to.bookOverUnder
+                      : (anchor && anchor.total ? anchor.total.current : null));
+  if (spread == null && total == null) return null;
+  const book = anchor ? {
+    name: anchor.name,
+    spread: _sgoFlip(anchor.spread ? anchor.spread.current : null),
+    spreadOpen: _sgoFlip(anchor.spread ? anchor.spread.open : null),
+    total: anchor.total ? anchor.total.current : null,
+    totalOpen: anchor.total ? anchor.total.open : null
+  } : null;
+  return { spread: _sgoFlip(spread), total, book };
+}
+// One event into the schedule shape mergeGameLines matches on.
+function parseSgoEventGame(ev) {
+  const home = sgoTeamKey(ev && ev.teams && ev.teams.home);
+  const away = sgoTeamKey(ev && ev.teams && ev.teams.away);
+  if (!home || !away) return null;
+  const kickoff = Date.parse((ev.status && ev.status.startsAt) || '');
+  if (!Number.isFinite(kickoff)) return null;
+  const l = parseSgoEventLine(ev);
+  if (!l) return null;
+  return { id: 'sgo-' + (ev.eventID || home + away + kickoff), home, away, kickoff,
+           spread: l.spread, total: l.total, book: l.book };
+}
+// The paged /events read, shared by both fetchers below. `oddIDs` narrows the
+// response to the markets actually wanted, which is what keeps a props pull
+// from downloading every alternate line in the book.
+async function _sgoEvents(env, params) {
+  const key = env && env.SGO_API_KEY;
+  if (!key) throw new Error('no SGO_API_KEY');
+  const out = [];
+  let cursor = '';
+  for (let page = 0; page < SGO_MAX_PAGES; page++) {
+    const q = new URLSearchParams({ leagueID: SGO_LEAGUE, limit: String(SGO_PAGE_LIMIT), ...params });
+    if (cursor) q.set('cursor', cursor);
+    const r = await fetch(SGO_API_BASE + '/events?' + q.toString(), {
+      headers: { 'x-api-key': key, accept: 'application/json' }, cf: { cacheTtl: 0 } });
+    if (!r.ok) {
+      // A first page that fails is a failed pull; a later one that fails has
+      // already returned games, and losing the rest of the slate is better
+      // than losing all of it.
+      if (!out.length) throw new Error('sgo events ' + r.status);
+      break;
+    }
+    let j = null;
+    try { j = await r.json(); } catch (e) { break; }
+    const data = Array.isArray(j && j.data) ? j.data : [];
+    for (const ev of data) if (ev) out.push(ev);
+    cursor = (j && j.nextCursor) || '';
+    if (!cursor || !data.length) break;
+  }
+  return out;
+}
+// Player props for every game with odds on the board. Every row is a GAME line,
+// never a season line: they feed the weekly projection and the snapshot store,
+// and buildVegasOverlay must never see them, which `scope: 'game'` is for.
+async function fetchOddsSgo(env) {
+  const oddIDs = [
+    ...Object.keys(SGO_PROP_MARKETS).map(s => s + '-PLAYER_ID-game-ou-over'),
+    SGO_TD_STAT + '-PLAYER_ID-game-yn-yes'
+  ].join(',');
+  const events = await _sgoEvents(env, { oddsAvailable: 'true', includeOpposingOdds: 'true', oddID: oddIDs });
+  const rows = [];
+  for (const ev of events) for (const row of parseSgoEventProps(ev)) rows.push(row);
+  return rows;
+}
+// The week's game lines, with each anchor book's opener. Asked for by oddID so
+// the response is two markets a game rather than the whole board.
+async function fetchGameLinesSgo(env) {
+  const events = await _sgoEvents(env, {
+    oddsPresent: 'true', includeOpenCloseOdds: 'true',
+    oddID: SGO_GAME_SPREAD + ',' + SGO_GAME_TOTAL
+  });
+  const out = [];
+  for (const ev of events) { const g = parseSgoEventGame(ev); if (g) out.push(g); }
+  return out;
+}
+
 const NFLVERSE_GAMES_URL = 'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv';
 const TEAM_ALIAS = { LAR: 'LA', JAC: 'JAX', WSH: 'WAS', LVR: 'LV', OAK: 'LV', SD: 'LAC', STL: 'LA' };
 const teamKey = t => { const u = String(t || '').toUpperCase(); return TEAM_ALIAS[u] || u; };
@@ -2049,6 +2838,12 @@ function buildTeamEnvOverlay(marketTotals) {
 // per player+stat. Player props (when a key is configured) are strictly better
 // than a team-wide inference, so they go first and the free team-environment
 // provider fills in every stat and player the props did not cover.
+//
+// SportsGameOdds is deliberately NOT here even when its key is set. Every row
+// it returns is a GAME line, and buildVegasOverlay rejects those by design (a
+// prop for Sunday is not a season total), so listing it would spend a paid pull
+// on rows this build throws away. Its props reach the product through
+// PROVIDER_ODDS and the snapshot store, which is the weekly path.
 const ODDS_PROVIDERS = [
   { name: 'the-odds-api', kind: 'props',   fn: fetchOddsTheOddsApi,   needs: env => !!env.ODDS_API_KEY },
   { name: 'nflverse',     kind: 'teamenv', fn: fetchTeamEnvNflverse }
@@ -3315,8 +4110,16 @@ async function fetchScheduleEspn(season) {
 // exact kickoff instant. Matched on the two clubs within a two-day window rather
 // than on week number, because ESPN and nflverse number the postseason rounds
 // differently and a round mismatch would put a live score on the wrong game.
+// One source's own quote for one fixture, kept beside the others rather than
+// resolved against them. lineConsensus below is what turns them into the
+// number the site prints.
+function _lineQuote(g, src, spread, total) {
+  if (spread == null && total == null) return;
+  (g.quotes = g.quotes || {})[src] = { spread: spread == null ? null : spread, total: total == null ? null : total };
+}
 function mergeSchedule(spine, live) {
   const games = (spine || []).map(g => ({ ...g }));
+  for (const g of games) _lineQuote(g, 'nflverse', g.spread, g.total);
   const byPair = new Map();
   games.forEach((g, i) => {
     const k = g.away + '@' + g.home;
@@ -3340,12 +4143,14 @@ function mergeSchedule(spine, live) {
       if (g.status) t.status = g.status;
       if (g.homeScore != null) t.homeScore = g.homeScore;
       if (g.awayScore != null) t.awayScore = g.awayScore;
-      // The spine keeps the line where it has one: games.csv is a consensus
-      // number and the scoreboard quotes a single book. Where the spine is
-      // blank -- the preseason, and any fixture the CSV has not priced yet --
-      // one book beats no book, and `lineSrc` says which it was. The book's
+      // The scoreboard's number is RECORDED, not resolved: games.csv is a
+      // consensus and the scoreboard quotes a single book, and lineConsensus
+      // averages the two rather than either winning. The blank-fill below is
+      // what happens with no consensus pass -- the preseason, and any fixture
+      // the CSV has not priced yet, where one book beats no book. The book's
       // own open/current pair rides along either way, because the spine has no
       // concept of an opening line to be overwritten.
+      _lineQuote(t, 'espn', g.spread, g.total);
       if (t.spread == null && g.spread != null) { t.spread = g.spread; t.lineSrc = 'espn'; }
       if (t.total == null && g.total != null) { t.total = g.total; t.lineSrc = 'espn'; }
       if (g.book) t.book = g.book;
@@ -3356,12 +4161,110 @@ function mergeSchedule(spine, live) {
       // game with no match is left out rather than guessed into a round, since
       // the spine gains the bracket within a day of it being set.
       if (g.type !== 'PRE') continue;
-      games.push({ ...g, espnId: /^espn-/.test(g.id) ? g.id.slice(5) : null });
+      const add = { ...g, espnId: /^espn-/.test(g.id) ? g.id.slice(5) : null };
+      _lineQuote(add, 'espn', g.spread, g.total);
+      games.push(add);
       added++;
     }
   }
   games.sort((a, b) => a.kickoff - b.kickoff || (a.id < b.id ? -1 : 1));
   return { games, updated, added };
+}
+
+// The paid feed's game lines onto the schedule. Matched the way the live layer
+// is -- the two clubs within a two-day window rather than the week number,
+// because feeds number the postseason rounds differently and a round mismatch
+// would price the wrong game.
+//
+// Like the scoreboard's, this feed's number is RECORDED rather than resolved:
+// it is one more quote on the fixture, and lineConsensus averages it with the
+// others. What this function alone decides is the BOOK PAIR, which is not a
+// quote and cannot be averaged -- it is one book's open and current, the two
+// numbers every movement figure is computed from, and it goes over whole
+// (null included). Leaving the previous feed's pair on a fixture this one is
+// now pricing would measure the move against a book that is no longer behind
+// the number beside it.
+function mergeGameLines(games, lines, at) {
+  const out = (games || []).map(g => ({ ...g }));
+  const byPair = new Map();
+  out.forEach((g, i) => {
+    const k = g.away + '@' + g.home;
+    if (!byPair.has(k)) byPair.set(k, []);
+    byPair.get(k).push(i);
+  });
+  const WINDOW = 2 * 86400000;
+  let quoted = 0, booked = 0;
+  for (const l of lines || []) {
+    if (!l) continue;
+    const cands = byPair.get(l.away + '@' + l.home) || [];
+    let best = -1, bestGap = WINDOW;
+    for (const i of cands) {
+      const gap = Math.abs(out[i].kickoff - l.kickoff);
+      if (gap < bestGap) { bestGap = gap; best = i; }
+    }
+    if (best < 0) continue;
+    const t = out[best];
+    t.book = l.book || null;
+    if (l.book) booked++;
+    if (l.spread != null || l.total != null) { _lineQuote(t, 'sportsgameodds', l.spread, l.total); quoted++; }
+  }
+  return { games: out, quoted, booked };
+}
+
+// ── the consensus line ─────────────────────────────────────────────────────
+// A fixture can be priced by three sources at once: the spine's own column in
+// games.csv, the scoreboard's single named book, and the paid feed's consensus.
+// Each records its own quote in `g.quotes`; this is where they become the one
+// number the site prints, and that number is their MEAN.
+//
+// WHY A MEAN RATHER THAN A WINNER. Every one of these is an estimate of the
+// same thing. Picking one throws away the others' evidence for no reason a
+// reader could defend, and it makes the site's line jump whenever the winner
+// changes. The mean also fails softly: a source that goes stale or starts
+// quoting nonsense moves the line by a fraction of its error instead of
+// becoming the line.
+//
+// WHAT IT IS NOT. It is not a number any book posts, and it does not pretend
+// to be -- 2.5 and 3 average to 2.8, the site's usual one decimal on a derived
+// figure. `lineSources` rides on every payload beside it, so an average is
+// never shown that a reader cannot take apart. The sources are listed per
+// FIXTURE, not per market: a club priced on the spread by two sources and on
+// the total by one names both, because both are behind the fixture's line.
+//
+// FROZEN AT KICKOFF. A game that has started keeps whatever it already had,
+// which is the spine's own number: by then that is the closing line and the
+// historical record every backtest reads. A live feed's last-seen value has
+// nothing truer to say about a game that is over, and averaging one in would
+// quietly rewrite history.
+//
+// THE BOOK PAIR IS NOT AVERAGED and never can be. `g.book` stays one book's
+// open and current so _gameLineMove keeps one source behind every move; the
+// printed line beside it is this consensus. Those are two different questions
+// and this is the one place that says so.
+const LINE_MARKETS = ['spread', 'total'];
+function lineConsensus(games, at) {
+  const now = at == null ? Date.now() : at;
+  let averaged = 0, blended = 0;
+  for (const g of games || []) {
+    if (!g || !g.quotes) continue;
+    if (g.status === 'final' || g.status === 'in_progress' || now >= g.kickoff) continue;
+    const used = new Set();
+    for (const mkt of LINE_MARKETS) {
+      const vals = [];
+      for (const [src, q] of Object.entries(g.quotes)) {
+        const v = q ? q[mkt] : null;
+        if (Number.isFinite(v)) { vals.push(v); used.add(src); }
+      }
+      if (!vals.length) continue;
+      g[mkt] = _oddsRound(vals.reduce((a, c) => a + c, 0) / vals.length);
+    }
+    if (!used.size) continue;
+    g.lineSources = [...used].sort();
+    g.lineSrc = g.lineSources.join('+');
+    averaged++;
+    if (used.size > 1) blended++;
+  }
+  return { games: games || [], averaged, blended };
 }
 
 // ── the clock ──────────────────────────────────────────────────────────────
@@ -3428,7 +4331,7 @@ function _seasonDecorate(g, at) {
     // One named book's open and current, in the same convention as `spread`
     // above. Null on a fixture no book has posted, which is not the same fact
     // as a line of zero and must not print as one.
-    book: g.book || null, lineSrc: g.lineSrc || null,
+    book: g.book || null, lineSrc: g.lineSrc || null, lineSources: g.lineSources || null,
     status: s.status, statusSource: s.source
   };
 }
@@ -3577,8 +4480,24 @@ async function runScheduleRefresh(env) {
   let live = [], liveError = null;
   try { live = await fetchScheduleEspn(spine.season); }
   catch (e) { liveError = (e && e.message) || 'failed'; }
-  const merged = mergeSchedule(spine.games, live);
-  const provider = 'nflverse' + (live.length ? '+espn' : '');
+  let merged = mergeSchedule(spine.games, live);
+  // The paid line feed, when there is a key for it. Fail-safe like the live
+  // layer above: a pull that throws leaves the schedule exactly as the spine
+  // and the scoreboard built it rather than costing the refresh.
+  let lines = [], linesError = null;
+  if (env.SGO_API_KEY) {
+    try {
+      lines = await fetchGameLinesSgo(env);
+      const relined = mergeGameLines(merged.games, lines, Date.now());
+      merged = { ...merged, games: relined.games };
+    } catch (e) { linesError = (e && e.message) || 'failed'; }
+  }
+  // Every source that priced a fixture, averaged into the one number the site
+  // prints. Runs whether or not the paid feed is configured: the spine and the
+  // scoreboard are two sources on their own.
+  const consensus = lineConsensus(merged.games, Date.now());
+  merged = { ...merged, games: consensus.games };
+  const provider = 'nflverse' + (live.length ? '+espn' : '') + (lines.length ? '+sportsgameodds' : '');
   const espn = _ESPN_LAST;
   await scheduleCacheWrite(env, spine.season, merged.games, provider);
   _SEASON_CACHE = null; _SEASON_AT = 0;
@@ -3586,6 +4505,8 @@ async function runScheduleRefresh(env) {
     ok: true, season: spine.season, provider,
     spine: spine.games.length, live: live.length,
     statusUpdated: merged.updated, preseasonAdded: merged.added,
+    lines: lines.length, linesError,
+    linesAveraged: consensus.averaged, linesBlended: consensus.blended,
     games: merged.games.length, liveError, espn
   };
 }
@@ -3665,10 +4586,18 @@ const PROVIDER_SCHEDULE = [
 ];
 
 // ── odds ───────────────────────────────────────────────────────────────────
-// The Odds API is the only per-player book feed, and it is the one paid
-// upgrade. Without it the game-line provider still prices every club's scoring
-// environment, which is what the site runs on today.
+// Two per-player book feeds, both paid, tried in order: SportsGameOdds first
+// because it prices the game lines as well as the players, then The Odds API.
+// With neither key set the game-line providers still price every club's
+// scoring environment, which is what the site runs on today.
 const PROVIDER_ODDS = [
+  { name: 'sportsgameodds', free: false, needs: env => !!(env && env.SGO_API_KEY),
+    subjectType: 'player',
+    fetch: async (env) => (await fetchOddsSgo(env)).map(r => ({
+      book: r.book || 'unknown', subjectType: 'player', subject: r.player,
+      market: r.market, line: r.line, overOdds: r.overOdds, underOdds: r.underOdds,
+      gameId: r.gameId || null, ts: Date.now()
+    })) },
   { name: 'the-odds-api', free: false, needs: env => !!(env && env.ODDS_API_KEY),
     subjectType: 'player',
     fetch: async (env) => (await fetchOddsTheOddsApi(env)).map(r => ({
@@ -3676,10 +4605,13 @@ const PROVIDER_ODDS = [
       market: r.market, line: r.line, overOdds: r.overOdds, underOdds: r.underOdds,
       gameId: r.gameId || null, ts: Date.now()
     })) },
-  { name: 'espn-gamelines', free: true, subjectType: 'game',
+  { name: 'book-gamelines', free: true, subjectType: 'game',
     fetch: async (env) => {
       // The schedule refresh already merged the book's lines onto every game,
-      // so this reads them rather than pulling the scoreboard a second time.
+      // so this reads them rather than pulling the feed a second time. WHICH
+      // book that is depends on what was configured -- SportsGameOdds where
+      // there is a key, ESPN's scoreboard otherwise -- and the row is written
+      // under the book's own name either way, which is the point.
       // Rows go in under the BOOK's name, not 'consensus': a real bookmaker
       // sitting beside the consensus row is what lets the store say the two
       // disagree, and it is the only game-line row that moves intraday.
@@ -6184,6 +7116,44 @@ async function fetchDepthChartEspn(team) {
   out.offense.WR = [].concat(take('wr1'), take('wr2'), take('wr3'), take('wr'));
   return out;
 }
+// ESPN has answered this worker with nothing since September 4 — got 0, failed
+// 32, every morning — while the same URLs serve in full from anywhere else, so
+// the daily job can no longer depend on ESPN alone. Sleeper publishes the same
+// order on the player file the site already mirrors for /api/live: a slot (QB,
+// RB, TE, or LWR/RWR/SWR for receivers) and a rank within the position group,
+// where the receiver ranks run ACROSS the three receiver slots — which is why
+// they are merged here and sorted on the rank, rather than sorted within a slot.
+// The shape returned is fetchDepthChartEspn's, so every consumer (the recap's
+// "what we already knew", the news desk's depth events, the health board) is fed
+// by whichever source answered.
+const SLEEPER_DEPTH_POS = { QB: 'QB', RB: 'RB', TE: 'TE', WR: 'WR', LWR: 'WR', RWR: 'WR', SWR: 'WR' };
+async function fetchDepthChartsSleeper() {
+  const r = await fetch('https://api.sleeper.app/v1/players/nfl', { cf: { cacheTtl: 21600, cacheEverything: true } });
+  if (!r.ok) throw new Error('sleeper players ' + r.status);
+  const all = await r.json();
+  const rows = {}, asOf = Date.now();
+  for (const id in all) {
+    const p = all[id];
+    if (!p || !p.team || !p.depth_chart_position || p.depth_chart_order == null) continue;
+    const pos = SLEEPER_DEPTH_POS[p.depth_chart_position];
+    if (!pos) continue;
+    const order = +p.depth_chart_order;
+    if (!isFinite(order)) continue;
+    const name = p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
+    if (!name) continue;
+    const t = teamKey(p.team);
+    (rows[t] = rows[t] || []).push({ pos, order, name });
+  }
+  const teams = {};
+  for (const t of Object.keys(rows)) {
+    const offense = {};
+    for (const pos of ['QB', 'RB', 'WR', 'TE']) {
+      offense[pos] = rows[t].filter(x => x.pos === pos).sort((a, b) => a.order - b.order).map(x => x.name);
+    }
+    teams[t] = { team: t, asOf, offense };
+  }
+  return teams;
+}
 async function runDepthChartRefresh(env) {
   if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
   const sched = await scheduleCacheRead(env);
@@ -6193,14 +7163,27 @@ async function runDepthChartRefresh(env) {
   for (const t of clubs) {
     try { teams[t] = await fetchDepthChartEspn(t); } catch (e) { failed++; if (!firstError) firstError = (e && e.message) || 'failed'; }
   }
-  // Every morning since September 4 this returned got:0 failed:32 and said
-  // nothing else; the same URL answers 200 from outside the worker. The first
-  // error is kept so the log can say what ESPN actually said to the worker.
-  if (Object.keys(teams).length < 24) return { ok: false, error: 'thin', got: Object.keys(teams).length, failed, firstError };
+  // Every morning since September 4 the ESPN pass returned got:0 failed:32 and
+  // said nothing else; the same URL answers 200 from outside the worker. The
+  // first error is kept so the log can say what ESPN actually said to the
+  // worker, and the second source below is what keeps the site's depth charts
+  // current in the meantime. A club ESPN did answer for keeps ESPN's answer.
+  const fromEspn = Object.keys(teams).length;
+  let filled = 0;
+  if (fromEspn < clubs.size || fromEspn < 24) {
+    try {
+      const sleeper = await fetchDepthChartsSleeper();
+      for (const t of Object.keys(sleeper)) if (!teams[t]) { teams[t] = sleeper[t]; filled++; }
+    } catch (e) { if (!firstError) firstError = (e && e.message) || 'sleeper failed'; }
+  }
+  const got = Object.keys(teams).length;
+  if (got < 24) return { ok: false, error: 'thin', got, failed, firstError };
+  const source = !filled ? 'espn-depth' : fromEspn ? 'espn+sleeper' : 'sleeper-depth';
+  const asOf = Date.now();
   await oddsCacheInit(env);
   await env.LEADS_DB.prepare('INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)')
-    .bind(DEPTH_ROW, JSON.stringify({ asOf: Date.now(), teams }), 'espn-depth', Object.keys(teams).length, Date.now()).run();
-  return { ok: true, teams: Object.keys(teams).length, failed };
+    .bind(DEPTH_ROW, JSON.stringify({ asOf, updatedAt: asOf, source, teams }), source, got, asOf).run();
+  return { ok: true, teams: got, espn: fromEspn, sleeper: filled, failed, source, firstError };
 }
 async function depthChartsRead(env) {
   if (!env || !env.LEADS_DB) return null;
@@ -6756,10 +7739,10 @@ async function _anthropicRead(r) {
   }
   return { text, stopReason, error };
 }
-async function llmText(env, system, user, maxTokens, timeoutMs) {
+async function llmText(env, system, user, maxTokens, timeoutMs, modelOverride) {
   if (!env || !env.LLM_API_KEY) return { ok: false, error: 'no_key' };
   const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
-  const model = env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
+  const model = modelOverride || env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
   // The legacy desk's briefs finished inside a minute. A newsroom packet is a
   // 60 KB prompt asking for two lenses, and the first live tick showed it
   // needs more than that; the caller says how long it can wait.
@@ -6779,6 +7762,18 @@ async function llmText(env, system, user, maxTokens, timeoutMs) {
   } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
   finally { clearTimeout(to); }
 }
+// The newsroom model is intentionally separate from the site's interactive LLM.
+// Rankings, projections and DFS values are computed before this model is called.
+// Keeping a dedicated Sonnet default means changing LLM_MODEL to Opus for an
+// interactive feature cannot silently move automated editorial work to Opus.
+const NEWSROOM_DEFAULT_MODEL = 'claude-sonnet-4-6';
+function newsroomEditorialModel(env) {
+  const provider = ((env && env.LLM_PROVIDER) || 'anthropic').toLowerCase();
+  if (env && env.NEWSROOM_LLM_MODEL) return env.NEWSROOM_LLM_MODEL;
+  if (provider === 'anthropic') return NEWSROOM_DEFAULT_MODEL;
+  return (env && env.LLM_MODEL) || 'gpt-4o-mini';
+}
+
 const CONTENT_SECTIONS = {
   'team-recaps': ['teams'],
   'mnf-breakdown': ['alreadyKnew', 'learned', 'stillDontKnow', 'fantasyWinners', 'fantasyLosers', 'usageChanges', 'marketImplications', 'waiverImplications'],
@@ -6793,7 +7788,7 @@ const CONTENT_SECTIONS = {
   'weekend-game-plan': ['cards']
 };
 const WRITER_SYSTEM = `You write short, plain fantasy-football analysis for Iron Tuna, a site that prices players against the betting market.
-THE ONE RULE: you may state only facts that appear in the BRIEF you are given. Every player name, team, number, rank, share, line and injury status must come from the brief. If the brief does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. Do not describe the score or the game flow. Concentrate on usage, roles, target hierarchy, backfield split, red-zone work, injuries, depth-chart implications and what the market says.
+THE ONE RULE: you may state only facts that appear in the BRIEF you are given. Every player name, team, number, rank, share, line and injury status must come from the brief. If the brief does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. All projections, ranks, values, ownership estimates, floors, ceilings, leverage scores and DFS scores in the brief were already calculated by deterministic code. Do not calculate, re-rank, interpolate, normalize, replace or override them. Compare and explain the supplied values only. Do not describe the score or the game flow. Concentrate on usage, roles, target hierarchy, backfield split, red-zone work, injuries, depth-chart implications and what the market says.
 Write in short sentences. No hype, no hedging padding, no em dashes. Never invent a reason: if the brief has no cause for a change, say the cause is not known.
 OUTPUT: a single JSON object with exactly the section keys requested, each an array of strings (one paragraph or bullet per string; a "teams" or "cards" or "insights" section is an array of objects with the fields requested). No prose outside the JSON.`;
 function _sectionSpec(kind) {
@@ -6856,14 +7851,15 @@ function validateDraft(text, allowed) {
 async function writePiece(env, kind, brief) {
   const spec = _sectionSpec(kind);
   const user = 'KIND: ' + kind + '\nSECTIONS AND SHAPE: ' + spec + '\n\nBRIEF (the only source of facts):\n' + JSON.stringify(brief, null, 0).slice(0, 60000);
-  let attempt = await llmText(env, WRITER_SYSTEM, user, 4000);
+  const editorialModel = newsroomEditorialModel(env);
+  let attempt = await llmText(env, WRITER_SYSTEM, user, 4000, undefined, editorialModel);
   if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error], model: null };
   const parse = t => { try { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
   let body = parse(attempt.text);
   let v = body ? validateDraft(JSON.stringify(body), brief.allowed) : { ok: false, names: ['(unparseable JSON)'], numbers: [] };
   if (!v.ok) {
     const fix = user + '\n\nYOUR PREVIOUS DRAFT NAMED THINGS THE BRIEF DOES NOT CONTAIN. Remove or replace them; do not add anything new. Names not in the brief: ' + v.names.join(', ') + '. Numbers not in the brief: ' + v.numbers.join(', ') + '.';
-    attempt = await llmText(env, WRITER_SYSTEM, fix, 4000);
+    attempt = await llmText(env, WRITER_SYSTEM, fix, 4000, undefined, editorialModel);
     if (attempt.ok) { body = parse(attempt.text); v = body ? validateDraft(JSON.stringify(body), brief.allowed) : { ok: false, names: ['(unparseable JSON)'], numbers: [] }; }
   }
   return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.names.concat(v.numbers), model: attempt.model || null };
@@ -6894,8 +7890,8 @@ const NEWSROOM_FLAGS = {
   // scheduled refresh of leagues already connected on it.
   LEAGUE_SYNC:           { dflt: true,  note: 'Sync My League: the league model, My Leagues, and every personalized module' },
   SLEEPER_SYNC:          { dflt: false, note: 'the Sleeper connector; OFF until Sleeper’s commercial license is in writing (docs/data-sources.md R2)' },
-  YAHOO_SYNC:            { dflt: false, note: 'the Yahoo OAuth connector; needs YAHOO_CLIENT_ID, YAHOO_CLIENT_SECRET and LEAGUE_TOKEN_KEY' },
-  CBS_SYNC:              { dflt: false, note: 'CBS league-token connector; needs LEAGUE_TOKEN_KEY and verified CBS access' },
+  YAHOO_SYNC:            { dflt: false, note: 'the Yahoo OAuth connector; needs YAHOO_CLIENT_ID, YAHOO_CLIENT_SECRET and league-token encryption' },
+  CBS_SYNC:              { dflt: false, note: 'CBS league-token connector; needs league-token encryption and verified CBS access' },
   ESPN_SYNC:             { dflt: false, note: 'the ESPN connector; no supported path exists, the adapter is a placeholder' },
   PERSONALIZED_WAIVERS:  { dflt: true,  note: 'the Pickup Advisor on the players actually available in a synced league' },
   PERSONALIZED_LINEUP:   { dflt: true,  note: 'Best Lineup, Your Matchup, roster alerts and playoff readiness from a synced roster' },
@@ -8078,7 +9074,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
 
 // ── the writer, in an analyst's voice, two lenses ──────────────────────────
 const NEWSROOM_SYSTEM = `You write for Iron Tuna, a fantasy football intelligence desk that prices players against the betting market and reads usage before it reads box scores.
-THE ONE RULE: you may state only facts that appear in the PACKET you are given. Every player name, team, number, rank, share, line, salary, ownership figure and injury status must come from the packet. If the packet does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. Sources the packet lists under staleSources are NOT available. Never invent a cause: if the packet has no cause for a change, say the cause is not known.
+THE ONE RULE: you may state only facts that appear in the PACKET you are given. Every player name, team, number, rank, share, line, salary, ownership figure and injury status must come from the packet. If the packet does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. All projections, ranks, values, ownership estimates, floors, ceilings, leverage scores and DFS scores in the packet were already calculated by deterministic code. Do not calculate, re-rank, interpolate, normalize, replace or override them. Compare and explain the supplied values only. Sources the packet lists under staleSources are NOT available. Never invent a cause: if the packet has no cause for a change, say the cause is not known.
 THE QUESTION is never "what happened". It is "what does what happened tell us about what is going to happen next", and for DFS "what does this mean at this salary and this expected ownership".
 TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manager what to do: rankings, start/sit, waivers, trades, rest-of-season value. The DFS lens tells a daily player where projection, price and ownership create opportunity: value, chalk, leverage, stacks, cash versus tournaments. A good fantasy player is not automatically a good DFS play. The facts do not change between the lenses; the recommendations may. If the packet's dfs block says no salaries are loaded, the DFS lens speaks to roles and pricing direction and says plainly that no salary number is available.
 COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
@@ -8178,7 +9174,8 @@ async function writeNewsroomPiece(env, kind, packet) {
   const user = 'KIND: ' + kind + ' (' + ((packet.meta && packet.meta.title) || K.title) + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
     'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
     '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
-  let attempt = await llmText(env, NEWSROOM_SYSTEM, user, WRITER_MAX_TOKENS, WRITER_TIMEOUT_MS);
+  const editorialModel = newsroomEditorialModel(env);
+  let attempt = await llmText(env, NEWSROOM_SYSTEM, user, WRITER_MAX_TOKENS, WRITER_TIMEOUT_MS, editorialModel);
   if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error + (attempt.head ? ' ' + attempt.head.slice(0, 120) : '')], model: null };
   const parse = t => { try { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
   // Why a draft did not parse, for the row: the stop reason and the shape of
@@ -8194,7 +9191,7 @@ async function writeNewsroomPiece(env, kind, packet) {
     const fix = cut ? user + '\n\nYOUR PREVIOUS DRAFT WAS CUT OFF before the JSON closed. Write the same shape at half the length: at most four items per section, each at most thirty-five words, and close every bracket. Return only the JSON object.'
       : !body ? user + '\n\nYOUR PREVIOUS ANSWER WAS NOT ONE JSON OBJECT. Return only the JSON object in the shape requested, nothing before it and nothing after it, every bracket closed.'
       : user + '\n\nYOUR PREVIOUS DRAFT FAILED THE FACT CHECK. Fix exactly these and add nothing new: ' + v.problems.join('; ') + '. A "name:" problem is a name the packet does not contain; a "number:" problem is a number the packet does not contain; "analyst:" means you named a colleague the packet does not; "missing:" means a required section or key is absent; "phrasing:" is a banned phrase or an em dash.';
-    attempt = await llmText(env, NEWSROOM_SYSTEM, fix, WRITER_MAX_TOKENS, WRITER_TIMEOUT_MS);
+    attempt = await llmText(env, NEWSROOM_SYSTEM, fix, WRITER_MAX_TOKENS, WRITER_TIMEOUT_MS, editorialModel);
     if (attempt.ok) { body = parse(attempt.text); v = body ? factCheck(body, packet) : { ok: false, problems: [unparseable(attempt)] }; }
   }
   return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.problems, model: attempt.model || null };
@@ -8225,6 +9222,9 @@ async function contentStore(env, rec) {
 }
 // Everything a packet reads, read once. Extends the desk's context with the
 // freshness stamps and the DFS slates under the metrics.
+// NUMERIC BOUNDARY: this function obtains the deterministic ranking boards and
+// computes DFS slate metrics before any writer is invoked. The writer receives
+// the finished numbers as facts; it is never a projection, ranking or DFS engine.
 async function contentContext(env, weekNumber, opts) {
   const sched = await scheduleCacheRead(env);
   const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
@@ -8263,7 +9263,7 @@ async function contentContext(env, weekNumber, opts) {
     odds: odds ? { provider: odds.provider, at: odds.updatedAt } : null,
     snapshots: snaps && snaps.ok && snaps.last ? { provider: 'odds_snapshots', at: snaps.last } : null,
     usage: usage ? { provider: 'nflverse', at: usage.updatedAt || usage.builtAt } : null,
-    depth: depth ? { provider: 'espn-depth', at: depth.asOf } : null,
+    depth: depth ? { provider: depth.source || 'espn-depth', at: depth.asOf } : null,
     dfs: dfs.dk ? { provider: 'csv', at: dfs.dk.salariesAsOf } : dfs.fd ? { provider: 'csv', at: dfs.fd.salariesAsOf } : null
   };
   return { sched, state, week: week.ok ? week : null, next: next.ok ? next : null, depth, usage, signals, gameMarkets, weekMarkets,
@@ -8362,6 +9362,15 @@ async function runContentTick(env) {
 }
 const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, dfsAnalyst: d.id, dfsName: d.name }; };
 const _pieceUrl = (row) => '/in-season/desk/' + row.kind + '/' + row.week;
+// The title a published piece carries: the one it was STORED under, not the
+// calendar's. The calendar title is only a default; the week's games can move
+// it (a Wednesday opener is not Thursday night), and reading it back off
+// CONTENT_KINDS put the wrong day on the front page. Stored with the edition
+// trailer the desk adds (' · Week 2', ' · update 2'), which the
+// feeds add back themselves, so it comes off here. A legacy row with no title
+// falls back to the calendar, then to the kind.
+const _pieceTitle = (row) => String(row.title || '').split(' \u00b7 ')[0].trim()
+  || (CONTENT_KINDS[row.kind] ? CONTENT_KINDS[row.kind].title : row.kind);
 async function contentListPayload(env, season, week) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
@@ -8389,7 +9398,7 @@ async function contentPiecePayload(env, kind, season, week) {
     // A held piece ships its PACKET and not its draft: the data is right by
     // construction, the prose was not.
     const pub = brief && brief.meta ? { meta: brief.meta, freshness: brief.freshness, rivalry: brief.rivalry, priorCalls: brief.priorCalls, dfs: brief.dfs, ...Object.fromEntries(Object.entries(brief).filter(([k]) => !['allowed', 'playerIndex', 'rivalryBudget', 'colleagues'].includes(k))) } : brief;
-    return { ok: true, contract: CONTENT_CONTRACT, kind, title: row.title, subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
+    return { ok: true, contract: CONTENT_CONTRACT, kind, title: _pieceTitle(row), subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
              headline: row.headline || null, dek: row.dek || null, byline: _bylineOf(row), lens: row.lens || (K ? K.lens : 'weekly'), legacy: !K,
              createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly'), dfs: sectionsFor(kind, 'dfs') }, objectSections: NEWSROOM_OBJECT_SECTIONS,
              body: row.status === 'published' ? parse(row.body) : null, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
@@ -8405,7 +9414,7 @@ async function newsroomFeedPayload(env, lens, limit) {
     const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, rivalry FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, limit || 20)).all();
     let rows = (q.results || []);
     if (lens === 'dfs') rows = rows.filter(r => r.lens === 'both' || r.lens === 'dfs');
-    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, pieces: rows.map(r => ({ kind: r.kind, title: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].title : r.title, dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry })) };
+    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry })) };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
 // The front page's lead, in the regular season: the newest published piece,
@@ -8433,14 +9442,14 @@ function deskNextPayload(state, sched, now) {
     let d = null;
     try { d = contentDue(kind, now, state, sched); } catch (e) { continue; }
     if (!d || d.skip || !Number.isFinite(d.dueAt) || d.dueAt === Number.MAX_SAFE_INTEGER || d.dueAt <= now) continue;
-    if (!best || d.dueAt < best.at) best = { kind, K, at: d.dueAt, week: d.week };
+    if (!best || d.dueAt < best.at) best = { kind, K, d, at: d.dueAt, week: d.week };
   }
   if (!best) return null;
   const p = etParts(best.at);
   const day = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' }[p.dow] || p.dow;
   const when = day + ' at ' + (p.hour % 12 || 12) + ':' + String(p.minute).padStart(2, '0') + ' ' + (p.hour < 12 ? 'AM' : 'PM') + ' ET';
   const a = ANALYSTS[best.K.analyst] || ANALYST_HOUSE;
-  const story = { slug: 'desk:next:' + best.kind, url: '/in-season/desk', title: 'Next from the desk: ' + best.K.title, dek: (best.K.summary || '') + ' Publishes ' + when + '.',
+  const story = { slug: 'desk:next:' + best.kind, url: '/in-season/desk', title: 'Next from the desk: ' + kindTitle(best.K, best.d), dek: (best.K.summary || '') + ' Publishes ' + when + '.',
                   label: 'The Desk', category: 'desk', placeholder: true, analyst: a.name, analystId: a.id, createdAt: best.at, players: [], names: [], cast: [] };
   return { ok: true, source: 'desk-next', story, recent: [] };
 }
@@ -8457,7 +9466,7 @@ async function analystPayload(env, id) {
   let pieces = [];
   if (await contentReady(env)) {
     await newsroomReady(env);
-    try { pieces = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, dek, published_at, rivalry FROM content_pieces WHERE status = 'published' AND analyst = ? ORDER BY published_at DESC LIMIT 12").bind(id).all()).results || []).map(r => ({ kind: r.kind, title: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].title : r.kind, week: r.week, headline: r.headline, dek: r.dek, publishedAt: r.published_at, url: _pieceUrl(r), rivalry: !!r.rivalry })); } catch (e) {}
+    try { pieces = ((await env.LEADS_DB.prepare("SELECT kind, title, week, headline, dek, published_at, rivalry FROM content_pieces WHERE status = 'published' AND analyst = ? ORDER BY published_at DESC LIMIT 12").bind(id).all()).results || []).map(r => ({ kind: r.kind, title: _pieceTitle(r), week: r.week, headline: r.headline, dek: r.dek, publishedAt: r.published_at, url: _pieceUrl(r), rivalry: !!r.rivalry })); } catch (e) {}
   }
   const calls = await analystCalls(env, id, 20);
   const record = calls.reduce((m, c) => { if (c.outcome) m[c.outcome] = (m[c.outcome] || 0) + 1; return m; }, {});
@@ -8705,14 +9714,24 @@ const SCORING_SITE = {
   fd: { receptionPoints: 0.5, rbReceptionPoints: 0.5, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -2 }
 };
 const DFS_DDL = [
-  'CREATE TABLE IF NOT EXISTS dfs_salaries (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, slate TEXT, season INTEGER, week INTEGER, name TEXT NOT NULL, position TEXT NOT NULL, team TEXT, opponent TEXT, salary INTEGER NOT NULL, site_id TEXT, source TEXT, fetched_at INTEGER NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS dfs_salaries (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, slate TEXT, season INTEGER, week INTEGER, name TEXT NOT NULL, position TEXT NOT NULL, team TEXT, opponent TEXT, salary INTEGER NOT NULL, site_id TEXT, operator_fppg REAL, source TEXT, fetched_at INTEGER NOT NULL)',
   'CREATE INDEX IF NOT EXISTS ix_dfs_site_week ON dfs_salaries (site, season, week, fetched_at)'
 ];
 let _DFS_READY = false;
 async function dfsReady(env) {
   if (_DFS_READY) return true;
   if (!env || !env.LEADS_DB) return false;
-  try { for (const q of DFS_DDL) await env.LEADS_DB.prepare(q).run(); _DFS_READY = true; return true; } catch (e) { return false; }
+  try {
+    for (const q of DFS_DDL) await env.LEADS_DB.prepare(q).run();
+    // Existing production tables predate operator FPPG. Migrate once in place
+    // instead of dropping salary history or overloading another column.
+    const cols = await env.LEADS_DB.prepare('PRAGMA table_info(dfs_salaries)').all();
+    if (!(cols.results || []).some(c => c.name === 'operator_fppg')) {
+      await env.LEADS_DB.prepare('ALTER TABLE dfs_salaries ADD COLUMN operator_fppg REAL').run();
+    }
+    _DFS_READY = true;
+    return true;
+  } catch (e) { return false; }
 }
 // A DST row on either site names the club; the board names the club's
 // defense. Both resolve to the team key.
@@ -8749,7 +9768,7 @@ function parseDfsCsv(site, text) {
   const idx = k => head.findIndex(h => h.toLowerCase() === k.toLowerCase());
   const rows = [];
   if (site === 'dk') {
-    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info'), iRoster = idx('Roster Position');
+    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info'), iRoster = idx('Roster Position'), iFppg = idx('AvgPointsPerGame');
     if (iPos < 0 || iName < 0 || iSal < 0) return { rows: [], error: 'not a DraftKings salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
@@ -8757,17 +9776,21 @@ function parseDfsCsv(site, text) {
       const game = String(f[iGame] || '');
       const m = /^([A-Z]{2,3})@([A-Z]{2,3})/.exec(game);
       const opp = m ? (teamKey(m[1]) === team ? teamKey(m[2]) : teamKey(m[1])) : null;
+      const fppg = iFppg >= 0 ? parseFloat(f[iFppg]) : NaN;
       rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
-                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null });
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null,
+                  operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else if (site === 'fd') {
-    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position');
+    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position'), iFppg = idx('FPPG');
     if (iPos < 0 || iSal < 0 || (iNick < 0 && iFirst < 0)) return { rows: [], error: 'not a FanDuel salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
       const name = iNick >= 0 && f[iNick] ? f[iNick] : ((f[iFirst] || '') + ' ' + (f[iLast] || '')).trim();
+      const fppg = iFppg >= 0 ? parseFloat(f[iFppg]) : NaN;
       rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
-                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null });
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null,
+                  operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else return { rows: [], error: 'unknown site' };
   const good = rows.filter(r => r.name && r.position && Number.isFinite(r.salary) && r.salary > 0);
@@ -8777,10 +9800,10 @@ async function dfsStore(env, site, rows, meta) {
   if (!(await dfsReady(env))) return { ok: false, error: 'no_db' };
   const m = meta || {};
   const ts = Date.now();
-  const stmt = env.LEADS_DB.prepare('INSERT INTO dfs_salaries (site, slate, season, week, name, position, team, opponent, salary, site_id, source, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const stmt = env.LEADS_DB.prepare('INSERT INTO dfs_salaries (site, slate, season, week, name, position, team, opponent, salary, site_id, operator_fppg, source, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   let n = 0;
   for (let i = 0; i < rows.length; i += 50) {
-    const chunk = rows.slice(i, i + 50).map(r => stmt.bind(site, m.slate || 'main', m.season || null, m.week || null, r.name, r.position, r.team || null, r.opponent || null, Math.round(r.salary), r.siteId || null, m.source || 'csv', ts));
+    const chunk = rows.slice(i, i + 50).map(r => stmt.bind(site, m.slate || 'main', m.season || null, m.week || null, r.name, r.position, r.team || null, r.opponent || null, Math.round(r.salary), r.siteId || null, r.operatorFppg != null && Number.isFinite(Number(r.operatorFppg)) ? Number(r.operatorFppg) : null, m.source || 'csv', ts));
     try { await env.LEADS_DB.batch(chunk); n += chunk.length; } catch (e) { for (const s of chunk) { try { await s.run(); n++; } catch (e2) {} } }
   }
   return { ok: true, stored: n, site, slate: m.slate || 'main', season: m.season, week: m.week, fetchedAt: ts };
@@ -8790,7 +9813,7 @@ async function dfsSalariesRead(env, site, season, week) {
   try {
     const latest = await env.LEADS_DB.prepare('SELECT MAX(fetched_at) AS ts FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ?').bind(site, season, week).first();
     if (!latest || !latest.ts) return null;
-    const q = await env.LEADS_DB.prepare('SELECT name, position, team, opponent, salary, site_id, slate, source FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND fetched_at = ?').bind(site, season, week, latest.ts).all();
+    const q = await env.LEADS_DB.prepare('SELECT name, position, team, opponent, salary, site_id, operator_fppg, slate, source FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND fetched_at = ?').bind(site, season, week, latest.ts).all();
     return { rows: q.results || [], fetchedAt: latest.ts };
   } catch (e) { return null; }
 }
@@ -8809,8 +9832,10 @@ function buildDfsSlate(site, salaries, week, opts) {
   const rows = [];
   for (const s of salaries || []) {
     const pos = s.position;
+    const fppgRaw = s.operatorFppg != null ? s.operatorFppg : s.operator_fppg;
+    const operatorFppg = fppgRaw != null && Number.isFinite(Number(fppgRaw)) ? _oddsRound(Number(fppgRaw)) : null;
     const p = pos === 'DST' ? defByTeam.get(teamKey(s.team)) : byKey.get(_oddsNorm(s.name) + '|' + pos);
-    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, onBoard: false }); continue; }
+    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, operatorFppg, onBoard: false }); continue; }
     const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
     const v = pts('vegas'), c = pts('consensus'), it = pts('ironTuna');
     const w0 = p.weeks.find(x => x.env) || null;
@@ -8818,6 +9843,8 @@ function buildDfsSlate(site, salaries, week, opts) {
     rows.push({
       name: p.name, position: pos, team: p.team, opponent: w0 ? w0.opponent : s.opponent, home: w0 ? w0.home : null, salary: s.salary, onBoard: true, key: p.key, siteName: s.name.trim(),
       vegasPoints: v, ironTunaPoints: it, consensusPoints: c,
+      operatorFppg, operatorFppgLabel: site === 'dk' ? 'DraftKings FPPG' : 'FanDuel FPPG',
+      projectionVsFppg: operatorFppg == null ? null : _oddsRound(it - operatorFppg),
       vegasPerK: _oddsRound(v / (s.salary / 1000) * 100) / 100, ironTunaPerK: _oddsRound(it / (s.salary / 1000) * 100) / 100,
       marketDelta: p.marketDelta, vegasBasis: p.vegas.basis, vegasConfidence: p.vegas.confidence,
       tdProbability: p.vegas.td ? p.vegas.td.probability : Math.round((1 - Math.exp(-lam)) * 1000) / 10, tdBasis: p.vegas.td ? 'anytime-td-market' : 'derived',
@@ -9116,7 +10143,7 @@ async function healthPayload(env, opts) {
     // an operator should be able to see whether it is there.
     usagePrior: usagePrior ? { updatedAt: usagePrior.updatedAt, season: usagePrior.season, throughWeek: usagePrior.throughWeek, players: Object.keys(usagePrior.players || {}).length } : null,
     availability: avail ? { updatedAt: avail.updatedAt, asOf: avail.asOf, matched: avail.matched } : null,
-    depthCharts: depth,
+    depthCharts: depth ? { updatedAt: depth.updatedAt || depth.asOf, source: depth.source || 'espn-depth', teams: Object.keys(depth.teams || {}).length } : null,
     rankings: { ros: snapMeta(rosList[0]), next3: snapMeta(next3List[0]), playoffs: snapMeta(playoffList[0]) },
     dfs: { dk: dk ? { fetchedAt: dk.fetchedAt, rows: dk.rows.length } : null, fd: fd ? { fetchedAt: fd.fetchedAt, rows: fd.rows.length } : null }
   };
@@ -9824,7 +10851,8 @@ async function pruneAnalytics(env, keepDays) {
 // is behind FLAG_SLEEPER_SYNC, default OFF, until a license is in writing.
 // Yahoo is OAuth 2.0 with the reader's consent and needs client credentials;
 // it is behind FLAG_YAHOO_SYNC. CBS uses a reader-supplied per-league token,
-// sealed under LEAGUE_TOKEN_KEY, and is behind FLAG_CBS_SYNC. ESPN has no
+// sealed under a dedicated LEAGUE_TOKEN_KEY when present or a domain-separated
+// key derived from AUTH_SECRET, and is behind FLAG_CBS_SYNC. ESPN has no
 // supported path (see LEAGUE_PROVIDERS.espn).
 const LEAGUE_CONTRACT = 1;
 const LEAGUE_DDL = [
@@ -9874,12 +10902,20 @@ async function leagueSessionEmail(request, env) {
   if (env.LEADS_DB && o.sid) { try { const row = await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE id=?').bind(o.sid).first(); if (!row) return null; } catch (e) {} }
   return String(o.e).toLowerCase();
 }
-// Secrets at rest. OAuth tokens are sealed with AES-GCM under a key derived
-// from LEAGUE_TOKEN_KEY; without that secret no OAuth provider can connect,
-// and the admin board says so. A token never goes to the browser.
+// Secrets at rest. OAuth and provider tokens are sealed with AES-GCM. A
+// dedicated LEAGUE_TOKEN_KEY takes precedence. Deployments that already have
+// the required AUTH_SECRET may use a domain-separated derivation instead, so a
+// missing optional secret cannot strand league linking. A token never goes to
+// the browser.
 let _LEAGUE_AES = null, _LEAGUE_AES_FOR = '';
+function leagueTokenSecret(env) {
+  if (!env) return '';
+  if (env.LEAGUE_TOKEN_KEY) return String(env.LEAGUE_TOKEN_KEY);
+  return env.AUTH_SECRET ? 'iron-tuna:league-token:v1:' + String(env.AUTH_SECRET) : '';
+}
+function leagueTokenConfigured(env) { return !!leagueTokenSecret(env); }
 async function leagueAesKey(env) {
-  const secret = env && env.LEAGUE_TOKEN_KEY;
+  const secret = leagueTokenSecret(env);
   if (!secret) return null;
   if (_LEAGUE_AES && _LEAGUE_AES_FOR === secret) return _LEAGUE_AES;
   const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
@@ -10307,7 +11343,7 @@ const YAHOO_AUTH = 'https://api.login.yahoo.com/oauth2/request_auth';
 const YAHOO_TOKEN = 'https://api.login.yahoo.com/oauth2/get_token';
 const YAHOO_API = 'https://fantasysports.yahooapis.com/fantasy/v2';
 const YAHOO_SCOPE = 'fspt-r';
-function yahooConfigured(env) { return !!(env && env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET && env.LEAGUE_TOKEN_KEY); }
+function yahooConfigured(env) { return !!(env && env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET && leagueTokenConfigured(env)); }
 function yahooRedirect(env, origin) { return (env && env.YAHOO_REDIRECT_URI) || (origin + '/api/oauth/yahoo/callback'); }
 async function yahooTokenExchange(env, params) {
   const body = new URLSearchParams(params).toString();
@@ -10603,7 +11639,7 @@ function cbsError(code) {
 }
 const CBS_RESOURCES = new Set(['details', 'rules', 'teams', 'rosters', 'schedules', 'standings/overall', 'transactions/waiver-order', 'transaction-list/log']);
 async function cbsGet(env, id, token, resource, params = {}) {
-  if (!flagOn(env, 'CBS_SYNC') || !env.LEAGUE_TOKEN_KEY) throw new LeagueProviderError('provider_disabled', 'CBS sync needs FLAG_CBS_SYNC and LEAGUE_TOKEN_KEY.');
+  if (!flagOn(env, 'CBS_SYNC') || !leagueTokenConfigured(env)) throw new LeagueProviderError('provider_disabled', 'CBS sync needs FLAG_CBS_SYNC and league-token encryption.');
   id = cbsLeagueId(id);
   if (!CBS_RESOURCES.has(resource)) throw cbsError('invalid_response');
   if (!token) throw cbsError('expired_authorization');
@@ -10718,7 +11754,7 @@ function cbsNormalize(raw, ctx) {
 const PROVIDER_CBS = {
   id: 'cbs', label: 'CBS Sportsline', auth: 'league_token', flag: 'CBS_SYNC',
   terms: 'Reader-supplied league access token, encrypted at rest. Read-only requests. Disabled until CBS access and commercial terms have been verified.',
-  needs: env => !!(env && env.LEAGUE_TOKEN_KEY),
+  needs: env => leagueTokenConfigured(env),
   async discover(env, conn, input) {
     const id = cbsLeagueId(input.leagueId);
     const body = await cbsGet(env, id, conn.token, 'details');
@@ -11514,8 +12550,8 @@ async function leagueRoutes(request, env, url, ctx) {
     const conns = await q('SELECT provider, status, COUNT(*) AS n FROM provider_connections GROUP BY provider, status');
     const leagues = await q('SELECT id, provider, provider_league_id, name, season, num_teams, sync_status, last_ok_at, last_sync_at, next_sync_at, failures, last_error, user_team_id FROM leagues ORDER BY updated_at DESC LIMIT 60');
     const rateLimited = recent.filter(r => /rate_limited/.test(String(r.error || ''))).length;
-    return json({ ok: true, contract: LEAGUE_CONTRACT, providers: leagueProviderReport(env), flags: Object.fromEntries(['LEAGUE_SYNC', 'SLEEPER_SYNC', 'YAHOO_SYNC', 'ESPN_SYNC', 'PERSONALIZED_WAIVERS', 'PERSONALIZED_LINEUP', 'PERSONALIZED_TRADES', 'PERSONALIZED_STORIES'].map(k => [k, flagOn(env, k)])),
-                  tokenKey: !!env.LEAGUE_TOKEN_KEY, metrics: { byProvider, runs7d: runs.map(r => ({ ...r, successRate: r.n ? Math.round(100 * r.ok / r.n) : null, avgMs: r.avg_ms != null ? Math.round(r.avg_ms) : null })), rateLimited7d: rateLimited },
+    return json({ ok: true, contract: LEAGUE_CONTRACT, providers: leagueProviderReport(env), flags: Object.fromEntries(['LEAGUE_SYNC', 'SLEEPER_SYNC', 'YAHOO_SYNC', 'CBS_SYNC', 'ESPN_SYNC', 'PERSONALIZED_WAIVERS', 'PERSONALIZED_LINEUP', 'PERSONALIZED_TRADES', 'PERSONALIZED_STORIES'].map(k => [k, flagOn(env, k)])),
+                  tokenKey: leagueTokenConfigured(env), metrics: { byProvider, runs7d: runs.map(r => ({ ...r, successRate: r.n ? Math.round(100 * r.ok / r.n) : null, avgMs: r.avg_ms != null ? Math.round(r.avg_ms) : null })), rateLimited7d: rateLimited },
                   recent, failing, misses, connections: conns, leagues, ran }, 200, c);
   }
 
@@ -11707,6 +12743,8 @@ async function leagueRoutes(request, env, url, ctx) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const marketResponse = await tmsRoutes(request, env, url);
+    if (marketResponse) return marketResponse;
     // ?preview=<LEADS_EXPORT_KEY> on a closed in-season route: park the key in a
     // cookie and bounce to the clean URL, so the owner can walk the section
     // without re-appending the secret and without it ending up in a shared link
@@ -11751,6 +12789,7 @@ export default {
     // projections key, and there is nothing paid here — this is the free column,
     // and it ships numbers the site already publishes on the cheat sheet.
     if (url.pathname === '/api/vegas-column') {
+      if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       const c = corsHeaders(request.headers.get('Origin'));
       const now = Date.now();
@@ -11829,6 +12868,7 @@ export default {
     // context in one shape. Every in-season surface reads this rather than
     // joining the four itself.
     if (url.pathname === '/api/market') {
+      if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const w = url.searchParams.get('week');
@@ -11976,6 +13016,7 @@ export default {
     }
     // Vegas Edge, the signals behind it, the Wednesday update, and one player.
     if (url.pathname === '/api/vegas-edge' || url.pathname === '/api/signals' || url.pathname === '/api/ros-update' || url.pathname === '/api/intel/player') {
+      if (IS_WASHINGTON(request) && (url.pathname === '/api/vegas-edge' || url.pathname === '/api/signals')) return WA_MARKET_BLOCK();
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const preset = String(url.searchParams.get('scoring') || '').toLowerCase();
@@ -12011,6 +13052,7 @@ export default {
     // Line movement for one market. `subject` is the player's name as the book
     // published it, or a game id; `market` is an Iron Tuna stat key.
     if (url.pathname === '/api/market/movement') {
+      if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const subject = String(url.searchParams.get('subject') || '').slice(0, 80);
@@ -12066,6 +13108,7 @@ export default {
     // board is built once per isolate and every card slices it, so the cost of
     // the extra URLs is a map lookup, not a rebuild and not a D1 read.
     if (url.pathname === '/api/player-odds') {
+      if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       const c = corsHeaders(request.headers.get('Origin'));
       const now = Date.now();
@@ -12383,10 +13426,13 @@ export default {
       const email = String(b.email || '').trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: true }, 200, c);
       if (env.RATE_KV) { const k = 'mlreq:' + email; const n = parseInt(await env.RATE_KV.get(k) || '0', 10); if (n >= 5) return json({ ok: true }, 200, c); await env.RATE_KV.put(k, String(n + 1), { expirationTtl: 86400 }); }
-      if (env.AUTH_SECRET && await isEntitled(env, email)) {
+      // A signed session is also the account boundary for free league sync. Do
+      // not require a purchase here; paid routes still enforce isEntitled.
+      if (env.AUTH_SECRET) {
         const nonce = crypto.randomUUID();
         if (env.RATE_KV) await env.RATE_KV.put('mln:' + nonce, '1', { expirationTtl: 900 });
-        const token = await makeToken(env.AUTH_SECRET, { e: email, n: nonce, t: 'magic', exp: Date.now() + 15 * 60 * 1000 });
+        const returnTo = String(b.returnTo || '') === '/my-league' ? '/my-league' : '/';
+        const token = await makeToken(env.AUTH_SECRET, { e: email, n: nonce, t: 'magic', r: returnTo, exp: Date.now() + 15 * 60 * 1000 });
         await sendLoginEmail(env, email, url.origin + '/api/auth/verify?token=' + encodeURIComponent(token));
       }
       return json({ ok: true }, 200, c);
@@ -12404,14 +13450,15 @@ export default {
         } catch (e) {}
       }
       const sess = await makeToken(env.AUTH_SECRET, { sid: sid, e: email, t: 'sess', exp: now + 90 * 24 * 3600 * 1000 });
-      return new Response(null, { status: 302, headers: { 'Location': url.origin + '/?restored=1', 'Set-Cookie': 'it_sess=' + sess + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (90 * 24 * 3600) } });
+      const returnTo = o.r === '/my-league' ? '/my-league' : '/';
+      return new Response(null, { status: 302, headers: { 'Location': url.origin + returnTo + (returnTo.includes('?') ? '&' : '?') + 'restored=1', 'Set-Cookie': 'it_sess=' + sess + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (90 * 24 * 3600) } });
     }
     if (url.pathname === '/api/auth/me') {
       const c = corsHeaders(request.headers.get('Origin'));
       const o = env.AUTH_SECRET ? await readToken(env.AUTH_SECRET, parseCookie(request.headers.get('Cookie'))['it_sess']) : null;
-      if (!o || o.t !== 'sess') return json({ entitled: false }, 200, c);
-      if (env.LEADS_DB) { try { const row = await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE id=?').bind(o.sid).first(); if (!row) return json({ entitled: false }, 200, c); await env.LEADS_DB.prepare('UPDATE sessions SET last_seen=? WHERE id=?').bind(Date.now(), o.sid).run(); } catch (e) {} }
-      return json({ entitled: await isEntitled(env, o.e), email: o.e, product: 'bundle' }, 200, c);
+      if (!o || o.t !== 'sess') return json({ signedIn: false, entitled: false }, 200, c);
+      if (env.LEADS_DB) { try { const row = await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE id=?').bind(o.sid).first(); if (!row) return json({ signedIn: false, entitled: false }, 200, c); await env.LEADS_DB.prepare('UPDATE sessions SET last_seen=? WHERE id=?').bind(Date.now(), o.sid).run(); } catch (e) {} }
+      return json({ signedIn: true, entitled: await isEntitled(env, o.e), email: o.e, product: 'bundle' }, 200, c);
     }
     if (url.pathname === '/api/auth/logout' && request.method === 'POST') {
       const c = corsHeaders(request.headers.get('Origin'));
@@ -12835,7 +13882,7 @@ export default {
     // that route reports what it fetched without storing it.
     if (url.pathname === '/api/admin/dfs') {
       const c = corsHeaders(request.headers.get('Origin'));
-      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!adminOk(env, url.searchParams.get('key') || '') && !(await githubDfsWorkflowOk(request))) return json({ ok: false, error: 'forbidden' }, 403, c);
       const sched = await scheduleCacheRead(env);
       const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
       const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
@@ -13357,27 +14404,11 @@ export default {
         (blk, y, mo, dd) => ((y + '-' + mo + '-' + dd) !== '2026-07-04' && Date.now() < Date.UTC(+y, +mo - 1, +dd, 13, 0, 0) ? '' : blk));
       return new Response(__xml, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
     }
-    // ── /the-line is geofenced out of Washington State ────────────────────────
-    // The Line reads the week's games against the posted number and puts
-    // HYPOTHETICAL stakes on the ones it disagrees with. No wager is taken, no
-    // money is held and nothing is settled — but Washington treats online
-    // gambling activity more strictly than any other state (Wash. Rev. Code
-    // ch. 9.46), so the page is simply not served there rather than argued
-    // about. The block is at the EDGE, before the asset layer, because the ribbon
-    // link is baked into ~20 static pages and cannot be varied per request.
-    //
-    // regionCode is checked with the country, because "WA" is also Western
-    // Australia. A request Cloudflare cannot place gets the page: the fence is
-    // for readers who ARE in Washington, not for everyone the edge cannot see.
-    // The response is uncacheable and Vary-marked, so no shared cache can hand
-    // one region's answer to another.
-    if (LINE_GEOFENCED(url.pathname)) {
-      const __cf = request.cf || {};
-      const __ctry = String(__cf.country || '').toUpperCase();
-      const __reg = String(__cf.regionCode || '').toUpperCase();
-      const __regName = String(__cf.region || '').trim().toLowerCase();
-      if (__ctry === 'US' && (__reg === 'WA' || __regName === 'washington')) {
-        return new Response(LINE_BLOCKED_HTML, {
+    // ── betting-market pages are geofenced out of Washington State ───────────
+    // This is evaluated at the edge before the asset layer. A direct URL, an
+    // old bookmark or a hand-typed alias therefore gets the same 451 as a click.
+    if (IS_WASHINGTON(request) && WA_MARKET_PAGE_GEOFENCED(url.pathname)) {
+        return new Response(WA_MARKET_BLOCKED_HTML, {
           status: 451,
           headers: {
             'content-type': 'text/html; charset=utf-8',
@@ -13385,7 +14416,6 @@ export default {
             'vary': 'CF-IPCountry',
           },
         });
-      }
     }
     let __assetReq = request;
     // "/" serves the news-style front page (front.html); the classic SPA hub moved to /hub.
@@ -13461,8 +14491,21 @@ export default {
         __assetReq = new Request(new URL(IN_SEASON_HUB, url).toString(), request);
       }
     } catch (e) {}
-    const resp = await env.ASSETS.fetch(__assetReq);
-    const ct = resp.headers.get('content-type') || '';
+    let resp = await env.ASSETS.fetch(__assetReq);
+    let ct = resp.headers.get('content-type') || '';
+    // "/" is shared by all three top-level products. In Washington the page
+    // itself is rewritten at the edge so the Betting Market Intel tab and pane
+    // never reach the browser. This is server-side removal, not CSS hiding.
+    if (IS_WASHINGTON(request) && ct.includes('text/html') &&
+        (url.pathname === '/' || url.pathname === '/front' || url.pathname === '/front/' || url.pathname === '/front.html')) {
+      let waHtml = await resp.text();
+      waHtml = stripWashingtonMarketLane(waHtml);
+      resp = new Response(waHtml, resp);
+      resp.headers.set('cache-control', 'private, no-store');
+      resp.headers.set('vary', 'CF-IPCountry');
+      resp.headers.delete('content-length');
+      ct = resp.headers.get('content-type') || 'text/html';
+    }
     // Count the view off the response path — a slow or failed D1 write must never
     // hold up the page. Only real, successful HTML loads count.
     if (resp.ok && ct.includes('text/html') && request.method === 'GET') ctx.waitUntil(logPageView(env, request, url));
@@ -13543,6 +14586,7 @@ export default {
     // York time, says what is due this hour; runScheduledTick runs it phase
     // by phase through the job log, and the desk tick goes last.
     if (event.cron === '*/15 * * * *' || event.cron === '0 * * * *') {
+      ctx.waitUntil(tmsPoll(env).catch(() => console.error('Tuna Market Signal storage unavailable')));
       console.log('tick start:', event.cron, new Date(event.scheduledTime || Date.now()).toISOString());
       ctx.waitUntil(runScheduledTick(env, Date.now(), event.cron)
         .then(r => console.log('tick:', JSON.stringify(r).slice(0, 600)))

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18397866361');
+  gtag('config', 'G-KLBZBZSJ25');
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DFS Strategy: Stacks, Correlation, Leverage and Contest Selection | Iron Tuna</title>
+<meta name="description" content="Learn how stacks, correlation, chalk, leverage, ownership, duplication and late swap should change across DFS payout structures.">
+<link rel="canonical" href="https://irontuna.com/dfs-strategy-guide">
+<!--seo:meta-->
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<meta property="og:site_name" content="Iron Tuna">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:site" content="@irontunafantasy">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DFS Strategy: Stacks, Correlation, Leverage and Contest Selection | Iron Tuna">
+<meta property="og:description" content="Learn how stacks, correlation, chalk, leverage, ownership, duplication and late swap should change across DFS payout structures.">
+<meta property="og:url" content="https://irontuna.com/dfs-strategy-guide">
+<meta property="og:image" content="https://irontuna.com/og.png">
+<meta name="twitter:title" content="DFS Strategy: Stacks, Correlation, Leverage and Contest Selection | Iron Tuna">
+<meta name="twitter:description" content="Learn how stacks, correlation, chalk, leverage, ownership, duplication and late swap should change across DFS payout structures.">
+<meta name="twitter:image" content="https://irontuna.com/og.png">
+<!--/seo:meta-->
+<link rel="stylesheet" href="/site.css">
+<style>
+.article{max-width:900px;margin:0 auto;padding:42px 20px 70px}.article h1{font-size:clamp(34px,6vw,58px);line-height:1.02;margin:10px 0 16px}.article h2{font-size:27px;margin:36px 0 10px}.article h3{font-size:19px;margin:25px 0 7px}.article p,.article li{font-size:16px;line-height:1.72;color:var(--sec)}.article .lede{font-size:20px;line-height:1.6;max-width:760px}.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);font-weight:800}.callout{border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:10px;background:var(--panel);padding:16px 18px;margin:22px 0}.callout p{margin:0}.article table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}.article th,.article td{border-bottom:1px solid var(--line);padding:11px 10px;text-align:left;vertical-align:top}.article th{color:var(--text)}.article a.btn{display:inline-block;margin-top:18px;padding:11px 18px;border-radius:24px;background:var(--teal);color:#fff;font-weight:800;text-decoration:none}header.site .simple-brand{font-weight:900;letter-spacing:.16em;color:var(--text);text-decoration:none}.simple-nav{display:flex;gap:15px;align-items:center}.simple-nav a{font-size:13px;color:var(--sec);text-decoration:none}@media(max-width:650px){.simple-nav a:not(:last-child){display:none}.article{padding-top:28px}.article table{font-size:12px}}
+</style>
+
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://irontuna.com/dfs-strategy-guide","name":"DFS Strategy: Stacks, Correlation, Leverage and Contest Selection","description":"Learn how stacks, correlation, chalk, leverage, ownership, duplication and late swap should change across DFS payout structures.","url":"https://irontuna.com/dfs-strategy-guide","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/dfs-strategy-guide"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"DFS Strategy: Stacks, Correlation, Leverage and Contest Selection"}]}]}</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <!--chrome:nav-->
+    <nav class="nav" id="sitenav" aria-label="Main">
+      <span class="nav-dd"><a href="/fantasy">Fantasy</a><span class="nav-dd-menu"><a href="/fantasy">This week</a><a href="/in-season">In-Season hub</a><a href="/rankings">Rankings</a><a href="/depth-charts">Depth Charts</a><a href="/weekly-intel">Weekly Intel</a><a href="/waivers">Waivers &amp; FAAB</a><a href="/trade-finder">Trade Finder</a><a href="/my-league">My Leagues</a><a href="/my-week">My Week</a></span></span>
+      <a href="/dfs">DFS</a>
+      <span class="nav-dd"><a href="/vegas-edge">Market Intel</a><span class="nav-dd-menu"><a href="/vegas-edge">Vegas Edge</a><a href="/game-intel">Game Intel</a><a href="/player-intel">Player Intel</a><a href="/what-they-arent-telling-you">The whole board</a></span></span>
+      <span class="nav-dd"><a href="/in-season/desk">The Desk</a><span class="nav-dd-menu"><a href="/in-season/desk">The Desk</a><a href="/analysts">The Analysts</a><a href="/the-pick">The Pick</a><a href="/the-tell">The Tell</a><a href="/play-caller-premium">Play-Caller Premium</a></span></span>
+      <span class="nav-dd"><a href="/fantasy-football-auction-values">Draft Tools</a><span class="nav-dd-menu"><a href="/fantasy-football-auction-values">Auction values</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a><a href="/guides">Strategy guides</a><a href="/auction-insights">Auction insights</a><a href="/snake-insights">Snake insights</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/faq">FAQ</a>
+    </nav>
+    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
+    <!--/chrome:nav-->
+</div></header>
+<main id="main" class="article">
+<div class="eyebrow">DFS Academy · Strategy</div>
+<h1>Stacks, correlation and leverage only matter in context.</h1>
+<p class="lede">DFS strategy is not about maximizing one number. It is about building a roster whose risk profile fits the way the contest pays. The more top-heavy the payout, the more valuable correlated upside and differentiation become.</p>
+
+<h2>Start with the payout curve.</h2>
+<p>Head-to-Head and 50/50 contests reward survival. Large tournaments reward extreme outcomes. That sounds obvious, but it changes nearly every lineup decision. A safe popular player can be a feature in cash and a source of duplication in a tournament. A volatile stack can be unnecessary in cash and essential in a contest where thousands of entries must be beaten.</p>
+
+<h2>Stacks: make one correct prediction pay more than once.</h2>
+<p>A stack links players whose fantasy outcomes tend to rise together. The classic NFL example is a quarterback paired with one of his receivers or tight ends. When the quarterback has a ceiling game through that pass catcher, both roster spots benefit from the same underlying event.</p>
+<h3>Bring-backs</h3>
+<p>In tournaments, a player from the opposing team can strengthen the game story. If Team A is forced to keep throwing because Team B is also scoring, both sides may benefit. A bring-back is not mandatory, but it can make a high-total game environment more internally consistent.</p>
+
+<h2>Correlation is useful because roster spots are not independent.</h2>
+<p>Positive correlation increases the chance that several roster spots hit together. That is valuable when the payout requires an unusually high total score. Negative correlation can work the other way. For example, a defense and an opposing quarterback generally need very different game scripts to reach their ceilings.</p>
+<div class="callout"><p><b>Cash:</b> correlation is secondary to raw projection and floor. <b>Tournaments:</b> correlation can turn one accurate game-level prediction into multiple ceiling performances.</p></div>
+
+<h2>Chalk is not automatically bad.</h2>
+<p>“Chalk” means a player expected to be popular. Players often become popular because salary, role and projection make them strong plays. In contests where merely beating a threshold matters, fading a strong chalk play can add risk without adding enough reward.</p>
+<p>In tournaments, ownership matters because you need to separate from the field. The important question is not “Is this player popular?” It is “What am I receiving in projection and ceiling for the ownership I am accepting?”</p>
+
+<h2>Leverage: get paid when a common assumption fails.</h2>
+<p>A leverage play benefits when a highly owned alternative disappoints, especially when the two outcomes are related. The best leverage plays are not random contrarian picks. They preserve enough projection and role while opening a path to a less duplicated, higher-upside roster.</p>
+
+<h2>Duplication matters more as the field gets larger.</h2>
+<p>If thousands of entries can build the same obvious combination, even a first-place outcome may be shared. Salary left unused, a different secondary stack, or a lower-owned player with comparable projection can reduce duplication. The goal is not to make the lineup look strange. It is to create a lineup that can plausibly finish first without being identical to a large portion of the field.</p>
+
+<h2>Multi-entry is a portfolio problem.</h2>
+<p>When entering multiple lineups, exposure becomes another decision. High-conviction values can appear often. More fragile players should usually occupy a smaller portion of the portfolio. Several lineups that all depend on the same game script are not truly diversified just because one or two players change.</p>
+
+<h2>Late swap changes the correct amount of risk.</h2>
+<p>If early players have disappointed, later roster spots may need more ceiling and lower ownership to recover. If early players have greatly exceeded expectations, preserving that advantage can become more important than chasing additional variance. The same player can therefore be the correct choice at noon and the wrong choice at 4 PM depending on what has already happened.</p>
+
+<h2>Match the strategy to the contest.</h2>
+<table>
+<thead><tr><th>Contest</th><th>Floor</th><th>Correlation</th><th>Leverage</th><th>Volatility</th></tr></thead>
+<tbody>
+<tr><td>Head-to-Head / 50/50 / Double Up</td><td>High priority</td><td>Useful, not required</td><td>Low priority</td><td>Keep low</td></tr>
+<tr><td>Multiplier</td><td>Still important</td><td>Moderate</td><td>Selective</td><td>Moderate</td></tr>
+<tr><td>Single-Entry Tournament</td><td>Strong core</td><td>Important</td><td>Selective</td><td>Moderate-high</td></tr>
+<tr><td>Multi-Entry Tournament</td><td>Lower priority</td><td>Very important</td><td>Important</td><td>Accept strategically</td></tr>
+</tbody>
+</table>
+<div class="callout"><p>The best tournament lineup is not the lineup with the most longshots. It is the lineup that gives up the least expected scoring while buying the most useful ceiling, correlation and separation.</p></div>
+<a class="btn" href="/dfs">Back to DFS</a>
+</main>
+<footer class="site"><div class="wrap">
+  <!--chrome:foot-->
+  <div class="foot-cols">
+    <div class="foot-col">
+     <h2>In-Season</h2>
+     <ul>
+      <li><a href="/in-season">Overview</a></li>
+      <li><a href="/fantasy">Fantasy</a></li>
+      <li><a href="/dfs">DFS</a></li>
+      <li><a href="/rankings">Rankings</a></li>
+      <li><a href="/depth-charts">Depth Charts</a></li>
+      <li><a href="/weekly-rankings">This week’s rankings</a></li>
+      <li><a href="/season-long-rankings">Season long rankings</a></li>
+      <li><a href="/stats">Stats</a></li>
+      <li><a href="/waivers">Waivers &amp; FAAB</a></li>
+      <li><a href="/my-league">My Leagues</a></li>
+      <li><a href="/my-week">My Week</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Market Intel</h2>
+     <ul>
+      <li><a href="/vegas-edge">Vegas Edge</a></li>
+      <li><a href="/hidden-value">Hidden Value</a></li>
+      <li><a href="/previews">Previews</a></li>
+      <li><a href="/the-line">The Line</a></li>
+      <li><a href="/game-intel">Game Intel</a></li>
+      <li><a href="/player-intel">Player Intel</a></li>
+      <li><a href="/what-they-arent-telling-you">The whole board</a></li>
+      <li><a href="/trade-finder">Trade Finder</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Read</h2>
+     <ul>
+      <li><a href="/in-season/desk">The Desk</a></li>
+      <li><a href="/analysts">The analysts (AI)</a></li>
+      <li><a href="/the-pick">The Pick</a></li>
+      <li><a href="/the-tell">The Tell</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/auction-insights">Auction insights</a></li>
+      <li><a href="/insights-vault">Insight Vault</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Draft Tools</h2>
+     <ul>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
+      <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
+      <li><a href="/guides">Strategy guides</a></li>
+      <li><a href="/auction-watch">Auction Watch</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Company</h2>
+     <ul>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/support">Support</a></li>
+      <li><a href="/creators">Creators &amp; affiliates</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Legal</h2>
+     <ul>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/terms">Terms</a></li>
+      <li><a href="/data">Data &amp; sources</a></li>
+     </ul>
+    </div>
+  </div>
+  <div class="foot-note">
+   <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
+   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
+  </div>
+  <!--/chrome:foot-->
+</div></footer>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+</body>
+</html>

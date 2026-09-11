@@ -30,12 +30,14 @@ console.log('\nthe lobby CSVs');
   const dk = 'Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\nQB,"Josh Allen (12345)",Josh Allen,12345,QB,8200,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\nRB,"Jahmyr Gibbs (222)",Jahmyr Gibbs,222,RB/FLEX,8900,DET@GB 09/14/2026 04:25PM ET,DET,21.3\nDST,"Bears  (333)",Bears ,333,DST,3000,CHI@MIN 09/14/2026 01:00PM ET,CHI,7.0\n';
   const a = H.parseDfsCsv('dk', dk);
   ok('a DraftKings CSV parses', !a.error && a.rows.length === 3, a.error);
+  ok('DraftKings FPPG comes across as historical operator data', a.rows[0].operatorFppg === 24.1 && a.rows[1].operatorFppg === 21.3);
   ok('the opponent comes out of Game Info', a.rows[0].opponent === 'NYJ' && a.rows[1].opponent === 'GB');
   ok('a defense is a DST with its club', a.rows[2].position === 'DST' && a.rows[2].team === 'CHI');
   const fd = 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n1,QB,Josh,Josh Allen,Allen,24.1,1,9200,BUF@NYJ,BUF,NYJ,,,,QB\n2,D,,Chicago Bears,,7,1,4000,CHI@MIN,CHI,MIN,,,,D\n';
   const b = H.parseDfsCsv('fd', fd);
   ok('a FanDuel CSV parses', !b.error && b.rows.length === 2, b.error);
   ok('the nickname is the name and D is a DST', b.rows[0].name === 'Josh Allen' && b.rows[1].position === 'DST');
+  ok('FanDuel FPPG comes across through the same normalized field', b.rows[0].operatorFppg === 24.1);
   ok('a file from the wrong site is refused', !!H.parseDfsCsv('dk', fd).error && !!H.parseDfsCsv('fd', dk).error);
   ok('an empty file is refused', H.parseDfsCsv('dk', '').error === 'empty');
   ok('the roster position comes across', a.rows[1].rosterPosition === 'RB/FLEX' && b.rows[0].rosterPosition === 'QB');
@@ -111,7 +113,7 @@ const WEEK = { ok: true, players: [
 const SAL = [['Josh Allen', 'QB', 'BUF', 8200], ['Aaron Rodgers', 'QB', 'NYJ', 6000], ['Jahmyr Gibbs', 'RB', 'DET', 8900], ['Breece Hall', 'RB', 'NYJ', 7200], ['James Cook', 'RB', 'BUF', 6800],
   ['Amon-Ra St. Brown', 'WR', 'DET', 8600], ['Garrett Wilson', 'WR', 'NYJ', 7000], ['Khalil Shakir', 'WR', 'BUF', 5200], ['Jameson Williams', 'WR', 'DET', 6100], ['Jayden Reed', 'WR', 'GB', 5600],
   ['Sam LaPorta', 'TE', 'DET', 5500], ['Dalton Kincaid', 'TE', 'BUF', 4400], ['Tucker Kraft', 'TE', 'GB', 3800], ['Bears ', 'DST', 'CHI', 3000], ['Bills ', 'DST', 'BUF', 3600], ['Nobody Famous', 'WR', 'GB', 3000]]
-  .map(([name, position, team, salary]) => ({ name, position, team, opponent: null, salary }));
+  .map(([name, position, team, salary], i) => ({ name, position, team, opponent: null, salary, operatorFppg: 10 + i }));
 const STATE = { ok: true, games: [{ id: 'a', home: 'NYJ', away: 'BUF', total: 47, spread: -3, impliedHome: 22, impliedAway: 25, kickoff: 1 }, { id: 'b', home: 'GB', away: 'DET', total: 51, spread: 1, impliedHome: 26, impliedAway: 25, kickoff: 1 }] };
 
 console.log('\nthe slate');
@@ -121,6 +123,7 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
   ok('a player the board does not know is kept but unmatched', slate.unmatched === 1 && slate.players.find(p => p.name === 'Nobody Famous').onBoard === false);
   const allen = slate.players.find(p => p.name === 'Josh Allen');
   ok('each player carries salary and all three projections', allen.salary === 8200 && allen.vegasPoints > 0 && allen.ironTunaPoints > 0 && allen.consensusPoints > 0);
+  ok('the slate keeps operator FPPG and exposes the Iron Tuna edge against it', allen.operatorFppg === 10 && near(allen.projectionVsFppg, allen.ironTunaPoints - 10, 0.11));
   ok('and Market Delta, TD probability and team total', allen.marketDelta && Number.isFinite(allen.tdProbability) && allen.teamTotal === 27);
   ok('the site scoring is applied (DK 300-yard bonus is not reached at 280)', near(allen.vegasPoints, _oddsRound(280 * 0.04 + 2.2 * 4 + 4 + 0.5 * 6), 0.15), String(allen.vegasPoints));
   ok('Vegas Value Score is market points per $1K against the slate median', allen.vegasValueScore > 0 && slate.players.some(p => p.vegasValueScore && p.vegasValueScore !== 100));
@@ -136,6 +139,46 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
   ok('a stack is priced', stacks[1].away.stackSalary > 0 && stacks[1].away.stackVegasPoints > 0);
 }
 
+console.log('\nthe DFS page explanations');
+{
+  const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+  ok('DFS setup begins with three ordered dropdowns', page.indexOf('id="dfGameStyleSelect"') < page.indexOf('id="dfGamesSelect"') && page.indexOf('id="dfGamesSelect"') < page.indexOf('id="dfPayoutSelect"'));
+  ok('Game Style contains the full DraftKings format menu', ['Flash Draft','Classic','Showdown Captain Mode','Pick6','Best Ball','Tiers','In-Game Showdown','Single Stat - Total Yards','Single Stat - Touchdowns','Snake','Snake Showdown','Madden Classic','Madden Showdown Captain Mode'].every(x => page.includes('>'+x+'</option>')));
+  ok('Games is disabled until Game Style and is built from the loaded slate', page.includes('id="dfGamesSelect" disabled required') && page.includes('function populateGamesSelect(s)') && page.includes('All listed games') && page.includes('1 PM ET games') && page.includes('4 PM / late afternoon games') && page.includes('Primetime games') && page.includes('Custom game selection'));
+  ok('single-game formats are tagged so Games can collapse to individual matchups', page.includes("'showdown-captain': { label:'Showdown Captain Mode'") && page.includes("single:true") && page.includes("if (!style.single)"));
+  ok('Payout Structure contains cash, multiplier, tournament and qualifier choices', ['Head-to-Head','50/50','Double Up','Multiplier (3x / 5x / 10x)','Tournament - Single Entry','Tournament - Multi-Entry','Satellite / Qualifier','League / Private Contest'].every(x => page.includes('>'+x+'</option>')));
+  ok('Payout Structure maps to optimizer risk shapes', page.includes("h2h: { label:'Head-to-Head', shape:'cash'") && page.includes("'double-up': { label:'Double Up', shape:'cash'") && page.includes("multiplier: { label:'Multiplier', shape:'single'") && page.includes("'tournament-multi': { label:'Tournament - Multi-Entry', shape:'gpp'"));
+  ok('the setup is sequential and required', page.includes("if (!gameStyle || !gameChoice || !payoutStructure) return false") && page.includes("First select Game Style.") && page.includes("Next select the Games / player pool.") && page.includes("Finally select the Payout Structure."));
+  ok('selected games actually filter the optimizer and every DFS board', page.includes('function filteredSlate()') && page.includes('selectedGames[playerGameKey(p)]') && page.includes('dashboard(view); envTable(view); values(view); pool(view); stacks(view); tdBoard(view);'));
+  ok('non-Classic formats do not receive an illegal Classic roster', page.includes("function styleSupportsOptimizer() { return site !== 'dk' || gameStyle === 'classic'; }") && page.includes('The Classic lineup solver is hidden because this DraftKings format uses different roster or scoring rules.'));
+  ok('DraftKings terminology retains hover help', page.includes('.df-term:hover::after') && page.includes('data-tip="The roster and scoring format DraftKings uses.') && page.includes('data-tip="How the contest awards prizes.'));
+  ok('Play of the Week evaluates payout risk and reward', page.includes('id="dfPlayWeek"') && page.includes('function renderPlayOfWeek(s)') && page.includes("rec='Head-to-Head'") && page.includes("rec='Multiplier'") && page.includes("rec='Tournament - Single Entry'") && page.includes("rec='Tournament - Multi-Entry'") && page.includes('moves away from it only when the model can buy enough additional ceiling or leverage'));
+  ok('DFS Academy links to the two new strategy articles', page.includes('href="/dfs-getting-started"') && page.includes('href="/dfs-strategy-guide"') && fs.existsSync(path.join(ROOT,'dfs-getting-started.html')) && fs.existsSync(path.join(ROOT,'dfs-strategy-guide.html')));
+  ok('the lead roster has a larger summary, side breakdown, and player fit lines', page.includes('.df-explain-summary p{margin:0;color:#d5e2df;font-size:16px') && page.includes('Lineup Breakdown') && page.includes('class="df-fit"'));
+  ok('player names expose a calculation drawer', page.includes('id="dfPlayerModal"') && page.includes('function openPlayerCalc') && page.includes('df-player-link'));
+  ok('the player drawer labels modeled ownership as a model', page.includes('Modeled ownership') && page.includes('not an operator or third-party ownership feed'));
+  ok('DraftKings FPPG is always paired with the Iron Tuna projection and edge', page.includes('DraftKings FPPG') && page.includes('Iron Tuna Projection') && page.includes('Tuna Edge') && page.includes('historical fantasy-points-per-game average'));
+  ok('the DFS What If box autocompletes from typed player names', page.includes('id="dfWhatIfInput"') && page.includes('function renderWhatIfList') && page.includes("addEventListener('input', renderWhatIfList)") && page.includes('data-whatif-key'));
+  ok('the What If selection becomes an optimizer lock only when the player is eligible for the selected games', page.includes("if (whatIfKey && eligible[whatIfKey] && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey)"));
+  const scripts = [...page.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
+  ok('every inline DFS script parses', (() => { try { scripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
+}
+
+console.log('\nthe homepage DFS lane');
+{
+  const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
+  ok('homepage DFS begins with Game Style, Games and Payout Structure dropdowns', front.indexOf('id="dfsGameStyle"') < front.indexOf('id="dfsGames"') && front.indexOf('id="dfsGames"') < front.indexOf('id="dfsPayout"'));
+  ok('homepage Game Style carries all DraftKings formats', ['Flash Draft','Classic','Showdown Captain Mode','Pick6','Best Ball','Tiers','In-Game Showdown','Single Stat - Total Yards','Single Stat - Touchdowns','Snake','Snake Showdown','Madden Classic','Madden Showdown Captain Mode'].every(x => front.includes('>'+x+'</option>')));
+  ok('homepage Games offers time windows and individual games from the live slate', front.includes('1 PM ET games') && front.includes('4 PM / late afternoon games') && front.includes('Primetime games') && front.includes("games.forEach(function(g){html+='<option value=\"game:"));
+  ok('homepage payout choice maps into cash, single-entry and tournament optimizer objectives', front.includes("h2h:'cash'") && front.includes("'double-up':'cash'") && front.includes("multiplier:'single'") && front.includes("'tournament-multi':'gpp'"));
+  ok('homepage game selection filters the actual eligible player pool', front.includes('function frontFiltered(s)') && front.includes('frontGameKeys[frontPlayerGameKey(p)]'));
+  ok('homepage includes Play of the Week and both DFS Academy articles', front.includes('id="dfsPotwTitle"') && front.includes('/dfs-getting-started') && front.includes('/dfs-strategy-guide'));
+  ok('the retired Cash Single entry Large field chips are no longer visible markup', !front.includes('Cash <small>Floors</small>') && !front.includes('Single entry <small>Best roster</small>') && !front.includes('Large field <small>Longshots</small>'));
+  ok('league-wide NFL story art always includes the NFL shield path', front.includes('var hasLeagueMark = !t;') && front.includes('function nflSvg(type)') && front.includes('NFL_LOGO_URL'));
+  const frontScripts = [...front.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
+  ok('every inline homepage script still parses', (() => { try { frontScripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
+}
+
 console.log('\nthe optimizer');
 {
   const players = slate.players.filter(p => p.onBoard).map(p => ({ ...p, id: p.key }));
@@ -143,6 +186,7 @@ console.log('\nthe optimizer');
   const r = DFS.build(players, { ...base, mode: 'ironTuna', lineups: 1 });
   ok('a lineup is built', r.ok && r.lineups.length === 1);
   const L = r.lineups[0];
+  ok('lineup rows carry operator FPPG and the projection edge', L.players.every(p => typeof p.operatorFppg === 'number' && typeof p.projectionVsFppg === 'number'));
   ok('it fills every slot', L.players.length === 9 && L.players.every(p => p.id));
   ok('it respects the cap', L.salary <= 50000);
   ok('each slot holds an eligible position', L.players.every(p => p.slot === p.position || (p.slot === 'FLEX' && /RB|WR|TE/.test(p.position))));

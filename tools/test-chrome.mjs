@@ -119,13 +119,13 @@ console.log('\nthe call to action matches the page\'s format');
   const wrong = [];
   for (const f of pages) {
     const cta = (header(read(f)).match(/<a class="cta" href="([^"]*)"/) || [])[1] || '';
-    // An IN-SEASON page sells the league save: a reader on the waiver board in
-    // October is not there to build a draft sheet, and saving their scoring and
-    // FAAB budget improves every number in front of them. Everywhere else the
+    // An IN-SEASON page leads to free account-backed league sync: a reader on
+    // the waiver board in October is not there to build a draft sheet, and sync
+    // improves every number in front of them. Everywhere else the
     // CTA is the board that page belongs to. Snake keeps its own; best ball no
     // longer does, because that line is retired and its pages point at the
     // auction sheet like everything else.
-    const want = IN_SEASON.has(f) ? '/in-season#league' : /^snake-/.test(f) ? 'snakedraft' : 'auctiondraft';
+    const want = IN_SEASON.has(f) ? '/my-league' : /^snake-/.test(f) ? 'snakedraft' : 'auctiondraft';
     if (!cta.includes(want)) wrong.push(`${f}: cta=${cta} want ${want}`);
     // No page may send the reader to the retired best-ball room.
     if (cta.includes('/bestball')) wrong.push(`${f}: cta=${cta} still sells best ball`);
@@ -209,7 +209,7 @@ console.log('\nthe disclaimer is on every page, in full');
     'informational and may differ at the venue',
     'not a sportsbook or exchange',
     'Availability varies by state',
-    '1-800-GAMBLER',
+    '1-800-MY-RESET',
   ];
   // allPages is every page carrying <header class="site">, which is every page
   // the chrome generator writes. THE THREE IT EXCLUDES ARE THE THREE THAT MATTER

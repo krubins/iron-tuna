@@ -1,5 +1,8 @@
 # Iron Tuna — Project Handoff
 
+Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
+[docs/TUNA-MARKET-SIGNAL.md](docs/TUNA-MARKET-SIGNAL.md).
+
 Fantasy-football auction draft assistant. Live at **https://irontuna.com**.
 This document is everything you need to pick the project up in Claude Code (or any editor).
 
@@ -8285,6 +8288,8 @@ section is the rest:
 
 **What it is.** A reader connects the fantasy league they actually play in and every in-season surface reads their exact scoring, their roster, every other roster, the free-agent pool, their opponent and the standings. It is infrastructure, not a page: the model lives in D1 and the pages read it. The long record (audit, design, provider terms, deliverables, env vars, deployment) is `docs/league-sync.md`; this is the map.
 
+**Access.** Sync My League is free. `/api/auth/request` sends a magic link to any valid email, and a request from `/my-league` returns there after verification. The session protects each reader's synced data and encrypted provider credentials; it does not grant the paid bundle. Paid routes continue to enforce `isEntitled`. The My Leagues page owns the free sign-in form, and the homepage masthead has one `Sync My League` action in place of its former Save My League and Auction Manager actions.
+
 **Where it lives.**
 - `_worker.js`, the marked region `// ══ LEAGUE SYNC` … `// ══ /LEAGUE SYNC` just above `export default`. Adapters (`LEAGUE_PROVIDERS`: sleeper, yahoo, CBS, espn placeholder, manual), the normalized model (`leagueNormalizeSettings`, `leagueEffectiveSettings`, `leagueScore`), the crosswalk (`leagueResolvePlayer`, `leagueMapPlayers`, tables `player_id_map` / `player_map_misses`), storage (`leagueWriteModel`, `leagueLoad`), the sync (`leagueSync`, job `league-sync` → `runLeagueSync`, cadence `leagueNextSyncAt`), the modules (`leagueBoard`, `leagueLineup`, `leaguePickups`, `leagueMatchup`, `leagueIntel`, `leagueTrades`, `leaguePlayoffs`, `leagueAvailabilityLookup`, `leagueSummary`) and the routes (`leagueRoutes`: `/api/leagues*`, `/api/oauth/yahoo/*`, `/api/admin/league-sync`). The fetch handler dispatches to `leagueRoutes` first.
 - Three touches outside the region: nine flags appended to `NEWSROOM_FLAGS` (`LEAGUE_SYNC`, `SLEEPER_SYNC`, `YAHOO_SYNC`, `CBS_SYNC`, `ESPN_SYNC`, `PERSONALIZED_WAIVERS/LINEUP/TRADES/STORIES`), the `league-sync` row in `JOB_FNS` and `JOB_SCHEDULE` (hourly, phase 2; the job decides per league), and `boardsPayload`'s memo key now includes `o.customKey` so a league's custom scoring does not collide with another's.
@@ -8297,10 +8302,10 @@ section is the rest:
 - A provider failure never deletes a league. It is a logged run (`league_sync_runs`), a `failed` status the UI shows next to the last good sync, and a retry with doubling backoff capped at a day.
 - The reader's corrections (`leagues.overrides`) are never written by a sync. `leagueEffectiveSettings` lays them over the synced settings and names them.
 - No display-name matching where an id exists. A provider id that cannot be resolved is a recorded miss and stays on the roster by name, scored 0, never guessed.
-- OAuth tokens and CBS league tokens are sealed with AES-GCM under `LEAGUE_TOKEN_KEY` before D1 and never return to the browser. CBS tokens are stored per league in `league_provider_tokens`; a successful full pull is required before save/rotation, and disconnecting that league deletes its token.
+- OAuth tokens and CBS league tokens are sealed with AES-GCM before D1 and never return to the browser. A dedicated `LEAGUE_TOKEN_KEY` takes precedence; without it, the worker derives a domain-separated league-token key from the already-required `AUTH_SECRET`. CBS tokens are stored per league in `league_provider_tokens`; a successful full pull is required before save/rotation, and disconnecting that league deletes its token.
 - **CBS is off by default** (`FLAG_CBS_SYNC`). The implementation is fixture-tested but not live-tested; verify response shapes and permitted commercial access before enabling it. CBS connection uses a reader-supplied league access token and never requests their CBS password. **Sleeper is off by default** (`FLAG_SLEEPER_SYNC`) pending a written commercial license. Yahoo is off until an app is registered (`YAHOO_CLIENT_ID`, `YAHOO_CLIENT_SECRET`, `LEAGUE_TOKEN_KEY`). ESPN has no supported path and the adapter says so.
 
-**Tests.** `node tools/test-league-sync.mjs` (145 assertions in CI): Sleeper, Yahoo and synthetic CBS fixtures, stubbed network, in-memory D1, real scoring engine and PROJECTIONS pool. CBS coverage includes credential redaction, hostname validation, per-league token encryption/rotation/deletion, scheduled sync, idempotency and partial/error responses. `node tools/test-cbs-ui.mjs` checks the masked connection form and retry flow. `tools/test-data-sources.mjs` allowlists the validated CBS league hostname suffix.
+**Tests.** `node tools/test-league-sync.mjs` (147 assertions in CI): Sleeper, Yahoo and synthetic CBS fixtures, stubbed network, in-memory D1, real scoring engine and PROJECTIONS pool. CBS coverage includes credential redaction, hostname validation, dedicated and `AUTH_SECRET`-derived encryption, per-league token rotation/deletion, scheduled sync, idempotency and partial/error responses. `node tools/test-cbs-ui.mjs` checks the masked connection form and retry flow. `tools/test-data-sources.mjs` allowlists the validated CBS league hostname suffix.
 
 ### 68o. The first real draft, and what the fact check got wrong
 
@@ -8794,6 +8799,7 @@ offence question rather than a roster one, so it sits with the offence analyst.
   dashboards are **not** bylined, and the test asserts they are not. A byline on
   a table recomputed on every load is the one kind that lies.
 
+
 ### 68p. The invocation dies, and the cron does not
 
 With the job log opening a row before each job (§68m), the second night
@@ -8867,3 +8873,196 @@ showed why for each.
   what this prevents.
 - The deaths of §68p continue at the same rate; the usage model has not
   been switched.
+
+---
+
+## 71. September 10: the depth charts became a page
+
+The site knew every club's depth chart and showed it to nobody. Sleeper's
+order rides on `/api/live` and `depthChartsFromLive` folds it into the table
+the Value Coach is grounded on (§63), but a reader who wanted to know who was
+behind Bijan had to ask the coach. **`/depth-charts`** is that table as a
+page: 32 clubs, QB/RB/WR/TE in published order, each name carrying its current
+designation, refreshed every day because it reads the same six-hour feed on
+every load.
+
+**It reads `/api/live`, not the D1 row.** The stored table (`odds_overlay`
+row 6) is a job's output and can be a day stale or missing; the live feed is
+the one the app already fetches, is cached at the edge, and answers even when
+D1 does not. The page carries `LIVE = '/api/live?v=3'` and
+`tools/test-depth-page.mjs` fails if the worker's cache key, `index.html`'s
+`LIVE_FEED_VERSION` and the page's constant ever name three different
+versions — which is exactly how the depth charts "did not take" on launch day.
+
+**The fold is the same rule, one line deeper.** Receiver ranks run ACROSS
+LWR/RWR/SWR, so they are merged and sorted on the rank; sorting within a slot
+names the wrong man WR2 and no reader can catch it. The page keeps
+QB3/RB5/WR6/TE3 against the coach's QB2/RB4/WR5/TE2, and the test fails if the
+page is ever the shallower of the two: the whole point of the page is the name
+under the name.
+
+**The daily job stopped depending on ESPN alone.** It had returned
+`got: 0, failed: 32` every morning from September 4 until the reshaped fetch
+(§68n) brought all thirty-two clubs back at 10:00Z on September 10 — six
+mornings in which the site's stored depth charts were whatever the last good
+run left. `runDepthChartRefresh` now falls back to
+`fetchDepthChartsSleeper()` — the same player file the page reads, folded into
+`fetchDepthChartEspn`'s shape — for every club ESPN did not answer for, and
+no-ops entirely on a morning ESPN answers in full. The recap's "what we
+already knew", the news desk's depth events and the health board are fed by
+whichever source answered. The row records which: `source` is
+`espn-depth`, `espn+sleeper` or `sleeper-depth`, and `/api/admin/providers`
+stamps that instead of the hard-coded `espn-depth` it used to claim.
+
+**And the health board could never see the row.** `healthAssess` reads
+`u.depthCharts.updatedAt`; the stored payload has only ever carried `asOf`, so
+depth charts reported "never loaded" on the mornings the job worked. The
+payload now carries both and the health summary sends `updatedAt`, the source
+and a club count instead of shipping all 32 charts into the admin payload.
+
+---
+
+## 72. September 10: SportsGameOdds becomes the market feed
+
+Every market-implied number on the site — the spread and total under
+`/the-line` and `/previews`, the Betting Odds column on all sixteen rankings
+boards, the player arrows and anytime-touchdown prices, Vegas Edge and Hidden
+Value — has until now been derived from **game lines only**. The Odds API
+adapter for player props has been in `_worker.js` since the market engine was
+built and has never had a key, so `basis` on a board row has read `gamelines`
+or `ratings` and never `props`.
+
+`api.sportsgameodds.com` replaces both halves of that. It is the only source
+here that answers the site's two market questions with one subscription:
+
+| | Before | After, with `SGO_API_KEY` set |
+|---|---|---|
+| Player props | none configured | per book, per market, per game |
+| Game spread / total | ESPN's undocumented scoreboard | SGO, on the fixtures that have not kicked off |
+| The opening line | ESPN's one named book | SGO's anchor book |
+| `basis` on a board row | `gamelines` / `ratings` | `props` where a book quoted the player |
+
+### What actually changed
+
+**One adapter, two fetchers.** `fetchOddsSgo` returns player props in the row
+shape every odds provider here emits; `fetchGameLinesSgo` returns the week's
+spreads and totals in the shape `_espnOdds` already returned, so
+`_gameLineMove` reads it unchanged. Both go through `_sgoEvents`, one paged
+`/events` read with the key in an `x-api-key` header.
+
+**The props reach the product through the snapshot store, not the season
+overlay.** SGO is deliberately **not** in `ODDS_PROVIDERS`. Every row it
+returns is a game line, `buildVegasOverlay` rejects those by design (a prop for
+Sunday is not a season total), and listing it would spend a paid pull on rows
+that get thrown away. It is in `PROVIDER_ODDS`, which `runMarketSnapshot` runs
+on the job clock, and from there the weekly board reads it as `ctx.weekMarkets`.
+That is the path that puts `props` under a player's number.
+
+**The game lines are merged, not substituted.** `mergeGameLines` matches on the
+two clubs within a two-day window — the same rule `mergeSchedule` uses, and for
+the same reason — and then applies one rule: **the number of record is the one a
+reader could still bet into.** A fixture that has not kicked off is repriced off
+the paid feed and marked `lineSrc: 'sportsgameodds'`. A game already played
+keeps the spine's own closing line, because that is the historical record and a
+live feed has nothing truer to say about a game that is over. The book pair
+rides along either way, because it belongs to the book and not to the fixture.
+
+**`espn-gamelines` is now `book-gamelines`.** The provider reads whatever book
+the schedule refresh merged on. With a key that is SGO; without one it is still
+ESPN. The old name would have been a lie half the time.
+
+### Three traps, and what stops each
+
+1. **The sign.** A book quotes the home side's handicap (`-2.5`); the spine
+   writes the same game as a home margin (`+2.5`). An unflipped spread inverts
+   every favorite on the site and nothing on the page would look wrong.
+   `parseSgoEventLine` flips it, `-0` included, and the test asserts a pick'em
+   survives as `0`.
+2. **The pairing.** SGO ships each side of a market as its own entry keyed by
+   `{statID}-{statEntityID}-{periodID}-{betTypeID}-{sideID}`. An over whose
+   under is lost is a line with no price to de-vig; a market read from both
+   sides is one book counted twice in the consensus. The parser anchors on one
+   side (`over`, or `yes` for an anytime touchdown) and looks the other up.
+3. **The pair behind a move.** Open, current and movement must come from ONE
+   book or "it opened at 46.5 and it is 48.5 now" is a sentence about two of
+   them. `_sgoBookPair` picks the first book in name order that quotes both, so
+   the same fixture picks the same book on every run. The printed number stays
+   the consensus, which is the shape the page already prints.
+
+### It has never run against the live service
+
+There is no key, and `api.sportsgameodds.com` is unreachable from the sandbox
+this repo is developed in. The adapter is written to SGO's published v2
+documentation and to the field names in their own TypeScript SDK
+(`sports-odds-api@2.1.0`), and `tools/test-sgo.mjs` holds all of it — parsing,
+pairing, the sign, the merge rule, paging, and the key never leaving a header —
+to `tools/fixtures/sgo-nfl-week.json`. **Treat the first real pull as a test.**
+`/api/admin/market-status` reports the row count and the provider list; check
+both before believing a number the feed produced.
+
+**Licensing is open.** `docs/data-sources.md` R8 is the question R3 has now
+answered for the other feed, asked of this one: a paid subscription licenses
+*use*, not necessarily *redisplay* in a paid product. R3 closed on 2026-09-10
+with The Odds API's terms in writing, so it is the template for the SGO
+inquiry rather than a fellow unknown. Two things hold the exposure down and neither settles it —
+no page names a book (the printed line is SGO's consensus; the anchor book's
+name reaches `book.name` on the API payloads and is rendered nowhere), and
+nothing is passed through raw. Send the email.
+
+**R1 got smaller.** The reason the ESPN swap had to trade the opening line away
+is gone: SGO carries an opener under a documented API. `_espnOdds` is still the
+live source while the key is unset, so take it out in the same commit that
+turns the key on — not before.
+
+### The printed line is now an average, not a winner
+
+Adding a third source made the old rule indefensible. A fixture can be priced
+by the spine's own column in `games.csv`, by the scoreboard's single named
+book, and by the paid feed's consensus, and the site used to resolve that by
+**precedence**: the spine won, ESPN filled blanks, and SGO replaced both on an
+upcoming game. Three estimates of the same number, two of them thrown away, and
+the printed line jumping whenever the winner changed.
+
+`lineConsensus` replaces it. Each layer records its own quote in `g.quotes` —
+`mergeSchedule` seeds `nflverse` and records `espn`, `mergeGameLines` records
+`sportsgameodds` — and the number the site prints is their **mean**. The pass
+runs on every schedule refresh whether or not the paid feed is configured,
+because the spine and the scoreboard are two sources on their own.
+
+**This changes displayed lines today, with no key set.** ESPN used to fill only
+what `games.csv` left blank; it now averages with it on every upcoming fixture.
+Expect the spread and total under `/the-line` and `/previews` to shift by a
+fraction of a point against what the same build printed yesterday.
+
+Four things to know about it:
+
+- **It fails softly.** A source that goes stale or starts quoting nonsense
+  moves the line by a fraction of its error instead of becoming the line. That
+  is the main reason to prefer a mean here over any winner.
+- **It is not a bettable number, and does not pretend to be.** 2.5 and 3
+  average to 2.8, the site's usual one decimal on a derived figure.
+  `lineSources` (and the `lineSrc` string beside it, now always populated)
+  rides on every game payload, so an average is never shown that a reader
+  cannot take apart. Sources are listed per FIXTURE, not per market.
+- **It freezes at kickoff.** A game that has started keeps the spine's own
+  number, which by then is the closing line and the historical record every
+  backtest reads. Averaging a live feed's last-seen value into a played game
+  would quietly rewrite history.
+- **The book pair is NOT averaged and cannot be.** `g.book` stays one book's
+  open and current, so `_gameLineMove` keeps a single source behind every
+  movement figure. The printed line beside it is the consensus. Those are two
+  different questions and `lineConsensus` is the one place that says so.
+
+**The equal weighting is a judgment call, not arithmetic.** `games.csv` is
+itself a consensus and ESPN's number is one book, so a 50/50 mean slightly
+double-counts that book. Weighting them is a defensible future change; nothing
+here assumes equal weight beyond the mean itself.
+
+**The props side already averaged and was left alone.** Books are the sources
+there, not feeds: `buildVegasOverlay` takes the mean across books for the
+season overlay and `vegasCountMarket` the median for the weekly one, and two
+configured providers simply contribute more books to the same pool. Where both
+feeds report the SAME book, `snapshotWrite` keeps the first (SGO) and drops the
+second rather than averaging — two reports of one book's line is not two
+sources, and blurring them would invent a number that book never posted.
+
