@@ -1,5 +1,7 @@
 # Iron Tuna — Project Handoff
 
+CBS browser connector prototype: `extensions/cbs-connector` contains a minimal Edge/Chrome MV3 popup using activeTab plus the Iron Tuna host permission. It reads only the historical inline CBS API-token declaration and uses the signed-in Iron Tuna tab to call existing connect/team endpoints. See its README for installation and privacy details. `tools/test-cbs-extension.mjs` validates boundaries and the popup flow with synthetic data. Current live token availability and a full real-league import remain unverified; this is a test version, not a completed production rollout.
+
 CBS sync follow-up (September 11, 2026): My Leagues now shows inline CBS progress/errors and rejects email addresses in the league field. The connector still requires an existing CBS Fantasy API token; CBS account sign-in/token acquisition and a successful live league import remain unfinished. See `docs/league-sync.md` section 3.3. Enabling the flag alone does not complete this flow.
 
 Tuna Market Signal setup, provider access, storage, scoring and rollout notes:

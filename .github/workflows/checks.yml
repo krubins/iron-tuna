@@ -738,6 +738,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-cbs-ui.mjs
 
+      - name: CBS browser connector
+        if: ${{ !cancelled() }}
+        run: node tools/test-cbs-extension.mjs
+
       # Every deployed script that the pages load. it-sync.js is loaded by
       # nine in-season pages; a syntax error there takes the league strip and
       # the personalized modules off all of them at once.
