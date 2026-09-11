@@ -7825,8 +7825,8 @@ const NEWSROOM_FLAGS = {
   // scheduled refresh of leagues already connected on it.
   LEAGUE_SYNC:           { dflt: true,  note: 'Sync My League: the league model, My Leagues, and every personalized module' },
   SLEEPER_SYNC:          { dflt: false, note: 'the Sleeper connector; OFF until Sleeper’s commercial license is in writing (docs/data-sources.md R2)' },
-  YAHOO_SYNC:            { dflt: false, note: 'the Yahoo OAuth connector; needs YAHOO_CLIENT_ID, YAHOO_CLIENT_SECRET and LEAGUE_TOKEN_KEY' },
-  CBS_SYNC:              { dflt: false, note: 'CBS league-token connector; needs LEAGUE_TOKEN_KEY and verified CBS access' },
+  YAHOO_SYNC:            { dflt: false, note: 'the Yahoo OAuth connector; needs YAHOO_CLIENT_ID, YAHOO_CLIENT_SECRET and league-token encryption' },
+  CBS_SYNC:              { dflt: false, note: 'CBS league-token connector; needs league-token encryption and verified CBS access' },
   ESPN_SYNC:             { dflt: false, note: 'the ESPN connector; no supported path exists, the adapter is a placeholder' },
   PERSONALIZED_WAIVERS:  { dflt: true,  note: 'the Pickup Advisor on the players actually available in a synced league' },
   PERSONALIZED_LINEUP:   { dflt: true,  note: 'Best Lineup, Your Matchup, roster alerts and playoff readiness from a synced roster' },
@@ -10756,7 +10756,8 @@ async function pruneAnalytics(env, keepDays) {
 // is behind FLAG_SLEEPER_SYNC, default OFF, until a license is in writing.
 // Yahoo is OAuth 2.0 with the reader's consent and needs client credentials;
 // it is behind FLAG_YAHOO_SYNC. CBS uses a reader-supplied per-league token,
-// sealed under LEAGUE_TOKEN_KEY, and is behind FLAG_CBS_SYNC. ESPN has no
+// sealed under a dedicated LEAGUE_TOKEN_KEY when present or a domain-separated
+// key derived from AUTH_SECRET, and is behind FLAG_CBS_SYNC. ESPN has no
 // supported path (see LEAGUE_PROVIDERS.espn).
 const LEAGUE_CONTRACT = 1;
 const LEAGUE_DDL = [
@@ -10806,12 +10807,20 @@ async function leagueSessionEmail(request, env) {
   if (env.LEADS_DB && o.sid) { try { const row = await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE id=?').bind(o.sid).first(); if (!row) return null; } catch (e) {} }
   return String(o.e).toLowerCase();
 }
-// Secrets at rest. OAuth tokens are sealed with AES-GCM under a key derived
-// from LEAGUE_TOKEN_KEY; without that secret no OAuth provider can connect,
-// and the admin board says so. A token never goes to the browser.
+// Secrets at rest. OAuth and provider tokens are sealed with AES-GCM. A
+// dedicated LEAGUE_TOKEN_KEY takes precedence. Deployments that already have
+// the required AUTH_SECRET may use a domain-separated derivation instead, so a
+// missing optional secret cannot strand league linking. A token never goes to
+// the browser.
 let _LEAGUE_AES = null, _LEAGUE_AES_FOR = '';
+function leagueTokenSecret(env) {
+  if (!env) return '';
+  if (env.LEAGUE_TOKEN_KEY) return String(env.LEAGUE_TOKEN_KEY);
+  return env.AUTH_SECRET ? 'iron-tuna:league-token:v1:' + String(env.AUTH_SECRET) : '';
+}
+function leagueTokenConfigured(env) { return !!leagueTokenSecret(env); }
 async function leagueAesKey(env) {
-  const secret = env && env.LEAGUE_TOKEN_KEY;
+  const secret = leagueTokenSecret(env);
   if (!secret) return null;
   if (_LEAGUE_AES && _LEAGUE_AES_FOR === secret) return _LEAGUE_AES;
   const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
@@ -11239,7 +11248,7 @@ const YAHOO_AUTH = 'https://api.login.yahoo.com/oauth2/request_auth';
 const YAHOO_TOKEN = 'https://api.login.yahoo.com/oauth2/get_token';
 const YAHOO_API = 'https://fantasysports.yahooapis.com/fantasy/v2';
 const YAHOO_SCOPE = 'fspt-r';
-function yahooConfigured(env) { return !!(env && env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET && env.LEAGUE_TOKEN_KEY); }
+function yahooConfigured(env) { return !!(env && env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET && leagueTokenConfigured(env)); }
 function yahooRedirect(env, origin) { return (env && env.YAHOO_REDIRECT_URI) || (origin + '/api/oauth/yahoo/callback'); }
 async function yahooTokenExchange(env, params) {
   const body = new URLSearchParams(params).toString();
@@ -11535,7 +11544,7 @@ function cbsError(code) {
 }
 const CBS_RESOURCES = new Set(['details', 'rules', 'teams', 'rosters', 'schedules', 'standings/overall', 'transactions/waiver-order', 'transaction-list/log']);
 async function cbsGet(env, id, token, resource, params = {}) {
-  if (!flagOn(env, 'CBS_SYNC') || !env.LEAGUE_TOKEN_KEY) throw new LeagueProviderError('provider_disabled', 'CBS sync needs FLAG_CBS_SYNC and LEAGUE_TOKEN_KEY.');
+  if (!flagOn(env, 'CBS_SYNC') || !leagueTokenConfigured(env)) throw new LeagueProviderError('provider_disabled', 'CBS sync needs FLAG_CBS_SYNC and league-token encryption.');
   id = cbsLeagueId(id);
   if (!CBS_RESOURCES.has(resource)) throw cbsError('invalid_response');
   if (!token) throw cbsError('expired_authorization');
@@ -11650,7 +11659,7 @@ function cbsNormalize(raw, ctx) {
 const PROVIDER_CBS = {
   id: 'cbs', label: 'CBS Sportsline', auth: 'league_token', flag: 'CBS_SYNC',
   terms: 'Reader-supplied league access token, encrypted at rest. Read-only requests. Disabled until CBS access and commercial terms have been verified.',
-  needs: env => !!(env && env.LEAGUE_TOKEN_KEY),
+  needs: env => leagueTokenConfigured(env),
   async discover(env, conn, input) {
     const id = cbsLeagueId(input.leagueId);
     const body = await cbsGet(env, id, conn.token, 'details');
@@ -12446,8 +12455,8 @@ async function leagueRoutes(request, env, url, ctx) {
     const conns = await q('SELECT provider, status, COUNT(*) AS n FROM provider_connections GROUP BY provider, status');
     const leagues = await q('SELECT id, provider, provider_league_id, name, season, num_teams, sync_status, last_ok_at, last_sync_at, next_sync_at, failures, last_error, user_team_id FROM leagues ORDER BY updated_at DESC LIMIT 60');
     const rateLimited = recent.filter(r => /rate_limited/.test(String(r.error || ''))).length;
-    return json({ ok: true, contract: LEAGUE_CONTRACT, providers: leagueProviderReport(env), flags: Object.fromEntries(['LEAGUE_SYNC', 'SLEEPER_SYNC', 'YAHOO_SYNC', 'ESPN_SYNC', 'PERSONALIZED_WAIVERS', 'PERSONALIZED_LINEUP', 'PERSONALIZED_TRADES', 'PERSONALIZED_STORIES'].map(k => [k, flagOn(env, k)])),
-                  tokenKey: !!env.LEAGUE_TOKEN_KEY, metrics: { byProvider, runs7d: runs.map(r => ({ ...r, successRate: r.n ? Math.round(100 * r.ok / r.n) : null, avgMs: r.avg_ms != null ? Math.round(r.avg_ms) : null })), rateLimited7d: rateLimited },
+    return json({ ok: true, contract: LEAGUE_CONTRACT, providers: leagueProviderReport(env), flags: Object.fromEntries(['LEAGUE_SYNC', 'SLEEPER_SYNC', 'YAHOO_SYNC', 'CBS_SYNC', 'ESPN_SYNC', 'PERSONALIZED_WAIVERS', 'PERSONALIZED_LINEUP', 'PERSONALIZED_TRADES', 'PERSONALIZED_STORIES'].map(k => [k, flagOn(env, k)])),
+                  tokenKey: leagueTokenConfigured(env), metrics: { byProvider, runs7d: runs.map(r => ({ ...r, successRate: r.n ? Math.round(100 * r.ok / r.n) : null, avgMs: r.avg_ms != null ? Math.round(r.avg_ms) : null })), rateLimited7d: rateLimited },
                   recent, failing, misses, connections: conns, leagues, ran }, 200, c);
   }
 
