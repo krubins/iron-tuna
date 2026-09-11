@@ -38,7 +38,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -50,7 +50,30 @@ console.log('\nthe migration');
   ok('every package absorbs what the table says it absorbs', Object.entries(H.LEGACY_CONTENT).filter(([k, v]) => v.disposition === 'merged' && H.CONTENT_KINDS[v.destination]).every(([k, v]) => (H.CONTENT_KINDS[v.destination].absorbs || []).includes(k)));
   ok('two crons that both run the tick are a problem', !H.newsroomAudit(['*/15 * * * *', '0 * * * *']).ok);
   ok('no cron is a problem', !H.newsroomAudit([]).ok);
-  ok('sixteen scheduled packages and one unscheduled', Object.values(H.CONTENT_KINDS).filter(k => !k.unscheduled).length === 16 && H.CONTENT_KINDS.breaking.unscheduled === true);
+  ok('seventeen scheduled packages and one unscheduled', Object.values(H.CONTENT_KINDS).filter(k => !k.unscheduled).length === 17 && H.CONTENT_KINDS.breaking.unscheduled === true);
+  ok('the game recap is the one per-game package, and carries no clock slot', H.CONTENT_KINDS['game-recap'].perGame === true
+    && H.CONTENT_KINDS['game-recap'].day === null && H.CONTENT_KINDS['game-recap'].hour === null
+    && Object.values(H.CONTENT_KINDS).filter(k => k.perGame).length === 1);
+  ok('a per-game kind with a clock slot as well is a problem', (() => {
+    // The audit reads CONTENT_KINDS directly, so the check is made against a
+    // temporarily slotted copy and put back.
+    const K = H.CONTENT_KINDS['game-recap']; const day = K.day, hour = K.hour;
+    K.day = 'Sun'; K.hour = 19;
+    const bad = H.newsroomAudit(['*/15 * * * *']);
+    K.day = day; K.hour = hour;
+    return !bad.ok && bad.problems.some(p => /per-game kind also carries a clock slot/.test(p));
+  })());
+  ok('the recap targets only games the feed has marked final', (() => {
+    const gs = [{ id: 'a', status: 'final' }, { id: 'b', status: 'in' }, { id: 'c', status: null }];
+    const t = H.CONTENT_KINDS['game-recap'].targets(gs);
+    return t.length === 1 && t[0].id === 'a';
+  })());
+  ok('the recap asks for the three layers, the findings and the wrap', (() => {
+    const w = H.sectionsFor('game-recap', 'weekly');
+    return ['whatScored', 'usageBehindIt', 'nextWeekSignals', 'components', 'wrap'].every(k => w.includes(k))
+      && w.indexOf('whatScored') < w.indexOf('usageBehindIt') && w.indexOf('usageBehindIt') < w.indexOf('nextWeekSignals')
+      && H.sectionsFor('game-recap', 'dfs').includes('wrap');
+  })());
   ok('every package has a primary analyst on the staff and both lenses', Object.values(H.CONTENT_KINDS).every(k => H.ANALYSTS[k.analyst] && k.lens === 'both'));
   ok('the worth-gated pieces are the positional and QB features', ['quarterback-monday', 'tailback-tuesday', 'wideout-wednesday', 'tight-end-thursday'].every(k => H.CONTENT_KINDS[k].gate === 'worth'));
   ok('the Routines table names the two Pick Routines as retired and The Tell as retained', H.ROUTINE_MIGRATION.filter(r => /The Pick/.test(r.name)).every(r => r.disposition === 'retired') && H.ROUTINE_MIGRATION.find(r => /The Tell/.test(r.name)).disposition === 'retained');
@@ -415,6 +438,129 @@ console.log('\nthe writer reads a stream and knows when it was cut off');
   ok('a cut-off answer says so', cut.stop === 'max_tokens');
   ok('an error inside the stream is an error', H._anthropicStreamText(ev({ type: 'error', error: { type: 'overloaded_error' } })).error === 'provider_overloaded_error');
   ok('the writer has room for two lenses over a full slate', H.WRITER_MAX_TOKENS >= 12000 && H.WRITER_TIMEOUT_MS >= 240000);
+}
+
+console.log('\nwhat the site called before kickoff, and how it landed');
+{
+  const frz = (rows) => ({ takenAt: 1000, kickoff: 2000, rows });
+  const row = (o) => ({ key: o.key || 'p|WR', name: o.name || 'A Player', position: 'WR', team: 'AAA',
+    consensusRank: o.cr, consensusPts: o.cp, ironTunaRank: o.ir, ironTunaPts: o.ip, vegasRank: 10, vegasPts: 12 });
+  const scored = (key, points) => new Map([[key, { points, line: '5 of 8, 60 receiving yards, 0 TD' }]]);
+
+  ok('with no frozen board there is no claim at all', (() => {
+    const v = H._vindication(null, scored('p|WR', 30), 1);
+    return v.available === false && !v.hits.length && !v.misses.length && v.headline === null && /frozen/.test(v.reason);
+  })());
+
+  // Iron Tuna 18.0 against a consensus 10.0, eleven places higher: a called
+  // overperformance. He scored 22, which beats the consensus number.
+  ok('a called overperformance that happened is a hit', (() => {
+    const v = H._vindication(frz([row({ key: 'p|WR', cr: 24, cp: 10, ir: 13, ip: 18 })]), scored('p|WR', 22), 1);
+    return v.available && v.hits.length === 1 && !v.misses.length && v.hits[0].direction === 'over' && v.hits[0].margin === 12;
+  })());
+
+  ok('the same call that did not happen is a miss, and never a hit', (() => {
+    const v = H._vindication(frz([row({ key: 'p|WR', cr: 24, cp: 10, ir: 13, ip: 18 })]), scored('p|WR', 4), 1);
+    return v.available && !v.hits.length && v.misses.length === 1 && v.misses[0].direction === 'over';
+  })());
+
+  ok('a called underperformance is graded the other way round', (() => {
+    const hit  = H._vindication(frz([row({ key: 'p|WR', cr: 8, cp: 16, ir: 20, ip: 9 })]), scored('p|WR', 5), 1);
+    const miss = H._vindication(frz([row({ key: 'p|WR', cr: 8, cp: 16, ir: 20, ip: 9 })]), scored('p|WR', 25), 1);
+    return hit.hits.length === 1 && hit.hits[0].direction === 'under' && miss.misses.length === 1 && !miss.hits.length;
+  })());
+
+  ok('a disagreement too small to have been a call is not one, in either direction', (() => {
+    const pts   = H._vindication(frz([row({ key: 'p|WR', cr: 24, cp: 10, ir: 13, ip: 11 })]), scored('p|WR', 30), 1);
+    const ranks = H._vindication(frz([row({ key: 'p|WR', cr: 15, cp: 10, ir: 13, ip: 18 })]), scored('p|WR', 30), 1);
+    return !pts.hits.length && !pts.misses.length && !ranks.hits.length && !ranks.misses.length;
+  })());
+
+  ok('a player the frozen board carries but the box score does not is skipped, not graded', (() => {
+    const v = H._vindication(frz([row({ key: 'p|WR', cr: 24, cp: 10, ir: 13, ip: 18 })]), new Map(), 1);
+    return v.available && !v.hits.length && !v.misses.length;
+  })());
+
+  ok('only a wide enough hit reaches the headline', (() => {
+    const small = H._vindication(frz([row({ key: 'p|WR', cr: 20, cp: 10, ir: 13, ip: 18 })]), scored('p|WR', 13), 1);
+    const big   = H._vindication(frz([row({ key: 'p|WR', cr: 24, cp: 10, ir: 13, ip: 18 })]), scored('p|WR', 22), 1);
+    return small.hits.length === 1 && small.headline === null
+      && big.hits.length === 1 && big.headline && big.headline.name === 'A Player';
+  })());
+
+  ok('a miss is never the headline, however large', (() => {
+    const v = H._vindication(frz([row({ key: 'p|WR', cr: 24, cp: 10, ir: 13, ip: 18 })]), scored('p|WR', 0), 1);
+    return v.misses.length === 1 && v.headline === null;
+  })());
+
+  ok('the hits are ordered by how far the result beat the consensus', (() => {
+    const rows = [row({ key: 'a|WR', name: 'Ann Player', cr: 24, cp: 10, ir: 13, ip: 18 }),
+                  row({ key: 'b|WR', name: 'Bob Player', cr: 30, cp: 8, ir: 12, ip: 16 })];
+    const m = new Map([['a|WR', { points: 14 }], ['b|WR', { points: 28 }]]);
+    const v = H._vindication(frz(rows), m, 1);
+    return v.hits.length === 2 && v.hits[0].name === 'Bob Player';
+  })());
+
+  ok('the writer is handed the misses as well as the hits, and told to print one', (() => {
+    const v = H._vindication(frz([row({ key: 'p|WR', cr: 24, cp: 10, ir: 13, ip: 18 })]), scored('p|WR', 4), 1);
+    const s = H._voiceBlock({ meta: { analyst: 'raines', dfsAnalyst: 'park' }, calledIt: v });
+    return /REPORT BOTH/.test(s) && /at least one of them goes in the section/.test(s) && !/YOU/.test(s);
+  })());
+
+  ok('the you-are-welcome headline is offered only on a headline-sized hit, and spelled right', (() => {
+    const v = H._vindication(frz([row({ key: 'p|WR', cr: 24, cp: 10, ir: 13, ip: 18 })]), scored('p|WR', 22), 1);
+    const s = H._voiceBlock({ meta: { analyst: 'raines', dfsAnalyst: 'park' }, calledIt: v });
+    return s.includes("YOU'RE WELCOME") && !/YOUR WELCOME/.test(s) && /at most once/.test(s);
+  })());
+
+  ok('with no frozen board the writer is told to claim nothing', (() => {
+    const s = H._voiceBlock({ meta: { analyst: 'raines', dfsAnalyst: 'park' }, calledIt: H._vindication(null, new Map(), 1) });
+    return /Make no claim about having called anything/.test(s) && !/YOU/.test(s);
+  })());
+
+  ok('a row missing a projection or a rank is skipped, never counted as a call', (() => {
+    const bad = (o) => ({ takenAt: 1, kickoff: 2, rows: [{ key: 'p|WR', name: 'A Player', position: 'WR', team: 'AAA',
+      consensusRank: 24, consensusPts: 10, ironTunaRank: 13, ironTunaPts: 18, vegasRank: 10, vegasPts: 12, ...o }] });
+    const m = new Map([['p|WR', { points: 22 }]]);
+    return [{ ironTunaPts: null }, { consensusPts: undefined }, { ironTunaRank: null }, { consensusRank: NaN }]
+      .every(o => { const v = H._vindication(bad(o), m, 1); return !v.hits.length && !v.misses.length; })
+      && H._vindication(bad({}), new Map([['p|WR', { points: null }]]), 1).hits.length === 0;
+  })());
+  ok('the section is asked for and required together, or neither', (() => {
+    const frz = { takenAt: 1, kickoff: 2, rows: [{ key: 'p|WR', name: 'A Player', position: 'WR', team: 'AAA', consensusRank: 24, consensusPts: 10, ironTunaRank: 13, ironTunaPts: 18, vegasRank: 10, vegasPts: 12 }] };
+    const withCall = { meta: { kind: 'game-recap', lens: 'both' }, calledIt: H._vindication(frz, new Map([['p|WR', { points: 22 }]]), 1) };
+    const without  = { meta: { kind: 'game-recap', lens: 'both' }, calledIt: H._vindication(null, new Map(), 1) };
+    // No packet at all is the full calendar list, which is what the audit and
+    // the kinds table read.
+    return H.sectionsFor('game-recap', 'weekly').includes('weCalledIt')
+      && H.sectionsFor('game-recap', 'weekly', withCall).includes('weCalledIt')
+      && !H.sectionsFor('game-recap', 'weekly', without).includes('weCalledIt');
+  })());
+  ok('a recap with nothing called is not held for the section it was told to omit', (() => {
+    const without = { meta: { kind: 'game-recap', lens: 'weekly' }, calledIt: H._vindication(null, new Map(), 1),
+                      allowed: { names: [], numbers: [], analysts: ['Mike Raines'] } };
+    const body = { headline: 'A game', weekly: Object.fromEntries(H.sectionsFor('game-recap', 'weekly', without).map(k => [k, ['x']])) };
+    const fc = H.factCheck(body, without);
+    return !fc.problems.some(p => /missing:weekly.weCalledIt/.test(p));
+  })());
+  ok('but a recap that DID call something is held if it leaves the section out', (() => {
+    const frz = { takenAt: 1, kickoff: 2, rows: [{ key: 'p|WR', name: 'A Player', position: 'WR', team: 'AAA', consensusRank: 24, consensusPts: 10, ironTunaRank: 13, ironTunaPts: 18, vegasRank: 10, vegasPts: 12 }] };
+    const withCall = { meta: { kind: 'game-recap', lens: 'weekly' }, calledIt: H._vindication(frz, new Map([['p|WR', { points: 22 }]]), 1),
+                       allowed: { names: [], numbers: [], analysts: ['Mike Raines'] } };
+    const body = { headline: 'A game', weekly: Object.fromEntries(H.sectionsFor('game-recap', 'weekly').filter(k => k !== 'weCalledIt').map(k => [k, ['x']])) };
+    return H.factCheck(body, withCall).problems.some(p => /missing:weekly.weCalledIt/.test(p));
+  })());
+  ok('the frozen row keeps all three boards and drops a bye, an out and a kicker', (() => {
+    const board = { players: [
+      { key: 'a|WR', name: 'Ann Player', position: 'WR', pos: 'WR', team: 'AAA', weeks: [{ week: 1 }], consensus: { rank: 5, points: 12 }, ironTuna: { rank: 3, points: 15 }, vegas: { rank: 4, points: 14, basis: 'props' }, injury: null },
+      { key: 'b|WR', name: 'Bye Player', position: 'WR', pos: 'WR', team: 'AAA', weeks: [{ week: 1, bye: true }], consensus: { rank: 6, points: 0 }, ironTuna: { rank: 6, points: 0 }, vegas: { rank: 6, points: 0 } },
+      { key: 'c|WR', name: 'Out Player', position: 'WR', pos: 'WR', team: 'AAA', weeks: [{ week: 1, out: true }], consensus: { rank: 7, points: 0 }, ironTuna: { rank: 7, points: 0 }, vegas: { rank: 7, points: 0 } },
+      { key: 'k|K',  name: 'Kick Player', position: 'K', pos: 'K', team: 'AAA', weeks: [{ week: 1 }], consensus: { rank: 1, points: 8 }, ironTuna: { rank: 1, points: 8 }, vegas: { rank: 1, points: 8 } },
+      { key: 'z|WR', name: 'Zed Player', position: 'WR', pos: 'WR', team: 'ZZZ', weeks: [{ week: 1 }], consensus: { rank: 1, points: 20 }, ironTuna: { rank: 1, points: 20 }, vegas: { rank: 1, points: 20 } }
+    ] };
+    const rows = H._freezeRows(board, 1, new Set(['AAA']));
+    return rows.length === 1 && rows[0].key === 'a|WR' && rows[0].consensusRank === 5 && rows[0].ironTunaPts === 15 && rows[0].vegasBasis === 'props';
+  })());
 }
 
 console.log('\nbreaking news');
