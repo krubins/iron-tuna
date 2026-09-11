@@ -114,6 +114,11 @@ for the existing client engine), `playoffs`, `availability`.
 
 ## Part 3. Status, terms, flags, env, deployment
 
+League sync is a free account feature. Any valid email may request the same
+one-time magic link used by existing customers; the resulting session scopes
+league rows and encrypted provider credentials to that email. Paid endpoints
+still check `isEntitled`, so signing in for league sync does not unlock them.
+
 ### 3.1 The deliverables (spec §47)
 
 | # | Deliverable | Status |

@@ -218,11 +218,11 @@ async function chargeEmail(env, ch) {
 async function sendLoginEmail(env, email, link) {
   if (!env.RESEND_API_KEY) return;
   const from = env.EMAIL_FROM || 'Iron Tuna <login@irontuna.com>';
-  const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">Sign in to Iron Tuna</h2><p>Tap to unlock your purchase on this device:</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Sign in to Iron Tuna</a></p><p style="color:#667;font-size:13px">This link expires in 15 minutes and can be used once. If you did not request it, ignore this email.</p></div>';
+  const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">Sign in to Iron Tuna</h2><p>Tap to sign in on this device. League sync is free; any paid tools you already own will be unlocked too.</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Sign in to Iron Tuna</a></p><p style="color:#667;font-size:13px">This link expires in 15 minutes and can be used once. If you did not request it, ignore this email.</p></div>';
   try { await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ from: from, to: email, subject: 'Your Iron Tuna sign-in link', html: html }) }); } catch (e) {}
 }
-// The comp email is deliberately not sendLoginEmail. That one says "unlock your
-// purchase", which is the wrong sentence for someone who never bought anything,
+// The comp email is deliberately not sendLoginEmail. It explains the full paid
+// bundle granted by an admin, while the self-serve email covers free accounts too,
 // and it swallows every failure — fine for a self-serve login that answers
 // ok:true either way, useless for an admin who needs to know whether the thing
 // they just sent actually left the building. So this one reports what happened.
@@ -13331,10 +13331,13 @@ export default {
       const email = String(b.email || '').trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: true }, 200, c);
       if (env.RATE_KV) { const k = 'mlreq:' + email; const n = parseInt(await env.RATE_KV.get(k) || '0', 10); if (n >= 5) return json({ ok: true }, 200, c); await env.RATE_KV.put(k, String(n + 1), { expirationTtl: 86400 }); }
-      if (env.AUTH_SECRET && await isEntitled(env, email)) {
+      // A signed session is also the account boundary for free league sync. Do
+      // not require a purchase here; paid routes still enforce isEntitled.
+      if (env.AUTH_SECRET) {
         const nonce = crypto.randomUUID();
         if (env.RATE_KV) await env.RATE_KV.put('mln:' + nonce, '1', { expirationTtl: 900 });
-        const token = await makeToken(env.AUTH_SECRET, { e: email, n: nonce, t: 'magic', exp: Date.now() + 15 * 60 * 1000 });
+        const returnTo = String(b.returnTo || '') === '/my-league' ? '/my-league' : '/';
+        const token = await makeToken(env.AUTH_SECRET, { e: email, n: nonce, t: 'magic', r: returnTo, exp: Date.now() + 15 * 60 * 1000 });
         await sendLoginEmail(env, email, url.origin + '/api/auth/verify?token=' + encodeURIComponent(token));
       }
       return json({ ok: true }, 200, c);
@@ -13352,14 +13355,15 @@ export default {
         } catch (e) {}
       }
       const sess = await makeToken(env.AUTH_SECRET, { sid: sid, e: email, t: 'sess', exp: now + 90 * 24 * 3600 * 1000 });
-      return new Response(null, { status: 302, headers: { 'Location': url.origin + '/?restored=1', 'Set-Cookie': 'it_sess=' + sess + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (90 * 24 * 3600) } });
+      const returnTo = o.r === '/my-league' ? '/my-league' : '/';
+      return new Response(null, { status: 302, headers: { 'Location': url.origin + returnTo + (returnTo.includes('?') ? '&' : '?') + 'restored=1', 'Set-Cookie': 'it_sess=' + sess + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (90 * 24 * 3600) } });
     }
     if (url.pathname === '/api/auth/me') {
       const c = corsHeaders(request.headers.get('Origin'));
       const o = env.AUTH_SECRET ? await readToken(env.AUTH_SECRET, parseCookie(request.headers.get('Cookie'))['it_sess']) : null;
-      if (!o || o.t !== 'sess') return json({ entitled: false }, 200, c);
-      if (env.LEADS_DB) { try { const row = await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE id=?').bind(o.sid).first(); if (!row) return json({ entitled: false }, 200, c); await env.LEADS_DB.prepare('UPDATE sessions SET last_seen=? WHERE id=?').bind(Date.now(), o.sid).run(); } catch (e) {} }
-      return json({ entitled: await isEntitled(env, o.e), email: o.e, product: 'bundle' }, 200, c);
+      if (!o || o.t !== 'sess') return json({ signedIn: false, entitled: false }, 200, c);
+      if (env.LEADS_DB) { try { const row = await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE id=?').bind(o.sid).first(); if (!row) return json({ signedIn: false, entitled: false }, 200, c); await env.LEADS_DB.prepare('UPDATE sessions SET last_seen=? WHERE id=?').bind(Date.now(), o.sid).run(); } catch (e) {} }
+      return json({ signedIn: true, entitled: await isEntitled(env, o.e), email: o.e, product: 'bundle' }, 200, c);
     }
     if (url.pathname === '/api/auth/logout' && request.method === 'POST') {
       const c = corsHeaders(request.headers.get('Origin'));

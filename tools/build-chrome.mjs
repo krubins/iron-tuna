@@ -130,7 +130,8 @@ const NAV = [
   { label: 'Free cheat sheet', href: '{app}', cta: true },
 ];
 
-// Where the header button says "Save my league" instead of "Free cheat sheet".
+// Where the header button leads to account-backed league sync instead of the
+// browser-only draft cheat sheet.
 // A reader on the waiver board in October is not there to build a draft sheet,
 // and the one thing that improves every number in front of them is saving their
 // scoring and their FAAB budget. The draft CTA is still one click away in the
@@ -145,7 +146,7 @@ const NAV = [
 //
 // tools/test-chrome.mjs reads this set out of this file rather than copying it,
 // so adding a page here is one edit, not two.
-const IN_SEASON_CTA = { label: 'Save my league', href: '/in-season#league', cta: true };
+const IN_SEASON_CTA = { label: 'Sync my league', href: '/my-league', cta: true };
 //
 // The rankings section — the ribbon's six destinations and the fourteen
 // per-position pages under its two menus — is in-season by definition, so every

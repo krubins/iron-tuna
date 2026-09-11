@@ -1412,11 +1412,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   </nav>
   <nav class="mast-nav">
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
-    <a class="cta-gold" href="/in-season#league">Save My League</a>
-    <!-- The label is owned by the edition switcher below (it becomes "Auction
-         Manager", "Snake board" and so on), so the href has to be the draft ROOM
-         and not the cheat sheet, or the button says one thing and does another. -->
-    <a class="cta" id="navMgr" href="/auctiondraft?screen=board">Auction Manager</a>
+    <a class="cta-gold" id="navSync" href="/my-league">Sync My League</a>
   </nav>
 </div></header>
 <div class="dominant" role="doc-subtitle"><div class="wrap">
@@ -4023,7 +4019,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // back to are the same page.
   var posSub = document.getElementById('posSub');
   var SUB_TAIL = '';
-  var navMgr = document.getElementById('navMgr');
   var tbMgr = document.getElementById('tbMgr');
   var tbText = document.getElementById('tbText');
   var allocHead = document.getElementById('allocHead');
@@ -4045,7 +4040,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   edPainters.push(function () {
     var e = ED[edKey];
     if (posSub) posSub.textContent = e.posSub + SUB_TAIL;
-    if (navMgr) navMgr.textContent = e.mgr;
     if (tbMgr) tbMgr.textContent = 'Open the ' + (edKey === 'auction' ? 'Auction Manager' : e.mgr);
     // The band's pitch names the room it sells, so it cannot keep saying
     // "Auction Manager" to a reader who is drafting a snake.
