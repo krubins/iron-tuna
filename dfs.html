@@ -205,6 +205,43 @@ p{color:var(--sec);margin:0 0 16px}
 .df-bestball-path h2{margin:0 0 7px;font-size:22px}
 .df-bestball-path p{max-width:78ch;margin:0 0 14px;font-size:14px;line-height:1.65}
 .df-bestball-actions{display:flex;flex-wrap:wrap;gap:10px}
+.df-config{margin:18px 0 18px;border:1px solid var(--line2);border-radius:14px;background:var(--panel);padding:18px}
+.df-config-title{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:14px}
+.df-config-title span,.df-reading-head span{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-weight:800}
+.df-config-title b,.df-reading-head b{font-size:17px;color:var(--text)}
+.df-config-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.df-select-block{display:block;min-width:0}
+.df-select-kicker{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.df-select-label{display:block;color:var(--text);font-size:14px;font-weight:800;margin-bottom:7px}
+.df-select-label .df-term{font-size:11px;width:17px;height:17px;line-height:16px;text-align:center;border:1px solid var(--line2);border-radius:50%;margin-left:4px;color:var(--teal);border-bottom:1px solid var(--line2)}
+.df-select-block select{width:100%;min-height:44px;border:1px solid var(--line2);border-radius:9px;background:var(--bg);color:var(--text);font:700 14px var(--font-body);padding:9px 36px 9px 11px}
+.df-select-block select:disabled{opacity:.48;cursor:not-allowed}
+.df-select-help{margin:7px 0 0;font-size:11.5px;line-height:1.45;color:var(--muted)}
+.df-custom-games{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.df-custom-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
+.df-custom-head b{color:var(--text)} .df-custom-head span{font-size:12px;color:var(--muted)}
+.df-custom-games .btn{margin-top:10px;padding:8px 15px;font-size:13px}
+.df-setup-state{margin:13px 0 0;padding-top:11px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.5;color:var(--muted)}
+.df-setup-state.ready{color:var(--teal);font-weight:800}
+.df-play-week{margin:20px 0;border:1px solid rgba(191,145,0,.38);border-radius:14px;padding:20px;background:linear-gradient(180deg,rgba(191,145,0,.09),rgba(191,145,0,.025))}
+.df-play-week-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--goldink);font-weight:800}
+.df-play-week h2{margin:5px 0 8px;font-size:clamp(22px,3vw,30px)}
+.df-play-week-dek{font-size:15px;line-height:1.65;max-width:82ch}
+.df-play-week-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(250px,.7fr);gap:16px;margin-top:13px}
+.df-play-week-copy{font-size:14px;line-height:1.68;color:var(--sec)}
+.df-play-week-copy p{margin:0 0 10px}
+.df-play-week-score{border-left:1px solid rgba(191,145,0,.3);padding-left:16px}
+.df-play-week-score b{display:block;font-size:20px;color:var(--text)}
+.df-play-week-score span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+.df-reading{margin:22px 0}
+.df-reading-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
+.df-reading-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.df-reading-card{display:block;border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:16px;color:var(--text);text-decoration:none}
+.df-reading-card:hover{border-color:var(--teal);text-decoration:none}
+.df-reading-card>span{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);font-weight:800}
+.df-reading-card h3{margin:5px 0 6px;font-size:18px}.df-reading-card p{margin:0;font-size:13px;line-height:1.55}
+@media(max-width:850px){.df-config-grid{grid-template-columns:1fr}.df-play-week-grid{grid-template-columns:1fr}.df-play-week-score{border-left:0;border-top:1px solid rgba(191,145,0,.3);padding:12px 0 0}.df-reading-grid{grid-template-columns:1fr}}
+
 .df-game-scope{margin:18px 0;border:1px solid var(--line2);border-radius:12px;background:var(--panel);padding:15px 16px}
 .df-game-scope .df-game-style-head{margin-bottom:5px}
 .df-game-scope-intro{font-size:13px;line-height:1.6;color:var(--sec);margin:0 0 11px;max-width:86ch}
@@ -300,83 +337,86 @@ p{color:var(--sec);margin:0 0 16px}
 <p class="is-lede">Daily fantasy is one slate, one set of game lines and one cap. Iron Tuna solves that cap against the market&rsquo;s own numbers and gives you the roster first &mdash; then the branches off it: the build that clears a double-up, the build that wins a big field, and the swap available at every slot.</p>
 <div class="its-strip" data-season-strip></div>
 
+<div class="df-config" id="dfConfig">
+  <div class="df-config-title"><span>DraftKings DFS Setup</span><b>Match the contest you are actually entering</b></div>
+  <div class="df-config-grid">
+    <label class="df-select-block" for="dfGameStyleSelect">
+      <span class="df-select-kicker">First</span>
+      <span class="df-select-label">Game Style <span class="df-term" data-tip="The roster and scoring format DraftKings uses. This determines how a legal lineup is built before payout strategy is considered.">?</span></span>
+      <select id="dfGameStyleSelect" required>
+        <option value="">Select Game Style…</option>
+        <option value="flash-draft" title="A live-game DraftKings format played while the underlying game is in progress.">Flash Draft</option>
+        <option value="classic" title="The standard multi-game salary-cap format.">Classic</option>
+        <option value="showdown-captain" title="A single-game salary-cap format with one Captain spot and five FLEX spots.">Showdown Captain Mode</option>
+        <option value="pick6" title="A player-pick format built around statistical outcomes rather than a traditional salary-cap roster.">Pick6</option>
+        <option value="best-ball" title="Draft the roster once; the best eligible scorers are used automatically each week.">Best Ball</option>
+        <option value="tiers" title="No salary cap. Choose one player from each DraftKings tier.">Tiers</option>
+        <option value="in-game-showdown" title="A single-game Showdown format entered after the game has begun.">In-Game Showdown</option>
+        <option value="single-stat-yards" title="A single-stat contest focused on total yards.">Single Stat - Total Yards</option>
+        <option value="single-stat-touchdowns" title="A single-stat contest focused on touchdowns.">Single Stat - Touchdowns</option>
+        <option value="snake" title="A live snake draft using players from multiple games.">Snake</option>
+        <option value="snake-showdown" title="A live snake draft using players from one game.">Snake Showdown</option>
+        <option value="madden-classic" title="Classic-style DFS built around a Madden simulation slate.">Madden Classic</option>
+        <option value="madden-showdown-captain" title="Showdown Captain Mode built around a Madden simulation game.">Madden Showdown Captain Mode</option>
+      </select>
+      <p class="df-select-help" id="dfGameStyleHelp">Start by selecting the DraftKings roster format.</p>
+    </label>
+
+    <label class="df-select-block" for="dfGamesSelect">
+      <span class="df-select-kicker">Second</span>
+      <span class="df-select-label">Games <span class="df-term" data-tip="The games that define the eligible player pool. DraftKings may offer all-game, early-only, late-only, primetime, single-game and custom slates.">?</span></span>
+      <select id="dfGamesSelect" disabled required>
+        <option value="">Select Game Style first…</option>
+      </select>
+      <p class="df-select-help" id="dfGamesHelp">The exact game pool matters because players outside it cannot be used.</p>
+    </label>
+
+    <label class="df-select-block" for="dfPayoutSelect">
+      <span class="df-select-kicker">Third</span>
+      <span class="df-select-label">Payout Structure <span class="df-term" data-tip="How the contest awards prizes. The same legal roster can call for a very different strategy in Head-to-Head, a Double Up or a top-heavy tournament.">?</span></span>
+      <select id="dfPayoutSelect" disabled required>
+        <option value="">Select Games first…</option>
+        <option value="h2h" title="One lineup versus one opponent. The higher score wins.">Head-to-Head</option>
+        <option value="50-50" title="The top half of the field wins the same payout.">50/50</option>
+        <option value="double-up" title="Nearly half the field wins approximately twice the entry fee.">Double Up</option>
+        <option value="multiplier" title="A smaller winning group receives a fixed multiple of the entry fee, such as 3x, 5x or 10x.">Multiplier (3x / 5x / 10x)</option>
+        <option value="tournament-single" title="A top-heavy tournament in which each user may enter only one lineup.">Tournament - Single Entry</option>
+        <option value="tournament-multi" title="A top-heavy tournament allowing multiple lineups up to the stated entry limit.">Tournament - Multi-Entry</option>
+        <option value="satellite" title="A contest where the prize is typically entry into another higher-stakes contest.">Satellite / Qualifier</option>
+        <option value="private" title="A league or private contest with a custom field and payout structure.">League / Private Contest</option>
+      </select>
+      <p class="df-select-help" id="dfPayoutHelp">Select the way the contest pays before Iron Tuna chooses the appropriate risk profile.</p>
+    </label>
+  </div>
+
+  <div class="df-custom-games" id="dfCustomGames" hidden>
+    <div class="df-custom-head"><b>Custom Games</b><span>Select every game included in the DraftKings contest.</span></div>
+    <div class="df-game-grid" id="dfGameGrid"></div>
+    <button class="btn alt" id="dfCustomDone" type="button">Use selected games</button>
+  </div>
+  <p class="df-setup-state" id="dfSetupState">Complete all three selections to build and evaluate the contest.</p>
+</div>
+
+<section class="df-play-week" id="dfPlayWeek">
+  <div class="df-play-week-label">Play of the Week</div>
+  <h2 id="dfPlayWeekTitle">Evaluating this week&rsquo;s best risk/reward contest…</h2>
+  <p class="df-play-week-dek" id="dfPlayWeekDek">Iron Tuna compares the high-floor build with the additional upside and leverage available as the payout curve gets steeper.</p>
+  <div class="df-play-week-grid" id="dfPlayWeekBody"><p class="is-note">Waiting for this week&rsquo;s salary and projection board.</p></div>
+</section>
+
+<div class="df-reading">
+  <div class="df-reading-head"><span>DFS Academy</span><b>Understand the lobby before you optimize the lineup.</b></div>
+  <div class="df-reading-grid">
+    <a class="df-reading-card" href="/dfs-getting-started"><span>Start Here</span><h3>How DraftKings DFS Is Structured</h3><p>Game Style, game pool, payout structure, entry limits and why each choice changes the lineup you should build.</p></a>
+    <a class="df-reading-card" href="/dfs-strategy-guide"><span>Strategy</span><h3>Stacks, Correlation, Leverage and Contest Selection</h3><p>When correlation helps, when chalk is good, when leverage matters and how to match roster construction to the payout curve.</p></a>
+  </div>
+</div>
+
 <div class="rk-controls">
   <div class="rk-seg" id="dfSite" role="group" aria-label="Site"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button><button type="button" data-site="pk">Pick&rsquo;em</button><button type="button" data-site="sl">Sleeper picks</button></div>
   <div class="rk-seg" id="dfNav" role="group" aria-label="Section"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
 </div>
 
-<div class="df-game-style" id="dfGameStyle">
-  <div class="df-game-style-head"><span>Step 1</span><b>DraftKings Game Style</b></div>
-  <div class="df-game-style-options" role="group" aria-label="DraftKings game style">
-    <button class="df-game-style-card" type="button" data-game-style="classic" aria-pressed="true">
-      <b><span class="df-term" data-tip="DraftKings&rsquo; weekly salary-cap game. Build a lineup from the current slate while staying under the $50,000 cap.">Classic</span></b>
-      <span>Build one weekly NFL lineup under DraftKings&rsquo; $50,000 salary cap. This is the game style Iron Tuna&rsquo;s DFS optimizer is solving.</span>
-      <small>Select Classic &rarr; then choose your contest structure</small>
-    </button>
-    <button class="df-game-style-card" type="button" data-game-style="bestball" aria-pressed="false">
-      <b><span class="df-term" data-tip="Draft the roster once. DraftKings automatically uses your highest-scoring eligible players each week, so there are no weekly start/sit decisions.">Best Ball</span></b>
-      <span>Draft a season or multiweek roster by snake draft. DraftKings automatically counts your highest-scoring eligible players each week, with no weekly lineup management.</span>
-      <small>Select Best Ball &rarr; use Iron Tuna&rsquo;s Best Ball tools</small>
-    </button>
-  </div>
-</div>
-
-<div class="df-bestball-path" id="dfBestBallPath" hidden>
-  <h2>DraftKings Best Ball</h2>
-  <p>Best Ball does not use the weekly Classic lineup optimizer. You draft the roster once, then DraftKings automatically uses the highest-scoring eligible players each week. Iron Tuna&rsquo;s Best Ball tools therefore focus on draft value, roster construction, stacking, exposure and spike-week upside.</p>
-  <div class="df-bestball-actions">
-    <a class="btn" href="/bestball-insights">Open Best Ball Insights</a>
-    <a class="btn alt" href="/best-ball-draft-strategy">Best Ball Strategy Guide</a>
-  </div>
-</div>
-
-<!-- ── the contest shape ──────────────────────────────────────────────────────
-     One question, one control, above everything it governs. It used to be a
-     bare four-word segmented control buried inside Vegas Values, where it
-     re-sorted a table and nothing else; the roster a reader actually enters was
-     three sections further down behind a Build button they had to know to
-     press. The shape now drives the solve, the sort and the copy on every
-     section, so there is no second control anywhere that can disagree with it. -->
-<div id="dfStrategyGuide">
-<div class="df-game-style-head"><span>Step 2</span><b>Choose Your Classic Contest Structure</b></div>
-<div class="df-shapes" id="dfShape" role="group" aria-label="DraftKings Classic contest structure">
-  <button class="df-shape" type="button" data-contest="cash"><i>DraftKings lobby filter</i><b><span class="df-term" data-tip="A cash contest where roughly half the field wins the same payout. The goal is to finish above the cutoff, not to finish first.">50/50</span> &amp; <span class="df-term" data-tip="A cash contest where a winning entry returns about twice the entry fee. Roughly half the field is paid, after DraftKings&rsquo; fee.">Double Ups</span></b><span>The chalk/value roster. Favor players most likely to beat what their salaries require and avoid fragile longshots.</span></button>
-  <button class="df-shape" type="button" data-contest="single"><i>Look for [Single Entry]</i><b><span class="df-term" data-tip="A contest with a top-heavy prize structure where higher finishes earn more. Winning requires more upside than simply clearing a cash-game cutoff.">Tournament</span> &middot; <span class="df-term" data-tip="You may enter only one lineup in this contest. Iron Tuna therefore builds your best single roster rather than a portfolio of alternatives.">Single Entry</span></b><span>The best one-shot roster. Keep a strong value core, then add enough ceiling, correlation and selective leverage to win.</span></button>
-  <button class="df-shape" type="button" data-contest="gpp"><i>Look for the M / entry limit</i><b><span class="df-term" data-tip="A tournament that allows the same user to enter more than one lineup, up to the contest&rsquo;s stated maximum. Strategy can be spread across a portfolio of lineups.">Multi-Entry Tournament</span></b><span>The ceiling/leverage roster for large, top-heavy fields. Accept more volatility, stacks and lower-owned upside.</span></button>
-</div>
-<p class="is-note" id="dfShapeNote"></p>
-<p class="df-dk-lobby-note"><b>Step 2, after choosing <span class="df-term" data-tip="DraftKings&rsquo; weekly salary-cap game. Build a lineup from the current slate while staying under the $50,000 cap.">Classic</span>:</b> match the contest you are entering. Choose <b><span class="df-term" data-tip="A cash contest where roughly half the field wins the same payout.">50/50</span> &amp; <span class="df-term" data-tip="A cash contest where a winning entry returns about twice the entry fee, after the operator&rsquo;s fee.">Double Ups</span></b> for the cash build; choose a <span class="df-term" data-tip="A top-heavy contest where higher finishes earn larger prizes.">tournament</span> marked <b>[<span class="df-term" data-tip="You may enter only one lineup in this contest.">Single Entry</span>]</b> for the one-lineup tournament build; or choose a <b><span class="df-term" data-tip="A tournament allowing multiple lineups from the same user, up to the stated entry maximum.">Multi-Entry Tournament</span></b> with an entry maximum for the portfolio build. DraftKings&rsquo; <b><span class="df-term" data-tip="Guaranteed Prize Pool. The advertised prize pool is guaranteed regardless of whether the contest fills. GPP does not tell you whether the contest is single-entry or multi-entry.">GPP</span></b> means Guaranteed Prize Pool.</p>
-<p class="df-shape-diff"><b>The strategy difference:</b> 50/50 &amp; Double Ups ask, “How do I avoid a bad lineup and beat the payout line?” A Single Entry tournament asks, “What is my best one lineup?” A large Multi-Entry Tournament asks, “What collection of lineups can finish near the very top if the slate breaks my way?”</p>
-<div class="df-strategy-compare" aria-label="DraftKings contest strategy">
-  <div class="df-strategy-card"><b>50/50 &amp; Double Ups = chalk and value consistency</b><p><strong>Objective:</strong> finish above the payout cutoff, not first. The roster leans toward <strong>chalk</strong>: players with the strongest combination of role, projection, floor and salary value, meaning the best collective chance of producing more fantasy points than their prices require. It deliberately avoids low-probability longshots whose outcomes can be slate-winning or lineup-killing.</p><span class="df-dk-find"><b>In DraftKings:</b> use the “50/50 &amp; Double Ups” contest filter. A Double Up pays nearly half the field the same amount, roughly doubling a winning entry fee.</span></div>
-  <div class="df-strategy-card"><b>Tournament &middot; Single Entry = your best one shot</b><p><strong>Objective:</strong> beat the entire tournament field with one lineup, without a second roster to rescue a bad call. Start with the same strong value base as the cash build, but accept more ceiling and correlation because merely finishing above average is not enough. Use leverage selectively rather than being contrarian just to be different.</p><span class="df-dk-find"><b>In DraftKings:</b> look for “[Single Entry]” in the contest title/details. DraftKings limits you to one lineup in that contest.</span></div>
-  <div class="df-strategy-card"><b>Multi-Entry Tournament = ceiling and separation</b><p><strong>Objective:</strong> finish near the very top of a large, top-heavy tournament. The roster gives up some median safety to gain first-place paths: higher ceilings, correlated stacks, bring-backs and lower-owned pivots. This is where calculated longshots belong, but only when they still have a plausible role and market-supported path to upside.</p><span class="df-dk-find"><b>In DraftKings:</b> look for the “M” multi-entry indicator and the contest&rsquo;s entry maximum. DraftKings may display it as “Multi-Entry Tournament (20 Entries Max)” or another stated maximum.</span></div>
-</div>
-
-<div class="df-game-scope" id="dfGameScope">
-  <div class="df-game-style-head"><span>Step 3 · Required</span><b>Select the Games in Your DraftKings Contest</b></div>
-  <p class="df-game-scope-intro">DraftKings Classic contests can use different groups of games. Select the exact games shown in the contest you are entering. Iron Tuna will exclude every player from games you do not select, so the optimizer uses the same eligible player pool as DraftKings.</p>
-  <div class="df-game-presets" id="dfGamePresets"></div>
-  <div class="df-game-grid" id="dfGameGrid"><p class="is-note">Loading the available games…</p></div>
-  <p class="df-game-scope-state required" id="dfGameScopeState">Choose at least one game before Iron Tuna builds a lineup.</p>
-</div>
-
-<div class="df-advanced-head">
-  <button class="df-advanced-toggle" id="dfAdvancedToggle" type="button" aria-expanded="false" aria-controls="dfAdvanced">Advanced</button>
-  <span>Multiple lineups, diversification, exposure, duplication and late swap.</span>
-</div>
-<div class="df-advanced-panel" id="dfAdvanced" hidden>
-  <div class="df-advanced-grid">
-    <div class="df-advanced-item"><h3>Multi-Entry Tournament (3 Entries Max)</h3><p>DraftKings treats this as a multi-entry contest with a three-lineup maximum. Keep the players you are most confident in, then vary the uncertain pieces. The objective is neither three unrelated lottery tickets nor the same fragile bet three times.</p><button class="btn alt" type="button" data-advanced-contest="3max">Build 3 lineups</button></div>
-    <div class="df-advanced-item"><h3>Multi-Entry Tournament (20 Entries Max)</h3><p>DraftKings uses the multi-entry designation and states the maximum number of entries for that contest. When entering many lineups, treat them as a portfolio rather than independent guesses. Keep conviction players across several rosters, but spread secondary exposures so one injury, game failure or chalk bust does not sink every entry.</p><button class="btn alt" type="button" data-advanced-lineups="20">Build 20 lineups</button></div>
-    <div class="df-advanced-item"><h3>Hedge game scripts</h3><p>If one group of lineups assumes a game shoots out, another group can lean away from that assumption or emphasize a different high-total game. That reduces the number of entries depending on the same story. It is diversification, not a guaranteed financial hedge, and both sides can still lose.</p></div>
-    <div class="df-advanced-item"><h3>Ownership and duplication</h3><p>Do not chase low ownership in every slot. Concentrate leverage where the projection sacrifice is small, and avoid constructions so obvious that a first-place finish is likely to be split with many identical lineups.</p></div>
-    <div class="df-advanced-item"><h3>Exposure limits</h3><p>Across many lineups, cap how much of the portfolio depends on uncertain players or one game environment. High-conviction values can appear often; volatile leverage plays should occupy a smaller share unless your edge is unusually strong.</p></div>
-    <div class="df-advanced-item"><h3>Late swap</h3><p>If early players disappoint, later slots may need more ceiling and lower ownership. If early players smash, the remaining slots can become more conservative. The correct posture changes with your live position relative to the field.</p></div>
-  </div>
-  <p class="df-advanced-caution">Multiple lineups can reduce concentration in one outcome, but they do not eliminate contest risk or guarantee a profit. Iron Tuna builds lineups for analysis and copying; it does not submit entries.</p>
-</div>
-</div>
 <p class="is-note" id="dfNote"></p>
 <p class="is-note" id="dfSiteNote"></p>
 
@@ -639,9 +679,34 @@ p{color:var(--sec);margin:0 0 16px}
   var SECS = { lineup: 1, values: 1, stacks: 1, td: 1, dash: 1 };
   var SEC_IDS = ['lineup', 'values', 'stacks', 'td', 'dash'];
   var site = 'dk', sec = 'lineup', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
-  var gameStyle = 'classic';
+  var gameStyle = '', gameChoice = '', payoutStructure = '';
   var selectedGames = {}, gameUniverseSig = '';
   var whatIfKey = null, whatIfName = '';
+  var GAME_STYLES = {
+    'flash-draft': { label:'Flash Draft', note:'A live-game format. The player pool and available choices can change as the game unfolds.', single:false },
+    classic: { label:'Classic', note:'The standard multi-game $50,000 salary-cap format. Iron Tuna can fully optimize this format from the loaded salary slate.', single:false, optimizer:true },
+    'showdown-captain': { label:'Showdown Captain Mode', note:'A single-game salary-cap format with one Captain and five FLEX spots. The Captain earns 1.5x fantasy points and costs 1.5x salary.', single:true },
+    pick6: { label:'Pick6', note:'A player-outcome format rather than a traditional salary-cap roster. Game selection narrows the relevant player pool.', single:false },
+    'best-ball': { label:'Best Ball', note:'Draft once for a season or multiweek contest. DraftKings automatically uses the highest-scoring eligible players each scoring period.', season:true },
+    tiers: { label:'Tiers', note:'No salary cap. Select one player from each DraftKings tier, so relative choices inside each tier matter more than price.', single:false },
+    'in-game-showdown': { label:'In-Game Showdown', note:'A single-game Showdown entered after play has started. Remaining game state and available players matter.', single:true },
+    'single-stat-yards': { label:'Single Stat - Total Yards', note:'A single-stat contest where total-yard outcomes drive the result.', single:false },
+    'single-stat-touchdowns': { label:'Single Stat - Touchdowns', note:'A single-stat contest where touchdown outcomes drive the result.', single:false },
+    snake: { label:'Snake', note:'A live snake draft using a multi-game player pool. Once a player is drafted, opponents cannot draft that player.', single:false },
+    'snake-showdown': { label:'Snake Showdown', note:'A live snake draft using players from one game.', single:true },
+    'madden-classic': { label:'Madden Classic', note:'Classic-style fantasy built from a Madden simulation slate rather than live NFL games.', single:false },
+    'madden-showdown-captain': { label:'Madden Showdown Captain Mode', note:'Single-game Captain Mode built from a Madden simulation.', single:true }
+  };
+  var PAYOUTS = {
+    h2h: { label:'Head-to-Head', shape:'cash', note:'One opponent. Highest score wins. This usually favors projection, floor and avoiding unnecessary failure points.' },
+    '50-50': { label:'50/50', shape:'cash', note:'The top half wins the same prize. You are trying to clear a broad cutoff rather than maximize first-place probability.' },
+    'double-up': { label:'Double Up', shape:'cash', note:'Nearly half the field wins about twice the entry fee. Strategy is close to 50/50: dependable value and floor matter most.' },
+    multiplier: { label:'Multiplier', shape:'single', note:'A smaller slice of the field earns a fixed multiple. The higher payoff asks for more upside than a cash contest without requiring massive-field tournament volatility.' },
+    'tournament-single': { label:'Tournament - Single Entry', shape:'single', note:'One lineup per user with a top-heavy payout curve. You need more ceiling and correlation, but cannot spread risk across multiple entries.' },
+    'tournament-multi': { label:'Tournament - Multi-Entry', shape:'gpp', note:'A top-heavy tournament allowing multiple lineups. Ceiling, correlation, leverage and portfolio construction matter more.' },
+    satellite: { label:'Satellite / Qualifier', shape:'cash', note:'The prize is usually entry into another contest. Strategy depends on the number of qualifying seats, but clearing the qualification line is more important than finishing first.' },
+    private: { label:'League / Private Contest', shape:'single', note:'A custom field. Strategy depends on field size, payout concentration and what you know about the opponents.' }
+  };
   // A reader who has opened the fine-tune panel and moved something owns the
   // build from then on: the shape switch still re-sorts every other section,
   // but it stops overwriting settings they chose by hand.
@@ -659,7 +724,7 @@ p{color:var(--sec);margin:0 0 16px}
   // is a portfolio construction rather than a separate basic payout objective.
   var SHAPES = {
     cash: { mode: 'floor', stack: false, bring: false, maxTeam: 3, n: 1,
-            head: '50/50 & Double Ups: the chalk and value-consistency roster',
+            head: 'High-floor value roster',
             why: 'The objective is to finish above a broad payout cutoff, not to finish first. This roster favors the players with the strongest combined chance of beating what their salaries require: stable roles, dependable volume, strong floors and good points-per-dollar value. Those players often become chalk because the field sees the same value. Iron Tuna does not avoid them for being popular. It avoids fragile longshots whose range includes both a slate-winning spike and a lineup-killing miss.',
             keys: ['floorPoints', 'projPoints'] },
     single: { mode: 'ironTuna', stack: true, bring: false, maxTeam: 4, n: 1,
@@ -1168,59 +1233,117 @@ p{color:var(--sec);margin:0 0 16px}
     });
   }
   function selectedGameKeys() { return Object.keys(selectedGames).filter(function (k) { return selectedGames[k]; }); }
-  function gameScopeRequired() { return site === 'dk' && gameStyle === 'classic' && !isPickem(); }
+  function gameScopeRequired() { return site === 'dk' && !!gameStyle && gameStyle !== 'best-ball' && !isPickem(); }
+  function styleSupportsOptimizer() { return site !== 'dk' || gameStyle === 'classic'; }
   function setGameKeys(keys) {
     selectedGames = {};
     (keys || []).forEach(function (k) { selectedGames[k] = true; });
-    clearWhatIf(false);
-    marks = {};
-    render();
+    clearWhatIf(false); marks = {};
   }
-  function renderGameScope(s) {
-    var host = $('dfGameScope');
-    host.hidden = !gameScopeRequired();
-    if (!gameScopeRequired()) return true;
+  function setupReady() {
+    if (site !== 'dk') return true;
+    if (!gameStyle || !gameChoice || !payoutStructure) return false;
+    if (gameStyle !== 'best-ball' && !selectedGameKeys().length) return false;
+    return true;
+  }
+  function payoutToContest() {
+    var p = PAYOUTS[payoutStructure];
+    contest = p && SHAPES[p.shape] ? p.shape : 'single';
+    tuned = false;
+    applyShape();
+  }
+  function gameBuckets(games) {
+    var timed = games.filter(function (g) { return kickoffHourET(g.start) != null; });
+    return {
+      all: games.map(function (g) { return g.key; }),
+      early: timed.filter(function (g) { var h=kickoffHourET(g.start); return h>=12 && h<15; }).map(function (g) { return g.key; }),
+      late: timed.filter(function (g) { var h=kickoffHourET(g.start); return h>=15 && h<19; }).map(function (g) { return g.key; }),
+      prime: timed.filter(function (g) { var h=kickoffHourET(g.start); return h>=19 || h<1; }).map(function (g) { return g.key; })
+    };
+  }
+  function populateGamesSelect(s) {
+    var sel = $('dfGamesSelect'), custom = $('dfCustomGames');
+    if (!sel) return;
+    if (!gameStyle) {
+      sel.disabled = true; sel.innerHTML = '<option value="">Select Game Style first…</option>';
+      custom.hidden = true; return;
+    }
+    if (gameStyle === 'best-ball') {
+      sel.disabled = false;
+      sel.innerHTML = '<option value="">Select Games / Player Pool…</option><option value="season">Season-long player pool</option>';
+      if (gameChoice === 'season') sel.value = 'season';
+      custom.hidden = true; return;
+    }
     var games = gamesForSlate(s);
     var sig = games.map(function (g) { return g.key; }).join(',');
-    if (gameUniverseSig && sig !== gameUniverseSig) selectedGames = {};
+    if (gameUniverseSig && sig !== gameUniverseSig) { selectedGames = {}; gameChoice=''; }
     gameUniverseSig = sig;
-    // Drop selections that are not present in the newly loaded salary pool.
-    var allowed = {}; games.forEach(function (g) { allowed[g.key] = true; });
-    Object.keys(selectedGames).forEach(function (k) { if (!allowed[k]) delete selectedGames[k]; });
+    var style = GAME_STYLES[gameStyle] || {};
+    var html = '<option value="">Select Games…</option>';
+    var buckets = gameBuckets(games);
+    if (!style.single) {
+      if (buckets.all.length) html += '<option value="all">All listed games</option>';
+      if (buckets.early.length) html += '<option value="early">1 PM ET games</option>';
+      if (buckets.late.length) html += '<option value="late">4 PM / late afternoon games</option>';
+      if (buckets.prime.length) html += '<option value="prime">Primetime games</option>';
+    }
+    games.forEach(function (g) {
+      var meta = kickoffText(g.start);
+      html += '<option value="game:' + e(g.key) + '">' + e(g.label) + (meta ? ' · ' + e(meta) : '') + '</option>';
+    });
+    if (!style.single && games.length > 1) html += '<option value="custom">Custom game selection…</option>';
+    sel.innerHTML = html;
+    sel.disabled = !games.length;
+    if (gameChoice && [].some.call(sel.options,function(o){return o.value===gameChoice;})) sel.value=gameChoice; else if(gameChoice!=='custom') gameChoice='';
+    custom.hidden = gameChoice !== 'custom';
     $('dfGameGrid').innerHTML = games.map(function (g) {
-      var meta = [];
-      var kt = kickoffText(g.start); if (kt) meta.push(kt);
-      meta.push(g.players + ' eligible player' + (g.players === 1 ? '' : 's'));
-      return '<button class="df-game-choice" type="button" data-game-key="' + e(g.key) + '" aria-pressed="' + (selectedGames[g.key] ? 'true' : 'false') + '"><b>' + e(g.label) + '</b><small>' + e(meta.join(' · ')) + '</small></button>';
-    }).join('') || '<p class="is-note">No game matchups could be identified from this salary pool. Upload the DraftKings salary CSV for the contest you are entering.</p>';
-
-    var timed = games.filter(function (g) { return kickoffHourET(g.start) != null; });
-    var buckets = {
-      early: timed.filter(function (g) { var h = kickoffHourET(g.start); return h >= 12 && h < 15; }).map(function (g) { return g.key; }),
-      late: timed.filter(function (g) { var h = kickoffHourET(g.start); return h >= 15 && h < 19; }).map(function (g) { return g.key; }),
-      prime: timed.filter(function (g) { var h = kickoffHourET(g.start); return h >= 19 || h < 1; }).map(function (g) { return g.key; })
-    };
-    var presets = '<button type="button" data-game-preset="all">All listed games</button><button type="button" data-game-preset="clear">Clear</button>';
-    if (buckets.early.length) presets += '<button type="button" data-game-preset="early">1 PM ET games</button>';
-    if (buckets.late.length) presets += '<button type="button" data-game-preset="late">Late afternoon</button>';
-    if (buckets.prime.length) presets += '<button type="button" data-game-preset="prime">Primetime</button>';
-    $('dfGamePresets').innerHTML = presets;
-    $('dfGamePresets').dataset.all = JSON.stringify(games.map(function (g) { return g.key; }));
-    $('dfGamePresets').dataset.early = JSON.stringify(buckets.early);
-    $('dfGamePresets').dataset.late = JSON.stringify(buckets.late);
-    $('dfGamePresets').dataset.prime = JSON.stringify(buckets.prime);
-
-    var keys = selectedGameKeys();
-    var playerCount = (s.players || []).filter(function (p) { return p.onBoard && selectedGames[playerGameKey(p)]; }).length;
-    var state = $('dfGameScopeState');
-    if (!keys.length) {
-      state.className = 'df-game-scope-state required';
-      state.textContent = 'Required: choose at least one game before Iron Tuna builds a lineup.';
+      var meta=[]; var kt=kickoffText(g.start); if(kt) meta.push(kt); meta.push(g.players+' eligible player'+(g.players===1?'':'s'));
+      return '<button class="df-game-choice" type="button" data-game-key="'+e(g.key)+'" aria-pressed="'+(selectedGames[g.key]?'true':'false')+'"><b>'+e(g.label)+'</b><small>'+e(meta.join(' · '))+'</small></button>';
+    }).join('');
+    sel.dataset.all=JSON.stringify(buckets.all); sel.dataset.early=JSON.stringify(buckets.early); sel.dataset.late=JSON.stringify(buckets.late); sel.dataset.prime=JSON.stringify(buckets.prime);
+  }
+  function applyGameChoice() {
+    var sel=$('dfGamesSelect'); if(!sel) return;
+    gameChoice=sel.value;
+    if (gameChoice === 'season') selectedGames={};
+    else if (gameChoice === 'custom') { $('dfCustomGames').hidden=false; }
+    else {
+      $('dfCustomGames').hidden=true;
+      var keys=[];
+      if (/^game:/.test(gameChoice)) keys=[gameChoice.slice(5)];
+      else if (gameChoice) { try { keys=JSON.parse(sel.dataset[gameChoice]||'[]'); } catch(x){ keys=[]; } }
+      setGameKeys(keys);
+    }
+    $('dfPayoutSelect').disabled = !gameChoice || (gameChoice==='custom' && !selectedGameKeys().length);
+    if ($('dfPayoutSelect').disabled) { payoutStructure=''; $('dfPayoutSelect').value=''; }
+    updateSetupState();
+  }
+  function updateSetupState() {
+    var gs=GAME_STYLES[gameStyle], py=PAYOUTS[payoutStructure];
+    $('dfGameStyleHelp').textContent = gs ? gs.note : 'Start by selecting the DraftKings roster format.';
+    var keys=selectedGameKeys();
+    if (!gameStyle) $('dfGamesHelp').textContent='The exact game pool matters because players outside it cannot be used.';
+    else if (gameStyle==='best-ball') $('dfGamesHelp').textContent='Best Ball uses a season-long player pool rather than a single weekly slate.';
+    else if (gameChoice==='custom') $('dfGamesHelp').textContent=keys.length ? keys.length+' games selected in the custom player pool.' : 'Select every game included in the contest, then confirm the custom pool.';
+    else $('dfGamesHelp').textContent=gameChoice ? (keys.length+' game'+(keys.length===1?'':'s')+' selected for the eligible player pool.') : 'Choose the same game window or matchup shown in DraftKings.';
+    $('dfPayoutHelp').textContent = py ? py.note : 'Select the way the contest pays before Iron Tuna chooses the appropriate risk profile.';
+    var state=$('dfSetupState');
+    if (!setupReady()) {
+      state.className='df-setup-state';
+      state.textContent=!gameStyle?'First select Game Style.':!gameChoice?'Next select the Games / player pool.':!payoutStructure?'Finally select the Payout Structure.':'Complete the custom game selection.';
       return false;
     }
-    state.className = 'df-game-scope-state ready';
-    state.textContent = keys.length + ' game' + (keys.length === 1 ? '' : 's') + ' selected · ' + playerCount + ' eligible players. Iron Tuna will use only this player pool.';
+    state.className='df-setup-state ready';
+    state.textContent=(gs?gs.label:gameStyle)+' · '+(gameStyle==='best-ball'?'Season-long player pool':keys.length+' selected game'+(keys.length===1?'':'s'))+' · '+(py?py.label:payoutStructure)+'.';
     return true;
+  }
+  function renderFormatNotice() {
+    if (!$('dfLineups')) return;
+    var gs=GAME_STYLES[gameStyle] || {};
+    if (styleSupportsOptimizer()) return;
+    built=null;
+    $('dfLineups').innerHTML='<div class="is-empty"><b>'+e(gs.label || gameStyle)+' selected.</b> The Classic lineup solver is hidden because this DraftKings format uses different roster or scoring rules. Iron Tuna will use this selection to tailor the DFS format analysis without presenting a Classic roster as legal for this contest.</div>';
+    $('dfPivots').innerHTML='';
   }
   function filteredSlate() {
     if (!slate) return null;
@@ -1243,12 +1366,12 @@ p{color:var(--sec);margin:0 0 16px}
   }
   function showGameScopeRequired() {
     built = null;
-    $('dfLineups').innerHTML = '<p class="is-empty"><b>Select the games in your DraftKings contest above.</b> Iron Tuna will not build a lineup until the eligible game pool is defined.</p>';
+    $('dfLineups').innerHTML = '<p class="is-empty"><b>Complete Game Style, Games and Payout Structure above.</b> Iron Tuna will not build or evaluate the contest until the actual DraftKings setup is defined.</p>';
     $('dfPivots').innerHTML = '';
     $('dfPool').querySelector('tbody').innerHTML = '';
     $('dfCards').innerHTML = '';
     $('dfValues').hidden = true; $('dfTd').hidden = true;
-    $('dfStacks').innerHTML = '<p class="is-empty">Select the contest games above to see stacks from that player pool.</p>';
+    $('dfStacks').innerHTML = '<p class="is-empty">Complete the DFS setup above to see the relevant player pool and stacks.</p>';
     $('dfNav').hidden = true;
   }
 
@@ -1303,6 +1426,7 @@ p{color:var(--sec);margin:0 0 16px}
   }
   function build() {
     if (!slate || !window.ITDfs) return;
+    if (site === 'dk' && (!setupReady() || !styleSupportsOptimizer())) { if(!setupReady()) showGameScopeRequired(); else renderFormatNotice(); return; }
     var view = filteredSlate();
     if (!view) { showGameScopeRequired(); return; }
     var players = view.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
@@ -1340,19 +1464,49 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
     $('dfTd').hidden = !list.length;
   }
+  function lineupStat(l, key) { return l && l.players ? l.players.reduce(function (n,p) { var v=Number(p[key]); return n+(isFinite(v)?v:0); },0) : 0; }
+  function renderPlayOfWeek(s) {
+    var host=$('dfPlayWeekBody'); if(!host || !s || !window.ITDfs) return;
+    var players=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
+    if(players.length<9){ $('dfPlayWeekTitle').textContent='Play of the Week: waiting for a complete slate'; host.innerHTML='<p class="is-note">The recommendation will publish when enough salaries and projections are available to compare contest shapes.</p>'; return; }
+    var base={cap:s.cap,slots:s.slots,flex:s.flex,maxPerTeam:4,lineups:1,seed:17};
+    var cash=ITDfs.build(players,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:3}));
+    var tour=ITDfs.build(players,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
+    var lev=ITDfs.build(players,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
+    if(!cash.ok||!tour.ok){ $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">Iron Tuna could not yet build comparable legal contest shapes from the current slate.</p>'; return; }
+    var C=cash.lineups[0], T=tour.lineups[0], L=lev.ok?lev.lineups[0]:T;
+    var cashProj=lineupStat(C,'ironTunaPoints'), cashFloor=lineupStat(C,'floor'), cashCeil=lineupStat(C,'ceiling');
+    var tourProj=lineupStat(T,'ironTunaPoints'), tourCeil=lineupStat(T,'ceiling');
+    var levProj=lineupStat(L,'ironTunaPoints'), levCeil=lineupStat(L,'ceiling');
+    var vegas=lineupStat(T,'vegasPoints');
+    var edge=vegas>0?(tourProj-vegas)/vegas:0;
+    var rec='Head-to-Head', rationale='The highest-confidence path is still to maximize the chance of beating one opponent. The current slate does not offer enough extra ceiling at a small enough projection cost to justify moving materially up the payout curve.';
+    var tag='Highest hit rate';
+    if(edge>=.05 && levProj>=cashProj*.97 && levCeil>=cashCeil*1.10){rec='Tournament - Multi-Entry';tag='Risk justified by separation';rationale='The leverage build keeps nearly all of the high-floor lineup’s median projection while creating materially more ceiling and differentiation. That combination makes the larger payout curve more attractive than it is on a normal week, despite the lower chance of cashing.';}
+    else if(edge>=.035 && tourProj>=cashProj*.97 && tourCeil>=cashCeil*1.07){rec='Tournament - Single Entry';tag='Upside without a major projection sacrifice';rationale='The tournament build adds meaningful ceiling and correlation without giving away much median projection. This is the kind of week where accepting a lower cashing probability can be justified by the larger payoff available when the roster hits.';}
+    else if(edge>=.018 && tourProj>=cashProj*.985){rec='Multiplier';tag='Measured step up the payout curve';rationale='The slate offers enough projected edge and upside to take more risk than Head-to-Head, but not enough to justify the volatility of a large tournament. A multiplier is the middle ground: fewer winners, meaningfully better payoff, and less dependence on a perfect ceiling outcome.';}
+    $('dfPlayWeekTitle').textContent='Play of the Week: '+rec;
+    $('dfPlayWeekDek').textContent=rationale;
+    var stability=cashProj>0?cashFloor/cashProj:0, upside=tourProj>0?tourCeil/tourProj:0;
+    host.innerHTML='<div class="df-play-week-copy"><p><b>Why this contest:</b> '+e(rationale)+'</p><p>Head-to-Head remains the easiest format to win on any single entry. Iron Tuna moves away from it only when the model can buy enough additional ceiling or leverage without surrendering too much of the lineup’s core projection.</p><p class="is-note">This is a model-based contest recommendation, not a guarantee of profit. Contest fees, field strength and actual payout tables still matter.</p></div>'
+      +'<div class="df-play-week-score"><b>'+e(rec)+'</b><span>'+e(tag)+'</span><b style="margin-top:13px">'+(edge>=0?'+':'')+(edge*100).toFixed(1)+'%</b><span>Iron Tuna projection vs. Vegas-derived projection in the ceiling build</span><b style="margin-top:13px">'+(stability*100).toFixed(0)+'% / '+(upside*100).toFixed(0)+'%</b><span>Floor retention / ceiling multiple</span></div>';
+  }
+
   function render() {
     if (!slate) return;
     $('dfCap').value = slate.cap;
     refreshFppgHeads();
-    applyShape();
-    if (!renderGameScope(slate)) { showGameScopeRequired(); return; }
+    populateGamesSelect(slate);
+    updateSetupState();
+    renderPlayOfWeek(slate);
+    if (site === 'dk' && !setupReady()) { showGameScopeRequired(); return; }
+    payoutToContest();
     var view = filteredSlate();
+    if (!view) { showGameScopeRequired(); return; }
+    if (site === 'dk' && !styleSupportsOptimizer()) { $('dfNav').hidden=true; renderFormatNotice(); return; }
     $('dfNav').hidden = false;
     show();
     dashboard(view); envTable(view); values(view); pool(view); stacks(view); tdBoard(view);
-    // The lineup solves only after the reader has defined the same game pool
-    // as the DraftKings contest. That prevents a Sunday-main roster from being
-    // recommended into an early-only or primetime contest.
     build();
   }
 
@@ -1423,7 +1577,7 @@ p{color:var(--sec);margin:0 0 16px}
 
   function slateOk(j) {
     slate = j;
-    if (gameScopeRequired() && !gameUniverseSig) selectedGames = {};
+    if (site === 'dk' && !gameUniverseSig) selectedGames = {};
     if (whatIfKey && !(j.players || []).some(function (p) { return p.key === whatIfKey; })) clearWhatIf(false);
     var stamp = j.source === 'upload'
       ? 'Priced from your own ' + (j.label || 'salary') + ' file. It was read in this browser and stored nowhere on the site.'
@@ -1471,25 +1625,16 @@ p{color:var(--sec);margin:0 0 16px}
     }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
   }
   function applyGameStyle() {
-    var wrap = $('dfGameStyle');
-    if (wrap) {
-      wrap.querySelectorAll('[data-game-style]').forEach(function (b) {
-        b.setAttribute('aria-pressed', b.getAttribute('data-game-style') === gameStyle ? 'true' : 'false');
-      });
-    }
-    var bestBall = site === 'dk' && gameStyle === 'bestball';
-    $('dfBestBallPath').hidden = !bestBall;
-    $('dfStrategyGuide').hidden = bestBall || isPickem();
-    if ($('dfGameScope')) $('dfGameScope').hidden = bestBall || site !== 'dk' || isPickem();
-    $('dfNav').hidden = bestBall || isPickem();
-    $('dfUp').hidden = bestBall || isPickem();
-    SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = bestBall || (isPickem() ? true : k !== sec); });
-    if (bestBall) {
-      $('sec-pickem').hidden = true;
-      $('dfSiteNote').textContent = 'DraftKings Best Ball · draft once, then weekly scoring is optimized automatically by the game format.';
-      $('dfNote').textContent = '';
-    }
-    return bestBall;
+    var dk = site === 'dk' && !isPickem();
+    $('dfConfig').hidden = !dk;
+    $('dfPlayWeek').hidden = !dk;
+    $('dfGameStyleSelect').value = gameStyle;
+    if (!dk) return false;
+    populateGamesSelect(slate || {players:[],stacks:[]});
+    $('dfPayoutSelect').disabled = !gameChoice || (gameChoice==='custom' && !selectedGameKeys().length);
+    if (payoutStructure) $('dfPayoutSelect').value=payoutStructure;
+    updateSetupState();
+    return gameStyle === 'best-ball';
   }
 
   function load() {
@@ -1500,37 +1645,47 @@ p{color:var(--sec);margin:0 0 16px}
       SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = true; });
       $('sec-pickem').hidden = false;
       $('dfUp').hidden = true;
-      $('dfGameStyle').hidden = true;
-      $('dfBestBallPath').hidden = true;
-      $('dfStrategyGuide').hidden = true;
+      $('dfConfig').hidden = true; $('dfPlayWeek').hidden=true;
       $('dfNote').textContent = '';
       loadPickem();
       return;
     }
     $('sec-pickem').hidden = true;
-    $('dfGameStyle').hidden = site !== 'dk';
-    if (site !== 'dk') gameStyle = 'classic';
-    if (applyGameStyle()) return;
-    $('dfNav').hidden = false;
-    $('dfUp').hidden = false;
-    $('dfStrategyGuide').hidden = false;
-    applyShape();
-    $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
-    show();
+    if (site !== 'dk') { gameStyle='classic'; gameChoice='all'; payoutStructure='h2h'; }
+    applyGameStyle();
+    $('dfUp').hidden = site === 'dk' && gameStyle === 'best-ball';
+    $('dfSiteNote').textContent = site === 'dk'
+      ? 'Choose Game Style, Games and Payout Structure above. Iron Tuna will not apply the Classic optimizer to a different DraftKings format.'
+      : 'Classic salary cap · $60,000. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
     var mine = upGet(site);
     $('dfUpClear').hidden = !mine;
     if (!mine) upState('Playing a different slate? Export the salary CSV from your contest lobby and price it here. It stays in this browser.', false);
     if (mine) loadUpload(mine); else loadSite();
   }
   document.addEventListener('DOMContentLoaded', function () {
-    press($('dfMode'), 'data-mode', mode); applyShape(); show(); applyGameStyle();
-    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; selectedGames = {}; gameUniverseSig = ''; clearWhatIf(false); load(); });
-    $('dfGameStyle').addEventListener('click', function (ev) {
-      var b = ev.target.closest('[data-game-style]'); if (!b) return;
-      gameStyle = b.getAttribute('data-game-style') === 'bestball' ? 'bestball' : 'classic';
-      applyGameStyle();
-      if (gameStyle === 'classic') load();
-      try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'dfs_game_style', uid: localStorage.getItem('it.uid') || '', props: { path: location.pathname, gameStyle: gameStyle, site: site } })], { type: 'application/json' })); } catch (x) {}
+    press($('dfMode'), 'data-mode', mode); applyShape(); show();
+    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; selectedGames = {}; gameUniverseSig = ''; gameChoice=''; payoutStructure=''; clearWhatIf(false); load(); });
+    $('dfGameStyleSelect').addEventListener('change', function () {
+      gameStyle=this.value; gameChoice=''; payoutStructure=''; selectedGames={}; gameUniverseSig='';
+      $('dfPayoutSelect').value=''; $('dfPayoutSelect').disabled=true; $('dfCustomGames').hidden=true;
+      populateGamesSelect(slate || {players:[],stacks:[]}); updateSetupState();
+      if (gameStyle==='best-ball') $('dfGamesSelect').disabled=false;
+      render();
+      try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({event:'dfs_game_style',uid:localStorage.getItem('it.uid')||'',props:{path:location.pathname,gameStyle:gameStyle,site:site}})],{type:'application/json'})); } catch(x){}
+    });
+    $('dfGamesSelect').addEventListener('change', function () { applyGameChoice(); render(); });
+    $('dfGameGrid').addEventListener('click', function (ev) {
+      var b=ev.target.closest('[data-game-key]'); if(!b)return;
+      var key=b.getAttribute('data-game-key'); if(selectedGames[key])delete selectedGames[key];else selectedGames[key]=true;
+      b.setAttribute('aria-pressed',selectedGames[key]?'true':'false'); updateSetupState();
+    });
+    $('dfCustomDone').addEventListener('click', function () {
+      if(!selectedGameKeys().length){$('dfGamesHelp').textContent='Select at least one game for the custom pool.';return;}
+      gameChoice='custom'; $('dfPayoutSelect').disabled=false; $('dfCustomGames').hidden=true; updateSetupState(); render();
+    });
+    $('dfPayoutSelect').addEventListener('change', function () {
+      payoutStructure=this.value; payoutToContest(); updateSetupState(); render();
+      try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({event:'dfs_payout_structure',uid:localStorage.getItem('it.uid')||'',props:{path:location.pathname,payout:payoutStructure,site:site}})],{type:'application/json'})); } catch(x){}
     });
     $('dfWhatIfInput').addEventListener('input', renderWhatIfList);
     $('dfWhatIfInput').addEventListener('focus', renderWhatIfList);
@@ -1575,57 +1730,7 @@ p{color:var(--sec);margin:0 0 16px}
       loadSite();
     });
     $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
-    $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); if (slate) values(slate); });
-    $('dfGameGrid').addEventListener('click', function (ev) {
-      var b = ev.target.closest('[data-game-key]'); if (!b) return;
-      var key = b.getAttribute('data-game-key');
-      if (selectedGames[key]) delete selectedGames[key]; else selectedGames[key] = true;
-      clearWhatIf(false); marks = {};
-      render();
-      try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'dfs_game_scope', uid: localStorage.getItem('it.uid') || '', props: { path: location.pathname, games: selectedGameKeys().length, site: site } })], { type: 'application/json' })); } catch (x) {}
-    });
-    $('dfGamePresets').addEventListener('click', function (ev) {
-      var b = ev.target.closest('[data-game-preset]'); if (!b) return;
-      var p = b.getAttribute('data-game-preset');
-      var keys = [];
-      if (p !== 'clear') {
-        try { keys = JSON.parse(this.dataset[p] || '[]'); } catch (x) { keys = []; }
-      }
-      setGameKeys(keys);
-    });
-    $('dfAdvancedToggle').addEventListener('click', function () {
-      var open = $('dfAdvanced').hidden;
-      $('dfAdvanced').hidden = !open;
-      this.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-    $('dfAdvanced').addEventListener('click', function (ev) {
-      var cbtn = ev.target.closest('[data-advanced-contest]');
-      if (cbtn) {
-        contest = cbtn.getAttribute('data-advanced-contest');
-        tuned = false;
-        applyShape();
-        load();
-        return;
-      }
-      var lbtn = ev.target.closest('[data-advanced-lineups]');
-      if (lbtn) {
-        contest = 'gpp';
-        tuned = false;
-        applyShape();
-        $('dfN').value = Math.max(1, Math.min(20, parseInt(lbtn.getAttribute('data-advanced-lineups'), 10) || 10));
-        tuned = true;
-        load();
-      }
-    });
-    // The shape switch is the page's primary control: it re-solves the roster,
-    // re-sorts the values table (the server sorts that one, hence the reload)
-    // and re-labels the branches.
-    $('dfShape').addEventListener('click', function (ev) {
-      var b = ev.target.closest('button'); if (!b) return;
-      contest = b.getAttribute('data-contest');
-      applyShape(); load();
-      try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'dfs_contest', uid: localStorage.getItem('it.uid') || '', props: { path: location.pathname, contest: contest, site: site } })], { type: 'application/json' })); } catch (x) {}
-    });
+    $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); var view=filteredSlate(); if (view) values(view); });
     desk();
     // Anything moved by hand in the fine-tune panel takes the build off the
     // preset and rebuilds immediately, so the roster on screen always matches
@@ -1633,7 +1738,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mode = b.getAttribute('data-mode'); press(this, 'data-mode', mode); tuned = true; build(); });
     $('dfTune').addEventListener('change', function (ev) { if (ev.target.closest('#dfMode')) return; tuned = true; build(); });
     $('dfBuild').addEventListener('click', function () { tuned = true; build(); });
-    $('dfPool').addEventListener('click', function (ev) { if (ev.target.closest('.df-player-link')) return; var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); tuned = true; build(); });
+    $('dfPool').addEventListener('click', function (ev) { if (ev.target.closest('.df-player-link')) return; var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; var view=filteredSlate(); if (view) pool(view); tuned = true; build(); });
     document.addEventListener('click', function (ev) {
       var wi = ev.target.closest('[data-player-whatif]');
       if (wi) {
