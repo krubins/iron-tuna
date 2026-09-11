@@ -59,7 +59,7 @@ Use Cloudflare Worker secrets. Never put provider keys in frontend code or GitHu
 | `TMS_LICENSED_IMPORT` | off | Admin-only normalized import path |
 
 Default PropLine prop markets are:
-`passing_yards,passing_tds,interceptions,rushing_yards,rushing_tds,receiving_yards,receiving_tds,receptions,anytime_td`.
+`player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td`.
 
 Historical movement and steam require a PropLine tier that exposes those features.
 If movement is unavailable, current game lines and props still collect and Iron Tuna
@@ -75,8 +75,7 @@ The PropLine adapter does four things on each successful poll:
 4. where available, fetches PropLine movement data and attaches opening/current history
    plus steam metadata before storing the normalized observation.
 
-PropLine returns American odds. The adapter converts those prices to decimal internally
-so the existing Tuna Market Signal probability math is unchanged.
+PropLine returns American odds. The adapter converts those prices to decimal internally and selects the most balanced two-way line per book/player/market before storing it, so alternate ladders cannot be mistaken for time-series movement. The existing Tuna Market Signal probability math is otherwise unchanged.
 
 The Odds API fallback retains its prior behavior: bulk game markets plus explicitly
 configured event props.
