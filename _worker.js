@@ -1363,7 +1363,7 @@ function tmsNormalize(events, observed, provider = 'the-odds-api', source = TMS_
       for (const o of m.outcomes || []) {
         if (!o.name || typeof o.price !== 'number' || !Number.isFinite(o.price) || o.price <= 1) continue;
         if (o.point != null && (typeof o.point !== 'number' || !Number.isFinite(o.point))) continue;
-        if (m.key !== 'h2h' && o.point == null) continue;
+        if (m.key !== 'h2h' && o.point == null && !/(^|_)anytime_td$/.test(m.key)) continue;
         if (m.key.startsWith('player_') && !o.description) continue;
         rows.push({ provider, source, event: String(e.id), sport: e.sport_key,
           matchup: `${e.away_team || ''} at ${e.home_team || ''}`, starts: Date.parse(e.commence_time),
