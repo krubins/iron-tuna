@@ -8836,3 +8836,34 @@ Also seen: the Week 1 midweek preview published at 12:45Z on September 9
 by revalidation (§68o); the reshaped ESPN fetch (§68n) answered 200 with
 sixteen events at 13:00Z and the depth charts loaded all thirty-two clubs
 at 10:00Z the next morning, the first success since September 4.
+
+### 68q. Friday: two held pieces, two duplicate ticks, four fixes
+
+The first retrospective day held two of its three pieces and the log
+showed why for each.
+
+- Kickers & Defenses and What Matters were held on `number:900`,
+  `number:600`, `number:200`: the tails of "1,900 yards". The number scan
+  now reads a thousand with a separator as one number (`validateDraft`);
+  both rows pass on the next tick by revalidation (§68o).
+- What Matters came back `provider_524` four times before it wrote: the
+  writer's connection sat idle past the hundred seconds a Cloudflare edge
+  allows. The Weekend Preview, the largest piece (fifteen games, two
+  lenses, a 125 KB packet), came back "(unparseable JSON)" six times, the
+  retry cap. The answer is streamed now (`_anthropicRead`), so the
+  connection is never idle and the stop reason is known; the answer budget
+  is 12,000 tokens (`WRITER_MAX_TOKENS`) with four minutes a call
+  (`WRITER_TIMEOUT_MS`); a draft cut off at `max_tokens` is asked for again
+  at half the length, an answer that is not one JSON object is asked for as
+  one; the system prompt carries a LENGTH rule; and the violation says
+  what came back (stop reason, length, first bytes). `RETRY_HELD_MAX` is
+  ten, so the Week 1 Weekend Preview gets another run.
+- From 20:15Z on September 11 the `*/15` trigger fired twice a slot, about
+  thirty seconds apart, and both invocations ran the whole tick. The cause
+  is outside the repo (the worker was redeployed at 19:48Z; the dashboard's
+  Triggers and Deployments pages are where to look); the cure is in it:
+  `tickClaim` inserts `tick:<slot>` into `newsroom_settings` on its primary
+  key and a second claimant stops. On a Sunday two writers on one piece is
+  what this prevents.
+- The deaths of §68p continue at the same rate; the usage model has not
+  been switched.

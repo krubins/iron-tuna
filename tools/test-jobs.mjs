@@ -25,7 +25,7 @@ const jobRun = async (env, name, trigger) => {
 const H = new Function('JOB_FNS', 'jobRun', 'LEAD_TZ',
   cut('function etOffsetHours(ms) {', 'function etClock(ms) {') + '\n' + cut('function etParts(ms) {', 'const _etDow = ') + '\n' +
   cut('// -- the job schedule (Step 30)', '// Memoized per isolate alongside _PROJ_ENC') +
-  '\nreturn { JOB_SCHEDULE, jobEntryCheck, jobScheduleFrom, jobsDueAt, jobScheduleReport, runScheduledTick, etParts };'
+  '\nreturn { JOB_SCHEDULE, jobEntryCheck, jobScheduleFrom, jobsDueAt, jobScheduleReport, runScheduledTick, tickClaim, etParts };'
 )(JOB_FNS, jobRun, 'America/New_York');
 // An instant from an Eastern wall-clock time (EDT in September, EST in December).
 const ET = (y, m, d, h, min, edt) => Date.UTC(y, m - 1, d, h + (edt ? 4 : 5), min || 0);
@@ -117,6 +117,16 @@ console.log('\nthe tick');
   runs.length = 0;
   const f = await H.runScheduledTick({ failOdds: true }, ET(2026, 9, 16, 7, 0, true), 'x');
   ok('a failed job is named on the tick and does not stop the others', f.ok && f.ran.find(r => r.job === 'odds-refresh').error === 'the books did not answer' && f.ran.find(r => r.job === 'content-tick').ok);
+  // One invocation per quarter hour: the second claimant of a slot stops.
+  const claimed = new Set();
+  const lockDb = { prepare: (sql) => ({ bind: (...a) => ({ async run() { if (/INSERT INTO newsroom_settings/.test(sql)) { if (claimed.has(a[0])) throw new Error('UNIQUE constraint failed'); claimed.add(a[0]); } return { meta: { changes: 1 } }; } }) }) };
+  const lenv = { LEADS_DB: lockDb };
+  const first = await H.runScheduledTick(lenv, ET(2026, 9, 13, 12, 15, true), '*/15 * * * *');
+  const second = await H.runScheduledTick(lenv, ET(2026, 9, 13, 12, 15, true) + 30000, '*/15 * * * *');
+  ok('the first invocation of a quarter-hour claims it and runs', !first.skipped && Array.isArray(first.ran));
+  ok('a second invocation thirty seconds later is skipped whole', second.skipped === 'duplicate invocation for this quarter-hour' && second.ran.length === 0, JSON.stringify(second));
+  ok('the next quarter-hour is a new claim', !(await H.runScheduledTick(lenv, ET(2026, 9, 13, 12, 30, true), '*/15 * * * *')).skipped);
+  ok('with no database every claim succeeds', await H.tickClaim({}, Date.now()) === true);
   const quiet = await H.runScheduledTick({}, ET(2026, 9, 14, 15, 0, true), 'x'); // Mon 3 PM
   ok('a quiet hour runs only the hourly jobs', quiet.due.join() === 'schedule-refresh,news-scan,league-sync,content-tick');
   ok('a bad override is on the tick\'s answer', (await H.runScheduledTick({ JOB_SCHEDULE_JSON: '[1]' }, ET(2026, 9, 14, 15, 0, true), 'x')).scheduleErrors.length === 1);

@@ -6725,6 +6725,37 @@ function briefGamePlan(kind, games, ctx) {
 }
 
 // ── the writer ─────────────────────────────────────────────────────────────
+// The writer's answer, streamed. A two-lens piece over a fifteen-game slate
+// runs past the hundred seconds an idle connection is allowed, and came back
+// 524 four times on September 11; with the stream open the connection is
+// never idle. The stop reason rides along: a draft cut off at max_tokens is
+// not a draft the fact check should read, it is a draft to ask for shorter.
+// A plain JSON answer (a test's fake, a proxy that buffers) still reads.
+async function _anthropicRead(r) {
+  const type = (r.headers && typeof r.headers.get === 'function' && r.headers.get('content-type')) || '';
+  if (!(r.body && typeof r.body.getReader === 'function' && /event-stream/i.test(type))) {
+    const j = await r.json();
+    return { text: (j && j.content && j.content[0] && j.content[0].text) || '', stopReason: (j && j.stop_reason) || null, error: j && j.error ? String(j.error.message || j.error.type) : null };
+  }
+  const reader = r.body.getReader(); const dec = new TextDecoder();
+  let buf = '', text = '', stopReason = null, error = null;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line.startsWith('data:')) continue;
+      let ev = null; try { ev = JSON.parse(line.slice(5).trim()); } catch (e) { continue; }
+      if (!ev) continue;
+      if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') text += ev.delta.text || '';
+      else if (ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) stopReason = ev.delta.stop_reason;
+      else if (ev.type === 'error') error = String((ev.error && (ev.error.message || ev.error.type)) || 'stream error');
+    }
+  }
+  return { text, stopReason, error };
+}
 async function llmText(env, system, user, maxTokens, timeoutMs) {
   if (!env || !env.LLM_API_KEY) return { ok: false, error: 'no_key' };
   const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
@@ -6735,11 +6766,15 @@ async function llmText(env, system, user, maxTokens, timeoutMs) {
   const ctrl = new AbortController(); const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, timeoutMs || 60000);
   try {
     const r = provider === 'anthropic'
-      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: maxTokens || 3000, system, messages: [{ role: 'user', content: user }] }) })
+      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: maxTokens || 3000, stream: true, system, messages: [{ role: 'user', content: user }] }) })
       : await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0.3, max_tokens: maxTokens || 3000, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }) });
-    if (!r.ok) return { ok: false, error: 'provider_' + r.status };
+    if (!r.ok) { let head = ''; try { head = (await r.text()).slice(0, 200); } catch (e) {} return { ok: false, error: 'provider_' + r.status, head }; }
+    if (provider === 'anthropic') {
+      const a = await _anthropicRead(r);
+      return { ok: !!a.text, text: a.text, model, stopReason: a.stopReason, error: a.error || (a.text ? undefined : 'empty') };
+    }
     const j = await r.json();
-    const text = provider === 'anthropic' ? ((j.content && j.content[0] && j.content[0].text) || '') : ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
     return { ok: !!text, text, model };
   } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
   finally { clearTimeout(to); }
@@ -6807,11 +6842,13 @@ function validateDraft(text, allowed) {
   const vals = [...nums].map(Number).filter(Number.isFinite);
   const grid = new Set(vals.map(x => x.toFixed(1)));
   const arithmetic = a => a < 10 && vals.some(x => grid.has((x - a).toFixed(1)) || grid.has((x + a).toFixed(1)));
-  for (const m of String(text).matchAll(/-?\d+(?:\.\d+)?/g)) {
-    const v = m[0]; const num = Number(v), abs = Math.abs(num);
+  // "1,600 yards" is one number, 1600, not a 1 and a 600: the Friday pieces
+  // were held on the tails of thousands with separators.
+  for (const m of String(text).matchAll(/-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?/g)) {
+    const raw = m[0], v = raw.replace(/,/g, ''); const num = Number(v), abs = Math.abs(num);
     if (nums.has(v) || nums.has(String(abs)) || (Number.isInteger(num) && abs <= 20)) continue;
     if (arithmetic(abs)) continue;
-    bad.numbers.push(v);
+    bad.numbers.push(raw);
   }
   bad.names = [...new Set(bad.names)]; bad.numbers = [...new Set(bad.numbers)];
   return { ok: !bad.names.length && !bad.numbers.length, ...bad };
@@ -8048,6 +8085,7 @@ COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (
 THE RIVALRY, when the packet carries one: exactly one line, intellectual, never personal. Acceptable: "Brooks still has him WR17. The receiving market appears considerably less worried." Not acceptable: insults, claims a colleague does not understand football, manufactured heat.
 STYLE. Direct, analytical, actionable, confident, concise. Take positions. No introductions, no restating the box score, no hedging padding, no em dashes (use a period, a colon or a comma). Never write "it's worth noting", "buckle up", "dive in", "game-changer", "in conclusion", "at the end of the day", "ever-evolving", "look no further". The analyst's personality is noticeable in the prose and never overrides the facts.
 HEADLINE AND DEK in sentence case: capitalize the first word and proper nouns (players, clubs, Vegas, Iron Tuna) and nothing else. Never Title Case. The headline names a player or a game and says what to do about it; the dek is one sentence carrying the finding and a number from the packet.
+LENGTH. At most six items per section, each one to three sentences. When the packet is large, choose what matters; never enumerate the whole slate. The whole answer must close its JSON.
 PUBLISH LESS. If the packet genuinely carries nothing a reader should act on, return {"skip":"<one sentence why>"} instead of filler.
 OUTPUT: a single JSON object, no prose outside it, in exactly the shape requested.`;
 const AI_PHRASES = [/it'?s worth noting/i, /buckle up/i, /dive in/i, /game-?changer/i, /in conclusion/i, /at the end of the day/i, /ever-evolving/i, /look no further/i, /—/];
@@ -8101,7 +8139,12 @@ function factCheck(body, packet) {
 // exactly the gap it fills from memory. Drop the writer-only bulk first, then
 // the heaviest fact blocks, naming each one dropped, until it fits.
 const WRITER_PACKET_BUDGET = 90000;
-const WRITER_TIMEOUT_MS = 170000;
+// Four minutes a call, streamed, and twelve thousand tokens of answer: the
+// Weekend Preview covers fifteen games in two lenses and the September 11
+// runs were cut off at six thousand. Two calls sit inside the desk tick's
+// thirteen-minute deadline with room for the packet.
+const WRITER_TIMEOUT_MS = 240000;
+const WRITER_MAX_TOKENS = 12000;
 function compactForWriter(packet, budget) {
   const limit = budget || WRITER_PACKET_BUDGET;
   // A copy: the trims below must not reach the packet the row stores.
@@ -8135,16 +8178,24 @@ async function writeNewsroomPiece(env, kind, packet) {
   const user = 'KIND: ' + kind + ' (' + ((packet.meta && packet.meta.title) || K.title) + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
     'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
     '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
-  let attempt = await llmText(env, NEWSROOM_SYSTEM, user, 6000, WRITER_TIMEOUT_MS);
-  if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error], model: null };
+  let attempt = await llmText(env, NEWSROOM_SYSTEM, user, WRITER_MAX_TOKENS, WRITER_TIMEOUT_MS);
+  if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error + (attempt.head ? ' ' + attempt.head.slice(0, 120) : '')], model: null };
   const parse = t => { try { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
+  // Why a draft did not parse, for the row: the stop reason and the shape of
+  // what came back. Six Weekend Previews were held on "(unparseable JSON)"
+  // alone on September 11 and the row could not say whether the answer was
+  // cut off, wrapped in prose, or empty.
+  const unparseable = a => '(unparseable JSON)' + (a.stopReason ? ' stop=' + a.stopReason : '') + ' chars=' + String(a.text || '').length + ' head=' + JSON.stringify(String(a.text || '').slice(0, 60));
   let body = parse(attempt.text);
   if (body && typeof body.skip === 'string') return { status: 'skipped', body: null, violations: [], model: attempt.model || null, skip: body.skip.slice(0, 300) };
-  let v = body ? factCheck(body, packet) : { ok: false, problems: ['(unparseable JSON)'] };
+  let v = body ? factCheck(body, packet) : { ok: false, problems: [unparseable(attempt)] };
   if (!v.ok) {
-    const fix = user + '\n\nYOUR PREVIOUS DRAFT FAILED THE FACT CHECK. Fix exactly these and add nothing new: ' + v.problems.join('; ') + '. A "name:" problem is a name the packet does not contain; a "number:" problem is a number the packet does not contain; "analyst:" means you named a colleague the packet does not; "missing:" means a required section or key is absent; "phrasing:" is a banned phrase or an em dash.';
-    attempt = await llmText(env, NEWSROOM_SYSTEM, fix, 6000, WRITER_TIMEOUT_MS);
-    if (attempt.ok) { body = parse(attempt.text); v = body ? factCheck(body, packet) : { ok: false, problems: ['(unparseable JSON)'] }; }
+    const cut = !body && attempt.stopReason === 'max_tokens';
+    const fix = cut ? user + '\n\nYOUR PREVIOUS DRAFT WAS CUT OFF before the JSON closed. Write the same shape at half the length: at most four items per section, each at most thirty-five words, and close every bracket. Return only the JSON object.'
+      : !body ? user + '\n\nYOUR PREVIOUS ANSWER WAS NOT ONE JSON OBJECT. Return only the JSON object in the shape requested, nothing before it and nothing after it, every bracket closed.'
+      : user + '\n\nYOUR PREVIOUS DRAFT FAILED THE FACT CHECK. Fix exactly these and add nothing new: ' + v.problems.join('; ') + '. A "name:" problem is a name the packet does not contain; a "number:" problem is a number the packet does not contain; "analyst:" means you named a colleague the packet does not; "missing:" means a required section or key is absent; "phrasing:" is a banned phrase or an em dash.';
+    attempt = await llmText(env, NEWSROOM_SYSTEM, fix, WRITER_MAX_TOKENS, WRITER_TIMEOUT_MS);
+    if (attempt.ok) { body = parse(attempt.text); v = body ? factCheck(body, packet) : { ok: false, problems: [unparseable(attempt)] }; }
   }
   return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.problems, model: attempt.model || null };
 }
@@ -8158,7 +8209,7 @@ async function contentLatest(env, kind, season, week) {
 // provider error, no key), not on the fact check. It is retried on a later
 // tick, at most every forty minutes and at most six times; a piece held
 // because its prose failed the check is not retried: that is the editor's.
-const RETRY_HELD_AFTER_MS = 40 * 60000, RETRY_HELD_MAX = 6;
+const RETRY_HELD_AFTER_MS = 40 * 60000, RETRY_HELD_MAX = 10;
 function heldRetryable(latest, now) {
   if (!latest || latest.status !== 'held') return false;
   if (latest.body && latest.body !== 'null') return false;
@@ -9274,8 +9325,24 @@ function jobScheduleReport(sched, now) {
 // The hourly tick. Phase 1 runs in parallel and finishes before phase 2
 // starts; the desk goes last. Nothing here throws: every job is a logged
 // row, and the tick's own answer lists them.
+// One invocation per quarter hour. From 20:15Z on September 11 the trigger
+// fired twice a slot, thirty seconds apart, and both ran the whole tick; on
+// a Sunday that is two writers on the same piece. The slot is claimed with
+// one insert on a primary key; the second claimant sees the row and stops.
+// Without a database (a test's bare env) every claim succeeds.
+async function tickClaim(env, at) {
+  if (!env || !env.LEADS_DB) return true;
+  try { if (typeof newsroomReady === 'function') await newsroomReady(env); } catch (e) {}
+  const slot = Math.floor(at / 900000);
+  try {
+    await env.LEADS_DB.prepare('INSERT INTO newsroom_settings (key, value, updated_at) VALUES (?, ?, ?)').bind('tick:' + slot, String(at), at).run();
+  } catch (e) { return false; }
+  try { await env.LEADS_DB.prepare("DELETE FROM newsroom_settings WHERE key LIKE 'tick:%' AND updated_at < ?").bind(at - 2 * 86400000).run(); } catch (e) {}
+  return true;
+}
 async function runScheduledTick(env, now, trigger) {
   const at = Number.isFinite(now) ? now : Date.now();
+  if (!(await tickClaim(env, at))) return { ok: true, at, et: etParts(at), skipped: 'duplicate invocation for this quarter-hour', due: [], ran: [], scheduleErrors: [] };
   const sched = jobScheduleFrom(env);
   const due = jobsDueAt(sched.entries, at);
   const ran = [];

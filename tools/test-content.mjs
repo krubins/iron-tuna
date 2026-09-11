@@ -198,6 +198,9 @@ console.log('\nthe validator');
   ok('a real player the packet lacks is still caught', H.validateDraft('Justin Jefferson is the play here.', wk.allowed).names.join() === 'Justin Jefferson');
   const ar = H.validateDraft('Market points 18.6, 1.5 below consensus. LA -3.5 at home.', wk.allowed);
   ok('a difference of two packet numbers is allowed, and so is the signed spread', ar.ok, JSON.stringify(ar));
+  const th = H._finishBrief({ players: [{ name: 'Puka Nacua', yards: 1600, season: 2026 }] });
+  ok('a thousand with a separator is one number', H.validateDraft('Nacua went for 1,600 yards.', th.allowed).ok, JSON.stringify(H.validateDraft('Nacua went for 1,600 yards.', th.allowed)));
+  ok('and a thousand the packet lacks is caught whole, not by its tail', H.validateDraft('He is on pace for 1,900.', th.allowed).numbers.join() === '1,900');
   const nn = H.validateDraft('He ran for 155 yards, 4.7 per carry.', wk.allowed);
   ok('a number that is neither in the packet nor arithmetic on it is still caught', nn.numbers.join() === '155,4.7', JSON.stringify(nn));
 }
