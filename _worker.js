@@ -1511,6 +1511,7 @@ const TMS_PROVIDERS = {
       return e.id && Number.isFinite(starts) && starts > observed - 3600000 && starts < observed + 9 * 86400000;
     }).slice(0, 20);
     let quota = { remaining: eventResult.remaining ?? game.remaining, used: eventResult.used ?? game.used, limit: eventResult.limit ?? game.limit };
+    let movementAvailable = env.PROPLINE_MOVEMENT !== '0';
     for (const e of events) {
       let currentEventId = String(e.id);
       if (markets.length) {
@@ -1519,11 +1520,12 @@ const TMS_PROVIDERS = {
         rows.push(...tmsNormalizePropline([current.data], observed));
         quota = { remaining: current.remaining, used: current.used, limit: current.limit };
       }
-      if (env.PROPLINE_MOVEMENT !== '0') {
+      if (movementAvailable) {
         try {
           const movement = await tmsPropLineHttp('sports/' + sport + '/events/' + encodeURIComponent(e.id) + '/movement', { markets: ['h2h','spreads','totals', ...markets].join(','), bookmakers }, env);
           const movementEventId = String(movement.data?.id || currentEventId);
-          tmsApplyPropLineMovement(rows.filter(r => r.event === movementEventId), movement.data);
+          if (movement.data?.redacted) movementAvailable = false;
+          else tmsApplyPropLineMovement(rows.filter(r => r.event === movementEventId), movement.data);
           quota = { remaining: movement.remaining, used: movement.used, limit: movement.limit };
         } catch (err) {
           if (!['credentials_or_plan', 'provider_http_402', 'provider_http_404'].includes(err.message)) throw err;
