@@ -19,6 +19,8 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 |---|---|---|---|
 | `<league>.football.cbssports.com` | Reader-authorized CBS league settings, teams, rosters, standings, schedules, waiver order and transaction log | `PROVIDER_CBS`, `cbsGet`; validated league subdomain, fixed HTTPS `/api/league/` resources | **Off by default (`FLAG_CBS_SYNC`).** Token access and commercial terms still require live verification. No CBS login/password collection or provider writes. See docs/league-sync.md CBS addendum. |
 | `api.sportsgameodds.com` | NFL player props, and one of the three quotes averaged into the game spread and total behind `/the-line`, `/previews` and every weekly board | `SGO_API_BASE`, `fetchOddsSgo`, `fetchGameLinesSgo` | **Paid, terms unconfirmed.** See item R8. |
+| `api.prop-line.com` | Tuna Market Signal current NFL game lines and fantasy-relevant player props; paid tiers also supply native opening/latest movement and cross-book steam | `TMS_PROVIDERS.propline`, `tmsPropLineHttp` | **Green for end-user analytical display.** Terms effective 2026-04-27 permit apps/websites to surface derived insights and individual values, while prohibiting bulk redistribution. Default integration excludes exchanges. |
+| `prop-line.com` | PropLine source-attribution link displayed with market results | `TMS_PROPLINE_SOURCE` | Link only; the worker does not fetch this website. Data use is covered by the API inventory entry above. |
 | `api.the-odds-api.com` | NFL odds, totals, spreads, supported props, and prospective Tuna Market Signal snapshots | `ODDS_API_BASE`, `TMS_PROVIDERS` | **Green for analytical UI use.** Current terms permit storage and derived/display use, while prohibiting standalone raw-data redistribution. See R3. |
 | `the-odds-api.com` | Tuna Market Signal source-attribution link | `TMS_SOURCE` | Identification link only; the Worker does not fetch this host. |
 | `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts, **and the game lines the scoreboard carries** | `_worker.js:1353`, `:3061`, `:5656`, `:5657`, `_espnOdds` | **Red.** Undocumented endpoints, no commercial license. The odds block adds a bookmaker's spread, total and opening line to what is taken. No page names the book; the name reaches the JSON API only. See R1. |
@@ -30,7 +32,7 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
 | DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
 | DFS lobby CSV (reader upload) | A reader's own salary file, for any classic slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/dfs/slate` | **Green.** Same file, obtained by the reader from a lobby they are already in. Parsed per request and stored nowhere; single-game files are refused rather than mispriced against the classic cap. |
-| DraftKings lobby + draftables (scheduled repository workflow) | DraftKings NFL Sunday Classic main-slate salaries | `tools/import-draftkings-salaries.mjs`, `.github/workflows/draftkings-salaries.yml` → `POST /api/admin/dfs` | **Red / owner-directed exception.** Undocumented, keyless operator endpoints; automated access may conflict with operator terms and can change without notice. Runs once weekly outside the deployed Worker, validates 40+ players and all five positions before importing. |
+| DraftKings lobby + draftables (scheduled repository workflow) | DraftKings NFL weekly Classic salaries across the Thursday-through-Monday game window | `tools/import-draftkings-salaries.mjs`, `.github/workflows/draftkings-salaries.yml` → `POST /api/admin/dfs` | **Red / owner-directed exception.** Undocumented, keyless operator endpoints; automated access may conflict with operator terms and can change without notice. The workflow merges all available multi-game Classic pools for the target NFL week, excludes Showdown/single-game pricing, validates 40+ players and all five positions, then imports the combined player set. It authenticates with a short-lived GitHub Actions identity token restricted to this repository, workflow and `main` branch. |
 
 ### Infrastructure — not content, no data-licensing question
 
@@ -56,8 +58,9 @@ Both Worker-side integrations were behind unset env vars and had never run
 against the live services, so removing them changed no behavior. The old
 `dfs-refresh` Worker cron went with them. DraftKings was later added as an
 owner-directed, once-weekly repository workflow that stays outside the deployed
-Worker and sends a validated CSV through the existing admin import. FanDuel
-remains absent.
+Worker. It merges the available multi-game Classic salary pools across the
+Thursday-through-Monday NFL week and sends a validated combined CSV through the
+existing admin import. FanDuel remains absent.
 
 ---
 
@@ -262,5 +265,5 @@ anyway; it costs nothing.
    server-side, return an Iron Tuna shape.
 3. API keys are `env` bindings. Never in client code, never in the repo.
 4. Cache. It protects the quota and every green license here permits it.
-5. Keep the written record. When The Odds API or Sleeper answers, save the
-   email — `docs/` is a fine home for a text copy.
+5. Keep the written record. Preserve dated provider terms and licensing confirmations in `docs/`.
+6. PropLine's default bookmaker allowlist is sportsbook-only. Do not add exchanges to that path without a separate product and legal decision.

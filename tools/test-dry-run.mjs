@@ -256,8 +256,25 @@ console.log('\nthe feeds and the front page');
   ok('the DFS feed links the DFS lens', dfs.ok && dfs.pieces.every(p => /lens=dfs$/.test(p.url)));
   const lead = await H.deskLeadPayload(env);
   ok('the front-page lead is the newest desk piece, in the lead painter\'s shape', lead && lead.ok && lead.story.url && lead.story.title && lead.story.analyst && lead.recent.length >= 1);
+  // The label the front page prints is the title the piece was PUBLISHED
+  // under, not the calendar's. A midweek slate moves that title (2026 opened
+  // on a Wednesday), and the feed used to overwrite it from CONTENT_KINDS,
+  // which put Thursday back on the front page over a Wednesday game.
+  const tnfRow = db.T.content_pieces.filter(r => r.kind === 'tnf-preview' && r.status === 'published').pop();
+  const tnfTitle = tnfRow.title;
+  tnfRow.title = 'Midweek Kickoff Preview \u00b7 Week 2';
+  const moved = await H.newsroomFeedPayload(env, 'weekly', 20);
+  const mp = moved.pieces.find(p => p.kind === 'tnf-preview');
+  ok('the feed carries the title a piece was published under, not the calendar default', mp && mp.title === 'Midweek Kickoff Preview', JSON.stringify(mp && mp.title));
+  const movedLead = await H.deskLeadPayload(env);
+  const leadRows = [movedLead.story].concat(movedLead.recent).filter(r => /:tnf-preview:/.test(r.slug));
+  ok('and so does the front-page lead label', leadRows.length >= 1 && leadRows.every(r => r.label === 'Midweek Kickoff Preview'), JSON.stringify(leadRows.map(r => r.label)));
+  const movedAnalyst = await H.analystPayload(env, H.CONTENT_KINDS['tnf-preview'].analyst);
+  ok('and the analyst page, which no calendar title could produce', movedAnalyst.ok && movedAnalyst.pieces.some(r => r.kind === 'tnf-preview' && r.title === 'Midweek Kickoff Preview'), JSON.stringify(movedAnalyst.pieces.map(r => r.title)));
+  tnfRow.title = tnfTitle;
   const piece = await H.contentPiecePayload(env, 'early-rankings', 2026, 2);
   ok('a piece payload carries both lenses, the sections for each, the byline and the disclosure', piece.ok && piece.body.weekly && piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length && piece.byline.name === 'Evan Brooks' && piece.byline.dfsName === 'Lena Park' && /AI-powered/.test(piece.disclosure));
+  ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Early Rankings for Next Week', JSON.stringify(piece.title));
   ok('the packet the page shows hides the allowed list and the index', piece.brief && !piece.brief.allowed && !piece.brief.playerIndex && piece.brief.freshness);
   const a = await H.analystPayload(env, 'brooks');
   ok('an analyst page lists recent pieces and the record of calls', a.ok && a.pieces.length >= 1 && Array.isArray(a.calls) && a.headToHead !== null);
@@ -334,6 +351,13 @@ console.log('\nthe lead before the first piece');
   const st = H.nflSeasonState(scheduleAt(wed), wed);
   const nx = H.deskNextPayload(st, scheduleAt(wed), wed);
   ok('the lead names the next piece and when it publishes', nx && nx.ok && nx.story.placeholder === true && nx.story.category === 'desk' && /^Next from the desk: /.test(nx.story.title) && /Publishes (Wednesday|Thursday) at \d{1,2}:\d{2} (AM|PM) ET\.$/.test(nx.story.dek) && nx.story.url === '/in-season/desk', JSON.stringify(nx && nx.story));
+  // A Wednesday opener renames the piece before it exists, too: the lead
+  // announces what will actually run, not the calendar's Thursday default.
+  const wedGames = GAMES.concat([g('w1-wed', 1, 2026, 9, 9, 20, 20, 'AAA', 'CCC')]);
+  const wedSched = { season: 2026, games: wedGames.map(x => ({ ...x, status: null })) };
+  const early = ET(2026, 9, 9, 5, 0);
+  const nw = H.deskNextPayload(H.nflSeasonState(wedSched, early), wedSched, early);
+  ok('with a Wednesday opener the lead names the midweek preview, not Thursday night', nw && nw.story.title === 'Next from the desk: Midweek Kickoff Preview', JSON.stringify(nw && nw.story.title));
   ok('and it is the earliest slot still to come', nx && nx.story.createdAt > wed && Object.keys(H.CONTENT_KINDS).filter(k => !H.CONTENT_KINDS[k].unscheduled).every(k => { const d = H.contentDue(k, wed, st, scheduleAt(wed)); return !(Number.isFinite(d.dueAt) && d.dueAt > wed && d.dueAt < nx.story.createdAt); }));
   Date.now = realNow;
 }

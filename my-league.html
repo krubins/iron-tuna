@@ -66,7 +66,7 @@ p{color:var(--sec);margin:0 0 16px}
       <span class="nav-dd"><a href="/fantasy-football-auction-values">Draft Tools</a><span class="nav-dd-menu"><a href="/fantasy-football-auction-values">Auction values</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a><a href="/guides">Strategy guides</a><a href="/auction-insights">Auction insights</a><a href="/snake-insights">Snake insights</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
-    <a class="cta" href="/in-season#league">Save my league</a>
+    <a class="cta" href="/my-league" aria-current="page">Sync my league</a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
@@ -80,6 +80,7 @@ p{color:var(--sec);margin:0 0 16px}
 
 <section id="connect">
 <h2>Sync my league</h2>
+<p class="is-note"><b>Free.</b> Sign in with an email link so encrypted provider credentials and synced leagues can follow you across devices. No purchase is required.</p>
 <p class="is-note">CBS Sportsline, when enabled, uses a league access token that Iron Tuna encrypts separately for each league. Disconnecting deletes that league&rsquo;s token. We never ask for your CBS password.</p>
 <p>Connect the league you actually play in and Iron Tuna imports its exact scoring, every roster, the free-agent pool, your opponent and the standings. Rankings, the Pickup Advisor, Best Lineup, the Trade Finder and the stories then read <em>your</em> league instead of a default one. Nothing is re-typed.</p>
 <div id="lsStatus" class="is-note" style="margin:0 0 12px"></div>
@@ -198,7 +199,7 @@ p{color:var(--sec);margin:0 0 16px}
   </div>
   <div class="foot-note">
    <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
-   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-GAMBLER</b>.</p>
+   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
    <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span>
     <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
   </div>
@@ -250,7 +251,15 @@ document.addEventListener('DOMContentLoaded', function () {
   function render() {
     if (!st) return;
     if (!st.signedIn) {
-      note('<b>Sign in to connect a league.</b> League sync is part of the paid bundle and is tied to your account so it follows you across devices. <a href="/">Sign in or restore access on the home page</a>.');
+      note('<div class="is-card"><h3>Sign in to sync your league</h3><p><b>League sync is free.</b> Enter your email and we will send a one-time link. Signing in keeps encrypted provider credentials and synced leagues tied to you across devices.</p><div class="is-row2"><div class="is-field"><label for="lsEmail">Email</label><input class="is-input" id="lsEmail" type="email" autocomplete="email" placeholder="you@email.com"></div></div><div class="is-btns"><button type="button" class="is-btn primary" id="lsSignin">Email me a sign-in link</button></div><p class="is-note" id="lsSigninMsg"></p></div>');
+      $('lsSignin').addEventListener('click', function () {
+        var email = $('lsEmail').value.trim(), msg = $('lsSigninMsg'), b = this;
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent = 'Enter a valid email address.'; return; }
+        b.disabled = true; msg.textContent = 'Sending…';
+        ITSync.api('/api/auth/request', { method: 'POST', body: { email: email, returnTo: '/my-league' } }).then(function () {
+          b.hidden = true; $('lsEmail').disabled = true; msg.textContent = 'Check your email. Open the one-time link on this device; it expires in 15 minutes.';
+        });
+      });
       $('lsList').innerHTML = ''; $('lsConnect').hidden = true; return;
     }
     var q = new URLSearchParams(location.search).get('yahoo');
@@ -453,5 +462,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script><!--/chrome:navjs-->
+
+<script src="/player-search.js" defer></script>
 </body>
 </html>

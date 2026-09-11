@@ -353,6 +353,12 @@ jobs:
       - name: The three boards, Market Delta and the explainer
         run: node tools/test-boards.mjs
 
+      # Numeric fantasy outputs are software outputs, not model opinions. This
+      # fails if an LLM call leaks into ranking/projection/DFS code or if the
+      # automated newsroom stops using its dedicated Sonnet model.
+      - name: AI never calculates rankings, projections or DFS values
+        run: node tools/test-ai-boundary.mjs
+
       # The insight rules (deterministic, data-carrying, and returning nothing
       # from the usage rules until games have been played), Vegas Edge's six
       # boards, and the Wednesday movers' reasons.
@@ -370,6 +376,8 @@ jobs:
         run: node tools/test-dfs.mjs
       - name: DraftKings main-slate importer
         run: node tools/test-draftkings-import.mjs
+      - name: DraftKings workflow authentication
+        run: node tools/test-draftkings-auth.mjs
       - name: The health board, the job log and the editorial actions
         run: node tools/test-health.mjs
       - name: The job schedule in New York time

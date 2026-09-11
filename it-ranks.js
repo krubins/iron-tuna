@@ -41,6 +41,15 @@
 (function () {
   'use strict';
 
+  // Ranking pages are generated from this one file, so load the shared player
+  // identity/media helper here rather than duplicating it across every shell.
+  if (!window.ITPlayerSearch && !document.querySelector('script[src="/player-search.js"]')) {
+    var mediaScript = document.createElement('script');
+    mediaScript.src = '/player-search.js';
+    mediaScript.async = true;
+    document.head.appendChild(mediaScript);
+  }
+
   var PRESETS = [['standard', 'Standard'], ['half', 'Half PPR'], ['ppr', 'PPR']];
   var STORE = 'it.ranks.scoring';
 
