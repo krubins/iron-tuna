@@ -1,5 +1,7 @@
 # Iron Tuna — Project Handoff
 
+CBS sync follow-up (September 11, 2026): My Leagues now shows inline CBS progress/errors and rejects email addresses in the league field. The connector still requires an existing CBS Fantasy API token; CBS account sign-in/token acquisition and a successful live league import remain unfinished. See `docs/league-sync.md` section 3.3. Enabling the flag alone does not complete this flow.
+
 Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
 [docs/TUNA-MARKET-SIGNAL.md](docs/TUNA-MARKET-SIGNAL.md).
 
