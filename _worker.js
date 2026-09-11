@@ -7741,7 +7741,9 @@ async function llmText(env, system, user, maxTokens, timeoutMs, modelOverride) {
       ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: maxTokens || 3000, system, messages: [{ role: 'user', content: user }], ...(stream ? { stream: true } : {}) }) })
       : await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0.3, max_tokens: maxTokens || 3000, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }) });
     if (!r.ok) return { ok: false, error: 'provider_' + r.status };
-    if (stream) {
+    // Read as a stream only when one came back; anything else is the plain
+    // JSON answer (a proxy, or the dry run's fake model).
+    if (stream && r.headers && /event-stream/.test(r.headers.get('content-type') || '')) {
       const s = _anthropicStreamText(await r.text());
       if (s.error) return { ok: false, error: s.error };
       return { ok: !!s.text, text: s.text, model, truncated: s.stop === 'max_tokens' };
