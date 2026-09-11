@@ -9292,3 +9292,26 @@ takes about five and a half minutes. The `nothing published twice` rule gained
 a per-game exception and, beside it, the stricter rule that actually holds for
 those kinds — one row per GAME, checked on the game id.
 
+### 68r. Friday night: the first Weekend Preview that parsed, and why two rows stayed held
+
+On the build carrying the streamed writer the Weekend Preview wrote in
+full for the first time (version 7, 323 seconds, both lenses), and the
+fact check held it on "Herbert.\nVega" and "Lock Herbert": the body is
+checked as JSON text, so a newline inside a string is a backslash and an
+n, which the sentence-boundary rule did not treat as whitespace; and an
+imperative at the head of a sentence read as a first name. Both are in
+`validateDraft` now (the boundary accepts an escaped newline; `NOT_A_NAME`
+carries the desk's imperatives). The three numbers it was also held on
+(800, 2400, 1500) were paces the writer computed, which the packet does
+not carry; that hold is correct.
+
+Kickers & Defenses and What Matters, held on comma thousands (§68q),
+were not released by the fix: their kinds take no updates, so the tick
+answered "exists" before it built a packet, and the revalidation of §68o
+sat after that answer. `produceContent` now re-checks a held draft before
+"exists", at most once an hour a row (`revalidateDue`, a `reval:<id>` key
+in `newsroom_settings`), because a packet is CPU.
+
+Also seen: the last duplicate tick before the claim (§68q) ran the new
+per-game recaps twice and published NE at SEA twice (rows 18 and 19); the
+claim held from the first tick on the new build (one row at 22:30Z).

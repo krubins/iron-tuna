@@ -7939,7 +7939,7 @@ function _sectionSpec(kind) {
 // none of these (and not an all-caps abbreviation, and not a possessive of
 // something allowed). The first live preview was held on "Two Slates",
 // "Implied Totals", "Every Patriots", "Guerendo's PUP" and "Brown. Vegas".
-const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Out Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trade Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Back Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Best Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Clear Obvious Likely Unlikely Possible Probable Certain Sure Different Same Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Over Under Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Strong Moderate Mild Slight Fade Fades Lean Leans Buy Buys Sell Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modeled Modelled Not Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas').split(/\s+/));
+const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Out Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trade Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Back Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Best Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Clear Obvious Likely Unlikely Possible Probable Certain Sure Different Same Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Over Under Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Strong Moderate Mild Slight Fade Fades Lean Leans Buy Buys Sell Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modeled Modelled Not Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas Lock Play Fire Ride Trust Bet Grab Prioritize Prioritise Upgrade Downgrade Pass Run Go Take Keep Use Own Prefer Skip Stream Roll Punt Pull Slide Push Wait Watch Note Expect Treat Read Price Weight Value Pay Pair Stack Run Back Flex Move Moving Put Leave Let Give Get Make Find Look Think Know Say Tell Call Called Calling Calls').split(/\s+/));
 const _nameTokens = (run) => run.split(/\s+/).map(t => t.replace(/['\u2019]s$/, '')).filter(t => t && !/^[A-Z0-9.&-]+$/.test(t) && !NOT_A_NAME.has(t.replace(/[.,]+$/, '')));
 function validateDraft(text, allowed) {
   const names = new Set(allowed.names || []), nums = new Set(allowed.numbers || []);
@@ -7949,7 +7949,12 @@ function validateDraft(text, allowed) {
   // A sentence ends where a lower-case word meets its full stop, so "Brown.
   // Vegas" is two sentences and not a man. An initial ("A.J.") is not a
   // sentence end.
-  const bounded = String(text).replace(/([a-z0-9)][.!?;:])\s+(?=[A-Z])/g, '$1\n');
+  // The body is checked as JSON text, so a newline inside a string is the
+  // two characters backslash and n: "Herbert.\nVega" held the first Weekend
+  // Preview that ever parsed.
+  // The marker is a bar, not a newline: the name pattern's whitespace class
+  // matches a newline and would read straight across it.
+  const bounded = String(text).replace(/([a-z0-9)][.!?;:])(?:\s|\\n|\\r|\\t)+(?=[A-Z])/g, '$1 | ');
   for (const m of bounded.matchAll(/\b([A-Z][a-z'\u2019.-]+(?:\s[A-Z][A-Za-z'\u2019.-]+){1,2})\b/g)) {
     const n = m[1];
     if (known(n)) continue;
@@ -9662,6 +9667,19 @@ async function produceContent(env, kind, opts) {
   const slug = _slugOf(kind, season, week, gameId);
   const latest = await contentLatest(env, kind, season, week, gameId);
   const retry = heldRetryable(latest, Date.now());
+  // A held draft is re-checked against a fresh packet before "exists" ends
+  // the tick's interest in it (§68o). The Friday rows the number fix should
+  // have released were never reached: their kinds take no updates, so the
+  // tick answered "exists" before it built a packet. At most once an hour a
+  // row, because a packet is CPU and the fact check is code that changes
+  // only with a deploy.
+  let revalTried = false;
+  if (latest && latest.status === 'held' && latest.body && latest.body !== 'null' && !o.force && !retry && (await revalidateDue(env, latest, Date.now()))) {
+    revalTried = true;
+    const ctx0 = await contentContext(env, week, { excluded: d.excluded || [] });
+    const packet0 = await buildResearchPacket(env, kind, d, ctx0, { ...o, gameId });
+    if (!packet0.skip) { const revived = await revalidateHeld(env, kind, latest, packet0, d, season, gameId); if (revived) return revived; }
+  }
   if (latest && !o.force && !retry && !K.updates && !K.unscheduled) return { ok: false, kind, week, game: gameId, error: 'exists' };
   if (d.skip) { if (!latest) await contentStore(env, { season, week, kind, gameId, slug, title: K.title, status: 'skipped', brief: { reason: d.reason }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped' }; }
   const ctx = await contentContext(env, week, { excluded: d.excluded || [] });
@@ -9675,7 +9693,7 @@ async function produceContent(env, kind, opts) {
   // changes: the first live preview was held on title-case headline words
   // and sentence boundaries, and once the rule learned them the draft it had
   // held was right. Nothing is rewritten; the row is published as it stands.
-  if (latest && latest.status === 'held' && latest.body && latest.body !== 'null' && !o.force) {
+  if (!revalTried && latest && latest.status === 'held' && latest.body && latest.body !== 'null' && !o.force) {
     const revived = await revalidateHeld(env, kind, latest, packet, d, season, gameId);
     if (revived) return revived;
   }
@@ -9702,6 +9720,17 @@ async function produceContent(env, kind, opts) {
     calls = await recordCalls(env, { season, week, kind, slug }, list, rivalry);
   }
   return { ok: true, kind, week, game: gameId, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
+}
+const REVALIDATE_EVERY_MS = 60 * 60000;
+async function revalidateDue(env, latest, now) {
+  if (!env || !env.LEADS_DB || !latest || !latest.id) return true;
+  const key = 'reval:' + latest.id;
+  try {
+    const r = await env.LEADS_DB.prepare('SELECT updated_at FROM newsroom_settings WHERE key = ?').bind(key).first();
+    if (r && Number.isFinite(+r.updated_at) && now - (+r.updated_at) < REVALIDATE_EVERY_MS) return false;
+    await env.LEADS_DB.prepare('INSERT OR REPLACE INTO newsroom_settings (key, value, updated_at) VALUES (?, ?, ?)').bind(key, String(latest.version || 1), now).run();
+  } catch (e) {}
+  return true;
 }
 async function revalidateHeld(env, kind, latest, packet, d, season, gameId) {
   let body = null; try { body = JSON.parse(latest.body); } catch (e) { return null; }
