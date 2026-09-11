@@ -130,7 +130,8 @@ const NAV = [
   { label: 'Free cheat sheet', href: '{app}', cta: true },
 ];
 
-// Where the header button says "Save my league" instead of "Free cheat sheet".
+// Where the header button leads to account-backed league sync instead of the
+// browser-only draft cheat sheet.
 // A reader on the waiver board in October is not there to build a draft sheet,
 // and the one thing that improves every number in front of them is saving their
 // scoring and their FAAB budget. The draft CTA is still one click away in the
@@ -145,7 +146,7 @@ const NAV = [
 //
 // tools/test-chrome.mjs reads this set out of this file rather than copying it,
 // so adding a page here is one edit, not two.
-const IN_SEASON_CTA = { label: 'Save my league', href: '/in-season#league', cta: true };
+const IN_SEASON_CTA = { label: 'Sync my league', href: '/my-league', cta: true };
 //
 // The rankings section — the ribbon's six destinations and the fourteen
 // per-position pages under its two menus — is in-season by definition, so every
@@ -253,10 +254,10 @@ const BLURB = 'Iron Tuna prices every player against the betting market first an
 //      once the reader is already on one of them.
 //
 // The wording is fixed: entertainment-only, verify-before-relying, 21+,
-// informational, not-a-sportsbook, state availability, 1-800-GAMBLER.
+// informational, not-a-sportsbook, state availability, 1-800-MY-RESET.
 // tools/test-chrome.mjs asserts all seven clauses on every page. Do not
 // shorten it.
-const LEGAL = '<b>For social and entertainment purposes only.</b> Every number on this site \u2014 projections, odds, salaries and contract prices alike \u2014 is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-GAMBLER</b>.';
+const LEGAL = '<b>For social and entertainment purposes only.</b> Every number on this site \u2014 projections, odds, salaries and contract prices alike \u2014 is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

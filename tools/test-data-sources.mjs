@@ -31,6 +31,8 @@ const ok = (name, cond, extra = '') => {
 // "service" hosts are vendors Iron Tuna is a paying or authenticated customer
 // of, and "own" is us.
 const ALLOWED = {
+  'api.prop-line.com':        { kind: 'content', why: 'PropLine game lines, player props and movement for end-user analytical display; no bulk redistribution (docs/data-sources.md)' },
+  'prop-line.com':            { kind: 'content', why: 'PropLine source-attribution link; never fetched by the worker (docs/data-sources.md)' },
   'football.cbssports.com': { kind: 'content', why: 'CBS reader-authorized league API; validated league subdomain only, FLAG_CBS_SYNC off until access and commercial terms verified (R7)' },
   'api.sportsgameodds.com':   { kind: 'content', why: 'paid odds feed: player props and one of the quotes behind /the-line; display terms pending (docs/data-sources.md R8)' },
   'api.the-odds-api.com':     { kind: 'content', why: 'documented odds feed; stored and derived UI use permitted (docs/data-sources.md R3)' },
@@ -52,6 +54,7 @@ const ALLOWED = {
   'upload.twitter.com':       { kind: 'service', why: 'our own posting' },
   'graph.threads.net':        { kind: 'service', why: 'our own posting' },
   'api.indexnow.org':         { kind: 'service', why: 'search index ping' },
+  'token.actions.githubusercontent.com': { kind: 'service', why: 'verify the signed identity of the DraftKings GitHub Actions workflow' },
   'github.com':               { kind: 'service', why: 'links only, never fetched' },
   // A JSON-LD @context is a vocabulary identifier, not an endpoint. It is
   // printed into the ProfilePage block the worker builds for /analysts/<id>

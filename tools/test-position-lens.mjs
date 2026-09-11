@@ -103,7 +103,7 @@ const read = page => page.evaluate(() => ({
             .map(a => a.getAttribute('href') || '')
             .filter(h => /^\/(auctiondraft|snakedraft)(\?|$)/.test(h))
             .map(h => h.split('?')[0]))],
-  mgr: document.getElementById('navMgr').textContent
+  sync: document.getElementById('navSync').textContent
 }));
 const pick = (page, ed) => page.click('#edSwitch a[data-ed="' + ed + '"]');
 
@@ -223,15 +223,15 @@ console.log('\nthe lead and the modules agree');
 // The complaint that put this switch in the ribbon was that a reader who came
 // for another draft was still handed the auction site. So the test is not "the
 // switch has two buttons": it is that ONE click moves the drop links, the
-// app links and the button that names the room together. (The guides module and
-// the camp desk used to be asserted here too; both came off the front page with
-// the run from The Play-Caller Premium down to the Draft Tools band.)
+// app links and the persistent league-sync button together. (The guides module
+// and the camp desk used to be asserted here too; both came off the front page
+// with the run from The Play-Caller Premium down to the Draft Tools band.)
 console.log('\nthe whole page follows the edition');
 {
   const { page, ctx } = await open({});
   const a = await read(page);
   ok('auction opens on the auction room', a.app.join() === '/auctiondraft', a.app.join());
-  ok('and names it', a.mgr === 'Auction Manager', a.mgr);
+  ok('and keeps free league sync in the masthead', a.sync === 'Sync My League', a.sync);
 
   // The switch offers exactly two editions now, and the site sells one of them.
   ok('the switch offers auction and snake, and nothing else',
@@ -243,7 +243,7 @@ console.log('\nthe whole page follows the edition');
   const b = await read(page);
   ok('snake re-points every story', b.drops.join() === '/snake', b.drops.join());
   ok('every app link lands in the draft room', b.app.join() === '/snakedraft', b.app.join());
-  ok('the room is named honestly', b.mgr === 'Draft Room', b.mgr);
+  ok('league sync stays in the masthead', b.sync === 'Sync My League', b.sync);
   // The rewrite covers exactly two families of URL. Anything else that starts
   // "/auction-" has no twin in the other edition, so it must survive untouched —
   // and no link may be invented: every /snake* href has to be a page that
@@ -257,7 +257,7 @@ console.log('\nthe whole page follows the edition');
   const back = await read(page);
   ok('switching back restores the page as authored',
      back.drops.join() === '/auction' && back.app.join() === '/auctiondraft' &&
-     back.mgr === 'Auction Manager');
+     back.sync === 'Sync My League');
   ok('nothing on the page threw', errors.length === 0, errors[0]);
   await ctx.close();
 }

@@ -250,7 +250,9 @@
       // alongside it and the page prints those.
       var owned = bestL.map(ownOf).filter(function (v) { return v != null; });
       results.push({ key: bestL.map(function (p) { return p.id; }).sort().join('|'), players: bestL.map(function (p, i) { return { slot: cfg.slots[i], id: p.id, name: p.name, position: p.position, team: p.team, opponent: p.opponent, salary: p.salary, points: Math.round(mode.pts(p) * 10) / 10,
-          proj: Math.round(p.ironTunaPoints * 10) / 10, floor: Math.round(floorOf(p) * 10) / 10, ceiling: Math.round(ceilOf(p) * 10) / 10, ownership: ownOf(p), leverage: isFinite(p.leverage) ? p.leverage : null }; }),
+          proj: Math.round(p.ironTunaPoints * 10) / 10, operatorFppg: p.operatorFppg == null ? null : Math.round(Number(p.operatorFppg) * 10) / 10,
+          projectionVsFppg: p.projectionVsFppg == null ? null : Math.round(Number(p.projectionVsFppg) * 10) / 10,
+          floor: Math.round(floorOf(p) * 10) / 10, ceiling: Math.round(ceilOf(p) * 10) / 10, ownership: ownOf(p), leverage: isFinite(p.leverage) ? p.leverage : null }; }),
         salary: salary, remaining: cfg.cap - salary, points: Math.round(bestS * 10) / 10, mode: o.mode || 'ironTuna',
         projPoints: Math.round(bestL.reduce(function (s, p) { return s + p.ironTunaPoints; }, 0) * 10) / 10,
         floorPoints: Math.round(bestL.reduce(function (s, p) { return s + floorOf(p); }, 0) * 10) / 10,

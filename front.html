@@ -110,8 +110,9 @@ img{max-width:100%}
    two writers overwriting each other. It sets data-lane on the ribbon and CSS
    does the rest, which also leaves a section hidden for being empty hidden
    when its lane comes back. */
-.ribbon[data-lane="dfs"] a[data-lane="fantasy"],
-.ribbon[data-lane="fantasy"] a[data-lane="dfs"]{display:none}
+.ribbon[data-lane="fantasy"] a[data-lane]:not([data-lane="fantasy"]),
+.ribbon[data-lane="dfs"] a[data-lane]:not([data-lane="dfs"]),
+.ribbon[data-lane="market"] a[data-lane]:not([data-lane="market"]){display:none}
 /* The regular season. it-season.js stamps html[data-season="in"] off /api/season,
    and the draft-season bands (The Pick, the cheat-sheet Vegas column, Position
    Intel, Just Posted) leave the front page with it: they are historical once the
@@ -132,6 +133,8 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .nr-card{border:1px solid var(--line2,#d9e0e5);border-radius:10px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;color:inherit;text-decoration:none;background:var(--card,#fff)}
 .nr-card:hover{border-color:var(--teal,#0e7c63)}
 .nr-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal,#0e7c63)}
+.nr-kicker.nfl-wide{display:flex;align-items:center;gap:6px}
+.nr-nfl-logo{display:block;width:18px;height:18px;object-fit:contain;flex:0 0 auto}
 .nr-card h3{margin:0;font-size:17px;line-height:1.3}.nr-card p{margin:0;color:var(--sec,#5a6b78);font-size:13.5px;line-height:1.45}
 .nr-by{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sec,#5a6b78);margin-top:auto}
 .nr-av{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--teal,#0e7c63);color:#fff;font-weight:800;font-size:10px}
@@ -164,7 +167,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dg-foot{grid-column:1/-1;border-top:1px solid var(--line,#e6ebef);padding-top:12px}
 @media(max-width:800px){.dg-wrap{grid-template-columns:1fr}}
 /* Auction or snake is a question about a draft. It has no answer on a slate. */
-.ribbon[data-lane="dfs"] .ed-switch{display:none}
+.ribbon[data-lane="dfs"] .ed-switch,.ribbon[data-lane="market"] .ed-switch{display:none}
 
 /* ── section headers ── */
 .sec-head{display:flex;align-items:baseline;gap:14px;margin:34px 0 14px;border-bottom:2px solid var(--ink);padding-bottom:8px;position:relative}
@@ -235,6 +238,8 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .lead-kicker{display:flex;gap:8px;align-items:center}
 .badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:3px}
 .badge-pos{background:var(--brand);color:#fff}
+.badge-nfl{display:inline-flex;align-items:center;gap:6px}
+.badge-nfl-logo{display:block;width:18px;height:18px;object-fit:contain;flex:0 0 auto}
 .badge-deep{background:#12181f;color:#f5c542;border:1px solid #3a4550}
 .badge-under{background:var(--brand-tint);color:var(--brand);border:1px solid var(--brand-line)}
 .badge-over{background:#fbeaea;color:#b02020;border:1px solid #f0c8c8}
@@ -307,6 +312,8 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .rail a.hl{font-size:14px;font-weight:700;line-height:1.35;display:block}
 .rail a.hl:hover{color:var(--brand)}
 .rail .hl-meta{font-size:11.5px;color:var(--ink-3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.hl-meta.nfl-wide{display:flex;align-items:center;gap:6px}
+.hl-nfl-logo{display:block;width:18px;height:18px;object-fit:contain;flex:0 0 auto}
 
 /* ── story grid modules ──────────────────────────────────────────────────
    Five positions used to sit in five narrow auto-fit columns, which at any
@@ -1091,7 +1098,27 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The contest chips, then the solved roster on the page's one dark surface.
    Dark because it is the answer: on a gray page of white cards, an inverted
    board is the only thing that cannot be scrolled past. */
-.dfs-shape { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px }
+.dfs-setup{margin:0 0 24px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:0 10px 26px rgba(15,23,25,.05)}
+.dfs-setup-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:13px}
+.dfs-setup-title span{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--brand)}
+.dfs-setup-title b{font-size:17px}
+.dfs-setup-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.dfs-select label{display:block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.dfs-select select{width:100%;min-height:44px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:700 14px Inter,Arial,sans-serif;padding:9px 34px 9px 11px}
+.dfs-select select:disabled{opacity:.48;cursor:not-allowed;background:#f1f3f3}
+.dfs-select small{display:block;margin-top:6px;color:var(--ink-3);font-size:11px;line-height:1.4}
+.dfs-setup-state{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+.dfs-setup-state.ready{color:var(--brand);font-weight:800}
+.dfs-quickread{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin:0 0 26px}
+.dfs-potw,.dfs-learn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.dfs-potw{border-top:3px solid var(--gold)}
+.dfs-potw .k,.dfs-learn .k{display:block;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--brand);margin-bottom:4px}
+.dfs-potw .k{color:var(--gold-ink)}
+.dfs-potw h3,.dfs-learn h3{font-size:19px;line-height:1.2;margin-bottom:6px}
+.dfs-potw p,.dfs-learn p{font-size:13px;line-height:1.55;color:var(--ink-2)}
+.dfs-learn a{display:block;font-weight:800;color:var(--brand);margin-top:8px;font-size:12px}
+@media(max-width:760px){.dfs-setup-grid{grid-template-columns:1fr}.dfs-quickread{grid-template-columns:1fr}}
+.dfs-shape { display: none !important; flex-wrap: wrap; gap: 10px; margin: 0 0 14px }
 .dfs-shape button {
   appearance: none; font: inherit; cursor: pointer; text-align: left;
   background: var(--card, #fff); border: 1px solid var(--line, #e1e7ea); border-radius: 10px;
@@ -1243,7 +1270,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The panes are two siblings in <main>; nothing is fetched for DFS until the
    DFS tab is opened for the first time, so the fantasy reader pays nothing
    for a lane they never look at. */
-.lane-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--mast); border-bottom: 1px solid var(--line) }
+.lane-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--mast); border-bottom: 1px solid var(--line) }
 .lane-tab { appearance: none; border: 0; background: none; cursor: pointer; font: inherit; color: #8d99a1;
   font-family: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif; font-size: clamp(19px, 2.4vw, 26px); letter-spacing: .1em;
   line-height: 1; text-transform: uppercase; padding: 15px 10px 12px; border-bottom: 4px solid transparent; transition: color .12s, background .12s }
@@ -1286,7 +1313,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dfs-stack h3 { font-size: 15px; margin-bottom: 6px }
 .dfs-stack p { font-size: 13px; line-height: 20px; color: var(--ink-2); margin-top: 6px }
 .dfs-empty { font-size: 13.5px; color: var(--ink-3); margin-top: 12px }
-@media (max-width: 560px) { .lane-tab { letter-spacing: .05em; padding: 13px 6px 10px } }
+@media (max-width: 560px) { .lane-tab { letter-spacing: .035em; padding: 13px 4px 10px; font-size: 10.5px } }
 
 /* The section ribbon under the hero. This page links no shared stylesheet, so
    the block below is INJECTED here by tools/build-ranks.mjs — the identical
@@ -1382,11 +1409,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   </nav>
   <nav class="mast-nav">
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
-    <a class="cta-gold" href="/in-season#league">Save My League</a>
-    <!-- The label is owned by the edition switcher below (it becomes "Auction
-         Manager", "Snake board" and so on), so the href has to be the draft ROOM
-         and not the cheat sheet, or the button says one thing and does another. -->
-    <a class="cta" id="navMgr" href="/auctiondraft?screen=board">Auction Manager</a>
+    <a class="cta-gold" id="navSync" href="/my-league">Sync My League</a>
   </nav>
 </div></header>
 <div class="dominant" role="doc-subtitle"><div class="wrap">
@@ -1660,8 +1683,9 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
      kept in the URL (?lane=dfs) and in this browser, so a shared link opens on
      the lane it was shared from. -->
 <div class="lane-tabs" role="tablist" aria-label="Choose a lane">
-  <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Weekly Fantasy</button>
+  <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Season Long</button>
   <button class="lane-tab" type="button" role="tab" id="laneTabDfs" data-lane="dfs" aria-controls="laneDfs" aria-selected="false" tabindex="-1">DFS</button>
+  <button class="lane-tab" type="button" role="tab" id="laneTabMarket" data-lane="market" aria-controls="laneMarket" aria-selected="false" tabindex="-1">Betting Market Intel</button>
 </div>
 
 <div class="ribbon" data-lane="fantasy"><div class="wrap">
@@ -1685,6 +1709,11 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   <a href="#dfsValues" data-lane="dfs">Vegas Values</a>
   <a href="#dfsStacks" data-lane="dfs">Game Stacks</a>
   <a href="#dfsTd" data-lane="dfs">TD Board</a>
+  <a href="#marketGames" data-lane="market">Game Markets</a>
+  <a href="#marketProps" data-lane="market">Player Props</a>
+  <a href="#marketMoves" data-lane="market">Prop &amp; Line Moves</a>
+  <a href="#marketLine" data-lane="market">The Line</a>
+  <a href="#marketMethod" data-lane="market">How We Read It</a>
   <span class="rb-spacer"></span>
   <!-- Player lookup. It lives in the ribbon because the ribbon is the one band
        that stays on screen the whole way down the page, so "look a player up"
@@ -1839,16 +1868,69 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
        and the note says which site had no salaries loaded. -->
   <div class="lane-pane" id="laneDfs" role="tabpanel" aria-labelledby="laneTabDfs" hidden>
 
-  <!-- ── the lineup ───────────────────────────────────────────────────────────
-       The DFS lane used to open on four summary tiles — how many players are
-       priced, what the median dollar buys — and the roster a reader could
-       actually enter was not on this page at all. It is the first thing now,
-       solved on the same slate the tiles are counting, and the contest chips
-       above it are the branch: the same cap solved for a double-up, for one
-       entry, or for a field big enough that the median is worth nothing.
+  <!-- The homepage DFS lane mirrors /dfs: define the DraftKings contest first. -->
+  <div class="dfs-setup" id="dfsSetup">
+    <div class="dfs-setup-title"><span>DraftKings DFS Setup</span><b>Match the contest you are entering</b></div>
+    <div class="dfs-setup-grid">
+      <div class="dfs-select">
+        <label for="dfsGameStyle">First · Game Style</label>
+        <select id="dfsGameStyle">
+          <option value="">Select Game Style…</option>
+          <option value="flash-draft">Flash Draft</option>
+          <option value="classic">Classic</option>
+          <option value="showdown-captain">Showdown Captain Mode</option>
+          <option value="pick6">Pick6</option>
+          <option value="best-ball">Best Ball</option>
+          <option value="tiers">Tiers</option>
+          <option value="in-game-showdown">In-Game Showdown</option>
+          <option value="single-stat-yards">Single Stat - Total Yards</option>
+          <option value="single-stat-touchdowns">Single Stat - Touchdowns</option>
+          <option value="snake">Snake</option>
+          <option value="snake-showdown">Snake Showdown</option>
+          <option value="madden-classic">Madden Classic</option>
+          <option value="madden-showdown-captain">Madden Showdown Captain Mode</option>
+        </select>
+        <small>The roster/scoring format.</small>
+      </div>
+      <div class="dfs-select">
+        <label for="dfsGames">Second · Games</label>
+        <select id="dfsGames" disabled><option value="">Select Game Style first…</option></select>
+        <small>The games and players actually available in that contest.</small>
+      </div>
+      <div class="dfs-select">
+        <label for="dfsPayout">Third · Payout Structure</label>
+        <select id="dfsPayout" disabled>
+          <option value="">Select Games first…</option>
+          <option value="h2h">Head-to-Head</option>
+          <option value="50-50">50/50</option>
+          <option value="double-up">Double Up</option>
+          <option value="multiplier">Multiplier (3x / 5x / 10x)</option>
+          <option value="tournament-single">Tournament - Single Entry</option>
+          <option value="tournament-multi">Tournament - Multi-Entry</option>
+          <option value="satellite">Satellite / Qualifier</option>
+          <option value="private">League / Private Contest</option>
+        </select>
+        <small>How much risk the roster should accept for the available payoff.</small>
+      </div>
+    </div>
+    <p class="dfs-setup-state" id="dfsSetupState">Start with Game Style.</p>
+  </div>
 
-       It shares dfs-optimizer.js with /dfs, so the two surfaces cannot solve
-       the same slate differently. Nothing here enters a contest. -->
+  <div class="dfs-quickread">
+    <div class="dfs-potw">
+      <span class="k">Play of the Week</span>
+      <h3 id="dfsPotwTitle">Waiting for this week&rsquo;s slate</h3>
+      <p id="dfsPotwCopy">Iron Tuna compares the safest roster with the additional ceiling available farther up the payout curve, and recommends the contest where the added payoff best compensates for the added risk.</p>
+    </div>
+    <div class="dfs-learn">
+      <span class="k">DFS Academy</span>
+      <h3>Understand the contest before building the lineup.</h3>
+      <p>Start with the structure, then learn how stacks, correlation, leverage and ownership change by contest.</p>
+      <a href="/dfs-getting-started">Starting out: how DFS contests work →</a>
+      <a href="/dfs-strategy-guide">Strategy: stacks, leverage and correlation →</a>
+    </div>
+  </div>
+
   <div class="fp-deck" id="dfsDeck">
     <a class="fp-act" href="/dfs">
       <span class="fp-act-k">The whole sheet</span>
@@ -1873,11 +1955,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   <div class="fp-chap" id="dfsLineup"><div class="fp-chap-top"><span class="fp-chap-n">01</span><h2>The lineup</h2></div>
     <p class="fp-chap-dek">One slate, one cap, solved. Pick the contest you are entering and the roster below is re-solved for it &mdash; floors for a double-up, ceiling discounted by ownership for a large field.</p></div>
 
-  <div class="dfs-shape" id="dfsShape" role="group" aria-label="What contest is this for">
-    <button type="button" data-contest="cash">Cash <small>Floors</small></button>
-    <button type="button" data-contest="single" aria-pressed="true">Single entry <small>Best roster</small></button>
-    <button type="button" data-contest="gpp">Large field <small>Longshots</small></button>
-  </div>
+  <div class="dfs-shape" id="dfsShape" aria-hidden="true"></div>
   <p class="dfs-note" id="dfsShapeNote"></p>
   <div id="dfsBuild"></div>
 
@@ -1936,6 +2014,92 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 
   </div><!-- /#laneDfs -->
 
+  <!-- ── Betting Market Intel lane ─────────────────────────────────────────
+       A read-only market board. It uses the same /api/vegas-edge payload as
+       The Line and the fantasy market overlays, so a spread or prop cannot be
+       quoted differently on the homepage. Market observations and Iron Tuna
+       projections are deliberately labeled as different things. -->
+  <div class="lane-pane" id="laneMarket" role="tabpanel" aria-labelledby="laneTabMarket" hidden>
+
+    <div class="fp-deck">
+      <a class="fp-act" href="#marketGames">
+        <span class="fp-act-k">Game markets</span>
+        <span class="fp-act-h">Spreads, totals and <em>Tuna Edge</em></span>
+        <p>The posted market beside Iron Tuna&rsquo;s projection for the same game, including what has moved since the first stored observation.</p>
+        <span class="fp-act-go">Read the board &rarr;</span>
+      </a>
+      <a class="fp-act" href="#marketProps">
+        <span class="fp-act-k">Player props</span>
+        <span class="fp-act-h">The prop versus <em>our projection</em></span>
+        <p>Quoted player markets only where the feed actually carries one. Derived Iron Tuna numbers are never presented as sportsbook odds.</p>
+        <span class="fp-act-go">Read the props &rarr;</span>
+      </a>
+      <a class="fp-act gold" href="/the-line">
+        <span class="fp-act-k">The column</span>
+        <span class="fp-act-h"><em>The Line</em></span>
+        <p>Every game on the slate against the posted number, with the model disagreement explained and the market movement beside it.</p>
+        <span class="fp-act-go">Open The Line &rarr;</span>
+      </a>
+    </div>
+
+    <div class="fp-chap" id="marketGames"><div class="fp-chap-top"><span class="fp-chap-n">01</span><h2>Game markets</h2></div>
+      <p class="fp-chap-dek">The market number is the input. Iron Tuna&rsquo;s projection is our independent output. Tuna Edge is simply the difference between the two, not a guarantee or a bet recommendation.</p></div>
+    <div class="fp-chapbody">
+      <p class="dfs-note" id="marketStamp"><b>21+ market information.</b> Iron Tuna does not accept wagers or place bets. Betting Market Intel is not available in Washington, where market-data requests are blocked at the edge. Market prices move, so verify any number at its source before relying on it.</p>
+      <div class="dfs-scroll" id="marketGamesWrap" hidden>
+        <table class="dfs-table" id="marketGamesTable">
+          <thead><tr><th>Game</th><th>Spread</th><th class="num">O/U</th><th title="The points each team is expected to score, calculated from the market spread and game total.">Market implied</th><th title="Iron Tuna’s independent estimate of the points each team will score.">Iron Tuna Projection</th><th title="Iron Tuna’s projected game total minus the market total; positive means Over and negative means Under.">Tuna Edge</th><th title="The change in the market total or spread from the stored opening line to the current line.">Movement</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="dfs-empty" id="marketGamesEmpty">Reading the current game markets&hellip;</p>
+    </div>
+
+    <div class="fp-chap" id="marketProps"><div class="fp-chap-top"><span class="fp-chap-n">02</span><h2>Player props</h2></div>
+      <p class="fp-chap-dek">The sportsbook consensus across the fantasy-relevant markets PropLine carries: passing, rushing and receiving yards, receptions, touchdowns, interceptions and anytime-TD prices. The baseline is our first observation within the stored window, not necessarily the sportsbook opening line.</p></div>
+    <div class="fp-chapbody">
+      <div class="dfs-scroll" id="marketPropsWrap" hidden>
+        <table class="dfs-table" id="marketPropsTable">
+          <thead><tr><th>Player</th><th>Prop</th><th class="num">Current line</th><th class="num">Over / Yes</th><th class="num">Baseline</th><th class="num">Move</th><th>Books</th><th>Source</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="dfs-empty" id="marketPropsEmpty">Reading quoted player props&hellip;</p>
+    </div>
+
+    <div class="fp-chap" id="marketMoves"><div class="fp-chap-top"><span class="fp-chap-n">03</span><h2>Prop &amp; line movement</h2></div>
+      <p class="fp-chap-dek">Changes between stored PropLine quotes, collected hourly. Baselines are first observations within the last 24 hours; paid provider opening history, when available, is labeled separately. Line move is the median change at comparable books. Agreement counts books moving in the same direction, not confirmed sharp money or a real-time steam alert. Changes between polls can be missed.</p></div>
+    <div class="fp-chapbody">
+      <div class="dfs-scroll" id="marketMovesWrap" hidden>
+        <table class="dfs-table" id="marketMovesTable">
+          <thead><tr><th>Player</th><th>Market</th><th class="num">Baseline</th><th class="num">Current</th><th class="num">Line move</th><th class="num">Price move</th><th>Books</th><th>Agreement / signal</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="dfs-empty" id="marketMovesEmpty">Reading prop and line movement&hellip;</p>
+    </div>
+
+    <div class="fp-chap" id="marketLine"><div class="fp-chap-top"><span class="fp-chap-n">04</span><h2>The Line</h2></div>
+      <p class="fp-chap-dek">The widest model-versus-market disagreements on the current slate. The full column keeps every game, including the ones where the model and the market agree.</p></div>
+    <div class="fp-chapbody">
+      <div class="dfs-cards" id="marketLineCards"></div>
+      <p class="dfs-empty" id="marketLineEmpty">Reading The Line&hellip;</p>
+      <p><a class="sec-more" href="/the-line">Open the full The Line column &rarr;</a></p>
+    </div>
+
+    <div class="fp-chap" id="marketMethod"><div class="fp-chap-top"><span class="fp-chap-n">05</span><h2>How Iron Tuna reads the market</h2></div>
+      <p class="fp-chap-dek">Iron Tuna&rsquo;s proprietary formulas translate spreads, over/unders, player props and related betting information into projections. The model then blends that market read with other projection inputs and evaluates line movement before deciding how much weight the movement deserves.</p></div>
+    <div class="fp-chapbody">
+      <div class="dfs-cards">
+        <div class="dfs-card"><span class="dfs-tag">1. Observe</span><h3>The posted market</h3><p>Totals, spreads and player props are observations. They are kept separate from anything Iron Tuna derives from them.</p></div>
+        <div class="dfs-card"><span class="dfs-tag">2. Translate</span><h3>Odds into projections</h3><p>Iron Tuna converts market prices into expected football outcomes, then scores those outcomes into fantasy terms where applicable.</p></div>
+        <div class="dfs-card"><span class="dfs-tag">3. Filter</span><h3>Signal versus noise</h3><p>Movement gets context. Broad, corroborated movement can earn more weight; popularity-driven or isolated movement can be discounted rather than blindly followed.</p></div>
+      </div>
+      <p class="dfs-note"><b>Methodology note:</b> a sportsbook line is not an Iron Tuna projection, and an Iron Tuna projection is not a sportsbook quote. The source and basis should remain visible anywhere the two appear together.</p>
+    </div>
+
+  </div><!-- /#laneMarket -->
+
   <!-- The Draft Tools band is a draft-lane pitch, so it belongs to the fantasy
        lane and goes with it. It sits at the foot of the page rather than inside
        #laneFantasy, which is where the band was written to sit and is now the
@@ -1960,7 +2124,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     <a href="/auctiondraft?screen=cheat">Custom Auction Values</a><a href="/auctiondraft?screen=board">Auction Manager</a><a href="/auction-draft-assistant">AI Value Coach</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary Cap &amp; Keepers</a><a href="/guides">Strategy Library</a><a href="/in-season">In-Season</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/rankings">Rankings</a><a href="/depth-charts">Depth Charts</a><a href="/vegas-edge">Vegas Edge</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/my-league">My League</a>
   </nav>
   <a href="/the-pick">The Pick</a><a href="/play-caller-premium">Play-Caller</a><a href="/insights-vault">Insight Vault</a><a href="/auction-watch">Auction Watch</a><a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/data">Data &amp; sources</a><a href="/admin" rel="nofollow">Admin</a>
-  <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site &mdash; projections, odds, salaries and contract prices alike &mdash; is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-GAMBLER</b>.</p>
+  <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site &mdash; projections, odds, salaries and contract prices alike &mdash; is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
   <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via <a href="https://github.com/nflverse/nflverse-data" rel="noopener" style="color:inherit;text-decoration:underline">nflverse</a> (CC BY 4.0) &middot; <a href="/data" style="color:inherit;text-decoration:underline">Data &amp; sources</a> &middot; Team and player images remain the property of their owners; Iron Tuna is not affiliated with or endorsed by the NFL or any club</span>
 </div></footer>
 
@@ -2327,6 +2491,14 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // one exception it spells its own way.
   var LOGO_ID = { WAS: 'wsh' };
   function logoUrl(t) { return 'https://a.espncdn.com/i/teamlogos/nfl/500/' + (LOGO_ID[t] || t).toLowerCase() + '.png'; }
+  var NFL_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png';
+  function isNflLeagueWide(v) { return /^NFL\s+League-Wide$/i.test(String(v || '').trim()); }
+  function badgeTopic(v) {
+    var label = String(v || '');
+    return '<span class="badge badge-pos' + (isNflLeagueWide(label) ? ' badge-nfl' : '') + '">' +
+      (isNflLeagueWide(label) ? '<img class="badge-nfl-logo" src="' + NFL_LOGO_URL + '" alt="" aria-hidden="true">' : '') +
+      esc(label) + '</span>';
+  }
 
   // ── which club, or clubs, the plate is for ────────────────────────────────
   // TEAM_ART's own names are the vocabulary, split into city and nickname so
@@ -2452,6 +2624,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var type = g.querySelectorAll('[data-x0]');
     for (var i = 0; i < type.length; i++) type[i].setAttribute('x', type[i].getAttribute('data-x0'));
   }
+  function nflSvg(type) {
+    return '<g class="club">' +
+      '<image href="' + NFL_LOGO_URL + '" x="28" y="21" width="94" height="94" preserveAspectRatio="xMidYMid meet"/>' +
+      type + '</g>';
+  }
   function renderArt(s) {
     var host = document.getElementById('leadArt');
     if (!host) return;
@@ -2460,6 +2637,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     if (s && s.ppl && s.ppl.length) { host.innerHTML = ''; return; }
     var title = (s && s.title) || '', dek = (s && s.dek) || '';
     var sub = (s && s.topic ? s.topic : 'Deep dive').toUpperCase();
+    var nflWide = isNflLeagueWide(s && (s.label || s.topic));
     // Whose story it is. An authored drop-page story arrives with `team` already
     // stamped on it by tools/build-front.mjs, from its HEADLINE only — the body
     // fallback that works for topics is too loose here, and a club cited in
@@ -2522,10 +2700,13 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
           '<path d="M420 0 L500 0 L340 150 L260 150 Z" fill="' + ink + '" opacity="0.06"/>' +
           '<path d="M300 0 L340 0 L180 150 L140 150 Z" fill="' + ink + '" opacity="0.06"/>' +
           (function () {
+            var hasLeagueMark = !t;
             var type =
-              '<text x="' + (t ? 144 : 34) + '" data-x0="34" y="84" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
-              '<text x="' + (t ? 146 : 34) + '" data-x0="34" y="108" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>';
-            // No club, no mark: the league-wide plate is the geometry alone.
+              '<text x="' + (t ? 144 : hasLeagueMark ? 146 : 34) + '" data-x0="34" y="84" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
+              '<text x="' + (t ? 146 : hasLeagueMark ? 148 : 34) + '" data-x0="34" y="108" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>';
+            // "NFL League-Wide" is a branded league story, so it gets the NFL
+            // shield. Other neutral stories keep the geometry-only plate.
+            if (hasLeagueMark) return nflSvg(type);
             return t ? clubSvg(one, 28, 26, 92, type) : type;
           })() +
           strapSvg(686, 'end', chip, sub) +
@@ -2686,7 +2867,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     renderCast(s);
     document.getElementById('leadKicker').innerHTML =
       (isDeepLead ? '<span class="badge badge-deep">Deep Dive</span>' : '') +
-      '<span class="badge badge-pos">' + esc(s.topic || s.pos) + '</span>' +
+      badgeTopic(s.topic || s.pos) +
       (s.view ? '<span class="badge ' + viewCls(s) + '">' + esc(s.view) + '</span>' : '');
     document.getElementById('leadTitle').innerHTML = '<a href="' + s.url + '">' + esc(s.title) + '</a>';
     document.getElementById('leadPlay').innerHTML = s.play ? '<b>The play:</b> ' + esc(s.play) : '';
@@ -2795,8 +2976,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var lbl = s.label || 'Insight', rank = desk ? 'The Desk' : 'Insight';
     document.getElementById('leadKicker').innerHTML =
       '<span class="badge badge-deep">' + rank + '</span>' +
-      (lbl.toLowerCase() === rank.toLowerCase() ? ''
-        : '<span class="badge badge-pos">' + esc(lbl) + '</span>');
+      (lbl.toLowerCase() === rank.toLowerCase() ? '' : badgeTopic(lbl));
     // The desk writes at ONE league — 12 teams, $200, the site's own scoring —
     // and it quotes hard dollars in the headline: "bid $32, not the sheet's
     // $26". Both figures are wrong for a reader who plays $300, or ten teams,
@@ -3458,7 +3638,10 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     rail.innerHTML = '';
     items.forEach(function(it){
       var el = document.createElement('li');
-      el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta">' + esc(it.meta) + '</div>';
+      var nflWide = isNflLeagueWide(it.label) || isNflLeagueWide(String(it.meta || '').split(' · ')[0]);
+      el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta' + (nflWide ? ' nfl-wide' : '') + '">' +
+        (nflWide ? '<img class="hl-nfl-logo" src="' + NFL_LOGO_URL + '" alt="" aria-hidden="true">' : '') +
+        esc(it.meta) + '</div>';
       rail.appendChild(el);
     });
     // Early in a season the lead rotation can hold every story there is, leaving
@@ -3495,6 +3678,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       return {
         title: rr ? rr.text : o.title,
         url: o.url,
+        label: o.label || 'The Desk',
         meta: (o.label || 'The Desk') + (when ? ' · ' + when : ''),
         desk: 1,
         at: +o.createdAt || 0
@@ -3735,7 +3919,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // back to are the same page.
   var posSub = document.getElementById('posSub');
   var SUB_TAIL = '';
-  var navMgr = document.getElementById('navMgr');
   var tbMgr = document.getElementById('tbMgr');
   var tbText = document.getElementById('tbText');
   var allocHead = document.getElementById('allocHead');
@@ -3757,7 +3940,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   edPainters.push(function () {
     var e = ED[edKey];
     if (posSub) posSub.textContent = e.posSub + SUB_TAIL;
-    if (navMgr) navMgr.textContent = e.mgr;
     if (tbMgr) tbMgr.textContent = 'Open the ' + (edKey === 'auction' ? 'Auction Manager' : e.mgr);
     // The band's pitch names the room it sells, so it cannot keep saying
     // "Auction Manager" to a reader who is drafting a snake.
@@ -3993,10 +4175,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
      down, and the lane switch keeps working even if a feed throws. -->
 <script>
 (function () {
-  var LANES = { fantasy: 1, dfs: 1 };
   var tabs = [].slice.call(document.querySelectorAll('.lane-tab'));
   var ribbon = document.querySelector('.ribbon');
-  var panes = { fantasy: document.getElementById('laneFantasy'), dfs: document.getElementById('laneDfs') };
+  var panes = { fantasy: document.getElementById('laneFantasy'), dfs: document.getElementById('laneDfs'), market: document.getElementById('laneMarket') };
+  var LANES = { fantasy: 1, dfs: 1 };
+  if (panes.market) LANES.market = 1;
   if (!tabs.length || !panes.fantasy || !panes.dfs) return;
 
   var lane = 'fantasy';
@@ -4013,6 +4196,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       if (hash) {
         var target = document.getElementById(hash);
         if (target && panes.dfs.contains(target)) return 'dfs';
+        if (target && panes.market && panes.market.contains(target)) return 'market';
         if (target && panes.fantasy.contains(target)) return 'fantasy';
       }
       var saved = localStorage.getItem('it.lane');
@@ -4026,6 +4210,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     lane = next;
     panes.fantasy.hidden = next !== 'fantasy';
     panes.dfs.hidden = next !== 'dfs';
+    if (panes.market) panes.market.hidden = next !== 'market';
     // Anything else in the main column that belongs to one lane — the "Drafting
     // soon?" band at the foot of the page — goes with it. The bands with no
     // data-lane (the method, the closing band) are the page's own furniture and
@@ -4053,6 +4238,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       } catch (err) {}
     }
     if (next === 'dfs') loadSlate();
+    if (next === 'market') loadMarket();
   }
 
   tabs.forEach(function (t) {
@@ -4075,9 +4261,216 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     if (!a) return;
     var target = document.getElementById(a.getAttribute('href').slice(1));
     if (!target) return;
-    var want = panes.dfs.contains(target) ? 'dfs' : panes.fantasy.contains(target) ? 'fantasy' : null;
+    var want = panes.dfs.contains(target) ? 'dfs' : panes.market && panes.market.contains(target) ? 'market' : panes.fantasy.contains(target) ? 'fantasy' : null;
     if (want && want !== lane) setLane(want);
   });
+
+  // ── Betting Market Intel ──────────────────────────────────────────────────
+  // Same payload as /the-line. No market is fetched directly from a vendor by
+  // the browser and no derived probability is relabeled as a sportsbook quote.
+  var marketLoaded = false, marketLoading = false;
+
+  function marketNum(v) { return v != null && isFinite(Number(v)); }
+  function marketN1(v) { return marketNum(v) ? (Math.round(Number(v) * 10) / 10).toFixed(1) : '—'; }
+  function marketSigned(v) {
+    if (!marketNum(v)) return '—';
+    var n = Math.round(Number(v) * 10) / 10;
+    return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(1);
+  }
+  function marketAmer(pct) {
+    if (!marketNum(pct) || Number(pct) <= 0 || Number(pct) >= 100) return '—';
+    var p = Number(pct) / 100;
+    var v = p >= .5 ? -Math.round(100 * p / (1 - p)) : Math.round(100 * (1 - p) / p);
+    return (v > 0 ? '+' : '') + v;
+  }
+  function marketSpread(g) {
+    if (!g || !marketNum(g.spread)) return '—';
+    if (!g.favourite) return Number(g.spread) === 0 ? 'Pick\'em' : marketSigned(g.spread);
+    return e(g.favourite) + ' −' + Math.abs(Number(g.spread)).toFixed(1);
+  }
+  function marketMove(g) {
+    var bits = [];
+    if (g && g.movement && marketNum(g.movement.total) && Number(g.movement.total) !== 0) bits.push('O/U ' + marketSigned(g.movement.total));
+    if (g && g.movement && marketNum(g.movement.spread) && Number(g.movement.spread) !== 0) bits.push('spread ' + marketSigned(g.movement.spread));
+    return bits.length ? bits.join(' · ') : 'No stored move';
+  }
+  function marketLabel(v) {
+    return String(v || '').replace(/^player_/, '').replaceAll('_', ' ').replace(/\b\w/g, function (m) { return m.toUpperCase(); });
+  }
+  function renderMarketMoves(signal) {
+    var items = (signal && signal.items) || [], by = {};
+    items.forEach(function (r) {
+      if (!r || !r.player || r.stale || !r.comparable) return;
+      var moving = marketNum(r.consensusLineDelta) && Number(r.consensusLineDelta) !== 0 ||
+        marketNum(r.probabilityDelta) && Number(r.probabilityDelta) !== 0 ||
+        marketNum(r.steamScore) && Number(r.steamScore) > 0;
+      if (!moving) return;
+      var key = [r.event, r.player, r.market, r.side].join('|');
+      var weight = (marketNum(r.steamScore) ? Number(r.steamScore) * 2 : 0) + (marketNum(r.score) ? Number(r.score) : 0);
+      if (!by[key] || weight > by[key].weight) by[key] = { row: r, weight: weight };
+    });
+    var rows = Object.keys(by).map(function (k) { return by[k]; })
+      .sort(function (a, b) { return b.weight - a.weight; }).slice(0, 30).map(function (x) { return x.row; });
+    var body = $('marketMovesTable').querySelector('tbody');
+    body.innerHTML = rows.map(function (r) {
+      var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.booksQuoting) ? Number(r.booksQuoting) : marketNum(r.books) ? Number(r.books) : null;
+      var steam = marketNum(r.steamScore)
+        ? '<b>' + marketN1(r.steamScore) + '/100</b>' + (marketNum(r.booksMoved) && marketNum(r.booksQuoting) ? '<small>' + e(r.booksMoved + ' of ' + r.booksQuoting + ' books moving' + (r.movementDirection ? ' ' + r.movementDirection : '')) + '</small>' : '')
+        : (r.observedBooksCompared > 0 ? e(r.observedBooksMoved + ' of ' + r.observedBooksCompared + ' books · ' + r.observedDirection) + '<small>' + e(r.observedMovementMetric === 'line' ? 'Observed line changes' : 'Observed price changes') + '</small>' : 'Awaiting comparable quotes');
+      return '<tr><td><b>' + e(r.player) + '</b><small>' + e(r.matchup || '') + '</small></td>' +
+        '<td>' + e(marketLabel(r.market)) + '<small>' + e(r.side || '') + '</small></td>' +
+        '<td class="num">' + marketN1(r.consensusOpeningLine) + '<small>' + e(r.historyBasis === 'provider-opening' ? 'Provider opening' : 'First observed') + '</small></td>' +
+        '<td class="num"><b>' + marketN1(r.consensusLine) + '</b></td>' +
+        '<td class="num"><b>' + marketSigned(r.consensusLineDelta) + '</b></td>' +
+        '<td class="num">' + (marketNum(r.probabilityDelta) ? marketSigned(r.probabilityDelta) + ' pp' : '—') + '</td>' +
+        '<td>' + (books == null ? '—' : e(String(books))) + '</td>' +
+        '<td>' + steam + '<small>' + e(r.sourceName || 'Market feed') + '</small></td></tr>';
+    }).join('');
+    $('marketMovesWrap').hidden = !rows.length;
+    $('marketMovesEmpty').hidden = !!rows.length;
+    if (!rows.length) {
+      $('marketMovesEmpty').textContent = signal && signal.status === 'disabled'
+        ? 'Prop and line movement is awaiting provider configuration.'
+        : 'No fresh, confirmed prop movement is available yet. Unchanged or stale markets are omitted.';
+    }
+  }
+  function marketHelpCell(content, explanation) {
+    var safe = String(explanation).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return '<td tabindex="0" title="' + safe + '" aria-label="' + safe + '">' + content + '</td>';
+  }
+  function renderMarket(j, signal) {
+    var games = (j && j.gameEnvironments) || [];
+    var props = ((j && j.tdBoard) || []).filter(function (p) {
+      return p && p.basis === 'anytime-td-market' && marketNum(p.probability) && marketNum(p.expectedTds);
+    });
+
+    var gbody = $('marketGamesTable').querySelector('tbody');
+    gbody.innerHTML = games.map(function (g) {
+      var totalEdge = marketNum(g.ironTunaTotal) && marketNum(g.total) ? Number(g.ironTunaTotal) - Number(g.total) : null;
+      var edge = totalEdge == null ? '—' : (totalEdge > 0 ? 'Over ' : totalEdge < 0 ? 'Under ' : 'Even ') + marketSigned(totalEdge);
+      var implied = marketNum(g.impliedAway) && marketNum(g.impliedHome)
+        ? e(g.away) + ' ' + marketN1(g.impliedAway) + ' / ' + e(g.home) + ' ' + marketN1(g.impliedHome)
+        : '—';
+      var tuna = marketNum(g.ironTunaAway) && marketNum(g.ironTunaHome)
+        ? e(g.away) + ' ' + marketN1(g.ironTunaAway) + ' / ' + e(g.home) + ' ' + marketN1(g.ironTunaHome) +
+          (marketNum(g.ironTunaTotal) ? ' (' + marketN1(g.ironTunaTotal) + ' total)' : '')
+        : '—';
+      return '<tr><td><b>' + e(g.away) + ' @ ' + e(g.home) + '</b></td>' +
+        '<td>' + marketSpread(g) + '</td>' +
+        '<td class="num">' + marketN1(g.total) + '</td>' +
+        marketHelpCell(implied, implied === '—' ? 'Market-implied team scores are unavailable.' : 'The market implies ' + g.away + ' will score ' + marketN1(g.impliedAway) + ' points and ' + g.home + ' ' + marketN1(g.impliedHome) + ' points.') +
+        marketHelpCell(tuna, tuna === '—' ? 'Iron Tuna team projections are unavailable.' : 'Iron Tuna projects ' + g.away + ' to score ' + marketN1(g.ironTunaAway) + ' points and ' + g.home + ' ' + marketN1(g.ironTunaHome) + ' points.') +
+        marketHelpCell('<b>' + edge + '</b>', totalEdge == null ? 'A projection and market total are both needed to calculate Tuna Edge.' : totalEdge === 0 ? 'Iron Tuna’s projected total matches the market total.' : 'Iron Tuna’s projected total is ' + marketN1(Math.abs(totalEdge)) + ' points ' + (totalEdge > 0 ? 'above' : 'below') + ' the market total, indicating an ' + (totalEdge > 0 ? 'Over' : 'Under') + ' lean.') +
+        marketHelpCell(e(marketMove(g)), marketMove(g) === 'No stored move' ? 'No nonzero change is recorded; opening comparisons may be unavailable or unchanged.' : marketMove(g) + ' points versus the stored opening line; plus means an increase and minus means a decrease.') + '</tr>';
+    }).join('');
+    $('marketGamesWrap').hidden = !games.length;
+    $('marketGamesEmpty').hidden = !!games.length;
+    if (!games.length) $('marketGamesEmpty').textContent = 'No current game market reached the feed. Nothing stale is substituted.';
+
+    var pbody = $('marketPropsTable').querySelector('tbody');
+    var signalProps = ((signal && signal.items) || []).filter(function (r) {
+      return r && r.player && !r.stale;
+    });
+    var propGroups = {};
+    signalProps.forEach(function (r) {
+      var key = [r.event, r.player, r.market].join('|');
+      var preferred = /^(over|yes)$/i.test(r.side || '') ? 2 : 1;
+      var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : 0;
+      var rank = preferred * 1000 + books * 10 + (marketNum(r.steamScore) ? Number(r.steamScore) : 0);
+      if (!propGroups[key] || rank > propGroups[key].rank) propGroups[key] = { row: r, rank: rank };
+    });
+    var broadProps = Object.keys(propGroups).map(function (k) { return propGroups[k].row; })
+      .sort(function (a, b) {
+        var am = Math.abs(Number(a.consensusLineDelta) || 0), bm = Math.abs(Number(b.consensusLineDelta) || 0);
+        var as = Number(a.steamScore) || 0, bs = Number(b.steamScore) || 0;
+        return bs - as || bm - am || String(a.player).localeCompare(String(b.player));
+      }).slice(0, 40);
+
+    if (broadProps.length) {
+      pbody.innerHTML = broadProps.map(function (r) {
+        var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : null;
+        var pct = marketNum(r.consensusProbability) ? marketN1(r.consensusProbability) + '%' : '—';
+        var move = !marketNum(r.consensusLineDelta) ? 'Awaiting comparison' : Number(r.consensusLineDelta) !== 0 ? marketSigned(r.consensusLineDelta) : 'No line move';
+        var source = r.sourceName || 'Market feed';
+        if (marketNum(r.steamScore) && Number(r.steamScore) > 0) source += ' · steam ' + marketN1(r.steamScore);
+        return '<tr><td><b>' + e(r.player) + '</b><small>' + e(r.matchup || '') + '</small></td>' +
+          '<td>' + e(marketLabel(r.market)) + '<small>' + e(r.side || '') + '</small></td>' +
+          '<td class="num"><b>' + marketN1(r.consensusLine) + '</b></td>' +
+          '<td class="num">' + pct + '</td>' +
+          '<td class="num">' + marketN1(r.consensusOpeningLine) + '<small>' + e(r.historyBasis === 'provider-opening' ? 'Provider opening' : 'First observed') + '</small></td>' +
+          '<td class="num"><b>' + e(move) + '</b></td>' +
+          '<td>' + (books == null ? '—' : e(String(books))) + '</td>' +
+          '<td><small>' + e(source) + '</small></td></tr>';
+      }).join('');
+    } else {
+      pbody.innerHTML = props.slice(0, 20).map(function (p) {
+        return '<tr><td><b>' + e(p.name) + '</b><small>' + e((p.position || '') + (p.team ? ' · ' + p.team : '')) + '</small></td>' +
+          '<td>Anytime TD</td><td class="num">—</td><td class="num"><b>' + marketN1(p.probability) + '%</b></td>' +
+          '<td class="num">—</td><td class="num">—</td><td>—</td><td><small>Current TD market</small></td></tr>';
+      }).join('');
+    }
+    var anyProps = broadProps.length || props.length;
+    $('marketPropsWrap').hidden = !anyProps;
+    $('marketPropsEmpty').hidden = !!anyProps;
+    if (!anyProps) $('marketPropsEmpty').textContent = signal && signal.status === 'disabled'
+      ? 'The broader player-prop board is awaiting market-provider configuration.'
+      : 'No quoted player prop reached the current feed. Iron Tuna does not manufacture sportsbook prices to fill the table.';
+
+    renderMarketMoves(signal);
+
+    var ranked = games.map(function (g) {
+      var totalEdge = marketNum(g.ironTunaTotal) && marketNum(g.total) ? Number(g.ironTunaTotal) - Number(g.total) : null;
+      var modelMargin = marketNum(g.ironTunaHome) && marketNum(g.ironTunaAway) ? Number(g.ironTunaHome) - Number(g.ironTunaAway) : null;
+      var spreadEdge = marketNum(modelMargin) && marketNum(g.spread) ? modelMargin - Number(g.spread) : null;
+      var best = Math.abs(totalEdge || 0) >= Math.abs(spreadEdge || 0)
+        ? { kind: 'Total', edge: totalEdge, market: marketN1(g.total), model: marketN1(g.ironTunaTotal) }
+        : { kind: 'Spread', edge: spreadEdge, market: marketSpread(g), model: marketNum(modelMargin) ? (modelMargin >= 0 ? e(g.home) + ' by ' + marketN1(modelMargin) : e(g.away) + ' by ' + marketN1(Math.abs(modelMargin))) : '—' };
+      return { g: g, best: best, mag: marketNum(best.edge) ? Math.abs(Number(best.edge)) : -1 };
+    }).filter(function (x) { return x.mag >= 0; }).sort(function (a,b) { return b.mag - a.mag; }).slice(0, 4);
+
+    $('marketLineCards').innerHTML = ranked.map(function (x) {
+      var g=x.g, r=x.best;
+      return '<div class="dfs-card"><span class="dfs-tag">' + e(r.kind) + ' · Tuna Edge ' + marketSigned(r.edge) + '</span>' +
+        '<h3>' + e(g.away) + ' @ ' + e(g.home) + '</h3>' +
+        '<p>Market: <b>' + r.market + '</b>. Iron Tuna: <b>' + r.model + '</b>. ' + e(marketMove(g)) + '.</p>' +
+        '<p><a href="/the-line">Read the full game in The Line &rarr;</a></p></div>';
+    }).join('');
+    $('marketLineEmpty').hidden = !!ranked.length;
+    if (!ranked.length) $('marketLineEmpty').textContent = 'The model and market board has no complete comparison yet.';
+
+    if (j && j.asOf) {
+      try { $('marketStamp').innerHTML += ' Market data as of <b>' + e(new Date(j.asOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + ' ET</b>.'; } catch (err) {}
+    }
+  }
+  function marketBlank(msg) {
+    $('marketGamesWrap').hidden = true; $('marketGamesEmpty').hidden = false; $('marketGamesEmpty').textContent = msg;
+    $('marketPropsWrap').hidden = true; $('marketPropsEmpty').hidden = false; $('marketPropsEmpty').textContent = msg;
+    $('marketMovesWrap').hidden = true; $('marketMovesEmpty').hidden = false; $('marketMovesEmpty').textContent = msg;
+    $('marketLineCards').innerHTML = ''; $('marketLineEmpty').hidden = false; $('marketLineEmpty').textContent = msg;
+  }
+  function loadMarket() {
+    if (marketLoaded || marketLoading) return;
+    marketLoading = true;
+    Promise.all([
+      fetch('/api/vegas-edge', { credentials: 'omit' }).then(function (r) { return r.json(); }),
+      fetch('/api/tuna-market?kind=props', { credentials: 'omit' }).then(function (r) { return r.json(); }).catch(function () { return null; })
+    ]).then(function (parts) {
+        var j = parts[0], signal = parts[1];
+        marketLoading = false;
+        if (j && j.error === 'jurisdiction_unavailable') {
+          marketLoaded = true;
+          marketBlank('Betting Market Intel is not available in Washington. Season-long fantasy and DFS tools remain available.');
+          return;
+        }
+        if (!j || !j.ok) { marketBlank('The market board did not answer. Nothing stale is shown in its place.'); return; }
+        marketLoaded = true;
+        renderMarket(j, signal);
+      })
+      .catch(function () {
+        marketLoading = false;
+        marketBlank('The market board is temporarily unavailable. Nothing stale is shown in its place.');
+      });
+  }
 
   // ── the slate ────────────────────────────────────────────────────────────
   var $ = function (id) { return document.getElementById(id); };
@@ -4176,6 +4569,108 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
             why: 'A big field pays almost everything to the top fraction of a percent, so the median is worth nothing. Ceiling discounted by modeled ownership, stacked and brought back \u2014 the build that carries longshots on purpose.' }
   };
   var shape = 'single';
+  var frontGameStyle = '', frontGameChoice = '', frontPayout = '', frontGameKeys = {};
+  var FRONT_SINGLE = { 'showdown-captain':1, 'in-game-showdown':1, 'snake-showdown':1, 'madden-showdown-captain':1 };
+  var FRONT_PAYOUT_SHAPE = { h2h:'cash', '50-50':'cash', 'double-up':'cash', satellite:'cash', multiplier:'single', 'tournament-single':'single', 'tournament-multi':'gpp', private:'single' };
+
+  function frontGameKey(a,b){ a=String(a||'').toUpperCase(); b=String(b||'').toUpperCase(); return a&&b?[a,b].sort().join('|'):''; }
+  function frontPlayerGameKey(p){ return p ? frontGameKey(p.team,p.opponent) : ''; }
+  function frontKickoff(x){
+    var raw=x&&(x.startTime||x.gameStart||x.gameTime||x.kickoff||x.commenceTime||x.startDate||x.start);
+    if(!raw) return null; var d=new Date(raw); return isNaN(d.getTime())?null:d;
+  }
+  function frontHourET(d){
+    if(!d) return null;
+    try { var p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false}).formatToParts(d).filter(function(x){return x.type==='hour';})[0]; return p?parseInt(p.value,10):null; }
+    catch(e){ return null; }
+  }
+  function frontKickText(d){
+    if(!d) return '';
+    try{return d.toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short',hour:'numeric',minute:'2-digit'})+' ET';}catch(e){return '';}
+  }
+  function frontGames(s){
+    var map={};
+    (s&&s.stacks||[]).forEach(function(g){
+      if(!g||!g.home||!g.away)return;
+      var k=frontGameKey(g.home.team,g.away.team); if(!k)return;
+      map[k]={key:k,label:(g.game||g.away.team+' @ '+g.home.team),start:frontKickoff(g),players:0};
+    });
+    (s&&s.players||[]).forEach(function(p){
+      if(!p.onBoard||!p.team||!p.opponent)return;
+      var k=frontPlayerGameKey(p); if(!k)return;
+      if(!map[k]) map[k]={key:k,label:p.home===false?p.team+' @ '+p.opponent:p.home===true?p.opponent+' @ '+p.team:p.team+' vs '+p.opponent,start:frontKickoff(p),players:0};
+      map[k].players++;
+      if(!map[k].start) map[k].start=frontKickoff(p);
+    });
+    return Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){
+      if(a.start&&b.start&&a.start-b.start)return a.start-b.start;
+      return a.label.localeCompare(b.label);
+    });
+  }
+  function frontSelectedKeys(){ return Object.keys(frontGameKeys).filter(function(k){return frontGameKeys[k];}); }
+  function frontSetKeys(keys){ frontGameKeys={}; (keys||[]).forEach(function(k){frontGameKeys[k]=1;}); }
+  function frontPopulateGames(s){
+    var sel=$('dfsGames'); if(!sel)return;
+    if(!frontGameStyle){ sel.disabled=true; sel.innerHTML='<option value="">Select Game Style first…</option>'; return; }
+    if(frontGameStyle==='best-ball'){ sel.disabled=false; sel.innerHTML='<option value="">Select Games…</option><option value="season">Season-long player pool</option>'; if(frontGameChoice==='season')sel.value='season'; return; }
+    var games=frontGames(s), single=!!FRONT_SINGLE[frontGameStyle], html='<option value="">Select Games…</option>';
+    var all=games.map(function(g){return g.key;}), early=[], late=[], prime=[];
+    games.forEach(function(g){var h=frontHourET(g.start); if(h!=null){if(h>=12&&h<15)early.push(g.key);else if(h>=15&&h<19)late.push(g.key);else if(h>=19||h<1)prime.push(g.key);}});
+    if(!single){
+      if(all.length)html+='<option value="all">All listed games</option>';
+      if(early.length)html+='<option value="early">1 PM ET games</option>';
+      if(late.length)html+='<option value="late">4 PM / late afternoon games</option>';
+      if(prime.length)html+='<option value="prime">Primetime games</option>';
+    }
+    games.forEach(function(g){html+='<option value="game:'+e(g.key)+'">'+e(g.label)+(g.start?' · '+e(frontKickText(g.start)):'')+'</option>';});
+    sel.innerHTML=html; sel.disabled=!games.length;
+    sel.dataset.all=JSON.stringify(all); sel.dataset.early=JSON.stringify(early); sel.dataset.late=JSON.stringify(late); sel.dataset.prime=JSON.stringify(prime);
+    if(frontGameChoice&&[].some.call(sel.options,function(o){return o.value===frontGameChoice;}))sel.value=frontGameChoice; else frontGameChoice='';
+  }
+  function frontApplyGameChoice(){
+    var sel=$('dfsGames'); frontGameChoice=sel.value; var keys=[];
+    if(/^game:/.test(frontGameChoice))keys=[frontGameChoice.slice(5)];
+    else if(frontGameChoice&&frontGameChoice!=='season'){try{keys=JSON.parse(sel.dataset[frontGameChoice]||'[]');}catch(e){keys=[];}}
+    frontSetKeys(keys);
+    $('dfsPayout').disabled=!frontGameChoice;
+    if(!frontGameChoice){frontPayout='';$('dfsPayout').value='';}
+    frontUpdateState();
+  }
+  function frontSetupReady(){ return !!(frontGameStyle&&frontGameChoice&&frontPayout); }
+  function frontFiltered(s){
+    if(!s||!s.ok||frontGameChoice==='season'||!frontSelectedKeys().length)return s;
+    var q={}; for(var k in s)q[k]=s[k];
+    q.players=(s.players||[]).filter(function(p){return frontGameKeys[frontPlayerGameKey(p)];});
+    q.stacks=(s.stacks||[]).filter(function(g){return g&&g.home&&g.away&&frontGameKeys[frontGameKey(g.home.team,g.away.team)];});
+    q.boards={}; Object.keys(s.boards||{}).forEach(function(n){q.boards[n]=(s.boards[n]||[]).filter(function(p){return frontGameKeys[frontPlayerGameKey(p)];});});
+    q.label=(s.label||'DraftKings')+' · '+frontSelectedKeys().length+' selected game'+(frontSelectedKeys().length===1?'':'s');
+    return q;
+  }
+  function frontUpdateState(){
+    var state=$('dfsSetupState'); if(!state)return;
+    if(!frontGameStyle){state.className='dfs-setup-state';state.textContent='Start with Game Style.';return;}
+    if(!frontGameChoice){state.className='dfs-setup-state';state.textContent='Now select the Games / player pool.';return;}
+    if(!frontPayout){state.className='dfs-setup-state';state.textContent='Finally select the Payout Structure.';return;}
+    state.className='dfs-setup-state ready';
+    state.textContent=$('dfsGameStyle').options[$('dfsGameStyle').selectedIndex].text+' · '+$('dfsGames').options[$('dfsGames').selectedIndex].text+' · '+$('dfsPayout').options[$('dfsPayout').selectedIndex].text;
+  }
+  function frontPotw(s){
+    if(!s||!s.ok||!window.ITDfs||!s.slots)return;
+    var pool=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
+    var base={cap:s.cap,slots:s.slots,flex:s.flex,lineups:1,seed:23,maxPerTeam:4};
+    var safe=ITDfs.build(pool,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:3}));
+    var ceil=ITDfs.build(pool,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
+    var lev=ITDfs.build(pool,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
+    if(!safe.ok||!ceil.ok)return;
+    var S=safe.lineups[0],T=ceil.lineups[0],L=lev.ok?lev.lineups[0]:T;
+    var rec='Head-to-Head', why='The safest build still gives up too much projection when we chase additional ceiling. This week, the better trade is maximizing the chance of beating one opponent rather than paying for volatility.';
+    if(L.projPoints>=S.projPoints*.97&&L.ceilingPoints>=S.ceilingPoints*1.10){rec='Tournament - Multi-Entry';why='The leverage build keeps nearly all of the safe roster’s projection while buying materially more ceiling and separation. The larger payoff is worth taking more variance this week.';}
+    else if(T.projPoints>=S.projPoints*.975&&T.ceilingPoints>=S.ceilingPoints*1.07){rec='Tournament - Single Entry';why='The ceiling build adds meaningful upside without giving away much core projection. That makes a one-entry tournament a better risk/reward trade than the usual head-to-head baseline.';}
+    else if(T.projPoints>=S.projPoints*.99){rec='Multiplier';why='The slate supports a modest step up the payout curve without requiring large-field volatility. The extra payoff compensates for the smaller winning band better than a full tournament does.';}
+    $('dfsPotwTitle').textContent=rec;
+    $('dfsPotwCopy').textContent=why+' The recommendation asks which contest shape offers the strongest return tradeoff over many repetitions, not simply which one is easiest to win once.';
+  }
+
   function tagFor(p, qb) {
     if (qb && p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE')) return '<span class="tg stack">stack</span>';
     if (qb && p.team === qb.opponent && p.position !== 'DST') return '<span class="tg stack">bring-back</span>';
@@ -4187,6 +4682,9 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   function buildLineup(s) {
     var host = $('dfsBuild'), note = $('dfsShapeNote');
     if (!host) return;
+    if (site === 'dk' && !frontSetupReady()) { host.innerHTML='<p class="dfs-empty"><b>Complete Game Style, Games and Payout Structure above.</b> The lineup will be built from that exact contest setup.</p>'; if(note)note.textContent=''; return; }
+    if (site === 'dk' && frontGameStyle !== 'classic') { host.innerHTML='<p class="dfs-empty"><b>'+e($('dfsGameStyle').options[$('dfsGameStyle').selectedIndex].text)+' selected.</b> This homepage preview uses the Classic optimizer only. Open the full DFS sheet for format-specific analysis.</p>'; if(note)note.textContent=''; return; }
+    s = frontFiltered(s);
     var sh = SHAPES[shape] || SHAPES.single;
     if (note) note.textContent = sh.why;
     if (s && s.ok && s.slots && !window.ITDfs && !buildLineup.waiting) {
@@ -4217,33 +4715,27 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       return '<tr><td><span class="sl' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
         + '<td><b>' + e(p.name) + '</b>' + tagFor(p, qb) + '<small>' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? ' vs ' + p.opponent : '')) + '</small></td>'
         + '<td class="num">' + money(p.salary) + '</td>'
+        + '<td class="num">' + (p.operatorFppg == null ? '—' : n1(p.operatorFppg)) + '</td>'
         + '<td class="num">' + n1(p.proj) + '</td>'
-        + '<td class="num">' + n1(p.ceiling) + '</td></tr>';
+        + '<td class="num">' + (p.projectionVsFppg == null ? '—' : ((p.projectionVsFppg > 0 ? '+' : '') + n1(p.projectionVsFppg))) + '</td></tr>';
     }).join('');
+    var hasFppg = l.players.every(function (p) { return p.operatorFppg != null && isFinite(Number(p.operatorFppg)); });
+    var dkFppg = hasFppg ? l.players.reduce(function (sum, p) { return sum + Number(p.operatorFppg); }, 0) : null;
+    var tunaEdge = dkFppg == null ? null : l.projPoints - dkFppg;
     host.innerHTML = '<div class="fp-board">'
       + '<div class="fp-board-head"><h3>' + e(sh.head) + '</h3><span>' + e((s.label || '') + (s.week ? ' \u00b7 Week ' + s.week : '')) + '</span></div>'
       + '<div class="fp-board-stats">'
-        + tile(n1(l[sh.key]), sh.keyLabel, true)
-        + tile(n1(l.projPoints), 'Projected')
+        + tile(dkFppg == null ? '—' : n1(dkFppg), 'DraftKings FPPG')
+        + tile(n1(l.projPoints), 'Iron Tuna Projection', true)
+        + tile(tunaEdge == null ? '—' : ((tunaEdge > 0 ? '+' : '') + n1(tunaEdge)), 'Tuna Edge')
         + tile(money(l.salary), 'Salary used')
-        + (l.ownership != null ? tile(n1(l.ownership) + '%', 'Total own') : tile(money(l.remaining), 'Left over'))
       + '</div>'
       + '<div class="fp-board-meter"><i style="width:' + pct + '%"></i></div>'
       + '<div class="fp-board-cap"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div>'
-      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">Proj</th><th class="num">Ceiling</th></tr></thead><tbody>' + rows + '</tbody></table>'
+      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">DraftKings FPPG</th><th class="num">Iron Tuna Projection</th><th class="num">Tuna Edge</th></tr></thead><tbody>' + rows + '</tbody></table>'
       + '<div class="fp-board-foot"><span>Solved against the cap on the same market numbers the board below prints. Nothing here enters a contest.</span>'
       + '<a href="/dfs">Lock, exclude and build twenty &rarr;</a></div></div>';
   }
-  var shapeHost = $('dfsShape');
-  if (shapeHost) shapeHost.addEventListener('click', function (ev) {
-    var b = ev.target.closest('button'); if (!b) return;
-    shape = b.getAttribute('data-contest');
-    [].forEach.call(this.querySelectorAll('button'), function (x) {
-      x.setAttribute('aria-pressed', x.getAttribute('data-contest') === shape ? 'true' : 'false');
-    });
-    buildLineup(slates[site]);
-  });
-
   function render(s) {
     if (!s || !s.ok) {
       $('dfsNote').textContent = (s && s.note) || 'No salaries are loaded for this week.';
@@ -4251,10 +4743,12 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       buildLineup(s);
       return;
     }
+    frontPopulateGames(s); frontUpdateState(); frontPotw(s);
     var stamp = '';
     try { stamp = new Date(s.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (err) {}
     $('dfsNote').textContent = (s.note ? s.note + ' ' : '') + (stamp ? 'Salaries as of ' + stamp + ' ET.' : '');
-    buildLineup(s); cards(s); values(s); stacks(s); tdBoard(s);
+    var view=frontFiltered(s);
+    buildLineup(s); cards(view); values(view); stacks(view); tdBoard(view);
   }
 
   function loadSlate() {
@@ -4273,10 +4767,21 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       });
   }
 
+  $('dfsGameStyle').addEventListener('change', function(){
+    frontGameStyle=this.value; frontGameChoice=''; frontPayout=''; frontGameKeys={};
+    $('dfsPayout').value=''; $('dfsPayout').disabled=true;
+    frontPopulateGames(slates[site]||{players:[],stacks:[]}); frontUpdateState(); buildLineup(slates[site]);
+  });
+  $('dfsGames').addEventListener('change', function(){ frontApplyGameChoice(); if(slates[site])render(slates[site]); });
+  $('dfsPayout').addEventListener('change', function(){
+    frontPayout=this.value; shape=FRONT_PAYOUT_SHAPE[frontPayout]||'single'; frontUpdateState(); if(slates[site])render(slates[site]);
+  });
+
   $('dfsSite').addEventListener('click', function (ev) {
     var b = ev.target.closest('button');
     if (!b) return;
     site = b.getAttribute('data-site');
+    frontGameChoice=''; frontPayout=''; frontGameKeys={}; $('dfsGames').value=''; $('dfsPayout').value=''; $('dfsPayout').disabled=true;
     [].forEach.call(this.querySelectorAll('button'), function (x) {
       x.setAttribute('aria-pressed', x.getAttribute('data-site') === site ? 'true' : 'false');
     });
@@ -4298,7 +4803,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   var av = function (name) { return (name || '').split(' ').map(function (w) { return w[0]; }).join(''); };
   function card(p, lens) {
     var by = p.byline || {}; var who = lens === 'dfs' ? by.dfsName : by.name;
-    return '<a class="nr-card" href="' + esc(p.url) + '"><span class="nr-kicker">' + esc(lens === 'dfs' && p.dfsTitle ? p.dfsTitle : p.title) + ' &middot; Week ' + esc(p.week) + (p.version > 1 ? ' &middot; update ' + esc(p.version) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
+    var kicker = lens === 'dfs' && p.dfsTitle ? p.dfsTitle : p.title;
+    var nflWide = /^NFL\s+League-Wide$/i.test(String(kicker || '').trim());
+    return '<a class="nr-card" href="' + esc(p.url) + '"><span class="nr-kicker' + (nflWide ? ' nfl-wide' : '') + '">' +
+      (nflWide ? '<img class="nr-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' : '') +
+      esc(kicker) + ' &middot; Week ' + esc(p.week) + (p.version > 1 ? ' &middot; update ' + esc(p.version) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
       '<span class="nr-by"><span class="nr-av">' + esc(av(who)) + '</span>' + esc(who || 'Iron Tuna') + (p.rivalry && lens !== 'dfs' ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') + '</span></a>';
   }
   function band(lens, gridId, ids) {

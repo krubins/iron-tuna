@@ -484,10 +484,13 @@ console.log('\nmanual leagues');
 
 console.log('\nYahoo OAuth');
 {
-  const noKey = { ...env, LEAGUE_TOKEN_KEY: undefined };
-  ok('without LEAGUE_TOKEN_KEY, Yahoo is reported unconfigured', !H.leagueProviderReport(noKey).yahoo.enabled && H.leagueProviderReport(noKey).yahoo.reason === 'not configured');
+  const noKey = { ...env, LEAGUE_TOKEN_KEY: undefined, AUTH_SECRET: undefined };
+  ok('without either encryption source, Yahoo is reported unconfigured', !H.leagueProviderReport(noKey).yahoo.enabled && H.leagueProviderReport(noKey).yahoo.reason === 'not configured');
   const sealed = await H.leagueSeal(env, 'secret-token');
   ok('tokens are sealed at rest and open again only with the key', sealed.startsWith('v1.') && !sealed.includes('secret-token') && (await H.leagueOpen(env, sealed)) === 'secret-token' && (await H.leagueOpen({ LEAGUE_TOKEN_KEY: 'other' }, sealed)) === null);
+  const fallbackEnv = { AUTH_SECRET: 'auth-only' };
+  const fallbackSealed = await H.leagueSeal(fallbackEnv, 'fallback-token');
+  ok('AUTH_SECRET supplies a domain-separated fallback encryption key', fallbackSealed.startsWith('v1.') && !fallbackSealed.includes('fallback-token') && (await H.leagueOpen(fallbackEnv, fallbackSealed)) === 'fallback-token' && (await H.leagueOpen({ AUTH_SECRET: 'other' }, fallbackSealed)) === null);
   const start = await route(env, 'GET', '/api/oauth/yahoo/start', null, cookie);
   const loc = start.headers.get('location') || '';
   ok('start redirects to Yahoo with the client id, the read-only scope and a signed state', start.status === 302 && loc.startsWith('https://api.login.yahoo.com/oauth2/request_auth') && /client_id=cid/.test(loc) && /scope=fspt-r/.test(loc) && /state=/.test(loc) && !/client_secret/.test(loc));
@@ -520,6 +523,7 @@ console.log('\nCBS token connector, end to end');
   const saved = (id = 'fixture') => db.t.league_provider_tokens.get('ken@example.com|cbs|' + id);
   ok('CBS is off by default', !H.leagueProviderReport(env).cbs.enabled);
   ok('CBS needs the encryption key even when enabled', !H.leagueProviderReport({ FLAG_CBS_SYNC: '1' }).cbs.enabled);
+  ok('CBS can use the existing AUTH_SECRET as its separated encryption source', H.leagueProviderReport({ FLAG_CBS_SYNC: '1', AUTH_SECRET: 'auth-only' }).cbs.enabled);
   const callsBefore = cbsNet.requests.length;
   const off = await route(env, 'POST', '/api/leagues/connect', { provider: 'cbs', leagueId: 'fixture', accessToken: 'secret' }, cookie);
   ok('disabled connect makes no CBS requests', off.status === 503 && cbsNet.requests.length === callsBefore);

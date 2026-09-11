@@ -3,6 +3,26 @@ name: checks
 # There is no build step and no package manager in this repo (see HANDOFF.md §2),
 # so nothing here installs anything — every check is plain node against the files
 # that actually deploy.
+#
+# EVERY GATE RUNS, EVEN AFTER ONE FAILS. Steps in a job stop at the first
+# failure by default, and these gates are ordered with the cheap generator
+# checks first — so on 2026-09-10 a stale rankings ribbon (#181, one page that
+# predated the American-spelling pass) failed build-ranks --check and turned
+# the SIXTY steps after it into "not run". Main read red for a reason that had
+# nothing to do with most of them, and the next PR merged on top inherited it
+# without ever learning whether its own tests passed.
+#
+# So each step below carries `if: ${{ !cancelled() }}`: a failure no longer
+# halts the run, every gate reports its own verdict, and one push tells you
+# everything that is broken rather than the first thing. The job still fails
+# if any step failed — this changes what gets REPORTED, never what passes.
+# `!cancelled()` rather than `always()` so a cancelled run still stops.
+#
+# The two steps that REGENERATE files rather than checking them (front.html and
+# the worker's lead faces) restore the tree afterwards. They used to be able to
+# leave a rebuild behind only when the run was ending anyway; now that later
+# steps still run, a leftover regenerated file would have them testing a tree
+# that is not the one under review.
 on:
   pull_request:
   push:
@@ -20,12 +40,15 @@ jobs:
       # A single bad escape silently white-screens the whole app, so parsing the
       # deployed files is the highest-value check in the repo.
       - name: Tuna Market Signal
+        if: ${{ !cancelled() }}
         run: node tools/test-tuna-market.mjs
 
       - name: Parse _worker.js
+        if: ${{ !cancelled() }}
         run: node --check _worker.js
 
       - name: Parse the index.html app script
+        if: ${{ !cancelled() }}
         run: |
           node -e '
             const fs = require("fs");
@@ -37,6 +60,7 @@ jobs:
           '
 
       - name: Parse the front.html scripts
+        if: ${{ !cancelled() }}
         run: |
           node -e '
             const fs = require("fs");
@@ -48,6 +72,7 @@ jobs:
           '
 
       - name: Parse the lead.html scripts
+        if: ${{ !cancelled() }}
         run: |
           node -e '
             const fs = require("fs");
@@ -59,6 +84,7 @@ jobs:
           '
 
       - name: Parse the player.html scripts
+        if: ${{ !cancelled() }}
         run: |
           node -e '
             const fs = require("fs");
@@ -73,6 +99,7 @@ jobs:
       # whole script is inline. A syntax error there leaves the page saying
       # "Reading this week's board..." under a masthead that promises a bet.
       - name: Parse the the-line.html scripts
+        if: ${{ !cancelled() }}
         run: |
           node -e '
             const fs = require("fs");
@@ -87,30 +114,35 @@ jobs:
       # loaded by front.html and player.html alike, so a syntax error there
       # takes out the search box on every page at once.
       - name: Parse player-search.js
+        if: ${{ !cancelled() }}
         run: node --check player-search.js
 
       # /it-season.js is loaded by every in-season page and is what puts the
       # week on them. A syntax error there leaves eight pages saying "Reading
       # the NFL schedule..." forever, with no console anyone is watching.
       - name: Parse it-season.js
+        if: ${{ !cancelled() }}
         run: node --check it-season.js
 
       # /it-ranks.js is the board behind all sixteen per-position rankings pages.
       # A syntax error there leaves every one of them saying "Reading the
       # board..." forever, with no console anyone is watching.
       - name: Parse it-ranks.js
+        if: ${{ !cancelled() }}
         run: node --check it-ranks.js
 
       # /it-trade.js is the Trade Finder's engine and the FAAB Advisor's roster
       # parser. A syntax error there leaves both pages with a button that does
       # nothing.
       - name: Parse it-trade.js
+        if: ${{ !cancelled() }}
         run: node --check it-trade.js
 
       # /admin is the only page with a form that calls an API, and it is
       # hand-written like the rest — a syntax error there breaks the dashboard
       # and the comp-access form with it, silently, since nobody browses it.
       - name: Parse the admin.html scripts
+        if: ${{ !cancelled() }}
         run: |
           node -e '
             const fs = require("fs");
@@ -122,6 +154,7 @@ jobs:
           '
 
       - name: Parse wrangler.jsonc
+        if: ${{ !cancelled() }}
         run: |
           node -e '
             const fs = require("fs");
@@ -135,6 +168,7 @@ jobs:
       # above already catch — but a literal backspace (0x08) inside a regex parses
       # fine and then silently never matches. Only a byte scan finds that one.
       - name: No stray control bytes in deployed source
+        if: ${{ !cancelled() }}
         run: |
           node -e '
             const fs = require("fs");
@@ -165,6 +199,7 @@ jobs:
       # thrown away. Nothing else in this repo reads CSS, so nothing else can see
       # it. It found two older ones in index.html on its first run.
       - name: Every var(--token) resolves to a definition
+        if: ${{ !cancelled() }}
         run: node tools/test-css-tokens.mjs
 
       # front.html embeds STORIES/REPORTS extracted from the drop and auction-watch
@@ -181,13 +216,26 @@ jobs:
       # prices, and a story whose short forms link to nothing. So the whole
       # working tree is diffed, not a named handful of files.
       - name: front.html is rebuilt from its source pages
+        if: ${{ !cancelled() }}
         run: |
           node tools/build-front.mjs
+          stale=0
           if ! git diff --quiet; then
             echo "::error file=front.html::the generated front-page data is stale — run 'node tools/build-front.mjs' and commit the result"
             git --no-pager diff --stat
-            exit 1
+            stale=1
           fi
+          # Put the tree back before the next gate reads it: this step rebuilds
+          # rather than checking, and every later step runs now even when this
+          # one fails. Scoped to the files that actually differ, and to CI only
+          # — the runner's tree is pristine at checkout, so those files are the
+          # rebuild's own output and nothing else. Guarded on $GITHUB_ACTIONS
+          # because a contributor running this snippet against a dirty working
+          # tree would otherwise have their uncommitted work discarded.
+          if [ -n "$GITHUB_ACTIONS" ] && [ "$stale" -ne 0 ]; then
+            git diff --name-only -z | xargs -0 -r git checkout --
+          fi
+          [ "$stale" -eq 0 ] || exit 1
           echo "every generated block and stamp is up to date"
 
       # Google Analytics collects NOTHING from a page that does not configure the
@@ -202,6 +250,7 @@ jobs:
       # shallow, so it detects that and carries the committed dates forward rather
       # than dating every guide to the checkout commit. No fetch-depth needed.
       - name: The discovery layer is rebuilt from the pages that exist
+        if: ${{ !cancelled() }}
         run: |
           if ! node tools/build-seo.mjs --check; then
             echo "::error::the discovery layer is stale — run 'node tools/build-seo.mjs' and commit the result"
@@ -209,6 +258,7 @@ jobs:
           fi
 
       - name: Analytics tagging, structured data and crawlability
+        if: ${{ !cancelled() }}
         run: node tools/test-seo.mjs
 
       # The nav and footer are generated from one link set in build-chrome.mjs.
@@ -217,6 +267,7 @@ jobs:
       # unreachable from some pages. Same contract as the two gates above:
       # rebuilding here must produce no diff.
       - name: The header and footer are rebuilt from the canonical link set
+        if: ${{ !cancelled() }}
         run: |
           if ! node tools/build-chrome.mjs --check; then
             echo "::error::the chrome is stale — run 'node tools/build-chrome.mjs' and commit the result"
@@ -228,6 +279,7 @@ jobs:
       # and one position list, for the same reason the chrome is. Same contract:
       # rebuilding here must produce no diff.
       - name: The rankings ribbon and its per-position pages are rebuilt from their source
+        if: ${{ !cancelled() }}
         run: |
           if ! node tools/build-ranks.mjs --check; then
             echo "::error::the rankings section is stale — run 'node tools/build-ranks.mjs' and commit the result"
@@ -235,6 +287,7 @@ jobs:
           fi
 
       - name: Every destination is reachable and the chrome is well-formed
+        if: ${{ !cancelled() }}
         run: node tools/test-chrome.mjs
 
       # The ribbon's link set, the gate over the pages it reaches, and the board
@@ -242,6 +295,7 @@ jobs:
       # ribbon, a dropdown clipped inside a scroll container, and a page left out
       # of POST_DRAFT_PAGES — so all three are asserted rather than reviewed.
       - name: The rankings ribbon, its pages and the consensus-vs-odds board
+        if: ${{ !cancelled() }}
         run: node tools/test-ranks.mjs
 
       # The newsroom (§68) bylines what it generates. These are the static story
@@ -250,6 +304,7 @@ jobs:
       # has one masthead rather than two. Same contract as the three gates above:
       # rebuilding here must produce no diff.
       - name: The analyst byline is stamped on every static story page
+        if: ${{ !cancelled() }}
         run: |
           if ! node tools/build-bylines.mjs --check; then
             echo "::error::the analyst bylines are stale — run 'node tools/build-bylines.mjs' and commit the result"
@@ -261,6 +316,7 @@ jobs:
       # walks the directory can tell you the link resolves. This pins both, and
       # fails if any analyst name is ever copied into a second file.
       - name: One masthead, read from the worker roster
+        if: ${{ !cancelled() }}
         run: node tools/test-bylines.mjs
 
       # The scrolling cheat-sheet insights are hand-written prose with no build
@@ -270,6 +326,7 @@ jobs:
       # second-year back a rookie. This holds that prose to the same player pool
       # the boards price from.
       - name: Insight prose against the player pool
+        if: ${{ !cancelled() }}
         run: node tools/test-insights.mjs
 
       # LEAD_FACES in _worker.js is generated from tools/nfl-headshots.json and the
@@ -277,13 +334,20 @@ jobs:
       # it stale, and the symptom is a missing or wrongly-captioned face on the
       # front page's lead — quiet enough to ship. Rebuilding here must be a no-op.
       - name: _worker.js lead faces are rebuilt from their sources
+        if: ${{ !cancelled() }}
         run: |
           node tools/build-worker-faces.mjs
+          stale=0
           if ! git diff --quiet -- _worker.js; then
             echo "::error file=_worker.js::LEAD_FACES is stale — run 'node tools/build-worker-faces.mjs' and commit the result"
             git --no-pager diff --stat -- _worker.js
-            exit 1
+            stale=1
           fi
+          # As above: restore before the next gate reads _worker.js, in CI only.
+          if [ -n "$GITHUB_ACTIONS" ] && [ "$stale" -ne 0 ]; then
+            git checkout -- _worker.js
+          fi
+          [ "$stale" -eq 0 ] || exit 1
           echo "LEAD_FACES is up to date"
 
       # PROJECTIONS is a full-season line per player and the board's rank is those
@@ -294,6 +358,7 @@ jobs:
       # list of who cannot play a full season; this holds the committed rows, the
       # worker's AVAILABILITY block and the client's injury fallback to it.
       - name: Pro-rated projections agree with tools/availability.json
+        if: ${{ !cancelled() }}
         run: node tools/apply-availability.mjs --check
 
       # The odds math is duplicated between _worker.js and tools/ because there is
@@ -310,6 +375,7 @@ jobs:
       # rule give DIFFERENT answers at named instants, so a regression to a
       # calendar rule fails rather than looking plausible.
       - name: The NFL season and week service
+        if: ${{ !cancelled() }}
         run: node tools/test-season.mjs
 
       # The ESPN scoreboard's game lines. ESPN writes a spread as the home
@@ -319,6 +385,7 @@ jobs:
       # The check parses a stored scoreboard payload and demands all sixteen
       # games agree with nflverse's own lines for the same week.
       - name: ESPN game lines, and the sign convention against a second feed
+        if: ${{ !cancelled() }}
         run: node tools/test-espn-lines.mjs
 
       # The paid odds feed. Nothing in this repo has ever reached
@@ -330,6 +397,7 @@ jobs:
       # line with no price), and open and current have to come from ONE book or
       # the movement column is a sentence about two of them.
       - name: The SportsGameOdds adapter, against its fixture
+        if: ${{ !cancelled() }}
         run: node tools/test-sgo.mjs
 
       # One scoring engine, three copies (worker, it-league.js, index.html),
@@ -337,6 +405,7 @@ jobs:
       # handful of chosen ones. A drift here means the same player is worth
       # different points on the cheat sheet, in a story and in the rankings.
       - name: The scoring engine agrees with itself in every file
+        if: ${{ !cancelled() }}
         run: node tools/test-scoring.mjs
 
       # The provider registry (no credential in any payload, no scraping), the
@@ -344,6 +413,7 @@ jobs:
       # that starts quoting late), and the Vegas-implied projection (median not
       # mean, de-vigged, and "unavailable" rather than invented).
       - name: Providers, line history and the Vegas projection
+        if: ${{ !cancelled() }}
         run: node tools/test-market.mjs
 
       # The three boards (consensus / Vegas / Iron Tuna) across four horizons,
@@ -351,12 +421,21 @@ jobs:
       # season posts lines for fourteen weeks and not the last four, so a
       # horizon reaching past them has to say "ratings" and grade LOW.
       - name: The three boards, Market Delta and the explainer
+        if: ${{ !cancelled() }}
         run: node tools/test-boards.mjs
+
+      # Numeric fantasy outputs are software outputs, not model opinions. This
+      # fails if an LLM call leaks into ranking/projection/DFS code or if the
+      # automated newsroom stops using its dedicated Sonnet model.
+      - name: AI never calculates rankings, projections or DFS values
+        if: ${{ !cancelled() }}
+        run: node tools/test-ai-boundary.mjs
 
       # The insight rules (deterministic, data-carrying, and returning nothing
       # from the usage rules until games have been played), Vegas Edge's six
       # boards, and the Wednesday movers' reasons.
       - name: Insight detection, Vegas Edge and the Wednesday update
+        if: ${{ !cancelled() }}
         run: node tools/test-signals.mjs
 
       # The content desk: the ESPN box-score adapter on a real stored game,
@@ -365,18 +444,28 @@ jobs:
       # the validator that holds a draft naming a player or number the brief
       # does not contain.
       - name: The content desk
+        if: ${{ !cancelled() }}
         run: node tools/test-content.mjs
       - name: DFS adapters, Vegas Value Score, stacks and optimizer
+        if: ${{ !cancelled() }}
         run: node tools/test-dfs.mjs
       - name: DraftKings main-slate importer
+        if: ${{ !cancelled() }}
         run: node tools/test-draftkings-import.mjs
+      - name: DraftKings workflow authentication
+        if: ${{ !cancelled() }}
+        run: node tools/test-draftkings-auth.mjs
       - name: The health board, the job log and the editorial actions
+        if: ${{ !cancelled() }}
         run: node tools/test-health.mjs
       - name: The job schedule in New York time
+        if: ${{ !cancelled() }}
         run: node tools/test-jobs.mjs
       - name: The in-season newsroom (migration, staff, blend, packets, memory, fact check, breaking news)
+        if: ${{ !cancelled() }}
         run: node tools/test-newsroom.mjs
       - name: The editorial week, dry run (fake D1, fake model, the clock advanced a quarter hour at a time)
+        if: ${{ !cancelled() }}
         run: node tools/test-dry-run.mjs
 
       # The data-licensing boundary (docs/data-sources.md, Addendum §14). Every
@@ -384,24 +473,29 @@ jobs:
       # reason it is allowed, so adding a source is a deliberate edit rather
       # than a stray fetch, and the red-listed hosts cannot come back.
       - name: Data sources, licenses and the red list
+        if: ${{ !cancelled() }}
         run: node tools/test-data-sources.mjs
 
       # The Trade Finder: the roster parser, the lineup valuation, the trade
       # search (both sides must gain, on their own horizons) and the worker's
       # screenshot reader, all in plain node against the shipped it-trade.js.
       - name: The Trade Finder engine and the roster reader
+        if: ${{ !cancelled() }}
         run: node tools/test-trade-finder.mjs
 
       - name: Odds pipeline tests (build-time tools)
+        if: ${{ !cancelled() }}
         run: node tools/test-vegas.mjs
 
       - name: Odds pipeline tests (worker, incl. worker/tool sync)
+        if: ${{ !cancelled() }}
         run: node tools/test-worker-odds.mjs
 
       # The team ratings fit and the kicker/defense model live in _worker.js AND
       # in tools/, for the same no-bundler reason. This runs both against one
       # fixture, so a change to one copy fails here.
       - name: Team market ratings (worker/tool sync)
+        if: ${{ !cancelled() }}
         run: node tools/test-team-market.mjs
 
       # The committed K and DEF rows themselves: coverage (a kicker for every
@@ -409,6 +503,7 @@ jobs:
       # projection has to have — spread narrower than a season of outcomes, and
       # league totals that match what the NFL actually produces.
       - name: Committed kicker and defense rows
+        if: ${{ !cancelled() }}
         run: node tools/test-k-def.mjs
 
       # Everything else with assertions in tools/. These are plain node, no
@@ -417,12 +512,15 @@ jobs:
       # column's worker/client scoring sync, and the generated lead story's
       # fallback behavior.
       - name: Per-league pricing and the front page's contract with it
+        if: ${{ !cancelled() }}
         run: node tools/test-it-league.mjs
 
       - name: The generated lead story and its admin desk
+        if: ${{ !cancelled() }}
         run: node tools/test-lead-story.mjs
 
       - name: Just Posted mirrors the X insight rotation onto the site
+        if: ${{ !cancelled() }}
         run: node tools/test-posted-insights.mjs
 
       # The worker rewrites a few routes onto other assets ("/" -> front.html,
@@ -433,9 +531,11 @@ jobs:
       # (ERR_TOO_MANY_REDIRECTS, shipped 2026-08-21). Nothing in the worker source
       # shows it; it takes the assets layer's rules to see it.
       - name: Route rewrites resolve without redirecting or looping
+        if: ${{ !cancelled() }}
         run: node tools/test-asset-routing.mjs
 
       - name: The reading view's palette, across both pages
+        if: ${{ !cancelled() }}
         run: node tools/test-reading-view.mjs
 
       # The Pick is written a story a day by a Routine, in prose, with tables of
@@ -445,6 +545,7 @@ jobs:
       # confident advice. This holds the column to the same pool the boards price
       # from, and to the markup /it-league.js needs to translate it.
       - name: The Pick, against the player pool it prices from
+        if: ${{ !cancelled() }}
         run: node tools/test-the-pick.mjs
 
       # "The Tell" argues from three printed numbers per entry
@@ -456,6 +557,7 @@ jobs:
       # checked against the six entries under it, because two statements of the
       # same fact on one page is how a page contradicts itself.
       - name: The Tell, against the numbers it quotes
+        if: ${{ !cancelled() }}
         run: node tools/test-the-tell.mjs
 
       # "The Line" is the only page on the site that puts a number on a bet, and
@@ -467,6 +569,7 @@ jobs:
       # lives in _worker.js and is invisible from the page -- to fencing every
       # form of the path, with a 451 that no cache may keep.
       - name: The Line, its staking ladder and its Washington fence
+        if: ${{ !cancelled() }}
         run: node tools/test-the-line.mjs
 
       # Who coaches whom is handed to the Value Coach as authoritative and told to
@@ -475,6 +578,7 @@ jobs:
       # holds STAFFS_2026 to all 32 teams, to an HC in every row, and to the site's
       # own pages, which is how it caught TEN listing its OC as the head coach.
       - name: Coaching staffs, against the pages that assert them
+        if: ${{ !cancelled() }}
         run: node tools/test-coaching-staffs.mjs
 
       # The depth charts are handed to the Value Coach the same way, as
@@ -487,6 +591,7 @@ jobs:
       # note and freshness from the worker, every source folded by injuryLine,
       # and the prompt's rule that a missing field means healthy, never "none".
       - name: Depth charts and injuries, from the live feed to the coach's prompt
+        if: ${{ !cancelled() }}
         run: node tools/test-depth-charts.mjs
 
       # The four draft-day edges. The one this exists for: an injury tag has to
@@ -496,6 +601,7 @@ jobs:
       # that makes it worth having -- never put up a player you want whom rivals
       # can also afford.
       - name: Draft-day edges (projection edits, news, rival need, nominations)
+        if: ${{ !cancelled() }}
         run: node tools/test-draft-edges.mjs
 
       # What the two coaches can SEE. buildCoachContext used to drop `teams` and
@@ -505,9 +611,11 @@ jobs:
       # fields to their meaning -- above all that runnerUp tracks the SECOND-best
       # able bidder, since that is where an English auction actually settles.
       - name: The coaches can see the rest of the room
+        if: ${{ !cancelled() }}
         run: node tools/test-coach-room.mjs
 
       - name: What the board grades a player name against
+        if: ${{ !cancelled() }}
         run: node tools/test-board-color.mjs
 
       # Positional scarcity in the BID, not just the color. The detector used
@@ -516,6 +624,7 @@ jobs:
       # of them goes over value and the team that waits pays the most — was
       # invisible to it. No browser, no network.
       - name: The cliff premium on You, and the alert that precedes it
+        if: ${{ !cancelled() }}
         run: node tools/test-cliff-premium.mjs
 
       # The models box's "highlight recommended players" checkbox. Two separate
@@ -526,11 +635,13 @@ jobs:
       # up as an error. Also pins the two models boxes to one shared control, so
       # the board and the sheet cannot drift apart on the same setting.
       - name: Highlighting the model's own buys, and the $1 endgame shortlist
+        if: ${{ !cancelled() }}
         run: node tools/test-recommended-highlight.mjs
 
       # The target flag's whole-line highlight, which the row-class expressions
       # above share. It was written before this job existed and never wired in.
       - name: The target highlight on the sheet and the rail
+        if: ${{ !cancelled() }}
         run: node tools/test-target-highlight.mjs
 
       # The ribbon's player lookup and the /player/<slug> card it lands on. The
@@ -539,15 +650,18 @@ jobs:
       # actively pricing — and the box does not say "my index is old", it says
       # "No player by that name on the board".
       - name: The player lookup and the card it lands on
+        if: ${{ !cancelled() }}
         run: node tools/test-player-card.mjs
 
       # The player names inside stories and insights, linked to those cards. The
       # rules that keep a link off an adverb are not obvious, and getting one
       # wrong ships a link on the word "likely" in every call about a tight end.
       - name: Player mentions link to player cards
+        if: ${{ !cancelled() }}
         run: node tools/test-player-links.mjs
 
       - name: Vegas column (worker)
+        if: ${{ !cancelled() }}
         run: node tools/test-worker-column.mjs
 
       # Twelve managers at $120 spend $1440, so every dollar column has to total
@@ -556,6 +670,7 @@ jobs:
       # but /it-league.js and /api/vegas-column publish the raw curve, so a story
       # quoted WR1 at $42 against a sheet reading $50. No browser, no network.
       - name: The cheat sheet's dollars add up
+        if: ${{ !cancelled() }}
         run: node tools/test-curve-budget.mjs
 
       # VALUE is re-solved on the board that is LEFT once picks are logged:
@@ -563,12 +678,14 @@ jobs:
       # pool, the remaining demand and the money still in the room. Pick zero
       # must reproduce the pre-draft column exactly. No browser, no network.
       - name: VALUE re-baselines during the draft
+        if: ${{ !cancelled() }}
         run: node tools/test-live-value.mjs
 
       # The plan for the reader's team prices its targets at what the room will
       # make them pay, the handcuff to a starter they own carries his cover, and
       # a bye they already have costs the second hole. No browser, no network.
       - name: Plan pricing, handcuffs and byes
+        if: ${{ !cancelled() }}
         run: node tools/test-plan-pricing.mjs
 
       # A team card's WR2 has to mean the second-best receiver on that roster.
@@ -576,6 +693,7 @@ jobs:
       # receiver into an empty corps read as WR1 while the two the plan still
       # meant to buy sat under him. No browser, no network.
       - name: Team card rows rank players within the position
+        if: ${{ !cancelled() }}
         run: node tools/test-roster-slots.mjs
 
       # Bidding Status Intel is the cheat sheet's permanent read on the room, and
@@ -584,6 +702,7 @@ jobs:
       # when the rival is really filling an RB4 has him bracing for a bidding war
       # that was never coming. No browser, no network.
       - name: Bidding intel names the right slot and the right ceiling
+        if: ${{ !cancelled() }}
         run: node tools/test-bidding-intel.mjs
 
       # A team card's pts/gm and the Bidding Status Intel panel's Proj. PPG are
@@ -594,12 +713,14 @@ jobs:
       # and the real panel and reads the rendered text off each, so they cannot
       # drift apart again. No browser, no network.
       - name: The card's pts/gm and the panel's Proj. PPG are one number
+        if: ${{ !cancelled() }}
         run: node tools/test-card-ppg.mjs
 
       # The worker keeps the availability list current from ESPN's injury feed
       # (IR / PUP / suspended / exempt), merged over the committed block with the
       # pro-rating applied exactly once. Skips the live pull without network.
       - name: Worker availability refresh
+        if: ${{ !cancelled() }}
         run: node tools/test-worker-availability.mjs
 
       # Sync My League (docs/league-sync.md): the provider adapters against
@@ -610,33 +731,40 @@ jobs:
       # advisor on the room's actual free agents, matchup, intel, trades,
       # playoffs) on 10-, 12- and 14-team rooms. No network: fetch is stubbed.
       - name: "Sync My League: providers, crosswalk, sync and the personalized modules"
+        if: ${{ !cancelled() }}
         run: node tools/test-league-sync.mjs
 
       - name: CBS connection form
+        if: ${{ !cancelled() }}
         run: node tools/test-cbs-ui.mjs
 
       # Every deployed script that the pages load. it-sync.js is loaded by
       # nine in-season pages; a syntax error there takes the league strip and
       # the personalized modules off all of them at once.
       - name: Parse it-sync.js
+        if: ${{ !cancelled() }}
         run: node --check it-sync.js
 
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one
       # computation — this fails if they ever start disagreeing.
       - name: Consensus vs odds, per player and per day
+        if: ${{ !cancelled() }}
         run: node tools/test-player-odds.mjs
 
       - name: Vegas rank chips on the boards
+        if: ${{ !cancelled() }}
         run: node tools/test-vegas-rank-chip.mjs
 
       - name: Admin grant and revoke
+        if: ${{ !cancelled() }}
         run: node tools/test-admin-grant.mjs
 
       # The counter that must never cost a page view, and the numbers on /admin
       # that must never overstate the site. Written in Aug 2026 but never wired
       # up here, so it was only ever run by hand.
       - name: Traffic analytics
+        if: ${{ !cancelled() }}
         run: node tools/test-analytics.mjs
 
       # /api/admin/comp grants access and then puts a working sign-in link in
@@ -645,6 +773,7 @@ jobs:
       # Resend refused while the response still said ok. This follows the link
       # it emits all the way through /api/auth/verify to /api/auth/me.
       - name: Comping access and mailing the link
+        if: ${{ !cancelled() }}
         run: node tools/test-admin-comp.mjs
 
       # NOT run here: tools/test-position-lens.mjs, tools/test-you-column.mjs,
