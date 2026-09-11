@@ -81,7 +81,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // sitemap while the gate is shut. Spell them out.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
-  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line',
+  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap',
   '/weekly-rankings', '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
   '/weekly-te-rankings', '/weekly-flex-rankings', '/weekly-k-rankings', '/weekly-dst-rankings',
   '/season-long-rankings', '/season-long-qb-rankings', '/season-long-rb-rankings',
@@ -6781,6 +6781,81 @@ function _rosSlim(board) {
   }
   return rows;
 }
+// ── the pre-kickoff board, frozen ──────────────────────────────────────────
+// A recap that says "we told you he would beat the consensus" is making a
+// claim about a MOMENT: what the two boards said before the game. The boards
+// are recomputed continuously, so reading them after the whistle and calling
+// the difference a prediction is how a desk ends up quoting itself from data
+// that did not exist when it supposedly spoke. This freezes the week board
+// for a game's two clubs shortly before its kickoff, and the recap reads that
+// row and nothing else. No row, no claim.
+const BOARD_FREEZE_LEAD_MS = 2 * 3600000;   // frozen inside this window before kickoff
+const BOARD_FREEZE_DDL = 'CREATE TABLE IF NOT EXISTS week_board_snapshots (season INTEGER NOT NULL, week INTEGER NOT NULL, game_id TEXT NOT NULL, taken_at INTEGER NOT NULL, kickoff INTEGER, payload TEXT NOT NULL, PRIMARY KEY (season, week, game_id))';
+let _FREEZE_READY = false;
+async function boardFreezeReady(env) {
+  if (_FREEZE_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { await env.LEADS_DB.prepare(BOARD_FREEZE_DDL).run(); _FREEZE_READY = true; return true; } catch (e) { return false; }
+}
+// One club's players as the three boards had them, for one week.
+function _freezeRows(board, week, teams) {
+  const out = [];
+  for (const p of (board && board.players) || []) {
+    if (!teams.has(p.team)) continue;
+    if (p.pos === 'K' || p.pos === 'DEF') continue;
+    const wk = (p.weeks || []).find(w => w.week === week) || null;
+    if (wk && (wk.bye || wk.out)) continue;
+    out.push({ key: p.key, name: p.name, position: p.position, team: p.team,
+               consensusRank: p.consensus.rank, consensusPts: p.consensus.points,
+               ironTunaRank: p.ironTuna.rank, ironTunaPts: p.ironTuna.points,
+               vegasRank: p.vegas.rank, vegasPts: p.vegas.points, vegasBasis: p.vegas.basis,
+               injury: p.injury ? p.injury.status : null });
+  }
+  return out;
+}
+async function runBoardFreeze(env, opts) {
+  const o = opts || {};
+  if (!(await boardFreezeReady(env))) return { ok: false, error: 'no_db' };
+  const sched = await scheduleCacheRead(env);
+  if (!sched) return { ok: false, error: 'no_schedule' };
+  const now = o.now || Date.now();
+  const state = nflSeasonState(sched, now);
+  const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  if (week == null) return { ok: false, error: 'not_regular_season' };
+  // Only games about to start, and only once each. A game already under way
+  // is too late: whatever the board says now has seen some of the result.
+  const due = weekGames(sched, week, now).filter(g => g.kickoff > now && g.kickoff - now <= BOARD_FREEZE_LEAD_MS);
+  if (!due.length) return { ok: true, week, frozen: 0, note: 'no kickoff inside the window' };
+  let existing = new Set();
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT game_id FROM week_board_snapshots WHERE season = ? AND week = ?').bind(sched.season, week).all();
+    existing = new Set(((q && q.results) || []).map(r => r.game_id));
+  } catch (e) {}
+  const todo = due.filter(g => !existing.has(g.id));
+  if (!todo.length) return { ok: true, week, frozen: 0, note: 'already frozen' };
+  const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
+  if (!board.ok) return { ok: false, error: 'no_board' };
+  let frozen = 0;
+  for (const g of todo) {
+    const rows = _freezeRows(board, week, new Set([g.home, g.away]));
+    if (!rows.length) continue;
+    try {
+      await env.LEADS_DB.prepare('INSERT OR REPLACE INTO week_board_snapshots (season, week, game_id, taken_at, kickoff, payload) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(sched.season, week, g.id, now, g.kickoff, JSON.stringify({ matchup: g.away + ' at ' + g.home, rows })).run();
+      frozen++;
+    } catch (e) {}
+  }
+  return { ok: true, season: sched.season, week, frozen, games: todo.map(g => g.away + '@' + g.home) };
+}
+async function boardFreezeRead(env, season, week, gameId) {
+  if (!(await boardFreezeReady(env))) return null;
+  try {
+    const r = await env.LEADS_DB.prepare('SELECT payload, taken_at, kickoff FROM week_board_snapshots WHERE season = ? AND week = ? AND game_id = ?').bind(season, week, String(gameId)).first();
+    if (!r) return null;
+    const p = JSON.parse(r.payload);
+    return { takenAt: r.taken_at, kickoff: r.kickoff, matchup: p.matchup || null, rows: Array.isArray(p.rows) ? p.rows : [] };
+  } catch (e) { return null; }
+}
 async function runRosSnapshot(env, opts) {
   if (!(await rosReady(env))) return { ok: false, error: 'no_db' };
   const o = opts || {};
@@ -7255,6 +7330,21 @@ const CONTENT_KINDS = {
     targets: (gs) => gs.filter(g => g.dow === 'Sun' && g.status === 'final'),
     summary: 'Not a recap. Signal, noise, role changes and misleading box scores, and what they say about next week.',
     absorbs: ['what-changed-today', 'snf-what-we-learned', 'team-recaps'] },
+  // ONE PIECE PER GAME, written when that game goes final. It has no weekday
+  // slot: `perGame` takes it off the clock entirely and the tick walks the
+  // week's final games instead, so a Thursday night game is recapped Thursday
+  // night and a Sunday 1 o'clock game at four, each on its own row. Because
+  // the front-page lead is the newest published desk piece (deskLeadPayload),
+  // the recap of the game that just ended IS the lead until the next game
+  // ends and takes it. `components` in the body are the findings the rail
+  // then breaks the story into; `wrap` is the short summary the Weekly Wrap
+  // Up collects. The three layers the sections ask for are the brief:
+  // what scored, who was used, and what the usage says about next week.
+  'game-recap': { title: 'Game Recap', day: null, hour: null, minute: null, retro: true, subject: 'played', perGame: true,
+    analyst: 'raines', dfsAnalyst: 'park', lens: 'both',
+    targets: (gs) => gs.filter(g => g.status === 'final'),
+    summary: 'Every game, once it is final: the points, the targets and carries behind them, and what the usage says about next week.',
+    absorbs: [] },
   'mnf-preview': { title: 'Monday Night Football Preview', day: 'Mon', hour: 6, minute: 0, retro: false, subject: 'current', anchor: 'targets',
     analyst: 'dalton', dfsAnalyst: 'dalton', lens: 'both', optional: true, preview: true,
     targets: (gs) => gs.filter(g => g.dow === 'Mon'),
@@ -7342,6 +7432,12 @@ const LEGACY_CONTENT = {
 const NEWSROOM_SECTIONS = {
   'last-minute-intel':     { weekly: ['whatChanged', 'movesUp', 'movesDown', 'startSit', 'replacements', 'longerTerm'], dfs: ['projectionImpact', 'ownershipImpact', 'cashGame', 'tournaments', 'stacks', 'pivots', 'lateSwap'] },
   'what-sunday-taught-us': { weekly: ['signal', 'noise', 'roleChanges', 'concerns', 'buy', 'watchThis', 'waiversAndTrades'], dfs: ['emergingChalk', 'priceInefficiencies', 'roleChangesForPricing', 'touchdownRegression', 'stackImplications', 'leverage'] },
+  // The three layers a recap owes a fantasy reader, in order, plus the two
+  // structural sections: `components` is the story broken into its own
+  // findings (the rail prints them as headlines once a later game pushes this
+  // story off the lead) and `wrap` is the two-sentence summary the Weekly
+  // Wrap Up collects for every game of the week.
+  'game-recap':            { weekly: ['theGame', 'weCalledIt', 'whatScored', 'usageBehindIt', 'nextWeekSignals', 'components', 'waiverAndTrade', 'wrap'], dfs: ['priceImpact', 'usageForPricing', 'emergingChalk', 'leverage', 'stackImplications', 'wrap'] },
   'mnf-preview':           { weekly: ['startSit', 'expectations', 'matchups', 'injuries', 'usage', 'marketSignals', 'risk'], dfs: ['captainOptions', 'value', 'ownership', 'contrarianCaptains', 'correlation', 'gameScripts', 'fades'] },
   'early-rankings':        { weekly: ['overview', 'quarterbacks', 'runningBacks', 'wideReceivers', 'tightEnds', 'flex', 'kickersAndDefenses', 'whereWeDisagree'], dfs: ['rawVsSalary', 'earlyValues', 'earlyChalk', 'leverage', 'cashVsTournament'] },
   'quarterback-monday':    { weekly: ['theStory', 'whatTheNumbersSay', 'whatToDo', 'buySell'], dfs: ['stacks', 'bringBacks', 'ownership', 'salaryAndRushingUpside', 'gameEnvironment'] },
@@ -7366,14 +7462,37 @@ const NEWSROOM_OBJECT_SECTIONS = {
   movesUp: ['player', 'position', 'team', 'from', 'to', 'why'], movesDown: ['player', 'position', 'team', 'from', 'to', 'why'],
   signal: ['player', 'team', 'label', 'why'], noise: ['player', 'team', 'label', 'why'], roleChanges: ['player', 'team', 'label', 'why'], buy: ['player', 'team', 'label', 'why'], concerns: ['player', 'team', 'label', 'why'], watchThis: ['player', 'team', 'label', 'why'],
   whoMovesUp: ['player', 'position', 'team', 'why'], whoMovesDown: ['player', 'position', 'team', 'why'], pivots: ['player', 'position', 'team', 'salary', 'why'],
+  // The recap's three layers, each a list of players with the numbers that
+  // layer is about: what scored, the usage under it, and the usage that has
+  // not scored yet. `components` is the story's own findings; each one is a
+  // headline the rail can print on its own, so it carries a verb and a name.
+  whatScored: ['player', 'position', 'team', 'points', 'line', 'why'],
+  usageBehindIt: ['player', 'position', 'team', 'targets', 'carries', 'share', 'why'],
+  nextWeekSignals: ['player', 'position', 'team', 'signal', 'evidence', 'why'],
+  components: ['headline', 'player', 'why'],
+  // Where the site's own projection disagreed with the consensus before
+  // kickoff and the result proved it right, or did not. `verdict` is the
+  // packet's own word (`right` or `wrong`), never the writer's.
+  weCalledIt: ['player', 'position', 'team', 'weSaid', 'consensusSaid', 'heScored', 'verdict', 'why'],
   captainOptions: ['player', 'position', 'team', 'salary', 'why'], contrarianCaptains: ['player', 'position', 'team', 'salary', 'why'], streamingDefenses: ['team', 'opponent', 'why'], defensesToAvoid: ['team', 'opponent', 'why'], kickerRankings: ['player', 'team', 'rank', 'why'],
   priceInefficiencyBoard: ['player', 'position', 'team', 'salary', 'projection', 'value', 'why'], earlyValues: ['player', 'position', 'team', 'salary', 'why'], likelyChalk: ['player', 'position', 'team', 'salary', 'why'], goodChalk: ['player', 'position', 'team', 'salary', 'why'], badChalk: ['player', 'position', 'team', 'salary', 'why'],
   coreStacks: ['game', 'players', 'why'], contrarianStacks: ['game', 'players', 'why'], stacks: ['game', 'players', 'why'], initialStacks: ['game', 'players', 'why']
 };
-function sectionsFor(kind, lens) {
+// A section the packet may not have earned. `weCalledIt` is the case: with no
+// board frozen before kickoff the site has no record of what it said in
+// advance, so there is nothing to write and the writer is told to leave it
+// out. Both the SHAPE the writer is handed and the check that holds it come
+// from this one call, so a section can never be asked for and then failed for
+// its absence, nor skipped when it was asked for.
+const CONDITIONAL_SECTIONS = {
+  'game-recap': { weCalledIt: p => !!(p && p.calledIt && p.calledIt.available && (p.calledIt.hits.length || p.calledIt.misses.length)) }
+};
+function sectionsFor(kind, lens, packet) {
   const n = NEWSROOM_SECTIONS[kind];
-  if (n) return lens === 'dfs' ? n.dfs.slice() : n.weekly.slice();
-  return (CONTENT_SECTIONS[kind] || []).slice();
+  let list = n ? (lens === 'dfs' ? n.dfs.slice() : n.weekly.slice()) : (CONTENT_SECTIONS[kind] || []).slice();
+  const cond = packet ? CONDITIONAL_SECTIONS[kind] : null;
+  if (cond) list = list.filter(sec => !cond[sec] || cond[sec](packet));
+  return list;
 }
 const DOW_N = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 // Which week a kind is ABOUT at `now`. 'played' is the last week with a game
@@ -7408,6 +7527,23 @@ function contentDue(kind, now, state, sched) {
   // Targets come from the SUBJECT week's games.
   const gs = week === anchorWeek ? ags : weekGames(sched, week, now);
   const targets = K.targets(gs);
+  // A PER-GAME piece has no weekday slot. It is due the moment any game of
+  // the week it is about is final, and the producer takes those games one at
+  // a time, one stored row each (produceContent's `gameId`). `dueAt` is the
+  // last kickoff among them so deskNextPayload, which only ever looks
+  // forward, passes over a kind that is already due; with nothing final it is
+  // MAX_SAFE_INTEGER, which that function skips for the same reason.
+  if (K.perGame) {
+    const ready = targets.length > 0;
+    // `excluded` stays empty. It is the note a SLATE piece prints to say which
+    // of its games it could not cover yet; a recap covers exactly one game, so
+    // listing the rest of the week under "not covered here" would read as an
+    // omission from a story that never promised them.
+    return { due: ready, ready, reason: ready ? 'ready' : 'nothing_final_yet', week, anchorWeek,
+             dueAt: ready ? Math.max(...targets.map(g => g.kickoff)) : Number.MAX_SAFE_INTEGER,
+             targets: targets.map(g => g.id), targetDays: targets.map(g => g.dow), slotDay: null,
+             updatesUntil: null, excluded: [] };
+  }
   // A piece about a specific game (a preview, or the live pre-kickoff
   // intel) anchors on its own first target game, a day before it: Sunday's
   // 12:15 slot is the Sunday of those games, and the Monday preview is the
@@ -7588,9 +7724,13 @@ function briefForGames(kind, games, summaries, ctx) {
     for (const t of [s.home.team, s.away.team]) {
       const sec = _teamSection(t, usageAll, ctx); teams.push(sec);
       const u = usageAll[t]; if (!u) continue;
-      const board = new Map((ctx.week && ctx.week.players || []).map(p => [p.key, p]));
+      // Matched on the normalized NAME, not on `key`. A board key carries the
+      // position ("joshallen|QB") and a box-score key does not ("joshallen"),
+      // so the map this used to build never returned a row: `exp` was null for
+      // every player and `winners` and `losers` came back empty every week.
+      const board = _boardByNorm(ctx);
       for (const p of u.players) {
-        const row = board.get(p.key);
+        const row = _boardRowFor(board, p);
         const exp = row ? row.ironTuna.points : null;
         const pts = _oddsRound(scoreStats({ passYd: p.pass.yd, passTD: p.pass.td, passInt: p.pass.int, rushYd: p.rush.yd, rushTD: p.rush.td, recYd: p.rec.yd, recTD: p.rec.td, rec: p.rec.rec, fumLost: p.fumLost }, p.position || 'WR', ctx.rules));
         const line = { name: p.name, position: p.position, team: t, points: pts, projected: exp, touches: p.touches, targets: p.rec.tgt, carries: p.rush.att, targetShare: p.targetShare, carryShare: p.carryShare, rzTouches: p.rzTouches, glCarries: p.glCarries };
@@ -8639,9 +8779,12 @@ async function newsroomReady(env) {
     for (const q of CALLS_DDL) await env.LEADS_DB.prepare(q).run();
     // Columns the desk's table grew for the newsroom. SQLite has no ADD COLUMN
     // IF NOT EXISTS; a duplicate column is an error we expect and swallow.
-    for (const col of ['analyst TEXT', 'lens TEXT', 'version INTEGER', 'rivalry TEXT', 'headline TEXT', 'dek TEXT']) {
+    for (const col of ['analyst TEXT', 'lens TEXT', 'version INTEGER', 'rivalry TEXT', 'headline TEXT', 'dek TEXT', 'game_id TEXT', 'components TEXT', 'wrap TEXT']) {
       try { await env.LEADS_DB.prepare('ALTER TABLE content_pieces ADD COLUMN ' + col).run(); } catch (e) {}
     }
+    // A per-game kind writes one row per game per week; the index the table
+    // shipped with stops at (kind, season, week).
+    try { await env.LEADS_DB.prepare('CREATE INDEX IF NOT EXISTS ix_content_game ON content_pieces (kind, season, week, game_id)').run(); } catch (e) {}
     _NEWSROOM_READY = true; return true;
   } catch (e) { return false; }
 }
@@ -8767,6 +8910,171 @@ function packetSundayTaught(games, summaries, ctx) {
   const signal = base.usageChanges.filter(c => c.direction === 'up').map(c => ({ label: 'SIGNAL', player: c.name, team: c.team, touches: c.touches, seasonAvgTouches: c.seasonAvgTouches }));
   delete base.allowed;
   return { ...base, labeled, noiseCandidates: noise.slice(0, 8), signalCandidates: signal.slice(0, 8), finalsCount: summaries.length, dfs: _dfsBlock(ctx, null) };
+}
+// A box-score player against his row on the board. The two sides key
+// differently: the board is `_oddsNorm(name)|POSITION` (boardsPayload) and a
+// box-score line is `_oddsNorm(name)` alone (normalizeGameSummary), because
+// ESPN's box score does not carry a position and the name index only
+// sometimes fills one in. Matching those two by `key` returns nothing, every
+// time, which is why the packets below match on the normalized NAME and use
+// the position only to break a tie.
+// Every candidate is kept, not just the first: two players can normalize to
+// the same name, and which of them a box-score line means is decided by the
+// club it came from, not by which the board happened to list first.
+function _boardByNorm(ctx) {
+  const out = new Map();
+  for (const p of (ctx.week && ctx.week.players) || []) {
+    const n = String(p.key || '').split('|')[0];
+    if (!n) continue;
+    const list = out.get(n);
+    if (list) list.push(p); else out.set(n, [p]);
+  }
+  return out;
+}
+// A declaration, not a const arrow: briefForGames above calls it, and the two
+// need to hoist together.
+function _boardRowFor(index, p) {
+  const list = index.get(p.key);
+  if (!list || !list.length) return null;
+  // The club decides. With no club on either side, one candidate is the
+  // answer and two are a guess, so two return nothing rather than the wrong
+  // player's projection.
+  if (p.team) {
+    const same = list.filter(x => x.team === p.team);
+    if (same.length) return same[0];
+    // The board knows a club for all of them and none is his: not this player.
+    if (list.every(x => x.team)) return null;
+  }
+  return list.length === 1 ? list[0] : null;
+}
+// ONE GAME, in the three layers a fantasy reader actually needs, in that
+// order and computed rather than judged:
+//
+//   A  what scored          the fantasy points, and the line that produced
+//                           them, against what the board projected.
+//   B  what was used        targets, carries and share. None of it scores;
+//                           all of it predicts.
+//   C  what it means next   opportunity that has not turned into points yet,
+//                           red-zone and goal-line work, and roles that moved
+//                           off the depth chart or off the season's average.
+//
+// `wrapFacts` is the short list the two-sentence Weekly Wrap Up summary is
+// built from, so the wrap and the story cannot drift apart.
+// WHERE IRON TUNA DISAGREED WITH THE EXPERTS BEFORE THE GAME, AND WHAT
+// HAPPENED. Built only from the board frozen before kickoff (`freeze`), never
+// from a board read after the whistle: the claim is that the site said
+// something in advance, so the evidence has to predate the thing it predicted.
+// With no frozen row there is no block and the story makes no such claim.
+//
+// The disagreement is Iron Tuna's weekly projection against the CONSENSUS
+// one, which is what "expert rankings" means on this site: the ranking most
+// sites publish. Iron Tuna higher is a called overperformance, lower is a
+// called underperformance, and the call lands when the player's actual points
+// finish on Iron Tuna's side of the consensus number.
+//
+// Misses ride along with the hits, and the writer is given both. A desk that
+// prints only its wins is not a record, and the reader can see the same box
+// score. Only a hit may reach the headline.
+const CALLED_MIN_PTS = 2.0;         // the projections must differ by this much to have been a call
+const CALLED_MIN_RANKS = 4;         // and by this many places inside the position
+const CALLED_HEADLINE_PTS = 6.0;    // the actual result must beat the consensus by this to lead
+const CALLED_HEADLINE_RANKS = 8;
+function _vindication(freeze, scoredByKey, week) {
+  if (!freeze || !freeze.rows.length) return { available: false, reason: 'no board was frozen before this kickoff', hits: [], misses: [], headline: null };
+  const hits = [], misses = [];
+  for (const r of freeze.rows) {
+    const actualRow = scoredByKey.get(r.key);
+    if (!actualRow) continue;                       // did not take the field
+    // A missing projection or rank is not a quiet zero. NaN fails every
+    // comparison below, so an unguarded row would sail through the gate and
+    // become a call the site never made.
+    if (![r.ironTunaPts, r.consensusPts, r.ironTunaRank, r.consensusRank, actualRow.points].every(Number.isFinite)) continue;
+    const gap = _oddsRound(r.ironTunaPts - r.consensusPts);
+    const rankGap = r.consensusRank - r.ironTunaRank;   // positive: Iron Tuna higher
+    if (Math.abs(gap) < CALLED_MIN_PTS || Math.abs(rankGap) < CALLED_MIN_RANKS) continue;
+    const direction = gap > 0 ? 'over' : 'under';
+    const actual = actualRow.points;
+    const margin = _oddsRound(actual - r.consensusPts);
+    const landed = direction === 'over' ? margin > 0 : margin < 0;
+    const entry = { name: r.name, position: r.position, team: r.team, direction,
+                    consensusPts: r.consensusPts, consensusRank: r.consensusRank,
+                    ironTunaPts: r.ironTunaPts, ironTunaRank: r.ironTunaRank,
+                    pointsGap: gap, rankGap: Math.abs(rankGap), actual, margin: Math.abs(margin),
+                    frozenAt: freeze.takenAt, line: actualRow.line || null };
+    (landed ? hits : misses).push(entry);
+  }
+  const big = h => h.margin >= CALLED_HEADLINE_PTS && h.rankGap >= CALLED_HEADLINE_RANKS;
+  hits.sort((a, b) => b.margin - a.margin || b.rankGap - a.rankGap);
+  misses.sort((a, b) => b.margin - a.margin);
+  const lead = hits.find(big) || null;
+  return { available: true, frozenAt: freeze.takenAt, kickoff: freeze.kickoff,
+           thresholds: { calledPoints: CALLED_MIN_PTS, calledRanks: CALLED_MIN_RANKS, headlinePoints: CALLED_HEADLINE_PTS, headlineRanks: CALLED_HEADLINE_RANKS },
+           week, hits: hits.slice(0, 6), misses: misses.slice(0, 4), headline: lead };
+}
+function packetGameRecap(game, summary, ctx, freeze) {
+  const usage = gameUsageByTeam(summary);
+  const index = _boardByNorm(ctx);
+  const teams = [game.away, game.home];
+  const scored = [], used = [], forward = [];
+  // Keyed by the BOARD's key, so the frozen pre-kickoff row and the box-score
+  // line meet on the same identifier the freeze was written with.
+  const scoredByKey = new Map();
+  for (const t of teams) {
+    const u = usage[t];
+    if (!u) continue;
+    for (const p of u.players) {
+      const row = _boardRowFor(index, p);
+      const pos = p.position || (row ? row.position : null);
+      const pts = _oddsRound(scoreStats({ passYd: p.pass.yd, passTD: p.pass.td, passInt: p.pass.int, rushYd: p.rush.yd, rushTD: p.rush.td, recYd: p.rec.yd, recTD: p.rec.td, rec: p.rec.rec, fumLost: p.fumLost }, pos || 'WR', ctx.rules));
+      const projected = row ? row.ironTuna.points : null;
+      const line = [];
+      if (p.pass.att) line.push(p.pass.cmp + '/' + p.pass.att + ', ' + p.pass.yd + ' pass yards, ' + p.pass.td + ' TD, ' + p.pass.int + ' INT');
+      if (p.rush.att) line.push(p.rush.att + ' carries, ' + p.rush.yd + ' rush yards, ' + p.rush.td + ' TD');
+      if (p.rec.tgt) line.push(p.rec.rec + ' of ' + p.rec.tgt + ', ' + p.rec.yd + ' receiving yards, ' + p.rec.td + ' TD');
+      const base = { name: p.name, position: pos, team: t };
+      // A: the scoreboard.
+      const scoreRow = { ...base, points: pts, projected, line: line.join('; '), touchdowns: p.tds.length, fumblesLost: p.fumLost };
+      if (row) scoredByKey.set(row.key, scoreRow);
+      if (pts >= 1 || p.touches >= 3) scored.push(scoreRow);
+      // B: the usage under it, whether or not it scored.
+      if (p.rec.tgt >= 1 || p.rush.att >= 1) used.push({ ...base, targets: p.rec.tgt, receptions: p.rec.rec, targetShare: p.targetShare, carries: p.rush.att, carryShare: p.carryShare, touches: p.touches, points: pts });
+      // C: the forward read. Every entry names the reason it is here, so the
+      // writer argues from a computed flag and not from the vibe of a line.
+      const prior = (ctx.usage && ctx.usage.players && ctx.usage.players[p.key]) || null;
+      const seasonGames = prior && prior.season ? prior.season.games : 0;
+      const seasonAvg = seasonGames ? _oddsRound((prior.season.targets + prior.season.carries) / seasonGames) : null;
+      const signals = [];
+      if (p.touches >= 12 && projected != null && pts < projected) signals.push('heavy usage, points below the projection');
+      if (p.rzTouches >= 2 && !p.tds.length) signals.push(p.rzTouches + ' red-zone touches and no touchdown');
+      if (p.glCarries >= 1) signals.push(p.glCarries + ' goal-line carries');
+      if (p.rec.tgt >= 7) signals.push(p.rec.tgt + ' targets');
+      if (p.targetShare >= 25) signals.push(p.targetShare + '% of the team targets');
+      if (p.carryShare >= 60) signals.push(p.carryShare + '% of the carries');
+      if (seasonAvg != null && seasonAvg >= 4 && p.touches >= seasonAvg * 1.4) signals.push('touches up from a season average of ' + seasonAvg);
+      if (seasonAvg != null && seasonAvg >= 4 && p.touches <= seasonAvg * 0.6) signals.push('touches down from a season average of ' + seasonAvg);
+      if (signals.length) forward.push({ ...base, touches: p.touches, targets: p.rec.tgt, carries: p.rush.att, targetShare: p.targetShare, carryShare: p.carryShare,
+        rzTouches: p.rzTouches, rzTargets: p.rzTargets, glCarries: p.glCarries, points: pts, projected, seasonAvgTouches: seasonAvg, seasonGames, signals,
+        roleTrend: row && row.roleTrend ? row.roleTrend.label : null, ironTunaRank: row ? row.ironTuna.rank : null, consensusRank: row ? row.consensus.rank : null });
+    }
+  }
+  scored.sort((a, b) => b.points - a.points);
+  used.sort((a, b) => b.touches - a.touches);
+  forward.sort((a, b) => b.signals.length - a.signals.length || b.touches - a.touches);
+  const teamBlocks = teams.map(t => {
+    const u = usage[t] || null;
+    return { team: t, prior: _priorFor(t, ctx), injuries: (ctx.injuriesByTeam && ctx.injuriesByTeam[t]) || [],
+             teamTargets: u ? u.targets : null, teamCarries: u ? u.carries : null,
+             targetLeaders: u ? u.targetLeaders : [], backfield: u ? u.backfield : [], redZone: u ? u.redZone : [], scorers: u ? u.scorers : [] };
+  });
+  const box = { away: summary.away, home: summary.home, final: !!summary.final };
+  const wrapFacts = { matchup: game.away + ' at ' + game.home, score: summary.away.team + ' ' + summary.away.score + ', ' + summary.home.team + ' ' + summary.home.score,
+                      topScorers: scored.slice(0, 3), biggestUsage: used.slice(0, 3), leadSignal: forward[0] || null };
+  return { kind: 'game-recap', week: ctx.weekNumber, game: { id: game.id, matchup: game.away + ' at ' + game.home, away: game.away, home: game.home, day: game.dow, kickoff: game.kickoff }, box,
+           whatScored: scored.slice(0, 16), usage: used.slice(0, 20), forwardSignals: forward.slice(0, 14), teams: teamBlocks,
+           calledIt: _vindication(freeze, scoredByKey, ctx.weekNumber),
+           market: Object.fromEntries(teams.map(t => [t, _marketFor(t, ctx)])), waivers: teams.flatMap(t => _waiverFor(t, usage, ctx)).slice(0, 8),
+           wrapFacts, dfs: _dfsBlock(ctx, new Set(teams)),
+           unavailable: ['routes and route participation (no free feed publishes them)', 'snap counts until the weekly usage file publishes', 'red-zone and goal-line counts are derived from play descriptions and are left uncounted where the play text is ambiguous'] };
 }
 function packetShowdown(kind, games, ctx) {
   const base = briefGamePlan(kind, games, ctx);
@@ -8977,6 +9285,20 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   let facts = null;
   const summariesFor = async (gs) => { const out = []; for (const g of gs) { try { const s = await gameSummaryFor(env, g, ctx.nameIndex); if (s && s.final) out.push(s); } catch (e) {} } return out; };
   if (kind === 'last-minute-intel') facts = packetLastMinute(ctx, games);
+  // One game, named by the caller. The box score is the whole packet, so a
+  // recap without one is skipped rather than written from the schedule.
+  else if (kind === 'game-recap') {
+    const g = games.find(x => x.id === o.gameId) || games[0];
+    if (!g) return { skip: true, reason: 'no_game' };
+    let s = null; try { s = await gameSummaryFor(env, g, ctx.nameIndex); } catch (e) { s = null; }
+    if (!s || !s.final) return { skip: true, reason: 'no_box_score', checked: g.away + '@' + g.home };
+    // The board as it stood before this kickoff. Absent for a game that
+    // kicked off before the freeze job existed, and then the story simply
+    // makes no claim about what the site said in advance.
+    let freeze = null;
+    try { freeze = await boardFreezeRead(env, ctx.sched ? ctx.sched.season : null, d.week, g.id); } catch (e) { freeze = null; }
+    facts = packetGameRecap(g, s, ctx, freeze);
+  }
   else if (kind === 'what-sunday-taught-us') { const s = await summariesFor(games); if (!s.length && !o.force) return { skip: true, reason: 'no_box_scores' }; facts = packetSundayTaught(games, s, ctx); }
   else if (kind === 'mnf-preview' || kind === 'tnf-preview') facts = packetShowdown(kind, games, ctx);
   else if (kind === 'early-rankings') facts = packetRankings(ctx, d.week);
@@ -9010,7 +9332,8 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   const rivalry = rivalryGate(env, kind, facts.disagreements || (facts.candidates ? facts.candidates : []), budget);
   const analyst = analystFor(env, K.analyst), dfsAnalyst = analystFor(env, K.dfsAnalyst || 'park'), marketAnalyst = K.marketAnalyst ? analystFor(env, K.marketAnalyst) : null;
   const packet = {
-    meta: { kind, title: kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
+    meta: { kind, title: facts.game ? facts.game.matchup : kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
+            game: facts.game ? facts.game.id : null, matchup: facts.game ? facts.game.matchup : null,
             analyst: analyst.id, analystName: analyst.name, dfsAnalyst: dfsAnalyst.id, dfsAnalystName: dfsAnalyst.name, marketAnalyst: marketAnalyst ? marketAnalyst.id : null, marketAnalystName: marketAnalyst ? marketAnalyst.name : null,
             lens: flagOn(env, 'DFS_CONTENT') ? K.lens : 'weekly', scoring: 'PPR (the reader’s league re-scores the tables on the page)', excludedGames: d.excluded || [] },
     freshness: freshnessReport(ctx.stamps, kind, Date.now()),
@@ -9047,8 +9370,8 @@ HEADLINE AND DEK in sentence case: capitalize the first word and proper nouns (p
 PUBLISH LESS. If the packet genuinely carries nothing a reader should act on, return {"skip":"<one sentence why>"} instead of filler.
 OUTPUT: a single JSON object, no prose outside it, in exactly the shape requested.`;
 const AI_PHRASES = [/it'?s worth noting/i, /buckle up/i, /dive in/i, /game-?changer/i, /in conclusion/i, /at the end of the day/i, /ever-evolving/i, /look no further/i, /—/];
-function _lensShape(kind, lens) {
-  const secs = sectionsFor(kind, lens);
+function _lensShape(kind, lens, packet) {
+  const secs = sectionsFor(kind, lens, packet);
   return '{' + secs.map(s => {
     const f = NEWSROOM_OBJECT_SECTIONS[s];
     return '"' + s + '":' + (f ? '[{' + f.map(x => '"' + x + '":"..."').join(',') + '}]' : '["..."]');
@@ -9062,6 +9385,25 @@ function _voiceBlock(packet) {
   if (packet.rivalry) s += 'RIVALRY IN THIS PIECE: ' + packet.rivalry.player + '. Brooks (Fantasy Analysis) ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; Vega (Market Intelligence) ' + packet.rivalry.position + packet.rivalry.vega.rank + ' on ' + packet.rivalry.vega.basis + '. Write ONE line in the weekly lens, in the section it belongs to, and put the same line in "rivalryLine". Nowhere else.\n';
   else s += 'NO RIVALRY IN THIS PIECE. Do not set up Vega against Brooks.\n';
   if (packet.priorCalls && packet.priorCalls.length) s += 'PRIOR CALLS the desk has published on players in this packet are in priorCalls. Reference only those, by analyst and week, where relevant.\n';
+  // Where the site's own board disagreed with the consensus BEFORE kickoff and
+  // the game settled it. The gate is arithmetic in the packet, not the
+  // writer's judgement: `calledIt.hits` are the ones the result proved right,
+  // `calledIt.misses` the ones it did not, and `calledIt.headline` is set only
+  // when one hit clears the wider bar. The writer never decides that a call
+  // was big enough to crow about; it decides how to say it.
+  const c = packet.calledIt;
+  if (c && c.available && (c.hits.length || c.misses.length)) {
+    s += 'WE CALLED IT. Before this kickoff the site\'s own projection differed from the consensus ranking on the players in `calledIt`, and the game has now settled it. Write the `weCalledIt` section from that block and from nothing else. `hits` are the calls the result proved right and `misses` are the ones it did not.\n';
+    s += 'REPORT BOTH. A section that lists the hits and hides the misses in the same box score is not a record, and the reader has the box score. If `misses` is not empty, at least one of them goes in the section, in the same plain voice as the hits.\n';
+    if (c.headline) {
+      s += 'THIS ONE IS BIG ENOUGH TO LEAD WITH: ' + c.headline.name + '. The site had him ' + c.headline.position + c.headline.ironTunaRank + ' where the consensus had him ' + c.headline.position + c.headline.consensusRank + ', a call that he would ' + (c.headline.direction === 'over' ? 'beat' : 'fall short of') + ' the consensus number of ' + c.headline.consensusPts + ' points; he scored ' + c.headline.actual + '.\n';
+      s += 'You MAY open the headline with "YOU\'RE WELCOME:" and then say what the site called and that it happened, for example: YOU\'RE WELCOME: Iron Tuna said ' + c.headline.name + ' would ' + (c.headline.direction === 'over' ? 'beat' : 'miss') + ' his ranking, and he did. Spell it "YOU\'RE WELCOME", with the apostrophe. Use it at most once, only for this player, and only in the headline; if the game has a bigger story, lead with that instead.\n';
+    } else {
+      s += 'NOTHING here is big enough for the headline. Keep it to the section.\n';
+    }
+  } else if (c && !c.available) {
+    s += 'NO PRE-KICKOFF BOARD was frozen for this game, so the site has no record of what it said in advance. Make no claim about having called anything, and omit the `weCalledIt` section.\n';
+  }
   return s;
 }
 function factCheck(body, packet) {
@@ -9084,7 +9426,7 @@ function factCheck(body, packet) {
   if (!packet.rivalry && body && body.rivalryLine) problems.push('rivalry:not_in_packet');
   // Sections: each lens must carry its sections.
   for (const lens of packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly']) {
-    const secs = sectionsFor(packet.meta.kind, lens);
+    const secs = sectionsFor(packet.meta.kind, lens, packet);
     const got = body && body[lens] && typeof body[lens] === 'object' ? body[lens] : null;
     if (!got) { problems.push('missing:' + lens); continue; }
     for (const s of secs) if (!(s in got)) problems.push('missing:' + lens + '.' + s);
@@ -9117,7 +9459,7 @@ function compactForWriter(packet, budget) {
   if (size() > limit) trim(out, 8);
   while (size() > limit) {
     let big = null, bigLen = 0;
-    for (const [k, v] of Object.entries(out)) { if (['meta', 'freshness', 'rivalry', 'priorCalls', 'staleSources', 'allowed'].includes(k)) continue; const l = JSON.stringify(v).length; if (l > bigLen) { big = k; bigLen = l; } }
+    for (const [k, v] of Object.entries(out)) { if (['meta', 'freshness', 'rivalry', 'priorCalls', 'staleSources', 'allowed', 'calledIt'].includes(k)) continue; const l = JSON.stringify(v).length; if (l > bigLen) { big = k; bigLen = l; } }
     if (!big) break;
     delete out[big]; omitted.push(big + ' omitted for length');
   }
@@ -9127,7 +9469,7 @@ function compactForWriter(packet, budget) {
 async function writeNewsroomPiece(env, kind, packet) {
   const K = CONTENT_KINDS[kind];
   const lenses = packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly'];
-  const shape = '{"headline":"...","dek":"one sentence, the finding","' + lenses.map(l => l + '":' + _lensShape(kind, l)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
+  const shape = '{"headline":"...","dek":"one sentence, the finding","' + lenses.map(l => l + '":' + _lensShape(kind, l, packet)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
   const user = 'KIND: ' + kind + ' (' + ((packet.meta && packet.meta.title) || K.title) + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
     'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
     '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
@@ -9147,9 +9489,17 @@ async function writeNewsroomPiece(env, kind, packet) {
 }
 
 // ── storage, tick, payloads ────────────────────────────────────────────────
-const _slugOf = (kind, season, week) => kind + '-' + season + '-w' + week;
-async function contentLatest(env, kind, season, week) {
-  try { return await env.LEADS_DB.prepare('SELECT id, status, version, brief, body, violations, created_at FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first(); } catch (e) { return null; }
+// A per-game piece carries the game in its slug and in its own column, so a
+// week holds one row per game rather than one row per kind. Everything else
+// keys on (kind, season, week) exactly as it did.
+const _gameSlug = id => String(id || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const _slugOf = (kind, season, week, gameId) => kind + '-' + season + '-w' + week + (gameId ? '-' + _gameSlug(gameId) : '');
+async function contentLatest(env, kind, season, week, gameId) {
+  try {
+    return gameId
+      ? await env.LEADS_DB.prepare('SELECT id, status, version, brief, body, violations, created_at FROM content_pieces WHERE kind = ? AND season = ? AND week = ? AND game_id = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week, String(gameId)).first()
+      : await env.LEADS_DB.prepare('SELECT id, status, version, brief, body, violations, created_at FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first();
+  } catch (e) { return null; }
 }
 // A piece held with NO draft failed on the way to the model (a timeout, a
 // provider error, no key), not on the fact check. It is retried on a later
@@ -9162,12 +9512,39 @@ function heldRetryable(latest, now) {
   if ((latest.version || 1) >= RETRY_HELD_MAX) return false;
   return (now - latest.created_at) >= RETRY_HELD_AFTER_MS;
 }
-async function contentExists(env, kind, season, week) { return !!(await contentLatest(env, kind, season, week)); }
+async function contentExists(env, kind, season, week, gameId) { return !!(await contentLatest(env, kind, season, week, gameId)); }
+// The story broken into its own findings, lifted out of the body at publish
+// so the front page can read them without parsing every piece's prose. Each
+// one is a headline in its own right: it is what the rail prints once a later
+// game's recap takes the lead off this story. `n` is the component's index in
+// the section, which is also its anchor on the piece's page.
+function _componentsOf(body) {
+  const list = body && body.weekly && Array.isArray(body.weekly.components) ? body.weekly.components : [];
+  const out = [];
+  for (const c of list) {
+    if (!c || typeof c !== 'object') continue;
+    const headline = String(c.headline || '').trim().slice(0, 200);
+    if (!headline) continue;
+    out.push({ n: out.length + 1, headline, player: String(c.player || '').trim().slice(0, 60) || null, why: String(c.why || '').trim().slice(0, 400) || null });
+    if (out.length >= 6) break;
+  }
+  return out.length ? out : null;
+}
+// The short summary of one game, lifted out at publish for the same reason
+// the components are: the Weekly Wrap Up prints one of these per game and
+// should not have to parse sixteen pieces' bodies to do it. Because it is the
+// piece's OWN wrap section, the wrap and the story cannot drift apart.
+function _wrapOf(body) {
+  const w = body && body.weekly ? body.weekly.wrap : null;
+  const text = Array.isArray(w) ? w.filter(x => typeof x === 'string').join(' ') : typeof w === 'string' ? w : '';
+  return text.trim().slice(0, 600) || null;
+}
 async function contentStore(env, rec) {
   await newsroomReady(env);
-  await env.LEADS_DB.prepare('INSERT INTO content_pieces (season, week, kind, slug, title, status, brief, body, violations, model, created_at, published_at, analyst, lens, version, rivalry, headline, dek) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+  await env.LEADS_DB.prepare('INSERT INTO content_pieces (season, week, kind, slug, title, status, brief, body, violations, model, created_at, published_at, analyst, lens, version, rivalry, headline, dek, game_id, components, wrap) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
     .bind(rec.season, rec.week, rec.kind, rec.slug, rec.title, rec.status, JSON.stringify(rec.brief || null), JSON.stringify(rec.body || null), JSON.stringify(rec.violations || []), rec.model || null, Date.now(), rec.status === 'published' ? Date.now() : null,
-          rec.analyst || null, rec.lens || null, rec.version || 1, rec.rivalry ? JSON.stringify(rec.rivalry) : null, rec.headline || null, rec.dek || null).run();
+          rec.analyst || null, rec.lens || null, rec.version || 1, rec.rivalry ? JSON.stringify(rec.rivalry) : null, rec.headline || null, rec.dek || null, rec.gameId ? String(rec.gameId) : null,
+          rec.components ? JSON.stringify(rec.components) : null, rec.wrap || null).run();
 }
 // Everything a packet reads, read once. Extends the desk's context with the
 // freshness stamps and the DFS slates under the metrics.
@@ -9243,15 +9620,22 @@ async function produceContent(env, kind, opts) {
   if (!o.force && (!d.due || !d.ready)) return { ok: false, kind, ...d };
   if (d.week == null) return { ok: false, kind, error: 'no_week' };
   const season = sched.season, week = d.week;
-  const latest = await contentLatest(env, kind, season, week);
+  // A per-game kind is produced one game at a time. The caller names the
+  // game (runContentTick walks the week's final games); with none named the
+  // first target stands in, so a forced run from /admin still does something.
+  const gameId = K.perGame ? (o.gameId || (d.targets || [])[0] || null) : null;
+  if (K.perGame && !gameId) return { ok: false, kind, week, error: 'no_game' };
+  if (K.perGame && o.gameId && !(d.targets || []).includes(o.gameId) && !o.force) return { ok: false, kind, week, error: 'game_not_final', game: o.gameId };
+  const slug = _slugOf(kind, season, week, gameId);
+  const latest = await contentLatest(env, kind, season, week, gameId);
   const retry = heldRetryable(latest, Date.now());
-  if (latest && !o.force && !retry && !K.updates && !K.unscheduled) return { ok: false, kind, week, error: 'exists' };
-  if (d.skip) { if (!latest) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: d.reason }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped' }; }
+  if (latest && !o.force && !retry && !K.updates && !K.unscheduled) return { ok: false, kind, week, game: gameId, error: 'exists' };
+  if (d.skip) { if (!latest) await contentStore(env, { season, week, kind, gameId, slug, title: K.title, status: 'skipped', brief: { reason: d.reason }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped' }; }
   const ctx = await contentContext(env, week, { excluded: d.excluded || [] });
-  const packet = await buildResearchPacket(env, kind, d, ctx, o);
+  const packet = await buildResearchPacket(env, kind, d, ctx, { ...o, gameId });
   if (packet.skip) {
-    if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: packet.reason, checked: packet.checked || null }, body: null, analyst: K.analyst, lens: K.lens });
-    return { ok: true, kind, week, status: 'skipped', reason: packet.reason };
+    if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, gameId, slug, title: K.title, status: 'skipped', brief: { reason: packet.reason, checked: packet.checked || null }, body: null, analyst: K.analyst, lens: K.lens });
+    return { ok: true, kind, week, game: gameId, status: 'skipped', reason: packet.reason };
   }
   // A draft the fact check held is checked again against the fresh packet
   // before the writer is asked for another. The check is code and the code
@@ -9259,31 +9643,34 @@ async function produceContent(env, kind, opts) {
   // and sentence boundaries, and once the rule learned them the draft it had
   // held was right. Nothing is rewritten; the row is published as it stands.
   if (latest && latest.status === 'held' && latest.body && latest.body !== 'null' && !o.force) {
-    const revived = await revalidateHeld(env, kind, latest, packet, d, season);
+    const revived = await revalidateHeld(env, kind, latest, packet, d, season, gameId);
     if (revived) return revived;
   }
   if (latest && !o.force && !retry && K.updates && !updateWanted(K, latest, d, packet, Date.now())) return { ok: false, kind, week, error: 'exists', note: 'no update wanted' };
   const written = await writeNewsroomPiece(env, kind, packet);
-  if (written.status === 'skipped') { if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: 'writer_declined', note: written.skip }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped', reason: 'writer_declined', note: written.skip }; }
+  if (written.status === 'skipped') { if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, gameId, slug, title: K.title, status: 'skipped', brief: { reason: 'writer_declined', note: written.skip }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, game: gameId, status: 'skipped', reason: 'writer_declined', note: written.skip }; }
   const auto = await autoPublishOn(env);
   let status = written.status;
   const violations = written.violations.slice();
   if (status === 'published' && !auto.on) { status = 'held'; violations.push('awaiting_approval: ' + auto.reason); }
   const version = latest && latest.version ? latest.version + 1 : (latest ? 2 : 1);
-  // A retry of a transport failure is the same edition, not an update.
-  const title = kindTitle(K, d) + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
+  // A retry of a transport failure is the same edition, not an update. A
+  // per-game piece is titled by its matchup, because "Game Recap · Week 1"
+  // six times in a column says nothing about which game.
+  const title = (K.perGame && packet.meta.matchup ? packet.meta.matchup : kindTitle(K, d)) + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
   const analyst = packet.meta.analyst;
   const rivalry = packet.rivalry && written.body && written.body.rivalryLine ? { ...packet.rivalry, line: String(written.body.rivalryLine).slice(0, 300) } : null;
-  await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title, status, brief: packet, body: written.body, violations, model: written.model, analyst, lens: packet.meta.lens, version, rivalry,
-                           headline: written.body ? String(written.body.headline || '').slice(0, 200) : null, dek: written.body ? String(written.body.dek || '').slice(0, 400) : null });
+  await contentStore(env, { season, week, kind, gameId, slug, title, status, brief: packet, body: written.body, violations, model: written.model, analyst, lens: packet.meta.lens, version, rivalry,
+                           headline: written.body ? String(written.body.headline || '').slice(0, 200) : null, dek: written.body ? String(written.body.dek || '').slice(0, 400) : null,
+                           components: _componentsOf(written.body), wrap: _wrapOf(written.body) });
   let calls = { stored: 0 };
   if (status === 'published' && written.body) {
     const list = normalizeCalls(written.body.calls, packet, analyst, 'weekly');
-    calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, list, rivalry);
+    calls = await recordCalls(env, { season, week, kind, slug }, list, rivalry);
   }
-  return { ok: true, kind, week, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
+  return { ok: true, kind, week, game: gameId, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
 }
-async function revalidateHeld(env, kind, latest, packet, d, season) {
+async function revalidateHeld(env, kind, latest, packet, d, season, gameId) {
   let body = null; try { body = JSON.parse(latest.body); } catch (e) { return null; }
   if (!body || typeof body !== 'object') return null;
   let vio = []; try { vio = JSON.parse(latest.violations || '[]') || []; } catch (e) { vio = []; }
@@ -9298,19 +9685,56 @@ async function revalidateHeld(env, kind, latest, packet, d, season) {
   const analyst = packet.meta.analyst, week = d.week;
   const rivalry = packet.rivalry && body.rivalryLine ? { ...packet.rivalry, line: String(body.rivalryLine).slice(0, 300) } : null;
   let calls = { stored: 0 };
-  try { calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, normalizeCalls(body.calls, packet, analyst, 'weekly'), rivalry); } catch (e) {}
-  return { ok: true, kind, week, status: 'published', version: latest.version || 1, revalidated: true, heldOn: vio.length, analyst, rivalry: !!rivalry, calls: calls.stored, sections: Object.keys(body) };
+  try { calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week, gameId) }, normalizeCalls(body.calls, packet, analyst, 'weekly'), rivalry); } catch (e) {}
+  return { ok: true, kind, week, game: gameId || null, status: 'published', version: latest.version || 1, revalidated: true, heldOn: vio.length, analyst, rivalry: !!rivalry, calls: calls.stored, sections: Object.keys(body) };
+}
+// How many recaps one tick may write, oldest final first. This is the one
+// number to tune if recaps run late, and it is deliberately small.
+//
+// The budget: a quarter-hour tick gets thirteen minutes (JOB_DEADLINE_MS), a
+// single piece took 130 seconds on the first live run (§68l), and the tick
+// also walks the sixteen other packages. Two recaps is about four and a half
+// minutes, which leaves the rest of the calendar its room. Writing a whole
+// Sunday afternoon in one invocation would blow the deadline, and a job past
+// its deadline is abandoned mid-flight rather than cancelled — the worst
+// outcome available here.
+//
+// The cost: nine one o'clock games go final within about twenty minutes of
+// each other, so the last of them is recapped a little over an hour later
+// rather than immediately. Oldest-first means the wait is always spent on the
+// game that has been waiting longest. Raise this once the worker is on the
+// Standard usage model (see the CPU-limits note in the previous section).
+const RECAPS_PER_TICK = 2;
+async function runPerGameKind(env, kind, out) {
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  let d = null;
+  try { d = contentDue(kind, Date.now(), state, sched); } catch (e) { return; }
+  if (!d || !d.due || !d.ready || d.week == null) { out.push({ ok: false, kind, ...(d || { error: 'not_due' }) }); return; }
+  const finals = weekGames(sched, d.week, Date.now()).filter(g => (d.targets || []).includes(g.id)).sort((a, b) => a.kickoff - b.kickoff);
+  let written = 0;
+  for (const g of finals) {
+    if (written >= RECAPS_PER_TICK) break;
+    const latest = await contentLatest(env, kind, sched.season, d.week, g.id);
+    if (latest && !heldRetryable(latest, Date.now())) continue;
+    try { out.push(await produceContent(env, kind, { gameId: g.id })); written++; }
+    catch (e) { out.push({ ok: false, kind, game: g.id, error: (e && e.message) || 'failed' }); written++; }
+  }
 }
 async function runContentTick(env) {
   const out = [];
   for (const kind of Object.keys(CONTENT_KINDS)) {
     if (CONTENT_KINDS[kind].unscheduled) continue;
+    if (CONTENT_KINDS[kind].perGame) { try { await runPerGameKind(env, kind, out); } catch (e) { out.push({ ok: false, kind, error: (e && e.message) || 'failed' }); } continue; }
     try { out.push(await produceContent(env, kind)); } catch (e) { out.push({ ok: false, kind, error: (e && e.message) || 'failed' }); }
   }
   return { ok: true, at: Date.now(), results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? r.due : false)) };
 }
 const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, dfsAnalyst: d.id, dfsName: d.name }; };
-const _pieceUrl = (row) => '/in-season/desk/' + row.kind + '/' + row.week;
+// A per-game row gets a fourth segment: the game, slugified. `_gameSlug` is
+// idempotent, so the segment read back off the path rebuilds the stored slug
+// exactly and the piece can be looked up by it.
+const _pieceUrl = (row) => '/in-season/desk/' + row.kind + '/' + row.week + (row.game_id ? '/' + _gameSlug(row.game_id) : '');
 // The title a published piece carries: the one it was STORED under, not the
 // calendar's. The calendar title is only a default; the week's games can move
 // it (a Wednesday opener is not Thursday night), and reading it back off
@@ -9325,19 +9749,24 @@ async function contentListPayload(env, season, week) {
   await newsroomReady(env);
   try {
     const q = week != null
-      ? await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek FROM content_pieces WHERE season = ? AND week = ? AND status != 'unpublished' ORDER BY created_at DESC").bind(season, week).all()
-      : await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 80").all();
+      ? await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, game_id FROM content_pieces WHERE season = ? AND week = ? AND status != 'unpublished' ORDER BY created_at DESC").bind(season, week).all()
+      : await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, game_id FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 80").all();
     const pieces = (q.results || []).map(r => ({ ...r, byline: _bylineOf(r), url: _pieceUrl(r), legacy: !CONTENT_KINDS[r.kind] }));
     return { ok: true, contract: CONTENT_CONTRACT, disclosure: AI_DISCLOSURE,
-             kinds: Object.entries(CONTENT_KINDS).filter(([k, v]) => !v.unscheduled).map(([k, v]) => ({ kind: k, title: v.title, subtitle: v.subtitle || null, day: v.day, hour: v.hour, minute: v.minute || 0, analyst: v.analyst, analystName: (ANALYSTS[v.analyst] || ANALYST_HOUSE).name, dfsAnalyst: v.dfsAnalyst, lens: v.lens, summary: v.summary, gate: v.gate || null, updates: v.updates || null })),
+             kinds: Object.entries(CONTENT_KINDS).filter(([k, v]) => !v.unscheduled).map(([k, v]) => ({ kind: k, title: v.title, subtitle: v.subtitle || null, day: v.day, hour: v.hour, minute: v.minute || 0, analyst: v.analyst, analystName: (ANALYSTS[v.analyst] || ANALYST_HOUSE).name, dfsAnalyst: v.dfsAnalyst, lens: v.lens, summary: v.summary, gate: v.gate || null, updates: v.updates || null, perGame: !!v.perGame })),
              pieces };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
-async function contentPiecePayload(env, kind, season, week) {
+async function contentPiecePayload(env, kind, season, week, game) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
   try {
-    const row = week != null
+    // A per-game piece is addressed by its game. The path segment is the
+    // slugified game id and `_slugOf` rebuilds the stored slug from it, so
+    // the lookup needs no reverse mapping back to the schedule's own id.
+    const row = game
+      ? await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND slug = ? ORDER BY created_at DESC LIMIT 1').bind(kind, _slugOf(kind, season, week, game)).first()
+      : week != null
       ? await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first()
       : await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? ORDER BY created_at DESC LIMIT 1').bind(kind).first();
     if (!row || row.status === 'unpublished') return { ok: false, error: 'not_found', kind };
@@ -9347,9 +9776,12 @@ async function contentPiecePayload(env, kind, season, week) {
     // A held piece ships its PACKET and not its draft: the data is right by
     // construction, the prose was not.
     const pub = brief && brief.meta ? { meta: brief.meta, freshness: brief.freshness, rivalry: brief.rivalry, priorCalls: brief.priorCalls, dfs: brief.dfs, ...Object.fromEntries(Object.entries(brief).filter(([k]) => !['allowed', 'playerIndex', 'rivalryBudget', 'colleagues'].includes(k))) } : brief;
+    // `_pieceTitle` already strips the edition trailer, so a per-game row
+    // comes back as its matchup and the page prints the week itself.
     return { ok: true, contract: CONTENT_CONTRACT, kind, title: _pieceTitle(row), subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
+             game: row.game_id || null, matchup: brief && brief.meta ? brief.meta.matchup || null : null, url: _pieceUrl(row),
              headline: row.headline || null, dek: row.dek || null, byline: _bylineOf(row), lens: row.lens || (K ? K.lens : 'weekly'), legacy: !K,
-             createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly'), dfs: sectionsFor(kind, 'dfs') }, objectSections: NEWSROOM_OBJECT_SECTIONS,
+             createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly', brief), dfs: sectionsFor(kind, 'dfs', brief) }, objectSections: NEWSROOM_OBJECT_SECTIONS,
              body: row.status === 'published' ? parse(row.body) : null, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
@@ -9360,10 +9792,16 @@ async function newsroomFeedPayload(env, lens, limit) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
   try {
-    const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, rivalry FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, limit || 20)).all();
+    const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, rivalry, game_id, components FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, limit || 20)).all();
     let rows = (q.results || []);
     if (lens === 'dfs') rows = rows.filter(r => r.lens === 'both' || r.lens === 'dfs');
-    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry })) };
+    const parse = s => { try { const v = JSON.parse(s); return Array.isArray(v) ? v : null; } catch (e) { return null; } };
+    // `_pieceTitle` is the stored title minus the edition trailer, which for a
+    // per-game row IS the matchup: six rows all reading "Game Recap" would say
+    // nothing about which game. `components` are the findings the rail breaks
+    // the story into once it is no longer the lead.
+    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry,
+      game: r.game_id || null, perGame: !!(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].perGame), components: parse(r.components) })) };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
 // The front page's lead, in the regular season: the newest published piece,
@@ -9375,9 +9813,88 @@ async function deskLeadPayload(env) {
   const feed = await newsroomFeedPayload(env, 'weekly', 12);
   if (!feed.ok || !feed.pieces.length) return null;
   const [cur, ...rest] = feed.pieces;
-  const row = p => ({ slug: 'desk:' + p.kind + ':' + p.week, url: p.url, title: p.headline || p.title + ' · Week ' + p.week, dek: p.dek || '', label: p.title, category: 'desk', analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], names: [], cast: [] });
-  return { ok: true, source: 'desk', story: row(cur), recent: rest.map(row) };
+  // The faces the lead card runs, slugged and carried the same way leadRow
+  // does it for an authored story: the page prefers its own cast entry and
+  // falls back to the one that traveled with the story.
+  const faces = p => {
+    const names = [...new Set((p.components || []).map(c => c && c.player).filter(Boolean))].slice(0, 4);
+    // `leadSlug` and `LEAD_FACES` belong to the draft-season lead block. The
+    // desk payload is loaded on its own in tools/test-dry-run.mjs, so the two
+    // are checked rather than assumed: a missing face costs a photograph, and
+    // throwing here would cost the whole front page its lead.
+    if (typeof leadSlug !== 'function' || typeof LEAD_FACES === 'undefined') return { ppl: [], names, cast: [] };
+    const ppl = names.map(leadSlug).filter(Boolean);
+    const cast = ppl.map(k => { const f = LEAD_FACES[k]; return f ? { k, n: f.n, t: f.t, p: f.p, e: f.e, h: f.h } : null; }).filter(Boolean);
+    return { ppl, names, cast };
+  };
+  // `title` off the feed is the STORED title minus its edition trailer, so a
+  // per-game row is already its matchup and every other row is its own title.
+  const labelOf = p => p.title;
+  const row = p => ({ slug: 'desk:' + p.kind + ':' + p.week + (p.game ? ':' + _gameSlug(p.game) : ''), url: p.url,
+                      title: p.headline || labelOf(p) + (p.perGame ? '' : ' · Week ' + p.week), dek: p.dek || '', label: labelOf(p),
+                      category: 'desk', analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], ...faces(p) });
+  // THE STORY BREAKS INTO ITS COMPONENTS ONCE IT IS NO LONGER THE LEAD.
+  // While a recap is the lead it runs whole, under its own headline. The
+  // moment a later game's recap takes the lead, the rail stops printing it as
+  // one row and prints its findings instead, each as a headline of its own
+  // linking to that finding on the piece. A story pushed down is not the same
+  // story shrunk to a line: its parts are what the reader still wants.
+  const railRows = [];
+  for (const p of rest) {
+    const parts = p.components || [];
+    if (!parts.length) { railRows.push(row(p)); continue; }
+    for (const c of parts) {
+      railRows.push({ slug: 'desk:' + p.kind + ':' + p.week + (p.game ? ':' + _gameSlug(p.game) : '') + ':c' + c.n,
+                      url: p.url + '#component-' + c.n,
+                      title: c.headline, dek: c.why || '', label: labelOf(p), category: 'desk',
+                      analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], ppl: [], names: c.player ? [c.player] : [], cast: [] });
+    }
+  }
+  return { ok: true, source: 'desk', story: row(cur), recent: railRows.slice(0, 12) };
 }
+// ── the Weekly Wrap Up ─────────────────────────────────────────────────────
+// Every game of the week in one place, each in the two sentences its own
+// recap wrote. It is DERIVED, never written: the wrap of a game is the `wrap`
+// section of that game's recap, so there is no second draft to fact-check and
+// no way for the summary to disagree with the story it summarizes. Games with
+// no recap yet are listed too, with the reason, so the page reads as a full
+// slate from Thursday morning rather than appearing a game at a time.
+let _WRAP_CACHE = new Map();
+async function weeklyWrapPayload(env, week) {
+  if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  await newsroomReady(env);
+  const sched = await scheduleCacheRead(env);
+  const now = Date.now();
+  const state = sched ? nflSeasonState(sched, now) : { ok: false };
+  // Default to the week the slate is actually about: the played week while
+  // its games are still going final, the clock's week otherwise.
+  const wk = week != null ? week : (state.ok ? (lastPlayedWeek(state, now) || (state.week.type === 'REG' ? state.week.number : null)) : null);
+  if (wk == null || !sched) return { ok: false, error: 'no_week' };
+  const hit = _WRAP_CACHE.get(wk);
+  if (hit && now - hit.at < 120000) return hit.out;
+  let rows = [];
+  try {
+    rows = ((await env.LEADS_DB.prepare("SELECT kind, slug, title, week, season, game_id, headline, dek, wrap, components, published_at, analyst FROM content_pieces WHERE kind = 'game-recap' AND season = ? AND week = ? AND status = 'published' ORDER BY published_at DESC").bind(sched.season, wk).all()).results || []);
+  } catch (e) { return { ok: false, error: 'unavailable' }; }
+  // One row per game: the newest version of that game's recap wins.
+  const byGame = new Map();
+  for (const r of rows) if (!byGame.has(r.game_id)) byGame.set(r.game_id, r);
+  const parse = s => { try { const v = JSON.parse(s); return Array.isArray(v) ? v : null; } catch (e) { return null; } };
+  const games = weekGames(sched, wk, now).sort((a, b) => a.kickoff - b.kickoff).map(g => {
+    const r = byGame.get(g.id) || null;
+    const base = { id: g.id, matchup: g.away + ' at ' + g.home, away: g.away, home: g.home, day: g.dow, kickoff: g.kickoff,
+                   status: g.status || null, awayScore: g.awayScore == null ? null : g.awayScore, homeScore: g.homeScore == null ? null : g.homeScore };
+    if (!r) return { ...base, recap: null, pending: g.status === 'final' ? 'the recap is being written' : 'the game has not gone final' };
+    return { ...base, recap: { url: _pieceUrl(r), headline: r.headline || r.title, dek: r.dek || '', wrap: r.wrap || r.dek || '',
+                               components: parse(r.components) || [], publishedAt: r.published_at, byline: _bylineOf(r) } };
+  });
+  const out = { ok: true, season: sched.season, week: wk, disclosure: AI_DISCLOSURE,
+                counts: { games: games.length, recapped: games.filter(g => g.recap).length, final: games.filter(g => g.status === 'final').length },
+                games };
+  _WRAP_CACHE.set(wk, { at: now, out });
+  return out;
+}
+
 // The regular season with nothing published yet: the lead is the desk's NEXT
 // piece, named and timed, in the same shape. Never a draft-season story. The
 // alternative, which the front page ran on the Wednesday of Week 1, was a
@@ -9415,13 +9932,13 @@ async function analystPayload(env, id) {
   let pieces = [];
   if (await contentReady(env)) {
     await newsroomReady(env);
-    try { pieces = ((await env.LEADS_DB.prepare("SELECT kind, title, week, headline, dek, published_at, rivalry FROM content_pieces WHERE status = 'published' AND analyst = ? ORDER BY published_at DESC LIMIT 12").bind(id).all()).results || []).map(r => ({ kind: r.kind, title: _pieceTitle(r), week: r.week, headline: r.headline, dek: r.dek, publishedAt: r.published_at, url: _pieceUrl(r), rivalry: !!r.rivalry })); } catch (e) {}
+    try { pieces = ((await env.LEADS_DB.prepare("SELECT kind, title, week, headline, dek, published_at, rivalry, game_id FROM content_pieces WHERE status = 'published' AND analyst = ? ORDER BY published_at DESC LIMIT 12").bind(id).all()).results || []).map(r => ({ kind: r.kind, title: _pieceTitle(r), week: r.week, headline: r.headline, dek: r.dek, publishedAt: r.published_at, url: _pieceUrl(r), rivalry: !!r.rivalry })); } catch (e) {}
   }
   const calls = await analystCalls(env, id, 20);
   const record = calls.reduce((m, c) => { if (c.outcome) m[c.outcome] = (m[c.outcome] || 0) + 1; return m; }, {});
   let headToHead = null;
   if (RIVALRY_PAIR.includes(id)) {
-    try { headToHead = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 10").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null, publishedAt: r.published_at } : null; }).filter(Boolean); } catch (e) { headToHead = []; }
+    try { headToHead = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at, game_id FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 10").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null, publishedAt: r.published_at } : null; }).filter(Boolean); } catch (e) { headToHead = []; }
   }
   const columns = id === 'brooks' ? [{ title: 'The Tell', url: '/the-tell', note: 'The weekly column on what is inside a ranking runs on this desk under a pen name; see the column’s own method box.' }] : [];
   return { ok: true, disclosure: AI_DISCLOSURE, analyst: { id: a.id, name: a.name, role: a.role, avatar: a.avatar, specialty: a.specialty, personality: a.personality, philosophy: a.philosophy, assignments: a.assignments, voice: a.voice, rivalry: a.rivalry ? { id: a.rivalry, name: ANALYSTS[a.rivalry].name, url: '/analysts/' + a.rivalry } : null },
@@ -9455,7 +9972,7 @@ async function disagreementsPayload(env, horizon) {
   const columns = stored ? JSON.parse(JSON.stringify(stored.columns)) : rivalryColumns(b.players, { week: b.currentWeek });
   if (ledger) for (const id of ['vega', 'brooks']) if (columns[id]) { columns[id].record = ledger[id]; }
   let recent = [];
-  if (ready) { try { recent = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 5").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null } : null; }).filter(Boolean); } catch (e) {} }
+  if (ready) { try { recent = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at, game_id FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 5").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null } : null; }).filter(Boolean); } catch (e) {} }
   return { ok: true, horizon: b.horizon, currentWeek: b.currentWeek, pair: { brooks: { name: ANALYSTS.brooks.name, label: 'Fantasy Analysis', url: '/analysts/brooks' }, vega: { name: ANALYSTS.vega.name, label: 'Market Intelligence', url: '/analysts/vega' } },
            columns, locked: !!stored, lockedAt: stored ? stored.builtAt : null, lastWeek: ledger ? ledger.lastWeek : null,
            disagreements: rows.map(r => ({ ...r, brooksRank: r.fantasyRank, vegaRank: r.marketRank })), recentLines: recent, thresholds: BLEND_DISAGREE };
@@ -9578,6 +10095,17 @@ function newsroomAudit(crons) {
   const active = Object.entries(CONTENT_KINDS).filter(([k, v]) => !v.unscheduled);
   const slots = new Map();
   for (const [k, v] of active) {
+    // A per-game package has no weekday slot at all: it fires off the feed's
+    // own `final`, one piece per game. Giving it a day and an hour as well
+    // would be two schedules for one package, which is the shape this audit
+    // exists to catch, so it is required to have neither.
+    if (v.perGame) {
+      if (v.day != null || v.hour != null) problems.push('per-game kind also carries a clock slot: ' + k);
+      if (!ANALYSTS[v.analyst]) problems.push('no such analyst on ' + k + ': ' + v.analyst);
+      if (!NEWSROOM_SECTIONS[k]) problems.push('no sections for ' + k);
+      if (LEGACY_CONTENT[k]) problems.push('legacy kind still active: ' + k);
+      continue;
+    }
     const key = v.day + ' ' + v.hour + ':' + (v.minute || 0) + ' ' + (v.retro ? 'retro' : 'fwd') + ' ' + (v.targets.toString());
     if (slots.has(key)) problems.push('duplicate slot and target rule: ' + slots.get(key) + ' and ' + k);
     slots.set(key, k);
@@ -9609,18 +10137,28 @@ async function newsroomAdmin(env, action, body) {
     const kind = String(b.kind || '').replace(/[^a-z-]/g, ''); const week = /^\d{1,2}$/.test(String(b.week || '')) ? parseInt(b.week, 10) : null;
     if (!CONTENT_KINDS[kind] || week == null) return { ok: false, error: 'kind_and_week' };
     const sched = await scheduleCacheRead(env);
-    const row = await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, sched ? sched.season : null, week).first();
+    // A per-game kind holds one row per game in a week, so approving by
+    // kind and week alone would publish whichever game happened to be
+    // written last. The editor names the game.
+    const game = String(b.game || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) || null;
+    if (CONTENT_KINDS[kind].perGame && !game) return { ok: false, error: 'game_required' };
+    const row = game
+      ? await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? AND game_id = ? ORDER BY created_at DESC LIMIT 1').bind(kind, sched ? sched.season : null, week, game).first()
+      : await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, sched ? sched.season : null, week).first();
     if (!row) return { ok: false, error: 'not_found' };
     if (!row.body || row.body === 'null') return { ok: false, error: 'no_body' };
     await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ? WHERE id = ?').bind('published', Date.now(), row.id).run();
     let calls = { stored: 0 };
     try { const packet = JSON.parse(row.brief); const bd = JSON.parse(row.body); const list = normalizeCalls(bd.calls, packet, row.analyst, 'weekly'); calls = await recordCalls(env, { season: row.season, week: row.week, kind, slug: row.slug }, list, row.rivalry ? JSON.parse(row.rivalry) : null); } catch (e) {}
-    return { ok: true, action, kind, week, calls: calls.stored };
+    return { ok: true, action, kind, week, game, calls: calls.stored };
   }
   if (action === 'run') {
     const kind = String(b.kind || '').replace(/[^a-z-]/g, '');
     if (!CONTENT_KINDS[kind]) return { ok: false, error: 'unknown_kind' };
-    const r = await produceContent(env, kind, { force: true, events: b.events });
+    // Without a game, a forced per-game run writes the week's first final
+    // game every time; the board passes one so the editor can pick.
+    const gameId = String(b.game || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) || null;
+    const r = await produceContent(env, kind, { force: true, events: b.events, gameId });
     return { ok: !!r.ok, action, ...r };
   }
   if (action === 'scan') return { ok: true, action, scan: await runNewsScan(env) };
@@ -9868,6 +10406,7 @@ const JOB_FNS = {
   'usage-prior-refresh':  env => runPriorUsageRefresh(env),
   'depth-charts':         env => runDepthChartRefresh(env),
   'ros-snapshot':         env => runRosSnapshot(env),
+  'board-freeze':         env => runBoardFreeze(env),
   'snapshot-prune':       env => snapshotPrune(env, SNAP_KEEP_DAYS),
   'analytics-prune':      env => pruneAnalytics(env, 180),
   'job-prune':            env => jobPrune(env, JOB_KEEP_DAYS),
@@ -10052,7 +10591,7 @@ async function _editorialRows(env, state, sched, now) {
   let pieces = [];
   if (season != null && await contentReady(env)) {
     try {
-      const q = await env.LEADS_DB.prepare('SELECT id, kind, week, status, title, created_at, published_at, violations FROM content_pieces WHERE season = ? ORDER BY created_at DESC LIMIT 200').bind(season).all();
+      const q = await env.LEADS_DB.prepare('SELECT id, kind, week, status, title, created_at, published_at, violations, game_id FROM content_pieces WHERE season = ? ORDER BY created_at DESC LIMIT 200').bind(season).all();
       pieces = q.results || [];
     } catch (e) { pieces = []; }
   }
@@ -10062,8 +10601,14 @@ async function _editorialRows(env, state, sched, now) {
     const wk = d.week != null ? d.week : null;
     const latest = pieces.find(p => p.kind === kind && (wk == null || p.week === wk)) || pieces.find(p => p.kind === kind) || null;
     let violations = 0; if (latest && latest.violations) { try { violations = (JSON.parse(latest.violations) || []).length; } catch (e) {} }
-    rows.push({ kind, title: K.title, day: K.day, hour: K.hour, minute: K.minute || 0, analyst: K.analyst, analystName: (ANALYSTS[K.analyst] || ANALYST_HOUSE).name, lens: K.lens, gate: K.gate || null, updates: K.updates || null, unscheduled: !!K.unscheduled, optional: !!K.optional, week: wk, due: !!d.due, ready: !!d.ready, reason: d.reason || null, dueAt: d.dueAt || null,
-                piece: latest ? { id: latest.id, week: latest.week, status: latest.status, title: latest.title, createdAt: latest.created_at, publishedAt: latest.published_at, violations } : null });
+    // A per-game kind holds one row per game of the week, so the board also
+    // says how many of the week's games are recapped and how many are final.
+    // Its `piece` is the newest of them, which is what the buttons act on.
+    const perGame = !!K.perGame;
+    const written = perGame ? pieces.filter(p => p.kind === kind && (wk == null || p.week === wk)).length : null;
+    rows.push({ kind, title: K.title, day: K.day, hour: K.hour, minute: K.minute || 0, analyst: K.analyst, analystName: (ANALYSTS[K.analyst] || ANALYST_HOUSE).name, lens: K.lens, gate: K.gate || null, updates: K.updates || null, unscheduled: !!K.unscheduled, optional: !!K.optional, perGame, week: wk, due: !!d.due, ready: !!d.ready, reason: d.reason || null, dueAt: d.dueAt || null,
+                games: perGame ? { final: (d.targets || []).length, written } : null,
+                piece: latest ? { id: latest.id, week: latest.week, status: latest.status, title: latest.title, createdAt: latest.created_at, publishedAt: latest.published_at, violations, game: latest.game_id || null } : null });
   }
   return rows;
 }
@@ -10119,25 +10664,29 @@ async function healthPayload(env, opts) {
 // name or number the brief does not contain: the validator is a guard on the
 // model, and a person signing a piece is the editor.
 const CONTENT_ACTIONS = ['preview', 'publish', 'unpublish', 'regenerate', 'edit'];
-async function _latestPiece(env, kind, season, week) {
+// A per-game kind holds one row per game of a week, so the editor's actions
+// name the game; without it, "the latest piece for this kind and week" is
+// whichever game happened to be written last.
+async function _latestPiece(env, kind, season, week, game) {
+  if (game) return env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? AND game_id = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week, String(game)).first();
   return week != null
     ? env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first()
     : env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? ORDER BY created_at DESC LIMIT 1').bind(kind).first();
 }
-async function contentAdmin(env, action, kind, season, week, body) {
+async function contentAdmin(env, action, kind, season, week, body, game) {
   if (!CONTENT_ACTIONS.includes(action)) return { ok: false, error: 'unknown_action' };
   if (!CONTENT_KINDS[kind]) return { ok: false, error: 'unknown_kind' };
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
   if (action === 'regenerate') {
-    const r = await produceContent(env, kind, { force: true });
+    const r = await produceContent(env, kind, { force: true, gameId: game || null });
     return { ok: !!r.ok, action, kind, ...r };
   }
   let row;
-  try { row = await _latestPiece(env, kind, season, week); } catch (e) { return { ok: false, error: 'unavailable' }; }
-  if (!row) return { ok: false, error: 'not_found', kind, week };
-  const full = () => ({ id: row.id, kind, season: row.season, week: row.week, title: row.title, status: row.status, createdAt: row.created_at, publishedAt: row.published_at,
-                        body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: { weekly: sectionsFor(kind, 'weekly'), dfs: sectionsFor(kind, 'dfs') }, analyst: row.analyst || null, version: row.version || 1 });
+  try { row = await _latestPiece(env, kind, season, week, game); } catch (e) { return { ok: false, error: 'unavailable' }; }
+  if (!row) return { ok: false, error: 'not_found', kind, week, game: game || null };
+  const full = () => ({ id: row.id, kind, season: row.season, week: row.week, game: row.game_id || null, title: row.title, status: row.status, createdAt: row.created_at, publishedAt: row.published_at,
+                        body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: { weekly: sectionsFor(kind, 'weekly', parse(row.brief)), dfs: sectionsFor(kind, 'dfs', parse(row.brief)) }, analyst: row.analyst || null, version: row.version || 1 });
   if (action === 'preview') return { ok: true, action, piece: full() };
   if (action === 'publish') {
     if (!row.body || row.body === 'null') return { ok: false, error: 'no_body', note: 'This piece has no draft to publish. Regenerate it or edit one in.' };
@@ -10196,6 +10745,12 @@ const JOB_SCHEDULE = [
   { job: 'depth-charts',         days: ['Sun'],                hours: [11],                           phase: 1 },
   // phase 2: derived from the pulls
   { job: 'ros-snapshot',         days: ['Tue'],                hours: [6],                            phase: 2 },
+  // The pre-kickoff board, frozen per game so a recap can prove what the two
+  // boards said BEFORE the game rather than recompute it afterwards. Runs on
+  // every quarter hour of every day a game can kick off: the job itself only
+  // acts on a game starting inside the next two hours and only once each, so
+  // a tick with nothing imminent costs one schedule read.
+  { job: 'board-freeze',         days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 2 },
   { job: 'calls-grade',          days: ['Tue', 'Wed'],         hours: [6],                            phase: 2 },
   // The week's column, built after the morning odds pull and before the first
   // kickoff, once. Friday and Saturday are retries: the builder is a no-op
@@ -12931,6 +13486,15 @@ export default {
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
     }
     // The desk: the week's pieces, and one piece.
+    // The Weekly Wrap Up: every game of the week in the two sentences its own
+    // recap wrote, plus the games still to come.
+    if (url.pathname === '/api/weekly-wrap') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const wk = url.searchParams.get('week');
+      const out = await weeklyWrapPayload(env, wk && /^\d{1,2}$/.test(wk) ? parseInt(wk, 10) : null);
+      return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=120' });
+    }
     if (url.pathname === '/api/content' || url.pathname === '/api/content/piece') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
@@ -12941,7 +13505,9 @@ export default {
       if (url.pathname === '/api/content/piece') {
         const kind = String(url.searchParams.get('kind') || '').replace(/[^a-z-]/g, '');
         if (!CONTENT_KINDS[kind] && !LEGACY_CONTENT[kind]) return json({ ok: false, error: 'unknown_kind' }, 404, c);
-        const out = await contentPiecePayload(env, kind, season, week);
+        // ?game= is the slugified game id off /in-season/desk/<kind>/<week>/<game>.
+        const game = String(url.searchParams.get('game') || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40) || null;
+        const out = await contentPiecePayload(env, kind, season, week, game);
         return json(out, out.ok ? 200 : 404, { ...c, 'cache-control': 'public, max-age=300' });
       }
       const out = await contentListPayload(env, season, week);
@@ -13858,10 +14424,11 @@ export default {
       if (request.method === 'POST' || url.searchParams.get('preview')) {
         let b = {};
         if (request.method === 'POST') { try { b = await request.json(); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); } }
-        else b = { action: 'preview', kind: url.searchParams.get('preview'), week: url.searchParams.get('week') };
+        else b = { action: 'preview', kind: url.searchParams.get('preview'), week: url.searchParams.get('week'), game: url.searchParams.get('game') };
         const schedA = await scheduleCacheRead(env);
         const wkA = b.week != null && b.week !== '' && /^\d{1,2}$/.test(String(b.week)) ? parseInt(b.week, 10) : null;
-        const r = await contentAdmin(env, String(b.action || '').replace(/[^a-z]/g, ''), String(b.kind || '').replace(/[^a-z-]/g, ''), schedA ? schedA.season : null, wkA, b.body);
+        const gameA = String(b.game || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) || null;
+        const r = await contentAdmin(env, String(b.action || '').replace(/[^a-z]/g, ''), String(b.kind || '').replace(/[^a-z-]/g, ''), schedA ? schedA.season : null, wkA, b.body, gameA);
         return json(r, r.ok ? 200 : (r.error === 'not_found' ? 404 : 400), c);
       }
       if (url.searchParams.get('depth') === '1') { try { out.depth = await runDepthChartRefresh(env); } catch (e) { out.depth = { ok: false, error: (e && e.message) || 'failed' }; } }
@@ -14404,9 +14971,10 @@ export default {
       }
       // /in-season IS a page now (in-season.html), so it needs no alias here —
       // the assets layer resolves the extensionless route like any other.
-      // /in-season/desk, /in-season/desk/<kind>, /in-season/desk/<kind>/<week>:
-      // one shell for the week's pieces, reading kind and week off the path.
-      else if (/^\/in-season\/desk(\/[a-z-]+(\/\d{1,2})?)?\/?$/.test(url.pathname)) {
+      // /in-season/desk, /in-season/desk/<kind>, /in-season/desk/<kind>/<week>,
+      // and /in-season/desk/<kind>/<week>/<game> for a per-game piece:
+      // one shell for the week's pieces, reading kind, week and game off the path.
+      else if (/^\/in-season\/desk(\/[a-z-]+(\/\d{1,2}(\/[a-z0-9-]{1,40})?)?)?\/?$/.test(url.pathname)) {
         const open = POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request);
         __assetReq = new Request(new URL(open ? '/desk' : IN_SEASON_HUB, url).toString(), request);
       }
