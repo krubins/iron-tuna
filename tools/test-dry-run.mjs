@@ -56,7 +56,7 @@ const RAW = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/espn-summ
 // A few tables in memory, answered by matching the SQL. Enough for the
 // pipeline; nothing more.
 function fakeDb(clock) {
-  const T = { content_pieces: [], analyst_calls: [], newsroom_settings: {}, news_events: [], news_state: null, job_runs: [], summaries: {} };
+  const T = { content_pieces: [], analyst_calls: [], newsroom_settings: {}, news_events: [], news_state: null, job_runs: [], summaries: {}, freezes: {} };
   let ids = 1;
   const stmt = (sql, args) => ({
     async run() {
@@ -69,6 +69,7 @@ function fakeDb(clock) {
       else if (/UPDATE content_pieces SET status/.test(sql)) { const r = T.content_pieces.find(x => x.id === args[args.length - 1]); if (r) { r.status = args[0]; if (args.length > 2) r.published_at = args[1]; } }
       else if (/UPDATE news_events SET handled/.test(sql)) T.news_events.forEach(e => { if (e.handled == null && e.score >= args[1]) e.handled = args[0]; });
       else if (/INSERT OR REPLACE INTO game_summaries/.test(sql)) T.summaries[args[0]] = { payload: args[5], final: args[4] };
+      else if (/INSERT OR REPLACE INTO week_board_snapshots/.test(sql)) T.freezes[args[0] + '|' + args[1] + '|' + args[2]] = { season: args[0], week: args[1], game_id: args[2], taken_at: args[3], kickoff: args[4], payload: args[5] };
       return { meta: { changes: 1 } };
     },
     async first() {
@@ -89,10 +90,12 @@ function fakeDb(clock) {
       if (/FROM newsroom_settings WHERE key = \?/.test(sql)) return T.newsroom_settings[args[0]] || null;
       if (/SELECT payload FROM news_state/.test(sql)) return T.news_state;
       if (/SELECT payload, final FROM game_summaries WHERE espn_id = \?/.test(sql)) return T.summaries[args[0]] || null;
+      if (/FROM week_board_snapshots WHERE season = \? AND week = \? AND game_id = \?/.test(sql)) return T.freezes[args[0] + '|' + args[1] + '|' + args[2]] || null;
       if (/SELECT 1 FROM/.test(sql)) return null;
       return null;
     },
     async all() {
+      if (/SELECT game_id FROM week_board_snapshots WHERE season = \? AND week = \?/.test(sql)) return { results: Object.values(T.freezes).filter(f => f.season === args[0] && f.week === args[1]).map(f => ({ game_id: f.game_id })) };
       if (/SELECT kind, rivalry FROM content_pieces/.test(sql)) { const kinds = args.slice(1, -1); return { results: T.content_pieces.filter(r => r.status === 'published' && kinds.includes(r.kind)).sort((a, b) => b.created_at - a.created_at).slice(0, args[args.length - 1]) }; }
       if (/FROM analyst_calls WHERE player_key IN/.test(sql)) { const keys = args.slice(0, -1); return { results: T.analyst_calls.filter(c => keys.includes(c.player_key)).sort((a, b) => b.created_at - a.created_at).slice(0, args[args.length - 1]) }; }
       if (/FROM content_pieces WHERE status = 'published' AND analyst = \?/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published' && r.analyst === args[0]).sort((a, b) => b.published_at - a.published_at).slice(0, 12) };
@@ -166,7 +169,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade, weeklyWrapPayload };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade, weeklyWrapPayload, runBoardFreeze };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, fakeFetch, stub, 'x', async () => {}, {}, {}, async () => null, availabilityTable, availabilityCacheRead, async () => null, availabilityReport, async () => null, stub, stub, {}, {}, p => p, async (id) => { const norm = RAW; return norm; });
 const db = fakeDb(clock);
 const env = { LEADS_DB: db, LLM_API_KEY: 'test', LLM_PROVIDER: 'anthropic' };
@@ -194,6 +197,9 @@ for (clock.t = start; clock.t <= end; clock.t += 900000) {
   const et = H.etParts(clock.t);
   if (et.dow === 'Sun' && et.hour === 11 && et.minute === 45 && et.dow === 'Sun') { availability['calrunner|RB'] = { status: 'Out', gamesOut: 1, note: 'ankle, ruled out' }; }
   if (et.dow === 'Sun' && et.hour === 12 && et.minute === 45) { availability['danwideout|WR'] = { status: 'Out', gamesOut: 1, note: 'hamstring, ruled out' }; }
+  // The quarter-hourly board freeze, as JOB_SCHEDULE runs it: it acts only
+  // on a game kicking off inside the next two hours, and only once each.
+  await H.runBoardFreeze(env);
   const scan = await H.runNewsScan(env);
   if (scan.significant) scans.push({ at: et, ...scan });
   const t = await H.runContentTick(env);
@@ -273,7 +279,21 @@ console.log('\nthe feeds and the front page');
     ok('a per-game row in the rail is labeled by its matchup, not by the kind', l.recent.concat([l.story]).filter(r => /^desk:game-recap:/.test(r.slug)).every(r => /\sat\s/.test(r.label) && !/^Game Recap$/.test(r.label)));
   }
   {
-    const wrap = await H.weeklyWrapPayload(env, 1);
+      // The freeze must reach the recap: a row written before kickoff, read
+    // back by the packet, and graded against what the game actually produced.
+    const froze = Object.values(db.T.freezes);
+    ok('a board was frozen for every game, before its kickoff and never after', froze.length >= 6 && froze.every(f => f.taken_at < f.kickoff && f.kickoff - f.taken_at <= 2 * 3600000), froze.length + ' frozen');
+    ok('each frozen row carries all three boards for the two clubs', froze.every(f => { const rows = JSON.parse(f.payload).rows; return rows.length && rows.every(r => r.key && Number.isFinite(r.consensusRank) && Number.isFinite(r.ironTunaRank) && Number.isFinite(r.vegasRank)); }));
+    ok('the freeze is written once per game, not once per tick', new Set(froze.map(f => f.game_id)).size === froze.length);
+    const briefs = recaps.map(r => JSON.parse(r.brief));
+    ok('every recap read the frozen board rather than reporting none', briefs.every(b => b.calledIt && b.calledIt.available === true), JSON.stringify(briefs.map(b => b.calledIt && b.calledIt.available)));
+    ok('a graded call names both boards, the actual, and which way it went', briefs.every(b => [...b.calledIt.hits, ...b.calledIt.misses].every(h => h.name && ['over', 'under'].includes(h.direction) && Number.isFinite(h.consensusPts) && Number.isFinite(h.ironTunaPts) && Number.isFinite(h.actual))));
+    ok('a hit finished on Iron Tuna\'s side of the consensus and a miss did not', briefs.every(b => b.calledIt.hits.every(h => h.direction === 'over' ? h.actual > h.consensusPts : h.actual < h.consensusPts) && b.calledIt.misses.every(h => h.direction === 'over' ? h.actual <= h.consensusPts : h.actual >= h.consensusPts)));
+    ok('the headline call, where there is one, is a hit and clears the wider bar', briefs.every(b => !b.calledIt.headline || (b.calledIt.hits.some(h => h.name === b.calledIt.headline.name) && b.calledIt.headline.margin >= 6 && b.calledIt.headline.rankGap >= 8)));
+    ok('a recap that called something carries the section, and one that did not does not', recaps.every(r => { const b = JSON.parse(r.brief); const has = b.calledIt.available && (b.calledIt.hits.length || b.calledIt.misses.length); const body = r.body && r.body !== 'null' ? JSON.parse(r.body) : null; if (!body || !body.weekly) return true; return has ? ('weCalledIt' in body.weekly) : !('weCalledIt' in body.weekly); }));
+  }
+  {
+  const wrap = await H.weeklyWrapPayload(env, 1);
     ok('the Weekly Wrap Up lists every game of the week', wrap.ok && wrap.week === 1 && wrap.counts.games === 6 && wrap.games.length === 6);
     ok('each wrapped game carries its own recap\'s summary and a link to it', wrap.games.filter(g => g.recap).every(g => g.recap.wrap && /^\/in-season\/desk\/game-recap\/1\//.test(g.recap.url)) && wrap.games.some(g => g.recap));
     ok('a game with no recap yet says so rather than showing an empty card', wrap.games.filter(g => !g.recap).every(g => !!g.pending));

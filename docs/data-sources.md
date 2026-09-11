@@ -18,6 +18,7 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 | Host | Used for | Call sites | License status |
 |---|---|---|---|
 | `<league>.football.cbssports.com` | Reader-authorized CBS league settings, teams, rosters, standings, schedules, waiver order and transaction log | `PROVIDER_CBS`, `cbsGet`; validated league subdomain, fixed HTTPS `/api/league/` resources | **Off by default (`FLAG_CBS_SYNC`).** Token access and commercial terms still require live verification. No CBS login/password collection or provider writes. See docs/league-sync.md CBS addendum. |
+| `api.sportsgameodds.com` | NFL player props, and one of the three quotes averaged into the game spread and total behind `/the-line`, `/previews` and every weekly board | `SGO_API_BASE`, `fetchOddsSgo`, `fetchGameLinesSgo` | **Paid, terms unconfirmed.** See item R8. |
 | `api.the-odds-api.com` | NFL odds, totals, spreads, supported props, and prospective Tuna Market Signal snapshots | `ODDS_API_BASE`, `TMS_PROVIDERS` | **Green for analytical UI use.** Current terms permit storage and derived/display use, while prohibiting standalone raw-data redistribution. See R3. |
 | `the-odds-api.com` | Tuna Market Signal source-attribution link | `TMS_SOURCE` | Identification link only; the Worker does not fetch this host. |
 | `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts, **and the game lines the scoreboard carries** | `_worker.js:1353`, `:3061`, `:5656`, `:5657`, `_espnOdds` | **Red.** Undocumented endpoints, no commercial license. The odds block adds a bookmaker's spread, total and opening line to what is taken. No page names the book; the name reaches the JSON API only. See R1. |
@@ -79,7 +80,17 @@ not a feature loss. The one gap is live in-game scoreboard state, which nflverse
 does not publish in real time — decide whether `/game-intel` needs live scores or
 whether post-game data is enough, because that answer changes the size of R1.
 
-**The scoreboard's odds block is a second gap, added deliberately.** `_espnOdds`
+**The scoreboard's odds block was the second gap, and SportsGameOdds closes
+it.** Where `SGO_API_KEY` is set, `runScheduleRefresh` merges SGO's spread and
+total onto every fixture that has not kicked off, and the `book` pair
+(`_gameLineMove`'s open/current source) is SGO's anchor book rather than ESPN's.
+That removes the reason R1 had to trade the opening line away: the swap can now
+drop `_espnOdds` without losing movement. **It is not done yet** — the key is
+unset, so ESPN is still the live source today, and the paragraph below still
+describes what happens with no key. Take the ESPN odds block out in the same
+commit that turns the key on, not before.
+
+**The original note, still true with no key:** `_espnOdds`
 reads the spread and total ESPN carries from one named book, plus that book's
 own opening line, and the site now displays the movement between them. nflverse
 publishes closing lines in `games.csv` and no opener at all, so this one is not
@@ -120,6 +131,37 @@ a standalone raw feed. Tuna Market Signal serves bounded derived dashboard data
 for Iron Tuna and does not expose a raw provider passthrough. Recheck the terms
 when changing product scope or subscription plan and retain the dated review in
 `docs/TUNA-MARKET-SIGNAL.md`.
+
+### R8 — SportsGameOdds: get commercial display terms in writing  *(added 2026-09-10)*
+
+**Where:** `SGO_API_BASE` and the adapter beneath it, `env.SGO_API_KEY`.
+
+The question R3 just answered, asked of the other feed. A paid subscription is
+a licence to **use** the feed; it is not automatically a licence to
+**redisplay** derived numbers in a paid product, and nothing in SGO's public
+documentation addresses redisplay. R3 is the template: The Odds API's terms of
+August 31, 2026 expressly permit storing, displaying and deriving, and prohibit
+redistributing a standalone raw feed. Ask SGO the same question in the same
+words, and save the dated reply in `docs/`. Until it arrives this row is the
+only unconfirmed odds source on the list.
+
+Two things reduce the exposure while that is unanswered, and neither settles it:
+
+- **No page names a book.** The printed spread and total are SGO's consensus,
+  the same shape as the `games.csv` number beside them, and `lineConsensus`
+  then averages that consensus with the spine's and the scoreboard's, so the
+  printed line is not any one source's number at all. The anchor book's name
+  reaches `book.name` and `moveBook` on the API payloads and is rendered
+  nowhere. Anything that starts printing it changes this answer.
+- **Nothing is passed through raw.** Every prop becomes an expected stat line
+  server-side before it reaches a browser (§14.2).
+
+**The adapter has never run against the live service.** It is written to SGO's
+published v2 documentation and to the field names in their own TypeScript SDK
+(`sports-odds-api@2.1.0`), and it is held to a committed fixture by
+`tools/test-sgo.mjs`. Treat the first real pull as a test: check
+`/api/admin/market-status` for the row count and the club-match rate before
+believing any number it produces.
 
 ### R4 — NFL.com and ESPN imagery  *(OPEN — owner decision required)*
 

@@ -84,6 +84,7 @@ const NAV = [
       { label: 'This week', href: '/fantasy' },
       { label: 'In-Season hub', href: '/in-season' },
       { label: 'Rankings', href: '/rankings' },
+      { label: 'Depth Charts', href: '/depth-charts' },
       { label: 'Weekly Intel', href: '/weekly-intel' },
       { label: 'Waivers & FAAB', href: '/waivers' },
       { label: 'Trade Finder', href: '/trade-finder' },
@@ -152,6 +153,7 @@ const IN_SEASON_CTA = { label: 'Save my league', href: '/in-season#league', cta:
 // set is what gives them the season's call to action rather than the draft one.
 const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-league.html', 'my-week.html',
   'weekly-intel.html', 'rankings.html', 'vegas-edge.html', 'game-intel.html', 'waivers.html',
+  'depth-charts.html',
   'trade-finder.html', 'faab.html', 'player-intel.html', 'desk.html', 'what-they-arent-telling-you.html',
   'post-draft.html', 'analysts.html', 'analyst.html',
   'stats.html', 'hidden-value.html', 'previews.html', 'the-line.html', 'weekly-wrap.html',
@@ -175,6 +177,7 @@ const FOOT_COLS = [
       { label: 'Fantasy', href: '/fantasy' },
       { label: 'DFS', href: '/dfs' },
       { label: 'Rankings', href: '/rankings' },
+      { label: 'Depth Charts', href: '/depth-charts' },
       // The section ribbon's own destinations. The ribbon itself is only on the
       // front page and the rankings section, so the footer is how every OTHER
       // page on the site reaches them.

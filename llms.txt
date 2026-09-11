@@ -34,6 +34,11 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 ### Stats — https://irontuna.com/stats
 - The one board on the site that is not a forecast: season and latest-week production off the weekly stat lines and snap counts, scored at the setting you choose. A player with no published line shows a dash, never a zero.
 
+### Depth charts — https://irontuna.com/depth-charts
+- Every club's published offensive order — quarterback, running back, receiver and tight end — refreshed every day from the league player feed, with each man's current injury designation (Q, D, O, IR, PUP, SUS) carried on his name.
+- The three receiver slots clubs publish separately are merged into one WR1-through-WR6 order, because the ranks run across all three; reading them slot by slot names the wrong man WR2.
+- It is a published order, not a snap count. Use it for who is in front of whom and who inherits the work, and https://irontuna.com/stats for how the touches were actually divided.
+
 ### Hidden Value — https://irontuna.com/hidden-value
 - Where the two rankings columns disagree by enough to act on, in both directions. A player is listed only when the two ranks are at least six slots and 25% of the better rank apart, and the better of the two is inside the startable range at his position.
 
@@ -105,6 +110,7 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - This week's rankings, by position: https://irontuna.com/weekly-rankings
 - Season long rankings, by position: https://irontuna.com/season-long-rankings
 - Stats (what has actually been played): https://irontuna.com/stats
+- Depth charts (every club's published order, refreshed daily): https://irontuna.com/depth-charts
 - Hidden Value (widest market-vs-consensus gaps): https://irontuna.com/hidden-value
 - Game previews: https://irontuna.com/previews
 - The Line (the week's games against the posted number; hypothetical stakes, no advice, not served in Washington): https://irontuna.com/the-line

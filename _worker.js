@@ -1908,6 +1908,307 @@ async function fetchOddsTheOddsApi(env) {
   return rows;
 }
 
+// SportsGameOdds v2. WRITTEN TO THE PUBLISHED v2 DOCUMENTATION AND TO THE
+// OFFICIAL TypeScript SDK'S TYPES (sports-odds-api@2.1.0), AND NOT YET RUN
+// AGAINST THE LIVE SERVICE: no key is configured, and the host is unreachable
+// from the sandbox this repo is developed in. Same posture as The Odds API
+// above, and the same consequence — every shape below is asserted against a
+// committed fixture (tools/fixtures/sgo-nfl-week.json) rather than trusted.
+//
+// It is registered in PROVIDER_ODDS ahead of every other odds source, and its
+// game lines are merged onto the schedule ahead of ESPN's, because it is the
+// only feed here that answers both halves of the question this site asks:
+//   1. PLAYER PROPS, per book. Without them the "Betting Odds" column is a
+//      team-wide inference off the game line, which is what it has been.
+//   2. GAME LINES WITH THE BOOK'S OWN OPENER. That opener is the one number a
+//      snapshot history cannot reconstruct after the fact, and it is why
+//      ESPN's undocumented scoreboard was carrying it (docs/data-sources.md
+//      R1). SGO carries the same pair under a documented, paid API, so the
+//      movement column survives dropping ESPN rather than degrading with it.
+//
+// SHAPE. One /events call returns the week's games. Each carries an `odds` map
+// keyed by an oddID of the form
+//     {statID}-{statEntityID}-{periodID}-{betTypeID}-{sideID}
+// and EVERY SIDE IS ITS OWN ENTRY, so an over and its under are two keys that
+// have to be paired back together before either is worth anything. Each entry
+// carries the consensus (`bookOdds`, `bookOverUnder`, `bookSpread`) plus a
+// `byBookmaker` map of each book's own number; with includeOpenCloseOdds the
+// per-book entries also carry that book's opener.
+const SGO_API_BASE = 'https://api.sportsgameodds.com/v2';
+const SGO_LEAGUE = 'NFL';
+const SGO_PAGE_LIMIT = 50;                // events per page
+const SGO_MAX_PAGES = 4;                  // a week is 13-16 games; never more than this
+// statID -> the site's own market key. Everything absent from this table is
+// ignored rather than guessed at, which is what keeps a renamed or newly added
+// SGO market out of the projections until someone has looked at it.
+const SGO_PROP_MARKETS = {
+  passing_yards: 'passYd', passing_touchdowns: 'passTD', passing_interceptions: 'passInt',
+  rushing_yards: 'rushYd', rushing_attempts: 'rushAtt', rushing_touchdowns: 'rushTD',
+  receiving_yards: 'recYd', receiving_receptions: 'rec', receiving_touchdowns: 'recTD'
+};
+// The anytime-touchdown market is a yes/no on the same statID a total-TDs
+// over/under uses, so the BET TYPE is what tells them apart, not the stat.
+const SGO_TD_STAT = 'touchdowns';
+const SGO_GAME_SPREAD = 'points-home-game-sp-home';
+const SGO_GAME_TOTAL = 'points-all-game-ou-over';
+// A book quotes a handicap: the home side at -3. The spine writes the same
+// game as a home margin of +3. Flipped here so _seasonDecorate stays the only
+// place that knows which way a spread points. -0 prints as "-0", so a pick'em
+// has to survive the flip as 0.
+const _sgoFlip = n => (n == null ? null : n === 0 ? 0 : -n);
+const _sgoNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+const _sgoSlug = s => String(s || '').toUpperCase().replace(/[^A-Z]/g, '');
+// Club names to the site's own abbreviations, read off the DEF rows in
+// PROJECTIONS rather than written out again: those rows already pair every
+// full club name with its key, so a relocation or a rename is one edit in the
+// place the rest of the site already reads.
+let _SGO_CLUBS = null;
+function _sgoClubIndex() {
+  if (_SGO_CLUBS) return _SGO_CLUBS;
+  const m = new Map();
+  for (const p of PROJECTIONS) {
+    if (p && p.position === 'DEF' && p.name && p.team) m.set(_sgoSlug(p.name), teamKey(p.team));
+  }
+  return (_SGO_CLUBS = m);
+}
+// SGO identifies a club three ways and any of them may be the one present.
+// The full name is tried first because it is the only one whose spelling this
+// repo already owns; `names.short` is accepted last, and only when it actually
+// looks like an abbreviation, so a long name arriving in a short field cannot
+// become a two-letter club key.
+function sgoTeamKey(side) {
+  if (!side) return null;
+  const idx = _sgoClubIndex();
+  const names = side.names || {};
+  const byLong = idx.get(_sgoSlug(names.long));
+  if (byLong) return byLong;
+  const byId = idx.get(_sgoSlug(String(side.teamID || '').replace(/_NFL$/i, '')));
+  if (byId) return byId;
+  const short = teamKey(names.short || '');
+  return /^[A-Z]{2,4}$/.test(short) ? short : null;
+}
+// A player prop's statEntityID IS the playerID. The event's own `players` map
+// is the authority on the name; the id is the fallback, and it has to be
+// stripped of its disambiguating suffix ("JOSH_ALLEN_1_NFL") or _oddsNorm
+// keeps the league on the end of the name and matches nobody.
+function sgoPlayerName(ev, id) {
+  const rec = ev && ev.players ? ev.players[id] : null;
+  if (rec) {
+    if (rec.name) return rec.name;
+    if (rec.firstName || rec.lastName) return [rec.firstName, rec.lastName].filter(Boolean).join(' ');
+  }
+  const raw = String(id || '');
+  if (!raw || /^(?:home|away|all|side\d*)$/i.test(raw)) return null;
+  const stripped = raw.replace(/_\d+_[A-Z]+$/, '').replace(/_/g, ' ').trim();
+  return stripped || null;
+}
+// The five oddID parts. They are ALSO flat fields on the entry, so those are
+// preferred and the id is only parsed when a field is missing: the id is a
+// display key and the fields are the data.
+const SGO_ODDID_RE = /^([^-]+)-([^-]+)-([^-]+)-([^-]+)-([^-]+)$/;
+function sgoParts(o) {
+  const m = SGO_ODDID_RE.exec(String((o && o.oddID) || ''));
+  const at = i => (m ? m[i] : null);
+  return {
+    statID: o && o.statID != null ? o.statID : at(1),
+    statEntityID: o && o.statEntityID != null ? o.statEntityID : at(2),
+    periodID: o && o.periodID != null ? o.periodID : at(3),
+    betTypeID: o && o.betTypeID != null ? o.betTypeID : at(4),
+    sideID: o && o.sideID != null ? o.sideID : at(5)
+  };
+}
+// The other side of a two-sided market. `opposingOddID` is authoritative when
+// it is there; otherwise the side is swapped in the key, which is the only
+// thing that differs between the pair.
+function sgoOpposite(odds, o, side, otherSide) {
+  if (o && o.opposingOddID && odds[o.opposingOddID]) return odds[o.opposingOddID];
+  const id = String((o && o.oddID) || '');
+  const swapped = id.replace(new RegExp('-' + side + '$'), '-' + otherSide);
+  return swapped !== id ? (odds[swapped] || null) : null;
+}
+// One event's player props into the row shape every odds provider here emits.
+// Pure, so the fixture drives it without the network.
+//
+// ONE ROW PER BOOK, never one per market. The season overlay averages the
+// books into a consensus and the snapshot store wants each book's own number;
+// collapsing them here would make line movement unanswerable, which is the
+// whole product. The consensus figures are used only when a response carries
+// no per-book detail at all.
+function parseSgoEventProps(ev) {
+  const rows = [];
+  const odds = (ev && ev.odds) || {};
+  const ts = Date.now();
+  const home = sgoTeamKey(ev && ev.teams && ev.teams.home);
+  const away = sgoTeamKey(ev && ev.teams && ev.teams.away);
+  const commence = (ev && ev.status && ev.status.startsAt) || null;
+  for (const o of Object.values(odds)) {
+    if (!o || o.cancelled) continue;
+    const p = sgoParts(o);
+    if (p.periodID !== 'game') continue;                 // a first-half line is not this week's total
+    const anytimeTd = p.statID === SGO_TD_STAT && p.betTypeID === 'yn';
+    const stat = anytimeTd ? 'anytimeTD' : (p.betTypeID === 'ou' ? SGO_PROP_MARKETS[p.statID] : null);
+    if (!stat) continue;
+    // Anchor on ONE side of the pair so the market is emitted once. The other
+    // side is looked up rather than iterated to.
+    const anchor = anytimeTd ? 'yes' : 'over';
+    const other = anytimeTd ? 'no' : 'under';
+    if (p.sideID !== anchor) continue;
+    const player = sgoPlayerName(ev, p.statEntityID);
+    if (!player) continue;
+    const opp = sgoOpposite(odds, o, anchor, other) || {};
+    const books = o.byBookmaker && Object.keys(o.byBookmaker).length ? o.byBookmaker : null;
+    const oppBooks = opp.byBookmaker || {};
+    const emit = (book, line, overOdds, underOdds) => {
+      // An anytime-TD carries no line worth storing (it is a price, not a
+      // number); every other market is worthless without one.
+      if (!anytimeTd && line == null) return;
+      if (overOdds == null && underOdds == null) return;
+      rows.push({
+        player, position: null, team: null, market: stat,
+        line: anytimeTd ? 1 : line, overOdds, underOdds,
+        book, gameId: (ev && ev.eventID) || null, commence,
+        home, away, scope: 'game', ts
+      });
+    };
+    if (books) {
+      for (const [id, b] of Object.entries(books)) {
+        if (!b || b.available === false) continue;
+        const ob = oppBooks[id] || {};
+        emit(String(b.bookmakerID || id), _sgoNum(b.overUnder), _sgoNum(b.odds),
+             ob.available === false ? null : _sgoNum(ob.odds));
+      }
+    } else {
+      emit('sgo-consensus', _sgoNum(o.bookOverUnder != null ? o.bookOverUnder : o.fairOverUnder),
+           _sgoNum(o.bookOdds != null ? o.bookOdds : o.fairOdds),
+           _sgoNum(opp.bookOdds != null ? opp.bookOdds : opp.fairOdds));
+    }
+  }
+  return rows;
+}
+// One book's own current-and-open pair for one market, or null when it does not
+// quote both. Both ends or neither: half a pair is not a movement.
+function _sgoBookPair(entry, id, field) {
+  const b = (entry && entry.byBookmaker && entry.byBookmaker[id]) || null;
+  if (!b || b.available === false) return null;
+  const current = _sgoNum(b[field]);
+  const open = _sgoNum(b['open' + field[0].toUpperCase() + field.slice(1)]);
+  return (current != null && open != null) ? { current, open } : null;
+}
+// THE ANCHOR BOOK: the one every move on this fixture is measured against.
+// _gameLineMove's rule is that open, current and move come from ONE source, so
+// a book that quotes BOTH markets is preferred and a book quoting one is the
+// fallback. Books are considered in name order, so the same fixture picks the
+// same book on every run and this hour's move is measured against the same
+// opener last hour's was.
+function _sgoAnchor(sp, to) {
+  const ids = [...new Set([
+    ...Object.keys((sp && sp.byBookmaker) || {}),
+    ...Object.keys((to && to.byBookmaker) || {})
+  ])].sort();
+  let partial = null;
+  for (const id of ids) {
+    const spread = _sgoBookPair(sp, id, 'spread'), total = _sgoBookPair(to, id, 'overUnder');
+    if (spread && total) return { name: id, spread, total };
+    if (!partial && (spread || total)) partial = { name: id, spread, total };
+  }
+  return partial;
+}
+// One event's GAME line: the number the site PRINTS, and separately the book
+// pair the movement is computed FROM.
+//
+// These are two different things and conflating them is how a page comes to
+// report a move nobody quoted. The printed spread and total are SGO's
+// CONSENSUS -- no page here attributes a line to a book, and a consensus is the
+// same shape as the spine's own column beside it. The `book` block is the
+// anchor book ALONE, current and open together, which is exactly what
+// _espnOdds returned from ESPN's single named book and what _gameLineMove
+// reads. A response with no per-book detail yields no block at all, which is
+// honest: _gameLineMove then falls back to the snapshot store's first sighting.
+function parseSgoEventLine(ev) {
+  const odds = (ev && ev.odds) || {};
+  const sp = odds[SGO_GAME_SPREAD] || null;
+  const to = odds[SGO_GAME_TOTAL] || null;
+  const anchor = _sgoAnchor(sp, to);
+  const spread = _sgoNum(sp && sp.bookSpread != null ? sp.bookSpread
+                       : (anchor && anchor.spread ? anchor.spread.current : null));
+  const total = _sgoNum(to && to.bookOverUnder != null ? to.bookOverUnder
+                      : (anchor && anchor.total ? anchor.total.current : null));
+  if (spread == null && total == null) return null;
+  const book = anchor ? {
+    name: anchor.name,
+    spread: _sgoFlip(anchor.spread ? anchor.spread.current : null),
+    spreadOpen: _sgoFlip(anchor.spread ? anchor.spread.open : null),
+    total: anchor.total ? anchor.total.current : null,
+    totalOpen: anchor.total ? anchor.total.open : null
+  } : null;
+  return { spread: _sgoFlip(spread), total, book };
+}
+// One event into the schedule shape mergeGameLines matches on.
+function parseSgoEventGame(ev) {
+  const home = sgoTeamKey(ev && ev.teams && ev.teams.home);
+  const away = sgoTeamKey(ev && ev.teams && ev.teams.away);
+  if (!home || !away) return null;
+  const kickoff = Date.parse((ev.status && ev.status.startsAt) || '');
+  if (!Number.isFinite(kickoff)) return null;
+  const l = parseSgoEventLine(ev);
+  if (!l) return null;
+  return { id: 'sgo-' + (ev.eventID || home + away + kickoff), home, away, kickoff,
+           spread: l.spread, total: l.total, book: l.book };
+}
+// The paged /events read, shared by both fetchers below. `oddIDs` narrows the
+// response to the markets actually wanted, which is what keeps a props pull
+// from downloading every alternate line in the book.
+async function _sgoEvents(env, params) {
+  const key = env && env.SGO_API_KEY;
+  if (!key) throw new Error('no SGO_API_KEY');
+  const out = [];
+  let cursor = '';
+  for (let page = 0; page < SGO_MAX_PAGES; page++) {
+    const q = new URLSearchParams({ leagueID: SGO_LEAGUE, limit: String(SGO_PAGE_LIMIT), ...params });
+    if (cursor) q.set('cursor', cursor);
+    const r = await fetch(SGO_API_BASE + '/events?' + q.toString(), {
+      headers: { 'x-api-key': key, accept: 'application/json' }, cf: { cacheTtl: 0 } });
+    if (!r.ok) {
+      // A first page that fails is a failed pull; a later one that fails has
+      // already returned games, and losing the rest of the slate is better
+      // than losing all of it.
+      if (!out.length) throw new Error('sgo events ' + r.status);
+      break;
+    }
+    let j = null;
+    try { j = await r.json(); } catch (e) { break; }
+    const data = Array.isArray(j && j.data) ? j.data : [];
+    for (const ev of data) if (ev) out.push(ev);
+    cursor = (j && j.nextCursor) || '';
+    if (!cursor || !data.length) break;
+  }
+  return out;
+}
+// Player props for every game with odds on the board. Every row is a GAME line,
+// never a season line: they feed the weekly projection and the snapshot store,
+// and buildVegasOverlay must never see them, which `scope: 'game'` is for.
+async function fetchOddsSgo(env) {
+  const oddIDs = [
+    ...Object.keys(SGO_PROP_MARKETS).map(s => s + '-PLAYER_ID-game-ou-over'),
+    SGO_TD_STAT + '-PLAYER_ID-game-yn-yes'
+  ].join(',');
+  const events = await _sgoEvents(env, { oddsAvailable: 'true', includeOpposingOdds: 'true', oddID: oddIDs });
+  const rows = [];
+  for (const ev of events) for (const row of parseSgoEventProps(ev)) rows.push(row);
+  return rows;
+}
+// The week's game lines, with each anchor book's opener. Asked for by oddID so
+// the response is two markets a game rather than the whole board.
+async function fetchGameLinesSgo(env) {
+  const events = await _sgoEvents(env, {
+    oddsPresent: 'true', includeOpenCloseOdds: 'true',
+    oddID: SGO_GAME_SPREAD + ',' + SGO_GAME_TOTAL
+  });
+  const out = [];
+  for (const ev of events) { const g = parseSgoEventGame(ev); if (g) out.push(g); }
+  return out;
+}
+
 const NFLVERSE_GAMES_URL = 'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv';
 const TEAM_ALIAS = { LAR: 'LA', JAC: 'JAX', WSH: 'WAS', LVR: 'LV', OAK: 'LV', SD: 'LAC', STL: 'LA' };
 const teamKey = t => { const u = String(t || '').toUpperCase(); return TEAM_ALIAS[u] || u; };
@@ -2247,6 +2548,12 @@ function buildTeamEnvOverlay(marketTotals) {
 // per player+stat. Player props (when a key is configured) are strictly better
 // than a team-wide inference, so they go first and the free team-environment
 // provider fills in every stat and player the props did not cover.
+//
+// SportsGameOdds is deliberately NOT here even when its key is set. Every row
+// it returns is a GAME line, and buildVegasOverlay rejects those by design (a
+// prop for Sunday is not a season total), so listing it would spend a paid pull
+// on rows this build throws away. Its props reach the product through
+// PROVIDER_ODDS and the snapshot store, which is the weekly path.
 const ODDS_PROVIDERS = [
   { name: 'the-odds-api', kind: 'props',   fn: fetchOddsTheOddsApi,   needs: env => !!env.ODDS_API_KEY },
   { name: 'nflverse',     kind: 'teamenv', fn: fetchTeamEnvNflverse }
@@ -3513,8 +3820,16 @@ async function fetchScheduleEspn(season) {
 // exact kickoff instant. Matched on the two clubs within a two-day window rather
 // than on week number, because ESPN and nflverse number the postseason rounds
 // differently and a round mismatch would put a live score on the wrong game.
+// One source's own quote for one fixture, kept beside the others rather than
+// resolved against them. lineConsensus below is what turns them into the
+// number the site prints.
+function _lineQuote(g, src, spread, total) {
+  if (spread == null && total == null) return;
+  (g.quotes = g.quotes || {})[src] = { spread: spread == null ? null : spread, total: total == null ? null : total };
+}
 function mergeSchedule(spine, live) {
   const games = (spine || []).map(g => ({ ...g }));
+  for (const g of games) _lineQuote(g, 'nflverse', g.spread, g.total);
   const byPair = new Map();
   games.forEach((g, i) => {
     const k = g.away + '@' + g.home;
@@ -3538,12 +3853,14 @@ function mergeSchedule(spine, live) {
       if (g.status) t.status = g.status;
       if (g.homeScore != null) t.homeScore = g.homeScore;
       if (g.awayScore != null) t.awayScore = g.awayScore;
-      // The spine keeps the line where it has one: games.csv is a consensus
-      // number and the scoreboard quotes a single book. Where the spine is
-      // blank -- the preseason, and any fixture the CSV has not priced yet --
-      // one book beats no book, and `lineSrc` says which it was. The book's
+      // The scoreboard's number is RECORDED, not resolved: games.csv is a
+      // consensus and the scoreboard quotes a single book, and lineConsensus
+      // averages the two rather than either winning. The blank-fill below is
+      // what happens with no consensus pass -- the preseason, and any fixture
+      // the CSV has not priced yet, where one book beats no book. The book's
       // own open/current pair rides along either way, because the spine has no
       // concept of an opening line to be overwritten.
+      _lineQuote(t, 'espn', g.spread, g.total);
       if (t.spread == null && g.spread != null) { t.spread = g.spread; t.lineSrc = 'espn'; }
       if (t.total == null && g.total != null) { t.total = g.total; t.lineSrc = 'espn'; }
       if (g.book) t.book = g.book;
@@ -3554,12 +3871,110 @@ function mergeSchedule(spine, live) {
       // game with no match is left out rather than guessed into a round, since
       // the spine gains the bracket within a day of it being set.
       if (g.type !== 'PRE') continue;
-      games.push({ ...g, espnId: /^espn-/.test(g.id) ? g.id.slice(5) : null });
+      const add = { ...g, espnId: /^espn-/.test(g.id) ? g.id.slice(5) : null };
+      _lineQuote(add, 'espn', g.spread, g.total);
+      games.push(add);
       added++;
     }
   }
   games.sort((a, b) => a.kickoff - b.kickoff || (a.id < b.id ? -1 : 1));
   return { games, updated, added };
+}
+
+// The paid feed's game lines onto the schedule. Matched the way the live layer
+// is -- the two clubs within a two-day window rather than the week number,
+// because feeds number the postseason rounds differently and a round mismatch
+// would price the wrong game.
+//
+// Like the scoreboard's, this feed's number is RECORDED rather than resolved:
+// it is one more quote on the fixture, and lineConsensus averages it with the
+// others. What this function alone decides is the BOOK PAIR, which is not a
+// quote and cannot be averaged -- it is one book's open and current, the two
+// numbers every movement figure is computed from, and it goes over whole
+// (null included). Leaving the previous feed's pair on a fixture this one is
+// now pricing would measure the move against a book that is no longer behind
+// the number beside it.
+function mergeGameLines(games, lines, at) {
+  const out = (games || []).map(g => ({ ...g }));
+  const byPair = new Map();
+  out.forEach((g, i) => {
+    const k = g.away + '@' + g.home;
+    if (!byPair.has(k)) byPair.set(k, []);
+    byPair.get(k).push(i);
+  });
+  const WINDOW = 2 * 86400000;
+  let quoted = 0, booked = 0;
+  for (const l of lines || []) {
+    if (!l) continue;
+    const cands = byPair.get(l.away + '@' + l.home) || [];
+    let best = -1, bestGap = WINDOW;
+    for (const i of cands) {
+      const gap = Math.abs(out[i].kickoff - l.kickoff);
+      if (gap < bestGap) { bestGap = gap; best = i; }
+    }
+    if (best < 0) continue;
+    const t = out[best];
+    t.book = l.book || null;
+    if (l.book) booked++;
+    if (l.spread != null || l.total != null) { _lineQuote(t, 'sportsgameodds', l.spread, l.total); quoted++; }
+  }
+  return { games: out, quoted, booked };
+}
+
+// ── the consensus line ─────────────────────────────────────────────────────
+// A fixture can be priced by three sources at once: the spine's own column in
+// games.csv, the scoreboard's single named book, and the paid feed's consensus.
+// Each records its own quote in `g.quotes`; this is where they become the one
+// number the site prints, and that number is their MEAN.
+//
+// WHY A MEAN RATHER THAN A WINNER. Every one of these is an estimate of the
+// same thing. Picking one throws away the others' evidence for no reason a
+// reader could defend, and it makes the site's line jump whenever the winner
+// changes. The mean also fails softly: a source that goes stale or starts
+// quoting nonsense moves the line by a fraction of its error instead of
+// becoming the line.
+//
+// WHAT IT IS NOT. It is not a number any book posts, and it does not pretend
+// to be -- 2.5 and 3 average to 2.8, the site's usual one decimal on a derived
+// figure. `lineSources` rides on every payload beside it, so an average is
+// never shown that a reader cannot take apart. The sources are listed per
+// FIXTURE, not per market: a club priced on the spread by two sources and on
+// the total by one names both, because both are behind the fixture's line.
+//
+// FROZEN AT KICKOFF. A game that has started keeps whatever it already had,
+// which is the spine's own number: by then that is the closing line and the
+// historical record every backtest reads. A live feed's last-seen value has
+// nothing truer to say about a game that is over, and averaging one in would
+// quietly rewrite history.
+//
+// THE BOOK PAIR IS NOT AVERAGED and never can be. `g.book` stays one book's
+// open and current so _gameLineMove keeps one source behind every move; the
+// printed line beside it is this consensus. Those are two different questions
+// and this is the one place that says so.
+const LINE_MARKETS = ['spread', 'total'];
+function lineConsensus(games, at) {
+  const now = at == null ? Date.now() : at;
+  let averaged = 0, blended = 0;
+  for (const g of games || []) {
+    if (!g || !g.quotes) continue;
+    if (g.status === 'final' || g.status === 'in_progress' || now >= g.kickoff) continue;
+    const used = new Set();
+    for (const mkt of LINE_MARKETS) {
+      const vals = [];
+      for (const [src, q] of Object.entries(g.quotes)) {
+        const v = q ? q[mkt] : null;
+        if (Number.isFinite(v)) { vals.push(v); used.add(src); }
+      }
+      if (!vals.length) continue;
+      g[mkt] = _oddsRound(vals.reduce((a, c) => a + c, 0) / vals.length);
+    }
+    if (!used.size) continue;
+    g.lineSources = [...used].sort();
+    g.lineSrc = g.lineSources.join('+');
+    averaged++;
+    if (used.size > 1) blended++;
+  }
+  return { games: games || [], averaged, blended };
 }
 
 // ── the clock ──────────────────────────────────────────────────────────────
@@ -3626,7 +4041,7 @@ function _seasonDecorate(g, at) {
     // One named book's open and current, in the same convention as `spread`
     // above. Null on a fixture no book has posted, which is not the same fact
     // as a line of zero and must not print as one.
-    book: g.book || null, lineSrc: g.lineSrc || null,
+    book: g.book || null, lineSrc: g.lineSrc || null, lineSources: g.lineSources || null,
     status: s.status, statusSource: s.source
   };
 }
@@ -3775,8 +4190,24 @@ async function runScheduleRefresh(env) {
   let live = [], liveError = null;
   try { live = await fetchScheduleEspn(spine.season); }
   catch (e) { liveError = (e && e.message) || 'failed'; }
-  const merged = mergeSchedule(spine.games, live);
-  const provider = 'nflverse' + (live.length ? '+espn' : '');
+  let merged = mergeSchedule(spine.games, live);
+  // The paid line feed, when there is a key for it. Fail-safe like the live
+  // layer above: a pull that throws leaves the schedule exactly as the spine
+  // and the scoreboard built it rather than costing the refresh.
+  let lines = [], linesError = null;
+  if (env.SGO_API_KEY) {
+    try {
+      lines = await fetchGameLinesSgo(env);
+      const relined = mergeGameLines(merged.games, lines, Date.now());
+      merged = { ...merged, games: relined.games };
+    } catch (e) { linesError = (e && e.message) || 'failed'; }
+  }
+  // Every source that priced a fixture, averaged into the one number the site
+  // prints. Runs whether or not the paid feed is configured: the spine and the
+  // scoreboard are two sources on their own.
+  const consensus = lineConsensus(merged.games, Date.now());
+  merged = { ...merged, games: consensus.games };
+  const provider = 'nflverse' + (live.length ? '+espn' : '') + (lines.length ? '+sportsgameodds' : '');
   const espn = _ESPN_LAST;
   await scheduleCacheWrite(env, spine.season, merged.games, provider);
   _SEASON_CACHE = null; _SEASON_AT = 0;
@@ -3784,6 +4215,8 @@ async function runScheduleRefresh(env) {
     ok: true, season: spine.season, provider,
     spine: spine.games.length, live: live.length,
     statusUpdated: merged.updated, preseasonAdded: merged.added,
+    lines: lines.length, linesError,
+    linesAveraged: consensus.averaged, linesBlended: consensus.blended,
     games: merged.games.length, liveError, espn
   };
 }
@@ -3863,10 +4296,18 @@ const PROVIDER_SCHEDULE = [
 ];
 
 // ── odds ───────────────────────────────────────────────────────────────────
-// The Odds API is the only per-player book feed, and it is the one paid
-// upgrade. Without it the game-line provider still prices every club's scoring
-// environment, which is what the site runs on today.
+// Two per-player book feeds, both paid, tried in order: SportsGameOdds first
+// because it prices the game lines as well as the players, then The Odds API.
+// With neither key set the game-line providers still price every club's
+// scoring environment, which is what the site runs on today.
 const PROVIDER_ODDS = [
+  { name: 'sportsgameodds', free: false, needs: env => !!(env && env.SGO_API_KEY),
+    subjectType: 'player',
+    fetch: async (env) => (await fetchOddsSgo(env)).map(r => ({
+      book: r.book || 'unknown', subjectType: 'player', subject: r.player,
+      market: r.market, line: r.line, overOdds: r.overOdds, underOdds: r.underOdds,
+      gameId: r.gameId || null, ts: Date.now()
+    })) },
   { name: 'the-odds-api', free: false, needs: env => !!(env && env.ODDS_API_KEY),
     subjectType: 'player',
     fetch: async (env) => (await fetchOddsTheOddsApi(env)).map(r => ({
@@ -3874,10 +4315,13 @@ const PROVIDER_ODDS = [
       market: r.market, line: r.line, overOdds: r.overOdds, underOdds: r.underOdds,
       gameId: r.gameId || null, ts: Date.now()
     })) },
-  { name: 'espn-gamelines', free: true, subjectType: 'game',
+  { name: 'book-gamelines', free: true, subjectType: 'game',
     fetch: async (env) => {
       // The schedule refresh already merged the book's lines onto every game,
-      // so this reads them rather than pulling the scoreboard a second time.
+      // so this reads them rather than pulling the feed a second time. WHICH
+      // book that is depends on what was configured -- SportsGameOdds where
+      // there is a key, ESPN's scoreboard otherwise -- and the row is written
+      // under the book's own name either way, which is the point.
       // Rows go in under the BOOK's name, not 'consensus': a real bookmaker
       // sitting beside the consensus row is what lets the store say the two
       // disagree, and it is the only game-line row that moves intraday.
@@ -6047,6 +6491,81 @@ function _rosSlim(board) {
   }
   return rows;
 }
+// ── the pre-kickoff board, frozen ──────────────────────────────────────────
+// A recap that says "we told you he would beat the consensus" is making a
+// claim about a MOMENT: what the two boards said before the game. The boards
+// are recomputed continuously, so reading them after the whistle and calling
+// the difference a prediction is how a desk ends up quoting itself from data
+// that did not exist when it supposedly spoke. This freezes the week board
+// for a game's two clubs shortly before its kickoff, and the recap reads that
+// row and nothing else. No row, no claim.
+const BOARD_FREEZE_LEAD_MS = 2 * 3600000;   // frozen inside this window before kickoff
+const BOARD_FREEZE_DDL = 'CREATE TABLE IF NOT EXISTS week_board_snapshots (season INTEGER NOT NULL, week INTEGER NOT NULL, game_id TEXT NOT NULL, taken_at INTEGER NOT NULL, kickoff INTEGER, payload TEXT NOT NULL, PRIMARY KEY (season, week, game_id))';
+let _FREEZE_READY = false;
+async function boardFreezeReady(env) {
+  if (_FREEZE_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { await env.LEADS_DB.prepare(BOARD_FREEZE_DDL).run(); _FREEZE_READY = true; return true; } catch (e) { return false; }
+}
+// One club's players as the three boards had them, for one week.
+function _freezeRows(board, week, teams) {
+  const out = [];
+  for (const p of (board && board.players) || []) {
+    if (!teams.has(p.team)) continue;
+    if (p.pos === 'K' || p.pos === 'DEF') continue;
+    const wk = (p.weeks || []).find(w => w.week === week) || null;
+    if (wk && (wk.bye || wk.out)) continue;
+    out.push({ key: p.key, name: p.name, position: p.position, team: p.team,
+               consensusRank: p.consensus.rank, consensusPts: p.consensus.points,
+               ironTunaRank: p.ironTuna.rank, ironTunaPts: p.ironTuna.points,
+               vegasRank: p.vegas.rank, vegasPts: p.vegas.points, vegasBasis: p.vegas.basis,
+               injury: p.injury ? p.injury.status : null });
+  }
+  return out;
+}
+async function runBoardFreeze(env, opts) {
+  const o = opts || {};
+  if (!(await boardFreezeReady(env))) return { ok: false, error: 'no_db' };
+  const sched = await scheduleCacheRead(env);
+  if (!sched) return { ok: false, error: 'no_schedule' };
+  const now = o.now || Date.now();
+  const state = nflSeasonState(sched, now);
+  const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  if (week == null) return { ok: false, error: 'not_regular_season' };
+  // Only games about to start, and only once each. A game already under way
+  // is too late: whatever the board says now has seen some of the result.
+  const due = weekGames(sched, week, now).filter(g => g.kickoff > now && g.kickoff - now <= BOARD_FREEZE_LEAD_MS);
+  if (!due.length) return { ok: true, week, frozen: 0, note: 'no kickoff inside the window' };
+  let existing = new Set();
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT game_id FROM week_board_snapshots WHERE season = ? AND week = ?').bind(sched.season, week).all();
+    existing = new Set(((q && q.results) || []).map(r => r.game_id));
+  } catch (e) {}
+  const todo = due.filter(g => !existing.has(g.id));
+  if (!todo.length) return { ok: true, week, frozen: 0, note: 'already frozen' };
+  const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
+  if (!board.ok) return { ok: false, error: 'no_board' };
+  let frozen = 0;
+  for (const g of todo) {
+    const rows = _freezeRows(board, week, new Set([g.home, g.away]));
+    if (!rows.length) continue;
+    try {
+      await env.LEADS_DB.prepare('INSERT OR REPLACE INTO week_board_snapshots (season, week, game_id, taken_at, kickoff, payload) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(sched.season, week, g.id, now, g.kickoff, JSON.stringify({ matchup: g.away + ' at ' + g.home, rows })).run();
+      frozen++;
+    } catch (e) {}
+  }
+  return { ok: true, season: sched.season, week, frozen, games: todo.map(g => g.away + '@' + g.home) };
+}
+async function boardFreezeRead(env, season, week, gameId) {
+  if (!(await boardFreezeReady(env))) return null;
+  try {
+    const r = await env.LEADS_DB.prepare('SELECT payload, taken_at, kickoff FROM week_board_snapshots WHERE season = ? AND week = ? AND game_id = ?').bind(season, week, String(gameId)).first();
+    if (!r) return null;
+    const p = JSON.parse(r.payload);
+    return { takenAt: r.taken_at, kickoff: r.kickoff, matchup: p.matchup || null, rows: Array.isArray(p.rows) ? p.rows : [] };
+  } catch (e) { return null; }
+}
 async function runRosSnapshot(env, opts) {
   if (!(await rosReady(env))) return { ok: false, error: 'no_db' };
   const o = opts || {};
@@ -6382,6 +6901,44 @@ async function fetchDepthChartEspn(team) {
   out.offense.WR = [].concat(take('wr1'), take('wr2'), take('wr3'), take('wr'));
   return out;
 }
+// ESPN has answered this worker with nothing since September 4 — got 0, failed
+// 32, every morning — while the same URLs serve in full from anywhere else, so
+// the daily job can no longer depend on ESPN alone. Sleeper publishes the same
+// order on the player file the site already mirrors for /api/live: a slot (QB,
+// RB, TE, or LWR/RWR/SWR for receivers) and a rank within the position group,
+// where the receiver ranks run ACROSS the three receiver slots — which is why
+// they are merged here and sorted on the rank, rather than sorted within a slot.
+// The shape returned is fetchDepthChartEspn's, so every consumer (the recap's
+// "what we already knew", the news desk's depth events, the health board) is fed
+// by whichever source answered.
+const SLEEPER_DEPTH_POS = { QB: 'QB', RB: 'RB', TE: 'TE', WR: 'WR', LWR: 'WR', RWR: 'WR', SWR: 'WR' };
+async function fetchDepthChartsSleeper() {
+  const r = await fetch('https://api.sleeper.app/v1/players/nfl', { cf: { cacheTtl: 21600, cacheEverything: true } });
+  if (!r.ok) throw new Error('sleeper players ' + r.status);
+  const all = await r.json();
+  const rows = {}, asOf = Date.now();
+  for (const id in all) {
+    const p = all[id];
+    if (!p || !p.team || !p.depth_chart_position || p.depth_chart_order == null) continue;
+    const pos = SLEEPER_DEPTH_POS[p.depth_chart_position];
+    if (!pos) continue;
+    const order = +p.depth_chart_order;
+    if (!isFinite(order)) continue;
+    const name = p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
+    if (!name) continue;
+    const t = teamKey(p.team);
+    (rows[t] = rows[t] || []).push({ pos, order, name });
+  }
+  const teams = {};
+  for (const t of Object.keys(rows)) {
+    const offense = {};
+    for (const pos of ['QB', 'RB', 'WR', 'TE']) {
+      offense[pos] = rows[t].filter(x => x.pos === pos).sort((a, b) => a.order - b.order).map(x => x.name);
+    }
+    teams[t] = { team: t, asOf, offense };
+  }
+  return teams;
+}
 async function runDepthChartRefresh(env) {
   if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
   const sched = await scheduleCacheRead(env);
@@ -6391,14 +6948,27 @@ async function runDepthChartRefresh(env) {
   for (const t of clubs) {
     try { teams[t] = await fetchDepthChartEspn(t); } catch (e) { failed++; if (!firstError) firstError = (e && e.message) || 'failed'; }
   }
-  // Every morning since September 4 this returned got:0 failed:32 and said
-  // nothing else; the same URL answers 200 from outside the worker. The first
-  // error is kept so the log can say what ESPN actually said to the worker.
-  if (Object.keys(teams).length < 24) return { ok: false, error: 'thin', got: Object.keys(teams).length, failed, firstError };
+  // Every morning since September 4 the ESPN pass returned got:0 failed:32 and
+  // said nothing else; the same URL answers 200 from outside the worker. The
+  // first error is kept so the log can say what ESPN actually said to the
+  // worker, and the second source below is what keeps the site's depth charts
+  // current in the meantime. A club ESPN did answer for keeps ESPN's answer.
+  const fromEspn = Object.keys(teams).length;
+  let filled = 0;
+  if (fromEspn < clubs.size || fromEspn < 24) {
+    try {
+      const sleeper = await fetchDepthChartsSleeper();
+      for (const t of Object.keys(sleeper)) if (!teams[t]) { teams[t] = sleeper[t]; filled++; }
+    } catch (e) { if (!firstError) firstError = (e && e.message) || 'sleeper failed'; }
+  }
+  const got = Object.keys(teams).length;
+  if (got < 24) return { ok: false, error: 'thin', got, failed, firstError };
+  const source = !filled ? 'espn-depth' : fromEspn ? 'espn+sleeper' : 'sleeper-depth';
+  const asOf = Date.now();
   await oddsCacheInit(env);
   await env.LEADS_DB.prepare('INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)')
-    .bind(DEPTH_ROW, JSON.stringify({ asOf: Date.now(), teams }), 'espn-depth', Object.keys(teams).length, Date.now()).run();
-  return { ok: true, teams: Object.keys(teams).length, failed };
+    .bind(DEPTH_ROW, JSON.stringify({ asOf, updatedAt: asOf, source, teams }), source, got, asOf).run();
+  return { ok: true, teams: got, espn: fromEspn, sleeper: filled, failed, source, firstError };
 }
 async function depthChartsRead(env) {
   if (!env || !env.LEADS_DB) return null;
@@ -6577,7 +7147,7 @@ const NEWSROOM_SECTIONS = {
   // findings (the rail prints them as headlines once a later game pushes this
   // story off the lead) and `wrap` is the two-sentence summary the Weekly
   // Wrap Up collects for every game of the week.
-  'game-recap':            { weekly: ['theGame', 'whatScored', 'usageBehindIt', 'nextWeekSignals', 'components', 'waiverAndTrade', 'wrap'], dfs: ['priceImpact', 'usageForPricing', 'emergingChalk', 'leverage', 'stackImplications', 'wrap'] },
+  'game-recap':            { weekly: ['theGame', 'weCalledIt', 'whatScored', 'usageBehindIt', 'nextWeekSignals', 'components', 'waiverAndTrade', 'wrap'], dfs: ['priceImpact', 'usageForPricing', 'emergingChalk', 'leverage', 'stackImplications', 'wrap'] },
   'mnf-preview':           { weekly: ['startSit', 'expectations', 'matchups', 'injuries', 'usage', 'marketSignals', 'risk'], dfs: ['captainOptions', 'value', 'ownership', 'contrarianCaptains', 'correlation', 'gameScripts', 'fades'] },
   'early-rankings':        { weekly: ['overview', 'quarterbacks', 'runningBacks', 'wideReceivers', 'tightEnds', 'flex', 'kickersAndDefenses', 'whereWeDisagree'], dfs: ['rawVsSalary', 'earlyValues', 'earlyChalk', 'leverage', 'cashVsTournament'] },
   'quarterback-monday':    { weekly: ['theStory', 'whatTheNumbersSay', 'whatToDo', 'buySell'], dfs: ['stacks', 'bringBacks', 'ownership', 'salaryAndRushingUpside', 'gameEnvironment'] },
@@ -6610,14 +7180,29 @@ const NEWSROOM_OBJECT_SECTIONS = {
   usageBehindIt: ['player', 'position', 'team', 'targets', 'carries', 'share', 'why'],
   nextWeekSignals: ['player', 'position', 'team', 'signal', 'evidence', 'why'],
   components: ['headline', 'player', 'why'],
+  // Where the site's own projection disagreed with the consensus before
+  // kickoff and the result proved it right, or did not. `verdict` is the
+  // packet's own word (`right` or `wrong`), never the writer's.
+  weCalledIt: ['player', 'position', 'team', 'weSaid', 'consensusSaid', 'heScored', 'verdict', 'why'],
   captainOptions: ['player', 'position', 'team', 'salary', 'why'], contrarianCaptains: ['player', 'position', 'team', 'salary', 'why'], streamingDefenses: ['team', 'opponent', 'why'], defensesToAvoid: ['team', 'opponent', 'why'], kickerRankings: ['player', 'team', 'rank', 'why'],
   priceInefficiencyBoard: ['player', 'position', 'team', 'salary', 'projection', 'value', 'why'], earlyValues: ['player', 'position', 'team', 'salary', 'why'], likelyChalk: ['player', 'position', 'team', 'salary', 'why'], goodChalk: ['player', 'position', 'team', 'salary', 'why'], badChalk: ['player', 'position', 'team', 'salary', 'why'],
   coreStacks: ['game', 'players', 'why'], contrarianStacks: ['game', 'players', 'why'], stacks: ['game', 'players', 'why'], initialStacks: ['game', 'players', 'why']
 };
-function sectionsFor(kind, lens) {
+// A section the packet may not have earned. `weCalledIt` is the case: with no
+// board frozen before kickoff the site has no record of what it said in
+// advance, so there is nothing to write and the writer is told to leave it
+// out. Both the SHAPE the writer is handed and the check that holds it come
+// from this one call, so a section can never be asked for and then failed for
+// its absence, nor skipped when it was asked for.
+const CONDITIONAL_SECTIONS = {
+  'game-recap': { weCalledIt: p => !!(p && p.calledIt && p.calledIt.available && (p.calledIt.hits.length || p.calledIt.misses.length)) }
+};
+function sectionsFor(kind, lens, packet) {
   const n = NEWSROOM_SECTIONS[kind];
-  if (n) return lens === 'dfs' ? n.dfs.slice() : n.weekly.slice();
-  return (CONTENT_SECTIONS[kind] || []).slice();
+  let list = n ? (lens === 'dfs' ? n.dfs.slice() : n.weekly.slice()) : (CONTENT_SECTIONS[kind] || []).slice();
+  const cond = packet ? CONDITIONAL_SECTIONS[kind] : null;
+  if (cond) list = list.filter(sec => !cond[sec] || cond[sec](packet));
+  return list;
 }
 const DOW_N = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 // Which week a kind is ABOUT at `now`. 'played' is the last week with a game
@@ -8072,11 +8657,65 @@ function _boardRowFor(index, p) {
 //
 // `wrapFacts` is the short list the two-sentence Weekly Wrap Up summary is
 // built from, so the wrap and the story cannot drift apart.
-function packetGameRecap(game, summary, ctx) {
+// WHERE IRON TUNA DISAGREED WITH THE EXPERTS BEFORE THE GAME, AND WHAT
+// HAPPENED. Built only from the board frozen before kickoff (`freeze`), never
+// from a board read after the whistle: the claim is that the site said
+// something in advance, so the evidence has to predate the thing it predicted.
+// With no frozen row there is no block and the story makes no such claim.
+//
+// The disagreement is Iron Tuna's weekly projection against the CONSENSUS
+// one, which is what "expert rankings" means on this site: the ranking most
+// sites publish. Iron Tuna higher is a called overperformance, lower is a
+// called underperformance, and the call lands when the player's actual points
+// finish on Iron Tuna's side of the consensus number.
+//
+// Misses ride along with the hits, and the writer is given both. A desk that
+// prints only its wins is not a record, and the reader can see the same box
+// score. Only a hit may reach the headline.
+const CALLED_MIN_PTS = 2.0;         // the projections must differ by this much to have been a call
+const CALLED_MIN_RANKS = 4;         // and by this many places inside the position
+const CALLED_HEADLINE_PTS = 6.0;    // the actual result must beat the consensus by this to lead
+const CALLED_HEADLINE_RANKS = 8;
+function _vindication(freeze, scoredByKey, week) {
+  if (!freeze || !freeze.rows.length) return { available: false, reason: 'no board was frozen before this kickoff', hits: [], misses: [], headline: null };
+  const hits = [], misses = [];
+  for (const r of freeze.rows) {
+    const actualRow = scoredByKey.get(r.key);
+    if (!actualRow) continue;                       // did not take the field
+    // A missing projection or rank is not a quiet zero. NaN fails every
+    // comparison below, so an unguarded row would sail through the gate and
+    // become a call the site never made.
+    if (![r.ironTunaPts, r.consensusPts, r.ironTunaRank, r.consensusRank, actualRow.points].every(Number.isFinite)) continue;
+    const gap = _oddsRound(r.ironTunaPts - r.consensusPts);
+    const rankGap = r.consensusRank - r.ironTunaRank;   // positive: Iron Tuna higher
+    if (Math.abs(gap) < CALLED_MIN_PTS || Math.abs(rankGap) < CALLED_MIN_RANKS) continue;
+    const direction = gap > 0 ? 'over' : 'under';
+    const actual = actualRow.points;
+    const margin = _oddsRound(actual - r.consensusPts);
+    const landed = direction === 'over' ? margin > 0 : margin < 0;
+    const entry = { name: r.name, position: r.position, team: r.team, direction,
+                    consensusPts: r.consensusPts, consensusRank: r.consensusRank,
+                    ironTunaPts: r.ironTunaPts, ironTunaRank: r.ironTunaRank,
+                    pointsGap: gap, rankGap: Math.abs(rankGap), actual, margin: Math.abs(margin),
+                    frozenAt: freeze.takenAt, line: actualRow.line || null };
+    (landed ? hits : misses).push(entry);
+  }
+  const big = h => h.margin >= CALLED_HEADLINE_PTS && h.rankGap >= CALLED_HEADLINE_RANKS;
+  hits.sort((a, b) => b.margin - a.margin || b.rankGap - a.rankGap);
+  misses.sort((a, b) => b.margin - a.margin);
+  const lead = hits.find(big) || null;
+  return { available: true, frozenAt: freeze.takenAt, kickoff: freeze.kickoff,
+           thresholds: { calledPoints: CALLED_MIN_PTS, calledRanks: CALLED_MIN_RANKS, headlinePoints: CALLED_HEADLINE_PTS, headlineRanks: CALLED_HEADLINE_RANKS },
+           week, hits: hits.slice(0, 6), misses: misses.slice(0, 4), headline: lead };
+}
+function packetGameRecap(game, summary, ctx, freeze) {
   const usage = gameUsageByTeam(summary);
   const index = _boardByNorm(ctx);
   const teams = [game.away, game.home];
   const scored = [], used = [], forward = [];
+  // Keyed by the BOARD's key, so the frozen pre-kickoff row and the box-score
+  // line meet on the same identifier the freeze was written with.
+  const scoredByKey = new Map();
   for (const t of teams) {
     const u = usage[t];
     if (!u) continue;
@@ -8091,7 +8730,9 @@ function packetGameRecap(game, summary, ctx) {
       if (p.rec.tgt) line.push(p.rec.rec + ' of ' + p.rec.tgt + ', ' + p.rec.yd + ' receiving yards, ' + p.rec.td + ' TD');
       const base = { name: p.name, position: pos, team: t };
       // A: the scoreboard.
-      if (pts >= 1 || p.touches >= 3) scored.push({ ...base, points: pts, projected, line: line.join('; '), touchdowns: p.tds.length, fumblesLost: p.fumLost });
+      const scoreRow = { ...base, points: pts, projected, line: line.join('; '), touchdowns: p.tds.length, fumblesLost: p.fumLost };
+      if (row) scoredByKey.set(row.key, scoreRow);
+      if (pts >= 1 || p.touches >= 3) scored.push(scoreRow);
       // B: the usage under it, whether or not it scored.
       if (p.rec.tgt >= 1 || p.rush.att >= 1) used.push({ ...base, targets: p.rec.tgt, receptions: p.rec.rec, targetShare: p.targetShare, carries: p.rush.att, carryShare: p.carryShare, touches: p.touches, points: pts });
       // C: the forward read. Every entry names the reason it is here, so the
@@ -8127,6 +8768,7 @@ function packetGameRecap(game, summary, ctx) {
                       topScorers: scored.slice(0, 3), biggestUsage: used.slice(0, 3), leadSignal: forward[0] || null };
   return { kind: 'game-recap', week: ctx.weekNumber, game: { id: game.id, matchup: game.away + ' at ' + game.home, away: game.away, home: game.home, day: game.dow, kickoff: game.kickoff }, box,
            whatScored: scored.slice(0, 16), usage: used.slice(0, 20), forwardSignals: forward.slice(0, 14), teams: teamBlocks,
+           calledIt: _vindication(freeze, scoredByKey, ctx.weekNumber),
            market: Object.fromEntries(teams.map(t => [t, _marketFor(t, ctx)])), waivers: teams.flatMap(t => _waiverFor(t, usage, ctx)).slice(0, 8),
            wrapFacts, dfs: _dfsBlock(ctx, new Set(teams)),
            unavailable: ['routes and route participation (no free feed publishes them)', 'snap counts until the weekly usage file publishes', 'red-zone and goal-line counts are derived from play descriptions and are left uncounted where the play text is ambiguous'] };
@@ -8347,7 +8989,12 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
     if (!g) return { skip: true, reason: 'no_game' };
     let s = null; try { s = await gameSummaryFor(env, g, ctx.nameIndex); } catch (e) { s = null; }
     if (!s || !s.final) return { skip: true, reason: 'no_box_score', checked: g.away + '@' + g.home };
-    facts = packetGameRecap(g, s, ctx);
+    // The board as it stood before this kickoff. Absent for a game that
+    // kicked off before the freeze job existed, and then the story simply
+    // makes no claim about what the site said in advance.
+    let freeze = null;
+    try { freeze = await boardFreezeRead(env, ctx.sched ? ctx.sched.season : null, d.week, g.id); } catch (e) { freeze = null; }
+    facts = packetGameRecap(g, s, ctx, freeze);
   }
   else if (kind === 'what-sunday-taught-us') { const s = await summariesFor(games); if (!s.length && !o.force) return { skip: true, reason: 'no_box_scores' }; facts = packetSundayTaught(games, s, ctx); }
   else if (kind === 'mnf-preview' || kind === 'tnf-preview') facts = packetShowdown(kind, games, ctx);
@@ -8420,8 +9067,8 @@ HEADLINE AND DEK in sentence case: capitalize the first word and proper nouns (p
 PUBLISH LESS. If the packet genuinely carries nothing a reader should act on, return {"skip":"<one sentence why>"} instead of filler.
 OUTPUT: a single JSON object, no prose outside it, in exactly the shape requested.`;
 const AI_PHRASES = [/it'?s worth noting/i, /buckle up/i, /dive in/i, /game-?changer/i, /in conclusion/i, /at the end of the day/i, /ever-evolving/i, /look no further/i, /—/];
-function _lensShape(kind, lens) {
-  const secs = sectionsFor(kind, lens);
+function _lensShape(kind, lens, packet) {
+  const secs = sectionsFor(kind, lens, packet);
   return '{' + secs.map(s => {
     const f = NEWSROOM_OBJECT_SECTIONS[s];
     return '"' + s + '":' + (f ? '[{' + f.map(x => '"' + x + '":"..."').join(',') + '}]' : '["..."]');
@@ -8435,6 +9082,25 @@ function _voiceBlock(packet) {
   if (packet.rivalry) s += 'RIVALRY IN THIS PIECE: ' + packet.rivalry.player + '. Brooks (Fantasy Analysis) ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; Vega (Market Intelligence) ' + packet.rivalry.position + packet.rivalry.vega.rank + ' on ' + packet.rivalry.vega.basis + '. Write ONE line in the weekly lens, in the section it belongs to, and put the same line in "rivalryLine". Nowhere else.\n';
   else s += 'NO RIVALRY IN THIS PIECE. Do not set up Vega against Brooks.\n';
   if (packet.priorCalls && packet.priorCalls.length) s += 'PRIOR CALLS the desk has published on players in this packet are in priorCalls. Reference only those, by analyst and week, where relevant.\n';
+  // Where the site's own board disagreed with the consensus BEFORE kickoff and
+  // the game settled it. The gate is arithmetic in the packet, not the
+  // writer's judgement: `calledIt.hits` are the ones the result proved right,
+  // `calledIt.misses` the ones it did not, and `calledIt.headline` is set only
+  // when one hit clears the wider bar. The writer never decides that a call
+  // was big enough to crow about; it decides how to say it.
+  const c = packet.calledIt;
+  if (c && c.available && (c.hits.length || c.misses.length)) {
+    s += 'WE CALLED IT. Before this kickoff the site\'s own projection differed from the consensus ranking on the players in `calledIt`, and the game has now settled it. Write the `weCalledIt` section from that block and from nothing else. `hits` are the calls the result proved right and `misses` are the ones it did not.\n';
+    s += 'REPORT BOTH. A section that lists the hits and hides the misses in the same box score is not a record, and the reader has the box score. If `misses` is not empty, at least one of them goes in the section, in the same plain voice as the hits.\n';
+    if (c.headline) {
+      s += 'THIS ONE IS BIG ENOUGH TO LEAD WITH: ' + c.headline.name + '. The site had him ' + c.headline.position + c.headline.ironTunaRank + ' where the consensus had him ' + c.headline.position + c.headline.consensusRank + ', a call that he would ' + (c.headline.direction === 'over' ? 'beat' : 'fall short of') + ' the consensus number of ' + c.headline.consensusPts + ' points; he scored ' + c.headline.actual + '.\n';
+      s += 'You MAY open the headline with "YOU\'RE WELCOME:" and then say what the site called and that it happened, for example: YOU\'RE WELCOME: Iron Tuna said ' + c.headline.name + ' would ' + (c.headline.direction === 'over' ? 'beat' : 'miss') + ' his ranking, and he did. Spell it "YOU\'RE WELCOME", with the apostrophe. Use it at most once, only for this player, and only in the headline; if the game has a bigger story, lead with that instead.\n';
+    } else {
+      s += 'NOTHING here is big enough for the headline. Keep it to the section.\n';
+    }
+  } else if (c && !c.available) {
+    s += 'NO PRE-KICKOFF BOARD was frozen for this game, so the site has no record of what it said in advance. Make no claim about having called anything, and omit the `weCalledIt` section.\n';
+  }
   return s;
 }
 function factCheck(body, packet) {
@@ -8457,7 +9123,7 @@ function factCheck(body, packet) {
   if (!packet.rivalry && body && body.rivalryLine) problems.push('rivalry:not_in_packet');
   // Sections: each lens must carry its sections.
   for (const lens of packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly']) {
-    const secs = sectionsFor(packet.meta.kind, lens);
+    const secs = sectionsFor(packet.meta.kind, lens, packet);
     const got = body && body[lens] && typeof body[lens] === 'object' ? body[lens] : null;
     if (!got) { problems.push('missing:' + lens); continue; }
     for (const s of secs) if (!(s in got)) problems.push('missing:' + lens + '.' + s);
@@ -8490,7 +9156,7 @@ function compactForWriter(packet, budget) {
   if (size() > limit) trim(out, 8);
   while (size() > limit) {
     let big = null, bigLen = 0;
-    for (const [k, v] of Object.entries(out)) { if (['meta', 'freshness', 'rivalry', 'priorCalls', 'staleSources', 'allowed'].includes(k)) continue; const l = JSON.stringify(v).length; if (l > bigLen) { big = k; bigLen = l; } }
+    for (const [k, v] of Object.entries(out)) { if (['meta', 'freshness', 'rivalry', 'priorCalls', 'staleSources', 'allowed', 'calledIt'].includes(k)) continue; const l = JSON.stringify(v).length; if (l > bigLen) { big = k; bigLen = l; } }
     if (!big) break;
     delete out[big]; omitted.push(big + ' omitted for length');
   }
@@ -8500,7 +9166,7 @@ function compactForWriter(packet, budget) {
 async function writeNewsroomPiece(env, kind, packet) {
   const K = CONTENT_KINDS[kind];
   const lenses = packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly'];
-  const shape = '{"headline":"...","dek":"one sentence, the finding","' + lenses.map(l => l + '":' + _lensShape(kind, l)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
+  const shape = '{"headline":"...","dek":"one sentence, the finding","' + lenses.map(l => l + '":' + _lensShape(kind, l, packet)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
   const user = 'KIND: ' + kind + ' (' + ((packet.meta && packet.meta.title) || K.title) + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
     'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
     '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
@@ -8616,7 +9282,7 @@ async function contentContext(env, weekNumber, opts) {
     odds: odds ? { provider: odds.provider, at: odds.updatedAt } : null,
     snapshots: snaps && snaps.ok && snaps.last ? { provider: 'odds_snapshots', at: snaps.last } : null,
     usage: usage ? { provider: 'nflverse', at: usage.updatedAt || usage.builtAt } : null,
-    depth: depth ? { provider: 'espn-depth', at: depth.asOf } : null,
+    depth: depth ? { provider: depth.source || 'espn-depth', at: depth.asOf } : null,
     dfs: dfs.dk ? { provider: 'csv', at: dfs.dk.salariesAsOf } : dfs.fd ? { provider: 'csv', at: dfs.fd.salariesAsOf } : null
   };
   return { sched, state, week: week.ok ? week : null, next: next.ok ? next : null, depth, usage, signals, gameMarkets, weekMarkets,
@@ -8797,7 +9463,7 @@ async function contentPiecePayload(env, kind, season, week, game) {
     return { ok: true, contract: CONTENT_CONTRACT, kind, title: row.title, subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
              game: row.game_id || null, matchup: brief && brief.meta ? brief.meta.matchup || null : null, url: _pieceUrl(row),
              headline: row.headline || null, dek: row.dek || null, byline: _bylineOf(row), lens: row.lens || (K ? K.lens : 'weekly'), legacy: !K,
-             createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly'), dfs: sectionsFor(kind, 'dfs') }, objectSections: NEWSROOM_OBJECT_SECTIONS,
+             createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly', brief), dfs: sectionsFor(kind, 'dfs', brief) }, objectSections: NEWSROOM_OBJECT_SECTIONS,
              body: row.status === 'published' ? parse(row.body) : null, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
@@ -9403,6 +10069,7 @@ const JOB_FNS = {
   'usage-prior-refresh':  env => runPriorUsageRefresh(env),
   'depth-charts':         env => runDepthChartRefresh(env),
   'ros-snapshot':         env => runRosSnapshot(env),
+  'board-freeze':         env => runBoardFreeze(env),
   'snapshot-prune':       env => snapshotPrune(env, SNAP_KEEP_DAYS),
   'analytics-prune':      env => pruneAnalytics(env, 180),
   'job-prune':            env => jobPrune(env, JOB_KEEP_DAYS),
@@ -9633,7 +10300,7 @@ async function healthPayload(env, opts) {
     // an operator should be able to see whether it is there.
     usagePrior: usagePrior ? { updatedAt: usagePrior.updatedAt, season: usagePrior.season, throughWeek: usagePrior.throughWeek, players: Object.keys(usagePrior.players || {}).length } : null,
     availability: avail ? { updatedAt: avail.updatedAt, asOf: avail.asOf, matched: avail.matched } : null,
-    depthCharts: depth,
+    depthCharts: depth ? { updatedAt: depth.updatedAt || depth.asOf, source: depth.source || 'espn-depth', teams: Object.keys(depth.teams || {}).length } : null,
     rankings: { ros: snapMeta(rosList[0]), next3: snapMeta(next3List[0]), playoffs: snapMeta(playoffList[0]) },
     dfs: { dk: dk ? { fetchedAt: dk.fetchedAt, rows: dk.rows.length } : null, fd: fd ? { fetchedAt: fd.fetchedAt, rows: fd.rows.length } : null }
   };
@@ -9682,7 +10349,7 @@ async function contentAdmin(env, action, kind, season, week, body, game) {
   try { row = await _latestPiece(env, kind, season, week, game); } catch (e) { return { ok: false, error: 'unavailable' }; }
   if (!row) return { ok: false, error: 'not_found', kind, week, game: game || null };
   const full = () => ({ id: row.id, kind, season: row.season, week: row.week, game: row.game_id || null, title: row.title, status: row.status, createdAt: row.created_at, publishedAt: row.published_at,
-                        body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: { weekly: sectionsFor(kind, 'weekly'), dfs: sectionsFor(kind, 'dfs') }, analyst: row.analyst || null, version: row.version || 1 });
+                        body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: { weekly: sectionsFor(kind, 'weekly', parse(row.brief)), dfs: sectionsFor(kind, 'dfs', parse(row.brief)) }, analyst: row.analyst || null, version: row.version || 1 });
   if (action === 'preview') return { ok: true, action, piece: full() };
   if (action === 'publish') {
     if (!row.body || row.body === 'null') return { ok: false, error: 'no_body', note: 'This piece has no draft to publish. Regenerate it or edit one in.' };
@@ -9741,6 +10408,12 @@ const JOB_SCHEDULE = [
   { job: 'depth-charts',         days: ['Sun'],                hours: [11],                           phase: 1 },
   // phase 2: derived from the pulls
   { job: 'ros-snapshot',         days: ['Tue'],                hours: [6],                            phase: 2 },
+  // The pre-kickoff board, frozen per game so a recap can prove what the two
+  // boards said BEFORE the game rather than recompute it afterwards. Runs on
+  // every quarter hour of every day a game can kick off: the job itself only
+  // acts on a game starting inside the next two hours and only once each, so
+  // a tick with nothing imminent costs one schedule read.
+  { job: 'board-freeze',         days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 2 },
   { job: 'calls-grade',          days: ['Tue', 'Wed'],         hours: [6],                            phase: 2 },
   // The week's column, built after the morning odds pull and before the first
   // kickoff, once. Friday and Saturday are retries: the builder is a no-op

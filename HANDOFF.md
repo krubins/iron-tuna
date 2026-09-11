@@ -8797,6 +8797,7 @@ offence question rather than a roster one, so it sits with the offence analyst.
   dashboards are **not** bylined, and the test asserts they are not. A byline on
   a table recomputed on every load is the one kind that lies.
 
+
 ### 68p. The invocation dies, and the cron does not
 
 With the job log opening a row before each job (§68m), the second night
@@ -8842,7 +8843,201 @@ at 10:00Z the next morning, the first success since September 4.
 
 ---
 
-## 70. September 10: a recap for every game, and the Weekly Wrap Up
+## 71. September 10: the depth charts became a page
+
+The site knew every club's depth chart and showed it to nobody. Sleeper's
+order rides on `/api/live` and `depthChartsFromLive` folds it into the table
+the Value Coach is grounded on (§63), but a reader who wanted to know who was
+behind Bijan had to ask the coach. **`/depth-charts`** is that table as a
+page: 32 clubs, QB/RB/WR/TE in published order, each name carrying its current
+designation, refreshed every day because it reads the same six-hour feed on
+every load.
+
+**It reads `/api/live`, not the D1 row.** The stored table (`odds_overlay`
+row 6) is a job's output and can be a day stale or missing; the live feed is
+the one the app already fetches, is cached at the edge, and answers even when
+D1 does not. The page carries `LIVE = '/api/live?v=3'` and
+`tools/test-depth-page.mjs` fails if the worker's cache key, `index.html`'s
+`LIVE_FEED_VERSION` and the page's constant ever name three different
+versions — which is exactly how the depth charts "did not take" on launch day.
+
+**The fold is the same rule, one line deeper.** Receiver ranks run ACROSS
+LWR/RWR/SWR, so they are merged and sorted on the rank; sorting within a slot
+names the wrong man WR2 and no reader can catch it. The page keeps
+QB3/RB5/WR6/TE3 against the coach's QB2/RB4/WR5/TE2, and the test fails if the
+page is ever the shallower of the two: the whole point of the page is the name
+under the name.
+
+**The daily job stopped depending on ESPN alone.** It had returned
+`got: 0, failed: 32` every morning from September 4 until the reshaped fetch
+(§68n) brought all thirty-two clubs back at 10:00Z on September 10 — six
+mornings in which the site's stored depth charts were whatever the last good
+run left. `runDepthChartRefresh` now falls back to
+`fetchDepthChartsSleeper()` — the same player file the page reads, folded into
+`fetchDepthChartEspn`'s shape — for every club ESPN did not answer for, and
+no-ops entirely on a morning ESPN answers in full. The recap's "what we
+already knew", the news desk's depth events and the health board are fed by
+whichever source answered. The row records which: `source` is
+`espn-depth`, `espn+sleeper` or `sleeper-depth`, and `/api/admin/providers`
+stamps that instead of the hard-coded `espn-depth` it used to claim.
+
+**And the health board could never see the row.** `healthAssess` reads
+`u.depthCharts.updatedAt`; the stored payload has only ever carried `asOf`, so
+depth charts reported "never loaded" on the mornings the job worked. The
+payload now carries both and the health summary sends `updatedAt`, the source
+and a club count instead of shipping all 32 charts into the admin payload.
+
+---
+
+## 72. September 10: SportsGameOdds becomes the market feed
+
+Every market-implied number on the site — the spread and total under
+`/the-line` and `/previews`, the Betting Odds column on all sixteen rankings
+boards, the player arrows and anytime-touchdown prices, Vegas Edge and Hidden
+Value — has until now been derived from **game lines only**. The Odds API
+adapter for player props has been in `_worker.js` since the market engine was
+built and has never had a key, so `basis` on a board row has read `gamelines`
+or `ratings` and never `props`.
+
+`api.sportsgameodds.com` replaces both halves of that. It is the only source
+here that answers the site's two market questions with one subscription:
+
+| | Before | After, with `SGO_API_KEY` set |
+|---|---|---|
+| Player props | none configured | per book, per market, per game |
+| Game spread / total | ESPN's undocumented scoreboard | SGO, on the fixtures that have not kicked off |
+| The opening line | ESPN's one named book | SGO's anchor book |
+| `basis` on a board row | `gamelines` / `ratings` | `props` where a book quoted the player |
+
+### What actually changed
+
+**One adapter, two fetchers.** `fetchOddsSgo` returns player props in the row
+shape every odds provider here emits; `fetchGameLinesSgo` returns the week's
+spreads and totals in the shape `_espnOdds` already returned, so
+`_gameLineMove` reads it unchanged. Both go through `_sgoEvents`, one paged
+`/events` read with the key in an `x-api-key` header.
+
+**The props reach the product through the snapshot store, not the season
+overlay.** SGO is deliberately **not** in `ODDS_PROVIDERS`. Every row it
+returns is a game line, `buildVegasOverlay` rejects those by design (a prop for
+Sunday is not a season total), and listing it would spend a paid pull on rows
+that get thrown away. It is in `PROVIDER_ODDS`, which `runMarketSnapshot` runs
+on the job clock, and from there the weekly board reads it as `ctx.weekMarkets`.
+That is the path that puts `props` under a player's number.
+
+**The game lines are merged, not substituted.** `mergeGameLines` matches on the
+two clubs within a two-day window — the same rule `mergeSchedule` uses, and for
+the same reason — and then applies one rule: **the number of record is the one a
+reader could still bet into.** A fixture that has not kicked off is repriced off
+the paid feed and marked `lineSrc: 'sportsgameodds'`. A game already played
+keeps the spine's own closing line, because that is the historical record and a
+live feed has nothing truer to say about a game that is over. The book pair
+rides along either way, because it belongs to the book and not to the fixture.
+
+**`espn-gamelines` is now `book-gamelines`.** The provider reads whatever book
+the schedule refresh merged on. With a key that is SGO; without one it is still
+ESPN. The old name would have been a lie half the time.
+
+### Three traps, and what stops each
+
+1. **The sign.** A book quotes the home side's handicap (`-2.5`); the spine
+   writes the same game as a home margin (`+2.5`). An unflipped spread inverts
+   every favorite on the site and nothing on the page would look wrong.
+   `parseSgoEventLine` flips it, `-0` included, and the test asserts a pick'em
+   survives as `0`.
+2. **The pairing.** SGO ships each side of a market as its own entry keyed by
+   `{statID}-{statEntityID}-{periodID}-{betTypeID}-{sideID}`. An over whose
+   under is lost is a line with no price to de-vig; a market read from both
+   sides is one book counted twice in the consensus. The parser anchors on one
+   side (`over`, or `yes` for an anytime touchdown) and looks the other up.
+3. **The pair behind a move.** Open, current and movement must come from ONE
+   book or "it opened at 46.5 and it is 48.5 now" is a sentence about two of
+   them. `_sgoBookPair` picks the first book in name order that quotes both, so
+   the same fixture picks the same book on every run. The printed number stays
+   the consensus, which is the shape the page already prints.
+
+### It has never run against the live service
+
+There is no key, and `api.sportsgameodds.com` is unreachable from the sandbox
+this repo is developed in. The adapter is written to SGO's published v2
+documentation and to the field names in their own TypeScript SDK
+(`sports-odds-api@2.1.0`), and `tools/test-sgo.mjs` holds all of it — parsing,
+pairing, the sign, the merge rule, paging, and the key never leaving a header —
+to `tools/fixtures/sgo-nfl-week.json`. **Treat the first real pull as a test.**
+`/api/admin/market-status` reports the row count and the provider list; check
+both before believing a number the feed produced.
+
+**Licensing is open.** `docs/data-sources.md` R8 is the question R3 has now
+answered for the other feed, asked of this one: a paid subscription licenses
+*use*, not necessarily *redisplay* in a paid product. R3 closed on 2026-09-10
+with The Odds API's terms in writing, so it is the template for the SGO
+inquiry rather than a fellow unknown. Two things hold the exposure down and neither settles it —
+no page names a book (the printed line is SGO's consensus; the anchor book's
+name reaches `book.name` on the API payloads and is rendered nowhere), and
+nothing is passed through raw. Send the email.
+
+**R1 got smaller.** The reason the ESPN swap had to trade the opening line away
+is gone: SGO carries an opener under a documented API. `_espnOdds` is still the
+live source while the key is unset, so take it out in the same commit that
+turns the key on — not before.
+
+### The printed line is now an average, not a winner
+
+Adding a third source made the old rule indefensible. A fixture can be priced
+by the spine's own column in `games.csv`, by the scoreboard's single named
+book, and by the paid feed's consensus, and the site used to resolve that by
+**precedence**: the spine won, ESPN filled blanks, and SGO replaced both on an
+upcoming game. Three estimates of the same number, two of them thrown away, and
+the printed line jumping whenever the winner changed.
+
+`lineConsensus` replaces it. Each layer records its own quote in `g.quotes` —
+`mergeSchedule` seeds `nflverse` and records `espn`, `mergeGameLines` records
+`sportsgameodds` — and the number the site prints is their **mean**. The pass
+runs on every schedule refresh whether or not the paid feed is configured,
+because the spine and the scoreboard are two sources on their own.
+
+**This changes displayed lines today, with no key set.** ESPN used to fill only
+what `games.csv` left blank; it now averages with it on every upcoming fixture.
+Expect the spread and total under `/the-line` and `/previews` to shift by a
+fraction of a point against what the same build printed yesterday.
+
+Four things to know about it:
+
+- **It fails softly.** A source that goes stale or starts quoting nonsense
+  moves the line by a fraction of its error instead of becoming the line. That
+  is the main reason to prefer a mean here over any winner.
+- **It is not a bettable number, and does not pretend to be.** 2.5 and 3
+  average to 2.8, the site's usual one decimal on a derived figure.
+  `lineSources` (and the `lineSrc` string beside it, now always populated)
+  rides on every game payload, so an average is never shown that a reader
+  cannot take apart. Sources are listed per FIXTURE, not per market.
+- **It freezes at kickoff.** A game that has started keeps the spine's own
+  number, which by then is the closing line and the historical record every
+  backtest reads. Averaging a live feed's last-seen value into a played game
+  would quietly rewrite history.
+- **The book pair is NOT averaged and cannot be.** `g.book` stays one book's
+  open and current, so `_gameLineMove` keeps a single source behind every
+  movement figure. The printed line beside it is the consensus. Those are two
+  different questions and `lineConsensus` is the one place that says so.
+
+**The equal weighting is a judgment call, not arithmetic.** `games.csv` is
+itself a consensus and ESPN's number is one book, so a 50/50 mean slightly
+double-counts that book. Weighting them is a defensible future change; nothing
+here assumes equal weight beyond the mean itself.
+
+**The props side already averaged and was left alone.** Books are the sources
+there, not feeds: `buildVegasOverlay` takes the mean across books for the
+season overlay and `vegasCountMarket` the median for the weekly one, and two
+configured providers simply contribute more books to the same pool. Where both
+feeds report the SAME book, `snapshotWrite` keeps the first (SGO) and drops the
+second rather than averaging — two reports of one book's line is not two
+sources, and blurring them would invent a number that book never posted.
+
+---
+
+---
+
+## 73. September 10: a recap for every game, and the Weekly Wrap Up
 
 Ken's ask: *"Each week look at the schedule of games. When each game ends,
 post a story (which should be the lead headline) giving a fantasy recap
@@ -8856,7 +9051,7 @@ shorter summary of each game should be included as a Weekly Wrap Up."*
 The calendar built in §68 had one retrospective piece per SLATE (What Sunday
 Taught Us, Thursday Night: What Matters). This adds one per GAME.
 
-### 70a. The package
+### 73a. The package
 
 `game-recap` in `CONTENT_KINDS`, Mike Raines on the weekly lens and Lena Park
 on DFS, and the first package in the calendar with **`perGame: true`**. It has
@@ -8884,7 +9079,7 @@ names the computed flag that put it there, so the writer argues from a number
 rather than from the shape of a stat line. `wrapFacts` is the short list the
 `wrap` section is built from, so the wrap and the story cannot drift apart.
 
-### 70b. One row per game
+### 73b. One row per game
 
 `content_pieces` was keyed `(kind, season, week)` and now also carries
 `game_id`, `components` and `wrap` (guarded `ALTER TABLE` in `newsroomReady`,
@@ -8909,7 +9104,7 @@ game that has waited longest. **This is the one number to tune if recaps run
 late**, and it should go up once the worker is on the Standard usage model
 (the CPU-limits note at the end of the previous section).
 
-### 70c. The lead, and what happens when it is pushed down
+### 73c. The lead, and what happens when it is pushed down
 
 The front-page lead is already the newest published desk piece
 (`deskLeadPayload`, §68p), so a recap published at the final whistle **is** the
@@ -8931,7 +9126,7 @@ lead with no extra plumbing. Two things were added on top:
   players its components name, guarded so the desk payload does not depend on
   the draft-season lead block being loaded.
 
-### 70d. The Weekly Wrap Up
+### 73d. The Weekly Wrap Up
 
 `/weekly-wrap`, served by `/api/weekly-wrap` (`weeklyWrapPayload`). It is
 **derived, never written**: a game's summary there is the `wrap` section of
@@ -8948,7 +9143,7 @@ desk index, where the recap card points here rather than at
 `/in-season/desk/game-recap` — that URL lands on whichever single game was
 written last, which is not an index of anything.
 
-### 70d-i. The admin board
+### 73d-i. The admin board
 
 A per-game kind holds one row per game of a week, so "the latest piece for
 this kind and week" is whichever game happened to be written last. Every
@@ -8960,7 +9155,49 @@ Editorial table, which carry `data-game`. The table's Slot column reads "each
 game, when final" instead of a weekday it does not have, and its Week column
 carries an `n/m recapped` count.
 
-### 70e. A defect this found
+### 73e. "We told you so", and the freeze that makes it provable
+
+Ken's follow-up: where Iron Tuna advised of a significant over- or
+underperformance against the expert rankings and it happened, say so in the
+recap, and if it is big enough, in the headline.
+
+**The problem is evidence, not phrasing.** The boards are recomputed
+continuously. Reading them after the whistle and calling the difference a
+prediction is how a desk ends up quoting itself from numbers that did not
+exist when it supposedly spoke. So the claim is built on a frozen record and
+on nothing else:
+
+- **`week_board_snapshots (season, week, game_id, taken_at, kickoff, payload)`**
+  holds, per game, what all three boards said about the two clubs' players.
+- **`board-freeze`** is a new phase-2 job on every quarter hour. It acts only
+  on a game kicking off inside the next two hours (`BOARD_FREEZE_LEAD_MS`) and
+  only once per game, so a tick with nothing imminent costs one schedule read.
+  A game already under way is never frozen: whatever the board says then has
+  seen part of the result.
+- **`_vindication(freeze, scoredByKey, week)`** grades it. Iron Tuna's weekly
+  projection against the CONSENSUS one — which is what "expert rankings" means
+  here — higher is a called overperformance, lower a called underperformance,
+  and the call lands when the player's actual points finish on Iron Tuna's
+  side of the consensus number. **No frozen row, no block, and the story makes
+  no claim about having called anything.**
+
+Two gates, both arithmetic in the packet rather than the writer's judgement:
+a disagreement counts as a call at all at `CALLED_MIN_PTS` (2.0) **and**
+`CALLED_MIN_RANKS` (4); it may reach the headline only at
+`CALLED_HEADLINE_PTS` (6.0) **and** `CALLED_HEADLINE_RANKS` (8).
+
+**The misses ride along with the hits.** `calledIt.misses` is in the packet
+and the writer is told to print at least one when it is not empty. A section
+that lists the wins and hides the losses in the same box score is not a
+record, and the reader has the box score. Only a hit may ever be the headline.
+
+The section is `weCalledIt`, second in the weekly lens. Where
+`calledIt.headline` is set the writer may open with **`YOU'RE WELCOME:`** —
+spelled with the apostrophe, at most once, only for that player, and only if
+the game has no bigger story. `calledIt` is exempt from `compactForWriter`'s
+whole-block drop, because the voice block promises it.
+
+### 73f. A defect this found
 
 `briefForGames` matched box-score players to board rows on `key`. The two
 sides key differently: a board row is `_oddsNorm(name)|POSITION`
@@ -8972,9 +9209,35 @@ and Thursday Night: What Matters. Both now match on the normalized name
 (`_boardByNorm` / `_boardRowFor`), with the team breaking a tie between two
 players of the same name.
 
-### 70f. Tests
+### 73g. Tests
 
-`tools/test-newsroom.mjs`: seventeen scheduled packages, the one per-game kind
+`tools/test-newsroom.mjs` gained thirteen assertions on the vindication block:
+no frozen board means no claim; a called over- and a called underperformance
+graded in both directions; a disagreement too small in points or in ranks
+counted as no call at all; a frozen player absent from the box score skipped
+rather than graded; only a wide enough hit reaching the headline; a miss never
+reaching it however large; the hits ordered by margin; the writer handed the
+misses and told to print one; "YOU'RE WELCOME" offered only on a
+headline-sized hit and never misspelled; and `_freezeRows` keeping all three
+boards while dropping a bye, an inactive, a kicker and the other clubs.
+`tools/test-jobs.mjs` carries `board-freeze` at every quarter hour. Three more
+hold the contract that a section is asked for and required together: the list
+`_lensShape` hands the writer and the list `factCheck` holds it to both come
+from `sectionsFor(kind, lens, packet)`, so a recap with nothing called is not
+held for omitting the section it was told to omit, and one that DID call
+something still is.
+
+`tools/test-dry-run.mjs` runs `board-freeze` on every tick of the simulated
+fortnight, as the schedule does, and then asserts the whole chain: a board
+frozen for every game before its kickoff and never after, inside the two-hour
+window, once per game; every frozen row carrying all three boards for the two
+clubs; every recap reading that row rather than reporting none; every graded
+call naming both boards, the actual and its direction; every hit finishing on
+Iron Tuna's side of the consensus and every miss not; the headline call, where
+there is one, being a hit that clears the wider bar; and the section present
+exactly on the recaps that called something.
+
+Also in `tools/test-newsroom.mjs`: seventeen scheduled packages, the one per-game kind
 carries no clock slot (and the audit fails if it ever gains one), the recap
 targets only games the feed marked final, and the sections carry the three
 layers in order plus the findings and the wrap.
@@ -8995,3 +9258,4 @@ run now drives twelve more pieces through the whole pipeline than it did, and
 takes about five and a half minutes. The `nothing published twice` rule gained
 a per-game exception and, beside it, the stricter rule that actually holds for
 those kinds — one row per GAME, checked on the game id.
+

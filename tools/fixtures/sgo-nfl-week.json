@@ -1,0 +1,158 @@
+{
+  "data": [
+    {
+      "eventID": "sgo-evt-kc-buf",
+      "leagueID": "NFL",
+      "sportID": "FOOTBALL",
+      "type": "match",
+      "info": { "seasonWeek": "2" },
+      "status": { "startsAt": "2026-09-13T17:00:00.000Z", "started": false, "completed": false, "oddsAvailable": true, "oddsPresent": true },
+      "teams": {
+        "home": { "teamID": "BUFFALO_BILLS_NFL", "names": { "long": "Buffalo Bills", "medium": "Bills", "short": "BUF" } },
+        "away": { "teamID": "KANSAS_CITY_CHIEFS_NFL", "names": { "long": "Kansas City Chiefs", "medium": "Chiefs", "short": "KC" } }
+      },
+      "players": {
+        "JOSH_ALLEN_1_NFL": { "playerID": "JOSH_ALLEN_1_NFL", "name": "Josh Allen", "firstName": "Josh", "lastName": "Allen", "teamID": "BUFFALO_BILLS_NFL", "status": "active" },
+        "JAMES_COOK_1_NFL": { "playerID": "JAMES_COOK_1_NFL", "firstName": "James", "lastName": "Cook", "teamID": "BUFFALO_BILLS_NFL", "status": "active" }
+      },
+      "odds": {
+        "points-home-game-sp-home": {
+          "oddID": "points-home-game-sp-home", "statID": "points", "statEntityID": "home", "periodID": "game",
+          "betTypeID": "sp", "sideID": "home", "bookSpread": "-2.5", "bookOdds": "-110",
+          "byBookmaker": {
+            "alpha": { "bookmakerID": "alpha", "available": true, "spread": "-3", "openSpread": "-1.5", "odds": "-110", "openOdds": "-108", "isMainLine": true },
+            "beta": { "bookmakerID": "beta", "available": true, "spread": "-2.5", "odds": "-115" }
+          }
+        },
+        "points-away-game-sp-away": {
+          "oddID": "points-away-game-sp-away", "statID": "points", "statEntityID": "away", "periodID": "game",
+          "betTypeID": "sp", "sideID": "away", "bookSpread": "2.5", "bookOdds": "-110"
+        },
+        "points-all-game-ou-over": {
+          "oddID": "points-all-game-ou-over", "statID": "points", "statEntityID": "all", "periodID": "game",
+          "betTypeID": "ou", "sideID": "over", "bookOverUnder": "48.5", "bookOdds": "-110",
+          "byBookmaker": {
+            "alpha": { "bookmakerID": "alpha", "available": true, "overUnder": "49", "openOverUnder": "46.5", "odds": "-110" },
+            "beta": { "bookmakerID": "beta", "available": true, "overUnder": "48.5", "odds": "-105" }
+          }
+        },
+        "points-all-1h-ou-over": {
+          "oddID": "points-all-1h-ou-over", "statID": "points", "statEntityID": "all", "periodID": "1h",
+          "betTypeID": "ou", "sideID": "over", "bookOverUnder": "24.5", "bookOdds": "-110"
+        },
+        "passing_yards-JOSH_ALLEN_1_NFL-game-ou-over": {
+          "oddID": "passing_yards-JOSH_ALLEN_1_NFL-game-ou-over",
+          "opposingOddID": "passing_yards-JOSH_ALLEN_1_NFL-game-ou-under",
+          "statID": "passing_yards", "statEntityID": "JOSH_ALLEN_1_NFL", "playerID": "JOSH_ALLEN_1_NFL",
+          "periodID": "game", "betTypeID": "ou", "sideID": "over",
+          "marketName": "Passing Yards", "bookOverUnder": "241.5", "bookOdds": "-112",
+          "byBookmaker": {
+            "alpha": { "bookmakerID": "alpha", "available": true, "overUnder": "241.5", "odds": "-112" },
+            "beta": { "bookmakerID": "beta", "available": true, "overUnder": "244.5", "odds": "-105" }
+          }
+        },
+        "passing_yards-JOSH_ALLEN_1_NFL-game-ou-under": {
+          "oddID": "passing_yards-JOSH_ALLEN_1_NFL-game-ou-under",
+          "opposingOddID": "passing_yards-JOSH_ALLEN_1_NFL-game-ou-over",
+          "statID": "passing_yards", "statEntityID": "JOSH_ALLEN_1_NFL", "playerID": "JOSH_ALLEN_1_NFL",
+          "periodID": "game", "betTypeID": "ou", "sideID": "under",
+          "bookOverUnder": "241.5", "bookOdds": "-108",
+          "byBookmaker": {
+            "alpha": { "bookmakerID": "alpha", "available": true, "overUnder": "241.5", "odds": "-108" },
+            "beta": { "bookmakerID": "beta", "available": false, "overUnder": "244.5", "odds": "-115" }
+          }
+        },
+        "rushing_yards-JAMES_COOK_1_NFL-game-ou-over": {
+          "oddID": "rushing_yards-JAMES_COOK_1_NFL-game-ou-over",
+          "statID": "rushing_yards", "statEntityID": "JAMES_COOK_1_NFL", "playerID": "JAMES_COOK_1_NFL",
+          "periodID": "game", "betTypeID": "ou", "sideID": "over", "bookOverUnder": "62.5", "bookOdds": "-114",
+          "byBookmaker": { "alpha": { "bookmakerID": "alpha", "available": true, "overUnder": "62.5", "odds": "-114" } }
+        },
+        "rushing_yards-JAMES_COOK_1_NFL-game-ou-under": {
+          "oddID": "rushing_yards-JAMES_COOK_1_NFL-game-ou-under",
+          "statID": "rushing_yards", "statEntityID": "JAMES_COOK_1_NFL", "playerID": "JAMES_COOK_1_NFL",
+          "periodID": "game", "betTypeID": "ou", "sideID": "under", "bookOverUnder": "62.5", "bookOdds": "-106",
+          "byBookmaker": { "alpha": { "bookmakerID": "alpha", "available": true, "overUnder": "62.5", "odds": "-106" } }
+        },
+        "touchdowns-JAMES_COOK_1_NFL-game-yn-yes": {
+          "oddID": "touchdowns-JAMES_COOK_1_NFL-game-yn-yes",
+          "opposingOddID": "touchdowns-JAMES_COOK_1_NFL-game-yn-no",
+          "statID": "touchdowns", "statEntityID": "JAMES_COOK_1_NFL", "playerID": "JAMES_COOK_1_NFL",
+          "periodID": "game", "betTypeID": "yn", "sideID": "yes", "marketName": "Anytime Touchdown Scorer",
+          "bookOdds": "+105",
+          "byBookmaker": { "alpha": { "bookmakerID": "alpha", "available": true, "odds": "+105" } }
+        },
+        "touchdowns-JAMES_COOK_1_NFL-game-yn-no": {
+          "oddID": "touchdowns-JAMES_COOK_1_NFL-game-yn-no",
+          "opposingOddID": "touchdowns-JAMES_COOK_1_NFL-game-yn-yes",
+          "statID": "touchdowns", "statEntityID": "JAMES_COOK_1_NFL", "playerID": "JAMES_COOK_1_NFL",
+          "periodID": "game", "betTypeID": "yn", "sideID": "no", "bookOdds": "-135",
+          "byBookmaker": { "alpha": { "bookmakerID": "alpha", "available": true, "odds": "-135" } }
+        },
+        "touchdowns-JAMES_COOK_1_NFL-game-ou-over": {
+          "oddID": "touchdowns-JAMES_COOK_1_NFL-game-ou-over",
+          "statID": "touchdowns", "statEntityID": "JAMES_COOK_1_NFL", "playerID": "JAMES_COOK_1_NFL",
+          "periodID": "game", "betTypeID": "ou", "sideID": "over", "bookOverUnder": "0.5", "bookOdds": "+105"
+        },
+        "tackles-JAMES_COOK_1_NFL-game-ou-over": {
+          "oddID": "tackles-JAMES_COOK_1_NFL-game-ou-over",
+          "statID": "tackles", "statEntityID": "JAMES_COOK_1_NFL", "playerID": "JAMES_COOK_1_NFL",
+          "periodID": "game", "betTypeID": "ou", "sideID": "over", "bookOverUnder": "1.5", "bookOdds": "-120"
+        }
+      }
+    },
+    {
+      "eventID": "sgo-evt-dal-phi",
+      "leagueID": "NFL",
+      "status": { "startsAt": "2026-09-13T20:25:00.000Z", "started": false, "completed": false, "oddsAvailable": true },
+      "teams": {
+        "home": { "teamID": "PHILADELPHIA_EAGLES_NFL", "names": { "long": "Philadelphia Eagles", "medium": "Eagles", "short": "PHI" } },
+        "away": { "teamID": "DALLAS_COWBOYS_NFL", "names": { "long": "Dallas Cowboys", "medium": "Cowboys", "short": "DAL" } }
+      },
+      "players": {},
+      "odds": {
+        "points-home-game-sp-home": {
+          "oddID": "points-home-game-sp-home", "statID": "points", "statEntityID": "home", "periodID": "game",
+          "betTypeID": "sp", "sideID": "home", "bookSpread": "0", "bookOdds": "-110"
+        },
+        "points-all-game-ou-over": {
+          "oddID": "points-all-game-ou-over", "statID": "points", "statEntityID": "all", "periodID": "game",
+          "betTypeID": "ou", "sideID": "over", "bookOverUnder": "44.5", "bookOdds": "-110"
+        },
+        "receiving_receptions-CEEDEE_LAMB_1_NFL-game-ou-over": {
+          "oddID": "receiving_receptions-CEEDEE_LAMB_1_NFL-game-ou-over",
+          "statID": "receiving_receptions", "statEntityID": "CEEDEE_LAMB_1_NFL", "playerID": "CEEDEE_LAMB_1_NFL",
+          "periodID": "game", "betTypeID": "ou", "sideID": "over", "bookOverUnder": "6.5", "bookOdds": "-118"
+        },
+        "receiving_receptions-CEEDEE_LAMB_1_NFL-game-ou-under": {
+          "oddID": "receiving_receptions-CEEDEE_LAMB_1_NFL-game-ou-under",
+          "statID": "receiving_receptions", "statEntityID": "CEEDEE_LAMB_1_NFL", "playerID": "CEEDEE_LAMB_1_NFL",
+          "periodID": "game", "betTypeID": "ou", "sideID": "under", "bookOverUnder": "6.5", "bookOdds": "-104"
+        }
+      }
+    },
+    {
+      "eventID": "sgo-evt-nyj-ne",
+      "leagueID": "NFL",
+      "status": { "startsAt": "2026-09-06T17:00:00.000Z", "started": true, "completed": true, "ended": true },
+      "teams": {
+        "home": { "teamID": "NEW_ENGLAND_PATRIOTS_NFL", "names": { "long": "New England Patriots", "medium": "Patriots", "short": "NE" }, "score": 24 },
+        "away": { "teamID": "NEW_YORK_JETS_NFL", "names": { "long": "New York Jets", "medium": "Jets", "short": "NYJ" }, "score": 17 }
+      },
+      "players": {},
+      "odds": {
+        "points-home-game-sp-home": {
+          "oddID": "points-home-game-sp-home", "statID": "points", "statEntityID": "home", "periodID": "game",
+          "betTypeID": "sp", "sideID": "home", "bookSpread": "-6.5", "bookOdds": "-110",
+          "byBookmaker": { "alpha": { "bookmakerID": "alpha", "available": true, "spread": "-6.5", "openSpread": "-4.5", "odds": "-110" } }
+        },
+        "points-all-game-ou-over": {
+          "oddID": "points-all-game-ou-over", "statID": "points", "statEntityID": "all", "periodID": "game",
+          "betTypeID": "ou", "sideID": "over", "bookOverUnder": "41.5", "bookOdds": "-110",
+          "byBookmaker": { "alpha": { "bookmakerID": "alpha", "available": true, "overUnder": "41.5", "openOverUnder": "43.5", "odds": "-110" } }
+        }
+      }
+    }
+  ],
+  "nextCursor": ""
+}
