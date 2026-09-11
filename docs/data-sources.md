@@ -19,6 +19,7 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 |---|---|---|---|
 | `<league>.football.cbssports.com` | Reader-authorized CBS league settings, teams, rosters, standings, schedules, waiver order and transaction log | `PROVIDER_CBS`, `cbsGet`; validated league subdomain, fixed HTTPS `/api/league/` resources | **Off by default (`FLAG_CBS_SYNC`).** Token access and commercial terms still require live verification. No CBS login/password collection or provider writes. See docs/league-sync.md CBS addendum. |
 | `api.sportsgameodds.com` | NFL player props, and one of the three quotes averaged into the game spread and total behind `/the-line`, `/previews` and every weekly board | `SGO_API_BASE`, `fetchOddsSgo`, `fetchGameLinesSgo` | **Paid, terms unconfirmed.** See item R8. |
+| `api.prop-line.com` | Tuna Market Signal current NFL game lines and fantasy-relevant player props; paid tiers also supply native opening/latest movement and cross-book steam | `TMS_PROVIDERS.propline`, `tmsPropLineHttp` | **Green for end-user analytical display.** Terms effective 2026-04-27 permit apps/websites to surface derived insights and individual values, while prohibiting bulk redistribution. Default integration excludes exchanges. |
 | `api.the-odds-api.com` | NFL odds, totals, spreads, supported props, and prospective Tuna Market Signal snapshots | `ODDS_API_BASE`, `TMS_PROVIDERS` | **Green for analytical UI use.** Current terms permit storage and derived/display use, while prohibiting standalone raw-data redistribution. See R3. |
 | `the-odds-api.com` | Tuna Market Signal source-attribution link | `TMS_SOURCE` | Identification link only; the Worker does not fetch this host. |
 | `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts, **and the game lines the scoreboard carries** | `_worker.js:1353`, `:3061`, `:5656`, `:5657`, `_espnOdds` | **Red.** Undocumented endpoints, no commercial license. The odds block adds a bookmaker's spread, total and opening line to what is taken. No page names the book; the name reaches the JSON API only. See R1. |
@@ -263,5 +264,5 @@ anyway; it costs nothing.
    server-side, return an Iron Tuna shape.
 3. API keys are `env` bindings. Never in client code, never in the repo.
 4. Cache. It protects the quota and every green license here permits it.
-5. Keep the written record. When The Odds API or Sleeper answers, save the
-   email — `docs/` is a fine home for a text copy.
+5. Keep the written record. Preserve dated provider terms and licensing confirmations in `docs/`.
+6. PropLine's default bookmaker allowlist is sportsbook-only. Do not add exchanges to that path without a separate product and legal decision.
