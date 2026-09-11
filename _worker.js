@@ -1345,7 +1345,7 @@ const TMS_SOURCE = 'https://the-odds-api.com/';
 const TMS_PROPLINE_SOURCE = 'https://prop-line.com/';
 const TMS_PROPLINE_API = 'https://api.prop-line.com/v1/';
 const TMS_PROPLINE_BOOKS = 'draftkings,fanduel,pinnacle,bovada,betmgm,betrivers,fanatics,hardrock';
-const TMS_PROPLINE_MARKETS = 'passing_yards,passing_tds,interceptions,rushing_yards,rushing_tds,receiving_yards,receiving_tds,receptions,anytime_td';
+const TMS_PROPLINE_MARKETS = 'player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td';
 const tmsInt = (v, fallback, min, max) => Number.isFinite(Number(v)) && v !== '' && v != null ? Math.max(min, Math.min(max, Math.floor(Number(v)))) : fallback;
 const tmsList = v => String(v || '').split(',').map(s => s.trim()).filter(Boolean);
 const tmsKey = r => JSON.stringify([r.provider, r.event, r.book, r.market, r.player, r.side]);
@@ -1387,7 +1387,44 @@ function tmsNormalizePropline(events, observed) {
       return price == null ? { ...o, price: NaN } : { ...o, price };
     }) }))
   })) }));
-  return tmsNormalize(converted, observed, 'propline', TMS_PROPLINE_SOURCE);
+  return tmsPrimaryPropRows(tmsNormalize(converted, observed, 'propline', TMS_PROPLINE_SOURCE));
+}
+function tmsNumberOrNull(v) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function tmsPrimaryPropRows(rows) {
+  const keep = [], groups = new Map();
+  for (const row of rows) {
+    if (!row.player) { keep.push(row); continue; }
+    const key = JSON.stringify([row.provider, row.event, row.book, row.market, row.player]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+  for (const group of groups.values()) {
+    const byLine = new Map();
+    for (const row of group) {
+      const key = row.line == null ? 'null' : String(row.line);
+      if (!byLine.has(key)) byLine.set(key, []);
+      byLine.get(key).push(row);
+    }
+    if (byLine.size === 1) { keep.push(...group); continue; }
+    let best = null;
+    for (const lineRows of byLine.values()) {
+      const over = lineRows.find(r => /^(over|yes)$/i.test(r.side));
+      const under = lineRows.find(r => /^(under|no)$/i.test(r.side));
+      let score = 10;
+      if (over && under) {
+        const po = 1 / over.price, pu = 1 / under.price;
+        score = Math.abs(po / (po + pu) - 0.5);
+      } else if (over) score = Math.abs(1 / over.price - 0.5) + 1;
+      else if (under) score = Math.abs(1 / under.price - 0.5) + 1;
+      if (!best || score < best.score) best = { score, rows: lineRows };
+    }
+    if (best) keep.push(...best.rows);
+  }
+  return keep;
 }
 async function tmsPropLineHttp(path, params, env, request = fetch) {
   const url = new URL(TMS_PROPLINE_API + path);
@@ -1405,7 +1442,7 @@ async function tmsPropLineHttp(path, params, env, request = fetch) {
   try { data = await res.json(); } catch { throw new Error('invalid_json'); }
   return { data, remaining: res.headers.get('x-daily-remaining'), used: res.headers.get('x-daily-used'), limit: res.headers.get('x-daily-limit') };
 }
-const tmsMovementKey = (book, market, player, side) => JSON.stringify([book || '', market || '', player || '', side || '']);
+const tmsMovementKey = (book, market, player, side, line) => JSON.stringify([book || '', market || '', player || '', side || '', line == null ? null : Number(line)]);
 function tmsApplyPropLineMovement(rows, movement) {
   if (!movement || movement.redacted || !Array.isArray(movement.bookmakers)) return rows;
   const steam = Array.isArray(movement.steam) ? movement.steam : [];
@@ -1417,25 +1454,26 @@ function tmsApplyPropLineMovement(rows, movement) {
     const latestAt = Date.parse(o.latest_at);
     const s = steam.find(x => x && x.market === m.key && x.name === o.name &&
       ((x.description || '') === player || (!player && !x.description)));
-    meta.set(tmsMovementKey(b.key, m.key, player, o.name), {
-      openingLine: Number.isFinite(Number(o.open_point)) ? Number(o.open_point) : null,
+    const latestLine = tmsNumberOrNull(o.latest_point);
+    meta.set(tmsMovementKey(b.key, m.key, player, o.name, latestLine), {
+      openingLine: tmsNumberOrNull(o.open_point),
       openingPrice,
       openingAt: Number.isFinite(openingAt) ? openingAt : null,
       nativeDirection: o.direction || null,
-      nativeProbShift: Number.isFinite(Number(o.prob_shift)) ? Number(o.prob_shift) * 100 : null,
-      nativePointShift: Number.isFinite(Number(o.point_shift)) ? Number(o.point_shift) : null,
-      nativeSnapshots: Number.isFinite(Number(o.num_snapshots)) ? Number(o.num_snapshots) : null,
+      nativeProbShift: tmsNumberOrNull(o.prob_shift) == null ? null : tmsNumberOrNull(o.prob_shift) * 100,
+      nativePointShift: tmsNumberOrNull(o.point_shift),
+      nativeSnapshots: tmsNumberOrNull(o.num_snapshots),
       latestAt: Number.isFinite(latestAt) ? latestAt : null,
-      steamScore: s && Number.isFinite(Number(s.steam_score)) ? Number(s.steam_score) : null,
-      booksQuoting: s && Number.isFinite(Number(s.books_quoting)) ? Number(s.books_quoting) : null,
-      booksMoved: s && Number.isFinite(Number(s.books_moved)) ? Number(s.books_moved) : null,
+      steamScore: s ? tmsNumberOrNull(s.steam_score) : null,
+      booksQuoting: s ? tmsNumberOrNull(s.books_quoting) : null,
+      booksMoved: s ? tmsNumberOrNull(s.books_moved) : null,
       consensusDirection: s?.consensus_direction || null,
-      consensusPointShift: s && Number.isFinite(Number(s.consensus_point_shift)) ? Number(s.consensus_point_shift) : null,
-      avgProbShift: s && Number.isFinite(Number(s.avg_prob_shift)) ? Number(s.avg_prob_shift) * 100 : null
+      consensusPointShift: s ? tmsNumberOrNull(s.consensus_point_shift) : null,
+      avgProbShift: s && tmsNumberOrNull(s.avg_prob_shift) != null ? tmsNumberOrNull(s.avg_prob_shift) * 100 : null
     });
   }
   for (const row of rows) {
-    const m = meta.get(tmsMovementKey(row.book, row.market, row.player, row.side));
+    const m = meta.get(tmsMovementKey(row.book, row.market, row.player, row.side, row.line));
     if (m) Object.assign(row, m);
   }
   return rows;
@@ -1474,15 +1512,18 @@ const TMS_PROVIDERS = {
     }).slice(0, 20);
     let quota = { remaining: eventResult.remaining ?? game.remaining, used: eventResult.used ?? game.used, limit: eventResult.limit ?? game.limit };
     for (const e of events) {
+      let currentEventId = String(e.id);
       if (markets.length) {
         const current = await tmsPropLineHttp('sports/' + sport + '/events/' + encodeURIComponent(e.id) + '/odds', { markets: markets.join(','), bookmakers }, env);
+        currentEventId = String(current.data?.id || e.id);
         rows.push(...tmsNormalizePropline([current.data], observed));
         quota = { remaining: current.remaining, used: current.used, limit: current.limit };
       }
       if (env.PROPLINE_MOVEMENT !== '0') {
         try {
           const movement = await tmsPropLineHttp('sports/' + sport + '/events/' + encodeURIComponent(e.id) + '/movement', { markets: ['h2h','spreads','totals', ...markets].join(','), bookmakers }, env);
-          tmsApplyPropLineMovement(rows.filter(r => r.event === String(e.id)), movement.data);
+          const movementEventId = String(movement.data?.id || currentEventId);
+          tmsApplyPropLineMovement(rows.filter(r => r.event === movementEventId), movement.data);
           quota = { remaining: movement.remaining, used: movement.used, limit: movement.limit };
         } catch (err) {
           if (!['credentials_or_plan', 'provider_http_402', 'provider_http_404'].includes(err.message)) throw err;
