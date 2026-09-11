@@ -335,8 +335,6 @@ p{color:var(--sec);margin:0 0 16px}
 <hr class="is-rule">
 <h1>The lineup, solved.<br>Then the ways to break it.</h1>
 <p class="is-lede">Daily fantasy is one slate, one set of game lines and one cap. Iron Tuna solves that cap against the market&rsquo;s own numbers and gives you the roster first &mdash; then the branches off it: the build that clears a double-up, the build that wins a big field, and the swap available at every slot.</p>
-<div class="its-strip" data-season-strip></div>
-
 <div class="df-config" id="dfConfig">
   <div class="df-config-title"><span>DraftKings DFS Setup</span><b>Match the contest you are actually entering</b></div>
   <div class="df-config-grid">
@@ -396,6 +394,8 @@ p{color:var(--sec);margin:0 0 16px}
   </div>
   <p class="df-setup-state" id="dfSetupState">Complete all three selections to build and evaluate the contest.</p>
 </div>
+
+<div class="its-strip" data-season-strip></div>
 
 <section class="df-play-week" id="dfPlayWeek">
   <div class="df-play-week-label">Play of the Week</div>
@@ -1464,7 +1464,17 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
     $('dfTd').hidden = !list.length;
   }
-  function lineupStat(l, key) { return l && l.players ? l.players.reduce(function (n,p) { var v=Number(p[key]); return n+(isFinite(v)?v:0); },0) : 0; }
+  var POTW_VARIANCE={QB:{floor:.62,ceil:1.55},RB:{floor:.55,ceil:1.75},WR:{floor:.45,ceil:1.95},TE:{floor:.45,ceil:1.9},DST:{floor:.4,ceil:2.1},K:{floor:.5,ceil:1.6}};
+  function lineupStat(l, key) {
+    return l && l.players ? l.players.reduce(function (n,p) {
+      var v=Number(p[key]);
+      if ((!isFinite(v) || v<=0) && (key==='floor'||key==='ceiling')) {
+        var band=POTW_VARIANCE[p.position]||POTW_VARIANCE.WR, base=Number(p.ironTunaPoints)||0;
+        v=base*(key==='floor'?band.floor:band.ceil);
+      }
+      return n+(isFinite(v)?v:0);
+    },0) : 0;
+  }
   function renderPlayOfWeek(s) {
     var host=$('dfPlayWeekBody'); if(!host || !s || !window.ITDfs) return;
     var players=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
