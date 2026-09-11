@@ -9545,6 +9545,19 @@ function heldRetryable(latest, now) {
   if ((latest.version || 1) >= RETRY_HELD_MAX) return false;
   return (now - latest.created_at) >= RETRY_HELD_AFTER_MS;
 }
+// A piece held WITH its draft can still be revived, because the fact check is
+// code and the code changes: a rule that has since learned the shape it
+// wrongly flagged passes the same prose untouched (Week 1's Thursday piece was
+// held on "2,600" read as a 600). So a held draft does not count as already
+// written for the exists check below; revalidateHeld re-reads it on each tick
+// while its kind is due. Held for APPROVAL is the editor's call, not the
+// tick's, and never reopens here.
+function heldRevivable(latest) {
+  if (!latest || latest.status !== 'held') return false;
+  if (!latest.body || latest.body === 'null') return false;
+  let vio = []; try { vio = JSON.parse(latest.violations || '[]') || []; } catch (e) { vio = []; }
+  return !vio.some(v => /^awaiting_approval/.test(String(v)));
+}
 async function contentExists(env, kind, season, week, gameId) { return !!(await contentLatest(env, kind, season, week, gameId)); }
 // The story broken into its own findings, lifted out of the body at publish
 // so the front page can read them without parsing every piece's prose. Each
@@ -9662,7 +9675,7 @@ async function produceContent(env, kind, opts) {
   const slug = _slugOf(kind, season, week, gameId);
   const latest = await contentLatest(env, kind, season, week, gameId);
   const retry = heldRetryable(latest, Date.now());
-  if (latest && !o.force && !retry && !K.updates && !K.unscheduled) return { ok: false, kind, week, game: gameId, error: 'exists' };
+  if (latest && !o.force && !retry && !K.updates && !K.unscheduled && !heldRevivable(latest)) return { ok: false, kind, week, game: gameId, error: 'exists' };
   if (d.skip) { if (!latest) await contentStore(env, { season, week, kind, gameId, slug, title: K.title, status: 'skipped', brief: { reason: d.reason }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped' }; }
   const ctx = await contentContext(env, week, { excluded: d.excluded || [] });
   const packet = await buildResearchPacket(env, kind, d, ctx, { ...o, gameId });
