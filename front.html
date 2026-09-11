@@ -1101,17 +1101,30 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The contest chips, then the solved roster on the page's one dark surface.
    Dark because it is the answer: on a gray page of white cards, an inverted
    board is the only thing that cannot be scrolled past. */
-.dfs-setup{margin:0 0 24px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:0 10px 26px rgba(15,23,25,.05)}
-.dfs-setup-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:13px}
-.dfs-setup-title span{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--brand)}
-.dfs-setup-title b{font-size:17px}
-.dfs-setup-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.dfs-select label{display:block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.dfs-intro{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(0,1.65fr);gap:24px;align-items:start;margin-bottom:26px}
+.dfs-setup{min-width:0;padding:24px;border:1px solid var(--line);border-top:4px solid var(--brand);border-radius:14px;background:var(--card);box-shadow:0 10px 26px rgba(15,23,25,.05)}
+.dfs-setup-title{margin:0 0 24px;font-size:1.125rem;font-weight:800;letter-spacing:.07em;color:var(--brand)}
+.dfs-setup-grid{display:grid;grid-template-columns:1fr;gap:24px}
+.dfs-select label{display:block;font-size:1rem;font-weight:800;color:var(--ink);margin-bottom:6px}
 .dfs-select select{width:100%;min-height:44px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:700 14px Inter,Arial,sans-serif;padding:9px 34px 9px 11px}
 .dfs-select select:disabled{opacity:.48;cursor:not-allowed;background:#f1f3f3}
-.dfs-select small{display:block;margin-top:6px;color:var(--ink-3);font-size:11px;line-height:1.4}
-.dfs-setup-state{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+.dfs-select small{display:block;margin:0 0 10px;color:var(--ink-2);font-size:.875rem;line-height:1.5}
+.dfs-select select:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
+.dfs-setup-state{margin-top:24px;padding-top:16px;border-top:1px solid var(--line);font-size:.875rem;line-height:1.5;color:var(--ink-2)}
 .dfs-setup-state.ready{color:var(--brand);font-weight:800}
+.dfs-decoder{min-width:0;padding:24px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.dfs-decoder h2{font-size:1.5rem;line-height:1.2;margin:0 0 22px}
+.dfs-decoder-columns{display:grid;grid-template-columns:1.1fr 1fr;gap:24px}
+.dfs-decoder h3{font-size:1rem;line-height:1.4;margin:0 0 6px;color:var(--brand)}
+.dfs-decoder dl{margin:0}
+.dfs-decoder dl>div{padding:12px 0;border-bottom:1px solid var(--line)}
+.dfs-decoder dl>div:last-child{border-bottom:0;padding-bottom:0}
+.dfs-decoder dt{font-size:.875rem;font-weight:800;line-height:1.4;margin-bottom:3px}
+.dfs-decoder dd{margin:0;font-size:1rem;line-height:1.5;color:var(--ink-2)}
+.dfs-decoder-source{margin:22px 0 0;padding-top:14px;border-top:1px solid var(--line);font-size:.875rem;line-height:1.5;color:var(--ink-2)}
+.dfs-decoder-source a{color:var(--brand);text-decoration:underline;text-underline-offset:3px}
+@media(max-width:1100px){.dfs-decoder-columns{grid-template-columns:1fr}}
+@media(max-width:760px){.dfs-intro{grid-template-columns:1fr;gap:16px}.dfs-setup,.dfs-decoder{padding:20px}}
 .dfs-quickread{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin:0 0 26px}
 .dfs-potw,.dfs-learn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 .dfs-potw{border-top:3px solid var(--gold)}
@@ -1951,12 +1964,14 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   <div class="lane-pane" id="laneDfs" role="tabpanel" aria-labelledby="laneTabDfs" hidden>
 
   <!-- The homepage DFS lane mirrors /dfs: define the DraftKings contest first. -->
-  <div class="dfs-setup" id="dfsSetup">
-    <div class="dfs-setup-title"><span>DraftKings DFS Setup</span><b>Match the contest you are entering</b></div>
+  <div class="dfs-intro">
+  <section class="dfs-setup" id="dfsSetup" aria-labelledby="dfsBuilderHeading">
+    <h2 class="dfs-setup-title" id="dfsBuilderHeading">LINEUP BUILDER</h2>
     <div class="dfs-setup-grid">
       <div class="dfs-select">
-        <label for="dfsGameStyle">First · Game Style</label>
-        <select id="dfsGameStyle">
+        <label for="dfsGameStyle">Game Style</label>
+        <small id="dfsGameStyleHelp">How you pick players and earn points.</small>
+        <select id="dfsGameStyle" aria-describedby="dfsGameStyleHelp">
           <option value="">Select Game Style…</option>
           <option value="flash-draft">Flash Draft</option>
           <option value="classic">Classic</option>
@@ -1972,16 +1987,16 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
           <option value="madden-classic">Madden Classic</option>
           <option value="madden-showdown-captain">Madden Showdown Captain Mode</option>
         </select>
-        <small>The roster/scoring format.</small>
       </div>
       <div class="dfs-select">
-        <label for="dfsGames">Second · Games</label>
-        <select id="dfsGames" disabled><option value="">Select Game Style first…</option></select>
-        <small>The games and players actually available in that contest.</small>
+        <label for="dfsGames">Games</label>
+        <small id="dfsGamesHelp">Which games your lineup can draw players from.</small>
+        <select id="dfsGames" aria-describedby="dfsGamesHelp" disabled><option value="">Select Game Style first…</option></select>
       </div>
       <div class="dfs-select">
-        <label for="dfsPayout">Third · Payout Structure</label>
-        <select id="dfsPayout" disabled>
+        <label for="dfsPayout">Payout Structure</label>
+        <small id="dfsPayoutHelp">How prizes are shared among the winners.</small>
+        <select id="dfsPayout" aria-describedby="dfsPayoutHelp" disabled>
           <option value="">Select Games first…</option>
           <option value="h2h">Head-to-Head</option>
           <option value="50-50">50/50</option>
@@ -1992,10 +2007,47 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
           <option value="satellite">Satellite / Qualifier</option>
           <option value="private">League / Private Contest</option>
         </select>
-        <small>How much risk the roster should accept for the available payoff.</small>
       </div>
     </div>
-    <p class="dfs-setup-state" id="dfsSetupState">Start with Game Style.</p>
+    <p class="dfs-setup-state" id="dfsSetupState" role="status">Start with Game Style.</p>
+  </section>
+  <aside class="dfs-decoder" aria-labelledby="dfsDecoderHeading">
+    <h2 id="dfsDecoderHeading">Decoding DraftKings</h2>
+    <div class="dfs-decoder-columns">
+      <section aria-labelledby="dfsContestsHeading">
+        <h3 id="dfsContestsHeading">Understanding the Contests</h3>
+        <dl>
+          <div><dt>Flash Draft</dt><dd>Make quick player picks while a live game unfolds.</dd></div>
+          <div><dt>Classic</dt><dd>Build a lineup from several games within a set player budget.</dd></div>
+          <div><dt>Showdown Captain Mode</dt><dd>Pick one game; your captain costs more and earns extra points.</dd></div>
+          <div><dt>Pick6</dt><dd>Pick whether players finish above or below a listed stat total.</dd></div>
+          <div><dt>Best Ball</dt><dd>Draft once; your best performers count automatically each week.</dd></div>
+          <div><dt>Tiers</dt><dd>Choose one player from each group, with no salary budget.</dd></div>
+          <div><dt>In-Game Showdown</dt><dd>Build for a later portion of a game already underway.</dd></div>
+          <div><dt>Single Stat – Total Yards</dt><dd>Choose players whose combined yardage determines your score.</dd></div>
+          <div><dt>Single Stat – Touchdowns</dt><dd>Choose players whose combined touchdowns determine your score.</dd></div>
+          <div><dt>Snake</dt><dd>Take turns drafting players; the pick order reverses each round.</dd></div>
+          <div><dt>Snake Showdown</dt><dd>Take turns drafting players from just one game.</dd></div>
+          <div><dt>Madden Classic</dt><dd>Build a budget-based lineup for simulated Madden games.</dd></div>
+          <div><dt>Madden Showdown Captain Mode</dt><dd>Pick one simulated Madden game, with a captain earning extra points.</dd></div>
+        </dl>
+      </section>
+      <section aria-labelledby="dfsPayoutsHeading">
+        <h3 id="dfsPayoutsHeading">Understanding the Payouts</h3>
+        <dl>
+          <div><dt>Head-to-Head</dt><dd>Face one opponent; the higher score wins.</dd></div>
+          <div><dt>50/50</dt><dd>The top half share the prizes equally, after contest fees.</dd></div>
+          <div><dt>Double Up</dt><dd>Finish in a paid spot to receive twice your entry fee.</dd></div>
+          <div><dt>Multiplier (3x / 5x / 10x)</dt><dd>Top finishers receive the listed multiple of their entry fee.</dd></div>
+          <div><dt>Tournament – Single Entry</dt><dd>One lineup per person; higher finishes earn larger prizes.</dd></div>
+          <div><dt>Tournament – Multi-Entry</dt><dd>Multiple lineups per person; higher finishes earn larger prizes.</dd></div>
+          <div><dt>Satellite / Qualifier</dt><dd>Win a ticket or entry to another contest.</dd></div>
+          <div><dt>League / Private Contest</dt><dd>Play with a chosen group under that contest’s prize rules.</dd></div>
+        </dl>
+      </section>
+    </div>
+    <p class="dfs-decoder-source">Availability and rules vary by contest. <a href="https://www.draftkings.com/how-to-play">DraftKings contest guide</a></p>
+  </aside>
   </div>
 
   <div class="dfs-quickread">
