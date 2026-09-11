@@ -7639,11 +7639,14 @@ async function gameSummaryFor(env, game, nameIndex) {
 function _numsOf(obj, set) {
   if (obj == null) return set;
   if (typeof obj === 'number' && Number.isFinite(obj)) { set.add(String(obj)); set.add(String(Math.round(obj * 10) / 10)); set.add(String(Math.round(obj))); return set; }
-  if (typeof obj === 'string') { for (const m of obj.matchAll(/-?\d+(?:\.\d+)?/g)) set.add(m[0]); return set; }
+  if (typeof obj === 'string') { for (const m of obj.matchAll(_NUM_RE)) set.add(m[0].replace(/,/g, '')); return set; }
   if (Array.isArray(obj)) { for (const x of obj) _numsOf(x, set); return set; }
   if (typeof obj === 'object') { for (const v of Object.values(obj)) _numsOf(v, set); }
   return set;
 }
+// A number in prose, thousands separators included: "2,600" is one salary, not
+// a 2 and a 600. Week 1's desk was held for a day on exactly that split.
+const _NUM_RE = /-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?/g;
 function _namesOf(obj, set) {
   if (obj == null) return set;
   if (typeof obj === 'string') { if (/^[A-Z][A-Za-z'.-]+(?:\s[A-Z][A-Za-z'.-]+){1,2}$/.test(obj)) set.add(obj); return set; }
@@ -7848,36 +7851,18 @@ function briefGamePlan(kind, games, ctx) {
 }
 
 // ── the writer ─────────────────────────────────────────────────────────────
-// The writer's answer, streamed. A two-lens piece over a fifteen-game slate
-// runs past the hundred seconds an idle connection is allowed, and came back
-// 524 four times on September 11; with the stream open the connection is
-// never idle. The stop reason rides along: a draft cut off at max_tokens is
-// not a draft the fact check should read, it is a draft to ask for shorter.
-// A plain JSON answer (a test's fake, a proxy that buffers) still reads.
-async function _anthropicRead(r) {
-  const type = (r.headers && typeof r.headers.get === 'function' && r.headers.get('content-type')) || '';
-  if (!(r.body && typeof r.body.getReader === 'function' && /event-stream/i.test(type))) {
-    const j = await r.json();
-    return { text: (j && j.content && j.content[0] && j.content[0].text) || '', stopReason: (j && j.stop_reason) || null, error: j && j.error ? String(j.error.message || j.error.type) : null };
+// An Anthropic event stream, read whole: the text, why it stopped, and any
+// error the stream carried after its 200.
+function _anthropicStreamText(sse) {
+  let text = '', stop = null, error = null;
+  for (const line of String(sse).split('\n')) {
+    if (!line.startsWith('data:')) continue;
+    let e; try { e = JSON.parse(line.slice(5)); } catch (x) { continue; }
+    if (e.type === 'content_block_delta' && e.delta && e.delta.type === 'text_delta') text += e.delta.text || '';
+    else if (e.type === 'message_delta' && e.delta && e.delta.stop_reason) stop = e.delta.stop_reason;
+    else if (e.type === 'error') error = 'provider_' + ((e.error && e.error.type) || 'error');
   }
-  const reader = r.body.getReader(); const dec = new TextDecoder();
-  let buf = '', text = '', stopReason = null, error = null;
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    let i;
-    while ((i = buf.indexOf('\n')) >= 0) {
-      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-      if (!line.startsWith('data:')) continue;
-      let ev = null; try { ev = JSON.parse(line.slice(5).trim()); } catch (e) { continue; }
-      if (!ev) continue;
-      if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') text += ev.delta.text || '';
-      else if (ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) stopReason = ev.delta.stop_reason;
-      else if (ev.type === 'error') error = String((ev.error && (ev.error.message || ev.error.type)) || 'stream error');
-    }
-  }
-  return { text, stopReason, error };
+  return { text, stop, error };
 }
 async function llmText(env, system, user, maxTokens, timeoutMs, modelOverride) {
   if (!env || !env.LLM_API_KEY) return { ok: false, error: 'no_key' };
@@ -7887,18 +7872,26 @@ async function llmText(env, system, user, maxTokens, timeoutMs, modelOverride) {
   // 60 KB prompt asking for two lenses, and the first live tick showed it
   // needs more than that; the caller says how long it can wait.
   const ctrl = new AbortController(); const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, timeoutMs || 60000);
+  // A long answer is streamed: a silent connection held open for minutes is
+  // what came back as provider_524 on the Week 1 desk. The stream is read to
+  // the end all the same; the caller still gets one string.
+  const stream = provider === 'anthropic' && (maxTokens || 3000) > 8000;
   try {
     const r = provider === 'anthropic'
-      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: maxTokens || 3000, stream: true, system, messages: [{ role: 'user', content: user }] }) })
+      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: maxTokens || 3000, system, messages: [{ role: 'user', content: user }], ...(stream ? { stream: true } : {}) }) })
       : await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0.3, max_tokens: maxTokens || 3000, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }) });
-    if (!r.ok) { let head = ''; try { head = (await r.text()).slice(0, 200); } catch (e) {} return { ok: false, error: 'provider_' + r.status, head }; }
-    if (provider === 'anthropic') {
-      const a = await _anthropicRead(r);
-      return { ok: !!a.text, text: a.text, model, stopReason: a.stopReason, error: a.error || (a.text ? undefined : 'empty') };
+    if (!r.ok) return { ok: false, error: 'provider_' + r.status };
+    // Read as a stream only when one came back; anything else is the plain
+    // JSON answer (a proxy, or the dry run's fake model).
+    if (stream && r.headers && /event-stream/.test(r.headers.get('content-type') || '')) {
+      const s = _anthropicStreamText(await r.text());
+      if (s.error) return { ok: false, error: s.error };
+      return { ok: !!s.text, text: s.text, model, truncated: s.stop === 'max_tokens' };
     }
     const j = await r.json();
-    const text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
-    return { ok: !!text, text, model };
+    const text = provider === 'anthropic' ? ((j.content && j.content[0] && j.content[0].text) || '') : ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    const truncated = provider === 'anthropic' ? j.stop_reason === 'max_tokens' : !!(j.choices && j.choices[0] && j.choices[0].finish_reason === 'length');
+    return { ok: !!text, text, model, truncated };
   } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
   finally { clearTimeout(to); }
 }
@@ -7977,13 +7970,11 @@ function validateDraft(text, allowed) {
   const vals = [...nums].map(Number).filter(Number.isFinite);
   const grid = new Set(vals.map(x => x.toFixed(1)));
   const arithmetic = a => a < 10 && vals.some(x => grid.has((x - a).toFixed(1)) || grid.has((x + a).toFixed(1)));
-  // "1,600 yards" is one number, 1600, not a 1 and a 600: the Friday pieces
-  // were held on the tails of thousands with separators.
-  for (const m of String(text).matchAll(/-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?/g)) {
-    const raw = m[0], v = raw.replace(/,/g, ''); const num = Number(v), abs = Math.abs(num);
+  for (const m of String(text).matchAll(_NUM_RE)) {
+    const v = m[0].replace(/,/g, ''); const num = Number(v), abs = Math.abs(num);
     if (nums.has(v) || nums.has(String(abs)) || (Number.isInteger(num) && abs <= 20)) continue;
     if (arithmetic(abs)) continue;
-    bad.numbers.push(raw);
+    bad.numbers.push(v);
   }
   bad.names = [...new Set(bad.names)]; bad.numbers = [...new Set(bad.numbers)];
   return { ok: !bad.names.length && !bad.numbers.length, ...bad };
@@ -9477,12 +9468,10 @@ function factCheck(body, packet) {
 // exactly the gap it fills from memory. Drop the writer-only bulk first, then
 // the heaviest fact blocks, naming each one dropped, until it fits.
 const WRITER_PACKET_BUDGET = 90000;
-// Four minutes a call, streamed, and twelve thousand tokens of answer: the
-// Weekend Preview covers fifteen games in two lenses and the September 11
-// runs were cut off at six thousand. Two calls sit inside the desk tick's
-// thirteen-minute deadline with room for the packet.
-const WRITER_TIMEOUT_MS = 240000;
+// Two lenses over a whole Sunday slate run past 6,000 tokens: every Week 1
+// Weekend Preview came back cut off mid-object and was held as unparseable.
 const WRITER_MAX_TOKENS = 12000;
+const WRITER_TIMEOUT_MS = 300000;
 function compactForWriter(packet, budget) {
   const limit = budget || WRITER_PACKET_BUDGET;
   // A copy: the trims below must not reach the packet the row stores.
@@ -9518,23 +9507,16 @@ async function writeNewsroomPiece(env, kind, packet) {
     '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
   const editorialModel = newsroomEditorialModel(env);
   let attempt = await llmText(env, NEWSROOM_SYSTEM, user, WRITER_MAX_TOKENS, WRITER_TIMEOUT_MS, editorialModel);
-  if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error + (attempt.head ? ' ' + attempt.head.slice(0, 120) : '')], model: null };
-  const parse = t => { try { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
-  // Why a draft did not parse, for the row: the stop reason and the shape of
-  // what came back. Six Weekend Previews were held on "(unparseable JSON)"
-  // alone on September 11 and the row could not say whether the answer was
-  // cut off, wrapped in prose, or empty.
-  const unparseable = a => '(unparseable JSON)' + (a.stopReason ? ' stop=' + a.stopReason : '') + ' chars=' + String(a.text || '').length + ' head=' + JSON.stringify(String(a.text || '').slice(0, 60));
-  let body = parse(attempt.text);
+  if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error], model: null };
+  const parse = a => { if (a.truncated) return null; try { const m = a.text.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
+  const unreadable = a => ({ ok: false, problems: [a.truncated ? 'truncated:max_tokens' : '(unparseable JSON)'] });
+  let body = parse(attempt);
   if (body && typeof body.skip === 'string') return { status: 'skipped', body: null, violations: [], model: attempt.model || null, skip: body.skip.slice(0, 300) };
-  let v = body ? factCheck(body, packet) : { ok: false, problems: [unparseable(attempt)] };
+  let v = body ? factCheck(body, packet) : unreadable(attempt);
   if (!v.ok) {
-    const cut = !body && attempt.stopReason === 'max_tokens';
-    const fix = cut ? user + '\n\nYOUR PREVIOUS DRAFT WAS CUT OFF before the JSON closed. Write the same shape at half the length: at most four items per section, each at most thirty-five words, and close every bracket. Return only the JSON object.'
-      : !body ? user + '\n\nYOUR PREVIOUS ANSWER WAS NOT ONE JSON OBJECT. Return only the JSON object in the shape requested, nothing before it and nothing after it, every bracket closed.'
-      : user + '\n\nYOUR PREVIOUS DRAFT FAILED THE FACT CHECK. Fix exactly these and add nothing new: ' + v.problems.join('; ') + '. A "name:" problem is a name the packet does not contain; a "number:" problem is a number the packet does not contain; "analyst:" means you named a colleague the packet does not; "missing:" means a required section or key is absent; "phrasing:" is a banned phrase or an em dash.';
+    const fix = user + '\n\nYOUR PREVIOUS DRAFT FAILED THE FACT CHECK. Fix exactly these and add nothing new: ' + v.problems.join('; ') + '. A "name:" problem is a name the packet does not contain; a "number:" problem is a number the packet does not contain; "analyst:" means you named a colleague the packet does not; "missing:" means a required section or key is absent; "phrasing:" is a banned phrase or an em dash; "truncated:" means the draft ran out of room before the JSON closed, so write every section tighter.';
     attempt = await llmText(env, NEWSROOM_SYSTEM, fix, WRITER_MAX_TOKENS, WRITER_TIMEOUT_MS, editorialModel);
-    if (attempt.ok) { body = parse(attempt.text); v = body ? factCheck(body, packet) : { ok: false, problems: [unparseable(attempt)] }; }
+    if (attempt.ok) { body = parse(attempt); v = body ? factCheck(body, packet) : unreadable(attempt); }
   }
   return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.problems, model: attempt.model || null };
 }

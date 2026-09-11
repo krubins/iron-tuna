@@ -38,7 +38,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -424,6 +424,20 @@ console.log('\nthe fact check reads prose as prose');
   const num = v('He ran for 155 yards and 26.4 points.');
   ok('a large number the packet lacks is still caught, and a packet number is not', !num.ok && num.numbers.includes('155') && !num.numbers.includes('26'), JSON.stringify(num.numbers));
   ok('the writer is told to write the headline in sentence case', /sentence case/i.test(H.NEWSROOM_SYSTEM) && /Never Title Case/.test(H.NEWSROOM_SYSTEM));
+  const dk = H._finishBrief({ meta: { kind: 'tnf-what-matters', lens: 'both' }, dfs: { dk: [{ name: 'Jaxson Dart', salary: 5600 }], stacks: [{ team: 'DAL', salary: 20200 }] } });
+  const dv = H.validateDraft('Jaxson Dart at 5,600, the DAL stack at 20,200 salary.', dk.allowed);
+  ok('DFS salaries with thousands separators match the packet', dv.ok, JSON.stringify(dv.numbers));
+}
+
+console.log('\nthe writer reads a stream and knows when it was cut off');
+{
+  const ev = (o) => 'event: x\ndata: ' + JSON.stringify(o) + '\n\n';
+  const done = H._anthropicStreamText(ev({ type: 'message_start' }) + ev({ type: 'content_block_delta', delta: { type: 'text_delta', text: '{"head' } }) + ev({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'line":"x"}' } }) + ev({ type: 'message_delta', delta: { stop_reason: 'end_turn' } }));
+  ok('the deltas join into the answer', done.text === '{"headline":"x"}' && done.stop === 'end_turn' && !done.error, JSON.stringify(done));
+  const cut = H._anthropicStreamText(ev({ type: 'content_block_delta', delta: { type: 'text_delta', text: '{"head' } }) + ev({ type: 'message_delta', delta: { stop_reason: 'max_tokens' } }));
+  ok('a cut-off answer says so', cut.stop === 'max_tokens');
+  ok('an error inside the stream is an error', H._anthropicStreamText(ev({ type: 'error', error: { type: 'overloaded_error' } })).error === 'provider_overloaded_error');
+  ok('the writer has room for two lenses over a full slate', H.WRITER_MAX_TOKENS >= 12000 && H.WRITER_TIMEOUT_MS >= 240000);
 }
 
 console.log('\nwhat the site called before kickoff, and how it landed');
