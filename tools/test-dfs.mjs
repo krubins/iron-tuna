@@ -142,11 +142,13 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
 console.log('\nthe DFS page explanations');
 {
   const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
-  ok('the primary contest cards are Cash, Single Entry and Large Field', /<b>Cash<\/b>[\s\S]*<b>Single Entry<\/b>[\s\S]*<b>Large Field<\/b>/.test(page) && !/<button class="df-shape"[^>]*data-contest="3max"/.test(page));
-  ok('cash is explicitly the chalk and value-consistency roster', page.includes('Cash = chalk and value consistency') && page.includes('This is the chalk and value-consistency roster.') && page.includes('fragile longshots'));
-  ok('single entry is explained as the best one-shot roster', page.includes('Single Entry = your best one shot') && page.includes('best one-shot roster'));
-  ok('large field is explained as ceiling and separation', page.includes('Large Field = ceiling and separation') && page.includes('ceiling and leverage roster'));
-  ok('advanced strategy exposes multi-lineup and hedging concepts', page.includes('id="dfAdvancedToggle"') && page.includes('3-Max: one core, three paths') && page.includes('Multi-lineup portfolio') && page.includes('Hedge game scripts') && page.includes('Exposure limits') && page.includes('Late swap'));
+  ok('the primary contest cards use DraftKings lobby terminology', page.includes('<b>50/50 &amp; Double Ups</b>') && page.includes('<b>Tournament &middot; Single Entry</b>') && page.includes('<b>Multi-Entry Tournament</b>') && !/<button class="df-shape"[^>]*data-contest="3max"/.test(page));
+  ok('the DraftKings translation explains where to find each contest', page.includes('Match Iron Tuna to DraftKings:') && page.includes('use the “50/50 &amp; Double Ups” contest filter') && page.includes('look for “[Single Entry]”') && page.includes('look for the “M” multi-entry indicator'));
+  ok('cash is explicitly the chalk and value-consistency roster', page.includes('50/50 &amp; Double Ups = chalk and value consistency') && page.includes('This is the chalk and value-consistency roster.') && page.includes('fragile longshots'));
+  ok('single entry is explained as the best one-shot roster', page.includes('Tournament &middot; Single Entry = your best one shot') && page.includes('best one-shot roster'));
+  ok('multi-entry tournaments are explained as ceiling and separation', page.includes('Multi-Entry Tournament = ceiling and separation') && page.includes('ceiling and leverage roster'));
+  ok('GPP is not incorrectly treated as an entry-limit label', page.includes('GPP</b> means Guaranteed Prize Pool') && page.includes('not by itself whether the contest is single-entry or multi-entry'));
+  ok('advanced strategy uses DraftKings entry-max language and hedging concepts', page.includes('id="dfAdvancedToggle"') && page.includes('Multi-Entry Tournament (3 Entries Max)') && page.includes('Multi-Entry Tournament (20 Entries Max)') && page.includes('Hedge game scripts') && page.includes('Exposure limits') && page.includes('Late swap'));
   ok('the lead roster has a larger summary, side breakdown, and player fit lines', page.includes('.df-explain-summary p{margin:0;color:#d5e2df;font-size:16px') && page.includes('Lineup Breakdown') && page.includes('class="df-fit"'));
   ok('player names expose a calculation drawer', page.includes('id="dfPlayerModal"') && page.includes('function openPlayerCalc') && page.includes('df-player-link'));
   ok('the player drawer labels modeled ownership as a model', page.includes('Modeled ownership') && page.includes('not an operator or third-party ownership feed'));
