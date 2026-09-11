@@ -453,6 +453,25 @@ console.log('\na held draft is re-read after the check itself changes');
   ok('nothing stored is nothing to revive', !H.heldRevivable(null));
 }
 
+// Week 1, 2026-09-11: the desk wrote three complete pieces and the check held
+// every one of them. "Herbert.\nVega" and "Outperformed.\nPricing" were two
+// sentences; "Lock Herbert" and "Move Williams" were verbs; 12.9 and the DFS
+// salary savings were arithmetic the drafts spelled out in full.
+console.log('\nthe fact check reads a sentence break, a verb and shown arithmetic');
+{
+  const p = H._finishBrief({ meta: { kind: 'weekend-preview', lens: 'both' }, rivalry: null,
+    players: [{ name: 'Justin Herbert', salary: 6100 }, { name: 'Kyren Williams', carries: 14 }, { name: 'Matthew Stafford', projected: 17.1, points: 4.2 }],
+    dfs: { saver: [{ name: 'Patrick Mahomes', salary: 5500 }, { name: 'Josh Allen', salary: 7000 }, { name: 'Geno Smith', salary: 4600 }, { name: 'Bub Means', salary: 3000 }, { name: 'Saints DST', salary: 2200 }] } });
+  const v = s => H.validateDraft(s, p.allowed);
+  ok('a name meeting a sentence break is two sentences', v('The market has Herbert at rank 3. Vega called the buy.').ok, JSON.stringify(v('The market has Herbert at rank 3. Vega called the buy.').names));
+  ok('a verb in front of a packet name is a verb', v('Lock Herbert in cash. Move Williams up.').ok, JSON.stringify(v('Lock Herbert in cash. Move Williams up.').names));
+  ok('a difference the draft spells out is arithmetic at any size', v('Projected 17.1, finished 4.2. A 12.9-point miss.').ok, JSON.stringify(v('Projected 17.1, finished 4.2. A 12.9-point miss.').numbers));
+  ok('salary savings the draft spells out are arithmetic', v('Mahomes at 5,500 saves 1,500 against Allen at 7,000, and Smith at 4,600 saves 2,400.').ok, JSON.stringify(v('Mahomes at 5,500 saves 1,500 against Allen at 7,000, and Smith at 4,600 saves 2,400.').numbers));
+  ok('a saving between two salaries the draft quotes is arithmetic', v('Means at 3,000 and the Saints DST at 2,200: the 800 difference buys an upgrade.').ok, JSON.stringify(v('Means at 3,000 and the Saints DST at 2,200: the 800 difference buys an upgrade.').numbers));
+  ok('a large number with no working shown is still caught', v('He saves 1,500 somewhere.').numbers.join() === '1500', JSON.stringify(v('He saves 1,500 somewhere.').numbers));
+  ok('a player the packet lacks is still caught', v('Jerry Jeudy is the play here.').names.join() === 'Jerry Jeudy');
+}
+
 console.log('\nwhat the site called before kickoff, and how it landed');
 {
   const frz = (rows) => ({ takenAt: 1000, kickoff: 2000, rows });
