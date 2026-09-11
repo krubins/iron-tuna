@@ -4635,7 +4635,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return bits.length ? bits.join(' · ') : 'No stored move';
   }
   function marketLabel(v) {
-    return String(v || '').replace(/^player_/, '').replaceAll('_', ' ').replace(/w/g, function (m) { return m.toUpperCase(); });
+    return String(v || '').replace(/^player_/, '').replaceAll('_', ' ').replace(/\bw/g, function (m) { return m.toUpperCase(); });
   }
   function renderMarketMoves(signal) {
     var items = (signal && signal.items) || [], by = {};
