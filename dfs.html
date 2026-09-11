@@ -123,6 +123,35 @@ p{color:var(--sec);margin:0 0 16px}
 .df-card-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:11px 16px;border-top:1px solid var(--line)}
 .is-board .btn.alt{background:rgba(70,214,172,.14);color:#46d6ac;border-color:#46d6ac}
 
+/* The roster explains itself at three levels: a thesis above it, one sentence
+   under each player, and a detailed read beside the table on wide screens. */
+.df-explain-summary{margin:0 var(--space-5) var(--space-4);padding:15px 17px;border:1px solid rgba(255,255,255,.13);
+  border-radius:10px;background:rgba(255,255,255,.055)}
+.df-explain-summary h4{margin:0 0 7px;font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:#46d6ac}
+.df-explain-summary p{margin:0;color:#d5e2df;font-size:13.5px;line-height:1.62}
+.df-lead-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(285px,.85fr);gap:18px;align-items:start;padding:0 var(--space-5) var(--space-4)}
+.df-lead-table{min-width:0;overflow:auto;border:1px solid rgba(255,255,255,.09);border-radius:9px}
+.df-lead-table table{margin:0}
+.df-breakdown{border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.055);padding:15px 16px}
+.df-breakdown h4{margin:0 0 10px;font-size:15px;color:#fff}
+.df-breakdown-section{border-top:1px solid rgba(255,255,255,.10);padding:11px 0 0;margin-top:11px}
+.df-breakdown-section:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.df-breakdown-section b{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#46d6ac;margin-bottom:4px}
+.df-breakdown-section p{margin:0;color:#bcd0cc;font-size:12.5px;line-height:1.55}
+.df-fit{display:block;margin-top:5px;max-width:62ch;font-size:11.5px;line-height:1.42;color:var(--muted);font-weight:400}
+.is-board .df-fit{color:#9fb6b1}
+.df-card .df-fit{font-size:11px}
+@media(max-width:900px){
+  .df-lead-grid{grid-template-columns:1fr;padding:0 var(--space-4) var(--space-4)}
+  .df-explain-summary{margin-left:var(--space-4);margin-right:var(--space-4)}
+  .df-breakdown{order:2}
+}
+@media(max-width:620px){
+  .df-lead-grid{padding-left:10px;padding-right:10px}
+  .df-explain-summary{margin-left:10px;margin-right:10px}
+  .df-fit{max-width:44ch}
+}
+
 .df-tune{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);padding:0 var(--space-5);margin:var(--space-6) 0}
 .df-tune>summary{cursor:pointer;padding:14px 0;font-weight:700;color:var(--teal);font-size:var(--fs-sm);list-style-position:inside}
 .df-tune[open]>summary{border-bottom:1px solid var(--line);margin-bottom:12px}
@@ -734,6 +763,126 @@ p{color:var(--sec);margin:0 0 16px}
     return '';
   }
 
+  function finite(v) { return v != null && isFinite(Number(v)); }
+  function pproj(p) { return finite(p.proj) ? Number(p.proj) : finite(p.ironTunaPoints) ? Number(p.ironTunaPoints) : 0; }
+  function pceil(p) { return finite(p.ceiling) ? Number(p.ceiling) : pproj(p); }
+  function pfloor(p) { return finite(p.floor) ? Number(p.floor) : pproj(p) * .72; }
+  function avg(arr, fn) { if (!arr.length) return 0; return arr.reduce(function (s, x) { return s + fn(x); }, 0) / arr.length; }
+  function lineupCatchers(l, qb) {
+    if (!qb) return [];
+    return l.players.filter(function (p) { return p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE'); });
+  }
+  function lineupBringbacks(l, qb) {
+    if (!qb) return [];
+    return l.players.filter(function (p) { return p.team === qb.opponent && p.position !== 'DST'; });
+  }
+  function playerFit(p, l, qb, sh) {
+    var ps = l.players.slice().sort(function (a, b) { return pproj(b) - pproj(a); });
+    var ss = l.players.slice().sort(function (a, b) { return Number(b.salary || 0) - Number(a.salary || 0); });
+    var avgSalary = avg(l.players, function (x) { return Number(x.salary || 0); });
+    var marketEdge = finite(p.vegasPoints) && finite(p.consensusPoints) ? Number(p.vegasPoints) - Number(p.consensusPoints) : null;
+    var teamTotal = finite(p.teamTotal) ? Number(p.teamTotal) : null;
+    var own = finite(p.ownership) ? Number(p.ownership) : null;
+    if (p.position === 'DST') {
+      return 'Keeps the defense spend at ' + money(p.salary) + ', protecting salary for the offensive core' + (teamTotal != null ? ' while its game environment stays acceptable' : '') + '.';
+    }
+    if (qb && p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE')) {
+      return 'Completes the ' + qb.name + ' stack, so a strong passing game can score for two roster spots at once' + (own != null && own <= 8 ? ', with useful ownership leverage' : '') + '.';
+    }
+    if (qb && p.team === qb.opponent && p.position !== 'DST' && contest === 'gpp') {
+      return 'Brings back the ' + qb.name + ' stack, a bet that the opposing offense keeps the game aggressive enough to sustain the stack’s ceiling.';
+    }
+    if (p === ps[0]) {
+      return 'Acts as a primary scoring anchor at ' + n1(pproj(p)) + ' projected points' + (teamTotal != null ? ' in a ' + n1(teamTotal) + '-point implied team environment' : '') + '.';
+    }
+    if (p === ss[0]) {
+      return 'Takes the largest salary allocation because this build values his ' + (contest === 'cash' ? 'floor and workload stability' : 'ceiling and raw scoring') + ' more than the cheaper alternatives.';
+    }
+    if (Number(p.salary || 0) <= avgSalary * .76) {
+      return 'Supplies the salary relief that keeps the premium core intact while still projecting ' + n1(pproj(p)) + ' points' + (marketEdge != null && marketEdge > .7 ? '; the betting market is also ahead of consensus here' : '') + '.';
+    }
+    if (contest === 'cash' && pfloor(p) / Math.max(1, pproj(p)) >= .72) {
+      return 'Adds a relatively tight floor-to-projection range, which helps this cash build avoid relying on a spike outcome to get over the line.';
+    }
+    if ((contest === 'gpp' || contest === '3max') && own != null && own <= 8) {
+      return 'Adds lower-owned ceiling to the roster, giving the build a way to separate from the field without abandoning projection.';
+    }
+    if (marketEdge != null && marketEdge >= 1) {
+      return 'Fits the Tuna Edge thesis: the betting-market projection is ' + n1(marketEdge) + ' points above consensus, so the build is buying that disagreement.';
+    }
+    if (own != null && own >= 20 && contest === 'cash') {
+      return 'Uses popular volume rather than fighting it; in cash, ownership is acceptable when the role and projection support the salary.';
+    }
+    return 'Balances ' + money(p.salary) + ' of salary with ' + n1(pproj(p)) + ' projected points' + (own != null ? ' at ' + n1(own) + '% modeled ownership' : '') + ', fitting the roster without forcing a weaker punt elsewhere.';
+  }
+
+  function lineupSummary(l, sh, qb) {
+    var catchers = lineupCatchers(l, qb), backs = lineupBringbacks(l, qb);
+    var sorted = l.players.slice().sort(function (a, b) { return pproj(b) - pproj(a); });
+    var chalk = l.players.filter(function (p) { return finite(p.ownership) && Number(p.ownership) >= 20; }).length;
+    var ownAvg = avg(l.players.filter(function (p) { return finite(p.ownership); }), function (p) { return Number(p.ownership); });
+    var market = l.players.filter(function (p) { return finite(p.vegasPoints) && finite(p.consensusPoints); })
+      .sort(function (a, b) { return (Number(b.vegasPoints)-Number(b.consensusPoints)) - (Number(a.vegasPoints)-Number(a.consensusPoints)); })[0];
+    var marketGap = market ? Number(market.vegasPoints) - Number(market.consensusPoints) : 0;
+    var objective = contest === 'cash'
+      ? 'This roster is trying to maximize the chance of clearing the cash line, so it prioritizes dependable points per dollar, floor and role certainty over uniqueness.'
+      : contest === 'gpp'
+      ? 'This roster is trying to create a first-place outcome in a large field, so it accepts more volatility in exchange for ceiling, correlation and ownership leverage.'
+      : contest === '3max'
+      ? 'This is the lead build for a three-entry portfolio, balancing ceiling with enough diversification that every entry does not depend on the same fragile outcome.'
+      : 'This single-entry build balances raw projection with ceiling and useful correlation because there is no second lineup to rescue an overaggressive bet.';
+    var anchors = sorted.slice(0,2).map(function (p) { return p.name; }).join(' and ');
+    var relation = catchers.length
+      ? 'The lineup pairs ' + qb.name + ' with ' + catchers.map(function (p) { return p.name; }).join(' and ') + (backs.length ? ', with ' + backs.map(function (p) { return p.name; }).join(' and ') + ' on the other side' : '') + ', creating intentional passing-game correlation.'
+      : 'The build is not dependent on a concentrated quarterback stack, so more of the scoring can arrive independently across games.';
+    var marketText = market && marketGap > .5
+      ? 'The strongest market-versus-consensus signal inside the roster is ' + market.name + ', with the market ' + n1(marketGap) + ' fantasy points higher than consensus.'
+      : 'The roster is not being carried by one extreme market disagreement; its edge is spread across the construction.';
+    var ownText = ownAvg
+      ? 'Modeled ownership averages ' + n1(ownAvg) + '% across the priced players' + (chalk ? ', including ' + chalk + ' player' + (chalk === 1 ? '' : 's') + ' at 20% or more' : '') + '.'
+      : '';
+    return objective + ' It spends ' + money(l.salary) + ' and leaves ' + money(l.remaining) + ', with ' + anchors + ' providing the largest projected scoring base. ' + relation + ' ' + marketText + (ownText ? ' ' + ownText : '');
+  }
+
+  function breakdownHtml(l, sh, qb) {
+    var bySalary = l.players.slice().sort(function (a, b) { return Number(b.salary || 0) - Number(a.salary || 0); });
+    var pricey = bySalary[0], cheap = bySalary[bySalary.length - 1];
+    var catchers = lineupCatchers(l, qb), backs = lineupBringbacks(l, qb);
+    var owned = l.players.filter(function (p) { return finite(p.ownership); });
+    var ownAvg = avg(owned, function (p) { return Number(p.ownership); });
+    var market = l.players.filter(function (p) { return finite(p.vegasPoints) && finite(p.consensusPoints); })
+      .sort(function (a, b) { return Math.abs(Number(b.vegasPoints)-Number(b.consensusPoints)) - Math.abs(Number(a.vegasPoints)-Number(a.consensusPoints)); })[0];
+    var risky = l.players.filter(function (p) { return p.position !== 'DST'; }).slice()
+      .sort(function (a, b) { return (pfloor(a)/Math.max(1,pproj(a))) - (pfloor(b)/Math.max(1,pproj(b))); })[0];
+    var construction = 'Salary is concentrated most heavily in ' + pricey.name + ' at ' + money(pricey.salary) + '. ' + cheap.name + ' at ' + money(cheap.salary) + ' is the lowest-cost piece, which helps the roster keep ' + money(l.remaining) + ' unused rather than forcing a worse fit just to spend every dollar.';
+    var marketText = market
+      ? market.name + ' has the biggest market/consensus gap in this lineup: ' + n1(Number(market.vegasPoints)-Number(market.consensusPoints)) + ' fantasy points. ' + (finite(market.teamTotal) ? market.team + ' is implied for ' + n1(market.teamTotal) + ' points.' : 'That gap is part of the projection case, not a standalone reason to roster him.')
+      : 'The lineup is using the blended Iron Tuna projection without a usable player-level market/consensus gap for this slate.';
+    var corr = catchers.length
+      ? qb.name + ' is paired with ' + catchers.map(function (p) { return p.name; }).join(' and ') + '. ' + (backs.length ? 'The bring-back is ' + backs.map(function (p) { return p.name; }).join(' and ') + ', so the lineup benefits if that game stays aggressive on both sides.' : 'There is no opposing bring-back, so the build captures same-team passing upside without requiring a full shootout.')
+      : 'There is no same-team QB/pass-catcher stack in this build. That lowers game-level dependency, which is more useful in cash than in a top-heavy tournament.';
+    var salaryText = 'The expensive slot is ' + pricey.name + ' because the optimizer values the points attached to that salary more than the alternatives. The savings from ' + cheap.name + ' are only useful because they preserve the stronger projection at the top instead of creating another weak punt.';
+    var risk = risky
+      ? risky.name + ' has the widest downside relative to his projection among the offensive players in this roster, with a ' + n1(pfloor(risky)) + ' floor against a ' + n1(pproj(risky)) + ' projection. ' + (ownAvg ? 'The lineup also carries about ' + n1(ownAvg) + '% average modeled ownership, which ' + (contest === 'gpp' ? 'can limit uniqueness if the popular pieces fail to separate from the field.' : 'is acceptable here because the objective is survival, not uniqueness.') : '')
+      : 'The main risk is that the optimizer’s projected roles do not materialize as expected.';
+    var why = contest === 'cash'
+      ? 'Tuna Edge prefers this combination because it buys the most dependable projected production it can under the cap without paying for unnecessary correlation or low-owned volatility.'
+      : contest === 'gpp'
+      ? 'Tuna Edge prefers this combination because it preserves enough raw projection while concentrating upside into correlated outcomes and lower-owned ceiling.'
+      : contest === '3max'
+      ? 'Tuna Edge uses this as the first portfolio spine because it combines ceiling with enough ownership and salary flexibility to support meaningful pivots in the other entries.'
+      : 'Tuna Edge prefers this combination because it keeps a strong median projection while adding correlation selectively rather than turning the entire lineup into one game bet.';
+    function sec(title, body) { return '<div class="df-breakdown-section"><b>' + e(title) + '</b><p>' + e(body) + '</p></div>'; }
+    return '<aside class="df-breakdown" aria-label="Detailed lineup explanation"><h4>Lineup Breakdown</h4>'
+      + sec('Construction', construction)
+      + sec('Betting Market Read', marketText)
+      + sec('Correlation and Fit', corr)
+      + sec('Salary Decisions', salaryText)
+      + sec('Key Risks', risk)
+      + sec('Why Tuna Edge Chose It', why)
+      + '</aside>';
+  }
+
   function lineupCard(l, i, sh, lead) {
     var qb = null; for (var k = 0; k < l.players.length; k++) if (l.players[k].slot === 'QB') qb = l.players[k];
     var full = l.salary + Math.max(0, l.remaining);
@@ -749,24 +898,26 @@ p{color:var(--sec);margin:0 0 16px}
       + stat(money(l.salary), 'Salary used');
     var rows = l.players.map(function (p) {
       return '<tr><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
-        + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></td>'
+        + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span>'
+        + '<span class="df-fit">' + e(playerFit(p, l, qb, sh)) + '</span></td>'
         + '<td class="num">' + money(p.salary) + '</td>'
         + '<td class="num">' + fppgText(p) + '</td>'
         + '<td class="num">' + n1(p.proj) + '</td>'
         + '<td class="num">' + edgeHtml(p) + '</td>'
-        + '<td class="num">' + (p.ownership == null ? '\u2014' : n1(p.ownership) + '%') + '</td></tr>';
+        + '<td class="num">' + (p.ownership == null ? '—' : n1(p.ownership) + '%') + '</td></tr>';
     }).join('');
     var meter = '<div class="df-meterwrap"><div class="is-meter' + (l.remaining < 400 ? ' tight' : '') + '"><i style="width:' + pct + '%"></i></div>'
       + '<div class="df-caplab"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div></div>';
     var table = '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">DraftKings FPPG</th><th class="num">Iron Tuna Projection</th><th class="num">Tuna Edge</th><th class="num">Own</th></tr></thead><tbody>' + rows + '</tbody></table>';
-    var sub = e((slate.label || '') + (slate.week ? ' \u00b7 Week ' + slate.week : '') + ' \u00b7 ' + (ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode));
+    var sub = e((slate.label || '') + (slate.week ? ' · Week ' + slate.week : '') + ' · ' + (ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode));
     var foot = '<button class="btn alt" type="button" data-copy="' + i + '">Copy this lineup</button>'
-      + '<span class="df-copy">' + e(l.players.map(function (p) { return p.name; }).join(' \u00b7 ')) + '</span>';
-    // The lead roster is the one dark board on the page.
+      + '<span class="df-copy">' + e(l.players.map(function (p) { return p.name; }).join(' · ')) + '</span>';
     if (lead) {
       return '<div class="is-board">'
         + '<div class="is-board-head"><h3>' + e(sh.head) + '</h3><span class="is-board-sub">' + sub + '</span></div>'
-        + '<div class="is-stats">' + stats + '</div>' + meter + table
+        + '<div class="df-explain-summary"><h4>Why This Lineup</h4><p>' + e(lineupSummary(l, sh, qb)) + '</p></div>'
+        + '<div class="is-stats">' + stats + '</div>' + meter
+        + '<div class="df-lead-grid"><div class="df-lead-main"><div class="df-lead-table">' + table + '</div></div>' + breakdownHtml(l, sh, qb) + '</div>'
         + '<div class="is-board-foot">' + foot + '</div></div>';
     }
     return '<div class="df-card">'
