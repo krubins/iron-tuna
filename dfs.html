@@ -188,12 +188,16 @@ p{color:var(--sec);margin:0 0 16px}
 .df-game-style-head b{font-size:16px;color:var(--text)}
 .df-game-style-head span{font-size:12px;color:var(--muted);font-family:var(--font-mono);letter-spacing:.07em;text-transform:uppercase}
 .df-game-style-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.df-game-style-card{display:block;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:13px 14px;color:var(--text);text-decoration:none}
+.df-game-style-card{display:block;width:100%;text-align:left;appearance:none;font:inherit;cursor:pointer;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:13px 14px;color:var(--text);text-decoration:none}
 .df-game-style-card:hover{border-color:var(--teal);text-decoration:none}
-.df-game-style-card[aria-current="true"]{border-color:var(--teal);box-shadow:inset 0 0 0 1px var(--teal);background:rgba(14,124,99,.06)}
+.df-game-style-card[aria-pressed="true"]{border-color:var(--teal);box-shadow:inset 0 0 0 1px var(--teal);background:rgba(14,124,99,.06)}
 .df-game-style-card b{display:block;font-size:17px;margin:0 0 4px}
 .df-game-style-card span{display:block;font-size:13px;line-height:1.5;color:var(--sec)}
 .df-game-style-card small{display:block;margin-top:7px;font-family:var(--font-mono);font-size:10.5px;line-height:1.45;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.df-bestball-path{margin:0 0 20px;border:1px solid var(--line2);border-radius:12px;background:linear-gradient(180deg,rgba(14,124,99,.07),rgba(14,124,99,.02));padding:18px}
+.df-bestball-path h2{margin:0 0 7px;font-size:22px}
+.df-bestball-path p{max-width:78ch;margin:0 0 14px;font-size:14px;line-height:1.65}
+.df-bestball-actions{display:flex;flex-wrap:wrap;gap:10px}
 @media(max-width:620px){.df-game-style-options{grid-template-columns:1fr}}
 .df-advanced-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0 8px}
 .df-advanced-toggle{appearance:none;border:1px solid var(--teal);border-radius:999px;background:transparent;color:var(--teal);font:700 13px/1 var(--font-body);letter-spacing:.03em;padding:10px 15px;cursor:pointer}
@@ -280,17 +284,26 @@ p{color:var(--sec);margin:0 0 16px}
 
 <div class="df-game-style" id="dfGameStyle">
   <div class="df-game-style-head"><span>Step 1</span><b>DraftKings Game Style</b></div>
-  <div class="df-game-style-options">
-    <a class="df-game-style-card" href="/dfs?site=dk" aria-current="true">
+  <div class="df-game-style-options" role="group" aria-label="DraftKings game style">
+    <button class="df-game-style-card" type="button" data-game-style="classic" aria-pressed="true">
       <b>Classic</b>
-      <span>Build one weekly NFL lineup under DraftKings&rsquo; $50,000 salary cap. This is the game style Iron Tuna&rsquo;s DFS optimizer below is solving.</span>
-      <small>Choose this in DraftKings &rarr; then match the contest type below</small>
-    </a>
-    <a class="df-game-style-card" href="/bestball-insights">
+      <span>Build one weekly NFL lineup under DraftKings&rsquo; $50,000 salary cap. This is the game style Iron Tuna&rsquo;s DFS optimizer is solving.</span>
+      <small>Select Classic &rarr; then choose your contest structure</small>
+    </button>
+    <button class="df-game-style-card" type="button" data-game-style="bestball" aria-pressed="false">
       <b>Best Ball</b>
       <span>Draft a season or multiweek roster by snake draft. DraftKings automatically counts your highest-scoring eligible players each week, with no weekly lineup management.</span>
-      <small>Different strategy &rarr; open Iron Tuna Best Ball</small>
-    </a>
+      <small>Select Best Ball &rarr; use Iron Tuna&rsquo;s Best Ball tools</small>
+    </button>
+  </div>
+</div>
+
+<div class="df-bestball-path" id="dfBestBallPath" hidden>
+  <h2>DraftKings Best Ball</h2>
+  <p>Best Ball does not use the weekly Classic lineup optimizer. You draft the roster once, then DraftKings automatically uses the highest-scoring eligible players each week. Iron Tuna&rsquo;s Best Ball tools therefore focus on draft value, roster construction, stacking, exposure and spike-week upside.</p>
+  <div class="df-bestball-actions">
+    <a class="btn" href="/bestball-insights">Open Best Ball Insights</a>
+    <a class="btn alt" href="/best-ball-draft-strategy">Best Ball Strategy Guide</a>
   </div>
 </div>
 
@@ -302,7 +315,8 @@ p{color:var(--sec);margin:0 0 16px}
      press. The shape now drives the solve, the sort and the copy on every
      section, so there is no second control anywhere that can disagree with it. -->
 <div id="dfStrategyGuide">
-<div class="df-shapes" id="dfShape" role="group" aria-label="DraftKings contest type">
+<div class="df-game-style-head"><span>Step 2</span><b>Choose Your Classic Contest Structure</b></div>
+<div class="df-shapes" id="dfShape" role="group" aria-label="DraftKings Classic contest structure">
   <button class="df-shape" type="button" data-contest="cash"><i>DraftKings lobby filter</i><b>50/50 &amp; Double Ups</b><span>The chalk/value roster. Favor players most likely to beat what their salaries require and avoid fragile longshots.</span></button>
   <button class="df-shape" type="button" data-contest="single"><i>Look for [Single Entry]</i><b>Tournament &middot; Single Entry</b><span>The best one-shot roster. Keep a strong value core, then add enough ceiling, correlation and selective leverage to win.</span></button>
   <button class="df-shape" type="button" data-contest="gpp"><i>Look for the M / entry limit</i><b>Multi-Entry Tournament</b><span>The ceiling/leverage roster for large, top-heavy fields. Accept more volatility, stacks and lower-owned upside.</span></button>
@@ -593,6 +607,7 @@ p{color:var(--sec);margin:0 0 16px}
   var SECS = { lineup: 1, values: 1, stacks: 1, td: 1, dash: 1 };
   var SEC_IDS = ['lineup', 'values', 'stacks', 'td', 'dash'];
   var site = 'dk', sec = 'lineup', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
+  var gameStyle = 'classic';
   var whatIfKey = null, whatIfName = '';
   // A reader who has opened the fine-tune panel and moved something owns the
   // build from then on: the shape switch still re-sorts every other section,
@@ -1268,6 +1283,27 @@ p{color:var(--sec);margin:0 0 16px}
       slateOk(j);
     }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
   }
+  function applyGameStyle() {
+    var wrap = $('dfGameStyle');
+    if (wrap) {
+      wrap.querySelectorAll('[data-game-style]').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-game-style') === gameStyle ? 'true' : 'false');
+      });
+    }
+    var bestBall = site === 'dk' && gameStyle === 'bestball';
+    $('dfBestBallPath').hidden = !bestBall;
+    $('dfStrategyGuide').hidden = bestBall || isPickem();
+    $('dfNav').hidden = bestBall || isPickem();
+    $('dfUp').hidden = bestBall || isPickem();
+    SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = bestBall || (isPickem() ? true : k !== sec); });
+    if (bestBall) {
+      $('sec-pickem').hidden = true;
+      $('dfSiteNote').textContent = 'DraftKings Best Ball · draft once, then weekly scoring is optimized automatically by the game format.';
+      $('dfNote').textContent = '';
+    }
+    return bestBall;
+  }
+
   function load() {
     press($('dfSite'), 'data-site', site);
     if (isPickem()) {
@@ -1277,15 +1313,18 @@ p{color:var(--sec);margin:0 0 16px}
       $('sec-pickem').hidden = false;
       $('dfUp').hidden = true;
       $('dfGameStyle').hidden = true;
+      $('dfBestBallPath').hidden = true;
       $('dfStrategyGuide').hidden = true;
       $('dfNote').textContent = '';
       loadPickem();
       return;
     }
     $('sec-pickem').hidden = true;
+    $('dfGameStyle').hidden = site !== 'dk';
+    if (site !== 'dk') gameStyle = 'classic';
+    if (applyGameStyle()) return;
     $('dfNav').hidden = false;
     $('dfUp').hidden = false;
-    $('dfGameStyle').hidden = site !== 'dk';
     $('dfStrategyGuide').hidden = false;
     applyShape();
     $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
@@ -1296,8 +1335,15 @@ p{color:var(--sec);margin:0 0 16px}
     if (mine) loadUpload(mine); else loadSite();
   }
   document.addEventListener('DOMContentLoaded', function () {
-    press($('dfMode'), 'data-mode', mode); applyShape(); show();
+    press($('dfMode'), 'data-mode', mode); applyShape(); show(); applyGameStyle();
     $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; clearWhatIf(false); load(); });
+    $('dfGameStyle').addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-game-style]'); if (!b) return;
+      gameStyle = b.getAttribute('data-game-style') === 'bestball' ? 'bestball' : 'classic';
+      applyGameStyle();
+      if (gameStyle === 'classic') load();
+      try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'dfs_game_style', uid: localStorage.getItem('it.uid') || '', props: { path: location.pathname, gameStyle: gameStyle, site: site } })], { type: 'application/json' })); } catch (x) {}
+    });
     $('dfWhatIfInput').addEventListener('input', renderWhatIfList);
     $('dfWhatIfInput').addEventListener('focus', renderWhatIfList);
     $('dfWhatIfInput').addEventListener('keydown', function (ev) {
