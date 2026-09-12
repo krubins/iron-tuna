@@ -9957,6 +9957,65 @@ async function weeklyWrapPayload(env, week) {
   return out;
 }
 
+// ── the front page's recap strip ───────────────────────────────────────────
+// The newest per-game recaps, newest first, for the rotating strip above the
+// hero. It exists as its own read rather than a filter over /api/newsroom
+// because the two want different things: the newsroom band is the whole desk
+// at whatever limit the page asked for, and this is six recaps and nothing
+// else. Filtering the feed would have made the strip's contents depend on how
+// many non-recap packages happened to publish ahead of them.
+//
+// Sunday afternoon is what the shape is for: eight games go final inside
+// twenty minutes and eight recaps land behind them. A strip showing only the
+// newest would show the eighth game and hide the other seven for an hour.
+const RECAP_STRIP_MAX = 6;
+// Past this, a recap is last week's news sitting above the hero. The strip is
+// additive — the hero is the page with or without it — so going quiet is the
+// right failure, not showing a stale headline as if it were today's.
+const RECAP_STRIP_FRESH_MS = 36 * 3600 * 1000;
+let _RECAPS_CACHE = null, _RECAPS_AT = 0;
+async function recapStripPayload(env) {
+  const now = Date.now();
+  if (_RECAPS_CACHE && now - _RECAPS_AT < 60000) return _RECAPS_CACHE;
+  let out = { ok: false, recaps: [], error: 'no_db' };
+  if (await contentReady(env)) {
+    await newsroomReady(env);
+    try {
+      // Over-fetch, because a recap that was rewritten has more than one
+      // published row and the strip wants six GAMES, not six rows.
+      const q = await env.LEADS_DB.prepare(
+        "SELECT kind, slug, title, week, season, game_id, headline, dek, published_at, created_at, analyst"
+        + " FROM content_pieces WHERE kind = 'game-recap' AND status = 'published'"
+        + " ORDER BY published_at DESC LIMIT 40").all();
+      // One entry per game, newest version wins — the same rule the Weekly
+      // Wrap Up uses, so the strip and the wrap can never name the same game
+      // with two different headlines.
+      const byGame = new Map();
+      for (const r of (q.results || [])) if (!byGame.has(r.game_id)) byGame.set(r.game_id, r);
+      const rows = [...byGame.values()].slice(0, RECAP_STRIP_MAX);
+      const at = r => +(r.published_at || r.created_at) || 0;
+      // Freshness is judged on the NEWEST recap, not per row: once a slate is
+      // current the whole slate is current, so a Sunday-early game does not
+      // drop out of Monday's strip while the night game stays.
+      const newest = rows.length ? at(rows[0]) : 0;
+      const fresh = newest > 0 && (now - newest) < RECAP_STRIP_FRESH_MS;
+      out = {
+        ok: true,
+        recaps: fresh ? rows.map(r => ({
+          slug: r.slug, week: r.week, game: r.game_id || null, url: _pieceUrl(r),
+          title: r.headline || _pieceTitle(r), dek: r.dek || '',
+          byline: _bylineOf(r), publishedAt: at(r)
+        })) : [],
+        // Why the strip is empty, so a quiet front page can be told apart from
+        // a broken one without opening the database.
+        reason: rows.length === 0 ? 'no published recaps' : (fresh ? null : 'newest recap is over 36h old')
+      };
+    } catch (e) { out = { ok: false, recaps: [], error: 'unavailable' }; }
+  }
+  _RECAPS_CACHE = out; _RECAPS_AT = now;
+  return out;
+}
+
 // The regular season with nothing published yet: the lead is the desk's NEXT
 // piece, named and timed, in the same shape. Never a draft-season story. The
 // alternative, which the front page ran on the Wednesday of Week 1, was a
@@ -13637,6 +13696,17 @@ export default {
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const out = await newsroomFeedPayload(env, url.searchParams.get('lens') === 'dfs' ? 'dfs' : 'weekly', parseInt(url.searchParams.get('limit') || '20', 10) || 20);
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=120' });
+    }
+    // The recap strip above the front page's hero. Sixty seconds, because on a
+    // Sunday afternoon this list gains a game every couple of minutes. It
+    // answers 200 with an empty list when there is nothing fresh: the strip
+    // not existing is a normal state, not an error the page should log.
+    if (url.pathname === '/api/recaps') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'GET') return new Response('method', { status: 405 });
+      const out = await recapStripPayload(env);
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=60' });
     }
     if (url.pathname === '/api/analysts' || url.pathname === '/api/analyst') {
       const c = corsHeaders(request.headers.get('Origin'));
