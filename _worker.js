@@ -12592,7 +12592,7 @@ async function leagueSync(env, row, trigger, preparedRaw) {
 async function leagueSyncState(env, row, ok, error, at) {
   const failures = ok ? 0 : (Number(row.failures) || 0) + 1;
   try { await env.LEADS_DB.prepare('UPDATE leagues SET last_sync_at=?, sync_status=?, last_error=?, next_sync_at=?, failures=? WHERE id=?')
-    .bind(at, ok ? 'ok' : 'failed', error || null, leagueNextSyncAt(at, failures), failures, row.id).run(); } catch (e) {}
+    .bind(at, ok ? 'ok' : 'failed', error || null, row.provider === 'cbs_browser' ? null : leagueNextSyncAt(at, failures), failures, row.id).run(); } catch (e) {}
 }
 // The job: every connected league that is due, a few at a time, with the
 // provider's flag respected and a per-league backoff on failure.
