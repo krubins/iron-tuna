@@ -1,0 +1,83 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const root = new URL('../extensions/cbs-connector/', import.meta.url);
+const source = fs.readFileSync(new URL('bridge.js', root), 'utf8');
+const { leagueFromUrl, ironTunaRequest } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const manifest = JSON.parse(fs.readFileSync(new URL('manifest.json', root)));
+assert.deepEqual(manifest.permissions, ['activeTab', 'scripting']);
+assert.deepEqual(manifest.host_permissions, ['https://irontuna.com/*']);
+assert.equal(leagueFromUrl('https://bkahuna.football.cbssports.com/teams/8'), 'bkahuna');
+for (const url of ['http://bkahuna.football.cbssports.com/', 'https://bkahuna.football.cbssports.com.evil.test/', 'https://user:pass@bkahuna.football.cbssports.com/', 'https://bkahuna.football.cbssports.com:8888/', 'https://www.cbssports.com/', 'bad']) assert.equal(leagueFromUrl(url), null);
+const token = 'synthetic-api-token-123456789';
+const readerSource = fs.readFileSync(new URL('reader.js', root), 'utf8');
+const { readCbsPage } = await import('data:text/javascript;base64,'+Buffer.from(readerSource).toString('base64'));
+// Minimal DOM fixtures exercise the same serialized reader as the extension.
+const anchor = (name, href) => ({ textContent:name, getAttribute:()=>href });
+const cell = (value, links=[]) => ({textContent:value, querySelector:()=>links[0] || null, querySelectorAll:()=>links});
+const row = (...cells) => ({cells:cells.map(c=>typeof c === 'string' ? cell(c) : c)});
+const table = rows => ({rows});
+const doc = tables => ({querySelectorAll:selector=>selector === 'table' ? tables : tables.flatMap(t=>t.rows)});
+const origin = 'https://fixture.football.cbssports.com';
+const readPage = (document,kind,teamId='8',other={}) => vm.runInNewContext('('+readCbsPage.toString()+')("fixture",kind,teamId,true)',{document,kind,teamId,location:{origin},URL,...other});
+const forbidden = {get textContent(){throw Error('Private identity field read');}};
+const rulesDoc = doc([table([row('League Name','Fixture'),row('Teams','2'),row('League Password',forbidden),row('QB','1','1'),row('Bench','1','1')]),table([row('Offensive','Name','Settings'),row('PaTD','Passing TD','6 points'),row('Special Scoring For Running Backs'),row('Recpt','Reception','.5 points')])]);
+const parsedRules = await readPage(rulesDoc,'rules');
+assert.equal(parsedRules.rules[1].group,'SPECIAL SCORING FOR RUNNING BACKS');
+assert.equal(parsedRules.name,'Fixture');
+assert(!JSON.stringify(parsedRules).includes('Password'));
+const rosterTable = table([row('','Pos','Players'),row('','QB',cell('Justin Herbert QB • LAC',[anchor('Justin Herbert',origin+'/players/playerpage/2221960')])),row('Reserves'),row('','QB',cell('Lamar Jackson QB • BAL',[anchor('Lamar Jackson',origin+'/players/playerpage/2181169')])),row('Active: 1 Reserve: 1')]);
+const parsedRoster = await readPage(doc([rosterTable]),'team');
+assert.equal(parsedRoster.players[0].slot,'starter');
+assert.equal(parsedRoster.players[1].slot,'bench');
+assert.equal(parsedRoster.players[0].providerPlayerId,'2221960');
+rosterTable.rows.pop();
+await assert.rejects(readPage(doc([rosterTable]),'team'),/counts could not be verified/);
+await assert.rejects(readPage(doc([]),'rules'),/scoring table/);
+await assert.rejects(readPage(rulesDoc,'rules','8',{location:{origin:'https://evil.test'}}),/signed-in CBS/);
+await assert.rejects(readPage(rulesDoc,'team','../rules'),/Unsupported/);
+const grid = await readPage(doc([table([row(cell('A',[anchor('A',origin+'/teams/8')])),row(cell('B',[anchor('B',origin+'/teams/9')]))])]),'grid');
+assert.equal(grid.length,2);
+const cbsReads=[];
+await vm.runInNewContext('('+readCbsPage.toString()+')("fixture","rules",null)',{document:doc([]),location:{origin},URL,AbortController,setTimeout,clearTimeout,DOMParser:class {parseFromString(){return rulesDoc;}},fetch:async(path,options)=>{cbsReads.push({path,options});return{ok:true,headers:{get:()=> 'text/html'},text:async()=>'<synthetic page>'};}});
+assert.equal(cbsReads[0].path,'/rules');
+assert.equal(cbsReads[0].options.credentials,'same-origin');
+assert.equal(cbsReads[0].options.redirect,'error');
+let requests = [];
+async function request(path, body, origin = 'https://irontuna.com', failure = false) {
+  return vm.runInNewContext('(' + ironTunaRequest.toString() + ')(path,body)', { path, body, location: { origin }, AbortController, setTimeout, clearTimeout,
+    fetch: async (url, options) => { requests.push({ url, options }); if (failure) throw new Error(token); return { ok: true, status: 200, json: async () => ({ ok: true, signedIn: true, accessToken: token, league: { id: 'abc-123', name: 'Fixture', secret: token }, teams: [{ teamId: '8', name: 'Tuna', token }] }) }; } });
+}
+await request('/api/other', {});
+await request('/api/leagues/connect', {}, 'https://evil.test');
+assert.equal(requests.length, 0);
+const response = await request('/api/leagues/connect', { provider: 'cbs', leagueId: 'fixture', accessToken: token });
+assert.equal(requests[0].options.credentials, 'same-origin');
+assert.equal(requests[0].options.redirect, 'error');
+assert.equal(requests[0].options.method, 'POST');
+assert(!JSON.stringify(response).includes(token));
+assert.equal(response.teams[0].teamId, '8');
+assert(!(await request('/api/leagues/connect', {}, 'https://irontuna.com', true)).message.includes(token));
+
+// Run the actual popup against a browser API stub, including serialized functions.
+const elements = new Map();
+const el = id => { if (!elements.has(id)) elements.set(id, { value: '', dataset: {}, disabled: false, hidden: false, addEventListener(type, fn) { this[type] = fn; }, replaceChildren(...children) { this.children = children; this.value = children[0]?.value; } }); return elements.get(id); };
+const calls = [];
+const context = vm.createContext({ leagueFromUrl, readCbsPage, ironTunaRequest, URL, document: { getElementById: el, createElement: () => ({}) }, chrome: { tabs: { query: async filter => filter.active ? [{ id: 1, url: 'https://fixture.football.cbssports.com/' }] : [{ id: 2, url: 'https://irontuna.com/my-league' }] }, scripting: { executeScript: async req => {
+  calls.push(req);
+  if (req.func === readCbsPage) return [{ result: req.args[1] === 'rules' ? {name:'Fixture',numTeams:2} : req.args[1] === 'grid' ? [{teamId:'8',name:'Tuna'},{teamId:'9',name:'Other'}] : {teamId:req.args[2],players:[{name:'Fixture'}]} }];
+  if (req.args[0] === '/api/auth/me') return [{ result: { signedIn: true } }];
+  if (req.args[0].endsWith('/team')) return [{ result: { ok: true } }];
+  return [{ result: { ok: true, league: { id: 'abc-123', name: 'Fixture' }, needsTeam: true, teams: [{ teamId: '8', name: 'Tuna' }] } }];
+} } } });
+const popup = fs.readFileSync(new URL('popup.js', root), 'utf8').replace(/^import[^\n]+\n/gm, '');
+await vm.runInContext('(async()=>{' + popup + '})()', context);
+assert.equal(el('connect').disabled, false);
+await el('connect').click();
+assert.equal(el('teamSection').hidden, false);
+assert.equal(el('team').value, '8');
+assert(calls.some(c => c.args[0] === '/api/leagues/connect' && c.args[1].provider === 'cbs_browser' && c.args[1].snapshot.rosters.length === 2));
+await el('saveTeam').click();
+assert.match(el('status').textContent, /Your team is saved/);
+assert(!/localStorage|sessionStorage|chrome\.storage|document\.cookie/.test(source + popup + readerSource));
+console.log('CBS extension: permissions, host validation, browser collection, request boundaries, redaction, connect and team selection passed.');

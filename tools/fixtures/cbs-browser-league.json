@@ -1,0 +1,221 @@
+{
+  "version": 1,
+  "leagueId": "browser-fixture",
+  "name": "Synthetic CBS browser league",
+  "season": 2026,
+  "numTeams": 2,
+  "playoffWeekStart": 15,
+  "roster": {
+    "QB": 1,
+    "RB": 2,
+    "WR": 2,
+    "TE": 1,
+    "FLEX": 1,
+    "K": 1,
+    "DEF": 1,
+    "BN": 8
+  },
+  "rules": [
+    {
+      "group": "OFFENSIVE",
+      "code": "FL",
+      "text": "-2 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "Fum2PK",
+      "text": "2 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "Fum2PT",
+      "text": "2 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "IFRTD",
+      "text": "6 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "IKRTD",
+      "text": "6 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "IPRTD",
+      "text": "6 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "MXP",
+      "text": "-1 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "Pa2P",
+      "text": "2 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "PaInt",
+      "text": "-2 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "PaTD",
+      "text": "6 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "Re2P",
+      "text": "2 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "ReTD",
+      "text": "6 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "Ru2P",
+      "text": "2 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "RuTD",
+      "text": "6 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "XP",
+      "text": "1 points"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "PaYd",
+      "text": "125+ PaYds = 1 point for every 25 PaYdsPlus a 1 point bonus @ 300+ PaYdPlus a 1 point bonus @ 400+ PaYdPlus a 1 point bonus @ 500+ PaYd"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "ReYd",
+      "text": "0+ ReYds = 1 point for every 10 ReYdsPlus a 1 point bonus @ 100+ ReYdPlus a 1 point bonus @ 200+ ReYd"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "RuYd",
+      "text": "0+ RuYds = 1 point for every 10 RuYdsPlus a 1 point bonus @ 100+ RuYdPlus a 1 point bonus @ 200+ RuYd"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "Recpt",
+      "text": "1+ Recpt = 1 point for every 1 RecptPlus a 1 point bonus @ 10+ Recpt"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "FG",
+      "text": "Plus 1 point for a FG of 1 to 29 YdsPlus 2 points for a FG of 30 to 39 YdsPlus 3 points for a FG of 40 to 49 YdsPlus 4 points for a FG of 50 to 59 YdsPlus 5 points for a FG of 60+ Yds"
+    },
+    {
+      "group": "OFFENSIVE",
+      "code": "MFG",
+      "text": "Plus -3 points for a MFG of 1 to 29 YdsPlus -2 points for a MFG of 30 to 39 YdsPlus -1 point for a MFG of 40 to 49 Yds"
+    },
+    {
+      "group": "SPECIAL SCORING FOR RUNNING BACKS",
+      "code": "Recpt",
+      "text": "1+ Recpt = .5 points for every 1 RecptPlus a .5 point bonus @ 5+ RecptPlus a .5 point bonus @ 10+ Recpt"
+    },
+    {
+      "group": "DEFENSIVE",
+      "code": "DFR",
+      "text": "2 points"
+    },
+    {
+      "group": "DEFENSIVE",
+      "code": "DFTD",
+      "text": "4 points"
+    },
+    {
+      "group": "DEFENSIVE",
+      "code": "Int",
+      "text": "2 points"
+    },
+    {
+      "group": "DEFENSIVE",
+      "code": "ST2PT",
+      "text": "2 points"
+    },
+    {
+      "group": "DEFENSIVE",
+      "code": "STTD",
+      "text": "6 points"
+    },
+    {
+      "group": "DEFENSIVE",
+      "code": "STY",
+      "text": "4 points"
+    },
+    {
+      "group": "DEFENSIVE",
+      "code": "STY1PT",
+      "text": "1 point"
+    },
+    {
+      "group": "DEFENSIVE",
+      "code": "SACK",
+      "text": "1+ SACK = 1 point for every 1 SACKPlus a 1 point bonus @ 5+ SACKPlus a 1 point bonus @ 10+ SACK"
+    },
+    {
+      "group": "DEFENSIVE",
+      "code": "PA",
+      "text": "0 - 0 PAs = 10 points 1 - 3 PA = 8 points 4 - 6 PA = 7 points 7 - 9 PA = 6 points 10 - 13 PA = 5 points 14 - 16 PA = 4 points 17 - 20 PA = 3 points 21 - 23 PA = 2 points 24 - 27 PA = 1 point 28 - 30 PA = 0 points 31 - 40 PA = -2 points 41+ PAs = -3 points"
+    }
+  ],
+  "teams": [
+    {
+      "teamId": "8",
+      "name": "Fixture A"
+    },
+    {
+      "teamId": "9",
+      "name": "Fixture B"
+    }
+  ],
+  "rosters": [
+    {
+      "teamId": "8",
+      "players": [
+        {
+          "providerPlayerId": "2221960",
+          "name": "Justin Herbert",
+          "position": "QB",
+          "team": "LAC",
+          "slot": "starter",
+          "slotLabel": "QB"
+        }
+      ],
+      "counts": {
+        "starter": 1,
+        "bench": 0
+      }
+    },
+    {
+      "teamId": "9",
+      "players": [
+        {
+          "providerPlayerId": "2181169",
+          "name": "Lamar Jackson",
+          "position": "QB",
+          "team": "BAL",
+          "slot": "bench",
+          "slotLabel": "BN"
+        }
+      ],
+      "counts": {
+        "starter": 0,
+        "bench": 1
+      }
+    }
+  ]
+}

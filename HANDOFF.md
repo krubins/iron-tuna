@@ -1,6 +1,8 @@
 # Iron Tuna — Project Handoff
 
-CBS sync follow-up (September 11, 2026): My Leagues now shows inline CBS progress/errors and rejects email addresses in the league field. The connector still requires an existing CBS Fantasy API token; CBS account sign-in/token acquisition and a successful live league import remain unfinished. See `docs/league-sync.md` section 3.3. Enabling the flag alone does not complete this flow.
+CBS browser connector 0.2.0: the token-declaration approach failed on the live CBS league. The extension now reads whitelisted settings/scoring, roster-grid team names and every team roster through same-origin requests in the signed-in CBS tab, then posts a bounded snapshot to the existing connect route as provider cbs_browser. No CBS credentials leave the browser. The existing API-token adapter and encryption are retained separately. Browser leagues never run in the scheduled sync job and expose no next automatic refresh time.
+
+Live DOM validation found all 12 BigKahuna teams and 204 players, matching each page's Active/Reserve counts. All scoring rows were parsed against a synthetic fixture that retains the observed scoring shapes. Extension fetch transport and the final live POST/team selection still require a real run after reloading the installed extension and deploying this branch. Do not claim the league is linked until My Leagues confirms it. See extensions/cbs-connector/README.md and docs/league-sync.md for scope and release checks.
 
 Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
 [docs/TUNA-MARKET-SIGNAL.md](docs/TUNA-MARKET-SIGNAL.md).
