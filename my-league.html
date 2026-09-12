@@ -81,13 +81,13 @@ p{color:var(--sec);margin:0 0 16px}
 <section id="connect">
 <h2>Sync my league</h2>
 <p class="is-note"><b>Free.</b> Sign in with an email link so encrypted provider credentials and synced leagues can follow you across devices. No purchase is required.</p>
-<p class="is-note">CBS Sportsline, when enabled, uses a league access token that Iron Tuna encrypts separately for each league. Disconnecting deletes that league&rsquo;s token. We never ask for your CBS password.</p>
+<p class="is-note">CBS browser import is free and imports settings and rosters through the extension. Refresh it from CBS using the extension. The separate API-token connector encrypts supplied tokens. Neither method asks for your CBS password.</p>
 <p>Connect the league you actually play in and Iron Tuna imports its exact scoring, every roster, the free-agent pool, your opponent and the standings. Rankings, the Pickup Advisor, Best Lineup, the Trade Finder and the stories then read <em>your</em> league instead of a default one. Nothing is re-typed.</p>
 <div id="lsStatus" class="is-note" style="margin:0 0 12px"></div>
 <div id="lsList"></div>
 <div id="lsConnect" hidden></div>
 <div id="lsManual" hidden></div>
-<p class="is-note" id="lsPrivacy">What Iron Tuna imports: league settings and scoring, team names and manager display names, rosters, matchups, standings and transactions, from the provider you choose. Sleeper leagues are read by league ID from Sleeper&rsquo;s public API. Yahoo leagues are read after you authorize Iron Tuna on Yahoo&rsquo;s own site. CBS Sportsline leagues, when enabled, are read with the league access token you provide. Iron Tuna never asks for a Yahoo or CBS password and encrypts provider tokens at rest. The data is used only to personalize your guidance and is never shown to unrelated users. Disconnecting a league stops syncing and deletes the imported data and that CBS league&rsquo;s token. Full details in the <a href="/privacy">privacy policy</a>.</p>
+<p class="is-note" id="lsPrivacy">What Iron Tuna imports: league settings and scoring, team names and manager display names, rosters, matchups, standings and transactions, from the provider you choose. Sleeper leagues are read by league ID from Sleeper&rsquo;s public API. Yahoo leagues are read after you authorize Iron Tuna on Yahoo&rsquo;s own site. CBS browser import reads settings, team names and rosters without copying credentials; refresh it using the extension. The separate CBS API connector uses a league token you provide. Iron Tuna never asks for a Yahoo or CBS password and encrypts provider tokens at rest. The data is used only to personalize your guidance and is never shown to unrelated users. Disconnecting a league stops syncing and deletes the imported data and that CBS league&rsquo;s token. Full details in the <a href="/privacy">privacy policy</a>.</p>
 </section>
 
 <h2>Your in-season settings</h2>
@@ -137,6 +137,7 @@ p{color:var(--sec);margin:0 0 16px}
       <li><a href="/weekly-rankings">This week’s rankings</a></li>
       <li><a href="/season-long-rankings">Season long rankings</a></li>
       <li><a href="/stats">Stats</a></li>
+      <li><a href="/weekly-wrap">Weekly Wrap Up</a></li>
       <li><a href="/waivers">Waivers &amp; FAAB</a></li>
       <li><a href="/my-league">My Leagues</a></li>
       <li><a href="/my-week">My Week</a></li>
@@ -239,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function () {
       '<p class="is-note" style="margin:6px 0 0' + (bad || stale ? ';color:var(--danger)' : '') + '">' + esc(ITSync.syncLine(L)) + (bad ? '<br>' + esc(s.error || '') + (/(expired_authorization)/.test(String(s.error)) && L.provider === 'yahoo' ? ' <a class="is-btn sec" href="/api/oauth/yahoo/start">Reconnect Yahoo</a>' : '') + (s.lastOkAt ? '<br>Last successfully synced ' + esc(new Date(s.lastOkAt).toLocaleString()) + '; that data is still in use.' : '') : '') + (stale && !bad ? ' League data may be outdated. Refresh recommended.' : '') + (s.nextAt && L.provider !== 'manual' ? '<br>Next automatic refresh ' + esc(new Date(s.nextAt).toLocaleString()) : '') + '</p>' +
       (!L.userTeamId ? '<p style="color:var(--danger);margin:8px 0 0"><b>Which team is yours?</b> Iron Tuna could not tell. <button type="button" class="is-btn sec" data-act="teams">Pick my team</button></p>' : '') +
       '<div class="is-btns" style="margin-top:10px">' +
-        (L.provider !== 'manual' ? '<button type="button" class="is-btn primary" data-act="sync">Sync now</button>' : '<button type="button" class="is-btn primary" data-act="edit">Edit league</button>') +
+        (L.provider === 'cbs_browser' ? '<span class="is-note">Refresh from your CBS league using the extension.</span>' : L.provider !== 'manual' ? '<button type="button" class="is-btn primary" data-act="sync">Sync now</button>' : '<button type="button" class="is-btn primary" data-act="edit">Edit league</button>') +
         (L.isDefault ? '' : '<button type="button" class="is-btn sec" data-act="default">Make default</button>') +
         '<button type="button" class="is-btn sec" data-act="settings">Review settings</button>' +
         (L.userTeamId ? '<button type="button" class="is-btn sec" data-act="teams">Change my team</button>' : '') +
@@ -278,14 +279,14 @@ document.addEventListener('DOMContentLoaded', function () {
     var P = (st && st.providers) || {};
     var el = $('lsConnect'); el.hidden = false;
     el.innerHTML = '<div class="is-card"><h3>Which platform?</h3><div class="is-btns">' +
-      ['sleeper', 'yahoo', 'cbs', 'espn'].map(function (k) { var p = P[k] || { label: k, enabled: false }; return '<button type="button" class="is-btn ' + (p.enabled ? 'primary' : 'sec') + '" data-prov="' + k + '">' + esc(p.label) + (p.enabled ? '' : ' (unavailable)') + '</button>'; }).join('') +
+      ['sleeper', 'yahoo', 'cbs', 'espn'].map(function (k) { var p = (k === 'cbs' && P.cbs_browser && P.cbs_browser.enabled ? P.cbs_browser : P[k]) || { label: k, enabled: false }; var label = k === 'cbs' ? 'CBS Sportsline' : p.label; return '<button type="button" class="is-btn ' + (p.enabled ? 'primary' : 'sec') + '" data-prov="' + k + '">' + esc(label) + (p.enabled ? '' : ' (unavailable)') + '</button>'; }).join('') +
       '<button type="button" class="is-btn sec" data-prov="manual">Enter it by hand</button></div><div id="lsFlow" style="margin-top:12px"></div></div>';
     el.querySelectorAll('[data-prov]').forEach(function (b) { b.addEventListener('click', function () { flow(b.getAttribute('data-prov')); }); });
     if (provider) flow(provider);
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   function flow(k) {
-    var P = (st.providers || {})[k], f = $('lsFlow');
+    var P = (k === 'cbs' && (st.providers || {}).cbs_browser && st.providers.cbs_browser.enabled ? st.providers.cbs_browser : (st.providers || {})[k]), f = $('lsFlow');
     if (k === 'manual') { manualForm(null); return; }
     if (!P || !P.enabled) { f.innerHTML = '<p class="is-note">' + esc((P && P.reason) || 'Not available.') + (k === 'espn' ? ' <button type="button" class="is-btn sec" id="lsEspnManual">Set my ESPN league up manually</button>' : '') + '</p>'; var b = $('lsEspnManual'); if (b) b.addEventListener('click', function () { manualForm(null); }); return; }
     if (k === 'sleeper') {
@@ -299,20 +300,31 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
     if (k === 'cbs') {
-      f.innerHTML = '<p>Connect or reconnect a CBS Sportsline football league with its league ID and access token. Iron Tuna encrypts the token and only reads league data. Use your league access token, never your CBS password.</p><div class="is-field"><label for="lsCbsId">CBS league ID or URL</label><input class="is-input" id="lsCbsId" placeholder="your-league.football.cbssports.com" spellcheck="false" autocomplete="off"></div><div class="is-field"><label for="lsCbsToken">League access token</label><input class="is-input" id="lsCbsToken" type="password" autocomplete="off" spellcheck="false" maxlength="8192"></div><p class="is-note">Use a token from your authorized CBS league session. If you do not have one, use manual setup. Tokens are not saved on this device. To renew access, reconnect here using the same league ID and a new token.</p><button type="button" class="is-btn primary" id="lsCbsConnect">Sync this league</button>';
+      f.innerHTML = '<p><b>This form does not use your CBS email or password.</b> The free <a href="https://github.com/krubins/iron-tuna/tree/main/extensions/cbs-connector" target="_blank" rel="noopener">CBS browser connector</a> reads your league settings and rosters while you are signed in on CBS. Keep Iron Tuna open in the same browser, open your CBS league, then use the extension to import or refresh. Matchups, standings, transactions and waiver balances are not included in this import.</p><p><b>Advanced API token connection:</b> The form below is only for members who already have a CBS Fantasy API access token.</p><div class="is-field"><label for="lsCbsId">CBS football league address</label><input class="is-input" id="lsCbsId" placeholder="your-league.football.cbssports.com" inputmode="url" spellcheck="false" autocomplete="off"><p class="is-note">Open the league on CBS and copy its address. It looks like <b>your-league.football.cbssports.com</b>. An email address will not work here.</p></div><div class="is-field"><label for="lsCbsToken">CBS Fantasy API access token</label><input class="is-input" id="lsCbsToken" type="password" autocomplete="off" spellcheck="false" maxlength="8192"><p class="is-note">This is an API token, not your CBS password. Iron Tuna encrypts it and only makes read-only league requests.</p></div><div class="is-btns"><button type="button" class="is-btn primary" id="lsCbsConnect">Sync this league</button><button type="button" class="is-btn sec" id="lsCbsManual">I do not have an API token</button></div><p class="is-note" id="lsCbsMsg" role="status" aria-live="polite"></p>';
+      $('lsCbsManual').addEventListener('click', function () { manualForm(null); });
       $('lsCbsConnect').addEventListener('click', function () {
-        var b = this, id = $('lsCbsId').value.trim(), token = $('lsCbsToken').value.trim();
-        if (!id || !token) { note('Enter the CBS league ID and access token.', true); return; }
+        var b = this, id = $('lsCbsId').value.trim(), tokenInput = $('lsCbsToken'), token = tokenInput.value.trim(), msg = $('lsCbsMsg');
+        function result(text, bad) { msg.textContent = text; msg.style.color = bad ? 'var(--danger)' : ''; }
+        if (!id || !token) { result('Enter the CBS football league address and API access token.', true); return; }
+        var match = id.toLowerCase().match(/^(?:https:\/\/)?([a-z0-9][a-z0-9-]{0,62})\.football\.cbssports\.com(?:\/[^?#]*)?(?:[?#].*)?$/);
+        var leagueId = match ? match[1] : id.toLowerCase();
+        if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(leagueId)) { result('That is not a CBS football league address. Open your league on CBS and copy the address from the browser bar.', true); return; }
         b.disabled = true; b.textContent = 'Importing…';
-        $('lsCbsToken').value = '';
-        var pending = ITSync.api('/api/leagues/connect', { method: 'POST', body: { provider: 'cbs', leagueId: id, accessToken: token } });
+        result('Connecting to CBS and importing your league…', false);
+        var pending = ITSync.api('/api/leagues/connect', { method: 'POST', body: { provider: 'cbs', leagueId: leagueId, accessToken: token } });
         token = '';
         pending.then(function (r) {
-          if (!r || !r.ok) { b.disabled = false; b.textContent = 'Sync this league'; note(esc((r && (r.detail || r.message || r.error)) || 'The import failed. Enter the token again to retry.'), true); return; }
-          note('<b>Synced.</b> ' + esc(r.league.name) + (r.needsTeam ? ' Choose your team below.' : ''));
-          $('lsConnect').hidden = true;
-          reload().then(function () { if (r.needsTeam) panel(r.league.id, 'teams'); });
-        });
+          if (!r || !r.ok) { b.disabled = false; b.textContent = 'Sync this league'; result((r && (r.detail || r.message || r.error)) || 'The import failed. Check the league address and API token, then try again.', true); return; }
+          tokenInput.value = '';
+          result('League synced. Loading your teams…', false);
+          ITSync.invalidate();
+          ITSync.load(true).then(function (s) {
+            if (!s || s.error || !s.leagues || !s.leagues.some(function (l) { return l.id === r.league.id; })) throw new Error('refresh_failed');
+            st = s; render(); $('lsConnect').hidden = true;
+            note('<b>Synced.</b> ' + esc(r.league.name) + (r.needsTeam ? ' Choose your team below.' : ''));
+            if (r.needsTeam) panel(r.league.id, 'teams');
+          }).catch(function () { b.disabled = false; b.textContent = 'Sync this league'; result('The league was synced, but this page could not refresh. Reload the page to see it.', true); });
+        }, function () { b.disabled = false; b.textContent = 'Sync this league'; result('Iron Tuna could not reach the sync service. Check your connection and try again.', true); });
       });
       return;
     }

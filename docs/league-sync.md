@@ -158,4 +158,16 @@ To run once a provider is enabled in production, on the admin board and My Week:
 
 ### 3.3 CBS live-validation checklist
 
+The September 11 live attempt used an email in the league-address field; it did not validate CBS API access. CBS account sign-in and API-token acquisition are still unimplemented. The form now explicitly distinguishes an API token from a password, rejects invalid league addresses before sending anything, displays progress/errors beside the submit button, and retains input on failure for retry. A successful import clears the token, but the form stays visible until the imported league is confirmed in a fresh list. Network and list-refresh failures have explicit recovery messages. Do not describe this as a completed consumer CBS linking flow until token acquisition and a real import have been validated.
+
 Keep `FLAG_CBS_SYNC` off while validating with a consenting test league. Confirm the token works in the `Authorization` header against each fixed resource, capture only redacted structural samples, compare roster and scoring counts with the CBS UI, exercise a FAAB and priority-waiver league, verify a superflex and a bonus-scoring rule, confirm transaction move IDs/types and timestamps, rotate the token through My Leagues, run the scheduled sync, then disconnect and verify `league_provider_tokens` has no row for that league. If any resource differs, update the normalizer and synthetic fixture before activation.
+
+## CBS browser import (extension 0.2.0)
+
+The historical inline-token method failed live. `cbs_browser` is a separate provider in `LEAGUE_PROVIDERS`, gated by the existing off-by-default `CBS_SYNC` flag. It accepts a bounded, signed-in, rate-limited snapshot at `/api/leagues/connect`, validates it before creating or changing the league, and uses the existing model writer and CBS player crosswalk. It stores no CBS authorization. The API-token adapter retains its existing encrypted-token flow.
+
+The extension reads only league name/count, roster limits, playoff start, scoring table, team names and player rosters. It excludes identity details, passwords, cookies, forms, messages and the constitution. A missing team, empty roster, duplicate player, unrecognized roster footer or count mismatch aborts the import. This version supports the observed Active/Reserve roster layout; IR roster pages fail visibly pending support.
+
+Browser snapshots have no automatic refresh. The job excludes them and the sync endpoint directs users to the extension. Matchups, standings, transactions and waiver balances are absent and labeled as such; playoff team count and league type need reader confirmation. Unknown scoring rules stay in extras.unsupported with an explicit note. Yardage uses the existing fractional scoring engine; verify CBS rounding if comparing final scores. Do not call this a full unattended CBS sync.
+
+Validation: `node tools/test-cbs-extension.mjs`, `node tools/test-league-sync.mjs`, `node tools/test-cbs-ui.mjs`. Live rendered DOM checks: 12 teams, 204 players, all roster footer counts and position metadata recognized. Outstanding release check: reload extension 0.2.0, complete its real same-origin reads and authenticated import, select the user team, and verify the saved league and a repeat refresh.

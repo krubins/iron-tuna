@@ -72,11 +72,12 @@
   function select(id) { write('localStorage', ACTIVE_KEY, id); if (cur) { cur.activeId = id; emit(); } }
   function invalidate() { write('sessionStorage', CACHE_KEY, null); cur = null; }
   function onChange(fn) { if (typeof fn === 'function') listeners.push(fn); }
-  function providerLabel(p) { return { sleeper: 'Sleeper', yahoo: 'Yahoo', cbs: 'CBS Sportsline', espn: 'ESPN', manual: 'Manual' }[p] || p; }
+  function providerLabel(p) { return { sleeper: 'Sleeper', yahoo: 'Yahoo', cbs: 'CBS Sportsline', cbs_browser: 'CBS browser import', espn: 'ESPN', manual: 'Manual' }[p] || p; }
   function syncLine(L) {
     if (!L) return '';
     var s = L.sync || {};
     if (L.provider === 'manual') return 'Manual · entered ' + ago(s.lastAt);
+    if (L.provider === 'cbs_browser') return 'CBS · imported ' + ago(s.lastOkAt || s.lastAt) + ' · refresh using the CBS extension';
     if (s.status === 'failed') return providerLabel(L.provider) + ' · last sync failed · last good ' + ago(s.lastOkAt);
     return providerLabel(L.provider) + ' · synced ' + ago(s.lastOkAt || s.lastAt) + (s.stale ? ' · may be outdated' : '');
   }
@@ -94,7 +95,7 @@
       el.hidden = false;
       el.innerHTML = '<span class="its-lab">League:</span> ' + sel +
         ' <span class="its-sync' + (stale ? ' stale' : '') + '">' + esc(syncLine(L)) + '</span>' +
-        (L.provider !== 'manual' ? ' <button type="button" class="its-btn" data-sync>Sync now</button>' : '') +
+        (L.provider !== 'manual' && L.provider !== 'cbs_browser' ? ' <button type="button" class="its-btn" data-sync>Sync now</button>' : '') +
         ' <a class="its-link" href="/my-league">My Leagues</a>' + (o.week ? ' · <a class="its-link" href="/my-week">My Week</a>' : '') +
         (stale && L.sync.status === 'failed' ? '<span class="its-warn">League data may be outdated. Refresh recommended.</span>' : '');
       var s = el.querySelector('select'); if (s) s.addEventListener('change', function () { select(this.value); if (o.onChange) o.onChange(active()); else root.location.reload(); });

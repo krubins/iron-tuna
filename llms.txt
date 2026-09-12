@@ -45,6 +45,9 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 ### Previews — https://irontuna.com/previews
 - Every game on the week's slate with its posted spread and total, the points each offense is implied to score, how the line has moved since it opened, and where Iron Tuna's own fitted total disagrees with the book's.
 
+### Weekly Wrap Up — https://irontuna.com/weekly-wrap
+- Every game of the week in the two sentences its own recap wrote, with a link to the full recap. Each game is recapped when the feed marks it final, in three layers: the fantasy points and the line that produced them, the targets and carries underneath, and the usage that has not turned into points yet. Games not yet final are listed with the reason rather than left off.
+
 ### The Line — https://irontuna.com/the-line
 - The same week's games read against the posted number: spread, total, the price where a book has quoted one, and the anytime-touchdown props that reached the feed, with Iron Tuna's own fitted expectation beside each.
 - Iron Tuna states a confidence on **every** game, including the ones it passes, and places a HYPOTHETICAL, unfunded stake — never more than $100 — only where the disagreement clears a published, fixed ladder. Nothing is wagered, held or settled.
@@ -116,6 +119,7 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - FAAB Advisor: https://irontuna.com/faab
 - Trade Finder: https://irontuna.com/trade-finder
 - The Desk: https://irontuna.com/in-season/desk
+- Weekly Wrap Up (every game recapped, short form): https://irontuna.com/weekly-wrap
 - The analysts, and the AI disclosure: https://irontuna.com/analysts
 - The Pick (one dated call, kept on the page it was made on): https://irontuna.com/the-pick
 - The Tell: https://irontuna.com/the-tell
