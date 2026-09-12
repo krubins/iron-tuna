@@ -446,6 +446,11 @@ jobs:
       - name: The content desk
         if: ${{ !cancelled() }}
         run: node tools/test-content.mjs
+      # The front page's recap strip: one entry per game, six at most, and
+      # every way it goes quiet rather than printing a stale headline.
+      - name: The recap strip
+        if: ${{ !cancelled() }}
+        run: node tools/test-recaps.mjs
       - name: DFS adapters, Vegas Value Score, stacks and optimizer
         if: ${{ !cancelled() }}
         run: node tools/test-dfs.mjs
