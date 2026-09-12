@@ -451,6 +451,11 @@ console.log('\na held draft is re-read after the check itself changes');
   ok('a published piece is not reopened', !H.heldRevivable(held({ status: 'published' })));
   ok('a held piece with no draft is the retry path, not this one', !H.heldRevivable(held({ body: 'null' })) && H.heldRetryable({ status: 'held', body: 'null', version: 1, created_at: 0 }, 41 * 60000));
   ok('nothing stored is nothing to revive', !H.heldRevivable(null));
+  // The per-game loop keeps its own copy of the exists check, one call above
+  // produceContent, and it skipped the whole piece before the revival could
+  // run: the SF at LA recap sat held while the slate pieces beside it revived.
+  const perGame = cut('async function runPerGameKind(', 'async function runContentTick(');
+  ok('the per-game loop lets a revivable draft through its own exists check', /heldRetryable\(latest, Date\.now\(\)\) && !heldRevivable\(latest\)/.test(perGame), perGame.split('\n').filter(l => /continue;/.test(l)).join(' | '));
 }
 
 // Week 1, 2026-09-11: the desk wrote three complete pieces and the check held

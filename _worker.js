@@ -9773,7 +9773,12 @@ async function runPerGameKind(env, kind, out) {
   for (const g of finals) {
     if (written >= RECAPS_PER_TICK) break;
     const latest = await contentLatest(env, kind, sched.season, d.week, g.id);
-    if (latest && !heldRetryable(latest, Date.now())) continue;
+    // Same rule the slate kinds get in produceContent: a row held WITH its
+    // draft is not finished business, because the check that held it is code
+    // and the code changes. Without this the SF at LA recap stayed held after
+    // the fact check learned its sentence break, while every slate piece
+    // held beside it published itself.
+    if (latest && !heldRetryable(latest, Date.now()) && !heldRevivable(latest)) continue;
     try { out.push(await produceContent(env, kind, { gameId: g.id })); written++; }
     catch (e) { out.push({ ok: false, kind, game: g.id, error: (e && e.message) || 'failed' }); written++; }
   }
