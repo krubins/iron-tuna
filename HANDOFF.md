@@ -10666,3 +10666,109 @@ is wanted in the live prompt, it has to go to the Routine deliberately.**
   still ends at 58; `lead_story` still ends at 95; no new audit rows beyond the
   66/67 swap. Tamper predicates clean.
 - §83's byline mapping still absent from repo and deployed — third day.
+
+## 86. September 12: the feed recovered, and yesterday's drift was the feed's fault
+
+Three corrections to yesterday, all in the same direction: things were less
+broken than they looked.
+
+### 86a. The player-odds feed is back
+
+Every row in `odds_overlay` is current again — rows 1, 2, 3 and 4 all written at
+11:00:19Z today, row 6 an hour old, and a **new row 7 (`nflverse-usage-prior`)**
+two hours old. The 34-hour freeze §85b reported is over. Whether it self-healed
+or was fixed I cannot tell from here; the timestamps only say it is running.
+
+Row 1's payload has also grown: it now carries **K and DEF** entries
+(`kaimifairbairn|K`, `houstontexans|DEF`, …) alongside the skill positions. The
+board still prices only QB/RB/WR/TE, so nothing downstream changes, but the feed
+is no longer just the four scoring positions.
+
+### 86b. This session's clock was fine today, so §85a needs narrowing
+
+D1 says `11:20:40Z`; the trigger fired at `11:20:09Z`. In step.
+
+Yesterday's ten-hour skew was real but **not a standing property of this
+session** — it was a one-off, probably a late resume. §85a's conclusion stands
+in its useful form and no further: **ask D1 for the time before calling anything
+stale**, because you cannot tell a skewed clock from a stopped feed by looking at
+either one alone. But do not carry forward "this session's clock is ten hours
+behind" as a fact. It was not today.
+
+### 86c. Pollard's price drift was the frozen feed, not the market
+
+Row 94 is still pinned. On its own 09-08 board it still reproduces perfectly —
+all four rows, and both prose figures (1,060.8 receiving yards, 207.2 gap) to
+the decimal.
+
+Against **today's** board, with the odds refreshed:
+
+| | story | 09-11 (frozen odds) | 09-12 (fresh odds) |
+|---|---|---|---|
+| Carnell Tate | $11, WR25 | WR24 $11 | WR24 $11 |
+| Cam Ward | $1, QB26 | QB26 $1 | QB26 $1 |
+| **Tony Pollard** | **$5, RB29** | **RB27 $6** | **RB28 $5** |
+| Wan'Dale Robinson | $3, WR38 | WR37 $3 | WR37 $3 |
+
+**Pollard is back to $5.** Yesterday I reported his price had moved to $6 and
+that the story's "bid to $6" had become the board's own number. That was true of
+the board as it stood, but the board as it stood was blending 34-hour-old odds.
+With the feed running again the price is the story's price.
+
+So **every dollar figure in the pinned lead is currently correct**, and only
+ranks have drifted by one apiece. The prose figures are 1,059.9 and 206.9
+against 1,060.8 and 207.2 — under a point, on a story that names its board.
+
+The general lesson is worth more than the particular: a stale feed does not just
+make a board *old*, it makes it *wrong in ways that look like news*. A price
+that moves because the odds stopped arriving is indistinguishable, from the
+outside, from a price that moves because the market moved. Had the column been
+running, a story could have been written about that $6.
+
+### 86d. Two recap rows exist in `lead_story`, and the site has no label for them
+
+`lead_story` now ends at **97**, not 95 — two rows inserted on 09-11 at 21:30
+and 21:31, both `verified=1, published=0`, both `category='recap'`:
+
+- 96, `recap-sf-la-2026-09-10`, "Kaelon Black out-carried Christian McCaffrey 14 to 10 in San Francisco"
+- 97, `recap-ne-sea-2026-09-09`, "Jaxon Smith-Njigba took 46% of Seattle's targets with the backup quarterback"
+
+Both say in `method` they were "built entirely from Iron Tuna's own ingested box
+score", citing `game_summaries` rows by ESPN id. Week 1 has been played; this is
+the recap desk from §75 writing into `lead_story`.
+
+`lead_story_run` still ends at **58**, so these did not come from the lead-story
+Routine — which is still paused. Nothing was published and no audit row was
+written.
+
+**But `recap` is not a category the lead-story rendering path knows.**
+`LEAD_CATEGORIES` has six keys — player, playcaller, vegas, preseason, injury,
+market — and no `recap`, in the repo worker and in the deployed bundle alike.
+Both label sites fall through:
+
+    category: LEAD_CATEGORIES[key] ? key : null,
+    label:    LEAD_CATEGORIES[key] || 'Insight',
+
+So if either row is ever published, the front-page card reads **"Insight"** and
+the `category` served to the client is **null**. The admin list (line 14512)
+does the same.
+
+Neither row is live, so nothing is wrong on the site today. It is a one-line
+addition if recaps are meant to appear in the lead rotation, and a non-issue if
+they have their own surface — but as it stands the two are half-joined: written
+into the lead table, invisible to the lead table's vocabulary. §83's byline
+section has no slot for `recap` either.
+
+### 86e. The rest
+
+- CI **77/77** after merging 34 commits.
+- Pipeline functions and `boardPayload` unchanged since 09-11.
+- Repo vs deployed: 1380 player-rows across four boards, **0 differences**.
+- Harness self-test: 23 checks, all pass.
+- Routine still `enabled: false`, untouched since 09-09 13:05Z. Prompt still
+  47,183 chars / `9c578c415408`, byte-identical to the repo copy.
+- Tamper predicates clean: no audit rows beyond the 66/67 swap, no analyst row
+  published, no published row unverified, one published row.
+- **§81a unchanged**: Collins and Wilson still tie at 231.5, slots $28 and $30,
+  both served $30. Sixth day, and still the only inverted tie that costs
+  anything.
