@@ -7,22 +7,6 @@ export function leagueFromUrl(value) {
   } catch { return null; }
 }
 
-export function readCbsAccess(expectedLeague) {
-  if (location.protocol !== 'https:' || location.hostname !== expectedLeague + '.football.cbssports.com') return { error: 'wrong_page' };
-  // The historical CBS league page declares `var token = "..."`. Read only
-  // that declaration, never arbitrary cookies, storage, forms or global objects.
-  const candidates = new Set();
-  for (const script of document.scripts) {
-    if (script.src) continue;
-    for (const match of script.textContent.matchAll(/\b(?:var|let|const)\s+token\s*=\s*(["'])([^"'\r\n]+)\1\s*;/g)) {
-      const value = match[2];
-      if (value.length >= 16 && value.length <= 8192 && !/[\s\\\x00-\x1f\x7f]/.test(value)) candidates.add(value);
-    }
-  }
-  if (candidates.size !== 1) return { error: candidates.size ? 'ambiguous_token' : 'token_unavailable' };
-  return { leagueId: expectedLeague, accessToken: [...candidates][0] };
-}
-
 export async function ironTunaRequest(path, body) {
   if (location.origin !== 'https://irontuna.com') return { ok: false, message: 'Open Iron Tuna and try again.' };
   if (path !== '/api/auth/me' && path !== '/api/leagues/connect' && !/^\/api\/leagues\/[a-zA-Z0-9-]+\/team$/.test(path)) return { ok: false, message: 'Unsupported request.' };

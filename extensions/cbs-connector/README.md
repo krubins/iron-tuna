@@ -1,24 +1,27 @@
-# Iron Tuna CBS Connector — test version
+# Iron Tuna CBS Connector 0.2.0
 
-This extension attempts to obtain the API token declared by the signed-in CBS league page and passes it to Iron Tuna's existing encrypted CBS connector. No CBS password, cookie collection, or extension storage is used. This is not yet a verified live CBS connection: current CBS pages may no longer expose the historical token declaration. It fails visibly in that case.
+This free browser import reads league settings, team names and rosters from the CBS football league you are signed in to. It replaces the failed 0.1.0 token-detection method. No CBS password, token, cookies or browser storage are copied to Iron Tuna.
 
-## Install in Edge or Chrome
+## Install or update
 
-1. Extract the supplied ZIP to a folder you will keep.
-2. In Edge, open `edge://extensions`. In Chrome, open `chrome://extensions`.
-3. Turn on **Developer mode**, click **Load unpacked**, and select the extracted folder containing `manifest.json`.
-4. In the browser's Extensions menu, pin **Iron Tuna CBS Connector**.
-5. Open https://irontuna.com/my-league and sign in with your email link. Leave that tab open.
-6. In that same browser, open your CBS football league and sign in on CBS.
-7. While viewing the CBS league, click the extension and then **Connect to Iron Tuna**. Keep the popup open while it imports.
-8. If the import succeeds, choose your team and click **Save my team**. Refresh My Leagues.
+1. Keep the extracted extension folder on your computer.
+2. In Edge, open `edge://extensions`; in Chrome, open `chrome://extensions`.
+3. For a new install, enable Developer mode, choose **Load unpacked**, and select the folder containing `manifest.json`. To update an existing installation after replacing its files, click **Reload** on the Iron Tuna CBS Connector card and check that it shows **0.2.0**.
+4. Sign in at [My Leagues](https://irontuna.com/my-league) and leave it open.
+5. In the same browser, open your CBS football league and sign in there.
+6. Open the extension, confirm the season, then click **Import to Iron Tuna**. Keep the popup open while all team rosters are read.
+7. Choose your team, click **Save my team**, and refresh My Leagues.
 
-If it says CBS did not expose a usable API token, stop there and report that message. Do not paste a password or token into chat. A successful import is required before calling the integration complete.
+Run the extension again to refresh. There is no automatic background refresh. Disconnect in My Leagues to remove the imported league.
 
-## Access and privacy
+## Scope and privacy
 
-The extension requests temporary access to the tab where you click it, plus access to `https://irontuna.com/*` to use your existing Iron Tuna session. It only accepts HTTPS CBS football league hosts as sources. It reads a specific inline API-token declaration, not arbitrary browser storage, cookies, or login fields. Clicking Connect explicitly sends the token to Iron Tuna over HTTPS; the existing server validates all league resources before encrypting and retaining it for scheduled sync. Tokens remain in extension memory only during that attempt. Removing the extension does not disconnect a saved league: use Disconnect in My Leagues to delete its token and imported data.
+Imports league name/count, roster slots, scoring, playoff start, team names, player identities and starter/bench slots. Scoring includes supported positional reception rates, thresholds, bonuses and kicker/defense ranges; unknown rules are preserved and labeled. The existing scoring engine uses fractional yardage. Confirm CBS rounding before relying on exact final-score parity.
 
-## Validation
+Does not import standings, matchups, transactions or waiver balances. Confirm playoff team count and league type in Iron Tuna. This version supports the observed Active/Reserve roster layout and rejects IR or unrecognized footer layouts rather than dropping players.
 
-Run `node tools/test-cbs-extension.mjs` from the repository root. Tests cover host restrictions, token absence/ambiguity, serialization of injected functions, request allowlisting and redacted responses. A real browser installation, real token extraction, and a complete import remain required release checks. Do not publish to an extension store as production-ready before those pass.
+Permissions are unchanged: temporary access to the CBS tab where you click the extension, plus the Iron Tuna website to use your existing sign-in. CBS reads are fixed same-origin GET requests. Only whitelisted table fields leave CBS; account identity rows, league passwords, messages and the constitution are excluded. A failed page or mismatched player count stops the import before submission.
+
+## Validation status
+
+The rendered live league pages were checked: all 12 teams and 204 player entries match their roster counts. Synthetic tests cover parsing, privacy exclusions, request restrictions, popup/team selection, scoring normalization, incomplete imports and idempotent refresh. The real extension request transport and final saved-league result still need validation after reloading 0.2.0 and deploying the server change. Do not present this as a completed live integration until that succeeds.

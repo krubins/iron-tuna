@@ -1,6 +1,8 @@
-import { leagueFromUrl, readCbsAccess, ironTunaRequest } from './bridge.js';
+import { leagueFromUrl, ironTunaRequest } from './bridge.js';
+import { readCbsPage } from './reader.js';
 const $ = id => document.getElementById(id);
 let sourceTab, leagueId, targetTab, importedId;
+$('season').value = new Date().getFullYear();
 function status(text, bad = false) { $('status').textContent = text; $('status').dataset.error = String(bad); }
 async function request(path, body) {
   const args = body === undefined ? [path] : [path, body];
@@ -16,7 +18,7 @@ try {
 
 $('connect').addEventListener('click', async () => {
   $('connect').disabled = true;
-  let access;
+  let snapshot;
   try {
     const tabs = await chrome.tabs.query({ url: 'https://irontuna.com/*' });
     targetTab = tabs.find(t => new URL(t.url).pathname === '/my-league') || tabs[0];
@@ -24,13 +26,24 @@ $('connect').addEventListener('click', async () => {
     status('Checking your Iron Tuna sign-in…');
     const me = await request('/api/auth/me');
     if (!me?.signedIn) throw new Error('Sign in to Iron Tuna first, then return to CBS and try again.');
-    status('Reading access from this CBS league…');
-    const results = await chrome.scripting.executeScript({ target: { tabId: sourceTab.id }, func: readCbsAccess, args: [leagueId] });
-    access = results[0]?.result;
-    if (!access?.accessToken || access.leagueId !== leagueId) throw new Error('CBS did not expose a usable league API token on this page. This connection method needs further work; no league was imported.');
-    status('Importing league settings and rosters… Keep this popup open.');
-    const connected = await request('/api/leagues/connect', { provider: 'cbs', leagueId, accessToken: access.accessToken });
-    access.accessToken = '';
+    status('Reading league settings…');
+    const read = async (kind, teamId) => {
+      const result = await chrome.scripting.executeScript({ target:{tabId:sourceTab.id}, func:readCbsPage, args:[leagueId,kind,teamId || null] });
+      if (!result[0]?.result) throw new Error('CBS returned no league data. Open your signed-in league and retry.');
+      return result[0].result;
+    };
+    const season = Number($('season').value);
+    if (!Number.isInteger(season) || season < 2020 || season > new Date().getFullYear()+1) throw new Error('Enter the season shown on CBS.');
+    const settings = await read('rules');
+    const teams = await read('grid');
+    if (teams.length !== settings.numTeams) throw new Error('CBS did not return every team. No import was sent.');
+    snapshot = {version:1,leagueId,season,...settings,teams,rosters:[]};
+    for (const [i,t] of teams.entries()) {
+      status('Reading roster '+(i+1)+' of '+teams.length+'… Keep this popup open.');
+      snapshot.rosters.push(await read('team',t.teamId));
+    }
+    status('Saving '+teams.length+' teams and their rosters to Iron Tuna…');
+    const connected = await request('/api/leagues/connect', {provider:'cbs_browser',snapshot});
     if (!connected?.ok || !connected.league?.id) throw new Error(connected?.message || 'Iron Tuna could not import this league.');
     importedId = connected.league.id;
     $('connect').hidden = true;
@@ -40,7 +53,7 @@ $('connect').addEventListener('click', async () => {
       $('teamSection').hidden = false;
     } else status('Connected. Refresh My Leagues to see your league.');
   } catch (error) { status(error instanceof Error ? error.message : 'Connection failed. Try again.', true); $('connect').disabled = false; }
-  finally { if (access) access.accessToken = ''; }
+  finally { snapshot = null; }
 });
 $('saveTeam').addEventListener('click', async () => {
   $('saveTeam').disabled = true;

@@ -2,10 +2,11 @@
 <html lang="en"><head><meta charset="utf-8"><title>Iron Tuna CBS Connector</title><link rel="stylesheet" href="popup.css"></head>
 <body><h1>Connect your CBS league</h1>
 <p id="league">Checking this tab…</p>
-<p>Sign in to Iron Tuna in another tab first. Connecting sends this league’s API token to Iron Tuna, where it is encrypted for future syncs. Your CBS password and cookies are never copied.</p>
-<button id="connect" disabled>Connect to Iron Tuna</button>
+<p>Sign in to Iron Tuna in another tab first. Importing sends league settings, team names and rosters to Iron Tuna. Your CBS password and cookies are never copied.</p>
+<p><label for="season">CBS season</label> <input id="season" type="number" min="2020" max="2100" style="width:90px"></p>
+<button id="connect" disabled>Import to Iron Tuna</button>
 <p id="status" role="status" aria-live="polite"></p>
 <section id="teamSection" hidden><label for="team">Which team is yours?</label><select id="team"></select><button id="saveTeam">Save my team</button></section>
 <p><a href="https://irontuna.com/my-league" target="_blank" rel="noopener">Open My Leagues</a></p>
-<p class="small">Keep this popup open while importing. This test version needs live CBS validation. Disconnect your league in Iron Tuna to delete its saved token.</p>
+<p class="small">Keep this popup open while importing. Run this extension again to refresh. This version imports settings and rosters; it does not import matchups, standings, transactions or waiver balances.</p>
 <script type="module" src="popup.js"></script></body></html>
