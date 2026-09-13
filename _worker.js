@@ -4094,11 +4094,18 @@ function _espnGame(ev) {
 // The preseason, which the spine does not carry at all, plus whatever the
 // scoreboard is currently showing (status and score for the games being played).
 // Each call is independent: one failing week must not cost the others.
-async function fetchScheduleEspn(season) {
+// The four preseason weeks are asked for only while the preseason is the
+// subject: once the regular season is a day away they are four extra
+// scoreboard fetches, each a large JSON to parse, on every quarter-hour
+// refresh of a worker whose invocations die on CPU (HANDOFF §68p). On
+// September 13 the refresh opened its row and died at nearly every quarter
+// hour from 08:15Z, and the desk's Sunday pieces never ran behind it.
+async function fetchScheduleEspn(season, opts) {
   const out = [];
   const add = evs => { for (const ev of evs) { const g = _espnGame(ev); if (g) out.push(g); } };
+  const preseason = !(opts && opts.preseason === false);
   // ESPN numbers preseason weeks 1-4, week 1 being the Hall of Fame game.
-  for (let w = 1; w <= 4; w++) {
+  if (preseason) for (let w = 1; w <= 4; w++) {
     try { add(await _espnEvents('dates=' + season + '&seasontype=1&week=' + w)); } catch (e) {}
   }
   try { add(await _espnEvents('')); } catch (e) {}
@@ -4478,7 +4485,9 @@ async function runScheduleRefresh(env) {
   try { spine = await fetchScheduleNflverse(); }
   catch (e) { return { ok: false, error: 'spine: ' + ((e && e.message) || 'failed') }; }
   let live = [], liveError = null;
-  try { live = await fetchScheduleEspn(spine.season); }
+  const firstReg = Math.min(...spine.games.filter(g => g.type === 'REG' && Number.isFinite(g.kickoff)).map(g => g.kickoff));
+  const preseason = !Number.isFinite(firstReg) || Date.now() < firstReg - 86400000;
+  try { live = await fetchScheduleEspn(spine.season, { preseason }); }
   catch (e) { liveError = (e && e.message) || 'failed'; }
   let merged = mergeSchedule(spine.games, live);
   // The paid line feed, when there is a key for it. Fail-safe like the live
