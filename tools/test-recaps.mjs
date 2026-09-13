@@ -122,6 +122,9 @@ console.log('\nthe front page holds up its half');
     /function step\(n\) \{ held = true; stop\(\);/.test(front));
   ok('one recap drops the counter and the arrows', /\.rcp\[data-single\] \.rcp-nav\{display:none\}/.test(front));
   ok('the dek is the part that goes on a narrow screen', /@media \(max-width: 860px\) \{ \.rcp-dek\{display:none\} \}/.test(front));
+  // Basis 0. With `auto` the dek claims its content width first and the
+  // headline loses half the strip to it at any real headline length.
+  ok('the headline takes the width it needs and the dek clips first', /\.rcp-dek\{flex:1 1 0;/.test(front));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
