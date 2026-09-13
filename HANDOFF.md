@@ -10803,8 +10803,8 @@ odds-refresh         2026-09-10 11:00:51  11:00:51   1
 nothing at all. **This is what §85 actually was.** I filed it as "the feed
 stopped"; the feed did not stop, the job hung, and it has now hung on two of
 the last four days. Over fourteen days, `odds-refresh` hung 2 runs in 10;
-across every job the worker schedules, 193 of roughly 1,400 runs never wrote a
-finish, and `ok = 0` is recorded essentially never. A job that dies writes the
+across every job the worker schedules, **196 of 1,485 runs** in fourteen days
+never wrote a finish, against **6** that recorded `ok = 0`. A job that dies writes the
 same row as a job that is still running.
 
 Two things follow, and only one of them is already handled:
