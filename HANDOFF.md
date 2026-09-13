@@ -10772,3 +10772,192 @@ section has no slot for `recap` either.
 - **§81a unchanged**: Collins and Wilson still tie at 231.5, slots $28 and $30,
   both served $30. Sixth day, and still the only inverted tie that costs
   anything.
+
+## 87. September 13: the odds job does not fail, it hangs — and the pinned story contradicts itself
+
+D1 clock 2026-09-13 11:22:52Z; this container read 11:22:47Z, so the two were
+in step again. Yesterday's rule holds and is the only one worth carrying: ask
+D1 for the time, never assume either direction.
+
+### 87a. `odds-refresh` starts and never finishes, and nothing says so
+
+The player-odds row has not moved since yesterday. `odds_overlay` row 1
+(`nflverse`) and row 2 (`teamctx`) are both stamped 2026-09-12 11:00:19Z —
+24.4 hours old against D1's clock. Row 7 (`nflverse-usage-prior`) is 26.4
+hours old. Rows 4 and 6 refreshed this morning (10:15:15Z and 10:00:37Z), so
+the hourly tick itself is alive.
+
+`job_runs` says exactly what happened, and it is not a failure:
+
+```
+job                  started              finished   ok
+odds-refresh         2026-09-13 11:00:33  NEVER      null
+usage-prior-refresh  2026-09-13 09:00:42  NEVER      null
+availability-refresh 2026-09-12 23:00:12  NEVER      null
+odds-refresh         2026-09-12 11:00:18  11:00:19   1
+odds-refresh         2026-09-11 11:01:21  NEVER      null     <- the 34h staleness of §85
+odds-refresh         2026-09-10 11:00:51  11:00:51   1
+```
+
+`finished_at` null, `ok` null, `error` null. The job records a start and then
+nothing at all. **This is what §85 actually was.** I filed it as "the feed
+stopped"; the feed did not stop, the job hung, and it has now hung on two of
+the last four days. Over fourteen days, `odds-refresh` hung 2 runs in 10;
+across every job the worker schedules, 193 of roughly 1,400 runs never wrote a
+finish, and `ok = 0` is recorded essentially never. A job that dies writes the
+same row as a job that is still running.
+
+Two things follow, and only one of them is already handled:
+
+- The worker **does** catch it. `_jobDied` (`finished_at == null && ok == null
+  && age > JOB_DIED_AFTER_MS`, 16 minutes) counts a hung run as failed, so
+  `/api/health` should be reporting `degraded` right now. That is working.
+- Nothing downstream cares. `HEALTH_STALE_H.odds` is **36 hours**, so a
+  24-hour-old overlay is not "stale" by the site's own rule, and
+  `ODDS_MAX_AGE_MS` is **14 days**, so the board keeps blending a two-week-old
+  market without comment. On 09-11 the overlay was 34 hours old — under the
+  36-hour limit — while it was printing Pollard at $6. The staleness limit is
+  set wider than the interval at which the numbers visibly move.
+
+The general form, which is worth more than the incident: **a job that hangs is
+indistinguishable from a job that is running, and a board built on a stale
+overlay is indistinguishable from a board built on a fresh one.** Everything
+downstream of the overlay reads as normal. That is why §85's drift looked like
+news.
+
+### 87b. The pinned story contradicts itself, and it did so on the day it published
+
+Row 94 is still the only published row, still pinned. Its table is right — I
+rebuilt the September 8 board from the `wr/rb/qb/te-0908` snapshots and it
+reproduces all seven player rows exactly:
+
+```
+Tate WR25 $11 · Ward QB26 $1 · Pollard RB29 $5 · Wan'Dale Robinson WR38 $3
+Spears RB37 $2 · Ridley WR61 $1 · Helm TE24 $1
+```
+
+and both prose figures too: Tate at **1,060.8** receiving yards, **207.2**
+clear of the next Tennessee receiver. Seven prices, four ranks and two
+projections, all matching. The harness and the story agree completely on the
+day's board.
+
+Then this paragraph, which is in the body right now:
+
+> The receiver board is packed where he sits. Receivers ranked 20 through 23
+> all cost $12. The next three, 24 through 26, all cost $10.
+
+On the served board of September 8 those ranks cost:
+
+```
+WR20 $12   WR21 $12   WR22 $12   WR23 $11
+WR24 $11   WR25 $11   WR26 $10
+```
+
+Three of the seven figures are wrong, and one of them is the story's own
+subject: **the table prices Tate at $11 as WR25, and four paragraphs later the
+same story tells the reader WR25 costs $10.** A reader does not need the board
+to catch this. The story contradicts itself on the page.
+
+The cause is `_colPrice`'s curve, not the board: the curve slots really are
+WR20–23 = $12 and WR24–26 = $10. Since the 2026-09-04 pricing change a served
+price is no longer its rank's curve slot — each of the two odds worlds is slot-
+priced at its own rank, the two are interpolated, and the envelope lifts. So
+reading a price band off the curve and printing it as "what the board says" is
+now guaranteed to be wrong wherever the two worlds disagree. This is §74f/§72f
+with a name and a live example: **a story must look a price up, never derive
+one.** The BOARD ATTRIBUTION CHECK covers single figures read off the wrong
+board; it does not cover a price *band* derived from the curve, and that is the
+gap to close before the column resumes.
+
+I did not edit the row. The column is paused and the standing rule holds.
+
+### 87c. The site's two boards disagree on 22% of the board
+
+Ken's instruction is that the story price and the cheat-sheet price must track
+identically. They do not, and this is the first time it has been measured
+end to end.
+
+`it-league.js` computes the static fallback exactly as the app does — parse
+`DEFAULT_BOARD_RAW`, rank within position by points, **array index is the curve
+slot**, no blend and no envelope. Against today's served board:
+
+```
+340 players compared
+ 74 priced differently  (21.8%)
+ largest gap  $28
+ 14 of the 74 sit at the SAME rank on both boards and still differ
+```
+
+The worst rows:
+
+```
+A.J. Brown        static WR10 $30  ->  served WR44 $2    -28
+Jaxson Dart       static QB7  $13  ->  served QB3  $27   +14
+James Cook        static RB7  $47  ->  served RB11 $35   -12
+Chase Brown       static RB13 $28  ->  served RB9  $39   +11
+Jalen Hurts       static QB4  $27  ->  served QB7  $17   -10
+Omarion Hampton   static RB14 $22  ->  served RB14 $30    +8
+```
+
+Most of the spread is the odds blend and availability scaling doing their job —
+A.J. Brown at $30 against $2 is availability, and the served figure is the right
+one. The 14 same-rank rows are not that: same player, same rank on both boards,
+different dollar figure, purely because one board walks the curve and the other
+interpolates two worlds and walks an envelope up.
+
+The static block is a fallback (`if (served) return served`), so it only reaches
+a reader whose `/api/board` request has not landed yet or has failed. But it is
+what every reader sees for the first moments of every page load, and it is what
+a blocked or offline reader sees permanently — quoting $30 for a player the live
+board prices at $2.
+
+**§81a is a symptom of this, not a separate bug.** Collins and Wilson carry
+identical committed points (229.8). The static fallback ranks them 11th and
+12th and hands them adjacent curve slots, $28 and $27. Today's served board
+puts Collins at WR10 $30 and Wilson at WR12 $28. The numbers move every day the
+overlay moves; the structure does not. Yesterday's "$30 vs $28" and today's
+"$30 vs $28 vs $27" are the same defect sampled twice, and chasing the
+particular pair is the wrong repair. The repair is to make the fallback compute
+prices the way the served board does, or to stop shipping a second pricing
+recipe at all.
+
+### 87d. The recap rows duplicate recaps that are already live, in the right table
+
+`lead_story` still ends at 97. Rows 96 and 97 (`category='recap'`,
+`verified=1`, `published=0`) cover `2026_01_SF_LA` and `2026_01_NE_SEA` — and
+**both of those games already have published recaps in `content_pieces`**,
+which is where recaps belong. `/api/recaps` reads `content_pieces WHERE kind =
+'game-recap' AND status = 'published'` and feeds the front-page strip
+(`.rcp-*`, the banner main added in #219/#220). `lead_story` has nothing to do
+with it.
+
+So rows 96/97 are duplicates in the wrong table, carrying different headlines
+from the live recaps of the same two games. `LEAD_CATEGORIES` still has exactly
+six keys in both the repo and the deployed bundle, and no `recap` among them.
+Harmless at `published=0`; publishing either would put a recap in the lead slot
+labelled "Insight", serving `category: null`, next to a strip already showing
+that same game under another headline. Eleven `lead_story` rows now carry a
+category outside the six.
+
+### 87e. The rest
+
+- Deployed bundle **byte-identical** to yesterday's fetch (1,417,624 bytes).
+  Cloudflare reports `modified_on` 2026-09-12T13:00:03Z; the content did not
+  change.
+- Repo vs deployed: **1380 player-rows across four boards, 0 differences**;
+  `VEGAS_WEIGHT`, `LEAGUE_BUDGET`, `MIN_BID`, `CURVE` and `COLUMN_NORM` all
+  identical.
+- CI: every `node tools/*.mjs` step in `checks.yml` run in order — **76 unique
+  commands (78 occurrences), all pass**, after merging `origin/main` to
+  `2ee4ec5`. Yesterday's "77" was a different extraction of the same file;
+  the count to use going forward is the 76 unique commands.
+- Harness self-test: **23 checks, all pass**.
+- Routine still `enabled: false`, `ended_reason` and `suspension_reason` both
+  empty, untouched since 2026-09-09 13:05:36Z. Live prompt still **47,183
+  chars / `9c578c415408`**, read back out of the trigger and unchanged.
+- Tamper predicates clean: one published row (94), no published-unverified row,
+  no analyst row published, 67 audit rows — all as yesterday.
+- The branch is now **25 commits ahead of `main`**. `main`'s
+  `tools/live-board.mjs` is still the pre-09-02 harness: retired pricing, no
+  availability scaling. It runs without error and prints wrong numbers. That is
+  the shape of the bug that made me "correct" three good stories in §80.
