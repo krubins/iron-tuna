@@ -260,18 +260,36 @@ console.log('\nthe feeds and the front page');
   // under, not the calendar's. A midweek slate moves that title (2026 opened
   // on a Wednesday), and the feed used to overwrite it from CONTENT_KINDS,
   // which put Thursday back on the front page over a Wednesday game.
-  const tnfRow = db.T.content_pieces.filter(r => r.kind === 'tnf-preview' && r.status === 'published').pop();
-  const tnfTitle = tnfRow.title;
-  tnfRow.title = 'Midweek Kickoff Preview \u00b7 Week 2';
+  // The check rides the Week 2 weekend preview: on this Friday morning it is
+  // still ahead of its games, whereas the Thursday preview (the kind whose
+  // title actually moves) left the feed at Thursday night's kickoff, which
+  // is asserted below. The title itself is any non-calendar one.
+  const wpRow = db.T.content_pieces.filter(r => r.kind === 'weekend-preview' && r.status === 'published').pop();
+  const wpTitle = wpRow.title;
+  wpRow.title = 'Midweek Kickoff Preview \u00b7 Week 2';
   const moved = await H.newsroomFeedPayload(env, 'weekly', 20);
-  const mp = moved.pieces.find(p => p.kind === 'tnf-preview');
+  const mp = moved.pieces.find(p => p.kind === 'weekend-preview');
   ok('the feed carries the title a piece was published under, not the calendar default', mp && mp.title === 'Midweek Kickoff Preview', JSON.stringify(mp && mp.title));
   const movedLead = await H.deskLeadPayload(env);
-  const leadRows = [movedLead.story].concat(movedLead.recent).filter(r => /:tnf-preview:/.test(r.slug));
+  const leadRows = [movedLead.story].concat(movedLead.recent).filter(r => /:weekend-preview:/.test(r.slug));
   ok('and so does the front-page lead label', leadRows.length >= 1 && leadRows.every(r => r.label === 'Midweek Kickoff Preview'), JSON.stringify(leadRows.map(r => r.label)));
-  const movedAnalyst = await H.analystPayload(env, H.CONTENT_KINDS['tnf-preview'].analyst);
-  ok('and the analyst page, which no calendar title could produce', movedAnalyst.ok && movedAnalyst.pieces.some(r => r.kind === 'tnf-preview' && r.title === 'Midweek Kickoff Preview'), JSON.stringify(movedAnalyst.pieces.map(r => r.title)));
-  tnfRow.title = tnfTitle;
+  const movedAnalyst = await H.analystPayload(env, H.CONTENT_KINDS['weekend-preview'].analyst);
+  ok('and the analyst page, which no calendar title could produce', movedAnalyst.ok && movedAnalyst.pieces.some(r => r.kind === 'weekend-preview' && r.title === 'Midweek Kickoff Preview'), JSON.stringify(movedAnalyst.pieces.map(r => r.title)));
+  wpRow.title = wpTitle;
+  // ── a forward piece leaves the feed when its games kick off ─────────────
+  // Friday morning of Week 2: everything written ahead of Week 1's games is
+  // out of the public feed, and so is the Week 2 Thursday preview the
+  // morning after its game. What happened stays, and so does the desk index.
+  const FORWARD = ['weekend-preview', 'last-minute-intel', 'mnf-preview', 'tnf-preview', 'kickers-defenses', 'underrated', 'trade-desk'];
+  const all = await H.newsroomFeedPayload(env, 'weekly', 60);
+  ok('the Week 1 previews, the pre-kickoff intel and the week\'s streamers have left the feed', all.ok && !all.pieces.some(p => p.week === 1 && FORWARD.includes(p.kind)), all.pieces.filter(p => p.week === 1).map(p => p.kind).join());
+  ok('and so has the Week 2 Thursday preview, the morning after its game', !all.pieces.some(p => p.week === 2 && p.kind === 'tnf-preview'));
+  ok('what happened stays: the Week 1 recaps and What Sunday Taught Us are still listed', all.pieces.some(p => p.kind === 'game-recap' && p.week === 1) && all.pieces.some(p => p.kind === 'what-sunday-taught-us' && p.week === 1));
+  ok('a Week 2 piece still ahead of its games is listed', all.pieces.some(p => p.week === 2 && p.kind === 'weekend-preview'));
+  ok('the feed says how many it held back', Number.isFinite(all.expired) && all.expired >= 3, String(all.expired));
+  ok('the front-page lead and its column carry none of them', (() => { const l = [movedLead.story].concat(movedLead.recent); return !l.some(r => FORWARD.some(k => r.slug.startsWith('desk:' + k + ':1:') || r.slug === 'desk:' + k + ':1') || r.slug.startsWith('desk:tnf-preview:2')); })(), JSON.stringify([movedLead.story].concat(movedLead.recent).map(r => r.slug)));
+  const idx = await H.contentListPayload(env, 2026, null);
+  ok('the desk index is an archive and still lists every one of them', idx.ok && FORWARD.filter(k => db.T.content_pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')).every(k => idx.pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')));
   const piece = await H.contentPiecePayload(env, 'early-rankings', 2026, 2);
   ok('a piece payload carries both lenses, the sections for each, the byline and the disclosure', piece.ok && piece.body.weekly && piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length && piece.byline.name === 'Evan Brooks' && piece.byline.dfsName === 'Lena Park' && /AI-powered/.test(piece.disclosure));
   ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Early Rankings for Next Week', JSON.stringify(piece.title));

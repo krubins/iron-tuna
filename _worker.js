@@ -9847,22 +9847,96 @@ async function contentPiecePayload(env, kind, season, week, game) {
              body: row.status === 'published' ? parse(row.body) : null, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
+// ── a forward piece leaves the feed when its games kick off ────────────────
+// A preview, the Sunday pre-kickoff intel, the week's streamers, the one
+// player the consensus has wrong: all of it is written AHEAD of games. Once
+// those games have been played the piece is no longer news, it is a
+// prediction of a result the reader already knows, and on the Monday after
+// Week 1 the front page was still saying which quarterbacks were projected to
+// do well on Sunday. The desk already knows when each of these can no longer
+// be WRITTEN (contentDue's readiness gates); this is the same judgement
+// applied to whether it can still be SHOWN, so the two never disagree.
+//
+// The rule, by the kind's own readiness flag (`_staleRule`):
+//   all-started  a `live` piece (Last-Minute Intel) updates until the last
+//                of its games kicks off, so it is current for exactly as long
+//                as it is still being produced.
+//   any-started  a `preview` (Thursday, Monday, the weekend) is refused by
+//                contentDue the moment one of its games has kicked off, and
+//                leaves the feed at the same instant.
+//   slate        a forward piece with no target games (Underrated, Trade
+//                Desk, Kickers & Defenses, Breaking) is about its week's
+//                slate: stale once half or more of the games it was written
+//                ahead of have kicked off. "Ahead of" is the games that had
+//                not kicked off when it published, so a Friday piece is not
+//                judged by Thursday night. Published with nothing ahead of it
+//                (a Breaking piece during the Monday game), it lasts as long
+//                as its week does.
+//   never        a retrospective piece (a recap, What Sunday Taught Us, the
+//                Monday and Tuesday rankings, the Wednesday pickups) is about
+//                what happened; a piece that waits for its games to go final
+//                before it is written (Thursday Night: What Matters) likewise.
+//
+// Only the public feed applies it. The desk index and the analyst pages are
+// archives and keep everything; every piece stays readable at its URL. Pure,
+// and fail-open: with no schedule there is no judgement and the piece stays.
+// The schedule is the site's spine, and losing it is a failure to be seen on
+// the health board, not a reason to blank the front page.
+function _staleRule(K) {
+  if (!K || K.perGame || K.retro) return 'never';
+  if (K.live) return 'all-started';
+  if (K.preview) return 'any-started';
+  // A forward kind whose targets must be final before it is written is about
+  // the games it waited for, not ahead of them.
+  const sample = K.targets([{ dow: 'Sun', status: 'final', state: { status: 'completed' }, kickoff: 0 }, { dow: 'Thu', status: 'final', state: { status: 'completed' }, kickoff: 0 }]);
+  return sample.length ? 'never' : 'slate';
+}
+function pieceExpired(row, sched, now) {
+  const K = row ? CONTENT_KINDS[row.kind] : null;
+  const rule = _staleRule(K);
+  if (rule === 'never' || !sched || row.week == null) return false;
+  const off = g => g.state.status === 'postponed' || g.state.status === 'canceled';
+  const started = g => !off(g) && g.state.status !== 'upcoming';
+  const gs = weekGames(sched, row.week, now).filter(g => !off(g));
+  if (!gs.length) return false;
+  if (rule === 'all-started' || rule === 'any-started') {
+    const targets = K.targets(gs);
+    if (!targets.length) return false;
+    return rule === 'all-started' ? targets.every(started) : targets.some(started);
+  }
+  const at = +(row.published_at || row.created_at) || 0;
+  const ahead = gs.filter(g => g.kickoff > at);
+  if (!ahead.length) return gs.every(g => g.state.status === 'completed');
+  return ahead.filter(started).length * 2 >= ahead.length;
+}
 // The public feed the homes read: published pieces newest first, with the
 // byline and the lens each carries. ?lens=dfs lists only pieces with a DFS
-// lens (every package in the calendar today, but a legacy row has none).
+// lens (every package in the calendar today, but a legacy row has none). A
+// forward piece whose games have kicked off is left out (pieceExpired above);
+// `expired` counts what was held back so a thin feed can be told apart from
+// a desk that did not publish.
 async function newsroomFeedPayload(env, lens, limit) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
   try {
-    const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, rivalry, game_id, components FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, limit || 20)).all();
+    const want = Math.min(60, limit || 20);
+    // Over-fetch: the rows the expiry and the lens drop would otherwise leave
+    // the feed short of what the page asked for.
+    const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, rivalry, game_id, components FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, want + 24)).all();
     let rows = (q.results || []);
+    const sched = await scheduleCacheRead(env);
+    const now = Date.now();
+    const before = rows.length;
+    rows = rows.filter(r => !pieceExpired(r, sched, now));
+    const expired = before - rows.length;
     if (lens === 'dfs') rows = rows.filter(r => r.lens === 'both' || r.lens === 'dfs');
+    rows = rows.slice(0, want);
     const parse = s => { try { const v = JSON.parse(s); return Array.isArray(v) ? v : null; } catch (e) { return null; } };
     // `_pieceTitle` is the stored title minus the edition trailer, which for a
     // per-game row IS the matchup: six rows all reading "Game Recap" would say
     // nothing about which game. `components` are the findings the rail breaks
     // the story into once it is no longer the lead.
-    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry,
+    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, expired, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry,
       game: r.game_id || null, perGame: !!(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].perGame), components: parse(r.components) })) };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
