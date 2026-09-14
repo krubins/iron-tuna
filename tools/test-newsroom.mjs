@@ -477,6 +477,19 @@ console.log('\nthe fact check reads a sentence break, a verb and shown arithmeti
   ok('a player the packet lacks is still caught', v('Jerry Jeudy is the play here.').names.join() === 'Jerry Jeudy');
 }
 
+// Week 1's recaps were held again on the same shape with different words:
+// "Stash Allen", "Attack Douglas", "Unlike Watson". Each hold costs a whole
+// regeneration, and one recap took eight of them.
+console.log('\nthe call vocabulary is prose, not a roster');
+{
+  const p = H._finishBrief({ meta: { kind: 'game-recap', lens: 'both' }, rivalry: null,
+    players: [{ name: 'Josh Allen' }, { name: 'Deshaun Watson' }, { name: 'Caleb Douglas' }, { name: 'Ashton Jeanty' }] });
+  const v = s => H.validateDraft(s, p.allowed);
+  ok('a call direction in front of a packet name is a verb', v('Stash Allen in deeper leagues. Attack Douglas in tournaments. Pair Jeanty with the game stack.').ok, JSON.stringify(v('Stash Allen in deeper leagues. Attack Douglas in tournaments. Pair Jeanty with the game stack.').names));
+  ok('a preposition in front of a packet name is a preposition', v('Unlike Watson, the price never moved. Despite Jeanty, the total stayed low.').ok, JSON.stringify(v('Unlike Watson, the price never moved. Despite Jeanty, the total stayed low.').names));
+  ok('an invented player is still caught beside them', v('Stash Allen, but Jerry Jeudy is the real play.').names.join() === 'Jerry Jeudy', JSON.stringify(v('Stash Allen, but Jerry Jeudy is the real play.').names));
+}
+
 console.log('\nwhat the site called before kickoff, and how it landed');
 {
   const frz = (rows) => ({ takenAt: 1000, kickoff: 2000, rows });
