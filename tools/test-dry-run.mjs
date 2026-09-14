@@ -307,9 +307,11 @@ console.log('\nthe feeds and the front page');
     const lmi = db.T.content_pieces.filter(r => r.kind === 'last-minute-intel' && r.status === 'published').sort((a, b) => a.created_at - b.created_at);
     ok('a live piece re-produced after a published version is a numbered edition', lmi.length < 2 || /\u00b7 update 2/.test(lmi[1].title), JSON.stringify(lmi.map(r => r.title)));
     // The rewrite cap: a held draft at the cap is revalidated but not rewritten.
-    const gid = GAMES.find(x => x.week === 1).id;
+    // The clock is Friday of Week 2, so the recap kind is about Week 2 and
+    // the planted row has to be one of that week's final games.
+    const gid = 'w2-thu';
     const before = db.T.content_pieces.length;
-    const capped = { id: 9002, kind: 'game-recap', season: 2026, week: 1, game_id: gid, slug: 'game-recap-2026-w1-' + gid.toLowerCase().replace(/[^a-z0-9]+/g, '-'), title: 'X at Y \u00b7 Week 1', status: 'held', version: H.REWRITE_HELD_MAX, body: JSON.stringify({ weekly: { theGame: ['Nobody Real did a thing'] }, dfs: {} }), violations: '["name:Nobody Real"]', created_at: Date.now() - 3600000, published_at: null, analyst: 'raines', lens: 'both', brief: '{}' };
+    const capped = { id: 9002, kind: 'game-recap', season: 2026, week: 2, game_id: gid, slug: 'game-recap-2026-w2-' + gid.toLowerCase().replace(/[^a-z0-9]+/g, '-'), title: 'X at Y \u00b7 Week 2', status: 'held', version: H.REWRITE_HELD_MAX, body: JSON.stringify({ weekly: { theGame: ['Nobody Real did a thing'] }, dfs: {} }), violations: '["name:Nobody Real"]', created_at: Date.now() - 3600000, published_at: null, analyst: 'raines', lens: 'both', brief: '{}' };
     db.T.content_pieces.push(capped);
     modelLog.length = 0;
     const r = await H.produceContent(env, 'game-recap', { gameId: gid });
