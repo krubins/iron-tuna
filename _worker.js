@@ -9847,9 +9847,37 @@ async function contentPiecePayload(env, kind, season, week, game) {
              body: row.status === 'published' ? parse(row.body) : null, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
+// ── played-out previews ────────────────────────────────────────────────────
+// A piece of ADVANCE insight is written about games still to come: the
+// previews and the pre-kickoff intel, which are the kinds marked `preview` or
+// `live`. Once every game it covers has kicked off, its start/sits and its
+// projections are about a result the reader can look up, and a feed that is
+// simply newest-first would keep a Friday preview above Tuesday's rankings
+// until the column ran out of room. So the feed is sorted in two bands:
+// everything current, newest first; then the played-out pieces, newest
+// first, so a reader who wants one can still find it, at the bottom. The
+// lead is the first row of the same feed, so a played-out preview never
+// leads while anything current is published.
+//
+// "Kicked off" is the line, not "final": a preview is moot from the opening
+// kickoff, and `upcoming` is the same state contentDue reads when it decides
+// whether a preview may still be WRITTEN. A piece is played out only when
+// NONE of its games is still to come, so the Weekend Preview holds its place
+// through Sunday while the Monday game it covers is ahead. No schedule
+// means no verdict: the feed is then what it always was.
+const _advanceKind = K => !!(K && (K.preview || K.live));
+function _playedOut(row, sched, now) {
+  const K = CONTENT_KINDS[row.kind];
+  if (!_advanceKind(K) || !sched || row.week == null) return false;
+  // A preview from a past season has nothing ahead of it by definition.
+  if (sched.season && row.season && row.season !== sched.season) return true;
+  const targets = K.targets(weekGames(sched, row.week, now));
+  return targets.length > 0 && targets.every(g => g.state.status !== 'upcoming');
+}
 // The public feed the homes read: published pieces newest first, with the
-// byline and the lens each carries. ?lens=dfs lists only pieces with a DFS
-// lens (every package in the calendar today, but a legacy row has none).
+// byline and the lens each carries, the played-out previews at the bottom
+// (`playedOut`, above). ?lens=dfs lists only pieces with a DFS lens (every
+// package in the calendar today, but a legacy row has none).
 async function newsroomFeedPayload(env, lens, limit) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
@@ -9857,17 +9885,24 @@ async function newsroomFeedPayload(env, lens, limit) {
     const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, rivalry, game_id, components FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, limit || 20)).all();
     let rows = (q.results || []);
     if (lens === 'dfs') rows = rows.filter(r => r.lens === 'both' || r.lens === 'dfs');
+    // Two bands, each keeping the query's newest-first order: the current
+    // pieces, then the previews whose games have all kicked off.
+    const sched = await scheduleCacheRead(env);
+    const now = Date.now();
+    rows = rows.map(r => ({ ...r, playedOut: _playedOut(r, sched, now) }));
+    rows = rows.filter(r => !r.playedOut).concat(rows.filter(r => r.playedOut));
     const parse = s => { try { const v = JSON.parse(s); return Array.isArray(v) ? v : null; } catch (e) { return null; } };
     // `_pieceTitle` is the stored title minus the edition trailer, which for a
     // per-game row IS the matchup: six rows all reading "Game Recap" would say
     // nothing about which game. `components` are the findings the rail breaks
     // the story into once it is no longer the lead.
     return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry,
-      game: r.game_id || null, perGame: !!(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].perGame), components: parse(r.components) })) };
+      game: r.game_id || null, perGame: !!(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].perGame), components: parse(r.components), playedOut: !!r.playedOut })) };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
-// The front page's lead, in the regular season: the newest published piece,
-// in the shape the lead painter already understands.
+// The front page's lead, in the regular season: the newest published piece
+// that is still current (a played-out preview sits at the bottom of the feed,
+// `_playedOut`), in the shape the lead painter already understands.
 async function deskLeadPayload(env) {
   // Twelve, not six: the front page's Top Headlines column is six slots wide
   // and the lead itself takes the first row off this list, so six left it one
@@ -9894,7 +9929,7 @@ async function deskLeadPayload(env) {
   const labelOf = p => p.title;
   const row = p => ({ slug: 'desk:' + p.kind + ':' + p.week + (p.game ? ':' + _gameSlug(p.game) : ''), url: p.url,
                       title: p.headline || labelOf(p) + (p.perGame ? '' : ' · Week ' + p.week), dek: p.dek || '', label: labelOf(p),
-                      category: 'desk', analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], ...faces(p) });
+                      category: 'desk', analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], playedOut: !!p.playedOut, ...faces(p) });
   // THE STORY BREAKS INTO ITS COMPONENTS ONCE IT IS NO LONGER THE LEAD.
   // While a recap is the lead it runs whole, under its own headline. The
   // moment a later game's recap takes the lead, the rail stops printing it as
@@ -9909,7 +9944,7 @@ async function deskLeadPayload(env) {
       railRows.push({ slug: 'desk:' + p.kind + ':' + p.week + (p.game ? ':' + _gameSlug(p.game) : '') + ':c' + c.n,
                       url: p.url + '#component-' + c.n,
                       title: c.headline, dek: c.why || '', label: labelOf(p), category: 'desk',
-                      analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], ppl: [], names: c.player ? [c.player] : [], cast: [] });
+                      analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], playedOut: !!p.playedOut, ppl: [], names: c.player ? [c.player] : [], cast: [] });
     }
   }
   return { ok: true, source: 'desk', story: row(cur), recent: railRows.slice(0, 12) };

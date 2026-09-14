@@ -531,6 +531,17 @@ console.log('\nTop Headlines keeps up with the season');
   ok('the column never runs past its slots', railMerge(many, reports, [], true).length === RAIL_MAX);
   ok('a desk with six pieces of its own needs no report at all',
      railMerge(many, reports, [], true).every(x => x.desk));
+  // A preview whose games have all kicked off arrives from the worker at the
+  // bottom of the feed, flagged. The newest-first sort here must not lift it
+  // back over the current pieces and the reports, however new it is.
+  const played = Object.assign(deskItem(99, 0), { playedOut: true });
+  const demoted = railMerge([played].concat(desk), reports, [], true);
+  ok('a played-out preview sorts behind every current line in season, whatever its date',
+     demoted.length === 5 && demoted[4].url === played.url
+     && demoted.slice(0, 4).map(x => x.at).every((v, i, a) => i === 0 || a[i - 1] >= v),
+     demoted.map(x => x.title).join(' | '));
+  ok('and only ever fills a slot nothing current wanted',
+     railMerge(many.concat([played]), reports, [], true).every(x => !x.playedOut));
 
   // The age cap is what stops the reports becoming the next frozen feed.
   const REPORTS = [{ date: '2026-09-08', title: 'This week', url: '/auction-watch-2026-09-08' },

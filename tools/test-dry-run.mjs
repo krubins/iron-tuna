@@ -260,18 +260,50 @@ console.log('\nthe feeds and the front page');
   // under, not the calendar's. A midweek slate moves that title (2026 opened
   // on a Wednesday), and the feed used to overwrite it from CONTENT_KINDS,
   // which put Thursday back on the front page over a Wednesday game.
-  const tnfRow = db.T.content_pieces.filter(r => r.kind === 'tnf-preview' && r.status === 'published').pop();
+  // Checked on the Friday piece rather than the Thursday preview: by this
+  // Friday the preview's game has been played, so it sits at the bottom of the
+  // feed (below) and out of the front page's column, which is the right place
+  // for it and the wrong one to read a label off.
+  const tnfRow = db.T.content_pieces.filter(r => r.kind === 'tnf-what-matters' && r.status === 'published').pop();
   const tnfTitle = tnfRow.title;
-  tnfRow.title = 'Midweek Kickoff Preview \u00b7 Week 2';
+  tnfRow.title = 'Midweek Football: What Matters \u00b7 Week 2';
   const moved = await H.newsroomFeedPayload(env, 'weekly', 20);
-  const mp = moved.pieces.find(p => p.kind === 'tnf-preview');
-  ok('the feed carries the title a piece was published under, not the calendar default', mp && mp.title === 'Midweek Kickoff Preview', JSON.stringify(mp && mp.title));
+  const mp = moved.pieces.find(p => p.kind === 'tnf-what-matters');
+  ok('the feed carries the title a piece was published under, not the calendar default', mp && mp.title === 'Midweek Football: What Matters', JSON.stringify(mp && mp.title));
   const movedLead = await H.deskLeadPayload(env);
-  const leadRows = [movedLead.story].concat(movedLead.recent).filter(r => /:tnf-preview:/.test(r.slug));
-  ok('and so does the front-page lead label', leadRows.length >= 1 && leadRows.every(r => r.label === 'Midweek Kickoff Preview'), JSON.stringify(leadRows.map(r => r.label)));
-  const movedAnalyst = await H.analystPayload(env, H.CONTENT_KINDS['tnf-preview'].analyst);
-  ok('and the analyst page, which no calendar title could produce', movedAnalyst.ok && movedAnalyst.pieces.some(r => r.kind === 'tnf-preview' && r.title === 'Midweek Kickoff Preview'), JSON.stringify(movedAnalyst.pieces.map(r => r.title)));
+  const leadRows = [movedLead.story].concat(movedLead.recent).filter(r => /:tnf-what-matters:/.test(r.slug));
+  ok('and so does the front-page lead label', leadRows.length >= 1 && leadRows.every(r => r.label === 'Midweek Football: What Matters'), JSON.stringify(leadRows.map(r => r.label)));
+  const movedAnalyst = await H.analystPayload(env, H.CONTENT_KINDS['tnf-what-matters'].analyst);
+  ok('and the analyst page, which no calendar title could produce', movedAnalyst.ok && movedAnalyst.pieces.some(r => r.kind === 'tnf-what-matters' && r.title === 'Midweek Football: What Matters'), JSON.stringify(movedAnalyst.pieces.map(r => r.title)));
   tnfRow.title = tnfTitle;
+  // ── played-out previews go to the bottom ─────────────────────────────────
+  // It is Friday morning of Week 2. Thursday's preview was published Thursday
+  // at 6 and its game kicked off Thursday night; Wednesday's Pickup Advisor is
+  // a day older and still current. Newest-first would put the preview above
+  // it; the feed puts every current piece above every played-out one.
+  {
+    const all = await H.newsroomFeedPayload(env, 'weekly', 60);
+    const idx = (kind, week) => all.pieces.findIndex(p => p.kind === kind && p.week === week);
+    const firstOut = all.pieces.findIndex(p => p.playedOut);
+    ok('the feed is two bands: every current piece, then every played-out preview', all.ok && firstOut > 0 && all.pieces.slice(firstOut).every(p => p.playedOut) && all.pieces.slice(0, firstOut).every(p => !p.playedOut), JSON.stringify(all.pieces.map(p => [p.kind, p.week, p.playedOut])));
+    ok('each band is newest first', [all.pieces.slice(0, firstOut), all.pieces.slice(firstOut)].every(b => b.every((p, i) => i === 0 || b[i - 1].publishedAt >= p.publishedAt)));
+    ok('the Thursday preview is played out by Friday and sits below the older Pickup Advisor', all.pieces[idx('tnf-preview', 2)].playedOut && idx('tnf-preview', 2) > idx('pickup-advisor', 2) && !all.pieces[idx('pickup-advisor', 2)].playedOut, JSON.stringify([idx('tnf-preview', 2), idx('pickup-advisor', 2)]));
+    ok('so are last week\'s pre-kickoff intel and Monday night preview', ['last-minute-intel', 'mnf-preview'].every(k => idx(k, 1) >= 0 && all.pieces[idx(k, 1)].playedOut), JSON.stringify(['last-minute-intel', 'mnf-preview'].map(k => idx(k, 1))));
+    ok('a preview whose games are still ahead is current, and so is a retrospective about a game just played', ['weekend-preview', 'tnf-what-matters'].every(k => idx(k, 2) >= 0 && !all.pieces[idx(k, 2)].playedOut), JSON.stringify(['weekend-preview', 'tnf-what-matters'].map(k => [idx(k, 2), idx(k, 2) >= 0 && all.pieces[idx(k, 2)].playedOut])));
+    ok('a recap and the rankings are never played out', all.pieces.filter(p => !['tnf-preview', 'mnf-preview', 'weekend-preview', 'last-minute-intel'].includes(p.kind)).every(p => !p.playedOut));
+    // The lead is the first row of the same feed. A preview republished after
+    // everything else (a late update) is still not the lead once its game has
+    // kicked off: the newest CURRENT piece is.
+    const tp = db.T.content_pieces.filter(r => r.kind === 'tnf-preview' && r.week === 2 && r.status === 'published').pop();
+    const was = tp.published_at;
+    tp.published_at = end + 3600000;
+    const late = await H.deskLeadPayload(env);
+    const newestCurrent = all.pieces.find(p => !p.playedOut);
+    ok('a played-out preview never leads while anything current is published, however new it is', late.story.slug === 'desk:' + newestCurrent.kind + ':' + newestCurrent.week + (newestCurrent.game ? ':' + newestCurrent.game.toLowerCase().replace(/[^a-z0-9]+/g, '-') : '') && !/:tnf-preview:/.test(late.story.slug), JSON.stringify([late.story.slug, newestCurrent.kind]));
+    const col = late.recent, colOut = col.findIndex(r => r.playedOut);
+    ok('and the column the front page reads keeps every played-out row behind the current ones, flagged', late.story.playedOut === false && (colOut < 0 || col.slice(colOut).every(r => r.playedOut)) && col.every(r => /:tnf-preview:2/.test(r.slug) ? r.playedOut === true : true), JSON.stringify(col.map(r => [r.slug, r.playedOut])));
+    tp.published_at = was;
+  }
   const piece = await H.contentPiecePayload(env, 'early-rankings', 2026, 2);
   ok('a piece payload carries both lenses, the sections for each, the byline and the disclosure', piece.ok && piece.body.weekly && piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length && piece.byline.name === 'Evan Brooks' && piece.byline.dfsName === 'Lena Park' && /AI-powered/.test(piece.disclosure));
   ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Early Rankings for Next Week', JSON.stringify(piece.title));

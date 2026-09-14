@@ -9344,3 +9344,73 @@ Things that had to move with it:
 still rewritten by `build-front.mjs`. Nothing reads them on the page any more.
 They were left in place because the build script asserts on the declarations,
 and because the data is what any future rebuild of these bands would want.
+
+---
+
+## 75. September 14: a played-out preview goes to the bottom of the feed
+
+Ken's note: *"Once a game has been played, push stories that provide
+advance insights and projections about that game very low on the
+priority."*
+
+**The problem.** The newsroom feed (`/api/newsroom`) was strictly newest
+first, and the front-page lead and its column are the first rows of that
+same feed (`deskLeadPayload`, §68p, §73c). So on a Friday morning the
+Thursday Night Football Preview, published Thursday at 6 and about a game
+that ended Thursday night, still stood above Wednesday's Pickup Advisor
+and Tuesday's rankings; and on Sunday night Last-Minute Intel sat in the
+column beside the recaps of the games it had previewed. Nothing was wrong
+with the pieces. They were simply in the wrong place once the whistle blew.
+
+**The rule.** `_playedOut(row, sched, now)` in `_worker.js`, ahead of
+`newsroomFeedPayload`. A piece is one of ADVANCE insight if its kind is
+marked `preview` or `live` in `CONTENT_KINDS`: today the Thursday, Monday
+and Weekend previews, and Last-Minute Intel. Such a piece is played out
+when NONE of the games its kind targets for that week is still `upcoming`
+(`weekGames` / `seasonGameStatus`, the same state `contentDue` reads when
+it decides whether a preview may still be written). Two consequences worth
+knowing:
+
+- **Kicked off is the line, not final.** A preview is moot from the opening
+  kickoff. Thursday's preview drops the moment the Thursday game starts.
+- **Every game, not any game.** A piece covering several games stays
+  current while one of them is ahead, so the Weekend Preview (Sunday and
+  Monday games) holds its place through Sunday and drops at the Monday
+  night kickoff; Last-Minute Intel (Sunday's games) drops at the Sunday
+  night kickoff. That is the conservative reading of the note. If a
+  half-played weekend should already count, the threshold to change is the
+  `every` in `_playedOut`.
+
+A preview from a past season is played out by definition. No schedule in
+the cache means no verdict, and the feed is then exactly what it was.
+
+**What it does.** The feed is sorted in two bands, each keeping the query's
+newest-first order: every current piece, then every played-out one. Each
+row carries `playedOut`. Because the lead is row one of this feed, a
+played-out preview never leads while anything current is published, however
+recently it was republished (a late pre-kickoff update, say). The desk lead
+payload carries the flag onto the front page's rows, and `railMerge` in
+`front.html`, which re-sorts the column newest first in season, now sorts a
+played-out row behind every current line first, so the page cannot undo the
+worker's order. A played-out piece is still in the feed and still linked,
+at the bottom: a reader who wants Friday's preview after the fact can find
+it; it just is not news.
+
+Only the newsroom feed and the front page changed. The desk index and the
+admin board (`contentListPayload`) stay chronological; the recap strip
+(§73 addendum) carries recaps only and was never affected; the archive
+pages are untouched.
+
+**Checked:** `tools/test-dry-run.mjs` (the Friday-of-Week-2 feed is two
+bands, the Thursday preview sits below the older Pickup Advisor, last
+week's intel and Monday preview are played out, the Weekend Preview and
+Thursday Night: What Matters are not, a recap or a rankings piece never
+is, and a preview republished after everything else still does not lead),
+`tools/test-lead-story.mjs` (`railMerge` keeps a flagged row last and only
+lets it fill a slot nothing current wanted), `test-newsroom`,
+`test-content`, `test-recaps`, `test-jobs`, `test-seo`, `test-chrome`,
+`test-css-tokens`, both parse gates, the control-byte scan, and
+`build-front.mjs` / `build-seo.mjs --check` with no drift. The dry run's
+stored-title assertion moved from the Thursday preview to Thursday Night:
+What Matters, because by the Friday it is checked on the preview is, by
+design, at the bottom of the feed and out of the column.

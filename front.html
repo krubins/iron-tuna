@@ -3731,7 +3731,10 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         label: o.label || 'The Desk',
         meta: (o.label || 'The Desk') + (when ? ' · ' + when : ''),
         desk: 1,
-        at: +o.createdAt || 0
+        at: +o.createdAt || 0,
+        // A preview whose games have all kicked off: the worker sorts it to
+        // the bottom of the feed, and the column keeps it there.
+        playedOut: !!o.playedOut
       };
     });
   }
@@ -3759,7 +3762,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // newest thing the site has.
   //
   //   in season   the desk's published pieces and any report inside
-  //               RAIL_FRESH_MS, merged and sorted strictly newest first. The
+  //               RAIL_FRESH_MS, merged and sorted strictly newest first,
+  //               except that a desk piece the worker marked played out (a
+  //               preview whose games have all kicked off) goes behind every
+  //               current line whatever its date, so the sort here cannot
+  //               undo the worker's order. The
   //               draft-season drop pages are not eligible AT ALL. When there
   //               is nothing current the column is empty and takes itself off
   //               the page, which is the honest answer — a "Top Headlines" box
@@ -3777,7 +3784,9 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       });
     }
     if (!inSeason) { take(deskItems); take(fallbackItems); return out; }
-    take((deskItems || []).concat(reportItems || []).sort(function(a, b){ return (b.at || 0) - (a.at || 0); }));
+    take((deskItems || []).concat(reportItems || []).sort(function(a, b){
+      return ((a.playedOut ? 1 : 0) - (b.playedOut ? 1 : 0)) || ((b.at || 0) - (a.at || 0));
+    }));
     return out;
   }
 
