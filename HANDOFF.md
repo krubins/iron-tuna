@@ -8506,6 +8506,29 @@ own prose AND applied in its script, and `tools/test-the-line.mjs` holds the two
 to each other, to the worker's `GAP_AGREE` floor, and to the standing
 disclosures being present at all.
 
+**The Line is on the record (added 2026-09-14).** The page prices the week
+live, so the board a reader saw on Tuesday is not Sunday's, and a stake that
+was never written down cannot be graded. The `line-ledger` job (phase 2, every
+quarter hour, the same cadence and the same `BOARD_FREEZE_LEAD_MS` window as
+`board-freeze`) files every read the page makes on a game -- total, spread and
+any book-quoted anytime-TD prop, staked or passed -- once per game into D1
+`line_ledger` (PK `season, week, game_id, market`; `market` is `total`,
+`spread` or `td:<player_key>`), then settles every open row whose game has a
+final in the schedule cache: total and spread on the score, a prop on the
+usage file's week line (`win`/`loss`; `void` when the week is in and he has no
+line, or the game was postponed). The arithmetic (`LINE_LADDER`,
+`lineGameReads`, `lineProps`, `lineTicket`, `lineSettle`, `lineRecordSummary`)
+is the page's own restated in `_worker.js`, and `tools/test-the-line.mjs` runs
+both on the same fixtures and fails on any difference in label, stake, side or
+edge. `/api/the-line/record` (Washington-fenced) returns the season's rows, a
+summary and a per-week summary; the page's **The record** section prints only
+the staked rows, settles game markets at a hypothetical −110 and props at the
+quoted price, and reports the passes as graded *leans* so the whole board is
+on the record without a pass ever being sold as a bet. Pages never write the
+ledger; `?rerun=line-ledger` on `/api/admin/health` runs the job by hand. A
+game the job missed (cron outage across the window) has no row and is not
+backfilled: the record says what was filed, not what would have been.
+
 ### Every board is Fantasy Consensus vs. Betting Odds
 
 The point of the section. Each row prints the same player twice:

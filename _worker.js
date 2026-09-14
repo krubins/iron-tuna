@@ -6666,6 +6666,9 @@ function detectInsights(input) {
 // whether a number is a quoted market or derived from the game lines, because
 // on a week where no priced props reach the feed (today) every player board is
 // the latter. Books have props posted; this build is not carrying them.
+// The agreement threshold: under this many points the model and the book are
+// called to agree. /the-line's floor is this number and not its own.
+const GAP_AGREE = 2.0;
 const EDGE_CONTRACT = 1;
 function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const players = (week && week.players) || [];
@@ -6707,7 +6710,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
     const q = p.vegas.td;
     const lam = (p.ironTuna.stats.rushTD || 0) + (p.ironTuna.stats.recTD || 0) + (p.pos === 'QB' ? 0 : 0);
     const derived = Math.round((1 - Math.exp(-lam)) * 1000) / 10;
-    return { name: p.name, position: p.position, team: p.team, probability: q ? q.probability : derived, basis: q ? 'anytime-td-market' : 'derived',
+    return { key: p.key, name: p.name, position: p.position, team: p.team, probability: q ? q.probability : derived, basis: q ? 'anytime-td-market' : 'derived',
              books: q ? q.books : null, expectedTds: _oddsRound(lam * 100) / 100, opponent: p.weeks[0] && p.weeks[0].opponent };
   }).sort((a, b) => b.probability - a.probability).slice(0, 40);
   // Volume board: market-implied touches. Props where present, else the
@@ -6731,7 +6734,6 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
     const w0 = p.weeks && p.weeks[0];
     if (w0 && w0.env && w0.env.expected != null && !modelPts.has(p.team)) modelPts.set(p.team, w0.env.expected);
   }
-  const GAP_AGREE = 2.0;
   const gameEnvironments = ((state && state.ok && state.games) || []).map(g => {
     const gm = gameMarkets && gameMarkets[g.id];
     const lm = _gameLineMove(g, gm);
@@ -6855,6 +6857,305 @@ async function boardFreezeRead(env, season, week, gameId) {
     const p = JSON.parse(r.payload);
     return { takenAt: r.taken_at, kickoff: r.kickoff, matchup: p.matchup || null, rows: Array.isArray(p.rows) ? p.rows : [] };
   } catch (e) { return null; }
+}
+// ── The Line, on the record ─────────────────────────────────────────────────
+// /the-line prices every game live off /api/vegas-edge, so the board a reader
+// sees on Tuesday is not the board on Sunday morning, and a stake that was
+// never written down cannot be graded. A column that remembers only its wins
+// is not a record. This files every read the page makes on a game -- the
+// total, the spread, and any quoted anytime-touchdown prop, staked or passed
+// -- ONCE per game, inside the same two-hour window before kickoff that
+// freezes the week board (BOARD_FREEZE_LEAD_MS), and settles every row on the
+// final score in the schedule. The arithmetic below is the page's own,
+// restated in the worker's voice; tools/test-the-line.mjs holds the two to
+// each other, rung for rung and read for read, so a rule that drifts in one
+// fails there rather than filing a stake the page never showed.
+const LINE_LADDER = [
+  { at: 4.0, stake: 100, label: 'High' },
+  { at: 3.0, stake: 60, label: 'Moderate' },
+  { at: GAP_AGREE, stake: 30, label: 'Slight' }
+];
+const LINE_PROP_LADDER = [
+  { at: 10, stake: 50, label: 'Moderate' },
+  { at: 6, stake: 25, label: 'Slight' }
+];
+const LINE_FULL_EDGE = 5.0;   // the edge that reads 100 on the conviction scale
+const LINE_PROP_FULL = 15;    // the same, in percentage points, for a prop
+// A game market is settled at this hypothetical price; a prop at the price
+// the book quoted. Stated on the page, so the record's arithmetic is checkable.
+const LINE_GAME_PRICE = -110;
+const _lineNum = v => v != null && Number.isFinite(v);
+const _lineOne = v => (Math.round(v * 10) / 10).toFixed(1);
+const _lineSigned = v => (v > 0 ? '+' : v < 0 ? '−' : '') + _lineOne(Math.abs(v));
+function lineRung(edge, ladder) { const a = Math.abs(edge); for (const r of ladder) if (a >= r.at) return r; return null; }
+function lineConviction(edge, full) { return Math.max(0, Math.min(100, Math.round(Math.abs(edge) / full * 100))); }
+function lineAmerican(pct) {
+  if (!_lineNum(pct) || pct <= 0 || pct >= 100) return null;
+  const p = pct / 100;
+  const v = p >= 0.5 ? -Math.round(100 * p / (1 - p)) : Math.round(100 * (1 - p) / p);
+  return (v > 0 ? '+' : '') + v;
+}
+// A game already under way is not priced, whatever the feed still carries.
+function lineOpen(g, now) {
+  if (g.status && g.status !== 'pre' && g.status !== 'upcoming') return false;
+  return !g.kickoff || g.kickoff > now;
+}
+function _lineRead(kind, edge, side, pick, live) {
+  if (!_lineNum(edge)) return { kind, edge: null, conf: 0, label: 'No read', stake: 0, side: null, pick: null };
+  const r = lineRung(edge, LINE_LADDER);
+  const conf = lineConviction(edge, LINE_FULL_EDGE);
+  if (!live) return { kind, edge, conf, label: 'Closed', stake: 0, side, pick };
+  if (!r) return { kind, edge, conf, label: 'Pass', stake: 0, side, pick };
+  return { kind, edge, conf, label: r.label, stake: r.stake, side, pick };
+}
+// The two game reads, as the page makes them. `edge` is the model's number
+// minus the book's; `pick` is the structured claim the ledger settles, which
+// side of the posted number the model is on. The feed signs a spread as the
+// HOME margin, so the model's margin is its home expectation minus its away.
+function lineGameReads(g, now) {
+  const live = lineOpen(g, now);
+  const totEdge = (_lineNum(g.ironTunaTotal) && _lineNum(g.total)) ? Math.round((g.ironTunaTotal - g.total) * 10) / 10 : null;
+  const total = _lineRead('Total', totEdge,
+    _lineNum(g.total) ? (totEdge > 0 ? 'Over ' + _lineOne(g.total) : 'Under ' + _lineOne(g.total)) : null,
+    _lineNum(totEdge) ? (totEdge > 0 ? 'over' : 'under') : null, live);
+  Object.assign(total, { market: 'total', line: _lineNum(g.total) ? g.total : null,
+    posted: _lineNum(g.total) ? g.total : null, model: _lineNum(g.ironTunaTotal) ? g.ironTunaTotal : null });
+  const mMar = (_lineNum(g.ironTunaHome) && _lineNum(g.ironTunaAway)) ? g.ironTunaHome - g.ironTunaAway : null;
+  const sprEdge = (_lineNum(mMar) && _lineNum(g.spread)) ? Math.round((mMar - g.spread) * 10) / 10 : null;
+  let side = null, pick = null;
+  if (_lineNum(g.spread) && _lineNum(sprEdge)) {
+    side = sprEdge > 0 ? g.home + ' ' + _lineSigned(-g.spread) : g.away + ' ' + _lineSigned(g.spread);
+    pick = sprEdge > 0 ? 'home' : 'away';
+  }
+  const spread = _lineRead('Spread', sprEdge, side, pick, live);
+  Object.assign(spread, { market: 'spread', line: _lineNum(g.spread) ? g.spread : null,
+    posted: _lineNum(g.spread) ? g.spread : null, model: _lineNum(mMar) ? Math.round(mMar * 10) / 10 : null });
+  return [total, spread];
+}
+// The anytime-touchdown props for one game, as the page reads them: only a
+// price a book actually posted is a market, only the yes side is staked, and
+// at most the two biggest disagreements are kept.
+function lineProps(g, tdBoard, now) {
+  const live = lineOpen(g, now), rows = [];
+  for (const p of tdBoard || []) {
+    if (p.team !== g.home && p.team !== g.away) continue;
+    if (p.basis !== 'anytime-td-market' || !_lineNum(p.probability) || !_lineNum(p.expectedTds)) continue;
+    const model = Math.round((1 - Math.exp(-p.expectedTds)) * 1000) / 10;
+    const edge = Math.round((model - p.probability) * 10) / 10;
+    const r = lineRung(edge, LINE_PROP_LADDER);
+    const key = p.key || (_oddsNorm(p.name) + '|' + p.position);
+    rows.push({ kind: 'Anytime TD', market: 'td:' + key, key, name: p.name, position: p.position, team: p.team,
+      posted: p.probability, model, edge, line: p.probability, price: lineAmerican(p.probability),
+      conf: lineConviction(edge, LINE_PROP_FULL), side: p.name + ' to score', pick: 'yes',
+      stake: (live && r && edge > 0) ? r.stake : 0,
+      label: !live ? 'Closed' : (edge < 0 ? (r ? 'Price short' : 'Pass') : (r ? r.label : 'Pass')) });
+  }
+  rows.sort((a, b) => Math.abs(b.edge) - Math.abs(a.edge));
+  return rows.slice(0, 2);
+}
+// One game's ticket: the two reads with ONE stake between them at most (the
+// larger edge gets the money and the other is stated and left alone, as the
+// page says), and the props, each staked on its own.
+function lineTicket(g, tdBoard, now) {
+  const reads = lineGameReads(g, now);
+  let best = null;
+  for (const r of reads) if (r.stake && (!best || Math.abs(r.edge) > Math.abs(best.edge))) best = r;
+  for (const r of reads) if (r.stake && r !== best) { r.stake = 0; r.yielded = true; }
+  return { reads, props: lineProps(g, tdBoard, now), best };
+}
+// Settle one filed row. `game` is null while there is no final; a game the
+// league did not play is `{ voided: reason }`. Returns null to leave the row
+// pending: a stake is never guessed at, it waits for the number.
+function lineSettle(row, game, usage) {
+  if (row.market === 'total' || row.market === 'spread') {
+    if (!game) return null;
+    if (game.voided) return { outcome: 'void', note: 'the game was ' + game.voided };
+    if (!_lineNum(game.homeScore) || !_lineNum(game.awayScore)) return null;
+    if (!_lineNum(row.line) || !row.pick) return { outcome: 'void', note: 'no read was made on this market, so there is nothing to settle' };
+    const total = game.homeScore + game.awayScore, margin = game.homeScore - game.awayScore;
+    const score = game.awayScore + '-' + game.homeScore;
+    if (row.market === 'total') {
+      const o = total === row.line ? 'push' : ((total > row.line) === (row.pick === 'over') ? 'win' : 'loss');
+      return { outcome: o, note: score + ': ' + total + ' points against ' + _lineOne(row.line) };
+    }
+    const o = margin === row.line ? 'push' : ((margin > row.line) === (row.pick === 'home') ? 'win' : 'loss');
+    return { outcome: o, note: score + ': ' + (game.home || 'home') + ' margin ' + _lineSigned(margin) + ' against ' + _lineSigned(row.line) };
+  }
+  if (/^td:/.test(row.market)) {
+    if (game && game.voided) return { outcome: 'void', note: 'the game was ' + game.voided };
+    if (!usage || !usage.players || (usage.throughWeek || 0) < row.week) return null;   // the week's stat file is not in yet
+    const u = usage.players[row.player_key];
+    if (u && u.latest && u.latest.week === row.week) {
+      const tds = ((u.latest.stats || {}).rushTD || 0) + ((u.latest.stats || {}).recTD || 0);
+      return { outcome: tds > 0 ? 'win' : 'loss', note: tds + ' touchdown' + (tds === 1 ? '' : 's') + ' in the week\'s stat line' };
+    }
+    return { outcome: 'void', note: 'no stat line for the week, so he did not play and the prop is void' };
+  }
+  return null;
+}
+// The hypothetical return on one settled row: a game market at LINE_GAME_PRICE,
+// a prop at the price it was filed at. A push, a void and a pending row are 0.
+function lineRowNet(row) {
+  if (!row.stake) return 0;
+  if (row.outcome === 'loss') return -row.stake;
+  if (row.outcome !== 'win') return 0;
+  const price = /^td:/.test(row.market) ? parseInt(row.price, 10) : LINE_GAME_PRICE;
+  if (!Number.isFinite(price) || !price) return 0;
+  return Math.round((price > 0 ? row.stake * price / 100 : row.stake * 100 / -price) * 100) / 100;
+}
+// The record over a set of rows. Only a staked row is a wager; an unstaked
+// game read with a direction is a lean, counted separately so the passes are
+// on the record too without being sold as bets.
+function lineRecordSummary(rows) {
+  const s = { wagers: 0, wins: 0, losses: 0, pushes: 0, voids: 0, pending: 0, staked: 0, net: 0 };
+  const leans = { right: 0, wrong: 0, push: 0, pending: 0 };
+  for (const r of rows || []) {
+    if (r.stake) {
+      s.wagers++; s.staked += r.stake;
+      if (r.outcome === 'win') s.wins++;
+      else if (r.outcome === 'loss') s.losses++;
+      else if (r.outcome === 'push') s.pushes++;
+      else if (r.outcome === 'void') s.voids++;
+      else s.pending++;
+      s.net += lineRowNet(r);
+    } else if ((r.market === 'total' || r.market === 'spread') && _lineNum(r.edge) && r.edge !== 0) {
+      if (r.outcome === 'win') leans.right++;
+      else if (r.outcome === 'loss') leans.wrong++;
+      else if (r.outcome === 'push') leans.push++;
+      else if (!r.outcome) leans.pending++;
+    }
+  }
+  s.net = Math.round(s.net * 100) / 100;
+  return { ...s, leans };
+}
+// The rows one game files, from its environment on the edge payload.
+function lineLedgerRows(season, week, ge, tdBoard, now) {
+  const t = lineTicket(ge, tdBoard, now);
+  const base = { season, week, game_id: ge.id, taken_at: now, kickoff: ge.kickoff || null,
+    matchup: ge.game || (ge.away + ' at ' + ge.home), home: ge.home, away: ge.away };
+  const out = [];
+  for (const r of t.reads) {
+    if (!_lineNum(r.edge) && !_lineNum(r.posted)) continue;   // nothing posted and nothing modelled: nothing to file
+    out.push({ ...base, market: r.market, kind: r.kind, pick: r.pick, side: r.side, line: r.line, posted: r.posted, model: r.model,
+      edge: r.edge, conviction: r.conf, label: r.label + (r.yielded ? ' (stated, not staked)' : ''), stake: r.stake, price: null,
+      player_key: null, player: null,
+      payload: JSON.stringify({ total: ge.total, spread: ge.spread, impliedHome: ge.impliedHome, impliedAway: ge.impliedAway,
+        ironTunaTotal: ge.ironTunaTotal, ironTunaHome: ge.ironTunaHome, ironTunaAway: ge.ironTunaAway, movement: ge.movement || null }) });
+  }
+  for (const p of t.props) {
+    out.push({ ...base, market: p.market, kind: p.kind, pick: p.pick, side: p.side, line: p.line, posted: p.posted, model: p.model,
+      edge: p.edge, conviction: p.conf, label: p.label, stake: p.stake, price: p.price, player_key: p.key, player: p.name,
+      payload: JSON.stringify({ probability: p.posted, expectedTds: null, team: p.team, position: p.position }) });
+  }
+  return out;
+}
+const LINE_LEDGER_DDL = 'CREATE TABLE IF NOT EXISTS line_ledger (season INTEGER NOT NULL, week INTEGER NOT NULL, game_id TEXT NOT NULL, market TEXT NOT NULL, taken_at INTEGER NOT NULL, kickoff INTEGER, matchup TEXT, home TEXT, away TEXT, kind TEXT NOT NULL, pick TEXT, side TEXT, line REAL, posted REAL, model REAL, edge REAL, conviction INTEGER, label TEXT, stake INTEGER NOT NULL DEFAULT 0, price TEXT, player_key TEXT, player TEXT, outcome TEXT, note TEXT, graded_at INTEGER, payload TEXT, PRIMARY KEY (season, week, game_id, market))';
+const LINE_LEDGER_COLS = ['season', 'week', 'game_id', 'market', 'taken_at', 'kickoff', 'matchup', 'home', 'away', 'kind', 'pick', 'side', 'line', 'posted', 'model', 'edge', 'conviction', 'label', 'stake', 'price', 'player_key', 'player', 'payload'];
+let _LINE_READY = false;
+async function lineLedgerReady(env) {
+  if (_LINE_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { await env.LEADS_DB.prepare(LINE_LEDGER_DDL).run(); _LINE_READY = true; return true; } catch (e) { return false; }
+}
+// A game as the settler needs it: null until it is over with a score, the
+// score once it is, and a voided marker if the league did not play it.
+function lineFinal(g, now) {
+  if (!g) return null;
+  if (g.status === 'postponed' || g.status === 'canceled') return { voided: g.status };
+  const s = seasonGameStatus(g, now);
+  if (s.status !== 'completed' || !_lineNum(g.homeScore) || !_lineNum(g.awayScore)) return null;
+  return { home: g.home, away: g.away, homeScore: g.homeScore, awayScore: g.awayScore };
+}
+// The job. Two halves, both idempotent: file the games about to kick off
+// that are not on the record yet, then settle every filed row whose game has
+// a final. A tick with nothing imminent and nothing to settle costs one
+// schedule read and one query.
+async function runLineLedger(env, opts) {
+  const o = opts || {};
+  if (!(await lineLedgerReady(env))) return { ok: false, error: 'no_db' };
+  const sched = await scheduleCacheRead(env);
+  if (!sched) return { ok: false, error: 'no_schedule' };
+  const now = o.now || Date.now();
+  const state = nflSeasonState(sched, now);
+  const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  if (week == null) return { ok: false, error: 'not_regular_season' };
+  const out = { ok: true, season: sched.season, week, filed: 0, games: [], graded: 0, pending: 0 };
+  const due = weekGames(sched, week, now).filter(g => g.kickoff > now && g.kickoff - now <= BOARD_FREEZE_LEAD_MS);
+  if (due.length) {
+    let existing = new Set();
+    try {
+      const q = await env.LEADS_DB.prepare('SELECT DISTINCT game_id FROM line_ledger WHERE season = ? AND week = ?').bind(sched.season, week).all();
+      existing = new Set(((q && q.results) || []).map(r => r.game_id));
+    } catch (e) {}
+    const todo = due.filter(g => !existing.has(g.id));
+    if (todo.length) {
+      const edge = o.edge || await vegasEdgeBuild(env, { preset: 'ppr' }, now, 'edge');
+      const envs = new Map(((edge && edge.gameEnvironments) || []).map(g => [g.id, g]));
+      for (const g of todo) {
+        const ge = envs.get(g.id);
+        if (!ge) continue;     // no posted line: the page prints nothing for it, so nothing is filed
+        const rows = lineLedgerRows(sched.season, week, ge, (edge && edge.tdBoard) || [], now);
+        if (!rows.length) continue;
+        try {
+          const sql = 'INSERT OR IGNORE INTO line_ledger (' + LINE_LEDGER_COLS.join(', ') + ') VALUES (' + LINE_LEDGER_COLS.map(() => '?').join(', ') + ')';
+          await env.LEADS_DB.batch(rows.map(r => env.LEADS_DB.prepare(sql).bind(...LINE_LEDGER_COLS.map(c => r[c] === undefined ? null : r[c]))));
+          out.filed += rows.length;
+          out.games.push(g.away + '@' + g.home);
+        } catch (e) { out.error = (e && e.message) || 'write_failed'; }
+      }
+    }
+  }
+  let open = [];
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT season, week, game_id, market, pick, line, player_key FROM line_ledger WHERE outcome IS NULL AND season = ? LIMIT 2000').bind(sched.season).all();
+    open = (q && q.results) || [];
+  } catch (e) {}
+  if (open.length) {
+    const byId = new Map((sched.games || []).map(g => [g.id, g]));
+    const usage = open.some(r => /^td:/.test(r.market)) ? await usageCacheRead(env) : null;
+    for (const r of open) {
+      const settled = lineSettle(r, lineFinal(byId.get(r.game_id), now), usage);
+      if (!settled) { out.pending++; continue; }
+      try {
+        await env.LEADS_DB.prepare('UPDATE line_ledger SET outcome = ?, note = ?, graded_at = ? WHERE season = ? AND week = ? AND game_id = ? AND market = ?')
+          .bind(settled.outcome, settled.note, now, r.season, r.week, r.game_id, r.market).run();
+        out.graded++;
+      } catch (e) {}
+    }
+  }
+  return out;
+}
+// The record, for /api/the-line/record and the page: every filed row of the
+// season, the summary over all of them, and one per week.
+async function lineRecordPayload(env, season) {
+  if (!(await lineLedgerReady(env))) return { ok: false, error: 'no_db' };
+  let rows = [];
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT * FROM line_ledger WHERE season = ? ORDER BY week ASC, kickoff ASC, game_id ASC, stake DESC, market ASC LIMIT 4000').bind(season).all();
+    rows = (q && q.results) || [];
+  } catch (e) { return { ok: false, error: 'read_failed' }; }
+  const shaped = rows.map(r => ({ week: r.week, gameId: r.game_id, matchup: r.matchup, home: r.home, away: r.away, kickoff: r.kickoff, takenAt: r.taken_at,
+    market: r.market, kind: r.kind, side: r.side, pick: r.pick, line: r.line, posted: r.posted, model: r.model, edge: r.edge, conviction: r.conviction,
+    label: r.label, stake: r.stake, price: r.price, player: r.player, outcome: r.outcome, note: r.note, gradedAt: r.graded_at, net: lineRowNet(r) }));
+  const weeks = [...new Set(shaped.map(r => r.week))].sort((a, b) => a - b).map(w => ({ week: w, ...lineRecordSummary(shaped.filter(r => r.week === w)) }));
+  return { ok: true, contract: 1, season, filedWithin: BOARD_FREEZE_LEAD_MS, gamePrice: LINE_GAME_PRICE,
+           summary: lineRecordSummary(shaped), weeks, rows: shaped };
+}
+// The edge payload, built fresh. The route memoizes it for five minutes; the
+// ledger job wants the number as it stands and calls this directly.
+async function vegasEdgeBuild(env, o, now, kind) {
+  const at = now || Date.now();
+  const week = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: o.preset });
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, at) : { ok: false };
+  const curWeek = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  const [weekMarkets, gameMarkets, usage] = await Promise.all([
+    curWeek != null && sched ? marketHistoryWeek(env, sched.season, curWeek) : {},
+    marketHistoryGames(env, (state.ok ? state.games : []).map(g => g.id)),
+    usageCacheRead(env)
+  ]);
+  const signals = detectInsights({ week: week.ok ? week : null, usage, weekMarkets, gameMarkets, state, rules: scoringRules(o.preset) });
+  return kind === 'signals' ? signals : buildVegasEdge(week.ok ? week : null, weekMarkets, gameMarkets, state, signals);
 }
 async function runRosSnapshot(env, opts) {
   if (!(await rosReady(env))) return { ok: false, error: 'no_db' };
@@ -10602,6 +10903,7 @@ const JOB_FNS = {
   'depth-charts':         env => runDepthChartRefresh(env),
   'ros-snapshot':         env => runRosSnapshot(env),
   'board-freeze':         env => runBoardFreeze(env),
+  'line-ledger':          env => runLineLedger(env),
   'snapshot-prune':       env => snapshotPrune(env, SNAP_KEEP_DAYS),
   'analytics-prune':      env => pruneAnalytics(env, 180),
   'job-prune':            env => jobPrune(env, JOB_KEEP_DAYS),
@@ -10946,6 +11248,10 @@ const JOB_SCHEDULE = [
   // acts on a game starting inside the next two hours and only once each, so
   // a tick with nothing imminent costs one schedule read.
   { job: 'board-freeze',         days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 2 },
+  // The Line's ledger, on the same cadence and the same two-hour window: a
+  // game's reads are filed once before it kicks off and settled once it has a
+  // final. A tick with nothing imminent and nothing to settle costs a read.
+  { job: 'line-ledger',          days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 2 },
   { job: 'calls-grade',          days: ['Tue', 'Wed'],         hours: [6],                            phase: 2 },
   // The week's column, built after the morning odds pull and before the first
   // kickoff, once. Friday and Saturday are retries: the builder is a no-op
@@ -13835,6 +14141,16 @@ export default {
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
     }
     // Vegas Edge, the signals behind it, the Wednesday update, and one player.
+    // The Line's record: every stake the page filed, settled on the finals.
+    // Fenced like the board it is a record of.
+    if (url.pathname === '/api/the-line/record') {
+      if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const sched = await scheduleCacheRead(env);
+      const out = sched ? await lineRecordPayload(env, sched.season) : { ok: false, error: 'no_schedule' };
+      return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
+    }
     if (url.pathname === '/api/vegas-edge' || url.pathname === '/api/signals' || url.pathname === '/api/ros-update' || url.pathname === '/api/intel/player') {
       if (IS_WASHINGTON(request) && (url.pathname === '/api/vegas-edge' || url.pathname === '/api/signals')) return WA_MARKET_BLOCK();
       const c = corsHeaders(request.headers.get('Origin'));
@@ -13855,17 +14171,7 @@ export default {
       }
       const ek = url.pathname + '|' + o.preset;
       if (_EDGE_MEMO.key === ek && Date.now() - _EDGE_MEMO.at < 300000) return json(_EDGE_MEMO.out, 200, { ...c, 'cache-control': 'public, max-age=300' });
-      const week = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: o.preset });
-      const sched = await scheduleCacheRead(env);
-      const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
-      const curWeek = state.ok && state.week.type === 'REG' ? state.week.number : null;
-      const [weekMarkets, gameMarkets, usage] = await Promise.all([
-        curWeek != null && sched ? marketHistoryWeek(env, sched.season, curWeek) : {},
-        marketHistoryGames(env, (state.ok ? state.games : []).map(g => g.id)),
-        usageCacheRead(env)
-      ]);
-      const signals = detectInsights({ week: week.ok ? week : null, usage, weekMarkets, gameMarkets, state, rules: scoringRules(o.preset) });
-      const out = url.pathname === '/api/signals' ? signals : buildVegasEdge(week.ok ? week : null, weekMarkets, gameMarkets, state, signals);
+      const out = await vegasEdgeBuild(env, o, Date.now(), url.pathname === '/api/signals' ? 'signals' : 'edge');
       _EDGE_MEMO = { key: ek, at: Date.now(), out };
       return json(out, 200, { ...c, 'cache-control': 'public, max-age=300' });
     }
