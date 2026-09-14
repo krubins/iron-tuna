@@ -38,7 +38,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -438,6 +438,43 @@ console.log('\nthe writer reads a stream and knows when it was cut off');
   ok('a cut-off answer says so', cut.stop === 'max_tokens');
   ok('an error inside the stream is an error', H._anthropicStreamText(ev({ type: 'error', error: { type: 'overloaded_error' } })).error === 'provider_overloaded_error');
   ok('the writer has room for two lenses over a full slate', H.WRITER_MAX_TOKENS >= 12000 && H.WRITER_TIMEOUT_MS >= 240000);
+}
+
+// Week 1's Thursday piece passed the fact check the moment the comma rule
+// landed, and still never published: the exists check returned before the
+// revalidation could look at it.
+console.log('\na held draft is re-read after the check itself changes');
+{
+  const held = (o) => ({ status: 'held', body: '{"headline":"x"}', violations: '[]', version: 2, created_at: 1, ...o });
+  ok('a held draft does not count as already written', H.heldRevivable(held()));
+  ok('a piece held for the editor stays the editor\'s', !H.heldRevivable(held({ violations: '["awaiting_approval: paused from /admin"]' })));
+  ok('a published piece is not reopened', !H.heldRevivable(held({ status: 'published' })));
+  ok('a held piece with no draft is the retry path, not this one', !H.heldRevivable(held({ body: 'null' })) && H.heldRetryable({ status: 'held', body: 'null', version: 1, created_at: 0 }, 41 * 60000));
+  ok('nothing stored is nothing to revive', !H.heldRevivable(null));
+  // The per-game loop keeps its own copy of the exists check, one call above
+  // produceContent, and it skipped the whole piece before the revival could
+  // run: the SF at LA recap sat held while the slate pieces beside it revived.
+  const perGame = cut('async function runPerGameKind(', 'async function runContentTick(');
+  ok('the per-game loop lets a revivable draft through its own exists check', /heldRetryable\(latest, Date\.now\(\)\) && !heldRevivable\(latest\)/.test(perGame), perGame.split('\n').filter(l => /continue;/.test(l)).join(' | '));
+}
+
+// Week 1, 2026-09-11: the desk wrote three complete pieces and the check held
+// every one of them. "Herbert.\nVega" and "Outperformed.\nPricing" were two
+// sentences; "Lock Herbert" and "Move Williams" were verbs; 12.9 and the DFS
+// salary savings were arithmetic the drafts spelled out in full.
+console.log('\nthe fact check reads a sentence break, a verb and shown arithmetic');
+{
+  const p = H._finishBrief({ meta: { kind: 'weekend-preview', lens: 'both' }, rivalry: null,
+    players: [{ name: 'Justin Herbert', salary: 6100 }, { name: 'Kyren Williams', carries: 14 }, { name: 'Matthew Stafford', projected: 17.1, points: 4.2 }],
+    dfs: { saver: [{ name: 'Patrick Mahomes', salary: 5500 }, { name: 'Josh Allen', salary: 7000 }, { name: 'Geno Smith', salary: 4600 }, { name: 'Bub Means', salary: 3000 }, { name: 'Saints DST', salary: 2200 }] } });
+  const v = s => H.validateDraft(s, p.allowed);
+  ok('a name meeting a sentence break is two sentences', v('The market has Herbert at rank 3. Vega called the buy.').ok, JSON.stringify(v('The market has Herbert at rank 3. Vega called the buy.').names));
+  ok('a verb in front of a packet name is a verb', v('Lock Herbert in cash. Move Williams up.').ok, JSON.stringify(v('Lock Herbert in cash. Move Williams up.').names));
+  ok('a difference the draft spells out is arithmetic at any size', v('Projected 17.1, finished 4.2. A 12.9-point miss.').ok, JSON.stringify(v('Projected 17.1, finished 4.2. A 12.9-point miss.').numbers));
+  ok('salary savings the draft spells out are arithmetic', v('Mahomes at 5,500 saves 1,500 against Allen at 7,000, and Smith at 4,600 saves 2,400.').ok, JSON.stringify(v('Mahomes at 5,500 saves 1,500 against Allen at 7,000, and Smith at 4,600 saves 2,400.').numbers));
+  ok('a saving between two salaries the draft quotes is arithmetic', v('Means at 3,000 and the Saints DST at 2,200: the 800 difference buys an upgrade.').ok, JSON.stringify(v('Means at 3,000 and the Saints DST at 2,200: the 800 difference buys an upgrade.').numbers));
+  ok('a large number with no working shown is still caught', v('He saves 1,500 somewhere.').numbers.join() === '1500', JSON.stringify(v('He saves 1,500 somewhere.').numbers));
+  ok('a player the packet lacks is still caught', v('Jerry Jeudy is the play here.').names.join() === 'Jerry Jeudy');
 }
 
 console.log('\nwhat the site called before kickoff, and how it landed');

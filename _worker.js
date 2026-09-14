@@ -7948,7 +7948,7 @@ function _sectionSpec(kind) {
 // none of these (and not an all-caps abbreviation, and not a possessive of
 // something allowed). The first live preview was held on "Two Slates",
 // "Implied Totals", "Every Patriots", "Guerendo's PUP" and "Brown. Vegas".
-const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Out Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trade Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Back Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Best Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Clear Obvious Likely Unlikely Possible Probable Certain Sure Different Same Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Over Under Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Strong Moderate Mild Slight Fade Fades Lean Leans Buy Buys Sell Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modeled Modelled Not Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas Attack Stash Unlike Like Tied Tying Correlating Correlate Correlated Pairing Paired Chasing Riding Trusting Playing Locking Starting Sitting Benching Fading Buying Selling Holding Adding Dropping Targeting Avoiding Considering Expecting Watching Reading Pricing Weighting Valuing Paying Stacking Moving Pivoting Streaming Rolling Punting Pulling Pushing Waiting Skipping Preferring Owning Using Keeping Taking Giving Getting Making Finding Looking Thinking Knowing Saying Telling Calling Lock Play Fire Ride Trust Bet Grab Prioritize Prioritise Upgrade Downgrade Pass Run Go Take Keep Use Own Prefer Skip Stream Roll Punt Pull Slide Push Wait Watch Note Expect Treat Read Price Weight Value Pay Pair Stack Run Back Flex Move Moving Put Leave Let Give Get Make Find Look Think Know Say Tell Call Called Calling Calls').split(/\s+/));
+const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Lock Move Upgrade Downgrade Bump Swap Slot Ride Trust Stream Prioritize Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Obvious Likely Unlikely Possible Certain Sure Different Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Moderate Mild Slight Fades Lean Leans Buys Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modeled Modelled Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas Attack Stash Unlike Like Tied Tying Correlating Correlate Correlated Pairing Paired Chasing Riding Trusting Playing Locking Starting Sitting Benching Fading Buying Selling Holding Adding Dropping Targeting Avoiding Considering Expecting Watching Reading Pricing Weighting Valuing Paying Stacking Moving Pivoting Streaming Rolling Punting Pulling Pushing Waiting Skipping Preferring Owning Using Keeping Taking Giving Getting Making Finding Looking Thinking Knowing Saying Telling Calling Play Fire Bet Grab Prioritise Pass Run Go Take Keep Use Own Prefer Skip Roll Punt Pull Slide Wait Read Weight Pay Pair Put Leave Let Give Get Make Find Look Think Know Say Tell Call Called Calls').split(/\s+/));
 const _nameTokens = (run) => run.split(/\s+/).map(t => t.replace(/['\u2019]s$/, '')).filter(t => t && !/^[A-Z0-9.&-]+$/.test(t) && !NOT_A_NAME.has(t.replace(/[.,]+$/, '')));
 function validateDraft(text, allowed) {
   const names = new Set(allowed.names || []), nums = new Set(allowed.numbers || []);
@@ -7958,13 +7958,11 @@ function validateDraft(text, allowed) {
   // A sentence ends where a lower-case word meets its full stop, so "Brown.
   // Vegas" is two sentences and not a man. An initial ("A.J.") is not a
   // sentence end.
-  // The body is checked as JSON text, so a newline inside a string is the
-  // two characters backslash and n: "Herbert.\nVega" held the first Weekend
-  // Preview that ever parsed.
-  // The marker is a bar, not a newline: the name pattern's whitespace class
-  // matches a newline and would read straight across it.
-  const bounded = String(text).replace(/([a-z0-9)][.!?;:])(?:\s|\\n|\\r|\\t)+(?=[A-Z])/g, '$1 | ');
-  for (const m of bounded.matchAll(/\b([A-Z][a-z'\u2019.-]+(?:\s[A-Z][A-Za-z'\u2019.-]+){1,2})\b/g)) {
+  // The run must not cross that inserted break, so the words of a name are
+  // separated by a space and never by the newline: \s matches both, which is
+  // why "Herbert. Vega called the buy" still read as a man named Herbert Vega.
+  const bounded = String(text).replace(/([a-z0-9)][.!?;:])\s+(?=[A-Z])/g, '$1\n');
+  for (const m of bounded.matchAll(/\b([A-Z][a-z'\u2019.-]+(?:[^\S\n][A-Z][A-Za-z'\u2019.-]+){1,2})\b/g)) {
     const n = m[1];
     if (known(n)) continue;
     if (/^(What|Why|The|This|That|His|Their|A|An|In|On|At|For|With|And|But|Not|No|He|She|It|They|We|Both)\b/.test(n)) continue;
@@ -7983,19 +7981,19 @@ function validateDraft(text, allowed) {
   // 20.1" is arithmetic on the packet, not a new fact.
   const vals = [...nums].map(Number).filter(Number.isFinite);
   const grid = new Set(vals.map(x => x.toFixed(1)));
-  const arithmetic = a => a < 10 && vals.some(x => grid.has((x - a).toFixed(1)) || grid.has((x + a).toFixed(1)));
-  // Money is arithmetic on money: "$800 savings" and "the 700-dollar
-  // difference" are two packet salaries subtracted, and a salary-scale
-  // packet number (a thousand or more) minus or plus another is allowed when
-  // the draft marks the result as dollars. A bare "1,500" is not.
-  const big = vals.filter(x => Number.isInteger(x) && Math.abs(x) >= 1000);
-  const bigSet = new Set(big);
-  const moneyArithmetic = a => Number.isInteger(a) && big.some(x => bigSet.has(x - a) || bigSet.has(x + a));
-  for (const m of String(text).matchAll(/(\$)?(-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?)(-dollar|\s?dollars?)?/g)) {
-    const v = m[2].replace(/,/g, ''); const num = Number(v), abs = Math.abs(num);
+  // Above ten the draft has to show its work: both packet numbers it did the
+  // arithmetic on must appear in the draft too, so "projected 17.1, finished
+  // 4.2, a 12.9-point miss" and "$5,500 saves $1,500 against $7,000" read as
+  // arithmetic a reader can follow, while a number quoted out of nowhere that
+  // happens to equal some difference inside the packet does not.
+  const drafted = new Set();
+  for (const m of String(text).matchAll(_NUM_RE)) drafted.add(Math.abs(Number(m[0].replace(/,/g, ''))).toFixed(1));
+  const shown = (a1, a2) => drafted.has(Math.abs(a1).toFixed(1)) && drafted.has(Math.abs(a2).toFixed(1));
+  const arithmetic = a => vals.some(x => [x - a, x + a].some(s => grid.has(s.toFixed(1)) && (a < 10 || shown(x, s))));
+  for (const m of String(text).matchAll(_NUM_RE)) {
+    const v = m[0].replace(/,/g, ''); const num = Number(v), abs = Math.abs(num);
     if (nums.has(v) || nums.has(String(abs)) || (Number.isInteger(num) && abs <= 20)) continue;
     if (arithmetic(abs)) continue;
-    if ((m[1] || m[3]) && moneyArithmetic(abs)) continue;
     bad.numbers.push(v);
   }
   bad.names = [...new Set(bad.names)]; bad.numbers = [...new Set(bad.numbers)];
@@ -9567,6 +9565,19 @@ function heldRetryable(latest, now) {
   if ((latest.version || 1) >= RETRY_HELD_MAX) return false;
   return (now - latest.created_at) >= RETRY_HELD_AFTER_MS;
 }
+// A piece held WITH its draft can still be revived, because the fact check is
+// code and the code changes: a rule that has since learned the shape it
+// wrongly flagged passes the same prose untouched (Week 1's Thursday piece was
+// held on "2,600" read as a 600). So a held draft does not count as already
+// written for the exists check below; revalidateHeld re-reads it on each tick
+// while its kind is due. Held for APPROVAL is the editor's call, not the
+// tick's, and never reopens here.
+function heldRevivable(latest) {
+  if (!latest || latest.status !== 'held') return false;
+  if (!latest.body || latest.body === 'null') return false;
+  let vio = []; try { vio = JSON.parse(latest.violations || '[]') || []; } catch (e) { vio = []; }
+  return !vio.some(v => /^awaiting_approval/.test(String(v)));
+}
 async function contentExists(env, kind, season, week, gameId) { return !!(await contentLatest(env, kind, season, week, gameId)); }
 // The story broken into its own findings, lifted out of the body at publish
 // so the front page can read them without parsing every piece's prose. Each
@@ -9684,20 +9695,7 @@ async function produceContent(env, kind, opts) {
   const slug = _slugOf(kind, season, week, gameId);
   const latest = await contentLatest(env, kind, season, week, gameId);
   const retry = heldRetryable(latest, Date.now());
-  // A held draft is re-checked against a fresh packet before "exists" ends
-  // the tick's interest in it (§68o). The Friday rows the number fix should
-  // have released were never reached: their kinds take no updates, so the
-  // tick answered "exists" before it built a packet. At most once an hour a
-  // row, because a packet is CPU and the fact check is code that changes
-  // only with a deploy.
-  let revalTried = false;
-  if (latest && latest.status === 'held' && latest.body && latest.body !== 'null' && !o.force && !retry && (await revalidateDue(env, latest, Date.now()))) {
-    revalTried = true;
-    const ctx0 = await contentContext(env, week, { excluded: d.excluded || [] });
-    const packet0 = await buildResearchPacket(env, kind, d, ctx0, { ...o, gameId });
-    if (!packet0.skip) { const revived = await revalidateHeld(env, kind, latest, packet0, d, season, gameId); if (revived) return revived; }
-  }
-  if (latest && !o.force && !retry && !K.updates && !K.unscheduled) return { ok: false, kind, week, game: gameId, error: 'exists' };
+  if (latest && !o.force && !retry && !K.updates && !K.unscheduled && !heldRevivable(latest)) return { ok: false, kind, week, game: gameId, error: 'exists' };
   if (d.skip) { if (!latest) await contentStore(env, { season, week, kind, gameId, slug, title: K.title, status: 'skipped', brief: { reason: d.reason }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped' }; }
   const ctx = await contentContext(env, week, { excluded: d.excluded || [] });
   const packet = await buildResearchPacket(env, kind, d, ctx, { ...o, gameId });
@@ -9710,7 +9708,7 @@ async function produceContent(env, kind, opts) {
   // changes: the first live preview was held on title-case headline words
   // and sentence boundaries, and once the rule learned them the draft it had
   // held was right. Nothing is rewritten; the row is published as it stands.
-  if (!revalTried && latest && latest.status === 'held' && latest.body && latest.body !== 'null' && !o.force) {
+  if (latest && latest.status === 'held' && latest.body && latest.body !== 'null' && !o.force) {
     const revived = await revalidateHeld(env, kind, latest, packet, d, season, gameId);
     if (revived) return revived;
   }
@@ -9737,17 +9735,6 @@ async function produceContent(env, kind, opts) {
     calls = await recordCalls(env, { season, week, kind, slug }, list, rivalry);
   }
   return { ok: true, kind, week, game: gameId, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
-}
-const REVALIDATE_EVERY_MS = 60 * 60000;
-async function revalidateDue(env, latest, now) {
-  if (!env || !env.LEADS_DB || !latest || !latest.id) return true;
-  const key = 'reval:' + latest.id;
-  try {
-    const r = await env.LEADS_DB.prepare('SELECT updated_at FROM newsroom_settings WHERE key = ?').bind(key).first();
-    if (r && Number.isFinite(+r.updated_at) && now - (+r.updated_at) < REVALIDATE_EVERY_MS) return false;
-    await env.LEADS_DB.prepare('INSERT OR REPLACE INTO newsroom_settings (key, value, updated_at) VALUES (?, ?, ?)').bind(key, String(latest.version || 1), now).run();
-  } catch (e) {}
-  return true;
 }
 async function revalidateHeld(env, kind, latest, packet, d, season, gameId) {
   let body = null; try { body = JSON.parse(latest.body); } catch (e) { return null; }
@@ -9795,7 +9782,12 @@ async function runPerGameKind(env, kind, out) {
   for (const g of finals) {
     if (written >= RECAPS_PER_TICK) break;
     const latest = await contentLatest(env, kind, sched.season, d.week, g.id);
-    if (latest && !heldRetryable(latest, Date.now())) continue;
+    // Same rule the slate kinds get in produceContent: a row held WITH its
+    // draft is not finished business, because the check that held it is code
+    // and the code changes. Without this the SF at LA recap stayed held after
+    // the fact check learned its sentence break, while every slate piece
+    // held beside it published itself.
+    if (latest && !heldRetryable(latest, Date.now()) && !heldRevivable(latest)) continue;
     try { out.push(await produceContent(env, kind, { gameId: g.id })); written++; }
     catch (e) { out.push({ ok: false, kind, game: g.id, error: (e && e.message) || 'failed' }); written++; }
   }
@@ -9971,6 +9963,65 @@ async function weeklyWrapPayload(env, week) {
                 counts: { games: games.length, recapped: games.filter(g => g.recap).length, final: games.filter(g => g.status === 'final').length },
                 games };
   _WRAP_CACHE.set(wk, { at: now, out });
+  return out;
+}
+
+// ── the front page's recap strip ───────────────────────────────────────────
+// The newest per-game recaps, newest first, for the rotating strip above the
+// hero. It exists as its own read rather than a filter over /api/newsroom
+// because the two want different things: the newsroom band is the whole desk
+// at whatever limit the page asked for, and this is six recaps and nothing
+// else. Filtering the feed would have made the strip's contents depend on how
+// many non-recap packages happened to publish ahead of them.
+//
+// Sunday afternoon is what the shape is for: eight games go final inside
+// twenty minutes and eight recaps land behind them. A strip showing only the
+// newest would show the eighth game and hide the other seven for an hour.
+const RECAP_STRIP_MAX = 6;
+// Past this, a recap is last week's news sitting above the hero. The strip is
+// additive — the hero is the page with or without it — so going quiet is the
+// right failure, not showing a stale headline as if it were today's.
+const RECAP_STRIP_FRESH_MS = 36 * 3600 * 1000;
+let _RECAPS_CACHE = null, _RECAPS_AT = 0;
+async function recapStripPayload(env) {
+  const now = Date.now();
+  if (_RECAPS_CACHE && now - _RECAPS_AT < 60000) return _RECAPS_CACHE;
+  let out = { ok: false, recaps: [], error: 'no_db' };
+  if (await contentReady(env)) {
+    await newsroomReady(env);
+    try {
+      // Over-fetch, because a recap that was rewritten has more than one
+      // published row and the strip wants six GAMES, not six rows.
+      const q = await env.LEADS_DB.prepare(
+        "SELECT kind, slug, title, week, season, game_id, headline, dek, published_at, created_at, analyst"
+        + " FROM content_pieces WHERE kind = 'game-recap' AND status = 'published'"
+        + " ORDER BY published_at DESC LIMIT 40").all();
+      // One entry per game, newest version wins — the same rule the Weekly
+      // Wrap Up uses, so the strip and the wrap can never name the same game
+      // with two different headlines.
+      const byGame = new Map();
+      for (const r of (q.results || [])) if (!byGame.has(r.game_id)) byGame.set(r.game_id, r);
+      const rows = [...byGame.values()].slice(0, RECAP_STRIP_MAX);
+      const at = r => +(r.published_at || r.created_at) || 0;
+      // Freshness is judged on the NEWEST recap, not per row: once a slate is
+      // current the whole slate is current, so a Sunday-early game does not
+      // drop out of Monday's strip while the night game stays.
+      const newest = rows.length ? at(rows[0]) : 0;
+      const fresh = newest > 0 && (now - newest) < RECAP_STRIP_FRESH_MS;
+      out = {
+        ok: true,
+        recaps: fresh ? rows.map(r => ({
+          slug: r.slug, week: r.week, game: r.game_id || null, url: _pieceUrl(r),
+          title: r.headline || _pieceTitle(r), dek: r.dek || '',
+          byline: _bylineOf(r), publishedAt: at(r)
+        })) : [],
+        // Why the strip is empty, so a quiet front page can be told apart from
+        // a broken one without opening the database.
+        reason: rows.length === 0 ? 'no published recaps' : (fresh ? null : 'newest recap is over 36h old')
+      };
+    } catch (e) { out = { ok: false, recaps: [], error: 'unavailable' }; }
+  }
+  _RECAPS_CACHE = out; _RECAPS_AT = now;
   return out;
 }
 
@@ -12362,6 +12413,94 @@ const PROVIDER_CBS = {
   },
   normalize: cbsNormalize
 };
+// Browser snapshots use the existing league model, without storing CBS credentials.
+function cbsBrowserNormalize(raw, ctx) {
+  const invalid = () => { throw new LeagueProviderError('invalid_browser_import', 'CBS import is incomplete or unsupported. Re-read the league with the updated extension.'); };
+  const str = (v, max) => { if (typeof v !== 'string' || !v.trim() || v.length > max || /[\x00-\x1f]/.test(v)) invalid(); return v.trim(); };
+  const id = v => { if (typeof v !== 'string' || !/^\d{1,12}$/.test(v)) invalid(); return v; };
+  if (!raw || raw.version !== 1 || JSON.stringify(raw).length > 350000) invalid();
+  const leagueId = cbsLeagueId(raw.leagueId);
+  if (leagueId !== raw.leagueId || !Number.isInteger(raw.season) || raw.season < 2020 || raw.season > Number(ctx.season) + 1) invalid();
+  const name = str(raw.name, 160);
+  if (!Number.isInteger(raw.numTeams) || raw.numTeams < 2 || raw.numTeams > 32 || !Array.isArray(raw.teams) || raw.teams.length !== raw.numTeams || !Array.isArray(raw.rosters) || raw.rosters.length !== raw.numTeams) invalid();
+  const teamIds = new Set(), rosterIds = new Set(), playerIds = new Set();
+  const teams = raw.teams.map(t => { const teamId = id(t.teamId); if (teamIds.has(teamId)) invalid(); teamIds.add(teamId); return { teamId, name: str(t.name, 160), ownerId: null, wins: null, losses: null, ties: null, pointsFor: null, pointsAgainst: null, faabLeft: null, waiverPosition: null }; });
+  const rosters = raw.rosters.map(r => {
+    const teamId = id(r.teamId);
+    if (!teamIds.has(teamId) || rosterIds.has(teamId) || !Array.isArray(r.players) || !r.players.length || r.players.length > 60) invalid();
+    if (!r.counts || !Number.isInteger(r.counts.starter) || !Number.isInteger(r.counts.bench) || r.counts.starter < 0 || r.counts.bench < 0 || r.players.filter(p => p.slot === 'starter').length !== r.counts.starter || r.players.filter(p => p.slot === 'bench').length !== r.counts.bench || r.counts.starter + r.counts.bench !== r.players.length) invalid();
+    rosterIds.add(teamId);
+    return { teamId, players: r.players.map(p => {
+      const providerPlayerId = id(p.providerPlayerId);
+      if (playerIds.has(providerPlayerId) || !['QB','RB','WR','TE','K','DEF'].includes(p.position) || !['starter','bench','ir'].includes(p.slot) || !/^[A-Z]{2,3}$/.test(p.team)) invalid();
+      playerIds.add(providerPlayerId);
+      return { providerPlayerId, name: str(p.name, 100), position: p.position, team: p.team, slot: p.slot, slotLabel: str(p.slotLabel, 16) };
+    }) };
+  });
+  const roster = leagueEmptyRoster();
+  if (!raw.roster || typeof raw.roster !== 'object' || !Object.keys(raw.roster).length) invalid();
+  for (const [k,v] of Object.entries(raw.roster)) { if (!(k in roster) || k === 'other' || !Number.isInteger(v) || v < 0 || v > 20) invalid(); roster[k] = v; }
+  const scoring = leagueDefaultSettings().scoring, unsupported = {}, seen = new Set();
+  for (const k of Object.keys(scoring)) scoring[k] = Array.isArray(scoring[k]) ? [] : 0;
+  const scalar = { FL:'fumbleLost', Fum2PK:'fumble2pt', Fum2PT:'fumble2pt', IFRTD:'individualFumbleRecoveryTD', IKRTD:'individualKickReturnTD', IPRTD:'individualPuntReturnTD', MXP:'missedExtraPoint', Pa2P:'passing2pt', PaInt:'passingInt', PaTD:'passingTD', Re2P:'receiving2pt', ReTD:'receivingTD', Ru2P:'rushing2pt', RuTD:'rushingTD', XP:'extraPoint', DFR:'defensiveFumbleRecovery', DFTD:'defensiveTD', Int:'interception', ST2PT:'specialTeams2pt', STTD:'specialTeamsTD', STY:'safety', STY1PT:'specialTeamsSafety1pt' };
+  const num = '(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))';
+  const goals = {}, missed = {};
+  if (!Array.isArray(raw.rules) || !raw.rules.length || raw.rules.length > 120) invalid();
+  for (const [i,rule] of raw.rules.entries()) {
+    const group = str(rule.group, 80), code = str(rule.code,16), text = str(rule.text,2000).replace(/Plus /g, ' Plus ').trim(), unique = group + ':' + code;
+    if (seen.has(unique)) invalid(); seen.add(unique);
+    let handled = false;
+    const regular = group === 'OFFENSIVE' || group === 'DEFENSIVE';
+    const simple = text.match(new RegExp('^' + num + ' points?$'));
+    if (regular && scalar[code] && simple) {
+      const key = scalar[code], value = Number(simple[1]);
+      if ((code === 'Fum2PT' && seen.has(group + ':Fum2PK') || code === 'Fum2PK' && seen.has(group + ':Fum2PT')) && scoring[key] !== value) invalid();
+      scoring[key] = value; handled = true;
+    }
+    if ((regular && ['PaYd','ReYd','RuYd','Recpt','SACK'].includes(code)) || group === 'SPECIAL SCORING FOR RUNNING BACKS' && code === 'Recpt') {
+      const base = text.match(new RegExp('^(\\d+)\\+ [A-Za-z]+ = ' + num + ' points? for every ' + num + ' [A-Za-z]+'));
+      if (base && Number(base[3]) > 0) {
+        const rest = text.slice(base[0].length).trim(), bonuses = [], re = new RegExp('Plus a ' + num + ' point bonus @ (\\d+)\\+ [A-Za-z]+', 'g');
+        for (const m of rest.matchAll(re)) bonuses.push({ at:Number(m[2]), points:Number(m[1]) });
+        if (!rest.replace(re,'').trim()) {
+          const prefix = { PaYd:'passing', ReYd:'receiving', RuYd:'rushing' }[code];
+          if (prefix && Number(base[2]) > 0) { scoring[prefix+'YardsPerPoint'] = Number(base[3])/Number(base[2]); scoring[prefix+'YardsThreshold'] = Number(base[1]); scoring[prefix+'YardBonuses'] = bonuses; handled = true; }
+          else if (!prefix && Number(base[1]) <= 1) {
+            const key = code === 'SACK' ? 'sack' : group === 'SPECIAL SCORING FOR RUNNING BACKS' ? 'rbReception' : 'reception';
+            scoring[key+'Points'] = Number(base[2])/Number(base[3]); scoring[key+'Bonuses'] = bonuses; handled = true;
+          }
+        }
+      }
+    }
+    if (regular && ['FG','MFG'].includes(code)) {
+      const re = new RegExp('Plus ' + num + ' points? for a ' + code + ' of (\\d+)(?: to (\\d+)|\\+) Yds','g');
+      const matches = [...text.matchAll(re)];
+      if (matches.length && !text.replace(re,'').trim()) { for (const m of matches) (code === 'FG' ? goals : missed)[m[2]+':'+(m[3]||999)] = Number(m[1]); handled = true; }
+    }
+    if (regular && code === 'PA') {
+      const re = new RegExp('(\\d+)(?: - (\\d+)|\\+) PAs? = ' + num + ' points?','g'), matches = [...text.matchAll(re)];
+      if (matches.length && !text.replace(re,'').trim()) { scoring.pointsAllowed = matches.map(m=>({min:Number(m[1]),max:Number(m[2]||999),points:Number(m[3])})); handled = true; }
+    }
+    if (!handled) unsupported['cbs_browser_'+i+'_'+code] = {group,code,text};
+  }
+  if (!seen.has('SPECIAL SCORING FOR RUNNING BACKS:Recpt')) { scoring.rbReceptionPoints = scoring.receptionPoints; scoring.rbReceptionBonuses = scoring.receptionBonuses; }
+  scoring.fieldGoalTiers = Object.entries(goals).map(([range,points])=>{ const [min,max]=range.split(':').map(Number); return {min,max,points,missPoints:missed[range]||0}; }).sort((a,b)=>a.min-b.min);
+  for (const value of Object.values(scoring)) for (const number of Array.isArray(value) ? value.flatMap(v=>Object.values(v)) : [value]) if (!Number.isFinite(number) || Math.abs(number) > 1000000) invalid();
+  if (Object.keys(missed).some(k=>!(k in goals))) unsupported.cbs_missed_ranges = missed;
+  if (scoring.fieldGoalTiers.length !== 5) unsupported.cbs_field_goal_ranges = 'This league does not have the five field-goal ranges required by the kicker model. Review kicker scoring.';
+  const notes = ['Browser import: refresh with the CBS extension. Standings, matchups, transactions and waiver balances are not imported.', 'Confirm playoff team count and league type; CBS browser import does not read those fields.'];
+  if (Object.keys(unsupported).length) notes.push('Some CBS scoring rules are preserved but not scored. Review settings before using recommendations.');
+  const settings = leagueNormalizeSettings({scoring,roster,extras:{unsupported,notes},faab:null,waiverType:'unknown',playoffWeekStart:raw.playoffWeekStart});
+  return { name, season:raw.season, numTeams:teams.length, status:'in_season', userTeamId:null, settings, teams, rosters, matchups:[], transactions:[] };
+}
+const PROVIDER_CBS_BROWSER = {
+  id:'cbs_browser', label:'CBS browser import', auth:'browser', flag:'CBS_SYNC',
+  terms:'League tables imported by the reader from their signed-in CBS browser. Refresh using the extension; no credentials stored.',
+  needs:()=>true,
+  async pull() { throw new LeagueProviderError('browser_refresh_required', 'Open your CBS league and use the Iron Tuna extension to refresh it.'); },
+  normalize:cbsBrowserNormalize
+};
+
 const PROVIDER_MANUAL = {
   id: 'manual', label: 'Manual', auth: 'none', flag: null, terms: 'The reader’s own entry. Nothing is fetched.',
   needs: env => true,
@@ -12369,7 +12508,7 @@ const PROVIDER_MANUAL = {
   async pull() { throw new LeagueProviderError('manual_league', 'A manual league is edited, not synced.'); },
   normalize(raw) { return raw; }
 };
-const LEAGUE_PROVIDERS = { sleeper: PROVIDER_SLEEPER, yahoo: PROVIDER_YAHOO, cbs: PROVIDER_CBS, espn: PROVIDER_ESPN, manual: PROVIDER_MANUAL };
+const LEAGUE_PROVIDERS = { sleeper: PROVIDER_SLEEPER, yahoo: PROVIDER_YAHOO, cbs: PROVIDER_CBS, cbs_browser: PROVIDER_CBS_BROWSER, espn: PROVIDER_ESPN, manual: PROVIDER_MANUAL };
 // What a reader may connect right now, and why not otherwise. Presence only,
 // never a key.
 function leagueProviderReport(env) {
@@ -12501,7 +12640,7 @@ async function leagueSync(env, row, trigger, preparedRaw) {
     const allPlayers = [];
     for (const r of model.rosters || []) for (const p of r.players || []) allPlayers.push(p);
     for (const x of model.transactions || []) for (const p of [...(x.adds || []), ...(x.drops || [])]) if (!allPlayers.some(q => q.providerPlayerId === p.providerPlayerId)) allPlayers.push({ ...p, position: p.position || null });
-    const mapped = await leagueMapPlayers(env, row.provider, allPlayers);
+    const mapped = await leagueMapPlayers(env, row.provider === 'cbs_browser' ? 'cbs' : row.provider, allPlayers);
     unmatched = mapped.unmatched;
     const ts = Date.now();
     await leagueWriteModel(env, row.id, model, mapped.map, ts);
@@ -12511,7 +12650,7 @@ async function leagueSync(env, row, trigger, preparedRaw) {
     // provider identified it and the reader has not chosen one by hand.
     const keepTeam = row.user_team_id && (model.teams || []).some(t => t.teamId === row.user_team_id);
     await env.LEADS_DB.prepare('UPDATE leagues SET name=?, season=?, num_teams=?, status=?, settings=?, user_team_id=?, updated_at=?, last_sync_at=?, last_ok_at=?, sync_status=?, last_error=NULL, next_sync_at=?, failures=0 WHERE id=?')
-      .bind(model.name || row.name, model.season || row.season, model.numTeams || row.num_teams, model.status || row.status, JSON.stringify(model.settings), keepTeam ? row.user_team_id : (model.userTeamId || row.user_team_id || null), ts, ts, ts, 'ok', leagueNextSyncAt(ts, 0), row.id).run();
+      .bind(model.name || row.name, model.season || row.season, model.numTeams || row.num_teams, model.status || row.status, JSON.stringify(model.settings), keepTeam ? row.user_team_id : (model.userTeamId || row.user_team_id || null), ts, ts, ts, 'ok', row.provider === 'cbs_browser' ? null : leagueNextSyncAt(ts, 0), row.id).run();
   } catch (e) {
     error = (e && e.message) || 'failed'; code = (e && e.code) || 'sync_failed';
     if (row.provider === 'cbs') error = cbsError(code).message;
@@ -12526,7 +12665,7 @@ async function leagueSync(env, row, trigger, preparedRaw) {
 async function leagueSyncState(env, row, ok, error, at) {
   const failures = ok ? 0 : (Number(row.failures) || 0) + 1;
   try { await env.LEADS_DB.prepare('UPDATE leagues SET last_sync_at=?, sync_status=?, last_error=?, next_sync_at=?, failures=? WHERE id=?')
-    .bind(at, ok ? 'ok' : 'failed', error || null, leagueNextSyncAt(at, failures), failures, row.id).run(); } catch (e) {}
+    .bind(at, ok ? 'ok' : 'failed', error || null, row.provider === 'cbs_browser' ? null : leagueNextSyncAt(at, failures), failures, row.id).run(); } catch (e) {}
 }
 // The job: every connected league that is due, a few at a time, with the
 // provider's flag respected and a per-league backoff on failure.
@@ -12534,7 +12673,7 @@ async function runLeagueSync(env) {
   if (!(await leagueReady(env))) return { ok: false, error: 'no_db' };
   const now = Date.now();
   let rows = [];
-  try { rows = (await env.LEADS_DB.prepare("SELECT * FROM leagues WHERE provider != 'manual' AND (next_sync_at IS NULL OR next_sync_at <= ?) ORDER BY next_sync_at ASC LIMIT ?").bind(now, LEAGUE_SYNC_BATCH).all()).results || []; }
+  try { rows = (await env.LEADS_DB.prepare("SELECT * FROM leagues WHERE provider != 'manual' AND provider != 'cbs_browser' AND (next_sync_at IS NULL OR next_sync_at <= ?) ORDER BY next_sync_at ASC LIMIT ?").bind(now, LEAGUE_SYNC_BATCH).all()).results || []; }
   catch (e) { return { ok: false, error: (e && e.message) || 'query failed' }; }
   const results = [];
   for (let i = 0; i < rows.length; i += 3) {
@@ -13191,6 +13330,16 @@ async function leagueRoutes(request, env, url, ctx) {
     const conn = provider.auth === 'oauth2' ? { ...(await leagueConnectionRead(env, email, pid) || {}), email } : { email };
     if (provider.auth === 'oauth2' && (!conn.access_enc || conn.status === 'disconnected')) return leagueErr('expired_authorization', null, 409, c);
     try {
+      if (pid === 'cbs_browser') {
+        const raw = body.snapshot;
+        let model;
+        try { model = provider.normalize(raw, ctx); } catch (e) { return leagueErr('invalid_browser_import', 'CBS import is incomplete. Re-read the league with the updated extension.', 400, c); }
+        const { row, created } = await leagueCreateRow(env, email, pid, raw.leagueId, model.name, model.season, {});
+        const r = await leagueSync(env, row, 'browser', raw);
+        if (!r.ok && created) await leagueDisconnect(env, email, row);
+        const L = r.ok ? await leagueLoad(env, email, row.id) : null;
+        return json({ ok:r.ok, created, sync:r, league:L ? leaguePublic(L) : null, needsTeam:!!(L && !L.userTeamId), teams:L ? L.teams : [], message:r.ok ? null : 'The import could not be saved. Please retry.' }, r.ok ? 200 : 502, c);
+      }
       if (pid === 'cbs') {
         const lid = cbsLeagueId(body.leagueId || body.lookupLeagueId);
         const token = typeof body.accessToken === 'string' ? body.accessToken.trim() : '';
@@ -13249,6 +13398,7 @@ async function leagueRoutes(request, env, url, ctx) {
   }
   if (action === 'sync') {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    if (row.provider === 'cbs_browser') return leagueErr('browser_refresh_required', 'Open your CBS league and use the Iron Tuna extension to refresh it.', 409, c);
     if (row.provider === 'manual') return json({ ok: true, manual: true, message: 'A manual league is edited, not synced.' }, 200, c);
     if (row.last_sync_at && Date.now() - row.last_sync_at < LEAGUE_SYNC_MIN_GAP_MS && !url.searchParams.get('force')) return leagueErr('too_soon', null, 429, c);
     const r = await leagueSync(env, row, 'user');
@@ -13555,6 +13705,17 @@ export default {
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const out = await newsroomFeedPayload(env, url.searchParams.get('lens') === 'dfs' ? 'dfs' : 'weekly', parseInt(url.searchParams.get('limit') || '20', 10) || 20);
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=120' });
+    }
+    // The recap strip above the front page's hero. Sixty seconds, because on a
+    // Sunday afternoon this list gains a game every couple of minutes. It
+    // answers 200 with an empty list when there is nothing fresh: the strip
+    // not existing is a normal state, not an error the page should log.
+    if (url.pathname === '/api/recaps') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'GET') return new Response('method', { status: 405 });
+      const out = await recapStripPayload(env);
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=60' });
     }
     if (url.pathname === '/api/analysts' || url.pathname === '/api/analyst') {
       const c = corsHeaders(request.headers.get('Origin'));

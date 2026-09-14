@@ -297,22 +297,12 @@ console.log('\nthe camp desk is crawlable without JavaScript');
     reports.every((r) => inArchive.has(r.url)),
     reports.filter((r) => !inArchive.has(r.url)).map((r) => r.url).join(', '));
 
-  // And the front page deliberately does NOT carry them all any more. A desk that
-  // creeps back to printing the entire run is the regression this pins.
+  // The front page no longer carries a camp desk at all: the run from The
+  // Play-Caller Premium down to the Draft Tools band came off the page in
+  // September 2026. A desk that creeps back onto it, printing the whole archive,
+  // is the regression this pins.
   const onFront = new Set([...front.matchAll(/href="(\/auction-watch-\d{4}-\d{2}-\d{2})"/g)].map((m) => m[1]));
-  ok('the front page carries only the latest few reports, not the archive',
-    onFront.size <= 5 && onFront.size >= Math.min(2, reports.length), String(onFront.size));
-
-  // The link out is what makes the trimmed desk honest rather than a truncation.
-  ok('the camp desk links to the archive', /id="camp"[\s\S]{0,300}href="\/auction-watch"/.test(front));
-
-  ok('the latest report is the featured one',
-    new RegExp(`id="campFeat">[\\s\\S]{0,400}href="${reports[0].url}"`).test(front));
-
-  // The client render appends rows. Without this clear it would append a second
-  // copy of every row on top of the pre-rendered ones.
-  ok('the client render clears the list before refilling it',
-    /var cl = document\.getElementById\('campList'\);\s*(?:\/\/[^\n]*\n\s*)*cl\.innerHTML = '';/.test(front));
+  ok('the front page does not carry the camp archive', onFront.size <= 5, String(onFront.size));
 
   // A camp report page nobody links to is reachable only from the sitemap.
   const watchPages = pages.filter((f) => /^auction-watch-\d{4}-\d{2}-\d{2}\.html$/.test(f));

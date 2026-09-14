@@ -574,5 +574,40 @@ console.log('\nCBS token connector, end to end');
   ok('CBS sync logs never include tokens', !JSON.stringify([...db.t.league_sync_runs.values()]).includes('CBS-secret'));
 }
 
+console.log('\nCBS browser import');
+{
+  const fixture = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/cbs-browser-league.json'), 'utf8'));
+  const provider = H.LEAGUE_PROVIDERS.cbs_browser;
+  const model = provider.normalize(fixture, {season:2026}), s = model.settings.scoring;
+  ok('CBS browser rules preserve passing threshold and all bonuses', s.passingYardsThreshold === 125 && s.passingYardsPerPoint === 25 && s.passingTD === 6 && s.passingYardBonuses.length === 3);
+  ok('CBS browser rules preserve positional PPR', s.receptionPoints === 1 && s.rbReceptionPoints === .5 && s.rbReceptionBonuses.length === 2);
+  ok('CBS browser maps field-goal and defensive ranges', s.fieldGoalTiers.length === 5 && s.fieldGoalTiers[0].max === 29 && s.fieldGoalTiers[0].missPoints === -3 && s.pointsAllowed.length === 12 && s.pointsAllowed[6].min === 17);
+  ok('CBS browser fixture scoring is fully recognized', !Object.keys(model.settings.extras.unsupported).length);
+  ok('CBS browser makes missing data explicit', model.settings.faab === null && /matchups/.test(model.settings.extras.notes.join(' ')) && model.matchups.length === 0);
+  const ce = { ...env, FLAG_CBS_SYNC:'1', LEAGUE_TOKEN_KEY:undefined };
+  const con = snapshot => route(ce, 'POST', '/api/leagues/connect', {provider:'cbs_browser',snapshot}, cookie);
+  const beforeTokens = db.t.league_provider_tokens.size;
+  const connected = await con(fixture), id = connected.body.league?.id;
+  ok('CBS browser connects without encryption credentials and requests team choice', connected.body.ok && connected.body.needsTeam && connected.body.teams.length === 2, JSON.stringify(connected.body));
+  ok('CBS browser stores no authorization token', db.t.league_provider_tokens.size === beforeTokens);
+  await route(ce,'POST','/api/leagues/'+id+'/team',{teamId:'8'},cookie);
+  const again = await con(fixture);
+  ok('CBS browser refresh is idempotent and keeps chosen team', again.body.ok && !again.body.created && again.body.league.id === id && again.body.league.userTeamId === '8');
+  ok('CBS browser has no automatic refresh time', again.body.league?.sync?.nextAt == null);
+  const refresh = await route(ce,'POST','/api/leagues/'+id+'/sync',null,cookie);
+  ok('CBS browser server refresh directs the reader back to extension', refresh.status === 409 && refresh.body.error === 'browser_refresh_required');
+  const previous = JSON.stringify([...db.t.league_roster_players.values()].filter(r=>r.league_id===id));
+  for (const mutate of [f=>f.rosters.pop(), f=>f.rosters[0].players=[], f=>f.teams[1].teamId='8', f=>f.rules.push(f.rules[0]), f=>f.rosters[1].players[0].providerPlayerId=f.rosters[0].players[0].providerPlayerId, f=>f.season=9999, f=>f.leagueId='https://evil.test']) {
+    const bad = structuredClone(fixture); mutate(bad); const r = await con(bad);
+    ok('CBS malformed browser import rejected before modifying saved rosters', r.status === 400 && JSON.stringify([...db.t.league_roster_players.values()].filter(r=>r.league_id===id)) === previous);
+  }
+  const unknown = structuredClone(fixture); unknown.rules.push({group:'SPECIAL SCORING FOR TIGHT ENDS',code:'Recpt',text:'3 points'});
+  ok('CBS unhandled positional rules stay visible', Object.keys(provider.normalize(unknown,{season:2026}).settings.extras.unsupported).length === 1);
+  ok('CBS browser remains off without its feature flag', !H.leagueProviderReport({}).cbs_browser.enabled);
+  const off = await route({...ce,FLAG_CBS_SYNC:'0'},'POST','/api/leagues/connect',{provider:'cbs_browser',snapshot:fixture},cookie);
+  ok('CBS browser disabled flag is enforced at connect', off.status === 503);
+  const anon = await route(ce,'POST','/api/leagues/connect',{provider:'cbs_browser',snapshot:fixture});
+  ok('CBS browser import requires Iron Tuna sign-in', anon.status === 401);
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
