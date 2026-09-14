@@ -10961,3 +10961,154 @@ category outside the six.
   `tools/live-board.mjs` is still the pre-09-02 harness: retired pricing, no
   availability scaling. It runs without error and prints wrong numbers. That is
   the shape of the bug that made me "correct" three good stories in §80.
+
+## 88. September 14: the pinned story's prices have moved, and the deployment is ahead of the repo
+
+D1 clock 2026-09-14 11:22:52Z, container 11:23:03Z — in step for the third day.
+
+### 88a. Row 94's table no longer matches the board, and its worst paragraph is now right
+
+The feeds recovered overnight: `odds_overlay` rows 1, 2 and 3 all refreshed at
+11:00:03Z, 23 minutes before this audit. On that board, against the table row
+94 published on September 8:
+
+```
+                    story (Sept 8)      today
+Carnell Tate        $11, WR25           $10, WR26     price moved
+Cam Ward            $1,  QB26           $1,  QB27     rank only
+Tony Pollard        $5,  RB29           $5,  RB29     unchanged
+Wan'Dale Robinson   $3,  WR38           $2,  WR41     price moved
+```
+
+and the prose: 1,060.8 receiving yards is now **1,030.7**, and the 207.2-point
+gap to the next Tennessee receiver is now **201.3**. **Two of the four table
+prices are wrong against the live board**, both low, which means the max bids
+the story recommends ($13 on Tate, $4 on Robinson) now sit further above the
+board than they did when it published.
+
+And the paragraph from §87b — "Receivers ranked 20 through 23 all cost $12. The
+next three, 24 through 26, all cost $10" — is **correct today**. Today's served
+column really does read $12 $12 $12 $12 then $10 $10 $10 across WR20–26.
+
+That is the finding, not a footnote: **yesterday the table was right and the
+prose was wrong; today the prose is right and the table is wrong.** The two
+halves of the same story drift independently, because one was looked up and the
+other was derived off the curve. A story whose figures are all looked up decays
+in one direction and can be re-checked in one pass. This one cannot. §87b's rule
+stands and this is the second day of evidence for it: look a price up, never
+derive one.
+
+Still not edited. The column is paused.
+
+### 88b. The hang is bursty, not a slow leak — and one "stale" row was never stale
+
+§87a's hang rate is not a constant. Per day, runs that never wrote a finish:
+
+```
+09-09   22 / 112   20%
+09-10   35 / 259   14%
+09-11   46 / 225   20%
+09-12   51 / 317   16%
+09-13  109 / 229   48%     <- the day I audited a 24h-stale overlay
+09-14   17 / 168   10%
+```
+
+09-13 is not a worse average, it is a different failure. `availability-refresh`
+fired **every fifteen minutes from 14:00 to 23:00** and every single attempt
+after 14:00 hung:
+
+```
+14:00:11  finished 14:00:12  ok=1
+14:15:11  NEVER    14:30:13  NEVER    14:45:11  NEVER
+15:00:11  NEVER    15:15:11  NEVER    15:30:11  NEVER    15:45:11  NEVER
+16:00:11  NEVER    16:15:11  NEVER    16:30:11  NEVER    16:45:11  NEVER
+17:00:11  NEVER  ...  23:00:11  NEVER
+```
+
+That is a retry storm: the job is due, it hangs without writing a finish, so it
+is still due at the next tick, so it runs again and hangs again. Nothing backs
+off and nothing escalates. It ran for nine hours and moved the injury row zero
+times. This morning at 11:00:02 `odds-refresh`, `availability-refresh` and
+`usage-prior-refresh` all completed in **one second**, so whatever it is clears
+on its own.
+
+**And a correction to §87a.** I listed row 7 (`nflverse-usage-prior`, now 50
+hours old) among the stale feeds. It is not stale. Today's run returned
+`{"ok":true,"season":2025,"skipped":"already built","players":610,
+"throughWeek":18}` — it is a prior-season reference table, complete through week
+18, and it is *supposed* to stop rewriting itself. Age is not evidence on its
+own; what the job says it did is. Row 7 should not have been on that list.
+
+### 88c. The deployed worker contains code that is in no branch
+
+The bundle changed at 2026-09-14T10:47:30Z, 35 minutes before this audit. Two
+source changes:
+
+- `fetchScheduleEspn(season, opts)` gained a `preseason` option, and the caller
+  now sets it false once the regular season is a day old, so the schedule fetch
+  stops walking preseason weeks 1–4.
+- `NOT_A_NAME` — the guard that decides whether a token could be a player name
+  — went from 631 tokens (617 unique, 14 duplicates) to 715 tokens, 715 unique.
+  Compared as sets: **nothing was removed**, 98 verb and gerund forms were added
+  (`Attack Buying Calling Chasing Correlating Fading Holding …`). Purely
+  additive and deduped. Benign.
+
+Neither change is in `origin/main` (still `2ee4ec5`), in this branch, or in any
+other remote branch. `grep` for `fetchScheduleEspn(season, opts)` and for
+`Correlating` in `git show origin/main:_worker.js` returns zero.
+
+The change itself is harmless — the board comparison below is still 0 rows
+apart. The problem is what it means: **irontuna.com is running source that the
+repository does not have, so the repo has stopped being the record of what the
+site runs.** Most likely someone deployed from a working copy rather than
+through the git integration. Every "repo vs deployed" check in this file
+assumes those two are the same thing; from today that assumption has a
+counter-example, and a board-affecting edit made the same way would show up here
+as an unexplained difference with nothing in git to explain it.
+
+### 88d. The two boards still disagree on a fifth of the board
+
+Re-run of §87c on a completely different overlay — yesterday's was 24 hours
+stale, today's is 23 minutes old:
+
+```
+             09-13              09-14
+differing    74 / 340 (21.8%)   75 / 340 (22.1%)
+largest gap  $28                $29   (A.J. Brown $30 static vs $1 served)
+same rank    14                 9
+```
+
+The share barely moves. That settles what §87c could only suggest: this is
+structural, not a property of one day's odds.
+
+§81a's pair moved again and reversed. Static fallback: Collins $28, Wilson $27
+(adjacent curve slots, identical committed points). Served: **Collins WR12 $25,
+Wilson WR11 $29** — a $4 split, with Wilson above Collins today and below him
+yesterday. Six days of chasing this pair; the pair is noise and the recipe
+mismatch is the signal.
+
+### 88e. The rest
+
+- CI **76/76**, `origin/main` unchanged at `2ee4ec5`, nothing to merge.
+- Harness self-test **23/23**.
+- Repo vs deployed: **1380 player-rows across four boards, 0 differences**;
+  `VEGAS_WEIGHT`, `LEAGUE_BUDGET`, `MIN_BID`, `CURVE`, `COLUMN_NORM` identical.
+  The 88c drift did not reach the board.
+- Routine still `enabled: false`, untouched since 2026-09-09 13:05:36Z; live
+  prompt still **47,183 chars / `9c578c415408`**.
+- Tamper predicates clean: one published row (94), no published-unverified row,
+  no analyst row published, 67 audit rows.
+- Recaps are healthy where they belong: `content_pieces` holds 16 published and
+  21 held `game-recap` rows through 2026-09-14 07:05Z, which is what
+  `/api/recaps` and the front-page strip read. `lead_story` rows 96 and 97 are
+  still `published=0`, and `LEAD_CATEGORIES` still has its six keys with no
+  `recap`, in both the repo and the deployed bundle.
+- **The "Iron Tuna recap: Sunday night" Routine FAILED** at 2026-09-14
+  03:47:53Z. The Sunday early (20:32Z) and late (23:52Z) window runs both
+  succeeded. Not investigated — it is outside the lead-story column and nothing
+  reader-facing is missing, but it is the first Routine failure recorded here.
+- D1 grew from 7.0 MB to 11.2 MB in a day, which is Sunday's slate landing:
+  `job_runs` is 1,750 rows and the recap rows above account for the rest.
+- The branch is **27 commits ahead of `main`**, whose `tools/live-board.mjs` is
+  still the pre-09-02 harness — retired pricing, no availability scaling, no
+  error when it is wrong.
