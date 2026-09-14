@@ -8079,6 +8079,15 @@ retry; otherwise the piece is `held` with the problems named and the page
 shows the packet. A model that returns `{"skip": "..."}` is honored: the
 piece is `skipped` with `writer_declined`.
 
+**Name the opponent (September 14).** Whenever a piece discusses a player it
+says who he is playing, from the packet, so a reader can tell the advice is
+for this week's game and not a prior week's. `NEWSROOM_SYSTEM` carries the
+rule (NAME THE OPPONENT), `_oppFor` puts `opponent` and `home` on the packet
+rows that lacked them (team boards, replacements, the flex table, pickups,
+the trade desk; `_rowFor` already had them), and `tools/test-newsroom.mjs`
+pins both. Where a row's opponent is null (a bye), the writer says the
+opponent is not in the packet rather than guessing.
+
 ### 68h. Storage, memory, the feeds
 
 `content_pieces` grew `analyst, lens, version, rivalry, headline, dek`

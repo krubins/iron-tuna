@@ -7671,7 +7671,7 @@ function _priorFor(team, ctx) {
     .filter(x => x.targetsPerGame >= 2 || x.carriesPerGame >= 3).sort((a, b) => (b.targetsPerGame + b.carriesPerGame) - (a.targetsPerGame + a.carriesPerGame)).slice(0, 8);
   const board = (ctx.week && ctx.week.players || []).filter(p => p.team === team && p.pos !== 'K' && p.pos !== 'DEF')
     .sort((a, b) => a.ironTuna.rank - b.ironTuna.rank).slice(0, 8)
-    .map(p => ({ name: p.name, position: p.position, ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, injury: p.injury ? p.injury.status : null }));
+    .map(p => ({ name: p.name, position: p.position, ..._oppFor(p), ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, injury: p.injury ? p.injury.status : null }));
   return { depthChart: dc, seasonUsage: seasonShares, board };
 }
 function _teamSection(team, usage, ctx) {
@@ -8871,10 +8871,17 @@ function _replacementFor(team, position, absentName, ctx) {
     const p = board.get(_oddsNorm(n) + '|' + position);
     if (!p) continue;
     if (p.injury && _injSev(p.injury.status) === 2) continue;
-    out.push({ name: p.name, position: p.position, team, ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, points: p.ironTuna.points, roleTrend: p.roleTrend ? p.roleTrend.label : null });
+    out.push({ name: p.name, position: p.position, team, ..._oppFor(p), ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, points: p.ironTuna.points, roleTrend: p.roleTrend ? p.roleTrend.label : null });
     if (out.length >= 2) break;
   }
   return out;
+}
+// The opponent a board row is playing in its first priced week, so a packet
+// row can always say who the player is playing (NAME THE OPPONENT in
+// NEWSROOM_SYSTEM). Null on a bye or where the board carries no week.
+function _oppFor(p) {
+  const wk = (p && p.weeks && (p.weeks.find(x => x.env) || p.weeks[0])) || null;
+  return { opponent: wk && wk.opponent ? wk.opponent : null, home: wk && wk.opponent ? wk.home : null };
 }
 // A row from the week board, in the shape every packet prints.
 function _rowFor(p, extra) {
@@ -9150,7 +9157,7 @@ function packetRankings(ctx, week, opts) {
       rank: r.blend.rank, fantasyRank: r.blend.fantasyRank, marketRank: r.blend.marketRank, points: r.blend.points, fantasyPoints: r.blend.fantasy, marketPoints: r.blend.market, marketBasis: r.blend.marketBasis,
       injury: r.injury ? r.injury.status : null, roleTrend: r.roleTrend && r.roleTrend.games ? r.roleTrend.label : null }));
   }
-  const flex = b.players.filter(r => /^(RB|WR|TE)$/.test(r.position)).sort((x, y) => (x.blend.flexRank || 999) - (y.blend.flexRank || 999)).slice(0, 30).map(r => ({ name: r.name, position: r.position, team: r.team, flexRank: r.blend.flexRank, points: r.blend.points }));
+  const flex = b.players.filter(r => /^(RB|WR|TE)$/.test(r.position)).sort((x, y) => (x.blend.flexRank || 999) - (y.blend.flexRank || 999)).slice(0, 30).map(r => ({ name: r.name, position: r.position, team: r.team, ..._oppFor(r), flexRank: r.blend.flexRank, points: r.blend.points }));
   const dis = blendDisagreements(b.players, 12);
   return { week, rankings: table, flex, disagreements: dis, blendNote: 'rank is the 50/50 blend; fantasyRank is 100% Fantasy Analysis; marketRank is 100% Market Intelligence', dfs: _dfsBlock(ctx, null) };
 }
@@ -9238,7 +9245,7 @@ function packetPickups(ctx) {
       const hurt = p.injury && _injSev(p.injury.status) === 2;
       // Beyond the consensus rostered line: nobody in this size has him.
       if (c <= line) continue;
-      const row = { name: p.name, position: p.position, team: p.team, ironTunaRank: r, consensusRank: c, next3Points: p.ironTuna.points, roleTrend: trend, injury: p.injury ? p.injury.status : null, marketBasis: p.vegas.basis, gamesOut: p.injury ? p.injury.gamesOut : 0 };
+      const row = { name: p.name, position: p.position, team: p.team, ..._oppFor(p), ironTunaRank: r, consensusRank: c, next3Points: p.ironTuna.points, roleTrend: trend, injury: p.injury ? p.injury.status : null, marketBasis: p.vegas.basis, gamesOut: p.injury ? p.injury.gamesOut : 0 };
       if (hurt && p.injury.gamesOut <= 4 && r <= line * 1.2) stash.push({ ...row, faabPct: PICKUP_FAAB.stash, holdFor: 'until he returns' });
       else if (r <= line * 0.8 && trend !== 'down') priority.push({ ...row, faabPct: PICKUP_FAAB.priority, holdFor: 'rest of season' });
       else if (r <= line * 1.1) mid.push({ ...row, faabPct: PICKUP_FAAB.mid, holdFor: 'three weeks' });
@@ -9273,7 +9280,7 @@ function packetTradeDesk(ctx, rosBoard) {
     const rc = recent(p.key);
     const rosEdge = p.consensus.rank - p.ironTuna.rank;    // positive: Iron Tuna higher than consensus
     const perGame = p.games ? _oddsRound(p.ironTuna.points / p.games) : null;
-    const row = { name: p.name, position: p.position, team: p.team, rosRank: p.ironTuna.rank, consensusRosRank: p.consensus.rank, rosPointsPerGame: perGame, recentPointsPerGame: rc ? rc.ppg : null, recentGames: rc ? rc.games : null, roleTrend: rc ? rc.trend : null, schedule: p.scheduleDifficulty ? p.scheduleDifficulty.label : null, injury: p.injury ? p.injury.status : null, marketBasis: p.vegas.basis };
+    const row = { name: p.name, position: p.position, team: p.team, ..._oppFor(p), rosRank: p.ironTuna.rank, consensusRosRank: p.consensus.rank, rosPointsPerGame: perGame, recentPointsPerGame: rc ? rc.ppg : null, recentGames: rc ? rc.games : null, roleTrend: rc ? rc.trend : null, schedule: p.scheduleDifficulty ? p.scheduleDifficulty.label : null, injury: p.injury ? p.injury.status : null, marketBasis: p.vegas.basis };
     if (rosEdge >= 4 && (!rc || (perGame != null && rc.ppg <= perGame * 0.9)) && !(p.injury && _injSev(p.injury.status) === 2)) targets.push({ ...row, edge: rosEdge });
     if (rosEdge <= -4 && rc && perGame != null && rc.ppg >= perGame * 1.15 && rc.trend !== 'up') away.push({ ...row, edge: rosEdge });
   }
@@ -9400,6 +9407,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
 // ── the writer, in an analyst's voice, two lenses ──────────────────────────
 const NEWSROOM_SYSTEM = `You write for Iron Tuna, a fantasy football intelligence desk that prices players against the betting market and reads usage before it reads box scores.
 THE ONE RULE: you may state only facts that appear in the PACKET you are given. Every player name, team, number, rank, share, line, salary, ownership figure and injury status must come from the packet. If the packet does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. All projections, ranks, values, ownership estimates, floors, ceilings, leverage scores and DFS scores in the packet were already calculated by deterministic code. Do not calculate, re-rank, interpolate, normalize, replace or override them. Compare and explain the supplied values only. Sources the packet lists under staleSources are NOT available. Never invent a cause: if the packet has no cause for a change, say the cause is not known.
+NAME THE OPPONENT. Every time you discuss a player, say who he is playing, from the packet's opponent field for him (or nextWeekOpponent, or the game's matchup), with home or away where the packet has it: "against BUF at home", "at DEN". A reader who sees the opponent knows the advice is for this week's game and not a prior week's. In a recap, name the opponent he just played and, where the packet carries it, the one he plays next. If the packet carries no opponent for a player (a bye, or the field is null), say the opponent is not in the packet rather than guessing.
 THE QUESTION is never "what happened". It is "what does what happened tell us about what is going to happen next", and for DFS "what does this mean at this salary and this expected ownership".
 TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manager what to do: rankings, start/sit, waivers, trades, rest-of-season value. The DFS lens tells a daily player where projection, price and ownership create opportunity: value, chalk, leverage, stacks, cash versus tournaments. A good fantasy player is not automatically a good DFS play. The facts do not change between the lenses; the recommendations may. If the packet's dfs block says no salaries are loaded, the DFS lens speaks to roles and pricing direction and says plainly that no salary number is available.
 COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
