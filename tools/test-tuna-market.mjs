@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 const src = readFileSync(new URL('../_worker.js', import.meta.url), 'utf8');
 const section = src.slice(src.indexOf('// TUNA MARKET SIGNAL START'), src.indexOf('// TUNA MARKET SIGNAL END'));
 let calls = 0, response;
-const api = new Function('fetch', 'adminOk', section + '\nreturn {tmsNormalize,tmsNormalizePropline,tmsAmericanToDecimal,tmsApplyPropLineMovement,tmsPrimaryPropRows,tmsSignals,tmsHttp,tmsReady,tmsStore,tmsPoll,tmsRoutes,TMS_PROVIDERS};')(
+const api = new Function('fetch', 'adminOk', section + '\nreturn {tmsNormalize,tmsNormalizePropline,tmsAmericanToDecimal,tmsApplyPropLineMovement,tmsPrimaryPropRows,tmsSignals,tmsHttp,tmsReady,tmsStore,tmsPoll,tmsRoutes,tmsBookBoard,tmsDecimalToAmerican,TMS_PROVIDERS};')(
   async () => { calls++; return response.clone(); }, (env, key) => !!env.LEADS_EXPORT_KEY && key === env.LEADS_EXPORT_KEY);
 const db = new DatabaseSync(':memory:');
 const wrap = (sql, args = []) => ({ bind: (...values) => wrap(sql, values),
@@ -142,4 +142,43 @@ assert.equal((await (await req('/api/tuna-market')).json()).status, 'disabled');
 delete env.TMS_PROVIDER;
 env.TMS_ENABLED = '0'; assert.equal((await (await req('/api/tuna-market')).json()).status, 'disabled');
 new Function(readFileSync(new URL('../tuna-market.js', import.meta.url), 'utf8'));
-console.log('Tuna Market Signal: PropLine normalization and native movement, line/price separation, freshness, source isolation, SQLite storage, idempotency, concurrent polling, quota cooldown, auth, licensed splits and UI parse passed.');
+env.TMS_ENABLED = '1';
+// One book's board: DraftKings by default, attributed, the book's own quote and
+// never another book's number.
+assert.equal(api.tmsDecimalToAmerican(1.9090909090909092), -110);
+assert.equal(api.tmsDecimalToAmerican(2.5), 150);
+assert.equal(api.tmsDecimalToAmerican(1), null);
+const boardNow = now;
+const boardFixture = (at, spread, price) => [{ id: 'dk-event', sport_key: 'americanfootball_nfl', commence_time: new Date(boardNow + 86400000).toISOString(), home_team: 'Home', away_team: 'Away', bookmakers: [
+  { key: 'draftkings', last_update: new Date(at).toISOString(), markets: [
+    { key: 'spreads', outcomes: [{ name: 'Home', point: spread, price }, { name: 'Away', point: -spread, price: 1.9 }] },
+    { key: 'h2h', outcomes: [{ name: 'Home', price: 1.5 }, { name: 'Away', price: 2.6 }] },
+    { key: 'totals', outcomes: [{ name: 'Over', point: 44.5, price: 1.91 }, { name: 'Under', point: 44.5, price: 1.91 }] },
+    { key: 'player_receptions', outcomes: [{ name: 'Over', description: 'Board Player', point: 5.5, price: 1.87 }, { name: 'Under', description: 'Board Player', point: 5.5, price: 1.95 }] } ] },
+  { key: 'fanduel', last_update: new Date(at).toISOString(), markets: [{ key: 'spreads', outcomes: [{ name: 'Home', point: -4, price: 1.91 }, { name: 'Away', point: 4, price: 1.91 }] }] } ] }];
+await api.tmsStore(env, api.tmsNormalize(boardFixture(boardNow - 7200000, -3, 1.91), boardNow - 7200000), boardNow - 7200000);
+await api.tmsStore(env, api.tmsNormalize(boardFixture(boardNow - 60000, -3.5, 1.87), boardNow - 60000), boardNow - 60000);
+result = await (await req('/api/tuna-market/book')).json();
+assert.equal(result.book, 'draftkings'); assert.equal(result.label, 'DraftKings'); assert.equal(result.status, 'ok');
+const boardGame = result.games.find(g => g.event === 'dk-event');
+assert.ok(boardGame); assert.equal(boardGame.home, 'Home'); assert.equal(boardGame.away, 'Away'); assert.equal(boardGame.sourceName, 'The Odds API');
+assert.deepEqual(boardGame.markets.spreads.map(q => q.side), ['Away', 'Home']);
+const homeSpread = boardGame.markets.spreads.find(q => q.side === 'Home');
+assert.equal(homeSpread.line, -3.5); assert.equal(homeSpread.openLine, -3); assert.equal(homeSpread.lineMove, -0.5);
+assert.equal(homeSpread.american, -115); assert.equal(homeSpread.openAmerican, -110); assert.equal(homeSpread.openBasis, 'first-observed'); assert.equal(homeSpread.stale, false);
+assert.equal(boardGame.markets.h2h.find(q => q.side === 'Away').american, 160);
+assert.deepEqual(boardGame.markets.totals.map(q => q.side), ['Over', 'Under']);
+assert.equal(boardGame.markets.spreads.some(q => Math.abs(q.line) === 4), false);
+const boardProp = result.props.find(p => p.player === 'Board Player');
+assert.equal(boardProp.label, 'Receptions'); assert.equal(boardProp.quotes[0].side, 'Over'); assert.equal(boardProp.quotes[0].line, 5.5); assert.equal(boardProp.quotes[1].american, -105);
+assert.equal(result.counts.players >= 1, true);
+result = await (await req('/api/tuna-market/book?book=fanduel&kind=games')).json();
+assert.equal(result.label, 'FanDuel'); assert.equal(result.props.length, 0);
+assert.equal(result.games.find(g => g.event === 'dk-event').markets.spreads.find(q => q.side === 'Home').line, -4);
+result = await (await req('/api/tuna-market/book?player=board')).json();
+assert.equal(result.games.length, 0); assert.equal(result.props.length, 1);
+result = await (await req('/api/tuna-market/book?book=nobody')).json();
+assert.equal(result.status, 'no_quotes'); assert.ok(result.booksQuoting.includes('draftkings')); assert.equal(result.label, 'nobody');
+assert.equal((await req('/api/tuna-market/book', { method: 'POST' })).status, 405);
+assert.equal(JSON.stringify(result).includes('apiKey'), false);
+console.log('Tuna Market Signal: PropLine normalization and native movement, line/price separation, freshness, source isolation, SQLite storage, idempotency, concurrent polling, quota cooldown, auth, licensed splits, the per-book board and UI parse passed.');

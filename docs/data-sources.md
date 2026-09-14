@@ -62,6 +62,15 @@ Worker. It merges the available multi-game Classic salary pools across the
 Thursday-through-Monday NFL week and sends a validated combined CSV through the
 existing admin import. FanDuel remains absent.
 
+### Evaluated and not adopted
+
+| Host | Checked | Why not |
+|---|---|---|
+| `sportsbook.draftkings.com` / `sportsbook-nash.draftkings.com` (DraftKings Sportsbook JSON: game lines, player props) | 2026-09-13 | Every API path (`/sites/US-SB/api/v5/eventgroups/88808`, `/api/sportscontent/<site>/v1/leagues/88808`, the navigation and category endpoints) answers a non-browser client with an Akamai "Access Denied" (HTTP 403) whatever the headers, and the sportsbook page loads the Akamai Bot Manager sensor script, so a scheduled workflow like the DFS salary import would be refused the same way. Getting past that means defeating bot detection, which this repo does not do; the sportsbook terms also prohibit automated access. Addendum 13.3 / 13.7. DraftKings' lines and props are already carried by the licensed providers above under the book key `draftkings`, and `GET /api/tuna-market/book?book=draftkings` serves that book's own board (docs/TUNA-MARKET-SIGNAL.md). |
+
+The DFS lobby JSON the salary workflow reads is a different host (`www.draftkings.com/lobby`, `api.draftkings.com/draftgroups`) and answered an unauthenticated fetch normally on the same day; the sportsbook is fenced, the lobby is not.
+
+
 ---
 
 ## 2. Remediation queue

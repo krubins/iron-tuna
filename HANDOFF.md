@@ -9344,3 +9344,71 @@ Things that had to move with it:
 still rewritten by `build-front.mjs`. Nothing reads them on the page any more.
 They were left in place because the build script asserts on the declarations,
 and because the data is what any future rebuild of these bands would want.
+
+## 75. September 13: DraftKings' sportsbook board, by book
+
+Ken asked for DraftKings' betting lines and player props brought in the way the
+salaries are (§53-era `tools/import-draftkings-salaries.mjs`: a once-weekly
+repository workflow reading the DFS lobby JSON and posting through the admin
+import). That route does not exist for the sportsbook, and the reason is worth
+keeping on file so nobody re-runs the experiment:
+
+- **The DFS lobby is open; the sportsbook is fenced.** On 2026-09-13
+  `www.draftkings.com/lobby/getcontests?sport=NFL` answered a plain fetch with
+  2.6 MB of JSON. Every sportsbook API path — the v5 `eventgroups/88808`
+  endpoint, `sportsbook-nash.draftkings.com/api/sportscontent/<site>/v1/leagues/88808`,
+  the navigation and category endpoints, the state-coded hosts — answered
+  `403 Access Denied` from Akamai whatever the headers, and the sportsbook page
+  loads the Akamai Bot Manager sensor script. A GitHub runner gets the same
+  refusal. Getting past it means defeating bot detection, which this repo does
+  not do, and the sportsbook terms prohibit automated access anyway. Recorded in
+  `docs/data-sources.md` under "Evaluated and not adopted".
+- **DraftKings' numbers already arrive by the licensed door.** Tuna Market Signal
+  (§53f, `docs/TUNA-MARKET-SIGNAL.md`) polls PropLine — or The Odds API as the
+  fallback — with `draftkings` first in `TMS_BOOKMAKERS`, and stores every
+  book's own quote per event, market, player and side in
+  `tuna_market_snapshots`. The public `/api/tuna-market` then deliberately
+  strips book identity and publishes only the cross-book movement analysis.
+
+So the deliverable is a read, not a feed: **`GET /api/tuna-market/book`**, in
+the same self-contained TUNA MARKET SIGNAL region of `_worker.js`, executed by
+`tools/test-tuna-market.mjs` against the real source.
+
+- `?book=draftkings` is the default; any key in the allowlist works
+  (`fanduel`, `betmgm`, …). `label` is the display name.
+- `games[]` carries each upcoming event's moneyline, spread and total as the
+  book's own two-sided quotes (decimal and American), ordered away-then-home /
+  over-then-under. `props[]` carries each upcoming player market with a human
+  `label` and its two sides. Every quote has the window's opening line and price
+  beside the current one, `openBasis` says whether that opener is the
+  provider's or the first observation stored, and `lineMove` is the difference.
+- `?kind=games|props`, `?player=<substring>` (props only, like the signal
+  endpoint) and `?event=<id>` narrow it. Started games drop out. `stale` marks
+  a quote with no observation in three hours.
+- `booksQuoting` names the books with upcoming quotes in the window, so a
+  request for a book the provider is not returning reports `no_quotes` rather
+  than an empty `ok`.
+- Same gate as the signal endpoint (`TMS_ENABLED=1` and a provider key), same
+  Washington 451 fence, `no-store`, and a visitor read never touches a vendor.
+
+**What it needs to show anything.** Nothing is flowing in production today:
+`/api/tuna-market` returns `disabled` because `wrangler.jsonc` selects
+`TMS_PROVIDER=propline` and no `PROPLINE_API_KEY` secret is set, and
+`/api/market` reports `sources.odds: nflverse`, i.e. `ODDS_API_KEY` is unset
+too. Set `PROPLINE_API_KEY` (free tier; the budget in `docs/TUNA-MARKET-SIGNAL.md`
+holds) and the next hourly poll fills the board. The Odds API fallback would
+also work for game lines, but its props pull is limited to the two events named
+in `TMS_PROP_EVENT_IDS`, so PropLine is the practical provider for a full
+DraftKings props board.
+
+**Licensing.** PropLine's terms are green for end-user analytical display and
+The Odds API's (R3, closed 2026-09-10) permit storing and displaying the data
+and derived values in a commercial product while prohibiting a raw feed. The
+board shows one book's current and opening quote with the source named, and
+keeps the raw payload, the intermediate history and the credentials
+server-side. The book-blind stance of `/api/tuna-market` is unchanged; this is
+the one endpoint that names a book, and the docs say so.
+
+Nothing on the front end reads it yet. The Wagers lane and the front page's
+Betting Market Intel band consume `/api/tuna-market`; a "DraftKings board"
+widget on either is a straightforward follow-up once a key is in place.

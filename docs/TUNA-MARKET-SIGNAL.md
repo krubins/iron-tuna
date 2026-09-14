@@ -114,13 +114,47 @@ configured event props.
 
 - `GET /api/tuna-market?kind=props&player=Name`
 - `GET /api/tuna-market?kind=games`
+- `GET /api/tuna-market/book?book=draftkings&kind=games|props&player=Name&event=<id>` — one named sportsbook's own board
 - `POST /api/tuna-market/refresh` (admin bearer token)
 - `POST /api/tuna-market/import` (admin bearer token, licensed normalized feed only)
 
-Public items may include source name, derived consensus opening/current line,
+Public signal items may include source name, derived consensus opening/current line,
 consensus line delta, implied-probability delta, cross-book steam score, books moved,
-books quoting, and the existing movement score. Book identity, raw per-book price
-history and provider credentials remain server-side.
+books quoting, and the existing movement score. On `/api/tuna-market`, book identity,
+raw per-book price history and provider credentials remain server-side.
+
+### The book board
+
+`/api/tuna-market/book` is the deliberate exception to the book-blind signal: it
+names one sportsbook (`book=draftkings` by default; any key in `TMS_BOOKMAKERS`) and
+returns that book's own current quotes, attributed to the provider that observed
+them. Same stored 24-hour window, same provider gate, same Washington fence, no
+provider request on a visitor read.
+
+- `games[]`: one row per upcoming event with `markets.h2h`, `markets.spreads` and
+  `markets.totals`, each a list of quotes ordered away-then-home or over-then-under.
+- `props[]`: one row per upcoming event, player and market (`label` is the human
+  name, e.g. "Receiving yards") with its two-sided `quotes`.
+- A quote carries `line`, `price` (decimal), `american`, the window's `openLine` /
+  `openPrice` / `openAmerican` with `openBasis` (`provider-opening` where the tier
+  supplies it, otherwise `first-observed`), `lineMove`, `updated`, `observed` and
+  `stale` (no observation in three hours).
+- `booksQuoting` lists the book keys with upcoming quotes in the window, so a
+  request for a book the provider is not returning reports `no_quotes` rather
+  than an empty `ok`.
+- Started games are dropped; a board is what can still be bet. Props are capped at
+  2,000 rows per response.
+
+Another book's number never appears on a named book's board. The raw provider
+payload, the observation history beyond the current and opening quote, and the
+credentials stay server-side, which keeps this a bounded derived display rather
+than a raw passthrough (see "Licensing record").
+
+DraftKings' own sportsbook JSON is not a source for this and was checked on
+2026-09-13: every endpoint answers non-browser clients with an Akamai "Access
+Denied" regardless of headers, the page loads the Akamai Bot Manager sensor, and
+the sportsbook terms prohibit automated access. DraftKings' lines reach this
+store through the licensed provider under the book key `draftkings`.
 
 Washington requests remain blocked at the edge with HTTP 451 for Betting Market Intel.
 

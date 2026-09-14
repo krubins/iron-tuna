@@ -1721,6 +1721,103 @@ function tmsSignals(rows, now, sharpBooks = []) {
   }
   return items.sort((a, b) => (b.steamScore ?? -1) - (a.steamScore ?? -1) || (b.score ?? -1) - (a.score ?? -1));
 }
+// ── one sportsbook's own board ────────────────────────────────────────────
+// /api/tuna-market above is book-blind on purpose: it publishes the movement
+// and consensus Iron Tuna derives ACROSS books. This answers the other
+// question a reader asks -- "what is DraftKings actually posting right now" --
+// from the same stored observations, scoped to one named book and attributed
+// to it. DraftKings' own sportsbook JSON was evaluated on 2026-09-13 and is not
+// pulled: every endpoint sits behind Akamai Bot Manager and the sportsbook
+// terms prohibit automated access (docs/data-sources.md, "Evaluated and not
+// adopted"). Its numbers reach this store through the licensed provider under
+// the book key `draftkings`, which is what the default here selects. Showing a
+// book's current quote with the source named is inside the PropLine and The
+// Odds API terms recorded in docs/TUNA-MARKET-SIGNAL.md; the raw provider
+// payload, the observation history and the credentials stay server-side.
+const TMS_BOOK_LABELS = { draftkings: 'DraftKings', fanduel: 'FanDuel', betmgm: 'BetMGM', betrivers: 'BetRivers', fanatics: 'Fanatics', hardrock: 'Hard Rock Bet', hardrockbet: 'Hard Rock Bet', pinnacle: 'Pinnacle', bovada: 'Bovada', caesars: 'Caesars', williamhill_us: 'Caesars', espnbet: 'ESPN BET', ballybet: 'Bally Bet', betonlineag: 'BetOnline' };
+const TMS_MARKET_LABELS = { h2h: 'Moneyline', spreads: 'Spread', totals: 'Total',
+  player_pass_yds: 'Passing yards', player_pass_tds: 'Passing touchdowns', player_pass_interceptions: 'Interceptions thrown', player_pass_attempts: 'Pass attempts', player_pass_completions: 'Completions',
+  player_rush_yds: 'Rushing yards', player_rush_tds: 'Rushing touchdowns', player_rush_attempts: 'Rush attempts',
+  player_reception_yds: 'Receiving yards', player_reception_tds: 'Receiving touchdowns', player_receptions: 'Receptions', player_anytime_td: 'Anytime touchdown' };
+const TMS_GAME_MARKETS = ['h2h', 'spreads', 'totals'];
+const TMS_BOARD_STALE_MS = 3 * 3600000;
+const tmsSourceName = provider => provider === 'propline' ? 'PropLine' : provider === 'the-odds-api' ? 'The Odds API' : 'Licensed market feed';
+const tmsMarketLabel = market => TMS_MARKET_LABELS[market] || String(market || '').replace(/^player_/, '').replace(/_/g, ' ');
+function tmsDecimalToAmerican(price) {
+  const n = Number(price);
+  if (!Number.isFinite(n) || n <= 1) return null;
+  return n >= 2 ? Math.round((n - 1) * 100) : -Math.round(100 / (n - 1));
+}
+// One book's quotes: the latest observation per (event, market, player, side)
+// with the earliest observation in the window -- or the provider's own opener,
+// where the tier supplies one -- beside it. Started games drop out: a board is
+// what can still be bet. Another book's number never appears on this one.
+function tmsBookBoard(rows, book, now, filter = {}) {
+  const series = new Map();
+  for (const r of rows) {
+    if (r.book !== book) continue;
+    const key = tmsKey(r);
+    if (!series.has(key)) series.set(key, []);
+    series.get(key).push(r);
+  }
+  const quotes = [];
+  for (const history of series.values()) {
+    history.sort((a, b) => a.observed - b.observed);
+    const first = history[0], last = history[history.length - 1];
+    if (last.starts <= now) continue;
+    const nativeOpen = tmsNumberOrNull(last.openingAt) != null && Number(last.openingAt) < last.updated &&
+      (last.openingLine != null || tmsNumberOrNull(last.openingPrice) != null);
+    const openLine = nativeOpen ? last.openingLine : first.line;
+    const openPrice = nativeOpen ? tmsNumberOrNull(last.openingPrice) : first.price;
+    quotes.push({ ...last, openLine, openPrice,
+      openBasis: nativeOpen ? 'provider-opening' : 'first-observed',
+      openObserved: nativeOpen ? Number(last.openingAt) : first.observed,
+      lineMove: openLine != null && last.line != null ? Math.round((last.line - openLine) * 100) / 100 : null,
+      stale: now - last.observed > TMS_BOARD_STALE_MS });
+  }
+  const kind = filter.kind === 'games' || filter.kind === 'props' ? filter.kind : null;
+  const player = String(filter.player || '').toLowerCase();
+  const event = String(filter.event || '');
+  const publicQuote = q => ({ side: q.side, line: q.line, price: q.price, american: tmsDecimalToAmerican(q.price),
+    openLine: q.openLine, openPrice: q.openPrice, openAmerican: tmsDecimalToAmerican(q.openPrice), openBasis: q.openBasis,
+    lineMove: q.lineMove, updated: q.updated, observed: q.observed, stale: q.stale });
+  const games = new Map(), props = new Map();
+  let asOf = 0;
+  for (const q of quotes) {
+    if (event && q.event !== event) continue;
+    if (q.observed > asOf) asOf = q.observed;
+    const isProp = !!q.player;
+    if (isProp ? kind === 'games' : kind === 'props') continue;
+    if (player && !(isProp && q.player.toLowerCase().includes(player))) continue;
+    if (isProp) {
+      const key = JSON.stringify([q.provider, q.event, q.market, q.player]);
+      if (!props.has(key)) props.set(key, { event: q.event, sport: q.sport, matchup: q.matchup, starts: q.starts, player: q.player,
+        market: q.market, label: tmsMarketLabel(q.market), sourceName: tmsSourceName(q.provider), quotes: [], updated: 0, observed: 0 });
+      const p = props.get(key);
+      p.quotes.push(publicQuote(q));
+      p.updated = Math.max(p.updated, q.updated); p.observed = Math.max(p.observed, q.observed);
+      continue;
+    }
+    if (!TMS_GAME_MARKETS.includes(q.market)) continue;
+    // tmsNormalize writes the matchup as "Away at Home"; no club has " at " in its name.
+    const at = q.matchup.lastIndexOf(' at ');
+    const away = at < 0 ? '' : q.matchup.slice(0, at), home = at < 0 ? '' : q.matchup.slice(at + 4);
+    const key = JSON.stringify([q.provider, q.event]);
+    if (!games.has(key)) games.set(key, { event: q.event, sport: q.sport, matchup: q.matchup, away, home, starts: q.starts,
+      sourceName: tmsSourceName(q.provider), markets: {}, updated: 0, observed: 0 });
+    const g = games.get(key);
+    (g.markets[q.market] = g.markets[q.market] || []).push(publicQuote(q));
+    g.updated = Math.max(g.updated, q.updated); g.observed = Math.max(g.observed, q.observed);
+  }
+  // Sides read the way the matchup does: away then home, over then under.
+  const sideRank = (g, s) => s === g.away ? 0 : s === g.home ? 1 : /^(over|yes)$/i.test(s) ? 0 : /^(under|no)$/i.test(s) ? 1 : 2;
+  for (const g of games.values()) for (const list of Object.values(g.markets)) list.sort((a, b) => sideRank(g, a.side) - sideRank(g, b.side));
+  for (const p of props.values()) p.quotes.sort((a, b) => sideRank({}, a.side) - sideRank({}, b.side));
+  const gameList = [...games.values()].sort((a, b) => a.starts - b.starts || a.matchup.localeCompare(b.matchup));
+  const propList = [...props.values()].sort((a, b) => a.starts - b.starts || a.player.localeCompare(b.player) || a.market.localeCompare(b.market)).slice(0, 2000);
+  return { asOf: asOf || null, games: gameList, props: propList,
+    counts: { games: gameList.length, props: propList.length, players: new Set(propList.map(p => p.player)).size } };
+}
 async function tmsRoutes(request, env, url) {
   if (!url.pathname.startsWith('/api/tuna-market')) return null;
   const tmsCf = request && request.cf || {};
@@ -1758,6 +1855,29 @@ async function tmsRoutes(request, env, url) {
       }
       await tmsReady(env); await tmsStore(env, rows, now);
       return json({ status: 'ok', rows: rows.length });
+    }
+    // One named sportsbook's own current board. ?book=draftkings (the default)
+    // &kind=games|props &player=Name &event=<id>. Same 24-hour window, same
+    // provider gate and same Washington fence as the signal endpoint above.
+    if (url.pathname === '/api/tuna-market/book') {
+      if (request.method !== 'GET') return json({ error: 'method' }, 405);
+      const book = String(url.searchParams.get('book') || 'draftkings').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 40) || 'draftkings';
+      const label = TMS_BOOK_LABELS[book] || book;
+      if (env.TMS_ENABLED !== '1') return json({ status: 'disabled', book, label, games: [], props: [] });
+      const bookProvider = env.TMS_PROVIDER || (env.PROPLINE_API_KEY ? 'propline' : 'the-odds-api');
+      if (bookProvider === 'propline' && !env.PROPLINE_API_KEY) return json({ status: 'disabled', book, label, games: [], props: [] });
+      await tmsReady(env);
+      const now = Date.now();
+      const records = await env.LEADS_DB.prepare('SELECT payload FROM tuna_market_snapshots WHERE observed>=? ORDER BY observed DESC LIMIT 1000').bind(now - 86400000).all();
+      const rows = (records.results || []).flatMap(r => JSON.parse(r.payload));
+      const board = tmsBookBoard(rows, book, now, { kind: url.searchParams.get('kind'),
+        player: (url.searchParams.get('player') || '').slice(0, 100), event: (url.searchParams.get('event') || '').slice(0, 80) });
+      const state = await env.LEADS_DB.prepare("SELECT status,updated,next_poll FROM tuna_market_state WHERE id='poll'").first();
+      const quoting = new Set(rows.filter(r => r.starts > now).map(r => r.book));
+      return json({ status: board.games.length || board.props.length ? 'ok' : quoting.size ? 'no_quotes' : 'collecting',
+        book, label, windowHours: 24, truncated: records.results?.length === 1000, booksQuoting: [...quoting].sort(),
+        health: state ? { ...JSON.parse(state.status || '{}'), updated: state.updated, nextPoll: state.next_poll } : null,
+        ...board });
     }
     if (url.pathname !== '/api/tuna-market') return json({ error: 'not_found' }, 404);
     if (request.method !== 'GET') return json({ error: 'method' }, 405);
