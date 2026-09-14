@@ -380,7 +380,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('dkKicker').classList.toggle('nfl-wide', nflWide);
     $('dkKicker').innerHTML =
       (nflWide ? '<img class="dk-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' : '') +
-      (lens === 'dfs' ? 'DFS' : 'Weekly Fantasy') + ' &middot; ' + e(j.title) + ' &middot; Week ' + e(j.week) + (j.version > 1 ? ' &middot; update ' + e(j.version) : '');
+      (lens === 'dfs' ? 'DFS' : 'Weekly Fantasy') + ' &middot; ' + e(j.title) + ' &middot; Week ' + e(j.week) + (j.game ? ' &middot; Final' : '') + (j.edition > 1 ? ' &middot; update ' + e(j.edition) : '');
     $('dkBody').innerHTML = byline(j, lens) + (j.dek ? '<p class="dk-dek">' + e(j.dek) + '</p>' : '') + (lens === 'weekly' ? rivalryBox(j) : '') +
       (j.status === 'published' ? lensBody(j, lens, j.sections ? j.sections[lens] : null) + (lens === 'weekly' ? callsBox(j) : '') : '');
     if (lens === 'dfs' && j.brief && j.brief.dfs && j.brief.dfs.note) $('dkBody').innerHTML += '<p class="is-note">' + e(j.brief.dfs.note) + '</p>';

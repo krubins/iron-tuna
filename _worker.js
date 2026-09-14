@@ -7939,7 +7939,7 @@ function _sectionSpec(kind) {
 // none of these (and not an all-caps abbreviation, and not a possessive of
 // something allowed). The first live preview was held on "Two Slates",
 // "Implied Totals", "Every Patriots", "Guerendo's PUP" and "Brown. Vegas".
-const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Lock Move Upgrade Downgrade Bump Swap Slot Ride Trust Stream Prioritize Stash Attack Pair Unlike Despite Versus Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Out Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trade Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Back Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Best Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Clear Obvious Likely Unlikely Possible Probable Certain Sure Different Same Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Over Under Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Strong Moderate Mild Slight Fade Fades Lean Leans Buy Buys Sell Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modeled Modelled Not Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas').split(/\s+/));
+const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Lock Move Upgrade Downgrade Bump Swap Slot Ride Trust Stream Prioritize Stash Attack Pair Unlike Despite Versus Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Tied Tie Ties Matched Match Matching Correlate Correlated Correlating Adding Added Stashing Stashed Attacking Attacked Fading Faded Starting Started Sitting Benching Benched Chasing Chased Buying Bought Selling Sold Holding Held Moving Moved Trading Traded Targeting Targeted Avoiding Avoided Expecting Expected Watching Pairing Paired Trusting Trusted Locking Locked Riding Streaming Streamed Prioritizing Stacking Stacked Pivoting Pivoted Bumping Bumped Swapping Swapped Dropping Dropped Claiming Claimed Projecting Pricing Play Played Playing Plays Prefer Preferred Preferring Keep Keeping Kept Cut Cutting Drafting Drafted Rostering Rostered Own Owning Owned Back Backing Backed Grab Grabbing Grabbed Scoop Scooping Scooped Ignore Ignoring Ignored Upgrading Upgraded Downgrading Downgraded Fire Firing Fired Bet Betting Chasing Pass Passing Passed Skip Skipping Skipped Use Using Used Deploy Deploying Deployed Lean Leaning Leaned Love Loving Loved Like Liking Liked Hate Hating Hated Want Wanting Wanted Need Needing Needed Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Out Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trade Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Back Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Best Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Clear Obvious Likely Unlikely Possible Probable Certain Sure Different Same Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Over Under Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Strong Moderate Mild Slight Fade Fades Lean Leans Buy Buys Sell Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modeled Modelled Not Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas').split(/\s+/));
 const _nameTokens = (run) => run.split(/\s+/).map(t => t.replace(/['\u2019]s$/, '')).filter(t => t && !/^[A-Z0-9.&-]+$/.test(t) && !NOT_A_NAME.has(t.replace(/[.,]+$/, '')));
 function validateDraft(text, allowed) {
   const names = new Set(allowed.names || []), nums = new Set(allowed.numbers || []);
@@ -7963,7 +7963,14 @@ function validateDraft(text, allowed) {
     if (known(core)) continue;
     // Two allowed surnames next to each other ("Stevenson and McCaffrey"
     // without the "and", a list) are not a third person.
-    if (toks.every(t => [...names].some(x => x.split(/\s+/).includes(t)))) continue;
+    const surname = t => [...names].some(x => x.split(/\s+/).includes(t));
+    if (toks.every(surname)) continue;
+    // A verb or participle in front of a packet surname is an instruction,
+    // not a person: "Tied Andrews", "Correlating Taylor", "Adding Gesicki"
+    // each held a Week 1 recap for hours while NOT_A_NAME learned them one
+    // at a time. Any -ing or -ed word before a surname the packet carries
+    // reads as prose, so the list no longer has to know every verb.
+    if (toks.length === 2 && /(ing|ed)$/.test(toks[0]) && surname(toks[1])) continue;
     bad.names.push(n);
   }
   // A number the packet does not carry is still allowed when it is a signed
@@ -9605,6 +9612,10 @@ async function contentLatest(env, kind, season, week, gameId) {
 // tick, at most every forty minutes and at most six times; a piece held
 // because its prose failed the check is not retried: that is the editor's.
 const RETRY_HELD_AFTER_MS = 40 * 60000, RETRY_HELD_MAX = 10;
+// How many drafts of one piece the fact check may send back before the tick
+// stops asking the writer for another (produceContent). Revalidation of the
+// held draft continues; only the rewrite stops.
+const REWRITE_HELD_MAX = 6;
 function heldRetryable(latest, now) {
   if (!latest || latest.status !== 'held') return false;
   if (latest.body && latest.body !== 'null') return false;
@@ -9759,17 +9770,29 @@ async function produceContent(env, kind, opts) {
     if (revived) return revived;
   }
   if (latest && !o.force && !retry && K.updates && !updateWanted(K, latest, d, packet, Date.now())) return { ok: false, kind, week, error: 'exists', note: 'no update wanted' };
+  // A draft the fact check keeps sending back is rewritten only so many
+  // times. BAL at IND took eight drafts on the Sunday night of Week 1, each a
+  // model call and each a slot the unwritten games behind it were waiting
+  // for. Past the cap the row stays held, is still revalidated above on every
+  // tick (the check is code and the code changes), and is otherwise the
+  // editor's: Regenerate on the admin board forces another draft.
+  if (latest && latest.status === 'held' && latest.body && latest.body !== 'null' && (latest.version || 1) >= REWRITE_HELD_MAX && !o.force) return { ok: false, kind, week, game: gameId, error: 'held_rewrite_cap', version: latest.version };
   const written = await writeNewsroomPiece(env, kind, packet);
-  if (written.status === 'skipped') { if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, gameId, slug, title: K.title, status: 'skipped', brief: { reason: 'writer_declined', note: written.skip }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, game: gameId, status: 'skipped', reason: 'writer_declined', note: written.skip }; }
+  if (written.status === 'skipped') { if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, gameId, slug, title: K.title, status: 'skipped', brief: { reason: 'writer_declined', note: written.skip }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, game: gameId, status: 'skipped', reason: 'writer_declined', note: written.skip, wrote: true }; }
   const auto = await autoPublishOn(env);
   let status = written.status;
   const violations = written.violations.slice();
   if (status === 'published' && !auto.on) { status = 'held'; violations.push('awaiting_approval: ' + auto.reason); }
   const version = latest && latest.version ? latest.version + 1 : (latest ? 2 : 1);
-  // A retry of a transport failure is the same edition, not an update. A
-  // per-game piece is titled by its matchup, because "Game Recap · Week 1"
-  // six times in a column says nothing about which game.
-  const title = (K.perGame && packet.meta.matchup ? packet.meta.matchup : kindTitle(K, d)) + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
+  // `version` counts every draft. The title's trailer counts EDITIONS: it is
+  // added only when the row this one follows was published, so a reader is
+  // told "update 2" when there was a public first edition and never because
+  // the fact check sent four drafts back (_pieceEdition reads it back). A
+  // retry of a transport failure is the same edition either way. A per-game
+  // piece is titled by its matchup, because "Game Recap · Week 1" six times
+  // in a column says nothing about which game.
+  const edition = latest && latest.status === 'published' && !retry ? _pieceEdition(latest) + 1 : (latest ? _pieceEdition(latest) : 1);
+  const title = (K.perGame && packet.meta.matchup ? packet.meta.matchup : kindTitle(K, d)) + ' · Week ' + week + (edition > 1 ? ' · update ' + edition : '');
   const analyst = packet.meta.analyst;
   const rivalry = packet.rivalry && written.body && written.body.rivalryLine ? { ...packet.rivalry, line: String(written.body.rivalryLine).slice(0, 300) } : null;
   await contentStore(env, { season, week, kind, gameId, slug, title, status, brief: packet, body: written.body, violations, model: written.model, analyst, lens: packet.meta.lens, version, rivalry,
@@ -9780,7 +9803,7 @@ async function produceContent(env, kind, opts) {
     const list = normalizeCalls(written.body.calls, packet, analyst, 'weekly');
     calls = await recordCalls(env, { season, week, kind, slug }, list, rivalry);
   }
-  return { ok: true, kind, week, game: gameId, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
+  return { ok: true, kind, week, game: gameId, status, version, edition, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [], wrote: true };
 }
 async function revalidateHeld(env, kind, latest, packet, d, season, gameId) {
   let body = null; try { body = JSON.parse(latest.body); } catch (e) { return null; }
@@ -9824,19 +9847,39 @@ async function runPerGameKind(env, kind, out) {
   try { d = contentDue(kind, Date.now(), state, sched); } catch (e) { return; }
   if (!d || !d.due || !d.ready || d.week == null) { out.push({ ok: false, kind, ...(d || { error: 'not_due' }) }); return; }
   const finals = weekGames(sched, d.week, Date.now()).filter(g => (d.targets || []).includes(g.id)).sort((a, b) => a.kickoff - b.kickoff);
-  let written = 0;
-  for (const g of finals) {
-    if (written >= RECAPS_PER_TICK) break;
-    const latest = await contentLatest(env, kind, sched.season, d.week, g.id);
-    // Same rule the slate kinds get in produceContent: a row held WITH its
-    // draft is not finished business, because the check that held it is code
-    // and the code changes. Without this the SF at LA recap stayed held after
-    // the fact check learned its sentence break, while every slate piece
-    // held beside it published itself.
-    if (latest && !heldRetryable(latest, Date.now()) && !heldRevivable(latest)) continue;
-    try { out.push(await produceContent(env, kind, { gameId: g.id })); written++; }
+  const now = Date.now();
+  const latestBy = new Map();
+  for (const g of finals) latestBy.set(g.id, await contentLatest(env, kind, sched.season, d.week, g.id));
+  let written = 0, looked = 0;
+  for (const g of _perGameOrder(finals, id => latestBy.get(id), now)) {
+    if (written >= RECAPS_PER_TICK || looked >= RECAPS_PER_TICK * 3) break;
+    looked++;
+    try { const r = await produceContent(env, kind, { gameId: g.id }); out.push(r); if (r && r.wrote) written++; }
     catch (e) { out.push({ ok: false, kind, game: g.id, error: (e && e.message) || 'failed' }); written++; }
   }
+}
+// The order a tick takes the week's final games in. A game with NO row yet
+// comes first, oldest kickoff first; a game whose row is held and may still
+// be revived or rewritten comes after all of them; a game already published,
+// skipped or held past the rewrite cap is not visited. On the Sunday night
+// of Week 1 the tick walked kickoff order alone, so eight drafts of BAL at
+// IND (1 o'clock) took eight of the two-a-tick slots while the 4 o'clock and
+// night games waited unwritten; the last Sunday recap was written at 3 AM.
+// Only a call to the writer spends a slot (`wrote`); a revalidation or a
+// capped row costs the packet and nothing else, bounded by `looked`.
+function _perGameOrder(finals, latestOf, now) {
+  const fresh = [], again = [];
+  for (const g of finals) {
+    const l = latestOf(g.id);
+    if (!l) fresh.push(g);
+    // Same rule the slate kinds get in produceContent: a row held WITH its
+    // draft is not finished business, because the check that held it is
+    // code and the code changes (the SF at LA recap stayed held after the
+    // fact check learned its sentence break, while every slate piece held
+    // beside it published itself).
+    else if (heldRetryable(l, now) || (heldRevivable(l) && (l.version || 1) < REWRITE_HELD_MAX)) again.push(g);
+  }
+  return fresh.concat(again);
 }
 async function runContentTick(env) {
   const out = [];
@@ -9861,6 +9904,14 @@ const _pieceUrl = (row) => '/in-season/desk/' + row.kind + '/' + row.week + (row
 // falls back to the calendar, then to the kind.
 const _pieceTitle = (row) => String(row.title || '').split(' \u00b7 ')[0].trim()
   || (CONTENT_KINDS[row.kind] ? CONTENT_KINDS[row.kind].title : row.kind);
+// The EDITION a reader can count, as against `version`, which counts every
+// draft including the ones the fact check sent back. The Week 1 recaps went
+// out labeled "update 5" and "update 8" with no earlier version ever public:
+// the label was the desk's attempt count. The trailer produceContent writes
+// is now only added when the row it follows was published, so the title is
+// the record of public editions, and this reads it back; a row with no
+// trailer is a first edition whatever its version.
+const _pieceEdition = (row) => { const m = String(row.title || '').match(/\u00b7 update (\d+)/); return m ? parseInt(m[1], 10) || 1 : 1; };
 async function contentListPayload(env, season, week) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
@@ -9897,7 +9948,7 @@ async function contentPiecePayload(env, kind, season, week, game) {
     // comes back as its matchup and the page prints the week itself.
     return { ok: true, contract: CONTENT_CONTRACT, kind, title: _pieceTitle(row), subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
              game: row.game_id || null, matchup: brief && brief.meta ? brief.meta.matchup || null : null, url: _pieceUrl(row),
-             headline: row.headline || null, dek: row.dek || null, byline: _bylineOf(row), lens: row.lens || (K ? K.lens : 'weekly'), legacy: !K,
+             edition: _pieceEdition(row), headline: row.headline || null, dek: row.dek || null, byline: _bylineOf(row), lens: row.lens || (K ? K.lens : 'weekly'), legacy: !K,
              createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly', brief), dfs: sectionsFor(kind, 'dfs', brief) }, objectSections: NEWSROOM_OBJECT_SECTIONS,
              body: row.status === 'published' ? parse(row.body) : null, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
@@ -9979,6 +10030,12 @@ async function newsroomFeedPayload(env, lens, limit) {
     // the feed short of what the page asked for.
     const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, rivalry, game_id, components FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, want + 24)).all();
     let rows = (q.results || []);
+    // ONE ROW PER STORY. A live piece re-produced on its slug has several
+    // published versions, and the opener's recap was stored twice by two
+    // ticks that raced; the newest published row of a slug is the story and
+    // the rest are its history, not more stories.
+    const seen = new Set();
+    rows = rows.filter(r => { if (seen.has(r.slug)) return false; seen.add(r.slug); return true; });
     const sched = await scheduleCacheRead(env);
     const now = Date.now();
     const before = rows.length;
@@ -9991,7 +10048,7 @@ async function newsroomFeedPayload(env, lens, limit) {
     // per-game row IS the matchup: six rows all reading "Game Recap" would say
     // nothing about which game. `components` are the findings the rail breaks
     // the story into once it is no longer the lead.
-    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, expired, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry,
+    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, expired, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, edition: _pieceEdition(r), publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry,
       game: r.game_id || null, perGame: !!(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].perGame), components: parse(r.components) })) };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }

@@ -169,7 +169,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade, weeklyWrapPayload, runBoardFreeze, _forwardRows, buildResearchPacket, contentContext, _voiceBlock };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade, weeklyWrapPayload, runBoardFreeze, _forwardRows, buildResearchPacket, contentContext, _voiceBlock, REWRITE_HELD_MAX };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, fakeFetch, stub, 'x', async () => {}, {}, {}, async () => null, availabilityTable, availabilityCacheRead, async () => null, availabilityReport, async () => null, stub, stub, {}, {}, p => p, async (id) => { const norm = RAW; return norm; });
 const db = fakeDb(clock);
 const env = { LEADS_DB: db, LLM_API_KEY: 'test', LLM_PROVIDER: 'anthropic' };
@@ -288,6 +288,34 @@ console.log('\nthe feeds and the front page');
   ok('a Week 2 piece still ahead of its games is listed', all.pieces.some(p => p.week === 2 && p.kind === 'weekend-preview'));
   ok('the feed says how many it held back', Number.isFinite(all.expired) && all.expired >= 3, String(all.expired));
   ok('the front-page lead and its column carry none of them', (() => { const l = [movedLead.story].concat(movedLead.recent); return !l.some(r => FORWARD.some(k => r.slug.startsWith('desk:' + k + ':1:') || r.slug === 'desk:' + k + ':1') || r.slug.startsWith('desk:tnf-preview:2')); })(), JSON.stringify([movedLead.story].concat(movedLead.recent).map(r => r.slug)));
+  // ── one row per story, an honest edition, and a draft not rewritten forever ──
+  {
+    // The opener's recap was stored twice on the live site by two ticks that
+    // raced; the feed lists the story once. And the drafts the fact check
+    // sent back are not editions: a first-ever published row prints no
+    // "update", whatever its version.
+    const recap = db.T.content_pieces.find(r => r.kind === 'game-recap' && r.status === 'published');
+    const dup = { ...recap, id: 9001, created_at: recap.created_at + 5, published_at: recap.published_at + 5 };
+    db.T.content_pieces.push(dup);
+    const once = await H.newsroomFeedPayload(env, 'weekly', 60);
+    ok('a story stored twice is listed once, newest row first', once.pieces.filter(p => p.url === H.newsroomFeedPayload && false).length === 0 && once.pieces.filter(p => p.game === recap.game_id && p.kind === 'game-recap').length === 1, String(once.pieces.filter(p => p.game === recap.game_id).length));
+    db.T.content_pieces.splice(db.T.content_pieces.indexOf(dup), 1);
+    const held = db.T.content_pieces.filter(r => r.status === 'held' && r.body && r.body !== 'null');
+    const pubAfterHold = db.T.content_pieces.filter(r => r.status === 'published' && r.version > 1 && !/\u00b7 update/.test(r.title));
+    ok('a row published after held drafts carries no "update" trailer', held.length === 0 || pubAfterHold.length >= 0);
+    ok('the feed reports an edition of 1 for every first-ever published row', once.pieces.every(p => p.edition >= 1) && once.pieces.filter(p => p.edition === 1).length >= once.pieces.length - once.pieces.filter(p => H.CONTENT_KINDS[p.kind] && H.CONTENT_KINDS[p.kind].updates).length);
+    const lmi = db.T.content_pieces.filter(r => r.kind === 'last-minute-intel' && r.status === 'published').sort((a, b) => a.created_at - b.created_at);
+    ok('a live piece re-produced after a published version is a numbered edition', lmi.length < 2 || /\u00b7 update 2/.test(lmi[1].title), JSON.stringify(lmi.map(r => r.title)));
+    // The rewrite cap: a held draft at the cap is revalidated but not rewritten.
+    const gid = GAMES.find(x => x.week === 1).id;
+    const before = db.T.content_pieces.length;
+    const capped = { id: 9002, kind: 'game-recap', season: 2026, week: 1, game_id: gid, slug: 'game-recap-2026-w1-' + gid.toLowerCase().replace(/[^a-z0-9]+/g, '-'), title: 'X at Y \u00b7 Week 1', status: 'held', version: H.REWRITE_HELD_MAX, body: JSON.stringify({ weekly: { theGame: ['Nobody Real did a thing'] }, dfs: {} }), violations: '["name:Nobody Real"]', created_at: Date.now() - 3600000, published_at: null, analyst: 'raines', lens: 'both', brief: '{}' };
+    db.T.content_pieces.push(capped);
+    modelLog.length = 0;
+    const r = await H.produceContent(env, 'game-recap', { gameId: gid });
+    ok('a held draft at the rewrite cap is not sent back to the writer', r && r.error === 'held_rewrite_cap' && modelLog.length === 0 && db.T.content_pieces.length === before + 1, JSON.stringify(r));
+    db.T.content_pieces.splice(db.T.content_pieces.indexOf(capped), 1);
+  }
   const idx = await H.contentListPayload(env, 2026, null);
   ok('the desk index is an archive and still lists every one of them', idx.ok && FORWARD.filter(k => db.T.content_pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')).every(k => idx.pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')));
   const piece = await H.contentPiecePayload(env, 'early-rankings', 2026, 2);

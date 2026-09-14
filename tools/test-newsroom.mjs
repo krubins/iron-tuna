@@ -38,7 +38,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -454,8 +454,11 @@ console.log('\na held draft is re-read after the check itself changes');
   // The per-game loop keeps its own copy of the exists check, one call above
   // produceContent, and it skipped the whole piece before the revival could
   // run: the SF at LA recap sat held while the slate pieces beside it revived.
+  // Since the Sunday night of Week 1 the gate lives in _perGameOrder, one
+  // call above the loop, and the loop itself keeps no exists check at all.
   const perGame = cut('async function runPerGameKind(', 'async function runContentTick(');
-  ok('the per-game loop lets a revivable draft through its own exists check', /heldRetryable\(latest, Date\.now\(\)\) && !heldRevivable\(latest\)/.test(perGame), perGame.split('\n').filter(l => /continue;/.test(l)).join(' | '));
+  const gate = cut('function _perGameOrder(', 'async function runContentTick(');
+  ok('the per-game loop lets a revivable draft through its own exists check', !/heldRevivable\(latest\)\) continue;/.test(perGame) && /_perGameOrder\(finals/.test(perGame) && /heldRetryable\(l, now\) \|\| \(heldRevivable\(l\)/.test(gate), perGame.split('\n').filter(l => /continue;/.test(l)).join(' | '));
 }
 
 // Week 1, 2026-09-11: the desk wrote three complete pieces and the check held
@@ -726,6 +729,32 @@ console.log('\na played-week piece looks forward with next week\'s board');
   const meta = (fw) => ({ meta: { analyst: 'dalton', dfsAnalyst: 'park', storyType: 'retrospective', week: 1, forwardWeek: fw } });
   ok('the writer is told Week 1 has been played and the piece is about Week 2', /WEEKS\. Week 1 has been played and this piece is about what it says for Week 2\./.test(H._voiceBlock(meta(2))) && /never say a player is "projected"/.test(H._voiceBlock(meta(2))));
   ok('and told nothing of the kind when the piece is about the clock\'s own week', !/WEEKS\./.test(H._voiceBlock(meta(1))) && !/WEEKS\./.test(H._voiceBlock({ meta: { analyst: 'porter', dfsAnalyst: 'park', storyType: 'forward', week: 2, forwardWeek: 2 } })));
+}
+
+console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, editions miscounted');
+{
+  // The name check: a verb or participle before a packet surname is prose.
+  const allowed = { names: ['Marvin Harrison', 'Mark Andrews', 'Jonathan Taylor', 'Mike Gesicki', 'Rashod Bateman', 'Alec Pierce'], numbers: ['10.4', '12'] };
+  const v = t => H.validateDraft(t, allowed).names;
+  ok('"Tied Andrews", "Correlating Taylor" and "Adding Gesicki" are instructions, not people', v('Tied Andrews to Pierce. Correlating Taylor with Bateman. Adding Gesicki everywhere.').length === 0, JSON.stringify(v('Tied Andrews to Pierce. Correlating Taylor with Bateman. Adding Gesicki everywhere.')));
+  ok('"Attack Lane" and "Stash Mason" still read as prose off the word list', v('Attack Lane in cash. Stash Mason for a week.').length === 0);
+  ok('a person the packet does not carry is still caught', v('Cooper Rush is the story.').includes('Cooper Rush') && v('Trusting Cooper Rush here').length >= 1);
+  ok('a participle before a name that is not a packet surname is still a name', v('Blocking Smith all day').includes('Blocking Smith'));
+  // The edition a reader can count.
+  ok('a title with no trailer is a first edition whatever its version', H._pieceEdition({ title: 'GB at MIN · Week 1', version: 5 }) === 1 && H._pieceEdition({ title: null, version: 3 }) === 1);
+  ok('a title carrying the trailer is that edition', H._pieceEdition({ title: 'Last-Minute Intel · Week 1 · update 3', version: 4 }) === 3);
+  // The order a tick takes the week's games in.
+  const now = 1000000, old = now - 3 * 3600000;
+  const g = (id, k) => ({ id, kickoff: k });
+  const finals = [g('a', 1), g('b', 2), g('c', 3), g('d', 4), g('e', 5), g('f', 6)];
+  const rows = { a: { status: 'published', version: 1 }, b: { status: 'held', body: '{"x":1}', violations: '["name:X"]', version: 2, created_at: old },
+                 c: null, d: { status: 'held', body: null, violations: '["The operation was aborted"]', version: 1, created_at: old },
+                 e: { status: 'held', body: '{"x":1}', violations: '["name:X"]', version: H.REWRITE_HELD_MAX, created_at: old }, f: null };
+  const order = H._perGameOrder(finals, id => rows[id], now).map(x => x.id);
+  ok('unwritten games come first, oldest kickoff first', order.slice(0, 2).join() === 'c,f', order.join());
+  ok('then the held rows a tick may still retry or rewrite', order.slice(2).join() === 'b,d', order.join());
+  ok('a published game and a held draft past the rewrite cap are not visited', !order.includes('a') && !order.includes('e'));
+  ok('the cap is finite and above one', Number.isInteger(H.REWRITE_HELD_MAX) && H.REWRITE_HELD_MAX > 1 && H.RECAPS_PER_TICK >= 1);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

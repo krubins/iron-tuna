@@ -9469,3 +9469,66 @@ week, with nothing withheld.
 was written from the old packet and is not rewritten by this change; the
 admin board's Regenerate on that kind and week produces it again from the
 new one.
+
+### 75c. The same Monday, 2:26 PM: "GB at MIN · Week 1 · Update 5"
+
+Ken's third report, with a screenshot of the season-long lane: "It is still
+posting stories as if they are predictive. For example, the attached talks
+about the Minnesota Green Bay game that has already happened." The cards were
+the Week 1 game recaps (§73), which are about played games by design. What
+the screenshot showed was three things the cards said that were not true,
+and one reason they had appeared so late. `content_pieces` on the live D1
+was the witness:
+
+| Game | Drafts | Held on | Published (ET) |
+|---|---|---|---|
+| BAL at IND (1 PM) | 8 | "Attack Lane", "Correlating Taylor", "Tied Andrews", "Matched Flowers" | Mon 12:50 AM |
+| GB at MIN (1 PM) | 5 | "Stash Mason", "Unlike Watson", two salaries | Mon 2:50 AM |
+| NYJ at TEN (1 PM) | 4 | "Attack Mitchell", "Stash Allen", three salaries | Mon 1:49 AM |
+| DAL at NYG (4:25 PM) | 1 | | Mon 3:05 AM |
+| NE at SEA (Wed) | 1 | stored twice by two ticks | Fri 6:19 PM |
+
+- **"Update 5" was the attempt count.** `version` counts every draft, and
+  the title's trailer and the cards printed it, so a story with no earlier
+  public version said "update 5" to the reader. All ten published rows on
+  the site carrying a trailer had `published_before = 0`. The trailer is now
+  an EDITION: `produceContent` adds it only when the row it follows was
+  published; `_pieceEdition(row)` reads it back; the feed and the piece
+  payload carry `edition` beside `version`; `front.html` and `desk.html`
+  print `edition`. The ten live titles were stripped of their trailers by
+  one UPDATE on the D1 (ids 23, 34, 38, 41, 46, 49, 54, 57, 58, 62), each
+  checked against the same `published_before = 0` rule.
+- **Nothing on the card said the game was over.** A per-game row now prints
+  "· Final" after its week on both pages.
+- **The story was in the feed twice.** The opener's recap has two published
+  rows (ids 18 and 19, seven seconds apart, two ticks that raced) and a live
+  piece has one row per version; `newsroomFeedPayload` listed every row. It
+  keeps the newest published row per slug and drops the rest.
+- **The drafts were sent back for verbs.** "Tied Andrews", "Correlating
+  Taylor", "Adding Gesicki" read as people, and PR #223 had only taught the
+  list "Stash", "Attack" and "Unlike". `NOT_A_NAME` gained the verbs and
+  participles the Sunday drafts used, and `validateDraft` gained the rule
+  that makes the list unnecessary for the next one: any -ing or -ed word
+  before a surname the packet carries is prose.
+- **The rewrites starved the slate.** `runPerGameKind` walked kickoff order
+  and counted every visit against `RECAPS_PER_TICK` (2), so BAL at IND's
+  eight drafts took eight slots while the 4 o'clock and night games waited
+  unwritten until 3 AM. `_perGameOrder` puts games with no row first (oldest
+  kickoff first) and the held rows a tick may still revive or rewrite after
+  them; only a call to the writer (`wrote` on the result) spends a slot,
+  bounded by `looked` at three times the budget; and `REWRITE_HELD_MAX` (6)
+  stops the tick asking for a seventh draft of a piece the check keeps
+  sending back. Such a row is still revalidated every tick (the check is
+  code and the code changes) and is otherwise the editor's: Regenerate on
+  the admin board forces another draft.
+
+**Tests.** `tools/test-newsroom.mjs`: the three Sunday phrasings pass the
+name check and a person the packet lacks still does not, with a participle
+before a non-packet name still a name; a trailer-less title is edition 1 at
+any version and a trailer is its number; `_perGameOrder` puts unwritten games
+first, then retryable and revivable rows, and never visits a published game or
+a draft at the cap; the source-shape assertion that pinned the loop's old
+inline exists check now pins `_perGameOrder`. `tools/test-dry-run.mjs`: a
+story stored twice is listed once; every first-ever published row reports
+edition 1; a live piece re-produced after a published version is "update 2";
+a held draft at the cap is not sent to the writer and stores nothing.
