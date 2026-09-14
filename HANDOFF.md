@@ -9344,3 +9344,62 @@ Things that had to move with it:
 still rewritten by `build-front.mjs`. Nothing reads them on the page any more.
 They were left in place because the build script asserts on the declarations,
 and because the data is what any future rebuild of these bands would want.
+
+---
+
+## 75. September 14: a forward piece leaves the feed when its games kick off
+
+Ken's report on the Monday after Week 1: "Remove stories that read
+predictive of games that have already happened. For example, it is still
+showing that Justin Herbert and Jaxson Dart are projected to do well but
+their games have already happened."
+
+**Why.** `newsroomFeedPayload` served every published piece newest first and
+nothing ever aged out of it. The desk knows when a forward piece can no
+longer be WRITTEN (`contentDue`: a preview is refused once a target game has
+started, the Sunday intel once every one has), but nothing applied that
+judgement to whether it could still be SHOWN. So the Friday Weekend Preview,
+the Sunday Last-Minute Intel and the Thursday Underrated column sat in the
+front page's Top Headlines, the Newsroom band and `/fantasy` and `/dfs` on
+Monday morning, predicting a Sunday the reader had already watched.
+
+**The rule.** `pieceExpired(row, sched, now)` in `_worker.js`, applied only in
+`newsroomFeedPayload` (which the lead, the rail, the Newsroom band and both
+lane pages read). `_staleRule(K)` reads the kind's own readiness flags, so
+the feed and `contentDue` cannot disagree:
+
+| Rule | Kinds | Stale when |
+|---|---|---|
+| `all-started` | `live` (Last-Minute Intel) | every target game has kicked off. The piece updates until the last kickoff, so it is current for exactly as long as it is still produced. |
+| `any-started` | `preview` (Thursday, Monday, the weekend) | any target game has kicked off, the same instant `contentDue` refuses to produce it. |
+| `slate` | forward, no targets (Underrated, Trade Desk, Kickers & Defenses, Breaking) | half or more of the week's games it was written AHEAD OF (not yet kicked off when it published) have kicked off. A Friday piece is not judged by Thursday night; a Thursday-morning piece is not judged by the Thursday game alone. Published with nothing ahead of it (Breaking during the Monday game), it lasts as long as its week. |
+| `never` | `retro` and `perGame` kinds, plus a forward kind that waits for its targets to go final (Thursday Night: What Matters) | never. What happened is not a prediction. |
+
+Postponed and canceled games are neither "started" nor counted. No schedule
+means no judgement and the piece stays (fail-open: the schedule is the
+site's spine and losing it belongs on the health board, not on a blank
+front page). The feed over-fetches by 24 rows so the expiry cannot leave
+the page short, and carries `expired`, the count it held back, so a thin
+feed can be told apart from a desk that did not publish.
+
+**What does not change.** Every piece stays readable at its URL. The desk
+index (`contentListPayload`) and the analyst pages are archives and list
+everything. The recap strip, the Weekly Wrap Up and the retrospective pieces
+are untouched. Nothing is deleted or unpublished.
+
+**Tests.** `tools/test-newsroom.mjs` holds the rule against a one-week
+fixture at ten instants (each kind's rule; the weekend preview current at
+Sunday noon and gone at 1:05; the Sunday intel staying through the late
+games and leaving at the night kickoff, a postponed night game not holding
+it; the Thursday and Monday previews gone at their kickoffs; the Friday
+streamers and the Thursday column judged by the Sunday slate rather than by
+Thursday night; breaking news during the Monday game lasting its week;
+nothing retrospective ever expiring; no schedule, a legacy kind, a row
+without a week and a week without games all staying).
+`tools/test-dry-run.mjs`, on the Friday morning of Week 2: no Week 1 forward
+piece and no Week 2 Thursday preview in the feed, the lead or its column;
+the Week 1 recaps and What Sunday Taught Us still there; the Week 2 weekend
+preview still there; the held-back count reported; the desk index still
+listing all of them. Its published-title check moved from the Thursday
+preview to the weekend preview, because on that Friday the Thursday preview
+is, correctly, gone.
