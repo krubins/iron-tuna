@@ -8864,7 +8864,7 @@ const _injSev = s => /out|ir\b|doubtful|suspend|pup|nfi/i.test(String(s || '')) 
 function _replacementFor(team, position, absentName, ctx) {
   const dc = ctx.depth && ctx.depth.teams && ctx.depth.teams[team] && ctx.depth.teams[team].offense;
   const list = dc ? (dc[position] || []) : [];
-  const board = new Map(((ctx.week && ctx.week.players) || []).map(p => [_oddsNorm(p.name) + '|' + p.position, p]));
+  const board = new Map(_fwdPlayers(ctx).map(p => [_oddsNorm(p.name) + '|' + p.position, p]));
   const out = [];
   for (const n of list) {
     if (_oddsNorm(n) === _oddsNorm(absentName)) continue;
@@ -8907,7 +8907,7 @@ function _dfsBlock(ctx, teams) {
       stacks: (s.stackScores || []).slice(0, 6) };
     out.available = true;
   }
-  if (!out.available) out.note = 'No DFS salaries are loaded for this week. Salaries arrive by CSV import from the lobby (see /admin); until then the DFS lens can speak to roles and pricing direction but not to a number.';
+  if (!out.available) out.note = ctx.dfsNote || 'No DFS salaries are loaded for this week. Salaries arrive by CSV import from the lobby (see /admin); until then the DFS lens can speak to roles and pricing direction but not to a number.';
   return out;
 }
 // ── the builders ───────────────────────────────────────────────────────────
@@ -9136,6 +9136,39 @@ function _nextWeekRows(ctx, week) {
   }
   return out;
 }
+// THE BOARD A PIECE LOOKS FORWARD WITH. A piece about the played week
+// (Quarterback Monday, Tailback Tuesday, the Wednesday and Thursday columns)
+// argues from that week's usage and points at the week after it. Tuesday
+// through Thursday the clock has turned and ctx.week already IS that week.
+// Monday morning it is not: the week rule holds a week open until its Monday
+// game ends, so ctx.week is still the played week and every projection,
+// opponent and team total on it is for a game the reader watched yesterday.
+// On September 14 Quarterback Monday handed the writer Justin Herbert's
+// Sunday projection as "the board" and the piece read as a preview of a game
+// already played. The rows come from the next3 board for the named week
+// instead, ranked by points within position the way the week board ranks.
+// `_fwdPlayers` is what the position packets read; a caller that never set
+// `forward` (a test, or a forward piece about the current week) gets the
+// week board as before.
+function _forwardRows(ctx, week) {
+  if (week == null) return (ctx.week && ctx.week.players) || [];
+  if (ctx.week && ctx.week.ok && ctx.week.currentWeek === week) return ctx.week.players || [];
+  const rows = _nextWeekRows(ctx, week);
+  for (const side of ['ironTuna', 'consensus', 'vegas']) {
+    const byPos = {};
+    for (const r of rows) (byPos[r.position] = byPos[r.position] || []).push(r);
+    for (const list of Object.values(byPos)) list.slice().sort((a, b) => ((b[side] && b[side].points) || 0) - ((a[side] && a[side].points) || 0)).forEach((r, i) => { r[side].rank = i + 1; });
+  }
+  return rows;
+}
+const _fwdPlayers = ctx => ctx.forward || ((ctx.week && ctx.week.players) || []);
+// What the packet tells the writer about which week each number belongs to.
+function _boardNote(ctx, usageWeek) {
+  const bw = ctx.forwardWeek != null ? ctx.forwardWeek : (ctx.week && ctx.week.currentWeek != null ? ctx.week.currentWeek : null);
+  if (bw == null) return null;
+  return 'ironTunaRank, consensusRank, vegasRank, projected, opponent, teamTotal, injury and the quarterbacks table are for Week ' + bw + ', the coming week.'
+    + (usageWeek != null ? ' touches, targets, carries, shares, yards, tds and points are Week ' + usageWeek + ' actuals.' : '');
+}
 function packetRankings(ctx, week, opts) {
   const o = opts || {};
   const rows = o.horizonRows || _nextWeekRows(ctx, week);
@@ -9181,7 +9214,7 @@ function packetRos(ctx, boards, rosUpdate, mondaySummaries) {
 function packetPosition(ctx, positions, opts) {
   const o = opts || {};
   const U = ctx.usage && ctx.usage.players ? Object.values(ctx.usage.players).filter(u => positions.includes(u.position) && u.latest && u.season && u.season.games >= 1) : [];
-  const board = new Map(((ctx.week && ctx.week.players) || []).map(p => [p.key, p]));
+  const board = new Map(_fwdPlayers(ctx).map(p => [p.key, p]));
   const rows = U.map(u => {
     const key = _oddsNorm(u.name) + '|' + u.position; const p = board.get(key);
     const t = (u.latest.usage.targets || 0) + (u.latest.usage.carries || 0);
@@ -9195,16 +9228,17 @@ function packetPosition(ctx, positions, opts) {
   });
   const moved = rows.filter(r => r.priorAvgTouches != null && r.priorAvgTouches >= 3 && (r.touches >= r.priorAvgTouches * 1.3 || r.touches <= r.priorAvgTouches * 0.7));
   const sig = ((ctx.signals && ctx.signals.insights) || []).filter(i => i.confidence !== 'LOW' && i.subject && positions.includes(i.subject.position) && /consolidation|role|production/.test(i.type)).slice(0, 12);
-  const absences = ((ctx.week && ctx.week.players) || []).filter(p => positions.includes(p.position) && p.injury && _injSev(p.injury.status) === 2 && p.consensus.rank <= (p.position === 'RB' ? 24 : p.position === 'WR' ? 36 : 12))
+  const absences = _fwdPlayers(ctx).filter(p => positions.includes(p.position) && p.injury && _injSev(p.injury.status) === 2 && p.consensus.rank <= (p.position === 'RB' ? 24 : p.position === 'WR' ? 36 : 12))
     .map(p => ({ absent: p.name, team: p.team, status: p.injury.status, consensusRank: p.consensus.rank, beneficiaries: _replacementFor(p.team, p.position, p.name, ctx) })).filter(a => a.beneficiaries.length);
   if (o.gate && !moved.length && !sig.length && !absences.length) return { skip: true, reason: 'nothing_worth_publishing', checked: { usageMoves: 0, insights: 0, absences: 0, playersWithUsage: rows.length } };
   const leaders = rows.slice().sort((a, b) => b.touches - a.touches).slice(0, 20);
-  return { positions, week: rows[0] ? rows[0].week : null, usageMoves: moved.sort((a, b) => Math.abs(b.touches - b.priorAvgTouches) - Math.abs(a.touches - a.priorAvgTouches)).slice(0, 12), insights: sig.map(i => ({ type: i.type, label: i.label, player: i.subject.name, team: i.subject.team, confidence: i.confidence, data: i.data })),
+  const usageWeek = rows[0] ? rows[0].week : null;
+  return { positions, week: usageWeek, boardWeek: ctx.forwardWeek != null ? ctx.forwardWeek : (ctx.week && ctx.week.currentWeek != null ? ctx.week.currentWeek : null), boardNote: _boardNote(ctx, usageWeek), usageMoves: moved.sort((a, b) => Math.abs(b.touches - b.priorAvgTouches) - Math.abs(a.touches - a.priorAvgTouches)).slice(0, 12), insights: sig.map(i => ({ type: i.type, label: i.label, player: i.subject.name, team: i.subject.team, confidence: i.confidence, data: i.data })),
            absences, leaders, redZone: (ctx.redZoneWeek || []).filter(r => positions.includes(r.position)).slice(0, 12), unavailable: ['routes and route participation (no free feed publishes them)', 'first-read share', 'air yards before the weekly file'], dfs: _dfsBlock(ctx, null) };
 }
 function packetQb(ctx) {
   const base = packetPosition(ctx, ['QB'], { gate: false });
-  const W = (ctx.week && ctx.week.players) || [];
+  const W = _fwdPlayers(ctx);
   // A starter the depth chart names who is not the board's QB1 for the club.
   const changes = [];
   const dc = ctx.depth && ctx.depth.teams ? ctx.depth.teams : {};
@@ -9317,6 +9351,20 @@ function packetBreaking(ctx, events) {
 // metadata, the freshness report, the prior calls on the players named, the
 // rivalry (or its absence), and `allowed`.
 async function buildResearchPacket(env, kind, d, ctx, opts) {
+  {
+    // The week the piece looks forward to: its subject week for a forward
+    // piece, the week after for one about the played week (_forwardRows).
+    // When that is not the clock's week, the position packets read the
+    // next3 board for it, and the DFS slates loaded (the clock's week, which
+    // has been played) are withheld with the reason.
+    const K0 = CONTENT_KINDS[kind];
+    const forwardWeek = !K0 || d.week == null ? null : (K0.subject === 'played' ? d.week + 1 : d.week);
+    const curWeek = ctx.state && ctx.state.ok && ctx.state.week && ctx.state.week.type === 'REG' ? ctx.state.week.number : null;
+    if (forwardWeek != null && curWeek != null && forwardWeek !== curWeek) {
+      ctx = { ...ctx, forwardWeek, forward: _forwardRows(ctx, forwardWeek), dfs: {},
+              dfsNote: 'The DFS slates loaded are Week ' + curWeek + '\'s, and that slate has been played. Week ' + forwardWeek + ' salaries are not loaded yet; the DFS lens can speak to roles and pricing direction but not to a number.' };
+    } else ctx = { ...ctx, forwardWeek };
+  }
   const o = opts || {};
   const K = CONTENT_KINDS[kind];
   const games = weekGames(ctx.sched, d.week, Date.now()).filter(g => (d.targets || []).includes(g.id));
@@ -9371,7 +9419,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   const rivalry = rivalryGate(env, kind, facts.disagreements || (facts.candidates ? facts.candidates : []), budget);
   const analyst = analystFor(env, K.analyst), dfsAnalyst = analystFor(env, K.dfsAnalyst || 'park'), marketAnalyst = K.marketAnalyst ? analystFor(env, K.marketAnalyst) : null;
   const packet = {
-    meta: { kind, title: facts.game ? facts.game.matchup : kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
+    meta: { kind, title: facts.game ? facts.game.matchup : kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, forwardWeek: ctx.forwardWeek != null ? ctx.forwardWeek : null, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
             game: facts.game ? facts.game.id : null, matchup: facts.game ? facts.game.matchup : null,
             analyst: analyst.id, analystName: analyst.name, dfsAnalyst: dfsAnalyst.id, dfsAnalystName: dfsAnalyst.name, marketAnalyst: marketAnalyst ? marketAnalyst.id : null, marketAnalystName: marketAnalyst ? marketAnalyst.name : null,
             lens: flagOn(env, 'DFS_CONTENT') ? K.lens : 'weekly', scoring: 'PPR (the reader’s league re-scores the tables on the page)', excludedGames: d.excluded || [] },
@@ -9425,6 +9473,13 @@ function _voiceBlock(packet) {
   if (packet.rivalry) s += 'RIVALRY IN THIS PIECE: ' + packet.rivalry.player + '. Brooks (Fantasy Analysis) ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; Vega (Market Intelligence) ' + packet.rivalry.position + packet.rivalry.vega.rank + ' on ' + packet.rivalry.vega.basis + '. Write ONE line in the weekly lens, in the section it belongs to, and put the same line in "rivalryLine". Nowhere else.\n';
   else s += 'NO RIVALRY IN THIS PIECE. Do not set up Vega against Brooks.\n';
   if (packet.priorCalls && packet.priorCalls.length) s += 'PRIOR CALLS the desk has published on players in this packet are in priorCalls. Reference only those, by analyst and week, where relevant.\n';
+  // A piece about the played week points at the next one. Its usage numbers
+  // are last week's actuals and its board is next week's; the writer is told
+  // so, because a next-week projection read as a prediction of last week's
+  // game is how Quarterback Monday came to preview a game already played.
+  if (packet.meta.storyType === 'retrospective' && packet.meta.forwardWeek != null && packet.meta.week != null && packet.meta.forwardWeek !== packet.meta.week) {
+    s += 'WEEKS. Week ' + packet.meta.week + ' has been played and this piece is about what it says for Week ' + packet.meta.forwardWeek + '. Every rank, projection, opponent and team total in the packet is for Week ' + packet.meta.forwardWeek + '. Never present one as a prediction of a Week ' + packet.meta.week + ' game, and never say a player is "projected" or "expected" to do something in a game that has already been played.\n';
+  }
   // Where the site's own board disagreed with the consensus BEFORE kickoff and
   // the game settled it. The gate is arithmetic in the packet, not the
   // writer's judgement: `calledIt.hits` are the ones the result proved right,

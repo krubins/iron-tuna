@@ -38,7 +38,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -691,6 +691,41 @@ console.log('\na forward piece leaves the feed when its games kick off');
   ok('what happened never expires', [row('game-recap', T(13, 16, 30), { game_id: 'e1' }), row('what-sunday-taught-us', T(13, 19, 30)), row('early-rankings', T(14, 6)), row('ros-rankings', T(15, 7)), row('pickup-advisor', T(16, 6))].every(r => fresh(r, at.tueAm) && fresh(r, T(20, 9))));
   ok('with no schedule there is no judgement and the piece stays', !H.pieceExpired(wp, null, at.tueAm));
   ok('a legacy kind, a row without a week, and a week with no games all stay', !H.pieceExpired(row('final-read', T(10, 7)), schedAt(at.tueAm), at.tueAm) && !H.pieceExpired({ ...wp, week: null }, schedAt(at.tueAm), at.tueAm) && !H.pieceExpired({ ...wp, week: 9 }, schedAt(at.tueAm), at.tueAm));
+}
+
+console.log('\na played-week piece looks forward with next week\'s board');
+{
+  // Monday morning of Week 1: the clock's week is still 1 (the Monday game
+  // is unplayed), so the week board carries Sunday's projections. A piece
+  // about the played week must point at Week 2 instead.
+  const qb = (name, team, w1, w2) => ({ name, position: 'QB', pos: 'QB', team, key: _oddsNorm(name) + '|QB', roleTrend: null, injury: null, why: null, marketDelta: null,
+    ironTuna: { points: w1.it, rank: 0 }, consensus: { points: w1.c, rank: 0 }, vegas: { points: w1.v, rank: 0, basis: 'props', confidence: 'HIGH' },
+    weeks: [{ week: 1, opponent: w1.opp, home: true, env: { implied: 27, posted: true }, ironTunaPts: w1.it, consensusPts: w1.c, vegasPts: w1.v, basis: 'props', confidence: 'HIGH' },
+            w2.bye ? { week: 2, bye: true } : { week: 2, opponent: w2.opp, home: false, env: { implied: 22, posted: true }, ironTunaPts: w2.it, consensusPts: w2.c, vegasPts: w2.v, basis: 'gamelines', confidence: 'MEDIUM' }] });
+  const players = [qb('Justin Passer', 'LAC', { opp: 'KC', it: 20, c: 19, v: 21 }, { opp: 'DEN', it: 17, c: 18, v: 16 }),
+                   qb('Jaxson Rookie', 'NYG', { opp: 'WAS', it: 15, c: 14, v: 16 }, { opp: 'DAL', it: 19, c: 17, v: 20 }),
+                   qb('Josh Bye', 'BUF', { opp: 'NYJ', it: 22, c: 22, v: 22 }, { bye: true })];
+  players.forEach((p, i) => { p.ironTuna.rank = i + 1; p.consensus.rank = i + 1; p.vegas.rank = i + 1; });
+  const week = { ok: true, currentWeek: 1, players };
+  const next = { ok: true, players };
+  const usage = { players: { jp: { name: 'Justin Passer', position: 'QB', team: 'LAC', latest: { week: 1, usage: { targets: 0, carries: 8 }, stats: { passYd: 300, passTD: 2, rushYd: 40 } }, season: { games: 2, targets: 0, carries: 11, points: 40 } } } };
+  const base = { week, next, usage, signals: { insights: [] }, depth: { teams: {} }, rules: H.scoringRules('ppr'), dfs: {}, injuriesList: [] };
+  ok('asked for the clock\'s week, the forward board is the week board itself', H._forwardRows(base, 1) === players);
+  const fwd = H._forwardRows(base, 2);
+  ok('asked for the week after, it is built from the next3 board for that week, byes dropped', fwd.length === 2 && fwd.every(r => r.weeks[0].week === 2) && !fwd.some(r => r.name === 'Josh Bye'));
+  ok('with Week 2 opponents, not Sunday\'s', fwd.find(r => r.name === 'Justin Passer').weeks[0].opponent === 'DEN' && fwd.find(r => r.name === 'Jaxson Rookie').weeks[0].opponent === 'DAL');
+  ok('and ranked by Week 2 points on each of the three boards', fwd.find(r => r.name === 'Jaxson Rookie').ironTuna.rank === 1 && fwd.find(r => r.name === 'Justin Passer').consensus.rank === 1 && fwd.find(r => r.name === 'Jaxson Rookie').vegas.rank === 1);
+  ok('a caller that never set a forward board reads the week board, as before', H._fwdPlayers(base) === players && H._fwdPlayers({ ...base, forward: fwd }) === fwd);
+  const stale = H.packetQb(base);
+  const fresh = H.packetQb({ ...base, forward: fwd, forwardWeek: 2, dfs: {}, dfsNote: 'The DFS slates loaded are Week 1\'s, and that slate has been played.' });
+  ok('without the forward board Quarterback Monday would hand the writer Sunday\'s opponents', !stale.skip && stale.quarterbacks.every(q => ['KC', 'WAS', 'NYJ'].includes(q.opponent)));
+  ok('with it, every quarterback carries a Week 2 opponent and a Week 2 projection', !fresh.skip && fresh.quarterbacks.length === 2 && fresh.quarterbacks.every(q => ['DEN', 'DAL'].includes(q.opponent)) && fresh.quarterbacks.find(q => q.name === 'Justin Passer').projected === 17);
+  ok('the usage evidence is still Week 1\'s actuals', fresh.usageMoves.length === 1 && fresh.usageMoves[0].week === 1 && fresh.usageMoves[0].carries === 8);
+  ok('and the packet says which week each number belongs to', fresh.boardWeek === 2 && fresh.week === 1 && /Week 2, the coming week/.test(fresh.boardNote) && /Week 1 actuals/.test(fresh.boardNote));
+  ok('the played slate\'s DFS numbers are withheld with the reason', fresh.dfs.available === false && /has been played/.test(fresh.dfs.note));
+  const meta = (fw) => ({ meta: { analyst: 'dalton', dfsAnalyst: 'park', storyType: 'retrospective', week: 1, forwardWeek: fw } });
+  ok('the writer is told Week 1 has been played and the piece is about Week 2', /WEEKS\. Week 1 has been played and this piece is about what it says for Week 2\./.test(H._voiceBlock(meta(2))) && /never say a player is "projected"/.test(H._voiceBlock(meta(2))));
+  ok('and told nothing of the kind when the piece is about the clock\'s own week', !/WEEKS\./.test(H._voiceBlock(meta(1))) && !/WEEKS\./.test(H._voiceBlock({ meta: { analyst: 'porter', dfsAnalyst: 'park', storyType: 'forward', week: 2, forwardWeek: 2 } })));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
