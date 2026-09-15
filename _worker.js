@@ -7728,9 +7728,12 @@ const CONTENT_KINDS = {
   'quarterback-monday': { title: 'Quarterback Monday', day: 'Mon', hour: 7, minute: 0, retro: true, subject: 'played',
     analyst: 'dalton', dfsAnalyst: 'park', lens: 'both', gate: 'worth', targets: () => [],
     summary: 'One quarterback story that matters, or nothing.', absorbs: [] },
+  // WEEKLY ONLY. The rest-of-season rankings are a season-long product and
+  // carry no DFS lens (the DFS reader has the slate on /dfs and the pickup
+  // advisor's price report on Wednesday); `lens: 'weekly'` keeps the desk
+  // page's Weekly / DFS tab off it and keeps it out of the DFS feed.
   'ros-rankings': { title: 'Rest-of-Season Rankings', day: 'Tue', hour: 7, minute: 0, retro: true, subject: 'current',
-    analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
-    dfsTitle: 'Early Price Inefficiency Board',
+    analyst: 'brooks', marketAnalyst: 'vega', lens: 'weekly', rivalry: true, targets: () => [],
     summary: 'Next 3, until the playoffs, playoffs only, rest of season: one engine, four horizons.', absorbs: ['rankings-update', 'mnf-breakdown', 'early-rankings'] },
   'tailback-tuesday': { title: 'Tailback Tuesday', day: 'Tue', hour: 8, minute: 0, retro: true, subject: 'played',
     analyst: 'brooks', altAnalyst: 'raines', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
@@ -7822,7 +7825,7 @@ const NEWSROOM_SECTIONS = {
   // against the coming slate's prices.
   'what-tuna-got-right':   { weekly: ['theRecord', 'biggestWins', 'whatWeMissed', 'whatToDo'], dfs: ['theRecord', 'biggestWins', 'whatItMeansForPricing'] },
   'quarterback-monday':    { weekly: ['theStory', 'whatTheNumbersSay', 'whatToDo', 'buySell'], dfs: ['stacks', 'bringBacks', 'ownership', 'salaryAndRushingUpside', 'gameEnvironment'] },
-  'ros-rankings':          { weekly: ['whatMondayChanged', 'next3', 'untilPlayoffs', 'playoffsOnly', 'restOfSeason', 'majorMovers', 'whereWeDisagree'], dfs: ['priceInefficiencyBoard', 'whyThePriceIsWrong', 'initialOwnership', 'leverage'] },
+  'ros-rankings':          { weekly: ['whatMondayChanged', 'next3', 'untilPlayoffs', 'playoffsOnly', 'restOfSeason', 'majorMovers', 'whereWeDisagree'], dfs: [] },
   'tailback-tuesday':      { weekly: ['theDevelopment', 'workloadEvidence', 'rankingImpact', 'tradesAndWaivers', 'restOfSeason'], dfs: ['salary', 'workloadPerDollar', 'touchdownEquity', 'ownership', 'chalkVsLeverage', 'stacking'] },
   'pickup-advisor':        { weekly: ['priorityAdds', 'midLevelAdds', 'deepAdds', 'speculativeStashes', 'doNotChase', 'faabAndDrops'], dfs: ['earlyValues', 'likelyChalk', 'goodChalk', 'badChalk', 'leverage', 'pricingErrors', 'initialStacks', 'ownershipUncertainty'] },
   'wideout-wednesday':     { weekly: ['theDevelopment', 'targetEvidence', 'startSit', 'trades', 'restOfSeason'], dfs: ['salary', 'ownership', 'stacks', 'bigPlayUpside', 'leverage', 'correlation'] },
@@ -9679,7 +9682,8 @@ function packetRos(ctx, boards, rosUpdate, mondaySummaries) {
   out.disagreements = dis;
   if (mondaySummaries && mondaySummaries.length) { const m = briefForGames('ros-rankings', mondaySummaries.games, mondaySummaries.summaries, ctx); delete m.allowed; out.whatMondayChanged = { winners: m.winners, losers: m.losers, usageChanges: m.usageChanges, teams: m.teams.map(t => ({ team: t.team, learned: t.learned, stillDontKnow: t.stillDontKnow })) }; }
   else out.whatMondayChanged = { note: 'no Monday game this week, or its box score is not final' };
-  out.dfs = _dfsBlock(ctx, null);
+  // No dfs block: the kind is weekly-only (CONTENT_KINDS), so the writer is
+  // never handed a DFS lens to fill and the packet does not carry the slate.
   return out;
 }
 // Position features share one shape and one worth gate: a player at the
@@ -10476,13 +10480,21 @@ async function contentPiecePayload(env, kind, season, week, game) {
     // A held piece ships its PACKET and not its draft: the data is right by
     // construction, the prose was not.
     const pub = brief && brief.meta ? { meta: brief.meta, freshness: brief.freshness, rivalry: brief.rivalry, priorCalls: brief.priorCalls, dfs: brief.dfs, ...Object.fromEntries(Object.entries(brief).filter(([k]) => !['allowed', 'playerIndex', 'rivalryBudget', 'colleagues'].includes(k))) } : brief;
+    // The lens is the KIND's, not the row's, once the kind has one. A row
+    // written while the kind still carried a DFS lens (the Week 2 rest-of-
+    // season rankings) keeps its stored `dfs` body, and serving it would put
+    // the Weekly / DFS tab back on a piece that no longer has one; so a
+    // weekly-only kind serves the weekly lens and drops the DFS body.
+    const lens = K && K.lens !== 'both' ? K.lens : (row.lens || (K ? K.lens : 'weekly'));
+    let body = row.status === 'published' ? parse(row.body) : null;
+    if (lens !== 'both' && body && typeof body === 'object' && body.dfs) { body = { ...body }; delete body.dfs; }
     // `_pieceTitle` already strips the edition trailer, so a per-game row
     // comes back as its matchup and the page prints the week itself.
     return { ok: true, contract: CONTENT_CONTRACT, kind, title: _pieceTitle(row), subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
              game: row.game_id || null, matchup: brief && brief.meta ? brief.meta.matchup || null : null, url: _pieceUrl(row),
-             edition: _pieceEdition(row), headline: weekCase(row.headline) || null, dek: weekCase(row.dek) || null, byline: _bylineOf(row), lens: row.lens || (K ? K.lens : 'weekly'), legacy: !K,
+             edition: _pieceEdition(row), headline: weekCase(row.headline) || null, dek: weekCase(row.dek) || null, byline: _bylineOf(row), lens, legacy: !K,
              createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly', brief), dfs: sectionsFor(kind, 'dfs', brief) }, objectSections: NEWSROOM_OBJECT_SECTIONS,
-             body: row.status === 'published' ? parse(row.body) : null, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
+             body, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
 // ── a forward piece leaves the feed when its games kick off ────────────────
@@ -10573,7 +10585,9 @@ async function newsroomFeedPayload(env, lens, limit) {
     const before = rows.length;
     rows = rows.filter(r => !pieceExpired(r, sched, now));
     const expired = before - rows.length;
-    if (lens === 'dfs') rows = rows.filter(r => r.lens === 'both' || r.lens === 'dfs');
+    // The kind's CURRENT lens decides, not the row's: a row stored while its
+    // kind still had a DFS lens does not put that kind back in the DFS lane.
+    if (lens === 'dfs') rows = rows.filter(r => (r.lens === 'both' || r.lens === 'dfs') && !(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].lens !== 'both'));
     rows = rows.slice(0, want);
     const parse = s => { try { const v = JSON.parse(s); return Array.isArray(v) ? v : null; } catch (e) { return null; } };
     // `_pieceTitle` is the stored title minus the edition trailer, which for a
