@@ -80,6 +80,11 @@
 .tl-arrow.down .g{color:var(--danger,#c0322f)}
 .tl-arrow.flat .g{color:var(--muted,#6b7a85)}
 .tl-sub{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#6b7a85);margin:14px 0 0}
+.tl-rec td.num,.tl-rec th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tl-rec .win{color:var(--teal,#0e7c63);font-weight:700}
+.tl-rec .loss{color:var(--danger,#c0322f);font-weight:700}
+.tl-rec .push,.tl-rec .void,.tl-rec .pending{color:var(--muted,#6b7a85)}
+.tl-rec tr.wk td{background:var(--panel,#f7f9fa);font-weight:700;color:var(--text,#111820)}
 @media(max-width:620px){.tl-mkt{display:block;overflow-x:auto;white-space:nowrap}}
 </style>
 
@@ -178,7 +183,22 @@
   <li><b>Under 2.0 points, there is no bet.</b> That is the same threshold the rest of the site uses to call the model and the book in agreement, and most of the slate sits inside it every week. A week with no wager on it is a normal week, not a broken page.</li>
   <li><b>A game that has kicked off is closed.</b> Iron Tuna does not price a game it can already see, and no in-play number appears here.</li>
   <li><b>A missing number prints as missing.</b> Where a book has posted no line, or the model has no rating for a club, the row says so rather than showing a zero.</li>
+  <li><b>Every stake goes on the record.</b> Inside two hours of a game&rsquo;s kickoff, the board&rsquo;s reads on it are written down as they stand, staked or passed, and settled on the final score once it is in. A game market is settled at a hypothetical &minus;110; a prop at the price the book quoted. The record below is every filed stake, the losses beside the wins, and nothing filed is ever revised.</li>
 </ol>
+
+<h2 id="record">The record</h2>
+<p>Every hypothetical stake this page has put on a game this season, as it stood when it was filed, and how it settled. A game that has not been played is pending. Nothing here is a recommendation and nothing here was ever funded.</p>
+<div class="tl-ticket" id="tlRecTicket" hidden>
+  <div class="tl-stat"><span class="k">Record</span><span class="v" id="tlRecWL">&mdash;</span></div>
+  <div class="tl-stat"><span class="k">Hypothetical staked</span><span class="v" id="tlRecStaked">&mdash;</span></div>
+  <div class="tl-stat"><span class="k">Net at &minus;110</span><span class="v" id="tlRecNet">&mdash;</span></div>
+  <div class="tl-stat"><span class="k">Weeks on record</span><span class="v" id="tlRecWeeks">&mdash;</span></div>
+</div>
+<div class="is-scroll"><table class="is-table tl-rec" id="tlRecTable" hidden>
+<thead><tr><th scope="col">Game</th><th scope="col">Play</th><th scope="col" class="num">Posted</th><th scope="col" class="num">Iron Tuna</th><th scope="col" class="num">Edge</th><th scope="col" class="num">Stake</th><th scope="col">Result</th><th scope="col" class="num">Net</th></tr></thead>
+<tbody id="tlRecRows"></tbody>
+</table></div>
+<p class="is-note" id="tlRecNote">Reading the record&hellip;</p>
 
 <h2>The arrows</h2>
 <p>Under each game is a row of the fantasy players in it, each with an arrow. The arrow is not a prediction of a stat line and it is not tied to a wager. It says which way the betting market has that player relative to what the fantasy consensus projects for him this week: <b>up</b> where the market prices him for more than the consensus expects, <b>down</b> where it prices him for less, and <b>level</b> where the two are close enough that the site does not flag the gap. A player&rsquo;s quoted anytime-touchdown price is shown beside his name where a book has posted one.</p>
@@ -617,7 +637,57 @@
       $('tlEmpty').textContent = 'The market board did not answer. Nothing is shown rather than a line that may be stale.';
     });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  // ── the record ───────────────────────────────────────────────────────────
+  // Read-only. The worker files each game's reads before kickoff and settles
+  // them on the final; this page prints that ledger and never writes to it.
+  function recordRow(r) {
+    var cls = r.outcome || 'pending';
+    var result = r.outcome === 'win' ? 'Win' : r.outcome === 'loss' ? 'Loss' : r.outcome === 'push' ? 'Push' : r.outcome === 'void' ? 'Void' : 'Pending';
+    var posted = r.market === 'total' ? n1(r.posted) : r.market === 'spread' ? (e(r.home) + ' ' + line(-r.posted)) : (e(r.price || '') + ' &middot; ' + n1(r.posted) + '%');
+    var model = r.market === 'total' ? n1(r.model) : r.market === 'spread' ? (num(r.model) ? (r.model >= 0 ? e(r.home) : e(r.away)) + ' ' + line(-Math.abs(r.model)) : '&mdash;') : n1(r.model) + '%';
+    return '<tr><td>' + e(r.matchup) + '</td><td>' + e(r.side) + '</td><td class="num">' + posted + '</td><td class="num">' + model + '</td>' +
+      '<td class="num">' + signed(r.edge) + '</td><td class="num">' + money(r.stake) + '</td>' +
+      '<td class="' + cls + '" title="' + e(r.note || '') + '">' + result + '</td>' +
+      '<td class="num ' + (r.net > 0 ? 'win' : r.net < 0 ? 'loss' : '') + '">' + (r.outcome && r.outcome !== 'pending' ? signedMoney(r.net) : '&mdash;') + '</td></tr>';
+  }
+  function signedMoney(v) { return (v > 0 ? '+' : v < 0 ? '−' : '') + '$' + Math.abs(Math.round(v * 100) / 100).toFixed(2).replace(/\.00$/, ''); }
+  function renderRecord(j) {
+    var note = $('tlRecNote');
+    if (!j || !j.ok) { note.textContent = 'The record did not answer. Nothing is shown rather than a number that may be wrong.'; return; }
+    var s = j.summary || {}, staked = (j.rows || []).filter(function (r) { return r.stake > 0; });
+    if (!staked.length) {
+      note.textContent = 'Nothing is on the record yet. A stake is filed inside two hours of its game\u2019s kickoff, so the first rows appear once the first game of the season with a stake on it is about to start.';
+      return;
+    }
+    $('tlRecWL').textContent = s.wins + '-' + s.losses + (s.pushes ? '-' + s.pushes : '');
+    $('tlRecStaked').textContent = money(s.staked);
+    $('tlRecNet').textContent = signedMoney(s.net);
+    $('tlRecWeeks').textContent = (j.weeks || []).length;
+    $('tlRecTicket').hidden = false;
+    var html = '', week = null;
+    for (var i = 0; i < staked.length; i++) {
+      if (staked[i].week !== week) {
+        week = staked[i].week;
+        var w = null;
+        for (var k = 0; k < (j.weeks || []).length; k++) if (j.weeks[k].week === week) w = j.weeks[k];
+        html += '<tr class="wk"><td colspan="8">Week ' + week + (w ? ' &middot; ' + w.wins + '-' + w.losses + (w.pushes ? '-' + w.pushes : '') + ' &middot; ' + money(w.staked) + ' staked &middot; ' + signedMoney(w.net) + (w.pending ? ' &middot; ' + w.pending + ' pending' : '') : '') + '</td></tr>';
+      }
+      html += recordRow(staked[i]);
+    }
+    $('tlRecRows').innerHTML = html;
+    $('tlRecTable').hidden = false;
+    var L = s.leans || {};
+    note.innerHTML = staked.length + ' hypothetical stake' + (staked.length === 1 ? '' : 's') + ' filed' + (s.pending ? ', ' + s.pending + ' pending' : '') +
+      (s.voids ? ', ' + s.voids + ' void' : '') + '. Game markets are settled at &minus;110 and props at the quoted price. ' +
+      'Of the reads the page passed on, the model&rsquo;s lean was right ' + (L.right || 0) + ' and wrong ' + (L.wrong || 0) +
+      (L.pending ? ', with ' + L.pending + ' pending' : '') + ' &mdash; leans are graded here because the passes are on the record too, and no lean was ever a bet.';
+  }
+  function bootRecord() {
+    fetch('/api/the-line/record').then(function (r) { return r.json(); }).then(renderRecord).catch(function () {
+      $('tlRecNote').textContent = 'The record did not answer. Nothing is shown rather than a number that may be wrong.';
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot(); bootRecord(); }); else { boot(); bootRecord(); }
 })();
 </script>
 <!--chrome:navjs--><script>
