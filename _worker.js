@@ -11011,6 +11011,43 @@ const SCORING_SITE = {
         passingYardBonuses: [{ at: 300, points: 3 }], rushingYardBonuses: [{ at: 100, points: 3 }], receivingYardBonuses: [{ at: 100, points: 3 }] },
   fd: { receptionPoints: 0.5, rbReceptionPoints: 0.5, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -2 }
 };
+// When the DraftKings workflow runs, as UTC weekday and hour, mirrored from
+// .github/workflows/draftkings-salaries.yml (tools/test-draftkings-import.mjs
+// holds the two in step). A blank board is told the next one rather than left
+// without a clock. FanDuel has no import job, so it is not promised one.
+const DFS_IMPORT_SCHEDULE = [{ dow: 2, hour: 10 }, { dow: 2, hour: 14 }, { dow: 3, hour: 14 }];
+function dfsImportWindow(now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const day0 = Math.floor(at / 86400000) * 86400000;
+  let last = null, next = null;
+  for (let d = -7; d <= 7; d++) {
+    const day = day0 + d * 86400000, dow = new Date(day).getUTCDay();
+    for (const s of DFS_IMPORT_SCHEDULE) {
+      if (s.dow !== dow) continue;
+      const t = day + s.hour * 3600000;
+      if (t <= at && (last == null || t > last)) last = t;
+      if (t > at && (next == null || t < next)) next = t;
+    }
+  }
+  return { last, next };
+}
+const _dfsWhenET = ms => new Date(ms).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET';
+// The reader's sentence for a week with no salaries. Inside the game week,
+// when every scheduled slot has already passed, the next slot is days away
+// and naming it alone would read as "nothing until next week", so the note
+// says the update ran and found nothing, and that the desk loads it by hand.
+function dfsNoSalariesNote(site, now) {
+  const label = DFS_SITES[site].label;
+  const w = site === 'dk' ? dfsImportWindow(now) : { last: null, next: null };
+  if (!w.next) return { note: 'No ' + label + ' salaries are posted for this week yet. Salaries go up when the lobby does; the scoring environment below still reads from the game lines.' };
+  const at = Number.isFinite(now) ? now : Date.now();
+  if (w.next - at > 2 * 86400000 && w.last) {
+    return { nextImportAt: w.next, lastImportAt: w.last,
+      note: 'No ' + label + ' salaries are posted for this week. The scheduled update last ran ' + _dfsWhenET(w.last) + ' and found no posted slate; the desk loads it by hand as soon as ' + label + ' posts it. The next scheduled update is ' + _dfsWhenET(w.next) + '.' };
+  }
+  return { nextImportAt: w.next, lastImportAt: w.last,
+    note: 'No ' + label + ' salaries are posted for this week yet. The next scheduled update is ' + _dfsWhenET(w.next) + '.' };
+}
 const DFS_DDL = [
   'CREATE TABLE IF NOT EXISTS dfs_salaries (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, slate TEXT, season INTEGER, week INTEGER, name TEXT NOT NULL, position TEXT NOT NULL, team TEXT, opponent TEXT, salary INTEGER NOT NULL, site_id TEXT, operator_fppg REAL, source TEXT, fetched_at INTEGER NOT NULL)',
   'CREATE INDEX IF NOT EXISTS ix_dfs_site_week ON dfs_salaries (site, season, week, fetched_at)'
@@ -14318,7 +14355,7 @@ export default {
       const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
       const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
       if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
-        note: 'No ' + DFS_SITES[site].label + ' salaries are posted for this week yet. Salaries go up when the lobby does; the scoring environment below still reads from the game lines.',
+        ...dfsNoSalariesNote(site, Date.now()),
         operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
       const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
       const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, {});

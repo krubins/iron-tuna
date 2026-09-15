@@ -1599,7 +1599,7 @@ p{color:var(--sec);margin:0 0 16px}
   function slateNone(msg, label) {
     slate = null;
     $('dfNote').textContent = msg;
-    $('dfEmpty').textContent = 'No ' + (label || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.';
+    $('dfEmpty').textContent = (msg || 'No ' + (label || 'site') + ' salaries are loaded for this week.') + ' The scoring environment still reads from the game lines on Game Intel.';
     $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
     $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
     $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted. Upload your own contest\u2019s salary file above and the roster builds off that.</p>';
