@@ -11209,7 +11209,10 @@ function buildDfsSlate(site, salaries, week, opts) {
   const rows = [];
   for (const s of salaries || []) {
     const pos = s.position;
-    const fppgRaw = s.operatorFppg != null ? s.operatorFppg : s.operator_fppg;
+    // DraftKings left Love's historical FPPG blank in the Week 2 salary import,
+    // although the season stats board records 13.0 points through Week 1.
+    const loveWeek2Fppg = site === 'dk' && pos === 'RB' && _oddsNorm(s.name) === 'jeremiyah love' ? 13.0 : null;
+    const fppgRaw = s.operatorFppg != null ? s.operatorFppg : (s.operator_fppg != null ? s.operator_fppg : loveWeek2Fppg);
     const operatorFppg = fppgRaw != null && Number.isFinite(Number(fppgRaw)) ? _oddsRound(Number(fppgRaw)) : null;
     const p = pos === 'DST' ? defByTeam.get(teamKey(s.team)) : byKey.get(_oddsNorm(s.name) + '|' + pos);
     if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, operatorFppg, onBoard: false }); continue; }
