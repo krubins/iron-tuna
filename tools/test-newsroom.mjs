@@ -344,6 +344,7 @@ const board = (list) => ({ ok: true, players: list.map((p, i) => ({ ...p, games:
   ok('the packet says what no feed can supply', rb2.unavailable.some(u => /routes/.test(u)));
   const pk = H.packetPickups({ ...ctx, next: board(rows) });
   ok('the pickup advisor computes three league sizes with their rostered lines', pk.leagueSizes.join() === '10,12,14' && pk.tiers[12].rosteredLine.RB === 60 && pk.tiers[10].rosteredLine.WR === 60);
+  ok('every pickup row says who the player is playing', Object.values(pk.tiers).every(t => t.priorityAdds.concat(t.midLevelAdds, t.deepAdds, t.speculativeStashes).every(r => r.opponent === 'X' && r.home === true)));
   ok('every tier carries a FAAB range and a holding period', Object.values(pk.tiers).every(t => t.priorityAdds.concat(t.midLevelAdds, t.deepAdds, t.speculativeStashes).every(r => Array.isArray(r.faabPct) && r.holdFor)));
   const un = H.packetUnderrated({ ...ctx, week: board(rows) });
   ok('the underrated pick is a player the market ranks well above the consensus, on a priced market', un.weeklyPick && un.weeklyPick.player === 'CeeDee Lamb' && un.weeklyPick.higher === 'market' || un.skip, JSON.stringify(un.weeklyPick || un));
@@ -424,6 +425,7 @@ console.log('\nthe fact check reads prose as prose');
   const num = v('He ran for 155 yards and 26.4 points.');
   ok('a large number the packet lacks is still caught, and a packet number is not', !num.ok && num.numbers.includes('155') && !num.numbers.includes('26'), JSON.stringify(num.numbers));
   ok('the writer is told to write the headline in sentence case', /sentence case/i.test(H.NEWSROOM_SYSTEM) && /Never Title Case/.test(H.NEWSROOM_SYSTEM));
+  ok('the writer is told to name who every player is playing, so the advice reads as this week\'s', /NAME THE OPPONENT/.test(H.NEWSROOM_SYSTEM) && /say who he is playing/.test(H.NEWSROOM_SYSTEM) && /not a prior week/.test(H.NEWSROOM_SYSTEM));
   const dk = H._finishBrief({ meta: { kind: 'tnf-what-matters', lens: 'both' }, dfs: { dk: [{ name: 'Jaxson Dart', salary: 5600 }], stacks: [{ team: 'DAL', salary: 20200 }] } });
   const dv = H.validateDraft('Jaxson Dart at 5,600, the DAL stack at 20,200 salary.', dk.allowed);
   ok('DFS salaries with thousands separators match the packet', dv.ok, JSON.stringify(dv.numbers));
