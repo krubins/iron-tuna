@@ -38,7 +38,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -477,6 +477,19 @@ console.log('\nthe fact check reads a sentence break, a verb and shown arithmeti
   ok('a player the packet lacks is still caught', v('Jerry Jeudy is the play here.').names.join() === 'Jerry Jeudy');
 }
 
+// Week 1's recaps were held again on the same shape with different words:
+// "Stash Allen", "Attack Douglas", "Unlike Watson". Each hold costs a whole
+// regeneration, and one recap took eight of them.
+console.log('\nthe call vocabulary is prose, not a roster');
+{
+  const p = H._finishBrief({ meta: { kind: 'game-recap', lens: 'both' }, rivalry: null,
+    players: [{ name: 'Josh Allen' }, { name: 'Deshaun Watson' }, { name: 'Caleb Douglas' }, { name: 'Ashton Jeanty' }] });
+  const v = s => H.validateDraft(s, p.allowed);
+  ok('a call direction in front of a packet name is a verb', v('Stash Allen in deeper leagues. Attack Douglas in tournaments. Pair Jeanty with the game stack.').ok, JSON.stringify(v('Stash Allen in deeper leagues. Attack Douglas in tournaments. Pair Jeanty with the game stack.').names));
+  ok('a preposition in front of a packet name is a preposition', v('Unlike Watson, the price never moved. Despite Jeanty, the total stayed low.').ok, JSON.stringify(v('Unlike Watson, the price never moved. Despite Jeanty, the total stayed low.').names));
+  ok('an invented player is still caught beside them', v('Stash Allen, but Jerry Jeudy is the real play.').names.join() === 'Jerry Jeudy', JSON.stringify(v('Stash Allen, but Jerry Jeudy is the real play.').names));
+}
+
 console.log('\nwhat the site called before kickoff, and how it landed');
 {
   const frz = (rows) => ({ takenAt: 1000, kickoff: 2000, rows });
@@ -629,6 +642,55 @@ console.log('\nthe draft-season social guard');
 {
   ok('the env override allows the threads', (await H.draftSocialAllowed({ DRAFT_SEASON_SOCIAL: '1' })).ok);
   ok('with no schedule the guard falls open (preseason behavior is unchanged)', (await H.draftSocialAllowed({})).ok);
+}
+
+console.log('\na forward piece leaves the feed when its games kick off');
+{
+  // One week: a Thursday game, three at one o'clock, a late game, Sunday
+  // night and Monday night. The feed says final three and a half hours after
+  // kickoff, as the dry run's fixture does; before that the clock decides.
+  const T = (d, h, m) => Date.UTC(2026, 8, d, h + 4, m || 0); // September 2026 is EDT
+  const G = (id, d, h, m, away, home) => ({ id, type: 'REG', week: 1, kickoff: T(d, h, m), away, home, status: null });
+  const GAMES = [G('thu', 10, 20, 15, 'AAA', 'BBB'), G('e1', 13, 13, 0, 'CCC', 'DDD'), G('e2', 13, 13, 0, 'EEE', 'FFF'), G('e3', 13, 13, 0, 'GGG', 'HHH'),
+                 G('late', 13, 16, 25, 'III', 'JJJ'), G('snf', 13, 20, 20, 'KKK', 'LLL'), G('mnf', 14, 20, 15, 'MMM', 'NNN')];
+  const schedAt = (now, tweak) => ({ season: 2026, games: GAMES.map(x => ({ ...x, status: now >= x.kickoff + 3.5 * 3600000 ? 'final' : null, ...((tweak && tweak[x.id]) || {}) })) });
+  const at = { thuAm: T(10, 9), thuNight: T(10, 20, 30), friAm: T(11, 9), sunNoon: T(13, 12), sunEarly: T(13, 13, 5), sunLate: T(13, 16, 30), sunNight: T(13, 20, 30), monAm: T(14, 9), monLate: T(14, 22), tueAm: T(15, 9) };
+  const row = (kind, published_at, extra) => ({ kind, week: 1, season: 2026, status: 'published', published_at, created_at: published_at, ...(extra || {}) });
+  const stale = (r, when, tweak) => H.pieceExpired(r, schedAt(when, tweak), when);
+  const fresh = (r, when, tweak) => !stale(r, when, tweak);
+  // The rule each kind falls under, read off the same flags contentDue uses.
+  const want = { 'last-minute-intel': 'all-started', 'tnf-preview': 'any-started', 'mnf-preview': 'any-started', 'weekend-preview': 'any-started',
+                 'underrated': 'slate', 'trade-desk': 'slate', 'kickers-defenses': 'slate', 'breaking': 'slate',
+                 'tnf-what-matters': 'never', 'game-recap': 'never', 'what-sunday-taught-us': 'never', 'early-rankings': 'never', 'quarterback-monday': 'never',
+                 'ros-rankings': 'never', 'tailback-tuesday': 'never', 'pickup-advisor': 'never', 'wideout-wednesday': 'never', 'tight-end-thursday': 'never' };
+  ok('every package on the calendar falls under one of the four rules', Object.keys(H.CONTENT_KINDS).every(k => ['never', 'all-started', 'any-started', 'slate'].includes(H._staleRule(H.CONTENT_KINDS[k]))));
+  ok('and each under the one its readiness flag implies', Object.entries(want).every(([k, r]) => H._staleRule(H.CONTENT_KINDS[k]) === r), Object.keys(want).filter(k => H._staleRule(H.CONTENT_KINDS[k]) !== want[k]).map(k => k + '=' + H._staleRule(H.CONTENT_KINDS[k])).join());
+  ok('a kind that waits for its games to go final is about them, not ahead of them', H._staleRule(H.CONTENT_KINDS['tnf-what-matters']) === 'never');
+  const wp = row('weekend-preview', T(11, 7));
+  ok('the weekend preview is current on Friday and at Sunday noon', fresh(wp, at.friAm) && fresh(wp, at.sunNoon));
+  ok('and leaves the feed the moment the first Sunday game kicks off', stale(wp, at.sunEarly) && stale(wp, at.sunNight) && stale(wp, at.monAm) && stale(wp, at.tueAm));
+  const lmi = row('last-minute-intel', T(13, 12, 15));
+  ok('the pre-kickoff intel stays while a Sunday game is still to come', fresh(lmi, at.sunEarly) && fresh(lmi, at.sunLate));
+  ok('and leaves once the night game has kicked off', stale(lmi, at.sunNight) && stale(lmi, at.monAm));
+  ok('a postponed night game does not hold it on the page', stale(lmi, at.sunLate, { snf: { status: 'postponed' } }));
+  const mnf = row('mnf-preview', T(14, 6));
+  ok('the Monday preview is current Monday morning and gone at kickoff', fresh(mnf, at.monAm) && stale(mnf, at.monLate) && stale(mnf, at.tueAm));
+  const tnf = row('tnf-preview', T(10, 6));
+  ok('the Thursday preview is current Thursday morning and gone by Friday', fresh(tnf, at.thuAm) && stale(tnf, at.thuNight) && stale(tnf, at.friAm));
+  const twm = row('tnf-what-matters', T(11, 6));
+  ok('Thursday Night: What Matters is about a played game and never expires', fresh(twm, at.friAm) && fresh(twm, at.sunNight) && fresh(twm, at.tueAm));
+  const kd = row('kickers-defenses', T(11, 8));
+  ok('the Friday streamers are current until the Sunday slate is under way', fresh(kd, at.friAm) && fresh(kd, at.sunNoon) && stale(kd, at.sunEarly) && stale(kd, at.monAm));
+  const und = row('underrated', T(10, 7));
+  ok('a Thursday-morning piece is not judged by the Thursday game alone', fresh(und, at.thuNight) && fresh(und, at.sunNoon));
+  ok('but is once half the games it was written ahead of have kicked off', stale(und, at.sunEarly) && stale(und, at.tueAm));
+  const brkSun = row('breaking', T(13, 11));
+  ok('a Sunday-morning scratch is news until the one o\'clock games', fresh(brkSun, at.sunNoon) && stale(brkSun, at.sunEarly));
+  const brkMon = row('breaking', T(14, 21));
+  ok('breaking news during the Monday game lasts as long as its week', fresh(brkMon, at.monLate) && stale(brkMon, at.tueAm));
+  ok('what happened never expires', [row('game-recap', T(13, 16, 30), { game_id: 'e1' }), row('what-sunday-taught-us', T(13, 19, 30)), row('early-rankings', T(14, 6)), row('ros-rankings', T(15, 7)), row('pickup-advisor', T(16, 6))].every(r => fresh(r, at.tueAm) && fresh(r, T(20, 9))));
+  ok('with no schedule there is no judgement and the piece stays', !H.pieceExpired(wp, null, at.tueAm));
+  ok('a legacy kind, a row without a week, and a week with no games all stay', !H.pieceExpired(row('final-read', T(10, 7)), schedAt(at.tueAm), at.tueAm) && !H.pieceExpired({ ...wp, week: null }, schedAt(at.tueAm), at.tueAm) && !H.pieceExpired({ ...wp, week: 9 }, schedAt(at.tueAm), at.tueAm));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
