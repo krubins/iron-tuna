@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 const src = readFileSync(new URL('../_worker.js', import.meta.url), 'utf8');
 const section = src.slice(src.indexOf('// TUNA MARKET SIGNAL START'), src.indexOf('// TUNA MARKET SIGNAL END'));
 let calls = 0, response;
-const api = new Function('fetch', 'adminOk', section + '\nreturn {tmsNormalize,tmsNormalizePropline,tmsAmericanToDecimal,tmsApplyPropLineMovement,tmsPrimaryPropRows,tmsSignals,tmsHttp,tmsReady,tmsStore,tmsPoll,tmsRoutes,TMS_PROVIDERS};')(
+const api = new Function('fetch', 'adminOk', section + '\nreturn {tmsNormalize,tmsNormalizePropline,tmsAmericanToDecimal,tmsApplyPropLineMovement,tmsPrimaryPropRows,tmsProjectionRows,tmsSignals,tmsHttp,tmsReady,tmsStore,tmsPoll,tmsRoutes,TMS_PROVIDERS};')(
   async () => { calls++; return response.clone(); }, (env, key) => !!env.LEADS_EXPORT_KEY && key === env.LEADS_EXPORT_KEY);
 const db = new DatabaseSync(':memory:');
 const wrap = (sql, args = []) => ({ bind: (...values) => wrap(sql, values),
@@ -40,6 +40,19 @@ const propLineFixture = [{ id: 'pl-event', sport_key: 'americanfootball_nfl', co
 const plRows = api.tmsNormalizePropline(propLineFixture, now);
 assert.equal(plRows.length, 2);
 assert.equal(plRows[0].provider, 'propline');
+const projectionRows = api.tmsProjectionRows(plRows);
+assert.deepEqual(projectionRows.map(r => ({ subject: r.subject, market: r.market, line: r.line, overOdds: r.overOdds, underOdds: r.underOdds })), [
+  { subject: 'Test Player', market: 'recYd', line: 50.5, overOdds: -110, underOdds: -110 }
+]);
+const tdProjectionRows = api.tmsProjectionRows(api.tmsNormalizePropline([{ ...propLineFixture[0], bookmakers: [{
+  key: 'draftkings', last_update: new Date(now).toISOString(), markets: [{ key: 'player_anytime_td', outcomes: [
+    { name: 'Yes', description: 'Test Player', price: 150 }, { name: 'No', description: 'Test Player', price: -180 }
+  ] }]
+}] }], now));
+assert.equal(tdProjectionRows[0].market, 'anytimeTD');
+assert.equal(tdProjectionRows[0].line, 1);
+assert.equal(tdProjectionRows[0].overOdds, 150);
+assert.equal(tdProjectionRows[0].underOdds, -180);
 api.tmsApplyPropLineMovement(plRows, { bookmakers: [{ key: 'draftkings', markets: [{ key: 'player_reception_yds', outcomes: [
   { name: 'Over', description: 'Test Player', open_price: -105, open_point: 48.5, open_at: new Date(now - 3600000).toISOString(), latest_price: -110, latest_point: 50.5, latest_at: new Date(now).toISOString(), direction: 'up', num_snapshots: 8 },
   { name: 'Under', description: 'Test Player', open_price: -115, open_point: 48.5, open_at: new Date(now - 3600000).toISOString(), latest_price: -110, latest_point: 50.5, latest_at: new Date(now).toISOString(), direction: 'down', num_snapshots: 8 }
