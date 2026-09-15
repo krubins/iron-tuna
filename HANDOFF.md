@@ -9701,3 +9701,51 @@ pieces `expired` and the recaps and the Week 2 preview not.
 `tools/test-league-sync.mjs` stubs `boardsPayload` and lifts the league
 region on its own, so it now also lifts the helpers (`_gameStarted` through
 `boardStillToPlay`) the board route calls on its way out.
+
+## 78. September 15: one word mark on every banner
+
+**The ask.** Every banner should carry the header's word mark: the eight
+Bebas Neue letters at staggered sizes on the seven-stop metal gradient
+(`<svg class="brand-logo">` on every page). Some banners carried a taller,
+stretched "IRON TUNA" instead.
+
+**Where the drift came from.** The header mark is `<text>` in a web font. Put
+that in a generator or a standalone image and there is no web font, so the
+machine's fallback draws the name: Impact, or the system sans. `og.png` (the
+social preview every one of the 162 pages names in `og:image`) had the name as
+tall condensed white type; `snake-og.svg` / `bestball-og.svg` set it in Arial;
+the two `social/compare-*.png` cards and all 210 `social/cards/*.png` stat
+cards set it as bold sans-serif type. Five versions of one name.
+
+**The fix is a mark that needs no font.** `tools/build-wordmark.mjs` traces
+the header's eight letters, at the header's exact positions and sizes, out of
+`tools/fonts/BebasNeue-Regular.ttf` (SIL OFL, licence beside it) into plain
+path data, `tools/wordmark-paths.json`. An overlay of the outlined mark on the
+live header render shows no offset. `tools/wordmark.mjs` reads that JSON and
+exports `wordmarkSvg({height})` for HTML templates and `wordmarkGroup({x, y,
+height})` + `wordmarkGradient()` for embedding in another SVG. **Every banner
+generator draws the mark through this module. Never set "IRON TUNA" as type
+in a generator again.** Regenerate the JSON only if the header's letters move
+(needs `npm i --no-save opentype.js`, not committed).
+
+**What was rebuilt.**
+
+| Asset | Generator | Note |
+|---|---|---|
+| `og.png` | `tools/build-og.mjs` (new) | Tuna mark (`tuna-mark.png`, the landing page's) beside the word mark, landing tagline in Bebas from `tools/fonts`, same subline as before. The old file's cartoon fish was not used anywhere else on the site. |
+| `social/compare-auction.png`, `social/compare-snake.png` | `tools/build-compare-cards.mjs` (new) | The generator used to live in a scratchpad (§10 says so); it is in the repo now with the row data inline. |
+| `social/cards/*.png` (210) | `tools/build-insight-cards.mjs` | Brand row is `wordmarkSvg({height:36})` next to the tuna thumbnail. Rebuilt with `--force`. |
+| `snake-og.svg`, `bestball-og.svg` | edited in place | Arial brand line replaced by `wordmarkGroup` at the same left edge. Nothing references these two files; kept for completeness. |
+
+All three raster generators need `playwright-core` on the path and a Chromium
+binary (`/opt/pw-browsers/chromium` in Claude Code remote sessions, else
+`CHROMIUM_PATH`), same as the stat-card builder always did. Fonts are embedded
+from `tools/fonts`, so no build needs the network.
+
+**Left alone, deliberately.** `admin.html`'s masthead still sets `IRON
+<b>TUNA</b>` as type (internal page, not a banner), and the print-only
+one-page cheat-sheet chip in `index.html` (`.cob-name`) sets the name in
+uniform Bebas at 17px. Both are page chrome; convert them if they come up.
+`og.png`'s subline still reads "The most comprehensive tool for fantasy
+football auction drafts", which predates snake, best ball, DFS and in-season;
+that is copy, not the mark, and is a separate call.
