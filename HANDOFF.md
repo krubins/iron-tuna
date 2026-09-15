@@ -9404,6 +9404,135 @@ listing all of them. Its published-title check moved from the Thursday
 preview to the weekend preview, because on that Friday the Thursday preview
 is, correctly, gone.
 
+### 75b. The same Monday: Quarterback Monday previewed a game already played
+
+Ken's follow-up, with the URL `/in-season/desk/quarterback-monday/1`: "Your
+desk is still showing a story about Justin Herbert for week one."
+
+**Why.** Quarterback Monday is a retrospective piece (`subject: 'played'`,
+Monday 7 AM, about Week 1), so §75's expiry rightly leaves it alone. The
+defect was inside the packet. `contentContext` builds `ctx.week` from the
+`week` board, which prices the CLOCK's week, and the week rule (§51) holds a
+week open until its Monday game ends. Monday morning the clock's week is
+therefore still Week 1, and `packetQb` handed the writer the Week 1 board
+as `quarterbacks`: Herbert's Sunday projection, Sunday's opponent, Sunday's
+team total. The writer, told only that the packet is the source of facts,
+wrote what the numbers said, and what they said was a preview of a game the
+reader had watched the day before. Tuesday through Thursday the same code is
+right, because the clock has turned and the week board is the coming week's;
+only the Monday piece was wrong, and only on Mondays.
+
+**The rule.** A piece about the played week points at the week after it.
+`buildResearchPacket` computes `forwardWeek` (the subject week for a forward
+piece, the subject week plus one for a played-week piece). When that is not
+the clock's week, `ctx.forward` is built by `_forwardRows(ctx, forwardWeek)`
+from the `next3` board's per-week rows for that week (byes and outs dropped,
+ranked by points within position on all three boards), and `packetPosition`,
+`packetQb` and `_replacementFor` read `_fwdPlayers(ctx)` instead of the week
+board. The usage evidence is untouched: it is still the played week's
+targets, carries and points, which is what the piece argues from. Three
+things travel with it:
+
+- `meta.forwardWeek`, `boardWeek` and `boardNote` on the packet say which
+  week each number belongs to ("ranks and projections are for Week 2, the
+  coming week; touches and points are Week 1 actuals").
+- `_voiceBlock` tells the writer, for a retrospective piece whose forward
+  week differs from its subject: Week 1 has been played, the piece is about
+  what it says for Week 2, and no player is "projected" or "expected" to do
+  anything in a game already played.
+- The DFS slates loaded on Monday are the played week's, so `ctx.dfs` is
+  withheld and `_dfsBlock` carries the reason (`ctx.dfsNote`): the Week 2
+  salaries are not loaded yet and the DFS lens speaks to roles and pricing
+  direction, not to a number.
+
+On Tuesday and later `forwardWeek` equals the clock's week, `ctx.forward` is
+not set, and every packet reads exactly what it read before.
+
+**Tests.** `tools/test-newsroom.mjs`: the forward board is the week board
+when asked for the clock's week and the next3 rows for the week after, with
+Week 2 opponents, byes dropped and ranks by Week 2 points on all three
+boards; without a forward board Quarterback Monday would carry Sunday's
+opponents and with it carries Week 2's and Week 2 projections; the usage
+rows stay Week 1's; the packet names both weeks; the played slate's DFS
+numbers are withheld; the writer is told which week is which, and told
+nothing of the kind for a piece about the clock's own week.
+`tools/test-dry-run.mjs`, at Monday 9 AM of Week 1 against the real boards:
+the clock still says Week 1, the forward board for Week 2 carries every
+club's Week 2 opponent and ranks, the Quarterback Monday packet is about
+Week 1 and points at Week 2 (falling back to What Sunday Taught Us for the
+meta assertions if the fixture gives the gate nothing worth publishing), the
+Week 1 slate is withheld with the reason, the writer is briefed; and on
+Tuesday, Tailback Tuesday about Week 1 points at Week 2 as the clock's own
+week, with nothing withheld.
+
+**Already-published rows.** The Week 1 Quarterback Monday on the live site
+was written from the old packet and is not rewritten by this change; the
+admin board's Regenerate on that kind and week produces it again from the
+new one.
+
+### 75c. The same Monday, 2:26 PM: "GB at MIN · Week 1 · Update 5"
+
+Ken's third report, with a screenshot of the season-long lane: "It is still
+posting stories as if they are predictive. For example, the attached talks
+about the Minnesota Green Bay game that has already happened." The cards were
+the Week 1 game recaps (§73), which are about played games by design. What
+the screenshot showed was three things the cards said that were not true,
+and one reason they had appeared so late. `content_pieces` on the live D1
+was the witness:
+
+| Game | Drafts | Held on | Published (ET) |
+|---|---|---|---|
+| BAL at IND (1 PM) | 8 | "Attack Lane", "Correlating Taylor", "Tied Andrews", "Matched Flowers" | Mon 12:50 AM |
+| GB at MIN (1 PM) | 5 | "Stash Mason", "Unlike Watson", two salaries | Mon 2:50 AM |
+| NYJ at TEN (1 PM) | 4 | "Attack Mitchell", "Stash Allen", three salaries | Mon 1:49 AM |
+| DAL at NYG (4:25 PM) | 1 | | Mon 3:05 AM |
+| NE at SEA (Wed) | 1 | stored twice by two ticks | Fri 6:19 PM |
+
+- **"Update 5" was the attempt count.** `version` counts every draft, and
+  the title's trailer and the cards printed it, so a story with no earlier
+  public version said "update 5" to the reader. All ten published rows on
+  the site carrying a trailer had `published_before = 0`. The trailer is now
+  an EDITION: `produceContent` adds it only when the row it follows was
+  published; `_pieceEdition(row)` reads it back; the feed and the piece
+  payload carry `edition` beside `version`; `front.html` and `desk.html`
+  print `edition`. The ten live titles were stripped of their trailers by
+  one UPDATE on the D1 (ids 23, 34, 38, 41, 46, 49, 54, 57, 58, 62), each
+  checked against the same `published_before = 0` rule.
+- **Nothing on the card said the game was over.** A per-game row now prints
+  "· Final" after its week on both pages.
+- **The story was in the feed twice.** The opener's recap has two published
+  rows (ids 18 and 19, seven seconds apart, two ticks that raced) and a live
+  piece has one row per version; `newsroomFeedPayload` listed every row. It
+  keeps the newest published row per slug and drops the rest.
+- **The drafts were sent back for verbs.** "Tied Andrews", "Correlating
+  Taylor", "Adding Gesicki" read as people, and PR #223 had only taught the
+  list "Stash", "Attack" and "Unlike". `NOT_A_NAME` gained the verbs and
+  participles the Sunday drafts used, and `validateDraft` gained the rule
+  that makes the list unnecessary for the next one: any -ing or -ed word
+  before a surname the packet carries is prose.
+- **The rewrites starved the slate.** `runPerGameKind` walked kickoff order
+  and counted every visit against `RECAPS_PER_TICK` (2), so BAL at IND's
+  eight drafts took eight slots while the 4 o'clock and night games waited
+  unwritten until 3 AM. `_perGameOrder` puts games with no row first (oldest
+  kickoff first) and the held rows a tick may still revive or rewrite after
+  them; only a call to the writer (`wrote` on the result) spends a slot,
+  bounded by `looked` at three times the budget; and `REWRITE_HELD_MAX` (6)
+  stops the tick asking for a seventh draft of a piece the check keeps
+  sending back. Such a row is still revalidated every tick (the check is
+  code and the code changes) and is otherwise the editor's: Regenerate on
+  the admin board forces another draft.
+
+**Tests.** `tools/test-newsroom.mjs`: the three Sunday phrasings pass the
+name check and a person the packet lacks still does not, with a participle
+before a non-packet name still a name; a trailer-less title is edition 1 at
+any version and a trailer is its number; `_perGameOrder` puts unwritten games
+first, then retryable and revivable rows, and never visits a published game or
+a draft at the cap; the source-shape assertion that pinned the loop's old
+inline exists check now pins `_perGameOrder`. `tools/test-dry-run.mjs`: a
+story stored twice is listed once; every first-ever published row reports
+edition 1; a live piece re-produced after a published version is "update 2";
+a held draft at the cap is not sent to the writer and stores nothing.
+
 ## 76. September 14: Monday morning is What Tuna Got Right
 
 Ken's report, the Monday after Week 1: on Monday, instead of the "whole
