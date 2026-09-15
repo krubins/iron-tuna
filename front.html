@@ -798,13 +798,12 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .hb-intel .hb-dek{font-size:14.5px;margin-top:12px}
 .hb-intel .hb-ctas{margin-top:18px}
 .hb-intel .hb-btn{padding:12px 20px;font-size:13.5px}
-/* The three cards. Names and ranks only; a card the digest cannot fill is not
+/* The two cards. Names and ranks only; a card the digest cannot fill is not
    drawn, which is why the grid starts hidden. */
 .hb-teasers{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:20px}
 .hb-card{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:13px 14px;min-width:0}
 .hb-card i{font-style:normal;display:block;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
 .hb-card i.fade{color:#ff8a80}
-.hb-card i.td{color:var(--gold)}
 .hb-card b{display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;overflow-wrap:anywhere}
 .hb-card small{display:block;font-size:11px;color:#8b9c97;margin:2px 0 9px;letter-spacing:.03em}
 .hb-card .hb-row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:#b3c1bd;padding:3px 0;border-top:1px solid rgba(255,255,255,.07)}
@@ -1014,7 +1013,6 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-lead-plate .hb-card { background: var(--bg, #f4f7f7); border-color: var(--line, #e1e7ea); padding: 15px 16px }
 .fp-lead-plate .hb-card i { color: var(--brand, #0e7c63) }
 .fp-lead-plate .hb-card i.fade { color: var(--value-red, #c8322b) }
-.fp-lead-plate .hb-card i.td { color: var(--gold-ink, #7a5300) }
 .fp-lead-plate .hb-card b { color: var(--ink, #0f1719); font-size: 16px }
 .fp-lead-plate .hb-card small { color: var(--ink-3, #6d7c86) }
 .fp-lead-plate .hb-card .hb-row { color: var(--ink-2, #3f4e58); border-top-color: var(--line, #e1e7ea) }
@@ -3161,14 +3159,13 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return m;
   }
 
-  // ── the hero's three cards ────────────────────────────────────────────────
+  // ── the hero's two cards ─────────────────────────────────────────────────
   // Read off the SAME digest the dateline prints, so the top of the page and
   // the Vegas section can never name different players for the same day. Real
   // data or nothing: a card is drawn only when every number on it exists, and
   // when the digest has no case the grid stays hidden and the note says so.
-  // The TD card's percentage is DERIVED (Poisson on the blended season line
-  // over the games he can play), never a quoted book price, and it is labeled
-  // that way on the card because no free feed carries an anytime-TD market.
+  // The digest's topTd (the derived anytime-TD card) is no longer drawn: the
+  // percentage was never a quoted prop and the label did not explain itself.
   function hbRank(b, key) {
     var v = b && b[key];
     return (typeof v === 'number' && isFinite(v)) ? esc(b.position) + v : null;
@@ -3193,14 +3190,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         [['Consensus', hbRank(g.topUp, 'rankConsensus')], ['Vegas', hbRank(g.topUp, 'rankMarket')], ['Iron Tuna', hbRank(g.topUp, 'rankIronTuna')]]);
       cards += hbCard('fade', 'Vegas fades', g.topDown,
         [['Consensus', hbRank(g.topDown, 'rankConsensus')], ['Vegas', hbRank(g.topDown, 'rankMarket')], ['Iron Tuna', hbRank(g.topDown, 'rankIronTuna')]]);
-      var t = g.topTd;
-      if (t && typeof t.anytimeTd === 'number' && isFinite(t.anytimeTd)) {
-        cards += hbCard('td', 'TD edge', t,
-          [['Consensus', hbRank(t, 'rankConsensus')], ['Iron Tuna', hbRank(t, 'rankIronTuna')]],
-          ['Anytime TD', t.anytimeTd + '%',
-           'Implied from ' + t.tdIronTuna + ' season TDs over ' + t.games + ' games. The lines have him at '
-           + t.tdMarket + ' against a consensus ' + t.tdConsensus + '. Not a quoted prop.']);
-      }
     }
     if (!cards) {
       grid.hidden = true; grid.innerHTML = '';
