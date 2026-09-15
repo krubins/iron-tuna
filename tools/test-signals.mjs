@@ -147,6 +147,32 @@ console.log('\nVegas Edge');
      none.hasProps === false && /No priced player prop has reached this board/.test(none.note) && !/No sportsbook/.test(none.note));
 }
 
+console.log('\na game that has kicked off leaves Vegas Edge');
+{
+  // The same week, once BBB at AAA has been played. Big Riser (AAA) and Big
+  // Fader (BBB) are results now; Steady Man (CCC) is still to play.
+  const done = { ...STATE, games: STATE.games.map(g => g.id === '2026_02_BBB_AAA' ? { ...g, status: 'completed' } : g) };
+  const sig = H.detectInsights({ week: WEEK, usage: null, weekMarkets: WEEK_MARKETS, gameMarkets: GAME_MARKETS, state: done, rules: H.SCORING_BASE });
+  const e = H.buildVegasEdge(WEEK, WEEK_MARKETS, GAME_MARKETS, done, sig);
+  const names = list => list.map(x => x.name);
+  ok('vs experts no longer carries the players whose game was played', !names(e.vsExperts.buys).includes('Big Riser') && !names(e.vsExperts.fades).includes('Big Fader'), JSON.stringify([names(e.vsExperts.buys), names(e.vsExperts.fades)]));
+  ok('nor do the movers', e.movers.length === 0, JSON.stringify(names(e.movers)));
+  ok('nor the TD board and the volume board', names(e.tdBoard).join() === 'Steady Man' && names(e.volumeBoard).join() === 'Steady Man', JSON.stringify([names(e.tdBoard), names(e.volumeBoard)]));
+  ok('the game board keeps only the game still to be played', e.gameEnvironments.length === 1 && e.gameEnvironments[0].id === '2026_02_DDD_CCC');
+  ok('and the game-script signal on the played game is gone', e.hiddenSignals.length === 0);
+  ok('the payload says what it held back', e.played.games === 1 && e.played.of === 2 && e.played.players === 2 && /1 of the week.s 2 games have kicked off/.test(e.playedNote), JSON.stringify([e.played, e.playedNote]));
+  ok('the props flag is still about the feed, not about who is left', e.hasProps === true);
+  const live = H.buildVegasEdge(WEEK, WEEK_MARKETS, GAME_MARKETS, { ...STATE, games: STATE.games.map(g => g.id === '2026_02_BBB_AAA' ? { ...g, status: 'in_progress' } : g) }, sig);
+  ok('a game under way counts as kicked off', live.gameEnvironments.length === 1 && !names(live.vsExperts.buys).includes('Big Riser'));
+  const all = H.buildVegasEdge(WEEK, WEEK_MARKETS, GAME_MARKETS, { ...STATE, games: STATE.games.map(g => ({ ...g, status: 'completed' })) }, sig);
+  ok('once every game has been played the boards are empty and the note says so', all.vsExperts.buys.length === 0 && all.tdBoard.length === 0 && all.gameEnvironments.length === 0 && /^Every game this week has kicked off/.test(all.playedNote));
+  const post = H.buildVegasEdge(WEEK, WEEK_MARKETS, GAME_MARKETS, { ...STATE, games: STATE.games.map(g => g.id === '2026_02_BBB_AAA' ? { ...g, status: 'postponed' } : g) }, sig);
+  ok('a postponed game has not kicked off, and is not counted among the week\'s games', names(post.vsExperts.buys).includes('Big Riser') && post.played.games === 0 && post.played.of === 1 && post.playedNote === null);
+  const before = H.buildVegasEdge(WEEK, WEEK_MARKETS, GAME_MARKETS, STATE, H.detectInsights({ week: WEEK, usage: null, weekMarkets: WEEK_MARKETS, gameMarkets: GAME_MARKETS, state: STATE, rules: H.SCORING_BASE }));
+  ok('before kickoff nothing is held back', before.played.games === 0 && before.played.players === 0 && before.playedNote === null && before.vsExperts.buys[0].name === 'Big Riser');
+  ok('no schedule, no judgement', H.buildVegasEdge(WEEK, WEEK_MARKETS, GAME_MARKETS, { ok: false }, { insights: [] }).vsExperts.buys[0].name === 'Big Riser');
+}
+
 console.log('\nWednesday movers');
 {
   const prev = { rank: 12, injury: null, roleTrend: { label: 'flat', pct: 2 }, games: 10, delta: { classification: 'MARKET AGREES' }, scheduleDifficulty: { label: 'Average' }, ppg: 14.2 };

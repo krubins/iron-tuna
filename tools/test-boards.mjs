@@ -60,7 +60,8 @@ const H = new Function(
   cut('// -- kickers and defenses, scored', '// -- the insight detection engine') + '\n' +
   'return { scoringRules, scoreStats, scoreAny, scoreKickerStats, scoreDefenseStats, SCORING_KDEF, ' +
   'nflSeasonState, teamRatingsFrom, weekEnvironment, weeklyStats, horizonWeeks, marketDelta, MARKET_DELTA, ' +
-  'explainDelta, roleTrendFrom, buildBoards, HORIZONS, IT_BLEND, marketHistoryFrom, marketPropsFrom, _oddsProjectionIndex };'
+  'explainDelta, roleTrendFrom, buildBoards, HORIZONS, IT_BLEND, marketHistoryFrom, marketPropsFrom, _oddsProjectionIndex, ' +
+  'seasonGameStatus, playedTeams, boardStillToPlay };'
 )(etOffsetHours, teamKey, stub, 'x', async () => {}, stub, _oddsRound, _oddsNorm, POOL, AVAILABILITY_GAMES, _availF,
   { passYd: 0.2, passTD: 0.28, passInt: 0.35, rushYd: 0.3, rushTD: 0.4, recYd: 0.3, recTD: 0.4, rec: 0.28, scrimmageTD: 0.4 }, {});
 
@@ -267,6 +268,47 @@ console.log('\nrole trend from usage');
   const early = H.roleTrendFrom({ ...u, season: { games: 2, targets: 16, carries: 0 } });
   ok('but not before', early.applied === false && early.factor === 1);
   ok('no usage is no data, not zero', H.roleTrendFrom(null).label === 'no data' && H.roleTrendFrom(null).factor === 1);
+}
+
+console.log('\na projection for a game that has kicked off is a result, not a projection');
+{
+  // The same season, except that Week 2's BBB-DDD game is the Monday night
+  // game. At half past four on the Sunday AAA-CCC is under way and BBB-DDD
+  // is still to come; Monday morning the early game is over, the night game
+  // is still to come and the week has not turned (the report's screenshot);
+  // Monday at ten both have kicked off.
+  const late = games.find(g => g.week === 2 && g.home === 'BBB');
+  const SCHED2 = { ...SCHED, updatedAt: 2, games: games.map(g => g === late ? { ...g, kickoff: ET(3, 20, 15) } : g) };
+  const at = { morning: ET(2, 9, 0), afternoon: ET(2, 16, 30), monday: ET(3, 9, 0), night: ET(3, 22, 0) };
+  const board = (now) => {
+    const st = H.nflSeasonState(SCHED2, now);
+    return H.buildBoards({ ...ctx(), sched: SCHED2, state: st, ratings: H.teamRatingsFrom(SCHED2) }, { horizon: 'week', preset: 'ppr' });
+  };
+  const w0 = (b, name) => b.players.find(p => p.name === name).weeks[0];
+  const am = board(at.morning), pm = board(at.afternoon), mon = board(at.monday), night = board(at.night);
+  ok('every week row says where its game stands', am.players.every(p => p.weeks[0].gameState === 'upcoming'), JSON.stringify(am.players.map(p => p.weeks[0].gameState)));
+  ok('by the clock when the feed has not spoken', w0(pm, 'Alpha Quarterback').gameState === 'in_progress' && w0(pm, 'Beta Back').gameState === 'upcoming'
+     && w0(mon, 'Alpha Quarterback').gameState === 'completed' && w0(mon, 'Beta Back').gameState === 'upcoming'
+     && w0(night, 'Alpha Quarterback').gameState === 'completed' && w0(night, 'Beta Back').gameState === 'in_progress');
+  ok('and by the feed when it has', H.buildBoards({ ...ctx(), sched: SCHED2, state: H.nflSeasonState({ ...SCHED2, updatedAt: 3, games: SCHED2.games.map(g => g === late ? g : g.week === 2 ? { ...g, status: 'final' } : g) }, at.morning),
+     ratings: H.teamRatingsFrom({ ...SCHED2, updatedAt: 3, games: SCHED2.games.map(g => g === late ? g : g.week === 2 ? { ...g, status: 'final' } : g) }) }, { horizon: 'week', preset: 'ppr' })
+     .players.find(p => p.name === 'Alpha Quarterback').weeks[0].gameState === 'completed');
+  ok('the week is still Week 2 on Monday morning, so the board itself still projects Sunday', mon.currentWeek === 2 && mon.players.length === POOL.length);
+  const still = H.boardStillToPlay(pm), stillMon = H.boardStillToPlay(mon);
+  ok('the public board drops the clubs whose game has kicked off', still.players.map(p => p.team).every(t => t === 'BBB' || t === 'DDD') && still.players.length === 4, JSON.stringify(still.players.map(p => p.name)));
+  ok('and says how many rows it held back', still.played === 4);
+  ok('on Monday morning only the night game\'s clubs are on it', stillMon.players.map(p => p.team).every(t => t === 'BBB' || t === 'DDD') && stillMon.players.length === 4 && stillMon.played === 4, JSON.stringify(stillMon.players.map(p => p.name)));
+  ok('a rank is the whole board\'s rank, not a renumbering of who is left', still.players.find(p => p.name === 'Beta Back').consensus.rank === pm.players.find(p => p.name === 'Beta Back').consensus.rank);
+  ok('before kickoff nothing is held back', H.boardStillToPlay(am).players.length === POOL.length && H.boardStillToPlay(am).played === 0);
+  ok('once every game has kicked off the week board is empty, and says so', H.boardStillToPlay(night).players.length === 0 && H.boardStillToPlay(night).played === POOL.length);
+  ok('the source board is not written to', pm.players.length === POOL.length && !('played' in pm));
+  const n3 = H.buildBoards({ ...ctx(), sched: SCHED2, state: H.nflSeasonState(SCHED2, at.afternoon), ratings: H.teamRatingsFrom(SCHED2) }, { horizon: 'next3', preset: 'ppr' });
+  ok('a longer horizon is a sum over weeks and is returned whole', H.boardStillToPlay(n3).players.length === POOL.length && H.boardStillToPlay(n3).played == null);
+  ok('no board, no judgement', H.boardStillToPlay(null) === null && H.boardStillToPlay({ ok: false }).ok === false);
+  const stPm = H.nflSeasonState(SCHED2, at.afternoon);
+  ok('the clubs that have kicked off, by the same rule', [...H.playedTeams(stPm)].sort().join() === 'AAA,CCC' && H.playedTeams(H.nflSeasonState(SCHED2, at.morning)).size === 0);
+  const postponed = H.nflSeasonState({ ...SCHED2, updatedAt: 4, games: SCHED2.games.map(g => g.week === 2 && g.home === 'AAA' ? { ...g, status: 'postponed' } : g) }, at.afternoon);
+  ok('a postponed game has not kicked off', H.playedTeams(postponed).size === 0);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
