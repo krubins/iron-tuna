@@ -12,9 +12,11 @@
 // Cards are 1200x675 (X's standard 16:9 timeline crop), styled on the site's own design
 // tokens (the :root palette shared by the guide pages). Deliberately no irontuna.com text
 // on the card: X posts carry no site reference by decision (see HANDOFF §10), branding is
-// the wordmark + tuna mark only.
+// the wordmark + tuna mark only. The wordmark is the header's, as outlined paths
+// (tools/wordmark.mjs) so it renders identically with no font installed; never set the name as type here.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { chromium } from 'playwright-core';
+import { wordmarkSvg } from './wordmark.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const OUT_DIR = ROOT + 'social/cards/';
@@ -48,7 +50,7 @@ function cardHtml(ins) {
     .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px}
     .brand{display:flex;align-items:center;gap:16px}
     .brand img{width:58px;height:58px;border-radius:12px}
-    .brand b{font-size:27px;letter-spacing:3.5px}
+    .brand svg{filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
     .badge{font-size:20px;font-weight:700;letter-spacing:2px;color:var(--teal);
       border:1.5px solid var(--line);background:var(--panel);border-radius:999px;padding:12px 24px}
     .badge span{color:var(--muted);font-weight:600}
@@ -66,7 +68,7 @@ function cardHtml(ins) {
       background:linear-gradient(90deg,var(--teal),var(--gold))}
   </style></head><body>
     <div class="top">
-      <div class="brand"><img src="${logoData}"><b>IRON TUNA</b></div>
+      <div class="brand"><img src="${logoData}">${wordmarkSvg({ height: 36 })}</div>
       <div class="badge">${FORMAT_LABEL[ins.format] || 'INSIGHT'} <span>· ${dateLabel(ins.date)}</span></div>
     </div>
     <h1>${esc(ins.title)}</h1>
