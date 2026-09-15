@@ -4802,7 +4802,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var nflWide = /^NFL\s+League-Wide$/i.test(String(kicker || '').trim());
     return '<a class="nr-card" href="' + esc(p.url) + '"><span class="nr-kicker' + (nflWide ? ' nfl-wide' : '') + '">' +
       (nflWide ? '<img class="nr-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' : '') +
-      esc(kicker) + ' &middot; Week ' + esc(p.week) + (p.version > 1 ? ' &middot; update ' + esc(p.version) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
+      esc(kicker) + ' &middot; Week ' + esc(p.week) + (p.perGame ? ' &middot; Final' : '') + (p.edition > 1 ? ' &middot; update ' + esc(p.edition) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
       '<span class="nr-by"><span class="nr-av">' + esc(av(who)) + '</span>' + esc(who || 'Iron Tuna') + (p.rivalry && lens !== 'dfs' ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') + '</span></a>';
   }
   function band(lens, gridId, ids) {
