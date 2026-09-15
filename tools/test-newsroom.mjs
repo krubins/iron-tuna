@@ -74,7 +74,9 @@ console.log('\nthe migration');
       && w.indexOf('whatScored') < w.indexOf('usageBehindIt') && w.indexOf('usageBehindIt') < w.indexOf('nextWeekSignals')
       && H.sectionsFor('game-recap', 'dfs').includes('wrap');
   })());
-  ok('every package has a primary analyst on the staff and both lenses', Object.values(H.CONTENT_KINDS).every(k => H.ANALYSTS[k.analyst] && k.lens === 'both'));
+  ok('every package has a primary analyst on the staff', Object.values(H.CONTENT_KINDS).every(k => H.ANALYSTS[k.analyst]));
+  ok('every package but the rest-of-season rankings carries both lenses', Object.entries(H.CONTENT_KINDS).every(([k, v]) => k === 'ros-rankings' ? v.lens === 'weekly' : v.lens === 'both'));
+  ok('the rest-of-season rankings are weekly-only: no DFS analyst, no DFS title', !H.CONTENT_KINDS['ros-rankings'].dfsAnalyst && !H.CONTENT_KINDS['ros-rankings'].dfsTitle);
   ok('the worth-gated pieces are the positional and QB features, and the Monday scorecard', ['quarterback-monday', 'tailback-tuesday', 'wideout-wednesday', 'tight-end-thursday', 'what-tuna-got-right'].every(k => H.CONTENT_KINDS[k].gate === 'worth'));
   ok('the Monday scorecard sits in the early rankings\' slot, about the played week, with the finals it has', (() => {
     const K = H.CONTENT_KINDS['what-tuna-got-right'];
@@ -410,7 +412,7 @@ console.log('\nthe fact check');
   const miss = JSON.parse(JSON.stringify(good)); delete miss.dfs; delete miss.weekly.tradeAway;
   const mv = H.factCheck(miss, packet);
   ok('a missing lens or section is caught', mv.problems.includes('missing:dfs') && mv.problems.includes('missing:weekly.tradeAway'));
-  ok('every kind has weekly and DFS sections', Object.keys(H.CONTENT_KINDS).every(k => H.sectionsFor(k, 'weekly').length >= 4 && H.sectionsFor(k, 'dfs').length >= 3));
+  ok('every kind has weekly sections, and every both-lens kind has DFS sections', Object.entries(H.CONTENT_KINDS).every(([k, v]) => H.sectionsFor(k, 'weekly').length >= 4 && (v.lens === 'both' ? H.sectionsFor(k, 'dfs').length >= 3 : H.sectionsFor(k, 'dfs').length === 0)));
 }
 
 // The first live Thursday preview (2026-09-09) was held over headline words:
