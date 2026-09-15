@@ -14,7 +14,7 @@ const cut = (a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i); if (i <
 
 // Real ET clock helpers from the worker; stubbed jobs that record their runs.
 const runs = [];
-const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'usage-prior-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'board-freeze', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick', 'league-sync'].map(j => [j, async () => ({ ok: true })]));
+const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'usage-prior-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'board-freeze', 'line-ledger', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick', 'league-sync'].map(j => [j, async () => ({ ok: true })]));
 const jobRun = async (env, name, trigger) => {
   const rec = { job: name, trigger, started: Date.now() }; runs.push(rec);
   if (name === 'schedule-refresh') await new Promise(r => setTimeout(r, 30));
@@ -55,7 +55,7 @@ console.log('\nwhat is due, and daylight saving');
   ok('Tuesday 6 AM Eastern in December (11:00Z) runs it too', due(ET(2026, 12, 15, 6, 0, false)).includes('ros-snapshot') && ET(2026, 12, 15, 6, 0, false) === Date.UTC(2026, 11, 15, 11));
   ok('and 10:00Z in December, which is 5 AM Eastern, does not', !due(Date.UTC(2026, 11, 15, 10)).includes('ros-snapshot'));
   ok('Wednesday 6 AM does not run it', !due(ET(2026, 9, 16, 6, 0, true)).includes('ros-snapshot'));
-  ok('a quarter past the hour runs the quarter-hourly jobs and nothing else', due(ET(2026, 9, 15, 6, 15, true)).join() === 'board-freeze,news-scan,content-tick');
+  ok('a quarter past the hour runs the quarter-hourly jobs and nothing else', due(ET(2026, 9, 15, 6, 15, true)).join() === 'board-freeze,line-ledger,news-scan,content-tick');
   ok('Sunday 12:15 PM pulls the injury list before the desk tick', (() => { const d = due(ET(2026, 9, 13, 12, 15, true)); return d.indexOf('availability-refresh') >= 0 && d.indexOf('availability-refresh') < d.indexOf('content-tick') && d.includes('schedule-refresh'); })());
   ok('a Sunday 12:30 in December (17:30Z) is the same Eastern quarter', due(Date.UTC(2026, 11, 13, 17, 30)).includes('availability-refresh'));
   ok('every hour runs the schedule refresh and the desk tick', [3, 11, 17, 23].every(h => { const d = due(ET(2026, 9, 14, h, 0, true)); return d.includes('schedule-refresh') && d.includes('content-tick'); }));
@@ -128,7 +128,7 @@ console.log('\nthe tick');
   ok('the next quarter-hour is a new claim', !(await H.runScheduledTick(lenv, ET(2026, 9, 13, 12, 30, true), '*/15 * * * *')).skipped);
   ok('with no database every claim succeeds', await H.tickClaim({}, Date.now()) === true);
   const quiet = await H.runScheduledTick({}, ET(2026, 9, 14, 15, 0, true), 'x'); // Mon 3 PM
-  ok('a quiet hour runs only the hourly jobs', quiet.due.join() === 'schedule-refresh,board-freeze,news-scan,league-sync,content-tick');
+  ok('a quiet hour runs only the hourly jobs', quiet.due.join() === 'schedule-refresh,board-freeze,line-ledger,news-scan,league-sync,content-tick');
   ok('a bad override is on the tick\'s answer', (await H.runScheduledTick({ JOB_SCHEDULE_JSON: '[1]' }, ET(2026, 9, 14, 15, 0, true), 'x')).scheduleErrors.length === 1);
 }
 
@@ -143,7 +143,7 @@ console.log('\nthe worker source');
   const hour = k => { const m = kinds.match(new RegExp("'" + k + "':[^\\n]*?day: '(\\w+)', hour: (\\d+)")); return m ? m[1] + ' ' + m[2] : null; };
   ok('Sunday 12:15 PM: Last-Minute Intel', hour('last-minute-intel') === 'Sun 12' && /'last-minute-intel': \{[^}]*minute: 15/.test(kinds));
   ok('Sunday 7:30 PM: What Sunday Taught Us, updated as the night game goes final', hour('what-sunday-taught-us') === 'Sun 19' && /'what-sunday-taught-us': \{[^}]*minute: 30/.test(kinds) && /updates: 'more-finals'/.test(kinds));
-  ok('Monday 6 AM: the MNF preview and the early rankings', hour('mnf-preview') === 'Mon 6' && hour('early-rankings') === 'Mon 6');
+  ok('Monday 6 AM: the MNF preview and What Tuna Got Right, gated on a win', hour('mnf-preview') === 'Mon 6' && hour('what-tuna-got-right') === 'Mon 6' && /'what-tuna-got-right': \{[^}]*gate: 'worth'/.test(kinds) && !hour('early-rankings'));
   ok('Monday 7 AM: Quarterback Monday, gated on there being a story', hour('quarterback-monday') === 'Mon 7' && /'quarterback-monday': \{[^}]*gate: 'worth'/.test(kinds));
   ok('Tuesday 7 and 8 AM: ROS rankings, then Tailback Tuesday', hour('ros-rankings') === 'Tue 7' && hour('tailback-tuesday') === 'Tue 8');
   ok('Wednesday 6 and 8 AM: the Pickup Advisor, then Wideout Wednesday', hour('pickup-advisor') === 'Wed 6' && hour('wideout-wednesday') === 'Wed 8');

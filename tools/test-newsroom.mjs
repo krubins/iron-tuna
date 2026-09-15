@@ -38,14 +38,14 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK, packetCalledItWeek, WEEK_WINS_MAX, WEEK_MISSES_MAX, CONDITIONAL_SECTIONS };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
 {
   const a = H.newsroomAudit(['*/15 * * * *']);
   ok('the calendar audits clean', a.ok, a.problems.join('; '));
-  ok('every retired kind is gone from the calendar', ['team-recaps', 'mnf-breakdown', 'what-they-arent-telling-you', 'opportunity-report', 'rankings-update', 'final-read', 'tnf-aftermath', 'weekend-game-plan', 'what-changed-today', 'snf-what-we-learned'].every(k => !H.CONTENT_KINDS[k] && H.LEGACY_CONTENT[k]));
+  ok('every retired kind is gone from the calendar', ['team-recaps', 'mnf-breakdown', 'what-they-arent-telling-you', 'opportunity-report', 'rankings-update', 'final-read', 'tnf-aftermath', 'weekend-game-plan', 'what-changed-today', 'snf-what-we-learned', 'early-rankings'].every(k => !H.CONTENT_KINDS[k] && H.LEGACY_CONTENT[k]));
   ok('every retired kind names its destination on the calendar', Object.values(H.LEGACY_CONTENT).every(v => v.destination === 'none' || v.destination === 'data' || v.destination === 'desk-lead' || v.destination === 'the-tell' || H.CONTENT_KINDS[v.destination]));
   ok('every package absorbs what the table says it absorbs', Object.entries(H.LEGACY_CONTENT).filter(([k, v]) => v.disposition === 'merged' && H.CONTENT_KINDS[v.destination]).every(([k, v]) => (H.CONTENT_KINDS[v.destination].absorbs || []).includes(k)));
   ok('two crons that both run the tick are a problem', !H.newsroomAudit(['*/15 * * * *', '0 * * * *']).ok);
@@ -75,7 +75,16 @@ console.log('\nthe migration');
       && H.sectionsFor('game-recap', 'dfs').includes('wrap');
   })());
   ok('every package has a primary analyst on the staff and both lenses', Object.values(H.CONTENT_KINDS).every(k => H.ANALYSTS[k.analyst] && k.lens === 'both'));
-  ok('the worth-gated pieces are the positional and QB features', ['quarterback-monday', 'tailback-tuesday', 'wideout-wednesday', 'tight-end-thursday'].every(k => H.CONTENT_KINDS[k].gate === 'worth'));
+  ok('the worth-gated pieces are the positional and QB features, and the Monday scorecard', ['quarterback-monday', 'tailback-tuesday', 'wideout-wednesday', 'tight-end-thursday', 'what-tuna-got-right'].every(k => H.CONTENT_KINDS[k].gate === 'worth'));
+  ok('the Monday scorecard sits in the early rankings\' slot, about the played week, with the finals it has', (() => {
+    const K = H.CONTENT_KINDS['what-tuna-got-right'];
+    return K.day === 'Mon' && K.hour === 6 && K.retro === true && K.subject === 'played' && K.partial === true && K.absorbs.includes('early-rankings')
+      && H.LEGACY_CONTENT['early-rankings'].disposition === 'merged' && !H.CONTENT_KINDS['early-rankings'];
+  })());
+  ok('it targets the week\'s final games and never the Monday game', (() => {
+    const t = H.CONTENT_KINDS['what-tuna-got-right'].targets([{ id: 'a', dow: 'Sun', status: 'final' }, { id: 'b', dow: 'Sun', status: 'in' }, { id: 'c', dow: 'Mon', status: 'final' }, { id: 'd', dow: 'Thu', status: 'final' }]);
+    return t.map(g => g.id).join() === 'a,d';
+  })());
   ok('the Routines table names the two Pick Routines as retired and The Tell as retained', H.ROUTINE_MIGRATION.filter(r => /The Pick/.test(r.name)).every(r => r.disposition === 'retired') && H.ROUTINE_MIGRATION.find(r => /The Tell/.test(r.name)).disposition === 'retained');
   ok('the wrangler triggers are the single quarter-hour tick', /"crons": \["\*\/15 \* \* \* \*"\]/.test(fs.readFileSync(path.join(ROOT, 'wrangler.jsonc'), 'utf8')));
   ok('the worker still recognizes the old social crons and gates them', /draftSocialAllowed\(env\)/.test(cut('  async scheduled(event, env, ctx) {', '\nfunction originAllowed(')));
@@ -296,9 +305,9 @@ console.log('\nthe rivalry gate');
   ok('the candidate names both sides with their ranks', c && c.player === 'CeeDee Lamb' && c.brooks.rank === 14 && c.vega.rank === 5 && c.higher === 'vega' && c.pair.join() === 'vega,brooks');
   ok('no disagreement, no rivalry', H.rivalryCandidate([]) === null);
   ok('a kind without the flag never carries it', H.rivalryGate({}, 'kickers-defenses', dis, { allowed: true }) === null && H.rivalryGate({}, 'pickup-advisor', dis, { allowed: true }) === null);
-  ok('an eligible kind carries it when the budget allows', H.rivalryGate({}, 'early-rankings', dis, { allowed: true }) !== null);
-  ok('and not when the budget is spent', H.rivalryGate({}, 'early-rankings', dis, { allowed: false, used: 2, window: 10 }) === null);
-  ok('and not when the flag is off', H.rivalryGate({ FLAG_RIVALRY: '0' }, 'early-rankings', dis, { allowed: true }) === null);
+  ok('an eligible kind carries it when the budget allows', H.rivalryGate({}, 'ros-rankings', dis, { allowed: true }) !== null);
+  ok('and not when the budget is spent', H.rivalryGate({}, 'ros-rankings', dis, { allowed: false, used: 2, window: 10 }) === null);
+  ok('and not when the flag is off', H.rivalryGate({ FLAG_RIVALRY: '0' }, 'ros-rankings', dis, { allowed: true }) === null);
   // The budget rule, reproduced: (used + 1) / max(window, seen + 1) <= 0.2.
   const budget = (used, seen) => (used + 1) / Math.max(10, seen + 1) <= 0.2;
   ok('the budget allows one in five over a ten-piece window and no more', budget(0, 10) && budget(1, 10) && !budget(2, 10) && budget(0, 0));
@@ -344,6 +353,7 @@ const board = (list) => ({ ok: true, players: list.map((p, i) => ({ ...p, games:
   ok('the packet says what no feed can supply', rb2.unavailable.some(u => /routes/.test(u)));
   const pk = H.packetPickups({ ...ctx, next: board(rows) });
   ok('the pickup advisor computes three league sizes with their rostered lines', pk.leagueSizes.join() === '10,12,14' && pk.tiers[12].rosteredLine.RB === 60 && pk.tiers[10].rosteredLine.WR === 60);
+  ok('every pickup row says who the player is playing', Object.values(pk.tiers).every(t => t.priorityAdds.concat(t.midLevelAdds, t.deepAdds, t.speculativeStashes).every(r => r.opponent === 'X' && r.home === true)));
   ok('every tier carries a FAAB range and a holding period', Object.values(pk.tiers).every(t => t.priorityAdds.concat(t.midLevelAdds, t.deepAdds, t.speculativeStashes).every(r => Array.isArray(r.faabPct) && r.holdFor)));
   const un = H.packetUnderrated({ ...ctx, week: board(rows) });
   ok('the underrated pick is a player the market ranks well above the consensus, on a priced market', un.weeklyPick && un.weeklyPick.player === 'CeeDee Lamb' && un.weeklyPick.higher === 'market' || un.skip, JSON.stringify(un.weeklyPick || un));
@@ -424,6 +434,7 @@ console.log('\nthe fact check reads prose as prose');
   const num = v('He ran for 155 yards and 26.4 points.');
   ok('a large number the packet lacks is still caught, and a packet number is not', !num.ok && num.numbers.includes('155') && !num.numbers.includes('26'), JSON.stringify(num.numbers));
   ok('the writer is told to write the headline in sentence case', /sentence case/i.test(H.NEWSROOM_SYSTEM) && /Never Title Case/.test(H.NEWSROOM_SYSTEM));
+  ok('the writer is told to name who every player is playing, so the advice reads as this week\'s', /NAME THE OPPONENT/.test(H.NEWSROOM_SYSTEM) && /say who he is playing/.test(H.NEWSROOM_SYSTEM) && /not a prior week/.test(H.NEWSROOM_SYSTEM));
   const dk = H._finishBrief({ meta: { kind: 'tnf-what-matters', lens: 'both' }, dfs: { dk: [{ name: 'Jaxson Dart', salary: 5600 }], stacks: [{ team: 'DAL', salary: 20200 }] } });
   const dv = H.validateDraft('Jaxson Dart at 5,600, the DAL stack at 20,200 salary.', dk.allowed);
   ok('DFS salaries with thousands separators match the packet', dv.ok, JSON.stringify(dv.numbers));
@@ -616,6 +627,73 @@ console.log('\nwhat the site called before kickoff, and how it landed');
   })());
 }
 
+
+console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
+{
+  const frz = (rows) => ({ takenAt: 1000, kickoff: 2000, rows });
+  const row = (o) => ({ key: o.key, name: o.name, position: o.pos || 'WR', team: o.team || 'AAA',
+    consensusRank: o.cr, consensusPts: o.cp, ironTunaRank: o.ir, ironTunaPts: o.ip, vegasRank: 10, vegasPts: 12 });
+  const scored = (pairs) => new Map(pairs.map(([key, points]) => [key, { points, line: 'a line' }]));
+  const G = (id, dow, status, away, home) => ({ id, type: 'REG', dow, status, away, home, state: { status: status === 'final' ? 'completed' : 'upcoming' } });
+  const games = [G('thu', 'Thu', 'final', 'AAA', 'BBB'), G('e1', 'Sun', 'final', 'CCC', 'DDD'), G('snf', 'Sun', 'final', 'EEE', 'FFF'), G('mnf', 'Mon', null, 'GGG', 'HHH')];
+  // Thursday: a big hit (margin 12, gap 11) and a small one (margin 3, gap 7).
+  const thu = H._vindication(frz([row({ key: 'a|WR', name: 'Al Big', cr: 24, cp: 10, ir: 13, ip: 18 }), row({ key: 'b|WR', name: 'Bo Small', cr: 20, cp: 10, ir: 13, ip: 18 })]), scored([['a|WR', 22], ['b|WR', 13]]), 1);
+  // The early game: a hit bigger than Thursday's (margin 15) and a miss.
+  const e1 = H._vindication(frz([row({ key: 'c|RB', name: 'Cy Huge', pos: 'RB', team: 'CCC', cr: 20, cp: 10, ir: 8, ip: 16 }), row({ key: 'd|WR', name: 'Di Miss', team: 'DDD', cr: 24, cp: 10, ir: 13, ip: 18 })]), scored([['c|RB', 25], ['d|WR', 4]]), 1);
+  const ctx = { weekNumber: 1, next: { players: [{ key: 'c|RB', ironTuna: { rank: 5, points: 17 }, consensus: { rank: 9, points: 14 }, weeks: [{ opponent: 'ZZZ' }], injury: null }] } };
+  const entries = [{ game: games[0], calledIt: thu }, { game: games[1], calledIt: e1 }, { game: games[2], calledIt: H._vindication(null, new Map(), 1) }];
+  const p = H.packetCalledItWeek(games, entries, ctx);
+
+  ok('the record adds up the whole week, from the counts and not the trimmed lists', p.record && p.record.games === 2 && p.record.calls === 4 && p.record.hits === 3 && p.record.misses === 1 && p.record.hitRate === 75, JSON.stringify(p.record));
+  ok('the wins are ranked across games, biggest margin first', p.biggestWins.map(w => w.name).join() === 'Cy Huge,Al Big,Bo Small', p.biggestWins.map(w => w.name + ':' + w.margin).join());
+  ok('each win names the game it was made on', p.biggestWins.every(w => /\sat\s/.test(w.game) && w.day) && p.biggestWins[0].game === 'CCC at DDD');
+  ok('the biggest win clears the headline bar and leads', p.headlineWin && p.headlineWin.name === 'Cy Huge');
+  ok('a win carries the player\'s row on the coming week\'s board where there is one', p.biggestWins[0].nextWeek && p.biggestWins[0].nextWeek.ironTunaRank === 5 && p.biggestWins[0].nextWeek.opponent === 'ZZZ' && p.biggestWins[1].nextWeek === null);
+  ok('the misses ride along', p.misses.length === 1 && p.misses[0].name === 'Di Miss' && p.misses[0].game === 'CCC at DDD');
+  ok('a game with no frozen board and the Monday game are named as not covered, with the reason', p.notCovered.length === 2 && p.notCovered.find(n => n.game === 'EEE at FFF' && /frozen/.test(n.reason)) && p.notCovered.find(n => n.game === 'GGG at HHH' && /not yet played/.test(n.reason)), JSON.stringify(p.notCovered));
+  ok('a Monday game already final is still not covered here: its own recap grades it', (() => {
+    const q = H.packetCalledItWeek([games[0], { ...games[3], status: 'final', state: { status: 'completed' } }], [{ game: games[0], calledIt: thu }], ctx);
+    return q.notCovered.length === 1 && /own recap/.test(q.notCovered[0].reason);
+  })());
+  ok('the games covered are listed with their own counts', p.gamesCovered.length === 2 && p.gamesCovered.find(g => g.game === 'AAA at BBB').hits === 2 && p.gamesCovered.find(g => g.game === 'CCC at DDD').misses === 1);
+  ok('hits and misses are counted by position', p.byPosition.WR.hits === 2 && p.byPosition.WR.misses === 1 && p.byPosition.RB.hits === 1);
+  ok('the misses section is asked for only when there was a miss', H.sectionsFor('what-tuna-got-right', 'weekly', p).includes('whatWeMissed') && !H.sectionsFor('what-tuna-got-right', 'weekly', { record: { misses: 0 } }).includes('whatWeMissed'));
+  ok('the DFS lens shares the record and the wins', H.sectionsFor('what-tuna-got-right', 'dfs', p).includes('biggestWins') && H.sectionsFor('what-tuna-got-right', 'dfs', p).includes('theRecord'));
+  ok('the headline bar is the recap\'s: a week of small wins leads plainly', (() => {
+    const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(frz([row({ key: 'b|WR', name: 'Bo Small', cr: 20, cp: 10, ir: 13, ip: 18 })]), scored([['b|WR', 13]]), 1) }], ctx);
+    return q.biggestWins.length === 1 && q.headlineWin === null;
+  })());
+  ok('no frozen board anywhere, nothing runs', (() => {
+    const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctx);
+    return q.skip === true && q.reason === 'no_frozen_boards';
+  })());
+  ok('calls that all missed do not make a scorecard', (() => {
+    const q = H.packetCalledItWeek(games, [{ game: games[1], calledIt: H._vindication(frz([row({ key: 'd|WR', name: 'Di Miss', cr: 24, cp: 10, ir: 13, ip: 18 })]), scored([['d|WR', 4]]), 1) }], ctx);
+    return q.skip === true && q.reason === 'nothing_landed';
+  })());
+  ok('the lists are cut for the writer, the record is not', (() => {
+    const rows = [], sc = [];
+    for (let i = 0; i < 12; i++) { rows.push(row({ key: 'w' + i + '|WR', name: 'Win Number' + i, cr: 24, cp: 10, ir: 13, ip: 18 })); sc.push(['w' + i + '|WR', 12 + i]); }
+    const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(frz(rows), scored(sc), 1) }], ctx);
+    return q.record.hits === 12 && q.biggestWins.length <= H.WEEK_WINS_MAX;
+  })());
+  ok('the writer is told the record, the order and the misses, and offered YOU\'RE WELCOME only for a headline-sized win', (() => {
+    const packet = { meta: { kind: 'what-tuna-got-right', analyst: 'mercer', dfsAnalyst: 'park' }, ...p };
+    const v = H._voiceBlock(packet);
+    const q = { meta: { kind: 'what-tuna-got-right', analyst: 'mercer', dfsAnalyst: 'park' }, ...H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(frz([row({ key: 'b|WR', name: 'Bo Small', cr: 20, cp: 10, ir: 13, ip: 18 })]), scored([['b|WR', 13]]), 1) }], ctx) };
+    const w = H._voiceBlock(q);
+    return /3 of 4 calls landed across 2 games \(75%\)/.test(v) && /biggest first/.test(v) && /THE MISSES/.test(v) && /YOU'RE WELCOME:/.test(v) && /Cy Huge/.test(v)
+      && /NO MISSES/.test(w) && /NO SINGLE WIN/.test(w) && !/YOU'RE WELCOME:" and then/.test(w);
+  })());
+  ok('the fact check asks the scorecard for its sections and holds a draft without them', (() => {
+    const packet = H._finishBrief({ meta: { kind: 'what-tuna-got-right', lens: 'both', analyst: 'mercer', dfsAnalyst: 'park' }, ...p });
+    packet.allowed.analysts = ['Jack Mercer', 'Lena Park'];
+    const full = { headline: 'Cy Huge is the week', dek: 'x', weekly: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'weekly', packet).map(k => [k, ['Cy Huge scored 25.']])), dfs: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'dfs', packet).map(k => [k, ['Cy Huge scored 25.']])) };
+    const missing = { ...full, weekly: { theRecord: ['Cy Huge scored 25.'] } };
+    return H.factCheck(full, packet).ok && H.factCheck(missing, packet).problems.some(x => /missing:weekly.biggestWins/.test(x));
+  })());
+}
+
 console.log('\nbreaking news');
 {
   const bd = board(rows).players;
@@ -664,7 +742,7 @@ console.log('\na forward piece leaves the feed when its games kick off');
   // The rule each kind falls under, read off the same flags contentDue uses.
   const want = { 'last-minute-intel': 'all-started', 'tnf-preview': 'any-started', 'mnf-preview': 'any-started', 'weekend-preview': 'any-started',
                  'underrated': 'slate', 'trade-desk': 'slate', 'kickers-defenses': 'slate', 'breaking': 'slate',
-                 'tnf-what-matters': 'never', 'game-recap': 'never', 'what-sunday-taught-us': 'never', 'early-rankings': 'never', 'quarterback-monday': 'never',
+                 'tnf-what-matters': 'never', 'game-recap': 'never', 'what-sunday-taught-us': 'never', 'what-tuna-got-right': 'never', 'quarterback-monday': 'never',
                  'ros-rankings': 'never', 'tailback-tuesday': 'never', 'pickup-advisor': 'never', 'wideout-wednesday': 'never', 'tight-end-thursday': 'never' };
   ok('every package on the calendar falls under one of the four rules', Object.keys(H.CONTENT_KINDS).every(k => ['never', 'all-started', 'any-started', 'slate'].includes(H._staleRule(H.CONTENT_KINDS[k]))));
   ok('and each under the one its readiness flag implies', Object.entries(want).every(([k, r]) => H._staleRule(H.CONTENT_KINDS[k]) === r), Object.keys(want).filter(k => H._staleRule(H.CONTENT_KINDS[k]) !== want[k]).map(k => k + '=' + H._staleRule(H.CONTENT_KINDS[k])).join());
@@ -691,7 +769,7 @@ console.log('\na forward piece leaves the feed when its games kick off');
   ok('a Sunday-morning scratch is news until the one o\'clock games', fresh(brkSun, at.sunNoon) && stale(brkSun, at.sunEarly));
   const brkMon = row('breaking', T(14, 21));
   ok('breaking news during the Monday game lasts as long as its week', fresh(brkMon, at.monLate) && stale(brkMon, at.tueAm));
-  ok('what happened never expires', [row('game-recap', T(13, 16, 30), { game_id: 'e1' }), row('what-sunday-taught-us', T(13, 19, 30)), row('early-rankings', T(14, 6)), row('ros-rankings', T(15, 7)), row('pickup-advisor', T(16, 6))].every(r => fresh(r, at.tueAm) && fresh(r, T(20, 9))));
+  ok('what happened never expires', [row('game-recap', T(13, 16, 30), { game_id: 'e1' }), row('what-sunday-taught-us', T(13, 19, 30)), row('what-tuna-got-right', T(14, 6)), row('ros-rankings', T(15, 7)), row('pickup-advisor', T(16, 6))].every(r => fresh(r, at.tueAm) && fresh(r, T(20, 9))));
   ok('with no schedule there is no judgement and the piece stays', !H.pieceExpired(wp, null, at.tueAm));
   ok('a legacy kind, a row without a week, and a week with no games all stay', !H.pieceExpired(row('final-read', T(10, 7)), schedAt(at.tueAm), at.tueAm) && !H.pieceExpired({ ...wp, week: null }, schedAt(at.tueAm), at.tueAm) && !H.pieceExpired({ ...wp, week: 9 }, schedAt(at.tueAm), at.tueAm));
 }
