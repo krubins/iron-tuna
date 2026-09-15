@@ -4595,6 +4595,16 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     frontUpdateState();
   }
   function frontSetupReady(){ return !!(frontGameStyle&&frontGameChoice&&frontPayout); }
+  // The board heading names the contest the roster is optimal for, e.g.
+  // "Classic Game / All Listed Games / Multiplier", not a generic shape label.
+  function frontContestHead(fallback){
+    if(!frontSetupReady()) return fallback;
+    var pick=function(id){ var sel=$(id); return sel&&sel.selectedIndex>=0?String(sel.options[sel.selectedIndex].text||'').trim():''; };
+    var style=pick('dfsGameStyle'), games=pick('dfsGames'), payout=pick('dfsPayout');
+    if(style&&!/game$/i.test(style)) style+=' Game';
+    payout=payout.replace(/\s*\(.*\)\s*$/,'');
+    return [style,games,payout].filter(Boolean).join(' / ')||fallback;
+  }
   function frontFiltered(s){
     if(!s||!s.ok||frontGameChoice==='season'||!frontSelectedKeys().length)return s;
     var q={}; for(var k in s)q[k]=s[k];
@@ -4706,7 +4716,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var dkFppg = hasFppg ? l.players.reduce(function (sum, p) { return sum + Number(p.operatorFppg); }, 0) : null;
     var tunaEdge = dkFppg == null ? null : l.projPoints - dkFppg;
     host.innerHTML = '<div class="fp-board">'
-      + '<div class="fp-board-head"><h3>' + e(sh.head) + '</h3><span>' + e((s.label || '') + (s.week ? ' \u00b7 Week ' + s.week : '')) + '</span></div>'
+      + '<div class="fp-board-head"><h3>' + e(frontContestHead(sh.head)) + '</h3><span>' + e((s.label || '') + (s.week ? ' \u00b7 Week ' + s.week : '')) + '</span></div>'
       + '<div class="fp-board-stats">'
         + tile(dkFppg == null ? '—' : n1(dkFppg), 'DraftKings FPPG')
         + tile(n1(l.projPoints), 'Iron Tuna Projection', true)
