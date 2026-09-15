@@ -9825,6 +9825,16 @@ function packetBreaking(ctx, events) {
 // Wraps a builder's facts with what every packet carries: the story's
 // metadata, the freshness report, the prior calls on the players named, the
 // rivalry (or its absence), and `allowed`.
+// How many full weeks of regular-season games are in the books when a piece
+// is written. A piece about the played week (subject 'played') is about that
+// many; every other subject week is the clock's week, which has not been
+// played yet, so one fewer. Handed to the writer as a number because "Week 2"
+// on its own reads as "two weeks of data": the Week 2 rest-of-season piece
+// was headlined on two weeks of results with one in the books.
+function _weeksPlayed(K, week) {
+  if (!K || week == null || !Number.isFinite(week)) return null;
+  return K.subject === 'played' ? week : Math.max(0, week - 1);
+}
 async function buildResearchPacket(env, kind, d, ctx, opts) {
   {
     // The week the piece looks forward to: its subject week for a forward
@@ -9906,7 +9916,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   const rivalry = rivalryGate(env, kind, facts.disagreements || (facts.candidates ? facts.candidates : []), budget);
   const analyst = analystFor(env, K.analyst), dfsAnalyst = analystFor(env, K.dfsAnalyst || 'park'), marketAnalyst = K.marketAnalyst ? analystFor(env, K.marketAnalyst) : null;
   const packet = {
-    meta: { kind, title: facts.game ? facts.game.matchup : kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, forwardWeek: ctx.forwardWeek != null ? ctx.forwardWeek : null, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
+    meta: { kind, title: facts.game ? facts.game.matchup : kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, forwardWeek: ctx.forwardWeek != null ? ctx.forwardWeek : null, weeksPlayed: _weeksPlayed(K, d.week), date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
             game: facts.game ? facts.game.id : null, matchup: facts.game ? facts.game.matchup : null,
             analyst: analyst.id, analystName: analyst.name, dfsAnalyst: dfsAnalyst.id, dfsAnalystName: dfsAnalyst.name, marketAnalyst: marketAnalyst ? marketAnalyst.id : null, marketAnalystName: marketAnalyst ? marketAnalyst.name : null,
             lens: flagOn(env, 'DFS_CONTENT') ? K.lens : 'weekly', scoring: 'PPR (the reader’s league re-scores the tables on the page)', excludedGames: d.excluded || [] },
@@ -9967,6 +9977,17 @@ function _voiceBlock(packet) {
   // game is how Quarterback Monday came to preview a game already played.
   if (packet.meta.storyType === 'retrospective' && packet.meta.forwardWeek != null && packet.meta.week != null && packet.meta.forwardWeek !== packet.meta.week) {
     s += 'WEEKS. Week ' + packet.meta.week + ' has been played and this piece is about what it says for Week ' + packet.meta.forwardWeek + '. Every rank, projection, opponent and team total in the packet is for Week ' + packet.meta.forwardWeek + '. Never present one as a prediction of a Week ' + packet.meta.week + ' game, and never say a player is "projected" or "expected" to do something in a game that has already been played.\n';
+  }
+  // The sample is the number of weeks PLAYED, never the number of the week.
+  // "Week 2" is one week of results; a piece written in it that says "two
+  // weeks of data" is wrong in the headline before the reader gets to it.
+  if (packet.meta.weeksPlayed != null) {
+    const n = packet.meta.weeksPlayed;
+    const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen'];
+    const w = words[n] || String(n);
+    s += 'SAMPLE SIZE. ' + (n === 0 ? 'No regular-season games have been played yet.' : n === 1 ? 'Exactly one week of regular-season games has been played (Week 1).' : 'Exactly ' + w + ' weeks of regular-season games have been played (Weeks 1 through ' + n + ').')
+       + ' Any reference to the season\'s sample, in the headline, the dek or the body, says exactly that: "' + (n === 1 ? 'one week' : w + ' weeks') + ' of data", "' + (n === 1 ? 'one week' : w + ' weeks') + ' of results".'
+       + (packet.meta.week != null && packet.meta.week !== n ? ' This piece is written in Week ' + packet.meta.week + '; the week number is not the number of weeks played, so never write "' + (words[packet.meta.week] || packet.meta.week) + ' weeks of data".' : '') + '\n';
   }
   // Where the site's own board disagreed with the consensus BEFORE kickoff and
   // the game settled it. The gate is arithmetic in the packet, not the
@@ -11535,7 +11556,7 @@ async function contentAdmin(env, action, kind, season, week, body, game) {
   try { row = await _latestPiece(env, kind, season, week, game); } catch (e) { return { ok: false, error: 'unavailable' }; }
   if (!row) return { ok: false, error: 'not_found', kind, week, game: game || null };
   const full = () => ({ id: row.id, kind, season: row.season, week: row.week, game: row.game_id || null, title: row.title, status: row.status, createdAt: row.created_at, publishedAt: row.published_at,
-                        body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: { weekly: sectionsFor(kind, 'weekly', parse(row.brief)), dfs: sectionsFor(kind, 'dfs', parse(row.brief)) }, analyst: row.analyst || null, version: row.version || 1 });
+                        headline: row.headline || null, dek: row.dek || null, body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: { weekly: sectionsFor(kind, 'weekly', parse(row.brief)), dfs: sectionsFor(kind, 'dfs', parse(row.brief)) }, analyst: row.analyst || null, version: row.version || 1 });
   if (action === 'preview') return { ok: true, action, piece: full() };
   if (action === 'publish') {
     if (!row.body || row.body === 'null') return { ok: false, error: 'no_body', note: 'This piece has no draft to publish. Regenerate it or edit one in.' };
@@ -11554,8 +11575,14 @@ async function contentAdmin(env, action, kind, season, week, body, game) {
   const brief = parse(row.brief);
   const v = brief && brief.allowed ? validateDraft(JSON.stringify(b), brief.allowed) : { ok: true, names: [], numbers: [] };
   const warnings = v.ok ? [] : v.names.concat(v.numbers);
-  await env.LEADS_DB.prepare('UPDATE content_pieces SET body = ?, violations = ?, model = ? WHERE id = ?').bind(JSON.stringify(b), JSON.stringify(warnings), 'editor', row.id).run();
-  row.body = JSON.stringify(b); row.violations = JSON.stringify(warnings); row.model = 'editor';
+  // The desk cards, the lead and the rail print the `headline` and `dek`
+  // columns, lifted out of the draft at store time; an edit that only wrote
+  // `body` left the old headline on every card. Lift them again here, the
+  // same way contentStore does, so what the editor saved is what is shown.
+  const headline = b.headline != null && String(b.headline).trim() ? String(b.headline).trim().slice(0, 200) : (row.headline || null);
+  const dek = b.dek != null && String(b.dek).trim() ? String(b.dek).trim().slice(0, 400) : (row.dek || null);
+  await env.LEADS_DB.prepare('UPDATE content_pieces SET body = ?, violations = ?, model = ?, headline = ?, dek = ? WHERE id = ?').bind(JSON.stringify(b), JSON.stringify(warnings), 'editor', headline, dek, row.id).run();
+  row.body = JSON.stringify(b); row.violations = JSON.stringify(warnings); row.model = 'editor'; row.headline = headline; row.dek = dek;
   return { ok: true, action, warnings, piece: full() };
 }
 
