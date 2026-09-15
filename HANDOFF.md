@@ -11170,3 +11170,163 @@ mismatch is the signal.
 - The branch is **27 commits ahead of `main`**, whose `tools/live-board.mjs` is
   still the pre-09-02 harness — retired pricing, no availability scaling, no
   error when it is wrong.
+## 90. September 15: the deployed worker is a feature branch, and two of my numbers were wrong
+
+D1 clock 2026-09-15 11:22:29Z, container 11:22:42Z — in step for the fourth
+day. All four board feeds refreshed at 11:01:22Z, twenty minutes before this
+audit, and a new `odds_overlay` row 5 (`nflverse-usage`) has appeared now that
+week 1 is complete. Row 7 is 74 hours old and still correct: it reports
+`skipped: already built` by design (§89b).
+
+### 90a. Correction to §89c: the deployment is not "code in no branch" — it is an unmerged branch
+
+Yesterday I reported that the deployed bundle carried two source edits present
+in no branch, and inferred someone had deployed from a working copy. **Both
+halves of that were wrong, and the method that produced them was wrong too.**
+I checked `origin/main`, this branch, and the eight most recently committed
+branches out of 214. The right search is over every ref:
+
+```
+git grep -l "_oppFor" $(git for-each-ref --format='%(refname)' refs/remotes/origin) -- _worker.js
+git log --all --oneline -S"fetchScheduleEspn(season, opts)" -- _worker.js
+```
+
+which finds both immediately:
+
+- **09-14's deployment** was `origin/claude/iron-tuna-in-season-2oxwqe`
+  (`f25b087`, "The schedule refresh stops asking ESPN for the preseason once the
+  season is here") — that is where the `opts` parameter and the 98 `NOT_A_NAME`
+  additions live.
+- **09-15's deployment** is `origin/claude/trusting-ptolemy-950fxw` (`bd3aeda`,
+  2026-09-14 23:39Z, "Newsroom: name who every player is playing") — that is
+  where `_oppFor` lives.
+
+Today's bundle no longer contains yesterday's changes at all: `NOT_A_NAME` is
+back to **623 tokens, set-identical to the repo**, and `fetchScheduleEspn` has
+lost its `opts` parameter. Nothing was reverted. A different branch simply won
+the last build.
+
+So the finding is not "someone deployed a working copy". It is:
+
+> **The Cloudflare Worker `iron-tuna` is serving whichever unmerged feature
+> branch was built most recently.** `main` is not what runs. Yesterday it was
+> one branch, today it is another, and the two have no relationship to each
+> other except that neither is merged.
+
+That is worse than what I reported yesterday, not better, and it invalidates
+the premise of a check this file has run every day: "repo vs deployed, 0
+differences" has been comparing `main` against whatever branch happened to win
+the race. It has passed only because none of these branches has touched the
+board. Today's branch diff against `main` is 18 lines in `_worker.js`, all in
+the newsroom payload, and the board comparison below is still 1380 rows and 0
+differences — but that is luck, not a guarantee. A branch that edits
+`COLUMN_CURVE` and gets built would serve wrong prices to every reader while
+every check in this file said the repo was clean.
+
+The lesson for the audit itself: **search all refs, not the most recent few.**
+`git grep` over `for-each-ref` costs one command and would have got this right
+the first time.
+
+### 90b. Correction to §89b: never report a hang rate from a partial day
+
+Yesterday I wrote that 09-14 ran at 10%, recovered from 09-13's 48%. That was
+measured at 11:23, four hours into the day. The full day reads:
+
+```
+09-09   22 / 190   12%
+09-10   35 / 259   14%
+09-11   46 / 225   20%
+09-12   51 / 317   16%
+09-13  109 / 229   48%
+09-14   65 / 272   24%     <- I reported 10%
+09-15   48 / 116   41%  (partial, 11:22)
+```
+
+09-14 was 24%, not 10%; the storm arrived after I looked. Today is at 41%
+before noon, so I am not calling it either — the figure to record tomorrow is
+the closed number for 09-15.
+
+The storm has also moved to a different job. Over the last 36 hours:
+
+```
+schedule-refresh      66 / 122 hung   54%
+news-scan             15 /  78        19%
+board-freeze          11 /  78        14%
+content-tick          10 /  63        16%
+market-snapshot        7 /  15        47%
+availability-refresh   4 /   8        50%
+```
+
+On 09-13 it was `availability-refresh` retrying every fifteen minutes for nine
+hours. Today it is `schedule-refresh`, on the same fifteen-minute tick. **The
+hang is not a bug in any one fetcher** — it moves between jobs that share the
+tick, which points at the tick's own budget rather than at what any of them
+fetches. All four board feeds still completed normally at 11:01, so the daily
+pulls are getting through; it is the quarter-hourly work that dies.
+
+### 90c. Row 94: same two prices wrong, and the curve paragraph in a third state
+
+```
+                    story (Sept 8)   09-14        09-15
+Carnell Tate        $11, WR25        $10, WR26    $10, WR26
+Cam Ward            $1,  QB26        $1,  QB27    $1,  QB27
+Tony Pollard        $5,  RB29        $5,  RB29    $5,  RB29
+Wan'Dale Robinson   $3,  WR38        $2,  WR41    $2,  WR41
+prose               1,060.8 / 207.2  1,030.7/201.3  1,029.7/201.1
+```
+
+Two of the four published prices remain wrong against the live board, both low,
+for a second day.
+
+The curve paragraph — "Receivers ranked 20 through 23 all cost $12. The next
+three, 24 through 26, all cost $10" — is now in its **third state in three
+days**. Today's served column reads WR20 **$13**, WR21–23 $12, WR24–26 $10. So
+the first sentence is wrong again (at WR20 this time, not WR23) and the second
+is right.
+
+```
+09-13   first sentence wrong at WR23, second wrong at WR24 and WR25
+09-14   both sentences correct
+09-15   first sentence wrong at WR20, second correct
+```
+
+Three days, three different answers, from a sentence that was never looked up.
+§88b's rule does not need more evidence than this: **look a price up, never
+derive one.**
+
+### 90d. The two-board gap, day three
+
+```
+             09-13              09-14              09-15
+differing    74 / 340 (21.8%)   75 / 340 (22.1%)   77 / 340 (22.6%)
+largest gap  $28                $29                $29  (A.J. Brown $30 vs $1)
+same rank    14                 9                  13
+```
+
+Three overlays — one 24 hours stale, one 23 minutes old, one 20 minutes old —
+and the share moves by less than a point. §81a's pair moved again: static
+Collins $28 / Wilson $27 against served **Collins WR12 $25, Wilson WR10 $29**.
+
+### 90e. The rest
+
+- CI **76/76** after merging `origin/main` (`168d171`); the merge conflicted in
+  `HANDOFF.md` because `main` added its own §75, so my 75–88 became 76–89 and
+  all 60 internal cross-references shifted with them.
+- Harness self-test **23/23**.
+- Repo vs deployed: **1380 player-rows across four boards, 0 differences**;
+  `VEGAS_WEIGHT`, `LEAGUE_BUDGET`, `MIN_BID`, `CURVE`, `COLUMN_NORM` identical.
+  See §90a for why this check is weaker than it looks.
+- Routine still `enabled: false`, untouched since 2026-09-09 13:05:36Z; live
+  prompt still **47,183 chars / `9c578c415408`**.
+- Tamper predicates clean: one published row (94), no published-unverified row,
+  no analyst row published, 67 audit rows. `lead_story` 96 and 97 still
+  `published=0`; `LEAD_CATEGORIES` still six keys, no `recap`, in repo and
+  deployed bundle alike.
+- **The night-recap Routine has now failed twice.** "Sunday night" FAILED
+  2026-09-14 03:47:53Z, "Monday night" FAILED 2026-09-15 03:47:28Z; both fire
+  at 03:47Z, and the Sunday early (20:32Z) and late (23:52Z) window runs both
+  succeeded. But a `game-recap` was published at **03:48:12Z**, 44 seconds after
+  the "failure" — so the work landed and the run was marked failed anyway. Same
+  shape as the hung jobs: **the status is not a reliable signal of the
+  outcome**, in either direction.
+- The branch is **28 commits ahead of `main`**.
