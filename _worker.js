@@ -1603,6 +1603,75 @@ async function tmsStore(env, rows, now) {
   const cutoff = now - tmsInt(env.TMS_RETENTION_DAYS, 30, 1, 90) * 86400000;
   await env.LEADS_DB.prepare('DELETE FROM tuna_market_snapshots WHERE observed < ?').bind(cutoff).run();
 }
+// Convert the display feed's normalized player markets into the snapshot
+// contract consumed by vegasProjection/buildBoards. Tuna Market Signal keeps
+// one row per side so it can show movement; the projection engine needs one
+// row per book/player/market with the Over and Under prices paired together.
+// Game markets are deliberately excluded here because PropLine event IDs are
+// not Iron Tuna schedule IDs. The existing schedule providers remain the
+// authoritative game-line path.
+function tmsProjectionRows(rows) {
+  const marketMap = typeof ODDS_API_MARKET_MAP === 'object' ? ODDS_API_MARKET_MAP : {
+    player_pass_yds: 'passYd', player_pass_tds: 'passTD', player_pass_interceptions: 'passInt',
+    player_rush_yds: 'rushYd', player_rush_attempts: 'rushAtt', player_rush_tds: 'rushTD',
+    player_reception_yds: 'recYd', player_receptions: 'rec', player_reception_tds: 'recTD',
+    player_anytime_td: 'anytimeTD'
+  };
+  const american = price => {
+    const n = Number(price);
+    if (!Number.isFinite(n) || n <= 1) return null;
+    return n >= 2 ? Math.round((n - 1) * 100) : -Math.round(100 / (n - 1));
+  };
+  const grouped = new Map();
+  for (const r of rows || []) {
+    const market = marketMap[r && r.market];
+    if (!market || !r.player || !r.book) continue;
+    const key = JSON.stringify([r.provider || '', r.event || '', r.book, market, r.player]);
+    if (!grouped.has(key)) grouped.set(key, { source: r, market, over: null, under: null });
+    const g = grouped.get(key);
+    if (/^(over|yes)$/i.test(r.side || '')) g.over = r;
+    else if (/^(under|no)$/i.test(r.side || '')) g.under = r;
+  }
+  const out = [];
+  for (const g of grouped.values()) {
+    const anchor = g.over || g.under;
+    const line = g.market === 'anytimeTD' ? 1 : Number(anchor && anchor.line);
+    if (!anchor || !Number.isFinite(line)) continue;
+    out.push({
+      book: String(anchor.book), subjectType: 'player', subject: String(anchor.player),
+      market: g.market, line,
+      overOdds: g.over ? american(g.over.price) : null,
+      underOdds: g.under ? american(g.under.price) : null,
+      gameId: anchor.event == null ? null : String(anchor.event),
+      commence: Number.isFinite(Number(anchor.starts)) ? Number(anchor.starts) : null,
+      ts: Number.isFinite(Number(anchor.updated)) ? Number(anchor.updated) : Number(anchor.observed)
+    });
+  }
+  return out;
+}
+async function tmsStoreForProjections(env, rows, now) {
+  // The standalone Tuna Market tests execute this section without the wider
+  // worker. In production these functions are present after module startup.
+  if (typeof scheduleCacheRead !== 'function' || typeof nflSeasonState !== 'function' || typeof snapshotWrite !== 'function') {
+    return { ok: false, skipped: 'projection_pipeline_unavailable' };
+  }
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, now) : null;
+  if (!sched || !state || !state.ok || state.week.type !== 'REG') return { ok: false, skipped: 'no_current_week' };
+  // PropLine can return the next Thursday inside its nine-day window. Only
+  // feed markets whose kickoff belongs to the active NFL week into this
+  // week's predictions.
+  const kickoffs = (state.games || []).map(g => Number(g.kickoff)).filter(Number.isFinite);
+  const sameWeek = r => r.commence == null || kickoffs.some(k => Math.abs(k - r.commence) <= 6 * 3600000);
+  const projected = tmsProjectionRows(rows).filter(sameWeek);
+  const wrote = await snapshotWrite(env, projected, { season: sched.season, week: state.week.number, ts: now });
+  if (wrote && wrote.ok && wrote.written) {
+    if (typeof _BOARDS_MEMO !== 'undefined') _BOARDS_MEMO = new Map();
+    if (typeof _MARKET_MEMO !== 'undefined') _MARKET_MEMO = { key: '', at: 0, out: null };
+    if (typeof _EDGE_MEMO !== 'undefined') _EDGE_MEMO = { key: '', at: 0, out: null };
+  }
+  return { ...wrote, eligible: projected.length };
+}
 async function tmsPoll(env, now = Date.now()) {
   if (env.TMS_ENABLED !== '1') return { status: 'disabled' };
   await tmsReady(env);
@@ -1619,7 +1688,13 @@ async function tmsPoll(env, now = Date.now()) {
     if (!provider?.pull) throw new Error('invalid_pull_provider');
     const result = await provider.pull(env, now);
     await tmsStore(env, result.rows, now);
-    status = { status: result.rows.length ? 'ok' : 'empty', rows: result.rows.length, quota: result.quota };
+    let projection = null;
+    try { projection = await tmsStoreForProjections(env, result.rows, now); }
+    catch (e) { projection = { ok: false, error: 'projection_store_failed' }; }
+    status = { status: result.rows.length ? 'ok' : 'empty', rows: result.rows.length, quota: result.quota,
+               projection: projection ? { ok: !!projection.ok, eligible: projection.eligible || 0,
+                 written: projection.written || 0, unchanged: projection.unchanged || 0,
+                 skipped: projection.skipped || null, error: projection.error || null } : null };
   } catch (e) {
     // Never persist URLs, API response bodies, or credentials in errors.
     const code = /^[a-z_0-9]+$/.test(e.message) ? e.message : 'ingestion_failed';
