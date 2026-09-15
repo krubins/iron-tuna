@@ -6360,7 +6360,7 @@ function buildBoards(ctx, opts) {
       confSum += _confScore[conf]; confN++;
       weekRows.push({ week: w, opponent: env.opponent, home: env.home, env: { factor: env.factor, implied: env.implied,
         expected: env.expected, posted: env.posted, impliedDelta: env.impliedDelta, opponentDefRank: env.opponentDefRank },
-        basis, confidence: conf, kickoff: env.kickoff, status: env.status,
+        basis, confidence: conf, kickoff: env.kickoff, status: env.status, gameState: _fixtureState(env, state),
         consensusPts: _oddsRound(scoreAny(c, p.position, rules, 1)), vegasPts: _oddsRound(scoreAny(v, p.position, rules, 1)),
         ironTunaPts: _oddsRound(scoreAny(i, p.position, rules, 1)),
         vegasProjection: vp && vp.ok ? { status: vp.status, label: vp.label, confidence: vp.confidence, td: vp.td, priced: vp.priced, missing: vp.missingCore, books: vp.books, ageHours: vp.ageHours, reasons: vp.confidenceReasons } : (vp ? { status: vp.status, label: vp.label } : null) });
@@ -6451,6 +6451,51 @@ async function boardsPayload(env, opts) {
   if (_BOARDS_MEMO.size > 40) _BOARDS_MEMO = new Map();
   _BOARDS_MEMO.set(key, { at: Date.now(), out });
   return out;
+}
+
+// -- a projection for a game that has kicked off is a result, not a projection
+// The week is current until its own last game has finished (nflSeasonState),
+// which is right for the clock and wrong for a forecast: on the Monday of
+// Week 1 the week board, Vegas vs. Experts, the TD and volume boards and the
+// game environments were still projecting Sunday's players and pricing
+// Sunday's games, and the reader had already watched them. The Line has said
+// it for a while ("Iron Tuna does not bet a game it can watch"); this makes
+// it the one rule every forward board applies. A game that has kicked off,
+// whether under way or over, takes its players off the forward boards. A
+// postponed or canceled game has not kicked off. No schedule, no judgement:
+// the board is served whole.
+//
+// The rule is applied to what is SHOWN, not to what is built. boardsPayload
+// still carries every player, because the DFS slate, the pre-kickoff freeze,
+// the desk's packets and the league advice all need the played half of the
+// week too; the public routes call boardStillToPlay on their way out.
+const _gameStarted = g => !!g && (g.status === 'in_progress' || g.status === 'completed');
+// The state of one player's fixture, from the feed's status and the clock,
+// by the same rule the season service uses for a game. Null when the fixture
+// has no kickoff to judge by.
+function _fixtureState(env, state) {
+  if (!env || !Number.isFinite(env.kickoff)) return null;
+  const at = state && Number.isFinite(state.now) ? state.now : Date.now();
+  return seasonGameStatus({ status: env.status, kickoff: env.kickoff }, at).status;
+}
+// The clubs whose game this week has kicked off.
+function playedTeams(state) {
+  const out = new Set();
+  for (const g of (state && state.ok && state.games) || []) if (_gameStarted(g)) { out.add(g.home); out.add(g.away); }
+  return out;
+}
+// The week board without the players whose game has kicked off. Ranks are
+// left as the whole board gave them: QB5 on Monday night was QB5 all week,
+// and renumbering him QB1 among the two clubs left would make the Market
+// Delta's slot counts lie. `played` says how many rows were held back, so a
+// page can say so instead of reading as a thin board. Every other horizon is
+// a sum over weeks and is returned untouched. A copy, never a mutation:
+// boardsPayload memoizes its output.
+function boardStillToPlay(board) {
+  if (!board || !board.ok || !board.horizon || board.horizon.key !== 'week') return board;
+  const played = p => (p.weeks || []).some(w => w.gameState === 'in_progress' || w.gameState === 'completed');
+  const players = (board.players || []).filter(p => !played(p));
+  return { ...board, players, played: (board.players || []).length - players.length };
 }
 
 // -- the insight detection engine ------------------------------------------
@@ -6668,8 +6713,16 @@ function detectInsights(input) {
 // the latter. Books have props posted; this build is not carrying them.
 const EDGE_CONTRACT = 1;
 function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
-  const players = (week && week.players) || [];
-  const hasProps = players.some(p => /^props/.test(p.vegas.basis));
+  const all = (week && week.players) || [];
+  const hasProps = all.some(p => /^props/.test(p.vegas.basis));
+  // A club whose game has kicked off is off every forward board here: its
+  // players' projections are results now, and its line is a closing line.
+  // See boardStillToPlay for the rule; this is the same one, by club.
+  const off = playedTeams(state);
+  const players = all.filter(p => !off.has(p.team));
+  const stateGames = (state && state.ok && state.games) || [];
+  const startedGames = new Set(stateGames.filter(_gameStarted).map(g => g.id));
+  const weekGameCount = stateGames.filter(g => g.status !== 'postponed' && g.status !== 'canceled').length;
   // Skill positions only. A defense's rank swings twenty slots on a game total
   // because its whole line IS the environment; that is not a disagreement
   // about a player, and it would crowd every real one off the board.
@@ -6727,12 +6780,12 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   // book's. A game where either side is missing gets null and prints as blank
   // rather than as a gap of zero, which would read as agreement.
   const modelPts = new Map();
-  for (const p of players) {
+  for (const p of all) {
     const w0 = p.weeks && p.weeks[0];
     if (w0 && w0.env && w0.env.expected != null && !modelPts.has(p.team)) modelPts.set(p.team, w0.env.expected);
   }
   const GAP_AGREE = 2.0;
-  const gameEnvironments = ((state && state.ok && state.games) || []).map(g => {
+  const gameEnvironments = stateGames.filter(g => !_gameStarted(g)).map(g => {
     const gm = gameMarkets && gameMarkets[g.id];
     const lm = _gameLineMove(g, gm);
     const mv = (lm.spread != null || lm.total != null) ? lm : null;
@@ -6746,9 +6799,18 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
              gapAgrees: (itTotal != null && g.total != null) ? Math.abs(itTotal - g.total) < GAP_AGREE : null,
              favorite: g.spread > 0 ? g.home : g.spread < 0 ? g.away : null, movement: mv };
   }).filter(g => g.total != null).sort((a, b) => b.total - a.total);
-  const hidden = (insights && insights.insights || []).filter(i => i.type === 'game_script_change');
+  const hidden = (insights && insights.insights || []).filter(i => i.type === 'game_script_change' && !startedGames.has(i.subject && i.subject.key));
+  // What was held back, and a sentence a page can print beside its note. The
+  // count is games rather than players because that is the fact the reader
+  // can check against the scoreboard.
+  const played = { games: startedGames.size, of: weekGameCount, players: all.length - players.length };
+  const playedNote = played.games
+    ? (played.games === played.of ? 'Every game this week has kicked off' : played.games + ' of the week\u2019s ' + played.of + ' games have kicked off') +
+      ', and the players in them are off these boards: a projection for a game already played is a result, not a projection.'
+    : null;
   return { ok: true, contract: EDGE_CONTRACT, week: state && state.ok ? state.week.label : null, hasProps,
            note: hasProps ? null : 'No priced player prop has reached this board. Books post props; none are in the feed behind this build, so every player number here is derived from the posted game lines. The game board is quoted.',
+           played, playedNote,
            vsExperts, movers: movers.slice(0, 40), tdBoard, volumeBoard, gameEnvironments, hiddenSignals: hidden };
 }
 
@@ -9813,7 +9875,12 @@ async function contentListPayload(env, season, week) {
     const q = week != null
       ? await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, game_id FROM content_pieces WHERE season = ? AND week = ? AND status != 'unpublished' ORDER BY created_at DESC").bind(season, week).all()
       : await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, game_id FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 80").all();
-    const pieces = (q.results || []).map(r => ({ ...r, byline: _bylineOf(r), url: _pieceUrl(r), legacy: !CONTENT_KINDS[r.kind] }));
+    // The index is an archive and lists everything, but it says which forward
+    // pieces have been overtaken by their games (pieceExpired, the feed's
+    // rule), so a page that shows it as "what is new" can leave those out.
+    const sched = await scheduleCacheRead(env);
+    const now = Date.now();
+    const pieces = (q.results || []).map(r => ({ ...r, byline: _bylineOf(r), url: _pieceUrl(r), legacy: !CONTENT_KINDS[r.kind], expired: pieceExpired(r, sched, now) }));
     return { ok: true, contract: CONTENT_CONTRACT, disclosure: AI_DISCLOSURE,
              kinds: Object.entries(CONTENT_KINDS).filter(([k, v]) => !v.unscheduled).map(([k, v]) => ({ kind: k, title: v.title, subtitle: v.subtitle || null, day: v.day, hour: v.hour, minute: v.minute || 0, analyst: v.analyst, analystName: (ANALYSTS[v.analyst] || ANALYST_HOUSE).name, dfsAnalyst: v.dfsAnalyst, lens: v.lens, summary: v.summary, gate: v.gate || null, updates: v.updates || null, perGame: !!v.perGame })),
              pieces };
@@ -13512,7 +13579,7 @@ async function leagueRoutes(request, env, url, ctx) {
     if (action === 'board') {
       if (!flagOn(env, 'PERSONALIZED_RANKINGS')) return leagueErr('provider_disabled', 'Personalized rankings are off', 404, c);
       const thr = url.searchParams.get('through');
-      const out = await leagueBoard(env, L, String(url.searchParams.get('horizon') || 'week').toLowerCase(), thr && /^1[0-8]$/.test(thr) ? parseInt(thr, 10) : null);
+      const out = boardStillToPlay(await leagueBoard(env, L, String(url.searchParams.get('horizon') || 'week').toLowerCase(), thr && /^1[0-8]$/.test(thr) ? parseInt(thr, 10) : null));
       const pos = String(url.searchParams.get('pos') || 'ALL').toUpperCase();
       if (out.ok && pos !== 'ALL') out.players = out.players.filter(p => p.position === pos || (pos === 'FLEX' && ['RB', 'WR', 'TE'].includes(p.position)));
       return json(out, out.ok ? 200 : 503, c);
@@ -13629,12 +13696,12 @@ export default {
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const preset = String(url.searchParams.get('scoring') || '').toLowerCase();
       const thr = url.searchParams.get('through');
-      const out = await boardsPayload(env, {
+      const out = boardStillToPlay(await boardsPayload(env, {
         horizon: String(url.searchParams.get('horizon') || 'week').toLowerCase(),
         position: url.searchParams.get('pos') || 'ALL',
         preset: SCORING_PRESETS[preset] ? preset : 'ppr',
         through: thr && /^1[0-8]$/.test(thr) ? parseInt(thr, 10) : null
-      });
+      }));
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
     }
     // Stat lines for the rankings page, which scores them in the browser so a

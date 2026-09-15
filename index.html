@@ -23379,7 +23379,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
   useEffect(() => grab('/api/content', (j) => {
     const titles = {};
     (j.kinds || []).forEach((k) => { titles[k.kind] = k.title; });
-    const pieces = (j.pieces || []).filter((p) => p.status === 'published').slice(0, 3)
+    const pieces = (j.pieces || []).filter((p) => p.status === 'published' && !p.expired).slice(0, 3)
       .map((p) => ({ kind: p.kind, title: p.title || titles[p.kind] || p.kind, week: p.week,
                      at: p.published_at || p.created_at, tag: DESK_TAG[p.kind] || 'Desk' }));
     return pieces.length ? { pieces } : null;

@@ -4297,7 +4297,9 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     }).join('');
     $('marketGamesWrap').hidden = !games.length;
     $('marketGamesEmpty').hidden = !!games.length;
-    if (!games.length) $('marketGamesEmpty').textContent = 'No current game market reached the feed. Nothing stale is substituted.';
+    if (!games.length) $('marketGamesEmpty').textContent = j && j.played && j.played.games
+      ? 'Every game this week has kicked off. A line for a game already played is a closing line, not a market, so nothing is shown until the next week\u2019s lines post.'
+      : 'No current game market reached the feed. Nothing stale is substituted.';
 
     var pbody = $('marketPropsTable').querySelector('tbody');
     var signalProps = ((signal && signal.items) || []).filter(function (r) {

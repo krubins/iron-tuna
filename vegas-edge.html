@@ -278,7 +278,8 @@ p{color:var(--sec);margin:0 0 16px}
   document.addEventListener('DOMContentLoaded', function () {
     fetch('/api/vegas-edge').then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok) { $('veNote').textContent = 'The board did not answer. Nothing is shown rather than something invented.'; return; }
-      $('veNote').innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || 'Player props are priced this week; every number below says whether it is quoted or derived.');
+      $('veNote').innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || 'Player props are priced this week; every number below says whether it is quoted or derived.') +
+        (j.playedNote ? ' ' + e(j.playedNote) : '');
       $('veBuys').innerHTML = j.vsExperts.buys.length ? j.vsExperts.buys.map(function (p) { return card(p, 'buy'); }).join('') : '<p class="is-empty">No player the market rates meaningfully higher than the consensus today.</p>';
       $('veFades').innerHTML = j.vsExperts.fades.length ? j.vsExperts.fades.map(function (p) { return card(p, 'fade'); }).join('') : '<p class="is-empty">No player the market rates meaningfully lower than the consensus today.</p>';
       if (j.movers.length) {

@@ -38,6 +38,9 @@ const deps = [
 ];
 // _tierPoints and _oddsRound live outside the cuts above.
 deps.push(cut('function _tierPoints(', '\n}\n') + '\n}\n');
+// The board route hands its week board through boardStillToPlay on the way
+// out; the rule and its helpers live beside boardsPayload, which is stubbed.
+deps.push(cut('const _gameStarted = ', '// -- the insight detection engine'));
 const region = cut('// ══ LEAGUE SYNC', '// ══ /LEAGUE SYNC');
 const _oddsRoundSrc = src.match(/const _oddsRound = [^\n]+\n/) ? src.match(/const _oddsRound = [^\n]+\n/)[0] : (src.match(/function _oddsRound\([^)]*\) \{[^}]*\}/) || [''])[0];
 if (!_oddsRoundSrc) { console.error('FAIL: _oddsRound not found'); process.exit(1); }

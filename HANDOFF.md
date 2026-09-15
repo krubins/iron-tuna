@@ -9403,3 +9403,71 @@ preview still there; the held-back count reported; the desk index still
 listing all of them. Its published-title check moved from the Thursday
 preview to the weekend preview, because on that Friday the Thursday preview
 is, correctly, gone.
+
+---
+
+## 76. September 14: a projection for a game that has kicked off is a result, not a projection
+
+Ken's second report on the Monday of Week 1, after §75 had cleared the desk
+pieces: "The site is still showing a lot of outdated information, such as
+projections/predictions from last week. Once the game has been played, the
+projection/prediction story about it should be hidden." The screenshot was
+Weekly Intel: The Week correctly saying 15 final and DEN at KC to come, and
+Vegas vs. Experts directly under it still calling Justin Herbert a STRONG
+VEGAS BUY off a Chargers game total for a game that ended the day before.
+
+**Why.** The week rule (`nflSeasonState`: a week is current until its own
+last game has finished) is right for the clock and was being applied to the
+forecasts. On Monday the week board, Vegas vs. Experts, the TD board, the
+volume board, the game environments and the hidden game-script signals all
+still carried every club, because the week was still Week 1. The Line had
+already refused this for itself (`open()` in `the-line.html`: "Iron Tuna
+does not bet a game it can watch"); nothing else had.
+
+**The rule.** A game that has kicked off, under way or over, takes its
+players off every forward board. Postponed and canceled games have not
+kicked off. No schedule, no judgement, and the board is served whole.
+
+| Where | What |
+|---|---|
+| `buildBoards` | every week row now carries `gameState` (`upcoming` / `in_progress` / `completed` / `postponed` / `canceled`), from `_fixtureState`: the feed's status and the clock, by `seasonGameStatus`, the season service's own rule. |
+| `boardStillToPlay(board)` | the week board without the rows whose `gameState` is `in_progress` or `completed`, plus `played`, the count held back. Other horizons are sums over weeks and pass through untouched. A copy: `boardsPayload` memoizes its output. |
+| `/api/boards`, `/api/leagues/:id/board` | call it on the way out. `boardsPayload` and `leagueBoard` themselves still carry every player: the DFS slate, the pre-kickoff freeze, the desk packets, the league advice and Player Intel need the played half of the week too. |
+| `buildVegasEdge` | `playedTeams(state)` (the clubs of every started game) is removed from `vsExperts`, `movers`, `tdBoard` and `volumeBoard`; started games leave `gameEnvironments` and `hiddenSignals`. The payload carries `played: { games, of, players }` and `playedNote`, a sentence the pages print beside the props note. `hasProps` is still about the feed, not about who is left. |
+| `contentListPayload` | every row carries `expired` (§75's `pieceExpired`). The index is still the archive and lists everything; Weekly Intel's Desk grid and the app's desk strip now skip `expired` rows, because they show the week's pieces, not the archive. `desk.html` is unchanged. |
+
+**Ranks are not renumbered.** A player who was QB5 all week is QB5 on Monday
+night, and the Market Delta's slot counts were computed against the whole
+board; renumbering him QB1 among the two clubs left would make them lie. The
+board, the weekly rankings pages (`it-ranks.js`) and Weekly Intel say how
+many players were held back instead of reading as thin.
+
+**Consumers, and what changes for each.** Weekly Intel (Vegas vs. Experts,
+This Week's Board, The Desk), Vegas Edge, Previews, the front page's market
+lane (its empty state now says every game has kicked off rather than that no
+market reached the feed), In-Season's readings, the app's edge card, the
+weekly rankings pages, Rankings, Fantasy, DFS's board table and Trade
+Finder's week horizon all read the filtered payloads. `/api/signals` is
+unchanged: no page reads it and the desk's packets call `detectInsights`
+directly. `_EDGE_MEMO` and the boards memo are five minutes, so a game can
+stay on a board for up to five minutes after its kickoff.
+
+Also on Weekly Intel: the Waivers card pointed at the September 1 report a
+week after the September 8 one was published. It is static markup, not
+generated; it now points at September 8.
+
+**Tests.** `tools/test-boards.mjs`: the fixture's Week 2 with a night game,
+at four instants (every row says where its game stands, by the clock and by
+the feed; the public board drops the two clubs under way and holds the count;
+ranks unchanged; nothing held back before kickoff; an empty board once every
+game has kicked off, still on Monday morning; the source board not written
+to; a longer horizon returned whole; a postponed game not kicked off).
+`tools/test-signals.mjs`: the fixture week with one game played (the two
+players gone from vs. experts, movers, the TD and volume boards; the game gone
+from the game board and the hidden signals; the counts and the note; a game
+under way counting; every game played; postponed; before kickoff; no
+schedule). `tools/test-dry-run.mjs`: the desk index flags the Week 1 forward
+pieces `expired` and the recaps and the Week 2 preview not.
+`tools/test-league-sync.mjs` stubs `boardsPayload` and lifts the league
+region on its own, so it now also lifts the helpers (`_gameStarted` through
+`boardStillToPlay`) the board route calls on its way out.

@@ -289,6 +289,8 @@ console.log('\nthe feeds and the front page');
   ok('the feed says how many it held back', Number.isFinite(all.expired) && all.expired >= 3, String(all.expired));
   ok('the front-page lead and its column carry none of them', (() => { const l = [movedLead.story].concat(movedLead.recent); return !l.some(r => FORWARD.some(k => r.slug.startsWith('desk:' + k + ':1:') || r.slug === 'desk:' + k + ':1') || r.slug.startsWith('desk:tnf-preview:2')); })(), JSON.stringify([movedLead.story].concat(movedLead.recent).map(r => r.slug)));
   const idx = await H.contentListPayload(env, 2026, null);
+  ok('and the index flags each of them as overtaken by its games, so a "what is new" grid can leave them out', idx.ok && idx.pieces.filter(r => r.week === 1 && FORWARD.includes(r.kind) && r.status === 'published').every(r => r.expired === true)
+     && idx.pieces.filter(r => r.kind === 'game-recap' || r.kind === 'what-sunday-taught-us' || (r.week === 2 && r.kind === 'weekend-preview')).every(r => r.expired === false), JSON.stringify(idx.pieces.map(r => [r.kind, r.week, r.expired])));
   ok('the desk index is an archive and still lists every one of them', idx.ok && FORWARD.filter(k => db.T.content_pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')).every(k => idx.pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')));
   const piece = await H.contentPiecePayload(env, 'early-rankings', 2026, 2);
   ok('a piece payload carries both lenses, the sections for each, the byline and the disclosure', piece.ok && piece.body.weekly && piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length && piece.byline.name === 'Evan Brooks' && piece.byline.dfsName === 'Lena Park' && /AI-powered/.test(piece.disclosure));
