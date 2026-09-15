@@ -38,7 +38,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, _weeksPlayed, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK, packetCalledItWeek, WEEK_WINS_MAX, WEEK_MISSES_MAX, CONDITIONAL_SECTIONS };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, weekCase, weekFrameProblems, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, _weeksPlayed, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK, packetCalledItWeek, WEEK_WINS_MAX, WEEK_MISSES_MAX, CONDITIONAL_SECTIONS };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -74,7 +74,9 @@ console.log('\nthe migration');
       && w.indexOf('whatScored') < w.indexOf('usageBehindIt') && w.indexOf('usageBehindIt') < w.indexOf('nextWeekSignals')
       && H.sectionsFor('game-recap', 'dfs').includes('wrap');
   })());
-  ok('every package has a primary analyst on the staff and both lenses', Object.values(H.CONTENT_KINDS).every(k => H.ANALYSTS[k.analyst] && k.lens === 'both'));
+  ok('every package has a primary analyst on the staff', Object.values(H.CONTENT_KINDS).every(k => H.ANALYSTS[k.analyst]));
+  ok('every package but the rest-of-season rankings carries both lenses', Object.entries(H.CONTENT_KINDS).every(([k, v]) => k === 'ros-rankings' ? v.lens === 'weekly' : v.lens === 'both'));
+  ok('the rest-of-season rankings are weekly-only: no DFS analyst, no DFS title', !H.CONTENT_KINDS['ros-rankings'].dfsAnalyst && !H.CONTENT_KINDS['ros-rankings'].dfsTitle);
   ok('the worth-gated pieces are the positional and QB features, and the Monday scorecard', ['quarterback-monday', 'tailback-tuesday', 'wideout-wednesday', 'tight-end-thursday', 'what-tuna-got-right'].every(k => H.CONTENT_KINDS[k].gate === 'worth'));
   ok('the Monday scorecard sits in the early rankings\' slot, about the played week, with the finals it has', (() => {
     const K = H.CONTENT_KINDS['what-tuna-got-right'];
@@ -410,7 +412,7 @@ console.log('\nthe fact check');
   const miss = JSON.parse(JSON.stringify(good)); delete miss.dfs; delete miss.weekly.tradeAway;
   const mv = H.factCheck(miss, packet);
   ok('a missing lens or section is caught', mv.problems.includes('missing:dfs') && mv.problems.includes('missing:weekly.tradeAway'));
-  ok('every kind has weekly and DFS sections', Object.keys(H.CONTENT_KINDS).every(k => H.sectionsFor(k, 'weekly').length >= 4 && H.sectionsFor(k, 'dfs').length >= 3));
+  ok('every kind has weekly sections, and every both-lens kind has DFS sections', Object.entries(H.CONTENT_KINDS).every(([k, v]) => H.sectionsFor(k, 'weekly').length >= 4 && (v.lens === 'both' ? H.sectionsFor(k, 'dfs').length >= 3 : H.sectionsFor(k, 'dfs').length === 0)));
 }
 
 // The first live Thursday preview (2026-09-09) was held over headline words:
@@ -821,6 +823,33 @@ console.log('\na played-week piece looks forward with next week\'s board');
   ok('a legacy packet without the count is told nothing about the sample', !/SAMPLE SIZE\./.test(played1));
   ok('the played-week count comes from the subject: Week 1 played is one week, Week 2 current is one week, Week 2 played is two',
      H._weeksPlayed(H.CONTENT_KINDS['what-sunday-taught-us'], 1) === 1 && H._weeksPlayed(H.CONTENT_KINDS['ros-rankings'], 2) === 1 && H._weeksPlayed(H.CONTENT_KINDS['pickup-advisor'], 2) === 1 && H._weeksPlayed(H.CONTENT_KINDS['what-sunday-taught-us'], 2) === 2 && H._weeksPlayed(H.CONTENT_KINDS['ros-rankings'], null) === null);
+}
+
+console.log('\nthe Week 1 Tailback Tuesday: "Tailback Tuesday week 1: who earned the role"');
+{
+  // The headline of a piece about the played week is read days later on a
+  // front page that carries no week of its own: bare "week 1" read as stale,
+  // and the sentence-case rule had lowercased the W.
+  ok('the writer is told a week of the season is a proper noun', /"Week 1", "Week 2", never "week 1"/.test(H.NEWSROOM_SYSTEM));
+  const retro = { meta: { analyst: 'brooks', dfsAnalyst: 'park', storyType: 'retrospective', week: 1, forwardWeek: 2 } };
+  const vb = H._voiceBlock(retro);
+  ok('a retrospective piece is told its headline must say which way it looks', /THE HEADLINE SAYS WHICH WAY IT LOOKS/.test(vb) && /what Week 1 taught/.test(vb) && /Week 2 intel/.test(vb) && /Never a bare "Week 1"/.test(vb));
+  ok('and a forward piece is not', !/HEADLINE SAYS WHICH WAY/.test(H._voiceBlock({ meta: { analyst: 'porter', dfsAnalyst: 'park', storyType: 'forward', week: 2, forwardWeek: 2 } })));
+  ok('weekCase capitalizes the week', H.weekCase('Tailback Tuesday week 1: who earned the role') === 'Tailback Tuesday Week 1: who earned the role' && H.weekCase('the week 12 slate, week 13 byes') === 'the Week 12 slate, Week 13 byes');
+  ok('and leaves the word alone everywhere else', H.weekCase('a week later, this week, weekly') === 'a week later, this week, weekly' && H.weekCase(null) === null && H.weekCase('') === '');
+  const fp = (headline, dek) => H.weekFrameProblems({ headline, dek: dek || 'Seven backs logged 20-plus touches.' }, retro.meta);
+  ok('a bare Week 1 in a retrospective headline is held as reading like a preview', fp('Tailback Tuesday week 1: who earned the role').length === 1 && /^week:headline names Week 1/.test(fp('Tailback Tuesday week 1: who earned the role')[0]));
+  ok('a look back at Week 1 passes', !fp('What Week 1 taught about the backfields').length && !fp('Week 1 in review: who earned the role').length && !fp('After Week 1, the backfields that held').length);
+  ok('Week 2 as the subject passes', !fp('Week 2 intel: the backs who earned the role').length && !fp('Gibbs holds the role for Week 2').length);
+  ok('a headline with no week in it passes', !fp('Gibbs earned the role and Achane borrowed the stat line').length);
+  ok('the dek is checked the same way', fp('Gibbs earned the role', 'Seven backs logged 20-plus touches in week 1.').length === 1 && /^week:dek/.test(fp('Gibbs earned the role', 'Seven backs logged 20-plus touches in week 1.')[0]));
+  ok('a forward piece is never held on its own week', !H.weekFrameProblems({ headline: 'Week 2 start/sit', dek: 'Week 2.' }, { storyType: 'forward', week: 2, forwardWeek: 2 }).length && !H.weekFrameProblems({ headline: 'week 1', dek: '' }, { storyType: 'retrospective', week: 1, forwardWeek: 1 }).length);
+  const packet = { meta: { kind: 'tailback-tuesday', lens: 'weekly', analyst: 'brooks', dfsAnalyst: 'park', storyType: 'retrospective', week: 1, forwardWeek: 2 }, allowed: { names: ['Jahmyr Gibbs'], numbers: [], analysts: [] } };
+  const secs = H.sectionsFor('tailback-tuesday', 'weekly', packet);
+  const weekly = Object.fromEntries(secs.map(x => [x, []]));
+  const held = H.factCheck({ headline: 'Tailback Tuesday week 1: who earned the role', dek: 'Gibbs led all backs.', weekly }, packet);
+  ok('the fact check carries the week problem', !held.ok && held.problems.some(x => /^week:headline/.test(x)));
+  ok('and passes the same piece framed as Week 2 intel', H.factCheck({ headline: 'Week 2 intel: Gibbs earned the role', dek: 'Gibbs led all backs.', weekly }, packet).ok);
 }
 
 console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, editions miscounted');

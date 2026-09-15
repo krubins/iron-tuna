@@ -798,13 +798,12 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .hb-intel .hb-dek{font-size:14.5px;margin-top:12px}
 .hb-intel .hb-ctas{margin-top:18px}
 .hb-intel .hb-btn{padding:12px 20px;font-size:13.5px}
-/* The three cards. Names and ranks only; a card the digest cannot fill is not
+/* The two cards. Names and ranks only; a card the digest cannot fill is not
    drawn, which is why the grid starts hidden. */
 .hb-teasers{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:20px}
 .hb-card{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:13px 14px;min-width:0}
 .hb-card i{font-style:normal;display:block;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
 .hb-card i.fade{color:#ff8a80}
-.hb-card i.td{color:var(--gold)}
 .hb-card b{display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;overflow-wrap:anywhere}
 .hb-card small{display:block;font-size:11px;color:#8b9c97;margin:2px 0 9px;letter-spacing:.03em}
 .hb-card .hb-row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:#b3c1bd;padding:3px 0;border-top:1px solid rgba(255,255,255,.07)}
@@ -1014,7 +1013,6 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-lead-plate .hb-card { background: var(--bg, #f4f7f7); border-color: var(--line, #e1e7ea); padding: 15px 16px }
 .fp-lead-plate .hb-card i { color: var(--brand, #0e7c63) }
 .fp-lead-plate .hb-card i.fade { color: var(--value-red, #c8322b) }
-.fp-lead-plate .hb-card i.td { color: var(--gold-ink, #7a5300) }
 .fp-lead-plate .hb-card b { color: var(--ink, #0f1719); font-size: 16px }
 .fp-lead-plate .hb-card small { color: var(--ink-3, #6d7c86) }
 .fp-lead-plate .hb-card .hb-row { color: var(--ink-2, #3f4e58); border-top-color: var(--line, #e1e7ea) }
@@ -1136,8 +1134,24 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dfs-select select{width:100%;min-height:44px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:700 14px Inter,Arial,sans-serif;padding:9px 34px 9px 11px}
 .dfs-select select:disabled{opacity:.48;cursor:not-allowed;background:#f1f3f3}
 .dfs-select small{display:block;margin-top:6px;color:var(--ink-3);font-size:11px;line-height:1.4}
-.dfs-setup-state{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+.dfs-setup-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+.dfs-setup-state{font-size:12px;color:var(--ink-3);margin:0;flex:1 1 240px}
 .dfs-setup-state.ready{color:var(--brand);font-weight:800}
+.dfs-submit{appearance:none;border:0;cursor:pointer;min-height:44px;padding:0 26px;border-radius:9px;background:var(--brand);color:#fff;font:800 13px/1 Inter,Arial,sans-serif;letter-spacing:.09em;text-transform:uppercase;transition:background .15s,transform .15s}
+.dfs-submit:hover{background:var(--brand-dark,#0a5f4c)}
+.dfs-submit:active{transform:translateY(1px)}
+.dfs-submit:disabled{opacity:.42;cursor:not-allowed;background:var(--ink-3);transform:none}
+.dfs-submit:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+@media(max-width:560px){.dfs-submit{width:100%}}
+/* The result panel opens from zero height so the page below slides down
+   rather than jumping; the fraction row is what animates. */
+.dfs-result{display:grid;grid-template-rows:0fr;transition:grid-template-rows .55s cubic-bezier(.22,.8,.3,1)}
+.dfs-result.open{grid-template-rows:1fr}
+.dfs-result-in{overflow:hidden;min-height:0}
+.dfs-result-body{padding:0 0 26px;opacity:0;transform:translateY(-8px);transition:opacity .4s ease .15s,transform .4s ease .15s}
+.dfs-result.open .dfs-result-body{opacity:1;transform:none}
+.dfs-result .dfs-note{margin:0 0 12px}
+@media (prefers-reduced-motion: reduce){.dfs-result,.dfs-result-body{transition:none}}
 .dfs-quickread{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin:0 0 26px}
 .dfs-potw,.dfs-learn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 .dfs-potw{border-top:3px solid var(--gold)}
@@ -1180,6 +1194,8 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-board th { font-size: 10.5px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; color: #7f948f }
 .fp-board td.num, .fp-board th.num { text-align: right; font-variant-numeric: tabular-nums }
 .fp-board tbody tr:last-child td { border-bottom: 0 }
+.fp-board tfoot td { border-bottom: 0; border-top: 2px solid rgba(255, 255, 255, .22); background: rgba(255, 255, 255, .04); padding-top: 11px; padding-bottom: 11px }
+.fp-board tfoot b { color: var(--teal, #2dd4a3) }
 .fp-board b { color: #fff; font-weight: 700 }
 .fp-board small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #7f948f }
 .fp-board .sl { display: inline-block; min-width: 40px; text-align: center; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; color: #bcd0cc; background: rgba(255, 255, 255, .09); border-radius: 4px; padding: 4px 6px }
@@ -1845,7 +1861,21 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
         <small>How much risk the roster should accept for the available payoff.</small>
       </div>
     </div>
-    <p class="dfs-setup-state" id="dfsSetupState">Start with Game Style.</p>
+    <div class="dfs-setup-foot">
+      <p class="dfs-setup-state" id="dfsSetupState">Start with Game Style.</p>
+      <button class="dfs-submit" type="button" id="dfsSubmit" disabled aria-controls="dfsResult" aria-expanded="false">Submit</button>
+    </div>
+  </div>
+
+  <!-- The solved roster for the contest set above. Closed until Submit is
+       clicked; opening it slides everything below it down. -->
+  <div class="dfs-result" id="dfsResult" aria-live="polite">
+    <div class="dfs-result-in">
+      <div class="dfs-result-body">
+        <p class="dfs-note" id="dfsResultNote"></p>
+        <div id="dfsResultBuild"></div>
+      </div>
+    </div>
   </div>
 
   <div class="dfs-quickread">
@@ -3161,14 +3191,13 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return m;
   }
 
-  // ── the hero's three cards ────────────────────────────────────────────────
+  // ── the hero's two cards ─────────────────────────────────────────────────
   // Read off the SAME digest the dateline prints, so the top of the page and
   // the Vegas section can never name different players for the same day. Real
   // data or nothing: a card is drawn only when every number on it exists, and
   // when the digest has no case the grid stays hidden and the note says so.
-  // The TD card's percentage is DERIVED (Poisson on the blended season line
-  // over the games he can play), never a quoted book price, and it is labeled
-  // that way on the card because no free feed carries an anytime-TD market.
+  // The digest's topTd (the derived anytime-TD card) is no longer drawn: the
+  // percentage was never a quoted prop and the label did not explain itself.
   function hbRank(b, key) {
     var v = b && b[key];
     return (typeof v === 'number' && isFinite(v)) ? esc(b.position) + v : null;
@@ -3193,14 +3222,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         [['Consensus', hbRank(g.topUp, 'rankConsensus')], ['Vegas', hbRank(g.topUp, 'rankMarket')], ['Iron Tuna', hbRank(g.topUp, 'rankIronTuna')]]);
       cards += hbCard('fade', 'Vegas fades', g.topDown,
         [['Consensus', hbRank(g.topDown, 'rankConsensus')], ['Vegas', hbRank(g.topDown, 'rankMarket')], ['Iron Tuna', hbRank(g.topDown, 'rankIronTuna')]]);
-      var t = g.topTd;
-      if (t && typeof t.anytimeTd === 'number' && isFinite(t.anytimeTd)) {
-        cards += hbCard('td', 'TD edge', t,
-          [['Consensus', hbRank(t, 'rankConsensus')], ['Iron Tuna', hbRank(t, 'rankIronTuna')]],
-          ['Anytime TD', t.anytimeTd + '%',
-           'Implied from ' + t.tdIronTuna + ' season TDs over ' + t.games + ' games. The lines have him at '
-           + t.tdMarket + ' against a consensus ' + t.tdConsensus + '. Not a quoted prop.']);
-      }
     }
     if (!cards) {
       grid.hidden = true; grid.innerHTML = '';
@@ -4503,6 +4524,9 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
             why: 'A big field pays almost everything to the top fraction of a percent, so the median is worth nothing. Ceiling discounted by modeled ownership, stacked and brought back \u2014 the build that carries longshots on purpose.' }
   };
   var shape = 'single';
+  // The roster is not solved until Submit is clicked; after that it re-solves
+  // live as the setup changes, and closes again if the setup becomes incomplete.
+  var submitted = false;
   var frontGameStyle = '', frontGameChoice = '', frontPayout = '', frontGameKeys = {};
   var FRONT_SINGLE = { 'showdown-captain':1, 'in-game-showdown':1, 'snake-showdown':1, 'madden-showdown-captain':1 };
   var FRONT_PAYOUT_SHAPE = { h2h:'cash', '50-50':'cash', 'double-up':'cash', satellite:'cash', multiplier:'single', 'tournament-single':'single', 'tournament-multi':'gpp', private:'single' };
@@ -4571,6 +4595,16 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     frontUpdateState();
   }
   function frontSetupReady(){ return !!(frontGameStyle&&frontGameChoice&&frontPayout); }
+  // The board heading names the contest the roster is optimal for, e.g.
+  // "Classic Game / All Listed Games / Multiplier", not a generic shape label.
+  function frontContestHead(fallback){
+    if(!frontSetupReady()) return fallback;
+    var pick=function(id){ var sel=$(id); return sel&&sel.selectedIndex>=0?String(sel.options[sel.selectedIndex].text||'').trim():''; };
+    var style=pick('dfsGameStyle'), games=pick('dfsGames'), payout=pick('dfsPayout');
+    if(style&&!/game$/i.test(style)) style+=' Game';
+    payout=payout.replace(/\s*\(.*\)\s*$/,'');
+    return [style,games,payout].filter(Boolean).join(' / ')||fallback;
+  }
   function frontFiltered(s){
     if(!s||!s.ok||frontGameChoice==='season'||!frontSelectedKeys().length)return s;
     var q={}; for(var k in s)q[k]=s[k];
@@ -4580,7 +4614,17 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     q.label=(s.label||'DraftKings')+' · '+frontSelectedKeys().length+' selected game'+(frontSelectedKeys().length===1?'':'s');
     return q;
   }
+  function frontSyncSubmit(){
+    var b=$('dfsSubmit'); if(!b)return;
+    b.disabled = site==='dk' ? !frontSetupReady() : false;
+  }
+  function frontOpenResult(open){
+    var r=$('dfsResult'), b=$('dfsSubmit'); if(!r)return;
+    r.classList.toggle('open',!!open);
+    if(b)b.setAttribute('aria-expanded',open?'true':'false');
+  }
   function frontUpdateState(){
+    frontSyncSubmit();
     var state=$('dfsSetupState'); if(!state)return;
     if(!frontGameStyle){state.className='dfs-setup-state';state.textContent='Start with Game Style.';return;}
     if(!frontGameChoice){state.className='dfs-setup-state';state.textContent='Now select the Games / player pool.';return;}
@@ -4614,9 +4658,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return '';
   }
   function buildLineup(s) {
-    var host = $('dfsBuild'), note = $('dfsShapeNote');
+    // The board draws into the panel under the setup; chapter 01 keeps a
+    // one-line pointer so its ribbon anchor still lands somewhere useful.
+    var host = $('dfsResultBuild'), note = $('dfsResultNote'), pointer = $('dfsBuild'), chapNote = $('dfsShapeNote');
     if (!host) return;
-    if (site === 'dk' && !frontSetupReady()) { host.innerHTML='<p class="dfs-empty"><b>Complete Game Style, Games and Payout Structure above.</b> The lineup will be built from that exact contest setup.</p>'; if(note)note.textContent=''; return; }
+    frontSyncSubmit();
+    if (chapNote) chapNote.textContent = '';
+    if (site === 'dk' && !frontSetupReady()) {
+      submitted = false; frontOpenResult(false); host.innerHTML = ''; if (note) note.textContent = '';
+      if (pointer) pointer.innerHTML = '<p class="dfs-empty"><b>Complete Game Style, Games and Payout Structure above, then click Submit.</b> The lineup is built from that exact contest setup.</p>';
+      return;
+    }
+    if (!submitted) {
+      frontOpenResult(false); host.innerHTML = ''; if (note) note.textContent = '';
+      if (pointer) pointer.innerHTML = '<p class="dfs-empty"><b>Setup complete.</b> Click Submit under the contest setup to solve the roster.</p>';
+      return;
+    }
+    frontOpenResult(true);
+    if (pointer) pointer.innerHTML = '<p class="dfs-empty">The roster is solved above, directly under the contest setup. <a href="#dfsResult">Jump to it &uarr;</a></p>';
     if (site === 'dk' && frontGameStyle !== 'classic') { host.innerHTML='<p class="dfs-empty"><b>'+e($('dfsGameStyle').options[$('dfsGameStyle').selectedIndex].text)+' selected.</b> This homepage preview uses the Classic optimizer only. Open the full DFS sheet for format-specific analysis.</p>'; if(note)note.textContent=''; return; }
     s = frontFiltered(s);
     var sh = SHAPES[shape] || SHAPES.single;
@@ -4657,7 +4716,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var dkFppg = hasFppg ? l.players.reduce(function (sum, p) { return sum + Number(p.operatorFppg); }, 0) : null;
     var tunaEdge = dkFppg == null ? null : l.projPoints - dkFppg;
     host.innerHTML = '<div class="fp-board">'
-      + '<div class="fp-board-head"><h3>' + e(sh.head) + '</h3><span>' + e((s.label || '') + (s.week ? ' \u00b7 Week ' + s.week : '')) + '</span></div>'
+      + '<div class="fp-board-head"><h3>' + e(frontContestHead(sh.head)) + '</h3><span>' + e((s.label || '') + (s.week ? ' \u00b7 Week ' + s.week : '')) + '</span></div>'
       + '<div class="fp-board-stats">'
         + tile(dkFppg == null ? '—' : n1(dkFppg), 'DraftKings FPPG')
         + tile(n1(l.projPoints), 'Iron Tuna Projection', true)
@@ -4666,7 +4725,12 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       + '</div>'
       + '<div class="fp-board-meter"><i style="width:' + pct + '%"></i></div>'
       + '<div class="fp-board-cap"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div>'
-      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">DraftKings FPPG</th><th class="num">Iron Tuna Projection</th><th class="num">Tuna Edge</th></tr></thead><tbody>' + rows + '</tbody></table>'
+      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">DraftKings FPPG</th><th class="num">Iron Tuna Projection</th><th class="num">Tuna Edge</th></tr></thead><tbody>' + rows + '</tbody>'
+      + '<tfoot><tr><td></td><td><b>Total</b><small>' + l.players.length + ' players</small></td>'
+        + '<td class="num"><b>' + money(l.salary) + '</b></td>'
+        + '<td class="num"><b>' + (dkFppg == null ? '\u2014' : n1(dkFppg)) + '</b></td>'
+        + '<td class="num"><b>' + n1(l.projPoints) + '</b></td>'
+        + '<td class="num"><b>' + (tunaEdge == null ? '\u2014' : ((tunaEdge > 0 ? '+' : '') + n1(tunaEdge))) + '</b></td></tr></tfoot></table>'
       + '<div class="fp-board-foot"><span>Solved against the cap on the same market numbers the board below prints. Nothing here enters a contest.</span>'
       + '<a href="/dfs">Lock, exclude and build twenty &rarr;</a></div></div>';
   }
@@ -4710,11 +4774,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   $('dfsPayout').addEventListener('change', function(){
     frontPayout=this.value; shape=FRONT_PAYOUT_SHAPE[frontPayout]||'single'; frontUpdateState(); if(slates[site])render(slates[site]);
   });
+  $('dfsSubmit').addEventListener('click', function(){
+    if(this.disabled) return;
+    submitted = true;
+    if(slates[site]) buildLineup(slates[site]); else { buildLineup(null); loadSlate(); }
+    // The panel opens in place and pushes the page down. Only nudge the
+    // window when the top of the result would otherwise sit below the fold.
+    var r=$('dfsResult');
+    if(r) setTimeout(function(){
+      var top=r.getBoundingClientRect().top, room=window.innerHeight-top;
+      if(room<220) try{ window.scrollBy({top:top-96,left:0,behavior:'smooth'}); }catch(err){ window.scrollBy(0,top-96); }
+    }, 80);
+  });
 
   $('dfsSite').addEventListener('click', function (ev) {
     var b = ev.target.closest('button');
     if (!b) return;
     site = b.getAttribute('data-site');
+    submitted=false; frontOpenResult(false);
     frontGameChoice=''; frontPayout=''; frontGameKeys={}; $('dfsGames').value=''; $('dfsPayout').value=''; $('dfsPayout').disabled=true;
     [].forEach.call(this.querySelectorAll('button'), function (x) {
       x.setAttribute('aria-pressed', x.getAttribute('data-site') === site ? 'true' : 'false');

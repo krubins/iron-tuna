@@ -243,8 +243,9 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('and a per-game kind is one row per game, not one per week', Object.keys(H.CONTENT_KINDS).filter(k => H.CONTENT_KINDS[k].perGame).every(k => [1, 2].every(w => { const rows = at(k, w).filter(x => x.status !== 'skipped'); const ids = db.T.content_pieces.filter(r => r.kind === k && r.week === w && r.status !== 'skipped').map(r => r.game_id); return new Set(ids).size === rows.length; })));
   ok('no retired kind ran', P.every(r => H.CONTENT_KINDS[r.kind]) && Object.keys(H.LEGACY_CONTENT).every(k => !P.some(r => r.kind === k)));
   const pub = P.filter(r => r.status === 'published');
-  ok('every published piece carries both lenses, a headline, a byline and a version', pub.length >= 9 && pub.every(r => { const b = JSON.parse(r.body); return b.weekly && b.dfs && r.headline && r.analyst && r.version >= 1; }), String(pub.length));
-  ok('the DFS lens says no salaries are loaded rather than inventing a number', pub.every(r => { const p = JSON.parse(r.brief); return p.dfs && p.dfs.available === false; }));
+  ok('every published piece carries the weekly lens, a headline, a byline and a version, and every both-lens piece the DFS lens too', pub.length >= 9 && pub.every(r => { const b = JSON.parse(r.body); return b.weekly && (H.CONTENT_KINDS[r.kind].lens === 'both' ? !!b.dfs : !b.dfs) && r.headline && r.analyst && r.version >= 1; }), String(pub.length));
+  ok('the rest-of-season rankings are weekly-only: no DFS lens written, none stored', at('ros-rankings', 2)[0] && at('ros-rankings', 2)[0].status === 'published' && db.T.content_pieces.filter(r => r.kind === 'ros-rankings' && r.status === 'published').every(r => r.lens === 'weekly' && !JSON.parse(r.body).dfs && !JSON.parse(r.brief).dfs));
+  ok('the DFS lens says no salaries are loaded rather than inventing a number', pub.filter(r => H.CONTENT_KINDS[r.kind].lens === 'both').every(r => { const p = JSON.parse(r.brief); return p.dfs && p.dfs.available === false; }));
   ok('every published piece passed the fact check', pub.every(r => JSON.parse(r.violations).length === 0));
   const riv = pub.filter(r => r.rivalry);
   ok('the rivalry surfaced in at most one in five eligible pieces, and only on eligible kinds', riv.length <= Math.max(1, Math.ceil(pub.filter(r => H.CONTENT_KINDS[r.kind].rivalry).length * 0.2)) && riv.every(r => H.CONTENT_KINDS[r.kind].rivalry), riv.map(r => r.kind).join());
@@ -263,6 +264,7 @@ console.log('\nthe feeds and the front page');
   ok('the newsroom feed lists published pieces newest first with bylines and URLs', feed.ok && feed.pieces.length >= 5 && feed.pieces.every(p => p.byline.name && /^\/in-season\/desk\//.test(p.url)) && feed.pieces[0].publishedAt >= feed.pieces[1].publishedAt);
   const dfs = await H.newsroomFeedPayload(env, 'dfs', 10);
   ok('the DFS feed links the DFS lens', dfs.ok && dfs.pieces.every(p => /lens=dfs$/.test(p.url)));
+  ok('and leaves out the rest-of-season rankings, which have no DFS lens', dfs.ok && dfs.pieces.length >= 1 && !dfs.pieces.some(p => p.kind === 'ros-rankings') && feed.pieces.some(p => p.kind === 'ros-rankings'));
   const lead = await H.deskLeadPayload(env);
   ok('the front-page lead is the newest desk piece, in the lead painter\'s shape', lead && lead.ok && lead.story.url && lead.story.title && lead.story.analyst && lead.recent.length >= 1);
   // The label the front page prints is the title the piece was PUBLISHED
@@ -332,7 +334,22 @@ console.log('\nthe feeds and the front page');
      && idx.pieces.filter(r => r.kind === 'game-recap' || r.kind === 'what-sunday-taught-us' || (r.week === 2 && r.kind === 'weekend-preview')).every(r => r.expired === false), JSON.stringify(idx.pieces.map(r => [r.kind, r.week, r.expired])));
   ok('the desk index is an archive and still lists every one of them', idx.ok && FORWARD.filter(k => db.T.content_pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')).every(k => idx.pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')));
   const piece = await H.contentPiecePayload(env, 'ros-rankings', 2026, 2);
-  ok('a piece payload carries both lenses, the sections for each, the byline and the disclosure', piece.ok && piece.body.weekly && piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length && piece.byline.name === 'Evan Brooks' && piece.byline.dfsName === 'Lena Park' && /AI-powered/.test(piece.disclosure));
+  ok('the rest-of-season piece payload is weekly-only: one lens, its sections, the byline and the disclosure, no DFS body, no DFS title', piece.ok && piece.lens === 'weekly' && piece.body.weekly && !piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length === 0 && piece.dfsTitle === null && piece.byline.name === 'Evan Brooks' && /AI-powered/.test(piece.disclosure), JSON.stringify([piece.lens, piece.dfsTitle, Object.keys(piece.body || {})]));
+  {
+    // A row stored while the kind still carried a DFS lens (the live Week 2
+    // piece) is served weekly-only: the desk page keys its Weekly / DFS tab
+    // off `lens` and `body.dfs`, and both have to say there is no DFS lens.
+    const old = db.T.content_pieces.filter(r => r.kind === 'ros-rankings' && r.status === 'published').pop();
+    const stash = { lens: old.lens, body: old.body };
+    old.lens = 'both'; old.body = JSON.stringify({ ...JSON.parse(old.body), dfs: { priceInefficiencyBoard: [] } });
+    const served = await H.contentPiecePayload(env, 'ros-rankings', 2026, 2);
+    ok('a rest-of-season row stored with a DFS lens is still served weekly-only', served.ok && served.lens === 'weekly' && served.body.weekly && !served.body.dfs, JSON.stringify([served.lens, Object.keys(served.body || {})]));
+    const dfsFeed = await H.newsroomFeedPayload(env, 'dfs', 10);
+    ok('and stays out of the DFS feed', dfsFeed.ok && !dfsFeed.pieces.some(p => p.kind === 'ros-rankings'));
+    Object.assign(old, stash);
+  }
+  const both = await H.contentPiecePayload(env, 'pickup-advisor', 2026, 2);
+  ok('a both-lens piece payload still carries both lenses, the sections for each and the DFS byline', both.ok && both.body.weekly && both.body.dfs && both.sections.weekly.length && both.sections.dfs.length && both.byline.dfsName === 'Lena Park', JSON.stringify([both.ok, Object.keys(both.body || {})]));
   ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Rest-of-Season Rankings', JSON.stringify(piece.title));
   ok('the packet the page shows hides the allowed list and the index', piece.brief && !piece.brief.allowed && !piece.brief.playerIndex && piece.brief.freshness);
   const a = await H.analystPayload(env, 'brooks');

@@ -80,7 +80,7 @@ same facts.
 | `mnf-preview` | Mon 6 AM | Chris Dalton | Chris Dalton (showdown) | both | — |
 | `what-tuna-got-right` | Mon 6 AM, only when a call landed | Jack Mercer | Lena Park | both | `early-rankings` (retired September 14; the Tuesday ROS rankings carry next week) |
 | `quarterback-monday` | Mon 7 AM, only when there is a story | Chris Dalton | Lena Park | both | Play-Caller Premium's scheme beat |
-| `ros-rankings` | Tue 7 AM | Evan Brooks | Nate Vega | both (DFS: Early Price Inefficiency Board) | `rankings-update`, `mnf-breakdown`, `early-rankings` |
+| `ros-rankings` | Tue 7 AM | Evan Brooks | Nate Vega | weekly only (no DFS lens; season-long product) | `rankings-update`, `mnf-breakdown`, `early-rankings` |
 | `tailback-tuesday` | Tue 8 AM, only when there is a story | Evan Brooks | Lena Park | both | `opportunity-report` (backfields) |
 | `pickup-advisor` | Wed 6 AM | Tyler Grant | Lena Park (First-Look DFS Value & Leverage) | both | Waiver Watch |
 | `wideout-wednesday` | Wed 8 AM, only when there is a story | Mike Raines | Lena Park | both | `opportunity-report` (targets) |

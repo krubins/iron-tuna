@@ -7728,9 +7728,12 @@ const CONTENT_KINDS = {
   'quarterback-monday': { title: 'Quarterback Monday', day: 'Mon', hour: 7, minute: 0, retro: true, subject: 'played',
     analyst: 'dalton', dfsAnalyst: 'park', lens: 'both', gate: 'worth', targets: () => [],
     summary: 'One quarterback story that matters, or nothing.', absorbs: [] },
+  // WEEKLY ONLY. The rest-of-season rankings are a season-long product and
+  // carry no DFS lens (the DFS reader has the slate on /dfs and the pickup
+  // advisor's price report on Wednesday); `lens: 'weekly'` keeps the desk
+  // page's Weekly / DFS tab off it and keeps it out of the DFS feed.
   'ros-rankings': { title: 'Rest-of-Season Rankings', day: 'Tue', hour: 7, minute: 0, retro: true, subject: 'current',
-    analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
-    dfsTitle: 'Early Price Inefficiency Board',
+    analyst: 'brooks', marketAnalyst: 'vega', lens: 'weekly', rivalry: true, targets: () => [],
     summary: 'Next 3, until the playoffs, playoffs only, rest of season: one engine, four horizons.', absorbs: ['rankings-update', 'mnf-breakdown', 'early-rankings'] },
   'tailback-tuesday': { title: 'Tailback Tuesday', day: 'Tue', hour: 8, minute: 0, retro: true, subject: 'played',
     analyst: 'brooks', altAnalyst: 'raines', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
@@ -7822,7 +7825,7 @@ const NEWSROOM_SECTIONS = {
   // against the coming slate's prices.
   'what-tuna-got-right':   { weekly: ['theRecord', 'biggestWins', 'whatWeMissed', 'whatToDo'], dfs: ['theRecord', 'biggestWins', 'whatItMeansForPricing'] },
   'quarterback-monday':    { weekly: ['theStory', 'whatTheNumbersSay', 'whatToDo', 'buySell'], dfs: ['stacks', 'bringBacks', 'ownership', 'salaryAndRushingUpside', 'gameEnvironment'] },
-  'ros-rankings':          { weekly: ['whatMondayChanged', 'next3', 'untilPlayoffs', 'playoffsOnly', 'restOfSeason', 'majorMovers', 'whereWeDisagree'], dfs: ['priceInefficiencyBoard', 'whyThePriceIsWrong', 'initialOwnership', 'leverage'] },
+  'ros-rankings':          { weekly: ['whatMondayChanged', 'next3', 'untilPlayoffs', 'playoffsOnly', 'restOfSeason', 'majorMovers', 'whereWeDisagree'], dfs: [] },
   'tailback-tuesday':      { weekly: ['theDevelopment', 'workloadEvidence', 'rankingImpact', 'tradesAndWaivers', 'restOfSeason'], dfs: ['salary', 'workloadPerDollar', 'touchdownEquity', 'ownership', 'chalkVsLeverage', 'stacking'] },
   'pickup-advisor':        { weekly: ['priorityAdds', 'midLevelAdds', 'deepAdds', 'speculativeStashes', 'doNotChase', 'faabAndDrops'], dfs: ['earlyValues', 'likelyChalk', 'goodChalk', 'badChalk', 'leverage', 'pricingErrors', 'initialStacks', 'ownershipUncertainty'] },
   'wideout-wednesday':     { weekly: ['theDevelopment', 'targetEvidence', 'startSit', 'trades', 'restOfSeason'], dfs: ['salary', 'ownership', 'stacks', 'bigPlayUpside', 'leverage', 'correlation'] },
@@ -9679,7 +9682,8 @@ function packetRos(ctx, boards, rosUpdate, mondaySummaries) {
   out.disagreements = dis;
   if (mondaySummaries && mondaySummaries.length) { const m = briefForGames('ros-rankings', mondaySummaries.games, mondaySummaries.summaries, ctx); delete m.allowed; out.whatMondayChanged = { winners: m.winners, losers: m.losers, usageChanges: m.usageChanges, teams: m.teams.map(t => ({ team: t.team, learned: t.learned, stillDontKnow: t.stillDontKnow })) }; }
   else out.whatMondayChanged = { note: 'no Monday game this week, or its box score is not final' };
-  out.dfs = _dfsBlock(ctx, null);
+  // No dfs block: the kind is weekly-only (CONTENT_KINDS), so the writer is
+  // never handed a DFS lens to fill and the packet does not carry the slate.
   return out;
 }
 // Position features share one shape and one worth gate: a player at the
@@ -9951,7 +9955,7 @@ TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manage
 COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
 THE RIVALRY, when the packet carries one: exactly one line, intellectual, never personal. Acceptable: "Brooks still has him WR17. The receiving market appears considerably less worried." Not acceptable: insults, claims a colleague does not understand football, manufactured heat.
 STYLE. Direct, analytical, actionable, confident, concise. Take positions. No introductions, no restating the box score, no hedging padding, no em dashes (use a period, a colon or a comma). Never write "it's worth noting", "buckle up", "dive in", "game-changer", "in conclusion", "at the end of the day", "ever-evolving", "look no further". The analyst's personality is noticeable in the prose and never overrides the facts.
-HEADLINE AND DEK in sentence case: capitalize the first word and proper nouns (players, clubs, Vegas, Iron Tuna) and nothing else. Never Title Case. The headline names a player or a game and says what to do about it; the dek is one sentence carrying the finding and a number from the packet.
+HEADLINE AND DEK in sentence case: capitalize the first word and proper nouns (players, clubs, Vegas, Iron Tuna) and nothing else. Never Title Case. A week of the season is a proper noun: "Week 1", "Week 2", never "week 1". The headline names a player or a game and says what to do about it; the dek is one sentence carrying the finding and a number from the packet.
 LENGTH. At most six items per section, each one to three sentences. When the packet is large, choose what matters; never enumerate the whole slate. The whole answer must close its JSON.
 PUBLISH LESS. If the packet genuinely carries nothing a reader should act on, return {"skip":"<one sentence why>"} instead of filler.
 OUTPUT: a single JSON object, no prose outside it, in exactly the shape requested.`;
@@ -9977,6 +9981,11 @@ function _voiceBlock(packet) {
   // game is how Quarterback Monday came to preview a game already played.
   if (packet.meta.storyType === 'retrospective' && packet.meta.forwardWeek != null && packet.meta.week != null && packet.meta.forwardWeek !== packet.meta.week) {
     s += 'WEEKS. Week ' + packet.meta.week + ' has been played and this piece is about what it says for Week ' + packet.meta.forwardWeek + '. Every rank, projection, opponent and team total in the packet is for Week ' + packet.meta.forwardWeek + '. Never present one as a prediction of a Week ' + packet.meta.week + ' game, and never say a player is "projected" or "expected" to do something in a game that has already been played.\n';
+    // The headline is read on a front page days after the week it names. A
+    // bare "Week 1" up there reads as a preview of a week already played
+    // (the Week 1 Tailback Tuesday: "Tailback Tuesday week 1: who earned
+    // the role"), so the headline has to say which way it looks.
+    s += 'THE HEADLINE SAYS WHICH WAY IT LOOKS. If it names Week ' + packet.meta.week + ', it says plainly that it is looking back ("what Week ' + packet.meta.week + ' taught", "Week ' + packet.meta.week + ' in review", "after Week ' + packet.meta.week + '"). Otherwise it names Week ' + packet.meta.forwardWeek + ' as its subject ("Week ' + packet.meta.forwardWeek + ' intel", "for Week ' + packet.meta.forwardWeek + '"). Never a bare "Week ' + packet.meta.week + '" in the headline or dek: on the front page that reads as a preview of a week already played. Capitalize Week.\n';
   }
   // The sample is the number of weeks PLAYED, never the number of the week.
   // "Week 2" is one week of results; a piece written in it that says "two
@@ -10054,7 +10063,30 @@ function factCheck(body, packet) {
     for (const s of secs) if (!(s in got)) problems.push('missing:' + lens + '.' + s);
   }
   if (!body || typeof body.headline !== 'string' || !body.headline.trim()) problems.push('missing:headline');
+  else for (const p of weekFrameProblems(body, packet.meta)) problems.push(p);
   return { ok: !problems.length, problems: [...new Set(problems)] };
+}
+// "Week" before a number is a proper noun. The sentence-case rule the writer
+// works under lowercased it ("week 1"), and one week later the front page
+// printed it that way; the row is fixed at store and at read so the pieces
+// already published print it right too.
+const weekCase = s => s == null ? s : String(s).replace(/\bweek(?=\s+\d)/g, 'Week');
+// A piece about the played week is read days later, on a front page that
+// carries no week of its own. Its headline or dek naming that week bare
+// ("Tailback Tuesday week 1: who earned the role") reads as a preview of a
+// week already played. Either it says it is looking back, or it names the
+// coming week as its subject. The cue list is the vocabulary of a look back,
+// not every verb: "earned the role" was the sentence that read as stale.
+const WEEK_LOOKBACK = /\b(in review|review|recap|look(?:s|ed|ing)? back|taught|teaches|learned|lessons?|said|says|told|tells|showed|shows|revealed|reveals|proved|proves|after|from|what|takeaways?)\b/i;
+function weekFrameProblems(body, meta) {
+  const out = [];
+  if (!meta || meta.storyType !== 'retrospective' || meta.week == null || meta.forwardWeek == null || meta.forwardWeek === meta.week) return out;
+  const played = new RegExp('\\bweek\\s+' + meta.week + '\\b(?!\\d)', 'i'), forward = new RegExp('\\bweek\\s+' + meta.forwardWeek + '\\b(?!\\d)', 'i');
+  for (const field of ['headline', 'dek']) {
+    const t = String(body[field] || '');
+    if (played.test(t) && !forward.test(t) && !WEEK_LOOKBACK.test(t)) out.push('week:' + field + ' names Week ' + meta.week + ', which has been played, as if previewing it; say it looks back ("what Week ' + meta.week + ' taught") or name Week ' + meta.forwardWeek + ' as the subject ("Week ' + meta.forwardWeek + ' intel")');
+  }
+  return out;
 }
 // The prompt has a length budget and the packet has to fit it WHOLE: a JSON
 // string cut at a character count hands the model half an object, which is
@@ -10166,7 +10198,7 @@ function _componentsOf(body) {
   const out = [];
   for (const c of list) {
     if (!c || typeof c !== 'object') continue;
-    const headline = String(c.headline || '').trim().slice(0, 200);
+    const headline = weekCase(String(c.headline || '').trim().slice(0, 200));
     if (!headline) continue;
     out.push({ n: out.length + 1, headline, player: String(c.player || '').trim().slice(0, 60) || null, why: String(c.why || '').trim().slice(0, 400) || null });
     if (out.length >= 6) break;
@@ -10316,7 +10348,7 @@ async function produceContent(env, kind, opts) {
   const analyst = packet.meta.analyst;
   const rivalry = packet.rivalry && written.body && written.body.rivalryLine ? { ...packet.rivalry, line: String(written.body.rivalryLine).slice(0, 300) } : null;
   await contentStore(env, { season, week, kind, gameId, slug, title, status, brief: packet, body: written.body, violations, model: written.model, analyst, lens: packet.meta.lens, version, rivalry,
-                           headline: written.body ? String(written.body.headline || '').slice(0, 200) : null, dek: written.body ? String(written.body.dek || '').slice(0, 400) : null,
+                           headline: written.body ? weekCase(String(written.body.headline || '').slice(0, 200)) : null, dek: written.body ? weekCase(String(written.body.dek || '').slice(0, 400)) : null,
                            components: _componentsOf(written.body), wrap: _wrapOf(written.body) });
   let calls = { stored: 0 };
   if (status === 'published' && written.body) {
@@ -10469,13 +10501,21 @@ async function contentPiecePayload(env, kind, season, week, game) {
     // A held piece ships its PACKET and not its draft: the data is right by
     // construction, the prose was not.
     const pub = brief && brief.meta ? { meta: brief.meta, freshness: brief.freshness, rivalry: brief.rivalry, priorCalls: brief.priorCalls, dfs: brief.dfs, ...Object.fromEntries(Object.entries(brief).filter(([k]) => !['allowed', 'playerIndex', 'rivalryBudget', 'colleagues'].includes(k))) } : brief;
+    // The lens is the KIND's, not the row's, once the kind has one. A row
+    // written while the kind still carried a DFS lens (the Week 2 rest-of-
+    // season rankings) keeps its stored `dfs` body, and serving it would put
+    // the Weekly / DFS tab back on a piece that no longer has one; so a
+    // weekly-only kind serves the weekly lens and drops the DFS body.
+    const lens = K && K.lens !== 'both' ? K.lens : (row.lens || (K ? K.lens : 'weekly'));
+    let body = row.status === 'published' ? parse(row.body) : null;
+    if (lens !== 'both' && body && typeof body === 'object' && body.dfs) { body = { ...body }; delete body.dfs; }
     // `_pieceTitle` already strips the edition trailer, so a per-game row
     // comes back as its matchup and the page prints the week itself.
     return { ok: true, contract: CONTENT_CONTRACT, kind, title: _pieceTitle(row), subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
              game: row.game_id || null, matchup: brief && brief.meta ? brief.meta.matchup || null : null, url: _pieceUrl(row),
-             edition: _pieceEdition(row), headline: row.headline || null, dek: row.dek || null, byline: _bylineOf(row), lens: row.lens || (K ? K.lens : 'weekly'), legacy: !K,
+             edition: _pieceEdition(row), headline: weekCase(row.headline) || null, dek: weekCase(row.dek) || null, byline: _bylineOf(row), lens, legacy: !K,
              createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly', brief), dfs: sectionsFor(kind, 'dfs', brief) }, objectSections: NEWSROOM_OBJECT_SECTIONS,
-             body: row.status === 'published' ? parse(row.body) : null, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
+             body, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
 // ── a forward piece leaves the feed when its games kick off ────────────────
@@ -10566,7 +10606,9 @@ async function newsroomFeedPayload(env, lens, limit) {
     const before = rows.length;
     rows = rows.filter(r => !pieceExpired(r, sched, now));
     const expired = before - rows.length;
-    if (lens === 'dfs') rows = rows.filter(r => r.lens === 'both' || r.lens === 'dfs');
+    // The kind's CURRENT lens decides, not the row's: a row stored while its
+    // kind still had a DFS lens does not put that kind back in the DFS lane.
+    if (lens === 'dfs') rows = rows.filter(r => (r.lens === 'both' || r.lens === 'dfs') && !(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].lens !== 'both'));
     rows = rows.slice(0, want);
     const parse = s => { try { const v = JSON.parse(s); return Array.isArray(v) ? v : null; } catch (e) { return null; } };
     // `_pieceTitle` is the stored title minus the edition trailer, which for a
@@ -10604,7 +10646,7 @@ async function deskLeadPayload(env) {
   // per-game row is already its matchup and every other row is its own title.
   const labelOf = p => p.title;
   const row = p => ({ slug: 'desk:' + p.kind + ':' + p.week + (p.game ? ':' + _gameSlug(p.game) : ''), url: p.url,
-                      title: p.headline || labelOf(p) + (p.perGame ? '' : ' · Week ' + p.week), dek: p.dek || '', label: labelOf(p),
+                      title: weekCase(p.headline) || labelOf(p) + (p.perGame ? '' : ' · Week ' + p.week), dek: weekCase(p.dek) || '', label: labelOf(p),
                       category: 'desk', analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], ...faces(p) });
   // THE STORY BREAKS INTO ITS COMPONENTS ONCE IT IS NO LONGER THE LEAD.
   // While a recap is the lead it runs whole, under its own headline. The
@@ -10619,7 +10661,7 @@ async function deskLeadPayload(env) {
     for (const c of parts) {
       railRows.push({ slug: 'desk:' + p.kind + ':' + p.week + (p.game ? ':' + _gameSlug(p.game) : '') + ':c' + c.n,
                       url: p.url + '#component-' + c.n,
-                      title: c.headline, dek: c.why || '', label: labelOf(p), category: 'desk',
+                      title: weekCase(c.headline), dek: c.why || '', label: labelOf(p), category: 'desk',
                       analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], ppl: [], names: c.player ? [c.player] : [], cast: [] });
     }
   }
@@ -10658,7 +10700,7 @@ async function weeklyWrapPayload(env, week) {
     const base = { id: g.id, matchup: g.away + ' at ' + g.home, away: g.away, home: g.home, day: g.dow, kickoff: g.kickoff,
                    status: g.status || null, awayScore: g.awayScore == null ? null : g.awayScore, homeScore: g.homeScore == null ? null : g.homeScore };
     if (!r) return { ...base, recap: null, pending: g.status === 'final' ? 'the recap is being written' : 'the game has not gone final' };
-    return { ...base, recap: { url: _pieceUrl(r), headline: r.headline || r.title, dek: r.dek || '', wrap: r.wrap || r.dek || '',
+    return { ...base, recap: { url: _pieceUrl(r), headline: weekCase(r.headline) || r.title, dek: weekCase(r.dek) || '', wrap: weekCase(r.wrap) || weekCase(r.dek) || '',
                                components: parse(r.components) || [], publishedAt: r.published_at, byline: _bylineOf(r) } };
   });
   const out = { ok: true, season: sched.season, week: wk, disclosure: AI_DISCLOSURE,
@@ -10714,7 +10756,7 @@ async function recapStripPayload(env) {
         ok: true,
         recaps: fresh ? rows.map(r => ({
           slug: r.slug, week: r.week, game: r.game_id || null, url: _pieceUrl(r),
-          title: r.headline || _pieceTitle(r), dek: r.dek || '',
+          title: weekCase(r.headline) || _pieceTitle(r), dek: weekCase(r.dek) || '',
           byline: _bylineOf(r), publishedAt: at(r)
         })) : [],
         // Why the strip is empty, so a quiet front page can be told apart from
@@ -10764,13 +10806,13 @@ async function analystPayload(env, id) {
   let pieces = [];
   if (await contentReady(env)) {
     await newsroomReady(env);
-    try { pieces = ((await env.LEADS_DB.prepare("SELECT kind, title, week, headline, dek, published_at, rivalry, game_id FROM content_pieces WHERE status = 'published' AND analyst = ? ORDER BY published_at DESC LIMIT 12").bind(id).all()).results || []).map(r => ({ kind: r.kind, title: _pieceTitle(r), week: r.week, headline: r.headline, dek: r.dek, publishedAt: r.published_at, url: _pieceUrl(r), rivalry: !!r.rivalry })); } catch (e) {}
+    try { pieces = ((await env.LEADS_DB.prepare("SELECT kind, title, week, headline, dek, published_at, rivalry, game_id FROM content_pieces WHERE status = 'published' AND analyst = ? ORDER BY published_at DESC LIMIT 12").bind(id).all()).results || []).map(r => ({ kind: r.kind, title: _pieceTitle(r), week: r.week, headline: weekCase(r.headline), dek: weekCase(r.dek), publishedAt: r.published_at, url: _pieceUrl(r), rivalry: !!r.rivalry })); } catch (e) {}
   }
   const calls = await analystCalls(env, id, 20);
   const record = calls.reduce((m, c) => { if (c.outcome) m[c.outcome] = (m[c.outcome] || 0) + 1; return m; }, {});
   let headToHead = null;
   if (RIVALRY_PAIR.includes(id)) {
-    try { headToHead = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at, game_id FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 10").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null, publishedAt: r.published_at } : null; }).filter(Boolean); } catch (e) { headToHead = []; }
+    try { headToHead = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at, game_id FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 10").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: weekCase(r.headline), url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null, publishedAt: r.published_at } : null; }).filter(Boolean); } catch (e) { headToHead = []; }
   }
   const columns = id === 'brooks' ? [{ title: 'The Tell', url: '/the-tell', note: 'The weekly column on what is inside a ranking runs on this desk under a pen name; see the column’s own method box.' }] : [];
   return { ok: true, disclosure: AI_DISCLOSURE, analyst: { id: a.id, name: a.name, role: a.role, avatar: a.avatar, specialty: a.specialty, personality: a.personality, philosophy: a.philosophy, assignments: a.assignments, voice: a.voice, rivalry: a.rivalry ? { id: a.rivalry, name: ANALYSTS[a.rivalry].name, url: '/analysts/' + a.rivalry } : null },
@@ -10804,7 +10846,7 @@ async function disagreementsPayload(env, horizon) {
   const columns = stored ? JSON.parse(JSON.stringify(stored.columns)) : rivalryColumns(b.players, { week: b.currentWeek });
   if (ledger) for (const id of ['vega', 'brooks']) if (columns[id]) { columns[id].record = ledger[id]; }
   let recent = [];
-  if (ready) { try { recent = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at, game_id FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 5").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null } : null; }).filter(Boolean); } catch (e) {} }
+  if (ready) { try { recent = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at, game_id FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 5").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: weekCase(r.headline), url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null } : null; }).filter(Boolean); } catch (e) {} }
   return { ok: true, horizon: b.horizon, currentWeek: b.currentWeek, pair: { brooks: { name: ANALYSTS.brooks.name, label: 'Fantasy Analysis', url: '/analysts/brooks' }, vega: { name: ANALYSTS.vega.name, label: 'Market Intelligence', url: '/analysts/vega' } },
            columns, locked: !!stored, lockedAt: stored ? stored.builtAt : null, lastWeek: ledger ? ledger.lastWeek : null,
            disagreements: rows.map(r => ({ ...r, brooksRank: r.fantasyRank, vegaRank: r.marketRank })), recentLines: recent, thresholds: BLEND_DISAGREE };

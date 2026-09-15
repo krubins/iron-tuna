@@ -17,7 +17,10 @@ const cut = (a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i); if (i <
 const HOUR = 3600000;
 // A fresh harness per case: the payload memoizes for sixty seconds, and a
 // shared one would answer the second case with the first case's rows.
-const mk = (opts = {}) => new Function('contentReady', 'newsroomReady', '_pieceUrl', '_pieceTitle', '_bylineOf',
+// The strip prints headlines through the desk's own weekCase ("week 1" is
+// "Week 1"), so the harness carries the real one rather than a stand-in.
+const weekCase = new Function(cut('const weekCase =', '\n') + '\nreturn weekCase;')();
+const mk = (opts = {}) => new Function('contentReady', 'newsroomReady', '_pieceUrl', '_pieceTitle', '_bylineOf', 'weekCase',
   cut("// ── the front page's recap strip ─", '// The regular season with nothing published yet:')
   + '\nreturn { recapStripPayload, RECAP_STRIP_MAX, RECAP_STRIP_FRESH_MS };'
 )(
@@ -25,7 +28,8 @@ const mk = (opts = {}) => new Function('contentReady', 'newsroomReady', '_pieceU
   async () => {},
   r => '/in-season/desk/' + r.kind + '/' + r.week + '/' + String(r.game_id || '').toLowerCase(),
   r => String(r.title || r.kind),
-  () => ({ name: 'Rhea Vega' })
+  () => ({ name: 'Rhea Vega' }),
+  weekCase
 );
 // D1's prepare().bind().all() shape, narrowed to what the payload uses.
 const db = rows => ({ prepare: () => ({ bind() { return this; }, all: async () => ({ results: rows }) }) });

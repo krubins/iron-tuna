@@ -81,7 +81,6 @@ p{margin:0}
 .hb-card{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:13px 14px;min-width:0}
 .hb-card i{font-style:normal;display:block;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--wi-teal);margin-bottom:8px}
 .hb-card i.fade{color:#ff8a80}
-.hb-card i.td{color:var(--gold)}
 .hb-card b{display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;overflow-wrap:anywhere}
 .hb-card b a{color:inherit}
 .hb-card small{display:block;font-size:11px;color:#8b9c97;margin:2px 0 9px;letter-spacing:.03em}
@@ -588,14 +587,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         [['Consensus', hbRank(g.topUp, 'rankConsensus')], ['Vegas', hbRank(g.topUp, 'rankMarket')], ['Iron Tuna', hbRank(g.topUp, 'rankIronTuna')]]);
       cards += hbCard('fade', 'Vegas fades', g.topDown,
         [['Consensus', hbRank(g.topDown, 'rankConsensus')], ['Vegas', hbRank(g.topDown, 'rankMarket')], ['Iron Tuna', hbRank(g.topDown, 'rankIronTuna')]]);
-      var t = g.topTd;
-      if (t && typeof t.anytimeTd === 'number' && isFinite(t.anytimeTd)) {
-        cards += hbCard('td', 'TD edge', t,
-          [['Consensus', hbRank(t, 'rankConsensus')], ['Iron Tuna', hbRank(t, 'rankIronTuna')]],
-          ['Anytime TD', t.anytimeTd + '%',
-           'Implied from ' + t.tdIronTuna + ' season TDs over ' + t.games + ' games. The lines have him at '
-           + t.tdMarket + ' against a consensus ' + t.tdConsensus + '. Not a quoted prop.']);
-      }
     }
     if (!cards) {
       grid.hidden = true; grid.innerHTML = '';
