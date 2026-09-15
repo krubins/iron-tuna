@@ -74,5 +74,31 @@ ok('the workflow authenticates its token request', tokenRequest.auth === 'Bearer
 ok('the signed token is returned for the import', token === 'signed-token');
 ok('running outside GitHub Actions is rejected', await githubOidcToken({}).then(() => false, () => true));
 
+console.log('\nthe schedule the reader is told');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const workflow = fs.readFileSync(path.join(ROOT, '.github/workflows/draftkings-salaries.yml'), 'utf8');
+const worker = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8');
+const crons = [...workflow.matchAll(/- cron: '(\d+) (\d+) \* \* (\d)'/g)].map(m => ({ dow: Number(m[3]), hour: Number(m[2]), minute: Number(m[1]) }));
+const noteStart = worker.indexOf('const DFS_IMPORT_SCHEDULE');
+const noteEnd = worker.indexOf('const DFS_DDL', noteStart);
+const N = new Function('DFS_SITES', worker.slice(noteStart, noteEnd) + '\nreturn { DFS_IMPORT_SCHEDULE, dfsImportWindow, dfsNoSalariesNote };')(
+  { dk: { label: 'DraftKings' }, fd: { label: 'FanDuel' } });
+ok('the workflow runs on the hour', crons.length > 0 && crons.every(c => c.minute === 0));
+ok('the Worker mirrors every workflow cron slot', JSON.stringify(crons.map(c => ({ dow: c.dow, hour: c.hour }))) === JSON.stringify(N.DFS_IMPORT_SCHEDULE),
+   JSON.stringify(crons) + ' vs ' + JSON.stringify(N.DFS_IMPORT_SCHEDULE));
+ok('the first slot is Tuesday 6 AM EDT, before the week\'s first reader', N.DFS_IMPORT_SCHEDULE[0].dow === 2 && N.DFS_IMPORT_SCHEDULE[0].hour === 10);
+const tue = N.dfsNoSalariesNote('dk', Date.parse('2026-09-15T09:00:00Z'));
+ok('a Tuesday pre-dawn board names the 6 AM update', /next scheduled update is Tue, Sep 15, 6:00 AM ET\./.test(tue.note) && tue.nextImportAt === Date.parse('2026-09-15T10:00:00Z'), tue.note);
+const tueLate = N.dfsNoSalariesNote('dk', Date.parse('2026-09-15T12:36:00Z'));
+ok('once the 6 AM slot has passed the note names the 10 AM retry', /next scheduled update is Tue, Sep 15, 10:00 AM ET\./.test(tueLate.note) && tueLate.lastImportAt === Date.parse('2026-09-15T10:00:00Z'), tueLate.note);
+const thu = N.dfsNoSalariesNote('dk', Date.parse('2026-09-17T15:00:00Z'));
+ok('inside the game week the note says the update ran and found nothing', /last ran Wed, Sep 16, 10:00 AM ET and found no posted slate/.test(thu.note) && /next scheduled update is Tue, Sep 22, 6:00 AM ET/.test(thu.note), thu.note);
+ok('standard time is printed in New York time, not UTC', /Tue, Dec 1, 5:00 AM ET/.test(N.dfsNoSalariesNote('dk', Date.parse('2026-12-01T09:00:00Z')).note));
+const fd = N.dfsNoSalariesNote('fd', Date.parse('2026-09-15T12:36:00Z'));
+ok('FanDuel, which has no import job, is promised no update', fd.nextImportAt == null && !/scheduled update/.test(fd.note));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -321,7 +321,8 @@ section{margin:0 0 var(--space-6)}
         // NOT the API's own note here: it is written for the operator and
         // says to import a CSV from /admin, which is not a sentence a reader
         // should ever be shown. The lane page carries the operator wording.
-        'No DraftKings salaries are loaded for this week, so nothing on the slate has a price to read against yet.'));
+        'No DraftKings salaries are loaded for this week, so nothing on the slate has a price to read against yet.'
+        + (dfsRes && dfsRes.nextImportAt ? ' The next scheduled update is ' + new Date(dfsRes.nextImportAt).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.' : '')));
     }
 
     if (edge && edge.week) $('rdWeek').textContent = edge.week;
