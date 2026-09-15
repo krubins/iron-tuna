@@ -139,7 +139,8 @@ function fakeModel(body) {
     // NEWSROOM_OBJECT_SECTIONS so the fake writer answers the shape the
     // real _lensShape asked it for.
     whatScored: ['player', 'position', 'team', 'points', 'line', 'why'], usageBehindIt: ['player', 'position', 'team', 'targets', 'carries', 'share', 'why'],
-    nextWeekSignals: ['player', 'position', 'team', 'signal', 'evidence', 'why'], components: ['headline', 'player', 'why'] };
+    nextWeekSignals: ['player', 'position', 'team', 'signal', 'evidence', 'why'], components: ['headline', 'player', 'why'],
+    biggestWins: ['player', 'position', 'team', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'], whatWeMissed: ['player', 'position', 'team', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'] };
   const shape = /SHAPE[^\n]*\n(\{[^\n]*\})/.exec(user)[1];
   const S = JSON.parse(shape);
   const lensKeys = (lens) => Object.keys(S[lens] || {});
@@ -217,7 +218,15 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('the 11:45 scratch, before the intel slot, scored as breaking news and produced a Breaking piece; the 12:45 one refreshed Last-Minute Intel instead of a second story', scans.length === 2 && scans[0].handled.via === 'breaking' && scans[1].handled.via === 'last-minute-intel', JSON.stringify(scans.map(s => [s.at, s.handled && s.handled.via])));
   ok('below-threshold changes are logged and produce nothing', db.T.news_events.length >= 2 && db.T.news_events.every(e => e.score < 60 ? !e.handled : true));
   ok('What Sunday Taught Us published at 7:30 PM with the finals it had and updated as the late and night games went final: three versions, one slug', at('what-sunday-taught-us', 1)[0] && at('what-sunday-taught-us', 1)[0].at === 'Sun 19:30' && at('what-sunday-taught-us', 1).length === 3 && P.filter(r => r.kind === 'what-sunday-taught-us').every(r => r.slug === P.find(x => x.kind === 'what-sunday-taught-us').slug), JSON.stringify(at('what-sunday-taught-us', 1)));
-  ok('the MNF preview and the early rankings published Monday 6:00, the preview about the Monday game and the rankings about Week 2', at('mnf-preview', 1)[0] && at('mnf-preview', 1)[0].at === 'Mon 6:00' && at('early-rankings', 2)[0] && at('early-rankings', 2)[0].at === 'Mon 6:00' && at('early-rankings', 2)[0].status === 'published', JSON.stringify([at('mnf-preview', 1), at('early-rankings', 2)]));
+  ok('the MNF preview and What Tuna Got Right ran Monday 6:00, the preview about the Monday game and the scorecard about Week 1', at('mnf-preview', 1)[0] && at('mnf-preview', 1)[0].at === 'Mon 6:00' && at('what-tuna-got-right', 1)[0] && at('what-tuna-got-right', 1)[0].at === 'Mon 6:00' && ['published', 'skipped'].includes(at('what-tuna-got-right', 1)[0].status), JSON.stringify([at('mnf-preview', 1), at('what-tuna-got-right', 1)]));
+  ok('no early rankings ran, and no Week 2 piece was written on Monday morning', !P.some(r => r.kind === 'early-rankings') && !timeline.some(x => x.at === 'Mon 6:00' && x.week === 2));
+  {
+    const sc = db.T.content_pieces.filter(r => r.kind === 'what-tuna-got-right' && r.week === 1).pop();
+    const b = sc ? JSON.parse(sc.brief) : null;
+    ok('the scorecard was written from the frozen boards the recaps graded, or skipped for a reason the packet names', !!b && (sc.status === 'published' ? (b.record && b.record.games >= 1 && Array.isArray(b.biggestWins) && b.biggestWins.length >= 1 && b.biggestWins.every(w => w.game && Number.isFinite(w.margin))) : ['no_frozen_boards', 'nothing_landed', 'writer_declined'].includes(b.reason)), JSON.stringify(sc && { status: sc.status, reason: b && b.reason, record: b && b.record }));
+    ok('it covers the games played through Sunday and names the Monday game as not covered', !b || !b.record || (b.notCovered.some(n => n.day === 'Mon') && b.gamesCovered.every(g => g.day !== 'Mon')), JSON.stringify(b && b.notCovered));
+    ok('its wins are the recaps\' own hits, in the recaps\' own numbers', !b || !b.record || b.biggestWins.every(w => { const r = db.T.content_pieces.find(x => x.kind === 'game-recap' && x.game_id === w.gameId); if (!r) return false; const c = JSON.parse(r.brief).calledIt; return c.hits.some(h => h.name === w.name && h.actual === w.actual && h.margin === w.margin); }));
+  }
   ok('the Week 2 MNF preview waited for its own Monday', !at('mnf-preview', 2).length || at('mnf-preview', 2)[0].at === 'Mon 6:00');
   ok('Quarterback Monday was skipped: nothing worth publishing with no usage file', at('quarterback-monday', 1)[0] && at('quarterback-monday', 1)[0].status === 'skipped');
   if (!at('ros-rankings', 2)[0]) { Date.now = () => ET(2026, 9, 15, 7, 0); console.log('  DEBUG ros-rankings: ' + JSON.stringify(await H.produceContent(env, 'ros-rankings', {})).slice(0, 600)); Date.now = () => clock.t; }
@@ -290,9 +299,9 @@ console.log('\nthe feeds and the front page');
   ok('the front-page lead and its column carry none of them', (() => { const l = [movedLead.story].concat(movedLead.recent); return !l.some(r => FORWARD.some(k => r.slug.startsWith('desk:' + k + ':1:') || r.slug === 'desk:' + k + ':1') || r.slug.startsWith('desk:tnf-preview:2')); })(), JSON.stringify([movedLead.story].concat(movedLead.recent).map(r => r.slug)));
   const idx = await H.contentListPayload(env, 2026, null);
   ok('the desk index is an archive and still lists every one of them', idx.ok && FORWARD.filter(k => db.T.content_pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')).every(k => idx.pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')));
-  const piece = await H.contentPiecePayload(env, 'early-rankings', 2026, 2);
+  const piece = await H.contentPiecePayload(env, 'ros-rankings', 2026, 2);
   ok('a piece payload carries both lenses, the sections for each, the byline and the disclosure', piece.ok && piece.body.weekly && piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length && piece.byline.name === 'Evan Brooks' && piece.byline.dfsName === 'Lena Park' && /AI-powered/.test(piece.disclosure));
-  ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Early Rankings for Next Week', JSON.stringify(piece.title));
+  ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Rest-of-Season Rankings', JSON.stringify(piece.title));
   ok('the packet the page shows hides the allowed list and the index', piece.brief && !piece.brief.allowed && !piece.brief.playerIndex && piece.brief.freshness);
   const a = await H.analystPayload(env, 'brooks');
   ok('an analyst page lists recent pieces and the record of calls', a.ok && a.pieces.length >= 1 && Array.isArray(a.calls) && a.headToHead !== null);
@@ -346,10 +355,10 @@ console.log('\nthe pause, the approval and the hallucinating writer');
   Date.now = () => end;
   await H.newsroomAdmin(env, 'pause', {});
   ok('paused, automatic publishing is off', !(await H.autoPublishOn(env)).on);
-  const r = await H.produceContent(env, 'early-rankings', { force: true });
+  const r = await H.produceContent(env, 'ros-rankings', { force: true });
   ok('a validated piece is held for approval while paused', r.ok && r.status === 'held' && r.violations.some(v => /awaiting_approval/.test(v)), JSON.stringify(r));
-  const ap = await H.newsroomAdmin(env, 'approve', { kind: 'early-rankings', week: r.week });
-  ok('approve publishes it and records its calls', ap.ok && db.T.content_pieces.filter(x => x.kind === 'early-rankings').pop().status === 'published' && ap.calls >= 1, JSON.stringify(ap));
+  const ap = await H.newsroomAdmin(env, 'approve', { kind: 'ros-rankings', week: r.week });
+  ok('approve publishes it and records its calls', ap.ok && db.T.content_pieces.filter(x => x.kind === 'ros-rankings').pop().status === 'published' && ap.calls >= 1, JSON.stringify(ap));
   await H.newsroomAdmin(env, 'resume', {});
   ok('resumed', (await H.autoPublishOn(env)).on);
   modelMode = 'hallucinate'; modelLog.length = 0;
