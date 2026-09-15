@@ -1136,8 +1136,24 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dfs-select select{width:100%;min-height:44px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:700 14px Inter,Arial,sans-serif;padding:9px 34px 9px 11px}
 .dfs-select select:disabled{opacity:.48;cursor:not-allowed;background:#f1f3f3}
 .dfs-select small{display:block;margin-top:6px;color:var(--ink-3);font-size:11px;line-height:1.4}
-.dfs-setup-state{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+.dfs-setup-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+.dfs-setup-state{font-size:12px;color:var(--ink-3);margin:0;flex:1 1 240px}
 .dfs-setup-state.ready{color:var(--brand);font-weight:800}
+.dfs-submit{appearance:none;border:0;cursor:pointer;min-height:44px;padding:0 26px;border-radius:9px;background:var(--brand);color:#fff;font:800 13px/1 Inter,Arial,sans-serif;letter-spacing:.09em;text-transform:uppercase;transition:background .15s,transform .15s}
+.dfs-submit:hover{background:var(--brand-dark,#0a5f4c)}
+.dfs-submit:active{transform:translateY(1px)}
+.dfs-submit:disabled{opacity:.42;cursor:not-allowed;background:var(--ink-3);transform:none}
+.dfs-submit:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+@media(max-width:560px){.dfs-submit{width:100%}}
+/* The result panel opens from zero height so the page below slides down
+   rather than jumping; the fraction row is what animates. */
+.dfs-result{display:grid;grid-template-rows:0fr;transition:grid-template-rows .55s cubic-bezier(.22,.8,.3,1)}
+.dfs-result.open{grid-template-rows:1fr}
+.dfs-result-in{overflow:hidden;min-height:0}
+.dfs-result-body{padding:0 0 26px;opacity:0;transform:translateY(-8px);transition:opacity .4s ease .15s,transform .4s ease .15s}
+.dfs-result.open .dfs-result-body{opacity:1;transform:none}
+.dfs-result .dfs-note{margin:0 0 12px}
+@media (prefers-reduced-motion: reduce){.dfs-result,.dfs-result-body{transition:none}}
 .dfs-quickread{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin:0 0 26px}
 .dfs-potw,.dfs-learn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 .dfs-potw{border-top:3px solid var(--gold)}
@@ -1180,6 +1196,8 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-board th { font-size: 10.5px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; color: #7f948f }
 .fp-board td.num, .fp-board th.num { text-align: right; font-variant-numeric: tabular-nums }
 .fp-board tbody tr:last-child td { border-bottom: 0 }
+.fp-board tfoot td { border-bottom: 0; border-top: 2px solid rgba(255, 255, 255, .22); background: rgba(255, 255, 255, .04); padding-top: 11px; padding-bottom: 11px }
+.fp-board tfoot b { color: var(--teal, #2dd4a3) }
 .fp-board b { color: #fff; font-weight: 700 }
 .fp-board small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #7f948f }
 .fp-board .sl { display: inline-block; min-width: 40px; text-align: center; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; color: #bcd0cc; background: rgba(255, 255, 255, .09); border-radius: 4px; padding: 4px 6px }
@@ -1845,7 +1863,21 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
         <small>How much risk the roster should accept for the available payoff.</small>
       </div>
     </div>
-    <p class="dfs-setup-state" id="dfsSetupState">Start with Game Style.</p>
+    <div class="dfs-setup-foot">
+      <p class="dfs-setup-state" id="dfsSetupState">Start with Game Style.</p>
+      <button class="dfs-submit" type="button" id="dfsSubmit" disabled aria-controls="dfsResult" aria-expanded="false">Submit</button>
+    </div>
+  </div>
+
+  <!-- The solved roster for the contest set above. Closed until Submit is
+       clicked; opening it slides everything below it down. -->
+  <div class="dfs-result" id="dfsResult" aria-live="polite">
+    <div class="dfs-result-in">
+      <div class="dfs-result-body">
+        <p class="dfs-note" id="dfsResultNote"></p>
+        <div id="dfsResultBuild"></div>
+      </div>
+    </div>
   </div>
 
   <div class="dfs-quickread">
@@ -4503,6 +4535,9 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
             why: 'A big field pays almost everything to the top fraction of a percent, so the median is worth nothing. Ceiling discounted by modeled ownership, stacked and brought back \u2014 the build that carries longshots on purpose.' }
   };
   var shape = 'single';
+  // The roster is not solved until Submit is clicked; after that it re-solves
+  // live as the setup changes, and closes again if the setup becomes incomplete.
+  var submitted = false;
   var frontGameStyle = '', frontGameChoice = '', frontPayout = '', frontGameKeys = {};
   var FRONT_SINGLE = { 'showdown-captain':1, 'in-game-showdown':1, 'snake-showdown':1, 'madden-showdown-captain':1 };
   var FRONT_PAYOUT_SHAPE = { h2h:'cash', '50-50':'cash', 'double-up':'cash', satellite:'cash', multiplier:'single', 'tournament-single':'single', 'tournament-multi':'gpp', private:'single' };
@@ -4580,7 +4615,17 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     q.label=(s.label||'DraftKings')+' · '+frontSelectedKeys().length+' selected game'+(frontSelectedKeys().length===1?'':'s');
     return q;
   }
+  function frontSyncSubmit(){
+    var b=$('dfsSubmit'); if(!b)return;
+    b.disabled = site==='dk' ? !frontSetupReady() : false;
+  }
+  function frontOpenResult(open){
+    var r=$('dfsResult'), b=$('dfsSubmit'); if(!r)return;
+    r.classList.toggle('open',!!open);
+    if(b)b.setAttribute('aria-expanded',open?'true':'false');
+  }
   function frontUpdateState(){
+    frontSyncSubmit();
     var state=$('dfsSetupState'); if(!state)return;
     if(!frontGameStyle){state.className='dfs-setup-state';state.textContent='Start with Game Style.';return;}
     if(!frontGameChoice){state.className='dfs-setup-state';state.textContent='Now select the Games / player pool.';return;}
@@ -4614,9 +4659,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return '';
   }
   function buildLineup(s) {
-    var host = $('dfsBuild'), note = $('dfsShapeNote');
+    // The board draws into the panel under the setup; chapter 01 keeps a
+    // one-line pointer so its ribbon anchor still lands somewhere useful.
+    var host = $('dfsResultBuild'), note = $('dfsResultNote'), pointer = $('dfsBuild'), chapNote = $('dfsShapeNote');
     if (!host) return;
-    if (site === 'dk' && !frontSetupReady()) { host.innerHTML='<p class="dfs-empty"><b>Complete Game Style, Games and Payout Structure above.</b> The lineup will be built from that exact contest setup.</p>'; if(note)note.textContent=''; return; }
+    frontSyncSubmit();
+    if (chapNote) chapNote.textContent = '';
+    if (site === 'dk' && !frontSetupReady()) {
+      submitted = false; frontOpenResult(false); host.innerHTML = ''; if (note) note.textContent = '';
+      if (pointer) pointer.innerHTML = '<p class="dfs-empty"><b>Complete Game Style, Games and Payout Structure above, then click Submit.</b> The lineup is built from that exact contest setup.</p>';
+      return;
+    }
+    if (!submitted) {
+      frontOpenResult(false); host.innerHTML = ''; if (note) note.textContent = '';
+      if (pointer) pointer.innerHTML = '<p class="dfs-empty"><b>Setup complete.</b> Click Submit under the contest setup to solve the roster.</p>';
+      return;
+    }
+    frontOpenResult(true);
+    if (pointer) pointer.innerHTML = '<p class="dfs-empty">The roster is solved above, directly under the contest setup. <a href="#dfsResult">Jump to it &uarr;</a></p>';
     if (site === 'dk' && frontGameStyle !== 'classic') { host.innerHTML='<p class="dfs-empty"><b>'+e($('dfsGameStyle').options[$('dfsGameStyle').selectedIndex].text)+' selected.</b> This homepage preview uses the Classic optimizer only. Open the full DFS sheet for format-specific analysis.</p>'; if(note)note.textContent=''; return; }
     s = frontFiltered(s);
     var sh = SHAPES[shape] || SHAPES.single;
@@ -4666,7 +4726,12 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       + '</div>'
       + '<div class="fp-board-meter"><i style="width:' + pct + '%"></i></div>'
       + '<div class="fp-board-cap"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div>'
-      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">DraftKings FPPG</th><th class="num">Iron Tuna Projection</th><th class="num">Tuna Edge</th></tr></thead><tbody>' + rows + '</tbody></table>'
+      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">DraftKings FPPG</th><th class="num">Iron Tuna Projection</th><th class="num">Tuna Edge</th></tr></thead><tbody>' + rows + '</tbody>'
+      + '<tfoot><tr><td></td><td><b>Total</b><small>' + l.players.length + ' players</small></td>'
+        + '<td class="num"><b>' + money(l.salary) + '</b></td>'
+        + '<td class="num"><b>' + (dkFppg == null ? '\u2014' : n1(dkFppg)) + '</b></td>'
+        + '<td class="num"><b>' + n1(l.projPoints) + '</b></td>'
+        + '<td class="num"><b>' + (tunaEdge == null ? '\u2014' : ((tunaEdge > 0 ? '+' : '') + n1(tunaEdge))) + '</b></td></tr></tfoot></table>'
       + '<div class="fp-board-foot"><span>Solved against the cap on the same market numbers the board below prints. Nothing here enters a contest.</span>'
       + '<a href="/dfs">Lock, exclude and build twenty &rarr;</a></div></div>';
   }
@@ -4710,11 +4775,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   $('dfsPayout').addEventListener('change', function(){
     frontPayout=this.value; shape=FRONT_PAYOUT_SHAPE[frontPayout]||'single'; frontUpdateState(); if(slates[site])render(slates[site]);
   });
+  $('dfsSubmit').addEventListener('click', function(){
+    if(this.disabled) return;
+    submitted = true;
+    if(slates[site]) buildLineup(slates[site]); else { buildLineup(null); loadSlate(); }
+    // The panel opens in place and pushes the page down. Only nudge the
+    // window when the top of the result would otherwise sit below the fold.
+    var r=$('dfsResult');
+    if(r) setTimeout(function(){
+      var top=r.getBoundingClientRect().top, room=window.innerHeight-top;
+      if(room<220) try{ window.scrollBy({top:top-96,left:0,behavior:'smooth'}); }catch(err){ window.scrollBy(0,top-96); }
+    }, 80);
+  });
 
   $('dfsSite').addEventListener('click', function (ev) {
     var b = ev.target.closest('button');
     if (!b) return;
     site = b.getAttribute('data-site');
+    submitted=false; frontOpenResult(false);
     frontGameChoice=''; frontPayout=''; frontGameKeys={}; $('dfsGames').value=''; $('dfsPayout').value=''; $('dfsPayout').disabled=true;
     [].forEach.call(this.querySelectorAll('button'), function (x) {
       x.setAttribute('aria-pressed', x.getAttribute('data-site') === site ? 'true' : 'false');
