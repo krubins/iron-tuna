@@ -143,7 +143,7 @@ console.log('\nthe worker source');
   const hour = k => { const m = kinds.match(new RegExp("'" + k + "':[^\\n]*?day: '(\\w+)', hour: (\\d+)")); return m ? m[1] + ' ' + m[2] : null; };
   ok('Sunday 12:15 PM: Last-Minute Intel', hour('last-minute-intel') === 'Sun 12' && /'last-minute-intel': \{[^}]*minute: 15/.test(kinds));
   ok('Sunday 7:30 PM: What Sunday Taught Us, updated as the night game goes final', hour('what-sunday-taught-us') === 'Sun 19' && /'what-sunday-taught-us': \{[^}]*minute: 30/.test(kinds) && /updates: 'more-finals'/.test(kinds));
-  ok('Monday 6 AM: the MNF preview and the early rankings', hour('mnf-preview') === 'Mon 6' && hour('early-rankings') === 'Mon 6');
+  ok('Monday 6 AM: the MNF preview and What Tuna Got Right, gated on a win', hour('mnf-preview') === 'Mon 6' && hour('what-tuna-got-right') === 'Mon 6' && /'what-tuna-got-right': \{[^}]*gate: 'worth'/.test(kinds) && !hour('early-rankings'));
   ok('Monday 7 AM: Quarterback Monday, gated on there being a story', hour('quarterback-monday') === 'Mon 7' && /'quarterback-monday': \{[^}]*gate: 'worth'/.test(kinds));
   ok('Tuesday 7 and 8 AM: ROS rankings, then Tailback Tuesday', hour('ros-rankings') === 'Tue 7' && hour('tailback-tuesday') === 'Tue 8');
   ok('Wednesday 6 and 8 AM: the Pickup Advisor, then Wideout Wednesday', hour('pickup-advisor') === 'Wed 6' && hour('wideout-wednesday') === 'Wed 8');

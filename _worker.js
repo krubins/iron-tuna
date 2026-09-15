@@ -7650,16 +7650,26 @@ const CONTENT_KINDS = {
     analyst: 'dalton', dfsAnalyst: 'dalton', lens: 'both', optional: true, preview: true,
     targets: (gs) => gs.filter(g => g.dow === 'Mon'),
     summary: 'Start/sit and the showdown slate for the Monday game.', absorbs: [] },
-  'early-rankings': { title: 'Early Rankings for Next Week', day: 'Mon', hour: 6, minute: 0, retro: true, subject: 'nextPlayed',
-    analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
-    summary: 'Every position ranked for the coming week, with the Fantasy Analysis / Market Intelligence slider.', absorbs: [] },
+  // THE WEEK'S WINS, in order of size. Every game's recap already grades the
+  // board frozen before its kickoff against the box score (`_vindication`);
+  // this collects those gradings across the week that just played and ranks
+  // the hits, biggest first. Same arithmetic, same thresholds, same rows the
+  // recaps read, so this piece can never claim a call a recap did not. It
+  // replaced the Monday early rankings (LEGACY_CONTENT): Tuesday ranks the
+  // same week across four horizons, and Monday morning is for the record.
+  // `partial`: the Monday game is not final at 6 AM and is named as not
+  // covered rather than waited for. Worth-gated: no hit, no piece.
+  'what-tuna-got-right': { title: 'What Tuna Got Right', subtitle: 'The biggest wins from the board frozen before kickoff', day: 'Mon', hour: 6, minute: 0, retro: true, subject: 'played',
+    analyst: 'mercer', dfsAnalyst: 'park', lens: 'both', gate: 'worth', partial: true,
+    targets: (gs) => gs.filter(g => g.status === 'final' && g.dow !== 'Mon'),
+    summary: 'What the board called before kickoff and the box score proved: the week’s biggest wins, ranked, with the misses on the record.', absorbs: ['early-rankings'] },
   'quarterback-monday': { title: 'Quarterback Monday', day: 'Mon', hour: 7, minute: 0, retro: true, subject: 'played',
     analyst: 'dalton', dfsAnalyst: 'park', lens: 'both', gate: 'worth', targets: () => [],
     summary: 'One quarterback story that matters, or nothing.', absorbs: [] },
   'ros-rankings': { title: 'Rest-of-Season Rankings', day: 'Tue', hour: 7, minute: 0, retro: true, subject: 'current',
     analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
     dfsTitle: 'Early Price Inefficiency Board',
-    summary: 'Next 3, until the playoffs, playoffs only, rest of season: one engine, four horizons.', absorbs: ['rankings-update', 'mnf-breakdown'] },
+    summary: 'Next 3, until the playoffs, playoffs only, rest of season: one engine, four horizons.', absorbs: ['rankings-update', 'mnf-breakdown', 'early-rankings'] },
   'tailback-tuesday': { title: 'Tailback Tuesday', day: 'Tue', hour: 8, minute: 0, retro: true, subject: 'played',
     analyst: 'brooks', altAnalyst: 'raines', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
     summary: 'The running back development that changes a ranking, argued from the workload.', absorbs: ['opportunity-report'] },
@@ -7711,6 +7721,7 @@ const CONTENT_KINDS = {
 const LEGACY_CONTENT = {
   'team-recaps':                 { title: 'Team-by-Team Recaps', slot: 'Mon 7 AM', disposition: 'retired', destination: 'what-sunday-taught-us', reason: 'A conventional recap. Its per-club usage data feeds What Sunday Taught Us.' },
   'mnf-breakdown':               { title: 'Monday Night: What We Learned', slot: 'Tue 7 AM', disposition: 'merged', destination: 'ros-rankings', reason: 'What Monday night changed opens the Tuesday rankings.' },
+  'early-rankings':              { title: 'Early Rankings for Next Week', slot: 'Mon 6 AM', disposition: 'merged', destination: 'ros-rankings', reason: 'The whole board for the coming week, ranked a day before Tuesday ranked it again across four horizons. Monday 6 AM is now What Tuna Got Right.' },
   'what-they-arent-telling-you': { title: "What They Aren't Telling You", slot: 'Tue 7 AM', disposition: 'merged', destination: 'underrated', reason: 'Same premise, one player, Thursday, Nate Vega.' },
   'opportunity-report':          { title: 'The Opportunity Report', slot: 'Wed 7 AM', disposition: 'merged', destination: 'wideout-wednesday', reason: 'Targets to Wideout Wednesday, backfields to Tailback Tuesday.' },
   'rankings-update':             { title: 'Forward-Looking Rankings Update', slot: 'Wed 7 AM', disposition: 'merged', destination: 'ros-rankings', reason: 'One ranking engine, four horizons, Tuesday.' },
@@ -7740,7 +7751,14 @@ const NEWSROOM_SECTIONS = {
   // Wrap Up collects for every game of the week.
   'game-recap':            { weekly: ['theGame', 'weCalledIt', 'whatScored', 'usageBehindIt', 'nextWeekSignals', 'components', 'waiverAndTrade', 'wrap'], dfs: ['priceImpact', 'usageForPricing', 'emergingChalk', 'leverage', 'stackImplications', 'wrap'] },
   'mnf-preview':           { weekly: ['startSit', 'expectations', 'matchups', 'injuries', 'usage', 'marketSignals', 'risk'], dfs: ['captainOptions', 'value', 'ownership', 'contrarianCaptains', 'correlation', 'gameScripts', 'fades'] },
+  // Retired (LEGACY_CONTENT) but its published rows stay readable, and a
+  // legacy row renders through its sections, so the list stays.
   'early-rankings':        { weekly: ['overview', 'quarterbacks', 'runningBacks', 'wideReceivers', 'tightEnds', 'flex', 'kickersAndDefenses', 'whereWeDisagree'], dfs: ['rawVsSalary', 'earlyValues', 'earlyChalk', 'leverage', 'cashVsTournament'] },
+  // The record first, then the wins biggest first, then the misses (only
+  // when there were any: CONDITIONAL_SECTIONS), then what to do with the
+  // players the board was right about. The DFS lens reads the same wins
+  // against the coming slate's prices.
+  'what-tuna-got-right':   { weekly: ['theRecord', 'biggestWins', 'whatWeMissed', 'whatToDo'], dfs: ['theRecord', 'biggestWins', 'whatItMeansForPricing'] },
   'quarterback-monday':    { weekly: ['theStory', 'whatTheNumbersSay', 'whatToDo', 'buySell'], dfs: ['stacks', 'bringBacks', 'ownership', 'salaryAndRushingUpside', 'gameEnvironment'] },
   'ros-rankings':          { weekly: ['whatMondayChanged', 'next3', 'untilPlayoffs', 'playoffsOnly', 'restOfSeason', 'majorMovers', 'whereWeDisagree'], dfs: ['priceInefficiencyBoard', 'whyThePriceIsWrong', 'initialOwnership', 'leverage'] },
   'tailback-tuesday':      { weekly: ['theDevelopment', 'workloadEvidence', 'rankingImpact', 'tradesAndWaivers', 'restOfSeason'], dfs: ['salary', 'workloadPerDollar', 'touchdownEquity', 'ownership', 'chalkVsLeverage', 'stacking'] },
@@ -7775,6 +7793,11 @@ const NEWSROOM_OBJECT_SECTIONS = {
   // kickoff and the result proved it right, or did not. `verdict` is the
   // packet's own word (`right` or `wrong`), never the writer's.
   weCalledIt: ['player', 'position', 'team', 'weSaid', 'consensusSaid', 'heScored', 'verdict', 'why'],
+  // The Monday scorecard: one row per call, the game it was made on, and the
+  // three numbers that settle it (what the site said, what the consensus
+  // said, what he scored).
+  biggestWins: ['player', 'position', 'team', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
+  whatWeMissed: ['player', 'position', 'team', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
   captainOptions: ['player', 'position', 'team', 'salary', 'why'], contrarianCaptains: ['player', 'position', 'team', 'salary', 'why'], streamingDefenses: ['team', 'opponent', 'why'], defensesToAvoid: ['team', 'opponent', 'why'], kickerRankings: ['player', 'team', 'rank', 'why'],
   priceInefficiencyBoard: ['player', 'position', 'team', 'salary', 'projection', 'value', 'why'], earlyValues: ['player', 'position', 'team', 'salary', 'why'], likelyChalk: ['player', 'position', 'team', 'salary', 'why'], goodChalk: ['player', 'position', 'team', 'salary', 'why'], badChalk: ['player', 'position', 'team', 'salary', 'why'],
   coreStacks: ['game', 'players', 'why'], contrarianStacks: ['game', 'players', 'why'], stacks: ['game', 'players', 'why'], initialStacks: ['game', 'players', 'why']
@@ -7786,7 +7809,9 @@ const NEWSROOM_OBJECT_SECTIONS = {
 // from this one call, so a section can never be asked for and then failed for
 // its absence, nor skipped when it was asked for.
 const CONDITIONAL_SECTIONS = {
-  'game-recap': { weCalledIt: p => !!(p && p.calledIt && p.calledIt.available && (p.calledIt.hits.length || p.calledIt.misses.length)) }
+  'game-recap': { weCalledIt: p => !!(p && p.calledIt && p.calledIt.available && (p.calledIt.hits.length || p.calledIt.misses.length)) },
+  // A week with no misses has no misses section; it does not get a padded one.
+  'what-tuna-got-right': { whatWeMissed: p => !!(p && p.record && p.record.misses > 0) }
 };
 function sectionsFor(kind, lens, packet) {
   const n = NEWSROOM_SECTIONS[kind];
@@ -7798,8 +7823,8 @@ function sectionsFor(kind, lens, packet) {
 const DOW_N = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 // Which week a kind is ABOUT at `now`. 'played' is the last week with a game
 // played; 'current' is the clock's week; 'nextPlayed' is the week after the
-// played one (Monday's early rankings are about next week whether or not a
-// Monday game is still to be played).
+// played one (the retired Monday early rankings were about next week whether
+// or not a Monday game was still to be played; kept for a kind that needs it).
 function contentSubjectWeek(K, state, now) {
   if (!state || !state.ok) return null;
   const cur = state.week.type === 'REG' ? state.week.number : null;
@@ -8368,7 +8393,7 @@ const ANALYSTS = {
     specialty: ['Editorial synthesis', 'Major fantasy developments', 'Cross-position conclusions'],
     personality: 'Confident, decisive and skeptical.',
     philosophy: 'His question is "So what?" A statistic without an action attached is trivia.',
-    assignments: ['What Sunday Taught Us', 'Breaking stories', 'Cross-position analysis'],
+    assignments: ['What Sunday Taught Us', 'What Tuna Got Right', 'Breaking stories', 'Cross-position analysis'],
     voice: 'Decisive. Opens with the conclusion, then the evidence. Asks "so what" of every number and answers it in the same breath. Impatient with statistics that do not change a decision. Short declarative sentences; no throat-clearing.',
     rivalry: null },
   vega: { id: 'vega', name: 'Nate Vega', role: 'Market Intelligence Analyst', avatar: 'NV',
@@ -9350,7 +9375,7 @@ function _vindication(freeze, scoredByKey, week) {
     const actual = actualRow.points;
     const margin = _oddsRound(actual - r.consensusPts);
     const landed = direction === 'over' ? margin > 0 : margin < 0;
-    const entry = { name: r.name, position: r.position, team: r.team, direction,
+    const entry = { key: r.key, name: r.name, position: r.position, team: r.team, direction,
                     consensusPts: r.consensusPts, consensusRank: r.consensusRank,
                     ironTunaPts: r.ironTunaPts, ironTunaRank: r.ironTunaRank,
                     pointsGap: gap, rankGap: Math.abs(rankGap), actual, margin: Math.abs(margin),
@@ -9361,9 +9386,12 @@ function _vindication(freeze, scoredByKey, week) {
   hits.sort((a, b) => b.margin - a.margin || b.rankGap - a.rankGap);
   misses.sort((a, b) => b.margin - a.margin);
   const lead = hits.find(big) || null;
+  // `counts` is the whole record before the lists are cut for the writer:
+  // the Monday scorecard adds these up across the week, and a hit rate
+  // computed from a trimmed list would flatter the desk.
   return { available: true, frozenAt: freeze.takenAt, kickoff: freeze.kickoff,
            thresholds: { calledPoints: CALLED_MIN_PTS, calledRanks: CALLED_MIN_RANKS, headlinePoints: CALLED_HEADLINE_PTS, headlineRanks: CALLED_HEADLINE_RANKS },
-           week, hits: hits.slice(0, 6), misses: misses.slice(0, 4), headline: lead };
+           week, counts: { hits: hits.length, misses: misses.length }, hits: hits.slice(0, 6), misses: misses.slice(0, 4), headline: lead };
 }
 function packetGameRecap(game, summary, ctx, freeze) {
   const usage = gameUsageByTeam(summary);
@@ -9429,6 +9457,76 @@ function packetGameRecap(game, summary, ctx, freeze) {
            market: Object.fromEntries(teams.map(t => [t, _marketFor(t, ctx)])), waivers: teams.flatMap(t => _waiverFor(t, usage, ctx)).slice(0, 8),
            wrapFacts, dfs: _dfsBlock(ctx, new Set(teams)),
            unavailable: ['routes and route participation (no free feed publishes them)', 'snap counts until the weekly usage file publishes', 'red-zone and goal-line counts are derived from play descriptions and are left uncounted where the play text is ambiguous'] };
+}
+// THE WEEK'S RECORD, and the biggest wins on it. One entry per game that is
+// final AND had a board frozen before its kickoff; each is graded by the same
+// call the game's own recap made (`packetGameRecap(...).calledIt`), so the
+// Monday piece and the recaps cannot disagree about what was called. Games
+// with no frozen board, and the Monday game still to be played, are named
+// under `notCovered` rather than silently left out: a record that quietly
+// drops the games it cannot grade is not a record.
+//
+// `biggestWins` is every hit across the week, biggest margin first, then the
+// wider rank gap; `headlineWin` is the top hit only when it clears the same bar
+// a recap needs to lead with a call (CALLED_HEADLINE_*). The misses ride
+// along as they do in a recap. `nextWeek` on each win is that player's row
+// on the coming week's board, so the writer can say what to do with him and
+// not only what he did. Worth-gated: nothing landed, nothing runs.
+const WEEK_WINS_MAX = 8;
+const WEEK_MISSES_MAX = 4;
+function packetCalledItWeek(allGames, entries, ctx) {
+  const covered = [], notCovered = [];
+  const wins = [], misses = [], byPosition = {};
+  let calls = 0, hitCount = 0, missCount = 0;
+  const graded = new Map();
+  // `entries` is one {game, calledIt} per final game, `calledIt` being what
+  // that game's recap packet graded (buildResearchPacket makes them).
+  for (const e of entries || []) {
+    if (!e || !e.game) continue;
+    const c = e.calledIt;
+    if (!c || !c.available) { graded.set(e.game.id, 'no board was frozen before kickoff'); continue; }
+    const matchup = e.game.away + ' at ' + e.game.home;
+    const tag = h => ({ ...h, game: matchup, day: e.game.dow, gameId: e.game.id });
+    for (const h of c.hits) wins.push(tag(h));
+    for (const m of c.misses) misses.push(tag(m));
+    calls += c.counts.hits + c.counts.misses; hitCount += c.counts.hits; missCount += c.counts.misses;
+    for (const h of c.hits) { const b = byPosition[h.position] || (byPosition[h.position] = { hits: 0, misses: 0 }); b.hits++; }
+    for (const m of c.misses) { const b = byPosition[m.position] || (byPosition[m.position] = { hits: 0, misses: 0 }); b.misses++; }
+    covered.push({ game: matchup, day: e.game.dow, calls: c.counts.hits + c.counts.misses, hits: c.counts.hits, misses: c.counts.misses, frozenAt: c.frozenAt });
+    graded.set(e.game.id, null);
+  }
+  for (const g of allGames || []) {
+    if (g.type && g.type !== 'REG') continue;
+    // The Monday game is never a target here (it gets its own recap that
+    // night), whatever its state; anything else final but ungraded has no
+    // box score yet.
+    const why = graded.has(g.id) ? graded.get(g.id)
+      : g.dow === 'Mon' ? (g.status === 'final' ? 'the Monday game is graded in its own recap' : 'not yet played')
+      : g.status === 'final' ? 'no box score yet' : ((g.state && g.state.status === 'upcoming') || !g.status ? 'not yet played' : 'not yet final');
+    if (why) notCovered.push({ game: g.away + ' at ' + g.home, day: g.dow, reason: why });
+  }
+  if (!covered.length) return { skip: true, reason: 'no_frozen_boards', checked: notCovered.map(n => n.game).join(',') };
+  if (!hitCount) return { skip: true, reason: 'nothing_landed', checked: covered.map(n => n.game).join(',') };
+  wins.sort((a, b) => b.margin - a.margin || b.rankGap - a.rankGap);
+  misses.sort((a, b) => b.margin - a.margin);
+  // The coming week's row for each player the board was right about.
+  const next = new Map(((ctx.next && ctx.next.players) || []).map(p => [p.key, p]));
+  const forward = h => {
+    const p = h.key ? next.get(h.key) : null;
+    if (!p) return null;
+    const w = p.weeks && p.weeks[0] ? p.weeks[0] : null;
+    return { ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, ironTunaPts: p.ironTuna.points, opponent: w ? w.opponent : null, bye: !!(w && w.bye), injury: p.injury ? p.injury.status : null };
+  };
+  const big = h => h.margin >= CALLED_HEADLINE_PTS && h.rankGap >= CALLED_HEADLINE_RANKS;
+  const top = wins.slice(0, WEEK_WINS_MAX).map(h => ({ ...h, nextWeek: forward(h) }));
+  return { week: ctx.weekNumber,
+           record: { games: covered.length, calls, hits: hitCount, misses: missCount, hitRate: calls ? Math.round(100 * hitCount / calls) : 0 },
+           biggestWins: top, headlineWin: top.length && big(top[0]) ? top[0] : null,
+           misses: misses.slice(0, WEEK_MISSES_MAX), byPosition,
+           gamesCovered: covered, notCovered,
+           thresholds: { calledPoints: CALLED_MIN_PTS, calledRanks: CALLED_MIN_RANKS, headlinePoints: CALLED_HEADLINE_PTS, headlineRanks: CALLED_HEADLINE_RANKS },
+           howACallIsGraded: 'A call is the site\'s pre-kickoff weekly projection differing from the consensus projection by at least ' + CALLED_MIN_PTS + ' points and ' + CALLED_MIN_RANKS + ' places inside the position. It lands when the player\'s actual points finish on the site\'s side of the consensus number.',
+           dfs: _dfsBlock(ctx, null) };
 }
 function packetShowdown(kind, games, ctx) {
   const base = briefGamePlan(kind, games, ctx);
@@ -9703,7 +9801,19 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   }
   else if (kind === 'what-sunday-taught-us') { const s = await summariesFor(games); if (!s.length && !o.force) return { skip: true, reason: 'no_box_scores' }; facts = packetSundayTaught(games, s, ctx); }
   else if (kind === 'mnf-preview' || kind === 'tnf-preview') facts = packetShowdown(kind, games, ctx);
-  else if (kind === 'early-rankings') facts = packetRankings(ctx, d.week);
+  // The week's box scores and the boards frozen before each kickoff, one
+  // entry per target game; the packet grades them the way each recap did.
+  else if (kind === 'what-tuna-got-right') {
+    const entries = [];
+    for (const g of games) {
+      let s = null; try { s = await gameSummaryFor(env, g, ctx.nameIndex); } catch (e) { s = null; }
+      if (!s || !s.final) continue;
+      let freeze = null; try { freeze = await boardFreezeRead(env, ctx.sched ? ctx.sched.season : null, d.week, g.id); } catch (e) { freeze = null; }
+      // Graded by the recap's own packet, so the two can never disagree.
+      entries.push({ game: g, calledIt: packetGameRecap(g, s, ctx, freeze).calledIt });
+    }
+    facts = packetCalledItWeek(weekGames(ctx.sched, d.week, Date.now()), entries, ctx);
+  }
   else if (kind === 'quarterback-monday') facts = packetQb(ctx);
   else if (kind === 'ros-rankings') {
     const [next3, ros, untilPlayoffs, playoffs, rosUpdate] = await Promise.all([
@@ -9814,6 +9924,24 @@ function _voiceBlock(packet) {
     }
   } else if (c && !c.available) {
     s += 'NO PRE-KICKOFF BOARD was frozen for this game, so the site has no record of what it said in advance. Make no claim about having called anything, and omit the `weCalledIt` section.\n';
+  }
+  // The Monday scorecard. The order of the wins is the packet's, not the
+  // writer's: biggest first. The writer may not promote a call, invent one,
+  // or leave the misses out.
+  if (packet.meta.kind === 'what-tuna-got-right' && packet.record) {
+    const r = packet.record;
+    s += 'THE WEEK\'S RECORD. Before each kickoff the site\'s own projection differed from the consensus ranking on the players in `biggestWins` and `misses`, and the games have settled them: ' + r.hits + ' of ' + r.calls + ' calls landed across ' + r.games + ' games (' + r.hitRate + '%). Write `theRecord` from `record` and `gamesCovered`, and name the games in `notCovered` as not covered, with the packet\'s reason.\n';
+    s += 'THE WINS. `biggestWins` is already in order, biggest first. Write `biggestWins` in that order and in no other, one entry per packet entry, and put the numbers in it: what the site had him at (ironTunaRank, ironTunaPts), what the consensus had (consensusRank, consensusPts), what he scored (actual). `why` says what the call was and how far it landed (margin); where `nextWeek` is present it says what to do with him this week.\n';
+    if (r.misses > 0) s += 'THE MISSES. `misses` is on the record too. Write `whatWeMissed` from it, at least one entry, in the same plain voice as the wins. A scorecard that prints only its wins is not a record, and the reader has the box scores.\n';
+    else s += 'NO MISSES this week in the packet, so there is no `whatWeMissed` section. Do not add one.\n';
+    const hw = packet.headlineWin;
+    if (hw) {
+      s += 'THE BIGGEST WIN CLEARS THE HEADLINE BAR: ' + hw.name + ' (' + hw.game + '). The site had him ' + hw.position + hw.ironTunaRank + ' where the consensus had him ' + hw.position + hw.consensusRank + ', a call that he would ' + (hw.direction === 'over' ? 'beat' : 'fall short of') + ' the consensus number of ' + hw.consensusPts + ' points; he scored ' + hw.actual + '.\n';
+      s += 'You MAY open the headline with "YOU\'RE WELCOME:" and then say what the site called and that it happened. Spell it "YOU\'RE WELCOME", with the apostrophe. Use it at most once, only for this player, and only in the headline.\n';
+    } else {
+      s += 'NO SINGLE WIN clears the headline bar. The headline names the biggest win plainly, without "YOU\'RE WELCOME".\n';
+    }
+    s += 'Make no claim about any player, game or call that is not in `biggestWins` or `misses`.\n';
   }
   return s;
 }

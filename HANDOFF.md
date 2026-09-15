@@ -9564,3 +9564,72 @@ inline exists check now pins `_perGameOrder`. `tools/test-dry-run.mjs`: a
 story stored twice is listed once; every first-ever published row reports
 edition 1; a live piece re-produced after a published version is "update 2";
 a held draft at the cap is not sent to the writer and stores nothing.
+
+## 76. September 14: Monday morning is What Tuna Got Right
+
+Ken's report, the Monday after Week 1: on Monday, instead of the "whole
+board" story (the 6 AM Early Rankings for Next Week: every position ranked
+for the coming week), the desk should run a series of what Tuna got right,
+with the biggest wins highlighted. Every Monday.
+
+**The piece.** `what-tuna-got-right` in `CONTENT_KINDS`: Monday 6:00 AM ET,
+retrospective, about the week just played (`subject: 'played'`), Jack
+Mercer with Lena Park on the DFS lens, worth-gated. It takes the early
+rankings' slot; `early-rankings` moved to `LEGACY_CONTENT` as merged into
+`ros-rankings`, because Tuesday already ranks the coming week (the next-3
+horizon) and the Monday board was the same week ranked a day earlier. Its
+published rows stay readable at their URLs, and its section list stays in
+`NEWSROOM_SECTIONS` so a legacy row still renders.
+
+**Where the wins come from.** Nothing new is graded. Every game's recap
+already reads the board frozen before its kickoff (`week_board_snapshots`,
+§73) and grades it against the box score with `_vindication`; the Monday
+piece collects those gradings across the week and ranks the hits. The
+producer builds one `{game, calledIt}` per final game by calling
+`packetGameRecap(...).calledIt`, the same call the recap made, and
+`packetCalledItWeek` does the rest, so the scorecard can never claim a
+call a recap did not. `_vindication` gained `key` on each entry (to find
+the player on next week's board) and `counts`, the whole record before the
+lists are trimmed for the writer: a hit rate computed from a cut list
+would flatter the desk.
+
+The packet: `record` (games covered, calls, hits, misses, hit rate),
+`biggestWins` (every hit across the week, biggest margin first, then the
+wider rank gap, cut at `WEEK_WINS_MAX` = 8, each with the game it was made
+on and the player's row on the coming week's board where he has one),
+`headlineWin` (the top win only when it clears the recap's own
+`CALLED_HEADLINE_*` bar), `misses` (cut at 4), `byPosition`,
+`gamesCovered`, `notCovered` (a game with no frozen board, or the Monday
+game still to be played, named with the reason: a record that quietly
+drops the games it cannot grade is not a record), and the thresholds.
+
+**The gates.** `partial: true`: at 6 AM Monday the Monday game is not
+final and is not waited for; the targets are the week's final games other
+than Monday's, which gets its own recap that night. `gate: 'worth'`, two
+ways: no game with a frozen board (`no_frozen_boards`) and calls that all
+missed (`nothing_landed`) are stored as skipped with the reason, never
+padded. The misses section is conditional (`CONDITIONAL_SECTIONS`): a
+week with no misses does not get an empty one.
+
+**The writer.** `_voiceBlock` states the record in one line, tells the
+writer the wins are in the packet's order and no other, requires at least
+one miss in `whatWeMissed` when there were any, and offers `YOU'RE
+WELCOME:` only for a headline-sized win, as the recaps do. Sections:
+weekly `theRecord`, `biggestWins`, `whatWeMissed`, `whatToDo`; DFS
+`theRecord`, `biggestWins`, `whatItMeansForPricing`. `biggestWins` and
+`whatWeMissed` are object sections (player, position, team, game, weSaid,
+consensusSaid, heScored, why). `desk.html` labels them.
+
+**Tests.** `tools/test-newsroom.mjs`: the slot, the subject, the targets
+(never the Monday game), the retirement of the early rankings; the
+aggregation (counts from the whole record, the cross-game order, the game
+on each win, next week's row, the misses, `notCovered` with reasons, the
+per-position counts, the conditional section, the headline bar, both skip
+reasons, the cut lists, the writer's instructions, the fact check).
+`tools/test-content.mjs`: due Monday 6 AM about the played week, ready
+with the finals it has, the Monday game left out, due the same Monday in a
+week with no Monday game, not ready with nothing final. `tools/test-dry-run.mjs`:
+it ran Monday 6:00 about Week 1 and nothing about Week 2 ran that morning;
+its wins are the recaps' own hits in the recaps' own numbers; the Monday
+game is named as not covered. `tools/test-jobs.mjs` carries the slot.
+`docs/editorial-migration.md` §2 has the new row.

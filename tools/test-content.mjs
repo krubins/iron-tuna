@@ -88,9 +88,13 @@ const due = (kind, when, finalIds) => { const sc = withStatus(finalIds || []); r
   const mnf = due('mnf-preview', ET(2026, 9, 14, 6, 10), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
   ok('the MNF preview is due Monday morning, before kickoff, about the Monday game', mnf.due && mnf.ready && mnf.week === 1 && mnf.targets.join() === 'w1-mnf', JSON.stringify(mnf));
   ok('the Monday after a week with no Monday game, the clock has turned and the preview is simply not due', !due('mnf-preview', ET(2026, 9, 21, 6, 0), ['w2-thu', 'w2-e1', 'w2-snf']).due && due('mnf-preview', ET(2026, 9, 28, 6, 0), ['w2-thu', 'w2-e1', 'w2-snf', 'w3-e1']).due);
-  const early = due('early-rankings', ET(2026, 9, 14, 6, 0), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
-  ok('the early rankings are due Monday 6 AM and are about Week 2 while the clock still says Week 1', early.due && early.ready && early.week === 2 && H.nflSeasonState(withStatus([]), ET(2026, 9, 14, 6, 0)).week.number === 1, JSON.stringify(early));
-  ok('and are not due on Sunday night', !due('early-rankings', ET(2026, 9, 13, 23, 0), []).due);
+  const right = due('what-tuna-got-right', ET(2026, 9, 14, 6, 0), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
+  ok('What Tuna Got Right is due Monday 6 AM, about the week just played, and ready with the finals it has', right.due && right.ready && right.week === 1 && right.anchorWeek === 1, JSON.stringify(right));
+  ok('it covers the final games and leaves the Monday game for its own recap', right.targets.length === 5 && !right.targets.includes('w1-mnf'), JSON.stringify(right.targets));
+  ok('and is not due on Sunday night', !due('what-tuna-got-right', ET(2026, 9, 13, 23, 0), []).due);
+  ok('the Monday after a week with no Monday game it is due the same Monday 6 AM', due('what-tuna-got-right', ET(2026, 9, 21, 6, 0), ['w2-thu', 'w2-e1', 'w2-snf']).due && due('what-tuna-got-right', ET(2026, 9, 21, 6, 0), ['w2-thu', 'w2-e1', 'w2-snf']).week === 2);
+  ok('with nothing final it is due but not ready', !due('what-tuna-got-right', ET(2026, 9, 14, 6, 0), []).ready);
+  ok('the early rankings are retired', due('early-rankings', ET(2026, 9, 14, 6, 0), []).reason === 'unknown_kind' && H.CONTENT_KINDS['ros-rankings'].absorbs.includes('early-rankings'));
   const qb = due('quarterback-monday', ET(2026, 9, 14, 7, 0), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
   ok('Quarterback Monday is due at 7 and is about the played week', qb.due && qb.ready && qb.week === 1);
   // Tuesday: ROS rankings about the coming week; Tailback Tuesday about the played one.
@@ -143,7 +147,7 @@ const due = (kind, when, finalIds) => { const sc = withStatus(finalIds || []); r
   ok('a midnight-stored Week 1 opener does not make the Week 1 Friday pieces due the Friday before', !dm('weekend-preview', ET(2026, 9, 8, 15, 0)).due && !dm('kickers-defenses', ET(2026, 9, 8, 15, 0)).due && dm('weekend-preview', ET(2026, 9, 11, 7, 0)).due);
   ok('and the Week 1 Thursday pieces are due on the Thursday, not the Thursday before', !dm('underrated', ET(2026, 9, 3, 8, 0)).due && dm('underrated', ET(2026, 9, 10, 7, 0)).due);
   ok('a breaking piece is never due on the clock', due('breaking', ET(2026, 9, 18, 8, 0), wk1).reason === 'unscheduled');
-  ok('nothing is due before a game has been played', !due('what-sunday-taught-us', ET(2026, 9, 1, 12, 0), []).due && !due('early-rankings', ET(2026, 9, 1, 12, 0), []).due);
+  ok('nothing is due before a game has been played', !due('what-sunday-taught-us', ET(2026, 9, 1, 12, 0), []).due && !due('what-tuna-got-right', ET(2026, 9, 1, 12, 0), []).due);
   ok('nothing is due in the offseason', due('ros-rankings', ET(2026, 5, 1, 12, 0), []).reason === 'not_regular_season');
   ok('an unknown kind is refused', due('team-recaps', ET(2026, 9, 14, 7, 30), wk1).reason === 'unknown_kind');
 }
