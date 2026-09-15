@@ -9749,3 +9749,48 @@ uniform Bebas at 17px. Both are page chrome; convert them if they come up.
 `og.png`'s subline still reads "The most comprehensive tool for fantasy
 football auction drafts", which predates snake, best ball, DFS and in-season;
 that is copy, not the mark, and is a separate call.
+
+## 79. September 15: "Tailback Tuesday week 1" on a Tuesday of Week 2
+
+**The ask.** Ken's screenshot of the front-page lead, 8:04 AM Tuesday: "Saying
+'week 1' makes it look stale. If this is looking back at week 1, we need to
+say that. Otherwise, we need to flag this as Week 2 intel. Also 'week 1'
+should have a capital w." The headline was "Tailback Tuesday week 1: who
+earned the role and who just borrowed the stat line".
+
+**Two causes, both the writer's brief.** The lower-case W came from the
+sentence-case rule in `NEWSROOM_SYSTEM`: "capitalize the first word and proper
+nouns ... and nothing else", and the writer took Week for a common noun. The
+stale read came from the WEEKS block (§75b): it tells a retrospective writer
+which week the numbers belong to and says nothing about how the headline
+names the week, so the played week went into the headline bare, the way a
+preview would name it, on a front page that carries no week of its own.
+
+**What changed.**
+
+- `NEWSROOM_SYSTEM`: a week of the season is a proper noun, "Week 1", never
+  "week 1".
+- `_voiceBlock`, in the WEEKS block a retrospective piece gets: THE HEADLINE
+  SAYS WHICH WAY IT LOOKS. Name the played week only as a look back ("what
+  Week 1 taught", "Week 1 in review", "after Week 1"), or name the coming week
+  as the subject ("Week 2 intel", "for Week 2"). Never a bare "Week 1".
+- `weekFrameProblems`, run by `factCheck` on the headline and dek of a
+  retrospective piece: the played week named with neither the coming week
+  nor a look-back cue (`WEEK_LOOKBACK`) is a `week:` problem, and the draft
+  goes back to the writer with the fix spelled out, the same loop a bad name
+  or number takes. A headline naming no week passes; a forward piece is
+  never checked.
+- `weekCase`: "week" before a number is "Week", applied to the headline, dek
+  and component headlines at store, and to every payload that prints them
+  (piece, list, feed, front-page lead and rail, recap strip, analyst pages),
+  so the rows already published print it right without a rewrite.
+
+**The Week 1 Tailback Tuesday on the live site** prints "Week 1" now and is
+otherwise as written; the framing needs a new draft, which is the admin
+board's Regenerate on that kind and week (the §75b precedent).
+
+**Tests.** `tools/test-newsroom.mjs`, "the Week 1 Tailback Tuesday": the two
+brief lines, `weekCase` on and off, the frame check on the live headline,
+on three look-backs, on two Week 2 framings, on a headline with no week, on
+the dek, on a forward piece, and through `factCheck`. `tools/test-recaps.mjs`
+hands its harness the real `weekCase`, which the recap strip now calls.
