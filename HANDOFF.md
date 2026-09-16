@@ -9794,3 +9794,91 @@ brief lines, `weekCase` on and off, the frame check on the live headline,
 on three look-backs, on two Week 2 framings, on a headline with no week, on
 the dek, on a forward piece, and through `factCheck`. `tools/test-recaps.mjs`
 hands its harness the real `weekCase`, which the recap strip now calls.
+
+---
+
+## 80. September 16: every quoted prop, not two anytime-touchdown prices
+
+**The ask.** Ken: *"The Prop bets only have a few Anytime TD bets. It should
+have all of the available prop bets from both DraftKings and from the other
+sites we've used."*
+
+**Why it showed a few anytime-TD rows.** Three causes, all on the read side;
+the feeds were collecting the whole market.
+
+1. **The Line only ever read the TD board.** `props(g)` on the page (and
+   `lineProps` in the worker, which files the ledger) took the two largest
+   anytime-touchdown disagreements per game off `tdBoard`, which is itself
+   forty players site-wide. Every other market the store holds per player
+   (`weekMarkets`: passing, rushing and receiving yards, receptions, TD
+   counts, interceptions, attempts) reached the page only folded into the
+   volume board and the movers.
+2. **The front page's Player props table fell back to the TD board** because
+   `/api/tuna-market?kind=props` was giving it nothing usable. That endpoint
+   loaded EVERY hourly snapshot of every event in the last 24 hours on every
+   visitor request (a full slate is ~350 KB per event per poll; twenty-four
+   polls of twenty events is a payload the Worker cannot parse inside its
+   limits), emitted one row per BOOK and per side into a public shape that
+   carries no book (eight books, eight identical rows), capped the list at
+   200, and called any quote the book had not touched in an hour `stale`,
+   which the page filters out. A dozen players survived that on a good day
+   and none on a bad one, and the page printed the TD fallback either way.
+3. **`marketHistoryWeek` kept the OLDEST 40,000 rows** under its cap (`ORDER
+   BY ts ASC LIMIT`), the opposite of what its comment promised, so a busy
+   week past the cap lost its current lines rather than its openers.
+
+**What changed.**
+
+- **`propBoard` on `/api/vegas-edge`** (`buildVegasEdge`, `propBoardRow`):
+  every quoted player market for the clubs still to play, one row per player
+  per market: the median current line across the books quoting it, the
+  store's own opening line and the move, the median de-vigged over/yes
+  probability and the median posted over price, the market-implied mean,
+  Iron Tuna's own number for the same stat (`p.ironTuna.stats[m]`; the
+  Poisson chance of at least one TD for the anytime market) and the edge
+  between them, the book COUNT and the opponent. Widest disagreement first,
+  capped at 1,500 rows, `propSummary` counts rows, players, markets and
+  books. No book is named, per the licensing posture in §72. Started games
+  stay off it like every other forward board (§77).
+- **The Line** prints every quoted prop under each game. The two anytime-TD
+  reads the ladder stakes are exactly what they were and still the only rows
+  the ledger files; everything else (`reads(g, staked)`) is an unstaked read
+  with the posted line, the over price, the model's number and the gap, on
+  the prop conviction scale as a share of the line (fifteen percent reads
+  100). Six prop rows print above a fold, the rest under "N more quoted props
+  on this game". The prose carries the rule as a new bullet.
+- **The front page's Player props board** reads `propBoard` first (with a
+  market filter and a "show every prop" control over the top forty), then
+  the market-signal feed, then the TD board, in one table shape: Player, Prop,
+  Line, Over/Yes, Iron Tuna, Edge, Baseline, Move, Books.
+- **Vegas Edge** gets a Quoted Props table between the movers and the TD
+  board, sixty rows above a "show every prop" control.
+- **`/api/tuna-market`**: reads each event's FIRST and LAST snapshot in the
+  window (a SQL join on `MIN/MAX(observed)` per provider+event, 400-row cap)
+  instead of every snapshot; memoizes the computed signal for five minutes
+  and invalidates it on every store; marks a quote stale only when the
+  collector has not observed it for two hours (`TMS_STALE_MS`), never on the
+  book's own `last_update`; emits ONE public item per market (provider,
+  event, market, player, side) with the book count on it; takes `limit`
+  (default 1,000, ceiling 5,000) and reports `total` and `limit`.
+  `TMS_RETENTION_DAYS` defaults to 3 rather than 30: the window is a day, the
+  projection bridge (§72) keeps its own store, and thirty days of raw
+  per-book payloads was on course to be gigabytes of D1.
+- **`marketHistoryWeek`** keeps the newest rows under its cap.
+
+**Not done, on purpose.** Yardage, reception, count and interception props
+are read, not staked, and are not on the record. Staking them means a ladder
+for them in the prose, the worker (`lineProps`) and the ledger's settlement
+(`lineSettle` grades `td:` rows off the stat file and nothing else), and the
+page's promise that the two never disagree; that is its own change.
+
+**Tests.** `tools/test-signals.mjs`, Vegas Edge: the prop board's rows,
+lines, opens, moves, probabilities, prices, model numbers, the summary, the
+sort, the played-game exclusion, and that no book name reaches a row.
+`tools/test-the-line.mjs`, "the rest of the quoted market": the staked reads
+are unchanged, every other quoted prop on the game is an unstaked read and
+another club's is not, a price the ladder read is not listed twice, the
+conviction arithmetic, a model with no number prints no edge, a closed game
+closes the reads, the worker files none of them, and the prose says so.
+`tools/test-tuna-market.mjs`: stale is observed-based, one public item per
+market with the book count, `limit` and its ceiling, and the first/last read.

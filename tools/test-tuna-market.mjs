@@ -25,7 +25,12 @@ assert.equal(signal.score, 20); assert.equal(signal.publicSplit, null); assert.e
 signal = api.tmsSignals([...old, ...api.tmsNormalize(fixture(now, 50.5, 1.8), now)], now)[0];
 assert.ok(Math.abs(signal.probabilityDelta - 5.555555555555558) < 1e-8);
 assert.equal(api.tmsSignals(old, now)[0].score, null);
-assert.equal(api.tmsSignals([...old, ...latest], now + 7200000)[0].score, null);
+// Stale is about when the collector last SAW the quote, not when the book last
+// touched it: two hours of not being observed and the row is unscored, while a
+// line the book has not moved in two hours is still fresh if the last poll saw it.
+assert.equal(api.tmsSignals([...old, ...latest], now + 3 * 3600000)[0].score, null);
+assert.equal(api.tmsSignals([...old, ...latest], now + 7200000 - 1)[0].stale, false);
+assert.equal(api.tmsSignals([...old, ...api.tmsNormalize(fixture(now - 6 * 3600000, 51.5), now)], now)[0].stale, false);
 assert.equal(api.tmsSignals([...old, ...latest], now + 172800000).length, 0);
 assert.equal(api.tmsNormalize(fixture(now, 50, -110), now).length, 0);
 assert.equal(api.tmsNormalize(fixture(now + 120000), now).length, 0);
@@ -132,6 +137,24 @@ await api.tmsStore(env, [freeOld], now - 1800000);
 await api.tmsStore(env, [freeNew], now);
 result = await (await req('/api/tuna-market?kind=props')).json();
 const publicFree = result.items.find(r => r.sourceName === 'PropLine');
+// One public item per market, not one per book: the shape carries no book, so
+// a second book's row is a copy of the first, and the count says how many.
+await api.tmsStore(env, [{ ...freeOld, book: 'second' }], now - 1700000);
+await api.tmsStore(env, [{ ...freeNew, book: 'second' }, { ...freeNew, book: 'third', line: 51.5 }], now + 1);
+result = await (await req('/api/tuna-market?kind=props&player=test')).json();
+const dedup = result.items.filter(r => r.sourceName === 'PropLine');
+assert.equal(dedup.length, 1);
+assert.equal(dedup[0].marketBooks, 3);
+assert.equal(result.total, result.items.length);
+// The limit is a query parameter with a ceiling, and total still counts everything.
+result = await (await req('/api/tuna-market?limit=1')).json();
+assert.equal(result.items.length, 1);
+assert.ok(result.total > 1);
+assert.equal(result.limit, 1);
+assert.equal((await (await req('/api/tuna-market?limit=99999')).json()).limit, 5000);
+// The read takes each event's first and last snapshot only.
+assert.match(section, /MIN\(observed\) AS first_seen, MAX\(observed\) AS last_seen/);
+assert.doesNotMatch(section, /ORDER BY observed DESC LIMIT 1000/);
 assert.ok(publicFree);
 assert.equal(publicFree.historyBasis, 'first-observed');
 assert.equal(publicFree.consensusLineDelta, 1);

@@ -1368,6 +1368,9 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dfs-seg button:hover { color: var(--brand) }
 .dfs-seg button[aria-pressed="true"] { background: var(--ink); color: #fff }
 .dfs-note { font-size: 12.5px; color: var(--ink-3); margin: 6px 0 0 }
+.dfs-more { appearance: none; border: 1px solid var(--line); border-radius: 4px; background: var(--card); cursor: pointer; font: inherit; font-size: 11.5px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 7px 13px }
+.dfs-more:hover { color: var(--brand) }
 .dfs-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 16px 0 6px }
 .dfs-card { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 14px 16px }
 .dfs-card .dfs-tag { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand) }
@@ -2047,15 +2050,20 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     </div>
 
     <div class="fp-chap" id="marketProps"><div class="fp-chap-top"><span class="fp-chap-n">02</span><h2>Player props</h2></div>
-      <p class="fp-chap-dek">The sportsbook consensus across the fantasy-relevant markets PropLine carries: passing, rushing and receiving yards, receptions, touchdowns, interceptions and anytime-TD prices. The baseline is our first observation within the stored window, not necessarily the sportsbook opening line.</p></div>
+      <p class="fp-chap-dek">Every player market the books have posted for the games still to play: passing, rushing and receiving yards, receptions, touchdown counts, interceptions and anytime-touchdown prices, each beside Iron Tuna&rsquo;s own number for the same stat. The line is the median across the books quoting it; the baseline is the first line the store recorded, not necessarily the sportsbook opener. Widest disagreement first.</p></div>
     <div class="fp-chapbody">
+      <div class="dfs-controls" id="marketPropsControls" hidden>
+        <div class="dfs-seg" id="marketPropsMarket" role="group" aria-label="Market"></div>
+        <span class="dfs-note" id="marketPropsCount"></span>
+      </div>
       <div class="dfs-scroll" id="marketPropsWrap" hidden>
         <table class="dfs-table" id="marketPropsTable">
-          <thead><tr><th>Player</th><th>Prop</th><th class="num">Current line</th><th class="num">Over / Yes</th><th class="num">Baseline</th><th class="num">Move</th><th>Books</th><th>Source</th></tr></thead>
+          <thead><tr><th>Player</th><th>Prop</th><th class="num">Line</th><th class="num">Over / Yes</th><th class="num">Iron Tuna</th><th class="num">Edge</th><th class="num">Baseline</th><th class="num">Move</th><th class="num">Books</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
       <p class="dfs-empty" id="marketPropsEmpty">Reading quoted player props&hellip;</p>
+      <p class="dfs-note" id="marketPropsMoreWrap" hidden><button type="button" class="dfs-more" id="marketPropsMore">Show every prop</button></p>
     </div>
 
     <div class="fp-chap" id="marketMoves"><div class="fp-chap-top"><span class="fp-chap-n">03</span><h2>Prop &amp; line movement</h2></div>
@@ -4316,15 +4324,129 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         : 'No fresh, confirmed prop movement is available yet. Unchanged or stale markets are omitted.';
     }
   }
+  // The Player props board. Three sources, in order of what they can say:
+  // the edge payload's prop board (every quoted market, with the model's
+  // number beside each), then the market-signal feed (consensus and movement,
+  // no model number), then the anytime-touchdown board alone. The table has
+  // one shape whichever answers; a source that cannot fill a column prints a
+  // dash there rather than a number it does not have.
+  var PROPS_SHOW = 40;
+  var propsState = { market: '', all: false, rows: [], mode: '', wired: false };
+  function propsRowsFromBoard(board) {
+    return board.map(function (b) {
+      var td = b.market === 'anytimeTD';
+      return { key: b.key, name: b.name, sub: (b.position || '') + (b.team ? ' \u00b7 ' + b.team : '') + (b.opponent ? (b.home === false ? ' @ ' : ' vs ') + b.opponent : ''),
+        market: b.market, prop: b.label, side: td ? 'Yes' : 'Over', line: td ? null : b.line,
+        pct: b.probability, odds: b.overOdds, model: b.model, modelUnit: td ? '%' : '', edge: b.edge,
+        open: td ? b.openProbability : b.open, openNote: 'First recorded', openUnit: td ? '%' : '',
+        move: b.movement, moveUnit: td ? ' pp' : '', books: b.books };
+    });
+  }
+  function propsRowsFromSignal(items) {
+    var groups = {};
+    items.forEach(function (r) {
+      if (!r || !r.player || r.stale) return;
+      var key = [r.event, r.player, r.market].join('|');
+      var preferred = /^(over|yes)$/i.test(r.side || '') ? 2 : 1;
+      var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : 0;
+      var rank = preferred * 1000 + books * 10 + (marketNum(r.steamScore) ? Number(r.steamScore) : 0);
+      if (!groups[key] || rank > groups[key].rank) groups[key] = { row: r, rank: rank };
+    });
+    return Object.keys(groups).map(function (k) { return groups[k].row; })
+      .sort(function (a, b) {
+        var am = Math.abs(Number(a.consensusLineDelta) || 0), bm = Math.abs(Number(b.consensusLineDelta) || 0);
+        var as = Number(a.steamScore) || 0, bs = Number(b.steamScore) || 0;
+        return bs - as || bm - am || String(a.player).localeCompare(String(b.player));
+      }).map(function (r) {
+        var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : null;
+        return { key: r.player + '|' + r.market, name: r.player, sub: r.matchup || '', market: r.market, prop: marketLabel(r.market), side: r.side || '',
+          line: r.consensusLine, pct: r.consensusProbability, odds: null, model: null, modelUnit: '', edge: null,
+          open: r.consensusOpeningLine, openNote: r.historyBasis === 'provider-opening' ? 'Provider opening' : 'First observed', openUnit: '',
+          move: r.consensusLineDelta, moveUnit: '', books: books };
+      });
+  }
+  function propsRowsFromTd(props) {
+    return props.map(function (p) {
+      return { key: p.key || p.name, name: p.name, sub: (p.position || '') + (p.team ? ' \u00b7 ' + p.team : ''), market: 'anytimeTD', prop: 'Anytime TD', side: 'Yes',
+        line: null, pct: p.probability, odds: null, model: null, modelUnit: '', edge: null, open: null, openNote: '', openUnit: '', move: null, moveUnit: '', books: p.books };
+    });
+  }
+  function propsCell(r) {
+    var pct = marketNum(r.pct) ? marketN1(r.pct) + '%' : '\u2014';
+    if (marketNum(r.odds)) pct += '<small>' + e((r.odds > 0 ? '+' : '') + r.odds) + '</small>';
+    var model = marketNum(r.model) ? marketN1(r.model) + r.modelUnit : '\u2014';
+    var edge = marketNum(r.edge) ? marketSigned(r.edge) + (r.modelUnit === '%' ? ' pp' : '') : '\u2014';
+    var open = marketNum(r.open) ? marketN1(r.open) + r.openUnit + (r.openNote ? '<small>' + e(r.openNote) + '</small>' : '') : '\u2014';
+    var move = !marketNum(r.move) ? (r.open == null ? '\u2014' : 'Awaiting comparison') : Number(r.move) !== 0 ? marketSigned(r.move) + r.moveUnit : 'No move';
+    return '<tr><td><b>' + e(r.name) + '</b><small>' + e(r.sub) + '</small></td>' +
+      '<td>' + e(r.prop) + '<small>' + e(r.side) + '</small></td>' +
+      '<td class="num"><b>' + (marketNum(r.line) ? marketN1(r.line) : '\u2014') + '</b></td>' +
+      '<td class="num">' + pct + '</td>' +
+      '<td class="num">' + model + '</td>' +
+      '<td class="num"><b>' + edge + '</b></td>' +
+      '<td class="num">' + open + '</td>' +
+      '<td class="num">' + e(move) + '</td>' +
+      '<td class="num">' + (marketNum(r.books) ? e(String(r.books)) : '\u2014') + '</td></tr>';
+  }
+  function drawMarketProps() {
+    var rows = propsState.rows.filter(function (r) { return !propsState.market || r.market === propsState.market; });
+    var shown = propsState.all ? rows : rows.slice(0, PROPS_SHOW);
+    $('marketPropsTable').querySelector('tbody').innerHTML = shown.map(propsCell).join('');
+    $('marketPropsWrap').hidden = !shown.length;
+    $('marketPropsEmpty').hidden = !!shown.length;
+    if (!shown.length) $('marketPropsEmpty').textContent = 'No quoted prop in that market.';
+    $('marketPropsMoreWrap').hidden = rows.length <= PROPS_SHOW;
+    $('marketPropsMore').textContent = propsState.all ? 'Show the top ' + PROPS_SHOW : 'Show every prop (' + rows.length + ')';
+    var players = {};
+    rows.forEach(function (r) { players[r.name] = 1; });
+    $('marketPropsCount').textContent = rows.length + ' quoted prop' + (rows.length === 1 ? '' : 's') + ' on ' + Object.keys(players).length + ' player' + (Object.keys(players).length === 1 ? '' : 's') +
+      (propsState.summaryBooks ? ' across ' + propsState.summaryBooks + ' book' + (propsState.summaryBooks === 1 ? '' : 's') : '') + '.';
+  }
+  function wireMarketProps() {
+    if (propsState.wired) return;
+    propsState.wired = true;
+    $('marketPropsMarket').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button'); if (!b) return;
+      propsState.market = b.getAttribute('data-market') || '';
+      [].forEach.call($('marketPropsMarket').querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      drawMarketProps();
+    });
+    $('marketPropsMore').addEventListener('click', function () { propsState.all = !propsState.all; drawMarketProps(); });
+  }
+  function renderMarketProps(j, signal) {
+    var board = (j && j.propBoard) || [];
+    var tdProps = ((j && j.tdBoard) || []).filter(function (p) {
+      return p && p.basis === 'anytime-td-market' && marketNum(p.probability) && marketNum(p.expectedTds);
+    });
+    var signalItems = (signal && signal.items) || [];
+    if (board.length) { propsState.rows = propsRowsFromBoard(board); propsState.mode = 'board'; }
+    else if (signalItems.some(function (r) { return r && r.player && !r.stale; })) { propsState.rows = propsRowsFromSignal(signalItems); propsState.mode = 'signal'; }
+    else { propsState.rows = propsRowsFromTd(tdProps); propsState.mode = 'td'; }
+    propsState.summaryBooks = j && j.propSummary && marketNum(j.propSummary.books) ? Number(j.propSummary.books) : null;
+    if (!propsState.rows.length) {
+      $('marketPropsWrap').hidden = true; $('marketPropsControls').hidden = true; $('marketPropsMoreWrap').hidden = true;
+      $('marketPropsEmpty').hidden = false;
+      $('marketPropsEmpty').textContent = signal && signal.status === 'disabled'
+        ? 'The broader player-prop board is awaiting market-provider configuration.'
+        : 'No quoted player prop reached the current feed. Iron Tuna does not manufacture sportsbook prices to fill the table.';
+      return;
+    }
+    wireMarketProps();
+    var markets = [], seen = {};
+    propsState.rows.forEach(function (r) { if (!seen[r.market]) { seen[r.market] = 1; markets.push({ key: r.market, label: r.prop }); } });
+    if (propsState.market && !seen[propsState.market]) propsState.market = '';
+    $('marketPropsMarket').innerHTML = [{ key: '', label: 'All markets' }].concat(markets).map(function (m) {
+      return '<button type="button" data-market="' + e(m.key) + '" aria-pressed="' + (propsState.market === m.key ? 'true' : 'false') + '">' + e(m.label) + '</button>';
+    }).join('');
+    $('marketPropsControls').hidden = markets.length < 2 && propsState.rows.length <= PROPS_SHOW;
+    drawMarketProps();
+  }
   function marketHelpCell(content, explanation) {
     var safe = String(explanation).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return '<td tabindex="0" title="' + safe + '" aria-label="' + safe + '">' + content + '</td>';
   }
   function renderMarket(j, signal) {
     var games = (j && j.gameEnvironments) || [];
-    var props = ((j && j.tdBoard) || []).filter(function (p) {
-      return p && p.basis === 'anytime-td-market' && marketNum(p.probability) && marketNum(p.expectedTds);
-    });
 
     var gbody = $('marketGamesTable').querySelector('tbody');
     gbody.innerHTML = games.map(function (g) {
@@ -4351,54 +4473,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       ? 'Every game this week has kicked off. A line for a game already played is a closing line, not a market, so nothing is shown until the next week\u2019s lines post.'
       : 'No current game market reached the feed. Nothing stale is substituted.';
 
-    var pbody = $('marketPropsTable').querySelector('tbody');
-    var signalProps = ((signal && signal.items) || []).filter(function (r) {
-      return r && r.player && !r.stale;
-    });
-    var propGroups = {};
-    signalProps.forEach(function (r) {
-      var key = [r.event, r.player, r.market].join('|');
-      var preferred = /^(over|yes)$/i.test(r.side || '') ? 2 : 1;
-      var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : 0;
-      var rank = preferred * 1000 + books * 10 + (marketNum(r.steamScore) ? Number(r.steamScore) : 0);
-      if (!propGroups[key] || rank > propGroups[key].rank) propGroups[key] = { row: r, rank: rank };
-    });
-    var broadProps = Object.keys(propGroups).map(function (k) { return propGroups[k].row; })
-      .sort(function (a, b) {
-        var am = Math.abs(Number(a.consensusLineDelta) || 0), bm = Math.abs(Number(b.consensusLineDelta) || 0);
-        var as = Number(a.steamScore) || 0, bs = Number(b.steamScore) || 0;
-        return bs - as || bm - am || String(a.player).localeCompare(String(b.player));
-      }).slice(0, 40);
-
-    if (broadProps.length) {
-      pbody.innerHTML = broadProps.map(function (r) {
-        var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : null;
-        var pct = marketNum(r.consensusProbability) ? marketN1(r.consensusProbability) + '%' : '—';
-        var move = !marketNum(r.consensusLineDelta) ? 'Awaiting comparison' : Number(r.consensusLineDelta) !== 0 ? marketSigned(r.consensusLineDelta) : 'No line move';
-        var source = r.sourceName || 'Market feed';
-        if (marketNum(r.steamScore) && Number(r.steamScore) > 0) source += ' · steam ' + marketN1(r.steamScore);
-        return '<tr><td><b>' + e(r.player) + '</b><small>' + e(r.matchup || '') + '</small></td>' +
-          '<td>' + e(marketLabel(r.market)) + '<small>' + e(r.side || '') + '</small></td>' +
-          '<td class="num"><b>' + marketN1(r.consensusLine) + '</b></td>' +
-          '<td class="num">' + pct + '</td>' +
-          '<td class="num">' + marketN1(r.consensusOpeningLine) + '<small>' + e(r.historyBasis === 'provider-opening' ? 'Provider opening' : 'First observed') + '</small></td>' +
-          '<td class="num"><b>' + e(move) + '</b></td>' +
-          '<td>' + (books == null ? '—' : e(String(books))) + '</td>' +
-          '<td><small>' + e(source) + '</small></td></tr>';
-      }).join('');
-    } else {
-      pbody.innerHTML = props.slice(0, 20).map(function (p) {
-        return '<tr><td><b>' + e(p.name) + '</b><small>' + e((p.position || '') + (p.team ? ' · ' + p.team : '')) + '</small></td>' +
-          '<td>Anytime TD</td><td class="num">—</td><td class="num"><b>' + marketN1(p.probability) + '%</b></td>' +
-          '<td class="num">—</td><td class="num">—</td><td>—</td><td><small>Current TD market</small></td></tr>';
-      }).join('');
-    }
-    var anyProps = broadProps.length || props.length;
-    $('marketPropsWrap').hidden = !anyProps;
-    $('marketPropsEmpty').hidden = !!anyProps;
-    if (!anyProps) $('marketPropsEmpty').textContent = signal && signal.status === 'disabled'
-      ? 'The broader player-prop board is awaiting market-provider configuration.'
-      : 'No quoted player prop reached the current feed. Iron Tuna does not manufacture sportsbook prices to fill the table.';
+    renderMarketProps(j, signal);
 
     renderMarketMoves(signal);
 

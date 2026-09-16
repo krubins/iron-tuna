@@ -80,6 +80,11 @@
 .tl-arrow.down .g{color:var(--danger,#c0322f)}
 .tl-arrow.flat .g{color:var(--muted,#6b7a85)}
 .tl-sub{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#6b7a85);margin:14px 0 0}
+.tl-mkt tr.tl-read td{color:var(--ink-2,#3b4650)}
+.tl-mkt td small{display:block;font-size:11px;color:var(--muted,#6b7a85)}
+.tl-more{margin:0 0 8px}
+.tl-more summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--brand,#0e7c63);padding:4px 0}
+.tl-more .tl-mkt{margin-top:4px}
 .tl-rec td.num,.tl-rec th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tl-rec .win{color:var(--teal,#0e7c63);font-weight:700}
 .tl-rec .loss{color:var(--danger,#c0322f);font-weight:700}
@@ -179,6 +184,7 @@
 <ol>
   <li><b>One stake per game at most.</b> Where the total and the spread both clear the threshold, the larger edge is the one that gets the money and the other is stated and left alone.</li>
   <li><b>An anytime-touchdown prop is staked separately and smaller</b> &mdash; $50 at ten percentage points of disagreement, $25 at six &mdash; and only where a book actually quoted the player. One player&rsquo;s touchdown is a coin landing once; a game total is sixty minutes of arithmetic, and the money says so. Where the model rates a player <em>below</em> his quoted price the row reads <b>Price short</b> and takes no wager, because only the yes side of an anytime touchdown is reliably posted.</li>
+  <li><b>Every other quoted prop is listed for the read, not the wager.</b> Passing, rushing and receiving yards, receptions, touchdown counts and interceptions appear under each game with the posted line, the over price, Iron Tuna&rsquo;s own number for the same stat and the gap between them, on a conviction scale where a fifteen percent disagreement with the line reads 100. Anytime-touchdown prices beyond the two the ladder considers are listed the same way. None of these rows is staked and none goes on the record; they are there so the whole posted market for a game can be read in one place.</li>
   <li><b>Confidence is printed on every game, including the passes.</b> It is a conviction score on Iron Tuna&rsquo;s own scale, where a five-point edge reads 100. <b>It is not a probability of winning</b>, and no reading of it should be treated as one.</li>
   <li><b>Under 2.0 points, there is no bet.</b> That is the same threshold the rest of the site uses to call the model and the book in agreement, and most of the slate sits inside it every week. A week with no wager on it is a normal week, not a broken page.</li>
   <li><b>A game that has kicked off is closed.</b> Iron Tuna does not price a game it can already see, and no in-play number appears here.</li>
@@ -333,7 +339,8 @@
   var FULL_EDGE = 5.0;   // the edge that reads 100 on the conviction scale
   var PROP_FULL = 15;    // the same, in percentage points, for a prop
 
-  var games = [], td = [], byTeam = {}, hasProps = false, week = '', sort = 'edge', filter = 'all';
+  var games = [], td = [], board = [], byTeam = {}, hasProps = false, week = '', sort = 'edge', filter = 'all';
+  var PROP_SHOWN = 6;    // prop rows printed in a game's table before the fold
   var $ = function (id) { return document.getElementById(id); };
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var num = function (v) { return v != null && isFinite(v); };
@@ -431,6 +438,33 @@
     }
     rows.sort(function (a, b) { return Math.abs(b.edge) - Math.abs(a.edge); });
     return rows.slice(0, 2);
+  }
+  // Every OTHER quoted prop on the game, for the read and never the wager:
+  // the yardage, reception, touchdown-count and interception markets, and the
+  // anytime-touchdown prices the two-row ladder above did not consider. The
+  // edge is the model's number minus the posted line, and the conviction is
+  // that gap as a share of the line on the prop scale (fifteen percent reads
+  // 100). Nothing here is staked, so nothing here reaches the ledger.
+  function reads(g, staked) {
+    var live = open(g), out = [], taken = {};
+    for (var i = 0; i < (staked || []).length; i++) taken[staked[i].name + '|anytimeTD'] = 1;
+    for (var k = 0; k < board.length; k++) {
+      var b = board[k];
+      if (!b || (b.team !== g.home && b.team !== g.away)) continue;
+      if (taken[b.name + '|' + b.market]) continue;
+      var isTd = b.market === 'anytimeTD';
+      var posted = isTd ? b.probability : b.line;
+      if (!num(posted)) continue;
+      var edge = num(b.model) ? Math.round((b.model - posted) * 10) / 10 : null;
+      var rel = num(edge) && posted ? edge / Math.abs(posted) * 100 : null;
+      out.push({ name: b.name, position: b.position, team: b.team, market: b.market, kind: b.label, td: isTd,
+        line: isTd ? null : b.line, market_pct: isTd ? b.probability : b.probability, odds: b.overOdds, books: b.books,
+        model: b.model, edge: edge,
+        conf: isTd ? (num(edge) ? conviction(edge, PROP_FULL) : null) : (num(rel) ? conviction(rel, PROP_FULL) : null),
+        stake: 0, label: !live ? 'Closed' : 'Unstaked' });
+    }
+    out.sort(function (a, b) { return (b.conf || 0) - (a.conf || 0) || String(a.name).localeCompare(String(b.name)); });
+    return out;
   }
 
   // ── the arrows ────────────────────────────────────────────────────────────
@@ -547,6 +581,28 @@
         '<td class="num">' + (p.stake ? money(p.stake) : '&mdash;') + '</td>' +
         '</tr>';
     }).join('');
+    var rs = reads(g, ps);
+    var readRow = function (r) {
+      var posted = r.td
+        ? (num(r.odds) ? e((r.odds > 0 ? '+' : '') + r.odds) + ' &middot; ' : '') + n1(r.market_pct) + '%'
+        : 'O/U ' + n1(r.line) + (num(r.market_pct) ? ' &middot; over ' + n1(r.market_pct) + '%' : '');
+      return '<tr class="tl-read">' +
+        '<td>' + e(r.name) + ' ' + e(String(r.kind).toLowerCase()) + (num(r.books) ? '<small> &middot; ' + r.books + (r.books === 1 ? ' book' : ' books') + '</small>' : '') + '</td>' +
+        '<td class="num">' + posted + '</td>' +
+        '<td class="num">' + (num(r.model) ? n1(r.model) + (r.td ? '%' : '') : '&mdash;') + '</td>' +
+        '<td class="num">' + signed(r.edge) + '</td>' +
+        '<td class="num">' + (num(r.conf) ? r.conf : '&mdash;') + '</td>' +
+        '<td>' + chip(r.label) + '</td>' +
+        '<td class="num">&mdash;</td>' +
+        '</tr>';
+    };
+    var above = Math.max(0, PROP_SHOWN - ps.length);
+    var readRows = rs.slice(0, above).map(readRow).join('');
+    var foldRows = rs.slice(above).map(readRow).join('');
+    var fold = foldRows
+      ? '<details class="tl-more"><summary>' + (rs.length - above) + ' more quoted prop' + (rs.length - above === 1 ? '' : 's') + ' on this game</summary>' +
+        '<div class="is-scroll"><table class="tl-mkt"><tbody>' + foldRows + '</tbody></table></div></details>'
+      : '';
     var mv = [];
     if (g.movement && num(g.movement.total)) mv.push('the total has moved ' + signed(g.movement.total));
     if (g.movement && num(g.movement.spread)) mv.push('the spread has moved ' + signed(g.movement.spread));
@@ -562,7 +618,8 @@
       '<div class="is-scroll"><table class="tl-mkt">' +
       '<thead><tr><th scope="col">Market</th><th scope="col" class="num">Posted</th><th scope="col" class="num">Iron Tuna</th>' +
       '<th scope="col" class="num">Edge</th><th scope="col" class="num">Conviction</th><th scope="col">Confidence</th><th scope="col" class="num">Stake</th></tr></thead>' +
-      '<tbody>' + rows + propRows + '</tbody></table></div>' +
+      '<tbody>' + rows + propRows + readRows + '</tbody></table></div>' +
+      fold +
       ticketLine(best, top, ps) +
       (ar.length ? '<p class="tl-sub">The fantasy players in this game</p><div class="tl-arrows">' + ar.map(arrowHtml).join('') + '</div>' : '') +
       '</article>';
@@ -629,6 +686,7 @@
       }
       games = j.gameEnvironments || [];
       td = j.tdBoard || [];
+      board = j.propBoard || [];
       hasProps = !!j.hasProps;
       week = j.week || '';
       byTeam = { up: (j.vsExperts && j.vsExperts.buys) || [], down: (j.vsExperts && j.vsExperts.fades) || [] };

@@ -155,8 +155,8 @@ const s0 = page.indexOf('var GAP = 2.0;');
 const s1 = page.indexOf('  function arrowHtml(a)');
 ok('the arithmetic block can be lifted out of the page', s0 > 0 && s1 > s0);
 const api = new Function(page.slice(s0, s1) +
-  '\nreturn { read: read, gameReads: gameReads, props: props, rung: rung, conviction: conviction, amer: amer, open: open,' +
-  ' setBoard: function (rows) { td = rows; } };')();
+  '\nreturn { read: read, gameReads: gameReads, props: props, reads: reads, rung: rung, conviction: conviction, amer: amer, open: open,' +
+  ' setBoard: function (rows) { td = rows; }, setProps: function (rows) { board = rows; } };')();
 
 const GAME = (over = {}) => Object.assign({
   id: 'x', game: 'AAA at BBB', home: 'BBB', away: 'AAA', kickoff: Date.now() + 864e5, status: 'upcoming',
@@ -238,6 +238,33 @@ ok('the worker ladder is the page ladder, rung for rung',
 ok('and the prop ladder', JSON.stringify(W.LINE_PROP_LADDER.map(p => ({ at: p.at, stake: p.stake }))) === JSON.stringify(propRungs));
 ok('and both conviction scales', page.includes('var FULL_EDGE = ' + W.LINE_FULL_EDGE.toFixed(1)) && page.includes('var PROP_FULL = ' + W.LINE_PROP_FULL + ';'));
 ok('the floor it stakes from is the worker\'s own', W.LINE_LADDER[2].at === parseFloat(gapAgree[1]));
+
+// Every other quoted prop: listed for the read, never staked, never filed.
+console.log('\nthe rest of the quoted market');
+{
+  api.setBoard([{ name: 'Quoted Player', position: 'RB', team: 'BBB', probability: 40, expectedTds: 0.8, basis: 'anytime-td-market' }]);
+  api.setProps([
+    { name: 'Quoted Player', position: 'RB', team: 'BBB', market: 'rushYd', label: 'Rushing yards', line: 72.5, probability: 52.4, overOdds: -115, model: 84.2, edge: 11.7, books: 6 },
+    { name: 'Quoted Player', position: 'RB', team: 'BBB', market: 'anytimeTD', label: 'Anytime TD', line: null, probability: 40, overOdds: 150, model: 55.1, edge: 15.1, books: 6 },
+    { name: 'Other Back', position: 'RB', team: 'AAA', market: 'anytimeTD', label: 'Anytime TD', line: null, probability: 22, overOdds: 350, model: 18, edge: -4, books: 4 },
+    { name: 'Some Receiver', position: 'WR', team: 'AAA', market: 'rec', label: 'Receptions', line: 4.5, probability: 48, overOdds: 105, model: null, edge: null, books: 5 },
+    { name: 'Elsewhere', position: 'WR', team: 'ZZZ', market: 'recYd', label: 'Receiving yards', line: 60.5, probability: 50, overOdds: -110, model: 70, edge: 9.5, books: 5 }
+  ]);
+  const staked = api.props(GAME());
+  const rest = api.reads(GAME(), staked);
+  ok('the staked anytime-TD reads are exactly what they were', staked.length === 1 && staked[0].name === 'Quoted Player' && staked[0].stake > 0);
+  ok('every other quoted prop on the game is a read: the yardage line, the other back\'s price, the receiver', rest.length === 3 && !rest.some(r => r.name === 'Elsewhere'), JSON.stringify(rest.map(r => r.name + ':' + r.market)));
+  ok('a TD price the ladder already read is not listed twice', !rest.some(r => r.name === 'Quoted Player' && r.market === 'anytimeTD'));
+  ok('none of them is staked, and each says so', rest.every(r => r.stake === 0 && r.label === 'Unstaked'));
+  const yards = rest.find(r => r.market === 'rushYd');
+  ok('a yardage read is the model minus the line, on the prop scale as a share of the line', yards.edge === 11.7 && yards.conf === Math.max(0, Math.min(100, Math.round(11.7 / 72.5 * 100 / 15 * 100))));
+  ok('a prop the model has no number for prints no edge and no conviction rather than zero', rest.find(r => r.market === 'rec').edge === null && rest.find(r => r.market === 'rec').conf === null);
+  ok('a closed game closes the reads too', api.reads(GAME({ status: 'in_progress' }), []).every(r => r.label === 'Closed' && r.stake === 0));
+  ok('the worker files none of them: the ledger reads the TD board only', /function lineProps\(g, tdBoard, now\)/.test(worker) && !/propBoard/.test(worker.slice(worker.indexOf('function lineProps('), worker.indexOf('function lineTicket('))));
+  ok('the page reads the prop board off the same payload', page.includes('board = j.propBoard || [];'));
+  ok('and the prose says the rest of the market is read, not staked', /listed for the read, not the wager/.test(flat) && /None of these rows is staked and none goes on the record/.test(flat));
+  api.setProps([]);
+}
 const NOW = Date.now();
 const cases = [GAME(), GAME({ ironTunaTotal: 48.5 }), GAME({ ironTunaTotal: 39.5 }), GAME({ ironTunaTotal: 47.2 }), GAME({ ironTunaTotal: 46.4 }),
   GAME({ ironTunaTotal: 45.9 }), GAME({ ironTunaTotal: null }), GAME({ ironTunaTotal: 52, status: 'in_progress' }), GAME({ ironTunaTotal: 52, kickoff: NOW - 6e5 }),
