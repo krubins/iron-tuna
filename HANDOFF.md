@@ -9994,6 +9994,34 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
   is now null-safe and the note write is guarded. Nothing else changed in
   the script.
 
+**The Market Intel page (`/vegas-edge`), same pass.**
+
+- **Same page head** (`Market Intel · Vegas Edge`, 39px `h1`, lede,
+  `.is-actions`: Open this week's board → `#board`, How to read a gap →
+  `#howto`). The illustrative `.it-viz` figure the page opened on is gone;
+  the real board is the hero. (The `.it-viz` CSS stays in site.css for
+  faab.html and the-tell.html.)
+- **Seven boards in one plate** (`.ve-plate`), with a switcher (`.ve-seg`,
+  `#veSwitch`) in the plate head: Vegas vs. Experts, Market Movers, Quoted
+  Props, TD Board, Volume, Game Environments, Signals. Each is a `.ve-board`
+  panel; `showBoard()` shows one at a time. Every table, container and
+  empty-state id the fetch writes to is unchanged (`veBuys`, `veFades`,
+  `veMovers`, `veProps`, `veTd`, `veVol`, `veGames`, `veHidden`, the
+  `…Empty` ids); only the markup around them moved. They used to be seven
+  H2s down the page, each over a table hidden until its feed answered, so
+  an empty week printed seven headings over nothing.
+- **Every board has an `.is-vacant` empty state** inside the plate, and the
+  TD, Volume and Game boards gained one (`veTdEmpty`, `veVolEmpty`,
+  `veGamesEmpty`), hidden by the fetch when the table paints. When the feed
+  fails, `vacantAll()` rewrites every one to say so.
+- **Three key cards under the plate** (`#veKey`): the highest total on the
+  slate (`gameEnvironments[0]`), the largest mover (`movers[0]`) and the
+  first hidden signal, each with a button that switches the plate to the
+  board it came from. Hidden until the feed answers.
+- **How to read a gap** is a 2×2 numbered grid (`.ve-how`) instead of an
+  `<ol>`; the section heads are the numbered `.is-sec` heads; the signal
+  cards lose their gold left bar.
+
 Not implemented from the canvas on `/dfs`: the lineup as a light table (the
 dark `.is-board` is a deliberate design and the test pins its CSS), What-if
 and Fine-tune side by side (the fine-tune panel holds the full player pool
@@ -10005,6 +10033,6 @@ Not implemented from the canvas: the clock card as a four-line week timeline
 and sample numbers in the FAAB stat row (they are live values, blank until a
 league is connected).
 
-The full design pass these changes were implemented from, with the five
+The full design pass these changes were implemented from, with the four
 section pages that were NOT implemented, is on the Claude Design canvas
 "Iron Tuna UI Pass".
