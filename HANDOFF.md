@@ -9971,11 +9971,40 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
 - **The three section labels** (`.is-label` eyebrow over an `.is-rule`) are
   the numbered `.is-sec` heads the Fantasy page uses.
 
+**The DFS page (`/dfs`), same pass.**
+
+- **Same page head** (`In-Season · DFS`, 39px `h1`, lede, `.is-actions`: Build
+  this week's lineup → `#sec-lineup`, Price my own salary file → `#dfUp`).
+- **The venue and board switchers (`#dfSite`, `#dfNav`) moved up** from below
+  the setup, the Play of the Week and the Academy cards to directly under the
+  head, with `#dfNote` and `#dfSiteNote` beside them. Same ids, same script;
+  the site note now says the setup is "below".
+- **The contest setup is one plate with three numbered steps** across it
+  (`.df-config` restyled; the kickers carry `<i>1</i>` … `<i>3</i>`). A step's
+  circle turns teal with a check once its select is answered:
+  `updateSetupState()` toggles `.done` on each `.df-select-block`, so the
+  state tracks programmatic changes as well as the reader's. The selects,
+  their ids and order, the help lines and the `?` tooltips are unchanged
+  (`tools/test-dfs.mjs` asserts all of them).
+- **A real bug, live since 900bf61.** `applyShape()` pressed `#dfShape` and
+  wrote `#dfShapeNote`, neither of which has existed since the contest-shape
+  cards were retired. `press()` threw on the null inside the DOMContentLoaded
+  handler, before any listener below it had bound and before `load()` ran:
+  every control on the page was dead and the slate never fetched. `press()`
+  is now null-safe and the note write is guarded. Nothing else changed in
+  the script.
+
+Not implemented from the canvas on `/dfs`: the lineup as a light table (the
+dark `.is-board` is a deliberate design and the test pins its CSS), What-if
+and Fine-tune side by side (the fine-tune panel holds the full player pool
+and needs the width), and moving the Tuna Market Signal band to Market Intel
+(a product call; Vegas Edge already carries it too).
+
 Not implemented from the canvas: the clock card as a four-line week timeline
 (needs kickoff and lock times the schedule feed does not expose per platform),
 and sample numbers in the FAAB stat row (they are live values, blank until a
 league is connected).
 
-The full design pass these changes were implemented from, with the six
+The full design pass these changes were implemented from, with the five
 section pages that were NOT implemented, is on the Claude Design canvas
 "Iron Tuna UI Pass".
