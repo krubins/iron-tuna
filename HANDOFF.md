@@ -10062,6 +10062,20 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
   `.is-card`s under a numbered `.is-sec` head; the bullets carry check icons;
   the three FAQ cards are `<details class="av-q">`, the first open.
 
+**FAQ (`/faq`), same pass.**
+
+- **Same page head** (`Company · FAQ`, 39px `h1`, lede).
+- **Ten questions in one flat list are five groups** (Getting started, Free
+  and paid, Your league, Trust, Draft; `.faq-group` sections with ids
+  `faq-start` … `faq-draft`) **with a sticky index** (`.faq-index`) that
+  marks the group in view (a small IntersectionObserver block before the
+  chrome script). On a phone the index is a row of chips.
+- **The accordion rows** keep their `<details>` but carry stroke `+` / `−`
+  icons (two inline SVGs, one shown per state) and a 28px minimum height.
+- **A "Still stuck?" card** under the index, linking `/support`, replaces the
+  lone "← Back to Iron Tuna" link. The hand-written FAQPage schema is
+  untouched (`tools/test-seo.mjs` asserts it stays).
+
 Not implemented from the canvas on `/dfs`: the lineup as a light table (the
 dark `.is-board` is a deliberate design and the test pins its CSS), What-if
 and Fine-tune side by side (the fine-tune panel holds the full player pool
@@ -10073,6 +10087,6 @@ Not implemented from the canvas: the clock card as a four-line week timeline
 and sample numbers in the FAAB stat row (they are live values, blank until a
 league is connected).
 
-The full design pass these changes were implemented from, with the two
-section pages that were NOT implemented (FAQ, My Leagues), is on the Claude Design canvas
+The full design pass these changes were implemented from, with the one
+section page that was NOT implemented (My Leagues), is on the Claude Design canvas
 "Iron Tuna UI Pass".
