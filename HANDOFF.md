@@ -9882,3 +9882,234 @@ conviction arithmetic, a model with no number prints no edge, a closed game
 closes the reads, the worker files none of them, and the prose says so.
 `tools/test-tuna-market.mjs`: stale is observed-based, one public item per
 market with the book count, `limit` and its ceiling, and the first/last read.
+
+---
+
+## 81. September 16: the front page's chrome, cut from five bars to three
+
+**What changed on `/` (front.html only; no other page, no generator, no data).**
+
+- **The masthead carries the shared nav.** The six `mast-jump` links are now
+  the same six, in the same order, as `NAV` in `tools/build-chrome.mjs`
+  (Fantasy, DFS, Market Intel, The Desk, Draft Tools, FAQ). The front page used
+  to carry four of its own (Fantasy, In-Season, Draft, The Desk), so clicking
+  off "/" changed the nav. Sign In and Sync My League are unchanged.
+- **The green claim banner (`.dominant`) is gone**, markup and every rule.
+  `tools/test-recaps.mjs` used to assert the recap strip sat above it; it now
+  asserts the strip sits above `#heroBand`.
+- **The clock band is the week line.** `#heroBand` was a black gradient band
+  with the `.its-strip` boxed inside it; it is now a 36px light strip on the
+  page surface. The element, its id, `data-season-strip` and every `.its-*`
+  class are unchanged, so `hbClock()` and `it-season.js` are untouched. On a
+  phone it scrolls sideways like the ribbon rather than wrapping.
+- **The lane tabs live in the ribbon.** The three `.lane-tab` buttons moved
+  from their own full-width black band into the first slot of `.ribbon .wrap`
+  as a segmented control (the same shape as `#edSwitch` at the row's other
+  end), followed by a `.lane-sep` hairline. Ids, roles, ARIA, `data-lane` and
+  the lane script are unchanged; `stripWashingtonMarketLane` in `_worker.js`
+  still finds `#laneTabMarket` by id. Labels are now the masthead's own
+  (Fantasy / DFS / Market Intel, not Season Long / DFS / Betting Market Intel).
+  With one sticky bar instead of two, `scroll-padding-top` dropped from 106px
+  to 56px. On a phone the control takes `order:-3` so it leads the row.
+- **Chapter heads are section heads with a number.** `.fp-chap-n` was a 60px
+  Bebas numeral beside a 40px heading; it is a 12px mono figure beside the
+  30px Bebas heading on the same black rule and brand tick `.sec-head` uses.
+  The sub-heads inside a chapter keep their hairline, so the hierarchy holds.
+- **The four action cards lose the 4px colored left bar**; the kicker carries
+  the color (brand, or `--gold-ink` on the `.gold` card).
+- **The closing band's second button is an outline**, so the band has one
+  primary action.
+
+Not moved, deliberately: the player lookup stays in the ribbon (the one band
+on screen the whole way down the page), and the recap strip stays where it
+was because it is conditional content, hidden until `/api/recaps` answers.
+The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
+
+**The Fantasy page (`/fantasy`), same pass.**
+
+- **The page head is the section's.** A mono eyebrow (`In-Season · Fantasy`),
+  a 39px sentence-case `h1`, the lede, then a `.fn-actions` row: Save my
+  league (gold, `#fnSaveBtn`, relabelled "Your league settings" once a league
+  is saved locally and hidden once one is synced), This week's board, and the
+  scoring note (`#fnScoring`, still written by the script) as its hint. It
+  was a 68px all-caps display headline over a rule, the lede and a floating
+  note; in-season.html still wears that headline and was not touched.
+- **The deck cards and the two featured cards lose their colored left bar**
+  (`.is-act::before`, `.is-card.feat`), in site.css: the kicker carries the
+  color (teal, `--goldink` on `.gold`, muted on `.flat`) and the featured
+  card is the white card with its tag. Both classes are used by fantasy.html
+  only.
+- **The two reading sections get a designed empty state.** `.is-vacant`
+  (site.css) is a mark, a reason line, a detail line and the one place to go
+  instead; `.in-plate` drops its border inside an `.is-plate`. `#fnDeskEmpty`
+  and `#fnDisEmpty` carry it with `…H` / `…P` children, written by `vacant()`
+  in the page script. A section that printed one sentence under its ruled
+  heading read as a section with nothing in it.
+- **The empty bar under the clock strip was a real bug, on six pages.**
+  `.its-strip-sync{display:flex}` (injected by it-sync.js) is (0,1,0), the
+  same weight as the UA sheet's `[hidden]`, and won the tie, so `#fnSync`
+  painted as an empty bordered box for every reader with no synced league,
+  on fantasy, in-season, faab, my-week, rankings and trade-finder. The
+  injected sheet now leads with `.its-strip-sync[hidden]{display:none}`.
+
+**The In-Season hub (`/in-season`), same pass.**
+
+- **Same page head** (`In-Season · Overview`, 39px sentence-case `h1`, lede,
+  `.is-actions`). The action row is now `.is-actions` in site.css, shared
+  with fantasy.html, rather than a per-page rule.
+- **The readings sheet is a three-card strip** (`.is-readings` / `.is-reading`
+  in site.css) inside the same plate: Fantasy (largest market edge), DFS
+  (best Vegas value) and, new, **Market Intel** (the highest total on the
+  slate, off `gameEnvironments[0]` of `/api/vegas-edge`, which the feed
+  already sorts by total; the implied points of the higher side and the
+  total's move since open ride on the card). It was a five-column table
+  (No. / Lane / Reading / Value / Remark). A blank lane keeps its card and
+  says why, as before; `#rdWrap` is now the grid and `#rdBody` is gone.
+- **The two lane cards list their tools in two columns** (`.is-lane ul`), so
+  the cards are half the height and the Open buttons, now full width, sit
+  above the fold.
+- **The three section labels** (`.is-label` eyebrow over an `.is-rule`) are
+  the numbered `.is-sec` heads the Fantasy page uses.
+
+**The DFS page (`/dfs`), same pass.**
+
+- **Same page head** (`In-Season · DFS`, 39px `h1`, lede, `.is-actions`: Build
+  this week's lineup → `#sec-lineup`, Price my own salary file → `#dfUp`).
+- **The venue and board switchers (`#dfSite`, `#dfNav`) moved up** from below
+  the setup, the Play of the Week and the Academy cards to directly under the
+  head, with `#dfNote` and `#dfSiteNote` beside them. Same ids, same script;
+  the site note now says the setup is "below".
+- **The contest setup is one plate with three numbered steps** across it
+  (`.df-config` restyled; the kickers carry `<i>1</i>` … `<i>3</i>`). A step's
+  circle turns teal with a check once its select is answered:
+  `updateSetupState()` toggles `.done` on each `.df-select-block`, so the
+  state tracks programmatic changes as well as the reader's. The selects,
+  their ids and order, the help lines and the `?` tooltips are unchanged
+  (`tools/test-dfs.mjs` asserts all of them).
+- **A real bug, live since 900bf61.** `applyShape()` pressed `#dfShape` and
+  wrote `#dfShapeNote`, neither of which has existed since the contest-shape
+  cards were retired. `press()` threw on the null inside the DOMContentLoaded
+  handler, before any listener below it had bound and before `load()` ran:
+  every control on the page was dead and the slate never fetched. `press()`
+  is now null-safe and the note write is guarded. Nothing else changed in
+  the script.
+
+**The Market Intel page (`/vegas-edge`), same pass.**
+
+- **Same page head** (`Market Intel · Vegas Edge`, 39px `h1`, lede,
+  `.is-actions`: Open this week's board → `#board`, How to read a gap →
+  `#howto`). The illustrative `.it-viz` figure the page opened on is gone;
+  the real board is the hero. (The `.it-viz` CSS stays in site.css for
+  faab.html and the-tell.html.)
+- **Seven boards in one plate** (`.ve-plate`), with a switcher (`.ve-seg`,
+  `#veSwitch`) in the plate head: Vegas vs. Experts, Market Movers, Quoted
+  Props, TD Board, Volume, Game Environments, Signals. Each is a `.ve-board`
+  panel; `showBoard()` shows one at a time. Every table, container and
+  empty-state id the fetch writes to is unchanged (`veBuys`, `veFades`,
+  `veMovers`, `veProps`, `veTd`, `veVol`, `veGames`, `veHidden`, the
+  `…Empty` ids); only the markup around them moved. They used to be seven
+  H2s down the page, each over a table hidden until its feed answered, so
+  an empty week printed seven headings over nothing.
+- **Every board has an `.is-vacant` empty state** inside the plate, and the
+  TD, Volume and Game boards gained one (`veTdEmpty`, `veVolEmpty`,
+  `veGamesEmpty`), hidden by the fetch when the table paints. When the feed
+  fails, `vacantAll()` rewrites every one to say so.
+- **Three key cards under the plate** (`#veKey`): the highest total on the
+  slate (`gameEnvironments[0]`), the largest mover (`movers[0]`) and the
+  first hidden signal, each with a button that switches the plate to the
+  board it came from. Hidden until the feed answers.
+- **How to read a gap** is a 2×2 numbered grid (`.ve-how`) instead of an
+  `<ol>`; the section heads are the numbered `.is-sec` heads; the signal
+  cards lose their gold left bar.
+
+**The Desk index (`/in-season/desk`), same pass, and the story card.**
+
+- **"This is just too dense. Make it more like Fantasy Life or ESPN."** The
+  newsroom grid (front page `.nr-card`, the Fantasy page's `#fnDesk`) ran
+  full deks in four columns at 250px, and read as a wall of text. There is
+  now ONE story card, `.nr-*` in site.css (front.html carries its own copy of
+  the block, since it links no stylesheet): three across at 300px, the
+  headline at one size, the teaser clamped to two lines, a byline row with
+  the analyst and a relative time (`2h ago`; the date past a week), and the
+  player faces the search script puts at the head of a headline
+  (`.it-story-focus`) on their own row above it like a thumbnail. The front
+  page shows six cards, not eight; the Fantasy page renders the same markup.
+- **The Desk index is a feed, not a grid of slots.** `list()` in desk.html:
+  a day filter (chips from the kinds' days, plus Recaps), a week switcher
+  (the weeks on file, newest first), then the week's published pieces as
+  story cards in one column, newest first, each with a status chip
+  (Fact-checked / Held / Skipped). A slot whose hour has not come round is
+  not a story and gets no card; it is on **the week's clock** in the rail
+  (every kind in schedule order, a check when published, Held/Skipped when
+  so, Next on the first unfilled slot), with **the analysts** and their beats
+  under it. Same page head as the section; `#dkActions` and the eyebrow
+  change when a single piece is open. The piece view is unchanged.
+- The failed-feed state is `.is-vacant` (`#dkEmpty`, written by `vacant()`).
+
+**Draft Tools (`/fantasy-football-auction-values`), same pass.**
+
+- **Same page head** (`Draft Tools · Auction values`, 39px sentence-case
+  `h1`, lede, `.is-actions`: Build my free auction sheet →
+  `/auctiondraft?screen=cheat`, the same URL as the header's Free cheat
+  sheet, and See Draft Day Mode → `/auctiondraft?screen=board`). The buttons
+  used to point at `/`.
+- **The three-number table is a sticky plate beside the argument**
+  (`.av-split`, `.av-side`), with the pricing CTA card under it, so the proof
+  and the action stay on screen while the copy scrolls. It was a table in
+  the prose a screen down and a centered band two screens below. The page
+  now uses `.wrap.wide`.
+- **From values to draft night** is a Before / During / On the clock trio of
+  `.is-card`s under a numbered `.is-sec` head; the bullets carry check icons;
+  the three FAQ cards are `<details class="av-q">`, the first open.
+
+**FAQ (`/faq`), same pass.**
+
+- **Same page head** (`Company · FAQ`, 39px `h1`, lede).
+- **Ten questions in one flat list are five groups** (Getting started, Free
+  and paid, Your league, Trust, Draft; `.faq-group` sections with ids
+  `faq-start` … `faq-draft`) **with a sticky index** (`.faq-index`) that
+  marks the group in view (a small IntersectionObserver block before the
+  chrome script). On a phone the index is a row of chips.
+- **The accordion rows** keep their `<details>` but carry stroke `+` / `−`
+  icons (two inline SVGs, one shown per state) and a 28px minimum height.
+- **A "Still stuck?" card** under the index, linking `/support`, replaces the
+  lone "← Back to Iron Tuna" link. The hand-written FAQPage schema is
+  untouched (`tools/test-seo.mjs` asserts it stays).
+
+**My Leagues (`/my-league`), same pass.**
+
+- **Same page head** (`In-Season · My Leagues`, 39px `h1`, lede), then a
+  **three-step strip** (`.ml-steps`: choose a platform, connect it, every
+  board re-scores) so the long connect section reads as step one.
+- **The platforms are tiles, not pills.** The `[data-prov]` buttons live in
+  the static markup (`#lsTiles`, `.ml-tile`) with a status badge each
+  (`.ml-badge`: Syncs / Extension / By hand / Unavailable) that `paintTiles()`
+  repaints from `st.providers` once the sync state loads. `showConnect(k)`
+  no longer renders a "Which platform?" card; it fills `#lsConnect` with the
+  `.ml-flow` plate holding `#lsFlow` and rings the chosen tile (`.on`).
+  `flow(k)` is unchanged, which is what `tools/test-cbs-ui.mjs` runs in
+  isolation. Signed out, a tile click scrolls to the sign-in card.
+- **The empty state is an `.is-vacant`** in `#lsList` ("No league connected
+  yet"); the league cards render as before, the count is a note under them,
+  and the tile heading turns into "Add another league".
+- **The privacy paragraph is a `<details class="ml-priv">`** (still
+  `#lsPrivacy`), collapsed.
+- **Settings are a split** (`.ml-split`: the shared `ITInSeasonUI.leagueForm`
+  at 440px, and beside it one "Where it shows up" card with three rows plus
+  the "What the draft app knows" card, whose `#mlBox` now paints a tag and a
+  line rather than a card grid). "The rest of the section" trio is gone (it
+  duplicated the masthead); the sourcing paragraphs stay as a closing block.
+
+Not implemented from the canvas on `/dfs`: the lineup as a light table (the
+dark `.is-board` is a deliberate design and the test pins its CSS), What-if
+and Fine-tune side by side (the fine-tune panel holds the full player pool
+and needs the width), and moving the Tuna Market Signal band to Market Intel
+(a product call; Vegas Edge already carries it too).
+
+Not implemented from the canvas: the clock card as a four-line week timeline
+(needs kickoff and lock times the schedule feed does not expose per platform),
+and sample numbers in the FAAB stat row (they are live values, blank until a
+league is connected).
+
+The full design pass these changes were implemented from, all nine pages,
+is on the Claude Design canvas "Iron Tuna UI Pass".
