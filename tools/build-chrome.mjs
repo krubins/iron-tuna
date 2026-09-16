@@ -28,6 +28,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { putWordmark } from './wordmark.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = process.argv.includes('--check');
@@ -487,8 +488,12 @@ function putNavJs(html) {
 // pages that still say tuna.png — a file that no longer exists — so every new
 // page would otherwise ship with a broken-image glyph where the logo goes until
 // someone noticed. Cheaper to heal on every run than to chase.
+// The same pass swaps the mark's eight <text> letters for the outlined paths
+// (tools/wordmark.mjs): a page copied from before September 16 still sets the
+// name in the Bebas Neue web font, which the reader sees in Impact or the system
+// sans until the font arrives, and never sees in Bebas if it does not.
 function putLogo(html) {
-  return html.replace(/\/tuna\.png/g, '/tuna.webp');
+  return putWordmark(html.replace(/\/tuna\.png/g, '/tuna.webp'));
 }
 
 function putSkip(html) {

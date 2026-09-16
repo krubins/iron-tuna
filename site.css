@@ -181,7 +181,10 @@ header.site .wrap {
    bar. There is no white bar now, so it is the light metal on every page — the
    same seven stops, one mark.
    Height is the only thing set here: the SVG has a viewBox, so it scales rather
-   than distorting, which is what lets it shrink on a phone. */
+   than distorting, which is what lets it shrink on a phone.
+   The letters are outlined paths (tools/wordmark-paths.json), not <text> in the
+   Bebas Neue web font, so the mark is the same before the font arrives and on
+   a machine where it never does; see tools/wordmark.mjs. */
 .brand-logo { height: 30px; width: auto; display: block }
 header.site .brand-logo { height: 34px }
 
