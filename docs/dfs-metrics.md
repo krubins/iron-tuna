@@ -4,13 +4,15 @@ The contest scores and model metrics the DFS lens prints are computed in
 `dfsMetrics()` in `_worker.js`. Salary and operator FPPG are source observations:
 DraftKings supplies `AvgPointsPerGame` with its salary data and FanDuel supplies
 `FPPG`. Iron Tuna stores that historical average unchanged, labels it as historical,
-and shows it beside the forward-looking Iron Tuna projection. The other metrics are
+and shows it beside the forward-looking Iron Tuna projection. When the file carries no
+average for a player, `dfsOperatorFppg()` computes one from his season box score in the
+usage overlay at the site's scoring and the row says so (`operatorFppgBasis`). The other metrics are
 derived from the Iron Tuna week board at the site's own scoring rules.
 
 | Metric | Definition | Notes |
 |---|---|---|
 | **Projection** | `ironTunaPoints`: the Iron Tuna blend (consensus moved toward the market by confidence, plus the usage role nudge once three games exist) scored under the site's rules (`SCORING_SITE.dk` / `.fd`). | The market side (`vegasPoints`) and the consensus (`consensusPoints`) ride alongside so the reader can see which side is doing the work. |
-| **Operator FPPG** | Historical fantasy points per game supplied in the operator salary file (`AvgPointsPerGame` on DraftKings, `FPPG` on FanDuel). | This is not a forward projection. DFS surfaces show it beside Iron Tuna's projection, plus `projectionVsFppg = ironTunaPoints − operatorFppg`, so the user can see where the model materially differs from the historical baseline. |
+| **Operator FPPG** | Historical fantasy points per game supplied in the operator salary file (`AvgPointsPerGame` on DraftKings, `FPPG` on FanDuel). | This is not a forward projection. DFS surfaces show it beside Iron Tuna's projection, plus `projectionVsFppg = ironTunaPoints − operatorFppg`, so the user can see where the model materially differs from the historical baseline. `operatorFppgBasis` is `operator` when the number came from the salary file and `computed` when the file had none and it was built from the nflverse season line (`season.stats ÷ season.games` under `SCORING_SITE`, without the per-game yardage bonuses the overlay cannot see); `operatorFppgGames` is the game count behind a computed figure. A defense with no operator number stays blank. Every surface marks a computed figure as an estimate. |
 | **Value** | Iron Tuna points per $1,000 of salary, indexed to the slate median. 100 is an ordinary dollar; 130 is a bargain; 80 is a tax. | The legacy `vegasValueScore` (market points per $1K) is still on the row. |
 | **Floor** | `projection × positional floor factor × confidence factor`. Floor factors: QB 0.62, RB 0.55, WR 0.45, TE 0.45, DST 0.40, K 0.50. Confidence factor 1.00 / 0.92 / 0.84 for HIGH / MEDIUM / LOW market confidence. | A first-cut variance model, not a distribution. The projection engine does not yet produce percentiles; when it does, floor and ceiling should become the 20th and 85th percentiles. |
 | **Ceiling** | `projection × positional ceiling factor × (2 − confidence factor)`. Ceiling factors: QB 1.55, RB 1.75, WR 1.95, TE 1.90, DST 2.10, K 1.60. | Wider for the positions whose scoring is spikier (touchdown-dependent receivers, defenses). |

@@ -9,8 +9,15 @@ on:
       - 'tools/import-draftkings-salaries.mjs'
       - '.github/workflows/draftkings-salaries.yml'
   schedule:
-    # Tuesday morning in New York (9 AM EST / 10 AM EDT).
+    # Cron is UTC and does not follow New York clocks. The three slots below
+    # are 6 AM and 10 AM Tuesday and 10 AM Wednesday EDT (an hour earlier in
+    # EST). The first runs before anyone is reading, the second and third
+    # cover a lobby DraftKings posts late. The same slots are mirrored in
+    # DFS_IMPORT_SCHEDULE in _worker.js, which is what the reader is told; the
+    # importer test holds the two in step, so change both together.
+    - cron: '0 10 * * 2'
     - cron: '0 14 * * 2'
+    - cron: '0 14 * * 3'
   workflow_dispatch:
     inputs:
       draft_group_id:

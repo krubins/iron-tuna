@@ -798,13 +798,12 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .hb-intel .hb-dek{font-size:14.5px;margin-top:12px}
 .hb-intel .hb-ctas{margin-top:18px}
 .hb-intel .hb-btn{padding:12px 20px;font-size:13.5px}
-/* The three cards. Names and ranks only; a card the digest cannot fill is not
+/* The two cards. Names and ranks only; a card the digest cannot fill is not
    drawn, which is why the grid starts hidden. */
 .hb-teasers{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:20px}
 .hb-card{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:13px 14px;min-width:0}
 .hb-card i{font-style:normal;display:block;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
 .hb-card i.fade{color:#ff8a80}
-.hb-card i.td{color:var(--gold)}
 .hb-card b{display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;overflow-wrap:anywhere}
 .hb-card small{display:block;font-size:11px;color:#8b9c97;margin:2px 0 9px;letter-spacing:.03em}
 .hb-card .hb-row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:#b3c1bd;padding:3px 0;border-top:1px solid rgba(255,255,255,.07)}
@@ -1014,7 +1013,6 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-lead-plate .hb-card { background: var(--bg, #f4f7f7); border-color: var(--line, #e1e7ea); padding: 15px 16px }
 .fp-lead-plate .hb-card i { color: var(--brand, #0e7c63) }
 .fp-lead-plate .hb-card i.fade { color: var(--value-red, #c8322b) }
-.fp-lead-plate .hb-card i.td { color: var(--gold-ink, #7a5300) }
 .fp-lead-plate .hb-card b { color: var(--ink, #0f1719); font-size: 16px }
 .fp-lead-plate .hb-card small { color: var(--ink-3, #6d7c86) }
 .fp-lead-plate .hb-card .hb-row { color: var(--ink-2, #3f4e58); border-top-color: var(--line, #e1e7ea) }
@@ -1136,8 +1134,24 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dfs-select select{width:100%;min-height:44px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:700 14px Inter,Arial,sans-serif;padding:9px 34px 9px 11px}
 .dfs-select select:disabled{opacity:.48;cursor:not-allowed;background:#f1f3f3}
 .dfs-select small{display:block;margin-top:6px;color:var(--ink-3);font-size:11px;line-height:1.4}
-.dfs-setup-state{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+.dfs-setup-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+.dfs-setup-state{font-size:12px;color:var(--ink-3);margin:0;flex:1 1 240px}
 .dfs-setup-state.ready{color:var(--brand);font-weight:800}
+.dfs-submit{appearance:none;border:0;cursor:pointer;min-height:44px;padding:0 26px;border-radius:9px;background:var(--brand);color:#fff;font:800 13px/1 Inter,Arial,sans-serif;letter-spacing:.09em;text-transform:uppercase;transition:background .15s,transform .15s}
+.dfs-submit:hover{background:var(--brand-dark,#0a5f4c)}
+.dfs-submit:active{transform:translateY(1px)}
+.dfs-submit:disabled{opacity:.42;cursor:not-allowed;background:var(--ink-3);transform:none}
+.dfs-submit:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+@media(max-width:560px){.dfs-submit{width:100%}}
+/* The result panel opens from zero height so the page below slides down
+   rather than jumping; the fraction row is what animates. */
+.dfs-result{display:grid;grid-template-rows:0fr;transition:grid-template-rows .55s cubic-bezier(.22,.8,.3,1)}
+.dfs-result.open{grid-template-rows:1fr}
+.dfs-result-in{overflow:hidden;min-height:0}
+.dfs-result-body{padding:0 0 26px;opacity:0;transform:translateY(-8px);transition:opacity .4s ease .15s,transform .4s ease .15s}
+.dfs-result.open .dfs-result-body{opacity:1;transform:none}
+.dfs-result .dfs-note{margin:0 0 12px}
+@media (prefers-reduced-motion: reduce){.dfs-result,.dfs-result-body{transition:none}}
 .dfs-quickread{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin:0 0 26px}
 .dfs-potw,.dfs-learn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 .dfs-potw{border-top:3px solid var(--gold)}
@@ -1180,6 +1194,8 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-board th { font-size: 10.5px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; color: #7f948f }
 .fp-board td.num, .fp-board th.num { text-align: right; font-variant-numeric: tabular-nums }
 .fp-board tbody tr:last-child td { border-bottom: 0 }
+.fp-board tfoot td { border-bottom: 0; border-top: 2px solid rgba(255, 255, 255, .22); background: rgba(255, 255, 255, .04); padding-top: 11px; padding-bottom: 11px }
+.fp-board tfoot b { color: var(--teal, #2dd4a3) }
 .fp-board b { color: #fff; font-weight: 700 }
 .fp-board small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #7f948f }
 .fp-board .sl { display: inline-block; min-width: 40px; text-align: center; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; color: #bcd0cc; background: rgba(255, 255, 255, .09); border-radius: 4px; padding: 4px 6px }
@@ -1190,6 +1206,35 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-board .tg.stack { color: #bcd0cc; background: rgba(255, 255, 255, .1) }
 .fp-board-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px 22px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 12.5px; color: #7f948f }
 .fp-board-foot a { color: var(--teal, #2dd4a3); font-weight: 700 }
+
+/* A player's name opens his matchup under the row; the rest of the board
+   slides down the same way the result panel does (grid 0fr to 1fr), so the
+   table never jumps. */
+.fp-board .fp-name { appearance: none; background: none; border: 0; padding: 0; margin: 0; font: inherit; font-weight: 700; color: #fff; cursor: pointer; text-align: left; display: inline-flex; align-items: center; gap: 7px }
+.fp-board .fp-name::after { content: ""; flex: 0 0 auto; width: 6px; height: 6px; border-right: 1.5px solid #7f948f; border-bottom: 1.5px solid #7f948f; transform: rotate(45deg) translateY(-2px); transition: transform .25s ease, border-color .15s }
+.fp-board .fp-name:hover, .fp-board .fp-name:focus-visible { color: var(--teal, #2dd4a3); outline: none }
+.fp-board .fp-name:focus-visible { text-decoration: underline; text-underline-offset: 3px }
+.fp-board .fp-name:hover::after, .fp-board tr.is-open .fp-name::after { border-color: var(--teal, #2dd4a3) }
+.fp-board tr.is-open .fp-name::after { transform: rotate(-135deg) translateY(1px) }
+.fp-board tr.is-open td { border-bottom-color: transparent }
+.fp-board tr.fp-more td { padding: 0; border-bottom: 0 }
+.fp-board tr.fp-more.open td { border-bottom: 1px solid rgba(255, 255, 255, .1) }
+.fp-more-in { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .45s cubic-bezier(.22, .8, .3, 1) }
+.fp-more.open .fp-more-in { grid-template-rows: 1fr }
+.fp-more-clip { overflow: hidden; min-height: 0 }
+.fp-more-body { padding: 2px 22px 18px 74px; background: rgba(255, 255, 255, .03); opacity: 0; transform: translateY(-6px); transition: opacity .35s ease .1s, transform .35s ease .1s }
+.fp-more.open .fp-more-body { opacity: 1; transform: none }
+.fp-more-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 12px 16px; margin: 12px 0 14px }
+.fp-more-grid b { display: block; font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: 24px; line-height: 1; letter-spacing: .02em; color: #fff }
+.fp-more-grid .on b { color: var(--teal, #2dd4a3) }
+.fp-more-grid span { display: block; margin-top: 3px; font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; color: #7f948f }
+.fp-more-body p { margin: 0 0 8px; max-width: 72ch; font-size: 13.5px; line-height: 1.55; color: #c9d6d3 }
+.fp-more-body p:last-child { margin-bottom: 0 }
+.fp-more-body p b { color: #fff }
+.fp-board .fp-est { display: inline-block; margin-left: 5px; font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #f2c66a; vertical-align: 2px }
+.fp-board-foot .fp-foot-est { flex-basis: 100%; font-size: 12px }
+@media (max-width: 640px) { .fp-more-body { padding-left: 22px } }
+@media (prefers-reduced-motion: reduce) { .fp-more-in, .fp-more-body, .fp-board .fp-name::after { transition: none } }
 
 /* ── the action deck ─────────────────────────────────────────────────────── */
 .fp-deck { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 14px; margin: 0 0 10px }
@@ -1323,6 +1368,9 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dfs-seg button:hover { color: var(--brand) }
 .dfs-seg button[aria-pressed="true"] { background: var(--ink); color: #fff }
 .dfs-note { font-size: 12.5px; color: var(--ink-3); margin: 6px 0 0 }
+.dfs-more { appearance: none; border: 1px solid var(--line); border-radius: 4px; background: var(--card); cursor: pointer; font: inherit; font-size: 11.5px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 7px 13px }
+.dfs-more:hover { color: var(--brand) }
 .dfs-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 16px 0 6px }
 .dfs-card { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 14px 16px }
 .dfs-card .dfs-tag { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand) }
@@ -1845,7 +1893,21 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
         <small>How much risk the roster should accept for the available payoff.</small>
       </div>
     </div>
-    <p class="dfs-setup-state" id="dfsSetupState">Start with Game Style.</p>
+    <div class="dfs-setup-foot">
+      <p class="dfs-setup-state" id="dfsSetupState">Start with Game Style.</p>
+      <button class="dfs-submit" type="button" id="dfsSubmit" disabled aria-controls="dfsResult" aria-expanded="false">Submit</button>
+    </div>
+  </div>
+
+  <!-- The solved roster for the contest set above. Closed until Submit is
+       clicked; opening it slides everything below it down. -->
+  <div class="dfs-result" id="dfsResult" aria-live="polite">
+    <div class="dfs-result-in">
+      <div class="dfs-result-body">
+        <p class="dfs-note" id="dfsResultNote"></p>
+        <div id="dfsResultBuild"></div>
+      </div>
+    </div>
   </div>
 
   <div class="dfs-quickread">
@@ -1988,15 +2050,20 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     </div>
 
     <div class="fp-chap" id="marketProps"><div class="fp-chap-top"><span class="fp-chap-n">02</span><h2>Player props</h2></div>
-      <p class="fp-chap-dek">The sportsbook consensus across the fantasy-relevant markets PropLine carries: passing, rushing and receiving yards, receptions, touchdowns, interceptions and anytime-TD prices. The baseline is our first observation within the stored window, not necessarily the sportsbook opening line.</p></div>
+      <p class="fp-chap-dek">Every player market the books have posted for the games still to play: passing, rushing and receiving yards, receptions, touchdown counts, interceptions and anytime-touchdown prices, each beside Iron Tuna&rsquo;s own number for the same stat. The line is the median across the books quoting it; the baseline is the first line the store recorded, not necessarily the sportsbook opener. Widest disagreement first.</p></div>
     <div class="fp-chapbody">
+      <div class="dfs-controls" id="marketPropsControls" hidden>
+        <div class="dfs-seg" id="marketPropsMarket" role="group" aria-label="Market"></div>
+        <span class="dfs-note" id="marketPropsCount"></span>
+      </div>
       <div class="dfs-scroll" id="marketPropsWrap" hidden>
         <table class="dfs-table" id="marketPropsTable">
-          <thead><tr><th>Player</th><th>Prop</th><th class="num">Current line</th><th class="num">Over / Yes</th><th class="num">Baseline</th><th class="num">Move</th><th>Books</th><th>Source</th></tr></thead>
+          <thead><tr><th>Player</th><th>Prop</th><th class="num">Line</th><th class="num">Over / Yes</th><th class="num">Iron Tuna</th><th class="num">Edge</th><th class="num">Baseline</th><th class="num">Move</th><th class="num">Books</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
       <p class="dfs-empty" id="marketPropsEmpty">Reading quoted player props&hellip;</p>
+      <p class="dfs-note" id="marketPropsMoreWrap" hidden><button type="button" class="dfs-more" id="marketPropsMore">Show every prop</button></p>
     </div>
 
     <div class="fp-chap" id="marketMoves"><div class="fp-chap-top"><span class="fp-chap-n">03</span><h2>Prop &amp; line movement</h2></div>
@@ -3161,14 +3228,13 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return m;
   }
 
-  // ── the hero's three cards ────────────────────────────────────────────────
+  // ── the hero's two cards ─────────────────────────────────────────────────
   // Read off the SAME digest the dateline prints, so the top of the page and
   // the Vegas section can never name different players for the same day. Real
   // data or nothing: a card is drawn only when every number on it exists, and
   // when the digest has no case the grid stays hidden and the note says so.
-  // The TD card's percentage is DERIVED (Poisson on the blended season line
-  // over the games he can play), never a quoted book price, and it is labeled
-  // that way on the card because no free feed carries an anytime-TD market.
+  // The digest's topTd (the derived anytime-TD card) is no longer drawn: the
+  // percentage was never a quoted prop and the label did not explain itself.
   function hbRank(b, key) {
     var v = b && b[key];
     return (typeof v === 'number' && isFinite(v)) ? esc(b.position) + v : null;
@@ -3193,14 +3259,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         [['Consensus', hbRank(g.topUp, 'rankConsensus')], ['Vegas', hbRank(g.topUp, 'rankMarket')], ['Iron Tuna', hbRank(g.topUp, 'rankIronTuna')]]);
       cards += hbCard('fade', 'Vegas fades', g.topDown,
         [['Consensus', hbRank(g.topDown, 'rankConsensus')], ['Vegas', hbRank(g.topDown, 'rankMarket')], ['Iron Tuna', hbRank(g.topDown, 'rankIronTuna')]]);
-      var t = g.topTd;
-      if (t && typeof t.anytimeTd === 'number' && isFinite(t.anytimeTd)) {
-        cards += hbCard('td', 'TD edge', t,
-          [['Consensus', hbRank(t, 'rankConsensus')], ['Iron Tuna', hbRank(t, 'rankIronTuna')]],
-          ['Anytime TD', t.anytimeTd + '%',
-           'Implied from ' + t.tdIronTuna + ' season TDs over ' + t.games + ' games. The lines have him at '
-           + t.tdMarket + ' against a consensus ' + t.tdConsensus + '. Not a quoted prop.']);
-      }
     }
     if (!cards) {
       grid.hidden = true; grid.innerHTML = '';
@@ -4266,15 +4324,129 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         : 'No fresh, confirmed prop movement is available yet. Unchanged or stale markets are omitted.';
     }
   }
+  // The Player props board. Three sources, in order of what they can say:
+  // the edge payload's prop board (every quoted market, with the model's
+  // number beside each), then the market-signal feed (consensus and movement,
+  // no model number), then the anytime-touchdown board alone. The table has
+  // one shape whichever answers; a source that cannot fill a column prints a
+  // dash there rather than a number it does not have.
+  var PROPS_SHOW = 40;
+  var propsState = { market: '', all: false, rows: [], mode: '', wired: false };
+  function propsRowsFromBoard(board) {
+    return board.map(function (b) {
+      var td = b.market === 'anytimeTD';
+      return { key: b.key, name: b.name, sub: (b.position || '') + (b.team ? ' \u00b7 ' + b.team : '') + (b.opponent ? (b.home === false ? ' @ ' : ' vs ') + b.opponent : ''),
+        market: b.market, prop: b.label, side: td ? 'Yes' : 'Over', line: td ? null : b.line,
+        pct: b.probability, odds: b.overOdds, model: b.model, modelUnit: td ? '%' : '', edge: b.edge,
+        open: td ? b.openProbability : b.open, openNote: 'First recorded', openUnit: td ? '%' : '',
+        move: b.movement, moveUnit: td ? ' pp' : '', books: b.books };
+    });
+  }
+  function propsRowsFromSignal(items) {
+    var groups = {};
+    items.forEach(function (r) {
+      if (!r || !r.player || r.stale) return;
+      var key = [r.event, r.player, r.market].join('|');
+      var preferred = /^(over|yes)$/i.test(r.side || '') ? 2 : 1;
+      var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : 0;
+      var rank = preferred * 1000 + books * 10 + (marketNum(r.steamScore) ? Number(r.steamScore) : 0);
+      if (!groups[key] || rank > groups[key].rank) groups[key] = { row: r, rank: rank };
+    });
+    return Object.keys(groups).map(function (k) { return groups[k].row; })
+      .sort(function (a, b) {
+        var am = Math.abs(Number(a.consensusLineDelta) || 0), bm = Math.abs(Number(b.consensusLineDelta) || 0);
+        var as = Number(a.steamScore) || 0, bs = Number(b.steamScore) || 0;
+        return bs - as || bm - am || String(a.player).localeCompare(String(b.player));
+      }).map(function (r) {
+        var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : null;
+        return { key: r.player + '|' + r.market, name: r.player, sub: r.matchup || '', market: r.market, prop: marketLabel(r.market), side: r.side || '',
+          line: r.consensusLine, pct: r.consensusProbability, odds: null, model: null, modelUnit: '', edge: null,
+          open: r.consensusOpeningLine, openNote: r.historyBasis === 'provider-opening' ? 'Provider opening' : 'First observed', openUnit: '',
+          move: r.consensusLineDelta, moveUnit: '', books: books };
+      });
+  }
+  function propsRowsFromTd(props) {
+    return props.map(function (p) {
+      return { key: p.key || p.name, name: p.name, sub: (p.position || '') + (p.team ? ' \u00b7 ' + p.team : ''), market: 'anytimeTD', prop: 'Anytime TD', side: 'Yes',
+        line: null, pct: p.probability, odds: null, model: null, modelUnit: '', edge: null, open: null, openNote: '', openUnit: '', move: null, moveUnit: '', books: p.books };
+    });
+  }
+  function propsCell(r) {
+    var pct = marketNum(r.pct) ? marketN1(r.pct) + '%' : '\u2014';
+    if (marketNum(r.odds)) pct += '<small>' + e((r.odds > 0 ? '+' : '') + r.odds) + '</small>';
+    var model = marketNum(r.model) ? marketN1(r.model) + r.modelUnit : '\u2014';
+    var edge = marketNum(r.edge) ? marketSigned(r.edge) + (r.modelUnit === '%' ? ' pp' : '') : '\u2014';
+    var open = marketNum(r.open) ? marketN1(r.open) + r.openUnit + (r.openNote ? '<small>' + e(r.openNote) + '</small>' : '') : '\u2014';
+    var move = !marketNum(r.move) ? (r.open == null ? '\u2014' : 'Awaiting comparison') : Number(r.move) !== 0 ? marketSigned(r.move) + r.moveUnit : 'No move';
+    return '<tr><td><b>' + e(r.name) + '</b><small>' + e(r.sub) + '</small></td>' +
+      '<td>' + e(r.prop) + '<small>' + e(r.side) + '</small></td>' +
+      '<td class="num"><b>' + (marketNum(r.line) ? marketN1(r.line) : '\u2014') + '</b></td>' +
+      '<td class="num">' + pct + '</td>' +
+      '<td class="num">' + model + '</td>' +
+      '<td class="num"><b>' + edge + '</b></td>' +
+      '<td class="num">' + open + '</td>' +
+      '<td class="num">' + e(move) + '</td>' +
+      '<td class="num">' + (marketNum(r.books) ? e(String(r.books)) : '\u2014') + '</td></tr>';
+  }
+  function drawMarketProps() {
+    var rows = propsState.rows.filter(function (r) { return !propsState.market || r.market === propsState.market; });
+    var shown = propsState.all ? rows : rows.slice(0, PROPS_SHOW);
+    $('marketPropsTable').querySelector('tbody').innerHTML = shown.map(propsCell).join('');
+    $('marketPropsWrap').hidden = !shown.length;
+    $('marketPropsEmpty').hidden = !!shown.length;
+    if (!shown.length) $('marketPropsEmpty').textContent = 'No quoted prop in that market.';
+    $('marketPropsMoreWrap').hidden = rows.length <= PROPS_SHOW;
+    $('marketPropsMore').textContent = propsState.all ? 'Show the top ' + PROPS_SHOW : 'Show every prop (' + rows.length + ')';
+    var players = {};
+    rows.forEach(function (r) { players[r.name] = 1; });
+    $('marketPropsCount').textContent = rows.length + ' quoted prop' + (rows.length === 1 ? '' : 's') + ' on ' + Object.keys(players).length + ' player' + (Object.keys(players).length === 1 ? '' : 's') +
+      (propsState.summaryBooks ? ' across ' + propsState.summaryBooks + ' book' + (propsState.summaryBooks === 1 ? '' : 's') : '') + '.';
+  }
+  function wireMarketProps() {
+    if (propsState.wired) return;
+    propsState.wired = true;
+    $('marketPropsMarket').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button'); if (!b) return;
+      propsState.market = b.getAttribute('data-market') || '';
+      [].forEach.call($('marketPropsMarket').querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      drawMarketProps();
+    });
+    $('marketPropsMore').addEventListener('click', function () { propsState.all = !propsState.all; drawMarketProps(); });
+  }
+  function renderMarketProps(j, signal) {
+    var board = (j && j.propBoard) || [];
+    var tdProps = ((j && j.tdBoard) || []).filter(function (p) {
+      return p && p.basis === 'anytime-td-market' && marketNum(p.probability) && marketNum(p.expectedTds);
+    });
+    var signalItems = (signal && signal.items) || [];
+    if (board.length) { propsState.rows = propsRowsFromBoard(board); propsState.mode = 'board'; }
+    else if (signalItems.some(function (r) { return r && r.player && !r.stale; })) { propsState.rows = propsRowsFromSignal(signalItems); propsState.mode = 'signal'; }
+    else { propsState.rows = propsRowsFromTd(tdProps); propsState.mode = 'td'; }
+    propsState.summaryBooks = j && j.propSummary && marketNum(j.propSummary.books) ? Number(j.propSummary.books) : null;
+    if (!propsState.rows.length) {
+      $('marketPropsWrap').hidden = true; $('marketPropsControls').hidden = true; $('marketPropsMoreWrap').hidden = true;
+      $('marketPropsEmpty').hidden = false;
+      $('marketPropsEmpty').textContent = signal && signal.status === 'disabled'
+        ? 'The broader player-prop board is awaiting market-provider configuration.'
+        : 'No quoted player prop reached the current feed. Iron Tuna does not manufacture sportsbook prices to fill the table.';
+      return;
+    }
+    wireMarketProps();
+    var markets = [], seen = {};
+    propsState.rows.forEach(function (r) { if (!seen[r.market]) { seen[r.market] = 1; markets.push({ key: r.market, label: r.prop }); } });
+    if (propsState.market && !seen[propsState.market]) propsState.market = '';
+    $('marketPropsMarket').innerHTML = [{ key: '', label: 'All markets' }].concat(markets).map(function (m) {
+      return '<button type="button" data-market="' + e(m.key) + '" aria-pressed="' + (propsState.market === m.key ? 'true' : 'false') + '">' + e(m.label) + '</button>';
+    }).join('');
+    $('marketPropsControls').hidden = markets.length < 2 && propsState.rows.length <= PROPS_SHOW;
+    drawMarketProps();
+  }
   function marketHelpCell(content, explanation) {
     var safe = String(explanation).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return '<td tabindex="0" title="' + safe + '" aria-label="' + safe + '">' + content + '</td>';
   }
   function renderMarket(j, signal) {
     var games = (j && j.gameEnvironments) || [];
-    var props = ((j && j.tdBoard) || []).filter(function (p) {
-      return p && p.basis === 'anytime-td-market' && marketNum(p.probability) && marketNum(p.expectedTds);
-    });
 
     var gbody = $('marketGamesTable').querySelector('tbody');
     gbody.innerHTML = games.map(function (g) {
@@ -4297,56 +4469,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     }).join('');
     $('marketGamesWrap').hidden = !games.length;
     $('marketGamesEmpty').hidden = !!games.length;
-    if (!games.length) $('marketGamesEmpty').textContent = 'No current game market reached the feed. Nothing stale is substituted.';
+    if (!games.length) $('marketGamesEmpty').textContent = j && j.played && j.played.games
+      ? 'Every game this week has kicked off. A line for a game already played is a closing line, not a market, so nothing is shown until the next week\u2019s lines post.'
+      : 'No current game market reached the feed. Nothing stale is substituted.';
 
-    var pbody = $('marketPropsTable').querySelector('tbody');
-    var signalProps = ((signal && signal.items) || []).filter(function (r) {
-      return r && r.player && !r.stale;
-    });
-    var propGroups = {};
-    signalProps.forEach(function (r) {
-      var key = [r.event, r.player, r.market].join('|');
-      var preferred = /^(over|yes)$/i.test(r.side || '') ? 2 : 1;
-      var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : 0;
-      var rank = preferred * 1000 + books * 10 + (marketNum(r.steamScore) ? Number(r.steamScore) : 0);
-      if (!propGroups[key] || rank > propGroups[key].rank) propGroups[key] = { row: r, rank: rank };
-    });
-    var broadProps = Object.keys(propGroups).map(function (k) { return propGroups[k].row; })
-      .sort(function (a, b) {
-        var am = Math.abs(Number(a.consensusLineDelta) || 0), bm = Math.abs(Number(b.consensusLineDelta) || 0);
-        var as = Number(a.steamScore) || 0, bs = Number(b.steamScore) || 0;
-        return bs - as || bm - am || String(a.player).localeCompare(String(b.player));
-      }).slice(0, 40);
-
-    if (broadProps.length) {
-      pbody.innerHTML = broadProps.map(function (r) {
-        var books = marketNum(r.marketBooks) ? Number(r.marketBooks) : marketNum(r.books) ? Number(r.books) : null;
-        var pct = marketNum(r.consensusProbability) ? marketN1(r.consensusProbability) + '%' : '—';
-        var move = !marketNum(r.consensusLineDelta) ? 'Awaiting comparison' : Number(r.consensusLineDelta) !== 0 ? marketSigned(r.consensusLineDelta) : 'No line move';
-        var source = r.sourceName || 'Market feed';
-        if (marketNum(r.steamScore) && Number(r.steamScore) > 0) source += ' · steam ' + marketN1(r.steamScore);
-        return '<tr><td><b>' + e(r.player) + '</b><small>' + e(r.matchup || '') + '</small></td>' +
-          '<td>' + e(marketLabel(r.market)) + '<small>' + e(r.side || '') + '</small></td>' +
-          '<td class="num"><b>' + marketN1(r.consensusLine) + '</b></td>' +
-          '<td class="num">' + pct + '</td>' +
-          '<td class="num">' + marketN1(r.consensusOpeningLine) + '<small>' + e(r.historyBasis === 'provider-opening' ? 'Provider opening' : 'First observed') + '</small></td>' +
-          '<td class="num"><b>' + e(move) + '</b></td>' +
-          '<td>' + (books == null ? '—' : e(String(books))) + '</td>' +
-          '<td><small>' + e(source) + '</small></td></tr>';
-      }).join('');
-    } else {
-      pbody.innerHTML = props.slice(0, 20).map(function (p) {
-        return '<tr><td><b>' + e(p.name) + '</b><small>' + e((p.position || '') + (p.team ? ' · ' + p.team : '')) + '</small></td>' +
-          '<td>Anytime TD</td><td class="num">—</td><td class="num"><b>' + marketN1(p.probability) + '%</b></td>' +
-          '<td class="num">—</td><td class="num">—</td><td>—</td><td><small>Current TD market</small></td></tr>';
-      }).join('');
-    }
-    var anyProps = broadProps.length || props.length;
-    $('marketPropsWrap').hidden = !anyProps;
-    $('marketPropsEmpty').hidden = !!anyProps;
-    if (!anyProps) $('marketPropsEmpty').textContent = signal && signal.status === 'disabled'
-      ? 'The broader player-prop board is awaiting market-provider configuration.'
-      : 'No quoted player prop reached the current feed. Iron Tuna does not manufacture sportsbook prices to fill the table.';
+    renderMarketProps(j, signal);
 
     renderMarketMoves(signal);
 
@@ -4501,6 +4628,9 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
             why: 'A big field pays almost everything to the top fraction of a percent, so the median is worth nothing. Ceiling discounted by modeled ownership, stacked and brought back \u2014 the build that carries longshots on purpose.' }
   };
   var shape = 'single';
+  // The roster is not solved until Submit is clicked; after that it re-solves
+  // live as the setup changes, and closes again if the setup becomes incomplete.
+  var submitted = false;
   var frontGameStyle = '', frontGameChoice = '', frontPayout = '', frontGameKeys = {};
   var FRONT_SINGLE = { 'showdown-captain':1, 'in-game-showdown':1, 'snake-showdown':1, 'madden-showdown-captain':1 };
   var FRONT_PAYOUT_SHAPE = { h2h:'cash', '50-50':'cash', 'double-up':'cash', satellite:'cash', multiplier:'single', 'tournament-single':'single', 'tournament-multi':'gpp', private:'single' };
@@ -4569,6 +4699,16 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     frontUpdateState();
   }
   function frontSetupReady(){ return !!(frontGameStyle&&frontGameChoice&&frontPayout); }
+  // The board heading names the contest the roster is optimal for, e.g.
+  // "Classic Game / All Listed Games / Multiplier", not a generic shape label.
+  function frontContestHead(fallback){
+    if(!frontSetupReady()) return fallback;
+    var pick=function(id){ var sel=$(id); return sel&&sel.selectedIndex>=0?String(sel.options[sel.selectedIndex].text||'').trim():''; };
+    var style=pick('dfsGameStyle'), games=pick('dfsGames'), payout=pick('dfsPayout');
+    if(style&&!/game$/i.test(style)) style+=' Game';
+    payout=payout.replace(/\s*\(.*\)\s*$/,'');
+    return [style,games,payout].filter(Boolean).join(' / ')||fallback;
+  }
   function frontFiltered(s){
     if(!s||!s.ok||frontGameChoice==='season'||!frontSelectedKeys().length)return s;
     var q={}; for(var k in s)q[k]=s[k];
@@ -4578,7 +4718,17 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     q.label=(s.label||'DraftKings')+' · '+frontSelectedKeys().length+' selected game'+(frontSelectedKeys().length===1?'':'s');
     return q;
   }
+  function frontSyncSubmit(){
+    var b=$('dfsSubmit'); if(!b)return;
+    b.disabled = site==='dk' ? !frontSetupReady() : false;
+  }
+  function frontOpenResult(open){
+    var r=$('dfsResult'), b=$('dfsSubmit'); if(!r)return;
+    r.classList.toggle('open',!!open);
+    if(b)b.setAttribute('aria-expanded',open?'true':'false');
+  }
   function frontUpdateState(){
+    frontSyncSubmit();
     var state=$('dfsSetupState'); if(!state)return;
     if(!frontGameStyle){state.className='dfs-setup-state';state.textContent='Start with Game Style.';return;}
     if(!frontGameChoice){state.className='dfs-setup-state';state.textContent='Now select the Games / player pool.';return;}
@@ -4612,9 +4762,40 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return '';
   }
   function buildLineup(s) {
-    var host = $('dfsBuild'), note = $('dfsShapeNote');
+    // The board draws into the panel under the setup; chapter 01 keeps a
+    // one-line pointer so its ribbon anchor still lands somewhere useful.
+    var host = $('dfsResultBuild'), note = $('dfsResultNote'), pointer = $('dfsBuild'), chapNote = $('dfsShapeNote');
     if (!host) return;
-    if (site === 'dk' && !frontSetupReady()) { host.innerHTML='<p class="dfs-empty"><b>Complete Game Style, Games and Payout Structure above.</b> The lineup will be built from that exact contest setup.</p>'; if(note)note.textContent=''; return; }
+    if (!buildLineup.wired) {
+      // One delegated listener: the board is redrawn on every setup change,
+      // and a name click toggles the matchup row under it.
+      buildLineup.wired = true;
+      host.addEventListener('click', function (ev) {
+        var t = ev.target, b = null;
+        while (t && t !== host) { if (t.className && /\bfp-name\b/.test(t.className)) { b = t; break; } t = t.parentNode; }
+        if (!b) return;
+        var tr = b.parentNode; while (tr && tr.tagName !== 'TR') tr = tr.parentNode;
+        var more = tr && tr.nextElementSibling;
+        if (!more || !/\bfp-more\b/.test(more.className)) return;
+        var open = !/\bopen\b/.test(more.className);
+        more.classList.toggle('open', open); tr.classList.toggle('is-open', open);
+        b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
+    frontSyncSubmit();
+    if (chapNote) chapNote.textContent = '';
+    if (site === 'dk' && !frontSetupReady()) {
+      submitted = false; frontOpenResult(false); host.innerHTML = ''; if (note) note.textContent = '';
+      if (pointer) pointer.innerHTML = '<p class="dfs-empty"><b>Complete Game Style, Games and Payout Structure above, then click Submit.</b> The lineup is built from that exact contest setup.</p>';
+      return;
+    }
+    if (!submitted) {
+      frontOpenResult(false); host.innerHTML = ''; if (note) note.textContent = '';
+      if (pointer) pointer.innerHTML = '<p class="dfs-empty"><b>Setup complete.</b> Click Submit under the contest setup to solve the roster.</p>';
+      return;
+    }
+    frontOpenResult(true);
+    if (pointer) pointer.innerHTML = '<p class="dfs-empty">The roster is solved above, directly under the contest setup. <a href="#dfsResult">Jump to it &uarr;</a></p>';
     if (site === 'dk' && frontGameStyle !== 'classic') { host.innerHTML='<p class="dfs-empty"><b>'+e($('dfsGameStyle').options[$('dfsGameStyle').selectedIndex].text)+' selected.</b> This homepage preview uses the Classic optimizer only. Open the full DFS sheet for format-specific analysis.</p>'; if(note)note.textContent=''; return; }
     s = frontFiltered(s);
     var sh = SHAPES[shape] || SHAPES.single;
@@ -4643,19 +4824,29 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var full = l.salary + Math.max(0, l.remaining);
     var pct = Math.min(100, Math.round((l.salary / full) * 100));
     var tile = function (v, lab, on) { return '<div' + (on ? ' class="on"' : '') + '><b>' + v + '</b><span>' + lab + '</span></div>'; };
-    var rows = l.players.map(function (p) {
+    var byKey = {}; (s.players || []).forEach(function (p) { if (p && p.key) byKey[p.key] = p; });
+    var medPerK = frontMedianPerK(pool);
+    var est = function (p) { return p.operatorFppgBasis === 'computed' ? '<i class="fp-est" title="DraftKings posts no average for him; this is his season box score at DraftKings scoring.">est</i>' : ''; };
+    var rows = l.players.map(function (p, i) {
+      var r = byKey[p.id] || null, g = frontGameFor(s, r || p);
+      var away = r && r.home === false;
       return '<tr><td><span class="sl' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
-        + '<td><b>' + e(p.name) + '</b>' + tagFor(p, qb) + '<small>' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? ' vs ' + p.opponent : '')) + '</small></td>'
+        + '<td><button class="fp-name" type="button" aria-expanded="false" aria-controls="fpMore' + i + '">' + e(p.name) + '</button>' + tagFor(p, qb)
+          + '<small>' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? (away ? ' @ ' : ' vs ') + p.opponent : '')) + '</small></td>'
         + '<td class="num">' + money(p.salary) + '</td>'
-        + '<td class="num">' + (p.operatorFppg == null ? '—' : n1(p.operatorFppg)) + '</td>'
+        + '<td class="num">' + (p.operatorFppg == null ? '—' : n1(p.operatorFppg) + est(p)) + '</td>'
         + '<td class="num">' + n1(p.proj) + '</td>'
-        + '<td class="num">' + (p.projectionVsFppg == null ? '—' : ((p.projectionVsFppg > 0 ? '+' : '') + n1(p.projectionVsFppg))) + '</td></tr>';
+        + '<td class="num">' + (p.projectionVsFppg == null ? '—' : ((p.projectionVsFppg > 0 ? '+' : '') + n1(p.projectionVsFppg))) + '</td></tr>'
+        + '<tr class="fp-more" id="fpMore' + i + '"><td colspan="6"><div class="fp-more-in"><div class="fp-more-clip">'
+          + frontPlayerDetail(p, r, g, qb, sh, medPerK) + '</div></div></td></tr>';
     }).join('');
+    var estimated = l.players.filter(function (p) { return p.operatorFppgBasis === 'computed'; }).map(function (p) { return p.name; });
+    var estNote = estimated.length ? '<span class="fp-foot-est"><i class="fp-est">est</i> DraftKings posts no average yet for ' + e(estimated.join(', ')) + '. The number shown is the season box score scored at DraftKings rules, before yardage bonuses, so the edge is against that.</span>' : '';
     var hasFppg = l.players.every(function (p) { return p.operatorFppg != null && isFinite(Number(p.operatorFppg)); });
     var dkFppg = hasFppg ? l.players.reduce(function (sum, p) { return sum + Number(p.operatorFppg); }, 0) : null;
     var tunaEdge = dkFppg == null ? null : l.projPoints - dkFppg;
     host.innerHTML = '<div class="fp-board">'
-      + '<div class="fp-board-head"><h3>' + e(sh.head) + '</h3><span>' + e((s.label || '') + (s.week ? ' \u00b7 Week ' + s.week : '')) + '</span></div>'
+      + '<div class="fp-board-head"><h3>' + e(frontContestHead(sh.head)) + '</h3><span>' + e((s.label || '') + (s.week ? ' \u00b7 Week ' + s.week : '')) + '</span></div>'
       + '<div class="fp-board-stats">'
         + tile(dkFppg == null ? '—' : n1(dkFppg), 'DraftKings FPPG')
         + tile(n1(l.projPoints), 'Iron Tuna Projection', true)
@@ -4664,9 +4855,88 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       + '</div>'
       + '<div class="fp-board-meter"><i style="width:' + pct + '%"></i></div>'
       + '<div class="fp-board-cap"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div>'
-      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">DraftKings FPPG</th><th class="num">Iron Tuna Projection</th><th class="num">Tuna Edge</th></tr></thead><tbody>' + rows + '</tbody></table>'
-      + '<div class="fp-board-foot"><span>Solved against the cap on the same market numbers the board below prints. Nothing here enters a contest.</span>'
-      + '<a href="/dfs">Lock, exclude and build twenty &rarr;</a></div></div>';
+      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">DraftKings FPPG</th><th class="num">Iron Tuna Projection</th><th class="num">Tuna Edge</th></tr></thead><tbody>' + rows + '</tbody>'
+      + '<tfoot><tr><td></td><td><b>Total</b><small>' + l.players.length + ' players</small></td>'
+        + '<td class="num"><b>' + money(l.salary) + '</b></td>'
+        + '<td class="num"><b>' + (dkFppg == null ? '\u2014' : n1(dkFppg)) + '</b></td>'
+        + '<td class="num"><b>' + n1(l.projPoints) + '</b></td>'
+        + '<td class="num"><b>' + (tunaEdge == null ? '\u2014' : ((tunaEdge > 0 ? '+' : '') + n1(tunaEdge))) + '</b></td></tr></tfoot></table>'
+      + '<div class="fp-board-foot"><span>Solved against the cap on the same market numbers the board below prints. Click a name for the matchup. Nothing here enters a contest.</span>'
+      + '<a href="/dfs">Lock, exclude and build twenty &rarr;</a>' + estNote + '</div></div>';
+  }
+  // ── the matchup under a name ─────────────────────────────────────────────
+  // Every number here is one the slate already carries; the paragraph only
+  // points at them. Nothing is asserted that a number does not show.
+  function frontMedianPerK(pool) {
+    var v = (pool || []).filter(function (p) { return p.ironTunaPoints > 0 && p.salary > 0; })
+      .map(function (p) { return p.ironTunaPoints / (p.salary / 1000); }).sort(function (a, b) { return a - b; });
+    return v.length ? v[Math.floor(v.length / 2)] : null;
+  }
+  function frontGameFor(s, p) {
+    if (!p || !p.team || !p.opponent) return null;
+    var k = frontGameKey(p.team, p.opponent), hit = null;
+    (s && s.stacks || []).forEach(function (g) { if (!hit && g && g.home && g.away && frontGameKey(g.home.team, g.away.team) === k) hit = g; });
+    return hit;
+  }
+  function frontOrd(n) { var v = n % 100; return n + (v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'); }
+  function frontPlayerDetail(p, r, g, qb, sh, medPerK) {
+    var tile = function (v, lab, on) { return v == null || v === '' ? '' : '<div' + (on ? ' class="on"' : '') + '><b>' + v + '</b><span>' + lab + '</span></div>'; };
+    var opp = (r && r.opponent) || p.opponent || '';
+    var away = r && r.home === false;
+    var kick = frontKickoff({ kickoff: (r && r.kickoff) || (g && g.kickoff) || null });
+    var isHome = g && g.home && g.home.team === p.team;
+    var oppImplied = g ? (isHome ? g.impliedAway : g.impliedHome) : null;
+    var isDst = p.position === 'DST';
+    var rank = r && r.opponentDefRank ? r.opponentDefRank : null;
+    var perK = r && r.ironTunaPerK != null ? r.ironTunaPerK : (p.salary ? p.proj / (p.salary / 1000) : null);
+    var tiles = tile(opp ? e((away ? '@ ' : 'vs ') + opp) : null, kick ? e(frontKickText(kick)) : 'Matchup')
+      + tile(g && g.total != null ? n1(g.total) : null, 'Game total')
+      + tile(r && r.teamTotal != null ? n1(r.teamTotal) : null, isDst ? 'Own implied' : (r && r.teamTotalPosted ? 'Team implied' : 'Team expected'))
+      + tile(isDst && oppImplied != null ? n1(oppImplied) : null, 'Opp. implied')
+      + tile(rank ? frontOrd(rank) + ' of 32' : null, 'Opp. defense')
+      + tile(n1(p.proj), 'Iron Tuna', true)
+      + tile(r ? n1(r.vegasPoints) : null, 'Vegas')
+      + tile(r ? n1(r.consensusPoints) : null, 'Consensus')
+      + tile(!isDst && r && r.tdProbability != null ? n1(r.tdProbability) + '%' : null, 'TD odds')
+      + tile(n1(p.floor) + ' / ' + n1(p.ceiling), 'Floor / ceiling')
+      + tile(p.ownership != null ? n1(p.ownership) + '%' : null, 'Modeled own.')
+      + tile(perK != null ? (Math.round(perK * 100) / 100).toFixed(2) : null, 'Pts per $1K');
+    var why = frontWhy(p, r, g, qb, sh, medPerK, perK, oppImplied, rank);
+    var mkt = '';
+    if (r && r.marketDelta) {
+      var d = r.marketDelta;
+      mkt = e(String(d.classification || '').toLowerCase().replace(/^\w/, function (c) { return c.toUpperCase(); })) + (d.points ? ' (' + (d.points > 0 ? '+' : '') + n1(d.points) + ' on consensus)' : '') + '. ' + e(r.why || '');
+    }
+    return '<div class="fp-more-body"><div class="fp-more-grid">' + tiles + '</div>'
+      + '<p><b>Why he is in.</b> ' + why + '</p>'
+      + (mkt ? '<p><b>What the market says.</b> ' + mkt + '</p>' : '') + '</div>';
+  }
+  function frontWhy(p, r, g, qb, sh, medPerK, perK, oppImplied, rank) {
+    var out = [], opp = (r && r.opponent) || p.opponent || '';
+    var ratio = perK != null && medPerK ? perK / medPerK : null;
+    var priced = ratio == null ? '' : ratio >= 1.15 ? ', one of the better prices on the slate' : ratio >= 0.95 ? ', an ordinary price for what he returns' : ', a price paid for the projection rather than the value';
+    out.push('At ' + money(p.salary) + ' ' + (p.position === 'DST' ? 'the unit projects' : 'he projects') + ' ' + n1(p.proj) + ' points' + (perK != null ? ', ' + (Math.round(perK * 100) / 100).toFixed(2) + ' per $1K of salary' + priced : '') + '.');
+    if (p.operatorFppg != null && p.projectionVsFppg != null) {
+      var d = p.projectionVsFppg, avg = 'DraftKings average of ' + n1(p.operatorFppg) + (p.operatorFppgBasis === 'computed' ? ' (estimated from the box score)' : '');
+      out.push(Math.abs(d) < 0.5 ? 'That is in line with the ' + avg + '.'
+        : d > 0 ? 'That is ' + n1(d) + ' points above the ' + avg + ', so the projection is buying this matchup, not the season line.'
+        : 'That is ' + n1(-d) + ' points below the ' + avg + '; the roster keeps him for what the price buys, not for a matchup bump.');
+    }
+    var env = [];
+    if (g && g.total != null) env.push('the game total is ' + n1(g.total));
+    if (p.position === 'DST') {
+      if (oppImplied != null) env.push('the ' + opp + ' offense is implied for ' + n1(oppImplied) + ' points, which is the number a defense\u2019s score is built against');
+    } else if (r && r.teamTotal != null) env.push('his club is ' + (r.teamTotalPosted ? 'implied for ' : 'expected to score ') + n1(r.teamTotal));
+    if (rank && p.position !== 'DST') env.push('the ' + opp + ' defense is the ' + frontOrd(rank) + ' stingiest of 32' + (rank >= 22 ? ', a soft matchup' : rank <= 11 ? ', a hard one' : ''));
+    if (env.length) { var t = env.join(', ') + '.'; out.push(t.charAt(0).toUpperCase() + t.slice(1)); }
+    if (p.position !== 'DST' && r && r.tdProbability != null) out.push('The touchdown probability is ' + n1(r.tdProbability) + '%' + (r.tdBasis === 'anytime-td-market' ? ', off the anytime-TD market.' : ', derived from the projected line.'));
+    if (qb && p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE')) out.push('He is the stack partner for ' + e(qb.name) + ': a big game from one is a big game from both.');
+    else if (qb && p.team === qb.opponent && p.position !== 'DST') out.push('He is the bring-back against the ' + e(qb.name) + ' stack, a bet the game stays open on both sides.');
+    if (sh.mode === 'floor') out.push('A cash roster is built on floors, and his ' + n1(p.floor) + '-point floor is ' + (p.proj ? Math.round(p.floor / p.proj * 100) : '\u2014') + '% of his projection.');
+    else if (sh.mode === 'leverage') out.push('The large-field build wants ceiling the field is not on: ' + n1(p.ceiling) + ' points at ' + (p.ownership != null ? n1(p.ownership) + '% modeled ownership' : 'an ownership the model cannot price') + '.');
+    else out.push('The single-entry build takes the best projection the cap buys, and this slot is his: ' + n1(p.ceiling) + ' ceiling, ' + n1(p.floor) + ' floor.');
+    if (r && r.injury) out.push('Injury status: ' + e(r.injury) + '.');
+    return out.join(' ');
   }
   function render(s) {
     if (!s || !s.ok) {
@@ -4708,11 +4978,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   $('dfsPayout').addEventListener('change', function(){
     frontPayout=this.value; shape=FRONT_PAYOUT_SHAPE[frontPayout]||'single'; frontUpdateState(); if(slates[site])render(slates[site]);
   });
+  $('dfsSubmit').addEventListener('click', function(){
+    if(this.disabled) return;
+    submitted = true;
+    if(slates[site]) buildLineup(slates[site]); else { buildLineup(null); loadSlate(); }
+    // The panel opens in place and pushes the page down. Only nudge the
+    // window when the top of the result would otherwise sit below the fold.
+    var r=$('dfsResult');
+    if(r) setTimeout(function(){
+      var top=r.getBoundingClientRect().top, room=window.innerHeight-top;
+      if(room<220) try{ window.scrollBy({top:top-96,left:0,behavior:'smooth'}); }catch(err){ window.scrollBy(0,top-96); }
+    }, 80);
+  });
 
   $('dfsSite').addEventListener('click', function (ev) {
     var b = ev.target.closest('button');
     if (!b) return;
     site = b.getAttribute('data-site');
+    submitted=false; frontOpenResult(false);
     frontGameChoice=''; frontPayout=''; frontGameKeys={}; $('dfsGames').value=''; $('dfsPayout').value=''; $('dfsPayout').disabled=true;
     [].forEach.call(this.querySelectorAll('button'), function (x) {
       x.setAttribute('aria-pressed', x.getAttribute('data-site') === site ? 'true' : 'false');
@@ -4800,7 +5083,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var nflWide = /^NFL\s+League-Wide$/i.test(String(kicker || '').trim());
     return '<a class="nr-card" href="' + esc(p.url) + '"><span class="nr-kicker' + (nflWide ? ' nfl-wide' : '') + '">' +
       (nflWide ? '<img class="nr-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' : '') +
-      esc(kicker) + ' &middot; Week ' + esc(p.week) + (p.version > 1 ? ' &middot; update ' + esc(p.version) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
+      esc(kicker) + ' &middot; Week ' + esc(p.week) + (p.perGame ? ' &middot; Final' : '') + (p.edition > 1 ? ' &middot; update ' + esc(p.edition) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
       '<span class="nr-by"><span class="nr-av">' + esc(av(who)) + '</span>' + esc(who || 'Iron Tuna') + (p.rivalry && lens !== 'dfs' ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') + '</span></a>';
   }
   function band(lens, gridId, ids) {

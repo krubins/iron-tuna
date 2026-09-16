@@ -81,7 +81,6 @@ p{margin:0}
 .hb-card{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:13px 14px;min-width:0}
 .hb-card i{font-style:normal;display:block;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--wi-teal);margin-bottom:8px}
 .hb-card i.fade{color:#ff8a80}
-.hb-card i.td{color:var(--gold)}
 .hb-card b{display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;overflow-wrap:anywhere}
 .hb-card b a{color:inherit}
 .hb-card small{display:block;font-size:11px;color:#8b9c97;margin:2px 0 9px;letter-spacing:.03em}
@@ -392,7 +391,7 @@ p{margin:0}
   <div class="wi-grid">
     <div class="wi-card"><span class="wi-tag live">The clock</span><p id="wvClock">Reading the schedule&hellip;</p></div>
     <div class="wi-card"><span class="wi-tag">Tool</span><h3><a href="/faab">FAAB Advisor</a></h3><p>Reads your Sleeper league, prices every free agent against the roster you actually have, and names the rival with the budget to outbid you.</p><a class="go" href="/faab">Open the advisor &rarr;</a></div>
-    <div class="wi-card" id="wvWatch"><span class="wi-tag">Latest report</span><h3><a href="/waiver-watch-2026-09-01">Waiver &amp; FAAB Watch: September 1, 2026</a></h3><p>This week's verified waiver-wire pickups with suggested FAAB bid ranges, from MarShawn Lloyd to Tyjae Spears.</p><a class="go" href="/waiver-watch-2026-09-01">Read the report &rarr;</a></div>
+    <div class="wi-card" id="wvWatch"><span class="wi-tag">Latest report</span><h3><a href="/waiver-watch-2026-09-08">Waiver &amp; FAAB Watch: September 8, 2026</a></h3><p>This week's verified waiver-wire pickups with suggested FAAB bid ranges, from Tyler Allgeier to Jonah Coleman.</p><a class="go" href="/waiver-watch-2026-09-08">Read the report &rarr;</a></div>
   </div>
 
   <!-- ── The desk ─────────────────────────────────────────────────────── -->
@@ -588,14 +587,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         [['Consensus', hbRank(g.topUp, 'rankConsensus')], ['Vegas', hbRank(g.topUp, 'rankMarket')], ['Iron Tuna', hbRank(g.topUp, 'rankIronTuna')]]);
       cards += hbCard('fade', 'Vegas fades', g.topDown,
         [['Consensus', hbRank(g.topDown, 'rankConsensus')], ['Vegas', hbRank(g.topDown, 'rankMarket')], ['Iron Tuna', hbRank(g.topDown, 'rankIronTuna')]]);
-      var t = g.topTd;
-      if (t && typeof t.anytimeTd === 'number' && isFinite(t.anytimeTd)) {
-        cards += hbCard('td', 'TD edge', t,
-          [['Consensus', hbRank(t, 'rankConsensus')], ['Iron Tuna', hbRank(t, 'rankIronTuna')]],
-          ['Anytime TD', t.anytimeTd + '%',
-           'Implied from ' + t.tdIronTuna + ' season TDs over ' + t.games + ' games. The lines have him at '
-           + t.tdMarket + ' against a consensus ' + t.tdConsensus + '. Not a quoted prop.']);
-      }
     }
     if (!cards) {
       grid.hidden = true; grid.innerHTML = '';
@@ -735,7 +726,8 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       $('veBuys').innerHTML = ''; $('veFades').innerHTML = '';
       return;
     }
-    note.innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || (j.hasProps ? 'Player props are priced this week; every number below says whether it is quoted or derived.' : 'No sportsbook has posted a player prop for this week yet, so every player number is derived from the game line and labeled that way.'));
+    note.innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || (j.hasProps ? 'Player props are priced this week; every number below says whether it is quoted or derived.' : 'No sportsbook has posted a player prop for this week yet, so every player number is derived from the game line and labeled that way.')) +
+      (j.playedNote ? ' ' + e(j.playedNote) : '');
     var buys = (j.vsExperts.buys || []).slice(0, 3), fades = (j.vsExperts.fades || []).slice(0, 3);
     $('veBuys').innerHTML = buys.length ? buys.map(function (p) { return veCard(p, 'buy'); }).join('') : '<p class="is-empty">No player the market rates meaningfully higher than the consensus today.</p>';
     $('veFades').innerHTML = fades.length ? fades.map(function (p) { return veCard(p, 'fade'); }).join('') : '<p class="is-empty">No player the market rates meaningfully lower than the consensus today.</p>';
@@ -831,7 +823,8 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var L = window.ITLeague, hz = rkData.horizon || {};
     $('rkNote').innerHTML = (built.custom ? 'Scored at <b>' + e(L.label ? L.label() : 'your league') + '</b>' : 'Scored at <b>PPR</b>')
       + (hz.label ? ' · ' + e(hz.label) : '')
-      + (rkData.sources && rkData.sources.props ? ' · ' + rkData.sources.props + ' players carry a prop' : ' · no player prop posted yet');
+      + (rkData.sources && rkData.sources.props ? ' · ' + rkData.sources.props + ' players carry a prop' : ' · no player prop posted yet')
+      + (rkData.played ? ' · ' + rkData.played + ' player' + (rkData.played === 1 ? ' whose game has' : 's whose games have') + ' kicked off are off the board' : '');
   }
   whenReady(function () {
     var bar = $('rkPos');
@@ -873,7 +866,9 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   get('/api/content', function (j) {
     var host = $('dkGrid'), empty = $('dkEmpty');
     if (!j || !j.ok || !j.kinds) { empty.textContent = 'The desk did not answer.'; return; }
-    var pieces = (j.pieces || []).filter(function (p) { return p.status === 'published'; }).slice(0, 6);
+    // A forward piece whose games have kicked off is flagged by the index and
+    // left out here: this grid is the week's pieces, not the archive.
+    var pieces = (j.pieces || []).filter(function (p) { return p.status === 'published' && !p.expired; }).slice(0, 6);
     var h;
     if (pieces.length) {
       h = pieces.map(function (p) {

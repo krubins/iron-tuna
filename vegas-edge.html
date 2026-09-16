@@ -35,6 +35,9 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/site.css">
 <style>
+.ve-more{appearance:none;border:1px solid var(--line,#e3e8ec);border-radius:4px;background:var(--card,#fff);cursor:pointer;font:inherit;font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3,#6b7a85);padding:7px 13px}
+.ve-more:hover{color:var(--brand,#0e7c63)}
+
 body{overflow-x:hidden}
 /* Mobile masthead: one sideways-scrolling row under a pinned CTA, so the
    header stays 52px instead of wrapping into three ragged rows. Copied from the
@@ -136,6 +139,13 @@ p{color:var(--sec);margin:0 0 16px}
 <p>The largest meaningful prop changes since each line opened. Open to current, off the median book.</p>
 <div class="is-scroll"><table class="is-table" id="veMovers" hidden><thead><tr><th>Player</th><th>Market</th><th class="num">Open</th><th class="num">Current</th><th class="num">Move</th><th class="num">Books</th></tr></thead><tbody></tbody></table></div>
 <p class="is-empty" id="veMoversEmpty">No prop movement has reached this board yet this week.</p>
+
+<h2>Quoted Props</h2>
+<p>Every player market the books have posted for the games still to play, beside Iron Tuna&rsquo;s own number for the same stat. The line is the median across the books quoting it; the over or yes price is the median de-vigged probability. Widest disagreement first.</p>
+<p class="is-note" id="vePropsNote" hidden></p>
+<div class="is-scroll"><table class="is-table" id="veProps" hidden><thead><tr><th>Player</th><th>Market</th><th class="num">Line</th><th class="num">Over / Yes</th><th class="num">Iron Tuna</th><th class="num">Edge</th><th class="num">Open</th><th class="num">Move</th><th class="num">Books</th></tr></thead><tbody></tbody></table></div>
+<p class="is-empty" id="vePropsEmpty">No quoted player prop has reached this board yet this week.</p>
+<p id="vePropsMoreWrap" hidden><button type="button" class="ve-more" id="vePropsMore">Show every prop</button></p>
 
 <h2>TD Board</h2>
 <p>Players ranked by the probability of scoring at least once this week.</p>
@@ -278,7 +288,8 @@ p{color:var(--sec);margin:0 0 16px}
   document.addEventListener('DOMContentLoaded', function () {
     fetch('/api/vegas-edge').then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok) { $('veNote').textContent = 'The board did not answer. Nothing is shown rather than something invented.'; return; }
-      $('veNote').innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || 'Player props are priced this week; every number below says whether it is quoted or derived.');
+      $('veNote').innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || 'Player props are priced this week; every number below says whether it is quoted or derived.') +
+        (j.playedNote ? ' ' + e(j.playedNote) : '');
       $('veBuys').innerHTML = j.vsExperts.buys.length ? j.vsExperts.buys.map(function (p) { return card(p, 'buy'); }).join('') : '<p class="is-empty">No player the market rates meaningfully higher than the consensus today.</p>';
       $('veFades').innerHTML = j.vsExperts.fades.length ? j.vsExperts.fades.map(function (p) { return card(p, 'fade'); }).join('') : '<p class="is-empty">No player the market rates meaningfully lower than the consensus today.</p>';
       if (j.movers.length) {
@@ -289,6 +300,37 @@ p{color:var(--sec);margin:0 0 16px}
             '<td class="num">' + (td ? sign(m.movement, ' pts') : sign(m.movement)) + (m.percentChange != null ? ' (' + sign(m.percentChange, '%') + ')' : '') + '</td><td class="num">' + m.booksMoved + ' of ' + m.books + '</td></tr>';
         }).join('');
         $('veMovers').hidden = false; $('veMoversEmpty').hidden = true;
+      }
+      if (j.propBoard && j.propBoard.length) {
+        var PROPS_SHOW = 60, showAll = false;
+        var propRow = function (b) {
+          var td = b.market === 'anytimeTD';
+          var pct = b.probability == null ? '—' : n1(b.probability) + '%' + (b.overOdds != null ? ' <span class="is-status">' + e((b.overOdds > 0 ? '+' : '') + b.overOdds) + '</span>' : '');
+          var open = td ? (b.openProbability == null ? '—' : n1(b.openProbability) + '%') : (b.open == null ? '—' : n1(b.open));
+          var move = b.movement == null ? '—' : b.movement === 0 ? 'No move' : sign(b.movement, td ? ' pp' : '');
+          return '<tr><td><b>' + e(b.name) + '</b> <span class="is-status">' + e(b.position + ' · ' + b.team + (b.opponent ? (b.home === false ? ' @ ' : ' vs ') + b.opponent : '')) + '</span></td>' +
+            '<td>' + e(b.label) + '</td>' +
+            '<td class="num"><b>' + (td ? '—' : n1(b.line)) + '</b></td>' +
+            '<td class="num">' + pct + '</td>' +
+            '<td class="num">' + (b.model == null ? '—' : n1(b.model) + (td ? '%' : '')) + '</td>' +
+            '<td class="num"><b>' + (b.edge == null ? '—' : sign(b.edge, td ? ' pp' : '')) + '</b></td>' +
+            '<td class="num">' + open + '</td>' +
+            '<td class="num">' + move + '</td>' +
+            '<td class="num">' + (b.books == null ? '—' : b.books) + '</td></tr>';
+        };
+        var drawProps = function () {
+          var rows = showAll ? j.propBoard : j.propBoard.slice(0, PROPS_SHOW);
+          $('veProps').querySelector('tbody').innerHTML = rows.map(propRow).join('');
+          $('vePropsMore').textContent = showAll ? 'Show the top ' + PROPS_SHOW : 'Show every prop (' + j.propBoard.length + ')';
+        };
+        drawProps();
+        $('veProps').hidden = false; $('vePropsEmpty').hidden = true;
+        $('vePropsMoreWrap').hidden = j.propBoard.length <= PROPS_SHOW;
+        $('vePropsMore').addEventListener('click', function () { showAll = !showAll; drawProps(); });
+        if (j.propSummary) {
+          $('vePropsNote').textContent = j.propSummary.rows + ' quoted markets on ' + j.propSummary.players + ' players across ' + j.propSummary.books + ' book' + (j.propSummary.books === 1 ? '' : 's') + '.' + (j.propSummary.capped ? ' The board is capped; the widest disagreements are kept.' : '');
+          $('vePropsNote').hidden = false;
+        }
       }
       if (j.tdBoard.length) {
         $('veTd').querySelector('tbody').innerHTML = j.tdBoard.map(function (t, i) { return '<tr><td class="num">' + (i + 1) + '</td><td><b>' + e(t.name) + '</b> <span class="is-status">' + e(t.position + ' · ' + t.team) + '</span></td><td>' + e(t.opponent || '—') + '</td><td class="num"><b>' + n1(t.probability) + '%</b></td><td class="num">' + t.expectedTds + '</td><td><span class="is-status">' + e(t.basis) + '</span></td></tr>'; }).join('');

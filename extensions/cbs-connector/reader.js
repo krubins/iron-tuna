@@ -58,10 +58,14 @@ export async function readCbsPage(leagueId, kind, teamId, currentDocument = fals
   const players = [], seen = new Set();
   for (const row of table.rows) {
     const cells = [...row.cells];
-    if (cells.some(c => /^Reserves$/.test(text(c)))) { slot = 'bench'; continue; }
-    if (cells.some(c => /^Injured(?: Reserve)?$/.test(text(c)))) { slot = 'ir'; continue; }
     const cell = cells.find(c => c.querySelector('a[href*="/players/playerpage/"]'));
-    if (!cell) continue;
+    // A row without a player is a section heading or noise; a player row's own
+    // slot cell ("IR") must never be read as a heading.
+    if (!cell) {
+      if (cells.some(c => /^Reserves$/.test(text(c)))) slot = 'bench';
+      else if (cells.some(c => /^(?:Injured(?: Reserve| Players| List)?|IR)$/i.test(text(c)))) slot = 'ir';
+      continue;
+    }
     const a = cell.querySelector('a[href*="/players/playerpage/"]'), u = new URL(a.getAttribute('href'), location.origin), id = u.pathname.match(/^\/players\/playerpage\/(\d+)$/)?.[1];
     if (u.origin !== location.origin || !id || seen.has(id)) throw new Error('CBS roster contains an unexpected player entry. No import was sent.');
     const meta = text(cell).match(/\b(QB|RB|WR|TE|K|DST)\s*[•·]\s*([A-Z]{2,3})\b/);
@@ -71,8 +75,12 @@ export async function readCbsPage(leagueId, kind, teamId, currentDocument = fals
     players.push({ providerPlayerId: id, name: text(a), position, team: meta[2], slot, slotLabel: slot === 'starter' ? ({ 'RB-WR-TE':'FLEX', DST:'DEF' }[text(posCell)] || text(posCell)) : slot === 'bench' ? 'BN' : 'IR' });
     seen.add(id);
   }
+  // The footer verifies the Active and Reserve sections. An injured section is
+  // listed under its own heading; when the footer also counts it, that count
+  // must agree, and otherwise the heading is the verification.
   const footer = [...table.rows].map(r => text(r.cells[0])).find(t => /^Active:\s*\d+\s+Reserve:\s*\d+/.test(t));
-  const counts = footer?.match(/^Active:\s*(\d+)\s+Reserve:\s*(\d+)$/);
-  if (!players.length || players.length > 60 || !counts || players.filter(p => p.slot === 'starter').length !== Number(counts[1]) || players.filter(p => p.slot === 'bench').length !== Number(counts[2]) || players.some(p => p.slot === 'ir')) throw new Error('CBS roster counts could not be verified for team ' + teamId + '. No import was sent.');
-  return { teamId, players, counts:{starter:Number(counts[1]),bench:Number(counts[2])} };
+  const counts = footer?.match(/^Active:\s*(\d+)\s+Reserve:\s*(\d+)(?:\s+(?:Injured|IR)[A-Za-z ]*:\s*(\d+))?$/);
+  const n = s => players.filter(p => p.slot === s).length;
+  if (!players.length || players.length > 60 || !counts || n('starter') !== Number(counts[1]) || n('bench') !== Number(counts[2]) || (counts[3] !== undefined && n('ir') !== Number(counts[3]))) throw new Error('CBS roster counts could not be verified for team ' + teamId + '. No import was sent.');
+  return { teamId, players, counts:{starter:Number(counts[1]),bench:Number(counts[2]),ir:n('ir')} };
 }

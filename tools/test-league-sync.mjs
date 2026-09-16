@@ -38,6 +38,9 @@ const deps = [
 ];
 // _tierPoints and _oddsRound live outside the cuts above.
 deps.push(cut('function _tierPoints(', '\n}\n') + '\n}\n');
+// The board route hands its week board through boardStillToPlay on the way
+// out; the rule and its helpers live beside boardsPayload, which is stubbed.
+deps.push(cut('const _gameStarted = ', '// -- the insight detection engine'));
 const region = cut('// ══ LEAGUE SYNC', '// ══ /LEAGUE SYNC');
 const _oddsRoundSrc = src.match(/const _oddsRound = [^\n]+\n/) ? src.match(/const _oddsRound = [^\n]+\n/)[0] : (src.match(/function _oddsRound\([^)]*\) \{[^}]*\}/) || [''])[0];
 if (!_oddsRoundSrc) { console.error('FAIL: _oddsRound not found'); process.exit(1); }
@@ -584,6 +587,8 @@ console.log('\nCBS browser import');
   ok('CBS browser maps field-goal and defensive ranges', s.fieldGoalTiers.length === 5 && s.fieldGoalTiers[0].max === 29 && s.fieldGoalTiers[0].missPoints === -3 && s.pointsAllowed.length === 12 && s.pointsAllowed[6].min === 17);
   ok('CBS browser fixture scoring is fully recognized', !Object.keys(model.settings.extras.unsupported).length);
   ok('CBS browser makes missing data explicit', model.settings.faab === null && /matchups/.test(model.settings.extras.notes.join(' ')) && model.matchups.length === 0);
+  ok('CBS browser keeps an injured-reserve player on the IR slot', model.rosters[1].players.length === 2 && model.rosters[1].players[1].slot === 'ir' && model.settings.roster.IR === 1);
+  ok('CBS browser without an IR count in the footer still imports the IR section', (() => { const f = structuredClone(fixture); delete f.rosters[1].counts.ir; return provider.normalize(f, {season:2026}).rosters[1].players.length === 2; })());
   const ce = { ...env, FLAG_CBS_SYNC:'1', LEAGUE_TOKEN_KEY:undefined };
   const con = snapshot => route(ce, 'POST', '/api/leagues/connect', {provider:'cbs_browser',snapshot}, cookie);
   const beforeTokens = db.t.league_provider_tokens.size;
@@ -597,7 +602,7 @@ console.log('\nCBS browser import');
   const refresh = await route(ce,'POST','/api/leagues/'+id+'/sync',null,cookie);
   ok('CBS browser server refresh directs the reader back to extension', refresh.status === 409 && refresh.body.error === 'browser_refresh_required');
   const previous = JSON.stringify([...db.t.league_roster_players.values()].filter(r=>r.league_id===id));
-  for (const mutate of [f=>f.rosters.pop(), f=>f.rosters[0].players=[], f=>f.teams[1].teamId='8', f=>f.rules.push(f.rules[0]), f=>f.rosters[1].players[0].providerPlayerId=f.rosters[0].players[0].providerPlayerId, f=>f.season=9999, f=>f.leagueId='https://evil.test']) {
+  for (const mutate of [f=>f.rosters.pop(), f=>f.rosters[0].players=[], f=>f.teams[1].teamId='8', f=>f.rules.push(f.rules[0]), f=>f.rosters[1].players[0].providerPlayerId=f.rosters[0].players[0].providerPlayerId, f=>f.rosters[1].counts.ir=0, f=>f.rosters[1].players[1].slot='bench', f=>f.season=9999, f=>f.leagueId='https://evil.test']) {
     const bad = structuredClone(fixture); mutate(bad); const r = await con(bad);
     ok('CBS malformed browser import rejected before modifying saved rosters', r.status === 400 && JSON.stringify([...db.t.league_roster_players.values()].filter(r=>r.league_id===id)) === previous);
   }

@@ -69,9 +69,23 @@ const playerKey = row => {
   return `${row.playerId || row.playerDkId || row.displayName}|${position}|${competition.competitionId || competition.name || ''}`;
 };
 
+// DraftKings' season average rides in draftStatAttributes as stat 90. The
+// value is a display string and can be blank or a dash for a player the
+// lobby has not averaged yet; sortValue carries the same number where value
+// is formatted. Either way a non-number is "none", never zero.
+export function draftableFppg(row) {
+  const stat = (Array.isArray(row && row.draftStatAttributes) ? row.draftStatAttributes : []).find(x => Number(x.id) === 90);
+  if (!stat) return null;
+  for (const v of [stat.value, stat.sortValue]) {
+    const text = String(v == null ? '' : v).trim();
+    if (text && Number.isFinite(Number(text))) return Number(text);
+  }
+  return null;
+}
+
 export function mergeDraftablePayloads(entries) {
   const players = new Map();
-  let salaryConflicts = 0;
+  let salaryConflicts = 0, fppgBackfilled = 0;
   for (const entry of entries) {
     const raw = Array.isArray(entry && entry.payload && entry.payload.draftables) ? entry.payload.draftables : [];
     for (const row of raw) {
@@ -79,14 +93,24 @@ export function mergeDraftablePayloads(entries) {
       const current = players.get(key);
       if (!current) {
         players.set(key, row);
-      } else if (Number(current.salary) > 0 && Number(row.salary) > 0 && Number(current.salary) !== Number(row.salary)) {
+        continue;
+      }
+      if (Number(current.salary) > 0 && Number(row.salary) > 0 && Number(current.salary) !== Number(row.salary)) {
         // Entries arrive broadest-slate first. Keep that canonical salary and
         // count the discrepancy rather than silently changing it later.
         salaryConflicts++;
       }
+      // The row that won the merge keeps its salary, but a stat block it
+      // came without is taken from any later slate that has one, so a player
+      // priced on several slates is not left without an average because the
+      // broadest payload happened to omit it.
+      if (draftableFppg(current) == null && draftableFppg(row) != null) {
+        players.set(key, { ...current, draftStatAttributes: row.draftStatAttributes });
+        fppgBackfilled++;
+      }
     }
   }
-  return { draftables: [...players.values()], salaryConflicts };
+  return { draftables: [...players.values()], salaryConflicts, fppgBackfilled };
 }
 
 const csvCell = value => {
@@ -117,8 +141,7 @@ export function draftablesToCsv(payload, minimum = MIN_PLAYERS) {
   const lines = rows.sort((a, b) => b.salary - a.salary || String(a.displayName).localeCompare(String(b.displayName))).map(row => {
     const id = row.playerDkId || row.playerId || row.draftableId;
     const roster = /^(RB|WR|TE)$/.test(row.position) ? `${row.position}/FLEX` : row.position;
-    const stat = (Array.isArray(row.draftStatAttributes) ? row.draftStatAttributes : []).find(x => Number(x.id) === 90);
-    const fppg = stat && Number.isFinite(Number(stat.value)) ? Number(stat.value) : null;
+    const fppg = draftableFppg(row);
     if (fppg != null) fppgRows++;
     return [row.position, `${row.displayName} (${id})`, row.displayName, id, roster, row.salary,
       row.competition.name || '', row.teamAbbreviation || '', fppg == null ? '' : fppg].map(csvCell).join(',');
@@ -162,6 +185,7 @@ export async function run(env = process.env, now = Date.now()) {
     maxGames: Math.max(...slates.map(slate => Number(slate.GameCount || 0))),
     players: converted.rows.length,
     fppgPlayers: converted.fppgRows,
+    fppgBackfilled: merged.fppgBackfilled,
     salaryConflicts: merged.salaryConflicts,
     dryRun
   };

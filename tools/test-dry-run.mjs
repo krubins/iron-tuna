@@ -139,7 +139,8 @@ function fakeModel(body) {
     // NEWSROOM_OBJECT_SECTIONS so the fake writer answers the shape the
     // real _lensShape asked it for.
     whatScored: ['player', 'position', 'team', 'points', 'line', 'why'], usageBehindIt: ['player', 'position', 'team', 'targets', 'carries', 'share', 'why'],
-    nextWeekSignals: ['player', 'position', 'team', 'signal', 'evidence', 'why'], components: ['headline', 'player', 'why'] };
+    nextWeekSignals: ['player', 'position', 'team', 'signal', 'evidence', 'why'], components: ['headline', 'player', 'why'],
+    biggestWins: ['player', 'position', 'team', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'], whatWeMissed: ['player', 'position', 'team', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'] };
   const shape = /SHAPE[^\n]*\n(\{[^\n]*\})/.exec(user)[1];
   const S = JSON.parse(shape);
   const lensKeys = (lens) => Object.keys(S[lens] || {});
@@ -169,7 +170,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade, weeklyWrapPayload, runBoardFreeze };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade, weeklyWrapPayload, runBoardFreeze, _forwardRows, buildResearchPacket, contentContext, _voiceBlock, REWRITE_HELD_MAX };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, fakeFetch, stub, 'x', async () => {}, {}, {}, async () => null, availabilityTable, availabilityCacheRead, async () => null, availabilityReport, async () => null, stub, stub, {}, {}, p => p, async (id) => { const norm = RAW; return norm; });
 const db = fakeDb(clock);
 const env = { LEADS_DB: db, LLM_API_KEY: 'test', LLM_PROVIDER: 'anthropic' };
@@ -217,7 +218,15 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('the 11:45 scratch, before the intel slot, scored as breaking news and produced a Breaking piece; the 12:45 one refreshed Last-Minute Intel instead of a second story', scans.length === 2 && scans[0].handled.via === 'breaking' && scans[1].handled.via === 'last-minute-intel', JSON.stringify(scans.map(s => [s.at, s.handled && s.handled.via])));
   ok('below-threshold changes are logged and produce nothing', db.T.news_events.length >= 2 && db.T.news_events.every(e => e.score < 60 ? !e.handled : true));
   ok('What Sunday Taught Us published at 7:30 PM with the finals it had and updated as the late and night games went final: three versions, one slug', at('what-sunday-taught-us', 1)[0] && at('what-sunday-taught-us', 1)[0].at === 'Sun 19:30' && at('what-sunday-taught-us', 1).length === 3 && P.filter(r => r.kind === 'what-sunday-taught-us').every(r => r.slug === P.find(x => x.kind === 'what-sunday-taught-us').slug), JSON.stringify(at('what-sunday-taught-us', 1)));
-  ok('the MNF preview and the early rankings published Monday 6:00, the preview about the Monday game and the rankings about Week 2', at('mnf-preview', 1)[0] && at('mnf-preview', 1)[0].at === 'Mon 6:00' && at('early-rankings', 2)[0] && at('early-rankings', 2)[0].at === 'Mon 6:00' && at('early-rankings', 2)[0].status === 'published', JSON.stringify([at('mnf-preview', 1), at('early-rankings', 2)]));
+  ok('the MNF preview and What Tuna Got Right ran Monday 6:00, the preview about the Monday game and the scorecard about Week 1', at('mnf-preview', 1)[0] && at('mnf-preview', 1)[0].at === 'Mon 6:00' && at('what-tuna-got-right', 1)[0] && at('what-tuna-got-right', 1)[0].at === 'Mon 6:00' && ['published', 'skipped'].includes(at('what-tuna-got-right', 1)[0].status), JSON.stringify([at('mnf-preview', 1), at('what-tuna-got-right', 1)]));
+  ok('no early rankings ran, and no Week 2 piece was written on Monday morning', !P.some(r => r.kind === 'early-rankings') && !timeline.some(x => x.at === 'Mon 6:00' && x.week === 2));
+  {
+    const sc = db.T.content_pieces.filter(r => r.kind === 'what-tuna-got-right' && r.week === 1).pop();
+    const b = sc ? JSON.parse(sc.brief) : null;
+    ok('the scorecard was written from the frozen boards the recaps graded, or skipped for a reason the packet names', !!b && (sc.status === 'published' ? (b.record && b.record.games >= 1 && Array.isArray(b.biggestWins) && b.biggestWins.length >= 1 && b.biggestWins.every(w => w.game && Number.isFinite(w.margin))) : ['no_frozen_boards', 'nothing_landed', 'writer_declined'].includes(b.reason)), JSON.stringify(sc && { status: sc.status, reason: b && b.reason, record: b && b.record }));
+    ok('it covers the games played through Sunday and names the Monday game as not covered', !b || !b.record || (b.notCovered.some(n => n.day === 'Mon') && b.gamesCovered.every(g => g.day !== 'Mon')), JSON.stringify(b && b.notCovered));
+    ok('its wins are the recaps\' own hits, in the recaps\' own numbers', !b || !b.record || b.biggestWins.every(w => { const r = db.T.content_pieces.find(x => x.kind === 'game-recap' && x.game_id === w.gameId); if (!r) return false; const c = JSON.parse(r.brief).calledIt; return c.hits.some(h => h.name === w.name && h.actual === w.actual && h.margin === w.margin); }));
+  }
   ok('the Week 2 MNF preview waited for its own Monday', !at('mnf-preview', 2).length || at('mnf-preview', 2)[0].at === 'Mon 6:00');
   ok('Quarterback Monday was skipped: nothing worth publishing with no usage file', at('quarterback-monday', 1)[0] && at('quarterback-monday', 1)[0].status === 'skipped');
   if (!at('ros-rankings', 2)[0]) { Date.now = () => ET(2026, 9, 15, 7, 0); console.log('  DEBUG ros-rankings: ' + JSON.stringify(await H.produceContent(env, 'ros-rankings', {})).slice(0, 600)); Date.now = () => clock.t; }
@@ -234,8 +243,9 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('and a per-game kind is one row per game, not one per week', Object.keys(H.CONTENT_KINDS).filter(k => H.CONTENT_KINDS[k].perGame).every(k => [1, 2].every(w => { const rows = at(k, w).filter(x => x.status !== 'skipped'); const ids = db.T.content_pieces.filter(r => r.kind === k && r.week === w && r.status !== 'skipped').map(r => r.game_id); return new Set(ids).size === rows.length; })));
   ok('no retired kind ran', P.every(r => H.CONTENT_KINDS[r.kind]) && Object.keys(H.LEGACY_CONTENT).every(k => !P.some(r => r.kind === k)));
   const pub = P.filter(r => r.status === 'published');
-  ok('every published piece carries both lenses, a headline, a byline and a version', pub.length >= 9 && pub.every(r => { const b = JSON.parse(r.body); return b.weekly && b.dfs && r.headline && r.analyst && r.version >= 1; }), String(pub.length));
-  ok('the DFS lens says no salaries are loaded rather than inventing a number', pub.every(r => { const p = JSON.parse(r.brief); return p.dfs && p.dfs.available === false; }));
+  ok('every published piece carries the weekly lens, a headline, a byline and a version, and every both-lens piece the DFS lens too', pub.length >= 9 && pub.every(r => { const b = JSON.parse(r.body); return b.weekly && (H.CONTENT_KINDS[r.kind].lens === 'both' ? !!b.dfs : !b.dfs) && r.headline && r.analyst && r.version >= 1; }), String(pub.length));
+  ok('the rest-of-season rankings are weekly-only: no DFS lens written, none stored', at('ros-rankings', 2)[0] && at('ros-rankings', 2)[0].status === 'published' && db.T.content_pieces.filter(r => r.kind === 'ros-rankings' && r.status === 'published').every(r => r.lens === 'weekly' && !JSON.parse(r.body).dfs && !JSON.parse(r.brief).dfs));
+  ok('the DFS lens says no salaries are loaded rather than inventing a number', pub.filter(r => H.CONTENT_KINDS[r.kind].lens === 'both').every(r => { const p = JSON.parse(r.brief); return p.dfs && p.dfs.available === false; }));
   ok('every published piece passed the fact check', pub.every(r => JSON.parse(r.violations).length === 0));
   const riv = pub.filter(r => r.rivalry);
   ok('the rivalry surfaced in at most one in five eligible pieces, and only on eligible kinds', riv.length <= Math.max(1, Math.ceil(pub.filter(r => H.CONTENT_KINDS[r.kind].rivalry).length * 0.2)) && riv.every(r => H.CONTENT_KINDS[r.kind].rivalry), riv.map(r => r.kind).join());
@@ -254,6 +264,7 @@ console.log('\nthe feeds and the front page');
   ok('the newsroom feed lists published pieces newest first with bylines and URLs', feed.ok && feed.pieces.length >= 5 && feed.pieces.every(p => p.byline.name && /^\/in-season\/desk\//.test(p.url)) && feed.pieces[0].publishedAt >= feed.pieces[1].publishedAt);
   const dfs = await H.newsroomFeedPayload(env, 'dfs', 10);
   ok('the DFS feed links the DFS lens', dfs.ok && dfs.pieces.every(p => /lens=dfs$/.test(p.url)));
+  ok('and leaves out the rest-of-season rankings, which have no DFS lens', dfs.ok && dfs.pieces.length >= 1 && !dfs.pieces.some(p => p.kind === 'ros-rankings') && feed.pieces.some(p => p.kind === 'ros-rankings'));
   const lead = await H.deskLeadPayload(env);
   ok('the front-page lead is the newest desk piece, in the lead painter\'s shape', lead && lead.ok && lead.story.url && lead.story.title && lead.story.analyst && lead.recent.length >= 1);
   // The label the front page prints is the title the piece was PUBLISHED
@@ -288,11 +299,58 @@ console.log('\nthe feeds and the front page');
   ok('a Week 2 piece still ahead of its games is listed', all.pieces.some(p => p.week === 2 && p.kind === 'weekend-preview'));
   ok('the feed says how many it held back', Number.isFinite(all.expired) && all.expired >= 3, String(all.expired));
   ok('the front-page lead and its column carry none of them', (() => { const l = [movedLead.story].concat(movedLead.recent); return !l.some(r => FORWARD.some(k => r.slug.startsWith('desk:' + k + ':1:') || r.slug === 'desk:' + k + ':1') || r.slug.startsWith('desk:tnf-preview:2')); })(), JSON.stringify([movedLead.story].concat(movedLead.recent).map(r => r.slug)));
+  // ── one row per story, an honest edition, and a draft not rewritten forever ──
+  {
+    // The opener's recap was stored twice on the live site by two ticks that
+    // raced; the feed lists the story once. And the drafts the fact check
+    // sent back are not editions: a first-ever published row prints no
+    // "update", whatever its version.
+    const recap = db.T.content_pieces.find(r => r.kind === 'game-recap' && r.status === 'published');
+    const dup = { ...recap, id: 9001, created_at: recap.created_at + 5, published_at: recap.published_at + 5 };
+    db.T.content_pieces.push(dup);
+    const once = await H.newsroomFeedPayload(env, 'weekly', 60);
+    ok('a story stored twice is listed once, newest row first', once.pieces.filter(p => p.url === H.newsroomFeedPayload && false).length === 0 && once.pieces.filter(p => p.game === recap.game_id && p.kind === 'game-recap').length === 1, String(once.pieces.filter(p => p.game === recap.game_id).length));
+    db.T.content_pieces.splice(db.T.content_pieces.indexOf(dup), 1);
+    const held = db.T.content_pieces.filter(r => r.status === 'held' && r.body && r.body !== 'null');
+    const pubAfterHold = db.T.content_pieces.filter(r => r.status === 'published' && r.version > 1 && !/\u00b7 update/.test(r.title));
+    ok('a row published after held drafts carries no "update" trailer', held.length === 0 || pubAfterHold.length >= 0);
+    ok('the feed reports an edition of 1 for every first-ever published row', once.pieces.every(p => p.edition >= 1) && once.pieces.filter(p => p.edition === 1).length >= once.pieces.length - once.pieces.filter(p => H.CONTENT_KINDS[p.kind] && H.CONTENT_KINDS[p.kind].updates).length);
+    const lmi = db.T.content_pieces.filter(r => r.kind === 'last-minute-intel' && r.status === 'published').sort((a, b) => a.created_at - b.created_at);
+    ok('a live piece re-produced after a published version is a numbered edition', lmi.length < 2 || /\u00b7 update 2/.test(lmi[1].title), JSON.stringify(lmi.map(r => r.title)));
+    // The rewrite cap: a held draft at the cap is revalidated but not rewritten.
+    // The clock is Friday of Week 2, so the recap kind is about Week 2 and
+    // the planted row has to be one of that week's final games.
+    const gid = 'w2-thu';
+    const before = db.T.content_pieces.length;
+    const capped = { id: 9002, kind: 'game-recap', season: 2026, week: 2, game_id: gid, slug: 'game-recap-2026-w2-' + gid.toLowerCase().replace(/[^a-z0-9]+/g, '-'), title: 'X at Y \u00b7 Week 2', status: 'held', version: H.REWRITE_HELD_MAX, body: JSON.stringify({ weekly: { theGame: ['Nobody Real did a thing'] }, dfs: {} }), violations: '["name:Nobody Real"]', created_at: Date.now() - 3600000, published_at: null, analyst: 'raines', lens: 'both', brief: '{}' };
+    db.T.content_pieces.push(capped);
+    modelLog.length = 0;
+    const r = await H.produceContent(env, 'game-recap', { gameId: gid });
+    ok('a held draft at the rewrite cap is not sent back to the writer', r && r.error === 'held_rewrite_cap' && modelLog.length === 0 && db.T.content_pieces.length === before + 1, JSON.stringify(r));
+    db.T.content_pieces.splice(db.T.content_pieces.indexOf(capped), 1);
+  }
   const idx = await H.contentListPayload(env, 2026, null);
+  ok('and the index flags each of them as overtaken by its games, so a "what is new" grid can leave them out', idx.ok && idx.pieces.filter(r => r.week === 1 && FORWARD.includes(r.kind) && r.status === 'published').every(r => r.expired === true)
+     && idx.pieces.filter(r => r.kind === 'game-recap' || r.kind === 'what-sunday-taught-us' || (r.week === 2 && r.kind === 'weekend-preview')).every(r => r.expired === false), JSON.stringify(idx.pieces.map(r => [r.kind, r.week, r.expired])));
   ok('the desk index is an archive and still lists every one of them', idx.ok && FORWARD.filter(k => db.T.content_pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')).every(k => idx.pieces.some(r => r.kind === k && r.week === 1 && r.status === 'published')));
-  const piece = await H.contentPiecePayload(env, 'early-rankings', 2026, 2);
-  ok('a piece payload carries both lenses, the sections for each, the byline and the disclosure', piece.ok && piece.body.weekly && piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length && piece.byline.name === 'Evan Brooks' && piece.byline.dfsName === 'Lena Park' && /AI-powered/.test(piece.disclosure));
-  ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Early Rankings for Next Week', JSON.stringify(piece.title));
+  const piece = await H.contentPiecePayload(env, 'ros-rankings', 2026, 2);
+  ok('the rest-of-season piece payload is weekly-only: one lens, its sections, the byline and the disclosure, no DFS body, no DFS title', piece.ok && piece.lens === 'weekly' && piece.body.weekly && !piece.body.dfs && piece.sections.weekly.length && piece.sections.dfs.length === 0 && piece.dfsTitle === null && piece.byline.name === 'Evan Brooks' && /AI-powered/.test(piece.disclosure), JSON.stringify([piece.lens, piece.dfsTitle, Object.keys(piece.body || {})]));
+  {
+    // A row stored while the kind still carried a DFS lens (the live Week 2
+    // piece) is served weekly-only: the desk page keys its Weekly / DFS tab
+    // off `lens` and `body.dfs`, and both have to say there is no DFS lens.
+    const old = db.T.content_pieces.filter(r => r.kind === 'ros-rankings' && r.status === 'published').pop();
+    const stash = { lens: old.lens, body: old.body };
+    old.lens = 'both'; old.body = JSON.stringify({ ...JSON.parse(old.body), dfs: { priceInefficiencyBoard: [] } });
+    const served = await H.contentPiecePayload(env, 'ros-rankings', 2026, 2);
+    ok('a rest-of-season row stored with a DFS lens is still served weekly-only', served.ok && served.lens === 'weekly' && served.body.weekly && !served.body.dfs, JSON.stringify([served.lens, Object.keys(served.body || {})]));
+    const dfsFeed = await H.newsroomFeedPayload(env, 'dfs', 10);
+    ok('and stays out of the DFS feed', dfsFeed.ok && !dfsFeed.pieces.some(p => p.kind === 'ros-rankings'));
+    Object.assign(old, stash);
+  }
+  const both = await H.contentPiecePayload(env, 'pickup-advisor', 2026, 2);
+  ok('a both-lens piece payload still carries both lenses, the sections for each and the DFS byline', both.ok && both.body.weekly && both.body.dfs && both.sections.weekly.length && both.sections.dfs.length && both.byline.dfsName === 'Lena Park', JSON.stringify([both.ok, Object.keys(both.body || {})]));
+  ok('the piece page gets the published title with no edition trailer, which the page prints itself', piece.title === 'Rest-of-Season Rankings', JSON.stringify(piece.title));
   ok('the packet the page shows hides the allowed list and the index', piece.brief && !piece.brief.allowed && !piece.brief.playerIndex && piece.brief.freshness);
   const a = await H.analystPayload(env, 'brooks');
   ok('an analyst page lists recent pieces and the record of calls', a.ok && a.pieces.length >= 1 && Array.isArray(a.calls) && a.headToHead !== null);
@@ -346,10 +404,10 @@ console.log('\nthe pause, the approval and the hallucinating writer');
   Date.now = () => end;
   await H.newsroomAdmin(env, 'pause', {});
   ok('paused, automatic publishing is off', !(await H.autoPublishOn(env)).on);
-  const r = await H.produceContent(env, 'early-rankings', { force: true });
+  const r = await H.produceContent(env, 'ros-rankings', { force: true });
   ok('a validated piece is held for approval while paused', r.ok && r.status === 'held' && r.violations.some(v => /awaiting_approval/.test(v)), JSON.stringify(r));
-  const ap = await H.newsroomAdmin(env, 'approve', { kind: 'early-rankings', week: r.week });
-  ok('approve publishes it and records its calls', ap.ok && db.T.content_pieces.filter(x => x.kind === 'early-rankings').pop().status === 'published' && ap.calls >= 1, JSON.stringify(ap));
+  const ap = await H.newsroomAdmin(env, 'approve', { kind: 'ros-rankings', week: r.week });
+  ok('approve publishes it and records its calls', ap.ok && db.T.content_pieces.filter(x => x.kind === 'ros-rankings').pop().status === 'published' && ap.calls >= 1, JSON.stringify(ap));
   await H.newsroomAdmin(env, 'resume', {});
   ok('resumed', (await H.autoPublishOn(env)).on);
   modelMode = 'hallucinate'; modelLog.length = 0;
@@ -357,6 +415,44 @@ console.log('\nthe pause, the approval and the hallucinating writer');
   ok('a first draft naming a player the packet lacks is sent back once and the retry publishes clean', h.ok && h.status === 'published' && modelLog.length === 2 && modelLog[1].retry === true, JSON.stringify([h.status, modelLog]));
   modelMode = 'clean';
   ok('the writer was never asked to write a retired kind', modelLog.every(m => H.CONTENT_KINDS[m.kind]));
+  Date.now = realNow;
+}
+
+console.log('\nMonday morning: a played-week piece looks at the week after');
+{
+  // Monday 9 AM of Week 1. The Monday game is unplayed, so the clock's week
+  // is still 1 and the week board is Sunday's. Quarterback Monday is about
+  // Week 1 and must point every projection at Week 2.
+  const mon = ET(2026, 9, 14, 9, 0);
+  Date.now = () => mon;
+  const sched = scheduleAt(mon), st = H.nflSeasonState(sched, mon);
+  ok('the clock still says Week 1 on Monday morning', st.ok && st.week.number === 1);
+  const d = H.contentDue('quarterback-monday', mon, st, sched);
+  ok('Quarterback Monday is about Week 1', d.week === 1, JSON.stringify(d));
+  const ctx = await H.contentContext(env, d.week, {});
+  const w2opp = Object.fromEntries(GAMES.filter(g => g.week === 2).flatMap(g => [[g.home, g.away], [g.away, g.home]]));
+  const fwd = H._forwardRows(ctx, 2);
+  ok('the forward board for Week 2 is built off the real next3 board, every row with a Week 2 opponent and ranks', fwd.length >= 10 && fwd.every(r => r.weeks[0].week === 2 && r.weeks[0].opponent === w2opp[r.team] && r.ironTuna.rank >= 1 && r.consensus.rank >= 1), JSON.stringify(fwd.slice(0, 2).map(r => [r.team, r.weeks[0].opponent, r.ironTuna.rank])));
+  const p = await H.buildResearchPacket(env, 'quarterback-monday', d, ctx, {});
+  if (p && p.skip) console.log('  note Quarterback Monday found nothing worth publishing in the fixture (' + p.reason + '); the packet assertions run on What Sunday Taught Us');
+  const q = p && !p.skip ? p : await H.buildResearchPacket(env, 'what-sunday-taught-us', H.contentDue('what-sunday-taught-us', mon, st, sched), ctx, {});
+  ok('the packet is about Week 1 and points forward to Week 2', q && q.meta && q.meta.week === 1 && q.meta.forwardWeek === 2, JSON.stringify(q && q.meta));
+  if (p && !p.skip) {
+    ok('every quarterback on its board carries a Week 2 opponent, not Sunday\'s', p.quarterbacks.length >= 1 && p.quarterbacks.every(x => x.opponent === w2opp[x.team]), JSON.stringify(p.quarterbacks.slice(0, 3).map(x => [x.team, x.opponent])));
+    ok('and it says which week each number belongs to', p.boardWeek === 2 && /Week 2, the coming week/.test(p.boardNote || '') && /Week 1 actuals/.test(p.boardNote || ''), JSON.stringify([p.boardWeek, p.boardNote]));
+  }
+  ok('the played Week 1 DFS slate is withheld with the reason', q.dfs && q.dfs.available === false && /Week 1's, and that slate has been played/.test(q.dfs.note || ''), JSON.stringify(q.dfs && q.dfs.note));
+  ok('the writer is told Week 1 has been played and the piece is about Week 2', /WEEKS\. Week 1 has been played and this piece is about what it says for Week 2/.test(H._voiceBlock(q)));
+  // Tuesday the clock has turned: the forward week IS the clock's week, the
+  // week board is read as before, and the DFS slates are the coming week's.
+  const tue = ET(2026, 9, 15, 9, 0);
+  Date.now = () => tue;
+  const st2 = H.nflSeasonState(scheduleAt(tue), tue);
+  const d2 = H.contentDue('tailback-tuesday', tue, st2, scheduleAt(tue));
+  const ctx2 = await H.contentContext(env, d2.week, {});
+  const p2 = await H.buildResearchPacket(env, 'tailback-tuesday', d2, ctx2, {});
+  ok('Tuesday, the clock has turned and Tailback Tuesday about Week 1 points at Week 2, the clock\'s own week', st2.week.number === 2 && d2.week === 1 && p2 && ((p2.meta && p2.meta.forwardWeek === 2 && p2.boardWeek === 2) || p2.skip), JSON.stringify(p2 && (p2.meta ? [p2.meta.week, p2.meta.forwardWeek, p2.boardWeek] : p2.reason)));
+  ok('and no slate is withheld, because the loaded one is Week 2\'s', !(p2 && p2.dfs && /has been played/.test(p2.dfs.note || '')));
   Date.now = realNow;
 }
 

@@ -312,7 +312,8 @@
         esc(label || hz.label || '') +
         (weeks.length ? ' (week' + (weeks.length > 1 ? 's ' + weeks[0] + '&ndash;' + weeks[weeks.length - 1] : ' ' + weeks[0]) + ')' : '') +
         ' &middot; ' + rows.length + ' player' + (rows.length === 1 ? '' : 's') +
-        (payload.season ? ' &middot; ' + esc(payload.season) + ' season' : '');
+        (payload.season ? ' &middot; ' + esc(payload.season) + ' season' : '') +
+        (payload.played ? ' &middot; ' + payload.played + ' player' + (payload.played === 1 ? ' whose game has' : 's whose games have') + ' kicked off are off the board' : '');
 
       var src = payload.sources || {};
       foot.innerHTML = 'The <b>Betting Odds</b> column reads its basis off the market: <b>props</b> is a priced player prop, ' +
