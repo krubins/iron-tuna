@@ -38,8 +38,135 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/site.css">
 <style>
-/* Everything this page draws is in site.css (.is-* and .rk-*). The block stays
-   because tools/build-chrome.mjs anchors the shared stylesheet link on it. */
+/* The rest of what this page draws is in site.css (.is-* and .rk-*); the block
+   also anchors the shared stylesheet link for tools/build-chrome.mjs. What is
+   here is the wrap's own furniture: the week board, the filter row, the slot
+   heads and the game cards, all in the site's tokens. */
+
+/* ── the week board ────────────────────────────────────────────────────── */
+.ww-week {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-5); align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5); margin: 0 0 var(--space-4);
+}
+.ww-wkbtn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px 0 10px;
+  border: 1px solid var(--line2); border-radius: var(--radius-sm); background: var(--bg); color: var(--sec);
+  font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+}
+.ww-wkbtn.next { padding: 0 10px 0 14px }
+.ww-wkbtn:hover { border-color: var(--teal); color: var(--text); text-decoration: none }
+.ww-wkbtn[aria-disabled="true"] { color: #a3aeb7; border-color: var(--line); background: var(--panel); pointer-events: none }
+.ww-wkbtn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round }
+.ww-mid { display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+.ww-top { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap }
+.ww-num { font-family: var(--font-display); font-weight: 400; font-size: 34px; letter-spacing: .045em; text-transform: uppercase; line-height: 1; color: var(--text) }
+.ww-when { font-size: var(--fs-xs); color: var(--muted) }
+.ww-when b { color: var(--text); font-weight: 700 }
+.ww-bar { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; height: 8px }
+.ww-bar i { display: block; border-radius: 2px; background: var(--line2) }
+.ww-bar i.r { background: var(--teal) } .ww-bar i.w { background: var(--gold) } .ww-bar i.l { background: var(--danger) }
+.ww-key { display: flex; gap: 18px; flex-wrap: wrap; font-size: var(--fs-2xs); color: var(--sec) }
+.ww-key span { display: inline-flex; align-items: center; gap: 6px }
+.ww-key span::before { content: ""; width: 10px; height: 10px; border-radius: 2px; background: var(--line2) }
+.ww-key .r::before { background: var(--teal) } .ww-key .w::before { background: var(--gold) } .ww-key .l::before { background: var(--danger) }
+.ww-key b { font-weight: 800; color: var(--text) }
+
+/* ── the filter row: site's own segmented control and chips ─────────────── */
+.ww-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-2) }
+.ww-tools .rk-seg2 button { white-space: nowrap }
+.ww-tools .rk-seg2 button small { font-weight: 700; margin-left: 6px; opacity: .7; font-size: var(--fs-3xs) }
+.ww-tools .rk-chips { margin: 0 }
+.ww-tools .rk-chips .rkc-chip { white-space: nowrap; flex: 0 0 auto }
+.ww-tools .rk-chips .rkc-chip small { font-weight: 700; margin-left: 6px; color: var(--muted); font-size: var(--fs-3xs) }
+
+/* ── a kickoff slot ─────────────────────────────────────────────────────── */
+.ww-day {
+  display: flex; align-items: baseline; gap: var(--space-3); margin: var(--space-6) 0 14px;
+  padding-bottom: var(--space-2); border-bottom: 2px solid var(--text); position: relative;
+}
+.ww-day::after { content: ""; position: absolute; left: 0; bottom: -2px; width: 56px; height: 2px; background: var(--teal) }
+.ww-day h2 { font-family: var(--font-display); font-weight: 400; font-size: 27px; letter-spacing: .045em; text-transform: uppercase; line-height: 1; margin: 0; color: var(--text) }
+.ww-day .ww-meta { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.ww-day .ww-st { margin-left: auto; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--teal); white-space: nowrap }
+.ww-day .ww-st.live { color: var(--danger) }
+.ww-day .ww-st.off { color: var(--muted) }
+.ww-games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) }
+.ww-games.solo { grid-template-columns: minmax(0, 1fr) }
+
+/* ── a game card ────────────────────────────────────────────────────────── */
+.ww-game { display: grid; grid-template-columns: 176px minmax(0, 1fr); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg); overflow: hidden }
+.ww-game[hidden] { display: none }
+.ww-score { background: var(--panel); border-right: 1px solid var(--line); padding: var(--space-4); display: flex; flex-direction: column; gap: 6px }
+.ww-team { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2) }
+.ww-team b { font-size: var(--fs-sm); font-weight: 800; letter-spacing: .06em; color: var(--text) }
+.ww-team i { font-style: normal; font-family: var(--font-display); font-size: 30px; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums }
+.ww-team.lost b, .ww-team.lost i { color: var(--muted); font-weight: 700 }
+.ww-score .is-status { margin-top: 6px }
+.ww-score .ww-kick { font-family: var(--font-display); font-size: 24px; line-height: 1; color: var(--sec); margin-top: 2px; white-space: nowrap }
+.ww-body { padding: var(--space-4) var(--space-5) 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+.ww-body h3 { margin: 0; font-size: 18px; line-height: 1.3; font-weight: 800; letter-spacing: -.005em }
+.ww-body h3 a { color: var(--text) }
+.ww-wrap { margin: 0; font-size: 15px; line-height: 1.55; color: var(--sec) }
+.ww-parts { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px }
+.ww-parts li { display: flex; gap: 10px; font-size: var(--fs-sm); line-height: 1.4 }
+.ww-parts li span { font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 700; color: var(--teal); padding-top: 2px }
+.ww-parts li a { color: var(--sec); font-weight: 600 }
+.ww-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); font-size: var(--fs-xs); color: var(--muted) }
+.ww-by { display: inline-flex; align-items: center; gap: var(--space-2) }
+.ww-av { width: 22px; height: 22px; border-radius: 50%; background: var(--text); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .04em; display: inline-flex; align-items: center; justify-content: center }
+.ww-read { color: var(--teal); font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap }
+.ww-body .is-tag { margin-bottom: 0; align-self: flex-start }
+.ww-body .is-tag.ww-live { color: var(--danger); background: rgba(192, 50, 47, .08); border-color: rgba(192, 50, 47, .3) }
+.ww-body .is-tag.ww-up { color: var(--muted); background: var(--elev); border-color: var(--line) }
+.ww-game.pending .ww-body h3 { color: var(--sec); font-weight: 700 }
+.ww-game.up { background: transparent; border-style: dashed; border-color: var(--line2) }
+.ww-game.up .ww-score { background: transparent; border-right-style: dashed; border-right-color: var(--line2) }
+.ww-note { font-size: var(--fs-sm); color: var(--muted); margin: 0; line-height: 1.55 }
+/* A slot with one game gets the whole row: the wrap left, the findings right. */
+.ww-games.solo .ww-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); column-gap: var(--space-6); row-gap: 10px; align-items: start }
+.ww-games.solo .ww-body h3, .ww-games.solo .ww-body .is-tag, .ww-games.solo .ww-body .ww-foot { grid-column: 1 / -1 }
+.ww-games.solo .ww-parts { margin-top: 0 }
+.ww-games.solo .ww-body .is-tag { justify-self: start }
+
+/* ── the method strip and the section links ─────────────────────────────── */
+.ww-method { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); margin: var(--space-7) 0 0 }
+.ww-method div { border-top: 2px solid var(--text); padding-top: 10px }
+.ww-method b { display: block; font-size: var(--fs-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px }
+.ww-method p { margin: 0; font-size: var(--fs-sm); color: var(--sec); line-height: 1.5 }
+.ww-rest { margin-top: var(--space-4) }
+.ww-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0 }
+
+@media (max-width: 700px) {
+  .ww-week { grid-template-columns: 1fr 1fr; gap: var(--space-3); padding: 14px var(--space-4) }
+  .ww-week .ww-mid { grid-column: 1 / -1; grid-row: 1 }
+  .ww-week #wwPrev { grid-row: 2; justify-self: start }
+  .ww-week #wwNext { grid-row: 2; justify-self: end }
+  .ww-tools .rk-seg2 { display: flex; width: 100% }
+  .ww-tools .rk-seg2 button { flex: 1 1 0; justify-content: center; padding: 0 8px; font-size: var(--fs-3xs) }
+  .ww-num { font-size: 30px }
+  .ww-key { gap: 10px 14px }
+  .ww-tools .rk-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; width: 100%; padding-bottom: 2px }
+  .ww-tools .rk-chips::-webkit-scrollbar { display: none }
+  .ww-day { flex-wrap: wrap; gap: var(--space-2) var(--space-3) }
+  .ww-day h2 { font-size: 24px }
+  .ww-games, .ww-games.solo { grid-template-columns: 1fr; gap: var(--space-3) }
+  .ww-game { grid-template-columns: 1fr }
+  .ww-score { border-right: 0; border-bottom: 1px solid var(--line); flex-direction: row; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-4) }
+  .ww-team i { font-size: 26px }
+  .ww-score .is-status, .ww-score .ww-kick { margin: 0 0 0 auto }
+  .ww-score .ww-kick { font-size: 22px }
+  .ww-game.up .ww-score { border-bottom-style: dashed; border-bottom-color: var(--line2) }
+  .ww-body { padding: 14px var(--space-4) 12px }
+  .ww-games.solo .ww-body { display: flex }
+  .ww-body h3 { font-size: 17px }
+  .ww-foot { flex-wrap: wrap }
+  .ww-method { grid-template-columns: 1fr; gap: 14px; margin-top: var(--space-6) }
+}
+@media (min-width: 701px) and (max-width: 980px) {
+  .ww-games { grid-template-columns: minmax(0, 1fr) }
+  .ww-games.solo .ww-body { display: flex }
+}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://irontuna.com/weekly-wrap","name":"NFL Weekly Wrap Up: Every Game Recapped for Fantasy","description":"Every game this week in two sentences, drawn from each game's own fantasy recap: what scored, who was used, and what the targets and carries say about next week.","url":"https://irontuna.com/weekly-wrap","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/weekly-wrap"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"NFL Weekly Wrap Up: Every Game Recapped for Fantasy"}]}]}</script>
@@ -83,33 +210,46 @@
 <!--/ranks:ribbon-->
 <main id="main" class="wrap wide">
 <p class="is-eyebrow">In-Season &middot; Weekly Wrap Up</p>
-<h1>Every game this week, in two sentences</h1>
-<p class="is-lede">Each game gets a full fantasy recap the moment it goes final &mdash; what scored, who was used, and what the usage says about next week. This page is the short form: one summary per game, written by that game&rsquo;s own recap, with a link through to the whole thing. Games that have not gone final yet are listed with the rest of the slate rather than left off it.</p>
+<h1 id="wwTitle">Weekly Wrap Up</h1>
+<p class="is-lede">Every game of the week in two sentences, taken from that game&rsquo;s own recap. The score, the headline, the findings that matter for next week, and a link to the whole story.</p>
 <div class="its-strip" data-season-strip></div>
 
 <div class="rk-board" id="wwBoard">
-  <p class="is-note" id="wwStamp"></p>
-  <div class="rk-games" id="wwCards"></div>
+  <div class="ww-week" id="wwWeek" hidden>
+    <a class="ww-wkbtn" id="wwPrev" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg><span id="wwPrevLabel">Previous week</span></a>
+    <div class="ww-mid">
+      <div class="ww-top"><span class="ww-num" id="wwNum"></span><span class="ww-when" id="wwWhen"></span></div>
+      <div class="ww-bar" id="wwBar" role="img" aria-label=""></div>
+      <div class="ww-key" id="wwKey"></div>
+    </div>
+    <a class="ww-wkbtn next" id="wwNext" href="#"><span id="wwNextLabel">Next week</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+  </div>
+  <div class="ww-tools" id="wwTools" hidden>
+    <div class="rk-seg2" role="group" aria-label="Show">
+      <button type="button" data-filter="all" aria-pressed="true">All games<small id="wwNAll"></small></button>
+      <button type="button" data-filter="recap" aria-pressed="false">Recapped<small id="wwNRecap"></small></button>
+      <button type="button" data-filter="rest" aria-pressed="false">Still to come<small id="wwNRest"></small></button>
+    </div>
+    <nav class="rk-chips" id="wwChips" aria-label="Jump to a kickoff slot"></nav>
+  </div>
+  <div id="wwCards"></div>
   <p class="is-empty" id="wwEmpty">Reading this week&rsquo;s slate&hellip;</p>
   <p class="is-note" id="wwFoot"></p>
 </div>
 
-<h2>How the wrap is written</h2>
-<ol>
-  <li><b>The recap comes first.</b> A game&rsquo;s recap is written when the feed marks that game final, and it leads the front page until the next game ends and takes its place.</li>
-  <li><b>Three layers, every time.</b> What scored, the targets and carries underneath it, and the usage that has not turned into points yet. The middle and the last are the ones that tell you about next week.</li>
-  <li><b>The summary is the story&rsquo;s own.</b> Nothing here is a second draft. Each wrap is the recap&rsquo;s own closing section, so the short form cannot say something the long form does not.</li>
-  <li><b>Missing is missing.</b> A game with no recap yet says so and says why, rather than showing an empty card that reads like a game nobody thought was worth writing about.</li>
-</ol>
+<h2 class="ww-sr">How the wrap is written</h2>
+<div class="ww-method">
+  <div><b>The recap comes first</b><p>A game&rsquo;s recap is written when the feed marks it final, and it leads the front page until the next game ends.</p></div>
+  <div><b>Three layers, every time</b><p>What scored, the targets and carries under it, and the usage that has not turned into points yet.</p></div>
+  <div><b>The summary is the story&rsquo;s own</b><p>Each wrap is the recap&rsquo;s closing section, so the short form cannot say something the long form does not.</p></div>
+  <div><b>Missing is missing</b><p>A game with no recap yet says so and says why, rather than showing an empty card.</p></div>
+</div>
 
-<h2>The rest of the section</h2>
-<div class="is-grid">
+<h2 class="ww-sr">The rest of the section</h2>
+<div class="is-grid ww-rest">
   <div class="is-card"><h3><a href="/in-season/desk">The Desk</a></h3><p>Every piece the newsroom has published this week.</p></div>
-  <div class="is-card"><h3><a href="/stats">Stats</a></h3><p>What has actually been played so far this season.</p></div>
-  <div class="is-card"><h3><a href="/weekly-rankings">This week&rsquo;s rankings</a></h3><p>Consensus against the market, position by position.</p></div>
   <div class="is-card"><h3><a href="/waivers">Waivers &amp; FAAB</a></h3><p>Who to add on the back of what these games showed.</p></div>
   <div class="is-card"><h3><a href="/previews">Previews</a></h3><p>The games still to come, priced off the market.</p></div>
-  <div class="is-card"><h3><a href="/analysts">The analysts</a></h3><p>Who writes what, and the record of their calls.</p></div>
 </div>
 </main>
 <footer class="site"><div class="wrap">
@@ -200,61 +340,247 @@
 // which derives each game's summary from that game's own recap rather than
 // writing a second one, so the short form here and the long form on the desk
 // cannot disagree. A game with no recap yet prints the reason instead.
+//
+// The page reads one week at a time: the slate's own week by default, or the
+// one named by ?week=N, which the previous/next links write. Games are grouped
+// by kickoff slot (Thursday night, Sunday 1:00, Sunday night ...) and each card
+// is in one of four states -- recapped, final with the recap still being
+// written, in progress, or still to play -- so a reader can tell at a glance
+// which games have a story and which are waiting on one. While the tab is
+// visible the slate is re-read every two minutes, which is the API's own cache
+// life, so a card that says it fills in on its own actually does.
 (function () {
   var cards = document.getElementById('wwCards'),
       empty = document.getElementById('wwEmpty'),
-      stamp = document.getElementById('wwStamp'),
-      foot = document.getElementById('wwFoot');
+      foot = document.getElementById('wwFoot'),
+      week = document.getElementById('wwWeek'),
+      tools = document.getElementById('wwTools'),
+      chips = document.getElementById('wwChips'),
+      title = document.getElementById('wwTitle');
+  var ET = 'America/New_York', GAME_MS = 3.75 * 3600000, REFRESH_MS = 120000;
+  var filter = 'all', currentWeek = null;
+
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  function kick(ms) {
-    if (!ms) return '';
+  function fmt(ms, opts) {
+    try { return new Intl.DateTimeFormat('en-US', Object.assign({ timeZone: ET }, opts)).format(new Date(ms)); }
+    catch (e) { return ''; }
+  }
+  function clock(ms) {
+    var out = { dow: '', day: '', hour: 0, minute: 0 };
     try {
-      return new Date(ms).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit' }) + ' ET';
-    } catch (e) { return ''; }
+      new Intl.DateTimeFormat('en-US', { timeZone: ET, weekday: 'long', hour: 'numeric', minute: '2-digit', hour12: false })
+        .formatToParts(new Date(ms)).forEach(function (p) {
+          if (p.type === 'weekday') out.dow = p.value;
+          else if (p.type === 'hour') out.hour = parseInt(p.value, 10) % 24;
+          else if (p.type === 'minute') out.minute = parseInt(p.value, 10);
+        });
+    } catch (e) {}
+    return out;
   }
-  function score(g) {
-    if (g.awayScore == null || g.homeScore == null) return '';
-    return esc(g.away) + ' ' + g.awayScore + ', ' + esc(g.home) + ' ' + g.homeScore;
+  function timeOf(ms) { return fmt(ms, { hour: 'numeric', minute: '2-digit' }) + ' ET'; }
+  function ts(v) { var n = +v; return isFinite(n) && n > 0 ? n : Date.parse(v) || 0; }
+
+  // Where a game stands. The feed's word is taken for final and in progress;
+  // "scheduled" is not believed after kickoff, because a row written before
+  // the game still says scheduled hours after it ended.
+  function stateOf(g, now) {
+    if (g.status === 'final') return g.recap ? 'recap' : 'pending';
+    if (g.status === 'postponed' || g.status === 'canceled') return g.status;
+    if (g.status === 'in_progress') return 'live';
+    if (!g.kickoff || now < g.kickoff) return 'upcoming';
+    if (now < g.kickoff + GAME_MS) return 'live';
+    return g.recap ? 'recap' : 'pending';
   }
-  function card(g) {
-    var out = ['<article class="is-card ww-game">'];
-    out.push('<p class="is-eyebrow">' + esc(g.matchup) + (g.status === 'final' ? ' &middot; Final' : g.kickoff ? ' &middot; ' + esc(kick(g.kickoff)) : '') + '</p>');
-    var s = score(g);
-    if (s) out.push('<p class="is-note ww-score">' + s + '</p>');
-    if (g.recap) {
-      out.push('<h3><a href="' + esc(g.recap.url) + '">' + esc(g.recap.headline) + '</a></h3>');
-      out.push('<p>' + esc(g.recap.wrap) + '</p>');
-      var parts = g.recap.components || [];
+  // The kickoff slot a game belongs to: the day, and the hour unless it is a
+  // night game, so the eight one o'clock games share a head and the Sunday
+  // night game gets its own.
+  function slotOf(g) {
+    if (!g.kickoff) return { key: 'tbd', label: 'Time to be announced', chip: 'TBA', date: '' };
+    var c = clock(g.kickoff), night = c.hour >= 19;
+    var t = fmt(g.kickoff, { hour: 'numeric', minute: '2-digit' }).replace(/\s?[AP]M$/i, '');
+    return {
+      key: c.dow + (night ? '-night' : '-' + c.hour + ':' + c.minute),
+      label: night ? c.dow + ' night' : c.dow + ', ' + t,
+      chip: c.dow.slice(0, 3) + (night ? ' night' : ' ' + t),
+      date: fmt(g.kickoff, { month: 'short', day: 'numeric' }) + (night ? ' · ' + timeOf(g.kickoff) : '')
+    };
+  }
+
+  function scoreBlock(g, st) {
+    var out = ['<div class="ww-score">'];
+    var hasScore = g.awayScore != null && g.homeScore != null;
+    var awayLost = hasScore && st !== 'live' && g.awayScore < g.homeScore,
+        homeLost = hasScore && st !== 'live' && g.homeScore < g.awayScore;
+    out.push('<div class="ww-team' + (awayLost ? ' lost' : '') + '"><b>' + esc(g.away) + '</b>' + (hasScore ? '<i>' + esc(g.awayScore) + '</i>' : '') + '</div>');
+    out.push('<div class="ww-team' + (homeLost ? ' lost' : '') + '"><b>' + esc(g.home) + '</b>' + (hasScore ? '<i>' + esc(g.homeScore) + '</i>' : '') + '</div>');
+    if (st === 'recap' || st === 'pending') out.push('<div class="is-status final">Final</div>');
+    else if (st === 'live') out.push('<div class="is-status live">In progress</div>');
+    else if (st === 'upcoming') out.push('<div class="is-status">' + esc(g.kickoff ? fmt(g.kickoff, { weekday: 'short' }) + ' · kickoff' : 'Kickoff') + '</div>' + (g.kickoff ? '<div class="ww-kick">' + esc(timeOf(g.kickoff)) + '</div>' : ''));
+    else out.push('<div class="is-status">' + esc(st) + '</div>');
+    out.push('</div>');
+    return out.join('');
+  }
+  function byline(b, when) {
+    if (!b || !b.name) return '<span></span>';
+    return '<span class="ww-by">' + (b.avatar ? '<span class="ww-av" aria-hidden="true">' + esc(b.avatar) + '</span>' : '') + esc(b.name) + (when ? ' · ' + esc(fmt(when, { weekday: 'short', hour: 'numeric', minute: '2-digit' })) : '') + '</span>';
+  }
+  function card(g, now) {
+    var st = stateOf(g, now);
+    var cls = st === 'recap' ? '' : st === 'pending' ? ' pending' : st === 'upcoming' ? ' up' : '';
+    var out = ['<article class="ww-game' + cls + '" data-state="' + st + '">', scoreBlock(g, st), '<div class="ww-body">'];
+    if (st === 'recap') {
+      var r = g.recap;
+      out.push('<h3><a href="' + esc(r.url) + '">' + esc(r.headline) + '</a></h3>');
+      if (r.wrap) out.push('<p class="ww-wrap">' + esc(r.wrap) + '</p>');
+      var parts = r.components || [];
       if (parts.length) {
         out.push('<ul class="ww-parts">');
         for (var i = 0; i < parts.length; i++) {
-          out.push('<li><a href="' + esc(g.recap.url) + '#component-' + parts[i].n + '">' + esc(parts[i].headline) + '</a></li>');
+          out.push('<li><span>' + (i < 9 ? '0' : '') + (i + 1) + '</span><a href="' + esc(r.url) + '#component-' + esc(parts[i].n) + '">' + esc(parts[i].headline) + '</a></li>');
         }
         out.push('</ul>');
       }
-      if (g.recap.byline && g.recap.byline.name) out.push('<p class="is-note">' + esc(g.recap.byline.name) + '</p>');
+      out.push('<div class="ww-foot">' + byline(r.byline, ts(r.publishedAt)) + '<a class="ww-read" href="' + esc(r.url) + '">Read the recap</a></div>');
+    } else if (st === 'pending') {
+      out.push('<span class="is-tag">Recap being written</span>');
+      out.push('<h3>' + esc(g.matchup) + '</h3>');
+      out.push('<p class="ww-note">This game is final and its recap is being written. Recaps are written in the order the games ended and usually land within the hour. This card fills in on its own.</p>');
+    } else if (st === 'live') {
+      out.push('<span class="is-tag ww-live">In progress</span>');
+      out.push('<h3>' + esc(g.matchup) + '</h3>');
+      out.push('<p class="ww-note">The recap is written the moment the feed marks this game final. Until then the score here updates on its own.</p>');
+      out.push('<div class="ww-foot"><span>' + esc(g.kickoff ? 'Kicked off ' + timeOf(g.kickoff) : '') + '</span></div>');
+    } else if (st === 'upcoming') {
+      out.push('<span class="is-tag ww-up">Still to play</span>');
+      out.push('<h3>' + esc(g.matchup) + '</h3>');
+      out.push('<p class="ww-note">' + esc(g.kickoff ? 'Kicks off ' + fmt(g.kickoff, { weekday: 'long' }) + ' at ' + timeOf(g.kickoff) + '. ' : '') + 'The recap posts when the game goes final.</p>');
+      out.push('<div class="ww-foot"><span></span><a class="ww-read" href="/previews">Preview the line</a></div>');
     } else {
-      out.push('<p class="is-note ww-pending">' + esc(g.pending || 'No recap yet.') + '</p>');
+      out.push('<span class="is-tag ww-up">' + esc(st === 'postponed' ? 'Postponed' : 'Canceled') + '</span>');
+      out.push('<h3>' + esc(g.matchup) + '</h3>');
+      out.push('<p class="ww-note">' + (st === 'postponed' ? 'This game has been moved. It stays on the week’s slate and is recapped when it is played.' : 'This game will not be played.') + '</p>');
     }
-    out.push('</article>');
+    out.push('</div></article>');
     return out.join('');
   }
-  fetch('/api/weekly-wrap').then(function (r) { return r.json(); }).then(function (d) {
-    if (!d || !d.ok || !d.games || !d.games.length) {
-      empty.textContent = 'The week’s slate is not available yet. It fills in as the games go final.';
-      return;
+
+  function slotStatus(games, now) {
+    var n = games.length, rec = 0, live = 0, up = 0;
+    games.forEach(function (g) { var s = stateOf(g, now); if (s === 'recap') rec++; else if (s === 'live') live++; else if (s === 'upcoming') up++; });
+    if (rec === n) return { text: 'Recapped', cls: '' };
+    if (up === n) return { text: 'Still to play', cls: 'off' };
+    if (live && !rec) return { text: 'In progress', cls: 'live' };
+    return { text: rec + ' of ' + n + ' recapped', cls: '' };
+  }
+
+  function renderWeek(d, now) {
+    var wk = d.week, games = d.games;
+    var counts = { r: 0, w: 0, l: 0, u: 0 };
+    var bar = [];
+    games.forEach(function (g) {
+      var s = stateOf(g, now);
+      var k = s === 'recap' ? 'r' : s === 'pending' ? 'w' : s === 'live' ? 'l' : 'u';
+      counts[k]++;
+      bar.push('<i class="' + (k === 'u' ? '' : k) + '"></i>');
+    });
+    title.textContent = 'Week ' + wk + ' Wrap Up';
+    document.getElementById('wwNum').textContent = 'Week ' + wk;
+    document.getElementById('wwWhen').innerHTML = '<b>' + esc(fmt(now, { weekday: 'long', month: 'short', day: 'numeric' })) + '</b> · ' + esc(timeOf(now)) + ' · ' + games.length + ' games';
+    var barEl = document.getElementById('wwBar');
+    barEl.innerHTML = bar.join('');
+    barEl.setAttribute('aria-label', counts.r + ' of ' + games.length + ' games recapped');
+    var key = [];
+    key.push('<span class="r"><b>' + counts.r + '</b> recapped</span>');
+    if (counts.w) key.push('<span class="w"><b>' + counts.w + '</b> final, recap being written</span>');
+    if (counts.l) key.push('<span class="l"><b>' + counts.l + '</b> in progress</span>');
+    if (counts.u) key.push('<span><b>' + counts.u + '</b> still to play</span>');
+    document.getElementById('wwKey').innerHTML = key.join('');
+    // Previous is always a week back until Week 1. Next is enabled only once
+    // the season clock says the week after this one exists, so a reader
+    // cannot page into a week with no games on it.
+    var prev = document.getElementById('wwPrev'), next = document.getElementById('wwNext');
+    if (wk > 1) { prev.href = '?week=' + (wk - 1); prev.removeAttribute('aria-disabled'); document.getElementById('wwPrevLabel').textContent = 'Week ' + (wk - 1); }
+    else { prev.setAttribute('aria-disabled', 'true'); prev.removeAttribute('href'); document.getElementById('wwPrevLabel').textContent = 'Week 1'; }
+    document.getElementById('wwNextLabel').textContent = 'Week ' + (wk + 1);
+    next.setAttribute('aria-disabled', 'true'); next.removeAttribute('href');
+    if (window.ITSeason) {
+      window.ITSeason.load(function (s) {
+        var cur = s && s.week && s.week.type === 'REG' ? s.week.number : null;
+        if (cur != null && wk < cur) { next.href = '?week=' + (wk + 1); next.removeAttribute('aria-disabled'); }
+      });
     }
-    empty.hidden = true;
-    stamp.textContent = 'Week ' + d.week + ' — ' + d.counts.recapped + ' of ' + d.counts.games + ' games recapped, ' + d.counts.final + ' final.';
-    cards.innerHTML = d.games.map(card).join('');
+    document.getElementById('wwNAll').textContent = games.length;
+    document.getElementById('wwNRecap').textContent = counts.r;
+    document.getElementById('wwNRest').textContent = games.length - counts.r;
+    week.hidden = false; tools.hidden = false;
+  }
+
+  function render(d) {
+    var now = Date.now();
+    var slots = [], byKey = {};
+    d.games.forEach(function (g) {
+      var s = slotOf(g);
+      if (!byKey[s.key]) { byKey[s.key] = { slot: s, games: [] }; slots.push(byKey[s.key]); }
+      byKey[s.key].games.push(g);
+    });
+    var html = [], chipHtml = [];
+    slots.forEach(function (sl, i) {
+      var id = 'ww-slot-' + i, st = slotStatus(sl.games, now);
+      chipHtml.push('<a class="rkc-chip" href="#' + id + '">' + esc(sl.slot.chip) + '<small>' + sl.games.length + '</small></a>');
+      html.push('<section class="ww-slot" id="' + id + '">');
+      html.push('<div class="ww-day"><h2>' + esc(sl.slot.label) + '</h2><span class="ww-meta">' + esc(sl.slot.date) + (sl.slot.date ? ' · ' : '') + sl.games.length + (sl.games.length === 1 ? ' game' : ' games') + '</span><span class="ww-st ' + st.cls + '">' + esc(st.text) + '</span></div>');
+      html.push('<div class="ww-games' + (sl.games.length === 1 ? ' solo' : '') + '">' + sl.games.map(function (g) { return card(g, now); }).join('') + '</div>');
+      html.push('</section>');
+    });
+    cards.innerHTML = html.join('');
+    chips.innerHTML = chipHtml.join('');
+    renderWeek(d, now);
+    applyFilter();
     if (d.disclosure) foot.textContent = d.disclosure;
-  }).catch(function () {
-    empty.textContent = 'The week’s slate could not be read just now.';
+  }
+
+  // The filter hides cards, and a slot with nothing left to show hides with
+  // them, so "Recapped" on a Thursday morning is one head and one card rather
+  // than six heads over nothing.
+  function applyFilter() {
+    [].slice.call(cards.querySelectorAll('.ww-game')).forEach(function (el) {
+      var s = el.getAttribute('data-state');
+      el.hidden = filter === 'recap' ? s !== 'recap' : filter === 'rest' ? s === 'recap' : false;
+    });
+    [].slice.call(cards.querySelectorAll('.ww-slot')).forEach(function (sec) {
+      sec.hidden = !sec.querySelector('.ww-game:not([hidden])');
+    });
+    [].slice.call(tools.querySelectorAll('[data-filter]')).forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-filter') === filter ? 'true' : 'false');
+    });
+  }
+  tools.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-filter]');
+    if (!b) return;
+    filter = b.getAttribute('data-filter');
+    applyFilter();
   });
+
+  var wkParam = (location.search.match(/[?&]week=(\d{1,2})(?:&|$)/) || [])[1] || null;
+  function load(first) {
+    fetch('/api/weekly-wrap' + (wkParam ? '?week=' + wkParam : '')).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok || !d.games || !d.games.length) {
+        if (first) empty.textContent = 'The week’s slate is not available yet. It fills in as the games go final.';
+        return;
+      }
+      empty.hidden = true;
+      currentWeek = d.week;
+      render(d);
+    }).catch(function () {
+      if (first) empty.textContent = 'The week’s slate could not be read just now.';
+    });
+  }
+  load(true);
+  setInterval(function () { if (document.visibilityState === 'visible' && currentWeek != null) load(false); }, REFRESH_MS);
 })();
 </script>
 <!--chrome:navjs--><script>
