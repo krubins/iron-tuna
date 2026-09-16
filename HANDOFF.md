@@ -7172,8 +7172,14 @@ name against the board **locally** with the same `resolve()`. A misread name
 fails to resolve and is offered to fix; nothing the model read can become a
 projection. `rosterReadParse()` in the worker is the part `test-trade-finder.mjs`
 covers without a model: fenced JSON, upper-cased positions, missing clubs,
-capped counts, prose or an empty list as clean failures. The same route accepts
-`{text}` for a paste the local parser could not untangle.
+capped counts, prose or an empty list as clean failures, and a reply cut off
+mid-object (the model hit its output budget) salvaged down to the last complete
+player and returned with `partial: true`. The budget is `ROSTER_READ_MAX_TOKENS`
+(16000; a whole-league page is ~5000, and 4000 used to cut it off and surface
+as "a shape this page cannot use"), the wait `ROSTER_READ_TIMEOUT_MS`. A copied
+screenshot pasted into the rosters box is read as an image: the page's `paste`
+listener takes image files off the clipboard and hands them to the same reader.
+The same route accepts `{text}` for a paste the local parser could not untangle.
 
 State is `localStorage` `it_trade_v1`: the paste, the teams as board ids, the
 reader's team, both horizons, tilt, package size, preset, slots. Gated with the
