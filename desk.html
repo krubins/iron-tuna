@@ -42,7 +42,9 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:6px 0 14px}
+/* The page head the section pages wear (fantasy.html, in-season.html, dfs.html, vegas-edge.html). */
+h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
+@media(max-width:560px){h1{font-size:var(--fs-2xl)}}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 .btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
@@ -50,11 +52,45 @@ p{color:var(--sec);margin:0 0 16px}
 .btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal)}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
 
-.dk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
-.dk-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:block;color:inherit;text-decoration:none}
-.dk-card:hover{border-color:var(--teal)} .dk-card h3{margin:4px 0 4px;font-size:16px}
-.dk-card .when{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
-.dk-card .st{font-size:12px;color:var(--muted)} .dk-card .st.held{color:var(--goldink)}
+/* ── the index: feed, filters, rail ── */
+.dk-index{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:var(--space-6);align-items:start;margin-top:var(--space-4)}
+.dk-bar{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin:0 0 var(--space-4)}
+.dk-chips{display:flex;gap:8px;flex-wrap:wrap}
+.dk-chip{appearance:none;border:1px solid var(--line2);border-radius:999px;background:var(--bg);color:var(--sec);font:inherit;font-size:var(--fs-xs);font-weight:600;padding:7px 14px;cursor:pointer;line-height:1.2}
+.dk-chip:hover{border-color:var(--teal);color:var(--text)}
+.dk-chip[aria-pressed="true"]{background:var(--text);color:#fff;border-color:var(--text)}
+.dk-weeks{display:inline-flex;border:1px solid var(--line2);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg);margin-left:auto}
+.dk-weeks button{appearance:none;border:0;border-left:1px solid var(--line);background:none;font:inherit;font-size:var(--fs-2xs);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--sec);padding:8px 12px;cursor:pointer;white-space:nowrap}
+.dk-weeks button:first-child{border-left:0}
+.dk-weeks button[aria-pressed="true"]{background:var(--text);color:#fff}
+/* The feed is the shared story card (.nr-card, site.css), two across in the
+   feed column, one on a phone. A status chip in the byline row says what the
+   desk's own rule did with the piece: published (the prose stayed inside the
+   data), held (it did not; the packet shipped), skipped, or not yet. */
+.dk-feed .nr-grid{grid-template-columns:1fr;gap:var(--space-4);margin:0}
+.dk-feed .nr-card h3{font-size:var(--fs-lg)}
+.dk-feed .nr-card[hidden]{display:none}
+.dk-feed .nr-st svg{width:11px;height:11px;vertical-align:-1px;margin-right:3px}
+.dk-rail{display:flex;flex-direction:column;gap:var(--space-4);position:sticky;top:var(--space-4)}
+.dk-rail .is-card{padding:var(--space-4) var(--space-5)}
+.dk-clock{display:flex;flex-direction:column;margin-top:var(--space-2)}
+.dk-clock a{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:var(--fs-sm);color:var(--text)}
+.dk-clock a:hover{text-decoration:none;color:var(--teal)}
+.dk-clock a.done{color:var(--muted)}
+.dk-clock .d{font-family:var(--font-mono);font-size:var(--fs-3xs);font-weight:800;letter-spacing:.1em;width:34px;flex:0 0 auto;color:var(--muted)}
+.dk-clock a.next .d{color:var(--teal)}
+.dk-clock .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dk-clock .s{margin-left:auto;flex:0 0 auto;color:var(--teal)}
+.dk-clock .s svg{width:14px;height:14px;display:block}
+.dk-clock .is-tag{margin:0 0 0 auto;padding:1px 6px}
+.dk-people{display:flex;flex-direction:column;gap:2px;margin-top:var(--space-2)}
+.dk-people a{display:flex;align-items:center;gap:10px;padding:6px 0;color:var(--text);font-size:var(--fs-xs);line-height:1.3}
+.dk-people a:hover{text-decoration:none;color:var(--teal)}
+.dk-people a b{display:block}
+.dk-people a span{display:block;color:var(--muted);font-size:var(--fs-2xs)}
+.dk-people a .dk-av{display:inline-flex;width:28px;height:28px;font-size:10px;flex:0 0 auto}
+@media(max-width:900px){.dk-index{grid-template-columns:1fr}.dk-rail{position:static}}
+@media(max-width:620px){.dk-weeks{margin-left:0}}
 .dk-piece h2{font-size:clamp(17px,2.2vw,22px);margin:26px 0 8px;letter-spacing:.02em;text-transform:uppercase;color:var(--teal)}
 .dk-piece p,.dk-piece li{font-size:16px;line-height:1.6;color:var(--text)}
 .dk-piece ul{padding-left:20px} .dk-piece li{margin-bottom:8px}
@@ -144,10 +180,21 @@ body.dk-tailback #dkTitle{max-width:920px}
     <!--/chrome:nav-->
 </div></header>
 <main id="main" class="wrap">
-<p class="is-eyebrow">In-Season &middot; The Desk</p>
+<p class="is-eyebrow" id="dkEyebrow">The Desk &middot; In-Season</p>
 <h1 id="dkTitle">The In-Season Desk</h1>
 <p class="is-lede" id="dkLede">The week&rsquo;s pieces, in the order the week produces them. Every fact in them comes from the box score, the depth chart, the injury list, the usage file or the betting market; a piece is published only when its prose stayed inside that data, and shows the data itself when it did not.</p>
+<div class="is-actions" id="dkActions">
+  <a class="is-btn primary" href="#dkFeed">This week&rsquo;s pieces</a>
+  <a class="is-btn ghost" href="/analysts">Meet the analysts &rarr;</a>
+  <span class="is-hint">Eight AI personas. The facts are the site&rsquo;s.</span>
+</div>
 <div class="its-strip" data-season-strip></div>
+<!-- ── the index ──────────────────────────────────────────────────────────
+     The desk's front: the week's pieces as a feed on the left (a day filter
+     and a week switcher above it), the week's publishing clock and the
+     analysts on the right. It used to be one grid of kind cards with a
+     status line each. Painted by list() below off /api/content; #dkList is
+     hidden by piece() when a single piece is open, as before. -->
 <div id="dkList"></div>
 <article class="dk-piece" id="dkPiece" hidden>
   <p class="dk-kicker" id="dkKicker"></p>
@@ -160,7 +207,7 @@ body.dk-tailback #dkTitle{max-width:920px}
   <div id="dkPost"></div>
 </article>
 <p class="is-note dk-disc" id="dkDiscStatic">Iron Tuna’s analysts are AI-powered editorial personas, not people. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls. Every number they print is computed from the site’s own data (the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries you load); a piece whose prose named something the data does not contain is held, not published. The personalities are a way of organizing the analysis. The facts are the site’s. <a href="/analysts">Meet the desk &rarr;</a></p>
-<p class="is-empty" id="dkEmpty">Reading the desk&hellip;</p>
+<div class="is-vacant" id="dkEmpty"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span><div class="is-vacant-msg"><b id="dkEmptyH">Reading the desk&hellip;</b><span id="dkEmptyP"></span></div></div>
 <p class="is-note" style="margin-top:28px"><a href="/in-season/desk">&larr; The desk</a> &middot; <a href="/rankings">Rankings</a> &middot; <a href="/vegas-edge">Vegas Edge</a></p>
 </main>
 <footer class="site"><div class="wrap">
@@ -294,29 +341,121 @@ body.dk-tailback #dkTitle{max-width:920px}
       var body = JSON.stringify({ event: ev, uid: uid, props: Object.assign({ path: location.pathname }, props || {}) });
       if (navigator.sendBeacon) navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' })); else fetch('/api/track', { method: 'POST', body: body, keepalive: true }); } catch (x) {}
   }
+  var CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3 3 7-7"></path></svg>';
+  var ORDER = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var DAY = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' };
+  var initials = function (name) { return String(name || '').split(/\s+/).map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase(); };
+  var whenOf = function (k) {
+    return k.perGame ? 'Every game, when it goes final'
+      : k.day + ' ' + (k.hour % 12 === 0 ? 12 : k.hour % 12) + ':' + (k.minute < 10 ? '0' : '') + k.minute + (k.hour < 12 ? ' AM' : ' PM') + ' ET';
+  };
+  var stamp = function (iso) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit' }) + ' ET'; } catch (x) { return ''; }
+  };
+  var ago = function (iso) {
+    if (!iso) return ''; var t = new Date(iso).getTime(); if (!isFinite(t)) return '';
+    var m = Math.round((Date.now() - t) / 60000);
+    if (m < 60) return Math.max(m, 1) + 'm ago'; if (m < 1440) return Math.round(m / 60) + 'h ago'; if (m < 10080) return Math.round(m / 1440) + 'd ago';
+    try { return new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }); } catch (x) { return ''; }
+  };
+  // The status chip: what the desk's own rule did with the piece.
+  function statusChip(p) {
+    if (!p) return '<span class="nr-st">Not yet</span>';
+    if (p.status === 'published') return '<span class="nr-st ok" title="The prose stayed inside the data">' + CHECK + 'Fact-checked</span>';
+    if (p.status === 'held') return '<span class="nr-st held" title="The draft did not clear the fact check; the research packet shipped instead">Held</span>';
+    if (p.status === 'skipped') return '<span class="nr-st" title="Nothing worth publishing in this slot">Skipped</span>';
+    return '<span class="nr-st">' + e(p.status) + '</span>';
+  }
   function list(j) {
-    var latest = {};
-    (j.pieces || []).forEach(function (p) { if (!latest[p.kind]) latest[p.kind] = p; });
-    var order = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    // A per-game package has no weekday and no hour, so it sorts to the front
-    // of the week rather than into a slot that does not exist.
     var kinds = (j.kinds || []).slice().sort(function (a, b) {
       if (!!a.perGame !== !!b.perGame) return a.perGame ? -1 : 1;
       if (a.perGame) return 0;
-      return (order.indexOf(a.day) - order.indexOf(b.day)) || (a.hour - b.hour) || (a.minute - b.minute);
+      return (ORDER.indexOf(a.day) - ORDER.indexOf(b.day)) || (a.hour - b.hour) || (a.minute - b.minute);
     });
-    $('dkList').innerHTML = '<div class="dk-grid">' + kinds.map(function (k) {
-      var p = latest[k.kind];
-      var when = k.perGame ? 'Every game, when it goes final'
-        : k.day + ' ' + (k.hour % 12 === 0 ? 12 : k.hour % 12) + ':' + (k.minute < 10 ? '0' : '') + k.minute + (k.hour < 12 ? ' AM' : ' PM') + ' ET';
-      // The recap card leads to the Weekly Wrap Up, which lists every game of
-      // the week. /in-season/desk/game-recap would land on whichever single
-      // game was written last, which is not an index of anything.
-      var href = k.perGame ? '/weekly-wrap' : '/in-season/desk/' + e(k.kind);
-      return '<a class="dk-card" href="' + href + '"><span class="when">' + e(when) + (k.gate ? ' &middot; only when there is a story' : '') + '</span><h3>' + e(k.title) + '</h3>' +
-        '<span class="dk-by">' + e(k.analystName) + (k.lens === 'both' ? ' &middot; Weekly + DFS' : '') + '</span>' +
-        (p ? '<span class="st ' + e(p.status) + '">Week ' + e(p.week) + ' &middot; ' + e(p.status) + (p.version > 1 ? ' &middot; update ' + e(p.version) : '') + '</span>' : '<span class="st">Not yet this season</span>') + '</a>';
-    }).join('') + '</div>';
+    var pieces = j.pieces || [];
+    // The weeks on file, newest first; the newest is "this week".
+    var weeks = []; pieces.forEach(function (p) { if (p.week != null && weeks.indexOf(p.week) < 0) weeks.push(p.week); });
+    weeks.sort(function (a, b) { return b - a; });
+    var week = weeks[0] != null ? weeks[0] : null;
+    var day = 'all';
+    // The days the desk publishes on, in week order, for the filter.
+    var days = []; kinds.forEach(function (k) { if (!k.perGame && days.indexOf(k.day) < 0) days.push(k.day); });
+    days.sort(function (a, b) { return ORDER.indexOf(a) - ORDER.indexOf(b); });
+    var hasPerGame = kinds.some(function (k) { return k.perGame; });
+
+    function latestFor(k) {
+      var mine = pieces.filter(function (p) { return p.kind === k.kind && (week == null || p.week === week); });
+      if (!mine.length) return null;
+      if (k.perGame) return { many: mine.length, first: mine[0] };
+      return { first: mine[0] };
+    }
+    // The feed: the week's pieces, newest first. A slot whose hour has not
+    // come round is not a story and does not get a card; it is on the clock
+    // in the rail, with "Next" on the one that is up.
+    var byKind = {}; kinds.forEach(function (k) { byKind[k.kind] = k; });
+    function feedPieces() {
+      return pieces.filter(function (p) { return week == null || p.week === week; })
+        .sort(function (a, b) { return new Date(b.published_at || b.created_at || 0) - new Date(a.published_at || a.created_at || 0); });
+    }
+    function item(p) {
+      var k = byKind[p.kind] || { title: p.title, day: '', analystName: (p.byline || {}).name || 'Iron Tuna', analyst: (p.byline || {}).analyst || '' };
+      var href = p.url || '/in-season/desk/' + p.kind + '/' + p.week;
+      var by = p.byline && p.byline.name ? p.byline.name : k.analystName;
+      var byId = p.byline && p.byline.analyst ? p.byline.analyst : k.analyst;
+      var kick = e(k.perGame && p.title ? p.title : k.title) + ' &middot; Week ' + e(p.week) + (k.perGame ? ' &middot; Final' : '') + (p.version > 1 ? ' &middot; update ' + e(p.version) : '');
+      return '<article class="nr-card" data-day="' + e(k.perGame ? 'game' : k.day) + '">' +
+        '<span class="nr-kicker">' + kick + '</span>' +
+        '<h3><a href="' + e(href) + '">' + e(p.headline || p.title || k.title) + '</a></h3>' +
+        (p.dek ? '<p>' + e(p.dek) + '</p>' : '') +
+        '<span class="nr-by"><span class="nr-av">' + e(initials(by)) + '</span><a href="/analysts/' + e(byId || '') + '">' + e(by) + '</a>' + statusChip(p) +
+        '<span class="nr-time">' + e(ago(p.published_at || p.created_at)) + '</span></span></article>';
+    }
+    function clock() {
+      var nextSeen = false;
+      return kinds.map(function (k) {
+        var got = latestFor(k), p = got && got.first;
+        var done = p && p.status === 'published';
+        var next = !p && !nextSeen && !k.perGame; if (next) nextSeen = true;
+        var st = done ? '<span class="s">' + CHECK + '</span>' : p && p.status === 'held' ? '<span class="is-tag">Held</span>' : p && p.status === 'skipped' ? '<span class="is-tag">Skipped</span>' : next ? '<span class="is-tag is-live">Next</span>' : '';
+        return '<a href="' + e(k.perGame ? '/weekly-wrap' : (p && p.url ? p.url : '/in-season/desk/' + k.kind)) + '" class="' + (done ? 'done' : next ? 'next' : '') + '"><span class="d">' + e(k.perGame ? 'Game' : k.day) + '</span><span class="t">' + e(k.title) + '</span>' + st + '</a>';
+      }).join('');
+    }
+    function people() {
+      var seen = {}, out = [];
+      kinds.forEach(function (k) {
+        if (!k.analyst || seen[k.analyst]) { if (k.analyst) seen[k.analyst].beats.push(k.title); return; }
+        seen[k.analyst] = { id: k.analyst, name: k.analystName, beats: [k.title] }; out.push(seen[k.analyst]);
+      });
+      return out.map(function (a) {
+        return '<a href="/analysts/' + e(a.id) + '"><span class="dk-av">' + e(initials(a.name)) + '</span><span><b>' + e(a.name) + '</b><span>' + e(a.beats.slice(0, 2).join(' · ')) + (a.beats.length > 2 ? ' · +' + (a.beats.length - 2) : '') + '</span></span></a>';
+      }).join('');
+    }
+    function paint() {
+      $('dkList').innerHTML =
+        '<div class="dk-index"><div id="dkFeed" class="dk-feed">' +
+          '<div class="dk-bar"><div class="dk-chips" id="dkDays">' +
+            '<button type="button" class="dk-chip" data-day="all" aria-pressed="' + (day === 'all') + '">All pieces</button>' +
+            days.map(function (d) { return '<button type="button" class="dk-chip" data-day="' + e(d) + '" aria-pressed="' + (day === d) + '">' + e(DAY[d] || d) + '</button>'; }).join('') +
+            (hasPerGame ? '<button type="button" class="dk-chip" data-day="game" aria-pressed="' + (day === 'game') + '">Recaps</button>' : '') +
+          '</div>' +
+          (weeks.length ? '<div class="dk-weeks" id="dkWeeks" role="group" aria-label="Week">' + weeks.slice(0, 4).map(function (w) { return '<button type="button" data-week="' + w + '" aria-pressed="' + (w === week) + '">Week ' + w + '</button>'; }).join('') + '</div>' : '') +
+          '</div>' +
+          (function () { var fp = feedPieces(); return fp.length ? '<div class="nr-grid">' + fp.map(item).join('') + '</div>'
+            : '<div class="is-vacant"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span><div class="is-vacant-msg"><b>Nothing published yet' + (week != null ? ' for Week ' + week : '') + '.</b><span>The desk publishes on the data\u2019s clock, not the calendar. The next slot is on the clock to the right.</span></div></div>'; })() +
+        '</div>' +
+        '<aside class="dk-rail">' +
+          '<div class="is-card"><span class="is-tag">The week’s clock</span><div class="dk-clock">' + clock() + '</div></div>' +
+          '<div class="is-card"><span class="is-tag">The analysts</span><p>AI-powered editorial personas, not people. Each has a fixed beat, a stated philosophy and a memory of its own calls.</p><div class="dk-people">' + people() + '</div><p class="is-note" style="margin-top:10px"><a href="/analysts">All of them, and the AI disclosure &rarr;</a></p></div>' +
+        '</aside></div>';
+      applyDay();
+      $('dkDays').addEventListener('click', function (ev) { var b = ev.target.closest('[data-day]'); if (!b) return; day = b.getAttribute('data-day'); [].forEach.call($('dkDays').querySelectorAll('[data-day]'), function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-day') === day ? 'true' : 'false'); }); applyDay(); });
+      var wk = $('dkWeeks'); if (wk) wk.addEventListener('click', function (ev) { var b = ev.target.closest('[data-week]'); if (!b) return; week = parseInt(b.getAttribute('data-week'), 10); paint(); });
+    }
+    function applyDay() {
+      [].forEach.call(document.querySelectorAll('.dk-feed .nr-card'), function (it) { it.hidden = day !== 'all' && it.getAttribute('data-day') !== day; });
+    }
+    paint();
     // The disclosure is pre-rendered above (#dkDiscStatic) rather than appended
     // here, so it is in the served HTML and survives a feed that does not
     // answer. Appending it again would print it twice. If the payload ever
@@ -460,7 +599,8 @@ body.dk-tailback #dkTitle{max-width:920px}
     if (j.disclosure) post += '<p class="is-note dk-disc">' + e(j.disclosure) + ' <a href="/analysts">Meet the desk &rarr;</a></p>';
     $('dkPost').innerHTML = post;
     try { if (window.ITSync) { var sb = $('dkSync'); if (!sb) { sb = document.createElement('div'); sb.id = 'dkSync'; sb.hidden = true; $('dkBody').parentNode.insertBefore(sb, $('dkBody')); } ITSync.callouts($('dkBody'), { summary: sb }); } } catch (e) {}
-    $('dkPiece').hidden = false; $('dkList').hidden = true; $('dkEmpty').hidden = true;
+    $('dkPiece').hidden = false; $('dkList').hidden = true; $('dkEmpty').hidden = true; if ($('dkActions')) $('dkActions').hidden = true;
+    if ($('dkEyebrow')) $('dkEyebrow').textContent = 'The Desk · ' + (j.game ? 'Recap' : 'Week ' + j.week);
     if (window.ITPlayerSearch && window.ITPlayerSearch.linkAllPlayers) { try { window.ITPlayerSearch.linkAllPlayers($('dkBody')); } catch (x) {} }
     track('story_open', { kind: j.kind, week: j.week, lens: lens, analyst: (j.byline || {}).analyst });
   }
@@ -469,15 +609,16 @@ body.dk-tailback #dkTitle{max-width:920px}
     lens = b.getAttribute('data-lens'); try { localStorage.setItem('it.lane', lens === 'dfs' ? 'dfs' : 'fantasy'); } catch (x) {}
     paintLens();
   });
+  var vacant = function (head, detail) { $('dkEmptyH').textContent = head; $('dkEmptyP').textContent = detail || ''; };
   function boot() {
     var w = wanted();
     if (w.kind) {
       fetch('/api/content/piece?kind=' + encodeURIComponent(w.kind) + (w.week ? '&week=' + encodeURIComponent(w.week) : '') + (w.game ? '&game=' + encodeURIComponent(w.game) : '')).then(function (r) { return r.json(); }).then(function (j) {
-        if (!j || !j.ok) { $('dkEmpty').textContent = 'That piece has not been produced yet this season. It appears when its games are final and its hour comes round.'; return; }
+        if (!j || !j.ok) { vacant('That piece has not been produced yet this season.', 'It appears when its games are final and its hour comes round.'); return; }
         piece(j, w);
-      }).catch(function () { $('dkEmpty').textContent = 'The desk did not answer.'; });
+      }).catch(function () { vacant('The desk did not answer.', 'The content feed is not responding. Nothing here is stale; there is simply nothing to show.'); });
     } else {
-      fetch('/api/content').then(function (r) { return r.json(); }).then(function (j) { if (!j || !j.ok) { $('dkEmpty').textContent = 'The desk did not answer.'; return; } list(j); }).catch(function () { $('dkEmpty').textContent = 'The desk did not answer.'; });
+      fetch('/api/content').then(function (r) { return r.json(); }).then(function (j) { if (!j || !j.ok) { vacant('The desk did not answer.', 'The content feed is not responding. Nothing here is stale; there is simply nothing to show.'); return; } list(j); }).catch(function () { vacant('The desk did not answer.', 'The content feed is not responding. Nothing here is stale; there is simply nothing to show.'); });
     }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

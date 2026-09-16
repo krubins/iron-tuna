@@ -272,7 +272,7 @@ section{margin:0 0 var(--space-6)}
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">04</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
     <p id="fnDeskNote">Eight AI analyst personas, one set of facts, newest first. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p></div>
   <section id="desk">
-    <div class="is-grid" id="fnDesk"></div>
+    <div class="nr-grid" id="fnDesk"></div>
     <!-- One of the two is always in the DOM. A section that quietly renders
          nothing reads as a section with nothing in it, which is a different
          claim and a wrong one; this one says why it is empty and where the
@@ -642,7 +642,15 @@ section{margin:0 0 var(--space-6)}
   });
   fetch('/api/newsroom?lens=weekly&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
     if (!j || !j.ok || !j.pieces.length) { vacant('fnDeskEmpty', 'The desk has not published this week yet.', 'The first package lands at its slot once the games are final. Nothing here is stale; there is simply nothing yet.'); return; }
-    $('fnDesk').innerHTML = j.pieces.map(function (p) { var by = p.byline || {}; return '<div class="is-card"><span class="is-tag">' + e(p.title) + ' &middot; Week ' + e(p.week) + '</span><h3><a href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a></h3><p>' + e(p.dek || '') + '</p><p class="is-note">By <a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' + (p.rivalry ? ' &middot; Vega vs. Brooks' : '') + '</p></div>'; }).join('');
+    var av = function (name) { return String(name || '').split(' ').map(function (w) { return w.charAt(0); }).join(''); };
+    var ago = function (iso) {
+      if (!iso) return ''; var t = new Date(iso).getTime(); if (!isFinite(t)) return '';
+      var m = Math.round((Date.now() - t) / 60000);
+      if (m < 60) return Math.max(m, 1) + 'm ago'; if (m < 1440) return Math.round(m / 60) + 'h ago'; if (m < 10080) return Math.round(m / 1440) + 'd ago';
+      try { return new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }); } catch (x) { return ''; }
+    };
+    $('fnDesk').innerHTML = j.pieces.slice(0, 6).map(function (p) { var by = p.byline || {}; return '<article class="nr-card"><span class="nr-kicker">' + e(p.title) + ' &middot; Week ' + e(p.week) + '</span><h3><a href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a></h3>' + (p.dek ? '<p>' + e(p.dek) + '</p>' : '') +
+      '<span class="nr-by"><span class="nr-av">' + e(av(by.name)) + '</span><a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' + (p.rivalry ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') + (p.publishedAt ? '<span class="nr-time">' + e(ago(p.publishedAt)) + '</span>' : '') + '</span></article>'; }).join('');
     $('fnDeskEmpty').hidden = true;
   }).catch(function () { vacant('fnDeskEmpty', 'The desk did not answer.', 'The newsroom feed is not responding. Last week\u2019s pieces are still on the desk.'); });
   fetch('/api/disagreements', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {

@@ -693,6 +693,39 @@ footer.site a:hover { color: var(--text) }
 .is-act-go { margin-top: auto; padding-top: var(--space-2); font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
 @media (prefers-reduced-motion: reduce) { .is-act:hover { transform: none } }
 
+/* ── the story card ─────────────────────────────────────────────────────────
+   Every piece the desk publishes, on every surface that lists them (the front
+   page's newsroom, the Fantasy page's, the desk index): one card, read at a
+   glance. The player faces the search script puts at the head of a headline
+   (.it-story-focus) sit on their own row above it like a thumbnail; the
+   headline is one size, the teaser is clamped to two lines, and the byline
+   row carries the analyst and the time. It replaces a grid of full deks in
+   four columns that read as a wall of text. */
+.nr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-5); margin: var(--space-2) 0 var(--space-6) }
+.nr-card {
+  display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: var(--space-5) 22px; color: inherit; text-decoration: none;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.nr-card:hover { border-color: var(--line2); box-shadow: 0 8px 24px rgba(15, 23, 25, .06); text-decoration: none }
+.nr-card:hover h3 { color: var(--teal) }
+.nr-kicker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--fs-3xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
+.nr-nfl-logo { display: block; width: 18px; height: 18px; object-fit: contain; flex: 0 0 auto }
+.nr-card h3 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 700; color: var(--text); letter-spacing: -.005em; overflow-wrap: anywhere }
+.nr-card h3 a { color: inherit }
+.nr-card h3 a:hover { text-decoration: none }
+.nr-card h3 .it-story-focus { display: flex; margin: 0 0 10px; vertical-align: baseline }
+.nr-card p { margin: 0; color: var(--sec); font-size: var(--fs-sm); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.nr-by { display: flex; align-items: center; gap: 8px; font-size: var(--fs-2xs); color: var(--sec); margin-top: auto; padding-top: 4px; min-width: 0 }
+.nr-by a { color: inherit; font-weight: 700 }
+.nr-av { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--teal); color: #fff; font-weight: 800; font-size: 10px }
+.nr-time { margin-left: auto; color: var(--muted); white-space: nowrap; flex: 0 0 auto }
+.nr-riv, .nr-st { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; border: 1px solid var(--line2); color: var(--sec) }
+.nr-st.ok { color: var(--teal); background: rgba(14, 124, 99, .1); border-color: rgba(14, 124, 99, .3) }
+.nr-st.held { color: var(--goldink); background: #fdf4e2; border-color: #f0e0b0 }
+.nr-card.pending h3 { color: var(--sec); font-weight: 600 }
+
 /* Cards get a hairline lift on hover so a grid of them reads as a set of
    things you can open rather than a set of boxes. */
 .is-card { transition: border-color .12s ease, box-shadow .12s ease }

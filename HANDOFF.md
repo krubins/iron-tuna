@@ -10022,6 +10022,30 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
   `<ol>`; the section heads are the numbered `.is-sec` heads; the signal
   cards lose their gold left bar.
 
+**The Desk index (`/in-season/desk`), same pass, and the story card.**
+
+- **"This is just too dense. Make it more like Fantasy Life or ESPN."** The
+  newsroom grid (front page `.nr-card`, the Fantasy page's `#fnDesk`) ran
+  full deks in four columns at 250px, and read as a wall of text. There is
+  now ONE story card, `.nr-*` in site.css (front.html carries its own copy of
+  the block, since it links no stylesheet): three across at 300px, the
+  headline at one size, the teaser clamped to two lines, a byline row with
+  the analyst and a relative time (`2h ago`; the date past a week), and the
+  player faces the search script puts at the head of a headline
+  (`.it-story-focus`) on their own row above it like a thumbnail. The front
+  page shows six cards, not eight; the Fantasy page renders the same markup.
+- **The Desk index is a feed, not a grid of slots.** `list()` in desk.html:
+  a day filter (chips from the kinds' days, plus Recaps), a week switcher
+  (the weeks on file, newest first), then the week's published pieces as
+  story cards in one column, newest first, each with a status chip
+  (Fact-checked / Held / Skipped). A slot whose hour has not come round is
+  not a story and gets no card; it is on **the week's clock** in the rail
+  (every kind in schedule order, a check when published, Held/Skipped when
+  so, Next on the first unfilled slot), with **the analysts** and their beats
+  under it. Same page head as the section; `#dkActions` and the eyebrow
+  change when a single piece is open. The piece view is unchanged.
+- The failed-feed state is `.is-vacant` (`#dkEmpty`, written by `vacant()`).
+
 Not implemented from the canvas on `/dfs`: the lineup as a light table (the
 dark `.is-board` is a deliberate design and the test pins its CSS), What-if
 and Fine-tune side by side (the fine-tune panel holds the full player pool
@@ -10033,6 +10057,6 @@ Not implemented from the canvas: the clock card as a four-line week timeline
 and sample numbers in the FAAB stat row (they are live values, blank until a
 league is connected).
 
-The full design pass these changes were implemented from, with the four
-section pages that were NOT implemented, is on the Claude Design canvas
+The full design pass these changes were implemented from, with the three
+section pages that were NOT implemented (Draft Tools, FAQ, My Leagues), is on the Claude Design canvas
 "Iron Tuna UI Pass".

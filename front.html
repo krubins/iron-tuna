@@ -146,16 +146,38 @@ html:not([data-season="in"]) #newsroom,html:not([data-season="in"]) #newsroomSub
 html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsroomBand{display:none}
 html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #today [data-in-only]{display:none}
 /* The newsroom: the desk's newest pieces, bylined. */
-.nr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:8px 0 26px}
-.nr-card{border:1px solid var(--line2,#d9e0e5);border-radius:10px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;color:inherit;text-decoration:none;background:var(--card,#fff)}
-.nr-card:hover{border-color:var(--teal,#0e7c63)}
-.nr-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal,#0e7c63)}
-.nr-kicker.nfl-wide{display:flex;align-items:center;gap:6px}
-.nr-nfl-logo{display:block;width:18px;height:18px;object-fit:contain;flex:0 0 auto}
-.nr-card h3{margin:0;font-size:17px;line-height:1.3}.nr-card p{margin:0;color:var(--sec,#5a6b78);font-size:13.5px;line-height:1.45}
-.nr-by{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sec,#5a6b78);margin-top:auto}
-.nr-av{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--teal,#0e7c63);color:#fff;font-weight:800;font-size:10px}
-.nr-riv{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line2,#d9e0e5);border-radius:3px;padding:1px 5px;margin-left:auto}
+/* ── the story card ─────────────────────────────────────────────────────────
+   Every piece the desk publishes, on every surface that lists them (the front
+   page's newsroom, the Fantasy page's, the desk index): one card, read at a
+   glance. The player faces the search script puts at the head of a headline
+   (.it-story-focus) sit on their own row above it like a thumbnail; the
+   headline is one size, the teaser is clamped to two lines, and the byline
+   row carries the analyst and the time. It replaces a grid of full deks in
+   four columns that read as a wall of text. */
+.nr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin: 8px 0 32px }
+.nr-card {
+  display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  background: var(--card,#fff); border: 1px solid var(--line); border-radius: 12px;
+  padding: 24px 22px; color: inherit; text-decoration: none;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.nr-card:hover { border-color: var(--line2,#d9e0e5); box-shadow: 0 8px 24px rgba(15, 23, 25, .06); text-decoration: none }
+.nr-card:hover h3 { color: var(--brand) }
+.nr-kicker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand) }
+.nr-nfl-logo { display: block; width: 18px; height: 18px; object-fit: contain; flex: 0 0 auto }
+.nr-card h3 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 700; color: var(--ink); letter-spacing: -.005em; overflow-wrap: anywhere }
+.nr-card h3 a { color: inherit }
+.nr-card h3 a:hover { text-decoration: none }
+.nr-card h3 .it-story-focus { display: flex; margin: 0 0 10px; vertical-align: baseline }
+.nr-card p { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.nr-by { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); margin-top: auto; padding-top: 4px; min-width: 0 }
+.nr-by a { color: inherit; font-weight: 700 }
+.nr-av { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 800; font-size: 10px }
+.nr-time { margin-left: auto; color: var(--ink-3); white-space: nowrap; flex: 0 0 auto }
+.nr-riv, .nr-st { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; border: 1px solid var(--line2,#d9e0e5); color: var(--ink-2) }
+.nr-st.ok { color: var(--brand); background: rgba(14, 124, 99, .1); border-color: rgba(14, 124, 99, .3) }
+.nr-st.held { color: var(--gold-ink); background: #fdf4e2; border-color: #f0e0b0 }
+.nr-card.pending h3 { color: var(--ink-2); font-weight: 600 }
 /* Vega vs. Brooks. Two columns, five picks each: the man's own case for five
    players he expects to beat the other man's ranking on, in his own voice.
    The ranks sit above each pitch as a chip so the band can be scanned, and
@@ -5083,6 +5105,16 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   var $ = function (id) { return document.getElementById(id); };
   var hide = function (ids) { ids.forEach(function (id) { var el = $(id); if (el) el.hidden = true; }); var a = document.querySelector('.ribbon a[href="#' + ids[0] + '"]'); if (a) a.hidden = true; };
   var av = function (name) { return (name || '').split(' ').map(function (w) { return w[0]; }).join(''); };
+  // "2h ago" inside a week, the date after; the way a news feed dates itself.
+  var ago = function (iso) {
+    if (!iso) return '';
+    var t = new Date(iso).getTime(); if (!isFinite(t)) return '';
+    var m = Math.round((Date.now() - t) / 60000);
+    if (m < 60) return Math.max(m, 1) + 'm ago';
+    if (m < 60 * 24) return Math.round(m / 60) + 'h ago';
+    if (m < 60 * 24 * 7) return Math.round(m / 1440) + 'd ago';
+    try { return new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }); } catch (e) { return ''; }
+  };
   function card(p, lens) {
     var by = p.byline || {}; var who = lens === 'dfs' ? by.dfsName : by.name;
     var kicker = lens === 'dfs' && p.dfsTitle ? p.dfsTitle : p.title;
@@ -5090,13 +5122,14 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return '<a class="nr-card" href="' + esc(p.url) + '"><span class="nr-kicker' + (nflWide ? ' nfl-wide' : '') + '">' +
       (nflWide ? '<img class="nr-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' : '') +
       esc(kicker) + ' &middot; Week ' + esc(p.week) + (p.perGame ? ' &middot; Final' : '') + (p.edition > 1 ? ' &middot; update ' + esc(p.edition) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
-      '<span class="nr-by"><span class="nr-av">' + esc(av(who)) + '</span>' + esc(who || 'Iron Tuna') + (p.rivalry && lens !== 'dfs' ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') + '</span></a>';
+      '<span class="nr-by"><span class="nr-av">' + esc(av(who)) + '</span>' + esc(who || 'Iron Tuna') + (p.rivalry && lens !== 'dfs' ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') +
+      (p.publishedAt ? '<span class="nr-time">' + esc(ago(p.publishedAt)) + '</span>' : '') + '</span></a>';
   }
   function band(lens, gridId, ids) {
     fetch('/api/newsroom?lens=' + lens + '&limit=8').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       var grid = $(gridId); if (!grid) return;
       if (!j || !j.ok || !j.pieces || !j.pieces.length) { hide(ids); return; }
-      grid.innerHTML = j.pieces.slice(0, 8).map(function (p) { return card(p, lens); }).join('');
+      grid.innerHTML = j.pieces.slice(0, 6).map(function (p) { return card(p, lens); }).join('');
     }).catch(function () { hide(ids); });
   }
   band('weekly', 'newsroomBand', ['newsroom', 'newsroomSub', 'newsroomBand']);
