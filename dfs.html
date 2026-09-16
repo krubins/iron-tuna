@@ -305,6 +305,7 @@ p{color:var(--sec);margin:0 0 16px}
 .df-edge-up{color:var(--teal);font-weight:700}.df-edge-down{color:var(--danger);font-weight:700}.df-edge-flat{color:var(--muted)}
 .df-player-actions{margin-top:14px}
 @media(max-width:560px){.df-player-sheet{width:100vw;padding:18px}.df-player-grid{grid-template-columns:1fr 1fr}}
+.df-est{display:inline-block;margin-left:4px;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#b7791f;vertical-align:2px}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/dfs","name":"DFS: The Market Read, Aimed at One Slate","description":"Daily fantasy is one slate, one set of game lines, and a salary cap. Iron Tuna reads the same betting market its season-long board is priced from, aimed at the games being played this week.","url":"https://irontuna.com/dfs","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/dfs"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"DFS: The Market Read, Aimed at One Slate"}]}]}</script>
@@ -755,7 +756,8 @@ p{color:var(--sec);margin:0 0 16px}
   function press(host, attr, val) { [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); }); }
   function show() { SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = k !== sec; }); press($('dfNav'), 'data-sec', sec); }
   function fppgLabel() { return site === 'dk' ? 'DK FPPG' : site === 'fd' ? 'FD FPPG' : 'FPPG'; }
-  function fppgText(p) { return p && p.operatorFppg != null && isFinite(p.operatorFppg) ? n1(p.operatorFppg) : '—'; }
+  // A computed average (no operator number in the file) is printed as an estimate, never as DraftKings' own figure.
+  function fppgText(p) { return p && p.operatorFppg != null && isFinite(p.operatorFppg) ? n1(p.operatorFppg) + (p.operatorFppgBasis === 'computed' ? '<i class="df-est" title="No operator average in the salary file; season box score at site scoring, before yardage bonuses.">est</i>' : '') : '—'; }
   function fppgEdge(p) {
     if (!p) return null;
     if (p.projectionVsFppg != null && isFinite(p.projectionVsFppg)) return Number(p.projectionVsFppg);

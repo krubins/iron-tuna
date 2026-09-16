@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { draftablesToCsv, githubOidcToken, mergeDraftablePayloads, selectWeeklySlates, targetWeekWindow } from './import-draftkings-salaries.mjs';
+import { draftableFppg, draftablesToCsv, githubOidcToken, mergeDraftablePayloads, selectWeeklySlates, targetWeekWindow } from './import-draftkings-salaries.mjs';
 
 let pass = 0, fail = 0;
 const ok = (name, condition, extra = '') => {
@@ -38,6 +38,15 @@ ok('players unique to narrower pools are added', merged.draftables.length === 3,
 ok('the broadest-pool salary wins an overlap', merged.draftables.find(x => x.playerId === 2001).salary === 7000);
 ok('salary conflicts are counted', merged.salaryConflicts === 1, String(merged.salaryConflicts));
 
+console.log('\nthe season average across pools');
+const noStat = { ...row(4, 5000), draftStatAttributes: [{ id: 90, value: '-' }] };
+const withStat = { ...row(4, 5100), draftStatAttributes: [{ id: 90, value: '12.3' }] };
+const backfilled = mergeDraftablePayloads([{ slate: selected[0], payload: { draftables: [noStat] } }, { slate: selected[1], payload: { draftables: [withStat] } }]);
+ok('a stat block the broadest pool lacks is taken from a narrower one, salary kept', backfilled.draftables[0].salary === 5000 && draftableFppg(backfilled.draftables[0]) === 12.3 && backfilled.fppgBackfilled === 1, JSON.stringify(backfilled));
+ok('a pool that has the average keeps its own', mergeDraftablePayloads([{ payload: { draftables: [withStat] } }, { payload: { draftables: [{ ...noStat, draftStatAttributes: [{ id: 90, value: '1.0' }] }] } }]).fppgBackfilled === 0);
+ok('a dash or blank average is none, never zero', draftableFppg({ draftStatAttributes: [{ id: 90, value: '-' }] }) === null && draftableFppg({ draftStatAttributes: [{ id: 90, value: '' }] }) === null && draftableFppg({}) === null);
+ok('a formatted value falls back to sortValue', draftableFppg({ draftStatAttributes: [{ id: 90, value: 'n/a', sortValue: '9.75' }] }) === 9.75);
+
 const positions = ['QB', 'RB', 'WR', 'TE', 'DST'];
 const draftables = [];
 for (let i = 0; i < 45; i++) {
@@ -55,6 +64,7 @@ const converted = draftablesToCsv({ draftables });
 ok('duplicate roster slots collapse to one player', converted.rows.length === 45, String(converted.rows.length));
 ok('the CSV matches the existing DraftKings adapter', converted.csv.startsWith('Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\n'));
 ok('DraftKings FPPG is carried into the CSV', converted.fppgRows === 45 && converted.csv.includes(',10.5\n'));
+ok('a pool without the average leaves every CSV cell empty rather than zero', (() => { const c = draftablesToCsv({ draftables: draftables.map(r => ({ ...r, draftStatAttributes: [{ id: 90, value: '-' }] })) }); return c.fppgRows === 0 && c.csv.split('\n').slice(1, 46).every(l => /,$/.test(l)); })());
 ok('skill positions retain FLEX eligibility', converted.csv.includes(',RB/FLEX,'));
 ok('defenses retain DST eligibility', converted.csv.includes(',DST,'));
 ok('a short response cannot overwrite good data', (() => { try { draftablesToCsv({ draftables: draftables.slice(0, 10) }); return false; } catch { return true; } })());

@@ -175,8 +175,29 @@ console.log('\nthe homepage DFS lane');
   ok('homepage includes Play of the Week and both DFS Academy articles', front.includes('id="dfsPotwTitle"') && front.includes('/dfs-getting-started') && front.includes('/dfs-strategy-guide'));
   ok('the retired Cash Single entry Large field chips are no longer visible markup', !front.includes('Cash <small>Floors</small>') && !front.includes('Single entry <small>Best roster</small>') && !front.includes('Large field <small>Longshots</small>'));
   ok('league-wide NFL story art always includes the NFL shield path', front.includes('var hasLeagueMark = !t;') && front.includes('function nflSvg(type)') && front.includes('NFL_LOGO_URL'));
+  ok('a name on the solved roster opens the matchup under it, on the same slide the result panel uses', front.includes('class="fp-name" type="button" aria-expanded="false"') && front.includes('<tr class="fp-more"') && front.includes('function frontPlayerDetail') && front.includes('function frontWhy') && front.includes('.fp-more.open .fp-more-in { grid-template-rows: 1fr }'));
+  ok('the matchup prints the game total, the implied totals, the defense rank and the market read', ['Game total', 'Opp. defense', 'TD odds', 'What the market says', 'r.opponentDefRank', 'frontGameFor(s, r || p)'].every(x => front.includes(x)));
+  ok('a computed DraftKings average is marked as an estimate, in the cell and in the foot', front.includes("p.operatorFppgBasis === 'computed' ? '<i class=\"fp-est\"") && front.includes('DraftKings posts no average yet for'));
   const frontScripts = [...front.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
   ok('every inline homepage script still parses', (() => { try { frontScripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
+}
+
+console.log('\nthe operator average when the file has none');
+{
+  const usage = { players: { [_oddsNorm('Jahmyr Gibbs') + '|RB']: { season: { games: 2, stats: { rushYd: 190, rushTD: 2, rec: 6, recYd: 50 } } } } };
+  const sal = SAL.map(s => s.name === 'Jahmyr Gibbs' || s.name === 'Bears ' ? { ...s, operatorFppg: null } : s);
+  const s2 = H.buildDfsSlate('dk', sal, WEEK, { usage });
+  const gibbs = s2.players.find(p => p.name === 'Jahmyr Gibbs');
+  // 190 rushing yards, 2 TDs, 6 catches, 50 receiving yards over two games at
+  // DK scoring: (19 + 12 + 6 + 5) / 2. The 100-yard bonus is per game and a
+  // season total cannot say which game earned it, so it is not applied.
+  ok('a missing average is computed from the season box score at site scoring, per game', near(gibbs.operatorFppg, 21, 0.06) && gibbs.operatorFppgBasis === 'computed' && gibbs.operatorFppgGames === 2, String(gibbs.operatorFppg));
+  ok('and the edge is measured against it', near(gibbs.projectionVsFppg, _oddsRound(gibbs.ironTunaPoints - 21), 0.11));
+  ok('a file average keeps its basis', s2.players.find(p => p.name === 'Josh Allen').operatorFppg === 10 && s2.players.find(p => p.name === 'Josh Allen').operatorFppgBasis === 'operator');
+  ok('a defense with no average stays blank rather than guessed', (() => { const b = s2.players.find(p => p.position === 'DST' && p.team === 'CHI'); return b.operatorFppg === null && b.operatorFppgBasis === null; })());
+  ok('no overlay: blank, with the basis null and no edge', (() => { const g = H.buildDfsSlate('dk', sal, WEEK, {}).players.find(p => p.name === 'Jahmyr Gibbs'); return g.operatorFppg === null && g.projectionVsFppg === null && g.operatorFppgBasis === null; })());
+  ok('a player with no games yet stays blank', (() => { const g = H.buildDfsSlate('dk', sal, WEEK, { usage: { players: { [_oddsNorm('Jahmyr Gibbs') + '|RB']: { season: { games: 0, stats: {} } } } } }).players.find(p => p.name === 'Jahmyr Gibbs'); return g.operatorFppg === null && g.operatorFppgGames === 0; })());
+  ok('every priced row carries the matchup a reader opens it for', s2.players.filter(p => p.onBoard).every(p => 'kickoff' in p && 'opponentDefRank' in p));
 }
 
 console.log('\nthe optimizer');
@@ -187,6 +208,7 @@ console.log('\nthe optimizer');
   ok('a lineup is built', r.ok && r.lineups.length === 1);
   const L = r.lineups[0];
   ok('lineup rows carry operator FPPG and the projection edge', L.players.every(p => typeof p.operatorFppg === 'number' && typeof p.projectionVsFppg === 'number'));
+  ok('and say where the average came from', L.players.every(p => p.operatorFppgBasis === 'operator') && DFS.build(players.map(p => ({ ...p, operatorFppgBasis: 'computed' })), { ...base, mode: 'ironTuna', lineups: 1 }).lineups[0].players.every(p => p.operatorFppgBasis === 'computed'));
   ok('it fills every slot', L.players.length === 9 && L.players.every(p => p.id));
   ok('it respects the cap', L.salary <= 50000);
   ok('each slot holds an eligible position', L.players.every(p => p.slot === p.position || (p.slot === 'FLEX' && /RB|WR|TE/.test(p.position))));

@@ -1207,6 +1207,35 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-board-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px 22px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 12.5px; color: #7f948f }
 .fp-board-foot a { color: var(--teal, #2dd4a3); font-weight: 700 }
 
+/* A player's name opens his matchup under the row; the rest of the board
+   slides down the same way the result panel does (grid 0fr to 1fr), so the
+   table never jumps. */
+.fp-board .fp-name { appearance: none; background: none; border: 0; padding: 0; margin: 0; font: inherit; font-weight: 700; color: #fff; cursor: pointer; text-align: left; display: inline-flex; align-items: center; gap: 7px }
+.fp-board .fp-name::after { content: ""; flex: 0 0 auto; width: 6px; height: 6px; border-right: 1.5px solid #7f948f; border-bottom: 1.5px solid #7f948f; transform: rotate(45deg) translateY(-2px); transition: transform .25s ease, border-color .15s }
+.fp-board .fp-name:hover, .fp-board .fp-name:focus-visible { color: var(--teal, #2dd4a3); outline: none }
+.fp-board .fp-name:focus-visible { text-decoration: underline; text-underline-offset: 3px }
+.fp-board .fp-name:hover::after, .fp-board tr.is-open .fp-name::after { border-color: var(--teal, #2dd4a3) }
+.fp-board tr.is-open .fp-name::after { transform: rotate(-135deg) translateY(1px) }
+.fp-board tr.is-open td { border-bottom-color: transparent }
+.fp-board tr.fp-more td { padding: 0; border-bottom: 0 }
+.fp-board tr.fp-more.open td { border-bottom: 1px solid rgba(255, 255, 255, .1) }
+.fp-more-in { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .45s cubic-bezier(.22, .8, .3, 1) }
+.fp-more.open .fp-more-in { grid-template-rows: 1fr }
+.fp-more-clip { overflow: hidden; min-height: 0 }
+.fp-more-body { padding: 2px 22px 18px 74px; background: rgba(255, 255, 255, .03); opacity: 0; transform: translateY(-6px); transition: opacity .35s ease .1s, transform .35s ease .1s }
+.fp-more.open .fp-more-body { opacity: 1; transform: none }
+.fp-more-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 12px 16px; margin: 12px 0 14px }
+.fp-more-grid b { display: block; font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: 24px; line-height: 1; letter-spacing: .02em; color: #fff }
+.fp-more-grid .on b { color: var(--teal, #2dd4a3) }
+.fp-more-grid span { display: block; margin-top: 3px; font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; color: #7f948f }
+.fp-more-body p { margin: 0 0 8px; max-width: 72ch; font-size: 13.5px; line-height: 1.55; color: #c9d6d3 }
+.fp-more-body p:last-child { margin-bottom: 0 }
+.fp-more-body p b { color: #fff }
+.fp-board .fp-est { display: inline-block; margin-left: 5px; font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #f2c66a; vertical-align: 2px }
+.fp-board-foot .fp-foot-est { flex-basis: 100%; font-size: 12px }
+@media (max-width: 640px) { .fp-more-body { padding-left: 22px } }
+@media (prefers-reduced-motion: reduce) { .fp-more-in, .fp-more-body, .fp-board .fp-name::after { transition: none } }
+
 /* ── the action deck ─────────────────────────────────────────────────────── */
 .fp-deck { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 14px; margin: 0 0 10px }
 .fp-act {
@@ -4662,6 +4691,22 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     // one-line pointer so its ribbon anchor still lands somewhere useful.
     var host = $('dfsResultBuild'), note = $('dfsResultNote'), pointer = $('dfsBuild'), chapNote = $('dfsShapeNote');
     if (!host) return;
+    if (!buildLineup.wired) {
+      // One delegated listener: the board is redrawn on every setup change,
+      // and a name click toggles the matchup row under it.
+      buildLineup.wired = true;
+      host.addEventListener('click', function (ev) {
+        var t = ev.target, b = null;
+        while (t && t !== host) { if (t.className && /\bfp-name\b/.test(t.className)) { b = t; break; } t = t.parentNode; }
+        if (!b) return;
+        var tr = b.parentNode; while (tr && tr.tagName !== 'TR') tr = tr.parentNode;
+        var more = tr && tr.nextElementSibling;
+        if (!more || !/\bfp-more\b/.test(more.className)) return;
+        var open = !/\bopen\b/.test(more.className);
+        more.classList.toggle('open', open); tr.classList.toggle('is-open', open);
+        b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
     frontSyncSubmit();
     if (chapNote) chapNote.textContent = '';
     if (site === 'dk' && !frontSetupReady()) {
@@ -4704,14 +4749,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var full = l.salary + Math.max(0, l.remaining);
     var pct = Math.min(100, Math.round((l.salary / full) * 100));
     var tile = function (v, lab, on) { return '<div' + (on ? ' class="on"' : '') + '><b>' + v + '</b><span>' + lab + '</span></div>'; };
-    var rows = l.players.map(function (p) {
+    var byKey = {}; (s.players || []).forEach(function (p) { if (p && p.key) byKey[p.key] = p; });
+    var medPerK = frontMedianPerK(pool);
+    var est = function (p) { return p.operatorFppgBasis === 'computed' ? '<i class="fp-est" title="DraftKings posts no average for him; this is his season box score at DraftKings scoring.">est</i>' : ''; };
+    var rows = l.players.map(function (p, i) {
+      var r = byKey[p.id] || null, g = frontGameFor(s, r || p);
+      var away = r && r.home === false;
       return '<tr><td><span class="sl' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
-        + '<td><b>' + e(p.name) + '</b>' + tagFor(p, qb) + '<small>' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? ' vs ' + p.opponent : '')) + '</small></td>'
+        + '<td><button class="fp-name" type="button" aria-expanded="false" aria-controls="fpMore' + i + '">' + e(p.name) + '</button>' + tagFor(p, qb)
+          + '<small>' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? (away ? ' @ ' : ' vs ') + p.opponent : '')) + '</small></td>'
         + '<td class="num">' + money(p.salary) + '</td>'
-        + '<td class="num">' + (p.operatorFppg == null ? '—' : n1(p.operatorFppg)) + '</td>'
+        + '<td class="num">' + (p.operatorFppg == null ? '—' : n1(p.operatorFppg) + est(p)) + '</td>'
         + '<td class="num">' + n1(p.proj) + '</td>'
-        + '<td class="num">' + (p.projectionVsFppg == null ? '—' : ((p.projectionVsFppg > 0 ? '+' : '') + n1(p.projectionVsFppg))) + '</td></tr>';
+        + '<td class="num">' + (p.projectionVsFppg == null ? '—' : ((p.projectionVsFppg > 0 ? '+' : '') + n1(p.projectionVsFppg))) + '</td></tr>'
+        + '<tr class="fp-more" id="fpMore' + i + '"><td colspan="6"><div class="fp-more-in"><div class="fp-more-clip">'
+          + frontPlayerDetail(p, r, g, qb, sh, medPerK) + '</div></div></td></tr>';
     }).join('');
+    var estimated = l.players.filter(function (p) { return p.operatorFppgBasis === 'computed'; }).map(function (p) { return p.name; });
+    var estNote = estimated.length ? '<span class="fp-foot-est"><i class="fp-est">est</i> DraftKings posts no average yet for ' + e(estimated.join(', ')) + '. The number shown is the season box score scored at DraftKings rules, before yardage bonuses, so the edge is against that.</span>' : '';
     var hasFppg = l.players.every(function (p) { return p.operatorFppg != null && isFinite(Number(p.operatorFppg)); });
     var dkFppg = hasFppg ? l.players.reduce(function (sum, p) { return sum + Number(p.operatorFppg); }, 0) : null;
     var tunaEdge = dkFppg == null ? null : l.projPoints - dkFppg;
@@ -4731,8 +4786,82 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         + '<td class="num"><b>' + (dkFppg == null ? '\u2014' : n1(dkFppg)) + '</b></td>'
         + '<td class="num"><b>' + n1(l.projPoints) + '</b></td>'
         + '<td class="num"><b>' + (tunaEdge == null ? '\u2014' : ((tunaEdge > 0 ? '+' : '') + n1(tunaEdge))) + '</b></td></tr></tfoot></table>'
-      + '<div class="fp-board-foot"><span>Solved against the cap on the same market numbers the board below prints. Nothing here enters a contest.</span>'
-      + '<a href="/dfs">Lock, exclude and build twenty &rarr;</a></div></div>';
+      + '<div class="fp-board-foot"><span>Solved against the cap on the same market numbers the board below prints. Click a name for the matchup. Nothing here enters a contest.</span>'
+      + '<a href="/dfs">Lock, exclude and build twenty &rarr;</a>' + estNote + '</div></div>';
+  }
+  // ── the matchup under a name ─────────────────────────────────────────────
+  // Every number here is one the slate already carries; the paragraph only
+  // points at them. Nothing is asserted that a number does not show.
+  function frontMedianPerK(pool) {
+    var v = (pool || []).filter(function (p) { return p.ironTunaPoints > 0 && p.salary > 0; })
+      .map(function (p) { return p.ironTunaPoints / (p.salary / 1000); }).sort(function (a, b) { return a - b; });
+    return v.length ? v[Math.floor(v.length / 2)] : null;
+  }
+  function frontGameFor(s, p) {
+    if (!p || !p.team || !p.opponent) return null;
+    var k = frontGameKey(p.team, p.opponent), hit = null;
+    (s && s.stacks || []).forEach(function (g) { if (!hit && g && g.home && g.away && frontGameKey(g.home.team, g.away.team) === k) hit = g; });
+    return hit;
+  }
+  function frontOrd(n) { var v = n % 100; return n + (v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'); }
+  function frontPlayerDetail(p, r, g, qb, sh, medPerK) {
+    var tile = function (v, lab, on) { return v == null || v === '' ? '' : '<div' + (on ? ' class="on"' : '') + '><b>' + v + '</b><span>' + lab + '</span></div>'; };
+    var opp = (r && r.opponent) || p.opponent || '';
+    var away = r && r.home === false;
+    var kick = frontKickoff({ kickoff: (r && r.kickoff) || (g && g.kickoff) || null });
+    var isHome = g && g.home && g.home.team === p.team;
+    var oppImplied = g ? (isHome ? g.impliedAway : g.impliedHome) : null;
+    var isDst = p.position === 'DST';
+    var rank = r && r.opponentDefRank ? r.opponentDefRank : null;
+    var perK = r && r.ironTunaPerK != null ? r.ironTunaPerK : (p.salary ? p.proj / (p.salary / 1000) : null);
+    var tiles = tile(opp ? e((away ? '@ ' : 'vs ') + opp) : null, kick ? e(frontKickText(kick)) : 'Matchup')
+      + tile(g && g.total != null ? n1(g.total) : null, 'Game total')
+      + tile(r && r.teamTotal != null ? n1(r.teamTotal) : null, isDst ? 'Own implied' : (r && r.teamTotalPosted ? 'Team implied' : 'Team expected'))
+      + tile(isDst && oppImplied != null ? n1(oppImplied) : null, 'Opp. implied')
+      + tile(rank ? frontOrd(rank) + ' of 32' : null, 'Opp. defense')
+      + tile(n1(p.proj), 'Iron Tuna', true)
+      + tile(r ? n1(r.vegasPoints) : null, 'Vegas')
+      + tile(r ? n1(r.consensusPoints) : null, 'Consensus')
+      + tile(!isDst && r && r.tdProbability != null ? n1(r.tdProbability) + '%' : null, 'TD odds')
+      + tile(n1(p.floor) + ' / ' + n1(p.ceiling), 'Floor / ceiling')
+      + tile(p.ownership != null ? n1(p.ownership) + '%' : null, 'Modeled own.')
+      + tile(perK != null ? (Math.round(perK * 100) / 100).toFixed(2) : null, 'Pts per $1K');
+    var why = frontWhy(p, r, g, qb, sh, medPerK, perK, oppImplied, rank);
+    var mkt = '';
+    if (r && r.marketDelta) {
+      var d = r.marketDelta;
+      mkt = e(String(d.classification || '').toLowerCase().replace(/^\w/, function (c) { return c.toUpperCase(); })) + (d.points ? ' (' + (d.points > 0 ? '+' : '') + n1(d.points) + ' on consensus)' : '') + '. ' + e(r.why || '');
+    }
+    return '<div class="fp-more-body"><div class="fp-more-grid">' + tiles + '</div>'
+      + '<p><b>Why he is in.</b> ' + why + '</p>'
+      + (mkt ? '<p><b>What the market says.</b> ' + mkt + '</p>' : '') + '</div>';
+  }
+  function frontWhy(p, r, g, qb, sh, medPerK, perK, oppImplied, rank) {
+    var out = [], opp = (r && r.opponent) || p.opponent || '';
+    var ratio = perK != null && medPerK ? perK / medPerK : null;
+    var priced = ratio == null ? '' : ratio >= 1.15 ? ', one of the better prices on the slate' : ratio >= 0.95 ? ', an ordinary price for what he returns' : ', a price paid for the projection rather than the value';
+    out.push('At ' + money(p.salary) + ' ' + (p.position === 'DST' ? 'the unit projects' : 'he projects') + ' ' + n1(p.proj) + ' points' + (perK != null ? ', ' + (Math.round(perK * 100) / 100).toFixed(2) + ' per $1K of salary' + priced : '') + '.');
+    if (p.operatorFppg != null && p.projectionVsFppg != null) {
+      var d = p.projectionVsFppg, avg = 'DraftKings average of ' + n1(p.operatorFppg) + (p.operatorFppgBasis === 'computed' ? ' (estimated from the box score)' : '');
+      out.push(Math.abs(d) < 0.5 ? 'That is in line with the ' + avg + '.'
+        : d > 0 ? 'That is ' + n1(d) + ' points above the ' + avg + ', so the projection is buying this matchup, not the season line.'
+        : 'That is ' + n1(-d) + ' points below the ' + avg + '; the roster keeps him for what the price buys, not for a matchup bump.');
+    }
+    var env = [];
+    if (g && g.total != null) env.push('the game total is ' + n1(g.total));
+    if (p.position === 'DST') {
+      if (oppImplied != null) env.push('the ' + opp + ' offense is implied for ' + n1(oppImplied) + ' points, which is the number a defense\u2019s score is built against');
+    } else if (r && r.teamTotal != null) env.push('his club is ' + (r.teamTotalPosted ? 'implied for ' : 'expected to score ') + n1(r.teamTotal));
+    if (rank && p.position !== 'DST') env.push('the ' + opp + ' defense is the ' + frontOrd(rank) + ' stingiest of 32' + (rank >= 22 ? ', a soft matchup' : rank <= 11 ? ', a hard one' : ''));
+    if (env.length) { var t = env.join(', ') + '.'; out.push(t.charAt(0).toUpperCase() + t.slice(1)); }
+    if (p.position !== 'DST' && r && r.tdProbability != null) out.push('The touchdown probability is ' + n1(r.tdProbability) + '%' + (r.tdBasis === 'anytime-td-market' ? ', off the anytime-TD market.' : ', derived from the projected line.'));
+    if (qb && p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE')) out.push('He is the stack partner for ' + e(qb.name) + ': a big game from one is a big game from both.');
+    else if (qb && p.team === qb.opponent && p.position !== 'DST') out.push('He is the bring-back against the ' + e(qb.name) + ' stack, a bet the game stays open on both sides.');
+    if (sh.mode === 'floor') out.push('A cash roster is built on floors, and his ' + n1(p.floor) + '-point floor is ' + (p.proj ? Math.round(p.floor / p.proj * 100) : '\u2014') + '% of his projection.');
+    else if (sh.mode === 'leverage') out.push('The large-field build wants ceiling the field is not on: ' + n1(p.ceiling) + ' points at ' + (p.ownership != null ? n1(p.ownership) + '% modeled ownership' : 'an ownership the model cannot price') + '.');
+    else out.push('The single-entry build takes the best projection the cap buys, and this slot is his: ' + n1(p.ceiling) + ' ceiling, ' + n1(p.floor) + ' floor.');
+    if (r && r.injury) out.push('Injury status: ' + e(r.injury) + '.');
+    return out.join(' ');
   }
   function render(s) {
     if (!s || !s.ok) {
