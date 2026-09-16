@@ -13284,19 +13284,50 @@ function cbsError(code) {
   return new LeagueProviderError(code, messages[code] || messages.invalid_response);
 }
 const CBS_RESOURCES = new Set(['details', 'rules', 'teams', 'rosters', 'schedules', 'standings/overall', 'transactions/waiver-order', 'transaction-list/log']);
+// Two places CBS has served its fantasy API (version 3.0): the documented
+// api.cbssports.com/fantasy base, and /api/league on the league's own host.
+// Each read tries the host that last worked first, then the other, and a
+// failure names what both answered.
+let cbsPreferredHost = null;
+function cbsHosts(id, resource) {
+  const hosts = [
+    { name: 'api.cbssports.com', url: new URL('https://api.cbssports.com/fantasy/league/' + resource) },
+    { name: 'league host', url: new URL('https://' + id + '.football.cbssports.com/api/league/' + resource) }
+  ];
+  return cbsPreferredHost === 'league host' ? hosts.reverse() : hosts;
+}
 async function cbsGet(env, id, token, resource, params = {}) {
   if (!flagOn(env, 'CBS_SYNC') || !leagueTokenConfigured(env)) throw new LeagueProviderError('provider_disabled', 'CBS sync needs FLAG_CBS_SYNC and league-token encryption.');
   id = cbsLeagueId(id);
   if (!CBS_RESOURCES.has(resource)) throw cbsError('invalid_response');
   if (!token) throw cbsError('expired_authorization');
-  const url = new URL('https://' + id + '.football.cbssports.com/api/league/' + resource);
-  // CBS's fantasy API (version 3.0) reads the token from the access_token
-  // query parameter; the Authorization header is sent as well. The URL is
-  // never logged, stored or echoed: every diagnostic below is built from the
-  // resource name, the HTTP status and, for a redirect, the target's host and
-  // path only (a sign-in redirect carries the original URL in its query).
+  let first = null;
+  for (const host of cbsHosts(id, resource)) {
+    try {
+      const body = await cbsFetch(host, id, token, resource, params);
+      cbsPreferredHost = host.name;
+      return body;
+    } catch (e) {
+      if (!(e instanceof LeagueProviderError)) throw e;
+      if (e.code === 'rate_limited') { e.detail = 'CBS ' + resource + ': ' + e.detail; throw e; }
+      if (!first) { first = e; continue; }
+      // Report the refused token when either host said so; otherwise the last answer.
+      const chosen = first.code === 'expired_authorization' ? first : e;
+      chosen.detail = 'CBS ' + resource + ': ' + first.detail + '; ' + e.detail;
+      throw chosen;
+    }
+  }
+  throw first;
+}
+async function cbsFetch(host, id, token, resource, params) {
+  const url = new URL(host.url);
+  // CBS reads the token from the access_token query parameter; the
+  // Authorization header is sent as well. The URL is never logged, stored or
+  // echoed: every diagnostic below is built from the host name, the HTTP
+  // status and, for a redirect, the target's host and path only (a sign-in
+  // redirect carries the original URL in its query).
   url.search = new URLSearchParams({ version: '3.0', response_format: 'json', sport: 'football', league_id: id, ...params, access_token: token }).toString();
-  const fail = (code, note) => { const e = cbsError(code); e.detail = 'CBS ' + resource + ': ' + note; return e; };
+  const fail = (code, note) => { const e = cbsError(code); e.detail = host.name + ' ' + note; return e; };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
