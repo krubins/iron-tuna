@@ -10046,6 +10046,22 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
   change when a single piece is open. The piece view is unchanged.
 - The failed-feed state is `.is-vacant` (`#dkEmpty`, written by `vacant()`).
 
+**Draft Tools (`/fantasy-football-auction-values`), same pass.**
+
+- **Same page head** (`Draft Tools · Auction values`, 39px sentence-case
+  `h1`, lede, `.is-actions`: Build my free auction sheet →
+  `/auctiondraft?screen=cheat`, the same URL as the header's Free cheat
+  sheet, and See Draft Day Mode → `/auctiondraft?screen=board`). The buttons
+  used to point at `/`.
+- **The three-number table is a sticky plate beside the argument**
+  (`.av-split`, `.av-side`), with the pricing CTA card under it, so the proof
+  and the action stay on screen while the copy scrolls. It was a table in
+  the prose a screen down and a centered band two screens below. The page
+  now uses `.wrap.wide`.
+- **From values to draft night** is a Before / During / On the clock trio of
+  `.is-card`s under a numbered `.is-sec` head; the bullets carry check icons;
+  the three FAQ cards are `<details class="av-q">`, the first open.
+
 Not implemented from the canvas on `/dfs`: the lineup as a light table (the
 dark `.is-board` is a deliberate design and the test pins its CSS), What-if
 and Fine-tune side by side (the fine-tune panel holds the full player pool
@@ -10057,6 +10073,6 @@ Not implemented from the canvas: the clock card as a four-line week timeline
 and sample numbers in the FAAB stat row (they are live values, blank until a
 league is connected).
 
-The full design pass these changes were implemented from, with the three
-section pages that were NOT implemented (Draft Tools, FAQ, My Leagues), is on the Claude Design canvas
+The full design pass these changes were implemented from, with the two
+section pages that were NOT implemented (FAQ, My Leagues), is on the Claude Design canvas
 "Iron Tuna UI Pass".
