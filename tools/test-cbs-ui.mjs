@@ -4,7 +4,10 @@ import assert from 'node:assert/strict';
 const html = fs.readFileSync(new URL('../my-league.html', import.meta.url), 'utf8');
 const front = fs.readFileSync(new URL('../front.html', import.meta.url), 'utf8');
 const worker = fs.readFileSync(new URL('../_worker.js', import.meta.url), 'utf8');
-assert.match(front, /id="navSync" href="\/my-league">Sync My League<\/a>/);
+// The masthead button is the manual setup, not sync: automatic sync is off or
+// unproven for every provider (docs/league-sync.md §3.1), so the button says
+// what it actually does and lands on the browser-only settings form.
+assert.match(front, /id="navSync" href="\/my-league#settings">Customize My League<\/a>/);
 assert.doesNotMatch(front.match(/<nav class="mast-nav">[\s\S]*?<\/nav>/)[0], /Save My League|Auction Manager/);
 assert.match(html, /<b>League sync is free\.<\/b>/);
 assert.match(html, /returnTo: '\/my-league'/);

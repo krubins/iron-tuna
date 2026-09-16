@@ -231,7 +231,7 @@ console.log('\nthe whole page follows the edition');
   const { page, ctx } = await open({});
   const a = await read(page);
   ok('auction opens on the auction room', a.app.join() === '/auctiondraft', a.app.join());
-  ok('and keeps free league sync in the masthead', a.sync === 'Sync My League', a.sync);
+  ok('and keeps the league button in the masthead', a.sync === 'Customize My League', a.sync);
 
   // The switch offers exactly two editions now, and the site sells one of them.
   ok('the switch offers auction and snake, and nothing else',
@@ -243,7 +243,7 @@ console.log('\nthe whole page follows the edition');
   const b = await read(page);
   ok('snake re-points every story', b.drops.join() === '/snake', b.drops.join());
   ok('every app link lands in the draft room', b.app.join() === '/snakedraft', b.app.join());
-  ok('league sync stays in the masthead', b.sync === 'Sync My League', b.sync);
+  ok('the league button stays in the masthead', b.sync === 'Customize My League', b.sync);
   // The rewrite covers exactly two families of URL. Anything else that starts
   // "/auction-" has no twin in the other edition, so it must survive untouched —
   // and no link may be invented: every /snake* href has to be a page that
@@ -257,7 +257,7 @@ console.log('\nthe whole page follows the edition');
   const back = await read(page);
   ok('switching back restores the page as authored',
      back.drops.join() === '/auction' && back.app.join() === '/auctiondraft' &&
-     back.sync === 'Sync My League');
+     back.sync === 'Customize My League');
   ok('nothing on the page threw', errors.length === 0, errors[0]);
   await ctx.close();
 }

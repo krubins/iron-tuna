@@ -398,8 +398,13 @@ console.log('\nsitemap.xml');
 console.log('\nevery page claims the URL the chrome links it as');
 {
   const chrome = read('tools/build-chrome.mjs');
+  // The fragment is not part of the path, and the regex stops at it: the chrome
+  // links /faq#faq-start and /my-league#settings, which are the /faq and
+  // /my-league PAGES and are compared as such. Ten destinations, not the thirty
+  // this floor was written for — the nav is five items and the footer nine since
+  // the two-lane pass, deliberately, so the floor moved with it.
   const hrefs = [...new Set([...chrome.matchAll(/href: *.(\/[A-Za-z0-9\/_-]*)./g)].map((m) => m[1]))];
-  ok('the chrome link set was read', hrefs.length > 20, String(hrefs.length));
+  ok('the chrome link set was read', hrefs.length >= 10, String(hrefs.length));
 
   const wrong = [];
   for (const f of pages) {

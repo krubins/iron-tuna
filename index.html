@@ -2642,11 +2642,14 @@ a.itl-card:hover { border-color: var(--positive); }
 
 /* footer */
 .itl-foot { border-top: 1px solid var(--border-subtle); margin-top: auto; }
-.itl-foot .itl-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 24px clamp(20px, 3vw, 44px); padding-top: 34px; padding-bottom: 44px; font-size: 13px; line-height: 22px; color: var(--text-muted); }
-.itl-foot h2 { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--text-primary); margin: 0 0 8px; }
-.itl-foot a { display: block; color: var(--text-muted); }
+/* ONE ROW of nine destinations, not four columns of tools and columns. The
+   grid is gone with them; the wrap is a stack of two blocks now. */
+.itl-foot .itl-wrap { padding-top: 34px; padding-bottom: 44px; font-size: 13px; line-height: 22px; color: var(--text-muted); }
+.itl-foot-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 10px clamp(18px, 3vw, 34px); padding-bottom: 20px; }
+.itl-foot-admin { font-size: 12px; opacity: 0.65; }
+.itl-foot a { color: var(--text-muted); }
 .itl-foot a:hover { color: var(--text-primary); }
-.itl-legal { grid-column: 1 / -1; border-top: 1px solid var(--border-subtle); padding-top: 16px; }
+.itl-legal { border-top: 1px solid var(--border-subtle); padding-top: 16px; }
 .itl-legal p { margin: 0 0 8px; }
 .itl-legal p:last-child { margin-bottom: 0; }
 .itl-legal b { color: var(--text-secondary); }
@@ -23437,15 +23440,23 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
     ['/guides', 'Strategy library', 'Guides']
   ];
 
+  // ONE ROW, the same nine destinations as the shared footer on every other page
+  // (tools/build-chrome.mjs FOOT_LINKS): the two product lanes, the articles
+  // that support them, and the pages that belong to no lane. The four columns
+  // this replaced carried the draft rooms and the individual article columns —
+  // a second navigation system, under different names, inside the app shell.
+  // Every one of those pages still serves at its own URL.
+  //
+  // The Admin link is the only way into /admin from the site; it is kept as a
+  // plain trailing link rather than a destination, because the page itself is
+  // what gates access (export key), and rel=nofollow keeps a noindex page out
+  // of the crawl.
   const FOOT = [
-    ['In-Season', [['/in-season', 'Overview'], ['/fantasy', 'Fantasy'], ['/dfs', 'DFS'], ['/my-league', 'My League']]],
-    ['Draft Tools', [['/fantasy-football-auction-values', 'Auction values'], ['/auctiondraft?screen=board', 'Draft manager'], ['/snakedraft', 'Snake board'], ['/superflex-auction-values', 'Superflex & 2QB'], ['/guides', 'Strategy library']]],
-    ['Read', [['/in-season/desk', 'The Desk'], ['/the-pick', 'The Pick'], ['/auction-insights', 'Insights'], ['/insights-vault', 'Insight Vault']]],
-    // The Admin link is the only way into /admin from the site; it is a plain
-    // footer link because the page itself is what gates access (export key),
-    // and rel=nofollow keeps a noindex page out of the crawl.
-    ['Company', [['/faq', 'FAQ'], ['/support', 'Support'], ['/creators', 'Creators & affiliates'], ['/privacy', 'Privacy'], ['/terms', 'Terms'], ['/data', 'Data & sources'], ['/admin', 'Admin', 'nofollow']]]
+    ['/fantasy', 'Fantasy'], ['/dfs', 'DFS'], ['/in-season/desk', 'Articles'],
+    ['/faq#faq-start', 'How It Works'], ['/data', 'Data Sources'], ['/faq', 'FAQ'],
+    ['/privacy', 'Privacy'], ['/terms', 'Terms'], ['/support', 'Support']
   ];
+  const FOOT_ADMIN = ['/admin', 'Admin', 'nofollow'];
 
   // ── 03 · where the experts and the market disagree most ──────────────────
   const gapsBody = edge.st === 'ok' && edge.rows.length
@@ -23489,17 +23500,27 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
         h('a', { className: 'itl-brand', href: '/', 'aria-label': 'Iron Tuna home' },
           h('img', { src: '/tuna-mark.png', alt: '', width: 76, height: 40 }),
           h('span', null, 'Iron Tuna')),
+        // The same five destinations, in the same order, as the shared chrome on
+        // every other page (tools/build-chrome.mjs NAV). 'Draft' and 'The Desk'
+        // came off: the draft rooms are an offseason pitch and the desk is the
+        // articles hub, which is what the label says now. Search is the ribbon
+        // lookup rather than a link, because the app already has the component.
         h('nav', { className: 'itl-nav', 'aria-label': 'Main' },
           h('a', { href: '/fantasy' }, 'Fantasy'),
           h('a', { href: '/dfs' }, 'DFS'),
-          h('a', { href: '/fantasy-football-auction-values' }, 'Draft'),
-          h('a', { href: '/in-season/desk' }, 'The Desk'),
+          h('a', { href: '/in-season/desk' }, 'Articles'),
+          h('a', { href: '/faq#faq-start' }, 'How It Works'),
           // Spelled out rather than via the h() alias above: tools/test-player-card.mjs
           // counts this exact call on both dark ribbons, which is how it caught the
           // lookup falling out of the hub when this component was rewritten.
           React.createElement(RibbonPlayerSearch, { from: 'hub_header' }),
+          // Sign In stays secondary: a plain button in the nav run, never the
+          // filled control beside it.
           h('button', { type: 'button', onClick: onSignin, title: 'Sign in to restore your purchase on this device' }, 'Sign in')),
-        h('a', { className: 'itl-cta', href: '/in-season#league' }, 'Save my league'))),
+        // Not "Save my league". Automatic sync is off or unproven for every
+        // provider (docs/league-sync.md §3.1); the browser-only settings form in
+        // section 02 of /my-league is what works for every reader today.
+        h('a', { className: 'itl-cta', href: '/my-league#settings' }, 'Customize My League'))),
 
       h('div', { className: 'itl-main' }, h('div', { className: 'itl-wrap' },
 
@@ -23587,9 +23608,9 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
 
       // ── footer ────────────────────────────────────────────────────────────
       h('footer', { className: 'itl-foot' }, h('div', { className: 'itl-wrap' },
-        FOOT.map(([head, links]) => h('div', { key: head },
-          h('h2', null, head),
-          links.map(([href, label, rel]) => h('a', { key: href, href, rel }, label)))),
+        h('nav', { className: 'itl-foot-nav', 'aria-label': 'Footer' },
+          FOOT.map(([href, label]) => h('a', { key: href, href }, label)),
+          h('a', { className: 'itl-foot-admin', key: FOOT_ADMIN[0], href: FOOT_ADMIN[0], rel: FOOT_ADMIN[2] }, FOOT_ADMIN[1])),
         h('div', { className: 'itl-legal' },
           h('p', null, 'Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.'),
           // Kept in step with LEGAL in tools/build-chrome.mjs by hand: this

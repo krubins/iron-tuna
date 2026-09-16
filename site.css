@@ -206,6 +206,9 @@ header.site > .wrap > a.cta {
 header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: none }
 
 /* ── nav dropdown ───────────────────────────────────────────────────────── */
+/* The header dropdowns are inert: the nav is five flat links and no page emits
+   .nav-dd markup any more. Same reasoning as .foot-cols above — the rules stay
+   until the navigation has settled, so a revert is one generator run. */
 .nav-dd { position: relative; display: inline-block }
 .nav-dd > a::after { content: "▾"; margin-left: 5px; font-size: .85em; opacity: .7 }
 .nav-dd .nav-dd-menu {
@@ -311,6 +314,19 @@ footer.site {
 footer.site .wrap { max-width: 1080px }
 footer.site a { color: var(--muted) }
 footer.site a:hover { color: var(--text) }
+/* The footer sitemap is ONE ROW now, not six columns. Nine destinations: the
+   two product lanes, the articles that support them, and the pages that belong
+   to no lane — how it works, the data inventory, the FAQ, the two legal
+   documents and support.
+   .foot-cols and .foot-col below are inert: no page emits that markup any more.
+   They are left in place rather than removed in the same pass that changed the
+   navigation, so a revert is one generator run and not a stylesheet edit too. */
+.foot-nav { margin-bottom: var(--space-5) }
+.foot-nav ul {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5);
+}
+.foot-nav a { font-size: var(--fs-xs) }
 .foot-cols {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-5); margin-bottom: var(--space-5);
