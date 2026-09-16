@@ -70,6 +70,9 @@ p{color:var(--sec);margin:0 0 16px}
 .ml-badge.up{color:var(--teal)}
 .ml-badge.gold{color:var(--goldink)}
 .ml-badge.off{color:var(--danger)}
+.ml-go{font-size:var(--fs-xs);font-weight:700;color:var(--teal);text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(14,124,99,.35)}
+.ml-go::after{content:" \2192"}
+.ml-tile:hover .ml-go,.ml-tile.on .ml-go{text-decoration-color:var(--teal)}
 .ml-flow{margin:var(--space-4) 0 0;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--bg);padding:var(--space-4) var(--space-5)}
 .ml-flow-h{display:flex;align-items:baseline;gap:var(--space-3);margin:0 0 var(--space-3);padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
 .ml-flow-h span{font-family:var(--font-mono);font-size:var(--fs-2xs);font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
@@ -138,13 +141,13 @@ p{color:var(--sec);margin:0 0 16px}
 <p class="ml-sub">Connect the league you actually play in and Iron Tuna imports its exact scoring, every roster, the free-agent pool, your opponent and the standings. Rankings, the Pickup Advisor, Best Lineup, the Trade Finder and the stories then read <em>your</em> league instead of a default one. <b>Free.</b> Sign in with an email link so synced leagues follow you across devices; no purchase is required.</p>
 <div id="lsStatus" class="is-note" style="margin:0 0 12px"></div>
 <div id="lsList"></div>
-<p class="ml-tiles-h" id="lsTilesH">Choose a platform</p>
+<p class="ml-tiles-h" id="lsTilesH">Choose a platform to connect</p>
 <div class="ml-tiles" id="lsTiles" role="group" aria-labelledby="lsTilesH">
-  <button type="button" class="ml-tile live" data-prov="sleeper"><b>Sleeper</b><span>League ID or username</span><em class="ml-badge up">Syncs</em></button>
-  <button type="button" class="ml-tile live" data-prov="yahoo"><b>Yahoo</b><span>Authorize on Yahoo</span><em class="ml-badge up">Syncs</em></button>
-  <button type="button" class="ml-tile" data-prov="cbs"><b>CBS</b><span>Sportsline, via the extension</span><em class="ml-badge gold">Extension</em></button>
-  <button type="button" class="ml-tile" data-prov="espn"><b>ESPN</b><span>Enter by hand</span><em class="ml-badge">By hand</em></button>
-  <button type="button" class="ml-tile" data-prov="manual"><b>Other</b><span>Fantrax, MFL, anything</span><em class="ml-badge">By hand</em></button>
+  <button type="button" class="ml-tile live" data-prov="sleeper"><b>Sleeper</b><span>League ID or username</span><em class="ml-badge up">Syncs</em><i class="ml-go">Connect</i></button>
+  <button type="button" class="ml-tile live" data-prov="yahoo"><b>Yahoo</b><span>Authorize on Yahoo</span><em class="ml-badge up">Syncs</em><i class="ml-go">Connect</i></button>
+  <button type="button" class="ml-tile" data-prov="cbs"><b>CBS</b><span>Sportsline, via the extension</span><em class="ml-badge gold">Extension</em><i class="ml-go">Connect</i></button>
+  <button type="button" class="ml-tile" data-prov="espn"><b>ESPN</b><span>Enter by hand</span><em class="ml-badge">By hand</em><i class="ml-go">Set up</i></button>
+  <button type="button" class="ml-tile" data-prov="manual"><b>Other</b><span>Fantrax, MFL, anything</span><em class="ml-badge">By hand</em><i class="ml-go">Set up</i></button>
 </div>
 <div id="lsConnect" hidden></div>
 <div id="lsManual" hidden></div>
@@ -326,8 +329,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!q) note('');
     paintTiles();
     if (!st.leagues.length) {
-      $('lsList').innerHTML = '<div class="is-vacant"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 016 0v2"></path></svg></span><div class="is-vacant-msg"><b>No league connected yet.</b><span>Choose a platform below. Once it is synced, Iron Tuna knows your league and every board re-scores itself.</span></div></div>';
-      $('lsTilesH').textContent = 'Choose a platform';
+      $('lsList').innerHTML = '<div class="is-vacant"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 016 0v2"></path></svg></span><div class="is-vacant-msg"><b>No league connected yet.</b><span>Click a platform below to open its connection form. Once the league is synced, Iron Tuna knows it and every board re-scores itself.</span></div></div>';
+      $('lsTilesH').textContent = 'Choose a platform to connect';
     } else {
       $('lsList').innerHTML = st.leagues.map(card).join('') + '<p class="is-note" style="margin:8px 0 0">' + st.leagues.length + ' league' + (st.leagues.length === 1 ? '' : 's') + ' connected. The default league is what every page uses unless you switch it in the League selector.</p>';
       $('lsTilesH').textContent = 'Add another league';
@@ -349,6 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
       t.classList.toggle('live', on && k !== 'cbs');
       badge.className = 'ml-badge ' + (on ? (k === 'cbs' ? 'gold' : 'up') : k === 'espn' ? '' : 'off');
       badge.textContent = on ? (k === 'cbs' ? 'Extension' : 'Syncs') : k === 'espn' ? 'By hand' : 'Unavailable';
+      var go = t.querySelector('.ml-go'); if (go) go.textContent = on ? 'Connect' : k === 'espn' ? 'Set up' : 'Why not';
     });
   }
   function markTile(k) {
