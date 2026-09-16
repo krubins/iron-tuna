@@ -198,6 +198,12 @@ console.log('\nthe operator average when the file has none');
   ok('no overlay: blank, with the basis null and no edge', (() => { const g = H.buildDfsSlate('dk', sal, WEEK, {}).players.find(p => p.name === 'Jahmyr Gibbs'); return g.operatorFppg === null && g.projectionVsFppg === null && g.operatorFppgBasis === null; })());
   ok('a player with no games yet stays blank', (() => { const g = H.buildDfsSlate('dk', sal, WEEK, { usage: { players: { [_oddsNorm('Jahmyr Gibbs') + '|RB']: { season: { games: 0, stats: {} } } } } }).players.find(p => p.name === 'Jahmyr Gibbs'); return g.operatorFppg === null && g.operatorFppgGames === 0; })());
   ok('every priced row carries the matchup a reader opens it for', s2.players.filter(p => p.onBoard).every(p => 'kickoff' in p && 'opponentDefRank' in p));
+  const love = { name: 'Jeremiyah Love', position: 'RB', team: 'ARI', opponent: 'SEA', salary: 5900, operatorFppg: null };
+  const pinned = H.buildDfsSlate('dk', [...sal, love], WEEK, {}).players.find(p => p.name === 'Jeremiyah Love');
+  ok('a figure the desk pinned by hand fills a blank the overlay cannot, as an estimate', pinned.operatorFppg === 13 && pinned.operatorFppgBasis === 'computed');
+  const loveUsage = { players: { [_oddsNorm('Jeremiyah Love') + '|RB']: { season: { games: 1, stats: { rushYd: 80, rushTD: 1, rec: 2, recYd: 10 } } } } };
+  ok('and the overlay wins over the pin when it has his line', H.buildDfsSlate('dk', [...sal, love], WEEK, { usage: loveUsage }).players.find(p => p.name === 'Jeremiyah Love').operatorFppg === 17);
+  ok('the pin is per site', H.buildDfsSlate('fd', [...sal, love], WEEK, {}).players.find(p => p.name === 'Jeremiyah Love').operatorFppg === null);
 }
 
 console.log('\nthe optimizer');
