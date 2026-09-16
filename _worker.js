@@ -1374,6 +1374,16 @@ const TMS_PROPLINE_SOURCE = 'https://prop-line.com/';
 const TMS_PROPLINE_API = 'https://api.prop-line.com/v1/';
 const TMS_PROPLINE_BOOKS = 'draftkings,fanduel,pinnacle,bovada,betmgm,betrivers,fanatics,hardrock';
 const TMS_PROPLINE_MARKETS = 'player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td';
+// A quote is stale when the collector has not SEEN it lately, not when the book
+// last touched it: a line that has held for six hours is still the book's
+// line. Two poll intervals, so one missed hourly poll does not empty the board.
+const TMS_STALE_MS = 2 * 3600000;
+// The public read takes each event's first and last snapshot inside the window
+// (the baseline and the current quote), never every hourly snapshot between.
+const TMS_READ_CAP = 400;
+// The computed signal is rebuilt at most this often; a store invalidates it.
+const TMS_MEMO_MS = 300000;
+let _TMS_MEMO = { at: 0, items: null, truncated: false };
 const tmsInt = (v, fallback, min, max) => Number.isFinite(Number(v)) && v !== '' && v != null ? Math.max(min, Math.min(max, Math.floor(Number(v)))) : fallback;
 const tmsList = v => String(v || '').split(',').map(s => s.trim()).filter(Boolean);
 const tmsKey = r => JSON.stringify([r.provider, r.event, r.book, r.market, r.player, r.side]);
@@ -1600,8 +1610,13 @@ async function tmsStore(env, rows, now) {
   }
   const statements = [...groups.values()].map(group => env.LEADS_DB.prepare('INSERT OR IGNORE INTO tuna_market_snapshots(provider,event,observed,payload) VALUES(?,?,?,?)').bind(group[0].provider, group[0].event, now, JSON.stringify(group)));
   for (let i = 0; i < statements.length; i += 50) await env.LEADS_DB.batch(statements.slice(i, i + 50));
-  const cutoff = now - tmsInt(env.TMS_RETENTION_DAYS, 30, 1, 90) * 86400000;
+  // Three days by default. The public window is 24 hours and the projection
+  // bridge below keeps its own store, so every day of raw per-book payloads
+  // beyond that is D1 storage with no reader (a full slate is roughly 150 MB
+  // a day at an hourly poll).
+  const cutoff = now - tmsInt(env.TMS_RETENTION_DAYS, 3, 1, 90) * 86400000;
   await env.LEADS_DB.prepare('DELETE FROM tuna_market_snapshots WHERE observed < ?').bind(cutoff).run();
+  _TMS_MEMO = { at: 0, items: null, truncated: false };
 }
 // Convert the display feed's normalized player markets into the snapshot
 // contract consumed by vegasProjection/buildBoards. Tuna Market Signal keeps
@@ -1729,7 +1744,7 @@ function tmsSignals(rows, now, sharpBooks = []) {
     const firstLine = nativeOpen ? last.openingLine : first.line;
     const firstPrice = nativeOpen ? last.openingPrice : first.price;
     const comparable = nativeOpen || (first.updated < last.updated && first.observed < last.observed);
-    const stale = now - last.updated > 3600000 || now - last.observed > 3600000;
+    const stale = now - last.observed > TMS_STALE_MS;
     const lineDelta = comparable && firstLine !== null && last.line !== null ? last.line - firstLine : null;
     const probabilityDelta = comparable && firstLine === last.line && Number.isFinite(Number(firstPrice))
       ? (1 / last.price - 1 / firstPrice) * 100 : null;
@@ -1841,16 +1856,45 @@ async function tmsRoutes(request, env, url) {
     if (selectedProvider === 'propline' && !env.PROPLINE_API_KEY) return json({ status: 'disabled', items: [] });
     await tmsReady(env);
     const now = Date.now();
-    const records = await env.LEADS_DB.prepare('SELECT payload FROM tuna_market_snapshots WHERE observed>=? ORDER BY observed DESC LIMIT 1000').bind(now - 86400000).all();
-    const rows = (records.results || []).flatMap(r => JSON.parse(r.payload));
+    let all = _TMS_MEMO.items, truncated = _TMS_MEMO.truncated;
+    if (!all || now - _TMS_MEMO.at > TMS_MEMO_MS) {
+      // Each event's FIRST and LAST snapshot in the window. The first is the
+      // baseline, the last is the current quote, and the twenty-odd hourly
+      // snapshots between them carried nothing the signal reads: loading all
+      // of them was a full slate's payloads twenty-four times over on every
+      // visitor request, which is what took this endpoint down and left the
+      // pages on their anytime-touchdown fallback.
+      const records = await env.LEADS_DB.prepare(
+        'SELECT s.payload FROM tuna_market_snapshots s JOIN (SELECT provider, event, MIN(observed) AS first_seen, MAX(observed) AS last_seen ' +
+        'FROM tuna_market_snapshots WHERE observed>=? GROUP BY provider, event) b ' +
+        'ON s.provider=b.provider AND s.event=b.event AND (s.observed=b.first_seen OR s.observed=b.last_seen) ' +
+        'ORDER BY s.observed DESC LIMIT ?').bind(now - 86400000, TMS_READ_CAP).all();
+      const rows = (records.results || []).flatMap(r => JSON.parse(r.payload));
+      all = tmsSignals(rows, now, tmsList(env.TMS_SHARP_BOOKS));
+      truncated = (records.results || []).length === TMS_READ_CAP;
+      _TMS_MEMO = { at: now, items: all, truncated };
+    }
     const kind = url.searchParams.get('kind'), player = (url.searchParams.get('player') || '').toLowerCase().slice(0, 100);
-    const items = tmsSignals(rows, now, tmsList(env.TMS_SHARP_BOOKS)).filter(r => (!kind || (kind === 'props' ? !!r.player : !r.player)) && (!player || r.player.toLowerCase().includes(player)));
+    const limit = tmsInt(url.searchParams.get('limit'), 1000, 1, 5000);
+    // ONE public item per market (provider, event, market, player, side). The
+    // signal holds a row per BOOK, but the public shape carries no book, so
+    // eight books' rows were eight copies of one line, and a cap of 200 rows
+    // reached a dozen players. The representative is the group's best-scored
+    // fresh row; the consensus fields on it are the group's already.
+    const seen = new Set(), items = [];
+    for (const r of all) {
+      if (kind && (kind === 'props' ? !r.player : !!r.player)) continue;
+      if (player && !r.player.toLowerCase().includes(player)) continue;
+      const k = tmsMarketKey(r);
+      if (seen.has(k)) continue;
+      seen.add(k); items.push(r);
+    }
     const state = await env.LEADS_DB.prepare("SELECT status,updated,next_poll FROM tuna_market_state WHERE id='poll'").first();
     // Public output is a transformed market signal, not a substitute odds feed.
     // Keep book identity, raw current price/line, source URL and observation
     // history server-side. The user-facing product is the movement/consensus
     // analysis Iron Tuna derives from those observations.
-    const publicItems = items.slice(0, 200).map(r => ({
+    const publicItems = items.slice(0, limit).map(r => ({
       event: r.event, sport: r.sport, market: r.market, player: r.player, matchup: r.matchup, side: r.side,
       sourceName: r.provider === 'propline' ? 'PropLine' : r.provider === 'the-odds-api' ? 'The Odds API' : 'Licensed market feed',
       observed: r.observed, updated: r.updated, stale: r.stale, comparable: r.comparable, score: r.score,
@@ -1863,7 +1907,7 @@ async function tmsRoutes(request, env, url) {
       steamScore: r.steamScore, booksMoved: r.booksMoved, booksQuoting: r.booksQuoting,
       publicSplit: r.publicSplit
     }));
-    return json({ status: items.length ? 'ok' : 'collecting', windowHours: 24, truncated: records.results?.length === 1000,
+    return json({ status: items.length ? 'ok' : 'collecting', windowHours: 24, truncated, limit,
       health: state ? { ...JSON.parse(state.status || '{}'), updated: state.updated, nextPoll: state.next_poll } : null,
       total: items.length, items: publicItems });
   } catch { return json({ error: 'market_temporarily_unavailable', items: [] }, 503); }
@@ -5178,10 +5222,14 @@ async function marketHistoryWeek(env, season, week) {
   try {
     const q = await env.LEADS_DB.prepare(
       'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds ' +
-      'FROM odds_snapshots WHERE season IS ? AND week IS ? ORDER BY ts ASC LIMIT ?')
+      'FROM odds_snapshots WHERE season IS ? AND week IS ? ORDER BY ts DESC LIMIT ?')
       .bind(season == null ? null : Number(season), week == null ? null : Number(week), MARKET_WEEK_ROW_CAP).all();
+    // Newest first under the cap, then back into time order for the history
+    // builder. ASC with a LIMIT kept the OLDEST rows and dropped the current
+    // lines the moment a busy week crossed the cap, which is the opposite of
+    // what the comment above promises.
     const bySubject = {};
-    for (const r of (q.results || [])) {
+    for (const r of (q.results || []).slice().reverse()) {
       const b = bySubject[r.subject] || (bySubject[r.subject] = {});
       (b[r.market] = b[r.market] || []).push(r);
     }
@@ -6790,6 +6838,44 @@ function detectInsights(input) {
 // called to agree. /the-line's floor is this number and not its own.
 const GAP_AGREE = 2.0;
 const EDGE_CONTRACT = 1;
+// The prop board: every player market a book has quoted, one row per player
+// per market, in the order a reader scans a slate.
+const PROP_BOARD_ORDER = ['anytimeTD', 'passYd', 'passTD', 'passInt', 'rushYd', 'rushAtt', 'rushTD', 'rec', 'recYd', 'recTD'];
+const PROP_BOARD_CAP = 1500;
+const _propMedianOdds = xs => { const m = _median(xs.filter(x => x != null).map(Number)); return m == null ? null : Math.round(m); };
+// One quoted market on one player, beside the model's own number for the same
+// stat. The line is the median of the books' current lines and the probability
+// the median de-vigged over (or yes); the book count is printed, the names are
+// not. Movement is off the store's own first sighting, as marketHistoryFrom
+// defines it, and says so through `open`.
+function propBoardRow(p, m, h) {
+  if (!h || !PROP_BOARD_ORDER.includes(m)) return null;
+  const per = (h.perBook || []).filter(b => b);
+  const base = { key: p.key, name: p.name, position: p.position, team: p.team,
+    opponent: p.weeks && p.weeks[0] ? p.weeks[0].opponent : null,
+    home: p.weeks && p.weeks[0] ? p.weeks[0].home : null,
+    market: m, label: m === 'anytimeTD' ? 'Anytime TD' : (WHY_MARKET_LABEL[m] || m),
+    books: h.books, booksMoved: h.booksMoved, agreement: h.agreement, lastSeen: h.lastSeen, basis: 'quoted' };
+  const st = (p.ironTuna && p.ironTuna.stats) || {};
+  if (m === 'anytimeTD') {
+    if (h.tdCurrentProbability == null) return null;
+    const lam = (st.rushTD || 0) + (st.recTD || 0);
+    const model = Math.round((1 - Math.exp(-lam)) * 1000) / 10;
+    const prob = h.tdCurrentProbability;
+    return { ...base, line: null, open: null, movement: h.tdOpenProbability == null ? null : _oddsRound(prob - h.tdOpenProbability),
+      probability: prob, openProbability: h.tdOpenProbability,
+      overOdds: _propMedianOdds(per.map(b => b.overOdds)), underOdds: _propMedianOdds(per.map(b => b.underOdds)),
+      implied: null, model, edge: _oddsRound(model - prob) };
+  }
+  if (h.current == null) return null;
+  const probs = per.map(b => b.overOdds == null ? null : (b.underOdds == null ? _oddsImpliedProb(b.overOdds) : _oddsDevigOver(b.overOdds, b.underOdds))).filter(x => x != null && x > 0 && x < 1);
+  const prob = probs.length ? Math.round(_median(probs) * 1000) / 10 : null;
+  const counted = vegasCountMarket(m, per.map(b => ({ book: b.book, line: b.current, overOdds: b.overOdds, underOdds: b.underOdds })));
+  const model = Number.isFinite(Number(st[m])) ? _oddsRound(Number(st[m])) : null;
+  return { ...base, line: h.current, open: h.open, movement: h.movement, probability: prob, openProbability: null,
+    overOdds: _propMedianOdds(per.map(b => b.overOdds)), underOdds: _propMedianOdds(per.map(b => b.underOdds)),
+    implied: counted ? counted.expected : null, model, edge: model == null ? null : _oddsRound(model - h.current) };
+}
 function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const all = (week && week.players) || [];
   const hasProps = all.some(p => /^props/.test(p.vegas.basis));
@@ -6849,6 +6935,26 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
     return { name: p.name, position: p.position, team: p.team, receptions: _oddsRound(s.rec || 0), rushAttempts: s.rushAtt != null ? _oddsRound(s.rushAtt) : null,
              rushYards: _oddsRound(s.rushYd || 0), recYards: _oddsRound(s.recYd || 0), impliedTouches: _oddsRound(touches), basis: /^props/.test(p.vegas.basis) ? 'props' : 'derived from game lines' };
   }).sort((a, b) => b.impliedTouches - a.impliedTouches).slice(0, 40);
+  // The prop board: EVERY quoted player market for the clubs still to play,
+  // not a reading of them. The TD board and the volume board above are the
+  // readings; this is the inventory they are read from, and the one place the
+  // site lists a posted line beside the model's own number for the same stat.
+  // Widest disagreement first; a page that wants a game or a market filters.
+  const propBoard = [];
+  const propBooks = new Set();
+  for (const [nk, hist] of Object.entries(weekMarkets || {})) {
+    const p = byKey.get(nk); if (!p || p.pos === 'K' || p.pos === 'DEF') continue;
+    for (const [m, h] of Object.entries(hist || {})) {
+      const row = propBoardRow(p, m, h);
+      if (!row) continue;
+      propBoard.push(row);
+      for (const b of (h.perBook || [])) if (b && b.book) propBooks.add(b.book);
+    }
+  }
+  propBoard.sort((a, b) => Math.abs(b.edge == null ? -1 : b.edge) - Math.abs(a.edge == null ? -1 : a.edge) ||
+    String(a.name).localeCompare(String(b.name)) || PROP_BOARD_ORDER.indexOf(a.market) - PROP_BOARD_ORDER.indexOf(b.market));
+  const propSummary = { rows: propBoard.length, players: new Set(propBoard.map(r => r.key)).size,
+    markets: new Set(propBoard.map(r => r.market)).size, books: propBooks.size, capped: propBoard.length > PROP_BOARD_CAP };
   // Game environments, with movement off the game snapshots.
   // The model's OWN expected points per club this week, read off the boards the
   // players already carry (weekEnvironment put it there as env.expected: club
@@ -6888,7 +6994,9 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   return { ok: true, contract: EDGE_CONTRACT, week: state && state.ok ? state.week.label : null, hasProps,
            note: hasProps ? null : 'No priced player prop has reached this board. Books post props; none are in the feed behind this build, so every player number here is derived from the posted game lines. The game board is quoted.',
            played, playedNote,
-           vsExperts, movers: movers.slice(0, 40), tdBoard, volumeBoard, gameEnvironments, hiddenSignals: hidden };
+           vsExperts, movers: movers.slice(0, 40), tdBoard, volumeBoard,
+           propBoard: propBoard.slice(0, PROP_BOARD_CAP), propSummary,
+           gameEnvironments, hiddenSignals: hidden };
 }
 
 // -- the Wednesday rest-of-season update ---------------------------------------
