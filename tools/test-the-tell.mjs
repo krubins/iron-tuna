@@ -339,6 +339,14 @@ console.log('\nthe front page quotes the column rather than keeping a second cop
   }
   ok('the lane band and its ribbon jump exist', front.includes('id="tellBand"')
      && front.includes('href="#thetell"'));
+  // The band is a call on a week, not an archive: once the games the newest
+  // edition argues about have been played it comes off the front page. The
+  // cutoff is the schedule's (the covered week's status off /api/season), with
+  // the calendar as a ceiling for when the feed cannot answer.
+  const band = front.slice(front.indexOf("getElementById('tellBand')"), front.indexOf("getElementById('pickBand')"));
+  ok('the band retires an edition once its week is complete',
+     /ITSeason\.load/.test(band) && /firstKickoff/.test(band) && /status === 'complete'/.test(band) && /hideTell\(\)/.test(band));
+  ok('and caps a week-old edition without the feed', /dayNum\(today\) - dayNum\(top\.date\) >= 7/.test(band));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

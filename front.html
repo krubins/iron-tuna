@@ -1803,7 +1803,9 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
        the-tell.html at build time (tools/build-front.mjs), so that page stays
        the source of truth and this band cannot quote it wrongly. Hidden
        outright when the feed is empty — a column heading over nothing is worse
-       than no column. -->
+       than no column — and hidden again once the games the newest edition
+       argues about have been played: a call on a week that is over is the
+       archive, and the archive lives on the column's own page. -->
   <!-- The newsroom: the in-season desk's newest packages, bylined to the AI
        analyst personas, off /api/newsroom. Regular season only (CSS above);
        hidden outright when the feed has nothing, like every band here. -->
@@ -4083,6 +4085,46 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     foot.innerHTML = 'Every call carries its numbers and gets graded in a later edition. ' +
       '<a href="/the-tell">Read the whole column &rarr;</a>';
     host.appendChild(foot);
+
+    // ── an edition whose games have been played is not this week's call ───
+    // The column publishes on Tuesday and argues about the week that kicks
+    // off after it, so the edition is current only until that week's own last
+    // game has finished. Past that point the band would be printing calls on
+    // games already scored as though they were still open, which is worse
+    // than printing nothing: the edition stays on the column's own page as
+    // the archive and comes off the front page.
+    //
+    // The week it covers is read off /api/season — the first week whose
+    // opening kickoff falls on or after the edition date — so the cutoff is
+    // the schedule's, not the calendar's, and survives Thursday openers and
+    // Monday night. The calendar is only a ceiling for when the feed cannot
+    // answer: a Tuesday column seven days old is past its week on any real
+    // schedule, and that ceiling is applied before anything paints so a
+    // week-old edition never flashes up before it is removed.
+    function hideTell(){ setSectionVisible(['thetell', 'tellSub', 'tellBand'], 'thetell', false); }
+    function etDay(ms){
+      try {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+      } catch (e) { return ''; }
+    }
+    function dayNum(iso){ var p = iso.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000; }
+    var today = etDay(Date.now());
+    if (top.date && today && dayNum(today) - dayNum(top.date) >= 7) { hideTell(); return; }
+    function tellClock(){
+      if (!window.ITSeason) { document.addEventListener('DOMContentLoaded', tellClock); return; }
+      ITSeason.load(function (s) {
+        if (!s || !s.weeks || !s.weeks.length || !top.date) return;
+        var covered = null;
+        for (var i = 0; i < s.weeks.length; i++) {
+          var w = s.weeks[i];
+          if (w && w.firstKickoff && etDay(w.firstKickoff) >= top.date) { covered = w; break; }
+        }
+        // No week opens after the edition: the schedule it argued about is
+        // entirely behind us, which is the same verdict as a finished week.
+        if (!covered || covered.status === 'complete') hideTell();
+      });
+    }
+    tellClock();
   })();
 
   // ── The Pick ───────────────────────────────────────────────────────────
