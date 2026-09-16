@@ -16400,6 +16400,8 @@ const ROSTER_READ_MAX_IMAGES = 8;
 const ROSTER_READ_MAX_BYTES = 9 * 1024 * 1024;     // the whole request, base64 included
 const ROSTER_READ_IMAGE_BYTES = 4 * 1024 * 1024;   // one image, base64
 const ROSTER_READ_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const ROSTER_READ_MAX_TOKENS = 16000;             // output; a 12-team league is ~5000
+const ROSTER_READ_TIMEOUT_MS = 110000;           // a full league takes the model a minute or more
 const ROSTER_READ_SYSTEM = `You transcribe fantasy football rosters from screenshots or pasted text.
 Return ONLY a JSON object, no prose, no markdown fence, in exactly this shape:
 {"teams":[{"name":"<team name as shown, or empty>","players":[{"name":"<player full name>","pos":"<QB|RB|WR|TE|K|DEF or empty>","team":"<NFL club abbreviation or empty>"}]}]}
@@ -16408,14 +16410,47 @@ Copy names exactly as printed; do not correct, expand, or invent a name, a posit
 A slot label (QB, RB, FLEX, BN, IR), a bye week, a projection or a score is not a player.
 A team defense is a player: name it "<City> <Nickname>" with pos "DEF" if the image shows it.
 If an image shows a league page with several teams, return every team. If it shows nothing readable, return {"teams":[]}.`;
+// A reply that ran out of output tokens ends mid-object. Everything before the
+// last complete player is still good, so walk back through the closing braces,
+// close whatever is still open, and take the first slice that parses. Strings
+// are tracked so a brace inside a name ("Ja'Marr {") cannot fool the count.
+function rosterReadRepair(t) {
+  const closersFor = str => {
+    const stack = [];
+    let inStr = false, esc = false;
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+      if (ch === '"') inStr = true;
+      else if (ch === '{') stack.push('}');
+      else if (ch === '[') stack.push(']');
+      else if (ch === '}' || ch === ']') stack.pop();
+    }
+    return inStr ? null : stack.reverse().join('');
+  };
+  let cut = t.length, tries = 0;
+  while (tries++ < 60) {
+    cut = t.lastIndexOf('}', cut - 1);
+    if (cut <= 0) return null;
+    const head = t.slice(0, cut + 1);
+    const closers = closersFor(head);
+    if (closers === null) continue;
+    try { return JSON.parse(head + closers); } catch (e) { /* walk back another brace */ }
+  }
+  return null;
+}
 function rosterReadParse(text) {
   let t = String(text || '');
   const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) t = fence[1];
   const a = t.indexOf('{'), b = t.lastIndexOf('}');
   if (a < 0 || b <= a) return { ok: false, error: 'no_json' };
-  let j;
-  try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) { return { ok: false, error: 'bad_json' }; }
+  let j, repaired = false;
+  try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) {
+    j = rosterReadRepair(t.slice(a));
+    if (!j) return { ok: false, error: 'bad_json' };
+    repaired = true;
+  }
   const POS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'DST']);
   const teams = [];
   for (const raw of (Array.isArray(j && j.teams) ? j.teams : []).slice(0, 24)) {
@@ -16435,8 +16470,8 @@ function rosterReadParse(text) {
     const name = (typeof raw.name === 'string' ? raw.name.replace(/\s+/g, ' ').trim().slice(0, 80) : '') || ('Team ' + (teams.length + 1));
     teams.push({ name, players });
   }
-  if (!teams.length) return { ok: false, error: 'no_teams' };
-  return { ok: true, teams };
+  if (!teams.length) return { ok: false, error: repaired ? 'bad_json' : 'no_teams' };
+  return { ok: true, teams, repaired };
 }
 async function handleRosterRead(request, env, c) {
   if (!originAllowed(request, env)) return json({ ok: false, error: 'Origin not allowed' }, 403, c);
@@ -16476,20 +16511,33 @@ async function handleRosterRead(request, env, c) {
   const content = provider === 'anthropic'
     ? [...images.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.media_type, data: im.data } })), { type: 'text', text: ask }]
     : [...images.map(im => ({ type: 'image_url', image_url: { url: 'data:' + im.media_type + ';base64,' + im.data } })), { type: 'text', text: ask }];
+  // A league page with twelve full rosters is ~200 players, and each one is
+  // ~20 tokens of JSON, so 4000 output tokens cut a whole-league screenshot
+  // off mid-object and the page saw an unparseable reply. The budget only
+  // costs what the model actually writes, so it is set well above any league.
   const ctrl = new AbortController();
-  const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 60000);
+  const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, ROSTER_READ_TIMEOUT_MS);
   try {
     const r = provider === 'anthropic'
-      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: 4000, system: ROSTER_READ_SYSTEM, messages: [{ role: 'user', content }] }) })
-      : await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0, max_tokens: 4000, messages: [{ role: 'system', content: ROSTER_READ_SYSTEM }, { role: 'user', content }] }) });
+      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: ROSTER_READ_MAX_TOKENS, system: ROSTER_READ_SYSTEM, messages: [{ role: 'user', content }] }) })
+      : await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0, max_tokens: ROSTER_READ_MAX_TOKENS, messages: [{ role: 'system', content: ROSTER_READ_SYSTEM }, { role: 'user', content }] }) });
     if (!r.ok) return json({ ok: false, error: 'The reader did not answer (' + r.status + ').' }, 502, c);
     const j = await r.json();
-    const out = provider === 'anthropic' ? ((j.content && j.content[0] && j.content[0].text) || '') : ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    const out = provider === 'anthropic'
+      ? (Array.isArray(j.content) ? j.content.filter(b => b && b.type === 'text' && typeof b.text === 'string').map(b => b.text).join('') : '')
+      : ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    const truncated = provider === 'anthropic' ? j.stop_reason === 'max_tokens' : !!(j.choices && j.choices[0] && j.choices[0].finish_reason === 'length');
     const parsed = rosterReadParse(out);
-    if (!parsed.ok) return json({ ok: false, error: parsed.error === 'no_teams' ? 'Nothing readable in that image.' : 'The reader answered in a shape this page cannot use.' }, 200, c);
-    return json({ ok: true, teams: parsed.teams, images: images.length, model }, 200, c);
+    if (!parsed.ok) {
+      console.log('roster-read unparseable', JSON.stringify({ error: parsed.error, truncated, stop: j.stop_reason || (j.choices && j.choices[0] && j.choices[0].finish_reason) || '', head: out.slice(0, 160) }));
+      const msg = parsed.error === 'no_teams' ? 'Nothing readable in that image.'
+        : truncated ? 'That screenshot holds more than the reader can transcribe in one go. Crop it to a few teams per image and try again.'
+        : 'The reader answered in a shape this page cannot use. Try a tighter crop, or paste the rosters as text.';
+      return json({ ok: false, error: msg }, 200, c);
+    }
+    return json({ ok: true, teams: parsed.teams, images: images.length, model, partial: !!(truncated || parsed.repaired) }, 200, c);
   } catch (e) {
-    return json({ ok: false, error: 'The reader timed out.' }, 504, c);
+    return json({ ok: false, error: 'The reader timed out. Try fewer teams per screenshot.' }, 504, c);
   } finally { clearTimeout(to); }
 }
 // ── /the roster reader ─────────────────────────────────────────────────────
