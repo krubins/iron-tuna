@@ -13,7 +13,8 @@
     "FLEX": 1,
     "K": 1,
     "DEF": 1,
-    "BN": 8
+    "BN": 8,
+    "IR": 1
   },
   "rules": [
     {
@@ -210,11 +211,20 @@
           "team": "BAL",
           "slot": "bench",
           "slotLabel": "BN"
+        },
+        {
+          "providerPlayerId": "2560955",
+          "name": "Christian McCaffrey",
+          "position": "RB",
+          "team": "SF",
+          "slot": "ir",
+          "slotLabel": "IR"
         }
       ],
       "counts": {
         "starter": 0,
-        "bench": 1
+        "bench": 1,
+        "ir": 1
       }
     }
   ]

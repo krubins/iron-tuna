@@ -33,6 +33,14 @@ assert.equal(parsedRoster.players[1].slot,'bench');
 assert.equal(parsedRoster.players[0].providerPlayerId,'2221960');
 rosterTable.rows.pop();
 await assert.rejects(readPage(doc([rosterTable]),'team'),/counts could not be verified/);
+// An injured-reserve section, with and without a footer count for it.
+const irRows = (footer) => table([row('','Pos','Players'),row('','QB',cell('Justin Herbert QB • LAC',[anchor('Justin Herbert',origin+'/players/playerpage/2221960')])),row('Reserves'),row('Injured Reserve'),row('','IR',cell('Christian McCaffrey RB • SF',[anchor('Christian McCaffrey',origin+'/players/playerpage/2560955')])),row(footer)]);
+const withIr = await readPage(doc([irRows('Active: 1 Reserve: 0 Injured: 1')]),'team');
+assert.equal(JSON.stringify(withIr.counts),JSON.stringify({starter:1,bench:0,ir:1}));
+assert.equal(withIr.players[1].slot,'ir'); assert.equal(withIr.players[1].slotLabel,'IR');
+assert.equal((await readPage(doc([irRows('Active: 1 Reserve: 0')]),'team')).counts.ir,1);
+await assert.rejects(readPage(doc([irRows('Active: 1 Reserve: 0 Injured: 2')]),'team'),/counts could not be verified/);
+await assert.rejects(readPage(doc([irRows('Active: 1 Reserve: 1')]),'team'),/counts could not be verified/);
 await assert.rejects(readPage(doc([]),'rules'),/scoring table/);
 await assert.rejects(readPage(rulesDoc,'rules','8',{location:{origin:'https://evil.test'}}),/signed-in CBS/);
 await assert.rejects(readPage(rulesDoc,'team','../rules'),/Unsupported/);

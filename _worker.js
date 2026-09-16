@@ -13298,7 +13298,8 @@ function cbsBrowserNormalize(raw, ctx) {
   const rosters = raw.rosters.map(r => {
     const teamId = id(r.teamId);
     if (!teamIds.has(teamId) || rosterIds.has(teamId) || !Array.isArray(r.players) || !r.players.length || r.players.length > 60) invalid();
-    if (!r.counts || !Number.isInteger(r.counts.starter) || !Number.isInteger(r.counts.bench) || r.counts.starter < 0 || r.counts.bench < 0 || r.players.filter(p => p.slot === 'starter').length !== r.counts.starter || r.players.filter(p => p.slot === 'bench').length !== r.counts.bench || r.counts.starter + r.counts.bench !== r.players.length) invalid();
+    const n = s => r.players.filter(p => p.slot === s).length, ir = r.counts && r.counts.ir != null ? r.counts.ir : n('ir');
+    if (!r.counts || !Number.isInteger(r.counts.starter) || !Number.isInteger(r.counts.bench) || !Number.isInteger(ir) || r.counts.starter < 0 || r.counts.bench < 0 || ir < 0 || n('starter') !== r.counts.starter || n('bench') !== r.counts.bench || n('ir') !== ir || r.counts.starter + r.counts.bench + ir !== r.players.length) invalid();
     rosterIds.add(teamId);
     return { teamId, players: r.players.map(p => {
       const providerPlayerId = id(p.providerPlayerId);
