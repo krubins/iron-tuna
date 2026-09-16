@@ -665,6 +665,19 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-player-links.mjs
 
+      # The story art: a face on every story that names a player, and a game
+      # photograph wherever tools/nfl-action-shots.json has an openly licensed
+      # one. The photographs are CC BY / CC BY-SA files from Wikimedia Commons,
+      # so the credit printed under each one is a license term, not a caption:
+      # a change that drops it ships the pictures outside their license.
+      - name: Parse it-action.js
+        if: ${{ !cancelled() }}
+        run: node --check it-action.js
+
+      - name: Story art, and the credit under every photograph
+        if: ${{ !cancelled() }}
+        run: node tools/test-story-art.mjs
+
       - name: Vegas column (worker)
         if: ${{ !cancelled() }}
         run: node tools/test-worker-column.mjs

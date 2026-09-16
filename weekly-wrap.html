@@ -112,6 +112,10 @@
 .ww-parts li { display: flex; gap: 10px; font-size: var(--fs-sm); line-height: 1.4 }
 .ww-parts li span { font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 700; color: var(--teal); padding-top: 2px }
 .ww-parts li a { color: var(--sec); font-weight: 600 }
+/* The face of the player a finding names, at the head of its line: a marker
+   the size of the type, not a photograph. */
+.ww-parts li a .it-story-focus { margin: -3px 8px -3px 0 }
+.ww-parts li a .it-story-focus .it-player-face { width: 28px; height: 28px; min-width: 28px; border-radius: 6px }
 .ww-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); font-size: var(--fs-xs); color: var(--muted) }
 .ww-by { display: inline-flex; align-items: center; gap: var(--space-2) }
 .ww-av { width: 22px; height: 22px; border-radius: 50%; background: var(--text); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .04em; display: inline-flex; align-items: center; justify-content: center }
@@ -335,6 +339,9 @@
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-season.js" defer></script>
+<!-- The faces beside each recap's findings: player-search.js reads the
+     player each line is stamped with and draws him as the cards paint. -->
+<script src="/player-search.js" defer></script>
 <script>
 // The Weekly Wrap Up. Everything on this page comes from /api/weekly-wrap,
 // which derives each game's summary from that game's own recap rather than
@@ -440,7 +447,9 @@
       if (parts.length) {
         out.push('<ul class="ww-parts">');
         for (var i = 0; i < parts.length; i++) {
-          out.push('<li><span>' + (i < 9 ? '0' : '') + (i + 1) + '</span><a href="' + esc(r.url) + '#component-' + esc(parts[i].n) + '">' + esc(parts[i].headline) + '</a></li>');
+          // `data-player-focus` names the player the finding is about, so
+          // player-search.js puts his face at the head of the line.
+          out.push('<li' + (parts[i].player ? ' data-player-focus="' + esc(parts[i].player) + '"' : '') + '><span>' + (i < 9 ? '0' : '') + (i + 1) + '</span><a data-player-head href="' + esc(r.url) + '#component-' + esc(parts[i].n) + '">' + esc(parts[i].headline) + '</a></li>');
         }
         out.push('</ul>');
       }

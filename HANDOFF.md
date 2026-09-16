@@ -10159,3 +10159,108 @@ league is connected).
 
 The full design pass these changes were implemented from, all nine pages,
 is on the Claude Design canvas "Iron Tuna UI Pass".
+
+## 82. September 16: a face on every story, and game photographs where there is a licensed one
+
+**The ask.** Every story that mentions a player should show that player, and
+some of the pictures should be game action rather than a cutout headshot.
+
+**What was true before.** `player-search.js` already decorated headings
+sitewide (`decorateStories`, run from `boot()` and again on every DOM
+mutation), but only when the *headline itself* wrote a name in full, and a
+`.call` with `data-players` only counted when it named exactly one man. So a
+desk piece whose subject lived in its findings, a wrap line, a Top Headlines
+row or a newsroom card with a headline like "The rookie back ran for 120"
+ran with no picture. The Desk feed, the desk piece page, `/lead` and the wrap
+had no faces at all beyond that headline rule.
+
+### Faces: one resolver, one attribute
+
+- **`ITPlayerSearch.resolve(token)`** answers a slug, a full name (with or
+  without a suffix) or an object carrying either. **`castOf(list, limit)`**
+  takes an array or one attribute string: names joined with `|`, or slugs
+  separated by spaces as `data-players` always was.
+- **`decorateStories` now reads, in order:** `data-player-focus` on the unit
+  (what the page *says* the story is about, several allowed), then the names
+  the heading writes out, then `data-players` (up to three, no longer "exactly
+  one"). Three faces is the cap. A unit with no heading names the element the
+  faces go in front of with **`data-player-head`** (the wrap's component
+  links, the tailback calls' player line). **`data-no-player-focus`** on or
+  above a heading keeps the faces off it — the desk piece and `/lead` run a
+  figure below the headline instead, and the same faces twice is a rash.
+- A block with `data-player-focus` is a **unit for the faces but not for the
+  links**: `FOCUS_UNITS` in `decorateStories` is `UNITS + ', [data-player-focus]'`,
+  so a recap's component line does not become its own story for the purpose
+  of reading "Kyren" against a cast.
+- **Where the stamps are:** `desk.html` feed cards (`item()`, from
+  `components[].player`), `componentsHtml` (`<li data-player-focus>`), the
+  tailback `.tb-call`; `front.html` newsroom cards (`card()`, same source)
+  and the Top Headlines column (`paintRail` builds one 38px face per line from
+  `it.who`, which `deskRailItems` now carries); `weekly-wrap.html` parts
+  (`<li data-player-focus><a data-player-head>`). The pages that already
+  carried `data-players` (the drop pages, /the-tell, /play-caller-premium)
+  gain faces on any call whose headline names nobody, from the same attribute
+  `tools/build-front.mjs` has always stamped.
+- **`storyArt(list, opts)`** is the figure under a story: the first named
+  player's game photograph when there is one, then the faces of everyone the
+  story is about, each a link to his card with his name beside it. `desk.html`
+  (`paintArt`, cast = findings + calls + rivalry + names the headline writes
+  out, into `#dkArt`) and `lead.html` (`#art`, from `s.cast`) run it. Pages
+  that paint from data before the deferred file has run wait on the
+  **`it-player-search-ready`** event `boot()` now dispatches.
+
+### Game photographs: Wikimedia Commons, and the credit is a license term
+
+Real action photographs are owned by the wire services and sold. The one host
+with NFL action imagery under terms anyone may rely on is Wikimedia Commons,
+where every file carries a machine-readable license. AI-generated "footage"
+was considered and rejected: a player's likeness in a club's uniform invented
+by a model is a right-of-publicity and trademark problem the site does not
+have today, and it would be fiction on a site whose whole pitch is that
+every number is real.
+
+- **`tools/build-action-shots.mjs`** finds the player on Wikidata (name
+  search, kept only if described as an American football player, and the
+  recorded position — P413 — must agree with the one the site prices him at;
+  two men of one name and one position resolve to nobody), takes the
+  entity's own image (P18) and Commons category (P373), reads every
+  candidate file's license and size, and keeps the best **landscape** file
+  under **CC0, public domain, CC BY or CC BY-SA** (`LICENSE_OK`; NC and ND
+  never match, and a file called "headshot"/"portrait"/"press conference"
+  never scores). Output: `tools/nfl-action-shots.json` (every lookup,
+  resolved or not) and **`it-action.js`** (`window.ITActionShots`, scoped to
+  the players `player-search.js` indexes). `--only`, `--refresh`, `--limit`,
+  `--emit` (regenerate the JS from the JSON, no network) and `--check` (CI:
+  the JS matches the JSON). Behind a proxy: `NODE_USE_ENV_PROXY=1`.
+- **The row carries the obligation:** `a` photographer, `l` license, `lu`
+  deed URL, `s` file page, and the figure prints "Photo: *photographer*,
+  *license*, via Wikimedia Commons; cropped to fit." under every use. That
+  wording is what CC BY / CC BY-SA require; **removing it puts the picture
+  outside its license**, and `tools/test-story-art.mjs` fails a build that
+  does. The lead band on `/` does the same in `renderCast` (`.lm-shot.action`
+  + `.lm-credit`), repainting once the deferred files arrive.
+- **`/it-action.js` loads before `/player-search.js`** on `/`,
+  `/in-season/desk` and `/lead` (both deferred, so in document order). The
+  wrap only needs faces and loads `player-search.js` alone.
+- **Right of publicity is not settled by a CC license** and is the same
+  question the headshots already carry; `docs/data-sources.md` R9 and
+  `docs/ip-attribution-review.md` row 14 say so. `/data` names the source and
+  the license terms.
+
+### The state on 2026-09-16
+
+**The lookup is empty.** The session this was built in could not reach
+`www.wikidata.org` or `commons.wikimedia.org` (egress policy 403), so
+`tools/nfl-action-shots.json` is `[]`, `it-action.js` defines an empty map,
+and every story runs its headshots exactly as before, with the faces now on
+every surface above. **The first `node tools/build-action-shots.mjs` on a
+machine with network fills it** (about 1,260 players at a quarter-second
+pause between calls, ten minutes or so; `--limit 50` to try it first), then
+commit the JSON and `it-action.js` together. Nothing else changes; the
+photographs appear where the map has one.
+
+**Tests:** `node tools/test-story-art.mjs` (59 checks: the resolver and the
+attribute order on the real `player-search.js` in a fake DOM, the figure and
+its credit, the build tool's license and scoring rules on fixtures, and that
+each page loads what it paints from). CI runs it and `node --check
+it-action.js` after the player-links step.

@@ -68,6 +68,14 @@ p{color:var(--sec);margin:0 0 16px}
    desk's own rule did with the piece: published (the prose stayed inside the
    data), held (it did not; the packet shipped), skipped, or not yet. */
 .dk-feed .nr-grid{grid-template-columns:1fr;gap:var(--space-4);margin:0}
+/* The story's art (player-search.js storyArt): a photograph the width of the
+   column over the faces it is about. The faces beside a finding or a call are
+   smaller than the ones over the story, because there they are a marker, not
+   the picture. */
+.dk-art{margin:6px 0 22px}
+.dk-art>img{max-height:440px}
+.dk-parts h3 .it-story-focus,.tb-call-player .it-story-focus{margin:0 10px 0 0}
+.dk-parts h3 .it-story-focus .it-player-face,.tb-call-player .it-story-focus .it-player-face{width:40px;height:40px;min-width:40px;border-radius:8px}
 .dk-feed .nr-card h3{font-size:var(--fs-lg)}
 .dk-feed .nr-card[hidden]{display:none}
 .dk-feed .nr-st svg{width:11px;height:11px;vertical-align:-1px;margin-right:3px}
@@ -181,7 +189,7 @@ body.dk-tailback #dkTitle{max-width:920px}
 </div></header>
 <main id="main" class="wrap">
 <p class="is-eyebrow" id="dkEyebrow">The Desk &middot; In-Season</p>
-<h1 id="dkTitle">The In-Season Desk</h1>
+<h1 id="dkTitle" data-no-player-focus>The In-Season Desk</h1>
 <p class="is-lede" id="dkLede">The week&rsquo;s pieces, in the order the week produces them. Every fact in them comes from the box score, the depth chart, the injury list, the usage file or the betting market; a piece is published only when its prose stayed inside that data, and shows the data itself when it did not.</p>
 <div class="is-actions" id="dkActions">
   <a class="is-btn primary" href="#dkFeed">This week&rsquo;s pieces</a>
@@ -202,6 +210,9 @@ body.dk-tailback #dkTitle{max-width:920px}
     <button type="button" role="tab" data-lens="weekly" aria-selected="true" class="on">Weekly Fantasy</button>
     <button type="button" role="tab" data-lens="dfs" aria-selected="false">DFS</button>
   </div>
+  <!-- The story's art: painted by paintArt() from the piece's own players.
+       A photograph when there is a licensed one, the faces either way. -->
+  <div id="dkArt"></div>
   <div id="dkPre"></div>
   <div id="dkBody"></div>
   <div id="dkPost"></div>
@@ -404,7 +415,13 @@ body.dk-tailback #dkTitle{max-width:920px}
       var by = p.byline && p.byline.name ? p.byline.name : k.analystName;
       var byId = p.byline && p.byline.analyst ? p.byline.analyst : k.analyst;
       var kick = e(k.perGame && p.title ? p.title : k.title) + ' &middot; Week ' + e(p.week) + (k.perGame ? ' &middot; Final' : '') + (p.version > 1 ? ' &middot; update ' + e(p.version) : '');
-      return '<article class="nr-card" data-day="' + e(k.perGame ? 'game' : k.day) + '">' +
+      // Who the piece is about, for its faces: the players its findings name
+      // (`components`), which player-search.js draws above the headline the
+      // moment the card is in the page. A piece with no findings falls back
+      // to the names the headline writes out.
+      var who = [];
+      (p.components || []).forEach(function (c) { if (c && c.player && who.indexOf(c.player) < 0) who.push(c.player); });
+      return '<article class="nr-card" data-day="' + e(k.perGame ? 'game' : k.day) + '"' + (who.length ? ' data-player-focus="' + e(who.slice(0, 3).join('|')) + '"' : '') + '>' +
         '<span class="nr-kicker">' + kick + '</span>' +
         '<h3><a href="' + e(href) + '">' + e(p.headline || p.title || k.title) + '</a></h3>' +
         (p.dek ? '<p>' + e(p.dek) + '</p>' : '') +
@@ -477,7 +494,7 @@ body.dk-tailback #dkTitle{max-width:920px}
   function componentsHtml(rows) {
     return '<h2>' + e(lbl('components')) + '</h2><ol class="dk-parts">' + rows.map(function (c, i) {
       var n = c.n || i + 1;
-      return '<li id="component-' + e(n) + '"><h3>' + e(c.headline || '') + '</h3>' +
+      return '<li id="component-' + e(n) + '"' + (c.player ? ' data-player-focus="' + e(c.player) + '"' : '') + '><h3>' + e(c.headline || '') + '</h3>' +
         (c.player ? '<p class="dk-conf">' + e(c.player) + '</p>' : '') +
         (c.why ? '<p>' + e(c.why) + '</p>' : '') + '</li>';
     }).join('') + '</ol>';
@@ -522,7 +539,7 @@ body.dk-tailback #dkTitle{max-width:920px}
   function callsBox(j) {
     var calls = j.body && j.body.calls; if (!calls || !calls.length) return '';
     if (j.kind === 'tailback-tuesday') return '<section class="tb-calls"><div class="tb-calls-head"><h2>The calls</h2><p>The decision first. The evidence directly below it.</p></div><div class="tb-call-grid">' +
-      calls.map(function (c) { return '<article class="tb-call"><div class="tb-call-top"><div><div class="tb-call-player">' + e(c.player) + '</div><span class="tb-action">' + e(c.direction || 'call') + (c.rank ? ' &middot; ' + e(c.rank) : '') + '</span></div><span class="tb-confidence">' + e(c.confidence || '—') + '</span></div>' +
+      calls.map(function (c) { return '<article class="tb-call"' + (c.player ? ' data-player-focus="' + e(c.player) + '"' : '') + '><div class="tb-call-top"><div><div class="tb-call-player" data-player-head>' + e(c.player) + '</div><span class="tb-action">' + e(c.direction || 'call') + (c.rank ? ' &middot; ' + e(c.rank) : '') + '</span></div><span class="tb-confidence">' + e(c.confidence || '—') + '</span></div>' +
         (c.recommendation ? '<p class="tb-recommendation">' + e(c.recommendation) + '</p>' : '') + '<p class="tb-rationale">' + e(c.rationale || '') + '</p></article>'; }).join('') +
       '</div><p class="is-note">Every call is stored and graded in a later week. <a href="/analysts/' + e((j.byline || {}).analyst) + '">The record &rarr;</a></p></section>';
     return '<h2>The calls</h2><div class="is-scroll"><table class="is-table"><thead><tr><th>Player</th><th>Call</th><th>Confidence</th><th>Why</th></tr></thead><tbody>' +
@@ -577,6 +594,44 @@ body.dk-tailback #dkTitle{max-width:920px}
     if (location.hash) { try { var at = document.getElementById(location.hash.slice(1)); if (at) at.scrollIntoView(); } catch (x) {} }
     track('desk_lens', { kind: j.kind, week: j.week, lens: lens });
   }
+  // The story's art, under the headline: a game photograph of the first
+  // player it is about when /it-action.js has one, and the faces of everyone
+  // it is about, each a link to his card. WHO IT IS ABOUT is read off the
+  // piece's own data, never guessed from the prose: the players its findings
+  // name, the players its calls are on, the player the rivalry box argues
+  // over, then whoever the headline writes out in full. player-search.js
+  // resolves each name against the pool the site prices; a name it does not
+  // know costs a face, not the band.
+  function castOf(j) {
+    var who = [], seen = {};
+    var add = function (n) { n = String(n || '').trim(); if (n && !seen[n]) { seen[n] = 1; who.push(n); } };
+    (j.components || []).forEach(function (c) { add(c && c.player); });
+    if (j.body && j.body.calls) j.body.calls.forEach(function (c) { add(c && c.player); });
+    if (j.rivalry) add(j.rivalry.player);
+    var PS = window.ITPlayerSearch;
+    if (PS && PS.castOf && who.length < 4) {
+      // The headline, read the way the faces at its head used to be: names in
+      // full, in order of appearance.
+      var text = String(j.headline || j.title || '');
+      PS.players.forEach(function (p) {
+        if (who.length >= 4 || seen[p.n]) return;
+        if (p.n.indexOf(' ') > 0 && text.indexOf(p.n) >= 0) add(p.n);
+      });
+    }
+    return who.slice(0, 4);
+  }
+  function paintArt(j) {
+    var box = $('dkArt'); if (!box) return;
+    box.innerHTML = '';
+    var paint = function () {
+      var PS = window.ITPlayerSearch;
+      if (!PS || !PS.storyArt) return;
+      var fig = PS.storyArt(castOf(j), { eager: true, cls: 'dk-art' });
+      if (fig) box.appendChild(fig);
+    };
+    if (window.ITPlayerSearch) paint();
+    else document.addEventListener('it-player-search-ready', paint, { once: true });
+  }
   function piece(j, want) {
     current = j; lens = j.lens === 'both' ? defaultLens(want) : 'weekly';
     $('dkPiece').classList.toggle('is-tailback', j.kind === 'tailback-tuesday');
@@ -590,6 +645,7 @@ body.dk-tailback #dkTitle{max-width:920px}
     var post = '';
     if (j.legacy) { $('dkTabs').hidden = true; $('dkTitle').textContent = j.title; $('dkKicker').textContent = 'From the archive'; $('dkBody').innerHTML = legacyPiece(j); }
     else paintLens();
+    paintArt(j);
     if (j.brief) {
       post += priorBox(j) + freshBox(j);
       if (j.brief.excludedGames && j.brief.excludedGames.length) post += '<p class="is-note">Not covered here because they had not finished: ' + e(j.brief.excludedGames.join(', ')) + '.</p>';
@@ -644,6 +700,9 @@ body.dk-tailback #dkTitle{max-width:920px}
 })();
 </script><!--/chrome:navjs-->
 
+<!-- The game photographs come first so player-search.js finds the map when a
+     story paints; both are deferred, so they run in this order. -->
+<script src="/it-action.js" defer></script>
 <script src="/player-search.js" defer></script>
 </body>
 </html>

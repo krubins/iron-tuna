@@ -91,6 +91,8 @@ footer.site a{color:var(--muted)}
 .stamp{color:var(--muted);font-weight:700}
 .stamp:before{content:"\00b7";margin-right:8px}
 .body{margin-top:6px}
+#art .it-art{margin:4px 0 22px}
+#art .it-art>img{max-height:460px}
 .body p.lead{font-size:clamp(18px,2.2vw,21px);color:var(--text);margin:0 0 22px}
 .body h2:first-child{margin-top:8px}
 .body h2{font-size:clamp(20px,2.6vw,25px);margin:32px 0 10px}
@@ -131,8 +133,12 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
 </div></header>
 <main id="main" class="wrap">
 <div class="meta-row" id="metaRow" hidden><span class="cat" id="cat">Insight</span><span class="stamp" id="stamp"></span></div>
-<h1 id="title">Loading the latest insight&hellip;</h1>
+<h1 id="title" data-no-player-focus>Loading the latest insight&hellip;</h1>
 <p class="lede" id="dek"></p>
+<!-- The story's art: the players it commits to, with a game photograph of the
+     first when there is a licensed one. Painted by the script below out of
+     the story's own cast, so it can never picture a man the copy did not name. -->
+<div id="art"></div>
 <!-- Whose dollars the article is quoting. Painted by the script below out of
      it-league.js, hidden until there is something true to say. -->
 <p class="it-yours" id="yours" hidden></p>
@@ -236,6 +242,7 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
 </div></footer>
 <script src="/it-league.js"></script>
 <script src="/it-sync.js"></script>
+<script src="/it-action.js" defer></script>
 <script src="/player-search.js" defer></script>
 <script>
 (function(){
@@ -328,6 +335,23 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
       }
       document.getElementById('stamp').textContent = stamp(s.createdAt);
       document.getElementById('metaRow').hidden = false;
+      // The faces, and the photograph, of the players the story names. The
+      // cast travels with the story (`s.cast`, out of the worker) as slugs
+      // that player-search.js also indexes; `names` is the same list as the
+      // desk wrote it, for a story from before the cast shipped.
+      (function paintArt(){
+        var box = document.getElementById('art');
+        var who = (s.cast && s.cast.length) ? s.cast : names;
+        if (!box || !who || !who.length) return;
+        var paint = function(){
+          var PS = window.ITPlayerSearch;
+          if (!PS || !PS.storyArt) return;
+          var fig = PS.storyArt(who, { eager: true });
+          if (fig) box.appendChild(fig);
+        };
+        if (window.ITPlayerSearch) paint();
+        else document.addEventListener('it-player-search-ready', paint, { once: true });
+      })();
       // The body is written by the desk's own run and stored as an HTML
       // fragment, so it goes in as markup. Wide tables get a scroller wrapped
       // around them here rather than in the stored copy, so the authoring

@@ -29,6 +29,7 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 | `api.login.yahoo.com` | Yahoo OAuth 2.0 (authorize, token, refresh) | `YAHOO_AUTH`, `YAHOO_TOKEN` | Service endpoint; the reader consents on Yahoo's page. See R7. |
 | `fantasysports.yahooapis.com` | A reader's Yahoo league under their own OAuth grant, read-only scope `fspt-r` | `PROVIDER_YAHOO` | **Green for the reader's own data under the Yahoo Developer Network terms**; behind `FLAG_YAHOO_SYNC` until an app is registered. See R7. |
 | `static.www.nfl.com` | Team and player imagery, hot-linked | ~1,680 URL references across the deployed HTML, none fetched server-side | **Unreviewed and OPEN.** Copyrighted images served from the league's CDN. See R4. |
+| `upload.wikimedia.org` (via `commons.wikimedia.org` and `www.wikidata.org` at build time) | Game photographs for the story art on `/`, `/in-season/desk`, `/lead`: one openly licensed action photo per player, hot-linked as a Commons thumbnail | `tools/build-action-shots.mjs` (build-time lookup, never the Worker), `it-action.js` (the deployed map), `storyArt()` in `player-search.js` | **Green, with an obligation.** Only CC0, public-domain, CC BY and CC BY-SA files are kept (`LICENSE_OK` in the tool; NC and ND never match). CC BY / CC BY-SA require the photographer, the license and a link to it wherever the file is shown, and that a cropped copy says so; `storyArt()` prints exactly that under every use and `tools/test-story-art.mjs` fails the build if it stops. See R9. |
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
 | DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
 | DFS lobby CSV (reader upload) | A reader's own salary file, for any classic slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/dfs/slate` | **Green.** Same file, obtained by the reader from a lobby they are already in. Parsed per request and stored nowhere; single-game files are refused rather than mispriced against the classic cap. |
@@ -231,9 +232,53 @@ same as `fetched_at`.
 
 ---
 
+### R9 — Wikimedia Commons game photographs: keep the credit with the picture  *(added 2026-09-16)*
+
+**Where:** `tools/build-action-shots.mjs` → `tools/nfl-action-shots.json` →
+`it-action.js` → `storyArt()` in `player-search.js`, and the lead band in
+`front.html` (`renderCast`).
+
+The first imagery on the site with a license anyone can read. Every row in the
+lookup is a file Commons publishes under CC0, public domain, CC BY or CC BY-SA;
+the tool refuses everything else, and the test refuses a row that slips past
+it. What the two CC licenses ask in return is not optional and is not
+"attribution" in the loose sense the headshot footer once used: **the
+photographer's name, the license name, a link to the license deed, and a note
+that the image was cropped, shown with the image.** The row carries all four
+(`a`, `l`, `lu`, and the fixed "cropped" wording), the figure prints them, and
+a page that showed the photograph without them would be using the file outside
+its license. Do not "tidy" the credit away.
+
+Two things this does **not** settle, for the owner:
+
+1. **Right of publicity.** A CC license is the photographer's grant of
+   copyright; it says nothing about the player's likeness. Editorial use in a
+   story about that player's game is the ordinary news use these pictures
+   were made for, and it is the same posture the headshots already take, but
+   it is a separate right and this file is not the place it gets cleared.
+2. **Hot-linking.** The pages reference Commons thumbnails rather than copying
+   the files, the same posture as the headshots. Commons permits it; CC would
+   equally permit vendoring the files into the repo, which trades a few
+   megabytes for independence from their CDN. A bandwidth decision, not a
+   rights one. `--vendor` does not exist yet; add it if the CDN ever proves
+   unreliable.
+
+The lookup itself is a network job (`node tools/build-action-shots.mjs`, with
+`NODE_USE_ENV_PROXY=1` behind a proxy) and is **not run in CI**: the CI gate
+only checks that `it-action.js` matches the JSON it was generated from. The
+lookup was written in a session whose egress policy blocked both Wikimedia
+hosts, so **as of 2026-09-16 the JSON is empty and every story still runs
+headshots**. The first run on a machine with network fills it.
+
 ## 3. Attribution strings
 
 Publish these on `/data` and in the site footer.
+
+**Wikimedia Commons game photographs** — required by CC BY and CC BY-SA, per
+file, with the picture. `storyArt()` prints it; the shape is:
+
+> Photo: *Photographer* (linked to the file page), *CC BY-SA 2.0* (linked to
+> the deed), via Wikimedia Commons; cropped to fit.
 
 **nflverse-data** — required by CC BY 4.0. Retain creator identification, state
 that the data was modified, and link the source.
