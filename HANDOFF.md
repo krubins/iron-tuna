@@ -10076,6 +10076,30 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
   lone "← Back to Iron Tuna" link. The hand-written FAQPage schema is
   untouched (`tools/test-seo.mjs` asserts it stays).
 
+**My Leagues (`/my-league`), same pass.**
+
+- **Same page head** (`In-Season · My Leagues`, 39px `h1`, lede), then a
+  **three-step strip** (`.ml-steps`: choose a platform, connect it, every
+  board re-scores) so the long connect section reads as step one.
+- **The platforms are tiles, not pills.** The `[data-prov]` buttons live in
+  the static markup (`#lsTiles`, `.ml-tile`) with a status badge each
+  (`.ml-badge`: Syncs / Extension / By hand / Unavailable) that `paintTiles()`
+  repaints from `st.providers` once the sync state loads. `showConnect(k)`
+  no longer renders a "Which platform?" card; it fills `#lsConnect` with the
+  `.ml-flow` plate holding `#lsFlow` and rings the chosen tile (`.on`).
+  `flow(k)` is unchanged, which is what `tools/test-cbs-ui.mjs` runs in
+  isolation. Signed out, a tile click scrolls to the sign-in card.
+- **The empty state is an `.is-vacant`** in `#lsList` ("No league connected
+  yet"); the league cards render as before, the count is a note under them,
+  and the tile heading turns into "Add another league".
+- **The privacy paragraph is a `<details class="ml-priv">`** (still
+  `#lsPrivacy`), collapsed.
+- **Settings are a split** (`.ml-split`: the shared `ITInSeasonUI.leagueForm`
+  at 440px, and beside it one "Where it shows up" card with three rows plus
+  the "What the draft app knows" card, whose `#mlBox` now paints a tag and a
+  line rather than a card grid). "The rest of the section" trio is gone (it
+  duplicated the masthead); the sourcing paragraphs stay as a closing block.
+
 Not implemented from the canvas on `/dfs`: the lineup as a light table (the
 dark `.is-board` is a deliberate design and the test pins its CSS), What-if
 and Fine-tune side by side (the fine-tune panel holds the full player pool
@@ -10087,6 +10111,5 @@ Not implemented from the canvas: the clock card as a four-line week timeline
 and sample numbers in the FAAB stat row (they are live values, blank until a
 league is connected).
 
-The full design pass these changes were implemented from, with the one
-section page that was NOT implemented (My Leagues), is on the Claude Design canvas
-"Iron Tuna UI Pass".
+The full design pass these changes were implemented from, all nine pages,
+is on the Claude Design canvas "Iron Tuna UI Pass".
