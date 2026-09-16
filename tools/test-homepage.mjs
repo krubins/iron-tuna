@@ -20,25 +20,50 @@
 // the rendered text.
 //
 // Needs playwright-core plus a Chromium binary (preinstalled at /opt/pw-browsers
-// in Claude Code remote sessions, else set CHROMIUM_PATH). Skips cleanly rather
-// than failing when they are absent, so it never blocks a machine without them.
+// in Claude Code remote sessions, else set CHROMIUM_PATH, else whatever
+// `npx playwright-core install chromium` put in the cache). It skips cleanly
+// when they are absent so it never blocks a contributor's machine — EXCEPT
+// under REQUIRE_BROWSER=1, which CI sets, where a skip is a failure instead.
 import fs from 'fs';
 import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// A SKIP THAT CI COUNTS AS GREEN IS WORSE THAN NO TEST. This file self-skips on
+// a machine with no browser, which is right for a contributor's laptop and
+// wrong for a gate — so CI sets REQUIRE_BROWSER=1 and a missing browser becomes
+// a failure with the command that fixes it. Nothing else about the run changes.
+const REQUIRE = process.env.REQUIRE_BROWSER === '1';
+function absent(what, fix) {
+  if (REQUIRE) {
+    console.error('FAIL — ' + what + '. REQUIRE_BROWSER=1, so this is a failure rather than a skip.');
+    if (fix) console.error('       ' + fix);
+    process.exit(1);
+  }
+  console.log('SKIP — ' + what + (fix ? ' (' + fix + ')' : ''));
+  process.exit(0);
+}
+
 let chromium;
 try {
   ({ chromium } = await import('playwright-core'));
 } catch (e) {
-  console.log('SKIP — needs playwright-core (' + e.message.split('\n')[0] + ')');
-  process.exit(0);
+  absent('needs playwright-core (' + e.message.split('\n')[0] + ')',
+         'npm install --no-save --no-package-lock playwright-core@1.56.1');
 }
-const CHROME = process.env.CHROMIUM_PATH
-  || ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome', '/opt/pw-browsers/chromium/chrome-linux/chrome']
-       .find(p => fs.existsSync(p));
-if (!CHROME) { console.log('SKIP — no Chromium binary; set CHROMIUM_PATH'); process.exit(0); }
+// CHROMIUM_PATH wins, then the binaries preinstalled in Claude Code remote
+// sessions, then whatever playwright-core itself installed — which is what a
+// `playwright-core install chromium` on a CI runner leaves behind, and which
+// already honours PLAYWRIGHT_BROWSERS_PATH.
+const CHROME = [
+  process.env.CHROMIUM_PATH,
+  '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  '/opt/pw-browsers/chromium/chrome-linux/chrome',
+  (() => { try { return chromium.executablePath(); } catch (e) { return null; } })()
+].find(p => p && fs.existsSync(p));
+if (!CHROME) absent('no Chromium binary', 'set CHROMIUM_PATH, or run `npx playwright-core install chromium`');
 
 let pass = 0, fail = 0;
 const ok = (n, c, x = '') => { if (c) { pass++; console.log(`  ok   ${n}`); } else { fail++; console.log(`  FAIL ${n}${x ? ' — ' + x : ''}`); } };
