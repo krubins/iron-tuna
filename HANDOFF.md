@@ -9794,3 +9794,49 @@ brief lines, `weekCase` on and off, the frame check on the live headline,
 on three look-backs, on two Week 2 framings, on a headline with no week, on
 the dek, on a forward piece, and through `factCheck`. `tools/test-recaps.mjs`
 hands its harness the real `weekCase`, which the recap strip now calls.
+
+---
+
+## September 2026: the front page's chrome, cut from five bars to three
+
+**What changed on `/` (front.html only; no other page, no generator, no data).**
+
+- **The masthead carries the shared nav.** The six `mast-jump` links are now
+  the same six, in the same order, as `NAV` in `tools/build-chrome.mjs`
+  (Fantasy, DFS, Market Intel, The Desk, Draft Tools, FAQ). The front page used
+  to carry four of its own (Fantasy, In-Season, Draft, The Desk), so clicking
+  off "/" changed the nav. Sign In and Sync My League are unchanged.
+- **The green claim banner (`.dominant`) is gone**, markup and every rule.
+  `tools/test-recaps.mjs` used to assert the recap strip sat above it; it now
+  asserts the strip sits above `#heroBand`.
+- **The clock band is the week line.** `#heroBand` was a black gradient band
+  with the `.its-strip` boxed inside it; it is now a 36px light strip on the
+  page surface. The element, its id, `data-season-strip` and every `.its-*`
+  class are unchanged, so `hbClock()` and `it-season.js` are untouched. On a
+  phone it scrolls sideways like the ribbon rather than wrapping.
+- **The lane tabs live in the ribbon.** The three `.lane-tab` buttons moved
+  from their own full-width black band into the first slot of `.ribbon .wrap`
+  as a segmented control (the same shape as `#edSwitch` at the row's other
+  end), followed by a `.lane-sep` hairline. Ids, roles, ARIA, `data-lane` and
+  the lane script are unchanged; `stripWashingtonMarketLane` in `_worker.js`
+  still finds `#laneTabMarket` by id. Labels are now the masthead's own
+  (Fantasy / DFS / Market Intel, not Season Long / DFS / Betting Market Intel).
+  With one sticky bar instead of two, `scroll-padding-top` dropped from 106px
+  to 56px. On a phone the control takes `order:-3` so it leads the row.
+- **Chapter heads are section heads with a number.** `.fp-chap-n` was a 60px
+  Bebas numeral beside a 40px heading; it is a 12px mono figure beside the
+  30px Bebas heading on the same black rule and brand tick `.sec-head` uses.
+  The sub-heads inside a chapter keep their hairline, so the hierarchy holds.
+- **The four action cards lose the 4px colored left bar**; the kicker carries
+  the color (brand, or `--gold-ink` on the `.gold` card).
+- **The closing band's second button is an outline**, so the band has one
+  primary action.
+
+Not moved, deliberately: the player lookup stays in the ribbon (the one band
+on screen the whole way down the page), and the recap strip stays where it
+was because it is conditional content, hidden until `/api/recaps` answers.
+The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
+
+The full design pass these changes were implemented from, with the eight
+section pages that were NOT implemented, is on the Claude Design canvas
+"Iron Tuna UI Pass".

@@ -117,7 +117,7 @@ console.log('\nthe front page holds up its half');
   ok('the strip ships hidden, so a page that never fetches is the page as it was',
     /<section class="rcp" id="recapStrip" hidden/.test(front));
   ok('it sits above the brand line, which is untouched beneath it',
-    front.indexOf('id="recapStrip"') < front.indexOf('<div class="dominant"'));
+    front.indexOf('id="recapStrip"') < front.indexOf('id="heroBand"'));
   ok('it is only ever revealed after a recap is painted',
     /paint\(\);\s*\r?\n\s*strip\.hidden = false;/.test(front));
   ok('the count reads "N of M"', /\(i \+ 1\) \+ ' of ' \+ items\.length/.test(front));

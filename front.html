@@ -44,10 +44,10 @@
    mean what it says everywhere, including on the sections that hide themselves
    when their feed has nothing to show. */
 [hidden]{display:none !important}
-/* Two sticky bars now sit at the top of the page — the lane tabs and the
-   section ribbon under them — so an anchor jump has to stop clear of both or it
-   lands with the section head hidden behind them. */
-html{scroll-behavior:smooth;scroll-padding-top:106px}
+/* One sticky bar sits at the top of the page — the section ribbon, with the
+   lane control inside it — so an anchor jump has to stop clear of it or it
+   lands with the section head hidden behind it. */
+html{scroll-behavior:smooth;scroll-padding-top:56px}
 body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 img{max-width:100%}
@@ -110,18 +110,6 @@ img{max-width:100%}
 @media (max-width: 860px) { .rcp-dek{display:none} }
 @media (max-width: 560px) { .rcp-wrap{gap:9px;padding:6px 14px} .rcp-kicker{display:none} .rcp-title{font-size:12.5px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical} }
 @media (prefers-reduced-motion: reduce) { .rcp-body{transition:none} }
-.dominant{background:linear-gradient(90deg,var(--brand-dark) 0%,var(--brand) 18%,var(--brand) 82%,var(--brand-dark) 100%);color:#fff}
-.dominant .wrap{display:flex;align-items:center;justify-content:center;gap:16px;padding:9px 18px}
-.dominant-copy{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;min-width:0}
-.dominant-text{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:clamp(18px,2.4vw,25px);letter-spacing:.10em;line-height:1.05;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.25)}
-.dominant-rule{flex:0 1 140px;height:1px;background:rgba(255,255,255,.45)}
-/* The banner set its own width at 390px and pushed the whole document into a
-   horizontal scroll: clamp() min was 19px with .14em of tracking on a line
-   that has to fit the whole claim. The claim is a single headline line, so
-   tighten the tracking and let the rules collapse before the words do. */
-@media(max-width:560px){.dominant-rule{flex-basis:34px;min-width:0}.dominant .wrap{gap:10px}
-  .dominant-text{font-size:clamp(14px,4vw,22px);letter-spacing:.07em}}
-@media(max-width:400px){.dominant-rule{display:none}.dominant .wrap{padding-left:12px;padding-right:12px}}
 
 /* ── section ribbon (in-page nav) ── */
 /* The two bars stick together as `.topbars`, so neither carries a `top` of
@@ -631,7 +619,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .tools-band .tb-ctas{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap}
 .tb-btn{display:inline-block;font-size:13.5px;font-weight:800;letter-spacing:.03em;border-radius:999px;padding:11px 22px}
 .tb-btn.gold{background:var(--gold);color:#1a1205}
-.tb-btn.brand{background:var(--brand);color:#fff}
+.tb-btn.brand{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3)}
 .tb-btn:hover{filter:brightness(1.07)}
 
 /* ── footer ── */
@@ -757,19 +745,19 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   .foot .fm{margin-left:0;flex:1 1 100%;line-height:1.5}
 }
 
-/* ── the claim strip ───────────────────────────────────────────────────────
-   Every general fantasy site ranks players; an auction is priced in dollars,
-   and almost nobody builds for it. The strip says the niche in one line, in
-   the brand color, directly under the masthead. */
-.dominant{background:var(--brand);color:#fff;border-bottom:1px solid rgba(0,0,0,.12)}
-.dominant-rule{background:rgba(255,255,255,.4)}
 
 /* ── the hero: the product, and the three numbers only an auction needs ──
    The page used to open on a news lead, which said "fantasy site" and left the
    reader to work out what the tool did. It opens on the sheet now: the claim,
    two buttons, a real screenshot of the thing being sold, and the three dollar
    columns underneath it. The news desk starts below. */
-.hero-band{background:linear-gradient(180deg,#122320 0%,var(--mast) 78%);color:#e9eeec;border-bottom:3px solid var(--brand)}
+/* The week line. This used to be a black gradient band with the clock strip
+   boxed inside it, under the green claim banner: with the masthead and the
+   rankings ribbon that was four bars before the first story. It is now one
+   36px light strip on the same surface as the page, and the claim banner is
+   gone. The element, its id and the .its-* classes are unchanged: hbClock()
+   paints data-season onto #heroBand and it-season.js fills the strip. */
+.hero-band{background:var(--card);color:var(--ink);border-bottom:1px solid var(--line)}
 .hero-band .hb-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px;align-items:start;padding-top:42px;padding-bottom:40px}
 /* The in-season half. A panel rather than bare copy, so the two products read
    as two things rather than one paragraph that changed subject halfway. */
@@ -884,11 +872,6 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The screenshot is the other half: scaled to a 390px column the sheet is a
    gray smear, so the frame keeps the image at half size and shows the left of
    it — one readable column of real dollars rather than four illegible ones. */
-@media(max-width:620px){
-  .dominant-text{text-align:center;font-size:clamp(15px,4.6vw,21px);letter-spacing:.05em;line-height:1.15}
-  .dominant-rule{display:none}
-  .dominant .wrap{padding:10px 14px}
-}
 @media(max-width:700px){
   .hb-shot img{width:auto;max-width:none;height:300px;object-fit:cover;object-position:0 0}
   .hb-copy h1{font-size:clamp(30px,7.4vw,40px)}
@@ -923,22 +906,29 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The page leads with one claim and two lanes; the draft product keeps its
    pitch, its screenshot and its three numbers, one band lower. */
 .fp-clock {
-  display: flex; flex-wrap: wrap; align-items: stretch; margin: 22px 0 22px;
-  border: 1px solid rgba(255, 255, 255, .14); border-radius: 10px;
-  background: rgba(255, 255, 255, .04);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; margin: 0; min-height: 36px; padding: 5px 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-size: 12.5px; line-height: 20px; letter-spacing: .06em; text-transform: uppercase;
-  font-weight: 700; font-variant-numeric: tabular-nums; color: #cfdad6;
+  font-size: 13px; line-height: 20px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink-2);
 }
-.fp-clock > span { padding: 7px 14px; border-left: 1px solid rgba(255, 255, 255, .14) }
-.fp-clock > span:first-child { border-left: 0 }
-.fp-clock .its-phase { color: var(--teal, #2dd4a3) }
-.fp-clock .its-phase.its-off { color: #97a5a0 }
-.fp-clock .its-week { color: #fff }
-.fp-clock .its-state { color: #fff }
-.fp-clock .its-counts, .fp-clock .its-next, .fp-clock .its-note { color: #97a5a0; text-transform: none; letter-spacing: .01em }
-.fp-clock .its-note { flex: 1 }
-.fp-clock .its-next { margin-left: auto }
+.fp-clock > span { padding: 0 12px; border-left: 1px solid var(--line); white-space: nowrap }
+.fp-clock > span:first-child { padding-left: 0; border-left: 0 }
+.fp-clock .its-phase { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--brand) }
+.fp-clock .its-phase.its-off { color: var(--ink-3) }
+.fp-clock .its-week { color: var(--ink); font-weight: 800 }
+.fp-clock .its-state { color: var(--ink); font-weight: 600 }
+.fp-clock .its-state.its-live { color: var(--value-red); font-weight: 700 }
+.fp-clock .its-counts, .fp-clock .its-next, .fp-clock .its-note { color: var(--ink-3); font-size: 12.5px }
+.fp-clock .its-note { flex: 1; white-space: normal }
+.fp-clock .its-next { margin-left: auto; border-left: 0 }
+@media (max-width: 700px) {
+  .fp-clock { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; font-size: 12.5px }
+  .fp-clock::-webkit-scrollbar { display: none }
+  .fp-clock > span { padding: 0 9px }
+  /* The strip is a sideways scroller on a phone, like the ribbon under it, so
+     the unavailable note scrolls rather than wrapping into a three-line band. */
+  .fp-clock .its-note { white-space: nowrap; flex: 0 0 auto }
+  .fp-clock .its-next { margin-left: 0; border-left: 1px solid var(--line) }
+}
 /* Horizontal padding restates the .wrap gutter: the shorthand used to zero it,
    which pushed the headline, lede and buttons flush to the viewport edge while
    the clock strip above kept its inset. */
@@ -1212,14 +1202,16 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-act {
   display: flex; flex-direction: column; gap: 7px; position: relative; overflow: hidden;
   background: var(--card, #fff); border: 1px solid var(--line, #e1e7ea); border-radius: 12px;
-  padding: 16px 18px 15px 21px; box-shadow: 0 6px 18px rgba(15, 23, 25, .04);
+  padding: 16px 20px 15px; box-shadow: 0 6px 18px rgba(15, 23, 25, .04);
   transition: border-color .12s ease, transform .12s ease, box-shadow .12s ease;
 }
-.fp-act::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--brand, #0e7c63) }
-.fp-act.gold::before { background: var(--gold, #f2a900) }
-.fp-act.flat::before { background: var(--line, #e1e7ea) }
+/* The 4px colored bar down the left edge is gone: the kicker carries the
+   color now (brand, or gold for the one-time action), which is how every
+   other card on the site marks what kind of thing it is. */
 .fp-act:hover { border-color: var(--brand, #0e7c63); transform: translateY(-2px); box-shadow: 0 14px 30px rgba(15, 23, 25, .09) }
-.fp-act-k { font-size: 10.5px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3, #6d7c86) }
+.fp-act-k { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--brand, #0e7c63) }
+.fp-act.gold .fp-act-k { color: var(--gold-ink, #7a5300) }
+.fp-act.flat .fp-act-k { color: var(--ink-3, #6d7c86) }
 .fp-act-h { font-size: 19px; line-height: 1.22; font-weight: 800; color: var(--ink, #0f1719); letter-spacing: -.012em }
 .fp-act-h em { font-style: normal; color: var(--brand, #0e7c63) }
 .fp-act p { font-size: 13px; line-height: 20px; color: var(--ink-2, #3f4e58) }
@@ -1232,17 +1224,24 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    oversized numeral, a rule that runs the full width, a dek — so that at a
    glance, at any scroll position, a reader can tell a chapter boundary from a
    section boundary without reading either. */
-.fp-chap { margin: clamp(38px, 5vw, 68px) 0 clamp(16px, 2vw, 26px); border-top: 1px solid var(--line, #e1e7ea); padding-top: 22px }
-.fp-chap-top { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap }
+/* The numeral used to be a 60px display figure beside a 40px heading: the
+   two chapter dividers were the largest type on the page after the lead, and
+   read as a second masthead each time one scrolled past. A chapter is now the
+   same object as .sec-head — the Bebas heading on the black rule with the
+   brand tick — with its number set small in the mono the week line uses. The
+   sub-heads inside keep their hairline (below), so the hierarchy holds. */
+.fp-chap { margin: clamp(30px, 4vw, 48px) 0 clamp(12px, 1.6vw, 18px) }
+.fp-chap-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 2px solid var(--ink, #0f1719); padding-bottom: 8px; position: relative }
+.fp-chap-top::after { content: ""; position: absolute; left: 0; bottom: -2px; width: 64px; height: 2px; background: var(--brand, #0e7c63) }
 .fp-chap-n {
-  font-family: 'Bebas Neue', Impact, sans-serif; font-size: clamp(40px, 5.4vw, 60px); line-height: .8;
-  color: var(--brand, #0e7c63); letter-spacing: .02em; flex: 0 0 auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1; font-weight: 700;
+  color: var(--brand, #0e7c63); letter-spacing: .12em; flex: 0 0 auto;
 }
 .fp-chap h2 {
-  font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: clamp(28px, 3.8vw, 40px);
-  line-height: 1; letter-spacing: .045em; text-transform: uppercase; color: var(--ink, #0f1719); margin: 0;
+  font-family: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif; font-weight: 400; font-size: 30px;
+  line-height: 1; letter-spacing: .05em; text-transform: uppercase; color: var(--ink, #0f1719); margin: 0;
 }
-.fp-chap-dek { font-size: 14.5px; line-height: 23px; color: var(--ink-2, #3f4e58); margin: 12px 0 0; max-width: 82ch }
+.fp-chap-dek { font-size: 13.5px; line-height: 21px; color: var(--ink-3, #6d7c86); margin: 10px 0 0; max-width: 82ch }
 /* Inside a chapter a section head is a SUBhead: the black two-pixel rule that
    made every one of them look like a chapter is dropped to a hairline, and the
    type comes down a step. The chapter divider now carries the weight. */
@@ -1315,16 +1314,25 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The panes are two siblings in <main>; nothing is fetched for DFS until the
    DFS tab is opened for the first time, so the fantasy reader pays nothing
    for a lane they never look at. */
-.lane-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--mast); border-bottom: 1px solid var(--line) }
-.lane-tab { appearance: none; border: 0; background: none; cursor: pointer; font: inherit; color: #8d99a1;
-  font-family: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif; font-size: clamp(19px, 2.4vw, 26px); letter-spacing: .1em;
-  line-height: 1; text-transform: uppercase; padding: 15px 10px 12px; border-bottom: 4px solid transparent; transition: color .12s, background .12s }
-.lane-tab + .lane-tab { border-left: 1px solid rgba(255, 255, 255, .12) }
-.lane-tab:hover { color: #fff; background: rgba(255, 255, 255, .06) }
-/* --brand is a dark green; on the black band it reads as no underline at all,
-   so the selected tab takes the light --teal the hero band already uses. */
-.lane-tab[aria-selected="true"] { color: #fff; background: rgba(45, 212, 163, .12); border-bottom-color: var(--teal) }
-.lane-tab:focus-visible { outline: 2px solid var(--teal); outline-offset: -4px }
+/* The three tabs used to be a full-width black band of their own, in 26px
+   display type, stacked on top of the ribbon: two sticky bars, 106px of
+   chrome travelling with the reader. They are now a segmented control that
+   LEADS the ribbon's row, the same shape as the edition switch at its other
+   end, and the ribbon is the only sticky bar. Same buttons, same ids, same
+   ARIA and the same script; only the markup's position and the styling moved. */
+.lane-tabs { display: inline-flex; align-items: center; flex: 0 0 auto; border: 1px solid var(--line2, #d9e0e5); border-radius: 6px; overflow: hidden; background: var(--card); margin-right: 8px }
+.lane-tab { appearance: none; border: 0; background: none; cursor: pointer; font: inherit; color: var(--ink-2);
+  font-size: 11.5px; font-weight: 800; letter-spacing: .06em; line-height: 1.2; text-transform: uppercase;
+  padding: 8px 14px; white-space: nowrap; transition: color .12s, background .12s }
+.lane-tab + .lane-tab { border-left: 1px solid var(--line) }
+.lane-tab:hover { color: var(--brand) }
+.lane-tab[aria-selected="true"] { color: #fff; background: var(--ink) }
+.lane-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px }
+.lane-sep { flex: 0 0 auto; width: 1px; height: 20px; background: var(--line); margin: 0 8px 0 2px }
+/* On a phone the ribbon scrolls sideways and the lane control is the one
+   thing on it that must be reachable without scrolling: it leads the row,
+   ahead of the search (order -2) and the edition switch (order -1). */
+@media (max-width: 700px) { .lane-tabs { order: -3; margin-right: 6px } .lane-sep { display: none } }
 
 /* ── the DFS lane ──
    Its own numbers, off /api/dfs, the same slate /dfs reads. Every block draws
@@ -1358,7 +1366,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dfs-stack h3 { font-size: 15px; margin-bottom: 6px }
 .dfs-stack p { font-size: 13px; line-height: 20px; color: var(--ink-2); margin-top: 6px }
 .dfs-empty { font-size: 13.5px; color: var(--ink-3); margin-top: 12px }
-@media (max-width: 560px) { .lane-tab { letter-spacing: .035em; padding: 13px 4px 10px; font-size: 10.5px } }
+@media (max-width: 560px) { .lane-tab { letter-spacing: .04em; padding: 7px 10px; font-size: 10.5px } }
 
 /* The section ribbon under the hero. This page links no shared stylesheet, so
    the block below is INJECTED here by tools/build-ranks.mjs — the identical
@@ -1449,8 +1457,11 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 <body>
 <header class="mast"><div class="wrap">
   <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <!-- The same six destinations, in the same order, as the shared chrome on
+       every other page (tools/build-chrome.mjs NAV). The front page used to
+       carry four of its own, so clicking off "/" changed the nav. -->
   <nav class="mast-jump" aria-label="Sections of the site">
-    <a href="/fantasy">Fantasy</a><a href="/in-season">In-Season</a><a href="/fantasy-football-auction-values">Draft</a><a href="/auction-insights">The Desk</a>
+    <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/vegas-edge">Market Intel</a><a href="/in-season/desk">The Desk</a><a href="/fantasy-football-auction-values">Draft Tools</a><a href="/faq">FAQ</a>
   </nav>
   <nav class="mast-nav">
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
@@ -1478,14 +1489,6 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     </span>
   </div>
 </section>
-<div class="dominant" role="doc-subtitle"><div class="wrap">
-  <span class="dominant-rule"></span>
-  <span class="dominant-copy">
-    <span class="dominant-text">The Betting-Market Knows the Future. Your Lineup Should Too.</span>
-  </span>
-  <span class="dominant-rule"></span>
-</div></div>
-
 <section class="hero-band" id="heroBand">
   <!-- Only the NFL clock strip (fed by /api/season) lives here now. The band
        used to carry the pitch under it: an eyebrow, the headline, a paragraph,
@@ -1630,13 +1633,16 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
      so a reader can look at the other lane and come straight back. The choice is
      kept in the URL (?lane=dfs) and in this browser, so a shared link opens on
      the lane it was shared from. -->
-<div class="lane-tabs" role="tablist" aria-label="Choose a lane">
-  <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Season Long</button>
-  <button class="lane-tab" type="button" role="tab" id="laneTabDfs" data-lane="dfs" aria-controls="laneDfs" aria-selected="false" tabindex="-1">DFS</button>
-  <button class="lane-tab" type="button" role="tab" id="laneTabMarket" data-lane="market" aria-controls="laneMarket" aria-selected="false" tabindex="-1">Betting Market Intel</button>
-</div>
-
 <div class="ribbon" data-lane="fantasy"><div class="wrap">
+  <!-- The lane control leads the row. The labels are the masthead's own
+       (Fantasy, DFS, Market Intel) so the tab and the nav link for the same
+       lane no longer use two names for one thing. -->
+  <div class="lane-tabs" role="tablist" aria-label="Choose a lane">
+    <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Fantasy</button>
+    <button class="lane-tab" type="button" role="tab" id="laneTabDfs" data-lane="dfs" aria-controls="laneDfs" aria-selected="false" tabindex="-1">DFS</button>
+    <button class="lane-tab" type="button" role="tab" id="laneTabMarket" data-lane="market" aria-controls="laneMarket" aria-selected="false" tabindex="-1">Market Intel</button>
+  </div>
+  <span class="lane-sep" aria-hidden="true"></span>
   <!-- Ribbon order tracks the page order. The Build moved up because it is the
        proof the rest of the page is arguing for — a solved roster with the money
        on it — and it was sitting eight screens down on a phone behind two
