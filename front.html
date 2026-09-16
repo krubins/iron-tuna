@@ -339,6 +339,13 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .lm-shot img{width:100%;height:100%;object-fit:cover;object-position:50% 8%;display:block}
 .lm-shot::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--tc,rgba(255,255,255,.28))}
 .lm-init{font-size:24px;font-weight:800;letter-spacing:.02em;color:#cfd7de}
+/* The game photograph, when the plate has one: it covers the cutout and the
+   plate widens to the shape of a game. Only the first plate ever carries one. */
+.lm-shot .lm-action{opacity:0;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%}
+.lm-shot.action{width:184px}
+.lm-shot.action .lm-action{opacity:1}
+.lm-credit{position:absolute;z-index:1;right:12px;bottom:4px;font-size:9.5px;line-height:1.3;color:#8794a0;max-width:60%;text-align:right}
+.lm-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .lm-meta{min-width:0;margin-top:10px}
 .lm-meta b{display:block;color:#fff;font-size:14.5px;font-weight:800;line-height:1.2;letter-spacing:-.01em}
 .lm-meta span{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#93a1ad}
@@ -351,6 +358,10 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .rail a.hl{font-size:14px;font-weight:700;line-height:1.35;display:block}
 .rail a.hl:hover{color:var(--brand)}
 .rail .hl-meta{font-size:11.5px;color:var(--ink-3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+/* A headline with a face beside it: the face is a fixed column, the text takes the rest. */
+.rail li.has-face{display:flex;align-items:flex-start;gap:10px}
+.rail li.has-face .hl-text{min-width:0;flex:1 1 auto}
+.rail .hl-face{width:38px;height:38px;min-width:38px;margin:1px 0 0;border-radius:7px;flex:0 0 auto}
 .hl-meta.nfl-wide{display:flex;align-items:center;gap:6px}
 .hl-nfl-logo{display:block;width:18px;height:18px;object-fit:contain;flex:0 0 auto}
 
@@ -1071,6 +1082,8 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-well .lm-cast { flex-direction: column; align-items: stretch; gap: 14px; width: 100% }
 .fp-well .lm-face { width: 100%; max-width: none }
 .fp-well .lm-face .lm-shot { width: 100%; height: 226px }
+.fp-well .lm-face .lm-shot.action { width: 100% }
+.fp-well .lm-credit { right: 10px; bottom: 6px; max-width: calc(100% - 20px) }
 /* The story's foot rides the bottom of the card, so the headline block and the
    headline column beside it close on the same line. */
 .fp-well .lead-foot { margin-top: auto }
@@ -1101,6 +1114,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   .fp-well .lm-face { width: auto; max-width: 168px }
   .fp-well .lm-cast, .fp-well .lm-face:first-child { flex: 0 1 auto }
   .fp-well .lm-face .lm-shot, .fp-well .lm-face:nth-child(2) .lm-shot, .fp-well .lm-face:first-child .lm-shot { width: 104px; height: 116px; flex: 0 0 auto; min-height: 0 }
+  .fp-well .lm-face:first-child .lm-shot.action { width: 184px }
   .fp-well .lead-foot { margin-top: 0 }
   .fp-well .lm-face:nth-child(2) { flex-direction: column; align-items: flex-start; gap: 0 }
   .fp-well .lm-face:nth-child(2) .lm-meta { margin-top: 10px }
@@ -2159,6 +2173,9 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 
 <script src="/it-league.js"></script>
 <script src="/it-season.js" defer></script>
+<!-- The game photographs for the lead band, before player-search.js so the
+     map is there when the band repaints; both deferred, so in this order. -->
+<script src="/it-action.js" defer></script>
 <script src="/player-search.js" defer></script>
 <!-- Shared with /dfs, so the front page and the sheet cannot solve the same
      slate differently. It is deferred: nothing on this page needs it until the
@@ -2846,8 +2863,37 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     // of white beside the headline. The band's own [hidden] handles the band;
     // this is what tells the grid there is no first column to make room for.
     var card = document.getElementById('lead');
+    lastCast = s;
     if (!keys.length){ band.hidden = true; if (card) card.classList.add('nopic'); return; }
     keys.forEach(function(k){ cast.appendChild(faceEl(PLAYERS[k] || sent[k])); });
+    // The first plate runs a GAME PHOTOGRAPH when there is a licensed one
+    // (/it-action.js, via player-search.js) — a picture of the man doing the
+    // thing the story is about, over the cutout that only says who he is. The
+    // credit its license requires goes in the band with it; the plate falls
+    // back to the cutout if the photograph does not load.
+    var old = band.querySelector('.lm-credit');
+    if (old) old.remove();
+    var PS = window.ITPlayerSearch, shot = PS && PS.action ? PS.action(keys[0]) : null;
+    if (shot){
+      var first = cast.firstChild && cast.firstChild.querySelector('.lm-shot');
+      if (first){
+        var who = PLAYERS[keys[0]] || sent[keys[0]];
+        var ph = document.createElement('img');
+        ph.className = 'lm-action';
+        ph.alt = who.n + (who.t ? ', ' + who.t : '');
+        ph.decoding = 'async';
+        ph.referrerPolicy = 'no-referrer';
+        var credit = document.createElement('span');
+        credit.className = 'lm-credit';
+        credit.innerHTML = 'Photo: <a href="' + esc(shot.s || shot.u) + '" rel="noopener">' + esc(shot.a || 'Wikimedia Commons') + '</a>'
+          + (shot.l ? ', <a href="' + esc(shot.lu || shot.s || shot.u) + '" rel="license noopener">' + esc(shot.l) + '</a>' : '')
+          + ', via Wikimedia Commons; cropped.';
+        ph.onload = function(){ first.classList.add('action'); band.appendChild(credit); };
+        ph.onerror = function(){ ph.remove(); credit.remove(); first.classList.remove('action'); };
+        ph.src = shot.u;
+        first.appendChild(ph);
+      }
+    }
     // `tm` means the story named nobody and this is that club's headline player,
     // so the band is labeled with the team instead of claiming the story is
     // about him. The club's full name comes from the plate's own palette.
@@ -2871,6 +2917,13 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     band.hidden = false;
     if (card) card.classList.remove('nopic');
   }
+
+  // The band paints from data embedded in the page, before the deferred
+  // player-search.js and /it-action.js have run, so the first paint cannot
+  // know about the photograph. When they arrive the band is painted again for
+  // the story it is showing; nothing else on the card moves.
+  var lastCast = null;
+  document.addEventListener('it-player-search-ready', function(){ if (lastCast) renderCast(lastCast); });
 
   // The lead is a story, so the players it names link to their cards. It is
   // repainted on every edition switch, arrow and dot, so this runs at the tail
@@ -3659,9 +3712,21 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     items.forEach(function(it){
       var el = document.createElement('li');
       var nflWide = isNflLeagueWide(it.label) || isNflLeagueWide(String(it.meta || '').split(' · ')[0]);
-      el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta' + (nflWide ? ' nfl-wide' : '') + '">' +
+      el.innerHTML = '<div class="hl-text"><a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta' + (nflWide ? ' nfl-wide' : '') + '">' +
         (nflWide ? '<img class="hl-nfl-logo" src="' + NFL_LOGO_URL + '" alt="" aria-hidden="true">' : '') +
-        esc(it.meta) + '</div>';
+        esc(it.meta) + '</div></div>';
+      // The face of the first player the line is about, beside it. Built
+      // here rather than left to player-search.js's heading pass because a
+      // headline in this column is a link, not a heading, and it only ever
+      // gets one face: the column is a list, not a photo page.
+      var PS = window.ITPlayerSearch;
+      var who = PS && PS.castOf && it.who && it.who.length ? PS.castOf(it.who, 1) : [];
+      if (who.length){
+        var face = PS.face(who[0], 'it-player-face hl-face');
+        face.setAttribute('aria-hidden', 'true');
+        el.insertBefore(face, el.firstChild);
+        el.className = 'has-face';
+      }
       rail.appendChild(el);
     });
     // Early in a season the lead rotation can hold every story there is, leaving
@@ -3701,7 +3766,10 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         label: o.label || 'The Desk',
         meta: (o.label || 'The Desk') + (when ? ' · ' + when : ''),
         desk: 1,
-        at: +o.createdAt || 0
+        at: +o.createdAt || 0,
+        // Who the line is about, for the face beside it: the story's own
+        // cast, or the one player a broken-out finding names.
+        who: names || []
       };
     });
   }
@@ -5161,7 +5229,13 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var by = p.byline || {}; var who = lens === 'dfs' ? by.dfsName : by.name;
     var kicker = lens === 'dfs' && p.dfsTitle ? p.dfsTitle : p.title;
     var nflWide = /^NFL\s+League-Wide$/i.test(String(kicker || '').trim());
-    return '<a class="nr-card" href="' + esc(p.url) + '"><span class="nr-kicker' + (nflWide ? ' nfl-wide' : '') + '">' +
+    // The players the piece's findings name, so player-search.js can put
+    // their faces over the headline once the card is in the page — the same
+    // rule the desk's own feed follows. A piece with no findings still gets
+    // the faces of whoever its headline writes out.
+    var who = [];
+    (p.components || []).forEach(function (c) { if (c && c.player && who.indexOf(c.player) < 0) who.push(c.player); });
+    return '<a class="nr-card" href="' + esc(p.url) + '"' + (who.length ? ' data-player-focus="' + esc(who.slice(0, 3).join('|')) + '"' : '') + '><span class="nr-kicker' + (nflWide ? ' nfl-wide' : '') + '">' +
       (nflWide ? '<img class="nr-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' : '') +
       esc(kicker) + ' &middot; Week ' + esc(p.week) + (p.perGame ? ' &middot; Final' : '') + (p.edition > 1 ? ' &middot; update ' + esc(p.edition) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
       '<span class="nr-by"><span class="nr-av">' + esc(av(who)) + '</span>' + esc(who || 'Iron Tuna') + (p.rivalry && lens !== 'dfs' ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') +

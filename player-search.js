@@ -181,7 +181,23 @@
       + 'margin-right:0;border:1px solid var(--line,rgba(127,127,127,.2));background:var(--elev,#edf1f2)}'
       + '.it-story-focus .it-player-face+ .it-player-face{margin-left:-10px}'
       + '@media(max-width:620px){.it-story-focus .it-player-face{width:42px;height:42px;min-width:42px;'
-      + 'border-radius:8px}.it-player-face{width:30px;height:30px;min-width:30px;margin-right:7px}}';
+      + 'border-radius:8px}.it-player-face{width:30px;height:30px;min-width:30px;margin-right:7px}}'
+      // The story figure: one game photograph over a row of the faces it is
+      // about, with the photograph's credit between them.
+      + '.it-art{margin:0 0 20px;display:flex;flex-direction:column;gap:12px;min-width:0}'
+      + '.it-art>img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;'
+      + 'object-position:50% 30%;border-radius:8px;background:var(--elev,#edf1f2)}'
+      + '.it-art-credit{font-size:11px;line-height:1.4;color:var(--muted,#738087);margin:-6px 0 0}'
+      + '.it-art-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}'
+      + '.it-art-cast{display:flex;flex-wrap:wrap;gap:10px 22px}'
+      + '.it-art-face{display:inline-flex;align-items:center;gap:10px;color:inherit;text-decoration:none;min-width:0}'
+      + '.it-art-face:hover{text-decoration:none}'
+      + '.it-art-face:hover b{color:var(--teal,#0e7c63)}'
+      + '.it-art-face .it-player-face{margin:0}'
+      + '.it-art-meta{display:flex;flex-direction:column;min-width:0}'
+      + '.it-art-meta b{font-size:13.5px;line-height:1.15;color:var(--text,#101317)}'
+      + '.it-art-meta span{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;'
+      + 'color:var(--muted,#738087);margin-top:2px}';
     doc.head.appendChild(s);
   }
 
@@ -250,34 +266,49 @@
 
     function addHead(h, unit) {
       if (!h || seenHead.indexOf(h) >= 0) return;
-      if (h.closest && (h.closest('table,nav,footer,.pc-head,.pl-menu') || h.querySelector('.it-story-focus'))) return;
+      // `data-no-player-focus` is a page saying the picture is already there:
+      // the desk piece and /lead run a story figure under the headline, and
+      // the same faces at the head of the headline would print them twice.
+      if (h.closest && (h.closest('table,nav,footer,.pc-head,.pl-menu,[data-no-player-focus]') || h.querySelector('.it-story-focus'))) return;
       seenHead.push(h);
       heads.push({ h: h, unit: unit || null });
     }
 
+    // A block that says who it is about is a unit for the faces even when it
+    // is not one for the links: a recap's component line is a finding inside
+    // the story, not a story of its own for the purpose of reading "Kyren".
+    var FOCUS_UNITS = UNITS + ', [data-player-focus]';
     var units = [];
-    if (where.nodeType === 1 && where.matches && where.matches(UNITS)) units.push(where);
-    var q = where.querySelectorAll(UNITS);
+    if (where.nodeType === 1 && where.matches && where.matches(FOCUS_UNITS)) units.push(where);
+    var q = where.querySelectorAll(FOCUS_UNITS);
     for (var i = 0; i < q.length; i++) units.push(q[i]);
-    units.forEach(function (unit) { addHead(unit.querySelector('h1,h2,h3'), unit); });
+    // A unit that has no heading of its own can name the element the faces go
+    // in front of (`data-player-head`): the wrap's component lines and the
+    // desk's tailback calls are a link and a div, not an <h3>.
+    units.forEach(function (unit) { addHead(unit.querySelector('[data-player-head],h1,h2,h3'), unit); });
 
     var generic = where.querySelectorAll('main h1,main h2,main h3');
     for (i = 0; i < generic.length; i++) addHead(generic[i], null);
 
     var made = 0;
     heads.forEach(function (item) {
-      var h = item.h, unit = item.unit;
-      var hits = mentionsIn(h.textContent || '', 4), focus = [];
-      for (var j = 0; j < hits.length && focus.length < 3; j++) focus.push(hits[j].p);
-
-      if (!focus.length && unit) {
-        var one = unit.getAttribute('data-player-focus') || '';
-        if (one && byKey[one]) focus.push(byKey[one]);
-        if (!focus.length) {
-          var cast = (unit.getAttribute('data-players') || '').trim().split(/\s+/).filter(Boolean);
-          if (cast.length === 1 && byKey[cast[0]]) focus.push(byKey[cast[0]]);
-        }
+      var h = item.h, unit = item.unit, focus = [];
+      // WHO THE STORY IS ABOUT, in order of how sure the page is:
+      //   1. what the page SAID (`data-player-focus`): the desk's own subject
+      //      list, or the players the front page's story data commits to;
+      //   2. the names the headline writes out in full;
+      //   3. the players the copy names (`data-players`), which the drop
+      //      pages carry as the call's cast.
+      // The first used to be one slug and the third only counted when it was
+      // exactly one man, so a story that named its subject anywhere but in
+      // its headline ran with no picture. Three faces is the cap everywhere:
+      // past that a headline stops reading as one story.
+      if (unit) focus = castOf(unit.getAttribute('data-player-focus'), 3);
+      if (!focus.length) {
+        var hits = mentionsIn(h.textContent || '', 4);
+        for (var j = 0; j < hits.length && focus.length < 3; j++) focus.push(hits[j].p);
       }
+      if (!focus.length && unit) focus = castOf(unit.getAttribute('data-players'), 3);
       if (!focus.length) return;
 
       var group = root.document.createElement('span');
@@ -292,6 +323,127 @@
 
   function decorateAll(scope) {
     return decorateTables(scope) + decorateStories(scope);
+  }
+
+  // ── who a story is about, from whatever the page has ──────────────────────
+  // A slug ("josh-allen"), a full name as the desk writes it ("Josh Allen",
+  // "Michael Pittman Jr."), or an object carrying either. Pages that paint from
+  // data hold names (the desk's `components[].player`, the lead's `cast`); the
+  // drop pages hold slugs. One resolver, so a surface never has to know which.
+  function resolve(token) {
+    if (!token) return null;
+    if (typeof token === 'object') return resolve(token.k) || resolve(token.n);
+    var t = String(token).trim();
+    if (!t) return null;
+    if (byKey[t]) return byKey[t];
+    fullIndex();
+    return fullMap[fold(t)] || fullMap[fold(t.replace(SUFFIX, ''))] || null;
+  }
+  // A list — an array, or one attribute string. Names carry spaces, so an
+  // attribute holding several of them joins them with "|"; slugs, which never
+  // do, may still be separated by spaces the way `data-players` always was.
+  function castOf(list, limit) {
+    var toks = [];
+    if (Array.isArray(list)) toks = list;
+    else if (list != null) {
+      var s = String(list).trim();
+      if (s) toks = s.indexOf('|') >= 0 ? s.split('|') : (resolve(s) ? [s] : s.split(/\s+/));
+    }
+    var out = [], seen = {};
+    for (var i = 0; i < toks.length && out.length < (limit || 4); i++) {
+      var p = resolve(toks[i]);
+      if (p && !seen[p.k]) { seen[p.k] = 1; out.push(p); }
+    }
+    return out;
+  }
+
+  // ── action photographs ────────────────────────────────────────────────────
+  // A headshot says who; a game photograph says what he does. The map lives in
+  // /it-action.js (generated by tools/build-action-shots.mjs from Wikimedia
+  // Commons, openly licensed files only) and is loaded by the story pages
+  // alone, because it is the one thing here a table never needs. Read at call
+  // time rather than at load: the two files are deferred, and the map only
+  // has to be there when a story paints.
+  //   { u: image URL, w, h: pixel size, a: photographer, l: license,
+  //     lu: license URL, s: the file page on Commons, y: the year }
+  // Each entry is a license obligation as much as a picture: the credit the
+  // figure prints below is what CC BY and CC BY-SA require, and a page that
+  // showed the photograph without it would be using the file outside its
+  // license. storyArt() never separates the two.
+  function action(k) {
+    var map = root.ITActionShots;
+    if (!map || !k) return null;
+    var a = map[k];
+    return a && a.u ? a : null;
+  }
+  function creditEl(shot) {
+    var doc = root.document;
+    var cap = doc.createElement('figcaption');
+    cap.className = 'it-art-credit';
+    cap.appendChild(doc.createTextNode('Photo: '));
+    var by = doc.createElement('a');
+    by.href = shot.s || shot.u;
+    by.rel = 'noopener';
+    by.textContent = shot.a || 'Wikimedia Commons';
+    cap.appendChild(by);
+    if (shot.l) {
+      cap.appendChild(doc.createTextNode(', '));
+      var lic = doc.createElement('a');
+      lic.href = shot.lu || shot.s || shot.u;
+      lic.rel = 'license noopener';
+      lic.textContent = shot.l;
+      cap.appendChild(lic);
+    }
+    cap.appendChild(doc.createTextNode(', via Wikimedia Commons' + (shot.a ? '; cropped to fit.' : '.')));
+    return cap;
+  }
+  // The art for one story: the first named player's game photograph when the
+  // map has one, then the faces of everyone the story is about, each a link
+  // to his card. With no photograph the figure is the row of faces alone —
+  // the same answer as before, never a hole where a picture failed to load.
+  function storyArt(list, opts) {
+    opts = opts || {};
+    var people = castOf(list, opts.limit || 4);
+    if (!people.length) return null;
+    ensureFocusStyle();
+    var doc = root.document;
+    var fig = doc.createElement('figure');
+    fig.className = 'it-art' + (opts.cls ? ' ' + opts.cls : '');
+    var shot = null, who = null;
+    if (opts.photo !== false) {
+      for (var i = 0; i < people.length && !shot; i++) { shot = action(people[i].k); if (shot) who = people[i]; }
+    }
+    if (shot) {
+      fig.classList.add('has-photo');
+      var img = doc.createElement('img');
+      img.alt = who.n + (who.t ? ', ' + who.t : '');
+      img.loading = opts.eager ? 'eager' : 'lazy';
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      if (shot.w && shot.h) { img.width = shot.w; img.height = shot.h; }
+      var cap = creditEl(shot);
+      img.onerror = function () { img.remove(); cap.remove(); fig.classList.remove('has-photo'); };
+      img.src = shot.u;
+      fig.appendChild(img);
+      fig.appendChild(cap);
+    }
+    var row = doc.createElement('div');
+    row.className = 'it-art-cast';
+    people.forEach(function (p) {
+      var a = doc.createElement('a');
+      a.className = 'it-art-face';
+      a.href = href(p);
+      a.appendChild(faceEl(p, 'it-player-face it-story-face'));
+      var meta = doc.createElement('span');
+      meta.className = 'it-art-meta';
+      var nm = doc.createElement('b'); nm.textContent = p.n;
+      var sub = doc.createElement('span'); sub.textContent = p.p + (p.t ? ' · ' + p.t : '');
+      meta.appendChild(nm); meta.appendChild(sub);
+      a.appendChild(meta);
+      row.appendChild(a);
+    });
+    fig.appendChild(row);
+    return fig;
   }
 
   // ── the box ───────────────────────────────────────────────────────────────
@@ -785,6 +937,10 @@
     get: function (k) { return byKey[k] || null; },
     search: search,
     face: faceEl,
+    resolve: resolve,
+    castOf: castOf,
+    action: action,
+    storyArt: storyArt,
     href: href,
     fold: fold,
     mount: mount,
@@ -820,6 +976,10 @@
       });
       root.__itPlayerFocusObserver.observe(root.document.body, { childList: true, subtree: true });
     }
+    // Pages that paint a story from data before this file has run wait on
+    // this rather than polling for the global.
+    root.__itPlayerSearchReady = true;
+    try { root.document.dispatchEvent(new root.CustomEvent('it-player-search-ready')); } catch (e) {}
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', boot);
   else boot();
