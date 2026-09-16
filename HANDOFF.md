@@ -11809,3 +11809,148 @@ Collins $28 / Wilson $27 against served **Collins WR12 $25, Wilson WR10 $29**.
   shape as the hung jobs: **the status is not a reliable signal of the
   outcome**, in either direction.
 - The branch is **28 commits ahead of `main`**.
+## 96. September 16: every Week 1 game now has two recaps, and the deployment is back in step
+
+D1 clock 2026-09-16 11:22:24Z, container 11:23:23Z. All four board feeds
+refreshed at 11:01:28Z. Row 7 is 98 hours old and still correct by design
+(§91b). `main` moved to `1ee60e4` and added five sections, so my 76–90 became
+81–95 and 66 internal cross-references shifted with them.
+
+### 96a. `lead_story` has gained a full duplicate set of Week 1 recaps
+
+`lead_story` jumped from 97 to **111** overnight. Rows 98–111 are fourteen new
+rows, every one `category='recap'`, `verified=1`, `published=0`, all created in
+a three-minute batch on 2026-09-15 between 14:12:50 and 14:15:26.
+
+With rows 96 and 97 that is **sixteen recap rows in `lead_story`, and they are
+one per Week 1 game** — ARI-LAC, ATL-PIT, BAL-IND, BUF-HOU, CHI-CAR, CLE-JAX,
+DAL-NYG, DEN-KC, GB-MIN, MIA-LV, NE-SEA, NO-DET, NYJ-TEN, SF-LA, TB-CIN,
+WAS-PHI. `content_pieces` holds a **published** `game-recap` for those same
+sixteen games, which is what `/api/recaps` and the front-page strip read.
+
+So every Week 1 game now has two recaps with different headlines: one live on
+the strip, one sitting in the lead-story table. `lead_story_run` is still 58,
+so the paused lead-story Routine did not write them, and nothing in the run log
+accounts for the batch.
+
+Why this matters more than it did as §92d, when it was two rows:
+
+- The front page takes **the newest row with `verified=1 AND published=1`** as
+  the lead story. All sixteen are already `verified=1`. A single `published`
+  flag on any of them replaces the pinned row 94 with a recap.
+- `LEAD_CATEGORIES` still has exactly six keys and no `recap`, in the repo and
+  in the deployed bundle alike. A published recap renders with the label
+  **"Insight"** and serves `category: null`.
+- The strip would then show that same game under a different headline, three
+  inches away.
+
+Nothing is published and I have not touched any of it. But the blast radius of
+one accidental flag has gone from two rows to sixteen, and the rows arrived
+while the column was paused.
+
+### 96b. The deployment is back on `main` — and one branch it served has still never merged
+
+Today's bundle is 1,468,201 bytes and carries 974 top-level symbols. Every one
+of them is in `origin/main` except the three esbuild generates (`__defProp`,
+`__name`, `worker_default`). Yesterday's branch-only `_oppFor` is now in `main`
+too: `claude/trusting-ptolemy-950fxw` was merged.
+
+The other one was not.
+
+```
+claude/trusting-ptolemy-950fxw   (served 09-15)   MERGED
+claude/iron-tuna-in-season-2oxwqe (served 09-14)  NOT MERGED  — still 3 commits ahead
+```
+
+So the sharpest form of §95a is this: **on 09-14 the production Worker served a
+branch that has never been merged and is still unmerged today** — `f25b087`
+"The schedule refresh stops asking ESPN for the preseason once the season is
+here" and `2ce8cd9` "The desk's verbs are not first names". Readers got that
+code for a day; `main` has never had it.
+
+The exposure is transient rather than permanent — a branch serves until
+something rebuilds from `main` — but transient is not the same as harmless, and
+nothing in the repo records which branch was live on which day. The daily "repo
+vs deployed" check is still conditional: it passed today because the deployment
+*is* `main`, and it passed on 09-14 and 09-15 only because those branches
+happened not to touch the board.
+
+### 96c. Hang rate: 09-15 closed at 38%
+
+```
+09-09   22 / 112   20%
+09-10   35 / 259   14%
+09-11   46 / 225   20%
+09-12   51 / 317   16%
+09-13  109 / 229   48%
+09-14   65 / 272   24%
+09-15  115 / 305   38%     <- I could only report 41% partial
+09-16   39 / 187   21%  (partial, 11:22 — not a figure to quote)
+```
+
+Two of the last four days above a third. §95b's rule held: the partial read
+(41%) was close but not the number, and the number to record is always the
+closed day.
+
+### 96d. Row 94 keeps sliding
+
+```
+                    story (Sept 8)   09-14      09-15      09-16
+Carnell Tate        $11, WR25        $10, WR26  $10, WR26  $10, WR27
+Cam Ward            $1,  QB26        $1,  QB27  $1,  QB27  $1,  QB27
+Tony Pollard        $5,  RB29        $5,  RB29  $5,  RB29  $5,  RB29
+Wan'Dale Robinson   $3,  WR38        $2,  WR41  $2,  WR41  $2,  WR42
+prose               1,060.8 / 207.2                        1,025.9 / 200.4
+```
+
+Third straight day with two published prices wrong against the live board, and
+the ranks are still walking away — Tate WR25→WR27, Robinson WR38→WR42.
+
+The curve paragraph is wrong at WR20 again: today's served column reads WR20
+**$13**, WR21–23 $12, WR24–27 $10, so "receivers ranked 20 through 23 all cost
+$12" is false at its first term and "24 through 26 all cost $10" is true. Four
+days: wrong, right, wrong-at-WR20, wrong-at-WR20.
+
+### 96e. The two-board gap, day four
+
+```
+             09-13    09-14    09-15    09-16
+differing    21.8%    22.1%    22.6%    21.2%   (72 / 340)
+largest gap  $28      $29      $29      $29     (A.J. Brown $30 static vs $1 served)
+same rank    14       9        13       11
+```
+
+Four overlays, four days, a range of 1.4 points. §87a's pair reversed back:
+static Collins $28 / Wilson $27 against served **Collins WR10 $30, Wilson WR12
+$28**, which is exactly where they were on 09-13.
+
+### 96f. D1 grew six-fold and the rows do not explain it
+
+`size_after` went from 12.3 MB on 09-15 to **78.1 MB** today. The row counts do
+not account for it:
+
+```
+page_views 13,606 · dfs_salaries 5,786 · odds_snapshots 2,761 · job_runs 2,346
+site_events 1,958 · content_pieces 68 · game_summaries 16 (109 KB of payload)
+lead_story 111 · analyst_calls 239 · tuna_market_snapshots 239
+```
+
+Every one of those is narrow-row, and the whole database is roughly 35,000 rows.
+65 MB of growth in a day is not in the data I can count, so it is most likely
+free pages or journal overhead rather than content — **but I have not
+established that**, and it is recorded here as an unexplained observation
+rather than a diagnosis.
+
+### 96g. The rest
+
+- CI **76/76**; harness self-test **23/23**.
+- Repo vs deployed: **1380 player-rows across four boards, 0 differences**;
+  `VEGAS_WEIGHT`, `LEAGUE_BUDGET`, `MIN_BID`, `CURVE`, `COLUMN_NORM` identical.
+- Routine still `enabled: false`, untouched since 2026-09-09 13:05:36Z; live
+  prompt still **47,183 chars / `9c578c415408`**.
+- Tamper predicates clean: one published row (94), no published-unverified row,
+  no analyst row published, 67 audit rows, `lead_story_run` still 58.
+- No new night-recap Routine run since 09-15 (no Tuesday game), so the 03:47Z
+  failure pattern has nothing new to add.
+- A new `odds_overlay` row 5 (`nflverse-usage`) is now refreshing hourly.
+- The branch is **30 commits ahead of `main`**.
