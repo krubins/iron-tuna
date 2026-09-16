@@ -56,8 +56,10 @@ async function fakeFetch(url, init) {
   net.calls.push(url);
   if (/\.football\.cbssports\.com\/api\/league\//.test(url)) {
     cbsNet.requests.push({ url, init });
-    const response = (body, status = 200) => ({ ok: status < 300, status, text: async () => typeof body === 'string' ? body : JSON.stringify(body) });
+    const response = (body, status = 200, headers = {}) => ({ ok: status < 300, status, headers: { get: k => headers[k.toLowerCase()] || null }, text: async () => typeof body === 'string' ? body : JSON.stringify(body) });
     if (cbsNet.mode === 'network') throw new Error('fetch failed with secret ' + init.headers.Authorization);
+    if (cbsNet.mode === 'redirect') return response('', 302, { location: 'https://www.cbssports.com/login?xurl=' + encodeURIComponent(url) });
+    if (cbsNet.mode === 'timeout') { const e = new Error('aborted with ' + url); e.name = 'AbortError'; throw e; }
     if (cbsNet.mode === 'plain') return response('invalid access token ' + init.headers.Authorization, 403);
     if (cbsNet.mode === 'expired200') return response({ statusCode: 401, body: { error: init.headers.Authorization } });
     if (cbsNet.mode === 'malformed') return response('<html>' + init.headers.Authorization + '</html>');
@@ -544,7 +546,7 @@ console.log('\nCBS token connector, end to end');
   ok('unsupported scoring is retained and labeled', Object.keys(L.settings.extras.unsupported).length === 1 && L.settings.extras.notes.length > 0);
   ok('CBS stores teams, roster slots, standings and waiver balance', L.teams.length === 2 && L.teams[0].faabLeft === 153 && L.teams[0].pointsFor === 440.5 && L.rosters.some(t => t.players.some(p => p.slot === 'ir')));
   ok('token is encrypted and absent from API responses', saved().access_enc.startsWith('v1.') && await H.leagueOpen(ce, saved().access_enc) === 'CBS-secret-one' && !JSON.stringify(r.body).includes('CBS-secret-one') && !JSON.stringify(r.body).includes('access_enc'));
-  ok('all CBS reads use HTTPS, header auth, no redirects and no credential URL', cbsNet.requests.length === 8 && cbsNet.requests.every(x => new URL(x.url).origin === 'https://fixture.football.cbssports.com' && !x.url.includes('secret') && x.init.headers.Authorization === 'CBS-secret-one' && x.init.redirect === 'error' && x.init.method === 'GET' && x.init.cache === 'no-store'));
+  ok('all CBS reads use HTTPS, the fixed league host, the token as access_token and Authorization, no followed redirects', cbsNet.requests.length === 8 && cbsNet.requests.every(x => new URL(x.url).origin === 'https://fixture.football.cbssports.com' && new URL(x.url).searchParams.get('access_token') === 'CBS-secret-one' && new URL(x.url).searchParams.get('version') === '3.0' && x.init.headers.Authorization === 'CBS-secret-one' && x.init.redirect === 'manual' && x.init.method === 'GET' && x.init.cache === 'no-store'));
   const team = await route(ce, 'POST', '/api/leagues/' + id + '/team', { teamId: '1' }, cookie);
   ok('CBS uses the existing team chooser', team.body.ok);
   const row = [...db.t.leagues.values()].find(x => x.id === id);
@@ -555,12 +557,16 @@ console.log('\nCBS token connector, end to end');
   ok('separate leagues retain separate encrypted tokens', other.body.ok && await H.leagueOpen(ce, saved('second').access_enc) === 'CBS-secret-two' && await H.leagueOpen(ce, saved().access_enc) === 'CBS-secret-one');
   const forbidden = await route(ce, 'GET', '/api/leagues/' + id, null, await session(ce, 'other@example.com'));
   ok('another account cannot read CBS data', forbidden.status === 404);
-  for (const [mode, expected] of [['plain', 'expired_authorization'], ['expired200', 'expired_authorization'], ['rate', 'rate_limited'], ['missing', 'league_not_found'], ['malformed', 'invalid_response'], ['network', 'provider_unavailable']]) {
+  for (const [mode, expected, note] of [['plain', 'expired_authorization', /HTTP 403/], ['expired200', 'expired_authorization', /HTTP 401/], ['rate', 'rate_limited', /HTTP 429/], ['missing', 'league_not_found', /HTTP 404/], ['malformed', 'invalid_response', /not JSON/], ['network', 'provider_unavailable', /could not be sent/], ['redirect', 'expired_authorization', /HTTP 302 to www\.cbssports\.com\/login\)/], ['timeout', 'provider_unavailable', /15 seconds/]]) {
     cbsNet.mode = mode;
     const before = JSON.stringify([...db.t.league_roster_players.values()].filter(x => x.league_id === id));
     const result = await H.leagueSync(ce, row, 'job');
-    ok('CBS ' + mode + ' failure is classified, redacted, and preserves rosters', !result.ok && result.code === expected && !JSON.stringify(result).includes('CBS-secret') && JSON.stringify([...db.t.league_roster_players.values()].filter(x => x.league_id === id)) === before);
+    ok('CBS ' + mode + ' failure is classified, redacted, and preserves rosters', !result.ok && result.code === expected && !JSON.stringify(result).includes('CBS-secret') && !JSON.stringify(result).includes('access_token') && JSON.stringify([...db.t.league_roster_players.values()].filter(x => x.league_id === id)) === before, JSON.stringify(result));
+    ok('CBS ' + mode + ' failure names the resource and the HTTP outcome', /CBS details: /.test(result.error) && note.test(result.error), result.error);
   }
+  cbsNet.mode = 'redirect';
+  const redirected = await con('fixture', 'CBS-secret-redirected');
+  ok('a sign-in redirect on connect is reported to the form as a refused token with the redacted target', redirected.status === 409 && redirected.body.error === 'expired_authorization' && /HTTP 302 to www\.cbssports\.com\/login\)/.test(redirected.body.detail) && !JSON.stringify(redirected.body).includes('secret') && !JSON.stringify(redirected.body).includes('xurl'), JSON.stringify(redirected.body));
   const badReconnect = await con('fixture', 'rejected-secret');
   ok('failed reconnect does not replace a saved token', !badReconnect.body.ok && await H.leagueOpen(ce, saved().access_enc) === 'CBS-secret-one');
   cbsNet.mode = '';

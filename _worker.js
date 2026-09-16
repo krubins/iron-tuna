@@ -13290,30 +13290,43 @@ async function cbsGet(env, id, token, resource, params = {}) {
   if (!CBS_RESOURCES.has(resource)) throw cbsError('invalid_response');
   if (!token) throw cbsError('expired_authorization');
   const url = new URL('https://' + id + '.football.cbssports.com/api/league/' + resource);
-  url.search = new URLSearchParams({ version: '3.0', response_format: 'json', sport: 'football', league_id: id, ...params }).toString();
+  // CBS's fantasy API (version 3.0) reads the token from the access_token
+  // query parameter; the Authorization header is sent as well. The URL is
+  // never logged, stored or echoed: every diagnostic below is built from the
+  // resource name, the HTTP status and, for a redirect, the target's host and
+  // path only (a sign-in redirect carries the original URL in its query).
+  url.search = new URLSearchParams({ version: '3.0', response_format: 'json', sport: 'football', league_id: id, ...params, access_token: token }).toString();
+  const fail = (code, note) => { const e = cbsError(code); e.detail = 'CBS ' + resource + ': ' + note; return e; };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    // Never cache credentials or follow a redirect carrying Authorization.
-    const res = await fetch(url.toString(), { method: 'GET', headers: { Authorization: token, Accept: 'application/json' }, redirect: 'error', cache: 'no-store', signal: controller.signal });
+    // Never cache credentials or follow a redirect carrying the token.
+    const res = await fetch(url.toString(), { method: 'GET', headers: { Authorization: token, Accept: 'application/json' }, redirect: 'manual', cache: 'no-store', signal: controller.signal });
+    if (res.status >= 300 && res.status < 400) {
+      let to = '';
+      try { const loc = new URL((res.headers && res.headers.get && res.headers.get('location')) || '', url); to = loc.hostname + loc.pathname; } catch (e) {}
+      // A redirect to a sign-in page means CBS did not accept the token.
+      if (/login|sign-?in|auth/i.test(to)) throw fail('expired_authorization', 'HTTP ' + res.status + ' to ' + to);
+      throw fail('provider_unavailable', 'HTTP ' + res.status + (to ? ' to ' + to : ' redirect'));
+    }
     const text = await res.text();
     let data = null;
     try { data = JSON.parse(text); } catch (e) { /* CBS also sends plain text. */ }
     const item = data && Array.isArray(data.results) ? data.results[0] : data;
     const status = !res.ok ? res.status : Number(item && item.statusCode) || res.status;
-    if (status === 401 || status === 403) throw cbsError('expired_authorization');
-    if (status === 429) throw cbsError('rate_limited');
-    if (status === 404) throw cbsError('league_not_found');
-    if (status >= 500 || status >= 300 && status < 400) throw cbsError('provider_unavailable');
+    if (status === 401 || status === 403) throw fail('expired_authorization', 'HTTP ' + status);
+    if (status === 429) throw fail('rate_limited', 'HTTP 429');
+    if (status === 404) throw fail('league_not_found', 'HTTP 404');
+    if (status >= 500) throw fail('provider_unavailable', 'HTTP ' + status);
     if (status >= 400 || !item || !item.body || item.body.type === 'error' || item.body.error) {
-      if (/unauthori[sz]ed|invalid.*token|expired.*token|access.denied/i.test(text)) throw cbsError('expired_authorization');
-      throw cbsError('invalid_response');
+      if (/unauthori[sz]ed|invalid.*token|expired.*token|access.denied/i.test(text)) throw fail('expired_authorization', 'HTTP ' + status + ', token refused');
+      throw fail('invalid_response', 'HTTP ' + status + (data ? ', JSON without a league body' : ', not JSON'));
     }
     return item.body;
   } catch (e) {
     // Never let an upstream body, URL, header, or native fetch error reach logs.
     if (e instanceof LeagueProviderError) throw e;
-    throw cbsError('provider_unavailable');
+    throw fail('provider_unavailable', e && e.name === 'AbortError' ? 'no answer within 15 seconds' : 'the request could not be sent');
   } finally { clearTimeout(timer); }
 }
 function cbsList(value) { if (!Array.isArray(value)) throw cbsError('invalid_response'); return value; }
@@ -13666,7 +13679,7 @@ async function leagueSync(env, row, trigger, preparedRaw) {
       .bind(model.name || row.name, model.season || row.season, model.numTeams || row.num_teams, model.status || row.status, JSON.stringify(model.settings), keepTeam ? row.user_team_id : (model.userTeamId || row.user_team_id || null), ts, ts, ts, 'ok', row.provider === 'cbs_browser' ? null : leagueNextSyncAt(ts, 0), row.id).run();
   } catch (e) {
     error = (e && e.message) || 'failed'; code = (e && e.code) || 'sync_failed';
-    if (row.provider === 'cbs') error = cbsError(code).message;
+    if (row.provider === 'cbs') error = cbsError(code).message + (e && e.detail ? ' (' + e.detail + ')' : '');
     await leagueSyncState(env, row, false, code + ': ' + error, started);
   }
   const finished = Date.now();
@@ -14387,7 +14400,7 @@ async function leagueRoutes(request, env, url, ctx) {
       if (!r.ok && created && /league_not_found|unsupported_provider/.test(String(r.error))) { await leagueDisconnect(env, email, row); return leagueErr(r.code || 'sync_failed', r.error, 404, c); }
       const L = await leagueLoad(env, email, row.id);
       return json({ ok: r.ok, step: 'done', created, sync: r, league: L ? leaguePublic(L) : null, needsTeam: !!(L && !L.userTeamId), teams: L ? L.teams : [] }, r.ok ? 200 : 502, c);
-    } catch (e) { return leagueErr((e && e.code) || 'sync_failed', pid === 'cbs' ? cbsError(e && e.code).message : (e && e.message) || 'failed', e && e.code === 'expired_authorization' ? 409 : e && e.code === 'league_not_found' || e && e.code === 'user_not_found' ? 404 : 502, c); }
+    } catch (e) { return leagueErr((e && e.code) || 'sync_failed', pid === 'cbs' ? cbsError(e && e.code).message + (e && e.detail ? ' (' + e.detail + ')' : '') : (e && e.message) || 'failed', e && e.code === 'expired_authorization' ? 409 : e && e.code === 'league_not_found' || e && e.code === 'user_not_found' ? 404 : 502, c); }
   }
   if (path === '/api/leagues/manual') {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
