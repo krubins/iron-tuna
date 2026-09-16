@@ -68,7 +68,7 @@ p{color:var(--sec);margin:0 0 16px}
 textarea.tf-paste{width:100%;min-height:200px;padding:12px 14px;border-radius:10px;border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;font-size:14px;line-height:1.5;resize:vertical}
 textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,99,.12)}
 .tf-drop{border:2px dashed var(--line2);border-radius:10px;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;background:#fff;cursor:pointer}
-.tf-drop.over{border-color:var(--teal);background:rgba(14,124,99,.05)}
+.tf-drop.over,.tf-drop:focus-visible{border-color:var(--teal);background:rgba(14,124,99,.05);outline:none}
 .tf-drop input{display:none}
 .tf-drop b{color:var(--text)}
 .tf-status{font-size:13px;color:var(--muted);margin:8px 0 0;min-height:1.2em}
@@ -188,7 +188,7 @@ select.tf-sel{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(
 
 <div class="tf-step" id="tf-rosters">
   <h3>2. The rosters</h3>
-  <p class="sub">Copy every team&rsquo;s roster from your league site and paste it here, one team after another with the team name above its players. Slot labels, byes and projections are ignored. Or drop in screenshots of each roster page.</p>
+  <p class="sub">Copy every team&rsquo;s roster from your league site and paste it here, one team after another with the team name above its players. Slot labels, byes and projections are ignored. Or drop in or paste screenshots of each roster page.</p>
   <textarea class="tf-paste" id="tf-text" placeholder="Team Awesome (Ken)
 QB  Josh Allen  BUF
 RB  Bijan Robinson  ATL
@@ -201,7 +201,7 @@ Derrick Henry
 ..." spellcheck="false" aria-label="League rosters"></textarea>
   <div class="cta-row">
     <button class="btn" id="tf-parse" type="button">Read the paste</button>
-    <label class="tf-drop" id="tf-drop" for="tf-files"><b>Drop screenshots here</b> or tap to choose &mdash; one roster page per image, up to 8<input id="tf-files" type="file" accept="image/*" multiple></label>
+    <label class="tf-drop" id="tf-drop" for="tf-files" tabindex="0"><b>Drop or paste screenshots here</b> or tap to choose &mdash; one roster page per image, up to 8<input id="tf-files" type="file" accept="image/*" multiple></label>
   </div>
   <p class="tf-status" id="tf-read-status"></p>
   <div class="tf-teams" id="tf-teams"></div>
@@ -609,6 +609,19 @@ Derrick Henry
   ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
   ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   drop.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files) readImages(e.dataTransfer.files); });
+  // A screenshot on the clipboard (Snipping Tool, Cmd-Shift-4, a copied image)
+  // can be pasted anywhere on the page. Only pastes that carry image files are
+  // taken; a text paste into the textarea is left alone.
+  document.addEventListener('paste', function (e) {
+    var items = e.clipboardData && e.clipboardData.items; if (!items) return;
+    var files = [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file' && /^image\//.test(items[i].type)) { var f = items[i].getAsFile(); if (f) files.push(f); }
+    }
+    if (!files.length) return;
+    e.preventDefault();
+    readImages(files);
+  });
   $('tf-llm-text').addEventListener('click', readText);
 
   // ── settings events ──────────────────────────────────────────────────────

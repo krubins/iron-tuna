@@ -44,10 +44,10 @@
    mean what it says everywhere, including on the sections that hide themselves
    when their feed has nothing to show. */
 [hidden]{display:none !important}
-/* Two sticky bars now sit at the top of the page — the lane tabs and the
-   section ribbon under them — so an anchor jump has to stop clear of both or it
-   lands with the section head hidden behind them. */
-html{scroll-behavior:smooth;scroll-padding-top:106px}
+/* One sticky bar sits at the top of the page — the section ribbon, with the
+   lane control inside it — so an anchor jump has to stop clear of it or it
+   lands with the section head hidden behind it. */
+html{scroll-behavior:smooth;scroll-padding-top:56px}
 body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 img{max-width:100%}
@@ -110,18 +110,6 @@ img{max-width:100%}
 @media (max-width: 860px) { .rcp-dek{display:none} }
 @media (max-width: 560px) { .rcp-wrap{gap:9px;padding:6px 14px} .rcp-kicker{display:none} .rcp-title{font-size:12.5px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical} }
 @media (prefers-reduced-motion: reduce) { .rcp-body{transition:none} }
-.dominant{background:linear-gradient(90deg,var(--brand-dark) 0%,var(--brand) 18%,var(--brand) 82%,var(--brand-dark) 100%);color:#fff}
-.dominant .wrap{display:flex;align-items:center;justify-content:center;gap:16px;padding:9px 18px}
-.dominant-copy{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;min-width:0}
-.dominant-text{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:clamp(18px,2.4vw,25px);letter-spacing:.10em;line-height:1.05;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.25)}
-.dominant-rule{flex:0 1 140px;height:1px;background:rgba(255,255,255,.45)}
-/* The banner set its own width at 390px and pushed the whole document into a
-   horizontal scroll: clamp() min was 19px with .14em of tracking on a line
-   that has to fit the whole claim. The claim is a single headline line, so
-   tighten the tracking and let the rules collapse before the words do. */
-@media(max-width:560px){.dominant-rule{flex-basis:34px;min-width:0}.dominant .wrap{gap:10px}
-  .dominant-text{font-size:clamp(14px,4vw,22px);letter-spacing:.07em}}
-@media(max-width:400px){.dominant-rule{display:none}.dominant .wrap{padding-left:12px;padding-right:12px}}
 
 /* ── section ribbon (in-page nav) ── */
 /* The two bars stick together as `.topbars`, so neither carries a `top` of
@@ -158,16 +146,38 @@ html:not([data-season="in"]) #newsroom,html:not([data-season="in"]) #newsroomSub
 html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsroomBand{display:none}
 html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #today [data-in-only]{display:none}
 /* The newsroom: the desk's newest pieces, bylined. */
-.nr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:8px 0 26px}
-.nr-card{border:1px solid var(--line2,#d9e0e5);border-radius:10px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;color:inherit;text-decoration:none;background:var(--card,#fff)}
-.nr-card:hover{border-color:var(--teal,#0e7c63)}
-.nr-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal,#0e7c63)}
-.nr-kicker.nfl-wide{display:flex;align-items:center;gap:6px}
-.nr-nfl-logo{display:block;width:18px;height:18px;object-fit:contain;flex:0 0 auto}
-.nr-card h3{margin:0;font-size:17px;line-height:1.3}.nr-card p{margin:0;color:var(--sec,#5a6b78);font-size:13.5px;line-height:1.45}
-.nr-by{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sec,#5a6b78);margin-top:auto}
-.nr-av{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--teal,#0e7c63);color:#fff;font-weight:800;font-size:10px}
-.nr-riv{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line2,#d9e0e5);border-radius:3px;padding:1px 5px;margin-left:auto}
+/* ── the story card ─────────────────────────────────────────────────────────
+   Every piece the desk publishes, on every surface that lists them (the front
+   page's newsroom, the Fantasy page's, the desk index): one card, read at a
+   glance. The player faces the search script puts at the head of a headline
+   (.it-story-focus) sit on their own row above it like a thumbnail; the
+   headline is one size, the teaser is clamped to two lines, and the byline
+   row carries the analyst and the time. It replaces a grid of full deks in
+   four columns that read as a wall of text. */
+.nr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin: 8px 0 32px }
+.nr-card {
+  display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  background: var(--card,#fff); border: 1px solid var(--line); border-radius: 12px;
+  padding: 24px 22px; color: inherit; text-decoration: none;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.nr-card:hover { border-color: var(--line2,#d9e0e5); box-shadow: 0 8px 24px rgba(15, 23, 25, .06); text-decoration: none }
+.nr-card:hover h3 { color: var(--brand) }
+.nr-kicker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand) }
+.nr-nfl-logo { display: block; width: 18px; height: 18px; object-fit: contain; flex: 0 0 auto }
+.nr-card h3 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 700; color: var(--ink); letter-spacing: -.005em; overflow-wrap: anywhere }
+.nr-card h3 a { color: inherit }
+.nr-card h3 a:hover { text-decoration: none }
+.nr-card h3 .it-story-focus { display: flex; margin: 0 0 10px; vertical-align: baseline }
+.nr-card p { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.nr-by { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); margin-top: auto; padding-top: 4px; min-width: 0 }
+.nr-by a { color: inherit; font-weight: 700 }
+.nr-av { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 800; font-size: 10px }
+.nr-time { margin-left: auto; color: var(--ink-3); white-space: nowrap; flex: 0 0 auto }
+.nr-riv, .nr-st { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; border: 1px solid var(--line2,#d9e0e5); color: var(--ink-2) }
+.nr-st.ok { color: var(--brand); background: rgba(14, 124, 99, .1); border-color: rgba(14, 124, 99, .3) }
+.nr-st.held { color: var(--gold-ink); background: #fdf4e2; border-color: #f0e0b0 }
+.nr-card.pending h3 { color: var(--ink-2); font-weight: 600 }
 /* Vega vs. Brooks. Two columns, five picks each: the man's own case for five
    players he expects to beat the other man's ranking on, in his own voice.
    The ranks sit above each pitch as a chip so the band can be scanned, and
@@ -631,7 +641,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .tools-band .tb-ctas{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap}
 .tb-btn{display:inline-block;font-size:13.5px;font-weight:800;letter-spacing:.03em;border-radius:999px;padding:11px 22px}
 .tb-btn.gold{background:var(--gold);color:#1a1205}
-.tb-btn.brand{background:var(--brand);color:#fff}
+.tb-btn.brand{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3)}
 .tb-btn:hover{filter:brightness(1.07)}
 
 /* ── footer ── */
@@ -757,19 +767,19 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   .foot .fm{margin-left:0;flex:1 1 100%;line-height:1.5}
 }
 
-/* ── the claim strip ───────────────────────────────────────────────────────
-   Every general fantasy site ranks players; an auction is priced in dollars,
-   and almost nobody builds for it. The strip says the niche in one line, in
-   the brand color, directly under the masthead. */
-.dominant{background:var(--brand);color:#fff;border-bottom:1px solid rgba(0,0,0,.12)}
-.dominant-rule{background:rgba(255,255,255,.4)}
 
 /* ── the hero: the product, and the three numbers only an auction needs ──
    The page used to open on a news lead, which said "fantasy site" and left the
    reader to work out what the tool did. It opens on the sheet now: the claim,
    two buttons, a real screenshot of the thing being sold, and the three dollar
    columns underneath it. The news desk starts below. */
-.hero-band{background:linear-gradient(180deg,#122320 0%,var(--mast) 78%);color:#e9eeec;border-bottom:3px solid var(--brand)}
+/* The week line. This used to be a black gradient band with the clock strip
+   boxed inside it, under the green claim banner: with the masthead and the
+   rankings ribbon that was four bars before the first story. It is now one
+   36px light strip on the same surface as the page, and the claim banner is
+   gone. The element, its id and the .its-* classes are unchanged: hbClock()
+   paints data-season onto #heroBand and it-season.js fills the strip. */
+.hero-band{background:var(--card);color:var(--ink);border-bottom:1px solid var(--line)}
 .hero-band .hb-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px;align-items:start;padding-top:42px;padding-bottom:40px}
 /* The in-season half. A panel rather than bare copy, so the two products read
    as two things rather than one paragraph that changed subject halfway. */
@@ -884,11 +894,6 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The screenshot is the other half: scaled to a 390px column the sheet is a
    gray smear, so the frame keeps the image at half size and shows the left of
    it — one readable column of real dollars rather than four illegible ones. */
-@media(max-width:620px){
-  .dominant-text{text-align:center;font-size:clamp(15px,4.6vw,21px);letter-spacing:.05em;line-height:1.15}
-  .dominant-rule{display:none}
-  .dominant .wrap{padding:10px 14px}
-}
 @media(max-width:700px){
   .hb-shot img{width:auto;max-width:none;height:300px;object-fit:cover;object-position:0 0}
   .hb-copy h1{font-size:clamp(30px,7.4vw,40px)}
@@ -923,22 +928,29 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The page leads with one claim and two lanes; the draft product keeps its
    pitch, its screenshot and its three numbers, one band lower. */
 .fp-clock {
-  display: flex; flex-wrap: wrap; align-items: stretch; margin: 22px 0 22px;
-  border: 1px solid rgba(255, 255, 255, .14); border-radius: 10px;
-  background: rgba(255, 255, 255, .04);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; margin: 0; min-height: 36px; padding: 5px 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-size: 12.5px; line-height: 20px; letter-spacing: .06em; text-transform: uppercase;
-  font-weight: 700; font-variant-numeric: tabular-nums; color: #cfdad6;
+  font-size: 13px; line-height: 20px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink-2);
 }
-.fp-clock > span { padding: 7px 14px; border-left: 1px solid rgba(255, 255, 255, .14) }
-.fp-clock > span:first-child { border-left: 0 }
-.fp-clock .its-phase { color: var(--teal, #2dd4a3) }
-.fp-clock .its-phase.its-off { color: #97a5a0 }
-.fp-clock .its-week { color: #fff }
-.fp-clock .its-state { color: #fff }
-.fp-clock .its-counts, .fp-clock .its-next, .fp-clock .its-note { color: #97a5a0; text-transform: none; letter-spacing: .01em }
-.fp-clock .its-note { flex: 1 }
-.fp-clock .its-next { margin-left: auto }
+.fp-clock > span { padding: 0 12px; border-left: 1px solid var(--line); white-space: nowrap }
+.fp-clock > span:first-child { padding-left: 0; border-left: 0 }
+.fp-clock .its-phase { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--brand) }
+.fp-clock .its-phase.its-off { color: var(--ink-3) }
+.fp-clock .its-week { color: var(--ink); font-weight: 800 }
+.fp-clock .its-state { color: var(--ink); font-weight: 600 }
+.fp-clock .its-state.its-live { color: var(--value-red); font-weight: 700 }
+.fp-clock .its-counts, .fp-clock .its-next, .fp-clock .its-note { color: var(--ink-3); font-size: 12.5px }
+.fp-clock .its-note { flex: 1; white-space: normal }
+.fp-clock .its-next { margin-left: auto; border-left: 0 }
+@media (max-width: 700px) {
+  .fp-clock { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; font-size: 12.5px }
+  .fp-clock::-webkit-scrollbar { display: none }
+  .fp-clock > span { padding: 0 9px }
+  /* The strip is a sideways scroller on a phone, like the ribbon under it, so
+     the unavailable note scrolls rather than wrapping into a three-line band. */
+  .fp-clock .its-note { white-space: nowrap; flex: 0 0 auto }
+  .fp-clock .its-next { margin-left: 0; border-left: 1px solid var(--line) }
+}
 /* Horizontal padding restates the .wrap gutter: the shorthand used to zero it,
    which pushed the headline, lede and buttons flush to the viewport edge while
    the clock strip above kept its inset. */
@@ -1241,14 +1253,16 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-act {
   display: flex; flex-direction: column; gap: 7px; position: relative; overflow: hidden;
   background: var(--card, #fff); border: 1px solid var(--line, #e1e7ea); border-radius: 12px;
-  padding: 16px 18px 15px 21px; box-shadow: 0 6px 18px rgba(15, 23, 25, .04);
+  padding: 16px 20px 15px; box-shadow: 0 6px 18px rgba(15, 23, 25, .04);
   transition: border-color .12s ease, transform .12s ease, box-shadow .12s ease;
 }
-.fp-act::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--brand, #0e7c63) }
-.fp-act.gold::before { background: var(--gold, #f2a900) }
-.fp-act.flat::before { background: var(--line, #e1e7ea) }
+/* The 4px colored bar down the left edge is gone: the kicker carries the
+   color now (brand, or gold for the one-time action), which is how every
+   other card on the site marks what kind of thing it is. */
 .fp-act:hover { border-color: var(--brand, #0e7c63); transform: translateY(-2px); box-shadow: 0 14px 30px rgba(15, 23, 25, .09) }
-.fp-act-k { font-size: 10.5px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3, #6d7c86) }
+.fp-act-k { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--brand, #0e7c63) }
+.fp-act.gold .fp-act-k { color: var(--gold-ink, #7a5300) }
+.fp-act.flat .fp-act-k { color: var(--ink-3, #6d7c86) }
 .fp-act-h { font-size: 19px; line-height: 1.22; font-weight: 800; color: var(--ink, #0f1719); letter-spacing: -.012em }
 .fp-act-h em { font-style: normal; color: var(--brand, #0e7c63) }
 .fp-act p { font-size: 13px; line-height: 20px; color: var(--ink-2, #3f4e58) }
@@ -1261,17 +1275,24 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    oversized numeral, a rule that runs the full width, a dek — so that at a
    glance, at any scroll position, a reader can tell a chapter boundary from a
    section boundary without reading either. */
-.fp-chap { margin: clamp(38px, 5vw, 68px) 0 clamp(16px, 2vw, 26px); border-top: 1px solid var(--line, #e1e7ea); padding-top: 22px }
-.fp-chap-top { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap }
+/* The numeral used to be a 60px display figure beside a 40px heading: the
+   two chapter dividers were the largest type on the page after the lead, and
+   read as a second masthead each time one scrolled past. A chapter is now the
+   same object as .sec-head — the Bebas heading on the black rule with the
+   brand tick — with its number set small in the mono the week line uses. The
+   sub-heads inside keep their hairline (below), so the hierarchy holds. */
+.fp-chap { margin: clamp(30px, 4vw, 48px) 0 clamp(12px, 1.6vw, 18px) }
+.fp-chap-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 2px solid var(--ink, #0f1719); padding-bottom: 8px; position: relative }
+.fp-chap-top::after { content: ""; position: absolute; left: 0; bottom: -2px; width: 64px; height: 2px; background: var(--brand, #0e7c63) }
 .fp-chap-n {
-  font-family: 'Bebas Neue', Impact, sans-serif; font-size: clamp(40px, 5.4vw, 60px); line-height: .8;
-  color: var(--brand, #0e7c63); letter-spacing: .02em; flex: 0 0 auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1; font-weight: 700;
+  color: var(--brand, #0e7c63); letter-spacing: .12em; flex: 0 0 auto;
 }
 .fp-chap h2 {
-  font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: clamp(28px, 3.8vw, 40px);
-  line-height: 1; letter-spacing: .045em; text-transform: uppercase; color: var(--ink, #0f1719); margin: 0;
+  font-family: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif; font-weight: 400; font-size: 30px;
+  line-height: 1; letter-spacing: .05em; text-transform: uppercase; color: var(--ink, #0f1719); margin: 0;
 }
-.fp-chap-dek { font-size: 14.5px; line-height: 23px; color: var(--ink-2, #3f4e58); margin: 12px 0 0; max-width: 82ch }
+.fp-chap-dek { font-size: 13.5px; line-height: 21px; color: var(--ink-3, #6d7c86); margin: 10px 0 0; max-width: 82ch }
 /* Inside a chapter a section head is a SUBhead: the black two-pixel rule that
    made every one of them look like a chapter is dropped to a hairline, and the
    type comes down a step. The chapter divider now carries the weight. */
@@ -1344,16 +1365,25 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    The panes are two siblings in <main>; nothing is fetched for DFS until the
    DFS tab is opened for the first time, so the fantasy reader pays nothing
    for a lane they never look at. */
-.lane-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--mast); border-bottom: 1px solid var(--line) }
-.lane-tab { appearance: none; border: 0; background: none; cursor: pointer; font: inherit; color: #8d99a1;
-  font-family: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif; font-size: clamp(19px, 2.4vw, 26px); letter-spacing: .1em;
-  line-height: 1; text-transform: uppercase; padding: 15px 10px 12px; border-bottom: 4px solid transparent; transition: color .12s, background .12s }
-.lane-tab + .lane-tab { border-left: 1px solid rgba(255, 255, 255, .12) }
-.lane-tab:hover { color: #fff; background: rgba(255, 255, 255, .06) }
-/* --brand is a dark green; on the black band it reads as no underline at all,
-   so the selected tab takes the light --teal the hero band already uses. */
-.lane-tab[aria-selected="true"] { color: #fff; background: rgba(45, 212, 163, .12); border-bottom-color: var(--teal) }
-.lane-tab:focus-visible { outline: 2px solid var(--teal); outline-offset: -4px }
+/* The three tabs used to be a full-width black band of their own, in 26px
+   display type, stacked on top of the ribbon: two sticky bars, 106px of
+   chrome travelling with the reader. They are now a segmented control that
+   LEADS the ribbon's row, the same shape as the edition switch at its other
+   end, and the ribbon is the only sticky bar. Same buttons, same ids, same
+   ARIA and the same script; only the markup's position and the styling moved. */
+.lane-tabs { display: inline-flex; align-items: center; flex: 0 0 auto; border: 1px solid var(--line2, #d9e0e5); border-radius: 6px; overflow: hidden; background: var(--card); margin-right: 8px }
+.lane-tab { appearance: none; border: 0; background: none; cursor: pointer; font: inherit; color: var(--ink-2);
+  font-size: 11.5px; font-weight: 800; letter-spacing: .06em; line-height: 1.2; text-transform: uppercase;
+  padding: 8px 14px; white-space: nowrap; transition: color .12s, background .12s }
+.lane-tab + .lane-tab { border-left: 1px solid var(--line) }
+.lane-tab:hover { color: var(--brand) }
+.lane-tab[aria-selected="true"] { color: #fff; background: var(--ink) }
+.lane-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px }
+.lane-sep { flex: 0 0 auto; width: 1px; height: 20px; background: var(--line); margin: 0 8px 0 2px }
+/* On a phone the ribbon scrolls sideways and the lane control is the one
+   thing on it that must be reachable without scrolling: it leads the row,
+   ahead of the search (order -2) and the edition switch (order -1). */
+@media (max-width: 700px) { .lane-tabs { order: -3; margin-right: 6px } .lane-sep { display: none } }
 
 /* ── the DFS lane ──
    Its own numbers, off /api/dfs, the same slate /dfs reads. Every block draws
@@ -1390,7 +1420,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dfs-stack h3 { font-size: 15px; margin-bottom: 6px }
 .dfs-stack p { font-size: 13px; line-height: 20px; color: var(--ink-2); margin-top: 6px }
 .dfs-empty { font-size: 13.5px; color: var(--ink-3); margin-top: 12px }
-@media (max-width: 560px) { .lane-tab { letter-spacing: .035em; padding: 13px 4px 10px; font-size: 10.5px } }
+@media (max-width: 560px) { .lane-tab { letter-spacing: .04em; padding: 7px 10px; font-size: 10.5px } }
 
 /* The section ribbon under the hero. This page links no shared stylesheet, so
    the block below is INJECTED here by tools/build-ranks.mjs — the identical
@@ -1481,8 +1511,11 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 <body>
 <header class="mast"><div class="wrap">
   <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
+  <!-- The same six destinations, in the same order, as the shared chrome on
+       every other page (tools/build-chrome.mjs NAV). The front page used to
+       carry four of its own, so clicking off "/" changed the nav. -->
   <nav class="mast-jump" aria-label="Sections of the site">
-    <a href="/fantasy">Fantasy</a><a href="/in-season">In-Season</a><a href="/fantasy-football-auction-values">Draft</a><a href="/auction-insights">The Desk</a>
+    <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/vegas-edge">Market Intel</a><a href="/in-season/desk">The Desk</a><a href="/fantasy-football-auction-values">Draft Tools</a><a href="/faq">FAQ</a>
   </nav>
   <nav class="mast-nav">
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
@@ -1510,14 +1543,6 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     </span>
   </div>
 </section>
-<div class="dominant" role="doc-subtitle"><div class="wrap">
-  <span class="dominant-rule"></span>
-  <span class="dominant-copy">
-    <span class="dominant-text">The Betting-Market Knows the Future. Your Lineup Should Too.</span>
-  </span>
-  <span class="dominant-rule"></span>
-</div></div>
-
 <section class="hero-band" id="heroBand">
   <!-- Only the NFL clock strip (fed by /api/season) lives here now. The band
        used to carry the pitch under it: an eyebrow, the headline, a paragraph,
@@ -1662,13 +1687,16 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
      so a reader can look at the other lane and come straight back. The choice is
      kept in the URL (?lane=dfs) and in this browser, so a shared link opens on
      the lane it was shared from. -->
-<div class="lane-tabs" role="tablist" aria-label="Choose a lane">
-  <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Season Long</button>
-  <button class="lane-tab" type="button" role="tab" id="laneTabDfs" data-lane="dfs" aria-controls="laneDfs" aria-selected="false" tabindex="-1">DFS</button>
-  <button class="lane-tab" type="button" role="tab" id="laneTabMarket" data-lane="market" aria-controls="laneMarket" aria-selected="false" tabindex="-1">Betting Market Intel</button>
-</div>
-
 <div class="ribbon" data-lane="fantasy"><div class="wrap">
+  <!-- The lane control leads the row. The labels are the masthead's own
+       (Fantasy, DFS, Market Intel) so the tab and the nav link for the same
+       lane no longer use two names for one thing. -->
+  <div class="lane-tabs" role="tablist" aria-label="Choose a lane">
+    <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Fantasy</button>
+    <button class="lane-tab" type="button" role="tab" id="laneTabDfs" data-lane="dfs" aria-controls="laneDfs" aria-selected="false" tabindex="-1">DFS</button>
+    <button class="lane-tab" type="button" role="tab" id="laneTabMarket" data-lane="market" aria-controls="laneMarket" aria-selected="false" tabindex="-1">Market Intel</button>
+  </div>
+  <span class="lane-sep" aria-hidden="true"></span>
   <!-- Ribbon order tracks the page order. The Build moved up because it is the
        proof the rest of the page is arguing for — a solved roster with the money
        on it — and it was sitting eight screens down on a phone behind two
@@ -1775,7 +1803,9 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
        the-tell.html at build time (tools/build-front.mjs), so that page stays
        the source of truth and this band cannot quote it wrongly. Hidden
        outright when the feed is empty — a column heading over nothing is worse
-       than no column. -->
+       than no column — and hidden again once the games the newest edition
+       argues about have been played: a call on a week that is over is the
+       archive, and the archive lives on the column's own page. -->
   <!-- The newsroom: the in-season desk's newest packages, bylined to the AI
        analyst personas, off /api/newsroom. Regular season only (CSS above);
        hidden outright when the feed has nothing, like every band here. -->
@@ -4055,6 +4085,46 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     foot.innerHTML = 'Every call carries its numbers and gets graded in a later edition. ' +
       '<a href="/the-tell">Read the whole column &rarr;</a>';
     host.appendChild(foot);
+
+    // ── an edition whose games have been played is not this week's call ───
+    // The column publishes on Tuesday and argues about the week that kicks
+    // off after it, so the edition is current only until that week's own last
+    // game has finished. Past that point the band would be printing calls on
+    // games already scored as though they were still open, which is worse
+    // than printing nothing: the edition stays on the column's own page as
+    // the archive and comes off the front page.
+    //
+    // The week it covers is read off /api/season — the first week whose
+    // opening kickoff falls on or after the edition date — so the cutoff is
+    // the schedule's, not the calendar's, and survives Thursday openers and
+    // Monday night. The calendar is only a ceiling for when the feed cannot
+    // answer: a Tuesday column seven days old is past its week on any real
+    // schedule, and that ceiling is applied before anything paints so a
+    // week-old edition never flashes up before it is removed.
+    function hideTell(){ setSectionVisible(['thetell', 'tellSub', 'tellBand'], 'thetell', false); }
+    function etDay(ms){
+      try {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+      } catch (e) { return ''; }
+    }
+    function dayNum(iso){ var p = iso.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000; }
+    var today = etDay(Date.now());
+    if (top.date && today && dayNum(today) - dayNum(top.date) >= 7) { hideTell(); return; }
+    function tellClock(){
+      if (!window.ITSeason) { document.addEventListener('DOMContentLoaded', tellClock); return; }
+      ITSeason.load(function (s) {
+        if (!s || !s.weeks || !s.weeks.length || !top.date) return;
+        var covered = null;
+        for (var i = 0; i < s.weeks.length; i++) {
+          var w = s.weeks[i];
+          if (w && w.firstKickoff && etDay(w.firstKickoff) >= top.date) { covered = w; break; }
+        }
+        // No week opens after the edition: the schedule it argued about is
+        // entirely behind us, which is the same verdict as a finished week.
+        if (!covered || covered.status === 'complete') hideTell();
+      });
+    }
+    tellClock();
   })();
 
   // ── The Pick ───────────────────────────────────────────────────────────
@@ -5077,6 +5147,16 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   var $ = function (id) { return document.getElementById(id); };
   var hide = function (ids) { ids.forEach(function (id) { var el = $(id); if (el) el.hidden = true; }); var a = document.querySelector('.ribbon a[href="#' + ids[0] + '"]'); if (a) a.hidden = true; };
   var av = function (name) { return (name || '').split(' ').map(function (w) { return w[0]; }).join(''); };
+  // "2h ago" inside a week, the date after; the way a news feed dates itself.
+  var ago = function (iso) {
+    if (!iso) return '';
+    var t = new Date(iso).getTime(); if (!isFinite(t)) return '';
+    var m = Math.round((Date.now() - t) / 60000);
+    if (m < 60) return Math.max(m, 1) + 'm ago';
+    if (m < 60 * 24) return Math.round(m / 60) + 'h ago';
+    if (m < 60 * 24 * 7) return Math.round(m / 1440) + 'd ago';
+    try { return new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }); } catch (e) { return ''; }
+  };
   function card(p, lens) {
     var by = p.byline || {}; var who = lens === 'dfs' ? by.dfsName : by.name;
     var kicker = lens === 'dfs' && p.dfsTitle ? p.dfsTitle : p.title;
@@ -5084,13 +5164,14 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return '<a class="nr-card" href="' + esc(p.url) + '"><span class="nr-kicker' + (nflWide ? ' nfl-wide' : '') + '">' +
       (nflWide ? '<img class="nr-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' : '') +
       esc(kicker) + ' &middot; Week ' + esc(p.week) + (p.perGame ? ' &middot; Final' : '') + (p.edition > 1 ? ' &middot; update ' + esc(p.edition) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
-      '<span class="nr-by"><span class="nr-av">' + esc(av(who)) + '</span>' + esc(who || 'Iron Tuna') + (p.rivalry && lens !== 'dfs' ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') + '</span></a>';
+      '<span class="nr-by"><span class="nr-av">' + esc(av(who)) + '</span>' + esc(who || 'Iron Tuna') + (p.rivalry && lens !== 'dfs' ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') +
+      (p.publishedAt ? '<span class="nr-time">' + esc(ago(p.publishedAt)) + '</span>' : '') + '</span></a>';
   }
   function band(lens, gridId, ids) {
     fetch('/api/newsroom?lens=' + lens + '&limit=8').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       var grid = $(gridId); if (!grid) return;
       if (!j || !j.ok || !j.pieces || !j.pieces.length) { hide(ids); return; }
-      grid.innerHTML = j.pieces.slice(0, 8).map(function (p) { return card(p, lens); }).join('');
+      grid.innerHTML = j.pieces.slice(0, 6).map(function (p) { return card(p, lens); }).join('');
     }).catch(function () { hide(ids); });
   }
   band('weekly', 'newsroomBand', ['newsroom', 'newsroomSub', 'newsroomBand']);

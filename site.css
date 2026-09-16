@@ -451,9 +451,44 @@ footer.site a:hover { color: var(--text) }
 .is-lane-head h3 { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1; letter-spacing: .03em; text-transform: uppercase; margin: 0 }
 .is-lane-head span { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
 .is-lane > p { margin: var(--space-3) 0 0; font-size: var(--fs-sm); color: var(--sec); line-height: 1.55 }
-.is-lane ul { list-style: none; margin: var(--space-4) 0; padding: 0; flex: 1 }
+/* Two columns: eleven tools in one column made the card twice the height of
+   the one beside it and put its Open button a screen below the fold. */
+.is-lane ul { list-style: none; margin: var(--space-4) 0; padding: 0; flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--space-4); align-content: start }
+.is-lane > .is-btn { align-self: stretch }
+@media (max-width: 480px) { .is-lane ul { grid-template-columns: 1fr } }
 .is-lane li { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); color: var(--sec) }
 .is-lane li:last-child { border-bottom: 0 }
+
+/* ── the page head's action row ──────────────────────────────────────────────
+   Under the lede on a section page: one primary action, one link into the
+   page's own evidence, and the note that qualifies them as the row's hint.
+   Pills, so the row reads as actions rather than as a third paragraph. */
+.is-actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin: 0 0 var(--space-5) }
+.is-actions .is-btn { border-radius: 999px }
+.is-actions .is-hint { margin-left: var(--space-1) }
+@media (max-width: 560px) { .is-actions .is-btn { flex: 1 1 auto } .is-actions .is-hint { flex: 1 1 100% } }
+
+/* ── the readings strip ───────────────────────────────────────────────────────
+   The hub's sheet: one card per lane inside the plate, each the single number
+   that lane exists to produce, with the lane's own page one link away. It was
+   a five-column table (No. / Lane / Reading / Value / Remark) that a reader
+   had to parse to find the number. A blank lane keeps its card and says why. */
+.is-readings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--bg) }
+.is-readings[hidden] { display: none }
+.is-reading { display: flex; flex-direction: column; gap: 6px; padding: var(--space-4) var(--space-5); border-left: 1px solid var(--line); min-width: 0 }
+.is-reading:first-child { border-left: 0 }
+.is-reading-k { font-size: var(--fs-3xs); font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--teal) }
+.is-reading-k a { color: inherit }
+.is-reading b { font-size: var(--fs-md); line-height: 1.3; color: var(--text); overflow-wrap: anywhere }
+.is-reading-v { font-size: var(--fs-xl); font-weight: 800; line-height: 1; letter-spacing: -.01em; color: var(--text); font-variant-numeric: tabular-nums; margin: 2px 0 }
+.is-reading p { margin: 0; font-size: var(--fs-xs); color: var(--sec); line-height: 1.5 }
+.is-reading-go { margin-top: auto; padding-top: var(--space-2); font-size: var(--fs-xs); font-weight: 700; color: var(--teal) }
+.is-reading.blank b { color: var(--sec); font-weight: 600 }
+@media (max-width: 820px) {
+  .is-readings { grid-template-columns: 1fr }
+  .is-reading { border-left: 0; border-top: 1px solid var(--line) }
+  .is-reading:first-child { border-top: 0 }
+}
 
 /* ── buttons ─────────────────────────────────────────────────────────────── */
 .is-btn {
@@ -643,26 +678,87 @@ footer.site a:hover { color: var(--text) }
 .is-act {
   display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
   background: var(--bg); border: 1px solid var(--line2); border-radius: var(--radius-md);
-  padding: var(--space-4) var(--space-5) var(--space-4) calc(var(--space-5) + 4px);
+  padding: var(--space-4) var(--space-5);
   color: var(--sec); text-decoration: none;
 }
-.is-act::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--teal) }
-.is-act.gold::before { background: var(--gold) }
-.is-act.flat::before { background: var(--line2) }
+/* The 4px colored bar down the left edge is gone, here and on the front page's
+   deck: the kicker carries the color instead (teal, or the gold ink for the
+   one-time action, muted for the flat one), which is how every other card on
+   the site says what kind of thing it is. */
 .is-act:hover { border-color: var(--teal); text-decoration: none; transform: translateY(-1px) }
 .is-act:hover .is-act-go { text-decoration: underline }
-.is-act-k { font-family: var(--font-mono); font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted) }
+.is-act-k { font-family: var(--font-mono); font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--teal) }
+.is-act.gold .is-act-k { color: var(--goldink) }
+.is-act.flat .is-act-k { color: var(--muted) }
 .is-act-h { font-size: var(--fs-lg); line-height: 1.2; font-weight: 700; color: var(--text); letter-spacing: -.01em }
 .is-act-h em { font-style: normal; color: var(--teal) }
 .is-act p { margin: 0; font-size: var(--fs-xs); color: var(--sec); line-height: 1.55 }
 .is-act-go { margin-top: auto; padding-top: var(--space-2); font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
 @media (prefers-reduced-motion: reduce) { .is-act:hover { transform: none } }
 
+/* ── the story card ─────────────────────────────────────────────────────────
+   Every piece the desk publishes, on every surface that lists them (the front
+   page's newsroom, the Fantasy page's, the desk index): one card, read at a
+   glance. The player faces the search script puts at the head of a headline
+   (.it-story-focus) sit on their own row above it like a thumbnail; the
+   headline is one size, the teaser is clamped to two lines, and the byline
+   row carries the analyst and the time. It replaces a grid of full deks in
+   four columns that read as a wall of text. */
+.nr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-5); margin: var(--space-2) 0 var(--space-6) }
+.nr-card {
+  display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: var(--space-5) 22px; color: inherit; text-decoration: none;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.nr-card:hover { border-color: var(--line2); box-shadow: 0 8px 24px rgba(15, 23, 25, .06); text-decoration: none }
+.nr-card:hover h3 { color: var(--teal) }
+.nr-kicker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--fs-3xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
+.nr-nfl-logo { display: block; width: 18px; height: 18px; object-fit: contain; flex: 0 0 auto }
+.nr-card h3 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 700; color: var(--text); letter-spacing: -.005em; overflow-wrap: anywhere }
+.nr-card h3 a { color: inherit }
+.nr-card h3 a:hover { text-decoration: none }
+.nr-card h3 .it-story-focus { display: flex; margin: 0 0 10px; vertical-align: baseline }
+.nr-card p { margin: 0; color: var(--sec); font-size: var(--fs-sm); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.nr-by { display: flex; align-items: center; gap: 8px; font-size: var(--fs-2xs); color: var(--sec); margin-top: auto; padding-top: 4px; min-width: 0 }
+.nr-by a { color: inherit; font-weight: 700 }
+.nr-av { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--teal); color: #fff; font-weight: 800; font-size: 10px }
+.nr-time { margin-left: auto; color: var(--muted); white-space: nowrap; flex: 0 0 auto }
+.nr-riv, .nr-st { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; border: 1px solid var(--line2); color: var(--sec) }
+.nr-st.ok { color: var(--teal); background: rgba(14, 124, 99, .1); border-color: rgba(14, 124, 99, .3) }
+.nr-st.held { color: var(--goldink); background: #fdf4e2; border-color: #f0e0b0 }
+.nr-card.pending h3 { color: var(--sec); font-weight: 600 }
+
 /* Cards get a hairline lift on hover so a grid of them reads as a set of
    things you can open rather than a set of boxes. */
 .is-card { transition: border-color .12s ease, box-shadow .12s ease }
 .is-card:hover { border-color: var(--line2); box-shadow: 0 6px 18px rgba(15, 23, 25, .05) }
-.is-card.feat { border-left: 3px solid var(--teal) }
+/* A featured card is the white card with its tag on it; the 3px teal bar it
+   used to wear down the left edge was the same device as the deck's, and it
+   went with the deck's. */
+.is-card.feat { background: var(--bg) }
+
+/* ── the empty state ────────────────────────────────────────────────────────
+   One object for "this feed has nothing yet": a mark, a reason line, a detail
+   line and the one place the reader can go instead. A section that quietly
+   printed a sentence under its ruled heading read as a section with nothing
+   in it, which is a different claim from "nothing has been published yet".
+   `.in-plate` drops the border when it sits inside an .is-plate that has one. */
+.is-vacant {
+  display: flex; align-items: center; gap: var(--space-4); margin: 0;
+  padding: var(--space-5) var(--space-4); background: var(--bg);
+  border: 1px solid var(--line); border-radius: var(--radius-md);
+}
+.is-vacant.in-plate { border: 0; border-radius: 0 }
+.is-vacant[hidden] { display: none }
+.is-vacant-ic { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; background: var(--elev); display: grid; place-items: center; color: var(--muted) }
+.is-vacant-ic svg { width: 16px; height: 16px }
+.is-vacant-msg { flex: 1; min-width: 0 }
+.is-vacant b { display: block; font-size: var(--fs-sm); color: var(--text); line-height: 1.4 }
+.is-vacant span { display: block; font-size: var(--fs-xs); color: var(--muted); line-height: 1.5; margin-top: 2px }
+.is-vacant span:empty { display: none }
+.is-vacant .is-btn { flex: 0 0 auto }
+@media (max-width: 560px) { .is-vacant { flex-wrap: wrap } .is-vacant .is-btn { flex: 1 1 100% } }
 
 /* ── a two-column page body ────────────────────────────────────────────────
    Main and a rail. Collapses to one column early, because a 300px rail beside

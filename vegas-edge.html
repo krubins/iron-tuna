@@ -45,16 +45,50 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:6px 0 14px}
+/* The page head the section pages wear (fantasy.html, in-season.html, dfs.html). */
+h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
+@media(max-width:560px){h1{font-size:var(--fs-2xl)}}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 .btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
 .btn:hover{filter:brightness(1.06);text-decoration:none}
 .btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal)}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
-.ve-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
-.ve-two h3{margin:0 0 8px;font-size:15px;color:var(--sec)}
+/* The board switcher, in the plate head. */
+.ve-seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg);font-family:var(--font-body);letter-spacing:0;text-transform:none}
+.ve-seg button{appearance:none;border:0;border-left:1px solid var(--line);background:none;font:inherit;font-size:var(--fs-2xs);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--sec);padding:8px 12px;cursor:pointer;white-space:nowrap}
+.ve-seg button:first-child{border-left:0}
+.ve-seg button:hover{color:var(--teal)}
+.ve-seg button[aria-pressed="true"]{background:var(--text);color:#fff}
+.ve-seg button:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.ve-plate .is-plate-head>div{padding:var(--space-2) var(--space-3)}
+.ve-board[hidden]{display:none}
+.ve-board-intro{margin:0;padding:var(--space-3) var(--space-4);font-size:var(--fs-xs);color:var(--muted);line-height:1.5;border-bottom:1px solid var(--line)}
+.ve-board-note{margin:0;padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--line)}
+.ve-board .is-scroll{background:var(--bg)}
+.ve-board .is-table{margin:0}
+.ve-board-more{margin:0;padding:var(--space-3) var(--space-4);border-top:1px solid var(--line);background:var(--bg)}
+.ve-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;padding:var(--space-4);background:var(--bg)}
+.ve-two h3{display:inline-block;margin:0 0 10px;font-size:var(--fs-3xs);font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:3px;border:1px solid var(--line2);color:var(--sec)}
+.ve-two .hi h3{color:var(--teal);background:rgba(14,124,99,.1);border-color:rgba(14,124,99,.32)}
+.ve-two .lo h3{color:var(--danger);background:#fbeaea;border-color:#f0c8c8}
+.ve-two .is-vacant{padding:var(--space-4) 0}
+/* The one number each secondary board comes down to. */
+.ve-key{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4);margin:var(--space-4) 0 0}
+.ve-key .is-card{background:var(--bg);display:flex;flex-direction:column}
+.ve-key .is-card[hidden]{display:none}
+.ve-key .is-card h3{margin:var(--space-2) 0 0}
+.ve-big{display:block;font-size:var(--fs-2xl);line-height:1;letter-spacing:-.01em;margin:6px 0 8px;color:var(--text);font-variant-numeric:tabular-nums}
+.ve-go{appearance:none;border:0;background:none;padding:var(--space-2) 0 0;margin-top:auto;font:inherit;font-size:var(--fs-xs);font-weight:700;color:var(--teal);cursor:pointer;text-align:left}
+.ve-go:hover{text-decoration:underline}
+/* How to read a gap: four numbered cards, not a list. */
+.ve-how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4);padding:0;margin:0;list-style:none;counter-reset:how}
+.ve-how li{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-4) var(--space-5);font-size:var(--fs-sm);color:var(--sec);line-height:1.55;counter-increment:how}
+.ve-how li::before{content:counter(how);flex:0 0 auto;display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--text);color:#fff;font-weight:800;font-size:13px}
+.ve-how li b{display:block;color:var(--text);font-size:var(--fs-md);margin-bottom:4px}
+@media(max-width:820px){.ve-key,.ve-how{grid-template-columns:1fr}}
 .ve-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.ve-card:last-child{margin-bottom:0}
 .ve-card b{color:var(--text);font-size:15px} .ve-card b a{color:inherit;text-decoration:none}
 .ve-card .ve-ranks{display:flex;gap:12px;font-size:13px;color:var(--sec);margin:6px 0}
 .ve-card .ve-ranks span b{font-size:13px}
@@ -62,7 +96,8 @@ p{color:var(--sec);margin:0 0 16px}
 .ve-card .ve-cls.buy{color:var(--teal)} .ve-card .ve-cls.fade{color:var(--danger)}
 .ve-card p{font-size:13px;margin:6px 0 0;color:var(--sec)}
 .ve-card ul{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--sec)}
-.ve-sig{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:14px}
+.ve-sig{background:var(--bg);border-bottom:1px solid var(--line);padding:14px 16px;font-size:14px}
+.ve-sig:last-child{border-bottom:0}
 .ve-sig b{color:var(--text)} .ve-sig ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--sec)}
 .ve-conf{font-size:10.5px;font-weight:800;letter-spacing:.08em;padding:2px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--sec);margin-left:6px}
 </style>
@@ -91,87 +126,108 @@ p{color:var(--sec);margin:0 0 16px}
     <!--/chrome:nav-->
 </div></header>
 <main id="main" class="wrap">
-<p class="is-eyebrow">In-Season &middot; Vegas Edge</p>
+<p class="is-eyebrow">Market Intel &middot; Vegas Edge</p>
 <h1>The market and the rankings do not agree, and the gap is the edge</h1>
 <p class="is-lede">A sportsbook posts a number with its own money behind it, and sharp bettors move it within minutes of news. A top 200 costs nothing to publish and nothing to be wrong about. These are the players where the two are furthest apart.</p>
+<div class="is-actions">
+  <a class="is-btn primary" href="#board">Open this week&rsquo;s board</a>
+  <a class="is-btn ghost" href="#howto">How to read a gap</a>
+</div>
 <div class="its-strip" data-season-strip></div>
-<!-- The picture the front page sells this page with (front.html, .fp-viz — the
-     "Vegas Edge" card), redrawn here as its own panel so the thing a reader
-     clicked survives the click. The line and the two readings are illustrative
-     and the foot line says so; the live boards are directly below it, and this
-     panel deliberately fetches nothing. -->
-<figure class="it-viz" role="img" aria-label="An illustration of the page: a game total climbing from the number the book opened to the number it posts now, beside an implied total of 27.5 points and a line move of plus 2.5.">
-  <p class="it-viz-kicker">Vegas Edge</p>
-  <p class="it-viz-sub">Model vs. market on every game line</p>
-  <div class="it-viz-body">
-    <div>
-      <div class="it-viz-chart">
-        <svg viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-          <defs><linearGradient id="itvVegasFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#f2a900" stop-opacity="0.36"/><stop offset="1" stop-color="#f2a900" stop-opacity="0"/>
-          </linearGradient></defs>
-          <g class="it-viz-grid"><path d="M0 25 H300"/><path d="M0 50 H300"/><path d="M0 75 H300"/></g>
-          <path d="M0 86 L50 67.7 L100.7 73.8 L150 46.4 L199.3 55.6 L250.7 28.2 L300 16 L300 100 L0 100 Z" fill="url(#itvVegasFill)"/>
-          <polyline class="it-viz-line gold" points="0,86 50,67.7 100.7,73.8 150,46.4 199.3,55.6 250.7,28.2 300,16"/>
-        </svg>
-        <span class="it-viz-dot" style="left:100%;top:16%"></span>
-      </div>
-      <div class="it-viz-axis"><span>Line opens</span><span>Now</span></div>
-    </div>
-    <div class="it-viz-tiles">
-      <div class="it-viz-tile"><span>Implied total</span><b>27.5</b></div>
-      <div class="it-viz-tile gold"><span>Line move</span><b>+2.5</b></div>
-    </div>
-  </div>
-  <p class="it-viz-foot">Open to current, off the median book <i>&middot; illustrative</i></p>
-</figure>
 
 <p class="is-note" id="veNote"></p>
 
-<h2>Vegas vs. Experts</h2>
-<p>The largest disagreements between the betting market and the consensus rankings this week, with the data behind each one.</p>
-<div class="ve-two">
-  <div><h3>The market is higher</h3><div id="veBuys"></div></div>
-  <div><h3>The market is lower</h3><div id="veFades"></div></div>
+<!-- ── the board ─────────────────────────────────────────────────────────────
+     Seven boards used to run down the page as seven H2s, each over a table
+     that stays hidden until its feed answers, so an empty week printed seven
+     headings over nothing. They are one plate now, with a switcher in its
+     head, and an empty board says why it is empty inside the plate. Every
+     table, container and empty-state id is the one the fetch below already
+     writes to; only the markup around them moved. The illustrative figure the
+     page used to open on is gone: the real board is the hero. -->
+<div class="is-sec" id="board"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>The board</h2><a class="is-sec-more" href="/what-they-arent-telling-you">The whole board &rarr;</a></div></div>
+<div class="is-plate ve-plate">
+  <div class="is-plate-head">
+    <span>Vegas Edge &mdash; <span id="veWeek">this week</span></span>
+    <div class="ve-seg" role="group" aria-label="Board" id="veSwitch">
+      <button type="button" data-board="vs" aria-pressed="true">Vegas vs. Experts</button>
+      <button type="button" data-board="movers">Market Movers</button>
+      <button type="button" data-board="props">Quoted Props</button>
+      <button type="button" data-board="td">TD Board</button>
+      <button type="button" data-board="vol">Volume</button>
+      <button type="button" data-board="games">Game Environments</button>
+      <button type="button" data-board="signals">Signals</button>
+    </div>
+  </div>
+
+  <div class="ve-board" data-board="vs">
+    <p class="ve-board-intro">The largest disagreements between the betting market and the consensus rankings this week, with the data behind each one.</p>
+    <div class="ve-two">
+      <div class="hi"><h3>The market is higher</h3><div id="veBuys"><div class="is-vacant in-plate" id="veBuysEmpty"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span><div class="is-vacant-msg"><b>Reading the board&hellip;</b><span></span></div></div></div></div>
+      <div class="lo"><h3>The market is lower</h3><div id="veFades"><div class="is-vacant in-plate" id="veFadesEmpty"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span><div class="is-vacant-msg"><b>Reading the board&hellip;</b><span></span></div></div></div></div>
+    </div>
+  </div>
+
+  <div class="ve-board" data-board="movers" hidden>
+    <p class="ve-board-intro">The largest meaningful prop changes since each line opened. Open to current, off the median book.</p>
+    <div class="is-scroll"><table class="is-table" id="veMovers" hidden><thead><tr><th>Player</th><th>Market</th><th class="num">Open</th><th class="num">Current</th><th class="num">Move</th><th class="num">Books</th></tr></thead><tbody></tbody></table></div>
+    <div class="is-vacant in-plate" id="veMoversEmpty"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span><div class="is-vacant-msg"><b>No prop movement has reached this board yet this week.</b><span>Movers appear once a book moves a posted line by a meaningful amount. Quoted props and game lines are still on the other boards.</span></div><a class="is-btn ghost" href="/game-intel">Game Intel</a></div>
+  </div>
+
+  <div class="ve-board" data-board="props" hidden>
+    <p class="ve-board-intro">Every player market the books have posted for the games still to play, beside Iron Tuna&rsquo;s own number for the same stat. The line is the median across the books quoting it; the over or yes price is the median de-vigged probability. Widest disagreement first.</p>
+    <p class="is-note ve-board-note" id="vePropsNote" hidden></p>
+    <div class="is-scroll"><table class="is-table" id="veProps" hidden><thead><tr><th>Player</th><th>Market</th><th class="num">Line</th><th class="num">Over / Yes</th><th class="num">Iron Tuna</th><th class="num">Edge</th><th class="num">Open</th><th class="num">Move</th><th class="num">Books</th></tr></thead><tbody></tbody></table></div>
+    <div class="is-vacant in-plate" id="vePropsEmpty"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span><div class="is-vacant-msg"><b>No quoted player prop has reached this board yet this week.</b><span>Books post props through the week; until one does, every player number on the site is derived from the game lines and says so.</span></div><a class="is-btn ghost" href="/player-intel">Player Intel</a></div>
+    <p class="ve-board-more" id="vePropsMoreWrap" hidden><button type="button" class="ve-more" id="vePropsMore">Show every prop</button></p>
+  </div>
+
+  <div class="ve-board" data-board="td" hidden>
+    <p class="ve-board-intro">Players ranked by the probability of scoring at least once this week.</p>
+    <div class="is-scroll"><table class="is-table" id="veTd" hidden><thead><tr><th>#</th><th>Player</th><th>Opp</th><th class="num">Anytime TD</th><th class="num">Expected TDs</th><th>Basis</th></tr></thead><tbody></tbody></table></div>
+    <div class="is-vacant in-plate" id="veTdEmpty"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span><div class="is-vacant-msg"><b>No touchdown market has reached this board yet this week.</b><span>The board fills once a book prices anytime-touchdown odds or the game lines give enough to derive them.</span></div></div>
+  </div>
+
+  <div class="ve-board" data-board="vol" hidden>
+    <p class="ve-board-intro">The strongest market-implied volume: receptions and carries the money expects.</p>
+    <div class="is-scroll"><table class="is-table" id="veVol" hidden><thead><tr><th>#</th><th>Player</th><th class="num">Receptions</th><th class="num">Carries</th><th class="num">Rush yds</th><th class="num">Rec yds</th><th class="num">Implied touches</th><th>Basis</th></tr></thead><tbody></tbody></table></div>
+    <div class="is-vacant in-plate" id="veVolEmpty"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span><div class="is-vacant-msg"><b>No volume market has reached this board yet this week.</b><span>Receptions and carries are read from posted props; until a book prices them there is no volume to rank.</span></div></div>
+  </div>
+
+  <div class="ve-board" data-board="games" hidden>
+    <p class="ve-board-intro">Every game on the slate, ranked by total, with each side&rsquo;s implied points and how the line has moved.</p>
+    <div class="is-scroll"><table class="is-table" id="veGames" hidden><thead><tr><th>Game</th><th class="num">Total</th><th>Favorite</th><th class="num">Spread</th><th class="num">Implied away</th><th class="num">Implied home</th><th class="num">Total move</th><th class="num">Spread move</th></tr></thead><tbody></tbody></table></div>
+    <div class="is-vacant in-plate" id="veGamesEmpty"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span><div class="is-vacant-msg"><b>No game this week carries a posted total yet.</b><span>Totals and spreads arrive as the books open the week; the board ranks every game the moment they do.</span></div><a class="is-btn ghost" href="/game-intel">Game Intel</a></div>
+  </div>
+
+  <div class="ve-board" data-board="signals" hidden>
+    <p class="ve-board-intro">Combinations of lines telling a broader story: a spread and a player market moving together.</p>
+    <div id="veHidden"><div class="is-vacant in-plate" id="veHiddenEmpty"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span><div class="is-vacant-msg"><b>No combined move has been detected this week.</b><span>A signal needs a spread or total and at least one player market moving the same way. One line moving on its own is noise, and the board says nothing about it.</span></div></div></div>
+  </div>
+
+  <div class="is-plate-foot">
+    <p>Quoted where a book prices it, derived from the game lines where none does, and labeled either way. Off the median book.</p>
+  </div>
 </div>
 
-<h2>Market Movers</h2>
-<p>The largest meaningful prop changes since each line opened. Open to current, off the median book.</p>
-<div class="is-scroll"><table class="is-table" id="veMovers" hidden><thead><tr><th>Player</th><th>Market</th><th class="num">Open</th><th class="num">Current</th><th class="num">Move</th><th class="num">Books</th></tr></thead><tbody></tbody></table></div>
-<p class="is-empty" id="veMoversEmpty">No prop movement has reached this board yet this week.</p>
+<!-- The one number each secondary board comes down to, so the reader sees
+     the slate's environment, its sharpest move and its one signal without
+     switching boards; each card switches to the board it came from. -->
+<div class="ve-key" id="veKey">
+  <div class="is-card" id="veKeyEnv" hidden><span class="is-tag is-live">Game environments</span><h3>Highest total on the slate</h3><b class="ve-big" id="veKeyEnvN"></b><p id="veKeyEnvP"></p><button type="button" class="ve-go" data-board-go="games">Every game &rarr;</button></div>
+  <div class="is-card" id="veKeyMover" hidden><span class="is-tag is-live">Market movers</span><h3>Largest move since open</h3><b class="ve-big" id="veKeyMoverN"></b><p id="veKeyMoverP"></p><button type="button" class="ve-go" data-board-go="movers">Every mover &rarr;</button></div>
+  <div class="is-card" id="veKeySignal" hidden><span class="is-tag is-live">Hidden signals</span><h3>Lines moving together</h3><b class="ve-big" id="veKeySignalN"></b><p id="veKeySignalP"></p><button type="button" class="ve-go" data-board-go="signals">Every signal &rarr;</button></div>
+</div>
 
-<h2>Quoted Props</h2>
-<p>Every player market the books have posted for the games still to play, beside Iron Tuna&rsquo;s own number for the same stat. The line is the median across the books quoting it; the over or yes price is the median de-vigged probability. Widest disagreement first.</p>
-<p class="is-note" id="vePropsNote" hidden></p>
-<div class="is-scroll"><table class="is-table" id="veProps" hidden><thead><tr><th>Player</th><th>Market</th><th class="num">Line</th><th class="num">Over / Yes</th><th class="num">Iron Tuna</th><th class="num">Edge</th><th class="num">Open</th><th class="num">Move</th><th class="num">Books</th></tr></thead><tbody></tbody></table></div>
-<p class="is-empty" id="vePropsEmpty">No quoted player prop has reached this board yet this week.</p>
-<p id="vePropsMoreWrap" hidden><button type="button" class="ve-more" id="vePropsMore">Show every prop</button></p>
-
-<h2>TD Board</h2>
-<p>Players ranked by the probability of scoring at least once this week.</p>
-<div class="is-scroll"><table class="is-table" id="veTd" hidden><thead><tr><th>#</th><th>Player</th><th>Opp</th><th class="num">Anytime TD</th><th class="num">Expected TDs</th><th>Basis</th></tr></thead><tbody></tbody></table></div>
-
-<h2>Volume Board</h2>
-<p>The strongest market-implied volume: receptions and carries the money expects.</p>
-<div class="is-scroll"><table class="is-table" id="veVol" hidden><thead><tr><th>#</th><th>Player</th><th class="num">Receptions</th><th class="num">Carries</th><th class="num">Rush yds</th><th class="num">Rec yds</th><th class="num">Implied touches</th><th>Basis</th></tr></thead><tbody></tbody></table></div>
-
-<h2>Game Environments</h2>
-<p>Every game on the slate, ranked by total, with each side’s implied points and how the line has moved.</p>
-<div class="is-scroll"><table class="is-table" id="veGames" hidden><thead><tr><th>Game</th><th class="num">Total</th><th>Favorite</th><th class="num">Spread</th><th class="num">Implied away</th><th class="num">Implied home</th><th class="num">Total move</th><th class="num">Spread move</th></tr></thead><tbody></tbody></table></div>
-
-<h2>Hidden Market Signals</h2>
-<p>Combinations of lines telling a broader story: a spread and a player market moving together.</p>
-<div id="veHidden"><p class="is-empty">No combined move has been detected this week.</p></div>
-
-<h2>How to read a gap</h2>
-<ol>
-  <li><b>Read the implied points, not the spread.</b> A spread and a total together give each offense its expected points, which is the scoring environment every skill player on that roster inherits.</li>
-  <li><b>Compare like with like.</b> The question is never whether a team is good, but whether the market rates that offense higher or lower than the projections already do.</li>
-  <li><b>Buy the gap, not the name.</b> A cheap player the market likes is worth more than a stud everyone already agrees on.</li>
-  <li><b>Respect the clamp.</b> One odd line is noise. A gap is a tiebreaker between players you already rate closely, not a reason to rebuild a roster.</li>
+<div class="is-sec" id="howto"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>How to read a gap</h2></div></div>
+<ol class="ve-how">
+  <li><div><b>Read the implied points, not the spread.</b> A spread and a total together give each offense its expected points, which is the scoring environment every skill player on that roster inherits.</div></li>
+  <li><div><b>Compare like with like.</b> The question is never whether a team is good, but whether the market rates that offense higher or lower than the projections already do.</div></li>
+  <li><div><b>Buy the gap, not the name.</b> A cheap player the market likes is worth more than a stud everyone already agrees on.</div></li>
+  <li><div><b>Respect the clamp.</b> One odd line is noise. A gap is a tiebreaker between players you already rate closely, not a reason to rebuild a roster.</div></li>
 </ol>
 
-<h2>The rest of the section</h2>
+<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">More</span><h2>The rest of the section</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
 <div class="is-grid">
   <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week itself: who is on bye, what the slate looks like, and every tool below in one place.</p></div>
   <div class="is-card"><h3><a href="/rankings">Rankings</a></h3><p>The board re-ranked for the week ahead, at your league’s scoring rather than a stranger’s.</p></div>
@@ -182,7 +238,7 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
 </div>
 
-<h2>Where these numbers come from</h2>
+<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">Method</span><h2>Where these numbers come from</h2><a class="is-sec-more" href="/data">Data &amp; sources &rarr;</a></div></div>
 <p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
 <p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
 
@@ -285,13 +341,50 @@ p{color:var(--sec);margin:0 0 16px}
       '<span class="ve-cls ' + kind + '">' + e(d.classification) + ' · ' + sign(d.rank, ' slots') + ' · ' + sign(d.points, ' pts') + '</span><span class="ve-conf">' + e(p.confidence) + ' · ' + e(p.basis) + '</span>' +
       (p.why ? '<p>' + e(p.why) + '</p>' : '') + '</div>';
   }
+  // The board switcher. One panel shown at a time; the key cards under the
+  // plate switch to the board they came from.
+  function showBoard(k) {
+    [].forEach.call(document.querySelectorAll('.ve-board'), function (b) { b.hidden = b.getAttribute('data-board') !== k; });
+    [].forEach.call(document.querySelectorAll('#veSwitch button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-board') === k ? 'true' : 'false'); });
+  }
+  var hide = function (id) { var el = $(id); if (el) el.hidden = true; };
   document.addEventListener('DOMContentLoaded', function () {
+    $('veSwitch').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (b) showBoard(b.getAttribute('data-board')); });
+    $('veKey').addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-board-go]'); if (!b) return;
+      showBoard(b.getAttribute('data-board-go'));
+      try { document.getElementById('board').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (err) {}
+    });
     fetch('/api/vegas-edge').then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) { $('veNote').textContent = 'The board did not answer. Nothing is shown rather than something invented.'; return; }
+      if (!j || !j.ok) { $('veNote').textContent = 'The board did not answer. Nothing is shown rather than something invented.'; vacantAll('The board did not answer.'); return; }
+      if (j.week) $('veWeek').textContent = j.week;
       $('veNote').innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || 'Player props are priced this week; every number below says whether it is quoted or derived.') +
         (j.playedNote ? ' ' + e(j.playedNote) : '');
       $('veBuys').innerHTML = j.vsExperts.buys.length ? j.vsExperts.buys.map(function (p) { return card(p, 'buy'); }).join('') : '<p class="is-empty">No player the market rates meaningfully higher than the consensus today.</p>';
       $('veFades').innerHTML = j.vsExperts.fades.length ? j.vsExperts.fades.map(function (p) { return card(p, 'fade'); }).join('') : '<p class="is-empty">No player the market rates meaningfully lower than the consensus today.</p>';
+      // The key cards: the slate's environment, its sharpest move, its one signal.
+      var env = j.gameEnvironments && j.gameEnvironments[0];
+      if (env && env.total != null) {
+        var homeHi = env.impliedHome != null && (env.impliedAway == null || env.impliedHome >= env.impliedAway);
+        var side = homeHi ? env.home : env.away, pts = homeHi ? env.impliedHome : env.impliedAway;
+        $('veKeyEnvN').innerHTML = e(env.game) + ' <span class="is-status">o' + n1(env.total) + '</span>';
+        $('veKeyEnvP').textContent = (pts != null ? side + ' is implied for ' + n1(pts) + ' points; every skill player on that side inherits it.' : 'The scoring environment every skill player in the game inherits.') +
+          (env.movement && env.movement.total != null ? ' The total has moved ' + sign(env.movement.total) + ' since it opened.' : '');
+        $('veKeyEnv').hidden = false;
+      }
+      var mv = j.movers && j.movers[0];
+      if (mv) {
+        var mvTd = mv.market === 'anytimeTD';
+        $('veKeyMoverN').innerHTML = e(mvTd ? sign(mv.movement, ' pts') : sign(mv.movement)) + ' <span class="is-status">' + e(mv.label) + '</span>';
+        $('veKeyMoverP').textContent = mv.name + ' (' + mv.position + ' \u00b7 ' + mv.team + '), ' + (mvTd ? sign(mv.openOdds) + ' to ' + sign(mv.currentOdds) : n1(mv.open) + ' to ' + n1(mv.current)) + ' since open, ' + mv.booksMoved + ' of ' + mv.books + ' books moving. A move this size with no injury news is the sharp side talking.';
+        $('veKeyMover').hidden = false;
+      }
+      var sg = j.hiddenSignals && j.hiddenSignals[0];
+      if (sg) {
+        $('veKeySignalN').textContent = sg.subject && sg.subject.game ? sg.subject.game : 'One game';
+        $('veKeySignalP').textContent = sg.data && sg.data.interpretation ? sg.data.interpretation : 'A spread and a player market moving the same way is a story about a role, not a number.';
+        $('veKeySignal').hidden = false;
+      }
       if (j.movers.length) {
         $('veMovers').querySelector('tbody').innerHTML = j.movers.map(function (m) {
           var td = m.market === 'anytimeTD';
@@ -299,7 +392,7 @@ p{color:var(--sec);margin:0 0 16px}
             '<td class="num">' + (td ? sign(m.openOdds) : n1(m.open)) + '</td><td class="num">' + (td ? sign(m.currentOdds) : n1(m.current)) + '</td>' +
             '<td class="num">' + (td ? sign(m.movement, ' pts') : sign(m.movement)) + (m.percentChange != null ? ' (' + sign(m.percentChange, '%') + ')' : '') + '</td><td class="num">' + m.booksMoved + ' of ' + m.books + '</td></tr>';
         }).join('');
-        $('veMovers').hidden = false; $('veMoversEmpty').hidden = true;
+        $('veMovers').hidden = false; hide('veMoversEmpty');
       }
       if (j.propBoard && j.propBoard.length) {
         var PROPS_SHOW = 60, showAll = false;
@@ -324,7 +417,7 @@ p{color:var(--sec);margin:0 0 16px}
           $('vePropsMore').textContent = showAll ? 'Show the top ' + PROPS_SHOW : 'Show every prop (' + j.propBoard.length + ')';
         };
         drawProps();
-        $('veProps').hidden = false; $('vePropsEmpty').hidden = true;
+        $('veProps').hidden = false; hide('vePropsEmpty');
         $('vePropsMoreWrap').hidden = j.propBoard.length <= PROPS_SHOW;
         $('vePropsMore').addEventListener('click', function () { showAll = !showAll; drawProps(); });
         if (j.propSummary) {
@@ -334,15 +427,15 @@ p{color:var(--sec);margin:0 0 16px}
       }
       if (j.tdBoard.length) {
         $('veTd').querySelector('tbody').innerHTML = j.tdBoard.map(function (t, i) { return '<tr><td class="num">' + (i + 1) + '</td><td><b>' + e(t.name) + '</b> <span class="is-status">' + e(t.position + ' · ' + t.team) + '</span></td><td>' + e(t.opponent || '—') + '</td><td class="num"><b>' + n1(t.probability) + '%</b></td><td class="num">' + t.expectedTds + '</td><td><span class="is-status">' + e(t.basis) + '</span></td></tr>'; }).join('');
-        $('veTd').hidden = false;
+        $('veTd').hidden = false; hide('veTdEmpty');
       }
       if (j.volumeBoard.length) {
         $('veVol').querySelector('tbody').innerHTML = j.volumeBoard.map(function (v, i) { return '<tr><td class="num">' + (i + 1) + '</td><td><b>' + e(v.name) + '</b> <span class="is-status">' + e(v.position + ' · ' + v.team) + '</span></td><td class="num">' + n1(v.receptions) + '</td><td class="num">' + (v.rushAttempts == null ? '—' : n1(v.rushAttempts)) + '</td><td class="num">' + n1(v.rushYards) + '</td><td class="num">' + n1(v.recYards) + '</td><td class="num"><b>' + n1(v.impliedTouches) + '</b></td><td><span class="is-status">' + e(v.basis) + '</span></td></tr>'; }).join('');
-        $('veVol').hidden = false;
+        $('veVol').hidden = false; hide('veVolEmpty');
       }
       if (j.gameEnvironments.length) {
         $('veGames').querySelector('tbody').innerHTML = j.gameEnvironments.map(function (g) { return '<tr><td><b>' + e(g.game) + '</b></td><td class="num">' + n1(g.total) + '</td><td>' + e(g.favorite || 'PK') + '</td><td class="num">' + (g.spread == null ? '—' : Math.abs(g.spread)) + '</td><td class="num">' + n1(g.impliedAway) + '</td><td class="num">' + n1(g.impliedHome) + '</td><td class="num">' + (g.movement ? sign(g.movement.total) : '—') + '</td><td class="num">' + (g.movement ? sign(g.movement.spread) : '—') + '</td></tr>'; }).join('');
-        $('veGames').hidden = false;
+        $('veGames').hidden = false; hide('veGamesEmpty');
       }
       if (j.hiddenSignals.length) {
         $('veHidden').innerHTML = j.hiddenSignals.map(function (s) {
@@ -354,8 +447,13 @@ p{color:var(--sec);margin:0 0 16px}
             '</ul><p>' + e(d.interpretation) + '</p></div>';
         }).join('');
       }
-    }).catch(function () { $('veNote').textContent = 'The board did not answer.'; });
+    }).catch(function () { $('veNote').textContent = 'The board did not answer.'; vacantAll('The board did not answer.'); });
   });
+  // Every board's empty state says the feed failed, rather than "nothing yet".
+  function vacantAll(msg) {
+    [].forEach.call(document.querySelectorAll('.ve-plate .is-vacant b'), function (b) { b.textContent = msg; });
+    [].forEach.call(document.querySelectorAll('.ve-plate .is-vacant span:not(.is-vacant-ic)'), function (sp) { sp.textContent = 'Nothing is shown rather than something invented.'; });
+  }
 })();
 </script>
 <!--chrome:navjs--><script>
