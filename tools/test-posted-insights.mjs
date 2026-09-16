@@ -65,11 +65,12 @@ if (POOL.length) {
 }
 
 // ── the front page and the insights hub both carry the markup + fetch ─────
+// "Just Posted" came off the homepage in the September 2026 rewrite: the page is
+// five sections now, and /insights is the hub for the drop rotation. The hub
+// below is the surface that carries it, and it is the one this test guards.
 const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
-ok('front.html has the Just Posted section, hidden by default',
-  /<div class="sec-head" id="wire" hidden>/.test(front));
-ok('front.html fetches /api/posted-insights', front.includes("fetch('/api/posted-insights')"));
-ok('front.html reveals the section via setSectionVisible', /setSectionVisible\(\['wire', 'wireSub', 'wireList'\]/.test(front));
+ok('the homepage carries no second Just Posted band',
+  !/id="wire"/.test(front) && !front.includes('/api/posted-insights'));
 
 const insightsHub = fs.readFileSync(path.join(ROOT, 'insights.html'), 'utf8');
 ok('insights.html has the Just Posted block, hidden by default',

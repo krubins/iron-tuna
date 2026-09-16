@@ -9,13 +9,14 @@
 //   node tools/preview-copy.mjs --player="Bijan Robinson"
 //   node tools/preview-copy.mjs --title="Cap X at $34, not the $57 on the sheet" --dek="..."
 //
-// Three surfaces quote hard dollars at a reader — the front page's generated
-// lead, its Position Intel modules, and the player card — and every one of them
-// is written by /it-league.js against the league that reader saved. Which means
+// Two surfaces quote hard dollars at a reader — the generated lead at /lead and
+// the player card — and both are written by /it-league.js against the league
+// that reader saved. (The homepage was a third until September 2026; it now
+// quotes live projections at the site's default scoring and says so.) Which means
 // the only way to know what a copy change actually says is to pick a league and
 // read it. This prints that.
 //
-// It LIFTS the pages' own blocks out of front.html and player.html and runs them
+// It LIFTS the pages' own blocks out of lead.html and player.html and runs them
 // against the real library rather than restating what they do: a preview that
 // paraphrases the page is a preview of nothing, and the paraphrase is exactly
 // what rots first. The blocks are found by anchor TEXT, never by line number, so
@@ -40,10 +41,17 @@ const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 // comes next instead of needing an anchor on its own closing brace.
 export const BLOCKS = {
   lead: {
-    file: 'front.html',
+    // /lead, not "/". The homepage carried the generated lead until the
+    // September 2026 rewrite; lead.html always held the complete version — it
+    // restates the article BODY as well as the headline and dek — and is where
+    // the story is read now.
+    file: 'lead.html',
     what: 'the generated lead: headline, dek and the "Your league" note',
     from: 'var names = (s.names && s.names.length) ? s.names',
-    to: 'yours.hidden = !note;',
+    // Exclusive: the note is written inside `if (note) { ... }`, so the window
+    // has to end at the statement AFTER that block or it cuts mid-brace.
+    to: "var cat = document.getElementById('cat');",
+    endBefore: true,
     needs: ['s', 'L', 'esc', 'document']
   },
   board: {
@@ -119,22 +127,29 @@ const strip = (s) => String(s)
 
 function renderLead(L, story) {
   const el = {};
-  const document = { getElementById: (id) => (el[id] = el[id] || { innerHTML: '', hidden: false }) };
-  new Function('s', 'L', 'esc', 'document', cut(read('front.html'), BLOCKS.lead))
+  // /lead writes the headline and dek as textContent and the note as innerHTML,
+  // and it sets document.title too, so the stub carries all three.
+  const document = {
+    title: '',
+    getElementById: (id) => (el[id] = el[id] || { innerHTML: '', textContent: '', hidden: true })
+  };
+  new Function('s', 'L', 'esc', 'document', cut(read(BLOCKS.lead.file), BLOCKS.lead))
     (story, L, (x) => String(x), document);
   return {
-    HEADLINE: strip(el.leadTitle.innerHTML),
-    DEK: strip(el.leadPlay.innerHTML),
-    NOTE: strip(el.leadYours.innerHTML)
+    HEADLINE: strip(el.title.textContent),
+    DEK: strip(el.dek.textContent),
+    NOTE: strip(el.yours.innerHTML)
   };
 }
 
-// front.html asks the library for this line (renderPositions -> L.tailor, and
-// L.tailorLabel for the label beside it), so there is no block to lift: these
-// two calls ARE the surface. Real insight rows, read out of front.html's own
-// data rather than invented here.
+// The surfaces that quote a call ask the library for this line (L.tailor, and
+// L.tailorLabel for the label beside it), so there is no block to lift: those
+// two calls ARE the surface. Real insight rows, read out of the site's own
+// extracted data rather than invented here — player.html carries the STORIES
+// array that front.html used to (the homepage stopped carrying build-time data
+// in September 2026), and tools/build-front.mjs writes both from one pass.
 function renderIntel(L, howMany) {
-  const rows = [...read('front.html').matchAll(/\{"title":"[^"]*","pos":"[^"]*"[^}]*"stat":"[^"]*"[^}]*\}/g)]
+  const rows = [...read('player.html').matchAll(/\{"title":"[^"]*","pos":"[^"]*"[^}]*"stat":"[^"]*"[^}]*\}/g)]
     .map((m) => { try { return JSON.parse(m[0]); } catch (e) { return null; } })
     .filter((r) => r && /%/.test(r.stat || ''));
   const out = [];
@@ -232,13 +247,13 @@ function report(o, store) {
   console.log(rule('READING AS: ' + whoIsReading(L, o)));
 
   const lead = renderLead(L, o.story);
-  console.log('\n' + bold('The front page lead') + '   ' + BLOCKS.lead.file + ', its own block');
+  console.log('\n' + bold('The generated lead') + '    ' + BLOCKS.lead.file + ', its own block');
   console.log('  sample desk copy — override with --title / --dek');
   Object.keys(lead).forEach((k) => console.log('  ' + k.padEnd(9) + lead[k]));
 
   const intel = renderIntel(L, o.intel);
   if (intel.length) {
-    console.log('\n' + bold('Position Intel') + '        front.html, via L.tailor()');
+    console.log('\n' + bold('A call, in your league') + ' player.html rows, via L.tailor()');
     intel.forEach((it) => {
       console.log('  ' + it.title.slice(0, 64) + (it.title.length > 64 ? '…' : ''));
       console.log('  effect:  ' + it.effect);

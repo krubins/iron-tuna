@@ -216,22 +216,22 @@ console.log('\nthe routes');
   ok('the pre-existing /api/lead capture still stands', src.includes("url.pathname === '/api/lead'"));
 }
 
-console.log('\nthe front page keeps its own lead as the floor');
+// The homepage painted a dated rotation of drop-page calls, then upgraded it in
+// place to the generated lead when /api/lead-story answered — a hero with its
+// own artwork, a cast of faces, prev/next controls and a publish countdown. All
+// of it came off in the September 2026 rewrite: "/" is five sections now and
+// section 4 is a compact group of the desk's CURRENT pieces, off /api/content.
+// /lead is where a generated story is read, and the section below is its test.
+console.log('\nthe homepage carries no lead of its own');
 {
-  ok('it paints the dated rotation before asking for anything',
-     front.indexOf('renderLead(); startTick();') < front.indexOf('loadGeneratedLead()'));
-  ok('a failed fetch is swallowed', /loadGeneratedLead[\s\S]{0,400}\.catch\(function\(\)\{\}\)/.test(front));
-  ok('a payload with no story paints nothing',
-     /function paintGeneratedLead\(d\)\{?\s*\n\s*if \(!d \|\| !d\.ok \|\| !d\.story \|\| !d\.story\.slug\) return;/.test(front));
-  ok('the generated lead retires the rotation controls', front.includes("getElementById('leadCtrls')"));
-  ok('the photo band falls back to the faces the story brought',
-     /PLAYERS\[k\] \|\| sent\[k\]/.test(front));
-  ok('...and still prefers the page\u2019s own cast when it has one',
-     front.indexOf('PLAYERS[k] || sent[k]') > 0 && !/sent\[k\] \|\| PLAYERS\[k\]/.test(front));
-  ok('the controls row can actually be hidden', front.includes('.lead-ctrls[hidden]{display:none}'));
-  ok('the countdown still names the three-hour cadence', front.includes('next insight in '));
-  ok('the archive is links, never a carousel the lead cycles into',
-     front.includes('Recent insights') && !/leadPool\.push/.test(front));
+  ok('no rotation, no controls, no countdown',
+     !/renderLead\(\)|leadCtrls|loadGeneratedLead|msToNextLead/.test(front));
+  ok('and no build-time drop-page library behind one',
+     !/var STORIES = \[|var PLAYERS = \{/.test(front));
+  // What stands in its place, and the rule it keeps: real current pieces only.
+  ok('the desk section reads /api/content', front.includes("grab('/api/content'"));
+  ok('and is hidden until that feed answers with something',
+     /<section class="hm-sec" id="articles" hidden/.test(front));
 }
 
 console.log('\nthe article page');
@@ -319,91 +319,16 @@ console.log('\nthe admin desk');
      route.includes('await leadStoryPayload(env)'));
 }
 
-// ── the countdown points at when a story actually lands ─────────────────────
-// The desk's Routine is `58 */3 * * *`. The countdown used to target the SLOT
-// BOUNDARY, so it told a reader "next insight in 37m" when the run had not even
-// fired yet and the story was ~95 minutes away. It was wrong by the cron offset
-// in every slot, and an open tab looked for the new story an hour before it
-// existed and then gave up for three hours.
+// ── (retired) the publish countdown ─────────────────────────────────────────
+// The homepage printed "next insight in 37m" beside the lead, and this block
+// reimplemented the page's maths to prove the countdown targeted the moment a
+// story actually LANDS (the `58 */3 * * *` run plus its write time) rather than
+// the slot boundary, which was wrong by the cron offset in every slot. The chip
+// went with the lead in the September 2026 rewrite; no surface counts down to a
+// publish any more, so there is no second implementation left to drift. The
+// Routine's own schedule is asserted in tools/test-jobs.mjs.
 {
-  const SLOT_MS = 3 * 60 * 60 * 1000;
-  // Pull the real constants out of front.html rather than restating them, so
-  // this fails if someone edits the page and not the cron (or the reverse).
-  const cron = Number((front.match(/var LEAD_CRON_MS = (\d+) \* 60 \* 1000/) || [])[1]);
-  const write = Number((front.match(/var LEAD_WRITE_MS = (\d+) \* 60 \* 1000/) || [])[1]);
-  ok('the page knows the run fires at :58, matching the `58 */3 * * *` cron', cron === 58);
-  // MEASURED from the nine scheduled runs on record, not guessed. The first
-  // version of this constant was 8 minutes, below every single observation, so
-  // the countdown promised a story before any run had ever delivered one.
-  const WRITES = [10, 11, 12, 13, 14, 16, 21, 22, 27];
-  ok('the write estimate is not below every run ever observed',
-     write >= WRITES[0]);
-  ok('and is not above every one either', write <= WRITES[WRITES.length - 1]);
-  ok('it sits at or near the median of what actually happened',
-     Math.abs(write - WRITES[(WRITES.length - 1) / 2 | 0]) <= 3);
-
-  // Reimplement exactly what the page computes, then check it against the clock.
-  const slotOf = ms => Math.floor(ms / SLOT_MS);
-  const dueAt = now => slotOf(now) * SLOT_MS + (cron + write) * 60000;
-  const toNext = now => { const d = dueAt(now); return (d > now ? d : d + SLOT_MS) - now; };
-
-  const slotStart = 165501 * SLOT_MS;               // 2026-08-22 15:00:00 UTC
-  const min = n => slotStart + n * 60000;
-  ok('at the slot boundary the countdown is the full cron offset, not zero',
-     Math.round(toNext(slotStart) / 60000) === cron + write);
-  // The bug, stated as a number: at 14:23 the old code said 37m.
-  ok('37 minutes before the boundary it does NOT claim a story in 37 minutes',
-     Math.round(toNext(slotStart - 37 * 60000) / 60000) === 37 + cron + write);
-  // One minute after the story is due, the next one is a full slot away less
-  // that minute: 180 - 1 = 179, NOT 180 - (cron + write) - 1.
-  ok('once the story has landed the countdown rolls to the next slot',
-     Math.round(toNext(min(cron + write + 1)) / 60000) === 179);
-  ok('the countdown is never negative and never exceeds one slot', [
-       slotStart - 1, slotStart, min(1), min(cron), min(cron + write), min(179),
-     ].every(t => { const v = toNext(t); return v > 0 && v <= SLOT_MS; }));
-
-  // The refetch is decided by SLOT comparison, not by a window after the
-  // boundary, so an early, late or held-back run cannot strand an open tab.
-  // It is gated on the run having FIRED, not on the write estimate: the write
-  // time ranges 10-27 minutes and a story that lands early must not sit unseen
-  // waiting for the estimate to catch up.
-  const firedAt = now => slotOf(now) * SLOT_MS + cron * 60000;
-  const stale = (storyMs, now) => slotOf(storyMs) < slotOf(now) && now >= firedAt(now);
-  const prev = (165500 * SLOT_MS) + 116 * 60000;    // the 13:56 story, slot 165500
-  ok('a tab does not go looking before the run has fired',
-     !stale(prev, min(cron - 5)));
-  ok('it looks as soon as the run has fired, not when the estimate says done',
-     stale(prev, min(cron + 1)));
-  ok('the fastest run on record is inside the looking window',
-     stale(prev, min(cron + WRITES[0])));
-  ok('so is the slowest, with 40 minutes of looks at two-minute spacing',
-     WRITES[WRITES.length - 1] <= 40 && stale(prev, min(cron + WRITES[WRITES.length - 1])));
-  ok('and it stops as soon as it is holding this slot\'s story',
-     !stale(min(cron), min(cron + write + 30)));
-  // The real 15:58 run: fired 15:58, published 16:12 into slot 165501.
-  ok('the run this was built from would have been picked up',
-     stale(prev, (165501 * SLOT_MS) + 72 * 60000));
-  // The old code looked in the six minutes after the boundary. State plainly
-  // that that window is before the story exists, so nothing is found there.
-  ok('the six minutes after the boundary — where the old code looked — is too early',
-     [1, 2, 3, 4, 5, 6].every(m => !stale(prev, min(m))));
-
-  // Guard the regression directly: the lead stamp must not use the deep-dive
-  // rotation's boundary countdown.
-  const paint = front.slice(front.indexOf('function paintGeneratedLead'),
-                            front.indexOf('function leadStamp'));
-  ok('the generated lead does not count down to the slot boundary',
-     !paint.includes('msToNextSlot()'));
-  ok('it counts down to the next expected publish instead',
-     (paint.match(/msToNextLead\(\)/g) || []).length >= 2);
-  ok('the polling loop is bounded so a held-back run cannot poll forever',
-     /looks < \d+/.test(paint));
-  ok('it looks from when the run fires, not from the write estimate',
-     paint.includes('leadFiredAt(now)') && !paint.includes('now >= leadDueAt(now)'));
-  // Asking faster than /api/lead-story's own memo can only return the same
-  // cached answer.
-  ok('it never asks more often than the two-minute server memo',
-     /lastLook >= 120000/.test(paint));
+  ok('no page counts down to a publish', !/msToNextLead|LEAD_CRON_MS|next insight in /.test(front));
 }
 
 // ── the desk's clock, in a clock a reader keeps ────────────────────────────
@@ -471,92 +396,27 @@ console.log('\nUTC never reaches a reader');
      Array.isArray(junk.names) && junk.names.length === 0);
 }
 
-// ── Top Headlines keeps up with the season ────────────────────────────────
-// The column froze. Its two feeds are the desk (through /api/lead-story) and
-// the drop-page library baked into front.html, and in September 2026 both went
-// quiet at once: the draft season's last insight drop was the 3rd, and the
-// in-season desk had published exactly one piece, which was the lead itself and
-// therefore not in the column. The painter's answer to "the desk sent nothing"
-// was to leave the drop-page list where it was, so the site's front door kept a
-// pre-season auction call under a heading that says Top Headlines.
+// ── (retired) the Top Headlines rail ───────────────────────────────────────
+// The column beside the lead merged two feeds — the desk through /api/lead-story
+// and the drop-page library baked into front.html — and this block lifted the
+// merge out of the page to prove that in the regular season it carried the desk
+// and this fortnight's reports, newest first, and never a draft-season drop
+// page. The rail was the homepage's SECOND article surface and came off with the
+// news well in the September 2026 rewrite.
 //
-// The rule these hold: in the regular season the column carries the desk and
-// this fortnight's reports, strictly newest first, and never a draft-season
-// drop page. Everything is lifted out of front.html rather than restated, so a
-// change to the page fails here rather than on the site.
-console.log('\nTop Headlines keeps up with the season');
+// The rule it existed to enforce survives, in a stronger form: the homepage's
+// one article surface reads /api/content, which serves only current pieces, and
+// the section hides itself when that feed has nothing. There is no build-time
+// list left on the page to go stale in the first place.
+console.log('\nthe homepage cannot show a stale article');
 {
-  const grab = (name) => {
-    const i = front.indexOf('function ' + name + '(');
-    if (i < 0) throw new Error('front.html has no ' + name + '()');
-    const e = front.indexOf('\n  }\n', i);
-    return front.slice(i, e + 5);
-  };
-  const RAIL_MAX = Number((front.match(/var RAIL_MAX = (\d+);/) || [])[1]);
-  const FRESH_DAYS = Number((front.match(/var RAIL_FRESH_MS = (\d+) \* 24 \* 60 \* 60 \* 1000;/) || [])[1]);
-  const FRESH = FRESH_DAYS * 86400000;
-  ok('the column still has six slots and a freshness cap in days', RAIL_MAX === 6 && FRESH_DAYS >= 7 && FRESH_DAYS <= 28,
-     `${RAIL_MAX} slots, ${FRESH_DAYS} days`);
-
-  const railMerge = new Function('RAIL_MAX', grab('railMerge') + '\nreturn railMerge;')(RAIL_MAX);
-  const railReportItems = new Function('REPORTS', 'RAIL_FRESH_MS', 'fmtShort',
-    grab('railReportItems') + '\nreturn railReportItems;');
-
-  const NOW = Date.UTC(2026, 8, 9, 22, 0);                   // Wednesday of Week 1
-  const day = (n) => NOW - n * 86400000;
-  const deskItem = (n, hoursAgo) => ({ url: '/in-season/desk/k' + n + '/1', title: 'Desk ' + n,
-                                       meta: 'The Desk', desk: 1, at: NOW - hoursAgo * 3600000 });
-  const dropItem = (n) => ({ url: '/auction-insights-2026-09-03#call-' + n, title: 'Bid a September auction price',
-                             meta: 'QB · Sep 3', at: Date.parse('2026-09-03T13:00:00Z') });
-
-  // The bug, stated as a test: an empty desk must not leave the auction shelf.
-  ok('in season, a drop-page call never reaches the column, even with nothing to replace it',
-     railMerge([], [], [dropItem(1), dropItem(2)], true).length === 0);
-  ok('and out of season the drop pages are still exactly what fills it',
-     railMerge([], [], [dropItem(1), dropItem(2)], false).length === 2);
-
-  const desk = [deskItem(1, 2), deskItem(2, 30)];
-  const reports = [{ url: '/auction-watch-2026-09-08', title: 'Report Sep 8', meta: 'Report · Sep 8', at: day(1) },
-                   { url: '/auction-watch-2026-09-05', title: 'Report Sep 5', meta: 'Report · Sep 5', at: day(4) }];
-  const mixed = railMerge(desk, reports, [dropItem(1)], true);
-  ok('in season the desk and this week\'s reports share the column',
-     mixed.length === 4 && mixed.filter(x => x.desk).length === 2);
-  ok('and it is strictly newest first across both feeds, not desk-then-report',
-     mixed.map(x => x.at).every((v, i, a) => i === 0 || a[i - 1] >= v) && !mixed[1].desk,
-     mixed.map(x => x.title).join(' | '));
-  ok('no page is listed twice, whichever feed it came from',
-     new Set(railMerge(desk.concat(desk), reports.concat(reports), [], true).map(x => x.url)).size
-     === railMerge(desk.concat(desk), reports.concat(reports), [], true).length);
-  const many = Array.from({ length: 10 }, (_, i) => deskItem(i, i + 1));
-  ok('the column never runs past its slots', railMerge(many, reports, [], true).length === RAIL_MAX);
-  ok('a desk with six pieces of its own needs no report at all',
-     railMerge(many, reports, [], true).every(x => x.desk));
-
-  // The age cap is what stops the reports becoming the next frozen feed.
-  const REPORTS = [{ date: '2026-09-08', title: 'This week', url: '/auction-watch-2026-09-08' },
-                   { date: '2026-08-01', title: 'Camp, five weeks ago', url: '/auction-watch-2026-08-01' }];
-  const items = railReportItems(REPORTS, FRESH, (d) => d)(NOW);
-  ok('a report from this week is eligible and one from before the season is not',
-     items.length === 1 && items[0].url === '/auction-watch-2026-09-08', JSON.stringify(items.map(x => x.url)));
-  ok('every eligible report carries the timestamp the merge sorts on',
-     items.every(x => Number.isFinite(x.at)));
-
-  // The painter has to be TOLD which season it is in, and the page has two
-  // witnesses for that: the payload's own desk category, and the season stamp.
-  ok('the lead payload\'s desk flag is passed to the painter',
-     /paintDeskRail\(d\.recent, desk \? 'More from the desk' : 'Recent insights', desk\);/.test(front));
-  ok('and the season stamp repaints the column if the lead request never answers',
-     /if \(s\.phase === 'regular'\) railSeasonPaint\(\);/.test(front)
-     && /function railSeasonPaint\(\) \{\s*\n\s*if \(genLead\) return;/.test(front));
-  ok('an in-season column with nothing in it is painted empty rather than left standing',
-     /if \(!items\.length && !inSeason\) return false;/.test(front));
-  ok('"More from the desk" is only claimed when every line under it is the desk\'s',
-     /items\.every\(function\(it\)\{ return it\.desk; \}\)\) \? heading : 'Top Headlines'/.test(front));
-
-  // And the feed behind the lead has to be deep enough to fill the column once
-  // the lead itself has taken the first row off it.
+  ok('no second, merged article rail', !/railMerge|paintDeskRail|RAIL_MAX|id="railList"/.test(front));
+  ok('no build-time drop-page or camp list to fall back on',
+     !/var STORIES = \[|var REPORTS = \[/.test(front));
+  // The desk feed is still what the site reads; it just reaches the homepage
+  // through /api/content rather than through the lead payload.
   const lim = Number((src.match(/const feed = await newsroomFeedPayload\(env, 'weekly', (\d+)\);/) || [])[1]);
-  ok('the desk feed behind the front page is deeper than the column is wide', lim > RAIL_MAX, String(lim));
+  ok('the desk feed behind the lead is still deeper than one story', lim > 1, String(lim));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

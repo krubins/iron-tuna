@@ -1,0 +1,354 @@
+#!/usr/bin/env node
+// The homepage, driven in a browser.
+//   node tools/test-homepage.mjs
+//
+// It replaces tools/test-position-lens.mjs, which drove the sticky ribbon's
+// Auction/Snake edition switch and the Position Intel grid under it. Both came
+// off in the September 2026 rewrite: "/" is five sections now — hero, the two
+// product cards, the market disagreements, the desk's current pieces, and the
+// method with the disclosures under it — and the draft-season controls went with
+// the draft-season modules.
+//
+// THE RULE THIS EXISTS FOR, and the one the old page broke constantly: A BAND IS
+// EITHER FULL OF REAL CURRENT DATA OR IT IS HIDDEN. The page it replaced opened
+// on "Reading the board…", "Waiting for this week's slate", "Reading the
+// market…" and "Loading the current case…" — four different skeletons above the
+// fold on a Wednesday, because every module reserved its own space and then
+// apologized for being empty. So every feed here is driven TWICE: once answering
+// with real rows, and once refusing outright. The refusing pass is the one that
+// matters, and it asserts the negative directly — no loading copy anywhere in
+// the rendered text.
+//
+// Needs playwright-core plus a Chromium binary (preinstalled at /opt/pw-browsers
+// in Claude Code remote sessions, else set CHROMIUM_PATH, else whatever
+// `npx playwright-core install chromium` put in the cache). It skips cleanly
+// when they are absent so it never blocks a contributor's machine — EXCEPT
+// under REQUIRE_BROWSER=1, which CI sets, where a skip is a failure instead.
+import fs from 'fs';
+import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// A SKIP THAT CI COUNTS AS GREEN IS WORSE THAN NO TEST. This file self-skips on
+// a machine with no browser, which is right for a contributor's laptop and
+// wrong for a gate — so CI sets REQUIRE_BROWSER=1 and a missing browser becomes
+// a failure with the command that fixes it. Nothing else about the run changes.
+const REQUIRE = process.env.REQUIRE_BROWSER === '1';
+function absent(what, fix) {
+  if (REQUIRE) {
+    console.error('FAIL — ' + what + '. REQUIRE_BROWSER=1, so this is a failure rather than a skip.');
+    if (fix) console.error('       ' + fix);
+    process.exit(1);
+  }
+  console.log('SKIP — ' + what + (fix ? ' (' + fix + ')' : ''));
+  process.exit(0);
+}
+
+let chromium;
+try {
+  ({ chromium } = await import('playwright-core'));
+} catch (e) {
+  absent('needs playwright-core (' + e.message.split('\n')[0] + ')',
+         'npm install --no-save --no-package-lock playwright-core@1.56.1');
+}
+// CHROMIUM_PATH wins, then the binaries preinstalled in Claude Code remote
+// sessions, then whatever playwright-core itself installed — which is what a
+// `playwright-core install chromium` on a CI runner leaves behind, and which
+// already honours PLAYWRIGHT_BROWSERS_PATH.
+const CHROME = [
+  process.env.CHROMIUM_PATH,
+  '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  '/opt/pw-browsers/chromium/chrome-linux/chrome',
+  (() => { try { return chromium.executablePath(); } catch (e) { return null; } })()
+].find(p => p && fs.existsSync(p));
+if (!CHROME) absent('no Chromium binary', 'set CHROMIUM_PATH, or run `npx playwright-core install chromium`');
+
+let pass = 0, fail = 0;
+const ok = (n, c, x = '') => { if (c) { pass++; console.log(`  ok   ${n}`); } else { fail++; console.log(`  FAIL ${n}${x ? ' — ' + x : ''}`); } };
+
+// ── the feeds, as the worker actually shapes them ───────────────────────────
+// Field for field what _worker.js sends: vsExperts.buys/fades carry the `brief`
+// shape (three point figures, a positional ironTunaRank and the marketDelta
+// classification), and `opponent` is a bare team key with no home/away flag.
+const mk = (name, position, team, opponent, c, v, it, classification, ironTunaRank) => ({
+  name, position, team, opponent,
+  consensusPoints: c, vegasPoints: v, ironTunaPoints: it, ironTunaRank,
+  delta: { points: Math.round((v - c) * 10) / 10, rank: 4, classification }
+});
+const EDGE = { ok: true, week: 'Week 3', vsExperts: {
+  buys: [
+    mk('Drake London', 'WR', 'ATL', 'CAR', 12.1, 16.8, 15.2, 'STRONG VEGAS BUY', 14),
+    mk('Cam Ward', 'QB', 'TEN', 'IND', 15.2, 19.9, 18.4, 'STRONG VEGAS BUY', 8),
+    mk('Tank Bigsby', 'RB', 'JAX', 'HOU', 6.0, 10.4, 9.1, 'STRONG VEGAS BUY', 38),
+    mk('James Cook', 'RB', 'BUF', 'NYJ', 13.4, 15.9, 15.0, 'VEGAS LEANS HIGHER', 9)
+  ],
+  fades: [
+    mk('Derrick Henry', 'RB', 'BAL', 'CIN', 17.8, 13.1, 14.6, 'STRONG VEGAS FADE', 11),
+    mk('Blake Corum', 'RB', 'LAR', 'SEA', 11.5, 7.0, 8.4, 'STRONG VEGAS FADE', 41),
+    // MARKET AGREES is not a disagreement and must never become a row.
+    mk('Agreeable Wideout', 'WR', 'SEA', 'LAR', 12.0, 12.1, 12.0, 'MARKET AGREES', 20),
+    // A row with a hole in it is dropped, not printed with a dash.
+    { name: 'Holey Wideout', position: 'WR', team: 'NYG', opponent: 'DAL',
+      consensusPoints: 11.0, vegasPoints: null, ironTunaPoints: 9.5, ironTunaRank: 30,
+      delta: { points: -3.0, rank: -9, classification: 'STRONG VEGAS FADE' } }
+  ]
+}};
+const DFS = { ok: true, boards: { bestVegasValues: [
+  { name: 'Rome Odunze', position: 'WR', team: 'CHI', salary: 5400, vegasPoints: 14.2, vegasValueScore: 3.21 }
+]}};
+const CONTENT = { ok: true, pieces: [
+  { kind: 'final-read', title: 'The Final Read', headline: 'Three lineups the market moved overnight',
+    dek: 'Sunday morning props shifted two flex calls.', week: 3, publishedAt: Date.UTC(2026, 8, 16, 14),
+    url: '/in-season/desk/final-read/3', byline: 'Iron Tuna desk' },
+  { kind: 'opportunity-report', title: 'Opportunity Report', headline: 'Who inherits the carries in Baltimore',
+    dek: 'Snap share against the implied total.', week: 3, publishedAt: Date.UTC(2026, 8, 16, 11),
+    url: '/in-season/desk/opportunity-report/3', byline: 'Iron Tuna desk' },
+  { kind: 'rankings-update', title: 'Rankings Update', headline: 'Eleven moves after the injury report',
+    week: 3, publishedAt: Date.UTC(2026, 8, 16, 9), url: '/in-season/desk/rankings-update/3' },
+  { kind: 'tnf-preview', title: 'TNF Preview', headline: 'The total moved three points in a day',
+    week: 3, publishedAt: Date.UTC(2026, 8, 15, 20), url: '/in-season/desk/tnf-preview/3' },
+  // Five sent, four shown: the group is small on purpose.
+  { kind: 'weekend-game-plan', title: 'Weekend Game Plan', headline: 'Too many to print',
+    week: 3, publishedAt: Date.UTC(2026, 8, 15, 12), url: '/in-season/desk/weekend-game-plan/3' },
+  // No url: not a card.
+  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: Date.UTC(2026, 8, 15, 8) }
+]};
+const SEASON = { ok: true, phase: 'regular', phaseLabel: 'Regular season',
+  week: { label: 'Week 3', status: 'upcoming', firstKickoff: Date.UTC(2026, 8, 17, 20, 15) },
+  counts: { inProgress: 0 } };
+
+// `live` is the answering pass; `dead` refuses every feed the way an outage or
+// a quiet Wednesday does.
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
+let MODE = 'live';
+const server = http.createServer((req, res) => {
+  const u = new URL(req.url, 'http://x');
+  if (u.pathname.startsWith('/api/')) {
+    let body = { ok: false, error: 'unavailable' };
+    if (MODE === 'live') {
+      if (u.pathname === '/api/vegas-edge') body = EDGE;
+      else if (u.pathname === '/api/dfs') body = DFS;
+      else if (u.pathname === '/api/content') body = CONTENT;
+      else if (u.pathname === '/api/season') body = SEASON;
+    }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(JSON.stringify(body));
+  }
+  const fp = path.join(ROOT, u.pathname === '/' ? 'front.html' : u.pathname.slice(1));
+  if (!fp.startsWith(ROOT) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); return res.end('nf'); }
+  res.writeHead(200, { 'content-type': TYPES[path.extname(fp)] || 'application/octet-stream' });
+  res.end(fs.readFileSync(fp));
+});
+await new Promise(r => server.listen(0, r));
+const BASE = `http://127.0.0.1:${server.address().port}/`;
+
+const browser = await chromium.launch({ executablePath: CHROME });
+const errors = [];
+async function open(width, height) {
+  const ctx = await browser.newContext({ viewport: { width, height } });
+  const page = await ctx.newPage();
+  page.on('pageerror', e => errors.push(`${width}px: ${e.message}`));
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  return { page, ctx };
+}
+const LOADING = /Reading the board|Reading the market|Reading the desk|Reading the slate|Reading today|Waiting for this week|Loading the current case|Coming soon|Loading…/i;
+const read = page => page.evaluate(() => {
+  const vis = id => { const e = document.getElementById(id); return !!e && e.getClientRects().length > 0; };
+  const text = el => (el ? el.textContent.replace(/\s+/g, ' ').trim() : null);
+  return {
+    h1: text(document.querySelector('h1')),
+    lede: text(document.querySelector('.hm-lede')),
+    cta: [...document.querySelectorAll('.hm-cta a')].map(a => `${a.textContent.trim()}|${a.getAttribute('href')}`),
+    how: (() => { const a = document.querySelector('.hm-how-link'); return a && `${a.textContent.trim()}|${a.getAttribute('href')}`; })(),
+    clock: vis('hmClock') ? text(document.getElementById('hmClock')) : null,
+    lanes: [...document.querySelectorAll('.hm-lane > h2')].map(e => e.textContent.trim()),
+    laneLinks: [...document.querySelectorAll('.hm-links a')].map(a => a.getAttribute('href')),
+    fnRead: vis('fnRead') ? text(document.getElementById('fnRead')) : null,
+    dfRead: vis('dfRead') ? text(document.getElementById('dfRead')) : null,
+    diff: vis('different'),
+    rows: [...document.querySelectorAll('#diffBody tr')].map(tr => ({
+      who: text(tr.querySelector('.who b')),
+      nums: [...tr.querySelectorAll('.num')].map(td => td.textContent.trim()),
+      act: text(tr.querySelector('.hm-act')),
+      why: text(tr.querySelector('.hm-act-why'))
+    })),
+    fine: vis('diffFine') ? text(document.getElementById('diffFine')) : null,
+    articles: vis('articles'),
+    cards: [...document.querySelectorAll('#readGrid .hm-read-card')].map(a => a.getAttribute('href')),
+    how5: vis('how'),
+    // Section order, top to bottom, is the specified one.
+    order: [...document.querySelectorAll('section')].map(s => s.id || s.className).filter(Boolean),
+    // The horizontal overflow a phone would scroll.
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    body: document.body.innerText,
+    // Every heading, so the outline can be checked for a hole.
+    headings: [...document.querySelectorAll('h1,h2,h3')].map(h => h.tagName + ':' + h.textContent.trim().slice(0, 40))
+  };
+});
+
+// ── 1. the thesis, at both widths ───────────────────────────────────────────
+console.log('\nthe hero says the one thing, at every width');
+for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
+  const { page, ctx } = await open(w, h);
+  const r = await read(page);
+  ok(`${tag}: the headline is the thesis`,
+     r.h1 === 'The betting market knows more. Put it in your lineup.', r.h1);
+  ok(`${tag}: the supporting line says what the site does`,
+     r.lede === 'Iron Tuna translates sportsbook lines, player props and market movement into weekly rankings, trade values and DFS lineups.', r.lede);
+  ok(`${tag}: two buttons, one per lane`,
+     r.cta.join(' / ') === 'Get Fantasy Advice|/fantasy / Build a DFS Lineup|/dfs', r.cta.join(' / '));
+  ok(`${tag}: and a smaller link into the method, on this page`,
+     r.how === 'See How It Works|#how', r.how);
+  ok(`${tag}: the hero is the first section on the page`, r.order[0] === 'heroBand', r.order.slice(0, 2).join(','));
+  ok(`${tag}: the page does not scroll sideways`, r.overflow === 0, String(r.overflow));
+  // The one heading level that must not be skipped: h1 then h2s.
+  ok(`${tag}: there is exactly one h1`, r.headings.filter(x => x.startsWith('H1:')).length === 1);
+  await ctx.close();
+}
+
+// ── 2. the five sections, in the order the spec names ───────────────────────
+console.log('\nfive sections, in order, and nothing else');
+{
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  ok('hero, cards, disagreements, articles, method',
+     r.order.join(' > ') === 'heroBand > hm-sec > different > articles > how', r.order.join(' > '));
+  ok('the two product cards are named as specified',
+     r.lanes.join(' / ') === 'Fantasy This Week / DFS This Week', r.lanes.join(' / '));
+  // The five destinations each card owes, as routes that exist.
+  const want = ['/weekly-rankings', '/fantasy#startsit', '/season-long-rankings', '/trade-finder', '/faab',
+                '/dfs#dfPlayWeek', '/dfs#lineup', '/dfs#dfTune', '/dfs#stacks', '/dfs#values'];
+  ok('the Fantasy card links rankings, start/sit, rest of season, trades and waivers',
+     want.slice(0, 5).every(h => r.laneLinks.includes(h)), r.laneLinks.slice(0, 5).join(','));
+  ok('the DFS card links contest, lineup, the multi-lineup builder, stacks and values',
+     want.slice(5).every(h => r.laneLinks.includes(h)), r.laneLinks.slice(5).join(','));
+  ok('and nothing else is a card link', r.laneLinks.length === want.length, String(r.laneLinks.length));
+  ok('the method section is on the page and is the hero link’s target', r.how5 === true);
+  await ctx.close();
+}
+
+// ── 3. the live pass: real numbers, and the decision the gap implies ────────
+console.log('\nwith the boards answering');
+{
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+
+  ok('the dateline names the week off the schedule', /Week 3/.test(r.clock || ''), r.clock);
+
+  // Each card shows ONE real current output.
+  ok('the Fantasy card recommends a real player', /Drake London/.test(r.fnRead || ''), r.fnRead);
+  ok('and states the three numbers behind it',
+     /16\.8/.test(r.fnRead) && /12\.1/.test(r.fnRead) && /15\.2/.test(r.fnRead), r.fnRead);
+  ok('the DFS card shows a real current slate output',
+     /Rome Odunze/.test(r.dfRead || '') && /\$5,400/.test(r.dfRead) && /3\.21/.test(r.dfRead), r.dfRead);
+  // One player, one place: the card's pick is taken out of the table below it.
+  ok('the card’s player is not repeated in the table',
+     !r.rows.some(x => x.who === 'Drake London'), r.rows.map(x => x.who).join(','));
+
+  ok('the disagreement section is shown', r.diff === true);
+  ok('it shows three to five players', r.rows.length >= 3 && r.rows.length <= 5, String(r.rows.length));
+  ok('every row carries all three projections',
+     r.rows.every(x => x.nums.length === 3 && x.nums.every(n => /^\d+\.\d$/.test(n))),
+     JSON.stringify(r.rows.map(x => x.nums)));
+  // The translation the spec asks for: a number turned into an instruction.
+  const ACTIONS = new Set(['Start', 'Sit', 'Upgrade', 'Downgrade', 'Value play', 'Fade']);
+  ok('every row ends in one of the six decisions',
+     r.rows.every(x => ACTIONS.has(x.act)), r.rows.map(x => x.act).join(','));
+  ok('and shows the gap the decision came from',
+     r.rows.every(x => /market [+-]\d+\.\d pts vs consensus/.test(x.why || '')), r.rows.map(x => x.why).join(' / '));
+  // The four rules the mapping encodes, each pinned to a row of the fixture.
+  const by = n => r.rows.find(x => x.who === n);
+  ok('a strong buy on a startable player is a Start', by('Cam Ward') && by('Cam Ward').act === 'Start');
+  ok('a strong buy on a player outside the starting window is a Value play',
+     by('Tank Bigsby') && by('Tank Bigsby').act === 'Value play');
+  ok('a strong fade on a player you would be starting is a Sit',
+     by('Derrick Henry') && by('Derrick Henry').act === 'Sit');
+  ok('a strong fade on a bench player is a Fade', by('Blake Corum') && by('Blake Corum').act === 'Fade');
+  ok('a lean the market likes is an Upgrade', by('James Cook') && by('James Cook').act === 'Upgrade');
+  // The two rows that must never appear.
+  ok('a player the market agrees about is not a disagreement',
+     !r.rows.some(x => x.who === 'Agreeable Wideout'));
+  ok('a row missing a projection is dropped, not printed with a dash',
+     !r.rows.some(x => x.who === 'Holey Wideout') && !r.rows.some(x => x.nums.includes('—')));
+  ok('the table says what scoring the numbers are at',
+     /default scoring/.test(r.fine || '') && /Week 3/.test(r.fine || ''), r.fine);
+
+  ok('the articles section is shown', r.articles === true);
+  ok('it is a SMALL group — four at most', r.cards.length === 4, String(r.cards.length));
+  ok('every card has a real destination',
+     r.cards.every(h => /^\/in-season\/desk\//.test(h)), r.cards.join(','));
+
+  ok('and no loading copy survives anywhere on the page', !LOADING.test(r.body),
+     (r.body.match(LOADING) || [''])[0]);
+  await ctx.close();
+}
+
+// ── 4. the refusing pass: the whole point of the rewrite ────────────────────
+console.log('\nwith every feed refusing');
+MODE = 'dead';
+for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
+  const { page, ctx } = await open(w, h);
+  const r = await read(page);
+  ok(`${tag}: the hero still says the thing`, r.h1 === 'The betting market knows more. Put it in your lineup.');
+  ok(`${tag}: both buttons still work`, r.cta.length === 2);
+  ok(`${tag}: the dateline is absent rather than loading`, r.clock === null);
+  ok(`${tag}: the Fantasy card keeps its links and drops its reading`,
+     r.fnRead === null && r.laneLinks.length === 10);
+  ok(`${tag}: the DFS card too`, r.dfRead === null);
+  ok(`${tag}: the disagreement section is hidden, not empty`, r.diff === false && r.rows.length === 0);
+  ok(`${tag}: the articles section is hidden, not empty`, r.articles === false && r.cards.length === 0);
+  ok(`${tag}: the method and the disclosures are still there`, r.how5 === true);
+  ok(`${tag}: nowhere on the page says it is loading`, !LOADING.test(r.body),
+     (r.body.match(LOADING) || [''])[0]);
+  ok(`${tag}: and it still does not scroll sideways`, r.overflow === 0, String(r.overflow));
+  await ctx.close();
+}
+
+// ── 5. the sixth decision, on a board with room for it ─────────────────────
+// The table is capped at five rows and the fixture above spends all five on the
+// stronger calls, so the downgrade gets a board of its own rather than a sixth
+// row that would silently fall off the bottom.
+console.log('\nwith a board of leans');
+{
+  MODE = 'live';   // section 4 left every feed refusing
+  const full = EDGE.vsExperts;
+  EDGE.vsExperts = { buys: [full.buys[0], full.buys[3]], fades: [
+    mk('Dallas Goedert', 'TE', 'PHI', 'DAL', 10.9, 9.2, 9.8, 'VEGAS LEANS LOWER', 10),
+    mk('Chuba Hubbard', 'RB', 'CAR', 'ATL', 12.4, 10.9, 11.4, 'VEGAS LEANS LOWER', 22),
+    full.fades[0]
+  ]};
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  const by = n => r.rows.find(x => x.who === n);
+  ok('a lean the market dislikes is a Downgrade',
+     by('Dallas Goedert') && by('Dallas Goedert').act === 'Downgrade',
+     r.rows.map(x => x.who + '=' + x.act).join(', '));
+  ok('and it is still stated as a gap in points',
+     by('Dallas Goedert') && /market -1\.7 pts vs consensus/.test(by('Dallas Goedert').why));
+  EDGE.vsExperts = full;
+  await ctx.close();
+}
+
+// ── 6. fewer than three disagreements is not a section ──────────────────────
+console.log('\nwith only two disagreements on the board');
+{
+  MODE = 'live';
+  const full = EDGE.vsExperts;
+  // One buy for the card, two rows left over — below the three the spec asks for.
+  EDGE.vsExperts = { buys: [full.buys[0], full.buys[1]], fades: [full.fades[0]] };
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  ok('the card still recommends a player', /Drake London/.test(r.fnRead || ''), r.fnRead);
+  ok('but the table is hidden rather than short', r.diff === false, String(r.rows.length));
+  ok('and nothing on the page apologizes for it', !LOADING.test(r.body));
+  EDGE.vsExperts = full;
+  await ctx.close();
+}
+
+ok('no page threw', errors.length === 0, errors.join(' | '));
+await browser.close();
+server.close();
+console.log(`\n${pass} passed, ${fail} failed`);
+process.exit(fail ? 1 : 0);

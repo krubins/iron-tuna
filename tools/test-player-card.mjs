@@ -166,31 +166,23 @@ ok('the card is noindex, like the other rendered shells',
 ok('the card is not advertised in the sitemap',
    !read('sitemap.xml').includes('irontuna.com/player'));
 
-// ── the box is on the front page, and stays on screen ──────────────────────
-console.log('\nthe box lives in the sticky ribbon');
-ok('front.html has the search box in the ribbon',
-   /<div class="ribbon"[^>]*>[\s\S]*?class="rb-search"[\s\S]*?<\/div><\/div>/.test(front));
-// The ribbon no longer carries `position:sticky` itself: it and the lane tabs
-// stick as one `.topbars` group, because the tabs' height is a clamp() on the
-// viewport and any fixed `top` offset under them is wrong at some width. What
-// still has to hold is what this line has always meant — the box stays on
-// screen — so assert the group is pinned and the ribbon is inside it.
-const topbars = front.indexOf('<div class="topbars">');
-ok('the ribbon is still pinned to the top of the page',
-   /\.topbars\{[^}]*position:sticky[^}]*top:0/.test(front)
-   && topbars !== -1
-   && front.indexOf('<div class="ribbon"') > topbars
-   && front.indexOf('<div class="ribbon"') < front.indexOf('<main class="wrap">'));
+// ── how the homepage reaches the lookup ────────────────────────────────────
+// The box used to ride in the homepage's sticky in-page ribbon, which is how it
+// stayed on screen the whole way down a very long page. That ribbon came off
+// with the sections it anchored in the September 2026 rewrite: "/" is five
+// sections now, short enough that a pinned box buys nothing, and the masthead's
+// own SEARCH link is the way in.
+console.log('\nthe lookup is reachable from the homepage');
+ok('the masthead links the card directly', /<nav class="mast-jump"[\s\S]*?href="\/player">Search<\/a>/.test(front));
 ok('front.html loads the lookup', front.includes('src="/player-search.js"'));
-ok('the box opts in by attribute, so both pages mount the same widget',
-   front.includes('data-player-search') && card.includes('data-player-search')
-   && search.includes('[data-player-search]'));
-// The menu cannot live inside .ribbon .wrap: that element scrolls sideways, so
-// an absolutely positioned child of it is clipped to the band's height.
-ok('the ribbon band is still a sideways scroller',
-   /\.ribbon \.wrap\{[^}]*overflow-x:auto/.test(front));
+ok('and uses it to link the names it paints', /ITPlayerSearch\.linkPlayers/.test(front));
+ok('it carries no second, in-page search box', !/rb-search|data-player-search/.test(front));
+// The widget contract itself is unchanged, and the card and the draft app are
+// the surfaces that mount it.
+ok('the box opts in by attribute, so the card and the app mount the same widget',
+   card.includes('data-player-search') && search.includes('[data-player-search]'));
 ok('the menu is parented to <body> and positioned in viewport coordinates',
-   /doc\.body\.appendChild\(menu\)/.test(search) && /\.pl-menu\{position:fixed/.test(front));
+   /doc\.body\.appendChild\(menu\)/.test(search) && /\.pl-menu\{position:fixed/.test(card));
 ok('the menu follows the ribbon when the page scrolls',
    /on\(root, 'scroll'[\s\S]{0,60}place\(\)/.test(search));
 // The draft app is React and mounts the widget from an effect, so mount() has
@@ -232,12 +224,17 @@ ok('the app implements no second lookup',
    !/INDEX_RAW/.test(app));
 
 // ── the card lists what the desk actually said ─────────────────────────────
-console.log('\nthe calls on a card are the front page\'s own');
+console.log('\nthe calls on a card are the desk\u2019s own');
+// There is ONE copy now. The homepage carried the same array until September
+// 2026 and this asserted the two were byte-identical; the homepage stopped
+// carrying build-time data in that rewrite, so the card is the only consumer and
+// tools/build-front.mjs is the only writer. CI's "front.html is rebuilt from its
+// source pages" step re-runs that generator and fails on any diff, which is what
+// keeps this copy honest now.
 const cardStories = (card.match(/^var STORIES = (\[[\s\S]*?\]);$/m) || [])[1];
-const frontStories = (front.match(/^var STORIES = (\[[\s\S]*?\]);\n/m) || [])[1];
 ok('player.html carries a STORIES array', !!cardStories);
-ok('it is byte-identical to the front page\'s', cardStories === frontStories,
-   cardStories && frontStories ? 'they differ' : 'one is missing');
+ok('and it is the only copy on the site',
+   !/var STORIES = \[/.test(front), 'front.html grew one back');
 if (cardStories) {
   const stories = JSON.parse(cardStories);
   const named = stories.filter((s) => (s.ppl || []).length);

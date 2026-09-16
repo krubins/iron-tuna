@@ -28,6 +28,9 @@ const ok = (name, cond, extra = '') => {
 const src = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8');
 const card = fs.readFileSync(path.join(ROOT, 'player.html'), 'utf8');
 const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
+// The Vegas-vs-Consensus column moved off the homepage in the September 2026
+// rewrite; /weekly-intel is the page that prints the digest now.
+const intel = fs.readFileSync(path.join(ROOT, 'weekly-intel.html'), 'utf8');
 
 // ── lift the Vegas section out of the worker ───────────────────────────────
 const START = '// Vegas-weighted projections';
@@ -91,12 +94,12 @@ console.log('\nhand-declared contracts');
   ok('player.html asks for the contract the worker serves', w && c && w[1] === c[1],
      w && c ? `worker ${w[1]} vs card ${c[1]}` : '');
   // The column's own pair is asserted in tools/test-it-league.mjs; this only
-  // checks that a digest change bumped it, since front.html now prints digest
-  // fields and a stale cached payload would print them as "undefined".
+  // checks that a digest change bumped it, since the page prints digest fields
+  // and a stale cached payload would print them as "undefined".
   const wc = src.match(/const COLUMN_CONTRACT = (\d+)/);
-  const fc = front.match(/var VS_CONTRACT = (\d+)/);
-  ok('the column contract still matches front.html', wc && fc && wc[1] === fc[1],
-     wc && fc ? `worker ${wc[1]} vs front ${fc[1]}` : '');
+  const fc = intel.match(/var VS_CONTRACT = (\d+)/);
+  ok('the column contract still matches the page that prints it', wc && fc && wc[1] === fc[1],
+     wc && fc ? `worker ${wc[1]} vs page ${fc[1]}` : '');
   ok('the card asks the endpoint by version', /\/api\/player-odds\?v=' \+ PC_ODDS_CONTRACT/.test(card));
   ok('the card drops a payload of another vintage',
      /d\.contract !== PC_ODDS_CONTRACT\) return/.test(card));
@@ -149,7 +152,7 @@ console.log('\nthe column and the card agree');
               && one.player.ptsDelta === it.ptsDelta;
     if (!same) { ok(`card and column agree on ${it.name}`, false, JSON.stringify({ card: one.player, column: it }).slice(0, 240)); }
   }
-  ok('every case on the front page is answerable on a card', matched === col.items.length,
+  ok('every case in the column is answerable on a card', matched === col.items.length,
      `${matched}/${col.items.length}`);
   ok('and the two never disagree about the numbers', true);
   ok('the column never prints a player the market did not price',
@@ -235,19 +238,23 @@ console.log('\nwhat the pages print');
   ok('the card names the fields it insists on', fields.length >= 5);
   ok('and the worker ships every one of them',
      fields.every(f => one[f] !== undefined), fields.filter(f => one[f] === undefined).join(','));
-  // Everything front.html reads off the digest, taken from the source rather
-  // than from a list this test would have to remember to update.
-  const dayFn = front.slice(front.indexOf('function renderDay()'), front.indexOf('function renderCase()'));
-  ok('the dateline renderer is in front.html', dayFn.length > 400);
+  // Everything the page reads off the digest, taken from the source rather than
+  // from a list this test would have to remember to update. /weekly-intel's
+  // renderHero prints the two cards and the dateline under them; renderTeams
+  // prints the clubs. Both read the same digest the worker just built.
+  const dayFn = intel.slice(intel.indexOf('function renderHero(j)'), intel.indexOf('function wkCard('));
+  ok('the digest renderer is on the page', dayFn.length > 400, String(dayFn.length));
   const read = new Set([...dayFn.matchAll(/\bg\.([a-zA-Z]+)/g)].map(m => m[1]));
-  ok('every digest field the dateline prints exists',
+  ok('every digest field the page prints exists',
      [...read].every(k => g[k] !== undefined), [...read].filter(k => g[k] === undefined).join(','));
-  const briefRead = new Set([...dayFn.matchAll(/\bb\.([a-zA-Z]+)/g)].map(m => m[1]));
-  ok('every field it prints about the biggest mover exists',
-     !g.topUp || [...briefRead].every(k => g.topUp[k] !== undefined),
-     g.topUp ? [...briefRead].filter(k => g.topUp[k] === undefined).join(',') : '');
-  ok('the dateline is hidden when there is no digest to count',
-     /if \(!g \|\| !isFinite\(g\.moved\)[\s\S]*?host\.hidden = true; return;/.test(dayFn));
+  const briefRead = new Set([...dayFn.matchAll(/\bt\.([a-zA-Z]+)/g)].map(m => m[1]));
+  ok('every field it prints about a club exists',
+     !g.teamUp || [...briefRead].every(k => g.teamUp[k] !== undefined),
+     g.teamUp ? [...briefRead].filter(k => g.teamUp[k] === undefined).join(',') : '');
+  ok('the dateline is written only when the digest can actually be counted',
+     /if \(dl && g && typeof g\.moved === 'number' && typeof g\.draftable === 'number' && g\.draftable > 0\)/.test(dayFn));
+    ok('and the cards say so rather than printing an empty grid',
+     /The odds feed has not answered\. Nothing is shown here until it does\./.test(dayFn));
   ok('the card holds no valuation of its own',
      !/function\s+(score|value|price)Player/.test(card));
 }
@@ -368,68 +375,22 @@ console.log('\nthe card renders every branch');
   }
 }
 
-// ── 6c. the front page's dateline, driven on a real digest ─────────────────
-// Same reasoning as the card: the dateline is a sentence assembled out of
-// counts, and the failure mode is a count that isn't there.
-function renderDateline(digest, asOf, items) {
-  const start = front.indexOf("  // ── the day's dateline");
-  const end = front.indexOf('  // The column\'s argument needs a case to make.');
-  const blk = front.slice(start, end);
-  const el = { hidden: true, innerHTML: '' };
-  const document = { getElementById: id => (id === 'vsDay' ? el : null) };
-  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
-                  'August', 'September', 'October', 'November', 'December'];
-  const esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-  // The real club map, lifted from front.html rather than stubbed, so the
-  // dateline is exercised with the names a reader actually sees.
-  const TEAM_ART = {};
-  const artSeg = front.slice(front.indexOf('var TEAM_ART = {'), front.indexOf('};', front.indexOf('var TEAM_ART = {')));
-  for (const m of artSeg.matchAll(/(\w+):\['([^']+)'/g)) TEAM_ART[m[1]] = [m[2]];
-  const vsNum = n => (n > 0 ? '+' : '') + n;
-  const vsMeta = { digest, asOf };
-  const vsItems = items === undefined ? [{}] : items;
-  new Function('document', 'MONTHS', 'esc', 'TEAM_ART', 'vsNum', 'vsMeta', 'vsItems',
-    `${blk}\n renderDay();`)(document, MONTHS, esc, TEAM_ART, vsNum, vsMeta, vsItems);
-  return el;
-}
-function TEAM_ART_NAME(t) {
-  const seg = front.slice(front.indexOf('var TEAM_ART = {'), front.indexOf('};', front.indexOf('var TEAM_ART = {')));
-  const m = seg.match(new RegExp('\\b' + t + ":\\['([^']+)'"));
-  return m ? m[1] : t;
-}
-console.log('\nthe front page dateline');
+// ── 6c. (retired) the front page's prose dateline ──────────────────────────
+// The homepage printed a sentence assembled out of the digest's counts — "N of M
+// draftable players sit on a different slot, K up, J down, the biggest raise is
+// X (+$n)" — under the Vegas vs. Consensus module, and this block drove that
+// renderer on a real digest to prove no count came out as "undefined" and that a
+// day with no disagreement was stated rather than faked as a row of zeroes.
+//
+// The module came off the homepage in the September 2026 rewrite. /weekly-intel
+// keeps a shorter dateline off the same digest, and section 6b above now drives
+// THAT renderer's field reads. The rule survives where the surface did:
 {
-  const g = R.buildVegasDigest(board);
-  const el = renderDateline(g, Date.UTC(2026, 7, 23, 11));
-  ok('it renders', el.hidden === false);
-  ok('it prints no holes', !/undefined|NaN|\[object/.test(el.innerHTML), el.innerHTML.slice(0, 240));
-  ok('it dates the lines', /Lines of 23 August 2026/.test(el.innerHTML));
-  ok('it counts the disagreements', el.innerHTML.includes('<b>' + g.moved + '</b>'));
-  ok('it says the numbers are recounted daily', /every morning/.test(el.innerHTML));
-  if (g.topUp) ok('it names the biggest raise', el.innerHTML.includes(g.topUp.name));
-  if (g.topDown) ok('it names the biggest fade', el.innerHTML.includes(g.topDown.name));
-  ok('it prices a mover in dollars, not in the word "dollars"',
-     !g.topUp || /\(\+\$\d+\)/.test(el.innerHTML), el.innerHTML.slice(0, 200));
-  ok('it spells a club out rather than printing its abbreviation',
-     !g.teamUp || el.innerHTML.includes(TEAM_ART_NAME(g.teamUp.team)), g.teamUp ? g.teamUp.team : '');
-
-  // A board the market agrees with everywhere is a real state, and the dateline
-  // has to say so rather than printing a row of zeroes.
-  const calm = renderDateline({ ...g, moved: 0, up: 0, down: 0, dollars: 0, topUp: null, topDown: null,
-                                byPos: { QB: { moved: 0, up: 0, down: 0, dollars: 0 }, RB: { moved: 0, up: 0, down: 0, dollars: 0 },
-                                         WR: { moved: 0, up: 0, down: 0, dollars: 0 }, TE: { moved: 0, up: 0, down: 0, dollars: 0 } } },
-                              Date.UTC(2026, 7, 23, 11));
-  ok('a day with no disagreement is stated, not faked', calm.hidden === false && /did not move/.test(calm.innerHTML));
-  ok('and it prints no holes either', !/undefined|NaN/.test(calm.innerHTML), calm.innerHTML.slice(0, 200));
-
-  const none = renderDateline(null, Date.UTC(2026, 7, 23, 11));
-  ok('no digest means no dateline', none.hidden === true);
-
-  // The section itself leaves the page when the odds feed has no case to make,
-  // and the dateline is inside it — a paragraph left standing over nothing is
-  // the orphan that removal was for.
-  const orphan = renderDateline(g, Date.UTC(2026, 7, 23, 11), []);
-  ok('no case on the board means no dateline either', orphan.hidden === true);
+  ok('the homepage prints no digest prose', !/renderDay\(|id="vsDay"/.test(front));
+  ok('the page that does guards its counts before printing them',
+     /typeof g\.moved === 'number' && typeof g\.draftable === 'number' && g\.draftable > 0/.test(intel));
+  ok('and links the whole count rather than restating it',
+     intel.includes('/in-season/what-they-arent-telling-you'));
 }
 
 // ── 7. end to end on the live nflverse lines ───────────────────────────────
