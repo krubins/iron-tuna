@@ -45,7 +45,12 @@ ok('another repository is rejected', !(await verifier(request(await jwt({ ...bas
 ok('another workflow is rejected', !(await verifier(request(await jwt({ ...baseClaims, workflow_ref: 'krubins/iron-tuna/.github/workflows/checks.yml@refs/heads/main' })))));
 ok('a feature branch is rejected', !(await verifier(request(await jwt({ ...baseClaims, ref: 'refs/heads/feature' })))));
 ok('an expired token is rejected', !(await verifier(request(await jwt({ ...baseClaims, exp: now - 1 })))));
-ok('a damaged signature is rejected', !(await verifier(request((await jwt()).slice(0, -2) + 'xx'))));
+// Damage the first character of the signature, not the last two: the final
+// base64url character carries only two significant bits, so a signature whose
+// encoding already ended in "xx" survived that edit byte-for-byte and verified,
+// which failed this case in about one run in 256 (CI on 2026-09-16).
+const damaged = (await jwt()).replace(/\.([A-Za-z0-9_-])([A-Za-z0-9_-]*)$/, (m, c, rest) => '.' + (c === 'A' ? 'B' : 'A') + rest);
+ok('a damaged signature is rejected', !(await verifier(request(damaged))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
