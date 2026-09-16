@@ -640,15 +640,18 @@ footer.site a:hover { color: var(--text) }
 .is-act {
   display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
   background: var(--bg); border: 1px solid var(--line2); border-radius: var(--radius-md);
-  padding: var(--space-4) var(--space-5) var(--space-4) calc(var(--space-5) + 4px);
+  padding: var(--space-4) var(--space-5);
   color: var(--sec); text-decoration: none;
 }
-.is-act::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--teal) }
-.is-act.gold::before { background: var(--gold) }
-.is-act.flat::before { background: var(--line2) }
+/* The 4px colored bar down the left edge is gone, here and on the front page's
+   deck: the kicker carries the color instead (teal, or the gold ink for the
+   one-time action, muted for the flat one), which is how every other card on
+   the site says what kind of thing it is. */
 .is-act:hover { border-color: var(--teal); text-decoration: none; transform: translateY(-1px) }
 .is-act:hover .is-act-go { text-decoration: underline }
-.is-act-k { font-family: var(--font-mono); font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted) }
+.is-act-k { font-family: var(--font-mono); font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--teal) }
+.is-act.gold .is-act-k { color: var(--goldink) }
+.is-act.flat .is-act-k { color: var(--muted) }
 .is-act-h { font-size: var(--fs-lg); line-height: 1.2; font-weight: 700; color: var(--text); letter-spacing: -.01em }
 .is-act-h em { font-style: normal; color: var(--teal) }
 .is-act p { margin: 0; font-size: var(--fs-xs); color: var(--sec); line-height: 1.55 }
@@ -659,7 +662,32 @@ footer.site a:hover { color: var(--text) }
    things you can open rather than a set of boxes. */
 .is-card { transition: border-color .12s ease, box-shadow .12s ease }
 .is-card:hover { border-color: var(--line2); box-shadow: 0 6px 18px rgba(15, 23, 25, .05) }
-.is-card.feat { border-left: 3px solid var(--teal) }
+/* A featured card is the white card with its tag on it; the 3px teal bar it
+   used to wear down the left edge was the same device as the deck's, and it
+   went with the deck's. */
+.is-card.feat { background: var(--bg) }
+
+/* ── the empty state ────────────────────────────────────────────────────────
+   One object for "this feed has nothing yet": a mark, a reason line, a detail
+   line and the one place the reader can go instead. A section that quietly
+   printed a sentence under its ruled heading read as a section with nothing
+   in it, which is a different claim from "nothing has been published yet".
+   `.in-plate` drops the border when it sits inside an .is-plate that has one. */
+.is-vacant {
+  display: flex; align-items: center; gap: var(--space-4); margin: 0;
+  padding: var(--space-5) var(--space-4); background: var(--bg);
+  border: 1px solid var(--line); border-radius: var(--radius-md);
+}
+.is-vacant.in-plate { border: 0; border-radius: 0 }
+.is-vacant[hidden] { display: none }
+.is-vacant-ic { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; background: var(--elev); display: grid; place-items: center; color: var(--muted) }
+.is-vacant-ic svg { width: 16px; height: 16px }
+.is-vacant-msg { flex: 1; min-width: 0 }
+.is-vacant b { display: block; font-size: var(--fs-sm); color: var(--text); line-height: 1.4 }
+.is-vacant span { display: block; font-size: var(--fs-xs); color: var(--muted); line-height: 1.5; margin-top: 2px }
+.is-vacant span:empty { display: none }
+.is-vacant .is-btn { flex: 0 0 auto }
+@media (max-width: 560px) { .is-vacant { flex-wrap: wrap } .is-vacant .is-btn { flex: 1 1 100% } }
 
 /* ── a two-column page body ────────────────────────────────────────────────
    Main and a rail. Collapses to one column early, because a 300px rail beside

@@ -42,7 +42,16 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-h1{font-family:var(--font-display);font-weight:400;font-size:clamp(38px,6.4vw,68px);line-height:1;letter-spacing:.02em;text-transform:uppercase;margin:6px 0 16px}
+/* The page head is the one the other section pages wear (Vegas Edge, The
+   Desk, My Leagues): a mono eyebrow, a 39px sentence-case headline, the lede,
+   then the actions. It was a 68px all-caps display headline, which made this
+   the one page in the section whose title was set differently from its
+   neighbors, and larger than anything on the front page. */
+h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
+.fn-actions{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin:0 0 var(--space-5)}
+.fn-actions .is-btn{border-radius:999px}
+.fn-actions .is-hint{margin-left:var(--space-1)}
+@media(max-width:560px){h1{font-size:var(--fs-2xl)}.fn-actions .is-btn{flex:1 1 auto}.fn-actions .is-hint{flex:1 1 100%}}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 section{margin:0 0 var(--space-6)}
@@ -111,11 +120,17 @@ section{margin:0 0 var(--space-6)}
 <main id="main">
 <div class="wrap wide">
 <div class="fn-top">
-  <p class="is-eyebrow">Sheet 02 &middot; Fantasy</p>
-  <hr class="is-rule">
-  <h1>Your league, re-scored<br>every week.</h1>
+  <p class="is-eyebrow">In-Season &middot; Fantasy</p>
+  <h1>Your league, re-scored every week</h1>
   <p class="is-lede">Rankings, start/sit, waiver prices and trades, each read from the market first and restated at your league&rsquo;s scoring.</p>
-  <p class="is-note" id="fnScoring" style="margin-top:0">Scored at PPR until you save your league.</p>
+  <!-- The one action the whole page improves with, then the page's own
+       evidence, then the scoring note that used to float on its own line.
+       The button is hidden by the script below once a league is synced. -->
+  <div class="fn-actions">
+    <a class="is-btn primary" id="fnSaveBtn" href="/my-league">Save my league</a>
+    <a class="is-btn ghost" href="#board">This week&rsquo;s board &rarr;</a>
+    <span class="is-hint" id="fnScoring">Scored at PPR until you save your league.</span>
+  </div>
 </div>
 <div class="its-strip" data-season-strip></div>
 <div class="its-strip-sync" id="fnSync" hidden></div>
@@ -261,7 +276,15 @@ section{margin:0 0 var(--space-6)}
     <p id="fnDeskNote">Eight AI analyst personas, one set of facts, newest first. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p></div>
   <section id="desk">
     <div class="is-grid" id="fnDesk"></div>
-    <p class="is-empty" id="fnDeskEmpty">Reading the desk&hellip;</p>
+    <!-- One of the two is always in the DOM. A section that quietly renders
+         nothing reads as a section with nothing in it, which is a different
+         claim and a wrong one; this one says why it is empty and where the
+         last pieces are. -->
+    <div class="is-vacant" id="fnDeskEmpty">
+      <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
+      <div class="is-vacant-msg"><b id="fnDeskEmptyH">Reading the desk&hellip;</b><span id="fnDeskEmptyP"></span></div>
+      <a class="is-btn ghost" href="/in-season/desk">Read the desk</a>
+    </div>
   </section>
 
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>Vega vs. Brooks</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
@@ -269,7 +292,11 @@ section{margin:0 0 var(--space-6)}
   <section id="disagree">
     <div class="is-plate">
       <div class="fn-riv" id="fnDisWrap" hidden></div>
-      <p class="is-plate-state is-empty" id="fnDisEmpty">Reading the boards&hellip;</p>
+      <div class="is-vacant in-plate" id="fnDisEmpty">
+        <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
+        <div class="is-vacant-msg"><b id="fnDisEmptyH">Reading the boards&hellip;</b><span id="fnDisEmptyP"></span></div>
+        <a class="is-btn ghost" href="/rankings#blend=50">Slide between them</a>
+      </div>
     </div>
   </section>
 </div>
@@ -538,6 +565,7 @@ section{margin:0 0 var(--space-6)}
   function scoringNote() {
     var L = window.ITInSeason;
     if (L) $('fnScoring').textContent = L.scoringNote();
+    if (L && L.get() && $('fnSaveBtn')) $('fnSaveBtn').textContent = 'Your league settings';
     return L && L.get() ? (PRESET[L.scoring()] || 'ppr') : 'ppr';
   }
 
@@ -594,12 +622,15 @@ section{margin:0 0 var(--space-6)}
 (function () {
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var $ = function (id) { return document.getElementById(id); };
+  // The empty state: a reason line and a detail line, never a bare sentence.
+  var vacant = function (id, head, detail) { $(id + 'H').textContent = head; $(id + 'P').textContent = detail || ''; };
   // The synced league: the strip, or the call to connect one; and the week's
   // three numbers on the card once the summary answers.
   if (window.ITSync) ITSync.load().then(function () {
     ITSync.strip($('fnSync'), { week: true });
     var LS = ITSync.active();
     if (!LS) { ITSync.cta($('fnCta'), 'generic'); return; }
+    if ($('fnSaveBtn')) $('fnSaveBtn').hidden = true;
     $('fnScoring').innerHTML = '<b>Customized for your league:</b> ' + e(LS.name) + ' · ' + e(LS.label);
     $('fnWeekCard').hidden = false;
     ITSync.api('/api/leagues/' + encodeURIComponent(LS.id) + '/advice?module=summary').then(function (j) {
@@ -613,14 +644,14 @@ section{margin:0 0 var(--space-6)}
     }).catch(function () { $('fnWeekP').textContent = 'Your league did not answer.'; });
   });
   fetch('/api/newsroom?lens=weekly&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
-    if (!j || !j.ok || !j.pieces.length) { $('fnDeskEmpty').textContent = 'The desk has not published this week yet. The first package lands at its slot once the games are final.'; return; }
+    if (!j || !j.ok || !j.pieces.length) { vacant('fnDeskEmpty', 'The desk has not published this week yet.', 'The first package lands at its slot once the games are final. Nothing here is stale; there is simply nothing yet.'); return; }
     $('fnDesk').innerHTML = j.pieces.map(function (p) { var by = p.byline || {}; return '<div class="is-card"><span class="is-tag">' + e(p.title) + ' &middot; Week ' + e(p.week) + '</span><h3><a href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a></h3><p>' + e(p.dek || '') + '</p><p class="is-note">By <a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' + (p.rivalry ? ' &middot; Vega vs. Brooks' : '') + '</p></div>'; }).join('');
     $('fnDeskEmpty').hidden = true;
-  }).catch(function () { $('fnDeskEmpty').textContent = 'The desk did not answer.'; });
+  }).catch(function () { vacant('fnDeskEmpty', 'The desk did not answer.', 'The newsroom feed is not responding. Last week\u2019s pieces are still on the desk.'); });
   fetch('/api/disagreements', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
     var cols = (j && j.ok && j.columns) || {};
     var wrote = ['vega', 'brooks'].filter(function (k) { return cols[k] && cols[k].picks && cols[k].picks.length; });
-    if (!wrote.length) { $('fnDisEmpty').textContent = 'The two methods agree within six places on every startable player this week. Neither of them has a case to make.'; return; }
+    if (!wrote.length) { vacant('fnDisEmpty', 'The two methods agree within six places on every startable player this week.', 'Neither of them has a case to make. The column returns the first week the boards split.'); return; }
     var r3 = function (rec) { return rec.hit + '\u2013' + rec.miss + (rec.push ? '\u2013' + rec.push : ''); };
     // The scoreboard under the two columns: how the last settled week went, and
     // whether what is above it is on the record yet.
@@ -651,7 +682,7 @@ section{margin:0 0 var(--space-6)}
         }).join('') + '</div>';
     }).join('') + foot(j);
     $('fnDisWrap').hidden = false; $('fnDisEmpty').hidden = true;
-  }).catch(function () { $('fnDisEmpty').textContent = 'The boards did not answer.'; });
+  }).catch(function () { vacant('fnDisEmpty', 'The boards did not answer.', 'The disagreement feed is not responding. The rankings page still carries both boards.'); });
 })();
 </script>
 <!--chrome:navjs--><script>

@@ -9925,6 +9925,38 @@ on screen the whole way down the page), and the recap strip stays where it
 was because it is conditional content, hidden until `/api/recaps` answers.
 The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
 
-The full design pass these changes were implemented from, with the eight
+**The Fantasy page (`/fantasy`), same pass.**
+
+- **The page head is the section's.** A mono eyebrow (`In-Season · Fantasy`),
+  a 39px sentence-case `h1`, the lede, then a `.fn-actions` row: Save my
+  league (gold, `#fnSaveBtn`, relabelled "Your league settings" once a league
+  is saved locally and hidden once one is synced), This week's board, and the
+  scoring note (`#fnScoring`, still written by the script) as its hint. It
+  was a 68px all-caps display headline over a rule, the lede and a floating
+  note; in-season.html still wears that headline and was not touched.
+- **The deck cards and the two featured cards lose their colored left bar**
+  (`.is-act::before`, `.is-card.feat`), in site.css: the kicker carries the
+  color (teal, `--goldink` on `.gold`, muted on `.flat`) and the featured
+  card is the white card with its tag. Both classes are used by fantasy.html
+  only.
+- **The two reading sections get a designed empty state.** `.is-vacant`
+  (site.css) is a mark, a reason line, a detail line and the one place to go
+  instead; `.in-plate` drops its border inside an `.is-plate`. `#fnDeskEmpty`
+  and `#fnDisEmpty` carry it with `…H` / `…P` children, written by `vacant()`
+  in the page script. A section that printed one sentence under its ruled
+  heading read as a section with nothing in it.
+- **The empty bar under the clock strip was a real bug, on six pages.**
+  `.its-strip-sync{display:flex}` (injected by it-sync.js) is (0,1,0), the
+  same weight as the UA sheet's `[hidden]`, and won the tie, so `#fnSync`
+  painted as an empty bordered box for every reader with no synced league,
+  on fantasy, in-season, faab, my-week, rankings and trade-finder. The
+  injected sheet now leads with `.its-strip-sync[hidden]{display:none}`.
+
+Not implemented from the canvas: the clock card as a four-line week timeline
+(needs kickoff and lock times the schedule feed does not expose per platform),
+and sample numbers in the FAAB stat row (they are live values, blank until a
+league is connected).
+
+The full design pass these changes were implemented from, with the seven
 section pages that were NOT implemented, is on the Claude Design canvas
 "Iron Tuna UI Pass".

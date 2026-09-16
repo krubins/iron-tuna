@@ -168,7 +168,7 @@
   // The shared styles, once.
   try {
     var css = doc.createElement('style');
-    css.textContent = '.its-strip-sync{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:13px;color:var(--sec);padding:10px 14px;border:1px solid var(--line2);border-radius:10px;background:var(--elev);margin:12px 0}' +
+    css.textContent = '.its-strip-sync[hidden]{display:none}.its-strip-sync{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:13px;color:var(--sec);padding:10px 14px;border:1px solid var(--line2);border-radius:10px;background:var(--elev);margin:12px 0}' +
       '.its-strip-sync .its-lab{font-weight:700;color:var(--text)}.its-strip-sync b{color:var(--text)}.its-sel{font:inherit;padding:4px 8px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--text)}' +
       '.its-sync.stale{color:var(--danger)}.its-btn{font:inherit;font-size:12px;font-weight:700;padding:5px 10px;border-radius:14px;border:1px solid var(--teal);background:rgba(14,124,99,.1);color:var(--teal);cursor:pointer}.its-btn[disabled]{opacity:.6}' +
       '.its-link{font-weight:700}.its-warn{flex-basis:100%;color:var(--danger);font-weight:700}' +
