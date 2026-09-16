@@ -9750,6 +9750,46 @@ uniform Bebas at 17px. Both are page chrome; convert them if they come up.
 football auction drafts", which predates snake, best ball, DFS and in-season;
 that is copy, not the mark, and is a separate call.
 
+## 80. September 16: the page header draws the outlined word mark too
+
+**The ask.** Ken, with the banner mark from §78 attached: "Use this version of
+the Word Mark on all banners. The front page looks vertically stretched."
+
+**Why the front page could look stretched.** §78 fixed the banners by tracing
+the header's letters into paths, but the header itself, on `front.html` and
+every one of the 160 chrome pages, still set the eight letters as `<text>` in
+the Bebas Neue web font (`display=swap`). A reader sees whatever fallback the
+browser has until Google Fonts answers, and sees it for good if the request
+never completes: Impact on Windows and macOS, the system sans on iOS, both of
+which draw a wider, taller "IRON TUNA" than the mark. A headless Chromium
+with no font access showed exactly that on `/`. The two versions of one name
+that §78 warned about were still there, only now between the page and its
+banner rather than between banners.
+
+**The fix.** `tools/wordmark.mjs` gains `WORDMARK_LETTERS` (the path group
+with the header's `fill="url(#wordMetal)"`) and `putWordmark(html)`, which
+swaps a page's eight-`<text>` letter group for it and leaves the page's own
+`<defs>` alone (lead.html inverts the stops for its white page; that stays).
+`tools/put-wordmark.mjs` ran it once over every page and
+`tools/templates/preseason-week.html`; `tools/build-chrome.mjs`'s `putLogo`
+repeats it on every run, so a page authored from an old copy is healed like
+the `tuna.png` reference is. `tools/build-ranks.mjs`'s header template uses
+`WORDMARK_LETTERS` directly (`--check` is clean). `index.html`'s `LogoMark`
+carries the same paths as `WORDMARK_PATHS`: the header layout it computes
+was the coordinate space the header SVG was generated from, so at the header
+and ribbon sizes the paths drop in unchanged; the landing (`tagline`) mark,
+which used to be the letters at 0.8 size on a tighter advance, is now the one
+mark scaled so its ink spans the word box (`WORDMARK_INK`, `markFit`). No
+page loads a font for the mark any more; Bebas Neue stays for headings.
+
+**Verified** with headless Chromium and no network: `/`, a rankings page, the
+phone masthead and the three `LogoMark` sizes all draw the §78 mark.
+`test-chrome`, `test-reading-view`, `test-ranks` and `test-seo` pass;
+`build-chrome` and `build-ranks --check` report nothing to do.
+
+**Left alone.** `admin.html`'s type-set masthead (internal, per §78) and the
+print-only cheat-sheet chip in `index.html`.
+
 ## 79. September 15: "Tailback Tuesday week 1" on a Tuesday of Week 2
 
 **The ask.** Ken's screenshot of the front-page lead, 8:04 AM Tuesday: "Saying
