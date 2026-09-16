@@ -798,12 +798,18 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-admin-comp.mjs
 
-      # NOT run here: tools/test-position-lens.mjs, tools/test-you-column.mjs,
+      # NOT run here: tools/test-homepage.mjs, tools/test-you-column.mjs,
       # tools/test-market-anchors.mjs, tools/test-vegas-slider.mjs,
       # tools/test-qb-curve.mjs and tools/test-faab.mjs.
       # All drive real Chromium and self-skip without playwright-core plus a
       # browser binary. Adding them without installing those would give a green
       # step that never actually ran, which is worse than not claiming coverage.
-      # Run them locally (CHROMIUM_PATH=... node tools/test-position-lens.mjs)
-      # when touching the ribbon's edition switch, Position Intel, the lead, the
-      # cheat-sheet columns or the FAAB advisor's bid maths.
+      # Run them locally (CHROMIUM_PATH=... node tools/test-homepage.mjs) when
+      # touching the homepage, the cheat-sheet columns or the FAAB advisor's bid
+      # maths.
+      #
+      # tools/test-homepage.mjs replaced tools/test-position-lens.mjs in the
+      # September 2026 homepage rewrite. It drives "/" at 1280 and 390 with every
+      # feed answering AND with every feed refusing, because the rule the rewrite
+      # exists to keep — a band is either full of real current data or it is
+      # hidden — is only provable in the refusing pass.

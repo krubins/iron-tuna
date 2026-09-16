@@ -812,8 +812,8 @@ footer.site a:hover { color: var(--text) }
 /* NO OVERFLOW ON THIS ROW. A menu cannot hang out of a scroll container:
    overflow-x:auto with overflow-y:visible computes to overflow-y:auto — the
    spec is explicit about it — so the dropdown would be clipped at the band's
-   46px and turned into a scrollbar. front.html learned this the hard way with
-   its own ribbon's search box (see the note beside .rb-search). The band wraps
+   46px and turned into a scrollbar. The homepage's own sticky ribbon learned
+   this the hard way with the player-lookup menu it carried. The band wraps
    instead of scrolling here; on a phone, where the menus are off anyway, the
    media query below turns the sideways scroll back on. */
 .rk-ribbon-in {

@@ -123,15 +123,20 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
 console.log('\nwhere the ribbon sits');
 {
   const front = read('front.html');
-  const heroEnd = front.indexOf('</section>', front.indexOf('<section class="hero-band"'));
+  const heroStart = front.indexOf('<section class="hero-band"');
+  const heroEnd = front.indexOf('</section>', heroStart);
   const ribAt = front.indexOf('<!--ranks:ribbon-->');
   const nextSec = front.indexOf('<section', heroEnd);
+  ok('the hero band is still the first section', heroStart > 0);
   ok('it is after the hero band', ribAt > heroEnd, `hero ends ${heroEnd}, ribbon at ${ribAt}`);
   ok('and before anything else on the page', ribAt < nextSec, `next section at ${nextSec}`);
-  // The in-page anchor ribbon further down is a different band with a different
-  // job. Confusing the two is how one of them ends up navigating away.
-  ok('the page still has its own in-page anchor ribbon', front.includes('<div class="ribbon" data-lane="fantasy">'));
-  ok('and the two are not the same element', !/<div class="ribbon"[^>]*>[\s\S]{0,200}rkr-link/.test(front));
+  // The homepage's own in-page anchor ribbon — the sticky bar of lane tabs and
+  // section jumps — came off with the sections it pointed at in the September
+  // 2026 rewrite. This band is the only ribbon on the page now, and it navigates
+  // AWAY to the boards, which is the distinction that used to need policing.
+  ok('there is no second, in-page ribbon to confuse it with',
+     !/<div class="ribbon"[^>]*>/.test(front));
+  ok('and this one carries the ribbon links', /rkr-link/.test(front.slice(ribAt, nextSec)));
 }
 
 // ── the dropdown is not inside a scroll container ────────────────────────────

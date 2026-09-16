@@ -162,17 +162,28 @@ assert.equal(publicFree.steamScore, null);
 assert.equal(publicFree.observedBooksMoved, 1);
 assert.equal('price' in publicFree, false);
 assert.equal('book' in publicFree, false);
-const front = readFileSync(new URL('../front.html', import.meta.url), 'utf8');
-for (const block of front.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Function(block[1]);
-const tableBody = { innerHTML: '' };
-const nodes = { marketMovesTable: { querySelector: () => tableBody }, marketMovesWrap: {}, marketMovesEmpty: {} };
-const renderMoves = new Function('$', 'e', front.slice(front.indexOf('  function marketNum('), front.indexOf('  function renderMarket(j,')) + '\nreturn renderMarketMoves;')(
-  id => nodes[id], value => String(value));
-renderMoves({ items: [publicFree] });
-assert.match(tableBody.innerHTML, /First observed/);
-assert.match(tableBody.innerHTML, /1 of 1 books/);
-assert.doesNotMatch(tableBody.innerHTML, /Provider opening|\/100/);
-assert.equal(nodes.marketMovesWrap.hidden, false);
+// The homepage's own copy of this board came off with the Betting Market Intel
+// lane in September 2026 (front.html is five sections now, and none of them is a
+// market board). The board itself did not go anywhere: tuna-market.js is the one
+// renderer, and it is mounted on the three pages below. Asserting it there rather
+// than in a page-local function is the point — there is no second copy to drift.
+{
+  const dash = readFileSync(new URL('../tuna-market.js', import.meta.url), 'utf8');
+  assert.match(dash, /getElementById\('tuna-market'\)/);
+  assert.match(dash, /fetch\('\/api\/tuna-market\?'/);
+  // The free payload's fields are what the dashboard actually prints.
+  assert.match(dash, /observedBooksMoved/);
+  assert.match(dash, /first_seen|firstSeen|First observed/i);
+  for (const page of ['dfs.html', 'player.html', 'vegas-edge.html']) {
+    const html = readFileSync(new URL('../' + page, import.meta.url), 'utf8');
+    assert.ok(html.includes('id="tuna-market"'), page + ' lost the market board mount');
+    assert.ok(html.includes('/tuna-market.js'), page + ' does not load the board');
+  }
+  // And the homepage carries no second one.
+  const front = readFileSync(new URL('../front.html', import.meta.url), 'utf8');
+  for (const block of front.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Function(block[1]);
+  assert.ok(!/renderMarketMoves|marketMovesTable/.test(front), 'front.html grew a market board again');
+}
 env.TMS_PROVIDER = 'propline';
 assert.equal((await (await req('/api/tuna-market')).json()).status, 'disabled');
 delete env.TMS_PROVIDER;

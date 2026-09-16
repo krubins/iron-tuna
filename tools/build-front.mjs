@@ -1,30 +1,40 @@
-// Rebuilds the embedded data arrays in front.html (the "/" news front page) from the
-// static pages that are the source of truth:
+// Extracts the desk's own pages into the data arrays the pages that quote them
+// carry, from the static pages that are the source of truth:
 //   STORIES  <- every auction-insights-YYYY-MM-DD.html "call" section (title, position
 //               label, priced view chip, named players) joined to tools/x-posts/insights_pool.json for
 //               the play/stat lines. Each story also carries `deep` (1 when the call is a
 //               structural read rather than a single-player call) and `topic` (the desk
-//               label shown on the front page lead) and `team` (the NFL team the
-//               call is about, used to color the lead's plate). See DEEP/TOPICS
+//               label) and `team` (the NFL team the call is about). See DEEP/TOPICS
 //               and TEAMS below.
 //   REPORTS  <- every auction-watch-YYYY-MM-DD.html page (title + meta description),
 //               newest first — this is the Training Camp & Preseason desk
 //   PLAYERS  <- the headshot rows for every player named by a story above, looked up
 //               in tools/nfl-headshots.json. Each story carries `ppl`, the slugs of
-//               the players it names, and the lead renders their photos. A team
-//               story that names nobody carries `tm` instead — the club whose
-//               headline player stands in, which the band prints as its label.
+//               the players it names. A team story that names nobody carries `tm`
+//               instead — the club whose headline player stands in.
 //   PRESEASON<- every preseason-week-N.html page (headline, description, the
-//               takeaway headings), newest week first — the weekly takeaways rail
-//// It also writes outside front.html, from the same pass:
-//   player-search.js  <- the lookup index behind the ribbon's search box and the
-//               player card: one line per player the app prices, "slug|Name|TEAM|
+//               takeaway headings), newest week first
+//
+// IT NO LONGER WRITES front.html. The homepage was rewritten in September 2026 to
+// five sections — hero, the two product cards, the market disagreements, the
+// desk's current pieces and the method — all of which paint from live feeds
+// (/api/vegas-edge, /api/dfs, /api/content) rather than from build-time arrays.
+// The 130KB of embedded data went with the bands that read it. The pages that
+// still quote these columns are named below and are written exactly as before.
+//
+// What it writes:
+//   player-search.js  <- the lookup index behind every search box and the player
+//               card: one line per player the app prices, "slug|Name|TEAM|
 //               POS|espnId|nflId". Identity only — no points and no prices, which
 //               /it-league.js already answers correctly for both a reader with a
 //               saved board and one without.
-//   player.html <- the same STORIES array, so a player card can list every call
-//               that names him without a second extraction that could disagree
-//               with the front page about what the desk said.
+//   player.html <- the STORIES array, so a player card can list every call that
+//               names him without a second extraction that could disagree with
+//               the desk about what it said.
+//   weekly-intel.html <- PICKS and COLUMN, for the same reason.
+//   auction-watch.html <- the camp archive: every report, newest first. This is
+//               now the ONLY served HTML linking the auction-watch pages, which
+//               is why it is not conditional.
 //   the drop pages, and play-caller-premium.html
 //             <- `data-players` on every call, listing the players it NAMES.
 //               player-search.js links those names to their cards as the page
@@ -32,17 +42,16 @@
 //               writes "Kyren" without ever writing "Kyren Williams", and no
 //               client-side guess should be reading a bare word against four
 //               hundred players. So the answer computed here travels with the
-//               call, in all three editions, and it is the same `ppl` the front
-//               page draws its faces from.
+//               call, in all three editions.
 //
 // Run after adding a new insights drop page or a new auction-watch (camp/preseason)
 // page:  node tools/build-front.mjs
 // Run tools/build-headshots.mjs first if a story names a player who joined the
 // league since the lookup was last refreshed — otherwise that player simply gets
 // no photo, which is a missing face, never a wrong one.
-// The script replaces the single-line `var STORIES = [...];` / `var REPORTS = [...];`
-// declarations inside front.html in place. Date gating stays client-side, so future-
-// dated drop pages are safe to embed.
+// The script replaces the single-line `var STORIES = [...];` / `var PICKS = [...];`
+// declarations in place. Date gating stays client-side, so future-dated drop
+// pages are safe to embed.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -646,66 +655,19 @@ for (const f of files.filter(f => /^preseason-week-\d+\.html$/.test(f))) {
 }
 preseason.sort((a, b) => b.week - a.week);
 
-let front = read('front.html');
-const before = front;
-front = front.replace(/var STORIES = \[[\s\S]*?\];\n/, 'var STORIES = ' + JSON.stringify(stories) + ';\n');
-front = front.replace(/var PLAYERS = \{[\s\S]*?\};\n/, 'var PLAYERS = ' + JSON.stringify(Object.fromEntries(cast)) + ';\n');
-front = front.replace(/var REPORTS = \[[\s\S]*?\];\n/, 'var REPORTS = ' + JSON.stringify(reports) + ';\n');
-front = front.replace(/var COLUMN = \[[\s\S]*?\];\n/, 'var COLUMN = ' + JSON.stringify(column) + ';\n');
-front = front.replace(/var PICKS = \[[\s\S]*?\];\n/, 'var PICKS = ' + JSON.stringify(picks) + ';\n');
-front = front.replace(/var TELL = \[[\s\S]*?\];\n/, 'var TELL = ' + JSON.stringify(tell) + ';\n');
 
-// ── static camp desk, for crawlers that never run the script ────────────────
-// The camp desk used to be built entirely on the client out of REPORTS, which
-// left every auction-watch page with no <a href> pointing at it anywhere in the
-// served HTML — reachable only from sitemap.xml. Googlebot renders JS on a
-// second pass, but Bing and the AI answer-engine crawlers robots.txt explicitly
-// welcomes (GPTBot, PerplexityBot, ClaudeBot) generally do not, so the whole
-// camp desk was invisible to them.
-//
-// So the same markup the client would produce is written into the page at build
-// time. The client render replaces campNote/campFeat and clears campList before
-// refilling it, so what a reader sees is unchanged and the two cannot drift.
-//
-// The front page dropped its camp desk in September 2026 (the whole run from The
-// Play-Caller Premium down to the Draft Tools band came off the page), so the
-// write is conditional on the markup still being there. /auction-watch below is
-// the archive and is unaffected: that is where every report is linked now.
+// ── the camp desk's shared helpers ─────────────────────────────────────────
+// The camp desk used to be built on the client out of REPORTS, which left every
+// auction-watch page with no <a href> pointing at it anywhere in the served HTML
+// — reachable only from sitemap.xml. Googlebot renders JS on a second pass, but
+// Bing and the AI answer-engine crawlers robots.txt explicitly welcomes (GPTBot,
+// PerplexityBot, ClaudeBot) generally do not. /auction-watch below is written at
+// build time for exactly that reason.
 const escText = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
   'August', 'September', 'October', 'November', 'December'];
-const fmtDate = (d) => { const p = d.split('-'); return `${MONTHS[+p[1] - 1]} ${+p[2]}, ${p[0]}`; };
 const fmtShort = (d) => { const p = d.split('-'); return `${MONTHS[+p[1] - 1].slice(0, 3)} ${+p[2]}`; };
 
-if (reports.length && /<ul class="camp-list" id="campList">/.test(front)) {
-  const f = reports[0];
-  // Season-neutral wording. The run started as camp reports and did not stop
-  // when the season did: the September entries are Week 1 scratches, snap
-  // shares and injury clearances. front.html's edition switch carries the
-  // same sentence for the client render — change both or --check goes red.
-  const note = 'Verified, roster-relevant player signals from around the league \u2014 usage, injuries, depth-chart moves and the price each one changes. '
-    + `These reports update as news breaks — <b>latest report: ${fmtDate(f.date)}</b>.`;
-  const feat = '<span><span class="badge badge-pos">Latest report</span></span>'
-    + `<h3><a href="${f.url}">${escText(f.title)}</a></h3>`
-    + `<p>${escText(f.desc)}</p>`
-    + `<a class="lead-link" href="${f.url}">Read the report &rarr;</a>`;
-  // Four, not all of them. The desk used to print every report ever published —
-  // 24 rows of "Auction Watch: <date>" reaching back to June, which is a
-  // directory listing rather than a section, and the single densest block of
-  // near-identical link text on the page. The archive at /auction-watch is where
-  // the run lives now; the front page carries the latest and the last four.
-  const CAMP_ON_FRONT = 4;
-  const list = reports.slice(1, 1 + CAMP_ON_FRONT)
-    .map(r => `<li><span class="cd">${fmtShort(r.date)}</span><a href="${r.url}">${escText(r.title)}</a></li>`)
-    .join('');
-  front = front.replace(/<p class="camp-note" id="campNote">[\s\S]*?<\/p>/, `<p class="camp-note" id="campNote">${note}</p>`);
-  front = front.replace(/<div class="camp-feat" id="campFeat">[\s\S]*?<\/div>/, `<div class="camp-feat" id="campFeat">${feat}</div>`);
-  front = front.replace(/<ul class="camp-list" id="campList">[\s\S]*?<\/ul>/, `<ul class="camp-list" id="campList">${list}</ul>`);
-  if (!front.includes(`<ul class="camp-list" id="campList">${list}</ul>`)) {
-    console.error('ABORT: could not write the static camp desk into front.html');
-    process.exit(1);
-  }
-}
 // ── the camp archive: /auction-watch ─────────────────────────────────────────
 // Every report, newest first, on a page of its own. The front page's desk shows
 // the latest plus four; this is where the other twenty live, and it is what the
@@ -728,14 +690,6 @@ if (reports.length) {
   }
   if (watchNext !== watchBefore) fs.writeFileSync(watchFile, watchNext);
 }
-
-front = front.replace(/var PRESEASON = \[[\s\S]*?\];\n/, 'var PRESEASON = ' + JSON.stringify(preseason) + ';\n');
-if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var COLUMN = \[/.test(front) || !/var PICKS = \[/.test(front) || !/var TELL = \[/.test(front) || !/var PRESEASON = \[/.test(front)) {
-  console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/COLUMN/PICKS/TELL/PRESEASON declarations in front.html');
-  process.exit(1);
-}
-fs.writeFileSync(path.join(root, 'front.html'), front);
-console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos, ${picks.length} picks, ${tell.length} tells, ${preseason.length} preseason weeks${front === before ? ' (no change)' : ''}`);
 
 // ── weekly-intel.html: the in-season front page ────────────────────────────
 // It carries The Pick and the coaching column too, and for the same reason

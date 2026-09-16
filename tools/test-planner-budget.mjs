@@ -18,7 +18,7 @@
 // shape models still go down the reserving path, so this test covers them.
 //
 // WHY IT DRIVES A BROWSER
-// Same reason as tools/build-front-analysis.mjs: the planner lives inside
+// The planner lives inside
 // index.html's one big in-page script with no module boundary, and the numbers
 // depend on the whole valuation pipeline ahead of it. Re-implementing any of
 // that in Node would measure a copy rather than what ships.
