@@ -9952,11 +9952,30 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
   on fantasy, in-season, faab, my-week, rankings and trade-finder. The
   injected sheet now leads with `.its-strip-sync[hidden]{display:none}`.
 
+**The In-Season hub (`/in-season`), same pass.**
+
+- **Same page head** (`In-Season · Overview`, 39px sentence-case `h1`, lede,
+  `.is-actions`). The action row is now `.is-actions` in site.css, shared
+  with fantasy.html, rather than a per-page rule.
+- **The readings sheet is a three-card strip** (`.is-readings` / `.is-reading`
+  in site.css) inside the same plate: Fantasy (largest market edge), DFS
+  (best Vegas value) and, new, **Market Intel** (the highest total on the
+  slate, off `gameEnvironments[0]` of `/api/vegas-edge`, which the feed
+  already sorts by total; the implied points of the higher side and the
+  total's move since open ride on the card). It was a five-column table
+  (No. / Lane / Reading / Value / Remark). A blank lane keeps its card and
+  says why, as before; `#rdWrap` is now the grid and `#rdBody` is gone.
+- **The two lane cards list their tools in two columns** (`.is-lane ul`), so
+  the cards are half the height and the Open buttons, now full width, sit
+  above the fold.
+- **The three section labels** (`.is-label` eyebrow over an `.is-rule`) are
+  the numbered `.is-sec` heads the Fantasy page uses.
+
 Not implemented from the canvas: the clock card as a four-line week timeline
 (needs kickoff and lock times the schedule feed does not expose per platform),
 and sample numbers in the FAAB stat row (they are live values, blank until a
 league is connected).
 
-The full design pass these changes were implemented from, with the seven
+The full design pass these changes were implemented from, with the six
 section pages that were NOT implemented, is on the Claude Design canvas
 "Iron Tuna UI Pass".

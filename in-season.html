@@ -42,7 +42,11 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-h1{font-family:var(--font-display);font-weight:400;font-size:clamp(38px,6.4vw,68px);line-height:1;letter-spacing:.02em;text-transform:uppercase;margin:6px 0 16px}
+/* The page head the section pages wear (see fantasy.html): a mono eyebrow, a
+   39px sentence-case headline, the lede, then the actions. It was a four-line
+   68px all-caps display headline, the largest type in the section. */
+h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
+@media(max-width:560px){h1{font-size:var(--fs-2xl)}}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 section{margin:0 0 var(--space-6)}
@@ -70,32 +74,26 @@ section{margin:0 0 var(--space-6)}
     <!--/chrome:nav-->
 </div></header>
 <main id="main" class="wrap">
-<p class="is-eyebrow">In-Season</p>
-<h1>Three prices on every player.<br>Read them before kickoff.</h1>
+<p class="is-eyebrow">In-Season &middot; Overview</p>
+<h1>Three prices on every player. Read them before kickoff.</h1>
 <p class="is-lede">Your league, the daily-fantasy salary and the betting market each put a number on the same player. Iron Tuna reads the market first, the consensus second, and your league&rsquo;s scoring on top of both &mdash; then prints where they disagree.</p>
-<div class="is-btns" style="margin-top:0">
+<div class="is-actions">
   <a class="is-btn primary" href="#league">Save my league</a>
   <a class="is-btn ghost" href="/fantasy">This week&rsquo;s board &rarr;</a>
 </div>
 <div class="its-strip" data-season-strip></div>
 
 <!-- ── Sheet 01 · this week's readings ────────────────────────────────────
-     One row per lane, each printing the single number that lane exists to
+     One card per lane, each printing the single number that lane exists to
      produce. Everything here is fetched; see the states in the script below. -->
+<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2 id="rdHead">This week&rsquo;s readings</h2><a class="is-sec-more" href="/weekly-intel">Every tool &rarr;</a></div></div>
 <section aria-labelledby="rdHead">
   <div class="is-plate">
     <div class="is-plate-head">
-      <span id="rdHead">In-Season &mdash; this week&rsquo;s readings</span>
-      <span>IS-01</span>
-      <span id="rdWeek">&mdash;</span>
+      <span>In-Season &mdash; <span id="rdWeek">this week</span>&rsquo;s readings</span>
       <span>Sheet 01 of 03</span>
     </div>
-    <div class="is-scroll" id="rdWrap" hidden>
-      <table class="is-table">
-        <thead><tr><th>No.</th><th>Lane</th><th>Reading</th><th>Value</th><th>Remark</th></tr></thead>
-        <tbody id="rdBody"></tbody>
-      </table>
-    </div>
+    <div class="is-readings" id="rdWrap" hidden></div>
     <p class="is-plate-state" id="rdState">Reading the market&hellip; Nothing on this sheet is dated until the schedule feed answers.</p>
     <div class="is-plate-foot">
       <p>Values hold for the current week. Where a number is derived rather than quoted from a book, the lane page says so.</p>
@@ -104,9 +102,8 @@ section{margin:0 0 var(--space-6)}
 </section>
 
 <!-- ── 02 · the two lanes ─────────────────────────────────────────────────── -->
+<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Two lanes</h2></div></div>
 <section id="lanes">
-  <div class="is-label"><p class="is-eyebrow">02 &middot; Two lanes</p></div>
-  <hr class="is-rule">
   <div class="is-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
 
     <div class="is-lane">
@@ -147,9 +144,8 @@ section{margin:0 0 var(--space-6)}
 </section>
 
 <!-- ── 03 · my league ─────────────────────────────────────────────────────── -->
+<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>My league</h2></div></div>
 <section id="league">
-  <div class="is-label"><p class="is-eyebrow">03 &middot; My league</p></div>
-  <hr class="is-rule">
   <div class="is-two">
     <div>
       <h2 style="margin-top:0">Every board re-scores itself for your league</h2>
@@ -272,19 +268,21 @@ section{margin:0 0 var(--space-6)}
       .catch(function () { return null; });
   }
 
-  function row(no, lane, href, reading, value, remark) {
-    return '<tr>' +
-      '<td class="is-rank">' + e(no) + '</td>' +
-      '<td><a href="' + e(href) + '">' + e(lane) + '</a></td>' +
-      '<td class="is-who">' + e(reading) + '</td>' +
-      '<td><span class="is-val">' + e(value) + '</span></td>' +
-      '<td>' + e(remark) + '</td>' +
-    '</tr>';
+  // One card per lane: the lane, the reading, its number, the remark, and the
+  // lane's own page. `no` is kept in the markup as the card's order.
+  function row(no, lane, href, reading, value, remark, cls) {
+    return '<div class="is-reading' + (cls ? ' ' + cls : '') + '" data-no="' + e(no) + '">' +
+      '<span class="is-reading-k"><a href="' + e(href) + '">' + e(lane) + '</a></span>' +
+      '<b>' + e(reading) + '</b>' +
+      (value != null ? '<span class="is-reading-v">' + e(value) + '</span>' : '') +
+      '<p>' + e(remark) + '</p>' +
+      '<a class="is-reading-go" href="' + e(href) + '">Open ' + e(lane) + ' &rarr;</a>' +
+    '</div>';
   }
 
-  // A lane with nothing to say still gets its row, and the row says why.
+  // A lane with nothing to say still gets its card, and the card says why.
   function blank(no, lane, href, why) {
-    return row(no, lane, href, 'No reading this week', '—', why);
+    return row(no, lane, href, 'No reading this week', null, why, 'blank');
   }
 
   function paint(edge, dfsRes) {
@@ -325,12 +323,28 @@ section{margin:0 0 var(--space-6)}
         + (dfsRes && dfsRes.nextImportAt ? ' The next scheduled update is ' + new Date(dfsRes.nextImportAt).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.' : '')));
     }
 
+    // 03 · Market Intel — the richest scoring environment on the slate. The
+    // feed sorts its game environments by total, so the first is the answer.
+    var env = edge && edge.gameEnvironments && edge.gameEnvironments[0];
+    if (env && env.total != null) {
+      read++;
+      var homeHi = env.impliedHome != null && (env.impliedAway == null || env.impliedHome >= env.impliedAway);
+      var side = homeHi ? env.home : env.away, pts = homeHi ? env.impliedHome : env.impliedAway;
+      var mv = env.movement && env.movement.total != null ? ' The total has moved ' + sgn(env.movement.total) + ' since it opened.' : '';
+      rows.push(row('03', 'Market Intel', '/vegas-edge', 'Highest total on the slate · ' + env.game,
+        'o' + n1(env.total),
+        (pts != null ? side + ' is implied for ' + n1(pts) + ' points; every skill player on that side inherits it.' : 'The scoring environment every skill player in the game inherits.') + mv));
+    } else {
+      rows.push(blank('03', 'Market Intel', '/vegas-edge',
+        'No game this week carries a posted total yet, so there is no scoring environment to read.'));
+    }
+
     if (edge && edge.week) $('rdWeek').textContent = edge.week;
     if (!read) {
       $('rdState').textContent = 'No readings for this week yet. The sheet fills once the first line is posted; it never falls back to the calendar.';
       return;
     }
-    $('rdBody').innerHTML = rows.join('');
+    $('rdWrap').innerHTML = rows.join('');
     $('rdWrap').hidden = false;
     $('rdState').hidden = true;
   }

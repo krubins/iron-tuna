@@ -48,10 +48,7 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
    the one page in the section whose title was set differently from its
    neighbors, and larger than anything on the front page. */
 h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
-.fn-actions{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin:0 0 var(--space-5)}
-.fn-actions .is-btn{border-radius:999px}
-.fn-actions .is-hint{margin-left:var(--space-1)}
-@media(max-width:560px){h1{font-size:var(--fs-2xl)}.fn-actions .is-btn{flex:1 1 auto}.fn-actions .is-hint{flex:1 1 100%}}
+@media(max-width:560px){h1{font-size:var(--fs-2xl)}}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 section{margin:0 0 var(--space-6)}
@@ -126,7 +123,7 @@ section{margin:0 0 var(--space-6)}
   <!-- The one action the whole page improves with, then the page's own
        evidence, then the scoring note that used to float on its own line.
        The button is hidden by the script below once a league is synced. -->
-  <div class="fn-actions">
+  <div class="is-actions">
     <a class="is-btn primary" id="fnSaveBtn" href="/my-league">Save my league</a>
     <a class="is-btn ghost" href="#board">This week&rsquo;s board &rarr;</a>
     <span class="is-hint" id="fnScoring">Scored at PPR until you save your league.</span>
