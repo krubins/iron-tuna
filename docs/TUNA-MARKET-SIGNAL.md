@@ -55,7 +55,7 @@ Use Cloudflare Worker secrets. Never put provider keys in frontend code or GitHu
 | `PROPLINE_MOVEMENT` | off | Set `1` only with paid movement access; free mode uses stored snapshots |
 | `TMS_PROP_EVENT_IDS` | empty | The Odds API fallback only, explicit event IDs |
 | `TMS_SHARP_BOOKS` | empty | Optional reference books used by the existing gap heuristic |
-| `TMS_RETENTION_DAYS` | 30 | Snapshot retention, clamped 1–90 days |
+| `TMS_RETENTION_DAYS` | 3 | Snapshot retention, clamped 1–90 days. The public window is 24 hours and the projection bridge keeps its own store; a full slate is roughly 150 MB of raw per-book payloads a day at an hourly poll, so the old 30-day default was gigabytes of D1 with no reader |
 | `TMS_LICENSED_IMPORT` | off | Admin-only normalized import path |
 
 Default PropLine prop markets are:
@@ -79,7 +79,15 @@ only access D1 and do not spend provider quota. Do not reduce the interval witho
 recalculating this budget. Paid movement endpoints are never called in free mode.
 
 The public comparison window is 24 hours. A baseline is the first stored observation
-in that window, not a guaranteed sportsbook opening line. A second updated quote is
+in that window, not a guaranteed sportsbook opening line. The read takes each event's
+FIRST and LAST snapshot inside the window (the baseline and the current quote), never
+the hourly snapshots between them, and the computed signal is memoized for five
+minutes and invalidated by every store. A quote is stale when the collector has not
+observed it for two poll intervals (two hours), not when the book last touched it: a
+line that has held for six hours is still the book's line. The public list carries ONE
+item per market (provider, event, market, player, side) rather than one per book, so
+the `books` / `marketBooks` count is where the books show; `limit` (default 1000, at
+most 5000) caps the list and `total` counts every market that matched. A second updated quote is
 needed to measure movement. Observed agreement compares fresh, comparable books
 within the same provider/event/player/market/side; it measures line changes separately
 from price changes at an unchanged line. New or stale books cannot manufacture a move.
@@ -112,7 +120,7 @@ configured event props.
 
 ## Public API
 
-- `GET /api/tuna-market?kind=props&player=Name`
+- `GET /api/tuna-market?kind=props&player=Name&limit=1000`
 - `GET /api/tuna-market?kind=games`
 - `POST /api/tuna-market/refresh` (admin bearer token)
 - `POST /api/tuna-market/import` (admin bearer token, licensed normalized feed only)

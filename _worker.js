@@ -1374,6 +1374,16 @@ const TMS_PROPLINE_SOURCE = 'https://prop-line.com/';
 const TMS_PROPLINE_API = 'https://api.prop-line.com/v1/';
 const TMS_PROPLINE_BOOKS = 'draftkings,fanduel,pinnacle,bovada,betmgm,betrivers,fanatics,hardrock';
 const TMS_PROPLINE_MARKETS = 'player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td';
+// A quote is stale when the collector has not SEEN it lately, not when the book
+// last touched it: a line that has held for six hours is still the book's
+// line. Two poll intervals, so one missed hourly poll does not empty the board.
+const TMS_STALE_MS = 2 * 3600000;
+// The public read takes each event's first and last snapshot inside the window
+// (the baseline and the current quote), never every hourly snapshot between.
+const TMS_READ_CAP = 400;
+// The computed signal is rebuilt at most this often; a store invalidates it.
+const TMS_MEMO_MS = 300000;
+let _TMS_MEMO = { at: 0, items: null, truncated: false };
 const tmsInt = (v, fallback, min, max) => Number.isFinite(Number(v)) && v !== '' && v != null ? Math.max(min, Math.min(max, Math.floor(Number(v)))) : fallback;
 const tmsList = v => String(v || '').split(',').map(s => s.trim()).filter(Boolean);
 const tmsKey = r => JSON.stringify([r.provider, r.event, r.book, r.market, r.player, r.side]);
@@ -1600,8 +1610,13 @@ async function tmsStore(env, rows, now) {
   }
   const statements = [...groups.values()].map(group => env.LEADS_DB.prepare('INSERT OR IGNORE INTO tuna_market_snapshots(provider,event,observed,payload) VALUES(?,?,?,?)').bind(group[0].provider, group[0].event, now, JSON.stringify(group)));
   for (let i = 0; i < statements.length; i += 50) await env.LEADS_DB.batch(statements.slice(i, i + 50));
-  const cutoff = now - tmsInt(env.TMS_RETENTION_DAYS, 30, 1, 90) * 86400000;
+  // Three days by default. The public window is 24 hours and the projection
+  // bridge below keeps its own store, so every day of raw per-book payloads
+  // beyond that is D1 storage with no reader (a full slate is roughly 150 MB
+  // a day at an hourly poll).
+  const cutoff = now - tmsInt(env.TMS_RETENTION_DAYS, 3, 1, 90) * 86400000;
   await env.LEADS_DB.prepare('DELETE FROM tuna_market_snapshots WHERE observed < ?').bind(cutoff).run();
+  _TMS_MEMO = { at: 0, items: null, truncated: false };
 }
 // Convert the display feed's normalized player markets into the snapshot
 // contract consumed by vegasProjection/buildBoards. Tuna Market Signal keeps
@@ -1729,7 +1744,7 @@ function tmsSignals(rows, now, sharpBooks = []) {
     const firstLine = nativeOpen ? last.openingLine : first.line;
     const firstPrice = nativeOpen ? last.openingPrice : first.price;
     const comparable = nativeOpen || (first.updated < last.updated && first.observed < last.observed);
-    const stale = now - last.updated > 3600000 || now - last.observed > 3600000;
+    const stale = now - last.observed > TMS_STALE_MS;
     const lineDelta = comparable && firstLine !== null && last.line !== null ? last.line - firstLine : null;
     const probabilityDelta = comparable && firstLine === last.line && Number.isFinite(Number(firstPrice))
       ? (1 / last.price - 1 / firstPrice) * 100 : null;
@@ -1841,16 +1856,45 @@ async function tmsRoutes(request, env, url) {
     if (selectedProvider === 'propline' && !env.PROPLINE_API_KEY) return json({ status: 'disabled', items: [] });
     await tmsReady(env);
     const now = Date.now();
-    const records = await env.LEADS_DB.prepare('SELECT payload FROM tuna_market_snapshots WHERE observed>=? ORDER BY observed DESC LIMIT 1000').bind(now - 86400000).all();
-    const rows = (records.results || []).flatMap(r => JSON.parse(r.payload));
+    let all = _TMS_MEMO.items, truncated = _TMS_MEMO.truncated;
+    if (!all || now - _TMS_MEMO.at > TMS_MEMO_MS) {
+      // Each event's FIRST and LAST snapshot in the window. The first is the
+      // baseline, the last is the current quote, and the twenty-odd hourly
+      // snapshots between them carried nothing the signal reads: loading all
+      // of them was a full slate's payloads twenty-four times over on every
+      // visitor request, which is what took this endpoint down and left the
+      // pages on their anytime-touchdown fallback.
+      const records = await env.LEADS_DB.prepare(
+        'SELECT s.payload FROM tuna_market_snapshots s JOIN (SELECT provider, event, MIN(observed) AS first_seen, MAX(observed) AS last_seen ' +
+        'FROM tuna_market_snapshots WHERE observed>=? GROUP BY provider, event) b ' +
+        'ON s.provider=b.provider AND s.event=b.event AND (s.observed=b.first_seen OR s.observed=b.last_seen) ' +
+        'ORDER BY s.observed DESC LIMIT ?').bind(now - 86400000, TMS_READ_CAP).all();
+      const rows = (records.results || []).flatMap(r => JSON.parse(r.payload));
+      all = tmsSignals(rows, now, tmsList(env.TMS_SHARP_BOOKS));
+      truncated = (records.results || []).length === TMS_READ_CAP;
+      _TMS_MEMO = { at: now, items: all, truncated };
+    }
     const kind = url.searchParams.get('kind'), player = (url.searchParams.get('player') || '').toLowerCase().slice(0, 100);
-    const items = tmsSignals(rows, now, tmsList(env.TMS_SHARP_BOOKS)).filter(r => (!kind || (kind === 'props' ? !!r.player : !r.player)) && (!player || r.player.toLowerCase().includes(player)));
+    const limit = tmsInt(url.searchParams.get('limit'), 1000, 1, 5000);
+    // ONE public item per market (provider, event, market, player, side). The
+    // signal holds a row per BOOK, but the public shape carries no book, so
+    // eight books' rows were eight copies of one line, and a cap of 200 rows
+    // reached a dozen players. The representative is the group's best-scored
+    // fresh row; the consensus fields on it are the group's already.
+    const seen = new Set(), items = [];
+    for (const r of all) {
+      if (kind && (kind === 'props' ? !r.player : !!r.player)) continue;
+      if (player && !r.player.toLowerCase().includes(player)) continue;
+      const k = tmsMarketKey(r);
+      if (seen.has(k)) continue;
+      seen.add(k); items.push(r);
+    }
     const state = await env.LEADS_DB.prepare("SELECT status,updated,next_poll FROM tuna_market_state WHERE id='poll'").first();
     // Public output is a transformed market signal, not a substitute odds feed.
     // Keep book identity, raw current price/line, source URL and observation
     // history server-side. The user-facing product is the movement/consensus
     // analysis Iron Tuna derives from those observations.
-    const publicItems = items.slice(0, 200).map(r => ({
+    const publicItems = items.slice(0, limit).map(r => ({
       event: r.event, sport: r.sport, market: r.market, player: r.player, matchup: r.matchup, side: r.side,
       sourceName: r.provider === 'propline' ? 'PropLine' : r.provider === 'the-odds-api' ? 'The Odds API' : 'Licensed market feed',
       observed: r.observed, updated: r.updated, stale: r.stale, comparable: r.comparable, score: r.score,
@@ -1863,7 +1907,7 @@ async function tmsRoutes(request, env, url) {
       steamScore: r.steamScore, booksMoved: r.booksMoved, booksQuoting: r.booksQuoting,
       publicSplit: r.publicSplit
     }));
-    return json({ status: items.length ? 'ok' : 'collecting', windowHours: 24, truncated: records.results?.length === 1000,
+    return json({ status: items.length ? 'ok' : 'collecting', windowHours: 24, truncated, limit,
       health: state ? { ...JSON.parse(state.status || '{}'), updated: state.updated, nextPoll: state.next_poll } : null,
       total: items.length, items: publicItems });
   } catch { return json({ error: 'market_temporarily_unavailable', items: [] }, 503); }
@@ -5178,10 +5222,14 @@ async function marketHistoryWeek(env, season, week) {
   try {
     const q = await env.LEADS_DB.prepare(
       'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds ' +
-      'FROM odds_snapshots WHERE season IS ? AND week IS ? ORDER BY ts ASC LIMIT ?')
+      'FROM odds_snapshots WHERE season IS ? AND week IS ? ORDER BY ts DESC LIMIT ?')
       .bind(season == null ? null : Number(season), week == null ? null : Number(week), MARKET_WEEK_ROW_CAP).all();
+    // Newest first under the cap, then back into time order for the history
+    // builder. ASC with a LIMIT kept the OLDEST rows and dropped the current
+    // lines the moment a busy week crossed the cap, which is the opposite of
+    // what the comment above promises.
     const bySubject = {};
-    for (const r of (q.results || [])) {
+    for (const r of (q.results || []).slice().reverse()) {
       const b = bySubject[r.subject] || (bySubject[r.subject] = {});
       (b[r.market] = b[r.market] || []).push(r);
     }
@@ -6790,6 +6838,44 @@ function detectInsights(input) {
 // called to agree. /the-line's floor is this number and not its own.
 const GAP_AGREE = 2.0;
 const EDGE_CONTRACT = 1;
+// The prop board: every player market a book has quoted, one row per player
+// per market, in the order a reader scans a slate.
+const PROP_BOARD_ORDER = ['anytimeTD', 'passYd', 'passTD', 'passInt', 'rushYd', 'rushAtt', 'rushTD', 'rec', 'recYd', 'recTD'];
+const PROP_BOARD_CAP = 1500;
+const _propMedianOdds = xs => { const m = _median(xs.filter(x => x != null).map(Number)); return m == null ? null : Math.round(m); };
+// One quoted market on one player, beside the model's own number for the same
+// stat. The line is the median of the books' current lines and the probability
+// the median de-vigged over (or yes); the book count is printed, the names are
+// not. Movement is off the store's own first sighting, as marketHistoryFrom
+// defines it, and says so through `open`.
+function propBoardRow(p, m, h) {
+  if (!h || !PROP_BOARD_ORDER.includes(m)) return null;
+  const per = (h.perBook || []).filter(b => b);
+  const base = { key: p.key, name: p.name, position: p.position, team: p.team,
+    opponent: p.weeks && p.weeks[0] ? p.weeks[0].opponent : null,
+    home: p.weeks && p.weeks[0] ? p.weeks[0].home : null,
+    market: m, label: m === 'anytimeTD' ? 'Anytime TD' : (WHY_MARKET_LABEL[m] || m),
+    books: h.books, booksMoved: h.booksMoved, agreement: h.agreement, lastSeen: h.lastSeen, basis: 'quoted' };
+  const st = (p.ironTuna && p.ironTuna.stats) || {};
+  if (m === 'anytimeTD') {
+    if (h.tdCurrentProbability == null) return null;
+    const lam = (st.rushTD || 0) + (st.recTD || 0);
+    const model = Math.round((1 - Math.exp(-lam)) * 1000) / 10;
+    const prob = h.tdCurrentProbability;
+    return { ...base, line: null, open: null, movement: h.tdOpenProbability == null ? null : _oddsRound(prob - h.tdOpenProbability),
+      probability: prob, openProbability: h.tdOpenProbability,
+      overOdds: _propMedianOdds(per.map(b => b.overOdds)), underOdds: _propMedianOdds(per.map(b => b.underOdds)),
+      implied: null, model, edge: _oddsRound(model - prob) };
+  }
+  if (h.current == null) return null;
+  const probs = per.map(b => b.overOdds == null ? null : (b.underOdds == null ? _oddsImpliedProb(b.overOdds) : _oddsDevigOver(b.overOdds, b.underOdds))).filter(x => x != null && x > 0 && x < 1);
+  const prob = probs.length ? Math.round(_median(probs) * 1000) / 10 : null;
+  const counted = vegasCountMarket(m, per.map(b => ({ book: b.book, line: b.current, overOdds: b.overOdds, underOdds: b.underOdds })));
+  const model = Number.isFinite(Number(st[m])) ? _oddsRound(Number(st[m])) : null;
+  return { ...base, line: h.current, open: h.open, movement: h.movement, probability: prob, openProbability: null,
+    overOdds: _propMedianOdds(per.map(b => b.overOdds)), underOdds: _propMedianOdds(per.map(b => b.underOdds)),
+    implied: counted ? counted.expected : null, model, edge: model == null ? null : _oddsRound(model - h.current) };
+}
 function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const all = (week && week.players) || [];
   const hasProps = all.some(p => /^props/.test(p.vegas.basis));
@@ -6849,6 +6935,26 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
     return { name: p.name, position: p.position, team: p.team, receptions: _oddsRound(s.rec || 0), rushAttempts: s.rushAtt != null ? _oddsRound(s.rushAtt) : null,
              rushYards: _oddsRound(s.rushYd || 0), recYards: _oddsRound(s.recYd || 0), impliedTouches: _oddsRound(touches), basis: /^props/.test(p.vegas.basis) ? 'props' : 'derived from game lines' };
   }).sort((a, b) => b.impliedTouches - a.impliedTouches).slice(0, 40);
+  // The prop board: EVERY quoted player market for the clubs still to play,
+  // not a reading of them. The TD board and the volume board above are the
+  // readings; this is the inventory they are read from, and the one place the
+  // site lists a posted line beside the model's own number for the same stat.
+  // Widest disagreement first; a page that wants a game or a market filters.
+  const propBoard = [];
+  const propBooks = new Set();
+  for (const [nk, hist] of Object.entries(weekMarkets || {})) {
+    const p = byKey.get(nk); if (!p || p.pos === 'K' || p.pos === 'DEF') continue;
+    for (const [m, h] of Object.entries(hist || {})) {
+      const row = propBoardRow(p, m, h);
+      if (!row) continue;
+      propBoard.push(row);
+      for (const b of (h.perBook || [])) if (b && b.book) propBooks.add(b.book);
+    }
+  }
+  propBoard.sort((a, b) => Math.abs(b.edge == null ? -1 : b.edge) - Math.abs(a.edge == null ? -1 : a.edge) ||
+    String(a.name).localeCompare(String(b.name)) || PROP_BOARD_ORDER.indexOf(a.market) - PROP_BOARD_ORDER.indexOf(b.market));
+  const propSummary = { rows: propBoard.length, players: new Set(propBoard.map(r => r.key)).size,
+    markets: new Set(propBoard.map(r => r.market)).size, books: propBooks.size, capped: propBoard.length > PROP_BOARD_CAP };
   // Game environments, with movement off the game snapshots.
   // The model's OWN expected points per club this week, read off the boards the
   // players already carry (weekEnvironment put it there as env.expected: club
@@ -6888,7 +6994,9 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   return { ok: true, contract: EDGE_CONTRACT, week: state && state.ok ? state.week.label : null, hasProps,
            note: hasProps ? null : 'No priced player prop has reached this board. Books post props; none are in the feed behind this build, so every player number here is derived from the posted game lines. The game board is quoted.',
            played, playedNote,
-           vsExperts, movers: movers.slice(0, 40), tdBoard, volumeBoard, gameEnvironments, hiddenSignals: hidden };
+           vsExperts, movers: movers.slice(0, 40), tdBoard, volumeBoard,
+           propBoard: propBoard.slice(0, PROP_BOARD_CAP), propSummary,
+           gameEnvironments, hiddenSignals: hidden };
 }
 
 // -- the Wednesday rest-of-season update ---------------------------------------
@@ -9904,6 +10012,16 @@ function packetBreaking(ctx, events) {
 // Wraps a builder's facts with what every packet carries: the story's
 // metadata, the freshness report, the prior calls on the players named, the
 // rivalry (or its absence), and `allowed`.
+// How many full weeks of regular-season games are in the books when a piece
+// is written. A piece about the played week (subject 'played') is about that
+// many; every other subject week is the clock's week, which has not been
+// played yet, so one fewer. Handed to the writer as a number because "Week 2"
+// on its own reads as "two weeks of data": the Week 2 rest-of-season piece
+// was headlined on two weeks of results with one in the books.
+function _weeksPlayed(K, week) {
+  if (!K || week == null || !Number.isFinite(week)) return null;
+  return K.subject === 'played' ? week : Math.max(0, week - 1);
+}
 async function buildResearchPacket(env, kind, d, ctx, opts) {
   {
     // The week the piece looks forward to: its subject week for a forward
@@ -9985,7 +10103,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   const rivalry = rivalryGate(env, kind, facts.disagreements || (facts.candidates ? facts.candidates : []), budget);
   const analyst = analystFor(env, K.analyst), dfsAnalyst = analystFor(env, K.dfsAnalyst || 'park'), marketAnalyst = K.marketAnalyst ? analystFor(env, K.marketAnalyst) : null;
   const packet = {
-    meta: { kind, title: facts.game ? facts.game.matchup : kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, forwardWeek: ctx.forwardWeek != null ? ctx.forwardWeek : null, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
+    meta: { kind, title: facts.game ? facts.game.matchup : kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, forwardWeek: ctx.forwardWeek != null ? ctx.forwardWeek : null, weeksPlayed: _weeksPlayed(K, d.week), date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
             game: facts.game ? facts.game.id : null, matchup: facts.game ? facts.game.matchup : null,
             analyst: analyst.id, analystName: analyst.name, dfsAnalyst: dfsAnalyst.id, dfsAnalystName: dfsAnalyst.name, marketAnalyst: marketAnalyst ? marketAnalyst.id : null, marketAnalystName: marketAnalyst ? marketAnalyst.name : null,
             lens: flagOn(env, 'DFS_CONTENT') ? K.lens : 'weekly', scoring: 'PPR (the reader’s league re-scores the tables on the page)', excludedGames: d.excluded || [] },
@@ -10051,6 +10169,17 @@ function _voiceBlock(packet) {
     // (the Week 1 Tailback Tuesday: "Tailback Tuesday week 1: who earned
     // the role"), so the headline has to say which way it looks.
     s += 'THE HEADLINE SAYS WHICH WAY IT LOOKS. If it names Week ' + packet.meta.week + ', it says plainly that it is looking back ("what Week ' + packet.meta.week + ' taught", "Week ' + packet.meta.week + ' in review", "after Week ' + packet.meta.week + '"). Otherwise it names Week ' + packet.meta.forwardWeek + ' as its subject ("Week ' + packet.meta.forwardWeek + ' intel", "for Week ' + packet.meta.forwardWeek + '"). Never a bare "Week ' + packet.meta.week + '" in the headline or dek: on the front page that reads as a preview of a week already played. Capitalize Week.\n';
+  }
+  // The sample is the number of weeks PLAYED, never the number of the week.
+  // "Week 2" is one week of results; a piece written in it that says "two
+  // weeks of data" is wrong in the headline before the reader gets to it.
+  if (packet.meta.weeksPlayed != null) {
+    const n = packet.meta.weeksPlayed;
+    const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen'];
+    const w = words[n] || String(n);
+    s += 'SAMPLE SIZE. ' + (n === 0 ? 'No regular-season games have been played yet.' : n === 1 ? 'Exactly one week of regular-season games has been played (Week 1).' : 'Exactly ' + w + ' weeks of regular-season games have been played (Weeks 1 through ' + n + ').')
+       + ' Any reference to the season\'s sample, in the headline, the dek or the body, says exactly that: "' + (n === 1 ? 'one week' : w + ' weeks') + ' of data", "' + (n === 1 ? 'one week' : w + ' weeks') + ' of results".'
+       + (packet.meta.week != null && packet.meta.week !== n ? ' This piece is written in Week ' + packet.meta.week + '; the week number is not the number of weeks played, so never write "' + (words[packet.meta.week] || packet.meta.week) + ' weeks of data".' : '') + '\n';
   }
   // Where the site's own board disagreed with the consensus BEFORE kickoff and
   // the game settled it. The gate is arithmetic in the packet, not the
@@ -10305,7 +10434,7 @@ async function contentContext(env, weekNumber, opts) {
       try {
         const sal = await dfsSalariesRead(env, site, sched.season, curWeek);
         if (!sal || !sal.rows.length) continue;
-        const slate = buildDfsSlate(site, sal.rows, week, {});
+        const slate = buildDfsSlate(site, sal.rows, week, { usage });
         slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
         slate.metrics = dfsMetrics(slate.players, 'gpp'); slate.stackScores = dfsStackScores(slate.stacks);
         dfs[site] = slate;
@@ -11274,9 +11403,43 @@ async function dfsSalariesRead(env, site, season, week) {
 // Salaries joined to the week board at the site's scoring. VVS is the
 // market-implied points per $1,000; `index` puts it against the slate's
 // median so 100 is an ordinary price and 130 is a bargain.
+// Operator FPPG, with its basis said. Both sites publish a historical
+// average beside the salary; when a row carries none (a rookie the lobby has
+// not averaged yet, a player whose slate payload came without its stat block),
+// the same kind of number is computed from his season box score in the usage
+// overlay at the site's own scoring, so the column and the Tuna Edge against
+// it do not go blank. The overlay keeps a season total and yardage bonuses
+// are per game, so they are left out of the computed figure. `basis` is
+// 'operator' or 'computed' and every surface prints the difference. A defense
+// has no box score in the overlay and stays blank rather than guessed.
+//
+// The desk can also pin a figure by hand, per site and player, for a week the
+// import left blank and the overlay cannot fill: the number is read off the
+// season stats board and carries the same 'computed' basis, so it prints as
+// an estimate and never as the operator's own. The overlay wins when it has
+// the line, because it is the same box score without a hand in between.
+const DFS_FPPG_PINS = {
+  // DraftKings left Love's historical FPPG blank in the Week 2 salary import,
+  // although the season stats board records 13.0 points through Week 1.
+  dk: { 'jeremiyahlove|RB': 13.0 }
+};
+function dfsOperatorFppg(site, s, rules, usage) {
+  const raw = s.operatorFppg != null ? s.operatorFppg : s.operator_fppg;
+  if (raw != null && Number.isFinite(Number(raw))) return { value: _oddsRound(Number(raw)), basis: 'operator', games: null };
+  const pos = s.position;
+  const pinned = DFS_FPPG_PINS[site] && DFS_FPPG_PINS[site][_oddsNorm(s.name) + '|' + pos];
+  const pin = pinned != null ? { value: _oddsRound(pinned), basis: 'computed', games: null } : null;
+  if (pos === 'DST' || !usage || !usage.players) return pin || { value: null, basis: null, games: null };
+  const u = usage.players[_oddsNorm(s.name) + '|' + pos];
+  const games = u && u.season ? Number(u.season.games) : 0;
+  if (!u || !u.season || !u.season.stats || !(games > 0)) return pin || { value: null, basis: null, games: games || 0 };
+  const flat = { ...rules, passingYardBonuses: [], rushingYardBonuses: [], receptionBonuses: [], rbReceptionBonuses: [], receivingYardBonuses: [] };
+  return { value: _oddsRound(scoreStats(u.season.stats, pos, flat) / games), basis: 'computed', games };
+}
 function buildDfsSlate(site, salaries, week, opts) {
   const S = DFS_SITES[site];
   const rules = scoringRules('ppr', SCORING_SITE[site]);
+  const usage = opts && opts.usage ? opts.usage : null;
   const byKey = new Map();
   for (const p of (week && week.players) || []) byKey.set(p.key, p);
   const defByTeam = new Map();
@@ -11284,13 +11447,10 @@ function buildDfsSlate(site, salaries, week, opts) {
   const rows = [];
   for (const s of salaries || []) {
     const pos = s.position;
-    // DraftKings left Love's historical FPPG blank in the Week 2 salary import,
-    // although the season stats board records 13.0 points through Week 1.
-    const loveWeek2Fppg = site === 'dk' && pos === 'RB' && _oddsNorm(s.name) === 'jeremiyah love' ? 13.0 : null;
-    const fppgRaw = s.operatorFppg != null ? s.operatorFppg : (s.operator_fppg != null ? s.operator_fppg : loveWeek2Fppg);
-    const operatorFppg = fppgRaw != null && Number.isFinite(Number(fppgRaw)) ? _oddsRound(Number(fppgRaw)) : null;
+    const fppg = dfsOperatorFppg(site, s, rules, usage);
+    const operatorFppg = fppg.value;
     const p = pos === 'DST' ? defByTeam.get(teamKey(s.team)) : byKey.get(_oddsNorm(s.name) + '|' + pos);
-    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, operatorFppg, onBoard: false }); continue; }
+    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, onBoard: false }); continue; }
     const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
     const v = pts('vegas'), c = pts('consensus'), it = pts('ironTuna');
     const w0 = p.weeks.find(x => x.env) || null;
@@ -11298,12 +11458,15 @@ function buildDfsSlate(site, salaries, week, opts) {
     rows.push({
       name: p.name, position: pos, team: p.team, opponent: w0 ? w0.opponent : s.opponent, home: w0 ? w0.home : null, salary: s.salary, onBoard: true, key: p.key, siteName: s.name.trim(),
       vegasPoints: v, ironTunaPoints: it, consensusPoints: c,
-      operatorFppg, operatorFppgLabel: site === 'dk' ? 'DraftKings FPPG' : 'FanDuel FPPG',
+      operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, operatorFppgLabel: site === 'dk' ? 'DraftKings FPPG' : 'FanDuel FPPG',
       projectionVsFppg: operatorFppg == null ? null : _oddsRound(it - operatorFppg),
       vegasPerK: _oddsRound(v / (s.salary / 1000) * 100) / 100, ironTunaPerK: _oddsRound(it / (s.salary / 1000) * 100) / 100,
       marketDelta: p.marketDelta, vegasBasis: p.vegas.basis, vegasConfidence: p.vegas.confidence,
       tdProbability: p.vegas.td ? p.vegas.td.probability : Math.round((1 - Math.exp(-lam)) * 1000) / 10, tdBasis: p.vegas.td ? 'anytime-td-market' : 'derived',
       teamTotal: w0 && w0.env ? (w0.env.implied != null ? w0.env.implied : w0.env.expected) : null, teamTotalPosted: !!(w0 && w0.env && w0.env.posted),
+      // The matchup a reader opens a row for: when the game kicks off and how
+      // stingy the defense across from him is (1 = fewest points allowed).
+      kickoff: w0 ? w0.kickoff || null : null, opponentDefRank: w0 && w0.env && w0.env.opponentDefRank ? w0.env.opponentDefRank : null,
       gameTotal: null, impliedTouches: _oddsRound((p.vegas.stats.rec || 0) + (p.vegas.stats.rushAtt != null ? p.vegas.stats.rushAtt : (p.vegas.stats.rushYd || 0) / 4.3)),
       injury: p.injury ? p.injury.status : null, why: p.why ? p.why.summary : ''
     });
@@ -11655,7 +11818,7 @@ async function contentAdmin(env, action, kind, season, week, body, game) {
   try { row = await _latestPiece(env, kind, season, week, game); } catch (e) { return { ok: false, error: 'unavailable' }; }
   if (!row) return { ok: false, error: 'not_found', kind, week, game: game || null };
   const full = () => ({ id: row.id, kind, season: row.season, week: row.week, game: row.game_id || null, title: row.title, status: row.status, createdAt: row.created_at, publishedAt: row.published_at,
-                        body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: { weekly: sectionsFor(kind, 'weekly', parse(row.brief)), dfs: sectionsFor(kind, 'dfs', parse(row.brief)) }, analyst: row.analyst || null, version: row.version || 1 });
+                        headline: row.headline || null, dek: row.dek || null, body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: { weekly: sectionsFor(kind, 'weekly', parse(row.brief)), dfs: sectionsFor(kind, 'dfs', parse(row.brief)) }, analyst: row.analyst || null, version: row.version || 1 });
   if (action === 'preview') return { ok: true, action, piece: full() };
   if (action === 'publish') {
     if (!row.body || row.body === 'null') return { ok: false, error: 'no_body', note: 'This piece has no draft to publish. Regenerate it or edit one in.' };
@@ -11674,8 +11837,14 @@ async function contentAdmin(env, action, kind, season, week, body, game) {
   const brief = parse(row.brief);
   const v = brief && brief.allowed ? validateDraft(JSON.stringify(b), brief.allowed) : { ok: true, names: [], numbers: [] };
   const warnings = v.ok ? [] : v.names.concat(v.numbers);
-  await env.LEADS_DB.prepare('UPDATE content_pieces SET body = ?, violations = ?, model = ? WHERE id = ?').bind(JSON.stringify(b), JSON.stringify(warnings), 'editor', row.id).run();
-  row.body = JSON.stringify(b); row.violations = JSON.stringify(warnings); row.model = 'editor';
+  // The desk cards, the lead and the rail print the `headline` and `dek`
+  // columns, lifted out of the draft at store time; an edit that only wrote
+  // `body` left the old headline on every card. Lift them again here, the
+  // same way contentStore does, so what the editor saved is what is shown.
+  const headline = b.headline != null && String(b.headline).trim() ? String(b.headline).trim().slice(0, 200) : (row.headline || null);
+  const dek = b.dek != null && String(b.dek).trim() ? String(b.dek).trim().slice(0, 400) : (row.dek || null);
+  await env.LEADS_DB.prepare('UPDATE content_pieces SET body = ?, violations = ?, model = ?, headline = ?, dek = ? WHERE id = ?').bind(JSON.stringify(b), JSON.stringify(warnings), 'editor', headline, dek, row.id).run();
+  row.body = JSON.stringify(b); row.violations = JSON.stringify(warnings); row.model = 'editor'; row.headline = headline; row.dek = dek;
   return { ok: true, action, warnings, piece: full() };
 }
 
@@ -14477,8 +14646,8 @@ export default {
       if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
         ...dfsNoSalariesNote(site, Date.now()),
         operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
-      const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
-      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, {});
+      const [board, usage] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null)]);
+      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage });
       slate.week = week; slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
       if (flagOn(env, 'DFS_CONTENT')) {
         const contest = DFS_CONTESTS[url.searchParams.get('contest')] ? url.searchParams.get('contest') : 'gpp';
@@ -14526,8 +14695,8 @@ export default {
         note: 'That is a single-game file: it prices a captain or MVP at a multiplier the classic roster does not have. Every board here is built for the classic cap, so pricing it would show you a lineup you cannot enter. Upload a main-slate export instead.' }, 400, c);
       const sched = await scheduleCacheRead(env);
       const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
-      const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
-      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, {});
+      const [board, usage] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null)]);
+      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, { usage });
       slate.week = state.ok && state.week.type === 'REG' ? state.week.number : null;
       // No salariesAsOf: the reader's file has no import time, and a timestamp
       // for when they happened to press the button would say nothing true.
