@@ -335,8 +335,14 @@ console.log('\nthe front page quotes the column instead of copying it');
   // The crawlers robots.txt invites do not run JavaScript, so the band the
   // client paints is invisible to them. The static link in the served HTML is
   // the only thing that makes the column reachable at all.
+  //
+  // ONE link, not two. The footer copy came off in the two-lane pass: the
+  // individual article columns are no longer primary navigation, so the section
+  // header above the band ("Every entry →") is what carries the column now. The
+  // page still serves, is still in sitemap.xml, and is still linked from
+  // /weekly-intel and /the-tell.
   ok('the front page links /the-pick without JavaScript',
-    (front.match(/href="\/the-pick"/g) || []).length >= 2);
+    (front.match(/href="\/the-pick"/g) || []).length >= 1);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

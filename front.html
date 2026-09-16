@@ -659,11 +659,15 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .foot{margin-top:40px;background:#fff;border-top:1px solid var(--line)}
 .foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 18px 34px;font-size:13px;color:var(--ink-3)}
 .foot a:hover{color:var(--brand)}
-/* The tools row takes a line of its own above the secondary links: flex-basis
+/* The footer sitemap takes a line of its own above the legal run: flex-basis
    100% breaks it out of the footer's single wrapping row so it reads as a group
-   rather than seven more items in the legal-and-company run. */
-.foot-tools{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
-.foot-tools a{font-weight:700;color:var(--ink-2)}
+   rather than nine more items in the copyright line. Same nine destinations as
+   the shared footer on every other page. */
+.foot-nav{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.foot-nav a{font-weight:700;color:var(--ink-2)}
+/* /admin is not a destination a visitor navigates to; it is the operator's only
+   link in. It sits at the end of the row, quiet. */
+.foot-admin{font-size:12px;color:var(--ink-3);opacity:.7}
 .foot .fm{margin-left:auto}
 
 /* Between the widest phone and the full desktop the ribbon is a handful of
@@ -1525,15 +1529,24 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 <body>
 <header class="mast"><div class="wrap">
   <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
-  <!-- The same six destinations, in the same order, as the shared chrome on
+  <!-- The same five destinations, in the same order, as the shared chrome on
        every other page (tools/build-chrome.mjs NAV). The front page used to
-       carry four of its own, so clicking off "/" changed the nav. -->
+       carry four of its own, so clicking off "/" changed the nav.
+       Market Intel and Draft Tools came off both: the betting market is the
+       layer underneath the two lanes rather than a third lane of its own, and
+       the draft rooms are an offseason pitch. Every one of those pages still
+       serves at its own URL. -->
   <nav class="mast-jump" aria-label="Sections of the site">
-    <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/vegas-edge">Market Intel</a><a href="/in-season/desk">The Desk</a><a href="/fantasy-football-auction-values">Draft Tools</a><a href="/faq">FAQ</a>
+    <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">Articles</a><a href="/faq#faq-start">How It Works</a><a href="/player">Search</a>
   </nav>
   <nav class="mast-nav">
+    <!-- Sign In stays where it was and stays secondary: a quiet text link, not
+         a button, beside the one filled control in the masthead. -->
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
-    <a class="cta-gold" id="navSync" href="/my-league">Sync My League</a>
+    <!-- Not "Sync My League". Automatic sync is off or unproven for every
+         provider (docs/league-sync.md §3.1); the browser-only settings form in
+         section 02 of /my-league is what works for every reader today. -->
+    <a class="cta-gold" id="navSync" href="/my-league#settings">Customize My League</a>
   </nav>
 </div></header>
 <!-- ── the recap strip ──────────────────────────────────────────────────────
@@ -2157,16 +2170,23 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 </main>
 
 <footer class="foot"><div class="wrap">
-  <!-- The tools row exists because the two card shelves above it do not any more.
-       Cutting nine cards from the reading flow is an editorial call; dropping the
-       homepage's only link to /auction-draft-assistant, /superflex-auction-values
-       and /salary-cap-draft-tool would have been an accidental SEO one, on the
-       highest-authority page on the site and on two pages the title tag targets
-       by name. The cards go, the links stay. -->
-  <nav class="foot-tools" aria-label="Tools">
-    <a href="/auctiondraft?screen=cheat">Custom Auction Values</a><a href="/auctiondraft?screen=board">Auction Manager</a><a href="/auction-draft-assistant">AI Value Coach</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary Cap &amp; Keepers</a><a href="/guides">Strategy Library</a><a href="/in-season">In-Season</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/rankings">Rankings</a><a href="/depth-charts">Depth Charts</a><a href="/vegas-edge">Vegas Edge</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/my-league">My League</a>
+  <!-- ONE ROW, the same nine destinations as the shared footer on every other
+       page (tools/build-chrome.mjs FOOT_LINKS). This used to be two rows and
+       twenty-seven links: a fifteen-link "Tools" nav of draft rooms and
+       individual in-season tools, then a loose run of article columns. Both
+       were a second navigation system reaching the same places under different
+       names, on the highest-authority page on the site.
+
+       THE PAGES ARE NOT GONE. /auction-draft-assistant, /superflex-auction-values,
+       /salary-cap-draft-tool, /auction-watch, /rankings, /vegas-edge and the rest
+       all still serve and all still sit in sitemap.xml; they are reached from the
+       lane pages that use them rather than from the homepage footer. -->
+  <nav class="foot-nav" aria-label="Footer">
+    <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">Articles</a><a href="/faq#faq-start">How It Works</a><a href="/data">Data Sources</a><a href="/faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/support">Support</a>
   </nav>
-  <a href="/the-pick">The Pick</a><a href="/play-caller-premium">Play-Caller</a><a href="/insights-vault">Insight Vault</a><a href="/auction-watch">Auction Watch</a><a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/data">Data &amp; sources</a><a href="/admin" rel="nofollow">Admin</a>
+  <!-- Not a navigation destination: /admin is noindex and gated by its own export
+       key, and this is the only link into it from the site. -->
+  <a class="foot-admin" href="/admin" rel="nofollow">Admin</a>
   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site &mdash; projections, odds, salaries and contract prices alike &mdash; is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
   <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via <a href="https://github.com/nflverse/nflverse-data" rel="noopener" style="color:inherit;text-decoration:underline">nflverse</a> (CC BY 4.0) &middot; <a href="/data" style="color:inherit;text-decoration:underline">Data &amp; sources</a> &middot; Team and player images remain the property of their owners; Iron Tuna is not affiliated with or endorsed by the NFL or any club</span>
 </div></footer>

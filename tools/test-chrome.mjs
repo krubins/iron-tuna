@@ -13,9 +13,10 @@
 //
 // build-chrome.mjs --check already fails when a page's chrome is stale against
 // the generator. This file asserts the things that would still be true of a
-// consistently-wrong generator: that the link set is actually complete, that the
-// mobile disclosure nav is wired up, and that the CTA stays format-correct so a
-// best-ball guide does not send a reader to the auction board.
+// consistently-wrong generator: that the link set is the five-item one and the
+// footer the nine-item one, that nothing retired has crept back into either,
+// that the mobile disclosure nav is wired up, and that the one header button
+// says what it actually does.
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -30,15 +31,16 @@ const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 // Same exclusions as the generator, and for the same reasons.
 const EXCLUDE = new Set(['index.html', 'front.html', 'admin.html']);
-// The reading pages take the footer and the stylesheet but keep their own short
-// header — see the NAV_EXCLUDE note in build-chrome.mjs. `pages` is what the nav
-// assertions run over; `allPages` is everything the footer must reach.
-const NAV_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html', 'the-tell.html']);
+// The three reading pages keep their own PALETTE (tools/test-reading-view.mjs
+// owns that) but no longer keep their own NAV: they carried a hand-written
+// four-link draft row that reached the same places under different names, and
+// the shared nav is five links now. So `pages` and `allPages` are the same set.
+const STYLE_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html', 'the-tell.html']);
 const allPages = fs.readdirSync(ROOT)
   .filter((f) => f.endsWith('.html') && !EXCLUDE.has(f))
   .filter((f) => read(f).includes('<header class="site">'))
   .sort();
-const pages = allPages.filter((f) => !NAV_EXCLUDE.has(f));
+const pages = allPages;
 
 const header = (h) => (h.match(/<header class="site">[\s\S]*?<\/header>/) || [''])[0];
 const footer = (h) => (h.match(/<footer class="site">[\s\S]*?<\/footer>/) || [''])[0];
@@ -57,25 +59,15 @@ console.log('\nthe chrome is generated, not hand-written');
 
 console.log('\nevery destination is reachable from every page');
 {
-  // The set a reader must be able to get to from anywhere. The app links are
-  // absolute and format-dependent, so they are asserted separately below.
-  //
-  // /bestball-insights and the /insights hub came OFF this list in the
-  // auction-first pass (§27c). Best ball is retired from every surface and the
-  // hub was a format chooser for a site that now has one format; the auction
-  // edition is the destination. The pages still serve at their old URLs — see
-  // the sitemap assertions in tools/test-seo.mjs — they are simply not linked.
-  // /in-season replaced /post-draft as the section hub. Its two lanes are
-  // asserted too: the dropdown carries them instead of the eleven tools it used
-  // to list, so if a lane silently drops out of the nav there is no other place
-  // a reader can reach it from every page. /wagers is NOT here: the lane is
-  // retired and 301s to the hub, so a nav link to it would be a link to a
-  // redirect.
-  const MUST_NAV = ['/fantasy-football-auction-values', '/auction-insights',
-    '/snake-insights', '/insights-vault', '/the-pick', '/guides',
-    '/in-season', '/fantasy', '/dfs', '/my-league', '/faq'];
-  const MUST_FOOT = ['/privacy', '/terms', '/support', '/creators',
-    '/play-caller-premium', '/the-tell', '/auction-insights', '/guides', '/the-pick'];
+  // TWO PRODUCT LANES AND THE ARTICLES THAT SUPPORT THEM. The nav is five
+  // links; there is nothing else in it, which is the point of the pass that
+  // wrote this. Every one of them must be on every page.
+  const MUST_NAV = ['/fantasy', '/dfs', '/in-season/desk', '/faq#faq-start', '/player'];
+  // Nine footer links, and the same nine on every page: the two lanes, the
+  // articles, how it works, the data inventory, the FAQ, the two legal
+  // documents and support.
+  const MUST_FOOT = ['/fantasy', '/dfs', '/in-season/desk', '/faq#faq-start',
+    '/data', '/faq', '/privacy', '/terms', '/support'];
   const badNav = [], badFoot = [];
   for (const f of pages) {
     const nav = hrefs(header(read(f)));
@@ -85,15 +77,61 @@ console.log('\nevery destination is reachable from every page');
     const foot = hrefs(footer(read(f)));
     for (const m of MUST_FOOT) if (!foot.includes(m)) badFoot.push(`${f}: ${m}`);
   }
-  ok('the nav reaches every section from every page', badNav.length === 0, badNav.slice(0, 6).join('; '));
-  ok('the footer reaches privacy, terms and support from every page', badFoot.length === 0, badFoot.slice(0, 6).join('; '));
+  ok('the nav reaches both lanes, the articles, how it works and search', badNav.length === 0, badNav.slice(0, 6).join('; '));
+  ok('the footer reaches privacy, terms, support and the data inventory', badFoot.length === 0, badFoot.slice(0, 6).join('; '));
+}
+
+console.log('\nthe chrome leads with two lanes and nothing else');
+{
+  // What came OUT, and must not creep back. These are NOT dead URLs: every one
+  // of them still serves and still sits in sitemap.xml. They are simply no
+  // longer primary navigation, so a page that links one from its header or its
+  // footer has put a third lane, an article column or a draft tool back in
+  // front of the reader.
+  //
+  // Read as a prefix, because a link may carry a query or a fragment.
+  const GONE = [
+    '/vegas-edge', '/game-intel', '/player-intel', '/what-they-arent-telling-you',
+    '/the-line', '/hidden-value', '/previews',            // the market lane
+    '/the-pick', '/the-tell', '/play-caller-premium',
+    '/analysts', '/auction-insights', '/snake-insights',
+    '/bestball-insights', '/insights-vault', '/insights', // article columns
+    '/fantasy-football-auction-values', '/superflex-auction-values',
+    '/salary-cap-draft-tool', '/guides', '/auction-watch',
+    '/auction-draft-assistant', '/custom-auction-values',  // draft tools
+    '/in-season', '/post-draft', '/rankings', '/depth-charts', '/weekly-intel',
+    '/waivers', '/faab', '/trade-finder', '/my-week', '/stats',
+    '/weekly-rankings', '/season-long-rankings', '/weekly-wrap', '/creators',
+  ];
+  // The in-season section ribbon (tools/build-ranks.mjs) is page furniture, not
+  // site chrome, so it is matched out: this check owns <header class="site">
+  // and <footer class="site"> only.
+  const isGone = (h) => GONE.some((g) => h === g || h.startsWith(g + '?') || h.startsWith(g + '#'));
+  const bad = [];
+  for (const f of allPages) {
+    const src = read(f);
+    for (const h of [...hrefs(header(src)), ...hrefs(footer(src))]) {
+      if (isGone(h)) bad.push(`${f}: ${h}`);
+    }
+  }
+  ok('no retired lane, column or tool is back in the chrome', bad.length === 0, bad.slice(0, 8).join('; '));
+
+  // IT IS THE SEASON. The draft rooms and the auction promotions are an
+  // offseason pitch; in week 2 they are the site telling a visitor it is still
+  // July. Nothing in the chrome may link one.
+  const promo = [];
+  for (const f of allPages) {
+    const src = read(f);
+    for (const h of [...hrefs(header(src)), ...hrefs(footer(src))]) {
+      if (/auctiondraft|snakedraft|\/bestball|screen=cheat|screen=board/.test(h)) promo.push(`${f}: ${h}`);
+    }
+  }
+  ok('no draft room or auction promotion is in the chrome', promo.length === 0, promo.slice(0, 6).join('; '));
 }
 
 console.log('\nthe nav link set is identical everywhere');
 {
-  // The <nav> only. The CTA sits outside it in the header and legitimately
-  // differs — by format, and by whether the page is in-season — so it is
-  // asserted on its own below rather than folded in here and excused.
+  // The <nav> only; the CTA sits outside it in the header and is asserted below.
   const navOf = (h) => (h.match(/<nav class="nav"[\s\S]*?<\/nav>/) || [''])[0];
   const shape = (f) => hrefs(navOf(header(read(f)))).filter((h) => h.startsWith('/')).join(',');
   const shapes = new Map();
@@ -105,32 +143,42 @@ console.log('\nthe nav link set is identical everywhere');
   const variants = [...shapes.values()];
   ok('there is exactly one nav shape', shapes.size === 1,
     shapes.size + ' variants, e.g. ' + variants.map((v) => v[0]).slice(0, 4).join(' / '));
+  ok('and it is the five-item one',
+    [...shapes.keys()][0] === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/player',
+    [...shapes.keys()][0]);
+
+  // The same nine footer links, in the same order, everywhere.
+  const footOf = (f) => hrefs((read(f).match(/<nav class="foot-nav"[\s\S]*?<\/nav>/) || [''])[0]).join(',');
+  const footShapes = new Set(allPages.map(footOf));
+  ok('there is exactly one footer shape', footShapes.size === 1, [...footShapes].slice(0, 3).join(' / '));
+  ok('and it is the nine-item one',
+    [...footShapes][0] === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/data,/faq,/privacy,/terms,/support',
+    [...footShapes][0]);
 }
 
-console.log('\nthe call to action matches the page\'s format');
+console.log('\nthe one header button says what it actually does');
 {
-  // The in-season set, read out of the generator rather than copied, so the two
-  // cannot drift: a page added there gets asserted here on the next run.
-  const chrome = fs.readFileSync(path.join(ROOT, 'tools', 'build-chrome.mjs'), 'utf8');
-  const IN_SEASON = new Set((chrome.match(/const IN_SEASON = new Set\(\[([\s\S]*?)\]\)/) || [, ''])[1]
-    .split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean));
-  if (!IN_SEASON.size) throw new Error('could not read IN_SEASON out of build-chrome.mjs');
-
-  const wrong = [];
+  // IT IS NOT "Sync my league". Automatic league sync does not work reliably:
+  // Sleeper is off pending a license, Yahoo is off and has never run live, ESPN
+  // is not implemented, and CBS has never been exercised against a live league
+  // (docs/league-sync.md §3.1). What works for every reader is the browser-only
+  // settings form in section 02 of /my-league, so the button is labeled for that
+  // and lands on it. If sync is ever proved out, this is the assertion to change
+  // — deliberately, not by a label drifting back.
+  const wrong = [], mislabeled = [];
   for (const f of pages) {
-    const cta = (header(read(f)).match(/<a class="cta" href="([^"]*)"/) || [])[1] || '';
-    // An IN-SEASON page leads to free account-backed league sync: a reader on
-    // the waiver board in October is not there to build a draft sheet, and sync
-    // improves every number in front of them. Everywhere else the
-    // CTA is the board that page belongs to. Snake keeps its own; best ball no
-    // longer does, because that line is retired and its pages point at the
-    // auction sheet like everything else.
-    const want = IN_SEASON.has(f) ? '/my-league' : /^snake-/.test(f) ? 'snakedraft' : 'auctiondraft';
-    if (!cta.includes(want)) wrong.push(`${f}: cta=${cta} want ${want}`);
-    // No page may send the reader to the retired best-ball room.
-    if (cta.includes('/bestball')) wrong.push(`${f}: cta=${cta} still sells best ball`);
+    const h = header(read(f));
+    const m = h.match(/<a class="cta" href="([^"]*)"[^>]*>([^<]*)<\/a>/) || [];
+    if (m[1] !== '/my-league#settings') wrong.push(`${f}: cta=${m[1]}`);
+    if (m[2] !== 'Customize My League') mislabeled.push(`${f}: "${m[2]}"`);
   }
-  ok('a format page points at its own board', wrong.length === 0, wrong.slice(0, 6).join('; '));
+  ok('every page points the button at the manual setup', wrong.length === 0, wrong.slice(0, 6).join('; '));
+  ok('and labels it Customize My League', mislabeled.length === 0, mislabeled.slice(0, 6).join('; '));
+
+  // The anchor has to exist, or the button lands at the top of a page whose
+  // first section is the sync flow it was relabeled away from.
+  ok('/my-league carries the #settings anchor the button targets',
+    /<div class="is-sec" id="settings">/.test(read('my-league.html')));
 }
 
 console.log('\nthe mobile nav is a real disclosure, not an unmarked scroll');
@@ -145,30 +193,43 @@ console.log('\nthe mobile nav is a real disclosure, not an unmarked scroll');
   ok('every page has a skip link', noSkip.length === 0, noSkip.slice(0, 4).join(', '));
 }
 
-console.log('\nthe reading pages are excluded from the nav on purpose');
+console.log('\nthe reading pages take the shared nav now');
 {
-  // They are pages you read rather than use, and main's test-reading-view.mjs
-  // owns their palette. What must still hold is that opting out of the NAV does
-  // not opt them out of the SITE: the footer sitemap is how a reader gets
-  // anywhere from them, so it has to be there.
-  const missing = [...NAV_EXCLUDE].filter((f) => !fs.existsSync(path.join(ROOT, f)));
-  ok('every excluded page still exists', missing.length === 0, missing.join(', '));
-  const noFoot = [...NAV_EXCLUDE].filter((f) => !read(f).includes('<!--chrome:foot-->'));
-  const gotNav = [...NAV_EXCLUDE].filter((f) => read(f).includes('<!--chrome:nav-->'));
-  ok('a reading page still carries the shared footer', noFoot.length === 0, noFoot.join(', '));
-  ok('a reading page does not carry the eleven-item nav', gotNav.length === 0, gotNav.join(', '));
+  // They used to be excluded from it, on the argument that an eleven-item nav
+  // does not belong on a page you read. The nav is five items, and what they
+  // carried instead was a second navigation system: Auction Values / Strategy /
+  // Insights / Columns plus a draft CTA, reaching the same places under
+  // different names. The exception went; the PALETTE exception did not.
+  const missing = [...STYLE_EXCLUDE].filter((f) => !fs.existsSync(path.join(ROOT, f)));
+  ok('every reading page still exists', missing.length === 0, missing.join(', '));
+  const noNav = [...STYLE_EXCLUDE].filter((f) => !read(f).includes('<!--chrome:nav-->'));
+  const noFoot = [...STYLE_EXCLUDE].filter((f) => !read(f).includes('<!--chrome:foot-->'));
+  ok('a reading page carries the shared nav', noNav.length === 0, noNav.join(', '));
+  ok('a reading page carries the shared footer', noFoot.length === 0, noFoot.join(', '));
+  // The rules the old in-nav CTA needed are gone with it. Left behind,
+  // `header.site .nav{display:flex}` beats site.css's mobile rule and the
+  // disclosure button opens nothing on a phone, and the :has() rule hides a
+  // real nav link.
+  const stale = [...STYLE_EXCLUDE].filter((f) => /header\.site \.nav\{|nth-last-child\(2\)\{display:none\}/.test(read(f)));
+  ok('and none keeps the header CSS written for the old one', stale.length === 0, stale.join(', '));
+  // What they DO keep: their own white palette. tools/test-reading-view.mjs owns
+  // the detail; this is the boundary, so a future strip pass cannot take it.
+  const noRoot = [...STYLE_EXCLUDE].filter((f) => !/:root\{--bg:#ffffff/.test(read(f)));
+  ok('a reading page still declares its own reading palette', noRoot.length === 0, noRoot.join(', '));
 }
 
 console.log('\nthe page you are on is marked');
 {
-  // Pages that ARE a nav destination should mark themselves current. Dated
-  // family members mark their section (auction-insights-2026-08-20 -> Insights).
-  // insights.html is off this list: it was the three-format chooser, and a site
-  // with one format sends the reader to /auction-insights instead. The page
-  // still serves and stays in the sitemap; it is simply not a nav destination.
-  const named = pages.filter((f) => /^(guides|faq|the-pick|insights-vault)\.html$/.test(f));
-  const missing = named.filter((f) => !read(f).includes('aria-current="page"'));
+  // Pages that ARE a nav destination should mark themselves current. /faq is
+  // reached as /faq#faq-start and /my-league as /my-league#settings, so the
+  // generator drops the fragment before comparing — a link that lands on a page
+  // should say so.
+  const named = ['fantasy.html', 'dfs.html', 'faq.html', 'player.html', 'my-league.html'];
+  const missing = named.filter((f) => !header(read(f)).includes('aria-current="page"'));
   ok('a nav destination marks itself as current', missing.length === 0, missing.join(', '));
+  // And a page that is NOT a destination must not claim to be one.
+  const liars = pages.filter((f) => !named.includes(f) && header(read(f)).includes('aria-current="page"'));
+  ok('and no other page claims to be', liars.length === 0, liars.slice(0, 5).join(', '));
 }
 
 console.log('\nthe chrome elements are actually closed');
