@@ -10326,7 +10326,7 @@ async function contentContext(env, weekNumber, opts) {
       try {
         const sal = await dfsSalariesRead(env, site, sched.season, curWeek);
         if (!sal || !sal.rows.length) continue;
-        const slate = buildDfsSlate(site, sal.rows, week, {});
+        const slate = buildDfsSlate(site, sal.rows, week, { usage });
         slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
         slate.metrics = dfsMetrics(slate.players, 'gpp'); slate.stackScores = dfsStackScores(slate.stacks);
         dfs[site] = slate;
@@ -11295,9 +11295,43 @@ async function dfsSalariesRead(env, site, season, week) {
 // Salaries joined to the week board at the site's scoring. VVS is the
 // market-implied points per $1,000; `index` puts it against the slate's
 // median so 100 is an ordinary price and 130 is a bargain.
+// Operator FPPG, with its basis said. Both sites publish a historical
+// average beside the salary; when a row carries none (a rookie the lobby has
+// not averaged yet, a player whose slate payload came without its stat block),
+// the same kind of number is computed from his season box score in the usage
+// overlay at the site's own scoring, so the column and the Tuna Edge against
+// it do not go blank. The overlay keeps a season total and yardage bonuses
+// are per game, so they are left out of the computed figure. `basis` is
+// 'operator' or 'computed' and every surface prints the difference. A defense
+// has no box score in the overlay and stays blank rather than guessed.
+//
+// The desk can also pin a figure by hand, per site and player, for a week the
+// import left blank and the overlay cannot fill: the number is read off the
+// season stats board and carries the same 'computed' basis, so it prints as
+// an estimate and never as the operator's own. The overlay wins when it has
+// the line, because it is the same box score without a hand in between.
+const DFS_FPPG_PINS = {
+  // DraftKings left Love's historical FPPG blank in the Week 2 salary import,
+  // although the season stats board records 13.0 points through Week 1.
+  dk: { 'jeremiyahlove|RB': 13.0 }
+};
+function dfsOperatorFppg(site, s, rules, usage) {
+  const raw = s.operatorFppg != null ? s.operatorFppg : s.operator_fppg;
+  if (raw != null && Number.isFinite(Number(raw))) return { value: _oddsRound(Number(raw)), basis: 'operator', games: null };
+  const pos = s.position;
+  const pinned = DFS_FPPG_PINS[site] && DFS_FPPG_PINS[site][_oddsNorm(s.name) + '|' + pos];
+  const pin = pinned != null ? { value: _oddsRound(pinned), basis: 'computed', games: null } : null;
+  if (pos === 'DST' || !usage || !usage.players) return pin || { value: null, basis: null, games: null };
+  const u = usage.players[_oddsNorm(s.name) + '|' + pos];
+  const games = u && u.season ? Number(u.season.games) : 0;
+  if (!u || !u.season || !u.season.stats || !(games > 0)) return pin || { value: null, basis: null, games: games || 0 };
+  const flat = { ...rules, passingYardBonuses: [], rushingYardBonuses: [], receptionBonuses: [], rbReceptionBonuses: [], receivingYardBonuses: [] };
+  return { value: _oddsRound(scoreStats(u.season.stats, pos, flat) / games), basis: 'computed', games };
+}
 function buildDfsSlate(site, salaries, week, opts) {
   const S = DFS_SITES[site];
   const rules = scoringRules('ppr', SCORING_SITE[site]);
+  const usage = opts && opts.usage ? opts.usage : null;
   const byKey = new Map();
   for (const p of (week && week.players) || []) byKey.set(p.key, p);
   const defByTeam = new Map();
@@ -11305,13 +11339,10 @@ function buildDfsSlate(site, salaries, week, opts) {
   const rows = [];
   for (const s of salaries || []) {
     const pos = s.position;
-    // DraftKings left Love's historical FPPG blank in the Week 2 salary import,
-    // although the season stats board records 13.0 points through Week 1.
-    const loveWeek2Fppg = site === 'dk' && pos === 'RB' && _oddsNorm(s.name) === 'jeremiyah love' ? 13.0 : null;
-    const fppgRaw = s.operatorFppg != null ? s.operatorFppg : (s.operator_fppg != null ? s.operator_fppg : loveWeek2Fppg);
-    const operatorFppg = fppgRaw != null && Number.isFinite(Number(fppgRaw)) ? _oddsRound(Number(fppgRaw)) : null;
+    const fppg = dfsOperatorFppg(site, s, rules, usage);
+    const operatorFppg = fppg.value;
     const p = pos === 'DST' ? defByTeam.get(teamKey(s.team)) : byKey.get(_oddsNorm(s.name) + '|' + pos);
-    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, operatorFppg, onBoard: false }); continue; }
+    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, onBoard: false }); continue; }
     const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
     const v = pts('vegas'), c = pts('consensus'), it = pts('ironTuna');
     const w0 = p.weeks.find(x => x.env) || null;
@@ -11319,12 +11350,15 @@ function buildDfsSlate(site, salaries, week, opts) {
     rows.push({
       name: p.name, position: pos, team: p.team, opponent: w0 ? w0.opponent : s.opponent, home: w0 ? w0.home : null, salary: s.salary, onBoard: true, key: p.key, siteName: s.name.trim(),
       vegasPoints: v, ironTunaPoints: it, consensusPoints: c,
-      operatorFppg, operatorFppgLabel: site === 'dk' ? 'DraftKings FPPG' : 'FanDuel FPPG',
+      operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, operatorFppgLabel: site === 'dk' ? 'DraftKings FPPG' : 'FanDuel FPPG',
       projectionVsFppg: operatorFppg == null ? null : _oddsRound(it - operatorFppg),
       vegasPerK: _oddsRound(v / (s.salary / 1000) * 100) / 100, ironTunaPerK: _oddsRound(it / (s.salary / 1000) * 100) / 100,
       marketDelta: p.marketDelta, vegasBasis: p.vegas.basis, vegasConfidence: p.vegas.confidence,
       tdProbability: p.vegas.td ? p.vegas.td.probability : Math.round((1 - Math.exp(-lam)) * 1000) / 10, tdBasis: p.vegas.td ? 'anytime-td-market' : 'derived',
       teamTotal: w0 && w0.env ? (w0.env.implied != null ? w0.env.implied : w0.env.expected) : null, teamTotalPosted: !!(w0 && w0.env && w0.env.posted),
+      // The matchup a reader opens a row for: when the game kicks off and how
+      // stingy the defense across from him is (1 = fewest points allowed).
+      kickoff: w0 ? w0.kickoff || null : null, opponentDefRank: w0 && w0.env && w0.env.opponentDefRank ? w0.env.opponentDefRank : null,
       gameTotal: null, impliedTouches: _oddsRound((p.vegas.stats.rec || 0) + (p.vegas.stats.rushAtt != null ? p.vegas.stats.rushAtt : (p.vegas.stats.rushYd || 0) / 4.3)),
       injury: p.injury ? p.injury.status : null, why: p.why ? p.why.summary : ''
     });
@@ -14504,8 +14538,8 @@ export default {
       if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
         ...dfsNoSalariesNote(site, Date.now()),
         operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
-      const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
-      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, {});
+      const [board, usage] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null)]);
+      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage });
       slate.week = week; slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
       if (flagOn(env, 'DFS_CONTENT')) {
         const contest = DFS_CONTESTS[url.searchParams.get('contest')] ? url.searchParams.get('contest') : 'gpp';
@@ -14553,8 +14587,8 @@ export default {
         note: 'That is a single-game file: it prices a captain or MVP at a multiplier the classic roster does not have. Every board here is built for the classic cap, so pricing it would show you a lineup you cannot enter. Upload a main-slate export instead.' }, 400, c);
       const sched = await scheduleCacheRead(env);
       const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
-      const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
-      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, {});
+      const [board, usage] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null)]);
+      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, { usage });
       slate.week = state.ok && state.week.type === 'REG' ? state.week.number : null;
       // No salariesAsOf: the reader's file has no import time, and a timestamp
       // for when they happened to press the button would say nothing true.
