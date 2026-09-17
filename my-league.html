@@ -156,7 +156,7 @@ p{color:var(--sec);margin:0 0 16px}
 </section>
 
 <div class="is-sec" id="settings"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Your in-season settings</h2></div></div>
-<p class="ml-sub">Platform, scoring, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
+<p class="ml-sub">Platform, scoring, lineup, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. Copy them in from a screenshot of your settings page, a paste of it, or the cheat sheet you already built &mdash; the same way the draft room asks &mdash; or set them by hand. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
 <div class="ml-split">
   <div class="ml-form" id="mlForm"></div>
   <div class="ml-side">
@@ -168,7 +168,7 @@ p{color:var(--sec);margin:0 0 16px}
       </div>
     </div>
     <div class="is-card ml-box"><span class="ml-kick gold">What the draft app knows</span>
-      <p>Set up separately, in the draft room. It carries your full custom scoring, every yardage divisor and touchdown value, which is more than the three presets and is what the cheat sheet prices against.</p>
+      <p>Your cheat sheet carries the same full scoring &mdash; every yardage divisor and touchdown value &mdash; and it is what the draft board prices against. The form on the left can copy it across rather than asking you for it twice.</p>
       <div id="mlBox"></div>
     </div>
   </div>
@@ -205,6 +205,7 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-season.js" defer></script>
 <script src="/it-league.js" defer></script>
 <script src="/it-inseason.js" defer></script>
+<script src="/it-inseason-import.js" defer></script>
 <script src="/it-inseason-ui.js" defer></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -427,7 +428,16 @@ document.addEventListener('DOMContentLoaded', function () {
     var el = $('lsManual'); el.hidden = false; $('lsConnect').hidden = true; markTile(L ? null : 'manual');
     var S = L ? L.settings : null, mine = L ? (L.rosters.find(function (r) { return r.teamId === L.userTeamId; }) || { players: [] }) : null;
     var rec = S ? S.scoring.receptionPoints : 1;
-    el.innerHTML = '<div class="is-card"><h3>' + (L ? 'Edit ' + esc(L.name) : 'Enter your league by hand') + '</h3><p class="is-note" style="margin:0 0 10px">Works for ESPN, CBS, Fantrax, MFL or any league. The scoring and lineup below make every ranking exact; your roster makes Best Lineup and the Pickup Advisor personal. Other managers&rsquo; rosters are optional; without them the free-agent pool is everyone not on your team.</p>' +
+    // Every scoring field an IMPORT found, including the ones this form does
+    // not print. The form asks for three numbers because three is what anyone
+    // will type; a screenshot or a paste knows twenty, and dropping seventeen
+    // on the way to the server would leave the import a worse answer than the
+    // typing it replaced. mfRecExact is the same idea for a reception value
+    // that is none of the three buttons — a 0.75-PPR league keeps its 0.75
+    // unless the reader moves the control into a different bucket themselves.
+    var mfScoring = S ? Object.assign({}, S.scoring) : {};
+    var mfRecExact = null;
+    el.innerHTML = '<div class="is-card"><h3>' + (L ? 'Edit ' + esc(L.name) : 'Enter your league by hand') + '</h3><p class="is-note" style="margin:0 0 10px">Works for ESPN, CBS, Fantrax, MFL or any league. The scoring and lineup below make every ranking exact; your roster makes Best Lineup and the Pickup Advisor personal. Other managers&rsquo; rosters are optional; without them the free-agent pool is everyone not on your team.</p><div id="mfImp"></div>' +
       '<div class="is-row2"><div class="is-field"><label>League name</label><input class="is-input" id="mfName" value="' + esc(L ? L.name : '') + '"></div><div class="is-field"><label>Teams</label><input class="is-input" id="mfTeams" type="number" min="2" max="20" value="' + esc(L ? L.numTeams : 12) + '"></div></div>' +
       '<div class="is-field"><label>Scoring</label><div class="is-seg" role="group">' + [['1', 'PPR'], ['0.5', 'Half PPR'], ['0', 'Standard']].map(function (o) { return '<label><input type="radio" name="mfRec" value="' + o[0] + '"' + (String(rec) === o[0] ? ' checked' : '') + '>' + o[1] + '</label>'; }).join('') + '</div></div>' +
       '<div class="is-row2"><div class="is-field"><label>TE premium (extra per catch)</label><input class="is-input" id="mfTe" type="number" step="0.25" value="' + esc(S ? S.extras.tePremium : 0) + '"></div><div class="is-field"><label>Passing TD</label><input class="is-input" id="mfPtd" type="number" step="1" value="' + esc(S ? S.scoring.passingTD : 4) + '"></div></div>' +
@@ -435,9 +445,41 @@ document.addEventListener('DOMContentLoaded', function () {
       '<div class="is-row2"><div class="is-field"><label>FAAB budget (blank if waiver priority)</label><input class="is-input" id="mfFaab" type="number" value="' + (S && S.faab != null ? esc(S.faab) : '') + '"></div><div class="is-field"><label>Your team name</label><input class="is-input" id="mfTeam" value="' + esc(L ? ((L.teams.find(function (t) { return t.teamId === L.userTeamId; }) || {}).name || 'My team') : 'My team') + '"></div></div>' +
       '<div class="is-field"><label>Your roster, one player per line (mark starters with * and IR with IR)</label><textarea class="is-input" id="mfRoster" rows="10" placeholder="* Josh Allen QB&#10;* Bijan Robinson RB&#10;Rachaad White RB&#10;IR Nico Collins WR">' + esc(mine ? mine.players.map(function (p) { return (p.slot === 'starter' ? '* ' : p.slot === 'ir' ? 'IR ' : '') + p.name + (p.position ? ' ' + p.position : ''); }).join(NL) : '') + '</textarea></div>' +
       '<div class="is-btns"><button type="button" class="is-btn primary" id="mfSave">' + (L ? 'Save league' : 'Create league') + '</button><button type="button" class="is-btn sec" id="mfCancel">Cancel</button></div><p class="is-note" id="mfMsg"></p></div>';
+    // The cheat sheet's intake, on the by-hand form. What it replaces is a
+    // reader retyping a settings page they are already looking at, into three
+    // scoring boxes that cannot hold most of what it says.
+    if (window.ITInSeasonUI && window.ITInSeasonUI.importer) {
+      ITInSeasonUI.importer($('mfImp'), {
+        note: 'Scoring and starting lineup, off a screenshot, a paste, or the cheat sheet you already built. Nothing is saved until you press ' + (L ? 'Save league' : 'Create league') + '.',
+        onApply: function (partial) {
+          if (partial.scoring) {
+            Object.assign(mfScoring, partial.scoring);
+            if (partial.scoring.passingTD != null) $('mfPtd').value = partial.scoring.passingTD;
+            var r = partial.scoring.receptionPoints;
+            if (r != null) {
+              mfRecExact = r;
+              var near = r >= 0.9 ? '1' : r >= 0.4 ? '0.5' : '0';
+              var radio = el.querySelector('input[name="mfRec"][value="' + near + '"]');
+              if (radio) radio.checked = true;
+            }
+          }
+          if (partial.extras && partial.extras.tePremium != null) $('mfTe').value = partial.extras.tePremium;
+          if (partial.teams) $('mfTeams').value = partial.teams;
+          if (partial.faab != null) $('mfFaab').value = partial.faab;
+          // A lineup arrives whole and replaces the boxes; a preset patches the
+          // one slot it names and leaves the bench alone.
+          if (partial.roster) el.querySelectorAll('[data-ro]').forEach(function (i) { i.value = Number(partial.roster[i.getAttribute('data-ro')]) || 0; });
+          else if (partial.rosterPatch) el.querySelectorAll('[data-ro]').forEach(function (i) { var v = partial.rosterPatch[i.getAttribute('data-ro')]; if (v != null) i.value = v; });
+        }
+      });
+    }
     $('mfCancel').addEventListener('click', function () { el.hidden = true; markTile(null); });
     $('mfSave').addEventListener('click', function () {
       var recV = parseFloat((el.querySelector('input[name="mfRec"]:checked') || {}).value || '1');
+      if (mfRecExact != null && (mfRecExact >= 0.9 ? 1 : mfRecExact >= 0.4 ? 0.5 : 0) === recV) recV = mfRecExact;
+      // A league that pays running backs differently for a catch said so in the
+      // import; one control cannot, so the imported split survives the control.
+      var recRbV = (mfRecExact != null && mfScoring.rbReceptionPoints != null && mfScoring.rbReceptionPoints !== mfRecExact) ? mfScoring.rbReceptionPoints : recV;
       var roster = {}; el.querySelectorAll('[data-ro]').forEach(function (i) { roster[i.getAttribute('data-ro')] = parseInt(i.value, 10) || 0; });
       var players = $('mfRoster').value.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
         var slot = /^\*/.test(l) ? 'starter' : /^IR\b/i.test(l) ? 'ir' : 'bench'; l = l.replace(/^(\*|IR)\s*/i, '');
@@ -445,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return { name: (m ? m[1] : l).trim(), position: m && m[2] ? m[2].toUpperCase() : null, slot: slot };
       });
       var body = { id: L ? L.id : undefined, name: $('mfName').value || 'My league', numTeams: $('mfTeams').value, teamName: $('mfTeam').value, players: players,
-        settings: { scoring: { receptionPoints: recV, rbReceptionPoints: recV, passingTD: parseFloat($('mfPtd').value) || 4 }, extras: { tePremium: parseFloat($('mfTe').value) || 0 }, roster: roster, faab: $('mfFaab').value === '' ? null : parseInt($('mfFaab').value, 10) } };
+        settings: { scoring: Object.assign({}, mfScoring, { receptionPoints: recV, rbReceptionPoints: recRbV, passingTD: parseFloat($('mfPtd').value) || 4 }), extras: { tePremium: parseFloat($('mfTe').value) || 0 }, roster: roster, faab: $('mfFaab').value === '' ? null : parseInt($('mfFaab').value, 10) } };
       $('mfMsg').textContent = 'Saving…';
       ITSync.api('/api/leagues/manual', { method: 'POST', body: body }).then(function (j) {
         if (!j || !j.ok) { $('mfMsg').textContent = (j && (j.message || j.error)) || 'Could not save.'; return; }
