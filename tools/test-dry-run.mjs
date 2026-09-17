@@ -98,6 +98,15 @@ function fakeDb(clock) {
       if (/SELECT game_id FROM week_board_snapshots WHERE season = \? AND week = \?/.test(sql)) return { results: Object.values(T.freezes).filter(f => f.season === args[0] && f.week === args[1]).map(f => ({ game_id: f.game_id })) };
       if (/SELECT kind, rivalry FROM content_pieces/.test(sql)) { const kinds = args.slice(1, -1); return { results: T.content_pieces.filter(r => r.status === 'published' && kinds.includes(r.kind)).sort((a, b) => b.created_at - a.created_at).slice(0, args[args.length - 1]) }; }
       if (/FROM analyst_calls WHERE player_key IN/.test(sql)) { const keys = args.slice(0, -1); return { results: T.analyst_calls.filter(c => keys.includes(c.player_key)).sort((a, b) => b.created_at - a.created_at).slice(0, args[args.length - 1]) }; }
+      // The Monday scorecard's other half: the week's published
+      // recommendations, joined to the story that made each one. No outcome
+      // filter, because the ledger's grader runs a day and a half later.
+      if (/FROM analyst_calls c LEFT JOIN content_pieces p/.test(sql)) {
+        const piece = (slug) => T.content_pieces.filter(r => r.slug === slug && r.status === 'published').pop() || {};
+        return { results: T.analyst_calls.filter(c => c.season === args[0] && c.week === args[1] && c.kind !== args[2])
+          .sort((a, b) => a.created_at - b.created_at)
+          .map(c => ({ ...c, piece_title: piece(c.slug).title || null, piece_headline: piece(c.slug).headline || null, piece_game: piece(c.slug).game_id || null })) };
+      }
       if (/FROM content_pieces WHERE status = 'published' AND analyst = \?/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published' && r.analyst === args[0]).sort((a, b) => b.published_at - a.published_at).slice(0, 12) };
       if (/FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published' && r.rivalry).sort((a, b) => b.published_at - a.published_at).slice(0, 10) };
       if (/FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT \?/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published').sort((a, b) => b.published_at - a.published_at).slice(0, args[0]) };
@@ -223,9 +232,24 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   {
     const sc = db.T.content_pieces.filter(r => r.kind === 'what-tuna-got-right' && r.week === 1).pop();
     const b = sc ? JSON.parse(sc.brief) : null;
-    ok('the scorecard was written from the frozen boards the recaps graded, or skipped for a reason the packet names', !!b && (sc.status === 'published' ? (b.record && b.record.games >= 1 && Array.isArray(b.biggestWins) && b.biggestWins.length >= 1 && b.biggestWins.every(w => w.game && Number.isFinite(w.margin))) : ['no_frozen_boards', 'nothing_landed', 'writer_declined'].includes(b.reason)), JSON.stringify(sc && { status: sc.status, reason: b && b.reason, record: b && b.record }));
+    ok('the scorecard was written from the frozen boards the recaps graded, or skipped for a reason the packet names', !!b && (sc.status === 'published' ? (b.record && b.record.games >= 1 && Array.isArray(b.biggestWins) && b.biggestWins.length >= 1 && b.biggestWins.every(w => w.game && Number.isFinite(w.margin) && (w.source === 'board' || w.source === 'story'))) : ['no_record', 'nothing_landed', 'writer_declined'].includes(b.reason)), JSON.stringify(sc && { status: sc.status, reason: b && b.reason, record: b && b.record }));
+    // The wiring, whether or not this fixture's numbers produce a win: the
+    // scorecard reached the calls ledger and read the week's published
+    // recommendations, and a skip says what it looked at in both halves.
+    ok('the scorecard reads the week\'s published recommendations, and a skip names what it looked at in both halves',
+      (() => {
+        if (!b) return false;
+        if (sc.status === 'published') return b.record.storyCalls != null;
+        // The ledger had week 1 positions on it by Monday morning and the
+        // scorecard read them: `storyRows` is what the query returned, after
+        // one-per-player-per-story dedupe. It cannot be compared to the table
+        // at the end of the run, which also holds calls filed after this tick.
+        const filed = db.T.analyst_calls.filter(c => c.week === 1 && c.kind !== 'rivalry-column' && !['hold', 'stash'].includes(c.direction)).length;
+        return !!b.looked && b.looked.storyRows > 0 && b.looked.storyRows <= filed && b.looked.games != null && b.looked.boardCalls != null && b.looked.ungraded != null;
+      })(),
+      JSON.stringify(b && (b.looked || { storyCalls: b.record && b.record.storyCalls })));
     ok('it covers the games played through Sunday and names the Monday game as not covered', !b || !b.record || (b.notCovered.some(n => n.day === 'Mon') && b.gamesCovered.every(g => g.day !== 'Mon')), JSON.stringify(b && b.notCovered));
-    ok('its wins are the recaps\' own hits, in the recaps\' own numbers', !b || !b.record || b.biggestWins.every(w => { const r = db.T.content_pieces.find(x => x.kind === 'game-recap' && x.game_id === w.gameId); if (!r) return false; const c = JSON.parse(r.brief).calledIt; return c.hits.some(h => h.name === w.name && h.actual === w.actual && h.margin === w.margin); }));
+    ok('its BOARD wins are the recaps\' own hits, in the recaps\' own numbers', !b || !b.record || b.biggestWins.filter(w => w.source === 'board').every(w => { const r = db.T.content_pieces.find(x => x.kind === 'game-recap' && x.game_id === w.gameId); if (!r) return false; const c = JSON.parse(r.brief).calledIt; return c.hits.some(h => h.name === w.name && h.actual === w.actual && h.margin === w.margin); }));
   }
   ok('the Week 2 MNF preview waited for its own Monday', !at('mnf-preview', 2).length || at('mnf-preview', 2)[0].at === 'Mon 6:00');
   ok('Quarterback Monday was skipped: nothing worth publishing with no usage file', at('quarterback-monday', 1)[0] && at('quarterback-monday', 1)[0].status === 'skipped');

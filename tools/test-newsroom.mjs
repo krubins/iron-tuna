@@ -38,7 +38,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, weekCase, weekFrameProblems, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, _weeksPlayed, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK, packetCalledItWeek, WEEK_WINS_MAX, WEEK_MISSES_MAX, CONDITIONAL_SECTIONS };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, weekCase, weekFrameProblems, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, _weeksPlayed, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK, packetCalledItWeek, weekPublishedCalls, gradeStoryCall, CALL_PUSH_PTS, WEEK_WINS_MAX, WEEK_MISSES_MAX, CONDITIONAL_SECTIONS };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -196,13 +196,14 @@ console.log('\nthe rivalry column on the record');
       }
       if (/^INSERT INTO analyst_calls/.test(sql)) {
         const k = ['season', 'week', 'analyst', 'player_key', 'player', 'team', 'position', 'kind', 'slug', 'lens', 'direction', 'recommendation', 'rank', 'confidence', 'rationale', 'evidence', 'rivalry', 'created_at'];
-        const row = { id: nextId++, outcome: null, outcome_note: null, outcome_at: null };
+        const row = { id: nextId++, outcome: null, outcome_note: null, outcome_at: null, outcome_actual: null, outcome_projected: null, outcome_margin: null };
         k.forEach((n, i) => { row[n] = b[i]; });
         t.analyst_calls.push(row); return { success: true };
       }
       if (/^UPDATE analyst_calls SET outcome/.test(sql)) {
-        const row = t.analyst_calls.find(r => r.id === b[3]);
-        if (row) { row.outcome = b[0]; row.outcome_note = b[1]; row.outcome_at = b[2]; }
+        // outcome, note, at, actual, projected, margin, id
+        const row = t.analyst_calls.find(r => r.id === b[6]);
+        if (row) { row.outcome = b[0]; row.outcome_note = b[1]; row.outcome_at = b[2]; row.outcome_actual = b[3]; row.outcome_projected = b[4]; row.outcome_margin = b[5]; }
         return { success: true };
       }
       throw new Error('unexpected write: ' + sql.slice(0, 60));
@@ -665,9 +666,9 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
     const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(frz([row({ key: 'b|WR', name: 'Bo Small', cr: 20, cp: 10, ir: 13, ip: 18 })]), scored([['b|WR', 13]]), 1) }], ctx);
     return q.biggestWins.length === 1 && q.headlineWin === null;
   })());
-  ok('no frozen board anywhere, nothing runs', (() => {
+  ok('no frozen board and no published recommendation: nothing to grade, nothing runs', (() => {
     const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctx);
-    return q.skip === true && q.reason === 'no_frozen_boards';
+    return q.skip === true && q.reason === 'no_record';
   })());
   ok('calls that all missed do not make a scorecard', (() => {
     const q = H.packetCalledItWeek(games, [{ game: games[1], calledIt: H._vindication(frz([row({ key: 'd|WR', name: 'Di Miss', cr: 24, cp: 10, ir: 13, ip: 18 })]), scored([['d|WR', 4]]), 1) }], ctx);
@@ -684,9 +685,145 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
     const v = H._voiceBlock(packet);
     const q = { meta: { kind: 'what-tuna-got-right', analyst: 'mercer', dfsAnalyst: 'park' }, ...H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(frz([row({ key: 'b|WR', name: 'Bo Small', cr: 20, cp: 10, ir: 13, ip: 18 })]), scored([['b|WR', 13]]), 1) }], ctx) };
     const w = H._voiceBlock(q);
-    return /3 of 4 calls landed across 2 games \(75%\)/.test(v) && /biggest first/.test(v) && /THE MISSES/.test(v) && /YOU'RE WELCOME:/.test(v) && /Cy Huge/.test(v)
+    return /3 of 4 landed across 2 games \(75%\)/.test(v) && /biggest first/.test(v) && /THE MISSES/.test(v) && /YOU'RE WELCOME:/.test(v) && /Cy Huge/.test(v)
       && /NO MISSES/.test(w) && /NO SINGLE WIN/.test(w) && !/YOU'RE WELCOME:" and then/.test(w);
   })());
+  // The reader that feeds the other half. It is the one new query, so it is
+  // exercised against a fake D1 rather than only through a hand-built packet.
+  await (async () => {
+    const C = (o) => ({ id: o.id, season: 2026, week: o.week || 1, analyst: o.analyst || 'raines', player_key: o.key, player: o.name,
+      team: 'AAA', position: 'WR', kind: o.kind || 'pickup-advisor', slug: o.slug || 'pa-1', lens: 'weekly',
+      direction: o.dir || 'start', recommendation: 'x', confidence: 'HIGH', rationale: 'r', outcome: o.outcome || null, created_at: o.id });
+    const CALLS = [
+      C({ id: 1, key: 'r1|WR', name: 'Stu Story' }),
+      C({ id: 2, key: 'r1|WR', name: 'Stu Story' }),                                  // the same call, re-stored on the slug
+      C({ id: 3, key: 'h1|TE', name: 'Hal Hold', dir: 'hold' }),                      // makes no claim about one Sunday
+      C({ id: 4, key: 's1|RB', name: 'Sta Sher', dir: 'stash' }),
+      C({ id: 5, key: 'g1|WR', name: 'Gam Erecap', kind: 'game-recap', slug: 'gr-1', dir: 'buy' }),
+      C({ id: 6, key: 'n1|WR', name: 'Nex Tweek', week: 2, slug: 'pa-2' }),           // another week
+      C({ id: 7, key: 'v1|WR', name: 'Riv Alry', kind: H.RIVALRY_COLUMN_KIND, slug: 'rc-1' })
+    ];
+    const PIECES = [{ slug: 'pa-1', status: 'published', title: 'Pickup Advisor · Week 1', headline: 'Adds', game_id: null },
+                    { slug: 'gr-1', status: 'published', title: 'AAA at BBB · Week 1', headline: 'A game', game_id: '2026-01-aaa-bbb' }];
+    const env = { LEADS_DB: { prepare: (sql) => ({ bind: (...a) => ({ all: async () => {
+      if (!/FROM analyst_calls c LEFT JOIN content_pieces p/.test(sql)) throw new Error('unexpected: ' + sql.slice(0, 40));
+      if (/outcome IS NOT NULL/.test(sql)) throw new Error('the Monday scorecard must not wait for the Tuesday grader');
+      const piece = (slug) => PIECES.find(x => x.slug === slug) || {};
+      return { results: CALLS.filter(c => c.season === a[0] && c.week === a[1] && c.kind !== a[2]).sort((x, y) => x.created_at - y.created_at)
+        .map(c => ({ ...c, piece_title: piece(c.slug).title || null, piece_headline: piece(c.slug).headline || null, piece_game: piece(c.slug).game_id || null })) };
+    } }) }) } };
+    const got = await H.weekPublishedCalls(env, 2026, 1);
+    ok('the week\'s published recommendations come back, one per player per story', got.rows.length === 2 && got.rows.map(r => r.name).join() === 'Stu Story,Gam Erecap', JSON.stringify(got.rows.map(r => r.name)));
+    ok('it does not wait on the ledger\'s Tuesday grader: an ungraded row still comes back', got.rows.every(r => r.ledgerOutcome === null));
+    ok('a hold and a stash are held off the week\'s record entirely', got.held === 2 && !got.rows.some(r => /Hold|Sher/.test(r.name)));
+    ok('the rivalry column is not on this record: it is graded on rank in its own column', !got.rows.some(r => r.kind === H.RIVALRY_COLUMN_KIND));
+    ok('another week is not on it either', !got.rows.some(r => r.name === 'Nex Tweek'));
+    ok('each one names its story, its analyst and a URL that resolves', got.rows[0].story === 'Pickup Advisor' && got.rows[0].analystName === 'Mike Raines' && got.rows[0].url === '/in-season/desk/pickup-advisor/1'
+      && got.rows[1].url === '/in-season/desk/game-recap/1/2026-01-aaa-bbb', JSON.stringify(got.rows.map(r => r.url)));
+    ok('the stories are counted, not the calls', got.stories === 2);
+    ok('a database that is not there is not an error, it is an empty record', (await H.weekPublishedCalls({}, 2026, 1)).rows.length === 0 && (await H.weekPublishedCalls(env, 2026, null)).rows.length === 0);
+  })();
+
+  ok('a story call is settled on the same two numbers a board call is: actual against that week\'s consensus', (() => {
+    const g = H.gradeStoryCall({ direction: 'start' }, 22, 12), b = H.gradeStoryCall({ direction: 'fade' }, 4, 12);
+    const m = H.gradeStoryCall({ direction: 'start' }, 4, 12), p2 = H.gradeStoryCall({ direction: 'start' }, 12.5, 12);
+    return g.outcome === 'hit' && g.margin === 10 && b.outcome === 'hit' && b.margin === 8 && m.outcome === 'miss' && m.margin === -8 && p2.outcome === 'push';
+  })());
+  ok('no box score or no consensus number is not a miss, it is not graded', H.gradeStoryCall({ direction: 'start' }, null, 12) === null && H.gradeStoryCall({ direction: 'start' }, 20, null) === null && H.gradeStoryCall({ direction: 'hold' }, 20, 12) === null);
+
+  // ── the other half: what the STORIES told the reader to do ──────────────
+  // `analyst_calls` holds one row per position a published piece took and
+  // runCallsGrade settles each against the week's actual points. The
+  // scorecard grades those alongside the board's own calls, in one ranked
+  // list, so the Monday piece covers the recommendations a reader acted on
+  // and not only the model's numbers.
+  const rec = (o) => ({ source: 'story', key: o.key, name: o.name, player: o.name, position: o.pos || 'WR', team: o.team || 'AAA',
+    analyst: o.analyst || 'raines', analystName: o.analystName || 'Mike Raines', kind: o.kind || 'pickup-advisor', slug: 's-' + o.name,
+    story: o.story || 'Pickup Advisor', direction: o.dir || 'start', recommendation: o.rec || 'start him', confidence: 'HIGH' });
+
+  // The week's box scores, keyed the way the board keys a player: exactly
+  // what the recaps handed back, and what the story half is graded on.
+  const box = new Map([
+    ['r1|WR', { points: 27, line: 'a line' }], ['r2|RB', { points: 3, line: 'a line' }],
+    ['r3|WR', { points: 2, line: 'a line' }], ['r4|TE', { points: 10.5, line: 'a line' }],
+    ['r5|WR', { points: 30, line: 'a line' }]
+  ]);
+  // ...and that week's consensus numbers for them, off the board the piece
+  // already holds.
+  const wk = { players: [
+    { key: 'r1|WR', consensus: { points: 13 } }, { key: 'r2|RB', consensus: { points: 11 } },
+    { key: 'r3|WR', consensus: { points: 14 } }, { key: 'r4|TE', consensus: { points: 10 } }
+  ] };
+  const ctxS = { ...ctx, week: wk };
+  const recs = { stories: 2, held: 1, rows: [
+    rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }),
+    rec({ key: 'r2|RB', name: 'Fay Fade', pos: 'RB', team: 'CCC', dir: 'fade', rec: 'leave him on the bench', analyst: 'park', analystName: 'Lena Park', kind: 'trade-desk', story: 'The Trade Desk' }),
+    rec({ key: 'r3|WR', name: 'Wes Wrong', team: 'DDD' }),
+    rec({ key: 'r4|TE', name: 'Pip Push', pos: 'TE', team: 'AAA' }),
+    rec({ key: 'r5|WR', name: 'Noc Onsensus', team: 'AAA' })
+  ] };
+  const pr = H.packetCalledItWeek(games, entries, ctxS, recs, box);
+
+  ok('the story recommendations are counted as their own record, beside the board\'s', pr.record.storyCalls === 4 && pr.record.storyHits === 2 && pr.record.storyMisses === 1 && pr.record.storyPushes === 1 && pr.record.storyHitRate === 67 && pr.record.stories === 2, JSON.stringify(pr.record));
+  ok('the board\'s own record is untouched by them', pr.record.games === 2 && pr.record.calls === 4 && pr.record.hits === 3 && pr.record.hitRate === 75);
+  ok('the combined rate leaves the pushes out: a push decided nothing', pr.record.totalCalls === 8 && pr.record.totalHits === 5 && pr.record.totalHitRate === 71, JSON.stringify({ c: pr.record.totalCalls, h: pr.record.totalHits, r: pr.record.totalHitRate }));
+  ok('a hold is held off the record, and a call with no consensus number is counted out rather than scored a miss', pr.record.heldPositions === 1 && pr.record.ungraded === 1);
+  ok('both kinds of win rank in ONE list, on the points the call beat its number by', pr.biggestWins.map(w => w.name).join() === 'Cy Huge,Stu Story,Al Big,Fay Fade,Bo Small', pr.biggestWins.map(w => w.name + ':' + w.margin).join());
+  ok('every win says which kind it is, and a story win names the story and the analyst', (() => {
+    const b = pr.biggestWins.find(w => w.name === 'Cy Huge'), t = pr.biggestWins.find(w => w.name === 'Stu Story');
+    return b.source === 'board' && b.story === null && t.source === 'story' && t.story === 'Pickup Advisor' && t.analystName === 'Mike Raines' && t.recommendation === 'start him';
+  })());
+  ok('a story win carries the numbers that settle it', (() => {
+    const t = pr.biggestWins.find(w => w.name === 'Stu Story');
+    return t.actual === 27 && t.benchmark === 13 && t.margin === 14 && t.outcome === 'hit';
+  })());
+  ok('a story win names the game its player actually played', pr.biggestWins.find(w => w.name === 'Stu Story').game === 'AAA at BBB' && pr.biggestWins.find(w => w.name === 'Fay Fade').game === 'CCC at DDD');
+  ok('a fade that held a player under his number is a win of the size it beat it by', pr.biggestWins.find(w => w.name === 'Fay Fade').margin === 8);
+  ok('the misses mix both kinds too, widest first', pr.misses.map(m => m.name).join() === 'Wes Wrong,Di Miss' && pr.misses[0].source === 'story', pr.misses.map(m => m.name + ':' + m.margin).join());
+  ok('a wrong story call still counts by position', pr.byPosition.WR.misses === 2 && pr.byPosition.RB.hits === 2);
+  ok('the record is broken out by story and by analyst', (() => {
+    const st = pr.byStory.find(x => x.story === 'Pickup Advisor'), a = pr.byAnalyst.find(x => x.analyst === 'Lena Park');
+    return st && st.calls === 3 && st.hits === 1 && st.misses === 1 && st.pushes === 1 && a && a.calls === 1 && a.hits === 1;
+  })());
+  ok('a week with no frozen board anywhere still runs on the stories alone', (() => {
+    const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctxS, recs, box);
+    return !q.skip && q.record.games === 0 && q.record.storyHits === 2 && q.biggestWins.length === 2 && q.biggestWins[0].name === 'Stu Story';
+  })());
+  ok('a week whose only wrong call was a story call still gets a misses section', (() => {
+    const only = { stories: 1, held: 0, rows: [recs.rows[0], recs.rows[2]] };
+    const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctxS, only, box);
+    return H.sectionsFor('what-tuna-got-right', 'weekly', q).includes('whatWeMissed');
+  })());
+  ok('stories that all missed do not make a scorecard either', (() => {
+    const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctxS, { stories: 1, held: 0, rows: [recs.rows[2]] }, box);
+    return q.skip === true && q.reason === 'nothing_landed';
+  })());
+  ok('a call the morning cannot settle is never guessed at', (() => {
+    const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctxS, { stories: 1, held: 0, rows: [recs.rows[4]] }, box);
+    return q.skip === true && q.reason === 'no_record';
+  })());
+  ok('and neither is one with no box-score line at all', (() => {
+    const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctxS, { stories: 1, held: 0, rows: [recs.rows[0]] }, new Map());
+    return q.skip === true && q.reason === 'no_record';
+  })());
+  ok('a big enough story win can lead the piece, and the writer is told it is a story call', (() => {
+    const q = { meta: { kind: 'what-tuna-got-right', analyst: 'mercer', dfsAnalyst: 'park' },
+                ...H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctxS, recs, box) };
+    const v = H._voiceBlock(q);
+    return q.headlineWin.name === 'Stu Story' && q.headlineWin.source === 'story'
+      && /STORY call, not a board call/.test(v) && /Mike Raines published/.test(v) && /Pickup Advisor/.test(v) && /consensus had him at 13 points/.test(v);
+  })());
+  ok('the writer is given both records separately and told to print both', (() => {
+    const v = H._voiceBlock({ meta: { kind: 'what-tuna-got-right', analyst: 'mercer', dfsAnalyst: 'park' }, ...pr });
+    return /BOARD CALLS:/.test(v) && /STORY CALLS:/.test(v) && /3 of 4 landed across 2 games \(75%\)/.test(v)
+      && /2 of 3 decided calls landed \(67%\)/.test(v) && /TOGETHER: 5 of 8 \(71%/.test(v)
+      && /1 published position is not on this record at all/.test(v) && /1 more could not be settled/.test(v) && /source "story"/.test(v);
+  })());
+  ok('the analysts a story win credits are named people for the piece, so the fact check does not hold the draft', (() => {
+    const packet = H._finishBrief({ meta: { kind: 'what-tuna-got-right', lens: 'both', analyst: 'mercer', dfsAnalyst: 'park' }, ...pr });
+    return packet.allowed.names.includes('Mike Raines') && packet.allowed.names.includes('Stu Story');
+  })());
+
   ok('the fact check asks the scorecard for its sections and holds a draft without them', (() => {
     const packet = H._finishBrief({ meta: { kind: 'what-tuna-got-right', lens: 'both', analyst: 'mercer', dfsAnalyst: 'park' }, ...p });
     packet.allowed.analysts = ['Jack Mercer', 'Lena Park'];

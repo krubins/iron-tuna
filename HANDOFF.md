@@ -10264,3 +10264,98 @@ attribute order on the real `player-search.js` in a fake DOM, the figure and
 its credit, the build tool's license and scoring rules on fixtures, and that
 each page loads what it paints from). CI runs it and `node --check
 it-action.js` after the player-links step.
+
+---
+
+## 83. September 17: What Tuna Got Right was blank, and graded half the record
+
+Ken's report: the What Tuna Got Right card on the front page was empty, and
+its footer read "Week 1 · [object Object]". His instruction for the section
+itself: "This section should look at our projections and any stories where
+we made recommendations and compare those to the outcome. We need to flag
+our biggest wins."
+
+Three things were wrong, and only the first was cosmetic.
+
+**The `[object Object]`.** `newsroomFeedPayload` carries `byline` as an
+object (`_bylineOf`: `{analyst, name, role, avatar, dfsAnalyst, dfsName}`),
+and the front page's desk grid printed `esc(p.byline)` whole. The card now
+prints `p.byline.name`. `front.html` was the only page that made this
+mistake; `desk.html` and the analyst pages already read the fields.
+
+**The blank card.** The same grid drew any published row with a `title`,
+falling back to the kind's name for the headline: a row stored without a
+headline painted "What Tuna Got Right" as both the eyebrow and the headline,
+with nothing under it, which tells a reader the desk published and not what
+it said. The grid now requires a real `headline`. Such a row is still in the
+archive and still readable at its URL; it just does not take one of the four
+front-page slots.
+
+**Half the record was never graded.** The piece read `week_board_snapshots`
+only: the board frozen before each kickoff, graded by `_vindication` the way
+each recap grades it. That measures the model's numbers and lets the columns
+off entirely, and in a week where no board was frozen (the freeze job is
+§73, so any earlier week has none) the packet skipped with
+`no_frozen_boards` and the Monday slot went dark.
+
+The desk has always stored the other half. `analyst_calls` holds one row per
+position a published piece took (`recordCalls`, on every publish): start
+him, fade him, spend the FAAB. Those are the recommendations a reader
+actually acted on, and nothing graded them on a Monday.
+
+**The timing, which decides the whole design.** The ledger has its own
+grader, `runCallsGrade`, but it is scheduled Tuesday and Wednesday at 6 AM
+because it reads the weekly usage file, which publishes Tuesday. That is a
+day and a half AFTER the Monday 6 AM scorecard. A Monday piece that waited
+for `outcome` to be filled in would print an empty story record every week
+of the season. So the scorecard grades the recommendations itself, off the
+box scores the recaps already read on Sunday night, and `runCallsGrade`
+goes on settling the ledger for the analyst pages afterwards on its own
+benchmark.
+
+**One benchmark for both halves.** A board call asks "did he finish on our
+side of the consensus number". A story that said start him is asking the
+reader to do the same thing in words, so `gradeStoryCall` settles it the
+same way: actual points against the consensus projection for that week,
+from the board the piece is already holding (on Monday the week rule still
+has `ctx.week` on the played week). A result inside `CALL_PUSH_PTS` (1.5)
+of the number is a push and decides nothing. That is what makes a story win
+and a board win rankable in one list: both are measured in points past the
+same number.
+
+| Piece | What changed |
+|---|---|
+| `packetGameRecap` | returns its `scoredByKey` box-score map, **non-enumerably** so it stays out of the JSON brief and out of the writer's packet. The Monday producer collects it across the week's games, so a recommendation and a board call about the same player can never be settled on different numbers. |
+| `weekPublishedCalls(env, season, week)` | the week's published recommendations, joined to the story that made each one. No `outcome` filter, for the timing reason above. Holds and stashes never come back (`STORY_CALL_HOLDS`: neither makes a claim about one Sunday), nor does a rivalry-column pick, which is graded on rank in its own column. Dedupes on slug + player + direction, because a piece re-produced on its slug files its positions again. |
+| `gradeStoryCall(call, actual, consensus)` | hit / miss / push plus a `margin` **signed in the call's own direction**, so a fade that held a player eight points under the number is a win the size of a buy that beat one by eight. No box-score line or no consensus number returns null: the call is counted out, never scored a miss. `CALL_BULLISH` / `CALL_BEARISH` are now shared sets, so `gradeCall` and this one can never drift apart on which way a direction points. |
+| `packetCalledItWeek(allGames, entries, ctx, recs, scored)` | merges both. Every win carries `source` (`board` or `story`); a story win also carries its `story`, `analystName`, `direction`, `recommendation`, `benchmark` and the matchup its player actually played. `biggestWins` is **one list ranked on margin**, a board call breaking a tie because it carried a rank gap as well as a points gap. `misses` mixes both the same way. |
+| `record` | three blocks, never one blended number: the board's (`games`, `calls`, `hits`, `hitRate`), the stories' (`storyCalls`, `storyHits`, `storyMisses`, `storyPushes`, `storyHitRate`, `stories`, plus `heldPositions` and `ungraded`, which are named rather than dropped), and the total, whose rate leaves the pushes out. Plus `byStory` and `byAnalyst`. |
+| the skip gates | `no_frozen_boards` is gone. `no_record` means **neither** half had anything; `nothing_landed` means calls were made and none landed. Both now carry `looked` (`games`, `boardCalls`, `storyCalls`, `storyRows`, `ungraded`, `held`), stored on the skipped row: a dark Monday is otherwise indistinguishable from a broken one. |
+| `CONDITIONAL_SECTIONS` | the misses section is gated on the `misses` list, not the board's count: a week whose only wrong calls were in the stories still owes the reader a misses section. |
+| `_voiceBlock` | gives the writer both records separately and makes it print both, tells it which fields belong to which `source`, and builds the YOU'RE WELCOME sentence from the fields the winning kind actually has. Handing the writer the board's half for a story win is how a scorecard invents a call. |
+| `buildResearchPacket` | pushes the analysts a story win credits into `allowed.analysts`. Without it the fact check held the draft for naming the colleague the packet itself put on the board. |
+| `biggestWins` / `whatWeMissed` | two new fields, `source` and `calledIn`. `desk.html` renders object sections from their own keys, so the columns appear with no page change. |
+| `analyst_calls` | `runCallsGrade` now also stores `outcome_actual`, `outcome_projected` and `outcome_margin` (columns added through `newsroomReady`'s ALTER loop). The scorecard does not read them; the ledger and the analyst pages get numbers instead of a margin parsed back out of `outcome_note` prose. |
+
+**Tests.** `tools/test-newsroom.mjs` (295, up 30): `weekPublishedCalls`
+against a fake D1, including that it must NOT filter on `outcome`; the
+grader on both directions, the push band and the two ways a call is not
+gradable; the story record beside the board's with neither contaminating the
+other; the combined rate excluding pushes; the single ranked list across
+both kinds; a story win naming its story, analyst, game and numbers; a fade
+counted as the win it is; mixed misses; the per-story and per-analyst
+breakouts; a week that runs on the stories alone with no frozen board
+anywhere; the misses section earned by a story miss; both skip reasons; a
+call with no consensus number and one with no box score, neither guessed at;
+a story win leading the piece with the writer told it is a story call; and
+the analysts allowed through the fact check. `tools/test-dry-run.mjs` (96)
+serves the new query and checks the scorecard reaches the ledger and that a
+skip names what it looked at in both halves.
+
+**Known gap.** The dry run's fixture box scores do not share keys with its
+board, so neither half produces a graded call there and the Week 1 scorecard
+skips `nothing_landed` with `boardCalls: 0`. That predates this work (the
+board half was already producing zero calls) and is a fixture limitation,
+not a code path: the grading itself is covered by the unit tests above, with
+explicit box scores and consensus numbers. Giving the dry-run fixture
+overlapping names would let it cover the whole Monday end to end.
