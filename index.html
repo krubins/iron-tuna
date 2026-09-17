@@ -8529,6 +8529,10 @@ function loadTesseract() {
 function parseScoringText(text) {
   const sc = {};
   const items = [];
+  // Kept inside the function: /it-inseason-import.js is a port of this parser
+  // and tools/test-inseason-league.mjs lifts this function whole to compare the
+  // two, so anything it depends on has to come with it.
+  const TE_SCORING_LINE = /\b(te|tes|tight ?ends?)\b/;
   const lines = (text || '').split(/\n|;|•|\|/).map(l => l.trim()).filter(Boolean);
   const numIn = s => {
     const m = s.match(/-?\d+(?:\.\d+)?/);
@@ -8579,7 +8583,12 @@ function parseScoringText(text) {
       const v = yppFrom(l);
       if (v) set('receivingYardsPerPoint', v, 'Receiving yds/pt');
     }
-    if (/(reception|per catch|points? per reception)/.test(l) && !/(yards?|yds?)/.test(l)) {
+    // A tight-end line is NOT the league-wide reception value: "TEs get 1.5
+    // per catch", read as one, pays every running back and receiver 1.5 a
+    // catch off a tight-end rule. The app does not model the bonus, so the
+    // line is left alone; the in-season port reads it into extras.tePremium
+    // (it-inseason-import.js, parseTePremium). Change the two together.
+    if (TE_SCORING_LINE.test(l)) { /* a tight-end premium, which this form has no field for */ } else if (/(reception|per catch|points? per reception)/.test(l) && !/(yards?|yds?)/.test(l)) {
       const n = numIn(l);
       if (n != null && Math.abs(n) <= 2) {
         if (/\brb\b|running ?back/.test(l)) set('rbReceptionPoints', n, 'RB reception');else set('receptionPoints', n, 'Reception');

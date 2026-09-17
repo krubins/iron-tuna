@@ -10264,3 +10264,366 @@ attribute order on the real `player-search.js` in a fake DOM, the figure and
 its credit, the build tool's license and scoring rules on fixtures, and that
 each page loads what it paints from). CI runs it and `node --check
 it-action.js` after the player-links step.
+
+## 83. September 17: pictures on the homepage, and a runner that can actually fetch them
+
+**The ask.** Action pictures from games, and more visuals on the front page.
+
+**What the front page looked like.** The September 2026 rewrite (§81, and
+`d52c82f`) cut `/` from 463 KB to 51 KB and, in doing so, took every picture
+off it: `grep -c '<img' front.html` returned **0**. The lead band with its
+photo plates, the faces beside Top Headlines and the `it-action.js` load all
+went with the modules they hung on. The only images on the page were the ones
+`player-search.js` added on its own, to the disagreement table, at 34px.
+
+### The homepage's three pictures
+
+All three follow the page's own rule — a band is either full of real current
+data or it is hidden — so a quiet feed leaves the page shorter, never a frame
+with nothing in it.
+
+- **The hero's picture** (`#heroEdge`, painted by `heroPaint`). One player,
+  photographed, beside the headline. Who he is comes off a feed: the player
+  the desk's newest piece is about (`/api/content`, `components[].player`),
+  else the widest market disagreement on this week's board
+  (`/api/vegas-edge`). The desk wins outright and replaces a market subject
+  that painted first. The **fallback** skips the player the Fantasy card
+  already recommends; a desk subject is not filtered that way, because the
+  desk writing about him today is a second fact, not a repeat.
+  - `.hm-hero` is ONE column until `has-edge` is set, so an unfilled hero is
+    exactly the hero this page had before rather than a headline with an empty
+    gutter beside it. The h1 (19ch) and lede (62ch) are capped, so neither
+    reflows when the column narrows.
+  - It is an `<aside>`, not a `<section>`: the page's five sections are its
+    outline and `tools/test-homepage.mjs` asserts that order.
+- **A face on each card's one reading** (`readPic`, `.hm-read.has-pic`).
+  Headshot only, never a game photograph: at 58px a photograph is unreadable
+  and would owe a credit line longer than the reading beside it.
+- **Faces on the desk's cards.** `data-player-focus` on each `.hm-read-card`,
+  from the players that piece's findings name — the same stamp the Desk's own
+  feed uses. They sit on their OWN row above the headline
+  (`.hm-read-card h3 .it-story-focus{display:flex}`); set inline they push the
+  first line of type around them and the headline reads as if it starts
+  mid-sentence.
+- The disagreement table's faces went **34px → 48px** (back to 34px on a
+  phone, where that column has to stay narrow inside `.hm-scroll`).
+
+### `ITPlayerSearch.plate(p, opts)`
+
+New in `player-search.js`: one player, one rectangle, at whatever shape the
+caller's CSS asks for. Game photograph → headshot cutout → initials. It is not
+`storyArt()`, which is a figure ABOUT a story with the whole cast named under
+it; this is one face where the page has already written who it is.
+
+**The credit follows the picture that loaded, not the one that was asked for.**
+Only the Commons photograph carries a license obligation, so the caption is
+attached on `onload` when that source is the one on screen and dropped the
+moment the image falls back to a headshot. A credit naming a photographer
+under somebody else's cutout would be worse than none. `opts.photo === false`
+skips the photograph entirely, which is what the 58px card readings pass.
+
+### The photographs themselves: `.github/workflows/action-shots.yml`
+
+`tools/build-action-shots.mjs` shipped in §82 with an **empty lookup**, because
+the Claude Code sessions this repo is developed from run behind an egress
+policy that refuses `commons.wikimedia.org` and `www.wikidata.org` with a 403
+on CONNECT. Every image host is refused there, including `a.espncdn.com` and
+`static.www.nfl.com` that the site already hot-links. The tool could be written
+in that session and never run in it.
+
+A GitHub runner has ordinary outbound internet, so that is where it runs:
+
+- **Monthly** (`0 9 1 * *`) and on `workflow_dispatch`, with `limit`, `only`
+  and `refresh` inputs.
+- **Incremental by design.** The tool skips any player already on file unless
+  `--refresh`, so each run picks up where the last stopped; the default is 400
+  players a run, which walks the ~1,260-player pool in three or four passes
+  rather than one enormous diff.
+- It runs `tools/test-story-art.mjs` **before** proposing anything, so a file
+  that fails the license or credit rules fails the run.
+- It **opens a pull request**, never pushes to main: what it changes is a
+  thousand rows of third-party URLs and license strings, and a wrong row is a
+  picture of the wrong man.
+
+Until a run lands the lookup stays empty, every plate falls back to a headshot,
+and nothing breaks. That is the resting state, not an outage.
+
+### Tests
+
+- `tools/test-homepage.mjs` — **85 checks** (was 68). The hero's picture is
+  asserted on the PLATE and the caption, never on a loaded `<img>`: the photo
+  hosts are third-party and a runner may or may not reach them, and falling
+  back to initials is exactly the behaviour that has to survive. New: the desk
+  subject wins; with no desk subject it falls back to the widest gap and never
+  to the Fantasy card's player; with every feed refusing the picture is absent
+  and the hero is back to one column. The `CONTENT` fixture gained
+  `components`, which is what the desk cards draw faces from.
+- `tools/test-story-art.mjs` — 62 checks. Two assertions that encoded "the
+  rewrite took the pictures off the homepage" were **replaced**, not removed:
+  front.html is back on the list that must load `/it-action.js` before
+  `player-search.js`, and the three homepage pictures are asserted directly.
+
+**Verified in Chromium** at 1280px and 390px, both feeds answering and both
+refusing: no page errors, no sideways scroll at either width. What could NOT
+be verified here is how the photographs themselves crop, because every image
+host is blocked in this environment — the plates rendered as initials. ESPN's
+cutouts are 350×254, so the hero's 4:3 box is close to their native ratio and
+`object-fit:cover` only crops, never distorts; check it on the branch preview
+once a run has filled the lookup.
+
+## 84. September 17: the first live photograph run, and the row that was a picture of somebody else
+
+**What happened.** `.github/workflows/action-shots.yml` (§83) ran for the first
+time against 400 players. The lookup worked, the license gate passed, and it
+resolved **115 photographs** — then the last step failed, because this
+repository does not let Actions open pull requests:
+
+```
+pull request create failed: GraphQL: GitHub Actions is not permitted to
+create or approve pull requests (createPullRequest)
+```
+
+The branch was already pushed, so nothing was lost. **It was not merged**, and
+reading the data is why.
+
+### A Commons category is a filing cabinet, not a caption
+
+The tool took the best-scoring landscape file out of each player's Commons
+category. **54% of the rows had a file title that never named the player**, and
+several were plainly wrong:
+
+| Row | File it chose | What that actually is |
+|---|---|---|
+| `austin-hooper` | `Chiefs vs Titans TE Chigoziem Okonkwo.png` | a different tight end |
+| `antonio-gibson` | `Sam Howell scramble Cardinals vs Commanders` | a team-mate |
+| `aidan-o-connell` | `Salute to Service Boot Camp … Airmen` | not football |
+| `amari-cooper` | `Cleveland Browns Visit NASA Glenn` | a facility tour |
+| `austin-ekeler` | `Commanders Training Camp` | not a game |
+
+These would have run in the **homepage hero**, full width, under the player's
+name. The doc that shipped with the workflow said "a wrong row is a picture of
+the wrong man"; this is what that looks like.
+
+### `depicts(file, player)`
+
+A file now needs evidence of one of exactly two kinds before it is used:
+
+1. it **is** the entity's Wikidata image (P18) — a person chose that file as
+   the picture OF this person; or
+2. its **title names him** (surname as a whole word, suffix-insensitive, and a
+   surname under four letters is too weak to match a filename on).
+
+Everything else is discarded **even when it is probably fine**. A generic
+fixture photograph filed under his category probably does show him, and
+"probably" is not good enough for a picture above the fold. `NOT_ACTION` also
+grew to drop visits, tours, training camp, practice, media day, mini-camp,
+OTAs, charity and military events.
+
+Each row now carries `why` (`p18` or `named`) so a reviewer sees the evidence
+in the diff. `emitJs()` strips it; it never reaches a browser.
+
+**The cost.** Replaying the rule over that run's own output keeps **46 of 115**
+on the title test alone, plus whatever P18 adds back. Fewer photographs, each
+one defensible. That is the right way round.
+
+### The workflow no longer dies on the last click
+
+`gh pr create` is now guarded. If Actions is forbidden from opening pull
+requests, the run emits a `::warning::` and a job summary carrying the
+compare URL and the setting to flip (*Settings → Actions → General → Allow
+GitHub Actions to create and approve pull requests*), and exits 0 — the branch
+is pushed and the work is safe, and losing a 15-minute run over a permission
+checkbox is the wrong answer.
+
+### Tests
+
+`tools/test-story-art.mjs` — **79 checks** (was 62). The whole depiction
+section is written from rows that run actually produced, including all five in
+the table above, so the regression is pinned to real data rather than invented
+fixtures.
+
+## 85. September 17: the run that rate-limited itself, and the budget it wasted
+
+The first run under the depiction rule (§84) came back:
+
+```
+looked up 400: 23 photographs, 71 without, 306 failed
+it-action.js: 10 players with a game photograph
+```
+
+Two separate faults, both in the tool.
+
+### 1. A fixed pause is not a rate limit, it is a hope
+
+Wikidata began answering `429` after about ninety players, and every request
+after that failed **instantly** — the old `api()` threw on any non-OK status,
+the caller counted it and moved on, and the run spent three quarters of its
+budget hammering a service that had already told it to stop. A 250ms sleep
+between calls is not a rate limit.
+
+`api()` now retries `429` and `5xx`, honours `Retry-After` when the server
+sends a sane one, and backs off exponentially with jitter. The pause is
+**module state** (`PAUSE`, 250ms–4s) rather than a constant, because the
+service throttles the CLIENT and not the request: one slow answer slows the
+whole run, and it decays back down as calls succeed. A `404` is still thrown
+immediately — that will not improve with time.
+
+A run that loses more than a quarter of its lookups now prints a
+`::warning::`, because 23 photographs from a run that mostly failed used to
+look exactly like 23 photographs from a run that worked.
+
+### 2. It spent the budget on players who can never appear
+
+`emitJs()` ships only the players `player-search.js` indexes — the pool the
+site prices. The lookup walked the ~1,260-name headshot release
+**alphabetically**, so of 23 photographs it found, **10** reached the browser.
+The rest were fringe names that `emitJs()` drops.
+
+`orderPool()` sorts the priced pool to the front, alphabetical within each
+group so a resumed run is still predictable. A capped run now buys as many
+usable pictures as it can.
+
+### What is on the site
+
+`bot/action-shots-20260917-0349` carried the 23 valid rows and was merged as
+its own pull request. Every row in it passes the depiction rule; the four
+players who had a photograph under the old generous rule and lost it
+(`alexander-mattison`, `antonio-gibson`, `anthony-firkser`, `baker-mayfield`)
+are the rule working.
+
+The lookup is incremental, so the next run continues from there rather than
+repeating it. Fill the rest by dispatching **Game photographs** again; it is
+safe to run repeatedly.
+
+### Still open for the owner
+
+**Actions cannot open pull requests in this repository.** Both runs pushed
+their branch and then failed on `gh pr create`; both pull requests were opened
+by hand. Enable *Settings → Actions → General → Allow GitHub Actions to create
+and approve pull requests* and the monthly run becomes unattended.
+
+---
+
+## 86. September 17: What Tuna Got Right was blank, and graded half the record
+
+Ken's report: the What Tuna Got Right card on the front page was empty, and
+its footer read "Week 1 · [object Object]". His instruction for the section
+itself: "This section should look at our projections and any stories where
+we made recommendations and compare those to the outcome. We need to flag
+our biggest wins."
+
+Three things were wrong, and only the first was cosmetic.
+
+**The `[object Object]`.** `newsroomFeedPayload` carries `byline` as an
+object (`_bylineOf`: `{analyst, name, role, avatar, dfsAnalyst, dfsName}`),
+and the front page's desk grid printed `esc(p.byline)` whole. The card now
+prints `p.byline.name`. `front.html` was the only page that made this
+mistake; `desk.html` and the analyst pages already read the fields.
+
+**The blank card.** The same grid drew any published row with a `title`,
+falling back to the kind's name for the headline: a row stored without a
+headline painted "What Tuna Got Right" as both the eyebrow and the headline,
+with nothing under it, which tells a reader the desk published and not what
+it said. The grid now requires a real `headline`. Such a row is still in the
+archive and still readable at its URL; it just does not take one of the four
+front-page slots.
+
+**Half the record was never graded.** The piece read `week_board_snapshots`
+only: the board frozen before each kickoff, graded by `_vindication` the way
+each recap grades it. That measures the model's numbers and lets the columns
+off entirely, and in a week where no board was frozen (the freeze job is
+§73, so any earlier week has none) the packet skipped with
+`no_frozen_boards` and the Monday slot went dark.
+
+The desk has always stored the other half. `analyst_calls` holds one row per
+position a published piece took (`recordCalls`, on every publish): start
+him, fade him, spend the FAAB. Those are the recommendations a reader
+actually acted on, and nothing graded them on a Monday.
+
+**The timing, which decides the whole design.** The ledger has its own
+grader, `runCallsGrade`, but it is scheduled Tuesday and Wednesday at 6 AM
+because it reads the weekly usage file, which publishes Tuesday. That is a
+day and a half AFTER the Monday 6 AM scorecard. A Monday piece that waited
+for `outcome` to be filled in would print an empty story record every week
+of the season. So the scorecard grades the recommendations itself, off the
+box scores the recaps already read on Sunday night, and `runCallsGrade`
+goes on settling the ledger for the analyst pages afterwards on its own
+benchmark.
+
+**One benchmark for both halves.** A board call asks "did he finish on our
+side of the consensus number". A story that said start him is asking the
+reader to do the same thing in words, so `gradeStoryCall` settles it the
+same way: actual points against the consensus projection for that week,
+from the board the piece is already holding (on Monday the week rule still
+has `ctx.week` on the played week). A result inside `CALL_PUSH_PTS` (1.5)
+of the number is a push and decides nothing. That is what makes a story win
+and a board win rankable in one list: both are measured in points past the
+same number.
+
+| Piece | What changed |
+|---|---|
+| `packetGameRecap` | returns its `scoredByKey` box-score map, **non-enumerably** so it stays out of the JSON brief and out of the writer's packet. The Monday producer collects it across the week's games, so a recommendation and a board call about the same player can never be settled on different numbers. |
+| `weekPublishedCalls(env, season, week)` | the week's published recommendations, joined to the story that made each one. No `outcome` filter, for the timing reason above. Holds and stashes never come back (`STORY_CALL_HOLDS`: neither makes a claim about one Sunday), nor does a rivalry-column pick, which is graded on rank in its own column. Dedupes on slug + player + direction, because a piece re-produced on its slug files its positions again. |
+| `gradeStoryCall(call, actual, consensus)` | hit / miss / push plus a `margin` **signed in the call's own direction**, so a fade that held a player eight points under the number is a win the size of a buy that beat one by eight. No box-score line or no consensus number returns null: the call is counted out, never scored a miss. `CALL_BULLISH` / `CALL_BEARISH` are now shared sets, so `gradeCall` and this one can never drift apart on which way a direction points. |
+| `packetCalledItWeek(allGames, entries, ctx, recs, scored)` | merges both. Every win carries `source` (`board` or `story`); a story win also carries its `story`, `analystName`, `direction`, `recommendation`, `benchmark` and the matchup its player actually played. `biggestWins` is **one list ranked on margin**, a board call breaking a tie because it carried a rank gap as well as a points gap. `misses` mixes both the same way. |
+| `record` | three blocks, never one blended number: the board's (`games`, `calls`, `hits`, `hitRate`), the stories' (`storyCalls`, `storyHits`, `storyMisses`, `storyPushes`, `storyHitRate`, `stories`, plus `heldPositions` and `ungraded`, which are named rather than dropped), and the total, whose rate leaves the pushes out. Plus `byStory` and `byAnalyst`. |
+| the skip gates | `no_frozen_boards` is gone. `no_record` means **neither** half had anything; `nothing_landed` means calls were made and none landed. Both now carry `looked` (`games`, `boardCalls`, `storyCalls`, `storyRows`, `ungraded`, `held`), stored on the skipped row: a dark Monday is otherwise indistinguishable from a broken one. |
+| `CONDITIONAL_SECTIONS` | the misses section is gated on the `misses` list, not the board's count: a week whose only wrong calls were in the stories still owes the reader a misses section. |
+| `_voiceBlock` | gives the writer both records separately and makes it print both, tells it which fields belong to which `source`, and builds the YOU'RE WELCOME sentence from the fields the winning kind actually has. Handing the writer the board's half for a story win is how a scorecard invents a call. |
+| `buildResearchPacket` | pushes the analysts a story win credits into `allowed.analysts`. Without it the fact check held the draft for naming the colleague the packet itself put on the board. |
+| `biggestWins` / `whatWeMissed` | two new fields, `source` and `calledIn`. `desk.html` renders object sections from their own keys, so the columns appear with no page change. |
+| `analyst_calls` | `runCallsGrade` now also stores `outcome_actual`, `outcome_projected` and `outcome_margin` (columns added through `newsroomReady`'s ALTER loop). The scorecard does not read them; the ledger and the analyst pages get numbers instead of a margin parsed back out of `outcome_note` prose. |
+
+**One row per player.** Four stories can make the same call on the same back
+and the board can have made it too. The first dry run that could grade
+anything duly produced a list of the biggest wins that was Cal Runner four
+times at the same margin. That is one win with four pieces of evidence, not
+four wins: `collapse` keeps one row per player, the loudest claim leading,
+with `callCount` and `alsoCalledIn` naming the rest, and the writer is told
+never to give a player a second row. The RECORD still counts every published
+position, because the desk published them.
+
+**The dry-run fixture covers the whole Monday now.** It could not before, and
+the reason was worth finding: three separate things in the fixture made a
+graded call impossible, so the Monday piece could only ever skip.
+
+| What was wrong | What it broke |
+|---|---|
+| The box score is a real DAL-PHI fixture with only the club abbreviations renamed, so it was full of real players the fixture board has never heard of. `_boardRowFor` matches a box-score line to a board row on the normalized name and the club. | Not one line found a row. `scoredByKey` came back empty for every game, so `_vindication` had nothing to grade the frozen projections against and the story half had no actual points either. `renameAthletes` now maps both sides onto each club's five pool players by role, and the rest onto names the board does not carry, because a real box score lists those too. |
+| Every game was spread 3, total 46. The consensus board is a flat per-game share and the Vegas board prices the week's environment. | An identical environment in every game made the two boards identical to the tenth of a point, so nothing could clear the "called it" gate. `LINES` now gives the slate one shootout, one rock fight and a range between. |
+| The pool was spaced far enough apart that no shift the market could produce moved a player four places inside his position, which is half the gate. | Same result from the other side. The pool is packed now, still without ties. |
+| The shootout was between the two top-projected clubs. | The top-ranked quarterback has nowhere to climb, so the high-total games produced no calls and the low-total ones produced only hits. The lower clubs get the shootout now, which is what makes the board half take a loss as well as a win. |
+
+That fixture's Week 1 Monday now grades 3 board calls (2 hits, 1 miss) and
+11 story calls across 13 stories (7 hits, 4 misses), ranks them into one
+list that mixes both, collapses a back called by four stories into one row,
+writes all four sections including the misses, and passes the fact check.
+Alan Quarter lands on it twice over, as a board win and a story miss: the
+numbers said he would fall short of his ranking and a column said start him,
+and the board was right. That is the piece doing its job.
+
+**Tests.** `tools/test-newsroom.mjs` (298, up 33): `weekPublishedCalls`
+against a fake D1, including that it must NOT filter on `outcome`; the
+grader on both directions, the push band and the two ways a call is not
+gradable; the story record beside the board's with neither contaminating the
+other; the combined rate excluding pushes; the single ranked list across
+both kinds; the per-player collapse, both for one player called by three
+stories and for one the board and a story were both right about; a story win
+naming its story, analyst, game and numbers; a fade counted as the win it
+is; mixed misses; the per-story and per-analyst breakouts; a week that runs
+on the stories alone with no frozen board anywhere; the misses section
+earned by a story miss; both skip reasons; a call with no consensus number
+and one with no box score, neither guessed at; a story win leading the piece
+with the writer told it is a story call; and the analysts allowed through
+the fact check.
+
+`tools/test-dry-run.mjs` (110, up 15) asserts the Monday as a PUBLISHED
+piece rather than an allowed skip, which is the point of the fixture work: a
+fixture that can only ever skip cannot tell you the Monday works. It checks
+both halves graded and each took a loss as well as a win, the combined
+record, the mixed and margin-ordered win list, the source and numbers on
+every row, one row per player with the repeats named, mixed misses, the
+per-story and per-analyst breakouts, the biggest win leading, all four
+sections written with the misses among them, the DFS lens off the same
+packet, and the fact check clean. Removing the collapse, disabling the story
+half or blinding the board half each fails it.

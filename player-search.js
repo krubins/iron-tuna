@@ -197,7 +197,19 @@
       + '.it-art-meta{display:flex;flex-direction:column;min-width:0}'
       + '.it-art-meta b{font-size:13.5px;line-height:1.15;color:var(--text,#101317)}'
       + '.it-art-meta span{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;'
-      + 'color:var(--muted,#738087);margin-top:2px}';
+      + 'color:var(--muted,#738087);margin-top:2px}'
+      // One player, one rectangle (plateEl). The shape is the caller's: this
+      // only says the picture fills whatever box it is given. A headshot is a
+      // cutout of a head, so it sits high in the frame; a game photograph is a
+      // photograph and sits where photographs sit.
+      + '.it-plate{margin:0;position:relative;min-width:0}'
+      + '.it-plate-shot{position:relative;display:grid;place-items:center;overflow:hidden;width:100%;height:100%;'
+      + 'border-radius:inherit;background:var(--elev,#edf1f2)}'
+      + '.it-plate-shot>*{grid-area:1/1}'
+      + '.it-plate-shot img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block}'
+      + '.it-plate.action .it-plate-shot img{object-position:50% 30%}'
+      + '.it-plate-shot i{font-style:normal;font-weight:800;font-size:18px;letter-spacing:.02em;color:var(--muted,#738087)}'
+      + '.it-plate .it-art-credit{margin:6px 0 0}';
     doc.head.appendChild(s);
   }
 
@@ -397,6 +409,63 @@
     cap.appendChild(doc.createTextNode(', via Wikimedia Commons' + (shot.a ? '; cropped to fit.' : '.')));
     return cap;
   }
+  // ── one player, one rectangle ─────────────────────────────────────────────
+  // A picture of a single man, at whatever shape the caller's CSS asks for:
+  // his game photograph when /it-action.js has one, his headshot cutout when
+  // it does not, his initials when neither image loads. The homepage's hero
+  // panel and its two lane readings are built on this.
+  //
+  // It is NOT storyArt(): that is a figure about a story, with the whole cast
+  // named underneath. This is one face where the page has already written who
+  // it is, so it carries no names of its own and never guesses at a subject.
+  //
+  // THE CREDIT FOLLOWS THE PICTURE THAT LOADED, not the one that was asked
+  // for. Only the Commons photograph carries a license obligation, so the
+  // caption is attached when that source is the one on screen and dropped the
+  // moment the image falls back to a headshot — a credit naming a
+  // photographer under somebody else's cutout would be worse than none.
+  function plateEl(p, opts) {
+    opts = opts || {};
+    if (!p) return null;
+    ensureFocusStyle();
+    var doc = root.document;
+    var fig = doc.createElement('figure');
+    fig.className = 'it-plate' + (opts.cls ? ' ' + opts.cls : '');
+    var shot = opts.photo === false ? null : action(p.k);
+    var box = doc.createElement('span');
+    box.className = 'it-plate-shot';
+    var ini = doc.createElement('i');
+    ini.textContent = initials(p.n).toUpperCase();
+    box.appendChild(ini);
+    var srcs = [];
+    if (shot) srcs.push(shot.u);
+    if (p.e) srcs.push(ESPN + p.e + '.png');
+    if (p.h) srcs.push(NFL + p.h);
+    var credit = shot ? creditEl(shot) : null;
+    if (srcs.length) {
+      var img = doc.createElement('img'), at = 0;
+      img.alt = opts.alt != null ? opts.alt : (p.n + (p.t ? ', ' + p.t : ''));
+      img.decoding = 'async';
+      if (!opts.eager) img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
+      img.onload = function () {
+        var live = !!shot && at === 0;
+        // `action` on the figure is what tells the page's own CSS it may use
+        // the wider, photographic crop rather than the head-and-shoulders one.
+        if (live) fig.classList.add('action'); else fig.classList.remove('action');
+        if (credit) { if (live) fig.appendChild(credit); else credit.remove(); }
+      };
+      img.onerror = function () {
+        if (++at < srcs.length) img.src = srcs[at];
+        else { img.remove(); if (credit) credit.remove(); }
+      };
+      img.src = srcs[0];
+      box.appendChild(img);
+    }
+    fig.appendChild(box);
+    return fig;
+  }
+
   // The art for one story: the first named player's game photograph when the
   // map has one, then the faces of everyone the story is about, each a link
   // to his card. With no photograph the figure is the row of faces alone —
@@ -941,6 +1010,7 @@
     castOf: castOf,
     action: action,
     storyArt: storyArt,
+    plate: plateEl,
     href: href,
     fold: fold,
     mount: mount,

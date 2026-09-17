@@ -160,6 +160,15 @@
       budget: Math.max(1, Math.round(num(raw && raw.budget, num(snap && snap.budget, DEFAULT_BUDGET)))),
       format: (raw && raw.format) || (snap && snap.format) || 'auction',
       scoring: scoring,
+      // The roster the app was set up with, passed through as saved. qbPremium
+      // below has always read it off `raw` for its own question; publishing it
+      // is what lets the in-season settings form copy a league across instead of
+      // asking a reader who already built a cheat sheet to type it twice
+      // (it-inseason-import.js, fromDraftApp). Null when nothing is saved —
+      // a snapshot carries no roster shape, and inventing one here would put a
+      // lineup in front of a reader that they never chose.
+      roster: (raw && raw.roster && typeof raw.roster === 'object') ? raw.roster : null,
+      flex: (raw && raw.flex && typeof raw.flex === 'object') ? raw.flex : null,
       // The Vegas slider. It was dropped here for months while sitting in the
       // saved config the line above already reads, so every number this library
       // quoted a reader was at a weighting they had not chosen. It only decides

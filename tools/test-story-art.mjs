@@ -28,7 +28,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { licenseOk, scoreFile, pickShot, chooseEntity, positionMatches, stripHtml, emitJs, rowFor } from './build-action-shots.mjs';
+import { licenseOk, scoreFile, pickShot, chooseEntity, positionMatches, stripHtml, emitJs, rowFor, depicts, orderPool, cleanUrl } from './build-action-shots.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -305,6 +305,90 @@ console.log('\nthe build tool');
   ok('pickShot answers null when nothing is usable', pickShot([file('File:Tall.jpg', 800, 1200, 2025)]) === null);
   ok('HTML in the artist field is stripped', stripHtml('<a href="//x">Keith Allison</a> from Hanover, MD, USA') === 'Keith Allison from Hanover, MD, USA');
 }
+
+// ── the depiction rule, written from what the first live run got wrong ─────
+// A player's Commons CATEGORY is a filing cabinet, not a claim about who is in
+// a picture. The 2026-09-17 run took the best-scoring landscape file out of
+// each category and 54% of its rows had a title that never mentioned the
+// player — including a photograph of a different tight end under Austin
+// Hooper's name. Every case below is a row that run actually produced.
+console.log('\nwhether the file is a picture of this man');
+{
+  const P = (n) => ({ k: 'x', n, p: 'WR' });
+  const F = (title, curated) => ({ title: 'File:' + title, curated: !!curated, w: 1200, h: 800, year: 2024,
+                                   meta: { LicenseShortName: { value: 'CC BY-SA 2.0' } } });
+  ok('the entity’s own Wikidata image is trusted outright',
+     depicts(F('Anything at all.jpg', true), P('Austin Hooper')));
+  ok('a file whose title names him is trusted',
+     depicts(F('Adam Thielen (38373209001).jpg'), P('Adam Thielen')));
+  ok('...including when others are named alongside him',
+     depicts(F('Aaron Rodgers & Aaron Jones Packers-Commanders OCT2023.jpg'), P('Aaron Jones')));
+  ok('...and when his name carries a suffix the filename drops',
+     depicts(F('092323 LSU vs Arkansas Brian Thomas.jpg'), P('Brian Thomas Jr.')));
+  // The three that shipped wrong.
+  ok('a photograph whose title names a DIFFERENT player is refused',
+     !depicts(F('Chiefs vs Titans TE Chigoziem Okonkwo.png'), P('Austin Hooper')));
+  ok('...and one whose subject is a team-mate',
+     !depicts(F('Sam Howell scramble Cardinals vs Commanders SEPT2023.jpg'), P('Antonio Gibson')));
+  ok('a generic fixture photograph out of his category is refused',
+     !depicts(F('Washington Commanders at Philadelphia Eagles (52510560186).jpg'), P('A.J. Brown')));
+  ok('a surname too short to match a filename on is refused',
+     !depicts(F('Bills vs Jets SEP2023.jpg'), P('Stefon Diggs')) && !depicts(F('Titans at Broncos 1.png'), P('Bo Nix')));
+  ok('the surname must be a whole word, not a fragment',
+     !depicts(F('Brownsville High 2019.jpg'), P('Marquise Brown')));
+
+  // And the events a category collects that are not football at all.
+  for (const t of ['Salute to Service Boot Camp challenges Creech and Nellis Airmen.jpg',
+                   'Cleveland Browns Visit NASA Glenn (GRC-2023-C-03813).jpg',
+                   'Commanders Training Camp - 54752501674.jpg',
+                   'Atlanta-falcons-visit 52305534772 o.jpg']) {
+    ok(`not a game: ${t.slice(0, 44)}`, scoreFile({ ...F(t, true) }, P('Any Player')) < 0);
+  }
+
+  // scoreFile only applies the rule when it is given a player, so the shape
+  // and license tests above still read as they did.
+  const generic = F('Washington Commanders at Philadelphia Eagles.jpg');
+  ok('scoreFile with no player still scores shape and license alone', scoreFile(generic) > 0);
+  ok('scoreFile with a player refuses what he is not in', scoreFile(generic, P('A.J. Brown')) < 0);
+  ok('pickShot passes the player through',
+     pickShot([generic, F('A.J. Brown catches one.jpg')], P('A.J. Brown')).title === 'File:A.J. Brown catches one.jpg');
+  ok('...and answers null when nothing is evidently him',
+     pickShot([generic], P('A.J. Brown')) === null);
+}
+
+// ── spending a capped run on players who can actually appear ───────────────
+// The 2026-09-17 run walked the headshot release alphabetically, resolved 23
+// photographs, and only 10 of them reached the browser — the rest were players
+// the site does not price, which emitJs() drops. A capped run has to buy usable
+// pictures, not alphabetical ones.
+console.log('\nwhich players a capped run spends itself on');
+{
+  const raw = [{ k: 'zeta-nobody' }, { k: 'alpha-nobody' }, { k: 'zeta-star' }, { k: 'alpha-star' }];
+  const order = orderPool(raw, new Set(['alpha-star', 'zeta-star'])).map(p => p.k);
+  ok('the players the site prices are looked up first',
+     order.join(',') === 'alpha-star,zeta-star,alpha-nobody,zeta-nobody', order.join(','));
+  ok('and it is stable, so a resumed run is predictable',
+     orderPool(raw, new Set(['alpha-star', 'zeta-star'])).map(p => p.k).join(',') === order.join(','));
+  ok('an empty priced set still returns every player', orderPool(raw, new Set()).length === raw.length);
+  ok('it does not mutate what it is given', raw[0].k === 'zeta-nobody');
+}
+
+// ── the API's analytics query does not belong in a reader's browser ────────
+// Commons hands its thumbnail URLs back with `?utm_source=commons.wikimedia.org
+// &utm_campaign=imageinfo&utm_content=thumbnail` attached. Serving that to a
+// reader reports every page view of ours to Wikimedia as an imageinfo click.
+console.log('\nthe URL a reader actually fetches');
+{
+  ok('the Commons analytics query is stripped',
+     cleanUrl('https://thumb.wikimedia.org/x/1280px-A.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo')
+       === 'https://thumb.wikimedia.org/x/1280px-A.jpg');
+  ok('a URL with no query is untouched',
+     cleanUrl('https://upload.wikimedia.org/x/B.png') === 'https://upload.wikimedia.org/x/B.png');
+  ok('and nothing throws on an empty one', cleanUrl(undefined) === '' && cleanUrl(null) === '');
+  const js = emitJs([{ k: 'p', u: 'https://thumb.wikimedia.org/x/C.jpg?utm_source=commons.wikimedia.org', w: 1200, h: 800, a: 'X', l: 'CC0', s: 'https://s' }], ['p']);
+  ok('so the deployed map carries none of it', !/utm_/.test(js) && /C\.jpg"/.test(js));
+  ok('and the map on disk carries none either', !/utm_/.test(read('it-action.js')));
+}
 {
   const p = { k: 'josh-allen', n: 'Josh Allen', p: 'QB' };
   const qb = { id: 'Q1', football: true, positions: ['quarterback'] };
@@ -325,7 +409,7 @@ console.log('\nthe build tool');
   const js = emitJs(rows, ['a-player', 'no-photo']);
   ok('the deployed map carries only players with a photograph whom the site prices',
      /"a-player":\{/.test(js) && !/no-photo/.test(js) && !/not-priced/.test(js));
-  ok('...and only the fields the page needs, never the lookup bookkeeping', !/"q":|"f":|"at":/.test(js));
+  ok('...and only the fields the page needs, never the lookup bookkeeping', !/"q":|"f":|"at":|"why":/.test(js));
   const w = makeDom();
   new Function('window', js)(w);
   ok('the emitted file defines window.ITActionShots', w.ITActionShots && w.ITActionShots['a-player'].u === 'https://u/a.jpg');
@@ -338,22 +422,33 @@ console.log('\nthe build tool');
 // ── 4. the pages load what they paint from ─────────────────────────────────
 console.log('\nthe pages');
 {
-  // front.html is off this list. The homepage painted the lead's artwork and the
-  // faces beside the Top Headlines column; both came off in the September 2026
-  // rewrite, so it loads no action shots. It still loads player-search.js, for
-  // the name-to-card links on the bands it does paint.
-  for (const f of ['desk.html', 'lead.html']) {
+  // front.html was off this list between the September 2026 homepage rewrite,
+  // which took every picture off the page, and the hero picture that put one
+  // back. It is on it again: the hero prefers a game photograph to a headshot,
+  // so it needs the map, and it needs it before the lookup that reads it.
+  for (const f of ['desk.html', 'lead.html', 'front.html']) {
     const src = read(f);
     const a = src.indexOf('<script src="/it-action.js" defer>'), b = src.indexOf('<script src="/player-search.js" defer>');
     ok(`${f} loads /it-action.js before player-search.js`, a >= 0 && b > a);
   }
-  ok('front.html paints no story art, so it loads no action shots',
-     !read('front.html').includes('/it-action.js'));
   ok('weekly-wrap.html loads player-search.js for the faces beside its findings', /<script src="\/player-search\.js" defer>/.test(read('weekly-wrap.html')));
   ok('desk.html stamps its feed cards, findings and calls with the player they are about',
      (read('desk.html').match(/data-player-focus=/g) || []).length >= 3);
-  ok('front.html carries no newsroom cards or headline faces to stamp',
-     !/data-player-focus=/.test(read('front.html')) && !/hl-face/.test(read('front.html')));
+  // The homepage's own three pictures: the hero's plate, a face on each card's
+  // one reading, and the desk cards stamped with who their findings name.
+  {
+    const src = read('front.html');
+    ok('front.html paints the hero picture from the player lookup',
+       /heroEdgePlate/.test(src) && /ITPlayerSearch/.test(src) && /PS\.plate\(/.test(src));
+    ok('...and stamps the desk cards with the players they are about',
+       /data-player-focus=/.test(src));
+    ok('...and gives each card’s reading a face', /readPic\(/.test(src) && /has-pic/.test(src));
+    // The page's outline is its five sections and the hero picture is not a
+    // sixth — tools/test-homepage.mjs asserts that order in the browser, and
+    // this catches a stray <section> before it gets that far.
+    ok('the hero picture is an aside, so the page still has exactly five sections',
+       /<aside class="hm-edge"/.test(src) && (src.match(/<section class=/g) || []).length === 5);
+  }
   ok('it-action.js parses and defines the map', (() => { const w = makeDom(); new Function('window', read('it-action.js'))(w); return !!w.ITActionShots; })());
   let checked = '';
   try { checked = execFileSync('node', [path.join(ROOT, 'tools', 'build-action-shots.mjs'), '--check'], { encoding: 'utf8' }); } catch (e) { checked = ''; }

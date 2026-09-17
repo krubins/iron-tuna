@@ -37,6 +37,11 @@
 // the best-scoring landscape file wins: a photograph wider than it is tall is
 // the shape of a game, a portrait one is usually a headshot by another name.
 //
+// WHICH OF THOSE FILES IS ACTUALLY HIM. A Commons category is a filing cabinet,
+// not a claim about who is in a picture, so a file has to carry evidence before
+// it is used: either it IS the entity's Wikidata image (P18), or its title
+// names him. See `depicts()` — the rule is there with the rows that taught it.
+//
 // The photos are NOT vendored. `u` is a Commons thumbnail URL at 1200px, the
 // same posture as the headshots (referenced, never copied). CC permits copying,
 // so vendoring is a bandwidth choice the owner can make later, not a rights one.
@@ -57,7 +62,7 @@ const UA = 'IronTunaBuild/1.0 (https://irontuna.com; support@irontuna.com) node-
 const WIKIDATA = 'https://www.wikidata.org/w/api.php';
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
 const THUMB_W = 1200;
-const PAUSE_MS = 250;
+// The pause between calls is dynamic now — see `PAUSE` and `throttled()`.
 
 // ── the rules, as pure functions so tools/test-story-art.mjs can hold them ──
 // A license the site may rely on. Deliberately a whitelist: a new license
@@ -107,16 +112,54 @@ export function chooseEntity(player, cands) {
   return unknown.length === 1 && ball.length === 1 ? unknown[0] : null;
 }
 
-// Names that say the file is not a game photograph, whatever its shape.
-const NOT_ACTION = /headshot|portrait|mugshot|autograph|signature|trading.?card|press.?conference|podium|interview|draft|combine|pro.?day|signing|award|ceremony|wedding|jersey.?retire/i;
+// Names that say the file is not a game photograph, whatever its shape. The
+// second half of this list was added after the first live run: a player's
+// Commons category is not a collection of him playing, it is everything anyone
+// filed under his name, which includes the day the team toured a NASA centre.
+const NOT_ACTION = /headshot|portrait|mugshot|autograph|signature|trading.?card|press.?conference|podium|interview|draft|combine|pro.?day|signing|award|ceremony|wedding|jersey.?retire|visits?\b|tour\b|training.?camp|boot.?camp|salute|airmen|military|charity|hospital|school|museum|parade|rally|media.?day|mini.?camp|ota\b|practice/i;
+
+// DOES THE FILE DEPICT THIS MAN? The rule that was missing, and the one this
+// tool exists to get right.
+//
+// The first live run (2026-09-17, 115 players) took the best-scoring landscape
+// file out of each player's Commons CATEGORY. A category is not a claim about
+// who is in a picture — it is a filing cabinet — so it handed back:
+//   austin-hooper   -> "Chiefs vs Titans TE Chigoziem Okonkwo.png"   (another player)
+//   antonio-gibson  -> "Sam Howell scramble Cardinals vs Commanders" (another player)
+//   aidan-o-connell -> "Salute to Service Boot Camp ... Airmen"      (not football)
+// Fifty-four percent of the rows had a title that never mentioned the player,
+// and these were going in the homepage's hero. A wrong row is a picture of the
+// wrong man, so a file now needs EVIDENCE, of one of exactly two kinds:
+//
+//   1. it is the entity's own image (Wikidata P18) — somebody chose that file
+//      as the picture OF this person; or
+//   2. its title names him.
+//
+// Anything else is discarded, even when it is probably fine. This trades
+// coverage for never being wrong, which is the right way round for a picture
+// that runs above the fold under somebody's name.
+export function depicts(f, player) {
+  if (!f || !player) return false;
+  if (f.curated) return true;                                // Wikidata P18
+  const title = String(f.title || '').toLowerCase();
+  const name = String(player.n || '');
+  const bare = name.replace(/\s+(?:Jr\.?|Sr\.?|I{2,3}|IV|V)$/i, '').trim();
+  const parts = bare.split(/\s+/);
+  const last = (parts[parts.length - 1] || '').toLowerCase();
+  // A one-word or two-letter surname is too weak to match a filename on.
+  if (last.length < 4) return false;
+  return new RegExp('(^|[^a-z])' + last.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z]|$)', 'i').test(title);
+}
 
 // Score one Commons file. `f` carries { title, w, h, year, meta, curated }.
 // Landscape first, then recency, then size. Returns -1 for a file the site
-// must not use.
-export function scoreFile(f) {
+// must not use. `player` is required for the depiction test; passing none
+// scores only the shape and the license, which is what the unit tests do.
+export function scoreFile(f, player) {
   if (!f || !licenseOk(f.meta)) return -1;
   if (!f.w || !f.h || f.w < 600) return -1;
   if (NOT_ACTION.test(f.title || '')) return -1;
+  if (player && !depicts(f, player)) return -1;
   const ratio = f.w / f.h;
   let s = 0;
   if (ratio >= 1.15 && ratio <= 2.4) s += 100;
@@ -127,13 +170,29 @@ export function scoreFile(f) {
   if (f.curated) s += 10;
   return s;
 }
-export function pickShot(files) {
+export function pickShot(files, player) {
   let best = null, bestScore = -1;
   for (const f of files || []) {
-    const s = scoreFile(f);
+    const s = scoreFile(f, player);
     if (s > bestScore) { best = f; bestScore = s; }
   }
   return bestScore < 0 ? null : best;
+}
+
+// THE PLAYERS THE SITE PRICES COME FIRST. The headshot release is ~1,260 names
+// in alphabetical order and `emitJs()` ships only the ones player-search.js
+// indexes, so a run that walks the alphabet spends most of its budget on
+// players who can never appear on a page: the 2026-09-17 run resolved 23
+// photographs and only 10 of them reached the browser. Sorting the priced pool
+// to the front means a capped run buys as many usable pictures as it can.
+// Alphabetical within each group, so the order is stable and a resumed run is
+// predictable.
+export function orderPool(rows, priced) {
+  const has = k => (priced instanceof Set ? priced.has(k) : !!(priced || {})[k]);
+  return (rows || []).slice().sort((a, b) => {
+    const pa = has(a.k) ? 0 : 1, pb = has(b.k) ? 0 : 1;
+    return pa !== pb ? pa - pb : (a.k < b.k ? -1 : a.k > b.k ? 1 : 0);
+  });
 }
 
 // The row that travels: what the page needs to show the picture and to credit
@@ -143,6 +202,10 @@ export function rowFor(player, ent, f) {
   return {
     k: player.k, n: player.n, q: ent ? ent.id : undefined,
     f: f.title, u: f.url, w: f.w, h: f.h, y: f.year || undefined,
+    // Why this file was trusted to be him, so a reviewer can see the evidence
+    // in the diff rather than taking the tool's word for it. It never reaches
+    // the browser: emitJs() drops everything but the picture and its credit.
+    why: f.curated ? 'p18' : 'named',
     a: stripHtml(val(m.Artist)) || stripHtml(val(m.Credit)) || 'Wikimedia Commons',
     l: String(val(m.LicenseShortName) || 'Public domain').trim(),
     lu: String(val(m.LicenseUrl) || '').trim() || undefined,
@@ -154,12 +217,25 @@ export function rowFor(player, ent, f) {
 // The deployed file. Scoped to the players player-search.js indexes — that is
 // the set every story surface can resolve a name to — so a photograph of a
 // player the site does not price never ships. `--check` compares this text.
+// The Commons API hands back its thumbnail URLs with its own analytics query
+// on them — `?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&…`. That
+// is the API telling its own dashboards where the call came from, and it has no
+// business on a URL a reader's browser fetches: it would report every page view
+// of ours back to Wikimedia as an "imageinfo thumbnail" click. The file serves
+// identically without it. Stripped on the way into the deployed map, so the
+// rows already on file are cleaned without re-running the lookup.
+export function cleanUrl(u) {
+  const s = String(u || '');
+  const q = s.indexOf('?');
+  return q < 0 ? s : s.slice(0, q);
+}
+
 export function emitJs(rows, indexKeys) {
   const keep = new Set(indexKeys || []);
   const map = {};
   for (const r of rows) {
     if (!r || !r.u || (keep.size && !keep.has(r.k))) continue;
-    map[r.k] = { u: r.u, w: r.w, h: r.h, a: r.a, l: r.l, lu: r.lu, s: r.s, y: r.y };
+    map[r.k] = { u: cleanUrl(r.u), w: r.w, h: r.h, a: r.a, l: r.l, lu: r.lu, s: r.s, y: r.y };
     for (const key of Object.keys(map[r.k])) if (map[r.k][key] === undefined) delete map[r.k][key];
   }
   const keys = Object.keys(map).sort();
@@ -175,12 +251,51 @@ export function emitJs(rows, indexKeys) {
 
 // ── the network ────────────────────────────────────────────────────────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ── being throttled is not a failure, it is an instruction ─────────────────
+// The 2026-09-17 run asked for 400 players and got:
+//   looked up 400: 23 photographs, 71 without, 306 failed
+// Wikidata started answering 429 after about ninety players and every request
+// after that failed INSTANTLY, so the run spent three quarters of its budget
+// hammering a service that had already told it to stop. A fixed 250ms pause is
+// not a rate limit, it is a hope.
+//
+// So: a 429 or a 5xx is retried, `Retry-After` is obeyed when the server sends
+// one, and the pause between every subsequent call grows and then decays back
+// down. `PAUSE` is module state on purpose — the whole run shares one throttle,
+// because the service is rate-limiting the CLIENT, not the request.
+let PAUSE = 250;
+const PAUSE_MIN = 250, PAUSE_MAX = 4000;
+const RETRIES = 4;
+function throttled() { PAUSE = Math.min(PAUSE_MAX, Math.max(PAUSE * 2, 1000)); }
+function eased() { if (PAUSE > PAUSE_MIN) PAUSE = Math.max(PAUSE_MIN, Math.round(PAUSE * 0.9)); }
+export function pauseMs() { return PAUSE; }
+
 async function api(base, params) {
   const u = new URL(base);
   for (const [k, v] of Object.entries({ format: 'json', formatversion: '2', origin: '*', ...params })) u.searchParams.set(k, v);
-  const res = await fetch(u, { headers: { 'User-Agent': UA, 'Api-User-Agent': UA } });
-  if (!res.ok) throw new Error(`${u.host} ${res.status}`);
-  return res.json();
+  let last = null;
+  for (let attempt = 0; attempt <= RETRIES; attempt++) {
+    let res;
+    try {
+      res = await fetch(u, { headers: { 'User-Agent': UA, 'Api-User-Agent': UA } });
+    } catch (e) {                                            // a dropped socket is worth one more try
+      last = e; throttled(); await sleep(PAUSE); continue;
+    }
+    if (res.ok) { eased(); return res.json(); }
+    last = new Error(`${u.host} ${res.status}`);
+    if (res.status !== 429 && res.status < 500) throw last;  // a 404 will not improve with time
+    throttled();
+    // `Retry-After` is seconds, or an HTTP date. Honour it when it is sane and
+    // fall back to the growing pause with a little jitter so a whole run does
+    // not come back in lockstep.
+    const ra = Number(res.headers.get('retry-after'));
+    const wait = Number.isFinite(ra) && ra > 0 && ra <= 120
+      ? ra * 1000
+      : PAUSE * Math.pow(2, attempt) + Math.floor(Math.random() * 250);
+    await sleep(wait);
+  }
+  throw last || new Error(`${u.host} gave up`);
 }
 
 async function findEntity(player) {
@@ -262,7 +377,16 @@ async function main() {
     return;
   }
   if (!flag('--emit')) {
-    const pool = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'nfl-headshots.json'), 'utf8'));
+    const raw = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'nfl-headshots.json'), 'utf8'));
+    // THE PLAYERS THE SITE PRICES COME FIRST. The headshot release is ~1,260
+    // names in alphabetical order and `emitJs()` ships only the ones
+    // player-search.js indexes, so a run that walks the alphabet spends most of
+    // its budget on players who can never appear on a page: the 2026-09-17 run
+    // resolved 23 photographs and only 10 of them reached the browser. Sorting
+    // the priced pool to the front means a capped run buys as many usable
+    // pictures as it can. Alphabetical within each group, so the order is still
+    // stable and a resumed run is predictable.
+    const pool = orderPool(raw, new Set(indexKeys()));
     const only = opt('--only') ? new Set(opt('--only').split(',')) : null;
     const limit = +opt('--limit') || Infinity;
     const refresh = flag('--refresh');
@@ -276,10 +400,10 @@ async function main() {
       let row = { k: p.k, n: p.n, none: true, at: new Date().toISOString().slice(0, 10) };
       try {
         const ent = await findEntity(p);
-        await sleep(PAUSE_MS);
+        await sleep(PAUSE);
         if (ent) {
           const files = await candidateFiles(ent);
-          const best = pickShot(files);
+          const best = pickShot(files, p);
           if (best) row = rowFor(p, ent, best);
           else row.q = ent.id;
         }
@@ -291,9 +415,17 @@ async function main() {
       if (row.u) found++; else none++;
       console.log(`  ${p.k}: ${row.u ? row.f + ' (' + row.l + ')' : 'no usable photograph'}`);
       byKey.set(p.k, row);
-      await sleep(PAUSE_MS);
+      await sleep(PAUSE);
     }
-    console.log(`looked up ${looked}: ${found} photographs, ${none} without, ${failed} failed`);
+    console.log(`looked up ${looked}: ${found} photographs, ${none} without, ${failed} failed (pause ended at ${PAUSE}ms)`);
+    // A run that mostly failed produced a thin, misleading result and used to
+    // look exactly like a good one. Say so where a reader and GitHub both see
+    // it; the rows it did get are still valid, so this is a warning, not an
+    // error, and the incremental next run picks the failures back up.
+    if (looked && failed > looked / 4) {
+      console.log(`::warning title=Most lookups failed::${failed} of ${looked} lookups failed, `
+        + 'almost certainly rate limiting. The rows in this run are still good; re-run to continue.');
+    }
     if (flag('--dry-run')) return;
     writeRows([...byKey.values()]);
   }

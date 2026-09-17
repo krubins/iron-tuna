@@ -29,7 +29,7 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 | `api.login.yahoo.com` | Yahoo OAuth 2.0 (authorize, token, refresh) | `YAHOO_AUTH`, `YAHOO_TOKEN` | Service endpoint; the reader consents on Yahoo's page. See R7. |
 | `fantasysports.yahooapis.com` | A reader's Yahoo league under their own OAuth grant, read-only scope `fspt-r` | `PROVIDER_YAHOO` | **Green for the reader's own data under the Yahoo Developer Network terms**; behind `FLAG_YAHOO_SYNC` until an app is registered. See R7. |
 | `static.www.nfl.com` | Team and player imagery, hot-linked | ~1,680 URL references across the deployed HTML, none fetched server-side | **Unreviewed and OPEN.** Copyrighted images served from the league's CDN. See R4. |
-| `upload.wikimedia.org` (via `commons.wikimedia.org` and `www.wikidata.org` at build time) | Game photographs for the story art on `/`, `/in-season/desk`, `/lead`: one openly licensed action photo per player, hot-linked as a Commons thumbnail | `tools/build-action-shots.mjs` (build-time lookup, never the Worker), `it-action.js` (the deployed map), `storyArt()` in `player-search.js` | **Green, with an obligation.** Only CC0, public-domain, CC BY and CC BY-SA files are kept (`LICENSE_OK` in the tool; NC and ND never match). CC BY / CC BY-SA require the photographer, the license and a link to it wherever the file is shown, and that a cropped copy says so; `storyArt()` prints exactly that under every use and `tools/test-story-art.mjs` fails the build if it stops. See R9. |
+| `thumb.wikimedia.org` and `upload.wikimedia.org` (resolved via `commons.wikimedia.org` and `www.wikidata.org` at build time) | Game photographs for the story art on `/`, `/in-season/desk`, `/lead`: one openly licensed action photo per player, hot-linked as a Commons thumbnail | `tools/build-action-shots.mjs` (build-time lookup, never the Worker), `it-action.js` (the deployed map), `storyArt()` in `player-search.js` | **Green, with an obligation.** Only CC0, public-domain, CC BY and CC BY-SA files are kept (`LICENSE_OK` in the tool; NC and ND never match). CC BY / CC BY-SA require the photographer, the license and a link to it wherever the file is shown, and that a cropped copy says so; `storyArt()` prints exactly that under every use and `tools/test-story-art.mjs` fails the build if it stops. See R9. |
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
 | DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
 | DFS lobby CSV (reader upload) | A reader's own salary file, for any classic slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/dfs/slate` | **Green.** Same file, obtained by the reader from a lobby they are already in. Parsed per request and stored nowhere; single-game files are refused rather than mispriced against the classic cap. |
@@ -264,11 +264,25 @@ Two things this does **not** settle, for the owner:
    unreliable.
 
 The lookup itself is a network job (`node tools/build-action-shots.mjs`, with
-`NODE_USE_ENV_PROXY=1` behind a proxy) and is **not run in CI**: the CI gate
-only checks that `it-action.js` matches the JSON it was generated from. The
-lookup was written in a session whose egress policy blocked both Wikimedia
-hosts, so **as of 2026-09-16 the JSON is empty and every story still runs
-headshots**. The first run on a machine with network fills it.
+`NODE_USE_ENV_PROXY=1` behind a proxy) and is **not run by the CI checks**:
+that gate only verifies `it-action.js` matches the JSON it was generated from.
+
+**Who runs it, and why it is a workflow.** The tool was written in a Claude
+Code session whose egress policy refuses `commons.wikimedia.org` and
+`www.wikidata.org` outright (403 to CONNECT), so it could be written there but
+never run there — it shipped in #251 with an empty lookup and every story fell
+back to headshots. `.github/workflows/action-shots.yml` is the machine that
+can: a GitHub runner has ordinary outbound internet. It runs monthly and on
+demand, walks a few hundred players per run (the tool skips anyone already on
+file unless `--refresh`), and **opens a pull request rather than pushing** —
+what it changes is a thousand rows of third-party URLs and license strings,
+and a wrong row is a picture of the wrong man. The workflow runs
+`tools/test-story-art.mjs` before it proposes anything, so a file that fails
+the license or credit rules fails the run instead of reaching a branch.
+
+Until a run lands, the JSON is empty, every plate falls back to the headshot
+cutout, and nothing on the site breaks. That is the designed resting state,
+not an outage.
 
 ## 3. Attribution strings
 
@@ -312,3 +326,48 @@ anyway; it costs nothing.
 4. Cache. It protects the quota and every green license here permits it.
 5. Keep the written record. Preserve dated provider terms and licensing confirmations in `docs/`.
 6. PropLine's default bookmaker allowlist is sportsbook-only. Do not add exchanges to that path without a separate product and legal decision.
+
+### R9a — the depiction rule  *(added 2026-09-17, after the first live run)*
+
+The first run of `.github/workflows/action-shots.yml` resolved 115 players and
+**54% of its rows had a file title that never mentioned the player.** It was
+taking the best-scoring landscape file out of each player's Commons *category*,
+and a category is a filing cabinet rather than a claim about who is in a
+picture. It produced, among others:
+
+| Row | File it chose | What that is |
+|---|---|---|
+| `austin-hooper` | `Chiefs vs Titans TE Chigoziem Okonkwo.png` | a different tight end |
+| `antonio-gibson` | `Sam Howell scramble Cardinals vs Commanders` | a team-mate |
+| `aidan-o-connell` | `Salute to Service Boot Camp … Airmen` | not football |
+| `amari-cooper` | `Cleveland Browns Visit NASA Glenn` | a facility tour |
+
+None of it was merged. `depicts()` now requires evidence of one of two kinds
+before a file is used: it **is** the entity's Wikidata image (P18), or its
+**title names him**. Everything else is discarded even when it is probably
+fine, because these pictures run in the homepage's hero under somebody's name
+and a wrong one is a picture of the wrong man. `NOT_ACTION` also now drops
+visits, tours, training camp, practice, media day and military events.
+
+The trade is coverage: replaying the rule over that run's own output keeps 46
+of 115 on the title test alone, plus whatever P18 adds back. Each row also
+carries `why` (`p18` or `named`) so the evidence is visible in the diff;
+`emitJs()` strips it, so it never reaches a browser.
+
+### R9b — what the browser actually fetches  *(added 2026-09-17)*
+
+Two corrections after watching the live page make its requests.
+
+**The host.** The Commons API returns thumbnails on **`thumb.wikimedia.org`**
+(117 of 133 rows) as well as `upload.wikimedia.org` (16). The inventory above
+named only the second. Both are Wikimedia's own file hosts and the licensing
+position is identical; the row is corrected so the host list is true.
+
+**The tracking query.** Every thumbnail URL the API hands back carries
+`?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail`.
+Serving that to a reader reports every page view of ours back to Wikimedia as
+an "imageinfo thumbnail" click — the API's own analytics, attached to a URL
+that was never meant to leave the build. `cleanUrl()` strips the query on the
+way into `it-action.js`, so the rows already on file were cleaned without
+re-running the lookup. The file serves identically without it.
+

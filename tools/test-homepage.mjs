@@ -99,12 +99,17 @@ const DFS = { ok: true, boards: { bestVegasValues: [
   { name: 'Rome Odunze', position: 'WR', team: 'CHI', salary: 5400, vegasPoints: 14.2, vegasValueScore: 3.21 }
 ]}};
 const CONTENT = { ok: true, pieces: [
+  // `components` are the findings a piece breaks into, each naming the player
+  // it is about. They are what the desk cards draw faces from and what the
+  // hero's picture prefers over the market board.
   { kind: 'final-read', title: 'The Final Read', headline: 'Three lineups the market moved overnight',
     dek: 'Sunday morning props shifted two flex calls.', week: 3, publishedAt: Date.UTC(2026, 8, 16, 14),
-    url: '/in-season/desk/final-read/3', byline: 'Iron Tuna desk' },
+    url: '/in-season/desk/final-read/3', byline: 'Iron Tuna desk',
+    components: [{ n: 1, player: 'Puka Nacua', headline: 'a' }, { n: 2, player: 'James Cook', headline: 'b' }] },
   { kind: 'opportunity-report', title: 'Opportunity Report', headline: 'Who inherits the carries in Baltimore',
     dek: 'Snap share against the implied total.', week: 3, publishedAt: Date.UTC(2026, 8, 16, 11),
-    url: '/in-season/desk/opportunity-report/3', byline: 'Iron Tuna desk' },
+    url: '/in-season/desk/opportunity-report/3', byline: 'Iron Tuna desk',
+    components: [{ n: 1, player: 'Derrick Henry', headline: 'c' }] },
   { kind: 'rankings-update', title: 'Rankings Update', headline: 'Eleven moves after the injury report',
     week: 3, publishedAt: Date.UTC(2026, 8, 16, 9), url: '/in-season/desk/rankings-update/3' },
   { kind: 'tnf-preview', title: 'TNF Preview', headline: 'The total moved three points in a day',
@@ -175,6 +180,20 @@ const read = page => page.evaluate(() => {
       why: text(tr.querySelector('.hm-act-why'))
     })),
     fine: vis('diffFine') ? text(document.getElementById('diffFine')) : null,
+    // The hero's picture. Asserted on the PLATE and the caption rather than on
+    // a loaded <img>: the photo hosts are third-party and a runner may or may
+    // not reach them, and the plate falls back to initials either way — which
+    // is exactly the behaviour that must survive.
+    edge: vis('heroEdge'),
+    edgePlate: !!document.querySelector('#heroEdgePlate .it-plate'),
+    edgeK: text(document.getElementById('heroEdgeK')),
+    edgeName: text(document.getElementById('heroEdgeName')),
+    edgeGap: text(document.getElementById('heroEdgeGap')),
+    edgeCols: (() => { const h = document.getElementById('hmHero'); return h ? h.classList.contains('has-edge') : null; })(),
+    // The faces the page paints: one per card reading, one or more per desk
+    // card, and the lookup's own markers in the disagreement table.
+    readPics: document.querySelectorAll('.hm-read.has-pic .it-plate').length,
+    cardFaces: document.querySelectorAll('#readGrid .it-player-face').length,
     articles: vis('articles'),
     cards: [...document.querySelectorAll('#readGrid .hm-read-card')].map(a => a.getAttribute('href')),
     how5: vis('how'),
@@ -280,8 +299,48 @@ console.log('\nwith the boards answering');
   ok('every card has a real destination',
      r.cards.every(h => /^\/in-season\/desk\//.test(h)), r.cards.join(','));
 
+  // ── the hero's picture ────────────────────────────────────────────────
+  // The page had no photograph of a football player on it at all. It has one
+  // now, and who it is comes off a feed rather than a choice: the player the
+  // desk's newest piece is about, else the widest market gap on the board.
+  ok('the hero carries a picture of a player', r.edge === true && r.edgePlate === true);
+  ok('it is the desk’s current subject when the desk names one',
+     r.edgeName === 'Puka Nacua', r.edgeName);
+  ok('and it says that is what it is', /desk/i.test(r.edgeK || ''), r.edgeK);
+  ok('captioned with why he is pictured, in the desk’s own words',
+     r.edgeGap === 'Three lineups the market moved overnight', r.edgeGap);
+  ok('the second hero column exists only once there is a picture in it', r.edgeCols === true);
+
+  // The faces on the two card readings and on the desk's cards.
+  ok('each card’s one reading carries the face of the player it names', r.readPics === 2, String(r.readPics));
+  ok('the desk’s cards carry the faces their findings name', r.cardFaces >= 3, String(r.cardFaces));
+
   ok('and no loading copy survives anywhere on the page', !LOADING.test(r.body),
      (r.body.match(LOADING) || [''])[0]);
+  await ctx.close();
+}
+
+// ── 3b. the hero's picture with no desk subject ────────────────────────────
+// The desk does not always break a piece into named findings. Then the picture
+// falls back to the board — and never to the player the Fantasy card already
+// recommends, because the same man photographed twice above the fold is the
+// page saying it once and looking like it said it twice.
+console.log('\nwith the desk naming nobody');
+{
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.map(p => ({ ...p, components: undefined }));
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  ok('the hero still carries a picture', r.edge === true && r.edgePlate === true);
+  ok('it is the widest disagreement on the board', r.edgeName === 'Cam Ward', r.edgeName);
+  ok('and it says so', /market gap/i.test(r.edgeK || ''), r.edgeK);
+  ok('captioned with the two numbers and the gap between them',
+     /19\.9/.test(r.edgeGap || '') && /15\.2/.test(r.edgeGap || '') && /\+4\.7/.test(r.edgeGap || ''), r.edgeGap);
+  ok('never the player the Fantasy card already recommends',
+     r.edgeName !== 'Drake London' && /Drake London/.test(r.fnRead || ''), r.edgeName);
+  ok('a piece with no findings still gets a card, just no faces on it',
+     r.cards.length === 4 && r.cardFaces === 0, r.cards.length + '/' + r.cardFaces);
+  CONTENT.pieces = full;
   await ctx.close();
 }
 
@@ -300,6 +359,12 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   ok(`${tag}: the disagreement section is hidden, not empty`, r.diff === false && r.rows.length === 0);
   ok(`${tag}: the articles section is hidden, not empty`, r.articles === false && r.cards.length === 0);
   ok(`${tag}: the method and the disclosures are still there`, r.how5 === true);
+  // The picture obeys the same rule as every other band: absent, not a frame
+  // with nothing in it — and the hero goes back to one full-width column so
+  // there is no empty gutter beside the headline either.
+  ok(`${tag}: the hero picture is absent rather than an empty frame`,
+     r.edge === false && r.edgePlate === false && r.edgeCols === false);
+  ok(`${tag}: and the card readings carry no faces`, r.readPics === 0, String(r.readPics));
   ok(`${tag}: nowhere on the page says it is loading`, !LOADING.test(r.body),
      (r.body.match(LOADING) || [''])[0]);
   ok(`${tag}: and it still does not scroll sideways`, r.overflow === 0, String(r.overflow));
