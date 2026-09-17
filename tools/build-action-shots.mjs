@@ -62,7 +62,7 @@ const UA = 'IronTunaBuild/1.0 (https://irontuna.com; support@irontuna.com) node-
 const WIKIDATA = 'https://www.wikidata.org/w/api.php';
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
 const THUMB_W = 1200;
-const PAUSE_MS = 250;
+// The pause between calls is dynamic now — see `PAUSE` and `throttled()`.
 
 // ── the rules, as pure functions so tools/test-story-art.mjs can hold them ──
 // A license the site may rely on. Deliberately a whitelist: a new license
@@ -179,6 +179,22 @@ export function pickShot(files, player) {
   return bestScore < 0 ? null : best;
 }
 
+// THE PLAYERS THE SITE PRICES COME FIRST. The headshot release is ~1,260 names
+// in alphabetical order and `emitJs()` ships only the ones player-search.js
+// indexes, so a run that walks the alphabet spends most of its budget on
+// players who can never appear on a page: the 2026-09-17 run resolved 23
+// photographs and only 10 of them reached the browser. Sorting the priced pool
+// to the front means a capped run buys as many usable pictures as it can.
+// Alphabetical within each group, so the order is stable and a resumed run is
+// predictable.
+export function orderPool(rows, priced) {
+  const has = k => (priced instanceof Set ? priced.has(k) : !!(priced || {})[k]);
+  return (rows || []).slice().sort((a, b) => {
+    const pa = has(a.k) ? 0 : 1, pb = has(b.k) ? 0 : 1;
+    return pa !== pb ? pa - pb : (a.k < b.k ? -1 : a.k > b.k ? 1 : 0);
+  });
+}
+
 // The row that travels: what the page needs to show the picture and to credit
 // it. Nothing else, so the deployed map stays small.
 export function rowFor(player, ent, f) {
@@ -222,12 +238,51 @@ export function emitJs(rows, indexKeys) {
 
 // ── the network ────────────────────────────────────────────────────────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ── being throttled is not a failure, it is an instruction ─────────────────
+// The 2026-09-17 run asked for 400 players and got:
+//   looked up 400: 23 photographs, 71 without, 306 failed
+// Wikidata started answering 429 after about ninety players and every request
+// after that failed INSTANTLY, so the run spent three quarters of its budget
+// hammering a service that had already told it to stop. A fixed 250ms pause is
+// not a rate limit, it is a hope.
+//
+// So: a 429 or a 5xx is retried, `Retry-After` is obeyed when the server sends
+// one, and the pause between every subsequent call grows and then decays back
+// down. `PAUSE` is module state on purpose — the whole run shares one throttle,
+// because the service is rate-limiting the CLIENT, not the request.
+let PAUSE = 250;
+const PAUSE_MIN = 250, PAUSE_MAX = 4000;
+const RETRIES = 4;
+function throttled() { PAUSE = Math.min(PAUSE_MAX, Math.max(PAUSE * 2, 1000)); }
+function eased() { if (PAUSE > PAUSE_MIN) PAUSE = Math.max(PAUSE_MIN, Math.round(PAUSE * 0.9)); }
+export function pauseMs() { return PAUSE; }
+
 async function api(base, params) {
   const u = new URL(base);
   for (const [k, v] of Object.entries({ format: 'json', formatversion: '2', origin: '*', ...params })) u.searchParams.set(k, v);
-  const res = await fetch(u, { headers: { 'User-Agent': UA, 'Api-User-Agent': UA } });
-  if (!res.ok) throw new Error(`${u.host} ${res.status}`);
-  return res.json();
+  let last = null;
+  for (let attempt = 0; attempt <= RETRIES; attempt++) {
+    let res;
+    try {
+      res = await fetch(u, { headers: { 'User-Agent': UA, 'Api-User-Agent': UA } });
+    } catch (e) {                                            // a dropped socket is worth one more try
+      last = e; throttled(); await sleep(PAUSE); continue;
+    }
+    if (res.ok) { eased(); return res.json(); }
+    last = new Error(`${u.host} ${res.status}`);
+    if (res.status !== 429 && res.status < 500) throw last;  // a 404 will not improve with time
+    throttled();
+    // `Retry-After` is seconds, or an HTTP date. Honour it when it is sane and
+    // fall back to the growing pause with a little jitter so a whole run does
+    // not come back in lockstep.
+    const ra = Number(res.headers.get('retry-after'));
+    const wait = Number.isFinite(ra) && ra > 0 && ra <= 120
+      ? ra * 1000
+      : PAUSE * Math.pow(2, attempt) + Math.floor(Math.random() * 250);
+    await sleep(wait);
+  }
+  throw last || new Error(`${u.host} gave up`);
 }
 
 async function findEntity(player) {
@@ -309,7 +364,16 @@ async function main() {
     return;
   }
   if (!flag('--emit')) {
-    const pool = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'nfl-headshots.json'), 'utf8'));
+    const raw = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'nfl-headshots.json'), 'utf8'));
+    // THE PLAYERS THE SITE PRICES COME FIRST. The headshot release is ~1,260
+    // names in alphabetical order and `emitJs()` ships only the ones
+    // player-search.js indexes, so a run that walks the alphabet spends most of
+    // its budget on players who can never appear on a page: the 2026-09-17 run
+    // resolved 23 photographs and only 10 of them reached the browser. Sorting
+    // the priced pool to the front means a capped run buys as many usable
+    // pictures as it can. Alphabetical within each group, so the order is still
+    // stable and a resumed run is predictable.
+    const pool = orderPool(raw, new Set(indexKeys()));
     const only = opt('--only') ? new Set(opt('--only').split(',')) : null;
     const limit = +opt('--limit') || Infinity;
     const refresh = flag('--refresh');
@@ -323,7 +387,7 @@ async function main() {
       let row = { k: p.k, n: p.n, none: true, at: new Date().toISOString().slice(0, 10) };
       try {
         const ent = await findEntity(p);
-        await sleep(PAUSE_MS);
+        await sleep(PAUSE);
         if (ent) {
           const files = await candidateFiles(ent);
           const best = pickShot(files, p);
@@ -338,9 +402,17 @@ async function main() {
       if (row.u) found++; else none++;
       console.log(`  ${p.k}: ${row.u ? row.f + ' (' + row.l + ')' : 'no usable photograph'}`);
       byKey.set(p.k, row);
-      await sleep(PAUSE_MS);
+      await sleep(PAUSE);
     }
-    console.log(`looked up ${looked}: ${found} photographs, ${none} without, ${failed} failed`);
+    console.log(`looked up ${looked}: ${found} photographs, ${none} without, ${failed} failed (pause ended at ${PAUSE}ms)`);
+    // A run that mostly failed produced a thin, misleading result and used to
+    // look exactly like a good one. Say so where a reader and GitHub both see
+    // it; the rows it did get are still valid, so this is a warning, not an
+    // error, and the incremental next run picks the failures back up.
+    if (looked && failed > looked / 4) {
+      console.log(`::warning title=Most lookups failed::${failed} of ${looked} lookups failed, `
+        + 'almost certainly rate limiting. The rows in this run are still good; re-run to continue.');
+    }
     if (flag('--dry-run')) return;
     writeRows([...byKey.values()]);
   }
