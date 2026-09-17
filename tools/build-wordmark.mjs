@@ -1,22 +1,26 @@
 // Regenerates tools/wordmark-paths.json: the IRON TUNA word mark as outlined paths.
 //
-// The site's header word mark (the <svg class="brand-logo"> on every page) is eight
-// <text> letters in Bebas Neue at staggered sizes, filled with the metal gradient.
-// That SVG depends on the web font being loaded, which is fine on a page and useless
-// in a standalone image: a raster generator or a static SVG file gets the fallback
-// font instead (Impact, or the system sans), which is where the taller, stretched
-// "IRON TUNA" on the old banners came from. This script traces the same eight letters
-// out of the same font into plain <path> data, so every banner can draw the mark
-// exactly as the header does with no font on the machine.
+// The site's word mark is eight letters in Bebas Neue at staggered sizes, filled with
+// the metal gradient. It used to be <text> in the web font, on the page header and in
+// every banner, and that depended on the font being loaded: a raster generator or a
+// static SVG never has it, and a page only has it once Google Fonts answers, so the
+// fallback (Impact, or the system sans) drew a taller, stretched "IRON TUNA" on the
+// banners and, for any reader whose font never arrived, on the page. This script
+// traces the eight letters out of the font into plain <path> data, so the header on
+// every page (tools/wordmark.mjs putWordmark, index.html's LogoMark) and every banner
+// draw the mark identically with no font anywhere.
 //
-// Geometry is copied from the header SVG verbatim (viewBox 0 0 296.6 56, each letter
+// Geometry is the original header SVG's (viewBox 0 0 296.6 56, each letter
 // text-anchor=middle at its x, dominant-baseline=central at y=27.5). Chromium's
 // "central" is the midpoint of the ascender/descender box, which is what is computed
-// here; an overlay of the two renders shows no offset.
+// here; an overlay of the two renders showed no offset.
 //
 // Needs opentype.js on the resolution path (`npm i --no-save opentype.js`, nothing is
 // committed). The font is tools/fonts/BebasNeue-Regular.ttf (SIL OFL, licence beside it).
-// Only run this if the header's letters, sizes or positions change; the JSON is committed.
+// Only run this if the letters, sizes or positions change; the JSON is committed. After a
+// rerun, `node tools/put-wordmark.mjs` will not touch pages that already carry paths:
+// swap the old path group out by hand (or from git) and paste the new paths into
+// index.html's WORDMARK_PATHS as well.
 import { readFileSync, writeFileSync } from 'node:fs';
 import opentype from 'opentype.js';
 

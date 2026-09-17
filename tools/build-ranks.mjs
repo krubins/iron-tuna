@@ -34,6 +34,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { WORDMARK_LETTERS } from './wordmark.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = process.argv.includes('--check');
@@ -150,8 +151,8 @@ const RIBBON_CSS = `${CSS_OPEN}
 /* NO OVERFLOW ON THIS ROW. A menu cannot hang out of a scroll container:
    overflow-x:auto with overflow-y:visible computes to overflow-y:auto — the
    spec is explicit about it — so the dropdown would be clipped at the band's
-   46px and turned into a scrollbar. front.html learned this the hard way with
-   its own ribbon's search box (see the note beside .rb-search). The band wraps
+   46px and turned into a scrollbar. The homepage's own sticky ribbon learned
+   this the hard way with the player-lookup menu it carried. The band wraps
    instead of scrolling here; on a phone, where the menus are off anyway, the
    media query below turns the sideways scroll back on. */
 .rk-ribbon-in {
@@ -280,7 +281,7 @@ function pageHtml(cat, pos) {
 </head>
 <body>
 <header class="site"><div class="wrap">
-    <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+    <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs>${WORDMARK_LETTERS}</svg></a>
     <nav class="nav" id="sitenav" aria-label="Main"></nav>
 </div></header>
 ${ribbonHtml(href)}

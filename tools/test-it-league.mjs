@@ -519,40 +519,53 @@ console.log('\ndeclarative markup');
 // contract, readers get an empty column until the cache expires.
 console.log('\nwire contract');
 {
+  // The homepage asked for this contract until September 2026, when the Vegas
+  // vs. Consensus case came off it with the rest of the branded columns.
+  // /weekly-intel is the page that prints the column now, so it is the copy that
+  // has to keep step with the worker.
+  const intel = fs.readFileSync(path.join(ROOT, 'weekly-intel.html'), 'utf8');
   const wc = worker.match(/const COLUMN_CONTRACT = (\d+)/);
-  const fc = front.match(/var VS_CONTRACT = (\d+)/);
-  ok('front.html asks for the contract the worker serves', wc && fc && wc[1] === fc[1],
-     `worker ${wc && wc[1]} vs front ${fc && fc[1]}`);
+  const fc = intel.match(/var VS_CONTRACT = (\d+)/);
+  ok('weekly-intel.html asks for the contract the worker serves', wc && fc && wc[1] === fc[1],
+     `worker ${wc && wc[1]} vs page ${fc && fc[1]}`);
   ok('the worker ships the consensus stat line', /statsConsensus: _colStatLine/.test(worker));
   ok('the worker ships the odds-blended stat line', /statsIronTuna: _colStatLine/.test(worker));
   ok('the worker ships the raw-market stat line', /statsMarket: _colStatLine/.test(worker));
-  ok('the front page re-scores those lines', /L\.score\(it\.statsConsensus, pos\)/.test(front));
+  ok('the page re-scores those lines at the reader’s rules',
+     /L\.score\(p\.consensus\.stats, pos, rules, g\)/.test(intel)
+     && /L\.score\(p\.vegas\.stats, pos, rules, g\)/.test(intel)
+     && /L\.score\(p\.ironTuna\.stats, pos, rules, g\)/.test(intel));
+  // front.html is off this list: the homepage prints no story numbers any more.
+  // Its five sections quote live projections straight off /api/vegas-edge and
+  // /api/dfs at the site's default scoring, and say so on the page, so it has
+  // nothing to restate and does not load the library.
   ok('every page that prints a story number loads the library',
-     ['front.html', 'my-insights.html', 'insights-vault.html', 'auction-insights-2026-08-27.html',
+     ['weekly-intel.html', 'my-insights.html', 'insights-vault.html', 'auction-insights-2026-08-27.html',
       'snake-insights-2026-09-03.html', 'bestball-insights-2026-07-04.html', 'auction-budget-allocation.html']
        .every(f => fs.readFileSync(path.join(ROOT, f), 'utf8').includes('/it-league.js')));
+  ok('and the homepage, which prints none, does not',
+     !fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8').includes('/it-league.js'));
 
-  // The reading lens, at the two places on the front page that quote a call.
-  // The lead and the Position Intel modules print the SAME stories: if one of
-  // them stops passing the lens it silently falls back to the saved league, and
-  // the page contradicts itself a screen apart. tools/test-position-lens.mjs
-  // drives the switch in a browser; this only guards the argument.
-  // Two editions on the switch, not three: the auction-first pass took best
-  // ball off every surface that sold it. The library still understands the
-  // value (a reader with a saved best ball league keeps their lens), the front
-  // page simply no longer offers it and falls back to auction.
-  ok('the front page offers the edition switch',
-     /id="edSwitch"/.test(front) && ['auction', 'snake'].every(f => front.includes('data-ed="' + f + '"')));
-  ok('and does not sell best ball on it', !front.includes('data-ed="bestball"'));
-  ok('both front-page renders read through the lens',
-     (front.match(/L\.tailor\(s\.stat, s\.title, s\.pos, readFmt\)/g) || []).length === 2);
+  // The reading lens. It used to be driven by an Auction/Snake switch in the
+  // homepage's sticky ribbon, which is why this block used to count two
+  // front-page renders through it. That switch was a DRAFT-SEASON control on an
+  // in-season homepage and came off with the rest of the draft promotion; the
+  // library still owns the value, and the pages that quote a call still read
+  // through it. tools/test-position-lens.mjs drove the switch in a browser and
+  // went with it.
+  const LENS_PAGES = ['my-insights.html', 'insights-vault.html', 'player.html'];
+  ok('the pages that quote a call still read through the lens',
+     LENS_PAGES.every(f => /L\.tailor\(/.test(fs.readFileSync(path.join(ROOT, f), 'utf8'))),
+     LENS_PAGES.filter(f => !/L\.tailor\(/.test(fs.readFileSync(path.join(ROOT, f), 'utf8'))).join(', '));
+  ok('and label the line from the library', /L\.tailorLabel\(\)/.test(fs.readFileSync(path.join(ROOT, 'player.html'), 'utf8')));
+  ok('the homepage offers no edition switch', !/id="edSwitch"/.test(front));
+  ok('and nothing on the site sells best ball on one',
+     !fs.readdirSync(ROOT).filter(f => f.endsWith('.html')).some(f => fs.readFileSync(path.join(ROOT, f), 'utf8').includes('data-ed="bestball"')));
   // The edition is the coarser choice and it owns the lens: setEdition writes
   // the reading format too, so best ball (which has no lens of its own) reads
   // in slots rather than being left on auction dollars.
-  ok('the switch writes the reader’s choice back to the library', /L\.setEdition\(/.test(front));
   ok('and setting an edition sets the lens under it',
      /function setEdition[\s\S]{0,400}setReadingFormat\(v\)/.test(fs.readFileSync(path.join(ROOT, 'it-league.js'), 'utf8')));
-  ok('the front page labels the line from the library', /L\.tailorLabel\(\)/.test(front));
 
   // The default board is generated, and a generated block left behind is a
   // reader being quoted last month's projections. Regenerate it here and
@@ -643,42 +656,16 @@ console.log('\nend to end: the library rebuilds the worker’s own numbers');
   }
 }
 
-// ── 10. front.html's own myCase, run as shipped ────────────────────────────
-console.log('\nfront.html myCase');
+// ── 10. (retired) front.html's own myCase ─────────────────────────────────
+// myCase re-read a Vegas-vs-Consensus case onto the reader's own board and
+// existed only inside front.html. The case module came off the homepage in the
+// September 2026 rewrite, and this section went with the function it ran. Every
+// primitive it composed — score(), price(), the rank re-sort — is exercised
+// directly against the library in sections 1-9 above, so nothing lost coverage.
+// What is asserted now is only that no second copy came back with a new name.
+console.log('\nno page carries its own re-pricing function');
 {
-  const i = front.indexOf('  function myCase(it) {');
-  const j = front.indexOf('\n  }', i);
-  ok('myCase was found in front.html', i > 0 && j > i);
-  const myCase = new Function('window', front.slice(i, j + 4) + '\n;return myCase;')({ ITLeague: null });
-  ok('no library, no personalization', myCase({ position: 'WR' }) === null);
-
-  const board = { ts: 1, sv: 2, teams: 12, budget: 400, format: 'auction', players: [
-    { n: 'Top Wideout', pos: 'WR', v: 70, pts: 320 },
-    { n: 'Case Wideout', pos: 'WR', v: 40, pts: 250 },
-    { n: 'Third Wideout', pos: 'WR', v: 20, pts: 200 }
-  ]};
-  const store = {
-    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 400, format: 'auction' } }),
-    iron_tuna_values_v1: JSON.stringify(board)
-  };
-  const withLeague = new Function('window', front.slice(i, j + 4) + '\n;return myCase;')({ ITLeague: load(store).L });
-  const item = {
-    name: 'Case Wideout', position: 'WR', rankConsensus: 9, rankIronTuna: 4, rankMarket: 3,
-    statsConsensus: { rec: 70, recYd: 900, recTD: 5 },
-    statsIronTuna: { rec: 80, recYd: 1000, recTD: 6 },
-    statsMarket: { rec: 90, recYd: 1100, recTD: 7 }
-  };
-  const m = withLeague(item);
-  ok('the case is re-read on the reader’s board', m && m.board === true, JSON.stringify(m));
-  ok('the odds-adjusted points come back as the board’s own number', m && m.ptsIronTuna === 250, m && String(m.ptsIronTuna));
-  ok('the consensus line is scaled onto the same board', m && m.ptsConsensus < m.ptsIronTuna && m.ptsConsensus > 0, m && String(m.ptsConsensus));
-  ok('the player keeps his own slot on his own board', m && m.rankIronTuna === 2, m && String(m.rankIronTuna));
-  ok('the weaker consensus line ranks no higher', m && m.rankConsensus >= m.rankIronTuna, m && `${m.rankConsensus} vs ${m.rankIronTuna}`);
-  ok('the gap is stated in the reader’s dollars', m && m.priceDelta === m.priceIronTuna - m.priceConsensus && m.priceIronTuna > 0);
-  ok('a $400 budget prices above the default league', m && m.priceIronTuna > load({}).L.price('WR', m.rankIronTuna - 1));
-
-  // An item the worker could not describe is dropped, not half-rendered.
-  ok('a stat-line-less item is refused', withLeague({ name: 'Case Wideout', position: 'WR' }) === null);
+  ok('the homepage has no myCase', !/function myCase\(/.test(front));
 }
 
 // ── 11. the generated lead's dollars, restated for the reader ──────────────
@@ -1036,19 +1023,12 @@ console.log('\nthe site board is fetched, and the static block is the fallback')
 // ── 12. the pages that print the desk's dollars all go through it ──────────
 console.log('\nthe front page and /lead restate before they paint');
 {
-  const paint = front.slice(front.indexOf('function paintGeneratedLead'), front.indexOf('function leadStamp'));
-  ok('the front-page lead restates the headline', /repriceCopy\(s\.title/.test(paint));
-  ok('and the dek with it', /repriceCopy\(s\.dek/.test(paint));
-  ok('and says whose league the numbers are', /pricingNote\(/.test(paint));
-  // Without the date the guard is dead code: every story looks current.
-  ok('and hands the story\u2019s own date to both, so an old-model story is refused',
-     /repriceCopy\(s\.title, names, s\.createdAt\)/.test(paint)
-     && /repriceCopy\(s\.dek \|\| '', names, s\.createdAt\)/.test(paint)
-     && /pricingNote\([^;]*s\.createdAt\)/.test(paint));
-  ok('the retired headlines under it carry their own dates too',
-     /repriceCopy\(o\.title,[\s\S]{0,120}?o\.createdAt\)/.test(front));
-  ok('the old "nothing to re-price" branch is gone',
-     !/Nothing to re-price/.test(front));
+  // The homepage carried the generated lead until September 2026. /lead is the
+  // page that prints it now, and it always was the complete one — it restates
+  // the article BODY, not only the headline and dek. The homepage carries no
+  // desk dollars at all, which is the stronger guarantee and is what is checked.
+  ok('the homepage prints no re-priced desk copy',
+     !/repriceCopy\(/.test(front) && !/pricingNote\(/.test(front));
 
   const page = fs.readFileSync(path.join(ROOT, 'lead.html'), 'utf8');
   ok('/lead loads the library at all', page.includes('src="/it-league.js"'));
@@ -1060,12 +1040,9 @@ console.log('\nthe front page and /lead restate before they paint');
   ok('/lead\u2019s archive list carries them as well',
      /repriceCopy\(x\.title,[\s\S]{0,120}?x\.createdAt\)/.test(page));
 
-  // The served board can settle after a page has painted. The front page
-  // repaints on it; /lead paints once, so it waits for it instead.
-  ok('the front page repaints when the served board lands',
-     /L\.onBoard\(function\(ok\)\{ if \(ok\) repaintLead\(\); \}\)/.test(front));
-  ok('and registers that hook once, outside any paint',
-     (front.match(/L\.onBoard\(/g) || []).length === 1);
+  // The served board can settle after a page has painted. /lead paints once, so
+  // it waits for the board rather than swapping dollars under the reader. (The
+  // homepage's repaint-on-board hook went with its lead; it loads no library.)
   ok('/lead waits for the board rather than swapping dollars under the reader',
      /function afterBoard\(d\)/.test(page) && /\.then\(afterBoard\)/.test(page));
   ok('and waits on both of its fetches',

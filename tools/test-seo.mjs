@@ -284,9 +284,16 @@ console.log('\nhead meta');
 // ── the static camp desk ─────────────────────────────────────────────────────
 console.log('\nthe camp desk is crawlable without JavaScript');
 {
+  // The report list used to be read out of front.html's REPORTS array. The
+  // homepage stopped carrying that array in September 2026 along with every
+  // other build-time data block, so this reads the run straight off the pages
+  // themselves — which is what build-front.mjs scans, and one fewer copy.
   const front = read('front.html');
-  const reports = JSON.parse(front.match(/var REPORTS = (\[[\s\S]*?\]);\n/)[1]);
-  ok('REPORTS is populated', reports.length > 0, String(reports.length));
+  const reports = fs.readdirSync(ROOT)
+    .filter((f) => /^auction-watch-\d{4}-\d{2}-\d{2}\.html$/.test(f))
+    .sort().reverse()
+    .map((f) => ({ url: '/' + f.replace('.html', '') }));
+  ok('there are camp reports to check', reports.length > 0, String(reports.length));
 
   // The whole run lives at /auction-watch, in the served HTML rather than behind
   // the script — the front page's desk carries only the latest few, so this is
@@ -297,12 +304,12 @@ console.log('\nthe camp desk is crawlable without JavaScript');
     reports.every((r) => inArchive.has(r.url)),
     reports.filter((r) => !inArchive.has(r.url)).map((r) => r.url).join(', '));
 
-  // The front page no longer carries a camp desk at all: the run from The
-  // Play-Caller Premium down to the Draft Tools band came off the page in
-  // September 2026. A desk that creeps back onto it, printing the whole archive,
-  // is the regression this pins.
+  // The front page carries no camp desk at all. It used to carry the latest plus
+  // four; the September 2026 rewrite left the homepage with five sections and
+  // none of them is a drop-page index. A desk that creeps back onto it is the
+  // regression this pins.
   const onFront = new Set([...front.matchAll(/href="(\/auction-watch-\d{4}-\d{2}-\d{2})"/g)].map((m) => m[1]));
-  ok('the front page does not carry the camp archive', onFront.size <= 5, String(onFront.size));
+  ok('the front page does not carry the camp archive', onFront.size === 0, String(onFront.size));
 
   // A camp report page nobody links to is reachable only from the sitemap.
   const watchPages = pages.filter((f) => /^auction-watch-\d{4}-\d{2}-\d{2}\.html$/.test(f));
@@ -398,8 +405,13 @@ console.log('\nsitemap.xml');
 console.log('\nevery page claims the URL the chrome links it as');
 {
   const chrome = read('tools/build-chrome.mjs');
+  // The fragment is not part of the path, and the regex stops at it: the chrome
+  // links /faq#faq-start and /my-league#settings, which are the /faq and
+  // /my-league PAGES and are compared as such. Ten destinations, not the thirty
+  // this floor was written for — the nav is five items and the footer nine since
+  // the two-lane pass, deliberately, so the floor moved with it.
   const hrefs = [...new Set([...chrome.matchAll(/href: *.(\/[A-Za-z0-9\/_-]*)./g)].map((m) => m[1]))];
-  ok('the chrome link set was read', hrefs.length > 20, String(hrefs.length));
+  ok('the chrome link set was read', hrefs.length >= 10, String(hrefs.length));
 
   const wrong = [];
   for (const f of pages) {

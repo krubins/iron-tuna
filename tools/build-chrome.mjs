@@ -28,217 +28,98 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { putWordmark } from './wordmark.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = process.argv.includes('--check');
 const EXCLUDE = new Set(['index.html', 'front.html', 'admin.html']);
 
-// The READING pages. tools/test-reading-view.mjs states the rule they
-// exist under: the app, the front page and the guides are one zone; the
-// standing play-caller column and the article page every generated story lands
-// on are a white reading zone. They are pages you
-// read rather than use, and an eleven-item nav belongs on neither. They keep
-// their own short header and take the shared footer, so every destination is
-// still one scroll away.
-const NAV_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html', 'the-tell.html']);
+// The READING pages. tools/test-reading-view.mjs states the rule they exist
+// under: the app, the front page and the guides are one zone; the standing
+// play-caller column and the article page every generated story lands on are a
+// white reading zone. They keep that palette, which is why they are excluded
+// from the CSS strip below — an inline :root is deliberate on these three and
+// drift everywhere else.
+//
+// THEY NO LONGER KEEP THEIR OWN NAV. Each carried a hand-written four-link row
+// (Auction Values / Strategy / Insights / Columns) plus a draft CTA: a second
+// navigation system reaching the same destinations under different names, which
+// is exactly what this pass set out to remove. The shared nav is five links now,
+// not eleven, so the reason for the exception is gone with it.
+const STYLE_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html', 'the-tell.html']);
 
 // ── the canonical link set ───────────────────────────────────────────────────
-// One place to change what the site links to. `app` is filled in per page so a
-// best-ball guide sends you to the best-ball board, not the auction one.
-const APP = 'https://irontuna.com/';
-// Where a page's call to action sends the reader. Auction is the default and the
-// point of the site; a snake page keeps its own board, because snake is still a
-// supported format and handing a snake reader an auction sheet is no use to them.
+// One place to change what the site links to.
 //
-// A best-ball page deliberately resolves to the AUCTION sheet rather than the
-// best-ball room: that line is retired (§27c), so there is no reason to keep
-// funneling readers into it. The pages still serve, and their one button now
-// points at the thing the site actually sells.
-const APP_BY_FORMAT = {
-  auction: APP + 'auctiondraft?screen=cheat',
-  snake: APP + 'snakedraft',
-  bestball: APP + 'auctiondraft?screen=cheat',
-};
-
-// IN-SEASON FIRST. The 2026 season is under way, so the three things the
-// product is now about lead the nav in the order the site is organized in:
-// Fantasy, DFS, Market Intel. The desk (the columns and the AI analysts) is
-// next, and the draft tools — which are the same working tools they always
-// were, and matter again every offseason — sit behind one "Draft Tools" menu
-// rather than owning the first two slots.
+// TWO PRODUCT LANES, AND NOTHING ELSE COMPETING WITH THEM. Fantasy and DFS are
+// what Iron Tuna sells. Articles explain and support those two lanes. The
+// betting market is the intelligence layer underneath both, not a third lane,
+// so "Market Intel" is no longer a top-level item: /vegas-edge, /game-intel,
+// /player-intel and /what-they-arent-telling-you still serve at the URLs they
+// were indexed under and are reached from the pages that use them.
 //
-// NOTHING WAS RETIRED TO DO THIS. Every destination the old nav reached is
-// still here; the auction values page, the guides, both insight editions and
-// the Insight Vault simply live under Draft Tools now. tools/test-chrome.mjs
-// asserts the full destination set on every page (MUST_NAV), so dropping one
-// by accident fails the build rather than going unnoticed.
+// NOTHING WAS DELETED TO DO THIS. Every page the old eleven-item nav reached is
+// still deployed at its own URL and still in sitemap.xml. Navigation removal is
+// not page removal; see the retained-routes list in the phase report.
 //
-// Best ball stays off every surface (§27c). The bestball-* pages still SERVE at
-// the URLs they were indexed at and stay in sitemap.xml — they are simply no
-// longer linked, which is how a content line is retired without breaking a URL
-// or throwing away its ranking. Do not put them back here without also putting
-// them back in the sitemap and the front page.
+// WHAT CAME OFF, AND WHY:
+//   Draft, In Season, The Desk, Market Intel   group headings for lanes the site
+//                                              no longer leads with
+//   The Pick, The Tell, Play-Caller Premium,   individual article columns; they
+//   Auction insights, Snake insights,          live under Articles now
+//   Insight Vault
+//   Auction values, Superflex & 2QB, Salary    draft tools and auction
+//   cap & keepers, Strategy guides, Auction    promotions. The season is under
+//   Manager, Snake board, Free cheat sheet     way; these belong back in the nav
+//                                              in the offseason, not in week 2.
+//   Rankings, Depth Charts, Weekly Intel,      individual tools
+//   Waivers & FAAB, Trade Finder, My Week
 const NAV = [
-  {
-    label: 'Fantasy', href: '/fantasy', children: [
-      { label: 'This week', href: '/fantasy' },
-      { label: 'In-Season hub', href: '/in-season' },
-      { label: 'Rankings', href: '/rankings' },
-      { label: 'Depth Charts', href: '/depth-charts' },
-      { label: 'Weekly Intel', href: '/weekly-intel' },
-      { label: 'Waivers & FAAB', href: '/waivers' },
-      { label: 'Trade Finder', href: '/trade-finder' },
-      { label: 'My Leagues', href: '/my-league' },
-      { label: 'My Week', href: '/my-week' },
-    ],
-  },
+  { label: 'Fantasy', href: '/fantasy' },
   { label: 'DFS', href: '/dfs' },
-  // MARKET INTEL is the standing name for the betting-market lane. The pages
-  // keep the names they were indexed under — Vegas Edge, Game Intel — because
-  // renaming a URL to tidy a label costs inbound links and buys nothing. This
-  // is the group heading only, and it is the same phrase the site already uses
-  // for the market model ("Market Intelligence", the Vega board).
-  {
-    label: 'Market Intel', href: '/vegas-edge', children: [
-      { label: 'Vegas Edge', href: '/vegas-edge' },
-      { label: 'Game Intel', href: '/game-intel' },
-      { label: 'Player Intel', href: '/player-intel' },
-      { label: 'The whole board', href: '/what-they-arent-telling-you' },
-    ],
-  },
-  {
-    label: 'The Desk', href: '/in-season/desk', children: [
-      { label: 'The Desk', href: '/in-season/desk' },
-      { label: 'The Analysts', href: '/analysts' },
-      { label: 'The Pick', href: '/the-pick' },
-      { label: 'The Tell', href: '/the-tell' },
-      { label: 'Play-Caller Premium', href: '/play-caller-premium' },
-    ],
-  },
-  {
-    label: 'Draft Tools', href: '/fantasy-football-auction-values', children: [
-      { label: 'Auction values', href: '/fantasy-football-auction-values' },
-      { label: 'Superflex & 2QB', href: '/superflex-auction-values' },
-      { label: 'Salary cap & keepers', href: '/salary-cap-draft-tool' },
-      { label: 'Strategy guides', href: '/guides' },
-      { label: 'Auction insights', href: '/auction-insights' },
-      { label: 'Snake insights', href: '/snake-insights' },
-      { label: 'Insight Vault', href: '/insights-vault' },
-    ],
-  },
-  { label: 'FAQ', href: '/faq' },
-  { label: 'Free cheat sheet', href: '{app}', cta: true },
+  // The desk is the articles hub: the week's written coverage and the standing
+  // columns under one heading rather than six of their own.
+  { label: 'Articles', href: '/in-season/desk' },
+  // There is no /how-it-works page in the repo, and this phase adds no pages.
+  // The FAQ's "Getting started" group is the site's existing answer to the
+  // question, so the label points there rather than at a new URL.
+  { label: 'How It Works', href: '/faq#faq-start' },
+  // /player is the site's search page: a real <form role="search"> posting ?q=
+  // with the shared typeahead behind it. Same destination the app's header
+  // lookup resolves to.
+  { label: 'Search', href: '/player' },
 ];
 
-// Where the header button leads to account-backed league sync instead of the
-// browser-only draft cheat sheet.
-// A reader on the waiver board in October is not there to build a draft sheet,
-// and the one thing that improves every number in front of them is saving their
-// scoring and their FAAB budget. The draft CTA is still one click away in the
-// nav and owns the whole of §05 on the homepage.
+// The one header button, on every page.
 //
-// The list is the in-season pages PLUS the pages that belong to no lane at all
-// — FAQ, support, the two legal documents, /data, the creator page and the
-// daily column. In September a Terms of Service page whose only button says
-// "Free cheat sheet" is the site telling a visitor it is still July. The draft
-// LANDING pages (auction values, the guides, both insight editions) keep the
-// draft button, because a reader who arrived on one searched for exactly that.
-//
-// tools/test-chrome.mjs reads this set out of this file rather than copying it,
-// so adding a page here is one edit, not two.
-const IN_SEASON_CTA = { label: 'Sync my league', href: '/my-league', cta: true };
-//
-// The rankings section — the ribbon's six destinations and the fourteen
-// per-position pages under its two menus — is in-season by definition, so every
-// one of them is listed here. tools/build-ranks.mjs generates the pages; this
-// set is what gives them the season's call to action rather than the draft one.
-const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-league.html', 'my-week.html',
-  'weekly-intel.html', 'rankings.html', 'vegas-edge.html', 'game-intel.html', 'waivers.html',
-  'depth-charts.html',
-  'trade-finder.html', 'faab.html', 'player-intel.html', 'desk.html', 'what-they-arent-telling-you.html',
-  'post-draft.html', 'analysts.html', 'analyst.html',
-  'stats.html', 'hidden-value.html', 'previews.html', 'the-line.html', 'weekly-wrap.html',
-  'weekly-rankings.html', 'weekly-qb-rankings.html', 'weekly-rb-rankings.html', 'weekly-wr-rankings.html',
-  'weekly-te-rankings.html', 'weekly-flex-rankings.html', 'weekly-k-rankings.html', 'weekly-dst-rankings.html',
-  'season-long-rankings.html', 'season-long-qb-rankings.html', 'season-long-rb-rankings.html',
-  'season-long-wr-rankings.html', 'season-long-te-rankings.html', 'season-long-flex-rankings.html',
-  'season-long-k-rankings.html', 'season-long-dst-rankings.html',
-  'faq.html', 'support.html', 'terms.html', 'privacy.html', 'data.html', 'creators.html',
-  'the-pick.html']);
+// IT IS NOT "My League". Automatic league sync does not work reliably today:
+// FLAG_SLEEPER_SYNC is off pending a written license, FLAG_YAHOO_SYNC is off and
+// has never run against a live Yahoo account, ESPN is not implemented at all,
+// and CBS is enabled but has never been exercised against a live CBS league
+// (docs/league-sync.md §3.1, rows 6-9 and 22). What DOES work for every reader
+// is the browser-only settings form in section 02 of /my-league — scoring, teams
+// and FAAB budget, saved locally, read by every board in the section. So the
+// entry says what it actually does and lands on that form.
+const CTA = { label: 'Customize My League', href: '/my-league#settings', cta: true };
 
-// The footer reads in the same order as the nav: the season first, the draft
-// tools after it, then the reading, the company and the legal shelf. "Data &
-// sources" is the public inventory of every external feed and the license it is
-// used under (data.html) — an acquirer, a licensing partner and a curious
-// reader all want the same page, and burying it would be the wrong instinct.
-const FOOT_COLS = [
-  {
-    h: 'In-Season', links: [
-      { label: 'Overview', href: '/in-season' },
-      { label: 'Fantasy', href: '/fantasy' },
-      { label: 'DFS', href: '/dfs' },
-      { label: 'Rankings', href: '/rankings' },
-      { label: 'Depth Charts', href: '/depth-charts' },
-      // The section ribbon's own destinations. The ribbon itself is only on the
-      // front page and the rankings section, so the footer is how every OTHER
-      // page on the site reaches them.
-      { label: 'This week’s rankings', href: '/weekly-rankings' },
-      { label: 'Season long rankings', href: '/season-long-rankings' },
-      { label: 'Stats', href: '/stats' },
-      { label: 'Weekly Wrap Up', href: '/weekly-wrap' },
-      { label: 'Waivers & FAAB', href: '/waivers' },
-      { label: 'My Leagues', href: '/my-league' },
-      { label: 'My Week', href: '/my-week' },
-    ],
-  },
-  {
-    h: 'Market Intel', links: [
-      { label: 'Vegas Edge', href: '/vegas-edge' },
-      { label: 'Hidden Value', href: '/hidden-value' },
-      { label: 'Previews', href: '/previews' },
-      { label: 'The Line', href: '/the-line' },
-      { label: 'Game Intel', href: '/game-intel' },
-      { label: 'Player Intel', href: '/player-intel' },
-      { label: 'The whole board', href: '/what-they-arent-telling-you' },
-      { label: 'Trade Finder', href: '/trade-finder' },
-    ],
-  },
-  {
-    h: 'Read', links: [
-      { label: 'The Desk', href: '/in-season/desk' },
-      { label: 'The analysts (AI)', href: '/analysts' },
-      { label: 'The Pick', href: '/the-pick' },
-      { label: 'The Tell', href: '/the-tell' },
-      { label: 'Play-Caller Premium', href: '/play-caller-premium' },
-      { label: 'Auction insights', href: '/auction-insights' },
-      { label: 'Insight Vault', href: '/insights-vault' },
-    ],
-  },
-  {
-    h: 'Draft Tools', links: [
-      { label: 'Auction values', href: '/fantasy-football-auction-values' },
-      { label: 'Auction Manager', href: APP + 'auctiondraft?screen=board' },
-      { label: 'Superflex & 2QB', href: '/superflex-auction-values' },
-      { label: 'Salary cap & keepers', href: '/salary-cap-draft-tool' },
-      { label: 'Snake board', href: APP + 'snakedraft' },
-      { label: 'Strategy guides', href: '/guides' },
-      { label: 'Auction Watch', href: '/auction-watch' },
-    ],
-  },
-  {
-    h: 'Company', links: [
-      { label: 'FAQ', href: '/faq' },
-      { label: 'Support', href: '/support' },
-      { label: 'Creators & affiliates', href: '/creators' },
-    ],
-  },
-  {
-    h: 'Legal', links: [
-      { label: 'Privacy', href: '/privacy' },
-      { label: 'Terms', href: '/terms' },
-      { label: 'Data & sources', href: '/data' },
-    ],
-  },
+// The footer is the nav plus the pages that belong to no lane: the data
+// inventory, the FAQ, the two legal documents and support. Nine links, one row.
+// Everything else that used to be here — the rankings shelf, the market column,
+// the reading column, the draft-tools column, the creator page and the "Build
+// your free sheet" promotion — is off the footer for the same reasons it is off
+// the nav. "Data Sources" is the public inventory of every external feed and the
+// license it is used under (data.html); an acquirer, a licensing partner and a
+// curious reader all want the same page.
+const FOOT_LINKS = [
+  { label: 'Fantasy', href: '/fantasy' },
+  { label: 'DFS', href: '/dfs' },
+  { label: 'Articles', href: '/in-season/desk' },
+  { label: 'How It Works', href: '/faq#faq-start' },
+  { label: 'Data Sources', href: '/data' },
+  { label: 'FAQ', href: '/faq' },
+  { label: 'Privacy', href: '/privacy' },
+  { label: 'Terms', href: '/terms' },
+  { label: 'Support', href: '/support' },
 ];
 
 const BLURB = 'Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.';
@@ -263,67 +144,51 @@ const LEGAL = '<b>For social and entertainment purposes only.</b> Every number o
 // ── helpers ──────────────────────────────────────────────────────────────────
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-// Which board a page belongs to, so its CTA points at the right one. Read from
-// the filename, which is how the page families are already named.
-function formatOf(file) {
-  if (/^(bestball-|best-ball-)/.test(file)) return 'bestball';
-  if (/^(snake-|snake_)/.test(file)) return 'snake';
-  return 'auction';
-}
-
 // A nav link is "current" when the page being built is the page it points to.
 // Dated family members count as their index (auction-insights-2026-08-20.html
 // is on /auction-insights), so the nav marks the section you are reading.
+// The fragment is dropped first: /faq#faq-start and /my-league#settings are the
+// faq and my-league pages, and a link that lands on a page should say so.
 function isCurrent(href, file) {
   if (!href.startsWith('/')) return false;
-  const slug = href.slice(1);
+  const slug = href.slice(1).split('#')[0].replace(/\/+$/, '');
   if (!slug) return false;
   const base = file.replace(/\.html$/, '');
   return base === slug || base.replace(/-2026-\d{2}-\d{2}$/, '') === slug;
 }
 
 function navHtml(file) {
-  const app = APP_BY_FORMAT[formatOf(file)];
-  const link = (l, extra = '') => {
-    const href = l.href.replace('{app}', app);
-    const cur = isCurrent(href, file) ? ' aria-current="page"' : '';
+  const link = (l) => {
+    const cur = isCurrent(l.href, file) ? ' aria-current="page"' : '';
     const cls = l.cta ? ' class="cta"' : '';
-    return `<a${cls} href="${href}"${cur}${extra}>${esc(l.label)}</a>`;
+    return `<a${cls} href="${l.href}"${cur}>${esc(l.label)}</a>`;
   };
-  const cta = IN_SEASON.has(file) ? IN_SEASON_CTA : NAV.find((l) => l.cta);
-  const items = NAV.filter((l) => !l.cta).map((l) => {
-    if (!l.children) return '      ' + link(l);
-    const kids = l.children.map((k) => link(k)).join('');
-    return `      <span class="nav-dd">${link(l)}<span class="nav-dd-menu">${kids}</span></span>`;
-  }).join('\n');
+  const items = NAV.map((l) => '      ' + link(l)).join('\n');
   return [
     '    <nav class="nav" id="sitenav" aria-label="Main">',
     items,
     '    </nav>',
-    '    ' + link(cta),
+    '    ' + link(CTA),
     '    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">',
     '      <span class="nav-toggle-bars"><span></span></span>Menu',
     '    </button>',
   ].join('\n');
 }
 
-function footHtml(file) {
-  const app = APP_BY_FORMAT[formatOf(file)];
-  const cols = FOOT_COLS.map((c) => {
-    const lis = c.links
-      .map((l) => `      <li><a href="${l.href.replace('{app}', app)}">${esc(l.label)}</a></li>`)
-      .join('\n');
-    return `    <div class="foot-col">\n     <h2>${esc(c.h)}</h2>\n     <ul>\n${lis}\n     </ul>\n    </div>`;
-  }).join('\n');
+function footHtml() {
+  const lis = FOOT_LINKS
+    .map((l) => `    <li><a href="${l.href}">${esc(l.label)}</a></li>`)
+    .join('\n');
   return [
-    '  <div class="foot-cols">',
-    cols,
-    '  </div>',
+    '  <nav class="foot-nav" aria-label="Footer">',
+    '   <ul>',
+    lis,
+    '   </ul>',
+    '  </nav>',
     '  <div class="foot-note">',
     `   <p>${BLURB}</p>`,
     `   <p class="foot-21">${LEGAL}</p>`,
-    '   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span>',
-    `    <a href="${app}">Build your free sheet</a></p>`,
+    '   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span></p>',
     '  </div>',
   ].join('\n');
 }
@@ -350,8 +215,8 @@ function putNav(html, file) {
   return html.replace(m[0], () => next);
 }
 
-function putFoot(html, file) {
-  const block = `${FOOT_OPEN}\n${footHtml(file)}\n  ${FOOT_CLOSE}`;
+function putFoot(html) {
+  const block = `${FOOT_OPEN}\n${footHtml()}\n  ${FOOT_CLOSE}`;
   if (html.includes(FOOT_OPEN)) {
     return html.replace(
       new RegExp(FOOT_OPEN + '[\\s\\S]*?' + FOOT_CLOSE.replace(/\//g, '\\/')),
@@ -431,13 +296,32 @@ const OWNED = [
   /\n?\/\* Visible keyboard focus \(WCAG 2\.4\.7\)[\s\S]*?\[tabindex\]:focus-visible\{[^}]*\}\n?/g,
   /\n?\/\* The dropdown is centered on its trigger[\s\S]*?@media \(max-width:560px\)\{\.nav-dd \.nav-dd-menu\{[^}]*\}\}\n?/g,
 ];
-function stripOwned(html) {
+// The three reading pages keep their own inline <style> (STYLE_EXCLUDE above),
+// because the white :root in it is what makes them a reading surface. What they
+// must NOT keep is the header block that stylesheet also carries: it was written
+// for a CTA that lived INSIDE <nav>, and the generated header puts the CTA
+// beside the nav instead. Left in place, `header.site .nav{display:flex}` beats
+// site.css's mobile rule and the disclosure button opens nothing on a phone,
+// and `:has(> a.cta) > a:nth-last-child(2){display:none}` hides a real nav link
+// on the one surface a reader spends longest on.
+//
+// Only those rules go. The palette, the type scale and everything below the
+// header are untouched. Each pattern is written so a second run finds nothing.
+const READING_OWNED = [
+  /\/\* Mobile masthead\.[\s\S]*?@media\(max-width:640px\)\{header\.site \.wrap\{[\s\S]*?nth-last-child\(2\)\{display:none\}\}\n?/g,
+  /\.nav a\{font-size:13px;margin-left:16px\}\n?/g,
+  /\.nav a\.cta\{color:#1a1205;[^}]*\}\n?/g,
+  [/(@media\(max-width:640px\)\{\.grid\{grid-template-columns:1fr\})\.nav a\{margin-left:10px\}\}/g, '$1}'],
+  /\.brand\{display:inline-flex;align-items:center\}\.brand-logo\{height:30px;width:auto;display:block\}\n?/g,
+];
+
+function stripOwned(html, rules = OWNED) {
   const i = html.indexOf('<style>'), j = html.indexOf('</style>');
   if (i === -1 || j === -1) return html;
   let css = html.slice(i + 7, j);
   // An entry is either a regex to delete outright, or a [regex, replacement]
   // pair where part of the rule has to survive (overflow-x:hidden below).
-  for (const entry of OWNED) {
+  for (const entry of rules) {
     const [re, replacement] = Array.isArray(entry) ? entry : [entry, ''];
     css = css.replace(re, replacement);
   }
@@ -487,8 +371,12 @@ function putNavJs(html) {
 // pages that still say tuna.png — a file that no longer exists — so every new
 // page would otherwise ship with a broken-image glyph where the logo goes until
 // someone noticed. Cheaper to heal on every run than to chase.
+// The same pass swaps the mark's eight <text> letters for the outlined paths
+// (tools/wordmark.mjs): a page copied from before September 16 still sets the
+// name in the Bebas Neue web font, which the reader sees in Impact or the system
+// sans until the font arrives, and never sees in Bebas if it does not.
 function putLogo(html) {
-  return html.replace(/\/tuna\.png/g, '/tuna.webp');
+  return putWordmark(html.replace(/\/tuna\.png/g, '/tuna.webp'));
 }
 
 function putSkip(html) {
@@ -515,21 +403,14 @@ for (const f of pages) {
   next = putCss(next);
   next = putLogo(next);
   next = putSkip(next);
-  if (!NAV_EXCLUDE.has(f)) {
-    next = putNav(next, f);
-    next = stripOwned(next);
-    next = putNavJs(next);
-  } else {
-    // A reading page keeps its own palette and header, but not its own
-    // TYPEFACE: leaving these three on -apple-system while the other 91 render
-    // in Inter reintroduces, on the three pages a reader spends longest on, the
-    // exact split this branch set out to remove. Only the font stack is
-    // rewritten; the white palette that test-reading-view.mjs owns is untouched.
-    next = next.replace(
-      /(body\{[^}]*?font-family:)-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif/,
-      '$1var(--font-body)');
-  }
-  next = putFoot(next, f);
+  // EVERY page takes the generated nav now, the three reading pages included.
+  // What they still keep is their own palette: stripOwned would delete the
+  // inline :root that makes them white, which test-reading-view.mjs requires
+  // them to carry.
+  next = putNav(next, f);
+  next = stripOwned(next, STYLE_EXCLUDE.has(f) ? READING_OWNED : OWNED);
+  next = putNavJs(next);
+  next = putFoot(next);
   if (next !== before) {
     changed.push(f);
     if (!CHECK) fs.writeFileSync(path.join(ROOT, f), next);

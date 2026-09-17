@@ -17,7 +17,7 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 
 | Host | Used for | Call sites | License status |
 |---|---|---|---|
-| `<league>.football.cbssports.com` | Reader-authorized CBS league settings, teams, rosters, standings, schedules, waiver order and transaction log | `PROVIDER_CBS`, `cbsGet`; validated league subdomain, fixed HTTPS `/api/league/` resources | **Off by default (`FLAG_CBS_SYNC`).** Token access and commercial terms still require live verification. No CBS login/password collection or provider writes. See docs/league-sync.md CBS addendum. |
+| `api.cbssports.com` and `<league>.football.cbssports.com` | Reader-authorized CBS league settings, teams, rosters, standings, schedules, waiver order and transaction log | `PROVIDER_CBS`, `cbsGet`, `cbsFetch`; the documented `/fantasy/league/` base first, then the validated league subdomain's `/api/league/`, fixed HTTPS resources on both | **Off by default (`FLAG_CBS_SYNC`).** Token access and commercial terms still require live verification. No CBS login/password collection or provider writes. See docs/league-sync.md CBS addendum. |
 | `api.sportsgameodds.com` | NFL player props, and one of the three quotes averaged into the game spread and total behind `/the-line`, `/previews` and every weekly board | `SGO_API_BASE`, `fetchOddsSgo`, `fetchGameLinesSgo` | **Paid, terms unconfirmed.** See item R8. |
 | `api.prop-line.com` | Tuna Market Signal current NFL game lines and fantasy-relevant player props; paid tiers also supply native opening/latest movement and cross-book steam | `TMS_PROVIDERS.propline`, `tmsPropLineHttp` | **Green for end-user analytical display.** Terms effective 2026-04-27 permit apps/websites to surface derived insights and individual values, while prohibiting bulk redistribution. Default integration excludes exchanges. |
 | `prop-line.com` | PropLine source-attribution link displayed with market results | `TMS_PROPLINE_SOURCE` | Link only; the worker does not fetch this website. Data use is covered by the API inventory entry above. |
@@ -29,6 +29,7 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 | `api.login.yahoo.com` | Yahoo OAuth 2.0 (authorize, token, refresh) | `YAHOO_AUTH`, `YAHOO_TOKEN` | Service endpoint; the reader consents on Yahoo's page. See R7. |
 | `fantasysports.yahooapis.com` | A reader's Yahoo league under their own OAuth grant, read-only scope `fspt-r` | `PROVIDER_YAHOO` | **Green for the reader's own data under the Yahoo Developer Network terms**; behind `FLAG_YAHOO_SYNC` until an app is registered. See R7. |
 | `static.www.nfl.com` | Team and player imagery, hot-linked | ~1,680 URL references across the deployed HTML, none fetched server-side | **Unreviewed and OPEN.** Copyrighted images served from the league's CDN. See R4. |
+| `thumb.wikimedia.org` and `upload.wikimedia.org` (resolved via `commons.wikimedia.org` and `www.wikidata.org` at build time) | Game photographs for the story art on `/`, `/in-season/desk`, `/lead`: one openly licensed action photo per player, hot-linked as a Commons thumbnail | `tools/build-action-shots.mjs` (build-time lookup, never the Worker), `it-action.js` (the deployed map), `storyArt()` in `player-search.js` | **Green, with an obligation.** Only CC0, public-domain, CC BY and CC BY-SA files are kept (`LICENSE_OK` in the tool; NC and ND never match). CC BY / CC BY-SA require the photographer, the license and a link to it wherever the file is shown, and that a cropped copy says so; `storyArt()` prints exactly that under every use and `tools/test-story-art.mjs` fails the build if it stops. See R9. |
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
 | DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
 | DFS lobby CSV (reader upload) | A reader's own salary file, for any classic slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/dfs/slate` | **Green.** Same file, obtained by the reader from a lobby they are already in. Parsed per request and stored nowhere; single-game files are refused rather than mispriced against the classic cap. |
@@ -219,7 +220,7 @@ See `docs/league-sync.md` Part 3 for the full record. In short:
 
 - **Sleeper.** The league connector uses the same API as the players map and inherits R2 exactly: free for non-commercial use, and Iron Tuna is a paid product. The connector is complete and tested against fixtures but ships **off** (`FLAG_SLEEPER_SYNC`). Turn it on only with Sleeper's written license in `docs/`. Attribution string in §3 applies.
 - **Yahoo.** OAuth 2.0 under the Yahoo Developer Network terms of use. The reader authorizes Iron Tuna to read their own fantasy data (scope `fspt-r`); no password is ever seen and tokens are sealed at rest (`LEAGUE_TOKEN_KEY`). Register an app at developer.yahoo.com, set `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`, and confirm the YDN terms permit use in a paid product before enabling `FLAG_YAHOO_SYNC`. Rate limits are per-app and undocumented; the connector caches for a minute and syncs on the job clock, never per page view.
-- **CBS Sportsline.** The connector uses a reader-supplied token scoped to one CBS football league. It calls only a fixed read-resource allowlist on the validated `<league>.football.cbssports.com` host, puts the token in the Authorization header, refuses redirects, and seals one token per league with `LEAGUE_TOKEN_KEY`. It never collects a CBS username/password or calls the mobile login endpoint. The implementation is synthetic-fixture-tested but not live-tested and ships **off** (`FLAG_CBS_SYNC`). Keep it off until a controlled live pass validates response shapes and CBS confirms permitted access and commercial use.
+- **CBS Sportsline.** The connector uses a reader-supplied token scoped to one CBS football league. It calls only a fixed read-resource allowlist, on the documented `api.cbssports.com/fantasy` base and then the validated `<league>.football.cbssports.com` host, sends the token the way CBS's fantasy API (version 3.0) reads it, as the `access_token` query parameter, plus the Authorization header, never follows a redirect (a redirect to a sign-in page is reported as a refused token), never logs or echoes the request URL, and seals one token per league with `LEAGUE_TOKEN_KEY`. Every CBS failure carries a redacted diagnostic (resource, what each host answered by HTTP status, and for a redirect the target host and path only) that reaches the form, the league's last error and the sync log. It never collects a CBS username/password or calls the mobile login endpoint. The implementation is synthetic-fixture-tested but not live-tested and ships **off** (`FLAG_CBS_SYNC`). Keep it off until a controlled live pass validates response shapes and CBS confirms permitted access and commercial use.
 - **ESPN.** No supported path. Not implemented; the adapter is a documented placeholder and manual setup is the fallback. Do not add the `lm-api-reads` host.
 
 ### R6 — Schema note for the free-tier delay model
@@ -231,9 +232,67 @@ same as `fetched_at`.
 
 ---
 
+### R9 — Wikimedia Commons game photographs: keep the credit with the picture  *(added 2026-09-16)*
+
+**Where:** `tools/build-action-shots.mjs` → `tools/nfl-action-shots.json` →
+`it-action.js` → `storyArt()` in `player-search.js`, and the lead band in
+`front.html` (`renderCast`).
+
+The first imagery on the site with a license anyone can read. Every row in the
+lookup is a file Commons publishes under CC0, public domain, CC BY or CC BY-SA;
+the tool refuses everything else, and the test refuses a row that slips past
+it. What the two CC licenses ask in return is not optional and is not
+"attribution" in the loose sense the headshot footer once used: **the
+photographer's name, the license name, a link to the license deed, and a note
+that the image was cropped, shown with the image.** The row carries all four
+(`a`, `l`, `lu`, and the fixed "cropped" wording), the figure prints them, and
+a page that showed the photograph without them would be using the file outside
+its license. Do not "tidy" the credit away.
+
+Two things this does **not** settle, for the owner:
+
+1. **Right of publicity.** A CC license is the photographer's grant of
+   copyright; it says nothing about the player's likeness. Editorial use in a
+   story about that player's game is the ordinary news use these pictures
+   were made for, and it is the same posture the headshots already take, but
+   it is a separate right and this file is not the place it gets cleared.
+2. **Hot-linking.** The pages reference Commons thumbnails rather than copying
+   the files, the same posture as the headshots. Commons permits it; CC would
+   equally permit vendoring the files into the repo, which trades a few
+   megabytes for independence from their CDN. A bandwidth decision, not a
+   rights one. `--vendor` does not exist yet; add it if the CDN ever proves
+   unreliable.
+
+The lookup itself is a network job (`node tools/build-action-shots.mjs`, with
+`NODE_USE_ENV_PROXY=1` behind a proxy) and is **not run by the CI checks**:
+that gate only verifies `it-action.js` matches the JSON it was generated from.
+
+**Who runs it, and why it is a workflow.** The tool was written in a Claude
+Code session whose egress policy refuses `commons.wikimedia.org` and
+`www.wikidata.org` outright (403 to CONNECT), so it could be written there but
+never run there — it shipped in #251 with an empty lookup and every story fell
+back to headshots. `.github/workflows/action-shots.yml` is the machine that
+can: a GitHub runner has ordinary outbound internet. It runs monthly and on
+demand, walks a few hundred players per run (the tool skips anyone already on
+file unless `--refresh`), and **opens a pull request rather than pushing** —
+what it changes is a thousand rows of third-party URLs and license strings,
+and a wrong row is a picture of the wrong man. The workflow runs
+`tools/test-story-art.mjs` before it proposes anything, so a file that fails
+the license or credit rules fails the run instead of reaching a branch.
+
+Until a run lands, the JSON is empty, every plate falls back to the headshot
+cutout, and nothing on the site breaks. That is the designed resting state,
+not an outage.
+
 ## 3. Attribution strings
 
 Publish these on `/data` and in the site footer.
+
+**Wikimedia Commons game photographs** — required by CC BY and CC BY-SA, per
+file, with the picture. `storyArt()` prints it; the shape is:
+
+> Photo: *Photographer* (linked to the file page), *CC BY-SA 2.0* (linked to
+> the deed), via Wikimedia Commons; cropped to fit.
 
 **nflverse-data** — required by CC BY 4.0. Retain creator identification, state
 that the data was modified, and link the source.
@@ -267,3 +326,48 @@ anyway; it costs nothing.
 4. Cache. It protects the quota and every green license here permits it.
 5. Keep the written record. Preserve dated provider terms and licensing confirmations in `docs/`.
 6. PropLine's default bookmaker allowlist is sportsbook-only. Do not add exchanges to that path without a separate product and legal decision.
+
+### R9a — the depiction rule  *(added 2026-09-17, after the first live run)*
+
+The first run of `.github/workflows/action-shots.yml` resolved 115 players and
+**54% of its rows had a file title that never mentioned the player.** It was
+taking the best-scoring landscape file out of each player's Commons *category*,
+and a category is a filing cabinet rather than a claim about who is in a
+picture. It produced, among others:
+
+| Row | File it chose | What that is |
+|---|---|---|
+| `austin-hooper` | `Chiefs vs Titans TE Chigoziem Okonkwo.png` | a different tight end |
+| `antonio-gibson` | `Sam Howell scramble Cardinals vs Commanders` | a team-mate |
+| `aidan-o-connell` | `Salute to Service Boot Camp … Airmen` | not football |
+| `amari-cooper` | `Cleveland Browns Visit NASA Glenn` | a facility tour |
+
+None of it was merged. `depicts()` now requires evidence of one of two kinds
+before a file is used: it **is** the entity's Wikidata image (P18), or its
+**title names him**. Everything else is discarded even when it is probably
+fine, because these pictures run in the homepage's hero under somebody's name
+and a wrong one is a picture of the wrong man. `NOT_ACTION` also now drops
+visits, tours, training camp, practice, media day and military events.
+
+The trade is coverage: replaying the rule over that run's own output keeps 46
+of 115 on the title test alone, plus whatever P18 adds back. Each row also
+carries `why` (`p18` or `named`) so the evidence is visible in the diff;
+`emitJs()` strips it, so it never reaches a browser.
+
+### R9b — what the browser actually fetches  *(added 2026-09-17)*
+
+Two corrections after watching the live page make its requests.
+
+**The host.** The Commons API returns thumbnails on **`thumb.wikimedia.org`**
+(117 of 133 rows) as well as `upload.wikimedia.org` (16). The inventory above
+named only the second. Both are Wikimedia's own file hosts and the licensing
+position is identical; the row is corrected so the host list is true.
+
+**The tracking query.** Every thumbnail URL the API hands back carries
+`?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail`.
+Serving that to a reader reports every page view of ours back to Wikimedia as
+an "imageinfo thumbnail" click — the API's own analytics, attached to a URL
+that was never meant to leave the build. `cleanUrl()` strips the query on the
+way into `it-action.js`, so the rows already on file were cleaned without
+re-running the lookup. The file serves identically without it.
+

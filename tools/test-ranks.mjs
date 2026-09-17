@@ -123,15 +123,20 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
 console.log('\nwhere the ribbon sits');
 {
   const front = read('front.html');
-  const heroEnd = front.indexOf('</section>', front.indexOf('<section class="hero-band"'));
+  const heroStart = front.indexOf('<section class="hero-band"');
+  const heroEnd = front.indexOf('</section>', heroStart);
   const ribAt = front.indexOf('<!--ranks:ribbon-->');
   const nextSec = front.indexOf('<section', heroEnd);
+  ok('the hero band is still the first section', heroStart > 0);
   ok('it is after the hero band', ribAt > heroEnd, `hero ends ${heroEnd}, ribbon at ${ribAt}`);
   ok('and before anything else on the page', ribAt < nextSec, `next section at ${nextSec}`);
-  // The in-page anchor ribbon further down is a different band with a different
-  // job. Confusing the two is how one of them ends up navigating away.
-  ok('the page still has its own in-page anchor ribbon', front.includes('<div class="ribbon" data-lane="fantasy">'));
-  ok('and the two are not the same element', !/<div class="ribbon"[^>]*>[\s\S]{0,200}rkr-link/.test(front));
+  // The homepage's own in-page anchor ribbon — the sticky bar of lane tabs and
+  // section jumps — came off with the sections it pointed at in the September
+  // 2026 rewrite. This band is the only ribbon on the page now, and it navigates
+  // AWAY to the boards, which is the distinction that used to need policing.
+  ok('there is no second, in-page ribbon to confuse it with',
+     !/<div class="ribbon"[^>]*>/.test(front));
+  ok('and this one carries the ribbon links', /rkr-link/.test(front.slice(ribAt, nextSec)));
 }
 
 // ── the dropdown is not inside a scroll container ────────────────────────────
@@ -168,12 +173,14 @@ console.log('\nthe section is gated like the rest of the in-season tools');
   const ungated = want.filter((w) => !gated.has(w));
   ok('every page in the section is in the gate', ungated.length === 0, ungated.join(', '));
 
-  // And the CTA: an in-season page sells the league save, not a draft sheet.
-  const chrome = read(path.join('tools', 'build-chrome.mjs'));
-  const inSeason = new Set((chrome.match(/const IN_SEASON = new Set\(\[([\s\S]*?)\]\)/) || [, ''])[1]
-    .split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean));
-  const missCta = allBoards.concat(LANES).filter((f) => !inSeason.has(f));
-  ok('and is listed as in-season, so its CTA is the league save', missCta.length === 0, missCta.join(', '));
+  // And the CTA. There is no in-season list to be on any more: the header button
+  // is the same on every page, because the draft CTA came off the whole site for
+  // the season. What it must be is the manual league setup — automatic sync is
+  // off or unproven for every provider (docs/league-sync.md §3.1) — so a
+  // rankings page cannot quietly go back to selling a draft sheet in September.
+  const missCta = allBoards.concat(LANES)
+    .filter((f) => !/<a class="cta" href="\/my-league#settings">Customize My League<\/a>/.test(read(f)));
+  ok('and its CTA is the league setup that actually works', missCta.length === 0, missCta.join(', '));
 }
 
 // ── the two columns the section is for ───────────────────────────────────────

@@ -319,26 +319,24 @@ console.log('\nevery statline can be restated in the reader\'s league');
   ok('the page loads the translator', /<script src="\/it-league\.js"/.test(page));
 }
 
-console.log('\nthe front page quotes the column rather than keeping a second copy');
+// The homepage used to carry a TELL array extracted from this page, and a band
+// that painted it, so this block existed to prove the copy had not drifted from
+// the source. The band came off in the September 2026 homepage rewrite (the six
+// standing columns were the "redundant branded columns" that pass removed), and
+// with it the copy. There is nothing left to drift — which is what this now
+// asserts, so a second copy cannot quietly reappear.
+//
+// The extraction itself is NOT gone: tools/build-front.mjs still reads this page
+// to stamp `data-players` on every entry (asserted above), which is what links
+// the names in the prose to their player cards.
+console.log('\nthe column is the only copy of itself');
 {
-  const m = front.match(/^var TELL = (\[[\s\S]*?\]);$/m);
-  ok('front.html carries the extracted array', !!m);
-  if (m) {
-    const band = JSON.parse(m[1]);
-    ok('it has an item per entry', band.length === entries.length,
-       `${band.length} in front.html, ${entries.length} on the page`);
-    const drift = band.filter((b, i) => !entries[i] || b.id !== entries[i].id
-      || b.title !== entries[i].title || b.side !== entries[i].side);
-    ok('and every item is the entry it points at', drift.length === 0,
-       drift.map((b) => b.id).join(', ') + ' — run node tools/build-front.mjs');
-    const noNums = band.filter((b) => !b.nums || b.nums.length < 2);
-    ok('the band carries the evidence row, not just the verdict',
-       noNums.length === 0, noNums.map((b) => b.id).join(', '));
-    const bad = band.filter((b) => !/^\/the-tell#/.test(b.url));
-    ok('every card links back into the column', bad.length === 0, bad.map((b) => b.id).join(', '));
-  }
-  ok('the lane band and its ribbon jump exist', front.includes('id="tellBand"')
-     && front.includes('href="#thetell"'));
+  const front = read('front.html');
+  ok('the homepage keeps no extracted copy', !/var TELL = \[/.test(front));
+  ok('and paints no band from one', !/id="tellBand"/.test(front));
+  ok('the page still carries every entry in its served HTML',
+     entries.length > 0 && entries.every((e) => page.includes('id="' + e.id + '"')),
+     String(entries.length));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

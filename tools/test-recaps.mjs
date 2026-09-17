@@ -111,24 +111,20 @@ console.log('\nthe route');
   ok('it is a GET', /method !== 'GET'/.test(route));
 }
 
-console.log('\nthe front page holds up its half');
+// The recap strip was a dark one-line wire pinned above the masthead on "/".
+// It came off the homepage in the September 2026 rewrite: the page is five
+// sections now, and the "what just went final" surface is the desk's own
+// recaps, which section 4 links off /api/content. /api/recaps is unchanged and
+// is still what the desk reads — everything above this line is that contract.
+console.log('\nthe homepage carries no second recap surface');
 {
   const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
-  ok('the strip ships hidden, so a page that never fetches is the page as it was',
-    /<section class="rcp" id="recapStrip" hidden/.test(front));
-  ok('it sits above the brand line, which is untouched beneath it',
-    front.indexOf('id="recapStrip"') < front.indexOf('<div class="dominant"'));
-  ok('it is only ever revealed after a recap is painted',
-    /paint\(\);\s*\r?\n\s*strip\.hidden = false;/.test(front));
-  ok('the count reads "N of M"', /\(i \+ 1\) \+ ' of ' \+ items\.length/.test(front));
-  ok('rotation is roughly eight seconds', /var HOLD = 8000;/.test(front));
-  ok('the arrows stop the rotation rather than fighting the reader',
-    /function step\(n\) \{ held = true; stop\(\);/.test(front));
-  ok('one recap drops the counter and the arrows', /\.rcp\[data-single\] \.rcp-nav\{display:none\}/.test(front));
-  ok('the dek is the part that goes on a narrow screen', /@media \(max-width: 860px\) \{ \.rcp-dek\{display:none\} \}/.test(front));
-  // Basis 0. With `auto` the dek claims its content width first and the
-  // headline loses half the strip to it at any real headline length.
-  ok('the headline takes the width it needs and the dek clips first', /\.rcp-dek\{flex:1 1 0;/.test(front));
+  ok('the strip is gone from the homepage', !/id="recapStrip"/.test(front));
+  ok('and nothing on the page fetches /api/recaps', !front.includes('/api/recaps'));
+  // What replaced it: the desk's current pieces, hidden until the feed answers.
+  ok('the desk section is there instead, hidden until it has something',
+    /<section class="hm-sec" id="articles" hidden/.test(front));
+  ok('and it reads the content desk', front.includes("grab('/api/content'"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -7904,10 +7904,10 @@ const CONTENT_KINDS = {
   // same week across four horizons, and Monday morning is for the record.
   // `partial`: the Monday game is not final at 6 AM and is named as not
   // covered rather than waited for. Worth-gated: no hit, no piece.
-  'what-tuna-got-right': { title: 'What Tuna Got Right', subtitle: 'The biggest wins from the board frozen before kickoff', day: 'Mon', hour: 6, minute: 0, retro: true, subject: 'played',
+  'what-tuna-got-right': { title: 'What Tuna Got Right', subtitle: 'The week’s biggest wins: what the board called before kickoff, and what the desk told you to do', day: 'Mon', hour: 6, minute: 0, retro: true, subject: 'played',
     analyst: 'mercer', dfsAnalyst: 'park', lens: 'both', gate: 'worth', partial: true,
     targets: (gs) => gs.filter(g => g.status === 'final' && g.dow !== 'Mon'),
-    summary: 'What the board called before kickoff and the box score proved: the week’s biggest wins, ranked, with the misses on the record.', absorbs: ['early-rankings'] },
+    summary: 'Both halves of the record, ranked biggest first: the projections the board froze before kickoff, and every recommendation the desk published by name, each against what actually happened. The misses are on it too.', absorbs: ['early-rankings'] },
   'quarterback-monday': { title: 'Quarterback Monday', day: 'Mon', hour: 7, minute: 0, retro: true, subject: 'played',
     analyst: 'dalton', dfsAnalyst: 'park', lens: 'both', gate: 'worth', targets: () => [],
     summary: 'One quarterback story that matters, or nothing.', absorbs: [] },
@@ -8044,8 +8044,12 @@ const NEWSROOM_OBJECT_SECTIONS = {
   // The Monday scorecard: one row per call, the game it was made on, and the
   // three numbers that settle it (what the site said, what the consensus
   // said, what he scored).
-  biggestWins: ['player', 'position', 'team', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
-  whatWeMissed: ['player', 'position', 'team', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
+  // `source` is the packet's own word (`board` or `story`) and `calledIn` is
+  // where the call was made: the frozen pre-kickoff board, or the story that
+  // recommended him by name. Both kinds of win run in one list, so the row
+  // has to say which kind it is.
+  biggestWins: ['player', 'position', 'team', 'source', 'calledIn', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
+  whatWeMissed: ['player', 'position', 'team', 'source', 'calledIn', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
   captainOptions: ['player', 'position', 'team', 'salary', 'why'], contrarianCaptains: ['player', 'position', 'team', 'salary', 'why'], streamingDefenses: ['team', 'opponent', 'why'], defensesToAvoid: ['team', 'opponent', 'why'], kickerRankings: ['player', 'team', 'rank', 'why'],
   priceInefficiencyBoard: ['player', 'position', 'team', 'salary', 'projection', 'value', 'why'], earlyValues: ['player', 'position', 'team', 'salary', 'why'], likelyChalk: ['player', 'position', 'team', 'salary', 'why'], goodChalk: ['player', 'position', 'team', 'salary', 'why'], badChalk: ['player', 'position', 'team', 'salary', 'why'],
   coreStacks: ['game', 'players', 'why'], contrarianStacks: ['game', 'players', 'why'], stacks: ['game', 'players', 'why'], initialStacks: ['game', 'players', 'why']
@@ -8059,7 +8063,10 @@ const NEWSROOM_OBJECT_SECTIONS = {
 const CONDITIONAL_SECTIONS = {
   'game-recap': { weCalledIt: p => !!(p && p.calledIt && p.calledIt.available && (p.calledIt.hits.length || p.calledIt.misses.length)) },
   // A week with no misses has no misses section; it does not get a padded one.
-  'what-tuna-got-right': { whatWeMissed: p => !!(p && p.record && p.record.misses > 0) }
+  // The list itself decides, not the board's count alone: a week whose only
+  // wrong calls were made in the stories still owes the reader a misses
+  // section.
+  'what-tuna-got-right': { whatWeMissed: p => !!(p && Array.isArray(p.misses) && p.misses.length > 0) }
 };
 function sectionsFor(kind, lens, packet) {
   const n = NEWSROOM_SECTIONS[kind];
@@ -9125,6 +9132,13 @@ const CALLS_DDL = [
   'CREATE TABLE IF NOT EXISTS news_state (id INTEGER PRIMARY KEY, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)'
 ];
 const CALL_DIRECTIONS = new Set(['up', 'down', 'hold', 'buy', 'sell', 'start', 'sit', 'add', 'drop', 'stash', 'attack', 'fade', 'target', 'avoid']);
+// The two that make no claim about one Sunday. `gradeCall` calls them
+// 'noted' and the Monday scorecard leaves them off the week's record.
+const STORY_CALL_HOLDS = new Set(['hold', 'stash']);
+// Which way a call points, so one grader serves both the ledger and the
+// Monday scorecard: bullish wants the player over the number, bearish under.
+const CALL_BULLISH = new Set(['up', 'buy', 'start', 'add', 'attack', 'target']);
+const CALL_BEARISH = new Set(['down', 'sell', 'sit', 'fade', 'avoid', 'drop']);
 function normalizeCalls(calls, packet, analystId, lens) {
   const names = new Set((packet.allowed && packet.allowed.names) || []);
   const index = packet.playerIndex || {};
@@ -9165,6 +9179,55 @@ async function priorCallsFor(env, keys, limit) {
       direction: r.direction, recommendation: r.recommendation, rank: r.rank, confidence: r.confidence, rationale: r.rationale, outcome: r.outcome, outcomeNote: r.outcome_note, at: r.created_at }));
   } catch (e) { return []; }
 }
+// EVERY RECOMMENDATION THE DESK PUBLISHED FOR A WEEK. `analyst_calls` holds
+// one row per position a published piece took (`recordCalls` writes them as
+// each piece publishes): "start him", "fade him", "spend the FAAB". This
+// reads them back for the Monday scorecard, joined to the story that made
+// each one so a win can name where it was called.
+//
+// NOT `outcome`. The ledger's own grader (`runCallsGrade`) runs Tuesday and
+// Wednesday, after the weekly usage file publishes, which is a day and a
+// half AFTER the Monday 6 AM scorecard; a Monday piece that waited for it
+// would print an empty story record every week of the season. The scorecard
+// grades these itself, off the same box scores the recaps used on Sunday
+// night and against the same consensus numbers the board half is measured
+// against. `runCallsGrade` still settles the ledger for the analyst pages
+// later, on its own benchmark.
+//
+// A hold and a stash never come back: both are positions to be judged over
+// weeks, not on one Sunday. Nor does a rivalry-column pick, which is graded
+// on rank in its own column.
+async function weekPublishedCalls(env, season, week) {
+  if (!env || !env.LEADS_DB || season == null || week == null) return { rows: [], stories: 0, held: 0 };
+  try {
+    const q = await env.LEADS_DB.prepare(
+      'SELECT c.id, c.analyst, c.player_key, c.player, c.team, c.position, c.kind, c.slug, c.lens, c.direction, c.recommendation, c.confidence, c.rationale, c.outcome, c.created_at, p.title AS piece_title, p.headline AS piece_headline, p.game_id AS piece_game ' +
+      'FROM analyst_calls c LEFT JOIN content_pieces p ON p.slug = c.slug AND p.status = \'published\' ' +
+      'WHERE c.season = ? AND c.week = ? AND c.kind != ? ORDER BY c.created_at ASC'
+    ).bind(season, week, RIVALRY_COLUMN_KIND).all();
+    const rows = [], seen = new Set(), stories = new Set();
+    let held = 0;
+    for (const r of q.results || []) {
+      if (!CALL_DIRECTIONS.has(String(r.direction || '')) || STORY_CALL_HOLDS.has(String(r.direction || ''))) { held++; continue; }
+      // One call per player per story. A piece re-produced on its slug stores
+      // its positions again, and the same recommendation counted twice would
+      // inflate the week's record.
+      const dedupe = r.slug + '|' + (r.player_key || r.player) + '|' + r.direction;
+      if (seen.has(dedupe)) continue;
+      seen.add(dedupe);
+      stories.add(r.slug);
+      const K = CONTENT_KINDS[r.kind];
+      rows.push({ source: 'story', id: r.id, analyst: r.analyst, analystName: (ANALYSTS[r.analyst] || ANALYST_HOUSE).name,
+                  key: r.player_key, name: r.player, player: r.player, team: r.team, position: r.position,
+                  kind: r.kind, slug: r.slug, lens: r.lens || 'weekly',
+                  story: (K && K.title) || String(r.piece_title || '').split(' \u00b7 ')[0].trim() || r.kind,
+                  storyHeadline: r.piece_headline || null, url: _pieceUrl({ kind: r.kind, week, game_id: r.piece_game || null }),
+                  direction: r.direction, recommendation: r.recommendation || null, confidence: r.confidence || null, rationale: r.rationale || null,
+                  ledgerOutcome: r.outcome || null });
+    }
+    return { rows, stories: stories.size, held };
+  } catch (e) { return { rows: [], stories: 0, held: 0, error: 'unavailable' }; }
+}
 async function analystCalls(env, analyst, limit) {
   if (!env || !env.LEADS_DB) return [];
   try {
@@ -9179,13 +9242,20 @@ async function analystCalls(env, analyst, limit) {
 // the usage file has not published is left ungraded.
 function gradeCall(call, actualPts, projectedPts) {
   if (actualPts == null || projectedPts == null) return null;
-  const bull = ['up', 'buy', 'start', 'add', 'attack', 'target'].includes(call.direction);
-  const bear = ['down', 'sell', 'sit', 'fade', 'avoid', 'drop'].includes(call.direction);
-  if (!bull && !bear) return { outcome: 'noted', note: 'a hold or a stash is graded over time, not on one week' };
+  const bull = CALL_BULLISH.has(call.direction);
+  const bear = CALL_BEARISH.has(call.direction);
+  if (!bull && !bear) return { outcome: 'noted', note: 'a hold or a stash is graded over time, not on one week', actual: actualPts, projected: projectedPts, margin: null };
   const diff = _oddsRound(actualPts - projectedPts);
   const hit = bull ? diff >= 0 : diff < 0;
   const push = Math.abs(diff) < 1.5;
-  return { outcome: push ? 'push' : hit ? 'hit' : 'miss', note: actualPts + ' actual vs ' + projectedPts + ' projected (' + (diff >= 0 ? '+' : '') + diff + ')' };
+  // MARGIN IS SIGNED IN THE CALL'S OWN DIRECTION, so one number ranks a buy
+  // and a fade against each other: a hit is positive by however far it
+  // landed, a miss negative by however far it did not. The Monday scorecard
+  // sorts the week's recommendations on it, and a fade that held a player to
+  // four points under his own line is a win of the same size as a buy that
+  // beat one by four.
+  const margin = _oddsRound(bull ? diff : -diff);
+  return { outcome: push ? 'push' : hit ? 'hit' : 'miss', note: actualPts + ' actual vs ' + projectedPts + ' projected (' + (diff >= 0 ? '+' : '') + diff + ')', actual: actualPts, projected: projectedPts, margin };
 }
 // Everyone who has a scored line for `week`, ranked inside his own position on
 // what he actually did that week. A player with no line for that week is
@@ -9253,7 +9323,11 @@ async function runCallsGrade(env) {
       g = gradeCall(r, actual, projected);
     }
     if (!g) continue;
-    try { await env.LEADS_DB.prepare('UPDATE analyst_calls SET outcome = ?, outcome_note = ?, outcome_at = ? WHERE id = ?').bind(g.outcome, g.note, Date.now(), r.id).run(); graded++; } catch (e) {}
+    // The numbers, not just the sentence. The Monday scorecard ranks the
+    // week's recommendations against each other and against the board's own
+    // calls, and a margin parsed back out of `outcome_note` prose is not a
+    // number the desk can stand behind.
+    try { await env.LEADS_DB.prepare('UPDATE analyst_calls SET outcome = ?, outcome_note = ?, outcome_at = ?, outcome_actual = ?, outcome_projected = ?, outcome_margin = ? WHERE id = ?').bind(g.outcome, g.note, Date.now(), g.actual != null ? g.actual : null, g.projected != null ? g.projected : null, g.margin != null ? g.margin : null, r.id).run(); graded++; } catch (e) {}
   }
   return { ok: true, graded, rivalry, candidates: rows.length };
 }
@@ -9401,6 +9475,14 @@ async function newsroomReady(env) {
     // IF NOT EXISTS; a duplicate column is an error we expect and swallow.
     for (const col of ['analyst TEXT', 'lens TEXT', 'version INTEGER', 'rivalry TEXT', 'headline TEXT', 'dek TEXT', 'game_id TEXT', 'components TEXT', 'wrap TEXT']) {
       try { await env.LEADS_DB.prepare('ALTER TABLE content_pieces ADD COLUMN ' + col).run(); } catch (e) {}
+    }
+    // What a graded call actually scored, kept as numbers so the Monday
+    // scorecard can rank recommendations the same way it ranks the board's
+    // own calls. Rows graded before these columns existed keep their
+    // `outcome` and their note and are simply not rankable; the scorecard
+    // leaves them out rather than guessing a margin for them.
+    for (const col of ['outcome_actual REAL', 'outcome_projected REAL', 'outcome_margin REAL']) {
+      try { await env.LEADS_DB.prepare('ALTER TABLE analyst_calls ADD COLUMN ' + col).run(); } catch (e) {}
     }
     // A per-game kind writes one row per game per week; the index the table
     // shipped with stops at (kind, season, week).
@@ -9699,12 +9781,21 @@ function packetGameRecap(game, summary, ctx, freeze) {
   const box = { away: summary.away, home: summary.home, final: !!summary.final };
   const wrapFacts = { matchup: game.away + ' at ' + game.home, score: summary.away.team + ' ' + summary.away.score + ', ' + summary.home.team + ' ' + summary.home.score,
                       topScorers: scored.slice(0, 3), biggestUsage: used.slice(0, 3), leadSignal: forward[0] || null };
-  return { kind: 'game-recap', week: ctx.weekNumber, game: { id: game.id, matchup: game.away + ' at ' + game.home, away: game.away, home: game.home, day: game.dow, kickoff: game.kickoff }, box,
+  return _withScored({ kind: 'game-recap', week: ctx.weekNumber, game: { id: game.id, matchup: game.away + ' at ' + game.home, away: game.away, home: game.home, day: game.dow, kickoff: game.kickoff }, box,
            whatScored: scored.slice(0, 16), usage: used.slice(0, 20), forwardSignals: forward.slice(0, 14), teams: teamBlocks,
            calledIt: _vindication(freeze, scoredByKey, ctx.weekNumber),
            market: Object.fromEntries(teams.map(t => [t, _marketFor(t, ctx)])), waivers: teams.flatMap(t => _waiverFor(t, usage, ctx)).slice(0, 8),
            wrapFacts, dfs: _dfsBlock(ctx, new Set(teams)),
-           unavailable: ['routes and route participation (no free feed publishes them)', 'snap counts until the weekly usage file publishes', 'red-zone and goal-line counts are derived from play descriptions and are left uncounted where the play text is ambiguous'] };
+           unavailable: ['routes and route participation (no free feed publishes them)', 'snap counts until the weekly usage file publishes', 'red-zone and goal-line counts are derived from play descriptions and are left uncounted where the play text is ambiguous'] }, scoredByKey);
+}
+// What every player on the board actually scored in a game, keyed the way the
+// board keys him. `_vindication` grades the frozen projections on it, and the
+// Monday scorecard grades the week's published recommendations on the same
+// numbers. NOT ENUMERABLE: the packet is JSON for the writer and for storage,
+// and a Map stringifies to `{}` in every recap brief.
+function _withScored(out, scoredByKey) {
+  Object.defineProperty(out, 'scoredByKey', { value: scoredByKey, enumerable: false });
+  return out;
 }
 // THE WEEK'S RECORD, and the biggest wins on it. One entry per game that is
 // final AND had a board frozen before its kickoff; each is graded by the same
@@ -9722,7 +9813,26 @@ function packetGameRecap(game, summary, ctx, freeze) {
 // not only what he did. Worth-gated: nothing landed, nothing runs.
 const WEEK_WINS_MAX = 8;
 const WEEK_MISSES_MAX = 4;
-function packetCalledItWeek(allGames, entries, ctx) {
+// A PUBLISHED RECOMMENDATION, GRADED THE WAY THE BOARD'S OWN CALLS ARE: on
+// what the player actually scored, against the CONSENSUS projection for that
+// week. The board half asks "did he finish on our side of the consensus
+// number"; a story that said start him is asking the reader to do the same
+// thing in words, so it is settled the same way and the two rank together.
+// A result inside `CALL_PUSH_PTS` of the number decides nothing.
+//
+// `scored` is the box-score map the recaps built (points keyed the way the
+// board keys a player) and `consensus` is that week's consensus points for
+// him. Missing either, the call is not graded: it is not a miss.
+const CALL_PUSH_PTS = 1.5;
+function gradeStoryCall(call, actual, consensus) {
+  if (actual == null || consensus == null || !Number.isFinite(actual) || !Number.isFinite(consensus)) return null;
+  const bull = CALL_BULLISH.has(call.direction), bear = CALL_BEARISH.has(call.direction);
+  if (!bull && !bear) return null;
+  const diff = _oddsRound(actual - consensus);
+  const margin = _oddsRound(bull ? diff : -diff);
+  return { outcome: Math.abs(diff) < CALL_PUSH_PTS ? 'push' : margin > 0 ? 'hit' : 'miss', actual, benchmark: consensus, margin };
+}
+function packetCalledItWeek(allGames, entries, ctx, recs, scored) {
   const covered = [], notCovered = [];
   const wins = [], misses = [], byPosition = {};
   let calls = 0, hitCount = 0, missCount = 0;
@@ -9734,7 +9844,7 @@ function packetCalledItWeek(allGames, entries, ctx) {
     const c = e.calledIt;
     if (!c || !c.available) { graded.set(e.game.id, 'no board was frozen before kickoff'); continue; }
     const matchup = e.game.away + ' at ' + e.game.home;
-    const tag = h => ({ ...h, game: matchup, day: e.game.dow, gameId: e.game.id });
+    const tag = h => ({ ...h, source: 'board', game: matchup, day: e.game.dow, gameId: e.game.id, story: null });
     for (const h of c.hits) wins.push(tag(h));
     for (const m of c.misses) misses.push(tag(m));
     calls += c.counts.hits + c.counts.misses; hitCount += c.counts.hits; missCount += c.counts.misses;
@@ -9742,6 +9852,50 @@ function packetCalledItWeek(allGames, entries, ctx) {
     for (const m of c.misses) { const b = byPosition[m.position] || (byPosition[m.position] = { hits: 0, misses: 0 }); b.misses++; }
     covered.push({ game: matchup, day: e.game.dow, calls: c.counts.hits + c.counts.misses, hits: c.counts.hits, misses: c.counts.misses, frozenAt: c.frozenAt });
     graded.set(e.game.id, null);
+  }
+  // THE OTHER HALF OF THE RECORD. The board frozen before a kickoff is what
+  // the site's numbers said; `analyst_calls` is what its STORIES said, in
+  // words a reader acted on ("start him", "fade him", "spend the FAAB"), and
+  // runCallsGrade has already settled each one against the week's actual
+  // points. A scorecard built on the board alone grades the model and lets
+  // the column off, and in a week where no board was frozen it has nothing
+  // to say at all.
+  const storyRows = (recs && recs.rows) || [];
+  const storyWins = [], storyMisses = [];
+  let storyPushes = 0;
+  const byStory = {}, byAnalyst = {};
+  // The game each club played this week, so a story call names the matchup
+  // the way a board call does. A reader who is told "we said start him" wants
+  // to know who he was starting him against.
+  const gameOfTeam = {};
+  for (const g of allGames || []) {
+    if (g.type && g.type !== 'REG') continue;
+    gameOfTeam[g.home] = { game: g.away + ' at ' + g.home, day: g.dow, gameId: g.id };
+    gameOfTeam[g.away] = { game: g.away + ' at ' + g.home, day: g.dow, gameId: g.id };
+  }
+  // That week's consensus number for each player, from the board the piece is
+  // already holding. On Monday the week rule still has ctx.week on the played
+  // week (a week is current until its own last game ends), so these are the
+  // numbers the calls were made against and not next week's.
+  const consensusOf = new Map();
+  for (const pl of (ctx.week && ctx.week.players) || []) if (pl && pl.key && pl.consensus) consensusOf.set(pl.key, pl.consensus.points);
+  const box = scored || new Map();
+  let ungraded = 0;
+  for (const raw of storyRows) {
+    const sc = raw.key ? box.get(raw.key) : null;
+    const g = gradeStoryCall(raw, sc ? sc.points : null, raw.key ? consensusOf.get(raw.key) : null);
+    // No box-score line or no consensus number for him: the call is not
+    // gradable this morning and is counted out rather than scored as a miss.
+    if (!g) { ungraded++; continue; }
+    const gt = gameOfTeam[raw.team] || null;
+    const r = { ...raw, ...g, game: gt ? gt.game : null, day: gt ? gt.day : null, gameId: gt ? gt.gameId : null, line: sc && sc.line ? sc.line : null };
+    const s = byStory[r.story] || (byStory[r.story] = { story: r.story, kind: r.kind, url: r.url, calls: 0, hits: 0, misses: 0, pushes: 0 });
+    const a = byAnalyst[r.analystName] || (byAnalyst[r.analystName] = { analyst: r.analystName, calls: 0, hits: 0, misses: 0, pushes: 0 });
+    s.calls++; a.calls++;
+    if (r.outcome === 'push') { storyPushes++; s.pushes++; a.pushes++; continue; }
+    const b = byPosition[r.position] || (byPosition[r.position] = { hits: 0, misses: 0 });
+    if (r.outcome === 'hit') { storyWins.push(r); s.hits++; a.hits++; b.hits++; }
+    else { storyMisses.push(r); s.misses++; a.misses++; b.misses++; }
   }
   for (const g of allGames || []) {
     if (g.type && g.type !== 'REG') continue;
@@ -9753,10 +9907,21 @@ function packetCalledItWeek(allGames, entries, ctx) {
       : g.status === 'final' ? 'no box score yet' : ((g.state && g.state.status === 'upcoming') || !g.status ? 'not yet played' : 'not yet final');
     if (why) notCovered.push({ game: g.away + ' at ' + g.home, day: g.dow, reason: why });
   }
-  if (!covered.length) return { skip: true, reason: 'no_frozen_boards', checked: notCovered.map(n => n.game).join(',') };
-  if (!hitCount) return { skip: true, reason: 'nothing_landed', checked: covered.map(n => n.game).join(',') };
+  const storyCalls = storyWins.length + storyMisses.length + storyPushes;
+  // NEITHER SOURCE HAS ANYTHING. Not "no frozen boards": the boards may be
+  // missing and the stories still on the record, or the other way round, and
+  // the reason has to say which so a skipped Monday can be diagnosed.
+  // A SKIP SAYS WHAT IT LOOKED AT. A dark Monday is otherwise indistinguishable
+  // from a broken one: `looked` names both halves, so the job log tells an
+  // operator whether the boards were missing, the stories were, or the week
+  // genuinely went badly.
+  const looked = { games: covered.length, boardCalls: calls, storyCalls, storyRows: storyRows.length, ungraded, held: (recs && recs.held) || 0 };
+  if (!covered.length && !storyCalls) return { skip: true, reason: 'no_record', looked, checked: notCovered.map(n => n.game).join(',') };
+  if (!hitCount && !storyWins.length) return { skip: true, reason: 'nothing_landed', looked, checked: covered.map(n => n.game).join(',') || (storyCalls + ' published recommendations') };
   wins.sort((a, b) => b.margin - a.margin || b.rankGap - a.rankGap);
   misses.sort((a, b) => b.margin - a.margin);
+  storyWins.sort((a, b) => b.margin - a.margin);
+  storyMisses.sort((a, b) => a.margin - b.margin);
   // The coming week's row for each player the board was right about.
   const next = new Map(((ctx.next && ctx.next.players) || []).map(p => [p.key, p]));
   const forward = h => {
@@ -9765,15 +9930,52 @@ function packetCalledItWeek(allGames, entries, ctx) {
     const w = p.weeks && p.weeks[0] ? p.weeks[0] : null;
     return { ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, ironTunaPts: p.ironTuna.points, opponent: w ? w.opponent : null, bye: !!(w && w.bye), injury: p.injury ? p.injury.status : null };
   };
-  const big = h => h.margin >= CALLED_HEADLINE_PTS && h.rankGap >= CALLED_HEADLINE_RANKS;
-  const top = wins.slice(0, WEEK_WINS_MAX).map(h => ({ ...h, nextWeek: forward(h) }));
+  const big = h => h.source === 'story' ? h.margin >= CALLED_HEADLINE_PTS : (h.margin >= CALLED_HEADLINE_PTS && h.rankGap >= CALLED_HEADLINE_RANKS);
+  // ONE RANKED LIST, BOTH SOURCES. Every win is measured in fantasy points
+  // the player beat the number the call was made against, so a board call
+  // and a column's "start him" rank against each other honestly. A board
+  // call breaks a tie: it carries a rank gap as well as a points gap, so it
+  // was the larger claim to begin with.
+  // ONE ROW PER PLAYER. Four stories can make the same call on the same back
+  // and the board can have made it too, and the Week 1 dry run duly produced
+  // a list of the biggest wins that was Cal Runner four times at the same
+  // margin. That is one win with four pieces of evidence, not four wins, and
+  // a reader scanning the list wants distinct players. The loudest claim
+  // leads the row and the rest are named on it; the RECORD still counts
+  // every published position, because the desk published them.
+  const collapse = (list) => {
+    const out = [], at = new Map();
+    for (const h of list) {
+      const id = h.key || h.name;
+      const seat = at.get(id);
+      const where = h.source === 'story' ? { source: 'story', calledIn: h.story, analyst: h.analystName } : { source: 'board', calledIn: 'the board frozen before ' + (h.game || 'kickoff') };
+      if (seat == null) { at.set(id, out.length); out.push({ ...h, callCount: 1, alsoCalledIn: [] }); continue; }
+      const row = out[seat];
+      row.callCount++;
+      // The same story saying it twice is not a second call; a different one is.
+      if (!row.alsoCalledIn.some(x => x.calledIn === where.calledIn && x.source === where.source) && where.calledIn !== (row.source === 'story' ? row.story : 'the board frozen before ' + (row.game || 'kickoff'))) row.alsoCalledIn.push(where);
+    }
+    return out;
+  };
+  const top = collapse(wins.concat(storyWins).sort((a, b) => b.margin - a.margin || (a.source === b.source ? 0 : a.source === 'board' ? -1 : 1)))
+    .slice(0, WEEK_WINS_MAX).map(h => ({ ...h, nextWeek: forward(h) }));
+  const allMisses = collapse(misses.concat(storyMisses).sort((a, b) => Math.abs(b.margin) - Math.abs(a.margin))).slice(0, WEEK_MISSES_MAX);
+  const totalCalls = calls + storyWins.length + storyMisses.length + storyPushes;
+  const totalHits = hitCount + storyWins.length;
+  const decided = calls + storyWins.length + storyMisses.length;   // pushes decide nothing, so they are not in the rate
   return { week: ctx.weekNumber,
-           record: { games: covered.length, calls, hits: hitCount, misses: missCount, hitRate: calls ? Math.round(100 * hitCount / calls) : 0 },
+           record: { games: covered.length, calls, hits: hitCount, misses: missCount, hitRate: calls ? Math.round(100 * hitCount / calls) : 0,
+                     storyCalls, storyHits: storyWins.length, storyMisses: storyMisses.length, storyPushes,
+                     storyHitRate: (storyWins.length + storyMisses.length) ? Math.round(100 * storyWins.length / (storyWins.length + storyMisses.length)) : 0,
+                     stories: (recs && recs.stories) || 0, ungraded, heldPositions: (recs && recs.held) || 0,
+                     totalCalls, totalHits, totalMisses: missCount + storyMisses.length, totalHitRate: decided ? Math.round(100 * totalHits / decided) : 0 },
            biggestWins: top, headlineWin: top.length && big(top[0]) ? top[0] : null,
-           misses: misses.slice(0, WEEK_MISSES_MAX), byPosition,
+           misses: allMisses, byPosition, byStory: Object.values(byStory).sort((a, b) => b.hits - a.hits || b.calls - a.calls),
+           byAnalyst: Object.values(byAnalyst).sort((a, b) => b.hits - a.hits || b.calls - a.calls),
+           boardWins: wins.length, storyWinCount: storyWins.length,
            gamesCovered: covered, notCovered,
            thresholds: { calledPoints: CALLED_MIN_PTS, calledRanks: CALLED_MIN_RANKS, headlinePoints: CALLED_HEADLINE_PTS, headlineRanks: CALLED_HEADLINE_RANKS },
-           howACallIsGraded: 'A call is the site\'s pre-kickoff weekly projection differing from the consensus projection by at least ' + CALLED_MIN_PTS + ' points and ' + CALLED_MIN_RANKS + ' places inside the position. It lands when the player\'s actual points finish on the site\'s side of the consensus number.',
+           howACallIsGraded: 'Two kinds of call are on this record. A BOARD call is the site\'s pre-kickoff weekly projection differing from the consensus projection by at least ' + CALLED_MIN_PTS + ' points and ' + CALLED_MIN_RANKS + ' places inside the position; it lands when the player\'s actual points finish on the site\'s side of the consensus number. A STORY call is a recommendation a published piece made about a player that week (start, sit, buy, sell, add, drop, attack, fade, target, avoid); it is settled on the same two numbers, his actual points against the consensus projection for that week, and it lands when he finishes on the side of it the recommendation argued for. A result inside ' + CALL_PUSH_PTS + ' points of the consensus number is a push and decides nothing. A hold or a stash makes no claim about one Sunday and is not counted here, nor is a call on a player with no box-score line or no consensus number.',
            dfs: _dfsBlock(ctx, null) };
 }
 function packetShowdown(kind, games, ctx) {
@@ -10063,15 +10265,24 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   // The week's box scores and the boards frozen before each kickoff, one
   // entry per target game; the packet grades them the way each recap did.
   else if (kind === 'what-tuna-got-right') {
-    const entries = [];
+    const entries = [], scoredWeek = new Map();
     for (const g of games) {
       let s = null; try { s = await gameSummaryFor(env, g, ctx.nameIndex); } catch (e) { s = null; }
       if (!s || !s.final) continue;
       let freeze = null; try { freeze = await boardFreezeRead(env, ctx.sched ? ctx.sched.season : null, d.week, g.id); } catch (e) { freeze = null; }
       // Graded by the recap's own packet, so the two can never disagree.
-      entries.push({ game: g, calledIt: packetGameRecap(g, s, ctx, freeze).calledIt });
+      const rp = packetGameRecap(g, s, ctx, freeze);
+      entries.push({ game: g, calledIt: rp.calledIt });
+      // The same box scores, collected across the week: the story half is
+      // graded on these, so a recommendation and a board call about the same
+      // player can never be settled on different numbers.
+      for (const [k, v] of rp.scoredByKey || []) scoredWeek.set(k, v);
     }
-    facts = packetCalledItWeek(weekGames(ctx.sched, d.week, Date.now()), entries, ctx);
+    // The week's published recommendations. The scorecard grades them here
+    // rather than waiting for the ledger's own Tuesday grader, which runs
+    // long after this Monday slot.
+    const recs = await weekPublishedCalls(env, ctx.sched ? ctx.sched.season : null, d.week).catch(() => ({ rows: [], stories: 0, held: 0 }));
+    facts = packetCalledItWeek(weekGames(ctx.sched, d.week, Date.now()), entries, ctx, recs, scoredWeek);
   }
   else if (kind === 'quarterback-monday') facts = packetQb(ctx);
   else if (kind === 'ros-rankings') {
@@ -10123,6 +10334,11 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   if (marketAnalyst) people.push(marketAnalyst.name);
   if (rivalry) people.push(ANALYSTS.vega.name, ANALYSTS.brooks.name);
   for (const c of priorCalls) people.push(c.analystName);
+  // The Monday scorecard credits a story call to whoever made it, so the
+  // analysts on its record are named people for this piece. Without this the
+  // fact check holds a draft for naming the colleague the packet itself put
+  // on the board.
+  for (const w of (fin.biggestWins || []).concat(fin.misses || [])) if (w && w.analystName) people.push(w.analystName);
   fin.allowed.names = [...new Set(fin.allowed.names.concat(people))];
   fin.allowed.analysts = [...new Set(people)];
   delete fin.playerIndexKeys;
@@ -10205,13 +10421,34 @@ function _voiceBlock(packet) {
   // or leave the misses out.
   if (packet.meta.kind === 'what-tuna-got-right' && packet.record) {
     const r = packet.record;
-    s += 'THE WEEK\'S RECORD. Before each kickoff the site\'s own projection differed from the consensus ranking on the players in `biggestWins` and `misses`, and the games have settled them: ' + r.hits + ' of ' + r.calls + ' calls landed across ' + r.games + ' games (' + r.hitRate + '%). Write `theRecord` from `record` and `gamesCovered`, and name the games in `notCovered` as not covered, with the packet\'s reason.\n';
-    s += 'THE WINS. `biggestWins` is already in order, biggest first. Write `biggestWins` in that order and in no other, one entry per packet entry, and put the numbers in it: what the site had him at (ironTunaRank, ironTunaPts), what the consensus had (consensusRank, consensusPts), what he scored (actual). `why` says what the call was and how far it landed (margin); where `nextWeek` is present it says what to do with him this week.\n';
-    if (r.misses > 0) s += 'THE MISSES. `misses` is on the record too. Write `whatWeMissed` from it, at least one entry, in the same plain voice as the wins. A scorecard that prints only its wins is not a record, and the reader has the box scores.\n';
+    // TWO RECORDS IN ONE. The board's calls (the frozen pre-kickoff
+    // projections the recaps graded) and the stories' own recommendations
+    // (analyst_calls, graded on the week's actual points) are both on this
+    // scorecard, and the writer has to keep them apart in the prose even
+    // though they rank in one list.
+    s += 'THE WEEK\'S RECORD. This scorecard grades TWO kinds of call and `record` counts them separately.\n';
+    s += '  BOARD CALLS: before each kickoff the site\'s own projection differed from the consensus ranking, and the games settled it. ' + r.hits + ' of ' + r.calls + ' landed across ' + r.games + ' games (' + r.hitRate + '%).\n';
+    s += '  STORY CALLS: recommendations the desk published by name that week (start, sit, buy, sell, add, fade, target, avoid), settled on the same two numbers as a board call: what the player actually scored against the consensus projection for that week. ' + r.storyHits + ' of ' + (r.storyHits + r.storyMisses) + ' decided calls landed (' + r.storyHitRate + '%)' + (r.storyPushes ? ', with ' + r.storyPushes + ' inside the push band and so deciding nothing' : '') + ', across ' + r.stories + ' stories.\n';
+    s += '  TOGETHER: ' + r.totalHits + ' of ' + r.totalCalls + ' (' + r.totalHitRate + '% of the calls a result decided). Write `theRecord` from `record`, `gamesCovered`, `byStory` and `byAnalyst`, give BOTH kinds their own number, and name the games in `notCovered` as not covered, with the packet\'s reason.\n';
+    if (r.heldPositions) s += '  ' + r.heldPositions + ' published position' + (r.heldPositions === 1 ? ' is' : 's are') + ' not on this record at all: a hold and a stash make no claim about one Sunday. Say so rather than letting the total read as everything the desk said.\n';
+    if (r.ungraded) s += '  ' + r.ungraded + ' more could not be settled this morning (no box-score line, or no consensus number for him). They are counted out, not counted as misses.\n';
+    s += 'THE WINS. `biggestWins` is already in order, biggest first, and it MIXES both kinds. Write it in that order and in no other, one entry per packet entry. Each entry\'s `source` says which kind it is and you put that in the row\'s `source` field, in the packet\'s own word:\n';
+    s += '  source "board": `calledIn` is the frozen board. Put the numbers in: what the site had him at (ironTunaRank, ironTunaPts), what the consensus had (consensusRank, consensusPts), what he scored (actual). `weSaid` is the site\'s rank and number, `consensusSaid` the consensus rank and number.\n';
+    s += '  source "story": `calledIn` is the story that made the call (the entry\'s `story`), and `weSaid` is what that story actually recommended, from `direction` and `recommendation`, attributed to the entry\'s `analystName`. `consensusSaid` is the consensus projection for that week, the entry\'s `benchmark`, the same number a board call is measured against. `heScored` is `actual`.\n';
+    s += '  Both kinds carry `game`, the matchup he played. `why` says what the call was and how far it landed (margin); where `nextWeek` is present it says what to do with him this week.\n';
+    s += '  ONE ROW PER PLAYER. Where `alsoCalledIn` is not empty, the same player was called by more than one of them (`callCount` is how many). That is one win with more than one piece of evidence: write it as a single entry and say in `why` where else it was called, naming those stories. Never give a player a second row.\n';
+    if (packet.misses && packet.misses.length) s += 'THE MISSES. `misses` is on the record too, and it mixes both kinds the same way. Write `whatWeMissed` from it, at least one entry, in the same plain voice as the wins, and mark each one\'s `source`. A scorecard that prints only its wins is not a record, and the reader has the box scores.\n';
     else s += 'NO MISSES this week in the packet, so there is no `whatWeMissed` section. Do not add one.\n';
     const hw = packet.headlineWin;
     if (hw) {
-      s += 'THE BIGGEST WIN CLEARS THE HEADLINE BAR: ' + hw.name + ' (' + hw.game + '). The site had him ' + hw.position + hw.ironTunaRank + ' where the consensus had him ' + hw.position + hw.consensusRank + ', a call that he would ' + (hw.direction === 'over' ? 'beat' : 'fall short of') + ' the consensus number of ' + hw.consensusPts + ' points; he scored ' + hw.actual + '.\n';
+      const where = hw.game ? ' (' + hw.game + ')' : '';
+      // The headline sentence is built from the fields the WINNING KIND
+      // actually has. A story win has no frozen rank to quote, and a board
+      // win has no analyst who recommended him by name; handing the writer
+      // the wrong half is how a scorecard invents a call.
+      s += hw.source === 'story'
+        ? 'THE BIGGEST WIN CLEARS THE HEADLINE BAR: ' + hw.name + where + ', and it is a STORY call, not a board call. ' + hw.analystName + ' published "' + hw.direction + (hw.recommendation ? ': ' + hw.recommendation : '') + '" on him in ' + hw.story + '; the consensus had him at ' + hw.benchmark + ' points and he scored ' + hw.actual + ', ' + Math.abs(hw.margin) + ' clear of it. Name the story, and name the analyst who made the call.\n'
+        : 'THE BIGGEST WIN CLEARS THE HEADLINE BAR: ' + hw.name + where + '. The site had him ' + hw.position + hw.ironTunaRank + ' where the consensus had him ' + hw.position + hw.consensusRank + ', a call that he would ' + (hw.direction === 'over' ? 'beat' : 'fall short of') + ' the consensus number of ' + hw.consensusPts + ' points; he scored ' + hw.actual + '.\n';
       s += 'You MAY open the headline with "YOU\'RE WELCOME:" and then say what the site called and that it happened. Spell it "YOU\'RE WELCOME", with the apostrophe. Use it at most once, only for this player, and only in the headline.\n';
     } else {
       s += 'NO SINGLE WIN clears the headline bar. The headline names the biggest win plainly, without "YOU\'RE WELCOME".\n';
@@ -10492,8 +10729,8 @@ async function produceContent(env, kind, opts) {
   const ctx = await contentContext(env, week, { excluded: d.excluded || [] });
   const packet = await buildResearchPacket(env, kind, d, ctx, { ...o, gameId });
   if (packet.skip) {
-    if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, gameId, slug, title: K.title, status: 'skipped', brief: { reason: packet.reason, checked: packet.checked || null }, body: null, analyst: K.analyst, lens: K.lens });
-    return { ok: true, kind, week, game: gameId, status: 'skipped', reason: packet.reason };
+    if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, gameId, slug, title: K.title, status: 'skipped', brief: { reason: packet.reason, checked: packet.checked || null, looked: packet.looked || null }, body: null, analyst: K.analyst, lens: K.lens });
+    return { ok: true, kind, week, game: gameId, status: 'skipped', reason: packet.reason, looked: packet.looked || null };
   }
   // A draft the fact check held is checked again against the fresh packet
   // before the writer is asked for another. The check is code and the code
@@ -13284,36 +13521,80 @@ function cbsError(code) {
   return new LeagueProviderError(code, messages[code] || messages.invalid_response);
 }
 const CBS_RESOURCES = new Set(['details', 'rules', 'teams', 'rosters', 'schedules', 'standings/overall', 'transactions/waiver-order', 'transaction-list/log']);
+// Two places CBS has served its fantasy API (version 3.0): the documented
+// api.cbssports.com/fantasy base, and /api/league on the league's own host.
+// Each read tries the host that last worked first, then the other, and a
+// failure names what both answered.
+let cbsPreferredHost = null;
+function cbsHosts(id, resource) {
+  const hosts = [
+    { name: 'api.cbssports.com', url: new URL('https://api.cbssports.com/fantasy/league/' + resource) },
+    { name: 'league host', url: new URL('https://' + id + '.football.cbssports.com/api/league/' + resource) }
+  ];
+  return cbsPreferredHost === 'league host' ? hosts.reverse() : hosts;
+}
 async function cbsGet(env, id, token, resource, params = {}) {
   if (!flagOn(env, 'CBS_SYNC') || !leagueTokenConfigured(env)) throw new LeagueProviderError('provider_disabled', 'CBS sync needs FLAG_CBS_SYNC and league-token encryption.');
   id = cbsLeagueId(id);
   if (!CBS_RESOURCES.has(resource)) throw cbsError('invalid_response');
   if (!token) throw cbsError('expired_authorization');
-  const url = new URL('https://' + id + '.football.cbssports.com/api/league/' + resource);
-  url.search = new URLSearchParams({ version: '3.0', response_format: 'json', sport: 'football', league_id: id, ...params }).toString();
+  let first = null;
+  for (const host of cbsHosts(id, resource)) {
+    try {
+      const body = await cbsFetch(host, id, token, resource, params);
+      cbsPreferredHost = host.name;
+      return body;
+    } catch (e) {
+      if (!(e instanceof LeagueProviderError)) throw e;
+      if (e.code === 'rate_limited') { e.detail = 'CBS ' + resource + ': ' + e.detail; throw e; }
+      if (!first) { first = e; continue; }
+      // Report the refused token when either host said so; otherwise the last answer.
+      const chosen = first.code === 'expired_authorization' ? first : e;
+      chosen.detail = 'CBS ' + resource + ': ' + first.detail + '; ' + e.detail;
+      throw chosen;
+    }
+  }
+  throw first;
+}
+async function cbsFetch(host, id, token, resource, params) {
+  const url = new URL(host.url);
+  // CBS reads the token from the access_token query parameter; the
+  // Authorization header is sent as well. The URL is never logged, stored or
+  // echoed: every diagnostic below is built from the host name, the HTTP
+  // status and, for a redirect, the target's host and path only (a sign-in
+  // redirect carries the original URL in its query).
+  url.search = new URLSearchParams({ version: '3.0', response_format: 'json', sport: 'football', league_id: id, ...params, access_token: token }).toString();
+  const fail = (code, note) => { const e = cbsError(code); e.detail = host.name + ' ' + note; return e; };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    // Never cache credentials or follow a redirect carrying Authorization.
-    const res = await fetch(url.toString(), { method: 'GET', headers: { Authorization: token, Accept: 'application/json' }, redirect: 'error', cache: 'no-store', signal: controller.signal });
+    // Never cache credentials or follow a redirect carrying the token.
+    const res = await fetch(url.toString(), { method: 'GET', headers: { Authorization: token, Accept: 'application/json' }, redirect: 'manual', cache: 'no-store', signal: controller.signal });
+    if (res.status >= 300 && res.status < 400) {
+      let to = '';
+      try { const loc = new URL((res.headers && res.headers.get && res.headers.get('location')) || '', url); to = loc.hostname + loc.pathname; } catch (e) {}
+      // A redirect to a sign-in page means CBS did not accept the token.
+      if (/login|sign-?in|auth/i.test(to)) throw fail('expired_authorization', 'HTTP ' + res.status + ' to ' + to);
+      throw fail('provider_unavailable', 'HTTP ' + res.status + (to ? ' to ' + to : ' redirect'));
+    }
     const text = await res.text();
     let data = null;
     try { data = JSON.parse(text); } catch (e) { /* CBS also sends plain text. */ }
     const item = data && Array.isArray(data.results) ? data.results[0] : data;
     const status = !res.ok ? res.status : Number(item && item.statusCode) || res.status;
-    if (status === 401 || status === 403) throw cbsError('expired_authorization');
-    if (status === 429) throw cbsError('rate_limited');
-    if (status === 404) throw cbsError('league_not_found');
-    if (status >= 500 || status >= 300 && status < 400) throw cbsError('provider_unavailable');
+    if (status === 401 || status === 403) throw fail('expired_authorization', 'HTTP ' + status);
+    if (status === 429) throw fail('rate_limited', 'HTTP 429');
+    if (status === 404) throw fail('league_not_found', 'HTTP 404');
+    if (status >= 500) throw fail('provider_unavailable', 'HTTP ' + status);
     if (status >= 400 || !item || !item.body || item.body.type === 'error' || item.body.error) {
-      if (/unauthori[sz]ed|invalid.*token|expired.*token|access.denied/i.test(text)) throw cbsError('expired_authorization');
-      throw cbsError('invalid_response');
+      if (/unauthori[sz]ed|invalid.*token|expired.*token|access.denied/i.test(text)) throw fail('expired_authorization', 'HTTP ' + status + ', token refused');
+      throw fail('invalid_response', 'HTTP ' + status + (data ? ', JSON without a league body' : ', not JSON'));
     }
     return item.body;
   } catch (e) {
     // Never let an upstream body, URL, header, or native fetch error reach logs.
     if (e instanceof LeagueProviderError) throw e;
-    throw cbsError('provider_unavailable');
+    throw fail('provider_unavailable', e && e.name === 'AbortError' ? 'no answer within 15 seconds' : 'the request could not be sent');
   } finally { clearTimeout(timer); }
 }
 function cbsList(value) { if (!Array.isArray(value)) throw cbsError('invalid_response'); return value; }
@@ -13666,7 +13947,7 @@ async function leagueSync(env, row, trigger, preparedRaw) {
       .bind(model.name || row.name, model.season || row.season, model.numTeams || row.num_teams, model.status || row.status, JSON.stringify(model.settings), keepTeam ? row.user_team_id : (model.userTeamId || row.user_team_id || null), ts, ts, ts, 'ok', row.provider === 'cbs_browser' ? null : leagueNextSyncAt(ts, 0), row.id).run();
   } catch (e) {
     error = (e && e.message) || 'failed'; code = (e && e.code) || 'sync_failed';
-    if (row.provider === 'cbs') error = cbsError(code).message;
+    if (row.provider === 'cbs') error = cbsError(code).message + (e && e.detail ? ' (' + e.detail + ')' : '');
     await leagueSyncState(env, row, false, code + ': ' + error, started);
   }
   const finished = Date.now();
@@ -14387,7 +14668,7 @@ async function leagueRoutes(request, env, url, ctx) {
       if (!r.ok && created && /league_not_found|unsupported_provider/.test(String(r.error))) { await leagueDisconnect(env, email, row); return leagueErr(r.code || 'sync_failed', r.error, 404, c); }
       const L = await leagueLoad(env, email, row.id);
       return json({ ok: r.ok, step: 'done', created, sync: r, league: L ? leaguePublic(L) : null, needsTeam: !!(L && !L.userTeamId), teams: L ? L.teams : [] }, r.ok ? 200 : 502, c);
-    } catch (e) { return leagueErr((e && e.code) || 'sync_failed', pid === 'cbs' ? cbsError(e && e.code).message : (e && e.message) || 'failed', e && e.code === 'expired_authorization' ? 409 : e && e.code === 'league_not_found' || e && e.code === 'user_not_found' ? 404 : 502, c); }
+    } catch (e) { return leagueErr((e && e.code) || 'sync_failed', pid === 'cbs' ? cbsError(e && e.code).message + (e && e.detail ? ' (' + e.detail + ')' : '') : (e && e.message) || 'failed', e && e.code === 'expired_authorization' ? 409 : e && e.code === 'league_not_found' || e && e.code === 'user_not_found' ? 404 : 502, c); }
   }
   if (path === '/api/leagues/manual') {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
@@ -16400,6 +16681,8 @@ const ROSTER_READ_MAX_IMAGES = 8;
 const ROSTER_READ_MAX_BYTES = 9 * 1024 * 1024;     // the whole request, base64 included
 const ROSTER_READ_IMAGE_BYTES = 4 * 1024 * 1024;   // one image, base64
 const ROSTER_READ_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const ROSTER_READ_MAX_TOKENS = 16000;             // output; a 12-team league is ~5000
+const ROSTER_READ_TIMEOUT_MS = 110000;           // a full league takes the model a minute or more
 const ROSTER_READ_SYSTEM = `You transcribe fantasy football rosters from screenshots or pasted text.
 Return ONLY a JSON object, no prose, no markdown fence, in exactly this shape:
 {"teams":[{"name":"<team name as shown, or empty>","players":[{"name":"<player full name>","pos":"<QB|RB|WR|TE|K|DEF or empty>","team":"<NFL club abbreviation or empty>"}]}]}
@@ -16408,14 +16691,47 @@ Copy names exactly as printed; do not correct, expand, or invent a name, a posit
 A slot label (QB, RB, FLEX, BN, IR), a bye week, a projection or a score is not a player.
 A team defense is a player: name it "<City> <Nickname>" with pos "DEF" if the image shows it.
 If an image shows a league page with several teams, return every team. If it shows nothing readable, return {"teams":[]}.`;
+// A reply that ran out of output tokens ends mid-object. Everything before the
+// last complete player is still good, so walk back through the closing braces,
+// close whatever is still open, and take the first slice that parses. Strings
+// are tracked so a brace inside a name ("Ja'Marr {") cannot fool the count.
+function rosterReadRepair(t) {
+  const closersFor = str => {
+    const stack = [];
+    let inStr = false, esc = false;
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+      if (ch === '"') inStr = true;
+      else if (ch === '{') stack.push('}');
+      else if (ch === '[') stack.push(']');
+      else if (ch === '}' || ch === ']') stack.pop();
+    }
+    return inStr ? null : stack.reverse().join('');
+  };
+  let cut = t.length, tries = 0;
+  while (tries++ < 60) {
+    cut = t.lastIndexOf('}', cut - 1);
+    if (cut <= 0) return null;
+    const head = t.slice(0, cut + 1);
+    const closers = closersFor(head);
+    if (closers === null) continue;
+    try { return JSON.parse(head + closers); } catch (e) { /* walk back another brace */ }
+  }
+  return null;
+}
 function rosterReadParse(text) {
   let t = String(text || '');
   const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) t = fence[1];
   const a = t.indexOf('{'), b = t.lastIndexOf('}');
   if (a < 0 || b <= a) return { ok: false, error: 'no_json' };
-  let j;
-  try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) { return { ok: false, error: 'bad_json' }; }
+  let j, repaired = false;
+  try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) {
+    j = rosterReadRepair(t.slice(a));
+    if (!j) return { ok: false, error: 'bad_json' };
+    repaired = true;
+  }
   const POS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'DST']);
   const teams = [];
   for (const raw of (Array.isArray(j && j.teams) ? j.teams : []).slice(0, 24)) {
@@ -16435,8 +16751,8 @@ function rosterReadParse(text) {
     const name = (typeof raw.name === 'string' ? raw.name.replace(/\s+/g, ' ').trim().slice(0, 80) : '') || ('Team ' + (teams.length + 1));
     teams.push({ name, players });
   }
-  if (!teams.length) return { ok: false, error: 'no_teams' };
-  return { ok: true, teams };
+  if (!teams.length) return { ok: false, error: repaired ? 'bad_json' : 'no_teams' };
+  return { ok: true, teams, repaired };
 }
 async function handleRosterRead(request, env, c) {
   if (!originAllowed(request, env)) return json({ ok: false, error: 'Origin not allowed' }, 403, c);
@@ -16476,20 +16792,33 @@ async function handleRosterRead(request, env, c) {
   const content = provider === 'anthropic'
     ? [...images.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.media_type, data: im.data } })), { type: 'text', text: ask }]
     : [...images.map(im => ({ type: 'image_url', image_url: { url: 'data:' + im.media_type + ';base64,' + im.data } })), { type: 'text', text: ask }];
+  // A league page with twelve full rosters is ~200 players, and each one is
+  // ~20 tokens of JSON, so 4000 output tokens cut a whole-league screenshot
+  // off mid-object and the page saw an unparseable reply. The budget only
+  // costs what the model actually writes, so it is set well above any league.
   const ctrl = new AbortController();
-  const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 60000);
+  const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, ROSTER_READ_TIMEOUT_MS);
   try {
     const r = provider === 'anthropic'
-      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: 4000, system: ROSTER_READ_SYSTEM, messages: [{ role: 'user', content }] }) })
-      : await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0, max_tokens: 4000, messages: [{ role: 'system', content: ROSTER_READ_SYSTEM }, { role: 'user', content }] }) });
+      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: ROSTER_READ_MAX_TOKENS, system: ROSTER_READ_SYSTEM, messages: [{ role: 'user', content }] }) })
+      : await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0, max_tokens: ROSTER_READ_MAX_TOKENS, messages: [{ role: 'system', content: ROSTER_READ_SYSTEM }, { role: 'user', content }] }) });
     if (!r.ok) return json({ ok: false, error: 'The reader did not answer (' + r.status + ').' }, 502, c);
     const j = await r.json();
-    const out = provider === 'anthropic' ? ((j.content && j.content[0] && j.content[0].text) || '') : ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    const out = provider === 'anthropic'
+      ? (Array.isArray(j.content) ? j.content.filter(b => b && b.type === 'text' && typeof b.text === 'string').map(b => b.text).join('') : '')
+      : ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    const truncated = provider === 'anthropic' ? j.stop_reason === 'max_tokens' : !!(j.choices && j.choices[0] && j.choices[0].finish_reason === 'length');
     const parsed = rosterReadParse(out);
-    if (!parsed.ok) return json({ ok: false, error: parsed.error === 'no_teams' ? 'Nothing readable in that image.' : 'The reader answered in a shape this page cannot use.' }, 200, c);
-    return json({ ok: true, teams: parsed.teams, images: images.length, model }, 200, c);
+    if (!parsed.ok) {
+      console.log('roster-read unparseable', JSON.stringify({ error: parsed.error, truncated, stop: j.stop_reason || (j.choices && j.choices[0] && j.choices[0].finish_reason) || '', head: out.slice(0, 160) }));
+      const msg = parsed.error === 'no_teams' ? 'Nothing readable in that image.'
+        : truncated ? 'That screenshot holds more than the reader can transcribe in one go. Crop it to a few teams per image and try again.'
+        : 'The reader answered in a shape this page cannot use. Try a tighter crop, or paste the rosters as text.';
+      return json({ ok: false, error: msg }, 200, c);
+    }
+    return json({ ok: true, teams: parsed.teams, images: images.length, model, partial: !!(truncated || parsed.repaired) }, 200, c);
   } catch (e) {
-    return json({ ok: false, error: 'The reader timed out.' }, 504, c);
+    return json({ ok: false, error: 'The reader timed out. Try fewer teams per screenshot.' }, 504, c);
   } finally { clearTimeout(to); }
 }
 // ── /the roster reader ─────────────────────────────────────────────────────

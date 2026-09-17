@@ -164,22 +164,68 @@ console.log('\nthe DFS page explanations');
   ok('every inline DFS script parses', (() => { try { scripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
 }
 
-console.log('\nthe homepage DFS lane');
+// The homepage carried a SECOND DFS builder — its own contest setup, its own
+// solved roster and its own matchup panel — inside a "DFS" lane tab. It came off
+// in the September 2026 rewrite: "/" is five sections now, and the DFS card
+// there links the five places on /dfs that finish the decision. /dfs is the one
+// builder, so these assertions moved onto it.
+console.log('\nthe DFS sheet is the only builder');
 {
   const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
-  ok('homepage DFS begins with Game Style, Games and Payout Structure dropdowns', front.indexOf('id="dfsGameStyle"') < front.indexOf('id="dfsGames"') && front.indexOf('id="dfsGames"') < front.indexOf('id="dfsPayout"'));
-  ok('homepage Game Style carries all DraftKings formats', ['Flash Draft','Classic','Showdown Captain Mode','Pick6','Best Ball','Tiers','In-Game Showdown','Single Stat - Total Yards','Single Stat - Touchdowns','Snake','Snake Showdown','Madden Classic','Madden Showdown Captain Mode'].every(x => front.includes('>'+x+'</option>')));
-  ok('homepage Games offers time windows and individual games from the live slate', front.includes('1 PM ET games') && front.includes('4 PM / late afternoon games') && front.includes('Primetime games') && front.includes("games.forEach(function(g){html+='<option value=\"game:"));
-  ok('homepage payout choice maps into cash, single-entry and tournament optimizer objectives', front.includes("h2h:'cash'") && front.includes("'double-up':'cash'") && front.includes("multiplier:'single'") && front.includes("'tournament-multi':'gpp'"));
-  ok('homepage game selection filters the actual eligible player pool', front.includes('function frontFiltered(s)') && front.includes('frontGameKeys[frontPlayerGameKey(p)]'));
-  ok('homepage includes Play of the Week and both DFS Academy articles', front.includes('id="dfsPotwTitle"') && front.includes('/dfs-getting-started') && front.includes('/dfs-strategy-guide'));
-  ok('the retired Cash Single entry Large field chips are no longer visible markup', !front.includes('Cash <small>Floors</small>') && !front.includes('Single entry <small>Best roster</small>') && !front.includes('Large field <small>Longshots</small>'));
-  ok('league-wide NFL story art always includes the NFL shield path', front.includes('var hasLeagueMark = !t;') && front.includes('function nflSvg(type)') && front.includes('NFL_LOGO_URL'));
-  ok('a name on the solved roster opens the matchup under it, on the same slide the result panel uses', front.includes('class="fp-name" type="button" aria-expanded="false"') && front.includes('<tr class="fp-more"') && front.includes('function frontPlayerDetail') && front.includes('function frontWhy') && front.includes('.fp-more.open .fp-more-in { grid-template-rows: 1fr }'));
-  ok('the matchup prints the game total, the implied totals, the defense rank and the market read', ['Game total', 'Opp. defense', 'TD odds', 'What the market says', 'r.opponentDefRank', 'frontGameFor(s, r || p)'].every(x => front.includes(x)));
-  ok('a computed DraftKings average is marked as an estimate, in the cell and in the foot', front.includes("p.operatorFppgBasis === 'computed' ? '<i class=\"fp-est\"") && front.includes('DraftKings posts no average yet for'));
-  const frontScripts = [...front.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
-  ok('every inline homepage script still parses', (() => { try { frontScripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
+  const dfs = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+
+  ok('DFS begins with Game Style, Games and Payout Structure dropdowns',
+     dfs.indexOf('id="dfGameStyleSelect"') < dfs.indexOf('id="dfGamesSelect"')
+     && dfs.indexOf('id="dfGamesSelect"') < dfs.indexOf('id="dfPayoutSelect"'));
+  ok('Game Style carries all DraftKings formats',
+     ['Flash Draft', 'Classic', 'Showdown Captain Mode', 'Pick6', 'Best Ball', 'Tiers',
+      'In-Game Showdown', 'Snake', 'Madden Classic'].every((f) => dfs.includes(f)));
+  ok('Games offers time windows and individual games from the live slate',
+     dfs.includes('1 PM ET games') && dfs.includes('4 PM / late afternoon games'));
+  // The homepage mapped payouts straight onto optimizer objectives with a flat
+  // lookup. /dfs's PAYOUTS table is the richer version and the one that ships:
+  // every payout names the contest SHAPE it solves as, and every shape is a
+  // preset over the same optimizer.
+  ok('payout choice maps into cash, single-entry and tournament shapes',
+     /h2h: \{ label:'Head-to-Head', shape:'cash'/.test(dfs)
+     && /'double-up': \{ label:'Double Up', shape:'cash'/.test(dfs)
+     && /'tournament-multi': \{ label:'Tournament - Multi-Entry', shape:'gpp'/.test(dfs)
+     && /'tournament-single': \{ label:'Tournament - Single Entry', shape:'single'/.test(dfs));
+  ok('every payout resolves to a shape the optimizer actually has',
+     (() => {
+       const shapes = new Set([...dfs.matchAll(/shape:'([a-z0-9]+)'/g)].map((m) => m[1]));
+       const defined = new Set([...(dfs.match(/var SHAPES = \{[\s\S]*?\n  \};/) || [''])[0]
+         .matchAll(/^\s*'?([a-z0-9-]+)'?: \{ mode:/gm)].map((m) => m[1]));
+       return [...shapes].every((x) => defined.has(x));
+     })());
+  ok('the slate filters the actual eligible player pool',
+     /function .*[Ff]ilter/.test(dfs) && dfs.includes('dfCustomGames'));
+  ok('Play of the Week and both DFS Academy articles are on the sheet',
+     dfs.includes('id="dfPlayWeekTitle"') && dfs.includes('/dfs-getting-started') && dfs.includes('/dfs-strategy-guide'));
+  ok('a computed DraftKings average is marked as an estimate, in the cell and in the foot',
+     dfs.includes("p.operatorFppgBasis === 'computed'") && dfs.includes('df-est'));
+  // The per-player panel: /dfs prints the full calculation behind a name,
+  // consensus -> market -> Iron Tuna included. (The homepage lane's lighter
+  // "matchup under a name" slide, and the league-wide NFL shield artwork beside
+  // its story cards, were that lane's own and went with it.)
+  ok('a name on the board opens the calculation behind it',
+     dfs.includes('df-player-link') && dfs.includes('id="dfPlayerBody"')
+     && /Consensus ' \+ n1\(p\.consensusPoints\)/.test(dfs));
+
+  // And the homepage keeps no second copy of any of it.
+  ok('the homepage carries no DFS builder',
+     !/id="dfsGameStyle"|id="dfsSubmit"|id="dfsBuild"|dfs-setup/.test(front));
+  ok('it links the sheet instead, at the five places that finish the decision',
+     ['/dfs#dfPlayWeek', '/dfs#lineup', '/dfs#dfTune', '/dfs#stacks', '/dfs#values']
+       .every((h) => front.includes('href="' + h + '"')));
+  ok('and every anchor it links is a real element or section on the sheet',
+     ['dfPlayWeek', 'dfTune'].every((id) => dfs.includes('id="' + id + '"'))
+     && ['lineup', 'stacks', 'values'].every((k) => dfs.includes('id="sec-' + k + '"')));
+  ok('the homepage does not load the optimizer it no longer runs',
+     !front.includes('/dfs-optimizer.js'));
+
+  const frontScripts = [...front.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1]).filter((c) => c.trim());
+  ok('every inline homepage script still parses', (() => { try { frontScripts.forEach((code) => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
 }
 
 console.log('\nthe operator average when the file has none');

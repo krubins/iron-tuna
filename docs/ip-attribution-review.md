@@ -40,6 +40,8 @@ negotiated one. Every other row is either a paid API subscription or unreviewed.
 
 ---
 
+| 14 | **Wikimedia Commons game photographs** (`upload.wikimedia.org`; looked up through Wikidata and the Commons API at build time) — *added 2026-09-16* | The story figure on `/in-season/desk`, `/lead` and the front-page lead band, via `it-action.js` and `storyArt()` in `player-search.js`; `tools/build-action-shots.mjs` builds the lookup | **Open license, per file.** Only CC0, public-domain, CC BY and CC BY-SA files are kept; NC and ND are excluded by the tool and by `tools/test-story-art.mjs`. | **Yes, and required:** photographer, license name, link to the deed, "cropped" note, printed under every use | Yes — the license is recorded on each row of `tools/nfl-action-shots.json` and is readable on the file's Commons page | **LOW for copyright.** The credit is a license term; the test fails a build that drops it. Right of publicity is a separate question and the same one the headshots already carry (see §2). The lookup is filled by `.github/workflows/action-shots.yml` on a GitHub runner, which has the outbound network the development sessions do not; until a run lands, every plate falls back to a headshot and nothing is displayed from this row. |
+
 ## 2. The imagery question (rows 2 and 3)
 
 This is the item that would come up first in diligence, so it is stated plainly.
@@ -77,6 +79,17 @@ would visibly change the product. That call belongs to the owner.
 3. **Substitute** — silhouettes, team color blocks, or initials. Cheap, ugly,
    and completely safe.
 4. **Remove** headshots entirely.
+
+**Added 2026-09-16 — a fifth path, partly built.** The game photographs in row
+14 are the first licensed imagery on the site, and the same pipeline could in
+principle supply *portraits* too: Commons holds CC-licensed head-and-shoulders
+photographs of many players, and `tools/build-action-shots.mjs` already knows
+how to find a player there and read a file's license. Swapping the ESPN/NFL
+cutouts for Commons portraits where they exist, and initials where they do not,
+would move rows 2 and 3 from "unreviewed" to "open license" for a large share
+of the faces on the site. It would not cover every player (Commons coverage is
+uneven below the starters) and it does not touch the club marks. Worth pricing
+before choosing among 1–4.
 
 An acquirer will ask which of these is in force. Options 2–4 all take
 engineering time; option 1 takes a decision.

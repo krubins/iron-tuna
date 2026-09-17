@@ -42,7 +42,9 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:6px 0 14px}
+/* The page head the section pages wear (fantasy.html, in-season.html). */
+h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
+@media(max-width:560px){h1{font-size:var(--fs-2xl)}}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 .btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
@@ -205,23 +207,32 @@ p{color:var(--sec);margin:0 0 16px}
 .df-bestball-path h2{margin:0 0 7px;font-size:22px}
 .df-bestball-path p{max-width:78ch;margin:0 0 14px;font-size:14px;line-height:1.65}
 .df-bestball-actions{display:flex;flex-wrap:wrap;gap:10px}
-.df-config{margin:18px 0 18px;border:1px solid var(--line2);border-radius:14px;background:var(--panel);padding:18px}
-.df-config-title{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:14px}
+/* The contest setup is one plate with three numbered steps across it, each
+   step's circle turning teal with a check once its select is filled, so the
+   plate reads as a sequence with a state rather than three dropdowns in a box.
+   The setup, its help lines and the tooltips are unchanged. */
+.df-config{margin:18px 0 18px;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--bg);padding:0;overflow:hidden}
+.df-config-title{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin:0;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
 .df-config-title span,.df-reading-head span{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-weight:800}
 .df-config-title b,.df-reading-head b{font-size:17px;color:var(--text)}
-.df-config-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.df-select-block{display:block;min-width:0}
-.df-select-kicker{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.df-config-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
+.df-select-block{display:block;min-width:0;padding:16px 20px;border-left:1px solid var(--line)}
+.df-select-block:first-child{border-left:0}
+.df-select-kicker{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.df-select-kicker i{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--text);color:#fff;font:700 11px/1 var(--font-body);letter-spacing:0;position:relative;flex:0 0 auto}
+.df-select-block.done .df-select-kicker{color:var(--teal)}
+.df-select-block.done .df-select-kicker i{background:var(--teal);color:transparent}
+.df-select-block.done .df-select-kicker i::after{content:"\2713";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:11px}
 .df-select-label{display:block;color:var(--text);font-size:14px;font-weight:800;margin-bottom:7px}
 .df-select-label .df-term{font-size:11px;width:17px;height:17px;line-height:16px;text-align:center;border:1px solid var(--line2);border-radius:50%;margin-left:4px;color:var(--teal);border-bottom:1px solid var(--line2)}
 .df-select-block select{width:100%;min-height:44px;border:1px solid var(--line2);border-radius:9px;background:var(--bg);color:var(--text);font:700 14px var(--font-body);padding:9px 36px 9px 11px}
 .df-select-block select:disabled{opacity:.48;cursor:not-allowed}
 .df-select-help{margin:7px 0 0;font-size:11.5px;line-height:1.45;color:var(--muted)}
-.df-custom-games{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.df-custom-games{margin:0;padding:14px 20px;border:0;border-top:1px solid var(--line);border-radius:0;background:var(--panel)}
 .df-custom-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
 .df-custom-head b{color:var(--text)} .df-custom-head span{font-size:12px;color:var(--muted)}
 .df-custom-games .btn{margin-top:10px;padding:8px 15px;font-size:13px}
-.df-setup-state{margin:13px 0 0;padding-top:11px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.5;color:var(--muted)}
+.df-setup-state{margin:0;padding:12px 20px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--panel)}
 .df-setup-state.ready{color:var(--teal);font-weight:800}
 .df-play-week{margin:20px 0;border:1px solid rgba(191,145,0,.38);border-radius:14px;padding:20px;background:linear-gradient(180deg,rgba(191,145,0,.09),rgba(191,145,0,.025))}
 .df-play-week-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--goldink);font-weight:800}
@@ -240,7 +251,7 @@ p{color:var(--sec);margin:0 0 16px}
 .df-reading-card:hover{border-color:var(--teal);text-decoration:none}
 .df-reading-card>span{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);font-weight:800}
 .df-reading-card h3{margin:5px 0 6px;font-size:18px}.df-reading-card p{margin:0;font-size:13px;line-height:1.55}
-@media(max-width:850px){.df-config-grid{grid-template-columns:1fr}.df-play-week-grid{grid-template-columns:1fr}.df-play-week-score{border-left:0;border-top:1px solid rgba(191,145,0,.3);padding:12px 0 0}.df-reading-grid{grid-template-columns:1fr}}
+@media(max-width:850px){.df-config-grid{grid-template-columns:1fr}.df-select-block{border-left:0;border-top:1px solid var(--line)}.df-select-block:first-child{border-top:0}.df-play-week-grid{grid-template-columns:1fr}.df-play-week-score{border-left:0;border-top:1px solid rgba(191,145,0,.3);padding:12px 0 0}.df-reading-grid{grid-template-columns:1fr}}
 
 .df-game-scope{margin:18px 0;border:1px solid var(--line2);border-radius:12px;background:var(--panel);padding:15px 16px}
 .df-game-scope .df-game-style-head{margin-bottom:5px}
@@ -315,32 +326,48 @@ p{color:var(--sec);margin:0 0 16px}
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site"><div class="wrap">
-  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
-      <span class="nav-dd"><a href="/fantasy">Fantasy</a><span class="nav-dd-menu"><a href="/fantasy">This week</a><a href="/in-season">In-Season hub</a><a href="/rankings">Rankings</a><a href="/depth-charts">Depth Charts</a><a href="/weekly-intel">Weekly Intel</a><a href="/waivers">Waivers &amp; FAAB</a><a href="/trade-finder">Trade Finder</a><a href="/my-league">My Leagues</a><a href="/my-week">My Week</a></span></span>
+      <a href="/fantasy">Fantasy</a>
       <a href="/dfs" aria-current="page">DFS</a>
-      <span class="nav-dd"><a href="/vegas-edge">Market Intel</a><span class="nav-dd-menu"><a href="/vegas-edge">Vegas Edge</a><a href="/game-intel">Game Intel</a><a href="/player-intel">Player Intel</a><a href="/what-they-arent-telling-you">The whole board</a></span></span>
-      <span class="nav-dd"><a href="/in-season/desk">The Desk</a><span class="nav-dd-menu"><a href="/in-season/desk">The Desk</a><a href="/analysts">The Analysts</a><a href="/the-pick">The Pick</a><a href="/the-tell">The Tell</a><a href="/play-caller-premium">Play-Caller Premium</a></span></span>
-      <span class="nav-dd"><a href="/fantasy-football-auction-values">Draft Tools</a><span class="nav-dd-menu"><a href="/fantasy-football-auction-values">Auction values</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a><a href="/guides">Strategy guides</a><a href="/auction-insights">Auction insights</a><a href="/snake-insights">Snake insights</a><a href="/insights-vault">Insight Vault</a></span></span>
-      <a href="/faq">FAQ</a>
+      <a href="/in-season/desk">Articles</a>
+      <a href="/faq#faq-start">How It Works</a>
+      <a href="/player">Search</a>
     </nav>
-    <a class="cta" href="/my-league">Sync my league</a>
+    <a class="cta" href="/my-league#settings">Customize My League</a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
     <!--/chrome:nav-->
 </div></header>
 <main id="main" class="wrap wide">
-<p class="is-eyebrow">Sheet 03 &middot; DFS</p>
-<hr class="is-rule">
-<h1>The lineup, solved.<br>Then the ways to break it.</h1>
+<p class="is-eyebrow">In-Season &middot; DFS</p>
+<h1>The lineup, solved. Then the ways to break it.</h1>
 <p class="is-lede">Daily fantasy is one slate, one set of game lines and one cap. Iron Tuna solves that cap against the market&rsquo;s own numbers and gives you the roster first &mdash; then the branches off it: the build that clears a double-up, the build that wins a big field, and the swap available at every slot.</p>
+<div class="is-actions">
+  <a class="is-btn primary" href="#sec-lineup">Build this week&rsquo;s lineup</a>
+  <a class="is-btn ghost" href="#dfUp">Price my own salary file</a>
+</div>
+
+<!-- ── the venue and the board ──────────────────────────────────────────────
+     Directly under the head, before the contest setup, so the page answers
+     "which site, which board" before it asks which contest. They were below
+     the setup, the Play of the Week and the Academy cards, a screen and a half
+     down. Same ids and the same script; only the markup moved. -->
+<div class="rk-controls">
+  <div class="rk-seg" id="dfSite" role="group" aria-label="Site"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button><button type="button" data-site="pk">Pick&rsquo;em</button><button type="button" data-site="sl">Sleeper picks</button></div>
+  <div class="rk-seg" id="dfNav" role="group" aria-label="Section"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
+</div>
+
+<p class="is-note" id="dfNote"></p>
+<p class="is-note" id="dfSiteNote"></p>
+
 <div class="df-config" id="dfConfig">
   <div class="df-config-title"><span>DraftKings DFS Setup</span><b>Match the contest you are actually entering</b></div>
   <div class="df-config-grid">
     <label class="df-select-block" for="dfGameStyleSelect">
-      <span class="df-select-kicker">First</span>
+      <span class="df-select-kicker"><i>1</i>First</span>
       <span class="df-select-label">Game Style <span class="df-term" data-tip="The roster and scoring format DraftKings uses. This determines how a legal lineup is built before payout strategy is considered.">?</span></span>
       <select id="dfGameStyleSelect" required>
         <option value="">Select Game Style…</option>
@@ -362,7 +389,7 @@ p{color:var(--sec);margin:0 0 16px}
     </label>
 
     <label class="df-select-block" for="dfGamesSelect">
-      <span class="df-select-kicker">Second</span>
+      <span class="df-select-kicker"><i>2</i>Second</span>
       <span class="df-select-label">Games <span class="df-term" data-tip="The games that define the eligible player pool. DraftKings may offer all-game, early-only, late-only, primetime, single-game and custom slates.">?</span></span>
       <select id="dfGamesSelect" disabled required>
         <option value="">Select Game Style first…</option>
@@ -371,7 +398,7 @@ p{color:var(--sec);margin:0 0 16px}
     </label>
 
     <label class="df-select-block" for="dfPayoutSelect">
-      <span class="df-select-kicker">Third</span>
+      <span class="df-select-kicker"><i>3</i>Third</span>
       <span class="df-select-label">Payout Structure <span class="df-term" data-tip="How the contest awards prizes. The same legal roster can call for a very different strategy in Head-to-Head, a Double Up or a top-heavy tournament.">?</span></span>
       <select id="dfPayoutSelect" disabled required>
         <option value="">Select Games first…</option>
@@ -412,14 +439,6 @@ p{color:var(--sec);margin:0 0 16px}
     <a class="df-reading-card" href="/dfs-strategy-guide"><span>Strategy</span><h3>Stacks, Correlation, Leverage and Contest Selection</h3><p>When correlation helps, when chalk is good, when leverage matters and how to match roster construction to the payout curve.</p></a>
   </div>
 </div>
-
-<div class="rk-controls">
-  <div class="rk-seg" id="dfSite" role="group" aria-label="Site"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button><button type="button" data-site="pk">Pick&rsquo;em</button><button type="button" data-site="sl">Sleeper picks</button></div>
-  <div class="rk-seg" id="dfNav" role="group" aria-label="Section"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
-</div>
-
-<p class="is-note" id="dfNote"></p>
-<p class="is-note" id="dfSiteNote"></p>
 
 <div class="df-player-modal" id="dfPlayerModal" hidden role="dialog" aria-modal="true" aria-labelledby="dfPlayerTitle">
   <button class="df-player-backdrop" type="button" data-player-close aria-label="Close player calculation"></button>
@@ -589,83 +608,23 @@ p{color:var(--sec);margin:0 0 16px}
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
-  <div class="foot-cols">
-    <div class="foot-col">
-     <h2>In-Season</h2>
-     <ul>
-      <li><a href="/in-season">Overview</a></li>
-      <li><a href="/fantasy">Fantasy</a></li>
-      <li><a href="/dfs">DFS</a></li>
-      <li><a href="/rankings">Rankings</a></li>
-      <li><a href="/depth-charts">Depth Charts</a></li>
-      <li><a href="/weekly-rankings">This week’s rankings</a></li>
-      <li><a href="/season-long-rankings">Season long rankings</a></li>
-      <li><a href="/stats">Stats</a></li>
-      <li><a href="/weekly-wrap">Weekly Wrap Up</a></li>
-      <li><a href="/waivers">Waivers &amp; FAAB</a></li>
-      <li><a href="/my-league">My Leagues</a></li>
-      <li><a href="/my-week">My Week</a></li>
-     </ul>
-    </div>
-    <div class="foot-col">
-     <h2>Market Intel</h2>
-     <ul>
-      <li><a href="/vegas-edge">Vegas Edge</a></li>
-      <li><a href="/hidden-value">Hidden Value</a></li>
-      <li><a href="/previews">Previews</a></li>
-      <li><a href="/the-line">The Line</a></li>
-      <li><a href="/game-intel">Game Intel</a></li>
-      <li><a href="/player-intel">Player Intel</a></li>
-      <li><a href="/what-they-arent-telling-you">The whole board</a></li>
-      <li><a href="/trade-finder">Trade Finder</a></li>
-     </ul>
-    </div>
-    <div class="foot-col">
-     <h2>Read</h2>
-     <ul>
-      <li><a href="/in-season/desk">The Desk</a></li>
-      <li><a href="/analysts">The analysts (AI)</a></li>
-      <li><a href="/the-pick">The Pick</a></li>
-      <li><a href="/the-tell">The Tell</a></li>
-      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
-      <li><a href="/auction-insights">Auction insights</a></li>
-      <li><a href="/insights-vault">Insight Vault</a></li>
-     </ul>
-    </div>
-    <div class="foot-col">
-     <h2>Draft Tools</h2>
-     <ul>
-      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
-      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
-      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
-      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
-      <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
-      <li><a href="/guides">Strategy guides</a></li>
-      <li><a href="/auction-watch">Auction Watch</a></li>
-     </ul>
-    </div>
-    <div class="foot-col">
-     <h2>Company</h2>
-     <ul>
-      <li><a href="/faq">FAQ</a></li>
-      <li><a href="/support">Support</a></li>
-      <li><a href="/creators">Creators &amp; affiliates</a></li>
-     </ul>
-    </div>
-    <div class="foot-col">
-     <h2>Legal</h2>
-     <ul>
-      <li><a href="/privacy">Privacy</a></li>
-      <li><a href="/terms">Terms</a></li>
-      <li><a href="/data">Data &amp; sources</a></li>
-     </ul>
-    </div>
-  </div>
+  <nav class="foot-nav" aria-label="Footer">
+   <ul>
+    <li><a href="/fantasy">Fantasy</a></li>
+    <li><a href="/dfs">DFS</a></li>
+    <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/faq#faq-start">How It Works</a></li>
+    <li><a href="/data">Data Sources</a></li>
+    <li><a href="/faq">FAQ</a></li>
+    <li><a href="/privacy">Privacy</a></li>
+    <li><a href="/terms">Terms</a></li>
+    <li><a href="/support">Support</a></li>
+   </ul>
+  </nav>
   <div class="foot-note">
    <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
    <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
-   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span>
-    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span></p>
   </div>
   <!--/chrome:foot-->
 </div></footer>
@@ -753,7 +712,11 @@ p{color:var(--sec);margin:0 0 16px}
     var qc = new URLSearchParams(location.search).get('contest');
     if (qc && SHAPES[qc]) contest = qc;
   } catch (err) {}
-  function press(host, attr, val) { [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); }); }
+  // Null-safe: the contest-shape cards (#dfShape) were retired from the markup
+  // while applyShape() kept pressing them. That threw inside DOMContentLoaded,
+  // before a single listener below had bound and before load() ran, so every
+  // control on the page was dead and the slate never fetched.
+  function press(host, attr, val) { if (!host) return; [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); }); }
   function show() { SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = k !== sec; }); press($('dfNav'), 'data-sec', sec); }
   function fppgLabel() { return site === 'dk' ? 'DK FPPG' : site === 'fd' ? 'FD FPPG' : 'FPPG'; }
   // A computed average (no operator number in the file) is printed as an estimate, never as DraftKings' own figure.
@@ -926,7 +889,7 @@ p{color:var(--sec);margin:0 0 16px}
   function applyShape() {
     var sh = SHAPES[contest] || SHAPES.single;
     press($('dfShape'), 'data-contest', contest);
-    $('dfShapeNote').innerHTML = '<b>' + e(sh.head) + '.</b> ' + e(sh.why);
+    if ($('dfShapeNote')) $('dfShapeNote').innerHTML = '<b>' + e(sh.head) + '.</b> ' + e(sh.why);
     if (tuned) return;
     mode = sh.mode; press($('dfMode'), 'data-mode', mode);
     $('dfStack').checked = sh.stack; $('dfBring').checked = sh.bring;
@@ -1330,6 +1293,9 @@ p{color:var(--sec);margin:0 0 16px}
     else if (gameChoice==='custom') $('dfGamesHelp').textContent=keys.length ? keys.length+' games selected in the custom player pool.' : 'Select every game included in the contest, then confirm the custom pool.';
     else $('dfGamesHelp').textContent=gameChoice ? (keys.length+' game'+(keys.length===1?'':'s')+' selected for the eligible player pool.') : 'Choose the same game window or matchup shown in DraftKings.';
     $('dfPayoutHelp').textContent = py ? py.note : 'Select the way the contest pays before Iron Tuna chooses the appropriate risk profile.';
+    // Each step's number becomes a check once that step is answered.
+    var done = { dfGameStyleSelect: !!gameStyle, dfGamesSelect: !!gameChoice && (gameChoice !== 'custom' || keys.length > 0), dfPayoutSelect: !!payoutStructure };
+    Object.keys(done).forEach(function (id) { var b = $(id) && $(id).closest('.df-select-block'); if (b) b.classList.toggle('done', done[id]); });
     var state=$('dfSetupState');
     if (!setupReady()) {
       state.className='df-setup-state';
@@ -1668,7 +1634,7 @@ p{color:var(--sec);margin:0 0 16px}
     applyGameStyle();
     $('dfUp').hidden = site === 'dk' && gameStyle === 'best-ball';
     $('dfSiteNote').textContent = site === 'dk'
-      ? 'Choose Game Style, Games and Payout Structure above. Iron Tuna will not apply the Classic optimizer to a different DraftKings format.'
+      ? 'Choose Game Style, Games and Payout Structure below. Iron Tuna will not apply the Classic optimizer to a different DraftKings format.'
       : 'Classic salary cap · $60,000. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
     var mine = upGet(site);
     $('dfUpClear').hidden = !mine;

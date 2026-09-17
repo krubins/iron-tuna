@@ -2642,11 +2642,14 @@ a.itl-card:hover { border-color: var(--positive); }
 
 /* footer */
 .itl-foot { border-top: 1px solid var(--border-subtle); margin-top: auto; }
-.itl-foot .itl-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 24px clamp(20px, 3vw, 44px); padding-top: 34px; padding-bottom: 44px; font-size: 13px; line-height: 22px; color: var(--text-muted); }
-.itl-foot h2 { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--text-primary); margin: 0 0 8px; }
-.itl-foot a { display: block; color: var(--text-muted); }
+/* ONE ROW of nine destinations, not four columns of tools and columns. The
+   grid is gone with them; the wrap is a stack of two blocks now. */
+.itl-foot .itl-wrap { padding-top: 34px; padding-bottom: 44px; font-size: 13px; line-height: 22px; color: var(--text-muted); }
+.itl-foot-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 10px clamp(18px, 3vw, 34px); padding-bottom: 20px; }
+.itl-foot-admin { font-size: 12px; opacity: 0.65; }
+.itl-foot a { color: var(--text-muted); }
 .itl-foot a:hover { color: var(--text-primary); }
-.itl-legal { grid-column: 1 / -1; border-top: 1px solid var(--border-subtle); padding-top: 16px; }
+.itl-legal { border-top: 1px solid var(--border-subtle); padding-top: 16px; }
 .itl-legal p { margin: 0 0 8px; }
 .itl-legal p:last-child { margin-bottom: 0; }
 .itl-legal b { color: var(--text-secondary); }
@@ -6466,6 +6469,12 @@ function normalizeNameKey(name, position) {
   return `${name.toLowerCase().replace(/[^a-z]/g, '')}_${position}`;
 }
 let BASELINE_PROJECTIONS = [];
+// IRON TUNA as outlined paths, traced from Bebas Neue by tools/build-wordmark.mjs
+// (tools/wordmark-paths.json, viewBox 0 0 296.6 56). Same data on every page header
+// and every banner; regenerate there, then paste here, if the letters ever move.
+const WORDMARK_PATHS = ["M6.83 47L6.83 1.50L13.97 1.50L13.97 47","M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10","M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38","M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30","M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30","M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43","M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44","M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"];
+// Left and right edge of the letters' ink in that space.
+const WORDMARK_INK = [6.83, 274.55];
 function LogoMark({
   height = 34,
   className = '',
@@ -6488,20 +6497,22 @@ function LogoMark({
   const tracking = tagline ? 1.3 : 1.5;
   const wordGap = base * (tagline ? 0.18 : 0.30);
   let x = 0;
-  const placed = [];
   sizes.forEach((sz, i) => {
     if (i === 4) x += wordGap;
     const adv = i === 0 ? sz * advF * 0.5 : sz * advF;
-    placed.push({
-      ...word[i],
-      size: sz,
-      cx: x + adv / 2
-    });
     x += adv + tracking;
   });
   const wordWidth = x;
+  // The letters are the outlined paths every banner draws (tools/wordmark-paths.json),
+  // not <text> in the Bebas Neue web font: set as type, the name showed in Impact or
+  // the system sans until the font arrived, and never in Bebas when it did not. The
+  // header layout above IS the paths' coordinate space (each letter's x and the 27.5
+  // centre line are the header SVG's), so at the header size they drop in as they
+  // are. The landing mark used to be the same letters at 0.8 size on a tighter
+  // advance; it is now the one mark, scaled so its ink spans the word box.
   const tunaW = 122;
   const cy = base * 0.55;
+  const markFit = tagline ? ` translate(0,${cy}) scale(${(wordWidth / (WORDMARK_INK[1] - WORDMARK_INK[0])).toFixed(5)}) translate(${-WORDMARK_INK[0]},-27.5)` : '';
   const tagFs = base * 0.20,
     tagDx = base * 0.31;
   const glyphW = (str, fs, ls) => str.length * (0.46 * fs) + (str.length - 1) * (ls * fs);
@@ -6710,17 +6721,12 @@ function LogoMark({
     fill: "#ffffff"
   })), React.createElement("g", {
     filter: wavy ? 'url(#waterDistort)' : undefined,
-    transform: `translate(${wordTx},${wordTy}) translate(${wordWidth/2},${cy}) scale(${tagline ? 1.2 : 1}) translate(${-(wordWidth/2)},${-cy})`
-  }, placed.map((g, i) => React.createElement("text", {
+    transform: `translate(${wordTx},${wordTy}) translate(${wordWidth/2},${cy}) scale(${tagline ? 1.2 : 1}) translate(${-(wordWidth/2)},${-cy})${markFit}`,
+    fill: LETTER
+  }, WORDMARK_PATHS.map((d, i) => React.createElement("path", {
     key: i,
-    x: g.cx,
-    y: cy,
-    fontFamily: "'Bebas Neue','Impact',sans-serif",
-    fontSize: g.size,
-    textAnchor: "middle",
-    dominantBaseline: "central",
-    fill: g.c
-  }, g.ch))), tagline && React.createElement("text", {
+    d
+  }))), tagline && React.createElement("text", {
     x: vbW / 2,
     y: taglineY,
     fontFamily: "'Bebas Neue','Impact',sans-serif",
@@ -8523,6 +8529,10 @@ function loadTesseract() {
 function parseScoringText(text) {
   const sc = {};
   const items = [];
+  // Kept inside the function: /it-inseason-import.js is a port of this parser
+  // and tools/test-inseason-league.mjs lifts this function whole to compare the
+  // two, so anything it depends on has to come with it.
+  const TE_SCORING_LINE = /\b(te|tes|tight ?ends?)\b/;
   const lines = (text || '').split(/\n|;|•|\|/).map(l => l.trim()).filter(Boolean);
   const numIn = s => {
     const m = s.match(/-?\d+(?:\.\d+)?/);
@@ -8573,7 +8583,12 @@ function parseScoringText(text) {
       const v = yppFrom(l);
       if (v) set('receivingYardsPerPoint', v, 'Receiving yds/pt');
     }
-    if (/(reception|per catch|points? per reception)/.test(l) && !/(yards?|yds?)/.test(l)) {
+    // A tight-end line is NOT the league-wide reception value: "TEs get 1.5
+    // per catch", read as one, pays every running back and receiver 1.5 a
+    // catch off a tight-end rule. The app does not model the bonus, so the
+    // line is left alone; the in-season port reads it into extras.tePremium
+    // (it-inseason-import.js, parseTePremium). Change the two together.
+    if (TE_SCORING_LINE.test(l)) { /* a tight-end premium, which this form has no field for */ } else if (/(reception|per catch|points? per reception)/.test(l) && !/(yards?|yds?)/.test(l)) {
       const n = numIn(l);
       if (n != null && Math.abs(n) <= 2) {
         if (/\brb\b|running ?back/.test(l)) set('rbReceptionPoints', n, 'RB reception');else set('receptionPoints', n, 'Reception');
@@ -23434,15 +23449,23 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
     ['/guides', 'Strategy library', 'Guides']
   ];
 
+  // ONE ROW, the same nine destinations as the shared footer on every other page
+  // (tools/build-chrome.mjs FOOT_LINKS): the two product lanes, the articles
+  // that support them, and the pages that belong to no lane. The four columns
+  // this replaced carried the draft rooms and the individual article columns —
+  // a second navigation system, under different names, inside the app shell.
+  // Every one of those pages still serves at its own URL.
+  //
+  // The Admin link is the only way into /admin from the site; it is kept as a
+  // plain trailing link rather than a destination, because the page itself is
+  // what gates access (export key), and rel=nofollow keeps a noindex page out
+  // of the crawl.
   const FOOT = [
-    ['In-Season', [['/in-season', 'Overview'], ['/fantasy', 'Fantasy'], ['/dfs', 'DFS'], ['/my-league', 'My League']]],
-    ['Draft Tools', [['/fantasy-football-auction-values', 'Auction values'], ['/auctiondraft?screen=board', 'Draft manager'], ['/snakedraft', 'Snake board'], ['/superflex-auction-values', 'Superflex & 2QB'], ['/guides', 'Strategy library']]],
-    ['Read', [['/in-season/desk', 'The Desk'], ['/the-pick', 'The Pick'], ['/auction-insights', 'Insights'], ['/insights-vault', 'Insight Vault']]],
-    // The Admin link is the only way into /admin from the site; it is a plain
-    // footer link because the page itself is what gates access (export key),
-    // and rel=nofollow keeps a noindex page out of the crawl.
-    ['Company', [['/faq', 'FAQ'], ['/support', 'Support'], ['/creators', 'Creators & affiliates'], ['/privacy', 'Privacy'], ['/terms', 'Terms'], ['/data', 'Data & sources'], ['/admin', 'Admin', 'nofollow']]]
+    ['/fantasy', 'Fantasy'], ['/dfs', 'DFS'], ['/in-season/desk', 'Articles'],
+    ['/faq#faq-start', 'How It Works'], ['/data', 'Data Sources'], ['/faq', 'FAQ'],
+    ['/privacy', 'Privacy'], ['/terms', 'Terms'], ['/support', 'Support']
   ];
+  const FOOT_ADMIN = ['/admin', 'Admin', 'nofollow'];
 
   // ── 03 · where the experts and the market disagree most ──────────────────
   const gapsBody = edge.st === 'ok' && edge.rows.length
@@ -23486,17 +23509,27 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
         h('a', { className: 'itl-brand', href: '/', 'aria-label': 'Iron Tuna home' },
           h('img', { src: '/tuna-mark.png', alt: '', width: 76, height: 40 }),
           h('span', null, 'Iron Tuna')),
+        // The same five destinations, in the same order, as the shared chrome on
+        // every other page (tools/build-chrome.mjs NAV). 'Draft' and 'The Desk'
+        // came off: the draft rooms are an offseason pitch and the desk is the
+        // articles hub, which is what the label says now. Search is the ribbon
+        // lookup rather than a link, because the app already has the component.
         h('nav', { className: 'itl-nav', 'aria-label': 'Main' },
           h('a', { href: '/fantasy' }, 'Fantasy'),
           h('a', { href: '/dfs' }, 'DFS'),
-          h('a', { href: '/fantasy-football-auction-values' }, 'Draft'),
-          h('a', { href: '/in-season/desk' }, 'The Desk'),
+          h('a', { href: '/in-season/desk' }, 'Articles'),
+          h('a', { href: '/faq#faq-start' }, 'How It Works'),
           // Spelled out rather than via the h() alias above: tools/test-player-card.mjs
           // counts this exact call on both dark ribbons, which is how it caught the
           // lookup falling out of the hub when this component was rewritten.
           React.createElement(RibbonPlayerSearch, { from: 'hub_header' }),
+          // Sign In stays secondary: a plain button in the nav run, never the
+          // filled control beside it.
           h('button', { type: 'button', onClick: onSignin, title: 'Sign in to restore your purchase on this device' }, 'Sign in')),
-        h('a', { className: 'itl-cta', href: '/in-season#league' }, 'Save my league'))),
+        // Not "Save my league". Automatic sync is off or unproven for every
+        // provider (docs/league-sync.md §3.1); the browser-only settings form in
+        // section 02 of /my-league is what works for every reader today.
+        h('a', { className: 'itl-cta', href: '/my-league#settings' }, 'Customize My League'))),
 
       h('div', { className: 'itl-main' }, h('div', { className: 'itl-wrap' },
 
@@ -23584,9 +23617,9 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
 
       // ── footer ────────────────────────────────────────────────────────────
       h('footer', { className: 'itl-foot' }, h('div', { className: 'itl-wrap' },
-        FOOT.map(([head, links]) => h('div', { key: head },
-          h('h2', null, head),
-          links.map(([href, label, rel]) => h('a', { key: href, href, rel }, label)))),
+        h('nav', { className: 'itl-foot-nav', 'aria-label': 'Footer' },
+          FOOT.map(([href, label]) => h('a', { key: href, href }, label)),
+          h('a', { className: 'itl-foot-admin', key: FOOT_ADMIN[0], href: FOOT_ADMIN[0], rel: FOOT_ADMIN[2] }, FOOT_ADMIN[1])),
         h('div', { className: 'itl-legal' },
           h('p', null, 'Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.'),
           // Kept in step with LEGAL in tools/build-chrome.mjs by hand: this

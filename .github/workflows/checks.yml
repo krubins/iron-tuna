@@ -1,8 +1,12 @@
 name: checks
 
-# There is no build step and no package manager in this repo (see HANDOFF.md §2),
-# so nothing here installs anything — every check is plain node against the files
-# that actually deploy.
+# There is no build step and no package manager in this repo (see HANDOFF.md §2).
+# Every check below is plain node against the files that actually deploy, with
+# ONE exception at the foot of this job: the browser test installs playwright-core
+# and a Chromium binary, because the only way to assert what a reader actually
+# sees is to render the page. That install writes nothing the site ships —
+# node_modules/ is gitignored and tools/ is in .assetsignore — and it is last, so
+# a registry or CDN outage cannot take the other 87 gates down with it.
 #
 # EVERY GATE RUNS, EVEN AFTER ONE FAILS. Steps in a job stop at the first
 # failure by default, and these gates are ordered with the cheap generator
@@ -172,7 +176,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "it-ranks.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "it-ranks.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js", "it-league.js", "it-season.js", "it-sync.js", "it-inseason.js", "it-inseason-import.js", "it-inseason-ui.js", "my-league.html", "in-season.html", "site.css"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -520,6 +524,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-it-league.mjs
 
+      - name: The in-season league, and the intake that fills it
+        if: ${{ !cancelled() }}
+        run: node tools/test-inseason-league.mjs
+
       - name: The generated lead story and its admin desk
         if: ${{ !cancelled() }}
         run: node tools/test-lead-story.mjs
@@ -665,6 +673,19 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-player-links.mjs
 
+      # The story art: a face on every story that names a player, and a game
+      # photograph wherever tools/nfl-action-shots.json has an openly licensed
+      # one. The photographs are CC BY / CC BY-SA files from Wikimedia Commons,
+      # so the credit printed under each one is a license term, not a caption:
+      # a change that drops it ships the pictures outside their license.
+      - name: Parse it-action.js
+        if: ${{ !cancelled() }}
+        run: node --check it-action.js
+
+      - name: Story art, and the credit under every photograph
+        if: ${{ !cancelled() }}
+        run: node tools/test-story-art.mjs
+
       - name: Vegas column (worker)
         if: ${{ !cancelled() }}
         run: node tools/test-worker-column.mjs
@@ -785,12 +806,50 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-admin-comp.mjs
 
-      # NOT run here: tools/test-position-lens.mjs, tools/test-you-column.mjs,
-      # tools/test-market-anchors.mjs, tools/test-vegas-slider.mjs,
-      # tools/test-qb-curve.mjs and tools/test-faab.mjs.
-      # All drive real Chromium and self-skip without playwright-core plus a
-      # browser binary. Adding them without installing those would give a green
-      # step that never actually ran, which is worse than not claiming coverage.
-      # Run them locally (CHROMIUM_PATH=... node tools/test-position-lens.mjs)
-      # when touching the ribbon's edition switch, Position Intel, the lead, the
+      # ── the browser gate ──────────────────────────────────────────────────
+      # LAST, and the only step in this file that installs anything. The browser
+      # tests drive real Chromium, and they SELF-SKIP when it is absent — which
+      # is right on a contributor's laptop and a trap in CI, because a skip exits
+      # 0 and the step reads green having asserted nothing. So the test is run
+      # with REQUIRE_BROWSER=1, under which a missing playwright-core or a
+      # missing binary is a failure that names the command to fix it. That flag
+      # is the whole reason this can be a gate at all.
+      #
+      # Pinned, and the same version the test's own error message suggests: an
+      # unpinned install would change the renderer under the layout assertions
+      # without a commit. The cache is keyed on that version and on the runner,
+      # so it can never serve a browser from a different one.
+      - name: Cache the Chromium download
+        if: ${{ !cancelled() }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-1.56.1-${{ runner.os }}-${{ runner.arch }}
+      - name: Chromium, for the browser gate
+        if: ${{ !cancelled() }}
+        id: browser
+        run: |
+          npm install --no-save --no-package-lock --no-audit --no-fund playwright-core@1.56.1
+          ./node_modules/.bin/playwright-core install --with-deps chromium
+
+      # tools/test-homepage.mjs replaced tools/test-position-lens.mjs in the
+      # September 2026 homepage rewrite. It drives "/" at 1280 and 390 with every
+      # feed answering AND with every feed refusing, because the rule the rewrite
+      # exists to keep — a band is either full of real current data or it is
+      # hidden — is only provable in the refusing pass. The feeds are stubbed
+      # field-for-field from _worker.js's own payload shapes; nothing here
+      # reaches the network.
+      - name: The homepage, rendered
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-homepage.mjs
+
+      # STILL NOT run here: tools/test-you-column.mjs, tools/test-market-anchors.mjs,
+      # tools/test-vegas-slider.mjs and tools/test-qb-curve.mjs, which need react
+      # and react-dom on top of the browser to mount the draft app, and
+      # tools/test-faab.mjs. Each is one step away now that the browser is
+      # installed above — add them the same way, with REQUIRE_BROWSER=1, rather
+      # than without it. Run them locally with
+      # CHROMIUM_PATH=... node tools/test-<name>.mjs when touching the
       # cheat-sheet columns or the FAAB advisor's bid maths.

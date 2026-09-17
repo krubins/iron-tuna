@@ -317,26 +317,38 @@ console.log('\neach entry can be translated into the reader\'s own money');
     noSubject.length === 0, noSubject.map((e) => e.id).join(', '));
 }
 
-// ── the front page ────────────────────────────────────────────────────────
-console.log('\nthe front page quotes the column instead of copying it');
+// ── where the column is quoted ───────────────────────────────────────────────
+// The homepage carried a PICKS array and a band that painted it. Both came off
+// in the September 2026 rewrite; /weekly-intel is where the extraction lands now
+// (tools/build-front.mjs writes it there), so that is the copy this checks for
+// drift against the column itself.
+console.log('\nthe in-season page quotes the column instead of copying it');
 {
-  const picks = JSON.parse((front.match(/var PICKS = (\[[\s\S]*?\]);\n/) || [])[1] || 'null');
-  ok('front.html carries a PICKS array', Array.isArray(picks) && picks.length > 0);
-  ok('PICKS has one row per entry', picks.length === entries.length, `${picks.length} vs ${entries.length}`);
+  const intel = read('weekly-intel.html');
+  const picks = JSON.parse((intel.match(/var PICKS = (\[[\s\S]*?\]);\n/) || [])[1] || 'null');
+  ok('weekly-intel.html carries a PICKS array', Array.isArray(picks) && picks.length > 0);
+  ok('PICKS has one row per entry', picks && picks.length === entries.length, `${picks && picks.length} vs ${entries.length}`);
 
   const titleOf = (e) => norm((e.html.match(/<h2>([\s\S]*?)<\/h2>/) || [])[1] || '');
-  const mismatched = picks.filter((p, i) => p.title !== titleOf(entries[i]) || p.url !== '/the-pick#' + entries[i].id);
+  const mismatched = (picks || []).filter((p, i) => p.title !== titleOf(entries[i]) || p.url !== '/the-pick#' + entries[i].id);
   ok('every card quotes its entry exactly', mismatched.length === 0,
     mismatched.map((p) => p.id).join(', ') + ' — run node tools/build-front.mjs');
 
-  const noTheme = picks.filter((p) => !p.theme);
+  const noTheme = (picks || []).filter((p) => !p.theme);
   ok('every card carries its theme', noTheme.length === 0, noTheme.map((p) => p.id).join(', '));
 
   // The crawlers robots.txt invites do not run JavaScript, so the band the
-  // client paints is invisible to them. The static link in the served HTML is
-  // the only thing that makes the column reachable at all.
-  ok('the front page links /the-pick without JavaScript',
-    (front.match(/href="\/the-pick"/g) || []).length >= 2);
+  // client paints is invisible to them. A static link in the served HTML is the
+  // only thing that makes the column reachable at all.
+  //
+  // NOT the homepage any more: the two links it carried went with the band, and
+  // "/" is five sections now. /weekly-intel and /the-tell are the served pages
+  // that link it; both are in the chrome's reach and in sitemap.xml.
+  const carriers = ['weekly-intel.html', 'the-tell.html'].filter((f) => /href="\/the-pick"/.test(read(f)));
+  ok('the column is linked from served HTML without JavaScript',
+    carriers.length >= 2, carriers.join(', '));
+  ok('and the homepage keeps no second copy of it',
+    !/var PICKS = \[/.test(read('front.html')) && !/id="pickBand"/.test(read('front.html')));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

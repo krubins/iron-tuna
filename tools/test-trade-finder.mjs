@@ -239,7 +239,7 @@ console.log('\nthe worker’s screenshot reader, without a model');
     if (a < 0 || b < 0) { console.error('FAIL: could not locate ' + from.slice(0, 50)); process.exit(1); }
     return src.slice(a, b);
   };
-  const W = new Function(cut('// ── the roster reader ─', '// ── /the roster reader ─') + '\nreturn { rosterReadParse, ROSTER_READ_SYSTEM, ROSTER_READ_MAX_IMAGES, ROSTER_READ_MAX_BYTES };')();
+  const W = new Function(cut('// ── the roster reader ─', '// ── /the roster reader ─') + '\nreturn { rosterReadParse, ROSTER_READ_SYSTEM, ROSTER_READ_MAX_IMAGES, ROSTER_READ_MAX_BYTES, ROSTER_READ_MAX_TOKENS };')();
   ok('the system prompt asks for JSON and forbids invention', /JSON/.test(W.ROSTER_READ_SYSTEM) && /never|do not|not invent|Do not/i.test(W.ROSTER_READ_SYSTEM));
   const good = W.rosterReadParse('Here you go:\n```json\n{"teams":[{"name":"Team A","players":[{"name":"Josh Allen","pos":"QB","team":"BUF"},{"name":"Bijan Robinson","pos":"RB"}]},{"name":"","players":[{"name":"Lamar Jackson","pos":"qb"}]}]}\n```');
   ok('a fenced JSON reply parses', good.ok && good.teams.length === 2, JSON.stringify(good).slice(0, 200));
@@ -254,6 +254,19 @@ console.log('\nthe worker’s screenshot reader, without a model');
   const long = W.rosterReadParse(JSON.stringify({ teams: Array.from({ length: 40 }, (_, i) => ({ name: 'T' + i, players: Array.from({ length: 60 }, (_, k) => ({ name: 'P' + k, pos: 'WR' })) })) }));
   ok('team and player counts are capped', long.teams.length <= 24 && long.teams[0].players.length <= 40, `${long.teams.length} x ${long.teams[0].players.length}`);
   ok('the image budget is bounded', W.ROSTER_READ_MAX_IMAGES >= 1 && W.ROSTER_READ_MAX_IMAGES <= 12 && W.ROSTER_READ_MAX_BYTES <= 12 * 1024 * 1024);
+  // A reply that hit the output budget ends mid-object. The complete players
+  // before the cut are kept and the reply is marked repaired.
+  const full = JSON.stringify({ teams: [
+    { name: 'Team A', players: [{ name: 'Josh Allen', pos: 'QB', team: 'BUF' }, { name: "Ja'Marr {Chase", pos: 'WR', team: 'CIN' }] },
+    { name: 'Team B', players: [{ name: 'Lamar Jackson', pos: 'QB', team: 'BAL' }, { name: 'Derrick Henry', pos: 'RB', team: 'BAL' }] }
+  ] });
+  const cutMidName = W.rosterReadParse(full.slice(0, full.indexOf('Derrick He')));
+  ok('a reply cut off inside a name keeps every complete player before it', cutMidName.ok && cutMidName.repaired && cutMidName.teams.length === 2 && cutMidName.teams[1].players.length === 1 && cutMidName.teams[0].players[1].name === "Ja'Marr {Chase", JSON.stringify(cutMidName).slice(0, 200));
+  const cutBetween = W.rosterReadParse(full.slice(0, full.lastIndexOf(',{"name":"Derrick')));
+  ok('a reply cut off between players keeps the rest', cutBetween.ok && cutBetween.teams[1].players.length === 1, JSON.stringify(cutBetween).slice(0, 200));
+  const cutEarly = W.rosterReadParse('{"teams":[{"name":"Team A","players":[{"name":"Josh Al');
+  ok('a reply cut off before any complete player is a clean failure', cutEarly.ok === false && /json/.test(cutEarly.error), JSON.stringify(cutEarly));
+  ok('the output budget covers a whole league', W.ROSTER_READ_MAX_TOKENS >= 12000);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
