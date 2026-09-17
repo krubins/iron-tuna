@@ -23,9 +23,12 @@
  * the markup and the events. Load them in that order; the importer block hides
  * itself where its file is not loaded, and the form still works.
  *
- *   ITInSeasonUI.leagueForm(el)      the form, or the saved card, into el
- *   ITInSeasonUI.importer(el, opts)  the import widget, calling opts.onApply
- *   ITInSeasonUI.esc(s)              escape, for the pages' own renderers
+ *   ITInSeasonUI.leagueForm(el, opts)  the form, or the saved card, into el;
+ *                                     returns { apply(partial, source, n) }
+ *   ITInSeasonUI.importer(el, opts)    the four-tab import widget
+ *   ITInSeasonUI.intake(el, opts)      the three boxes — scoring, rosters, FAAB —
+ *                                     each typed, pasted or read off a screenshot
+ *   ITInSeasonUI.esc(s)                escape, for the pages' own renderers
  */
 (function (root, doc) {
   'use strict';
@@ -37,6 +40,21 @@
   }
   function $(el, sel) { return el.querySelector(sel); }
   function all(el, sel) { return Array.prototype.slice.call(el.querySelectorAll(sel)); }
+
+  // One chip per rule. A paste that says "Half-PPR" at the top and "Reception
+  // 0.5" further down has named one rule twice, and the parser records both
+  // readings on purpose — the reader does not need to see it twice, and the
+  // LAST reading is the one that ended up in the settings. Shared by both
+  // intakes below.
+  function chips(items) {
+    var order = [], seen = {};
+    (items || []).forEach(function (it) {
+      var k = String(it[0]);
+      if (!(k in seen)) order.push(k);
+      seen[k] = it[1];
+    });
+    return order.map(function (k) { return [k, seen[k]]; });
+  }
 
   // ── the importer ──────────────────────────────────────────────────────────
   // opts.onApply(partial, source, count)  required; the host decides what a
@@ -63,20 +81,6 @@
     var preview = null;   // { items, partial, source }
     var status = o.status || '';
     var pasted = '';
-
-    // One chip per rule. A paste that says "Half-PPR" at the top and "Reception
-    // 0.5" further down has named one rule twice, and the parser records both
-    // readings on purpose — the reader does not need to see it twice, and the
-    // LAST reading is the one that ended up in the settings.
-    function chips(items) {
-      var order = [], seen = {};
-      (items || []).forEach(function (it) {
-        var k = String(it[0]);
-        if (!(k in seen)) order.push(k);
-        seen[k] = it[1];
-      });
-      return order.map(function (k) { return [k, seen[k]]; });
-    }
 
     function show(partial, source) {
       preview = { items: chips(partial && partial.items), partial: partial, source: source };
@@ -189,11 +193,276 @@
     render();
   }
 
-  // ── the league form ───────────────────────────────────────────────────────
-  function leagueForm(el) {
+  // ── the three boxes ───────────────────────────────────────────────────────
+  // /my-league §02 is where every "Customize My League" button on the site
+  // lands, and until now what it landed on was a form: three radio buttons, a
+  // pair of number fields, and two <details> the reader had to open before the
+  // scoring or the lineup was even visible. The importer above it helped, but
+  // it asked ONE question in four different ways — pick a tab, then paste
+  // everything you have — when the reader has three separate answers sitting in
+  // three separate browser tabs. Every platform prints them that way: scoring
+  // on one screen, the roster on another, the waiver budget on a third.
+  //
+  // So this asks the three questions side by side, in the order the page names
+  // them, and each box takes whichever form the answer is already in: typed,
+  // pasted as text, pasted as a screenshot off the clipboard, or dragged in as
+  // a file. A screenshot is read by OCR IN THE BROWSER — the image is never
+  // uploaded — and what it read comes back as chips to check before anything
+  // moves. Nothing here saves; the host applies the partial to its own form and
+  // the reader still presses Save.
+  //
+  // Each box reads only its own domain (ITInSeasonImport.parseFor), so the
+  // scoring screenshot dropped into the budget box says "no budget in that
+  // image" rather than quietly rewriting a lineup nobody asked it about.
+  //
+  // opts.onApply(partial, source, n)  required; the host owns what a partial means
+  // opts.draft                        false to drop the cheat-sheet strip
+  // The hints are deliberately the same LENGTH as each other, not just the same
+  // shape: each is one line at the width three cards take on this page, so the
+  // textareas below them start on the same line and the three boxes read as one
+  // row rather than three cards that missed their cue.
+  var INTAKE = [
+    {
+      kind: 'scoring', n: '01', title: 'Insert Scoring Rules',
+      hint: 'Touchdowns, receptions, yardage, a tight-end premium.',
+      // Every placeholder here is a line the parser actually reads. "1 per 10"
+      // is not — it comes back as one yard per point — and a suggestion the
+      // reader copies and gets a wrong answer from is worse than no suggestion.
+      ph: 'Passing TD: 4\nInterception: -2\nReception: 0.5\nReceiving yards: 1 point per 10 yards',
+      chips: [['std', 'Standard'], ['half', 'Half-PPR'], ['ppr', 'Full PPR'], ['pass4', 'Pass TD 4'], ['pass6', 'Pass TD 6'], ['tep', 'TE premium']]
+    },
+    {
+      kind: 'roster', n: '02', title: 'Insert Rosters',
+      hint: 'The starting slots and the bench, superflex included.',
+      ph: 'QB 1 / RB 2 / WR 3 / TE 1 / FLEX 1 / K 1 / DEF 1 / Bench 6\n\nor: QB, RB, RB, WR, WR, WR, TE, FLEX, K, DEF, BN, BN',
+      chips: [['superflex', 'Superflex']]
+    },
+    {
+      kind: 'faab', n: '03', title: 'Insert FAAB Budgets',
+      hint: 'The waiver budget, and the teams bidding against it.',
+      ph: 'FAAB budget: $100\n12 teams',
+      chips: [['faab100', '$100'], ['faab200', '$200'], ['faab1000', '$1,000']]
+    }
+  ];
+  // The budget shortcuts are values, not rules, so they are written here rather
+  // than in ITInSeasonImport.PRESETS — that list is the draft app's and stays
+  // the draft app's.
+  var FAAB_CHIPS = { faab100: 100, faab200: 200, faab1000: 1000 };
+
+  function intake(el, opts) {
     if (!el) return;
+    var IMP = root.ITInSeasonImport;
+    if (!IMP || !IMP.parseFor) { el.innerHTML = ''; return; }
+    var o = opts || {};
+    var onApply = typeof o.onApply === 'function' ? o.onApply : function () {};
+
+    var fromDraft = null;
+    if (o.draft !== false) { try { fromDraft = IMP.fromDraftApp(); } catch (e) { fromDraft = null; } }
+
+    // One state per box. The text lives here and not only in the textarea so a
+    // re-render of the result region never costs the reader their typing.
+    var state = INTAKE.map(function (b) { return { kind: b.kind, text: '', status: '', busy: false, preview: null }; });
+    function stateOf(kind) {
+      for (var i = 0; i < state.length; i++) if (state[i].kind === kind) return state[i];
+      return null;
+    }
+
+    el.innerHTML =
+      '<div class="is-intake">' +
+        '<div class="is-intake-grid">' + INTAKE.map(function (b) {
+          return '<section class="is-intake-card" data-box="' + b.kind + '" aria-label="' + esc(b.title) + '">' +
+            '<div class="is-intake-top"><span class="is-intake-n">' + esc(b.n) + '</span><b>' + esc(b.title) + '</b></div>' +
+            '<p class="is-intake-hint">' + esc(b.hint) + '</p>' +
+            '<label class="is-intake-lab" for="itk-' + b.kind + '">Type, paste or drag in</label>' +
+            // The veil covers the textarea and only the textarea: a drop target
+            // whose highlight also swallows its own label reads as a panel that
+            // broke rather than one that is ready to catch the file.
+            '<div class="is-intake-drop" data-drop>' +
+              '<textarea class="is-input is-intake-text" id="itk-' + b.kind + '" data-text rows="6" spellcheck="false" placeholder="' + esc(b.ph) + '"></textarea>' +
+              '<div class="is-intake-veil" aria-hidden="true"><span>Drop the screenshot</span></div>' +
+            '</div>' +
+            '<div class="is-intake-acts">' +
+              '<button type="button" class="is-btn sec" data-read>Read this</button>' +
+              '<button type="button" class="is-btn ghost" data-pick>Upload a screenshot</button>' +
+              '<input type="file" accept="image/*" data-file hidden>' +
+            '</div>' +
+            (b.chips.length ? '<div class="is-intake-chips">' + b.chips.map(function (c) {
+              return '<button type="button" class="is-intake-quick" data-quick="' + esc(c[0]) + '">' + esc(c[1]) + '</button>';
+            }).join('') + '</div>' : '') +
+            '<div class="is-intake-out" data-out role="status" aria-live="polite"></div>' +
+          '</section>';
+        }).join('') + '</div>' +
+        '<div class="is-intake-foot">' +
+          (fromDraft ? '<span class="is-intake-foot-l">Your cheat sheet is set up in this browser. It already knows your scoring and your lineup.</span>' +
+            '<button type="button" class="is-btn sec" data-draft>Copy my cheat sheet across</button>' : '') +
+          '<p class="is-intake-note">Screenshots are read <b>in your browser</b> and never uploaded. Nothing is saved until you press Save below.</p>' +
+        '</div>' +
+      '</div>';
+
+    // Only the result region of one box is ever re-rendered. Everything above it
+    // — the textarea most of all — is built once and left alone.
+    function out(s) {
+      var host = el.querySelector('[data-box="' + s.kind + '"] [data-out]');
+      if (!host) return;
+      var p = s.preview;
+      host.innerHTML =
+        (s.status ? '<p class="is-imp-status' + (s.busy ? ' busy' : '') + '">' + esc(s.status) + '</p>' : '') +
+        (p ? '<div class="is-imp-preview"><span class="is-imp-from">Read from ' + esc(p.source) + ':</span>' +
+          (p.items.length
+            ? p.items.map(function (it) { return '<span class="is-imp-chip">' + esc(it[0]) + ' <b>' + esc(it[1]) + '</b></span>'; }).join('') +
+              '<div class="is-btns"><button type="button" class="is-btn primary" data-apply>Use these</button>' +
+              '<button type="button" class="is-btn ghost" data-discard>Discard</button></div>'
+            : '<span class="is-imp-from">nothing to use</span>') +
+          '</div>' : '');
+    }
+    function say(s, msg, busy) { s.status = msg; s.busy = !!busy; out(s); }
+    function show(s, partial, source) {
+      s.preview = { items: chips(partial && partial.items), partial: partial, source: source };
+      s.busy = false;
+      s.status = s.preview.items.length ? '' : 'Nothing found here. Check the box you dropped it in, or type the numbers.';
+      out(s);
+    }
+    function detect(s, text, source) {
+      s.text = text;
+      show(s, IMP.parseFor(text, s.kind), source || 'what you typed');
+    }
+    function image(s, file) {
+      if (!file) return;
+      s.preview = null;
+      say(s, 'Loading OCR…', true);
+      IMP.fromImageFor(file, s.kind, function (m) { say(s, m, true); }).then(function (res) {
+        show(s, res, 'your screenshot');
+        if (!res.items.length) say(s, 'Could not read this box’s settings from that image. A tighter, higher-contrast crop reads best — or paste the text.');
+      }).catch(function () {
+        say(s, 'OCR could not load. Paste or type the text instead.');
+      });
+    }
+    // An image on the clipboard is the whole point of "copy a screenshot in":
+    // Win+Shift+S or Cmd+Ctrl+Shift+4 puts one there and never touches a file.
+    function imageIn(dt) {
+      if (!dt) return null;
+      var i, f;
+      if (dt.files && dt.files.length) {
+        for (i = 0; i < dt.files.length; i++) if (/^image\//.test(dt.files[i].type)) return dt.files[i];
+      }
+      if (dt.items) {
+        for (i = 0; i < dt.items.length; i++) {
+          if (dt.items[i].kind === 'file' && /^image\//.test(dt.items[i].type)) {
+            f = dt.items[i].getAsFile();
+            if (f) return f;
+          }
+        }
+      }
+      return null;
+    }
+
+    INTAKE.forEach(function (b) {
+      var card = el.querySelector('[data-box="' + b.kind + '"]');
+      var s = stateOf(b.kind);
+      var ta = $(card, '[data-text]'), drop = $(card, '[data-drop]'), file = $(card, '[data-file]');
+
+      ta.addEventListener('input', function () { s.text = ta.value; });
+      ta.addEventListener('paste', function (e) {
+        var img = imageIn(e.clipboardData);
+        if (img) { e.preventDefault(); image(s, img); return; }
+        // Text pasted from a settings page is already the answer; asking the
+        // reader to press a button after it is a step with nothing in it.
+        setTimeout(function () { if (ta.value.trim()) detect(s, ta.value, 'your paste'); }, 0);
+      });
+
+      // The WHOLE CARD catches the drag, and the veil lights the textarea. A
+      // zone that only accepts the file over the textarea itself means a drop
+      // an inch high or wide is the browser navigating away to the screenshot,
+      // taking the page and anything typed on it with it — the one failure here
+      // that loses work rather than just missing a read.
+      var deep = 0;
+      ['dragenter', 'dragover'].forEach(function (ev) {
+        card.addEventListener(ev, function (e) {
+          e.preventDefault();
+          if (ev === 'dragenter') deep++;
+          drop.classList.add('over');
+        });
+      });
+      ['dragleave', 'dragend'].forEach(function (ev) {
+        card.addEventListener(ev, function () {
+          if (ev === 'dragleave') deep = Math.max(0, deep - 1);
+          if (!deep || ev === 'dragend') { deep = 0; drop.classList.remove('over'); }
+        });
+      });
+      card.addEventListener('drop', function (e) {
+        e.preventDefault();
+        deep = 0; drop.classList.remove('over');
+        var img = imageIn(e.dataTransfer);
+        if (img) { image(s, img); return; }
+        var text = e.dataTransfer ? e.dataTransfer.getData('text') : '';
+        if (text) { ta.value = text; detect(s, text, 'what you dropped in'); }
+      });
+
+      $(card, '[data-read]').addEventListener('click', function () {
+        if (!ta.value.trim()) { say(s, 'Type or paste your settings first, or upload a screenshot.'); return; }
+        detect(s, ta.value, 'what you typed');
+      });
+      $(card, '[data-pick]').addEventListener('click', function () { file.click(); });
+      file.addEventListener('change', function (e) {
+        var f = e.target.files && e.target.files[0];
+        e.target.value = '';
+        image(s, f);
+      });
+
+      all(card, '[data-quick]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var k = btn.getAttribute('data-quick');
+          if (FAAB_CHIPS[k] != null) {
+            show(s, { faab: FAAB_CHIPS[k], items: [['FAAB budget', '$' + FAAB_CHIPS[k]]] }, 'a preset');
+          } else {
+            show(s, IMP.preset(k), 'a preset');
+          }
+        });
+      });
+
+      // The result region is rebuilt on every change, so its two buttons are
+      // caught on the card rather than bound to nodes that keep being replaced.
+      card.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest('[data-apply]')) {
+          if (!s.preview) return;
+          var n = s.preview.items.length, src = s.preview.source;
+          onApply(s.preview.partial, src, n);
+          s.preview = null;
+          say(s, 'Applied ' + n + ' setting' + (n === 1 ? '' : 's') + ' from ' + src + '. Check them in the form below, then save.');
+        } else if (t.closest('[data-discard]')) {
+          s.preview = null; say(s, '');
+        }
+      });
+    });
+
+    var d = $(el, '[data-draft]');
+    if (d) d.addEventListener('click', function () {
+      var n = chips(fromDraft.items).length;
+      onApply(fromDraft, 'your cheat sheet', n);
+      state.forEach(function (s) { s.preview = null; say(s, ''); });
+      say(state[0], 'Copied your cheat sheet into the form below. Check it, then save.');
+    });
+  }
+
+  // ── the league form ───────────────────────────────────────────────────────
+  // opts.importer  false where the page mounts intake() above the form instead,
+  //                so one page never shows two ways to copy a league in
+  //
+  // Returns a handle so a widget OUTSIDE the form can push a partial into it:
+  //   { apply(partial, source, n) }
+  // which is how the three boxes on /my-league §02 reach the fields they fill.
+  function leagueForm(el, opts) {
+    if (!el) return null;
     var L = root.ITInSeason;
-    if (!L) { el.innerHTML = '<p class="is-empty">Could not read your saved settings in this browser.</p>'; return; }
+    if (!L) { el.innerHTML = '<p class="is-empty">Could not read your saved settings in this browser.</p>'; return null; }
+    var fo = opts || {};
+    var useImporter = fo.importer !== false;
+    // The values the form was last drawn around. An import must merge into what
+    // is on screen now, not into what was saved — the reader may have typed a
+    // budget thirty seconds ago and not pressed Save.
+    var cur = null;
 
     // The scoring fields the form prints, in the order a platform prints them.
     // Every one of them is a rule leagues really do vary; the rest of
@@ -295,6 +564,7 @@
 
     function form(vals, impStatus) {
       var v = L.normalize(vals || L.draft());
+      cur = v;
       var s = v.settings;
       var open = !!s;
       var scOf = function (k) { return s && s.scoring[k] !== undefined ? s.scoring[k] : L.SCORING_DEFAULTS[k]; };
@@ -334,15 +604,21 @@
 
       // The whole form is re-rendered around the applied values, which takes the
       // importer's own status node with it — so the message it would have shown
-      // is handed to the widget that replaces it.
-      importer($(el, '[data-imp]'), {
-        note: 'Scoring and lineup, off a screenshot, a paste, or the cheat sheet you already built.',
-        status: impStatus || '',
-        onApply: function (partial, source, n) {
-          form(L.apply(readForm(v), partial),
-            'Applied ' + n + ' setting' + (n === 1 ? '' : 's') + ' from ' + source + '. Check them below, then save.');
-        }
-      });
+      // is handed to the widget that replaces it. Where the page mounts the
+      // three boxes instead, that same message still has to land somewhere, or
+      // an import that worked looks like a form that redrew itself.
+      if (useImporter) {
+        importer($(el, '[data-imp]'), {
+          note: 'Scoring and lineup, off a screenshot, a paste, or the cheat sheet you already built.',
+          status: impStatus || '',
+          onApply: function (partial, source, n) {
+            form(L.apply(readForm(v), partial),
+              'Applied ' + n + ' setting' + (n === 1 ? '' : 's') + ' from ' + source + '. Check them below, then save.');
+          }
+        });
+      } else if (impStatus) {
+        $(el, '[data-imp]').innerHTML = '<p class="is-imp-status">' + esc(impStatus) + '</p>';
+      }
 
       // The preset and the reception fields are two readings of one rule, so
       // moving the preset moves them. The fields still win on save: they are the
@@ -373,7 +649,19 @@
     }
 
     if (L.has()) saved(); else form(null);
+
+    return {
+      // A partial from outside. If the saved card is showing there is no form to
+      // merge into, so the saved record is opened AS the form and the import
+      // lands in it — the reader sees what changed before it is written, which
+      // is the whole contract every intake on this site keeps.
+      apply: function (partial, source, n) {
+        var base = $(el, 'form') ? readForm(cur) : (L.has() ? L.get() : L.draft());
+        form(L.apply(base, partial),
+          'Applied ' + n + ' setting' + (n === 1 ? '' : 's') + ' from ' + source + '. Check them below, then save.');
+      }
+    };
   }
 
-  root.ITInSeasonUI = { leagueForm: leagueForm, importer: importer, esc: esc };
+  root.ITInSeasonUI = { leagueForm: leagueForm, importer: importer, intake: intake, esc: esc };
 })(window, document);
