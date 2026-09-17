@@ -104,7 +104,14 @@ jobs:
           git commit -m "Game photographs: $shots players have one" \
                      -m "Looked up on Wikimedia Commons through Wikidata by .github/workflows/action-shots.yml. Only CC0, public-domain, CC BY and CC BY-SA files are kept, and each row carries the photographer, the license, a link to its deed and the file page, which player-search.js prints under every use."
           git push -u origin "$branch"
-          gh pr create --base main --head "$branch" \
+          # A repository can forbid Actions from opening pull requests
+          # (Settings → Actions → General → "Allow GitHub Actions to create and
+          # approve pull requests"), and this one did on the first live run:
+          # `gh pr create` came back "GitHub Actions is not permitted to create
+          # or approve pull requests". The branch is pushed by then, so the work
+          # is safe — losing the run over the last click would be the wrong
+          # answer. Say where it is, loudly and in the job summary, and stop.
+          if ! gh pr create --base main --head "$branch" \
             --title "Game photographs: $shots players have one" \
             --body "$(cat <<EOF
           Ran \`tools/build-action-shots.mjs\` on a runner, which has the outbound
@@ -122,4 +129,14 @@ jobs:
           Worth a skim before merging: the pictures are third-party files and a
           wrong one is a picture of the wrong man.
           EOF
-          )"
+          )"; then
+            url="https://github.com/${GITHUB_REPOSITORY}/pull/new/${branch}"
+            echo "::warning title=Open this pull request by hand::Actions may not create pull requests in this repository. The branch is pushed: $url"
+            {
+              echo "### Game photographs: $shots players have one"
+              echo
+              echo "The branch \`$branch\` is pushed, but Actions is not permitted to open a pull request here."
+              echo
+              echo "**[Open it]($url)**, or enable *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests* so the next run does it itself."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
