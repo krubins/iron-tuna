@@ -176,7 +176,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "it-ranks.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "it-ranks.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js", "it-league.js", "it-season.js", "it-sync.js", "it-inseason.js", "it-inseason-import.js", "it-inseason-ui.js", "my-league.html", "in-season.html", "site.css"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -523,6 +523,10 @@ jobs:
       - name: Per-league pricing and the front page's contract with it
         if: ${{ !cancelled() }}
         run: node tools/test-it-league.mjs
+
+      - name: The in-season league, and the intake that fills it
+        if: ${{ !cancelled() }}
+        run: node tools/test-inseason-league.mjs
 
       - name: The generated lead story and its admin desk
         if: ${{ !cancelled() }}

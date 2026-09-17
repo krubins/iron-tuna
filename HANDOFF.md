@@ -10442,9 +10442,69 @@ section is written from rows that run actually produced, including all five in
 the table above, so the regression is pinned to real data rather than invented
 fixtures.
 
+## 85. September 17: the run that rate-limited itself, and the budget it wasted
+
+The first run under the depiction rule (§84) came back:
+
+```
+looked up 400: 23 photographs, 71 without, 306 failed
+it-action.js: 10 players with a game photograph
+```
+
+Two separate faults, both in the tool.
+
+### 1. A fixed pause is not a rate limit, it is a hope
+
+Wikidata began answering `429` after about ninety players, and every request
+after that failed **instantly** — the old `api()` threw on any non-OK status,
+the caller counted it and moved on, and the run spent three quarters of its
+budget hammering a service that had already told it to stop. A 250ms sleep
+between calls is not a rate limit.
+
+`api()` now retries `429` and `5xx`, honours `Retry-After` when the server
+sends a sane one, and backs off exponentially with jitter. The pause is
+**module state** (`PAUSE`, 250ms–4s) rather than a constant, because the
+service throttles the CLIENT and not the request: one slow answer slows the
+whole run, and it decays back down as calls succeed. A `404` is still thrown
+immediately — that will not improve with time.
+
+A run that loses more than a quarter of its lookups now prints a
+`::warning::`, because 23 photographs from a run that mostly failed used to
+look exactly like 23 photographs from a run that worked.
+
+### 2. It spent the budget on players who can never appear
+
+`emitJs()` ships only the players `player-search.js` indexes — the pool the
+site prices. The lookup walked the ~1,260-name headshot release
+**alphabetically**, so of 23 photographs it found, **10** reached the browser.
+The rest were fringe names that `emitJs()` drops.
+
+`orderPool()` sorts the priced pool to the front, alphabetical within each
+group so a resumed run is still predictable. A capped run now buys as many
+usable pictures as it can.
+
+### What is on the site
+
+`bot/action-shots-20260917-0349` carried the 23 valid rows and was merged as
+its own pull request. Every row in it passes the depiction rule; the four
+players who had a photograph under the old generous rule and lost it
+(`alexander-mattison`, `antonio-gibson`, `anthony-firkser`, `baker-mayfield`)
+are the rule working.
+
+The lookup is incremental, so the next run continues from there rather than
+repeating it. Fill the rest by dispatching **Game photographs** again; it is
+safe to run repeatedly.
+
+### Still open for the owner
+
+**Actions cannot open pull requests in this repository.** Both runs pushed
+their branch and then failed on `gh pr create`; both pull requests were opened
+by hand. Enable *Settings → Actions → General → Allow GitHub Actions to create
+and approve pull requests* and the monthly run becomes unattended.
+
 ---
 
-## 85. September 17: What Tuna Got Right was blank, and graded half the record
+## 86. September 17: What Tuna Got Right was blank, and graded half the record
 
 Ken's report: the What Tuna Got Right card on the front page was empty, and
 its footer read "Week 1 · [object Object]". His instruction for the section
