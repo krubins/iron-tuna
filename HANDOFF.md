@@ -10265,9 +10265,115 @@ its credit, the build tool's license and scoring rules on fixtures, and that
 each page loads what it paints from). CI runs it and `node --check
 it-action.js` after the player-links step.
 
+## 83. September 17: pictures on the homepage, and a runner that can actually fetch them
+
+**The ask.** Action pictures from games, and more visuals on the front page.
+
+**What the front page looked like.** The September 2026 rewrite (§81, and
+`d52c82f`) cut `/` from 463 KB to 51 KB and, in doing so, took every picture
+off it: `grep -c '<img' front.html` returned **0**. The lead band with its
+photo plates, the faces beside Top Headlines and the `it-action.js` load all
+went with the modules they hung on. The only images on the page were the ones
+`player-search.js` added on its own, to the disagreement table, at 34px.
+
+### The homepage's three pictures
+
+All three follow the page's own rule — a band is either full of real current
+data or it is hidden — so a quiet feed leaves the page shorter, never a frame
+with nothing in it.
+
+- **The hero's picture** (`#heroEdge`, painted by `heroPaint`). One player,
+  photographed, beside the headline. Who he is comes off a feed: the player
+  the desk's newest piece is about (`/api/content`, `components[].player`),
+  else the widest market disagreement on this week's board
+  (`/api/vegas-edge`). The desk wins outright and replaces a market subject
+  that painted first. The **fallback** skips the player the Fantasy card
+  already recommends; a desk subject is not filtered that way, because the
+  desk writing about him today is a second fact, not a repeat.
+  - `.hm-hero` is ONE column until `has-edge` is set, so an unfilled hero is
+    exactly the hero this page had before rather than a headline with an empty
+    gutter beside it. The h1 (19ch) and lede (62ch) are capped, so neither
+    reflows when the column narrows.
+  - It is an `<aside>`, not a `<section>`: the page's five sections are its
+    outline and `tools/test-homepage.mjs` asserts that order.
+- **A face on each card's one reading** (`readPic`, `.hm-read.has-pic`).
+  Headshot only, never a game photograph: at 58px a photograph is unreadable
+  and would owe a credit line longer than the reading beside it.
+- **Faces on the desk's cards.** `data-player-focus` on each `.hm-read-card`,
+  from the players that piece's findings name — the same stamp the Desk's own
+  feed uses. They sit on their OWN row above the headline
+  (`.hm-read-card h3 .it-story-focus{display:flex}`); set inline they push the
+  first line of type around them and the headline reads as if it starts
+  mid-sentence.
+- The disagreement table's faces went **34px → 48px** (back to 34px on a
+  phone, where that column has to stay narrow inside `.hm-scroll`).
+
+### `ITPlayerSearch.plate(p, opts)`
+
+New in `player-search.js`: one player, one rectangle, at whatever shape the
+caller's CSS asks for. Game photograph → headshot cutout → initials. It is not
+`storyArt()`, which is a figure ABOUT a story with the whole cast named under
+it; this is one face where the page has already written who it is.
+
+**The credit follows the picture that loaded, not the one that was asked for.**
+Only the Commons photograph carries a license obligation, so the caption is
+attached on `onload` when that source is the one on screen and dropped the
+moment the image falls back to a headshot. A credit naming a photographer
+under somebody else's cutout would be worse than none. `opts.photo === false`
+skips the photograph entirely, which is what the 58px card readings pass.
+
+### The photographs themselves: `.github/workflows/action-shots.yml`
+
+`tools/build-action-shots.mjs` shipped in §82 with an **empty lookup**, because
+the Claude Code sessions this repo is developed from run behind an egress
+policy that refuses `commons.wikimedia.org` and `www.wikidata.org` with a 403
+on CONNECT. Every image host is refused there, including `a.espncdn.com` and
+`static.www.nfl.com` that the site already hot-links. The tool could be written
+in that session and never run in it.
+
+A GitHub runner has ordinary outbound internet, so that is where it runs:
+
+- **Monthly** (`0 9 1 * *`) and on `workflow_dispatch`, with `limit`, `only`
+  and `refresh` inputs.
+- **Incremental by design.** The tool skips any player already on file unless
+  `--refresh`, so each run picks up where the last stopped; the default is 400
+  players a run, which walks the ~1,260-player pool in three or four passes
+  rather than one enormous diff.
+- It runs `tools/test-story-art.mjs` **before** proposing anything, so a file
+  that fails the license or credit rules fails the run.
+- It **opens a pull request**, never pushes to main: what it changes is a
+  thousand rows of third-party URLs and license strings, and a wrong row is a
+  picture of the wrong man.
+
+Until a run lands the lookup stays empty, every plate falls back to a headshot,
+and nothing breaks. That is the resting state, not an outage.
+
+### Tests
+
+- `tools/test-homepage.mjs` — **85 checks** (was 68). The hero's picture is
+  asserted on the PLATE and the caption, never on a loaded `<img>`: the photo
+  hosts are third-party and a runner may or may not reach them, and falling
+  back to initials is exactly the behaviour that has to survive. New: the desk
+  subject wins; with no desk subject it falls back to the widest gap and never
+  to the Fantasy card's player; with every feed refusing the picture is absent
+  and the hero is back to one column. The `CONTENT` fixture gained
+  `components`, which is what the desk cards draw faces from.
+- `tools/test-story-art.mjs` — 62 checks. Two assertions that encoded "the
+  rewrite took the pictures off the homepage" were **replaced**, not removed:
+  front.html is back on the list that must load `/it-action.js` before
+  `player-search.js`, and the three homepage pictures are asserted directly.
+
+**Verified in Chromium** at 1280px and 390px, both feeds answering and both
+refusing: no page errors, no sideways scroll at either width. What could NOT
+be verified here is how the photographs themselves crop, because every image
+host is blocked in this environment — the plates rendered as initials. ESPN's
+cutouts are 350×254, so the hero's 4:3 box is close to their native ratio and
+`object-fit:cover` only crops, never distorts; check it on the branch preview
+once a run has filled the lookup.
+
 ---
 
-## 83. September 17: What Tuna Got Right was blank, and graded half the record
+## 84. September 17: What Tuna Got Right was blank, and graded half the record
 
 Ken's report: the What Tuna Got Right card on the front page was empty, and
 its footer read "Week 1 · [object Object]". His instruction for the section
