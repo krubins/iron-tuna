@@ -551,6 +551,60 @@ footer.site a:hover { color: var(--text) }
 .is-hint.err { color: var(--danger) }
 .is-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-5) }
 
+/* ── the league importer ─────────────────────────────────────────────────────
+   it-inseason-ui.js importer(): the draft app's intake, on the in-season forms.
+   It sits INSIDE a form (and inside a .is-card on /my-league), so everything
+   here is scoped to .is-imp and nothing restyles the fields around it. */
+.is-imp { border: 1px solid var(--line2); border-radius: var(--radius-md); background: var(--bg); padding: var(--space-4) }
+.is-imp-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--space-3) }
+.is-imp-head b { font-size: var(--fs-sm); letter-spacing: .02em }
+.is-imp-head span { font-size: var(--fs-xs); color: var(--muted); line-height: 1.5 }
+.is-imp-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-3) }
+.is-imp-tab {
+  font: inherit; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line2);
+  background: var(--panel); color: var(--sec); cursor: pointer;
+}
+.is-imp-tab:hover { border-color: var(--teal); color: var(--teal) }
+.is-imp-tab.active { background: rgba(14, 124, 99, .12); border-color: var(--teal); color: var(--teal) }
+.is-imp-body { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3) }
+.is-imp-hint { font-size: var(--fs-xs); color: var(--sec); line-height: 1.55; margin: 0 }
+.is-imp-text { font-family: var(--font-mono); font-size: var(--fs-xs); resize: vertical }
+.is-imp-presets { display: flex; flex-wrap: wrap; gap: 6px }
+.is-imp-presets .is-btn { padding: 8px 12px; font-size: var(--fs-2xs) }
+.is-imp-status { font-size: var(--fs-xs); color: var(--teal); margin: var(--space-3) 0 0; font-weight: 600 }
+/* The preview. Nothing here has been saved yet — it is the list of what WOULD
+   change, which is the whole reason a screenshot is safe to trust. */
+.is-imp-preview { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px dashed var(--line2) }
+.is-imp-from { display: block; font-size: var(--fs-2xs); color: var(--muted); margin-bottom: 6px }
+.is-imp-chip {
+  display: inline-block; margin: 0 5px 5px 0; padding: 4px 8px; border-radius: 999px;
+  border: 1px solid var(--line2); background: var(--panel); font-size: var(--fs-2xs); color: var(--sec);
+}
+.is-imp-chip b { color: var(--text); font-variant-numeric: tabular-nums }
+.is-imp-preview .is-btns { margin-top: var(--space-2) }
+
+/* ── the detail behind a setting ─────────────────────────────────────────────
+   Exact scoring and the starting lineup are closed until the reader has one, so
+   the form still reads as four questions rather than thirty boxes. */
+.is-more { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); padding: var(--space-3) }
+.is-more > summary {
+  cursor: pointer; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--muted);
+}
+.is-more > summary small { font-weight: 400; letter-spacing: .01em; text-transform: none; color: var(--sec); margin-left: 6px }
+.is-more[open] > summary { margin-bottom: var(--space-3) }
+.is-grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3) }
+.is-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: var(--space-2) }
+.is-slot {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .05em; color: var(--muted);
+}
+.is-slot .is-input { padding: 8px 9px; text-align: center; font-variant-numeric: tabular-nums }
+.is-slot.wide { letter-spacing: .02em; text-transform: none; font-size: var(--fs-xs) }
+.is-slot.wide .is-input { text-align: left }
+.is-slots + .is-hint { margin-top: var(--space-3) }
+
 /* ── the desk byline ──────────────────────────────────────────────────────
    Every story on the site is bylined to one of four desks (tools/desks.mjs),
    and the line is stamped by tools/build-bylines.mjs rather than written by
