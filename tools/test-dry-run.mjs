@@ -329,6 +329,16 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('Quarterback Monday was skipped: nothing worth publishing with no usage file', at('quarterback-monday', 1)[0] && at('quarterback-monday', 1)[0].status === 'skipped');
   if (!at('ros-rankings', 2)[0]) { Date.now = () => ET(2026, 9, 15, 7, 0); console.log('  DEBUG ros-rankings: ' + JSON.stringify(await H.produceContent(env, 'ros-rankings', {})).slice(0, 600)); Date.now = () => clock.t; }
   ok('the ROS rankings published Tuesday 7:00 about Week 2', at('ros-rankings', 2)[0] && at('ros-rankings', 2)[0].at === 'Tue 7:00', JSON.stringify(at('ros-rankings', 2)));
+  // Week 1 ends with a Monday night game and the fixture has its box score.
+  // The piece reports it from the box score; it never tells the reader there
+  // was no Monday game in a week that had one, and it never prints the old
+  // packet note, which ran every week because `.length` was read off an object.
+  {
+    const r = db.T.content_pieces.filter(x => x.kind === 'ros-rankings' && x.status === 'published').pop();
+    const p = r ? JSON.parse(r.brief) : null;
+    ok('and reports what Monday night changed off its box score, with a section per club', !!p && !!p.whatMondayChanged && p.whatMondayChanged.teams.length === 2, JSON.stringify(p && p.whatMondayChanged && p.whatMondayChanged.teams.map(t => t.team)));
+    ok('the section was asked for and written, and neither packet nor piece says there was no Monday game', !!r && 'whatMondayChanged' in JSON.parse(r.body).weekly && !/no Monday game/.test(r.brief) && !/no Monday game/.test(r.body));
+  }
   ok('Tailback Tuesday and Tight End Thursday were skipped rather than padded (no usage file, no priced beneficiary)', ['tailback-tuesday', 'tight-end-thursday'].every(k => at(k, 1)[0] && at(k, 1)[0].status === 'skipped'));
   ok('Wideout Wednesday ran: a top receiver was ruled out with a priced beneficiary on the depth chart', at('wideout-wednesday', 1)[0] && at('wideout-wednesday', 1)[0].status === 'published' && JSON.parse(P.find(r => r.kind === 'wideout-wednesday').brief).absences.length >= 1);
   ok('the Pickup Advisor published Wednesday 6:00', at('pickup-advisor', 2)[0] && at('pickup-advisor', 2)[0].at === 'Wed 6:00');
