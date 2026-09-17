@@ -10370,3 +10370,74 @@ host is blocked in this environment — the plates rendered as initials. ESPN's
 cutouts are 350×254, so the hero's 4:3 box is close to their native ratio and
 `object-fit:cover` only crops, never distorts; check it on the branch preview
 once a run has filled the lookup.
+
+## 84. September 17: the first live photograph run, and the row that was a picture of somebody else
+
+**What happened.** `.github/workflows/action-shots.yml` (§83) ran for the first
+time against 400 players. The lookup worked, the license gate passed, and it
+resolved **115 photographs** — then the last step failed, because this
+repository does not let Actions open pull requests:
+
+```
+pull request create failed: GraphQL: GitHub Actions is not permitted to
+create or approve pull requests (createPullRequest)
+```
+
+The branch was already pushed, so nothing was lost. **It was not merged**, and
+reading the data is why.
+
+### A Commons category is a filing cabinet, not a caption
+
+The tool took the best-scoring landscape file out of each player's Commons
+category. **54% of the rows had a file title that never named the player**, and
+several were plainly wrong:
+
+| Row | File it chose | What that actually is |
+|---|---|---|
+| `austin-hooper` | `Chiefs vs Titans TE Chigoziem Okonkwo.png` | a different tight end |
+| `antonio-gibson` | `Sam Howell scramble Cardinals vs Commanders` | a team-mate |
+| `aidan-o-connell` | `Salute to Service Boot Camp … Airmen` | not football |
+| `amari-cooper` | `Cleveland Browns Visit NASA Glenn` | a facility tour |
+| `austin-ekeler` | `Commanders Training Camp` | not a game |
+
+These would have run in the **homepage hero**, full width, under the player's
+name. The doc that shipped with the workflow said "a wrong row is a picture of
+the wrong man"; this is what that looks like.
+
+### `depicts(file, player)`
+
+A file now needs evidence of one of exactly two kinds before it is used:
+
+1. it **is** the entity's Wikidata image (P18) — a person chose that file as
+   the picture OF this person; or
+2. its **title names him** (surname as a whole word, suffix-insensitive, and a
+   surname under four letters is too weak to match a filename on).
+
+Everything else is discarded **even when it is probably fine**. A generic
+fixture photograph filed under his category probably does show him, and
+"probably" is not good enough for a picture above the fold. `NOT_ACTION` also
+grew to drop visits, tours, training camp, practice, media day, mini-camp,
+OTAs, charity and military events.
+
+Each row now carries `why` (`p18` or `named`) so a reviewer sees the evidence
+in the diff. `emitJs()` strips it; it never reaches a browser.
+
+**The cost.** Replaying the rule over that run's own output keeps **46 of 115**
+on the title test alone, plus whatever P18 adds back. Fewer photographs, each
+one defensible. That is the right way round.
+
+### The workflow no longer dies on the last click
+
+`gh pr create` is now guarded. If Actions is forbidden from opening pull
+requests, the run emits a `::warning::` and a job summary carrying the
+compare URL and the setting to flip (*Settings → Actions → General → Allow
+GitHub Actions to create and approve pull requests*), and exits 0 — the branch
+is pushed and the work is safe, and losing a 15-minute run over a permission
+checkbox is the wrong answer.
+
+### Tests
+
+`tools/test-story-art.mjs` — **79 checks** (was 62). The whole depiction
+section is written from rows that run actually produced, including all five in
+the table above, so the regression is pinned to real data rather than invented
+fixtures.

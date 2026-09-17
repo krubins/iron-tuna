@@ -28,7 +28,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { licenseOk, scoreFile, pickShot, chooseEntity, positionMatches, stripHtml, emitJs, rowFor } from './build-action-shots.mjs';
+import { licenseOk, scoreFile, pickShot, chooseEntity, positionMatches, stripHtml, emitJs, rowFor, depicts } from './build-action-shots.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -305,6 +305,56 @@ console.log('\nthe build tool');
   ok('pickShot answers null when nothing is usable', pickShot([file('File:Tall.jpg', 800, 1200, 2025)]) === null);
   ok('HTML in the artist field is stripped', stripHtml('<a href="//x">Keith Allison</a> from Hanover, MD, USA') === 'Keith Allison from Hanover, MD, USA');
 }
+
+// ── the depiction rule, written from what the first live run got wrong ─────
+// A player's Commons CATEGORY is a filing cabinet, not a claim about who is in
+// a picture. The 2026-09-17 run took the best-scoring landscape file out of
+// each category and 54% of its rows had a title that never mentioned the
+// player — including a photograph of a different tight end under Austin
+// Hooper's name. Every case below is a row that run actually produced.
+console.log('\nwhether the file is a picture of this man');
+{
+  const P = (n) => ({ k: 'x', n, p: 'WR' });
+  const F = (title, curated) => ({ title: 'File:' + title, curated: !!curated, w: 1200, h: 800, year: 2024,
+                                   meta: { LicenseShortName: { value: 'CC BY-SA 2.0' } } });
+  ok('the entity’s own Wikidata image is trusted outright',
+     depicts(F('Anything at all.jpg', true), P('Austin Hooper')));
+  ok('a file whose title names him is trusted',
+     depicts(F('Adam Thielen (38373209001).jpg'), P('Adam Thielen')));
+  ok('...including when others are named alongside him',
+     depicts(F('Aaron Rodgers & Aaron Jones Packers-Commanders OCT2023.jpg'), P('Aaron Jones')));
+  ok('...and when his name carries a suffix the filename drops',
+     depicts(F('092323 LSU vs Arkansas Brian Thomas.jpg'), P('Brian Thomas Jr.')));
+  // The three that shipped wrong.
+  ok('a photograph whose title names a DIFFERENT player is refused',
+     !depicts(F('Chiefs vs Titans TE Chigoziem Okonkwo.png'), P('Austin Hooper')));
+  ok('...and one whose subject is a team-mate',
+     !depicts(F('Sam Howell scramble Cardinals vs Commanders SEPT2023.jpg'), P('Antonio Gibson')));
+  ok('a generic fixture photograph out of his category is refused',
+     !depicts(F('Washington Commanders at Philadelphia Eagles (52510560186).jpg'), P('A.J. Brown')));
+  ok('a surname too short to match a filename on is refused',
+     !depicts(F('Bills vs Jets SEP2023.jpg'), P('Stefon Diggs')) && !depicts(F('Titans at Broncos 1.png'), P('Bo Nix')));
+  ok('the surname must be a whole word, not a fragment',
+     !depicts(F('Brownsville High 2019.jpg'), P('Marquise Brown')));
+
+  // And the events a category collects that are not football at all.
+  for (const t of ['Salute to Service Boot Camp challenges Creech and Nellis Airmen.jpg',
+                   'Cleveland Browns Visit NASA Glenn (GRC-2023-C-03813).jpg',
+                   'Commanders Training Camp - 54752501674.jpg',
+                   'Atlanta-falcons-visit 52305534772 o.jpg']) {
+    ok(`not a game: ${t.slice(0, 44)}`, scoreFile({ ...F(t, true) }, P('Any Player')) < 0);
+  }
+
+  // scoreFile only applies the rule when it is given a player, so the shape
+  // and license tests above still read as they did.
+  const generic = F('Washington Commanders at Philadelphia Eagles.jpg');
+  ok('scoreFile with no player still scores shape and license alone', scoreFile(generic) > 0);
+  ok('scoreFile with a player refuses what he is not in', scoreFile(generic, P('A.J. Brown')) < 0);
+  ok('pickShot passes the player through',
+     pickShot([generic, F('A.J. Brown catches one.jpg')], P('A.J. Brown')).title === 'File:A.J. Brown catches one.jpg');
+  ok('...and answers null when nothing is evidently him',
+     pickShot([generic], P('A.J. Brown')) === null);
+}
 {
   const p = { k: 'josh-allen', n: 'Josh Allen', p: 'QB' };
   const qb = { id: 'Q1', football: true, positions: ['quarterback'] };
@@ -325,7 +375,7 @@ console.log('\nthe build tool');
   const js = emitJs(rows, ['a-player', 'no-photo']);
   ok('the deployed map carries only players with a photograph whom the site prices',
      /"a-player":\{/.test(js) && !/no-photo/.test(js) && !/not-priced/.test(js));
-  ok('...and only the fields the page needs, never the lookup bookkeeping', !/"q":|"f":|"at":/.test(js));
+  ok('...and only the fields the page needs, never the lookup bookkeeping', !/"q":|"f":|"at":|"why":/.test(js));
   const w = makeDom();
   new Function('window', js)(w);
   ok('the emitted file defines window.ITActionShots', w.ITActionShots && w.ITActionShots['a-player'].u === 'https://u/a.jpg');

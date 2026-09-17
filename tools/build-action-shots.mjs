@@ -37,6 +37,11 @@
 // the best-scoring landscape file wins: a photograph wider than it is tall is
 // the shape of a game, a portrait one is usually a headshot by another name.
 //
+// WHICH OF THOSE FILES IS ACTUALLY HIM. A Commons category is a filing cabinet,
+// not a claim about who is in a picture, so a file has to carry evidence before
+// it is used: either it IS the entity's Wikidata image (P18), or its title
+// names him. See `depicts()` — the rule is there with the rows that taught it.
+//
 // The photos are NOT vendored. `u` is a Commons thumbnail URL at 1200px, the
 // same posture as the headshots (referenced, never copied). CC permits copying,
 // so vendoring is a bandwidth choice the owner can make later, not a rights one.
@@ -107,16 +112,54 @@ export function chooseEntity(player, cands) {
   return unknown.length === 1 && ball.length === 1 ? unknown[0] : null;
 }
 
-// Names that say the file is not a game photograph, whatever its shape.
-const NOT_ACTION = /headshot|portrait|mugshot|autograph|signature|trading.?card|press.?conference|podium|interview|draft|combine|pro.?day|signing|award|ceremony|wedding|jersey.?retire/i;
+// Names that say the file is not a game photograph, whatever its shape. The
+// second half of this list was added after the first live run: a player's
+// Commons category is not a collection of him playing, it is everything anyone
+// filed under his name, which includes the day the team toured a NASA centre.
+const NOT_ACTION = /headshot|portrait|mugshot|autograph|signature|trading.?card|press.?conference|podium|interview|draft|combine|pro.?day|signing|award|ceremony|wedding|jersey.?retire|visits?\b|tour\b|training.?camp|boot.?camp|salute|airmen|military|charity|hospital|school|museum|parade|rally|media.?day|mini.?camp|ota\b|practice/i;
+
+// DOES THE FILE DEPICT THIS MAN? The rule that was missing, and the one this
+// tool exists to get right.
+//
+// The first live run (2026-09-17, 115 players) took the best-scoring landscape
+// file out of each player's Commons CATEGORY. A category is not a claim about
+// who is in a picture — it is a filing cabinet — so it handed back:
+//   austin-hooper   -> "Chiefs vs Titans TE Chigoziem Okonkwo.png"   (another player)
+//   antonio-gibson  -> "Sam Howell scramble Cardinals vs Commanders" (another player)
+//   aidan-o-connell -> "Salute to Service Boot Camp ... Airmen"      (not football)
+// Fifty-four percent of the rows had a title that never mentioned the player,
+// and these were going in the homepage's hero. A wrong row is a picture of the
+// wrong man, so a file now needs EVIDENCE, of one of exactly two kinds:
+//
+//   1. it is the entity's own image (Wikidata P18) — somebody chose that file
+//      as the picture OF this person; or
+//   2. its title names him.
+//
+// Anything else is discarded, even when it is probably fine. This trades
+// coverage for never being wrong, which is the right way round for a picture
+// that runs above the fold under somebody's name.
+export function depicts(f, player) {
+  if (!f || !player) return false;
+  if (f.curated) return true;                                // Wikidata P18
+  const title = String(f.title || '').toLowerCase();
+  const name = String(player.n || '');
+  const bare = name.replace(/\s+(?:Jr\.?|Sr\.?|I{2,3}|IV|V)$/i, '').trim();
+  const parts = bare.split(/\s+/);
+  const last = (parts[parts.length - 1] || '').toLowerCase();
+  // A one-word or two-letter surname is too weak to match a filename on.
+  if (last.length < 4) return false;
+  return new RegExp('(^|[^a-z])' + last.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z]|$)', 'i').test(title);
+}
 
 // Score one Commons file. `f` carries { title, w, h, year, meta, curated }.
 // Landscape first, then recency, then size. Returns -1 for a file the site
-// must not use.
-export function scoreFile(f) {
+// must not use. `player` is required for the depiction test; passing none
+// scores only the shape and the license, which is what the unit tests do.
+export function scoreFile(f, player) {
   if (!f || !licenseOk(f.meta)) return -1;
   if (!f.w || !f.h || f.w < 600) return -1;
   if (NOT_ACTION.test(f.title || '')) return -1;
+  if (player && !depicts(f, player)) return -1;
   const ratio = f.w / f.h;
   let s = 0;
   if (ratio >= 1.15 && ratio <= 2.4) s += 100;
@@ -127,10 +170,10 @@ export function scoreFile(f) {
   if (f.curated) s += 10;
   return s;
 }
-export function pickShot(files) {
+export function pickShot(files, player) {
   let best = null, bestScore = -1;
   for (const f of files || []) {
-    const s = scoreFile(f);
+    const s = scoreFile(f, player);
     if (s > bestScore) { best = f; bestScore = s; }
   }
   return bestScore < 0 ? null : best;
@@ -143,6 +186,10 @@ export function rowFor(player, ent, f) {
   return {
     k: player.k, n: player.n, q: ent ? ent.id : undefined,
     f: f.title, u: f.url, w: f.w, h: f.h, y: f.year || undefined,
+    // Why this file was trusted to be him, so a reviewer can see the evidence
+    // in the diff rather than taking the tool's word for it. It never reaches
+    // the browser: emitJs() drops everything but the picture and its credit.
+    why: f.curated ? 'p18' : 'named',
     a: stripHtml(val(m.Artist)) || stripHtml(val(m.Credit)) || 'Wikimedia Commons',
     l: String(val(m.LicenseShortName) || 'Public domain').trim(),
     lu: String(val(m.LicenseUrl) || '').trim() || undefined,
@@ -279,7 +326,7 @@ async function main() {
         await sleep(PAUSE_MS);
         if (ent) {
           const files = await candidateFiles(ent);
-          const best = pickShot(files);
+          const best = pickShot(files, p);
           if (best) row = rowFor(p, ent, best);
           else row.q = ent.id;
         }
