@@ -42,7 +42,44 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
+/* ══ the page's own chrome ═══════════════════════════════════════════
+   The last of the five in-season pages to open on an h1 sitting on the same
+   white ground as the cards under it, with the NFL clock as a grey plate
+   between the lede and the first thing on the page. It wears .is-hero now.
+
+   The two things that were actually wrong here, though, are not the head:
+
+     THE GATE. For every reader without a synced league — which is most of
+     them — the whole page is one sentence and a gold pill floating in white
+     space above the footer. It is a state, so it now looks like one: the
+     tinted band directly under the opening band, with the sentence and its
+     action centered on a plate. The band carries the id, so the same
+     `$('mwGate').hidden = true` that hid the sentence hides the state.
+
+     SIX CARDS AND NO CHAPTERS. The other four pages in this section read as
+     numbered chapters; this one was three anonymous rows of two. The pairs
+     were already real — lineup and matchup are what you SET, alerts and
+     pickups are what you MOVE, trades and the playoff board are what comes
+     NEXT — so the page says so, and the middle pair takes the tinted band.
+
+   The measure widens to .wrap.wide with the rest of the section. */
 h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:6px 0 14px}
+/* An in-page anchor has to clear the sticky header. The two pages with a
+   ribbon get this from site.css, scoped to the ribbon; this one has the
+   header and no ribbon. */
+html{scroll-padding-top:calc(var(--header-h) + 14px)}
+@media(max-width:860px){html{scroll-padding-top:66px}}
+/* The gate. Centered, on its own plate, because for most readers this IS the
+   page and "one sentence adrift above the footer" is not a state. */
+.mw-gate{max-width:62ch;margin:0 auto;text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-6) var(--space-5)}
+.mw-gate .is-empty{margin:0;font-size:var(--fs-md);line-height:1.6;color:var(--sec)}
+/* The gate's action takes its own line. The script emits it inline after the
+   sentence, and on one line a gold pill mid-paragraph reads as a word. */
+.mw-gate .btn{display:block;width:fit-content;margin:var(--space-4) auto 0}
+/* The closing note inherited the page's new width; prose keeps a measure. */
+#mwBody > .wrap > .is-note{max-width:88ch}
+/* The sync strip spaces itself; this wrap collapses when it is hidden. */
+.mw-state:empty{display:none}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 .btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
@@ -50,7 +87,7 @@ p{color:var(--sec);margin:0 0 16px}
 .btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal)}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
 .mw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin:14px 0}
-.mw-card{border:1px solid var(--line2);border-radius:12px;padding:16px 18px;background:#fff}
+.mw-card{border:1px solid var(--line2);border-radius:12px;padding:16px 18px;background:var(--bg)}
 .mw-card h2{margin:0 0 6px;font-size:20px}
 .mw-card .who{font-size:12px;color:var(--muted);margin:0 0 10px}
 .mw-lineup{width:100%;border-collapse:collapse;font-size:14px}.mw-lineup td,.mw-lineup th{padding:6px 8px;border-bottom:1px solid var(--line2);text-align:left}.mw-lineup td.num,.mw-lineup th.num{text-align:right}.mw-lineup .slot{font-weight:800;color:var(--muted);font-size:12px;width:56px}
@@ -80,16 +117,47 @@ p{color:var(--sec);margin:0 0 16px}
     </button>
     <!--/chrome:nav-->
 </div></header>
-<main id="main" class="wrap">
-<p class="is-eyebrow">In-Season &middot; My Week</p>
-<h1>Your team, this week</h1>
-<p class="is-lede">The best lineup from your actual roster at your exact scoring, who you play, what needs a move before kickoff, and where the room is headed for the playoffs. Every number here is your league&rsquo;s, not a default one.</p>
-<div class="its-strip" data-season-strip></div>
-<div class="its-strip-sync" id="mwSync" hidden></div>
-<div id="mwGate">
-  <p class="is-empty" id="mwGateMsg">Reading your leagues&hellip;</p>
+<main id="main">
+
+<!-- the opening band. Same words, same ids, same script; .is-hero is in
+     site.css because all five in-season pages open on it now. The clock comes
+     up into the band as the dateline instead of sitting between the lede and
+     the gate as a plate of its own.
+
+     NO ACTION BUTTONS UP HERE, deliberately. The one thing to do on this page
+     depends on whether a league is connected, and the gate below already
+     renders exactly the right one for each state. A second, always-on copy in
+     the band would be right by accident at best. -->
+<section class="is-hero">
+  <div class="wrap wide">
+    <p class="is-hero-date">
+      <span class="is-eyebrow">In-Season &middot; My Week</span>
+      <span class="its-strip" data-season-strip></span>
+    </p>
+    <h1>Your team, <em>this week</em></h1>
+    <p class="is-lede">The best lineup from your actual roster at your exact scoring, who you play, what needs a move before kickoff, and where the room is headed for the playoffs. Every number here is your league&rsquo;s, not a default one.</p>
+    <a class="is-hero-how" href="/faq#faq-start">How the number is made</a>
+  </div>
+</section>
+
+<div class="wrap wide mw-state"><div class="its-strip-sync" id="mwSync" hidden></div></div>
+
+<!-- the gate, which for most readers is the whole page. The BAND carries the
+     id, so the same `$('mwGate').hidden = true` that hid the sentence now
+     hides the state it sits in. Not one line of script changed. -->
+<div class="is-band is-band-top" id="mwGate">
+  <div class="wrap wide">
+    <div class="mw-gate">
+      <p class="is-empty" id="mwGateMsg">Reading your leagues&hellip;</p>
+    </div>
+  </div>
 </div>
+
 <div id="mwBody" hidden>
+
+<div class="wrap wide">
+  <!-- 01 · what you SET before kickoff -->
+  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Set the lineup</h2></div></div>
   <div class="mw-grid">
     <div class="mw-card" id="mwLineupCard">
       <span class="is-tag is-live">Best lineup</span>
@@ -104,6 +172,13 @@ p{color:var(--sec);margin:0 0 16px}
       <div id="mwMatch" class="mw-empty">Reading the matchup&hellip;</div>
     </div>
   </div>
+</div><!-- /.wrap -->
+
+<div class="is-band">
+<div class="wrap wide">
+  <!-- 02 · what you MOVE. The middle pair takes the tinted band: it is the
+       only part of this page that asks for an action rather than a reading. -->
+  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Make the moves</h2></div></div>
   <div class="mw-grid">
     <div class="mw-card" id="mwIntelCard">
       <span class="is-tag">Roster alerts</span>
@@ -119,6 +194,12 @@ p{color:var(--sec);margin:0 0 16px}
       <div class="is-btns"><a class="is-btn sec" href="/faab">Full Pickup Advisor</a></div>
     </div>
   </div>
+</div>
+</div><!-- /.is-band -->
+
+<div class="wrap wide">
+  <!-- 03 · what comes NEXT -->
+  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>Look ahead</h2></div></div>
   <div class="mw-grid">
     <div class="mw-card" id="mwTradeCard">
       <span class="is-tag">Trade desk</span>
@@ -135,7 +216,8 @@ p{color:var(--sec);margin:0 0 16px}
     </div>
   </div>
   <p class="is-note">Confidence is graded from the margin. A &ldquo;lean&rdquo; is a margin of about a point at your scoring; late news should decide it. Playoff-horizon numbers are graded LOW by the market side this far out and are direction, not distance.</p>
-</div>
+</div><!-- /.wrap -->
+</div><!-- /#mwBody -->
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
