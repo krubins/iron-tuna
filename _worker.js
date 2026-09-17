@@ -8050,7 +8050,6 @@ const NEWSROOM_OBJECT_SECTIONS = {
   // has to say which kind it is.
   biggestWins: ['player', 'position', 'team', 'source', 'calledIn', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
   whatWeMissed: ['player', 'position', 'team', 'source', 'calledIn', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
-
   captainOptions: ['player', 'position', 'team', 'salary', 'why'], contrarianCaptains: ['player', 'position', 'team', 'salary', 'why'], streamingDefenses: ['team', 'opponent', 'why'], defensesToAvoid: ['team', 'opponent', 'why'], kickerRankings: ['player', 'team', 'rank', 'why'],
   priceInefficiencyBoard: ['player', 'position', 'team', 'salary', 'projection', 'value', 'why'], earlyValues: ['player', 'position', 'team', 'salary', 'why'], likelyChalk: ['player', 'position', 'team', 'salary', 'why'], goodChalk: ['player', 'position', 'team', 'salary', 'why'], badChalk: ['player', 'position', 'team', 'salary', 'why'],
   coreStacks: ['game', 'players', 'why'], contrarianStacks: ['game', 'players', 'why'], stacks: ['game', 'players', 'why'], initialStacks: ['game', 'players', 'why']
