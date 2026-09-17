@@ -165,7 +165,11 @@
       // catch off a tight-end rule. parseTePremium below is what reads it here;
       // index.html carries the same guard and leaves the line alone.
       if (TE_LINE.test(l)) { /* left to parseTePremium */ }
-      else if (/(reception|per catch|points? per reception)/.test(l) && !/(yards?|yds?)/.test(l)) {
+      // Sleeper and Yahoo print the reception as a bare "Rec", which is the most
+      // consequential rule on the page: miss it and a full-PPR league is priced
+      // at zero. The yardage and touchdown lines on the same screen — "Rec Yd
+      // 0.1", "Rec TD 6" — are read above and excluded here by name.
+      else if (/(reception|per catch|points? per reception|\brecs?\b)/.test(l) && !/(yards?|yds?|td|touchdown)/.test(l)) {
         var n = numIn(l);
         if (n != null && Math.abs(n) <= 2) {
           if (/\brb\b|running ?back/.test(l)) set('rbReceptionPoints', n, 'RB reception');
@@ -321,6 +325,28 @@
     [/^(?:ir|injured reserve)\b/, 'IR'],
     [/^(?:taxi)\b/, 'TAXI']
   ];
+  // Both halves of a count, in either order and anywhere on the line. Composed
+  // from COUNT_LINE itself so the two readers can never drift apart on what
+  // counts as a slot word. Every pattern there is anchored and holds no capture
+  // group, so the groups here are 1=slot 2=count for "QB 1" and 3=count 4=slot
+  // for the reversed "1 QB".
+  var SLOT_ALT = COUNT_LINE.map(function (p) { return p[0].source.replace(/^\^/, ''); }).join('|');
+  var PAIR_RE = new RegExp('(' + SLOT_ALT + ')\\s*:?\\s*(\\d+)|(\\d+)\\s*(' + SLOT_ALT + ')', 'gi');
+  function countPairs(line) {
+    var out = [], m;
+    PAIR_RE.lastIndex = 0;
+    while ((m = PAIR_RE.exec(line))) {
+      var tok = m[1] || m[4], num = m[2] != null ? m[2] : m[3];
+      if (!tok || num == null) continue;
+      var n = parseInt(num, 10);
+      if (!(n >= 0 && n <= 9)) continue;
+      for (var i = 0; i < COUNT_LINE.length; i++) {
+        if (COUNT_LINE[i][0].test(String(tok).toLowerCase())) { out.push([COUNT_LINE[i][1], n]); break; }
+      }
+    }
+    return out;
+  }
+
   function parseCounts(text) {
     // A count line is also written along one line — "QB 1 / RB 2 / WR 3 / TE 1"
     // — which is the form this file's own placeholder has always suggested and
@@ -341,13 +367,28 @@
     lines.forEach(function (rawLine) {
       var l = rawLine.toLowerCase().replace(/^[\s\-*·]+/, '');
       if (SCORING_WORD.test(l)) return;
-      var m = l.match(/(\d+)\s*$/) || l.match(/[:\s](\d+)\b/);
-      if (!m) return;
-      var n = parseInt(m[1], 10);
-      if (!(n >= 0 && n <= 9)) return;
-      for (var i = 0; i < COUNT_LINE.length; i++) {
-        if (COUNT_LINE[i][0].test(l)) { roster[COUNT_LINE[i][1]] += n; hits++; return; }
+      // A whole lineup on one line with nothing but spaces holding it together
+      // — "QB 1 RB 2 WR 2 TE 1 FLEX 1 K 1 D/ST 1 Bench 7" — is what OCR hands
+      // back when a settings page printed the row across. The anchored reader
+      // below finds the quarterback in it and stops, so a line carrying more
+      // than one pair is read pair by pair instead.
+      var pairs = countPairs(l);
+      if (pairs.length >= 2) {
+        pairs.forEach(function (pr) { roster[pr[0]] += pr[1]; hits++; });
+        return;
       }
+      var m = l.match(/(\d+)\s*$/) || l.match(/[:\s](\d+)\b/);
+      if (m) {
+        var n = parseInt(m[1], 10);
+        if (n >= 0 && n <= 9) {
+          for (var i = 0; i < COUNT_LINE.length; i++) {
+            if (COUNT_LINE[i][0].test(l)) { roster[COUNT_LINE[i][1]] += n; hits++; return; }
+          }
+        }
+      }
+      // "1 QB, 2 RB, 3 WR" — ESPN's own wording, and the count before the slot
+      // is invisible to the anchored patterns.
+      if (pairs.length === 1) { roster[pairs[0][0]] += pairs[0][1]; hits++; }
     });
 
     return hits >= 3 ? roster : null;
@@ -375,7 +416,9 @@
   // one every other tool guesses at.
   function parseTeams(text) {
     var s = String(text || '');
-    var m = s.match(/(\d{1,2})\s*[- ]?\s*team\b/i) || s.match(/\bteams?\b\D{0,12}(\d{1,2})\b/i);
+    // teams?, not team: "12 teams" is how every platform prints it and how this
+    // box's own placeholder says it, and \bteam\b cannot match before that s.
+    var m = s.match(/(\d{1,2})\s*[- ]?\s*teams?\b/i) || s.match(/\bteams?\b\D{0,12}(\d{1,2})\b/i);
     if (!m) return null;
     var n = parseInt(m[1], 10);
     return n >= 4 && n <= 20 ? n : null;
