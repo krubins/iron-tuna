@@ -74,11 +74,6 @@ html{scroll-padding-top:calc(var(--header-h) + 14px)}
    the end of the second; given its own measure, balancing puts one sentence
    on each line. */
 .is-hero h1{max-width:none}
-/* The sync offer is a button and the sentence that qualifies it, not a button
-   with text flowing around it. At the wider measure the sentence wrapped back
-   underneath the button and read as a caption for nothing. */
-#isConnect{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin-bottom:var(--space-4)}
-#isConnect .is-hint{flex:1 1 34ch;min-width:0;margin:0}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 section{margin:0 0 var(--space-6)}
@@ -212,8 +207,6 @@ section{margin:0 0 var(--space-6)}
   <div class="is-two">
     <div>
       <h2 style="margin-top:0">Every board re-scores itself for your league</h2>
-      <div class="its-strip-sync" id="isSync" hidden></div>
-      <p id="isConnect" hidden><a class="is-btn primary" href="/my-league#connect">Sync my league</a> <span class="is-hint">Connect Sleeper or Yahoo and Iron Tuna imports your exact scoring, roster and free-agent pool.</span></p>
       <p>Save your teams, roster slots and scoring once. Rankings, waiver prices, the DFS boards and the market comparisons all restate their numbers in your points instead of somebody else&rsquo;s. Free, no signup; it lives in this browser.</p>
       <p class="is-note" style="margin-top:0">Nothing here is sent to a server, and there is nothing to log into. Clear your browser data and it is gone &mdash; which is the trade for not asking you for an account.</p>
     </div>
@@ -247,7 +240,6 @@ section{margin:0 0 var(--space-6)}
 </div></footer>
 <script src="/it-season.js" defer></script>
 <script src="/it-league.js" defer></script>
-<script src="/it-sync.js" defer></script>
 <script src="/it-inseason.js" defer></script>
 <script src="/it-inseason-import.js" defer></script>
 <script src="/it-inseason-ui.js" defer></script>
@@ -356,7 +348,6 @@ section{margin:0 0 var(--space-6)}
 
   document.addEventListener('DOMContentLoaded', function () {
     if (window.ITInSeasonUI) ITInSeasonUI.leagueForm($('mlSlot'));
-    if (window.ITSync) ITSync.load().then(function (st) { ITSync.strip($('isSync'), { week: true }); if (st && st.signedIn && !ITSync.active()) $('isConnect').hidden = false; });
     Promise.all([get('/api/vegas-edge'), get('/api/dfs?site=dk')]).then(function (r) {
       paint(r[0] && r[0].ok ? r[0] : null, r[1]);
     });

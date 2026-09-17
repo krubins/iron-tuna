@@ -176,7 +176,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "it-ranks.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js", "it-league.js", "it-season.js", "it-sync.js", "it-inseason.js", "it-inseason-import.js", "it-inseason-ui.js", "my-league.html", "in-season.html", "site.css"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "it-ranks.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js", "it-league.js", "it-season.js", "it-inseason.js", "it-inseason-import.js", "it-inseason-ui.js", "my-league.html", "in-season.html", "site.css"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -748,32 +748,6 @@ jobs:
       - name: Worker availability refresh
         if: ${{ !cancelled() }}
         run: node tools/test-worker-availability.mjs
-
-      # Sync My League (docs/league-sync.md): the provider adapters against
-      # Sleeper-, Yahoo-, and CBS-shaped fixtures, the player-id crosswalk and its
-      # miss log, the idempotent sync into an in-memory D1, OAuth sealing,
-      # expiry and refresh, disconnect, and every personalized module (the
-      # league board with TE premium, best lineup incl. superflex, the pickup
-      # advisor on the room's actual free agents, matchup, intel, trades,
-      # playoffs) on 10-, 12- and 14-team rooms. No network: fetch is stubbed.
-      - name: "Sync My League: providers, crosswalk, sync and the personalized modules"
-        if: ${{ !cancelled() }}
-        run: node tools/test-league-sync.mjs
-
-      - name: CBS connection form
-        if: ${{ !cancelled() }}
-        run: node tools/test-cbs-ui.mjs
-
-      - name: CBS browser connector
-        if: ${{ !cancelled() }}
-        run: node tools/test-cbs-extension.mjs
-
-      # Every deployed script that the pages load. it-sync.js is loaded by
-      # nine in-season pages; a syntax error there takes the league strip and
-      # the personalized modules off all of them at once.
-      - name: Parse it-sync.js
-        if: ${{ !cancelled() }}
-        run: node --check it-sync.js
 
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one

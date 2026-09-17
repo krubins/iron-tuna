@@ -14,10 +14,11 @@
 // So three things are pinned here.
 //
 // 1. THE VOCABULARY. it-inseason.js carries hand-synced copies of the scoring
-//    field names (_worker.js SCORING_BASE, it-league.js SCORING_DEFAULTS) and of
-//    the roster slots (_worker.js leagueEmptyRoster). A field or a slot that
-//    exists in one copy and not another is a rule the reader set and no board
-//    ever honors — silent, and invisible in review.
+//    field names (_worker.js SCORING_BASE, it-league.js SCORING_DEFAULTS). A
+//    field that exists in one copy and not another is a rule the reader set and
+//    no board ever honors — silent, and invisible in review. The roster slots
+//    have only one owner now: league sync is gone, so it-inseason.js's SLOTS is
+//    the list, and what is checked here is that it is internally coherent.
 //
 // 2. THE PARSER. parseScoring() here is a port of parseScoringText() in
 //    index.html. Both are lifted and run over the same fixtures; they must agree
@@ -94,14 +95,14 @@ console.log('\nthe vocabulary is one vocabulary');
   const bonusesMissed = L.SCORING_BONUSES.filter(b => !(b in workerBase));
   ok('the bonus ladders the worker models are the ones kept here', bonusesMissed.length === 0, bonusesMissed.join(', '));
 
-  // The slots. leagueEmptyRoster() is the server's list; `other` is its bucket
-  // for slots no lineup understands and is not a slot.
-  const ers = worker.indexOf('function leagueEmptyRoster()');
-  const emptyRoster = new Function('return ' + worker.slice(worker.indexOf('{', worker.indexOf('return', ers)), worker.indexOf(';', ers)))();
-  const serverSlots = Object.keys(emptyRoster).filter(k => k !== 'other');
-  ok('the roster slots are the server\'s roster slots', eq(serverSlots.slice().sort(), L.SLOTS.slice().sort()),
-    `server ${serverSlots.join(',')} vs record ${L.SLOTS.join(',')}`);
+  // The slots. it-inseason.js owns the list outright; every slot the record
+  // names has to be one the form can label and the lineup can count.
+  ok('the slot list has no duplicates', new Set(L.SLOTS).size === L.SLOTS.length);
   ok('every slot has a label', L.SLOTS.every(s => !!L.SLOT_LABEL[s]));
+  const unlisted = Object.keys(L.SLOT_LABEL).filter(k => L.SLOTS.indexOf(k) < 0);
+  ok('and every label names a slot', unlisted.length === 0, unlisted.join(', '));
+  ok('the starting slots are all in the list',
+     ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SFLEX', 'K', 'DEF'].every(s => L.SLOTS.indexOf(s) >= 0));
   ok('the default lineup is a lineup, not an empty roster', L.rosterSum(L.defaultRoster()) === 15);
 }
 
@@ -316,8 +317,13 @@ console.log('\nthe form and the importer');
     const i = src.indexOf('/it-inseason.js'), j = src.indexOf('/it-inseason-import.js'), k = src.indexOf('/it-inseason-ui.js');
     ok(`${page} loads all three, in order`, i >= 0 && j > i && k > j);
   }
-  ok('the by-hand league form mounts the importer',
-    read('my-league.html').includes('id="mfImp"') && read('my-league.html').includes('ITInSeasonUI.importer($(\'mfImp\')'));
+  // The settings form mounts the importer itself, so a reader who lands on
+  // /my-league#settings can paste or screenshot a settings page rather than
+  // retype twenty scoring fields into it.
+  ok('the settings form mounts the importer',
+    uiSrc.includes('<div data-imp></div>') && uiSrc.includes("importer($(el, '[data-imp]')"));
+  ok('and /my-league mounts that form',
+    read('my-league.html').includes("ITInSeasonUI.leagueForm(document.getElementById('mlForm'))"));
   // The styles the widget names have to exist, or the reader gets an unstyled
   // pile of buttons in the middle of a form.
   const css = read('site.css');

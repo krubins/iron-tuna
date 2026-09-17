@@ -17,7 +17,6 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 
 | Host | Used for | Call sites | License status |
 |---|---|---|---|
-| `api.cbssports.com` and `<league>.football.cbssports.com` | Reader-authorized CBS league settings, teams, rosters, standings, schedules, waiver order and transaction log | `PROVIDER_CBS`, `cbsGet`, `cbsFetch`; the documented `/fantasy/league/` base first, then the validated league subdomain's `/api/league/`, fixed HTTPS resources on both | **Off by default (`FLAG_CBS_SYNC`).** Token access and commercial terms still require live verification. No CBS login/password collection or provider writes. See docs/league-sync.md CBS addendum. |
 | `api.sportsgameodds.com` | NFL player props, and one of the three quotes averaged into the game spread and total behind `/the-line`, `/previews` and every weekly board | `SGO_API_BASE`, `fetchOddsSgo`, `fetchGameLinesSgo` | **Paid, terms unconfirmed.** See item R8. |
 | `api.prop-line.com` | Tuna Market Signal current NFL game lines and fantasy-relevant player props; paid tiers also supply native opening/latest movement and cross-book steam | `TMS_PROVIDERS.propline`, `tmsPropLineHttp` | **Green for end-user analytical display.** Terms effective 2026-04-27 permit apps/websites to surface derived insights and individual values, while prohibiting bulk redistribution. Default integration excludes exchanges. |
 | `prop-line.com` | PropLine source-attribution link displayed with market results | `TMS_PROPLINE_SOURCE` | Link only; the worker does not fetch this website. Data use is covered by the API inventory entry above. |
@@ -25,9 +24,6 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 | `the-odds-api.com` | Tuna Market Signal source-attribution link | `TMS_SOURCE` | Identification link only; the Worker does not fetch this host. |
 | `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts, **and the game lines the scoreboard carries** | `_worker.js:1353`, `:3061`, `:5656`, `:5657`, `_espnOdds` | **Red.** Undocumented endpoints, no commercial license. The odds block adds a bookmaker's spread, total and opening line to what is taken. No page names the book; the name reaches the JSON API only. See R1. |
 | `api.sleeper.app` | NFL player id/metadata map | `_worker.js:7732`, `:7763` | **Red for a paid product.** Non-commercial grant only. See R2. |
-| `api.sleeper.app` (league sync) | A reader's Sleeper league: settings, rosters, users, matchups, transactions | `PROVIDER_SLEEPER` in the LEAGUE SYNC region | **Red for a paid product, so behind `FLAG_SLEEPER_SYNC` (default off).** Same R2 license question; see R7. |
-| `api.login.yahoo.com` | Yahoo OAuth 2.0 (authorize, token, refresh) | `YAHOO_AUTH`, `YAHOO_TOKEN` | Service endpoint; the reader consents on Yahoo's page. See R7. |
-| `fantasysports.yahooapis.com` | A reader's Yahoo league under their own OAuth grant, read-only scope `fspt-r` | `PROVIDER_YAHOO` | **Green for the reader's own data under the Yahoo Developer Network terms**; behind `FLAG_YAHOO_SYNC` until an app is registered. See R7. |
 | `static.www.nfl.com` | Team and player imagery, hot-linked | ~1,680 URL references across the deployed HTML, none fetched server-side | **Unreviewed and OPEN.** Copyrighted images served from the league's CDN. See R4. |
 | `thumb.wikimedia.org` and `upload.wikimedia.org` (resolved via `commons.wikimedia.org` and `www.wikidata.org` at build time) | Game photographs for the story art on `/`, `/in-season/desk`, `/lead`: one openly licensed action photo per player, hot-linked as a Commons thumbnail | `tools/build-action-shots.mjs` (build-time lookup, never the Worker), `it-action.js` (the deployed map), `storyArt()` in `player-search.js` | **Green, with an obligation.** Only CC0, public-domain, CC BY and CC BY-SA files are kept (`LICENSE_OK` in the tool; NC and ND never match). CC BY / CC BY-SA require the photographer, the license and a link to it wherever the file is shown, and that a cropped copy says so; `storyArt()` prints exactly that under every use and `tools/test-story-art.mjs` fails the build if it stops. See R9. |
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
@@ -214,14 +210,19 @@ them, and the runtime already takes that path when a fetch fails.
 - [x] Caching. §14.5. ESPN and Sleeper pulls are `cf.cacheTtl` cached; odds are on the job clock.
 - [ ] No Kalshi or prediction-market data anywhere. §13.4. Holds today — nothing to remove — keep it that way.
 
-### R7 — League sync providers (added 2026-09-09)
+### R7 — League sync providers (removed 2026-09-17)
 
-See `docs/league-sync.md` Part 3 for the full record. In short:
+Sync My League is gone. The Sleeper, Yahoo and CBS league connectors, the
+OAuth flow, the sealed provider tokens and the server-side league model were
+removed from the repo: no provider ever worked end to end in production. The
+hosts they called (`api.cbssports.com`, `<league>.football.cbssports.com`,
+`api.login.yahoo.com`, `fantasysports.yahooapis.com`) are no longer contacted
+and are off the allowlist in `tools/test-data-sources.mjs`.
 
-- **Sleeper.** The league connector uses the same API as the players map and inherits R2 exactly: free for non-commercial use, and Iron Tuna is a paid product. The connector is complete and tested against fixtures but ships **off** (`FLAG_SLEEPER_SYNC`). Turn it on only with Sleeper's written license in `docs/`. Attribution string in §3 applies.
-- **Yahoo.** OAuth 2.0 under the Yahoo Developer Network terms of use. The reader authorizes Iron Tuna to read their own fantasy data (scope `fspt-r`); no password is ever seen and tokens are sealed at rest (`LEAGUE_TOKEN_KEY`). Register an app at developer.yahoo.com, set `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`, and confirm the YDN terms permit use in a paid product before enabling `FLAG_YAHOO_SYNC`. Rate limits are per-app and undocumented; the connector caches for a minute and syncs on the job clock, never per page view.
-- **CBS Sportsline.** The connector uses a reader-supplied token scoped to one CBS football league. It calls only a fixed read-resource allowlist, on the documented `api.cbssports.com/fantasy` base and then the validated `<league>.football.cbssports.com` host, sends the token the way CBS's fantasy API (version 3.0) reads it, as the `access_token` query parameter, plus the Authorization header, never follows a redirect (a redirect to a sign-in page is reported as a refused token), never logs or echoes the request URL, and seals one token per league with `LEAGUE_TOKEN_KEY`. Every CBS failure carries a redacted diagnostic (resource, what each host answered by HTTP status, and for a redirect the target host and path only) that reaches the form, the league's last error and the sync log. It never collects a CBS username/password or calls the mobile login endpoint. The implementation is synthetic-fixture-tested but not live-tested and ships **off** (`FLAG_CBS_SYNC`). Keep it off until a controlled live pass validates response shapes and CBS confirms permitted access and commercial use.
-- **ESPN.** No supported path. Not implemented; the adapter is a documented placeholder and manual setup is the fallback. Do not add the `lm-api-reads` host.
+`api.sleeper.app` stays on the inventory above for the **players id/metadata
+map only**, which predates league sync and carries the same R2 question.
+Reader league settings are now browser-only (`it-inseason.js`), entered by
+hand or copied in from a screenshot; nothing reaches a provider.
 
 ### R6 — Schema note for the free-tier delay model
 

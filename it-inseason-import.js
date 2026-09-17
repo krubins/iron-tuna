@@ -28,14 +28,12 @@
  * the draft room, which is the shortest path of all for the reader who already
  * built a cheat sheet in this browser.
  *
- * THE SHAPE IS THE SERVER'S, not the draft app's. _worker.js
- * (leagueNormalizeSettings) is the one description of an in-season league:
- * scoring by SCORING_BASE's names, extras.tePremium, and a roster of SLOT counts
+ * THE SHAPE IS THE IN-SEASON RECORD'S, not the draft app's: scoring by
+ * SCORING_BASE's names, extras.tePremium, and a roster of SLOT counts
  * — QB RB WR TE FLEX SFLEX REC_FLEX WRRB_FLEX K DEF BN IR TAXI. The draft app's
  * per-position {starters, total} is an auction idea and stays in the auction;
  * anything leaving this file speaks the in-season vocabulary, so a partial can
- * go to /api/leagues/manual, into an override, or into the local record without
- * being translated again on the way.
+ * go straight into the local record without being translated again on the way.
  *
  * Nothing here writes anything. It returns a partial; the form decides whether
  * it ever reaches a record.

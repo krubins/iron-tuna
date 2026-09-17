@@ -93,9 +93,6 @@ html{scroll-padding-top:calc(var(--header-h) + 14px)}
 .rk-setup-foot:has(> p:not(:empty):not([hidden])){display:block}
 .rk-setup-foot .is-note,.rk-setup-foot .rk-playoff-cta{margin:0}
 .rk-setup-foot > * + *{margin-top:6px}
-/* The sync strip and the sync prompt are light-palette objects /it-sync.js
-   styles itself; they sit above the plate rather than inside its rows. */
-.rk-sync:empty{display:none}
 @media(max-width:560px){.rk-row > .rk-lab{flex:1 1 100%}}
 p{color:var(--sec);margin:0 0 16px}
 .btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
@@ -212,11 +209,6 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="is-grid" id="rkWedChoices"></div>
 </div>
 
-<div class="rk-sync">
-  <div class="its-strip-sync" id="rkSync" hidden></div>
-  <div id="rkCta" hidden></div>
-</div>
-
 <!-- ── the board controls ──────────────────────────────────────────────
      Six switches that all govern one table, in one plate with a line each,
      instead of four unlabelled rows loose in the column. Same ids, same
@@ -262,7 +254,6 @@ p{color:var(--sec);margin:0 0 16px}
     <button type="button" data-preset="half">Half PPR</button>
     <button type="button" data-preset="ppr">PPR</button>
     <button type="button" data-preset="custom" id="rkMine">My League</button>
-    <button type="button" data-preset="league" id="rkLeague" hidden>Your league (synced)</button>
   </div>
     </div>
   </div>
@@ -357,7 +348,6 @@ p{color:var(--sec);margin:0 0 16px}
 </div></footer>
 <script src="/it-season.js" defer></script>
 <script src="/it-league.js" defer></script>
-<script src="/it-sync.js" defer></script>
 <script>
 (function () {
   // Three boards, four horizons, seven position views, four scoring settings,
@@ -365,7 +355,7 @@ p{color:var(--sec);margin:0 0 16px}
   // scoring at the chosen setting is done here with it-league.js (the same
   // engine, pinned by tools/test-scoring.mjs), then the three boards are
   // re-ranked and Market Delta recomputed with the thresholds the API shipped.
-  var data = {}, dataL = {}, preset = 'ppr', horizon = 'week', board = 'ironTuna', pos = 'RB', sortKey = 'rank', sortDir = 1, q = '', hideOut = false;
+  var data = {}, preset = 'ppr', horizon = 'week', board = 'ironTuna', pos = 'RB', sortKey = 'rank', sortDir = 1, q = '', hideOut = false;
   // The Fantasy Analysis / Market Intelligence weight, 0 to 1, and the shrink
   // the worker applies to the market side by how much of it is a quoted
   // market (blendComponents in _worker.js; the same table).
@@ -412,9 +402,6 @@ p{color:var(--sec);margin:0 0 16px}
   function scored(payload) {
     var rows = payload.players.map(function (p) {
       var g = p.games || 1;
-      // A synced league is scored on the server at its exact rules (TE premium
-      // included, which the browser engine does not model); the points arrive.
-      if (preset === 'league' && p.roster) { var c0 = p.consensus.points, v0 = p.vegas.points; return { p: p, c: c0, v: v0, i: p.ironTuna.points, b: blendPts(p, c0, v0) }; }
       var c = score(p.consensus.stats, p.position, g), v = score(p.vegas.stats, p.position, g);
       return { p: p, c: c, v: v, i: score(p.ironTuna.stats, p.position, g), b: c != null && v != null ? blendPts(p, c, v) : null };
     }).filter(function (r) { return r.i != null; });
@@ -440,7 +427,7 @@ p{color:var(--sec);margin:0 0 16px}
     var p = r.p, w0 = p.weeks && p.weeks.find(function (w) { return !w.bye && !w.out; });
     switch (key) {
       case 'rank': return '<td class="num">' + r[rankField] + '</td>';
-      case 'player': return '<td class="p"><a href="/in-season/player/' + slug(p.name) + '?pos=' + e(p.position) + '"><b>' + e(p.name) + '</b></a><span>' + e(p.position) + '</span>' + rosterTag(p) + '</td>';
+      case 'player': return '<td class="p"><a href="/in-season/player/' + slug(p.name) + '?pos=' + e(p.position) + '"><b>' + e(p.name) + '</b></a><span>' + e(p.position) + '</span></td>';
       case 'team': return '<td>' + e(p.team) + '</td>';
       case 'opp': return '<td>' + (p.byes.length && !w0 ? '<span class="is-status">BYE</span>' : w0 ? e((w0.home ? 'vs ' : 'at ') + w0.opponent) : '—') + '</td>';
       case 'opps': return '<td>' + e(p.weeks.map(function (w) { return w.bye ? 'BYE' : w.out ? 'OUT' : (w.home ? 'vs ' : '@') + w.opponent; }).join(', ')) + '</td>';
@@ -473,15 +460,8 @@ p{color:var(--sec);margin:0 0 16px}
     }
     return 0;
   }
-  function rosterTag(p) {
-    var r = p.roster; if (!r || preset !== 'league') return '';
-    if (r.status === 'mine') return ' <span class="its-tag mine" title="On your roster">Your team' + (r.slot === 'starter' ? ' · starting' : '') + '</span>';
-    if (r.status === 'available') return ' <span class="its-tag avail" title="Available in your league">Available</span>';
-    if (r.status === 'waiver') return ' <span class="its-tag avail" title="On waivers in your league">Waivers</span>';
-    return ' <span class="its-tag" title="Rostered by ' + e(r.teamName) + '">' + (r.isOpponent ? 'Opponent' : e(r.teamName)) + '</span>';
-  }
   function render() {
-    var payload = (preset === 'league' ? dataL : data)[horizon]; if (!payload) { load(horizon); return; }
+    var payload = data[horizon]; if (!payload) { load(horizon); return; }
     var rows = scored(payload);
     var rankField = (board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v') + (pos === 'FLEX' ? 'Flex' : 'Rank');
     rows = rows.filter(function (r) { return pos === 'FLEX' ? /^(RB|WR|TE)$/.test(r.p.position) : r.p.position === pos; });
@@ -496,8 +476,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('rkBanner').hidden = horizon !== 'playoffs';
     $('rkPlayoffCta').hidden = horizon !== 'ros';
     var L = window.ITLeague;
-    var LS = window.ITSync && ITSync.active();
-    $('rkScoringNote').innerHTML = (preset === 'league' && LS ? '<b>Customized for your league:</b> ' + e(LS.name) + ' · ' + e(LS.label) : preset === 'custom' ? 'Scored at <b>' + e(L && L.label ? L.label() : 'your league') + '</b>' : 'Scored at <b>' + (preset === 'standard' ? 'Standard' : preset === 'half' ? 'Half PPR' : 'PPR') + '</b>') +
+    $('rkScoringNote').innerHTML = (preset === 'custom' ? 'Scored at <b>' + e(L && L.label ? L.label() : 'your league') + '</b>' : 'Scored at <b>' + (preset === 'standard' ? 'Standard' : preset === 'half' ? 'Half PPR' : 'PPR') + '</b>') +
       ' &middot; ' + e(payload.horizon.label) + (payload.horizon.weeks.length ? ' (weeks ' + payload.horizon.weeks[0] + (payload.horizon.weeks.length > 1 ? '–' + payload.horizon.weeks[payload.horizon.weeks.length - 1] : '') + ')' : '') +
       ' &middot; showing the <b>' + (board === 'ironTuna' ? 'Iron Tuna' : board === 'consensus' ? 'Consensus' : board === 'blend' ? (w === 0 ? 'Fantasy Analysis (Brooks)' : w === 1 ? 'Market Intelligence (Vega)' : Math.round((1 - w) * 100) + ' / ' + Math.round(w * 100) + ' Fantasy / Market') : 'Vegas') + '</b> board.';
     $('rkBlend').hidden = board !== 'blend';
@@ -506,14 +485,11 @@ p{color:var(--sec);margin:0 0 16px}
       (payload.sources && payload.sources.usage ? ' Usage through week ' + payload.sources.usage + '.' : ' No weekly usage has been published yet.');
   }
   function load(hz) {
-    var store = preset === 'league' ? dataL : data, LS = window.ITSync && ITSync.active();
-    if (store[hz]) { render(); return; }
-    if (preset === 'league' && !LS) { preset = 'ppr'; setPressed($('rkScoring'), 'data-preset', preset); load(hz); return; }
+    if (data[hz]) { render(); return; }
     $('rkEmpty').hidden = false; $('rkEmpty').textContent = 'Reading the board…';
-    var url = preset === 'league' ? '/api/leagues/' + encodeURIComponent(LS.id) + '/board?horizon=' + hz : '/api/boards?horizon=' + hz + '&pos=ALL&scoring=ppr';
-    fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) {
+    fetch('/api/boards?horizon=' + hz + '&pos=ALL&scoring=ppr', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok) { $('rkEmpty').textContent = 'The board did not answer. Nothing is shown rather than a stale ranking.'; return; }
-      store[hz] = j; if (hz === horizon) render();
+      data[hz] = j; if (hz === horizon) render();
     }).catch(function () { $('rkEmpty').textContent = 'The board did not answer.'; });
   }
   function wednesday() {
@@ -537,15 +513,6 @@ p{color:var(--sec);margin:0 0 16px}
     var has = !!(L && L.has);
     if (!has) { mine.disabled = true; mine.title = 'Set your league up in the draft app first'; }
     preset = has ? 'custom' : 'ppr';
-    // A synced league outranks the browser record: exact scoring, and the
-    // board says who is on your team and who is free in your room.
-    if (window.ITSync) ITSync.load().then(function (st) {
-      var LS = ITSync.active();
-      ITSync.strip($('rkSync'), { week: true });
-      if (!LS) { ITSync.cta($('rkCta'), 'rankings'); return; }
-      $('rkLeague').hidden = false;
-      preset = 'league'; setPressed($('rkScoring'), 'data-preset', preset); load(horizon);
-    });
     var hp = (location.hash.match(/horizon=(\w+)/) || [])[1]; if (hp && /^(week|next3|ros|playoffs)$/.test(hp)) horizon = hp;
     setPressed($('rkScoring'), 'data-preset', preset); setPressed($('rkHorizon'), 'data-horizon', horizon);
     setPressed($('rkBoard'), 'data-board', board); setPressed($('rkPos'), 'data-pos', pos);

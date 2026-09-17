@@ -100,7 +100,7 @@ console.log('\nthe chrome leads with two lanes and nothing else');
     '/salary-cap-draft-tool', '/guides', '/auction-watch',
     '/auction-draft-assistant', '/custom-auction-values',  // draft tools
     '/in-season', '/post-draft', '/rankings', '/depth-charts', '/weekly-intel',
-    '/waivers', '/faab', '/trade-finder', '/my-week', '/stats',
+    '/waivers', '/faab', '/trade-finder', '/stats',
     '/weekly-rankings', '/season-long-rankings', '/weekly-wrap', '/creators',
   ];
   // The in-season section ribbon (tools/build-ranks.mjs) is page furniture, not
@@ -158,13 +158,11 @@ console.log('\nthe nav link set is identical everywhere');
 
 console.log('\nthe one header button says what it actually does');
 {
-  // IT IS NOT "Sync my league". Automatic league sync does not work reliably:
-  // Sleeper is off pending a license, Yahoo is off and has never run live, ESPN
-  // is not implemented, and CBS has never been exercised against a live league
-  // (docs/league-sync.md §3.1). What works for every reader is the browser-only
-  // settings form in section 02 of /my-league, so the button is labeled for that
-  // and lands on it. If sync is ever proved out, this is the assertion to change
-  // — deliberately, not by a label drifting back.
+  // IT IS NOT "Sync my league". Automatic league sync never worked for any
+  // provider and has been removed from the repo. What works for every reader is
+  // the browser-only settings form on /my-league, so the button is labeled for
+  // that and lands on it. If sync is ever built again, this is the assertion to
+  // change — deliberately, not by a label drifting back.
   const wrong = [], mislabeled = [];
   for (const f of pages) {
     const h = header(read(f));
@@ -175,8 +173,8 @@ console.log('\nthe one header button says what it actually does');
   ok('every page points the button at the manual setup', wrong.length === 0, wrong.slice(0, 6).join('; '));
   ok('and labels it Customize My League', mislabeled.length === 0, mislabeled.slice(0, 6).join('; '));
 
-  // The anchor has to exist, or the button lands at the top of a page whose
-  // first section is the sync flow it was relabeled away from.
+  // The anchor has to exist, or the button lands at the top of the page
+  // instead of on the form it promises.
   ok('/my-league carries the #settings anchor the button targets',
     /<div class="is-sec" id="settings">/.test(read('my-league.html')));
 }

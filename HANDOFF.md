@@ -1,8 +1,6 @@
 # Iron Tuna — Project Handoff
 
-CBS browser connector 0.2.0: the token-declaration approach failed on the live CBS league. The extension now reads whitelisted settings/scoring, roster-grid team names and every team roster through same-origin requests in the signed-in CBS tab, then posts a bounded snapshot to the existing connect route as provider cbs_browser. No CBS credentials leave the browser. The existing API-token adapter and encryption are retained separately; as of 2026-09-16 it sends the token as CBS's `access_token` query parameter (and the Authorization header), tries the documented `api.cbssports.com/fantasy` base before the league host's `/api/league`, treats a sign-in redirect as a refused token instead of a generic failure, and every failure shows a redacted diagnostic (resource, what each host answered, redirect host/path) on the form and in the league's last error. The first live run after that change answered `CBS details: HTTP 302 to www.cbssports.com/login` from the league host alone, so the league host does not honor `access_token`; whether the documented base still does, and whether the pasted value is a CBS API token (the public token fetchers scrape it from `var token = "..."` in the signed-in league page), is unproven. Browser leagues never run in the scheduled sync job and expose no next automatic refresh time.
-
-Live DOM validation found all 12 BigKahuna teams and 204 players, matching each page's Active/Reserve counts. All scoring rows were parsed against a synthetic fixture that retains the observed scoring shapes. On 2026-09-16 the whole flow ran in a real Chromium (`node tools/test-cbs-e2e.mjs`: the unpacked extension, the real worker as irontuna.com, an in-memory D1, a fake CBS site in the reader's shapes): sign-in, tab discovery, the CBS reads, the import POST, team selection, the card on My Leagues and the strip on My Week all pass. The same day the reader and the normalizer gained injured-reserve support (extension 0.2.1); before that, one IR player on any team aborted the entire import with "CBS roster counts could not be verified", which in Week 2 is the likeliest way a live import fails. Two things the harness cannot prove: the live CBS markup (a drift shows as a "No import was sent" message in the popup) and the production env (Sleeper, Yahoo and ESPN stay unavailable on My Leagues by flag and configuration; `/api/leagues/providers` says which). Do not claim the league is linked until My Leagues confirms it. See extensions/cbs-connector/README.md and docs/league-sync.md for scope and release checks.
+**Sync My League was removed on 2026-09-17.** It never worked end to end for any provider, so the whole layer is gone: the `LEAGUE SYNC` region of `_worker.js`, every `/api/leagues*` and `/api/oauth/*` route, the Sleeper, Yahoo, CBS and ESPN adapters, the CBS browser extension, `it-sync.js`, the `/my-week` page, the connect flow on `/my-league` and every personalized module. See §87. Reader league settings are browser-only again (`it-inseason.js`), which is what always worked.
 
 Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
 [docs/TUNA-MARKET-SIGNAL.md](docs/TUNA-MARKET-SIGNAL.md).
@@ -10627,3 +10625,65 @@ per-story and per-analyst breakouts, the biggest win leading, all four
 sections written with the misses among them, the DFS lens off the same
 packet, and the fact check clean. Removing the collapse, disabling the story
 half or blinding the board half each fails it.
+
+---
+
+## 87. September 17: Sync My League is removed
+
+It never worked. Not "worked badly" — no reader ever connected a league and
+got a board back from it in production. Sleeper shipped behind a flag that
+was never turned on, because the API's grant is non-commercial and Iron Tuna
+is a paid product. Yahoo was written against fixtures and never once ran
+against a live Yahoo account. CBS was tried live twice: the API-token form
+in September, which failed because CBS never handed out a token to type into
+it, and then a browser extension, which read a real league in a test
+Chromium and was still one manual reload away from a release check. ESPN was
+a placeholder that existed to say ESPN has no supported path.
+
+So the honest state of the feature was four connectors, none of them
+carrying a reader, sitting under a masthead button that had already been
+relabeled **Customize My League** because the old label promised something
+the site could not do. That relabeling was the tell. The feature is gone
+now rather than dormant.
+
+**What came out.**
+
+| | |
+|---|---|
+| `_worker.js` | The whole `// ══ LEAGUE SYNC` region (2,050 lines): `LEAGUE_PROVIDERS`, the normalized model, `leagueSync`, the crosswalk, the eleven-table DDL, the personalization modules and `leagueRoutes`. With it: the `league-sync` job in `JOB_FNS` and `JOB_SCHEDULE`, the nine `NEWSROOM_FLAGS` entries, the `/api/leagues*` `/api/oauth/*` `/api/admin/league-sync` dispatch, and `boardsPayload`'s now-unused `customKey` memo field. |
+| Deleted files | `it-sync.js`, `my-week.html`, `extensions/cbs-connector/`, `docs/league-sync.md`, `tools/test-league-sync.mjs`, `tools/test-cbs-ui.mjs`, `tools/test-cbs-extension.mjs`, `tools/test-cbs-e2e.mjs`, and the four league fixtures. |
+| Pages | `/my-league` loses section 01 and is one section now, the settings form. `/my-week` is gone. The `ITSync` strip, CTA, callouts and league-scored reads come off `rankings` (the "Your league (synced)" preset and the roster badges), `faab` (the synced Pickup Advisor), `trade-finder` (the synced roster load and the desk's matches), `fantasy`, `in-season`, `player`, `lead`, `desk` and `admin` (the League sync card). Each page keeps the flow it had before sync was layered on it: the FAAB Advisor still reads a Sleeper room from the browser, the Trade Finder still takes pastes and screenshots. |
+| Prose and config | The privacy policy's two league-connection paragraphs, the FAQ's "Can Iron Tuna read my actual league?" entry and its JSON-LD row, `/my-week` out of the sitemap, `llms.txt` and `build-seo.mjs`, `FLAG_CBS_SYNC` out of `wrangler.jsonc`, and the CBS/Yahoo hosts off the `docs/data-sources.md` inventory and the `tools/test-data-sources.mjs` allowlist. |
+
+**What stayed, deliberately.**
+
+- **The D1 tables.** Nothing drops them. Eleven tables sit in `iron-tuna-leads`
+  with whatever rows they collected, unreferenced by any deployed code. Drop
+  them by hand when you want to; a `DROP TABLE` in a codebase that no longer
+  knows why they exist is the more dangerous artifact.
+- **`api.sleeper.app`.** Still on the inventory, still R2-red, for the player
+  id/metadata map — which predates league sync and is what `/api/faab/players`
+  and `/api/live` read.
+- **The magic-link session.** `/api/auth/request` still mails a link to any
+  valid address rather than entitled addresses only, which is how league sync
+  left it. Nothing free sits behind a session any more and paid routes still
+  check `isEntitled`, so narrowing it back is an open, deliberate decision
+  rather than a side effect of this removal. The comment on the route says so.
+
+**Tests.** `tools/test-jobs.mjs` drops `league-sync` from the job list and the
+quiet-hour expectation. `tools/test-newsroom.mjs` asserts every flag defaults
+on, with no provider exception to carve out. `tools/test-inseason-league.mjs`
+checked its roster slots against the worker's `leagueEmptyRoster()`, which no
+longer exists: `it-inseason.js`'s `SLOTS` is the only owner now, so the check
+is that the list is internally coherent — no duplicates, every slot labeled,
+every label a slot, every starting slot present. Its importer assertion moved
+off the deleted by-hand connect form and onto `leagueForm`'s own mount, which
+is the importer a reader actually reaches. `tools/test-chrome.mjs` and
+`tools/test-ranks.mjs` still pin the masthead button to
+`/my-league#settings` and the label to Customize My League; the comment above
+each now says the button is not a fallback from a broken sync but the only
+thing there is.
+
+The full suite passes. `tools/test-depth-page.mjs` fails one assertion ("the
+nav reaches it from every page"), and failed it before this change too:
+`/depth-charts` came off the nav in §81 and that test was not updated.

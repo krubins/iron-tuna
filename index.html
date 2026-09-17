@@ -23526,9 +23526,9 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
           // Sign In stays secondary: a plain button in the nav run, never the
           // filled control beside it.
           h('button', { type: 'button', onClick: onSignin, title: 'Sign in to restore your purchase on this device' }, 'Sign in')),
-        // Not "Save my league". Automatic sync is off or unproven for every
-        // provider (docs/league-sync.md §3.1); the browser-only settings form in
-        // section 02 of /my-league is what works for every reader today.
+        // Not "Save my league". Automatic league sync never worked for any
+        // provider and has been removed; the browser-only settings form on
+        // /my-league is what works for every reader.
         h('a', { className: 'itl-cta', href: '/my-league#settings' }, 'Customize My League'))),
 
       h('div', { className: 'itl-main' }, h('div', { className: 'itl-wrap' },
