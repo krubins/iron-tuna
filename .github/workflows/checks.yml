@@ -780,6 +780,17 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-admin-comp.mjs
 
+      # The self-serve half of the same thing: /api/auth/request mails a working
+      # sign-in link, so it may only do that for an address that already bought
+      # something. It was widened to any valid address for free league sync and
+      # narrowed back when that was removed (HANDOFF §87). A regression here is
+      # invisible by design — the route answers ok:true either way — so it is
+      # pinned: no mail without an entitlement, and one identical answer for a
+      # customer, a stranger and a typo, so the route is not an oracle.
+      - name: A sign-in link only for an address that bought something
+        if: ${{ !cancelled() }}
+        run: node tools/test-auth-request.mjs
+
       # ── the browser gate ──────────────────────────────────────────────────
       # LAST, and the only step in this file that installs anything. The browser
       # tests drive real Chromium, and they SELF-SKIP when it is absent — which

@@ -1,6 +1,6 @@
 # Iron Tuna — Project Handoff
 
-**Sync My League was removed on 2026-09-17.** It never worked end to end for any provider, so the whole layer is gone: the `LEAGUE SYNC` region of `_worker.js`, every `/api/leagues*` and `/api/oauth/*` route, the Sleeper, Yahoo, CBS and ESPN adapters, the CBS browser extension, `it-sync.js`, the `/my-week` page, the connect flow on `/my-league` and every personalized module. See §87. Reader league settings are browser-only again (`it-inseason.js`), which is what always worked.
+**Sync My League was removed on 2026-09-17.** It never worked end to end for any provider, so the whole layer is gone: the `LEAGUE SYNC` region of `_worker.js`, every `/api/leagues*` and `/api/oauth/*` route, the Sleeper, Yahoo, CBS and ESPN adapters, the CBS browser extension, `it-sync.js`, the `/my-week` page, the connect flow on `/my-league` and every personalized module. See §87. Reader league settings are browser-only again (`it-inseason.js`), which is what always worked. The magic-link sign-in it had widened to any valid address is back to entitled addresses only (§88).
 
 Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
 [docs/TUNA-MARKET-SIGNAL.md](docs/TUNA-MARKET-SIGNAL.md).
@@ -10664,11 +10664,6 @@ now rather than dormant.
 - **`api.sleeper.app`.** Still on the inventory, still R2-red, for the player
   id/metadata map — which predates league sync and is what `/api/faab/players`
   and `/api/live` read.
-- **The magic-link session.** `/api/auth/request` still mails a link to any
-  valid address rather than entitled addresses only, which is how league sync
-  left it. Nothing free sits behind a session any more and paid routes still
-  check `isEntitled`, so narrowing it back is an open, deliberate decision
-  rather than a side effect of this removal. The comment on the route says so.
 
 **Tests.** `tools/test-jobs.mjs` drops `league-sync` from the job list and the
 quiet-hour expectation. `tools/test-newsroom.mjs` asserts every flag defaults
@@ -10687,3 +10682,48 @@ thing there is.
 The full suite passes. `tools/test-depth-page.mjs` fails one assertion ("the
 nav reaches it from every page"), and failed it before this change too:
 `/depth-charts` came off the nav in §81 and that test was not updated.
+
+---
+
+## 88. September 17: the sign-in link goes back to paying addresses only
+
+League sync needed an account of its own, it was free, so `/api/auth/request`
+was widened to mail a sign-in link to **any** valid address. §87 removed league
+sync and left that widening standing, flagged rather than changed. This closes
+it: the route now calls `isEntitled(env, email)` and sends nothing when the
+answer is no.
+
+The front end never agreed with the widened behavior in the first place. The
+restore dialog in `index.html` says *"Already bought Draft Day Mode? Enter the
+email you purchased with"* and *"If that email has a purchase, a one-time
+sign-in link is on its way"*, and `/admin` says a link *"is only ever issued to
+an address that already has access."* All three were wrong for as long as the
+route was open. They are true again, so no copy changed — except the email
+body, which promised *"League sync is free; any paid tools you already own will
+be unlocked too"* and now says what the link is for.
+
+**The answer does not change, and that is the point.** `ok: true`, 200, same
+bytes, for a customer, a stranger and a typo alike. A route that 200s for a
+customer and 403s for a stranger would answer "is this address a customer" for
+any address anyone cared to type. The rate-limit counter is still spent before
+the entitlement check for the same reason: an unentitled request costs a KV
+write and reveals nothing by how long it took. `/api/admin/comp` remains the
+route that reports what actually happened, and it is behind the admin key.
+
+**`returnTo` went with it.** The magic link carried an `r` claim through to
+`/api/auth/verify`, and the only caller that ever set one was the sign-in form
+in the league-sync connect flow. The token no longer carries it and verify no
+longer reads it; every verified link lands on `/?restored=1`. A link minted
+before this deploys still verifies — its unread `r` just lands the reader on
+the front page instead, and links live fifteen minutes.
+
+**`tools/test-auth-request.mjs`** (19 assertions, in CI) drives the real worker
+over real SQLite with mail stubbed. No entitlement, no mail; an entitlements
+row, one mail; a `COMPED_EMAILS` owner address, one mail and no row invented
+for it; a malformed address, nothing; and **no database bound at all, nothing**
+— which is the state a fresh or broken deploy is in, where `isEntitled` returns
+false and an ungated route would mail everyone. It asserts the four cases
+return identical bytes, follows the emitted link through `/api/auth/verify` to
+`/api/auth/me` to prove a customer can still sign in, checks the link is
+one-time and lands on `/?restored=1`, and holds the five-a-day cap. Deleting
+the `isEntitled` call fails it on two assertions.

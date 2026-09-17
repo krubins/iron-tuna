@@ -246,12 +246,12 @@ async function chargeEmail(env, ch) {
 async function sendLoginEmail(env, email, link) {
   if (!env.RESEND_API_KEY) return;
   const from = env.EMAIL_FROM || 'Iron Tuna <login@irontuna.com>';
-  const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">Sign in to Iron Tuna</h2><p>Tap to sign in on this device. League sync is free; any paid tools you already own will be unlocked too.</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Sign in to Iron Tuna</a></p><p style="color:#667;font-size:13px">This link expires in 15 minutes and can be used once. If you did not request it, ignore this email.</p></div>';
+  const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">Sign in to Iron Tuna</h2><p>Tap to sign in on this device and restore the tools you bought.</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Sign in to Iron Tuna</a></p><p style="color:#667;font-size:13px">This link expires in 15 minutes and can be used once. If you did not request it, ignore this email.</p></div>';
   try { await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ from: from, to: email, subject: 'Your Iron Tuna sign-in link', html: html }) }); } catch (e) {}
 }
 // The comp email is deliberately not sendLoginEmail. It explains the full paid
-// bundle granted by an admin, while the self-serve email covers free accounts too,
-// and it swallows every failure — fine for a self-serve login that answers
+// bundle granted by an admin, while the self-serve email is the restore-on-this-
+// device link an existing buyer asks for, and it swallows every failure — fine for a self-serve login that answers
 // ok:true either way, useless for an admin who needs to know whether the thing
 // they just sent actually left the building. So this one reports what happened.
 async function sendCompEmail(env, email, link, days) {
@@ -13404,17 +13404,22 @@ export default {
       const email = String(b.email || '').trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: true }, 200, c);
       if (env.RATE_KV) { const k = 'mlreq:' + email; const n = parseInt(await env.RATE_KV.get(k) || '0', 10); if (n >= 5) return json({ ok: true }, 200, c); await env.RATE_KV.put(k, String(n + 1), { expirationTtl: 86400 }); }
-      // This mails a link to any valid address, which it did because league
-      // sync was free and needed an account of its own. League sync is gone, so
-      // nothing free sits behind a session any more: the session is only the
-      // device record, and every paid route still enforces isEntitled. Narrowing
-      // this back to entitled addresses is a live option; it is left open so a
-      // buyer who mistypes their billing email can still be reached by hand.
-      if (env.AUTH_SECRET) {
+      // ENTITLED ADDRESSES ONLY. This was widened to any valid address when
+      // league sync shipped, because a synced league was free and needed an
+      // account of its own. League sync is gone and nothing free sits behind a
+      // session now, so a session for an address that never bought anything is
+      // a mailbox we can be made to send to and a row we would have to keep.
+      // The one thing a session still does is restore a purchase on a device.
+      //
+      // The answer is ok:true either way, and it is that BEFORE this check as
+      // well as after: a bad address, an unentitled one and a real customer's
+      // are indistinguishable from outside, so this cannot be used to ask
+      // whether an address is a customer. /api/admin/comp is the route that
+      // reports what actually happened, and it is behind the admin key.
+      if (env.AUTH_SECRET && await isEntitled(env, email)) {
         const nonce = crypto.randomUUID();
         if (env.RATE_KV) await env.RATE_KV.put('mln:' + nonce, '1', { expirationTtl: 900 });
-        const returnTo = String(b.returnTo || '') === '/my-league' ? '/my-league' : '/';
-        const token = await makeToken(env.AUTH_SECRET, { e: email, n: nonce, t: 'magic', r: returnTo, exp: Date.now() + 15 * 60 * 1000 });
+        const token = await makeToken(env.AUTH_SECRET, { e: email, n: nonce, t: 'magic', exp: Date.now() + 15 * 60 * 1000 });
         await sendLoginEmail(env, email, url.origin + '/api/auth/verify?token=' + encodeURIComponent(token));
       }
       return json({ ok: true }, 200, c);
@@ -13432,8 +13437,11 @@ export default {
         } catch (e) {}
       }
       const sess = await makeToken(env.AUTH_SECRET, { sid: sid, e: email, t: 'sess', exp: now + 90 * 24 * 3600 * 1000 });
-      const returnTo = o.r === '/my-league' ? '/my-league' : '/';
-      return new Response(null, { status: 302, headers: { 'Location': url.origin + returnTo + (returnTo.includes('?') ? '&' : '?') + 'restored=1', 'Set-Cookie': 'it_sess=' + sess + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (90 * 24 * 3600) } });
+      // Always the front page. The magic link used to carry a returnTo, and the
+      // only caller that ever set one was the sign-in form in the league-sync
+      // connect flow; that form is gone. A link minted before this deployed
+      // still verifies — its unread `r` just lands the reader on / instead.
+      return new Response(null, { status: 302, headers: { 'Location': url.origin + '/?restored=1', 'Set-Cookie': 'it_sess=' + sess + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (90 * 24 * 3600) } });
     }
     if (url.pathname === '/api/auth/me') {
       const c = corsHeaders(request.headers.get('Origin'));
