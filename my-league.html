@@ -42,8 +42,47 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
+/* ══ the page's own chrome ═══════════════════════════════════════════
+   The destination of the "Customize My League" button in the masthead of
+   every page on the site, and it opened like a page nobody had styled: an h1
+   on the same white ground as the form under it, the NFL clock as a grey
+   plate between the lede and the steps, and five platform tiles squeezed
+   into an 820px measure while the two lane pages they feed run at 1200.
+
+   It wears .is-hero now, the band the other three in-season pages open on.
+   The three steps go onto the tinted band directly under it — they ARE the
+   summary before the detail, which is the job that band does on /dfs (the
+   setup) and /fantasy (the deck) — and the settings split takes the second
+   band, so the page reads dark, tint, white, tint, white.
+
+   It takes no ribbon, for the reason /in-season takes none: two chapters,
+   and the page is a flow you complete in order rather than a place you
+   navigate around.
+
+   The measure widens to .wrap.wide (1200px) with the rest of the section.
+   That is the whole fix for the platform row: five tiles at 820px gave each
+   one about 140px, which is why "Sportsline, via the extension" wrapped to
+   three lines under a one-word heading. */
 h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
 @media(max-width:560px){h1{font-size:var(--fs-2xl)}}
+/* An in-page anchor has to clear the sticky header or it lands with its own
+   chapter head behind it — and every page on this site links
+   /my-league#settings. The two pages with a ribbon get this from site.css,
+   scoped to the ribbon; this one has the header and no ribbon. */
+html{scroll-padding-top:calc(var(--header-h) + 14px)}
+@media(max-width:860px){html{scroll-padding-top:66px}}
+/* The steps are the band's only content, so the band's own padding is the
+   space around them. */
+.is-band .ml-steps{margin:0}
+/* Two clauses, and the break belongs BETWEEN them. Left to balance it came
+   out "Your league, on every / page that prints a number", which splits the
+   second clause across the fold of the headline. The clause takes its own
+   line at every width instead. */
+.is-hero h1{max-width:none}
+.is-hero h1 em{display:block}
+/* The closing method note inherited the page's new width and became a
+   140-character line. Prose keeps a reading measure. */
+.ml-src p{max-width:88ch}
 p{color:var(--sec);margin:0 0 16px}
 .ml-sub{max-width:720px;margin:0 0 var(--space-4)}
 /* Three steps under the lede: what the page asks of you, in order, so the
@@ -123,20 +162,50 @@ p{color:var(--sec);margin:0 0 16px}
     </button>
     <!--/chrome:nav-->
 </div></header>
-<main id="main" class="wrap">
-<p class="is-eyebrow">In-Season &middot; My Leagues</p>
-<h1>Your league, on every page that prints a number</h1>
-<p class="is-lede">A dollar figure means nothing until you know the budget behind it, and a rank means nothing until you know the scoring. Set yours once and every page on this site restates its numbers in them.</p>
-<div class="its-strip" data-season-strip></div>
+<main id="main">
 
+<!-- the opening band. Same words, same ids, same script; .is-hero is in
+     site.css because all four in-season pages open on it now. The clock comes
+     up into the band as the dateline instead of sitting between the lede and
+     the steps as a plate of its own.
+
+     The two actions are the page's own two paths, named: connect a league, or
+     set the scoring without connecting one. Section 02 already says the
+     settings apply "whether or not a league is connected"; until now the page
+     opened with no way to act on that except to scroll. -->
+<section class="is-hero">
+  <div class="wrap wide">
+    <p class="is-hero-date">
+      <span class="is-eyebrow">In-Season &middot; My Leagues</span>
+      <span class="its-strip" data-season-strip></span>
+    </p>
+    <h1>Your league, <em>on every page that prints a number</em></h1>
+    <p class="is-lede">A dollar figure means nothing until you know the budget behind it, and a rank means nothing until you know the scoring. Set yours once and every page on this site restates its numbers in them.</p>
+    <div class="is-actions">
+      <a class="is-btn primary" href="#connect">Connect my league</a>
+      <a class="is-btn ghost" href="#settings">Just set my scoring &rarr;</a>
+    </div>
+    <a class="is-hero-how" href="/data">Where these numbers come from</a>
+  </div>
+</section>
+
+<!-- the three steps, on the tinted band: what the page asks of you, in order.
+     They are a real sequence, which is why they are numbered, and they are the
+     summary this page owes a reader before its long connect section. -->
+<div class="is-band is-band-top">
+<div class="wrap wide">
 <div class="ml-steps">
   <div class="ml-step"><span class="ml-sn"><i>1</i>Choose a platform</span><b>Where your league lives</b><span>Sleeper and Yahoo sync by league ID or sign-in. CBS imports through the browser extension. ESPN and everything else, by hand.</span></div>
   <div class="ml-step"><span class="ml-sn"><i>2</i>Connect it</span><b>One sign-in, encrypted at rest</b><span>Iron Tuna imports scoring, rosters, the free-agent pool, standings and the transaction log. Nothing is re-typed and no password is stored.</span></div>
   <div class="ml-step"><span class="ml-sn"><i>3</i>Every board re-scores</span><b>Rankings, waivers, DFS, the market</b><span>Each page restates its numbers in your points and your dollars. Disconnect at any time and the imported data goes with it.</span></div>
 </div>
+</div>
+</div><!-- /.is-band -->
 
-<section id="connect">
-<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Connect your league</h2><a class="is-sec-more" href="/my-week">My Week &rarr;</a></div></div>
+<div class="wrap wide">
+
+<section>
+<div class="is-sec" id="connect"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Connect your league</h2><a class="is-sec-more" href="/my-week">My Week &rarr;</a></div></div>
 <p class="ml-sub">Connect the league you actually play in and Iron Tuna imports its exact scoring, every roster, the free-agent pool, your opponent and the standings. Rankings, the Pickup Advisor, Best Lineup, the Trade Finder and the stories then read <em>your</em> league instead of a default one. <b>Free.</b> Sign in with an email link so synced leagues follow you across devices; no purchase is required.</p>
 <div id="lsStatus" class="is-note" style="margin:0 0 12px"></div>
 <div id="lsList"></div>
@@ -155,6 +224,15 @@ p{color:var(--sec);margin:0 0 16px}
 </details>
 </section>
 
+</div><!-- /.wrap -->
+
+<!-- the settings, on the tinted band. This is the destination of the
+     "Customize My League" button in every masthead on the site, and on one
+     continuous white column it was the bottom half of a page rather than the
+     thing that button promises. The form and the rail cards flip to white on
+     the band, the way every --panel surface inside .is-band does. -->
+<div class="is-band">
+<div class="wrap wide">
 <div class="is-sec" id="settings"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Your in-season settings</h2></div></div>
 <p class="ml-sub">Platform, scoring, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
 <div class="ml-split">
@@ -174,11 +252,16 @@ p{color:var(--sec);margin:0 0 16px}
   </div>
 </div>
 
+</div>
+</div><!-- /.is-band -->
+
+<div class="wrap wide">
 <div class="ml-src">
 <p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
 <p class="is-note" style="margin-top:0">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market&rsquo;s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
 </div>
 
+</div><!-- /.wrap -->
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
