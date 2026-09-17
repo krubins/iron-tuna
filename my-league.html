@@ -121,6 +121,17 @@ p{color:var(--sec);margin:0 0 16px}
 .ml-priv summary{cursor:pointer;font-weight:700;color:var(--sec)}
 .ml-priv p{margin:var(--space-2) 0 0;font-size:inherit;color:inherit}
 #lsList .is-card{margin:10px 0}
+/* The roster-grid intake. A dashed box rather than a bare file input, because
+   the screenshot it wants is usually on the clipboard and never on disk. */
+.mg-drop{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1px dashed var(--line2);border-radius:var(--radius-md);background:var(--bg);transition:border-color .12s ease,background .12s ease}
+.mg-drop b{font-size:var(--fs-sm);line-height:1.3;color:var(--text)}
+.mg-drop span{font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
+.mg-drop kbd{font-family:var(--font-mono);font-size:var(--fs-2xs);font-weight:700;padding:1px 5px;border:1px solid var(--line2);border-radius:4px;background:var(--panel);color:var(--sec)}
+.mg-drop:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.mg-drop.over{border-style:solid;border-color:var(--teal);background:rgba(14,124,99,.07)}
+.mg-pick{padding:0;border:0;background:none;font:inherit;font-weight:700;color:var(--teal);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.mg-pick:hover{color:var(--text)}
+.mg-pick:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* Settings: the form on the left at a fixed width, and what it changes on the right. */
 .ml-split{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:var(--space-6);align-items:start}
 .ml-form .is-form{padding:var(--space-5)}
@@ -544,14 +555,95 @@ document.addEventListener('DOMContentLoaded', function () {
       img.src = url;
     });
   }
+  // Every image on a clipboard or a drag, not just the first: a roster grid
+  // that took three shots to capture is three images pasted together, and a
+  // reader who has to send them one at a time gets three reads that each
+  // REPLACE the last rather than one read of the whole room. files is what
+  // modern browsers fill; items is the older path Safari still needs.
+  function imagesIn(dt) {
+    var out = [], i, f;
+    if (!dt) return out;
+    if (dt.files && dt.files.length) {
+      for (i = 0; i < dt.files.length; i++) if (/^image\//.test(dt.files[i].type)) out.push(dt.files[i]);
+    }
+    if (!out.length && dt.items) {
+      for (i = 0; i < dt.items.length; i++) {
+        if (dt.items[i].kind === 'file' && /^image\//.test(dt.items[i].type)) { f = dt.items[i].getAsFile(); if (f) out.push(f); }
+      }
+    }
+    return out;
+  }
+  // One document-level paste listener at a time. manualForm() re-renders this
+  // widget whenever the form is reopened, and a listener per render would send
+  // one clipboard to the reader four times.
+  var mgPaste = null;
   function gridWidget(host, grid) {
     if (!host) return;
+    // A screenshot lives on the clipboard, not on disk: Win+Shift+S and
+    // Cmd+Ctrl+Shift+4 both end with an image nobody ever saved to a file, and
+    // a file input is the one intake that cannot take it. The box below takes
+    // the paste, the drag and the picker, the way the three settings boxes at
+    // the top of this page already do.
+    var mac = /Mac|iPhone|iPad|iPod/.test((navigator.platform || '') + ' ' + (navigator.userAgent || ''));
     host.innerHTML = '<div class="is-field"><label>Every roster from one screenshot</label>' +
-      '<p class="is-note" style="margin:0 0 6px">A league roster grid holds all of the teams at once. Names only: your starting lineup is projected from the scoring below, not read off the page. Upload more than one image at a time if the grid does not fit in one shot.</p>' +
-      '<input type="file" id="mgFile" accept="image/*" multiple>' +
-      '<p class="is-note" id="mgMsg" style="margin:6px 0 0"></p><div id="mgOut"></div></div>';
+      '<p class="is-note" style="margin:0 0 6px">A league roster grid holds all of the teams at once. Names only: your starting lineup is projected from the scoring below, not read off the page. Send more than one image at a time if the grid does not fit in one shot.</p>' +
+      '<div class="mg-drop" id="mgDrop" tabindex="0" role="group" aria-label="Paste, drop or choose roster screenshots">' +
+        '<b>Paste a screenshot, or drop one in</b>' +
+        '<span>Copy the roster grid and press <kbd>' + (mac ? '\u2318' : 'Ctrl+') + 'V</kbd> \u2014 here or anywhere on this form \u2014 or drag the image onto this box, or <button type="button" class="mg-pick" id="mgPick">choose files</button>.</span>' +
+      '</div>' +
+      '<input type="file" id="mgFile" accept="image/*" multiple hidden>' +
+      '<p class="is-note" id="mgMsg" style="margin:6px 0 0" role="status" aria-live="polite"></p><div id="mgOut"></div></div>';
     var msg = function (t, bad) { var m = host.querySelector('#mgMsg'); m.textContent = t || ''; m.style.color = bad ? 'var(--danger)' : ''; };
-    host.querySelector('#mgFile').addEventListener('change', function (e) { read(e.target.files); });
+    var drop = host.querySelector('#mgDrop'), fileIn = host.querySelector('#mgFile');
+    host.querySelector('#mgPick').addEventListener('click', function () { fileIn.click(); });
+    // The picker is cleared after every read so choosing the same file twice
+    // still fires change the second time.
+    fileIn.addEventListener('change', function (e) { var f = e.target.files; read(f); e.target.value = ''; });
+
+    drop.addEventListener('paste', function (e) {
+      var imgs = imagesIn(e.clipboardData);
+      if (!imgs.length) { msg('There is no image on the clipboard. Copy the roster grid as a screenshot first.', true); return; }
+      e.preventDefault(); read(imgs);
+    });
+
+    // A paste anywhere on the page reaches the grid too: a reader who has just
+    // taken the screenshot has not necessarily clicked this box first, and
+    // Ctrl+V landing nowhere reads as a feature that is broken. Fields that
+    // take a paste of their own keep it — the scoring boxes above read images
+    // themselves, and the roster textarea below takes text.
+    if (mgPaste) document.removeEventListener('paste', mgPaste);
+    var onPaste = function (e) {
+      // The form this widget sits in is thrown away and rebuilt; the listener
+      // outlives it, so it retires itself the first time it fires with its own
+      // widget gone rather than reading into a form nobody can see.
+      if (!document.body.contains(host)) { document.removeEventListener('paste', onPaste); if (mgPaste === onPaste) mgPaste = null; return; }
+      // The box's own handler already read this one.
+      if (e.defaultPrevented) return;
+      var t = e.target, tag = t && t.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+      var imgs = imagesIn(e.clipboardData);
+      if (!imgs.length) return;
+      e.preventDefault(); read(imgs);
+    };
+    mgPaste = onPaste;
+    document.addEventListener('paste', onPaste);
+
+    // A drop that misses the box is the browser navigating away to the image,
+    // taking the half-filled form with it — the one failure here that costs
+    // work rather than a read. The whole field catches the drag.
+    var zone = host.querySelector('.is-field') || host, deep = 0;
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) { e.preventDefault(); if (ev === 'dragenter') deep++; drop.classList.add('over'); });
+    });
+    ['dragleave', 'dragend'].forEach(function (ev) {
+      zone.addEventListener(ev, function () { if (ev === 'dragleave') deep = Math.max(0, deep - 1); if (!deep || ev === 'dragend') { deep = 0; drop.classList.remove('over'); } });
+    });
+    zone.addEventListener('drop', function (e) {
+      e.preventDefault(); deep = 0; drop.classList.remove('over');
+      var imgs = imagesIn(e.dataTransfer);
+      if (!imgs.length) { msg('That is not an image. Drop a screenshot of the roster grid.', true); return; }
+      read(imgs);
+    });
 
     function read(files) {
       var list = [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); }).slice(0, 8);
@@ -577,7 +669,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var box = $('mfTeams');
       if (box) box.value = Math.max(parseInt(box.value, 10) || 0, grid.teams.length);
       msg('Read ' + grid.teams.length + ' team' + (grid.teams.length === 1 ? '' : 's') + ', ' + n + ' players.' +
-        (grid.partial ? ' The reader ran out of room, so the last team may be short \u2014 split the grid and upload the pieces together.' : '') +
+        (grid.partial ? ' The reader ran out of room, so the last team may be short \u2014 split the grid and send the pieces together.' : '') +
         ' Pick your team, then save.');
     }
     function render() {
