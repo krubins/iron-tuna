@@ -316,6 +316,111 @@ p{color:var(--sec);margin:0 0 16px}
 .df-edge-up{color:var(--teal);font-weight:700}.df-edge-down{color:var(--danger);font-weight:700}.df-edge-flat{color:var(--muted)}
 .df-player-actions{margin-top:14px}
 @media(max-width:560px){.df-player-sheet{width:100vw;padding:18px}.df-player-grid{grid-template-columns:1fr 1fr}}
+/* ══ the page's own chrome ════════════════════════════════════════════════════
+   /dfs is a tool, and it used to OPEN like a document that had lost its style
+   sheet: an h1 on the same white ground as everything under it, two loose pill
+   groups directly below that, then a setup plate, a gold plate, two cards and
+   five tab sections — every one of them the same width on the same ground, with
+   nothing but a heading's size to say where one object ended and the next
+   began. The homepage answers the same reader with a dark opening band, a
+   ribbon of destinations under it and a tinted/white alternation down the rest;
+   this page had none of the three.
+
+   So it gets them, in the in-season palette, with NO NEW COLORS and NO NEW
+   CONTROLS. Every token below is one site.css already declares — the masthead
+   set (--mast, --mast-ink, --mast-accent) for the dark band, the --panel band
+   and the white card for the rest — and the three things added are:
+
+     1. ONE DARK BAND at the top, continuing the masthead rather than starting a
+        second white surface under it. The thesis, the NFL clock that was a grey
+        plate three objects down, and the two actions.
+     2. ONE STICKY RIBBON under it, carrying the two switches that govern every
+        board on this page — the venue and the board. They were loose pills in
+        the flow, so a reader eleven rows into the values table could not reach
+        them without scrolling back to the top. Now they follow him down.
+     3. A TINTED / WHITE ALTERNATION for the rest, on site.css's own .is-band,
+        so the setup, the answer, and the footer matter read as three objects.
+
+   Nothing here moves an id, a control, a string or a line of script. */
+
+/* THE UA SHEET'S [hidden] IS SPECIFICITY (0,1,0) — the same as any class — and
+   loses to an author sheet at a tie, so `.rk-seg{display:inline-flex}` and
+   `.btn{display:inline-block}` were both beating it: the board switch stayed on
+   screen for venues that have no boards, and the What If box's "Clear" button
+   shipped visible with nothing to clear. front.html carries the same one-line
+   fix for the same reason. This makes the attribute mean what it says. */
+[hidden]{display:none !important}
+
+/* An anchor has to clear BOTH sticky bars — the site header and the ribbon
+   below it — or it lands with its own chapter head hidden behind them. */
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 60px)}
+
+/* ── 1 · the opening band ──────────────────────────────────────────────────── */
+.df-hero{background:var(--mast);color:var(--mast-ink-hi);border-bottom:1px solid rgba(255,255,255,.08)}
+.df-hero>.wrap{padding-top:clamp(26px,4.4vw,52px);padding-bottom:clamp(24px,4vw,46px)}
+/* The section label and the NFL clock are one dateline, not two stacked
+   kickers: same line, same size, divided by a hairline. */
+.df-hero-date{display:flex;flex-wrap:wrap;align-items:center;gap:4px var(--space-3);margin:0 0 16px}
+.df-hero .is-eyebrow{color:var(--mast-accent);margin:0;padding-right:var(--space-3);border-right:1px solid rgba(255,255,255,.16)}
+@media(max-width:560px){.df-hero .is-eyebrow{border-right:0;padding-right:0}}
+.df-hero h1{color:var(--mast-ink-hi);font-size:clamp(30px,4.6vw,52px);line-height:1.05;max-width:24ch;margin:0 0 16px;letter-spacing:-.015em;text-wrap:balance}
+/* The second clause is the one this page is actually for, so it is the only
+   colored words in the band. Same device as the homepage headline. */
+.df-hero h1 em{font-style:normal;color:var(--mast-accent)}
+.df-hero .is-lede{color:var(--mast-ink);max-width:68ch;margin:0 0 22px}
+.df-hero .is-actions{margin:0}
+.df-hero .is-btn.ghost{background:transparent;color:var(--mast-ink-hi);border-color:rgba(255,255,255,.34)}
+.df-hero .is-btn.ghost:hover{background:rgba(255,255,255,.1);border-color:#fff;color:#fff}
+.df-hero .is-btn:focus-visible,.df-hero-how:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+/* Deliberately quieter than the two buttons: it is the third thing to do on
+   this page, not a third button competing with the first two. */
+.df-hero-how{display:inline-block;margin-top:22px;font-family:var(--font-mono);font-size:var(--fs-3xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mast-ink);border-bottom:1px solid rgba(207,212,218,.5);padding-bottom:2px}
+.df-hero-how:hover{color:#fff;border-bottom-color:#fff;text-decoration:none}
+/* The NFL clock, same strip and same script, painted on the dark ground: a
+   dateline rather than the grey plate it was sitting in below the setup. */
+.df-hero .its-strip{background:transparent;border:0;border-radius:0;padding:0;margin:0 0 15px;color:var(--mast-ink);font-size:var(--fs-xs);gap:6px var(--space-3)}
+.df-hero .its-strip .its-phase{color:var(--mast-accent)}
+.df-hero .its-strip .its-week,.df-hero .its-strip .its-state{color:#fff}
+.df-hero .its-strip .its-counts,.df-hero .its-strip .its-next,.df-hero .its-strip .its-note{color:var(--mast-dim)}
+.df-hero .its-strip .its-next{margin-left:0}
+@media(max-width:560px){.df-hero h1{max-width:none}.df-hero .is-actions .is-btn{flex:1 1 100%}}
+
+/* ── 2 · the ribbon ────────────────────────────────────────────────────────── */
+.df-ribbon{position:sticky;top:var(--header-h);z-index:45;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(16,19,23,.05)}
+.df-ribbon-in{max-width:1200px;margin:0 auto;padding:9px var(--space-5);display:flex;flex-wrap:wrap;align-items:center;gap:9px var(--space-3)}
+.df-ribbon-lab{font-family:var(--font-mono);font-size:var(--fs-3xs);font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.df-ribbon .rk-seg{background:var(--bg)}
+.df-ribbon .rk-seg button{padding:8px 13px;font-size:13px}
+.df-ribbon .df-ribbon-lab-board{margin-left:auto}
+/* The board switch takes itself off on a venue or a DraftKings format that has
+   no salary-cap boards; its label goes with it rather than labelling nothing. */
+.df-ribbon-in:has(#dfNav[hidden]) .df-ribbon-lab-board{display:none}
+@media(max-width:1080px){.df-ribbon .df-ribbon-lab-board{margin-left:0}}
+/* On a phone the ribbon SCROLLS SIDEWAYS rather than wrapping: nine buttons in
+   a wrapping row came out three deep, and a sticky bar that tall takes a third
+   of the screen away from the board it is meant to switch. One row, always. */
+@media(max-width:860px){
+  .df-ribbon{top:52px}
+  .df-ribbon-in{padding:8px 14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:var(--space-2)}
+  .df-ribbon-in::-webkit-scrollbar{display:none}
+  .df-ribbon-lab{flex:0 0 auto}
+  .df-ribbon .rk-seg{flex:0 0 auto;flex-wrap:nowrap}
+  .df-ribbon .rk-seg button{padding:8px 10px;font-size:12.5px}
+}
+
+/* ── 3 · the bands ─────────────────────────────────────────────────────────── */
+/* .is-band is site.css's tinted surface and already flips the cards inside it
+   to white. All this adds is the two places the page needs it to butt straight
+   up against something instead of floating in its own margin. */
+.df-band-top{margin-top:0}
+.df-band-top .is-sec:first-child{margin-top:0}
+.df-band .df-config{margin-top:0}
+/* The main column between the two bands. */
+.df-main{padding-top:var(--space-4)}
+.df-main>.df-play-week:first-child{margin-top:0}
+/* The reader's own salary file is its own offer, not a third academy card. */
+.df-main .df-up{margin-top:var(--space-5)}
+
 .df-est{display:inline-block;margin-left:4px;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#b7791f;vertical-align:2px}
 </style>
 
@@ -341,27 +446,58 @@ p{color:var(--sec);margin:0 0 16px}
     </button>
     <!--/chrome:nav-->
 </div></header>
-<main id="main" class="wrap wide">
-<p class="is-eyebrow">In-Season &middot; DFS</p>
-<h1>The lineup, solved. Then the ways to break it.</h1>
-<p class="is-lede">Daily fantasy is one slate, one set of game lines and one cap. Iron Tuna solves that cap against the market&rsquo;s own numbers and gives you the roster first &mdash; then the branches off it: the build that clears a double-up, the build that wins a big field, and the swap available at every slot.</p>
-<div class="is-actions">
-  <a class="is-btn primary" href="#sec-lineup">Build this week&rsquo;s lineup</a>
-  <a class="is-btn ghost" href="#dfUp">Price my own salary file</a>
-</div>
+<main id="main">
 
-<!-- ── the venue and the board ──────────────────────────────────────────────
-     Directly under the head, before the contest setup, so the page answers
-     "which site, which board" before it asks which contest. They were below
-     the setup, the Play of the Week and the Academy cards, a screen and a half
-     down. Same ids and the same script; only the markup moved. -->
-<div class="rk-controls">
-  <div class="rk-seg" id="dfSite" role="group" aria-label="Site"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button><button type="button" data-site="pk">Pick&rsquo;em</button><button type="button" data-site="sl">Sleeper picks</button></div>
-  <div class="rk-seg" id="dfNav" role="group" aria-label="Section"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
-</div>
+<!-- ── 1 · the opening band ────────────────────────────────────────────────
+     The page used to begin on the same white ground its tables are on, so the
+     first thing a reader met was a heading with no band around it and then a
+     row of pills. This continues the masthead instead: the thesis, the NFL
+     clock as a dateline rather than the grey plate it used to sit in three
+     objects lower, and the two things to do. Same words, same ids, same
+     script — it-season.js still paints [data-season-strip] wherever it is. -->
+<section class="df-hero">
+  <div class="wrap wide">
+    <p class="df-hero-date">
+      <span class="is-eyebrow">In-Season &middot; DFS</span>
+      <span class="its-strip" data-season-strip></span>
+    </p>
+    <h1>The lineup, solved. <em>Then the ways to break it.</em></h1>
+    <p class="is-lede">Daily fantasy is one slate, one set of game lines and one cap. Iron Tuna solves that cap against the market&rsquo;s own numbers and gives you the roster first &mdash; then the branches off it: the build that clears a double-up, the build that wins a big field, and the swap available at every slot.</p>
+    <div class="is-actions">
+      <a class="is-btn primary" href="#sec-lineup">Build this week&rsquo;s lineup</a>
+      <a class="is-btn ghost" href="#dfUp">Price my own salary file</a>
+    </div>
+    <a class="df-hero-how" href="#df-method">Where these numbers come from</a>
+  </div>
+</section>
 
-<p class="is-note" id="dfNote"></p>
-<p class="is-note" id="dfSiteNote"></p>
+<!-- ── 2 · the venue and the board ────────────────────────────────────────────────
+     The two switches that govern every board on the page, in a ribbon under
+     the band the way the rankings ribbon sits under the homepage hero. They
+     were two unlabelled pill groups loose in the column, which meant a reader
+     eleven rows into the values table had to scroll back to the top to change
+     board. Sticky, so they come with him. Same ids, same buttons, same
+     handlers; only the markup around them is new. -->
+<nav class="df-ribbon" aria-label="Venue and board">
+  <div class="df-ribbon-in">
+    <span class="df-ribbon-lab" id="dfSiteLab">Venue</span>
+    <div class="rk-seg" id="dfSite" role="group" aria-labelledby="dfSiteLab"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button><button type="button" data-site="pk">Pick&rsquo;em</button><button type="button" data-site="sl">Sleeper picks</button></div>
+    <span class="df-ribbon-lab df-ribbon-lab-board" id="dfNavLab">Board</span>
+    <div class="rk-seg" id="dfNav" role="group" aria-labelledby="dfNavLab"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
+  </div>
+</nav>
+
+<!-- ── 3 · the setup band ────────────────────────────────────────────────
+     The one question the whole page depends on, on the tinted surface so it
+     reads as a step the reader completes rather than as the first of nine
+     white blocks. The plate inside it, its three ordered selects and its help
+     lines are exactly as they were. -->
+<div class="is-band df-band-top">
+  <div class="wrap wide">
+    <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">Setup</span><h2>Set up the slate</h2><a class="is-sec-more" href="/dfs-getting-started">How the lobby works &rarr;</a></div></div>
+    <p class="df-sub">Three choices, in this order: the roster format, the games that define the eligible player pool, and the way the contest pays. Every board below is solved for what you pick here.</p>
+    <p class="is-note" id="dfNote"></p>
+    <p class="is-note" id="dfSiteNote"></p>
 
 <div class="df-config" id="dfConfig">
   <div class="df-config-title"><span>DraftKings DFS Setup</span><b>Match the contest you are actually entering</b></div>
@@ -423,7 +559,14 @@ p{color:var(--sec);margin:0 0 16px}
   <p class="df-setup-state" id="dfSetupState">Complete all three selections to build and evaluate the contest.</p>
 </div>
 
-<div class="its-strip" data-season-strip></div>
+  </div>
+</div><!-- /.is-band -->
+
+<!-- ── 4 · the answer, and the evidence behind it ───────────────────────────────
+     White ground between the two tinted bands, so the gold Play of the Week
+     plate and the dark lineup board are the two heaviest objects on the page
+     and nothing around them competes for the same attention. -->
+<div class="wrap wide df-main">
 
 <section class="df-play-week" id="dfPlayWeek">
   <div class="df-play-week-label">Play of the Week</div>
@@ -591,6 +734,15 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="is-scroll"><table class="is-table" id="dfTd" hidden><thead><tr><th>#</th><th>Player</th><th class="num">Salary</th><th class="num">Anytime TD</th><th class="num">TD % per $1K</th><th class="num">Team total</th><th>Basis</th></tr></thead><tbody></tbody></table></div>
 </section>
 
+</div><!-- /.df-main -->
+
+<!-- ── 5 · the rest of the lane, and the method ────────────────────────────────
+     Everything after the tool, on the tinted surface: where else to go in the
+     section, where the numbers come from, and the market signal. Same copy,
+     same links, same order. -->
+<div class="is-band">
+  <div class="wrap wide">
+
 <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">More</span><h2>The rest of the section</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
 <div class="is-grid">
   <div class="is-card"><h3><a href="/in-season">Overview</a></h3><p>This week&rsquo;s readings across both lanes, and the one place to save your league.</p></div>
@@ -600,11 +752,14 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
 </div>
 
-<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">Method</span><h2>Where these numbers come from</h2><a class="is-sec-more" href="/data">Data &amp; sources &rarr;</a></div></div>
+<div class="is-sec" id="df-method"><div class="is-sec-top"><span class="is-sec-n">Method</span><h2>Where these numbers come from</h2><a class="is-sec-more" href="/data">Data &amp; sources &rarr;</a></div></div>
 <p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
 <p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
 
 <section id="tuna-market" data-kind="props" aria-label="Tuna Market Signal"></section>
+
+  </div>
+</div><!-- /.is-band -->
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
