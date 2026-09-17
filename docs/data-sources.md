@@ -29,7 +29,7 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 | `api.login.yahoo.com` | Yahoo OAuth 2.0 (authorize, token, refresh) | `YAHOO_AUTH`, `YAHOO_TOKEN` | Service endpoint; the reader consents on Yahoo's page. See R7. |
 | `fantasysports.yahooapis.com` | A reader's Yahoo league under their own OAuth grant, read-only scope `fspt-r` | `PROVIDER_YAHOO` | **Green for the reader's own data under the Yahoo Developer Network terms**; behind `FLAG_YAHOO_SYNC` until an app is registered. See R7. |
 | `static.www.nfl.com` | Team and player imagery, hot-linked | ~1,680 URL references across the deployed HTML, none fetched server-side | **Unreviewed and OPEN.** Copyrighted images served from the league's CDN. See R4. |
-| `upload.wikimedia.org` (via `commons.wikimedia.org` and `www.wikidata.org` at build time) | Game photographs for the story art on `/`, `/in-season/desk`, `/lead`: one openly licensed action photo per player, hot-linked as a Commons thumbnail | `tools/build-action-shots.mjs` (build-time lookup, never the Worker), `it-action.js` (the deployed map), `storyArt()` in `player-search.js` | **Green, with an obligation.** Only CC0, public-domain, CC BY and CC BY-SA files are kept (`LICENSE_OK` in the tool; NC and ND never match). CC BY / CC BY-SA require the photographer, the license and a link to it wherever the file is shown, and that a cropped copy says so; `storyArt()` prints exactly that under every use and `tools/test-story-art.mjs` fails the build if it stops. See R9. |
+| `thumb.wikimedia.org` and `upload.wikimedia.org` (resolved via `commons.wikimedia.org` and `www.wikidata.org` at build time) | Game photographs for the story art on `/`, `/in-season/desk`, `/lead`: one openly licensed action photo per player, hot-linked as a Commons thumbnail | `tools/build-action-shots.mjs` (build-time lookup, never the Worker), `it-action.js` (the deployed map), `storyArt()` in `player-search.js` | **Green, with an obligation.** Only CC0, public-domain, CC BY and CC BY-SA files are kept (`LICENSE_OK` in the tool; NC and ND never match). CC BY / CC BY-SA require the photographer, the license and a link to it wherever the file is shown, and that a cropped copy says so; `storyArt()` prints exactly that under every use and `tools/test-story-art.mjs` fails the build if it stops. See R9. |
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
 | DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
 | DFS lobby CSV (reader upload) | A reader's own salary file, for any classic slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/dfs/slate` | **Green.** Same file, obtained by the reader from a lobby they are already in. Parsed per request and stored nowhere; single-game files are refused rather than mispriced against the classic cap. |
@@ -353,3 +353,21 @@ The trade is coverage: replaying the rule over that run's own output keeps 46
 of 115 on the title test alone, plus whatever P18 adds back. Each row also
 carries `why` (`p18` or `named`) so the evidence is visible in the diff;
 `emitJs()` strips it, so it never reaches a browser.
+
+### R9b — what the browser actually fetches  *(added 2026-09-17)*
+
+Two corrections after watching the live page make its requests.
+
+**The host.** The Commons API returns thumbnails on **`thumb.wikimedia.org`**
+(117 of 133 rows) as well as `upload.wikimedia.org` (16). The inventory above
+named only the second. Both are Wikimedia's own file hosts and the licensing
+position is identical; the row is corrected so the host list is true.
+
+**The tracking query.** Every thumbnail URL the API hands back carries
+`?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail`.
+Serving that to a reader reports every page view of ours back to Wikimedia as
+an "imageinfo thumbnail" click — the API's own analytics, attached to a URL
+that was never meant to leave the build. `cleanUrl()` strips the query on the
+way into `it-action.js`, so the rows already on file were cleaned without
+re-running the lookup. The file serves identically without it.
+

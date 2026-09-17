@@ -217,12 +217,25 @@ export function rowFor(player, ent, f) {
 // The deployed file. Scoped to the players player-search.js indexes — that is
 // the set every story surface can resolve a name to — so a photograph of a
 // player the site does not price never ships. `--check` compares this text.
+// The Commons API hands back its thumbnail URLs with its own analytics query
+// on them — `?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&…`. That
+// is the API telling its own dashboards where the call came from, and it has no
+// business on a URL a reader's browser fetches: it would report every page view
+// of ours back to Wikimedia as an "imageinfo thumbnail" click. The file serves
+// identically without it. Stripped on the way into the deployed map, so the
+// rows already on file are cleaned without re-running the lookup.
+export function cleanUrl(u) {
+  const s = String(u || '');
+  const q = s.indexOf('?');
+  return q < 0 ? s : s.slice(0, q);
+}
+
 export function emitJs(rows, indexKeys) {
   const keep = new Set(indexKeys || []);
   const map = {};
   for (const r of rows) {
     if (!r || !r.u || (keep.size && !keep.has(r.k))) continue;
-    map[r.k] = { u: r.u, w: r.w, h: r.h, a: r.a, l: r.l, lu: r.lu, s: r.s, y: r.y };
+    map[r.k] = { u: cleanUrl(r.u), w: r.w, h: r.h, a: r.a, l: r.l, lu: r.lu, s: r.s, y: r.y };
     for (const key of Object.keys(map[r.k])) if (map[r.k][key] === undefined) delete map[r.k][key];
   }
   const keys = Object.keys(map).sort();
