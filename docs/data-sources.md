@@ -326,3 +326,30 @@ anyway; it costs nothing.
 4. Cache. It protects the quota and every green license here permits it.
 5. Keep the written record. Preserve dated provider terms and licensing confirmations in `docs/`.
 6. PropLine's default bookmaker allowlist is sportsbook-only. Do not add exchanges to that path without a separate product and legal decision.
+
+### R9a — the depiction rule  *(added 2026-09-17, after the first live run)*
+
+The first run of `.github/workflows/action-shots.yml` resolved 115 players and
+**54% of its rows had a file title that never mentioned the player.** It was
+taking the best-scoring landscape file out of each player's Commons *category*,
+and a category is a filing cabinet rather than a claim about who is in a
+picture. It produced, among others:
+
+| Row | File it chose | What that is |
+|---|---|---|
+| `austin-hooper` | `Chiefs vs Titans TE Chigoziem Okonkwo.png` | a different tight end |
+| `antonio-gibson` | `Sam Howell scramble Cardinals vs Commanders` | a team-mate |
+| `aidan-o-connell` | `Salute to Service Boot Camp … Airmen` | not football |
+| `amari-cooper` | `Cleveland Browns Visit NASA Glenn` | a facility tour |
+
+None of it was merged. `depicts()` now requires evidence of one of two kinds
+before a file is used: it **is** the entity's Wikidata image (P18), or its
+**title names him**. Everything else is discarded even when it is probably
+fine, because these pictures run in the homepage's hero under somebody's name
+and a wrong one is a picture of the wrong man. `NOT_ACTION` also now drops
+visits, tours, training camp, practice, media day and military events.
+
+The trade is coverage: replaying the rule over that run's own output keeps 46
+of 115 on the title test alone, plus whatever P18 adds back. Each row also
+carries `why` (`p18` or `named`) so the evidence is visible in the diff;
+`emitJs()` strips it, so it never reaches a browser.
