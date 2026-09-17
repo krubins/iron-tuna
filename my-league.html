@@ -506,6 +506,77 @@ document.addEventListener('DOMContentLoaded', function () {
     else if (act === 'disconnect') { if (!confirm('Disconnect this league? Iron Tuna stops syncing it and deletes the imported settings, teams, rosters, matchups and transactions. Provider tokens are deleted when no league on that provider remains.')) return; ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/disconnect', { method: 'POST' }).then(function (j) { note('Disconnected. Removed: ' + esc((j.removed || []).join(', ')) + '.' + (j.tokensRemoved ? ' Provider tokens deleted.' : '') + ' Kept: ' + esc((j.retained || []).join(', ')) + '.'); reload(); }); }
     else panel(id, act);
   });
+  // ── the roster grid ───────────────────────────────────────────────────────
+  // A league that prints every roster on one page is one screenshot, not
+  // twelve. The reader returns names only — no starter, bench or IR — so a
+  // grid league has its best lineup projected rather than compared against a
+  // lineup nobody recorded. Each image is shrunk here first: a phone
+  // screenshot is several megabytes and the reader needs none of that to read
+  // a name.
+  function shrink(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        try {
+          var MAX = 1600, sc = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+          var c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * sc); c.height = Math.round(img.naturalHeight * sc);
+          var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+          resolve({ media_type: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.85).replace(/^data:[^,]*,/, '') });
+        } catch (e) { reject(e); } finally { URL.revokeObjectURL(url); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('unreadable')); };
+      img.src = url;
+    });
+  }
+  function gridWidget(host, grid) {
+    if (!host) return;
+    host.innerHTML = '<div class="is-field"><label>Every roster from one screenshot</label>' +
+      '<p class="is-note" style="margin:0 0 6px">A league roster grid holds all of the teams at once. Names only: your starting lineup is projected from the scoring below, not read off the page. Upload more than one image at a time if the grid does not fit in one shot.</p>' +
+      '<input type="file" id="mgFile" accept="image/*" multiple>' +
+      '<p class="is-note" id="mgMsg" style="margin:6px 0 0"></p><div id="mgOut"></div></div>';
+    var msg = function (t, bad) { var m = host.querySelector('#mgMsg'); m.textContent = t || ''; m.style.color = bad ? 'var(--danger)' : ''; };
+    host.querySelector('#mgFile').addEventListener('change', function (e) { read(e.target.files); });
+
+    function read(files) {
+      var list = [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); }).slice(0, 8);
+      if (!list.length) { msg('Those are not images.', true); return; }
+      msg('Reading ' + list.length + ' screenshot' + (list.length === 1 ? '' : 's') + '\u2026 a whole grid can take a minute.');
+      Promise.all(list.map(shrink)).then(function (images) {
+        return fetch('/api/roster-read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ images: images }) }).then(function (r) { return r.json(); });
+      }).then(adopt).catch(function () { msg('The reader did not answer. Try again, or type your roster below instead.', true); });
+    }
+    // A read REPLACES what the last one found. Appending would double a team
+    // when the same screenshot is sent twice, and nothing tells that apart
+    // from a league holding two teams of the same name.
+    function adopt(j) {
+      if (!j || !j.ok) { msg((j && j.error) || 'The reader could not read that.', true); return; }
+      grid.teams = (j.teams || []).map(function (t) {
+        return { name: String(t.name == null ? '' : t.name).slice(0, 60),
+                 players: (t.players || []).map(function (p) { return { name: p.name, position: p.pos || null, team: p.team || null }; }).filter(function (p) { return p && p.name; }) };
+      }).filter(function (t) { return t.players.length; });
+      grid.mine = -1; grid.partial = !!j.partial;
+      render();
+      if (!grid.teams.length) { msg('No rosters in that image.', true); return; }
+      var n = grid.teams.reduce(function (a, t) { return a + t.players.length; }, 0);
+      var box = $('mfTeams');
+      if (box) box.value = Math.max(parseInt(box.value, 10) || 0, grid.teams.length);
+      msg('Read ' + grid.teams.length + ' team' + (grid.teams.length === 1 ? '' : 's') + ', ' + n + ' players.' +
+        (grid.partial ? ' The reader ran out of room, so the last team may be short \u2014 split the grid and upload the pieces together.' : '') +
+        ' Pick your team, then save.');
+    }
+    function render() {
+      var out = host.querySelector('#mgOut');
+      if (!grid.teams.length) { out.innerHTML = ''; return; }
+      out.innerHTML = '<div class="is-seg" role="group" style="flex-wrap:wrap;margin-top:6px">' + grid.teams.map(function (t, i) {
+        return '<label><input type="radio" name="mgMine" value="' + i + '">' + esc(t.name || ('Team ' + (i + 1))) + ' (' + t.players.length + ')</label>';
+      }).join('') + '</div>';
+      [].slice.call(out.querySelectorAll('input[name="mgMine"]')).forEach(function (r) {
+        r.addEventListener('change', function () { grid.mine = parseInt(r.value, 10); });
+      });
+    }
+  }
+
   // ── manual ───────────────────────────────────────────────────────────────
   function manualForm(L) {
     var el = $('lsManual'); el.hidden = false; $('lsConnect').hidden = true; markTile(L ? null : 'manual');
@@ -520,7 +591,18 @@ document.addEventListener('DOMContentLoaded', function () {
     // unless the reader moves the control into a different bucket themselves.
     var mfScoring = S ? Object.assign({}, S.scoring) : {};
     var mfRecExact = null;
-    el.innerHTML = '<div class="is-card"><h3>' + (L ? 'Edit ' + esc(L.name) : 'Enter your league by hand') + '</h3><p class="is-note" style="margin:0 0 10px">Works for ESPN, CBS, Fantrax, MFL or any league. The scoring and lineup below make every ranking exact; your roster makes Best Lineup and the Pickup Advisor personal. Other managers&rsquo; rosters are optional; without them the free-agent pool is everyone not on your team.</p><div id="mfImp"></div>' +
+    // A league already holding a room keeps it through an edit. Without this,
+    // reopening a grid league to change one scoring number would save the one
+    // typed roster and silently drop the other eleven.
+    var grid = { teams: [], mine: -1, partial: false };
+    if (L && L.teams && L.teams.length > 1) {
+      grid.teams = L.teams.map(function (t) {
+        var r = (L.rosters || []).filter(function (x) { return x.teamId === t.teamId; })[0] || { players: [] };
+        return { name: t.name, players: r.players.map(function (p) { return { name: p.name, position: p.position || null, team: p.team || null }; }) };
+      });
+      grid.mine = L.teams.map(function (t) { return t.teamId; }).indexOf(L.userTeamId);
+    }
+    el.innerHTML = '<div class="is-card"><h3>' + (L ? 'Edit ' + esc(L.name) : 'Enter your league by hand') + '</h3><p class="is-note" style="margin:0 0 10px">Works for ESPN, CBS, Fantrax, MFL or any league. The scoring and lineup below make every ranking exact; your roster makes Best Lineup and the Pickup Advisor personal. Other managers&rsquo; rosters are optional; without them the free-agent pool is everyone not on your team.</p><div id="mfImp"></div><div id="mfGrid"></div>' +
       '<div class="is-row2"><div class="is-field"><label>League name</label><input class="is-input" id="mfName" value="' + esc(L ? L.name : '') + '"></div><div class="is-field"><label>Teams</label><input class="is-input" id="mfTeams" type="number" min="2" max="20" value="' + esc(L ? L.numTeams : 12) + '"></div></div>' +
       '<div class="is-field"><label>Scoring</label><div class="is-seg" role="group">' + [['1', 'PPR'], ['0.5', 'Half PPR'], ['0', 'Standard']].map(function (o) { return '<label><input type="radio" name="mfRec" value="' + o[0] + '"' + (String(rec) === o[0] ? ' checked' : '') + '>' + o[1] + '</label>'; }).join('') + '</div></div>' +
       '<div class="is-row2"><div class="is-field"><label>TE premium (extra per catch)</label><input class="is-input" id="mfTe" type="number" step="0.25" value="' + esc(S ? S.extras.tePremium : 0) + '"></div><div class="is-field"><label>Passing TD</label><input class="is-input" id="mfPtd" type="number" step="1" value="' + esc(S ? S.scoring.passingTD : 4) + '"></div></div>' +
@@ -556,6 +638,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     }
+    gridWidget($('mfGrid'), grid);
     $('mfCancel').addEventListener('click', function () { el.hidden = true; markTile(null); });
     $('mfSave').addEventListener('click', function () {
       var recV = parseFloat((el.querySelector('input[name="mfRec"]:checked') || {}).value || '1');
@@ -571,6 +654,19 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       var body = { id: L ? L.id : undefined, name: $('mfName').value || 'My league', numTeams: $('mfTeams').value, teamName: $('mfTeam').value, players: players,
         settings: { scoring: Object.assign({}, mfScoring, { receptionPoints: recV, rbReceptionPoints: recRbV, passingTD: parseFloat($('mfPtd').value) || 4 }), extras: { tePremium: parseFloat($('mfTe').value) || 0 }, roster: roster, faab: $('mfFaab').value === '' ? null : parseInt($('mfFaab').value, 10) } };
+      // A grid read replaces the one typed roster with the whole room. Which
+      // team is the reader's cannot be guessed from a screenshot, so the save
+      // waits for them to say rather than filing them as team one.
+      if (grid.teams.length) {
+        if (grid.mine < 0) { $('mfMsg').textContent = 'Pick which of those teams is yours.'; return; }
+        // The textarea wins for the reader's own team where they typed one,
+        // because it is the only place a starter or an IR slot can be said.
+        body.teams = grid.teams.map(function (t, i) {
+          return { teamId: 'm' + (i + 1), name: t.name || ('Team ' + (i + 1)), isUser: i === grid.mine,
+                   players: (i === grid.mine && players.length) ? players : t.players };
+        });
+        body.numTeams = Math.max(parseInt($('mfTeams').value, 10) || 0, body.teams.length);
+      }
       $('mfMsg').textContent = 'Saving…';
       ITSync.api('/api/leagues/manual', { method: 'POST', body: body }).then(function (j) {
         if (!j || !j.ok) { $('mfMsg').textContent = (j && (j.message || j.error)) || 'Could not save.'; return; }
