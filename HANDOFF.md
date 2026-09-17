@@ -12699,3 +12699,140 @@ rather than a diagnosis.
   failure pattern has nothing new to add.
 - A new `odds_overlay` row 5 (`nflverse-usage`) is now refreshing hourly.
 - The branch is **30 commits ahead of `main`**.
+## 103. September 17: D1 has tripled again, and the board is serving yesterday
+
+D1 clock 2026-09-17 11:23:18Z. `main` moved to `f52434b` and added six sections,
+so my 81–96 became 87–102 and 71 internal cross-references shifted with them.
+
+### 103a. The database is 195 MB and under 3% of it is data
+
+```
+09-15   12.3 MB
+09-16   78.1 MB
+09-17  195.4 MB
+```
+
+Row counts over the same period barely moved: `page_views` 13,606 → 13,987,
+`job_runs` 2,346 → 2,714, `site_events` 1,958 → 1,978, `content_pieces` 68 → 69,
+`lead_story` 111 → 111. `odds_snapshots` grew most, 2,761 → 7,326, and they are
+twelve narrow columns.
+
+So I measured the content directly rather than guessing. Summed across the seven
+fattest tables — every text column that could hold anything:
+
+```
+page_views      0.96 MB
+content_pieces  0.91 MB
+odds_overlay    0.74 MB
+lead_story      0.62 MB
+odds_snapshots  0.58 MB
+job_runs        0.52 MB
+game_summaries  0.11 MB
+               ------
+total           4.4 MB   against a 195.4 MB file
+```
+
+**Under 3% of the reported size is row content.** Whatever is growing is not
+the data.
+
+I had a hypothesis — the prune jobs had stopped, leaving deleted rows behind —
+and it is **wrong**. `analytics-prune`, `job-prune` and `snapshot-prune` are
+weekly, not daily: they ran 2026-09-06 08:00:36 and 2026-09-13 08:00:33, both
+Sundays, all three `ok=1`, and every one reported `deleted: 0` because nothing
+is old enough to prune (`keepDays: 180`). They are healthy and next due 09-20.
+Checking that before writing it down is standing rule (2) doing its job.
+
+What is left is storage-layer rather than content: free pages SQLite has not
+reclaimed, or D1's own write-ahead retention behind Time Travel. I cannot
+distinguish those from a query interface, so this stays an **unexplained
+observation**, per standing rule (3). It is worth telling Ken regardless,
+because D1 bills on stored bytes and this is a 16x increase in two days with no
+new content behind it.
+
+It is also the first thing I have seen that could plausibly connect to §99a's
+hangs — a database growing this fast makes writes slower, and the jobs that die
+are the ones that write. I have no evidence for that link and am not claiming
+it; I note it only so tomorrow looks for it.
+
+### 103b. `odds-refresh` hung again, so today's board is yesterday's board
+
+```
+odds-refresh  2026-09-17 11:01:04  finished NEVER  ok null
+odds-refresh  2026-09-16 11:01:27  finished 11:01:28  ok 1
+odds-refresh  2026-09-15 11:01:21  finished 11:01:22  ok 1
+```
+
+Third time now (09-11, 09-13, 09-17). `odds_overlay` row 1 is stamped
+2026-09-16 11:01:28Z, 24.4 hours old, and the snapshot tool confirms it is
+**byte-identical** to yesterday's capture. Rows 5 and 6 are 25.4 hours old;
+`usage-refresh` did not run today either.
+
+That has a consequence worth stating plainly, because it is the trap from §98:
+**every board figure in this section is identical to yesterday's — not because
+nothing moved, but because the board did not move.** Tate $10/WR27, Robinson
+$2/WR42, the 21.2% gap, Collins $30 / Wilson $28 — all the same numbers as
+§102, off the same frozen overlay. An audit that only compared today to
+yesterday would have called this stability.
+
+### 103c. Hang rate: 09-16 closed at 17%
+
+```
+09-11   46 / 225   20%
+09-12   51 / 317   16%
+09-13  109 / 229   48%
+09-14   65 / 272   24%
+09-15  115 / 305   38%
+09-16   68 / 403   17%
+09-17   34 / 152   22%  (partial, 11:22 — not a figure to quote)
+```
+
+A new job is in the rotation: `line-ledger`, 120 runs in 36 hours on the
+fifteen-minute tick, 24 of them hung (20%). Over that window `news-scan` is at
+23%, `schedule-refresh` 41%, `board-freeze` 13%. The pattern from §101b holds —
+it is spread across everything sharing the tick.
+
+### 103d. Row 94, fifth day wrong
+
+Two published prices still contradict the live board, and the figures are
+yesterday's because the board is yesterday's:
+
+```
+                  story (Sept 8)   today
+Carnell Tate      $11, WR25        $10, WR27
+Cam Ward          $1,  QB26        $1,  QB27
+Tony Pollard      $5,  RB29        $5,  RB29
+Wan'Dale Robinson $3,  WR38        $2,  WR42
+prose             1,060.8 / 207.2  1,025.9 / 200.4
+```
+
+Served WR20 is $13 and WR21–23 are $12, so the curve paragraph's first sentence
+is false at its first term for a third straight day.
+
+### 103e. The recap rows are stable at sixteen
+
+Still exactly sixteen `category='recap'` rows in `lead_story`, still all
+`verified=1, published=0`, `max(id)` still 111, `lead_story_run` still 58. No
+Week 2 additions yet. `LEAD_CATEGORIES` still has its six keys and no `recap`,
+in the repo and the deployed bundle alike. `content_pieces` holds 17 published
+`game-recap` rows across the same sixteen games. Nothing published, nothing
+touched.
+
+### 103f. The deployment is `main` again
+
+987 top-level symbols in today's bundle, every one in `origin/main` except
+`__defProp`, `__name` and `worker_default`. Second consecutive day in step
+after the two branch builds of 09-14 and 09-15. `claude/iron-tuna-in-season-2oxwqe`,
+which production served on 09-14, is still unmerged.
+
+### 103g. The rest
+
+- CI **78/78** — `main` added two new checks, so the count moved from 76.
+- Harness self-test **23/23**.
+- Repo vs deployed: **1380 player-rows across four boards, 0 differences**.
+- Routine still `enabled: false`, untouched since 2026-09-09 13:05:36Z; live
+  prompt still **47,183 chars / `9c578c415408`**.
+- Tamper predicates clean: one published row (94), no published-unverified row,
+  no analyst row published, 67 audit rows.
+- The Thursday-night recap Routine has not fired yet; the 03:47Z failures of
+  09-14 and 09-15 have nothing new to add today.
+- The branch is **32 commits ahead of `main`**.
