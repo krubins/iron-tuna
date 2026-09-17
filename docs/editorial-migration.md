@@ -78,7 +78,7 @@ same facts.
 | `last-minute-intel` | Sun 12:15 PM, live updates to kickoff | Mike Raines | Lena Park | both | camp desk's injury tracking |
 | `what-sunday-taught-us` | Sun 7:30 PM, updated as late games go final | Jack Mercer | Lena Park | both | `what-changed-today`, `snf-what-we-learned`, `team-recaps` data |
 | `mnf-preview` | Mon 6 AM | Chris Dalton | Chris Dalton (showdown) | both | — |
-| `what-tuna-got-right` | Mon 6 AM, only when a call landed | Jack Mercer | Lena Park | both | `early-rankings` (retired September 14; the Tuesday ROS rankings carry next week) |
+| `what-tuna-got-right` | Mon 6 AM, only when a call landed (board or story) | Jack Mercer | Lena Park | both | `early-rankings` (retired September 14; the Tuesday ROS rankings carry next week) |
 | `quarterback-monday` | Mon 7 AM, only when there is a story | Chris Dalton | Lena Park | both | Play-Caller Premium's scheme beat |
 | `ros-rankings` | Tue 7 AM | Evan Brooks | Nate Vega | weekly only (no DFS lens; season-long product) | `rankings-update`, `mnf-breakdown`, `early-rankings` |
 | `tailback-tuesday` | Tue 8 AM, only when there is a story | Evan Brooks | Lena Park | both | `opportunity-report` (backfields) |
