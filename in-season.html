@@ -42,11 +42,43 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-/* The page head the section pages wear (see fantasy.html): a mono eyebrow, a
-   39px sentence-case headline, the lede, then the actions. It was a four-line
-   68px all-caps display headline, the largest type in the section. */
+/* ══ the page's own chrome ═══════════════════════════════════════════
+   The hub for the two lanes opened the way the lanes themselves did before
+   this pass: an h1 on the same white ground as the plate under it, with the
+   NFL clock as a grey plate of its own between the actions and the first
+   chapter. It now wears .is-hero from site.css — the band /dfs and /fantasy
+   open on — with the clock up in it as the dateline, and the two lanes move
+   onto the tinted band, so the page reads dark, white, tint, white.
+
+   WHAT IT DOES NOT TAKE is the ribbon the other two carry. A ribbon holds
+   what governs a whole page. This page is three short chapters over two
+   screens, and its own two lanes ARE section 02 — a bar of jumps here would
+   be a second navigation system reaching the same two places under shorter
+   names, which is exactly what came off the homepage footer. Furniture is
+   furniture only when it has a job.
+
+   The measure widens with it. The page was .wrap (820px) while both lanes it
+   fronts are .wrap.wide (1200px), which is why its three-up readings sheet and
+   its two-column league form were the most cramped objects in the section.
+
+   The head below is unchanged — .is-hero restates the size on the band. */
 h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
 @media(max-width:560px){h1{font-size:var(--fs-2xl)}}
+/* An in-page anchor has to clear the sticky header or it lands with its own
+   chapter head behind it. The two pages with a ribbon get this from site.css,
+   scoped to the ribbon; this one has the header and no ribbon. */
+html{scroll-padding-top:calc(var(--header-h) + 14px)}
+@media(max-width:860px){html{scroll-padding-top:66px}}
+/* Two sentences, and the break belongs BETWEEN them. At the shared 24ch the
+   band gives a headline this one came out three lines with "Read" stranded at
+   the end of the second; given its own measure, balancing puts one sentence
+   on each line. */
+.is-hero h1{max-width:none}
+/* The sync offer is a button and the sentence that qualifies it, not a button
+   with text flowing around it. At the wider measure the sentence wrapped back
+   underneath the button and read as a caption for nothing. */
+#isConnect{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin-bottom:var(--space-4)}
+#isConnect .is-hint{flex:1 1 34ch;min-width:0;margin:0}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 section{margin:0 0 var(--space-6)}
@@ -72,15 +104,30 @@ section{margin:0 0 var(--space-6)}
     </button>
     <!--/chrome:nav-->
 </div></header>
-<main id="main" class="wrap">
-<p class="is-eyebrow">In-Season &middot; Overview</p>
-<h1>Three prices on every player. Read them before kickoff.</h1>
-<p class="is-lede">Your league, the daily-fantasy salary and the betting market each put a number on the same player. Iron Tuna reads the market first, the consensus second, and your league&rsquo;s scoring on top of both &mdash; then prints where they disagree.</p>
-<div class="is-actions">
-  <a class="is-btn primary" href="#league">Save my league</a>
-  <a class="is-btn ghost" href="/fantasy">This week&rsquo;s board &rarr;</a>
-</div>
-<div class="its-strip" data-season-strip></div>
+<main id="main">
+
+<!-- the opening band. Same words, same ids, same script; .is-hero is in
+     site.css because all three in-season pages open on it now. The NFL clock
+     comes up into the band as the dateline instead of sitting below the
+     actions as a plate of its own, and the sentence the page is FOR carries
+     the accent. -->
+<section class="is-hero">
+  <div class="wrap wide">
+    <p class="is-hero-date">
+      <span class="is-eyebrow">In-Season &middot; Overview</span>
+      <span class="its-strip" data-season-strip></span>
+    </p>
+    <h1>Three prices on every player. <em>Read them before kickoff.</em></h1>
+    <p class="is-lede">Your league, the daily-fantasy salary and the betting market each put a number on the same player. Iron Tuna reads the market first, the consensus second, and your league&rsquo;s scoring on top of both &mdash; then prints where they disagree.</p>
+    <div class="is-actions">
+      <a class="is-btn primary" href="#league">Save my league</a>
+      <a class="is-btn ghost" href="/fantasy">This week&rsquo;s board &rarr;</a>
+    </div>
+    <a class="is-hero-how" href="/faq#faq-start">How the number is made</a>
+  </div>
+</section>
+
+<div class="wrap wide">
 
 <!-- ── Sheet 01 · this week's readings ────────────────────────────────────
      One card per lane, each printing the single number that lane exists to
@@ -101,6 +148,14 @@ section{margin:0 0 var(--space-6)}
 </section>
 
 <!-- ── 02 · the two lanes ─────────────────────────────────────────────────── -->
+</div><!-- /.wrap -->
+
+<!-- The routing core of the hub, on the tinted band: the two lanes are what
+     this page is for, and on one continuous white column they read as the
+     middle third of three equal things. The lane cards flip to white on the
+     band, the way every surface inside .is-band does. -->
+<div class="is-band">
+<div class="wrap wide">
 <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Two lanes</h2></div></div>
 <section id="lanes">
   <div class="is-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
@@ -143,8 +198,17 @@ section{margin:0 0 var(--space-6)}
 </section>
 
 <!-- ── 03 · my league ─────────────────────────────────────────────────────── -->
-<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>My league</h2></div></div>
-<section id="league">
+</div>
+</div><!-- /.is-band -->
+
+<div class="wrap wide">
+
+<!-- The anchor is on the chapter head rather than on the section under it:
+     the band's own "Save my league", and /in-season#league from the draft app
+     and from The Pick, all landed on the form and skipped the heading that
+     says what the form is for. -->
+<div class="is-sec" id="league"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>My league</h2></div></div>
+<section>
   <div class="is-two">
     <div>
       <h2 style="margin-top:0">Every board re-scores itself for your league</h2>
@@ -157,6 +221,7 @@ section{margin:0 0 var(--space-6)}
   </div>
 </section>
 
+</div><!-- /.wrap -->
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->

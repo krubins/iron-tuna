@@ -739,13 +739,16 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 /* ── surfaces ───────────────────────────────────────────────────────────────
    A tinted band breaks the column without a new color: it is --panel edge to
    edge with hairlines top and bottom, and the cards inside it flip to white so
-   the contrast between card and ground survives the change of ground. */
+   the contrast between card and ground survives the change of ground. The
+   plate and the lane are the same --panel as the band and needed the same
+   flip; the rule named only the card, so a plate inside a band (the standing
+   argument on /fantasy) was panel on panel with a hairline for a border. */
 .is-band { background: var(--panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: var(--space-6) 0 var(--space-7); margin: var(--space-7) 0 }
 .is-band > .wrap > .is-sec:first-child { margin-top: 0 }
 /* A band that is the FIRST thing under the ribbon has no gap above it to float
    in: the ribbon's own hairline is the seam. */
 .is-band.is-band-top { margin-top: 0 }
-.is-band .is-card { background: var(--bg) }
+.is-band .is-card, .is-band .is-plate, .is-band .is-lane { background: var(--bg) }
 
 /* The dark board. One per page at most: the answer the page exists to give.
    It is the only inverted surface in the light system, which is exactly why it
