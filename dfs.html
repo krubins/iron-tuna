@@ -341,6 +341,10 @@ p{color:var(--sec);margin:0 0 16px}
      3. A TINTED / WHITE ALTERNATION for the rest, on site.css's own .is-band,
         so the setup, the answer, and the footer matter read as three objects.
 
+   The first two are .is-hero and .is-ribbon IN site.css rather than here:
+   /fantasy wears the same two, and inlining a page's chrome twice is how the
+   chrome drifted the last time. What stays below is this page's own.
+
    Nothing here moves an id, a control, a string or a line of script. */
 
 /* THE UA SHEET'S [hidden] IS SPECIFICITY (0,1,0) — the same as any class — and
@@ -351,71 +355,13 @@ p{color:var(--sec);margin:0 0 16px}
    fix for the same reason. This makes the attribute mean what it says. */
 [hidden]{display:none !important}
 
-/* An anchor has to clear BOTH sticky bars — the site header and the ribbon
-   below it — or it lands with its own chapter head hidden behind them. */
-html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 60px)}
+/* The board switch takes itself off on a venue, or a DraftKings format, with no
+   salary-cap boards; its label goes with it rather than labelling nothing. */
+.df-ribbon-lab-board{margin-left:auto}
+.is-ribbon-in:has(#dfNav[hidden]) .df-ribbon-lab-board{display:none}
+@media(max-width:1080px){.df-ribbon-lab-board{margin-left:0}}
 
-/* ── 1 · the opening band ──────────────────────────────────────────────────── */
-.df-hero{background:var(--mast);color:var(--mast-ink-hi);border-bottom:1px solid rgba(255,255,255,.08)}
-.df-hero>.wrap{padding-top:clamp(26px,4.4vw,52px);padding-bottom:clamp(24px,4vw,46px)}
-/* The section label and the NFL clock are one dateline, not two stacked
-   kickers: same line, same size, divided by a hairline. */
-.df-hero-date{display:flex;flex-wrap:wrap;align-items:center;gap:4px var(--space-3);margin:0 0 16px}
-.df-hero .is-eyebrow{color:var(--mast-accent);margin:0;padding-right:var(--space-3);border-right:1px solid rgba(255,255,255,.16)}
-@media(max-width:560px){.df-hero .is-eyebrow{border-right:0;padding-right:0}}
-.df-hero h1{color:var(--mast-ink-hi);font-size:clamp(30px,4.6vw,52px);line-height:1.05;max-width:24ch;margin:0 0 16px;letter-spacing:-.015em;text-wrap:balance}
-/* The second clause is the one this page is actually for, so it is the only
-   colored words in the band. Same device as the homepage headline. */
-.df-hero h1 em{font-style:normal;color:var(--mast-accent)}
-.df-hero .is-lede{color:var(--mast-ink);max-width:68ch;margin:0 0 22px}
-.df-hero .is-actions{margin:0}
-.df-hero .is-btn.ghost{background:transparent;color:var(--mast-ink-hi);border-color:rgba(255,255,255,.34)}
-.df-hero .is-btn.ghost:hover{background:rgba(255,255,255,.1);border-color:#fff;color:#fff}
-.df-hero .is-btn:focus-visible,.df-hero-how:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
-/* Deliberately quieter than the two buttons: it is the third thing to do on
-   this page, not a third button competing with the first two. */
-.df-hero-how{display:inline-block;margin-top:22px;font-family:var(--font-mono);font-size:var(--fs-3xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mast-ink);border-bottom:1px solid rgba(207,212,218,.5);padding-bottom:2px}
-.df-hero-how:hover{color:#fff;border-bottom-color:#fff;text-decoration:none}
-/* The NFL clock, same strip and same script, painted on the dark ground: a
-   dateline rather than the grey plate it was sitting in below the setup. */
-.df-hero .its-strip{background:transparent;border:0;border-radius:0;padding:0;margin:0 0 15px;color:var(--mast-ink);font-size:var(--fs-xs);gap:6px var(--space-3)}
-.df-hero .its-strip .its-phase{color:var(--mast-accent)}
-.df-hero .its-strip .its-week,.df-hero .its-strip .its-state{color:#fff}
-.df-hero .its-strip .its-counts,.df-hero .its-strip .its-next,.df-hero .its-strip .its-note{color:var(--mast-dim)}
-.df-hero .its-strip .its-next{margin-left:0}
-@media(max-width:560px){.df-hero h1{max-width:none}.df-hero .is-actions .is-btn{flex:1 1 100%}}
-
-/* ── 2 · the ribbon ────────────────────────────────────────────────────────── */
-.df-ribbon{position:sticky;top:var(--header-h);z-index:45;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(16,19,23,.05)}
-.df-ribbon-in{max-width:1200px;margin:0 auto;padding:9px var(--space-5);display:flex;flex-wrap:wrap;align-items:center;gap:9px var(--space-3)}
-.df-ribbon-lab{font-family:var(--font-mono);font-size:var(--fs-3xs);font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.df-ribbon .rk-seg{background:var(--bg)}
-.df-ribbon .rk-seg button{padding:8px 13px;font-size:13px}
-.df-ribbon .df-ribbon-lab-board{margin-left:auto}
-/* The board switch takes itself off on a venue or a DraftKings format that has
-   no salary-cap boards; its label goes with it rather than labelling nothing. */
-.df-ribbon-in:has(#dfNav[hidden]) .df-ribbon-lab-board{display:none}
-@media(max-width:1080px){.df-ribbon .df-ribbon-lab-board{margin-left:0}}
-/* On a phone the ribbon SCROLLS SIDEWAYS rather than wrapping: nine buttons in
-   a wrapping row came out three deep, and a sticky bar that tall takes a third
-   of the screen away from the board it is meant to switch. One row, always. */
-@media(max-width:860px){
-  .df-ribbon{top:52px}
-  .df-ribbon-in{padding:8px 14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:var(--space-2)}
-  .df-ribbon-in::-webkit-scrollbar{display:none}
-  .df-ribbon-lab{flex:0 0 auto}
-  .df-ribbon .rk-seg{flex:0 0 auto;flex-wrap:nowrap}
-  .df-ribbon .rk-seg button{padding:8px 10px;font-size:12.5px}
-}
-
-/* ── 3 · the bands ─────────────────────────────────────────────────────────── */
-/* .is-band is site.css's tinted surface and already flips the cards inside it
-   to white. All this adds is the two places the page needs it to butt straight
-   up against something instead of floating in its own margin. */
-.df-band-top{margin-top:0}
-.df-band-top .is-sec:first-child{margin-top:0}
-.df-band .df-config{margin-top:0}
-/* The main column between the two bands. */
+/* The white column between the two tinted bands. */
 .df-main{padding-top:var(--space-4)}
 .df-main>.df-play-week:first-child{margin-top:0}
 /* The reader's own salary file is its own offer, not a third academy card. */
@@ -455,9 +401,9 @@ html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 60px)}
      clock as a dateline rather than the grey plate it used to sit in three
      objects lower, and the two things to do. Same words, same ids, same
      script — it-season.js still paints [data-season-strip] wherever it is. -->
-<section class="df-hero">
+<section class="is-hero">
   <div class="wrap wide">
-    <p class="df-hero-date">
+    <p class="is-hero-date">
       <span class="is-eyebrow">In-Season &middot; DFS</span>
       <span class="its-strip" data-season-strip></span>
     </p>
@@ -467,7 +413,7 @@ html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 60px)}
       <a class="is-btn primary" href="#sec-lineup">Build this week&rsquo;s lineup</a>
       <a class="is-btn ghost" href="#dfUp">Price my own salary file</a>
     </div>
-    <a class="df-hero-how" href="#df-method">Where these numbers come from</a>
+    <a class="is-hero-how" href="#df-method">Where these numbers come from</a>
   </div>
 </section>
 
@@ -478,11 +424,11 @@ html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 60px)}
      eleven rows into the values table had to scroll back to the top to change
      board. Sticky, so they come with him. Same ids, same buttons, same
      handlers; only the markup around them is new. -->
-<nav class="df-ribbon" aria-label="Venue and board">
-  <div class="df-ribbon-in">
-    <span class="df-ribbon-lab" id="dfSiteLab">Venue</span>
+<nav class="is-ribbon" aria-label="Venue and board">
+  <div class="is-ribbon-in">
+    <span class="is-ribbon-lab" id="dfSiteLab">Venue</span>
     <div class="rk-seg" id="dfSite" role="group" aria-labelledby="dfSiteLab"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button><button type="button" data-site="pk">Pick&rsquo;em</button><button type="button" data-site="sl">Sleeper picks</button></div>
-    <span class="df-ribbon-lab df-ribbon-lab-board" id="dfNavLab">Board</span>
+    <span class="is-ribbon-lab df-ribbon-lab-board" id="dfNavLab">Board</span>
     <div class="rk-seg" id="dfNav" role="group" aria-labelledby="dfNavLab"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
   </div>
 </nav>
@@ -492,7 +438,7 @@ html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 60px)}
      reads as a step the reader completes rather than as the first of nine
      white blocks. The plate inside it, its three ordered selects and its help
      lines are exactly as they were. -->
-<div class="is-band df-band-top">
+<div class="is-band is-band-top">
   <div class="wrap wide">
     <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">Setup</span><h2>Set up the slate</h2><a class="is-sec-more" href="/dfs-getting-started">How the lobby works &rarr;</a></div></div>
     <p class="df-sub">Three choices, in this order: the roster format, the games that define the eligible player pool, and the way the contest pays. Every board below is solved for what you pick here.</p>
