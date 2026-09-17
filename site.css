@@ -573,6 +573,9 @@ footer.site a:hover { color: var(--text) }
 .is-imp-presets { display: flex; flex-wrap: wrap; gap: 6px }
 .is-imp-presets .is-btn { padding: 8px 12px; font-size: var(--fs-2xs) }
 .is-imp-status { font-size: var(--fs-xs); color: var(--teal); margin: var(--space-3) 0 0; font-weight: 600 }
+/* Teal is the colour of a thing that worked. "Reading image… 40%" has not
+   worked yet, so it reads as a working note rather than a result. */
+.is-imp-status.busy { color: var(--muted); font-weight: 500 }
 /* The preview. Nothing here has been saved yet — it is the list of what WOULD
    change, which is the whole reason a screenshot is safe to trust. */
 .is-imp-preview { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px dashed var(--line2) }
@@ -583,6 +586,76 @@ footer.site a:hover { color: var(--text) }
 }
 .is-imp-chip b { color: var(--text); font-variant-numeric: tabular-nums }
 .is-imp-preview .is-btns { margin-top: var(--space-2) }
+
+/* ── the three boxes ─────────────────────────────────────────────────────────
+   it-inseason-ui.js intake(): scoring, rosters and the FAAB budget, asked side
+   by side on /my-league §02 — the destination of every "Customize My League"
+   button on the site.
+
+   THE GRID IS auto-fit AND NOT repeat(3, …). Three across is the layout at the
+   1200px measure that section runs at, and auto-fit gets there on its own while
+   also giving two across on a tablet and one on a phone, with no breakpoint to
+   keep in sync with the band's own.
+
+   The drop zone is position:relative and the veil covers it: a textarea cannot
+   host a drag overlay itself, and a dashed border that only appears on dragover
+   is the difference between "this accepts a file" and a form that silently
+   navigates away to the image you dropped on it. */
+.is-intake-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-4) }
+.is-intake-card {
+  display: flex; flex-direction: column; gap: var(--space-3);
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.is-intake-top { display: flex; align-items: center; gap: 10px }
+.is-intake-n {
+  flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--teal);
+  display: inline-grid; place-items: center; font-family: var(--font-mono); font-size: var(--fs-3xs);
+  font-weight: 700; color: var(--teal);
+}
+.is-intake-top b { font-size: var(--fs-md); line-height: 1.2; color: var(--text) }
+.is-intake-hint { font-size: var(--fs-xs); color: var(--muted); line-height: 1.5; margin: 0 }
+.is-intake-drop { position: relative; display: flex }
+.is-intake-lab {
+  font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted);
+}
+.is-intake-text { font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.5; resize: vertical; display: block }
+.is-intake-text::placeholder { color: var(--muted); opacity: .75 }
+.is-intake-veil {
+  position: absolute; inset: 0; display: none; place-items: center;
+  border: 2px dashed var(--teal); border-radius: var(--radius-sm);
+  background: #eaf5f1; pointer-events: none;
+}
+.is-intake-veil span {
+  font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--teal);
+}
+.is-intake-drop.over .is-intake-veil { display: grid }
+.is-intake-acts { display: flex; flex-wrap: wrap; gap: var(--space-2) }
+.is-intake-acts .is-btn { padding: 9px 13px; font-size: var(--fs-2xs) }
+.is-intake-chips { display: flex; flex-wrap: wrap; gap: 6px }
+.is-intake-quick {
+  font: inherit; font-size: var(--fs-2xs); font-weight: 700; padding: 5px 10px; border-radius: 999px;
+  border: 1px solid var(--line2); background: var(--bg); color: var(--sec); cursor: pointer;
+}
+.is-intake-quick:hover { border-color: var(--teal); color: var(--teal) }
+.is-intake-quick:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px }
+/* Empty until something has been read, and it must not hold open a gap the
+   whole time it is. */
+.is-intake-out:empty { display: none }
+.is-intake-out { margin-top: auto }
+.is-intake-out .is-imp-status { margin-top: 0 }
+.is-intake-out .is-imp-preview { margin-top: var(--space-2) }
+.is-intake-foot {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3);
+  margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--line);
+}
+.is-intake-foot-l { font-size: var(--fs-xs); color: var(--sec); line-height: 1.5 }
+.is-intake-note { font-size: var(--fs-2xs); color: var(--muted); margin: 0; line-height: 1.5 }
+/* The note goes right only when the cheat-sheet line is there to sit left of
+   it. On its own it starts at the margin like every other line on the page,
+   rather than hanging off the right edge with nothing opposite it. */
+.is-intake-foot > :first-child ~ .is-intake-note { margin-left: auto }
+@media (max-width: 640px) { .is-intake-foot > :first-child ~ .is-intake-note { margin-left: 0 } }
 
 /* ── the detail behind a setting ─────────────────────────────────────────────
    Exact scoring and the starting lineup are closed until the reader has one, so

@@ -234,7 +234,15 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="is-band">
 <div class="wrap wide">
 <div class="is-sec" id="settings"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Your in-season settings</h2></div></div>
-<p class="ml-sub">Platform, scoring, lineup, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. Copy them in from a screenshot of your settings page, a paste of it, or the cheat sheet you already built &mdash; the same way the draft room asks &mdash; or set them by hand. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
+<p class="ml-sub">Platform, scoring, lineup, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. Your league prints those settings on three separate screens, so the three boxes below ask for them three separate ways: type them, paste a screenshot straight off the clipboard, or drag one in. A screenshot is read in your browser and shown back to you as values to check before anything moves. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
+
+<!-- the three boxes. Scoring, rosters and the FAAB budget, side by side and
+     each taking typing, a pasted screenshot or a dragged one. They fill the
+     form below rather than saving anything themselves: it-inseason-ui.js
+     intake() hands back a partial and leagueForm()’s handle applies it, so a
+     bad OCR read costs a glance instead of a season of wrong numbers. -->
+<div id="mlIntake"></div>
+
 <div class="ml-split">
   <div class="ml-form" id="mlForm"></div>
   <div class="ml-side">
@@ -292,7 +300,14 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-inseason-ui.js" defer></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  if (window.ITInSeasonUI) ITInSeasonUI.leagueForm(document.getElementById('mlForm'));
+  if (!window.ITInSeasonUI) return;
+  // The form takes no importer of its own here: the three boxes above it are the
+  // same intake asked one question at a time, and two ways to copy a league in
+  // on one screen is one too many. The handle is how the boxes reach the fields.
+  var form = ITInSeasonUI.leagueForm(document.getElementById('mlForm'), { importer: false });
+  ITInSeasonUI.intake(document.getElementById('mlIntake'), {
+    onApply: function (partial, source, n) { if (form) form.apply(partial, source, n); }
+  });
 });
 </script>
 <script src="/it-sync.js" defer></script>
