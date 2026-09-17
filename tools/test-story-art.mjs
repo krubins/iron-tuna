@@ -28,7 +28,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { licenseOk, scoreFile, pickShot, chooseEntity, positionMatches, stripHtml, emitJs, rowFor, depicts, orderPool } from './build-action-shots.mjs';
+import { licenseOk, scoreFile, pickShot, chooseEntity, positionMatches, stripHtml, emitJs, rowFor, depicts, orderPool, cleanUrl } from './build-action-shots.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -371,6 +371,23 @@ console.log('\nwhich players a capped run spends itself on');
      orderPool(raw, new Set(['alpha-star', 'zeta-star'])).map(p => p.k).join(',') === order.join(','));
   ok('an empty priced set still returns every player', orderPool(raw, new Set()).length === raw.length);
   ok('it does not mutate what it is given', raw[0].k === 'zeta-nobody');
+}
+
+// ── the API's analytics query does not belong in a reader's browser ────────
+// Commons hands its thumbnail URLs back with `?utm_source=commons.wikimedia.org
+// &utm_campaign=imageinfo&utm_content=thumbnail` attached. Serving that to a
+// reader reports every page view of ours to Wikimedia as an imageinfo click.
+console.log('\nthe URL a reader actually fetches');
+{
+  ok('the Commons analytics query is stripped',
+     cleanUrl('https://thumb.wikimedia.org/x/1280px-A.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo')
+       === 'https://thumb.wikimedia.org/x/1280px-A.jpg');
+  ok('a URL with no query is untouched',
+     cleanUrl('https://upload.wikimedia.org/x/B.png') === 'https://upload.wikimedia.org/x/B.png');
+  ok('and nothing throws on an empty one', cleanUrl(undefined) === '' && cleanUrl(null) === '');
+  const js = emitJs([{ k: 'p', u: 'https://thumb.wikimedia.org/x/C.jpg?utm_source=commons.wikimedia.org', w: 1200, h: 800, a: 'X', l: 'CC0', s: 'https://s' }], ['p']);
+  ok('so the deployed map carries none of it', !/utm_/.test(js) && /C\.jpg"/.test(js));
+  ok('and the map on disk carries none either', !/utm_/.test(read('it-action.js')));
 }
 {
   const p = { k: 'josh-allen', n: 'Josh Allen', p: 'QB' };
