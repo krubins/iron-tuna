@@ -28,7 +28,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { licenseOk, scoreFile, pickShot, chooseEntity, positionMatches, stripHtml, emitJs, rowFor, depicts } from './build-action-shots.mjs';
+import { licenseOk, scoreFile, pickShot, chooseEntity, positionMatches, stripHtml, emitJs, rowFor, depicts, orderPool } from './build-action-shots.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -354,6 +354,23 @@ console.log('\nwhether the file is a picture of this man');
      pickShot([generic, F('A.J. Brown catches one.jpg')], P('A.J. Brown')).title === 'File:A.J. Brown catches one.jpg');
   ok('...and answers null when nothing is evidently him',
      pickShot([generic], P('A.J. Brown')) === null);
+}
+
+// ── spending a capped run on players who can actually appear ───────────────
+// The 2026-09-17 run walked the headshot release alphabetically, resolved 23
+// photographs, and only 10 of them reached the browser — the rest were players
+// the site does not price, which emitJs() drops. A capped run has to buy usable
+// pictures, not alphabetical ones.
+console.log('\nwhich players a capped run spends itself on');
+{
+  const raw = [{ k: 'zeta-nobody' }, { k: 'alpha-nobody' }, { k: 'zeta-star' }, { k: 'alpha-star' }];
+  const order = orderPool(raw, new Set(['alpha-star', 'zeta-star'])).map(p => p.k);
+  ok('the players the site prices are looked up first',
+     order.join(',') === 'alpha-star,zeta-star,alpha-nobody,zeta-nobody', order.join(','));
+  ok('and it is stable, so a resumed run is predictable',
+     orderPool(raw, new Set(['alpha-star', 'zeta-star'])).map(p => p.k).join(',') === order.join(','));
+  ok('an empty priced set still returns every player', orderPool(raw, new Set()).length === raw.length);
+  ok('it does not mutate what it is given', raw[0].k === 'zeta-nobody');
 }
 {
   const p = { k: 'josh-allen', n: 'Josh Allen', p: 'QB' };
