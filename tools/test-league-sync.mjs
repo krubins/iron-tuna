@@ -490,6 +490,43 @@ console.log('\nmanual leagues');
   ok('editing replaces the roster rather than appending', ed.body.ok && ed.body.league.name === 'Hand League 2' && (await H.leagueLoad(env, 'ken@example.com', Lm.id)).rosters[0].players.length === 1);
 }
 
+console.log('\nleagues read off a roster grid');
+{
+  // One screenshot of a league's roster grid is every team at once, and it
+  // carries no starter/bench split. The reader hands back names only, so the
+  // whole room arrives on the bench and the lineup has to be projected rather
+  // than compared against a lineup nobody recorded.
+  const teams = [];
+  for (let t = 0; t < 12; t++) {
+    teams.push({
+      teamId: 'm' + (t + 1), name: 'Grid Team ' + (t + 1), isUser: t === 4,
+      players: [pick('QB', t), pick('RB', t * 2), pick('RB', t * 2 + 1), pick('WR', t * 2), pick('WR', t * 2 + 1), pick('TE', t)]
+        .filter(Boolean).map(p => ({ name: p.name }))
+    });
+  }
+  const r = await route(env, 'POST', '/api/leagues/manual', { name: 'Grid League', numTeams: 12, teams, settings: { scoring: { receptionPoints: 1 }, roster: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, BN: 5 } } }, cookie);
+  ok('a grid read imports every team in one save', r.status === 200 && r.body.ok && r.body.league.numTeams === 12);
+  const Lg = await H.leagueLoad(env, 'ken@example.com', r.body.league.id);
+  ok('all twelve rosters are stored, and the team the reader picked is theirs', Lg.teams.length === 12 && Lg.rosters.length === 12 && Lg.userTeamId === 'm5' && Lg.teams.find(t => t.teamId === 'm5').name === 'Grid Team 5');
+  ok('a bare name still resolves to a position off the board', Lg.rosters[0].players.every(p => p.name) && Lg.rosters[0].players.some(p => p.position === 'QB'));
+  ok('every player lands on the bench, because a grid names no starters', Lg.rosters.every(r2 => r2.players.every(p => p.slot === 'bench')));
+  const lu = await H.leagueLineup(env, Lg);
+  ok('the best lineup is still projected from the whole roster', lu.ok && lu.lineup.length === 7 && lu.lineup.filter(s => !s.empty).length > 0 && lu.projectedTotal > 0);
+  ok('with no slots known the comparison is withheld instead of claiming zero', lu.slotsKnown === false && lu.currentTotal === null && lu.improvement === null && lu.changes.length === 0);
+  const pk = await H.leaguePickups(env, Lg, { limit: 5 });
+  ok('a grid league still gets a pickup list, measured against the whole room', pk.ok && pk.pickups.length > 0);
+  const av = H.leagueAvailabilityLookup(Lg, [{ name: pick('QB', 0).name }, { name: pick('QB', 4).name }]);
+  ok('a player on another grid team reads as owned by that team, not free', av[0].status === 'rostered' && av[0].teamName === 'Grid Team 1' && av[1].status === 'mine');
+  // Editing the league re-sends the room with the reader's own team typed out,
+  // which is the only place a starter or an IR slot can be said at all.
+  const withSlots = teams.map((t, i) => i !== 4 ? t : { ...t, players: t.players.map((p, n) => ({ ...p, slot: n < 3 ? 'starter' : 'bench' })) });
+  const ed = await route(env, 'POST', '/api/leagues/manual', { id: Lg.id, name: 'Grid League', numTeams: 12, teams: withSlots, settings: { scoring: { receptionPoints: 1 }, roster: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, BN: 5 } } }, cookie);
+  const Lg2 = await H.leagueLoad(env, 'ken@example.com', Lg.id);
+  ok('editing a grid league keeps every other roster instead of dropping the room', ed.body.ok && Lg2.teams.length === 12 && Lg2.rosters.every(r2 => r2.players.length > 0));
+  const lu2 = await H.leagueLineup(env, Lg2);
+  ok('once slots are typed for the reader’s own team the comparison comes back', lu2.slotsKnown === true && lu2.currentTotal !== null && lu2.improvement !== null);
+}
+
 console.log('\nYahoo OAuth');
 {
   const noKey = { ...env, LEAGUE_TOKEN_KEY: undefined, AUTH_SECRET: undefined };
