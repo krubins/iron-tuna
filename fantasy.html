@@ -53,14 +53,54 @@ h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 section{margin:0 0 var(--space-6)}
 
-/* The masthead block. It was a 68px display headline sitting directly on a
-   paragraph, a note, a clock strip and then a table, all at the same 820px
-   measure and all the same distance apart -- so the page opened with five
-   objects of equal weight and no entry point. The lede is held to a reading
-   measure inside a wider page, and the clock strip is pushed down to sit with
-   the deck it dates rather than floating between the headline and the board. */
+/* ══ the page's own chrome ═══════════════════════════════════════════════════
+   The head was the right SHAPE and the wrong GROUND: a mono eyebrow, a 39px
+   headline, a lede and the actions, all sitting on the same white the board
+   table sits on, so the page opened with no band around it and a reader's eye
+   had nothing to land on. The section then ran six numbered chapters and two
+   surfaces down 3,400px with no way to move between them but the scrollbar.
+
+   It now wears the two objects the homepage opens with, which are .is-hero and
+   .is-ribbon in site.css because /dfs wears exactly the same two and inlining
+   a page's chrome twice is how the chrome drifted the last time:
+
+     1. THE OPENING BAND, continuing the masthead instead of starting a second
+        white surface under it, with the NFL clock promoted into it as the
+        dateline it always was. The clock used to float between the headline
+        and the deck as a grey plate of its own.
+     2. THE RIBBON, sticky, holding this page's six chapters. /dfs's carries
+        switches because it has them; this page's whole-page control is simply
+        where on it you are, so it carries the anchors.
+
+   And the deck moves onto the tinted band, so the rhythm down the page is
+   dark, tint, white, tint, white rather than one continuous column.
+
+   No new colors: every value is a token site.css already declares. */
+
+/* THE UA SHEET'S [hidden] IS SPECIFICITY (0,1,0) — the same as any class — and
+   loses to an author sheet at a tie, so `.is-btn{display:inline-flex}` was
+   beating it and "Save my league" stayed on screen for a reader who had
+   already saved one, next to the line naming the league they saved. front.html
+   and /dfs carry the same one-line fix. This makes the attribute mean what it
+   says. */
+[hidden]{display:none !important}
+
+/* The lede and the actions keep the reading measure they had. The headline
+   does NOT: at 760px "Your league, re-scored every week" breaks at the hyphen
+   in "re-scored", which is the one place in the sentence it must not. Given
+   its own measure it sits on one line on a desktop and breaks after the comma
+   when it has to. */
 .fn-top{max-width:760px}
+.fn-top h1{max-width:none}
+/* A line break between "re-" and "scored" turns the headline into two words
+   that are not words. It is the only place in the sentence that must hold. */
+.fn-top h1 .fn-nb{white-space:nowrap}
 .fn-top .is-lede{margin-bottom:var(--space-3)}
+/* The sync strip and the sync prompt are light-palette objects that /it-sync.js
+   styles and spaces itself, so they stay on the white ground under the band
+   rather than going into it. The wrap around them carries no padding of its
+   own, so it collapses to nothing for a reader who has not connected a
+   league — which is most of them. */
 /* Vega vs. Brooks. Not a table of gaps any more: two columns, five picks each,
    each man arguing the players he expects to beat the other man's ranking on.
    The ranks ride above each pitch as a chip for scanning and inside the pitch
@@ -114,23 +154,58 @@ section{margin:0 0 var(--space-6)}
     <!--/chrome:nav-->
 </div></header>
 <main id="main">
-<div class="wrap wide">
-<div class="fn-top">
-  <p class="is-eyebrow">In-Season &middot; Fantasy</p>
-  <h1>Your league, re-scored every week</h1>
-  <p class="is-lede">Rankings, start/sit, waiver prices and trades, each read from the market first and restated at your league&rsquo;s scoring.</p>
-  <!-- The one action the whole page improves with, then the page's own
-       evidence, then the scoring note that used to float on its own line.
-       The button is hidden by the script below once a league is synced. -->
-  <div class="is-actions">
-    <a class="is-btn primary" id="fnSaveBtn" href="/my-league">Save my league</a>
-    <a class="is-btn ghost" href="#board">This week&rsquo;s board &rarr;</a>
-    <span class="is-hint" id="fnScoring">Scored at PPR until you save your league.</span>
+
+<!-- ── the opening band ──────────────────────────────────────────────
+     Same words, same ids, same script; a ground of its own. The NFL clock
+     comes up into it as the dateline rather than sitting between the headline
+     and the deck as a grey plate, and the one clause the page is FOR carries
+     the accent. .is-hero is in site.css because /dfs opens on the same band. -->
+<section class="is-hero">
+  <div class="wrap wide">
+    <p class="is-hero-date">
+      <span class="is-eyebrow">In-Season &middot; Fantasy</span>
+      <span class="its-strip" data-season-strip></span>
+    </p>
+    <div class="fn-top">
+      <h1>Your league, <em><span class="fn-nb">re-scored</span> every week</em></h1>
+      <p class="is-lede">Rankings, start/sit, waiver prices and trades, each read from the market first and restated at your league&rsquo;s scoring.</p>
+      <!-- The one action the whole page improves with, then the page's own
+           evidence, then the scoring note that used to float on its own line.
+           The button is hidden by the script below once a league is synced. -->
+      <div class="is-actions">
+        <a class="is-btn primary" id="fnSaveBtn" href="/my-league">Save my league</a>
+        <a class="is-btn ghost" href="#board">This week&rsquo;s board &rarr;</a>
+        <span class="is-hint" id="fnScoring">Scored at PPR until you save your league.</span>
+      </div>
+    </div>
+    <a class="is-hero-how" href="/faq#faq-start">How the number is made</a>
   </div>
-</div>
-<div class="its-strip" data-season-strip></div>
+</section>
+
+<!-- ── the ribbon ────────────────────────────────────────────────────
+     Six chapters over 3,400px, and until now nothing but the scrollbar to move
+     between them. These are the page's own section heads, in their own order,
+     and they are the whole list — no destination here that is not on this
+     page. /dfs's ribbon carries its venue and board switches instead; the band
+     is the same one, from site.css. -->
+<nav class="is-ribbon" aria-label="Sections of this page">
+  <div class="is-ribbon-in">
+    <span class="is-ribbon-lab">This page</span>
+    <span class="is-ribbon-jump">
+      <a href="#now">Do this now</a>
+      <a href="#board">This week&rsquo;s board</a>
+      <a href="#startsit">The two calls</a>
+      <a href="#desk">The Newsroom</a>
+      <a href="#disagree">Vega vs. Brooks</a>
+      <a href="#tools">Every tool</a>
+    </span>
+  </div>
+</nav>
+
+<div class="wrap wide fn-state">
 <div class="its-strip-sync" id="fnSync" hidden></div>
 <div id="fnCta" hidden></div>
+</div>
 
 <!-- ── the deck ───────────────────────────────────────────────────────────────
      What this page owed a reader in its first screen and did not give them: the
@@ -142,7 +217,9 @@ section{margin:0 0 var(--space-6)}
 
      Two of these four fill from the board that is already loaded, so they cost
      no extra request. Both say so when the board cannot support a call. -->
-<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Do this now</h2><a class="is-sec-more" href="/weekly-intel">Every tool &rarr;</a></div>
+<div class="is-band is-band-top">
+<div class="wrap wide">
+<div class="is-sec" id="now"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Do this now</h2><a class="is-sec-more" href="/weekly-intel">Every tool &rarr;</a></div>
   <p>The four decisions open in a managed league this week. The first two are answered off this week&rsquo;s board; the other two need your rosters, which is one save away.</p></div>
 
 <div class="is-deck">
@@ -171,13 +248,17 @@ section{margin:0 0 var(--space-6)}
     <span class="is-act-go">Open the Trade Finder &rarr;</span>
   </a>
 </div>
+</div>
+</div><!-- /.is-band -->
+
+<div class="wrap wide">
 
 <!-- ── this week's board ────────────────────────────────────────────────────
      Chapter two, not chapter one. It is the evidence the deck above is drawn
      from, and it reads better once a reader knows what it is for. -->
-<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>This week&rsquo;s board</h2><a class="is-sec-more" href="/rankings">All four horizons &rarr;</a></div>
+<div class="is-sec" id="board"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>This week&rsquo;s board</h2><a class="is-sec-more" href="/rankings">All four horizons &rarr;</a></div>
   <p>Iron Tuna is the consensus projection blended toward the betting market. Where the two disagree by more than half a point, the row says which way and by how much.</p></div>
-<section id="board">
+<section>
   <div class="is-plate">
     <div class="is-plate-head">
       <span>This week&rsquo;s board &mdash; <b id="fnPosLabel">RB</b></span>
@@ -214,9 +295,9 @@ section{margin:0 0 var(--space-6)}
 
      The two calls are the column now. The clock and the league summary are the
      rail beside them: context, dated, not decisions. -->
-<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>The week&rsquo;s two calls</h2><a class="is-sec-more" href="/waivers">Why the price is the decision &rarr;</a></div>
+<div class="is-sec" id="startsit"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>The week&rsquo;s two calls</h2><a class="is-sec-more" href="/waivers">Why the price is the decision &rarr;</a></div>
   <p>One lineup call the market disagrees with the rankings about, and one price. Both are stated as a choice, because that is the form the decision actually takes.</p></div>
-<section id="startsit">
+<section>
   <div class="is-split">
     <div>
       <div class="is-card feat">
@@ -268,9 +349,9 @@ section{margin:0 0 var(--space-6)}
      seam. -->
 <div class="is-band">
 <div class="wrap wide">
-  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">04</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
+  <div class="is-sec" id="desk"><div class="is-sec-top"><span class="is-sec-n">04</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
     <p id="fnDeskNote">Eight AI analyst personas, one set of facts, newest first. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p></div>
-  <section id="desk">
+  <section>
     <div class="nr-grid" id="fnDesk"></div>
     <!-- One of the two is always in the DOM. A section that quietly renders
          nothing reads as a section with nothing in it, which is a different
@@ -283,9 +364,9 @@ section{margin:0 0 var(--space-6)}
     </div>
   </section>
 
-  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>Vega vs. Brooks</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
+  <div class="is-sec" id="disagree"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>Vega vs. Brooks</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
     <p>The desk&rsquo;s one standing argument. <a href="/analysts/vega">Market Intelligence</a> and <a href="/analysts/brooks">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p></div>
-  <section id="disagree">
+  <section>
     <div class="is-plate">
       <div class="fn-riv" id="fnDisWrap" hidden></div>
       <div class="is-vacant in-plate" id="fnDisEmpty">
@@ -304,8 +385,8 @@ section{margin:0 0 var(--space-6)}
 <!-- Nine cards at card weight read as nine things of equal importance, which
      is wrong: four of them are already the deck at the top of the page. This is
      a shelf, at shelf weight. -->
-<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Everything else in the lane</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
-<section id="tools">
+<div class="is-sec" id="tools"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Everything else in the lane</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
+<section>
   <div class="fn-tools">
     <a class="fn-tool" href="/rankings"><b>Rankings</b><span>This week, the next three, rest of season and the playoffs &mdash; Iron Tuna, consensus and Vegas side by side.</span></a>
     <a class="fn-tool" href="/weekly-intel#startsit"><b>Start / Sit</b><span>Your lineup at your settings, with the week&rsquo;s scoring environment priced off the market.</span></a>

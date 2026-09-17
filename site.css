@@ -678,13 +678,132 @@ footer.site a:hover { color: var(--text) }
 }
 .is-sec p { margin: var(--space-3) 0 0; font-size: var(--fs-sm); color: var(--sec); line-height: 1.6; max-width: 78ch }
 
+/* ── the opening band, and the ribbon under it ───────────────────────────────
+   The homepage opens on a dark band that continues the masthead, with a ribbon
+   of destinations directly under it. Every section page opened instead on an
+   h1 sitting on the same white ground as the tables below it, so the first
+   thing a reader met was a heading with no band around it — and each page then
+   grew its own answer to that, which is exactly how the chrome drifted the
+   first time. This is the one copy.
+
+   It uses the masthead palette declared at the top of this file, so a page
+   opts in with class names alone and declares no color of its own.
+
+   .is-hero   the dark opening band: a dateline, the page's thesis, its lede
+              and its actions. Full-bleed, with its own .wrap inside.
+   .is-ribbon the sticky bar under it. It carries whatever governs the whole
+              page — the page's own switches where it has them, its section
+              anchors where it does not. It sticks BELOW the site header
+              (sticky at 0, z-index 50) and under the header's nav dropdown,
+              at the same z-index as the rankings ribbon. */
+
+.is-hero { background: var(--mast); color: var(--mast-ink-hi); border-bottom: 1px solid rgba(255, 255, 255, .08) }
+.is-hero > .wrap { padding-top: clamp(26px, 4.4vw, 52px); padding-bottom: clamp(24px, 4vw, 46px) }
+/* The section label and the NFL clock are ONE dateline, not two stacked
+   kickers: same line, same size, divided by a hairline. */
+.is-hero-date { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--space-3); margin: 0 0 var(--space-4) }
+.is-hero .is-eyebrow {
+  color: var(--mast-accent); margin: 0;
+  padding-right: var(--space-3); border-right: 1px solid rgba(255, 255, 255, .16);
+}
+.is-hero h1 {
+  color: var(--mast-ink-hi); font-size: clamp(30px, 4.6vw, 52px); line-height: 1.05;
+  max-width: 24ch; margin: 0 0 var(--space-4); letter-spacing: -.015em; text-wrap: balance;
+}
+/* The clause the page is actually FOR is the only colored words in the band.
+   Same device as the homepage headline. */
+.is-hero h1 em { font-style: normal; color: var(--mast-accent) }
+.is-hero .is-lede { color: var(--mast-ink); max-width: 68ch; margin: 0 0 var(--space-5) }
+.is-hero .is-actions { margin: 0 }
+.is-hero .is-hint { color: var(--mast-dim) }
+.is-hero .is-btn.ghost { background: transparent; color: var(--mast-ink-hi); border-color: rgba(255, 255, 255, .34) }
+.is-hero .is-btn.ghost:hover { background: rgba(255, 255, 255, .1); border-color: #fff; color: #fff }
+.is-hero .is-btn:focus-visible, .is-hero-how:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px }
+/* Deliberately quieter than the buttons beside it: the third thing to do on
+   the page, not a third button competing with the first two. */
+.is-hero-how {
+  display: inline-block; margin-top: var(--space-5); font-family: var(--font-mono);
+  font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--mast-ink); border-bottom: 1px solid rgba(207, 212, 218, .5); padding-bottom: 2px;
+}
+.is-hero-how:hover { color: #fff; border-bottom-color: #fff; text-decoration: none }
+/* The NFL clock, the same strip off the same one /api/season read, painted on
+   the dark ground: a dateline rather than the grey plate it sits in on white. */
+.is-hero .its-strip {
+  background: transparent; border: 0; border-radius: 0; padding: 0; margin: 0;
+  color: var(--mast-ink); font-size: var(--fs-xs); gap: 6px var(--space-3);
+}
+.is-hero .its-strip .its-phase { color: var(--mast-accent) }
+.is-hero .its-strip .its-week, .is-hero .its-strip .its-state { color: #fff }
+.is-hero .its-strip .its-counts, .is-hero .its-strip .its-next, .is-hero .its-strip .its-note { color: var(--mast-dim) }
+.is-hero .its-strip .its-next { margin-left: 0 }
+@media (max-width: 560px) {
+  .is-hero h1 { max-width: none }
+  .is-hero .is-eyebrow { border-right: 0; padding-right: 0 }
+  .is-hero .is-actions .is-btn { flex: 1 1 100% }
+}
+
+/* An anchor on a page with a ribbon has to clear BOTH sticky bars — the site
+   header and the ribbon under it — or it lands with its own chapter head
+   hidden behind them. Scoped to the pages that actually carry one, so an
+   anchor on the other ninety keeps landing where it always has. */
+html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
+@media (max-width: 860px) { html:has(.is-ribbon) { scroll-padding-top: 108px } }
+
+.is-ribbon {
+  position: sticky; top: var(--header-h); z-index: 45;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 4px rgba(16, 19, 23, .05);
+}
+.is-ribbon-in {
+  max-width: 1200px; margin: 0 auto; padding: 9px var(--space-5);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 9px var(--space-3);
+}
+.is-ribbon-lab {
+  font-family: var(--font-mono); font-size: var(--fs-3xs); font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--muted); flex: 0 0 auto;
+}
+.is-ribbon .rk-seg { background: var(--bg); flex: 0 0 auto }
+.is-ribbon .rk-seg button { padding: 8px 13px; font-size: 13px }
+/* A ribbon of section anchors, for a page whose whole-page control is simply
+   where on it you are. Same band, same height, same weight as the switches. */
+.is-ribbon-jump { display: flex; align-items: stretch; flex-wrap: wrap; gap: 2px; min-width: 0 }
+.is-ribbon-jump a {
+  display: flex; align-items: center; white-space: nowrap; font-size: 12.5px; font-weight: 800;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--sec);
+  padding: 10px 11px; border-radius: 6px;
+}
+.is-ribbon-jump a:hover, .is-ribbon-jump a:focus-visible { color: var(--text); background: var(--elev); text-decoration: none }
+/* On a phone the ribbon SCROLLS SIDEWAYS rather than wrapping: a wrapping row
+   of this many items comes out three deep, and a sticky bar that tall takes a
+   third of the screen away from the thing it exists to navigate. */
+@media (max-width: 860px) {
+  .is-ribbon { top: 52px }
+  .is-ribbon-in {
+    padding: 8px 14px; gap: var(--space-2);
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+  }
+  .is-ribbon-in::-webkit-scrollbar { display: none }
+  .is-ribbon .rk-seg { flex-wrap: nowrap }
+  .is-ribbon .rk-seg button { padding: 8px 10px; font-size: 12.5px }
+  .is-ribbon-jump { flex-wrap: nowrap }
+  .is-ribbon-jump a { padding: 9px 9px; font-size: 11.5px; letter-spacing: .05em }
+}
+
 /* ── surfaces ───────────────────────────────────────────────────────────────
    A tinted band breaks the column without a new color: it is --panel edge to
    edge with hairlines top and bottom, and the cards inside it flip to white so
-   the contrast between card and ground survives the change of ground. */
+   the contrast between card and ground survives the change of ground. The
+   plate, the lane and the form are the same --panel as the band and needed
+   the same flip; the rule named only the card, so a plate inside a band (the
+   standing argument on /fantasy) was panel on panel with a hairline for a
+   border. Those four are every --panel surface the system has. */
 .is-band { background: var(--panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: var(--space-6) 0 var(--space-7); margin: var(--space-7) 0 }
 .is-band > .wrap > .is-sec:first-child { margin-top: 0 }
-.is-band .is-card { background: var(--bg) }
+/* A band that is the FIRST thing under the ribbon has no gap above it to float
+   in: the ribbon's own hairline is the seam. */
+.is-band.is-band-top { margin-top: 0 }
+.is-band .is-card, .is-band .is-plate, .is-band .is-lane, .is-band .is-form { background: var(--bg) }
 
 /* The dark board. One per page at most: the answer the page exists to give.
    It is the only inverted surface in the light system, which is exactly why it

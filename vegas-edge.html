@@ -45,9 +45,37 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-/* The page head the section pages wear (fantasy.html, in-season.html, dfs.html). */
+/* ══ the page's own chrome ═══════════════════════════════════════════
+   This page was already the best-built in the section — numbered chapters, a
+   plate with a board switcher in its head, four numbered how-to cards — and it
+   still opened the way the other six did: an h1 on the same white ground as
+   the plate under it, with the NFL clock as a grey plate between the actions
+   and the first chapter, and then white all the way to the footer.
+
+   It gets the two things it was missing and nothing else: the opening band
+   (.is-hero, site.css) with the clock up in it as the dateline, and a tinted
+   band under the how-to cards so the page has a seam between the board and
+   the reading about the board.
+
+   And the measure widens to .wrap.wide with the rest of the section. The
+   board is a wide table inside a plate, the key cards are a three-up row and
+   the section shelf is seven cards — all three were being asked to fit in
+   820px, which is also why the Method chapter's link wrapped below its own
+   heading. */
 h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
 @media(max-width:560px){h1{font-size:var(--fs-2xl)}}
+/* An in-page anchor has to clear the sticky header. The pages with a ribbon
+   get this from site.css, scoped to the ribbon; this one has the header and
+   no ribbon, and both of its band actions are in-page anchors. */
+html{scroll-padding-top:calc(var(--header-h) + 14px)}
+@media(max-width:860px){html{scroll-padding-top:66px}}
+/* The how-to cards are --panel, the same as the band they now sit on, so they
+   flip to white the way .is-card, .is-plate, .is-lane and .is-form already do
+   in site.css. Those four are shared surfaces; this one is this page's. */
+.is-band .ve-how li{background:var(--bg)}
+/* The closing prose inherited the page's new width and became a 140-character
+   line. The boards get the width; the writing keeps a reading measure. */
+#method ~ p{max-width:88ch}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 .btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
@@ -124,15 +152,30 @@ p{color:var(--sec);margin:0 0 16px}
     </button>
     <!--/chrome:nav-->
 </div></header>
-<main id="main" class="wrap">
-<p class="is-eyebrow">Market Intel &middot; Vegas Edge</p>
-<h1>The market and the rankings do not agree, and the gap is the edge</h1>
-<p class="is-lede">A sportsbook posts a number with its own money behind it, and sharp bettors move it within minutes of news. A top 200 costs nothing to publish and nothing to be wrong about. These are the players where the two are furthest apart.</p>
-<div class="is-actions">
-  <a class="is-btn primary" href="#board">Open this week&rsquo;s board</a>
-  <a class="is-btn ghost" href="#howto">How to read a gap</a>
-</div>
-<div class="its-strip" data-season-strip></div>
+<main id="main">
+
+<!-- the opening band. Same words, same ids, same script; .is-hero is in
+     site.css because the section's pages all open on it now. The clock comes
+     up into it as the dateline instead of sitting between the actions and the
+     first chapter as a plate of its own, and the clause the page is FOR — the
+     gap itself — carries the accent. -->
+<section class="is-hero">
+  <div class="wrap wide">
+    <p class="is-hero-date">
+      <span class="is-eyebrow">Market Intel &middot; Vegas Edge</span>
+      <span class="its-strip" data-season-strip></span>
+    </p>
+    <h1>The market and the rankings do not agree, <em>and the gap is the edge</em></h1>
+    <p class="is-lede">A sportsbook posts a number with its own money behind it, and sharp bettors move it within minutes of news. A top 200 costs nothing to publish and nothing to be wrong about. These are the players where the two are furthest apart.</p>
+    <div class="is-actions">
+      <a class="is-btn primary" href="#board">Open this week&rsquo;s board</a>
+      <a class="is-btn ghost" href="#howto">How to read a gap</a>
+    </div>
+    <a class="is-hero-how" href="#method">Where these numbers come from</a>
+  </div>
+</section>
+
+<div class="wrap wide">
 
 <p class="is-note" id="veNote"></p>
 
@@ -218,6 +261,13 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="is-card" id="veKeySignal" hidden><span class="is-tag is-live">Hidden signals</span><h3>Lines moving together</h3><b class="ve-big" id="veKeySignalN"></b><p id="veKeySignalP"></p><button type="button" class="ve-go" data-board-go="signals">Every signal &rarr;</button></div>
 </div>
 
+</div><!-- /.wrap -->
+
+<!-- The reading about the board, on the tinted surface. Everything above is
+     the board itself; this is the seam between using it and understanding it,
+     and until now there was none. -->
+<div class="is-band">
+<div class="wrap wide">
 <div class="is-sec" id="howto"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>How to read a gap</h2></div></div>
 <ol class="ve-how">
   <li><div><b>Read the implied points, not the spread.</b> A spread and a total together give each offense its expected points, which is the scoring environment every skill player on that roster inherits.</div></li>
@@ -226,6 +276,10 @@ p{color:var(--sec);margin:0 0 16px}
   <li><div><b>Respect the clamp.</b> One odd line is noise. A gap is a tiebreaker between players you already rate closely, not a reason to rebuild a roster.</div></li>
 </ol>
 
+</div>
+</div><!-- /.is-band -->
+
+<div class="wrap wide">
 <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">More</span><h2>The rest of the section</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
 <div class="is-grid">
   <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week itself: who is on bye, what the slate looks like, and every tool below in one place.</p></div>
@@ -237,11 +291,12 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
 </div>
 
-<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">Method</span><h2>Where these numbers come from</h2><a class="is-sec-more" href="/data">Data &amp; sources &rarr;</a></div></div>
+<div class="is-sec" id="method"><div class="is-sec-top"><span class="is-sec-n">Method</span><h2>Where these numbers come from</h2><a class="is-sec-more" href="/data">Data &amp; sources &rarr;</a></div></div>
 <p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
 <p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
 
 <section id="tuna-market" data-kind="" aria-label="Tuna Market Signal"></section>
+</div><!-- /.wrap -->
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
