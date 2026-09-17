@@ -8050,6 +8050,7 @@ const NEWSROOM_OBJECT_SECTIONS = {
   // has to say which kind it is.
   biggestWins: ['player', 'position', 'team', 'source', 'calledIn', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
   whatWeMissed: ['player', 'position', 'team', 'source', 'calledIn', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
+
   captainOptions: ['player', 'position', 'team', 'salary', 'why'], contrarianCaptains: ['player', 'position', 'team', 'salary', 'why'], streamingDefenses: ['team', 'opponent', 'why'], defensesToAvoid: ['team', 'opponent', 'why'], kickerRankings: ['player', 'team', 'rank', 'why'],
   priceInefficiencyBoard: ['player', 'position', 'team', 'salary', 'projection', 'value', 'why'], earlyValues: ['player', 'position', 'team', 'salary', 'why'], likelyChalk: ['player', 'position', 'team', 'salary', 'why'], goodChalk: ['player', 'position', 'team', 'salary', 'why'], badChalk: ['player', 'position', 'team', 'salary', 'why'],
   coreStacks: ['game', 'players', 'why'], contrarianStacks: ['game', 'players', 'why'], stacks: ['game', 'players', 'why'], initialStacks: ['game', 'players', 'why']
@@ -9936,9 +9937,30 @@ function packetCalledItWeek(allGames, entries, ctx, recs, scored) {
   // and a column's "start him" rank against each other honestly. A board
   // call breaks a tie: it carries a rank gap as well as a points gap, so it
   // was the larger claim to begin with.
-  const top = wins.concat(storyWins).sort((a, b) => b.margin - a.margin || (a.source === b.source ? 0 : a.source === 'board' ? -1 : 1))
+  // ONE ROW PER PLAYER. Four stories can make the same call on the same back
+  // and the board can have made it too, and the Week 1 dry run duly produced
+  // a list of the biggest wins that was Cal Runner four times at the same
+  // margin. That is one win with four pieces of evidence, not four wins, and
+  // a reader scanning the list wants distinct players. The loudest claim
+  // leads the row and the rest are named on it; the RECORD still counts
+  // every published position, because the desk published them.
+  const collapse = (list) => {
+    const out = [], at = new Map();
+    for (const h of list) {
+      const id = h.key || h.name;
+      const seat = at.get(id);
+      const where = h.source === 'story' ? { source: 'story', calledIn: h.story, analyst: h.analystName } : { source: 'board', calledIn: 'the board frozen before ' + (h.game || 'kickoff') };
+      if (seat == null) { at.set(id, out.length); out.push({ ...h, callCount: 1, alsoCalledIn: [] }); continue; }
+      const row = out[seat];
+      row.callCount++;
+      // The same story saying it twice is not a second call; a different one is.
+      if (!row.alsoCalledIn.some(x => x.calledIn === where.calledIn && x.source === where.source) && where.calledIn !== (row.source === 'story' ? row.story : 'the board frozen before ' + (row.game || 'kickoff'))) row.alsoCalledIn.push(where);
+    }
+    return out;
+  };
+  const top = collapse(wins.concat(storyWins).sort((a, b) => b.margin - a.margin || (a.source === b.source ? 0 : a.source === 'board' ? -1 : 1)))
     .slice(0, WEEK_WINS_MAX).map(h => ({ ...h, nextWeek: forward(h) }));
-  const allMisses = misses.concat(storyMisses).sort((a, b) => Math.abs(b.margin) - Math.abs(a.margin)).slice(0, WEEK_MISSES_MAX);
+  const allMisses = collapse(misses.concat(storyMisses).sort((a, b) => Math.abs(b.margin) - Math.abs(a.margin))).slice(0, WEEK_MISSES_MAX);
   const totalCalls = calls + storyWins.length + storyMisses.length + storyPushes;
   const totalHits = hitCount + storyWins.length;
   const decided = calls + storyWins.length + storyMisses.length;   // pushes decide nothing, so they are not in the rate
@@ -10415,6 +10437,7 @@ function _voiceBlock(packet) {
     s += '  source "board": `calledIn` is the frozen board. Put the numbers in: what the site had him at (ironTunaRank, ironTunaPts), what the consensus had (consensusRank, consensusPts), what he scored (actual). `weSaid` is the site\'s rank and number, `consensusSaid` the consensus rank and number.\n';
     s += '  source "story": `calledIn` is the story that made the call (the entry\'s `story`), and `weSaid` is what that story actually recommended, from `direction` and `recommendation`, attributed to the entry\'s `analystName`. `consensusSaid` is the consensus projection for that week, the entry\'s `benchmark`, the same number a board call is measured against. `heScored` is `actual`.\n';
     s += '  Both kinds carry `game`, the matchup he played. `why` says what the call was and how far it landed (margin); where `nextWeek` is present it says what to do with him this week.\n';
+    s += '  ONE ROW PER PLAYER. Where `alsoCalledIn` is not empty, the same player was called by more than one of them (`callCount` is how many). That is one win with more than one piece of evidence: write it as a single entry and say in `why` where else it was called, naming those stories. Never give a player a second row.\n';
     if (packet.misses && packet.misses.length) s += 'THE MISSES. `misses` is on the record too, and it mixes both kinds the same way. Write `whatWeMissed` from it, at least one entry, in the same plain voice as the wins, and mark each one\'s `source`. A scorecard that prints only its wins is not a record, and the reader has the box scores.\n';
     else s += 'NO MISSES this week in the packet, so there is no `whatWeMissed` section. Do not add one.\n';
     const hw = packet.headlineWin;

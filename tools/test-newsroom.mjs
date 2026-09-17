@@ -777,6 +777,33 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
     const t = pr.biggestWins.find(w => w.name === 'Stu Story');
     return t.actual === 27 && t.benchmark === 13 && t.margin === 14 && t.outcome === 'hit';
   })());
+  // Four stories can make the same call on the same back, and the board can
+  // have made it too. That is one win with four pieces of evidence.
+  ok('ONE ROW PER PLAYER: the same call in several stories is one win, with the rest named on it', (() => {
+    const many = { stories: 3, held: 0, rows: [
+      rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }),
+      { ...rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }), slug: 's-pickup-2', story: 'Last-Minute Intel', analyst: 'park', analystName: 'Lena Park' },
+      { ...rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }), slug: 's-pickup-3', story: 'The Trade Desk' },
+      rec({ key: 'r2|RB', name: 'Fay Fade', pos: 'RB', team: 'CCC', dir: 'fade', rec: 'bench him' })
+    ] };
+    const q = H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctxS, many, box);
+    const stu = q.biggestWins.filter(w => w.name === 'Stu Story');
+    return stu.length === 1 && stu[0].callCount === 3 && stu[0].alsoCalledIn.length === 2
+      && stu[0].alsoCalledIn.map(x => x.calledIn).sort().join() === 'Last-Minute Intel,The Trade Desk'
+      && q.biggestWins.length === 2
+      // the record still counts every published position: the desk published them
+      && q.record.storyCalls === 4 && q.record.storyHits === 4;
+  })());
+  ok('a player the board AND a story were both right about is one win, the louder claim leading', (() => {
+    // Cy Huge is a board hit at margin 15; a story called him too, smaller.
+    const both = { stories: 1, held: 0, rows: [{ ...rec({ key: 'c|RB', name: 'Cy Huge', pos: 'RB', team: 'CCC' }), story: 'Pickup Advisor' }] };
+    const wk2 = { players: wk.players.concat([{ key: 'c|RB', consensus: { points: 14 } }]) };
+    const q = H.packetCalledItWeek(games, entries, { ...ctx, week: wk2 }, both, new Map([['c|RB', { points: 25 }]]));
+    const cy = q.biggestWins.filter(w => w.name === 'Cy Huge');
+    return cy.length === 1 && cy[0].source === 'board' && cy[0].margin === 15 && cy[0].callCount === 2
+      && cy[0].alsoCalledIn.length === 1 && cy[0].alsoCalledIn[0].source === 'story' && cy[0].alsoCalledIn[0].calledIn === 'Pickup Advisor';
+  })());
+  ok('the writer is told never to give a player a second row', /ONE ROW PER PLAYER/.test(H._voiceBlock({ meta: { kind: 'what-tuna-got-right', analyst: 'mercer', dfsAnalyst: 'park' }, ...pr })));
   ok('a story win names the game its player actually played', pr.biggestWins.find(w => w.name === 'Stu Story').game === 'AAA at BBB' && pr.biggestWins.find(w => w.name === 'Fay Fade').game === 'CCC at DDD');
   ok('a fade that held a player under his number is a win of the size it beat it by', pr.biggestWins.find(w => w.name === 'Fay Fade').margin === 8);
   ok('the misses mix both kinds too, widest first', pr.misses.map(m => m.name).join() === 'Wes Wrong,Di Miss' && pr.misses[0].source === 'story', pr.misses.map(m => m.name + ':' + m.margin).join());

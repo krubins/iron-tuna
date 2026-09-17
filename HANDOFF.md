@@ -10337,25 +10337,56 @@ same number.
 | `biggestWins` / `whatWeMissed` | two new fields, `source` and `calledIn`. `desk.html` renders object sections from their own keys, so the columns appear with no page change. |
 | `analyst_calls` | `runCallsGrade` now also stores `outcome_actual`, `outcome_projected` and `outcome_margin` (columns added through `newsroomReady`'s ALTER loop). The scorecard does not read them; the ledger and the analyst pages get numbers instead of a margin parsed back out of `outcome_note` prose. |
 
-**Tests.** `tools/test-newsroom.mjs` (295, up 30): `weekPublishedCalls`
+**One row per player.** Four stories can make the same call on the same back
+and the board can have made it too. The first dry run that could grade
+anything duly produced a list of the biggest wins that was Cal Runner four
+times at the same margin. That is one win with four pieces of evidence, not
+four wins: `collapse` keeps one row per player, the loudest claim leading,
+with `callCount` and `alsoCalledIn` naming the rest, and the writer is told
+never to give a player a second row. The RECORD still counts every published
+position, because the desk published them.
+
+**The dry-run fixture covers the whole Monday now.** It could not before, and
+the reason was worth finding: three separate things in the fixture made a
+graded call impossible, so the Monday piece could only ever skip.
+
+| What was wrong | What it broke |
+|---|---|
+| The box score is a real DAL-PHI fixture with only the club abbreviations renamed, so it was full of real players the fixture board has never heard of. `_boardRowFor` matches a box-score line to a board row on the normalized name and the club. | Not one line found a row. `scoredByKey` came back empty for every game, so `_vindication` had nothing to grade the frozen projections against and the story half had no actual points either. `renameAthletes` now maps both sides onto each club's five pool players by role, and the rest onto names the board does not carry, because a real box score lists those too. |
+| Every game was spread 3, total 46. The consensus board is a flat per-game share and the Vegas board prices the week's environment. | An identical environment in every game made the two boards identical to the tenth of a point, so nothing could clear the "called it" gate. `LINES` now gives the slate one shootout, one rock fight and a range between. |
+| The pool was spaced far enough apart that no shift the market could produce moved a player four places inside his position, which is half the gate. | Same result from the other side. The pool is packed now, still without ties. |
+| The shootout was between the two top-projected clubs. | The top-ranked quarterback has nowhere to climb, so the high-total games produced no calls and the low-total ones produced only hits. The lower clubs get the shootout now, which is what makes the board half take a loss as well as a win. |
+
+That fixture's Week 1 Monday now grades 3 board calls (2 hits, 1 miss) and
+11 story calls across 13 stories (7 hits, 4 misses), ranks them into one
+list that mixes both, collapses a back called by four stories into one row,
+writes all four sections including the misses, and passes the fact check.
+Alan Quarter lands on it twice over, as a board win and a story miss: the
+numbers said he would fall short of his ranking and a column said start him,
+and the board was right. That is the piece doing its job.
+
+**Tests.** `tools/test-newsroom.mjs` (298, up 33): `weekPublishedCalls`
 against a fake D1, including that it must NOT filter on `outcome`; the
 grader on both directions, the push band and the two ways a call is not
 gradable; the story record beside the board's with neither contaminating the
 other; the combined rate excluding pushes; the single ranked list across
-both kinds; a story win naming its story, analyst, game and numbers; a fade
-counted as the win it is; mixed misses; the per-story and per-analyst
-breakouts; a week that runs on the stories alone with no frozen board
-anywhere; the misses section earned by a story miss; both skip reasons; a
-call with no consensus number and one with no box score, neither guessed at;
-a story win leading the piece with the writer told it is a story call; and
-the analysts allowed through the fact check. `tools/test-dry-run.mjs` (96)
-serves the new query and checks the scorecard reaches the ledger and that a
-skip names what it looked at in both halves.
+both kinds; the per-player collapse, both for one player called by three
+stories and for one the board and a story were both right about; a story win
+naming its story, analyst, game and numbers; a fade counted as the win it
+is; mixed misses; the per-story and per-analyst breakouts; a week that runs
+on the stories alone with no frozen board anywhere; the misses section
+earned by a story miss; both skip reasons; a call with no consensus number
+and one with no box score, neither guessed at; a story win leading the piece
+with the writer told it is a story call; and the analysts allowed through
+the fact check.
 
-**Known gap.** The dry run's fixture box scores do not share keys with its
-board, so neither half produces a graded call there and the Week 1 scorecard
-skips `nothing_landed` with `boardCalls: 0`. That predates this work (the
-board half was already producing zero calls) and is a fixture limitation,
-not a code path: the grading itself is covered by the unit tests above, with
-explicit box scores and consensus numbers. Giving the dry-run fixture
-overlapping names would let it cover the whole Monday end to end.
+`tools/test-dry-run.mjs` (110, up 15) asserts the Monday as a PUBLISHED
+piece rather than an allowed skip, which is the point of the fixture work: a
+fixture that can only ever skip cannot tell you the Monday works. It checks
+both halves graded and each took a loss as well as a win, the combined
+record, the mixed and margin-ordered win list, the source and numbers on
+every row, one row per player with the repeats named, mixed misses, the
+per-story and per-analyst breakouts, the biggest win leading, all four
+sections written with the misses among them, the DFS lens off the same
+packet, and the fact check clean. Removing the collapse, disabling the story
+half or blinding the board half each fails it.

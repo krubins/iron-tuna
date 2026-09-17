@@ -26,31 +26,83 @@ const stub = () => { throw new Error('not needed'); };
 // ── the fixture season: twelve clubs, two weeks, one Monday game ───────────
 const ET = (y, m, d, h, mi) => { const g = Date.UTC(y, m - 1, d, h + 5, mi || 0); return g - (etOffsetHours(g) + 5) * 3600000; };
 const TEAMS = ['AAA', 'BBB', 'CCC', 'DDD', 'EEE', 'FFF', 'GGG', 'HHH', 'III', 'JJJ', 'KKK', 'LLL'];
-const g = (id, week, y, m, d, h, mi, away, home, espnId) => ({ id, espnId: espnId || null, type: 'REG', week, kickoff: ET(y, m, d, h, mi), away, home, homeScore: null, awayScore: null, spread: 3, total: 46, status: null, src: 'f' });
+// THE LINES VARY, BECAUSE THE MARKET IS WHAT MAKES IRON TUNA DISAGREE.
+// Every fixture game used to be spread 3, total 46. The consensus board is a
+// flat per-game share of the season line and the Vegas board prices the
+// week's environment, so an identical environment in every game made the two
+// boards identical to the tenth of a point: no player ever cleared the
+// "called it" gate (2 points AND 4 places), `_vindication` graded nothing,
+// and the Monday scorecard could never cover its board half. A slate with
+// one shootout, one rock fight and a range in between is both what a real
+// week looks like and what gives the two boards something to disagree about.
+const LINES = [{ total: 61, spread: -13 }, { total: 33, spread: 2 }, { total: 54, spread: -6 }, { total: 36, spread: 10 }, { total: 49, spread: -14 }, { total: 43, spread: 3 }];
+const g = (id, week, y, m, d, h, mi, away, home, espnId, slot) => {
+  const L = LINES[(slot != null ? slot : 0) % LINES.length];
+  return { id, espnId: espnId || null, type: 'REG', week, kickoff: ET(y, m, d, h, mi), away, home, homeScore: null, awayScore: null, spread: L.spread, total: L.total, status: null, src: 'f' };
+};
 const GAMES = [
-  g('w1-thu', 1, 2026, 9, 10, 20, 20, 'AAA', 'BBB', 'e-thu'), g('w1-e1', 1, 2026, 9, 13, 13, 0, 'CCC', 'DDD', 'e-1'), g('w1-e2', 1, 2026, 9, 13, 13, 0, 'EEE', 'FFF', 'e-2'),
-  g('w1-late', 1, 2026, 9, 13, 16, 25, 'GGG', 'HHH', 'e-3'), g('w1-snf', 1, 2026, 9, 13, 20, 20, 'III', 'JJJ', 'e-4'), g('w1-mnf', 1, 2026, 9, 14, 20, 15, 'KKK', 'LLL', 'e-5'),
-  g('w2-thu', 2, 2026, 9, 17, 20, 15, 'BBB', 'CCC', 'e-6'), g('w2-e1', 2, 2026, 9, 20, 13, 0, 'DDD', 'EEE', 'e-7'), g('w2-e2', 2, 2026, 9, 20, 13, 0, 'FFF', 'GGG', 'e-8'), g('w2-late', 2, 2026, 9, 20, 16, 25, 'HHH', 'III', 'e-9'), g('w2-snf', 2, 2026, 9, 20, 20, 20, 'JJJ', 'KKK', 'e-10'), g('w2-mnf', 2, 2026, 9, 21, 20, 15, 'LLL', 'AAA', 'e-11'),
-  g('w3-e1', 3, 2026, 9, 27, 13, 0, 'AAA', 'CCC'), g('w3-e2', 3, 2026, 9, 27, 13, 0, 'BBB', 'DDD'), g('w3-mnf', 3, 2026, 9, 28, 20, 15, 'EEE', 'FFF')
+  // The shootout is a game between two of the LOWER-projected clubs and the
+  // rock fights involve the higher ones, so the market pushes a cheap player
+  // up the board and an expensive one down: the "called it" gate wants four
+  // places of movement, and the top-ranked club's quarterback has nowhere to
+  // climb. It is also what makes the board half produce both a hit and a
+  // miss on one Sunday rather than only hits.
+  g('w1-thu', 1, 2026, 9, 10, 20, 20, 'AAA', 'BBB', 'e-thu', 3), g('w1-e1', 1, 2026, 9, 13, 13, 0, 'CCC', 'DDD', 'e-1', 1), g('w1-e2', 1, 2026, 9, 13, 13, 0, 'EEE', 'FFF', 'e-2', 5),
+  g('w1-late', 1, 2026, 9, 13, 16, 25, 'GGG', 'HHH', 'e-3', 2), g('w1-snf', 1, 2026, 9, 13, 20, 20, 'III', 'JJJ', 'e-4', 0), g('w1-mnf', 1, 2026, 9, 14, 20, 15, 'KKK', 'LLL', 'e-5', 4),
+  g('w2-thu', 2, 2026, 9, 17, 20, 15, 'BBB', 'CCC', 'e-6', 2), g('w2-e1', 2, 2026, 9, 20, 13, 0, 'DDD', 'EEE', 'e-7', 0), g('w2-e2', 2, 2026, 9, 20, 13, 0, 'FFF', 'GGG', 'e-8', 4), g('w2-late', 2, 2026, 9, 20, 16, 25, 'HHH', 'III', 'e-9', 1), g('w2-snf', 2, 2026, 9, 20, 20, 20, 'JJJ', 'KKK', 'e-10', 3), g('w2-mnf', 2, 2026, 9, 21, 20, 15, 'LLL', 'AAA', 'e-11', 5),
+  g('w3-e1', 3, 2026, 9, 27, 13, 0, 'AAA', 'CCC', null, 0), g('w3-e2', 3, 2026, 9, 27, 13, 0, 'BBB', 'DDD', null, 2), g('w3-mnf', 3, 2026, 9, 28, 20, 15, 'EEE', 'FFF', null, 4)
 ];
-for (let w = 4; w <= 18; w++) for (let i = 0; i < TEAMS.length; i += 2) GAMES.push(g('w' + w + '-' + i, w, 2026, 9, 27 + (w - 3) * 7, 13, 0, TEAMS[i], TEAMS[i + 1]));
+for (let w = 4; w <= 18; w++) for (let i = 0; i < TEAMS.length; i += 2) GAMES.push(g('w' + w + '-' + i, w, 2026, 9, 27 + (w - 3) * 7, 13, 0, TEAMS[i], TEAMS[i + 1], null, (w + i) % 6));
 // A game is final three and a half hours after kickoff, as the feed would say.
 const scheduleAt = now => ({ season: 2026, games: GAMES.map(x => ({ ...x, status: now >= x.kickoff + 3.5 * 3600000 ? 'final' : now >= x.kickoff ? 'in' : null, homeScore: now >= x.kickoff ? 24 : null, awayScore: now >= x.kickoff ? 20 : null })) });
-// The pool: a QB, RB, two WR and a TE per club, priced so the ranks are unambiguous.
+// The pool: a QB, RB, two WR and a TE per club, ranked without ties but
+// PACKED, the way a real board is packed. The clubs used to be spaced far
+// enough apart that no shift the market could produce moved a player four
+// places inside his position, which is half the "called it" gate (2 points
+// AND 4 places); with nothing ever clearing it, `_vindication` graded no
+// calls and the Monday scorecard's board half was always empty. Tight
+// spacing plus a varied slate is what lets the two boards disagree.
 const FIRST = ['Alan', 'Ben', 'Cal', 'Dan', 'Eli', 'Finn', 'Gus', 'Hal', 'Ivan', 'Jon', 'Kai', 'Lou'];
 const POOL = [];
 TEAMS.forEach((t, i) => {
   const f = FIRST[i];
-  POOL.push({ name: f + ' Quarter', position: 'QB', team: t, projectedStats: { passYd: 4200 - i * 80, passTD: 30 - i, passInt: 10, rushYd: 200, rushTD: 2 } });
-  POOL.push({ name: f + ' Runner', position: 'RB', team: t, projectedStats: { rushYd: 1200 - i * 50, rushTD: 9 - (i % 4), rec: 40 - i, recYd: 320, recTD: 1, fumLost: 1 } });
-  POOL.push({ name: f + ' Wideout', position: 'WR', team: t, projectedStats: { rec: 90 - i * 3, recYd: 1250 - i * 60, recTD: 8 - (i % 3), rushYd: 20 } });
-  POOL.push({ name: f + ' Second', position: 'WR', team: t, projectedStats: { rec: 60 - i * 2, recYd: 800 - i * 40, recTD: 5, rushYd: 0 } });
-  POOL.push({ name: f + ' Tight', position: 'TE', team: t, projectedStats: { rec: 55 - i * 2, recYd: 620 - i * 30, recTD: 5 - (i % 2) } });
+  POOL.push({ name: f + ' Quarter', position: 'QB', team: t, projectedStats: { passYd: 4200 - i * 18, passTD: 30 - (i % 5), passInt: 10, rushYd: 200, rushTD: 2 } });
+  POOL.push({ name: f + ' Runner', position: 'RB', team: t, projectedStats: { rushYd: 1200 - i * 11, rushTD: 9 - (i % 4), rec: 40 - (i % 6), recYd: 320, recTD: 1, fumLost: 1 } });
+  POOL.push({ name: f + ' Wideout', position: 'WR', team: t, projectedStats: { rec: 90 - (i % 5), recYd: 1250 - i * 13, recTD: 8 - (i % 3), rushYd: 20 } });
+  POOL.push({ name: f + ' Second', position: 'WR', team: t, projectedStats: { rec: 60 - (i % 4), recYd: 800 - i * 9, recTD: 5, rushYd: 0 } });
+  POOL.push({ name: f + ' Tight', position: 'TE', team: t, projectedStats: { rec: 55 - (i % 3), recYd: 620 - i * 7, recTD: 5 - (i % 2) } });
 });
 const KEY = p => _oddsNorm(p.name) + '|' + p.position;
 const DEPTH = { teams: Object.fromEntries(TEAMS.map((t, i) => [t, { team: t, offense: { QB: [FIRST[i] + ' Quarter'], RB: [FIRST[i] + ' Runner', FIRST[i] + ' Backup'], WR: [FIRST[i] + ' Wideout', FIRST[i] + ' Second'], TE: [FIRST[i] + ' Tight'] } }])), asOf: ET(2026, 9, 10, 6, 0) };
-// A box score for any final game: the fixture summary with the clubs renamed.
+// A box score for any final game: the fixture summary with the clubs AND the
+// athletes renamed onto this season's pool.
+//
+// The fixture is a real DAL-PHI box score, and renaming only the club
+// abbreviations left it full of real players the fixture board has never
+// heard of. `_boardRowFor` matches a box-score line to a board row on the
+// normalized name and the club, so not one line found a row: `scoredByKey`
+// came back empty for every game, `_vindication` had nothing to grade its
+// frozen projections against, and the Monday scorecard skipped every run
+// with no call on the record from either half. A dry run that cannot grade
+// a call cannot cover the Monday piece at all.
+//
+// The two sides map onto the five pool players of each club, by role, and
+// the rest onto names the board does not carry: a real box score lists
+// players who are not on the board either, and the pipeline has to keep
+// stepping over them.
 const RAW = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/espn-summary-2025-w1-dal-phi.json'), 'utf8'));
+const AWAY_ROLES = { 'Dak Prescott': 'Quarter', 'Javonte Williams': 'Runner', 'CeeDee Lamb': 'Wideout', 'George Pickens': 'Second', 'Jake Ferguson': 'Tight',
+                     'Miles Sanders': 'Backup', 'KaVontae Turpin': 'Third', 'Jalen Tolbert': 'Fourth', 'Brevyn Spann-Ford': 'Fifth', 'Luke Schoonmaker': 'Sixth' };
+const HOME_ROLES = { 'Jalen Hurts': 'Quarter', 'Saquon Barkley': 'Runner', 'A.J. Brown': 'Wideout', 'DeVonta Smith': 'Second', 'Dallas Goedert': 'Tight',
+                     'Will Shipley': 'Backup', 'AJ Dillon': 'Third', 'Jahan Dotson': 'Fourth', 'Kylen Granson': 'Fifth', 'Quinyon Mitchell': 'Sixth' };
+const firstOf = (team) => FIRST[TEAMS.indexOf(team)] || team;
+// Applied to the JSON text, so the athlete's name is renamed wherever ESPN
+// repeats it and `normalizeGameSummary` does its own name work on the result.
+function renameAthletes(text, away, home) {
+  for (const [real, role] of Object.entries(AWAY_ROLES)) text = text.split(JSON.stringify(real)).join(JSON.stringify(firstOf(away) + ' ' + role));
+  for (const [real, role] of Object.entries(HOME_ROLES)) text = text.split(JSON.stringify(real)).join(JSON.stringify(firstOf(home) + ' ' + role));
+  return text;
+}
 
 // ── the fake D1 ────────────────────────────────────────────────────────────
 // A few tables in memory, answered by matching the SQL. Enough for the
@@ -149,12 +201,22 @@ function fakeModel(body) {
     // real _lensShape asked it for.
     whatScored: ['player', 'position', 'team', 'points', 'line', 'why'], usageBehindIt: ['player', 'position', 'team', 'targets', 'carries', 'share', 'why'],
     nextWeekSignals: ['player', 'position', 'team', 'signal', 'evidence', 'why'], components: ['headline', 'player', 'why'],
-    biggestWins: ['player', 'position', 'team', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'], whatWeMissed: ['player', 'position', 'team', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'] };
+    // The Monday scorecard's rows carry `source` (the packet's own word for
+    // which half made the call) and `calledIn` (the frozen board, or the
+    // story that recommended him), so the fake writer answers those too.
+    biggestWins: ['player', 'position', 'team', 'source', 'calledIn', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'],
+    whatWeMissed: ['player', 'position', 'team', 'source', 'calledIn', 'game', 'weSaid', 'consensusSaid', 'heScored', 'why'] };
   const shape = /SHAPE[^\n]*\n(\{[^\n]*\})/.exec(user)[1];
   const S = JSON.parse(shape);
   const lensKeys = (lens) => Object.keys(S[lens] || {});
   const fill = (lens) => Object.fromEntries(lensKeys(lens).map((k, i) => [k, objSecs[k] ? [{ player: nm(i), position: 'WR', team: 'AAA', why: sentence(i), salary: nu(i), faabPct: '10', holdFor: 'three weeks', from: 'WR12', to: 'WR9', label: 'SIGNAL', game: 'AAA at BBB', players: nm(i), opponent: 'BBB', rank: 3, projection: nu(i), value: nu(i + 1),
-    headline: nm(i) + ' carries ' + nu(i) + ' into the week', points: nu(i), line: nu(i) + ' yards', targets: 7, carries: 12, share: nu(i), signal: 'usage up', evidence: nu(i) }] : [sentence(i), nm(i + 1) + ' is the pivot at ' + nu(i + 1) + '.']]));
+    headline: nm(i) + ' carries ' + nu(i) + ' into the week', points: nu(i), line: nu(i) + ' yards', targets: 7, carries: 12, share: nu(i), signal: 'usage up', evidence: nu(i),
+    // Read off the packet's own win, the way the writer is told to: the
+    // scorecard's rows say which half made the call and where.
+    ...(packet.biggestWins && packet.biggestWins[i % packet.biggestWins.length]
+      ? { source: packet.biggestWins[i % packet.biggestWins.length].source,
+          calledIn: packet.biggestWins[i % packet.biggestWins.length].source === 'story' ? packet.biggestWins[i % packet.biggestWins.length].story : 'the frozen board' }
+      : {}) }] : [sentence(i), nm(i + 1) + ' is the pivot at ' + nu(i + 1) + '.']]));
   const out = { headline: nm(0) + ' is the story of the week', dek: 'What ' + nm(0) + ' told us about next week.', weekly: fill('weekly'), calls: [{ player: nm(0), direction: 'start', recommendation: 'start him', rank: null, confidence: 'HIGH', rationale: nu(0) + ' says so', evidence: [nu(0)] }], rivalryLine: null };
   if (S.dfs) out.dfs = fill('dfs');
   if (packet.rivalry) { const line = 'Brooks has ' + packet.rivalry.player + ' at ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; Vega, reading the market, has him ' + packet.rivalry.position + packet.rivalry.vega.rank + '.'; out.rivalryLine = line; out.weekly[lensKeys('weekly')[0]].push(line); }
@@ -190,7 +252,7 @@ const nameIndex = H._oddsProjectionIndex();
 function seedSummaries() {
   for (const gm of GAMES) {
     if (!gm.espnId) continue;
-    const raw = JSON.parse(JSON.stringify(RAW).replace(/"DAL"/g, '"' + gm.away + '"').replace(/"PHI"/g, '"' + gm.home + '"'));
+    const raw = JSON.parse(renameAthletes(JSON.stringify(RAW).replace(/"DAL"/g, '"' + gm.away + '"').replace(/"PHI"/g, '"' + gm.home + '"'), gm.away, gm.home));
     const norm = H.normalizeGameSummary(raw, nameIndex);
     norm.final = true; norm.home.team = gm.home; norm.away.team = gm.away; norm.gameId = gm.id; norm.week = gm.week;
     db.T.summaries[gm.espnId] = { payload: JSON.stringify(norm), final: 1 };
@@ -227,27 +289,39 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('the 11:45 scratch, before the intel slot, scored as breaking news and produced a Breaking piece; the 12:45 one refreshed Last-Minute Intel instead of a second story', scans.length === 2 && scans[0].handled.via === 'breaking' && scans[1].handled.via === 'last-minute-intel', JSON.stringify(scans.map(s => [s.at, s.handled && s.handled.via])));
   ok('below-threshold changes are logged and produce nothing', db.T.news_events.length >= 2 && db.T.news_events.every(e => e.score < 60 ? !e.handled : true));
   ok('What Sunday Taught Us published at 7:30 PM with the finals it had and updated as the late and night games went final: three versions, one slug', at('what-sunday-taught-us', 1)[0] && at('what-sunday-taught-us', 1)[0].at === 'Sun 19:30' && at('what-sunday-taught-us', 1).length === 3 && P.filter(r => r.kind === 'what-sunday-taught-us').every(r => r.slug === P.find(x => x.kind === 'what-sunday-taught-us').slug), JSON.stringify(at('what-sunday-taught-us', 1)));
-  ok('the MNF preview and What Tuna Got Right ran Monday 6:00, the preview about the Monday game and the scorecard about Week 1', at('mnf-preview', 1)[0] && at('mnf-preview', 1)[0].at === 'Mon 6:00' && at('what-tuna-got-right', 1)[0] && at('what-tuna-got-right', 1)[0].at === 'Mon 6:00' && ['published', 'skipped'].includes(at('what-tuna-got-right', 1)[0].status), JSON.stringify([at('mnf-preview', 1), at('what-tuna-got-right', 1)]));
+  ok('the MNF preview and What Tuna Got Right ran Monday 6:00, the preview about the Monday game and the scorecard about Week 1', at('mnf-preview', 1)[0] && at('mnf-preview', 1)[0].at === 'Mon 6:00' && at('what-tuna-got-right', 1)[0] && at('what-tuna-got-right', 1)[0].at === 'Mon 6:00' && at('what-tuna-got-right', 1)[0].status === 'published', JSON.stringify([at('mnf-preview', 1), at('what-tuna-got-right', 1)]));
   ok('no early rankings ran, and no Week 2 piece was written on Monday morning', !P.some(r => r.kind === 'early-rankings') && !timeline.some(x => x.at === 'Mon 6:00' && x.week === 2));
   {
     const sc = db.T.content_pieces.filter(r => r.kind === 'what-tuna-got-right' && r.week === 1).pop();
     const b = sc ? JSON.parse(sc.brief) : null;
-    ok('the scorecard was written from the frozen boards the recaps graded, or skipped for a reason the packet names', !!b && (sc.status === 'published' ? (b.record && b.record.games >= 1 && Array.isArray(b.biggestWins) && b.biggestWins.length >= 1 && b.biggestWins.every(w => w.game && Number.isFinite(w.margin) && (w.source === 'board' || w.source === 'story'))) : ['no_record', 'nothing_landed', 'writer_declined'].includes(b.reason)), JSON.stringify(sc && { status: sc.status, reason: b && b.reason, record: b && b.record }));
-    // The wiring, whether or not this fixture's numbers produce a win: the
-    // scorecard reached the calls ledger and read the week's published
-    // recommendations, and a skip says what it looked at in both halves.
-    ok('the scorecard reads the week\'s published recommendations, and a skip names what it looked at in both halves',
-      (() => {
-        if (!b) return false;
-        if (sc.status === 'published') return b.record.storyCalls != null;
-        // The ledger had week 1 positions on it by Monday morning and the
-        // scorecard read them: `storyRows` is what the query returned, after
-        // one-per-player-per-story dedupe. It cannot be compared to the table
-        // at the end of the run, which also holds calls filed after this tick.
-        const filed = db.T.analyst_calls.filter(c => c.week === 1 && c.kind !== 'rivalry-column' && !['hold', 'stash'].includes(c.direction)).length;
-        return !!b.looked && b.looked.storyRows > 0 && b.looked.storyRows <= filed && b.looked.games != null && b.looked.boardCalls != null && b.looked.ungraded != null;
-      })(),
-      JSON.stringify(b && (b.looked || { storyCalls: b.record && b.record.storyCalls })));
+    ok('the scorecard was written from the frozen boards the recaps graded', !!b && sc.status === 'published' && b.record && b.record.games >= 1 && Array.isArray(b.biggestWins) && b.biggestWins.length >= 1 && b.biggestWins.every(w => w.game && Number.isFinite(w.margin) && (w.source === 'board' || w.source === 'story')), JSON.stringify(sc && { status: sc.status, reason: b && b.reason, record: b && b.record }));
+    // THE WHOLE MONDAY, end to end: the frozen boards graded against the box
+    // scores, the week's published recommendations graded against the same
+    // numbers, both halves ranked into one list, and the piece written from
+    // it. Asserted as a PUBLISHED piece, not as an allowed skip: a fixture
+    // that can only ever skip cannot tell you the Monday works.
+    const body = sc && sc.body ? JSON.parse(sc.body) : null;
+    ok('the Monday scorecard published: both halves of the week had something on the record', sc.status === 'published' && !!b.record, JSON.stringify(sc && { status: sc.status, reason: b && b.reason, looked: b && b.looked }));
+    ok('the BOARD half graded the frozen projections, and took a loss as well as a win', b.record.calls >= 1 && b.record.hits >= 1 && b.record.misses >= 1 && b.record.games >= 1 && b.record.hitRate > 0 && b.record.hitRate < 100, JSON.stringify(b.record));
+    ok('the STORY half graded the week\'s published recommendations, across more than one story, and took a loss as well as a win', b.record.storyCalls >= 1 && b.record.storyHits >= 1 && b.record.storyMisses >= 1 && b.record.stories > 1, JSON.stringify(b.record));
+    ok('the combined record counts both and its rate is neither half\'s', b.record.totalCalls === b.record.calls + b.record.storyCalls && b.record.totalHits === b.record.hits + b.record.storyHits, JSON.stringify(b.record));
+    ok('the biggest wins mix the two: the board\'s own calls and the desk\'s published advice, in one list ranked on margin',
+      b.biggestWins.some(w => w.source === 'board') && b.biggestWins.some(w => w.source === 'story')
+      && b.biggestWins.every((w, i) => i === 0 || Math.abs(b.biggestWins[i - 1].margin) >= Math.abs(w.margin)),
+      JSON.stringify(b.biggestWins.map(w => w.source + '/' + w.name + '/' + w.margin)));
+    ok('every win names its source, the game its player played, and the numbers that settle it', b.biggestWins.every(w => (w.source === 'board' || w.source === 'story') && w.game && Number.isFinite(w.margin) && Number.isFinite(w.actual)));
+    ok('a story win names the story it was called in and the analyst who called it', b.biggestWins.filter(w => w.source === 'story').every(w => w.story && w.analystName && w.direction));
+    ok('ONE ROW PER PLAYER: four stories on the same back is one win with four pieces of evidence, not four wins',
+      new Set(b.biggestWins.map(w => w.name)).size === b.biggestWins.length
+      && b.biggestWins.some(w => w.callCount > 1 && w.alsoCalledIn.length >= 1),
+      JSON.stringify(b.biggestWins.map(w => w.name + ' x' + w.callCount)));
+    ok('the misses are on the record too, and they mix the two the same way', b.misses.length >= 2 && b.misses.some(m => m.source === 'story') && b.misses.some(m => m.source === 'board'), JSON.stringify(b.misses.map(m => m.source + '/' + m.name)));
+    ok('the record is broken out by story and by analyst', b.byStory.length > 1 && b.byAnalyst.length > 1 && b.byAnalyst.every(a => a.calls >= a.hits) && b.byStory.every(x => x.calls >= 1), JSON.stringify(b.byAnalyst.map(a => a.analyst + ':' + a.hits + '/' + a.calls)));
+    ok('the biggest win of the week leads the piece', !!b.headlineWin && b.headlineWin.name === b.biggestWins[0].name);
+    ok('and the piece was written with all four sections, the misses among them', !!body && ['theRecord', 'biggestWins', 'whatWeMissed', 'whatToDo'].every(k => Array.isArray(body.weekly[k]) && body.weekly[k].length), JSON.stringify(body && Object.keys(body.weekly)));
+    ok('the written rows say which half made each call, and where it was called', !!body && body.weekly.biggestWins.every(r => (r.source === 'board' || r.source === 'story') && r.calledIn), JSON.stringify(body && body.weekly.biggestWins.map(r => r.source + '/' + r.calledIn)));
+    ok('the DFS lens got the record and the wins off the same packet', !!body && !!body.dfs && Array.isArray(body.dfs.theRecord) && Array.isArray(body.dfs.biggestWins));
+    ok('it passed the fact check: a scorecard that names a player the packet does not carry is not publishable', JSON.parse(sc.violations || '[]').length === 0, sc.violations);
     ok('it covers the games played through Sunday and names the Monday game as not covered', !b || !b.record || (b.notCovered.some(n => n.day === 'Mon') && b.gamesCovered.every(g => g.day !== 'Mon')), JSON.stringify(b && b.notCovered));
     ok('its BOARD wins are the recaps\' own hits, in the recaps\' own numbers', !b || !b.record || b.biggestWins.filter(w => w.source === 'board').every(w => { const r = db.T.content_pieces.find(x => x.kind === 'game-recap' && x.game_id === w.gameId); if (!r) return false; const c = JSON.parse(r.brief).calledIt; return c.hits.some(h => h.name === w.name && h.actual === w.actual && h.margin === w.margin); }));
   }
