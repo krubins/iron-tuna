@@ -264,11 +264,25 @@ Two things this does **not** settle, for the owner:
    unreliable.
 
 The lookup itself is a network job (`node tools/build-action-shots.mjs`, with
-`NODE_USE_ENV_PROXY=1` behind a proxy) and is **not run in CI**: the CI gate
-only checks that `it-action.js` matches the JSON it was generated from. The
-lookup was written in a session whose egress policy blocked both Wikimedia
-hosts, so **as of 2026-09-16 the JSON is empty and every story still runs
-headshots**. The first run on a machine with network fills it.
+`NODE_USE_ENV_PROXY=1` behind a proxy) and is **not run by the CI checks**:
+that gate only verifies `it-action.js` matches the JSON it was generated from.
+
+**Who runs it, and why it is a workflow.** The tool was written in a Claude
+Code session whose egress policy refuses `commons.wikimedia.org` and
+`www.wikidata.org` outright (403 to CONNECT), so it could be written there but
+never run there — it shipped in #251 with an empty lookup and every story fell
+back to headshots. `.github/workflows/action-shots.yml` is the machine that
+can: a GitHub runner has ordinary outbound internet. It runs monthly and on
+demand, walks a few hundred players per run (the tool skips anyone already on
+file unless `--refresh`), and **opens a pull request rather than pushing** —
+what it changes is a thousand rows of third-party URLs and license strings,
+and a wrong row is a picture of the wrong man. The workflow runs
+`tools/test-story-art.mjs` before it proposes anything, so a file that fails
+the license or credit rules fails the run instead of reaching a branch.
+
+Until a run lands, the JSON is empty, every plate falls back to the headshot
+cutout, and nothing on the site breaks. That is the designed resting state,
+not an outage.
 
 ## 3. Attribution strings
 

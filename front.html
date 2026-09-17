@@ -159,6 +159,31 @@ img{max-width:100%}
    to do on this page, not a third button competing with the first two. */
 .hm-how-link{display:inline-block;margin-top:16px;font-size:13px;font-weight:600;color:#9fb1ae;border-bottom:1px solid rgba(159,177,174,.42);padding-bottom:1px}
 .hm-how-link:hover{color:#fff;border-bottom-color:#fff}
+/* ── the hero's picture ──────────────────────────────────────────────────
+   ONE column until there is a photograph to put beside the headline, so an
+   unfilled hero is exactly the hero this page had before rather than a
+   headline with an empty gutter next to it. `has-edge` is added by the
+   painter and is the only thing that opens the second column. */
+.hm-hero{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(26px,4vw,48px);align-items:center}
+.hm-hero.has-edge{grid-template-columns:minmax(0,1fr) minmax(0,330px)}
+/* The headline is capped at 19ch and the lede at 62ch, so neither reflows when
+   the column narrows — the picture arrives beside the copy, it does not move
+   it. Below 900px the picture goes under the buttons instead. */
+@media(max-width:900px){.hm-hero.has-edge{grid-template-columns:minmax(0,1fr)}
+  .hm-edge{max-width:380px}}
+.hm-edge{min-width:0}
+.hm-edge[hidden]{display:none}
+/* The shape is set here rather than in player-search.js: the plate fills
+   whatever box it is given, and this is the box. */
+.hm-edge .it-plate-shot{height:auto;aspect-ratio:4/3;border-radius:12px;background:rgba(255,255,255,.07);box-shadow:0 18px 44px rgba(0,0,0,.36)}
+.hm-edge .it-plate-shot i{font-size:28px;color:#7e918e}
+.hm-edge .it-art-credit{margin-top:9px;font-size:10.5px;line-height:1.4;color:#8b9b99}
+.hm-edge .it-art-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.he-meta{display:flex;flex-direction:column;gap:3px;margin-top:14px}
+.he-k{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--brand)}
+.he-name{font-size:18px;font-weight:800;line-height:1.2;color:#fff}
+.he-sub{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#9fb1ae}
+.he-gap{margin-top:4px;font-size:13px;line-height:1.45;color:#c6d2d0}
 
 /* ── shared section furniture ── */
 .hm-sec{padding-top:clamp(34px,4.6vw,56px)}
@@ -181,6 +206,18 @@ img{max-width:100%}
 .hm-read .k{display:block;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-dark)}
 .hm-read .h{display:block;margin-top:6px;font-size:16px;font-weight:800;line-height:1.25;color:var(--ink)}
 .hm-read .d{display:block;margin-top:5px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+/* The card's one reading is about one player, so it carries his face. The
+   column only exists once a picture is in it (`has-pic`, set by the painter),
+   because an empty 58px gutter beside three lines of type is worse than no
+   picture. A headshot here and never a game photograph: at this size the
+   photograph is unreadable, and it would owe a credit line longer than the
+   reading it sits beside. */
+.hm-read .pic{display:none}
+.hm-read.has-pic{display:grid;grid-template-columns:58px minmax(0,1fr);column-gap:13px;align-items:start}
+.hm-read.has-pic .pic{display:block;grid-column:1;grid-row:1/span 3}
+.hm-read.has-pic .k,.hm-read.has-pic .h,.hm-read.has-pic .d{grid-column:2}
+.hm-read .pic .it-plate-shot{height:auto;aspect-ratio:1/1;border-radius:8px;background:#e3eae8}
+.hm-read .pic .it-plate-shot i{font-size:15px}
 .hm-links{list-style:none;margin-top:18px;display:grid;gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .hm-links a{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);padding:11px 2px;font-size:14px;font-weight:700}
 .hm-links a span{font-size:12.5px;font-weight:400;color:var(--ink-3);text-align:right}
@@ -200,6 +237,12 @@ img{max-width:100%}
 .hm-table .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .hm-table .who b{display:block;font-size:14.5px;font-weight:700;line-height:1.2}
 .hm-table .who small{display:block;margin-top:2px;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+/* player-search.js puts the player's face at the front of the cell it finds
+   him in. The shared default is 34px, which is a marker in a long table; this
+   is a five-row board where the player IS the row, so his picture is worth
+   the width. */
+.hm-table .who.it-player-cell{display:flex;align-items:center;gap:12px}
+.hm-table .who .it-player-face{width:48px;height:48px;min-width:48px;border-radius:9px;margin:0}
 /* Iron Tuna's own number is the one the reader is meant to act on, so it is the
    only column with weight on it. */
 .hm-table .mine{font-weight:800;color:var(--ink)}
@@ -214,6 +257,12 @@ img{max-width:100%}
 .hm-read-card:hover{border-color:var(--brand-line)}
 .hm-read-card .t{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--brand-dark)}
 .hm-read-card h3{margin-top:8px;font-size:16px;line-height:1.3;font-weight:700}
+/* The faces the desk's own findings name, on their own row ABOVE the headline
+   rather than inline at the front of it — set inline they push the first line
+   of type around them and the headline reads as though it starts mid-sentence.
+   Same treatment the story cards elsewhere on the site use. */
+.hm-read-card h3 .it-story-focus{display:flex;margin:0 0 9px}
+.hm-read-card h3 .it-player-face{width:46px;height:46px;min-width:46px;border-radius:9px}
 .hm-read-card p{margin-top:7px;font-size:13px;line-height:1.45;color:var(--ink-2)}
 .hm-read-card .m{margin-top:auto;padding-top:12px;font-size:11.5px;color:var(--ink-3)}
 
@@ -245,6 +294,10 @@ img{max-width:100%}
   .hm-cta{gap:10px}
   .hm-btn{flex:1 1 100%;padding:13px 16px}
   .hm-table th,.hm-table td{padding:10px}
+  /* The board is a sideways scroller on a phone and the player column is the
+     one that has to stay narrow, so the face goes back to a marker. */
+  .hm-table .who .it-player-face{width:34px;height:34px;min-width:34px;border-radius:7px}
+  .hm-table .who.it-player-cell{gap:9px}
 }
 
 /* Visually hidden, still read aloud: the two product cards need a heading of
@@ -368,7 +421,8 @@ img{max-width:100%}
      revealed only once /api/season answers with a real week. A dateline that
      says it is loading is not a dateline. -->
 <section class="hero-band" id="heroBand">
-  <div class="wrap">
+  <div class="wrap hm-hero" id="hmHero">
+   <div class="hm-hero-copy">
     <p class="hm-clock" id="hmClock" hidden></p>
     <h1 class="hm-h1">The betting market knows more. <em>Put it in your lineup.</em></h1>
     <p class="hm-lede">Iron Tuna translates sportsbook lines, player props and market movement into weekly rankings, trade values and DFS lineups.</p>
@@ -380,6 +434,36 @@ img{max-width:100%}
          than on /faq: the method is explained here, so the reader never leaves
          the page to find out what the numbers are. -->
     <a class="hm-how-link" href="#how">See How It Works</a>
+   </div>
+   <!-- ── the hero's picture ────────────────────────────────────────────────
+        ONE player, photographed, because a page whose whole argument is about
+        football players had no picture of one on it. Who it is comes off a
+        feed and is captioned with what that feed says: the man the desk is
+        writing about today, or — when the desk names nobody — the widest
+        market disagreement on this week's board.
+
+        It obeys the same rule as every other band here. It is written hidden,
+        it is revealed only with a real player and a real line about him, and
+        the hero is a single column until it fills, so an empty feed leaves no
+        gutter beside the headline rather than a frame with nothing in it.
+
+        When it falls back to the board it skips the player the Fantasy card
+        already recommends: the same man pictured twice above the fold is the
+        page saying one thing and looking like it said two. A desk subject is
+        not filtered that way — the desk writing about him today is a second
+        fact about him, not a repeat of the first.
+
+        An <aside> rather than a <section> on purpose — the page's five
+        sections are its outline and this is not a sixth. -->
+   <aside class="hm-edge" id="heroEdge" hidden>
+     <div class="he-plate" id="heroEdgePlate"></div>
+     <div class="he-meta">
+       <span class="he-k" id="heroEdgeK"></span>
+       <b class="he-name" id="heroEdgeName"></b>
+       <span class="he-sub" id="heroEdgeSub"></span>
+       <span class="he-gap" id="heroEdgeGap"></span>
+     </div>
+   </aside>
   </div>
 </section>
 
@@ -424,6 +508,7 @@ img{max-width:100%}
         <h2>Fantasy This Week</h2>
         <p>Your league, re-priced off the betting market and restated at your own scoring.</p>
         <div class="hm-read" id="fnRead" hidden data-player-links>
+          <span class="pic" id="fnReadPic"></span>
           <span class="k" id="fnReadK"></span>
           <span class="h" id="fnReadH"></span>
           <span class="d" id="fnReadD"></span>
@@ -442,6 +527,7 @@ img{max-width:100%}
         <h2>DFS This Week</h2>
         <p>One slate, one set of lines, one cap &mdash; every salary read against market-implied points.</p>
         <div class="hm-read" id="dfRead" hidden data-player-links>
+          <span class="pic" id="dfReadPic"></span>
           <span class="k" id="dfReadK"></span>
           <span class="h" id="dfReadH"></span>
           <span class="d" id="dfReadD"></span>
@@ -563,6 +649,10 @@ img{max-width:100%}
 <script src="/it-season.js" defer></script>
 <!-- Player names in the painted bands link to their cards; deferred, and every
      call into it is guarded, so a band that paints first cannot throw. -->
+<!-- The game photographs the hero's picture prefers, before the lookup that
+     reads them; both deferred, so they run in this order. An empty map is not
+     an error — every plate falls back to the headshot cutout. -->
+<script src="/it-action.js" defer></script>
 <script src="/player-search.js" defer></script>
 <script>
 // ══ the homepage ═══════════════════════════════════════════════════════════
@@ -600,6 +690,67 @@ img{max-width:100%}
       .then(function (r) { return r.json(); })
       .then(function (j) { if (j && j.ok) then(j); })
       .catch(function () {});
+  }
+
+  // ── the hero's picture ───────────────────────────────────────────────────
+  // Who gets photographed, in order of what the page can actually say about
+  // him: the player the desk's newest piece is about, else the widest market
+  // disagreement on this week's board. The desk wins outright — it is a story
+  // somebody wrote today, where the board is a number — so a desk subject
+  // arriving late still replaces a market one that painted first.
+  //
+  // A name the player lookup does not carry paints nothing. That is the
+  // honest answer; the alternative is a frame around a stranger.
+  // The face on a card's one reading. Headshot only (`photo:false`): see the
+  // note on `.hm-read .pic`. Nothing paints for a name the lookup does not
+  // carry, and the column stays closed.
+  function readPic(boxId, readId, name) {
+    var PS = window.ITPlayerSearch;
+    if (!PS || !PS.resolve || !PS.plate) {
+      document.addEventListener('it-player-search-ready',
+        function () { readPic(boxId, readId, name); }, { once: true });
+      return;
+    }
+    var p = PS.resolve(name), box = $(boxId);
+    if (!p || !box) return;
+    var fig = PS.plate(p, { photo: false });
+    if (!fig) return;
+    box.innerHTML = '';
+    box.appendChild(fig);
+    $(readId).classList.add('has-pic');
+  }
+
+  var heroFrom = null;
+  function heroPaint(from, name, kicker, gap, href) {
+    if (heroFrom === 'desk' && from !== 'desk') return;
+    var PS = window.ITPlayerSearch;
+    // The lookup is deferred, so a feed that answers before it lands waits for
+    // it rather than giving up on the picture.
+    if (!PS || !PS.resolve || !PS.plate) {
+      document.addEventListener('it-player-search-ready',
+        function () { heroPaint(from, name, kicker, gap, href); }, { once: true });
+      return;
+    }
+    var p = PS.resolve(name), box = $('heroEdgePlate');
+    if (!p || !box) return;
+    var fig = PS.plate(p, { eager: true });
+    if (!fig) return;
+    box.innerHTML = '';
+    if (href) {
+      var a = document.createElement('a');
+      a.className = 'he-link';
+      a.href = href;
+      a.setAttribute('aria-label', p.n + ' — ' + kicker);
+      a.appendChild(fig);
+      box.appendChild(a);
+    } else box.appendChild(fig);
+    $('heroEdgeK').textContent = kicker;
+    $('heroEdgeName').textContent = p.n;
+    $('heroEdgeSub').textContent = p.p + (p.t ? ' · ' + p.t : '');
+    $('heroEdgeGap').textContent = gap || '';
+    show($('heroEdge'), true);
+    $('hmHero').classList.add('has-edge');
+    heroFrom = from;
   }
 
   // ── the hero's dateline ──────────────────────────────────────────────────
@@ -668,6 +819,19 @@ img{max-width:100%}
         + n1(card.consensusPoints) + '. Iron Tuna prices him at ' + n1(card.ironTunaPoints) + '.';
       show($('fnRead'), true);
       relink($('fnRead'));
+      readPic('fnReadPic', 'fnRead', card.name);
+    }
+
+    // The hero's fallback picture: the widest gap on the board, skipping the
+    // man the Fantasy card names so the top of the page never runs the same
+    // player twice. Only used if the desk has not named somebody.
+    for (var h = 0; h < all.length; h++) {
+      if (all[h] === card) continue;
+      heroPaint('edge', all[h].name, 'This week’s widest market gap',
+        'The market projects ' + n1(all[h].vegasPoints) + ' points against a consensus '
+        + n1(all[h].consensusPoints) + ' — ' + signed(all[h].delta.points) + ' on the week.',
+        '/vegas-edge');
+      break;
     }
 
     // Three to five players, and never the one the card already named.
@@ -705,6 +869,7 @@ img{max-width:100%}
       + n1(b.vegasPoints) + ' market-implied points — a Vegas Value Score of ' + b.vegasValueScore + '.';
     show($('dfRead'), true);
     relink($('dfRead'));
+    readPic('dfReadPic', 'dfRead', b.name);
   });
 
   // ── the desk's current pieces ────────────────────────────────────────────
@@ -718,9 +883,23 @@ img{max-width:100%}
     };
     var pieces = (j.pieces || []).filter(function (p) { return p && p.url && (p.headline || p.title); }).slice(0, 4);
     if (!pieces.length) return;
+    // Who a piece is about: the players its own findings name. The card is
+    // stamped with them and player-search.js draws their faces at the head of
+    // the headline, so the group reads as four stories about named people
+    // rather than four paragraphs. A piece with no findings is stamped with
+    // nothing and keeps the plain card it has always had.
+    var whoOf = function (p) {
+      var out = [];
+      (p.components || []).forEach(function (c) {
+        if (c && c.player && out.indexOf(c.player) < 0) out.push(c.player);
+      });
+      return out;
+    };
     $('readGrid').innerHTML = pieces.map(function (p) {
       var when = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + esc(p.week) : '');
-      return '<a class="hm-read-card" href="' + esc(p.url) + '">'
+      var who = whoOf(p);
+      return '<a class="hm-read-card" href="' + esc(p.url) + '"'
+        + (who.length ? ' data-player-focus="' + esc(who.slice(0, 3).join('|')) + '"' : '') + '>'
         + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
         + '<h3>' + esc(p.headline || p.title) + '</h3>'
         + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '')
@@ -728,6 +907,18 @@ img{max-width:100%}
         + '</a>';
     }).join('');
     show($('articles'), true);
+    // The faces on the cards just painted. player-search.js watches the
+    // document and would reach them on its own; calling it here means they
+    // arrive with the cards rather than a frame later.
+    try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('readGrid')); } catch (e) {}
+    // The hero's first choice: the newest piece that is about somebody.
+    for (var i = 0; i < pieces.length; i++) {
+      var who2 = whoOf(pieces[i]);
+      if (!who2.length) continue;
+      heroPaint('desk', who2[0], 'What the desk is on today',
+        pieces[i].headline || pieces[i].title, pieces[i].url);
+      break;
+    }
   });
 })();
 </script>

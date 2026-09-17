@@ -1,0 +1,125 @@
+name: Game photographs
+
+# Fills tools/nfl-action-shots.json — the openly licensed game photograph per
+# player that the story art and the homepage's hero picture prefer over a
+# headshot cutout — and regenerates it-action.js from it.
+#
+# WHY THIS IS A WORKFLOW RATHER THAN SOMETHING SOMEBODY RUNS.
+# The lookup talks to Wikidata and the Wikimedia Commons API. The Claude Code
+# sessions this repository is developed from run behind an egress policy that
+# refuses both hosts (403 to CONNECT), so the tool could be written there but
+# never run there: it shipped in #251 with an EMPTY lookup and every story fell
+# back to headshots. A GitHub runner has ordinary outbound internet, so this is
+# the machine that can actually do it.
+#
+# It is deliberately INCREMENTAL. tools/build-action-shots.mjs skips any player
+# already on file unless --refresh is passed, so each run picks up where the
+# last one stopped and the monthly schedule below walks the pool a few hundred
+# players at a time rather than opening one enormous pull request. It is also
+# deliberately POLITE: the tool pauses between calls and sends a User-Agent
+# naming the project and a contact address, which is what Wikimedia's API
+# etiquette asks for.
+#
+# Nothing here writes to main. The run opens a pull request, because what it
+# changes is a thousand rows of third-party URLs and license strings and that
+# is worth a human's eye before it is on the site.
+
+on:
+  schedule:
+    # 09:00 UTC on the 1st. Rosters change and Commons gains files; neither
+    # happens fast enough to want this more often than monthly.
+    - cron: '0 9 1 * *'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: How many players to look up this run (blank = 400)
+        required: false
+        type: string
+      only:
+        description: 'Comma-separated player slugs, e.g. josh-allen,bijan-robinson'
+        required: false
+        type: string
+      refresh:
+        description: Re-resolve players that already have a row
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: action-shots
+  cancel-in-progress: false
+
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    # The pause between calls is what makes this slow, and slow is the point.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Look up openly licensed game photographs
+        env:
+          INPUT_LIMIT: ${{ inputs.limit }}
+          INPUT_ONLY: ${{ inputs.only }}
+          INPUT_REFRESH: ${{ inputs.refresh }}
+        run: |
+          args=()
+          if [ -n "$INPUT_ONLY" ]; then
+            args+=(--only "$INPUT_ONLY")
+          else
+            args+=(--limit "${INPUT_LIMIT:-400}")
+          fi
+          if [ "$INPUT_REFRESH" = "true" ]; then args+=(--refresh); fi
+          echo "build-action-shots ${args[*]}"
+          node tools/build-action-shots.mjs "${args[@]}"
+
+      # The gate that matters: every photograph the run kept must carry a
+      # license the site may rely on and the credit that license requires. If
+      # the lookup ever admits a file that fails those rules, the run fails
+      # here and nothing is proposed.
+      - name: The credit under every photograph
+        run: node tools/test-story-art.mjs
+
+      - name: Open a pull request if anything changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- tools/nfl-action-shots.json it-action.js; then
+            echo "No new photographs; nothing to propose."
+            exit 0
+          fi
+          shots=$(node -e 'const r=require("./tools/nfl-action-shots.json");console.log(r.filter(x=>x.u).length+" of "+r.length)')
+          branch="bot/action-shots-$(date -u +%Y%m%d-%H%M)"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add tools/nfl-action-shots.json it-action.js
+          git commit -m "Game photographs: $shots players have one" \
+                     -m "Looked up on Wikimedia Commons through Wikidata by .github/workflows/action-shots.yml. Only CC0, public-domain, CC BY and CC BY-SA files are kept, and each row carries the photographer, the license, a link to its deed and the file page, which player-search.js prints under every use."
+          git push -u origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "Game photographs: $shots players have one" \
+            --body "$(cat <<EOF
+          Ran \`tools/build-action-shots.mjs\` on a runner, which has the outbound
+          network that the development sessions do not.
+
+          **$shots players now have a game photograph.** Everyone else keeps the
+          headshot cutout; nothing on the site breaks either way.
+
+          Every file kept is public domain, CC0, CC BY or CC BY-SA on Wikimedia
+          Commons. The photographer, the license, a link to its deed and the file
+          page travel on each row, and \`storyArt()\` / \`plate()\` print them under
+          every use — that credit is a license term, and \`tools/test-story-art.mjs\`
+          fails the build if it goes missing.
+
+          Worth a skim before merging: the pictures are third-party files and a
+          wrong one is a picture of the wrong man.
+          EOF
+          )"
