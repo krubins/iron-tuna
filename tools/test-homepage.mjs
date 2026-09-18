@@ -98,27 +98,35 @@ const EDGE = { ok: true, week: 'Week 3', vsExperts: {
 const DFS = { ok: true, boards: { bestVegasValues: [
   { name: 'Rome Odunze', position: 'WR', team: 'CHI', salary: 5400, vegasPoints: 14.2, vegasValueScore: 3.21 }
 ]}};
+// The band's order depends on the clock: front.html prints the three newest
+// pieces newest-first while the newest is inside its turn, and rotates the top
+// slot after that (deskOrder, covered turn by turn in tools/test-newsroom.mjs).
+// So the fixture publishes its newest piece minutes ago rather than on a fixed
+// date — otherwise which story led would depend on what time this test ran.
+const FRESH = Date.now() - 5 * 60 * 1000;
+const AGO = h => FRESH - h * 3600 * 1000;
 const CONTENT = { ok: true, pieces: [
   // `components` are the findings a piece breaks into, each naming the player
   // it is about. They are what the desk cards draw faces from and what the
   // hero's picture prefers over the market board.
   { kind: 'final-read', title: 'The Final Read', headline: 'Three lineups the market moved overnight',
-    dek: 'Sunday morning props shifted two flex calls.', week: 3, publishedAt: Date.UTC(2026, 8, 16, 14),
+    dek: 'Sunday morning props shifted two flex calls.', week: 3, publishedAt: FRESH,
     url: '/in-season/desk/final-read/3', byline: 'Iron Tuna desk',
     components: [{ n: 1, player: 'Puka Nacua', headline: 'a' }, { n: 2, player: 'James Cook', headline: 'b' }] },
   { kind: 'opportunity-report', title: 'Opportunity Report', headline: 'Who inherits the carries in Baltimore',
-    dek: 'Snap share against the implied total.', week: 3, publishedAt: Date.UTC(2026, 8, 16, 11),
+    dek: 'Snap share against the implied total.', week: 3, publishedAt: AGO(3),
     url: '/in-season/desk/opportunity-report/3', byline: 'Iron Tuna desk',
     components: [{ n: 1, player: 'Derrick Henry', headline: 'c' }] },
   { kind: 'rankings-update', title: 'Rankings Update', headline: 'Eleven moves after the injury report',
-    week: 3, publishedAt: Date.UTC(2026, 8, 16, 9), url: '/in-season/desk/rankings-update/3' },
+    week: 3, publishedAt: AGO(5), url: '/in-season/desk/rankings-update/3' },
   { kind: 'tnf-preview', title: 'TNF Preview', headline: 'The total moved three points in a day',
-    week: 3, publishedAt: Date.UTC(2026, 8, 15, 20), url: '/in-season/desk/tnf-preview/3' },
-  // Five sent, four shown: the group is small on purpose.
+    week: 3, publishedAt: AGO(18), url: '/in-season/desk/tnf-preview/3' },
+  // Six sent, three shown: the band is small on purpose, and a new piece
+  // pushes the oldest one out of it.
   { kind: 'weekend-game-plan', title: 'Weekend Game Plan', headline: 'Too many to print',
-    week: 3, publishedAt: Date.UTC(2026, 8, 15, 12), url: '/in-season/desk/weekend-game-plan/3' },
+    week: 3, publishedAt: AGO(26), url: '/in-season/desk/weekend-game-plan/3' },
   // No url: not a card.
-  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: Date.UTC(2026, 8, 15, 8) }
+  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: AGO(30) }
 ]};
 const SEASON = { ok: true, phase: 'regular', phaseLabel: 'Regular season',
   week: { label: 'Week 3', status: 'upcoming', firstKickoff: Date.UTC(2026, 8, 17, 20, 15) },
@@ -295,7 +303,7 @@ console.log('\nwith the boards answering');
      /default scoring/.test(r.fine || '') && /Week 3/.test(r.fine || ''), r.fine);
 
   ok('the articles section is shown', r.articles === true);
-  ok('it is a SMALL group — four at most', r.cards.length === 4, String(r.cards.length));
+  ok('it is a SMALL group — three at a time', r.cards.length === 3, String(r.cards.length));
   ok('every card has a real destination',
      r.cards.every(h => /^\/in-season\/desk\//.test(h)), r.cards.join(','));
 
@@ -339,7 +347,7 @@ console.log('\nwith the desk naming nobody');
   ok('never the player the Fantasy card already recommends',
      r.edgeName !== 'Drake London' && /Drake London/.test(r.fnRead || ''), r.edgeName);
   ok('a piece with no findings still gets a card, just no faces on it',
-     r.cards.length === 4 && r.cardFaces === 0, r.cards.length + '/' + r.cardFaces);
+     r.cards.length === 3 && r.cardFaces === 0, r.cards.length + '/' + r.cardFaces);
   CONTENT.pieces = full;
   await ctx.close();
 }

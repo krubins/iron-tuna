@@ -10760,3 +10760,54 @@ for d in 01 02 03 05 06 07 08 10 12 13 14 15 16 17 18; do
 done
 git push origin --delete claude/the-pick-daily-segment-qpj8l6
 ```
+
+
+## 88. September 18: the front page pinned one story until the desk published again
+
+Ken: "Love is still featured on the front page." He meant Jeremiyah Love, and
+he was right: the Week 2 weekend preview, headlined "fade Jeremiyah Love,
+attack Dalton Schultz, and know why Mack Hollins matters", had been the first
+card in "Current from the desk" since it published at 12:05 PM ET, and would
+have stayed there until the next piece landed. His instruction, the same one
+§87 applied to The Pick: it should have rotated.
+
+**What the band did.** `front.html` took `/api/content`, filtered to pieces
+with a url and a headline, and printed `.slice(0, 4)` newest first. Between
+publishes that is a fixed page. On a quiet Friday the desk publishes twice, so
+the same headline under the same player's name is the top of the front page for
+most of the day, and the hero's photograph is of that player, because the hero
+takes the first piece in the band that names somebody.
+
+**What it does now.** `deskOrder(pieces, now)` in `front.html`:
+
+- **Three at a time**, not four, matching the rule for The Pick. A new piece
+  pushes the oldest out of the band, which is what Ken asked for on the 18th.
+- **The top slot advances every two hours** (`DESK_TURN_MS`), rotating the
+  three. A reader who comes back after lunch gets a different story on top of a
+  band that has not changed underneath them.
+- **Except when there is news.** A piece published inside the current turn
+  leads on its own merit. A recap filed twenty minutes ago IS the front page,
+  and rotating it to third would be the site hiding what it just did. Rotation
+  starts once the newest piece has had its turn.
+- The hero's picture follows the rotated top piece, not the newest row
+  underneath it, so the photograph and the first card are about the same man.
+
+The order is a pure function of the feed and the clock, so two readers loading
+at the same moment get the same page, which matters because the band is drawn
+from a memoized payload.
+
+**Where it is tested.** `tools/test-newsroom.mjs` lifts `deskOrder` straight
+out of `front.html` and runs it turn by turn: three of five printed, the three
+newest, fresh news leading, the lead moving once it is no longer fresh, every
+turn still printing all three, the order being a rotation rather than a
+reshuffle, and the degenerate feeds (one piece, none, a piece with no
+timestamp). That file runs everywhere. `tools/test-homepage.mjs` still drives
+the real page in Chromium and now asserts three cards, but it needs a browser
+and skips without one, which is why the rule itself is guarded in the file that
+cannot skip.
+
+That browser test's fixture also changed, and the reason is worth keeping: it
+used to publish its newest piece on a fixed date in the past, which under a
+rotating band would have made "which story leads" depend on what time of day
+CI happened to run. It now publishes the newest five minutes ago, so the
+freshness rule pins the order and the hero assertions stay deterministic.
