@@ -34,9 +34,19 @@
  * would leave the drawer disagreeing with the row above it. One fetch per preset
  * (edge-cached five minutes) buys a board that cannot contradict itself.
  *
+ * TWO LINES UNDER EVERY NAME. The columns are all "how many points", and a
+ * reader arrives with two questions they do not answer: is he any good, and is
+ * this a week to start him. So each row carries a PLAYER sentence (his rank at
+ * his own position, what that rank is worth there, the points behind it, and an
+ * injury or a usage swing where there is one) and an OPPORTUNITY sentence (on a
+ * week board the fixture, the matchup and the scoring environment; on a season
+ * board the games, byes and slate still to come). Both are the payload's own
+ * numbers said in words — see "the two lines under a player's name" below.
+ *
  * NOTHING IS INVENTED. A number the payload does not carry prints as an em dash.
  * A board that does not answer prints why and shows no table at all, rather than
- * a stale one.
+ * a stale one. The sentences hold to the same rule: a clause whose field is
+ * missing is dropped, never defaulted.
  */
 (function () {
   'use strict';
@@ -74,6 +84,63 @@
     catch (e) { return 'ppr'; }
   }
   function remember(v) { try { localStorage.setItem(STORE, v); } catch (e) {} }
+
+  // ── the two lines under a player's name ──────────────────────────────────
+  // The board answers "how many points" in nine columns and answers the two
+  // questions a reader actually arrives with — IS HE ANY GOOD, and IS THIS A
+  // WEEK TO START HIM — in none of them. Both facts are on the row already,
+  // scattered across a rank, a positional tier nobody prints, an opponent, a
+  // schedule grade and a note, four columns apart and off the right edge of a
+  // phone. So every row carries two sentences under the name: the first about
+  // the PLAYER, the second about the OPPORTUNITY in front of him.
+  //
+  // THEY ARE THE SAME NUMBERS, SAID IN WORDS. Nothing here fetches anything,
+  // computes a projection or invents a grade. Every clause is a field of the
+  // payload the columns are built from, and a clause whose field is missing is
+  // DROPPED rather than defaulted: an unpriced fixture says it is a fitted
+  // rating, a board with no usage behind it says nothing about usage, and a
+  // player with no game says exactly that. Where the worker publishes its own
+  // classification (scheduleDifficulty.label) the sentence uses it, so a line
+  // cannot contradict the column beside it.
+  //
+  // THE TIERS. A rank is a number; "WR9" does not tell a reader whether that
+  // is a lineup lock or a bench stash, and the answer differs by position —
+  // TE6 is a weekly starter and RB6 is a first-rounder. These are the standing
+  // shapes of the positions, not a read on any player, and they are applied to
+  // the CONSENSUS POSITIONAL rank every time, including on the FLEX pages
+  // where the "#" column is a pooled RB/WR/TE slot: "the 9th-best receiver" is
+  // a statement about the player, "flex 23" is a statement about a lineup slot.
+  var TIERS = {
+    QB:  [[3, 'elite at the position'], [8, 'an every-week starter'], [14, 'a matchup starter'], [22, 'a streamer'], [Infinity, 'bench depth']],
+    RB:  [[5, 'elite at the position'], [12, 'a weekly RB1'], [24, 'an RB2'], [36, 'a flex play'], [48, 'bench depth'], [Infinity, 'a deep-league name']],
+    WR:  [[5, 'elite at the position'], [12, 'a weekly WR1'], [24, 'a WR2'], [36, 'a flex play'], [48, 'bench depth'], [Infinity, 'a deep-league name']],
+    TE:  [[2, 'elite at the position'], [6, 'an every-week starter'], [12, 'a matchup starter'], [18, 'a streamer'], [Infinity, 'bench depth']],
+    K:   [[5, 'top of the position'], [12, 'startable'], [20, 'a streamer'], [Infinity, 'waiver depth']],
+    DST: [[5, 'top of the position'], [12, 'startable'], [20, 'a streamer'], [Infinity, 'waiver depth']]
+  };
+  function tierOf(position, rank) {
+    var t = TIERS[position];
+    if (!t || rank == null || !isFinite(rank)) return '';
+    for (var i = 0; i < t.length; i++) if (rank <= t[i][0]) return t[i][1];
+    return '';
+  }
+  // A defensive rank is 1 = allows the fewest points, so a LOW number is a hard
+  // week. The two thresholds are the worker's own (scheduleDifficulty: <= 11
+  // Hard, >= 22 Easy), so a week grade and a season grade mean the same thing.
+  function gradeOf(defRank) { return defRank <= 11 ? 'a hard' : defRank >= 22 ? 'a soft' : 'an average'; }
+  function ord(n) {
+    var r = Math.round(n), v = Math.abs(r) % 100, t = v % 10;
+    return r + (v >= 11 && v <= 13 ? 'th' : t === 1 ? 'st' : t === 2 ? 'nd' : t === 3 ? 'rd' : 'th');
+  }
+  // "2.1 above" / "1.4 points a game below" / "level with", for a delta that is
+  // already the difference between a fixture and a club's own season mean.
+  function awayFrom(d, unit) {
+    if (d == null || !isFinite(d) || Math.abs(d) < 0.05) return 'level with';
+    return (Math.round(Math.abs(d) * 10) / 10).toFixed(1) + (unit ? ' ' + unit : '') + (d > 0 ? ' above' : ' below');
+  }
+  var POS_LONG = { QB: 'quarterbacks', RB: 'running backs', WR: 'receivers', TE: 'tight ends', K: 'kickers', DST: 'defenses' };
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+  function listOf(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
 
   function Board(host) {
     var horizon = host.getAttribute('data-rk-horizon') === 'ros' ? 'ros' : 'week';
@@ -207,10 +274,131 @@
       return '<td>' + (s ? esc(s.label) + ' <span class="is-status">' + esc(s.avgOpponentDefRank) + '</span>' : '—') + byes + '</td>';
     }
 
+    // THE PLAYER LINE. Who he is on this board, in the order a reader asks it:
+    // where he ranks at his own position, what that rank is worth at that
+    // position, and the points behind it (per game on a season board, where a
+    // total over a different number of games is not a comparison).
+    function playerLine(p) {
+      var rank = p.consensus ? p.consensus.rank : null;
+      // ON THE FLEX PAGES the "#" column is a POOLED RB/WR/TE slot, printed with
+      // the position's own letters ("RB23"). The compact form here would read as
+      // that same number and disagree with it, so the rank is spelled out
+      // instead. The tier below it is a statement about the player at his own
+      // position, and it has to be legible as one.
+      var head = rank == null ? esc(p.position)
+        : pos === 'FLEX' && POS_LONG[p.position] ? ord(rank) + ' among ' + POS_LONG[p.position]
+        : esc(p.position) + rank;
+      var bits = [head + (horizon === 'ros' ? ' the rest of the way' : ' this week')];
+      var tier = tierOf(p.position, rank);
+      if (tier) bits.push(tier);
+      // The points clause is dropped for a player with no game on this board: a
+      // 0.0 there is an absence, not a projection, and printing it as one beside
+      // a tier would read as a collapse.
+      var pts = p.consensus ? p.consensus.points : null;
+      if (pts != null && isFinite(pts) && p.games > 0) {
+        bits.push(horizon === 'ros' ? n1(pts / p.games) + ' points a game' : n1(pts) + ' points projected');
+      }
+      var s = bits.join(', ');
+      // ONE trailing clause, not two. An injury is the fact that changes a
+      // lineup, so it wins where there is one; otherwise the usage trend, and
+      // only once three games have earned it (roleTrend.applied), which is the
+      // same bar the consensus column nudges itself on.
+      if (p.injury && p.injury.status) {
+        s += ', listed ' + esc(p.injury.status) +
+          (p.injury.gamesOut ? ' for the next ' + (p.injury.gamesOut === 1 ? 'game' : p.injury.gamesOut + ' games') : '');
+      } else if (p.roleTrend && p.roleTrend.applied && p.roleTrend.label !== 'flat' && p.roleTrend.pct != null) {
+        s += ', with usage ' + (p.roleTrend.pct > 0 ? 'up ' : 'down ') + Math.abs(p.roleTrend.pct) + '% on his own average';
+      }
+      return s + '.';
+    }
+
+    // THE OPPORTUNITY LINE. What is in front of him, which on a week board is
+    // one fixture and on a season board is a slate.
+    function opportunityLine(p) { return horizon === 'ros' ? seasonOpportunity(p) : weekOpportunity(p); }
+
+    function weekOpportunity(p) {
+      var w = (p.weeks || [])[0];
+      if (!w) return 'No fixture on this board for the week.';
+      if (w.bye) return 'On bye this week, with no game to grade.';
+      var at = esc((w.home ? 'vs ' : 'at ') + w.opponent);
+      if (w.out) return 'Out of this week&rsquo;s game ' + at + '.';
+      var env = w.env || {};
+      var posted = !!env.posted;
+      // A DEFENSE IS GRADED ON THE OTHER SIDE OF THE FIXTURE. `opponentDefRank`
+      // and `implied` describe this club's OFFENSE, which is not what a DST
+      // scores off; its line reads the allowed side instead — what the opponent
+      // is expected to score, against what this club allows across its own
+      // schedule. Grading a defense on the offense's numbers would be a wrong
+      // sentence rather than a missing one.
+      if (p.position === 'DST') {
+        var opp = env.allowedImplied != null ? env.allowedImplied : env.allowedExpected;
+        if (opp == null) return at + ', a fixture no book has priced and no rating can grade.';
+        return at + ', an offense ' + (posted ? 'implied for ' : 'rated for ') + n1(opp) + ' points' +
+          (posted ? (env.allowedDelta != null ? ', ' + awayFrom(env.allowedDelta) + ' what this defense allows across its own schedule' : '')
+                  : ' off a fitted team rating rather than a posted line') + '.';
+      }
+      var parts = [at];
+      if (env.opponentDefRank) parts.push(gradeOf(env.opponentDefRank) + ' matchup (' + ord(env.opponentDefRank) + ' by points allowed)');
+      var imp = env.implied != null ? env.implied : env.expected;
+      // An unposted fixture says so ONCE, folded into the number it qualifies
+      // rather than trailing it as a second clause: "rated for 24.8 points off a
+      // fitted team rating" and not "rated for 24.8 points, off a fitted team
+      // rating". A season mean is only quoted against a posted line, because a
+      // fitted rating measured against a mean of fitted ratings says nothing.
+      if (imp != null) {
+        parts.push('with the offense ' + (posted ? 'implied for ' : 'rated for ') + n1(imp) + ' points' +
+          (posted ? (env.impliedDelta != null ? ', ' + awayFrom(env.impliedDelta) + ' its own season mean' : '')
+                  : ' off a fitted team rating rather than a posted line'));
+      } else if (!posted) {
+        parts.push('on a fitted team rating rather than a posted line');
+      }
+      return parts.join(', ') + '.';
+    }
+
+    function seasonOpportunity(p) {
+      if (!(p.games > 0)) return 'No game left on this board to grade.';
+      var bits = [plural(p.games, 'game') + ' left'];
+      if (p.byes && p.byes.length) {
+        bits.push(p.byes.length === 1 ? 'a bye in week ' + p.byes[0] : 'byes in weeks ' + listOf(p.byes));
+      }
+      if (p.position === 'DST') {
+        var d = avgAllowedDelta(p);
+        bits.push(d == null
+          ? 'and no posted line yet covers the offenses ahead of it'
+          : 'and the offenses ahead are implied ' + awayFrom(d, 'points a game') + ' what this defense allows across its own schedule');
+      } else {
+        var sd = p.scheduleDifficulty;
+        // The worker's own label, not a rule invented here, so the sentence and
+        // the Schedule column cannot disagree.
+        bits.push(sd
+          ? 'against ' + (sd.label === 'Hard' ? 'a hard' : sd.label === 'Easy' ? 'a soft' : 'an average') +
+            ' slate of defenses, averaging ' + ord(sd.avgOpponentDefRank) + ' by points allowed'
+          : 'against a slate this board cannot grade');
+      }
+      return bits.join(', ') + '.';
+    }
+
+    // A defense's remaining slate, from the weeks the payload already carries:
+    // the mean of each fixture's allowed delta, over the weeks that have one.
+    // Byes, absences and unpriced fixtures are skipped rather than counted as
+    // zero, which would drag every grade toward "level with".
+    function avgAllowedDelta(p) {
+      var sum = 0, n = 0;
+      (p.weeks || []).forEach(function (w) {
+        if (!w || w.bye || w.out || !w.env || w.env.allowedDelta == null) return;
+        sum += w.env.allowedDelta; n++;
+      });
+      return n ? sum / n : null;
+    }
+
     function rowHtml(p) {
-      var w0 = p.weeks && p.weeks.filter(function (w) { return !w.bye && !w.out; })[0];
+      // The week's fixture. A player ruled OUT still has an opponent, and
+      // printing BYE over his fixture — which the earlier filter did — is a
+      // different fact, and one the Opportunity line below would contradict.
+      var w0 = p.weeks && p.weeks[0];
       var oppCell = horizon === 'week'
-        ? '<td>' + (w0 ? esc((w0.home ? 'vs ' : 'at ') + w0.opponent) : '<span class="is-status">BYE</span>') + '</td>'
+        ? '<td>' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
+            : esc((w0.home ? 'vs ' : 'at ') + w0.opponent) + (w0.out ? ' <span class="is-status">OUT</span>' : '')) + '</td>'
         : '<td class="num">' + (p.games == null ? '—' : p.games) + '</td>';
       var opener = wantWeeks
         ? '<td><button class="rk-open" type="button" data-open="' + esc(p.key) + '" aria-expanded="' + (open[p.key] ? 'true' : 'false') +
@@ -219,7 +407,10 @@
       return '<tr>' + opener +
         '<td class="num">' + (primaryRank(p) == null ? '—' : esc(p.position) + primaryRank(p)) + '</td>' +
         '<td class="rk-who"><a href="/in-season/player/' + slug(p.name) + '?pos=' + esc(p.position) + '"><b>' + esc(p.name) + '</b></a>' +
-          (pos === 'ALL' || pos === 'FLEX' ? '<small>' + esc(p.position) + '</small>' : '') + '</td>' +
+          (pos === 'ALL' || pos === 'FLEX' ? '<small>' + esc(p.position) + '</small>' : '') +
+          '<span class="rk-read rk-read-pl"><span class="rk-read-k">Player</span>' + playerLine(p) + '</span>' +
+          '<span class="rk-read rk-read-op"><span class="rk-read-k">Opportunity</span>' + opportunityLine(p) + '</span>' +
+        '</td>' +
         '<td>' + esc(p.team) + '</td>' + oppCell +
         '<td class="rk-fan rk-pts">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
         '<td class="rk-fan rk-rnk">' + (rankOf(p, 'consensus') == null ? '—' : esc(p.position) + rankOf(p, 'consensus')) + '</td>' +

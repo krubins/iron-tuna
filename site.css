@@ -1166,6 +1166,29 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
    runs on after the name ("Alpha BackRB") is the bug this exists to stop. */
 .is-table td.rk-who b { color: var(--text) }
 .is-table td.rk-who small { display: block; color: var(--muted); font-size: var(--fs-2xs) }
+
+/* ── the two read-lines under a name ───────────────────────────────────────
+   One sentence on the player, one on the opportunity in front of him, on the
+   rankings board only: the stats board shares td.rk-who and prints what was
+   played, which has no opportunity to grade. The cell takes a floor width so
+   the sentences wrap to a readable measure instead of stretching an
+   eleven-column table, and a ceiling so they do not run the width of a desk
+   monitor.
+
+   The two keys borrow the board's own two colours, and mean the same thing
+   they mean on the column groups above: teal is the fantasy read of the
+   player, gold is the market's read of his week. */
+.rk-vs td.rk-who { min-width: 15rem }
+.rk-vs td.rk-who .rk-read {
+  display: block; max-width: 34rem; margin-top: 4px;
+  font-size: var(--fs-2xs); line-height: 1.4; color: var(--sec); white-space: normal;
+}
+.rk-vs td.rk-who .rk-read-k {
+  margin-right: 5px; font-size: var(--fs-3xs); font-weight: 800;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
+}
+.rk-vs td.rk-who .rk-read-pl .rk-read-k { color: var(--teal) }
+.rk-vs td.rk-who .rk-read-op .rk-read-k { color: var(--goldink) }
 .rk-vs .rk-basis { font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
 
 /* ── the week-by-week drawer ──────────────────────────────────────────────
