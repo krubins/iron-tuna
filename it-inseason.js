@@ -26,10 +26,11 @@
  * with six-point passing touchdowns, a tight-end premium or a superflex was
  * handed the nearest of three wrong answers, in the section that runs for five
  * months. `settings` carries what the league actually is — every scoring field,
- * the TE premium, and the starting lineup — scoring by SCORING_BASE's names,
- * extras.tePremium, and a roster of SLOT counts. One vocabulary for an
- * in-season league, whether it was entered by hand or copied in off a
- * screenshot by it-inseason-import.js.
+ * the TE premium, and the starting lineup — in the shape _worker.js already
+ * describes for a synced league (leagueNormalizeSettings): scoring by
+ * SCORING_BASE's names, extras.tePremium, and a roster of SLOT counts. One
+ * vocabulary for an in-season league, whether it was synced, entered by hand,
+ * or copied in off a screenshot by it-inseason-import.js.
  *
  * `scoring` stays, and stays truthful: it is DERIVED from the reception value
  * whenever settings are present, so the headline and the detail cannot drift

@@ -14,11 +14,10 @@
 // So three things are pinned here.
 //
 // 1. THE VOCABULARY. it-inseason.js carries hand-synced copies of the scoring
-//    field names (_worker.js SCORING_BASE, it-league.js SCORING_DEFAULTS). A
-//    field that exists in one copy and not another is a rule the reader set and
-//    no board ever honors — silent, and invisible in review. The roster slots
-//    have only one owner now: league sync is gone, so it-inseason.js's SLOTS is
-//    the list, and what is checked here is that it is internally coherent.
+//    field names (_worker.js SCORING_BASE, it-league.js SCORING_DEFAULTS) and of
+//    the roster slots (_worker.js leagueEmptyRoster). A field or a slot that
+//    exists in one copy and not another is a rule the reader set and no board
+//    ever honors — silent, and invisible in review.
 //
 // 2. THE PARSER. parseScoring() here is a port of parseScoringText() in
 //    index.html. Both are lifted and run over the same fixtures; they must agree
@@ -95,14 +94,14 @@ console.log('\nthe vocabulary is one vocabulary');
   const bonusesMissed = L.SCORING_BONUSES.filter(b => !(b in workerBase));
   ok('the bonus ladders the worker models are the ones kept here', bonusesMissed.length === 0, bonusesMissed.join(', '));
 
-  // The slots. it-inseason.js owns the list outright; every slot the record
-  // names has to be one the form can label and the lineup can count.
-  ok('the slot list has no duplicates', new Set(L.SLOTS).size === L.SLOTS.length);
+  // The slots. leagueEmptyRoster() is the server's list; `other` is its bucket
+  // for slots no lineup understands and is not a slot.
+  const ers = worker.indexOf('function leagueEmptyRoster()');
+  const emptyRoster = new Function('return ' + worker.slice(worker.indexOf('{', worker.indexOf('return', ers)), worker.indexOf(';', ers)))();
+  const serverSlots = Object.keys(emptyRoster).filter(k => k !== 'other');
+  ok('the roster slots are the server\'s roster slots', eq(serverSlots.slice().sort(), L.SLOTS.slice().sort()),
+    `server ${serverSlots.join(',')} vs record ${L.SLOTS.join(',')}`);
   ok('every slot has a label', L.SLOTS.every(s => !!L.SLOT_LABEL[s]));
-  const unlisted = Object.keys(L.SLOT_LABEL).filter(k => L.SLOTS.indexOf(k) < 0);
-  ok('and every label names a slot', unlisted.length === 0, unlisted.join(', '));
-  ok('the starting slots are all in the list',
-     ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SFLEX', 'K', 'DEF'].every(s => L.SLOTS.indexOf(s) >= 0));
   ok('the default lineup is a lineup, not an empty roster', L.rosterSum(L.defaultRoster()) === 15);
 }
 
@@ -208,6 +207,74 @@ console.log('\nthe lineup, off the two shapes platforms print');
   const r5 = IMP.parseRoster(perLine);
   ok('a lineup printed one slot per line reads too',
     !!r5 && r5.QB === 1 && r5.RB === 2 && r5.WR === 2 && r5.FLEX === 1 && r5.BN === 6, JSON.stringify(r5));
+}
+
+// ── 3b. one question at a time ─────────────────────────────────────────────
+// /my-league §02 asks three separate questions in three separate boxes, and the
+// failure that costs the most is the quiet one: a box labelled FAAB that
+// accepts a scoring screenshot and rewrites a lineup out of it. parseFor()
+// exists so a box can only ever answer its own question, and an empty answer is
+// an answer.
+console.log('\nthe three boxes each read their own domain');
+{
+  const { IMP } = load();
+  const WHOLE = [
+    'Passing TD: 4',
+    'Interception: -2',
+    'Reception: 0.5',
+    'QB 1 / RB 2 / WR 3 / TE 1 / FLEX 1 / K 1 / DEF 1 / BN 6',
+    'FAAB budget: $250',
+    '12 team league'
+  ].join('\n');
+
+  const sc = IMP.parseFor(WHOLE, 'scoring');
+  ok('the scoring box reads the scoring', sc.scoring && sc.scoring.passingTD === 4 && sc.scoring.receptionPoints === 0.5);
+  ok('and does not touch the lineup or the budget', !sc.roster && sc.faab === undefined && sc.teams === undefined);
+
+  const ro = IMP.parseFor(WHOLE, 'roster');
+  ok('the roster box reads the lineup', !!ro.roster && ro.roster.WR === 3 && ro.roster.BN === 6);
+  ok('and does not touch the scoring or the budget', !ro.scoring && ro.faab === undefined);
+  ok('and shows it a slot at a time, so a wrong read is checkable',
+    ro.items.some(i => i[0] === 'WR' && i[1] === 3) && ro.items.some(i => i[0] === 'Bench' && i[1] === 6));
+
+  const fa = IMP.parseFor(WHOLE, 'faab');
+  ok('the FAAB box reads the budget and the teams bidding into it', fa.faab === 250 && fa.teams === 12);
+  ok('and does not touch the scoring or the lineup', !fa.scoring && !fa.roster);
+
+  // The wrong screenshot in the right box: nothing, rather than something.
+  const only = 'Passing TD: 6\nReception: 1';
+  ok('a scoring screenshot in the FAAB box finds nothing at all',
+    IMP.parseFor(only, 'faab').items.length === 0);
+  ok('and in the roster box finds nothing at all',
+    IMP.parseFor(only, 'roster').items.length === 0);
+  ok('a partial that found nothing is still a partial', eq(IMP.parseFor('', 'scoring').items, []));
+
+  ok('the three scopes are the three the UI names', eq(IMP.SCOPES, ['scoring', 'roster', 'faab']));
+
+  // The one-line count form, which is what the roster box suggests, and the
+  // bench-only read that must NOT come back as a lineup: the record applies a
+  // roster whole, so a partial one would erase the starters it does not name.
+  ok('counts along one line read as a lineup',
+    eq(IMP.parseRoster('QB 1 / RB 2 / WR 3 / TE 1 / FLEX 1 / K 1 / DEF 1 / Bench 6'),
+       IMP.parseRoster('QB 1\nRB 2\nWR 3\nTE 1\nFLEX 1\nK 1\nDEF 1\nBench 6')));
+  ok('and so do counts separated by commas',
+    (IMP.parseRoster('QB 1, RB 2, WR 2, TE 1, W/R/T 1, K 1, D/ST 1, Bench 6') || {}).WRRB_FLEX === 0);
+  ok('a bench and an IR slot are not a lineup', IMP.parseRoster('Bench: 6, IR: 1, Taxi: 0') === null);
+
+  // THE PLACEHOLDERS ARE PROMISES. Each box shows an example of what to type,
+  // and a reader types what they are shown. One that the parser reads as
+  // something else — "Receiving yards: 1 per 10" came back as one yard per
+  // point — is a wrong answer the site suggested itself.
+  const phs = [...uiSrc.matchAll(/kind: '(\w+)', n: '[^']*', title: '[^']*',[\s\S]*?ph: '((?:[^'\\]|\\.)*)'/g)]
+    .map(m => [m[1], m[2].replace(/\\n/g, '\n')]);
+  ok('all three boxes show an example', phs.length === 3, phs.map(x => x[0]).join(', '));
+  for (const [kind, ph] of phs) {
+    const got = IMP.parseFor(ph, kind);
+    ok(`the ${kind} box's example reads back as ${kind}`, got.items.length > 0, JSON.stringify(ph));
+  }
+  const phScoring = (phs.find(x => x[0] === 'scoring') || [])[1] || '';
+  ok('and the yardage line in it means the divisor it says',
+    IMP.parseFor(phScoring, 'scoring').scoring.receivingYardsPerPoint === 10);
 }
 
 // ── 4. copying the draft room across ───────────────────────────────────────
@@ -317,17 +384,32 @@ console.log('\nthe form and the importer');
     const i = src.indexOf('/it-inseason.js'), j = src.indexOf('/it-inseason-import.js'), k = src.indexOf('/it-inseason-ui.js');
     ok(`${page} loads all three, in order`, i >= 0 && j > i && k > j);
   }
-  // The settings form mounts the importer itself, so a reader who lands on
-  // /my-league#settings can paste or screenshot a settings page rather than
-  // retype twenty scoring fields into it.
-  ok('the settings form mounts the importer',
-    uiSrc.includes('<div data-imp></div>') && uiSrc.includes("importer($(el, '[data-imp]')"));
-  ok('and /my-league mounts that form',
-    read('my-league.html').includes("ITInSeasonUI.leagueForm(document.getElementById('mlForm'))"));
+  ok('the by-hand league form mounts the importer',
+    read('my-league.html').includes('id="mfImp"') && read('my-league.html').includes('ITInSeasonUI.importer($(\'mfImp\')'));
+
+  // §02 mounts the three boxes, and mounts the form WITHOUT its own importer.
+  // Both halves matter: the boxes with no handle to apply through would read a
+  // league and have nowhere to put it, and the form keeping its four-tab
+  // importer would ask the same question twice on one screen.
+  {
+    const ml = read('my-league.html');
+    ok('/my-league §02 mounts the three boxes', ml.includes('id="mlIntake"') && ml.includes('ITInSeasonUI.intake('));
+    ok('and drops the form\'s own importer so the page asks once', /leagueForm\([\s\S]{0,120}?importer:\s*false/.test(ml));
+    ok('and hands what a box read to the form', /intake\([\s\S]{0,400}form\.apply\(/.test(ml));
+  }
+  ok('the form returns the handle the boxes apply through',
+    /return \{\s*\n[\s\S]{0,600}apply: function \(partial, source, n\)/.test(uiSrc));
   // The styles the widget names have to exist, or the reader gets an unstyled
   // pile of buttons in the middle of a form.
   const css = read('site.css');
-  const classes = [...new Set([...uiSrc.matchAll(/class="(is-imp[a-z-]*|is-more|is-grid4|is-slots|is-slot)/g)].map(m => m[1]))];
+  // Every is-* class the widgets render, wherever it sits in the attribute —
+  // the three boxes write class="is-input is-intake-text", and a sweep anchored
+  // to the start of the attribute would have missed the second name in it.
+  const classes = [...new Set(
+    [...uiSrc.matchAll(/class="([^"]+)"/g)]
+      .flatMap(m => m[1].split(/\s+/))
+      .filter(c => /^(is-imp[a-z-]*|is-intake[a-z-]*|is-more|is-grid4|is-slots|is-slot)$/.test(c))
+  )];
   const unstyled = classes.filter(c => !css.includes('.' + c));
   ok('every class the widget renders is styled', unstyled.length === 0, unstyled.join(', '));
 }

@@ -1,0 +1,18 @@
+{
+  "_note": "Synthetic CBS v3-shaped fixtures. Resource nesting follows ffmwr CBSPlatform f5d23ecc; scoring categories and transaction IDs require live-account validation. No real credentials or member data.",
+  "details": {"league_details": {"name": "CBS Fixture League", "sport": "football", "season": 2026, "num_teams": 2, "current_period": 5, "regular_season_periods": 14}},
+  "rules": {"rules": {
+    "roster": {"positions": [{"abbr": "QB", "max_active": 1}, {"abbr": "RB", "max_active": 2}, {"abbr": "WR", "max_active": 2}, {"abbr": "TE", "max_active": 1}, {"abbr": "RB-WR-TE", "max_active": 1}, {"abbr": "FLEX", "max_active": 1}, {"abbr": "DST", "max_active": 1}], "statuses": [{"description": "Reserve Players", "max": 6}, {"description": "Injured Players", "max": 2}]},
+    "scoring": {"categories": [{"abbr": "PaYd", "points": 1, "per": 25}, {"abbr": "PaTD", "points": 6}, {"abbr": "PaInt", "points": -2}, {"abbr": "RuYd", "points": 1, "per": 10}, {"abbr": "ReYd", "points": 1, "per": 10}, {"abbr": "RuTD", "points": 6}, {"abbr": "ReTD", "points": 6}, {"abbr": "Rec", "points": 0.5}, {"abbr": "FL", "points": -2}, {"abbr": "IDP", "points": 1}]},
+    "transactions": {"add_drop_faab_starting_budget": {"value": "$200"}}, "schedule": {"num_playoff_teams": {"value": 2}}
+  }},
+  "teams": {"teams": [{"id": "1", "name": "Fixture One", "owners": [{"id": "o1", "name": "Manager One"}]}, {"id": "2", "name": "Fixture Two", "owners": [{"id": "o2", "name": "Manager Two"}]}]},
+  "rosters": {"rosters": {"teams": [
+    {"id": "1", "players": [{"id": "cbs-allen", "fullname": "Josh Allen", "position": "QB", "pro_team": "BUF", "roster_status": "A", "roster_pos": "QB"}, {"id": "cbs-henry", "fullname": "Derrick Henry", "position": "RB", "pro_team": "BAL", "roster_status": "RS", "roster_pos": "RB"}]},
+    {"id": "2", "players": [{"id": "cbs-chase", "fullname": "Ja'Marr Chase", "position": "WR", "pro_team": "CIN", "roster_status": "A", "roster_pos": "RB-WR-TE"}, {"id": "cbs-unknown", "fullname": "Fixture Unknown", "position": "TE", "pro_team": "BUF", "roster_status": "I"}]}
+  ]}},
+  "standings": {"overall_standings": {"teams": [{"id": "1", "wins": 3, "losses": 1, "ties": 0, "points_scored": 440.5, "points_against": 410, "order": 1}, {"id": "2", "wins": 1, "losses": 3, "points_scored": 410, "points_against": 440.5, "order": 2}]}},
+  "waivers": {"faab_order": {"teams": [{"id": "1", "order": 2, "budget_remaining": "$153"}, {"id": "2", "order": 1, "budget_remaining": "$200"}]}},
+  "schedules": {"schedule": {"periods": [{"label": "Week 4", "matchups": [{"home_team": {"id": "1", "points": 110.5}, "away_team": {"id": "2", "points": 100}}]}, {"label": "Week 5", "matchups": [{"home_team": {"id": "1"}, "away_team": {"id": "2"}}]}]}},
+  "transactions": {"transaction_log": [{"id": "tx1", "team": {"id": "1"}, "date": "2026-09-08T12:00:00Z", "bid": "$12", "moves": [{"type": "won", "player": {"id": "cbs-henry", "fullname": "Derrick Henry", "position": "RB", "pro_team": "BAL"}}, {"type": "drop", "player": {"id": "cbs-drop", "fullname": "Fixture Drop", "position": "RB"}}]}]}
+}

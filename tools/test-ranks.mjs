@@ -175,9 +175,9 @@ console.log('\nthe section is gated like the rest of the in-season tools');
 
   // And the CTA. There is no in-season list to be on any more: the header button
   // is the same on every page, because the draft CTA came off the whole site for
-  // the season. What it must be is the manual league setup — automatic sync
-  // never worked for any provider and has been removed — so a rankings page
-  // cannot quietly go back to selling a draft sheet in September.
+  // the season. What it must be is the manual league setup — automatic sync is
+  // off or unproven for every provider (docs/league-sync.md §3.1) — so a
+  // rankings page cannot quietly go back to selling a draft sheet in September.
   const missCta = allBoards.concat(LANES)
     .filter((f) => !/<a class="cta" href="\/my-league#settings">Customize My League<\/a>/.test(read(f)));
   ok('and its CTA is the league setup that actually works', missCta.length === 0, missCta.join(', '));

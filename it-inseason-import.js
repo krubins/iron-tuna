@@ -28,12 +28,14 @@
  * the draft room, which is the shortest path of all for the reader who already
  * built a cheat sheet in this browser.
  *
- * THE SHAPE IS THE IN-SEASON RECORD'S, not the draft app's: scoring by
- * SCORING_BASE's names, extras.tePremium, and a roster of SLOT counts
+ * THE SHAPE IS THE SERVER'S, not the draft app's. _worker.js
+ * (leagueNormalizeSettings) is the one description of an in-season league:
+ * scoring by SCORING_BASE's names, extras.tePremium, and a roster of SLOT counts
  * — QB RB WR TE FLEX SFLEX REC_FLEX WRRB_FLEX K DEF BN IR TAXI. The draft app's
  * per-position {starters, total} is an auction idea and stays in the auction;
  * anything leaving this file speaks the in-season vocabulary, so a partial can
- * go straight into the local record without being translated again on the way.
+ * go to /api/leagues/manual, into an override, or into the local record without
+ * being translated again on the way.
  *
  * Nothing here writes anything. It returns a partial; the form decides whether
  * it ever reaches a record.
@@ -42,6 +44,12 @@
  *   ITInSeasonImport.fromImage(file, onStatus)  a promise of one, via OCR
  *   ITInSeasonImport.preset(kind)               a partial, from one tap
  *   ITInSeasonImport.fromDraftApp()             a partial, from the draft room
+ *
+ * And the same two readings narrowed to ONE of the three questions
+ * /my-league §02 asks in its own box — 'scoring', 'roster' or 'faab':
+ *
+ *   ITInSeasonImport.parseFor(text, kind)
+ *   ITInSeasonImport.fromImageFor(file, kind, onStatus)
  */
 (function (root) {
   'use strict';
@@ -71,6 +79,10 @@
   function lineupLabel(r) {
     var L = root.ITInSeason;
     return L && L.labelRoster ? L.labelRoster(r) : '';
+  }
+  function slotLabel(s) {
+    var L = root.ITInSeason;
+    return (L && L.SLOT_LABEL && L.SLOT_LABEL[s]) || s;
   }
 
   function loadTesseract() {
@@ -153,7 +165,11 @@
       // catch off a tight-end rule. parseTePremium below is what reads it here;
       // index.html carries the same guard and leaves the line alone.
       if (TE_LINE.test(l)) { /* left to parseTePremium */ }
-      else if (/(reception|per catch|points? per reception)/.test(l) && !/(yards?|yds?)/.test(l)) {
+      // Sleeper and Yahoo print the reception as a bare "Rec", which is the most
+      // consequential rule on the page: miss it and a full-PPR league is priced
+      // at zero. The yardage and touchdown lines on the same screen — "Rec Yd
+      // 0.1", "Rec TD 6" — are read above and excluded here by name.
+      else if (/(reception|per catch|points? per reception|\brecs?\b)/.test(l) && !/(yards?|yds?|td|touchdown)/.test(l)) {
         var n = numIn(l);
         if (n != null && Math.abs(n) <= 2) {
           if (/\brb\b|running ?back/.test(l)) set('rbReceptionPoints', n, 'RB reception');
@@ -309,28 +325,90 @@
     [/^(?:ir|injured reserve)\b/, 'IR'],
     [/^(?:taxi)\b/, 'TAXI']
   ];
+  // Both halves of a count, in either order and anywhere on the line. Composed
+  // from COUNT_LINE itself so the two readers can never drift apart on what
+  // counts as a slot word. Every pattern there is anchored and holds no capture
+  // group, so the groups here are 1=slot 2=count for "QB 1" and 3=count 4=slot
+  // for the reversed "1 QB".
+  var SLOT_ALT = COUNT_LINE.map(function (p) { return p[0].source.replace(/^\^/, ''); }).join('|');
+  var PAIR_RE = new RegExp('(' + SLOT_ALT + ')\\s*:?\\s*(\\d+)|(\\d+)\\s*(' + SLOT_ALT + ')', 'gi');
+  function countPairs(line) {
+    var out = [], m;
+    PAIR_RE.lastIndex = 0;
+    while ((m = PAIR_RE.exec(line))) {
+      var tok = m[1] || m[4], num = m[2] != null ? m[2] : m[3];
+      if (!tok || num == null) continue;
+      var n = parseInt(num, 10);
+      if (!(n >= 0 && n <= 9)) continue;
+      for (var i = 0; i < COUNT_LINE.length; i++) {
+        if (COUNT_LINE[i][0].test(String(tok).toLowerCase())) { out.push([COUNT_LINE[i][1], n]); break; }
+      }
+    }
+    return out;
+  }
+
   function parseCounts(text) {
-    var lines = String(text || '').split(/\n|;|•|\|/).map(function (l) { return l.trim(); }).filter(Boolean);
+    // A count line is also written along one line — "QB 1 / RB 2 / WR 3 / TE 1"
+    // — which is the form this file's own placeholder has always suggested and
+    // the only one it could not read: every COUNT_LINE pattern is anchored, so
+    // a run of eight counts on one line found the quarterback and stopped. The
+    // extra separators are a SPACED slash and a comma, so "W/R/T 1" and
+    // "D/ST 1" keep their slashes and stay one slot each.
+    var lines = [];
+    String(text || '').split(/\n|;|•|\|/).forEach(function (l) {
+      l.split(/\s+\/\s+|,/).forEach(function (part) {
+        var t = part.trim();
+        if (t) lines.push(t);
+      });
+    });
     var roster = emptyRoster();
     var hits = 0;
 
     lines.forEach(function (rawLine) {
       var l = rawLine.toLowerCase().replace(/^[\s\-*·]+/, '');
       if (SCORING_WORD.test(l)) return;
-      var m = l.match(/(\d+)\s*$/) || l.match(/[:\s](\d+)\b/);
-      if (!m) return;
-      var n = parseInt(m[1], 10);
-      if (!(n >= 0 && n <= 9)) return;
-      for (var i = 0; i < COUNT_LINE.length; i++) {
-        if (COUNT_LINE[i][0].test(l)) { roster[COUNT_LINE[i][1]] += n; hits++; return; }
+      // A whole lineup on one line with nothing but spaces holding it together
+      // — "QB 1 RB 2 WR 2 TE 1 FLEX 1 K 1 D/ST 1 Bench 7" — is what OCR hands
+      // back when a settings page printed the row across. The anchored reader
+      // below finds the quarterback in it and stops, so a line carrying more
+      // than one pair is read pair by pair instead.
+      var pairs = countPairs(l);
+      if (pairs.length >= 2) {
+        pairs.forEach(function (pr) { roster[pr[0]] += pr[1]; hits++; });
+        return;
       }
+      var m = l.match(/(\d+)\s*$/) || l.match(/[:\s](\d+)\b/);
+      if (m) {
+        var n = parseInt(m[1], 10);
+        if (n >= 0 && n <= 9) {
+          for (var i = 0; i < COUNT_LINE.length; i++) {
+            if (COUNT_LINE[i][0].test(l)) { roster[COUNT_LINE[i][1]] += n; hits++; return; }
+          }
+        }
+      }
+      // "1 QB, 2 RB, 3 WR" — ESPN's own wording, and the count before the slot
+      // is invisible to the anchored patterns.
+      if (pairs.length === 1) { roster[pairs[0][0]] += pairs[0][1]; hits++; }
     });
 
     return hits >= 3 ? roster : null;
   }
 
+  // A lineup nobody starts anybody in is not a lineup. "Bench: 6, IR: 1" is
+  // three count lines and would otherwise come back as a roster — which the
+  // record applies WHOLE, so it would wipe out the quarterback, the flex and
+  // everything else the reader had. Reading nothing is the right answer there.
+  var RESERVE = { BN: 1, IR: 1, TAXI: 1 };
+  function hasStarter(r) {
+    for (var i = 0; i < SLOTS.length; i++) {
+      if (!RESERVE[SLOTS[i]] && (Number(r[SLOTS[i]]) || 0) > 0) return true;
+    }
+    return false;
+  }
+
   function parseRoster(text) {
-    return parseSlotList(text) || parseCounts(text);
+    var r = parseSlotList(text) || parseCounts(text);
+    return r && hasStarter(r) ? r : null;
   }
 
   // Teams and the FAAB budget, wherever they are said. Teams is the one number
@@ -338,7 +416,9 @@
   // one every other tool guesses at.
   function parseTeams(text) {
     var s = String(text || '');
-    var m = s.match(/(\d{1,2})\s*[- ]?\s*team\b/i) || s.match(/\bteams?\b\D{0,12}(\d{1,2})\b/i);
+    // teams?, not team: "12 teams" is how every platform prints it and how this
+    // box's own placeholder says it, and \bteam\b cannot match before that s.
+    var m = s.match(/(\d{1,2})\s*[- ]?\s*teams?\b/i) || s.match(/\bteams?\b\D{0,12}(\d{1,2})\b/i);
     if (!m) return null;
     var n = parseInt(m[1], 10);
     return n >= 4 && n <= 20 ? n : null;
@@ -379,7 +459,87 @@
     return out;
   }
 
-  function fromImage(file, onStatus) {
+  // ── one question at a time ────────────────────────────────────────────────
+  // parseText() reads a whole league out of one blob, which is right for a
+  // reader who pasted their entire settings page. /my-league §02 asks three
+  // separate questions instead — the scoring rules, the lineup, the waiver
+  // budget — each with its own box, because that is how the platforms print
+  // them: scoring on one screen, roster on another, the budget on a third.
+  //
+  // A box that answered a question it was not asked would be the worst of both.
+  // Drop the scoring screenshot into the budget box and the honest answer is
+  // "no budget in this image" — not a lineup silently applied from a box
+  // labelled FAAB. So each scope runs only the parsers for its own domain, and
+  // an empty result is a result.
+  //
+  // parseText() is unchanged and still backs the four-tab importer; these add
+  // to it rather than replacing it.
+  var SCOPES = ['scoring', 'roster', 'faab'];
+
+  function scopedScoring(text) {
+    var res = parseScoring(text);
+    var out = { items: res.items };
+    if (Object.keys(res.scoring).length) out.scoring = res.scoring;
+    var te = parseTePremium(text, res.scoring.receptionPoints);
+    if (te != null) {
+      out.extras = { tePremium: te };
+      out.items.push(['TE premium', te]);
+    }
+    return out;
+  }
+
+  // One chip per slot rather than one chip for the whole lineup. The lineup
+  // label is the right summary for a card that is already saved; this is a
+  // PREVIEW of a read that could be wrong, and "WR 3" is checkable against the
+  // screenshot still open in the next tab in a way that a run-on label is not.
+  function scopedRoster(text) {
+    var out = { items: [] };
+    var roster = parseRoster(text);
+    if (roster && rosterSum(roster) >= 3) {
+      out.roster = roster;
+      for (var i = 0; i < SLOTS.length; i++) {
+        var n = Number(roster[SLOTS[i]]) || 0;
+        if (n > 0) out.items.push([slotLabel(SLOTS[i]), n]);
+      }
+    }
+    return out;
+  }
+
+  // Teams rides with the budget on purpose. $100 in a ten-team league and $100
+  // in a sixteen-team league are not the same money, the two numbers are
+  // printed on the same settings screen everywhere, and the form has a box for
+  // each of them six inches below this one.
+  function scopedFaab(text) {
+    var out = { items: [] };
+    var faab = parseFaab(text);
+    if (faab) {
+      out.faab = faab;
+      out.items.push(['FAAB budget', '$' + faab]);
+    }
+    var teams = parseTeams(text);
+    if (teams) {
+      out.teams = teams;
+      out.items.push(['Teams', teams]);
+    }
+    return out;
+  }
+
+  function parseFor(text, kind) {
+    if (kind === 'roster') return scopedRoster(text);
+    if (kind === 'faab') return scopedFaab(text);
+    return scopedScoring(text);
+  }
+
+  // OCR once, read once. Same Tesseract path as fromImage(); only the reading
+  // of what came back is narrowed.
+  function fromImageFor(file, kind, onStatus) {
+    return ocr(file, onStatus).then(function (text) { return parseFor(text, kind); });
+  }
+
+  // The image to its text, and nothing else. Split out from fromImage() so the
+  // scoped intakes below can run the same OCR and read the result their own
+  // way: one download of Tesseract, one recognition pass, three readings.
+  function ocr(file, onStatus) {
     var say = typeof onStatus === 'function' ? onStatus : function () {};
     if (!file) return Promise.reject(new Error('nofile'));
     say('Loading OCR…');
@@ -390,8 +550,12 @@
         }
       });
     }).then(function (res) {
-      return parseText((res && res.data && res.data.text) || '');
+      return (res && res.data && res.data.text) || '';
     });
+  }
+
+  function fromImage(file, onStatus) {
+    return ocr(file, onStatus).then(function (text) { return parseText(text); });
   }
 
   // The app's five one-tap settings, plus the superflex the in-season forms need
@@ -456,17 +620,21 @@
 
   root.ITInSeasonImport = {
     SLOTS: SLOTS,
+    SCOPES: SCOPES,
     PRESETS: PRESETS,
     emptyRoster: emptyRoster,
     rosterSum: rosterSum,
     lineupLabel: lineupLabel,
     parseText: parseText,
+    parseFor: parseFor,
     parseScoring: parseScoring,
     parseTePremium: parseTePremium,
     parseRoster: parseRoster,
     parseTeams: parseTeams,
     parseFaab: parseFaab,
+    ocr: ocr,
     fromImage: fromImage,
+    fromImageFor: fromImageFor,
     preset: preset,
     fromDraftApp: fromDraftApp,
     loadTesseract: loadTesseract

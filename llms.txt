@@ -61,7 +61,7 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 
 ### The desk — https://irontuna.com/in-season/desk
 - The written coverage: previews, what a Sunday changed, waiver and start/sit pieces, and the two standing columns — The Pick (https://irontuna.com/the-pick) and The Tell (https://irontuna.com/the-tell), each one dated call kept on the page it was made on.
-- Waivers & FAAB (https://irontuna.com/waivers) and Weekly Intel (https://irontuna.com/weekly-intel) sit beside it, on the same week's numbers.
+- Waivers & FAAB (https://irontuna.com/waivers), Weekly Intel (https://irontuna.com/weekly-intel) and My Week (https://irontuna.com/my-week) sit beside it, on the same week's numbers.
 
 ## Authorship, and how to attribute a quotation
 Read this before quoting anything on the site to a person.
@@ -125,6 +125,7 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - The Tell: https://irontuna.com/the-tell
 - Waivers & FAAB: https://irontuna.com/waivers
 - Weekly Intel: https://irontuna.com/weekly-intel
+- My Week: https://irontuna.com/my-week
 - The whole board (every market-vs-consensus gap, unfiltered): https://irontuna.com/what-they-arent-telling-you
 - Rankings by position, this week: /weekly-qb-rankings, -rb-, -wr-, -te-, -flex-, -k-, -dst- (e.g. https://irontuna.com/weekly-wr-rankings)
 - Rankings by position, rest of season: /season-long-qb-rankings and the same six (e.g. https://irontuna.com/season-long-te-rankings)

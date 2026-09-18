@@ -96,6 +96,11 @@ section{margin:0 0 var(--space-6)}
    that are not words. It is the only place in the sentence that must hold. */
 .fn-top h1 .fn-nb{white-space:nowrap}
 .fn-top .is-lede{margin-bottom:var(--space-3)}
+/* The sync strip and the sync prompt are light-palette objects that /it-sync.js
+   styles and spaces itself, so they stay on the white ground under the band
+   rather than going into it. The wrap around them carries no padding of its
+   own, so it collapses to nothing for a reader who has not connected a
+   league — which is most of them. */
 /* Vega vs. Brooks. Not a table of gaps any more: two columns, five picks each,
    each man arguing the players he expects to beat the other man's ranking on.
    The ranks ride above each pitch as a chip for scanning and inside the pitch
@@ -196,6 +201,11 @@ section{margin:0 0 var(--space-6)}
     </span>
   </div>
 </nav>
+
+<div class="wrap wide fn-state">
+<div class="its-strip-sync" id="fnSync" hidden></div>
+<div id="fnCta" hidden></div>
+</div>
 
 <!-- ── the deck ───────────────────────────────────────────────────────────────
      What this page owed a reader in its first screen and did not give them: the
@@ -316,6 +326,12 @@ section{margin:0 0 var(--space-6)}
         <h3 id="fnClockH">Waivers process Wednesday 3:00 AM ET</h3>
         <p id="fnClockP">Claims lock after Monday night on most platforms. The going rate reads your league&rsquo;s own settled bids where it can see them, never a national average.</p>
       </div>
+      <div class="is-card" id="fnWeekCard" hidden>
+        <span class="is-tag is-live">Your week</span>
+        <h3 id="fnWeekH">Best lineup, matchup and alerts</h3>
+        <p id="fnWeekP">Reading your league&hellip;</p>
+        <div class="is-btns"><a class="is-btn sec" href="/my-week">Open My Week</a></div>
+      </div>
     </aside>
   </div>
 </section>
@@ -410,6 +426,7 @@ section{margin:0 0 var(--space-6)}
 </div></footer>
 <script src="/it-season.js" defer></script>
 <script src="/it-league.js" defer></script>
+<script src="/it-sync.js" defer></script>
 <script src="/it-inseason.js" defer></script>
 <script src="/it-inseason-ui.js" defer></script>
 <script>
@@ -624,6 +641,25 @@ section{margin:0 0 var(--space-6)}
   var $ = function (id) { return document.getElementById(id); };
   // The empty state: a reason line and a detail line, never a bare sentence.
   var vacant = function (id, head, detail) { $(id + 'H').textContent = head; $(id + 'P').textContent = detail || ''; };
+  // The synced league: the strip, or the call to connect one; and the week's
+  // three numbers on the card once the summary answers.
+  if (window.ITSync) ITSync.load().then(function () {
+    ITSync.strip($('fnSync'), { week: true });
+    var LS = ITSync.active();
+    if (!LS) { ITSync.cta($('fnCta'), 'generic'); return; }
+    if ($('fnSaveBtn')) $('fnSaveBtn').hidden = true;
+    $('fnScoring').innerHTML = '<b>Customized for your league:</b> ' + e(LS.name) + ' · ' + e(LS.label);
+    $('fnWeekCard').hidden = false;
+    ITSync.api('/api/leagues/' + encodeURIComponent(LS.id) + '/advice?module=summary').then(function (j) {
+      if (!j || !j.ok) { $('fnWeekP').textContent = 'Your league did not answer.'; return; }
+      var bits = [];
+      if (j.matchup && j.matchup.opponent) bits.push('vs <b>' + e(j.matchup.opponent) + '</b>: ' + e(j.matchup.you) + ' to ' + e(j.matchup.them) + ' (' + e(j.matchup.verdict) + ')');
+      if (j.lineup) bits.push(j.lineup.improvement > 0 ? 'best lineup adds <b>+' + e(j.lineup.improvement) + '</b> over what you have set' : 'your lineup is already the best one');
+      if (j.alerts && j.alerts.length) bits.push('<b>' + j.alerts.length + '</b> roster alert' + (j.alerts.length === 1 ? '' : 's'));
+      if (j.pickups && j.pickups.length) bits.push('top add: <b>' + e(j.pickups[0].name) + '</b>');
+      $('fnWeekP').innerHTML = bits.length ? bits.join(' · ') : 'Nothing to act on yet.';
+    }).catch(function () { $('fnWeekP').textContent = 'Your league did not answer.'; });
+  });
   fetch('/api/newsroom?lens=weekly&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
     if (!j || !j.ok || !j.pieces.length) { vacant('fnDeskEmpty', 'The desk has not published this week yet.', 'The first package lands at its slot once the games are final. Nothing here is stale; there is simply nothing yet.'); return; }
     var av = function (name) { return String(name || '').split(' ').map(function (w) { return w.charAt(0); }).join(''); };

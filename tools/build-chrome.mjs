@@ -73,7 +73,7 @@ const STYLE_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html', 'the-tel
 //   Manager, Snake board, Free cheat sheet     way; these belong back in the nav
 //                                              in the offseason, not in week 2.
 //   Rankings, Depth Charts, Weekly Intel,      individual tools
-//   Waivers & FAAB, Trade Finder
+//   Waivers & FAAB, Trade Finder, My Week
 const NAV = [
   { label: 'Fantasy', href: '/fantasy' },
   { label: 'DFS', href: '/dfs' },
@@ -92,12 +92,14 @@ const NAV = [
 
 // The one header button, on every page.
 //
-// IT IS NOT "Sync My League". Automatic league sync was removed: it never
-// worked for any provider, so the connectors, the server-side league model and
-// My Week are gone from the repo. What works for every reader is the
-// browser-only settings form on /my-league — scoring, teams and FAAB budget,
-// saved locally, read by every board in the section. The entry says what it
-// actually does and lands on that form.
+// IT IS NOT "My League". Automatic league sync does not work reliably today:
+// FLAG_SLEEPER_SYNC is off pending a written license, FLAG_YAHOO_SYNC is off and
+// has never run against a live Yahoo account, ESPN is not implemented at all,
+// and CBS is enabled but has never been exercised against a live CBS league
+// (docs/league-sync.md §3.1, rows 6-9 and 22). What DOES work for every reader
+// is the browser-only settings form in section 02 of /my-league — scoring, teams
+// and FAAB budget, saved locally, read by every board in the section. So the
+// entry says what it actually does and lands on that form.
 const CTA = { label: 'Customize My League', href: '/my-league#settings', cta: true };
 
 // The footer is the nav plus the pages that belong to no lane: the data

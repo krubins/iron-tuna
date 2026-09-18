@@ -1,6 +1,10 @@
 # Iron Tuna — Project Handoff
 
-**Sync My League was removed on 2026-09-17.** It never worked end to end for any provider, so the whole layer is gone: the `LEAGUE SYNC` region of `_worker.js`, every `/api/leagues*` and `/api/oauth/*` route, the Sleeper, Yahoo, CBS and ESPN adapters, the CBS browser extension, `it-sync.js`, the `/my-week` page, the connect flow on `/my-league` and every personalized module. See §87. Reader league settings are browser-only again (`it-inseason.js`), which is what always worked. The magic-link sign-in it had widened to any valid address is back to entitled addresses only (§88).
+CBS browser connector 0.2.0: the token-declaration approach failed on the live CBS league. The extension now reads whitelisted settings/scoring, roster-grid team names and every team roster through same-origin requests in the signed-in CBS tab, then posts a bounded snapshot to the existing connect route as provider cbs_browser. No CBS credentials leave the browser. The existing API-token adapter and encryption are retained separately; as of 2026-09-16 it sends the token as CBS's `access_token` query parameter (and the Authorization header), tries the documented `api.cbssports.com/fantasy` base before the league host's `/api/league`, treats a sign-in redirect as a refused token instead of a generic failure, and every failure shows a redacted diagnostic (resource, what each host answered, redirect host/path) on the form and in the league's last error. The first live run after that change answered `CBS details: HTTP 302 to www.cbssports.com/login` from the league host alone, so the league host does not honor `access_token`; whether the documented base still does is unproven and now untestable: on 2026-09-17 a signed-in live league page carried no `var token = "..."` at all, in the served HTML or on `window`, so the technique the public token fetchers rely on no longer yields a value and there is nothing left to authenticate a probe of either host with. Treat the API-token adapter as dead rather than merely unverified; it is retained, still behind `FLAG_CBS_SYNC`, only because removing it would cost more than leaving it off. Browser leagues never run in the scheduled sync job and expose no next automatic refresh time.
+
+Live DOM validation found all 12 BigKahuna teams and 204 players, matching each page's Active/Reserve counts. All scoring rows were parsed against a synthetic fixture that retains the observed scoring shapes. On 2026-09-16 the whole flow ran in a real Chromium (`node tools/test-cbs-e2e.mjs`: the unpacked extension, the real worker as irontuna.com, an in-memory D1, a fake CBS site in the reader's shapes): sign-in, tab discovery, the CBS reads, the import POST, team selection, the card on My Leagues and the strip on My Week all pass. The same day the reader and the normalizer gained injured-reserve support (extension 0.2.1); before that, one IR player on any team aborted the entire import with "CBS roster counts could not be verified", which in Week 2 is the likeliest way a live import fails. Two things the harness cannot prove: the live CBS markup (a drift shows as a "No import was sent" message in the popup) and the production env (Sleeper, Yahoo and ESPN stay unavailable on My Leagues by flag and configuration; `/api/leagues/providers` says which). Do not claim the league is linked until My Leagues confirms it. See extensions/cbs-connector/README.md and docs/league-sync.md for scope and release checks.
+
+A league can also be read off a **roster grid screenshot**, which is the whole room in one image on the platforms that print one. The by-hand form on My Leagues takes the image, sends it to the existing `/api/roster-read`, and posts what comes back as `teams[]` to `/api/leagues/manual`, which already accepted that shape. The reader returns names only, so every player lands on the bench and a bare name is resolved to a position against the board. Because no starter is known, `leagueLineup` withholds the comparison against the set lineup rather than reporting that the reader starts nobody and projects zero: it returns `slotsKnown:false` with `currentTotal` and `improvement` null and no changes, and the projected best lineup stands on its own. Scoring and the starting-lineup shape are not in a roster grid and still come from the form's own importer or by hand, once. No extension, no sign-in to the platform and no token: it works for CBS, ESPN, Fantrax or anything else that renders a grid.
 
 Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
 [docs/TUNA-MARKET-SIGNAL.md](docs/TUNA-MARKET-SIGNAL.md).
@@ -10625,105 +10629,3 @@ per-story and per-analyst breakouts, the biggest win leading, all four
 sections written with the misses among them, the DFS lens off the same
 packet, and the fact check clean. Removing the collapse, disabling the story
 half or blinding the board half each fails it.
-
----
-
-## 87. September 17: Sync My League is removed
-
-It never worked. Not "worked badly" — no reader ever connected a league and
-got a board back from it in production. Sleeper shipped behind a flag that
-was never turned on, because the API's grant is non-commercial and Iron Tuna
-is a paid product. Yahoo was written against fixtures and never once ran
-against a live Yahoo account. CBS was tried live twice: the API-token form
-in September, which failed because CBS never handed out a token to type into
-it, and then a browser extension, which read a real league in a test
-Chromium and was still one manual reload away from a release check. ESPN was
-a placeholder that existed to say ESPN has no supported path.
-
-So the honest state of the feature was four connectors, none of them
-carrying a reader, sitting under a masthead button that had already been
-relabeled **Customize My League** because the old label promised something
-the site could not do. That relabeling was the tell. The feature is gone
-now rather than dormant.
-
-**What came out.**
-
-| | |
-|---|---|
-| `_worker.js` | The whole `// ══ LEAGUE SYNC` region (2,050 lines): `LEAGUE_PROVIDERS`, the normalized model, `leagueSync`, the crosswalk, the eleven-table DDL, the personalization modules and `leagueRoutes`. With it: the `league-sync` job in `JOB_FNS` and `JOB_SCHEDULE`, the nine `NEWSROOM_FLAGS` entries, the `/api/leagues*` `/api/oauth/*` `/api/admin/league-sync` dispatch, and `boardsPayload`'s now-unused `customKey` memo field. |
-| Deleted files | `it-sync.js`, `my-week.html`, `extensions/cbs-connector/`, `docs/league-sync.md`, `tools/test-league-sync.mjs`, `tools/test-cbs-ui.mjs`, `tools/test-cbs-extension.mjs`, `tools/test-cbs-e2e.mjs`, and the four league fixtures. |
-| Pages | `/my-league` loses section 01 and is one section now, the settings form. `/my-week` is gone. The `ITSync` strip, CTA, callouts and league-scored reads come off `rankings` (the "Your league (synced)" preset and the roster badges), `faab` (the synced Pickup Advisor), `trade-finder` (the synced roster load and the desk's matches), `fantasy`, `in-season`, `player`, `lead`, `desk` and `admin` (the League sync card). Each page keeps the flow it had before sync was layered on it: the FAAB Advisor still reads a Sleeper room from the browser, the Trade Finder still takes pastes and screenshots. |
-| Prose and config | The privacy policy's two league-connection paragraphs, the FAQ's "Can Iron Tuna read my actual league?" entry and its JSON-LD row, `/my-week` out of the sitemap, `llms.txt` and `build-seo.mjs`, `FLAG_CBS_SYNC` out of `wrangler.jsonc`, and the CBS/Yahoo hosts off the `docs/data-sources.md` inventory and the `tools/test-data-sources.mjs` allowlist. |
-
-**What stayed, deliberately.**
-
-- **The D1 tables.** Nothing drops them. Eleven tables sit in `iron-tuna-leads`
-  with whatever rows they collected, unreferenced by any deployed code. Drop
-  them by hand when you want to; a `DROP TABLE` in a codebase that no longer
-  knows why they exist is the more dangerous artifact.
-- **`api.sleeper.app`.** Still on the inventory, still R2-red, for the player
-  id/metadata map — which predates league sync and is what `/api/faab/players`
-  and `/api/live` read.
-
-**Tests.** `tools/test-jobs.mjs` drops `league-sync` from the job list and the
-quiet-hour expectation. `tools/test-newsroom.mjs` asserts every flag defaults
-on, with no provider exception to carve out. `tools/test-inseason-league.mjs`
-checked its roster slots against the worker's `leagueEmptyRoster()`, which no
-longer exists: `it-inseason.js`'s `SLOTS` is the only owner now, so the check
-is that the list is internally coherent — no duplicates, every slot labeled,
-every label a slot, every starting slot present. Its importer assertion moved
-off the deleted by-hand connect form and onto `leagueForm`'s own mount, which
-is the importer a reader actually reaches. `tools/test-chrome.mjs` and
-`tools/test-ranks.mjs` still pin the masthead button to
-`/my-league#settings` and the label to Customize My League; the comment above
-each now says the button is not a fallback from a broken sync but the only
-thing there is.
-
-The full suite passes. `tools/test-depth-page.mjs` fails one assertion ("the
-nav reaches it from every page"), and failed it before this change too:
-`/depth-charts` came off the nav in §81 and that test was not updated.
-
----
-
-## 88. September 17: the sign-in link goes back to paying addresses only
-
-League sync needed an account of its own, it was free, so `/api/auth/request`
-was widened to mail a sign-in link to **any** valid address. §87 removed league
-sync and left that widening standing, flagged rather than changed. This closes
-it: the route now calls `isEntitled(env, email)` and sends nothing when the
-answer is no.
-
-The front end never agreed with the widened behavior in the first place. The
-restore dialog in `index.html` says *"Already bought Draft Day Mode? Enter the
-email you purchased with"* and *"If that email has a purchase, a one-time
-sign-in link is on its way"*, and `/admin` says a link *"is only ever issued to
-an address that already has access."* All three were wrong for as long as the
-route was open. They are true again, so no copy changed — except the email
-body, which promised *"League sync is free; any paid tools you already own will
-be unlocked too"* and now says what the link is for.
-
-**The answer does not change, and that is the point.** `ok: true`, 200, same
-bytes, for a customer, a stranger and a typo alike. A route that 200s for a
-customer and 403s for a stranger would answer "is this address a customer" for
-any address anyone cared to type. The rate-limit counter is still spent before
-the entitlement check for the same reason: an unentitled request costs a KV
-write and reveals nothing by how long it took. `/api/admin/comp` remains the
-route that reports what actually happened, and it is behind the admin key.
-
-**`returnTo` went with it.** The magic link carried an `r` claim through to
-`/api/auth/verify`, and the only caller that ever set one was the sign-in form
-in the league-sync connect flow. The token no longer carries it and verify no
-longer reads it; every verified link lands on `/?restored=1`. A link minted
-before this deploys still verifies — its unread `r` just lands the reader on
-the front page instead, and links live fifteen minutes.
-
-**`tools/test-auth-request.mjs`** (19 assertions, in CI) drives the real worker
-over real SQLite with mail stubbed. No entitlement, no mail; an entitlements
-row, one mail; a `COMPED_EMAILS` owner address, one mail and no row invented
-for it; a malformed address, nothing; and **no database bound at all, nothing**
-— which is the state a fresh or broken deploy is in, where `isEntitled` returns
-false and an ungated route would mail everyone. It asserts the four cases
-return identical bytes, follows the emitted link through `/api/auth/verify` to
-`/api/auth/me` to prove a customer can still sign in, checks the link is
-one-time and lands on `/?restored=1`, and holds the five-a-day cap. Deleting
-the `isEntitled` call fails it on two assertions.
