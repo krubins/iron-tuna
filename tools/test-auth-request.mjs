@@ -3,21 +3,26 @@
 // sign-in link" route.
 //   node --experimental-sqlite tools/test-auth-request.mjs
 //
-// THIS ROUTE PUTS A WORKING SIGN-IN LINK IN SOMEBODY'S INBOX, so it is only
-// ever allowed to do that for an address that already bought something. It was
-// widened to any valid address when league sync shipped and a synced league was
-// free; league sync is gone (HANDOFF §87) and the widening went with it. The
-// failure this guards against is that widening coming back by accident, which
-// would be invisible in review: the route answers ok:true either way, so a
-// regression here looks exactly like correct behavior from the outside.
+// THIS ROUTE PUTS A WORKING SIGN-IN LINK IN SOMEBODY'S INBOX, and it does that
+// for ANY valid address on purpose. A session is the account boundary for a
+// saved league, which is free: §04 of /my-league will not store a room read off
+// a roster grid without one. Paid routes enforce isEntitled separately, so a
+// session is never access to anything bought — the test below proves that,
+// because it is the invariant that lets this route stay open.
 //
-// The second thing pinned here is that the answer really is identical in every
-// case. A route that 200s for a customer and 403s for a stranger is an oracle
-// for "is this address a customer" against any address someone cares to try.
+// Its failure modes are all quiet ones, which is why they are pinned here
+// rather than left to review: the route answers ok:true whatever happens, so
+// neither "it stopped sending" nor "it started sending to anyone twice" shows
+// from the outside.
+//
+// The other thing pinned is that the answer really is identical in every case.
+// A route that 200s for a customer and 403s for a stranger is an oracle for
+// "is this address a customer" against any address someone cares to try, so a
+// later decision to gate this must not become one by accident.
 //
 // Same arrangement as tools/test-admin-comp.mjs: the worker is imported and
-// driven directly, env.LEADS_DB is real SQLite via node:sqlite so isEntitled's
-// lookup genuinely runs, and global fetch is stubbed so no mail is ever sent.
+// driven directly, env.LEADS_DB is real SQLite via node:sqlite so the
+// entitlement lookup genuinely runs, and fetch is stubbed so no mail is sent.
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fs from 'fs';
@@ -81,19 +86,20 @@ const buy = (db, email) => db.raw.prepare('INSERT INTO entitlements (email, prod
 const linkOf = m => (String((m && m.body && m.body.html) || '').match(/href="([^"]*auth\/verify[^"]*)"/) || [])[1] || null;
 
 // ── the gate ───────────────────────────────────────────────────────────────
-console.log('\nonly an address that already bought something gets a link');
+console.log('\nany valid address gets a link, because a saved league is free');
 {
   const db = makeDb(), env = envOf(db, makeKv());
 
   resetMail();
   await ask(env, 'stranger@example.com');
-  ok('an address with no entitlement is mailed nothing', mail.calls.length === 0, String(mail.calls.length));
+  ok('an address with no purchase is mailed exactly one link', mail.calls.length === 1, String(mail.calls.length));
+  ok('and it goes to that address', (mail.calls[0] || {}).body.to === 'stranger@example.com');
 
   resetMail();
   buy(db, 'buyer@example.com');
   await ask(env, 'buyer@example.com');
   ok('an address with an entitlement row is mailed exactly one link', mail.calls.length === 1, String(mail.calls.length));
-  ok('and it goes to that address', (mail.calls[0] || {}).body.to === 'buyer@example.com');
+  ok('and it goes to that address too', (mail.calls[0] || {}).body.to === 'buyer@example.com');
 
   // COMPED_EMAILS is the owner list in the source; isEntitled honors it with no
   // database row at all, so the route has to as well.
@@ -106,15 +112,32 @@ console.log('\nonly an address that already bought something gets a link');
   ok('a comped owner address is mailed a link with no entitlement row', mail.calls.length === 1, String(mail.calls.length));
   ok('and no row was invented for it', !db.raw.prepare('SELECT 1 FROM entitlements WHERE email=?').get(owner));
 
+  // An address being real is the one thing still required. Mailing something
+  // that cannot receive it is how a self-serve route becomes a spam engine.
   resetMail();
   for (const bad of ['', 'notanemail', 'a@b', 'a b@c.com', '@b.com']) await ask(env, bad);
   ok('a malformed address is mailed nothing', mail.calls.length === 0, String(mail.calls.length));
 
-  // No database bound is the state a fresh or broken deploy is in. isEntitled
-  // returns false there, so the route must send nothing rather than everything.
+  // No database bound is the state a fresh or broken deploy is in. Signing in
+  // is not an entitlement question, so it still works there.
   resetMail();
   await ask({ ...baseEnv, RATE_KV: makeKv() }, 'buyer@example.com');
-  ok('with no database bound it sends nothing rather than anything', mail.calls.length === 0, String(mail.calls.length));
+  ok('with no database bound the link is still sent', mail.calls.length === 1, String(mail.calls.length));
+}
+
+// ── a session is not a purchase ────────────────────────────────────────────
+// The invariant that lets the route stay open to everyone: signing in gives a
+// device record and a home for a saved league, never paid access.
+console.log('\na session is not a purchase');
+{
+  const db = makeDb(), env = envOf(db, makeKv());
+  resetMail();
+  await ask(env, 'stranger@example.com');
+  const v = await worker.fetch(new Request(linkOf(mail.calls[0])), env, ctx);
+  const cookie = (v.headers.get('Set-Cookie') || '').split(';')[0];
+  const me = await (await worker.fetch(new Request('https://irontuna.com/api/auth/me', { headers: { Cookie: cookie } }), env, ctx)).json();
+  ok('a signed-in stranger is signed in', me.signedIn === true, JSON.stringify(me));
+  ok('and is NOT entitled', me.entitled === false, JSON.stringify(me));
 }
 
 // ── the answer is the same answer every time ───────────────────────────────
@@ -145,9 +168,10 @@ console.log('\nthe link works end to end');
 
   const v = await worker.fetch(new Request(link), env, ctx);
   ok('following it redirects', v.status === 302, String(v.status));
-  // The magic link used to carry a returnTo, set only by the sign-in form in
-  // the league-sync connect flow. That form is gone and so is the plumbing.
-  ok('and always lands on the front page', v.headers.get('Location') === 'https://irontuna.com/?restored=1', String(v.headers.get('Location')));
+  // A request that named no returnTo lands on the front page. /my-league is the
+  // only other destination the link will honor, and the sign-in form there is
+  // what sets it; anything else a caller asks for is ignored.
+  ok('a link with no returnTo lands on the front page', v.headers.get('Location') === 'https://irontuna.com/?restored=1', String(v.headers.get('Location')));
   const cookie = v.headers.get('Set-Cookie') || '';
   ok('it sets the session cookie', /^it_sess=[^;]+;/.test(cookie) && /HttpOnly/.test(cookie) && /Secure/.test(cookie), cookie.slice(0, 60));
 
