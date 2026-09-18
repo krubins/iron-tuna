@@ -14,7 +14,7 @@ const cut = (a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i); if (i <
 
 // Real ET clock helpers from the worker; stubbed jobs that record their runs.
 const runs = [];
-const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'usage-prior-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'board-freeze', 'line-ledger', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick', 'league-sync'].map(j => [j, async () => ({ ok: true })]));
+const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'usage-prior-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'board-freeze', 'line-ledger', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick'].map(j => [j, async () => ({ ok: true })]));
 const jobRun = async (env, name, trigger) => {
   const rec = { job: name, trigger, started: Date.now() }; runs.push(rec);
   if (name === 'schedule-refresh') await new Promise(r => setTimeout(r, 30));
@@ -128,7 +128,7 @@ console.log('\nthe tick');
   ok('the next quarter-hour is a new claim', !(await H.runScheduledTick(lenv, ET(2026, 9, 13, 12, 30, true), '*/15 * * * *')).skipped);
   ok('with no database every claim succeeds', await H.tickClaim({}, Date.now()) === true);
   const quiet = await H.runScheduledTick({}, ET(2026, 9, 14, 15, 0, true), 'x'); // Mon 3 PM
-  ok('a quiet hour runs only the hourly jobs', quiet.due.join() === 'schedule-refresh,board-freeze,line-ledger,news-scan,league-sync,content-tick');
+  ok('a quiet hour runs only the hourly jobs', quiet.due.join() === 'schedule-refresh,board-freeze,line-ledger,news-scan,content-tick');
   ok('a bad override is on the tick\'s answer', (await H.runScheduledTick({ JOB_SCHEDULE_JSON: '[1]' }, ET(2026, 9, 14, 15, 0, true), 'x')).scheduleErrors.length === 1);
 }
 

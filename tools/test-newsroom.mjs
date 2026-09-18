@@ -100,11 +100,12 @@ console.log('\nthe staff and the one rivalry');
   ok('every analyst has a voice, a philosophy and assignments', Object.values(A).every(a => a.voice.length > 40 && a.philosophy && a.assignments.length));
   ok('the disclosure says they are AI personas, not people', /AI-powered editorial personas, not people/.test(H.AI_DISCLOSURE));
   const flags = H.flagReport({});
-  // The four provider connectors (docs/league-sync.md) default OFF on purpose:
-  // Sleeper pending its commercial license; Yahoo and CBS pending configuration
-  // and terms validation; ESPN because no supported path exists.
-  ok('every flag defaults on, except the provider connectors', Object.entries(flags).every(([k, f]) => (f.on || /^(SLEEPER|YAHOO|CBS|ESPN)_SYNC$/.test(k)) && f.source === 'default'));
-  ok('the provider connectors default off', ['SLEEPER_SYNC', 'YAHOO_SYNC', 'CBS_SYNC', 'ESPN_SYNC'].every(k => flags[k] && !flags[k].on));
+  // Nothing defaults off any more. The four provider connectors were the only
+  // flags that did, and they went with the connectors (HANDOFF §87), so an
+  // off-by-default flag appearing here again is a deliberate decision someone
+  // has to make rather than a leftover.
+  ok('every flag defaults on', Object.entries(flags).every(([, f]) => f.on && f.source === 'default'));
+  ok('and no provider connector flag is left behind', !['SLEEPER_SYNC', 'YAHOO_SYNC', 'CBS_SYNC', 'ESPN_SYNC'].some(k => flags[k]));
   ok('a flag reads off the env', !H.flagOn({ FLAG_RIVALRY: '0' }, 'RIVALRY') && H.flagOn({ FLAG_RIVALRY: 'on' }, 'RIVALRY') && !H.flagOn({}, 'NOPE'));
 }
 

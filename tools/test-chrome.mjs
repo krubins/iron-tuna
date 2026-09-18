@@ -158,13 +158,11 @@ console.log('\nthe nav link set is identical everywhere');
 
 console.log('\nthe one header button says what it actually does');
 {
-  // IT IS NOT "Sync my league". Automatic league sync does not work reliably:
-  // Sleeper is off pending a license, Yahoo is off and has never run live, ESPN
-  // is not implemented, and CBS has never been exercised against a live league
-  // (docs/league-sync.md §3.1). What works for every reader is the browser-only
-  // settings form in section 02 of /my-league, so the button is labeled for that
-  // and lands on it. If sync is ever proved out, this is the assertion to change
-  // — deliberately, not by a label drifting back.
+  // IT IS NOT "Sync my league". The platform connectors were removed
+  // (docs/saved-league.md) and nothing syncs. What works is the form on
+  // /my-league, so the button is labeled for that and lands on it. If a
+  // connector is ever built and proved, this is the assertion to change —
+  // deliberately, not by a label drifting back.
   const wrong = [], mislabeled = [];
   for (const f of pages) {
     const h = header(read(f));

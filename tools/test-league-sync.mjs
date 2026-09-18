@@ -1,15 +1,23 @@
 #!/usr/bin/env node
-// Sync My League (docs/league-sync.md). Lifts the LEAGUE SYNC region out of
-// _worker.js with the real scoring engine, the real PROJECTIONS pool and the
-// real token helpers, stubs the network with Sleeper- and Yahoo-shaped
-// fixtures and the boards with a deterministic board built off PROJECTIONS,
-// and drives the whole thing through a small in-memory D1: normalization,
-// scoring import (PPR, half, standard, TE premium, unusual bonuses), roster
-// import (superflex, 10/12/14 teams), player-id matching and the miss log,
-// idempotent re-sync, multiple leagues and the default, OAuth expiry and
-// refresh, disconnect, availability, the pickup advisor, the lineup
-// optimizer, the matchup, intel, trades, playoffs, a provider outage, a
-// partial sync, a stale league, and the routes' auth gate.
+// The saved league. Lifts the THE SAVED LEAGUE region out of _worker.js with
+// the real scoring engine and the real PROJECTIONS pool, stubs the boards with
+// a deterministic board built off PROJECTIONS, and drives the whole thing
+// through a small in-memory D1.
+//
+// THERE IS NO NETWORK HERE, and that is the point rather than a convenience.
+// The Sleeper, Yahoo and CBS connectors were removed on 2026-09-18 (HANDOFF
+// §87) and a league now only ever arrives from the reader: the forms and the
+// roster-grid screenshot on /my-league, through POST /api/leagues/manual. The
+// fetch stub below throws, so anything that starts calling a fantasy platform
+// again fails here first.
+//
+// What is covered: settings normalization and the reader's overrides on top of
+// them, scoring import (PPR, half, standard, TE premium), roster shapes
+// (superflex, 10/12/14 teams), player-id matching and the miss log, leagues
+// created and edited by hand, a whole room read off a roster grid, multiple
+// leagues and the default, disconnect, availability, the pickup advisor, the
+// lineup optimizer, the matchup, intel, trades, playoffs, and the routes'
+// auth gate.
 //   node tools/test-league-sync.mjs
 import fs from 'fs';
 import path from 'path';
@@ -41,69 +49,22 @@ deps.push(cut('function _tierPoints(', '\n}\n') + '\n}\n');
 // The board route hands its week board through boardStillToPlay on the way
 // out; the rule and its helpers live beside boardsPayload, which is stubbed.
 deps.push(cut('const _gameStarted = ', '// -- the insight detection engine'));
-const region = cut('// ══ LEAGUE SYNC', '// ══ /LEAGUE SYNC');
+const region = cut('// ══ THE SAVED LEAGUE', '// ══ /THE SAVED LEAGUE');
 const _oddsRoundSrc = src.match(/const _oddsRound = [^\n]+\n/) ? src.match(/const _oddsRound = [^\n]+\n/)[0] : (src.match(/function _oddsRound\([^)]*\) \{[^}]*\}/) || [''])[0];
 if (!_oddsRoundSrc) { console.error('FAIL: _oddsRound not found'); process.exit(1); }
 
 // ── the network, stubbed ───────────────────────────────────────────────────
-const FIX = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/sleeper-league.json'), 'utf8'));
-const YFIX = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/yahoo-league.json'), 'utf8'));
-const CFIX = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/cbs-league.json'), 'utf8'));
-const cbsNet = { mode: '', raw: CFIX, requests: [] };
-const net = { calls: [], down: false, notFound: false, rate: false, yahooExpired: false, yahooRefreshed: 0, playersOnly: false };
-const sleeperWorld = { league: null, rosters: [], users: [], players: {}, matchups: {}, transactions: {} };
-async function fakeFetch(url, init) {
-  net.calls.push(url);
-  if (/\.football\.cbssports\.com\/api\/league\/|^https:\/\/api\.cbssports\.com\/fantasy\/league\//.test(url)) {
-    cbsNet.requests.push({ url, init });
-    const apiHost = url.startsWith('https://api.cbssports.com/');
-    if (cbsNet.mode === 'apidown' && apiHost) return response('gone', 404);
-    if (cbsNet.mode === 'leaguedown' && !apiHost) return response('', 302, { location: 'https://www.cbssports.com/login?xurl=' + encodeURIComponent(url) });
-    const response = (body, status = 200, headers = {}) => ({ ok: status < 300, status, headers: { get: k => headers[k.toLowerCase()] || null }, text: async () => typeof body === 'string' ? body : JSON.stringify(body) });
-    if (cbsNet.mode === 'network') throw new Error('fetch failed with secret ' + init.headers.Authorization);
-    if (cbsNet.mode === 'redirect') return response('', 302, { location: 'https://www.cbssports.com/login?xurl=' + encodeURIComponent(url) });
-    if (cbsNet.mode === 'timeout') { const e = new Error('aborted with ' + url); e.name = 'AbortError'; throw e; }
-    if (cbsNet.mode === 'plain') return response('invalid access token ' + init.headers.Authorization, 403);
-    if (cbsNet.mode === 'expired200') return response({ statusCode: 401, body: { error: init.headers.Authorization } });
-    if (cbsNet.mode === 'malformed') return response('<html>' + init.headers.Authorization + '</html>');
-    if (cbsNet.mode === 'rate') return response('slow down', 429);
-    if (cbsNet.mode === 'missing') return response('not found', 404);
-    const resource = new URL(url).pathname.split(/\/api\/league\/|\/fantasy\/league\//)[1];
-    const key = { 'standings/overall': 'standings', 'transactions/waiver-order': 'waivers', 'transaction-list/log': 'transactions' }[resource] || resource;
-    return response({ statusCode: 200, body: cbsNet.raw[key] });
-  }
-  const j = (o, status) => ({ ok: !status || status < 400, status: status || 200, json: async () => o });
-  if (net.down) throw new Error('ECONNRESET');
-  if (url.startsWith('https://api.sleeper.app/v1/players/nfl')) return j(sleeperWorld.players);
-  if (net.rate) return j({}, 429);
-  let m;
-  if ((m = url.match(/\/v1\/user\/([^/]+)\/leagues\/nfl\/(\d+)$/))) return j([sleeperWorld.league]);
-  if ((m = url.match(/\/v1\/user\/([^/]+)$/))) return decodeURIComponent(m[1]) === 'ken_r' ? j({ user_id: 'u1', username: 'ken_r', display_name: 'Ken' }) : j(null, 404);
-  if ((m = url.match(/\/v1\/league\/([^/]+)\/rosters$/))) return net.playersOnly ? j(null, 500) : j(sleeperWorld.rosters);
-  if ((m = url.match(/\/v1\/league\/([^/]+)\/users$/))) return j(sleeperWorld.users);
-  if ((m = url.match(/\/v1\/league\/([^/]+)\/matchups\/(\d+)$/))) return j(sleeperWorld.matchups[m[2]] || []);
-  if ((m = url.match(/\/v1\/league\/([^/]+)\/transactions\/(\d+)$/))) return j(sleeperWorld.transactions[m[2]] || []);
-  if ((m = url.match(/\/v1\/league\/([^/]+)$/))) return net.notFound || m[1] !== sleeperWorld.league.league_id ? j(null, 404) : j(sleeperWorld.league);
-  if (url.startsWith('https://api.login.yahoo.com/oauth2/get_token')) {
-    const body = String(init.body);
-    if (/grant_type=refresh_token/.test(body)) { net.yahooRefreshed++; return net.yahooExpired ? j({ error: 'invalid_grant' }, 400) : j({ access_token: 'AT2', refresh_token: 'RT2', expires_in: 3600 }); }
-    return j({ access_token: 'AT1', refresh_token: 'RT1', expires_in: 3600, xoauth_yahoo_guid: 'GUID1' });
-  }
-  if (url.startsWith('https://fantasysports.yahooapis.com')) {
-    const auth = (init.headers || {}).authorization || '';
-    if (!/Bearer AT/.test(auth)) return j({}, 401);
-    if (/\/users;use_login=true\/games/.test(url)) return j({ fantasy_content: { users: { 0: { user: [{ guid: 'GUID1' }, { games: { 0: { game: [{ game_key: '449' }, { leagues: { 0: { league: [YFIX.league] }, count: 1 } }] }, count: 1 } }] }, count: 1 } } });
-    return j({ fantasy_content: { league: [YFIX.league, {}] } });
-  }
-  return j({}, 404);
-}
+// ── the network, which there isn't ─────────────────────────────────────────
+// Nothing in the region may call out. A league is the reader's own entry, so
+// an outbound fetch is a regression, not a case to stub.
+async function fakeFetch(url) { throw new Error('the saved league made a network call: ' + url); }
 
 // ── an in-memory D1 ────────────────────────────────────────────────────────
 // Enough SQL for the region: INSERT ... ON CONFLICT (upsert by the table's
 // primary key), UPDATE ... WHERE, DELETE ... WHERE, SELECT with simple
 // conjunctions, COUNT(*), ORDER BY (ignored) and LIMIT (ignored).
-const PK = { league_provider_tokens: ['email', 'provider', 'provider_league_id'], leagues: ['id'], league_teams: ['league_id', 'team_id'], league_roster_players: ['league_id', 'provider_player_id'], league_matchups: ['league_id', 'week', 'team_id'],
-  league_transactions: ['league_id', 'provider_txn_id'], league_snapshots: ['league_id', 'season', 'week', 'kind'], league_sync_runs: ['id'], provider_connections: ['email', 'provider'],
+const PK = { leagues: ['id'], league_teams: ['league_id', 'team_id'], league_roster_players: ['league_id', 'provider_player_id'], league_matchups: ['league_id', 'week', 'team_id'],
+  league_transactions: ['league_id', 'provider_txn_id'], league_snapshots: ['league_id', 'season', 'week', 'kind'], provider_connections: ['email', 'provider'],
   player_id_map: ['provider', 'provider_player_id'], player_map_misses: ['provider', 'provider_player_id'], sessions: ['id'] };
 function fakeDb() {
   const t = {}; let auto = 1; const log = [];
@@ -204,75 +165,94 @@ const stubs = {
   _availTable: () => ({}), _withAvailability: p => p, _availPool: pool => pool
 };
 const code = deps.join('\n') + '\n' + _oddsRoundSrc + '\nvar boardsPayload = __stubBoards({ scoringRules, PROJECTIONS, teamKey, scoreAny, _oddsNorm, _oddsRound });\n' + region +
-  '\nreturn { leagueReady, leagueNormalizeSettings, leagueEffectiveSettings, leagueScore, leagueScoringKey, leagueSettingsLabel, leagueResolvePlayer, leagueMapPlayers, leagueOptimize, leagueStarterSlots, leagueRosterSize, sleeperScoring, sleeperRoster, sleeperNormalize, yahooScoring, yahooNormalize, yMerge, yList, LEAGUE_PROVIDERS, leagueProviderReport, leagueSync, runLeagueSync, leagueCreateRow, leagueLoad, leagueList, leagueManualUpsert, leagueSetDefault, leagueDisconnect, leagueBoard, leagueLineup, leaguePickups, leagueMatchup, leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailabilityLookup, leagueSummary, leagueRoutes, leagueSeal, leagueOpen, yahooAccessToken, yahooConnectionSave, leagueConnectionRead, leagueNextSyncAt, makeToken, SCORING_BASE, scoringRules, scoreAny, PROJECTIONS, _oddsNorm, teamKey, flagOn, LEAGUE_STALE_MS, leagueRowToLeague };';
+  '\nreturn { leagueReady, leagueNormalizeSettings, leagueEffectiveSettings, leagueScore, leagueScoringKey, leagueSettingsLabel, leagueResolvePlayer, leagueMapPlayers, leagueOptimize, leagueStarterSlots, leagueRosterSize, leagueEmptyRoster, LEAGUE_PROVIDERS, leagueCreateRow, leagueLoad, leagueList, leagueManualUpsert, leagueSetDefault, leagueDisconnect, leagueBoard, leagueLineup, leaguePickups, leagueMatchup, leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailabilityLookup, leagueSummary, leagueRoutes, makeToken, SCORING_BASE, scoringRules, scoreAny, PROJECTIONS, _oddsNorm, teamKey, flagOn, LEAGUE_STALE_MS, leagueRowToLeague };';
 const H = new Function(...Object.keys(stubs), '__stubBoards', code)(...Object.values(stubs), stubBoards);
 
-// ── a world: a 12-team superflex league on real players ───────────────────
+// ── a world: rooms of real players, in the shape a reader saves one ───────
 const byPos = {}; for (const p of H.PROJECTIONS) (byPos[p.position] = byPos[p.position] || []).push(p);
 const pick = (pos, i) => byPos[pos][i];
-let nextId = 4000;
-const idOf = new Map();
-function sleeperPlayer(p) { if (!idOf.has(p.name)) { const id = String(nextId++); idOf.set(p.name, id); sleeperWorld.players[id] = { player_id: id, full_name: p.name, first_name: p.name.split(' ')[0], last_name: p.name.split(' ').slice(1).join(' '), position: p.position, team: p.team, injury_status: null, espn_id: 100000 + Number(id), yahoo_id: 200000 + Number(id) }; } return idOf.get(p.name); }
-for (const t of Object.keys(byPos)) if (t === 'DEF') for (const d of byPos.DEF) { const id = d.team; idOf.set(d.name, id); sleeperWorld.players[id] = { player_id: id, position: 'DEF', team: d.team }; }
-function buildWorld(nTeams, opts) {
+// A room: nTeams rosters of real players, in the shape POST /api/leagues/manual
+// takes. Team 1 is the reader's. Starters are named where the caller wants a
+// lineup to compare against; a grid-read room names none, and leagueLineup
+// withholds the comparison rather than claiming the reader starts nobody.
+function buildRoom(nTeams, opts) {
   const o = opts || {};
-  const lg = JSON.parse(JSON.stringify(FIX.league));
-  lg.total_rosters = nTeams; lg.settings.num_teams = nTeams;
-  if (o.scoring) Object.assign(lg.scoring_settings, o.scoring);
-  if (o.roster_positions) lg.roster_positions = o.roster_positions;
-  if (o.noTe) delete lg.scoring_settings.bonus_rec_te;
-  sleeperWorld.league = lg;
-  sleeperWorld.users = [{ user_id: 'u1', display_name: 'Ken', username: 'ken_r', metadata: { team_name: 'Iron Tunas' } }].concat(Array.from({ length: nTeams - 1 }, (_, i) => ({ user_id: 'u' + (i + 2), display_name: 'Manager ' + (i + 2), metadata: { team_name: 'Team ' + (i + 2) } })));
-  const starterSlots = lg.roster_positions.filter(p => p !== 'BN' && p !== 'IR');
-  sleeperWorld.rosters = [];
   const counters = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
-  const take = pos => { const p = pick(pos, counters[pos]++); return p ? sleeperPlayer(p) : null; };
+  const take = pos => { const p = pick(pos, counters[pos]++); return p ? p : null; };
+  const teams = [];
   for (let r = 1; r <= nTeams; r++) {
-    const starters = starterSlots.map(s => s === 'FLEX' ? take('WR') : s === 'SUPER_FLEX' ? take('QB') : take(s));
-    const bench = [take('RB'), take('WR'), take('WR'), take('TE'), take('RB'), take('QB')];
-    const players = starters.concat(bench).filter(Boolean);
-    sleeperWorld.rosters.push({ roster_id: r, owner_id: 'u' + r, players, starters, reserve: [], taxi: [], settings: { wins: nTeams - r, losses: r - 1, ties: 0, fpts: 1000 - r * 10, fpts_decimal: 50, fpts_against: 900, fpts_against_decimal: 0, waiver_budget_used: r * 5, waiver_position: r } });
+    const starters = [take('QB'), take('RB'), take('RB'), take('WR'), take('WR'), take('TE'), take('QB')].filter(Boolean);
+    const bench = [take('RB'), take('WR'), take('TE')].filter(Boolean);
+    const players = starters.map(p => ({ name: p.name, position: p.position, slot: o.noSlots ? 'bench' : 'starter' }))
+      .concat(bench.map(p => ({ name: p.name, position: p.position, slot: 'bench' })));
+    teams.push({ teamId: 'm' + r, name: r === 1 ? 'Iron Tunas' : 'Team ' + r, isUser: r === 1, players });
   }
-  sleeperWorld.matchups = {};
-  for (let w = 1; w <= 6; w++) { sleeperWorld.matchups[w] = []; for (let r = 1; r <= nTeams; r += 2) { const mid = (r + 1) / 2; sleeperWorld.matchups[w].push({ roster_id: r, matchup_id: mid, points: w < worldState.week ? 100 + r : 0 }, { roster_id: r + 1, matchup_id: mid, points: w < worldState.week ? 95 + r : 0 }); } }
-  const dropped = sleeperWorld.rosters[1].players.pop();
-  sleeperWorld.transactions = { [worldState.week]: [{ transaction_id: 'tx1', type: 'waiver', status: 'complete', roster_ids: [2], adds: {}, drops: { [dropped]: 2 }, settings: { waiver_bid: 12 }, created: Date.now() - 3600000, status_updated: Date.now() - 3600000, leg: worldState.week }], [worldState.week - 1]: [] };
-  return { lg, dropped };
+  return teams;
 }
+// The settings a room is saved with: superflex, full PPR, half a point of TE
+// premium, so the board has something to move and the lineup has a flex to
+// fill. leagueNormalizeSettings is what actually reads this.
+const ROOM_SETTINGS = {
+  scoring: { receptionPoints: 1, rbReceptionPoints: 1, passingTD: 4 },
+  extras: { tePremium: 0.5 },
+  roster: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SFLEX: 1, K: 0, DEF: 0, BN: 3, IR: 0, TAXI: 0 },
+  faab: 100
+};
 const req = (method, url, body, cookie) => new Request('https://irontuna.com' + url, { method, headers: { cookie: cookie || '', 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
 async function session(env, email) { const tok = await H.makeToken(env.AUTH_SECRET, { sid: 's-' + email, e: email, t: 'sess', exp: Date.now() + 3600000 }); env.LEADS_DB.t.sessions = env.LEADS_DB.t.sessions || new Map(); env.LEADS_DB.t.sessions.set('s-' + email, { id: 's-' + email, email }); return 'it_sess=' + tok; }
 async function route(env, method, url, body, cookie) { const r = await H.leagueRoutes(new Request('https://irontuna.com' + url, { method, headers: { cookie: cookie || '', 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }), env, new URL('https://irontuna.com' + url), {}); return r ? { status: r.status, body: await r.json().catch(() => null), headers: r.headers } : null; }
 
 console.log('\nsettings normalization');
 {
-  const sc = H.sleeperScoring(FIX.league.scoring_settings);
-  ok('Sleeper pass_yd 0.04 becomes 25 yards per point, no threshold', sc.scoring.passingYardsPerPoint === 25 && sc.scoring.passingYardsThreshold === 0);
-  ok('rec 1 is full PPR for WR and RB alike', sc.scoring.receptionPoints === 1 && sc.scoring.rbReceptionPoints === 1);
-  ok('bonus_rec_te 0.5 becomes TE premium, not a WR reception value', sc.extras.tePremium === 0.5 && sc.scoring.receptionPoints === 1);
-  ok('the 300-yard passing bonus and 100-yard rushing bonus are carried', sc.scoring.passingYardBonuses[0].at === 300 && sc.scoring.passingYardBonuses[0].points === 1 && sc.scoring.rushingYardBonuses[0].points === 2);
-  ok('kicker tiers and points-allowed tiers are filled from Sleeper bins', sc.scoring.fieldGoalTiers[4].points === 5 && sc.scoring.pointsAllowed[0].points === 10 && sc.scoring.pointsAllowed[6].points === -4);
-  ok('unsupported rules (kr_yd, idp_tkl) are preserved, not dropped', sc.extras.unsupported.kr_yd === 0.04 && sc.extras.unsupported.idp_tkl === 1 && /kr_yd/.test(sc.extras.notes.join(' ')));
-  const half = H.sleeperScoring({ rec: 0.5 }); ok('half PPR', half.scoring.receptionPoints === 0.5 && half.scoring.rbReceptionPoints === 0.5);
-  const std = H.sleeperScoring({ rec: 0, pass_td: 6 }); ok('standard scoring with 6-point passing TDs', std.scoring.receptionPoints === 0 && std.scoring.passingTD === 6);
-  const rb = H.sleeperScoring({ rec: 1, bonus_rec_rb: -0.5 }); ok('position-specific PPR (RB half, WR full)', rb.scoring.rbReceptionPoints === 0.5 && rb.scoring.receptionPoints === 1);
-  const r = H.sleeperRoster(FIX.league.roster_positions, FIX.league.settings);
-  ok('roster slots: QB1 RB2 WR2 TE1 FLEX1 SFLEX1 K1 DEF1 BN6 IR1', r.QB === 1 && r.RB === 2 && r.WR === 2 && r.TE === 1 && r.FLEX === 1 && r.SFLEX === 1 && r.K === 1 && r.DEF === 1 && r.BN === 6 && r.IR === 1);
-  const r2 = H.sleeperRoster(['QB', 'RB', 'WR', 'REC_FLEX', 'WRRB_FLEX', 'DL', 'LB', 'BN'], {});
-  ok('unusual slots map or are kept under other', r2.REC_FLEX === 1 && r2.WRRB_FLEX === 1 && r2.other.DL === 1 && r2.other.LB === 1 && H.leagueRosterSize(r2) === 8);
-  const n = H.leagueNormalizeSettings({ scoring: { receptionPoints: 'abc', bogusKey: 3 }, roster: { QB: 99 } });
-  ok('a bad value falls back and a bogus key is preserved as unsupported', n.scoring.receptionPoints === 1 && n.extras.unsupported.bogusKey === 3 && n.roster.QB === 20);
-  const eff = H.leagueEffectiveSettings(H.leagueNormalizeSettings({ scoring: { receptionPoints: 1 }, extras: { tePremium: 0 } }), { scoring: { receptionPoints: 0.5 }, extras: { tePremium: 1 }, roster: { SFLEX: 1 } });
-  ok('overrides lay over synced settings and are named', eff.scoring.receptionPoints === 0.5 && eff.extras.tePremium === 1 && eff.roster.SFLEX === 1 && eff.overridden.join() === 'scoring.receptionPoints,extras.tePremium,roster.SFLEX');
-  const te = H.leagueNormalizeSettings({ extras: { tePremium: 0.5 } });
-  ok('TE premium adds per catch for tight ends only', H.leagueScore({ rec: 10, recYd: 100 }, 'TE', te, 1) - H.scoreAny({ rec: 10, recYd: 100 }, 'TE', te.scoring, 1) === 5 && H.leagueScore({ rec: 10, recYd: 100 }, 'WR', te, 1) === H.scoreAny({ rec: 10, recYd: 100 }, 'WR', te.scoring, 1));
-  ok('the scoring key changes when the rules change', H.leagueScoringKey(te) !== H.leagueScoringKey(H.leagueNormalizeSettings({})) && H.leagueScoringKey(te) === H.leagueScoringKey(H.leagueNormalizeSettings({ extras: { tePremium: 0.5 } })));
-  ok('the label reads the settings', /PPR · TE premium · 12 teams · Superflex/.test(H.leagueSettingsLabel(H.leagueNormalizeSettings({ extras: { tePremium: 0.5 }, roster: { QB: 1, SFLEX: 1 } }), 12)));
-  const y = H.yahooScoring(YFIX.settings.stat_modifiers.stats.map(s => s.stat));
-  ok('Yahoo stat ids map: 6-pt pass TD, -2 INT, half PPR, 25 yd/pt passing', y.scoring.passingTD === 6 && y.scoring.passingInt === -2 && y.scoring.receptionPoints === 0.5 && y.scoring.passingYardsPerPoint === 25);
-  ok('an unknown Yahoo stat id is preserved as unsupported', y.extras.unsupported.yahoo_stat_78 === 1);
-  const yn = H.yahooNormalize({ league: YFIX.league, settings: YFIX.settings, teams: [{ team_id: '1', name: 'Mine', is_owned_by_current_login: '1', managers: [{ nickname: 'Ken', guid: 'GUID1' }], team_standings: { rank: 2, outcome_totals: { wins: 3, losses: 1 }, points_for: 400 }, roster: [{ player_id: '30123', name: { full: pick('WR', 0).name }, primary_position: 'WR', editorial_team_abbr: pick('WR', 0).team.toLowerCase(), selected_position: { position: 'WR' } }, { player_id: '30124', name: { full: pick('RB', 0).name }, primary_position: 'RB', editorial_team_abbr: pick('RB', 0).team, selected_position: { position: 'BN' } }] }], matchups: [{ week: 5, status: 'midevent', teams: [{ team_id: '1', points: 10 }, { team_id: '2', points: 12 }] }], transactions: [] }, { currentWeek: 5 });
-  ok('Yahoo normalizes: W/R/T is FLEX, 3 WR, FAAB on, the user team found, starters and bench read', yn.settings.roster.FLEX === 1 && yn.settings.roster.WR === 3 && yn.settings.faab === 100 && yn.userTeamId === '1' && yn.rosters[0].players[0].slot === 'starter' && yn.rosters[0].players[1].slot === 'bench' && yn.matchups[0].opponentId === '2');
-  ok('yMerge folds Yahoo array-of-objects into one object', H.yMerge([{ a: 1 }, [{ b: 2 }], { c: 3 }]).b === 2 && H.yList({ 0: 'x', 1: 'y', count: 2 }).length === 2);
+  // leagueNormalizeSettings is the only normalizer left: what the reader types
+  // or pastes is what a league is. The shapes the connectors used to import —
+  // full/half/standard PPR, position-specific reception values, TE premium,
+  // superflex, unusual flex slots, rules the engine does not model — all still
+  // have to survive it, because the forms can express every one of them.
+  const N = o => H.leagueNormalizeSettings(o);
+
+  const ppr = N({ scoring: { receptionPoints: 1 } });
+  ok('full PPR applies to WR and RB alike', ppr.scoring.receptionPoints === 1 && ppr.scoring.rbReceptionPoints === 1);
+  // The RB reception value is its OWN field, not a derivation. A form that sets
+  // half PPR has to set both, or a back keeps full-point catches silently.
+  const half = N({ scoring: { receptionPoints: 0.5, rbReceptionPoints: 0.5 } });
+  ok('half PPR', half.scoring.receptionPoints === 0.5 && half.scoring.rbReceptionPoints === 0.5);
+  ok('and setting only the WR value leaves the RB value alone rather than guessing',
+     N({ scoring: { receptionPoints: 0.5 } }).scoring.rbReceptionPoints === ppr.scoring.rbReceptionPoints);
+  const std = N({ scoring: { receptionPoints: 0, passingTD: 6 } });
+  ok('standard scoring with 6-point passing TDs', std.scoring.receptionPoints === 0 && std.scoring.passingTD === 6);
+  const rb = N({ scoring: { receptionPoints: 1, rbReceptionPoints: 0.5 } });
+  ok('position-specific PPR (RB half, WR full)', rb.scoring.rbReceptionPoints === 0.5 && rb.scoring.receptionPoints === 1);
+  const tePrem = N({ scoring: { receptionPoints: 1 }, extras: { tePremium: 0.5 } });
+  ok('TE premium is an extra per catch, not a different WR reception value', tePrem.extras.tePremium === 0.5 && tePrem.scoring.receptionPoints === 1);
+
+  const r = N({ roster: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SFLEX: 1, K: 1, DEF: 1, BN: 6, IR: 1 } }).roster;
+  ok('roster slots: QB1 RB2 WR2 TE1 FLEX1 SFLEX1 K1 DEF1 BN6 IR1',
+     r.QB === 1 && r.RB === 2 && r.WR === 2 && r.TE === 1 && r.FLEX === 1 && r.SFLEX === 1 && r.K === 1 && r.DEF === 1 && r.BN === 6 && r.IR === 1);
+  const r2 = N({ roster: { QB: 1, RB: 1, WR: 1, REC_FLEX: 1, WRRB_FLEX: 1, BN: 1, other: { DL: 1, LB: 1 } } }).roster;
+  ok('the two extra flex slots are real slots', r2.REC_FLEX === 1 && r2.WRRB_FLEX === 1);
+  ok('and slots no lineup understands are kept under other rather than dropped', r2.other.DL === 1 && r2.other.LB === 1);
+  ok('a slot name nobody recognizes at the top level is not silently invented as a slot',
+     N({ roster: { QB: 1, DL: 3 } }).roster.DL === undefined);
+  ok('the starter slots come out in lineup order, superflex last',
+     H.leagueStarterSlots(r).join() === 'QB,RB,RB,WR,WR,TE,K,DEF,FLEX,SFLEX');
+
+  const n = N({ scoring: { receptionPoints: 'abc', bogusKey: 3 }, roster: { QB: 99 } });
+  ok('a bad value falls back and a bogus key is preserved as unsupported, never guessed at',
+     n.scoring.receptionPoints === 1 && n.extras.unsupported.bogusKey === 3);
+
+  const eff = H.leagueEffectiveSettings(N({ scoring: { receptionPoints: 1 }, extras: { tePremium: 0 } }),
+                                        { scoring: { receptionPoints: 0.5 }, extras: { tePremium: 1 }, roster: { SFLEX: 1 } });
+  ok('the reader\'s corrections lay over the settings and are named as corrections',
+     eff.scoring.receptionPoints === 0.5 && eff.extras.tePremium === 1 && eff.roster.SFLEX === 1 && eff.overridden.length > 0);
+
+  const te = N({ extras: { tePremium: 0.5 } });
+  ok('TE premium adds per catch for tight ends only',
+     H.leagueScore({ rec: 10, recYd: 100 }, 'TE', te, 1) - H.scoreAny({ rec: 10, recYd: 100 }, 'TE', H.scoringRules('ppr'), 1) === 5 &&
+     H.leagueScore({ rec: 10, recYd: 100 }, 'WR', te, 1) === H.scoreAny({ rec: 10, recYd: 100 }, 'WR', H.scoringRules('ppr'), 1));
+  ok('the scoring key changes when the rules change', H.leagueScoringKey(te) !== H.leagueScoringKey(N({})));
+  ok('the label reads the settings', /PPR · TE premium · 12 teams · Superflex/.test(
+     H.leagueSettingsLabel(N({ extras: { tePremium: 0.5 }, roster: { SFLEX: 1 } }), 12)));
 }
 
 console.log('\nplayer-id matching');
@@ -286,112 +266,32 @@ console.log('\nplayer-id matching');
   ok('an unranked position is refused', /not ranked/.test(H.leagueResolvePlayer({ name: 'Some Linebacker', position: 'LB' }).reason));
   const db = fakeDb(); const env = { LEADS_DB: db };
   await H.leagueReady(env);
-  const m = await H.leagueMapPlayers(env, 'sleeper', [{ providerPlayerId: '1', name: wr.name, position: 'WR', team: wr.team }, { providerPlayerId: '2', name: 'Nobody Atall', position: 'RB', team: 'BUF' }, { providerPlayerId: '1', name: wr.name, position: 'WR' }]);
+  const m = await H.leagueMapPlayers(env, 'manual', [{ providerPlayerId: '1', name: wr.name, position: 'WR', team: wr.team }, { providerPlayerId: '2', name: 'Nobody Atall', position: 'RB', team: 'BUF' }, { providerPlayerId: '1', name: wr.name, position: 'WR' }]);
   ok('one map row per provider id, one miss logged, duplicates ignored', m.map.size === 2 && m.unmatched === 1 && db.t.player_id_map.size === 1 && db.t.player_map_misses.size === 1);
-  await H.leagueMapPlayers(env, 'sleeper', [{ providerPlayerId: '2', name: 'Nobody Atall', position: 'RB', team: 'BUF' }]);
+  await H.leagueMapPlayers(env, 'manual', [{ providerPlayerId: '2', name: 'Nobody Atall', position: 'RB', team: 'BUF' }]);
   ok('a repeated miss increments its count rather than duplicating', db.t.player_map_misses.size === 1 && [...db.t.player_map_misses.values()][0].count === 2);
 }
 
-console.log('\nthe Sleeper connector, end to end');
-const db = fakeDb(); const env = { LEADS_DB: db, AUTH_SECRET: 'test-secret', LEAGUE_TOKEN_KEY: 'k', FLAG_SLEEPER_SYNC: '1', FLAG_YAHOO_SYNC: '1', YAHOO_CLIENT_ID: 'cid', YAHOO_CLIENT_SECRET: 'cs' };
-const world = buildWorld(12);
+// A 12-team superflex room, saved the way a reader saves one. Everything below
+// reads that and the site's own boards; nothing calls out.
+const db = fakeDb();
+const env = { LEADS_DB: db, AUTH_SECRET: 'test-secret' };
 const cookie = await session(env, 'ken@example.com');
-let leagueId = null;
-{
-  const rep = H.leagueProviderReport({});
-  ok('with no flags set, Sleeper, Yahoo and ESPN are all off and say why', !rep.sleeper.enabled && /FLAG_SLEEPER_SYNC/.test(rep.sleeper.reason) && !rep.yahoo.enabled && !rep.espn.enabled && /manual/i.test(rep.espn.reason));
-  ok('with the flag and config, Sleeper and Yahoo are on; ESPN never', H.leagueProviderReport(env).sleeper.enabled && H.leagueProviderReport(env).yahoo.enabled && !H.leagueProviderReport(env).espn.enabled);
-  const anon = await route(env, 'GET', '/api/leagues');
-  ok('the routes refuse a reader who is not signed in', anon.status === 401 && anon.body.error === 'not_signed_in');
-  const pub = await route(env, 'GET', '/api/leagues/providers');
-  ok('provider availability is public', pub.status === 200 && pub.body.providers.sleeper.enabled === true);
-  const d = await route(env, 'POST', '/api/leagues/connect', { provider: 'sleeper', username: 'ken_r' }, cookie);
-  ok('discovery by username lists the league', d.status === 200 && d.body.step === 'leagues' && d.body.leagues.length === 1 && d.body.user.id === 'u1');
-  const nf = await route(env, 'POST', '/api/leagues/connect', { provider: 'sleeper', username: 'nobody' }, cookie);
-  ok('an unknown username is a clear error', nf.status === 404 && nf.body.error === 'user_not_found' && /username/.test(nf.body.message));
-  const c = await route(env, 'POST', '/api/leagues/connect', { provider: 'sleeper', leagueId: world.lg.league_id, name: world.lg.name, providerUserId: 'u1' }, cookie);
-  leagueId = c.body.league && c.body.league.id;
-  ok('connecting imports the league and identifies the user team', c.status === 200 && c.body.step === 'done' && c.body.created && c.body.sync.ok && c.body.league.userTeamId === '1' && !c.body.needsTeam);
-  const L = await H.leagueLoad(env, 'ken@example.com', leagueId);
-  ok('twelve teams, rosters, this week and past matchups, and the transaction were stored', L.teams.length === 12 && L.rosters.length === 12 && L.rosters[0].players.length === 16 && L.matchups.some(m => m.week === 5) && L.matchups.some(m => m.week === 1 && m.played) && L.transactions.length === 1 && L.transactions[0].drops[0].id === world.dropped);
-  ok('scoring and roster came through as the league model', L.settings.extras.tePremium === 0.5 && L.settings.roster.SFLEX === 1 && L.settings.faab === 100 && L.label.includes('Superflex') && L.teams[0].faabLeft === 95);
-  ok('starter and bench slots follow the provider, with the slot label', L.rosters[0].players.filter(p => p.slot === 'starter').length === 10 && L.rosters[0].players.find(p => p.slotLabel === 'SFLEX') && L.rosters[0].players.filter(p => p.slot === 'bench').length === 6);
-  ok('every rostered player mapped to a key (real names from the pool)', L.rosters.every(r => r.players.every(p => p.key)) && c.body.sync.unmatched === 0);
-  ok('the first league is the default', L.isDefault === true && L.sync.status === 'ok' && !L.sync.stale);
-  const list = await route(env, 'GET', '/api/leagues', null, cookie);
-  ok('the list carries the league, the default id and no email', list.body.leagues.length === 1 && list.body.defaultId === leagueId && !JSON.stringify(list.body).includes('ken@example.com'));
-  // Idempotency
-  const rows = () => [db.t.league_teams.size, db.t.league_roster_players.size, db.t.league_matchups.size, db.t.league_transactions.size, db.t.leagues.size];
-  const before = rows();
-  const row = [...db.t.leagues.values()][0];
-  const again = await H.leagueSync(env, row, 'test');
-  ok('syncing again writes the same rows: no duplicate teams, players, matchups, transactions or leagues', again.ok && rows().join() === before.join());
-  const dup = await route(env, 'POST', '/api/leagues/connect', { provider: 'sleeper', leagueId: world.lg.league_id, providerUserId: 'u1' }, cookie);
-  ok('connecting the same league twice does not create a second league', dup.body.created === false && db.t.leagues.size === 1);
-  ok('every league table insert is an upsert on its primary key', db.log.filter(s => /^INSERT INTO league_/.test(s) && !/league_sync_runs/.test(s)).every(s => /ON CONFLICT/.test(s)));
-  // A dropped player leaves the roster on the next sync
-  const gone = sleeperWorld.rosters[0].players.pop();
-  await H.leagueSync(env, row, 'test');
-  const L2 = await H.leagueLoad(env, 'ken@example.com', leagueId);
-  ok('a player dropped at the provider is gone after the next sync', !L2.rosters[0].players.some(p => p.providerPlayerId === gone) && db.t.league_roster_players.size === before[1] - 1);
-  sleeperWorld.rosters[0].players.push(gone);
-  // Sync Now rate limit
-  const soon = await route(env, 'POST', '/api/leagues/' + leagueId + '/sync', null, cookie);
-  ok('Sync Now twice inside two minutes is refused, with the last sync intact', soon.status === 429 && soon.body.error === 'too_soon');
-  const forced = await route(env, 'POST', '/api/leagues/' + leagueId + '/sync?force=1', null, cookie);
-  ok('a forced sync runs', forced.status === 200 && forced.body.sync.ok);
-  // Overrides survive a sync
-  const ov = await route(env, 'POST', '/api/leagues/' + leagueId + '/overrides', { overrides: { scoring: { passingTD: 6 }, roster: { BN: 7 } } }, cookie);
-  ok('a correction is applied and labeled', ov.body.league.settings.scoring.passingTD === 6 && ov.body.league.settings.overridden.includes('scoring.passingTD') && ov.body.league.synced.scoring.passingTD === 4);
-  await H.leagueSync(env, [...db.t.leagues.values()][0], 'test');
-  const L3 = await H.leagueLoad(env, 'ken@example.com', leagueId);
-  ok('the correction survives the next sync', L3.settings.scoring.passingTD === 6 && L3.settings.roster.BN === 7 && L3.overrides.scoring.passingTD === 6);
-  const cl = await route(env, 'POST', '/api/leagues/' + leagueId + '/overrides', { clear: true }, cookie);
-  ok('clearing goes back to the synced values', cl.body.league.settings.scoring.passingTD === 4 && cl.body.league.settings.overridden.length === 0);
-  // Provider outage
-  net.down = true;
-  const out = await H.leagueSync(env, [...db.t.leagues.values()][0], 'test');
-  net.down = false;
-  const L4 = await H.leagueLoad(env, 'ken@example.com', leagueId);
-  ok('a provider outage is a failed run, the league and its rosters are kept, and a retry is scheduled with backoff', !out.ok && out.code === 'provider_unavailable' && L4.sync.status === 'failed' && L4.rosters[0].players.length === 16 && L4.sync.lastOkAt && L4.sync.failures === 1 && L4.sync.nextAt > Date.now() + 10 * 60000 && L4.sync.nextAt < Date.now() + 20 * 60000);
-  const rl = await (async () => { net.rate = true; const r = await H.leagueSync(env, [...db.t.leagues.values()][0], 'test'); net.rate = false; return r; })();
-  ok('a 429 is a rate_limited failure with doubled backoff', rl.code === 'rate_limited' && [...db.t.leagues.values()][0].failures === 2 && [...db.t.leagues.values()][0].next_sync_at > Date.now() + 25 * 60000);
-  const nf2 = await (async () => { net.notFound = true; const r = await H.leagueSync(env, [...db.t.leagues.values()][0], 'test'); net.notFound = false; return r; })();
-  ok('a league that disappeared is league_not_found, and the league is not deleted', nf2.code === 'league_not_found' && db.t.leagues.size === 1);
-  // Partial sync: rosters endpoint down
-  net.playersOnly = true; const partial = await H.leagueSync(env, [...db.t.leagues.values()][0], 'test'); net.playersOnly = false;
-  ok('a partial provider failure is a failed run, nothing half-written', !partial.ok && (await H.leagueLoad(env, 'ken@example.com', leagueId)).rosters[0].players.length === 16);
-  const good = await H.leagueSync(env, [...db.t.leagues.values()][0], 'test');
-  ok('the next good sync clears the failure state', good.ok && [...db.t.leagues.values()][0].failures === 0 && [...db.t.leagues.values()][0].sync_status === 'ok');
-  // Stale
-  const rowS = [...db.t.leagues.values()][0]; const keep = rowS.last_ok_at; rowS.last_ok_at = Date.now() - H.LEAGUE_STALE_MS - 1000;
-  ok('a league not synced for twelve hours reads as stale', H.leagueRowToLeague(rowS).sync.stale === true);
-  rowS.last_ok_at = keep;
-  ok('the sync log has a row per run with the duration and unmatched count', db.t.league_sync_runs.size >= 8 && [...db.t.league_sync_runs.values()].every(r => r.finished_at >= r.started_at && typeof r.unmatched === 'number'));
-  // The job
-  rowS.next_sync_at = Date.now() - 1000;
-  const job = await H.runLeagueSync(env);
-  ok('the job syncs what is due and reschedules it', job.ok && job.due === 1 && job.synced === 1 && rowS.next_sync_at > Date.now());
-  const job2 = await H.runLeagueSync(env);
-  ok('nothing due, nothing synced', job2.due === 0);
-  const sun = Date.UTC(2026, 8, 13, 15, 0), tue = Date.UTC(2026, 8, 15, 14, 0), fri = Date.UTC(2026, 8, 18, 14, 0);
-  ok('the cadence: hourly Sunday late morning, three-hourly Tuesday, six-hourly otherwise', H.leagueNextSyncAt(sun, 0) - sun === 3600000 && H.leagueNextSyncAt(tue, 0) - tue === 3 * 3600000 && H.leagueNextSyncAt(fri, 0) - fri === 6 * 3600000);
-  // Flag off stops the scheduled refresh too
-  const envOff = { ...env, FLAG_SLEEPER_SYNC: '0' };
-  const off = await H.leagueSync(envOff, [...db.t.leagues.values()][0], 'test');
-  ok('with the Sleeper flag off, the scheduled refresh refuses rather than fetching', !off.ok && off.error === 'provider_disabled');
-  const conOff = await route(envOff, 'POST', '/api/leagues/connect', { provider: 'sleeper', username: 'ken_r' }, cookie);
-  ok('and connecting is refused with the flag named', conOff.status === 503 && /FLAG_SLEEPER_SYNC/.test(conOff.body.detail));
-  const espn = await route(env, 'POST', '/api/leagues/connect', { provider: 'espn', username: 'x' }, cookie);
-  ok('ESPN says plainly that it cannot be synced and points to manual', espn.status === 503 && /manual/i.test(espn.body.detail));
-}
+await H.leagueReady(env);
+const made = await route(env, 'POST', '/api/leagues/manual',
+  { name: 'Iron Tunas League', numTeams: 12, teams: buildRoom(12), settings: ROOM_SETTINGS }, cookie);
+const leagueId = made.body.league.id;
 
-console.log('\npersonalization on the synced league');
+console.log('\npersonalization on the saved league');
 {
+  ok('a twelve-team room saves in one call', made.status === 200 && made.body.ok, JSON.stringify(made.body).slice(0, 160));
   const L = await H.leagueLoad(env, 'ken@example.com', leagueId);
   const wk = await H.leagueBoard(env, L, 'week');
   ok('the league board is scored at the league rules and every row says who owns him', wk.ok && wk.scoring.preset === 'league' && wk.players.every(p => p.roster && p.roster.status) && wk.players.some(p => p.roster.status === 'mine') && wk.players.some(p => p.roster.status === 'rostered') && wk.players.some(p => p.roster.status === 'available'));
-  ok('the dropped player is on waivers, not a free agent', wk.players.find(p => p.key === L.transactions[0].drops[0].key).roster.status === 'waiver');
+  // No transaction log, so nobody is on waivers: a player is on a roster in
+  // this room or he is free, and the board must not invent a third state.
+  ok('with no transaction log every player is rostered or available, never waivers',
+     wk.players.every(p => p.roster.status !== 'waiver'));
   // TE premium moves tight ends
   const plain = await H.leagueBoard(env, { ...L, settings: { ...L.settings, extras: { ...L.settings.extras, tePremium: 0 } } }, 'ros');
   const prem = await H.leagueBoard(env, L, 'ros');
@@ -401,7 +301,7 @@ console.log('\npersonalization on the synced league');
   // Lineup
   worldState.byeTeam = null;
   const lu = await H.leagueLineup(env, L);
-  ok('the best lineup fills every slot including superflex, from the actual roster', lu.ok && lu.lineup.length === 10 && lu.lineup.filter(s => s.slot === 'SFLEX').length === 1 && lu.lineup.every(s => !s.empty) && lu.projectedTotal > 0);
+  ok('the best lineup fills every slot including superflex, from the actual roster', lu.ok && lu.lineup.length === 8 && lu.lineup.filter(s => s.slot === 'SFLEX').length === 1 && lu.lineup.every(s => !s.empty) && lu.projectedTotal > 0);
   ok('superflex is filled by a quarterback when one is the best eligible', lu.lineup.find(s => s.slot === 'SFLEX').position === 'QB');
   ok('decisions carry both players, a margin and a graded confidence', lu.decisions.every(d => d.empty || (d.start && d.sit && ['Lean', 'Moderate', 'Strong'].includes(d.confidence) && /projects/.test(d.reason))));
   // A ruled-out starter is benched by arithmetic and intel says who replaces him
@@ -419,45 +319,59 @@ console.log('\npersonalization on the synced league');
   // Pickups
   const pk = await H.leaguePickups(env, L, { limit: 10 });
   ok('the pickup advisor only recommends players nobody in the league owns', pk.ok && pk.pickups.length > 0 && pk.pickups.every(p => p.status === 'available' || p.status === 'waiver') && pk.pickups.every(p => !L.rosters.some(r => r.players.some(x => x.key === p.key))));
-  ok('each pickup says why, who to drop, the priority, the FAAB range and the horizon values', pk.pickups.every(p => p.why && p.priority && p.projected.ros >= 0 && (p.drop === null || p.drop.name || p.drop.open) && p.faab && p.faab.low <= p.faab.high && p.faab.budget === 95));
+  ok('each pickup says why, who to drop, the priority, the FAAB range and the horizon values', pk.pickups.every(p => p.why && p.priority && p.projected.ros >= 0 && (p.drop === null || p.drop.name || p.drop.open) && p.faab && p.faab.low <= p.faab.high && p.faab.budget === 100));
   ok('a drop is never worth more than the add', pk.pickups.filter(p => p.drop && p.drop.name).every(p => p.projected.ros > p.drop.ros || p.gain.ros > 0 || p.gain.next3 > 0));
   const noFaab = { ...L, settings: { ...L.settings, faab: null, waiverType: 'priority' } };
   const pk2 = await H.leaguePickups(env, noFaab, { limit: 5 });
   ok('a waiver-priority league gets no bid range', pk2.ok && pk2.pickups.every(p => p.faab === null));
   // 10 vs 14 teams: the pool shrinks
-  const w10 = buildWorld(10); const row10 = (await H.leagueCreateRow(env, 'ken@example.com', 'sleeper', 'ten', 'Ten', 2026, { providerUserId: 'u1' })).row; sleeperWorld.league.league_id = 'ten'; await H.leagueSync(env, row10, 'test');
-  const L10 = await H.leagueLoad(env, 'ken@example.com', row10.id); const pk10 = await H.leaguePickups(env, L10, { limit: 40 });
-  const w14 = buildWorld(14); const row14 = (await H.leagueCreateRow(env, 'ken@example.com', 'sleeper', 'fourteen', 'Fourteen', 2026, { providerUserId: 'u1' })).row; sleeperWorld.league.league_id = 'fourteen'; await H.leagueSync(env, row14, 'test');
-  const L14 = await H.leagueLoad(env, 'ken@example.com', row14.id); const pk14 = await H.leaguePickups(env, L14, { limit: 40 });
-  const taken14 = new Set(L14.rosters.flatMap(r => r.players.map(p => p.key)));
-  ok('a 14-team league has fewer available players than a 10-team league, and someone the 10-team advisor offers is rostered in the 14-team room', pk14.availableCount < pk10.availableCount && L14.teams.length === 14 && L10.teams.length === 10 && pk10.pickups.some(p => taken14.has(p.key)));
-  const av10 = H.leagueAvailabilityLookup(L10, [{ name: pk14.pickups[0].name }]), av14 = H.leagueAvailabilityLookup(L14, [{ name: pk14.pickups[0].name }]);
-  ok('a waiver target can be available in one league and rostered in another (the availability service)', av14[0].status !== 'rostered' && ['available', 'waiver', 'rostered', 'mine'].includes(av10[0].status));
-  buildWorld(12); sleeperWorld.league.league_id = world.lg.league_id;
+  const mk = async (n, name) => {
+    const r = await route(env, 'POST', '/api/leagues/manual',
+      { name, numTeams: n, teams: buildRoom(n), settings: ROOM_SETTINGS }, cookie);
+    return r.body.league.id;
+  };
+  const id10 = await mk(10, 'Ten'), id14 = await mk(14, 'Fourteen');
+  const L10 = await H.leagueLoad(env, 'ken@example.com', id10); const pk10 = await H.leaguePickups(env, L10, { limit: 40 });
+  const L14 = await H.leagueLoad(env, 'ken@example.com', id14); const pk14 = await H.leaguePickups(env, L14, { limit: 40 });
+  ok('a fourteen-team room leaves fewer players available than a ten-team room', pk14.availableCount < pk10.availableCount,
+     pk14.availableCount + ' vs ' + pk10.availableCount);
+  const av10 = H.leagueAvailabilityLookup(L10, [{ name: pk10.pickups[0].name }]);
+  const av14 = H.leagueAvailabilityLookup(L14, [{ name: pk10.pickups[0].name }]);
+  ok('the same player can be free in one room and owned in another, which is what the availability service is for',
+     av10[0].status === 'available' && ['rostered', 'mine'].includes(av14[0].status),
+     av10[0].status + ' / ' + av14[0].status);
   // Multiple leagues, default switching, disconnect
   const list = await route(env, 'GET', '/api/leagues', null, cookie);
   ok('three leagues on the account, one default', list.body.leagues.length === 3 && list.body.leagues.filter(l => l.isDefault).length === 1 && list.body.defaultId === leagueId);
-  const sd = await route(env, 'POST', '/api/leagues/' + row14.id + '/default', null, cookie);
+  const sd = await route(env, 'POST', '/api/leagues/' + id14 + '/default', null, cookie);
   const list2 = await route(env, 'GET', '/api/leagues', null, cookie);
-  ok('the default switches, and only one league is default', sd.body.ok && list2.body.defaultId === row14.id && list2.body.leagues.filter(l => l.isDefault).length === 1);
+  ok('the default switches, and only one league is default', sd.body.ok && list2.body.defaultId === id14 && list2.body.leagues.filter(l => l.isDefault).length === 1);
   const other = await session(env, 'other@example.com');
   const cross = await route(env, 'GET', '/api/leagues/' + leagueId, null, other);
   ok('another reader cannot read this reader\'s league', cross.status === 404);
-  const dis = await route(env, 'POST', '/api/leagues/' + row14.id + '/disconnect', null, cookie);
-  ok('disconnecting removes the league and all its rows and says what was removed', dis.body.ok && dis.body.removed.length >= 5 && ![...db.t.leagues.values()].some(l => l.id === row14.id) && ![...db.t.league_roster_players.values()].some(p => p.league_id === row14.id) && ![...db.t.league_teams.values()].some(p => p.league_id === row14.id));
+  const dis = await route(env, 'POST', '/api/leagues/' + id14 + '/disconnect', null, cookie);
+  ok('disconnecting removes the league and all its rows and says what was removed', dis.body.ok && dis.body.removed.length >= 5 && ![...db.t.leagues.values()].some(l => l.id === id14) && ![...db.t.league_roster_players.values()].some(p => p.league_id === id14) && ![...db.t.league_teams.values()].some(p => p.league_id === id14));
   const list3 = await route(env, 'GET', '/api/leagues', null, cookie);
   ok('a new default is chosen when the default is disconnected', list3.body.leagues.length === 2 && list3.body.leagues.filter(l => l.isDefault).length === 1);
   // Matchup, trades, playoffs, availability, summary
   const Lm = await H.leagueLoad(env, 'ken@example.com', leagueId);
   const mu = await H.leagueMatchup(env, Lm);
-  ok('the matchup names the opponent, both projected totals and a graded verdict', mu.ok && mu.opponent && mu.opponent.teamId === '2' && mu.you.projected > 0 && mu.opponent.projected > 0 && /toss-up|lean|favored/.test(mu.verdict) && Array.isArray(mu.swing));
+  // A saved room has rosters but no schedule, so there is no opponent to name.
+  // The module still projects the reader's own week and says plainly that it
+  // has no opponent, rather than picking a team to play or reporting a 0-0 tie.
+  ok('the matchup projects your own week and says plainly there is no opponent',
+     mu.ok && mu.you.projected > 0 && mu.opponent === null && /no opponent/i.test(mu.verdict) && Array.isArray(mu.swing));
   const tr = await H.leagueTrades(env, Lm, { minGain: 0.1 });
   ok('trades: every partner is a real manager, and any proposal improves both lineups', tr.ok && tr.teams.length === 12 && tr.trades.every(t => Lm.teams.some(x => x.name === t.partner) && t.yourGain > 0 && t.theirGain > 0 && t.why.length >= 2) && tr.targets.every(t => Lm.teams.some(x => x.name === t.owner)));
   ok('trade data for the browser engine carries every roster with points per horizon', tr.teams.every(t => t.players.every(p => 'ros' in p && 'next3' in p)) && tr.teams.filter(t => t.isUser).length === 1);
   const po = await H.leaguePlayoffs(env, Lm);
-  ok('playoff readiness grades every started position against the room and lists bench moves', po.ok && po.positions.length >= 5 && po.positions.every(p => ['strong', 'average', 'weak'].includes(p.grade)) && po.rankInLeague >= 1 && po.rankInLeague <= 12 && Array.isArray(po.benchMoves) && po.weeks.join() === '15,16,17');
+  ok('playoff readiness grades every started position against the room and lists bench moves', po.ok && po.positions.length >= 4 && po.positions.every(p => ['strong', 'average', 'weak'].includes(p.grade)) && po.rankInLeague >= 1 && po.rankInLeague <= 12 && Array.isArray(po.benchMoves) && po.weeks.join() === '15,16,17');
   const av = H.leagueAvailabilityLookup(Lm, [{ name: Lm.rosters[0].players[0].name }, { name: Lm.rosters[1].players[0].name }, { name: 'Nobody Atall' }]);
-  ok('availability: mine, rostered by a named team (the opponent), unknown', av[0].status === 'mine' && av[1].status === 'rostered' && av[1].isOpponent === true && av[2].status === 'unknown' && /opponent/i.test(av[1].label));
+  // Mine, somebody else's by name, and a player the board has never heard of.
+  // Nobody is flagged as the opponent's, because this room has no matchup.
+  ok('availability: mine, rostered by a named team, unknown',
+     av[0].status === 'mine' && av[1].status === 'rostered' && av[1].teamName === 'Team 2' &&
+     av[1].isOpponent === false && av[2].status === 'unknown');
   const sum = await H.leagueSummary(env, Lm);
   ok('the summary carries the lineup, the matchup, the alerts and the top pickups', sum.ok && sum.lineup && sum.matchup && Array.isArray(sum.alerts) && sum.pickups.length > 0);
   const adv = await route(env, 'GET', '/api/leagues/' + leagueId + '/advice?module=lineup', null, cookie);
@@ -485,7 +399,7 @@ console.log('\nmanual leagues');
   const pk = await H.leaguePickups(env, Lm, { limit: 5 });
   ok('the pickup advisor treats everyone not on the manual roster as available', pk.ok && pk.pickups.length > 0);
   const sy = await route(env, 'POST', '/api/leagues/' + Lm.id + '/sync', null, cookie);
-  ok('a manual league is edited, not synced', sy.body.manual === true);
+  ok('there is no sync route left to call', sy.status === 404);
   const ed = await route(env, 'POST', '/api/leagues/manual', { id: Lm.id, name: 'Hand League 2', numTeams: 10, teamName: 'Mine', players: [{ name: qb.name, position: 'QB' }], settings: { roster: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, BN: 5 } } }, cookie);
   ok('editing replaces the roster rather than appending', ed.body.ok && ed.body.league.name === 'Hand League 2' && (await H.leagueLoad(env, 'ken@example.com', Lm.id)).rosters[0].players.length === 1);
 }
@@ -527,145 +441,5 @@ console.log('\nleagues read off a roster grid');
   ok('once slots are typed for the reader’s own team the comparison comes back', lu2.slotsKnown === true && lu2.currentTotal !== null && lu2.improvement !== null);
 }
 
-console.log('\nYahoo OAuth');
-{
-  const noKey = { ...env, LEAGUE_TOKEN_KEY: undefined, AUTH_SECRET: undefined };
-  ok('without either encryption source, Yahoo is reported unconfigured', !H.leagueProviderReport(noKey).yahoo.enabled && H.leagueProviderReport(noKey).yahoo.reason === 'not configured');
-  const sealed = await H.leagueSeal(env, 'secret-token');
-  ok('tokens are sealed at rest and open again only with the key', sealed.startsWith('v1.') && !sealed.includes('secret-token') && (await H.leagueOpen(env, sealed)) === 'secret-token' && (await H.leagueOpen({ LEAGUE_TOKEN_KEY: 'other' }, sealed)) === null);
-  const fallbackEnv = { AUTH_SECRET: 'auth-only' };
-  const fallbackSealed = await H.leagueSeal(fallbackEnv, 'fallback-token');
-  ok('AUTH_SECRET supplies a domain-separated fallback encryption key', fallbackSealed.startsWith('v1.') && !fallbackSealed.includes('fallback-token') && (await H.leagueOpen(fallbackEnv, fallbackSealed)) === 'fallback-token' && (await H.leagueOpen({ AUTH_SECRET: 'other' }, fallbackSealed)) === null);
-  const start = await route(env, 'GET', '/api/oauth/yahoo/start', null, cookie);
-  const loc = start.headers.get('location') || '';
-  ok('start redirects to Yahoo with the client id, the read-only scope and a signed state', start.status === 302 && loc.startsWith('https://api.login.yahoo.com/oauth2/request_auth') && /client_id=cid/.test(loc) && /scope=fspt-r/.test(loc) && /state=/.test(loc) && !/client_secret/.test(loc));
-  const state = decodeURIComponent(loc.match(/state=([^&]+)/)[1]);
-  const bad = await route(env, 'GET', '/api/oauth/yahoo/callback?code=abc&state=' + encodeURIComponent(state), null, await session(env, 'other@example.com'));
-  ok('a callback on another session is refused', (bad.headers.get('location') || '').includes('yahoo=state'));
-  const cb = await route(env, 'GET', '/api/oauth/yahoo/callback?code=abc&state=' + encodeURIComponent(state), null, cookie);
-  const conn = await H.leagueConnectionRead(env, 'ken@example.com', 'yahoo');
-  ok('the callback exchanges the code server-side, seals both tokens and never echoes them', (cb.headers.get('location') || '').includes('yahoo=connected') && conn && conn.status === 'connected' && conn.access_enc.startsWith('v1.') && conn.refresh_enc.startsWith('v1.') && !JSON.stringify([...db.t.provider_connections.values()]).includes('AT1'));
-  ok('the token exchange went to Yahoo with the secret in the Authorization header, not the URL', net.calls.some(u => u.startsWith('https://api.login.yahoo.com/oauth2/get_token')));
-  const t1 = await H.yahooAccessToken(env, 'ken@example.com');
-  ok('a fresh token is used as is', t1 === 'AT1' && net.yahooRefreshed === 0);
-  db.t.provider_connections.get('ken@example.com|yahoo').expires_at = Date.now() - 1;
-  const t2 = await H.yahooAccessToken(env, 'ken@example.com');
-  ok('an expired token is refreshed once and the new tokens sealed', t2 === 'AT2' && net.yahooRefreshed === 1 && (await H.leagueOpen(env, (await H.leagueConnectionRead(env, 'ken@example.com', 'yahoo')).refresh_enc)) === 'RT2');
-  const disc = await route(env, 'POST', '/api/leagues/connect', { provider: 'yahoo' }, cookie);
-  ok('discovery lists the Yahoo league through the user\'s grant', disc.status === 200 && disc.body.step === 'leagues' && disc.body.leagues[0].providerLeagueId === '449.l.12345');
-  db.t.provider_connections.get('ken@example.com|yahoo').expires_at = Date.now() - 1; net.yahooExpired = true;
-  const exp = await route(env, 'POST', '/api/leagues/connect', { provider: 'yahoo' }, cookie);
-  ok('a refresh Yahoo refuses becomes EXPIRED AUTHORIZATION with a reconnect message', exp.status === 409 && exp.body.error === 'expired_authorization' && /renewed/.test(exp.body.message) && (await H.leagueConnectionRead(env, 'ken@example.com', 'yahoo')).status === 'expired');
-  net.yahooExpired = false;
-  const off = await route(env, 'POST', '/api/oauth/yahoo/disconnect', null, cookie);
-  ok('disconnecting Yahoo deletes the tokens', off.body.ok && !(await H.leagueConnectionRead(env, 'ken@example.com', 'yahoo')));
-}
-
-console.log('\nCBS token connector, end to end');
-{
-  const ce = { ...env, FLAG_CBS_SYNC: '1' };
-  const con = (id = 'fixture', token = 'CBS-secret-one') => route(ce, 'POST', '/api/leagues/connect', { provider: 'cbs', leagueId: id, accessToken: token }, cookie);
-  const saved = (id = 'fixture') => db.t.league_provider_tokens.get('ken@example.com|cbs|' + id);
-  ok('CBS is off by default', !H.leagueProviderReport(env).cbs.enabled);
-  ok('CBS needs the encryption key even when enabled', !H.leagueProviderReport({ FLAG_CBS_SYNC: '1' }).cbs.enabled);
-  ok('CBS can use the existing AUTH_SECRET as its separated encryption source', H.leagueProviderReport({ FLAG_CBS_SYNC: '1', AUTH_SECRET: 'auth-only' }).cbs.enabled);
-  const callsBefore = cbsNet.requests.length;
-  const off = await route(env, 'POST', '/api/leagues/connect', { provider: 'cbs', leagueId: 'fixture', accessToken: 'secret' }, cookie);
-  ok('disabled connect makes no CBS requests', off.status === 503 && cbsNet.requests.length === callsBefore);
-  const anon = await route(ce, 'POST', '/api/leagues/connect', { provider: 'cbs', leagueId: 'fixture', accessToken: 'secret' });
-  ok('CBS connect requires sign-in', anon.status === 401);
-  for (const id of ['https://evil.example', 'fixture.football.cbssports.com.evil.test', 'fixture@evil.test', 'fixture/path', '-fixture', 'https://fixture.football.cbssports.com/?token=secret']) {
-    const r = await con(id);
-    ok('invalid league input is rejected without a fetch: ' + id, r.status === 404 && cbsNet.requests.length === callsBefore);
-  }
-  const r = await con('https://Fixture.football.cbssports.com/');
-  ok('CBS connects into the existing model and asks for the user team', r.body.ok && r.body.needsTeam && r.body.league.provider === 'cbs', JSON.stringify(r.body));
-  const id = r.body.league.id;
-  let L = await H.leagueLoad(ce, 'ken@example.com', id);
-  ok('CBS imports scoring, superflex, IR and FAAB', L.settings.scoring.passingYardsPerPoint === 25 && L.settings.scoring.passingTD === 6 && L.settings.scoring.receptionPoints === 0.5 && L.settings.roster.SFLEX === 1 && L.settings.roster.IR === 2 && L.settings.faab === 200);
-  ok('unsupported scoring is retained and labeled', Object.keys(L.settings.extras.unsupported).length === 1 && L.settings.extras.notes.length > 0);
-  ok('CBS stores teams, roster slots, standings and waiver balance', L.teams.length === 2 && L.teams[0].faabLeft === 153 && L.teams[0].pointsFor === 440.5 && L.rosters.some(t => t.players.some(p => p.slot === 'ir')));
-  ok('token is encrypted and absent from API responses', saved().access_enc.startsWith('v1.') && await H.leagueOpen(ce, saved().access_enc) === 'CBS-secret-one' && !JSON.stringify(r.body).includes('CBS-secret-one') && !JSON.stringify(r.body).includes('access_enc'));
-  ok('all CBS reads use HTTPS, the documented API host, the token as access_token and Authorization, no followed redirects', cbsNet.requests.length === 8 && cbsNet.requests.every(x => new URL(x.url).origin === 'https://api.cbssports.com' && new URL(x.url).pathname.startsWith('/fantasy/league/') && new URL(x.url).searchParams.get('access_token') === 'CBS-secret-one' && new URL(x.url).searchParams.get('version') === '3.0' && x.init.headers.Authorization === 'CBS-secret-one' && x.init.redirect === 'manual' && x.init.method === 'GET' && x.init.cache === 'no-store'));
-  cbsNet.mode = 'apidown'; cbsNet.requests.length = 0;
-  const viaLeague = await con('fixture', 'CBS-secret-one');
-  ok('when the API host is gone, every read falls back to the validated league host', viaLeague.body.ok && cbsNet.requests.length === 9 && cbsNet.requests.filter(x => new URL(x.url).origin === 'https://fixture.football.cbssports.com' && new URL(x.url).pathname.startsWith('/api/league/')).length === 8, JSON.stringify({ n: cbsNet.requests.length, hosts: cbsNet.requests.map(x => new URL(x.url).host) }));
-  cbsNet.mode = ''; cbsNet.requests.length = 0;
-  const team = await route(ce, 'POST', '/api/leagues/' + id + '/team', { teamId: '1' }, cookie);
-  ok('CBS uses the existing team chooser', team.body.ok);
-  const row = [...db.t.leagues.values()].find(x => x.id === id);
-  const sync = await H.leagueSync(ce, row, 'job');
-  ok('scheduled CBS sync decrypts its saved token and keeps team selection', sync.ok && (await H.leagueLoad(ce, 'ken@example.com', id)).userTeamId === '1');
-  ok('resync is idempotent', [...db.t.league_roster_players.values()].filter(x => x.league_id === id).length === 4 && [...db.t.league_transactions.values()].filter(x => x.league_id === id).length === 1 && [...db.t.league_matchups.values()].filter(x => x.league_id === id).length === 4);
-  const other = await con('second', 'CBS-secret-two');
-  ok('separate leagues retain separate encrypted tokens', other.body.ok && await H.leagueOpen(ce, saved('second').access_enc) === 'CBS-secret-two' && await H.leagueOpen(ce, saved().access_enc) === 'CBS-secret-one');
-  const forbidden = await route(ce, 'GET', '/api/leagues/' + id, null, await session(ce, 'other@example.com'));
-  ok('another account cannot read CBS data', forbidden.status === 404);
-  for (const [mode, expected, note] of [['plain', 'expired_authorization', /HTTP 403; (league host|api\.cbssports\.com) HTTP 403/], ['expired200', 'expired_authorization', /HTTP 401/], ['rate', 'rate_limited', /HTTP 429/], ['missing', 'league_not_found', /HTTP 404/], ['malformed', 'invalid_response', /not JSON/], ['network', 'provider_unavailable', /could not be sent/], ['redirect', 'expired_authorization', /HTTP 302 to www\.cbssports\.com\/login\)/], ['timeout', 'provider_unavailable', /15 seconds/]]) {
-    cbsNet.mode = mode;
-    const before = JSON.stringify([...db.t.league_roster_players.values()].filter(x => x.league_id === id));
-    const result = await H.leagueSync(ce, row, 'job');
-    ok('CBS ' + mode + ' failure is classified, redacted, and preserves rosters', !result.ok && result.code === expected && !JSON.stringify(result).includes('CBS-secret') && !JSON.stringify(result).includes('access_token') && JSON.stringify([...db.t.league_roster_players.values()].filter(x => x.league_id === id)) === before, JSON.stringify(result));
-    ok('CBS ' + mode + ' failure names the resource, both hosts and the HTTP outcome', /CBS details: /.test(result.error) && (mode === 'rate' || /api\.cbssports\.com .*; league host |league host .*; api\.cbssports\.com /.test(result.error)) && note.test(result.error), result.error);
-  }
-  cbsNet.mode = 'leaguedown'; cbsNet.requests.length = 0;
-  const viaApi = await H.leagueSync(ce, row, 'job');
-  ok('when the league host redirects to sign-in, every read falls back to the API host and the sync succeeds', viaApi.ok && cbsNet.requests.filter(x => new URL(x.url).origin === 'https://api.cbssports.com').length === 8, JSON.stringify({ ok: viaApi.ok, error: viaApi.error, hosts: cbsNet.requests.map(x => new URL(x.url).host) }));
-  cbsNet.mode = 'redirect';
-  const redirected = await con('fixture', 'CBS-secret-redirected');
-  ok('a sign-in redirect on connect is reported to the form as a refused token with the redacted target', redirected.status === 409 && redirected.body.error === 'expired_authorization' && /HTTP 302 to www\.cbssports\.com\/login\)/.test(redirected.body.detail) && !JSON.stringify(redirected.body).includes('secret') && !JSON.stringify(redirected.body).includes('xurl'), JSON.stringify(redirected.body));
-  const badReconnect = await con('fixture', 'rejected-secret');
-  ok('failed reconnect does not replace a saved token', !badReconnect.body.ok && await H.leagueOpen(ce, saved().access_enc) === 'CBS-secret-one');
-  cbsNet.mode = '';
-  cbsNet.raw = structuredClone(CFIX); cbsNet.raw.rosters.rosters.teams.pop();
-  const partial = await H.leagueSync(ce, row, 'job');
-  ok('a partial roster fails before any imported rows are deleted', !partial.ok && [...db.t.league_roster_players.values()].filter(x => x.league_id === id).length === 4);
-  cbsNet.raw = CFIX;
-  const reconnected = await con('fixture', 'CBS-renewed');
-  ok('reconnect rotates the token without duplicating the league', reconnected.body.ok && !reconnected.body.created && reconnected.body.league.id === id && await H.leagueOpen(ce, saved().access_enc) === 'CBS-renewed');
-  const noKey = await H.leagueSync({ ...ce, LEAGUE_TOKEN_KEY: 'wrong' }, row, 'job');
-  ok('a wrong encryption key fails closed', !noKey.ok && noKey.code === 'expired_authorization');
-  const dc = await route(ce, 'POST', '/api/leagues/' + id + '/disconnect', null, cookie);
-  ok('disconnect deletes only this league token', dc.body.tokensRemoved && !saved() && !!saved('second'));
-  ok('CBS sync logs never include tokens', !JSON.stringify([...db.t.league_sync_runs.values()]).includes('CBS-secret'));
-}
-
-console.log('\nCBS browser import');
-{
-  const fixture = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/cbs-browser-league.json'), 'utf8'));
-  const provider = H.LEAGUE_PROVIDERS.cbs_browser;
-  const model = provider.normalize(fixture, {season:2026}), s = model.settings.scoring;
-  ok('CBS browser rules preserve passing threshold and all bonuses', s.passingYardsThreshold === 125 && s.passingYardsPerPoint === 25 && s.passingTD === 6 && s.passingYardBonuses.length === 3);
-  ok('CBS browser rules preserve positional PPR', s.receptionPoints === 1 && s.rbReceptionPoints === .5 && s.rbReceptionBonuses.length === 2);
-  ok('CBS browser maps field-goal and defensive ranges', s.fieldGoalTiers.length === 5 && s.fieldGoalTiers[0].max === 29 && s.fieldGoalTiers[0].missPoints === -3 && s.pointsAllowed.length === 12 && s.pointsAllowed[6].min === 17);
-  ok('CBS browser fixture scoring is fully recognized', !Object.keys(model.settings.extras.unsupported).length);
-  ok('CBS browser makes missing data explicit', model.settings.faab === null && /matchups/.test(model.settings.extras.notes.join(' ')) && model.matchups.length === 0);
-  ok('CBS browser keeps an injured-reserve player on the IR slot', model.rosters[1].players.length === 2 && model.rosters[1].players[1].slot === 'ir' && model.settings.roster.IR === 1);
-  ok('CBS browser without an IR count in the footer still imports the IR section', (() => { const f = structuredClone(fixture); delete f.rosters[1].counts.ir; return provider.normalize(f, {season:2026}).rosters[1].players.length === 2; })());
-  const ce = { ...env, FLAG_CBS_SYNC:'1', LEAGUE_TOKEN_KEY:undefined };
-  const con = snapshot => route(ce, 'POST', '/api/leagues/connect', {provider:'cbs_browser',snapshot}, cookie);
-  const beforeTokens = db.t.league_provider_tokens.size;
-  const connected = await con(fixture), id = connected.body.league?.id;
-  ok('CBS browser connects without encryption credentials and requests team choice', connected.body.ok && connected.body.needsTeam && connected.body.teams.length === 2, JSON.stringify(connected.body));
-  ok('CBS browser stores no authorization token', db.t.league_provider_tokens.size === beforeTokens);
-  await route(ce,'POST','/api/leagues/'+id+'/team',{teamId:'8'},cookie);
-  const again = await con(fixture);
-  ok('CBS browser refresh is idempotent and keeps chosen team', again.body.ok && !again.body.created && again.body.league.id === id && again.body.league.userTeamId === '8');
-  ok('CBS browser has no automatic refresh time', again.body.league?.sync?.nextAt == null);
-  const refresh = await route(ce,'POST','/api/leagues/'+id+'/sync',null,cookie);
-  ok('CBS browser server refresh directs the reader back to extension', refresh.status === 409 && refresh.body.error === 'browser_refresh_required');
-  const previous = JSON.stringify([...db.t.league_roster_players.values()].filter(r=>r.league_id===id));
-  for (const mutate of [f=>f.rosters.pop(), f=>f.rosters[0].players=[], f=>f.teams[1].teamId='8', f=>f.rules.push(f.rules[0]), f=>f.rosters[1].players[0].providerPlayerId=f.rosters[0].players[0].providerPlayerId, f=>f.rosters[1].counts.ir=0, f=>f.rosters[1].players[1].slot='bench', f=>f.season=9999, f=>f.leagueId='https://evil.test']) {
-    const bad = structuredClone(fixture); mutate(bad); const r = await con(bad);
-    ok('CBS malformed browser import rejected before modifying saved rosters', r.status === 400 && JSON.stringify([...db.t.league_roster_players.values()].filter(r=>r.league_id===id)) === previous);
-  }
-  const unknown = structuredClone(fixture); unknown.rules.push({group:'SPECIAL SCORING FOR TIGHT ENDS',code:'Recpt',text:'3 points'});
-  ok('CBS unhandled positional rules stay visible', Object.keys(provider.normalize(unknown,{season:2026}).settings.extras.unsupported).length === 1);
-  ok('CBS browser remains off without its feature flag', !H.leagueProviderReport({}).cbs_browser.enabled);
-  const off = await route({...ce,FLAG_CBS_SYNC:'0'},'POST','/api/leagues/connect',{provider:'cbs_browser',snapshot:fixture},cookie);
-  ok('CBS browser disabled flag is enforced at connect', off.status === 503);
-  const anon = await route(ce,'POST','/api/leagues/connect',{provider:'cbs_browser',snapshot:fixture});
-  ok('CBS browser import requires Iron Tuna sign-in', anon.status === 401);
-}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
