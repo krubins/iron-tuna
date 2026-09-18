@@ -14,7 +14,9 @@
 //   1. STRUCTURE. Each entry carries the parts the rest of the site reads out
 //      of it — theme chip, position, team, date, headline, dek, pick line,
 //      statline. tools/build-front.mjs extracts the front-page card from
-//      exactly those, so a missing part is a card with a hole in it.
+//      exactly those, so a missing part is a card with a hole in it. The page
+//      also holds no more than PICK_WINDOW entries: the column rolls, three at
+//      a time, and tools/roll-the-pick.mjs is what takes the oldest one down.
 //   2. ROSTER. Every player the pick line commits to is on the board in
 //      PROJECTIONS, and every "Name (TEAM)" in a table is on that team.
 //   3. NUMBERS. A table column headed "Points" is checked against the PPR total
@@ -34,6 +36,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { PICK_WINDOW } from './roll-the-pick.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
@@ -170,6 +173,14 @@ const entries = [...page.matchAll(/<article class="call pick" id="([^"]*)">([\s\
 console.log('\nevery entry carries the parts the site reads out of it');
 {
   ok('the column has entries', entries.length > 0, String(entries.length));
+
+  // THREE AT A TIME. The column publishes daily and the page used to keep
+  // every entry ever written, so a reader arriving in Week 2 scrolled past a
+  // draft-day auction argument to get out. A new entry goes up and the oldest
+  // comes down: tools/roll-the-pick.mjs does the trim, this fails the build
+  // if a run appends without it.
+  ok(`the column carries at most ${PICK_WINDOW} entries`, entries.length <= PICK_WINDOW,
+    `${entries.length}: ${entries.map((e) => e.id).join(', ')} — run node tools/roll-the-pick.mjs`);
 
   const badId = entries.filter((e) => !/^pick-\d{4}-\d{2}-\d{2}(-\d+)?$/.test(e.id));
   ok('every id is pick-YYYY-MM-DD', badId.length === 0, badId.map((e) => e.id).join(', '));

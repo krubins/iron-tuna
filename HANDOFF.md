@@ -2477,6 +2477,11 @@ by name**, and the column is bylined to Iron Tuna like everything else here.
 - **`the-pick.html`** (route `/the-pick`) is the **source of truth**. Static
   entries, newest first, no client rendering and no date gating — entries are
   written on the day they publish.
+- **Three entries at a time, since 2026-09-18 (§87).** The column rolls: a new
+  entry goes up and the oldest comes down in the same run.
+  `tools/roll-the-pick.mjs` does the trim and `tools/test-the-pick.mjs` fails
+  the build if the page carries more than `PICK_WINDOW`. A retired entry is off
+  the page for good; git history is the archive.
 - Each entry is one `<article class="call pick" id="pick-YYYY-MM-DD">`. **The
   `call` class is not decoration:** `/it-league.js` finds an entry with
   `el.closest('.call')` and reads `.cpos` off it, so an entry that drops it keeps
@@ -10629,3 +10634,69 @@ per-story and per-analyst breakouts, the biggest win leading, all four
 sections written with the misses among them, the DFS lens off the same
 packet, and the fact check clean. Removing the collapse, disabling the story
 half or blinding the board half each fails it.
+
+## 87. September 18: The Pick was being written every day and published none of it
+
+Ken's report: "We continue to build stories, but they are not showing up on
+the site." The stories were The Pick (§23), and every one of them had been
+written. Between September 1 and September 18 the daily Routine fired every
+day, reported SUCCEEDED every day, and pushed every entry to
+`claude/the-pick-YYYY-MM-DD`. Fifteen branches, none merged. `/the-pick`
+sat on the September 9 entry for nine days while the column kept producing.
+
+**Why it looked healthy.** Two Routines write this column (§47). The one that
+pushes to `main` — `trig_016JAiJJMZi2jtZDmZS1QPNK`, 13:00 UTC, whose prompt is
+`tools/the-pick-routine-prompt.md` — had been disabled on September 9. The one
+left running, `trig_01K2obtrMAKiwGn3N4UroTEv` at 12:00 UTC, still carries the
+pre-September-1 draft of that prompt: the branch-and-wait-for-a-human version.
+Nobody was the human. The run log, the session reports and the branch list all
+said the column was working, because by their own definition it was.
+
+This is §46's failure a third time. Twice now the fix has been to make the work
+land somewhere a reader can reach; twice the fix has been undone by a config
+change nobody connected to the column. The lesson worth keeping: a Routine that
+reports success is reporting that IT finished, not that the site changed.
+`git log --oneline -1 -- the-pick.html` against the date is the check that
+would have caught it in a second, and no dashboard runs it.
+
+**What was done.**
+
+| Change | Why |
+|---|---|
+| `trig_016JAiJJMZi2jtZDmZS1QPNK` re-enabled, prompt updated from `tools/the-pick-routine-prompt.md`, renamed "The Pick (daily story, publishes to main)" | It fires an hour behind the branch-pushing one and its "One entry per day" step adopts that branch's entry and pushes it to `main`. That is the §47 arrangement working as designed. |
+| The Ken-created trigger left exactly as it is | `update_trigger` refuses it: created through the HTTP API, so only Ken can edit it, at https://claude.ai/code/routines/trig_01K2obtrMAKiwGn3N4UroTEv. If he ever pastes the current prompt into it, disable the 13:00 one — two Routines pushing to `main` is a different problem. |
+| The three newest stranded entries adopted onto `main` | September 16 (tier cliffs), 17 (target concentration), 18 (positional scarcity at tight end). Every number in all three still checks out against today's `PROJECTIONS`, which is not a given: the projection set refreshes daily and these were written against older ones. The twelve older stranded branches were left where they are. |
+
+### Three entries at a time
+
+Ken's second instruction, and a change to the format: **`/the-pick` carries the
+three most recent entries and nothing older.** A new entry goes up, the oldest
+comes down, same run.
+
+`tools/roll-the-pick.mjs` does it. It is a script and not a line in the prompt
+on purpose: the Routine is a writer, and asking a writer to delete its own back
+catalogue every day is asking for the one step that quietly does not happen.
+`node tools/roll-the-pick.mjs` keeps the newest `PICK_WINDOW` (3) articles,
+prints what it kept and what it retired, and is the first line of the column's
+"Ship it" sequence. `tools/test-the-pick.mjs` imports the same constant and
+fails the build if the page carries more, so a run that skips the trim cannot
+ship. `--check` reports without editing, for CI.
+
+A retired entry is gone from the page. That is safe here and would not be
+everywhere: the entries are anchors on one page (`/the-pick#pick-YYYY-MM-DD`),
+never pages of their own, nothing else on the site links to one, the sitemap
+carries only `/the-pick`, and `tools/build-seo.mjs` rebuilds the `blogPost`
+list out of the page's own articles, so the structured data follows the trim
+with no second edit. Git history is the archive. The ten entries retired in
+this change are in the commit that retired them.
+
+`weekly-intel.html`'s pick band reads `var PICKS` and already shows the newest
+as the lead with `PICKS.slice(1, 4)` under it, so at three entries it prints
+the lead and two below with no page change.
+
+**One more thing that was wrong in the prompt.** Its "Ship it" step said to
+commit `the-pick.html`, `front.html` and `sitemap.xml`. `build-front.mjs` writes
+the column's `var PICKS` into `weekly-intel.html`, not `front.html` — that moved
+in §62 and the prompt never followed. A run that committed exactly what it was
+told would publish the entry with the in-season page still quoting the previous
+one. The list now names `weekly-intel.html`.
