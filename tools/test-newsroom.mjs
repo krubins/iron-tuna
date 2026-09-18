@@ -1043,5 +1043,54 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   ok('the cap is finite and above one', Number.isInteger(H.REWRITE_HELD_MAX) && H.REWRITE_HELD_MAX > 1 && H.RECAPS_PER_TICK >= 1);
 }
 
+// ── the front page's desk band ────────────────────────────────────────────
+// THREE AT A TIME, AND THE TOP ONE MOVES. `deskOrder` in front.html decides
+// what "/" prints under "Current from the desk". It is lifted out of the page
+// and run here rather than driven in a browser, because tools/test-homepage.mjs
+// needs Chromium and skips without it: the rule that a quiet Friday still
+// changes the front page should not be guarded only by a test a laptop can
+// skip. The browser test still checks that three cards are what renders.
+{
+  const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
+  const head = front.indexOf('var DESK_BAND =');
+  const tail = front.indexOf("grab('/api/content'", head);
+  if (head < 0 || tail < 0) { console.error('FAIL: deskOrder not found in front.html'); process.exit(1); }
+  const deskOrder = new Function(front.slice(head, tail) + '; return deskOrder;')();
+
+  const HOUR = 3600 * 1000, TURN = 2 * HOUR;
+  const at = h => Date.UTC(2026, 8, 18, h);
+  const piece = (id, h) => ({ url: '/p/' + id, headline: id, publishedAt: at(h) });
+  const five = [piece('e', 16), piece('d', 12), piece('c', 9), piece('b', 8), piece('a', 6)];
+  const ids = a => a.map(p => p.headline).join(',');
+
+  ok('the band is three, not the whole feed', deskOrder(five, at(20)).length === 3, String(deskOrder(five, at(20)).length));
+  ok('the band is the three newest', deskOrder(five, at(20)).map(p => p.headline).sort().join() === 'c,d,e',
+    ids(deskOrder(five, at(20))));
+
+  // Fresh news leads on its own merit.
+  ok('a piece published inside the current turn leads', ids(deskOrder(five, at(16) + HOUR)) === 'e,d,c',
+    ids(deskOrder(five, at(16) + HOUR)));
+
+  // Once it has had its turn, the top slot advances and keeps advancing.
+  const seen = new Set();
+  for (let h = 0; h < 6; h++) seen.add(ids(deskOrder(five, at(18) + h * TURN)));
+  ok('the lead moves once the newest piece has had its turn', seen.size === 3, [...seen].join(' | '));
+  ok('every turn still prints all three', [...seen].every(o => o.split(',').sort().join() === 'c,d,e'),
+    [...seen].join(' | '));
+  ok('the order is a rotation, not a reshuffle',
+    [...seen].every(o => ('c,d,e,c,d,e').includes(o) || ('e,d,c,e,d,c').includes(o)), [...seen].join(' | '));
+
+  // The same instant gives the same order to everybody: the band is cached and
+  // two readers on one page load must not see two different front pages.
+  ok('the order is a function of the clock alone',
+    ids(deskOrder(five, at(21))) === ids(deskOrder(five, at(21))));
+
+  // Degenerate feeds: no rotation to do, and nothing thrown.
+  ok('one piece is printed as it is', ids(deskOrder([five[0]], at(21))) === 'e');
+  ok('an empty feed is empty', deskOrder([], at(21)).length === 0);
+  ok('a piece with no timestamp does not stop the band',
+    deskOrder([{ url: '/x', headline: 'x' }, { url: '/y', headline: 'y' }], at(21)).length === 2);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

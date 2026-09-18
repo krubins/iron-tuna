@@ -1,6 +1,6 @@
 # Iron Tuna — Project Handoff
 
-**The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §87, and `docs/saved-league.md` for the long record.
+**The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §89, and `docs/saved-league.md` for the long record.
 A league can also be read off a **roster grid screenshot**, which is the whole room in one image on the platforms that print one. The by-hand form on My Leagues takes the image, sends it to the existing `/api/roster-read`, and posts what comes back as `teams[]` to `/api/leagues/manual`, which already accepted that shape. The reader returns names only, so every player lands on the bench and a bare name is resolved to a position against the board. Because no starter is known, `leagueLineup` withholds the comparison against the set lineup rather than reporting that the reader starts nobody and projects zero: it returns `slotsKnown:false` with `currentTotal` and `improvement` null and no changes, and the projected best lineup stands on its own. Scoring and the starting-lineup shape are not in a roster grid and still come from the form's own importer or by hand, once. No extension, no sign-in to the platform and no token: it works for CBS, ESPN, Fantrax or anything else that renders a grid.
 
 Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
@@ -2474,6 +2474,11 @@ by name**, and the column is bylined to Iron Tuna like everything else here.
 - **`the-pick.html`** (route `/the-pick`) is the **source of truth**. Static
   entries, newest first, no client rendering and no date gating — entries are
   written on the day they publish.
+- **Three entries at a time, since 2026-09-18 (§87).** The column rolls: a new
+  entry goes up and the oldest comes down in the same run.
+  `tools/roll-the-pick.mjs` does the trim and `tools/test-the-pick.mjs` fails
+  the build if the page carries more than `PICK_WINDOW`. A retired entry is off
+  the page for good; git history is the archive.
 - Each entry is one `<article class="call pick" id="pick-YYYY-MM-DD">`. **The
   `call` class is not decoration:** `/it-league.js` finds an entry with
   `el.closest('.call')` and reads `.cpos` off it, so an entry that drops it keeps
@@ -8306,7 +8311,7 @@ section is the rest:
 
 **What it is.** A reader describes the league they actually play in and every in-season surface reads their exact scoring, their roster, every other roster, the free-agent pool and the standings. It is infrastructure, not a page: the model lives in D1 and the pages read it. The long record is `docs/saved-league.md`; this is the map.
 
-**There are no platform connectors.** Sleeper, Yahoo, CBS and the ESPN placeholder were removed in §87 along with the OAuth flow, the provider tokens, the scheduled `league-sync` job and the CBS extension. Nothing here calls a fantasy platform, and no provider credential is stored. `LEAGUE_PROVIDERS` has one entry, `manual`, and the adapter shape is kept only so that a future connector has something to slot into.
+**There are no platform connectors.** Sleeper, Yahoo, CBS and the ESPN placeholder were removed in §89 along with the OAuth flow, the provider tokens, the scheduled `league-sync` job and the CBS extension. Nothing here calls a fantasy platform, and no provider credential is stored. `LEAGUE_PROVIDERS` has one entry, `manual`, and the adapter shape is kept only so that a future connector has something to slot into.
 
 **Access.** Saving a league is free. `/api/auth/request` sends a magic link to any valid email; the session is what a saved league is tied to, and it does not grant the paid bundle — paid routes still enforce `isEntitled`. §04 of /my-league refuses to store a room without a session, which is why that endpoint stays open (§88).
 
@@ -10627,9 +10632,186 @@ sections written with the misses among them, the DFS lens off the same
 packet, and the fact check clean. Removing the collapse, disabling the story
 half or blinding the board half each fails it.
 
+## 87. September 18: The Pick was being written every day and published none of it
+
+Ken's report: "We continue to build stories, but they are not showing up on
+the site." The stories were The Pick (§23), and every one of them had been
+written. Between September 1 and September 18 the daily Routine fired every
+day, reported SUCCEEDED every day, and pushed every entry to
+`claude/the-pick-YYYY-MM-DD`. Fifteen branches, none merged. `/the-pick`
+sat on the September 9 entry for nine days while the column kept producing.
+
+**Why it looked healthy.** Two Routines write this column (§47). The one that
+pushes to `main` — `trig_016JAiJJMZi2jtZDmZS1QPNK`, 13:00 UTC, whose prompt is
+`tools/the-pick-routine-prompt.md` — had been disabled on September 9. The one
+left running, `trig_01K2obtrMAKiwGn3N4UroTEv` at 12:00 UTC, still carries the
+pre-September-1 draft of that prompt: the branch-and-wait-for-a-human version.
+Nobody was the human. The run log, the session reports and the branch list all
+said the column was working, because by their own definition it was.
+
+This is §46's failure a third time. Twice now the fix has been to make the work
+land somewhere a reader can reach; twice the fix has been undone by a config
+change nobody connected to the column. The lesson worth keeping: a Routine that
+reports success is reporting that IT finished, not that the site changed.
+`git log --oneline -1 -- the-pick.html` against the date is the check that
+would have caught it in a second, and no dashboard runs it.
+
+**What was done.**
+
+| Change | Why |
+|---|---|
+| `trig_016JAiJJMZi2jtZDmZS1QPNK` re-enabled, prompt updated from `tools/the-pick-routine-prompt.md`, renamed "The Pick (daily story, publishes to main)" | It fires an hour behind the branch-pushing one and its "One entry per day" step adopts that branch's entry and pushes it to `main`. That is the §47 arrangement working as designed. |
+| The Ken-created trigger left exactly as it is | `update_trigger` refuses it: created through the HTTP API, so only Ken can edit it, at https://claude.ai/code/routines/trig_01K2obtrMAKiwGn3N4UroTEv. If he ever pastes the current prompt into it, disable the 13:00 one — two Routines pushing to `main` is a different problem. |
+| The three newest stranded entries adopted onto `main` | September 16 (tier cliffs), 17 (target concentration), 18 (positional scarcity at tight end). Every number in all three still checks out against today's `PROJECTIONS`, which is not a given: the projection set refreshes daily and these were written against older ones. The twelve older stranded branches were left where they are. |
+
+### Three entries at a time
+
+Ken's second instruction, and a change to the format: **`/the-pick` carries the
+three most recent entries and nothing older.** A new entry goes up, the oldest
+comes down, same run.
+
+`tools/roll-the-pick.mjs` does it. It is a script and not a line in the prompt
+on purpose: the Routine is a writer, and asking a writer to delete its own back
+catalogue every day is asking for the one step that quietly does not happen.
+`node tools/roll-the-pick.mjs` keeps the newest `PICK_WINDOW` (3) articles,
+prints what it kept and what it retired, and is the first line of the column's
+"Ship it" sequence. `tools/test-the-pick.mjs` imports the same constant and
+fails the build if the page carries more, so a run that skips the trim cannot
+ship. `--check` reports without editing, for CI.
+
+A retired entry is gone from the page. That is safe here and would not be
+everywhere: the entries are anchors on one page (`/the-pick#pick-YYYY-MM-DD`),
+never pages of their own, nothing else on the site links to one, the sitemap
+carries only `/the-pick`, and `tools/build-seo.mjs` rebuilds the `blogPost`
+list out of the page's own articles, so the structured data follows the trim
+with no second edit. Git history is the archive. The ten entries retired in
+this change are in the commit that retired them.
+
+`weekly-intel.html`'s pick band reads `var PICKS` and already shows the newest
+as the lead with `PICKS.slice(1, 4)` under it, so at three entries it prints
+the lead and two below with no page change.
+
+**One more thing that was wrong in the prompt.** Its "Ship it" step said to
+commit `the-pick.html`, `front.html` and `sitemap.xml`. `build-front.mjs` writes
+the column's `var PICKS` into `weekly-intel.html`, not `front.html` — that moved
+in §62 and the prompt never followed. A run that committed exactly what it was
+told would publish the entry with the in-season page still quoting the previous
+one. The list now names `weekly-intel.html`.
+
+### The branches, cleared for deletion (2026-09-18)
+
+Sixteen `claude/the-pick-*` branches are the wreckage of the stranding, not
+work in progress, and a branch list nobody can read is how the stranding went
+unnoticed for eighteen days in the first place. Every one of them was checked
+and cleared for deletion; **the deletion itself has to be done by a human or
+from a machine outside this environment.** A session here can push a ref but
+not delete one: `git push origin --delete` returns `HTTP 403` from the egress
+proxy, which is an organization policy denial and not something to route
+around.
+
+What was checked before deleting, because "it is only a column entry" turned
+out not to be true of all of them:
+
+- **`claude/the-pick-2026-09-02`** also carried a rebuild of `auction-watch.html`.
+  `main`'s copy has the September 2 report and has been rebuilt since
+  (2026-09-16), so nothing unique was on the branch.
+- **`claude/the-pick-daily-segment-qpj8l6`** is the column's original feature
+  branch, merged as PR #79. Its last commit deletes the `lp-mode` card
+  component; `lp-mode` appears nowhere in `main`'s `index.html`, so that landed.
+- Everything else touched only `the-pick.html`, `front.html` and
+  `weekly-intel.html`.
+
+Nine of the dated branches carried an entry that had also published on `main`
+under the same id, so deleting them lost nothing. **Six carried an entry no
+reader ever saw**, and those are gone from the remote with the branch. Their
+tips, if one is ever wanted back:
+
+| Branch | Tip | Theme | The pick |
+|---|---|---|---|
+| `claude/the-pick-2026-09-02` | `07eb228c` | tier cliffs | Trey McBride, Brock Bowers — lost the day to the "target concentration" entry that reached `main` first (the 2026-09-02 incident in `tools/the-pick-routine-prompt.md`) |
+| `claude/the-pick-2026-09-06` | `c0d55d83` | the shape of the money | Jahmyr Gibbs, Rome Odunze — a variant of the entry that did publish that day |
+| `claude/the-pick-2026-09-08` | `5a28bbd8` | rookie pricing | Jaxson Dart, Patrick Mahomes — a different Dart entry from the one that published |
+| `claude/the-pick-2026-09-10` | `dd50da6b` | committee backfields | Rachaad White, Jacory Croskey-Merritt |
+| `claude/the-pick-2026-09-12` | `a5b7058d` | scoring settings | Garrett Wilson, Davante Adams |
+| `claude/the-pick-2026-09-13` | `d2b30720` | scoring settings | Mark Andrews |
+| `claude/the-pick-2026-09-14` | `3df50fcd` | scoring settings | Javonte Williams, Ashton Jeanty |
+| `claude/the-pick-2026-09-15` | `0f4831ff` | target concentration | Jaxon Smith-Njigba, De'Von Achane |
+
+(Eight rows: 09-02, 09-06 and 09-08 are the three same-date entries that
+differed from what published, and 09-10 through 09-15 never had a same-date
+entry on `main` at all.) None of them is publishable as written now. The
+numbers were computed against the projection set of their own day, and the set
+refreshes daily, so an entry restored a week later fails
+`tools/test-the-pick.mjs` on its own tables. Restoring one means re-running its
+argument against today's board, which is most of writing it again.
+
+A deleted branch tip stays fetchable from GitHub by SHA for a while after the
+branch is gone, so the table above is worth more than it looks for about a
+month. After that it is a record of what was written, not a way back to it.
+
+The deletion, when someone runs it:
+
+```bash
+for d in 01 02 03 05 06 07 08 10 12 13 14 15 16 17 18; do
+  git push origin --delete "claude/the-pick-2026-09-$d"
+done
+git push origin --delete claude/the-pick-daily-segment-qpj8l6
+```
+
+
+## 88. September 18: the front page pinned one story until the desk published again
+
+Ken: "Love is still featured on the front page." He meant Jeremiyah Love, and
+he was right: the Week 2 weekend preview, headlined "fade Jeremiyah Love,
+attack Dalton Schultz, and know why Mack Hollins matters", had been the first
+card in "Current from the desk" since it published at 12:05 PM ET, and would
+have stayed there until the next piece landed. His instruction, the same one
+§87 applied to The Pick: it should have rotated.
+
+**What the band did.** `front.html` took `/api/content`, filtered to pieces
+with a url and a headline, and printed `.slice(0, 4)` newest first. Between
+publishes that is a fixed page. On a quiet Friday the desk publishes twice, so
+the same headline under the same player's name is the top of the front page for
+most of the day, and the hero's photograph is of that player, because the hero
+takes the first piece in the band that names somebody.
+
+**What it does now.** `deskOrder(pieces, now)` in `front.html`:
+
+- **Three at a time**, not four, matching the rule for The Pick. A new piece
+  pushes the oldest out of the band, which is what Ken asked for on the 18th.
+- **The top slot advances every two hours** (`DESK_TURN_MS`), rotating the
+  three. A reader who comes back after lunch gets a different story on top of a
+  band that has not changed underneath them.
+- **Except when there is news.** A piece published inside the current turn
+  leads on its own merit. A recap filed twenty minutes ago IS the front page,
+  and rotating it to third would be the site hiding what it just did. Rotation
+  starts once the newest piece has had its turn.
+- The hero's picture follows the rotated top piece, not the newest row
+  underneath it, so the photograph and the first card are about the same man.
+
+The order is a pure function of the feed and the clock, so two readers loading
+at the same moment get the same page, which matters because the band is drawn
+from a memoized payload.
+
+**Where it is tested.** `tools/test-newsroom.mjs` lifts `deskOrder` straight
+out of `front.html` and runs it turn by turn: three of five printed, the three
+newest, fresh news leading, the lead moving once it is no longer fresh, every
+turn still printing all three, the order being a rotation rather than a
+reshuffle, and the degenerate feeds (one piece, none, a piece with no
+timestamp). That file runs everywhere. `tools/test-homepage.mjs` still drives
+the real page in Chromium and now asserts three cards, but it needs a browser
+and skips without one, which is why the rule itself is guarded in the file that
+cannot skip.
+
+That browser test's fixture also changed, and the reason is worth keeping: it
+used to publish its newest piece on a fixed date in the past, which under a
+rotating band would have made "which story leads" depend on what time of day
+CI happened to run. It now publishes the newest five minutes ago, so the
+freshness rule pins the order and the hero assertions stay deterministic.
+
 ---
 
-## 87. September 18: the league-platform connectors are removed
+## 89. September 18: the league-platform connectors are removed
 
 They never worked. Not "worked badly" — no reader ever connected a fantasy
 platform and got a board back from it in production. Sleeper shipped behind a

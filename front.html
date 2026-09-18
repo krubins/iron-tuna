@@ -873,8 +873,34 @@ img{max-width:100%}
   });
 
   // ── the desk's current pieces ────────────────────────────────────────────
-  // Four at most. Each card is drawn only with a destination and a headline on
-  // it; with nothing current the whole section stays hidden.
+  // THREE AT A TIME, AND THE TOP ONE MOVES. Each card is drawn only with a
+  // destination and a headline on it; with nothing current the whole section
+  // stays hidden.
+  //
+  // The band used to print the four newest pieces, newest first, and then sit
+  // there: between publishes the front page was the same story under the same
+  // player's name for as long as the desk was quiet, which on a Friday is most
+  // of the day. Ken's rule for The Pick is the rule here — three at a time,
+  // and a new one pushes the oldest out — with one addition the daily column
+  // does not need: the lead slot advances on a clock, so a reader who comes
+  // back after lunch gets a different story at the top of a band that has not
+  // changed underneath them.
+  //
+  // What it does NOT do is bury news. A piece published inside the current
+  // turn leads on its own merit, because a recap filed twenty minutes ago IS
+  // the front page, and rotating it to third would be the site hiding what it
+  // just did. Rotation starts once the newest piece has had its turn.
+  var DESK_BAND = 3;                      // cards in the band
+  var DESK_TURN_MS = 2 * 3600 * 1000;     // how long one piece holds the top
+  function deskOrder(pieces, now) {
+    var band = pieces.slice(0, DESK_BAND);
+    if (band.length < 2) return band;
+    var newest = 0, i;
+    for (i = 0; i < band.length; i++) newest = Math.max(newest, +band[i].publishedAt || 0);
+    if (newest && now - newest < DESK_TURN_MS) return band;
+    var turn = Math.floor(now / DESK_TURN_MS) % band.length;
+    return band.slice(turn).concat(band.slice(0, turn));
+  }
   grab('/api/content', function (j) {
     var day = function (v) {
       try {
@@ -886,12 +912,12 @@ img{max-width:100%}
     // the eyebrow and the headline with nothing under it: a card that says
     // the desk published and does not say what. Those rows are skipped here
     // and the piece is still in the archive at its URL.
-    var pieces = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).slice(0, 4);
+    var pieces = deskOrder((j.pieces || []).filter(function (p) { return p && p.url && p.headline; }), Date.now());
     if (!pieces.length) return;
     // Who a piece is about: the players its own findings name. The card is
     // stamped with them and player-search.js draws their faces at the head of
-    // the headline, so the group reads as four stories about named people
-    // rather than four paragraphs. A piece with no findings is stamped with
+    // the headline, so the group reads as three stories about named people
+    // rather than three paragraphs. A piece with no findings is stamped with
     // nothing and keeps the plain card it has always had.
     var whoOf = function (p) {
       var out = [];
@@ -919,7 +945,9 @@ img{max-width:100%}
     // document and would reach them on its own; calling it here means they
     // arrive with the cards rather than a frame later.
     try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('readGrid')); } catch (e) {}
-    // The hero's first choice: the newest piece that is about somebody.
+    // The hero's first choice: the first piece in the band that is about
+    // somebody, so the picture follows the story the rotation put on top
+    // rather than pinning itself to the newest row underneath it.
     for (var i = 0; i < pieces.length; i++) {
       var who2 = whoOf(pieces[i]);
       if (!who2.length) continue;
