@@ -14194,17 +14194,25 @@ async function leagueLineup(env, L, board) {
                      margin, confidence: conf, recommendation: (conf === 'Lean' ? 'Lean ' : 'Start ') + s.p.name,
                      reason: s.p.name + ' projects ' + _oddsRound(s.v) + ' to ' + alt.p.name + '’s ' + _oddsRound(alt.v) + ' at your scoring' + (conf === 'Lean' ? '; close enough that late news should decide it.' : '.') });
   }
+  // A roster grid carries no starter/bench split, so every player is imported
+  // on the bench. Measuring the best lineup against a lineup nobody set would
+  // report that the reader starts nobody and projects zero, and then call the
+  // whole lineup a change. Where no slot is known the comparison is withheld
+  // and the projection stands on its own.
+  const slotsKnown = mine.some(p => p.slot === 'starter');
   const currentStarters = new Set(mine.filter(p => p.slot === 'starter').map(p => p.key || p.name));
   const changes = [];
-  for (const s of opt.starters) if (s.p && !currentStarters.has(s.p.key || s.p.name)) changes.push({ action: 'start', name: s.p.name, position: s.pos, slot: s.slot, projected: _oddsRound(s.v) });
-  for (const r of opt.bench) if (currentStarters.has(r.p.key || r.p.name)) changes.push({ action: 'bench', name: r.p.name, position: r.pos, projected: _oddsRound(r.v), reason: r.p.bye ? 'bye week' : r.p.out ? 'ruled out' : 'outprojected' });
-  const currentTotal = _oddsRound(mine.filter(p => p.slot === 'starter').reduce((n, p) => n + p.points, 0));
+  if (slotsKnown) {
+    for (const s of opt.starters) if (s.p && !currentStarters.has(s.p.key || s.p.name)) changes.push({ action: 'start', name: s.p.name, position: s.pos, slot: s.slot, projected: _oddsRound(s.v) });
+    for (const r of opt.bench) if (currentStarters.has(r.p.key || r.p.name)) changes.push({ action: 'bench', name: r.p.name, position: r.pos, projected: _oddsRound(r.v), reason: r.p.bye ? 'bye week' : r.p.out ? 'ruled out' : 'outprojected' });
+  }
+  const currentTotal = slotsKnown ? _oddsRound(mine.filter(p => p.slot === 'starter').reduce((n, p) => n + p.points, 0)) : null;
   return {
     ok: true, contract: LEAGUE_CONTRACT, week: b.currentWeek, analyst: 'dalton',
     lineup: opt.starters.map(s => ({ slot: s.slot, name: s.p ? s.p.name : null, position: s.pos, team: s.p ? s.p.team : null, projected: _oddsRound(s.v), why: s.p ? _lgWhy(s.p.row) : null, empty: !!s.empty })),
     bench: opt.bench.map(r => ({ name: r.p.name, position: r.pos, team: r.p.team, projected: _oddsRound(r.v), ranked: r.p.ranked, bye: r.p.bye, out: r.p.out, slot: r.p.slot })),
     reserve: mine.filter(p => p.slot === 'ir' || p.slot === 'taxi').map(p => ({ name: p.name, position: p.position, slot: p.slot })),
-    projectedTotal: opt.total, currentTotal, improvement: _oddsRound(opt.total - currentTotal), decisions, changes,
+    projectedTotal: opt.total, currentTotal, slotsKnown, improvement: slotsKnown ? _oddsRound(opt.total - currentTotal) : null, decisions, changes,
     unranked: mine.filter(p => !p.ranked && p.slot !== 'ir').map(p => p.name)
   };
 }
