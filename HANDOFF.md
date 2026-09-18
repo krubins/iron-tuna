@@ -10701,12 +10701,16 @@ in §62 and the prompt never followed. A run that committed exactly what it was
 told would publish the entry with the in-season page still quoting the previous
 one. The list now names `weekly-intel.html`.
 
-### The branches, cleaned up (2026-09-18)
+### The branches, cleared for deletion (2026-09-18)
 
-Sixteen `claude/the-pick-*` branches were deleted once the fix above was on
-`main`. They were the wreckage of the stranding, not work in progress, and a
-branch list nobody can read is how the stranding went unnoticed for eighteen
-days in the first place.
+Sixteen `claude/the-pick-*` branches are the wreckage of the stranding, not
+work in progress, and a branch list nobody can read is how the stranding went
+unnoticed for eighteen days in the first place. Every one of them was checked
+and cleared for deletion; **the deletion itself has to be done by a human or
+from a machine outside this environment.** A session here can push a ref but
+not delete one: `git push origin --delete` returns `HTTP 403` from the egress
+proxy, which is an organization policy denial and not something to route
+around.
 
 What was checked before deleting, because "it is only a column entry" turned
 out not to be true of all of them:
@@ -10747,3 +10751,12 @@ argument against today's board, which is most of writing it again.
 A deleted branch tip stays fetchable from GitHub by SHA for a while after the
 branch is gone, so the table above is worth more than it looks for about a
 month. After that it is a record of what was written, not a way back to it.
+
+The deletion, when someone runs it:
+
+```bash
+for d in 01 02 03 05 06 07 08 10 12 13 14 15 16 17 18; do
+  git push origin --delete "claude/the-pick-2026-09-$d"
+done
+git push origin --delete claude/the-pick-daily-segment-qpj8l6
+```
