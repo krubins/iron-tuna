@@ -10700,3 +10700,50 @@ the column's `var PICKS` into `weekly-intel.html`, not `front.html` — that mov
 in §62 and the prompt never followed. A run that committed exactly what it was
 told would publish the entry with the in-season page still quoting the previous
 one. The list now names `weekly-intel.html`.
+
+### The branches, cleaned up (2026-09-18)
+
+Sixteen `claude/the-pick-*` branches were deleted once the fix above was on
+`main`. They were the wreckage of the stranding, not work in progress, and a
+branch list nobody can read is how the stranding went unnoticed for eighteen
+days in the first place.
+
+What was checked before deleting, because "it is only a column entry" turned
+out not to be true of all of them:
+
+- **`claude/the-pick-2026-09-02`** also carried a rebuild of `auction-watch.html`.
+  `main`'s copy has the September 2 report and has been rebuilt since
+  (2026-09-16), so nothing unique was on the branch.
+- **`claude/the-pick-daily-segment-qpj8l6`** is the column's original feature
+  branch, merged as PR #79. Its last commit deletes the `lp-mode` card
+  component; `lp-mode` appears nowhere in `main`'s `index.html`, so that landed.
+- Everything else touched only `the-pick.html`, `front.html` and
+  `weekly-intel.html`.
+
+Nine of the dated branches carried an entry that had also published on `main`
+under the same id, so deleting them lost nothing. **Six carried an entry no
+reader ever saw**, and those are gone from the remote with the branch. Their
+tips, if one is ever wanted back:
+
+| Branch | Tip | Theme | The pick |
+|---|---|---|---|
+| `claude/the-pick-2026-09-02` | `07eb228c` | tier cliffs | Trey McBride, Brock Bowers — lost the day to the "target concentration" entry that reached `main` first (the 2026-09-02 incident in `tools/the-pick-routine-prompt.md`) |
+| `claude/the-pick-2026-09-06` | `c0d55d83` | the shape of the money | Jahmyr Gibbs, Rome Odunze — a variant of the entry that did publish that day |
+| `claude/the-pick-2026-09-08` | `5a28bbd8` | rookie pricing | Jaxson Dart, Patrick Mahomes — a different Dart entry from the one that published |
+| `claude/the-pick-2026-09-10` | `dd50da6b` | committee backfields | Rachaad White, Jacory Croskey-Merritt |
+| `claude/the-pick-2026-09-12` | `a5b7058d` | scoring settings | Garrett Wilson, Davante Adams |
+| `claude/the-pick-2026-09-13` | `d2b30720` | scoring settings | Mark Andrews |
+| `claude/the-pick-2026-09-14` | `3df50fcd` | scoring settings | Javonte Williams, Ashton Jeanty |
+| `claude/the-pick-2026-09-15` | `0f4831ff` | target concentration | Jaxon Smith-Njigba, De'Von Achane |
+
+(Eight rows: 09-02, 09-06 and 09-08 are the three same-date entries that
+differed from what published, and 09-10 through 09-15 never had a same-date
+entry on `main` at all.) None of them is publishable as written now. The
+numbers were computed against the projection set of their own day, and the set
+refreshes daily, so an entry restored a week later fails
+`tools/test-the-pick.mjs` on its own tables. Restoring one means re-running its
+argument against today's board, which is most of writing it again.
+
+A deleted branch tip stays fetchable from GitHub by SHA for a while after the
+branch is gone, so the table above is worth more than it looks for about a
+month. After that it is a record of what was written, not a way back to it.
