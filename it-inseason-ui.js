@@ -232,7 +232,11 @@
       chips: [['std', 'Standard'], ['half', 'Half-PPR'], ['ppr', 'Full PPR'], ['pass4', 'Pass TD 4'], ['pass6', 'Pass TD 6'], ['tep', 'TE premium']]
     },
     {
-      kind: 'roster', n: '02', title: 'Insert Rosters',
+      // "Insert Rosters" is what this box was called, and a reader holding a
+      // screenshot of every team's players pasted it in here and got told the
+      // box could not read it. It reads the LINEUP — how many of each slot
+      // start — and says so now; the players have their own box under these.
+      kind: 'roster', n: '02', title: 'Insert Starting Lineup',
       hint: 'The starting slots and the bench, superflex included.',
       ph: 'QB 1 / RB 2 / WR 3 / TE 1 / FLEX 1 / K 1 / DEF 1 / Bench 6\n\nor: QB, RB, RB, WR, WR, WR, TE, FLEX, K, DEF, BN, BN',
       chips: [['superflex', 'Superflex']]

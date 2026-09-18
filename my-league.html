@@ -121,6 +121,11 @@ p{color:var(--sec);margin:0 0 16px}
 .ml-priv summary{cursor:pointer;font-weight:700;color:var(--sec)}
 .ml-priv p{margin:var(--space-2) 0 0;font-size:inherit;color:inherit}
 #lsList .is-card{margin:10px 0}
+/* 04, under the three intake boxes: one card the width of the row, because the
+   roster grid it takes is a wide screenshot and its team picker is a long row. */
+.ml-grid-card{margin:var(--space-4) 0 0}
+.ml-grid-card .is-btns{margin-top:var(--space-2)}
+.ml-grid-card .is-field{margin:0}
 /* The roster-grid intake. A dashed box rather than a bare file input, because
    the screenshot it wants is usually on the clipboard and never on disk. */
 .mg-drop{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1px dashed var(--line2);border-radius:var(--radius-md);background:var(--bg);transition:border-color .12s ease,background .12s ease}
@@ -245,7 +250,7 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="is-band">
 <div class="wrap wide">
 <div class="is-sec" id="settings"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Your in-season settings</h2></div></div>
-<p class="ml-sub">Platform, scoring, lineup, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. Your league prints those settings on three separate screens, so the three boxes below ask for them three separate ways: type them, paste a screenshot straight off the clipboard, or drag one in. A screenshot is read in your browser and shown back to you as values to check before anything moves. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
+<p class="ml-sub">Platform, scoring, lineup, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. Your league prints those settings on three separate screens, so the three boxes below ask for them three separate ways: type them, paste a screenshot straight off the clipboard, or drag one in. A screenshot in those three is read in your browser and shown back to you as values to check before anything moves. A fourth box under them takes the rosters themselves, every team at once, off the page your league prints them on; that one sends the image to Iron Tuna&rsquo;s reader, which returns the names and keeps nothing. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
 
 <!-- the three boxes. Scoring, rosters and the FAAB budget, side by side and
      each taking typing, a pasted screenshot or a dragged one. They fill the
@@ -253,6 +258,14 @@ p{color:var(--sec);margin:0 0 16px}
      intake() hands back a partial and leagueForm()’s handle applies it, so a
      bad OCR read costs a glance instead of a season of wrong numbers. -->
 <div id="mlIntake"></div>
+
+<!-- 04. The rosters themselves. The box above it numbered 02 reads the LINEUP —
+     how many of each slot start — and a reader holding a screenshot of every
+     team's players had nowhere on this section to put it: the reader that
+     transcribes a grid lived in the by-hand form up in §01, a section they
+     never had to open. It is mounted here as well now, and saves the room to
+     the same league record that form writes. -->
+<div id="mlGrid"></div>
 
 <div class="ml-split">
   <div class="ml-form" id="mlForm"></div>
@@ -309,6 +322,7 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-inseason.js" defer></script>
 <script src="/it-inseason-import.js" defer></script>
 <script src="/it-inseason-ui.js" defer></script>
+<script src="/it-roster-grid.js" defer></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   if (!window.ITInSeasonUI) return;
@@ -319,7 +333,88 @@ document.addEventListener('DOMContentLoaded', function () {
   ITInSeasonUI.intake(document.getElementById('mlIntake'), {
     onApply: function (partial, source, n) { if (form) form.apply(partial, source, n); }
   });
+  rosterGrid(document.getElementById('mlGrid'));
 });
+
+// 04, the rosters. The three boxes above fill the form beside them and save
+// nothing themselves; a room full of players has nowhere to live in that form —
+// it holds settings — so this one writes the league record directly, the same
+// POST the by-hand form in §01 makes. That record is what Best Lineup, the
+// Pickup Advisor and the free-agent pool read.
+function rosterGrid(el) {
+  if (!el || !window.ITRosterGrid) return;
+  var esc = window.ITSync ? ITSync.esc : function (x) { return String(x == null ? '' : x); };
+  el.innerHTML = '<section class="is-intake-card ml-grid-card">' +
+    '<div class="is-intake-top"><span class="is-intake-n">04</span><b>Insert Rosters</b></div>' +
+    '<p class="is-intake-hint">Every team\u2019s players, off the one page your league prints them on.</p>' +
+    '<div id="mlGridBox"></div>' +
+    '<div class="is-btns"><button type="button" class="is-btn primary" id="mlGridSave">Save these rosters</button></div>' +
+    '<p class="is-note" id="mlGridMsg" role="status" aria-live="polite" style="margin:0"></p>' +
+    // The three boxes above read their screenshots in the browser and say so.
+    // This one cannot: a grid of two hundred names needs the reader on the
+    // server. A privacy line that is true of the boxes beside it and false of
+    // this one is worse than no line at all.
+    '<p class="is-note" style="margin:6px 0 0">Unlike the three boxes above, this screenshot is sent to Iron Tuna\u2019s reader to be transcribed. The image is not kept; the names come back to this page, and nothing is saved to your league until you press the button.</p>' +
+  '</section>';
+  var msgEl = document.getElementById('mlGridMsg');
+  function msg(html, bad) { msgEl.innerHTML = html || ''; msgEl.style.color = bad ? 'var(--danger)' : ''; }
+
+  var grid = ITRosterGrid.mount(document.getElementById('mlGridBox'), {
+    label: '',
+    note: 'One screenshot of the roster grid holds every team at once. Names only: who starts is projected from the scoring on the left, not read off the page. Send more than one image together if the grid does not fit in one shot.',
+    onPick: function () { msg(''); }
+  });
+
+  document.getElementById('mlGridSave').addEventListener('click', function () {
+    if (!grid || !grid.teams.length) { msg('Paste a screenshot of the rosters first.', true); return; }
+    if (grid.mine < 0) { msg('Pick which of those teams is yours.', true); return; }
+    if (!window.ITSync || !window.ITInSeason) { msg('League sync could not load in this browser.', true); return; }
+    var btn = this;
+    btn.disabled = true;
+    msg('Saving\u2026');
+    // The settings on the left go with them: the lineup and the scoring are what
+    // turn a list of names into a starting lineup, and a reader who typed them
+    // thirty seconds ago has not necessarily pressed Save on that form yet.
+    var f = document.querySelector('#mlForm form');
+    if (f) { if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); }
+    var rec = ITInSeason.get() || ITInSeason.draft();
+
+    ITSync.load(true).then(function (st) {
+      if (!st || !st.signedIn) {
+        btn.disabled = false;
+        // Nothing read is thrown away: the room stays on screen, and one sign-in
+        // later the same button saves it.
+        msg('Rosters are saved to your account, so this needs a sign-in. <a href="#connect">Sign in up in \u00a701</a>, then press Save again \u2014 what was read stays here.', true);
+        var box = document.getElementById('lsEmail');
+        if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return null;
+      }
+      // A synced league is rewritten by its next sync, so a room read off a
+      // screenshot belongs to a manual league: this updates the one on the
+      // account if there is one, and makes one if there is not.
+      var manual = (st.leagues || []).filter(function (L) { return L.provider === 'manual'; });
+      var target = manual.filter(function (L) { return L.id === st.activeId || L.isDefault; })[0] || manual[0] || null;
+      var body = {
+        id: target ? target.id : undefined,
+        name: target ? target.name : 'My league',
+        numTeams: Math.max(grid.teams.length, parseInt(rec.teams, 10) || 0),
+        teams: grid.teams.map(function (t, i) {
+          return { teamId: 'm' + (i + 1), name: t.name || ('Team ' + (i + 1)), isUser: i === grid.mine, players: t.players };
+        }),
+        settings: { scoring: rec.settings ? rec.settings.scoring : {}, extras: rec.settings ? rec.settings.extras : { tePremium: 0 },
+                    roster: rec.settings ? rec.settings.roster : null, faab: rec.faab == null ? null : rec.faab }
+      };
+      return ITSync.api('/api/leagues/manual', { method: 'POST', body: body }).then(function (j) {
+        btn.disabled = false;
+        if (!j || !j.ok) { msg(esc((j && (j.message || j.error)) || 'Could not save those rosters.'), true); return; }
+        msg('<b>Saved.</b> ' + esc(j.league.name) + ' now holds ' + grid.teams.length + ' rosters.' +
+            (j.unresolved && j.unresolved.length ? ' Not on the board (kept by name, scored 0): ' + esc(j.unresolved.join(', ')) + '.' : ' Every player mapped to the board.'));
+        ITSync.invalidate();
+        ITSync.load(true);
+      });
+    }).catch(function () { btn.disabled = false; msg('Could not save those rosters. Try again.', true); });
+  });
+}
 </script>
 <script src="/it-sync.js" defer></script>
 <script>
@@ -532,157 +627,9 @@ document.addEventListener('DOMContentLoaded', function () {
     else if (act === 'disconnect') { if (!confirm('Disconnect this league? Iron Tuna stops syncing it and deletes the imported settings, teams, rosters, matchups and transactions. Provider tokens are deleted when no league on that provider remains.')) return; ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/disconnect', { method: 'POST' }).then(function (j) { note('Disconnected. Removed: ' + esc((j.removed || []).join(', ')) + '.' + (j.tokensRemoved ? ' Provider tokens deleted.' : '') + ' Kept: ' + esc((j.retained || []).join(', ')) + '.'); reload(); }); }
     else panel(id, act);
   });
-  // ── the roster grid ───────────────────────────────────────────────────────
-  // A league that prints every roster on one page is one screenshot, not
-  // twelve. The reader returns names only — no starter, bench or IR — so a
-  // grid league has its best lineup projected rather than compared against a
-  // lineup nobody recorded. Each image is shrunk here first: a phone
-  // screenshot is several megabytes and the reader needs none of that to read
-  // a name.
-  function shrink(file) {
-    return new Promise(function (resolve, reject) {
-      var url = URL.createObjectURL(file), img = new Image();
-      img.onload = function () {
-        try {
-          var MAX = 1600, sc = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
-          var c = document.createElement('canvas');
-          c.width = Math.round(img.naturalWidth * sc); c.height = Math.round(img.naturalHeight * sc);
-          var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
-          resolve({ media_type: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.85).replace(/^data:[^,]*,/, '') });
-        } catch (e) { reject(e); } finally { URL.revokeObjectURL(url); }
-      };
-      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('unreadable')); };
-      img.src = url;
-    });
-  }
-  // Every image on a clipboard or a drag, not just the first: a roster grid
-  // that took three shots to capture is three images pasted together, and a
-  // reader who has to send them one at a time gets three reads that each
-  // REPLACE the last rather than one read of the whole room. files is what
-  // modern browsers fill; items is the older path Safari still needs.
-  function imagesIn(dt) {
-    var out = [], i, f;
-    if (!dt) return out;
-    if (dt.files && dt.files.length) {
-      for (i = 0; i < dt.files.length; i++) if (/^image\//.test(dt.files[i].type)) out.push(dt.files[i]);
-    }
-    if (!out.length && dt.items) {
-      for (i = 0; i < dt.items.length; i++) {
-        if (dt.items[i].kind === 'file' && /^image\//.test(dt.items[i].type)) { f = dt.items[i].getAsFile(); if (f) out.push(f); }
-      }
-    }
-    return out;
-  }
-  // One document-level paste listener at a time. manualForm() re-renders this
-  // widget whenever the form is reopened, and a listener per render would send
-  // one clipboard to the reader four times.
-  var mgPaste = null;
-  function gridWidget(host, grid) {
-    if (!host) return;
-    // A screenshot lives on the clipboard, not on disk: Win+Shift+S and
-    // Cmd+Ctrl+Shift+4 both end with an image nobody ever saved to a file, and
-    // a file input is the one intake that cannot take it. The box below takes
-    // the paste, the drag and the picker, the way the three settings boxes at
-    // the top of this page already do.
-    var mac = /Mac|iPhone|iPad|iPod/.test((navigator.platform || '') + ' ' + (navigator.userAgent || ''));
-    host.innerHTML = '<div class="is-field"><label>Every roster from one screenshot</label>' +
-      '<p class="is-note" style="margin:0 0 6px">A league roster grid holds all of the teams at once. Names only: your starting lineup is projected from the scoring below, not read off the page. Send more than one image at a time if the grid does not fit in one shot.</p>' +
-      '<div class="mg-drop" id="mgDrop" tabindex="0" role="group" aria-label="Paste, drop or choose roster screenshots">' +
-        '<b>Paste a screenshot, or drop one in</b>' +
-        '<span>Copy the roster grid and press <kbd>' + (mac ? '\u2318' : 'Ctrl+') + 'V</kbd> \u2014 here or anywhere on this form \u2014 or drag the image onto this box, or <button type="button" class="mg-pick" id="mgPick">choose files</button>.</span>' +
-      '</div>' +
-      '<input type="file" id="mgFile" accept="image/*" multiple hidden>' +
-      '<p class="is-note" id="mgMsg" style="margin:6px 0 0" role="status" aria-live="polite"></p><div id="mgOut"></div></div>';
-    var msg = function (t, bad) { var m = host.querySelector('#mgMsg'); m.textContent = t || ''; m.style.color = bad ? 'var(--danger)' : ''; };
-    var drop = host.querySelector('#mgDrop'), fileIn = host.querySelector('#mgFile');
-    host.querySelector('#mgPick').addEventListener('click', function () { fileIn.click(); });
-    // The picker is cleared after every read so choosing the same file twice
-    // still fires change the second time.
-    fileIn.addEventListener('change', function (e) { var f = e.target.files; read(f); e.target.value = ''; });
-
-    drop.addEventListener('paste', function (e) {
-      var imgs = imagesIn(e.clipboardData);
-      if (!imgs.length) { msg('There is no image on the clipboard. Copy the roster grid as a screenshot first.', true); return; }
-      e.preventDefault(); read(imgs);
-    });
-
-    // A paste anywhere on the page reaches the grid too: a reader who has just
-    // taken the screenshot has not necessarily clicked this box first, and
-    // Ctrl+V landing nowhere reads as a feature that is broken. Fields that
-    // take a paste of their own keep it — the scoring boxes above read images
-    // themselves, and the roster textarea below takes text.
-    if (mgPaste) document.removeEventListener('paste', mgPaste);
-    var onPaste = function (e) {
-      // The form this widget sits in is thrown away and rebuilt; the listener
-      // outlives it, so it retires itself the first time it fires with its own
-      // widget gone rather than reading into a form nobody can see.
-      if (!document.body.contains(host)) { document.removeEventListener('paste', onPaste); if (mgPaste === onPaste) mgPaste = null; return; }
-      // The box's own handler already read this one.
-      if (e.defaultPrevented) return;
-      var t = e.target, tag = t && t.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
-      var imgs = imagesIn(e.clipboardData);
-      if (!imgs.length) return;
-      e.preventDefault(); read(imgs);
-    };
-    mgPaste = onPaste;
-    document.addEventListener('paste', onPaste);
-
-    // A drop that misses the box is the browser navigating away to the image,
-    // taking the half-filled form with it — the one failure here that costs
-    // work rather than a read. The whole field catches the drag.
-    var zone = host.querySelector('.is-field') || host, deep = 0;
-    ['dragenter', 'dragover'].forEach(function (ev) {
-      zone.addEventListener(ev, function (e) { e.preventDefault(); if (ev === 'dragenter') deep++; drop.classList.add('over'); });
-    });
-    ['dragleave', 'dragend'].forEach(function (ev) {
-      zone.addEventListener(ev, function () { if (ev === 'dragleave') deep = Math.max(0, deep - 1); if (!deep || ev === 'dragend') { deep = 0; drop.classList.remove('over'); } });
-    });
-    zone.addEventListener('drop', function (e) {
-      e.preventDefault(); deep = 0; drop.classList.remove('over');
-      var imgs = imagesIn(e.dataTransfer);
-      if (!imgs.length) { msg('That is not an image. Drop a screenshot of the roster grid.', true); return; }
-      read(imgs);
-    });
-
-    function read(files) {
-      var list = [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); }).slice(0, 8);
-      if (!list.length) { msg('Those are not images.', true); return; }
-      msg('Reading ' + list.length + ' screenshot' + (list.length === 1 ? '' : 's') + '\u2026 a whole grid can take a minute.');
-      Promise.all(list.map(shrink)).then(function (images) {
-        return fetch('/api/roster-read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ images: images }) }).then(function (r) { return r.json(); });
-      }).then(adopt).catch(function () { msg('The reader did not answer. Try again, or type your roster below instead.', true); });
-    }
-    // A read REPLACES what the last one found. Appending would double a team
-    // when the same screenshot is sent twice, and nothing tells that apart
-    // from a league holding two teams of the same name.
-    function adopt(j) {
-      if (!j || !j.ok) { msg((j && j.error) || 'The reader could not read that.', true); return; }
-      grid.teams = (j.teams || []).map(function (t) {
-        return { name: String(t.name == null ? '' : t.name).slice(0, 60),
-                 players: (t.players || []).map(function (p) { return { name: p.name, position: p.pos || null, team: p.team || null }; }).filter(function (p) { return p && p.name; }) };
-      }).filter(function (t) { return t.players.length; });
-      grid.mine = -1; grid.partial = !!j.partial;
-      render();
-      if (!grid.teams.length) { msg('No rosters in that image.', true); return; }
-      var n = grid.teams.reduce(function (a, t) { return a + t.players.length; }, 0);
-      var box = $('mfTeams');
-      if (box) box.value = Math.max(parseInt(box.value, 10) || 0, grid.teams.length);
-      msg('Read ' + grid.teams.length + ' team' + (grid.teams.length === 1 ? '' : 's') + ', ' + n + ' players.' +
-        (grid.partial ? ' The reader ran out of room, so the last team may be short \u2014 split the grid and send the pieces together.' : '') +
-        ' Pick your team, then save.');
-    }
-    function render() {
-      var out = host.querySelector('#mgOut');
-      if (!grid.teams.length) { out.innerHTML = ''; return; }
-      out.innerHTML = '<div class="is-seg" role="group" style="flex-wrap:wrap;margin-top:6px">' + grid.teams.map(function (t, i) {
-        return '<label><input type="radio" name="mgMine" value="' + i + '">' + esc(t.name || ('Team ' + (i + 1))) + ' (' + t.players.length + ')</label>';
-      }).join('') + '</div>';
-      [].slice.call(out.querySelectorAll('input[name="mgMine"]')).forEach(function (r) {
-        r.addEventListener('change', function () { grid.mine = parseInt(r.value, 10); });
-      });
-    }
-  }
+  // ── the roster grid ───────────────────────────────────────
+  // it-roster-grid.js, because §02 mounts the same reader: a screenshot of every
+  // roster is what a reader pastes into the section that promises rosters.
 
   // ── manual ───────────────────────────────────────────────────────────────
   function manualForm(L) {
@@ -701,14 +648,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // A league already holding a room keeps it through an edit. Without this,
     // reopening a grid league to change one scoring number would save the one
     // typed roster and silently drop the other eleven.
-    var grid = { teams: [], mine: -1, partial: false };
+    var seeded = { teams: [], mine: -1 };
     if (L && L.teams && L.teams.length > 1) {
-      grid.teams = L.teams.map(function (t) {
+      seeded.teams = L.teams.map(function (t) {
         var r = (L.rosters || []).filter(function (x) { return x.teamId === t.teamId; })[0] || { players: [] };
         return { name: t.name, players: r.players.map(function (p) { return { name: p.name, position: p.position || null, team: p.team || null }; }) };
       });
-      grid.mine = L.teams.map(function (t) { return t.teamId; }).indexOf(L.userTeamId);
+      seeded.mine = L.teams.map(function (t) { return t.teamId; }).indexOf(L.userTeamId);
     }
+    var grid = { teams: [], mine: -1, partial: false };
     el.innerHTML = '<div class="is-card"><h3>' + (L ? 'Edit ' + esc(L.name) : 'Enter your league by hand') + '</h3><p class="is-note" style="margin:0 0 10px">Works for ESPN, CBS, Fantrax, MFL or any league. The scoring and lineup below make every ranking exact; your roster makes Best Lineup and the Pickup Advisor personal. Other managers&rsquo; rosters are optional; without them the free-agent pool is everyone not on your team.</p><div id="mfImp"></div><div id="mfGrid"></div>' +
       '<div class="is-row2"><div class="is-field"><label>League name</label><input class="is-input" id="mfName" value="' + esc(L ? L.name : '') + '"></div><div class="is-field"><label>Teams</label><input class="is-input" id="mfTeams" type="number" min="2" max="20" value="' + esc(L ? L.numTeams : 12) + '"></div></div>' +
       '<div class="is-field"><label>Scoring</label><div class="is-seg" role="group">' + [['1', 'PPR'], ['0.5', 'Half PPR'], ['0', 'Standard']].map(function (o) { return '<label><input type="radio" name="mfRec" value="' + o[0] + '"' + (String(rec) === o[0] ? ' checked' : '') + '>' + o[1] + '</label>'; }).join('') + '</div></div>' +
@@ -745,7 +693,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     }
-    gridWidget($('mfGrid'), grid);
+    grid = ITRosterGrid.mount($('mfGrid'), {
+      teams: seeded.teams, mine: seeded.mine,
+      note: 'A league roster grid holds all of the teams at once. Names only: your starting lineup is projected from the scoring below, not read off the page. Send more than one image at a time if the grid does not fit in one shot.',
+      // The team count on this form is the floor the grid just proved.
+      onRead: function (g) { var box = $('mfTeams'); if (box) box.value = Math.max(parseInt(box.value, 10) || 0, g.teams.length); }
+    }) || grid;
     $('mfCancel').addEventListener('click', function () { el.hidden = true; markTile(null); });
     $('mfSave').addEventListener('click', function () {
       var recV = parseFloat((el.querySelector('input[name="mfRec"]:checked') || {}).value || '1');
