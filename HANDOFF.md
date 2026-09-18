@@ -12838,3 +12838,131 @@ which production served on 09-14, is still unmerged.
 - The Thursday-night recap Routine has not fired yet; the 03:47Z failures of
   09-14 and 09-15 have nothing new to add today.
 - The branch is **32 commits ahead of `main`**.
+
+## 104. September 18: Pollard's price broke, and three of the pinned story's four are now wrong
+
+D1 clock 2026-09-18 11:23:02Z. `main` moved to `479036f` and added no HANDOFF
+sections, so the merge was clean and my numbering is untouched for the first
+time in four days.
+
+The feeds all refreshed at 11:01:12Z and I confirmed the overlay actually moved
+— `overlay-0918.json` differs from `overlay-0917.json` — before reading anything
+off it. That is standing rule (4), and today it matters, because the board
+really did move.
+
+### 104a. Tony Pollard has gone from $5 to $3
+
+```
+                  story (Sept 8)        today        max bid the story gives
+Carnell Tate      $11, WR25             $10, WR27    $13
+Cam Ward          $1,  QB26             $1,  QB26    $2
+Tony Pollard      $5,  RB29             $3,  RB30    $6
+Wan'Dale Robinson $3,  WR38             $2,  WR41    $4
+prose             1,060.8 / 207.2       1,024.9 / 200.2
+```
+
+**Three of the four published prices are now wrong**, up from two. Pollard is
+the new one and the worst: the story prints "$5, RB29" as the board price and
+"$6" as the max bid, and the board now says **$3**. That is a 40% cut in the
+number a reader is being told to bid against, in a row that has been pinned to
+the front page for nine days.
+
+Cam Ward, meanwhile, went back to matching — QB27 for three days, QB26 today.
+So the row is not decaying monotonically; individual figures wander in and out
+of agreement while the overall count of wrong ones climbs.
+
+The curve paragraph is wrong at WR20 for a fourth straight day: served WR20 is
+$13 against the story's "receivers ranked 20 through 23 all cost $12". WR24–27
+all cost $10, so its second sentence remains true.
+
+Nothing edited. The column is still paused.
+
+### 104b. D1 is 285 MB and the content is 5 MB
+
+```
+          file        measured content
+09-15    12.3 MB      —
+09-16    78.1 MB      —
+09-17   195.4 MB      4.4 MB   (2.3%)
+09-18   285.6 MB      5.0 MB   (1.8%)
+```
+
+Same measurement as §103a, same seven tables, every text column:
+
+```
+content_pieces 1.03 · page_views 0.98 · odds_snapshots 0.96 · odds_overlay 0.74
+lead_story 0.62 · job_runs 0.59 · game_summaries 0.11   =  5.0 MB
+```
+
+**The content grew 0.6 MB while the file grew 90 MB** — a ratio of 150 to 1. It
+is no longer tripling, but +46% in a day on a database whose data is 1.8% of its
+size. `odds_snapshots` is the only table adding rows at any pace (7,326 →
+12,115), and it is twelve narrow columns.
+
+Still an unexplained observation, not a diagnosis. The prune jobs remain the
+thing to watch: they are weekly and **09-20 is the next Sunday**, so if the
+growth is unreclaimed space, Sunday is when something either changes or
+demonstrably does not.
+
+### 104c. The odds job recovered, and 09-17 closed at 18%
+
+`odds-refresh` finished normally today (11:01:11 → ok, 374 matched), after
+hanging on 09-11, 09-13 and 09-17.
+
+```
+09-12   51 / 317   16%
+09-13  109 / 229   48%
+09-14   65 / 272   24%
+09-15  115 / 305   38%
+09-16   68 / 403   17%
+09-17   63 / 344   18%
+09-18   47 / 173   27%  (partial, 11:22 — not a figure to quote)
+```
+
+### 104d. `usage-refresh` is not hanging — it is not running at all
+
+Distinct from §99a's failure mode and worth separating. `usage-refresh` last ran
+2026-09-16 10:01:26 (`ok=1`, `throughWeek: 1`). For 09-17 and 09-18 there is **no
+row in `job_runs` at all** — not a hung row, not a failed row, nothing. It ran
+on 09-15 and 09-16 on consecutive days, so it is not weekly like the prunes.
+`odds_overlay` row 5 (`nflverse-usage`) is 49 hours old as a result.
+
+Whether that is the scheduler dropping it or `JOB_SCHEDULE` correctly deciding
+it is not due until week 2's data is final, **I have not established**, and the
+difference matters: one is a bug, the other is the design working. Recorded as
+an open question rather than a finding.
+
+### 104e. The two-board gap, day six
+
+```
+             09-13    09-14    09-15    09-16    09-17    09-18
+differing    21.8%    22.1%    22.6%    21.2%    21.2%    20.6%
+largest      $28      $29      $29      $29      $29      $29
+same rank    14       9        13       11       11       14
+```
+
+09-17's figure was measured on a frozen board and is the same number as 09-16
+for that reason; today's is independent. Six days, a 2-point band, and the
+largest gap has been A.J. Brown at $29 every single day.
+
+§93's pair: static Collins $28 / Wilson $27 against served **Collins WR10 $30,
+Wilson WR12 $28**.
+
+### 104f. The rest
+
+- Deployed bundle: 987 top-level symbols, every one in `origin/main` except
+  `__defProp`, `__name`, `worker_default`. **Third consecutive day in step.**
+  `claude/iron-tuna-in-season-2oxwqe`, served on 09-14, is still unmerged.
+- Repo vs deployed: **1380 player-rows across four boards, 0 differences**.
+- CI **78/78**; harness self-test **23/23**.
+- **The Thursday-night recap Routine SUCCEEDED** at 2026-09-18 03:47:57Z. The
+  03:47Z slot failed on 09-14 and 09-15 and worked today, so that is not the
+  standing pattern it looked like two days ago. `content_pieces` is up to 18
+  published `game-recap` rows.
+- Recap rows unchanged: sixteen in `lead_story`, all `verified=1, published=0`,
+  `max(id)` still 111, `lead_story_run` still 58, no Week 2 additions.
+  `LEAD_CATEGORIES` still six keys, no `recap`, repo and deployed alike.
+- Routine still `enabled: false`, untouched since 2026-09-09 13:05:36Z; live
+  prompt still **47,183 chars / `9c578c415408`**.
+- Tamper predicates clean: one published row (94), no published-unverified row,
+  no analyst row published, 67 audit rows.
