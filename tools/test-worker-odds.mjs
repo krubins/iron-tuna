@@ -46,7 +46,7 @@ const harness = new Function('PROJECTIONS', '_xb64encode', 'PROJ_KEY', 'fetch', 
            VEGAS_WEIGHT, ODDS_MIN_MATCHED, ODDS_PROVIDERS, fetchOddsTheOddsApi,
            _csvSplit, fetchTeamEnvNflverse, buildTeamEnvOverlay,
            marketSeasonTotals, marketKicker, blendKicker, blendDefense,
-           KDEF_LEAGUE, K_MODEL, D_MODEL,
+           KDEF_LEAGUE, K_MODEL, D_MODEL, propsHealth, PROPS_STALE_HOURS,
            get encCalls() { return _PROJ_ENC; } };
 `);
 let encoded = null;
@@ -434,6 +434,72 @@ try {
   console.log('       biggest Vegas fades   :', ranked.slice(-4).map(([t, f]) => t + ' ' + f.toFixed(3)).join('  '));
 } catch (e) {
   console.log('  SKIP live nflverse pull (' + e.message + ')');
+}
+
+// ── are this week's props actually reaching the board? ────────────────────
+// snapshotStatus counts the whole table across every week it keeps, so a
+// collector that stopped weeks ago reads as healthy. This answers the question
+// people actually ask, and separates the four ways it can be answered — in
+// particular `unmatched`, where the collector looks perfect, every subject is
+// fresh, and every projection is still quietly falling back to the game line
+// because the normalized-name join broke.
+console.log('\nthis week’s props, end to end');
+{
+  const HOUR = 3600000;
+  // A fake D1 that answers the two queries propsHealth makes, and nothing else.
+  const db = (tot, subjects) => ({ LEADS_DB: {
+    prepare(sql) {
+      return {
+        bind() { return this; },
+        async run() { return {}; },                       // the DDL snapshotReady runs
+        async first() { return /COUNT\(\*\)/.test(sql) ? tot : {}; },
+        async all() { return { results: (subjects || []).map(x => ({ subject: x })) }; }
+      };
+    }
+  } });
+  // The board's own names, normalized the way the store keys its subjects.
+  const known = W._oddsNorm('Test Quarterback');   // both are in the stub board
+  const other = W._oddsNorm('Test Runner');
+  const stranger = W._oddsNorm('Nobody At All');
+
+  const live = await W.propsHealth(db({ rows: 420, subjects: 2, markets: 5, books: 7, last: Date.now() - 20 * 60000 }, [known, other]), 2026, 3);
+  ok('fresh rows matched to board players read live', live.state === 'live' && live.matched === 2, JSON.stringify(live));
+  ok('...and it reports the markets, the books and the age', live.markets === 5 && live.books === 7 && live.ageHours < 1);
+  ok('...and says the projection is reading them', /reading them/.test(live.note));
+
+  const stale = await W.propsHealth(db({ rows: 420, subjects: 2, markets: 5, books: 7, last: Date.now() - 30 * HOUR }, [known, other]), 2026, 3);
+  ok('rows that stopped arriving read stale, not live', stale.state === 'stale' && stale.ageHours > W.PROPS_STALE_HOURS);
+  ok('...and say the poll has stopped rather than blaming the join', /poll has stopped/.test(stale.note));
+
+  // The silent failure. Every count looks healthy; nothing reaches a board row.
+  const unmatched = await W.propsHealth(db({ rows: 900, subjects: 3, markets: 6, books: 8, last: Date.now() - 10 * 60000 }, [stranger, 'someoneelse', 'thirdguy']), 2026, 3);
+  ok('fresh rows matching nobody on the board are called out, not called healthy',
+     unmatched.state === 'unmatched' && unmatched.matched === 0 && unmatched.rows === 900);
+  ok('...and the note names the broken link', /name join is broken/.test(unmatched.note) && /falling back to the game line/.test(unmatched.note));
+
+  const empty = await W.propsHealth(db({ rows: 0, subjects: 0, markets: 0, books: 0, last: null }, []), 2026, 3);
+  ok('no rows for the week is its own state', empty.state === 'empty' && empty.rows === 0);
+  ok('...and points at the provider and the poll', /provider is keyed/.test(empty.note));
+
+  // Three distinct names on the stub board, two of them priced. The duplicate
+  // name is one ambiguous key, not two players.
+  ok('coverage is against the board, not against the store',
+     live.boardPlayers === 3 && live.matched === 2 && live.coverage === 66.7, JSON.stringify({ b: live.boardPlayers, m: live.matched, c: live.coverage }));
+  // An ambiguous name is null in the projection index and must not be counted
+  // as matched: buildBoards will not apply a prop to it either.
+  const ambiguous = await W.propsHealth(db({ rows: 10, subjects: 1, markets: 1, books: 1, last: Date.now() }, [W._oddsNorm('Ambi Guous')]), 2026, 3);
+  ok('an ambiguous name is not counted as reaching the board', ambiguous.matched === 0 && ambiguous.state === 'unmatched');
+
+  const noWeek = await W.propsHealth(db({ rows: 0 }, []), 2026, null);
+  ok('out of the regular season it expects nothing rather than reporting a fault', noWeek.state === 'no_week' && noWeek.ok === true);
+
+  // The table is there (the DDL runs) and the read is what fails, which is the
+  // case that must not be reported as an empty week.
+  const broken = await W.propsHealth({ LEADS_DB: { prepare(sql) {
+    if (/^SELECT/.test(sql)) throw new Error('d1 down');
+    return { bind() { return this; }, async run() { return {}; } };
+  } } }, 2026, 3);
+  ok('a database failure is reported, never mistaken for an empty week', broken.ok === false && /d1 down/.test(broken.error));
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

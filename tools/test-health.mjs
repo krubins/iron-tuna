@@ -37,6 +37,9 @@ const stubs = {
   runRosSnapshot: async () => ({ ok: true }), snapshotPrune: async () => ({ ok: true }), pruneAnalytics: async () => ({ ok: true }), runContentTick: async () => ({ ok: true, results: [] }),
   SNAP_KEEP_DAYS: 200, DEPTH_ROW: 6, MARKET_PRIOR_ROW: 7,
   scheduleCacheRead: async () => null, nflSeasonState: () => ({ ok: false }), oddsCacheRead: async () => null, snapshotStatus: async () => null, usageCacheRead: async () => null,
+  // Whether THIS week's props are reaching the board. Stubbed here; its own
+  // four states are exercised in tools/test-worker-odds.mjs against a fake D1.
+  propsHealth: async () => null,
   availabilityCacheRead: async () => null, rosSnapshots: async () => [], dfsSalariesRead: async () => null, providerReport: () => ({ providers: {}, unavailable: {} }),
   etParts: () => ({ dow: 'Tue', hour: 9, minute: 0 }), contentReady: async () => true,
   ANALYSTS: { mercer: { id: 'mercer', name: 'Jack Mercer' } }, ANALYST_HOUSE: { id: 'irontuna', name: 'Iron Tuna' }, newsroomStatus: async () => ({ autoPublish: { on: true }, audit: { ok: true, problems: [] }, legacy: [], routines: [] }),

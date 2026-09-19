@@ -3,10 +3,32 @@
 ## Architecture and scope
 
 Iron Tuna serves static HTML through `_worker.js`, with no package install/build step.
-The existing odds subsystem still powers Vegas projections. Tuna Market Signal is a
-separate analytical layer for current betting markets, opening/current line movement,
-cross-book confirmation and steam. It does not alter projections or optimizer rankings
-without a separate calibrated decision.
+Tuna Market Signal is the analytical layer for current betting markets, opening/current
+line movement, cross-book confirmation and steam.
+
+**It also feeds the weekly projections, and has since September 15, 2026.** The
+sentence that used to sit here — that it does not alter projections or optimizer
+rankings — was true when it was written and stopped being true when the projection
+bridge landed. On every successful poll, `tmsStoreForProjections` converts the
+normalized prop rows into the snapshot contract and writes them to `odds_snapshots`
+(`tmsProjectionRows` pairs the Over and Under per book/player/market and maps PropLine's
+market names to Iron Tuna's stat keys). From there:
+
+    odds_snapshots -> marketHistoryWeek -> marketPropsFrom -> vegasProjection
+                   -> the week board's vegas.basis = 'props'
+                   -> the DFS slate's market read and the Market read build
+
+So a player the books priced this week carries a projection built from his own quoted
+lines, and a player they did not carries his game's environment, discounted for it.
+See `docs/dfs-metrics.md`, "What the market actually said about him".
+
+**To check whether it is working**, read `props` on the health payload
+(`GET /api/health`). It reports this week only, and separates the four states:
+`live` (fresh rows matched to board players), `stale` (collection stopped),
+`unmatched` (rows arriving but matching nobody on the board — the silent failure, where
+every projection quietly falls back to the game line), and `empty` (nothing written).
+`snapshots` beside it counts the whole table across every week it keeps, so it can read
+healthy while this week's props are not reaching anything.
 
 As of September 10, 2026, **PropLine is the preferred Tuna Market Signal provider**.
 If `PROPLINE_API_KEY` is present and `TMS_PROVIDER` is not explicitly set, the Worker

@@ -5373,6 +5373,65 @@ function _gameLineMove(g, gm) {
     book: (sp.source === 'book' || to.source === 'book') && b ? b.name : null
   };
 }
+// Are this week's player props actually reaching the board?
+//
+// snapshotStatus below counts the whole table across every season and week it
+// still keeps, so a store that stopped collecting three weeks ago reads as
+// healthy. That is not the question anyone asks. The question is whether the
+// props being collected right now are landing on THIS week's players, and it
+// has four distinguishable answers that the row count alone cannot separate:
+//
+//   empty      nothing was written for this week. The provider is unkeyed,
+//              the poll is failing, or the week just turned over.
+//   stale      rows exist but the newest is old. The poll has stopped.
+//   unmatched  rows exist and are fresh, but none of their subjects match a
+//              player on the board. This is the silent one: the collector
+//              looks perfect and every projection still reads `gamelines`,
+//              because the join is by normalized name and something on one
+//              side of it changed.
+//   live       fresh rows, matched to board players. Working.
+//
+// The match is computed the same way buildBoards computes it — the normalized
+// name, against the same projection index — so this cannot agree with the
+// health board while the boards disagree with both.
+const PROPS_STALE_HOURS = 12;
+async function propsHealth(env, season, week) {
+  if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
+  if (week == null) return { ok: true, state: 'no_week', note: 'No regular-season week is current, so no weekly props are expected.' };
+  try {
+    const tot = await env.LEADS_DB.prepare(
+      'SELECT COUNT(*) AS rows, COUNT(DISTINCT subject) AS subjects, COUNT(DISTINCT market) AS markets, ' +
+      'COUNT(DISTINCT book) AS books, MAX(ts) AS last FROM odds_snapshots ' +
+      'WHERE season IS ? AND week IS ? AND subject_type = ?')
+      .bind(season == null ? null : Number(season), Number(week), 'player').first();
+    const rows = Number((tot && tot.rows) || 0);
+    const last = tot && tot.last ? Number(tot.last) : null;
+    const ageHours = last ? Math.round((Date.now() - last) / 360000) / 10 : null;
+    if (!rows) {
+      return { ok: true, state: 'empty', season, week, rows: 0, subjects: 0, matched: 0, coverage: 0,
+               note: 'No player prop has been written for this week. Check that the market provider is keyed and that its poll is running.' };
+    }
+    const q = await env.LEADS_DB.prepare(
+      'SELECT DISTINCT subject FROM odds_snapshots WHERE season IS ? AND week IS ? AND subject_type = ?')
+      .bind(season == null ? null : Number(season), Number(week), 'player').all();
+    // The same join buildBoards makes: normalized name against the projection
+    // index. A subject that matches nothing here is a prop no board row reads.
+    const idx = _oddsProjectionIndex();
+    const subjects = (q.results || []).map(r => String(r.subject || ''));
+    const matched = subjects.filter(sub => idx.get(sub) !== undefined && idx.get(sub) !== null).length;
+    const boardPlayers = idx.size;
+    const state = matched === 0 ? 'unmatched' : (ageHours != null && ageHours > PROPS_STALE_HOURS) ? 'stale' : 'live';
+    const markets = Number((tot && tot.markets) || 0), books = Number((tot && tot.books) || 0);
+    return { ok: true, state, season, week, rows, subjects: subjects.length, matched, boardPlayers,
+             coverage: boardPlayers ? Math.round(matched / boardPlayers * 1000) / 10 : 0,
+             markets, books, lastAt: last, ageHours,
+             note: state === 'live'
+               ? matched + ' board player' + (matched === 1 ? ' carries' : 's carry') + ' a quoted prop this week, across ' + markets + ' market' + (markets === 1 ? '' : 's') + ' and ' + books + ' book' + (books === 1 ? '' : 's') + ', pulled ' + (ageHours < 1 ? 'within the hour' : ageHours + ' hours ago') + '. The weekly Vegas projection is reading them.'
+               : state === 'stale'
+               ? 'Props were collected for this week but the newest is ' + ageHours + ' hours old. The poll has stopped; the board is serving the last lines it got.'
+               : 'The store holds ' + subjects.length + ' priced subjects for this week and NONE of them match a player on the board. The collector is working and every projection is still falling back to the game line \u2014 the name join is broken.' };
+  } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+}
 async function snapshotStatus(env) {
   if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
   try {
@@ -12335,11 +12394,16 @@ async function healthPayload(env, opts) {
     dfsSalariesRead(env, 'dk', sched ? sched.season : null, week).catch(() => null), dfsSalariesRead(env, 'fd', sched ? sched.season : null, week).catch(() => null),
     jobBoard(env, now)
   ]);
+  const props = await propsHealth(env, sched ? sched.season : null, week).catch(() => null);
   const snapMeta = m => m ? { season: m.season, week: m.week, builtAt: m.builtAt, rows: (m.rows || []).length } : null;
   const updates = {
     schedule: sched ? { updatedAt: sched.updatedAt, provider: sched.provider, season: sched.season, games: sched.games.length } : null,
     odds: odds ? { updatedAt: odds.updatedAt, provider: odds.provider, matched: odds.matched } : null,
     snapshots: snaps && snaps.ok ? { last: snaps.last, first: snaps.first, rows: snaps.rows, subjects: snaps.subjects, books: snaps.books } : null,
+    // The row counts above span every week the store still keeps. This one
+    // answers whether THIS week's props are reaching the board, and says which
+    // link is broken when they are not.
+    props: props && props.ok ? props : null,
     usage: usage ? { updatedAt: usage.updatedAt, season: usage.season, throughWeek: usage.throughWeek, players: Object.keys(usage.players || {}).length } : null,
     // Last season's copy of the same overlay, which /stats serves behind its
     // season buttons. Missing is not a fault -- the daily job builds it -- but

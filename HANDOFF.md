@@ -11368,3 +11368,66 @@ a second fixture with props posted proves the primary path.
 
 Guarded by `tools/test-dfs.mjs` ("the weekly betting market", 38 assertions).
 `docs/dfs-metrics.md` carries the table and the provider chain.
+
+## 95. September 19: "is it working?" was not a question anything could answer
+
+Ken: *"I think we had set it up to get props. Please check to see if it's
+working."*
+
+**It is set up.** `TMS_ENABLED=1`, `TMS_PROVIDER=propline` in `wrangler.jsonc`;
+`tmsPoll` runs on every quarter-hour tick behind an hourly lease; and since
+§72 (`Use PropLine props in player projections`, Sept 15)
+`tmsStoreForProjections` bridges the normalized prop rows into
+`odds_snapshots`, which is what `marketHistoryWeek` reads and what the week
+board turns into `vegas.basis === 'props'`. §80 (Sept 16) is direct evidence
+the collection was working: the complaint there was that the READ side showed
+only a few anytime-TD rows while *"the feeds were collecting the whole
+market."*
+
+**It could not be confirmed from here.** The egress policy refuses
+irontuna.com, by curl and by fetch alike, so production is unobservable from
+this session. That is a session limit, not a finding, and it is why the answer
+below is a diagnostic rather than a verdict.
+
+**But nothing on the site could have answered it either**, which is the real
+defect. `snapshotStatus` — the only prop-ish number on the health board —
+counts the whole `odds_snapshots` table across every week it keeps (200 days).
+A collector that stopped three weeks ago reads as perfectly healthy: thousands
+of rows, dozens of books, plenty of markets. It cannot distinguish the state
+everyone actually cares about.
+
+### `props` on the health payload
+
+`propsHealth(env, season, week)` answers this week only, and separates the four
+states that the row count cannot:
+
+| State | What it means |
+|---|---|
+| `live` | Fresh rows, matched to players on the board. Working; the note says how many players, markets and books, and how old the pull is. |
+| `stale` | Rows exist for the week but the newest is over 12 hours old. The poll has stopped; the board is serving the last lines it got. |
+| `unmatched` | **The silent one.** Rows are arriving and fresh, and *none of their subjects match a board player*. The collector looks perfect, and every projection is quietly falling back to the game line, because the join is by normalized name and one side of it moved. |
+| `empty` | Nothing written for this week. Provider unkeyed, poll failing, or the week just turned. |
+
+The match is computed the way `buildBoards` computes it — normalized name
+against `_oddsProjectionIndex()` — so the health board cannot agree with itself
+while disagreeing with the boards. An ambiguous name (one normalized name at
+two positions) is `null` in that index and is **not** counted as matched,
+because `buildBoards` will not apply a prop to it either. A D1 failure reports
+as a failure and is never flattened into `empty`.
+
+`GET /api/health` → `updates.props`.
+
+### The doc said the opposite
+
+`docs/TUNA-MARKET-SIGNAL.md` opened with "It does not alter projections or
+optimizer rankings without a separate calibrated decision." True when written,
+false since §72 put the projection bridge in, and false twice over since §94
+put the market read on the slate. A setup doc asserting that the thing is not
+wired is a good way to end up unsure whether it is wired. It now carries the
+chain, `odds_snapshots → marketHistoryWeek → vegasProjection → vegas.basis →
+the slate`, and points at `props` on the health payload for checking it.
+
+Guarded by `tools/test-worker-odds.mjs` ("this week's props, end to end"):
+each of the four states against a fake D1, coverage measured against the board
+rather than the store, the ambiguous-name rule, out of season, and a read
+failure.
