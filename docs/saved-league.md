@@ -1,10 +1,26 @@
-# Sync My League: audit, architecture and status
+# The saved league: architecture and status
 
-Working document for the League Sync feature. Part 1 is the audit of what the
-repo already had on the day this was written (2026-09-09). Part 2 is the design
-that was built on it. Part 3 is the status of each deliverable, the provider
-terms, the flags, the env vars and the deployment steps. HANDOFF.md carries
-the short version; this is the long one.
+A reader describes the league they actually play in and every in-season surface
+reads it: their exact scoring, their roster, every other roster, the free-agent
+pool and the standings. It is infrastructure, not a page — the model lives in
+D1 and the pages read it.
+
+> **The platform connectors were removed on 2026-09-18** (HANDOFF §89). Sleeper,
+> Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow,
+> the sealed provider tokens, the scheduled refresh and the CBS browser
+> extension. None of them ever carried a reader's league in production: Sleeper
+> never cleared its non-commercial grant, Yahoo never ran against a live
+> account, CBS never completed an import, and ESPN never had a supported path.
+> **Iron Tuna now makes no request to any fantasy platform on a reader's
+> behalf and stores no provider credential of any kind.**
+>
+> Everything below describes what remains, which is the half that works: the
+> normalized model, the player crosswalk, the personalization modules, and the
+> one way a league arrives — the reader's own entry.
+
+Part 1 is the audit of the application the model was built on. Part 2 is the
+design. Part 3 is the status of each piece. HANDOFF.md carries the short
+version; this is the long one.
 
 ---
 
