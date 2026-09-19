@@ -253,6 +253,20 @@
   // the draft app's.
   var FAAB_CHIPS = { faab100: 100, faab200: 200, faab1000: 1000 };
 
+  // The row used to be these three readers and nothing else. It is composable
+  // now because the middle box of §02 is where a reader pastes their ROSTERS —
+  // the page said so and the box read lineups — and the reader that transcribes
+  // a roster grid is not one of these three: it sends its image to the server
+  // and writes a league record. So a card in the row can be a slot the host
+  // fills instead, and a reader pushed out of the row keeps working under it.
+  //
+  //   opts.cards   the row in order. 'scoring' | 'roster' | 'faab' by kind,
+  //                { kind, n } to renumber one, or { slot, n, title, hint }
+  //                for an empty card the host fills. Default: all three.
+  //   opts.onSlot  (name, section) once per slot, after the row is drawn.
+  //   opts.foot    false to drop the footer, for a second row under the first.
+  //   opts.note     the footer's own line, where a slot in the row makes the
+  //                 default claim about browser-only reads untrue.
   function intake(el, opts) {
     if (!el) return;
     var IMP = root.ITInSeasonImport;
@@ -260,12 +274,28 @@
     var o = opts || {};
     var onApply = typeof o.onApply === 'function' ? o.onApply : function () {};
 
+    // One row entry per card, in the order asked for.
+    function boxOf(kind) {
+      for (var i = 0; i < INTAKE.length; i++) if (INTAKE[i].kind === kind) return INTAKE[i];
+      return null;
+    }
+    var ROW = (o.cards || ['scoring', 'roster', 'faab']).map(function (c) {
+      if (c && c.slot) return { slot: String(c.slot), n: c.n || '', title: c.title || '', hint: c.hint || '' };
+      var kind = typeof c === 'string' ? c : (c && c.kind);
+      var b = boxOf(kind);
+      if (!b) return null;
+      // A copy, so renumbering a card here cannot renumber it everywhere.
+      return { box: { kind: b.kind, n: (c && c.n) || b.n, title: b.title, hint: b.hint, ph: b.ph, chips: b.chips } };
+    }).filter(Boolean);
+    var BOXES = ROW.filter(function (r) { return r.box; }).map(function (r) { return r.box; });
+    if (!BOXES.length && !ROW.length) { el.innerHTML = ''; return; }
+
     var fromDraft = null;
     if (o.draft !== false) { try { fromDraft = IMP.fromDraftApp(); } catch (e) { fromDraft = null; } }
 
     // One state per box. The text lives here and not only in the textarea so a
     // re-render of the result region never costs the reader their typing.
-    var state = INTAKE.map(function (b) { return { kind: b.kind, text: '', status: '', busy: false, preview: null }; });
+    var state = BOXES.map(function (b) { return { kind: b.kind, text: '', status: '', busy: false, preview: null }; });
     function stateOf(kind) {
       for (var i = 0; i < state.length; i++) if (state[i].kind === kind) return state[i];
       return null;
@@ -273,7 +303,17 @@
 
     el.innerHTML =
       '<div class="is-intake">' +
-        '<div class="is-intake-grid">' + INTAKE.map(function (b) {
+        '<div class="is-intake-grid">' + ROW.map(function (r) {
+          // A slot is the card's frame and nothing else: its number, its title
+          // and the room under them for whatever the host mounts there.
+          if (r.slot) {
+            return '<section class="is-intake-card" data-slot="' + esc(r.slot) + '" aria-label="' + esc(r.title) + '">' +
+              (r.n || r.title ? '<div class="is-intake-top"><span class="is-intake-n">' + esc(r.n) + '</span><b>' + esc(r.title) + '</b></div>' : '') +
+              (r.hint ? '<p class="is-intake-hint">' + esc(r.hint) + '</p>' : '') +
+              '<div data-slot-body></div>' +
+            '</section>';
+          }
+          var b = r.box;
           return '<section class="is-intake-card" data-box="' + b.kind + '" aria-label="' + esc(b.title) + '">' +
             '<div class="is-intake-top"><span class="is-intake-n">' + esc(b.n) + '</span><b>' + esc(b.title) + '</b></div>' +
             '<p class="is-intake-hint">' + esc(b.hint) + '</p>' +
@@ -296,11 +336,11 @@
             '<div class="is-intake-out" data-out role="status" aria-live="polite"></div>' +
           '</section>';
         }).join('') + '</div>' +
-        '<div class="is-intake-foot">' +
+        (o.foot === false ? '' : '<div class="is-intake-foot">' +
           (fromDraft ? '<span class="is-intake-foot-l">Your cheat sheet is set up in this browser. It already knows your scoring and your lineup.</span>' +
             '<button type="button" class="is-btn sec" data-draft>Copy my cheat sheet across</button>' : '') +
-          '<p class="is-intake-note">Screenshots are read <b>in your browser</b> and never uploaded. Nothing is saved until you press Save below.</p>' +
-        '</div>' +
+          '<p class="is-intake-note">' + (o.note || 'Screenshots are read <b>in your browser</b> and never uploaded. Nothing is saved until you press Save below.') + '</p>' +
+        '</div>') +
       '</div>';
 
     // Only the result region of one box is ever re-rendered. Everything above it
@@ -360,7 +400,7 @@
       return null;
     }
 
-    INTAKE.forEach(function (b) {
+    BOXES.forEach(function (b) {
       var card = el.querySelector('[data-box="' + b.kind + '"]');
       var s = stateOf(b.kind);
       var ta = $(card, '[data-text]'), drop = $(card, '[data-drop]'), file = $(card, '[data-file]');
@@ -446,8 +486,17 @@
       var n = chips(fromDraft.items).length;
       onApply(fromDraft, 'your cheat sheet', n);
       state.forEach(function (s) { s.preview = null; say(s, ''); });
-      say(state[0], 'Copied your cheat sheet into the form below. Check it, then save.');
+      if (state.length) say(state[0], 'Copied your cheat sheet into the form below. Check it, then save.');
     });
+
+    // The host fills its slots last, with the row already on the page.
+    if (typeof o.onSlot === 'function') {
+      ROW.forEach(function (r) {
+        if (!r.slot) return;
+        var sec = el.querySelector('[data-slot="' + r.slot + '"]');
+        if (sec) o.onSlot(r.slot, sec.querySelector('[data-slot-body]') || sec, sec);
+      });
+    }
   }
 
   // ── the league form ───────────────────────────────────────────────────────
