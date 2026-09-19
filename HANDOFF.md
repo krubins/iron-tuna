@@ -10811,3 +10811,65 @@ used to publish its newest piece on a fixed date in the past, which under a
 rotating band would have made "which story leads" depend on what time of day
 CI happened to run. It now publishes the newest five minutes ago, so the
 freshness rule pins the order and the hero assertions stay deterministic.
+
+---
+
+## 89. September 17: "no Monday game this week" in a week that had one
+
+Ken's report: the Rest-of-Season Rankings opened by telling the reader "the
+packet notes no Monday game this week, or its box score is not final." There
+had been a Monday night game. His instruction went past the fact: "if you are
+not sure don't do a story about it, better to remain silent than raise the
+issue and lose credibility."
+
+**The bug is one property.** The Tuesday producer builds the Monday material
+as an OBJECT and hands it over:
+
+```js
+const ms = mon.length ? { games: mon, summaries: await summariesFor(mon) } : null;
+facts = packetRos(..., ms && ms.summaries.length ? ms : null);
+```
+
+`packetRos` then tested `mondaySummaries.length`. An object has no `length`,
+so the test was `undefined` every week of the season, the reported branch
+never ran once, and the packet took the else every Tuesday. The caller's own
+gate was right and did the real work; the callee threw the answer away. The
+check now reads `mondaySummaries.summaries`, which is what was passed.
+
+**Why the note is gone, not fixed.** A packet that hedges buys a page that
+hedges. The writer is told the packet is the only source of facts, so a
+sentence sitting in the packet gets printed, and "no Monday game this week,
+or its box score is not final" is a sentence that hedges TWO WAYS about a
+thing the reader can check in one click. `whatMondayChanged` is now either a
+block built from the box score or `null`, and `CONDITIONAL_SECTIONS` drops
+the section when it is null — the same mechanism that already keeps a week
+with no misses from getting an empty misses section (§the Monday scorecard).
+The writer is never asked for the section, so the piece says nothing about
+Monday rather than saying the wrong thing about it. The full section list,
+asked for without a packet, still names it, so `desk.html` keeps its label.
+
+The general rule this is the second instance of: a packet field whose value
+is an apology for missing data is a bug, not a fallback. Either the data is
+there and the section runs, or the section is not asked for.
+
+| Piece | What changed |
+|---|---|
+| `packetRos` | reads `mondaySummaries.summaries`, not `.length` off the wrapper. With nothing final from Monday, `whatMondayChanged` is `null` and carries no prose. |
+| `CONDITIONAL_SECTIONS['ros-rankings']` | `whatMondayChanged` is asked for only when the packet carries the block. `sectionsFor` drives both the SHAPE the writer is handed and the check that holds the draft, so the section can never be dropped from one and demanded by the other. |
+
+**Tests.** `tools/test-content.mjs` (96, up 7), a new "what Monday changed"
+block on the real DAL at PHI fixture: a final Monday box score is reported
+with a section per club and what each learned, and the section is asked for;
+a week with no Monday material carries a null block, no "no Monday game"
+string anywhere in the packet, and no `whatMondayChanged` in the section list
+while the rest of the list survives; a Monday game whose box score is not
+final yet is the same silence; and the full list still names the section for
+the desk page. `packetRos` and `sectionsFor` are now exported from that
+harness. Restoring `.length` fails the first assertion.
+
+`tools/test-dry-run.mjs` (112, up 2) carries the end-to-end guard, which is
+the one that would have caught this: the fixture's Week 1 ends with a Monday
+night game and has its box score, so the Tuesday piece it publishes must
+report Monday with a section per club, must carry `whatMondayChanged` in the
+written body, and neither its packet nor its prose may contain the string
+"no Monday game". Before the fix the published piece failed all three.
