@@ -11239,3 +11239,74 @@ written against a September 12 worker, and the market feed moved to
 SportsGameOdds in §72 after it. Rebasing it would be rewriting it. It stays on
 `claude/draftkings-book-board` at `c410b8d0` if the per-book board is ever
 wanted; the finding above is the part that had to survive, and now has.
+
+## 93. September 19: the DFS lineup could not be asked a question
+
+`/dfs` explains its roster in one direction only. The lead board prints a
+thesis over the table, a sentence under every player, a six-part breakdown
+beside it and the next best body at every seat. All of it is written before
+the reader arrives, and none of it answers the question the reader actually
+has, which is always a follow-up to something they just read: why him and not
+the cheaper one, what this build looks like in a bigger field, which seat is
+the one to change.
+
+The auction board has had the answer to that shape of question since launch.
+Its Value Coach is a chat keyed into the page's OWN numbers — this manager's
+budget, this board's values — which is the whole reason it beats a chatbot in
+another tab. It had never been pointed at the DFS lineup.
+
+**`dfs-coach.js`** is that coach, aimed at the roster: a panel under the
+recommendation and its pivots, not the app's floating dock, because this page
+is a document and a bubble over a salary table covers the numbers the question
+is about. It renders the chat, streams the reply token by token off
+`/api/coach` (the same server-side proxy, so the key stays on the server) and
+holds no state of its own — it reads the page through a `context` function on
+every ask, so it cannot answer about a lineup that is no longer on screen.
+
+**`coachContext()` in `dfs.html`** is that function, and it is assembled from
+the objects the page just rendered: the contest setup (game style, games,
+payout, the shape and its reasoning), the build (objective, stack, bring-back,
+max per team, the reader's locks, exclusions and forced player), the thesis,
+up to three solved lineups with `playerFit`'s own sentence on each seat of the
+lead, the pivot at every slot, the thirty best players it left on the board
+(sorted by the score the chosen shape is solved on) and the game environments
+behind all of it. Where there is no roster — pick'em, no slate, an incomplete
+DraftKings setup, a format with no Classic solve, an infeasible cap — it
+returns a `blocked` sentence instead, and the panel prints that and disables
+itself rather than taking a question it cannot ground.
+
+**THE COACH CALCULATES NOTHING**, which is the same boundary the newsroom
+writes under (`docs/ai-calculation-boundary.md`). Every number it can speak
+was computed by `dfs-optimizer.js` or by `buildDfsSlate`/`dfsMetrics` and
+handed to it as data; the prompt forbids recomputing, re-ranking,
+interpolating or inventing one in as many words, and tells it to say the page
+does not carry a number rather than produce it. The module itself names no
+metric, so there is nothing in it to compute one from. Football knowledge is
+still its own — roles, usage, schemes, matchups — because that is not one of
+this page's numbers.
+
+**The 40,000-character trap.** `/api/coach` SLICES an oversized `system`
+rather than refusing it, which would hand the model a JSON object cut off
+mid-object with no way to know. `fit()` holds the payload to 28,000
+characters, shedding in the order a follow-up is least likely to need (the
+board behind the roster, then the smaller games, then the alternates, then
+the rest of the board, then the smaller swaps), never the roster or the
+contest it was solved for, and it writes `trimmedFromThisPrompt` into the data
+so the model is told what it is missing.
+
+| Where | What |
+|---|---|
+| `dfs-coach.js` | `ITDfsCoach.mount({host, context})`, the system prompt, `fit()`, `tidy()` (a stray asterisk is unbolded, not shown), the SSE reader with a 45s first-byte and 20s idle timeout. A streaming token touches only its own bubble and the log is `aria-busy` until the answer is done, so a screen reader hears it once, complete. |
+| `dfs.html` | `.df-coach*` (light panel, teal accent, 390px-safe), `<div id="dfCoach">` between the pivots and the fine-tune panel, `coachContext()`, and `coachSync()` on every state that changes the roster — a solve, an infeasible solve, an incomplete setup, a non-Classic format, a slate that never loaded, the pick'em board. |
+| `docs/ai-calculation-boundary.md` | an "Interactive features" section: the rule is the same in a chat panel as in the newsroom. |
+| `tools/test-dfs-coach.mjs` | 46 assertions — the prompt's boundary and format clauses, one `fetch` and no provider key, the module carrying no metric, `fit()` under budget with the roster intact, `coachRow` passing numbers through and leaving a missing one absent rather than zero, and the page's wiring including every `coachSync()`. |
+| `.github/workflows/checks.yml` | `node --check dfs-coach.js` with the other shared client scripts, and the test beside `test-dfs.mjs`. |
+
+`node tools/test-dfs-coach.mjs` (46), `node tools/test-dfs.mjs` (111) and
+`node tools/test-ai-boundary.mjs` pass. Driven in a real Chromium against a
+worker-built slate and a stubbed `/api/coach`: the panel is disabled with its
+reason before the setup is complete, live after it, the reply streams into the
+bubble, and the payload carries the solved roster, its pivots, the bench and
+the games — re-read correctly after switching the contest from Head-to-Head to
+a multi-entry tournament. No page errors at 1280 or 390px.
+
