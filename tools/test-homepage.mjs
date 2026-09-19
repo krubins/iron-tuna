@@ -98,12 +98,19 @@ const EDGE = { ok: true, week: 'Week 3', vsExperts: {
 const DFS = { ok: true, boards: { bestVegasValues: [
   { name: 'Rome Odunze', position: 'WR', team: 'CHI', salary: 5400, vegasPoints: 14.2, vegasValueScore: 3.21 }
 ]}};
-// The band's order depends on the clock: front.html prints the three newest
-// pieces newest-first while the newest is inside its turn, and rotates the top
-// slot after that (deskOrder, covered turn by turn in tools/test-newsroom.mjs).
-// So the fixture publishes its newest piece minutes ago rather than on a fixed
-// date — otherwise which story led would depend on what time this test ran.
-const FRESH = Date.now() - 5 * 60 * 1000;
+// THE COVER ROTATES ON A CLOCK, so this test pins one. front.html gives each
+// cover a turn (COVER_TURN_MS, an hour): the desk band slides one story down
+// the feed per turn and the hero takes the next of the week's widest market
+// gaps. Which story leads and whose photograph runs would otherwise depend on
+// what time of day this test happened to run, so the browser's Date.now is
+// frozen at an instant whose turn index is 0 for every pool size the fixtures
+// use — 840 is the lowest common multiple of 1 through 8 — and the fixture
+// publishes its newest piece five minutes before that instant, inside its own
+// turn, so the band is newest-first. Turn by turn, both are covered without a
+// browser in tools/test-newsroom.mjs.
+const TURN_MS = 3600 * 1000;
+const CLOCK = Math.floor(Date.now() / (840 * TURN_MS)) * (840 * TURN_MS);
+const FRESH = CLOCK - 5 * 60 * 1000;
 const AGO = h => FRESH - h * 3600 * 1000;
 const CONTENT = { ok: true, pieces: [
   // `components` are the findings a piece breaks into, each naming the player
@@ -161,6 +168,11 @@ const browser = await chromium.launch({ executablePath: CHROME });
 const errors = [];
 async function open(width, height) {
   const ctx = await browser.newContext({ viewport: { width, height } });
+  // The frozen clock, set before any page script runs. Only Date.now is
+  // replaced: the page reads timestamps out of its feeds with new Date(value),
+  // which is unaffected, and the rotation is the one thing that asks the clock
+  // what time it is now.
+  await ctx.addInitScript(t => { Date.now = () => t; }, CLOCK);
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(`${width}px: ${e.message}`));
   await page.goto(BASE, { waitUntil: 'networkidle' });
@@ -340,8 +352,13 @@ console.log('\nwith the desk naming nobody');
   const { page, ctx } = await open(1280, 900);
   const r = await read(page);
   ok('the hero still carries a picture', r.edge === true && r.edgePlate === true);
-  ok('it is the widest disagreement on the board', r.edgeName === 'Cam Ward', r.edgeName);
+  // One of the widest gaps, taking its turn — the first of them at turn 0.
+  // It used to be the single widest and nothing else, which is how one player
+  // held the cover for a day and a half while the cards under him rotated.
+  ok('it is a gap off the top of the board', r.edgeName === 'Cam Ward', r.edgeName);
   ok('and it says so', /market gap/i.test(r.edgeK || ''), r.edgeK);
+  ok('but it no longer claims to be the widest, because it takes turns',
+     !/widest/i.test(r.edgeK || ''), r.edgeK);
   ok('captioned with the two numbers and the gap between them',
      /19\.9/.test(r.edgeGap || '') && /15\.2/.test(r.edgeGap || '') && /\+4\.7/.test(r.edgeGap || ''), r.edgeGap);
   ok('never the player the Fantasy card already recommends',

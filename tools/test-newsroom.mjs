@@ -1042,73 +1042,79 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   ok('the cap is finite and above one', Number.isInteger(H.REWRITE_HELD_MAX) && H.REWRITE_HELD_MAX > 1 && H.RECAPS_PER_TICK >= 1);
 }
 
-// ── the front page's desk band ────────────────────────────────────────────
-// THREE AT A TIME, AND THE THREE CHANGE. `deskOrder` in front.html decides what
-// "/" prints under "Current from the desk". It is lifted out of the page and
-// run here rather than driven in a browser, because tools/test-homepage.mjs
-// needs Chromium and skips without it: the rule that a quiet Friday still
-// changes the cover should not be guarded only by a test a laptop can skip.
+// ── what is on the cover ──────────────────────────────────────────────────
+// `coverBand` and `coverFace` in front.html decide the two things on "/" that
+// name a player at the top of it: the three cards under "Current from the
+// desk", and the hero's photograph. They are lifted out of the page and run
+// here rather than driven in a browser, because tools/test-homepage.mjs needs
+// Chromium and skips without it.
 //
-// The rule the first version got wrong, and what this file now pins: rotating
-// three cards among themselves changes the order and never the cast, so a
-// story in the band stays on the cover however often the page reorders it. The
-// window has to slide past the band for a story to come off.
+// The rule these pin, learned the hard way over three attempts on 2026-09-18:
+// A SUBJECT COMES OFF THE COVER, it does not merely move. Reordering three
+// cards changes the order and never the cast, and neither the first nor the
+// second attempt touched the hero at all, which was running the widest market
+// gap and had been the same man for a day and a half.
 {
   const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
-  const head = front.indexOf('var DESK_BAND =');
-  const tail = front.indexOf("grab('/api/content'", head);
-  if (head < 0 || tail < 0) { console.error('FAIL: deskOrder not found in front.html'); process.exit(1); }
-  const deskOrder = new Function(front.slice(head, tail) + '; return deskOrder;')();
-
-  const HOUR = 3600 * 1000;
-  const at = h => Date.UTC(2026, 8, 18, 12) + h * HOUR;
-  const feed = 'abcdefghij'.split('').map((id, i) => ({ url: '/p/' + id, headline: id, publishedAt: at(-i) }));
+  const head = front.indexOf('var COVER_TURN_MS =');
+  const tail = front.indexOf('// ── end cover rotation', head);
+  if (head < 0 || tail < 0) { console.error('FAIL: the cover rotation block is not in front.html'); process.exit(1); }
+  const R = new Function(front.slice(head, tail) + '; return { coverBand, coverFace, COVER_TURN_MS, DESK_BAND, HERO_POOL };')();
+  const { coverBand, coverFace } = R;
+  const TURN = R.COVER_TURN_MS;
+  const at = h => Date.UTC(2026, 8, 18, 12) + h * 3600 * 1000;
   const ids = a => a.map(p => p.headline).join(',');
-  const TURN = HOUR;   // must track DESK_TURN_MS; the slide test below fails if it does not
 
-  ok('three cards, not the whole feed', deskOrder(feed, at(6)).length === 3, String(deskOrder(feed, at(6)).length));
+  // ── the band ────────────────────────────────────────────────────────────
+  const feed = 'abcdefghij'.split('').map((id, i) => ({ url: '/p/' + id, headline: id, publishedAt: at(-i) }));
 
-  // Fresh news leads and brings the two behind it.
-  ok('a piece published inside the current turn leads', ids(deskOrder(feed, at(0) + HOUR / 2)) === 'a,b,c',
-    ids(deskOrder(feed, at(0) + HOUR / 2)));
+  ok('three cards, not the whole feed', coverBand(feed, at(6)).length === R.DESK_BAND);
+  ok('a piece published inside the current turn leads', ids(coverBand(feed, at(0) + TURN / 2)) === 'a,b,c',
+    ids(coverBand(feed, at(0) + TURN / 2)));
 
-  // THE CAST CHANGES. This is the assertion the first version would have
-  // failed: consecutive turns must not print the same three stories.
   const turns = [];
-  for (let t = 0; t < 8; t++) turns.push(deskOrder(feed, at(4) + t * TURN).map(p => p.headline));
+  for (let t = 0; t < 8; t++) turns.push(coverBand(feed, at(4) + t * TURN).map(p => p.headline));
   const sets = turns.map(t => t.slice().sort().join());
-  ok('consecutive turns print different stories', sets.every((s2, i) => i === 0 || s2 !== sets[i - 1]),
-    sets.join(' | '));
-  ok('each turn takes one story off and puts one on', turns.every((t, i) => {
-    if (!i) return true;
-    return t.filter(x => turns[i - 1].indexOf(x) < 0).length === 1;
-  }), turns.map(t => t.join('')).join(' '));
-
-  // A story is on the cover for a bounded run, not forever.
+  ok('consecutive turns print different stories', sets.every((s2, i) => i === 0 || s2 !== sets[i - 1]), sets.join(' | '));
+  ok('each turn takes one story off and puts one on',
+    turns.every((t, i) => !i || t.filter(x => turns[i - 1].indexOf(x) < 0).length === 1),
+    turns.map(t => t.join('')).join(' '));
   const onCover = turns.filter(t => t.indexOf('a') >= 0).length;
   ok('one story is not on every turn', onCover > 0 && onCover < turns.length, `${onCover}/${turns.length}`);
-
-  // The window travels past the band and wraps rather than running dry.
-  const reached = new Set(turns.flat());
-  ok('the rotation reaches past the three newest', reached.size > 3, [...reached].join(','));
-  ok('it never prints a piece the feed does not have', [...reached].every(x => 'abcdefghij'.includes(x)));
-  ok('it never prints the same piece twice in one turn',
-    turns.every(t => new Set(t).size === t.length), turns.map(t => t.join('')).join(' '));
+  ok('the rotation reaches past the three newest', new Set(turns.flat()).size > 3);
+  ok('it never prints the same piece twice in one turn', turns.every(t => new Set(t).size === t.length));
   ok('and it stays inside the pool rather than reaching the whole archive',
-    [...reached].every(x => 'abcdefgh'.includes(x)), [...reached].join(','));
-
-  // The same instant gives the same order to everybody: two readers on one page
-  // load must not see two different covers.
-  ok('the order is a function of the clock alone', ids(deskOrder(feed, at(9))) === ids(deskOrder(feed, at(9))));
-
-  // Degenerate feeds: no rotation to do, and nothing thrown.
-  ok('one piece is printed as it is', ids(deskOrder([feed[0]], at(9))) === 'a');
-  ok('an empty feed is empty', deskOrder([], at(9)).length === 0);
-  ok('a two-piece feed prints both and does not repeat one',
-    deskOrder(feed.slice(0, 2), at(9)).length === 2 &&
-    new Set(deskOrder(feed.slice(0, 2), at(9)).map(p => p.headline)).size === 2);
+    [...new Set(turns.flat())].every(x => 'abcdefgh'.includes(x)), [...new Set(turns.flat())].join(','));
+  ok('the band is a function of the clock alone', ids(coverBand(feed, at(9))) === ids(coverBand(feed, at(9))));
+  ok('one piece is printed as it is', ids(coverBand([feed[0]], at(9))) === 'a');
+  ok('an empty feed is empty', coverBand([], at(9)).length === 0);
   ok('a piece with no timestamp does not stop the band',
-    deskOrder([{ url: '/x', headline: 'x' }, { url: '/y', headline: 'y' }, { url: '/z', headline: 'z' }], at(9)).length === 3);
+    coverBand([{ url: '/x', headline: 'x' }, { url: '/y', headline: 'y' }, { url: '/z', headline: 'z' }], at(9)).length === 3);
+
+  // ── the hero's face ─────────────────────────────────────────────────────
+  // THE ONE THAT WOULD HAVE CAUGHT THE REAL BUG. The hero took the widest gap
+  // on the board and nothing else, so the same player held the cover for as
+  // long as he led it, however often the cards underneath him rotated.
+  const gaps = 'vwxyz12'.split('').map(n => ({ name: n }));
+  const faceAt = t => { const f = coverFace(gaps, null, at(0) + t * TURN); return f && f.name; };
+  const faces = [];
+  for (let t = 0; t < 6; t++) faces.push(faceAt(t));
+  ok('the hero is not the same player every turn', new Set(faces).size > 1, faces.join(','));
+  ok('the hero changes on every turn', faces.every((f, i) => !i || f !== faces[i - 1]), faces.join(','));
+  ok('the hero comes off the widest gaps, not the whole board',
+    faces.every(f => gaps.slice(0, R.HERO_POOL).some(g => g.name === f)), faces.join(','));
+  ok('the hero is a function of the clock alone', faceAt(3) === faceAt(3));
+
+  // The Fantasy card's player is never also the hero: one player, one place.
+  const skipped = [];
+  for (let t = 0; t < 6; t++) { const f = coverFace(gaps, gaps[0], at(0) + t * TURN); skipped.push(f && f.name); }
+  ok('the player the Fantasy card names never takes the hero', !skipped.includes('v'), skipped.join(','));
+  ok('and skipping him does not empty the hero', skipped.every(Boolean), skipped.join(','));
+
+  ok('no gaps on the board means no face rather than a throw', coverFace([], null, at(1)) === null);
+  ok('one gap, and it is the face', (coverFace([gaps[0]], null, at(1)) || {}).name === 'v');
+  ok('one gap that is the card’s own player leaves the hero to the desk',
+    coverFace([gaps[0]], gaps[0], at(1)) === null);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

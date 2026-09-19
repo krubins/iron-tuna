@@ -10762,73 +10762,84 @@ git push origin --delete claude/the-pick-daily-segment-qpj8l6
 ```
 
 
-## 88. September 18: rotating three cards is not rotating the cover
+## 88. September 18: one player was on the cover twice, by two different paths
 
-Ken: "Love is still featured on the front page." He meant Jeremiyah Love, and
-he was right: the Week 2 weekend preview, headlined "fade Jeremiyah Love,
-attack Dalton Schultz, and know why Mack Hollins matters", had been the first
-card in "Current from the desk" since it published at 12:05 PM ET, and would
-have stayed there until the next piece landed. His instruction, the same one
-§87 applied to The Pick: it should have rotated.
+Ken, three times in an evening: "Love is still featured on the front page."
+Then: "Why is Lo still on the cover. We are supposed to be rotating." Then, in
+full: "Love."
 
-**What the band did.** `front.html` took `/api/content`, filtered to pieces
-with a url and a headline, and printed `.slice(0, 4)` newest first. Between
-publishes that is a fixed page. The desk publishes a few times a day, so the
-same headline under the same player's name is the top of the front page for
-hours at a stretch, and the hero's photograph is of that player, because the
-hero takes the first piece in the band that names somebody.
+He was right every time, and the first two fixes were aimed at the wrong half
+of the page.
 
-### The first fix was wrong, and the way it was wrong is the lesson
+**Jeremiyah Love was on the cover TWICE, by two unrelated paths.**
 
-The band was cut to three and the TOP SLOT was made to advance every two hours,
-rotating those three. It shipped, and Ken came back inside the hour: "Why is Lo
-still on the cover. We are supposed to be rotating."
+1. **The desk band.** The Week 2 weekend preview, headlined "fade Jeremiyah
+   Love, attack Dalton Schultz, and know why Mack Hollins matters", was the
+   first of the four cards under "Current from the desk", and `front.html`
+   printed `.slice(0, 4)` newest first and then sat there until the desk
+   published again.
+2. **The hero's photograph.** The picture at the top of the page takes the
+   desk's subject when a piece names one, and otherwise `all[0]` — the single
+   widest market gap on the board, captioned "This week's widest market gap".
+   Love was the widest: Iron Tuna RB22, Vegas RB27, consensus RB8, a 5.9-point
+   gap. The three newest desk pieces all stored `components: null`, so the desk
+   never took the hero, and the fallback ran his face at full size above the
+   fold for as long as he led the board.
 
-He was right again, and no amount of deploying would have helped, because
-**rotating three cards among themselves changes the ORDER and never the CAST.**
-The story he wanted off the cover was one of the three. After the change it led
-one turn in three and was on the page all three. The word "rotating" had been
-read as "shuffle what is there" when it plainly meant "take that one off and
-put a different one up" — which is exactly what he had said about The Pick the
-day before, in those words.
+**Two wrong fixes, and what each one missed.**
 
-The general form, worth keeping: **when a request is about a thing being gone,
-a change that only reorders is not a partial fix, it is no fix.** The check is
-to state the outcome in the user's own words and ask whether the change
-produces it. "Is Love off the cover?" answers itself in one line of the diff.
+The first cut the band to three and advanced the TOP SLOT every two hours.
+Ken came back inside the hour. Rotating three cards among themselves changes
+the ORDER and never the CAST: his story was one of the three, so it led a third
+of the time and was on the page all of it.
 
-### What it does now
+The second made the window three wide and slid it one piece down the feed each
+turn, so a story genuinely came off. That was right, and it still did not
+matter, because nobody had looked at the hero. The largest thing on the cover,
+the thing a reader sees first, was a photograph chosen by a completely separate
+feed on a rule with no clock in it at all.
 
-`deskOrder(pieces, now)` in `front.html`:
+The lesson is not "rotate harder". It is: **when someone says a subject is
+still on the page, enumerate every path that can put a subject on that page
+before changing any of them.** Two greps would have found both in a minute —
+`heroPaint` has exactly two callers. Three deploys went out because the second
+one was never read.
 
-- **Three cards at a time**, matching the rule for The Pick.
-- **The window slides one piece down the feed every hour** (`DESK_TURN_MS`),
-  wrapping at the end of a pool eight deep (`DESK_POOL`). Every turn one story
-  comes off the cover and a different one comes on. A piece that is one of
-  eight is on the cover three turns in eight rather than permanently.
-- **Except when there is news.** A piece published inside the current turn
-  leads and brings the two behind it. A recap filed twenty minutes ago IS the
-  front page, and sliding past it would be the site hiding what it just did.
-- The hero's picture follows the first piece in the window that names a player,
-  so the photograph and the top card are about the same man.
+### What the cover does now
 
-The order is a pure function of the feed and the clock, so two readers loading
-at the same moment get the same cover, which matters because the band is drawn
-from a memoized payload.
+One clock, defined once in `front.html`, driving both paths, so they cannot
+drift into two rotations:
+
+| | |
+|---|---|
+| `COVER_TURN_MS` | an hour. One turn, one cover. |
+| `coverBand(pieces, now)` | three cards, sliding one piece down the feed each turn and wrapping at a pool eight deep (`DESK_POOL`). Every turn one story comes off and another goes up. A piece published inside the current turn is exempt and leads with the two behind it: a recap filed twenty minutes ago IS the front page, and sliding past it would be the site hiding what it just did. |
+| `coverFace(rows, skip, now)` | the hero takes the next of the week's five widest gaps (`HERO_POOL`) each turn, skipping the player the Fantasy card already names. The caption dropped the superlative — it reads "A market gap this week", because the picture is no longer the maximum and a caption that says "widest" about the third-widest is simply false. |
+
+Both are pure functions of their feed and the clock, so two readers loading at
+the same moment get the same cover, which matters because the payloads behind
+them are memoized.
 
 ### Where it is tested
 
-`tools/test-newsroom.mjs` lifts `deskOrder` straight out of `front.html` and
-runs it turn by turn. The assertions that matter are the two the first version
-would have failed: **consecutive turns print different stories**, and **each
-turn takes exactly one story off and puts one on**. Plus the bounded run (no
-story on every turn), the wrap, the pool ceiling, no duplicate inside a turn,
-determinism on the clock, and the degenerate feeds — one piece, none, two, and
-a piece with no timestamp. That file runs everywhere.
+`tools/test-newsroom.mjs` lifts the whole rotation block out of `front.html`
+between `var COVER_TURN_MS` and the `// ── end cover rotation` marker, and runs
+both functions turn by turn. The assertions that would have caught each of the
+three attempts, in order:
 
-`tools/test-homepage.mjs` still drives the real page in Chromium and asserts
-three cards, but it needs a browser and skips without one, which is why the
-rule itself is guarded in the file that cannot skip. Its fixture publishes its
-newest piece five minutes ago rather than on a fixed past date: under a sliding
-window, a fixed date would have made "which story leads" depend on what time of
-day CI happened to run.
+- **consecutive turns print different stories**, and **each turn swaps exactly
+  one** — the first fix fails both.
+- **the hero is not the same player every turn**, and **it changes on every
+  turn** — the first and second fixes fail both, because neither touched it.
+
+Plus the bounded run, the wrap, the pool ceiling, no duplicate within a turn,
+determinism on the clock, the Fantasy card's player never doubling as the hero,
+and the degenerate feeds: none, one, two, and a piece with no timestamp.
+
+`tools/test-homepage.mjs` drives the real page in Chromium. It now freezes
+`Date.now` in the browser at an instant whose turn index is 0 for every pool
+size the fixtures use (840 is the lowest common multiple of 1 through 8) and
+publishes its newest fixture piece five minutes before that instant. Without a
+pinned clock a rotating cover makes "which story leads" and "whose photograph
+runs" depend on what time of day CI happens to run. It also asserts the hero's
+caption no longer claims to be the widest.

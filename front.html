@@ -772,6 +772,62 @@ img{max-width:100%}
     });
   })();
 
+  // ── WHAT IS ON THE COVER, AND FOR HOW LONG ───────────────────────────────
+  // Two things on this page name a player at the top of it: the hero's
+  // photograph and the three cards under "Current from the desk". Both used to
+  // pick one subject and hold it until a feed changed underneath them, and on
+  // 2026-09-18 that meant Jeremiyah Love was the face of the site and the top
+  // headline on it for a day and a half.
+  //
+  // He was on the cover TWICE, by two unrelated paths, which is why the first
+  // two attempts at this did not move him:
+  //   1. the desk band's top card was the weekend preview, headlined "fade
+  //      Jeremiyah Love" — fixed by rotating the band, then fixed properly by
+  //      sliding the window down the feed so a story actually comes off;
+  //   2. the hero took `all[0]`, the single widest market gap on the board,
+  //      and his was the widest. Nothing about the band could ever change
+  //      that, and rotating three cards while the photograph stayed put is
+  //      what "Love" still on the cover meant the second and third time.
+  //
+  // So both rotate, on ONE clock, defined once here. A turn is an hour. Every
+  // turn the hero changes face and the band swaps one story, and the two move
+  // together rather than drifting into two different rotations.
+  var COVER_TURN_MS = 3600 * 1000;   // how long one cover holds
+  var DESK_BAND = 3;                 // cards on the cover at once
+  var DESK_POOL = 8;                 // how deep into the feed the window travels
+  var HERO_POOL = 5;                 // how many market gaps take a turn on the hero
+  function coverTurn(len, now) {
+    return len > 0 ? Math.floor(now / COVER_TURN_MS) % len : 0;
+  }
+  // The band: three wide, sliding one piece down the feed each turn and
+  // wrapping, so every turn one story comes off the cover and another goes up.
+  // Fresh news is exempt: a piece published inside the current turn leads and
+  // brings the two behind it, because a recap filed twenty minutes ago IS the
+  // front page and sliding past it would be the site hiding what it just did.
+  function coverBand(pieces, now) {
+    var pool = pieces.slice(0, DESK_POOL);
+    if (pool.length < 2) return pool;
+    var newest = 0, i;
+    for (i = 0; i < pool.length; i++) newest = Math.max(newest, +pool[i].publishedAt || 0);
+    var band = Math.min(DESK_BAND, pool.length);
+    if (newest && now - newest < COVER_TURN_MS) return pool.slice(0, band);
+    var turn = coverTurn(pool.length, now), out = [];
+    for (i = 0; i < band; i++) out.push(pool[(turn + i) % pool.length]);
+    return out;
+  }
+  // The hero: one of the week's widest gaps rather than THE widest, taking
+  // turns. `skip` is the player the Fantasy card already names, because the top
+  // of the page running the same man twice is the page saying it once and
+  // looking like it said it twice.
+  function coverFace(rows, skip, now) {
+    var pool = [], i;
+    for (i = 0; i < rows.length && pool.length < HERO_POOL; i++) {
+      if (rows[i] !== skip) pool.push(rows[i]);
+    }
+    return pool.length ? pool[coverTurn(pool.length, now)] : null;
+  }
+  // ── end cover rotation ───────────────────────────────────────────────────
+
   // ── the market disagreements, and the Fantasy card's reading ─────────────
   // Both come off ONE call, so the two bands can never disagree, and the player
   // the card recommends is deliberately taken OUT of the table below it: one
@@ -822,16 +878,19 @@ img{max-width:100%}
       readPic('fnReadPic', 'fnRead', card.name);
     }
 
-    // The hero's fallback picture: the widest gap on the board, skipping the
-    // man the Fantasy card names so the top of the page never runs the same
-    // player twice. Only used if the desk has not named somebody.
-    for (var h = 0; h < all.length; h++) {
-      if (all[h] === card) continue;
-      heroPaint('edge', all[h].name, 'This week’s widest market gap',
-        'The market projects ' + n1(all[h].vegasPoints) + ' points against a consensus '
-        + n1(all[h].consensusPoints) + ' — ' + signed(all[h].delta.points) + ' on the week.',
+    // The hero's fallback picture, used only if the desk has not named
+    // somebody: one of the week's widest gaps, taking its turn on the clock
+    // above, skipping the man the Fantasy card names. It said "This week's
+    // widest market gap" and showed exactly one player for as long as he led
+    // the board, which is how the same face held the cover for a day and a
+    // half. The caption is no longer a superlative, because the picture is no
+    // longer the maximum.
+    var face = coverFace(all, card, Date.now());
+    if (face) {
+      heroPaint('edge', face.name, 'A market gap this week',
+        'The market projects ' + n1(face.vegasPoints) + ' points against a consensus '
+        + n1(face.consensusPoints) + ' — ' + signed(face.delta.points) + ' on the week.',
         '/vegas-edge');
-      break;
     }
 
     // Three to five players, and never the one the card already named.
@@ -873,44 +932,9 @@ img{max-width:100%}
   });
 
   // ── the desk's current pieces ────────────────────────────────────────────
-  // THREE AT A TIME, AND THE THREE CHANGE. Each card is drawn only with a
+  // Three cards, drawn by coverBand() above. Each is drawn only with a
   // destination and a headline on it; with nothing current the whole section
   // stays hidden.
-  //
-  // The band first printed the four newest pieces, newest first, and sat there
-  // until the desk published again. On 2026-09-18 that put "fade Jeremiyah
-  // Love" on the cover from lunchtime onwards, so the top slot was made to
-  // advance on a clock. That was the wrong fix and Ken said so within the hour:
-  // rotating three cards among themselves changes the ORDER and never the
-  // CAST, and the story he wanted gone was one of the three. It led a third of
-  // the time and was on the page all of it.
-  //
-  // So the rotation reaches past the band. The window is three cards wide and
-  // it slides one piece down the feed every turn, wrapping at the end of the
-  // pool: every turn one story comes off the cover and a different one comes
-  // on, which is what "rotating" was asked for twice. A piece that is one of
-  // eight is on the cover for three turns in eight rather than forever.
-  //
-  // What it does NOT do is bury news. A piece published inside the current
-  // turn leads on its own merit, because a recap filed twenty minutes ago IS
-  // the front page, and rotating it down would be the site hiding what it just
-  // did. The slide starts once the newest piece has had its turn.
-  var DESK_BAND = 3;                  // cards on the cover at once
-  var DESK_POOL = 8;                  // how deep into the feed the window travels
-  var DESK_TURN_MS = 3600 * 1000;     // how long one set of three holds the cover
-  function deskOrder(pieces, now) {
-    var pool = pieces.slice(0, DESK_POOL);
-    if (pool.length < 2) return pool;
-    var newest = 0, i;
-    for (i = 0; i < pool.length; i++) newest = Math.max(newest, +pool[i].publishedAt || 0);
-    var band = Math.min(DESK_BAND, pool.length);
-    // Fresh news leads, and brings the two behind it.
-    if (newest && now - newest < DESK_TURN_MS) return pool.slice(0, band);
-    var turn = Math.floor(now / DESK_TURN_MS) % pool.length;
-    var out = [];
-    for (i = 0; i < band; i++) out.push(pool[(turn + i) % pool.length]);
-    return out;
-  }
   grab('/api/content', function (j) {
     var day = function (v) {
       try {
@@ -922,7 +946,7 @@ img{max-width:100%}
     // the eyebrow and the headline with nothing under it: a card that says
     // the desk published and does not say what. Those rows are skipped here
     // and the piece is still in the archive at its URL.
-    var pieces = deskOrder((j.pieces || []).filter(function (p) { return p && p.url && p.headline; }), Date.now());
+    var pieces = coverBand((j.pieces || []).filter(function (p) { return p && p.url && p.headline; }), Date.now());
     if (!pieces.length) return;
     // Who a piece is about: the players its own findings name. The card is
     // stamped with them and player-search.js draws their faces at the head of
