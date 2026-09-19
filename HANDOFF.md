@@ -10917,3 +10917,112 @@ is its own field and is **not** derived from `receptionPoints`, so a form that
 sets half PPR must set both or backs keep full-point catches; and a roster slot
 the model does not know is only preserved when it arrives under `roster.other`,
 not at the top level. Both are now pinned.
+
+---
+
+## 90. September 19: the cover was drawing from the archive, drafts and all
+
+Ken, after the hero rotation landed: "Love is gone, but it still doesn't have
+some of the stories that we are supposed to have in rotation." Right again, and
+this is the bug under both of the previous two.
+
+**The band read `/api/content`.** That endpoint is `contentListPayload`: every
+row in `content_pieces` whose status is not `unpublished`, newest first, **one
+row per VERSION**, with `expired` reported as a field rather than applied. It
+is the archive index. The front page treated it as a feed, filtered it to rows
+carrying a url and a headline, and took the top eight.
+
+Here is what those eight rows actually were on the evening of the 18th:
+
+| # | Row | Status |
+|---|---|---|
+| 1 | weekend preview v6 | published |
+| 2 | weekend preview v5 | **held** |
+| 3 | kickers & defenses | published |
+| 4 | weekend preview v4 | **held** |
+| 5 | weekend preview v3 | **held** |
+| 6 | weekend preview v2 | **held** |
+| 7 | weekend preview v1 | **held** |
+| 8 | TNF: what matters | published |
+
+Six of the eight were one story. Five of those were **drafts the fact check had
+held**, each carrying its own headline, none ever published, all rendered as
+cards on the front page pointing at the same URL. Every other piece the desk
+published this week — the DET-BUF recap, the tight end column, the underrated
+piece, the pickup advisor — sat below the cutoff and could never appear.
+
+It also explains §88 rather than being a separate incident. The rotation added
+there worked exactly as written; it was rotating through five drafts of the
+story Ken wanted gone. "Love is still on the cover" was literally true no
+matter how well the window slid, because most of the window WAS that story.
+
+**The fix is not a filter, it is the right feed.** `/api/newsroom` is
+`newsroomFeedPayload`, which /in-season/desk already reads: published rows
+only, **one row per slug** with the newest version winning, forward pieces
+dropped once their games have kicked off, and the `components` each piece
+breaks into so the cards and the hero can carry faces. The cover and the desk
+now answer to one rule and cannot disagree about what the desk has published.
+
+With that feed the eight-deep pool is eight different stories, and the band
+rotates three of them an hour.
+
+**Tests.** `tools/test-newsroom.mjs` asserts `front.html` reads
+`/api/newsroom` and never `/api/content`, with the reason attached, because
+this is a one-character-looking change that reintroduces a content incident.
+`tools/test-homepage.mjs` goes further: its harness answers `/api/content` with
+**poison** — five held drafts headlined "HELD DRAFT n — must never reach the
+cover" — so a page that goes back to the archive fails loudly rather than
+quietly showing drafts again. It also asserts no story appears on the cover
+twice.
+
+### The 24-hour floor
+
+Rendering the deployed page against the live feed (below) showed the cost of an
+unbounded slide: at 5 AM ET on the 19th the window sat on the older half of the
+pool and the cover was two Week 1 columns and the underrated piece, with
+Friday's preview, the kickers piece, the Thursday night read and the DET-BUF
+recap all off it. A section headed "Current from the desk" carrying nothing
+from the last day is its own kind of wrong.
+
+`COVER_FLOOR_MS` is 24 hours. If no card in the window was published inside
+that, the **last** slot goes to the newest piece that was. The lead slot is
+untouched, so the rotation still decides what leads.
+
+Two properties change, and both were chosen deliberately:
+
+- **While the desk is quiet, one story is on the cover every turn.** That is
+  the floor doing its job, and it is the trade Ken took when the alternative
+  was a cover with nothing current on it.
+- **One turn per cycle brings no new story, only a new order.** When the
+  sliding window first reaches the pinned piece on its own, the cast repeats
+  ([N,n,o] then [n,o,N]). The test asserts *at most* one new story per turn
+  rather than exactly one, and separately that no two consecutive turns are
+  identical. Pinning unconditionally would remove the anomaly and put the
+  newest story on the cover even when the window is full of current work,
+  which is the complaint this whole section started from.
+
+The floor is inert whenever the window already holds something from the last
+day, which on a normal publishing day is always.
+
+### Checking a page this session cannot load
+
+irontuna.com is unreachable from here: the egress proxy denies it, which is
+why three rounds of this were "Ken looks, Ken reports". The check that finally
+gave a straight answer runs the deployed `front.html` in Chromium against the
+REAL published feed pulled out of D1, with the clock advanced an hour a turn,
+and prints the three cards and the hero's name per turn. It found both the
+stale-window problem above and confirmed the fix. Worth rebuilding whenever
+the cover is in question; the shape is in this session's scratchpad, and it is
+twenty lines on top of the harness `tools/test-homepage.mjs` already has.
+
+The hero and the disagreement rows in that harness are stand-ins, because the
+board behind them is computed in the Worker from odds this session cannot
+reach. The band's data is real.
+
+**The general lesson, which is the same one as §88 in a different coat.** Three
+rounds were spent on the ranking logic of a list whose CONTENTS were wrong.
+Nobody printed the list. One `console.log` of the eight rows the band was
+drawing from — or one look at what `contentListPayload` selects — would have
+ended this on the first pass. When output looks wrong, read the input before
+rewriting the function that shapes it.
+

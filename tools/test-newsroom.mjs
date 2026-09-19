@@ -1092,6 +1092,76 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   ok('a piece with no timestamp does not stop the band',
     coverBand([{ url: '/x', headline: 'x' }, { url: '/y', headline: 'y' }, { url: '/z', headline: 'z' }], at(9)).length === 3);
 
+  // WHICH FEED THE COVER READS. The band drew from /api/content, the archive:
+  // every row that is not 'unpublished', one per VERSION. That put five held
+  // drafts of one preview on the front page and pushed every other published
+  // piece below the cutoff. /api/newsroom is the published feed, deduped by
+  // slug, expiry applied — the one /in-season/desk reads.
+  ok('the cover reads the published feed', /grab\('\/api\/newsroom/.test(front),
+    'front.html must read /api/newsroom for the desk band');
+  ok('and never the archive endpoint', !/grab\('\/api\/content/.test(front),
+    '/api/content carries held drafts and one row per version');
+
+  // ── the 24-hour floor ───────────────────────────────────────────────────
+  // A window that has slid into the older half of the pool can carry nothing
+  // from the last day, under a heading that says "Current from the desk". The
+  // floor puts the newest recent piece in the last slot when that happens.
+  // The fixture above never triggers it: every piece there is hours old, which
+  // is the point — the floor must be inert when the feed is fresh.
+  {
+    const DAY = 24 * 3600 * 1000;
+    // One fresh piece, the rest from earlier in the week.
+    const stale = ['n', 'o', 'p', 'q', 'r', 's', 't'].map((id, i) => ({
+      url: '/p/' + id, headline: id, publishedAt: at(0) - (30 + i * 6) * 3600 * 1000
+    }));
+    // Two hours old at turn 0, so it is still inside the day eight turns later.
+    // An earlier draft of this fixture published it 20 hours before turn 0 and
+    // watched it age out mid-run, which is the floor working, not failing.
+    const mixed = [{ url: '/p/N', headline: 'N', publishedAt: at(0) - 2 * 3600 * 1000 }].concat(stale);
+
+    const windows = [];
+    for (let t = 0; t < 8; t++) windows.push(coverBand(mixed, at(0) + t * TURN).map(p => p.headline));
+    ok('every turn carries something from the last 24 hours',
+      windows.every(w => w.includes('N')), windows.map(w => w.join('')).join(' '));
+    ok('the floor takes the last slot, not the lead',
+      windows.every(w => w[0] !== 'N' || w.indexOf('N') === 0), windows.map(w => w.join('')).join(' '));
+    ok('the floor never prints the same story twice in one window',
+      windows.every(w => new Set(w).size === w.length), windows.map(w => w.join('')).join(' '));
+    ok('the rest of the window still rotates under it',
+      windows.every((w, i) => !i || w.join() !== windows[i - 1].join()), windows.map(w => w.join('')).join(' '));
+    // AT MOST one, not exactly one, and the difference is the floor's own cost.
+    // On the turn where the sliding window first reaches the pinned piece on
+    // its own, the cast repeats in a new order — [N,n,o] then [n,o,N] — because
+    // the piece the floor was holding in the last slot has become the one the
+    // rotation would have shown anyway. It happens once per cycle, and the
+    // alternative is pinning the newest story to the cover on every turn even
+    // when the window is full of current work, which is the complaint this
+    // whole section started from.
+    ok('and no turn brings more than one new story',
+      windows.every((w, i) => !i || w.filter(x => windows[i - 1].indexOf(x) < 0).length <= 1),
+      windows.map(w => w.join('')).join(' '));
+    ok('the cover is never two identical turns in a row',
+      windows.every((w, i) => !i || w.join() !== windows[i - 1].join()),
+      windows.map(w => w.join('')).join(' '));
+    ok('and over a cycle it still reaches the whole pool',
+      new Set(windows.flat()).size === mixed.length, [...new Set(windows.flat())].join(''));
+
+    // Inert when the window already has something fresh.
+    const allFresh = 'uvwxyz'.split('').map((id, i) => ({
+      url: '/p/' + id, headline: id, publishedAt: at(0) - (2 + i) * 3600 * 1000
+    }));
+    const before = coverBand(allFresh, at(0) + 3 * TURN).map(p => p.headline);
+    ok('a window that is already current is left alone',
+      before.join() === ['u', 'v', 'w', 'x', 'y', 'z'].slice(3, 6).join(), before.join());
+
+    // Nothing fresh anywhere: the floor has nothing to insert and must not
+    // throw, empty the band, or start repeating a piece.
+    const none = coverBand(stale, at(0) + 5 * DAY);
+    ok('a feed with nothing fresh still prints three distinct cards',
+      none.length === 3 && new Set(none.map(p => p.headline)).size === 3,
+      none.map(p => p.headline).join(''));
+  }
+
   // ── the hero's face ─────────────────────────────────────────────────────
   // THE ONE THAT WOULD HAVE CAUGHT THE REAL BUG. The hero took the widest gap
   // on the board and nothing else, so the same player held the cover for as

@@ -578,7 +578,7 @@ img{max-width:100%}
   </section>
 
   <!-- ── 4 · what the desk published ────────────────────────────────────────
-       A small group of CURRENT articles, off /api/content — the same feed
+       A small group of CURRENT articles, off /api/newsroom — the same feed
        /in-season/desk prints from. Hidden outright when the desk has nothing
        current: a heading over an empty grid is worse than no heading. -->
   <section class="hm-sec" id="articles" hidden aria-labelledby="readHead">
@@ -669,7 +669,7 @@ img{max-width:100%}
 //   /api/season   the week, for the hero's dateline
 //   /api/vegas-edge  consensus / market / Iron Tuna projections per player
 //   /api/dfs?site=dk the slate, for the DFS card's one reading
-//   /api/content  the desk's current pieces
+//   /api/newsroom the desk's current pieces (published, one per story)
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -793,6 +793,7 @@ img{max-width:100%}
   // turn the hero changes face and the band swaps one story, and the two move
   // together rather than drifting into two different rotations.
   var COVER_TURN_MS = 3600 * 1000;   // how long one cover holds
+  var COVER_FLOOR_MS = 24 * 3600 * 1000;  // the cover always carries something this fresh
   var DESK_BAND = 3;                 // cards on the cover at once
   var DESK_POOL = 8;                 // how deep into the feed the window travels
   var HERO_POOL = 5;                 // how many market gaps take a turn on the hero
@@ -813,6 +814,29 @@ img{max-width:100%}
     if (newest && now - newest < COVER_TURN_MS) return pool.slice(0, band);
     var turn = coverTurn(pool.length, now), out = [];
     for (i = 0; i < band; i++) out.push(pool[(turn + i) % pool.length]);
+    // THE 24-HOUR FLOOR. A window that has slid into the older half of the
+    // pool can be three pieces from earlier in the week with nothing from
+    // yesterday on it, which is a section headed "Current from the desk"
+    // carrying nothing current. Observed on the morning of 2026-09-19: two
+    // Week 1 columns and the underrated piece, while Friday's preview, the
+    // kickers piece, the Thursday night read and the DET-BUF recap were all
+    // off the cover.
+    //
+    // So if no card in the window was published inside the last day, the last
+    // slot goes to the newest piece that was. The lead slot is left alone —
+    // the rotation still decides what leads — and the cost is accepted
+    // deliberately: while the desk is quiet, one story sits on the cover every
+    // turn. That is the trade Ken chose when the alternative was a cover with
+    // nothing from the last day on it.
+    var fresh = function (p) {
+      var at = +p.publishedAt || 0;
+      return at > 0 && now - at < COVER_FLOOR_MS;
+    };
+    for (i = 0; i < out.length; i++) if (fresh(out[i])) return out;
+    for (i = 0; i < pool.length; i++) {
+      // The feed is newest first, so the first one that qualifies is the one.
+      if (fresh(pool[i])) { out[out.length - 1] = pool[i]; break; }
+    }
     return out;
   }
   // The hero: one of the week's widest gaps rather than THE widest, taking
@@ -935,7 +959,23 @@ img{max-width:100%}
   // Three cards, drawn by coverBand() above. Each is drawn only with a
   // destination and a headline on it; with nothing current the whole section
   // stays hidden.
-  grab('/api/content', function (j) {
+  // THE PUBLISHED FEED, NOT THE ARCHIVE. This read was `/api/content`, which is
+  // `contentListPayload`: every row with a status other than 'unpublished',
+  // newest first, one per VERSION. On 2026-09-18 that meant the eight rows this
+  // band draws from were the published weekend preview, FIVE HELD DRAFTS of the
+  // same preview — each with its own headline, none of which had passed the
+  // fact check — and two other stories. Six of eight cards were one story, five
+  // of them were drafts a reader was never meant to see, and every other piece
+  // the desk had published that week was below the cutoff and unreachable. It
+  // is also the real reason the cover looked stuck on one player: the rotation
+  // was working and most of what it rotated through was the same preview.
+  //
+  // `/api/newsroom` is `newsroomFeedPayload`, which is what /in-season/desk
+  // reads: published rows only, ONE ROW PER SLUG with the newest version
+  // winning, forward pieces dropped once their games have kicked off, and the
+  // components each piece breaks into. The cover and the desk now answer to one
+  // rule, so they cannot disagree about what the desk has published.
+  grab('/api/newsroom?limit=20', function (j) {
     var day = function (v) {
       try {
         return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric' }).format(new Date(v));
