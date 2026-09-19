@@ -11026,8 +11026,75 @@ drawing from — or one look at what `contentListPayload` selects — would have
 ended this on the first pass. When output looks wrong, read the input before
 rewriting the function that shapes it.
 
+---
 
-## 91. September 19: two lines under every name, on all seventeen rankings pages
+## 91. September 19: the cover had four paths, not two
+
+§88 fixed two paths that put a player at the top of "/" and wrote the lesson
+down: *enumerate every path that can put a subject on that page before changing
+any of them.* §90 then found the feed underneath both. The enumeration itself
+was still one short — it counted the two things that carry a PHOTOGRAPH and
+stopped there.
+
+**3 and 4: the two card readings.** Under the hero and the band sit `fnRead`
+and `dfRead`, one line each, and each one names a player. `fnRead` took the
+strongest BUY on the board; `dfRead` took `bestVegasValues[0]`. Neither had a
+clock anywhere near it. So after §88 and §90 the cover changed every hour above
+a Fantasy call and a DFS value that had not changed since Sunday — the same
+complaint Ken made, one band down the page, waiting to be made again.
+
+Both take turns on the same `COVER_TURN_MS` now:
+
+| | |
+|---|---|
+| `coverPick(rows, now, cap)` | the turn's row out of the leaders of its own board, `CARD_POOL` (five) deep. Used by both cards. |
+| `coverLead(rows, pick)` | true only for the board's own first row. It guards the superlative: the DFS card reads "Best market value" for the leader and "Market value play" for everybody else, because a caption that claims the top of the board once the turn has moved off it is false, and false is the one thing a page arguing from the market cannot be. |
+
+Every row a turn can land on passed the same test the leader passed — the
+Fantasy card's pool is the buys, the DFS card's is rows the slate can state in
+full — so this chooses WHICH true thing to say and never whether to say a true
+one. A row with a hole in it is filtered before the pool is built, so a turn
+cannot land on one and print a card with a gap in it.
+
+**And one the rotation turned from latent into daily.** `heroPaint` took a
+single name and painted nothing when the player lookup carried no face for it.
+Standing still, that was a rare miss on one player. On a clock it is an hour of
+every day, chosen at random off the board, with no photograph on the cover at
+all — and nobody would have reported it as a bug, because the band is written
+to disappear rather than show a frame with nothing in it.
+
+It takes a candidate list now. `coverFaces(rows, skip, now)` returns the turn's
+pick with the rest of the pool behind it (`coverFace` is still that list's
+head, so §88's assertions are untouched), the desk offers every subject in the
+band rather than only the first, and the painter takes the first that resolves
+to a face. A list that resolves to nobody still paints nothing, which is the
+page's rule and stays the page's rule.
+
+### Where it is tested
+
+`tools/test-newsroom.mjs`, in the same lifted block, without a browser:
+a card reading is not the same player every turn, it changes on EVERY turn, it
+stays inside `CARD_POOL`, it is a function of the clock alone, a board of one
+is printed as it is, an empty board is no reading rather than a throw, and the
+superlative belongs to the leader. For `coverFaces`: the turn's pick leads, the
+pool is behind him, every turn offers the same cast in a different order, and
+the Fantasy card's player is not in the list at all.
+
+`tools/test-homepage.mjs` steps the frozen clock one turn forward in Chromium
+and asserts both readings change on the real page, the runner-up caption drops
+"Best", a slate row with a hole in it never appears, and two loads at the same
+hour agree.
+
+### The lesson, third coat
+
+§88: enumerate the paths. §90: read the input before rewriting the function
+that shapes it. This one is the first again, done properly — the enumeration
+has to be of what the READER sees change, not of what the code calls a
+photograph. Four greps end it: `heroPaint` has two callers, `$('fnRead')` and
+`$('dfRead')` one each.
+
+
+## 92. September 19: two lines under every name, on all seventeen rankings pages
 
 The sixteen rankings pages (`/weekly-*-rankings` and `/season-long-*-rankings`,
 all of them the one board in `it-ranks.js`) and the `/rankings` tool answered
