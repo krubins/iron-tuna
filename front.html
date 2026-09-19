@@ -793,6 +793,7 @@ img{max-width:100%}
   // turn the hero changes face and the band swaps one story, and the two move
   // together rather than drifting into two different rotations.
   var COVER_TURN_MS = 3600 * 1000;   // how long one cover holds
+  var COVER_FLOOR_MS = 24 * 3600 * 1000;  // the cover always carries something this fresh
   var DESK_BAND = 3;                 // cards on the cover at once
   var DESK_POOL = 8;                 // how deep into the feed the window travels
   var HERO_POOL = 5;                 // how many market gaps take a turn on the hero
@@ -813,6 +814,29 @@ img{max-width:100%}
     if (newest && now - newest < COVER_TURN_MS) return pool.slice(0, band);
     var turn = coverTurn(pool.length, now), out = [];
     for (i = 0; i < band; i++) out.push(pool[(turn + i) % pool.length]);
+    // THE 24-HOUR FLOOR. A window that has slid into the older half of the
+    // pool can be three pieces from earlier in the week with nothing from
+    // yesterday on it, which is a section headed "Current from the desk"
+    // carrying nothing current. Observed on the morning of 2026-09-19: two
+    // Week 1 columns and the underrated piece, while Friday's preview, the
+    // kickers piece, the Thursday night read and the DET-BUF recap were all
+    // off the cover.
+    //
+    // So if no card in the window was published inside the last day, the last
+    // slot goes to the newest piece that was. The lead slot is left alone —
+    // the rotation still decides what leads — and the cost is accepted
+    // deliberately: while the desk is quiet, one story sits on the cover every
+    // turn. That is the trade Ken chose when the alternative was a cover with
+    // nothing from the last day on it.
+    var fresh = function (p) {
+      var at = +p.publishedAt || 0;
+      return at > 0 && now - at < COVER_FLOOR_MS;
+    };
+    for (i = 0; i < out.length; i++) if (fresh(out[i])) return out;
+    for (i = 0; i < pool.length; i++) {
+      // The feed is newest first, so the first one that qualifies is the one.
+      if (fresh(pool[i])) { out[out.length - 1] = pool[i]; break; }
+    }
     return out;
   }
   // The hero: one of the week's widest gaps rather than THE widest, taking
