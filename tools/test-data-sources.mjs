@@ -75,7 +75,15 @@ const FORBIDDEN = [
   { pattern: /\bapi\.fanduel\.com\b/i,     why: "operator's own salary feed (Addendum 13.3, 13.7)" },
   { pattern: /\bkalshi\b/i,                why: 'prediction market data is prohibited by their terms (13.4)' },
   { pattern: /\bpolymarket\b/i,            why: 'prediction market; terms unread, assume the same posture (13.4)' },
-  { pattern: /\bapi\.fantasypros\.com\b/i, why: 'scraped projection aggregator (13.6, 13.7)' }
+  { pattern: /\bapi\.fantasypros\.com\b/i, why: 'scraped projection aggregator (13.6, 13.7)' },
+  // Evaluated 2026-09-13 and refused: every sportsbook API path answers a
+  // non-browser client with an Akamai "Access Denied", the page loads the Bot
+  // Manager sensor, and the sportsbook terms prohibit automated access. Red
+  // rather than merely unlisted, because the next person to want DraftKings'
+  // own lines will reach for this host first (docs/data-sources.md,
+  // "Evaluated and not adopted"). The licensed providers already carry that
+  // book's numbers.
+  { pattern: /\bsportsbook(?:-[a-z]+)?\.draftkings\.com\b/i, why: "the sportsbook is behind Akamai Bot Manager and its terms bar automated access (13.3, 13.7)" }
 ];
 
 const DEPLOYED = ['_worker.js', 'index.html', 'admin.html', 'front.html', 'player.html',
@@ -139,6 +147,16 @@ for (const f of DEPLOYED.filter(f => f !== '_worker.js')) {
 console.log('\nthe guard itself catches what it claims to');
 const dk = FORBIDDEN[0].pattern, kal = FORBIDDEN[2].pattern;
 ok('an operator host trips the red list', dk.test("fetch('https://api.draftkings.com/x')"));
+// The sportsbook rule has to catch the host and leave the word alone: the
+// pages say "sportsbook" in prose constantly.
+const sb = FORBIDDEN[5].pattern;
+ok('a sportsbook host trips the red list',
+   sb.test("fetch('https://sportsbook.draftkings.com/sites/US-SB/api/v5/eventgroups/88808')") &&
+   sb.test('https://sportsbook-nash.draftkings.com/api/sportscontent/x'));
+ok('the word sportsbook in prose does not',
+   !sb.test('The sportsbook and the projection consensus put two different numbers on the same player.'));
+ok('and the DFS lobby host, which does answer, is not red',
+   !sb.test("fetch('https://www.draftkings.com/lobby/getcontests?sport=NFL')"));
 ok('a site label does not', !dk.test('<option value="dk">DraftKings</option>'));
 ok('kalshi trips it anywhere', kal.test('// compare against kalshi pricing'));
 ok('a key read trips the key check', KEY_READ.test('const k = env.ODDS_API_KEY;'));

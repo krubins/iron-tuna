@@ -11200,3 +11200,42 @@ fixture branch; every longer horizon takes the slate branch.
 real Chromium against a worker-built payload — the sixteen pages at desktop and
 390px, and `/rankings` across all four horizons, all four boards and QB / RB /
 FLEX / K / DST, with no page errors.
+
+## 91. September 19: the DraftKings sportsbook is fenced, and that is now enforced
+
+Closing out the open pull requests left one carrying something `main` did not
+have. PR #222 ("DraftKings' sportsbook lines and props, by book") answered a
+request of Ken's from September 13 with a finding rather than a feature:
+
+**DraftKings' sportsbook cannot be read by a scheduled job.** Every API path
+tried — `/sites/US-SB/api/v5/eventgroups/88808`,
+`/api/sportscontent/<site>/v1/leagues/88808`, the navigation and category
+endpoints — answers a non-browser client with an Akamai "Access Denied" (403)
+whatever the headers, and the page loads the Akamai Bot Manager sensor. A
+runner would be refused exactly as a curl is. Getting past that means defeating
+bot detection, which this repo does not do, and the sportsbook terms prohibit
+automated access regardless.
+
+The distinction that makes it worth writing down: **the DFS lobby is not
+fenced and the sportsbook is.** `www.draftkings.com/lobby` and
+`api.draftkings.com/draftgroups`, which the weekly salary workflow reads,
+answered an unauthenticated fetch normally on the same day. So "we already pull
+DraftKings data" is true and is not evidence that the lines can be pulled too.
+
+**Why it is in the red list and not only in the inventory.** A note in
+`docs/data-sources.md` tells someone who goes looking. The next person to want
+this book's own numbers will reach for the host first and find out the same way,
+a day at a time. `tools/test-data-sources.mjs` now carries
+`sportsbook(-nash)?.draftkings.com` in `FORBIDDEN`, so the attempt fails the
+build with the reason attached. The guard's own tests check that the rule
+catches both hosts, leaves the word "sportsbook" in prose alone — the front page
+says it constantly — and does not touch the lobby host that does answer.
+
+**What was not taken.** The PR also added about 120 lines to `_worker.js` for a
+per-book view of the stored observations (`GET /api/tuna-market/book?book=…`,
+`TMS_BOOK_LABELS`) plus its tests and a section in
+`docs/TUNA-MARKET-SIGNAL.md`. That is a product feature nobody is waiting on,
+written against a September 12 worker, and the market feed moved to
+SportsGameOdds in §72 after it. Rebasing it would be rewriting it. It stays on
+`claude/draftkings-book-board` at `c410b8d0` if the per-book board is ever
+wanted; the finding above is the part that had to survive, and now has.
