@@ -6223,6 +6223,13 @@ function weekEnvironment(ratings, team, week) {
            basis: fx.posted ? 'gamelines' : (ratings.ok ? 'ratings' : 'none'),
            opponent: fx.opponent, home: fx.home, implied: fx.implied, expected: fx.expected,
            impliedDelta: (fx.implied != null && base != null) ? _oddsRound(fx.implied - base) : null,
+           // The defense's half of the same fixture, in the same shape: what the
+           // OPPONENT is expected to score, and how far that sits from what this
+           // club allows across its own schedule. A defense's week turns on this
+           // and not on `implied`, which is its own offense; without it the only
+           // opportunity figure a DST row could print would be the wrong one.
+           allowedImplied: fx.allowedImplied, allowedExpected: fx.allowedExpected,
+           allowedDelta: (fx.allowedImplied != null && baseA != null) ? _oddsRound(fx.allowedImplied - baseA) : null,
            posted: fx.posted, kickoff: fx.kickoff, gameId: fx.gameId, status: fx.status,
            opponentDefRank: ratings.defRank[fx.opponent] || null };
 }
@@ -6482,7 +6489,8 @@ function buildBoards(ctx, opts) {
       _addStats(cStats, c); _addStats(vStats, v); _addStats(iStats, i);
       confSum += _confScore[conf]; confN++;
       weekRows.push({ week: w, opponent: env.opponent, home: env.home, env: { factor: env.factor, implied: env.implied,
-        expected: env.expected, posted: env.posted, impliedDelta: env.impliedDelta, opponentDefRank: env.opponentDefRank },
+        expected: env.expected, posted: env.posted, impliedDelta: env.impliedDelta, opponentDefRank: env.opponentDefRank,
+        allowedImplied: env.allowedImplied, allowedExpected: env.allowedExpected, allowedDelta: env.allowedDelta },
         basis, confidence: conf, kickoff: env.kickoff, status: env.status, gameState: _fixtureState(env, state),
         consensusPts: _oddsRound(scoreAny(c, p.position, rules, 1)), vegasPts: _oddsRound(scoreAny(v, p.position, rules, 1)),
         ironTunaPts: _oddsRound(scoreAny(i, p.position, rules, 1)),

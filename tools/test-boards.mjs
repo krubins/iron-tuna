@@ -104,6 +104,17 @@ console.log('\nthe clock and the ratings');
   ok('and it still projects points from the fit', e14.expected != null && e14.expected > 0);
   const bye = H.weekEnvironment(ratings, 'AAA', 7);
   ok('a bye is a bye', bye.bye === true && bye.factor === 0);
+  // The DEFENSE's half of the same fixture, in the same shape. A defense does
+  // not score off `implied` — that is its own offense — so without this the
+  // only opportunity figure a DST row could print would be the wrong one.
+  const d3 = H.weekEnvironment(ratings, 'AAA', 3);
+  ok('a fixture carries the allowed side as well as the scored side',
+     d3.allowedImplied != null && d3.allowedExpected != null && d3.allowedDelta != null, JSON.stringify(d3));
+  ok('and the allowed side of a game is the other club\'s scored side',
+     near(d3.allowedImplied, H.weekEnvironment(ratings, d3.opponent, 3).implied, 0.06));
+  const d16 = H.weekEnvironment(ratings, 'AAA', 16);
+  ok('an unposted week has no allowed delta to quote, and says null rather than zero',
+     d16.allowedImplied === null && d16.allowedDelta === null && d16.allowedExpected != null);
 }
 
 console.log('\nhorizons');

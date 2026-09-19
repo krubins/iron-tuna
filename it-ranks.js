@@ -34,9 +34,22 @@
  * would leave the drawer disagreeing with the row above it. One fetch per preset
  * (edge-cached five minutes) buys a board that cannot contradict itself.
  *
+ * TWO LINES UNDER EVERY NAME. The columns are all "how many points", and a
+ * reader arrives with two questions they do not answer: is he any good, and is
+ * this a week to start him. So each row carries a PLAYER sentence (his rank at
+ * his own position, what that rank is worth there, the points behind it, and an
+ * injury or a usage swing where there is one) and an OPPORTUNITY sentence (on a
+ * week board the fixture, the matchup and the scoring environment; on a season
+ * board the games, byes and slate still to come). Both are the payload's own
+ * numbers said in words, and the grammar and the tiers behind them live in
+ * it-reads.js, shared with /rankings so the two cannot drift apart. This board
+ * decides only WHAT TO FEED IT: the consensus rank and points, because that is
+ * the column this ranking is published on.
+ *
  * NOTHING IS INVENTED. A number the payload does not carry prints as an em dash.
  * A board that does not answer prints why and shows no table at all, rather than
- * a stale one.
+ * a stale one. The sentences hold to the same rule: a clause whose field is
+ * missing is dropped, never defaulted.
  */
 (function () {
   'use strict';
@@ -207,10 +220,27 @@
       return '<td>' + (s ? esc(s.label) + ' <span class="is-status">' + esc(s.avgOpponentDefRank) + '</span>' : '—') + byes + '</td>';
     }
 
+    // THE TWO LINES, from the shared grammar in it-reads.js. All this board has
+    // to decide is what to feed it, and here that is settled: the ranking is
+    // PUBLISHED on the consensus board, so the rank and the points are the
+    // consensus ones, at his own position — never `primaryRank`, which is a
+    // pooled RB/WR/TE slot on the FLEX pages. There the number is spelled out
+    // instead, so it cannot be read as the "#" beside it.
+    function reads(p) {
+      if (!window.ITReads) return '';
+      return ITReads.cell(p, { horizon: horizon, spellOut: pos === 'FLEX',
+        rank: p.consensus ? p.consensus.rank : null,
+        points: p.consensus ? p.consensus.points : null });
+    }
+
     function rowHtml(p) {
-      var w0 = p.weeks && p.weeks.filter(function (w) { return !w.bye && !w.out; })[0];
+      // The week's fixture. A player ruled OUT still has an opponent, and
+      // printing BYE over his fixture — which the earlier filter did — is a
+      // different fact, and one the Opportunity line below would contradict.
+      var w0 = p.weeks && p.weeks[0];
       var oppCell = horizon === 'week'
-        ? '<td>' + (w0 ? esc((w0.home ? 'vs ' : 'at ') + w0.opponent) : '<span class="is-status">BYE</span>') + '</td>'
+        ? '<td>' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
+            : esc((w0.home ? 'vs ' : 'at ') + w0.opponent) + (w0.out ? ' <span class="is-status">OUT</span>' : '')) + '</td>'
         : '<td class="num">' + (p.games == null ? '—' : p.games) + '</td>';
       var opener = wantWeeks
         ? '<td><button class="rk-open" type="button" data-open="' + esc(p.key) + '" aria-expanded="' + (open[p.key] ? 'true' : 'false') +
@@ -219,7 +249,9 @@
       return '<tr>' + opener +
         '<td class="num">' + (primaryRank(p) == null ? '—' : esc(p.position) + primaryRank(p)) + '</td>' +
         '<td class="rk-who"><a href="/in-season/player/' + slug(p.name) + '?pos=' + esc(p.position) + '"><b>' + esc(p.name) + '</b></a>' +
-          (pos === 'ALL' || pos === 'FLEX' ? '<small>' + esc(p.position) + '</small>' : '') + '</td>' +
+          (pos === 'ALL' || pos === 'FLEX' ? '<small>' + esc(p.position) + '</small>' : '') +
+          reads(p) +
+        '</td>' +
         '<td>' + esc(p.team) + '</td>' + oppCell +
         '<td class="rk-fan rk-pts">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
         '<td class="rk-fan rk-rnk">' + (rankOf(p, 'consensus') == null ? '—' : esc(p.position) + rankOf(p, 'consensus')) + '</td>' +

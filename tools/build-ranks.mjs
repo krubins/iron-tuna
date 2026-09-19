@@ -73,6 +73,14 @@ const CATEGORIES = [
   },
 ];
 
+// The Opportunity half of the "two lines under a name" explainer. It is the one
+// sentence on these pages that differs by category, because an opportunity is a
+// fixture on a week board and a slate on a season one. The lines themselves are
+// built in it-ranks.js; this is only the page's description of them, and the two
+// have to be changed together.
+const WEEK_OPP = 'the fixture, how hard the defense across from him has been on points allowed, and what the market implies his offense will score against its own season mean. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score.';
+const SEASON_OPP = 'the games and byes he has left, and how hard the defenses on that slate have been on points allowed. A defense is graded on the other side of the fixture, on what the offenses ahead of it are implied to score.';
+
 const pageFile = (cat, pos) => cat.slug + '-' + pos.slug + '-rankings.html';
 const pageHref = (cat, pos) => '/' + cat.slug + '-' + pos.slug + '-rankings';
 
@@ -302,6 +310,9 @@ ${chipsHtml(cat, pos ? pos.slug : null)}
      data-rk-weeks="${cat.weeks ? '1' : '0'}"
      data-rk-label="${esc(cat.h1)}"></div>
 
+<h2>How to read the two lines under a name</h2>
+<p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is what the board makes of him: where he ranks at his own position, what a rank like that is worth at that position, the points behind it, and an injury or a usage swing where there is one. <b>Opportunity</b> is what is in front of him: ${cat.id === 'season' ? SEASON_OPP : WEEK_OPP} Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
+
 <h2>How to read the two columns</h2>
 <p class="is-note"><b>Fantasy Consensus</b> is the projection consensus, scored at the setting you choose and nudged by a player&rsquo;s live usage once three games have earned it. <b>Betting Odds</b> is the same player priced off the sportsbook: his own posted props where a book has quoted them, otherwise the posted game line&rsquo;s scoring environment applied to his line, otherwise a fitted team rating for a fixture nobody has posted yet. The <b>Gap</b> column is the second minus the first, in points and in rank slots, and the verdict beside it is the site&rsquo;s standing classification of that gap. Neither column is a tip. They are two honest readings of the same player, and the argument between them is the useful part.</p>
 
@@ -319,8 +330,11 @@ ${chipsHtml(cat, pos ? pos.slug : null)}
      worker for the board already scored at the chosen preset, because the
      week-by-week drawer prints per-week points the browser has no stat line to
      recompute. One fetch per preset, edge-cached, instead of two engines to keep
-     in step. -->
+     in step. it-reads.js is the two lines under each name, shared with
+     /rankings so the tiers and the grades cannot drift between them; it is
+     loaded first because it-ranks.js calls it on the first render. -->
 <script src="/it-season.js" defer></script>
+<script src="/it-reads.js" defer></script>
 <script src="/it-ranks.js" defer></script>
 </body>
 </html>

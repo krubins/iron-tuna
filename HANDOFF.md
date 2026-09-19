@@ -11092,3 +11092,111 @@ that shapes it. This one is the first again, done properly — the enumeration
 has to be of what the READER sees change, not of what the code calls a
 photograph. Four greps end it: `heroPaint` has two callers, `$('fnRead')` and
 `$('dfRead')` one each.
+
+
+## 92. September 19: two lines under every name, on all seventeen rankings pages
+
+The sixteen rankings pages (`/weekly-*-rankings` and `/season-long-*-rankings`,
+all of them the one board in `it-ranks.js`) and the `/rankings` tool answered
+"how many points" in nine or fourteen columns and answered the two questions a
+reader actually arrives with in none of them: **is he any good**, and **is this
+a week to start him**. Both facts were already on the row, spread across a rank,
+an opponent, a schedule grade and a note, ten columns apart and off the right
+edge of a phone.
+
+Every row now carries **two sentences under the player's name**.
+
+| Line | What it says |
+|---|---|
+| **Player** | his rank at his own position on the board being shown, what a rank like that is worth at that position, the points behind it (per game on any multi-week horizon, where a total over a different number of games is not a comparison), and an injury or a usage swing where there is one. |
+| **Opportunity** | on a one-week board: the fixture, the matchup by the opponent's points allowed, and what the market implies his offense will score against its own season mean. On every longer horizon: the games and byes ahead, and how hard the defenses on that slate have been. |
+
+Read them as: *"WR9 this week, a weekly WR1, 14.8 points projected,
+with usage up 24% on his own average."* / *"at BUF, a hard matchup (4th by
+points allowed), with the offense implied for 20.5 points, 2.1 below its own
+season mean."*
+
+**They are the same numbers, said in words.** Nothing fetches, computes a
+projection or invents a grade. Every clause is a field of the payload the
+columns are built from, and a clause whose field is missing is **dropped**, not
+defaulted: an unpriced fixture says it is a fitted rating instead of quoting a
+line, a board with no usage behind it says nothing about usage, and a player
+with no game says exactly that. A season mean is only quoted against a line a
+book has posted, because a fitted rating measured against a mean of fitted
+ratings says nothing.
+
+**The grades are the worker's own where the worker publishes one.** A slate
+reads `scheduleDifficulty.label`, so the sentence cannot disagree with the
+Schedule column beside it, and the week grade uses the same two thresholds the
+worker uses for a season (`<= 11` hard, `>= 22` soft), so a week and a season
+grade mean the same thing.
+
+**The tiers are the standing shapes of the positions, not a read on a player.**
+`TIERS` in `it-ranks.js`: TE6 is a weekly starter and RB6 is a first-rounder, so
+a rank alone cannot say what it is worth. They are applied to the **consensus
+positional rank** every time, including on the FLEX pages where the `#` column
+is a pooled RB/WR/TE slot — "the 9th-best receiver" is a statement about the
+player, "flex 23" is a statement about a lineup slot.
+
+**A defense is graded on the other side of the fixture.** `opponentDefRank` and
+`implied` describe a club's *offense*, which is not what a DST scores off, so a
+DST line reads the allowed side instead: what the opponent is expected to score,
+against what this club allows across its own schedule. That side was computed in
+`weekEnvironment` and thrown away; it is now returned (`allowedImplied`,
+`allowedExpected`, `allowedDelta`) and shipped on every week row's `env`. The
+addition is **purely additive** — `BOARDS_CONTRACT` is unchanged — and a season
+DST line averages the per-week `allowedDelta` in the browser, skipping byes,
+absences and unpriced fixtures rather than counting them as zero.
+
+**One thing beside the lines changed.** The week board's Opponent cell filtered
+out both byes *and* absences and then printed `BYE` for whatever was left, so a
+player ruled out had a bye printed over a fixture he has. It now prints the
+fixture with an `OUT` tag, which is what the Opportunity line underneath says
+too.
+
+### The lines are one file, and /rankings prints them too
+
+**`it-reads.js` is the grammar and the tiers, and nothing else.** Two surfaces
+print these lines and they compute their inputs differently, so if each wrote
+its own sentences the tiers would drift apart within a season and the same
+player would be "a weekly WR1" on one page and "a WR2" on the other. The file
+exports `window.ITReads` — `cell(p, o)` (both lines, in the markup every board
+prints them in), `player`, `opportunity`, and the helpers. It is loaded before
+the script that calls it on all seventeen pages, and both callers guard on
+`window.ITReads` so a row renders without it rather than throwing.
+
+**The caller passes in the only two things it alone knows: WHICH RANK and
+WHICH POINTS.**
+
+| Surface | Rank | Points | Horizons |
+|---|---|---|---|
+| the sixteen pages (`it-ranks.js`) | `p.consensus.rank` — the column the ranking is published on | `p.consensus.points`, scored on the server | `week`, `ros` |
+| `/rankings` | `r[f + 'Rank']` for the board the reader picked (`i`/`c`/`v`/`b`) | `bp(r)`, re-scored in the browser at his own league settings | `week`, `next3`, `ros`, `playoffs` |
+
+On `/rankings` that binding is the whole point: the reader switches between four
+boards and the `#` column follows him, so the rank in the sentence has to follow
+him too or the row contradicts itself. Both pass the POSITIONAL rank even when
+the table is ranking the pooled flex slot, and both set `spellOut` on FLEX so
+the spelled-out number cannot be read as the `#` beside it.
+
+`HZ` in `it-reads.js` gives each horizon its two words: `when` for the player
+line (`this week` / `over the next three weeks` / `the rest of the way` / `in
+weeks 15–17`) and `slate` for the opportunity line. A one-week board takes the
+fixture branch; every longer horizon takes the slate branch.
+
+| Where | What |
+|---|---|
+| `it-reads.js` | `TIERS`, `POS_LONG`, `HZ`, `tierOf`, `gradeOf`, `ord`, `awayFrom`, `plural`, `listOf`, `player`, `opportunity`, `weekOpportunity`, `slateOpportunity`, `avgAllowedDelta`, `cell`. |
+| `it-ranks.js` | one `reads(p)` that feeds it the consensus rank and points. |
+| `rankings.html` | one `reads(r)` in the same shape, plus the `<script src="/it-reads.js">` before its own block, and its own "How to read the two lines under a name" section under the board. |
+| `site.css` | `.rk-vs td.rk-who` **and** `.rk-table td.p`. The specificity is load-bearing on `/rankings`: its inline sheet carries `.rk-table td.p span { display:block; font-size:12px; color:var(--muted) }` for the position under the name, and inline beats a linked file at equal specificity, so every rule names three classes and the key names its own `display`. `/stats` shares `td.rk-who` and is deliberately not listed: it prints what was played, which has no opportunity to grade. |
+| the sixteen pages | a "How to read the two lines under a name" section above the existing "How to read the two columns". `tools/build-ranks.mjs` carries it too (`WEEK_OPP` / `SEASON_OPP`) along with the new script tag, so a page scaffolded later is born with both. |
+| `_worker.js` | `weekEnvironment` returns the allowed side; `buildBoards` ships it on `weekRows[].env`. |
+| `tools/test-ranks.mjs` | the tier and grade helpers are lifted out of `it-reads.js` with `new Function` and actually run: the thresholds, the ordinals, the "level with" case, the bye list, a horizon's words. Plus the assertions that there is exactly ONE copy of the tiers, that both boards call it and load it first, that a clause never defaults, and that a defense is never graded on its own offense. |
+| `tools/test-boards.mjs` | the allowed side of a fixture is the other club's scored side, and an unposted week has `null` rather than a zero delta. |
+
+`node tools/test-ranks.mjs` (71) and `node tools/test-boards.mjs` (85) pass, and
+`node tools/build-ranks.mjs --check` is clean. Both surfaces were driven in a
+real Chromium against a worker-built payload — the sixteen pages at desktop and
+390px, and `/rankings` across all four horizons, all four boards and QB / RB /
+FLEX / K / DST, with no page errors.
