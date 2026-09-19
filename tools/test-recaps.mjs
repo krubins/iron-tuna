@@ -124,7 +124,9 @@ console.log('\nthe homepage carries no second recap surface');
   // What replaced it: the desk's current pieces, hidden until the feed answers.
   ok('the desk section is there instead, hidden until it has something',
     /<section class="hm-sec" id="articles" hidden/.test(front));
-  ok('and it reads the content desk', front.includes("grab('/api/content'"));
+  // The published feed, not the archive index (§90). This pinned the archive
+  // and went red when the page was fixed.
+  ok('and it reads the desk\u2019s published feed', front.includes("grab('/api/newsroom"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

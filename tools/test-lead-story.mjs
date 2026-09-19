@@ -229,7 +229,12 @@ console.log('\nthe homepage carries no lead of its own');
   ok('and no build-time drop-page library behind one',
      !/var STORIES = \[|var PLAYERS = \{/.test(front));
   // What stands in its place, and the rule it keeps: real current pieces only.
-  ok('the desk section reads /api/content', front.includes("grab('/api/content'"));
+  // /api/newsroom, not /api/content (§90): the archive index served held
+  // drafts of one story as five separate cards. The feed is published rows
+  // only, one per slug, expiry applied. This assertion pinned the archive and
+  // went red when the page was fixed; it pins the feed now.
+  ok('the desk section reads the published feed', front.includes("grab('/api/newsroom"));
+  ok('and not the archive index', !front.includes("grab('/api/content'"));
   ok('and is hidden until that feed answers with something',
      /<section class="hm-sec" id="articles" hidden/.test(front));
 }
