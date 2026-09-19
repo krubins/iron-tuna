@@ -69,6 +69,30 @@ player keeps his whole market number (`shrink = 1`). A player priced only off
 his game line keeps 80% of the distance. A fitted team rating keeps 55%. A
 player with no market at all lands exactly on the consensus (`shrink = 0`).
 
+### Priced, and still not projectable
+
+A quote is not automatically a projection. `VEGAS_MARKETS` names a **core** per
+position, and a market projection needs one of them before any price means
+anything:
+
+| Position | Core | With only an anytime-TD price |
+|---|---|---|
+| WR, TE | `recYd`, `rec` | no projection |
+| QB | `passYd`, `passTD` | no projection |
+| RB | `rushYd`, `anytimeTD` | partial — the TD price is half its core |
+
+So a feed that posts an anytime-touchdown price on four hundred players and a
+yardage line on none of them produces a very healthy-looking row count and
+**zero** market projections for receivers, tight ends and quarterbacks. Those
+players fall back to the game line, and `vegas.basis` never reaches `props`.
+
+The row carries `market.shortOfProjection` for exactly that case, with
+`shortPriced` / `shortMissing` naming what was posted and what was needed. The
+coverage block counts them as `quotedButShort`, separately from `priced`, and
+`dfsPropNote()` leads with it when it applies — because "the books ignored him"
+and "the books quoted only his touchdown" are different facts with different
+fixes, and they are indistinguishable unless something says so.
+
 ### The Market read build
 
 `mode: 'market'` ("Market read (props first)") maximizes `marketPoints`. The

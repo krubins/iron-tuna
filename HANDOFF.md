@@ -11431,3 +11431,67 @@ Guarded by `tools/test-worker-odds.mjs` ("this week's props, end to end"):
 each of the four states against a fake D1, coverage measured against the board
 rather than the store, the ambiguous-name rule, out of season, and a read
 failure.
+
+## 96. September 19: 720 quoted props, and not one of them could project a receiver
+
+Ken, checking the Quoted Props board: *"There are quite a few anytime TD props
+and it says that there are 720 props."*
+
+Props are flowing. The collection is fine. And the number does not mean what it
+looks like it means.
+
+**A market projection needs a CORE market before a price means anything**
+(`VEGAS_MARKETS`), and an anytime-touchdown price is not one, except for a
+running back:
+
+| Position | Core markets | With only an anytime-TD price |
+|---|---|---|
+| WR, TE | `recYd`, `rec` | **no projection** |
+| QB | `passYd`, `passTD` | **no projection** |
+| RB | `rushYd`, `anytimeTD` | partial — the TD price is half his core |
+
+`vegasProjection` returns `unavailable / no_core_market` for the first two, so
+every receiver, tight end and quarterback falls back to the game line, and
+`vegas.basis` never reaches `props`. That is how "we have 720 props" and "no
+player carries a market projection" are both true on the same afternoon. Pinned
+in `tools/test-market.mjs`, "an anytime-touchdown-only feed", against the real
+projection code rather than a restatement of it.
+
+### Three places were hiding it
+
+**1. The Vegas Edge summary printed a total, not a mix.** `propSummary` has
+counted distinct markets since §80 and the page never printed the number:
+"720 quoted markets on N players across B books" reads identically for nine
+markets and for one. It now prints the breakdown — *anytime TD 612 · receiving
+yards 58 · receptions 50* — and, when only one market is posted, says in words
+that player projections are still coming from the game lines and why.
+
+**2. The board threw the diagnosis away.** `buildBoards` kept
+`vegasProjection.reason` and `.priced` only on the SUCCESS branch; an
+unavailable projection was reduced to `{status, label}`. So a man the books had
+priced on his touchdown and a man no book had looked at arrived downstream
+identical. Both now carry `reason`, `priced` and `missing`.
+
+**3. The slate could not tell those two men apart either.** A new state on the
+market read, `shortOfProjection`: quoted, and not on anything a projection can
+be built from. It is counted separately in the coverage
+(`quotedButShort`, `shortMarkets`), and it is the FIRST thing the note says
+when it applies, because it is the confusing one:
+
+> The books have posted on 214 players here, but only anytime TD — and a
+> market projection needs a yardage or reception line before a price means
+> anything. So every number on this slate is still the game line's
+> environment, discounted for it... This is a feed carrying one market, not a
+> feed carrying none.
+
+The player pool shows `TD ONLY` rather than `LINES`, and the player's line
+says what the books posted and what a projection would have needed.
+
+### What this does not do
+
+It does not make the feed carry yardage lines. If the breakdown on Vegas Edge
+comes back overwhelmingly `anytimeTD`, the fix is upstream — `TMS_PROP_MARKETS`
+narrowed, or the PropLine tier not returning the yardage markets for each
+event — and that is a configuration question, not a code one. What changed here
+is that the site now says which of those it is instead of presenting a healthy
+row count over a board that cannot use it.

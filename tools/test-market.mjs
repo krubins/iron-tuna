@@ -372,6 +372,29 @@ console.log('\nthe projection itself');
   const thin = M.vegasProjection({ rushYd: [mk(12.5, 'dk')] }, 'WR', R, { asOf: Date.now() });
   ok('one non-core market is not a projection', !thin.ok && thin.reason === 'no_core_market');
 
+  // ── an anytime-touchdown-only feed ──────────────────────────────────────
+  // The shape a thin prop feed actually takes: books post a touchdown price on
+  // everybody and a yardage line on nobody. It looks like a healthy feed —
+  // hundreds of quoted markets — and it cannot project a receiver or a
+  // quarterback, because neither of their core markets is a touchdown price.
+  // Only the running back survives it, and only partially, because anytimeTD
+  // is half of HIS core. This is why "we have 720 props" and "no player has a
+  // market projection" are both true at once, and it is pinned here so the two
+  // halves of that sentence can never drift apart.
+  const tdOnly = pos => M.vegasProjection({ anytimeTD: [{ book: 'dk', overOdds: -110, underOdds: -110 }, { book: 'fd', overOdds: -120, underOdds: 100 }] }, pos, R, { asOf: Date.now() });
+  ok('a touchdown price alone cannot project a receiver', !tdOnly('WR').ok && tdOnly('WR').reason === 'no_core_market');
+  ok('...nor a tight end', !tdOnly('TE').ok && tdOnly('TE').reason === 'no_core_market');
+  ok('...nor a quarterback', !tdOnly('QB').ok && tdOnly('QB').reason === 'no_core_market');
+  ok('...but it is half a running back\'s core, so he gets a partial one',
+     tdOnly('RB').ok && tdOnly('RB').status === 'partial' && tdOnly('RB').missingCore.includes('rushYd'));
+  ok('the unavailable answer still reports what WAS priced, so the gap is diagnosable',
+     tdOnly('WR').priced.join(',') === 'anytimeTD' && tdOnly('WR').missing.includes('recYd') && tdOnly('WR').missing.includes('rec'));
+  ok('a single yardage line rescues the receiver the touchdown price could not',
+     M.vegasProjection({ recYd: [mk(52.5, 'dk')], anytimeTD: [{ book: 'dk', overOdds: -110, underOdds: -110 }] }, 'WR', R, { asOf: Date.now() }).ok === true);
+  ok('the core markets are what that turns on, per position',
+     M.VEGAS_MARKETS.WR.core.join(',') === 'recYd,rec' && M.VEGAS_MARKETS.QB.core.join(',') === 'passYd,passTD'
+     && M.VEGAS_MARKETS.RB.core.join(',') === 'rushYd,anytimeTD');
+
   // A count TD market beats the binary, because it carries multi-score games.
   const counted = M.vegasProjection({
     recYd: [mk(80.5, 'dk')], rec: [mk(6.5, 'dk')], recTD: [mk(0.8, 'dk')],

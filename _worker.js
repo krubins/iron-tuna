@@ -6620,7 +6620,15 @@ function buildBoards(ctx, opts) {
         basis, confidence: conf, kickoff: env.kickoff, status: env.status, gameState: _fixtureState(env, state),
         consensusPts: _oddsRound(scoreAny(c, p.position, rules, 1)), vegasPts: _oddsRound(scoreAny(v, p.position, rules, 1)),
         ironTunaPts: _oddsRound(scoreAny(i, p.position, rules, 1)),
-        vegasProjection: vp && vp.ok ? { status: vp.status, label: vp.label, confidence: vp.confidence, td: vp.td, priced: vp.priced, missing: vp.missingCore, books: vp.books, ageHours: vp.ageHours, reasons: vp.confidenceReasons } : (vp ? { status: vp.status, label: vp.label } : null) });
+        // An UNAVAILABLE projection carries its evidence too. A player whose
+        // only quoted market is his anytime touchdown has been priced by the
+        // books and still cannot be projected from them, because a WR needs a
+        // yardage or reception line before a market number means anything
+        // (VEGAS_MARKETS.core). Dropping `reason` and `priced` here made that
+        // man indistinguishable from one no book has looked at, and the
+        // difference is the whole diagnosis when a feed is carrying one market.
+        vegasProjection: vp && vp.ok ? { status: vp.status, label: vp.label, confidence: vp.confidence, td: vp.td, priced: vp.priced, missing: vp.missingCore, books: vp.books, ageHours: vp.ageHours, reasons: vp.confidenceReasons }
+          : (vp ? { status: vp.status, label: vp.label, reason: vp.reason, priced: vp.priced || [], missing: vp.missing || [] } : null) });
     }
     const vegasConf = confN ? _confFrom(confSum / confN) : 'LOW';
     // Iron Tuna's own confidence: the Vegas grade lifted one step when a
@@ -7087,8 +7095,16 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   }
   propBoard.sort((a, b) => Math.abs(b.edge == null ? -1 : b.edge) - Math.abs(a.edge == null ? -1 : a.edge) ||
     String(a.name).localeCompare(String(b.name)) || PROP_BOARD_ORDER.indexOf(a.market) - PROP_BOARD_ORDER.indexOf(b.market));
+  // Which markets, and how many of each. The count of distinct markets was
+  // already here and the page never printed it, so "720 quoted markets" could
+  // be nine markets or it could be one, and nothing on the site said which.
+  // That is the difference between a feed that can project a receiver and one
+  // that cannot, so it is now a breakdown rather than a total.
+  const propByMarket = {};
+  for (const r of propBoard) propByMarket[r.market] = (propByMarket[r.market] || 0) + 1;
   const propSummary = { rows: propBoard.length, players: new Set(propBoard.map(r => r.key)).size,
-    markets: new Set(propBoard.map(r => r.market)).size, books: propBooks.size, capped: propBoard.length > PROP_BOARD_CAP };
+    markets: new Set(propBoard.map(r => r.market)).size, byMarket: propByMarket, books: propBooks.size,
+    capped: propBoard.length > PROP_BOARD_CAP };
   // Game environments, with movement off the game snapshots.
   // The model's OWN expected points per club this week, read off the boards the
   // players already carry (weekEnvironment put it there as env.expected: club
@@ -11989,7 +12005,17 @@ function dfsMarketRead(p, w0, vegasPts, consensusPts) {
   const shrink = BLEND_SHRINK[basis] != null ? BLEND_SHRINK[basis] : BLEND_SHRINK.none;
   // The week's own projection block, where this week's props were priced.
   // A season horizon has none, and an unavailable one is not evidence.
-  const vp = w0 && w0.vegasProjection && w0.vegasProjection.status && w0.vegasProjection.status !== 'unavailable' ? w0.vegasProjection : null;
+  const raw = w0 && w0.vegasProjection && w0.vegasProjection.status ? w0.vegasProjection : null;
+  const vp = raw && raw.status !== 'unavailable' ? raw : null;
+  // PRICED BUT SHORT. A projection needs a core market before a quote means
+  // anything: a receiver needs a yardage or reception line, a quarterback a
+  // passing line. A man whose only posted market is his anytime touchdown HAS
+  // been priced by the books and still gets the game-line number, because
+  // there is nothing to build a line out of. Before this he was indis-
+  // tinguishable from a man nobody looked at, which is how a feed carrying one
+  // market looks exactly like a feed carrying none.
+  const short = !vp && raw && raw.reason === 'no_core_market' && Array.isArray(raw.priced) && raw.priced.length
+    ? { priced: raw.priced.slice(), missing: Array.isArray(raw.missing) ? raw.missing.slice() : [] } : null;
   const td = (vp && vp.td) || (p && p.vegas && p.vegas.td) || null;
   const c = Number.isFinite(consensusPts) ? consensusPts : 0;
   const v = Number.isFinite(vegasPts) ? vegasPts : c;
@@ -12000,6 +12026,10 @@ function dfsMarketRead(p, w0, vegasPts, consensusPts) {
     quoted: /^props/.test(basis),
     priced, pricedLabels: priced.map(m => DFS_PROP_LABEL[m] || m),
     missing: vp && Array.isArray(vp.missing) ? vp.missing.slice() : [],
+    // Quoted, but not on anything a projection can be built from.
+    shortOfProjection: !!short,
+    shortPriced: short ? short.priced : [], shortPricedLabels: short ? short.priced.map(m => DFS_PROP_LABEL[m] || m) : [],
+    shortMissing: short ? short.missing : [], shortMissingLabels: short ? short.missing.map(m => DFS_PROP_LABEL[m] || m) : [],
     books: vp && Number.isFinite(vp.books) ? vp.books : null,
     ageHours: vp && Number.isFinite(vp.ageHours) ? vp.ageHours : null,
     status: vp ? vp.status : null,
@@ -12019,11 +12049,15 @@ function dfsMarketRead(p, w0, vegasPts, consensusPts) {
 function dfsPropCoverage(rows) {
   const on = (rows || []).filter(r => r.onBoard && r.available !== false && r.market);
   const basis = {};
-  const markets = new Set();
-  let priced = 0, books = 0, bookN = 0, fresh = null;
+  const markets = new Set(), shortMarkets = new Set();
+  let priced = 0, short = 0, books = 0, bookN = 0, fresh = null;
   for (const r of on) {
     const m = r.market;
     basis[m.basis] = (basis[m.basis] || 0) + 1;
+    // Priced, but on nothing a projection can be built from. Counted apart,
+    // because "the books ignored him" and "the books quoted only his
+    // touchdown" are different facts with different fixes.
+    if (m.shortOfProjection) { short++; for (const k of m.shortPriced) shortMarkets.add(k); }
     if (!m.quoted) continue;
     priced++;
     if (m.books) { books += m.books; bookN++; }
@@ -12032,19 +12066,30 @@ function dfsPropCoverage(rows) {
   }
   return { players: on.length, priced, coverage: on.length ? Math.round(priced / on.length * 100) : 0,
            basis, markets: [...markets].sort(), marketLabels: [...markets].sort().map(k => DFS_PROP_LABEL[k] || k),
+           quotedButShort: short, shortMarkets: [...shortMarkets].sort(),
+           shortMarketLabels: [...shortMarkets].sort().map(k => DFS_PROP_LABEL[k] || k),
            avgBooks: bookN ? Math.round(books / bookN * 10) / 10 : null, freshestHours: fresh };
 }
 // Said in one sentence, because every DFS surface prints it and they must not
 // drift. It never claims a prop that is not there and never hides one that is.
 function dfsPropNote(cov) {
   if (!cov || !cov.players) return null;
+  // The confusing state, and the one worth naming first: the books HAVE posted,
+  // and none of it can carry a projection. A slate full of anytime-touchdown
+  // prices and nothing else looks identical to a slate with no props at all
+  // unless somebody says this out loud.
+  if (!cov.priced && cov.quotedButShort) {
+    return 'The books have posted on ' + cov.quotedButShort + ' player' + (cov.quotedButShort === 1 ? '' : 's') + ' here, but only ' + cov.shortMarketLabels.join(' and ') + ' \u2014 and a market projection needs a yardage or reception line before a price means anything. So every number on this slate is still the game line\u2019s environment, discounted for it, and the prop-first build falls back to the consensus projection. This is a feed carrying one market, not a feed carrying none.';
+  }
   if (!cov.priced) {
     return 'No player prop has reached this slate. Books post them; none are in the feed behind this build, so every market number here is the game line\u2019s environment applied to the player\u2019s share of it, and is discounted accordingly. The prop-first build falls back to the consensus projection rather than presenting a fitted number as a market read.';
   }
   return 'The books have priced ' + cov.priced + ' of ' + cov.players + ' players on this slate (' + cov.coverage + '%)'
     + (cov.avgBooks ? ', ' + cov.avgBooks + ' books apiece' : '')
     + (cov.freshestHours != null ? ', pulled ' + (cov.freshestHours < 1 ? 'within the hour' : Math.round(cov.freshestHours) + ' hours ago') : '')
-    + '. Markets quoted: ' + cov.marketLabels.join(', ') + '. Everyone else carries the game line\u2019s environment, discounted for it.';
+    + '. Markets quoted: ' + cov.marketLabels.join(', ') + '.'
+    + (cov.quotedButShort ? ' Another ' + cov.quotedButShort + ' carry only ' + cov.shortMarketLabels.join(' and ') + ', which is not enough to build a projection from.' : '')
+    + ' Everyone else carries the game line\u2019s environment, discounted for it.';
 }
 function buildDfsSlate(site, salaries, board, opts) {
   const S = DFS_SITES[site];

@@ -293,6 +293,19 @@ console.log('\nthe weekly betting market');
      g.shrink === 0.8 && near(g.points, 14.0 + 0.8 * 4.4, 0.05) && g.points < 18.4 && g.points > 14.0);
   ok('...and names no market, because no book posted one', g.priced.length === 0 && g.books === null);
 
+  // PRICED BUT SHORT. The books posted on him — an anytime-touchdown price —
+  // and it is not something a receiver's projection can be built from, so he
+  // still carries his game's environment. This looks identical to "no book
+  // looked at him" unless it is counted and said separately, which is how a
+  // feed carrying one market reads as a feed carrying none.
+  const shortW0 = { env: {}, vegasProjection: { status: 'unavailable', reason: 'no_core_market', priced: ['anytimeTD'], missing: ['recYd', 'rec'] } };
+  const sh = H.dfsMarketRead({ vegas: { basis: 'gamelines', confidence: 'MEDIUM' } }, shortW0, 18.4, 14.0);
+  ok('a man priced only on his touchdown is flagged as short of a projection', sh.shortOfProjection === true && sh.quoted === false);
+  ok('...and names what the books DID post', sh.shortPricedLabels.join(',') === 'anytime TD');
+  ok('...and what a projection would have needed', sh.shortMissingLabels.includes('receiving yards') && sh.shortMissingLabels.includes('receptions'));
+  ok('...while still being discounted like any unquoted man', sh.shrink === 0.8 && sh.points < 18.4);
+  ok('a man nobody priced at all is NOT flagged short', g.shortOfProjection === false && g.shortPriced.length === 0);
+
   const fitted = H.dfsMarketRead({ vegas: { basis: 'ratings', confidence: 'LOW' } }, { env: {} }, 18.4, 14.0);
   ok('a fitted team rating is trusted least of all', fitted.shrink === 0.55 && fitted.points < g.points);
   const nothing = H.dfsMarketRead({ vegas: { basis: 'none' } }, null, 18.4, 14.0);
@@ -320,6 +333,21 @@ console.log('\nthe weekly betting market');
   ok('the union of quoted markets is reported', cov.markets.join(',') === 'anytimeTD,rec,recYd');
   ok('and the freshest pull behind them', cov.freshestHours === 0.5);
   ok('the note quotes the real numbers', /2 of 3 players/.test(H.dfsPropNote(cov)) && /receiving yards/.test(H.dfsPropNote(cov)));
+  // The whole slate priced on touchdowns and nothing else: the state that
+  // reads as "props are working" on one page and "no props" on another.
+  const tdOnlyCov = H.dfsPropCoverage([
+    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: true, shortPriced: ['anytimeTD'] } },
+    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: true, shortPriced: ['anytimeTD'] } },
+    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: false, shortPriced: [] } }
+  ]);
+  ok('a touchdown-only slate counts the priced-but-short apart from the unpriced',
+     tdOnlyCov.priced === 0 && tdOnlyCov.quotedButShort === 2 && tdOnlyCov.shortMarketLabels.join(',') === 'anytime TD');
+  ok('...and the note says the books DID post, rather than claiming they did not',
+     /The books have posted on 2 players/.test(H.dfsPropNote(tdOnlyCov)) && /anytime TD/.test(H.dfsPropNote(tdOnlyCov)));
+  ok('...and says why that is not enough, and what it fell back to',
+     /needs a yardage or reception line/.test(H.dfsPropNote(tdOnlyCov)) && /falls back to the consensus/.test(H.dfsPropNote(tdOnlyCov))
+     && /one market, not a feed carrying none/.test(H.dfsPropNote(tdOnlyCov)));
+
   const noneCov = H.dfsPropCoverage([{ onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [] } }]);
   ok('with nothing priced the note says so and says what it falls back to',
      /No player prop has reached this slate/.test(H.dfsPropNote(noneCov)) && /falls back to the consensus/.test(H.dfsPropNote(noneCov)));
@@ -434,6 +462,7 @@ console.log('\nthe DFS page explanations');
   ok('the slate dashboard reports prop coverage as a number, not a boolean', page.includes("card('Books priced'") && page.includes('s.props.coverage'));
   ok('a quoted anytime-touchdown price is named as devigged market, never as a derived one', page.includes("p.tdBasis === 'anytime-td-market'") && page.includes('devigged'));
   ok('a partly quoted man says which part of his line is still the game environment', page.includes("m.status === 'partial'") && page.includes('still the game environment'));
+  ok('a man priced only on his touchdown says so, and is not shown as unpriced', page.includes('m.shortOfProjection') && page.includes('TD ONLY') && page.includes('and nothing else'));
   const scripts = [...page.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
   ok('every inline DFS script parses', (() => { try { scripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
 }

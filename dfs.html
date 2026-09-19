@@ -1005,6 +1005,12 @@ p{color:var(--sec);margin:0 0 16px}
   var MARKET_LABEL = { passYd: 'passing yards', passTD: 'passing TDs', passInt: 'interceptions', rushYd: 'rushing yards',
                        rushAtt: 'carries', rushTD: 'rushing TDs', recYd: 'receiving yards', rec: 'receptions',
                        recTD: 'receiving TDs', anytimeTD: 'anytime TD' };
+  // A man priced on one market only is neither PROPS nor plain LINES: the
+  // books looked at him, and it was not enough to project from.
+  function marketChipFor(m) {
+    if (m && m.shortOfProjection) return ['TD ONLY', 'inferred'];
+    return MARKET_CHIP[m && m.basis] || MARKET_CHIP.none;
+  }
   var MARKET_CHIP = { 'props': ['PROPS', 'quoted'], 'props-partial': ['PROPS', 'quoted'], 'props+gamelines': ['PROPS', 'quoted'],
                       'gamelines': ['LINES', 'inferred'], 'gamelines+ratings': ['LINES', 'inferred'],
                       'ratings': ['FITTED', 'fitted'], 'none': ['\u2014', 'fitted'] };
@@ -1022,6 +1028,13 @@ p{color:var(--sec);margin:0 0 16px}
         + (m.status === 'partial' && m.missing && m.missing.length
             ? ' No line posted on ' + m.missing.map(function (k) { return MARKET_LABEL[k] || k; }).join(' or ') + ', so that part is still the game environment.' : '');
     }
+    // Priced, and still not projectable. The most confusing row on the board
+    // until somebody says why: the books DID post on him.
+    if (m.shortOfProjection) {
+      return 'The books posted ' + (m.shortPricedLabels || []).join(', ') + ' on him and nothing else. A market projection needs '
+        + ((m.shortMissingLabels || []).join(' or ') || 'a yardage or reception line')
+        + ', so his number here is still his game\u2019s environment, discounted for it.';
+    }
     if (m.basis === 'ratings' || m.basis === 'none') {
       return 'No book priced him and no line is posted on his game. This number is a fitted team rating, and the build discounts it to ' + Math.round((m.shrink || 0) * 100) + '% of the way from the consensus.';
     }
@@ -1030,7 +1043,7 @@ p{color:var(--sec);margin:0 0 16px}
   function marketTag(p) {
     var m = p && p.market;
     if (!m) return '<span class="df-mkt-fitted">\u2014</span>';
-    var chip = MARKET_CHIP[m.basis] || MARKET_CHIP.none;
+    var chip = marketChipFor(m);
     return '<span class="df-mkt-' + chip[1] + '" title="' + e(marketPhrase(p)) + '">' + chip[0]
       + (m.quoted && m.books ? ' <small>' + m.books + '</small>' : '') + '</span>';
   }
