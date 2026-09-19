@@ -2050,6 +2050,30 @@ function _availStatusOf(entry) {
   if (/^Out$/i.test(st) && fs !== 'PUP-P') return { status: 'Out', min: AVAIL_MIN_GAMES, reserve: false, needsDate: true };
   return null;
 }
+// THIS WEEK'S designation, which is the part the block above throws away.
+// Everything above answers a SEASON question, and by §48 a Questionable tag —
+// or a plain "Out" with no return date — is not a change to a full-season
+// line, so it maps to nothing and the board never hears about it. A single
+// slate asks the opposite question. Spending $5,800 of a $50,000 cap on a
+// receiver the report ruled out on Friday is the one mistake a lineup builder
+// must not make, and the feed already says so.
+//
+// So the same pull keeps a second table beside the first: the game status the
+// report carries for the week in front of us, for every board player who has
+// one. It never touches gamesOut, the pro-rating factor, or anything the
+// season path reads.
+function _availWeekStatusOf(entry) {
+  if (_availStatusOf(entry)) return 'Out';   // IR, PUP, NFI, suspended, exempt, ruled out
+  const st = String((entry && entry.status) || '').trim();
+  // Active/PUP is the one "Out" the season list declines on purpose (he can be
+  // activated any day, so it is no season line change). He is still not playing
+  // on Sunday, which is the only question being asked here.
+  if (/^out$/i.test(st)) return 'Out';
+  if (/^doubtful$/i.test(st)) return 'Doubtful';
+  if (/^questionable$/i.test(st)) return 'Questionable';
+  return null;                                // Probable, Day-To-Day, Active: he is expected to play
+}
+const AVAIL_WEEK_RANK = { Out: 3, Doubtful: 2, Questionable: 1 };
 // Week 1 kicks off on the Thursday after Labor Day (the first Monday of September).
 function _availKickoff(year) {
   const first = new Date(Date.UTC(year, 8, 1)).getUTCDay();
@@ -2092,6 +2116,7 @@ function buildAvailabilityOverlay(feed) {
   const kickoff = _availKickoff(year);
   const board = _availBoardIndex();
   const players = {};
+  const weekly = {};
   const skipped = { unlisted: 0, weekToWeek: 0, short: 0 };
   let entries = 0;
   for (const t of teams) for (const e of (t && Array.isArray(t.injuries)) ? t.injuries : []) {
@@ -2101,17 +2126,24 @@ function buildAvailabilityOverlay(feed) {
     const key = _oddsNorm(a.displayName) + '|' + pos;
     const p = board.get(key);
     if (!p) { skipped.unlisted++; continue; }
+    const type = String((e.details || {}).type || '').trim();
+    const note = ((type && !/^(Undisclosed|Suspension|Personal)$/i.test(type) ? type + ': ' : '') + String(e.shortComment || '').trim()).slice(0, 160);
+    // This week first, and independently: a Questionable tag reaches no other
+    // table here, and a slate is the one reader that needs it.
+    const wk = _availWeekStatusOf(e);
+    if (wk && !(weekly[key] && AVAIL_WEEK_RANK[weekly[key].status] >= AVAIL_WEEK_RANK[wk])) {
+      weekly[key] = { name: p.name, position: p.position, team: p.team, status: wk, note, asOf: asOf.slice(0, 10) };
+    }
     const m = _availStatusOf(e);
     if (!m) { skipped.weekToWeek++; continue; }
     const gamesOut = _availGamesOut(e, kickoff, m);
     if (!gamesOut) { skipped.short++; continue; }
     if (players[key] && players[key].gamesOut >= gamesOut) continue;   // two entries for one man: the longer absence
-    const type = String((e.details || {}).type || '').trim();
-    const note = ((type && !/^(Undisclosed|Suspension|Personal)$/i.test(type) ? type + ': ' : '') + String(e.shortComment || '').trim()).slice(0, 160);
     players[key] = { name: p.name, position: p.position, team: p.team, status: m.status, gamesOut, note,
                      source: 'ESPN injury feed ' + asOf.slice(0, 10), asOf: asOf.slice(0, 10) };
   }
-  return { players, matched: Object.keys(players).length, teams: teams.length, entries, skipped, asOf };
+  return { players, weekly, matched: Object.keys(players).length, weeklyMatched: Object.keys(weekly).length,
+           teams: teams.length, entries, skipped, asOf };
 }
 // committed ∪ live, live winning per player except downward on gamesOut (see the
 // note at the top of this block). Every entry records the committed number so
@@ -2127,10 +2159,12 @@ function availabilityMerge(committed, live) {
   return out;
 }
 let _AVAIL_TABLE = availabilityMerge(AVAILABILITY, null);   // what every sync reader below sees
+let _AVAIL_WEEK = {};     // this week's designations; empty until a live row carries them
 let _AVAIL_AT = 0;        // when the memo was last loaded from D1 (0 = never)
 let _AVAIL_LIVE_AT = 0;   // updated_at of the live row behind it (0 = committed block only)
 let _AVAIL_KICK_AT = 0;
 function _availTable() { return _AVAIL_TABLE; }
+function _availWeekTable() { return _AVAIL_WEEK; }
 // The merged table, loaded once per isolate-quarter-hour. oddsCacheRead calls
 // this first, so every path that reads the overlay has the live list in place
 // before blendProjections / applyAvailability run.
@@ -2138,9 +2172,16 @@ async function availabilityTable(env) {
   if (_AVAIL_AT && Date.now() - _AVAIL_AT < AVAIL_MEMO_MS) return _AVAIL_TABLE;
   const live = await availabilityCacheRead(env);
   _AVAIL_TABLE = availabilityMerge(AVAILABILITY, live && live.players);
+  _AVAIL_WEEK = (live && live.weekly) || {};
   _AVAIL_LIVE_AT = live ? live.updatedAt : 0;
   _AVAIL_AT = Date.now();
   return _AVAIL_TABLE;
+}
+// The pair a slate needs: the season list (which weeks a man on a reserve
+// list is missing) and this week's report. Loading the first fills the second.
+async function availabilityForWeek(env) {
+  const table = await availabilityTable(env);
+  return { table, weekly: _availWeekTable() };
 }
 // The factor a market (full-season) line takes for this player.
 function _availFactor(key) {
@@ -3836,13 +3877,17 @@ async function oddsCacheWrite(env, overlay, provider, matched) {
 }
 // The live availability list: row 3 of the same table, same lifecycle, no
 // migration. payload = { asOf, players: { "<norm>|<POS>": { name, position,
-// team, status, gamesOut, note, source, asOf } } }, provider 'espn-injuries',
+// team, status, gamesOut, note, source, asOf } }, weekly: { "<norm>|<POS>":
+// { name, position, team, status, note, asOf } } }, provider 'espn-injuries',
 // matched = the number of board players listed, updated_at = when it was pulled.
+// `weekly` is this week's game-status designations and is read separately: an
+// older row written before it existed simply has none, which is why nothing
+// below treats its absence as a broken row.
 async function availabilityCacheWrite(env, built) {
   await oddsCacheInit(env);
   await env.LEADS_DB.prepare(
     'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (3, ?, ?, ?, ?)'
-  ).bind(JSON.stringify({ asOf: built.asOf, players: built.players }), 'espn-injuries', built.matched, Date.now()).run();
+  ).bind(JSON.stringify({ asOf: built.asOf, players: built.players, weekly: built.weekly || {} }), 'espn-injuries', built.matched, Date.now()).run();
 }
 // Strict on the way back: a row that is not exactly the shape written above is
 // not used at all, rather than half-used.
@@ -3857,6 +3902,22 @@ function _availValidPlayers(players) {
   }
   return out;
 }
+// The weekly designations are read on their own terms and FAIL SOFT, not
+// hard: a row written before they existed, or one whose weekly half is
+// malformed, gives up the weekly table and keeps the season list. The season
+// list moves a projection; this one only decides whether a slate offers a man
+// up, so losing it must never cost the board its availability pro-rating.
+function _availValidWeekly(weekly) {
+  if (!weekly || typeof weekly !== 'object' || Array.isArray(weekly)) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(weekly)) {
+    if (!/^[a-z]*\|[A-Z]{1,4}$/.test(k) || !v || typeof v !== 'object') continue;
+    if (typeof v.status !== 'string' || !AVAIL_WEEK_RANK[v.status]) continue;
+    out[k] = { name: String(v.name || ''), position: String(v.position || ''), team: String(v.team || ''),
+               status: v.status, note: String(v.note || ''), asOf: String(v.asOf || '') };
+  }
+  return out;
+}
 async function availabilityCacheRead(env) {
   if (!env || !env.LEADS_DB) return null;
   try {
@@ -3866,7 +3927,8 @@ async function availabilityCacheRead(env) {
     const j = JSON.parse(row.payload);
     const players = _availValidPlayers(j && j.players);
     if (!players) return null;
-    return { players, asOf: String(j.asOf || ''), provider: row.provider, matched: row.matched, updatedAt: row.updated_at };
+    return { players, weekly: _availValidWeekly(j && j.weekly), asOf: String(j.asOf || ''),
+             provider: row.provider, matched: row.matched, updatedAt: row.updated_at };
   } catch (e) { return null; }
 }
 
@@ -3952,7 +4014,7 @@ async function runAvailabilityRefresh(env) {
   let built;
   try { built = buildAvailabilityOverlay(feed); }
   catch (e) { return { ok: false, error: 'build failed: ' + ((e && e.message) || 'failed') }; }
-  const info = { teams: built.teams, entries: built.entries, matched: built.matched, skipped: built.skipped, asOf: built.asOf };
+  const info = { teams: built.teams, entries: built.entries, matched: built.matched, weeklyMatched: built.weeklyMatched, skipped: built.skipped, asOf: built.asOf };
   if (built.teams < AVAIL_MIN_TEAMS) return { ok: false, error: 'thin_feed', ...info };
   if (built.matched < AVAIL_MIN_MATCHED) return { ok: false, error: 'insufficient_coverage', ...info };
   await availabilityCacheWrite(env, built);
@@ -3983,7 +4045,12 @@ async function availabilityReport(env) {
   }).sort((x, y) => x.position.localeCompare(y.position) || x.name.localeCompare(y.name));
   return {
     feed: AVAIL_FEED_URL,
-    live: live ? { asOf: live.asOf, matched: live.matched, updatedAt: live.updatedAt, ageHours: +((Date.now() - live.updatedAt) / 3600000).toFixed(1) } : null,
+    live: live ? { asOf: live.asOf, matched: live.matched, weeklyMatched: Object.keys(live.weekly || {}).length,
+                   updatedAt: live.updatedAt, ageHours: +((Date.now() - live.updatedAt) / 3600000).toFixed(1) } : null,
+    // This week's designations never move a season line, so they are reported
+    // beside the list rather than inside it. The DFS slate is what reads them.
+    weekly: Object.values((live && live.weekly) || {}).map(w => ({ name: w.name, position: w.position, team: w.team, status: w.status, note: w.note }))
+      .sort((x, y) => String(x.position).localeCompare(String(y.position)) || String(x.name).localeCompare(String(y.name))),
     serving: live ? 'committed block + live row (union, live wins, never fewer games out)' : 'committed block only (no usable live row)',
     committed: Object.keys(AVAILABILITY).length,
     merged: affected.length,
@@ -9083,7 +9150,7 @@ const DFS_CONTESTS = {
 };
 const DFS_VARIANCE = { QB: { floor: 0.62, ceil: 1.55 }, RB: { floor: 0.55, ceil: 1.75 }, WR: { floor: 0.45, ceil: 1.95 }, TE: { floor: 0.45, ceil: 1.9 }, DST: { floor: 0.4, ceil: 2.1 }, K: { floor: 0.5, ceil: 1.6 } };
 function dfsMetrics(rows, contest) {
-  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0 && r.salary > 0);
+  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0 && r.salary > 0 && r.available !== false);
   if (!on.length) return { contest: DFS_CONTESTS[contest] ? contest : 'gpp', rows: [], note: 'no priced players' };
   // Value: Iron Tuna points per $1K, indexed to the slate median (100 = an ordinary dollar).
   const perK = on.map(r => r.ironTunaPoints / (r.salary / 1000));
@@ -10686,11 +10753,13 @@ async function contentContext(env, weekNumber, opts) {
   // The DFS slates, priced and measured, where salaries exist.
   const dfs = {};
   if (flagOn(env, 'DFS_CONTENT') && week.ok && curWeek != null) {
+    const avail = await availabilityForWeek(env).catch(() => null);
+    const roster = await rosterStatusTable().catch(() => null);
     for (const site of ['dk', 'fd']) {
       try {
         const sal = await dfsSalariesRead(env, site, sched.season, curWeek);
         if (!sal || !sal.rows.length) continue;
-        const slate = buildDfsSlate(site, sal.rows, week, { usage });
+        const slate = buildDfsSlate(site, sal.rows, week, { usage, week: curWeek, availability: avail, roster });
         slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
         slate.metrics = dfsMetrics(slate.players, 'gpp'); slate.stackScores = dfsStackScores(slate.stacks);
         dfs[site] = slate;
@@ -11619,7 +11688,7 @@ function parseDfsCsv(site, text) {
                   operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else if (site === 'fd') {
-    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position'), iFppg = idx('FPPG');
+    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position'), iFppg = idx('FPPG'), iInj = idx('Injury Indicator');
     if (iPos < 0 || iSal < 0 || (iNick < 0 && iFirst < 0)) return { rows: [], error: 'not a FanDuel salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
@@ -11627,6 +11696,11 @@ function parseDfsCsv(site, text) {
       const fppg = iFppg >= 0 ? parseFloat(f[iFppg]) : NaN;
       rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
                   rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null,
+                  // FanDuel prints its own designation in the lobby file (O, D,
+                  // Q, IR, NA). DraftKings' export carries none, which is why
+                  // the injury report behind the slate is the primary source
+                  // and this is only the fallback.
+                  injuryIndicator: iInj >= 0 ? String(f[iInj] || '').trim().toUpperCase() || null : null,
                   operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else return { rows: [], error: 'unknown site' };
@@ -11692,14 +11766,138 @@ function dfsOperatorFppg(site, s, rules, usage) {
   const flat = { ...rules, passingYardBonuses: [], rushingYardBonuses: [], receptionBonuses: [], rbReceptionBonuses: [], receivingYardBonuses: [] };
   return { value: _oddsRound(scoreStats(u.season.stats, pos, flat) / games), basis: 'computed', games };
 }
-function buildDfsSlate(site, salaries, week, opts) {
+// ── who is not playing on Sunday ───────────────────────────────────────────
+// The season board can afford to price a man the report has ruled out: it is
+// answering a question about seventeen games and his line is already
+// pro-rated. A slate cannot. One afternoon, one cap, and a $5,800 receiver
+// who is inactive is $5,800 of a $50,000 budget spent on a certain zero — the
+// single worst thing a lineup builder can do, and the feed said so on Friday.
+//
+// Three sources answer it here, in this order, and a fourth — the roster file
+// in the block below — answers the case none of them can see. `weekStatusBasis`
+// on every row says which one spoke.
+//   injury-report — this week's designation (Out, Doubtful, Questionable). The
+//             report's own word for the game in front of us, kept by the same
+//             pull that feeds the season list and read nowhere else.
+//   reserve-list — the season list, whose gamesOut counts from Week 1, so a man
+//             carrying four games out is out for Weeks 1-4 and back in Week 5.
+//             That is the convention tools/availability.json states in its
+//             own header ("first eligible Week 5" = 4), read here rather than
+//             re-derived. With no week number there is nothing to compare, so
+//             this source stays silent rather than guessing.
+//   salary-file — the operator's own indicator, for FanDuel, whose lobby CSV
+//             carries one. DraftKings' does not, which is why it is last.
+//
+// Out and Doubtful take a player off the board. Questionable is printed and
+// left on it: that is a judgment the reader is entitled to make, and taking
+// every questionable body off a slate would empty it.
+const DFS_BENCH_RE = /^(out|doubtful|ir|pup|nfi|suspended|exempt)$/i;
+const DFS_FILE_STATUS = { O: 'Out', IR: 'Out', NA: 'Out', D: 'Doubtful', Q: 'Questionable' };
+function dfsWeekStatus(avail, key, week, fileIndicator) {
+  const w = key && ((avail && avail.weekly) || {})[key];
+  if (w && w.status) return { status: w.status, note: w.note || '', basis: 'injury-report' };
+  const a = key && ((avail && avail.table) || {})[key];
+  const games = a ? Number(a.gamesOut) || 0 : 0;
+  const wk = Number(week);
+  if (a && games > 0 && Number.isFinite(wk) && wk >= 1 && wk <= games) {
+    return { status: a.status || 'Out', note: a.note || '', basis: 'reserve-list' };
+  }
+  const f = DFS_FILE_STATUS[String(fileIndicator || '').trim().toUpperCase()];
+  if (f) return { status: f, note: '', basis: 'salary-file' };
+  return null;
+}
+function dfsAvailable(status) { return !(status && DFS_BENCH_RE.test(String(status).trim())); }
+
+// ── the roster, as of today ────────────────────────────────────────────────
+// The injury report above only knows about men who are hurt. It is not the
+// only way to not play on Sunday, and on a slate it is not even the most
+// expensive one.
+//
+// A board row is a season projection: written once, pro-rated since, and
+// carrying the club the player was on the day the file was built. Football
+// does not hold still. A receiver cut in September and signed to another
+// team's practice squad is still on the board at his old club with his old
+// line, he appears on no injury report anywhere, because he is not injured,
+// and an optimizer looking only at points per dollar will take him every
+// single time -- he is cheap and the board says he scores. That is how a man
+// who cannot dress on Sunday ends up in a recommended lineup.
+//
+// Sleeper's player file answers it directly, for every player, and the site
+// already reads that file twice (the depth-chart job, and /api/live, which
+// serves the browser the very same `status` field for the Value Coach's
+// injury line). So the slate reads it too:
+//
+//   status  Active, Inactive, Practice Squad, Injured Reserve, PUP, ... —
+//           anything but Active means he is not dressing, and he comes off
+//           the board.
+//   team    his club TODAY. A disagreement with the board is not a reason to
+//           bench him — he may well play — but it does mean the projection
+//           beside his name was built for a different offense, so it is
+//           flagged and printed rather than passed off as a current read.
+//
+// FAIL SOFT, without exception. An upstream that is down, slow, throttled or
+// reshaped leaves the slate exactly as it was before any of this existed: a
+// missing roster file must never empty a board.
+const SLEEPER_PLAYERS_URL = 'https://api.sleeper.app/v1/players/nfl';
+const ROSTER_MEMO_MS = 3600000;
+const ROSTER_FANT = ['QB', 'RB', 'WR', 'TE', 'K'];
+function buildSleeperRoster(all) {
+  const out = {};
+  const fant = new Set(ROSTER_FANT);
+  for (const id in (all || {})) {
+    const p = all[id];
+    if (!p || !fant.has(p.position)) continue;
+    const name = p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
+    if (!name) continue;
+    const key = _oddsNorm(name) + '|' + p.position;
+    // A name at two positions is dropped rather than guessed, the way the
+    // availability index and the odds matcher both do it.
+    if (key in out) { out[key] = null; continue; }
+    out[key] = { name, team: p.team ? teamKey(p.team) : null, status: String(p.status || '').trim() || null };
+  }
+  for (const k of Object.keys(out)) if (!out[k]) delete out[k];
+  return out;
+}
+let _ROSTER_TABLE = null, _ROSTER_AT = 0;
+async function rosterStatusTable() {
+  if (_ROSTER_TABLE && Date.now() - _ROSTER_AT < ROSTER_MEMO_MS) return _ROSTER_TABLE;
+  try {
+    const r = await fetch(SLEEPER_PLAYERS_URL, { cf: { cacheTtl: 21600, cacheEverything: true } });
+    if (!r.ok) return _ROSTER_TABLE;
+    const all = await r.json();
+    const built = buildSleeperRoster(all);
+    // A file that came back with almost nobody in it is a broken pull, not a
+    // league that released everyone. Same fail-safe as the availability pull.
+    if (Object.keys(built).length < 200) return _ROSTER_TABLE;
+    _ROSTER_TABLE = built; _ROSTER_AT = Date.now();
+    return _ROSTER_TABLE;
+  } catch (e) { return _ROSTER_TABLE; }
+}
+// What the roster file says about one man. `null` means it has nothing to add:
+// he is not in the file (so nothing is asserted), or he is active where the
+// board says he is.
+function dfsRosterCheck(roster, names, pos, boardTeam) {
+  if (!roster || !pos) return null;
+  let r = null;
+  for (const n of names) { const hit = n && roster[_oddsNorm(n) + '|' + pos]; if (hit) { r = hit; break; } }
+  if (!r) return null;
+  if (r.status && !/^active$/i.test(r.status)) return { kind: 'roster', status: r.status, team: r.team };
+  if (!r.team) return { kind: 'roster', status: 'Free agent', team: null };
+  if (boardTeam && r.team !== teamKey(boardTeam)) return { kind: 'team', status: null, team: r.team };
+  return null;
+}
+function buildDfsSlate(site, salaries, board, opts) {
   const S = DFS_SITES[site];
   const rules = scoringRules('ppr', SCORING_SITE[site]);
-  const usage = opts && opts.usage ? opts.usage : null;
+  const o = opts || {};
+  const usage = o.usage || null;
+  const avail = o.availability || null;
+  const roster = o.roster || null;
+  const week = Number.isFinite(Number(o.week)) ? Number(o.week) : null;
   const byKey = new Map();
-  for (const p of (week && week.players) || []) byKey.set(p.key, p);
+  for (const p of (board && board.players) || []) byKey.set(p.key, p);
   const defByTeam = new Map();
-  for (const p of (week && week.players) || []) if (p.pos === 'DEF') defByTeam.set(p.team, p);
+  for (const p of (board && board.players) || []) if (p.pos === 'DEF') defByTeam.set(p.team, p);
   const rows = [];
   for (const s of salaries || []) {
     const pos = s.position;
@@ -11707,6 +11905,12 @@ function buildDfsSlate(site, salaries, week, opts) {
     const operatorFppg = fppg.value;
     const p = pos === 'DST' ? defByTeam.get(teamKey(s.team)) : byKey.get(_oddsNorm(s.name) + '|' + pos);
     if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, onBoard: false }); continue; }
+    const rst = dfsRosterCheck(roster, [s.name, p.name], pos, p.team);
+    // The injury report first (it is this week's own word), then the reserve
+    // list, then the roster file, then the salary file's indicator. A man off
+    // an active roster is 'Out' here because that is what it means for Sunday.
+    const wk = dfsWeekStatus(avail, p.key, week, s.injuryIndicator)
+      || (rst && rst.kind === 'roster' ? { status: 'Out', note: 'Not on an active roster (' + rst.status + (rst.team ? ', ' + rst.team : '') + ')', basis: 'roster' } : null);
     const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
     const v = pts('vegas'), c = pts('consensus'), it = pts('ironTuna');
     const w0 = p.weeks.find(x => x.env) || null;
@@ -11724,10 +11928,16 @@ function buildDfsSlate(site, salaries, week, opts) {
       // stingy the defense across from him is (1 = fewest points allowed).
       kickoff: w0 ? w0.kickoff || null : null, opponentDefRank: w0 && w0.env && w0.env.opponentDefRank ? w0.env.opponentDefRank : null,
       gameTotal: null, impliedTouches: _oddsRound((p.vegas.stats.rec || 0) + (p.vegas.stats.rushAtt != null ? p.vegas.stats.rushAtt : (p.vegas.stats.rushYd || 0) / 4.3)),
-      injury: p.injury ? p.injury.status : null, why: p.why ? p.why.summary : ''
+      injury: p.injury ? p.injury.status : null, why: p.why ? p.why.summary : '',
+      // This week, not this season. `available` is what the optimizer reads.
+      weekStatus: wk ? wk.status : null, weekStatusNote: wk ? wk.note : '', weekStatusBasis: wk ? wk.basis : null,
+      available: dfsAvailable(wk && wk.status),
+      // He plays, but not where the board thinks: the projection beside his
+      // name was built for another offense. Said, never silently priced.
+      rosterTeam: rst ? rst.team : null, teamChanged: !!(rst && rst.kind === 'team')
     });
   }
-  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0);
+  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0 && r.available !== false);
   const med = _median(on.map(r => r.vegasPerK)) || 1;
   for (const r of on) r.vegasValueScore = Math.round(r.vegasPerK / med * 100);
   const skill = on.filter(r => r.position !== 'DST' && r.position !== 'K');
@@ -11737,8 +11947,11 @@ function buildDfsSlate(site, salaries, week, opts) {
     volumeValues: skill.filter(r => r.position !== 'QB').sort((a, b) => (b.impliedTouches / b.salary) - (a.impliedTouches / a.salary)).slice(0, 20).map(r => ({ ...r, touchesPerK: _oddsRound(r.impliedTouches / (r.salary / 1000) * 10) / 10 })),
     expensiveFades: skill.filter(r => r.salary >= 6000 && r.marketDelta && r.marketDelta.points < 0).sort((a, b) => a.marketDelta.points - b.marketDelta.points).slice(0, 15)
   };
+  const benched = rows.filter(r => r.onBoard && r.available === false);
   return { ok: rows.length > 0, contract: DFS_CONTRACT, site, label: S.label, cap: S.cap, slots: S.slots, flex: S.flex, scoring: 'site', players: rows.sort((a, b) => b.salary - a.salary),
            medianVegasPerK: _oddsRound(med * 100) / 100, unmatched: rows.filter(r => !r.onBoard).length, boards,
+           unavailable: benched.length,
+           unavailableNames: benched.sort((a, b) => b.salary - a.salary).slice(0, 25).map(r => ({ name: r.name, position: r.position, team: r.team, salary: r.salary, status: r.weekStatus, basis: r.weekStatusBasis })),
            hasProps: on.some(r => /^props/.test(r.vegasBasis)), note: on.some(r => /^props/.test(r.vegasBasis)) ? null : 'No priced player prop has reached this slate. Books post props; none are in the feed behind this build, so every Vegas number is the game line’s environment applied to the player’s line.' };
 }
 // Game stacks: every game on the slate ranked by total, with each side's
@@ -11747,7 +11960,7 @@ function buildDfsSlate(site, salaries, week, opts) {
 function buildDfsStacks(slate, state) {
   const games = (state && state.ok && state.games) || [];
   const byTeam = {};
-  for (const r of slate.players) if (r.onBoard) (byTeam[r.team] = byTeam[r.team] || []).push(r);
+  for (const r of slate.players) if (r.onBoard && r.available !== false) (byTeam[r.team] = byTeam[r.team] || []).push(r);
   const side = t => {
     const list = (byTeam[t] || []);
     const qb = list.filter(r => r.position === 'QB').sort((a, b) => b.vegasPoints - a.vegasPoints)[0] || null;
@@ -13959,8 +14172,8 @@ export default {
       if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
         ...dfsNoSalariesNote(site, Date.now()),
         operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
-      const [board, usage] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null)]);
-      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage });
+      const [board, usage, avail, roster] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null)]);
+      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage, week, availability: avail, roster });
       slate.week = week; slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
       if (flagOn(env, 'DFS_CONTENT')) {
         const contest = DFS_CONTESTS[url.searchParams.get('contest')] ? url.searchParams.get('contest') : 'gpp';
@@ -14008,9 +14221,10 @@ export default {
         note: 'That is a single-game file: it prices a captain or MVP at a multiplier the classic roster does not have. Every board here is built for the classic cap, so pricing it would show you a lineup you cannot enter. Upload a main-slate export instead.' }, 400, c);
       const sched = await scheduleCacheRead(env);
       const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
-      const [board, usage] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null)]);
-      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, { usage });
-      slate.week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      const [board, usage, avail, roster] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null)]);
+      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, { usage, week, availability: avail, roster });
+      slate.week = week;
       // No salariesAsOf: the reader's file has no import time, and a timestamp
       // for when they happened to press the button would say nothing true.
       slate.source = 'upload'; slate.salariesAsOf = null;

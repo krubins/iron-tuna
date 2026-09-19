@@ -165,6 +165,11 @@ p{color:var(--sec);margin:0 0 16px}
 .df-h3 em{font-family:var(--font-body);font-style:normal;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted)}
 .df-lock{color:var(--teal);font-weight:800} .df-excl{color:var(--danger);font-weight:800;text-decoration:line-through}
 #dfPool td.p{cursor:pointer} #dfPool td.p:hover{text-decoration:underline}
+.df-week-out{color:var(--danger);font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+.df-week-q{color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+#dfPool tr.df-row-out td{opacity:.55}
+.df-benched{border:1px solid var(--line);border-left:3px solid var(--danger);border-radius:8px;padding:10px 14px;margin:12px 0;background:var(--panel);font-size:13px}
+.df-benched b{color:var(--text)}
 .df-stack{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;background:var(--panel)}
 .df-stack h3{margin:0 0 6px} .df-stack .side{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;font-size:14px}
 .df-stack b{color:var(--text)} .df-stack .is-status{display:inline}
@@ -977,9 +982,28 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfValues').querySelector('tbody').innerHTML = list.map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? ' ' + (p.home === false ? '@' : 'vs ') + p.opponent : '')) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.ironTunaPoints) + '</b></td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + ' <span class="is-status">' + e(p.vegasBasis) + '</span></td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + delta(p.marketDelta) + '</td><td class="num">' + n1(p.tdProbability) + '%</td><td class="num">' + n1(p.teamTotal) + '</td><td class="num"><b>' + e(p.vegasValueScore) + '</b></td></tr>'; }).join('');
     $('dfValues').hidden = !list.length; press($('dfBoard'), 'data-board', board);
   }
+  // The week's designation, printed wherever a player is offered. "Out" here
+  // is the injury report's word for the game in front of the reader, not the
+  // season list's: a man the report has ruled out is off the board and says
+  // so, and a Questionable tag is printed and left on it, because that call
+  // belongs to the reader.
+  function weekTag(p) {
+    if (!p) return '';
+    var bits = [];
+    if (p.weekStatus) {
+      var off = p.available === false;
+      var why = (p.weekStatusNote || '') + (p.weekStatusBasis === 'salary-file' ? ' (the salary file\u2019s own indicator)'
+        : p.weekStatusBasis === 'reserve-list' ? ' (reserve list)' : p.weekStatusBasis === 'roster' ? '' : '');
+      bits.push('<span class="df-week-' + (off ? 'out' : 'q') + '"' + (why.trim() ? ' title="' + e(why.trim()) + '"' : '') + '>' + e(p.weekStatus) + '</span>');
+    }
+    // He plays, but for someone else now. The projection beside him was built
+    // for his old offense, so the reader is told rather than left to notice.
+    if (p.teamChanged && p.rosterTeam) bits.push('<span class="df-week-q" title="The projection here was built for ' + e(p.team) + '.">now ' + e(p.rosterTeam) + '</span>');
+    return bits.join(' ');
+  }
   function pool(s) {
     var on = s.players.filter(function (p) { return p.onBoard; });
-    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '') + '</td></tr>'; }).join('');
+    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr' + (p.available === false ? ' class="df-row-out"' : '') + '><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + [weekTag(p), (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '')].filter(Boolean).join(' ') + '</td></tr>'; }).join('');
   }
   // ── the shape switch ──────────────────────────────────────────────────────
   // Writes the preset into the fine-tune controls rather than solving off a
@@ -1463,7 +1487,7 @@ p{color:var(--sec);margin:0 0 16px}
     var list = whatIfMatches(value);
     if (!value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
     box.innerHTML = list.map(function (p) {
-      return '<button type="button" role="option" data-whatif-key="' + e(p.key) + '"><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' · ' + p.team) + '</small></span><small>' + money(p.salary) + ' · IT ' + n1(p.ironTunaPoints) + '</small></button>';
+      return '<button type="button" role="option" data-whatif-key="' + e(p.key) + '"><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' · ' + p.team) + '</small> ' + weekTag(p) + '</span><small>' + money(p.salary) + ' · IT ' + n1(p.ironTunaPoints) + '</small></button>';
     }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
     box.hidden = false;
   }
@@ -1475,7 +1499,8 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfWhatIfList').hidden = true;
     $('dfWhatIfClear').hidden = false;
     $('dfWhatIf').classList.add('active');
-    $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is forced into the lineup. Every other slot is re-solved around that choice.';
+    $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is forced into the lineup. Every other slot is re-solved around that choice.'
+      + (p.available === false ? ' <b>He is not playing this week' + (p.weekStatus ? ' (' + e(p.weekStatus) + (p.weekStatusNote ? ': ' + e(p.weekStatusNote) : '') + ')' : '') + '</b>, so he is in only because you put him there.' : '');
     build();
   }
   function chooseBestWhatIf() {
@@ -1493,6 +1518,21 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfWhatIfClear').hidden = true; $('dfWhatIf').classList.remove('active');
     $('dfWhatIfState').textContent = 'As you type, matching players will appear below just like the cheat-sheet What If box.';
     if (rebuild) build();
+  }
+  // What the builder refused to spend the cap on. It is said out loud rather
+  // than left as a silently smaller pool: a reader expecting a name and not
+  // seeing it is owed the reason, and "he is not playing this week" is a better
+  // answer than a lineup that quietly differs from last week's. A locked player
+  // is never in this list, because a lock overrules the whole thing.
+  function benchedNote(r) {
+    var list = (r && r.benched) || [];
+    if (!list.length) return '';
+    var top = list.slice().sort(function (a, b) { return b.salary - a.salary; }).slice(0, 6);
+    return '<p class="df-benched"><b>' + list.length + ' player' + (list.length === 1 ? '' : 's') + ' off the board:</b> '
+      + (list.length === 1 ? 'he is' : 'they are') + ' not playing this week \u2014 ruled out, doubtful, or not on an active roster. '
+      + top.map(function (p) { return e(p.name) + ' (' + e(p.position) + ' \u00b7 ' + e(p.team) + ', ' + e(p.status) + ')'; }).join(', ')
+      + (list.length > top.length ? ' and ' + (list.length - top.length) + ' more' : '')
+      + '. Lock one in the player pool below to build around him anyway.</p>';
   }
   function build() {
     if (!slate || !window.ITDfs) return;
@@ -1514,7 +1554,8 @@ p{color:var(--sec);margin:0 0 16px}
     }
     var lead = r.lineups[0];
     var alts = r.lineups.slice(1);
-    $('dfLineups').innerHTML = lineupCard(lead, 0, sh, true)
+    $('dfLineups').innerHTML = benchedNote(r)
+      + lineupCard(lead, 0, sh, true)
       + (alts.length ? '<h3 class="df-h3">Branch off it <em>' + alts.length + ' more</em></h3><p class="df-sub">' + (contest === 'gpp'
             ? 'The same core, re-solved to sit on different players. Entering a large field with one lineup is entering it with one opinion.'
             : 'The next best rosters under the same rules, for a second and third entry.') + '</p>'

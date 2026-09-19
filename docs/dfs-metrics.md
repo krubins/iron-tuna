@@ -37,6 +37,46 @@ contest emphasizes:
 | Large-Field GPP | leverage | Ceiling and ownership decide. Fade fragile chalk. |
 | Showdown | tournamentScore | One game: captain choice and correlation. Showdown salaries are not loaded; the page says so. |
 
+## Who is on the board at all
+
+Every metric above assumes the player is going to be on the field. That is not
+a safe assumption, and getting it wrong is more expensive than getting any of
+the numbers above wrong: a ruled-out receiver at $5,800 is a certain zero
+occupying 12% of the cap.
+
+The season-long availability list cannot answer it. It is deliberately shaped
+around a seventeen-game question and drops everything week-to-week — a
+Questionable tag, or a plain "Out" with no return date, is not a change to a
+season line (HANDOFF §48). So the slate asks four sources of its own, in this
+order, and `weekStatusBasis` on every row says which one answered:
+
+| Basis | Source | Catches |
+|---|---|---|
+| `injury-report` | The week's designations from the ESPN injury pull, kept as a second table beside the season list (`weekly` in overlay row 3). | Out, Doubtful, Questionable for this week. |
+| `reserve-list` | The season availability list, read against the week number: `gamesOut` counts from Week 1, so four games out means Weeks 1–4. | IR, PUP, NFI, suspensions, the exempt list. |
+| `roster` | Sleeper's player file (`buildSleeperRoster`), the same file `/api/live` and the depth-chart job already read. | The player who is not on an active roster at all — a practice-squad signing or a free agent appears on **no** injury report, because he is not hurt. |
+| `salary-file` | FanDuel's `Injury Indicator` column. DraftKings' export has none. | Whatever the operator itself marked. |
+
+`available: false` is the result, and it is what the optimizer reads: **Out and
+Doubtful come off the board; Questionable stays on it**, printed, because that
+call belongs to the reader. An unavailable player is also off the value boards,
+the stacks, and the ownership model — he cannot take ownership share from a
+player who is playing.
+
+Two deliberate limits:
+
+- **A lock overrules all of it.** `ITDfs.build` keeps a locked player in the
+  pool whatever his status, and the page says so. The builder declines to make
+  this call on its own; it does not overrule one the reader has already made.
+- **A team change is flagged, not benched.** When the roster file has a player
+  at a different club than the board does, he still plays — but the projection
+  beside his name was built for another offense. The row carries
+  `teamChanged` and `rosterTeam`, and the page prints it.
+
+Every source fails soft. A missing injury pull, a missing roster file, or a
+slate built with no week number leaves every player available, exactly as
+before any of this existed. A missing feed must never empty a board.
+
 ## What is deliberately not here
 
 - No metric is invented for marketing. Each row above is used by the DFS lens

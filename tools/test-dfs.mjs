@@ -21,7 +21,7 @@ function _csvSplit(line) { const out = []; let cur = '', q = false; for (let i =
 const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch',
   cut('// ── the scoring engine ─', 'const COLUMN_SCORING = {') + '\n' + cut('const _median = arr =>', '// How far apart the books are') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the three boards') + '\n' + cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats };'
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 
@@ -41,6 +41,11 @@ console.log('\nthe lobby CSVs');
   ok('a file from the wrong site is refused', !!H.parseDfsCsv('dk', fd).error && !!H.parseDfsCsv('fd', dk).error);
   ok('an empty file is refused', H.parseDfsCsv('dk', '').error === 'empty');
   ok('the roster position comes across', a.rows[1].rosterPosition === 'RB/FLEX' && b.rows[0].rosterPosition === 'QB');
+  // FanDuel prints its own designation in the lobby file. DraftKings does not,
+  // which is why the injury report behind the slate is the primary source and
+  // this column is only the fallback.
+  const fdInj = H.parseDfsCsv('fd', 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n1,WR,Garrett,Garrett Wilson,Wilson,14.2,1,7000,BUF@NYJ,NYJ,BUF,O,Knee,,WR\n2,QB,Josh,Josh Allen,Allen,24.1,1,9200,BUF@NYJ,BUF,NYJ,,,,QB\n');
+  ok('the FanDuel injury indicator is read off the file', fdInj.rows[0].injuryIndicator === 'O' && fdInj.rows[1].injuryIndicator === null);
 }
 
 // The reader upload takes whatever file the reader has, so it has to know a
@@ -139,6 +144,112 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
   ok('a stack is priced', stacks[1].away.stackSalary > 0 && stacks[1].away.stackVegasPoints > 0);
 }
 
+// ── who is not playing on Sunday ──────────────────────────────────────────
+// The bug this guards: a receiver the injury report ruled out on Friday, or
+// one who is not on an NFL active roster at all, kept a positive weekly
+// projection and a minimum salary, which is exactly the shape the optimizer
+// reaches for first. Nothing between the board and the lineup ever asked
+// whether he was going to play.
+//
+// Four sources answer that question, and each is pinned here, because each
+// one catching a different case is the whole point: the injury report knows
+// about the hurt, the reserve list knows who is still serving a long absence,
+// the roster file knows who is not on a roster at all (a practice-squad
+// signing appears on no injury report anywhere), and the FanDuel salary file
+// carries the operator's own indicator.
+console.log('\nwho is not playing this week');
+{
+  const avail = {
+    weekly: { 'garrettwilson|WR': { status: 'Out', note: 'Knee: ruled out Friday' },
+              'khalilshakir|WR': { status: 'Questionable', note: 'Ankle' },
+              'jamesonwilliams|WR': { status: 'Doubtful', note: 'Hamstring' } },
+    table: { 'breecehall|RB': { status: 'IR', gamesOut: 4, note: 'Knee' } }
+  };
+  ok('the injury report rules a man out', H.dfsWeekStatus(avail, 'garrettwilson|WR', 3, null).status === 'Out');
+  ok('...and says where that came from', H.dfsWeekStatus(avail, 'garrettwilson|WR', 3, null).basis === 'injury-report');
+  ok('a questionable tag is carried, not swallowed', H.dfsWeekStatus(avail, 'khalilshakir|WR', 3, null).status === 'Questionable');
+  ok('a healthy player gets no status at all', H.dfsWeekStatus(avail, 'joshallen|QB', 3, null) === null);
+
+  // gamesOut counts from Week 1, which is the convention the availability file
+  // states in its own header: "first eligible Week 5" is four games out.
+  ok('a reserve-list absence covers the weeks it spans', H.dfsWeekStatus(avail, 'breecehall|RB', 3, null).status === 'IR');
+  ok('...and ends when it ends', H.dfsWeekStatus(avail, 'breecehall|RB', 5, null) === null);
+  ok('...and says nothing at all without a week to compare', H.dfsWeekStatus(avail, 'breecehall|RB', null, null) === null);
+
+  ok('the FanDuel file indicator is read when nothing else has him', H.dfsWeekStatus(null, 'x|WR', 3, 'O').status === 'Out'
+     && H.dfsWeekStatus(null, 'x|WR', 3, 'Q').status === 'Questionable' && H.dfsWeekStatus(null, 'x|WR', 3, '') === null);
+  ok('...and the report outranks it', H.dfsWeekStatus(avail, 'khalilshakir|WR', 3, 'O').status === 'Questionable');
+
+  ok('Out and Doubtful come off the board, Questionable stays on it',
+     H.dfsAvailable('Out') === false && H.dfsAvailable('Doubtful') === false && H.dfsAvailable('IR') === false
+     && H.dfsAvailable('Questionable') === true && H.dfsAvailable(null) === true);
+
+  // The roster file. A practice-squad signing is the case no injury report
+  // will ever catch, because the man is not hurt.
+  const roster = H.buildSleeperRoster({
+    '1': { full_name: 'Jayden Reed', position: 'WR', team: 'GB', status: 'Active' },
+    '2': { full_name: 'Theo Practice', position: 'WR', team: 'LAC', status: 'Practice Squad' },
+    '3': { full_name: 'Traded Man', position: 'WR', team: 'NYJ', status: 'Active' },
+    '4': { full_name: 'Cut Loose', position: 'WR', team: null, status: 'Active' },
+    '5': { first_name: 'No', last_name: 'Position', position: 'LS', team: 'GB', status: 'Active' }
+  });
+  ok('the roster file reduces to fantasy players with a club and a status',
+     Object.keys(roster).length === 4 && roster['jaydenreed|WR'].team === 'GB' && !roster['noposition|LS']);
+  ok('an active player where the board says he is raises nothing', H.dfsRosterCheck(roster, ['Jayden Reed'], 'WR', 'GB') === null);
+  ok('a practice-squad signing is caught, and the injury report never would have',
+     H.dfsRosterCheck(roster, ['Theo Practice'], 'WR', 'MIA').kind === 'roster');
+  ok('a player on no roster at all is caught', H.dfsRosterCheck(roster, ['Cut Loose'], 'WR', 'MIA').kind === 'roster');
+  ok('a man who changed clubs is flagged, not benched — he plays, the projection is just stale',
+     H.dfsRosterCheck(roster, ['Traded Man'], 'WR', 'MIA').kind === 'team' && H.dfsRosterCheck(roster, ['Traded Man'], 'WR', 'MIA').team === 'NYJ');
+  ok('a player the file has never heard of is left alone', H.dfsRosterCheck(roster, ['Josh Allen'], 'QB', 'BUF') === null);
+  ok('no roster file asserts nothing', H.dfsRosterCheck(null, ['Theo Practice'], 'WR', 'MIA') === null);
+
+  // End to end: the slate marks them, and the optimizer refuses to spend the
+  // cap on them. Three starters coming off the board is three replacements
+  // going on it, which is what a real slate looks like on a Sunday morning, so
+  // the fixture grows the same way rather than being solved against a roster
+  // that can no longer be filled.
+  const WEEK_D = { ok: true, players: WEEK.players.concat([
+    P('Backup Wideout', 'WR', 'NYJ', 'BUF', { rec: 4, recYd: 45, recTD: 0.3 }, { rec: 4, recYd: 42, recTD: 0.3 }, { rec: 4, recYd: 44, recTD: 0.3 }),
+    P('Second Wideout', 'WR', 'DET', 'GB', { rec: 3, recYd: 38, recTD: 0.3 }, { rec: 3, recYd: 36, recTD: 0.2 }, { rec: 3, recYd: 37, recTD: 0.3 }),
+    P('Bench Back', 'RB', 'NYJ', 'BUF', { rushYd: 45, rushTD: 0.3, rec: 2, recYd: 14 }, { rushYd: 42, rushTD: 0.3, rec: 2, recYd: 13 }, { rushYd: 44, rushTD: 0.3, rec: 2, recYd: 14 })
+  ]) };
+  const SAL_D = SAL.concat([['Backup Wideout', 'WR', 'NYJ', 3400], ['Second Wideout', 'WR', 'DET', 3200], ['Bench Back', 'RB', 'NYJ', 3600]]
+    .map(([name, position, team, salary]) => ({ name, position, team, opponent: null, salary, operatorFppg: 8 })));
+  const marked = H.buildDfsSlate('dk', SAL_D, WEEK_D, { week: 3, availability: avail, roster });
+  const wilson = marked.players.find(p => p.name === 'Garrett Wilson');
+  const shakir = marked.players.find(p => p.name === 'Khalil Shakir');
+  ok('the slate marks the ruled-out man unavailable and says why', wilson.available === false && wilson.weekStatus === 'Out' && /ruled out/.test(wilson.weekStatusNote));
+  ok('a questionable man stays on the slate with his tag', shakir.available === true && shakir.weekStatus === 'Questionable');
+  ok('the slate counts what it took off and names them', marked.unavailable >= 3 && marked.unavailableNames.some(x => x.name === 'Garrett Wilson'));
+  ok('an unavailable player is off the value boards too', !marked.boards.bestVegasValues.some(p => p.available === false));
+  ok('...and cannot head a stack or be a bring-back',
+     !H.buildDfsStacks(marked, STATE).some(g => [g.home, g.away].some(x => (x.qb && x.qb.available === false) || x.catchers.some(c => c.available === false))));
+
+  const play = marked.players.filter(p => p.onBoard).map(p => ({ ...p, id: p.key }));
+  const built = DFS.build(play, { mode: 'ironTuna', cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, lineups: 3, seed: 7 });
+  ok('no lineup contains a man who is not playing', built.ok && built.lineups.every(l => l.players.every(x => {
+    const p = marked.players.find(q => q.key === x.id); return !p || p.available !== false;
+  })));
+  ok('the builder reports who it benched rather than quietly shrinking the pool',
+     built.benchedCount >= 3 && built.benched.some(b => b.name === 'Garrett Wilson' && b.status === 'Out'));
+  ok('a questionable man is still available to be picked', built.poolSize > 0 && !built.benched.some(b => b.name === 'Khalil Shakir'));
+
+  // A lock is a decision. The builder declines to make this call on its own;
+  // it does not overrule one the reader has already made.
+  const locked = DFS.build(play, { mode: 'ironTuna', cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, lock: ['garrettwilson|WR'], lineups: 1, seed: 7 });
+  ok('a locked player is built around even when the report has him out',
+     locked.ok && locked.lineups[0].players.some(x => x.id === 'garrettwilson|WR'));
+  ok('...and an explicit override puts everyone back', DFS.build(play, { mode: 'ironTuna', cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, includeUnavailable: true, lineups: 1, seed: 7 }).benchedCount === 0);
+
+  // With nothing to go on, nothing changes: this must never empty a board.
+  const bare = H.buildDfsSlate('dk', SAL_D, WEEK_D, {});
+  ok('with no injury report and no roster file every player stays available',
+     bare.unavailable === 0 && bare.players.filter(p => p.onBoard).every(p => p.available === true));
+  ok('...and the builder benches nobody', DFS.build(bare.players.filter(p => p.onBoard).map(p => ({ ...p, id: p.key })),
+     { mode: 'ironTuna', cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, lineups: 1, seed: 7 }).benchedCount === 0);
+}
+
 console.log('\nthe DFS page explanations');
 {
   const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
@@ -160,6 +271,10 @@ console.log('\nthe DFS page explanations');
   ok('DraftKings FPPG is always paired with the Iron Tuna projection and edge', page.includes('DraftKings FPPG') && page.includes('Iron Tuna Projection') && page.includes('Tuna Edge') && page.includes('historical fantasy-points-per-game average'));
   ok('the DFS What If box autocompletes from typed player names', page.includes('id="dfWhatIfInput"') && page.includes('function renderWhatIfList') && page.includes("addEventListener('input', renderWhatIfList)") && page.includes('data-whatif-key'));
   ok('the What If selection becomes an optimizer lock only when the player is eligible for the selected games', page.includes("if (whatIfKey && eligible[whatIfKey] && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey)"));
+  ok('a man who is not playing is marked in the player pool, not quietly dropped', page.includes('function weekTag(p)') && page.includes('df-week-out') && page.includes('df-row-out'));
+  ok('the page says who it took off the board and how to put him back', page.includes('function benchedNote(r)') && page.includes('off the board:') && page.includes('Lock one in the player pool below to build around him anyway.'));
+  ok('forcing an unavailable player in says so rather than pretending he is a normal pick', page.includes('He is not playing this week'));
+  ok('a player who changed clubs is flagged beside his stale projection', page.includes('p.teamChanged && p.rosterTeam'));
   const scripts = [...page.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
   ok('every inline DFS script parses', (() => { try { scripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
 }

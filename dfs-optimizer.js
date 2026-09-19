@@ -16,6 +16,11 @@
  * every fixture in tools/test-dfs.mjs, and it runs in milliseconds, which is
  * what a page that re-solves on every click needs.
  *
+ * A man who is not going to play on Sunday never reaches the board at all.
+ * The slate decides that (rows carry available:false, and weekStatus says
+ * why); this file only refuses to spend the cap on him, and a reader's lock
+ * is the one thing that puts him back.
+ *
  * NOTHING HERE SUBMITS AN ENTRY. It builds a table to look at.
  */
 (function (root) {
@@ -116,7 +121,18 @@
                 stack: !!o.stack, stackSize: o.stackSize || 1, bringBack: !!o.bringBack };
     var lock = {}; (o.lock || []).forEach(function (id) { lock[id] = 1; });
     var excl = {}; (o.exclude || []).forEach(function (id) { excl[id] = 1; });
-    var pool = players.filter(function (p) { return p && p.onBoard !== false && p.salary > 0 && !excl[p.id] && isFinite(mode.pts(p)) && mode.pts(p) > 0; });
+    // A player who is not playing this week is not a cheap play, he is a zero,
+    // and a zero at $5,800 is the worst thing this function can do with a cap.
+    // The slate marks him available:false; he comes off the board before a
+    // single lineup is seeded, unless the reader has explicitly locked him --
+    // a lock is a decision, and the builder does not overrule a decision, it
+    // only declines to make this one on its own.
+    var benched = [];
+    var pool = players.filter(function (p) {
+      if (!(p && p.onBoard !== false && p.salary > 0 && !excl[p.id] && isFinite(mode.pts(p)) && mode.pts(p) > 0)) return false;
+      if (p.available === false && !lock[p.id] && !o.includeUnavailable) { benched.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, status: p.weekStatus || 'Out' }); return false; }
+      return true;
+    });
     var rnd = mulberry(o.seed || 7);
     var n = Math.max(1, Math.min(20, o.lineups || 1));
     var results = [], used = {};
@@ -262,6 +278,7 @@
       bestL.forEach(function (p) { used[p.id] = (used[p.id] || 0) + 1; });
     }
     return { ok: results.length > 0, mode: mode.label, lineups: results, poolSize: pool.length, cap: cfg.cap,
+             benched: benched, benchedCount: benched.length,
              note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? '' : 's') + ' satisfy the constraints.' : null };
   }
   var api = { MODES: MODES, build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf };

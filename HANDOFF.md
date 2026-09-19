@@ -11200,3 +11200,82 @@ fixture branch; every longer horizon takes the slate branch.
 real Chromium against a worker-built payload — the sixteen pages at desktop and
 390px, and `/rankings` across all four horizons, all four boards and QB / RB /
 FLEX / K / DST, with no page errors.
+
+## 93. September 19: the DraftKings roster maker recommended a man who was not playing
+
+The report: the DFS lineup builder put **Theo Wease Jr.** in a recommended
+roster. He was not going to play. He is not hurt either — he is on the
+**Chargers' practice squad**, and the board still prices him as a Miami
+receiver with a 682-yard season line.
+
+That is two failures wearing one coat, and both of them ran the whole way from
+the board to the lineup without anything asking the only question a slate
+cares about: **is he going to be on the field on Sunday?**
+
+**Nothing on the DFS path had ever asked it.** `dfs-optimizer.js` filtered its
+pool on three things — on the board, a salary above zero, a positive
+projection — and `dfs.html` contained the string "injury" exactly zero times.
+The slate row did carry an `injury` field, and nothing read it.
+
+**The availability list could not have answered it anyway.** It is built for a
+seventeen-game question and drops week-to-week designations on purpose (§48): a
+Questionable tag, or a plain "Out" with no return date, is not a change to a
+season line, so `_availStatusOf` maps it to nothing and the board never hears
+about it. Correct for the board. Useless for one afternoon.
+
+**And no injury report of any kind would have caught this player**, because he
+is not injured. A practice-squad signing appears on no injury report anywhere.
+
+### What now decides who is on the board
+
+Four sources, in this order. Every slate row carries `weekStatus`,
+`weekStatusNote` and `weekStatusBasis`, and the basis says which one answered.
+
+| Basis | Source | Catches |
+|---|---|---|
+| `injury-report` | This week's designations, kept by the same 11:00Z ESPN pull in a **second table** (`weekly`) beside the season list. It moves no projection and touches no `gamesOut`. | Out, Doubtful, Questionable, and active/PUP — the one "Out" the season list declines by design. |
+| `reserve-list` | The season list read against the week number. `gamesOut` counts from Week 1, so four games out is Weeks 1–4 — the convention `tools/availability.json` states in its own header ("first eligible Week 5" = 4), read rather than re-derived. | IR, PUP, NFI, suspensions, the exempt list. |
+| `roster` | Sleeper's player file (`buildSleeperRoster`), the file `/api/live` and the depth-chart job already read. Status and club, per player. | **The Wease case.** Not on an active roster at all: practice squad, free agent, inactive. |
+| `salary-file` | FanDuel's `Injury Indicator` column, which the parser had been discarding. DraftKings' export carries none, which is why it is last. | Whatever the operator itself marked. |
+
+`available: false` is the verdict. **Out and Doubtful come off the board.
+Questionable stays on it**, printed, because that call belongs to the reader
+and benching every questionable body would empty a slate.
+
+An unavailable player is off the value boards, off the stacks and bring-backs,
+and out of the ownership model — he cannot take ownership share from a man who
+is playing.
+
+### Two things it deliberately does not do
+
+- **A lock overrules it.** `ITDfs.build` keeps a locked player in the pool
+  whatever his status, and the What If panel says so in as many words. The
+  builder declines to make this call on its own; it does not overrule one the
+  reader has already made.
+- **A team change is flagged, not benched.** When the roster file has a player
+  at a club the board does not, he still plays — but the projection beside his
+  name was built for another offense. The row carries `teamChanged` and
+  `rosterTeam`, and the page prints "now LAC" next to him rather than passing a
+  stale line off as a current read.
+
+### What the reader sees
+
+The pool table greys the row and prints the designation in its Status column.
+Above the lineup, a note names who came off and why — *"3 players off the
+board: the injury report rules them out or doubtful for this week…"* — and ends
+with how to put one back. Silence was the old behaviour and it was the worst
+part: a reader expecting a name and not seeing it was owed the reason.
+
+### Fail-soft, everywhere
+
+A missing ESPN pull, a missing or thin Sleeper file, a slate built with no week
+number, an overlay row written before `weekly` existed: each one leaves every
+player available, exactly as before any of this shipped. The weekly table is
+validated separately from the season list and on a bad shape gives up only
+itself. **A feed that is down must never empty a board** — that failure is
+worse than the one being fixed.
+
+Guarded by `tools/test-dfs.mjs` ("who is not playing this week", 30 assertions
+from each source in isolation through to no lineup containing a benched man)
+and `tools/test-worker-availability.mjs` (the weekly table, and that it still
+moves no season line). `docs/dfs-metrics.md` carries the table above.
