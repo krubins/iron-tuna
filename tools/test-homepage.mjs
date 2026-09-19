@@ -135,6 +135,14 @@ const CONTENT = { ok: true, pieces: [
   // No url: not a card.
   { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: AGO(30) }
 ]};
+// What /api/content would hand back: the same story five times over, in draft.
+// Nothing on the cover may come from here.
+const ARCHIVE_POISON = { ok: true, pieces: [1, 2, 3, 4, 5].map(v => ({
+  kind: 'weekend-preview', title: 'Weekend Preview', status: 'held', version: v,
+  headline: 'HELD DRAFT ' + v + ' — must never reach the cover',
+  dek: 'A draft the fact check stopped.', week: 3, publishedAt: FRESH,
+  url: '/in-season/desk/weekend-preview/3'
+})) };
 const SEASON = { ok: true, phase: 'regular', phaseLabel: 'Regular season',
   week: { label: 'Week 3', status: 'upcoming', firstKickoff: Date.UTC(2026, 8, 17, 20, 15) },
   counts: { inProgress: 0 } };
@@ -150,7 +158,13 @@ const server = http.createServer((req, res) => {
     if (MODE === 'live') {
       if (u.pathname === '/api/vegas-edge') body = EDGE;
       else if (u.pathname === '/api/dfs') body = DFS;
-      else if (u.pathname === '/api/content') body = CONTENT;
+      // The band reads the PUBLISHED feed. /api/content is the archive — it
+      // carries held drafts and one row per version — and the page used to
+      // read it, which put five unpublished drafts of one story on the cover.
+      // Answering it with poison here means a page that goes back to it fails
+      // these assertions loudly instead of quietly showing drafts again.
+      else if (u.pathname === '/api/newsroom') body = CONTENT;
+      else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
     }
     res.writeHead(200, { 'content-type': 'application/json' });
@@ -318,6 +332,12 @@ console.log('\nwith the boards answering');
   ok('it is a SMALL group — three at a time', r.cards.length === 3, String(r.cards.length));
   ok('every card has a real destination',
      r.cards.every(h => /^\/in-season\/desk\//.test(h)), r.cards.join(','));
+  // THE ARCHIVE IS NOT THE COVER. Held drafts are served at /api/content in
+  // this harness; a card carrying one means the page read the archive again.
+  ok('no held draft reaches the cover', !/HELD DRAFT/.test(r.body),
+     (r.body.match(/HELD DRAFT \d/) || [''])[0]);
+  ok('and no story appears on the cover twice',
+     new Set(r.cards).size === r.cards.length, r.cards.join(','));
 
   // ── the hero's picture ────────────────────────────────────────────────
   // The page had no photograph of a football player on it at all. It has one

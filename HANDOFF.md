@@ -10843,3 +10843,65 @@ publishes its newest fixture piece five minutes before that instant. Without a
 pinned clock a rotating cover makes "which story leads" and "whose photograph
 runs" depend on what time of day CI happens to run. It also asserts the hero's
 caption no longer claims to be the widest.
+
+## 89. September 19: the cover was drawing from the archive, drafts and all
+
+Ken, after the hero rotation landed: "Love is gone, but it still doesn't have
+some of the stories that we are supposed to have in rotation." Right again, and
+this is the bug under both of the previous two.
+
+**The band read `/api/content`.** That endpoint is `contentListPayload`: every
+row in `content_pieces` whose status is not `unpublished`, newest first, **one
+row per VERSION**, with `expired` reported as a field rather than applied. It
+is the archive index. The front page treated it as a feed, filtered it to rows
+carrying a url and a headline, and took the top eight.
+
+Here is what those eight rows actually were on the evening of the 18th:
+
+| # | Row | Status |
+|---|---|---|
+| 1 | weekend preview v6 | published |
+| 2 | weekend preview v5 | **held** |
+| 3 | kickers & defenses | published |
+| 4 | weekend preview v4 | **held** |
+| 5 | weekend preview v3 | **held** |
+| 6 | weekend preview v2 | **held** |
+| 7 | weekend preview v1 | **held** |
+| 8 | TNF: what matters | published |
+
+Six of the eight were one story. Five of those were **drafts the fact check had
+held**, each carrying its own headline, none ever published, all rendered as
+cards on the front page pointing at the same URL. Every other piece the desk
+published this week — the DET-BUF recap, the tight end column, the underrated
+piece, the pickup advisor — sat below the cutoff and could never appear.
+
+It also explains §88 rather than being a separate incident. The rotation added
+there worked exactly as written; it was rotating through five drafts of the
+story Ken wanted gone. "Love is still on the cover" was literally true no
+matter how well the window slid, because most of the window WAS that story.
+
+**The fix is not a filter, it is the right feed.** `/api/newsroom` is
+`newsroomFeedPayload`, which /in-season/desk already reads: published rows
+only, **one row per slug** with the newest version winning, forward pieces
+dropped once their games have kicked off, and the `components` each piece
+breaks into so the cards and the hero can carry faces. The cover and the desk
+now answer to one rule and cannot disagree about what the desk has published.
+
+With that feed the eight-deep pool is eight different stories, and the band
+rotates three of them an hour.
+
+**Tests.** `tools/test-newsroom.mjs` asserts `front.html` reads
+`/api/newsroom` and never `/api/content`, with the reason attached, because
+this is a one-character-looking change that reintroduces a content incident.
+`tools/test-homepage.mjs` goes further: its harness answers `/api/content` with
+**poison** — five held drafts headlined "HELD DRAFT n — must never reach the
+cover" — so a page that goes back to the archive fails loudly rather than
+quietly showing drafts again. It also asserts no story appears on the cover
+twice.
+
+**The general lesson, which is the same one as §88 in a different coat.** Three
+rounds were spent on the ranking logic of a list whose CONTENTS were wrong.
+Nobody printed the list. One `console.log` of the eight rows the band was
+drawing from — or one look at what `contentListPayload` selects — would have
+ended this on the first pass. When output looks wrong, read the input before
+rewriting the function that shapes it.

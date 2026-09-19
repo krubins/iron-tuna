@@ -1091,6 +1091,16 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   ok('a piece with no timestamp does not stop the band',
     coverBand([{ url: '/x', headline: 'x' }, { url: '/y', headline: 'y' }, { url: '/z', headline: 'z' }], at(9)).length === 3);
 
+  // WHICH FEED THE COVER READS. The band drew from /api/content, the archive:
+  // every row that is not 'unpublished', one per VERSION. That put five held
+  // drafts of one preview on the front page and pushed every other published
+  // piece below the cutoff. /api/newsroom is the published feed, deduped by
+  // slug, expiry applied — the one /in-season/desk reads.
+  ok('the cover reads the published feed', /grab\('\/api\/newsroom/.test(front),
+    'front.html must read /api/newsroom for the desk band');
+  ok('and never the archive endpoint', !/grab\('\/api\/content/.test(front),
+    '/api/content carries held drafts and one row per version');
+
   // ── the hero's face ─────────────────────────────────────────────────────
   // THE ONE THAT WOULD HAVE CAUGHT THE REAL BUG. The hero took the widest gap
   // on the board and nothing else, so the same player held the cover for as
