@@ -10762,7 +10762,7 @@ git push origin --delete claude/the-pick-daily-segment-qpj8l6
 ```
 
 
-## 88. September 18: the front page pinned one story until the desk published again
+## 88. September 18: rotating three cards is not rotating the cover
 
 Ken: "Love is still featured on the front page." He meant Jeremiyah Love, and
 he was right: the Week 2 weekend preview, headlined "fade Jeremiyah Love,
@@ -10773,103 +10773,62 @@ have stayed there until the next piece landed. His instruction, the same one
 
 **What the band did.** `front.html` took `/api/content`, filtered to pieces
 with a url and a headline, and printed `.slice(0, 4)` newest first. Between
-publishes that is a fixed page. On a quiet Friday the desk publishes twice, so
-the same headline under the same player's name is the top of the front page for
-most of the day, and the hero's photograph is of that player, because the hero
-takes the first piece in the band that names somebody.
+publishes that is a fixed page. The desk publishes a few times a day, so the
+same headline under the same player's name is the top of the front page for
+hours at a stretch, and the hero's photograph is of that player, because the
+hero takes the first piece in the band that names somebody.
 
-**What it does now.** `deskOrder(pieces, now)` in `front.html`:
+### The first fix was wrong, and the way it was wrong is the lesson
 
-- **Three at a time**, not four, matching the rule for The Pick. A new piece
-  pushes the oldest out of the band, which is what Ken asked for on the 18th.
-- **The top slot advances every two hours** (`DESK_TURN_MS`), rotating the
-  three. A reader who comes back after lunch gets a different story on top of a
-  band that has not changed underneath them.
+The band was cut to three and the TOP SLOT was made to advance every two hours,
+rotating those three. It shipped, and Ken came back inside the hour: "Why is Lo
+still on the cover. We are supposed to be rotating."
+
+He was right again, and no amount of deploying would have helped, because
+**rotating three cards among themselves changes the ORDER and never the CAST.**
+The story he wanted off the cover was one of the three. After the change it led
+one turn in three and was on the page all three. The word "rotating" had been
+read as "shuffle what is there" when it plainly meant "take that one off and
+put a different one up" — which is exactly what he had said about The Pick the
+day before, in those words.
+
+The general form, worth keeping: **when a request is about a thing being gone,
+a change that only reorders is not a partial fix, it is no fix.** The check is
+to state the outcome in the user's own words and ask whether the change
+produces it. "Is Love off the cover?" answers itself in one line of the diff.
+
+### What it does now
+
+`deskOrder(pieces, now)` in `front.html`:
+
+- **Three cards at a time**, matching the rule for The Pick.
+- **The window slides one piece down the feed every hour** (`DESK_TURN_MS`),
+  wrapping at the end of a pool eight deep (`DESK_POOL`). Every turn one story
+  comes off the cover and a different one comes on. A piece that is one of
+  eight is on the cover three turns in eight rather than permanently.
 - **Except when there is news.** A piece published inside the current turn
-  leads on its own merit. A recap filed twenty minutes ago IS the front page,
-  and rotating it to third would be the site hiding what it just did. Rotation
-  starts once the newest piece has had its turn.
-- The hero's picture follows the rotated top piece, not the newest row
-  underneath it, so the photograph and the first card are about the same man.
+  leads and brings the two behind it. A recap filed twenty minutes ago IS the
+  front page, and sliding past it would be the site hiding what it just did.
+- The hero's picture follows the first piece in the window that names a player,
+  so the photograph and the top card are about the same man.
 
 The order is a pure function of the feed and the clock, so two readers loading
-at the same moment get the same page, which matters because the band is drawn
+at the same moment get the same cover, which matters because the band is drawn
 from a memoized payload.
 
-**Where it is tested.** `tools/test-newsroom.mjs` lifts `deskOrder` straight
-out of `front.html` and runs it turn by turn: three of five printed, the three
-newest, fresh news leading, the lead moving once it is no longer fresh, every
-turn still printing all three, the order being a rotation rather than a
-reshuffle, and the degenerate feeds (one piece, none, a piece with no
-timestamp). That file runs everywhere. `tools/test-homepage.mjs` still drives
-the real page in Chromium and now asserts three cards, but it needs a browser
-and skips without one, which is why the rule itself is guarded in the file that
-cannot skip.
+### Where it is tested
 
-That browser test's fixture also changed, and the reason is worth keeping: it
-used to publish its newest piece on a fixed date in the past, which under a
-rotating band would have made "which story leads" depend on what time of day
-CI happened to run. It now publishes the newest five minutes ago, so the
-freshness rule pins the order and the hero assertions stay deterministic.
+`tools/test-newsroom.mjs` lifts `deskOrder` straight out of `front.html` and
+runs it turn by turn. The assertions that matter are the two the first version
+would have failed: **consecutive turns print different stories**, and **each
+turn takes exactly one story off and puts one on**. Plus the bounded run (no
+story on every turn), the wrap, the pool ceiling, no duplicate inside a turn,
+determinism on the clock, and the degenerate feeds — one piece, none, two, and
+a piece with no timestamp. That file runs everywhere.
 
----
-
-## 89. September 17: "no Monday game this week" in a week that had one
-
-Ken's report: the Rest-of-Season Rankings opened by telling the reader "the
-packet notes no Monday game this week, or its box score is not final." There
-had been a Monday night game. His instruction went past the fact: "if you are
-not sure don't do a story about it, better to remain silent than raise the
-issue and lose credibility."
-
-**The bug is one property.** The Tuesday producer builds the Monday material
-as an OBJECT and hands it over:
-
-```js
-const ms = mon.length ? { games: mon, summaries: await summariesFor(mon) } : null;
-facts = packetRos(..., ms && ms.summaries.length ? ms : null);
-```
-
-`packetRos` then tested `mondaySummaries.length`. An object has no `length`,
-so the test was `undefined` every week of the season, the reported branch
-never ran once, and the packet took the else every Tuesday. The caller's own
-gate was right and did the real work; the callee threw the answer away. The
-check now reads `mondaySummaries.summaries`, which is what was passed.
-
-**Why the note is gone, not fixed.** A packet that hedges buys a page that
-hedges. The writer is told the packet is the only source of facts, so a
-sentence sitting in the packet gets printed, and "no Monday game this week,
-or its box score is not final" is a sentence that hedges TWO WAYS about a
-thing the reader can check in one click. `whatMondayChanged` is now either a
-block built from the box score or `null`, and `CONDITIONAL_SECTIONS` drops
-the section when it is null — the same mechanism that already keeps a week
-with no misses from getting an empty misses section (§the Monday scorecard).
-The writer is never asked for the section, so the piece says nothing about
-Monday rather than saying the wrong thing about it. The full section list,
-asked for without a packet, still names it, so `desk.html` keeps its label.
-
-The general rule this is the second instance of: a packet field whose value
-is an apology for missing data is a bug, not a fallback. Either the data is
-there and the section runs, or the section is not asked for.
-
-| Piece | What changed |
-|---|---|
-| `packetRos` | reads `mondaySummaries.summaries`, not `.length` off the wrapper. With nothing final from Monday, `whatMondayChanged` is `null` and carries no prose. |
-| `CONDITIONAL_SECTIONS['ros-rankings']` | `whatMondayChanged` is asked for only when the packet carries the block. `sectionsFor` drives both the SHAPE the writer is handed and the check that holds the draft, so the section can never be dropped from one and demanded by the other. |
-
-**Tests.** `tools/test-content.mjs` (96, up 7), a new "what Monday changed"
-block on the real DAL at PHI fixture: a final Monday box score is reported
-with a section per club and what each learned, and the section is asked for;
-a week with no Monday material carries a null block, no "no Monday game"
-string anywhere in the packet, and no `whatMondayChanged` in the section list
-while the rest of the list survives; a Monday game whose box score is not
-final yet is the same silence; and the full list still names the section for
-the desk page. `packetRos` and `sectionsFor` are now exported from that
-harness. Restoring `.length` fails the first assertion.
-
-`tools/test-dry-run.mjs` (112, up 2) carries the end-to-end guard, which is
-the one that would have caught this: the fixture's Week 1 ends with a Monday
-night game and has its box score, so the Tuesday piece it publishes must
-report Monday with a section per club, must carry `whatMondayChanged` in the
-written body, and neither its packet nor its prose may contain the string
-"no Monday game". Before the fix the published piece failed all three.
+`tools/test-homepage.mjs` still drives the real page in Chromium and asserts
+three cards, but it needs a browser and skips without one, which is why the
+rule itself is guarded in the file that cannot skip. Its fixture publishes its
+newest piece five minutes ago rather than on a fixed past date: under a sliding
+window, a fixed date would have made "which story leads" depend on what time of
+day CI happened to run.

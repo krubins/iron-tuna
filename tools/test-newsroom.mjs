@@ -1043,12 +1043,16 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
 }
 
 // ── the front page's desk band ────────────────────────────────────────────
-// THREE AT A TIME, AND THE TOP ONE MOVES. `deskOrder` in front.html decides
-// what "/" prints under "Current from the desk". It is lifted out of the page
-// and run here rather than driven in a browser, because tools/test-homepage.mjs
+// THREE AT A TIME, AND THE THREE CHANGE. `deskOrder` in front.html decides what
+// "/" prints under "Current from the desk". It is lifted out of the page and
+// run here rather than driven in a browser, because tools/test-homepage.mjs
 // needs Chromium and skips without it: the rule that a quiet Friday still
-// changes the front page should not be guarded only by a test a laptop can
-// skip. The browser test still checks that three cards are what renders.
+// changes the cover should not be guarded only by a test a laptop can skip.
+//
+// The rule the first version got wrong, and what this file now pins: rotating
+// three cards among themselves changes the order and never the cast, so a
+// story in the band stays on the cover however often the page reorders it. The
+// window has to slide past the band for a story to come off.
 {
   const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
   const head = front.indexOf('var DESK_BAND =');
@@ -1056,39 +1060,55 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   if (head < 0 || tail < 0) { console.error('FAIL: deskOrder not found in front.html'); process.exit(1); }
   const deskOrder = new Function(front.slice(head, tail) + '; return deskOrder;')();
 
-  const HOUR = 3600 * 1000, TURN = 2 * HOUR;
-  const at = h => Date.UTC(2026, 8, 18, h);
-  const piece = (id, h) => ({ url: '/p/' + id, headline: id, publishedAt: at(h) });
-  const five = [piece('e', 16), piece('d', 12), piece('c', 9), piece('b', 8), piece('a', 6)];
+  const HOUR = 3600 * 1000;
+  const at = h => Date.UTC(2026, 8, 18, 12) + h * HOUR;
+  const feed = 'abcdefghij'.split('').map((id, i) => ({ url: '/p/' + id, headline: id, publishedAt: at(-i) }));
   const ids = a => a.map(p => p.headline).join(',');
+  const TURN = HOUR;   // must track DESK_TURN_MS; the slide test below fails if it does not
 
-  ok('the band is three, not the whole feed', deskOrder(five, at(20)).length === 3, String(deskOrder(five, at(20)).length));
-  ok('the band is the three newest', deskOrder(five, at(20)).map(p => p.headline).sort().join() === 'c,d,e',
-    ids(deskOrder(five, at(20))));
+  ok('three cards, not the whole feed', deskOrder(feed, at(6)).length === 3, String(deskOrder(feed, at(6)).length));
 
-  // Fresh news leads on its own merit.
-  ok('a piece published inside the current turn leads', ids(deskOrder(five, at(16) + HOUR)) === 'e,d,c',
-    ids(deskOrder(five, at(16) + HOUR)));
+  // Fresh news leads and brings the two behind it.
+  ok('a piece published inside the current turn leads', ids(deskOrder(feed, at(0) + HOUR / 2)) === 'a,b,c',
+    ids(deskOrder(feed, at(0) + HOUR / 2)));
 
-  // Once it has had its turn, the top slot advances and keeps advancing.
-  const seen = new Set();
-  for (let h = 0; h < 6; h++) seen.add(ids(deskOrder(five, at(18) + h * TURN)));
-  ok('the lead moves once the newest piece has had its turn', seen.size === 3, [...seen].join(' | '));
-  ok('every turn still prints all three', [...seen].every(o => o.split(',').sort().join() === 'c,d,e'),
-    [...seen].join(' | '));
-  ok('the order is a rotation, not a reshuffle',
-    [...seen].every(o => ('c,d,e,c,d,e').includes(o) || ('e,d,c,e,d,c').includes(o)), [...seen].join(' | '));
+  // THE CAST CHANGES. This is the assertion the first version would have
+  // failed: consecutive turns must not print the same three stories.
+  const turns = [];
+  for (let t = 0; t < 8; t++) turns.push(deskOrder(feed, at(4) + t * TURN).map(p => p.headline));
+  const sets = turns.map(t => t.slice().sort().join());
+  ok('consecutive turns print different stories', sets.every((s2, i) => i === 0 || s2 !== sets[i - 1]),
+    sets.join(' | '));
+  ok('each turn takes one story off and puts one on', turns.every((t, i) => {
+    if (!i) return true;
+    return t.filter(x => turns[i - 1].indexOf(x) < 0).length === 1;
+  }), turns.map(t => t.join('')).join(' '));
 
-  // The same instant gives the same order to everybody: the band is cached and
-  // two readers on one page load must not see two different front pages.
-  ok('the order is a function of the clock alone',
-    ids(deskOrder(five, at(21))) === ids(deskOrder(five, at(21))));
+  // A story is on the cover for a bounded run, not forever.
+  const onCover = turns.filter(t => t.indexOf('a') >= 0).length;
+  ok('one story is not on every turn', onCover > 0 && onCover < turns.length, `${onCover}/${turns.length}`);
+
+  // The window travels past the band and wraps rather than running dry.
+  const reached = new Set(turns.flat());
+  ok('the rotation reaches past the three newest', reached.size > 3, [...reached].join(','));
+  ok('it never prints a piece the feed does not have', [...reached].every(x => 'abcdefghij'.includes(x)));
+  ok('it never prints the same piece twice in one turn',
+    turns.every(t => new Set(t).size === t.length), turns.map(t => t.join('')).join(' '));
+  ok('and it stays inside the pool rather than reaching the whole archive',
+    [...reached].every(x => 'abcdefgh'.includes(x)), [...reached].join(','));
+
+  // The same instant gives the same order to everybody: two readers on one page
+  // load must not see two different covers.
+  ok('the order is a function of the clock alone', ids(deskOrder(feed, at(9))) === ids(deskOrder(feed, at(9))));
 
   // Degenerate feeds: no rotation to do, and nothing thrown.
-  ok('one piece is printed as it is', ids(deskOrder([five[0]], at(21))) === 'e');
-  ok('an empty feed is empty', deskOrder([], at(21)).length === 0);
+  ok('one piece is printed as it is', ids(deskOrder([feed[0]], at(9))) === 'a');
+  ok('an empty feed is empty', deskOrder([], at(9)).length === 0);
+  ok('a two-piece feed prints both and does not repeat one',
+    deskOrder(feed.slice(0, 2), at(9)).length === 2 &&
+    new Set(deskOrder(feed.slice(0, 2), at(9)).map(p => p.headline)).size === 2);
   ok('a piece with no timestamp does not stop the band',
-    deskOrder([{ url: '/x', headline: 'x' }, { url: '/y', headline: 'y' }], at(21)).length === 2);
+    deskOrder([{ url: '/x', headline: 'x' }, { url: '/y', headline: 'y' }, { url: '/z', headline: 'z' }], at(9)).length === 3);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

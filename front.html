@@ -873,33 +873,43 @@ img{max-width:100%}
   });
 
   // ── the desk's current pieces ────────────────────────────────────────────
-  // THREE AT A TIME, AND THE TOP ONE MOVES. Each card is drawn only with a
+  // THREE AT A TIME, AND THE THREE CHANGE. Each card is drawn only with a
   // destination and a headline on it; with nothing current the whole section
   // stays hidden.
   //
-  // The band used to print the four newest pieces, newest first, and then sit
-  // there: between publishes the front page was the same story under the same
-  // player's name for as long as the desk was quiet, which on a Friday is most
-  // of the day. Ken's rule for The Pick is the rule here — three at a time,
-  // and a new one pushes the oldest out — with one addition the daily column
-  // does not need: the lead slot advances on a clock, so a reader who comes
-  // back after lunch gets a different story at the top of a band that has not
-  // changed underneath them.
+  // The band first printed the four newest pieces, newest first, and sat there
+  // until the desk published again. On 2026-09-18 that put "fade Jeremiyah
+  // Love" on the cover from lunchtime onwards, so the top slot was made to
+  // advance on a clock. That was the wrong fix and Ken said so within the hour:
+  // rotating three cards among themselves changes the ORDER and never the
+  // CAST, and the story he wanted gone was one of the three. It led a third of
+  // the time and was on the page all of it.
+  //
+  // So the rotation reaches past the band. The window is three cards wide and
+  // it slides one piece down the feed every turn, wrapping at the end of the
+  // pool: every turn one story comes off the cover and a different one comes
+  // on, which is what "rotating" was asked for twice. A piece that is one of
+  // eight is on the cover for three turns in eight rather than forever.
   //
   // What it does NOT do is bury news. A piece published inside the current
   // turn leads on its own merit, because a recap filed twenty minutes ago IS
-  // the front page, and rotating it to third would be the site hiding what it
-  // just did. Rotation starts once the newest piece has had its turn.
-  var DESK_BAND = 3;                      // cards in the band
-  var DESK_TURN_MS = 2 * 3600 * 1000;     // how long one piece holds the top
+  // the front page, and rotating it down would be the site hiding what it just
+  // did. The slide starts once the newest piece has had its turn.
+  var DESK_BAND = 3;                  // cards on the cover at once
+  var DESK_POOL = 8;                  // how deep into the feed the window travels
+  var DESK_TURN_MS = 3600 * 1000;     // how long one set of three holds the cover
   function deskOrder(pieces, now) {
-    var band = pieces.slice(0, DESK_BAND);
-    if (band.length < 2) return band;
+    var pool = pieces.slice(0, DESK_POOL);
+    if (pool.length < 2) return pool;
     var newest = 0, i;
-    for (i = 0; i < band.length; i++) newest = Math.max(newest, +band[i].publishedAt || 0);
-    if (newest && now - newest < DESK_TURN_MS) return band;
-    var turn = Math.floor(now / DESK_TURN_MS) % band.length;
-    return band.slice(turn).concat(band.slice(0, turn));
+    for (i = 0; i < pool.length; i++) newest = Math.max(newest, +pool[i].publishedAt || 0);
+    var band = Math.min(DESK_BAND, pool.length);
+    // Fresh news leads, and brings the two behind it.
+    if (newest && now - newest < DESK_TURN_MS) return pool.slice(0, band);
+    var turn = Math.floor(now / DESK_TURN_MS) % pool.length;
+    var out = [];
+    for (i = 0; i < band; i++) out.push(pool[(turn + i) % pool.length]);
+    return out;
   }
   grab('/api/content', function (j) {
     var day = function (v) {
