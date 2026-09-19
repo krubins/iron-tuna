@@ -395,7 +395,20 @@ console.log('\nthe form and the importer');
     const ml = read('my-league.html');
     ok('/my-league §02 mounts the three boxes', ml.includes('id="mlIntake"') && ml.includes('ITInSeasonUI.intake('));
     ok('and drops the form\'s own importer so the page asks once', /leagueForm\([\s\S]{0,120}?importer:\s*false/.test(ml));
-    ok('and hands what a box read to the form', /intake\([\s\S]{0,400}form\.apply\(/.test(ml));
+    // What matters is the wiring, not how close together it is written. §02
+    // mounts TWO rows now — the readers, and the lineup card under them — so
+    // the handler they apply through is named once instead of inlined twice,
+    // and an adjacency check went red on a page that still does the thing.
+    const rows = [...ml.matchAll(/ITInSeasonUI\.intake\(([\s\S]{0,800}?)\}\);/g)].map(m => m[1]);
+    ok('every intake row is handed somewhere to apply what it read',
+      rows.length > 0 && rows.every(r => /onApply:\s*(?:function|[A-Za-z_$][\w$]*)/.test(r)),
+      rows.length + ' row(s)');
+    const named = [...new Set(rows.map(r => (r.match(/onApply:\s*([A-Za-z_$][\w$]*)\s*[,}\n]/) || [])[1]).filter(Boolean))];
+    ok('and that handler reaches the form',
+      named.length
+        ? named.every(n => new RegExp(n + '\\s*=\\s*function[\\s\\S]{0,200}form\\.apply\\(').test(ml))
+        : /onApply:\s*function[\s\S]{0,200}form\.apply\(/.test(ml),
+      named.join(', '));
   }
   ok('the form returns the handle the boxes apply through',
     /return \{\s*\n[\s\S]{0,600}apply: function \(partial, source, n\)/.test(uiSrc));
