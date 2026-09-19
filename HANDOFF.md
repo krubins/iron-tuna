@@ -13362,3 +13362,159 @@ Wilson WR12 $28**.
   prompt still **47,183 chars / `9c578c415408`**.
 - Tamper predicates clean: one published row (94), no published-unverified row,
   no analyst row published, 67 audit rows.
+## 109. September 19: `main` is red, the recap strip is gone, and a frozen overlay still moved the board
+
+D1 clock 2026-09-19 11:22:33Z. `main` moved to `9a98b21c` and added four
+sections, so my 87–104 became 91–108 and 78 internal cross-references shifted.
+
+### 109a. CI is failing, and it is failing on `main` itself
+
+**First red CI in this audit's history.** Two of the 76 checks fail:
+
+```
+tools/test-lead-story.mjs   92 passed, 1 failed   FAIL  the desk section reads /api/content
+tools/test-recaps.mjs       23 passed, 1 failed   FAIL  and it reads the content desk
+```
+
+Both are the same assertion wearing two hats. Before blaming the merge I ran
+them in a clean worktree at `origin/main` (`9a98b21c`) with none of my work in
+the tree, and **they fail there identically**. This is not my branch. `main` is
+red right now, mid-refactor: its own new §87–§90 describe the cover being
+rebuilt, and the front page's replacement "desk section" is not yet wired to
+`/api/content` that its tests require.
+
+Not mine to fix and not something I touched. Recorded so that tomorrow does not
+re-derive it, and so a green run is not assumed.
+
+### 109b. The recap strip has been removed from the homepage
+
+This changes §106 materially. `front.html` now has **zero** references to
+`/api/recaps` and zero `rcp-` classes; the tests assert "the strip is gone from
+the homepage" and "nothing on the page fetches /api/recaps", and both pass. A
+"desk section" reading `/api/content` replaces it — that is the half that does
+not work yet.
+
+So the sixteen `category='recap'` rows in `lead_story` no longer duplicate a
+*visible* strip. They still sit `verified=1, published=0`, still one flag from
+becoming the lead story, still labelled "Insight" if that happens, since
+`LEAD_CATEGORIES` is unchanged at six keys in repo and deployed bundle alike.
+The duplication argument is weaker today; the publish-flag argument is not.
+
+### 109c. The overlay froze and the board moved anyway
+
+`odds-refresh` hung at 11:01:24 — fourth time (09-11, 09-13, 09-17, 09-19).
+`odds_overlay` row 1 is stamped 09-18 11:01:12Z and I confirmed it is
+**byte-identical** to yesterday's capture.
+
+Standing rule (4) says check that the measuring instrument moved before
+reporting no movement. Today it caught the opposite error, which is worth
+writing down: **row 3 — the injury feed — DID refresh** (09-18 23:01Z), and
+`applyAvailability` scales the overlay by it inside `board()`. So:
+
+```
+Nico Collins   09-18:  WR10  $30        09-19:  WR17  $17
+```
+
+**A $13 fall on a day the odds feed did not move at all.** "The overlay is
+frozen" does not mean "the board is frozen", and an audit that skipped the
+measurement because row 1 was stale would have missed the largest single-player
+move in a week.
+
+Row 94's four are unchanged — Tate $10/WR27, Ward $1/QB26, Pollard $3/RB30,
+Robinson $2/WR41 — so **three of four published prices are still wrong**, with
+Pollard printed at $5 against $3 served and a $6 max bid. Sixth day. The curve
+paragraph is wrong at WR20 for a fifth day.
+
+### 109d. Collins is now the fifth-worst gap on the board
+
+```
+A.J. Brown      static WR10 $30  ->  served WR57 $1    -29
+Jaxson Dart     static QB7  $13  ->  served QB4  $27   +14
+Saquon Barkley  static RB10 $37  ->  served RB14 $26   -11
+Chase Brown     static RB13 $28  ->  served RB9  $39   +11
+Nico Collins    static WR11 $28  ->  served WR17 $17   -11
+```
+
+§93's pair has stopped being a tie story and become a gap story: a reader whose
+`/api/board` request fails sees **$28** for a player the live board prices at
+**$17**.
+
+```
+             09-13    09-14    09-15    09-16    09-17    09-18    09-19
+differing    21.8%    22.1%    22.6%    21.2%    21.2%    20.6%    20.3%
+largest      $28      $29      $29      $29      $29      $29      $29
+```
+
+Seven days, a 2.3-point band, A.J. Brown the worst every single day.
+
+### 109e. D1 growth has decelerated sharply
+
+```
+          file        measured content
+09-15    12.3 MB      —
+09-16    78.1 MB      —
+09-17   195.4 MB      4.4 MB
+09-18   285.6 MB      5.0 MB
+09-19   297.7 MB      5.6 MB
+```
+
+**+12 MB today against +90 MB yesterday and +117 MB the day before.** The
+content grew 0.6 MB, the same as every day. So the file:content growth ratio
+went 150:1 yesterday and 20:1 today — the runaway has largely stopped on its
+own, without the weekly prune, which is still not due until tomorrow (09-20).
+`odds_snapshots` remains the only table adding rows at pace (12,115 → 16,968).
+
+Still an unexplained observation. Tomorrow's prune Sunday is now a weaker test
+than it looked, since the growth decelerated before it ran.
+
+### 109f. Hang rate: 09-18 closed at 35%
+
+```
+09-13  109 / 229   48%
+09-14   65 / 272   24%
+09-15  115 / 305   38%
+09-16   68 / 403   17%
+09-17   63 / 344   18%
+09-18  124 / 352   35%     <- I could only report 27% partial
+09-19   74 / 160   46%  (partial, 11:22 — not a figure to quote)
+```
+
+Third time a partial read has understated the closed day (10 vs 24, 41 vs 38 —
+that one over — 27 vs 35). `usage-refresh` still has **no `job_runs` row at all**
+for a third day; overlay row 5 is 73 hours old.
+
+### 109g. The deployment is an unmerged branch again
+
+Today's bundle is 1,405,237 bytes — **80 KB smaller** than yesterday, because
+the league-platform connectors are gone (`PROVIDER_ESPN`, `PROVIDER_YAHOO`,
+`SLEEPER_API`, `YAHOO_TOKEN` and twenty more symbols dropped), which is `main`'s
+own §89. But three symbols in the deployment are not in `main`:
+`LEAGUE_SUFFIX`, `leagueDefKeys`, `leagueLastKeys`.
+
+Searching every ref finds them in `origin/claude/brave-pascal-tp8oy2`
+(`77069895`, "my-league: the middle box takes the roster grid, and reads it"),
+whose head is `cd145cd5` from 2026-09-19 05:32Z and which is **NOT merged** —
+`main` took PR #268 from that branch yesterday and the branch has moved on
+since.
+
+So production has now served an unmerged branch on **three** days: 09-14, 09-15
+and 09-19. Board code is untouched on this one — all seven board symbols have
+identical counts against `main`, and the comparison below is clean — but that is
+the third sample of a mechanism nobody has decided to stop.
+
+### 109h. The rest
+
+- Repo vs deployed: **1380 player-rows across four boards, 0 differences**.
+- Harness self-test **23/23**.
+- **Someone re-enabled a Routine.** "Iron Tuna — The Pick (daily story)" was
+  `enabled: false` yesterday and is `true` today, renamed to "…(daily story,
+  publishes to main)". A new Routine "Check the Sept 19 Pick landed on main" has
+  appeared. The lead-story column Routine is still `enabled: false`,
+  `updated_at` untouched since 2026-09-09 13:05:36Z.
+- **I could not verify the prompt hash today.** `list_triggers` returned a
+  smaller record (173 KB against ~300 KB) with no `session_request` field, so
+  the live prompt text was not available. Not evidence of a change — evidence of
+  a missing measurement, and it stays unverified rather than assumed.
+- Tamper predicates clean: one published row (94), no published-unverified row,
+  no analyst row published, 67 audit rows. Sixteen recap rows, none published,
+  `lead_story_run` still 58.
