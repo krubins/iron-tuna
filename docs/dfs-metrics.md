@@ -37,6 +37,62 @@ contest emphasizes:
 | Large-Field GPP | leverage | Ceiling and ownership decide. Fade fragile chalk. |
 | Showdown | tournamentScore | One game: captain choice and correlation. Showdown salaries are not loaded; the page says so. |
 
+## What the market actually said about him
+
+The Vegas column carries one number for two different things, and until now
+nothing downstream could tell which it was holding.
+
+For a player the books have priced, `vegasPoints` is his own quoted props —
+receiving yards, receptions, a devigged anytime-touchdown price — run through
+`vegasProjection()` and scored at the site's rules. That is a forecast of *him*,
+made with money at stake, and it is the best weekly prediction this site has.
+For a player nobody posted a prop on, it is the game total and spread split
+across an offense and handed to him by his share of it: a forecast of his
+*game*, with his name on it. Over seventeen weeks the difference washes out. On
+one slate it is the difference between a read and a guess.
+
+Every slate row now carries a `market` block from `dfsMarketRead()`:
+
+| Field | What it is |
+|---|---|
+| `basis` | `props` → `props-partial` → `props+gamelines` → `gamelines` → `gamelines+ratings` → `ratings` → `none`. The board's own ladder, best first. |
+| `quoted` | True when a book posted a prop on him this week. This is what the page's PROPS / LINES / FITTED chip reads. |
+| `priced` / `pricedLabels` | The markets a book actually posted, so a surface can say *which* props, not just that there were some. |
+| `books`, `ageHours` | How many books, and how old the pull is. |
+| `shrink` | How far that number is trusted — **`BLEND_SHRINK`, the same ladder the season blend uses.** One definition for the whole site; a second copy here would let the slate and the board disagree about the same player. |
+| `points` (`marketPoints`) | The market number after the shrink, pulled the rest of the way back toward the consensus projection. |
+| `tdProbability`, `tdBooks`, `tdDevigged` | The anytime-touchdown price — the one prop that speaks directly to a slate — with its book count, and whether it was devigged. |
+
+**The fallback is the consensus, never a fitted number wearing a Vegas label.**
+`marketPoints = consensus + shrink × (market − consensus)`. A fully quoted
+player keeps his whole market number (`shrink = 1`). A player priced only off
+his game line keeps 80% of the distance. A fitted team rating keeps 55%. A
+player with no market at all lands exactly on the consensus (`shrink = 0`).
+
+### The Market read build
+
+`mode: 'market'` ("Market read (props first)") maximizes `marketPoints`. The
+older `vegas` mode maximizes the raw market number and cannot tell a quoted
+prop from a sliced-up game total, so it will spend $7,000 on a curve fit that
+happens to read high; `market` will not. On a week the books have not posted,
+it degrades to the consensus build and the page says so rather than presenting
+an inference as a market read.
+
+Slate-level coverage is reported as a number, not a boolean:
+`props: { players, priced, coverage, basis, markets, avgBooks, freshestHours }`,
+with `dfsPropNote()` saying it in one sentence that every DFS surface prints —
+including, when nothing is priced, what the build is standing on instead.
+
+### Where the props come from
+
+`odds_snapshots` ← the market snapshot job (PropLine via `PROPLINE_API_KEY`, or
+SportsGameOdds, or The Odds API via `ODDS_API_KEY`) → `marketHistoryWeek()` →
+`marketPropsFrom()` → `vegasProjection()` → the week board's `vegas.basis` →
+the slate. **If no provider key is configured, no prop reaches the slate**, every
+row reads `gamelines` or `ratings`, and every surface says so. That is a
+configuration state, not a failure, and it is why the fallback is specified as
+carefully as the primary path.
+
 ## Who is on the board at all
 
 Every metric above assumes the player is going to be on the field. That is not

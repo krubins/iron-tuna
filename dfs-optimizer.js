@@ -55,6 +55,16 @@
     vegas: { label: 'Vegas optimal', pts: function (p) { return p.vegasPoints; } },
     consensus: { label: 'Consensus optimal', pts: function (p) { return p.consensusPoints; } },
     vegasEdge: { label: 'Vegas Edge', pts: function (p) { return p.vegasPoints + (p.marketDelta && p.marketDelta.points > 0 ? p.marketDelta.points : 0); } },
+    // The weekly betting market, taken at the strength of its own evidence.
+    // `vegas` above maximizes the raw market number and cannot tell a quoted
+    // prop from a game total sliced up, so it will spend $7,000 on a curve fit
+    // that happens to read high. This one maximizes the slate's marketPoints:
+    // the same number shrunk by how it was arrived at and pulled the rest of
+    // the way back toward the consensus, which is also its fallback on a week
+    // the books have not posted. It prefers the player somebody actually
+    // priced, and when nobody was priced it quietly becomes the consensus
+    // build rather than pretending otherwise.
+    market: { label: 'Market read (props first)', pts: function (p) { return isFinite(p.marketPoints) ? p.marketPoints : (isFinite(p.ironTunaPoints) ? p.ironTunaPoints : 0); } },
     floor: { label: 'Safest floor', pts: function (p) { return floorOf(p); } },
     ceiling: { label: 'Highest ceiling', pts: function (p) { return ceilOf(p); } },
     leverage: { label: 'Ceiling per point of ownership', pts: function (p) {
@@ -269,12 +279,23 @@
           proj: Math.round(p.ironTunaPoints * 10) / 10, operatorFppg: p.operatorFppg == null ? null : Math.round(Number(p.operatorFppg) * 10) / 10,
           operatorFppgBasis: p.operatorFppg == null ? null : (p.operatorFppgBasis || 'operator'),
           projectionVsFppg: p.projectionVsFppg == null ? null : Math.round(Number(p.projectionVsFppg) * 10) / 10,
-          floor: Math.round(floorOf(p) * 10) / 10, ceiling: Math.round(ceilOf(p) * 10) / 10, ownership: ownOf(p), leverage: isFinite(p.leverage) ? p.leverage : null }; }),
+          floor: Math.round(floorOf(p) * 10) / 10, ceiling: Math.round(ceilOf(p) * 10) / 10, ownership: ownOf(p), leverage: isFinite(p.leverage) ? p.leverage : null,
+          // The market evidence rides along so a card can say what the books
+          // said about a man rather than only what he is projected for. These
+          // also feed the fit lines, which had been reading vegasPoints and
+          // teamTotal off an object that never carried either.
+          vegasPoints: isFinite(p.vegasPoints) ? p.vegasPoints : null, consensusPoints: isFinite(p.consensusPoints) ? p.consensusPoints : null,
+          marketPoints: isFinite(p.marketPoints) ? p.marketPoints : null, marketQuoted: !!p.marketQuoted,
+          market: p.market || null, teamTotal: isFinite(p.teamTotal) ? p.teamTotal : null,
+          tdProbability: isFinite(p.tdProbability) ? p.tdProbability : null, tdBasis: p.tdBasis || null, tdBooks: isFinite(p.tdBooks) ? p.tdBooks : null,
+          weekStatus: p.weekStatus || null, available: p.available !== false }; }),
         salary: salary, remaining: cfg.cap - salary, points: Math.round(bestS * 10) / 10, mode: o.mode || 'ironTuna',
         projPoints: Math.round(bestL.reduce(function (s, p) { return s + p.ironTunaPoints; }, 0) * 10) / 10,
         floorPoints: Math.round(bestL.reduce(function (s, p) { return s + floorOf(p); }, 0) * 10) / 10,
         ceilingPoints: Math.round(bestL.reduce(function (s, p) { return s + ceilOf(p); }, 0) * 10) / 10,
-        ownership: owned.length === bestL.length ? Math.round(owned.reduce(function (s, v) { return s + v; }, 0) * 10) / 10 : null });
+        ownership: owned.length === bestL.length ? Math.round(owned.reduce(function (s, v) { return s + v; }, 0) * 10) / 10 : null,
+        marketPoints: Math.round(bestL.reduce(function (s, p) { return s + (isFinite(p.marketPoints) ? p.marketPoints : 0); }, 0) * 10) / 10,
+        quoted: bestL.filter(function (p) { return p.marketQuoted; }).length });
       bestL.forEach(function (p) { used[p.id] = (used[p.id] || 0) + 1; });
     }
     return { ok: results.length > 0, mode: mode.label, lineups: results, poolSize: pool.length, cap: cfg.cap,

@@ -11279,3 +11279,92 @@ Guarded by `tools/test-dfs.mjs` ("who is not playing this week", 30 assertions
 from each source in isolation through to no lineup containing a benched man)
 and `tools/test-worker-availability.mjs` (the weekly table, and that it still
 moves no season line). `docs/dfs-metrics.md` carries the table above.
+
+## 94. September 19: the slate could not tell a quoted prop from a sliced-up game total
+
+The ask: use the week's prop bets to predict players and drive the DFS
+recommendations; fall back to something else where the books have not posted.
+
+**The pipeline was already complete.** The market snapshot job writes
+`odds_snapshots`, `marketHistoryWeek` reads them, `marketPropsFrom` shapes one
+player's markets, `vegasProjection` converts his quoted lines into fantasy
+points, and the week board records the basis on `p.vegas`. The slate was
+already reading that board.
+
+**What was missing was that nothing downstream could tell what it was holding.**
+A quoted player and an unquoted one both arrived as `vegasPoints`. For the
+first that number is his own props — 62.5 receiving yards, 4.5 receptions, a
+devigged 41% anytime-touchdown price — a forecast of *him*, made with money at
+stake. For the second it is the game total and spread split across an offense:
+a forecast of his *game* with his name attached. The optimizer saw one field
+and let a prop-grounded 18.4 and a curve-fitted 18.4 compete for the same
+roster spot on identical terms.
+
+### The evidence now travels with the number
+
+`dfsMarketRead()` puts a `market` block on every slate row: the basis, the
+markets a book actually posted (`priced`, with plain-language labels), the book
+count, the age of the pull, the devigged touchdown price with its books — and
+`shrink`, how far the number is trusted.
+
+**`shrink` is `BLEND_SHRINK`, the site's own ladder, not a copy.** The slate
+discounts a market number by exactly the factors the season blend uses. A
+second table here would drift, and the slate and the board would end up
+disagreeing about the same player on the same afternoon. The test lifts the
+real declaration out of `_worker.js` rather than restating it.
+
+### The fallback is the consensus
+
+`marketPoints = consensus + shrink × (market − consensus)`
+
+A fully quoted player keeps his whole market number. A player priced only off
+his game line keeps 80% of the distance. A fitted team rating keeps 55%. A
+player with no market at all lands exactly on the consensus projection. So the
+degradation is to the experts' number, never to a curve fit wearing a Vegas
+label — which is what the second half of the ask was about.
+
+### The Market read build
+
+A new objective, `mode: 'market'`, maximizes `marketPoints`. The existing
+`vegas` mode is left alone: it maximizes the raw market number, which some
+readers want, and it demonstrably cannot see the difference — the test puts two
+receivers at the same salary with the same 16.0 raw market number, one quoted
+and one not, and `vegas` reads them as identical while `market` takes the
+quoted man.
+
+Being quoted is not a licence to be expensive. A priced $8,600 receiver can
+still lose his slot to value, and should. What it buys is that his number is
+not marked down.
+
+### What the reader sees
+
+- The player pool gains a **Market** column: `PROPS` with the book count,
+  `LINES`, or `FITTED`, with the full sentence on hover.
+- Every recommended player carries a line naming what the books posted on him
+  — "The books posted receiving yards, receptions across 6 books, pulled within
+  the hour. Anytime touchdown 41.2%, devigged from the market." — or saying
+  plainly that nobody priced him and what his number is instead.
+- The lead card says how much of *this roster* the market priced, names the
+  best quoted touchdown price in it, and when none of it was priced says so.
+- The slate dashboard reports coverage as a number, not a boolean: priced how
+  many of how many, by how many books, how fresh, which markets.
+
+### Two things fixed on the way
+
+`playerFit` and `lineupSummary` had been reading `vegasPoints`, `consensusPoints`
+and `teamTotal` off the lineup player object, which never carried any of them —
+so the market clauses in the fit lines and the "strongest market-versus-consensus
+signal" sentence had been dead code. The optimizer now carries those fields
+onto every picked player, and they work.
+
+### The state of the feed
+
+No prop provider key is configured in `wrangler.jsonc` (`PROPLINE_API_KEY`,
+`ODDS_API_KEY` are secrets, and `hasProps` could not be checked from the
+sandbox: the egress policy refuses irontuna.com). So the empty-feed path is
+very likely the live one today, and it is tested as carefully as the loaded
+one: the fixture slate carries no props and proves the consensus fallback, and
+a second fixture with props posted proves the primary path.
+
+Guarded by `tools/test-dfs.mjs` ("the weekly betting market", 38 assertions).
+`docs/dfs-metrics.md` carries the table and the provider chain.

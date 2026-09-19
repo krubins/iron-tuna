@@ -11886,6 +11886,107 @@ function dfsRosterCheck(roster, names, pos, boardTeam) {
   if (boardTeam && r.team !== teamKey(boardTeam)) return { kind: 'team', status: null, team: r.team };
   return null;
 }
+// ── what the market actually says about this player, this week ─────────────
+// A slate's Vegas column is not one kind of number, and until now nothing
+// downstream could tell which kind it was holding.
+//
+// For a player the books have priced, it is his own quoted props — 62.5
+// receiving yards, 4.5 receptions, a 38% anytime-touchdown price — converted
+// to fantasy points at the site's rules. That is a forecast of HIM, made by
+// people with money at stake, and it is the best weekly prediction on this
+// site. For a player nobody posted a prop on, it is the game total and the
+// spread split into an offense and handed to him by his share of it. That is
+// a forecast of his GAME with his name attached. Over seventeen weeks the
+// difference washes out. On one slate it is the difference between a read and
+// a guess, and both were arriving in the same `vegasPoints` field, so a
+// prop-grounded 18.4 and a curve-fitted 18.4 competed for the same roster
+// spot on identical terms.
+//
+// This keeps the evidence attached to the number:
+//
+//   basis     props | props-partial | props+gamelines | gamelines |
+//             gamelines+ratings | ratings | none — the ladder, best first.
+//   priced    the markets a book actually posted on him this week, so the
+//             page can say WHICH props, not just that there were some.
+//   books     how many books priced him, and how old the pull is.
+//   shrink    how far that number is trusted, on the SAME ladder the season
+//             blend uses (BLEND_SHRINK, one definition for the whole site): a
+//             quoted prop is worth all of itself, a fitted team rating a
+//             little over half.
+//   points    the market number after that shrink, pulled the rest of the way
+//             back toward the consensus projection. This is what a
+//             prop-driven build maximizes, and its FALLBACK IS THE CONSENSUS,
+//             not a guess: a player nobody priced lands on the experts'
+//             number rather than on a curve fit wearing a Vegas label.
+//
+// So a player nobody priced is never silently dropped and never silently
+// promoted. He keeps a number, the number says where it came from, and it is
+// worth less than a quoted one.
+const DFS_PROP_LABEL = { passYd: 'passing yards', passTD: 'passing TDs', passInt: 'interceptions',
+  rushYd: 'rushing yards', rushAtt: 'carries', rushTD: 'rushing TDs',
+  recYd: 'receiving yards', rec: 'receptions', recTD: 'receiving TDs', anytimeTD: 'anytime TD' };
+function dfsMarketRead(p, w0, vegasPts, consensusPts) {
+  const basis = (p && p.vegas && p.vegas.basis) || 'none';
+  const shrink = BLEND_SHRINK[basis] != null ? BLEND_SHRINK[basis] : BLEND_SHRINK.none;
+  // The week's own projection block, where this week's props were priced.
+  // A season horizon has none, and an unavailable one is not evidence.
+  const vp = w0 && w0.vegasProjection && w0.vegasProjection.status && w0.vegasProjection.status !== 'unavailable' ? w0.vegasProjection : null;
+  const td = (vp && vp.td) || (p && p.vegas && p.vegas.td) || null;
+  const c = Number.isFinite(consensusPts) ? consensusPts : 0;
+  const v = Number.isFinite(vegasPts) ? vegasPts : c;
+  const priced = vp && Array.isArray(vp.priced) ? vp.priced.slice() : [];
+  return {
+    basis, shrink,
+    points: _oddsRound(c + shrink * (v - c)),
+    quoted: /^props/.test(basis),
+    priced, pricedLabels: priced.map(m => DFS_PROP_LABEL[m] || m),
+    missing: vp && Array.isArray(vp.missing) ? vp.missing.slice() : [],
+    books: vp && Number.isFinite(vp.books) ? vp.books : null,
+    ageHours: vp && Number.isFinite(vp.ageHours) ? vp.ageHours : null,
+    status: vp ? vp.status : null,
+    confidence: (p && p.vegas && p.vegas.confidence) || 'LOW',
+    // The anytime-touchdown price is the one prop that speaks directly to a
+    // slate: a devigged market probability that he reaches the end zone, from
+    // the books, rather than a Poisson tail off a projected carry count.
+    tdProbability: td && td.probability != null ? td.probability : null,
+    tdBooks: td && Number.isFinite(td.books) ? td.books : null,
+    tdDevigged: !!(td && td.devigged)
+  };
+}
+// How much of this slate the books have actually priced. `hasProps` was a
+// boolean, and a boolean cannot answer the question a reader deciding whether
+// to trust a market build is actually asking: priced how much of it, by how
+// many books, how long ago, and what is everyone else standing on.
+function dfsPropCoverage(rows) {
+  const on = (rows || []).filter(r => r.onBoard && r.available !== false && r.market);
+  const basis = {};
+  const markets = new Set();
+  let priced = 0, books = 0, bookN = 0, fresh = null;
+  for (const r of on) {
+    const m = r.market;
+    basis[m.basis] = (basis[m.basis] || 0) + 1;
+    if (!m.quoted) continue;
+    priced++;
+    if (m.books) { books += m.books; bookN++; }
+    if (m.ageHours != null && (fresh == null || m.ageHours < fresh)) fresh = m.ageHours;
+    for (const k of m.priced) markets.add(k);
+  }
+  return { players: on.length, priced, coverage: on.length ? Math.round(priced / on.length * 100) : 0,
+           basis, markets: [...markets].sort(), marketLabels: [...markets].sort().map(k => DFS_PROP_LABEL[k] || k),
+           avgBooks: bookN ? Math.round(books / bookN * 10) / 10 : null, freshestHours: fresh };
+}
+// Said in one sentence, because every DFS surface prints it and they must not
+// drift. It never claims a prop that is not there and never hides one that is.
+function dfsPropNote(cov) {
+  if (!cov || !cov.players) return null;
+  if (!cov.priced) {
+    return 'No player prop has reached this slate. Books post them; none are in the feed behind this build, so every market number here is the game line\u2019s environment applied to the player\u2019s share of it, and is discounted accordingly. The prop-first build falls back to the consensus projection rather than presenting a fitted number as a market read.';
+  }
+  return 'The books have priced ' + cov.priced + ' of ' + cov.players + ' players on this slate (' + cov.coverage + '%)'
+    + (cov.avgBooks ? ', ' + cov.avgBooks + ' books apiece' : '')
+    + (cov.freshestHours != null ? ', pulled ' + (cov.freshestHours < 1 ? 'within the hour' : Math.round(cov.freshestHours) + ' hours ago') : '')
+    + '. Markets quoted: ' + cov.marketLabels.join(', ') + '. Everyone else carries the game line\u2019s environment, discounted for it.';
+}
 function buildDfsSlate(site, salaries, board, opts) {
   const S = DFS_SITES[site];
   const rules = scoringRules('ppr', SCORING_SITE[site]);
@@ -11914,6 +12015,9 @@ function buildDfsSlate(site, salaries, board, opts) {
     const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
     const v = pts('vegas'), c = pts('consensus'), it = pts('ironTuna');
     const w0 = p.weeks.find(x => x.env) || null;
+    // Scored at the SITE's rules, like everything else on the row: a prop is
+    // a stat line, and a stat line is worth different points on DK than on FD.
+    const mkt = dfsMarketRead(p, w0, v, c);
     const lam = (p.ironTuna.stats.rushTD || 0) + (p.ironTuna.stats.recTD || 0);
     rows.push({
       name: p.name, position: pos, team: p.team, opponent: w0 ? w0.opponent : s.opponent, home: w0 ? w0.home : null, salary: s.salary, onBoard: true, key: p.key, siteName: s.name.trim(),
@@ -11922,7 +12026,11 @@ function buildDfsSlate(site, salaries, board, opts) {
       projectionVsFppg: operatorFppg == null ? null : _oddsRound(it - operatorFppg),
       vegasPerK: _oddsRound(v / (s.salary / 1000) * 100) / 100, ironTunaPerK: _oddsRound(it / (s.salary / 1000) * 100) / 100,
       marketDelta: p.marketDelta, vegasBasis: p.vegas.basis, vegasConfidence: p.vegas.confidence,
+      // What the books actually posted on him this week, and the number that
+      // carries. `marketPoints` is what a prop-first build maximizes.
+      market: mkt, marketPoints: mkt.points, marketShrink: mkt.shrink, marketQuoted: mkt.quoted,
       tdProbability: p.vegas.td ? p.vegas.td.probability : Math.round((1 - Math.exp(-lam)) * 1000) / 10, tdBasis: p.vegas.td ? 'anytime-td-market' : 'derived',
+      tdBooks: mkt.tdBooks, tdDevigged: mkt.tdDevigged,
       teamTotal: w0 && w0.env ? (w0.env.implied != null ? w0.env.implied : w0.env.expected) : null, teamTotalPosted: !!(w0 && w0.env && w0.env.posted),
       // The matchup a reader opens a row for: when the game kicks off and how
       // stingy the defense across from him is (1 = fewest points allowed).
@@ -11948,11 +12056,12 @@ function buildDfsSlate(site, salaries, board, opts) {
     expensiveFades: skill.filter(r => r.salary >= 6000 && r.marketDelta && r.marketDelta.points < 0).sort((a, b) => a.marketDelta.points - b.marketDelta.points).slice(0, 15)
   };
   const benched = rows.filter(r => r.onBoard && r.available === false);
+  const cov = dfsPropCoverage(rows);
   return { ok: rows.length > 0, contract: DFS_CONTRACT, site, label: S.label, cap: S.cap, slots: S.slots, flex: S.flex, scoring: 'site', players: rows.sort((a, b) => b.salary - a.salary),
            medianVegasPerK: _oddsRound(med * 100) / 100, unmatched: rows.filter(r => !r.onBoard).length, boards,
            unavailable: benched.length,
            unavailableNames: benched.sort((a, b) => b.salary - a.salary).slice(0, 25).map(r => ({ name: r.name, position: r.position, team: r.team, salary: r.salary, status: r.weekStatus, basis: r.weekStatusBasis })),
-           hasProps: on.some(r => /^props/.test(r.vegasBasis)), note: on.some(r => /^props/.test(r.vegasBasis)) ? null : 'No priced player prop has reached this slate. Books post props; none are in the feed behind this build, so every Vegas number is the game line’s environment applied to the player’s line.' };
+           hasProps: on.some(r => r.marketQuoted), props: cov, note: dfsPropNote(cov) };
 }
 // Game stacks: every game on the slate ranked by total, with each side's
 // QB and his two most-targeted pass catchers, and the bring-back on the
