@@ -1,6 +1,6 @@
 # Iron Tuna — Project Handoff
 
-**The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §89, and `docs/saved-league.md` for the long record.
+**The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §90, and `docs/saved-league.md` for the long record.
 A league can also be read off a **roster grid screenshot**, which is the whole room in one image on the platforms that print one. The by-hand form on My Leagues takes the image, sends it to the existing `/api/roster-read`, and posts what comes back as `teams[]` to `/api/leagues/manual`, which already accepted that shape. The reader returns names only, so every player lands on the bench and a bare name is resolved to a position against the board. Because no starter is known, `leagueLineup` withholds the comparison against the set lineup rather than reporting that the reader starts nobody and projects zero: it returns `slotsKnown:false` with `currentTotal` and `improvement` null and no changes, and the projected best lineup stands on its own. Scoring and the starting-lineup shape are not in a roster grid and still come from the form's own importer or by hand, once. No extension, no sign-in to the platform and no token: it works for CBS, ESPN, Fantrax or anything else that renders a grid.
 
 Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
@@ -8311,7 +8311,7 @@ section is the rest:
 
 **What it is.** A reader describes the league they actually play in and every in-season surface reads their exact scoring, their roster, every other roster, the free-agent pool and the standings. It is infrastructure, not a page: the model lives in D1 and the pages read it. The long record is `docs/saved-league.md`; this is the map.
 
-**There are no platform connectors.** Sleeper, Yahoo, CBS and the ESPN placeholder were removed in §89 along with the OAuth flow, the provider tokens, the scheduled `league-sync` job and the CBS extension. Nothing here calls a fantasy platform, and no provider credential is stored. `LEAGUE_PROVIDERS` has one entry, `manual`, and the adapter shape is kept only so that a future connector has something to slot into.
+**There are no platform connectors.** Sleeper, Yahoo, CBS and the ESPN placeholder were removed in §90 along with the OAuth flow, the provider tokens, the scheduled `league-sync` job and the CBS extension. Nothing here calls a fantasy platform, and no provider credential is stored. `LEAGUE_PROVIDERS` has one entry, `manual`, and the adapter shape is kept only so that a future connector has something to slot into.
 
 **Access.** Saving a league is free. `/api/auth/request` sends a magic link to any valid email; the session is what a saved league is tied to, and it does not grant the paid bundle — paid routes still enforce `isEntitled`. §04 of /my-league refuses to store a room without a session, which is why that endpoint stays open (§88).
 
@@ -10811,7 +10811,67 @@ freshness rule pins the order and the hero assertions stay deterministic.
 
 ---
 
-## 89. September 18: the league-platform connectors are removed
+## 89. September 17: "no Monday game this week" in a week that had one
+
+Ken's report: the Rest-of-Season Rankings opened by telling the reader "the
+packet notes no Monday game this week, or its box score is not final." There
+had been a Monday night game. His instruction went past the fact: "if you are
+not sure don't do a story about it, better to remain silent than raise the
+issue and lose credibility."
+
+**The bug is one property.** The Tuesday producer builds the Monday material
+as an OBJECT and hands it over:
+
+```js
+const ms = mon.length ? { games: mon, summaries: await summariesFor(mon) } : null;
+facts = packetRos(..., ms && ms.summaries.length ? ms : null);
+```
+
+`packetRos` then tested `mondaySummaries.length`. An object has no `length`,
+so the test was `undefined` every week of the season, the reported branch
+never ran once, and the packet took the else every Tuesday. The caller's own
+gate was right and did the real work; the callee threw the answer away. The
+check now reads `mondaySummaries.summaries`, which is what was passed.
+
+**Why the note is gone, not fixed.** A packet that hedges buys a page that
+hedges. The writer is told the packet is the only source of facts, so a
+sentence sitting in the packet gets printed, and "no Monday game this week,
+or its box score is not final" is a sentence that hedges TWO WAYS about a
+thing the reader can check in one click. `whatMondayChanged` is now either a
+block built from the box score or `null`, and `CONDITIONAL_SECTIONS` drops
+the section when it is null — the same mechanism that already keeps a week
+with no misses from getting an empty misses section (§the Monday scorecard).
+The writer is never asked for the section, so the piece says nothing about
+Monday rather than saying the wrong thing about it. The full section list,
+asked for without a packet, still names it, so `desk.html` keeps its label.
+
+The general rule this is the second instance of: a packet field whose value
+is an apology for missing data is a bug, not a fallback. Either the data is
+there and the section runs, or the section is not asked for.
+
+| Piece | What changed |
+|---|---|
+| `packetRos` | reads `mondaySummaries.summaries`, not `.length` off the wrapper. With nothing final from Monday, `whatMondayChanged` is `null` and carries no prose. |
+| `CONDITIONAL_SECTIONS['ros-rankings']` | `whatMondayChanged` is asked for only when the packet carries the block. `sectionsFor` drives both the SHAPE the writer is handed and the check that holds the draft, so the section can never be dropped from one and demanded by the other. |
+
+**Tests.** `tools/test-content.mjs` (96, up 7), a new "what Monday changed"
+block on the real DAL at PHI fixture: a final Monday box score is reported
+with a section per club and what each learned, and the section is asked for;
+a week with no Monday material carries a null block, no "no Monday game"
+string anywhere in the packet, and no `whatMondayChanged` in the section list
+while the rest of the list survives; a Monday game whose box score is not
+final yet is the same silence; and the full list still names the section for
+the desk page. `packetRos` and `sectionsFor` are now exported from that
+harness. Restoring `.length` fails the first assertion.
+
+`tools/test-dry-run.mjs` (112, up 2) carries the end-to-end guard, which is
+the one that would have caught this: the fixture's Week 1 ends with a Monday
+night game and has its box score, so the Tuesday piece it publishes must
+report Monday with a section per club, must carry `whatMondayChanged` in the
+written body, and neither its packet nor its prose may contain the string
+"no Monday game". Before the fix the published piece failed all three.
+
+## 90. September 18: the league-platform connectors are removed
 
 They never worked. Not "worked badly" — no reader ever connected a fantasy
 platform and got a board back from it in production. Sleeper shipped behind a

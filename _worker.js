@@ -8066,7 +8066,12 @@ const CONDITIONAL_SECTIONS = {
   // The list itself decides, not the board's count alone: a week whose only
   // wrong calls were made in the stories still owes the reader a misses
   // section.
-  'what-tuna-got-right': { whatWeMissed: p => !!(p && Array.isArray(p.misses) && p.misses.length > 0) }
+  'what-tuna-got-right': { whatWeMissed: p => !!(p && Array.isArray(p.misses) && p.misses.length > 0) },
+  // Monday night is reported from its box score or it is not raised at all.
+  // A week with nothing final from Monday hands the writer no block, so the
+  // section is never asked for and the piece never has to explain an absence
+  // it cannot be sure of. Better silent than wrong in print.
+  'ros-rankings': { whatMondayChanged: p => !!(p && p.whatMondayChanged) }
 };
 function sectionsFor(kind, lens, packet) {
   const n = NEWSROOM_SECTIONS[kind];
@@ -10060,8 +10065,19 @@ function packetRos(ctx, boards, rosUpdate, mondaySummaries) {
     if (h === 'ros') dis = blendDisagreements(b.players, 12);
   }
   out.disagreements = dis;
-  if (mondaySummaries && mondaySummaries.length) { const m = briefForGames('ros-rankings', mondaySummaries.games, mondaySummaries.summaries, ctx); delete m.allowed; out.whatMondayChanged = { winners: m.winners, losers: m.losers, usageChanges: m.usageChanges, teams: m.teams.map(t => ({ team: t.team, learned: t.learned, stillDontKnow: t.stillDontKnow })) }; }
-  else out.whatMondayChanged = { note: 'no Monday game this week, or its box score is not final' };
+  // MONDAY NIGHT IS EITHER REPORTED OR NOT MENTIONED. `mondaySummaries` is
+  // `{ games, summaries }` and never an array, so the old `.length` test was
+  // undefined every week and the packet took the else branch even when the
+  // Monday game had been played and its box score was final. The writer was
+  // handed "no Monday game this week, or its box score is not final" and
+  // printed it: on September 15 the Tuesday rankings told the reader there had
+  // been no Monday night game in a week that had one. A packet that hedges
+  // buys a page that hedges. With nothing final from Monday the block is left
+  // null and CONDITIONAL_SECTIONS drops the section, so the piece is silent
+  // about Monday rather than wrong about it.
+  const mondayFinals = (mondaySummaries && mondaySummaries.summaries) || [];
+  if (mondayFinals.length) { const m = briefForGames('ros-rankings', mondaySummaries.games, mondayFinals, ctx); delete m.allowed; out.whatMondayChanged = { winners: m.winners, losers: m.losers, usageChanges: m.usageChanges, teams: m.teams.map(t => ({ team: t.team, learned: t.learned, stillDontKnow: t.stillDontKnow })) }; }
+  else out.whatMondayChanged = null;
   // No dfs block: the kind is weekly-only (CONTENT_KINDS), so the writer is
   // never handed a DFS lens to fill and the packet does not carry the slate.
   return out;
@@ -12722,7 +12738,7 @@ async function pruneAnalytics(env, keepDays) {
 //
 // THERE IS ONE ADAPTER AND IT IS THE READER. The Sleeper, Yahoo and CBS
 // connectors and the ESPN placeholder were removed on 2026-09-18 (HANDOFF
-// §89): Sleeper never cleared its non-commercial grant (docs/data-sources.md
+// §90): Sleeper never cleared its non-commercial grant (docs/data-sources.md
 // R2), Yahoo never ran against a live account, CBS never completed an import,
 // and ESPN never had a supported path. Nothing here calls a fantasy platform
 // any more, so there is no OAuth, no stored provider credential and no
@@ -12952,7 +12968,7 @@ const PROVIDER_MANUAL = {
   normalize(raw) { return raw; }
 };
 // One provider, and it is the reader. The Sleeper, Yahoo, CBS and ESPN
-// connectors were removed on 2026-09-18 (HANDOFF §89): none of them ever
+// connectors were removed on 2026-09-18 (HANDOFF §90): none of them ever
 // carried a league in production. The adapter shape stays, because it is what
 // keeps everything downstream from knowing where a league came from, and it is
 // what a future connector would slot into.

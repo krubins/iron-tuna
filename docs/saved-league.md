@@ -5,7 +5,7 @@ reads it: their exact scoring, their roster, every other roster, the free-agent
 pool and the standings. It is infrastructure, not a page — the model lives in
 D1 and the pages read it.
 
-> **The platform connectors were removed on 2026-09-18** (HANDOFF §89). Sleeper,
+> **The platform connectors were removed on 2026-09-18** (HANDOFF §90). Sleeper,
 > Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow,
 > the sealed provider tokens, the scheduled refresh and the CBS browser
 > extension. None of them ever carried a reader's league in production: Sleeper
