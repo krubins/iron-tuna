@@ -92,14 +92,12 @@ const NAV = [
 
 // The one header button, on every page.
 //
-// IT IS NOT "My League". Automatic league sync does not work reliably today:
-// FLAG_SLEEPER_SYNC is off pending a written license, FLAG_YAHOO_SYNC is off and
-// has never run against a live Yahoo account, ESPN is not implemented at all,
-// and CBS is enabled but has never been exercised against a live CBS league
-// (docs/league-sync.md §3.1, rows 6-9 and 22). What DOES work for every reader
-// is the browser-only settings form in section 02 of /my-league — scoring, teams
-// and FAAB budget, saved locally, read by every board in the section. So the
-// entry says what it actually does and lands on that form.
+// IT IS NOT "Sync My League". The Sleeper, Yahoo and CBS connectors and the
+// ESPN placeholder were removed (docs/saved-league.md): none of them ever
+// carried a reader's league. What works is /my-league itself, where a reader
+// describes their league — scoring, lineup, FAAB budget and every roster in the
+// room — and every board in the section reads it. So the entry says what it
+// actually does and lands on that form.
 const CTA = { label: 'Customize My League', href: '/my-league#settings', cta: true };
 
 // The footer is the nav plus the pages that belong to no lane: the data

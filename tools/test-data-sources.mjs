@@ -33,18 +33,11 @@ const ok = (name, cond, extra = '') => {
 const ALLOWED = {
   'api.prop-line.com':        { kind: 'content', why: 'PropLine game lines, player props and movement for end-user analytical display; no bulk redistribution (docs/data-sources.md)' },
   'prop-line.com':            { kind: 'content', why: 'PropLine source-attribution link; never fetched by the worker (docs/data-sources.md)' },
-  'api.cbssports.com':        { kind: 'content', why: 'CBS fantasy API (version 3.0) documented base for reader-authorized league reads; FLAG_CBS_SYNC (R7)' },
-  'football.cbssports.com': { kind: 'content', why: 'CBS reader-authorized league API; validated league subdomain only, FLAG_CBS_SYNC off until access and commercial terms verified (R7)' },
   'api.sportsgameodds.com':   { kind: 'content', why: 'paid odds feed: player props and one of the quotes behind /the-line; display terms pending (docs/data-sources.md R8)' },
   'api.the-odds-api.com':     { kind: 'content', why: 'documented odds feed; stored and derived UI use permitted (docs/data-sources.md R3)' },
   'the-odds-api.com':         { kind: 'content', why: 'source-attribution link; never fetched by the worker (docs/data-sources.md R3)' },
   'site.api.espn.com':        { kind: 'content', why: 'REMEDIATION PENDING: undocumented endpoints, no commercial license (R1)' },
   'api.sleeper.app':          { kind: 'content', why: 'REMEDIATION PENDING: non-commercial grant only (R2)' },
-  // League sync (docs/league-sync.md). Sleeper league reads ride on the row
-  // above and are gated by FLAG_SLEEPER_SYNC (default off) for the same R2
-  // reason. Yahoo is OAuth 2.0 with the reader's consent, read-only scope.
-  'api.login.yahoo.com':      { kind: 'service', why: 'Yahoo OAuth 2.0 authorization and token endpoints (league sync)' },
-  'fantasysports.yahooapis.com': { kind: 'content', why: 'Yahoo Fantasy Sports API, the reader’s own leagues under their OAuth grant (R7)' },
   'static.www.nfl.com':       { kind: 'content', why: 'REMEDIATION PENDING: hot-linked league imagery, rights unreviewed (R4)' },
   'api.stripe.com':           { kind: 'service', why: 'payments' },
   'api.resend.com':           { kind: 'service', why: 'transactional mail' },
@@ -117,7 +110,11 @@ if (fs.existsSync(docPath)) {
     ok(`${h} is in the inventory`, doc.includes(h),
        'a content source the worker reaches but the /data page would not list');
   }
-  ok('dynamic CBS league hosts are in the inventory', doc.includes('football.cbssports.com'));
+  // The connectors are gone, so no fantasy-platform host may be reachable at
+  // all. This is the assertion that catches one coming back by the side door.
+  ok('no fantasy-platform league host is reachable any more',
+     !['cbssports.com', 'yahooapis.com', 'login.yahoo.com'].some(h => [...hosts].some(x => x.includes(h))),
+     [...hosts].filter(x => /cbssports|yahoo/.test(x)).join(', '));
 }
 
 // Section 14.4. Naming a binding in a status label ("no LLM_API_KEY") is fine

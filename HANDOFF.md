@@ -1,5 +1,7 @@
 # Iron Tuna — Project Handoff
 
+**The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §89, and `docs/saved-league.md` for the long record.
+
 CBS browser connector 0.2.0: the token-declaration approach failed on the live CBS league. The extension now reads whitelisted settings/scoring, roster-grid team names and every team roster through same-origin requests in the signed-in CBS tab, then posts a bounded snapshot to the existing connect route as provider cbs_browser. No CBS credentials leave the browser. The existing API-token adapter and encryption are retained separately; as of 2026-09-16 it sends the token as CBS's `access_token` query parameter (and the Authorization header), tries the documented `api.cbssports.com/fantasy` base before the league host's `/api/league`, treats a sign-in redirect as a refused token instead of a generic failure, and every failure shows a redacted diagnostic (resource, what each host answered, redirect host/path) on the form and in the league's last error. The first live run after that change answered `CBS details: HTTP 302 to www.cbssports.com/login` from the league host alone, so the league host does not honor `access_token`; whether the documented base still does is unproven and now untestable: on 2026-09-17 a signed-in live league page carried no `var token = "..."` at all, in the served HTML or on `window`, so the technique the public token fetchers rely on no longer yields a value and there is nothing left to authenticate a probe of either host with. Treat the API-token adapter as dead rather than merely unverified; it is retained, still behind `FLAG_CBS_SYNC`, only because removing it would cost more than leaving it off. Browser leagues never run in the scheduled sync job and expose no next automatic refresh time.
 
 Live DOM validation found all 12 BigKahuna teams and 204 players, matching each page's Active/Reserve counts. All scoring rows were parsed against a synthetic fixture that retains the observed scoring shapes. On 2026-09-16 the whole flow ran in a real Chromium (`node tools/test-cbs-e2e.mjs`: the unpacked extension, the real worker as irontuna.com, an in-memory D1, a fake CBS site in the reader's shapes): sign-in, tab discovery, the CBS reads, the import POST, team selection, the card on My Leagues and the strip on My Week all pass. The same day the reader and the normalizer gained injured-reserve support (extension 0.2.1); before that, one IR player on any team aborted the entire import with "CBS roster counts could not be verified", which in Week 2 is the likeliest way a live import fails. Two things the harness cannot prove: the live CBS markup (a drift shows as a "No import was sent" message in the popup) and the production env (Sleeper, Yahoo and ESPN stay unavailable on My Leagues by flag and configuration; `/api/leagues/providers` says which). Do not claim the league is linked until My Leagues confirms it. See extensions/cbs-connector/README.md and docs/league-sync.md for scope and release checks.
@@ -10844,7 +10846,81 @@ pinned clock a rotating cover makes "which story leads" and "whose photograph
 runs" depend on what time of day CI happens to run. It also asserts the hero's
 caption no longer claims to be the widest.
 
-## 89. September 19: the cover was drawing from the archive, drafts and all
+---
+
+## 89. September 18: the league-platform connectors are removed
+
+They never worked. Not "worked badly" — no reader ever connected a fantasy
+platform and got a board back from it in production. Sleeper shipped behind a
+flag that was never turned on, because its API grant is non-commercial and Iron
+Tuna is a paid product. Yahoo was written against fixtures and never once ran
+against a live account. CBS was tried live twice, an API-token form and then a
+browser extension, and never completed an import a reader kept. ESPN was a
+placeholder whose job was to say ESPN has no supported path.
+
+The masthead button had already been relabeled off "Sync My League" because the
+label promised what the site could not do. That was the tell.
+
+**What came out**, all of it under `// ══ LEAGUE SYNC`, now
+`// ══ THE SAVED LEAGUE`: the four adapters, `leagueFetchJson`, the AES-GCM
+token sealing and the provider-connection helpers, `leagueSync`,
+`leagueSyncState`, `runLeagueSync`, `leagueSnapshot`, `leagueRunLog`,
+`leagueNextSyncAt`, the hourly `league-sync` job, the four provider flags, the
+three provider-only tables (`league_provider_tokens`, `league_sync_runs`,
+`provider_connections`), and the `/api/leagues/connect`,
+`/api/leagues/providers`, `/api/oauth/yahoo/*` and per-league `sync` routes.
+`/api/admin/league-sync` became `/api/admin/leagues` and reports saved leagues
+and unmapped players instead of provider runs. Also gone: the CBS extension,
+its three tests, the four provider fixtures, and the platform tiles and
+provider flows in §01 of /my-league.
+
+**What stayed, and why.** The manual half is not the fallback, it is the
+product: the league model, the crosswalk, `leagueManualUpsert`,
+`POST /api/leagues/manual`, every personalization module and My Week. Two days
+before this landed, main shipped §04 "Insert Rosters" — a roster-grid
+screenshot read by `/api/roster-read` and saved as a whole twelve-team room
+through that route, with a `slotsKnown` fix in `leagueLineup` so a grid-read
+room does not report that the reader starts nobody. Removing the server half
+would have deleted that on the day it shipped. `LEAGUE_PROVIDERS` keeps its
+shape with `manual` as its one entry, because that shape is what stops anything
+downstream from knowing where a league came from.
+
+**The D1 tables are not dropped.** The eight remaining ones are in use. The
+three the connectors owned are simply unreferenced; drop them by hand when you
+want to, because a `DROP TABLE` in a codebase that no longer knows why they
+exist is the more dangerous artifact.
+
+**A brace, and a check that cannot catch it.** The first pass at the cut ate
+the closing `}` of `leagueWeekContext`, and `node --check _worker.js` passed
+anyway: it parses the file as a script, where a stray top-level `export` is
+just an identifier, so the only symptom was `export default` appearing to be
+nested. What caught it was importing the worker, which the tests that drive it
+do. `node --check` is not a real gate on this file.
+
+**The tests were rebuilt, not deleted.** `tools/test-league-sync.mjs` was
+written around the Sleeper connector as its vehicle — its fixtures, its
+`buildWorld`, and a whole suite testing `sleeperScoring` and `yahooScoring`.
+Those modules are the product now, so the coverage moved rather than going with
+them: `buildRoom(n)` builds a room in the shape `POST /api/leagues/manual`
+takes, the normalization suite tests `leagueNormalizeSettings` against every
+shape the connectors used to import (full/half/standard PPR, position-specific
+reception values, TE premium, superflex, unusual flex slots, rules the engine
+does not model), and the personalization suite runs on a saved 12-team room.
+**The fetch stub throws**: an outbound call to a fantasy platform is now a
+regression and fails there first. Three assertions changed because the truth
+changed — a saved room has no transaction log, so nobody is on waivers; no
+schedule, so there is no opponent; and no sync route to call. 73 assertions,
+all passing.
+
+Writing this suite also corrected two things I had assumed: `rbReceptionPoints`
+is its own field and is **not** derived from `receptionPoints`, so a form that
+sets half PPR must set both or backs keep full-point catches; and a roster slot
+the model does not know is only preserved when it arrives under `roster.other`,
+not at the top level. Both are now pinned.
+
+---
+
+## 90. September 19: the cover was drawing from the archive, drafts and all
 
 Ken, after the hero rotation landed: "Love is gone, but it still doesn't have
 some of the stories that we are supposed to have in rotation." Right again, and
@@ -10905,3 +10981,4 @@ Nobody printed the list. One `console.log` of the eight rows the band was
 drawing from — or one look at what `contentListPayload` selects — would have
 ended this on the first pass. When output looks wrong, read the input before
 rewriting the function that shapes it.
+
