@@ -206,23 +206,36 @@ console.log('\nthe board prints the consensus against the odds');
 
 // ── the two lines under every name ───────────────────────────────────────────
 // The sentences are the board's answer to "is he any good" and "is this a week
-// to start him", and both failures they can have are silent: a clause that
-// DEFAULTS instead of dropping invents a number, and a grade read off the wrong
+// to start him", and every failure they can have is silent: a clause that
+// DEFAULTS instead of dropping invents a number, a grade read off the wrong
 // side of a fixture (a defense judged on its own offense) is a wrong sentence
-// rather than a missing one. The tier and grade helpers sit at the top of the
-// IIFE with no DOM behind them, so they are lifted out and actually run.
+// rather than a missing one, and a second copy of the tier table drifts from
+// the first inside a season. So the grammar lives in it-reads.js, once, and the
+// helpers there have no DOM behind them and are lifted out and actually run.
 console.log('\nevery row says what the player is and what is in front of him');
 {
+  const reads = read('it-reads.js');
   const js = read('it-ranks.js');
-  const cut = (from, to) => js.slice(js.indexOf(from), js.indexOf(to));
-  const H = new Function(cut('  var TIERS = {', '  function Board(host)') +
-    '\nreturn { TIERS, tierOf, gradeOf, ord, awayFrom, plural, listOf };')();
+  const tool = read('rankings.html');
+  const cutFrom = (src, from, to) => src.slice(src.indexOf(from), src.indexOf(to));
+  const H = new Function(cutFrom(reads, '  var TIERS = {', '  // THE PLAYER LINE.') +
+    '\nreturn { TIERS, POS_LONG, HZ, tierOf, gradeOf, ord, awayFrom, plural, listOf };')();
 
-  ok('both lines are rendered under the name, labelled',
-    js.includes('rk-read-pl') && js.includes('>Player</span>') &&
-    js.includes('rk-read-op') && js.includes('>Opportunity</span>'));
-  ok('and site.css styles them on the rankings board only',
-    /\.rk-vs td\.rk-who \.rk-read\b/.test(read('site.css')));
+  // ONE COPY. Two surfaces print these lines; if either grew its own tiers the
+  // same player would be "a weekly WR1" on one page and "a WR2" on the other.
+  ok('the tiers and the grammar live in one file', /var TIERS = \{/.test(reads));
+  ok('and neither board carries a second copy of them',
+    !/TIERS|function tierOf|function gradeOf/.test(js) && !/TIERS|function tierOf|function gradeOf/.test(tool));
+  ok('both boards call it', /ITReads\.cell\(/.test(js) && /ITReads\.cell\(/.test(tool));
+  ok('and both load it before the script that calls it',
+    allBoards.every((f) => read(f).indexOf('/it-reads.js') < read(f).indexOf('/it-ranks.js')) &&
+    tool.indexOf('/it-reads.js') < tool.indexOf('function reads(r)'));
+  ok('a board without it renders the row rather than throwing',
+    /if \(!window\.ITReads\) return ''/.test(js) && /if \(!window\.ITReads\) return ''/.test(tool));
+  ok('both lines are labelled, from one place',
+    /rk-read-pl[^]{0,80}>Player</.test(reads) && /rk-read-op[^]{0,90}>Opportunity</.test(reads));
+  ok('and site.css styles them on both boards and on neither other one',
+    /\.rk-vs td\.rk-who \.rk-read\b/.test(read('site.css')) && /\.rk-table td\.p \.rk-read\b/.test(read('site.css')));
 
   ok('a tier is the positional shape, not one invented per player',
     ['QB', 'RB', 'WR', 'TE', 'K', 'DST'].every((k) => Array.isArray(H.TIERS[k])));
@@ -231,14 +244,21 @@ console.log('\nevery row says what the player is and what is in front of him');
   ok('the top of a position reads as the top of it', /elite|top of/.test(H.tierOf('WR', 2)));
   ok('and the far end of it does not', /depth|deep-league|waiver/.test(H.tierOf('WR', 90)));
   ok('an unranked player gets no tier at all, rather than the bottom one', H.tierOf('WR', null) === '');
+  ok('every horizon either board can ask for has words of its own',
+    ['week', 'next3', 'ros', 'playoffs'].every((k) => H.HZ[k] && H.HZ[k].when && H.HZ[k].slate));
 
   // The function's own body, not a window of N characters after its name: a
   // window is a test that fails the next time the function grows a comment.
-  const playerLine = cut('    function playerLine(p) {', '    // THE OPPORTUNITY LINE');
-  ok('the player line ranks him at his OWN position, not in the flex pool',
-    playerLine.includes('p.consensus.rank') && !playerLine.includes('flexRank'));
-  ok('and says so in words where the "#" column is a pooled flex slot',
-    /pos === 'FLEX'[^\n]*ord\(rank\) \+ ' among '/.test(playerLine));
+  const playerLine = cutFrom(reads, '  function player(p, o) {', '  // THE OPPORTUNITY LINE');
+  ok('the player line is ranked and scored by the CALLER, because only it knows the board',
+    playerLine.includes('o.rank') && playerLine.includes('o.points') && !playerLine.includes('p.consensus'));
+  ok('the published pages feed it the consensus, which is the column they rank on',
+    /ITReads\.cell\(p, \{[^]{0,240}p\.consensus\.rank/.test(js));
+  ok('and the tool feeds it whichever of four boards the reader picked',
+    /f \+ 'Rank'/.test(tool) && /points: bp\(r\)/.test(tool));
+  ok('neither hands it a pooled flex slot: that is spelled out instead',
+    /spellOut: pos === 'FLEX'/.test(js) && /spellOut: pos === 'FLEX'/.test(tool) &&
+    /o\.spellOut && POS_LONG\[p\.position\]/.test(playerLine));
   ok('a usage swing is quoted only once three games have earned it',
     playerLine.includes('roleTrend.applied'));
   ok('and a player with no game on the board is not given a 0.0 projection',
@@ -258,26 +278,27 @@ console.log('\nevery row says what the player is and what is in front of him');
   ok('three byes read as a list, not as a chain of "and"s',
     H.listOf([7]) === '7' && H.listOf([7, 8]) === '7 and 8' && H.listOf([7, 8, 9]) === '7, 8 and 9');
 
-  ok('a season slate is graded with the worker\'s own label, so it cannot contradict the column',
-    /seasonOpportunity[\s\S]{0,900}scheduleDifficulty/.test(js) &&
-    /sd\.label === 'Hard'/.test(js) && !/avgOpponentDefRank\s*<=\s*11/.test(js));
+  ok('a multi-week slate is graded with the worker\'s own label, so it cannot contradict the column',
+    /slateOpportunity[^]{0,900}scheduleDifficulty/.test(reads) &&
+    /sd\.label === 'Hard'/.test(reads) && !/avgOpponentDefRank\s*<=\s*11/.test(reads));
   ok('a DEFENSE is graded on the other side of the fixture, never on its own offense',
-    /position === 'DST'[\s\S]{0,700}allowedImplied/.test(js) &&
-    /position === 'DST'[\s\S]{0,700}allowedDelta/.test(js));
+    /position === 'DST'[^]{0,700}allowedImplied/.test(reads) &&
+    /position === 'DST'[^]{0,700}allowedDelta/.test(reads));
   ok('and the worker actually ships that side of the fixture',
     /allowedImplied: env\.allowedImplied/.test(read('_worker.js')));
   ok('an unpriced fixture says it is a fitted rating rather than quoting a line',
-    /fitted team rating rather than a posted line/.test(js));
+    /fitted team rating rather than a posted line/.test(reads));
   ok('and a season mean is only quoted against a line a book has posted',
-    /posted \? \(env\.impliedDelta != null/.test(js));
+    /posted \? \(env\.impliedDelta != null/.test(reads));
   ok('a player with no game has an opportunity line that says exactly that',
-    /On bye this week/.test(js) && /Out of this week/.test(js));
+    /On bye this week/.test(reads) && /Out of this week/.test(reads));
   ok('an absence is no longer printed over a fixture as a bye',
     !/filter\(function \(w\) \{ return !w\.bye && !w\.out; \}\)\[0\]/.test(js) &&
     /w0\.out \?/.test(js));
 
   const noRead = allBoards.filter((f) => !read(f).includes('How to read the two lines under a name'));
   ok('and all sixteen pages tell the reader what the two lines are', noRead.length === 0, noRead.join(', '));
+  ok('so does the tool', /the two lines under a name/i.test(tool));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
