@@ -1,5 +1,7 @@
 # Iron Tuna — Project Handoff
 
+**The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §89, and `docs/saved-league.md` for the long record.
+
 CBS browser connector 0.2.0: the token-declaration approach failed on the live CBS league. The extension now reads whitelisted settings/scoring, roster-grid team names and every team roster through same-origin requests in the signed-in CBS tab, then posts a bounded snapshot to the existing connect route as provider cbs_browser. No CBS credentials leave the browser. The existing API-token adapter and encryption are retained separately; as of 2026-09-16 it sends the token as CBS's `access_token` query parameter (and the Authorization header), tries the documented `api.cbssports.com/fantasy` base before the league host's `/api/league`, treats a sign-in redirect as a refused token instead of a generic failure, and every failure shows a redacted diagnostic (resource, what each host answered, redirect host/path) on the form and in the league's last error. The first live run after that change answered `CBS details: HTTP 302 to www.cbssports.com/login` from the league host alone, so the league host does not honor `access_token`; whether the documented base still does is unproven and now untestable: on 2026-09-17 a signed-in live league page carried no `var token = "..."` at all, in the served HTML or on `window`, so the technique the public token fetchers rely on no longer yields a value and there is nothing left to authenticate a probe of either host with. Treat the API-token adapter as dead rather than merely unverified; it is retained, still behind `FLAG_CBS_SYNC`, only because removing it would cost more than leaving it off. Browser leagues never run in the scheduled sync job and expose no next automatic refresh time.
 
 Live DOM validation found all 12 BigKahuna teams and 204 players, matching each page's Active/Reserve counts. All scoring rows were parsed against a synthetic fixture that retains the observed scoring shapes. On 2026-09-16 the whole flow ran in a real Chromium (`node tools/test-cbs-e2e.mjs`: the unpacked extension, the real worker as irontuna.com, an in-memory D1, a fake CBS site in the reader's shapes): sign-in, tab discovery, the CBS reads, the import POST, team selection, the card on My Leagues and the strip on My Week all pass. The same day the reader and the normalizer gained injured-reserve support (extension 0.2.1); before that, one IR player on any team aborted the entire import with "CBS roster counts could not be verified", which in Week 2 is the likeliest way a live import fails. Two things the harness cannot prove: the live CBS markup (a drift shows as a "No import was sent" message in the popup) and the production env (Sleeper, Yahoo and ESPN stay unavailable on My Leagues by flag and configuration; `/api/leagues/providers` says which). Do not claim the league is linked until My Leagues confirms it. See extensions/cbs-connector/README.md and docs/league-sync.md for scope and release checks.
@@ -10761,7 +10763,271 @@ done
 git push origin --delete claude/the-pick-daily-segment-qpj8l6
 ```
 
-## 88. September 18: two lines under every name, on all seventeen rankings pages
+
+## 88. September 18: one player was on the cover twice, by two different paths
+
+Ken, three times in an evening: "Love is still featured on the front page."
+Then: "Why is Lo still on the cover. We are supposed to be rotating." Then, in
+full: "Love."
+
+He was right every time, and the first two fixes were aimed at the wrong half
+of the page.
+
+**Jeremiyah Love was on the cover TWICE, by two unrelated paths.**
+
+1. **The desk band.** The Week 2 weekend preview, headlined "fade Jeremiyah
+   Love, attack Dalton Schultz, and know why Mack Hollins matters", was the
+   first of the four cards under "Current from the desk", and `front.html`
+   printed `.slice(0, 4)` newest first and then sat there until the desk
+   published again.
+2. **The hero's photograph.** The picture at the top of the page takes the
+   desk's subject when a piece names one, and otherwise `all[0]` — the single
+   widest market gap on the board, captioned "This week's widest market gap".
+   Love was the widest: Iron Tuna RB22, Vegas RB27, consensus RB8, a 5.9-point
+   gap. The three newest desk pieces all stored `components: null`, so the desk
+   never took the hero, and the fallback ran his face at full size above the
+   fold for as long as he led the board.
+
+**Two wrong fixes, and what each one missed.**
+
+The first cut the band to three and advanced the TOP SLOT every two hours.
+Ken came back inside the hour. Rotating three cards among themselves changes
+the ORDER and never the CAST: his story was one of the three, so it led a third
+of the time and was on the page all of it.
+
+The second made the window three wide and slid it one piece down the feed each
+turn, so a story genuinely came off. That was right, and it still did not
+matter, because nobody had looked at the hero. The largest thing on the cover,
+the thing a reader sees first, was a photograph chosen by a completely separate
+feed on a rule with no clock in it at all.
+
+The lesson is not "rotate harder". It is: **when someone says a subject is
+still on the page, enumerate every path that can put a subject on that page
+before changing any of them.** Two greps would have found both in a minute —
+`heroPaint` has exactly two callers. Three deploys went out because the second
+one was never read.
+
+### What the cover does now
+
+One clock, defined once in `front.html`, driving both paths, so they cannot
+drift into two rotations:
+
+| | |
+|---|---|
+| `COVER_TURN_MS` | an hour. One turn, one cover. |
+| `coverBand(pieces, now)` | three cards, sliding one piece down the feed each turn and wrapping at a pool eight deep (`DESK_POOL`). Every turn one story comes off and another goes up. A piece published inside the current turn is exempt and leads with the two behind it: a recap filed twenty minutes ago IS the front page, and sliding past it would be the site hiding what it just did. |
+| `coverFace(rows, skip, now)` | the hero takes the next of the week's five widest gaps (`HERO_POOL`) each turn, skipping the player the Fantasy card already names. The caption dropped the superlative — it reads "A market gap this week", because the picture is no longer the maximum and a caption that says "widest" about the third-widest is simply false. |
+
+Both are pure functions of their feed and the clock, so two readers loading at
+the same moment get the same cover, which matters because the payloads behind
+them are memoized.
+
+### Where it is tested
+
+`tools/test-newsroom.mjs` lifts the whole rotation block out of `front.html`
+between `var COVER_TURN_MS` and the `// ── end cover rotation` marker, and runs
+both functions turn by turn. The assertions that would have caught each of the
+three attempts, in order:
+
+- **consecutive turns print different stories**, and **each turn swaps exactly
+  one** — the first fix fails both.
+- **the hero is not the same player every turn**, and **it changes on every
+  turn** — the first and second fixes fail both, because neither touched it.
+
+Plus the bounded run, the wrap, the pool ceiling, no duplicate within a turn,
+determinism on the clock, the Fantasy card's player never doubling as the hero,
+and the degenerate feeds: none, one, two, and a piece with no timestamp.
+
+`tools/test-homepage.mjs` drives the real page in Chromium. It now freezes
+`Date.now` in the browser at an instant whose turn index is 0 for every pool
+size the fixtures use (840 is the lowest common multiple of 1 through 8) and
+publishes its newest fixture piece five minutes before that instant. Without a
+pinned clock a rotating cover makes "which story leads" and "whose photograph
+runs" depend on what time of day CI happens to run. It also asserts the hero's
+caption no longer claims to be the widest.
+
+---
+
+## 89. September 18: the league-platform connectors are removed
+
+They never worked. Not "worked badly" — no reader ever connected a fantasy
+platform and got a board back from it in production. Sleeper shipped behind a
+flag that was never turned on, because its API grant is non-commercial and Iron
+Tuna is a paid product. Yahoo was written against fixtures and never once ran
+against a live account. CBS was tried live twice, an API-token form and then a
+browser extension, and never completed an import a reader kept. ESPN was a
+placeholder whose job was to say ESPN has no supported path.
+
+The masthead button had already been relabeled off "Sync My League" because the
+label promised what the site could not do. That was the tell.
+
+**What came out**, all of it under `// ══ LEAGUE SYNC`, now
+`// ══ THE SAVED LEAGUE`: the four adapters, `leagueFetchJson`, the AES-GCM
+token sealing and the provider-connection helpers, `leagueSync`,
+`leagueSyncState`, `runLeagueSync`, `leagueSnapshot`, `leagueRunLog`,
+`leagueNextSyncAt`, the hourly `league-sync` job, the four provider flags, the
+three provider-only tables (`league_provider_tokens`, `league_sync_runs`,
+`provider_connections`), and the `/api/leagues/connect`,
+`/api/leagues/providers`, `/api/oauth/yahoo/*` and per-league `sync` routes.
+`/api/admin/league-sync` became `/api/admin/leagues` and reports saved leagues
+and unmapped players instead of provider runs. Also gone: the CBS extension,
+its three tests, the four provider fixtures, and the platform tiles and
+provider flows in §01 of /my-league.
+
+**What stayed, and why.** The manual half is not the fallback, it is the
+product: the league model, the crosswalk, `leagueManualUpsert`,
+`POST /api/leagues/manual`, every personalization module and My Week. Two days
+before this landed, main shipped §04 "Insert Rosters" — a roster-grid
+screenshot read by `/api/roster-read` and saved as a whole twelve-team room
+through that route, with a `slotsKnown` fix in `leagueLineup` so a grid-read
+room does not report that the reader starts nobody. Removing the server half
+would have deleted that on the day it shipped. `LEAGUE_PROVIDERS` keeps its
+shape with `manual` as its one entry, because that shape is what stops anything
+downstream from knowing where a league came from.
+
+**The D1 tables are not dropped.** The eight remaining ones are in use. The
+three the connectors owned are simply unreferenced; drop them by hand when you
+want to, because a `DROP TABLE` in a codebase that no longer knows why they
+exist is the more dangerous artifact.
+
+**A brace, and a check that cannot catch it.** The first pass at the cut ate
+the closing `}` of `leagueWeekContext`, and `node --check _worker.js` passed
+anyway: it parses the file as a script, where a stray top-level `export` is
+just an identifier, so the only symptom was `export default` appearing to be
+nested. What caught it was importing the worker, which the tests that drive it
+do. `node --check` is not a real gate on this file.
+
+**The tests were rebuilt, not deleted.** `tools/test-league-sync.mjs` was
+written around the Sleeper connector as its vehicle — its fixtures, its
+`buildWorld`, and a whole suite testing `sleeperScoring` and `yahooScoring`.
+Those modules are the product now, so the coverage moved rather than going with
+them: `buildRoom(n)` builds a room in the shape `POST /api/leagues/manual`
+takes, the normalization suite tests `leagueNormalizeSettings` against every
+shape the connectors used to import (full/half/standard PPR, position-specific
+reception values, TE premium, superflex, unusual flex slots, rules the engine
+does not model), and the personalization suite runs on a saved 12-team room.
+**The fetch stub throws**: an outbound call to a fantasy platform is now a
+regression and fails there first. Three assertions changed because the truth
+changed — a saved room has no transaction log, so nobody is on waivers; no
+schedule, so there is no opponent; and no sync route to call. 73 assertions,
+all passing.
+
+Writing this suite also corrected two things I had assumed: `rbReceptionPoints`
+is its own field and is **not** derived from `receptionPoints`, so a form that
+sets half PPR must set both or backs keep full-point catches; and a roster slot
+the model does not know is only preserved when it arrives under `roster.other`,
+not at the top level. Both are now pinned.
+
+---
+
+## 90. September 19: the cover was drawing from the archive, drafts and all
+
+Ken, after the hero rotation landed: "Love is gone, but it still doesn't have
+some of the stories that we are supposed to have in rotation." Right again, and
+this is the bug under both of the previous two.
+
+**The band read `/api/content`.** That endpoint is `contentListPayload`: every
+row in `content_pieces` whose status is not `unpublished`, newest first, **one
+row per VERSION**, with `expired` reported as a field rather than applied. It
+is the archive index. The front page treated it as a feed, filtered it to rows
+carrying a url and a headline, and took the top eight.
+
+Here is what those eight rows actually were on the evening of the 18th:
+
+| # | Row | Status |
+|---|---|---|
+| 1 | weekend preview v6 | published |
+| 2 | weekend preview v5 | **held** |
+| 3 | kickers & defenses | published |
+| 4 | weekend preview v4 | **held** |
+| 5 | weekend preview v3 | **held** |
+| 6 | weekend preview v2 | **held** |
+| 7 | weekend preview v1 | **held** |
+| 8 | TNF: what matters | published |
+
+Six of the eight were one story. Five of those were **drafts the fact check had
+held**, each carrying its own headline, none ever published, all rendered as
+cards on the front page pointing at the same URL. Every other piece the desk
+published this week — the DET-BUF recap, the tight end column, the underrated
+piece, the pickup advisor — sat below the cutoff and could never appear.
+
+It also explains §88 rather than being a separate incident. The rotation added
+there worked exactly as written; it was rotating through five drafts of the
+story Ken wanted gone. "Love is still on the cover" was literally true no
+matter how well the window slid, because most of the window WAS that story.
+
+**The fix is not a filter, it is the right feed.** `/api/newsroom` is
+`newsroomFeedPayload`, which /in-season/desk already reads: published rows
+only, **one row per slug** with the newest version winning, forward pieces
+dropped once their games have kicked off, and the `components` each piece
+breaks into so the cards and the hero can carry faces. The cover and the desk
+now answer to one rule and cannot disagree about what the desk has published.
+
+With that feed the eight-deep pool is eight different stories, and the band
+rotates three of them an hour.
+
+**Tests.** `tools/test-newsroom.mjs` asserts `front.html` reads
+`/api/newsroom` and never `/api/content`, with the reason attached, because
+this is a one-character-looking change that reintroduces a content incident.
+`tools/test-homepage.mjs` goes further: its harness answers `/api/content` with
+**poison** — five held drafts headlined "HELD DRAFT n — must never reach the
+cover" — so a page that goes back to the archive fails loudly rather than
+quietly showing drafts again. It also asserts no story appears on the cover
+twice.
+
+### The 24-hour floor
+
+Rendering the deployed page against the live feed (below) showed the cost of an
+unbounded slide: at 5 AM ET on the 19th the window sat on the older half of the
+pool and the cover was two Week 1 columns and the underrated piece, with
+Friday's preview, the kickers piece, the Thursday night read and the DET-BUF
+recap all off it. A section headed "Current from the desk" carrying nothing
+from the last day is its own kind of wrong.
+
+`COVER_FLOOR_MS` is 24 hours. If no card in the window was published inside
+that, the **last** slot goes to the newest piece that was. The lead slot is
+untouched, so the rotation still decides what leads.
+
+Two properties change, and both were chosen deliberately:
+
+- **While the desk is quiet, one story is on the cover every turn.** That is
+  the floor doing its job, and it is the trade Ken took when the alternative
+  was a cover with nothing current on it.
+- **One turn per cycle brings no new story, only a new order.** When the
+  sliding window first reaches the pinned piece on its own, the cast repeats
+  ([N,n,o] then [n,o,N]). The test asserts *at most* one new story per turn
+  rather than exactly one, and separately that no two consecutive turns are
+  identical. Pinning unconditionally would remove the anomaly and put the
+  newest story on the cover even when the window is full of current work,
+  which is the complaint this whole section started from.
+
+The floor is inert whenever the window already holds something from the last
+day, which on a normal publishing day is always.
+
+### Checking a page this session cannot load
+
+irontuna.com is unreachable from here: the egress proxy denies it, which is
+why three rounds of this were "Ken looks, Ken reports". The check that finally
+gave a straight answer runs the deployed `front.html` in Chromium against the
+REAL published feed pulled out of D1, with the clock advanced an hour a turn,
+and prints the three cards and the hero's name per turn. It found both the
+stale-window problem above and confirmed the fix. Worth rebuilding whenever
+the cover is in question; the shape is in this session's scratchpad, and it is
+twenty lines on top of the harness `tools/test-homepage.mjs` already has.
+
+The hero and the disagreement rows in that harness are stand-ins, because the
+board behind them is computed in the Worker from odds this session cannot
+reach. The band's data is real.
+
+**The general lesson, which is the same one as §88 in a different coat.** Three
+rounds were spent on the ranking logic of a list whose CONTENTS were wrong.
+Nobody printed the list. One `console.log` of the eight rows the band was
+drawing from — or one look at what `contentListPayload` selects — would have
+ended this on the first pass. When output looks wrong, read the input before
+rewriting the function that shapes it.
+
+
+## 91. September 19: two lines under every name, on all seventeen rankings pages
 
 The sixteen rankings pages (`/weekly-*-rankings` and `/season-long-*-rankings`,
 all of them the one board in `it-ranks.js`) and the `/rankings` tool answered

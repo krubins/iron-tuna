@@ -8074,7 +8074,12 @@ const CONDITIONAL_SECTIONS = {
   // The list itself decides, not the board's count alone: a week whose only
   // wrong calls were made in the stories still owes the reader a misses
   // section.
-  'what-tuna-got-right': { whatWeMissed: p => !!(p && Array.isArray(p.misses) && p.misses.length > 0) }
+  'what-tuna-got-right': { whatWeMissed: p => !!(p && Array.isArray(p.misses) && p.misses.length > 0) },
+  // Monday night is reported from its box score or it is not raised at all.
+  // A week with nothing final from Monday hands the writer no block, so the
+  // section is never asked for and the piece never has to explain an absence
+  // it cannot be sure of. Better silent than wrong in print.
+  'ros-rankings': { whatMondayChanged: p => !!(p && p.whatMondayChanged) }
 };
 function sectionsFor(kind, lens, packet) {
   const n = NEWSROOM_SECTIONS[kind];
@@ -8624,13 +8629,8 @@ const NEWSROOM_FLAGS = {
   RIVALRY:               { dflt: true,  note: 'the single Vega/Brooks rivalry line, when the numbers earn it' },
   BREAKING_NEWS:         { dflt: true,  note: 'the significance-scored breaking-news scan and pieces' },
   PERSONALIZED_RANKINGS: { dflt: true,  note: 'rankings re-scored at the saved league on the pages' },
-  // League sync (docs/league-sync.md). A provider flag gates connecting AND the
-  // scheduled refresh of leagues already connected on it.
-  LEAGUE_SYNC:           { dflt: true,  note: 'Sync My League: the league model, My Leagues, and every personalized module' },
-  SLEEPER_SYNC:          { dflt: false, note: 'the Sleeper connector; OFF until Sleeper’s commercial license is in writing (docs/data-sources.md R2)' },
-  YAHOO_SYNC:            { dflt: false, note: 'the Yahoo OAuth connector; needs YAHOO_CLIENT_ID, YAHOO_CLIENT_SECRET and league-token encryption' },
-  CBS_SYNC:              { dflt: false, note: 'CBS league-token connector; needs league-token encryption and verified CBS access' },
-  ESPN_SYNC:             { dflt: false, note: 'the ESPN connector; no supported path exists, the adapter is a placeholder' },
+  // The league a reader saves, and everything that reads it.
+  LEAGUE_SYNC:           { dflt: true,  note: 'the saved league: the model, My Leagues, My Week and every personalized module' },
   PERSONALIZED_WAIVERS:  { dflt: true,  note: 'the Pickup Advisor on the players actually available in a synced league' },
   PERSONALIZED_LINEUP:   { dflt: true,  note: 'Best Lineup, Your Matchup, roster alerts and playoff readiness from a synced roster' },
   PERSONALIZED_TRADES:   { dflt: true,  note: 'trade partners and targets across a synced league’s rosters' },
@@ -10073,8 +10073,19 @@ function packetRos(ctx, boards, rosUpdate, mondaySummaries) {
     if (h === 'ros') dis = blendDisagreements(b.players, 12);
   }
   out.disagreements = dis;
-  if (mondaySummaries && mondaySummaries.length) { const m = briefForGames('ros-rankings', mondaySummaries.games, mondaySummaries.summaries, ctx); delete m.allowed; out.whatMondayChanged = { winners: m.winners, losers: m.losers, usageChanges: m.usageChanges, teams: m.teams.map(t => ({ team: t.team, learned: t.learned, stillDontKnow: t.stillDontKnow })) }; }
-  else out.whatMondayChanged = { note: 'no Monday game this week, or its box score is not final' };
+  // MONDAY NIGHT IS EITHER REPORTED OR NOT MENTIONED. `mondaySummaries` is
+  // `{ games, summaries }` and never an array, so the old `.length` test was
+  // undefined every week and the packet took the else branch even when the
+  // Monday game had been played and its box score was final. The writer was
+  // handed "no Monday game this week, or its box score is not final" and
+  // printed it: on September 15 the Tuesday rankings told the reader there had
+  // been no Monday night game in a week that had one. A packet that hedges
+  // buys a page that hedges. With nothing final from Monday the block is left
+  // null and CONDITIONAL_SECTIONS drops the section, so the piece is silent
+  // about Monday rather than wrong about it.
+  const mondayFinals = (mondaySummaries && mondaySummaries.summaries) || [];
+  if (mondayFinals.length) { const m = briefForGames('ros-rankings', mondaySummaries.games, mondayFinals, ctx); delete m.allowed; out.whatMondayChanged = { winners: m.winners, losers: m.losers, usageChanges: m.usageChanges, teams: m.teams.map(t => ({ team: t.team, learned: t.learned, stillDontKnow: t.stillDontKnow })) }; }
+  else out.whatMondayChanged = null;
   // No dfs block: the kind is weekly-only (CONTENT_KINDS), so the writer is
   // never handed a DFS lens to fill and the packet does not carry the slate.
   return out;
@@ -11790,8 +11801,7 @@ const JOB_FNS = {
   'news-scan':            env => runNewsScan(env),
   'calls-grade':          env => runCallsGrade(env),
   'rivalry-column':       env => runRivalryColumn(env),
-  'content-tick':         env => runContentTick(env),
-  'league-sync':          env => runLeagueSync(env)
+  'content-tick':         env => runContentTick(env)
 };
 const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
 // How long a job may run before the log calls it dead. A cron invocation has
@@ -12148,9 +12158,6 @@ const JOB_SCHEDULE = [
   { job: 'snapshot-prune',       days: ['Sun'],                hours: [4],                            phase: 2 },
   { job: 'analytics-prune',      days: ['Sun'],                hours: [4],                            phase: 2 },
   { job: 'job-prune',            days: ['Sun'],                hours: [4],                            phase: 2 },
-  // Connected leagues that are due (leagueNextSyncAt decides per league:
-  // hourly on Sunday, three-hourly Tue/Wed for waivers, six-hourly otherwise).
-  { job: 'league-sync',          days: null,                   hours: 'hourly',                       phase: 2 },
   // phase 3: the desk, which reads everything above. Quarter-hourly so a
   // 12:15 and a 7:30 slot exist in Eastern time; a tick with nothing due
   // costs one pure evaluation per kind.
@@ -12724,42 +12731,38 @@ async function pruneAnalytics(env, keepDays) {
   return { pruned: true, keepDays, pageViews: (a.meta && a.meta.changes) || 0, events: (b.meta && b.meta.changes) || 0 };
 }
 
-// ══ LEAGUE SYNC ════════════════════════════════════════════════════════════
-// "Sync My League": a reader connects a fantasy league and every in-season
-// surface reads their exact scoring, roster, opponents and free-agent pool.
+// ══ THE SAVED LEAGUE ══════════════════════════════════════════════════════
+// A reader describes the league they actually play in — scoring, lineup, FAAB
+// and every roster in the room — and every in-season surface reads it instead
+// of a default league.
 //
-// The shape of it, and the one rule: nothing downstream knows which platform
-// a league came from. Provider adapters (LEAGUE_PROVIDERS) pull and normalize
-// into the Iron Tuna league model (LEAGUE_CONTRACT); leagueSync writes that
-// model into D1 idempotently, keyed on provider IDs; and the personalization
+// The shape of it, and the one rule: nothing downstream knows where a league
+// came from. A provider adapter (LEAGUE_PROVIDERS) normalizes into the Iron
+// Tuna league model (LEAGUE_CONTRACT); the model is written into D1
+// idempotently, keyed on the provider's own ids; and the personalization
 // modules (leagueBoard, leaguePickups, leagueLineup, leagueMatchup,
 // leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailability) read ONLY the
-// local model plus the site's own boards. External calls happen on connect,
-// on Sync Now, and on the league-sync job. See docs/league-sync.md.
+// local model plus the site's own boards.
 //
-// Provider terms are not a footnote. Sleeper's API is free for non-commercial
-// use only (docs/data-sources.md R2, Addendum 13.5), so the Sleeper connector
-// is behind FLAG_SLEEPER_SYNC, default OFF, until a license is in writing.
-// Yahoo is OAuth 2.0 with the reader's consent and needs client credentials;
-// it is behind FLAG_YAHOO_SYNC. CBS uses a reader-supplied per-league token,
-// sealed under a dedicated LEAGUE_TOKEN_KEY when present or a domain-separated
-// key derived from AUTH_SECRET, and is behind FLAG_CBS_SYNC. ESPN has no
-// supported path (see LEAGUE_PROVIDERS.espn).
+// THERE IS ONE ADAPTER AND IT IS THE READER. The Sleeper, Yahoo and CBS
+// connectors and the ESPN placeholder were removed on 2026-09-18 (HANDOFF
+// §89): Sleeper never cleared its non-commercial grant (docs/data-sources.md
+// R2), Yahoo never ran against a live account, CBS never completed an import,
+// and ESPN never had a supported path. Nothing here calls a fantasy platform
+// any more, so there is no OAuth, no stored provider credential and no
+// scheduled refresh. A league arrives from the forms and the roster-grid
+// screenshot on /my-league, through POST /api/leagues/manual, and changes only
+// when the reader changes it.
 const LEAGUE_CONTRACT = 1;
 const LEAGUE_DDL = [
-  'CREATE TABLE IF NOT EXISTS league_provider_tokens (email TEXT NOT NULL, provider TEXT NOT NULL, provider_league_id TEXT NOT NULL, access_enc TEXT NOT NULL, updated_at INTEGER, PRIMARY KEY (email, provider, provider_league_id))',
   'CREATE TABLE IF NOT EXISTS leagues (id TEXT PRIMARY KEY, email TEXT NOT NULL, provider TEXT NOT NULL, provider_league_id TEXT NOT NULL, name TEXT, season INTEGER, sport TEXT, num_teams INTEGER, status TEXT, settings TEXT, overrides TEXT, user_team_id TEXT, is_default INTEGER DEFAULT 0, created_at INTEGER, updated_at INTEGER, last_sync_at INTEGER, last_ok_at INTEGER, sync_status TEXT, last_error TEXT, next_sync_at INTEGER, failures INTEGER DEFAULT 0)',
   'CREATE UNIQUE INDEX IF NOT EXISTS ux_leagues_owner ON leagues (email, provider, provider_league_id)',
-  'CREATE INDEX IF NOT EXISTS ix_leagues_due ON leagues (next_sync_at)',
   'CREATE TABLE IF NOT EXISTS league_teams (league_id TEXT NOT NULL, team_id TEXT NOT NULL, name TEXT, manager TEXT, owner_id TEXT, wins INTEGER, losses INTEGER, ties INTEGER, points_for REAL, points_against REAL, standing INTEGER, faab_left INTEGER, waiver_position INTEGER, updated_at INTEGER, PRIMARY KEY (league_id, team_id))',
   'CREATE TABLE IF NOT EXISTS league_roster_players (league_id TEXT NOT NULL, team_id TEXT NOT NULL, provider_player_id TEXT NOT NULL, player_key TEXT, name TEXT, position TEXT, nfl_team TEXT, slot TEXT, slot_label TEXT, updated_at INTEGER, PRIMARY KEY (league_id, provider_player_id))',
   'CREATE INDEX IF NOT EXISTS ix_lrp_team ON league_roster_players (league_id, team_id)',
   'CREATE TABLE IF NOT EXISTS league_matchups (league_id TEXT NOT NULL, week INTEGER NOT NULL, team_id TEXT NOT NULL, matchup_id TEXT, opponent_id TEXT, points REAL, opponent_points REAL, played INTEGER, updated_at INTEGER, PRIMARY KEY (league_id, week, team_id))',
   'CREATE TABLE IF NOT EXISTS league_transactions (league_id TEXT NOT NULL, provider_txn_id TEXT NOT NULL, type TEXT, team_id TEXT, adds TEXT, drops TEXT, faab INTEGER, status TEXT, ts INTEGER, week INTEGER, PRIMARY KEY (league_id, provider_txn_id))',
   'CREATE TABLE IF NOT EXISTS league_snapshots (league_id TEXT NOT NULL, season INTEGER, week INTEGER, kind TEXT NOT NULL, payload TEXT, built_at INTEGER, PRIMARY KEY (league_id, season, week, kind))',
-  'CREATE TABLE IF NOT EXISTS league_sync_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, league_id TEXT, provider TEXT, trigger TEXT, started_at INTEGER, finished_at INTEGER, ok INTEGER, error TEXT, summary TEXT, unmatched INTEGER)',
-  'CREATE INDEX IF NOT EXISTS ix_league_sync_runs ON league_sync_runs (league_id, started_at)',
-  'CREATE TABLE IF NOT EXISTS provider_connections (email TEXT NOT NULL, provider TEXT NOT NULL, provider_user_id TEXT, display_name TEXT, access_enc TEXT, refresh_enc TEXT, expires_at INTEGER, scopes TEXT, status TEXT, created_at INTEGER, updated_at INTEGER, PRIMARY KEY (email, provider))',
   'CREATE TABLE IF NOT EXISTS player_id_map (provider TEXT NOT NULL, provider_player_id TEXT NOT NULL, player_key TEXT, name TEXT, position TEXT, nfl_team TEXT, confidence TEXT, updated_at INTEGER, PRIMARY KEY (provider, provider_player_id))',
   'CREATE TABLE IF NOT EXISTS player_map_misses (provider TEXT NOT NULL, provider_player_id TEXT NOT NULL, name TEXT, position TEXT, nfl_team TEXT, count INTEGER, last_seen INTEGER, PRIMARY KEY (provider, provider_player_id))'
 ];
@@ -12769,21 +12772,9 @@ async function leagueReady(env) {
   if (!env || !env.LEADS_DB) return false;
   try { for (const q of LEAGUE_DDL) await env.LEADS_DB.prepare(q).run(); _LEAGUE_READY = true; return true; } catch (e) { return false; }
 }
-// Sync cadence, in New York time. A league is re-read when it is due, never
-// on a page view: Sunday late morning to kickoff hourly (inactives, lineup
-// moves), Tuesday and Wednesday every three hours (waivers clear overnight),
-// otherwise every six. A failing provider backs off by doubling, capped at a day.
-const LEAGUE_SYNC_MIN_GAP_MS = 2 * 60 * 1000;         // Sync Now, per league
-const LEAGUE_SYNC_BATCH = 40;                          // leagues per job tick
+// A league is the reader's own entry and never refreshes itself, so the only
+// age that matters is how long ago they last touched it.
 const LEAGUE_STALE_MS = 12 * 3600 * 1000;              // "may be outdated" after this
-function leagueNextSyncAt(now, failures) {
-  if (failures > 0) return now + Math.min(24 * 3600000, 15 * 60000 * Math.pow(2, Math.min(7, failures - 1)));
-  const et = etParts(now);
-  let h = 6;
-  if (et.dow === 'Sun' && et.hour >= 8 && et.hour < 16) h = 1;
-  else if (et.dow === 'Tue' || et.dow === 'Wed') h = 3;
-  return now + h * 3600000;
-}
 // The session behind a request: the same cookie /api/auth/me reads, checked
 // against the sessions table so a signed-out device stays signed out.
 async function leagueSessionEmail(request, env) {
@@ -12792,44 +12783,6 @@ async function leagueSessionEmail(request, env) {
   if (!o || o.t !== 'sess' || !o.e) return null;
   if (env.LEADS_DB && o.sid) { try { const row = await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE id=?').bind(o.sid).first(); if (!row) return null; } catch (e) {} }
   return String(o.e).toLowerCase();
-}
-// Secrets at rest. OAuth and provider tokens are sealed with AES-GCM. A
-// dedicated LEAGUE_TOKEN_KEY takes precedence. Deployments that already have
-// the required AUTH_SECRET may use a domain-separated derivation instead, so a
-// missing optional secret cannot strand league linking. A token never goes to
-// the browser.
-let _LEAGUE_AES = null, _LEAGUE_AES_FOR = '';
-function leagueTokenSecret(env) {
-  if (!env) return '';
-  if (env.LEAGUE_TOKEN_KEY) return String(env.LEAGUE_TOKEN_KEY);
-  return env.AUTH_SECRET ? 'iron-tuna:league-token:v1:' + String(env.AUTH_SECRET) : '';
-}
-function leagueTokenConfigured(env) { return !!leagueTokenSecret(env); }
-async function leagueAesKey(env) {
-  const secret = leagueTokenSecret(env);
-  if (!secret) return null;
-  if (_LEAGUE_AES && _LEAGUE_AES_FOR === secret) return _LEAGUE_AES;
-  const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
-  _LEAGUE_AES = await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-  _LEAGUE_AES_FOR = secret;
-  return _LEAGUE_AES;
-}
-async function leagueSeal(env, text) {
-  const key = await leagueAesKey(env);
-  if (!key) throw new Error('no_token_key');
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(String(text))));
-  const out = new Uint8Array(iv.length + ct.length); out.set(iv, 0); out.set(ct, iv.length);
-  return 'v1.' + b64urlEncode(out);
-}
-async function leagueOpen(env, sealed) {
-  const key = await leagueAesKey(env);
-  if (!key || !sealed || !String(sealed).startsWith('v1.')) return null;
-  try {
-    const buf = b64urlToBytes(String(sealed).slice(3));
-    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
-    return new TextDecoder().decode(pt);
-  } catch (e) { return null; }
 }
 // -- the player pool and the canonical key ----------------------------------
 // The site ranks by _oddsNorm(name)|position and always has; that IS the
@@ -13015,794 +12968,6 @@ function leagueSettingsLabel(settings, numTeams) {
 class LeagueProviderError extends Error {
   constructor(code, message, status) { super(message || code); this.code = code; this.status = status || null; }
 }
-async function leagueFetchJson(url, init, label) {
-  let r;
-  try { r = await fetch(url, init); }
-  catch (e) { throw new LeagueProviderError('provider_unavailable', label + ' did not answer'); }
-  if (r.status === 401 || r.status === 403) throw new LeagueProviderError('expired_authorization', label + ' refused the request', r.status);
-  if (r.status === 404) throw new LeagueProviderError('league_not_found', label + ' has no such league', 404);
-  if (r.status === 429) throw new LeagueProviderError('rate_limited', label + ' rate limit', 429);
-  if (!r.ok) throw new LeagueProviderError('provider_unavailable', label + ' answered ' + r.status, r.status);
-  try { return await r.json(); } catch (e) { throw new LeagueProviderError('provider_unavailable', label + ' sent something that is not JSON'); }
-}
-// ── Sleeper ────────────────────────────────────────────────────────────────
-// Read-only, no key, public league data. The players file is the one big
-// pull (cached six hours, as /api/faab/players already does); it also carries
-// ESPN, Yahoo and gsis ids, which is what seeds the other crosswalks.
-const SLEEPER_API = 'https://api.sleeper.app/v1';
-let _SLEEPER_PLAYERS = null, _SLEEPER_PLAYERS_AT = 0;
-async function sleeperPlayers(env) {
-  if (_SLEEPER_PLAYERS && Date.now() - _SLEEPER_PLAYERS_AT < 6 * 3600000) return _SLEEPER_PLAYERS;
-  const all = await leagueFetchJson(SLEEPER_API + '/players/nfl', { cf: { cacheTtl: 21600, cacheEverything: true } }, 'Sleeper');
-  const out = {};
-  for (const id in all) {
-    const p = all[id];
-    if (!p || !LEAGUE_POSITIONS.has(p.position)) continue;
-    const name = p.position === 'DEF' ? ((p.team || id) + ' DEF') : (p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim());
-    out[id] = { name, position: p.position, team: p.team || (p.position === 'DEF' ? id : null), injury: p.injury_status || null,
-                espn: p.espn_id != null ? String(p.espn_id) : null, yahoo: p.yahoo_id != null ? String(p.yahoo_id) : null, gsis: p.gsis_id || null };
-  }
-  _SLEEPER_PLAYERS = out; _SLEEPER_PLAYERS_AT = Date.now();
-  return out;
-}
-function _sleeperPer(v) { const n = Number(v); return n > 0 ? 1 / n : 0; }
-function _sleeperBonuses(ss, stem, ats) {
-  const out = [];
-  for (const at of ats) { const v = Number(ss['bonus_' + stem + '_' + at]); if (Number.isFinite(v) && v) out.push({ at, points: v }); }
-  return out;
-}
-// Sleeper's scoring_settings, into scoringRules' fields. Every key consumed is
-// named in SLEEPER_SCORING_KEYS; anything else with a value is preserved in
-// extras.unsupported so a league with IDP or a return-yardage rule is not
-// quietly scored as if it had none.
-const SLEEPER_SCORING_KEYS = new Set(['pass_yd', 'pass_td', 'pass_int', 'pass_2pt', 'rush_yd', 'rush_td', 'rush_2pt', 'rec_yd', 'rec_td', 'rec_2pt', 'rec',
-  'bonus_rec_rb', 'bonus_rec_wr', 'bonus_rec_te', 'fum_lost', 'fum_rec_td', 'kr_td', 'pr_td', 'st_td', 'def_st_td', 'def_td', 'sack', 'int', 'fum_rec', 'safe', 'blk_kick',
-  'xpm', 'xpmiss', 'fgm', 'fgmiss', 'fgm_0_19', 'fgm_20_29', 'fgm_30_39', 'fgm_40_49', 'fgm_50p', 'fgmiss_0_19', 'fgmiss_20_29', 'fgmiss_30_39', 'fgmiss_40_49', 'fgmiss_50p',
-  'pts_allow_0', 'pts_allow_1_6', 'pts_allow_7_13', 'pts_allow_14_20', 'pts_allow_21_27', 'pts_allow_28_34', 'pts_allow_35p',
-  'bonus_pass_yd_300', 'bonus_pass_yd_400', 'bonus_rush_yd_100', 'bonus_rush_yd_200', 'bonus_rec_yd_100', 'bonus_rec_yd_200', 'fum', 'fum_rec_2pt', 'def_2pt', 'st_2pt', 'def_st_fum_rec', 'def_st_ff', 'st_fum_rec', 'st_ff', 'ff', 'pass_sack', 'pass_cmp', 'pass_inc', 'pass_att', 'rush_att', 'rec_tgt', 'pass_cmp_40p', 'pass_td_40p', 'rush_40p', 'rec_40p', 'rush_td_40p', 'rec_td_40p', 'pass_td_50p', 'rush_td_50p', 'rec_td_50p', 'rec_0_4', 'rec_5_9', 'rec_10_19', 'rec_20_29', 'rec_30_39', 'rec_40p', 'sack_yd', 'idp_tkl', 'idp_sack', 'idp_int', 'idp_ff', 'idp_fum_rec', 'idp_def_td', 'idp_pass_def', 'idp_safe', 'idp_blk_kick', 'idp_tkl_loss', 'idp_qb_hit', 'idp_tkl_ast', 'idp_tkl_solo', 'yds_allow_0_100', 'yds_allow_100_199', 'yds_allow_200_299', 'yds_allow_300_349', 'yds_allow_350_399', 'yds_allow_400_449', 'yds_allow_450_499', 'yds_allow_500_549', 'yds_allow_550p', 'def_kr_td', 'def_pr_td', 'def_forced_punts', 'def_3_and_out', 'def_4_and_stop', 'def_pass_def', 'tkl', 'tkl_solo', 'tkl_ast', 'tkl_loss', 'qb_hit', 'pass_def', 'fum_ret_yd', 'int_ret_yd', 'kr_yd', 'pr_yd', 'bonus_fd_qb', 'bonus_fd_rb', 'bonus_fd_wr', 'bonus_fd_te', 'bonus_rush_rec_yd_100', 'bonus_rush_rec_yd_200', 'bonus_pass_cmp_25', 'pass_fd', 'rush_fd', 'rec_fd', 'fgm_yds', 'fgm_yds_over_30']);
-// The subset above that the engine actually MODELS; the rest are recorded.
-const SLEEPER_MODELED = new Set(['pass_yd', 'pass_td', 'pass_int', 'pass_2pt', 'rush_yd', 'rush_td', 'rush_2pt', 'rec_yd', 'rec_td', 'rec_2pt', 'rec', 'bonus_rec_rb', 'bonus_rec_wr', 'bonus_rec_te', 'fum_lost', 'fum_rec_td', 'kr_td', 'pr_td', 'st_td', 'def_st_td', 'def_td', 'sack', 'int', 'fum_rec', 'safe',
-  'xpm', 'xpmiss', 'fgm_0_19', 'fgm_20_29', 'fgm_30_39', 'fgm_40_49', 'fgm_50p', 'fgmiss', 'fgmiss_0_19', 'fgmiss_20_29', 'fgmiss_30_39', 'fgmiss_40_49', 'fgmiss_50p', 'fgm',
-  'pts_allow_0', 'pts_allow_1_6', 'pts_allow_7_13', 'pts_allow_14_20', 'pts_allow_21_27', 'pts_allow_28_34', 'pts_allow_35p',
-  'bonus_pass_yd_300', 'bonus_pass_yd_400', 'bonus_rush_yd_100', 'bonus_rush_yd_200', 'bonus_rec_yd_100', 'bonus_rec_yd_200']);
-function sleeperScoring(ss) {
-  ss = ss || {};
-  const n = (k, d) => (Number.isFinite(Number(ss[k])) && ss[k] != null ? Number(ss[k]) : d);
-  const rec = n('rec', 0);
-  const scoring = {
-    passingYardsPerPoint: _sleeperPer(ss.pass_yd), passingYardsThreshold: 0, passingYardBonuses: _sleeperBonuses(ss, 'pass_yd', [300, 400]),
-    passingTD: n('pass_td', 4), passingInt: n('pass_int', -1), passing2pt: n('pass_2pt', 2),
-    rushingYardsPerPoint: _sleeperPer(ss.rush_yd), rushingYardsThreshold: 0, rushingYardBonuses: _sleeperBonuses(ss, 'rush_yd', [100, 200]),
-    rushingTD: n('rush_td', 6), rushing2pt: n('rush_2pt', 2),
-    receivingYardsPerPoint: _sleeperPer(ss.rec_yd), receivingYardsThreshold: 0, receivingYardBonuses: _sleeperBonuses(ss, 'rec_yd', [100, 200]),
-    receivingTD: n('rec_td', 6), receiving2pt: n('rec_2pt', 2),
-    receptionPoints: rec + n('bonus_rec_wr', 0), receptionBonuses: [], rbReceptionPoints: rec + n('bonus_rec_rb', 0), rbReceptionBonuses: [],
-    fumbleLost: n('fum_lost', -2), fumble2pt: n('fum_rec_2pt', 2),
-    individualFumbleRecoveryTD: n('fum_rec_td', 6), individualKickReturnTD: n('kr_td', 6), individualPuntReturnTD: n('pr_td', 6),
-    // Kicker: Sleeper bins 0-19/20-29/30-39/40-49/50+; the engine's five tiers
-    // are 0-24/25-34/35-44/45-49/50+. The nearest bin fills each tier.
-    fieldGoalTiers: [
-      { min: 0, max: 24, points: n('fgm_0_19', n('fgm_20_29', n('fgm', 3))), missPoints: n('fgmiss_0_19', n('fgmiss', -1)) },
-      { min: 25, max: 34, points: n('fgm_20_29', n('fgm', 3)), missPoints: n('fgmiss_20_29', n('fgmiss', -1)) },
-      { min: 35, max: 44, points: n('fgm_30_39', n('fgm', 3)), missPoints: n('fgmiss_30_39', n('fgmiss', -1)) },
-      { min: 45, max: 49, points: n('fgm_40_49', n('fgm', 4)), missPoints: n('fgmiss_40_49', n('fgmiss', -1)) },
-      { min: 50, max: 999, points: n('fgm_50p', n('fgm', 5)), missPoints: n('fgmiss_50p', n('fgmiss', -1)) }],
-    extraPoint: n('xpm', 1), missedExtraPoint: n('xpmiss', -1),
-    defensiveFumbleRecovery: n('fum_rec', 2), defensiveTD: n('def_td', 6), interception: n('int', 2), sackPoints: n('sack', 1), sackBonuses: [],
-    safety: n('safe', 2), specialTeamsTD: n('st_td', n('def_st_td', 6)), specialTeams2pt: 2, specialTeamsSafety1pt: 1,
-    pointsAllowed: [{ min: 0, max: 0, points: n('pts_allow_0', 10) }, { min: 1, max: 6, points: n('pts_allow_1_6', 7) }, { min: 7, max: 13, points: n('pts_allow_7_13', 4) },
-                    { min: 14, max: 20, points: n('pts_allow_14_20', 1) }, { min: 21, max: 27, points: n('pts_allow_21_27', 0) }, { min: 28, max: 34, points: n('pts_allow_28_34', -1) }, { min: 35, max: 999, points: n('pts_allow_35p', -4) }]
-  };
-  const unsupported = {};
-  for (const k of Object.keys(ss)) if (!SLEEPER_MODELED.has(k) && Number(ss[k])) unsupported[k] = Number(ss[k]);
-  const notes = [];
-  if (Object.keys(unsupported).length) notes.push('Rules Iron Tuna does not model are kept but not scored: ' + Object.keys(unsupported).join(', ') + '.');
-  if (ss.fgm_0_19 != null || ss.fgm_20_29 != null) notes.push('Kicker distances use the nearest of Sleeper’s bins in Iron Tuna’s five tiers.');
-  return { scoring, extras: { tePremium: n('bonus_rec_te', 0), unsupported, notes } };
-}
-// roster_positions ['QB','RB','RB','WR','WR','TE','FLEX','K','DEF','BN',...]
-// into slot counts. IR and taxi come from settings, not the array.
-const SLEEPER_SLOT = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', FLEX: 'FLEX', SUPER_FLEX: 'SFLEX', REC_FLEX: 'REC_FLEX', WRRB_FLEX: 'WRRB_FLEX', BN: 'BN', IR: 'IR' };
-function sleeperRoster(positions, settings) {
-  const r = leagueEmptyRoster();
-  for (const p of positions || []) { const s = SLEEPER_SLOT[p]; if (s) r[s]++; else r.other[p] = (r.other[p] || 0) + 1; }
-  if (settings) { r.IR = Number(settings.reserve_slots) || r.IR; r.TAXI = Number(settings.taxi_slots) || 0; }
-  return r;
-}
-function sleeperNormalize(raw, ctx) {
-  const lg = raw.league || {};
-  const st = lg.settings || {};
-  const sc = sleeperScoring(lg.scoring_settings);
-  const roster = sleeperRoster(lg.roster_positions, st);
-  const waiverType = st.waiver_type === 2 ? 'faab' : st.waiver_type === 1 ? 'priority' : st.waiver_type === 0 ? 'priority' : 'unknown';
-  const settings = leagueNormalizeSettings({
-    scoring: sc.scoring, extras: sc.extras, roster,
-    faab: waiverType === 'faab' ? (Number(st.waiver_budget) || 100) : null, waiverType,
-    playoffWeekStart: Number(st.playoff_week_start) || 15, playoffTeams: Number(st.playoff_teams) || 6,
-    leagueType: st.type === 2 ? 'dynasty' : st.type === 1 ? 'keeper' : 'redraft'
-  });
-  const users = new Map();
-  for (const u of raw.users || []) users.set(String(u.user_id), u);
-  const players = raw.players || {};
-  const teams = [], rosters = [];
-  // Which starter index is which slot: the roster_positions array minus BN/IR.
-  const starterSlots = (lg.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR');
-  const byRoster = new Map();
-  for (const ro of raw.rosters || []) {
-    const rid = String(ro.roster_id);
-    byRoster.set(rid, ro);
-    const owner = users.get(String(ro.owner_id)) || null;
-    const rs = ro.settings || {};
-    const fpts = (Number(rs.fpts) || 0) + (Number(rs.fpts_decimal) || 0) / 100;
-    const fpa = (Number(rs.fpts_against) || 0) + (Number(rs.fpts_against_decimal) || 0) / 100;
-    teams.push({
-      teamId: rid, ownerId: ro.owner_id ? String(ro.owner_id) : null,
-      name: (owner && owner.metadata && owner.metadata.team_name) || (owner && owner.display_name ? owner.display_name + '’s team' : 'Team ' + rid),
-      manager: owner ? (owner.display_name || owner.username || null) : null,
-      wins: Number(rs.wins) || 0, losses: Number(rs.losses) || 0, ties: Number(rs.ties) || 0,
-      pointsFor: Math.round(fpts * 100) / 100, pointsAgainst: Math.round(fpa * 100) / 100,
-      faabLeft: settings.faab != null ? Math.max(0, settings.faab - (Number(rs.waiver_budget_used) || 0)) : null,
-      waiverPosition: Number(rs.waiver_position) || null
-    });
-    const list = [];
-    const starters = ro.starters || [], reserve = new Set((ro.reserve || []).map(String)), taxi = new Set((ro.taxi || []).map(String));
-    const starterSet = new Map();
-    starters.forEach((pid, i) => { if (pid && pid !== '0') starterSet.set(String(pid), starterSlots[i] || 'FLEX'); });
-    for (const pid of ro.players || []) {
-      const id = String(pid);
-      const meta = players[id] || null;
-      const slot = starterSet.has(id) ? 'starter' : reserve.has(id) ? 'ir' : taxi.has(id) ? 'taxi' : 'bench';
-      list.push({ providerPlayerId: id, name: meta ? meta.name : ('Sleeper #' + id), position: meta ? meta.position : null, team: meta ? meta.team : null,
-                  slot, slotLabel: slot === 'starter' ? (SLEEPER_SLOT[starterSet.get(id)] || starterSet.get(id)) : slot.toUpperCase() });
-    }
-    rosters.push({ teamId: rid, players: list });
-  }
-  // Standings: record, then points for.
-  teams.slice().sort((a, b) => (b.wins - a.wins) || (a.losses - b.losses) || (b.pointsFor - a.pointsFor)).forEach((t, i) => { t.standing = i + 1; });
-  const matchups = [];
-  for (const [week, rows] of Object.entries(raw.matchups || {})) {
-    const byM = new Map();
-    for (const m of rows || []) { const k = String(m.matchup_id); if (!byM.has(k)) byM.set(k, []); byM.get(k).push(m); }
-    for (const [mid, pair] of byM) for (const m of pair) {
-      const opp = pair.find(x => x !== m) || null;
-      matchups.push({ week: Number(week), matchupId: mid, teamId: String(m.roster_id), opponentId: opp ? String(opp.roster_id) : null,
-                      points: Number(m.points) || 0, opponentPoints: opp ? (Number(opp.points) || 0) : null, played: Number(week) < (ctx.currentWeek || 0) ? 1 : 0 });
-    }
-  }
-  const transactions = [];
-  for (const t of raw.transactions || []) {
-    if (!t || t.status !== 'complete') continue;
-    const txp = pid => ({ providerPlayerId: String(pid), name: players[pid] ? players[pid].name : null, position: players[pid] ? players[pid].position : null, team: players[pid] ? players[pid].team : null });
-    const adds = Object.entries(t.adds || {}).map(([pid, rid]) => ({ ...txp(pid), teamId: String(rid) }));
-    const drops = Object.entries(t.drops || {}).map(([pid, rid]) => ({ ...txp(pid), teamId: String(rid) }));
-    transactions.push({ providerTxnId: String(t.transaction_id), type: t.type === 'free_agent' ? 'add' : t.type, teamId: t.roster_ids && t.roster_ids.length ? String(t.roster_ids[0]) : null,
-                        adds, drops, faab: t.settings && t.settings.waiver_bid != null ? Number(t.settings.waiver_bid) : null, status: t.status, ts: Number(t.status_updated || t.created) || null, week: Number(t.leg) || null });
-  }
-  // The reader's team: the roster they own or co-own.
-  let userTeamId = null;
-  if (ctx.userId) for (const ro of raw.rosters || []) if (String(ro.owner_id) === String(ctx.userId) || (ro.co_owners || []).map(String).includes(String(ctx.userId))) userTeamId = String(ro.roster_id);
-  return {
-    provider: 'sleeper', providerLeagueId: String(lg.league_id), name: lg.name || 'Sleeper league', season: Number(lg.season) || null, sport: 'nfl',
-    numTeams: Number(lg.total_rosters) || teams.length, status: lg.status === 'in_season' ? 'in_season' : lg.status === 'complete' ? 'complete' : lg.status === 'pre_draft' || lg.status === 'drafting' ? 'pre_draft' : 'unknown',
-    settings, userTeamId, teams, rosters, matchups, transactions
-  };
-}
-const PROVIDER_SLEEPER = {
-  id: 'sleeper', label: 'Sleeper', auth: 'public', flag: 'SLEEPER_SYNC',
-  terms: 'Sleeper’s API is free for non-commercial use only; commercial use needs a license in writing (docs/data-sources.md R2).',
-  needs: env => true,
-  // input: { username } or { leagueId }
-  async discover(env, conn, input) {
-    const season = input.season;
-    if (input.leagueId) {
-      const lg = await leagueFetchJson(SLEEPER_API + '/league/' + encodeURIComponent(input.leagueId), { cf: { cacheTtl: 60 } }, 'Sleeper');
-      return { user: null, leagues: [{ providerLeagueId: String(lg.league_id), name: lg.name, season: Number(lg.season), numTeams: lg.total_rosters, status: lg.status }] };
-    }
-    const u = String(input.username || '').trim();
-    if (!u || !/^[A-Za-z0-9_.-]{1,40}$/.test(u)) throw new LeagueProviderError('bad_input', 'Enter your Sleeper username.');
-    let user;
-    try { user = await leagueFetchJson(SLEEPER_API + '/user/' + encodeURIComponent(u), { cf: { cacheTtl: 60 } }, 'Sleeper'); }
-    catch (e) { if (e.code === 'league_not_found') throw new LeagueProviderError('user_not_found', 'Sleeper has no user by that name.'); throw e; }
-    if (!user || !user.user_id) throw new LeagueProviderError('user_not_found', 'Sleeper has no user by that name.');
-    const list = await leagueFetchJson(SLEEPER_API + '/user/' + encodeURIComponent(user.user_id) + '/leagues/nfl/' + encodeURIComponent(season), { cf: { cacheTtl: 60 } }, 'Sleeper');
-    return { user: { id: String(user.user_id), name: user.display_name || user.username || u },
-             leagues: (list || []).map(lg => ({ providerLeagueId: String(lg.league_id), name: lg.name, season: Number(lg.season), numTeams: lg.total_rosters, status: lg.status })) };
-  },
-  async pull(env, conn, providerLeagueId, ctx) {
-    const base = SLEEPER_API + '/league/' + encodeURIComponent(providerLeagueId);
-    const opt = { cf: { cacheTtl: 60 } };
-    const [league, rosters, users, players] = await Promise.all([
-      leagueFetchJson(base, opt, 'Sleeper'), leagueFetchJson(base + '/rosters', opt, 'Sleeper'), leagueFetchJson(base + '/users', opt, 'Sleeper'), sleeperPlayers(env)
-    ]);
-    const cur = ctx.currentWeek || 1;
-    const weeks = ctx.firstSync ? Array.from({ length: Math.min(18, cur + 1) }, (_, i) => i + 1) : [cur - 1, cur, cur + 1].filter(w => w >= 1 && w <= 18);
-    const matchups = {};
-    await Promise.all(weeks.map(async w => { try { matchups[w] = await leagueFetchJson(base + '/matchups/' + w, opt, 'Sleeper'); } catch (e) { matchups[w] = []; } }));
-    const txWeeks = [cur - 1, cur].filter(w => w >= 1);
-    const transactions = [];
-    await Promise.all(txWeeks.map(async w => { try { const t = await leagueFetchJson(base + '/transactions/' + w, opt, 'Sleeper'); for (const x of t || []) transactions.push(x); } catch (e) {} }));
-    return { league, rosters, users, players, matchups, transactions };
-  },
-  normalize: sleeperNormalize
-};
-// ── Yahoo ──────────────────────────────────────────────────────────────────
-// OAuth 2.0 with the reader's consent, read-only fantasy scope. Iron Tuna
-// never sees a Yahoo password: the reader authorizes on Yahoo's page, Yahoo
-// hands back a code, the worker exchanges it server-side and seals the tokens
-// (leagueSeal) before they touch D1. The browser never receives a token.
-const YAHOO_AUTH = 'https://api.login.yahoo.com/oauth2/request_auth';
-const YAHOO_TOKEN = 'https://api.login.yahoo.com/oauth2/get_token';
-const YAHOO_API = 'https://fantasysports.yahooapis.com/fantasy/v2';
-const YAHOO_SCOPE = 'fspt-r';
-function yahooConfigured(env) { return !!(env && env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET && leagueTokenConfigured(env)); }
-function yahooRedirect(env, origin) { return (env && env.YAHOO_REDIRECT_URI) || (origin + '/api/oauth/yahoo/callback'); }
-async function yahooTokenExchange(env, params) {
-  const body = new URLSearchParams(params).toString();
-  const auth = 'Basic ' + btoa(env.YAHOO_CLIENT_ID + ':' + env.YAHOO_CLIENT_SECRET);
-  let r;
-  try { r = await fetch(YAHOO_TOKEN, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: auth }, body }); }
-  catch (e) { throw new LeagueProviderError('provider_unavailable', 'Yahoo did not answer'); }
-  let j = null; try { j = await r.json(); } catch (e) {}
-  if (!r.ok || !j || !j.access_token) throw new LeagueProviderError(r.status === 400 || r.status === 401 ? 'expired_authorization' : 'provider_unavailable', 'Yahoo refused the token exchange' + (j && j.error ? ' (' + j.error + ')' : ''), r.status);
-  return { accessToken: j.access_token, refreshToken: j.refresh_token || params.refresh_token || null, expiresAt: Date.now() + (Number(j.expires_in) || 3600) * 1000, guid: j.xoauth_yahoo_guid || null };
-}
-async function yahooConnectionSave(env, email, tok, existing) {
-  if (!(await leagueReady(env))) return false;
-  const now = Date.now();
-  const access = await leagueSeal(env, tok.accessToken);
-  const refresh = tok.refreshToken ? await leagueSeal(env, tok.refreshToken) : (existing && existing.refresh_enc) || null;
-  await env.LEADS_DB.prepare('INSERT INTO provider_connections (email, provider, provider_user_id, display_name, access_enc, refresh_enc, expires_at, scopes, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(email, provider) DO UPDATE SET provider_user_id=COALESCE(excluded.provider_user_id, provider_connections.provider_user_id), access_enc=excluded.access_enc, refresh_enc=excluded.refresh_enc, expires_at=excluded.expires_at, status=excluded.status, updated_at=excluded.updated_at')
-    .bind(email, 'yahoo', tok.guid || (existing && existing.provider_user_id) || null, null, access, refresh, tok.expiresAt, YAHOO_SCOPE, 'connected', now, now).run();
-  return true;
-}
-async function leagueConnectionRead(env, email, provider) {
-  if (!(await leagueReady(env))) return null;
-  try { return await env.LEADS_DB.prepare('SELECT * FROM provider_connections WHERE email=? AND provider=?').bind(email, provider).first(); } catch (e) { return null; }
-}
-// A usable Yahoo access token: the stored one while it is fresh, else a
-// refresh. A refresh that fails marks the connection expired, which is what
-// the UI turns into "Reconnect Yahoo".
-async function yahooAccessToken(env, email) {
-  const conn = await leagueConnectionRead(env, email, 'yahoo');
-  if (!conn || conn.status === 'disconnected') throw new LeagueProviderError('expired_authorization', 'Yahoo is not connected');
-  if (conn.expires_at && conn.expires_at - Date.now() > 120000) {
-    const t = await leagueOpen(env, conn.access_enc);
-    if (t) return t;
-  }
-  const refresh = await leagueOpen(env, conn.refresh_enc);
-  if (!refresh) { await leagueConnectionStatus(env, email, 'yahoo', 'expired'); throw new LeagueProviderError('expired_authorization', 'Your Yahoo connection needs to be renewed.'); }
-  try {
-    const tok = await yahooTokenExchange(env, { grant_type: 'refresh_token', refresh_token: refresh, redirect_uri: yahooRedirect(env, 'https://irontuna.com') });
-    await yahooConnectionSave(env, email, tok, conn);
-    return tok.accessToken;
-  } catch (e) {
-    if (e.code === 'expired_authorization') await leagueConnectionStatus(env, email, 'yahoo', 'expired');
-    throw e;
-  }
-}
-async function leagueConnectionStatus(env, email, provider, status) {
-  if (!(await leagueReady(env))) return;
-  try { await env.LEADS_DB.prepare('UPDATE provider_connections SET status=?, updated_at=? WHERE email=? AND provider=?').bind(status, Date.now(), email, provider).run(); } catch (e) {}
-}
-// Revoke and forget. Yahoo has no server-side revoke endpoint for OAuth 2.0
-// tokens; the sealed tokens are deleted, which is the same outcome for us.
-async function leagueConnectionDelete(env, email, provider) {
-  if (!(await leagueReady(env))) return;
-  try { await env.LEADS_DB.prepare('DELETE FROM provider_connections WHERE email=? AND provider=?').bind(email, provider).run(); } catch (e) {}
-}
-async function yahooGet(env, email, path) {
-  const token = await yahooAccessToken(env, email);
-  return leagueFetchJson(YAHOO_API + path + (path.includes('?') ? '&' : '?') + 'format=json', { headers: { authorization: 'Bearer ' + token } }, 'Yahoo');
-}
-// Yahoo's JSON is XML wearing a JSON coat: arrays of one-key objects, and
-// collections keyed "0","1",... with a "count". These two read it plainly.
-function yList(node) {
-  if (!node || typeof node !== 'object') return [];
-  const out = [];
-  for (const k of Object.keys(node)) if (/^\d+$/.test(k)) out.push(node[k]);
-  return out;
-}
-function yMerge(node) {
-  if (Array.isArray(node)) { const o = {}; for (const x of node) { if (Array.isArray(x)) Object.assign(o, yMerge(x)); else if (x && typeof x === 'object') Object.assign(o, x); } return o; }
-  return node && typeof node === 'object' ? node : {};
-}
-// Yahoo stat ids the engine models. Anything else is preserved as
-// extras.unsupported['yahoo_stat_<id>'].
-const YAHOO_STAT = {
-  4: ['passYdPer'], 5: ['passingTD'], 6: ['passingInt'], 8: ['rushYdPer'], 10: ['rushingTD'], 11: ['rec'], 12: ['recYdPer'], 13: ['receivingTD'],
-  15: ['returnTD'], 16: ['twoPt'], 18: ['fumbleLost'], 19: ['fg0'], 20: ['fg1'], 21: ['fg2'], 22: ['fg3'], 23: ['fg4'], 29: ['extraPoint'], 30: ['missedExtraPoint'],
-  32: ['sackPoints'], 33: ['interception'], 34: ['defensiveFumbleRecovery'], 35: ['defensiveTD'], 36: ['safety'], 37: ['blockKick'], 49: ['specialTeamsTD'],
-  50: ['pa0'], 51: ['pa1'], 52: ['pa2'], 53: ['pa3'], 54: ['pa4'], 55: ['pa5'], 56: ['pa6'],
-  57: ['fgMiss0'], 58: ['fgMiss1'], 59: ['fgMiss2'], 60: ['fgMiss3'], 61: ['fgMiss4']
-};
-function yahooScoring(stats, positionTypes) {
-  const d = leagueDefaultSettings().scoring;
-  const scoring = { ...d, passingInt: -1, passingYardsThreshold: 0, passingYardsPerPoint: 25, rushingYardsPerPoint: 10, receivingYardsPerPoint: 10, receptionPoints: 0, rbReceptionPoints: 0 };
-  const unsupported = {};
-  const fg = [null, null, null, null, null], fgm = [null, null, null, null, null], pa = [null, null, null, null, null, null, null];
-  let tePrem = 0;
-  for (const s of stats || []) {
-    const id = Number(s.stat_id), v = Number(s.value);
-    if (!Number.isFinite(v)) continue;
-    const m = YAHOO_STAT[id];
-    if (!m) { unsupported['yahoo_stat_' + id] = v; continue; }
-    const f = m[0];
-    if (f === 'passYdPer') scoring.passingYardsPerPoint = v > 0 ? 1 / v : 0;
-    else if (f === 'rushYdPer') scoring.rushingYardsPerPoint = v > 0 ? 1 / v : 0;
-    else if (f === 'recYdPer') scoring.receivingYardsPerPoint = v > 0 ? 1 / v : 0;
-    else if (f === 'rec') {
-      // Position-specific reception values arrive as separate rows on the
-      // same stat id, each carrying the position it applies to.
-      const pos = s.position ? String(s.position).toUpperCase() : null;
-      if (pos === 'RB') scoring.rbReceptionPoints = v;
-      else if (pos === 'TE') tePrem = v;
-      else { scoring.receptionPoints = v; if (!s.position) scoring.rbReceptionPoints = v; }
-    }
-    else if (f === 'returnTD') { scoring.individualKickReturnTD = v; scoring.individualPuntReturnTD = v; }
-    else if (f === 'twoPt') { scoring.passing2pt = v; scoring.rushing2pt = v; scoring.receiving2pt = v; }
-    else if (/^fg\d$/.test(f)) fg[Number(f[2])] = v;
-    else if (/^fgMiss\d$/.test(f)) fgm[Number(f[6])] = v;
-    else if (/^pa\d$/.test(f)) pa[Number(f[2])] = v;
-    else if (f === 'blockKick') unsupported.yahoo_blocked_kick = v;
-    else scoring[f] = v;
-  }
-  if (fg.some(x => x != null)) scoring.fieldGoalTiers = scoring.fieldGoalTiers.map((t, i) => ({ ...t, points: fg[i] != null ? fg[i] : t.points, missPoints: fgm[i] != null ? fgm[i] : t.missPoints }));
-  if (pa.some(x => x != null)) scoring.pointsAllowed = scoring.pointsAllowed.map((t, i) => ({ ...t, points: pa[i] != null ? pa[i] : t.points }));
-  if (tePrem && tePrem > scoring.receptionPoints) { tePrem = tePrem - scoring.receptionPoints; } else tePrem = 0;
-  const notes = [];
-  if (Object.keys(unsupported).length) notes.push('Yahoo stat categories Iron Tuna does not model are kept but not scored: ' + Object.keys(unsupported).join(', ') + '.');
-  return { scoring, extras: { tePremium: tePrem, unsupported, notes } };
-}
-const YAHOO_SLOT = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', 'W/R/T': 'FLEX', 'Q/W/R/T': 'SFLEX', 'W/R': 'WRRB_FLEX', 'W/T': 'REC_FLEX', BN: 'BN', IR: 'IR' };
-function yahooNormalize(raw, ctx) {
-  const L = raw.league || {};
-  const S = raw.settings || {};
-  const sc = yahooScoring((S.stat_modifiers && S.stat_modifiers.stats ? S.stat_modifiers.stats.map(x => ({ ...(x.stat || x) })) : []), S.stat_categories);
-  const roster = leagueEmptyRoster();
-  for (const rp of (S.roster_positions || [])) {
-    const p = rp.roster_position || rp;
-    const s = YAHOO_SLOT[String(p.position)];
-    const n = Number(p.count) || 1;
-    if (s) roster[s] += n; else roster.other[String(p.position)] = (roster.other[String(p.position)] || 0) + n;
-  }
-  const usesFaab = String(S.uses_faab) === '1' || S.uses_faab === true;
-  const settings = leagueNormalizeSettings({
-    scoring: sc.scoring, extras: sc.extras, roster, faab: usesFaab ? 100 : null, waiverType: usesFaab ? 'faab' : 'priority',
-    playoffWeekStart: Number(S.playoff_start_week) || 15, playoffTeams: Number(S.num_playoff_teams) || 6,
-    leagueType: S.is_keeper_league ? 'keeper' : 'redraft'
-  });
-  const teams = [], rosters = [];
-  let userTeamId = null;
-  for (const t of raw.teams || []) {
-    const id = String(t.team_id);
-    const mgr = (t.managers && t.managers[0] && (t.managers[0].manager || t.managers[0])) || null;
-    const st = t.team_standings || {};
-    const ot = st.outcome_totals || {};
-    if (String(t.is_owned_by_current_login) === '1' || t.is_owned_by_current_login === true) userTeamId = id;
-    teams.push({
-      teamId: id, ownerId: mgr && mgr.guid ? String(mgr.guid) : null, name: t.name || ('Team ' + id), manager: mgr ? (mgr.nickname || null) : null,
-      wins: Number(ot.wins) || 0, losses: Number(ot.losses) || 0, ties: Number(ot.ties) || 0,
-      pointsFor: Number(st.points_for) || 0, pointsAgainst: Number(st.points_against) || 0, standing: Number(st.rank) || null,
-      faabLeft: t.faab_balance != null ? Number(t.faab_balance) : null, waiverPosition: t.waiver_priority != null ? Number(t.waiver_priority) : null
-    });
-    const list = [];
-    for (const p of t.roster || []) {
-      const sel = String((p.selected_position && p.selected_position.position) || p.selected_position || '').toUpperCase();
-      const slot = sel === 'BN' ? 'bench' : sel === 'IR' || sel === 'IL' ? 'ir' : sel ? 'starter' : 'bench';
-      list.push({ providerPlayerId: String(p.player_id || (p.player_key || '').split('.').pop()), name: p.name && p.name.full ? p.name.full : (p.name || null),
-                  position: leaguePos(p.primary_position || p.display_position), team: p.editorial_team_abbr ? String(p.editorial_team_abbr).toUpperCase() : null,
-                  slot, slotLabel: slot === 'starter' ? (YAHOO_SLOT[sel] || sel) : slot.toUpperCase() });
-    }
-    rosters.push({ teamId: id, players: list });
-  }
-  if (!teams.some(t => t.standing)) teams.slice().sort((a, b) => (b.wins - a.wins) || (a.losses - b.losses) || (b.pointsFor - a.pointsFor)).forEach((t, i) => { t.standing = i + 1; });
-  const matchups = [];
-  for (const m of raw.matchups || []) {
-    const pair = m.teams || [];
-    if (pair.length !== 2) continue;
-    for (let i = 0; i < 2; i++) {
-      const me = pair[i], opp = pair[1 - i];
-      matchups.push({ week: Number(m.week), matchupId: String(m.week) + ':' + pair.map(x => x.team_id).sort().join('v'), teamId: String(me.team_id), opponentId: String(opp.team_id),
-                      points: Number(me.points) || 0, opponentPoints: Number(opp.points) || 0, played: m.status === 'postevent' ? 1 : 0 });
-    }
-  }
-  const transactions = [];
-  for (const t of raw.transactions || []) {
-    const adds = [], drops = [];
-    for (const p of t.players || []) {
-      const td = p.transaction_data || {};
-      const row = { providerPlayerId: String(p.player_id), teamId: td.destination_team_key ? String(td.destination_team_key).split('.').pop() : (td.source_team_key ? String(td.source_team_key).split('.').pop() : null), name: p.name && p.name.full ? p.name.full : null };
-      if (td.type === 'add') adds.push(row); else if (td.type === 'drop') drops.push(row); else if (td.type === 'trade') adds.push(row);
-    }
-    transactions.push({ providerTxnId: String(t.transaction_id || t.transaction_key), type: t.type === 'add/drop' ? 'add' : (t.type || 'add'), teamId: adds[0] ? adds[0].teamId : (drops[0] ? drops[0].teamId : null),
-                        adds, drops, faab: t.faab_bid != null ? Number(t.faab_bid) : null, status: t.status || 'complete', ts: t.timestamp ? Number(t.timestamp) * 1000 : null, week: null });
-  }
-  return {
-    provider: 'yahoo', providerLeagueId: String(L.league_key || L.league_id), name: L.name || 'Yahoo league', season: Number(L.season) || null, sport: 'nfl',
-    numTeams: Number(L.num_teams) || teams.length, status: String(L.is_finished) === '1' ? 'complete' : L.draft_status === 'predraft' ? 'pre_draft' : 'in_season',
-    settings, userTeamId, teams, rosters, matchups, transactions
-  };
-}
-// Walk Yahoo's nested resources into flat objects the normalizer reads.
-function yahooFlattenLeague(node) { return yMerge(node); }
-const PROVIDER_YAHOO = {
-  id: 'yahoo', label: 'Yahoo', auth: 'oauth2', flag: 'YAHOO_SYNC',
-  terms: 'Yahoo Fantasy Sports API under the Yahoo Developer Network terms; OAuth 2.0 with the reader’s consent, read-only scope fspt-r. Requires an app registered with Yahoo (YAHOO_CLIENT_ID / YAHOO_CLIENT_SECRET) and LEAGUE_TOKEN_KEY for sealed storage.',
-  needs: env => yahooConfigured(env),
-  async discover(env, conn, input) {
-    const j = await yahooGet(env, conn.email, '/users;use_login=true/games;game_keys=nfl/leagues');
-    const leagues = [];
-    const users = yList(((j || {}).fantasy_content || {}).users || {});
-    for (const u of users) {
-      const user = yMerge((u || {}).user);
-      for (const g of yList(user.games || {})) {
-        const game = yMerge((g || {}).game);
-        for (const l of yList(game.leagues || {})) {
-          const lg = yMerge((l || {}).league);
-          if (!lg.league_key) continue;
-          if (input.season && Number(lg.season) !== Number(input.season)) continue;
-          leagues.push({ providerLeagueId: String(lg.league_key), name: lg.name, season: Number(lg.season), numTeams: Number(lg.num_teams) || null, status: String(lg.is_finished) === '1' ? 'complete' : 'in_season' });
-        }
-      }
-    }
-    return { user: { id: conn.provider_user_id || null, name: conn.display_name || null }, leagues };
-  },
-  async pull(env, conn, providerLeagueId, ctx) {
-    const key = String(providerLeagueId);
-    if (!/^[a-z0-9.]+$/i.test(key)) throw new LeagueProviderError('league_not_found', 'That is not a Yahoo league key');
-    const [meta, standings, rosters, scoreboard, tx] = await Promise.all([
-      yahooGet(env, conn.email, '/league/' + key + '/settings'),
-      yahooGet(env, conn.email, '/league/' + key + '/standings'),
-      yahooGet(env, conn.email, '/league/' + key + '/teams/roster'),
-      yahooGet(env, conn.email, '/league/' + key + '/scoreboard' + (ctx.currentWeek ? ';week=' + ctx.currentWeek : '')),
-      yahooGet(env, conn.email, '/league/' + key + '/transactions;types=add,drop,trade;count=60').catch(() => null)
-    ]);
-    const lgA = yMerge((((meta || {}).fantasy_content || {}).league) || []);
-    const league = { ...lgA };
-    const settings = yMerge(lgA.settings);
-    const teams = [];
-    const stA = yMerge((((standings || {}).fantasy_content || {}).league) || []);
-    const byId = new Map();
-    for (const t of yList(yMerge(stA.standings).teams || {})) { const tm = yMerge((t || {}).team); byId.set(String(tm.team_id), { ...tm, managers: yList(tm.managers || {}).map(m => yMerge(m)) }); }
-    const roA = yMerge((((rosters || {}).fantasy_content || {}).league) || []);
-    for (const t of yList(roA.teams || {})) {
-      const tm = yMerge((t || {}).team);
-      const base = byId.get(String(tm.team_id)) || { ...tm, managers: yList(tm.managers || {}).map(m => yMerge(m)) };
-      const roster = [];
-      for (const p of yList(yMerge(tm.roster).players || {})) { const pl = yMerge((p || {}).player); roster.push({ ...pl, selected_position: yMerge(pl.selected_position) }); }
-      teams.push({ ...base, roster });
-    }
-    const matchups = [];
-    const sbA = yMerge((((scoreboard || {}).fantasy_content || {}).league) || []);
-    for (const m of yList(yMerge(sbA.scoreboard).matchups || {})) {
-      const mm = yMerge((m || {}).matchup);
-      const pair = yList(mm.teams || {}).map(t => { const tm = yMerge((t || {}).team); return { team_id: tm.team_id, points: Number((yMerge(tm.team_points) || {}).total) || 0 }; });
-      matchups.push({ week: Number(mm.week), status: mm.status, teams: pair });
-    }
-    const transactions = [];
-    if (tx) {
-      const txA = yMerge((((tx || {}).fantasy_content || {}).league) || []);
-      for (const t of yList(txA.transactions || {})) {
-        const tt = yMerge((t || {}).transaction);
-        transactions.push({ ...tt, players: yList(tt.players || {}).map(p => { const pl = yMerge((p || {}).player); return { ...pl, transaction_data: yMerge(pl.transaction_data) }; }) });
-      }
-    }
-    return { league, settings, teams, matchups, transactions };
-  },
-  normalize: yahooNormalize
-};
-// ── ESPN ───────────────────────────────────────────────────────────────────
-// Investigated 2026-09-09. ESPN publishes no fantasy API and no OAuth. The
-// only technical route is the undocumented lm-api-reads endpoint, which is
-// already red-listed here for injuries and depth charts (docs/data-sources.md
-// R1), and a PRIVATE league additionally needs the reader's espn_s2 and SWID
-// session cookies, which are login credentials by another name. That fails
-// three rules at once: no undocumented endpoints, no user credentials, no
-// commercial redisplay without terms. So: the adapter exists so the UI and
-// the model have a place for ESPN, it reports why it cannot connect, and the
-// manual league is the fallback. Adding a real adapter later touches this
-// object and nothing downstream.
-const PROVIDER_ESPN = {
-  id: 'espn', label: 'ESPN', auth: 'unavailable', flag: 'ESPN_SYNC',
-  terms: 'No public API, no OAuth; the undocumented endpoint needs the reader’s session cookies for private leagues and has no commercial terms. Not implemented; manual setup is the fallback.',
-  unavailable: 'ESPN does not offer a supported way to read your league. Set your ESPN league up manually and Iron Tuna will use it the same way.',
-  needs: env => false,
-  async discover() { throw new LeagueProviderError('unsupported_provider', PROVIDER_ESPN.unavailable); },
-  async pull() { throw new LeagueProviderError('unsupported_provider', PROVIDER_ESPN.unavailable); },
-  normalize(raw) { throw new LeagueProviderError('unsupported_provider', PROVIDER_ESPN.unavailable); }
-};
-// ── Manual ─────────────────────────────────────────────────────────────────
-// The fallback that always works: the reader types the settings and pastes
-// the rosters, and the result is the same model every module reads. A
-// manual league syncs nothing; its "sync" is the form.
-// CBS uses a league-specific access token supplied by the reader. No login,
-// mobile client credentials, token refresh, or write endpoints are used here.
-function cbsLeagueId(input) {
-  let id = String(input || '').trim().toLowerCase();
-  const m = id.match(/^(?:https:\/\/)?([a-z0-9][a-z0-9-]{0,62})\.football\.cbssports\.com(?:\/[^?#]*)?$/);
-  if (m) id = m[1];
-  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(id)) throw new LeagueProviderError('league_not_found', 'Enter a CBS league ID or football league URL.');
-  return id;
-}
-function cbsError(code) {
-  const messages = { expired_authorization: 'CBS access expired or was refused. Reconnect this league with a new access token.', rate_limited: 'CBS is rate limiting requests. Try again later.', league_not_found: 'CBS could not find that league.', provider_unavailable: 'CBS could not complete the request. Try again later.', invalid_response: 'CBS returned incomplete or unsupported league data. The previous sync is retained.' };
-  return new LeagueProviderError(code, messages[code] || messages.invalid_response);
-}
-const CBS_RESOURCES = new Set(['details', 'rules', 'teams', 'rosters', 'schedules', 'standings/overall', 'transactions/waiver-order', 'transaction-list/log']);
-// Two places CBS has served its fantasy API (version 3.0): the documented
-// api.cbssports.com/fantasy base, and /api/league on the league's own host.
-// Each read tries the host that last worked first, then the other, and a
-// failure names what both answered.
-let cbsPreferredHost = null;
-function cbsHosts(id, resource) {
-  const hosts = [
-    { name: 'api.cbssports.com', url: new URL('https://api.cbssports.com/fantasy/league/' + resource) },
-    { name: 'league host', url: new URL('https://' + id + '.football.cbssports.com/api/league/' + resource) }
-  ];
-  return cbsPreferredHost === 'league host' ? hosts.reverse() : hosts;
-}
-async function cbsGet(env, id, token, resource, params = {}) {
-  if (!flagOn(env, 'CBS_SYNC') || !leagueTokenConfigured(env)) throw new LeagueProviderError('provider_disabled', 'CBS sync needs FLAG_CBS_SYNC and league-token encryption.');
-  id = cbsLeagueId(id);
-  if (!CBS_RESOURCES.has(resource)) throw cbsError('invalid_response');
-  if (!token) throw cbsError('expired_authorization');
-  let first = null;
-  for (const host of cbsHosts(id, resource)) {
-    try {
-      const body = await cbsFetch(host, id, token, resource, params);
-      cbsPreferredHost = host.name;
-      return body;
-    } catch (e) {
-      if (!(e instanceof LeagueProviderError)) throw e;
-      if (e.code === 'rate_limited') { e.detail = 'CBS ' + resource + ': ' + e.detail; throw e; }
-      if (!first) { first = e; continue; }
-      // Report the refused token when either host said so; otherwise the last answer.
-      const chosen = first.code === 'expired_authorization' ? first : e;
-      chosen.detail = 'CBS ' + resource + ': ' + first.detail + '; ' + e.detail;
-      throw chosen;
-    }
-  }
-  throw first;
-}
-async function cbsFetch(host, id, token, resource, params) {
-  const url = new URL(host.url);
-  // CBS reads the token from the access_token query parameter; the
-  // Authorization header is sent as well. The URL is never logged, stored or
-  // echoed: every diagnostic below is built from the host name, the HTTP
-  // status and, for a redirect, the target's host and path only (a sign-in
-  // redirect carries the original URL in its query).
-  url.search = new URLSearchParams({ version: '3.0', response_format: 'json', sport: 'football', league_id: id, ...params, access_token: token }).toString();
-  const fail = (code, note) => { const e = cbsError(code); e.detail = host.name + ' ' + note; return e; };
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    // Never cache credentials or follow a redirect carrying the token.
-    const res = await fetch(url.toString(), { method: 'GET', headers: { Authorization: token, Accept: 'application/json' }, redirect: 'manual', cache: 'no-store', signal: controller.signal });
-    if (res.status >= 300 && res.status < 400) {
-      let to = '';
-      try { const loc = new URL((res.headers && res.headers.get && res.headers.get('location')) || '', url); to = loc.hostname + loc.pathname; } catch (e) {}
-      // A redirect to a sign-in page means CBS did not accept the token.
-      if (/login|sign-?in|auth/i.test(to)) throw fail('expired_authorization', 'HTTP ' + res.status + ' to ' + to);
-      throw fail('provider_unavailable', 'HTTP ' + res.status + (to ? ' to ' + to : ' redirect'));
-    }
-    const text = await res.text();
-    let data = null;
-    try { data = JSON.parse(text); } catch (e) { /* CBS also sends plain text. */ }
-    const item = data && Array.isArray(data.results) ? data.results[0] : data;
-    const status = !res.ok ? res.status : Number(item && item.statusCode) || res.status;
-    if (status === 401 || status === 403) throw fail('expired_authorization', 'HTTP ' + status);
-    if (status === 429) throw fail('rate_limited', 'HTTP 429');
-    if (status === 404) throw fail('league_not_found', 'HTTP 404');
-    if (status >= 500) throw fail('provider_unavailable', 'HTTP ' + status);
-    if (status >= 400 || !item || !item.body || item.body.type === 'error' || item.body.error) {
-      if (/unauthori[sz]ed|invalid.*token|expired.*token|access.denied/i.test(text)) throw fail('expired_authorization', 'HTTP ' + status + ', token refused');
-      throw fail('invalid_response', 'HTTP ' + status + (data ? ', JSON without a league body' : ', not JSON'));
-    }
-    return item.body;
-  } catch (e) {
-    // Never let an upstream body, URL, header, or native fetch error reach logs.
-    if (e instanceof LeagueProviderError) throw e;
-    throw fail('provider_unavailable', e && e.name === 'AbortError' ? 'no answer within 15 seconds' : 'the request could not be sent');
-  } finally { clearTimeout(timer); }
-}
-function cbsList(value) { if (!Array.isArray(value)) throw cbsError('invalid_response'); return value; }
-function cbsNumber(value) { const n = Number(String(value ?? '').replace(/[$,]/g, '')); return Number.isFinite(n) ? n : 0; }
-const CBS_SLOT = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DST: 'DEF', D: 'DEF', DEF: 'DEF', 'RB-WR-TE': 'FLEX', 'QB-RB-WR-TE': 'SFLEX', 'RB-WR': 'WRRB_FLEX', 'WR-TE': 'REC_FLEX', FLEX: 'SFLEX', RS: 'BN', I: 'IR' };
-function cbsSettings(rules, details) {
-  if (!rules || !rules.roster) throw cbsError('invalid_response');
-  const roster = leagueEmptyRoster();
-  for (const p of cbsList(rules.roster.positions)) {
-    const slot = CBS_SLOT[p.abbr];
-    if (slot) roster[slot] += cbsNumber(p.max_active); else roster.other[String(p.abbr)] = cbsNumber(p.max_active);
-  }
-  for (const s of cbsList(rules.roster.statuses)) {
-    if (s.description === 'Reserve Players') roster.BN = cbsNumber(s.max);
-    if (s.description === 'Injured Players') roster.IR = cbsNumber(s.max);
-  }
-  // CBS rules vary by scoring group. Import simple points-per-stat rules;
-  // preserve bonuses/ranges/position-specific rules for explicit correction.
-  const scoring = leagueDefaultSettings().scoring, unsupported = {}, notes = [];
-  for (const k of Object.keys(scoring)) scoring[k] = Array.isArray(scoring[k]) ? [] : 0;
-  const map = { PaYd: 'passingYardsPerPoint', PaTD: 'passingTD', PaInt: 'passingInt', RuYd: 'rushingYardsPerPoint', RuTD: 'rushingTD', ReYd: 'receivingYardsPerPoint', ReTD: 'receivingTD', Rec: 'receptionPoints', FL: 'fumbleLost', Pa2P: 'passing2pt', Ru2P: 'rushing2pt', Re2P: 'receiving2pt' };
-  const categories = Array.isArray(rules.scoring) ? rules.scoring : rules.scoring && rules.scoring.categories;
-  if (!Array.isArray(categories) || !categories.length) throw cbsError('invalid_response');
-  const recognized = new Set();
-  for (const [i, rule] of categories.entries()) {
-    const key = map[rule.abbr], points = Number(rule.points), units = Number(rule.per ?? 1);
-    if (!key || rule.points == null || !Number.isFinite(points) || !(units > 0) || rule.position || rule.ranges || rule.bonus || recognized.has(key)) { unsupported['cbs_' + i + '_' + String(rule.abbr || 'rule')] = rule; continue; }
-    recognized.add(key);
-    scoring[key] = /YardsPerPoint$/.test(key) ? (points > 0 ? units / points : 0) : points / units;
-    if (key === 'receptionPoints') scoring.rbReceptionPoints = scoring[key];
-  }
-  if (!recognized.size) throw cbsError('invalid_response');
-  if (Object.keys(unsupported).length) notes.push('Some CBS scoring rules are retained but not scored. Review scoring corrections before using recommendations.');
-  const budget = rules.transactions && rules.transactions.add_drop_faab_starting_budget;
-  const faab = budget ? cbsNumber(budget.value) : null;
-  return leagueNormalizeSettings({ scoring, extras: { unsupported, notes }, roster, faab, waiverType: faab > 0 ? 'faab' : 'priority', playoffWeekStart: cbsNumber(details.regular_season_periods) + 1, playoffTeams: cbsNumber(rules.schedule && rules.schedule.num_playoff_teams && rules.schedule.num_playoff_teams.value) });
-}
-function cbsPlayer(p) {
-  if (!p || p.id == null) throw cbsError('invalid_response');
-  const slot = p.roster_status === 'A' ? 'starter' : p.roster_status === 'I' ? 'ir' : 'bench';
-  return { providerPlayerId: String(p.id), name: p.fullname || p.name || null, position: leaguePos(p.position), team: p.pro_team || null, slot, slotLabel: slot === 'starter' ? CBS_SLOT[p.roster_pos] || p.roster_pos || leaguePos(p.position) : slot.toUpperCase() };
-}
-function cbsNormalize(raw, ctx) {
-  const L = raw.details.league_details;
-  if (!L || !L.name || L.sport && !['football', 'nfl'].includes(String(L.sport).toLowerCase())) throw cbsError('invalid_response');
-  const settings = cbsSettings(raw.rules.rules, L);
-  const standings = raw.standings.overall_standings;
-  const st = cbsList(standings.teams || (standings.divisions && standings.divisions.flatMap(d => cbsList(d.teams))));
-  const waivers = raw.waivers.faab_order || raw.waivers.waiver_order;
-  const w = cbsList(waivers && waivers.teams);
-  const teams = cbsList(raw.teams.teams).map(t => {
-    if (t.id == null) throw cbsError('invalid_response');
-    const s = st.find(x => String(x.id) === String(t.id)) || {}, a = w.find(x => String(x.id) === String(t.id)) || {};
-    return { teamId: String(t.id), name: t.name, manager: (t.owners || []).map(o => o.name).filter(Boolean).join(', ') || null, ownerId: null,
-      wins: cbsNumber(s.wins), losses: cbsNumber(s.losses), ties: cbsNumber(s.ties), pointsFor: cbsNumber(s.points_scored), pointsAgainst: cbsNumber(s.points_against), standing: cbsNumber(s.order) || null, faabLeft: a.budget_remaining == null ? null : cbsNumber(a.budget_remaining), waiverPosition: cbsNumber(a.order) || null };
-  });
-  const rosters = cbsList(raw.rosters.rosters && raw.rosters.rosters.teams).map(t => ({ teamId: String(t.id), players: cbsList(t.players).map(cbsPlayer) }));
-  if (!teams.length || teams.length !== Number(L.num_teams) || new Set(teams.map(t => t.teamId)).size !== teams.length || rosters.length !== teams.length || teams.some(t => !rosters.some(r => r.teamId === t.teamId) || !st.some(s => String(s.id) === t.teamId))) throw cbsError('invalid_response');
-  const ids = rosters.flatMap(r => r.players.map(p => p.providerPlayerId));
-  if (new Set(ids).size !== ids.length) throw cbsError('invalid_response');
-  const matchups = [];
-  for (const period of cbsList(raw.schedules.schedule && raw.schedules.schedule.periods)) {
-    const week = Number(period.period || String(period.label || '').replace(/\D/g, ''));
-    if (!(week >= 1 && week <= 18)) throw cbsError('invalid_response');
-    for (const m of cbsList(period.matchups)) {
-      const pair = [m.home_team, m.away_team];
-      if (pair.some(t => !t || t.id == null)) continue; // bye
-      for (let i = 0; i < 2; i++) matchups.push({ week, matchupId: week + ':' + pair.map(t => t.id).sort().join('v'), teamId: String(pair[i].id), opponentId: String(pair[1-i].id), points: cbsNumber(pair[i].points), opponentPoints: cbsNumber(pair[1-i].points), played: week < Number(L.current_period) ? 1 : 0 });
-    }
-  }
-  const transactions = cbsList(raw.transactions.transaction_log).map(t => {
-    if (t.id == null) throw cbsError('invalid_response');
-    const adds = [], drops = [], teamId = t.team && t.team.id != null ? String(t.team.id) : null;
-    for (const move of cbsList(t.moves)) {
-      if (!move.player) continue;
-      const p = { ...cbsPlayer(move.player), teamId };
-      if (['won', 'add', 'trade'].includes(move.type)) adds.push(p);
-      if (move.type === 'drop') drops.push(p);
-    }
-    return { providerTxnId: String(t.id), type: t.moves.some(m => m.type === 'trade') ? 'trade' : adds.length ? 'add' : 'drop', teamId, adds, drops, faab: t.bid == null ? null : cbsNumber(t.bid), status: 'complete', ts: Number.isFinite(Date.parse(t.date)) ? Date.parse(t.date) : null, week: null };
-  });
-  return { name: L.name, season: Number(L.season) || ctx.season, numTeams: teams.length, status: 'in_season', userTeamId: null, settings, teams, rosters, matchups, transactions };
-}
-const PROVIDER_CBS = {
-  id: 'cbs', label: 'CBS Sportsline', auth: 'league_token', flag: 'CBS_SYNC',
-  terms: 'Reader-supplied league access token, encrypted at rest. Read-only requests. Disabled until CBS access and commercial terms have been verified.',
-  needs: env => leagueTokenConfigured(env),
-  async discover(env, conn, input) {
-    const id = cbsLeagueId(input.leagueId);
-    const body = await cbsGet(env, id, conn.token, 'details');
-    const L = body.league_details;
-    if (!L || !L.name) throw cbsError('invalid_response');
-    return { user: null, leagues: [{ providerLeagueId: id, name: L.name, season: Number(L.season) || input.season, numTeams: Number(L.num_teams) }] };
-  },
-  async pull(env, conn, id, ctx) {
-    id = cbsLeagueId(id);
-    let token = conn.token;
-    if (!token) {
-      const saved = await env.LEADS_DB.prepare('SELECT access_enc FROM league_provider_tokens WHERE email=? AND provider=? AND provider_league_id=?').bind(conn.email, 'cbs', id).first();
-      token = saved && await leagueOpen(env, saved.access_enc);
-    }
-    if (!token) throw cbsError('expired_authorization');
-    const details = await cbsGet(env, id, token, 'details');
-    const period = Number(details.league_details && details.league_details.current_period) || ctx.currentWeek || 1;
-    const raw = { details };
-    // Bound fanout; all resources are required so a partial response never erases a good sync.
-    for (const [key, resource, params] of [['rules', 'rules', {}], ['teams', 'teams', {}], ['rosters', 'rosters', { team_id: 'all', period }], ['schedules', 'schedules', { period: 'all' }], ['standings', 'standings/overall', { period }], ['waivers', 'transactions/waiver-order', {}], ['transactions', 'transaction-list/log', { filter: 'all_but_lineup' }]]) raw[key] = await cbsGet(env, id, token, resource, params);
-    return raw;
-  },
-  normalize: cbsNormalize
-};
-// Browser snapshots use the existing league model, without storing CBS credentials.
-function cbsBrowserNormalize(raw, ctx) {
-  const invalid = () => { throw new LeagueProviderError('invalid_browser_import', 'CBS import is incomplete or unsupported. Re-read the league with the updated extension.'); };
-  const str = (v, max) => { if (typeof v !== 'string' || !v.trim() || v.length > max || /[\x00-\x1f]/.test(v)) invalid(); return v.trim(); };
-  const id = v => { if (typeof v !== 'string' || !/^\d{1,12}$/.test(v)) invalid(); return v; };
-  if (!raw || raw.version !== 1 || JSON.stringify(raw).length > 350000) invalid();
-  const leagueId = cbsLeagueId(raw.leagueId);
-  if (leagueId !== raw.leagueId || !Number.isInteger(raw.season) || raw.season < 2020 || raw.season > Number(ctx.season) + 1) invalid();
-  const name = str(raw.name, 160);
-  if (!Number.isInteger(raw.numTeams) || raw.numTeams < 2 || raw.numTeams > 32 || !Array.isArray(raw.teams) || raw.teams.length !== raw.numTeams || !Array.isArray(raw.rosters) || raw.rosters.length !== raw.numTeams) invalid();
-  const teamIds = new Set(), rosterIds = new Set(), playerIds = new Set();
-  const teams = raw.teams.map(t => { const teamId = id(t.teamId); if (teamIds.has(teamId)) invalid(); teamIds.add(teamId); return { teamId, name: str(t.name, 160), ownerId: null, wins: null, losses: null, ties: null, pointsFor: null, pointsAgainst: null, faabLeft: null, waiverPosition: null }; });
-  const rosters = raw.rosters.map(r => {
-    const teamId = id(r.teamId);
-    if (!teamIds.has(teamId) || rosterIds.has(teamId) || !Array.isArray(r.players) || !r.players.length || r.players.length > 60) invalid();
-    const n = s => r.players.filter(p => p.slot === s).length, ir = r.counts && r.counts.ir != null ? r.counts.ir : n('ir');
-    if (!r.counts || !Number.isInteger(r.counts.starter) || !Number.isInteger(r.counts.bench) || !Number.isInteger(ir) || r.counts.starter < 0 || r.counts.bench < 0 || ir < 0 || n('starter') !== r.counts.starter || n('bench') !== r.counts.bench || n('ir') !== ir || r.counts.starter + r.counts.bench + ir !== r.players.length) invalid();
-    rosterIds.add(teamId);
-    return { teamId, players: r.players.map(p => {
-      const providerPlayerId = id(p.providerPlayerId);
-      if (playerIds.has(providerPlayerId) || !['QB','RB','WR','TE','K','DEF'].includes(p.position) || !['starter','bench','ir'].includes(p.slot) || !/^[A-Z]{2,3}$/.test(p.team)) invalid();
-      playerIds.add(providerPlayerId);
-      return { providerPlayerId, name: str(p.name, 100), position: p.position, team: p.team, slot: p.slot, slotLabel: str(p.slotLabel, 16) };
-    }) };
-  });
-  const roster = leagueEmptyRoster();
-  if (!raw.roster || typeof raw.roster !== 'object' || !Object.keys(raw.roster).length) invalid();
-  for (const [k,v] of Object.entries(raw.roster)) { if (!(k in roster) || k === 'other' || !Number.isInteger(v) || v < 0 || v > 20) invalid(); roster[k] = v; }
-  const scoring = leagueDefaultSettings().scoring, unsupported = {}, seen = new Set();
-  for (const k of Object.keys(scoring)) scoring[k] = Array.isArray(scoring[k]) ? [] : 0;
-  const scalar = { FL:'fumbleLost', Fum2PK:'fumble2pt', Fum2PT:'fumble2pt', IFRTD:'individualFumbleRecoveryTD', IKRTD:'individualKickReturnTD', IPRTD:'individualPuntReturnTD', MXP:'missedExtraPoint', Pa2P:'passing2pt', PaInt:'passingInt', PaTD:'passingTD', Re2P:'receiving2pt', ReTD:'receivingTD', Ru2P:'rushing2pt', RuTD:'rushingTD', XP:'extraPoint', DFR:'defensiveFumbleRecovery', DFTD:'defensiveTD', Int:'interception', ST2PT:'specialTeams2pt', STTD:'specialTeamsTD', STY:'safety', STY1PT:'specialTeamsSafety1pt' };
-  const num = '(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))';
-  const goals = {}, missed = {};
-  if (!Array.isArray(raw.rules) || !raw.rules.length || raw.rules.length > 120) invalid();
-  for (const [i,rule] of raw.rules.entries()) {
-    const group = str(rule.group, 80), code = str(rule.code,16), text = str(rule.text,2000).replace(/Plus /g, ' Plus ').trim(), unique = group + ':' + code;
-    if (seen.has(unique)) invalid(); seen.add(unique);
-    let handled = false;
-    const regular = group === 'OFFENSIVE' || group === 'DEFENSIVE';
-    const simple = text.match(new RegExp('^' + num + ' points?$'));
-    if (regular && scalar[code] && simple) {
-      const key = scalar[code], value = Number(simple[1]);
-      if ((code === 'Fum2PT' && seen.has(group + ':Fum2PK') || code === 'Fum2PK' && seen.has(group + ':Fum2PT')) && scoring[key] !== value) invalid();
-      scoring[key] = value; handled = true;
-    }
-    if ((regular && ['PaYd','ReYd','RuYd','Recpt','SACK'].includes(code)) || group === 'SPECIAL SCORING FOR RUNNING BACKS' && code === 'Recpt') {
-      const base = text.match(new RegExp('^(\\d+)\\+ [A-Za-z]+ = ' + num + ' points? for every ' + num + ' [A-Za-z]+'));
-      if (base && Number(base[3]) > 0) {
-        const rest = text.slice(base[0].length).trim(), bonuses = [], re = new RegExp('Plus a ' + num + ' point bonus @ (\\d+)\\+ [A-Za-z]+', 'g');
-        for (const m of rest.matchAll(re)) bonuses.push({ at:Number(m[2]), points:Number(m[1]) });
-        if (!rest.replace(re,'').trim()) {
-          const prefix = { PaYd:'passing', ReYd:'receiving', RuYd:'rushing' }[code];
-          if (prefix && Number(base[2]) > 0) { scoring[prefix+'YardsPerPoint'] = Number(base[3])/Number(base[2]); scoring[prefix+'YardsThreshold'] = Number(base[1]); scoring[prefix+'YardBonuses'] = bonuses; handled = true; }
-          else if (!prefix && Number(base[1]) <= 1) {
-            const key = code === 'SACK' ? 'sack' : group === 'SPECIAL SCORING FOR RUNNING BACKS' ? 'rbReception' : 'reception';
-            scoring[key+'Points'] = Number(base[2])/Number(base[3]); scoring[key+'Bonuses'] = bonuses; handled = true;
-          }
-        }
-      }
-    }
-    if (regular && ['FG','MFG'].includes(code)) {
-      const re = new RegExp('Plus ' + num + ' points? for a ' + code + ' of (\\d+)(?: to (\\d+)|\\+) Yds','g');
-      const matches = [...text.matchAll(re)];
-      if (matches.length && !text.replace(re,'').trim()) { for (const m of matches) (code === 'FG' ? goals : missed)[m[2]+':'+(m[3]||999)] = Number(m[1]); handled = true; }
-    }
-    if (regular && code === 'PA') {
-      const re = new RegExp('(\\d+)(?: - (\\d+)|\\+) PAs? = ' + num + ' points?','g'), matches = [...text.matchAll(re)];
-      if (matches.length && !text.replace(re,'').trim()) { scoring.pointsAllowed = matches.map(m=>({min:Number(m[1]),max:Number(m[2]||999),points:Number(m[3])})); handled = true; }
-    }
-    if (!handled) unsupported['cbs_browser_'+i+'_'+code] = {group,code,text};
-  }
-  if (!seen.has('SPECIAL SCORING FOR RUNNING BACKS:Recpt')) { scoring.rbReceptionPoints = scoring.receptionPoints; scoring.rbReceptionBonuses = scoring.receptionBonuses; }
-  scoring.fieldGoalTiers = Object.entries(goals).map(([range,points])=>{ const [min,max]=range.split(':').map(Number); return {min,max,points,missPoints:missed[range]||0}; }).sort((a,b)=>a.min-b.min);
-  for (const value of Object.values(scoring)) for (const number of Array.isArray(value) ? value.flatMap(v=>Object.values(v)) : [value]) if (!Number.isFinite(number) || Math.abs(number) > 1000000) invalid();
-  if (Object.keys(missed).some(k=>!(k in goals))) unsupported.cbs_missed_ranges = missed;
-  if (scoring.fieldGoalTiers.length !== 5) unsupported.cbs_field_goal_ranges = 'This league does not have the five field-goal ranges required by the kicker model. Review kicker scoring.';
-  const notes = ['Browser import: refresh with the CBS extension. Standings, matchups, transactions and waiver balances are not imported.', 'Confirm playoff team count and league type; CBS browser import does not read those fields.'];
-  if (Object.keys(unsupported).length) notes.push('Some CBS scoring rules are preserved but not scored. Review settings before using recommendations.');
-  const settings = leagueNormalizeSettings({scoring,roster,extras:{unsupported,notes},faab:null,waiverType:'unknown',playoffWeekStart:raw.playoffWeekStart});
-  return { name, season:raw.season, numTeams:teams.length, status:'in_season', userTeamId:null, settings, teams, rosters, matchups:[], transactions:[] };
-}
-const PROVIDER_CBS_BROWSER = {
-  id:'cbs_browser', label:'CBS browser import', auth:'browser', flag:'CBS_SYNC',
-  terms:'League tables imported by the reader from their signed-in CBS browser. Refresh using the extension; no credentials stored.',
-  needs:()=>true,
-  async pull() { throw new LeagueProviderError('browser_refresh_required', 'Open your CBS league and use the Iron Tuna extension to refresh it.'); },
-  normalize:cbsBrowserNormalize
-};
-
 const PROVIDER_MANUAL = {
   id: 'manual', label: 'Manual', auth: 'none', flag: null, terms: 'The reader’s own entry. Nothing is fetched.',
   needs: env => true,
@@ -13810,19 +12975,12 @@ const PROVIDER_MANUAL = {
   async pull() { throw new LeagueProviderError('manual_league', 'A manual league is edited, not synced.'); },
   normalize(raw) { return raw; }
 };
-const LEAGUE_PROVIDERS = { sleeper: PROVIDER_SLEEPER, yahoo: PROVIDER_YAHOO, cbs: PROVIDER_CBS, cbs_browser: PROVIDER_CBS_BROWSER, espn: PROVIDER_ESPN, manual: PROVIDER_MANUAL };
-// What a reader may connect right now, and why not otherwise. Presence only,
-// never a key.
-function leagueProviderReport(env) {
-  const out = {};
-  for (const [id, p] of Object.entries(LEAGUE_PROVIDERS)) {
-    const flagOk = !p.flag || flagOn(env, p.flag);
-    const configured = p.needs(env);
-    out[id] = { id, label: p.label, auth: p.auth, enabled: flagOk && configured && p.auth !== 'unavailable',
-                reason: p.auth === 'unavailable' ? p.unavailable : !flagOk ? 'off (FLAG_' + p.flag + ')' : !configured ? 'not configured' : null, terms: p.terms };
-  }
-  return out;
-}
+// One provider, and it is the reader. The Sleeper, Yahoo, CBS and ESPN
+// connectors were removed on 2026-09-18 (HANDOFF §89): none of them ever
+// carried a league in production. The adapter shape stays, because it is what
+// keeps everything downstream from knowing where a league came from, and it is
+// what a future connector would slot into.
+const LEAGUE_PROVIDERS = { manual: PROVIDER_MANUAL };
 // -- storage: the model in D1, idempotently ---------------------------------
 // Provider ids are the primary keys, so a sync that runs twice writes the
 // same rows twice. Rows a sync did not touch (a dropped player, a team that
@@ -13899,19 +13057,6 @@ async function leagueWriteModel(env, leagueId, model, keyMap, ts) {
   await db.prepare('DELETE FROM league_roster_players WHERE league_id=? AND updated_at < ?').bind(leagueId, ts).run();
   await db.prepare('DELETE FROM league_teams WHERE league_id=? AND updated_at < ?').bind(leagueId, ts).run();
 }
-// A weekly snapshot of rosters and standings, one row per league per week,
-// so "you dropped him two weeks ago" and "your rank moved" can be facts.
-async function leagueSnapshot(env, leagueId, model, season, week, ts) {
-  if (!week) return;
-  const payload = { teams: (model.teams || []).map(t => ({ teamId: t.teamId, name: t.name, wins: t.wins, losses: t.losses, pointsFor: t.pointsFor, standing: t.standing })),
-                    rosters: (model.rosters || []).map(r => ({ teamId: r.teamId, players: (r.players || []).map(p => [p.providerPlayerId, p.slot]) })) };
-  try { await env.LEADS_DB.prepare('INSERT INTO league_snapshots (league_id, season, week, kind, payload, built_at) VALUES (?,?,?,?,?,?) ON CONFLICT(league_id, season, week, kind) DO UPDATE SET payload=excluded.payload, built_at=excluded.built_at')
-    .bind(leagueId, season || null, week, 'weekly', JSON.stringify(payload).slice(0, 200000), ts).run(); } catch (e) {}
-}
-async function leagueRunLog(env, r) {
-  try { await env.LEADS_DB.prepare('INSERT INTO league_sync_runs (league_id, provider, trigger, started_at, finished_at, ok, error, summary, unmatched) VALUES (?,?,?,?,?,?,?,?,?)')
-    .bind(r.leagueId, r.provider, r.trigger || null, r.started, r.finished, r.ok ? 1 : 0, r.error || null, r.summary || null, r.unmatched || 0).run(); } catch (e) {}
-}
 // The current NFL week from the site's own season service, so a league and
 // a story never disagree about what week it is.
 async function leagueWeekContext(env) {
@@ -13919,70 +13064,6 @@ async function leagueWeekContext(env) {
   const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
   const cur = state.ok && state.week.type === 'REG' ? state.week.number : null;
   return { season: sched ? sched.season : new Date().getUTCFullYear(), currentWeek: cur, state };
-}
-// -- the sync ----------------------------------------------------------------
-// pull -> normalize -> map players -> write -> snapshot -> log. Never throws;
-// a provider failure is a logged run and a scheduled retry, and the league
-// the reader already has is left exactly as it was.
-async function leagueSync(env, row, trigger, preparedRaw) {
-  const started = Date.now();
-  const provider = LEAGUE_PROVIDERS[row.provider];
-  const base = { leagueId: row.id, provider: row.provider, trigger, started };
-  if (!provider) return { ok: false, error: 'unknown_provider' };
-  if (row.provider === 'manual') return { ok: true, manual: true };
-  if (provider.flag && !flagOn(env, provider.flag)) { const r = { ...base, finished: Date.now(), ok: false, error: 'provider_disabled' }; await leagueRunLog(env, r); await leagueSyncState(env, row, false, 'provider_disabled', started); return { ok: false, error: 'provider_disabled' }; }
-  let model = null, unmatched = 0, error = null, code = null;
-  try {
-    const ctx = await leagueWeekContext(env);
-    const conn = provider.auth === 'oauth2' ? { ...(await leagueConnectionRead(env, row.email, row.provider) || {}), email: row.email } : { email: row.email };
-    let userId = null;
-    try { const meta = JSON.parse(row.overrides || '{}'); userId = meta.__providerUserId || null; } catch (e) {}
-    const raw = preparedRaw || await provider.pull(env, conn, row.provider_league_id, { ...ctx, firstSync: !row.last_ok_at, userId });
-    model = provider.normalize(raw, { ...ctx, userId });
-    const allPlayers = [];
-    for (const r of model.rosters || []) for (const p of r.players || []) allPlayers.push(p);
-    for (const x of model.transactions || []) for (const p of [...(x.adds || []), ...(x.drops || [])]) if (!allPlayers.some(q => q.providerPlayerId === p.providerPlayerId)) allPlayers.push({ ...p, position: p.position || null });
-    const mapped = await leagueMapPlayers(env, row.provider === 'cbs_browser' ? 'cbs' : row.provider, allPlayers);
-    unmatched = mapped.unmatched;
-    const ts = Date.now();
-    await leagueWriteModel(env, row.id, model, mapped.map, ts);
-    await leagueSnapshot(env, row.id, model, model.season || ctx.season, ctx.currentWeek, ts);
-    // The league row: name, size, status, settings (the reader's overrides are
-    // a separate column and are never touched here), the user's team if the
-    // provider identified it and the reader has not chosen one by hand.
-    const keepTeam = row.user_team_id && (model.teams || []).some(t => t.teamId === row.user_team_id);
-    await env.LEADS_DB.prepare('UPDATE leagues SET name=?, season=?, num_teams=?, status=?, settings=?, user_team_id=?, updated_at=?, last_sync_at=?, last_ok_at=?, sync_status=?, last_error=NULL, next_sync_at=?, failures=0 WHERE id=?')
-      .bind(model.name || row.name, model.season || row.season, model.numTeams || row.num_teams, model.status || row.status, JSON.stringify(model.settings), keepTeam ? row.user_team_id : (model.userTeamId || row.user_team_id || null), ts, ts, ts, 'ok', row.provider === 'cbs_browser' ? null : leagueNextSyncAt(ts, 0), row.id).run();
-  } catch (e) {
-    error = (e && e.message) || 'failed'; code = (e && e.code) || 'sync_failed';
-    if (row.provider === 'cbs') error = cbsError(code).message + (e && e.detail ? ' (' + e.detail + ')' : '');
-    await leagueSyncState(env, row, false, code + ': ' + error, started);
-  }
-  const finished = Date.now();
-  const r = { ...base, finished, ok: !error, error: error ? code + ': ' + error : null, unmatched,
-              summary: model ? JSON.stringify({ teams: (model.teams || []).length, players: (model.rosters || []).reduce((n, r) => n + (r.players || []).length, 0), matchups: (model.matchups || []).length, transactions: (model.transactions || []).length, unmatched, ms: finished - started }) : null };
-  await leagueRunLog(env, r);
-  return { ok: !error, error: r.error, code, unmatched, durationMs: finished - started, userTeamId: model ? model.userTeamId : null, teams: model ? (model.teams || []).length : 0 };
-}
-async function leagueSyncState(env, row, ok, error, at) {
-  const failures = ok ? 0 : (Number(row.failures) || 0) + 1;
-  try { await env.LEADS_DB.prepare('UPDATE leagues SET last_sync_at=?, sync_status=?, last_error=?, next_sync_at=?, failures=? WHERE id=?')
-    .bind(at, ok ? 'ok' : 'failed', error || null, row.provider === 'cbs_browser' ? null : leagueNextSyncAt(at, failures), failures, row.id).run(); } catch (e) {}
-}
-// The job: every connected league that is due, a few at a time, with the
-// provider's flag respected and a per-league backoff on failure.
-async function runLeagueSync(env) {
-  if (!(await leagueReady(env))) return { ok: false, error: 'no_db' };
-  const now = Date.now();
-  let rows = [];
-  try { rows = (await env.LEADS_DB.prepare("SELECT * FROM leagues WHERE provider != 'manual' AND provider != 'cbs_browser' AND (next_sync_at IS NULL OR next_sync_at <= ?) ORDER BY next_sync_at ASC LIMIT ?").bind(now, LEAGUE_SYNC_BATCH).all()).results || []; }
-  catch (e) { return { ok: false, error: (e && e.message) || 'query failed' }; }
-  const results = [];
-  for (let i = 0; i < rows.length; i += 3) {
-    const part = await Promise.all(rows.slice(i, i + 3).map(r => leagueSync(env, r, 'job').then(x => ({ id: r.id, provider: r.provider, ok: x.ok, error: x.error || null, ms: x.durationMs }))));
-    results.push(...part);
-  }
-  return { ok: true, due: rows.length, synced: results.filter(r => r.ok).length, failed: results.filter(r => !r.ok).length, results: results.slice(0, 20) };
 }
 // -- creating leagues --------------------------------------------------------
 async function leagueCreateRow(env, email, provider, providerLeagueId, name, season, opts) {
@@ -14057,17 +13138,8 @@ async function leagueDisconnect(env, email, row) {
   const id = row.id;
   await db.batch(['league_roster_players', 'league_teams', 'league_matchups', 'league_transactions', 'league_snapshots'].map(t => db.prepare('DELETE FROM ' + t + ' WHERE league_id=?').bind(id)));
   await db.prepare('DELETE FROM leagues WHERE id=? AND email=?').bind(id, email).run();
-  let tokensRemoved = false;
-  if (row.provider === 'cbs') {
-    await db.prepare('DELETE FROM league_provider_tokens WHERE email=? AND provider=? AND provider_league_id=?').bind(email, 'cbs', row.provider_league_id).run();
-    tokensRemoved = true;
-  }
-  if (LEAGUE_PROVIDERS[row.provider] && LEAGUE_PROVIDERS[row.provider].auth === 'oauth2') {
-    const left = await db.prepare('SELECT COUNT(*) AS n FROM leagues WHERE email=? AND provider=?').bind(email, row.provider).first();
-    if (!left || !left.n) { await leagueConnectionDelete(env, email, row.provider); tokensRemoved = true; }
-  }
   if (row.is_default) { const first = await db.prepare('SELECT id FROM leagues WHERE email=? ORDER BY created_at ASC LIMIT 1').bind(email).first(); if (first) await leagueSetDefault(env, email, first.id); }
-  return { ok: true, removed: ['league settings', 'teams', 'rosters', 'matchups', 'transactions', 'weekly snapshots'], tokensRemoved, retained: ['the sync log (no league data, kept 45 days for the health board)'] };
+  return { ok: true, removed: ['league settings', 'teams', 'rosters', 'matchups', 'transactions', 'weekly snapshots'], retained: [] };
 }
 // -- personalization ---------------------------------------------------------
 // Every module below reads the local model and the site's own boards, scored
@@ -14529,7 +13601,7 @@ async function leagueSummary(env, L) {
            alerts: intel.ok ? intel.alerts.slice(0, 4) : [], pickups: pickups.ok ? pickups.pickups.slice(0, 3) : [] };
 }
 // -- the routes ---------------------------------------------------------------
-// Everything under /api/leagues, /api/oauth/<provider> and /api/admin/league-sync.
+// Everything under /api/leagues and /api/admin/leagues.
 // Returns a Response, or null when the path is not ours.
 const LEAGUE_ERRORS = {
   expired_authorization: 'Your connection to this provider needs to be renewed.',
@@ -14554,67 +13626,23 @@ function leaguePublic(L) {
 }
 async function leagueRoutes(request, env, url, ctx) {
   const path = url.pathname.replace(/\/+$/, '');
-  const isLeague = path === '/api/leagues' || path.startsWith('/api/leagues/') || path.startsWith('/api/oauth/') || path === '/api/admin/league-sync';
+  const isLeague = path === '/api/leagues' || path.startsWith('/api/leagues/') || path === '/api/admin/leagues';
   if (!isLeague) return null;
   const c = { ...corsHeaders(request.headers.get('Origin')), 'cache-control': 'no-store' };
   if (request.method === 'OPTIONS') return new Response(null, { headers: c });
-  if (!flagOn(env, 'LEAGUE_SYNC')) return leagueErr('provider_disabled', 'League sync is off', 404, c);
+  if (!flagOn(env, 'LEAGUE_SYNC')) return leagueErr('provider_disabled', 'Saved leagues are off', 404, c);
   const readBody = async () => { try { return await request.json(); } catch (e) { return {}; } };
 
-  // Provider availability is public: the connect page decides what to show.
-  if (path === '/api/leagues/providers') return json({ ok: true, contract: LEAGUE_CONTRACT, providers: leagueProviderReport(env) }, 200, c);
-
-  // Admin: metrics and recent runs, never a token.
-  if (path === '/api/admin/league-sync') {
+  // Admin: the leagues on the account and the players no id could be mapped
+  // to. There are no provider runs to report any more, and never a token.
+  if (path === '/api/admin/leagues') {
     if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
     if (!(await leagueReady(env))) return json({ ok: false, error: 'no_db' }, 503, c);
-    let ran = null;
-    if (url.searchParams.get('run') === '1') ran = await jobRun(env, 'league-sync', 'admin');
-    const resync = url.searchParams.get('resync');
-    if (resync) { const row = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE id=?').bind(resync).first(); ran = row ? await leagueSync(env, row, 'admin') : { ok: false, error: 'no such league' }; }
-    const db = env.LEADS_DB, since = Date.now() - 7 * 86400000;
-    const q = async (sql, ...args) => { try { return (await db.prepare(sql).bind(...args).all()).results || []; } catch (e) { return []; } };
-    const byProvider = await q('SELECT provider, COUNT(*) AS n, SUM(CASE WHEN sync_status=\'ok\' OR sync_status=\'manual\' THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN sync_status=\'failed\' THEN 1 ELSE 0 END) AS failed FROM leagues GROUP BY provider');
-    const runs = await q('SELECT provider, COUNT(*) AS n, SUM(ok) AS ok, AVG(finished_at - started_at) AS avg_ms, SUM(unmatched) AS unmatched FROM league_sync_runs WHERE started_at >= ? GROUP BY provider', since);
-    const recent = await q('SELECT r.id, r.league_id, r.provider, r.trigger, r.started_at, r.finished_at, r.ok, r.error, r.summary, r.unmatched, l.name FROM league_sync_runs r LEFT JOIN leagues l ON l.id = r.league_id ORDER BY r.started_at DESC LIMIT 40');
-    const failing = await q('SELECT id, provider, provider_league_id, name, sync_status, last_error, last_ok_at, failures, next_sync_at FROM leagues WHERE sync_status=\'failed\' ORDER BY failures DESC LIMIT 40');
-    const misses = await q('SELECT provider, provider_player_id, name, position, nfl_team, count, last_seen FROM player_map_misses ORDER BY count DESC, last_seen DESC LIMIT 40');
-    const conns = await q('SELECT provider, status, COUNT(*) AS n FROM provider_connections GROUP BY provider, status');
-    const leagues = await q('SELECT id, provider, provider_league_id, name, season, num_teams, sync_status, last_ok_at, last_sync_at, next_sync_at, failures, last_error, user_team_id FROM leagues ORDER BY updated_at DESC LIMIT 60');
-    const rateLimited = recent.filter(r => /rate_limited/.test(String(r.error || ''))).length;
-    return json({ ok: true, contract: LEAGUE_CONTRACT, providers: leagueProviderReport(env), flags: Object.fromEntries(['LEAGUE_SYNC', 'SLEEPER_SYNC', 'YAHOO_SYNC', 'CBS_SYNC', 'ESPN_SYNC', 'PERSONALIZED_WAIVERS', 'PERSONALIZED_LINEUP', 'PERSONALIZED_TRADES', 'PERSONALIZED_STORIES'].map(k => [k, flagOn(env, k)])),
-                  tokenKey: leagueTokenConfigured(env), metrics: { byProvider, runs7d: runs.map(r => ({ ...r, successRate: r.n ? Math.round(100 * r.ok / r.n) : null, avgMs: r.avg_ms != null ? Math.round(r.avg_ms) : null })), rateLimited7d: rateLimited },
-                  recent, failing, misses, connections: conns, leagues, ran }, 200, c);
-  }
-
-  // Yahoo OAuth. The state is a signed token bound to the signed-in reader, so
-  // a callback cannot attach someone else's Yahoo account to this session.
-  if (path === '/api/oauth/yahoo/start' || path === '/api/oauth/yahoo/callback' || path === '/api/oauth/yahoo/disconnect') {
-    const email = await leagueSessionEmail(request, env);
-    if (!email) return path === '/api/oauth/yahoo/callback' ? Response.redirect(url.origin + '/my-league?yahoo=signin', 302) : leagueErr('not_signed_in', null, 401, c);
-    const rep = leagueProviderReport(env).yahoo;
-    if (path === '/api/oauth/yahoo/disconnect') {
-      if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
-      await leagueConnectionDelete(env, email, 'yahoo');
-      return json({ ok: true, removed: 'Yahoo tokens deleted. Your Yahoo leagues on Iron Tuna stay until you disconnect them, but they will no longer refresh.' }, 200, c);
-    }
-    if (!rep.enabled) return path === '/api/oauth/yahoo/callback' ? Response.redirect(url.origin + '/my-league?yahoo=off', 302) : leagueErr('provider_disabled', rep.reason, 503, c);
-    if (path === '/api/oauth/yahoo/start') {
-      const nonce = crypto.randomUUID();
-      const state = await makeToken(env.AUTH_SECRET, { t: 'yst', e: email, n: nonce, exp: Date.now() + 15 * 60000 });
-      const q = new URLSearchParams({ client_id: env.YAHOO_CLIENT_ID, redirect_uri: yahooRedirect(env, url.origin), response_type: 'code', scope: YAHOO_SCOPE, state });
-      return Response.redirect(YAHOO_AUTH + '?' + q.toString(), 302);
-    }
-    // callback
-    const st = await readToken(env.AUTH_SECRET, url.searchParams.get('state') || '');
-    if (!st || st.t !== 'yst' || st.e !== email || !(st.exp > Date.now())) return Response.redirect(url.origin + '/my-league?yahoo=state', 302);
-    const code = url.searchParams.get('code');
-    if (!code) return Response.redirect(url.origin + '/my-league?yahoo=denied', 302);
-    try {
-      const tok = await yahooTokenExchange(env, { grant_type: 'authorization_code', code, redirect_uri: yahooRedirect(env, url.origin) });
-      await yahooConnectionSave(env, email, tok, null);
-      return Response.redirect(url.origin + '/my-league?yahoo=connected', 302);
-    } catch (e) { return Response.redirect(url.origin + '/my-league?yahoo=failed&why=' + encodeURIComponent((e && e.code) || 'error'), 302); }
+    const q = async (sql, ...b) => (((await env.LEADS_DB.prepare(sql).bind(...b).all()).results) || []);
+    const leagues = await q('SELECT id, email, name, season, num_teams, created_at, updated_at FROM leagues ORDER BY updated_at DESC LIMIT 100');
+    const misses = await q('SELECT provider, provider_player_id, name, position, nfl_team, count, last_seen FROM player_map_misses ORDER BY count DESC LIMIT 50');
+    return json({ ok: true, contract: LEAGUE_CONTRACT,
+                  leagues: leagues.map(l => ({ ...l, email: undefined })), total: leagues.length, misses }, 200, c);
   }
 
   const email = await leagueSessionEmail(request, env);
@@ -14623,68 +13651,8 @@ async function leagueRoutes(request, env, url, ctx) {
 
   if (path === '/api/leagues') {
     const list = await leagueList(env, email);
-    const yahoo = await leagueConnectionRead(env, email, 'yahoo');
-    return json({ ok: true, contract: LEAGUE_CONTRACT, leagues: list.map(leaguePublic), defaultId: (list.find(l => l.isDefault) || list[0] || {}).id || null,
-                  connections: { yahoo: yahoo ? { status: yahoo.status, expiresAt: yahoo.expires_at } : null }, providers: leagueProviderReport(env) }, 200, c);
-  }
-  if (path === '/api/leagues/connect') {
-    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
-    if (await rl(env, request, 'lgconnect', 30, 600)) return leagueErr('rate_limited', null, 429, c);
-    const body = await readBody();
-    const pid = String(body.provider || '').toLowerCase();
-    const provider = LEAGUE_PROVIDERS[pid];
-    const rep = leagueProviderReport(env)[pid];
-    if (!provider || pid === 'manual') return leagueErr('unsupported_provider', 'Unknown provider', 400, c);
-    if (!rep.enabled) return leagueErr(provider.auth === 'unavailable' ? 'unsupported_provider' : 'provider_disabled', rep.reason, 503, c);
-    const ctx = await leagueWeekContext(env);
-    const conn = provider.auth === 'oauth2' ? { ...(await leagueConnectionRead(env, email, pid) || {}), email } : { email };
-    if (provider.auth === 'oauth2' && (!conn.access_enc || conn.status === 'disconnected')) return leagueErr('expired_authorization', null, 409, c);
-    try {
-      if (pid === 'cbs_browser') {
-        const raw = body.snapshot;
-        let model;
-        try { model = provider.normalize(raw, ctx); } catch (e) { return leagueErr('invalid_browser_import', 'CBS import is incomplete. Re-read the league with the updated extension.', 400, c); }
-        const { row, created } = await leagueCreateRow(env, email, pid, raw.leagueId, model.name, model.season, {});
-        const r = await leagueSync(env, row, 'browser', raw);
-        if (!r.ok && created) await leagueDisconnect(env, email, row);
-        const L = r.ok ? await leagueLoad(env, email, row.id) : null;
-        return json({ ok:r.ok, created, sync:r, league:L ? leaguePublic(L) : null, needsTeam:!!(L && !L.userTeamId), teams:L ? L.teams : [], message:r.ok ? null : 'The import could not be saved. Please retry.' }, r.ok ? 200 : 502, c);
-      }
-      if (pid === 'cbs') {
-        const lid = cbsLeagueId(body.leagueId || body.lookupLeagueId);
-        const token = typeof body.accessToken === 'string' ? body.accessToken.trim() : '';
-        if (!token || token.length > 8192 || /[\s\x00-\x1f\x7f]/.test(token)) return leagueErr('expired_authorization', 'Enter a valid CBS league access token.', 400, c);
-        // Verify the entire import before replacing an existing token or creating rows.
-        const raw = await provider.pull(env, { email, token }, lid, ctx);
-        const model = provider.normalize(raw, ctx);
-        const sealed = await leagueSeal(env, token);
-        const { row, created } = await leagueCreateRow(env, email, pid, lid, model.name, model.season, {});
-        const r = await leagueSync(env, row, 'connect', raw);
-        // Rotate the saved credential only after the new credential completed a
-        // full import. A rejected or structurally incomplete reconnect leaves
-        // the last known-good token and league data in place.
-        if (!r.ok) {
-          if (created) await leagueDisconnect(env, email, row);
-          return leagueErr(r.code || 'sync_failed', cbsError(r.code).message, 502, c);
-        }
-        await env.LEADS_DB.prepare('INSERT INTO league_provider_tokens (email, provider, provider_league_id, access_enc, updated_at) VALUES (?,?,?,?,?) ON CONFLICT(email, provider, provider_league_id) DO UPDATE SET access_enc=excluded.access_enc, updated_at=excluded.updated_at').bind(email, pid, lid, sealed, Date.now()).run();
-        const L = await leagueLoad(env, email, row.id);
-        return json({ ok: r.ok, step: 'done', created, sync: r, league: L ? leaguePublic(L) : null, needsTeam: !!(L && !L.userTeamId), teams: L ? L.teams : [] }, r.ok ? 200 : 502, c);
-      }
-      // Step 1: discover. Step 2 (leagueId present): import.
-      if (!body.leagueId) {
-        const d = await provider.discover(env, conn, { username: body.username, leagueId: body.lookupLeagueId, season: body.season || ctx.season });
-        const mine = await leagueList(env, email);
-        return json({ ok: true, step: 'leagues', provider: pid, user: d.user, season: body.season || ctx.season,
-                      leagues: d.leagues.map(l => ({ ...l, connected: mine.some(m => m.provider === pid && m.providerLeagueId === l.providerLeagueId) })) }, 200, c);
-      }
-      const lid = String(body.leagueId).slice(0, 80);
-      const { row, created } = await leagueCreateRow(env, email, pid, lid, body.name || null, body.season || ctx.season, { providerUserId: body.providerUserId || null });
-      const r = await leagueSync(env, row, 'connect');
-      if (!r.ok && created && /league_not_found|unsupported_provider/.test(String(r.error))) { await leagueDisconnect(env, email, row); return leagueErr(r.code || 'sync_failed', r.error, 404, c); }
-      const L = await leagueLoad(env, email, row.id);
-      return json({ ok: r.ok, step: 'done', created, sync: r, league: L ? leaguePublic(L) : null, needsTeam: !!(L && !L.userTeamId), teams: L ? L.teams : [] }, r.ok ? 200 : 502, c);
-    } catch (e) { return leagueErr((e && e.code) || 'sync_failed', pid === 'cbs' ? cbsError(e && e.code).message + (e && e.detail ? ' (' + e.detail + ')' : '') : (e && e.message) || 'failed', e && e.code === 'expired_authorization' ? 409 : e && e.code === 'league_not_found' || e && e.code === 'user_not_found' ? 404 : 502, c); }
+    return json({ ok: true, contract: LEAGUE_CONTRACT, leagues: list.map(leaguePublic),
+                  defaultId: (list.find(l => l.isDefault) || list[0] || {}).id || null }, 200, c);
   }
   if (path === '/api/leagues/manual') {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
@@ -14705,15 +13673,6 @@ async function leagueRoutes(request, env, url, ctx) {
   if (!action) {
     const L = await leagueLoad(env, email, id);
     return json({ ok: true, contract: LEAGUE_CONTRACT, league: leaguePublic(L) }, 200, c);
-  }
-  if (action === 'sync') {
-    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
-    if (row.provider === 'cbs_browser') return leagueErr('browser_refresh_required', 'Open your CBS league and use the Iron Tuna extension to refresh it.', 409, c);
-    if (row.provider === 'manual') return json({ ok: true, manual: true, message: 'A manual league is edited, not synced.' }, 200, c);
-    if (row.last_sync_at && Date.now() - row.last_sync_at < LEAGUE_SYNC_MIN_GAP_MS && !url.searchParams.get('force')) return leagueErr('too_soon', null, 429, c);
-    const r = await leagueSync(env, row, 'user');
-    const L = await leagueLoad(env, email, id);
-    return json({ ok: r.ok, sync: r, message: r.ok ? null : (LEAGUE_ERRORS[r.code] || r.error), league: L ? leaguePublic(L) : null }, r.ok ? 200 : 502, c);
   }
   if (action === 'default') {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
@@ -14781,7 +13740,7 @@ async function leagueRoutes(request, env, url, ctx) {
   } catch (e) { return json({ ok: false, error: 'module_failed', detail: String((e && e.message) || e).slice(0, 200) }, 500, c); }
   return json({ ok: false, error: 'not_found' }, 404, c);
 }
-// ══ /LEAGUE SYNC ═══════════════════════════════════════════════════════════
+// ══ /THE SAVED LEAGUE ═════════════════════════════════════════════════════
 
 export default {
   async fetch(request, env, ctx) {
@@ -14815,8 +13774,8 @@ export default {
     if (/^\/(in-season\/)?wagers\/?$/.test(url.pathname)) {
       return new Response(null, { status: 301, headers: { 'Location': IN_SEASON_HUB + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
     }
-    // Sync My League: /api/leagues/*, /api/oauth/*, /api/admin/league-sync.
-    if (url.pathname.startsWith('/api/leagues') || url.pathname.startsWith('/api/oauth/') || url.pathname === '/api/admin/league-sync') {
+    // The saved league: /api/leagues/* and the admin board's read of it.
+    if (url.pathname.startsWith('/api/leagues') || url.pathname === '/api/admin/leagues') {
       const lr = await leagueRoutes(request, env, url, ctx);
       if (lr) return lr;
     }

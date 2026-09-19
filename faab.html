@@ -336,7 +336,7 @@ Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
       $('fa-connect').hidden = true;
       ITSync.api('/api/leagues/' + encodeURIComponent(LS.id) + '/advice?module=pickups&limit=15').then(function (j) {
         if (!j || !j.ok) { $('fsSub').textContent = (j && (j.message || j.note)) || 'Your league did not answer. The generic advisor below still works.'; $('fa-connect').hidden = false; return; }
-        $('fsSub').innerHTML = '<b>Customized for your league.</b> ' + esc(j.availableCount) + ' players nobody in your room owns, ranked by what they add to <em>your</em> best lineup at your scoring.' + (j.stale ? ' <span class="its-warn">League data may be outdated. Sync now above.</span>' : '');
+        $('fsSub').innerHTML = '<b>Customized for your league.</b> ' + esc(j.availableCount) + ' players nobody in your room owns, ranked by what they add to <em>your</em> best lineup at your scoring.';
         $('fsRows').innerHTML = j.pickups.length ? j.pickups.map(row).join('') : '<p class="is-empty">No available player improves your roster this week. That is a compliment.</p>';
         $('fsNote').hidden = false;
         $('fsNote').innerHTML = 'Priority is the lineup gain per week over the next three and the rest of the season at your scoring. A drop is only proposed when the add is worth more than the player it costs. ' + (j.league.faab != null ? 'Bid ranges are shares of your remaining ' + DOLLAR + esc(j.league.budgetLeft) + ' by priority.' : 'This league uses waiver priority, so no bid is quoted.');
