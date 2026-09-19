@@ -220,6 +220,10 @@ console.log('\nevery row says what the player is and what is in front of him');
   const cutFrom = (src, from, to) => src.slice(src.indexOf(from), src.indexOf(to));
   const H = new Function(cutFrom(reads, '  var TIERS = {', '  // THE PLAYER LINE.') +
     '\nreturn { TIERS, POS_LONG, HZ, tierOf, gradeOf, ord, awayFrom, plural, listOf };')();
+  // vol() calls n1(), so it is lifted with it rather than on its own.
+  const H2 = new Function(cutFrom(reads, '  function n1(v)', '  // THE TIERS.') + '\nreturn { vol };')();
+  H.vol = H2.vol;
+  const worker = read('_worker.js');
 
   // ONE COPY. Two surfaces print these lines; if either grew its own tiers the
   // same player would be "a weekly WR1" on one page and "a WR2" on the other.
@@ -262,7 +266,46 @@ console.log('\nevery row says what the player is and what is in front of him');
   ok('a usage swing is quoted only once three games have earned it',
     playerLine.includes('roleTrend.applied'));
   ok('and a player with no game on the board is not given a 0.0 projection',
-    playerLine.includes('isFinite(pts) && p.games > 0'));
+    playerLine.includes('p.games > 0'));
+
+  // A RANK IS NOT A PERFORMANCE. "RB3, elite at the position" is one fact said
+  // twice; what a reader cannot get from the "#" column is what the player has
+  // actually done, so the season line leads and the tier is only the fallback.
+  ok('the player line leads on what he has actually done, not on a tier',
+    playerLine.indexOf('p.form') < playerLine.indexOf('tierOf('),
+    'tierOf must come after the form branch');
+  ok('and the tier is reached only when nothing has been played',
+    /\} else \{[^]{0,400}tierOf\(p\.position, rank\)/.test(playerLine));
+  ok('it says the volume the scoring was built on', playerLine.includes('f.volumeUnit'));
+  ok('and compares the projection ahead of him with the rate he has run at',
+    playerLine.includes('forwardOf(') && /marks '? ?\+? ?\(d < 0 \? 'down' : 'up'\)/.test(reads));
+  ok('that comparison is drawn only where both numbers are per-game rates',
+    /hz === 'week' \? proj \+ ' projected this week' : forwardOf\(/.test(playerLine));
+  ok('two numbers a tenth apart are not reported as a judgement',
+    /Math\.abs\(d\) < 0\.1/.test(reads));
+  ok('yards are whole numbers and touches are not',
+    H.vol(281.04, 'passing yards') === '281' && H.vol(19.04, 'touches') === '19.0');
+
+  // The worker's half: the season line was already read for the role trend and
+  // thrown away, and it is shipped raw so a browser that re-scores can.
+  ok('the worker ships the season line every board row is graded from',
+    /function seasonFormFrom\(/.test(worker) && /const form = seasonFormFrom\(/.test(worker) &&
+    /roleTrend: role, form,/.test(worker));
+  ok('raw, so a page that re-scores in the browser can re-score it too',
+    /stats: _roundStats\(stats\), points: pts/.test(worker) && /formPpg: ppg/.test(tool));
+  ok('a player who has not played gets null, never a 0.0 he did not earn',
+    /if \(!sea \|\| games <= 0\) return null;/.test(worker) && /if \(!stats\) return null;/.test(worker));
+  ok('volume is the figure that position is actually counted in',
+    /volumeUnit = 'touches'/.test(worker) && /volumeUnit = 'targets'/.test(worker) &&
+    /volumeUnit = 'passing yards'/.test(worker));
+
+  // A usage trend that divides a passer's attempts by his rushes is not a
+  // trend, and it fed the Iron Tuna blend as well as the printed percentage.
+  ok('the role trend counts the same things on both sides of its comparison',
+    /rec\.season\.passAttempts \+= r\.usage\.passAttempts \|\| 0;/.test(worker) &&
+    /\(seasonAtt \|\| 0\)\) \/ g;/.test(worker));
+  ok('and a cache too old to support it says so rather than guessing',
+    /if \(att > 0 && !\(seasonAtt > 0\)\) return \{ label: 'no data'/.test(worker));
 
   ok('a low defensive rank is a hard week and a high one a soft week',
     H.gradeOf(1).includes('hard') && H.gradeOf(30).includes('soft') && H.gradeOf(16).includes('average'));
