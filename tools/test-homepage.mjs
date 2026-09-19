@@ -96,7 +96,11 @@ const EDGE = { ok: true, week: 'Week 3', vsExperts: {
   ]
 }};
 const DFS = { ok: true, boards: { bestVegasValues: [
-  { name: 'Rome Odunze', position: 'WR', team: 'CHI', salary: 5400, vegasPoints: 14.2, vegasValueScore: 3.21 }
+  { name: 'Rome Odunze', position: 'WR', team: 'CHI', salary: 5400, vegasPoints: 14.2, vegasValueScore: 3.21 },
+  { name: 'Tucker Kraft', position: 'TE', team: 'GB', salary: 4200, vegasPoints: 10.9, vegasValueScore: 2.60 },
+  // A row with a hole in it is not a candidate, so a turn can never land on
+  // it and print a card with a gap in it.
+  { name: 'Priceless Receiver', position: 'WR', team: 'NYJ', salary: 0, vegasPoints: 12.0, vegasValueScore: 2.9 }
 ]}};
 // THE COVER ROTATES ON A CLOCK, so this test pins one. front.html gives each
 // cover a turn (COVER_TURN_MS, an hour): the desk band slides one story down
@@ -180,13 +184,14 @@ const BASE = `http://127.0.0.1:${server.address().port}/`;
 
 const browser = await chromium.launch({ executablePath: CHROME });
 const errors = [];
-async function open(width, height) {
+async function open(width, height, at) {
   const ctx = await browser.newContext({ viewport: { width, height } });
   // The frozen clock, set before any page script runs. Only Date.now is
   // replaced: the page reads timestamps out of its feeds with new Date(value),
   // which is unaffected, and the rotation is the one thing that asks the clock
-  // what time it is now.
-  await ctx.addInitScript(t => { Date.now = () => t; }, CLOCK);
+  // what time it is now. `at` steps it, for the section that drives the cover
+  // a turn forward in a real browser.
+  await ctx.addInitScript(t => { Date.now = () => t; }, at == null ? CLOCK : at);
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(`${width}px: ${e.message}`));
   await page.goto(BASE, { waitUntil: 'networkidle' });
@@ -387,6 +392,42 @@ console.log('\nwith the desk naming nobody');
      r.cards.length === 3 && r.cardFaces === 0, r.cards.length + '/' + r.cardFaces);
   CONTENT.pieces = full;
   await ctx.close();
+}
+
+// ── 3c. the two card readings take turns as well ───────────────────────────
+// THE THIRD AND FOURTH PATHS ONTO THE COVER. §88 enumerated two and fixed both;
+// the readings under them printed the top row of a board that barely moves
+// inside a week, so the cover changed hourly above a Fantasy call and a DFS
+// value that did not change at all. tools/test-newsroom.mjs drives the picker
+// itself turn by turn; this is the same rule in a real browser, on the page,
+// with the captions attached.
+console.log('\nthe card readings take turns too');
+{
+  const at = async (t) => { const { page, ctx } = await open(1280, 900, t); const r = await read(page); await ctx.close(); return r; };
+  const now = await at(CLOCK);
+  const later = await at(CLOCK + TURN_MS);
+  const who = t => (t || '').split(' ').slice(0, 2).join(' ');
+
+  ok('the Fantasy card names a different player a turn later',
+     who(now.fnRead) !== who(later.fnRead), who(now.fnRead) + ' / ' + who(later.fnRead));
+  ok('and it is still one of the week\u2019s buys', /Cam Ward/.test(later.fnRead || ''), later.fnRead);
+  ok('the DFS card names a different player a turn later',
+     who(now.dfRead) !== who(later.dfRead), who(now.dfRead) + ' / ' + who(later.dfRead));
+
+  // A superlative is the leader's alone. Rotated off the top of its board, a
+  // caption claiming the top of the board would simply be false.
+  ok('the leader is called the best value on the slate',
+     /Best market value/.test(now.dfRead || '') && /Rome Odunze/.test(now.dfRead || ''), now.dfRead);
+  ok('and a runner-up is called a value play instead',
+     /Market value play/.test(later.dfRead || '') && !/Best/.test(later.dfRead || ''), later.dfRead);
+  ok('a slate row the page cannot state in full is never rotated onto',
+     !/Priceless Receiver/.test(now.body + later.body));
+
+  // Off the clock and nothing else: two readers at one moment see one page,
+  // and a reader who reloads is not handed a shuffle.
+  const again = await at(CLOCK);
+  ok('two readings at the same hour agree',
+     again.fnRead === now.fnRead && again.dfRead === now.dfRead && again.edgeName === now.edgeName);
 }
 
 // ── 4. the refusing pass: the whole point of the rewrite ────────────────────
