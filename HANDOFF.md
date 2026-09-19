@@ -1,6 +1,11 @@
 # Iron Tuna — Project Handoff
 
-**The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §90, and `docs/saved-league.md` for the long record.
+**The league-platform connectors were removed on 2026-09-18.** Sleeper, Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow, the sealed provider tokens, the scheduled refresh and the CBS browser extension: none of them ever carried a reader's league in production. What stays is the half that works and that main is still building on — the league model, the player crosswalk, `POST /api/leagues/manual`, every personalized module and My Week. A league is the reader's own entry now: typed, pasted, or read off a roster-grid screenshot. See §89, and `docs/saved-league.md` for the long record.
+
+CBS browser connector 0.2.0: the token-declaration approach failed on the live CBS league. The extension now reads whitelisted settings/scoring, roster-grid team names and every team roster through same-origin requests in the signed-in CBS tab, then posts a bounded snapshot to the existing connect route as provider cbs_browser. No CBS credentials leave the browser. The existing API-token adapter and encryption are retained separately; as of 2026-09-16 it sends the token as CBS's `access_token` query parameter (and the Authorization header), tries the documented `api.cbssports.com/fantasy` base before the league host's `/api/league`, treats a sign-in redirect as a refused token instead of a generic failure, and every failure shows a redacted diagnostic (resource, what each host answered, redirect host/path) on the form and in the league's last error. The first live run after that change answered `CBS details: HTTP 302 to www.cbssports.com/login` from the league host alone, so the league host does not honor `access_token`; whether the documented base still does is unproven and now untestable: on 2026-09-17 a signed-in live league page carried no `var token = "..."` at all, in the served HTML or on `window`, so the technique the public token fetchers rely on no longer yields a value and there is nothing left to authenticate a probe of either host with. Treat the API-token adapter as dead rather than merely unverified; it is retained, still behind `FLAG_CBS_SYNC`, only because removing it would cost more than leaving it off. Browser leagues never run in the scheduled sync job and expose no next automatic refresh time.
+
+Live DOM validation found all 12 BigKahuna teams and 204 players, matching each page's Active/Reserve counts. All scoring rows were parsed against a synthetic fixture that retains the observed scoring shapes. On 2026-09-16 the whole flow ran in a real Chromium (`node tools/test-cbs-e2e.mjs`: the unpacked extension, the real worker as irontuna.com, an in-memory D1, a fake CBS site in the reader's shapes): sign-in, tab discovery, the CBS reads, the import POST, team selection, the card on My Leagues and the strip on My Week all pass. The same day the reader and the normalizer gained injured-reserve support (extension 0.2.1); before that, one IR player on any team aborted the entire import with "CBS roster counts could not be verified", which in Week 2 is the likeliest way a live import fails. Two things the harness cannot prove: the live CBS markup (a drift shows as a "No import was sent" message in the popup) and the production env (Sleeper, Yahoo and ESPN stay unavailable on My Leagues by flag and configuration; `/api/leagues/providers` says which). Do not claim the league is linked until My Leagues confirms it. See extensions/cbs-connector/README.md and docs/league-sync.md for scope and release checks.
+
 A league can also be read off a **roster grid screenshot**, which is the whole room in one image on the platforms that print one. The by-hand form on My Leagues takes the image, sends it to the existing `/api/roster-read`, and posts what comes back as `teams[]` to `/api/leagues/manual`, which already accepted that shape. The reader returns names only, so every player lands on the bench and a bare name is resolved to a position against the board. Because no starter is known, `leagueLineup` withholds the comparison against the set lineup rather than reporting that the reader starts nobody and projects zero: it returns `slotsKnown:false` with `currentTotal` and `improvement` null and no changes, and the projected best lineup stands on its own. Scoring and the starting-lineup shape are not in a roster grid and still come from the form's own importer or by hand, once. No extension, no sign-in to the platform and no token: it works for CBS, ESPN, Fantrax or anything else that renders a grid.
 
 Tuna Market Signal setup, provider access, storage, scoring and rollout notes:
@@ -8307,28 +8312,28 @@ section is the rest:
 
 ---
 
-## The saved league (2026-09-09, connectors removed 2026-09-18)
+## Sync My League (2026-09-09)
 
-**What it is.** A reader describes the league they actually play in and every in-season surface reads their exact scoring, their roster, every other roster, the free-agent pool and the standings. It is infrastructure, not a page: the model lives in D1 and the pages read it. The long record is `docs/saved-league.md`; this is the map.
+**What it is.** A reader connects the fantasy league they actually play in and every in-season surface reads their exact scoring, their roster, every other roster, the free-agent pool, their opponent and the standings. It is infrastructure, not a page: the model lives in D1 and the pages read it. The long record (audit, design, provider terms, deliverables, env vars, deployment) is `docs/league-sync.md`; this is the map.
 
-**There are no platform connectors.** Sleeper, Yahoo, CBS and the ESPN placeholder were removed in §90 along with the OAuth flow, the provider tokens, the scheduled `league-sync` job and the CBS extension. Nothing here calls a fantasy platform, and no provider credential is stored. `LEAGUE_PROVIDERS` has one entry, `manual`, and the adapter shape is kept only so that a future connector has something to slot into.
-
-**Access.** Saving a league is free. `/api/auth/request` sends a magic link to any valid email; the session is what a saved league is tied to, and it does not grant the paid bundle — paid routes still enforce `isEntitled`. §04 of /my-league refuses to store a room without a session, which is why that endpoint stays open (§88).
+**Access.** Sync My League is free. `/api/auth/request` sends a magic link to any valid email, and a request from `/my-league` returns there after verification. The session protects each reader's synced data and encrypted provider credentials; it does not grant the paid bundle. Paid routes continue to enforce `isEntitled`. The My Leagues page owns the free sign-in form, and the homepage masthead has one `Sync My League` action in place of its former Save My League and Auction Manager actions.
 
 **Where it lives.**
-- `_worker.js`, the marked region `// ══ THE SAVED LEAGUE` … `// ══ /THE SAVED LEAGUE` just above `export default`. The normalized model (`leagueNormalizeSettings`, `leagueEffectiveSettings`, `leagueScore`), the crosswalk (`leagueResolvePlayer`, `leagueMapPlayers`, tables `player_id_map` / `player_map_misses`), storage (`leagueWriteModel`, `leagueLoad`, `leagueManualUpsert`), the modules (`leagueBoard`, `leagueLineup`, `leaguePickups`, `leagueMatchup`, `leagueIntel`, `leagueTrades`, `leaguePlayoffs`, `leagueAvailabilityLookup`, `leagueSummary`) and the routes (`leagueRoutes`: `/api/leagues*`, `/api/admin/leagues`).
-- Two touches outside the region: the `LEAGUE_SYNC` and four `PERSONALIZED_*` flags in `NEWSROOM_FLAGS`, and `boardsPayload`'s memo key including `o.customKey` so one league's custom scoring cannot collide with another's.
-- `it-sync.js` — the client library (`ITSync`): loads `/api/leagues` once a minute per tab, the active-league selector, the strip, the acquisition CTA, and the On Your Roster / Available badges on any `/player/` link.
-- `my-league.html` is **My League** (sign-in, league cards, default, pick my team, Review settings with corrections, Delete, the by-hand form, the three intake boxes and the §04 roster grid); `my-week.html` is **My Week**. Hooks on `rankings.html`, `faab.html`, `trade-finder.html`, `player.html`, `fantasy.html` / `in-season.html`, `lead.html` / `desk.html`, `admin.html`.
+- `_worker.js`, the marked region `// ══ LEAGUE SYNC` … `// ══ /LEAGUE SYNC` just above `export default`. Adapters (`LEAGUE_PROVIDERS`: sleeper, yahoo, CBS, espn placeholder, manual), the normalized model (`leagueNormalizeSettings`, `leagueEffectiveSettings`, `leagueScore`), the crosswalk (`leagueResolvePlayer`, `leagueMapPlayers`, tables `player_id_map` / `player_map_misses`), storage (`leagueWriteModel`, `leagueLoad`), the sync (`leagueSync`, job `league-sync` → `runLeagueSync`, cadence `leagueNextSyncAt`), the modules (`leagueBoard`, `leagueLineup`, `leaguePickups`, `leagueMatchup`, `leagueIntel`, `leagueTrades`, `leaguePlayoffs`, `leagueAvailabilityLookup`, `leagueSummary`) and the routes (`leagueRoutes`: `/api/leagues*`, `/api/oauth/yahoo/*`, `/api/admin/league-sync`). The fetch handler dispatches to `leagueRoutes` first.
+- Three touches outside the region: nine flags appended to `NEWSROOM_FLAGS` (`LEAGUE_SYNC`, `SLEEPER_SYNC`, `YAHOO_SYNC`, `CBS_SYNC`, `ESPN_SYNC`, `PERSONALIZED_WAIVERS/LINEUP/TRADES/STORIES`), the `league-sync` row in `JOB_FNS` and `JOB_SCHEDULE` (hourly, phase 2; the job decides per league), and `boardsPayload`'s memo key now includes `o.customKey` so a league's custom scoring does not collide with another's.
+- `it-sync.js` — the client library (`ITSync`): loads `/api/leagues` once a minute per tab, the active-league selector, the sync strip, the acquisition CTA, and the On Your Roster / Available in Your League callouts on any `/player/` link.
+- `my-league.html` is **My Leagues** (connect flow, league cards, Sync now, default, pick my team, Review settings with corrections, Disconnect, manual league form); `my-week.html` is **My Week** (best lineup, matchup, alerts, pickups, trade matches, playoff readiness). Hooks on `rankings.html` (a "Your league (synced)" scoring preset reading `/board`, roster badges), `faab.html` (the synced Pickup Advisor above the Sleeper/manual flow), `trade-finder.html` (load every roster from the league; the desk's own matches), `player.html` (the league line under the club), `fantasy.html` / `in-season.html` (strip, CTA, week card), `lead.html` / `desk.html` (story callouts), `admin.html` (the League sync card).
 
 **Rules.**
-- Nothing downstream knows where a league came from.
-- A write that runs twice writes the same rows; rows it did not touch go by their stale `updated_at`.
-- The reader's corrections (`leagues.overrides`) are never overwritten. `leagueEffectiveSettings` lays them over the settings and names them.
-- No display-name matching where an id exists. An id that cannot be resolved is a recorded miss and stays on the roster by name, scored 0, never guessed.
-- A saved room has rosters but no schedule, so there is no opponent and nobody is on waivers. The modules say so rather than inventing either.
+- Nothing downstream knows which provider a league came from. Add a provider by adding an adapter with `discover/pull/normalize`; touch nothing else.
+- Provider ids are primary keys everywhere; a sync that runs twice writes the same rows. Rows a sync did not touch are deleted by their stale `updated_at`.
+- A provider failure never deletes a league. It is a logged run (`league_sync_runs`), a `failed` status the UI shows next to the last good sync, and a retry with doubling backoff capped at a day.
+- The reader's corrections (`leagues.overrides`) are never written by a sync. `leagueEffectiveSettings` lays them over the synced settings and names them.
+- No display-name matching where an id exists. A provider id that cannot be resolved is a recorded miss and stays on the roster by name, scored 0, never guessed.
+- OAuth tokens and CBS league tokens are sealed with AES-GCM before D1 and never return to the browser. A dedicated `LEAGUE_TOKEN_KEY` takes precedence; without it, the worker derives a domain-separated league-token key from the already-required `AUTH_SECRET`. CBS tokens are stored per league in `league_provider_tokens`; a successful full pull is required before save/rotation, and disconnecting that league deletes its token.
+- **CBS is off by default** (`FLAG_CBS_SYNC`). The implementation is fixture-tested but not live-tested; verify response shapes and permitted commercial access before enabling it. CBS connection uses a reader-supplied league access token and never requests their CBS password. **Sleeper is off by default** (`FLAG_SLEEPER_SYNC`) pending a written commercial license. Yahoo is off until an app is registered (`YAHOO_CLIENT_ID`, `YAHOO_CLIENT_SECRET`, `LEAGUE_TOKEN_KEY`). ESPN has no supported path and the adapter says so.
 
-**Tests.** `node tools/test-league-sync.mjs` (73 assertions in CI): settings normalization and the reader's corrections, the crosswalk and its miss log, leagues created and edited by hand, a whole room read off a roster grid, and every personalized module on 10-, 12- and 14-team rooms, against an in-memory D1, the real scoring engine and the real PROJECTIONS pool. **The fetch stub throws**, so an outbound call to a fantasy platform fails there first.
+**Tests.** `node tools/test-league-sync.mjs` (147 assertions in CI): Sleeper, Yahoo and synthetic CBS fixtures, stubbed network, in-memory D1, real scoring engine and PROJECTIONS pool. CBS coverage includes credential redaction, hostname validation, dedicated and `AUTH_SECRET`-derived encryption, per-league token rotation/deletion, scheduled sync, idempotency and partial/error responses. `node tools/test-cbs-ui.mjs` checks the masked connection form and retry flow. `tools/test-data-sources.mjs` allowlists the validated CBS league hostname suffix.
 
 ### 68o. The first real draft, and what the fact check got wrong
 
@@ -10759,119 +10764,91 @@ git push origin --delete claude/the-pick-daily-segment-qpj8l6
 ```
 
 
-## 88. September 18: the front page pinned one story until the desk published again
+## 88. September 18: one player was on the cover twice, by two different paths
 
-Ken: "Love is still featured on the front page." He meant Jeremiyah Love, and
-he was right: the Week 2 weekend preview, headlined "fade Jeremiyah Love,
-attack Dalton Schultz, and know why Mack Hollins matters", had been the first
-card in "Current from the desk" since it published at 12:05 PM ET, and would
-have stayed there until the next piece landed. His instruction, the same one
-§87 applied to The Pick: it should have rotated.
+Ken, three times in an evening: "Love is still featured on the front page."
+Then: "Why is Lo still on the cover. We are supposed to be rotating." Then, in
+full: "Love."
 
-**What the band did.** `front.html` took `/api/content`, filtered to pieces
-with a url and a headline, and printed `.slice(0, 4)` newest first. Between
-publishes that is a fixed page. On a quiet Friday the desk publishes twice, so
-the same headline under the same player's name is the top of the front page for
-most of the day, and the hero's photograph is of that player, because the hero
-takes the first piece in the band that names somebody.
+He was right every time, and the first two fixes were aimed at the wrong half
+of the page.
 
-**What it does now.** `deskOrder(pieces, now)` in `front.html`:
+**Jeremiyah Love was on the cover TWICE, by two unrelated paths.**
 
-- **Three at a time**, not four, matching the rule for The Pick. A new piece
-  pushes the oldest out of the band, which is what Ken asked for on the 18th.
-- **The top slot advances every two hours** (`DESK_TURN_MS`), rotating the
-  three. A reader who comes back after lunch gets a different story on top of a
-  band that has not changed underneath them.
-- **Except when there is news.** A piece published inside the current turn
-  leads on its own merit. A recap filed twenty minutes ago IS the front page,
-  and rotating it to third would be the site hiding what it just did. Rotation
-  starts once the newest piece has had its turn.
-- The hero's picture follows the rotated top piece, not the newest row
-  underneath it, so the photograph and the first card are about the same man.
+1. **The desk band.** The Week 2 weekend preview, headlined "fade Jeremiyah
+   Love, attack Dalton Schultz, and know why Mack Hollins matters", was the
+   first of the four cards under "Current from the desk", and `front.html`
+   printed `.slice(0, 4)` newest first and then sat there until the desk
+   published again.
+2. **The hero's photograph.** The picture at the top of the page takes the
+   desk's subject when a piece names one, and otherwise `all[0]` — the single
+   widest market gap on the board, captioned "This week's widest market gap".
+   Love was the widest: Iron Tuna RB22, Vegas RB27, consensus RB8, a 5.9-point
+   gap. The three newest desk pieces all stored `components: null`, so the desk
+   never took the hero, and the fallback ran his face at full size above the
+   fold for as long as he led the board.
 
-The order is a pure function of the feed and the clock, so two readers loading
-at the same moment get the same page, which matters because the band is drawn
-from a memoized payload.
+**Two wrong fixes, and what each one missed.**
 
-**Where it is tested.** `tools/test-newsroom.mjs` lifts `deskOrder` straight
-out of `front.html` and runs it turn by turn: three of five printed, the three
-newest, fresh news leading, the lead moving once it is no longer fresh, every
-turn still printing all three, the order being a rotation rather than a
-reshuffle, and the degenerate feeds (one piece, none, a piece with no
-timestamp). That file runs everywhere. `tools/test-homepage.mjs` still drives
-the real page in Chromium and now asserts three cards, but it needs a browser
-and skips without one, which is why the rule itself is guarded in the file that
-cannot skip.
+The first cut the band to three and advanced the TOP SLOT every two hours.
+Ken came back inside the hour. Rotating three cards among themselves changes
+the ORDER and never the CAST: his story was one of the three, so it led a third
+of the time and was on the page all of it.
 
-That browser test's fixture also changed, and the reason is worth keeping: it
-used to publish its newest piece on a fixed date in the past, which under a
-rotating band would have made "which story leads" depend on what time of day
-CI happened to run. It now publishes the newest five minutes ago, so the
-freshness rule pins the order and the hero assertions stay deterministic.
+The second made the window three wide and slid it one piece down the feed each
+turn, so a story genuinely came off. That was right, and it still did not
+matter, because nobody had looked at the hero. The largest thing on the cover,
+the thing a reader sees first, was a photograph chosen by a completely separate
+feed on a rule with no clock in it at all.
+
+The lesson is not "rotate harder". It is: **when someone says a subject is
+still on the page, enumerate every path that can put a subject on that page
+before changing any of them.** Two greps would have found both in a minute —
+`heroPaint` has exactly two callers. Three deploys went out because the second
+one was never read.
+
+### What the cover does now
+
+One clock, defined once in `front.html`, driving both paths, so they cannot
+drift into two rotations:
+
+| | |
+|---|---|
+| `COVER_TURN_MS` | an hour. One turn, one cover. |
+| `coverBand(pieces, now)` | three cards, sliding one piece down the feed each turn and wrapping at a pool eight deep (`DESK_POOL`). Every turn one story comes off and another goes up. A piece published inside the current turn is exempt and leads with the two behind it: a recap filed twenty minutes ago IS the front page, and sliding past it would be the site hiding what it just did. |
+| `coverFace(rows, skip, now)` | the hero takes the next of the week's five widest gaps (`HERO_POOL`) each turn, skipping the player the Fantasy card already names. The caption dropped the superlative — it reads "A market gap this week", because the picture is no longer the maximum and a caption that says "widest" about the third-widest is simply false. |
+
+Both are pure functions of their feed and the clock, so two readers loading at
+the same moment get the same cover, which matters because the payloads behind
+them are memoized.
+
+### Where it is tested
+
+`tools/test-newsroom.mjs` lifts the whole rotation block out of `front.html`
+between `var COVER_TURN_MS` and the `// ── end cover rotation` marker, and runs
+both functions turn by turn. The assertions that would have caught each of the
+three attempts, in order:
+
+- **consecutive turns print different stories**, and **each turn swaps exactly
+  one** — the first fix fails both.
+- **the hero is not the same player every turn**, and **it changes on every
+  turn** — the first and second fixes fail both, because neither touched it.
+
+Plus the bounded run, the wrap, the pool ceiling, no duplicate within a turn,
+determinism on the clock, the Fantasy card's player never doubling as the hero,
+and the degenerate feeds: none, one, two, and a piece with no timestamp.
+
+`tools/test-homepage.mjs` drives the real page in Chromium. It now freezes
+`Date.now` in the browser at an instant whose turn index is 0 for every pool
+size the fixtures use (840 is the lowest common multiple of 1 through 8) and
+publishes its newest fixture piece five minutes before that instant. Without a
+pinned clock a rotating cover makes "which story leads" and "whose photograph
+runs" depend on what time of day CI happens to run. It also asserts the hero's
+caption no longer claims to be the widest.
 
 ---
 
-## 89. September 17: "no Monday game this week" in a week that had one
-
-Ken's report: the Rest-of-Season Rankings opened by telling the reader "the
-packet notes no Monday game this week, or its box score is not final." There
-had been a Monday night game. His instruction went past the fact: "if you are
-not sure don't do a story about it, better to remain silent than raise the
-issue and lose credibility."
-
-**The bug is one property.** The Tuesday producer builds the Monday material
-as an OBJECT and hands it over:
-
-```js
-const ms = mon.length ? { games: mon, summaries: await summariesFor(mon) } : null;
-facts = packetRos(..., ms && ms.summaries.length ? ms : null);
-```
-
-`packetRos` then tested `mondaySummaries.length`. An object has no `length`,
-so the test was `undefined` every week of the season, the reported branch
-never ran once, and the packet took the else every Tuesday. The caller's own
-gate was right and did the real work; the callee threw the answer away. The
-check now reads `mondaySummaries.summaries`, which is what was passed.
-
-**Why the note is gone, not fixed.** A packet that hedges buys a page that
-hedges. The writer is told the packet is the only source of facts, so a
-sentence sitting in the packet gets printed, and "no Monday game this week,
-or its box score is not final" is a sentence that hedges TWO WAYS about a
-thing the reader can check in one click. `whatMondayChanged` is now either a
-block built from the box score or `null`, and `CONDITIONAL_SECTIONS` drops
-the section when it is null — the same mechanism that already keeps a week
-with no misses from getting an empty misses section (§the Monday scorecard).
-The writer is never asked for the section, so the piece says nothing about
-Monday rather than saying the wrong thing about it. The full section list,
-asked for without a packet, still names it, so `desk.html` keeps its label.
-
-The general rule this is the second instance of: a packet field whose value
-is an apology for missing data is a bug, not a fallback. Either the data is
-there and the section runs, or the section is not asked for.
-
-| Piece | What changed |
-|---|---|
-| `packetRos` | reads `mondaySummaries.summaries`, not `.length` off the wrapper. With nothing final from Monday, `whatMondayChanged` is `null` and carries no prose. |
-| `CONDITIONAL_SECTIONS['ros-rankings']` | `whatMondayChanged` is asked for only when the packet carries the block. `sectionsFor` drives both the SHAPE the writer is handed and the check that holds the draft, so the section can never be dropped from one and demanded by the other. |
-
-**Tests.** `tools/test-content.mjs` (96, up 7), a new "what Monday changed"
-block on the real DAL at PHI fixture: a final Monday box score is reported
-with a section per club and what each learned, and the section is asked for;
-a week with no Monday material carries a null block, no "no Monday game"
-string anywhere in the packet, and no `whatMondayChanged` in the section list
-while the rest of the list survives; a Monday game whose box score is not
-final yet is the same silence; and the full list still names the section for
-the desk page. `packetRos` and `sectionsFor` are now exported from that
-harness. Restoring `.length` fails the first assertion.
-
-`tools/test-dry-run.mjs` (112, up 2) carries the end-to-end guard, which is
-the one that would have caught this: the fixture's Week 1 ends with a Monday
-night game and has its box score, so the Tuesday piece it publishes must
-report Monday with a section per club, must carry `whatMondayChanged` in the
-written body, and neither its packet nor its prose may contain the string
-"no Monday game". Before the fix the published piece failed all three.
-
-## 90. September 18: the league-platform connectors are removed
+## 89. September 18: the league-platform connectors are removed
 
 They never worked. Not "worked badly" — no reader ever connected a fantasy
 platform and got a board back from it in production. Sleeper shipped behind a

@@ -12738,7 +12738,7 @@ async function pruneAnalytics(env, keepDays) {
 //
 // THERE IS ONE ADAPTER AND IT IS THE READER. The Sleeper, Yahoo and CBS
 // connectors and the ESPN placeholder were removed on 2026-09-18 (HANDOFF
-// §90): Sleeper never cleared its non-commercial grant (docs/data-sources.md
+// §89): Sleeper never cleared its non-commercial grant (docs/data-sources.md
 // R2), Yahoo never ran against a live account, CBS never completed an import,
 // and ESPN never had a supported path. Nothing here calls a fantasy platform
 // any more, so there is no OAuth, no stored provider credential and no
@@ -12968,7 +12968,7 @@ const PROVIDER_MANUAL = {
   normalize(raw) { return raw; }
 };
 // One provider, and it is the reader. The Sleeper, Yahoo, CBS and ESPN
-// connectors were removed on 2026-09-18 (HANDOFF §90): none of them ever
+// connectors were removed on 2026-09-18 (HANDOFF §89): none of them ever
 // carried a league in production. The adapter shape stays, because it is what
 // keeps everything downstream from knowing where a league came from, and it is
 // what a future connector would slot into.
