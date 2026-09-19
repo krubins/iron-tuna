@@ -12784,20 +12784,55 @@ const LEAGUE_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
 function leaguePos(p) { const u = String(p || '').toUpperCase(); return u === 'DST' || u === 'D/ST' || u === 'D' ? 'DEF' : u === 'PK' ? 'K' : u; }
 function leaguePlayerKey(name, pos) { return _oddsNorm(name) + '|' + leaguePos(pos); }
 let _LEAGUE_POOL = null;
+// The surname keys a name can be found under, most specific first. A league's
+// roster grid prints "K Walker III" and "A Ra St. Brown", and the last word of
+// neither is the surname: one is a suffix, the other is half of a two-word
+// name. Indexing and asking under both the last word and the last two joined
+// makes each reachable from either side, and the suffix is dropped before
+// either — _oddsNorm strips it only at the end of a whole name, so the last
+// token of "Kenneth Walker III" normalised to nothing at all.
+const LEAGUE_SUFFIX = /^(?:jr|sr|ii|iii|iv|v)\.?$/i;
+function leagueLastKeys(name) {
+  const toks = String(name || '').trim().split(/\s+/).filter(t => t && !LEAGUE_SUFFIX.test(t));
+  const out = [];
+  if (toks.length > 1) out.push(_oddsNorm(toks.slice(-2).join('')));
+  if (toks.length) out.push(_oddsNorm(toks[toks.length - 1]));
+  return out.filter((k, i) => k && out.indexOf(k) === i);
+}
+// A defense on a roster grid is printed as a nickname and nothing else —
+// "Texans", "49ers" — with no club column to read it against. The keys below
+// are the ways one can be written: the full name, the nickname alone, and the
+// city alone. A city is not always one defense ("New York", "Los Angeles"), so
+// a colliding key is poisoned rather than guessed at.
+function leagueDefKeys(name) {
+  const toks = String(name || '').trim().split(/\s+/)
+    .filter(t => t && !/^(d\/?st|def|defense|dst)$/i.test(t));
+  const out = [_oddsNorm(toks.join(''))];
+  if (toks.length > 1) {
+    out.push(_oddsNorm(toks[toks.length - 1]));
+    out.push(_oddsNorm(toks.slice(0, -1).join('')));
+  }
+  return out.filter((k, i) => k && out.indexOf(k) === i);
+}
 function leaguePoolIndex() {
   if (_LEAGUE_POOL) return _LEAGUE_POOL;
-  const byKey = new Map(), byLast = new Map(), defByTeam = new Map();
+  const byKey = new Map(), byLast = new Map(), defByTeam = new Map(), defByName = new Map();
   for (const p of PROJECTIONS) {
     const pos = leaguePos(p.position);
     const row = { name: p.name, position: pos, team: teamKey(p.team), key: leaguePlayerKey(p.name, pos) };
     byKey.set(row.key, row);
-    if (pos === 'DEF') { defByTeam.set(row.team, row); continue; }
-    const last = _oddsNorm(String(p.name).trim().split(/\s+/).slice(-1)[0]);
-    const lk = last + '|' + pos;
-    if (!byLast.has(lk)) byLast.set(lk, []);
-    byLast.get(lk).push(row);
+    if (pos === 'DEF') {
+      defByTeam.set(row.team, row);
+      for (const k of leagueDefKeys(p.name)) defByName.set(k, defByName.has(k) && defByName.get(k) !== row ? null : row);
+      continue;
+    }
+    for (const last of leagueLastKeys(p.name)) {
+      const lk = last + '|' + pos;
+      if (!byLast.has(lk)) byLast.set(lk, []);
+      if (!byLast.get(lk).includes(row)) byLast.get(lk).push(row);
+    }
   }
-  _LEAGUE_POOL = { byKey, byLast, defByTeam };
+  _LEAGUE_POOL = { byKey, byLast, defByTeam, defByName };
   return _LEAGUE_POOL;
 }
 // One provider player -> one key, or a miss with a reason. `hint` is what the
@@ -12812,18 +12847,31 @@ function leagueResolvePlayer(hint) {
   if (pos === 'DEF') {
     const d = team ? pool.defByTeam.get(team) : null;
     if (d) return { key: d.key, name: d.name, confidence: 'exact', reason: 'defense by club' };
-    return { key: null, confidence: 'none', reason: 'no defense for club ' + (team || '?') };
+    // No club: a grid prints the nickname on its own. Only a key that names
+    // exactly one defense counts, so "New York" stays unresolved.
+    for (const k of leagueDefKeys(name)) {
+      const hit = pool.defByName.get(k);
+      if (hit) return { key: hit.key, name: hit.name, confidence: 'exact', reason: 'defense by name' };
+    }
+    return { key: null, confidence: 'none', reason: 'no defense for ' + (team || name || '?') };
   }
   if (!name) return { key: null, confidence: 'none', reason: 'no name' };
   const exact = pool.byKey.get(leaguePlayerKey(name, pos));
   if (exact) return { key: exact.key, name: exact.name, confidence: 'exact', reason: 'name and position' };
-  const last = _oddsNorm(name.split(/\s+/).slice(-1)[0]);
-  const cands = (pool.byLast.get(last + '|' + pos) || []).filter(r => !team || r.team === team);
-  if (cands.length === 1) {
-    // The surname matched on the same club; the first name must at least agree
-    // on its initial, so "Mike Evans" cannot land on "Zach Evans".
-    const fi = _oddsNorm(name)[0], ci = _oddsNorm(cands[0].name)[0];
-    if (fi === ci) return { key: cands[0].key, name: cands[0].name, confidence: 'surname+team', reason: 'surname, position and club' };
+  // A grid prints one initial and a surname, so the initial is the only thing
+  // separating Josh Allen from Kyle Allen and it has to do that work rather
+  // than only confirm a surname that was already alone. Two players still
+  // standing after it is an answer of none: a coin flip here puts a stranger
+  // on the reader's roster.
+  const fi = _oddsNorm(name)[0];
+  for (const last of leagueLastKeys(name)) {
+    const all = (pool.byLast.get(last + '|' + pos) || []).filter(r => !team || r.team === team);
+    if (!all.length) continue;
+    const cands = all.length === 1 ? all : all.filter(r => _oddsNorm(r.name)[0] === fi);
+    if (cands.length !== 1) continue;
+    if (_oddsNorm(cands[0].name)[0] !== fi) continue;
+    return { key: cands[0].key, name: cands[0].name, confidence: 'surname+team',
+             reason: team ? 'surname, position and club' : 'surname, initial and position' };
   }
   return { key: null, confidence: 'none', reason: 'not on the board' };
 }
@@ -13097,13 +13145,21 @@ async function leagueManualUpsert(env, email, body, existingRow) {
   teams.slice().sort((a, b) => (b.wins - a.wins) || (b.pointsFor - a.pointsFor)).forEach((t, i) => { t.standing = i + 1; });
   const userTeamId = String((inTeams.find(t => t.isUser) || {}).teamId || (inTeams.findIndex(t => t.isUser) >= 0 ? 'm' + (inTeams.findIndex(t => t.isUser) + 1) : 'm1'));
   const model = { provider: 'manual', name, season: null, numTeams, status: 'in_season', settings, userTeamId, teams, rosters, matchups: [], transactions: [] };
-  // Names without a position: try every position the board carries.
+  // Names without a position — a flex column prints one and no position at all
+  // — are tried at every position the board carries, and only a name that lands
+  // at exactly ONE of them is taken. Stopping at the first would read the
+  // "J Williams" in a flex slot as Javonte where the roster meant Jameson,
+  // which is a wrong projection wearing the right name; unresolved keeps the
+  // player on the roster by name and attaches nothing.
   const players = [];
   for (const r of rosters) for (const p of r.players) {
     if (p.position) { players.push(p); continue; }
-    let hit = null;
-    for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) { const res = leagueResolvePlayer({ name: p.name, position: pos, team: p.team }); if (res.key) { hit = { ...res, pos }; break; } }
-    if (hit) { p.position = hit.pos; p.name = hit.name; }
+    const hits = [];
+    for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) {
+      const res = leagueResolvePlayer({ name: p.name, position: pos, team: p.team });
+      if (res.key) hits.push({ ...res, pos });
+    }
+    if (hits.length === 1) { p.position = hits[0].pos; p.name = hits[0].name; }
     players.push(p);
   }
   const mapped = await leagueMapPlayers(env, 'manual', players);
