@@ -721,36 +721,47 @@ img{max-width:100%}
   }
 
   var heroFrom = null;
-  function heroPaint(from, name, kicker, gap, href) {
+  // `cands` is the turn's pick first and its runners-up behind it, each one
+  // { name, kicker, gap, href }. A LIST, not a name: see `coverFaces` above
+  // for why one name was enough to lose the whole band for an hour. The first
+  // candidate that resolves to a face is the one painted. A list that resolves
+  // to nobody at all still paints nothing, because a frame around a stranger
+  // is worse than no frame, which is the rule the whole page is written to.
+  function heroPaint(from, cands) {
     if (heroFrom === 'desk' && from !== 'desk') return;
     var PS = window.ITPlayerSearch;
     // The lookup is deferred, so a feed that answers before it lands waits for
     // it rather than giving up on the picture.
     if (!PS || !PS.resolve || !PS.plate) {
       document.addEventListener('it-player-search-ready',
-        function () { heroPaint(from, name, kicker, gap, href); }, { once: true });
+        function () { heroPaint(from, cands); }, { once: true });
       return;
     }
-    var p = PS.resolve(name), box = $('heroEdgePlate');
-    if (!p || !box) return;
-    var fig = PS.plate(p, { eager: true });
-    if (!fig) return;
-    box.innerHTML = '';
-    if (href) {
-      var a = document.createElement('a');
-      a.className = 'he-link';
-      a.href = href;
-      a.setAttribute('aria-label', p.n + ' — ' + kicker);
-      a.appendChild(fig);
-      box.appendChild(a);
-    } else box.appendChild(fig);
-    $('heroEdgeK').textContent = kicker;
-    $('heroEdgeName').textContent = p.n;
-    $('heroEdgeSub').textContent = p.p + (p.t ? ' · ' + p.t : '');
-    $('heroEdgeGap').textContent = gap || '';
-    show($('heroEdge'), true);
-    $('hmHero').classList.add('has-edge');
-    heroFrom = from;
+    var box = $('heroEdgePlate');
+    if (!box) return;
+    for (var i = 0; i < cands.length; i++) {
+      var c = cands[i], p = PS.resolve(c.name);
+      if (!p) continue;
+      var fig = PS.plate(p, { eager: true });
+      if (!fig) continue;
+      box.innerHTML = '';
+      if (c.href) {
+        var a = document.createElement('a');
+        a.className = 'he-link';
+        a.href = c.href;
+        a.setAttribute('aria-label', p.n + ' — ' + c.kicker);
+        a.appendChild(fig);
+        box.appendChild(a);
+      } else box.appendChild(fig);
+      $('heroEdgeK').textContent = c.kicker;
+      $('heroEdgeName').textContent = p.n;
+      $('heroEdgeSub').textContent = p.p + (p.t ? ' · ' + p.t : '');
+      $('heroEdgeGap').textContent = c.gap || '';
+      show($('heroEdge'), true);
+      $('hmHero').classList.add('has-edge');
+      heroFrom = from;
+      return;
+    }
   }
 
   // ── the hero's dateline ──────────────────────────────────────────────────
@@ -819,13 +830,46 @@ img{max-width:100%}
   // turns. `skip` is the player the Fantasy card already names, because the top
   // of the page running the same man twice is the page saying it once and
   // looking like it said it twice.
-  function coverFace(rows, skip, now) {
+  // `coverFaces` is the turn's pick FIRST and the rest of the pool behind it.
+  // The picture can fail on a NAME: the lookup does not carry a face for
+  // everybody, and `heroPaint` painted nothing when it could not resolve the
+  // one name it was given. Standing still that was a rare miss on one player.
+  // On a clock it is an hour of every day, chosen at random off the board,
+  // with no photograph on the cover at all. The runners-up are what the
+  // painter walks when the turn's pick cannot be drawn. `coverFace` is still
+  // the turn's pick alone.
+  function coverFaces(rows, skip, now) {
     var pool = [], i;
     for (i = 0; i < rows.length && pool.length < HERO_POOL; i++) {
       if (rows[i] !== skip) pool.push(rows[i]);
     }
+    if (!pool.length) return [];
+    var k = coverTurn(pool.length, now);
+    return pool.slice(k).concat(pool.slice(0, k));
+  }
+  function coverFace(rows, skip, now) {
+    return coverFaces(rows, skip, now)[0] || null;
+  }
+  // THE TWO CARD READINGS WERE THE THIRD AND FOURTH PATHS ONTO THE COVER. §88
+  // enumerated two and fixed both; the Fantasy card took the strongest BUY on
+  // the board and the DFS card took `bestVegasValues[0]`, neither with a clock
+  // anywhere near it. So the cover changed every hour above two readings that
+  // did not change all week — the same complaint, one band down the page.
+  //
+  // They take turns on the clock above now, out of the leaders of their own
+  // board. Every row a turn can land on passed the same test the leader
+  // passed, so this picks WHICH true thing to say and never whether to say a
+  // true one. `cap` is how deep the slot will go; past it is the long tail,
+  // which is not a reading the page would have printed on any hour.
+  var CARD_POOL = 5;
+  function coverPick(rows, now, cap) {
+    var pool = rows.slice(0, Math.min(rows.length, cap || CARD_POOL));
     return pool.length ? pool[coverTurn(pool.length, now)] : null;
   }
+  // A superlative belongs to the leader alone. Rotated off the top of its
+  // board, a caption still claiming the top of the board is false, which is
+  // the one thing a page arguing from the market cannot afford to be.
+  function coverLead(rows, pick) { return !!(rows.length && rows[0] === pick); }
   // ── end cover rotation ───────────────────────────────────────────────────
 
   // ── the market disagreements, and the Fantasy card's reading ─────────────
@@ -863,9 +907,11 @@ img{max-width:100%}
       .filter(usable)
       .sort(function (a, b) { return Math.abs(b.delta.points) - Math.abs(a.delta.points); });
 
-    // The card takes the strongest BUY: a recommendation to act, not a warning.
-    var card = null;
-    for (var i = 0; i < all.length; i++) { if (decide(all[i]).on === 'up') { card = all[i]; break; } }
+    // The card takes a BUY: a recommendation to act, not a warning. WHICH buy
+    // is the turn's, out of the week's five strongest — it used to take the
+    // first of them and hold him for as long as he led the board, under a
+    // cover that was changing every hour above him.
+    var card = coverPick(all.filter(function (p) { return decide(p).on === 'up'; }), Date.now());
     if (card) {
       var d = decide(card);
       $('fnReadK').textContent = 'This week’s call · ' + d.t;
@@ -885,13 +931,12 @@ img{max-width:100%}
     // the board, which is how the same face held the cover for a day and a
     // half. The caption is no longer a superlative, because the picture is no
     // longer the maximum.
-    var face = coverFace(all, card, Date.now());
-    if (face) {
-      heroPaint('edge', face.name, 'A market gap this week',
-        'The market projects ' + n1(face.vegasPoints) + ' points against a consensus '
-        + n1(face.consensusPoints) + ' — ' + signed(face.delta.points) + ' on the week.',
-        '/vegas-edge');
-    }
+    heroPaint('edge', coverFaces(all, card, Date.now()).map(function (f) {
+      return { name: f.name, kicker: 'A market gap this week',
+        gap: 'The market projects ' + n1(f.vegasPoints) + ' points against a consensus '
+          + n1(f.consensusPoints) + ' — ' + signed(f.delta.points) + ' on the week.',
+        href: '/vegas-edge' };
+    }));
 
     // Three to five players, and never the one the card already named.
     var rows = all.filter(function (p) { return p !== card; }).slice(0, 5);
@@ -915,13 +960,21 @@ img{max-width:100%}
   });
 
   // ── the DFS card's reading ───────────────────────────────────────────────
-  // The best market-driven value on the current DraftKings slate, off the same
+  // A market-driven value off the current DraftKings slate, from the same
   // /api/dfs the sheet solves from. No slate, no salaries or no value on the
   // board and the block stays hidden.
   grab('/api/dfs?site=dk', function (j) {
-    var b = (j.boards && j.boards.bestVegasValues || [])[0];
-    if (!b || !b.name || b.vegasValueScore == null || !(Number(b.salary) > 0) || n1(b.vegasPoints) == null) return;
-    $('dfReadK').textContent = 'This week’s slate · Best market value';
+    // Every row the slate can state IN FULL, best value first, and the turn's
+    // pick out of the top five of them. A row with a hole in it is not a
+    // candidate at all, so a turn can never land on one and print a card with
+    // a gap in it.
+    var vals = (j.boards && j.boards.bestVegasValues || []).filter(function (r) {
+      return r && r.name && r.vegasValueScore != null && Number(r.salary) > 0 && n1(r.vegasPoints) != null;
+    });
+    var b = coverPick(vals, Date.now());
+    if (!b) return;
+    $('dfReadK').textContent = 'This week’s slate · '
+      + (coverLead(vals, b) ? 'Best market value' : 'Market value play');
     $('dfReadH').innerHTML = esc(b.name) + ' <small style="font-weight:400;color:var(--ink-3)">'
       + esc((b.position ? b.position + ' · ' : '') + b.team) + '</small>';
     $('dfReadD').textContent = '$' + Number(b.salary).toLocaleString('en-US') + ' on DraftKings for '
@@ -998,13 +1051,14 @@ img{max-width:100%}
     // The hero's first choice: the first piece in the band that is about
     // somebody, so the picture follows the story the rotation put on top
     // rather than pinning itself to the newest row underneath it.
-    for (var i = 0; i < pieces.length; i++) {
-      var who2 = whoOf(pieces[i]);
-      if (!who2.length) continue;
-      heroPaint('desk', who2[0], 'What the desk is on today',
-        pieces[i].headline || pieces[i].title, pieces[i].url);
-      break;
-    }
+    // All of them are offered, not just the first: a subject the lookup
+    // carries no face for hands the photograph to the story behind him rather
+    // than losing the band for the hour.
+    heroPaint('desk', pieces.filter(function (p) { return whoOf(p).length; })
+      .map(function (p) {
+        return { name: whoOf(p)[0], kicker: 'What the desk is on today',
+                 gap: p.headline || p.title, href: p.url };
+      }));
   });
 })();
 </script>
