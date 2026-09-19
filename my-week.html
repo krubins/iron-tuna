@@ -314,7 +314,7 @@ p{color:var(--sec);margin:0 0 16px}
       ITSync.strip($('mwSync'), { onChange: function () { location.reload(); } });
       var LS = ITSync.active();
       if (!st || !st.signedIn) { $('mwGateMsg').innerHTML = 'My Week reads your synced league. <a href="/my-league">Sign in and connect a league</a> to see it.'; return; }
-      if (!LS) { $('mwGateMsg').innerHTML = 'No league connected yet. <a class="btn" href="/my-league#connect">Sync my league</a>'; return; }
+      if (!LS) { $('mwGateMsg').innerHTML = 'No league saved yet. <a class="btn" href="/my-league#connect">Set up my league</a>'; return; }
       if (!LS.userTeamId) { $('mwGateMsg').innerHTML = 'Iron Tuna could not tell which team in <b>' + esc(LS.name) + '</b> is yours. <a href="/my-league">Pick it on My Leagues</a>.'; return; }
       $('mwGate').hidden = true; $('mwBody').hidden = false;
       var base = '/api/leagues/' + encodeURIComponent(LS.id) + '/advice?module=';

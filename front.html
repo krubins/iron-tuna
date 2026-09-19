@@ -403,9 +403,9 @@ img{max-width:100%}
     <!-- Sign In stays where it was and stays secondary: a quiet text link, not
          a button, beside the one filled control in the masthead. -->
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
-    <!-- Not "Sync My League". Automatic sync is off or unproven for every
-         provider (docs/league-sync.md §3.1); the browser-only settings form in
-         section 02 of /my-league is what works for every reader today. -->
+    <!-- Not "Sync My League". The platform connectors were removed
+         (docs/saved-league.md); /my-league is where a reader describes their
+         league, and that is what this button promises. -->
     <a class="cta-gold" id="navSync" href="/my-league#settings">Customize My League</a>
   </nav>
 </div></header>
@@ -578,7 +578,7 @@ img{max-width:100%}
   </section>
 
   <!-- ── 4 · what the desk published ────────────────────────────────────────
-       A small group of CURRENT articles, off /api/content — the same feed
+       A small group of CURRENT articles, off /api/newsroom — the same feed
        /in-season/desk prints from. Hidden outright when the desk has nothing
        current: a heading over an empty grid is worse than no heading. -->
   <section class="hm-sec" id="articles" hidden aria-labelledby="readHead">
@@ -669,7 +669,7 @@ img{max-width:100%}
 //   /api/season   the week, for the hero's dateline
 //   /api/vegas-edge  consensus / market / Iron Tuna projections per player
 //   /api/dfs?site=dk the slate, for the DFS card's one reading
-//   /api/content  the desk's current pieces
+//   /api/newsroom the desk's current pieces (published, one per story)
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -772,6 +772,86 @@ img{max-width:100%}
     });
   })();
 
+  // ── WHAT IS ON THE COVER, AND FOR HOW LONG ───────────────────────────────
+  // Two things on this page name a player at the top of it: the hero's
+  // photograph and the three cards under "Current from the desk". Both used to
+  // pick one subject and hold it until a feed changed underneath them, and on
+  // 2026-09-18 that meant Jeremiyah Love was the face of the site and the top
+  // headline on it for a day and a half.
+  //
+  // He was on the cover TWICE, by two unrelated paths, which is why the first
+  // two attempts at this did not move him:
+  //   1. the desk band's top card was the weekend preview, headlined "fade
+  //      Jeremiyah Love" — fixed by rotating the band, then fixed properly by
+  //      sliding the window down the feed so a story actually comes off;
+  //   2. the hero took `all[0]`, the single widest market gap on the board,
+  //      and his was the widest. Nothing about the band could ever change
+  //      that, and rotating three cards while the photograph stayed put is
+  //      what "Love" still on the cover meant the second and third time.
+  //
+  // So both rotate, on ONE clock, defined once here. A turn is an hour. Every
+  // turn the hero changes face and the band swaps one story, and the two move
+  // together rather than drifting into two different rotations.
+  var COVER_TURN_MS = 3600 * 1000;   // how long one cover holds
+  var COVER_FLOOR_MS = 24 * 3600 * 1000;  // the cover always carries something this fresh
+  var DESK_BAND = 3;                 // cards on the cover at once
+  var DESK_POOL = 8;                 // how deep into the feed the window travels
+  var HERO_POOL = 5;                 // how many market gaps take a turn on the hero
+  function coverTurn(len, now) {
+    return len > 0 ? Math.floor(now / COVER_TURN_MS) % len : 0;
+  }
+  // The band: three wide, sliding one piece down the feed each turn and
+  // wrapping, so every turn one story comes off the cover and another goes up.
+  // Fresh news is exempt: a piece published inside the current turn leads and
+  // brings the two behind it, because a recap filed twenty minutes ago IS the
+  // front page and sliding past it would be the site hiding what it just did.
+  function coverBand(pieces, now) {
+    var pool = pieces.slice(0, DESK_POOL);
+    if (pool.length < 2) return pool;
+    var newest = 0, i;
+    for (i = 0; i < pool.length; i++) newest = Math.max(newest, +pool[i].publishedAt || 0);
+    var band = Math.min(DESK_BAND, pool.length);
+    if (newest && now - newest < COVER_TURN_MS) return pool.slice(0, band);
+    var turn = coverTurn(pool.length, now), out = [];
+    for (i = 0; i < band; i++) out.push(pool[(turn + i) % pool.length]);
+    // THE 24-HOUR FLOOR. A window that has slid into the older half of the
+    // pool can be three pieces from earlier in the week with nothing from
+    // yesterday on it, which is a section headed "Current from the desk"
+    // carrying nothing current. Observed on the morning of 2026-09-19: two
+    // Week 1 columns and the underrated piece, while Friday's preview, the
+    // kickers piece, the Thursday night read and the DET-BUF recap were all
+    // off the cover.
+    //
+    // So if no card in the window was published inside the last day, the last
+    // slot goes to the newest piece that was. The lead slot is left alone —
+    // the rotation still decides what leads — and the cost is accepted
+    // deliberately: while the desk is quiet, one story sits on the cover every
+    // turn. That is the trade Ken chose when the alternative was a cover with
+    // nothing from the last day on it.
+    var fresh = function (p) {
+      var at = +p.publishedAt || 0;
+      return at > 0 && now - at < COVER_FLOOR_MS;
+    };
+    for (i = 0; i < out.length; i++) if (fresh(out[i])) return out;
+    for (i = 0; i < pool.length; i++) {
+      // The feed is newest first, so the first one that qualifies is the one.
+      if (fresh(pool[i])) { out[out.length - 1] = pool[i]; break; }
+    }
+    return out;
+  }
+  // The hero: one of the week's widest gaps rather than THE widest, taking
+  // turns. `skip` is the player the Fantasy card already names, because the top
+  // of the page running the same man twice is the page saying it once and
+  // looking like it said it twice.
+  function coverFace(rows, skip, now) {
+    var pool = [], i;
+    for (i = 0; i < rows.length && pool.length < HERO_POOL; i++) {
+      if (rows[i] !== skip) pool.push(rows[i]);
+    }
+    return pool.length ? pool[coverTurn(pool.length, now)] : null;
+  }
+  // ── end cover rotation ───────────────────────────────────────────────────
+
   // ── the market disagreements, and the Fantasy card's reading ─────────────
   // Both come off ONE call, so the two bands can never disagree, and the player
   // the card recommends is deliberately taken OUT of the table below it: one
@@ -822,16 +902,19 @@ img{max-width:100%}
       readPic('fnReadPic', 'fnRead', card.name);
     }
 
-    // The hero's fallback picture: the widest gap on the board, skipping the
-    // man the Fantasy card names so the top of the page never runs the same
-    // player twice. Only used if the desk has not named somebody.
-    for (var h = 0; h < all.length; h++) {
-      if (all[h] === card) continue;
-      heroPaint('edge', all[h].name, 'This week’s widest market gap',
-        'The market projects ' + n1(all[h].vegasPoints) + ' points against a consensus '
-        + n1(all[h].consensusPoints) + ' — ' + signed(all[h].delta.points) + ' on the week.',
+    // The hero's fallback picture, used only if the desk has not named
+    // somebody: one of the week's widest gaps, taking its turn on the clock
+    // above, skipping the man the Fantasy card names. It said "This week's
+    // widest market gap" and showed exactly one player for as long as he led
+    // the board, which is how the same face held the cover for a day and a
+    // half. The caption is no longer a superlative, because the picture is no
+    // longer the maximum.
+    var face = coverFace(all, card, Date.now());
+    if (face) {
+      heroPaint('edge', face.name, 'A market gap this week',
+        'The market projects ' + n1(face.vegasPoints) + ' points against a consensus '
+        + n1(face.consensusPoints) + ' — ' + signed(face.delta.points) + ' on the week.',
         '/vegas-edge');
-      break;
     }
 
     // Three to five players, and never the one the card already named.
@@ -873,9 +956,26 @@ img{max-width:100%}
   });
 
   // ── the desk's current pieces ────────────────────────────────────────────
-  // Four at most. Each card is drawn only with a destination and a headline on
-  // it; with nothing current the whole section stays hidden.
-  grab('/api/content', function (j) {
+  // Three cards, drawn by coverBand() above. Each is drawn only with a
+  // destination and a headline on it; with nothing current the whole section
+  // stays hidden.
+  // THE PUBLISHED FEED, NOT THE ARCHIVE. This read was `/api/content`, which is
+  // `contentListPayload`: every row with a status other than 'unpublished',
+  // newest first, one per VERSION. On 2026-09-18 that meant the eight rows this
+  // band draws from were the published weekend preview, FIVE HELD DRAFTS of the
+  // same preview — each with its own headline, none of which had passed the
+  // fact check — and two other stories. Six of eight cards were one story, five
+  // of them were drafts a reader was never meant to see, and every other piece
+  // the desk had published that week was below the cutoff and unreachable. It
+  // is also the real reason the cover looked stuck on one player: the rotation
+  // was working and most of what it rotated through was the same preview.
+  //
+  // `/api/newsroom` is `newsroomFeedPayload`, which is what /in-season/desk
+  // reads: published rows only, ONE ROW PER SLUG with the newest version
+  // winning, forward pieces dropped once their games have kicked off, and the
+  // components each piece breaks into. The cover and the desk now answer to one
+  // rule, so they cannot disagree about what the desk has published.
+  grab('/api/newsroom?limit=20', function (j) {
     var day = function (v) {
       try {
         return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric' }).format(new Date(v));
@@ -886,12 +986,12 @@ img{max-width:100%}
     // the eyebrow and the headline with nothing under it: a card that says
     // the desk published and does not say what. Those rows are skipped here
     // and the piece is still in the archive at its URL.
-    var pieces = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).slice(0, 4);
+    var pieces = coverBand((j.pieces || []).filter(function (p) { return p && p.url && p.headline; }), Date.now());
     if (!pieces.length) return;
     // Who a piece is about: the players its own findings name. The card is
     // stamped with them and player-search.js draws their faces at the head of
-    // the headline, so the group reads as four stories about named people
-    // rather than four paragraphs. A piece with no findings is stamped with
+    // the headline, so the group reads as three stories about named people
+    // rather than three paragraphs. A piece with no findings is stamped with
     // nothing and keeps the plain card it has always had.
     var whoOf = function (p) {
       var out = [];
@@ -919,7 +1019,9 @@ img{max-width:100%}
     // document and would reach them on its own; calling it here means they
     // arrive with the cards rather than a frame later.
     try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('readGrid')); } catch (e) {}
-    // The hero's first choice: the newest piece that is about somebody.
+    // The hero's first choice: the first piece in the band that is about
+    // somebody, so the picture follows the story the rotation put on top
+    // rather than pinning itself to the newest row underneath it.
     for (var i = 0; i < pieces.length; i++) {
       var who2 = whoOf(pieces[i]);
       if (!who2.length) continue;

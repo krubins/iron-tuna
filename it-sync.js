@@ -4,7 +4,7 @@
  * the in-season form, both in this browser only. This file knows the leagues
  * the reader has CONNECTED to their Iron Tuna account (/api/leagues): the
  * exact scoring, the roster, every other roster, the free-agent pool, the
- * opponent. It is the client half of docs/league-sync.md.
+ * opponent. It is the client half of docs/saved-league.md.
  *
  * Nothing here invents a league either. state() is null until /api/leagues
  * answers for a signed-in reader with at least one league, and every page
@@ -16,7 +16,7 @@
  *   ITSync.active()               -> the active league (default, or the one picked here), or null
  *   ITSync.select(id)             -> make a league active on this device
  *   ITSync.api(path, opts)        -> fetch on this origin with the session cookie
- *   ITSync.strip(el)              -> "League: X ▼ · Sleeper · Synced 8m ago · Sync now"
+ *   ITSync.strip(el)              -> "League: X ▼ · Saved 8m ago · My League"
  *   ITSync.cta(el, context)       -> the acquisition call, only where it belongs
  *   ITSync.callouts(root)         -> On Your Roster / Available badges on player links
  *   ITSync.ago(ts), ITSync.esc(s), ITSync.onChange(fn)
@@ -72,18 +72,16 @@
   function select(id) { write('localStorage', ACTIVE_KEY, id); if (cur) { cur.activeId = id; emit(); } }
   function invalidate() { write('sessionStorage', CACHE_KEY, null); cur = null; }
   function onChange(fn) { if (typeof fn === 'function') listeners.push(fn); }
-  function providerLabel(p) { return { sleeper: 'Sleeper', yahoo: 'Yahoo', cbs: 'CBS Sportsline', cbs_browser: 'CBS browser import', espn: 'ESPN', manual: 'Manual' }[p] || p; }
+  // How a league describes itself. There is one way a league arrives now — the
+  // reader saved it — so this says when, not from where.
   function syncLine(L) {
     if (!L) return '';
     var s = L.sync || {};
-    if (L.provider === 'manual') return 'Manual · entered ' + ago(s.lastAt);
-    if (L.provider === 'cbs_browser') return 'CBS · imported ' + ago(s.lastOkAt || s.lastAt) + ' · refresh using the CBS extension';
-    if (s.status === 'failed') return providerLabel(L.provider) + ' · last sync failed · last good ' + ago(s.lastOkAt);
-    return providerLabel(L.provider) + ' · synced ' + ago(s.lastOkAt || s.lastAt) + (s.stale ? ' · may be outdated' : '');
+    return 'Saved ' + ago(s.lastAt || s.lastOkAt);
   }
 
   // ── the strip ──────────────────────────────────────────────────────────────
-  // League: Office League ▼   Sleeper · synced 8m ago   [Sync now]
+  // League: Office League ▼   Saved 8m ago   My League
   function strip(el, opts) {
     if (!el) return;
     var o = opts || {};
@@ -91,22 +89,11 @@
       if (!st || !st.leagues.length) { el.hidden = true; el.innerHTML = ''; return; }
       var L = active();
       var sel = st.leagues.length > 1 ? '<select class="its-sel" aria-label="Active league">' + st.leagues.map(function (l) { return '<option value="' + esc(l.id) + '"' + (l.id === L.id ? ' selected' : '') + '>' + esc(l.name) + (l.isDefault ? ' (default)' : '') + '</option>'; }).join('') + '</select>' : '<b>' + esc(L.name) + '</b>';
-      var stale = L.sync && (L.sync.stale || L.sync.status === 'failed');
       el.hidden = false;
       el.innerHTML = '<span class="its-lab">League:</span> ' + sel +
-        ' <span class="its-sync' + (stale ? ' stale' : '') + '">' + esc(syncLine(L)) + '</span>' +
-        (L.provider !== 'manual' && L.provider !== 'cbs_browser' ? ' <button type="button" class="its-btn" data-sync>Sync now</button>' : '') +
-        ' <a class="its-link" href="/my-league">My Leagues</a>' + (o.week ? ' · <a class="its-link" href="/my-week">My Week</a>' : '') +
-        (stale && L.sync.status === 'failed' ? '<span class="its-warn">League data may be outdated. Refresh recommended.</span>' : '');
+        ' <span class="its-sync">' + esc(syncLine(L)) + '</span>' +
+        ' <a class="its-link" href="/my-league">My League</a>' + (o.week ? ' · <a class="its-link" href="/my-week">My Week</a>' : '');
       var s = el.querySelector('select'); if (s) s.addEventListener('change', function () { select(this.value); if (o.onChange) o.onChange(active()); else root.location.reload(); });
-      var b = el.querySelector('[data-sync]'); if (b) b.addEventListener('click', function () {
-        b.disabled = true; b.textContent = 'Syncing…';
-        api('/api/leagues/' + encodeURIComponent(L.id) + '/sync', { method: 'POST' }).then(function (j) {
-          invalidate();
-          if (!j.ok) { b.textContent = 'Sync failed'; var w = el.querySelector('.its-sync'); if (w) { w.classList.add('stale'); w.textContent = j.message || 'Sync failed'; } setTimeout(function () { b.disabled = false; b.textContent = 'Sync now'; }, 3000); return; }
-          root.location.reload();
-        });
-      });
     });
   }
   // ── the call to action ─────────────────────────────────────────────────────
@@ -178,5 +165,5 @@
       '.its-story{border-left:3px solid var(--teal);padding:10px 14px;margin:16px 0;background:var(--elev);border-radius:0 10px 10px 0}.its-story p{margin:4px 0;font-size:14px}';
     (doc.head || doc.documentElement).appendChild(css);
   } catch (e) {}
-  root.ITSync = { load: load, state: state, active: active, select: select, invalidate: invalidate, api: api, strip: strip, cta: cta, callouts: callouts, ago: ago, esc: esc, onChange: onChange, providerLabel: providerLabel, syncLine: syncLine };
+  root.ITSync = { load: load, state: state, active: active, select: select, invalidate: invalidate, api: api, strip: strip, cta: cta, callouts: callouts, ago: ago, esc: esc, onChange: onChange, syncLine: syncLine };
 })(window, document);

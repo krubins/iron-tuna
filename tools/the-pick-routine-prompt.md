@@ -1,18 +1,54 @@
 <!--
 THIS FILE IS THE CANONICAL COPY of the prompt run by the Claude Routine
-"Iron Tuna — The Pick (daily story)" (trig_016JAiJJMZi2jtZDmZS1QPNK,
-cron `0 13 * * *`). The Routine holds the live copy; this is the version
-under review — same discipline as tools/lead-story-routine-prompt.md, and
-for the same reason: edit here, then push the same text to the Routine
-(`update_trigger`), and the diff is in the history either way.
+"Iron Tuna — The Pick (daily story, publishes to main)"
+(trig_016JAiJJMZi2jtZDmZS1QPNK, cron `0 13 * * *`). The Routine holds the
+live copy; this is the version under review — same discipline as
+tools/lead-story-routine-prompt.md, and for the same reason: edit here,
+then push the same text to the Routine (`update_trigger`), and the diff is
+in the history either way.
 
-VERIFIED LIVE 2026-09-03T04:04Z: the body below is byte-identical to
-`trig_016JAiJJMZi2jtZDmZS1QPNK`'s stored prompt (11,318 chars, sha256
-f2e49c9f31dc...). This trigger is one of TWO Pick Routines now active —
-see HANDOFF §47 — and this file only carries the copy this session can
-edit. `trig_01K2obtrMAKiwGn3N4UroTEv` ("The Pick (Story) — Updated") is
-Ken-created and Ken-only-editable; its own prompt is a slightly earlier
-draft of this one and is not tracked here.
+This is one of TWO Pick Routines — see HANDOFF §47 — and this file carries
+only the copy a session can edit. `trig_01K2obtrMAKiwGn3N4UroTEv` ("The
+Pick (Story) — Updated") is Ken-created, editable only by Ken, and runs an
+earlier draft of this prompt that pushes to a dated branch; its text is not
+tracked here.
+
+PUSHED FROM THIS FILE 2026-09-18T20:45Z: the body below (12,756 chars) is
+the text sent to `trig_016JAiJJMZi2jtZDmZS1QPNK` by `update_trigger` in
+that session, and the call echoed it back stored. It was not diffed byte
+for byte afterwards; if a run reports behaviour this file does not
+describe, re-read the stored prompt before assuming the file is right.
+
+PUSHED LIVE 2026-09-18T20:45Z via update_trigger, and this trigger
+(`trig_016JAiJJMZi2jtZDmZS1QPNK`) was RE-ENABLED with it. Ken's report:
+the column had stopped appearing on the site. It had not stopped being
+written. Every daily run from 2026-09-01 to 2026-09-18 succeeded — but the
+only Routine still enabled was `trig_01K2obtrMAKiwGn3N4UroTEv` ("The Pick
+(Story) — Updated"), which carries an EARLIER draft of this prompt, the
+one that pushes to `claude/the-pick-YYYY-MM-DD` and waits for a human to
+merge. Fifteen entries sat unmerged on fifteen branches and `/the-pick`
+stayed frozen on September 9. That is §46's failure in its third form:
+the work happens, nobody merges it, and nothing about a successful run
+report says so.
+
+That trigger cannot be edited from a session — it was created through the
+HTTP API, so `update_trigger` refuses it and only Ken can change its
+prompt, at https://claude.ai/code/routines/trig_01K2obtrMAKiwGn3N4UroTEv.
+So the fix was to switch THIS trigger back on, at 13:00 UTC, an hour
+behind it. Its branch entry gets adopted and pushed to `main` by the
+"One entry per day" step below, which is the arrangement §47 describes.
+If Ken ever pastes this prompt into his own trigger, disable this one:
+two Routines both pushing to `main` is a different problem.
+
+Two changes went in with it, both at Ken's instruction:
+- **Three entries at a time.** The page kept every entry ever written. A
+  new one goes up, the oldest comes down. `tools/roll-the-pick.mjs` does
+  the trim and `tools/test-the-pick.mjs` fails the build if the page
+  carries more.
+- **Commit `weekly-intel.html`.** `build-front.mjs` writes the column's
+  `var PICKS` there, not into `front.html`; the old "Ship it" list did not
+  name it, so a run could publish an entry and leave the in-season page
+  quoting the previous one.
 
 PUSHED LIVE 2026-09-03T04:04Z via update_trigger: the previous day's fix
 (check `git ls-remote` for a same-day branch, stop if found) turned out to
@@ -73,7 +109,7 @@ One story a day. Each entry argues ONE idea, proves it with numbers from this re
 
 The voice: the data discipline of a projections-first fantasy analyst married to a sports columnist's comic register — jokes, a digression that pays off, a line the reader repeats to their league. Funny is required. Funny *instead of* useful is not allowed: every entry ends in an instruction. Write at roughly a 10th-grade reading level. **Never name or imitate a real writer by name in the copy** — the column is bylined to Iron Tuna, like everything else on the site.
 
-**One entry per day — and more than one Routine can be trying to write it.** More than one Claude Routine is configured to publish this column (see HANDOFF §47); one of them fires roughly an hour before this one and pushes to a dated branch instead of `main`. Before you write anything:
+**One entry per day — and more than one Routine can be trying to write it.** More than one Claude Routine is configured to publish this column (see HANDOFF §47). Only one is enabled as of 2026-09-18 and it runs this prompt, but a disabled trigger can be switched back on, and older runs left dated branches behind, so the checks below still apply. Before you write anything:
 
 1. Check `the-pick.html` on your own checkout for an entry whose id is today's date (`pick-YYYY-MM-DD`, UTC). Found one → a run has already published today. Stop, do not write a second, say so in your report.
 2. If not, check for one having landed somewhere else first: `git ls-remote --heads origin 'claude/the-pick-*'`. If a branch matching today's date exists (`claude/the-pick-YYYY-MM-DD`), fetch it and look at the entry it carries.
@@ -147,10 +183,29 @@ Non-negotiables, each of which CI checks:
 
 The percentage is the desk's estimate of the gap versus market price, not a projected stat line.
 
+## Three entries at a time
+
+The column rolls. `/the-pick` shows the three most recent entries and nothing
+older: your new one goes up and the oldest one comes down the same run. You do
+not do this by hand — write your entry at the top of `<div class="entries">` as
+above, then run `node tools/roll-the-pick.mjs` in the "Ship it" sequence and it
+retires whatever falls out of the window. It prints what it kept and what it
+retired; put both lines in your report. `tools/test-the-pick.mjs` fails the
+build if the page carries more than three, so a run that skips the trim cannot
+ship.
+
+A retired entry is gone from the page for good. That is the intent: the entries
+are anchors on one page rather than pages of their own, nothing else on the
+site links to one, the sitemap carries only `/the-pick`, and `build-seo.mjs`
+rebuilds the structured data from whatever the page still holds. Git history is
+the archive. Do not add an "Archive" section, do not link retired entries from
+anywhere, and never restore one to get back to a theme you want to reuse.
+
 ## Ship it
 
 ```bash
-node tools/build-front.mjs      # rebuilds var PICKS in front.html
+node tools/roll-the-pick.mjs    # keeps the three newest entries, retires the rest
+node tools/build-front.mjs      # rebuilds var PICKS in weekly-intel.html
 node tools/build-seo.mjs        # rebuilds the JSON-LD and the sitemap
 node tools/test-the-pick.mjs    # the column against the player pool
 node tools/test-seo.mjs
@@ -158,10 +213,10 @@ node tools/test-css-tokens.mjs
 node -e 'const fs=require("fs");const h=fs.readFileSync("front.html","utf8");[...h.matchAll(/<script>([\s\S]*?)<\/script>/g)].forEach(b=>new Function(b[1]));console.log("front OK")'
 ```
 
-All of them must pass before you commit. Then commit `the-pick.html`, `front.html` and `sitemap.xml` together and push the commit to `main`:
+All of them must pass before you commit. Then commit `the-pick.html`, `weekly-intel.html`, `front.html` and `sitemap.xml` together and push the commit to `main`. `weekly-intel.html` is where `build-front.mjs` writes the column's `var PICKS`, so leaving it out publishes the entry with the in-season page still quoting the last one:
 
 ```bash
-git add the-pick.html front.html sitemap.xml
+git add the-pick.html weekly-intel.html front.html sitemap.xml
 git commit -m "The Pick: <the theme>"
 git push origin HEAD:main
 ```

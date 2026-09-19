@@ -15,7 +15,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-<title>My Leagues: Sync Your League and Every Number Reads Your Settings | Iron Tuna</title>
+<title>My League: Save Your League and Every Number Reads It | Iron Tuna</title>
 <meta name="description" content="Set your teams, budget and scoring once and every price, rank and projection Iron Tuna publishes is restated in them — on the cheat sheet, in the stories, and across the in-season section.">
 <link rel="canonical" href="https://irontuna.com/my-league">
 <!--seo:meta-->
@@ -121,6 +121,11 @@ p{color:var(--sec);margin:0 0 16px}
 .ml-priv summary{cursor:pointer;font-weight:700;color:var(--sec)}
 .ml-priv p{margin:var(--space-2) 0 0;font-size:inherit;color:inherit}
 #lsList .is-card{margin:10px 0}
+/* 04, under the three intake boxes: one card the width of the row, because the
+   roster grid it takes is a wide screenshot and its team picker is a long row. */
+.ml-grid-card{margin:var(--space-4) 0 0}
+.ml-grid-card .is-btns{margin-top:var(--space-2)}
+.ml-grid-card .is-field{margin:0}
 /* The roster-grid intake. A dashed box rather than a bare file input, because
    the screenshot it wants is usually on the clipboard and never on disk. */
 .mg-drop{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1px dashed var(--line2);border-radius:var(--radius-md);background:var(--bg);transition:border-color .12s ease,background .12s ease}
@@ -153,7 +158,7 @@ p{color:var(--sec);margin:0 0 16px}
 @media(max-width:640px){.ml-steps{grid-template-columns:1fr;gap:var(--space-4)}.ml-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.ml-tile{min-height:0}}
 </style>
 
-<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/my-league","name":"My Leagues: Sync Your League and Every Number Reads Your Settings","description":"Set your teams, budget and scoring once and every price, rank and projection Iron Tuna publishes is restated in them — on the cheat sheet, in the stories, and across the in-season section.","url":"https://irontuna.com/my-league","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/my-league"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"My Leagues: Sync Your League and Every Number Reads Your Settings"}]}]}</script>
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/my-league","name":"My League: Save Your League and Every Number Reads It","description":"Set your teams, budget and scoring once and every price, rank and projection Iron Tuna publishes is restated in them — on the cheat sheet, in the stories, and across the in-season section.","url":"https://irontuna.com/my-league","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/my-league"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"My League: Save Your League and Every Number Reads It"}]}]}</script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -206,9 +211,9 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="is-band is-band-top">
 <div class="wrap wide">
 <div class="ml-steps">
-  <div class="ml-step"><span class="ml-sn"><i>1</i>Choose a platform</span><b>Where your league lives</b><span>Sleeper and Yahoo sync by league ID or sign-in. CBS imports through the browser extension. ESPN and everything else, by hand.</span></div>
-  <div class="ml-step"><span class="ml-sn"><i>2</i>Connect it</span><b>One sign-in, encrypted at rest</b><span>Iron Tuna imports scoring, rosters, the free-agent pool, standings and the transaction log. Nothing is re-typed and no password is stored.</span></div>
-  <div class="ml-step"><span class="ml-sn"><i>3</i>Every board re-scores</span><b>Rankings, waivers, DFS, the market</b><span>Each page restates its numbers in your points and your dollars. Disconnect at any time and the imported data goes with it.</span></div>
+  <div class="ml-step"><span class="ml-sn"><i>1</i>Describe your league</span><b>Scoring, lineup and budget</b><span>Type it, paste a settings page, or drop in a screenshot. Every platform&rsquo;s wording is read the same way.</span></div>
+  <div class="ml-step"><span class="ml-sn"><i>2</i>Add the rosters</span><b>One screenshot, the whole room</b><span>Section 04 reads every team off your league&rsquo;s roster grid. No password, no access token, nothing connected.</span></div>
+  <div class="ml-step"><span class="ml-sn"><i>3</i>Every board re-scores</span><b>Rankings, waivers, DFS, the market</b><span>Each page restates its numbers in your points and your dollars. Delete the league at any time and its data goes with it.</span></div>
 </div>
 </div>
 </div><!-- /.is-band -->
@@ -216,22 +221,13 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="wrap wide">
 
 <section>
-<div class="is-sec" id="connect"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Connect your league</h2><a class="is-sec-more" href="/my-week">My Week &rarr;</a></div></div>
-<p class="ml-sub">Connect the league you actually play in and Iron Tuna imports its exact scoring, every roster, the free-agent pool, your opponent and the standings. Rankings, the Pickup Advisor, Best Lineup, the Trade Finder and the stories then read <em>your</em> league instead of a default one. <b>Free.</b> Sign in with an email link so synced leagues follow you across devices; no purchase is required.</p>
+<div class="is-sec" id="connect"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Your leagues</h2><a class="is-sec-more" href="/my-week">My Week &rarr;</a></div></div>
+<p class="ml-sub">A league saved here follows you across devices, and every in-season board reads it: your exact scoring, your roster, every other roster and the free-agent pool. Rankings, the Pickup Advisor, Best Lineup, the Trade Finder and the stories all read <em>your</em> league instead of a default one. <b>Free.</b> Sign in with an email link; no purchase is required.</p>
 <div id="lsStatus" class="is-note" style="margin:0 0 12px"></div>
 <div id="lsList"></div>
-<p class="ml-tiles-h" id="lsTilesH">Choose a platform to connect</p>
-<div class="ml-tiles" id="lsTiles" role="group" aria-labelledby="lsTilesH">
-  <button type="button" class="ml-tile live" data-prov="sleeper"><b>Sleeper</b><span>League ID or username</span><em class="ml-badge up">Syncs</em><i class="ml-go">Connect</i></button>
-  <button type="button" class="ml-tile live" data-prov="yahoo"><b>Yahoo</b><span>Authorize on Yahoo</span><em class="ml-badge up">Syncs</em><i class="ml-go">Connect</i></button>
-  <button type="button" class="ml-tile" data-prov="cbs"><b>CBS</b><span>Sportsline, via the extension</span><em class="ml-badge gold">Extension</em><i class="ml-go">Connect</i></button>
-  <button type="button" class="ml-tile" data-prov="espn"><b>ESPN</b><span>Enter by hand</span><em class="ml-badge">By hand</em><i class="ml-go">Set up</i></button>
-  <button type="button" class="ml-tile" data-prov="manual"><b>Other</b><span>Fantrax, MFL, anything</span><em class="ml-badge">By hand</em><i class="ml-go">Set up</i></button>
-</div>
-<div id="lsConnect" hidden></div>
 <div id="lsManual" hidden></div>
-<details class="ml-priv" id="lsPrivacy"><summary>What Iron Tuna imports, and what it never asks for</summary>
-<p>League settings and scoring, team names and manager display names, rosters, matchups, standings and transactions, from the provider you choose. Sleeper leagues are read by league ID from Sleeper&rsquo;s public API. Yahoo leagues are read after you authorize Iron Tuna on Yahoo&rsquo;s own site. CBS browser import reads settings, team names and rosters without copying credentials; refresh it using the extension. The separate CBS API connector uses a league token you provide. Iron Tuna never asks for a Yahoo or CBS password and encrypts provider tokens at rest. The data is used only to personalize your guidance and is never shown to unrelated users. Disconnecting a league stops syncing and deletes the imported data and that CBS league&rsquo;s token. Full details in the <a href="/privacy">privacy policy</a>.</p>
+<details class="ml-priv" id="lsPrivacy"><summary>What Iron Tuna keeps, and what it never asks for</summary>
+<p>What you enter: the league&rsquo;s name and size, its scoring and starting lineup, the FAAB budget, team names and the players on each roster. That is all, and it is all typed, pasted or read off a screenshot by you &mdash; Iron Tuna does not connect to Sleeper, Yahoo, ESPN or CBS, holds no password or access token for any of them, and makes no request to any fantasy platform on your behalf. The roster-grid screenshot in section 04 is sent to Iron Tuna&rsquo;s reader to be transcribed and is not kept. Your league is used only to personalize your own guidance and is never shown to other readers. Deleting a league removes its settings, teams, rosters and history. Full details in the <a href="/privacy">privacy policy</a>.</p>
 </details>
 </section>
 
@@ -245,7 +241,7 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="is-band">
 <div class="wrap wide">
 <div class="is-sec" id="settings"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Your in-season settings</h2></div></div>
-<p class="ml-sub">Platform, scoring, lineup, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. Your league prints those settings on three separate screens, so the three boxes below ask for them three separate ways: type them, paste a screenshot straight off the clipboard, or drag one in. A screenshot is read in your browser and shown back to you as values to check before anything moves. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
+<p class="ml-sub">Platform, scoring, lineup, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. Your league prints those settings on three separate screens, so the three boxes below ask for them three separate ways: type them, paste a screenshot straight off the clipboard, or drag one in. A screenshot in those three is read in your browser and shown back to you as values to check before anything moves. A fourth box under them takes the rosters themselves, every team at once, off the page your league prints them on; that one sends the image to Iron Tuna&rsquo;s reader, which returns the names and keeps nothing. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
 
 <!-- the three boxes. Scoring, rosters and the FAAB budget, side by side and
      each taking typing, a pasted screenshot or a dragged one. They fill the
@@ -253,6 +249,14 @@ p{color:var(--sec);margin:0 0 16px}
      intake() hands back a partial and leagueForm()’s handle applies it, so a
      bad OCR read costs a glance instead of a season of wrong numbers. -->
 <div id="mlIntake"></div>
+
+<!-- 04. The rosters themselves. The box above it numbered 02 reads the LINEUP —
+     how many of each slot start — and a reader holding a screenshot of every
+     team's players had nowhere on this section to put it: the reader that
+     transcribes a grid lived in the by-hand form up in §01, a section they
+     never had to open. It is mounted here as well now, and saves the room to
+     the same league record that form writes. -->
+<div id="mlGrid"></div>
 
 <div class="ml-split">
   <div class="ml-form" id="mlForm"></div>
@@ -309,6 +313,7 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-inseason.js" defer></script>
 <script src="/it-inseason-import.js" defer></script>
 <script src="/it-inseason-ui.js" defer></script>
+<script src="/it-roster-grid.js" defer></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   if (!window.ITInSeasonUI) return;
@@ -319,7 +324,88 @@ document.addEventListener('DOMContentLoaded', function () {
   ITInSeasonUI.intake(document.getElementById('mlIntake'), {
     onApply: function (partial, source, n) { if (form) form.apply(partial, source, n); }
   });
+  rosterGrid(document.getElementById('mlGrid'));
 });
+
+// 04, the rosters. The three boxes above fill the form beside them and save
+// nothing themselves; a room full of players has nowhere to live in that form —
+// it holds settings — so this one writes the league record directly, the same
+// POST the by-hand form in §01 makes. That record is what Best Lineup, the
+// Pickup Advisor and the free-agent pool read.
+function rosterGrid(el) {
+  if (!el || !window.ITRosterGrid) return;
+  var esc = window.ITSync ? ITSync.esc : function (x) { return String(x == null ? '' : x); };
+  el.innerHTML = '<section class="is-intake-card ml-grid-card">' +
+    '<div class="is-intake-top"><span class="is-intake-n">04</span><b>Insert Rosters</b></div>' +
+    '<p class="is-intake-hint">Every team\u2019s players, off the one page your league prints them on.</p>' +
+    '<div id="mlGridBox"></div>' +
+    '<div class="is-btns"><button type="button" class="is-btn primary" id="mlGridSave">Save these rosters</button></div>' +
+    '<p class="is-note" id="mlGridMsg" role="status" aria-live="polite" style="margin:0"></p>' +
+    // The three boxes above read their screenshots in the browser and say so.
+    // This one cannot: a grid of two hundred names needs the reader on the
+    // server. A privacy line that is true of the boxes beside it and false of
+    // this one is worse than no line at all.
+    '<p class="is-note" style="margin:6px 0 0">Unlike the three boxes above, this screenshot is sent to Iron Tuna\u2019s reader to be transcribed. The image is not kept; the names come back to this page, and nothing is saved to your league until you press the button.</p>' +
+  '</section>';
+  var msgEl = document.getElementById('mlGridMsg');
+  function msg(html, bad) { msgEl.innerHTML = html || ''; msgEl.style.color = bad ? 'var(--danger)' : ''; }
+
+  var grid = ITRosterGrid.mount(document.getElementById('mlGridBox'), {
+    label: '',
+    note: 'One screenshot of the roster grid holds every team at once. Names only: who starts is projected from the scoring on the left, not read off the page. Send more than one image together if the grid does not fit in one shot.',
+    onPick: function () { msg(''); }
+  });
+
+  document.getElementById('mlGridSave').addEventListener('click', function () {
+    if (!grid || !grid.teams.length) { msg('Paste a screenshot of the rosters first.', true); return; }
+    if (grid.mine < 0) { msg('Pick which of those teams is yours.', true); return; }
+    if (!window.ITSync || !window.ITInSeason) { msg('League sync could not load in this browser.', true); return; }
+    var btn = this;
+    btn.disabled = true;
+    msg('Saving\u2026');
+    // The settings on the left go with them: the lineup and the scoring are what
+    // turn a list of names into a starting lineup, and a reader who typed them
+    // thirty seconds ago has not necessarily pressed Save on that form yet.
+    var f = document.querySelector('#mlForm form');
+    if (f) { if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); }
+    var rec = ITInSeason.get() || ITInSeason.draft();
+
+    ITSync.load(true).then(function (st) {
+      if (!st || !st.signedIn) {
+        btn.disabled = false;
+        // Nothing read is thrown away: the room stays on screen, and one sign-in
+        // later the same button saves it.
+        msg('Rosters are saved to your account, so this needs a sign-in. <a href="#connect">Sign in up in \u00a701</a>, then press Save again \u2014 what was read stays here.', true);
+        var box = document.getElementById('lsEmail');
+        if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return null;
+      }
+      // A synced league is rewritten by its next sync, so a room read off a
+      // screenshot belongs to a manual league: this updates the one on the
+      // account if there is one, and makes one if there is not.
+      var manual = (st.leagues || []).filter(function (L) { return L.provider === 'manual'; });
+      var target = manual.filter(function (L) { return L.id === st.activeId || L.isDefault; })[0] || manual[0] || null;
+      var body = {
+        id: target ? target.id : undefined,
+        name: target ? target.name : 'My league',
+        numTeams: Math.max(grid.teams.length, parseInt(rec.teams, 10) || 0),
+        teams: grid.teams.map(function (t, i) {
+          return { teamId: 'm' + (i + 1), name: t.name || ('Team ' + (i + 1)), isUser: i === grid.mine, players: t.players };
+        }),
+        settings: { scoring: rec.settings ? rec.settings.scoring : {}, extras: rec.settings ? rec.settings.extras : { tePremium: 0 },
+                    roster: rec.settings ? rec.settings.roster : null, faab: rec.faab == null ? null : rec.faab }
+      };
+      return ITSync.api('/api/leagues/manual', { method: 'POST', body: body }).then(function (j) {
+        btn.disabled = false;
+        if (!j || !j.ok) { msg(esc((j && (j.message || j.error)) || 'Could not save those rosters.'), true); return; }
+        msg('<b>Saved.</b> ' + esc(j.league.name) + ' now holds ' + grid.teams.length + ' rosters.' +
+            (j.unresolved && j.unresolved.length ? ' Not on the board (kept by name, scored 0): ' + esc(j.unresolved.join(', ')) + '.' : ' Every player mapped to the board.'));
+        ITSync.invalidate();
+        ITSync.load(true);
+      });
+    }).catch(function () { btn.disabled = false; msg('Could not save those rosters. Try again.', true); });
+  });
+}
 </script>
 <script src="/it-sync.js" defer></script>
 <script>
@@ -339,26 +425,25 @@ document.addEventListener('DOMContentLoaded', function () {
     return ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SFLEX', 'REC_FLEX', 'WRRB_FLEX', 'K', 'DEF', 'BN', 'IR', 'TAXI'].map(function (k) { var o = (ov || []).indexOf('roster.' + k) >= 0; return '<label style="display:inline-flex;flex-direction:column;margin:4px 8px 4px 0;font-size:12px;font-weight:700">' + esc(slotLabel(k)) + (o ? ' *' : '') + '<input class="is-input" style="width:56px" type="number" min="0" max="20" data-ro="' + k + '" value="' + esc(S.roster[k] || 0) + '"></label>'; }).join('') + (Object.keys(S.roster.other || {}).length ? '<p class="is-note">Other slots kept but not used in lineups: ' + esc(Object.keys(S.roster.other).map(function (k) { return k + ' ×' + S.roster.other[k]; }).join(', ')) + '</p>' : '');
   }
   function card(L) {
-    var s = L.sync || {}, bad = s.status === 'failed', stale = s.stale;
+    var s = L.sync || {};
     return '<div class="is-card" data-id="' + esc(L.id) + '" style="margin:10px 0">' +
-      '<span class="is-tag ' + (bad ? '' : 'is-live') + '">' + esc(ITSync.providerLabel(L.provider)) + (L.isDefault ? ' · default' : '') + '</span>' +
+      '<span class="is-tag is-live">Saved' + (L.isDefault ? ' · default' : '') + '</span>' +
       '<h3>' + esc(L.name) + ' <span class="is-status">' + esc(L.numTeams || '?') + ' teams · ' + esc(L.season || '') + '</span></h3>' +
       '<p>' + esc(L.label) + '</p>' +
-      '<p class="is-note" style="margin:6px 0 0' + (bad || stale ? ';color:var(--danger)' : '') + '">' + esc(ITSync.syncLine(L)) + (bad ? '<br>' + esc(s.error || '') + (/(expired_authorization)/.test(String(s.error)) && L.provider === 'yahoo' ? ' <a class="is-btn sec" href="/api/oauth/yahoo/start">Reconnect Yahoo</a>' : '') + (s.lastOkAt ? '<br>Last successfully synced ' + esc(new Date(s.lastOkAt).toLocaleString()) + '; that data is still in use.' : '') : '') + (stale && !bad ? ' League data may be outdated. Refresh recommended.' : '') + (s.nextAt && L.provider !== 'manual' ? '<br>Next automatic refresh ' + esc(new Date(s.nextAt).toLocaleString()) : '') + '</p>' +
+      '<p class="is-note" style="margin:6px 0 0">' + esc(ITSync.syncLine(L)) + '</p>' +
       (!L.userTeamId ? '<p style="color:var(--danger);margin:8px 0 0"><b>Which team is yours?</b> Iron Tuna could not tell. <button type="button" class="is-btn sec" data-act="teams">Pick my team</button></p>' : '') +
       '<div class="is-btns" style="margin-top:10px">' +
-        (L.provider === 'cbs_browser' ? '<span class="is-note">Refresh from your CBS league using the extension.</span>' : L.provider !== 'manual' ? '<button type="button" class="is-btn primary" data-act="sync">Sync now</button>' : '<button type="button" class="is-btn primary" data-act="edit">Edit league</button>') +
         (L.isDefault ? '' : '<button type="button" class="is-btn sec" data-act="default">Make default</button>') +
         '<button type="button" class="is-btn sec" data-act="settings">Review settings</button>' +
         (L.userTeamId ? '<button type="button" class="is-btn sec" data-act="teams">Change my team</button>' : '') +
         '<a class="is-btn sec" href="/my-week">My Week</a>' +
-        '<button type="button" class="is-btn sec" data-act="disconnect" style="margin-left:auto">Disconnect</button>' +
+        '<button type="button" class="is-btn sec" data-act="disconnect" style="margin-left:auto">Delete</button>' +
       '</div><div data-panel hidden></div></div>';
   }
   function render() {
     if (!st) return;
     if (!st.signedIn) {
-      note('<div class="is-card"><h3>Sign in to sync your league</h3><p><b>League sync is free.</b> Enter your email and we will send a one-time link. Signing in keeps encrypted provider credentials and synced leagues tied to you across devices.</p><div class="is-row2"><div class="is-field"><label for="lsEmail">Email</label><input class="is-input" id="lsEmail" type="email" autocomplete="email" placeholder="you@email.com"></div></div><div class="is-btns"><button type="button" class="is-btn primary" id="lsSignin">Email me a sign-in link</button></div><p class="is-note" id="lsSigninMsg"></p></div>');
+      note('<div class="is-card"><h3>Sign in to save your league</h3><p><b>Saving a league is free.</b> Enter your email and we will send a one-time link. Signing in keeps your leagues tied to you across devices, and section 04 needs it before it can store a room.</p><div class="is-row2"><div class="is-field"><label for="lsEmail">Email</label><input class="is-input" id="lsEmail" type="email" autocomplete="email" placeholder="you@email.com"></div></div><div class="is-btns"><button type="button" class="is-btn primary" id="lsSignin">Email me a sign-in link</button></div><p class="is-note" id="lsSigninMsg"></p></div>');
       $('lsSignin').addEventListener('click', function () {
         var email = $('lsEmail').value.trim(), msg = $('lsSigninMsg'), b = this;
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent = 'Enter a valid email address.'; return; }
@@ -367,130 +452,21 @@ document.addEventListener('DOMContentLoaded', function () {
           b.hidden = true; $('lsEmail').disabled = true; msg.textContent = 'Check your email. Open the one-time link on this device; it expires in 15 minutes.';
         });
       });
-      $('lsList').innerHTML = ''; $('lsConnect').hidden = true; markTile(null); return;
+      $('lsList').innerHTML = ''; return;
     }
-    var q = new URLSearchParams(location.search).get('yahoo');
-    if (q) {
-      var msg = { connected: 'Yahoo connected. Pick the league to sync below.', denied: 'Yahoo authorization was canceled.', failed: 'Yahoo did not complete the authorization.', state: 'That authorization link was stale or belonged to another session. Try again.', off: 'Yahoo sync is not enabled.', signin: 'Sign in first, then connect Yahoo.' }[q];
-      if (msg) note(esc(msg), q !== 'connected');
-      history.replaceState(null, '', location.pathname + location.hash);
-    }
-    if (!q) note('');
-    paintTiles();
+    note('');
     if (!st.leagues.length) {
-      $('lsList').innerHTML = '<div class="is-vacant"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 016 0v2"></path></svg></span><div class="is-vacant-msg"><b>No league connected yet.</b><span>Click a platform below to open its connection form. Once the league is synced, Iron Tuna knows it and every board re-scores itself.</span></div></div>';
-      $('lsTilesH').textContent = 'Choose a platform to connect';
+      $('lsList').innerHTML = '<div class="is-vacant"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 016 0v2"></path></svg></span><div class="is-vacant-msg"><b>No league saved yet.</b><span>Enter your league once and every board re-scores itself in your points. Section 04 below can read a whole room off one screenshot of your roster grid.</span></div></div><div class="is-btns"><button type="button" class="is-btn primary" data-add>Enter my league</button></div>';
     } else {
-      $('lsList').innerHTML = st.leagues.map(card).join('') + '<p class="is-note" style="margin:8px 0 0">' + st.leagues.length + ' league' + (st.leagues.length === 1 ? '' : 's') + ' connected. The default league is what every page uses unless you switch it in the League selector.</p>';
-      $('lsTilesH').textContent = 'Add another league';
+      $('lsList').innerHTML = st.leagues.map(card).join('') + '<p class="is-note" style="margin:8px 0 0">' + st.leagues.length + ' league' + (st.leagues.length === 1 ? '' : 's') + ' saved. The default league is what every page uses unless you switch it in the League selector.</p><div class="is-btns"><button type="button" class="is-btn sec" data-add>Add another league</button></div>';
     }
-    if (q === 'connected') showConnect('yahoo');
-    else if (location.hash === '#connect') $('lsTiles').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('lsList').querySelectorAll('[data-add]').forEach(function (b) { b.addEventListener('click', addLeague); });
+    if (location.hash === '#connect') $('lsList').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-  // ── the platform tiles ────────────────────────────────────────────────────
-  var TILE = { sleeper: 'Sleeper', yahoo: 'Yahoo', cbs: 'CBS Sportsline', espn: 'ESPN', manual: 'Other' };
-  function providerOf(k) {
-    var P = (st && st.providers) || {};
-    return k === 'cbs' && P.cbs_browser && P.cbs_browser.enabled ? P.cbs_browser : P[k];
-  }
-  function paintTiles() {
-    document.querySelectorAll('#lsTiles [data-prov]').forEach(function (t) {
-      var k = t.getAttribute('data-prov'), p = providerOf(k), badge = t.querySelector('.ml-badge');
-      if (k === 'manual') return;
-      var on = !!(p && p.enabled);
-      t.classList.toggle('live', on && k !== 'cbs');
-      badge.className = 'ml-badge ' + (on ? (k === 'cbs' ? 'gold' : 'up') : k === 'espn' ? '' : 'off');
-      badge.textContent = on ? (k === 'cbs' ? 'Extension' : 'Syncs') : k === 'espn' ? 'By hand' : 'Unavailable';
-      var go = t.querySelector('.ml-go'); if (go) go.textContent = on ? 'Connect' : k === 'espn' ? 'Set up' : 'Why not';
-    });
-  }
-  function markTile(k) {
-    document.querySelectorAll('#lsTiles [data-prov]').forEach(function (t) { var on = t.getAttribute('data-prov') === k; t.classList.toggle('on', on); t.setAttribute('aria-pressed', on ? 'true' : 'false'); });
-  }
-  document.querySelectorAll('#lsTiles [data-prov]').forEach(function (t) {
-    t.addEventListener('click', function () {
-      var k = t.getAttribute('data-prov');
-      if (!st || !st.signedIn) { var em = $('lsEmail'); $('lsStatus').scrollIntoView({ behavior: 'smooth', block: 'center' }); if (em) em.focus({ preventScroll: true }); return; }
-      showConnect(k);
-    });
-  });
-  // ── connect ──────────────────────────────────────────────────────────────
-  function showConnect(provider) {
-    var el = $('lsConnect');
-    if (!provider) { el.hidden = true; markTile(null); return; }
-    el.hidden = false; $('lsManual').hidden = true;
-    el.innerHTML = '<div class="ml-flow"><div class="ml-flow-h"><span>Connect</span><b>' + esc(TILE[provider] || provider) + '</b></div><div id="lsFlow"></div></div>';
-    markTile(provider);
-    flow(provider);
-    if (!$('lsConnect').hidden) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-  function flow(k) {
-    var P = (k === 'cbs' && (st.providers || {}).cbs_browser && st.providers.cbs_browser.enabled ? st.providers.cbs_browser : (st.providers || {})[k]), f = $('lsFlow');
-    if (k === 'manual') { manualForm(null); return; }
-    if (!P || !P.enabled) { f.innerHTML = '<p class="is-note">' + esc((P && P.reason) || 'Not available.') + (k === 'espn' ? ' <button type="button" class="is-btn sec" id="lsEspnManual">Set my ESPN league up manually</button>' : '') + '</p>'; var b = $('lsEspnManual'); if (b) b.addEventListener('click', function () { manualForm(null); }); return; }
-    if (k === 'sleeper') {
-      f.innerHTML = '<p>Your Sleeper <b>username</b> finds every league you are in; or paste a league ID or URL.</p><div class="is-row2"><div class="is-field"><label for="lsUser">Sleeper username</label><input class="is-input" id="lsUser" autocomplete="username" spellcheck="false"></div><div class="is-field"><label for="lsLid">or league ID / URL</label><input class="is-input" id="lsLid" placeholder="sleeper.com/leagues/…"></div></div><div class="is-btns"><button type="button" class="is-btn primary" id="lsFind">Find my leagues</button></div><div id="lsFound"></div>';
-      $('lsFind').addEventListener('click', function () {
-        var u = $('lsUser').value.trim(), lid = ($('lsLid').value.match(/(\d{10,})/) || [])[1] || null;
-        if (!u && !lid) { $('lsFound').innerHTML = '<p class="is-note" style="color:var(--danger)">Enter your username or a league ID.</p>'; return; }
-        $('lsFound').innerHTML = '<p class="is-note">Asking Sleeper…</p>';
-        ITSync.api('/api/leagues/connect', { method: 'POST', body: lid ? { provider: 'sleeper', lookupLeagueId: lid, username: u || undefined } : { provider: 'sleeper', username: u } }).then(function (j) { discovered('sleeper', j); });
-      });
-      return;
-    }
-    if (k === 'cbs') {
-      f.innerHTML = '<p><b>This form does not use your CBS email or password.</b> The free <a href="https://github.com/krubins/iron-tuna/tree/main/extensions/cbs-connector" target="_blank" rel="noopener">CBS browser connector</a> reads your league settings and rosters while you are signed in on CBS. Keep Iron Tuna open in the same browser, open your CBS league, then use the extension to import or refresh. Matchups, standings, transactions and waiver balances are not included in this import.</p><p><b>Advanced API token connection:</b> The form below is only for members who already have a CBS Fantasy API access token.</p><div class="is-field"><label for="lsCbsId">CBS football league address</label><input class="is-input" id="lsCbsId" placeholder="your-league.football.cbssports.com" inputmode="url" spellcheck="false" autocomplete="off"><p class="is-note">Open the league on CBS and copy its address. It looks like <b>your-league.football.cbssports.com</b>. An email address will not work here.</p></div><div class="is-field"><label for="lsCbsToken">CBS Fantasy API access token</label><input class="is-input" id="lsCbsToken" type="password" autocomplete="off" spellcheck="false" maxlength="8192"><p class="is-note">This is an API token, not your CBS password. Iron Tuna encrypts it and only makes read-only league requests.</p></div><div class="is-btns"><button type="button" class="is-btn primary" id="lsCbsConnect">Sync this league</button><button type="button" class="is-btn sec" id="lsCbsManual">I do not have an API token</button></div><p class="is-note" id="lsCbsMsg" role="status" aria-live="polite"></p>';
-      $('lsCbsManual').addEventListener('click', function () { manualForm(null); });
-      $('lsCbsConnect').addEventListener('click', function () {
-        var b = this, id = $('lsCbsId').value.trim(), tokenInput = $('lsCbsToken'), token = tokenInput.value.trim(), msg = $('lsCbsMsg');
-        function result(text, bad) { msg.textContent = text; msg.style.color = bad ? 'var(--danger)' : ''; }
-        if (!id || !token) { result('Enter the CBS football league address and API access token.', true); return; }
-        var match = id.toLowerCase().match(/^(?:https:\/\/)?([a-z0-9][a-z0-9-]{0,62})\.football\.cbssports\.com(?:\/[^?#]*)?(?:[?#].*)?$/);
-        var leagueId = match ? match[1] : id.toLowerCase();
-        if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(leagueId)) { result('That is not a CBS football league address. Open your league on CBS and copy the address from the browser bar.', true); return; }
-        b.disabled = true; b.textContent = 'Importing…';
-        result('Connecting to CBS and importing your league…', false);
-        var pending = ITSync.api('/api/leagues/connect', { method: 'POST', body: { provider: 'cbs', leagueId: leagueId, accessToken: token } });
-        token = '';
-        pending.then(function (r) {
-          if (!r || !r.ok) { b.disabled = false; b.textContent = 'Sync this league'; result((r && (r.detail || r.message || r.error)) || 'The import failed. Check the league address and API token, then try again.', true); return; }
-          tokenInput.value = '';
-          result('League synced. Loading your teams…', false);
-          ITSync.invalidate();
-          ITSync.load(true).then(function (s) {
-            if (!s || s.error || !s.leagues || !s.leagues.some(function (l) { return l.id === r.league.id; })) throw new Error('refresh_failed');
-            st = s; render(); $('lsConnect').hidden = true;
-            note('<b>Synced.</b> ' + esc(r.league.name) + (r.needsTeam ? ' Choose your team below.' : ''));
-            if (r.needsTeam) panel(r.league.id, 'teams');
-          }).catch(function () { b.disabled = false; b.textContent = 'Sync this league'; result('The league was synced, but this page could not refresh. Reload the page to see it.', true); });
-        }, function () { b.disabled = false; b.textContent = 'Sync this league'; result('Iron Tuna could not reach the sync service. Check your connection and try again.', true); });
-      });
-      return;
-    }
-    if (k === 'yahoo') {
-      var c = st.connections && st.connections.yahoo;
-      if (!c || c.status !== 'connected') { f.innerHTML = '<p>Iron Tuna will send you to Yahoo to approve read-only access to your fantasy leagues. You never give Iron Tuna your Yahoo password.</p><div class="is-btns"><a class="is-btn primary" href="/api/oauth/yahoo/start">Connect Yahoo</a></div>'; return; }
-      f.innerHTML = '<p class="is-note">Yahoo is connected. Reading your leagues…</p><div id="lsFound"></div><p class="is-note"><button type="button" class="is-btn sec" id="lsYahooOff">Disconnect Yahoo account</button></p>';
-      ITSync.api('/api/leagues/connect', { method: 'POST', body: { provider: 'yahoo' } }).then(function (j) { discovered('yahoo', j); });
-      $('lsYahooOff').addEventListener('click', function () { if (!confirm('Delete the Yahoo tokens? Yahoo leagues already synced stay, but will stop refreshing.')) return; ITSync.api('/api/oauth/yahoo/disconnect', { method: 'POST' }).then(reload); });
-    }
-  }
-  function discovered(k, j) {
-    var box = $('lsFound') || $('lsFlow');
-    if (!j || !j.ok) { box.innerHTML = '<p class="is-note" style="color:var(--danger)">' + esc((j && (j.message || j.error)) || 'No answer.') + (j && j.error === 'expired_authorization' && k === 'yahoo' ? ' <a class="is-btn sec" href="/api/oauth/yahoo/start">Reconnect Yahoo</a>' : '') + '</p>'; return; }
-    if (!j.leagues.length) { box.innerHTML = '<p class="is-note">No ' + esc(j.season) + ' leagues found' + (j.user ? ' for ' + esc(j.user.name) : '') + '. Check the season, or paste the league ID.</p>'; return; }
-    box.innerHTML = '<p>' + (j.user ? '<b>' + esc(j.user.name) + '</b> · ' : '') + esc(j.season) + ' season</p>' + j.leagues.map(function (l) { return '<div class="is-card" style="margin:8px 0"><h3>' + esc(l.name) + ' <span class="is-status">' + esc(l.numTeams || '?') + ' teams · ' + esc(l.status || '') + '</span></h3><div class="is-btns">' + (l.connected ? '<span class="is-tag is-live">Connected</span>' : '<button type="button" class="is-btn primary" data-connect="' + esc(l.providerLeagueId) + '" data-name="' + esc(l.name) + '">Sync this league</button>') + '</div></div>'; }).join('');
-    box.querySelectorAll('[data-connect]').forEach(function (b) { b.addEventListener('click', function () {
-      b.disabled = true; b.textContent = 'Importing…';
-      ITSync.api('/api/leagues/connect', { method: 'POST', body: { provider: k, leagueId: b.getAttribute('data-connect'), name: b.getAttribute('data-name'), season: j.season, providerUserId: j.user ? j.user.id : null } }).then(function (r) {
-        if (!r || !r.ok) { b.disabled = false; b.textContent = 'Sync this league'; note(esc((r && (r.message || r.error)) || 'The import failed.'), true); return; }
-        note('<b>Synced.</b> ' + esc(r.league.name) + ': ' + esc(r.sync.teams) + ' teams imported' + (r.sync.unmatched ? ', ' + r.sync.unmatched + ' player' + (r.sync.unmatched === 1 ? '' : 's') + ' not on the board (kept by name)' : '') + '. <b>Iron Tuna knows your league.</b>' + (r.needsTeam ? ' Pick which team is yours.' : ''));
-        $('lsConnect').hidden = true;
-        reload().then(function () { if (r.needsTeam) panel(r.league.id, 'teams'); });
-      });
-    }); });
-  }
-  // ── the per-league panels ────────────────────────────────────────────────
+  // The one way in. There are no platforms to choose between any more, so the
+  // by-hand form is the flow rather than the fallback at the end of one.
+  function addLeague() { manualForm(null); }
+
   function panel(id, kind) {
     var host = document.querySelector('[data-id="' + id + '"] [data-panel]'); if (!host) return;
     host.hidden = false; host.innerHTML = '<p class="is-note">Loading…</p>';
@@ -504,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (kind === 'settings') {
         var S = L.settings, ov = S.overridden || [];
-        host.innerHTML = '<h4 style="margin:12px 0 4px">Scoring, as Iron Tuna read it</h4><p class="is-note" style="margin:0 0 8px">' + (L.provider === 'manual' ? 'Entered by you.' : 'Synced from ' + esc(ITSync.providerLabel(L.provider)) + '. Correct anything below and your correction is kept through every future sync.') + '</p>' +
+        host.innerHTML = '<h4 style="margin:12px 0 4px">Scoring, as Iron Tuna read it</h4><p class="is-note" style="margin:0 0 8px">' + 'Entered by you. Correct anything below and your correction is kept.' + '</p>' +
           '<div class="is-scroll"><table class="is-table"><tbody>' + scoringRows(S, ov) + '</tbody></table></div>' +
           (S.extras.notes && S.extras.notes.length ? '<p class="is-note">' + S.extras.notes.map(esc).join(' ') + '</p>' : '') +
           (Object.keys(S.extras.unsupported || {}).length ? '<p class="is-note">Kept but not scored: ' + esc(Object.keys(S.extras.unsupported).map(function (k) { return k + '=' + S.extras.unsupported[k]; }).join(', ')) + '</p>' : '') +
@@ -527,166 +503,17 @@ document.addEventListener('DOMContentLoaded', function () {
   $('lsList').addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-act]'); if (!b) return;
     var cardEl = b.closest('[data-id]'), id = cardEl.getAttribute('data-id'), act = b.getAttribute('data-act');
-    if (act === 'sync') { b.disabled = true; b.textContent = 'Syncing…'; ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/sync', { method: 'POST' }).then(function (j) { if (!j.ok) note(esc(j.message || j.error || 'Sync failed') + '. Your last successful sync is still in use.', true); else note('<b>Synced.</b> ' + (j.sync.unmatched ? j.sync.unmatched + ' players not on the board (kept by name).' : 'Every rostered player mapped to the board.')); reload(); }); }
-    else if (act === 'default') ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/default', { method: 'POST' }).then(function () { ITSync.select(id); reload(); });
-    else if (act === 'disconnect') { if (!confirm('Disconnect this league? Iron Tuna stops syncing it and deletes the imported settings, teams, rosters, matchups and transactions. Provider tokens are deleted when no league on that provider remains.')) return; ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/disconnect', { method: 'POST' }).then(function (j) { note('Disconnected. Removed: ' + esc((j.removed || []).join(', ')) + '.' + (j.tokensRemoved ? ' Provider tokens deleted.' : '') + ' Kept: ' + esc((j.retained || []).join(', ')) + '.'); reload(); }); }
+    if (act === 'default') ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/default', { method: 'POST' }).then(function () { ITSync.select(id); reload(); });
+    else if (act === 'disconnect') { if (!confirm('Delete this league? Iron Tuna deletes its settings, teams, rosters and history.')) return; ITSync.api('/api/leagues/' + encodeURIComponent(id) + '/disconnect', { method: 'POST' }).then(function (j) { note('Deleted. Removed: ' + esc((j.removed || []).join(', ')) + '.'); reload(); }); }
     else panel(id, act);
   });
-  // ── the roster grid ───────────────────────────────────────────────────────
-  // A league that prints every roster on one page is one screenshot, not
-  // twelve. The reader returns names only — no starter, bench or IR — so a
-  // grid league has its best lineup projected rather than compared against a
-  // lineup nobody recorded. Each image is shrunk here first: a phone
-  // screenshot is several megabytes and the reader needs none of that to read
-  // a name.
-  function shrink(file) {
-    return new Promise(function (resolve, reject) {
-      var url = URL.createObjectURL(file), img = new Image();
-      img.onload = function () {
-        try {
-          var MAX = 1600, sc = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
-          var c = document.createElement('canvas');
-          c.width = Math.round(img.naturalWidth * sc); c.height = Math.round(img.naturalHeight * sc);
-          var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
-          resolve({ media_type: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.85).replace(/^data:[^,]*,/, '') });
-        } catch (e) { reject(e); } finally { URL.revokeObjectURL(url); }
-      };
-      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('unreadable')); };
-      img.src = url;
-    });
-  }
-  // Every image on a clipboard or a drag, not just the first: a roster grid
-  // that took three shots to capture is three images pasted together, and a
-  // reader who has to send them one at a time gets three reads that each
-  // REPLACE the last rather than one read of the whole room. files is what
-  // modern browsers fill; items is the older path Safari still needs.
-  function imagesIn(dt) {
-    var out = [], i, f;
-    if (!dt) return out;
-    if (dt.files && dt.files.length) {
-      for (i = 0; i < dt.files.length; i++) if (/^image\//.test(dt.files[i].type)) out.push(dt.files[i]);
-    }
-    if (!out.length && dt.items) {
-      for (i = 0; i < dt.items.length; i++) {
-        if (dt.items[i].kind === 'file' && /^image\//.test(dt.items[i].type)) { f = dt.items[i].getAsFile(); if (f) out.push(f); }
-      }
-    }
-    return out;
-  }
-  // One document-level paste listener at a time. manualForm() re-renders this
-  // widget whenever the form is reopened, and a listener per render would send
-  // one clipboard to the reader four times.
-  var mgPaste = null;
-  function gridWidget(host, grid) {
-    if (!host) return;
-    // A screenshot lives on the clipboard, not on disk: Win+Shift+S and
-    // Cmd+Ctrl+Shift+4 both end with an image nobody ever saved to a file, and
-    // a file input is the one intake that cannot take it. The box below takes
-    // the paste, the drag and the picker, the way the three settings boxes at
-    // the top of this page already do.
-    var mac = /Mac|iPhone|iPad|iPod/.test((navigator.platform || '') + ' ' + (navigator.userAgent || ''));
-    host.innerHTML = '<div class="is-field"><label>Every roster from one screenshot</label>' +
-      '<p class="is-note" style="margin:0 0 6px">A league roster grid holds all of the teams at once. Names only: your starting lineup is projected from the scoring below, not read off the page. Send more than one image at a time if the grid does not fit in one shot.</p>' +
-      '<div class="mg-drop" id="mgDrop" tabindex="0" role="group" aria-label="Paste, drop or choose roster screenshots">' +
-        '<b>Paste a screenshot, or drop one in</b>' +
-        '<span>Copy the roster grid and press <kbd>' + (mac ? '\u2318' : 'Ctrl+') + 'V</kbd> \u2014 here or anywhere on this form \u2014 or drag the image onto this box, or <button type="button" class="mg-pick" id="mgPick">choose files</button>.</span>' +
-      '</div>' +
-      '<input type="file" id="mgFile" accept="image/*" multiple hidden>' +
-      '<p class="is-note" id="mgMsg" style="margin:6px 0 0" role="status" aria-live="polite"></p><div id="mgOut"></div></div>';
-    var msg = function (t, bad) { var m = host.querySelector('#mgMsg'); m.textContent = t || ''; m.style.color = bad ? 'var(--danger)' : ''; };
-    var drop = host.querySelector('#mgDrop'), fileIn = host.querySelector('#mgFile');
-    host.querySelector('#mgPick').addEventListener('click', function () { fileIn.click(); });
-    // The picker is cleared after every read so choosing the same file twice
-    // still fires change the second time.
-    fileIn.addEventListener('change', function (e) { var f = e.target.files; read(f); e.target.value = ''; });
-
-    drop.addEventListener('paste', function (e) {
-      var imgs = imagesIn(e.clipboardData);
-      if (!imgs.length) { msg('There is no image on the clipboard. Copy the roster grid as a screenshot first.', true); return; }
-      e.preventDefault(); read(imgs);
-    });
-
-    // A paste anywhere on the page reaches the grid too: a reader who has just
-    // taken the screenshot has not necessarily clicked this box first, and
-    // Ctrl+V landing nowhere reads as a feature that is broken. Fields that
-    // take a paste of their own keep it — the scoring boxes above read images
-    // themselves, and the roster textarea below takes text.
-    if (mgPaste) document.removeEventListener('paste', mgPaste);
-    var onPaste = function (e) {
-      // The form this widget sits in is thrown away and rebuilt; the listener
-      // outlives it, so it retires itself the first time it fires with its own
-      // widget gone rather than reading into a form nobody can see.
-      if (!document.body.contains(host)) { document.removeEventListener('paste', onPaste); if (mgPaste === onPaste) mgPaste = null; return; }
-      // The box's own handler already read this one.
-      if (e.defaultPrevented) return;
-      var t = e.target, tag = t && t.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
-      var imgs = imagesIn(e.clipboardData);
-      if (!imgs.length) return;
-      e.preventDefault(); read(imgs);
-    };
-    mgPaste = onPaste;
-    document.addEventListener('paste', onPaste);
-
-    // A drop that misses the box is the browser navigating away to the image,
-    // taking the half-filled form with it — the one failure here that costs
-    // work rather than a read. The whole field catches the drag.
-    var zone = host.querySelector('.is-field') || host, deep = 0;
-    ['dragenter', 'dragover'].forEach(function (ev) {
-      zone.addEventListener(ev, function (e) { e.preventDefault(); if (ev === 'dragenter') deep++; drop.classList.add('over'); });
-    });
-    ['dragleave', 'dragend'].forEach(function (ev) {
-      zone.addEventListener(ev, function () { if (ev === 'dragleave') deep = Math.max(0, deep - 1); if (!deep || ev === 'dragend') { deep = 0; drop.classList.remove('over'); } });
-    });
-    zone.addEventListener('drop', function (e) {
-      e.preventDefault(); deep = 0; drop.classList.remove('over');
-      var imgs = imagesIn(e.dataTransfer);
-      if (!imgs.length) { msg('That is not an image. Drop a screenshot of the roster grid.', true); return; }
-      read(imgs);
-    });
-
-    function read(files) {
-      var list = [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); }).slice(0, 8);
-      if (!list.length) { msg('Those are not images.', true); return; }
-      msg('Reading ' + list.length + ' screenshot' + (list.length === 1 ? '' : 's') + '\u2026 a whole grid can take a minute.');
-      Promise.all(list.map(shrink)).then(function (images) {
-        return fetch('/api/roster-read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ images: images }) }).then(function (r) { return r.json(); });
-      }).then(adopt).catch(function () { msg('The reader did not answer. Try again, or type your roster below instead.', true); });
-    }
-    // A read REPLACES what the last one found. Appending would double a team
-    // when the same screenshot is sent twice, and nothing tells that apart
-    // from a league holding two teams of the same name.
-    function adopt(j) {
-      if (!j || !j.ok) { msg((j && j.error) || 'The reader could not read that.', true); return; }
-      grid.teams = (j.teams || []).map(function (t) {
-        return { name: String(t.name == null ? '' : t.name).slice(0, 60),
-                 players: (t.players || []).map(function (p) { return { name: p.name, position: p.pos || null, team: p.team || null }; }).filter(function (p) { return p && p.name; }) };
-      }).filter(function (t) { return t.players.length; });
-      grid.mine = -1; grid.partial = !!j.partial;
-      render();
-      if (!grid.teams.length) { msg('No rosters in that image.', true); return; }
-      var n = grid.teams.reduce(function (a, t) { return a + t.players.length; }, 0);
-      var box = $('mfTeams');
-      if (box) box.value = Math.max(parseInt(box.value, 10) || 0, grid.teams.length);
-      msg('Read ' + grid.teams.length + ' team' + (grid.teams.length === 1 ? '' : 's') + ', ' + n + ' players.' +
-        (grid.partial ? ' The reader ran out of room, so the last team may be short \u2014 split the grid and send the pieces together.' : '') +
-        ' Pick your team, then save.');
-    }
-    function render() {
-      var out = host.querySelector('#mgOut');
-      if (!grid.teams.length) { out.innerHTML = ''; return; }
-      out.innerHTML = '<div class="is-seg" role="group" style="flex-wrap:wrap;margin-top:6px">' + grid.teams.map(function (t, i) {
-        return '<label><input type="radio" name="mgMine" value="' + i + '">' + esc(t.name || ('Team ' + (i + 1))) + ' (' + t.players.length + ')</label>';
-      }).join('') + '</div>';
-      [].slice.call(out.querySelectorAll('input[name="mgMine"]')).forEach(function (r) {
-        r.addEventListener('change', function () { grid.mine = parseInt(r.value, 10); });
-      });
-    }
-  }
+  // ── the roster grid ───────────────────────────────────────
+  // it-roster-grid.js, because §02 mounts the same reader: a screenshot of every
+  // roster is what a reader pastes into the section that promises rosters.
 
   // ── manual ───────────────────────────────────────────────────────────────
   function manualForm(L) {
-    var el = $('lsManual'); el.hidden = false; $('lsConnect').hidden = true; markTile(L ? null : 'manual');
+    var el = $('lsManual'); el.hidden = false;
     var S = L ? L.settings : null, mine = L ? (L.rosters.find(function (r) { return r.teamId === L.userTeamId; }) || { players: [] }) : null;
     var rec = S ? S.scoring.receptionPoints : 1;
     // Every scoring field an IMPORT found, including the ones this form does
@@ -701,14 +528,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // A league already holding a room keeps it through an edit. Without this,
     // reopening a grid league to change one scoring number would save the one
     // typed roster and silently drop the other eleven.
-    var grid = { teams: [], mine: -1, partial: false };
+    var seeded = { teams: [], mine: -1 };
     if (L && L.teams && L.teams.length > 1) {
-      grid.teams = L.teams.map(function (t) {
+      seeded.teams = L.teams.map(function (t) {
         var r = (L.rosters || []).filter(function (x) { return x.teamId === t.teamId; })[0] || { players: [] };
         return { name: t.name, players: r.players.map(function (p) { return { name: p.name, position: p.position || null, team: p.team || null }; }) };
       });
-      grid.mine = L.teams.map(function (t) { return t.teamId; }).indexOf(L.userTeamId);
+      seeded.mine = L.teams.map(function (t) { return t.teamId; }).indexOf(L.userTeamId);
     }
+    var grid = { teams: [], mine: -1, partial: false };
     el.innerHTML = '<div class="is-card"><h3>' + (L ? 'Edit ' + esc(L.name) : 'Enter your league by hand') + '</h3><p class="is-note" style="margin:0 0 10px">Works for ESPN, CBS, Fantrax, MFL or any league. The scoring and lineup below make every ranking exact; your roster makes Best Lineup and the Pickup Advisor personal. Other managers&rsquo; rosters are optional; without them the free-agent pool is everyone not on your team.</p><div id="mfImp"></div><div id="mfGrid"></div>' +
       '<div class="is-row2"><div class="is-field"><label>League name</label><input class="is-input" id="mfName" value="' + esc(L ? L.name : '') + '"></div><div class="is-field"><label>Teams</label><input class="is-input" id="mfTeams" type="number" min="2" max="20" value="' + esc(L ? L.numTeams : 12) + '"></div></div>' +
       '<div class="is-field"><label>Scoring</label><div class="is-seg" role="group">' + [['1', 'PPR'], ['0.5', 'Half PPR'], ['0', 'Standard']].map(function (o) { return '<label><input type="radio" name="mfRec" value="' + o[0] + '"' + (String(rec) === o[0] ? ' checked' : '') + '>' + o[1] + '</label>'; }).join('') + '</div></div>' +
@@ -745,8 +573,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     }
-    gridWidget($('mfGrid'), grid);
-    $('mfCancel').addEventListener('click', function () { el.hidden = true; markTile(null); });
+    grid = ITRosterGrid.mount($('mfGrid'), {
+      teams: seeded.teams, mine: seeded.mine,
+      note: 'A league roster grid holds all of the teams at once. Names only: your starting lineup is projected from the scoring below, not read off the page. Send more than one image at a time if the grid does not fit in one shot.',
+      // The team count on this form is the floor the grid just proved.
+      onRead: function (g) { var box = $('mfTeams'); if (box) box.value = Math.max(parseInt(box.value, 10) || 0, g.teams.length); }
+    }) || grid;
+    $('mfCancel').addEventListener('click', function () { el.hidden = true; });
     $('mfSave').addEventListener('click', function () {
       var recV = parseFloat((el.querySelector('input[name="mfRec"]:checked') || {}).value || '1');
       if (mfRecExact != null && (mfRecExact >= 0.9 ? 1 : mfRecExact >= 0.4 ? 0.5 : 0) === recV) recV = mfRecExact;

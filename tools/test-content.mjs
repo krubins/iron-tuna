@@ -29,7 +29,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
-  'return { normalizeGameSummary, gameUsageByTeam, contentDue, kindTitle, CONTENT_KINDS, lastPlayedWeek, etParts, nflSeasonState, _oddsProjectionIndex, briefForGames, briefTeamRecaps, briefWtaty, validateDraft, _finishBrief, _nextEt, scoringRules, detectInsights, briefFinalRead, briefGamePlan };'
+  'return { normalizeGameSummary, gameUsageByTeam, contentDue, kindTitle, CONTENT_KINDS, lastPlayedWeek, etParts, nflSeasonState, _oddsProjectionIndex, briefForGames, briefTeamRecaps, briefWtaty, validateDraft, _finishBrief, _nextEt, scoringRules, detectInsights, briefFinalRead, briefGamePlan, packetRos, sectionsFor };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {});
 
 console.log('\nthe box score, on a real game (2025 Week 1, DAL at PHI)');
@@ -180,6 +180,26 @@ const ctx = { sched: { games: [{ type: 'REG', home: 'PHI', away: 'DAL' }] }, wee
   ok('the Final Read has its six sections', ['marketVsConsensus', 'injuryDrivenOpportunity', 'startSitPressure', 'ironTunaHigher', 'ironTunaLower', 'whatCouldChange'].every(k => Array.isArray(f[k])));
   const gp = H.briefGamePlan('weekend-game-plan', [{ id: 'x', home: 'PHI', away: 'DAL', spread: 3, total: 47.5, impliedHome: 25.25, impliedAway: 22.25, kickoff: 1 }], ctx);
   ok('a game card carries the lines and the derived environment', gp.cards[0].total === 47.5 && gp.cards[0].environment === 'above average' && gp.cards[0].mostImportant);
+}
+
+// September 15: the Tuesday rankings told the reader "the packet notes no
+// Monday game this week, or its box score is not final" in a week that had a
+// Monday night game, played and final. The producer hands packetRos
+// `{ games, summaries }`; the old test read `.length` off that object, which
+// is undefined, so the note ran every single week. The section is now either
+// reported from the box score or not asked for at all.
+console.log('\nwhat Monday changed');
+{
+  const mon = [{ id: 'mon', home: 'PHI', away: 'DAL', dow: 'Mon' }];
+  const played = H.packetRos(ctx, {}, null, { games: mon, summaries: [G] });
+  ok('a Monday game with a final box score is reported, not denied', !!played.whatMondayChanged && Array.isArray(played.whatMondayChanged.teams) && played.whatMondayChanged.teams.length === 2, JSON.stringify(played.whatMondayChanged));
+  ok('and it carries what each club learned, from the box score', played.whatMondayChanged.teams.every(t => t.team && t.learned) && played.whatMondayChanged.teams.some(t => t.team === 'PHI'));
+  ok('the section is asked for when there is something to report', H.sectionsFor('ros-rankings', 'weekly', played).includes('whatMondayChanged'));
+  const dark = H.packetRos(ctx, {}, null, null);
+  ok('a week with nothing final from Monday carries no block and no note to print', dark.whatMondayChanged === null && !JSON.stringify(dark).includes('no Monday game'));
+  ok('and the writer is never asked for the section, so the piece stays silent about Monday', !H.sectionsFor('ros-rankings', 'weekly', dark).includes('whatMondayChanged') && H.sectionsFor('ros-rankings', 'weekly', dark).includes('next3'));
+  ok('a Monday game whose box score is not final yet is the same silence', H.packetRos(ctx, {}, null, { games: mon, summaries: [] }).whatMondayChanged === null);
+  ok('the full section list still names it, so the desk page keeps the label', H.sectionsFor('ros-rankings', 'weekly').includes('whatMondayChanged'));
 }
 
 console.log('\nthe validator');

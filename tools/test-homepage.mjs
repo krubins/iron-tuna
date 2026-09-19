@@ -98,28 +98,51 @@ const EDGE = { ok: true, week: 'Week 3', vsExperts: {
 const DFS = { ok: true, boards: { bestVegasValues: [
   { name: 'Rome Odunze', position: 'WR', team: 'CHI', salary: 5400, vegasPoints: 14.2, vegasValueScore: 3.21 }
 ]}};
+// THE COVER ROTATES ON A CLOCK, so this test pins one. front.html gives each
+// cover a turn (COVER_TURN_MS, an hour): the desk band slides one story down
+// the feed per turn and the hero takes the next of the week's widest market
+// gaps. Which story leads and whose photograph runs would otherwise depend on
+// what time of day this test happened to run, so the browser's Date.now is
+// frozen at an instant whose turn index is 0 for every pool size the fixtures
+// use — 840 is the lowest common multiple of 1 through 8 — and the fixture
+// publishes its newest piece five minutes before that instant, inside its own
+// turn, so the band is newest-first. Turn by turn, both are covered without a
+// browser in tools/test-newsroom.mjs.
+const TURN_MS = 3600 * 1000;
+const CLOCK = Math.floor(Date.now() / (840 * TURN_MS)) * (840 * TURN_MS);
+const FRESH = CLOCK - 5 * 60 * 1000;
+const AGO = h => FRESH - h * 3600 * 1000;
 const CONTENT = { ok: true, pieces: [
   // `components` are the findings a piece breaks into, each naming the player
   // it is about. They are what the desk cards draw faces from and what the
   // hero's picture prefers over the market board.
   { kind: 'final-read', title: 'The Final Read', headline: 'Three lineups the market moved overnight',
-    dek: 'Sunday morning props shifted two flex calls.', week: 3, publishedAt: Date.UTC(2026, 8, 16, 14),
+    dek: 'Sunday morning props shifted two flex calls.', week: 3, publishedAt: FRESH,
     url: '/in-season/desk/final-read/3', byline: 'Iron Tuna desk',
     components: [{ n: 1, player: 'Puka Nacua', headline: 'a' }, { n: 2, player: 'James Cook', headline: 'b' }] },
   { kind: 'opportunity-report', title: 'Opportunity Report', headline: 'Who inherits the carries in Baltimore',
-    dek: 'Snap share against the implied total.', week: 3, publishedAt: Date.UTC(2026, 8, 16, 11),
+    dek: 'Snap share against the implied total.', week: 3, publishedAt: AGO(3),
     url: '/in-season/desk/opportunity-report/3', byline: 'Iron Tuna desk',
     components: [{ n: 1, player: 'Derrick Henry', headline: 'c' }] },
   { kind: 'rankings-update', title: 'Rankings Update', headline: 'Eleven moves after the injury report',
-    week: 3, publishedAt: Date.UTC(2026, 8, 16, 9), url: '/in-season/desk/rankings-update/3' },
+    week: 3, publishedAt: AGO(5), url: '/in-season/desk/rankings-update/3' },
   { kind: 'tnf-preview', title: 'TNF Preview', headline: 'The total moved three points in a day',
-    week: 3, publishedAt: Date.UTC(2026, 8, 15, 20), url: '/in-season/desk/tnf-preview/3' },
-  // Five sent, four shown: the group is small on purpose.
+    week: 3, publishedAt: AGO(18), url: '/in-season/desk/tnf-preview/3' },
+  // Six sent, three shown: the band is small on purpose, and a new piece
+  // pushes the oldest one out of it.
   { kind: 'weekend-game-plan', title: 'Weekend Game Plan', headline: 'Too many to print',
-    week: 3, publishedAt: Date.UTC(2026, 8, 15, 12), url: '/in-season/desk/weekend-game-plan/3' },
+    week: 3, publishedAt: AGO(26), url: '/in-season/desk/weekend-game-plan/3' },
   // No url: not a card.
-  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: Date.UTC(2026, 8, 15, 8) }
+  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: AGO(30) }
 ]};
+// What /api/content would hand back: the same story five times over, in draft.
+// Nothing on the cover may come from here.
+const ARCHIVE_POISON = { ok: true, pieces: [1, 2, 3, 4, 5].map(v => ({
+  kind: 'weekend-preview', title: 'Weekend Preview', status: 'held', version: v,
+  headline: 'HELD DRAFT ' + v + ' — must never reach the cover',
+  dek: 'A draft the fact check stopped.', week: 3, publishedAt: FRESH,
+  url: '/in-season/desk/weekend-preview/3'
+})) };
 const SEASON = { ok: true, phase: 'regular', phaseLabel: 'Regular season',
   week: { label: 'Week 3', status: 'upcoming', firstKickoff: Date.UTC(2026, 8, 17, 20, 15) },
   counts: { inProgress: 0 } };
@@ -135,7 +158,13 @@ const server = http.createServer((req, res) => {
     if (MODE === 'live') {
       if (u.pathname === '/api/vegas-edge') body = EDGE;
       else if (u.pathname === '/api/dfs') body = DFS;
-      else if (u.pathname === '/api/content') body = CONTENT;
+      // The band reads the PUBLISHED feed. /api/content is the archive — it
+      // carries held drafts and one row per version — and the page used to
+      // read it, which put five unpublished drafts of one story on the cover.
+      // Answering it with poison here means a page that goes back to it fails
+      // these assertions loudly instead of quietly showing drafts again.
+      else if (u.pathname === '/api/newsroom') body = CONTENT;
+      else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
     }
     res.writeHead(200, { 'content-type': 'application/json' });
@@ -153,6 +182,11 @@ const browser = await chromium.launch({ executablePath: CHROME });
 const errors = [];
 async function open(width, height) {
   const ctx = await browser.newContext({ viewport: { width, height } });
+  // The frozen clock, set before any page script runs. Only Date.now is
+  // replaced: the page reads timestamps out of its feeds with new Date(value),
+  // which is unaffected, and the rotation is the one thing that asks the clock
+  // what time it is now.
+  await ctx.addInitScript(t => { Date.now = () => t; }, CLOCK);
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(`${width}px: ${e.message}`));
   await page.goto(BASE, { waitUntil: 'networkidle' });
@@ -295,9 +329,15 @@ console.log('\nwith the boards answering');
      /default scoring/.test(r.fine || '') && /Week 3/.test(r.fine || ''), r.fine);
 
   ok('the articles section is shown', r.articles === true);
-  ok('it is a SMALL group — four at most', r.cards.length === 4, String(r.cards.length));
+  ok('it is a SMALL group — three at a time', r.cards.length === 3, String(r.cards.length));
   ok('every card has a real destination',
      r.cards.every(h => /^\/in-season\/desk\//.test(h)), r.cards.join(','));
+  // THE ARCHIVE IS NOT THE COVER. Held drafts are served at /api/content in
+  // this harness; a card carrying one means the page read the archive again.
+  ok('no held draft reaches the cover', !/HELD DRAFT/.test(r.body),
+     (r.body.match(/HELD DRAFT \d/) || [''])[0]);
+  ok('and no story appears on the cover twice',
+     new Set(r.cards).size === r.cards.length, r.cards.join(','));
 
   // ── the hero's picture ────────────────────────────────────────────────
   // The page had no photograph of a football player on it at all. It has one
@@ -332,14 +372,19 @@ console.log('\nwith the desk naming nobody');
   const { page, ctx } = await open(1280, 900);
   const r = await read(page);
   ok('the hero still carries a picture', r.edge === true && r.edgePlate === true);
-  ok('it is the widest disagreement on the board', r.edgeName === 'Cam Ward', r.edgeName);
+  // One of the widest gaps, taking its turn — the first of them at turn 0.
+  // It used to be the single widest and nothing else, which is how one player
+  // held the cover for a day and a half while the cards under him rotated.
+  ok('it is a gap off the top of the board', r.edgeName === 'Cam Ward', r.edgeName);
   ok('and it says so', /market gap/i.test(r.edgeK || ''), r.edgeK);
+  ok('but it no longer claims to be the widest, because it takes turns',
+     !/widest/i.test(r.edgeK || ''), r.edgeK);
   ok('captioned with the two numbers and the gap between them',
      /19\.9/.test(r.edgeGap || '') && /15\.2/.test(r.edgeGap || '') && /\+4\.7/.test(r.edgeGap || ''), r.edgeGap);
   ok('never the player the Fantasy card already recommends',
      r.edgeName !== 'Drake London' && /Drake London/.test(r.fnRead || ''), r.edgeName);
   ok('a piece with no findings still gets a card, just no faces on it',
-     r.cards.length === 4 && r.cardFaces === 0, r.cards.length + '/' + r.cardFaces);
+     r.cards.length === 3 && r.cardFaces === 0, r.cards.length + '/' + r.cardFaces);
   CONTENT.pieces = full;
   await ctx.close();
 }

@@ -1,10 +1,26 @@
-# Sync My League: audit, architecture and status
+# The saved league: architecture and status
 
-Working document for the League Sync feature. Part 1 is the audit of what the
-repo already had on the day this was written (2026-09-09). Part 2 is the design
-that was built on it. Part 3 is the status of each deliverable, the provider
-terms, the flags, the env vars and the deployment steps. HANDOFF.md carries
-the short version; this is the long one.
+A reader describes the league they actually play in and every in-season surface
+reads it: their exact scoring, their roster, every other roster, the free-agent
+pool and the standings. It is infrastructure, not a page — the model lives in
+D1 and the pages read it.
+
+> **The platform connectors were removed on 2026-09-18** (HANDOFF §89). Sleeper,
+> Yahoo, CBS and the ESPN placeholder are gone, and with them the OAuth flow,
+> the sealed provider tokens, the scheduled refresh and the CBS browser
+> extension. None of them ever carried a reader's league in production: Sleeper
+> never cleared its non-commercial grant, Yahoo never ran against a live
+> account, CBS never completed an import, and ESPN never had a supported path.
+> **Iron Tuna now makes no request to any fantasy platform on a reader's
+> behalf and stores no provider credential of any kind.**
+>
+> Everything below describes what remains, which is the half that works: the
+> normalized model, the player crosswalk, the personalization modules, and the
+> one way a league arrives — the reader's own entry.
+
+Part 1 is the audit of the application the model was built on. Part 2 is the
+design. Part 3 is the status of each piece. HANDOFF.md carries the short
+version; this is the long one.
 
 ---
 
@@ -136,6 +152,7 @@ still check `isEntitled`, so signing in for league sync does not unlock them.
 | 9 | ESPN investigation | No public API, no OAuth, the undocumented endpoint is already red-listed, and a private league needs the reader's session cookies. **Not implemented**; the adapter placeholder reports why; manual is the fallback. Adding it later touches `PROVIDER_ESPN` only. |
 | 10 | Manual fallback | `PROVIDER_MANUAL` + `/api/leagues/manual`: settings form, roster by name (the one place name matching is allowed), optional other rosters; same model, same modules. The browser-only records (`ITInSeason`, `ITLeague`) are untouched and still work. |
 | 10a | Roster grid screenshot | The by-hand form also takes a screenshot of a league's roster grid. The image goes to the existing `/api/roster-read`, whose reply (`teams[{name, players[{name,pos,team}]}]`) is posted to `/api/leagues/manual` as `teams[]`, a shape `leagueManualUpsert` already accepted. The reader returns names only: every player is stored `bench`, and a bare name is resolved to a position by trying each one against the board. The reader picks which team is theirs before the save; a grid cannot say. A read replaces the previous one rather than appending, because nothing distinguishes the same screenshot sent twice from two teams sharing a name. `leagueLineup` reports `slotsKnown:false` and withholds `currentTotal`, `improvement` and `changes` where no slot is known. Scoring and the starting-lineup shape are not in a grid and still come from the form. No extension, no platform sign-in, no token. |
+| 10b | Roster grid in §02 | The same reader is mounted twice. `it-roster-grid.js` owns it — paste, drag or picker, several images at once, the team picker — and both the by-hand form in §01 and box **04** of §02 mount it. §02 is where a reader who never opens §01 pastes their rosters, so its save writes the league record directly: the settings form beside it is submitted first, then `POST /api/leagues/manual` carries `teams[]` plus that form's scoring, lineup and budget. It updates the account's manual league where there is one and creates it where there is not — never a synced league, which its next sync would overwrite. Signed out, the read stays on screen and the box asks for a sign-in rather than dropping it. Box **02** is titled *Insert Starting Lineup*: it reads slot counts, not players, and calling it "Insert Rosters" is what sent roster screenshots into a box that could not read them. |
 | 11 | Database changes | Eleven tables, created lazily by `leagueReady` (the repo's pattern): leagues, league_teams, league_roster_players, league_matchups, league_transactions, league_snapshots, league_sync_runs, provider_connections, league_provider_tokens, player_id_map, player_map_misses. No existing table changed. |
 | 12 | UI changes | it-sync.js; My Leagues (my-league.html); My Week (my-week.html); hooks on rankings, FAAB, Trade Finder, player card, fantasy hub, in-season hub, lead story, desk pieces; the admin card; nav and footer (My Leagues, My Week); the privacy policy. |
 | 13 | Sync scheduling | Job `league-sync` hourly (phase 2); per-league due time from `leagueNextSyncAt`: hourly Sunday 8 AM to 4 PM ET, three-hourly Tue/Wed, six-hourly otherwise; backoff 15 min doubling to 24 h on failure; 40 leagues per tick, three at a time; Sync Now limited to one per two minutes per league. |
