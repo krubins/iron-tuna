@@ -1166,6 +1166,40 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
    runs on after the name ("Alpha BackRB") is the bug this exists to stop. */
 .is-table td.rk-who b { color: var(--text) }
 .is-table td.rk-who small { display: block; color: var(--muted); font-size: var(--fs-2xs) }
+
+/* ── the two read-lines under a name ───────────────────────────────────────
+   One sentence on the player, one on the opportunity in front of him. Both
+   boards that print them are listed: `.rk-vs td.rk-who` is the sixteen
+   published rankings pages (it-ranks.js) and `.rk-table td.p` is the /rankings
+   tool. The stats board also shares td.rk-who and is deliberately NOT here: it
+   prints what was played, which has no opportunity to grade.
+
+   The cell takes a floor width so the sentences wrap to a readable measure
+   instead of stretching an eleven-column table, and a ceiling so they do not
+   run the width of a desk monitor.
+
+   THE SPECIFICITY IS LOAD-BEARING on /rankings. Its own sheet carries
+   `.rk-table td.p span { display:block; font-size:12px; color:var(--muted) }`
+   for the position under the name, inline and therefore later than this file,
+   so every rule below has to out-specify it — three classes, not two — and the
+   key has to name its own `display`, which on the other sixteen pages it
+   inherits from nothing.
+
+   The two keys borrow the board's own two colours, and mean the same thing
+   they mean on the column groups above: teal is the fantasy read of the
+   player, gold is the market's read of his week. */
+.rk-vs td.rk-who, .rk-table td.p { min-width: 15rem }
+.rk-vs td.rk-who .rk-read, .rk-table td.p .rk-read {
+  display: block; max-width: 34rem; margin-top: 4px;
+  font-size: var(--fs-2xs); line-height: 1.4; letter-spacing: normal;
+  color: var(--sec); white-space: normal; text-transform: none;
+}
+.rk-vs td.rk-who .rk-read-k, .rk-table td.p .rk-read-k {
+  display: inline; margin-right: 5px; font-size: var(--fs-3xs); font-weight: 800;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
+}
+.rk-vs td.rk-who .rk-read-pl .rk-read-k, .rk-table td.p .rk-read-pl .rk-read-k { color: var(--teal) }
+.rk-vs td.rk-who .rk-read-op .rk-read-k, .rk-table td.p .rk-read-op .rk-read-k { color: var(--goldink) }
 .rk-vs .rk-basis { font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
 
 /* ── the week-by-week drawer ──────────────────────────────────────────────
