@@ -12472,3 +12472,63 @@ names neither field, so no row carries them: the lineup's `bankedPoints` and
 `bankedPlayers` are the only place the played half of a slate reaches the
 model. That is main's gap, not this branch's, and fixing it means adding two
 fields to `coachRow` — left alone here rather than widened into.
+
+## 110. September 20: the prompt described a field no row carried
+
+§109 closed with a loose end, and this is it. #297 taught the Value Coach's
+vocabulary block to read a played afternoon off a player row — *"a player row
+carrying `gamePlayed` with an actual is settled; one carrying `gamePlayed`
+with no actual is a defense whose game is over and whose number is still an
+estimate"* — and `coachRow` named neither field. The only place the settled
+half of a slate reached the model was the lineup's `bankedPoints` total, so a
+reader asking at four o'clock why a seat projects what it does was answered
+off an estimate the board had already replaced, and the prompt was describing
+a field that did not exist.
+
+`coachRow` carries three now, through the page's own `actualOf()` so a row and
+the `final` chip beside it cannot disagree:
+
+| Field | What |
+|---|---|
+| `gamePlayed` | true once his club's game is final. Absent otherwise, never `false`. |
+| `actual` | what he scored. **A banked `0` is a result** — he dressed and did nothing — so this reads `gamePlayed` rather than testing the number, and the row builder's `== null` sweep leaves a zero alone. |
+| `actualFrom` | the slate's own `actualBasis`: `box-score`, `box-score-absent`, `no-defense-box-score`, `no-kicking-box-score`. |
+
+The prompt gained the zero and lost an inaccuracy: a kicker produces
+`gamePlayed` with no actual for the same reason a defense does, and it said
+only "a defense".
+
+**And the follow-up found a bug §109 shipped.** The builder excludes a played
+man on `banked(p) != null` — a *scored* actual — not on `gamePlayed`
+(`dfs-optimizer.js`, the pool filter). A defense or a kicker whose game is
+final has `gamePlayed` with `actualPoints: null`, so it **stays in the pool and
+can be seated in the recommended roster**. §109's `coachBoard` filtered on
+`isPlayed`, which dropped exactly those men: the index was the one pool on the
+page missing a player the roster above it had already used, which is the
+failure this whole index exists to prevent. It filters on `isBanked` now, the
+builder's own rule, and marks the survivors with a `basis` of `est`.
+
+`est` beats `season` where a row could carry both, because the clock is the
+more urgent fact: a number for an afternoon already over is not a forecast of
+anything, whatever it was built from.
+
+| Where | What |
+|---|---|
+| `dfs.html` | `gamePlayed`/`actual`/`actualFrom` on `coachRow`; `coachBoard` filtering on `isBanked` rather than `isPlayed`; the `est` basis and its line in `coachBoardNote`. |
+| `dfs-coach.js` | the zero-is-a-result clause, the kicker, and the two `basis` values the index can carry. |
+| `docs/ai-calculation-boundary.md` | the settled half of a slate as transport, and the banked-not-played rule. |
+| `tools/test-dfs-coach.mjs` | 162 now: the three fields on a settled row, a banked zero that survives the `== null` sweep, a defense that carries no actual to quote as one, a man still to play carrying neither field, and the finished defense that is ON the index at `est` while a banked man is off it. |
+
+`node tools/test-dfs-coach.mjs` (162) and every other node gate in
+`checks.yml` except `test-dry-run` pass, plus the four `--check` generators,
+both script parses and the control-byte scan. Driven in Chromium against a
+three-game stubbed slate whose last game is FINAL — 28 played rows, 26 of them
+scored, two defenses without a box score — built by the worker's own
+`buildDfsSlate`/`dfsActualFor`: the captured payload carries
+`LAC Defense … gamePlayed: true, actualFrom: "no-defense-box-score"` with no
+`actual` to quote, two men at `actual: 0` from `box-score-absent`, and both
+finished defenses on the board index as
+`LAC Defense|LAC|vs KC|3200|8.6|19.5|14.1|133|est`. The DST count on the index
+goes 4 → 6 against §109's build, which is the bug above, and the defense the
+builder seated in the recommended roster is now in both places. No page errors
+at 1280 or 390px.

@@ -2950,7 +2950,26 @@ p{color:var(--sec);margin:0 0 16px}
       // confidence as a $9,000 one, which is the exact mistake this tier
       // invites.
       projectionFrom: p.supplemental ? (p.projectionBasis === 'operator' ? 'operator season average, not on the board' : 'his own season-to-date line, not on the board') : null,
-      projectionGames: p.supplemental && p.supplementalGames ? Number(p.supplementalGames) : null
+      projectionGames: p.supplemental && p.supplementalGames ? Number(p.supplementalGames) : null,
+      // WHETHER THIS AFTERNOON ALREADY HAPPENED. #297's vocabulary block told
+      // the coach that "a player row carrying gamePlayed with an actual is
+      // settled" — and no row carried either field, so the only place the
+      // played half of a slate reached the model was the lineup's
+      // bankedPoints total. A reader asking at four o'clock why a seat
+      // projects what it does was answered off an estimate the board had
+      // already replaced, and the prompt was describing a field that did not
+      // exist. Both travel now, through the page's own actualOf() so the row
+      // and the `final` chip beside it cannot disagree.
+      //
+      // A zero is a RESULT here (he dressed and did nothing), which is why
+      // this reads gamePlayed rather than testing the number: actual 0 is
+      // settled, a missing actual is not.
+      gamePlayed: p.gamePlayed ? true : null,
+      actual: p.gamePlayed ? coachN(actualOf(p)) : null,
+      // Why there is no actual, in the slate's own words: a defense or a
+      // kicker is scored on stats the stored box score never collected, so
+      // his number is still the projection.
+      actualFrom: p.gamePlayed && p.actualBasis ? p.actualBasis : null
     };
     if (extra) for (var k in extra) r[k] = extra[k];
     for (var j in r) if (r[j] == null) delete r[j];
@@ -2985,13 +3004,20 @@ p{color:var(--sec);margin:0 0 16px}
       // missing them -- and they are the cheap bodies a question about a
       // price point is most often about.
       //
-      // A man who is Out, Doubtful or not on a roster is off the board, and
-      // so is one whose game has finished (#297: no entry submitted now could
-      // contain him, which is why stillToPlay keeps him out of the solve).
-      // Offering either from the index would be offering a player the page
-      // would refuse to build with. Questionable stays, flagged, because that
-      // call belongs to the reader.
-      if (!projected(p) || p.available === false || isPlayed(p)) return;
+      // A man who is Out, Doubtful or not on a roster is off the board, and so
+      // is one whose afternoon is BANKED: no entry submitted now could contain
+      // him, which is why the builder refuses to spend a seat on him.
+      //
+      // BANKED, NOT PLAYED, and the difference is a real seat. The builder
+      // excludes on `banked(p) != null` — a scored actual — not on
+      // gamePlayed, so a defense or a kicker whose game is final but whose
+      // number is still the projection stays in the pool and can be seated in
+      // the recommended roster. Filtering this index on isPlayed dropped
+      // exactly those men, which made it the one pool on the page missing a
+      // player the roster above it had already used. It marks them instead.
+      // Questionable stays too, flagged, because that call belongs to the
+      // reader.
+      if (!projected(p) || p.available === false || isBanked(p)) return;
       (by[p.position] || (by[p.position] = [])).push(p);
     });
     var out = {};
@@ -3007,11 +3033,13 @@ p{color:var(--sec);margin:0 0 16px}
                        coachN(p.ironTunaPoints != null ? p.ironTunaPoints : p.proj),
                        coachN(p.ceiling), coachN(p.ownership),
                        p.value == null ? '' : Number(p.value),
-                       // What the projection IS, where it is not the board's:
-                       // a supplemental row's number is what he has already
-                       // done, not a forecast of Sunday, and a line that does
-                       // not say so reads like every other line.
-                       p.supplemental ? 'season' : '',
+                       // What the projection IS, where it is not a forward
+                       // read on a game still to come. `est` wins over
+                       // `season` because the clock is the more urgent fact:
+                       // a number for an afternoon that is already over is
+                       // not a forecast of anything, whatever it was built
+                       // from.
+                       p.gamePlayed ? 'est' : p.supplemental ? 'season' : '',
                        p.weekStatus || ''];
           while (cells.length && (cells[cells.length - 1] == null || cells[cells.length - 1] === '')) cells.pop();
           return cells.map(function (c) { return c == null ? '' : c; }).join('|');
@@ -3026,6 +3054,10 @@ p{color:var(--sec);margin:0 0 16px}
       + 'not playing this week, or has already played, which is a fact about the clock and never a view on the player. '
       + 'A basis of "season" marks a supplemental row: he is not on this week\u2019s board, and his number is his own '
       + 'season-to-date line scaled by his club\u2019s week, so it is what he has done rather than a forecast of Sunday. '
+      + 'A basis of "est" marks a man whose game is already final and who has no box score to be scored from \u2014 a '
+      + 'defense or a kicker \u2014 so the number beside him is still the projection it was before kickoff. The builder '
+      + 'can still seat him, which is why he is here, but say what that number is before recommending him. Anyone whose '
+      + 'afternoon produced an actual is off this index entirely: no entry submitted now could contain him. '
       + 'The market read, the floor, the leverage and the availability note live on the detailed rows above, not on '
       + 'these lines.';
   }

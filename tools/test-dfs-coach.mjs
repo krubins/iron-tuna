@@ -157,6 +157,12 @@ console.log('\nthe prompt');
      /1 for a fully quoted man, about 0\.8 off a game line, about 0\.55 off a fitted rating, 0 for nobody/.test(s));
   ok('it can answer whether the market read is worth trusting this week',
      /slate\.marketCoverage says how much of the whole board was priced/.test(s));
+  ok('it reads a settled afternoon off the row, and knows a zero is a result',
+     /A player row carrying gamePlayed with an actual is settled/.test(s)
+     && /an actual of 0 is a result rather than a missing number/.test(s));
+  ok('and it names both bodies whose game is over without a number to show for it',
+     /is a defense or a kicker whose game is over/.test(s)
+     && /neither box score is stored, and actualFrom says which/.test(s));
   ok('it says a flagged player is flagged, and never invents one',
      /never call a flagged man healthy, and never invent a designation the data does not carry/.test(s));
   ok('it knows Questionable is deliberately still on the board, and Out is not',
@@ -201,7 +207,7 @@ console.log('\nthe prompt');
   ok('and a board line is not dressed up as a detailed row',
      /quote what you have and say plainly what a line does not carry/.test(s));
   ok('a missing name is read as off this board, and a trimmed index is not read as one',
-     /he is outside the games the reader selected, he is not playing, or his game has already been played/.test(s)
+     /he is outside the games the reader selected, he is not playing, or his game is over and he has a score on the board/.test(s)
      && /which is a fact about the clock, never a view on the player/.test(s)
      && /say the deep end of it was trimmed rather than calling a missing player unavailable/.test(s));
 }
@@ -295,7 +301,7 @@ console.log('\nthe row the coach is handed');
 {
   const mod = [lift(/function fppgEdge\(/), lift(/function coachN\(/), lift(/var MARKET_CHIP = /),
     lift(/function marketChipFor\(/), lift(/function coachMarket\(/), lift(/function coachStatus\(/),
-    lift(/function coachRow\(/), 'export { coachN, coachRow };'].join('\n');
+    lift(/function actualOf\(/), lift(/function coachRow\(/), 'export { coachN, coachRow };'].join('\n');
   const { coachN, coachRow } = await import('data:text/javascript;base64,' + Buffer.from(mod, 'utf8').toString('base64'));
   ok('a number is rounded, never re-derived', coachN(18.44) === 18.4 && coachN(18.46) === 18.5 && coachN(0.0173, 2) === 0.02);
   ok('a missing number stays missing', coachN(null) === null && coachN(undefined) === null && coachN('x') === null);
@@ -350,6 +356,41 @@ console.log('\nthe row the coach is handed');
   ok('a field the board does not carry is absent, not zero',
      !('own' in thin) && !('dkFppg' in thin) && !('tdPct' in thin) && thin.proj === 7.1,
      JSON.stringify(thin));
+
+  // THE GAP THIS CLOSED. #297 taught the prompt to read `gamePlayed` and an
+  // `actual` off a player row, and no row carried either: the only place a
+  // played afternoon reached the model was the lineup's bankedPoints total,
+  // so the coach answered "why this seat" off an estimate the board had
+  // already replaced. The prompt was describing a field that did not exist.
+  const settled = coachRow({ name: 'Finished Back', position: 'RB', team: 'DET', salary: 7200,
+    ironTunaPoints: 18.2, gamePlayed: true, actualPoints: 24.36, actualBasis: 'box-score' });
+  ok('a man whose game is final carries what he actually scored, rounded like every other number',
+     settled.gamePlayed === true && settled.actual === 24.4 && settled.actualFrom === 'box-score',
+     JSON.stringify(settled));
+  // A zero is a RESULT here, and `== null` deletion must not eat it: he
+  // dressed and did nothing, which is exactly what the reader is asking about.
+  const blanked = coachRow({ name: 'Absent Body', position: 'WR', team: 'CHI', salary: 4200,
+    ironTunaPoints: 9.4, gamePlayed: true, actualPoints: 0, actualBasis: 'box-score-absent' });
+  ok('and a zero survives as a result rather than being dropped as a missing field',
+     blanked.gamePlayed === true && blanked.actual === 0 && 'actual' in blanked,
+     JSON.stringify(blanked));
+  // The one the prompt calls out: his game is over and his number is still
+  // the projection, because no defensive box score is stored.
+  const est = coachRow({ name: 'Bears ', position: 'DST', team: 'CHI', salary: 3000,
+    ironTunaPoints: 7.1, gamePlayed: true, actualPoints: null, actualBasis: 'no-defense-box-score' });
+  ok('a defense whose game is over says so, and carries no actual to quote as one',
+     est.gamePlayed === true && !('actual' in est) && est.actualFrom === 'no-defense-box-score',
+     JSON.stringify(est));
+  ok('a man whose game has not kicked off carries neither field, rather than a false',
+     !('gamePlayed' in coachRow({ name: 'Still To Play', position: 'TE', team: 'GB', salary: 3800,
+       ironTunaPoints: 8, gamePlayed: false }))
+     && !('actual' in coachRow({ name: 'Still To Play', position: 'TE', team: 'GB', salary: 3800,
+       ironTunaPoints: 8 })));
+  // The row reads through the page's own actualOf(), so a lineup row (which
+  // calls it `actual`) and a slate row (`actualPoints`) cannot disagree.
+  ok('a lineup row and a slate row say the same thing about the same afternoon',
+     coachRow({ name: 'X', position: 'RB', team: 'DET', salary: 5000, proj: 10,
+       gamePlayed: true, actual: 13.27 }).actual === 13.3);
 }
 
 console.log('\nthe whole board the coach can now read');
@@ -359,8 +400,8 @@ console.log('\nthe whole board the coach can now read');
   // coach used to answer it by listing the three receivers that happened to
   // be in the lineup. Every priced player the solve could have used is one
   // line of the index now, so the answer is in the data.
-  const mod = [lift(/function coachN\(/), lift(/function isPlayed\(/), lift(/function projected\(/),
-    lift(/function coachBoard\(/), lift(/function coachBoardNote\(/),
+  const mod = [lift(/function coachN\(/), lift(/function actualOf\(/), lift(/function isBanked\(/),
+    lift(/function projected\(/), lift(/function coachBoard\(/), lift(/function coachBoardNote\(/),
     "var COACH_BOARD_COLUMNS = 'name|team|opp|salary|proj|ceiling|own|value|basis|status';",
     'export { coachBoard, coachBoardNote, COACH_BOARD_COLUMNS };'].join('\n');
   const { coachBoard, coachBoardNote, COACH_BOARD_COLUMNS } =
@@ -378,10 +419,20 @@ console.log('\nthe whole board the coach can now read');
       weekStatus: 'Questionable' },
     { onBoard: true, name: 'Hurt Back', position: 'RB', team: 'LAC', salary: 5200, ironTunaPoints: 9.9,
       weekStatus: 'Out', available: false },
-    // #297: his game is final, so no entry submitted now could contain him.
+    // #297: his afternoon is banked, so no entry submitted now could contain him.
     { onBoard: true, name: 'Early Game', position: 'WR', team: 'MIA', opponent: 'NE', home: true, salary: 5600,
       ironTunaPoints: 16.2, ceiling: 30.1, ownership: 18.4, value: 132, cashScore: 140,
       gamePlayed: true, actualPoints: 21.3 },
+    // A zero is banked too: he dressed and did nothing, and that is a result.
+    { onBoard: true, name: 'Dressed And Idle', position: 'WR', team: 'NE', opponent: 'MIA', home: false,
+      salary: 4000, ironTunaPoints: 7.2, gamePlayed: true, actualPoints: 0, actualBasis: 'box-score-absent' },
+    // BUT a defense whose game is final has no box score to be scored from,
+    // so `banked` is null and the BUILDER WILL STILL SEAT HIM. The index has
+    // to carry him or it is the one pool on the page missing a man the roster
+    // above it used.
+    { onBoard: true, name: 'Finished D', position: 'DST', team: 'LAC', opponent: 'KC', home: true, salary: 3000,
+      ironTunaPoints: 8.6, ceiling: 17.2, ownership: 9.4, value: 104, cashScore: 101,
+      gamePlayed: true, actualPoints: null, actualBasis: 'no-defense-box-score' },
     // #301: not on this week's board, but the solve can use him, so the index
     // has to carry him — he is the cheap body a price question is about.
     { onBoard: false, projected: true, supplemental: true, supplementalGames: 3,
@@ -391,7 +442,7 @@ console.log('\nthe whole board the coach can now read');
   ] };
   const b = coachBoard(view, 'cashScore');
   ok('every priced player the solve could use is on it, grouped by position',
-     Object.keys(b).join() === 'WR' && b.WR.length === 3, JSON.stringify(b));
+     Object.keys(b).join() === 'DST,WR' && b.WR.length === 3, JSON.stringify(b));
   // THE REGRESSION THIS BLOCKS. #301 moved the solve, the bench and the pool
   // table from `onBoard` to `projected`, which let the supplemental
   // minimum-salary tier in. An index still filtering on `onBoard` would be
@@ -416,13 +467,30 @@ console.log('\nthe whole board the coach can now read');
   // He would otherwise sit at the top of the index on his finished afternoon
   // and read as the best body at his price, which is the one recommendation
   // nobody can act on.
-  ok('and neither is a man whose game is already over, however well he scored',
+  ok('and neither is a man whose afternoon is banked, however well he scored',
      !b.WR.some((r) => /Early Game/.test(r)), JSON.stringify(b.WR));
-  ok('the note says that is the clock talking and not a view on the player',
-     /has already played, which is a fact about the clock and never a view on the player/
-       .test(coachBoardNote('cashScore')));
+  ok('a banked zero is banked too, not a missing number that keeps him eligible',
+     !b.WR.some((r) => /Dressed And Idle/.test(r)), JSON.stringify(b.WR));
+  // THE BUG THIS BLOCKS, and it is the one this whole index exists to prevent:
+  // a pool on the page that disagrees with the roster above it. The builder
+  // excludes on a BANKED actual, not on gamePlayed, so a defense whose game is
+  // final but whose number is still the projection stays in the pool and can
+  // be seated. An index filtering on isPlayed dropped exactly those men.
+  ok('but a finished defense, whom the builder will still seat, is on the index',
+     !!b.DST && b.DST.length === 1, JSON.stringify(b.DST));
+  ok('and his line says the number beside him is still an estimate',
+     b.DST[0] === 'Finished D|LAC|vs KC|3000|8.6|17.2|9.4|104|est', b.DST[0]);
+  ok('the note explains that basis, and that a banked man is gone rather than hidden',
+     /A basis of "est" marks a man whose game is already final/.test(coachBoardNote('cashScore'))
+     && /The builder can still seat him, which is why he is here/.test(coachBoardNote('cashScore'))
+     && /Anyone whose afternoon produced an actual is off this index entirely/
+          .test(coachBoardNote('cashScore')));
   ok('and a body the board could not price is not on it either',
      !b.WR.some((r) => /Unpriced Body/.test(r)));
+  ok('the prompt reads the same two bases the line can carry',
+     /A basis of "est" on a line is a man whose game is already final/.test(coach.SYSTEM)
+     && /A basis of "season" on a line is the SEASON read above/.test(coach.SYSTEM)
+     && /Anyone whose afternoon produced an actual is off the index entirely/.test(coach.SYSTEM));
   ok('the index says what it is and what it is not, in the data beside it',
      /whole\s+eligible board rather than a shortlist/.test(coachBoardNote('cashScore'))
      && coachBoardNote('cashScore').includes(COACH_BOARD_COLUMNS)
