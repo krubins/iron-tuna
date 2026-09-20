@@ -89,6 +89,11 @@
       if (cfg.maxPerTeam && team[p.team] > cfg.maxPerTeam) return false;
     }
     if (salary > cfg.cap) return false;
+    // A required player is a CONSTRAINT, not a preference. The greedy fill can
+    // fail to seat one (two locked quarterbacks, a lock whose only slot was
+    // taken), and a roster that quietly drops the player the reader asked for
+    // is worse than no roster at all: it answers a question nobody asked.
+    if (cfg.lock) for (var lid in cfg.lock) if (!ids[lid]) return false;
     if (cfg.stack) {
       var qb = lineup[cfg.slots.indexOf('QB')];
       if (!qb) return false;
@@ -112,6 +117,7 @@
       if (ids[p.id]) pen += 1; ids[p.id] = 1;
       salary += p.salary; team[p.team] = (team[p.team] || 0) + 1;
     }
+    if (cfg.lock) for (var lid in cfg.lock) if (!ids[lid]) pen += 1;
     if (cfg.maxPerTeam) for (var t in team) if (team[t] > cfg.maxPerTeam) pen += team[t] - cfg.maxPerTeam;
     if (salary > cfg.cap) pen += (salary - cfg.cap) / 500;
     if (cfg.stack) {
@@ -143,6 +149,13 @@
       if (p.available === false && !lock[p.id] && !o.includeUnavailable) { benched.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, status: p.weekStatus || 'Out' }); return false; }
       return true;
     });
+    // A lock the board cannot honor -- a player who is off the slate, unpriced,
+    // or excluded in the same breath -- is dropped here rather than made into a
+    // constraint no lineup can satisfy. What survives, valid() enforces. An
+    // unavailable player the reader locked stays: the filter above kept him.
+    var inPool = {}; pool.forEach(function (p) { inPool[p.id] = 1; });
+    for (var lid in lock) if (!inPool[lid]) delete lock[lid];
+    cfg.lock = lock;
     var rnd = mulberry(o.seed || 7);
     var n = Math.max(1, Math.min(20, o.lineups || 1));
     var results = [], used = {};
@@ -153,11 +166,16 @@
       var lineup = new Array(slots.length).fill(null);
       var taken = {}, salary = 0, team = {};
       var place = function (p, i) { lineup[i] = p; taken[p.id] = 1; salary += p.salary; team[p.team] = (team[p.team] || 0) + 1; };
-      // Locks first, into the first slot they fit.
+      // Locks first, into a dedicated slot before FLEX: a required running back
+      // who takes the FLEX seat because it was scanned first strands the other
+      // required back with nowhere legal to sit.
       for (var id in lock) {
         var lp = pool.filter(function (p) { return p.id === id; })[0];
         if (!lp) continue;
-        for (var i = 0; i < slots.length; i++) if (!lineup[i] && eligible(lp.position, slots[i], cfg.flex)) { place(lp, i); break; }
+        var fit = [];
+        for (var i = 0; i < slots.length; i++) if (!lineup[i] && eligible(lp.position, slots[i], cfg.flex)) fit.push(i);
+        fit.sort(function (a, b) { return (slots[a] === 'FLEX' ? 1 : 0) - (slots[b] === 'FLEX' ? 1 : 0); });
+        if (fit.length) place(lp, fit[0]);
       }
       // Then greedy by value per dollar with noise, thinnest slots first
       // (the slot with the fewest eligible players is the one a late pick
@@ -300,7 +318,7 @@
     }
     return { ok: results.length > 0, mode: mode.label, lineups: results, poolSize: pool.length, cap: cfg.cap,
              benched: benched, benchedCount: benched.length,
-             note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? '' : 's') + ' satisfy the constraints.' : null };
+             note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? ' satisfies' : 's satisfy') + ' the constraints.' : null };
   }
   // ── what an ordinary entry scores ────────────────────────────────────────
   // A projection printed by itself has no scale. 133.8 is a good number or a

@@ -12162,3 +12162,46 @@ Driven in Chromium against a slate carrying both shapes: the payload shows
 0.55` with neither, the page's own sentence on the recommended roster and not
 on the bench, a Questionable receiver with his note and source, and eight of
 nine roster rows carrying no status field at all.
+
+## 106. September 20: the coach answered every question into a box zero pixels tall
+
+Reported from the page: type a question into the Value Coach, press Enter, and
+the panel "just resets as if nothing happened." Nothing was wrong with the
+send. The question went out, the proxy answered, both bubbles were written into
+the log — and the reader saw an empty panel, because the log itself had been
+squeezed to **zero height**.
+
+`.df-coach-main` is a flex column that scrolls, and every child of it except
+the conversation is `flex:0 0 auto`: the lede, the four openers, the input row,
+the compliance note. The conversation (`.df-coach-body`, `flex:1 1 auto;
+min-height:0`) was therefore the only child that could absorb an overflow, so
+on a short window it absorbed all of it. The dock is `min(76vh,700px)`; at a
+650-pixel window that is 494 pixels, and the fixed parts alone take more than
+that. Measured in Chromium against the real stylesheet:
+
+| Window height | Panel | Conversation after one question |
+|---|---|---|
+| 1080 / 900 / 800 | 504 | 96px, both bubbles on screen |
+| 720 | 447 | 39px, one bubble clipped |
+| 650 | 394 | **0px** — `scrollHeight` 96, rendered height nothing |
+
+So the bug was only ever visible on a laptop-sized window, which is why it read
+as an intermittent send failure rather than as layout.
+
+**The panel now has two shapes and says which one it is in.** `render()`
+toggles `df-coach-talking` on the host whenever there is a conversation. Empty,
+nothing changes: the lede and the four openers spread out as an invitation.
+Talking, the page gives that room to the answer — the lede is dropped and the
+openers fold into one horizontally scrolling row, so they are still there to
+click. Three guards, because one was what failed:
+
+| Where | What |
+|---|---|
+| `dfs-coach.js` | `host.classList.toggle('df-coach-talking', msgs.length > 0)` in `render()`; the finished render also scrolls `.df-coach-main`, not only the log, so a new turn cannot land under the input. |
+| `dfs.html` | `.df-coach-body:not(:empty){min-height:132px}` — a floor nothing can squeeze below — plus the talking rules for the lede and the openers. |
+| `tools/test-dfs-coach.mjs` | 123 now: the class, the two scrolls, the floor, and the room. |
+
+Driven in Chromium at 1280×420, 1280×650, 390×600, 390×740 and 1440×1080, five
+turns deep on both the harness and `/dfs` itself: the newest answer is inside
+the visible log and the input is on screen in every one, where at 650 the same
+question previously rendered into nothing.

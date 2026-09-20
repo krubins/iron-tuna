@@ -211,7 +211,19 @@
             + esc(m.text).replace(/\n/g, '<br>') + '</div>';
         }).join('');
       }
+      // The panel has two shapes, and the class says which one it is in: an
+      // empty one is an invitation, with the lede and the four openers spread
+      // out; one with a conversation in it gives that room to the conversation
+      // (the page's stylesheet folds the openers into a single scrolling row
+      // and drops the lede), because on a short window those two took the space
+      // the answer needed and the reply rendered into nothing.
+      host.classList.toggle('df-coach-talking', msgs.length > 0);
       elBody.scrollTop = elBody.scrollHeight;
+      // A new message can also push the input below the fold when the panel
+      // itself is the thing scrolling, so the newest turn is brought into view
+      // rather than left under it. Only on a finished render: doing it per
+      // token would drag the panel back down under a reader scrolling up.
+      if (!streaming && elMain) elMain.scrollTop = elMain.scrollHeight;
     }
     function push(role, text) {
       msgs.push({ role: role, text: text });
