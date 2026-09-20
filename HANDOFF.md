@@ -14807,3 +14807,158 @@ the third sample of a mechanism nobody has decided to stop.
 - Tamper predicates clean: one published row (94), no published-unverified row,
   no analyst row published, 67 audit rows. Sixteen recap rows, none published,
   `lead_story_run` still 58.
+
+## 127. September 20: the database shrank 59 MB with nothing pruning it
+
+D1 clock 2026-09-20 11:23:25Z. `main` moved to `6c08bd4d` and added nineteen
+sections numbered 91–107, so my block moved below theirs and my 91–109 became
+108–126, with 80 internal cross-references shifted. Both feeds refreshed this
+morning (row 1 and row 3 both differ from yesterday's capture), so every board
+figure below is measured on a board that actually moved.
+
+### 127a. The size question is answered as far as it can be: it is not the data, and it is not the prunes
+
+```
+          file        measured content
+09-15    12.3 MB      —
+09-16    78.1 MB      —
+09-17   195.4 MB      4.4 MB
+09-18   285.6 MB      5.0 MB
+09-19   297.7 MB      5.6 MB
+09-20   238.3 MB      6.1 MB     <- file DOWN 59 MB, content UP 0.5 MB
+```
+
+Today was the prune Sunday this was set up to test. **The prune jobs did not
+run.** `job_runs` has no `analytics-prune`, `job-prune` or `snapshot-prune` row
+in the last 48 hours; the last is still 2026-09-13 08:00:33Z.
+
+So the file fell 59 MB with no prune, no deletion job, and content that grew.
+That is a clean negative on two candidate explanations at once:
+
+- **not unpruned rows** — nothing pruned, and it shrank anyway;
+- **not the content** — content has grown every single day, monotonically, while
+  the file went up 117, up 90, up 12, then down 59.
+
+What is left is D1's own storage bookkeeping — free pages, or write-ahead/Time
+Travel retention ageing out on its own schedule. I still cannot prove which from
+a query interface, so it stays an observation. But it is now a much narrower
+one, and the practical answer for Ken is that **it is self-correcting and not
+worth chasing**: the peak was 297.7 MB, it is coming down without intervention,
+and the actual data is 6 MB.
+
+### 127b. First concrete evidence for what the hangs are
+
+`depth-charts` ran at 2026-09-19 10:01:22 and **succeeded** — `ok=1`, 30 of 32
+teams — while recording:
+
+```
+"failed": 2,  "firstError": "Too many subrequests by single Worker invocation."
+```
+
+That is a hard Cloudflare Workers limit, and it is the first actual error text
+anything has produced in nine days of looking at these failures. It matters
+because of the shape: a job that hits the ceiling and **survives** can write a
+row saying so; a job that is killed by it writes nothing at all — no
+`finished_at`, no `ok`, no `error`. That is exactly the signature of the 17–48%
+of runs this file has been calling "hung".
+
+One observation, in a job that lived. It is a hypothesis with evidence now
+rather than a shrug, and it is the first thing here that suggests a fix
+direction (fewer subrequests per tick, or splitting the tick). **It is not
+established** — the string appears exactly once in the whole table, and by
+construction the runs it would explain are the ones that could not record it.
+
+Today `depth-charts` hung outright at 10:00:57, and `odds_overlay` row 6 is 25
+hours old as a result.
+
+### 127c. Row 94 got better: one wrong price today, not three
+
+```
+                  story (Sept 8)   09-18        09-19        09-20
+Carnell Tate      $11, WR25        $10, WR27    $10, WR27    $10, WR27   wrong
+Cam Ward          $1,  QB26        $1,  QB26    $1,  QB26    $1,  QB26   matches
+Tony Pollard      $5,  RB29        $3,  RB30    $3,  RB30    $5,  RB29   MATCHES
+Wan'Dale Robinson $3,  WR38        $2,  WR41    $2,  WR41    $3,  WR40   matches on price
+```
+
+Pollard is back to **$5 at RB29 — exactly what the story prints, rank included**
+— after two days at $3. Robinson's price is back to $3. Only Tate is still
+wrong.
+
+And the curve paragraph is **fully correct today**, for the first time since
+09-14: served WR20–23 are all $12 and WR24–26 are all $10, which is precisely
+what it says.
+
+Six days of measurements now read: wrong, right, wrong, wrong, wrong, wrong,
+right. **A published figure being right today is not evidence the story is
+sound** — it is evidence that a number nobody looked up happens to agree this
+morning. That is the §125a point sharpened: the fault is the method, not the
+figure, and a run of agreement is the most misleading thing this row can do.
+
+### 127d. CI is green again
+
+**78/78.** `main`'s cover refactor landed and the two assertions that failed on
+`origin/main` yesterday (§126a, "the desk section reads /api/content") now pass.
+Not something I touched; recorded because yesterday's red is the kind of thing
+that gets carried forward as still-true.
+
+### 127e. Production is serving an unmerged branch for the fourth time in seven days
+
+Today's bundle carries `boxScoreStatLine`, `dfsActualFor` and
+`dfsActualsForWeek`, none of which are in `main`. Searching every ref finds them
+in `origin/claude/dazzling-franklin-apu9pr` (`706a4a8b`, 2026-09-20 04:56Z,
+"DFS: a played game stops being a projection"), **not merged**.
+
+```
+09-14  claude/iron-tuna-in-season-2oxwqe    still unmerged
+09-15  claude/trusting-ptolemy-950fxw       since merged
+09-19  claude/brave-pascal-tp8oy2           not merged
+09-20  claude/dazzling-franklin-apu9pr      not merged
+```
+
+Four days out of seven. This is not an anomaly any more; it is how the site
+deploys. Board code is untouched on this one too — all seven board symbols have
+identical counts against `main`, and the comparison below is clean.
+
+### 127f. The two-board gap, day eight
+
+```
+             09-13  09-14  09-15  09-16  09-17  09-18  09-19  09-20
+differing    21.8%  22.1%  22.6%  21.2%  21.2%  20.6%  20.3%  21.2%
+largest      $28    $29    $29    $29    $29    $29    $29    $29
+```
+
+A.J. Brown at $29 for the seventh consecutive day. Nico Collins holds at $11
+(static $28, served WR16 $17).
+
+### 127g. Hang rate: 09-19 closed at 44%
+
+```
+09-15  115 / 305   38%
+09-16   68 / 403   17%
+09-17   63 / 344   18%
+09-18  124 / 352   35%
+09-19  144 / 331   44%
+09-20   31 / 143   22%  (partial, 11:23 — not a figure to quote)
+```
+
+`odds-refresh` recovered (11:01:02, ok, 374 matched). `usage-refresh` still has
+**no row at all** for a fourth day; overlay row 5 is 96 hours old.
+
+### 127h. The rest
+
+- Repo vs deployed: **1380 player-rows across four boards, 0 differences**.
+- Harness self-test **23/23**.
+- **The live prompt hash could not be measured again.** `list_triggers` returned
+  169 KB with no `session_request` field for a second day. Unverified, not
+  unchanged (standing rule 5).
+- The lead-story column Routine is still `enabled: false`, `updated_at`
+  untouched since 2026-09-09 13:05:36Z.
+- More Routine housekeeping by a person: "The Pick (Story) - Updated" is now
+  disabled and a renamed "The Pick — daily story (LEAVE ON: this is the one that
+  publishes)" is enabled, plus a new "Check the Sept 20 Pick landed, solo run".
+  Somebody is deduplicating the Pick schedule. Left alone.
+- Tamper predicates clean: one published row (94), no published-unverified row,
+  no analyst row published, 67 audit rows. Sixteen recap rows, none published,
+  `lead_story_run` still 58, `LEAD_CATEGORIES` still six keys in repo and
+  deployed alike.
