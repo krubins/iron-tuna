@@ -358,30 +358,37 @@ p{color:var(--sec);margin:0 0 16px}
    is actually looking at. They belong on the roster row, because the row is
    where the disagreement happens. The chips above the board are the undo:
    every constraint the build is carrying, visible without opening anything. */
-/* The pair rides the NAME LINE, beside the plus that opens the note. A column
-   of their own was paid for out of the name and put them behind a horizontal
-   scroll; the disclosure row is worse, because a control that changes the
-   roster cannot sit behind a toggle the reader has to find first. The name
-   line already carries this row's controls, so they join it and wrap with it,
-   and the phone's five-column grid maps columns 1-7 and stays untouched. */
-.df-act{display:inline-flex;flex-wrap:wrap;gap:4px;vertical-align:middle;margin-left:6px}
-.df-act button{white-space:nowrap}
-.df-player-actions .df-act{margin-left:0}
-.df-act-note{margin-top:10px}
-.df-act button{font:700 10px var(--font-mono);letter-spacing:.07em;text-transform:uppercase;cursor:pointer;
-  border:1px solid var(--line2);border-radius:5px;background:var(--bg);color:var(--sec);padding:4px 7px}
+/* Excluding is a cross at the left of the row, where anything you can remove
+   from a list puts it, and it is the only control ON the roster: the man a
+   reader wants to REQUIRE is usually not among the nine the builder chose, so
+   requiring starts above the roster instead of on a row that may not exist. */
+.df-x{appearance:none;border:1px solid transparent;background:transparent;color:#7f9490;cursor:pointer;
+  width:24px;height:24px;min-width:24px;border-radius:50%;display:inline-grid;place-items:center;
+  font:700 17px/1 var(--font-body);padding:0;margin-right:-3px}
+.df-x:hover,.df-x:focus-visible{border-color:var(--danger);color:var(--danger);background:rgba(200,60,60,.10)}
+.df-card .df-x{color:var(--muted)}
+.df-tag.req{color:var(--teal);background:rgba(14,124,99,.1)}
+.is-board .df-tag.req{color:#46d6ac;background:rgba(70,214,172,.15)}
+.df-req-open{appearance:none;cursor:pointer;font:700 12px var(--font-body);letter-spacing:.01em;
+  border:1px solid var(--teal);border-radius:20px;background:rgba(14,124,99,.07);color:var(--teal);padding:7px 15px}
+.df-req-open::before{content:"+";font-family:var(--font-mono);font-weight:700;margin-right:6px}
+.df-req-open:hover{background:rgba(14,124,99,.14)}
+.df-req-open[aria-expanded="true"]{background:var(--teal);color:#fff}
+/* The drawer keeps a worded pair, because it is reached from any name on the
+   board and has to say which roster it is acting on. */
+.df-act{display:inline-flex;flex-wrap:wrap;gap:5px;vertical-align:middle}
+.df-act button{white-space:nowrap;font:700 10px var(--font-mono);letter-spacing:.07em;text-transform:uppercase;
+  cursor:pointer;border:1px solid var(--line2);border-radius:5px;background:var(--bg);color:var(--sec);padding:5px 9px}
 .df-act button:hover{border-color:var(--teal);color:var(--teal)}
 .df-act button.drop:hover{border-color:var(--danger);color:var(--danger)}
 .df-act button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
-.is-board .df-act button{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:#bcd0cc}
-.is-board .df-act button:hover{border-color:#46d6ac;color:#46d6ac}
-.is-board .df-act button.drop:hover{border-color:#f0a0a0;color:#f0a0a0}
-.is-board .df-act button[aria-pressed="true"]{background:#0e7c63;border-color:#46d6ac;color:#fff}
+.df-act button.drop[aria-pressed="true"]{background:var(--danger);border-color:var(--danger);color:#fff}
+.df-act-note{margin-top:10px}
 .df-constraints{margin:0 0 14px;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--panel);padding:11px 13px}
 .df-constraints.has{border-color:var(--teal)}
 .df-constraints-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .df-constraints-top>b{font-family:var(--font-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.df-req-search{position:relative;flex:1 1 260px;min-width:0;max-width:420px}
+.df-req-search{position:relative;flex:1 1 240px;min-width:0;max-width:400px}
 .df-req-search input{width:100%;font:inherit;font-size:14px;padding:8px 11px;border:1px solid var(--line2);border-radius:8px;background:var(--bg);color:var(--text)}
 .df-req-list{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 4px);background:var(--bg);border:1px solid var(--line2);border-radius:8px;box-shadow:0 14px 30px rgba(0,0,0,.14);max-height:260px;overflow:auto}
 .df-req-list button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);font:inherit;padding:9px 11px;cursor:pointer;text-align:left}
@@ -781,13 +788,14 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="df-constraints" id="dfConstraints" hidden>
     <div class="df-constraints-top">
       <b>Your constraints</b>
-      <div class="df-req-search">
-        <input id="dfReqInput" type="search" autocomplete="off" spellcheck="false" placeholder="Require a player by name&hellip;" aria-label="Require a player in every lineup" aria-controls="dfReqList" aria-autocomplete="list">
+      <button type="button" class="df-req-open" id="dfReqOpen" aria-expanded="false" aria-controls="dfReqSearch">Require a player</button>
+      <div class="df-req-search" id="dfReqSearch" hidden>
+        <input id="dfReqInput" type="search" autocomplete="off" spellcheck="false" placeholder="Type a name, then pick him&hellip;" aria-label="Require a player in every lineup" aria-controls="dfReqList" aria-autocomplete="list">
         <div class="df-req-list" id="dfReqList" role="listbox" hidden></div>
       </div>
       <button type="button" class="df-clear" data-mark="clearall" id="dfClearMarks" hidden>Clear all</button>
     </div>
-    <p class="is-note" id="dfReqHint">Add every player you have already locked in, one after another, and Iron Tuna solves the rest of the roster around them. Exclude anyone you do not want from his row below.</p>
+    <p class="is-note" id="dfReqHint">Press <b>Require a player</b> and add everyone you already have locked in, one after another; Iron Tuna solves the rest of the roster around them. To drop a player it picked, press the &times; beside his name below.</p>
     <div id="dfConstraintChips"></div>
   </div>
   <div id="dfLineups"></div>
@@ -1542,14 +1550,20 @@ p{color:var(--sec);margin:0 0 16px}
   // screen.
   function markKeyOf(p) { return String((p && (p.id || p.key)) || ''); }
   function isRequired(key) { return marks[key] === 'lock'; }
-  function rosterActions(p) {
+  // Drop him: one cross at the left of the row, where a list of things you can
+  // remove puts it. It is the only control ON the roster now -- requiring is a
+  // different act, because the man you want to require is usually NOT in the
+  // nine the builder chose, so it starts above the roster instead.
+  function rosterExclude(p) {
     var k = markKeyOf(p); if (!k) return '';
-    var req = isRequired(k);
-    return '<span class="df-act">'
-      + '<button type="button" data-mark="lock" data-mark-key="' + e(k) + '" aria-pressed="' + (req ? 'true' : 'false') + '"'
-      + ' title="' + e(req ? 'Stop requiring ' + p.name : 'Require ' + p.name + ' in every lineup') + '">' + (req ? 'Required' : 'Require') + '</button>'
-      + '<button type="button" class="drop" data-mark="excl" data-mark-key="' + e(k) + '"'
-      + ' title="' + e('Solve again without ' + p.name) + '">Exclude</button></span>';
+    return '<button type="button" class="df-x" data-mark="excl" data-mark-key="' + e(k) + '"'
+      + ' title="' + e('Solve again without ' + p.name) + '"'
+      + ' aria-label="' + e('Solve again without ' + p.name) + '"><span aria-hidden="true">\u00d7</span></button>';
+  }
+  // A man the reader required carries it on his row, since the control that
+  // said so is no longer sitting there to show its state.
+  function requiredTag(p) {
+    return isRequired(markKeyOf(p)) ? '<span class="df-tag req">Required</span>' : '';
   }
   // Every constraint the build is carrying, above the board, each one its own
   // undo. Without this the reader can exclude a player off the roster and then
@@ -1583,6 +1597,17 @@ p{color:var(--sec);margin:0 0 16px}
           || String(p.team || '').toLowerCase().indexOf(q) >= 0
           || String(p.position || '').toLowerCase().indexOf(q) >= 0;
     }).slice(0, 10);
+  }
+  // The search is a pill until the reader asks for it. It stays open after a
+  // pick, because a reader who has one man already locked into a submitted
+  // entry usually has three.
+  function openRequire(on) {
+    var pill = $('dfReqOpen'), box = $('dfReqSearch');
+    if (!pill || !box) return;
+    pill.setAttribute('aria-expanded', on ? 'true' : 'false');
+    box.hidden = !on;
+    if (on) { $('dfReqInput').focus(); }
+    else { $('dfReqInput').value = ''; $('dfReqList').hidden = true; $('dfReqList').innerHTML = ''; }
   }
   function renderRequireList() {
     var box = $('dfReqList'), input = $('dfReqInput');
@@ -1683,12 +1708,11 @@ p{color:var(--sec);margin:0 0 16px}
       var fitId = 'dffit-' + i + '-' + ri;
       var mkt = marketPhrase(p);
       return '<tr class="df-prow"><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
-        + '<td class="df-pcell"><span class="df-pwrap">' + faceHtml(p)
-        + '<span class="df-pname"><span class="df-pname-line">' + playerButton(p) + playerTag(p, qb)
+        + '<td class="df-pcell"><span class="df-pwrap">' + rosterExclude(p) + faceHtml(p)
+        + '<span class="df-pname"><span class="df-pname-line">' + playerButton(p) + playerTag(p, qb) + requiredTag(p)
         + ' ' + marketTag(p)
         + '<button class="df-fit-toggle" type="button" data-fit="' + fitId + '" aria-controls="' + fitId + '" aria-expanded="false">'
-        + '<span class="df-sr">Why ' + e(p.name || 'this player') + ' is in this lineup</span></button>'
-        + rosterActions(p) + '</span>'
+        + '<span class="df-sr">Why ' + e(p.name || 'this player') + ' is in this lineup</span></button></span>'
         + '<span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></span></span></td>'
         + '<td class="num" data-lab="Salary">' + money(p.salary) + '</td>'
         + '<td class="num" data-lab="' + e(fppgLabel()) + '">' + fppgText(p) + '</td>'
@@ -1712,7 +1736,7 @@ p{color:var(--sec);margin:0 0 16px}
         + propsNote(l)
         + '<div class="is-stats">' + stats + '</div>' + meter
         + '<div class="df-lead-grid"><div class="df-lead-table">' + table + '</div>'
-        + '<p class="df-fit df-act-note">Disagree with a seat? <b>Require</b> holds that player in every lineup; <b>Exclude</b> solves the slate again without him. The same pair sits on every alternate below, and on any player on the board from his name. One list of constraints drives all of them, and it is above the roster with an undo.</p>'
+        + '<p class="df-fit df-act-note">Disagree with a seat? The <b>&times;</b> beside a player solves the slate again without him, on this roster and on every alternate below. To put a player <b>in</b>, press <b>Require a player</b> above the roster and add him by name; he is held in every lineup while the other slots re-solve around him. Both land in the one list of constraints above, each with an undo.</p>'
         + breakdownHtml(l, sh, qb) + '</div>'
         + '<div class="is-board-foot">' + foot + '</div></div>';
     }
@@ -2774,10 +2798,15 @@ p{color:var(--sec);margin:0 0 16px}
     // Require by name. Picking does not close the search: the reader who has
     // three men already locked into a submitted entry is adding all three, so
     // the field clears, keeps focus and waits for the next one.
+    $('dfReqOpen').addEventListener('click', function () { openRequire(this.getAttribute('aria-expanded') !== 'true'); });
     $('dfReqInput').addEventListener('input', renderRequireList);
     $('dfReqInput').addEventListener('focus', renderRequireList);
     $('dfReqInput').addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape') { $('dfReqList').hidden = true; return; }
+      if (ev.key === 'Escape') {
+        if ($('dfReqList').hidden || !this.value.trim()) { openRequire(false); $('dfReqOpen').focus(); }
+        else { $('dfReqList').hidden = true; }
+        return;
+      }
       if (ev.key !== 'Enter') return;
       ev.preventDefault();
       var list = requireMatches(this.value).filter(function (p) { return marks[p.key] !== 'lock'; });
@@ -2789,10 +2818,19 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfReqList').addEventListener('click', function (ev) {
       var b = ev.target.closest('button[data-require-key]');
       if (!b || b.disabled) return;
+      // Stop here. requireByKey empties this list, so by the time the click
+      // reaches the document the button it started on is detached, and a
+      // detached node's closest('.df-req-search') is null -- which read as a
+      // click OUTSIDE the search and shut it after every single pick.
+      ev.stopPropagation();
       requireByKey(b.getAttribute('data-require-key'));
     });
+    // Clicking away puts the search back behind its pill, but only when it is
+    // empty: a half-typed name is not an accident to be thrown away.
     document.addEventListener('click', function (ev) {
-      if (!ev.target.closest('.df-req-search')) { var box = $('dfReqList'); if (box) box.hidden = true; }
+      if (ev.target.closest('.df-req-search') || ev.target.closest('#dfReqOpen')) return;
+      var box = $('dfReqList'); if (box) box.hidden = true;
+      if ($('dfReqInput') && !$('dfReqInput').value.trim()) openRequire(false);
     });
     // Require / exclude, from wherever it was clicked: the roster rows and the
     // constraint chips live inside #dfLineups, the drawer's pair inside the
