@@ -15199,6 +15199,16 @@ export default {
       const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
       if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
         ...dfsNoSalariesNote(site, Date.now()),
+        // The setup plate on /dfs asks for a Game Style, then the GAMES in the
+        // contest, and it built that list out of the priced slate. So a week
+        // whose salaries are not posted yet left step two disabled with an
+        // empty list behind it and the reader stuck on step one, unable to
+        // finish a setup that does not need salaries to be answered. The week's
+        // fixtures are known from the schedule long before anyone prices them,
+        // so they ship with the empty slate and the plate stays answerable
+        // while the lobby is still empty.
+        week,
+        games: week ? weekGames(sched, week, Date.now()).map(g => ({ away: g.away, home: g.home, kickoff: g.kickoff })) : [],
         operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
       const [board, usage, avail, roster, propsPulledAt, actuals] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null), snapshotPulledAt(env, 'player').catch(() => null), dfsActualsForWeek(env, sched, week).catch(() => null)]);
       const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage, week, availability: avail, roster, propsPulledAt, actuals });

@@ -1138,6 +1138,13 @@ p{color:var(--sec);margin:0 0 16px}
   var site = 'dk', sec = 'lineup', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
   var gameStyle = '', gameChoice = '', payoutStructure = '';
   var selectedGames = {}, gameUniverseSig = '';
+  // The week's fixtures, as the schedule knows them, for the weeks where the
+  // salaries are not posted yet. The setup plate reads its Games list out of
+  // the priced slate, and before a slate exists that list was empty -- so the
+  // reader who opened /dfs on a Monday got step one and a dead step two. These
+  // are the same games under different prices, and they keep the plate
+  // answerable until the lobby posts.
+  var scheduleGames = [];
   var GAME_STYLES = {
     'flash-draft': { label:'Flash Draft', note:'A live-game format. The player pool and available choices can change as the game unfolds.', single:false },
     classic: { label:'Classic', note:'The standard multi-game $50,000 salary-cap format, solved from the loaded salary slate.', single:false, optimizer:true },
@@ -2291,6 +2298,16 @@ p{color:var(--sec);margin:0 0 16px}
   // it while the reader is still choosing a structure, rather than being
   // asked for a recommendation it would otherwise have to invent.
   var playWeek = null;
+  // The three solves behind the Play of the Week are the most expensive thing
+  // on the page, and they used to run on every setup change: picking a Game
+  // Style, then the Games, then the Payout Structure paid for nine optimizer
+  // builds before the first roster was asked for, which is why each step of
+  // the plate felt slow to answer. The box depends on the player pool and the
+  // resolved roster format and on nothing else the plate touches -- not the
+  // games chosen, not the payout -- so the result is kept and re-used until
+  // one of those actually changes. `slateToken` is the pool's identity: an
+  // uploaded file carries no timestamp to tell it apart by.
+  var playWeekMemo = null, slateToken = 0;
 
   // The coach reads the page through coachContext() rather than holding its
   // own copy of anything, so every state change only has to tell it to look
@@ -2411,11 +2428,29 @@ p{color:var(--sec);margin:0 0 16px}
       map[key].players += 1;
       if (!map[key].start) map[key].start = kickoffDate(p);
     });
-    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) {
+    var out = Object.keys(map).map(function (k) { return map[k]; });
+    // Nothing priced yet. The games themselves are still known, so the list is
+    // the schedule's rather than nothing at all: the reader can name the
+    // contest they are entering now, and the board fills in behind the answer
+    // once the salaries land.
+    if (!out.length) out = scheduleGames.slice();
+    return out.sort(function (a, b) {
       if (a.start && b.start && a.start.getTime() !== b.start.getTime()) return a.start - b.start;
       if (a.start && !b.start) return -1; if (!a.start && b.start) return 1;
       return a.label.localeCompare(b.label);
     });
+  }
+  // The schedule's fixtures in the shape gamesForSlate() hands back, so every
+  // reader of that list -- the select, the custom grid, the coach -- takes the
+  // unpriced week without knowing it is unpriced. `players` is 0 because none
+  // are priced; the grid says so in words rather than printing the zero.
+  function scheduleGameList(rows) {
+    return (rows || []).map(function (g) {
+      var away = String(g.away || '').trim().toUpperCase(), home = String(g.home || '').trim().toUpperCase();
+      var key = gameKeyTeams(away, home);
+      if (!key) return null;
+      return { key: key, away: away, home: home, label: away + ' @ ' + home, players: 0, start: kickoffDate(g), unpriced: true };
+    }).filter(Boolean);
   }
   function selectedGameKeys() { return Object.keys(selectedGames).filter(function (k) { return selectedGames[k]; }); }
   function gameScopeRequired() { return site === 'dk' && !!gameStyle && gameStyle !== 'best-ball' && !isPickem(); }
@@ -2527,6 +2562,16 @@ p{color:var(--sec);margin:0 0 16px}
       if (Object.keys(kept).length === 1 && !gameChoice) gameChoice = 'game:' + Object.keys(kept)[0];
     }
     gameUniverseSig = sig;
+    // Neither the slate nor the schedule knows of a game this week. The select
+    // said "Select Games…" and refused to open, which reads as a broken
+    // control rather than an empty week, so it says which it is.
+    if (!games.length) {
+      sel.innerHTML = '<option value="">No games listed for this week yet…</option>';
+      sel.disabled = true;
+      custom.hidden = true;
+      $('dfGameGrid').innerHTML = '';
+      return;
+    }
     // One game on the slate is not a choice. A single-game export carries
     // exactly one, so pick it rather than asking.
     if (games.length === 1 && !selectedGameKeys().length) {
@@ -2561,7 +2606,8 @@ p{color:var(--sec);margin:0 0 16px}
     if (gameChoice && [].some.call(sel.options,function(o){return o.value===gameChoice;})) sel.value=gameChoice; else if(gameChoice!=='custom') gameChoice='';
     custom.hidden = gameChoice !== 'custom';
     $('dfGameGrid').innerHTML = games.map(function (g) {
-      var meta=[]; var kt=kickoffText(g.start); if(kt) meta.push(kt); meta.push(g.players+' eligible player'+(g.players===1?'':'s'));
+      var meta=[]; var kt=kickoffText(g.start); if(kt) meta.push(kt);
+      meta.push(g.unpriced ? 'salaries not posted yet' : g.players+' eligible player'+(g.players===1?'':'s'));
       return '<button class="df-game-choice" type="button" data-game-key="'+e(g.key)+'" aria-pressed="'+(selectedGames[g.key]?'true':'false')+'"><b>'+e(g.label)+'</b><small>'+e(meta.join(' · '))+'</small></button>';
     }).join('');
     sel.dataset.all=JSON.stringify(buckets.all); sel.dataset.early=JSON.stringify(buckets.early); sel.dataset.late=JSON.stringify(buckets.late); sel.dataset.prime=JSON.stringify(buckets.prime);
@@ -2589,7 +2635,7 @@ p{color:var(--sec);margin:0 0 16px}
     if (!gameStyle) $('dfGamesHelp').textContent='The exact game pool matters because players outside it cannot be used.';
     else if (gameStyle==='best-ball') $('dfGamesHelp').textContent='Best Ball uses a season-long player pool rather than a single weekly slate.';
     else if (gameChoice==='custom') $('dfGamesHelp').textContent=keys.length ? keys.length+' games selected in the custom player pool.' : 'Select every game included in the contest, then confirm the custom pool.';
-    else $('dfGamesHelp').textContent=gameChoice ? (keys.length+' game'+(keys.length===1?'':'s')+' selected for the eligible player pool.') : 'Choose the same game window or matchup shown in DraftKings.';
+    else $('dfGamesHelp').textContent=gameChoice ? (keys.length+' game'+(keys.length===1?'':'s')+' selected'+(slate?' for the eligible player pool.':'. The player pool fills in when the salaries post.')) : 'Choose the same game window or matchup shown in DraftKings.';
     $('dfPayoutHelp').textContent = py ? py.note : 'Select the way the contest pays before Iron Tuna chooses the appropriate risk profile.';
     // Each step's number becomes a check once that step is answered.
     var done = { dfGameStyleSelect: !!gameStyle, dfGamesSelect: !!gameChoice && (gameChoice !== 'custom' || keys.length > 0), dfPayoutSelect: !!payoutStructure };
@@ -2602,7 +2648,11 @@ p{color:var(--sec);margin:0 0 16px}
       return false;
     }
     state.className='df-setup-state ready';
-    state.textContent=(gs?gs.label:gameStyle)+' · '+(gameStyle==='best-ball'?'Season-long player pool':keys.length+' selected game'+(keys.length===1?'':'s'))+' · '+(py?py.label:payoutStructure)+'.';
+    // A setup answered on an unpriced week is a complete answer, and saying so
+    // matters: the reader has done everything asked of them and the blank board
+    // below is the lobby's fault, not theirs.
+    state.textContent=(gs?gs.label:gameStyle)+' · '+(gameStyle==='best-ball'?'Season-long player pool':keys.length+' selected game'+(keys.length===1?'':'s'))+' · '+(py?py.label:payoutStructure)+'.'
+      + (slate ? '' : ' Setup is complete; the board solves as soon as the salaries post.');
     coachSync();
     return true;
   }
@@ -3288,9 +3338,24 @@ p{color:var(--sec);margin:0 0 16px}
   // key they summed for the projection (`ironTunaPoints`) is not a field on a
   // lineup player — it is `proj` — so every total was zero. ITDfs.contestPick
   // reads the builder's own totals.
+
+  // What the recommendation is standing on. A step up the payout curve is a
+  // real risk, and the reader is owed the difference between "the books
+  // disagree with us" and "our two models disagree with each other".
+  function evidenceLine(pick) {
+    var ev = pick.evidence;
+    return ev.quoted
+      ? 'The books priced <b>' + ev.quoted + ' of ' + ev.of + '</b> picks in the ceiling build'
+        + (ev.books ? ' across ' + ev.books + ' books' : '')
+        + (ev.markets.length ? ' (' + ev.markets.map(function(m){ return MARKET_LABEL[m] || m; }).join(', ') + ')' : '')
+        + (ev.tdQuoted ? ', with ' + ev.tdQuoted + ' quoted touchdown price' + (ev.tdQuoted === 1 ? '' : 's') : '')
+        + '. The edge below is measured against those quoted lines.'
+        + (ev.coverage < 0.999 ? ' The rest carry their game\u2019s environment, so the bar for moving up the payout curve is raised by ' + Math.round((pick.need - 1) * 100) + '%.' : '')
+      : 'No book priced any pick in this build, so the comparison below is Iron Tuna against the game lines \u2014 two models sharing most of their inputs, not a disagreement with money. The bar for moving up the payout curve is doubled for it, which is why this week sits where the chance of winning is best.';
+  }
   function renderPlayOfWeek(s) {
     var host=$('dfPlayWeekBody'); if(!host || !s || !window.ITDfs) return;
-    var players=(s.players||[]).filter(function(p){return projected(p);}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
+    var pool=(s.players||[]).filter(function(p){return projected(p);});
     playWeek=null;
     // Which contest the advice is FOR. The reader picked a Game Style, and the
     // payout question is "what should I enter with this roster" -- so it is the
@@ -3314,33 +3379,41 @@ p{color:var(--sec);margin:0 0 16px}
     }
     var seats=((fmt && fmt.slots) || s.slots || []).length||9;
     var cross=seats<=6?Math.max(1,seats-1):4;
-    if(players.length<seats){ $('dfPlayWeekTitle').textContent='Play of the Week: waiting for a complete slate'; host.innerHTML='<p class="is-note">The recommendation will publish when enough salaries and projections are available to compare contest shapes.</p>'; return; }
+    if(pool.length<seats){ $('dfPlayWeekTitle').textContent='Play of the Week: waiting for a complete slate'; host.innerHTML='<p class="is-note">The recommendation will publish when enough salaries and projections are available to compare contest shapes.</p>'; return; }
     var base={cap:(fmt?fmt.cap:s.cap),slots:(fmt?fmt.slots:s.slots),flex:(fmt?fmt.flex:s.flex),
               mult:(fmt?(fmt.mult||null):(s.multiplier||null)),minTeams:(fmt?(fmt.minTeams||0):(s.minTeams||0)),
               tierSlots:(fmt&&fmt.tierSlots)||null,maxPerTeam:cross,lineups:1,seed:17};
-    var cash=ITDfs.build(players,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:seats<=6?cross:3}));
-    var tour=ITDfs.build(players,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
-    var lev=ITDfs.build(players,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
-    if(!cash.ok||!tour.ok){ $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">Iron Tuna could not yet build comparable legal contest shapes from the current slate.</p>'; return; }
-    // The decision lives in the optimizer, where it can be tested against real
-    // lineups. It used to be assembled here out of per-player sums, and the
-    // field it summed for the projection does not exist on a lineup player
-    // (it is `proj`), so every total was zero, every threshold compared zero
-    // to zero, and the answer was Head-to-Head on every slate ever served.
-    var pick = ITDfs.contestPick({ cash: cash.lineups[0], tournament: tour.lineups[0], leverage: lev.ok ? lev.lineups[0] : tour.lineups[0] });
-    if (!pick) { $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">Iron Tuna could not yet build comparable legal contest shapes from the current slate.</p>'; return; }
-    var ev = pick.evidence;
-    // What the recommendation is standing on. A step up the payout curve is a
-    // real risk, and the reader is owed the difference between "the books
-    // disagree with us" and "our two models disagree with each other".
-    var evidence = ev.quoted
-      ? 'The books priced <b>' + ev.quoted + ' of ' + ev.of + '</b> picks in the ceiling build'
-        + (ev.books ? ' across ' + ev.books + ' books' : '')
-        + (ev.markets.length ? ' (' + ev.markets.map(function(m){ return MARKET_LABEL[m] || m; }).join(', ') + ')' : '')
-        + (ev.tdQuoted ? ', with ' + ev.tdQuoted + ' quoted touchdown price' + (ev.tdQuoted === 1 ? '' : 's') : '')
-        + '. The edge below is measured against those quoted lines.'
-        + (ev.coverage < 0.999 ? ' The rest carry their game\u2019s environment, so the bar for moving up the payout curve is raised by ' + Math.round((pick.need - 1) * 100) + '%.' : '')
-      : 'No book priced any pick in this build, so the comparison below is Iron Tuna against the game lines \u2014 two models sharing most of their inputs, not a disagreement with money. The bar for moving up the payout curve is doubled for it, which is why this week sits where the chance of winning is best.';
+    // Everything the three builds read, in one string. The payout structure and
+    // the chosen games are deliberately absent: neither is an input to any of
+    // them, and including them would re-solve for a question that did not
+    // change. A miss re-solves; a hit re-prints from what the last solve found.
+    var sig = [slateToken, pool.length, JSON.stringify(base), seats].join('|');
+    var memo = playWeekMemo && playWeekMemo.sig === sig ? playWeekMemo : null;
+    var STILL_FORMING = 'Iron Tuna could not yet build comparable legal contest shapes from the current slate.';
+    if (!memo) {
+      var players=pool.map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
+      var cash=ITDfs.build(players,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:seats<=6?cross:3}));
+      var tour=ITDfs.build(players,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
+      var lev=ITDfs.build(players,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
+      // The decision lives in the optimizer, where it can be tested against real
+      // lineups. It used to be assembled here out of per-player sums, and the
+      // field it summed for the projection does not exist on a lineup player
+      // (it is `proj`), so every total was zero, every threshold compared zero
+      // to zero, and the answer was Head-to-Head on every slate ever served.
+      if (cash.ok && tour.ok) {
+        var pick = ITDfs.contestPick({ cash: cash.lineups[0], tournament: tour.lineups[0], leverage: lev.ok ? lev.lineups[0] : tour.lineups[0] });
+      }
+      // A board that cannot be solved is remembered too. Re-running three
+      // failing builds on the next click costs exactly what the successful
+      // ones do and tells the reader nothing new.
+      memo = playWeekMemo = { sig: sig, pick: pick || null, evidence: pick ? evidenceLine(pick) : '' };
+    }
+    if (!memo.pick) { $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">'+STILL_FORMING+'</p>'; return; }
+    // `pick` is the same binding the solve above declared -- `var` is the
+    // function's, not the block's -- and on a memo hit that solve never ran, so
+    // it is read back from what did. Everything below this line is printing.
+    pick = memo.pick;
+    var ev = pick.evidence, evidence = memo.evidence;
     // The format is named only once the reader has actually chosen one. Before
     // that the box is the week's general read and labelling it "Classic" would
     // answer a question nobody has asked yet.
@@ -3442,13 +3515,17 @@ p{color:var(--sec);margin:0 0 16px}
   }
   function slateOk(j) {
     slate = j;
+    scheduleGames = [];
+    slateToken += 1; playWeekMemo = null;
     if (site === 'dk' && !gameUniverseSig) selectedGames = {};
     var stamp = 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
     $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + e(stamp);
     render();
   }
-  function slateNone(msg, label) {
+  function slateNone(msg, label, games) {
     slate = null;
+    scheduleGames = scheduleGameList(games);
+    slateToken += 1; playWeekMemo = null;
     $('dfNote').textContent = msg;
     $('dfEmpty').textContent = (msg || 'No ' + (label || 'site') + ' salaries are loaded for this week.') + ' The scoring environment still reads from the game lines on Game Intel.';
     $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
@@ -3456,11 +3533,15 @@ p{color:var(--sec);margin:0 0 16px}
     if ($('dfConstraints')) $('dfConstraints').hidden = true;
     $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted.</p>';
     $('dfPivots').innerHTML = ''; built = null;
+    // render() stops at `if (!slate) return`, so the setup plate is refreshed
+    // here or not at all: the fixtures arrived with this response, and without
+    // this the reader is left on the disabled step two they started on.
+    if (site === 'dk' && !isPickem()) applyGameStyle();
     coachSync();
   }
   function loadSite() {
     fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label); return; }
+      if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label, j && j.games); return; }
       slateOk(j);
     }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
   }
