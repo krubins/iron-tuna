@@ -583,11 +583,18 @@ console.log('\nthe DFS page explanations');
   // which is where a list of removable things puts it. It is the only control
   // on the roster: requiring starts above it, because the man a reader wants
   // to require is usually not one of the nine already on screen.
-  ok('every roster row carries a cross that drops that player, ahead of his face',
-     page.includes('function rosterExclude(p)') && page.includes('class="df-x"') && page.includes("data-mark=\"excl\"")
-     && page.includes("rosterExclude(p) + faceHtml(p)"));
-  ok('and the roster no longer carries a Require button of its own',
-     !page.includes('function rosterActions(p)') && !/df-pname-line[\s\S]{0,300}data-mark="lock"/.test(page));
+  // Two glyphs at the LEFT of the row, ahead of the face: pin him in, cross
+  // him out. Worded buttons on the name line put the same two words on
+  // eighteen rows.
+  ok('every roster row carries a cross and a pin, ahead of his face',
+     page.includes('function rosterMarks(p)') && page.includes('class="df-x"') && page.includes('class="df-pin"')
+     && page.includes("data-mark=\"excl\"") && page.includes("data-mark=\"lock\"")
+     && page.includes("rosterMarks(p) + faceHtml(p)"));
+  ok('and the pin shows whether that player is being held',
+     /df-pin[\s\S]{0,200}aria-pressed="' \+ \(req \? 'true' : 'false'\)/.test(page)
+     && page.includes(".df-pin[aria-pressed=\"true\"]"));
+  ok('the roster carries no worded Require or Exclude button any more',
+     !page.includes('function rosterActions(p)') && !/df-pname-line[\s\S]{0,400}data-mark="lock"/.test(page));
   // The control that showed a man was required is gone from the row, so the
   // row says it another way.
   ok('a required player is still marked as such on his row',
@@ -597,9 +604,14 @@ console.log('\nthe DFS page explanations');
   // looking at Alternate 2 with no way to drop the man in front of him. The
   // row markup is shared, so the alternates carry the same pair and write the
   // same one list of constraints.
-  ok('the alternates carry the cross too, off the same shared row markup and the same constraint list',
-     !page.includes('lead ? rosterExclude')
-     && /var rows = l\.players\.map\([\s\S]{0,1400}rosterExclude\(p\)/.test(page));
+  ok('the alternates carry both marks too, off the same shared row markup and the same constraint list',
+     !page.includes('lead ? rosterMarks')
+     && /var rows = l\.players\.map\([\s\S]{0,1400}rosterMarks\(p\)/.test(page));
+  // The pin and the search reach different men on purpose: the search is for
+  // somebody not in the roster, the pin holds one the builder already found.
+  ok('the pin and the name search are both kept, because they reach different players',
+     page.includes('id="dfReqOpen"') && page.includes('class="df-pin"')
+     && page.includes('the pin holds a player the builder already found'));
   // The search is behind a pill now, so it is a thing the reader asks for
   // rather than a field sitting open above every roster.
   ok('the require search opens from a pill and stays open for the next name',
