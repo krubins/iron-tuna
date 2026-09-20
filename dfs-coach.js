@@ -112,6 +112,11 @@
     var o = opts || {};
     var host = o.host;
     var getContext = typeof o.context === 'function' ? o.context : function () { return null; };
+    // A host that is a floating dock is closed by its page, not minimized in
+    // place: the header button shuts the whole thing and the launcher comes
+    // back. Without an onClose the panel keeps its own minimize, so the module
+    // still stands alone on a page that embeds it inline.
+    var onClose = typeof o.onClose === 'function' ? o.onClose : null;
     if (!host) return null;
 
     var msgs = [];
@@ -123,7 +128,7 @@
     host.innerHTML =
       '<div class="df-coach-head">'
         + '<span class="df-coach-title">Value Coach<span class="df-coach-live">live on this lineup</span></span>'
-        + '<button type="button" class="df-coach-toggle" data-coach-toggle>Minimize</button>'
+        + '<button type="button" class="df-coach-toggle" data-coach-toggle>' + (onClose ? 'Close' : 'Minimize') + '</button>'
       + '</div>'
       + '<div class="df-coach-main" data-coach-main>'
         + '<p class="df-coach-lede" data-coach-lede></p>'
@@ -292,6 +297,7 @@
       if (b && !b.disabled) ask(b.getAttribute('data-coach-ask'));
     });
     elToggle.addEventListener('click', function () {
+      if (onClose) { onClose(); return; }
       openState = !openState;
       elMain.hidden = !openState;
       elToggle.textContent = openState ? 'Minimize' : 'Open the coach';

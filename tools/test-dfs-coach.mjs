@@ -58,6 +58,12 @@ console.log('the module');
   ok('it exports a panel to mount and the prompt it mounts with',
      typeof coach.mount === 'function' && typeof coach.SYSTEM === 'string' && Array.isArray(coach.STARTERS));
   ok('it offers the reader somewhere to start', coach.STARTERS.length >= 3 && coach.STARTERS.every((q) => /\?$/.test(q)));
+  // A dock is closed by its page; an inline panel minimizes itself. The module
+  // does both so it does not depend on being floated.
+  ok('a host that closes is closed, and one that does not still minimizes in place',
+     /var onClose = typeof o\.onClose === 'function' \? o\.onClose : null;/.test(src)
+     && /\(onClose \? 'Close' : 'Minimize'\)/.test(src)
+     && /if \(onClose\) \{ onClose\(\); return; \}/.test(src));
   // The prompt is prose about the page's numbers, so it is cut out before the
   // module's own code is read: what matters is that the CODE names none.
   const body = strip(src);
@@ -166,14 +172,48 @@ console.log('\nthe row the coach is handed');
 console.log('\nthe page');
 {
   ok('the sheet loads the coach', page.includes('<script src="/dfs-coach.js" defer></script>'));
-  ok('the panel sits with the lineup, under the roster and its pivots', (() => {
-    const sec = page.indexOf('<section id="sec-lineup">');
-    const end = page.indexOf('</section>', sec);
-    const host = page.indexOf('<div id="dfCoach"');
-    return sec >= 0 && host > page.indexOf('<div id="dfPivots">', sec) && host < end;
+  // THE BUG THIS REPLACED. The panel used to sit inside #sec-lineup under the
+  // pivots, which put it a full screen below the lineup, at the end of the
+  // section, competing with the fine-tune panel. A reader reading the roster
+  // never met it. It is a launcher and a dock now, both at page level so a
+  // section switch cannot take them away and a fixed dock is not nested in a
+  // container that scrolls or hides.
+  ok('the launcher and the dock are at page level, not buried in a section', (() => {
+    const lastSection = page.lastIndexOf('</section>');
+    const fab = page.indexOf('<button type="button" class="df-coach-fab"');
+    const dock = page.indexOf('<div id="dfCoach"');
+    return fab > lastSection && dock > fab && dock < page.indexOf('</main>');
   })());
+  ok('the dock is closed until the launcher asks for it',
+     /<div id="dfCoach" class="df-coach" role="dialog"[^>]*hidden>/.test(page)
+     && /aria-expanded="false" aria-controls="dfCoach"/.test(page));
+  ok('the launcher says what it opens, in text and not only in an icon',
+     /<span>Value Coach<\/span>/.test(page) && /class="df-coach-fab"[\s\S]{0,400}<svg/.test(page));
+  ok('opening and closing move the same two things, so they cannot disagree',
+     /function coachOpen\(\) \{ return !\$\('dfCoach'\)\.hidden; \}/.test(page)
+     && /dock\.hidden = false;\s*\n\s*fab\.setAttribute\('aria-expanded', 'true'\);/.test(page)
+     && /dock\.hidden = true;\s*\n\s*fab\.setAttribute\('aria-expanded', 'false'\);/.test(page));
+  ok('a dock opened before the roster existed re-reads the page as it opens',
+     /dock\.hidden = false;[\s\S]{0,200}coachSync\(\);/.test(page));
+  ok('opening moves focus into the dock and closing gives it back to the launcher',
+     /box && !box\.disabled \? box : dock\.querySelector\('\.df-coach-toggle'\)/.test(page)
+     && /fab\.focus\(\)/.test(page));
+  ok('Escape closes the dock, and the player modal still goes first because it is on top',
+     /if \(!\$\('dfPlayerModal'\)\.hidden\) \{ closePlayerCalc\(\); return; \}/.test(page)
+     && /if \(coachOpen\(\)\) closeCoach\(\);/.test(page));
+  ok('the launcher is wired to the toggle', /\$\('dfCoachFab'\)\.addEventListener\('click', toggleCoach\);/.test(page));
+  ok('the dock is under the player modal and over the tooltips', (() => {
+    const z = (re) => Number((page.match(re) || [])[1]);
+    return z(/\.df-coach\{position:fixed;[^}]*z-index:(\d+)/) < 1000
+        && z(/\.df-coach\{position:fixed;[^}]*z-index:(\d+)/) > 121;
+  })());
+  ok('the dock scrolls its conversation rather than growing past the window',
+     /\.df-coach\{position:fixed;[^}]*max-height:min\(76vh,700px\)/.test(page)
+     && /\.df-coach-body\{[^}]*overflow-y:auto/.test(page));
+  ok('on a phone it is a sheet across the width, not a 390px box off the edge',
+     /\.df-coach\{right:8px;left:8px;bottom:8px;width:auto/.test(page));
   ok('it is mounted against the page’s own state, not a copy',
-     /ITDfsCoach\.mount\(\{ host: \$\('dfCoach'\), context: coachContext \}\)/.test(page));
+     /ITDfsCoach\.mount\(\{ host: \$\('dfCoach'\), context: coachContext, onClose: closeCoach \}\)/.test(page));
   ok('a deferred script that has not landed yet cannot break a build',
      /if \(!mountCoach\(\)\) \{/.test(page)
      && /function coachSync\(\) \{ if \(coachPanel\) try \{ coachPanel\.refresh\(\); \} catch/.test(page));
@@ -184,9 +224,14 @@ console.log('\nthe page');
   // clue. The chrome now ships in the markup and the script only replaces it.
   ok('the panel is in the markup, so a missing script leaves a reason and not a gap', (() => {
     const at = page.indexOf('<div id="dfCoach"');
-    const host = page.slice(at, page.indexOf('</div>\n\n', at));
+    const host = page.slice(at, page.indexOf('</main>', at));
     return /class="df-coach"/.test(host) && /df-coach-title/.test(host) && /id="dfCoachBoot"/.test(host);
   })());
+  ok('and the launcher stops looking ready when the coach behind it never loaded',
+     /fab\.classList\.add\('df-coach-fab-bad'\); fab\.title = msg;/.test(page)
+     && /\.df-coach-fab-bad\{/.test(page));
+  ok('a retry that works puts the launcher back',
+     /if \(mountCoach\(\)\) \{ var fab = \$\('dfCoachFab'\); if \(fab\) \{ fab\.classList\.remove\('df-coach-fab-bad'\)/.test(page));
   ok('the mount is guarded on the script being there AND on it not throwing',
      /if \(!window\.ITDfsCoach \|\| typeof ITDfsCoach\.mount !== 'function'\) return false;/.test(page)
      && /catch \(err\) \{ coachPanel = null; \}/.test(page));
@@ -196,7 +241,7 @@ console.log('\nthe page');
      /function coachReload\(\)/.test(page) && /sc\.src = '\/dfs-coach\.js\?r=' \+ Date\.now\(\)/.test(page)
      && /sc\.onerror = function/.test(page));
   ok('a retry that arrives but cannot start is not silent either',
-     /if \(!mountCoach\(\)\) coachBoot\('The coach loaded but could not start/.test(page));
+     /else coachBoot\('The coach loaded but could not start\. Reload the page\.', false\);/.test(page));
   ok('the retry button has a style to wear', /\.df-coach-retry\{/.test(page));
   ok('the badge stops saying "starting" once it is clear nothing started',
      /var live = \$\('dfCoachLive'\); if \(live\) live\.textContent = badge \|\| 'not loaded';/.test(page));
