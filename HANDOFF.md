@@ -12532,3 +12532,68 @@ finished defenses on the board index as
 goes 4 → 6 against §109's build, which is the bug above, and the defense the
 builder seated in the recommended roster is now in both places. No page errors
 at 1280 or 390px.
+
+## 111. September 20: two pools, one claim, and nothing comparing them
+
+`coachBoard()` (§109) claims to carry every player the solve could have used.
+Both halves of that claim live in code that moves — the page's eligibility
+rule and the builder's pool filter — and in one evening they moved apart
+twice, with every gate green both times:
+
+- **§109 into #301.** main moved the solve, the bench and the pool table from
+  `onBoard` to `projected` to admit the supplemental minimum-salary tier. The
+  index kept filtering on `onBoard` and became the one pool on the page
+  missing them: the cheap bodies a price question is about.
+- **#300 into §110.** The builder excludes a played man on `banked(p) != null`,
+  a *scored* actual, not on `gamePlayed`. A defense whose game is final has no
+  box score, so it stays in the pool and gets seated — and the index, filtering
+  on `isPlayed`, had dropped it. A man in the recommended roster and absent
+  from the board behind it.
+
+Both were found by reading a diff. That does not scale, and the second one was
+found only because a browser run printed `playedInLineup: 1` and the number
+looked wrong.
+
+So the gate runs **the real builder and the real `coachBoard`** over one
+fixture and compares what each keeps. Neither predicate is restated in the
+test; that restatement is the drift it exists to catch. It locks each player in
+turn to learn whom the builder will seat, subtracts the two refusals the
+builder *names* (`played` and `benched`, both of which a lock overrides by
+design), and asserts the two sets are equal:
+
+```
+EVERY man the builder will seat unforced is on the coach's index
+and the index carries nobody the builder would refuse
+the index is never smaller than the pool the builder solved from
+```
+
+Re-introducing either historical bug fails it, with the name of the missing
+man in the failure detail. One deliberate difference is asserted as such: a
+cash build declines the supplemental tier (`thin`), and the index keeps it,
+because the index is the BOARD and not one solve — the reader can turn them
+back on, and "who is cheap at receiver" is a question about them either way.
+
+**Two things the writing of it turned up.**
+
+`ok(...)` has no per-test try, so an assertion whose *condition throws* takes
+the whole file down and every section below it never runs. `b.DST[0]` on a
+board that had wrongly dropped every defense did exactly that, and hid the new
+pools gate two blocks later — the one gate written to catch that bug. Every
+index into a lifted result is `?.` now, and the failure detail is the whole
+object rather than the element that was not there.
+
+And a lifted module must carry **every** eligibility helper the page has, not
+only the ones `coachBoard` calls today: lifting just the current ones made a
+changed filter die with `ReferenceError: isPlayed is not defined` instead of
+failing an assertion — and it would have passed silently the day someone
+lifted the other name too.
+
+| Where | What |
+|---|---|
+| `tools/test-dfs-coach.mjs` | 170 now: the pools-agree block, `?.` on every lifted index, and both lifted modules carrying `actualOf`, `isBanked`, `isPlayed` and `projected`. |
+
+`node tools/test-dfs-coach.mjs` (170, 0.8s) and every other node gate in
+`checks.yml` except `test-dry-run` pass, plus the four `--check` generators and
+the control-byte scan. Verified by reintroducing each bug in turn: `onBoard`
+for `projected` fails 5 assertions including both pool comparisons, `isPlayed`
+for `isBanked` fails the same 5, and the tree restores clean at 170.

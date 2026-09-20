@@ -44,6 +44,12 @@ const src = read('dfs-coach.js');
 const coach = require(path.join(ROOT, 'dfs-coach.js'));
 
 let pass = 0, fail = 0;
+// A FAILING ASSERTION MUST FAIL, NOT THROW. There is no per-test try here, so
+// an `ok(...)` whose condition throws takes the whole file down with it and
+// every section below never runs. That happened: `b.DST[0]` on a board that
+// had (wrongly) dropped every defense threw, and hid the pools gate two blocks
+// later — the one gate written to catch exactly that bug. Index into a lifted
+// result with `?.`, and pass the whole thing as the failure detail.
 const ok = (n, c, x = '') => { if (c) { pass++; console.log(`  ok   ${n}`); } else { fail++; console.log(`  FAIL ${n}${x ? ' — ' + x : ''}`); } };
 const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
@@ -264,7 +270,7 @@ console.log('\nthe payload the proxy will accept');
      && /var PROXY_SYSTEM_CAP = 40000;/.test(src)
      && !/var JSON_BUDGET = \d/.test(src));
   ok('the roster and the contest it was solved for survive every trim',
-     after.lineups.length >= 1 && after.lineups[0].players.length === 9 && after.setup && after.build && after.thesis);
+     after.lineups?.length >= 1 && after.lineups[0].players?.length === 9 && !!after.setup && !!after.build && !!after.thesis);
   ok('and the model is told what was dropped rather than left to assume it saw everything',
      Array.isArray(after.trimmedFromThisPrompt) && after.trimmedFromThisPrompt.length > 0,
      JSON.stringify(after.trimmedFromThisPrompt));
@@ -278,7 +284,7 @@ console.log('\nthe payload the proxy will accept');
      && Object.keys(after.slateBoard).every((pos) => after.slateBoard[pos].length > 0),
      JSON.stringify(Object.fromEntries(Object.entries(after.slateBoard || {}).map(([k, v]) => [k, v.length]))));
   ok('it is cut from the tail of each position, so the best body at every price is still there',
-     after.slateBoard.WR.length < 250 && after.slateBoard.WR[0] === boardLine('WR', 0)
+     after.slateBoard?.WR?.length < 250 && after.slateBoard?.WR?.[0] === boardLine('WR', 0)
      && after.slateBoard.DST.length === 28,
      after.slateBoard.WR.length + ' WRs kept');
   ok('and the cut is declared, so a name that was trimmed is not reported as a man who is not playing',
@@ -400,8 +406,14 @@ console.log('\nthe whole board the coach can now read');
   // coach used to answer it by listing the three receivers that happened to
   // be in the lineup. Every priced player the solve could have used is one
   // line of the index now, so the answer is in the data.
+  // EVERY eligibility helper the page has, not just the ones coachBoard calls
+  // today. Lifting only the current ones makes a changed filter die with
+  // "isPlayed is not defined" instead of failing an assertion, and a gate that
+  // reports a ReferenceError is a gate nobody can read \u2014 worse, it would pass
+  // silently the day someone lifted the other name too.
   const mod = [lift(/function coachN\(/), lift(/function actualOf\(/), lift(/function isBanked\(/),
-    lift(/function projected\(/), lift(/function coachBoard\(/), lift(/function coachBoardNote\(/),
+    lift(/function isPlayed\(/), lift(/function projected\(/),
+    lift(/function coachBoard\(/), lift(/function coachBoardNote\(/),
     "var COACH_BOARD_COLUMNS = 'name|team|opp|salary|proj|ceiling|own|value|basis|status';",
     'export { coachBoard, coachBoardNote, COACH_BOARD_COLUMNS };'].join('\n');
   const { coachBoard, coachBoardNote, COACH_BOARD_COLUMNS } =
@@ -457,11 +469,11 @@ console.log('\nthe whole board the coach can now read');
      /A basis of "season" marks a supplemental row/.test(coachBoardNote('value'))
      && /what he has done rather than a forecast of Sunday/.test(coachBoardNote('value')));
   ok('the line is the page\u2019s own numbers, rounded and not re-derived',
-     b.WR[0] === 'Cheap Receiver|CHI|@DET|4800|11.1|22.2|6.2|121||Questionable', b.WR[0]);
+     b.WR?.[0] === 'Cheap Receiver|CHI|@DET|4800|11.1|22.2|6.2|121||Questionable', JSON.stringify(b.WR));
   ok('a player nothing flagged ends his line early rather than padding it',
-     b.WR[1] === 'Garrett Wilson|NYJ|vs BUF|6000|14.2|26.4|12.5|103', b.WR[1]);
+     b.WR?.[1] === 'Garrett Wilson|NYJ|vs BUF|6000|14.2|26.4|12.5|103', JSON.stringify(b.WR));
   ok('it is sorted by the key this contest is judged on, so a trim cuts the names it cares least about',
-     b.WR[0].startsWith('Cheap Receiver'));
+     !!b.WR?.[0]?.startsWith('Cheap Receiver'));
   ok('a man who is not playing is not offered as an option',
      !b.RB && !b.WR.some((r) => /Hurt Back/.test(r)));
   // He would otherwise sit at the top of the index on his finished afternoon
@@ -479,7 +491,7 @@ console.log('\nthe whole board the coach can now read');
   ok('but a finished defense, whom the builder will still seat, is on the index',
      !!b.DST && b.DST.length === 1, JSON.stringify(b.DST));
   ok('and his line says the number beside him is still an estimate',
-     b.DST[0] === 'Finished D|LAC|vs KC|3000|8.6|17.2|9.4|104|est', b.DST[0]);
+     b.DST?.[0] === 'Finished D|LAC|vs KC|3000|8.6|17.2|9.4|104|est', JSON.stringify(b.DST));
   ok('the note explains that basis, and that a banked man is gone rather than hidden',
      /A basis of "est" marks a man whose game is already final/.test(coachBoardNote('cashScore'))
      && /The builder can still seat him, which is why he is here/.test(coachBoardNote('cashScore'))
@@ -707,6 +719,117 @@ console.log('\nthe page');
      })());
   ok('a setup choice that rebuilds nothing still tells the coach to look again',
      (lift(/function updateSetupState\(/).match(/coachSync\(\);/g) || []).length >= 2);
+}
+
+console.log('\nthe coach\u2019s pool and the builder\u2019s pool');
+{
+  // THE GATE'S REASON, and it is two bugs in one evening rather than a worry.
+  //
+  // coachBoard() claims to carry every player the solve could have used. Both
+  // halves of that claim live in code that moves: the page's eligibility rule
+  // and the builder's pool filter. Twice they moved apart and nothing went
+  // red, because no test compared them:
+  //
+  //   #301  moved the solve, the bench and the pool table from `onBoard` to
+  //         `projected` to admit the supplemental minimum-salary tier. The
+  //         index kept filtering on `onBoard` and became the one pool on the
+  //         page missing them — the cheap bodies a price question is about.
+  //   #304  found the index filtering on `isPlayed` while the builder excludes
+  //         on a BANKED actual. A defense whose game is final has gamePlayed
+  //         with no box score, so the builder seats him and the index had
+  //         dropped him: a man in the recommended roster and absent from the
+  //         board behind it.
+  //
+  // Both were found by reading a diff, which does not scale. This runs the
+  // REAL builder and the REAL coachBoard over one fixture and compares what
+  // each keeps. Neither predicate is restated here; that restatement is the
+  // drift this exists to catch.
+  const ITDfs = (await import(pathToFileURL(path.join(ROOT, 'dfs-optimizer.js')).href)).default;
+  // Every eligibility helper, for the reason given in the block above: this
+  // gate has to fail an assertion when a filter changes, not throw.
+  const mod = [lift(/function coachN\(/), lift(/function actualOf\(/), lift(/function isBanked\(/),
+    lift(/function isPlayed\(/), lift(/function projected\(/), lift(/function coachBoard\(/),
+    "var COACH_BOARD_COLUMNS = 'x';", 'export { coachBoard };'].join('\n');
+  const { coachBoard } = await import('data:text/javascript;base64,' + Buffer.from(mod, 'utf8').toString('base64'));
+
+  // Enough bodies to fill a Classic roster, plus one of every awkward kind.
+  const man = (name, pos, team, salary, pts, extra = {}) => ({
+    id: name, key: name, name, position: pos, team, opponent: team === 'BUF' ? 'NYJ' : 'BUF',
+    salary, ironTunaPoints: pts, ceiling: pts * 1.8, floor: pts * 0.6, ownership: 10, value: 100,
+    onBoard: true, ...extra
+  });
+  const players = [
+    man('QB One', 'QB', 'BUF', 7000, 20), man('QB Two', 'QB', 'NYJ', 6000, 17),
+    man('RB One', 'RB', 'BUF', 7500, 18), man('RB Two', 'RB', 'NYJ', 6500, 15),
+    man('RB Three', 'RB', 'BUF', 5000, 12), man('RB Four', 'RB', 'NYJ', 4200, 10),
+    man('WR One', 'WR', 'BUF', 8000, 19), man('WR Two', 'WR', 'NYJ', 7000, 16),
+    man('WR Three', 'WR', 'BUF', 6000, 14), man('WR Four', 'WR', 'NYJ', 5000, 12),
+    man('WR Five', 'WR', 'BUF', 4000, 9), man('TE One', 'TE', 'NYJ', 5500, 11),
+    man('TE Two', 'TE', 'BUF', 3500, 8), man('DST One', 'DST', 'NYJ', 3000, 7),
+    // The three the two bugs were about.
+    man('Supplemental Man', 'WR', 'BUF', 3000, 7.4, { onBoard: false, projected: true, supplemental: true }),
+    man('Finished D', 'DST', 'BUF', 3200, 8.6, { gamePlayed: true, actualPoints: null, actualBasis: 'no-defense-box-score' }),
+    man('Banked Man', 'WR', 'NYJ', 6800, 15, { gamePlayed: true, actualPoints: 22.4, actualBasis: 'box-score' }),
+    man('Benched Man', 'RB', 'BUF', 6900, 16, { available: false, weekStatus: 'Out' }),
+    man('Unpriced Body', 'WR', 'NYJ', 3000, 0, { onBoard: false })
+  ];
+
+  const onIndex = (view, key = 'value') => new Set(
+    Object.values(coachBoard(view, key)).flat().map((line) => line.split('|')[0]));
+  const view = { players };
+  const idx = onIndex(view);
+
+  // THE PROPERTY. A man the builder is willing to seat has to be on the board
+  // the coach reads, or the coach is answering about a roster it cannot see.
+  // Locking each one in turn is what makes this bite: a solve left to itself
+  // seats the nine it likes and says nothing about the rest.
+  const seatable = players.filter((p) => {
+    const r = ITDfs.build(players, { mode: 'ironTuna', format: 'dk-classic', lock: [p.id], lineups: 1, seed: 7 });
+    return !!r.ok && !!r.lineups?.[0]?.players?.some((q) => q.id === p.id);
+  }).map((p) => p.name);
+  const solved = ITDfs.build(players, { mode: 'ironTuna', format: 'dk-classic', lineups: 1, seed: 7 });
+  // A LOCK IS THE EXCEPTION, everywhere in the builder: both refusals it names
+  // read `&& !lock[p.id]`, because a reader locking a man is telling it that
+  // seat is taken and the banked points come with it. So the probe above can
+  // seat a banked or benched man, and that is not the index disagreeing — it
+  // is the reader overriding the board. The property is about who the builder
+  // will seat on its OWN account, and the builder names the exceptions itself
+  // rather than this test guessing at them.
+  const overridden = new Set([...solved.played, ...solved.benched].map((r) => r.name));
+  const unforced = seatable.filter((n) => !overridden.has(n));
+  ok('the builder can seat somebody awkward at all, or this gate proves nothing',
+     unforced.includes('Finished D') && unforced.includes('Supplemental Man'),
+     'unforced: ' + unforced.join(', '));
+  ok('EVERY man the builder will seat unforced is on the coach\u2019s index',
+     unforced.every((n) => idx.has(n)),
+     'missing from the index: ' + unforced.filter((n) => !idx.has(n)).join(', '));
+  // And the other way, so the index cannot quietly grow a man the builder
+  // would never use: the two sets are the same set.
+  ok('and the index carries nobody the builder would refuse',
+     [...idx].every((n) => unforced.includes(n)),
+     'on the index but not seatable: ' + [...idx].filter((n) => !unforced.includes(n)).join(', '));
+  ok('a man whose afternoon is banked is off both, by the builder\u2019s own reckoning',
+     solved.played.some((r) => r.name === 'Banked Man') && !idx.has('Banked Man'),
+     JSON.stringify(solved.played.map((r) => r.name)));
+  ok('and a man who is not playing is off both',
+     solved.benched.some((r) => r.name === 'Benched Man') && !idx.has('Benched Man'),
+     JSON.stringify(solved.benched.map((r) => r.name)));
+  ok('a body the board could not price is on neither',
+     !idx.has('Unpriced Body')
+     && !solved.lineups?.[0]?.players?.some((q) => q.name === 'Unpriced Body'));
+  ok('the index is never smaller than the pool the builder solved from',
+     idx.size >= solved.poolSize, idx.size + ' on the index, poolSize ' + solved.poolSize);
+
+  // THE ONE DELIBERATE DIFFERENCE, asserted so it cannot become an accident.
+  // A cash build drops the supplemental tier unless the reader asks for it
+  // (`thin`), but the index is the BOARD and not one solve: the reader can
+  // turn them back on, and "who is cheap at receiver" is a question about
+  // them either way. He stays, marked.
+  const cash = ITDfs.build(players, { mode: 'cash', format: 'dk-classic', lineups: 1, seed: 7 });
+  const thinNames = (cash.thin || []).map((r) => r.name);
+  ok('a tier a cash build declines is still on the index, because the index is the board',
+     !thinNames.length || thinNames.every((n) => idx.has(n)),
+     'thin: ' + JSON.stringify(thinNames));
 }
 
 console.log('\nthe catalog the setup coach recommends from');
