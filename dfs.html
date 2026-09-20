@@ -107,6 +107,15 @@ p{color:var(--sec);margin:0 0 16px}
 .is-stat .is-par{font-family:var(--font-display);font-size:.52em;color:var(--muted);letter-spacing:.01em}
 .is-board .is-stat .is-par{color:#8fa3a0}
 .is-board .is-stat.key .is-par{color:#8fa3a0}
+/* A number that is not a projection. Once a game is final the figure in the
+   Iron Tuna column is what the man SCORED, and a reader scanning the column
+   has no other way to tell the two apart. Quiet, because it qualifies the
+   number rather than competing with it. */
+.df-banked{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--teal);background:rgba(14,124,99,.1);border-radius:3px;padding:1px 4px;margin-left:5px;vertical-align:1px}
+.df-banked.pending{color:var(--muted);background:var(--elev)}
+.is-board .df-banked{color:#46d6ac;background:rgba(70,214,172,.15)}
+.is-board .df-banked.pending{color:#8fa3a0;background:rgba(255,255,255,.1)}
 .df-fieldnote{margin:10px var(--space-5) var(--space-4);font-size:12.5px;line-height:1.55;color:#9fb6b1;max-width:86ch}
 .df-fieldnote b{color:#d5e2df;font-weight:700}
 .df-caplab{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;
@@ -1693,7 +1702,30 @@ p{color:var(--sec);margin:0 0 16px}
     return '<p class="df-fieldnote"><b>' + n1(fieldAvg.points) + ' is the typical entry.</b> '
       + 'Rosters drawn off this board seat by seat on Iron Tuna\u2019s modeled ownership, under the same cap and the same roster format, then averaged: what an ordinary lineup on this slate projects for. '
       + 'This build projects ' + (Math.abs(over) < 0.05 ? 'level with it' : n1(Math.abs(over)) + ' points ' + (over > 0 ? 'above' : 'below') + ' it') + '. '
+      + (fieldAvg.bankedPool ? 'Part of that number is settled: the field entered before kickoff, so an ordinary entry owns the players whose games are finished at what they actually scored. '
+          : '')
       + 'It is a bar to clear, not a score to aim at, and the ownership behind it is Iron Tuna\u2019s model rather than a feed.</p>';
+  }
+  // FINAL means the figure beside his name is what he scored, not what he is
+  // projected for. A defense is the one seat that can be past kickoff and
+  // still carry a projection: the stored box score has no defensive line in
+  // it (dfsActualFor in _worker.js), and saying so is better than letting a
+  // reader assume the whole roster is settled.
+  function bankedMark(p) {
+    if (!p || !p.gamePlayed) return '';
+    if (p.actual == null) return ' <span class="df-banked pending" title="This game is over, but Iron Tuna has no box score for a defense, so this is still the projection.">est</span>';
+    return ' <span class="df-banked" title="' + n1(p.actual) + ' is what he actually scored. His game is final, so this is a result rather than a projection.">final</span>';
+  }
+  // How much of a total is already settled. A reader at four o'clock is not
+  // asking what the roster projects for, he is asking what is left to come.
+  function bankedNote(l) {
+    if (!l || !l.playedPlayers) return '';
+    var left = Number(l.projPoints) - Number(l.bankedPoints || 0);
+    return '<p class="df-fieldnote"><b>' + n1(l.bankedPoints || 0) + ' of these ' + n1(l.projPoints) + ' points are already in the books.</b> '
+      + l.bankedPlayers + ' of the ' + l.players.length + ' seats ' + (l.bankedPlayers === 1 ? 'has' : 'have') + ' played, and carr' + (l.bankedPlayers === 1 ? 'ies' : 'y') + ' what was actually scored under ' + e(slate.label || 'the site') + '\u2019 own rules; '
+      + 'the other ' + (l.players.length - l.bankedPlayers) + (l.players.length - l.bankedPlayers === 1 ? ' is still a projection, worth ' : ' are still projections, worth ') + n1(left) + '. '
+      + (l.playedPlayers > l.bankedPlayers ? 'A defense whose game is over is counted among those projections, because Iron Tuna stores no defensive box score. ' : '')
+      + 'Players whose games are finished are off the board for new lineups, since no entry submitted now can contain them; pin one to keep him in a roster you already hold.</p>';
   }
   function lineupCard(l, i, sh, lead) {
     var qb = null; for (var k = 0; k < l.players.length; k++) if (l.players[k].slot === 'QB') qb = l.players[k];
@@ -1739,7 +1771,7 @@ p{color:var(--sec);margin:0 0 16px}
         + '<span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></span></span></td>'
         + '<td class="num" data-lab="Salary">' + money(p.salary) + '</td>'
         + '<td class="num" data-lab="' + e(fppgLabel()) + '">' + fppgText(p) + '</td>'
-        + '<td class="num" data-lab="Iron Tuna">' + n1(p.proj) + '</td>'
+        + '<td class="num" data-lab="Iron Tuna">' + n1(p.proj) + bankedMark(p) + '</td>'
         + '<td class="num" data-lab="Tuna Edge">' + edgeHtml(p) + '</td>'
         + '<td class="num" data-lab="Own">' + (p.ownership == null ? '—' : n1(p.ownership) + '%') + '</td></tr>'
         + '<tr class="df-fitrow" id="' + fitId + '"><td aria-hidden="true"></td><td colspan="6">'
@@ -1757,7 +1789,7 @@ p{color:var(--sec);margin:0 0 16px}
         + '<div class="is-board-head"><h3>' + e(sh.head) + '</h3><span class="is-board-sub">' + sub + '</span></div>'
         + '<div class="df-explain-summary"><h4>Why This Lineup</h4><p>' + e(lineupSummary(l, sh, qb)) + '</p></div>'
         + propsNote(l)
-        + '<div class="is-stats">' + stats + '</div>' + fieldNote(l) + meter
+        + '<div class="is-stats">' + stats + '</div>' + bankedNote(l) + fieldNote(l) + meter
         + '<div class="df-lead-grid"><div class="df-lead-table">' + table + '</div>'
         + '<p class="df-fit df-act-note">Disagree with a seat? The <b>&times;</b> beside a player solves the slate again without him; the <b>pin</b> holds him in every lineup while the other slots re-solve around him. Both sit on every alternate below too. A player who is not in the roster at all goes in through <b>Require a player</b> above it, by name. Every one of them lands in the single list of constraints above, each with an undo.</p>'
         + breakdownHtml(l, sh, qb) + '</div>'
@@ -2318,6 +2350,11 @@ p{color:var(--sec);margin:0 0 16px}
       label: rank === 1 ? 'the recommended lineup' : 'alternate ' + (rank - 1),
       salary: l.salary, salaryLeft: l.remaining,
       projPoints: coachN(l.projPoints), floorPoints: coachN(l.floorPoints), ceilingPoints: coachN(l.ceilingPoints),
+      // Part of a partly-played slate's total is a result, not a forecast. The
+      // coach is told which part rather than left to add the rows up itself
+      // and call the sum a projection.
+      bankedPoints: l.playedPlayers ? coachN(l.bankedPoints) : null,
+      bankedPlayers: l.playedPlayers ? l.bankedPlayers : null,
       // The page prints the field's average beside the projection, so the
       // coach carries the same comparison rather than being asked a question
       // about a number on the screen it cannot see.

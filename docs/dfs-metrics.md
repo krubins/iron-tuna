@@ -235,6 +235,48 @@ Head-to-Head on every slate the site ever served.** The builder's own
 `projPoints`, `floorPoints` and `ceilingPoints` were correct the whole time and
 unused. `contestPick` reads those.
 
+## Played games
+
+Once a slate starts, part of it stops being a forecast. A player whose club's
+game is **final** carries `actualPoints` on his slate row: what he scored,
+run through the same site rules as everything else on the board
+(`scoringRules('ppr', SCORING_SITE[site])`), from the box score already stored
+in `game_summaries`. `dfsActualsForWeek()` reads that table and never fetches —
+`/api/dfs` is public and cached for five minutes, and a fourteen-game slate
+would otherwise hit ESPN fourteen times per cache miss. A game whose box score
+has not been stored yet simply reads as unplayed, which is what the page said
+yesterday.
+
+**Final only.** A game in progress has a box score too, and half of one is not
+what a man scored; a roster totalled on partial stats reads low for a reason no
+reader could see.
+
+| Where | What changes |
+|---|---|
+| Every optimizer mode | Reads the banked number ahead of its own objective. A finished afternoon has no spread left, so floor, median and ceiling are all that one number, and the leverage mode does not discount points already scored by anybody's ownership. |
+| The proposed roster | A player whose game is over is **off the board**: no entry submitted now can contain him, so building him into a "recommended" lineup would be hindsight, not a recommendation. He is listed in `played` with the reason. A **lock is the exception** — a reader totalling an entry he already holds is telling the builder those seats are taken, and the banked points come with them. |
+| Lineup totals | `projPoints` counts banked players at what they scored. `bankedPoints` / `bankedPlayers` split the settled part from the part still to come, and the card prints the split in words. |
+| Typical entry | Played players **stay in the draw**, at their actual score. The field submitted before kickoff, so an ordinary entry owns them at what they did — including a zero. `basis` becomes `modeled-ownership,part-played` so nothing downstream prints it as a pure projection. |
+
+Two honest gaps, both of which can only understate a player:
+
+- **Defenses and kickers.** `normalizeGameSummary()` collects passing,
+  rushing, receiving and fumbles. A DST is scored on sacks, takeaways, return
+  touchdowns and points allowed; a kicker on field goals and extra points.
+  None of those are in the stored payload. So either one, with its game final,
+  carries `gamePlayed: true` with `actualPoints: null` and an `actualBasis` of
+  `no-defense-box-score` / `no-kicking-box-score`, keeps its projection, and
+  the page marks it `est` rather than letting a reader assume the whole roster
+  is settled. DraftKings Classic has no kicker slot, so in practice this is
+  the defense. Closing it means collecting those lines in
+  `normalizeGameSummary()` and versioning the cached payload.
+- **Return touchdowns.** The normalized box score carries no returns, so a man
+  whose only score was a kick or punt return reads as the rest of his line.
+  A played man with no box-score line at all is scored **zero**
+  (`actualBasis: 'box-score-absent'`), because he dressed and did nothing —
+  that is a result, not a missing number, and quoting Thursday's projection at
+  him would be worse.
+
 ## What is deliberately not here
 
 - No metric is invented for marketing. Each row above is used by the DFS lens

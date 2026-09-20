@@ -24,8 +24,12 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // The market-trust ladder is the site's, not a copy: the DFS slate shrinks
   // a market number by the same factors the season blend does, so lifting it
   // here is what keeps this test honest about which one it is exercising.
-  cut('const BLEND_SHRINK', 'function blendComponents') + '\n' + cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, BLEND_SHRINK };'
+  cut('const BLEND_SHRINK', 'function blendComponents') + '\n' +
+  // The box-score stat line lives with the box scores, not with the DFS
+  // block, because the recaps score the same afternoon through it.
+  cut('function boxScoreStatLine', '\n// \u2500\u2500 what the week') + '\n' +
+  cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, BLEND_SHRINK };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 // The scheduled workflow's own CSV writer, so the false-positive gate below
@@ -1032,5 +1036,141 @@ console.log('\nthe field\'s average entry');
      && fs.readFileSync(path.join(ROOT, 'dfs-coach.js'), 'utf8').includes('typicalEntryPoints'));
   ok('the method is written down', fs.readFileSync(path.join(ROOT, 'docs/dfs-metrics.md'), 'utf8').includes('Typical entry'));
 }
+
+// A slate that is partly played. Once a game is final the projection beside a
+// man's name is describing an afternoon that already happened, so the board
+// stops quoting it: the roster totals on what he SCORED, and so does the
+// typical entry, because the field submitted its entries before kickoff and
+// owns him at his real number.
+console.log('\nthe slate, partly played');
+{
+  const rules = H.scoringRules('ppr', H.SCORING_SITE.dk);
+  const line = (name, team, o = {}) => ({ name, key: _oddsNorm(name), team,
+    pass: { att: 0, cmp: 0, yd: 0, td: 0, int: 0, ...(o.pass || {}) },
+    rush: { att: 0, yd: 0, td: 0, ...(o.rush || {}) },
+    rec: { tgt: 0, rec: 0, yd: 0, td: 0, ...(o.rec || {}) },
+    fumLost: o.fumLost || 0 });
+  const actualsOf = (teams, lines) => ({ games: 13, final: teams.length, teams: new Set(teams),
+    lines: lines.reduce((m, l) => (m.set(l.key, (m.get(l.key) || []).concat([l])), m), new Map()) });
+
+  // 320 passing yards is 12.8 plus the 300-yard bonus; three touchdowns are
+  // 12; the interception is -1; 30 rushing yards are 3 and the score is 6.
+  const qb = line('Josh Allen', 'BUF', { pass: { yd: 320, td: 3, int: 1 }, rush: { att: 4, yd: 30, td: 1 } });
+  const A = actualsOf(['BUF', 'NYJ'], [qb]);
+  const got = H.dfsActualFor(A, 'Josh Allen', 'BUF', 'QB', rules);
+  ok('a finished game is scored on the box score, at the site\'s own rules',
+     got.gamePlayed === true && got.actualBasis === 'box-score' && near(got.actualPoints, 35.8, 0.01), JSON.stringify(got));
+  ok('a man whose game has not kicked off carries no actual at all',
+     H.dfsActualFor(A, 'Somebody Else', 'KC', 'WR', rules).gamePlayed === false);
+  // He dressed and did nothing. That is a zero, not an unknown, and the board
+  // has to say zero rather than keep quoting Thursday's estimate at him.
+  const none = H.dfsActualFor(A, 'Khalil Shakir', 'BUF', 'WR', rules);
+  ok('a played man with no box-score line is a zero, not a missing number',
+     none.gamePlayed === true && none.actualPoints === 0 && none.actualBasis === 'box-score-absent', JSON.stringify(none));
+  // The one hole in this, said out loud rather than papered over: the stored
+  // box score carries passing, rushing, receiving and fumbles, and a defense
+  // is scored on sacks, takeaways, return touchdowns and points allowed.
+  const dst = H.dfsActualFor(A, 'Bills', 'BUF', 'DST', rules);
+  ok('a defense whose game is over says so and still has no actual',
+     dst.gamePlayed === true && dst.actualPoints === null && dst.actualBasis === 'no-defense-box-score', JSON.stringify(dst));
+  // A kicker is the same case as the defense: field goals and extra points
+  // are not in the stored box score either, so scoring him off it would bank
+  // a silent zero on a man who might have kicked four.
+  const k = H.dfsActualFor(A, 'Tyler Bass', 'BUF', 'K', rules);
+  ok('a kicker whose game is over keeps his projection too, for the same reason',
+     k.gamePlayed === true && k.actualPoints === null && k.actualBasis === 'no-kicking-box-score', JSON.stringify(k));
+  // Two men normalize to the same name often enough that taking the first is
+  // somebody's wrong stat line. The club breaks the tie.
+  const twins = actualsOf(['BUF', 'NYJ', 'LA'], [line('Mike Williams', 'NYJ', { rec: { rec: 4, yd: 50 } }), line('Mike Williams', 'LA', { rec: { rec: 9, yd: 140, td: 2 } })]);
+  ok('two players with the same normalized name are told apart by their club',
+     near(H.dfsActualFor(twins, 'Mike Williams', 'NYJ', 'WR', rules).actualPoints, 9, 0.01)
+     && near(H.dfsActualFor(twins, 'Mike Williams', 'LA', 'WR', rules).actualPoints, 38, 0.01));
+
+  // ── and what the optimizer does with it ────────────────────────────────
+  // A board of its own, because the slate fixture above is fifteen bodies
+  // for nine seats with $6,800 of headroom: locking anybody expensive in it
+  // is infeasible whether or not his game has been played, which would test
+  // the cap rather than this.
+  const mk = (id, position, pts, salary, team) => ({ id, key: id, name: id, position, team,
+    ironTunaPoints: pts, vegasPoints: pts, consensusPoints: pts, marketPoints: pts,
+    salary, onBoard: true, available: true, ownership: 10 });
+  const players = [
+    mk('qb1', 'QB', 22, 7000, 'BUF'), mk('qb2', 'QB', 18, 6000, 'KC'),
+    mk('rb1', 'RB', 20, 7000, 'DET'), mk('rb2', 'RB', 16, 6000, 'NYJ'), mk('rb3', 'RB', 12, 5000, 'LA'),
+    mk('wr1', 'WR', 19, 7000, 'CIN'), mk('wr2', 'WR', 15, 6000, 'MIA'), mk('wr3', 'WR', 13, 5000, 'SEA'), mk('wr4', 'WR', 11, 4000, 'ATL'),
+    mk('te1', 'TE', 12, 4000, 'KC'), mk('te2', 'TE', 9, 3000, 'BAL'),
+    mk('d1', 'DST', 8, 3000, 'CHI'), mk('d2', 'DST', 7, 2500, 'PIT')
+  ];
+  const base = { slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, cap: 50000 };
+  // His game is over and he went off for fifty. He is still not a play.
+  const bank = (id, pts) => players.map(p => p.id === id ? { ...p, gamePlayed: true, actualPoints: pts, actualBasis: 'box-score' } : p);
+  const played = bank('qb1', 50);
+  const built = DFS.build(played, { ...base, mode: 'ironTuna', lineups: 1 });
+  ok('a man whose game is finished is off the board, however well he scored',
+     built.ok && !built.lineups[0].players.some(p => p.id === 'qb1'));
+  ok('and the build says where he went rather than leaving a reader to wonder',
+     built.playedCount === 1 && built.played[0].id === 'qb1' && near(built.played[0].points, 50, 0.01), JSON.stringify(built.played));
+  // A lock is a decision, here as everywhere else in the builder: a reader
+  // totalling an entry he already has is saying those seats are taken.
+  const locked = DFS.build(played, { ...base, mode: 'ironTuna', lineups: 1, lock: ['qb1'] });
+  const row = locked.ok ? locked.lineups[0].players.find(p => p.id === 'qb1') : null;
+  ok('a locked one is seated, at what he actually scored', row && near(row.points, 50, 0.01) && near(row.actual, 50, 0.01) && row.gamePlayed === true, JSON.stringify(row));
+  ok('and a played afternoon has no spread left: his floor and his ceiling are that number too',
+     row && near(row.floor, 50, 0.01) && near(row.ceiling, 50, 0.01), row ? [row.floor, row.ceiling].join(' / ') : 'no row');
+  ok('the card splits what is banked from what is still a guess',
+     locked.lineups[0].bankedPlayers === 1 && near(locked.lineups[0].bankedPoints, 50, 0.01)
+     && locked.lineups[0].projPoints > 50, JSON.stringify({ b: locked.lineups[0].bankedPoints, p: locked.lineups[0].projPoints }));
+  // Zero is a value. The pool drops anyone the objective scores at nothing,
+  // which would quietly lose a locked man whose game ended 0.0 -- the one
+  // case where the reader already knows the number and asked for it anyway.
+  const goose = DFS.build(bank('qb1', 0), { ...base, mode: 'ironTuna', lineups: 1, lock: ['qb1'] });
+  ok('a locked man who scored nothing is still seated on his zero',
+     goose.ok && goose.lineups[0].players.some(p => p.id === 'qb1' && p.points === 0));
+  // A defense whose game is over has gamePlayed with a NULL actual, because
+  // the stored box score has no defensive line. `isFinite(null)` is true in
+  // JavaScript -- the global coerces and Number(null) is 0 -- so without an
+  // explicit null check it banks at zero: the defense drops off the board and
+  // out of the field's draw, scored nothing. A page render caught this.
+  const dstOver = players.map(p => p.id === 'd1' ? { ...p, gamePlayed: true, actualPoints: null, actualBasis: 'no-defense-box-score' } : p);
+  const withDst = DFS.build(dstOver, { ...base, mode: 'ironTuna', lineups: 1 });
+  const dstRow = withDst.ok ? withDst.lineups[0].players.find(p => p.slot === 'DST') : null;
+  ok('a played defense with no actual keeps its projection rather than banking a zero',
+     withDst.ok && withDst.playedCount === 0 && dstRow && dstRow.id === 'd1' && near(dstRow.points, 8, 0.01) && dstRow.actual === null,
+     JSON.stringify({ played: withDst.playedCount, row: dstRow }));
+  ok('and it stays in the field\'s draw at that projection, not at nothing',
+     near(DFS.fieldAverage(dstOver, base).points, DFS.fieldAverage(players, base).points, 0.01));
+
+  // Leverage discounts a CEILING by how many entries own it. There is nothing
+  // to discount once the points are in the books.
+  const lev = DFS.build(bank('qb1', 50).map(p => ({ ...p, ownership: 40 })), { ...base, mode: 'leverage', lineups: 1, lock: ['qb1'] });
+  ok('leverage does not discount points a man has already scored',
+     lev.ok && near(lev.lineups[0].players.find(p => p.id === 'qb1').points, 50, 0.01));
+
+  // ── and what the typical entry does with it ────────────────────────────
+  const fa0 = DFS.fieldAverage(players, base);
+  // The field owns him at what he scored, not at what he was projected for,
+  // because the field submitted before kickoff. So the benchmark moves with
+  // his result in both directions.
+  const faUp = DFS.fieldAverage(bank('qb1', 60), base);
+  const faDown = DFS.fieldAverage(bank('qb1', 0), base);
+  ok('a big afternoon from a rostered man lifts the typical entry', faUp.points > fa0.points, faUp.points + ' vs ' + fa0.points);
+  ok('and a goose egg from one drags it down', faDown.points < fa0.points, faDown.points + ' vs ' + fa0.points);
+  ok('the benchmark stops calling itself a pure projection once part of the slate is played',
+     faUp.basis === 'modeled-ownership,part-played' && faUp.bankedPool === 1 && fa0.basis === 'modeled-ownership', faUp.basis);
+  // A man who scored nothing is still a man the field rostered: dropping him
+  // from the draw would flatter the benchmark by replacing him with somebody
+  // who is still projecting.
+  ok('a banked zero stays in the field\'s draw rather than being filtered out as a missing projection',
+     faDown.bankedPool === 1 && faDown.pool === fa0.pool, JSON.stringify({ pool: faDown.pool, was: fa0.pool, banked: faDown.bankedPool }));
+
+  // What the page does with it.
+  const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+  ok('the page marks a banked line rather than printing it as a projection', page.includes('df-banked'));
+  ok('and says in words how much of the total is already in the books', page.includes('already in the books'));
+  ok('the coach is told which part of the roster is a result', page.includes('bankedPoints')
+     && fs.readFileSync(path.join(ROOT, 'dfs-coach.js'), 'utf8').includes('bankedPoints'));
+  ok('the method is written down', fs.readFileSync(path.join(ROOT, 'docs/dfs-metrics.md'), 'utf8').includes('Played games'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

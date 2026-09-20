@@ -8598,6 +8598,61 @@ async function gameSummaryFor(env, game, nameIndex) {
   return norm;
 }
 
+// The stat line a normalized box score carries, in the shape scoreStats
+// reads. Three callers built this object inline; it is written once here so a
+// recap, the ledger and the DFS board can never score the same afternoon
+// differently.
+function boxScoreStatLine(p) {
+  return { passYd: p.pass.yd, passTD: p.pass.td, passInt: p.pass.int,
+           rushYd: p.rush.yd, rushTD: p.rush.td,
+           recYd: p.rec.yd, recTD: p.rec.td, rec: p.rec.rec, fumLost: p.fumLost };
+}
+
+// ── what the week's finished games actually produced ───────────────────────
+// For the DFS board, which stops projecting a man once his game is over.
+//
+// READ FROM THE STORE, NEVER FETCHED. /api/dfs is public and cached for five
+// minutes, and a fourteen-game slate would otherwise go to ESPN fourteen
+// times on every cache miss. The newsroom's own jobs are what put a final
+// summary in `game_summaries`; a game whose box score has not been stored yet
+// is simply not final as far as this is concerned, and the board keeps
+// projecting it. That is the right failure: a missing actual reads as "not
+// played", which is what the page said yesterday.
+//
+// FINAL ONLY, on purpose. A game in progress has a box score too, and half of
+// one is not what a man scored. A roster totalled on partial stats reads low
+// for a reason no reader could see from the page.
+async function dfsActualsForWeek(env, sched, week) {
+  if (!sched || !Number.isFinite(Number(week))) return null;
+  const games = weekGames(sched, Number(week), Date.now());
+  if (!games.length) return null;
+  const ids = new Set(games.map(g => g.id));
+  let stored = [];
+  try {
+    const r = await env.LEADS_DB.prepare('SELECT game_id, payload FROM game_summaries WHERE week = ? AND final = 1').bind(Number(week)).all();
+    stored = (r && r.results) || [];
+  } catch (e) { return null; }
+  // Keyed by normalized name, EVERY candidate kept: two players normalize to
+  // the same name often enough that picking the first is a wrong stat line on
+  // somebody's roster. The club decides which one a line means.
+  const lines = new Map(), teams = new Set();
+  let finals = 0;
+  for (const row of stored) {
+    // `week` alone is not a key across seasons -- the insert stores a null
+    // season -- so the week's own game ids decide what counts.
+    if (!ids.has(row.game_id)) continue;
+    let s = null; try { s = JSON.parse(row.payload); } catch (e) { continue; }
+    if (!s || !s.final) continue;
+    finals++;
+    for (const side of [s.home, s.away]) if (side && side.team) teams.add(side.team);
+    for (const pl of s.players || []) {
+      if (!pl || !pl.key) continue;
+      const list = lines.get(pl.key); if (list) list.push(pl); else lines.set(pl.key, [pl]);
+    }
+  }
+  return finals ? { games: games.length, final: finals, teams, lines } : null;
+}
+
 // ── the briefs ─────────────────────────────────────────────────────────────
 // Structured, deterministic, and the ONLY thing the writer sees. Every brief
 // also carries `allowed`: the names and numbers the validator will accept.
@@ -8700,7 +8755,7 @@ function briefForGames(kind, games, summaries, ctx) {
       for (const p of u.players) {
         const row = _boardRowFor(board, p);
         const exp = row ? row.ironTuna.points : null;
-        const pts = _oddsRound(scoreStats({ passYd: p.pass.yd, passTD: p.pass.td, passInt: p.pass.int, rushYd: p.rush.yd, rushTD: p.rush.td, recYd: p.rec.yd, recTD: p.rec.td, rec: p.rec.rec, fumLost: p.fumLost }, p.position || 'WR', ctx.rules));
+        const pts = _oddsRound(scoreStats(boxScoreStatLine(p), p.position || 'WR', ctx.rules));
         const line = { name: p.name, position: p.position, team: t, points: pts, projected: exp, touches: p.touches, targets: p.rec.tgt, carries: p.rush.att, targetShare: p.targetShare, carryShare: p.carryShare, rzTouches: p.rzTouches, glCarries: p.glCarries };
         if (exp != null && pts >= exp * 1.6 && pts >= 12) winners.push(line);
         else if (exp != null && pts <= exp * 0.5 && exp >= 8) losers.push(line);
@@ -10119,7 +10174,7 @@ function packetGameRecap(game, summary, ctx, freeze) {
     for (const p of u.players) {
       const row = _boardRowFor(index, p);
       const pos = p.position || (row ? row.position : null);
-      const pts = _oddsRound(scoreStats({ passYd: p.pass.yd, passTD: p.pass.td, passInt: p.pass.int, rushYd: p.rush.yd, rushTD: p.rush.td, recYd: p.rec.yd, recTD: p.rec.td, rec: p.rec.rec, fumLost: p.fumLost }, pos || 'WR', ctx.rules));
+      const pts = _oddsRound(scoreStats(boxScoreStatLine(p), pos || 'WR', ctx.rules));
       const projected = row ? row.ironTuna.points : null;
       const line = [];
       if (p.pass.att) line.push(p.pass.cmp + '/' + p.pass.att + ', ' + p.pass.yd + ' pass yards, ' + p.pass.td + ' TD, ' + p.pass.int + ' INT');
@@ -12337,6 +12392,37 @@ function dfsPropNote(cov) {
     + (cov.quotedButShort ? ' Another ' + cov.quotedButShort + ' carry only ' + cov.shortMarketLabels.join(' and ') + ', which is not enough to build a projection from.' : '')
     + ' Everyone else carries the game line\u2019s environment, discounted for it.';
 }
+// One slate row against those box scores.
+//
+// `gamePlayed` is about the GAME, not the man: once his club's game is final
+// the projection beside his name is describing an afternoon that already
+// happened, whether or not he turned up in the box score. A man who dressed
+// and did nothing scored zero, and the board should say zero rather than keep
+// quoting Thursday's estimate at him.
+//
+// The one exception is the defense. `normalizeGameSummary` collects passing,
+// rushing, receiving and fumbles; a DST is scored on sacks, takeaways, return
+// touchdowns and points allowed, and none of those are in the stored payload.
+// Rather than total eight banked men plus one estimate and call the sum
+// banked, the defense says plainly that its number is still a projection.
+function dfsActualFor(actuals, name, team, pos, rules) {
+  if (!actuals || !team || !actuals.teams.has(team)) return { gamePlayed: false, actualPoints: null, actualBasis: null };
+  // A defense and a kicker are both scored on stats the normalized box score
+  // does not collect -- sacks, takeaways and points allowed for one, field
+  // goals and extra points for the other. Neither can be scored from it, so
+  // both keep their projection and say so rather than banking a silent zero.
+  if (pos === 'DST' || pos === 'DEF') return { gamePlayed: true, actualPoints: null, actualBasis: 'no-defense-box-score' };
+  if (pos === 'K') return { gamePlayed: true, actualPoints: null, actualBasis: 'no-kicking-box-score' };
+  const cands = actuals.lines.get(_oddsNorm(name)) || [];
+  const line = cands.length === 1 ? cands[0] : cands.filter(x => x.team === team)[0] || null;
+  // No line, but the game is over: he is a zero, not an unknown. A return
+  // touchdown is the one thing this misses, because the normalized box score
+  // does not carry returns either; it is rare enough to be worth the
+  // simplicity, and it can only ever understate a man.
+  return { gamePlayed: true, actualBasis: line ? 'box-score' : 'box-score-absent',
+           actualPoints: _oddsRound(scoreStats(line ? boxScoreStatLine(line) : {}, pos, rules)) };
+}
+
 function buildDfsSlate(site, salaries, board, opts) {
   const S = DFS_SITES[site];
   const rules = scoringRules('ppr', SCORING_SITE[site]);
@@ -12344,6 +12430,7 @@ function buildDfsSlate(site, salaries, board, opts) {
   const usage = o.usage || null;
   const avail = o.availability || null;
   const roster = o.roster || null;
+  const actuals = o.actuals || null;
   const week = Number.isFinite(Number(o.week)) ? Number(o.week) : null;
   const byKey = new Map();
   for (const p of (board && board.players) || []) byKey.set(p.key, p);
@@ -12372,6 +12459,11 @@ function buildDfsSlate(site, salaries, board, opts) {
     rows.push({
       name: p.name, position: pos, team: p.team, opponent: w0 ? w0.opponent : s.opponent, home: w0 ? w0.home : null, salary: s.salary, onBoard: true, key: p.key, siteName: s.name.trim(),
       vegasPoints: v, ironTunaPoints: it, consensusPoints: c,
+      // His game is over, so the projections above are describing an
+      // afternoon that already happened. Everything downstream -- the
+      // optimizer's objective, the floor, the ceiling, the typical entry --
+      // reads `actualPoints` ahead of them when it is there.
+      ...dfsActualFor(actuals, p.name, p.team, pos, rules),
       operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, operatorFppgLabel: site === 'dk' ? 'DraftKings FPPG' : 'FanDuel FPPG',
       projectionVsFppg: operatorFppg == null ? null : _oddsRound(it - operatorFppg),
       vegasPerK: _oddsRound(v / (s.salary / 1000) * 100) / 100, ironTunaPerK: _oddsRound(it / (s.salary / 1000) * 100) / 100,
@@ -14751,8 +14843,11 @@ export default {
       if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
         ...dfsNoSalariesNote(site, Date.now()),
         operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
-      const [board, usage, avail, roster] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null)]);
-      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage, week, availability: avail, roster });
+      const [board, usage, avail, roster, actuals] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null), dfsActualsForWeek(env, sched, week).catch(() => null)]);
+      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage, week, availability: avail, roster, actuals });
+      // How much of the slate is already in the books. The page needs this to
+      // say whether a total is a projection, a result, or part of each.
+      slate.played = actuals ? { games: actuals.games, final: actuals.final, teams: [...actuals.teams].sort() } : null;
       slate.week = week; slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
       if (flagOn(env, 'DFS_CONTENT')) {
         const contest = DFS_CONTESTS[url.searchParams.get('contest')] ? url.searchParams.get('contest') : 'gpp';
