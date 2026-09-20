@@ -622,18 +622,54 @@ console.log('\nthe DFS page explanations');
      page.includes('function solveFormat()') && page.includes('ITDfs.formatFor(site, style)')
      && page.includes('format: f.fmt, slots: f.fmt.slots, flex: f.fmt.flex')
      && page.includes("mult: f.fmt.mult || null, tierSlots: f.fmt.tierSlots || null, minTeams: f.fmt.minTeams || 0"));
-  // The reader upload went on 2026-09-20, so there is no longer a file a
-  // reader can hand the site. The guarantee this asserts is unchanged and is
-  // the one that matters: a single-game roster is never priced off main-slate
-  // salaries. What changed is the sentence, which must not point at a control
-  // that no longer exists.
-  ok('a single-game roster is never priced off the main slate, and says so rather than printing one',
+  // The guarantee: a single-game roster is never priced off main-slate
+  // salaries. What the reader is offered instead is the one thing that fixes
+  // it -- the contest's own export -- and the control for that is rendered
+  // into this notice rather than sitting over every board.
+  ok('a single-game roster is never priced off the main slate, and asks for the file that would fix it',
      page.includes("fmt.kind === 'salary' && fmt.single && priced !== 'single-game'")
      && page.includes('a roster you could not enter')
-     && page.includes('The board declines to do that rather than print one')
-     && !page.includes('upload it above'));
+     && page.includes('so the board declines rather than printing one')
+     && page.includes('out.needsFile = true;')
+     && page.includes("f.needsFile ? uploadControl(fmt) : ''"));
   ok('a Tiers roster is never invented out of salary bands',
-     page.includes("ITDfs.tierFormat(") && page.includes('Inventing buckets out of salary would build a roster nobody can enter'));
+     page.includes("ITDfs.tierFormat(") && page.includes('inventing them out of salary would build a roster nobody can enter'));
+  // The always-on panel that #293 removed does not come back. The route does,
+  // because five formats are priced on a file the desk import never stores,
+  // and the control for it is scoped to the notice that needs it.
+  ok('the file control is scoped to the format that needs one, not a panel over every board',
+     page.includes('function uploadControl(fmt)') && !page.includes('id="dfUp"')
+     && page.includes("fetch('/api/dfs/slate'"));
+  ok('and a reader\u2019s own file is kept rather than purged on every load',
+     !page.includes("localStorage.removeItem('it.dfs.csv.'")
+     && page.includes('var mine = upGet(site);') && page.includes('if (mine) loadUpload(mine); else loadSite();'));
+  // Handing over a single-game export changes the pool under the reader, and
+  // the universe-change reset used to clear every game they had picked -- so
+  // the upload landed on "Next select the Games" with one matchup in the list
+  // and no roster on the board.
+  ok('a pool change keeps the games that survive it rather than clearing the lot',
+     page.includes('var live = {}; games.forEach(function (g) { live[g.key] = 1; });')
+     && page.includes('if (lost || !Object.keys(kept).length)'));
+  ok('...and one game on the slate is chosen rather than asked about',
+     page.includes('if (games.length === 1 && !selectedGameKeys().length)')
+     && page.includes("gameChoice = 'game:' + games[0].key;"));
+  // The payout advice is "what should I enter with this roster", so it has to
+  // be about the contest the READER picked, not the one the slate was priced
+  // for. And it has to say something on the two shapes that have no payout
+  // curve at all, because a box that goes blank reads like a failure.
+  ok('the payout advice is solved for the format the reader chose',
+     page.includes('var pf = solveFormat();')
+     && page.includes('var fmt = pf.ready && pf.fmt && pf.fmt.slots ? pf.fmt : null;')
+     && page.includes('var base={cap:(fmt?fmt.cap:s.cap),slots:(fmt?fmt.slots:s.slots)'));
+  ok('...and says so plainly on a contest with no cap to trade against',
+     page.includes('no cap to trade against') && page.includes('With nothing to spend there is no trade to weigh'));
+  ok('...and on a pick contest, which has no roster to compare shapes across',
+     page.includes('not a payout question') && page.includes('no payout curve to move along'));
+  ok('...and names the format it advised on, once the reader has chosen one',
+     page.includes("var named = fmt && fmt.label && (site !== 'dk' || setupReady());"));
+  ok('a slate priced from a reader\u2019s file says so, and offers the way back',
+     page.includes("slate.source === 'upload'") && page.includes('Priced from your own file, kept in this browser')
+     && page.includes("id=\"dfUpClear\""));
   ok('a contest with no roster gets the board it actually asks for, not a lineup card',
      page.includes('function renderPicks(f, players)') && page.includes('ITDfs.pickBoard(players,')
      && page.includes('Model leans') && page.includes('posts its own line on a player'));

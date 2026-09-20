@@ -385,6 +385,15 @@ p{color:var(--sec);margin:0 0 16px}
   background:var(--panel);font-size:13px;color:var(--sec)}
 .df-formatline b{color:var(--text)}
 .df-formatline span{display:block;margin-top:4px;color:var(--muted);font-size:12.5px}
+/* The file a format needs, inside the notice that asks for it. It is not the
+   old always-on panel: it appears only where a Game Style cannot be priced
+   from the desk's slate, and it is the answer to the sentence above it. */
+.df-up-inline{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
+.df-up-inline .df-up-state{flex:1 1 220px;min-width:0;color:var(--muted);font-size:12.5px}
+.df-up-inline .df-up-state.bad{color:var(--danger)}
+.df-up-from{display:block;margin-top:6px;color:var(--muted);font-size:12.5px}
+.df-linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--teal);text-decoration:underline;cursor:pointer}
+.df-linkbtn:hover{opacity:.8}
 
 /* ── arguing with the roster, from the roster ────────────────────────────────
    The reader's two answers to a solved lineup are "keep him" and "not him",
@@ -2055,7 +2064,8 @@ p{color:var(--sec);margin:0 0 16px}
       var tf = ITDfs.tierFormat((tv.players || []).filter(function (p) { return p.onBoard; }));
       if (!tf) {
         out.ready = false;
-        out.blocked = 'A Tiers contest has no salary cap: it posts its own buckets and asks for one player out of each. The buckets are in the contest\u2019s own export, and the site reads only the desk\u2019s main slate, which carries none. Inventing buckets out of salary would build a roster nobody can enter, so the board says so instead. The solver is ready for the day those tiers reach it.';
+        out.blocked = 'A Tiers contest has no salary cap: it posts its own buckets and asks for one player out of each. The buckets are in the contest\u2019s own export, and the desk\u2019s main slate carries none \u2014 inventing them out of salary would build a roster nobody can enter. Hand over the Tiers CSV and the board solves it exactly.';
+        out.needsFile = true;
         return out;
       }
       out.fmt = tf; out.tierCount = tf.tiers.length;
@@ -2063,7 +2073,8 @@ p{color:var(--sec);margin:0 0 16px}
     }
     if (fmt.kind === 'salary' && fmt.single && priced !== 'single-game') {
       out.ready = false;
-      out.blocked = (site === 'fd' ? 'FanDuel' : 'DraftKings') + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. What the site reads is the main slate, so building ' + fmt.label + ' from it would seat a ' + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' at a price nobody is charged \u2014 a roster you could not enter. The board declines to do that rather than print one. The solver is ready for the day those salaries reach it.';
+      out.blocked = (site === 'fd' ? 'FanDuel' : 'DraftKings') + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. Building ' + fmt.label + ' from the main slate would seat a ' + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' at a price nobody is charged \u2014 a roster you could not enter \u2014 so the board declines rather than printing one. Hand over the export from the contest lobby and it solves exactly.';
+      out.needsFile = true;
       return out;
     }
     if (fmt.kind === 'salary' && !fmt.single && priced === 'single-game') {
@@ -2117,8 +2128,35 @@ p{color:var(--sec);margin:0 0 16px}
     }
     var games = gamesForSlate(s);
     var sig = games.map(function (g) { return g.key; }).join(',');
-    if (gameUniverseSig && sig !== gameUniverseSig) { selectedGames = {}; gameChoice=''; }
+    // The pool changed under the reader -- a new week, a different site, or a
+    // file they just handed over. What they picked is only invalid if the game
+    // itself is gone, so keep the ones that survive rather than clearing the
+    // lot: handing over a Showdown export used to wipe the matchup they had
+    // already chosen and leave the board on "Next select the Games".
+    if (gameUniverseSig && sig !== gameUniverseSig) {
+      var live = {}; games.forEach(function (g) { live[g.key] = 1; });
+      var kept = {}, lost = false;
+      Object.keys(selectedGames).forEach(function (k) { if (selectedGames[k] && live[k]) kept[k] = true; else lost = true; });
+      selectedGames = kept;
+      if (lost || !Object.keys(kept).length) gameChoice = '';
+      if (Object.keys(kept).length === 1 && !gameChoice) gameChoice = 'game:' + Object.keys(kept)[0];
+    }
     gameUniverseSig = sig;
+    // One game on the slate is not a choice. A single-game export carries
+    // exactly one, so pick it rather than asking.
+    if (games.length === 1 && !selectedGameKeys().length) {
+      gameChoice = 'game:' + games[0].key;
+      setGameKeys([games[0].key]);
+    }
+    // One game on the slate is not a choice. A single-game export carries
+    // exactly one, and the reset above had just cleared the selection the
+    // reader made before handing the file over -- so uploading a Showdown CSV
+    // landed on "Next select the Games / player pool" with one option in the
+    // list and no roster on the board. Pick it for them.
+    if (games.length === 1 && !selectedGameKeys().length) {
+      gameChoice = 'game:' + games[0].key;
+      setGameKeys([games[0].key]);
+    }
     var style = GAME_STYLES[gameStyle] || {};
     var html = '<option value="">Select Games…</option>';
     var buckets = gameBuckets(games);
@@ -2196,7 +2234,8 @@ p{color:var(--sec);margin:0 0 16px}
     var fmt=f && f.fmt;
     $('dfLineups').innerHTML='<div class="is-empty"><b>'+e((fmt && fmt.label) || gs.label || gameStyle || 'This format')+'.</b> '
       +(fmt && fmt.roster ? e(fmt.roster)+' ' : '')
-      +e((f && f.blocked) || '')+'</div>';
+      +e((f && f.blocked) || '')
+      +(f && f.needsFile ? uploadControl(fmt) : '')+'</div>';
     $('dfPivots').innerHTML='';
     coachSync();
   }
@@ -2276,7 +2315,14 @@ p{color:var(--sec);margin:0 0 16px}
     if (fmt.minTeams > 1) bits.push('both teams required');
     if (fmt.tierSlots) bits.push('one player per tier');
     return '<p class="df-formatline"><b>' + e(fmt.label) + '</b>' + (bits.length ? ' \u00b7 ' + e(bits.join(' \u00b7 ')) : '')
-      + (fmt.roster ? '<span>' + e(fmt.roster) + '</span>' : '') + '</p>';
+      + (fmt.roster ? '<span>' + e(fmt.roster) + '</span>' : '')
+      // Priced from the reader's own export rather than the desk's slate, and
+      // the only control that takes it back off again.
+      + (slate && slate.source === 'upload'
+         ? '<span class="df-up-from">Priced from your own file, kept in this browser. '
+           + '<button type="button" class="df-linkbtn" id="dfUpClear">Use the site\u2019s slate instead</button></span>'
+         : '')
+      + '</p>';
   }
 
   // ── the contests that are not a roster ────────────────────────────────────
@@ -2764,14 +2810,32 @@ p{color:var(--sec);margin:0 0 16px}
     var host=$('dfPlayWeekBody'); if(!host || !s || !window.ITDfs) return;
     var players=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
     playWeek=null;
-    // The roster the SLATE was priced for, not the classic nine. A Showdown
-    // file carries six seats, a multiplier and a both-teams rule, and comparing
-    // contest shapes across a roster nobody could enter answered a question
-    // about a lineup that does not exist.
-    var seats=(s.slots||[]).length||9;
+    // Which contest the advice is FOR. The reader picked a Game Style, and the
+    // payout question is "what should I enter with this roster" -- so it is the
+    // resolved format that decides the seats, the cap and the multiplier, and
+    // the slate's own roster only where the format could not be resolved.
+    var pf = solveFormat();
+    var fmt = pf.ready && pf.fmt && pf.fmt.slots ? pf.fmt : null;
+    // Two formats have no payout curve to weigh. A contest with no cap cannot
+    // be traded off against one -- there is no budget to spend differently for
+    // more ceiling -- and a pick contest has no roster to compare shapes of at
+    // all. Both are said, because a box that goes blank reads like a failure.
+    if (pf.ready && pf.kind === 'picks') {
+      $('dfPlayWeekTitle').textContent='Play of the Week: not a payout question';
+      host.innerHTML='<p class="is-note">'+e((pf.fmt && pf.fmt.label) || 'This contest')+' posts its own line on a player and pays on which side you take, so there is no roster to compare contest shapes across and no payout curve to move along. The board above is the whole answer: the players the model disagrees with the market about, and by how much.</p>';
+      coachSync(); return;
+    }
+    if (fmt && !(fmt.cap > 0)) {
+      $('dfPlayWeekTitle').textContent='Play of the Week: no cap to trade against';
+      host.innerHTML='<p class="is-note">'+e(fmt.label)+' has no salary cap, and the recommendation below a capped board is a trade: how much median projection to give up for ceiling, priced in cap dollars. With nothing to spend there is no trade to weigh, so the useful question is which players to take and in what order, which the board above answers.</p>';
+      coachSync(); return;
+    }
+    var seats=((fmt && fmt.slots) || s.slots || []).length||9;
     var cross=seats<=6?Math.max(1,seats-1):4;
     if(players.length<seats){ $('dfPlayWeekTitle').textContent='Play of the Week: waiting for a complete slate'; host.innerHTML='<p class="is-note">The recommendation will publish when enough salaries and projections are available to compare contest shapes.</p>'; return; }
-    var base={cap:s.cap,slots:s.slots,flex:s.flex,mult:s.multiplier||null,minTeams:s.minTeams||0,maxPerTeam:cross,lineups:1,seed:17};
+    var base={cap:(fmt?fmt.cap:s.cap),slots:(fmt?fmt.slots:s.slots),flex:(fmt?fmt.flex:s.flex),
+              mult:(fmt?(fmt.mult||null):(s.multiplier||null)),minTeams:(fmt?(fmt.minTeams||0):(s.minTeams||0)),
+              tierSlots:(fmt&&fmt.tierSlots)||null,maxPerTeam:cross,lineups:1,seed:17};
     var cash=ITDfs.build(players,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:seats<=6?cross:3}));
     var tour=ITDfs.build(players,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
     var lev=ITDfs.build(players,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
@@ -2795,7 +2859,11 @@ p{color:var(--sec);margin:0 0 16px}
         + '. The edge below is measured against those quoted lines.'
         + (ev.coverage < 0.999 ? ' The rest carry their game\u2019s environment, so the bar for moving up the payout curve is raised by ' + Math.round((pick.need - 1) * 100) + '%.' : '')
       : 'No book priced any pick in this build, so the comparison below is Iron Tuna against the game lines \u2014 two models sharing most of their inputs, not a disagreement with money. The bar for moving up the payout curve is doubled for it, which is why this week sits where the chance of winning is best.';
-    $('dfPlayWeekTitle').textContent='Play of the Week: '+pick.rec;
+    // The format is named only once the reader has actually chosen one. Before
+    // that the box is the week's general read and labelling it "Classic" would
+    // answer a question nobody has asked yet.
+    var named = fmt && fmt.label && (site !== 'dk' || setupReady());
+    $('dfPlayWeekTitle').textContent='Play of the Week: '+pick.rec + (named ? ' \u00b7 ' + fmt.label : '');
     $('dfPlayWeekDek').textContent=pick.rationale;
     // The page has now done the comparison; the coach quotes this rather than
     // producing a contest recommendation of its own. The evidence line goes
@@ -2927,6 +2995,57 @@ p{color:var(--sec);margin:0 0 16px}
     return gameStyle === 'best-ball';
   }
 
+  // ── the file a format needs, and only where it needs one ─────────────────
+  // The always-on upload panel was removed on 2026-09-20 because nobody used
+  // it, and nobody did: the site solved one contest, so a main-slate file got
+  // you the board you already had and a Showdown file got you a refusal. It
+  // solves thirteen now, and five of them are priced on a file the desk import
+  // never stores. So the ROUTE is back and the PANEL is not. The control below
+  // is rendered into the notice for a format that cannot otherwise be priced,
+  // where it is the answer to the sentence above it rather than a box sitting
+  // over every board asking to be noticed.
+  var upMem = {};
+  function upKey(s) { return 'it.dfs.csv.' + s; }
+  function upGet(s) { if (upMem[s]) return upMem[s]; try { return localStorage.getItem(upKey(s)) || ''; } catch (err) { return ''; } }
+  function upSet(s, csv) { upMem[s] = csv || ''; try { if (csv) localStorage.setItem(upKey(s), csv); else localStorage.removeItem(upKey(s)); } catch (err) {} }
+  var upMsg = '', upBad = false;
+  function upState(msg, bad) { upMsg = msg || ''; upBad = !!bad; var el = $('dfUpState'); if (el) { el.textContent = upMsg; el.className = 'df-up-state' + (upBad ? ' bad' : ''); } }
+  // The picker, the state line, and -- once a file is loaded -- the way back to
+  // the site's own slate. Rendered as markup rather than bound to a fixed node,
+  // because the notice it sits in is rebuilt on every solve.
+  function uploadControl(fmt) {
+    var what = fmt && fmt.kind === 'tiers' ? 'Tiers' : fmt && fmt.single ? 'single-game' : 'contest';
+    return '<div class="df-up-inline">'
+      + '<label class="btn alt" for="dfUpFile">Price my ' + e(what) + ' file<input id="dfUpFile" type="file" accept=".csv,text/csv" hidden></label>'
+      + (upGet(site) ? '<button class="btn alt" type="button" id="dfUpClear">Back to the site\u2019s slate</button>' : '')
+      + '<span class="df-up-state' + (upBad ? ' bad' : '') + '" id="dfUpState">'
+      + e(upMsg || 'Export the CSV from the contest lobby. It is priced for you and kept in this browser \u2014 it is never stored on the site.')
+      + '</span></div>';
+  }
+  // Price the reader's file. A file the parser refuses is theirs to fix, so the
+  // reason is printed and the page falls back to the site's own slate rather
+  // than sitting on a blank board -- and a refused file is not kept.
+  function loadUpload(csv) {
+    upState('Reading your file\u2026', false);
+    build();
+    fetch('/api/dfs/slate', { method: 'POST', headers: { 'content-type': 'application/json' },
+                              body: JSON.stringify({ site: site, csv: csv, contest: contest }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok) {
+          upSet(site, '');
+          upState((j && j.note) || 'That file could not be read.', true);
+          loadSite();
+          return;
+        }
+        upSet(site, csv);
+        upState('Your file: ' + j.players.length + ' priced rows'
+                + (j.unmatched ? ' \u00b7 ' + j.unmatched + ' of them are not on this week\u2019s board' : '')
+                + '. Kept in this browser only.', false);
+        slateOk(j);
+      })
+      .catch(function () { upState('The slate did not answer. Your file was not read.', true); build(); });
+  }
   function load() {
     press($('dfSite'), 'data-site', site);
     if (isPickem()) {
@@ -2946,15 +3065,13 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfSiteNote').textContent = site === 'dk'
       ? 'Choose Game Style, Games and Payout Structure below. Every format is solved against its own roster \u2014 Classic\u2019s nine slots, a Showdown Captain at 1.5\u00d7, a Tiers board with no cap \u2014 and never against another format\u2019s.'
       : 'Classic salary cap · $60,000. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
-    loadSite();
+    // A file the reader already handed over is theirs until they clear it. The
+    // boot-time purge that shipped with the panel's removal is gone with this:
+    // it deleted a reader's stored CSV on every load, which is the opposite of
+    // keeping what they gave us.
+    var mine = upGet(site);
+    if (mine) loadUpload(mine); else loadSite();
   }
-  // The salary-file panel that used to sit under the board is gone (2026-09-20),
-  // and with it the only control a reader had for deleting the CSV it kept.
-  // A file uploaded before that is still in this browser under the old keys, so
-  // clear them once on boot rather than leaving data behind that the page
-  // promised was the reader's to remove. Guarded: storage throws in a private
-  // window, and nothing here is worth failing the page over.
-  try { ['dk', 'fd'].forEach(function (s) { localStorage.removeItem('it.dfs.csv.' + s); }); } catch (err) {}
 
   document.addEventListener('DOMContentLoaded', function () {
     press($('dfMode'), 'data-mode', mode); applyShape(); show();
@@ -2963,6 +3080,26 @@ p{color:var(--sec);margin:0 0 16px}
       window.addEventListener('load', mountCoach);
     }
     $('dfCoachFab').addEventListener('click', toggleCoach);
+    // The file control is rendered inside the board and rebuilt on every solve,
+    // so both of its handlers are delegated to the container that survives.
+    // The picker is capped at the same million characters the route takes, so
+    // an oversized file is refused here rather than truncated into a CSV that
+    // parses and quietly leaves half the slate off the board.
+    $('dfLineups').addEventListener('change', function (ev) {
+      var input = ev.target.closest && ev.target.closest('#dfUpFile'); if (!input) return;
+      var fl = input.files && input.files[0];
+      input.value = '';
+      if (!fl) return;
+      if (fl.size > 1000000) { upState('That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.', true); build(); return; }
+      var fr = new FileReader();
+      fr.onload = function () { marks = {}; loadUpload(String(fr.result || '')); };
+      fr.onerror = function () { upState('That file could not be read from your computer.', true); build(); };
+      fr.readAsText(fl);
+    });
+    document.addEventListener('click', function (ev) {
+      var b = ev.target.closest && ev.target.closest('#dfUpClear'); if (!b) return;
+      upSet(site, ''); upState('', false); marks = {}; loadSite();
+    });
     // The plate's own way in. A reader stuck on the three selects should not
     // have to guess that the floating launcher answers on them too.
     $('dfSetupCoach').addEventListener('click', openCoach);

@@ -470,8 +470,20 @@ console.log('\nthe page');
      && /marketEvidence:evidence\.replace\(\/<\[\^>\]\+>\/g, ''\)/.test(page));
   ok('and it is the optimizer\u2019s own decision, not a second copy of the thresholds',
      /var pick = ITDfs\.contestPick\(/.test(page) && !/playWeek=\{[\s\S]{0,400}edge>=\./.test(page));
+  // The box has several ways out now -- a pick contest has no payout curve, an
+  // uncapped one has no trade to weigh, and a thin board cannot compare shapes
+  // -- so the property that matters is not the distance to any one of them: it
+  // is that the clear happens before the FIRST of them can return.
   ok('and it is cleared rather than left stale when the slate cannot support one',
-     /playWeek=null;[\s\S]{0,500}if\(players\.length<seats\)/.test(page));
+     (() => {
+       const fn = lift(/function renderPlayOfWeek\(/);
+       const at = fn.indexOf('playWeek=null;');
+       if (at < 0) return false;
+       // Counting `return` catches the inline callbacks too, so the property
+       // is checked where it actually bites: every exit path writes the box's
+       // title and body, and the clear has to come before any of them can.
+       return at < fn.indexOf("$('dfPlayWeekTitle')") && at < fn.indexOf('host.innerHTML');
+     })());
   ok('a setup choice that rebuilds nothing still tells the coach to look again',
      (lift(/function updateSetupState\(/).match(/coachSync\(\);/g) || []).length >= 2);
 }
