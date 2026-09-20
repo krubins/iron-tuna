@@ -31,8 +31,17 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // The "how long ago" phrasing is shared with the health board, so it is cut
   // in rather than restated here: the slate note and the board must not drift.
   cut('const PROPS_STALE_HOURS', 'async function propsHealth') + '\n' +
+  // weeklyStats and the two environment sets are the board's own scaler, and
+  // the projection ladder puts a supplemental row through the SAME one rather
+  // than a second rule that could drift from it. Cut in for that reason: the
+  // test must exercise the real scaler, not a stand-in that always agrees.
+  cut('// A season line, made per game', 'const _addStats =') + '\n' +
+  cut('const WEEK_ENV_CLAMP', '// The blend weight on the Vegas side') + '\n' +
   cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, BLEND_SHRINK };'
+  // The contest scores, so the ladder's cash exclusion is tested against the
+  // real dfsMetrics rather than asserted about it.
+  cut('const DFS_CONTESTS = {', '// \u2500\u2500 analyst memory') + '\n' +
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, BLEND_SHRINK, dfsMetrics, dfsSupplemental };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 // The scheduled workflow's own CSV writer, so the false-positive gate below
@@ -401,11 +410,11 @@ console.log('\nthe weekly betting market');
   // Coverage, said as a number. `hasProps` was a boolean and a boolean cannot
   // answer "priced how much of it, by how many books, how long ago".
   const rows = [
-    { onBoard: true, market: { basis: 'props', quoted: true, priced: ['rec', 'recYd'], books: 6, lastMoveHours: 2 } },
-    { onBoard: true, market: { basis: 'props-partial', quoted: true, priced: ['anytimeTD'], books: 4, lastMoveHours: 0.5 } },
-    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], books: null, lastMoveHours: null } },
-    { onBoard: true, available: false, market: { basis: 'props', quoted: true, priced: ['rec'], books: 9, lastMoveHours: 1 } },
-    { onBoard: false }
+    { onBoard: true, projected: true, market: { basis: 'props', quoted: true, priced: ['rec', 'recYd'], books: 6, lastMoveHours: 2 } },
+    { onBoard: true, projected: true, market: { basis: 'props-partial', quoted: true, priced: ['anytimeTD'], books: 4, lastMoveHours: 0.5 } },
+    { onBoard: true, projected: true, market: { basis: 'gamelines', quoted: false, priced: [], books: null, lastMoveHours: null } },
+    { onBoard: true, projected: true, available: false, market: { basis: 'props', quoted: true, priced: ['rec'], books: 9, lastMoveHours: 1 } },
+    { onBoard: false, projected: false }
   ];
   const cov = H.dfsPropCoverage(rows, Date.now() - 30 * 60000);
   ok('coverage counts the priced against the playable', cov.players === 3 && cov.priced === 2 && cov.coverage === 67);
@@ -426,9 +435,9 @@ console.log('\nthe weekly betting market');
   // The whole slate priced on touchdowns and nothing else: the state that
   // reads as "props are working" on one page and "no props" on another.
   const tdOnlyCov = H.dfsPropCoverage([
-    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: true, shortPriced: ['anytimeTD'] } },
-    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: true, shortPriced: ['anytimeTD'] } },
-    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: false, shortPriced: [] } }
+    { onBoard: true, projected: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: true, shortPriced: ['anytimeTD'] } },
+    { onBoard: true, projected: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: true, shortPriced: ['anytimeTD'] } },
+    { onBoard: true, projected: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: false, shortPriced: [] } }
   ]);
   ok('a touchdown-only slate counts the priced-but-short apart from the unpriced',
      tdOnlyCov.priced === 0 && tdOnlyCov.quotedButShort === 2 && tdOnlyCov.shortMarketLabels.join(',') === 'anytime TD');
@@ -440,7 +449,7 @@ console.log('\nthe weekly betting market');
      /still comes from his game/.test(H.dfsPropNote(tdOnlyCov))
      && /standalone market projection is built from/.test(H.dfsPropNote(tdOnlyCov)));
 
-  const noneCov = H.dfsPropCoverage([{ onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [] } }]);
+  const noneCov = H.dfsPropCoverage([{ onBoard: true, projected: true, market: { basis: 'gamelines', quoted: false, priced: [] } }]);
   ok('with nothing priced the note says so and says what it falls back to',
      /No player prop has reached this slate/.test(H.dfsPropNote(noneCov)) && /falls back to the consensus/.test(H.dfsPropNote(noneCov)));
   ok('an empty slate says nothing rather than claiming 0%', H.dfsPropNote(H.dfsPropCoverage([])) === null);
@@ -947,6 +956,158 @@ console.log('\nthe operator average when the file has none');
   const loveUsage = { players: { [_oddsNorm('Jeremiyah Love') + '|RB']: { season: { games: 1, stats: { rushYd: 80, rushTD: 1, rec: 2, recYd: 10 } } } } };
   ok('and the overlay wins over the pin when it has his line', H.buildDfsSlate('dk', [...sal, love], WEEK, { usage: loveUsage }).players.find(p => p.name === 'Jeremiyah Love').operatorFppg === 17);
   ok('the pin is per site', H.buildDfsSlate('fd', [...sal, love], WEEK, {}).players.find(p => p.name === 'Jeremiyah Love').operatorFppg === null);
+}
+
+console.log('\nthe projection ladder');
+{
+  // The bug this section exists for: DraftKings prices roughly twice as many
+  // bodies as the curated PROJECTIONS pool carries, and the surplus is almost
+  // exactly the $3,000 minimum-salary tier. Every one of them used to arrive
+  // as a stub with onBoard:false and be filtered out of the metrics, the
+  // value boards, the stacks and the optimizer -- so a punt play the operator
+  // had priced was invisible on the slate that priced it.
+  const punt = { name: 'Elic Ayomanor', position: 'WR', team: 'DET', opponent: 'GB', salary: 3000, operatorFppg: null };
+  const debut = { name: 'Nobody Atall', position: 'RB', team: 'BUF', opponent: 'NYJ', salary: 3000, operatorFppg: null };
+  const vet = { name: 'Priced Veteran', position: 'TE', team: 'NYJ', opponent: 'BUF', salary: 3000, operatorFppg: 6.4 };
+  // Four games: 20 catches, 240 receiving yards, 2 TDs. At DK PPR that is
+  // (20 + 24 + 12) / 4 = 14 a game, and no 100-yard bonus, because a season
+  // total cannot say which game earned one.
+  const puntUsage = { players: { [_oddsNorm('Elic Ayomanor') + '|WR']: { season: { games: 4, stats: { rec: 20, recYd: 240, recTD: 2 } } } } };
+  const s = H.buildDfsSlate('dk', [...SAL, punt, debut, vet], WEEK, { usage: puntUsage });
+  const row = s.players.find(p => p.name === 'Elic Ayomanor');
+  const none = s.players.find(p => p.name === 'Nobody Atall');
+  const oper = s.players.find(p => p.name === 'Priced Veteran');
+
+  ok('a priced man the board has never heard of still reaches the slate', !!row && row.onBoard === false);
+  ok('...and carries a projection off his own season line', near(row.ironTunaPoints, 14, 0.11), String(row.ironTunaPoints));
+  ok('...which says out loud that it is a season line, not a board projection', row.projectionBasis === 'usage' && row.supplemental === true && row.supplementalGames === 4);
+  ok('...and is graded low, because it is what he has done and not a forecast of Sunday', row.vegasConfidence === 'LOW');
+  ok('...and gets a key, without which the optimizer cannot hold him', row.key === _oddsNorm('Elic Ayomanor') + '|WR');
+  ok('...and his three numbers agree, because one line produced all three', row.vegasPoints === row.ironTunaPoints && row.consensusPoints === row.ironTunaPoints);
+  ok('...and claims no market, rather than a fit nobody fitted', row.market.basis === 'none' && row.marketQuoted === false && row.market.points === row.ironTunaPoints);
+  ok('...and no touchdown price, rather than a zero that reads like a forecast', row.tdProbability === null && row.tdBasis === null);
+  ok('...and takes the club’s fixture off the board rather than leaving it blank', row.opponent === 'GB' && row.teamTotal === 24);
+
+  // Found by rendering the page: the edge column printed 0.0 for every
+  // supplemental row, which reads as "the model agrees with DraftKings to the
+  // tenth" when it actually means both figures are the same number.
+  ok('...and claims no edge over an average derived from the same line it was built from', row.projectionVsFppg === null);
+  // The page has a client-side fallback that recomputes the edge when the
+  // server sends none, for slates served before projectionVsFppg existed. On
+  // a supplemental row the null is a decision, not a gap, and letting that
+  // fallback fire put the flat 0.0 straight back on screen.
+  ok('...and the page does not quietly recompute the edge it was deliberately not sent',
+     /if \(p\.supplemental\) return null;/.test(fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8')));
+  const twoSource = { name: 'Two Source', position: 'WR', team: 'DET', opponent: 'GB', salary: 3000, operatorFppg: 9.5 };
+  const ts = H.buildDfsSlate('dk', [...SAL, twoSource], WEEK, { usage: { players: { [_oddsNorm('Two Source') + '|WR']: { season: { games: 2, stats: { rec: 10, recYd: 120, recTD: 1 } } } } } })
+    .players.find(p => p.name === 'Two Source');
+  ok('...but keeps the edge where his own line really is a second source against the operator’s',
+     ts.projectionBasis === 'usage' && ts.operatorFppgBasis === 'operator' && near(ts.projectionVsFppg, _oddsRound(ts.ironTunaPoints - 9.5), 0.11));
+
+  ok('a man with no football behind him falls to the operator’s own average', oper.projectionBasis === 'operator' && near(oper.ironTunaPoints, 6.4, 0.01) && oper.supplemental === true);
+  ok('and a true debut stays off the board rather than being given an invented number', none.projected === false && none.projectionBasis === 'none' && none.ironTunaPoints === undefined);
+
+  ok('a board row says which rung it came off too', s.players.find(p => p.name === 'Josh Allen').projectionBasis === 'board' && s.players.find(p => p.name === 'Josh Allen').supplemental === false);
+  // Three rescued, not two: the fixture's own $3,000 'Nobody Famous' is a man
+  // the board has never carried and the operator has priced, which is the
+  // case this whole section is about, and he is now picked up by the same
+  // ladder rather than staying a stub.
+  ok('the slate counts the rescued and the genuinely missing apart',
+     s.supplemented === 3 && s.unprojected === 1 && s.unmatched === 4,
+     s.supplemented + '/' + s.unprojected + '/' + s.unmatched);
+  ok('...and the fixture\u2019s own unmatched $3,000 body is one of the rescued',
+     s.players.find(p => p.name === 'Nobody Famous').projectionBasis === 'operator');
+
+  // The number moves with the game, exactly as a board projection does: this
+  // is weeklyStats' own rule (touchdowns follow the environment, yards at the
+  // square root) rather than a second scaler that could drift from it.
+  const hot = { ...WEEK, players: WEEK.players.map(p => p.team === 'DET'
+    ? { ...p, weeks: [{ ...p.weeks[0], env: { ...p.weeks[0].env, factor: 1.2 } }] } : p) };
+  const scaled = H.buildDfsSlate('dk', [...SAL, punt], hot, { usage: puntUsage }).players.find(p => p.name === 'Elic Ayomanor');
+  ok('a supplemental number is scaled by his club’s week, like every other row', scaled.ironTunaPoints > row.ironTunaPoints, scaled.ironTunaPoints + ' vs ' + row.ironTunaPoints);
+
+  // A defense matches by club, so an unmatched one means the board itself is
+  // missing -- and there is no per-player usage line behind a defense to fall
+  // back on. Supplementing one would be inventing the number outright.
+  const ghostD = { name: 'Ghost Defense', position: 'DST', team: 'MIN', opponent: 'CHI', salary: 3000, operatorFppg: 8 };
+  ok('a defense is never supplemented, because there is no line behind it to use',
+     H.buildDfsSlate('dk', [...SAL, ghostD], WEEK, { usage: puntUsage }).players.find(p => p.name === 'Ghost Defense').projected === false);
+
+  // The measured board, which is what every DFS surface actually reads.
+  const gpp = H.dfsMetrics(s.players, 'gpp');
+  ok('a supplemental row is measured with everyone else in a tournament', gpp.rows.some(r => r.name === 'Elic Ayomanor') && gpp.supplemental === 3, String(gpp.supplemental));
+  ok('...and is scored on the same value scale rather than a private one', typeof gpp.rows.find(r => r.name === 'Elic Ayomanor').value === 'number');
+  // Cash is won on a floor, and a season average is the one number that
+  // cannot tell you whether a man has one this week.
+  const cash = H.dfsMetrics(s.players, 'cash');
+  ok('...and is kept out of a cash build, where certainty is the whole game', !cash.rows.some(r => r.supplemental) && cash.supplemental === 0);
+  ok('...while the board rows are all still there', cash.rows.length === gpp.rows.length - 3, cash.rows.length + ' vs ' + gpp.rows.length);
+
+  // An unavailable supplemental man is benched like anyone else: a $3,000
+  // certain zero is still a certain zero.
+  const outSlate = H.buildDfsSlate('dk', [...SAL, punt], WEEK, { usage: puntUsage, week: 1,
+    availability: { weekly: { [_oddsNorm('Elic Ayomanor') + '|WR']: { status: 'Out', note: 'hamstring' } } } });
+  const benched = outSlate.players.find(p => p.name === 'Elic Ayomanor');
+  ok('a supplemental man the report ruled out is benched like anyone else', benched.available === false && benched.weekStatus === 'Out');
+  ok('...and is named in the slate’s unavailable list rather than dropped in silence', outSlate.unavailableNames.some(u => u.name === 'Elic Ayomanor'));
+
+  // The optimizer is the surface the tier exists for.
+  const pool = s.players.filter(p => p.projected).map(p => ({ ...p, id: p.key }));
+  const gppBuild = DFS.build(pool, { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'ceiling', lineups: 1 });
+  ok('the optimizer can now reach a minimum-salary body at all', gppBuild.ok && gppBuild.poolSize > slate.players.filter(p => p.onBoard).length);
+  const floorBuild = DFS.build(pool, { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'floor', lineups: 1 });
+  ok('...but the safest-floor build declines to spend the cap on one', floorBuild.ok && floorBuild.lineups[0].players.every(p => !p.supplemental) && floorBuild.thinCount === 3, String(floorBuild.thinCount));
+  ok('...and says which ones it declined, rather than dropping them in silence', floorBuild.thin.some(t => t.name === 'Elic Ayomanor' && t.basis === 'usage'));
+  const doc = fs.readFileSync(path.join(ROOT, 'docs/dfs-metrics.md'), 'utf8');
+  ok('the ladder is written down, every rung of it',
+     /Where a player\u2019s projection comes from|Where a player's projection comes from/.test(doc)
+     && ['`board`', '`usage`', '`operator`', '`none`'].every(r => doc.includes(r))
+     && /backward-looking/.test(doc) && /does not claim to have found the leverage/.test(doc));
+  const locked = DFS.build(pool, { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'floor', lock: [_oddsNorm('Elic Ayomanor') + '|WR'], lineups: 1 });
+  ok('...unless the reader locks him, because a lock is a decision', locked.ok && locked.lineups[0].players.some(p => p.id === _oddsNorm('Elic Ayomanor') + '|WR'));
+  ok('a lineup seat says which rung its number came off', gppBuild.lineups[0].players.every(p => typeof p.projectionBasis === 'string'));
+
+  // A board outage is a different failure from one man missing from the pool:
+  // every row falls to a season average, and a page that says "4 of them"
+  // when it means "all of them" reads like a working board built the usual
+  // way. The card changes its sentence rather than understating it.
+  const noBoard = H.buildDfsSlate('dk', [...SAL, punt], null, { usage: puntUsage });
+  ok('with no board at all every skill row falls to a season line rather than the page emptying',
+     noBoard.supplemented > 0 && noBoard.players.filter(p => p.projected).every(p => p.supplemental));
+  ok('...and the page says so in place of the count, rather than understating it',
+     /None of this slate is on Iron Tuna\u2019s board|None of this slate is on Iron Tuna’s board/.test(fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8')));
+
+  // The ladder and the played-game work have to compose, and they meet on
+  // exactly the row most likely to be misread: a backward-looking number and
+  // a finished game look identical until one of them says which it is. A
+  // supplemental row banks its box score like every other visible row, so it
+  // is never the one man on the slate still quoting a season average at a
+  // game that has been played.
+  {
+    const bl = (name, team, o) => ({ name, key: _oddsNorm(name), team,
+      pass: { att: 0, cmp: 0, yd: 0, td: 0, int: 0 }, rush: { att: 0, yd: 0, td: 0, ...((o || {}).rush || {}) },
+      rec: { tgt: 0, rec: 0, yd: 0, td: 0, ...((o || {}).rec || {}) }, fumLost: 0 });
+    const ayo = bl('Elic Ayomanor', 'DET', { rec: { tgt: 9, rec: 7, yd: 88, td: 1 } });
+    const acts = { games: 13, final: 2, teams: new Set(['DET', 'GB']),
+      lines: new Map([[ayo.key, [ayo]]]) };
+    const done = H.buildDfsSlate('dk', [...SAL, punt], WEEK, { usage: puntUsage, actuals: acts })
+      .players.find(p => p.name === 'Elic Ayomanor');
+    // 7 receptions, 88 yards, a touchdown at DraftKings PPR: 7 + 8.8 + 6.
+    ok('a supplemental man whose game is over banks his box score like anyone else',
+       done.gamePlayed === true && done.actualBasis === 'box-score' && near(done.actualPoints, 21.8, 0.11), JSON.stringify({ g: done.gamePlayed, a: done.actualPoints }));
+    ok('...and still says his projection was a season line, because that is what it was',
+       done.projectionBasis === 'usage' && done.supplemental === true);
+    ok('...and the optimizer will not spend a seat on a finished afternoon',
+       DFS.build([done].concat(s.players.filter(p => p.projected && p.name !== 'Elic Ayomanor')).map(p => ({ ...p, id: p.key })),
+         { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'ceiling', lineups: 1 })
+         .played.some(x => x.name === 'Elic Ayomanor'));
+  }
+
+  // A slate served before the ladder shipped has no `projected` field at all,
+  // and a reader with a cached page must not lose his board to a missing key.
+  const legacy = s.players.filter(p => p.onBoard).map(p => { const q = { ...p, id: p.key }; delete q.projected; delete q.supplemental; return q; });
+  ok('a pre-ladder slate still builds, because onBoard answers when projected is absent',
+     DFS.build(legacy, { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'ironTuna', lineups: 1 }).ok);
 }
 
 console.log('\nthe optimizer');

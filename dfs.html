@@ -1219,6 +1219,13 @@ p{color:var(--sec);margin:0 0 16px}
   function fppgEdge(p) {
     if (!p) return null;
     if (p.projectionVsFppg != null && isFinite(p.projectionVsFppg)) return Number(p.projectionVsFppg);
+    // On a supplemental row a null edge is a DECISION, not a missing field:
+    // his projection and the average beside it came off the same season line,
+    // so the difference is 0.0 by construction. The fallback below exists for
+    // a row served before projectionVsFppg did, and letting it fire here
+    // printed a flat 0.0 that reads as the model agreeing with DraftKings to
+    // the tenth rather than as one number shown twice.
+    if (p.supplemental) return null;
     var proj = p.ironTunaPoints != null ? p.ironTunaPoints : p.proj;
     if (proj == null || p.operatorFppg == null || !isFinite(proj) || !isFinite(p.operatorFppg)) return null;
     return Number(proj) - Number(p.operatorFppg);
@@ -1232,18 +1239,42 @@ p{color:var(--sec);margin:0 0 16px}
     ['dfPoolFppgHead','dfMetricsFppgHead','dfValuesFppgHead'].forEach(function (id) { var el = $(id); if (el) el.textContent = fppgLabel(); });
   }
   function delta(d) { if (!d) return '—'; var cls = /BUY|HIGHER/.test(d.classification) ? 'buy' : /FADE|LOWER/.test(d.classification) ? 'fade' : 'agree'; return '<span class="rk-conf" style="' + (cls === 'buy' ? 'color:var(--teal)' : cls === 'fade' ? 'color:var(--danger)' : '') + '">' + e(d.classification) + (d.points != null ? ' ' + (d.points > 0 ? '+' : '') + d.points : '') + '</span>'; }
+  // A row the slate carries a number for, off any rung of the projection
+  // ladder. Every filter on this page used to ask `p.onBoard`, which is a
+  // narrower question -- whether he is in the curated preseason pool -- and
+  // answering it hid the whole minimum-salary tier from a page whose job is
+  // to price a slate. A response built before the ladder shipped has no
+  // `projected` field, so onBoard still answers for it.
+  function projected(p) { return !!p && (p.projected === true || (p.projected === undefined && !!p.onBoard)); }
+  // Said once, so the four surfaces that print it cannot drift. A
+  // supplemental number is his own season line, not a forecast of Sunday.
+  var SUPP_NOTE = 'Not on this week’s board. Projected from his season-to-date line, scaled by his club’s week, and graded low.';
+  function suppTag(p) { return p && p.supplemental ? ' <span class="is-status" title="' + SUPP_NOTE + '">season avg</span>' : ''; }
   function envTable(s) {
     var rows = []; var seen = {}; var totals = {};
     (s.stacks || []).forEach(function (g) { if (g.home && g.home.team) totals[g.home.team] = g.total; if (g.away && g.away.team) totals[g.away.team] = g.total; });
-    (s.players || []).forEach(function (p) { if (!p.onBoard || !p.teamTotal || seen[p.team]) return; seen[p.team] = 1; rows.push({ team: p.team, opp: p.opponent, at: p.home === false ? 'at' : 'vs', imp: p.teamTotal, posted: p.teamTotalPosted, total: totals[p.team] }); });
+    (s.players || []).forEach(function (p) { if (!projected(p) || !p.teamTotal || seen[p.team]) return; seen[p.team] = 1; rows.push({ team: p.team, opp: p.opponent, at: p.home === false ? 'at' : 'vs', imp: p.teamTotal, posted: p.teamTotalPosted, total: totals[p.team] }); });
     rows.sort(function (a, b) { return b.imp - a.imp; });
     $('dfBody').innerHTML = rows.map(function (r) { return '<tr><td><b>' + e(r.team) + '</b></td><td>' + e((r.at || '') + ' ' + (r.opp || '')) + '</td><td class="num">' + n1(r.imp) + (r.posted ? '' : ' <span class="is-status">fitted</span>') + '</td><td class="num">' + n1(r.total) + '</td></tr>'; }).join('');
     $('dfTable').hidden = !rows.length; $('dfEmpty').hidden = !!rows.length;
   }
   function dashboard(s) {
-    var on = s.players.filter(function (p) { return p.onBoard; });
+    var on = s.players.filter(function (p) { return projected(p); });
     var card = function (t, h, p) { return '<div class="is-card"><span class="is-tag is-live">' + t + '</span><h3>' + h + '</h3><p>' + p + '</p></div>'; };
-    var out = [card('Slate', e(s.label) + ' · Week ' + e(s.week), on.length + ' priced players on the board, cap ' + money(s.cap) + '.'),
+    var out = [card('Slate', e(s.label) + ' · Week ' + e(s.week), on.length + ' priced players on the board, cap ' + money(s.cap) + '.'
+        // The minimum-salary tier is mostly men the curated pool has never
+        // heard of, and it is the tier a reader scrolls to last and needs
+        // most. Saying how much of the board is standing on a season line
+        // rather than a projection is the difference between a full slate and
+        // a slate that looks full.
+        // When EVERY row came off a season line the board itself is missing,
+        // not the odd minimum-salary body, and "4 of them" understates that
+        // to the point of misleading: the reader is looking at a page that
+        // works like a slate and was built by a different method end to end.
+        + (s.supplemented && s.supplemented === on.length
+            ? ' None of this slate is on Iron Tuna’s board, so every number here is a season average rather than a projection. Treat the whole page as an estimate.'
+            : s.supplemented ? ' ' + s.supplemented + ' of them are projected from a season line rather than the board, and are marked.' : '')
+        + (s.unprojected ? ' ' + s.unprojected + (s.unprojected === 1 ? ' more carries' : ' more carry') + ' no projection at all.' : '')),
       card('Median value', n1(s.medianVegasPerK) + ' pts / $1K', 'What the market implies an ordinary dollar buys on this slate.'),
       s.boards.bestVegasValues[0] ? card('Best value', e(s.boards.bestVegasValues[0].name), 'VVS ' + s.boards.bestVegasValues[0].vegasValueScore + ' at ' + money(s.boards.bestVegasValues[0].salary) + '.') : '',
       s.boards.expensiveFades[0] ? card('Expensive fade', e(s.boards.expensiveFades[0].name), money(s.boards.expensiveFades[0].salary) + ', ' + e(s.boards.expensiveFades[0].marketDelta.classification.toLowerCase()) + '.') : '',
@@ -1441,13 +1472,13 @@ p{color:var(--sec);margin:0 0 16px}
     // player pool below, which is the board's reference list and prints what
     // he actually scored.
     var m = s.metrics || null;
-    var priced = s.players.filter(function (p) { return p.onBoard && typeof p.value === 'number'; });
+    var priced = s.players.filter(function (p) { return projected(p) && typeof p.value === 'number'; });
     var rows = stillToPlay(priced), metricsOff = priced.length - rows.length;
     $('dfMetrics').hidden = board !== 'metrics'; $('dfMetricsNote').hidden = board !== 'metrics'; $('dfValues').hidden = board === 'metrics' ? true : $('dfValues').hidden;
     if (board !== 'metrics') return;
     var key = m && m.sortBy ? m.sortBy : 'leverage';
     rows.sort(function (a, b) { return (b[key] || 0) - (a[key] || 0); });
-    $('dfMetrics').querySelector('tbody').innerHTML = rows.slice(0, 40).map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num"><b>' + e(p.value) + '</b></td><td class="num">' + n1(p.floor) + '</td><td class="num">' + n1(p.ceiling) + '</td><td class="num">' + n1(p.ownership) + '%</td><td class="num">' + n1(p.leverage) + '</td><td class="num">' + e(p.cashScore) + '</td><td class="num">' + e(p.tournamentScore) + '</td><td>' + e(p.chalk || '') + '</td></tr>'; }).join('');
+    $('dfMetrics').querySelector('tbody').innerHTML = rows.slice(0, 40).map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span>' + suppTag(p) + '</td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num"><b>' + e(p.value) + '</b></td><td class="num">' + n1(p.floor) + '</td><td class="num">' + n1(p.ceiling) + '</td><td class="num">' + n1(p.ownership) + '%</td><td class="num">' + n1(p.leverage) + '</td><td class="num">' + e(p.cashScore) + '</td><td class="num">' + e(p.tournamentScore) + '</td><td>' + e(p.chalk || '') + '</td></tr>'; }).join('');
     $('dfMetrics').hidden = !rows.length;
     playedOffNote($('dfMetricsNote'), metricsOff, priced.length);
   }
@@ -1485,6 +1516,11 @@ p{color:var(--sec);margin:0 0 16px}
   // A man priced on one market only is neither PROPS nor plain LINES: the
   // books looked at him, and it was not enough to project from.
   function marketChipFor(m) {
+    // No board projection behind him either, so his number is his own season
+    // average. The generic 'none' chip reads FITTED, which would claim a
+    // curve nobody fitted. Decided here so the row, the coach and anything
+    // else reading a market block cannot describe the same man two ways.
+    if (m && m.supplemental) return ['SEASON', 'fitted'];
     if (m && m.shortOfProjection) return ['TD ONLY', 'inferred'];
     return MARKET_CHIP[m && m.basis] || MARKET_CHIP.none;
   }
@@ -1504,6 +1540,12 @@ p{color:var(--sec);margin:0 0 16px}
     }
     var m = p && p.market;
     if (!m) return '';
+    // Said before anything about books, because for this row there are none.
+    if (p.supplemental) {
+      return p.projectionBasis === 'operator'
+        ? 'Not on this week’s board, and no football behind him this season. The number beside his name is the operator’s own published season average. No book has posted a market on him.'
+        : 'Not on this week’s board. The number beside his name is his own ' + (p.supplementalGames || 0) + '-game season line, per game, scaled by his club’s week. It is what he has done, not a forecast of Sunday, and no book has posted a market on him.';
+    }
     if (m.quoted) {
       return 'The books posted ' + (m.pricedLabels && m.pricedLabels.length ? m.pricedLabels.join(', ') : 'props') + ' on him'
         + (m.books ? ' across ' + m.books + ' book' + (m.books === 1 ? '' : 's') : '')
@@ -1560,8 +1602,8 @@ p{color:var(--sec);margin:0 0 16px}
     return bits.join(' ');
   }
   function pool(s) {
-    var on = s.players.filter(function (p) { return p.onBoard; });
-    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr' + (p.available === false ? ' class="df-row-out"' : '') + '><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(actualOf(p) != null ? actualOf(p) : p.ironTunaPoints) + bankedMark(p) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td>' + marketTag(p) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + [weekTag(p), (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '')].filter(Boolean).join(' ') + '</td></tr>'; }).join('');
+    var on = s.players.filter(function (p) { return projected(p); });
+    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr' + (p.available === false ? ' class="df-row-out"' : '') + '><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' \u00b7 ' + p.team) + '</span>' + suppTag(p) + '</td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(actualOf(p) != null ? actualOf(p) : p.ironTunaPoints) + bankedMark(p) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td>' + marketTag(p) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + [weekTag(p), (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '')].filter(Boolean).join(' ') + '</td></tr>'; }).join('');
   }
   // ── the shape switch ──────────────────────────────────────────────────────
   // Writes the preset into the fine-tune controls rather than solving off a
@@ -1861,7 +1903,7 @@ p{color:var(--sec);margin:0 0 16px}
   // solved around them. One at a time, as many as they like.
   function requirable() {
     var v = filteredSlate();
-    return ((v && v.players) || []).filter(function (p) { return p.key && p.onBoard; })
+    return ((v && v.players) || []).filter(function (p) { return p.key && projected(p); })
       .sort(function (a, b) { return (b.ironTunaPoints || 0) - (a.ironTunaPoints || 0); });
   }
   function requireMatches(value) {
@@ -2359,7 +2401,7 @@ p{color:var(--sec);margin:0 0 16px}
       if (!map[key].start) map[key].start = kickoffDate(g);
     });
     (s && s.players || []).forEach(function (p) {
-      if (!p.onBoard || !p.team || !p.opponent) return;
+      if (!projected(p) || !p.team || !p.opponent) return;
       var key = playerGameKey(p); if (!key) return;
       if (!map[key]) {
         var away = p.home === false ? p.team : (p.home === true ? p.opponent : '');
@@ -2404,7 +2446,7 @@ p{color:var(--sec);margin:0 0 16px}
     }
     if (fmt.kind === 'tiers') {
       var tv = filteredSlate() || slate || {};
-      var tf = ITDfs.tierFormat((tv.players || []).filter(function (p) { return p.onBoard; }));
+      var tf = ITDfs.tierFormat((tv.players || []).filter(function (p) { return projected(p); }));
       if (!tf) {
         out.ready = false;
         out.blocked = 'A Tiers contest has no salary cap: it posts its own buckets and asks for one player out of each. The buckets are in the contest\u2019s own export, and the desk\u2019s main slate carries none \u2014 inventing them out of salary would build a roster nobody can enter. Hand over the Tiers CSV and the board solves it exactly.';
@@ -2596,7 +2638,7 @@ p{color:var(--sec);margin:0 0 16px}
     Object.keys(boards).forEach(function (name) {
       q.boards[name] = Array.isArray(boards[name]) ? boards[name].filter(function (p) { return selectedGames[playerGameKey(p)]; }) : boards[name];
     });
-    var vals = q.players.filter(function (p) { return p.onBoard && p.salary > 0 && isFinite(p.vegasPoints); }).map(function (p) { return p.vegasPoints / (p.salary / 1000); }).sort(function (a, b) { return a - b; });
+    var vals = q.players.filter(function (p) { return projected(p) && p.salary > 0 && isFinite(p.vegasPoints); }).map(function (p) { return p.vegasPoints / (p.salary / 1000); }).sort(function (a, b) { return a - b; });
     if (vals.length) q.medianVegasPerK = vals.length % 2 ? vals[(vals.length - 1) / 2] : (vals[vals.length / 2 - 1] + vals[vals.length / 2]) / 2;
     q.label = (slate.label || 'DraftKings') + ' · ' + keys.length + ' selected game' + (keys.length === 1 ? '' : 's');
     return q;
@@ -2791,7 +2833,7 @@ p{color:var(--sec);margin:0 0 16px}
     if (!f.ready) { fieldAvg = null; renderFormatNotice(f); return; }
     var view = filteredSlate();
     if (!view) { showGameScopeRequired(); return; }
-    var players = view.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
+    var players = view.players.filter(function (p) { return projected(p); }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
     // Pick6 and the single-stat contests are not a roster, so they do not get
     // a roster-shaped answer. renderPicks() gives them the one the contest
     // actually asks for.
@@ -2902,7 +2944,13 @@ p{color:var(--sec);margin:0 0 16px}
       tourneyScore: p.tournamentScore == null ? null : Number(p.tournamentScore),
       chalk: p.chalk || null,
       market: coachMarket(p, brief),
-      status: coachStatus(p)
+      status: coachStatus(p),
+      // Where `proj` came from. Without this the coach reads a season average
+      // as a forward projection and recommends a $3,000 body with the same
+      // confidence as a $9,000 one, which is the exact mistake this tier
+      // invites.
+      projectionFrom: p.supplemental ? (p.projectionBasis === 'operator' ? 'operator season average, not on the board' : 'his own season-to-date line, not on the board') : null,
+      projectionGames: p.supplemental && p.supplementalGames ? Number(p.supplementalGames) : null
     };
     if (extra) for (var k in extra) r[k] = extra[k];
     for (var j in r) if (r[j] == null) delete r[j];
@@ -3043,7 +3091,7 @@ p{color:var(--sec);margin:0 0 16px}
       choices: setupChoices(true),
       slate: slate
         ? { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: slate.label, week: slate.week,
-            cap: slate.cap, pricedPlayers: (slate.players || []).filter(function (p) { return p.onBoard; }).length,
+            cap: slate.cap, pricedPlayers: (slate.players || []).filter(function (p) { return projected(p); }).length,
             salariesFrom: 'the site\u2019s salary feed' }
         : { site: 'DraftKings', note: 'No salary slate is loaded yet, so the page lists no games to choose from.' },
       playOfTheWeek: playWeek
@@ -3090,14 +3138,14 @@ p{color:var(--sec);margin:0 0 16px}
     var lead = built.lineups[0];
     var inLineup = {};
     built.lineups.forEach(function (l) { l.players.forEach(function (p) { inLineup[p.id] = 1; }); });
-    var solverPool = (view.players || []).filter(function (p) { return p.onBoard; })
+    var solverPool = (view.players || []).filter(function (p) { return projected(p); })
       .map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
     var pivots = pivotRows(lead, solverPool).slice(0, 9).map(function (r) {
       return { slot: r.slot, outName: r.out.name, inName: r.into.name, inPos: r.into.position, inTeam: r.into.team,
                dProj: coachN(r.dProj), dCeiling: coachN(r.dCeil), dSalary: r.dSal, inOwn: coachN(r.own) };
     });
     var benchKey = contest === 'cash' ? 'cashScore' : contest === 'gpp' || contest === '3max' ? 'tournamentScore' : 'value';
-    var bench = (view.players || []).filter(function (p) { return p.onBoard && !inLineup[p.key]; })
+    var bench = (view.players || []).filter(function (p) { return projected(p) && !inLineup[p.key]; })
       .sort(function (a, b) { return (Number(b[benchKey]) || 0) - (Number(a[benchKey]) || 0); })
       .slice(0, 30).map(function (p) { return coachRow(p, null, true); });
     var stackRows = (view.stacks || []).slice(0, 16).map(function (g) {
@@ -3147,7 +3195,7 @@ p{color:var(--sec);margin:0 0 16px}
     }).join('') || '<p class="is-empty">No game on this slate carries a posted total yet.</p>';
   }
   function tdBoard(s) {
-    var list = s.players.filter(function (p) { return p.onBoard && p.position !== 'DST'; }).sort(function (a, b) { return b.tdProbability - a.tdProbability; }).slice(0, 40);
+    var list = s.players.filter(function (p) { return projected(p) && p.position !== 'DST' && isFinite(p.tdProbability); }).sort(function (a, b) { return b.tdProbability - a.tdProbability; }).slice(0, 40);
     $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
     $('dfTd').hidden = !list.length;
   }
@@ -3158,7 +3206,7 @@ p{color:var(--sec);margin:0 0 16px}
   // reads the builder's own totals.
   function renderPlayOfWeek(s) {
     var host=$('dfPlayWeekBody'); if(!host || !s || !window.ITDfs) return;
-    var players=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
+    var players=(s.players||[]).filter(function(p){return projected(p);}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
     playWeek=null;
     // Which contest the advice is FOR. The reader picked a Game Style, and the
     // payout question is "what should I enter with this roster" -- so it is the
@@ -3390,7 +3438,12 @@ p{color:var(--sec);margin:0 0 16px}
         }
         upSet(site, csv);
         upState('Your file: ' + j.players.length + ' priced rows'
-                + (j.unmatched ? ' \u00b7 ' + j.unmatched + ' of them are not on this week\u2019s board' : '')
+                // What was missing used to be one number, and one number made
+                // a debut and a starter the curated pool had never heard of
+                // look identical. Now it says how many the ladder rescued and
+                // how many are genuinely left with nothing behind them.
+                + (j.supplemented ? ' \u00b7 ' + j.supplemented + ' projected from a season line rather than the board' : '')
+                + (j.unprojected ? ' \u00b7 ' + j.unprojected + (j.unprojected === 1 ? ' carries' : ' carry') + ' no projection at all' : '')
                 + '. Kept in this browser only.', false);
         slateOk(j);
       })
