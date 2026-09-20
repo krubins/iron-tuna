@@ -303,6 +303,18 @@ p{color:var(--sec);margin:0 0 16px}
 .df-coach-chip:disabled{opacity:.5;cursor:default}
 .df-coach-body{display:flex;flex-direction:column;gap:9px;min-height:0;flex:1 1 auto;overflow-y:auto;margin:0 0 12px}
 .df-coach-body:empty{display:none}
+/* The conversation is the one part of this panel that must never be the thing
+   that gets squeezed. Everything above and below it is flex:0 0 auto, so on a
+   short window the body was the only child left to absorb the overflow and it
+   collapsed to zero height: the question sent, the answer arrived, and the
+   reader saw the box clear with nothing in it. So once there is a conversation
+   the openers fold into one scrolling row, the empty-state lede gets out of the
+   way, and the body keeps a floor no shrinkage can take it below. */
+.df-coach-body:not(:empty){min-height:132px}
+.df-coach-talking .df-coach-lede{display:none}
+.df-coach-talking .df-coach-chips{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;margin-bottom:10px}
+.df-coach-talking .df-coach-chips::-webkit-scrollbar{display:none}
+.df-coach-talking .df-coach-chip{flex:0 0 auto;white-space:nowrap}
 .df-coach-msg{font-size:14px;line-height:1.55;padding:10px 13px;border-radius:12px;max-width:92%;overflow-wrap:anywhere}
 .df-coach-msg.bot{align-self:flex-start;background:var(--bg);border:1px solid var(--line);color:var(--sec);border-bottom-left-radius:4px}
 .df-coach-msg.bot.bad{border-color:var(--danger);color:var(--danger)}
