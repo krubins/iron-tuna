@@ -1063,6 +1063,16 @@ console.log('\nthe projection ladder');
   ok('...unless the reader locks him, because a lock is a decision', locked.ok && locked.lineups[0].players.some(p => p.id === _oddsNorm('Elic Ayomanor') + '|WR'));
   ok('a lineup seat says which rung its number came off', gppBuild.lineups[0].players.every(p => typeof p.projectionBasis === 'string'));
 
+  // A board outage is a different failure from one man missing from the pool:
+  // every row falls to a season average, and a page that says "4 of them"
+  // when it means "all of them" reads like a working board built the usual
+  // way. The card changes its sentence rather than understating it.
+  const noBoard = H.buildDfsSlate('dk', [...SAL, punt], null, { usage: puntUsage });
+  ok('with no board at all every skill row falls to a season line rather than the page emptying',
+     noBoard.supplemented > 0 && noBoard.players.filter(p => p.projected).every(p => p.supplemental));
+  ok('...and the page says so in place of the count, rather than understating it',
+     /None of this slate is on Iron Tuna\u2019s board|None of this slate is on Iron Tuna’s board/.test(fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8')));
+
   // A slate served before the ladder shipped has no `projected` field at all,
   // and a reader with a cached page must not lose his board to a missing key.
   const legacy = s.players.filter(p => p.onBoard).map(p => { const q = { ...p, id: p.key }; delete q.projected; delete q.supplemental; return q; });
