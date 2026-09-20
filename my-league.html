@@ -476,12 +476,37 @@ function rosterGrid(el) {
     }
     note('');
     if (!st.leagues.length) {
-      $('lsList').innerHTML = '<div class="is-vacant"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 016 0v2"></path></svg></span><div class="is-vacant-msg"><b>No league saved yet.</b><span>Enter your league once and every board re-scores itself in your points. The rosters box in section 02 below can read a whole room off one screenshot of your roster grid.</span></div></div><div class="is-btns"><button type="button" class="is-btn primary" data-add>Enter my league</button></div>';
+      // No league yet means there is nothing here to choose between, so the
+      // form opens itself rather than hiding behind a button. A reader who
+      // pressed "Customize My League" has already said what they came for;
+      // asking them to press "Enter my league" to be shown the fields is a
+      // click that carries no decision.
+      $('lsList').innerHTML = '<div class="is-vacant"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 016 0v2"></path></svg></span><div class="is-vacant-msg"><b>No league saved yet.</b><span>Fill in the form below and every board re-scores itself in your points. Its roster box reads a whole room off one screenshot of your league&rsquo;s roster grid.</span></div></div>';
     } else {
       $('lsList').innerHTML = st.leagues.map(card).join('') + '<p class="is-note" style="margin:8px 0 0">' + st.leagues.length + ' league' + (st.leagues.length === 1 ? '' : 's') + ' saved. The default league is what every page uses unless you switch it in the League selector.</p><div class="is-btns"><button type="button" class="is-btn sec" data-add>Add another league</button></div>';
     }
     $('lsList').querySelectorAll('[data-add]').forEach(function (b) { b.addEventListener('click', addLeague); });
-    if (location.hash === '#connect') $('lsList').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Opened, not scrolled to, and with no Cancel: there is no earlier state
+    // for a first league to go back to, and a page that jumped here would
+    // fight the anchor the reader arrived on.
+    if (!st.leagues.length) manualForm(null, { scroll: false, cancel: false });
+  }
+  // The section this page was asked for. Both sections below the masthead
+  // render after their fetch, so the browser's own jump to #settings or
+  // #connect lands on a page that is still short and leaves the reader parked
+  // above the thing they clicked. Re-aim once the heights are real, and only
+  // while the reader has not started scrolling for themselves.
+  var moved = false;
+  ['wheel', 'touchmove', 'keydown'].forEach(function (e) {
+    window.addEventListener(e, function () { moved = true; }, { passive: true, once: true });
+  });
+  var anchored = false;
+  function anchor() {
+    if (anchored || moved) return;
+    var el = /^#(settings|connect)$/.test(location.hash) && document.querySelector(location.hash);
+    if (!el) return;
+    anchored = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   // The one way in. There are no platforms to choose between any more, so the
   // by-hand form is the flow rather than the fallback at the end of one.
@@ -532,7 +557,8 @@ function rosterGrid(el) {
   // roster is what a reader pastes into the section that promises rosters.
 
   // ── manual ───────────────────────────────────────────────────────────────
-  function manualForm(L) {
+  function manualForm(L, o) {
+    o = o || {};
     var el = $('lsManual'); el.hidden = false;
     var S = L ? L.settings : null, mine = L ? (L.rosters.find(function (r) { return r.teamId === L.userTeamId; }) || { players: [] }) : null;
     var rec = S ? S.scoring.receptionPoints : 1;
@@ -564,7 +590,7 @@ function rosterGrid(el) {
       '<div class="is-field"><label>Starting lineup and bench</label><div>' + rosterRows(S || { roster: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SFLEX: 0, REC_FLEX: 0, WRRB_FLEX: 0, K: 1, DEF: 1, BN: 6, IR: 1, TAXI: 0 } }, []) + '</div></div>' +
       '<div class="is-row2"><div class="is-field"><label>FAAB budget (blank if waiver priority)</label><input class="is-input" id="mfFaab" type="number" value="' + (S && S.faab != null ? esc(S.faab) : '') + '"></div><div class="is-field"><label>Your team name</label><input class="is-input" id="mfTeam" value="' + esc(L ? ((L.teams.find(function (t) { return t.teamId === L.userTeamId; }) || {}).name || 'My team') : 'My team') + '"></div></div>' +
       '<div class="is-field"><label>Your roster, one player per line (mark starters with * and IR with IR)</label><textarea class="is-input" id="mfRoster" rows="10" placeholder="* Josh Allen QB&#10;* Bijan Robinson RB&#10;Rachaad White RB&#10;IR Nico Collins WR">' + esc(mine ? mine.players.map(function (p) { return (p.slot === 'starter' ? '* ' : p.slot === 'ir' ? 'IR ' : '') + p.name + (p.position ? ' ' + p.position : ''); }).join(NL) : '') + '</textarea></div>' +
-      '<div class="is-btns"><button type="button" class="is-btn primary" id="mfSave">' + (L ? 'Save league' : 'Create league') + '</button><button type="button" class="is-btn sec" id="mfCancel">Cancel</button></div><p class="is-note" id="mfMsg"></p></div>';
+      '<div class="is-btns"><button type="button" class="is-btn primary" id="mfSave">' + (L ? 'Save league' : 'Create league') + '</button>' + (o.cancel === false ? '' : '<button type="button" class="is-btn sec" id="mfCancel">Cancel</button>') + '</div><p class="is-note" id="mfMsg"></p></div>';
     // The cheat sheet's intake, on the by-hand form. What it replaces is a
     // reader retyping a settings page they are already looking at, into three
     // scoring boxes that cannot hold most of what it says.
@@ -599,7 +625,8 @@ function rosterGrid(el) {
       // The team count on this form is the floor the grid just proved.
       onRead: function (g) { var box = $('mfTeams'); if (box) box.value = Math.max(parseInt(box.value, 10) || 0, g.teams.length); }
     }) || grid;
-    $('mfCancel').addEventListener('click', function () { el.hidden = true; });
+    var cancel = $('mfCancel');
+    if (cancel) cancel.addEventListener('click', function () { el.hidden = true; });
     $('mfSave').addEventListener('click', function () {
       var recV = parseFloat((el.querySelector('input[name="mfRec"]:checked') || {}).value || '1');
       if (mfRecExact != null && (mfRecExact >= 0.9 ? 1 : mfRecExact >= 0.4 ? 0.5 : 0) === recV) recV = mfRecExact;
@@ -635,11 +662,14 @@ function rosterGrid(el) {
         reload();
       });
     });
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (o.scroll !== false) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   document.addEventListener('DOMContentLoaded', function () {
     if (!window.ITSync) { note('League sync could not load in this browser.', true); return; }
-    ITSync.load(true).then(function (s) { st = s; render(); });
+    // anchor() after the first render, not inside it: a signed-out reader
+    // returns early from render and their sign-in card shifts the page just
+    // the same.
+    ITSync.load(true).then(function (s) { st = s; render(); anchor(); });
   });
 })();
 </script>
