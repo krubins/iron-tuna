@@ -573,28 +573,56 @@ console.log('\nthe DFS page explanations');
   // `forcedIn` name for the player it held.
   ok('the What If box is gone, root and branch',
      !/whatIf|WhatIf|df-whatif|data-whatif-key/.test(page));
-  ok('and Require is the one way in, from every roster and from any name on the board',
+  ok('and Require is the one way in, from the pill above the roster or from any name on the board',
      page.includes("function isRequired(key) { return marks[key] === 'lock'; }")
-     && page.includes('function rosterActions(p)') && page.includes('Require in every lineup'));
+     && page.includes('id="dfReqOpen"') && page.includes('Require in every lineup'));
   // Requiring and excluding used to be reachable only from the pool table
   // inside the closed fine-tune panel. The roster is where the reader argues
   // with the solve, so the two controls sit on the roster row.
-  ok('every roster row carries a Require and an Exclude control',
-     page.includes('function rosterActions(p)') && page.includes("data-mark=\"lock\"") && page.includes("data-mark=\"excl\"")
-     && page.includes("+ rosterActions(p) + '</span>'"));
-  // They sit on the NAME LINE beside the plus, never inside the disclosure
-  // row: a control that changes the roster cannot live behind a toggle the
-  // reader has to find first.
-  ok('and they sit on the name line, not behind the note toggle',
-     /df-fit-toggle[\s\S]{0,260}rosterActions\(p\)[\s\S]{0,40}df-pname-line|df-fit-toggle[\s\S]{0,300}rosterActions\(p\)/.test(page)
-     && !/df-fitrow[\s\S]{0,400}rosterActions\(p\)/.test(page));
+  // Dropping a man is a cross at the LEFT of his row, ahead of his face,
+  // which is where a list of removable things puts it. It is the only control
+  // on the roster: requiring starts above it, because the man a reader wants
+  // to require is usually not one of the nine already on screen.
+  // Two glyphs at the LEFT of the row, ahead of the face: pin him in, cross
+  // him out. Worded buttons on the name line put the same two words on
+  // eighteen rows.
+  ok('every roster row carries a cross and a pin, ahead of his face',
+     page.includes('function rosterMarks(p)') && page.includes('class="df-x"') && page.includes('class="df-pin"')
+     && page.includes("data-mark=\"excl\"") && page.includes("data-mark=\"lock\"")
+     && page.includes("rosterMarks(p) + faceHtml(p)"));
+  ok('and the pin shows whether that player is being held',
+     /df-pin[\s\S]{0,200}aria-pressed="' \+ \(req \? 'true' : 'false'\)/.test(page)
+     && page.includes(".df-pin[aria-pressed=\"true\"]"));
+  ok('the roster carries no worded Require or Exclude button any more',
+     !page.includes('function rosterActions(p)') && !/df-pname-line[\s\S]{0,400}data-mark="lock"/.test(page));
+  // The control that showed a man was required is gone from the row, so the
+  // row says it another way.
+  ok('a required player is still marked as such on his row',
+     page.includes('function requiredTag(p)') && page.includes('df-tag req')
+     && page.includes('playerTag(p, qb) + requiredTag(p)'));
   // The controls were on the lead board only at first, which left a reader
   // looking at Alternate 2 with no way to drop the man in front of him. The
   // row markup is shared, so the alternates carry the same pair and write the
   // same one list of constraints.
-  ok('the alternates carry them too, off the same shared row markup and the same constraint list',
-     !page.includes('lead ? rosterActions')
-     && /var rows = l\.players\.map\([\s\S]{0,1400}rosterActions\(p\)/.test(page));
+  ok('the alternates carry both marks too, off the same shared row markup and the same constraint list',
+     !page.includes('lead ? rosterMarks')
+     && /var rows = l\.players\.map\([\s\S]{0,1400}rosterMarks\(p\)/.test(page));
+  // The pin and the search reach different men on purpose: the search is for
+  // somebody not in the roster, the pin holds one the builder already found.
+  ok('the pin and the name search are both kept, because they reach different players',
+     page.includes('id="dfReqOpen"') && page.includes('class="df-pin"')
+     && page.includes('the pin holds a player the builder already found'));
+  // The search is behind a pill now, so it is a thing the reader asks for
+  // rather than a field sitting open above every roster.
+  ok('the require search opens from a pill and stays open for the next name',
+     page.includes('function openRequire(on)') && page.includes('id="dfReqSearch" hidden')
+     && page.includes("pill.setAttribute('aria-expanded', on ? 'true' : 'false')")
+     && page.includes("input.value = ''; input.focus();"));
+  // A pick empties the list it was clicked in, and a detached node reports no
+  // ancestors -- so without this the click read as "outside the search" and
+  // closed it after every name.
+  ok('and a pick does not read as a click outside the search',
+     /data-require-key[\s\S]{0,600}ev\.stopPropagation\(\);[\s\S]{0,80}requireByKey/.test(page));
   ok('the player drawer can require or exclude anyone on the board, not only the nine on the roster',
      page.includes('Require in every lineup') && page.includes('Exclude from every lineup'));
   ok('every require/exclude control writes the same marks store and re-solves',
