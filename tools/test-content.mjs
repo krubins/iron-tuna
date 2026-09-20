@@ -43,6 +43,51 @@ const G = H.normalizeGameSummary(raw, H._oddsProjectionIndex());
   ok('the position comes from the board, not the box score', lamb && lamb.position === 'WR');
   const sq = G.players.find(p => p.name === 'Saquon Barkley');
   ok('carries are counted', sq && sq.rush.att > 0);
+  // ── the defense's own line ──────────────────────────────────────────────
+  // Built by inverting the offense across from it, so every number below is
+  // checkable against the other team's passing and fumble lines in this same
+  // fixture rather than against a defensive stat name nobody here can verify.
+  ok('the payload carries its contract version', G.v === 2);
+  ok('both defenses get a line', G.defense && G.defense.PHI && G.defense.DAL, JSON.stringify(G.defense));
+  ok('points allowed is the other side\'s final score',
+     G.defense.PHI.ptsAllowed === G.away.score && G.defense.DAL.ptsAllowed === G.home.score,
+     JSON.stringify({ phi: G.defense.PHI.ptsAllowed, dal: G.defense.DAL.ptsAllowed, away: G.away.score, home: G.home.score }));
+  // Dallas sacked a Philadelphia passer once and Philadelphia sacked nobody.
+  const sacksBy = t => G.players.filter(p => p.team === t).reduce((n, p) => n + p.pass.sacked, 0);
+  ok('a sack is read off the passing line it was taken on', sacksBy('PHI') === 1 && sacksBy('DAL') === 0,
+     JSON.stringify({ phiTaken: sacksBy('PHI'), dalTaken: sacksBy('DAL') }));
+  ok('and it counts for the defense across from the quarterback',
+     G.defense.DAL.sacks === sacksBy('PHI') && G.defense.PHI.sacks === sacksBy('DAL'),
+     JSON.stringify({ dalD: G.defense.DAL.sacks, phiD: G.defense.PHI.sacks }));
+  const lostBy = t => G.players.filter(p => p.team === t).reduce((n, p) => n + p.fumLost, 0);
+  ok('a fumble recovery is the other side\'s fumble lost',
+     G.defense.PHI.fumRec === lostBy('DAL') && G.defense.DAL.fumRec === lostBy('PHI'),
+     JSON.stringify({ phiD: G.defense.PHI.fumRec, dalLost: lostBy('DAL') }));
+  const intsBy = t => G.players.filter(p => p.team === t).reduce((n, p) => n + p.pass.int, 0);
+  ok('an interception is the other side\'s interception thrown',
+     G.defense.PHI.ints === intsBy('DAL') && G.defense.DAL.ints === intsBy('PHI'));
+  // Every touchdown in this game was a rushing one, so nothing may land in
+  // the defensive or special-teams buckets: the scoring-play reader must not
+  // count an ordinary drive.
+  ok('an offensive touchdown is never counted as a defensive one',
+     G.defense.PHI.defTD === 0 && G.defense.DAL.defTD === 0 && G.defense.PHI.stTD === 0 && G.defense.DAL.stTD === 0
+     && G.defense.PHI.safety === 0 && G.defense.DAL.safety === 0, JSON.stringify(G.defense));
+  // ...and it does count the ones that are. The fixture has no return score,
+  // so the reader is exercised on synthesized plays of each kind.
+  {
+    const withPlays = H.normalizeGameSummary({ ...raw, scoringPlays: [
+      { team: { abbreviation: 'DAL' }, scoringType: { name: 'touchdown' }, type: { text: 'Interception Return Touchdown' }, text: 'x' },
+      { team: { abbreviation: 'DAL' }, scoringType: { name: 'touchdown' }, type: { text: 'Fumble Return Touchdown' }, text: 'x' },
+      { team: { abbreviation: 'PHI' }, scoringType: { name: 'touchdown' }, type: { text: 'Kickoff Return Touchdown' }, text: 'x' },
+      { team: { abbreviation: 'PHI' }, scoringType: { name: 'touchdown' }, type: { text: 'Punt Return Touchdown' }, text: 'x' },
+      { team: { abbreviation: 'PHI' }, scoringType: { name: 'safety' }, type: { text: 'Safety' }, text: 'x' },
+      { team: { abbreviation: 'DAL' }, scoringType: { name: 'touchdown' }, type: { text: 'Rushing Touchdown' }, text: 'x' }
+    ] }, H._oddsProjectionIndex());
+    ok('an interception and a fumble return are defensive touchdowns', withPlays.defense.DAL.defTD === 2, JSON.stringify(withPlays.defense.DAL));
+    ok('a kickoff and a punt return are special-teams touchdowns', withPlays.defense.PHI.stTD === 2, JSON.stringify(withPlays.defense.PHI));
+    ok('a safety is counted once, and a rushing touchdown not at all',
+       withPlays.defense.PHI.safety === 1 && withPlays.defense.DAL.stTD === 0);
+  }
   ok('red-zone touches are derived from the drives', sq && sq.rzTouches > 0, JSON.stringify(sq && { rz: sq.rzTouches, gl: sq.glCarries }));
   ok('goal-line carries are a subset of red-zone touches', G.players.every(p => p.glCarries <= p.rzTouches));
   const hurts = G.players.find(p => p.name === 'Jalen Hurts');

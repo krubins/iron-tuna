@@ -32,7 +32,7 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // in rather than restated here: the slate note and the board must not drift.
   cut('const PROPS_STALE_HOURS', 'async function propsHealth') + '\n' +
   cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, BLEND_SHRINK };'
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, scoreAny, BLEND_SHRINK };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 // The scheduled workflow's own CSV writer, so the false-positive gate below
@@ -1481,12 +1481,29 @@ console.log('\nthe slate, partly played');
   const none = H.dfsActualFor(A, 'Khalil Shakir', 'BUF', 'WR', rules);
   ok('a played man with no box-score line is a zero, not a missing number',
      none.gamePlayed === true && none.actualPoints === 0 && none.actualBasis === 'box-score-absent', JSON.stringify(none));
-  // The one hole in this, said out loud rather than papered over: the stored
-  // box score carries passing, rushing, receiving and fumbles, and a defense
-  // is scored on sacks, takeaways, return touchdowns and points allowed.
+  // A defense IS scorable now: normalizeGameSummary builds its line by
+  // inverting the offense across from it. What it cannot do is invent one for
+  // a game stored before that line existed, and a summary at the old contract
+  // has none -- `A` above carries no defence map, which is exactly that case.
   const dst = H.dfsActualFor(A, 'Bills', 'BUF', 'DST', rules);
-  ok('a defense whose game is over says so and still has no actual',
+  ok('a defense from a box score stored before the line existed still has no actual',
      dst.gamePlayed === true && dst.actualPoints === null && dst.actualBasis === 'no-defense-box-score', JSON.stringify(dst));
+  const dline = { sacks: 3, ints: 1, fumRec: 1, defTD: 0, stTD: 0, safety: 0, ptsAllowed: 17 };
+  const withD = { ...A, defense: new Map([['BUF', dline]]) };
+  const scored = H.dfsActualFor(withD, 'Bills', 'BUF', 'DST', rules);
+  ok('and one whose line is stored is scored from it',
+     scored.gamePlayed === true && scored.actualBasis === 'box-score' && scored.actualPoints != null, JSON.stringify(scored));
+  // The invariant that matters: the actual runs through the SAME engine, the
+  // same rules and the same games count as the projection beside it, so the
+  // two are comparable rather than two different scales on one row.
+  ok('through the same call the projection uses',
+     near(scored.actualPoints, _oddsRound(H.scoreAny(dline, 'DST', rules, 1)), 0.001),
+     scored.actualPoints + ' vs ' + H.scoreAny(dline, 'DST', rules, 1));
+  // Three sacks, a pick, a fumble and seventeen allowed, added up by hand.
+  ok('and the arithmetic is the sum of its parts', near(scored.actualPoints, 11, 0.001), String(scored.actualPoints));
+  // A defense in a game that has not kicked off is untouched by any of this.
+  ok('a defense whose game is still to come carries no actual at all',
+     H.dfsActualFor(withD, 'Chiefs', 'KC', 'DST', rules).gamePlayed === false);
   // A kicker is the same case as the defense: field goals and extra points
   // are not in the stored box score either, so scoring him off it would bank
   // a silent zero on a man who might have kicked four.

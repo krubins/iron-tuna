@@ -8058,6 +8058,11 @@ async function contentReady(env) {
 }
 
 // ── ESPN box score ─────────────────────────────────────────────────────────
+// The stored box score's shape. Bump on ANY change to what normalizeGameSummary
+// returns: a FINAL summary is cached forever and served without re-reading
+// ESPN, so without this a new field simply never appears for a game that has
+// already been stored. v2 added the per-team `defense` line.
+const SUMMARY_CONTRACT = 2;
 const ESPN_SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=';
 const ESPN_DEPTH = t => 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/' + encodeURIComponent(t) + '/depthcharts';
 const RED_ZONE_YARDS = 20, GOAL_LINE_YARDS = 5;
@@ -8082,7 +8087,7 @@ function normalizeGameSummary(raw, nameIndex) {
     if (!players.has(k)) {
       const hit = nameIndex ? nameIndex.get(k) : null;
       players.set(k, { name, key: k, team, position: hit ? hit.position : null,
-        pass: { att: 0, cmp: 0, yd: 0, td: 0, int: 0 }, rush: { att: 0, yd: 0, td: 0 }, rec: { tgt: 0, rec: 0, yd: 0, td: 0 },
+        pass: { att: 0, cmp: 0, yd: 0, td: 0, int: 0, sacked: 0 }, rush: { att: 0, yd: 0, td: 0 }, rec: { tgt: 0, rec: 0, yd: 0, td: 0 },
         fumLost: 0, rzTouches: 0, rzTargets: 0, glCarries: 0, tds: [] });
     }
     return players.get(k);
@@ -8099,6 +8104,9 @@ function normalizeGameSummary(raw, nameIndex) {
         if (s.name === 'passing') {
           const ca = String(v['completions/passingAttempts'] || '').split('/');
           p.pass.cmp += n(ca[0]); p.pass.att += n(ca[1]); p.pass.yd += n(v.passingYards); p.pass.td += n(v.passingTouchdowns); p.pass.int += n(v.interceptions);
+          // "3-21" is three sacks for twenty-one yards. Taken for the DEFENSE
+          // across from him, which is the only thing this number is used for.
+          p.pass.sacked += n(String(v['sacks-sackYardsLost'] || '').split('-')[0]);
         } else if (s.name === 'rushing') {
           p.rush.att += n(v.rushingAttempts); p.rush.yd += n(v.rushingYards); p.rush.td += n(v.rushingTouchdowns);
         } else if (s.name === 'receiving') {
@@ -8157,8 +8165,53 @@ function normalizeGameSummary(raw, nameIndex) {
         position: i.athlete && i.athlete.position && i.athlete.position.abbreviation, status: i.status, type: i.details && i.details.type, returnDate: i.details && i.details.returnDate });
     }
   }
+  // ── the defense's own line ───────────────────────────────────────────────
+  // Built by INVERTING the offense across from it, because that is what these
+  // statistics are: a sack by this defense is a sack taken by that quarterback,
+  // an interception by this defense is one he threw, and a fumble this defense
+  // recovered is one they lost. Every key it reads is one the box score above
+  // already parses, so this cannot drift from a stat-name guess -- ESPN's own
+  // defensive categories are not read at all.
+  //
+  // Points allowed is the other side's final score, which is the same
+  // convention the site's DST PROJECTION uses (the opponent's implied team
+  // total), so a projected defense and a scored one are measured the same way.
+  const defense = {};
+  const both = [sides.home, sides.away].filter(x => x && x.team);
+  if (both.length === 2) {
+    for (const side of both) {
+      const opp = both.find(x => x.team !== side.team);
+      if (!opp) continue;
+      let sacks = 0, ints = 0, fumRec = 0;
+      for (const p of players.values()) {
+        if (p.team !== opp.team) continue;
+        sacks += p.pass.sacked; ints += p.pass.int; fumRec += p.fumLost;
+      }
+      defense[side.team] = { sacks, ints, fumRec, defTD: 0, stTD: 0, safety: 0, ptsAllowed: Number(opp.score) || 0 };
+    }
+    // A touchdown the DEFENSE scored is not in any offensive line, so it comes
+    // off the scoring plays: a return of any kind, by the side that scored it.
+    // Matched on the play's own type rather than its prose, and only when the
+    // play is a touchdown, so an ordinary drive can never be counted here.
+    for (const sp of (raw || {}).scoringPlays || []) {
+      const team = teamKey(sp.team && sp.team.abbreviation);
+      const d = defense[team]; if (!d) continue;
+      const kind = String((sp.scoringType && sp.scoringType.name) || '').toLowerCase();
+      const what = String((sp.type && sp.type.text) || '');
+      if (kind === 'safety') { d.safety++; continue; }
+      if (kind !== 'touchdown') continue;
+      if (/interception|fumble\s*return|blocked/i.test(what)) d.defTD++;
+      else if (/kick.?off\s*return|punt\s*return|missed\s*field\s*goal\s*return/i.test(what)) d.stTD++;
+    }
+  }
   return { espnId: comp.id || null, status: st, final, kickoff: comp.date ? Date.parse(comp.date) : null,
-           home: sides.home || null, away: sides.away || null,
+           // Bumped whenever this payload's SHAPE changes, because a final
+           // summary is cached forever and gameSummaryFor() serves the cached
+           // copy without re-reading ESPN. v2 added `defense`; a v1 row has
+           // none, and the DFS board treats that as a defense it cannot score
+           // rather than as a defense that did nothing.
+           v: SUMMARY_CONTRACT,
+           home: sides.home || null, away: sides.away || null, defense,
            players: [...players.values()].filter(p => p.pass.att || p.rush.att || p.rec.tgt),
            injuries };
 }
@@ -8670,7 +8723,13 @@ async function gameSummaryFor(env, game, nameIndex) {
   if (!espnId) return null;
   try {
     const row = await env.LEADS_DB.prepare('SELECT payload, final FROM game_summaries WHERE espn_id = ?').bind(String(espnId)).first();
-    if (row && row.final) return JSON.parse(row.payload);
+    if (row && row.final) {
+      const cached = JSON.parse(row.payload);
+      if (Number(cached && cached.v) >= SUMMARY_CONTRACT) return cached;
+      // Written before the payload grew a field this caller now needs. The
+      // fetch below re-reads the game once and stores it at the current
+      // version, so this costs one call per stale game, ever.
+    }
   } catch (e) {}
   const raw = await fetchGameSummaryEspn(espnId);
   const norm = normalizeGameSummary(raw, nameIndex);
@@ -8719,7 +8778,7 @@ async function dfsActualsForWeek(env, sched, week) {
   // Keyed by normalized name, EVERY candidate kept: two players normalize to
   // the same name often enough that picking the first is a wrong stat line on
   // somebody's roster. The club decides which one a line means.
-  const lines = new Map(), teams = new Set();
+  const lines = new Map(), teams = new Set(), defense = new Map();
   let finals = 0;
   for (const row of stored) {
     // `week` alone is not a key across seasons -- the insert stores a null
@@ -8729,12 +8788,18 @@ async function dfsActualsForWeek(env, sched, week) {
     if (!s || !s.final) continue;
     finals++;
     for (const side of [s.home, s.away]) if (side && side.team) teams.add(side.team);
+    // Only from a payload stored at the current contract. A row written before
+    // the defensive line existed has none, and a defense with no line is one
+    // this cannot score -- which is a state the board already knows how to say.
+    if (Number(s.v) >= SUMMARY_CONTRACT && s.defense) {
+      for (const team of Object.keys(s.defense)) defense.set(team, s.defense[team]);
+    }
     for (const pl of s.players || []) {
       if (!pl || !pl.key) continue;
       const list = lines.get(pl.key); if (list) list.push(pl); else lines.set(pl.key, [pl]);
     }
   }
-  return finals ? { games: games.length, final: finals, teams, lines } : null;
+  return finals ? { games: games.length, final: finals, teams, lines, defense } : null;
 }
 
 // ── the briefs ─────────────────────────────────────────────────────────────
@@ -12571,11 +12636,19 @@ function dfsPropNote(cov) {
 // banked, the defense says plainly that its number is still a projection.
 function dfsActualFor(actuals, name, team, pos, rules) {
   if (!actuals || !team || !actuals.teams.has(team)) return { gamePlayed: false, actualPoints: null, actualBasis: null };
-  // A defense and a kicker are both scored on stats the normalized box score
-  // does not collect -- sacks, takeaways and points allowed for one, field
-  // goals and extra points for the other. Neither can be scored from it, so
-  // both keep their projection and say so rather than banking a silent zero.
-  if (pos === 'DST' || pos === 'DEF') return { gamePlayed: true, actualPoints: null, actualBasis: 'no-defense-box-score' };
+  // The defense is scored off the line normalizeGameSummary builds by
+  // inverting the offense across from it, under the SAME rules and the same
+  // call the projection used (scoreAny with games = 1), so a projected defense
+  // and a scored one are measured the same way. A game stored before that line
+  // existed has none, and then the defense keeps its projection and says so
+  // rather than banking a zero it has not earned.
+  if (pos === 'DST' || pos === 'DEF') {
+    const d = actuals.defense && actuals.defense.get(team);
+    if (!d) return { gamePlayed: true, actualPoints: null, actualBasis: 'no-defense-box-score' };
+    return { gamePlayed: true, actualBasis: 'box-score', actualPoints: _oddsRound(scoreAny(d, 'DST', rules, 1)) };
+  }
+  // A kicker still is not scorable: field goals and extra points are not in
+  // the box score, and nothing in it inverts into them.
   if (pos === 'K') return { gamePlayed: true, actualPoints: null, actualBasis: 'no-kicking-box-score' };
   const cands = actuals.lines.get(_oddsNorm(name)) || [];
   const line = cands.length === 1 ? cands[0] : cands.filter(x => x.team === team)[0] || null;
