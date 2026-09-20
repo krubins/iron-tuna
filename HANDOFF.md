@@ -12367,3 +12367,108 @@ read minutes ago is live, not stale; an unstamped store says so), `test-dfs`
 "pulled"), `test-dfs-coach` 125. Merged with §107's single-game work: the slate
 note's coverage call carries the pull clock through `seats`-shaped rosters
 unchanged, because the clock is the store's and not the format's.
+
+## 109. September 20: the coach could only speak to the players the page had printed
+
+Asked "Who is the best $4,800 wide receiver?", the Value Coach on /dfs
+answered: *"The page does not show a wide receiver priced at exactly $4,800 in
+the data available to me. The WRs I can see in detail are Garrett Wilson at
+$6,000, Terry McLaurin at $5,200, and John Metchie III at $3,000. For anything
+in between, the full board was trimmed from this prompt, so I can only speak to
+the players the page surfaced."*
+
+Every word of that was true of the payload and false of the page. The pool
+table on /dfs prints **every** priced row on the slate; the coach was handed
+the solved roster, the nine swaps and the thirty best alternates by
+`cashScore`/`tournamentScore`, and `fit()` cut even those thirty first when the
+payload ran long. So the reader and the coach were looking at the same board
+and only one of them could see it, and the panel's own footer — "the coach
+reads the setup and the roster above **and the slate behind them**" — was
+describing something that was not being sent.
+
+**The whole eligible board goes now.** `coachBoard(view, key)` in `dfs.html`
+returns every player the solve could legally have used, grouped by position:
+
+```
+slateBoardColumns: name|team|opp|salary|proj|ceiling|own|value|status
+"Garrett Wilson|NYJ|vs BUF|6000|14.2|26.4|12.5|103"
+"Cheap Receiver|CHI|@DET|4800|11.1|22.2|6.2|121|Questionable"
+```
+
+A delimited **line**, not an object, because the prompt has a character budget
+and repeated key names are most of what an object costs: a 388-man main slate
+is ~19,000 characters this way and roughly three times that as JSON. Every cell
+is the number `coachRow` would have carried, rounded by `coachN`; a column with
+no number ends the line early rather than being filled in. It is transport, and
+`docs/ai-calculation-boundary.md` says so.
+
+Three decisions worth keeping:
+
+- **Sorted by the contest key inside each position.** When the board has to be
+  cut it is cut from the tail, so the best body at every price survives — which
+  is the whole point of an index a price question is asked against.
+- **Capped, never dropped.** `fit()` sheds the alternates, the game
+  environments and the detailed bench rows first, then caps the index at 120,
+  80, 40 and 24 per position. Everything else in the payload is detail about a
+  player the page already printed; this is the only thing in there that can
+  answer about one it did not, and a `trimmedFromThisPrompt` entry names the
+  cut so a trimmed name is never reported as a man who is not playing.
+- **Eligibility is `projected()`, not `onBoard`.** #301 supplemented the
+  minimum-salary tier with men who are not on this week's board at all, whose
+  number is their own season line, and moved the solve, the bench and the pool
+  table onto `projected` to let them in. An index still filtering on `onBoard`
+  would have been the one pool on the page missing them — and they are the
+  cheap bodies a question about a price point is most often about. They carry a
+  `basis` of `season` on the line, because a number that is what a man has
+  already done must not read like a forecast of Sunday.
+- **Out is off it, and so is a finished game; Questionable is on it, flagged.**
+  The solve will not build with a player who is not playing, and `stillToPlay`
+  keeps a man whose game is over out of a new lineup (#297) because no entry
+  submitted now could contain him — so offering either from the index would be
+  offering a roster the page would refuse. He would otherwise sit at the top of
+  his position on a finished afternoon and read as the best body at his price.
+  Questionable stays, because that call belongs to the reader (§96). The note
+  beside the index says a missing name is out of the game pool, not playing, or
+  already played, "which is a fact about the clock and never a view on the
+  player".
+
+**The budget is derived now, not written down.** It went to 29,000 against a
+10,186-character prompt — 814 characters of margin — and #297's banked-points
+vocabulary landed on main the same afternoon and spent every one of them: the
+merge brought the prompt to 11,000 and `SYSTEM.length + JSON_BUDGET` to exactly
+40,000, which the proxy SLICES rather than refuses. Two hand-kept numbers that
+must sum to less than a third cannot both be edited safely, so
+`JSON_BUDGET = PROXY_SYSTEM_CAP - SYSTEM.length - PROMPT_JOIN - PROMPT_HEADROOM`
+and a prompt edit now costs budget instead of margin. `test-dfs-coach` asserts
+both the sum and that the constant is gone. It earned itself the same evening:
+merging #301 and #302 grew the prompt by another 234 characters and the budget
+absorbed it without anyone touching a number. The infeasible-solve fallback (§104)
+carries the index too: which lock to drop is a question about the pool the lock
+is being applied to.
+
+| Where | What |
+|---|---|
+| `dfs.html` | `COACH_BOARD_COLUMNS`, `coachBoard()`, `coachBoardNote()`; `slateBoard`/`slateBoardColumns`/`slateBoardMeaning` on the lineup context and on `setupContext(noLineup)`. |
+| `dfs-coach.js` | the THE WHOLE BOARD IS IN THE DATA paragraph; `capBoard()` and four rungs at the end of the `fit()` ladder; `JSON_BUDGET` derived off the prompt; the lede says what the panel is actually loaded with. |
+| `docs/ai-calculation-boundary.md` | the index as transport, and the CI line that guards it. |
+| `tools/test-dfs-coach.mjs` | 151 now: the prompt's board clauses, `coachBoard()` executed against a fixture (rounding, the early-ending line, the Out man and the finished-game man who are absent, the Questionable one and the supplemental one who are not), `fit()` on a 560-man board — capped, declared, and a 388-man main slate reaching the model whole — and the budget measured off the prompt rather than written beside it. |
+
+`node tools/test-dfs-coach.mjs` (151) and every other node gate in
+`checks.yml` except `test-dry-run` pass, on the tree merged with main at
+`0729020`, plus the four `--check` generators, both script parses and the
+control-byte scan. Driven in Chromium against a stubbed 8-game slate built by
+the worker's own `buildDfsSlate`/`dfsMetrics` — 225 priced players plus one
+supplemental body the board does not carry: the captured `/api/coach` payload
+holds all 226, every one of the seventeen receivers priced at $4,800, and the
+supplemental man as `Camden Whitlow|HOU|vs IND|3000|6.2|14|8.6|102|season`, at
+27,045 characters of JSON inside a 38,487-character system prompt; dropping the
+cap to $11,000 puts the panel in setup mode with the same index beside the
+constraints. No page errors at 1280 or 390px. CI green on `911f2fb`
+(runs #729 and #730).
+
+**One thing this did not touch.** #297's vocabulary block tells the coach that
+"a player row carrying `gamePlayed` with an actual is settled", but `coachRow`
+names neither field, so no row carries them: the lineup's `bankedPoints` and
+`bankedPlayers` are the only place the played half of a slate reaches the
+model. That is main's gap, not this branch's, and fixing it means adding two
+fields to `coachRow` — left alone here rather than widened into.
