@@ -199,6 +199,127 @@ Kittle
   ok('a paste with no header is one team', headless.teams.length === 1 && headless.teams[0].players.length === 2);
 }
 
+// ── a name it cannot place is not a team ───────────────────────────────────
+// THE BUG THIS EXISTS FOR. A bare name the board could not place — "J
+// Williams", "A Bornegales", the shapes a screenshot produces — was promoted
+// to a TEAM NAME and then swallowed every player under it. A twelve-team paste
+// came back as thirteen teams, one of them called after a running back, with
+// the real team's name gone and its players filed under a stranger. The reader
+// was told none of it: an unplaceable PLAYER is reported in the fix box, but a
+// team name is just a team name, so the one line that went wrong was the one
+// line that produced no complaint.
+//
+// The rule now has two shapes (see nameShape in it-trade.js). An initial and a
+// surname is a player wherever it appears, because that is how a grid prints
+// one and it is not how anybody names a team. Two ordinary words whose second
+// is a board surname is a player only MID-ROSTER, because half the leagues in
+// the world name their teams after the people who manage them.
+console.log('\nan unplaceable name is a player, not a team');
+{
+  const P = (s) => T.parseRosters(s, POOL);
+  const shape = (r) => r.teams.map(t => t.name + ':' + t.players.length + (t.unresolved.length ? '+' + t.unresolved.join('/') : ''));
+
+  // The reported case, whole.
+  const bug = P('Team Awesome\nJosh Allen QB BUF\nJ Williams\nA Bornegales\n\nTeam Beta\nBijan Robinson RB ATL\nDerrick Henry RB BAL');
+  ok('a bare name mid-roster no longer invents a team', bug.teams.length === 2, shape(bug).join(' | '));
+  ok('the real second team keeps its name and its players',
+    bug.teams[1].name === 'Team Beta' && bug.teams[1].players.length === 2, shape(bug).join(' | '));
+  ok('and both unplaceable names reach the fix box',
+    bug.teams[0].unresolved.join('/') === 'J Williams/A Bornegales', JSON.stringify(bug.teams[0].unresolved));
+
+  // A player the board has never carried is the case that used to vanish
+  // entirely: no team to file it under, and nothing near it to match.
+  const off = P('Team A\nJosh Allen QB BUF\nS Vaki\nM Lloyd\n\nTeam B\nDerrick Henry RB BAL');
+  ok('a name the board does not carry at all is still a player, not a team',
+    off.teams.length === 2 && off.teams[0].unresolved.length === 2, shape(off).join(' | '));
+
+  // The other half of the bargain: every team-name shape still reads as one.
+  const keeps = (label, paste, name) => {
+    const r = P(paste);
+    ok(label, r.teams.length === 2 && r.teams[1].name === name && r.teams[1].players.length === 1, shape(r).join(' | '));
+  };
+  const HEAD = 'Team A\nJosh Allen QB BUF\n\n';
+  keeps('a team named after its manager stays a team', HEAD + 'Mike Johnson\nDerrick Henry RB BAL', 'Mike Johnson');
+  keeps('and after a dashed separator too', 'Team A\nJosh Allen QB BUF\n-----\nMike Johnson\nDerrick Henry RB BAL', 'Mike Johnson');
+  keeps('a team named after a player it likes', HEAD + 'Team Kittle\nDerrick Henry RB BAL', 'Team Kittle');
+  keeps('a team named after a defense', HEAD + 'Gridiron Bills\nDerrick Henry RB BAL', 'Gridiron Bills');
+  keeps('a possessive team name', HEAD + 'Ken\'s Krushers\nDerrick Henry RB BAL', 'Ken\'s Krushers');
+  keeps('a pun on a player\'s name', HEAD + 'Mahomes Alone\nDerrick Henry RB BAL', 'Mahomes Alone');
+  keeps('a paste with no blank line between its teams',
+    'Team A\nJosh Allen QB BUF\nTeam Beta\nDerrick Henry RB BAL', 'Team Beta');
+  keeps('an explicit header wins over a surname', HEAD + 'Roster: Henry\nDerrick Henry RB BAL', 'Henry');
+
+  // An initial and a surname is a player even as the first line of a paste,
+  // where every other shape is read as the header it almost always is.
+  const first = P('J Williams\nJosh Allen QB BUF');
+  ok('an initial-and-surname line opening a paste is a player, not the header',
+    first.teams.length === 1 && first.teams[0].unresolved.join() === 'J Williams', shape(first).join(' | '));
+  // …and it is filed under a team, not into a bag the page never reads.
+  ok('and it is kept somewhere the reader can answer for it',
+    first.teams[0].unresolved.length === 1 && first.unresolved.length === 0, JSON.stringify(first.unresolved));
+
+  // THE 'surname' SHAPE, ON ITS OWN. Everything above is carried by the
+  // 'initial' shape; this is the other branch. "Derek Henry" is a misspelling
+  // of a man on the board, two ordinary words, no initial — and mid-roster it
+  // is a player, not the start of a new team.
+  const misspelt = P('Team A\nJosh Allen QB BUF\nDerek Henry\nBijan Robinson RB ATL');
+  ok('a misspelt full name mid-roster is a player, not a team',
+    misspelt.teams.length === 1 && misspelt.teams[0].players.length === 2
+      && misspelt.teams[0].unresolved.join() === 'Derek Henry', shape(misspelt).join(' | '));
+  // THE BLANK LINE IS WHAT HOLDS THAT BACK. The same two-word shape, after a
+  // break, is a manager's name over their roster — and plenty of leagues name
+  // a team exactly that way.
+  const mgr = P('Team A\nJosh Allen QB BUF\n\nMike Henry\nBijan Robinson RB ATL');
+  ok('but the same shape after a blank line is the team it announces',
+    mgr.teams.length === 2 && mgr.teams[1].name === 'Mike Henry' && mgr.teams[1].players.length === 1, shape(mgr).join(' | '));
+  // A DEFENSE IS NOT A SURNAME. The pool indexes one under its nickname and
+  // its city, so without this "Gridiron Bills" reads as a man called Bills.
+  const dfn = P('Team A\nJosh Allen QB BUF\nGridiron Bills\nBijan Robinson RB ATL');
+  ok('a team named after a defense is a team even mid-roster',
+    dfn.teams.length === 2 && dfn.teams[1].name === 'Gridiron Bills', shape(dfn).join(' | '));
+  // A LINE THAT SAYS WHAT IT IS. "Owner Brown" carries a board surname and no
+  // colon, and is still a heading rather than one of the three Browns.
+  for (const word of ['Owner', 'Manager', 'Squad']) {
+    const hdr = P('Team A\nJosh Allen QB BUF\n' + word + ' Brown\nBijan Robinson RB ATL');
+    ok('"' + word + ' Brown" mid-roster is a heading, not a Brown',
+      hdr.teams.length === 2 && hdr.teams[1].name === word + ' Brown', shape(hdr).join(' | '));
+  }
+
+  // A NAME IS TWO WORDS. Three is a team having fun, and the boundary has to
+  // hold or every "Big Game Henry" in the league becomes a running back.
+  const three = P('Team A\nJosh Allen QB BUF\nBig Game Henry\nBijan Robinson RB ATL');
+  ok('a three-word line ending in a surname is still a team',
+    three.teams.length === 2 && three.teams[1].name === 'Big Game Henry', shape(three).join(' | '));
+  // A MISREAD SURNAME, WHICH IS WHAT A SCREENSHOT ACTUALLY PRODUCES. "Browm"
+  // is nobody, and an exact-match-only rule would have filed it under a team
+  // called Chase Browm along with everyone beneath it.
+  const typo = P('Team A\nJosh Allen QB BUF\nChase Browm\nBijan Robinson RB ATL');
+  ok('a surname off by one letter mid-roster is a player, not a team',
+    typo.teams.length === 1 && typo.teams[0].unresolved.join() === 'Chase Browm', shape(typo).join(' | '));
+
+  // THE SAME THEFT, ONE STEP REMOVED. A line that is neither a player nor a
+  // name — garbled OCR, a note the reader typed, a league site's "Empty" —
+  // still opens a team. It has no players in it, so the REAL header that
+  // follows was discarded under the old "a second header before any player
+  // keeps the first name" rule, and the team's whole roster was filed under
+  // the junk. A header after a break renames the empty team instead.
+  const junk = P('Team A\nJosh Allen QB BUF\nZzzz Nobody\n\nTeam Beta\nDerrick Henry RB BAL\nBijan Robinson RB ATL');
+  ok('a junk line does not steal the next team\'s name',
+    junk.teams.length === 2 && junk.teams[1].name === 'Team Beta', shape(junk).join(' | '));
+  ok('or its players', junk.teams[1].players.length === 2, shape(junk).join(' | '));
+  // And the rule that exists for is untouched: a subtitle on the same block,
+  // with no break, is still a subtitle.
+  const sub = P('Team Awesome\nOwner: Ken\nJosh Allen QB BUF');
+  ok('a subtitle under a header is still one team, under the first name',
+    sub.teams.length === 1 && sub.teams[0].name === 'Team Awesome', shape(sub).join(' | '));
+
+  // Nothing above may loosen the resolver or the noise filter.
+  ok('slot lines and byes are still noise, not players',
+    P('Team A\nJosh Allen QB BUF\nQB - BUF (3)\nBye: 7').teams.length === 1);
+  ok('a real player line still resolves rather than being reported',
+    P('Team A\nJ. Chase').teams[0].players.length === 1);
+}
+
 console.log('\nthe lineup');
 {
   const pts = { QB1: 20, QB2: 18, RB1: 15, RB2: 14, RB3: 13, RB4: 5, WR1: 16, WR2: 12, WR3: 11, TE1: 9, TE2: 8, K1: 8, D1: 7 };
