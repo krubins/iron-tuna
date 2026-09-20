@@ -12235,3 +12235,53 @@ Driven in Chromium at 1280×420, 1280×650, 390×600, 390×740 and 1440×1080, f
 turns deep on both the harness and `/dfs` itself: the newest answer is inside
 the visible log and the input is on screen in every one, where at 650 the same
 question previously rendered into nothing.
+
+## 107. September 20: "pulled 52h ago" was never a pull
+
+Reported from the DFS recommended roster: a player's market line read **pulled
+52h ago**, and the obvious reading was that the odds feed had stopped two days
+earlier. It had not. The poll runs on every quarter-hour tick with a
+sixty-minute cooldown (`tmsPoll`, `TMS_INTERVAL_MINUTES`), and `market-snapshot`
+runs eight times a day on top of it. The feed was minutes old.
+
+The number was real; the word was wrong. `odds_snapshots` is append-only and
+**a pull that finds a line unchanged writes nothing** — the design note above
+`SNAP_DDL` says so, because four pulls a day against thirty books would
+otherwise add six figures of identical rows a week. So the newest row for a
+player is the last time one of his books *moved his number*, and every surface
+that printed it called it a pull:
+
+| Surface | Said | Meant |
+|---|---|---|
+| DFS roster line (`dfs.html`) | "pulled 52h ago" | no book moved his line in 52h |
+| DFS slate note (`dfsPropNote`) | "pulled 3 hours ago" | freshest move on the slate |
+| Health board (`propsHealth`) | "The poll has stopped" | nothing moved in 12h |
+| Player page (`vegasConfidence`) | "the lines are ... old" | nobody has moved them |
+
+The health board's claim was the worst of the four: a settled market and a dead
+collector produced the identical reading, so the one gate that exists to catch
+a stopped poll could not tell them apart, in either direction.
+
+**The store now keeps its own clock.** `odds_snapshot_pulls` holds one row per
+subject type, stamped by `snapshotWrite` on every pull that reaches it —
+including a pull where nothing moved, which is the entire point. That is one
+upsert per subject type per pull, whatever the row count. `snapshotPulls` and
+`snapshotPulledAt` read it back, and the two questions are now answered
+separately everywhere:
+
+| Where | Now |
+|---|---|
+| `dfs.html` | "His line last moved 52h ago." The read time is the slate's, said once under the board rather than repeated per player. |
+| `dfsPropCoverage` / `dfsPropNote` | `freshestMoveHours` beside `pullAgeHours`: "The feed was read within the hour. The most recent line move on the slate landed 52 hours ago." |
+| `propsHealth` | `stale` now means the **poll** stopped, off `pullAgeHours`; `lastMoveHours` is reported beside it. A store with no stamp yet falls back to the old signal and says it cannot tell, rather than blaming the poll. |
+| `vegasProjection` / `vegasConfidence` | `ageHours` is `lastMoveHours`, and the printed reasons read "no book has moved his line in more than a day and a half". The demotion itself is unchanged: a line nobody has touched in that long is either a settled market or a player the books quietly dropped, and this still cannot tell which. |
+| `dfs-coach.js` | `pulledHoursAgo` is `lineLastMovedHours`, and the vocabulary block tells the coach not to read it as a dead feed. `slate.marketCoverage.feedReadHoursAgo` is the one number that says when the feed was read. |
+
+No cadence changed. The poll was already hourly, which was the right answer to
+the report; the label was the bug.
+
+Gates: `test-market` 130 (the pull clock is stamped by a pull that changed
+nothing, and the two clocks disagree), `test-worker-odds` 113 (a quiet market
+read minutes ago is live, not stale; an unstamped store says so), `test-dfs`
+289 (both clocks on the slate note, and the page says "line last moved", never
+"pulled"), `test-dfs-coach` 123.

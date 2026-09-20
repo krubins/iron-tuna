@@ -253,11 +253,11 @@ console.log('\nthe row the coach is handed');
   // A quoted man, a fitted man and a flagged man have to arrive distinguishable.
   const quoted = coachRow({ name: 'Puka Nacua', position: 'WR', team: 'LAR', salary: 7800, ironTunaPoints: 18.4,
     market: { basis: 'props', shrink: 1, points: 19.06, quoted: true, pricedLabels: ['receiving yards', 'receptions'],
-              books: 6, ageHours: 0.6, tdProbability: 41.2, tdDevigged: true, tdBooks: 5, shortOfProjection: false } });
+              books: 6, lastMoveHours: 0.6, tdProbability: 41.2, tdDevigged: true, tdBooks: 5, shortOfProjection: false } });
   ok('a quoted player arrives quoted, with what was posted and how fresh it is',
      quoted.market.read === 'PROPS' && quoted.market.trust === 1 && quoted.market.points === 19.1
      && quoted.market.posted === 'receiving yards, receptions' && quoted.market.books === 6
-     && quoted.market.pulledHoursAgo === 0.6 && quoted.market.tdFromTheBooks === true,
+     && quoted.market.lineLastMovedHours === 0.6 && quoted.market.tdFromTheBooks === true,
      JSON.stringify(quoted.market));
   const fitted = coachRow({ name: 'Nobody Priced', position: 'WR', team: 'CHI', salary: 4200, ironTunaPoints: 9.1,
     market: { basis: 'ratings', shrink: 0.55, points: 9.4, quoted: false, pricedLabels: [], shortOfProjection: false } });
@@ -388,7 +388,9 @@ console.log('\nthe page');
      && /if \(brief\) return out;/.test(page));
   ok('the slate says how much of the board the books priced',
      /marketCoverage: view\.props \?/.test(ctx) && /percent: view\.props\.coverage/.test(ctx)
-     && /avgBooks: view\.props\.avgBooks/.test(ctx) && /freshestHours: coachN\(view\.props\.freshestHours\)/.test(ctx));
+     && /avgBooks: view\.props\.avgBooks/.test(ctx)
+     && /feedReadHoursAgo: coachN\(view\.props\.pullAgeHours\)/.test(ctx)
+     && /newestLineMoveHours: coachN\(view\.props\.freshestMoveHours\)/.test(ctx));
   ok('the market and availability reads come from the page\u2019s own helpers, not a second vocabulary',
      /read: marketChipFor\(m\)\[0\]/.test(page) && !/PROPS'/.test(lift(/function coachMarket\(/)));
   ok('the context carries the contest, the roster, the swaps and the board behind them',

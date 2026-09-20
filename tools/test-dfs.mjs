@@ -24,7 +24,11 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // The market-trust ladder is the site's, not a copy: the DFS slate shrinks
   // a market number by the same factors the season blend does, so lifting it
   // here is what keeps this test honest about which one it is exercising.
-  cut('const BLEND_SHRINK', 'function blendComponents') + '\n' + cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
+  cut('const BLEND_SHRINK', 'function blendComponents') + '\n' +
+  // The "how long ago" phrasing is shared with the health board, so it is cut
+  // in rather than restated here: the slate note and the board must not drift.
+  cut('const PROPS_STALE_HOURS', 'async function propsHealth') + '\n' +
+  cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
   'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, BLEND_SHRINK };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
@@ -338,13 +342,13 @@ console.log('\nthe weekly betting market');
 {
   // A player the books priced: three markets, six books, an anytime-TD price.
   const priced = { vegas: { basis: 'props', confidence: 'HIGH', td: null } };
-  const w0 = { env: {}, vegasProjection: { status: 'full', priced: ['rec', 'recYd', 'anytimeTD'], missing: [], books: 6, ageHours: 0.4,
+  const w0 = { env: {}, vegasProjection: { status: 'full', priced: ['rec', 'recYd', 'anytimeTD'], missing: [], books: 6, lastMoveHours: 0.4,
                                            td: { probability: 41.2, books: 6, devigged: true } } };
   const m = H.dfsMarketRead(priced, w0, 18.4, 14.0);
   ok('a quoted player is marked quoted', m.quoted === true && m.basis === 'props');
   ok('the markets the books actually posted come across, in words', m.priced.join(',') === 'anytimeTD,rec,recYd'.split(',').sort().join(',') || m.priced.length === 3);
   ok('...with a plain-language label for each', m.pricedLabels.includes('receiving yards') && m.pricedLabels.includes('receptions'));
-  ok('the book count and the age of the pull come across', m.books === 6 && m.ageHours === 0.4);
+  ok('the book count and the age of his last line move come across', m.books === 6 && m.lastMoveHours === 0.4);
   ok('a fully quoted projection is trusted in full', m.shrink === 1 && near(m.points, 18.4, 0.05));
   ok('the devigged anytime-touchdown price comes across with its books', m.tdProbability === 41.2 && m.tdBooks === 6 && m.tdDevigged === true);
 
@@ -394,18 +398,28 @@ console.log('\nthe weekly betting market');
   // Coverage, said as a number. `hasProps` was a boolean and a boolean cannot
   // answer "priced how much of it, by how many books, how long ago".
   const rows = [
-    { onBoard: true, market: { basis: 'props', quoted: true, priced: ['rec', 'recYd'], books: 6, ageHours: 2 } },
-    { onBoard: true, market: { basis: 'props-partial', quoted: true, priced: ['anytimeTD'], books: 4, ageHours: 0.5 } },
-    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], books: null, ageHours: null } },
-    { onBoard: true, available: false, market: { basis: 'props', quoted: true, priced: ['rec'], books: 9, ageHours: 1 } },
+    { onBoard: true, market: { basis: 'props', quoted: true, priced: ['rec', 'recYd'], books: 6, lastMoveHours: 2 } },
+    { onBoard: true, market: { basis: 'props-partial', quoted: true, priced: ['anytimeTD'], books: 4, lastMoveHours: 0.5 } },
+    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], books: null, lastMoveHours: null } },
+    { onBoard: true, available: false, market: { basis: 'props', quoted: true, priced: ['rec'], books: 9, lastMoveHours: 1 } },
     { onBoard: false }
   ];
-  const cov = H.dfsPropCoverage(rows);
+  const cov = H.dfsPropCoverage(rows, Date.now() - 30 * 60000);
   ok('coverage counts the priced against the playable', cov.players === 3 && cov.priced === 2 && cov.coverage === 67);
   ok('a benched man is not counted as slate coverage', cov.avgBooks === 5);
   ok('the union of quoted markets is reported', cov.markets.join(',') === 'anytimeTD,rec,recYd');
-  ok('and the freshest pull behind them', cov.freshestHours === 0.5);
+  ok('and the most recently moved line behind them', cov.freshestMoveHours === 0.5);
+  // The two clocks are different questions and the note used to answer only
+  // the first while claiming it was the second. A feed read half an hour ago
+  // is live however long the books have sat on their numbers.
+  ok('...beside when the feed was actually read', cov.pullAgeHours === 0.5 && cov.pullAgeHours !== null);
   ok('the note quotes the real numbers', /2 of 3 players/.test(H.dfsPropNote(cov)) && /receiving yards/.test(H.dfsPropNote(cov)));
+  ok('the note says read, not pulled, and keeps the move separate',
+     /feed was read within the hour/.test(H.dfsPropNote(cov))
+     && /most recent line move on the slate landed within the hour/.test(H.dfsPropNote(cov))
+     && !/pulled/.test(H.dfsPropNote(cov)));
+  ok('a slate with no pull clock yet simply does not claim one',
+     !/feed was read/.test(H.dfsPropNote(H.dfsPropCoverage(rows))));
   // The whole slate priced on touchdowns and nothing else: the state that
   // reads as "props are working" on one page and "no props" on another.
   const tdOnlyCov = H.dfsPropCoverage([
@@ -742,6 +756,12 @@ console.log('\nthe DFS page explanations');
   ok('the objective row offers a prop-first market build', page.includes('data-mode="market"') && page.includes('Market read'));
   ok('the player pool says whether a man was quoted or inferred', page.includes('function marketTag(p)') && page.includes('df-mkt-quoted') && page.includes('df-mkt-inferred') && page.includes('MARKET_CHIP'));
   ok('every recommended player carries what the books actually posted on him', page.includes('function marketPhrase(p)') && page.includes('The books posted ') && page.includes('df-mktline'));
+  // The store writes a row only when a price changes, so the per-player age is
+  // the last MOVE, never the last pull. Calling it a pull told a reader the
+  // feed was two days dead when it had been read minutes earlier.
+  ok('a player\u2019s market age is called a line move, not a pull',
+     page.includes('His line last moved ') && page.includes('m.lastMoveHours')
+     && !/pulled '/.test(page) && !page.includes('pulledHoursAgo'));
   ok('the lead card shows how much of the roster the market priced, and says so when none of it was',
      page.includes('function propsNote(l)') && page.includes('picks are priced by the books') && page.includes('No player prop is behind this lineup'));
   ok('the slate dashboard reports prop coverage as a number, not a boolean', page.includes("card('Books priced'") && page.includes('s.props.coverage'));
