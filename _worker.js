@@ -3249,13 +3249,56 @@ const SCORING_PRESET_LABEL = { standard: 'Standard', half: 'Half PPR', ppr: 'PPR
 // A caller's rules, made safe. A blanked input in the app saves NaN
 // (parseFloat('')), and a NaN divisor would poison every number downstream, so
 // every field falls back to the base rather than propagating.
+// The kicker and defense table, which has to be declared BEFORE scoringRules
+// reads it: `_COL_RULES` below calls that function while this module is still
+// evaluating, and a `const` referenced above its declaration throws rather
+// than reading undefined.
+const SCORING_KDEF = {
+  fieldGoalTiers: [{ min: 0, max: 24, points: 1, missPoints: -4 }, { min: 25, max: 34, points: 2, missPoints: -3 },
+                   { min: 35, max: 44, points: 3, missPoints: -2 }, { min: 45, max: 49, points: 4, missPoints: -1 },
+                   { min: 50, max: 999, points: 4, missPoints: 0 }],
+  extraPoint: 1, missedExtraPoint: -1,
+  defensiveFumbleRecovery: 2, defensiveTD: 4, interception: 2, sackPoints: 1,
+  sackBonuses: [{ at: 5, points: 1 }, { at: 10, points: 1 }], safety: 4,
+  specialTeamsTD: 6, specialTeams2pt: 2, specialTeamsSafety1pt: 1,
+  pointsAllowed: [{ min: 0, max: 0, points: 10 }, { min: 1, max: 3, points: 8 }, { min: 4, max: 6, points: 7 },
+                  { min: 7, max: 9, points: 6 }, { min: 10, max: 13, points: 5 }, { min: 14, max: 17, points: 4 },
+                  { min: 18, max: 21, points: 3 }, { min: 22, max: 27, points: 2 }, { min: 28, max: 34, points: 1 },
+                  { min: 35, max: 999, points: 0 }]
+};
+
 function scoringRules(preset, custom) {
   const out = { ...SCORING_BASE, ...(SCORING_PRESETS[preset] || {}) };
   if (custom && typeof custom === 'object') {
-    for (const k of Object.keys(SCORING_BASE)) {
+    // The offensive table AND the kicker/defense one. Only SCORING_BASE was
+    // read here, so every K/DEF key an operator or a league supplied was
+    // silently dropped and the defense fell through to SCORING_KDEF: the
+    // site's season-long default, with a four-point defensive touchdown and
+    // a ten-rung points-allowed ladder that DraftKings does not use. The
+    // client has always honored those overrides (scoreDefense in
+    // it-league.js), so this is also the two halves agreeing again.
+    //
+    // Nothing is defaulted in from SCORING_KDEF here: a key the caller did
+    // not supply stays absent, and scoreDefenseStats fills it from KDEF as
+    // it always has.
+    const allowed = { ...SCORING_BASE, ...SCORING_KDEF };
+    for (const k of Object.keys(allowed)) {
       const v = custom[k];
-      if (Array.isArray(SCORING_BASE[k])) {
-        if (Array.isArray(v)) {
+      if (Array.isArray(allowed[k])) {
+        if (!Array.isArray(v)) continue;
+        // Two array shapes live in these tables: a BONUS is {at, points} and
+        // a TIER is {min, max, points}, with missPoints on a field goal.
+        // Reading a tier with the bonus filter drops every row, which is how
+        // a points-allowed ladder becomes an empty array and a defense
+        // quietly stops being scored for what it allowed.
+        if (allowed[k].some(b => b && b.min !== undefined)) {
+          out[k] = v.filter(b => b && Number.isFinite(Number(b.min)) && Number.isFinite(Number(b.max)) && Number.isFinite(Number(b.points)))
+                    .map(b => {
+                      const t = { min: Number(b.min), max: Number(b.max), points: Number(b.points) };
+                      if (Number.isFinite(Number(b.missPoints))) t.missPoints = Number(b.missPoints);
+                      return t;
+                    });
+        } else {
           out[k] = v.filter(b => b && Number.isFinite(Number(b.at)) && Number.isFinite(Number(b.points)))
                     .map(b => ({ at: Number(b.at), points: Number(b.points) }));
         }
@@ -6430,19 +6473,6 @@ async function runMarketSnapshot(env) {
 // make- and miss-distance mixes are the app's own (see its comment on why the
 // misses pile up on the long attempts). tools/test-scoring.mjs holds this to
 // index.html's copy.
-const SCORING_KDEF = {
-  fieldGoalTiers: [{ min: 0, max: 24, points: 1, missPoints: -4 }, { min: 25, max: 34, points: 2, missPoints: -3 },
-                   { min: 35, max: 44, points: 3, missPoints: -2 }, { min: 45, max: 49, points: 4, missPoints: -1 },
-                   { min: 50, max: 999, points: 4, missPoints: 0 }],
-  extraPoint: 1, missedExtraPoint: -1,
-  defensiveFumbleRecovery: 2, defensiveTD: 4, interception: 2, sackPoints: 1,
-  sackBonuses: [{ at: 5, points: 1 }, { at: 10, points: 1 }], safety: 4,
-  specialTeamsTD: 6, specialTeams2pt: 2, specialTeamsSafety1pt: 1,
-  pointsAllowed: [{ min: 0, max: 0, points: 10 }, { min: 1, max: 3, points: 8 }, { min: 4, max: 6, points: 7 },
-                  { min: 7, max: 9, points: 6 }, { min: 10, max: 13, points: 5 }, { min: 14, max: 17, points: 4 },
-                  { min: 18, max: 21, points: 3 }, { min: 22, max: 27, points: 2 }, { min: 28, max: 34, points: 1 },
-                  { min: 35, max: 999, points: 0 }]
-};
 const _K_MAKE = [0.18, 0.28, 0.32, 0.17, 0.05];
 const _K_MISS = [0.02, 0.06, 0.17, 0.25, 0.50];
 function _tierPoints(value, tiers) { for (const t of tiers || []) if (value >= t.min && value <= t.max) return t.points; return 0; }
@@ -12104,7 +12134,25 @@ const DFS_SITES = {
 // bonuses. Both are ordinary rule sets for the one scoring engine.
 const SCORING_SITE = {
   dk: { receptionPoints: 1, rbReceptionPoints: 1, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -1,
-        passingYardBonuses: [{ at: 300, points: 3 }], rushingYardBonuses: [{ at: 100, points: 3 }], receivingYardBonuses: [{ at: 100, points: 3 }] },
+        passingYardBonuses: [{ at: 300, points: 3 }], rushingYardBonuses: [{ at: 100, points: 3 }], receivingYardBonuses: [{ at: 100, points: 3 }],
+        // The defense, on DraftKings' own table rather than the site's
+        // season-long default. Without these a DST fell through to
+        // SCORING_KDEF -- a four-point defensive touchdown, a four-point
+        // safety and a ten-rung points-allowed ladder, none of them DK's --
+        // so every DFS defense, projected and scored, was on the wrong scale.
+        //
+        // Checked 2026-09-20. DraftKings' own rules page is unreachable from
+        // here (the egress proxy blocks draftkings.com), so these come from
+        // two independent web searches that agree with each other; the
+        // per-event values and the ladder were each confirmed without the
+        // other being quoted in the query. Worth re-checking against the
+        // operator's page from a machine that can reach it.
+        sackPoints: 1, sackBonuses: [], interception: 2, defensiveFumbleRecovery: 2,
+        defensiveTD: 6, specialTeamsTD: 6, safety: 2, specialTeams2pt: 2,
+        pointsAllowed: [{ min: 0, max: 0, points: 10 }, { min: 1, max: 6, points: 7 },
+                        { min: 7, max: 13, points: 4 }, { min: 14, max: 20, points: 1 },
+                        { min: 21, max: 27, points: 0 }, { min: 28, max: 34, points: -1 },
+                        { min: 35, max: 999, points: -4 }] },
   fd: { receptionPoints: 0.5, rbReceptionPoints: 0.5, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -2 }
 };
 // When the DraftKings workflow runs, as UTC weekday and hour, mirrored from

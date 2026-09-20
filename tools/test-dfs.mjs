@@ -32,7 +32,7 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // in rather than restated here: the slate note and the board must not drift.
   cut('const PROPS_STALE_HOURS', 'async function propsHealth') + '\n' +
   cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, scoreAny, BLEND_SHRINK };'
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, scoreAny, SCORING_KDEF, BLEND_SHRINK };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 // The scheduled workflow's own CSV writer, so the false-positive gate below
@@ -158,6 +158,27 @@ console.log('\nthe weekly import is not mistaken for a captain file');
 }
 
 console.log('\nsite scoring');
+{
+  // The defense, on DraftKings' table rather than the site's season-long one.
+  // Every K/DEF key an operator supplies used to be dropped by scoringRules,
+  // which reads SCORING_BASE only, so a DST was scored on SCORING_KDEF: a
+  // four-point defensive touchdown, a four-point safety, and a ladder that
+  // pays 5 for ten points allowed where DraftKings pays 4.
+  const dk = H.scoringRules('ppr', H.SCORING_SITE.dk);
+  const D = (o, g) => H.scoreAny({ sacks: 0, ints: 0, fumRec: 0, defTD: 0, stTD: 0, safety: 0, ...o }, 'DST', dk, g || 1);
+  ok('a site\'s defensive rules survive scoringRules at all', dk.defensiveTD === 6 && Array.isArray(dk.pointsAllowed) && dk.pointsAllowed.length === 7,
+     JSON.stringify({ td: dk.defensiveTD, tiers: dk.pointsAllowed && dk.pointsAllowed.length }));
+  ok('a defensive touchdown is six on DraftKings, not the site default of four', near(D({ defTD: 1, ptsAllowed: 24 }), 6, 0.001), String(D({ defTD: 1, ptsAllowed: 24 })));
+  ok('a return touchdown is six', near(D({ stTD: 1, ptsAllowed: 24 }), 6, 0.001));
+  ok('a safety is two, not four', near(D({ safety: 1, ptsAllowed: 24 }), 2, 0.001), String(D({ safety: 1, ptsAllowed: 24 })));
+  ok('a sack is one and a takeaway is two', near(D({ sacks: 1, ptsAllowed: 24 }), 1, 0.001) && near(D({ ints: 1, ptsAllowed: 24 }), 2, 0.001) && near(D({ fumRec: 1, ptsAllowed: 24 }), 2, 0.001));
+  ok('and five sacks earn no bonus, which the site default would pay', near(D({ sacks: 5, ptsAllowed: 24 }), 5, 0.001), String(D({ sacks: 5, ptsAllowed: 24 })));
+  // The ladder, rung by rung. A shutout is ten and a blowout costs four.
+  const ladder = [[0, 10], [3, 7], [6, 7], [7, 4], [13, 4], [14, 1], [20, 1], [21, 0], [27, 0], [28, -1], [34, -1], [35, -4], [52, -4]];
+  const wrong = ladder.filter(([pa, want]) => !near(D({ ptsAllowed: pa }), want, 0.001));
+  ok('the points-allowed ladder pays DraftKings\' figure at every rung', !wrong.length,
+     wrong.map(([pa, want]) => pa + ' allowed wanted ' + want + ', got ' + D({ ptsAllowed: pa })).join('; '));
+}
 {
   const dk = H.scoringRules('ppr', H.SCORING_SITE.dk), fd = H.scoringRules('ppr', H.SCORING_SITE.fd);
   ok('DraftKings pays the 300-yard passing bonus', near(H.scoreStats({ passYd: 300, passTD: 2 }, 'QB', dk), 12 + 8 + 3));
@@ -1499,8 +1520,10 @@ console.log('\nthe slate, partly played');
   ok('through the same call the projection uses',
      near(scored.actualPoints, _oddsRound(H.scoreAny(dline, 'DST', rules, 1)), 0.001),
      scored.actualPoints + ' vs ' + H.scoreAny(dline, 'DST', rules, 1));
-  // Three sacks, a pick, a fumble and seventeen allowed, added up by hand.
-  ok('and the arithmetic is the sum of its parts', near(scored.actualPoints, 11, 0.001), String(scored.actualPoints));
+  // Three sacks at a point, a pick and a fumble at two each, and seventeen
+  // allowed landing on DraftKings' 14-20 rung for one. Added up by hand.
+  ok('and the arithmetic is the sum of its parts, on DraftKings\' own table',
+     near(scored.actualPoints, 3 + 2 + 2 + 1, 0.001), String(scored.actualPoints));
   // A defense in a game that has not kicked off is untouched by any of this.
   ok('a defense whose game is still to come carries no actual at all',
      H.dfsActualFor(withD, 'Chiefs', 'KC', 'DST', rules).gamePlayed === false);
