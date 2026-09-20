@@ -387,15 +387,138 @@ console.log('\nthe form and the importer');
   ok('the by-hand league form mounts the importer',
     read('my-league.html').includes('id="mfImp"') && read('my-league.html').includes('ITInSeasonUI.importer($(\'mfImp\')'));
 
-  // §02 mounts the three boxes, and mounts the form WITHOUT its own importer.
-  // Both halves matter: the boxes with no handle to apply through would read a
+  // §02 mounts the boxes, and mounts the form WITHOUT its own importer. Both
+  // halves matter: the boxes with no handle to apply through would read a
   // league and have nowhere to put it, and the form keeping its four-tab
   // importer would ask the same question twice on one screen.
   {
     const ml = read('my-league.html');
-    ok('/my-league §02 mounts the three boxes', ml.includes('id="mlIntake"') && ml.includes('ITInSeasonUI.intake('));
+    ok('/my-league §02 mounts the boxes', ml.includes('id="mlIntake"') && ml.includes('ITInSeasonUI.intake('));
     ok('and drops the form\'s own importer so the page asks once', /leagueForm\([\s\S]{0,120}?importer:\s*false/.test(ml));
-    ok('and hands what a box read to the form', /intake\([\s\S]{0,400}form\.apply\(/.test(ml));
+
+    // What matters is the wiring, not how close together it is written — and
+    // not how long the call is either. A fixed-width window over the source
+    // went red once when the row grew a comment, so the call is walked to its
+    // own closing paren instead of guessed at.
+    const callsTo = (src, name) => {
+      const out = [];
+      for (const m of src.matchAll(new RegExp(name.replace(/[.$]/g, '\\$&') + '\\(', 'g'))) {
+        let i = m.index + m[0].length - 1, depth = 0, quote = null, esc = false;
+        for (; i < src.length; i++) {
+          const ch = src[i];
+          if (quote) { if (esc) esc = false; else if (ch === '\\\\') esc = true; else if (ch === quote) quote = null; continue; }
+          if (ch === '\'' || ch === '"' || ch === '`') { quote = ch; continue; }
+          if (ch === '(') depth++;
+          else if (ch === ')') { depth--; if (!depth) break; }
+        }
+        out.push(src.slice(m.index + m[0].length, i));
+      }
+      return out;
+    };
+    const rows = callsTo(ml, 'ITInSeasonUI.intake');
+    ok('every intake row is handed somewhere to apply what it read',
+      rows.length > 0 && rows.every(r => /onApply:\s*(?:function|[A-Za-z_$][\w$]*)/.test(r)),
+      rows.length + ' row(s)');
+    const named = [...new Set(rows.map(r => (r.match(/onApply:\s*([A-Za-z_$][\w$]*)\s*[,}\n]/) || [])[1]).filter(Boolean))];
+    ok('and that handler reaches the form',
+      named.length
+        ? named.every(n => new RegExp(n + '\\s*=\\s*function[\\s\\S]{0,200}form\\.apply\\(').test(ml))
+        : /onApply:\s*function[\s\S]{0,200}form\.apply\(/.test(ml),
+      named.join(', '));
+
+    // THE BUTTON THAT SHOULD NOT HAVE BEEN A BUTTON. The row's footer used to
+    // offer "Copy my cheat sheet across" to a reader who had already built one
+    // in this browser — a button for a thing the page could simply do, sitting
+    // under three boxes asking for what the cheat sheet already knew. The page
+    // now reads it on load and applies it, and asks the row not to draw the
+    // button. Both halves are pinned: an apply with the strip still drawn would
+    // offer to do a thing that was already done.
+    ok('§02 reads the cheat sheet itself rather than offering a button',
+      /fromDraftApp\(\)/.test(ml) && rows.every(r => /draft:\s*false/.test(r)));
+    ok('and applies what it read through the same handle the boxes use',
+      /apply\(sheet,/.test(ml));
+    // Only when §02 has nothing of its own. A reader who set these settings here
+    // meant them, and a draft board from August must not overwrite them on load.
+    ok('but never over settings the reader already saved here',
+      /!ITInSeason\.has\(\)[\s\S]{0,80}fromDraftApp\(\)/.test(ml));
+
+    // The row itself: three boxes, or the two the cheat sheet cannot answer.
+    // The cheat sheet carries scoring, lineup and team count; it has never
+    // carried a FAAB budget — cfg.budget is the AUCTION budget, a different
+    // number — nor a room full of players, so those two boxes stay either way.
+    const cards = ml.slice(ml.indexOf('var cards;'), ml.indexOf('ITInSeasonUI.intake('));
+    ok('with no cheat sheet the row is scoring, rosters and FAAB',
+      /cards\s*=\s*\['scoring',\s*rosters,\s*'faab'\]/.test(cards), cards.slice(0, 200));
+    ok('with one, the scoring box is the only one dropped',
+      /cards\s*=\s*\[rosters,\s*\{\s*kind:\s*'faab'/.test(cards), cards.slice(0, 200));
+    ok('and the lineup card that used to sit under the row is gone',
+      !ml.includes('mlLineup') && !/kind:\s*'roster'/.test(ml));
+    ok('the cheat sheet is never read as a FAAB budget',
+      !/budget/.test(importSrc.slice(importSrc.indexOf('function fromDraftApp'), importSrc.indexOf('root.ITInSeasonImport ='))));
+  }
+
+  // The third box takes words as well as a picture. /api/roster-read has always
+  // accepted a `text` field; until now nothing in the browser filled it, so the
+  // one box of the three that could not be typed into was the one asking for
+  // the longest answer.
+  {
+    const rg = read('it-roster-grid.js');
+    ok('the rosters box has a textarea', /data-text/.test(rg) && /is-intake-text/.test(rg));
+    ok('and a button that sends what is in it', /\[data-read\][\s\S]{0,200}readText\(\)/.test(rg));
+    ok('typed rosters go to the reader as text', /function readText\(\)[\s\S]{0,400}send\(\{\s*text:/.test(rg));
+    ok('and a screenshot pasted into the textarea is still read as one',
+      /textEl\.addEventListener\('paste'[\s\S]{0,300}read\(imgs\)/.test(rg));
+    ok('the worker takes text with no image at all',
+      /const text = String\(body\.text[\s\S]{0,200}!images\.length && !text\.trim\(\)/.test(worker));
+    // The by-hand form in §01 prints its own roster textarea further down the
+    // same card, so its grid stays image-only: two boxes of names on one card
+    // is a reader typing their team into the wrong one.
+    ok('§01\'s grid keeps one textarea, not two', /mfGrid'\)[\s\S]{0,400}text:\s*false/.test(read('my-league.html')));
+  }
+
+  // THE NAMES IT COULD NOT PLACE. A reader saved a twelve-team grid and was
+  // handed a list of eight names kept by name and scored zero — a report of
+  // eight holes, delivered at the one moment they could no longer be filled.
+  // The resolver's own answers are pinned in test-league-sync.mjs, against the
+  // real board; what is pinned here is that the box actually asks.
+  {
+    const rg = read('it-roster-grid.js');
+    const ml = read('my-league.html');
+    ok('every read is checked against the board', /function check\(\)[\s\S]{0,400}'\/api\/roster-check'/.test(rg));
+    ok('and the check runs after the read, not only on save', /if \(typeof o\.onRead === 'function'\) o\.onRead\(state\);\s*\n\s*check\(\);/.test(rg));
+    ok('a room the box opens with is checked too', /o\.teams && o\.teams\.length\)[\s\S]{0,400}check\(\);/.test(rg));
+    ok('an unplaced name becomes a question with the board\'s candidates',
+      /renderAsks/.test(rg) && /suggestions/.test(rg) && /Which player is this\?/.test(rg));
+    ok('the reader can keep a name the board has never carried', /'keep'[\s\S]{0,120}kept\[/.test(rg));
+    ok('and type one the suggestions missed', /data-type/.test(rg) && /ITPlayerSearch\.search/.test(rg));
+    // The second check is the point: it is the board answering, not the box
+    // assuming that what the reader picked is a name the board carries.
+    ok('every answer is re-checked rather than believed', /function applyFix\([\s\S]{0,300}check\(\);/.test(rg));
+    ok('a stale answer cannot overwrite a newer one', /seq !== checkSeq/.test(rg));
+    ok('the count is published for the host to act on', /state\.unplaced = asks\.length/.test(rg) && /onCheck/.test(rg));
+    // A check that cannot reach the network must not hold the rosters hostage.
+    ok('a failed check clears the asks instead of blocking the save',
+      /\.catch\(function \(\)[\s\S]{0,240}state\.unplaced = 0/.test(rg));
+
+    ok('§02\'s save asks once about what is still unplaced, then saves',
+      /grid\.unplaced > 0 && !warned/.test(ml) && /warned = true/.test(ml) && /press Save again/.test(ml));
+    ok('and a fresh answer arms that question again', /onCheck: function \(\) \{ warned = false/.test(ml));
+    ok('the worker answers the check without a model or a write',
+      /url\.pathname === '\/api\/roster-check'[\s\S]{0,600}leagueRosterCheck\(/.test(worker) && /'\/api\/roster-check'/.test(rg));
+    ok('and only for this site', /roster-check'[\s\S]{0,400}originAllowed\(request, env\)/.test(worker));
+    // One resolver, asked twice. Two would drift, and the panel would be
+    // telling the reader a name is fine that the save then scores zero.
+    const checkFn = worker.slice(worker.indexOf('function leagueRosterCheck'), worker.indexOf('// Resolve every player a league carries'));
+    ok('the check resolves with the same function the save does', /leagueResolvePlayer\(/.test(checkFn));
+    ok('and tries a bare name at every position, as the save does',
+      /LEAGUE_ASK_POSITIONS/.test(checkFn) && /hits\.length === 1/.test(checkFn));
+    // Every class the panel renders has to exist, or the questions land as an
+    // unstyled pile in the middle of the card.
+    // rg-ask* only. `rg-field` is a selector hook for the drag zone, wearing
+    // the `is-field` beside it for looks, and has no rules of its own.
+    const askClasses = [...new Set([...rg.matchAll(/class="([^"]+)"/g)].flatMap(m => m[1].split(/\s+/)).filter(c => /^rg-ask/.test(c)))];
+    const missing = askClasses.filter(c => !ml.includes('.' + c) && !read('site.css').includes('.' + c));
+    ok('every class the asks panel renders is styled', missing.length === 0, missing.join(', '));
   }
   ok('the form returns the handle the boxes apply through',
     /return \{\s*\n[\s\S]{0,600}apply: function \(partial, source, n\)/.test(uiSrc));

@@ -121,11 +121,16 @@ p{color:var(--sec);margin:0 0 16px}
 .ml-priv summary{cursor:pointer;font-weight:700;color:var(--sec)}
 .ml-priv p{margin:var(--space-2) 0 0;font-size:inherit;color:inherit}
 #lsList .is-card{margin:10px 0}
-/* 04, under the three intake boxes: one card the width of the row, because the
-   roster grid it takes is a wide screenshot and its team picker is a long row. */
-.ml-grid-card{margin:var(--space-4) 0 0}
-.ml-grid-card .is-btns{margin-top:var(--space-2)}
-.ml-grid-card .is-field{margin:0}
+/* The line that says the cheat sheet answered for the settings. It reads as a
+   note rather than a banner: it is an explanation, not news. */
+.ml-from{margin:0 0 var(--space-3);padding:10px 14px;border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:var(--radius-md);background:var(--panel);font-size:var(--fs-xs);color:var(--sec);line-height:1.6}
+.ml-from b{color:var(--text)}
+/* The roster reader sits in the middle card of the row, so it lays out down a
+   column: the drop box, the team picker wrapping under it, then the save. */
+.ml-grid-card{display:flex;flex-direction:column;gap:var(--space-2)}
+.ml-grid-card .is-field{margin:0;gap:6px}
+.ml-grid-card .is-btns{margin:0}
+.ml-grid-card .is-seg{font-size:var(--fs-2xs)}
 /* The roster-grid intake. A dashed box rather than a bare file input, because
    the screenshot it wants is usually on the clipboard and never on disk. */
 .mg-drop{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1px dashed var(--line2);border-radius:var(--radius-md);background:var(--bg);transition:border-color .12s ease,background .12s ease}
@@ -135,6 +140,18 @@ p{color:var(--sec);margin:0 0 16px}
 .mg-drop:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .mg-drop.over{border-style:solid;border-color:var(--teal);background:rgba(14,124,99,.07)}
 .mg-pick{padding:0;border:0;background:none;font:inherit;font-weight:700;color:var(--teal);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+/* The names the board could not place, and the question about each. It is a
+   panel rather than a warning colour: a misread letter is normal, and a reader
+   who is asked eight questions in red reads it as eight things going wrong. */
+.rg-ask{margin:10px 0 0;padding:12px 14px;border:1px solid var(--line2);border-left:3px solid var(--gold);border-radius:var(--radius-md);background:var(--bg)}
+.rg-ask-h{margin:0 0 8px;font-size:var(--fs-xs);color:var(--sec);line-height:1.6}
+.rg-ask-h b{color:var(--text)}
+.rg-asks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rg-asks li{display:flex;flex-direction:column;gap:4px}
+.rg-ask-n{font-size:var(--fs-xs);font-weight:700;color:var(--text);line-height:1.3}
+.rg-ask-n small{display:block;font-size:var(--fs-3xs);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rg-ask-p,.rg-ask-t{font-size:var(--fs-xs);padding:6px 8px}
+.rg-ask.done{border-left-color:var(--teal)}
 .mg-pick:hover{color:var(--text)}
 .mg-pick:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* Settings: the form on the left at a fixed width, and what it changes on the right. */
@@ -212,7 +229,7 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="wrap wide">
 <div class="ml-steps">
   <div class="ml-step"><span class="ml-sn"><i>1</i>Describe your league</span><b>Scoring, lineup and budget</b><span>Type it, paste a settings page, or drop in a screenshot. Every platform&rsquo;s wording is read the same way.</span></div>
-  <div class="ml-step"><span class="ml-sn"><i>2</i>Add the rosters</span><b>One screenshot, the whole room</b><span>Section 04 reads every team off your league&rsquo;s roster grid. No password, no access token, nothing connected.</span></div>
+  <div class="ml-step"><span class="ml-sn"><i>2</i>Add the rosters</span><b>One screenshot, the whole room</b><span>The middle box of section 02 reads every team off your league&rsquo;s roster grid. No password, no access token, nothing connected.</span></div>
   <div class="ml-step"><span class="ml-sn"><i>3</i>Every board re-scores</span><b>Rankings, waivers, DFS, the market</b><span>Each page restates its numbers in your points and your dollars. Delete the league at any time and its data goes with it.</span></div>
 </div>
 </div>
@@ -227,7 +244,7 @@ p{color:var(--sec);margin:0 0 16px}
 <div id="lsList"></div>
 <div id="lsManual" hidden></div>
 <details class="ml-priv" id="lsPrivacy"><summary>What Iron Tuna keeps, and what it never asks for</summary>
-<p>What you enter: the league&rsquo;s name and size, its scoring and starting lineup, the FAAB budget, team names and the players on each roster. That is all, and it is all typed, pasted or read off a screenshot by you &mdash; Iron Tuna does not connect to Sleeper, Yahoo, ESPN or CBS, holds no password or access token for any of them, and makes no request to any fantasy platform on your behalf. The roster-grid screenshot in section 04 is sent to Iron Tuna&rsquo;s reader to be transcribed and is not kept. Your league is used only to personalize your own guidance and is never shown to other readers. Deleting a league removes its settings, teams, rosters and history. Full details in the <a href="/privacy">privacy policy</a>.</p>
+<p>What you enter: the league&rsquo;s name and size, its scoring and starting lineup, the FAAB budget, team names and the players on each roster. That is all, and it is all typed, pasted or read off a screenshot by you &mdash; Iron Tuna does not connect to Sleeper, Yahoo, ESPN or CBS, holds no password or access token for any of them, and makes no request to any fantasy platform on your behalf. The roster-grid screenshot in section 02 is sent to Iron Tuna&rsquo;s reader to be transcribed and is not kept. Your league is used only to personalize your own guidance and is never shown to other readers. Deleting a league removes its settings, teams, rosters and history. Full details in the <a href="/privacy">privacy policy</a>.</p>
 </details>
 </section>
 
@@ -241,22 +258,21 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="is-band">
 <div class="wrap wide">
 <div class="is-sec" id="settings"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>Your in-season settings</h2></div></div>
-<p class="ml-sub">Platform, scoring, lineup, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. Your league prints those settings on three separate screens, so the three boxes below ask for them three separate ways: type them, paste a screenshot straight off the clipboard, or drag one in. A screenshot in those three is read in your browser and shown back to you as values to check before anything moves. A fourth box under them takes the rosters themselves, every team at once, off the page your league prints them on; that one sends the image to Iron Tuna&rsquo;s reader, which returns the names and keeps nothing. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
+<p class="ml-sub">Platform, scoring, lineup, teams and FAAB budget. Every board in the In-Season section restates its numbers at these, whether or not a league is connected. If you already set your league up for the cheat sheet, this page starts from that rather than asking you the same questions twice, and only puts the boxes in front of you that the cheat sheet cannot answer. Otherwise there are three: <b>scoring</b>, your league&rsquo;s <b>rosters</b>, and the <b>FAAB budget</b>. Every box takes the same two things &mdash; type or paste the text, or paste a screenshot straight off the clipboard &mdash; and shows you what it read as values to check before anything moves. The FAAB budget is the one number most tools guess at: a $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision.</p>
 
-<!-- the three boxes. Scoring, rosters and the FAAB budget, side by side and
-     each taking typing, a pasted screenshot or a dragged one. They fill the
-     form below rather than saving anything themselves: it-inseason-ui.js
-     intake() hands back a partial and leagueForm()’s handle applies it, so a
-     bad OCR read costs a glance instead of a season of wrong numbers. -->
+<!-- Where the settings came from, filled in only when the cheat sheet answered
+     for them. A form that redraws itself already filled in is a page that looks
+     like it guessed; this is the sentence that says it did not. -->
+<p class="ml-from" id="mlFrom" hidden></p>
+
+<!-- the boxes. Scoring, rosters and the FAAB budget, side by side and each
+     taking typing, a pasted screenshot or a dragged one. They fill the form
+     below rather than saving anything themselves: it-inseason-ui.js intake()
+     hands back a partial and leagueForm()’s handle applies it, so a bad read
+     costs a glance instead of a season of wrong numbers. A cheat sheet in this
+     browser answers the scoring box before it is drawn, so that box is not
+     drawn — see the wiring at the foot of this file. -->
 <div id="mlIntake"></div>
-
-<!-- 04. The rosters themselves. The box above it numbered 02 reads the LINEUP —
-     how many of each slot start — and a reader holding a screenshot of every
-     team's players had nowhere on this section to put it: the reader that
-     transcribes a grid lived in the by-hand form up in §01, a section they
-     never had to open. It is mounted here as well now, and saves the room to
-     the same league record that form writes. -->
-<div id="mlGrid"></div>
 
 <div class="ml-split">
   <div class="ml-form" id="mlForm"></div>
@@ -269,7 +285,7 @@ p{color:var(--sec);margin:0 0 16px}
       </div>
     </div>
     <div class="is-card ml-box"><span class="ml-kick gold">What the draft app knows</span>
-      <p>Your cheat sheet carries the same full scoring &mdash; every yardage divisor and touchdown value &mdash; and it is what the draft board prices against. The form on the left can copy it across rather than asking you for it twice.</p>
+      <p>Your cheat sheet carries the same full scoring &mdash; every yardage divisor and touchdown value &mdash; and it is what the draft board prices against. Where one is set up in this browser, the form on the left opens already filled in from it rather than asking you for it twice.</p>
       <div id="mlBox"></div>
     </div>
   </div>
@@ -317,48 +333,123 @@ p{color:var(--sec);margin:0 0 16px}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   if (!window.ITInSeasonUI) return;
-  // The form takes no importer of its own here: the three boxes above it are the
-  // same intake asked one question at a time, and two ways to copy a league in
-  // on one screen is one too many. The handle is how the boxes reach the fields.
+  // The form takes no importer of its own here: the boxes above it are the same
+  // intake asked one question at a time, and two ways to copy a league in on one
+  // screen is one too many. The handle is how the boxes reach the fields.
   var form = ITInSeasonUI.leagueForm(document.getElementById('mlForm'), { importer: false });
+  var apply = function (partial, source, n) { if (form) form.apply(partial, source, n); };
+
+  // The cheat sheet, where there is one. A reader who built a draft board in
+  // this browser has already answered the scoring and the lineup, down to the
+  // yardage divisors, and asking them again is the kind of second helping of
+  // work that makes a settings page feel like paperwork. It used to be a button
+  // in the footer of the row — "Copy my cheat sheet across" — which is a button
+  // for a thing the page could simply do.
+  //
+  // Only when §02 has nothing saved of its own. A reader who already set these
+  // settings here meant them, and overwriting them on every page load with a
+  // draft board from August would be the page changing their league behind them.
+  var sheet = null;
+  try {
+    if (window.ITInSeason && window.ITInSeasonImport && !ITInSeason.has()) sheet = ITInSeasonImport.fromDraftApp();
+  } catch (e) { sheet = null; }
+
+  // What the cheat sheet cannot answer is what is left to ask. It carries the
+  // scoring, the lineup and the league size; it has never carried a FAAB budget
+  // (its own budget is the AUCTION budget, a different number in a different
+  // season, and quoting one as the other would be worse than asking) and it has
+  // never carried a room full of players. So: rosters and the budget when there
+  // is a sheet, all three boxes when there is not.
+  var rosters = { slot: 'rosters', title: 'Insert Rosters', hint: 'Every team\u2019s players, off the one page your league prints them on.' };
+  var cards;
+  if (sheet) {
+    rosters.n = '01';
+    cards = [rosters, { kind: 'faab', n: '02' }];
+  } else {
+    rosters.n = '02';
+    cards = ['scoring', rosters, 'faab'];
+  }
+
   ITInSeasonUI.intake(document.getElementById('mlIntake'), {
-    onApply: function (partial, source, n) { if (form) form.apply(partial, source, n); }
+    cards: cards,
+    onSlot: function (name, body) { rosterGrid(body); },
+    // The footer's cheat-sheet button is gone for good: where there is a sheet
+    // this page has already applied it, and where there is not the button never
+    // drew anyway.
+    draft: false,
+    // The default line says every screenshot here is read in the browser. The
+    // rosters box is the one that is not, and a privacy claim that is true of
+    // the boxes beside it and false of that one is worse than no claim at all.
+    // It names only the boxes actually drawn: where the cheat sheet answered
+    // the scoring, there is no scoring box for the sentence to be about.
+    note: (sheet ? 'The budget box reads its screenshot' : 'The scoring and budget boxes read their screenshots') +
+      ' <b>in your browser</b> and never ' + (sheet ? 'uploads it' : 'upload them') +
+      '. The rosters box sends what you give it \u2014 image or text \u2014 to Iron Tuna\u2019s reader, as its own card says. Nothing is saved until you press Save.',
+    onApply: apply
   });
-  rosterGrid(document.getElementById('mlGrid'));
+
+  // Applied after the row is drawn, so the message the form shows is the last
+  // thing to move rather than something that happened before the page settled.
+  if (sheet) {
+    apply(sheet, 'your cheat sheet', sheet.items.length);
+    var from = document.getElementById('mlFrom');
+    if (from) {
+      from.innerHTML = '<b>Filled in from your cheat sheet.</b> ' +
+        sheet.items.map(function (it) { return ITInSeasonUI.esc(it[0]); }).join(', ') +
+        ' came across from the league you set up for the draft board. Check them in the form below and press Save \u2014 nothing is stored until you do. ' +
+        'The ' + (cards.length === 2 ? 'two boxes' : 'boxes') + ' below are the questions it could not answer.';
+      from.hidden = false;
+    }
+  }
 });
 
-// 04, the rosters. The three boxes above fill the form beside them and save
-// nothing themselves; a room full of players has nowhere to live in that form —
-// it holds settings — so this one writes the league record directly, the same
+// The rosters box. The boxes beside it fill the form and save nothing
+// themselves; a room full of players has nowhere to live in that form — it
+// holds settings — so this one writes the league record directly, the same
 // POST the by-hand form in §01 makes. That record is what Best Lineup, the
 // Pickup Advisor and the free-agent pool read.
 function rosterGrid(el) {
   if (!el || !window.ITRosterGrid) return;
   var esc = window.ITSync ? ITSync.esc : function (x) { return String(x == null ? '' : x); };
-  el.innerHTML = '<section class="is-intake-card ml-grid-card">' +
-    '<div class="is-intake-top"><span class="is-intake-n">04</span><b>Insert Rosters</b></div>' +
-    '<p class="is-intake-hint">Every team\u2019s players, off the one page your league prints them on.</p>' +
+  el.innerHTML = '<div class="ml-grid-card">' +
     '<div id="mlGridBox"></div>' +
     '<div class="is-btns"><button type="button" class="is-btn primary" id="mlGridSave">Save these rosters</button></div>' +
     '<p class="is-note" id="mlGridMsg" role="status" aria-live="polite" style="margin:0"></p>' +
-    // The three boxes above read their screenshots in the browser and say so.
-    // This one cannot: a grid of two hundred names needs the reader on the
-    // server. A privacy line that is true of the boxes beside it and false of
-    // this one is worse than no line at all.
-    '<p class="is-note" style="margin:6px 0 0">Unlike the three boxes above, this screenshot is sent to Iron Tuna\u2019s reader to be transcribed. The image is not kept; the names come back to this page, and nothing is saved to your league until you press the button.</p>' +
-  '</section>';
+    // The boxes beside this one read their screenshots in the browser and say
+    // so. This one cannot: a grid of two hundred names needs the reader on the
+    // server, whether it arrives as an image or as words. A privacy line that is
+    // true of its neighbours and false of this box is worse than no line at all.
+    '<p class="is-note" style="margin:0">What you put in this box \u2014 the text you type or paste, or the screenshot \u2014 goes to Iron Tuna\u2019s reader to be transcribed, unlike the boxes beside it. Neither is kept.</p>' +
+  '</div>';
   var msgEl = document.getElementById('mlGridMsg');
   function msg(html, bad) { msgEl.innerHTML = html || ''; msgEl.style.color = bad ? 'var(--danger)' : ''; }
 
   var grid = ITRosterGrid.mount(document.getElementById('mlGridBox'), {
+    // The card above already carries the number and the title.
     label: '',
-    note: 'One screenshot of the roster grid holds every team at once. Names only: who starts is projected from the scoring on the left, not read off the page. Send more than one image together if the grid does not fit in one shot.',
-    onPick: function () { msg(''); }
+    note: 'Paste the grid as text or as a screenshot \u2014 either one reads. Names only: who starts is projected from the scoring, not read off the page. Send more than one image together if the grid does not fit in one shot.',
+    onPick: function () { msg(''); },
+    // A new answer is a new state of play, so the one warning below is armed
+    // again: a reader who fixes six of eight names should be told about the two.
+    onCheck: function () { warned = false; }
   });
+
+  // The save asks once about names still unplaced, and saves on the second
+  // press. Blocking outright would hold a whole league hostage to a kicker the
+  // board has never carried; saying nothing is how eight names ended up scored
+  // zero for a season. Once is the number of times to ask.
+  var warned = false;
 
   document.getElementById('mlGridSave').addEventListener('click', function () {
     if (!grid || !grid.teams.length) { msg('Paste a screenshot of the rosters first.', true); return; }
     if (grid.mine < 0) { msg('Pick which of those teams is yours.', true); return; }
+    if (grid.unplaced > 0 && !warned) {
+      warned = true;
+      msg('<b>' + grid.unplaced + (grid.unplaced === 1 ? ' name is' : ' names are') + ' still unplaced.</b> Answer the question' +
+          (grid.unplaced === 1 ? '' : 's') + ' above so ' + (grid.unplaced === 1 ? 'it counts' : 'they count') +
+          ', or press Save again to store ' + (grid.unplaced === 1 ? 'it' : 'them') + ' by name and scored zero.', true);
+      return;
+    }
     if (!window.ITSync || !window.ITInSeason) { msg('League sync could not load in this browser.', true); return; }
     var btn = this;
     btn.disabled = true;
@@ -433,6 +524,10 @@ function rosterGrid(el) {
       '<p class="is-note" style="margin:6px 0 0">' + esc(ITSync.syncLine(L)) + '</p>' +
       (!L.userTeamId ? '<p style="color:var(--danger);margin:8px 0 0"><b>Which team is yours?</b> Iron Tuna could not tell. <button type="button" class="is-btn sec" data-act="teams">Pick my team</button></p>' : '') +
       '<div class="is-btns" style="margin-top:10px">' +
+        // panel() has always handled 'edit'; the button that asks for it went
+        // missing, and with it the only way back to the by-hand form once a
+        // league was saved — team names, your own starters, the roster grid.
+        '<button type="button" class="is-btn primary" data-act="edit">Edit league</button>' +
         (L.isDefault ? '' : '<button type="button" class="is-btn sec" data-act="default">Make default</button>') +
         '<button type="button" class="is-btn sec" data-act="settings">Review settings</button>' +
         (L.userTeamId ? '<button type="button" class="is-btn sec" data-act="teams">Change my team</button>' : '') +
@@ -443,7 +538,7 @@ function rosterGrid(el) {
   function render() {
     if (!st) return;
     if (!st.signedIn) {
-      note('<div class="is-card"><h3>Sign in to save your league</h3><p><b>Saving a league is free.</b> Enter your email and we will send a one-time link. Signing in keeps your leagues tied to you across devices, and section 04 needs it before it can store a room.</p><div class="is-row2"><div class="is-field"><label for="lsEmail">Email</label><input class="is-input" id="lsEmail" type="email" autocomplete="email" placeholder="you@email.com"></div></div><div class="is-btns"><button type="button" class="is-btn primary" id="lsSignin">Email me a sign-in link</button></div><p class="is-note" id="lsSigninMsg"></p></div>');
+      note('<div class="is-card"><h3>Sign in to save your league</h3><p><b>Saving a league is free.</b> Enter your email and we will send a one-time link. Signing in keeps your leagues tied to you across devices, and the rosters box in section 02 needs it before it can store a room.</p><div class="is-row2"><div class="is-field"><label for="lsEmail">Email</label><input class="is-input" id="lsEmail" type="email" autocomplete="email" placeholder="you@email.com"></div></div><div class="is-btns"><button type="button" class="is-btn primary" id="lsSignin">Email me a sign-in link</button></div><p class="is-note" id="lsSigninMsg"></p></div>');
       $('lsSignin').addEventListener('click', function () {
         var email = $('lsEmail').value.trim(), msg = $('lsSigninMsg'), b = this;
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent = 'Enter a valid email address.'; return; }
@@ -456,12 +551,37 @@ function rosterGrid(el) {
     }
     note('');
     if (!st.leagues.length) {
-      $('lsList').innerHTML = '<div class="is-vacant"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 016 0v2"></path></svg></span><div class="is-vacant-msg"><b>No league saved yet.</b><span>Enter your league once and every board re-scores itself in your points. Section 04 below can read a whole room off one screenshot of your roster grid.</span></div></div><div class="is-btns"><button type="button" class="is-btn primary" data-add>Enter my league</button></div>';
+      // No league yet means there is nothing here to choose between, so the
+      // form opens itself rather than hiding behind a button. A reader who
+      // pressed "Customize My League" has already said what they came for;
+      // asking them to press "Enter my league" to be shown the fields is a
+      // click that carries no decision.
+      $('lsList').innerHTML = '<div class="is-vacant"><span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 016 0v2"></path></svg></span><div class="is-vacant-msg"><b>No league saved yet.</b><span>Fill in the form below and every board re-scores itself in your points. Its roster box reads a whole room off one screenshot of your league&rsquo;s roster grid.</span></div></div>';
     } else {
       $('lsList').innerHTML = st.leagues.map(card).join('') + '<p class="is-note" style="margin:8px 0 0">' + st.leagues.length + ' league' + (st.leagues.length === 1 ? '' : 's') + ' saved. The default league is what every page uses unless you switch it in the League selector.</p><div class="is-btns"><button type="button" class="is-btn sec" data-add>Add another league</button></div>';
     }
     $('lsList').querySelectorAll('[data-add]').forEach(function (b) { b.addEventListener('click', addLeague); });
-    if (location.hash === '#connect') $('lsList').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Opened, not scrolled to, and with no Cancel: there is no earlier state
+    // for a first league to go back to, and a page that jumped here would
+    // fight the anchor the reader arrived on.
+    if (!st.leagues.length) manualForm(null, { scroll: false, cancel: false });
+  }
+  // The section this page was asked for. Both sections below the masthead
+  // render after their fetch, so the browser's own jump to #settings or
+  // #connect lands on a page that is still short and leaves the reader parked
+  // above the thing they clicked. Re-aim once the heights are real, and only
+  // while the reader has not started scrolling for themselves.
+  var moved = false;
+  ['wheel', 'touchmove', 'keydown'].forEach(function (e) {
+    window.addEventListener(e, function () { moved = true; }, { passive: true, once: true });
+  });
+  var anchored = false;
+  function anchor() {
+    if (anchored || moved) return;
+    var el = /^#(settings|connect)$/.test(location.hash) && document.querySelector(location.hash);
+    if (!el) return;
+    anchored = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   // The one way in. There are no platforms to choose between any more, so the
   // by-hand form is the flow rather than the fallback at the end of one.
@@ -512,7 +632,8 @@ function rosterGrid(el) {
   // roster is what a reader pastes into the section that promises rosters.
 
   // ── manual ───────────────────────────────────────────────────────────────
-  function manualForm(L) {
+  function manualForm(L, o) {
+    o = o || {};
     var el = $('lsManual'); el.hidden = false;
     var S = L ? L.settings : null, mine = L ? (L.rosters.find(function (r) { return r.teamId === L.userTeamId; }) || { players: [] }) : null;
     var rec = S ? S.scoring.receptionPoints : 1;
@@ -544,7 +665,7 @@ function rosterGrid(el) {
       '<div class="is-field"><label>Starting lineup and bench</label><div>' + rosterRows(S || { roster: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SFLEX: 0, REC_FLEX: 0, WRRB_FLEX: 0, K: 1, DEF: 1, BN: 6, IR: 1, TAXI: 0 } }, []) + '</div></div>' +
       '<div class="is-row2"><div class="is-field"><label>FAAB budget (blank if waiver priority)</label><input class="is-input" id="mfFaab" type="number" value="' + (S && S.faab != null ? esc(S.faab) : '') + '"></div><div class="is-field"><label>Your team name</label><input class="is-input" id="mfTeam" value="' + esc(L ? ((L.teams.find(function (t) { return t.teamId === L.userTeamId; }) || {}).name || 'My team') : 'My team') + '"></div></div>' +
       '<div class="is-field"><label>Your roster, one player per line (mark starters with * and IR with IR)</label><textarea class="is-input" id="mfRoster" rows="10" placeholder="* Josh Allen QB&#10;* Bijan Robinson RB&#10;Rachaad White RB&#10;IR Nico Collins WR">' + esc(mine ? mine.players.map(function (p) { return (p.slot === 'starter' ? '* ' : p.slot === 'ir' ? 'IR ' : '') + p.name + (p.position ? ' ' + p.position : ''); }).join(NL) : '') + '</textarea></div>' +
-      '<div class="is-btns"><button type="button" class="is-btn primary" id="mfSave">' + (L ? 'Save league' : 'Create league') + '</button><button type="button" class="is-btn sec" id="mfCancel">Cancel</button></div><p class="is-note" id="mfMsg"></p></div>';
+      '<div class="is-btns"><button type="button" class="is-btn primary" id="mfSave">' + (L ? 'Save league' : 'Create league') + '</button>' + (o.cancel === false ? '' : '<button type="button" class="is-btn sec" id="mfCancel">Cancel</button>') + '</div><p class="is-note" id="mfMsg"></p></div>';
     // The cheat sheet's intake, on the by-hand form. What it replaces is a
     // reader retyping a settings page they are already looking at, into three
     // scoring boxes that cannot hold most of what it says.
@@ -575,11 +696,16 @@ function rosterGrid(el) {
     }
     grid = ITRosterGrid.mount($('mfGrid'), {
       teams: seeded.teams, mine: seeded.mine,
+      // No textarea here: this form already prints one of its own further down,
+      // for the reader's OWN roster, and two boxes of names on one card is a
+      // reader typing their team into the wrong one.
+      text: false,
       note: 'A league roster grid holds all of the teams at once. Names only: your starting lineup is projected from the scoring below, not read off the page. Send more than one image at a time if the grid does not fit in one shot.',
       // The team count on this form is the floor the grid just proved.
       onRead: function (g) { var box = $('mfTeams'); if (box) box.value = Math.max(parseInt(box.value, 10) || 0, g.teams.length); }
     }) || grid;
-    $('mfCancel').addEventListener('click', function () { el.hidden = true; });
+    var cancel = $('mfCancel');
+    if (cancel) cancel.addEventListener('click', function () { el.hidden = true; });
     $('mfSave').addEventListener('click', function () {
       var recV = parseFloat((el.querySelector('input[name="mfRec"]:checked') || {}).value || '1');
       if (mfRecExact != null && (mfRecExact >= 0.9 ? 1 : mfRecExact >= 0.4 ? 0.5 : 0) === recV) recV = mfRecExact;
@@ -615,11 +741,14 @@ function rosterGrid(el) {
         reload();
       });
     });
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (o.scroll !== false) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   document.addEventListener('DOMContentLoaded', function () {
     if (!window.ITSync) { note('League sync could not load in this browser.', true); return; }
-    ITSync.load(true).then(function (s) { st = s; render(); });
+    // anchor() after the first render, not inside it: a signed-out reader
+    // returns early from render and their sign-in card shifts the page just
+    // the same.
+    ITSync.load(true).then(function (s) { st = s; render(); anchor(); });
   });
 })();
 </script>

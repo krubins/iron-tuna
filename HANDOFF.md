@@ -10028,8 +10028,38 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
 
 **The DFS page (`/dfs`), same pass.**
 
-- **Same page head** (`In-Season · DFS`, 39px `h1`, lede, `.is-actions`: Build
-  this week's lineup → `#sec-lineup`, Price my own salary file → `#dfUp`).
+- **Same page head** (`In-Season · DFS`, 39px `h1`, lede, then the quiet
+  `.is-hero-how` line down to `#df-method`). The `.is-actions` pill row that
+  used to sit between the lede and that line — Build this week's lineup →
+  `#sec-lineup` and Price my own salary file → `#dfUp` — was removed on
+  2026-09-20, and **the reader salary upload went with it the same day**: the
+  `#dfUp` panel, its four handlers, the `it.dfs.csv.*` localStorage copy, the
+  `loadUpload()` path and the public `POST /api/dfs/slate` route are all gone.
+  `load()` now calls `loadSite()` unconditionally, so `/dfs` serves the desk's
+  imported slate and nothing else. Two consequences worth knowing:
+  - `/dfs` **clears `it.dfs.csv.dk` and `it.dfs.csv.fd` once on boot**. The
+    panel was the only control that deleted a stored file, and it promised the
+    file was the reader's to remove, so removing the panel without the purge
+    would strand the CSV in their browser for good.
+  - `dfsSlateShape()` in `_worker.js` was briefly left with no caller — the
+    upload route was its only one — and was **wired into `POST /api/admin/dfs`
+    the same day**, which is now the only CSV path in. A single-game
+    (Showdown/MVP) export is refused before `dfsStore`, so it cannot reach the
+    board every reader is shown. The refusal is **unconditional, not scoped to
+    `slate: 'main'`**, because `dfsSalariesRead()` takes the latest
+    `fetched_at` for the site and week and never filters on the `slate`
+    column: a single-game file stored under any slate name is still what
+    `/api/dfs` serves — and the scheduled workflow posts `slate: 'weekly'`,
+    so a guard scoped to `'main'` would have skipped the one importer that
+    runs unattended. Importing one deliberately would need that read to learn
+    about slates first. Three gates in `tools/test-dfs.mjs` hold this —
+    the guard runs and runs *before* `dfsStore`, the refusal ignores `slate`,
+    and the read is still slate-blind — plus three more pinning the false
+    positive that would matter most: the scheduled DraftKings workflow merges
+    every Classic pool for the week, and that merged file must still read
+    `classic`. It is built with the importer's own `draftablesToCsv`, so the
+    gate tests the file the route actually receives.
+  `parseDfsCsv` is untouched and still carries the desk import.
 - **The venue and board switchers (`#dfSite`, `#dfNav`) moved up** from below
   the setup, the Play of the Week and the Academy cards to directly under the
   head, with `#dfNote` and `#dfSiteNote` beside them. Same ids, same script;
@@ -11025,12 +11055,1271 @@ Nobody printed the list. One `console.log` of the eight rows the band was
 drawing from — or one look at what `contentListPayload` selects — would have
 ended this on the first pass. When output looks wrong, read the input before
 rewriting the function that shapes it.
-## 91. September 2: the deployed worker is a build behind, and three runs died at `start`
+
+---
+
+## 91. September 19: the cover had four paths, not two
+
+§88 fixed two paths that put a player at the top of "/" and wrote the lesson
+down: *enumerate every path that can put a subject on that page before changing
+any of them.* §90 then found the feed underneath both. The enumeration itself
+was still one short — it counted the two things that carry a PHOTOGRAPH and
+stopped there.
+
+**3 and 4: the two card readings.** Under the hero and the band sit `fnRead`
+and `dfRead`, one line each, and each one names a player. `fnRead` took the
+strongest BUY on the board; `dfRead` took `bestVegasValues[0]`. Neither had a
+clock anywhere near it. So after §88 and §90 the cover changed every hour above
+a Fantasy call and a DFS value that had not changed since Sunday — the same
+complaint Ken made, one band down the page, waiting to be made again.
+
+Both take turns on the same `COVER_TURN_MS` now:
+
+| | |
+|---|---|
+| `coverPick(rows, now, cap)` | the turn's row out of the leaders of its own board, `CARD_POOL` (five) deep. Used by both cards. |
+| `coverLead(rows, pick)` | true only for the board's own first row. It guards the superlative: the DFS card reads "Best market value" for the leader and "Market value play" for everybody else, because a caption that claims the top of the board once the turn has moved off it is false, and false is the one thing a page arguing from the market cannot be. |
+
+Every row a turn can land on passed the same test the leader passed — the
+Fantasy card's pool is the buys, the DFS card's is rows the slate can state in
+full — so this chooses WHICH true thing to say and never whether to say a true
+one. A row with a hole in it is filtered before the pool is built, so a turn
+cannot land on one and print a card with a gap in it.
+
+**And one the rotation turned from latent into daily.** `heroPaint` took a
+single name and painted nothing when the player lookup carried no face for it.
+Standing still, that was a rare miss on one player. On a clock it is an hour of
+every day, chosen at random off the board, with no photograph on the cover at
+all — and nobody would have reported it as a bug, because the band is written
+to disappear rather than show a frame with nothing in it.
+
+It takes a candidate list now. `coverFaces(rows, skip, now)` returns the turn's
+pick with the rest of the pool behind it (`coverFace` is still that list's
+head, so §88's assertions are untouched), the desk offers every subject in the
+band rather than only the first, and the painter takes the first that resolves
+to a face. A list that resolves to nobody still paints nothing, which is the
+page's rule and stays the page's rule.
+
+### Where it is tested
+
+`tools/test-newsroom.mjs`, in the same lifted block, without a browser:
+a card reading is not the same player every turn, it changes on EVERY turn, it
+stays inside `CARD_POOL`, it is a function of the clock alone, a board of one
+is printed as it is, an empty board is no reading rather than a throw, and the
+superlative belongs to the leader. For `coverFaces`: the turn's pick leads, the
+pool is behind him, every turn offers the same cast in a different order, and
+the Fantasy card's player is not in the list at all.
+
+`tools/test-homepage.mjs` steps the frozen clock one turn forward in Chromium
+and asserts both readings change on the real page, the runner-up caption drops
+"Best", a slate row with a hole in it never appears, and two loads at the same
+hour agree.
+
+### The lesson, third coat
+
+§88: enumerate the paths. §90: read the input before rewriting the function
+that shapes it. This one is the first again, done properly — the enumeration
+has to be of what the READER sees change, not of what the code calls a
+photograph. Four greps end it: `heroPaint` has two callers, `$('fnRead')` and
+`$('dfRead')` one each.
+
+
+## 92. September 19: two lines under every name, on all seventeen rankings pages
+
+The sixteen rankings pages (`/weekly-*-rankings` and `/season-long-*-rankings`,
+all of them the one board in `it-ranks.js`) and the `/rankings` tool answered
+"how many points" in nine or fourteen columns and answered the two questions a
+reader actually arrives with in none of them: **is he any good**, and **is this
+a week to start him**. Both facts were already on the row, spread across a rank,
+an opponent, a schedule grade and a note, ten columns apart and off the right
+edge of a phone.
+
+Every row now carries **two sentences under the player's name**.
+
+| Line | What it says |
+|---|---|
+| **Player** | his rank at his own position on the board being shown, what a rank like that is worth at that position, the points behind it (per game on any multi-week horizon, where a total over a different number of games is not a comparison), and an injury or a usage swing where there is one. |
+| **Opportunity** | on a one-week board: the fixture, the matchup by the opponent's points allowed, and what the market implies his offense will score against its own season mean. On every longer horizon: the games and byes ahead, and how hard the defenses on that slate have been. |
+
+Read them as: *"WR9 this week, a weekly WR1, 14.8 points projected,
+with usage up 24% on his own average."* / *"at BUF, a hard matchup (4th by
+points allowed), with the offense implied for 20.5 points, 2.1 below its own
+season mean."*
+
+**They are the same numbers, said in words.** Nothing fetches, computes a
+projection or invents a grade. Every clause is a field of the payload the
+columns are built from, and a clause whose field is missing is **dropped**, not
+defaulted: an unpriced fixture says it is a fitted rating instead of quoting a
+line, a board with no usage behind it says nothing about usage, and a player
+with no game says exactly that. A season mean is only quoted against a line a
+book has posted, because a fitted rating measured against a mean of fitted
+ratings says nothing.
+
+**The grades are the worker's own where the worker publishes one.** A slate
+reads `scheduleDifficulty.label`, so the sentence cannot disagree with the
+Schedule column beside it, and the week grade uses the same two thresholds the
+worker uses for a season (`<= 11` hard, `>= 22` soft), so a week and a season
+grade mean the same thing.
+
+**The tiers are the standing shapes of the positions, not a read on a player.**
+`TIERS` in `it-ranks.js`: TE6 is a weekly starter and RB6 is a first-rounder, so
+a rank alone cannot say what it is worth. They are applied to the **consensus
+positional rank** every time, including on the FLEX pages where the `#` column
+is a pooled RB/WR/TE slot — "the 9th-best receiver" is a statement about the
+player, "flex 23" is a statement about a lineup slot.
+
+**A defense is graded on the other side of the fixture.** `opponentDefRank` and
+`implied` describe a club's *offense*, which is not what a DST scores off, so a
+DST line reads the allowed side instead: what the opponent is expected to score,
+against what this club allows across its own schedule. That side was computed in
+`weekEnvironment` and thrown away; it is now returned (`allowedImplied`,
+`allowedExpected`, `allowedDelta`) and shipped on every week row's `env`. The
+addition is **purely additive** — `BOARDS_CONTRACT` is unchanged — and a season
+DST line averages the per-week `allowedDelta` in the browser, skipping byes,
+absences and unpriced fixtures rather than counting them as zero.
+
+**One thing beside the lines changed.** The week board's Opponent cell filtered
+out both byes *and* absences and then printed `BYE` for whatever was left, so a
+player ruled out had a bye printed over a fixture he has. It now prints the
+fixture with an `OUT` tag, which is what the Opportunity line underneath says
+too.
+
+### The lines are one file, and /rankings prints them too
+
+**`it-reads.js` is the grammar and the tiers, and nothing else.** Two surfaces
+print these lines and they compute their inputs differently, so if each wrote
+its own sentences the tiers would drift apart within a season and the same
+player would be "a weekly WR1" on one page and "a WR2" on the other. The file
+exports `window.ITReads` — `cell(p, o)` (both lines, in the markup every board
+prints them in), `player`, `opportunity`, and the helpers. It is loaded before
+the script that calls it on all seventeen pages, and both callers guard on
+`window.ITReads` so a row renders without it rather than throwing.
+
+**The caller passes in the only two things it alone knows: WHICH RANK and
+WHICH POINTS.**
+
+| Surface | Rank | Points | Horizons |
+|---|---|---|---|
+| the sixteen pages (`it-ranks.js`) | `p.consensus.rank` — the column the ranking is published on | `p.consensus.points`, scored on the server | `week`, `ros` |
+| `/rankings` | `r[f + 'Rank']` for the board the reader picked (`i`/`c`/`v`/`b`) | `bp(r)`, re-scored in the browser at his own league settings | `week`, `next3`, `ros`, `playoffs` |
+
+On `/rankings` that binding is the whole point: the reader switches between four
+boards and the `#` column follows him, so the rank in the sentence has to follow
+him too or the row contradicts itself. Both pass the POSITIONAL rank even when
+the table is ranking the pooled flex slot, and both set `spellOut` on FLEX so
+the spelled-out number cannot be read as the `#` beside it.
+
+`HZ` in `it-reads.js` gives each horizon its two words: `when` for the player
+line (`this week` / `over the next three weeks` / `the rest of the way` / `in
+weeks 15–17`) and `slate` for the opportunity line. A one-week board takes the
+fixture branch; every longer horizon takes the slate branch.
+
+| Where | What |
+|---|---|
+| `it-reads.js` | `TIERS`, `POS_LONG`, `HZ`, `tierOf`, `gradeOf`, `ord`, `awayFrom`, `plural`, `listOf`, `player`, `opportunity`, `weekOpportunity`, `slateOpportunity`, `avgAllowedDelta`, `cell`. |
+| `it-ranks.js` | one `reads(p)` that feeds it the consensus rank and points. |
+| `rankings.html` | one `reads(r)` in the same shape, plus the `<script src="/it-reads.js">` before its own block, and its own "How to read the two lines under a name" section under the board. |
+| `site.css` | `.rk-vs td.rk-who` **and** `.rk-table td.p`. The specificity is load-bearing on `/rankings`: its inline sheet carries `.rk-table td.p span { display:block; font-size:12px; color:var(--muted) }` for the position under the name, and inline beats a linked file at equal specificity, so every rule names three classes and the key names its own `display`. `/stats` shares `td.rk-who` and is deliberately not listed: it prints what was played, which has no opportunity to grade. |
+| the sixteen pages | a "How to read the two lines under a name" section above the existing "How to read the two columns". `tools/build-ranks.mjs` carries it too (`WEEK_OPP` / `SEASON_OPP`) along with the new script tag, so a page scaffolded later is born with both. |
+| `_worker.js` | `weekEnvironment` returns the allowed side; `buildBoards` ships it on `weekRows[].env`. |
+| `tools/test-ranks.mjs` | the tier and grade helpers are lifted out of `it-reads.js` with `new Function` and actually run: the thresholds, the ordinals, the "level with" case, the bye list, a horizon's words. Plus the assertions that there is exactly ONE copy of the tiers, that both boards call it and load it first, that a clause never defaults, and that a defense is never graded on its own offense. |
+| `tools/test-boards.mjs` | the allowed side of a fixture is the other club's scored side, and an unposted week has `null` rather than a zero delta. |
+
+`node tools/test-ranks.mjs` (71) and `node tools/test-boards.mjs` (85) pass, and
+`node tools/build-ranks.mjs --check` is clean. Both surfaces were driven in a
+real Chromium against a worker-built payload — the sixteen pages at desktop and
+390px, and `/rankings` across all four horizons, all four boards and QB / RB /
+FLEX / K / DST, with no page errors.
+
+## 91. September 19: the DraftKings sportsbook is fenced, and that is now enforced
+
+Closing out the open pull requests left one carrying something `main` did not
+have. PR #222 ("DraftKings' sportsbook lines and props, by book") answered a
+request of Ken's from September 13 with a finding rather than a feature:
+
+**DraftKings' sportsbook cannot be read by a scheduled job.** Every API path
+tried — `/sites/US-SB/api/v5/eventgroups/88808`,
+`/api/sportscontent/<site>/v1/leagues/88808`, the navigation and category
+endpoints — answers a non-browser client with an Akamai "Access Denied" (403)
+whatever the headers, and the page loads the Akamai Bot Manager sensor. A
+runner would be refused exactly as a curl is. Getting past that means defeating
+bot detection, which this repo does not do, and the sportsbook terms prohibit
+automated access regardless.
+
+The distinction that makes it worth writing down: **the DFS lobby is not
+fenced and the sportsbook is.** `www.draftkings.com/lobby` and
+`api.draftkings.com/draftgroups`, which the weekly salary workflow reads,
+answered an unauthenticated fetch normally on the same day. So "we already pull
+DraftKings data" is true and is not evidence that the lines can be pulled too.
+
+**Why it is in the red list and not only in the inventory.** A note in
+`docs/data-sources.md` tells someone who goes looking. The next person to want
+this book's own numbers will reach for the host first and find out the same way,
+a day at a time. `tools/test-data-sources.mjs` now carries
+`sportsbook(-nash)?.draftkings.com` in `FORBIDDEN`, so the attempt fails the
+build with the reason attached. The guard's own tests check that the rule
+catches both hosts, leaves the word "sportsbook" in prose alone — the front page
+says it constantly — and does not touch the lobby host that does answer.
+
+**What was not taken.** The PR also added about 120 lines to `_worker.js` for a
+per-book view of the stored observations (`GET /api/tuna-market/book?book=…`,
+`TMS_BOOK_LABELS`) plus its tests and a section in
+`docs/TUNA-MARKET-SIGNAL.md`. That is a product feature nobody is waiting on,
+written against a September 12 worker, and the market feed moved to
+SportsGameOdds in §72 after it. Rebasing it would be rewriting it. It stays on
+`claude/draftkings-book-board` at `c410b8d0` if the per-book board is ever
+wanted; the finding above is the part that had to survive, and now has.
+
+## 93. September 19: the DFS lineup could not be asked a question
+
+`/dfs` explains its roster in one direction only. The lead board prints a
+thesis over the table, a sentence under every player, a six-part breakdown
+beside it and the next best body at every seat. All of it is written before
+the reader arrives, and none of it answers the question the reader actually
+has, which is always a follow-up to something they just read: why him and not
+the cheaper one, what this build looks like in a bigger field, which seat is
+the one to change.
+
+The auction board has had the answer to that shape of question since launch.
+Its Value Coach is a chat keyed into the page's OWN numbers — this manager's
+budget, this board's values — which is the whole reason it beats a chatbot in
+another tab. It had never been pointed at the DFS lineup.
+
+**`dfs-coach.js`** is that coach, aimed at the roster: a panel under the
+recommendation and its pivots, not the app's floating dock, because this page
+is a document and a bubble over a salary table covers the numbers the question
+is about. It renders the chat, streams the reply token by token off
+`/api/coach` (the same server-side proxy, so the key stays on the server) and
+holds no state of its own — it reads the page through a `context` function on
+every ask, so it cannot answer about a lineup that is no longer on screen.
+
+**`coachContext()` in `dfs.html`** is that function, and it is assembled from
+the objects the page just rendered: the contest setup (game style, games,
+payout, the shape and its reasoning), the build (objective, stack, bring-back,
+max per team, the reader's locks, exclusions and forced player), the thesis,
+up to three solved lineups with `playerFit`'s own sentence on each seat of the
+lead, the pivot at every slot, the thirty best players it left on the board
+(sorted by the score the chosen shape is solved on) and the game environments
+behind all of it. Where there is no roster — pick'em, no slate, an incomplete
+DraftKings setup, a format with no Classic solve, an infeasible cap — it
+returns a `blocked` sentence instead, and the panel prints that and disables
+itself rather than taking a question it cannot ground.
+
+**THE COACH CALCULATES NOTHING**, which is the same boundary the newsroom
+writes under (`docs/ai-calculation-boundary.md`). Every number it can speak
+was computed by `dfs-optimizer.js` or by `buildDfsSlate`/`dfsMetrics` and
+handed to it as data; the prompt forbids recomputing, re-ranking,
+interpolating or inventing one in as many words, and tells it to say the page
+does not carry a number rather than produce it. The module itself names no
+metric, so there is nothing in it to compute one from. Football knowledge is
+still its own — roles, usage, schemes, matchups — because that is not one of
+this page's numbers.
+
+**The 40,000-character trap.** `/api/coach` SLICES an oversized `system`
+rather than refusing it, which would hand the model a JSON object cut off
+mid-object with no way to know. `fit()` holds the payload to 28,000
+characters, shedding in the order a follow-up is least likely to need (the
+board behind the roster, then the smaller games, then the alternates, then
+the rest of the board, then the smaller swaps), never the roster or the
+contest it was solved for, and it writes `trimmedFromThisPrompt` into the data
+so the model is told what it is missing.
+
+| Where | What |
+|---|---|
+| `dfs-coach.js` | `ITDfsCoach.mount({host, context})`, the system prompt, `fit()`, `tidy()` (a stray asterisk is unbolded, not shown), the SSE reader with a 45s first-byte and 20s idle timeout. A streaming token touches only its own bubble and the log is `aria-busy` until the answer is done, so a screen reader hears it once, complete. |
+| `dfs.html` | `.df-coach*` (light panel, teal accent, 390px-safe), `<div id="dfCoach">` between the pivots and the fine-tune panel, `coachContext()`, and `coachSync()` on every state that changes the roster — a solve, an infeasible solve, an incomplete setup, a non-Classic format, a slate that never loaded, the pick'em board. |
+| `docs/ai-calculation-boundary.md` | an "Interactive features" section: the rule is the same in a chat panel as in the newsroom. |
+| `tools/test-dfs-coach.mjs` | 46 assertions — the prompt's boundary and format clauses, one `fetch` and no provider key, the module carrying no metric, `fit()` under budget with the roster intact, `coachRow` passing numbers through and leaving a missing one absent rather than zero, and the page's wiring including every `coachSync()`. |
+| `.github/workflows/checks.yml` | `node --check dfs-coach.js` with the other shared client scripts, and the test beside `test-dfs.mjs`. |
+
+`node tools/test-dfs-coach.mjs` (46), `node tools/test-dfs.mjs` (111) and
+`node tools/test-ai-boundary.mjs` pass. Driven in a real Chromium against a
+worker-built slate and a stubbed `/api/coach`: the panel is disabled with its
+reason before the setup is complete, live after it, the reply streams into the
+bubble, and the payload carries the solved roster, its pivots, the bench and
+the games — re-read correctly after switching the contest from Head-to-Head to
+a multi-entry tournament. No page errors at 1280 or 390px.
+
+
+## 94. September 20: the coach panel was an empty div, and said nothing when it stayed empty
+
+§93 shipped the Value Coach on the DFS lineup as an empty `<div id="dfCoach">`
+that `dfs-coach.js` filled on DOMContentLoaded. On the deployed site the panel
+did not appear. The code was not the problem: CI asserts the script tag and the
+host element are both in `dfs.html`, and it passed on the merge commit.
+
+**The failure mode was the problem.** An empty div that a separate deferred file
+fills has exactly one appearance when that file does not arrive: nothing. No
+panel, no error, no clue, and the rest of the page works perfectly, so there is
+nothing to tell a reader or a maintainer that anything is missing. It cannot be
+told apart from a page that was never meant to have a coach.
+
+So the panel's chrome now ships in the markup and `mount()` replaces it:
+
+- `mountCoach()` is guarded on `window.ITDfsCoach` existing AND on `mount()`
+  not throwing, and returns whether it took. Nothing else calls `mount()`.
+- When it does not take, `coachBoot()` writes the reason where the panel is,
+  moves the badge off "starting" (a panel reading "starting" over a sentence
+  saying it never started is worse than no panel), and offers **Try again**.
+- `coachReload()` re-fetches `/dfs-coach.js` with a cache-buster, because the
+  usual reason for a retry is a file that was not there the first time and a
+  browser that cached that miss would never see it land. It reports both ways it
+  can fail: the file still missing, or the file arriving and not starting.
+- A `window.load` retry is also registered, which costs nothing and covers a
+  script that resolves late.
+
+`coachSync()` was already a no-op with no panel, so a missing script still
+cannot break a build.
+
+| Where | What |
+|---|---|
+| `dfs.html` | the host carries `.df-coach` chrome and `#dfCoachBoot`; `mountCoach()`, `coachBoot()`, `coachReload()`; `.df-coach-retry`. |
+| `tools/test-dfs-coach.mjs` | 53 now: the chrome is in the markup, the mount is guarded both ways, a failure says so, the retry re-fetches with a cache-buster, a retry that arrives but cannot start is not silent, and the badge stops claiming to be starting. |
+
+Driven in Chromium both ways: with `/dfs-coach.js` answering 404 the panel
+renders at full width with the reason and a Try again button and no page errors;
+with the file then served, pressing it mounts the live coach and the message is
+gone. The normal path is unchanged.
+
+**Still unverified: whether this is what was wrong on the live site.** This
+session cannot reach irontuna.com (the environment's egress policy), so the
+deployed `/dfs-coach.js` was never fetched. If the asset is genuinely absent the
+panel will now say so instead of vanishing, which is the point either way.
+
+## 95. September 20: a rank is not a performance
+
+The two lines under every name (§92) said where a player ranked and what he
+was projected for, and the second clause of the PLAYER line was the first one
+said again:
+
+> RB3 the rest of the way, **elite at the position**, 14.7 points a game.
+
+"Elite at the position" is `tierOf(position, rank)`. It is derived from the
+rank printed two words earlier and carries no information the `#` column did
+not already have. Nothing on the row said how the player had actually played.
+
+**The usage overlay was already in hand.** `boardsContext` reads
+`usageCacheRead` for the role trend, and `roleTrendFrom` used two fields of it
+and dropped the rest — including `season.stats`, the raw line accumulated week
+by week, and the volume that produced it. The same shape as §92's defensive
+side of a fixture: computed, then thrown away.
+
+`seasonFormFrom(u, position, rules)` now builds a `form` block on every board
+row, in the same shape as `consensus`:
+
+| Field | What it is |
+|---|---|
+| `stats` | the RAW accumulated season line |
+| `points`, `ppg` | that line scored at this board's scoring |
+| `volume`, `volumeUnit` | touches for a back, targets for a receiver, passing yards for a passer |
+| `games`, `tds`, `snapPct` | what a reader checks next |
+
+The line rides along raw for the same reason `consensus.stats` does:
+`/rankings` re-scores every stat line in the browser at the reader's own
+league settings, and a form figure scored here at PPR would sit in one
+sentence beside a projection scored there at his. It re-scores this too.
+
+**What the line says now.** Production leads, the tier is the fallback:
+
+> RB1 the rest of the way, 27.3 points a game so far on 19.0 touches over 3
+> games, **which the board marks down to 14.7 going forward**, with usage up
+> 30% on his own average.
+
+The comparison is the insight. A board projecting well under a player's own
+rate is saying his scoring has outrun what drives it; one projecting over it
+is saying the opposite. Neither is visible in a rank. It is drawn only on a
+multi-week horizon, where both numbers are per-game rates — a one-week total
+against a season average would be a comparison between different units — and
+two numbers less than a tenth apart read as "much the same" rather than as a
+judgement. A player who has not played has no form at all, and there the tier
+is all the board has to say about him; in September that is every row.
+
+### The bug this surfaced: every quarterback read "usage up 1100%"
+
+`roleTrendFrom` counted `passAttempts` on the LATEST week's side and not in
+the season average, which accumulated only targets and carries. So a passer's
+38 attempts were being divided by his three rushes a game.
+
+It was not only a printed number. `role.factor` scales every stat on the Iron
+Tuna board, so the clamp at `ROLE_CLAMP` (0.9–1.1) was pinned high for every
+quarterback, and pinned the wrong way for any whose attempts dipped. Bounded
+at 10%, and wrong on every QB row all season.
+
+`buildUsageOverlay` now accumulates `season.passAttempts`, and `roleTrendFrom`
+counts it on both sides. A row cached before that field existed has attempts
+on one side only; that is not a trend of zero, so it returns `no data` rather
+than a number it cannot support.
+
+| Where | What |
+|---|---|
+| `_worker.js` | `seasonFormFrom`; `form` on every board row; `season.passAttempts` accumulated; `roleTrendFrom` compares like with like. |
+| `it-reads.js` | the form branch leads `player()`, `forwardOf()` draws the comparison, `vol()` prints yards whole and touches to a tenth. |
+| `rankings.html` | re-scores `form.stats` and passes `formPpg`, so the sentence is at the reader's scoring. |
+| the seventeen explainers | rewritten: Player leads on what he has done, and says the tier is what stands in before he has played. |
+| `tools/test-ranks.mjs` | the tier is reachable only from the not-played branch; the comparison is drawn only between per-game rates; yards are whole. |
+| `tools/test-boards.mjs` | the season line is shipped raw and scored, volume is per position, a player with no line gets null rather than 0.0, and a passer is compared against his own attempts. |
+
+`node tools/test-ranks.mjs` (84) and `node tools/test-boards.mjs` (95) pass.
+Both surfaces were driven in a real Chromium against a worker-built payload
+with three weeks of usage behind it.
+
+## 95. September 20: the coach was at the bottom of the page, which is nowhere
+
+§93 put the Value Coach in the lineup section, under the roster and its pivots,
+on the reasoning that a question belongs beside what provoked it. In practice
+that is the wrong end of a long section: below the lead board, below the
+alternates, below the pivot table, directly above the fine-tune panel. A reader
+working through the roster scrolls past the answer to their question without
+meeting the thing that answers it, and the first report of it was that the
+coach is "a box well below everything else."
+
+**It is a launcher and a dock now**, which is the shape the auction board has
+used since launch and for the same reason: the button travels with the reader
+instead of waiting at a fixed depth, and the coach opens beside the numbers
+being asked about rather than a screen below them.
+
+- `.df-coach-fab` is a teal pill at the bottom right, icon plus the words
+  "Value Coach" (an icon alone does not say what it opens). It carries
+  `aria-expanded` and `aria-controls`, and folds away while the dock is open
+  rather than sitting under it.
+- `.df-coach` is now `position: fixed`, 390px, capped at `min(76vh, 700px)`,
+  at z-index 301: over the tooltips (120) and under the player-calculation
+  modal (1000), which still takes Escape first because it is on top. The head
+  and the input are pinned and the conversation is the only part that scrolls.
+- Both sit at page level, after the last `</section>`. A fixed dock nested in a
+  container that hides with a section switch would vanish with it.
+- On a phone it is a sheet across the width (`left/right: 8px`) rather than a
+  390px box half off the edge.
+- Open and close move exactly two things, the dock's `hidden` and the button's
+  `aria-expanded`, so there is no third variable to disagree with them. Opening
+  calls `coachSync()` (a dock opened before the roster existed would otherwise
+  show a stale reason) and moves focus into the input; closing returns focus to
+  the launcher.
+
+`mount()` takes an `onClose` now. With one the header button reads **Close** and
+shuts the dock; without one it keeps the in-place minimize, so the module still
+stands alone on a page that embeds it inline.
+
+**§94's failure mode survives the move**, which took one addition: the dock is
+closed by default, so a reader only meets a boot failure by opening it. The
+launcher itself goes grey with the reason on its `title` when the coach behind
+it never loaded, and a successful **Try again** puts it back.
+
+| Where | What |
+|---|---|
+| `dfs.html` | `.df-coach-fab` / `.df-coach-fab-bad`, the fixed-dock CSS and its phone sheet, the launcher and dock markup at page level, `coachOpen`/`openCoach`/`closeCoach`/`toggleCoach`, Escape sharing with the player modal. |
+| `dfs-coach.js` | `opts.onClose`: Close instead of Minimize, and the header button defers to the page. |
+| `tools/test-dfs-coach.mjs` | 66 now: page-level placement, closed-by-default, the two states moving together, the sync and focus on open, Escape ordering, the z-index band, the scroll containment, the phone sheet, and the launcher's failure and recovery. |
+
+Driven in Chromium at 1280 and 390: closed on load, the launcher anchored 18px
+off both edges, opening shows the dock fully inside the viewport (390x496) with
+the launcher faded out, the starter chip still reaches a streamed reply, Escape
+closes it and focus returns to the button. At 390px the dock is 374px wide,
+fully on screen, with the send button reachable. With `/dfs-coach.js` answering
+404 the launcher is grey and titled with the reason, the dock opens to the
+message and a working Try again, and the retry restores both.
+## 96. September 19: the DraftKings roster maker recommended a man who was not playing
+
+The report: the DFS lineup builder put **Theo Wease Jr.** in a recommended
+roster. He was not going to play. He is not hurt either — he is on the
+**Chargers' practice squad**, and the board still prices him as a Miami
+receiver with a 682-yard season line.
+
+That is two failures wearing one coat, and both of them ran the whole way from
+the board to the lineup without anything asking the only question a slate
+cares about: **is he going to be on the field on Sunday?**
+
+**Nothing on the DFS path had ever asked it.** `dfs-optimizer.js` filtered its
+pool on three things — on the board, a salary above zero, a positive
+projection — and `dfs.html` contained the string "injury" exactly zero times.
+The slate row did carry an `injury` field, and nothing read it.
+
+**The availability list could not have answered it anyway.** It is built for a
+seventeen-game question and drops week-to-week designations on purpose (§48): a
+Questionable tag, or a plain "Out" with no return date, is not a change to a
+season line, so `_availStatusOf` maps it to nothing and the board never hears
+about it. Correct for the board. Useless for one afternoon.
+
+**And no injury report of any kind would have caught this player**, because he
+is not injured. A practice-squad signing appears on no injury report anywhere.
+
+### What now decides who is on the board
+
+Four sources, in this order. Every slate row carries `weekStatus`,
+`weekStatusNote` and `weekStatusBasis`, and the basis says which one answered.
+
+| Basis | Source | Catches |
+|---|---|---|
+| `injury-report` | This week's designations, kept by the same 11:00Z ESPN pull in a **second table** (`weekly`) beside the season list. It moves no projection and touches no `gamesOut`. | Out, Doubtful, Questionable, and active/PUP — the one "Out" the season list declines by design. |
+| `reserve-list` | The season list read against the week number. `gamesOut` counts from Week 1, so four games out is Weeks 1–4 — the convention `tools/availability.json` states in its own header ("first eligible Week 5" = 4), read rather than re-derived. | IR, PUP, NFI, suspensions, the exempt list. |
+| `roster` | Sleeper's player file (`buildSleeperRoster`), the file `/api/live` and the depth-chart job already read. Status and club, per player. | **The Wease case.** Not on an active roster at all: practice squad, free agent, inactive. |
+| `salary-file` | FanDuel's `Injury Indicator` column, which the parser had been discarding. DraftKings' export carries none, which is why it is last. | Whatever the operator itself marked. |
+
+`available: false` is the verdict. **Out and Doubtful come off the board.
+Questionable stays on it**, printed, because that call belongs to the reader
+and benching every questionable body would empty a slate.
+
+An unavailable player is off the value boards, off the stacks and bring-backs,
+and out of the ownership model — he cannot take ownership share from a man who
+is playing.
+
+### Two things it deliberately does not do
+
+- **A lock overrules it.** `ITDfs.build` keeps a locked player in the pool
+  whatever his status, and the What If panel says so in as many words. The
+  builder declines to make this call on its own; it does not overrule one the
+  reader has already made.
+- **A team change is flagged, not benched.** When the roster file has a player
+  at a club the board does not, he still plays — but the projection beside his
+  name was built for another offense. The row carries `teamChanged` and
+  `rosterTeam`, and the page prints "now LAC" next to him rather than passing a
+  stale line off as a current read.
+
+### What the reader sees
+
+The pool table greys the row and prints the designation in its Status column.
+Above the lineup, a note names who came off and why — *"3 players off the
+board: the injury report rules them out or doubtful for this week…"* — and ends
+with how to put one back. Silence was the old behaviour and it was the worst
+part: a reader expecting a name and not seeing it was owed the reason.
+
+### Fail-soft, everywhere
+
+A missing ESPN pull, a missing or thin Sleeper file, a slate built with no week
+number, an overlay row written before `weekly` existed: each one leaves every
+player available, exactly as before any of this shipped. The weekly table is
+validated separately from the season list and on a bad shape gives up only
+itself. **A feed that is down must never empty a board** — that failure is
+worse than the one being fixed.
+
+Guarded by `tools/test-dfs.mjs` ("who is not playing this week", 30 assertions
+from each source in isolation through to no lineup containing a benched man)
+and `tools/test-worker-availability.mjs` (the weekly table, and that it still
+moves no season line). `docs/dfs-metrics.md` carries the table above.
+
+## 97. September 19: the slate could not tell a quoted prop from a sliced-up game total
+
+The ask: use the week's prop bets to predict players and drive the DFS
+recommendations; fall back to something else where the books have not posted.
+
+**The pipeline was already complete.** The market snapshot job writes
+`odds_snapshots`, `marketHistoryWeek` reads them, `marketPropsFrom` shapes one
+player's markets, `vegasProjection` converts his quoted lines into fantasy
+points, and the week board records the basis on `p.vegas`. The slate was
+already reading that board.
+
+**What was missing was that nothing downstream could tell what it was holding.**
+A quoted player and an unquoted one both arrived as `vegasPoints`. For the
+first that number is his own props — 62.5 receiving yards, 4.5 receptions, a
+devigged 41% anytime-touchdown price — a forecast of *him*, made with money at
+stake. For the second it is the game total and spread split across an offense:
+a forecast of his *game* with his name attached. The optimizer saw one field
+and let a prop-grounded 18.4 and a curve-fitted 18.4 compete for the same
+roster spot on identical terms.
+
+### The evidence now travels with the number
+
+`dfsMarketRead()` puts a `market` block on every slate row: the basis, the
+markets a book actually posted (`priced`, with plain-language labels), the book
+count, the age of the pull, the devigged touchdown price with its books — and
+`shrink`, how far the number is trusted.
+
+**`shrink` is `BLEND_SHRINK`, the site's own ladder, not a copy.** The slate
+discounts a market number by exactly the factors the season blend uses. A
+second table here would drift, and the slate and the board would end up
+disagreeing about the same player on the same afternoon. The test lifts the
+real declaration out of `_worker.js` rather than restating it.
+
+### The fallback is the consensus
+
+`marketPoints = consensus + shrink × (market − consensus)`
+
+A fully quoted player keeps his whole market number. A player priced only off
+his game line keeps 80% of the distance. A fitted team rating keeps 55%. A
+player with no market at all lands exactly on the consensus projection. So the
+degradation is to the experts' number, never to a curve fit wearing a Vegas
+label — which is what the second half of the ask was about.
+
+### The Market read build
+
+A new objective, `mode: 'market'`, maximizes `marketPoints`. The existing
+`vegas` mode is left alone: it maximizes the raw market number, which some
+readers want, and it demonstrably cannot see the difference — the test puts two
+receivers at the same salary with the same 16.0 raw market number, one quoted
+and one not, and `vegas` reads them as identical while `market` takes the
+quoted man.
+
+Being quoted is not a licence to be expensive. A priced $8,600 receiver can
+still lose his slot to value, and should. What it buys is that his number is
+not marked down.
+
+### What the reader sees
+
+- The player pool gains a **Market** column: `PROPS` with the book count,
+  `LINES`, or `FITTED`, with the full sentence on hover.
+- Every recommended player carries a line naming what the books posted on him
+  — "The books posted receiving yards, receptions across 6 books, pulled within
+  the hour. Anytime touchdown 41.2%, devigged from the market." — or saying
+  plainly that nobody priced him and what his number is instead.
+- The lead card says how much of *this roster* the market priced, names the
+  best quoted touchdown price in it, and when none of it was priced says so.
+- The slate dashboard reports coverage as a number, not a boolean: priced how
+  many of how many, by how many books, how fresh, which markets.
+
+### Two things fixed on the way
+
+`playerFit` and `lineupSummary` had been reading `vegasPoints`, `consensusPoints`
+and `teamTotal` off the lineup player object, which never carried any of them —
+so the market clauses in the fit lines and the "strongest market-versus-consensus
+signal" sentence had been dead code. The optimizer now carries those fields
+onto every picked player, and they work.
+
+### The state of the feed
+
+No prop provider key is configured in `wrangler.jsonc` (`PROPLINE_API_KEY`,
+`ODDS_API_KEY` are secrets, and `hasProps` could not be checked from the
+sandbox: the egress policy refuses irontuna.com). So the empty-feed path is
+very likely the live one today, and it is tested as carefully as the loaded
+one: the fixture slate carries no props and proves the consensus fallback, and
+a second fixture with props posted proves the primary path.
+
+Guarded by `tools/test-dfs.mjs` ("the weekly betting market", 38 assertions).
+`docs/dfs-metrics.md` carries the table and the provider chain.
+
+## 98. September 19: "is it working?" was not a question anything could answer
+
+Ken: *"I think we had set it up to get props. Please check to see if it's
+working."*
+
+**It is set up.** `TMS_ENABLED=1`, `TMS_PROVIDER=propline` in `wrangler.jsonc`;
+`tmsPoll` runs on every quarter-hour tick behind an hourly lease; and since
+§72 (`Use PropLine props in player projections`, Sept 15)
+`tmsStoreForProjections` bridges the normalized prop rows into
+`odds_snapshots`, which is what `marketHistoryWeek` reads and what the week
+board turns into `vegas.basis === 'props'`. §80 (Sept 16) is direct evidence
+the collection was working: the complaint there was that the READ side showed
+only a few anytime-TD rows while *"the feeds were collecting the whole
+market."*
+
+**It could not be confirmed from here.** The egress policy refuses
+irontuna.com, by curl and by fetch alike, so production is unobservable from
+this session. That is a session limit, not a finding, and it is why the answer
+below is a diagnostic rather than a verdict.
+
+**But nothing on the site could have answered it either**, which is the real
+defect. `snapshotStatus` — the only prop-ish number on the health board —
+counts the whole `odds_snapshots` table across every week it keeps (200 days).
+A collector that stopped three weeks ago reads as perfectly healthy: thousands
+of rows, dozens of books, plenty of markets. It cannot distinguish the state
+everyone actually cares about.
+
+### `props` on the health payload
+
+`propsHealth(env, season, week)` answers this week only, and separates the four
+states that the row count cannot:
+
+| State | What it means |
+|---|---|
+| `live` | Fresh rows, matched to players on the board. Working; the note says how many players, markets and books, and how old the pull is. |
+| `stale` | Rows exist for the week but the newest is over 12 hours old. The poll has stopped; the board is serving the last lines it got. |
+| `unmatched` | **The silent one.** Rows are arriving and fresh, and *none of their subjects match a board player*. The collector looks perfect, and every projection is quietly falling back to the game line, because the join is by normalized name and one side of it moved. |
+| `empty` | Nothing written for this week. Provider unkeyed, poll failing, or the week just turned. |
+
+The match is computed the way `buildBoards` computes it — normalized name
+against `_oddsProjectionIndex()` — so the health board cannot agree with itself
+while disagreeing with the boards. An ambiguous name (one normalized name at
+two positions) is `null` in that index and is **not** counted as matched,
+because `buildBoards` will not apply a prop to it either. A D1 failure reports
+as a failure and is never flattened into `empty`.
+
+`GET /api/health` → `updates.props`.
+
+### The doc said the opposite
+
+`docs/TUNA-MARKET-SIGNAL.md` opened with "It does not alter projections or
+optimizer rankings without a separate calibrated decision." True when written,
+false since §72 put the projection bridge in, and false twice over since §97
+put the market read on the slate. A setup doc asserting that the thing is not
+wired is a good way to end up unsure whether it is wired. It now carries the
+chain, `odds_snapshots → marketHistoryWeek → vegasProjection → vegas.basis →
+the slate`, and points at `props` on the health payload for checking it.
+
+Guarded by `tools/test-worker-odds.mjs` ("this week's props, end to end"):
+each of the four states against a fake D1, coverage measured against the board
+rather than the store, the ambiguous-name rule, out of season, and a read
+failure.
+
+## 99. September 19: 720 quoted props, and not one of them could project a receiver
+
+Ken, checking the Quoted Props board: *"There are quite a few anytime TD props
+and it says that there are 720 props."*
+
+Props are flowing. The collection is fine. And the number does not mean what it
+looks like it means.
+
+**A market projection needs a CORE market before a price means anything**
+(`VEGAS_MARKETS`), and an anytime-touchdown price is not one, except for a
+running back:
+
+| Position | Core markets | With only an anytime-TD price |
+|---|---|---|
+| WR, TE | `recYd`, `rec` | **no projection** |
+| QB | `passYd`, `passTD` | **no projection** |
+| RB | `rushYd`, `anytimeTD` | partial — the TD price is half his core |
+
+`vegasProjection` returns `unavailable / no_core_market` for the first two, so
+every receiver, tight end and quarterback falls back to the game line, and
+`vegas.basis` never reaches `props`. That is how "we have 720 props" and "no
+player carries a market projection" are both true on the same afternoon. Pinned
+in `tools/test-market.mjs`, "an anytime-touchdown-only feed", against the real
+projection code rather than a restatement of it.
+
+### Three places were hiding it
+
+**1. The Vegas Edge summary printed a total, not a mix.** `propSummary` has
+counted distinct markets since §80 and the page never printed the number:
+"720 quoted markets on N players across B books" reads identically for nine
+markets and for one. It now prints the breakdown — *anytime TD 612 · receiving
+yards 58 · receptions 50* — and, when only one market is posted, says in words
+that player projections are still coming from the game lines and why.
+
+**2. The board threw the diagnosis away.** `buildBoards` kept
+`vegasProjection.reason` and `.priced` only on the SUCCESS branch; an
+unavailable projection was reduced to `{status, label}`. So a man the books had
+priced on his touchdown and a man no book had looked at arrived downstream
+identical. Both now carry `reason`, `priced` and `missing`.
+
+**3. The slate could not tell those two men apart either.** A new state on the
+market read, `shortOfProjection`: quoted, and not on anything a projection can
+be built from. It is counted separately in the coverage
+(`quotedButShort`, `shortMarkets`), and it is the FIRST thing the note says
+when it applies, because it is the confusing one:
+
+> The books have posted on 214 players here, but only anytime TD — and a
+> market projection needs a yardage or reception line before a price means
+> anything. So every number on this slate is still the game line's
+> environment, discounted for it... This is a feed carrying one market, not a
+> feed carrying none.
+
+The player pool shows `TD ONLY` rather than `LINES`, and the player's line
+says what the books posted and what a projection would have needed.
+
+### What this does not do
+
+It does not make the feed carry yardage lines. If the breakdown on Vegas Edge
+comes back overwhelmingly `anytimeTD`, the fix is upstream — `TMS_PROP_MARKETS`
+narrowed, or the PropLine tier not returning the yardage markets for each
+event — and that is a configuration question, not a code one. What changed here
+is that the site now says which of those it is instead of presenting a healthy
+row count over a board that cannot use it.
+
+## 100. September 20: the yardage markets were always being asked for
+
+Ken: *"Let's add the yardage markets to the feed."*
+
+They were never missing from the request. `TMS_PROPLINE_MARKETS` has listed all
+nine scoring markets since the PropLine adapter landed, and the per-event call
+sends every one of them on every game. There was nothing to add. So either the
+provider is not returning them, or something between the response and the store
+was throwing them away — and nothing on the site could say which.
+
+### The asymmetry that hides a line-parsing fault
+
+`tmsNormalize` required an outcome's line to be a number:
+
+```js
+if (o.point != null && (typeof o.point !== 'number' || !Number.isFinite(o.point))) continue;
+if (m.key !== 'h2h' && o.point == null && !/(^|_)anytime_td$/.test(m.key)) continue;
+```
+
+**An anytime-touchdown market has no line and is explicitly exempt.** Every
+yardage and reception market must have one. So a feed sending `"62.5"` instead
+of `62.5` — an ordinary thing for a book API to do — loses every yardage and
+reception row and keeps every touchdown price, and the result is a busy board
+that cannot project a single receiver. That is the exact shape of §99's
+symptom, and it would have looked identical to a provider that only posts
+touchdowns.
+
+`tmsOutcomeLine()` now coerces a numeric line from `point`, `line` or
+`handicap`, whatever type it arrives as, and `tmsOutcomePlayer()` reads the
+player from `description`, `participant`, `player` or `player_name`. Tolerance,
+not invention: a genuinely absent line, an unparseable one (`"n/a"`) and a
+player market with no player are all still dropped.
+
+This is a hardening, not a confirmed diagnosis. The live feed is unreachable
+from here and the provider's real payload has not been seen. What settles it is
+the next item.
+
+### Every drop is counted now
+
+Normalizing rejected rows in five places and every one was a bare `continue`.
+`tmsNormalize` now takes an optional tally and fills it by reason
+(`no_line`, `no_player`, `price`, `no_timestamp`, `alternate_ladder`,
+`market_shape`, `event_shape`) and by market. The poll reports it, with what it
+asked for and what came back, at `health.markets` on `GET /api/tuna-market`:
+
+    markets: { requested: [...], returned: { player_reception_yds: 214, ... },
+               events: 17, drops: { total, byReason, byMarket } }
+
+A clean pull records nothing, so any entry is a signal. "The books only post
+touchdowns" and "we threw the rest away" are different diagnoses with nothing in
+common, and until now there was no way to tell them apart.
+
+### Two real faults found on the way
+
+**The per-event cap was spending itself on the wrong games.** The event window
+is nine days; an NFL week is seven. It routinely holds this Sunday, this Monday
+*and* next Thursday — more than the cap of twenty. The list was sliced with no
+sort, so the twenty games that got a prop call were whatever order the provider
+returned, and the budget could go to games a week out while this Sunday went
+unpriced. `tmsPropLineEvents()` now filters, **sorts soonest-first**, then caps.
+Pulled out as a named function because it is a policy worth testing, and it is
+tested.
+
+**Rush attempts were never requested.** `ODDS_API_MARKET_MAP` maps it to
+`rushAtt` and `VEGAS_MARKETS` lists it among a running back's extras, so
+nothing downstream needed teaching — the request simply never asked. It scores
+nothing, and it is the market the DFS slate's implied-touches number is built
+from; without it that number is a carry count guessed as `rushYd / 4.3`. Now ten
+markets of a cap of twelve.
+
+Guarded by `tools/test-tuna-market.mjs`: a string line survives and is coerced,
+alternate line and player keys are read, an absent or unparseable line is still
+dropped, a touchdown market still needs no line, the drop tally by reason and
+market, a clean pull tallying nothing, the market list keeping its yardage
+markets under the cap, and the soonest games being the ones priced.
+
+## 101. September 20: "How do I check /api/tuna-market?"
+
+A fair question, and the third time in this thread that the answer to "is it
+working" was a URL and a field name. Ken is not going to read JSON, and should
+not have to. The diagnostics from §98 and §100 were real and they were in the
+wrong place.
+
+**The health board now says it in words**, as a tile beside the others:
+
+| Tile reads | State | What it means |
+|---|---|---|
+| **Working** | `live` | The books are pricing this week's players and the projections are reading them. |
+| **Touchdowns only** | `td_only` | Fresh, matched, and carrying no yardage or reception market — so receivers, tight ends and quarterbacks are all still on the game line. The feed is running; it is carrying one market. |
+| **Collection stopped** | `stale` | Props exist for the week, newest is over 12 hours old. |
+| **Reaching nobody** | `unmatched` | Rows arriving and matching no board player. The silent one. |
+| **Nothing this week** | `empty` | Nothing written. |
+| **Out of season** | `no_week` | No regular-season week is current. |
+
+Under it, the market mix in English — *receiving yards 214 · anytime TD 396 ·
+receptions 190* — and the full sentence in the feeds table beside the last
+update time.
+
+`td_only` is a new state, and it is the one §99 was about: a healthy row count
+that cannot project a receiver, because `VEGAS_MARKETS` wants a yardage or
+reception line and an anytime-touchdown price is not one. `propsHealth` now
+reads the market mix out of `odds_snapshots` — the same store the projections
+read, not the provider's own report of itself — and a week with no market in
+`passYd, passTD, rushYd, recYd, rec` is `td_only` however many rows it holds.
+Staleness is checked first: a week that stopped collecting AND carries one
+market reads `stale`, because the fix is the poll, not the provider.
+
+Where to look: **/admin → In-season health → Betting props.**
+
+Guarded by `tools/test-worker-odds.mjs` (the state machine, including one
+yardage market being enough to return to `live`, and stale winning over
+`td_only`) and `tools/test-health.mjs` (the tile exists, renders, has a word
+for every state the payload can emit, and prints market names in English).
+
+## 102. September 20: the touchdown price moved nothing, and the rest was thrown away
+
+Ken: *"This calculation shouldn't just be based on TDs only. It should factor
+other Prop info."*
+
+Right, and worse than that. Two separate places were discarding market
+information, and between them the most widely posted prop in football affected
+no number anywhere on the site.
+
+### 1. The anytime-touchdown price never reached a projection
+
+A board row is a STAT LINE, scored later. The touchdown price is a probability,
+so it lived in its own block (`vp.td`) and the merge that builds the Vegas line
+only ever took the count markets:
+
+```js
+v = { ...weeklyStats(full, pos, playable, env), ...vp.stats };   // and nothing else
+```
+
+`vp.stats` holds the yardage and reception markets. It never holds the anytime
+price, because the price is not a count. So unless a book also hung a rushing-
+or receiving-touchdown COUNT market on the same player — rare — a 41% anytime
+price on a receiver told the board **nothing**. It printed beside the number and
+was absent from it.
+
+`applyMarketTd()` now scales the line's own touchdown components to the market's
+expectation, which keeps the rush/receive split the market does not speak to. A
+baseline of 0.45 receiving and 0.05 rushing, against a market expecting 0.40,
+becomes 0.36 and 0.04. A quarterback's **passing** touchdowns are left alone: an
+anytime price is him crossing the line, never him throwing it, which is also
+what `tdPointsFor` already assumed. A priced touchdown COUNT still wins, because
+a count carries the two-score games a binary cannot.
+
+The implied count is the price itself, matching what `vegasProjection.points`
+already does with it. Both understate a man who can score twice, and they
+understate it identically — the two numbers sit side by side and must not
+disagree about the same market. Correcting that understatement is a change to
+both, on purpose, and not this one.
+
+### 2. A man with no core market had every quoted price discarded
+
+`vegasProjection` returns `no_core_market` when nothing in `VEGAS_MARKETS.core`
+is priced, and `buildBoards` gated the whole merge on `vp.ok`. So a receiver
+with an anytime price and no yardage line fell all the way back to the game
+line, and his touchdown price — real information about a real part of his
+afternoon — went in the bin.
+
+It is true that he cannot be projected **from the market alone**: a number built
+from a touchdown price and nothing else would be three points and a lie. That is
+why the refusal stands. But the refusal now carries the pieces — `stats`, `td`,
+`books`, `ageHours` — for a caller that has a baseline to lay them on, and
+`buildBoards` is that caller. Basis **`gamelines+props`**: the environment as
+the baseline, every quoted market on top of it. `BLEND_SHRINK` rates it 0.85,
+between a plain game line (0.8) and a partial market read (0.9).
+
+`points` is still deliberately absent from that return. There isn't one.
+
+### On the slate
+
+`quoted: true` (the books priced him) and `marketStandalone: false` (not a
+market read on his own). The `td_only` health state and the slate's own note
+both stop saying the prices went nowhere, because they no longer do: they say
+the touchdown side of each line is the market's and the yardage side is still
+the game's, and why.
+
+Guarded by `tools/test-market.mjs` (the scaling, the split, the quarterback
+rule, the zero baseline, that the applied line scores what the points path
+would have added, and that the refusal carries its evidence) and
+`tools/test-boards.mjs` (end to end: a touchdown-only man is `gamelines+props`,
+his touchdown line is the market's, his yardage is untouched, and his number
+moves off the game line's).
+
+## 103. September 20: Play of the Week has recommended Head-to-Head every week since it shipped
+
+Ken: *"Play of the Week should factor in the other props too."*
+
+It should, and while wiring that in the recommendation turned out never to have
+worked at all.
+
+### It compared zero with zero
+
+```js
+var cashProj = lineupStat(C, 'ironTunaPoints');
+```
+
+`ironTunaPoints` is not a field on a lineup player. The builder calls it
+`proj`. So `lineupStat` summed `undefined` across nine slots and returned 0 for
+the cash, tournament and leverage projections alike; `vegas` was 0 for the same
+reason; `edge` was `0 > 0 ? ... : 0`, so 0; and every threshold in the ladder
+needs a positive edge. **Head-to-Head, on every slate the site has ever
+served**, with a meaningless "+0.0%" printed beside it.
+
+The builder has totalled `projPoints`, `floorPoints` and `ceilingPoints`
+correctly on every lineup the whole time. The page was re-summing them by hand,
+with the wrong key, next to the right answer.
+
+Worse: §97 put `vegasPoints` onto lineup players for the fit lines, which made
+`vegas` positive while `tourProj` stayed 0 — so the panel was about to start
+printing **−100.0%**. Caught here, three days before anyone would have seen it.
+
+### And now it factors the props
+
+The gap that justifies a step up the payout curve is now measured against the
+**market read** (`marketPoints` — quoted props where there are any, the game
+line discounted for not being quoted where there are not), and the thresholds
+scale with how much of the roster the books actually priced:
+
+    need = 2 - coverage
+
+A fully quoted roster is taken at face value. One nobody priced needs twice the
+gap. The reason is the same one §102 was about: on an unquoted slate the market
+number is the game total split across an offense, which shares most of its
+inputs with the projection being compared to it. The two agreeing means very
+little and the two disagreeing means less, and moving up a payout curve on that
+is taking real money risk on two models arguing with each other.
+
+A 2.0% edge now recommends a Multiplier when the books are behind it and stays
+at Head-to-Head when they are not. Same slate, same number, different evidence.
+
+The panel says which: how many picks were priced, across how many books, on
+which markets, how many carry a quoted rather than derived touchdown price —
+or, plainly, that no book priced any of them and the bar was doubled for it.
+
+### Where it lives now
+
+`ITDfs.contestPick()` in `dfs-optimizer.js`. It was forty lines of thresholds
+inline in a render function, reachable only by string-matching the page, which
+is how it sat broken for its whole life. It is now a pure function tested
+against real builds: that the totals are the builder's own and not zero, that
+the edge is measured against the market read, that coverage moves the bar and
+not the number, that a market of zero is not an edge of −100%, and that a real
+build off the fixture slate produces a real recommendation.
+
+`lineupStat` and its private variance table are deleted.
+
+
+## 104. September 20: the coach had nothing to say about the decision that produces the lineup
+
+The DFS page opens with three selects — Game Style, Games, Payout Structure —
+and solves nothing until all three are answered. The Value Coach sat behind
+them: `coachContext()` returned `{blocked: 'Set Game Style, Games and Payout
+Structure above…'}`, so the panel told a reader to go and fill in a form at
+exactly the moment they had a question about it. That is backwards. The payout
+structure *is* the strategy decision: it picks the objective the optimizer
+solves for (cash → floor, single-entry → projection plus correlation,
+multi-entry → ceiling discounted by modeled ownership), and the game pool
+decides who is eligible for it. A reader who does not know whether they want a
+Double Up or a single-entry tournament does not need a roster. They need the
+coach.
+
+So the coach answers there too. The context now carries a `mode`:
+
+- **`setup`** — the reader is at the selects, or has chosen a Game Style Iron
+  Tuna does not solve a roster for. The payload is the page's own catalog:
+  every option those selects offer with the note printed under it, what Iron
+  Tuna would solve for each payout (`SHAPES[...].head`), the games on the
+  loaded slate with their posted totals and implied team totals, what is
+  already chosen, what is still missing, and `playOfTheWeek`.
+- **`lineup`** — unchanged, plus the other payout structures and
+  `playOfTheWeek`, because "should I be in a double up instead" is a question a
+  reader asks with the roster on screen.
+
+`playOfTheWeek` is §103's `ITDfs.contestPick()` output, captured in
+`renderPlayOfWeek()`: the recommended payout, the edge against the market read,
+floor retention, ceiling multiple, and the evidence line as plain text, so the
+coach can say what that edge is measured against instead of quoting a number
+with no provenance.
+
+A finished setup that still puts no roster on the page — an infeasible solve,
+or a game pool with no priced players — is setup mode too, carrying the reason
+as `whyNoRosterYet` and the fine-tune settings it ran under (`build`: the cap,
+the locks, the exclusions, the forced player, the per-team limit) so the coach
+can name the blocker. That used to be a refusal pointing at the fine-tune
+panel, which left the reader holding the one question the coach is best placed
+to answer: which constraint to drop. The panel opens on constraint chips there,
+not contest chips. Off DraftKings there is no setup plate to fall back to, so
+the reason still stands alone as `{blocked}`.
+
+`{blocked}` is now only for the states with no setup behind them: the pick'em
+board, no priced slate, and those same dead ends on FanDuel.
+
+**The boundary holds one step earlier.** Asked "which contest should I enter,"
+a model will happily invent one, or an entry fee, or a field size, none of
+which this page carries and all of which live in the DraftKings lobby. The
+prompt recommends from the catalog and nothing else, and where it names which
+structure this slate rewards it quotes `playOfTheWeek` — the page's own
+comparison of a floor build, a ceiling build and a leverage build, kept from
+`renderPlayOfWeek()` rather than recomputed. Picking a structure is strategy
+and is in scope; naming a stake is not, and the prompt says so in as many
+words.
+
+| Where | What |
+|---|---|
+| `dfs.html` | `setupChoices(all)`, `setupContext(noLineup)` and `coachBuild(byKey)` shared by both; `mode` on both contexts; `playWeek` kept from `renderPlayOfWeek()`; `coachSync()` from both halves of `updateSetupState()`, so a choice that rebuilds nothing still re-points the panel; `.df-setup-foot` / `.df-setup-coach` and the **Not sure? Ask the Value Coach** button on the setup plate, wired to `openCoach`. |
+| `dfs-coach.js` | the two-mode prompt, the structure-choosing clause and the blocked-solve clause; `SETUP_STARTERS`, `STUCK_STARTERS` and `startersFor()`; `grounded()` replacing the roster-only gate in `refresh()` and `ask()`; the badge, lede and placeholder following the mode; a `fit()` trim for the game list that never touches the menu of options itself. |
+| `docs/ai-calculation-boundary.md` | the catalog rule, and the CI line that guards it. |
+| `tools/test-dfs-coach.mjs` | 101 now: the setup and stuck starters and the mode-aware chrome, the prompt's setup clauses, the two contexts, the dead ends that fall back and the ones that cannot, and `setupChoices()` executed against the page's own `GAME_STYLES`/`PAYOUTS`/`SHAPES` so the menu cannot drift from the selects. |
+
+`node tools/test-dfs-coach.mjs` (101), `node tools/test-dfs.mjs` (111),
+`test-content`, `test-chrome`, `test-seo`, `test-analytics`, `test-css-tokens`
+and `test-ai-boundary` pass. Driven in Chromium against a stubbed slate and a
+stubbed `/api/coach`: the setup button opens the dock with the badge on **live
+on your setup** and the four setup chips live with nothing chosen; the lede
+names the next choice as the reader makes each one; a Showdown Game Style
+stays in setup mode with `whyNoRosterYet`; completing a Classic setup flips the
+badge back to the lineup and the payload to the solved roster; and dropping the
+cap to $11,000 on that complete setup puts the panel back into setup mode with
+the constraint chips, `readerIsChoosing: 'which constraint to loosen so a roster
+fits'` and `build.cap: 11000` in the payload. The captured payloads are 5.4KB in
+setup mode, 6.3KB with the constraints, and 19.7KB with a roster, all inside the
+28,000-character budget. No page errors at 1280 or 390px.
+## 105. September 20: the coach could not tell a quoted number from a fitted one
+
+§96 gave every slate row a weekly availability verdict and §97 gave it a market
+block, and both reached the page: the pool has a Market column, every
+recommended player carries a sentence naming what the books posted on him, and
+a flagged man is tagged in his row. Neither reached the **coach**. Its context
+carried `vegas`, `consensus` and `marketDelta` and stopped there, so it could
+quote a curve-fitted 16.0 with exactly the confidence of a quoted 16.0, and
+recommend a Questionable receiver without mentioning that he is Questionable.
+The page and the panel under it were describing the same player differently.
+
+**Both now ride on every row, read through the page's own helpers.**
+`coachMarket()` takes its label from `marketChipFor()` and the recommended
+roster's sentence from `marketPhrase()`, the same two functions that write the
+Market column and its hover text, so the coach cannot invent a second
+vocabulary and drift from what the reader is looking at.
+
+| Field | What it carries |
+|---|---|
+| `market.read` | PROPS, LINES, FITTED or TD ONLY, the chip the pool prints. |
+| `market.trust` | The `BLEND_SHRINK` factor: how much of the distance from consensus to market the page keeps. |
+| `market.points` | The shrunk number the market build actually maximizes. |
+| `market.posted` / `books` / `pulledHoursAgo` | Which markets a book put up, how many books, how old the pull is. |
+| `market.tdFromTheBooks` | The touchdown probability is a devigged price, not a Poisson tail. |
+| `marketSays` | The page's own full sentence, on the recommended roster only. |
+| `status.designation` / `note` / `from` | The week's tag, its wording, and which of the four sources answered. |
+| `status.playing: false` | Off the board. He is in a lineup only because the reader locked him. |
+| `slate.marketCoverage` | Priced how many of how many, by how many books, how fresh. |
+
+**The glossary says what to do with them**, which is the half that matters. The
+market read is CONFIDENCE, NOT QUALITY: a quoted 16.0 and a fitted 16.0 are not
+the same number, and an expensive quoted player is priced rather than
+automatically correct. On availability: a player with no `status` is one
+nothing flagged, Questionable is deliberately still on the board because that
+call is the reader's, `playing: false` means the reader locked him in himself,
+and the coach must never call a flagged man healthy or invent a designation the
+data does not carry.
+
+**Size.** The prompt is 8,226 characters against the proxy's 40,000, leaving
+the 28,000 JSON budget intact. The full market block rides on the roster and
+the swaps; a bench row takes `coachRow(p, null, true)` and carries only
+`read`, `trust` and `points`, which is what a swap decision needs.
+
+| Where | What |
+|---|---|
+| `dfs.html` | `coachMarket(p, brief)`, `coachStatus(p)`, both on `coachRow`; `marketSays` on the lead lineup; `slate.marketCoverage` off `view.props`. |
+| `dfs-coach.js` | two glossary paragraphs, WHETHER THE BOOKS PRICED HIM and WHETHER HE IS PLAYING. |
+| `tools/test-dfs-coach.mjs` | 119 now: the glossary clauses, a quoted row arriving quoted and a fitted row not dressed as one, TD-only saying so, a flagged row carrying its source, an unflagged row carrying no status at all rather than a healthy claim, the bench's brief block, and the market label coming from the page's helper rather than a second table. |
+
+Driven in Chromium against a slate carrying both shapes: the payload shows
+`PROPS trust 1` with its posted markets and book count beside `FITTED trust
+0.55` with neither, the page's own sentence on the recommended roster and not
+on the bench, a Questionable receiver with his note and source, and eight of
+nine roster rows carrying no status field at all.
+
+## 106. September 20: the coach answered every question into a box zero pixels tall
+
+Reported from the page: type a question into the Value Coach, press Enter, and
+the panel "just resets as if nothing happened." Nothing was wrong with the
+send. The question went out, the proxy answered, both bubbles were written into
+the log — and the reader saw an empty panel, because the log itself had been
+squeezed to **zero height**.
+
+`.df-coach-main` is a flex column that scrolls, and every child of it except
+the conversation is `flex:0 0 auto`: the lede, the four openers, the input row,
+the compliance note. The conversation (`.df-coach-body`, `flex:1 1 auto;
+min-height:0`) was therefore the only child that could absorb an overflow, so
+on a short window it absorbed all of it. The dock is `min(76vh,700px)`; at a
+650-pixel window that is 494 pixels, and the fixed parts alone take more than
+that. Measured in Chromium against the real stylesheet:
+
+| Window height | Panel | Conversation after one question |
+|---|---|---|
+| 1080 / 900 / 800 | 504 | 96px, both bubbles on screen |
+| 720 | 447 | 39px, one bubble clipped |
+| 650 | 394 | **0px** — `scrollHeight` 96, rendered height nothing |
+
+So the bug was only ever visible on a laptop-sized window, which is why it read
+as an intermittent send failure rather than as layout.
+
+**The panel now has two shapes and says which one it is in.** `render()`
+toggles `df-coach-talking` on the host whenever there is a conversation. Empty,
+nothing changes: the lede and the four openers spread out as an invitation.
+Talking, the page gives that room to the answer — the lede is dropped and the
+openers fold into one horizontally scrolling row, so they are still there to
+click. Three guards, because one was what failed:
+
+| Where | What |
+|---|---|
+| `dfs-coach.js` | `host.classList.toggle('df-coach-talking', msgs.length > 0)` in `render()`; the finished render also scrolls `.df-coach-main`, not only the log, so a new turn cannot land under the input. |
+| `dfs.html` | `.df-coach-body:not(:empty){min-height:132px}` — a floor nothing can squeeze below — plus the talking rules for the lede and the openers. |
+| `tools/test-dfs-coach.mjs` | 123 now: the class, the two scrolls, the floor, and the room. |
+
+Driven in Chromium at 1280×420, 1280×650, 390×600, 390×740 and 1440×1080, five
+turns deep on both the harness and `/dfs` itself: the newest answer is inside
+the visible log and the input is on screen in every one, where at 650 the same
+question previously rendered into nothing.
+
+---
+
+## 107. September 20: /dfs solved one contest out of thirteen
+
+The Game Style select has offered the whole DraftKings menu since it shipped —
+Classic, Showdown Captain Mode, Tiers, Pick6, Snake, the two Madden formats and
+the rest. Choosing any of them but Classic got this:
+
+> **Showdown Captain Mode selected.** The Classic lineup solver is hidden
+> because this DraftKings format uses different roster or scoring rules.
+
+That was honest and it was also the whole product missing. A reader who plays
+the Sunday-night Showdown had a thirteen-item menu and one answer in it.
+
+**The roster is now a property of the format, not a constant.** `FORMATS` in
+`dfs-optimizer.js` is the table of what each contest actually builds, and
+`build()` solves whichever of them it is handed:
+
+| Family | Roster | Cap |
+|---|---|---|
+| Classic (incl. Madden Classic) | the nine slots, one FLEX | the site's |
+| Showdown / In-Game / Madden Showdown | 1 Captain + 5 FLEX, any position, both teams | $50,000 |
+| FanDuel Single Game | 1 MVP + 5 FLEX, same shape | $60,000 |
+| Tiers | one player out of each posted tier | none |
+| Snake / Flash Draft / Snake Showdown | a target roster and the order to take it in | none |
+| Pick6 / Single Stat | not a roster at all — `pickBoard()` | none |
+| Best Ball | a draft question, and it says so | — |
+
+Four things the solver had to learn:
+
+- **Multiplier seats.** A Captain scores 1.5x **and costs 1.5x**. Both numbers,
+  or the roster is a fiction: a Captain carried at his FLEX price is several
+  thousand dollars of cap nobody gave you. Every per-seat figure the page prints
+  — salary, projection, floor, ceiling, the operator's average and the market
+  read — is scaled by the seat; ownership, touchdown probability and the raw
+  Vegas and consensus lines are the player's and are left alone.
+- **Who wears it.** Points and salary scale by the same 1.5, so value per dollar
+  is *identical* for all six men and cannot pick the Captain; the answer only
+  shows up in the total. The improvement loop gained a seat-exchange move that
+  reads it. On the fixture game it finds the exact optimum.
+- **A lineup key that can tell two entries apart.** The same six men with a
+  different Captain are two different entries. The de-duplicator now includes
+  the multiplier seat in the key; classic keys are unchanged.
+- **No cap at all.** `cap: 0` means uncapped, `remaining` comes back null rather
+  than zero, and the greedy fill stops dividing by a salary the contest never
+  charges — an uncapped contest is won by taking the most points, and ranking
+  the board by price there would be sorting on nothing.
+
+**The file is the authority on what it priced.** `/api/dfs/slate` used to refuse
+a single-game export with a 400; it reads it now. `dfsCollapseSingleGame()`
+folds the two rows DraftKings writes for one man into one, keeping the FLEX
+price as the salary every board compares against and the operator's own Captain
+price in `salaryBySlot`, so the builder charges what the lobby charges rather
+than 1.5x arrived at here. FanDuel writes one row with the seat in its
+roster-position list, and that row is left at the price the file gave it. The
+admin importer still refuses one, because `dfs_salaries` is the main slate every
+reader is served.
+
+**Nothing is invented.** A Showdown style over a main-slate file does not build
+a roster off main-slate salaries — it names the file to upload. A Tiers contest
+on a slate carrying no tiers does not band players by salary — it names the file
+to upload. The tiers come off FanDuel's `Tier` column or DraftKings' own
+`TIER n` roster position and nowhere else. Every refusal left on the page is a
+missing file or a missing column, and each one says what to do about it.
+
+One bug found on the way: the page looked for the quarterback by **slot**, and a
+Showdown has no QB slot. Every sentence built on it ("there is no same-team
+QB/pass-catcher stack in this build") was written about a quarterback the page
+had failed to find, with one sitting in the Captain seat. `lineupQb()` finds him
+by position.
+
+`tools/test-dfs.mjs` is 297 now: the collapse, both roster tables held in step
+against the worker's, the Captain's two multipliers, the both-teams rule, the
+exact optimum on a six-seat roster, one-per-tier, the uncapped builds and the
+pick board. Driven in Chromium across Classic, Showdown over the wrong file,
+Showdown over the right one, Tiers with no tiers, a snake draft, Pick6 and
+FanDuel single game: every board renders what it claims and no page throws.
+
+## 108. September 2: the deployed worker is a build behind, and three runs died at `start`
 
 The 09-02 audit found two live problems and cleared everything else. Both are
 Ken's to act on; neither is fixable from this session.
 
-### 91a. Production is serving the pre-08-31 valuation
+### 108a. Production is serving the pre-08-31 valuation
 
 The bundle at `/tmp/depboard/_worker.js`, pulled from Cloudflare on 09-02
 11:25Z, is **741,022 bytes** against **742,718** on 09-01, and it differs from
@@ -11064,7 +12353,7 @@ The harness now takes an override so both sides can be built and compared:
 
 Run it against the deployed bundle before trusting any check of a live story.
 
-### 91b. Nothing has published in 22 hours
+### 108b. Nothing has published in 22 hours
 
 `lead_story_run` rows 29, 30 and 31 — 09-01 18:58Z, 09-02 00:59Z, 09-02
 06:59Z — are all `stage='start'`, `desk` NULL, `story_id` NULL. In all three,
@@ -11088,7 +12377,7 @@ Because `lead_story_run` holds one row per run updated in place, a stall is
 the *only* state in which the intermediate stages are observable at all
 (§39). Three in a row is the first time that has been true.
 
-### 91c. What the audit cleared
+### 108c. What the audit cleared
 
 - **Row 70 is live and correct.** "Cap James Cook at $28, not $35; bid Baker
   Mayfield up to $5", vegas desk, created 09-01 13:19. Checked against the
@@ -11113,7 +12402,7 @@ the *only* state in which the intermediate stages are observable at all
   `category='analyst'` rows (21, 22, 27, 28, 35, 42, 50, 55, 60) are
   `published=0`; none has ever been served. No published row is unverified.
 
-### 91d. The harness lifts functions now, not just constants
+### 108d. The harness lifts functions now, not just constants
 
 §45 fixed `tools/live-board.mjs` by copying the worker's new `_colPrice` and
 normalization into it. That was the same mistake one level up, and it broke
@@ -11135,7 +12424,7 @@ yields **$1 in the repo build and $2 in the deployed build** for Kolar,
 Njoku and Gadsden. That difference is 48a, and before this rewrite the
 harness could not have shown it.
 
-### 91e. Still open
+### 108e. Still open
 
 §44's three archive options remain unanswered and no archive figure was
 hand-corrected today. Do not correct them again by hand; the recommended
@@ -11143,13 +12432,13 @@ option (2) — re-anchor archived prices from the live board via `it-league.js`
 at render time — would have absorbed both the 08-31 valuation pass and this
 deployment gap with zero edits.
 
-## 92. September 3: a wrong price got published, and the checker that would have caught it was off
+## 109. September 3: a wrong price got published, and the checker that would have caught it was off
 
-The 09-03 audit cleared §91a and §91b and then found the thing both were
+The 09-03 audit cleared §108a and §108b and then found the thing both were
 hiding: **a published lead quoted a price that was never on the board.** Not
 stale — wrong at publication.
 
-### 92a. Row 73 had Tony Pollard at RB28 and $5. The sheet said RB29 and $3.
+### 109a. Row 73 had Tony Pollard at RB28 and $5. The sheet said RB29 and $3.
 
 The live lead was "Bid Tyjae Spears to $5, not $2; cap Tony Pollard at $3"
 (preseason desk, created 09-03 07:16Z). Its table, headed "Iron Tuna sheet,
@@ -11197,7 +12486,7 @@ $3" to "the sheet already has Pollard at $3", and a reader-facing
 paragraph naming the error and its cause. `verified` and `published` were not
 touched, so no audit row was written by the fix.
 
-### 92b. Why nothing caught it
+### 109b. Why nothing caught it
 
 The run's own `method` says both halves of the failure out loud:
 
@@ -11221,7 +12510,7 @@ only asks the committed and blended boards to **disagree** about Chuba
 Hubbard. Disagreement proves the blend ran. It proves nothing about whether
 either board is right.
 
-### 92c. The harness broke again, and again the suite was green
+### 109c. The harness broke again, and again the suite was green
 
 `_worker.js` changed twice today in ways that go straight through the board:
 
@@ -11266,7 +12555,7 @@ Two changes close it:
    exits 1, and a one-line edit hard-coding `MIN_BID` fails the mutation
    check specifically.
 
-### 92d. §91a and §91b both cleared
+### 109d. §108a and §108b both cleared
 
 - **Deployment caught up.** The bundle is 963,377 bytes (741,022 yesterday)
   and carries `COLUMN_NORM`, `_WIRE_CACHE`, the flat `COLUMN_MIN_BID` return
@@ -11279,7 +12568,7 @@ Two changes close it:
   followed. Roughly 24 hours, self-resolved, cause still unexplained; the
   session transcripts are the only place it is visible.
 
-### 92e. Also clean
+### 109e. Also clean
 
 CI 47/47 after the merge. Tamper predicates clean: no `verified` 0→1 flip
 beyond the 08-24 baseline row, no `analyst` row published, no published row
@@ -11287,22 +12576,22 @@ unverified, exactly one published row. The Routine is enabled on `58 */6 * * *`
 and its prompt is still byte-identical to `tools/lead-story-routine-prompt.md`
 below the header marker (40,786 chars, sha256 `af5384664474`).
 
-### 92f. What this says about the open archive question
+### 109f. What this says about the open archive question
 
 §44 asked whether archived prices should be re-anchored from the live board at
 render time. Today is an argument that the same idea belongs *upstream*, in
 the Routine: a story should not be allowed to print a dollar figure it
 computed itself. It should print the number the sheet is serving, looked up by
 player, and a run that cannot look one up should say so rather than derive it.
-Every failure in §92a is a derivation error that a lookup could not have made.
+Every failure in §109a is a derivation error that a lookup could not have made.
 
-## 93. September 4: the same failure again, one board over
+## 110. September 4: the same failure again, one board over
 
 Second consecutive day a published lead quoted a price the reader's sheet
-contradicts, from the same root cause and a different surface. §92 was a
+contradicts, from the same root cause and a different surface. §109 was a
 neighbouring rank slot's price; today it is the neighbouring *board*.
 
-### 93a. Row 77 printed Cam Skattebo's committed price in the served column
+### 110a. Row 77 printed Cam Skattebo's committed price in the served column
 
 The live lead was "Bid Jaxson Dart to $27, not $13; cap Cam Skattebo at $12"
 (play-caller desk, 09-04 07:15Z). Its table is headed **"Iron Tuna board,
@@ -11333,7 +12622,7 @@ against a board that says $13. Corrected — table row now
 The `$12` recommendation itself stands, and "backs ranked 20 to 22 cost $12"
 was checked and is exactly right. `verified` and `published` untouched.
 
-### 93b. The run's method got better and still could not catch it
+### 110b. The run's method got better and still could not catch it
 
 Yesterday's run rebuilt the pipeline by hand. Today's did the right thing:
 
@@ -11360,9 +12649,9 @@ So the defect is not arithmetic and no longer even reconstruction. It is
 **attribution**: two boards in hand, and no check that ties each printed
 figure to the right one.
 
-### 93c. What would actually close it
+### 110c. What would actually close it
 
-§92f asked for lookup instead of derivation. Today sharpens it: the run
+§109f asked for lookup instead of derivation. Today sharpens it: the run
 already derives correctly. What it lacks is a check that *distinguishes the
 two boards*. `it-league.js` (`DEFAULT_BOARD_RAW`) is generated from the worker
 by a different tool and carries the **committed** board — so comparing every
@@ -11384,7 +12673,7 @@ Ken's call:
 > the wrong board: fix it or do not print it. If the two boards agree for that
 > player, say so explicitly rather than leaving the rank-move cell blank.
 
-### 93d. Everything else clean
+### 110d. Everything else clean
 
 - CI **51/51** after merging 18 commits from main; `tools/test-live-board.mjs`
   passes all 13 checks.
@@ -11404,14 +12693,14 @@ Ken's call:
   `tools/lead-story-routine-prompt.md` below its marker (40,786 chars, sha256
   `af5384664474`).
 
-## 94. September 4: the attribution check is live
+## 111. September 4: the attribution check is live
 
-Ken approved §93c. The BOARD ATTRIBUTION CHECK is in the Routine prompt as of
+Ken approved §110c. The BOARD ATTRIBUTION CHECK is in the Routine prompt as of
 2026-09-04, and the repo copy and the live prompt were verified byte-identical
 afterwards: **44,690 chars, sha256 `53007f8d8779`** (was 40,786 /
 `af5384664474`).
 
-### 94a. It had to reconcile a standing rule, not just append to one
+### 111a. It had to reconcile a standing rule, not just append to one
 
 The prompt already said, in two places, **never validate against
 `DEFAULT_BOARD_RAW`** — and that rule is correct and hard-won. A run on
@@ -11421,7 +12710,7 @@ figures the served board contradicts. `DEFAULT_BOARD_RAW` is the committed
 board, so it agrees with an unblended board perfectly; a match there cannot
 confirm anything.
 
-Appending §93c unchanged would have left the prompt holding two contradictory
+Appending §110c unchanged would have left the prompt holding two contradictory
 instructions, and the run would have followed whichever it read last —
 plausibly straight back into the August failure. So the ban stays, sharpened
 to **"a match there is never a pass"**, and the new use is stated as its
@@ -11435,7 +12724,7 @@ inverse in the paragraph immediately after:
 Both statements now sit adjacent, and the file header carries a note to keep
 them together if either is ever edited again.
 
-### 94b. What the check actually asks for
+### 111b. What the check actually asks for
 
 Five steps, placed right after the existing all-prices check: look every
 printed price and rank up in **both** boards and write down both; say in the
@@ -11454,12 +12743,12 @@ committed price. Zero-point players are dropped, so absence is not a signal.
 
 **Verified before shipping**, against the harness's own committed board:
 **340/340, zero mismatches**, and it returns Skattebo RB18 $15, Pollard RB29
-$3, Dart QB7 $13, Nabers WR13 $23 — so the check fires exactly on §93a
-(Skattebo's served cell matches the committed block, the alarm) and §92a is
+$3, Dart QB7 $13, Nabers WR13 $23 — so the check fires exactly on §110a
+(Skattebo's served cell matches the committed block, the alarm) and §109a is
 caught by steps 1 and 5 instead (Pollard's printed $5/RB28 matches neither
 board, and it came from reading a slot rather than a player).
 
-### 94c. Why this one is different from the rules that came before it
+### 111c. Why this one is different from the rules that came before it
 
 Almost every accuracy rule in that prompt asks the run to be more careful.
 This one gives it a comparison it cannot fake: `it-league.js` is generated
@@ -11472,14 +12761,14 @@ Next audit should confirm the prompt hash is `53007f8d8779` and read the
 method line of the first story written under it to see whether the check ran
 and what it returned.
 
-## 95. September 5: the pricing model changed, and the check could not see it
+## 112. September 5: the pricing model changed, and the check could not see it
 
-The BOARD ATTRIBUTION CHECK from §94 **ran on the live lead, reported a pass,
+The BOARD ATTRIBUTION CHECK from §111 **ran on the live lead, reported a pass,
 and the story was still wrong.** Not because the run skipped a step — it ran
 the check thoroughly and wrote it up — but because the board's pricing changed
 on 2026-09-04 and the check tests a model of the board that no longer holds.
 
-### 95a. What changed in the board
+### 112a. What changed in the board
 
 Commit `5eb7071` ("Price the board as the two odds worlds interpolated at the
 slider"). A served price is **no longer the blended rank's own curve slot**.
@@ -11499,7 +12788,7 @@ mid-slider price sit **below both of its extremes**, which a reader reported.
 The consequence for a story is that a served price can now differ from **both**
 of a player's own world prices. It is no longer "one of two boards".
 
-### 95b. Row 81: the recommendation read backwards
+### 112b. Row 81: the recommendation read backwards
 
 The live lead was "Bid Travis Etienne to $21, not $17: the next back down is 15
 points worse" (market desk, 09-05 07:12Z).
@@ -11535,7 +12824,7 @@ table's two cells and its date; three point totals refreshed to the September 5
 board. A reader-facing correction and a `method` CORRECTION were added.
 `verified` and `published` untouched.
 
-### 95c. Why the check passed it
+### 112c. Why the check passed it
 
 From the row's own method:
 
@@ -11544,7 +12833,7 @@ From the row's own method:
 > blended points differ from the committed points, so the odds do move the
 > player; they do not move him across a step in the price curve."
 
-That is the alarm firing and being reasoned away — using the escape clause §94
+That is the alarm firing and being reasoned away — using the escape clause §111
 put in the prompt for exactly the benign case:
 
 > "(A player the odds do not move will legitimately match — confirm that from
@@ -11569,7 +12858,7 @@ reproduce this exact number from the two world RANKS?"**:
 > projections-only or odds-only price is the most likely way to get this wrong,
 > because the envelope routinely lifts a player above both.
 
-### 95d. My own harness was silently wrong for three days
+### 112d. My own harness was silently wrong for three days
 
 The board a reader sees is what everything here is checked against, so this
 belongs in the record. `tools/live-board.mjs` lifts declarations out of the
@@ -11612,7 +12901,7 @@ The harness also now exposes `r0`, `r1` and `lerp` per player — the two world
 ranks and the pre-envelope interpolation — because under the new pricing a
 checker cannot explain a price without them.
 
-### 95e. The rest of the audit
+### 112e. The rest of the audit
 
 - CI **53/53** after merging 12 commits from main.
 - **Board pipeline functions unchanged** since 09-04 main (`_colScore`,
@@ -11633,14 +12922,14 @@ checker cannot explain a price without them.
   naming the check. So it is being run — it is the rule that is now wrong, not
   the compliance.
 
-## 96. September 6: I was wrong three times, and the stories were right
+## 113. September 6: I was wrong three times, and the stories were right
 
 The 09-06 audit found no defect in the column. It found one in me. **All three
 "corrections" made on 09-03, 09-04 and 09-05 were wrong**, the published stories
 were right in every particular, and all three have been restored to what they
 originally said.
 
-### 96a. The defect: the harness never scaled the overlay for availability
+### 113a. The defect: the harness never scaled the overlay for availability
 
 The worker does not hand `blendProjections` the raw odds payload.
 `oddsCacheRead` runs **`applyAvailability(overlay)`** over it first, scaling a
@@ -11658,7 +12947,7 @@ blend of a pro-rated line and a full-season one over-counts.
 That is why my boards kept disagreeing with the column by a rank here and a
 dollar there, always in the served column and never in the committed one.
 
-### 96b. What each story actually said, checked with the fixed harness
+### 113b. What each story actually said, checked with the fixed harness
 
 | Row | Story printed | True served board | My "correction" |
 |---|---|---|---|
@@ -11686,7 +12975,7 @@ removed, as has each `CORRECTION` paragraph in `method`. Row 73's
 `verified` and `published` were never touched by any of it, and all three rows
 were already retired from the front page by later runs before today.
 
-### 96c. What I should have done differently
+### 113c. What I should have done differently
 
 Three things, in order of how much they would have helped:
 
@@ -11707,7 +12996,7 @@ Three things, in order of how much they would have helped:
    bar for editing a story should be higher than the bar for reporting a
    discrepancy, and it was lower.
 
-### 96d. The test that would have caught it
+### 113d. The test that would have caught it
 
 `tools/test-live-board.mjs` now triples every market line in a synthetic
 overlay and requires that a player on the availability table climbs **less**
@@ -11721,7 +13010,7 @@ can tell a pro-rated player from a healthy one, and the lift's smoke now drives
 `applyAvailability` through a proxy overlay — an empty object never reaches
 `_availFactor`, so the symbol was not pulled in and the first real call threw.
 
-### 96e. The live lead is correct
+### 113e. The live lead is correct
 
 Row 84, "Bid Jadarian Price to $14 and cap Carnell Tate at $8; the board says
 $11 for both" (preseason desk, 09-06 07:12Z). Every figure verifies exactly on
@@ -11735,17 +13024,17 @@ the September 5 board it names:
 
 Its table now carries **both** boards as separate columns, and its `method`
 records looking each player up "in both boards by name and never by ladder
-slot". §94's attribution check is doing what it was written to do. The run also
+slot". §111's attribution check is doing what it was written to do. The run also
 reports its own cross-check against `DEFAULT_BOARD_RAW`: 339 of 340 matching,
 the exception being Garrett Wilson at WR12 where the static block says $27 and
 the live build $28 — nobody named in the story depends on it, and it is worth
 a look on a future run.
 
-### 96f. The rest
+### 113f. The rest
 
 - CI **56/56** after merging 9 commits.
 - Board pipeline unchanged, **and `boardPayload` itself hashes identically** to
-  09-05 main — the §95e check, which exists because the 09-04 pricing change
+  09-05 main — the §112e check, which exists because the 09-04 pricing change
   lived inside that function and a function-list diff missed it.
 - Repo vs deployed: **1380 player-rows across four boards, 0 differences.**
 - One stalled run: id 44, 09-05 12:58Z, `stage='start'` with
@@ -11754,17 +13043,17 @@ a look on a future run.
 - Tamper predicates clean; exactly one published row.
 - Routine enabled, `58 */6 * * *`, prompt 44,690 chars / `53007f8d8779`,
   byte-identical to the repo copy.
-- §95c's proposed replacement for the attribution check is **withdrawn**. It
+- §112c's proposed replacement for the attribution check is **withdrawn**. It
   was written to fix a failure that did not happen. The check as it stands
   produced exactly the right behaviour in row 84.
 
-## 97. September 7: a points tie makes the two boards disagree by a dollar
+## 114. September 7: a points tie makes the two boards disagree by a dollar
 
 Quiet audit. The live lead verifies, the harness held up under the new
-discipline from §96, and the loose end left over from row 84's own method
+discipline from §113, and the loose end left over from row 84's own method
 turned out to be a real defect in the site's board code.
 
-### 97a. Garrett Wilson: $28 on the served board, $27 on the fallback
+### 114a. Garrett Wilson: $28 on the served board, $27 on the fallback
 
 Row 84's run reported, against itself, that its build priced Garrett Wilson at
 WR12 for **$28** while `DEFAULT_BOARD_RAW` said **$27**, and noted nothing in
@@ -11811,7 +13100,7 @@ the right repair is a judgement call between two defensible options:
 Option 1 keeps the printed points and the printed rank consistent with each
 other, which is what a reader checks. Ken's call.
 
-### 97b. The live lead verifies
+### 114b. The live lead verifies
 
 Row 88, "Bid Pat Freiermuth to $4, not $1: the Steelers' new coordinator is a
 tight ends coach" (playcaller desk, 09-07 07:18Z), against the **September 7**
@@ -11825,13 +13114,13 @@ expected and present:
 | Rico Dowdle | $3, RB30; either way, worth $0; committed 177.9 | RB30 $3 both ways, committed **177.9** | ✓ |
 | DK Metcalf | $7, WR31; either way, worth $2 | WR31 ✓, but **$5 today, worth $0** | see below |
 
-The story also does, unprompted, the thing §94's check was written to make
+The story also does, unprompted, the thing §111's check was written to make
 runs do — it anticipates the alarm and explains it in the copy: *"Freiermuth
 and Dowdle carry the same price and the same rank whether or not the sportsbook
 odds are blended in. That is real, not a copying error"*, and then gives both
 boards' point totals for each. Those totals are exact.
 
-### 97c. Metcalf, and why I cannot settle it
+### 114c. Metcalf, and why I cannot settle it
 
 $7 with "worth $2" requires the envelope to have lifted him $2 above his own
 line on the September 6 board. Today his own line is $5 and nothing below him
@@ -11850,10 +13139,10 @@ that refreshes id 1. Without it, no figure in a story that names yesterday's
 board can ever be confirmed or refuted, which is exactly the class of claim
 this whole effort exists to check.
 
-Per §96c I have not touched row 88. The rank matches, the three other rows are
+Per §113c I have not touched row 88. The rank matches, the three other rows are
 exact, and the one difference has an ordinary explanation.
 
-### 97d. The rest
+### 114d. The rest
 
 - CI **60/60** after merging 22 commits (four new test files came with them).
 - Board pipeline unchanged, **and `boardPayload` hashes identically** to 09-06.
@@ -11865,14 +13154,14 @@ exact, and the one difference has an ordinary explanation.
 - Routine enabled, `58 */6 * * *`, prompt 44,690 chars / `53007f8d8779`,
   byte-identical to the repo copy.
 
-## 98. September 8: the overlay snapshot is solved, and ties are commoner than they looked
+## 115. September 8: the overlay snapshot is solved, and ties are commoner than they looked
 
 Clean audit. The live lead verifies in full — including four derived rates —
-and §97c is now cheap enough to do every day.
+and §114c is now cheap enough to do every day.
 
-### 98a. `tools/overlay-snapshot.mjs`
+### 115a. `tools/overlay-snapshot.mjs`
 
-§97c said the overlay is overwritten in place at the 7:00 AM ET refresh, so the
+§114c said the overlay is overwritten in place at the 7:00 AM ET refresh, so the
 board a story dates itself to is gone by the time an audit runs. Yesterday that
 left DK Metcalf's $7 neither confirmable nor refutable.
 
@@ -11895,12 +13184,12 @@ short query. Before this, each audit hand-pasted the two or three position
 slices a story happened to name, at roughly 8 KB of context each, and kept no
 record of the rest. **Snapshot first, every day, before reading any story.**
 
-This does not close §97c on the server side: the archive still lives only in a
+This does not close §114c on the server side: the archive still lives only in a
 session scratchpad, and a durable snapshot (a fifth `odds_overlay` row, or a
 small dated table written by the refresh job) is still the right fix and still
 Ken's. But the audit is no longer blind to yesterday.
 
-### 98b. Row 92 verifies completely, derived figures included
+### 115b. Row 92 verifies completely, derived figures included
 
 "Cap Harold Fannin Jr. at $11, not $20; take Mark Andrews at $3 instead"
 (market desk, 09-08 07:14Z), against the September 8 board it names:
@@ -11929,13 +13218,13 @@ changes no dollar figure.
 **A note on my own method.** My first pass flagged LaPorta and Kraft as
 disagreeing at $9, because I compared the story's *max bids* against board
 prices. They are recommendations, and the story quotes the board's $13 and $12
-beside them in the table. §96c again, in miniature: check what the number is
+beside them in the table. §113c again, in miniature: check what the number is
 before deciding it is wrong.
 
-### 98c. The tie scan: 22 ties, 8 inverted, one that costs a dollar
+### 115c. The tie scan: 22 ties, 8 inverted, one that costs a dollar
 
 Scanning every board for adjacent players with **exactly equal** printed points
-and an out-of-order world rank (§97a's mechanism) finds it is not a freak:
+and an out-of-order world rank (§114a's mechanism) finds it is not a freak:
 
 - 22 exact ties on the committed board, 8 of them with the display order and
   the world order disagreeing;
@@ -11945,16 +13234,16 @@ and an out-of-order world rank (§97a's mechanism) finds it is not a freak:
 
 The pairs where money is involved:
 
-- **Nico Collins / Garrett Wilson, WR11 and WR12 at 229.8** — §97a, unchanged
+- **Nico Collins / Garrett Wilson, WR11 and WR12 at 229.8** — §114a, unchanged
   and unfixed. Still $28 for both on the served board, still $27 for Wilson in
   `it-league.js`'s static block.
 - **Jordan Addison / Jayden Reed, WR44 and WR45 at 157** — inverted, but both
   $2 either way. No effect.
 
-So §97a is real and narrow *today*: one player, one dollar, one disagreement
+So §114a is real and narrow *today*: one player, one dollar, one disagreement
 between the two boards the site ships. The mechanism is general and will cost
 more whenever a tie lands higher up the curve, where the steps between slots
-are $2–$5 rather than nothing. The repair remains the choice set out in §97a,
+are $2–$5 rather than nothing. The repair remains the choice set out in §114a,
 and the pipeline hashes confirm nothing has changed there yet.
 
 Worth noting: today's lead quotes Dak Prescott at QB12 $5, and Prescott sits on
@@ -11962,7 +13251,7 @@ one of the inverted pairs (tied with Trevor Lawrence at 288.1). The story's
 figure matches the served board exactly, so nothing is wrong with the story —
 but it is a reminder that these pairs are not confined to the unpriced tail.
 
-### 98d. The rest
+### 115d. The rest
 
 - CI **60/60** after merging 9 commits.
 - Pipeline functions and `boardPayload` both hash identically to 09-07.
@@ -11973,14 +13262,14 @@ but it is a reminder that these pairs are not confined to the unpriced tail.
 - Routine enabled, `58 */6 * * *`, prompt 44,690 chars / `53007f8d8779`,
   byte-identical to the repo copy.
 
-## 99. September 9: the Routine prompt gained a byline section that describes something the code does not do
+## 116. September 9: the Routine prompt gained a byline section that describes something the code does not do
 
 The live lead verifies in full. The finding today is upstream of it: **the
 Routine's prompt was edited directly, without the repo copy**, and the section
 that was added asserts a mechanism I cannot find in either the repo or the
 deployed worker.
 
-### 99a. What changed
+### 116a. What changed
 
 The live prompt is **47,183 chars, sha256 `9c578c415408`**, against the repo's
 44,690 / `53007f8d8779`. The diff is a clean append at line 85 — 17 lines, no
@@ -11998,7 +13287,7 @@ Desk**, each with a prose register to write in, and:
 > **You do not write the byline anywhere.** There is no column for it; the site
 > computes it from `category` (`leadByline` in `_worker.js`) …
 
-### 99b. What the code actually does
+### 116b. What the code actually does
 
 Checked in the repo worker (1,388,257 bytes, this morning's `main`) and in the
 deployed bundle (1,258,366 bytes) separately:
@@ -12043,7 +13332,7 @@ Either way the fix is small: either land the mapping, or rewrite the two
 sentences that explain *why* to say the desk is a register the writer chooses
 rather than a label the reader sees.
 
-### 99c. The repo copy has been synced to the live one, not the other way round
+### 116c. The repo copy has been synced to the live one, not the other way round
 
 §17 exists because this prompt has been edited by several sessions
 independently before, with no way to see what changed or when. The repo file is
@@ -12060,11 +13349,11 @@ history and diffable, which it was not this morning.
 so and I will sync it, as today). Otherwise the audit's byte-identical check
 fires as a discrepancy every day and the repo stops being a record of anything.
 
-### 99d. Row 95 verifies completely
+### 116d. Row 95 verifies completely
 
 "Bid Quinshon Judkins to $22, not $15; he took 80% of Cleveland's first-team
 snaps" (preseason desk, 09-09 07:13Z), against the **September 8** board it
-names — checkable because §98a's snapshot kept it:
+names — checkable because §115a's snapshot kept it:
 
 | Claim | Board | |
 |---|---|---|
@@ -12076,7 +13365,7 @@ names — checkable because §98a's snapshot kept it:
 | "Judkins scores 225.4 on the September 8 board and 217.3 on the committed one" | **225.4 / 217.3** | ✓ |
 
 Every figure holds on today's board too, so nothing has drifted. The table names
-both boards in separate columns and the prose says which is which — the §94
+both boards in separate columns and the prose says which is which — the §111
 attribution habit is now standard in the column.
 
 One observation, not a defect: the table identifies Kenneth Walker III as
@@ -12086,7 +13375,7 @@ cannot check NFL rosters from this session and the prompt is explicit that
 those labels are the dataset's, not news — but if that label is stale, it is
 stale on the board as well as in the story.
 
-### 99e. The rest
+### 116e. The rest
 
 - CI **64/64** after merging 36 commits (four new test files arrived with them).
 - Pipeline functions and `boardPayload` both hash identically to 09-08.
@@ -12096,23 +13385,23 @@ stale on the board as well as in the story.
 - Harness self-test: 23 checks, all pass.
 - Runs 54–58 all `done`; no stalls.
 - Tamper predicates clean; exactly one published row.
-- **§97a unchanged**: Collins and Wilson still tie at 229.8 and are still the
+- **§114a unchanged**: Collins and Wilson still tie at 229.8 and are still the
   only inverted tie where the two slot prices differ ($27 vs $28). Today's scan
   found no new money-bearing pair.
 
-## 100. September 10: the column is paused, and the front page is pinned
+## 117. September 10: the column is paused, and the front page is pinned
 
 Nothing is broken. The lead-story Routine has been **deliberately stopped** and
 the front page rolled back a story, both by hand on 09-09. Recording it because
 a later reader will otherwise find a silent Routine and a stale lead and assume
 a fault.
 
-### 100a. What happened on 09-09, in order
+### 117a. What happened on 09-09, in order
 
 | time (UTC) | event |
 |---|---|
 | 07:13 | run 58 publishes row 95, "Bid Quinshon Judkins to $22" |
-| ~11:20–11:35 | the 09-09 audit runs; verifies row 95 exact; reports §99 |
+| ~11:20–11:35 | the 09-09 audit runs; verifies row 95 exact; reports §116 |
 | **12:42:10** | **row 95 unpublished** (`lead_story_audit` id 66) |
 | **12:42:17** | **row 94 republished** (`lead_story_audit` id 67) |
 | **13:05:36** | **the Routine is disabled** (`updated_at` on the trigger) |
@@ -12135,7 +13424,7 @@ the audit did flag about it was a data question, not a story defect — the tabl
 identified Kenneth Walker III as Kansas City because `PROJECTIONS` carries
 `team: 'KC'` for him, which the cheat sheet shows a reader as well.
 
-### 100b. The pinned lead is accurate, with one figure now drifting
+### 117b. The pinned lead is accurate, with one figure now drifting
 
 Row 94, "Bid Carnell Tate to $13, not the consensus sheet's $11, and pay $2 for
 Cam Ward" (playcaller, 09-08 19:17Z), has been the front page since 12:42Z on
@@ -12160,7 +13449,7 @@ The story's advice for him is "bid to $6". The board now charges $6 itself, so
 that recommendation has quietly become a non-recommendation — the same pattern
 as Pitts and Hurts before it: the board moves onto the call. The table header
 says "Consensus sheet, September 8", so the story is honest about which board
-it means, and per §96 I have not edited it.
+it means, and per §113 I have not edited it.
 
 **But a pinned story is a different problem from a rotating one.** The column
 normally replaces itself every six hours, so drift has hours to matter. This
@@ -12168,7 +13457,7 @@ one has been up for two days and will keep drifting for as long as the pause
 lasts. If the pause is going to run for a while, the Pollard row is the first
 thing that will read wrong to someone holding their own sheet.
 
-### 100c. §99 is unresolved and now untestable
+### 117c. §116 is unresolved and now untestable
 
 `leadByline` and the four desk names ("The Numbers Desk", "The Film Room",
 "The Beat", "The Value Desk") are still absent from the repo worker
@@ -12181,7 +13470,7 @@ visibly changed the prose — **cannot be answered**: no story has been written
 under the new section, because the Routine stopped before the next fire. It
 stays open until the column restarts.
 
-### 100d. `tools/live-board.mjs` on `main` is the retired harness
+### 117d. `tools/live-board.mjs` on `main` is the retired harness
 
 Today's merge conflicted in `tools/live-board.mjs`, and the reason matters more
 than the conflict: **this branch is 19 commits ahead of `main` and has never
@@ -12191,7 +13480,7 @@ been merged**, so `main` still carries the pre-09-02 harness. Checked directly:
 
 That file on `main` prices a player at the blended rank's own curve slot — the
 recipe retired on 09-04 — and never scales the overlay for availability. Anyone
-running it from `main` gets the two defects §95 and §96 were written about, and
+running it from `main` gets the two defects §112 and §113 were written about, and
 gets them silently.
 
 The conflict itself was benign: a site-wide American-spelling pass
@@ -12201,27 +13490,27 @@ the current harness, with the spelling convention applied to it and to
 throughout, matching the pass.
 
 `boardPayload`'s hash also moved today (`9369b7eeecac` → `52905b06fdcf`) with
-every pipeline function unchanged — exactly the case §98e added that check for.
+every pipeline function unchanged — exactly the case §115e added that check for.
 Diffed: four comment words, `favourite`/`offence`/`un-normalised`/`labelled`
 Americanized. No code.
 
-### 100e. The rest
+### 117e. The rest
 
 - CI **69/69** after merging 102 commits.
 - Repo vs deployed: 1380 player-rows across four boards, **0 differences**.
 - Harness self-test: 23 checks, all pass.
 - Tamper predicates clean; exactly one published row; the only two audit
   entries in the window are the deliberate swap above.
-- **§97a unchanged**: Collins and Wilson still the only inverted tie whose two
+- **§114a unchanged**: Collins and Wilson still the only inverted tie whose two
   slot prices differ ($27 vs $28). Fourth day.
 - Overlay snapshot taken for 09-10; 09-07 through 09-10 now on disk.
 
-## 101. September 11: the player-odds feed has stopped, and this session's clock lies
+## 118. September 11: the player-odds feed has stopped, and this session's clock lies
 
 The column is still paused. Two findings underneath it, one of them in my own
 tooling, and one correction to how these audits read the time.
 
-### 101a. This session's clock is ~10 hours behind. Use D1's.
+### 118a. This session's clock is ~10 hours behind. Use D1's.
 
 The scheduled trigger reported firing at **11:20Z**. D1, asked directly, says
 `datetime('now')` is **21:24Z** the same day. Everything this session infers
@@ -12234,7 +13523,7 @@ future-dated**, and compute ages from the data's own timestamps. The snapshot
 tool now does exactly that — every age it prints is relative to the newest row
 in the table, never to this machine.
 
-### 101b. The player-odds feed has not refreshed in 34 hours
+### 118b. The player-odds feed has not refreshed in 34 hours
 
 Ages measured against the newest row in `odds_overlay`:
 
@@ -12251,7 +13540,7 @@ and have not moved since. Confirmed independently: re-running the snapshot
 today produced `qb/rb/wr/te-0910` **byte-identical** to yesterday's — the
 player odds really are frozen, not merely slow.
 
-This lands the day after §92, which moved the market feed to SportsGameOdds and
+This lands the day after §109, which moved the market feed to SportsGameOdds and
 retired the 11:00Z daily trigger in favour of an hourly tick driven by
 `JOB_SCHEDULE` in New York time. The new rows are the ones that are current;
 the older pulls are the ones that stopped. That is the shape of a migration
@@ -12264,7 +13553,7 @@ so it crosses that line within two hours of this writing. With the Routine
 paused there is no run to notice, and the board a reader sees will simply keep
 blending older and older odds without anything saying so.
 
-### 101c. The pinned story keeps moving — through availability, not odds
+### 118c. The pinned story keeps moving — through availability, not odds
 
 Row 94 has been the front page since 09-09. Its own board (09-08) still
 reproduces every figure exactly. Against the board a reader sees **now**
@@ -12288,10 +13577,10 @@ live availability table together make a board that moves for reasons no story
 can anticipate — and the one figure a reader acts on, Pollard's price, is now
 $6, exactly the bid the story recommends.
 
-Reported, not edited (§96). But this is the second day of drift on a story
+Reported, not edited (§113). But this is the second day of drift on a story
 nobody can replace while the Routine is off.
 
-### 101d. My snapshot tool destroyed a file, and is fixed
+### 118d. My snapshot tool destroyed a file, and is fixed
 
 `tools/overlay-snapshot.mjs` stamped **every** output with row 1's date. With
 row 1 frozen at 09-10, today's run wrote the 09-11 injury feed into
@@ -12313,7 +13602,7 @@ The corrupted `avail-0910.json` was removed rather than left to be read as
 yesterday's data. Yesterday's 14-row injury feed is gone; nothing depended on
 it.
 
-### 101e. §97a's tie is now costing $2, not $1
+### 118e. §114a's tie is now costing $2, not $1
 
 Collins and Wilson still tie — at **231.5** now, not 229.8 — and are still the
 only inverted pair whose slot prices differ. But the gap has widened: the slots
@@ -12323,9 +13612,9 @@ in `it-league.js` would quote Wilson $28.
 So the discrepancy between the two boards the site ships has **doubled while
 the repair has been open**. Not because anything got worse, only because the
 pair drifted up the curve into a steeper part of it — which is exactly the
-generalization §97a predicted.
+generalization §114a predicted.
 
-### 101f. The prompt copy diverged, and it was the spelling pass
+### 118f. The prompt copy diverged, and it was the spelling pass
 
 The repo copy stopped matching the Routine: one word, `quantized` against the
 Routine's `quantised`. The 09-10 American-spelling pass (`77d6e6c`) edited the
@@ -12336,7 +13625,7 @@ what runs and is never pushed the other way without Ken. The header now warns
 against running site-wide text passes over the body. **If the American spelling
 is wanted in the live prompt, it has to go to the Routine deliberately.**
 
-### 101g. The rest
+### 118g. The rest
 
 - CI **76/76** after merging 121 commits.
 - Pipeline functions and `boardPayload` both unchanged since 09-10.
@@ -12345,18 +13634,18 @@ is wanted in the live prompt, it has to go to the Routine deliberately.**
 - Routine still `enabled: false`, unchanged since 09-09 13:05Z. `lead_story_run`
   still ends at 58; `lead_story` still ends at 95; no new audit rows beyond the
   66/67 swap. Tamper predicates clean.
-- §99's byline mapping still absent from repo and deployed — third day.
+- §116's byline mapping still absent from repo and deployed — third day.
 
-## 102. September 12: the feed recovered, and yesterday's drift was the feed's fault
+## 119. September 12: the feed recovered, and yesterday's drift was the feed's fault
 
 Three corrections to yesterday, all in the same direction: things were less
 broken than they looked.
 
-### 102a. The player-odds feed is back
+### 119a. The player-odds feed is back
 
 Every row in `odds_overlay` is current again — rows 1, 2, 3 and 4 all written at
 11:00:19Z today, row 6 an hour old, and a **new row 7 (`nflverse-usage-prior`)**
-two hours old. The 34-hour freeze §101b reported is over. Whether it self-healed
+two hours old. The 34-hour freeze §118b reported is over. Whether it self-healed
 or was fixed I cannot tell from here; the timestamps only say it is running.
 
 Row 1's payload has also grown: it now carries **K and DEF** entries
@@ -12364,18 +13653,18 @@ Row 1's payload has also grown: it now carries **K and DEF** entries
 board still prices only QB/RB/WR/TE, so nothing downstream changes, but the feed
 is no longer just the four scoring positions.
 
-### 102b. This session's clock was fine today, so §101a needs narrowing
+### 119b. This session's clock was fine today, so §118a needs narrowing
 
 D1 says `11:20:40Z`; the trigger fired at `11:20:09Z`. In step.
 
 Yesterday's ten-hour skew was real but **not a standing property of this
-session** — it was a one-off, probably a late resume. §101a's conclusion stands
+session** — it was a one-off, probably a late resume. §118a's conclusion stands
 in its useful form and no further: **ask D1 for the time before calling anything
 stale**, because you cannot tell a skewed clock from a stopped feed by looking at
 either one alone. But do not carry forward "this session's clock is ten hours
 behind" as a fact. It was not today.
 
-### 102c. Pollard's price drift was the frozen feed, not the market
+### 119c. Pollard's price drift was the frozen feed, not the market
 
 Row 94 is still pinned. On its own 09-08 board it still reproduces perfectly —
 all four rows, and both prose figures (1,060.8 receiving yards, 207.2 gap) to
@@ -12405,7 +13694,7 @@ that moves because the odds stopped arriving is indistinguishable, from the
 outside, from a price that moves because the market moved. Had the column been
 running, a story could have been written about that $6.
 
-### 102d. Two recap rows exist in `lead_story`, and the site has no label for them
+### 119d. Two recap rows exist in `lead_story`, and the site has no label for them
 
 `lead_story` now ends at **97**, not 95 — two rows inserted on 09-11 at 21:30
 and 21:31, both `verified=1, published=0`, both `category='recap'`:
@@ -12415,7 +13704,7 @@ and 21:31, both `verified=1, published=0`, both `category='recap'`:
 
 Both say in `method` they were "built entirely from Iron Tuna's own ingested box
 score", citing `game_summaries` rows by ESPN id. Week 1 has been played; this is
-the recap desk from §91 writing into `lead_story`.
+the recap desk from §108 writing into `lead_story`.
 
 `lead_story_run` still ends at **58**, so these did not come from the lead-story
 Routine — which is still paused. Nothing was published and no audit row was
@@ -12436,10 +13725,10 @@ does the same.
 Neither row is live, so nothing is wrong on the site today. It is a one-line
 addition if recaps are meant to appear in the lead rotation, and a non-issue if
 they have their own surface — but as it stands the two are half-joined: written
-into the lead table, invisible to the lead table's vocabulary. §99's byline
+into the lead table, invisible to the lead table's vocabulary. §116's byline
 section has no slot for `recap` either.
 
-### 102e. The rest
+### 119e. The rest
 
 - CI **77/77** after merging 34 commits.
 - Pipeline functions and `boardPayload` unchanged since 09-11.
@@ -12449,17 +13738,17 @@ section has no slot for `recap` either.
   47,183 chars / `9c578c415408`, byte-identical to the repo copy.
 - Tamper predicates clean: no audit rows beyond the 66/67 swap, no analyst row
   published, no published row unverified, one published row.
-- **§97a unchanged**: Collins and Wilson still tie at 231.5, slots $28 and $30,
+- **§114a unchanged**: Collins and Wilson still tie at 231.5, slots $28 and $30,
   both served $30. Sixth day, and still the only inverted tie that costs
   anything.
 
-## 103. September 13: the odds job does not fail, it hangs — and the pinned story contradicts itself
+## 120. September 13: the odds job does not fail, it hangs — and the pinned story contradicts itself
 
 D1 clock 2026-09-13 11:22:52Z; this container read 11:22:47Z, so the two were
 in step again. Yesterday's rule holds and is the only one worth carrying: ask
 D1 for the time, never assume either direction.
 
-### 103a. `odds-refresh` starts and never finishes, and nothing says so
+### 120a. `odds-refresh` starts and never finishes, and nothing says so
 
 The player-odds row has not moved since yesterday. `odds_overlay` row 1
 (`nflverse`) and row 2 (`teamctx`) are both stamped 2026-09-12 11:00:19Z —
@@ -12475,12 +13764,12 @@ odds-refresh         2026-09-13 11:00:33  NEVER      null
 usage-prior-refresh  2026-09-13 09:00:42  NEVER      null
 availability-refresh 2026-09-12 23:00:12  NEVER      null
 odds-refresh         2026-09-12 11:00:18  11:00:19   1
-odds-refresh         2026-09-11 11:01:21  NEVER      null     <- the 34h staleness of §101
+odds-refresh         2026-09-11 11:01:21  NEVER      null     <- the 34h staleness of §118
 odds-refresh         2026-09-10 11:00:51  11:00:51   1
 ```
 
 `finished_at` null, `ok` null, `error` null. The job records a start and then
-nothing at all. **This is what §101 actually was.** I filed it as "the feed
+nothing at all. **This is what §118 actually was.** I filed it as "the feed
 stopped"; the feed did not stop, the job hung, and it has now hung on two of
 the last four days. Over fourteen days, `odds-refresh` hung 2 runs in 10;
 across every job the worker schedules, **196 of 1,485 runs** in fourteen days
@@ -12502,10 +13791,10 @@ Two things follow, and only one of them is already handled:
 The general form, which is worth more than the incident: **a job that hangs is
 indistinguishable from a job that is running, and a board built on a stale
 overlay is indistinguishable from a board built on a fresh one.** Everything
-downstream of the overlay reads as normal. That is why §101's drift looked like
+downstream of the overlay reads as normal. That is why §118's drift looked like
 news.
 
-### 103b. The pinned story contradicts itself, and it did so on the day it published
+### 120b. The pinned story contradicts itself, and it did so on the day it published
 
 Row 94 is still the only published row, still pinned. Its table is right — I
 rebuilt the September 8 board from the `wr/rb/qb/te-0908` snapshots and it
@@ -12551,7 +13840,7 @@ gap to close before the column resumes.
 
 I did not edit the row. The column is paused and the standing rule holds.
 
-### 103c. The site's two boards disagree on 22% of the board
+### 120c. The site's two boards disagree on 22% of the board
 
 Ken's instruction is that the story price and the cheat-sheet price must track
 identically. They do not, and this is the first time it has been measured
@@ -12591,7 +13880,7 @@ what every reader sees for the first moments of every page load, and it is what
 a blocked or offline reader sees permanently — quoting $30 for a player the live
 board prices at $2.
 
-**§97a is a symptom of this, not a separate bug.** Collins and Wilson carry
+**§114a is a symptom of this, not a separate bug.** Collins and Wilson carry
 identical committed points (229.8). The static fallback ranks them 11th and
 12th and hands them adjacent curve slots, $28 and $27. Today's served board
 puts Collins at WR10 $30 and Wilson at WR12 $28. The numbers move every day the
@@ -12601,7 +13890,7 @@ particular pair is the wrong repair. The repair is to make the fallback compute
 prices the way the served board does, or to stop shipping a second pricing
 recipe at all.
 
-### 103d. The recap rows duplicate recaps that are already live, in the right table
+### 120d. The recap rows duplicate recaps that are already live, in the right table
 
 `lead_story` still ends at 97. Rows 96 and 97 (`category='recap'`,
 `verified=1`, `published=0`) cover `2026_01_SF_LA` and `2026_01_NE_SEA` — and
@@ -12619,7 +13908,7 @@ labelled "Insight", serving `category: null`, next to a strip already showing
 that same game under another headline. Eleven `lead_story` rows now carry a
 category outside the six.
 
-### 103e. The rest
+### 120e. The rest
 
 - Deployed bundle **byte-identical** to yesterday's fetch (1,417,624 bytes).
   Cloudflare reports `modified_on` 2026-09-12T13:00:03Z; the content did not
@@ -12640,13 +13929,13 @@ category outside the six.
 - The branch is now **25 commits ahead of `main`**. `main`'s
   `tools/live-board.mjs` is still the pre-09-02 harness: retired pricing, no
   availability scaling. It runs without error and prints wrong numbers. That is
-  the shape of the bug that made me "correct" three good stories in §96.
+  the shape of the bug that made me "correct" three good stories in §113.
 
-## 104. September 14: the pinned story's prices have moved, and the deployment is ahead of the repo
+## 121. September 14: the pinned story's prices have moved, and the deployment is ahead of the repo
 
 D1 clock 2026-09-14 11:22:52Z, container 11:23:03Z — in step for the third day.
 
-### 104a. Row 94's table no longer matches the board, and its worst paragraph is now right
+### 121a. Row 94's table no longer matches the board, and its worst paragraph is now right
 
 The feeds recovered overnight: `odds_overlay` rows 1, 2 and 3 all refreshed at
 11:00:03Z, 23 minutes before this audit. On that board, against the table row
@@ -12666,7 +13955,7 @@ prices are wrong against the live board**, both low, which means the max bids
 the story recommends ($13 on Tate, $4 on Robinson) now sit further above the
 board than they did when it published.
 
-And the paragraph from §103b — "Receivers ranked 20 through 23 all cost $12. The
+And the paragraph from §120b — "Receivers ranked 20 through 23 all cost $12. The
 next three, 24 through 26, all cost $10" — is **correct today**. Today's served
 column really does read $12 $12 $12 $12 then $10 $10 $10 across WR20–26.
 
@@ -12674,15 +13963,15 @@ That is the finding, not a footnote: **yesterday the table was right and the
 prose was wrong; today the prose is right and the table is wrong.** The two
 halves of the same story drift independently, because one was looked up and the
 other was derived off the curve. A story whose figures are all looked up decays
-in one direction and can be re-checked in one pass. This one cannot. §103b's rule
+in one direction and can be re-checked in one pass. This one cannot. §120b's rule
 stands and this is the second day of evidence for it: look a price up, never
 derive one.
 
 Still not edited. The column is paused.
 
-### 104b. The hang is bursty, not a slow leak — and one "stale" row was never stale
+### 121b. The hang is bursty, not a slow leak — and one "stale" row was never stale
 
-§103a's hang rate is not a constant. Per day, runs that never wrote a finish:
+§120a's hang rate is not a constant. Per day, runs that never wrote a finish:
 
 ```
 09-09   22 / 112   20%
@@ -12712,14 +14001,14 @@ times. This morning at 11:00:02 `odds-refresh`, `availability-refresh` and
 `usage-prior-refresh` all completed in **one second**, so whatever it is clears
 on its own.
 
-**And a correction to §103a.** I listed row 7 (`nflverse-usage-prior`, now 50
+**And a correction to §120a.** I listed row 7 (`nflverse-usage-prior`, now 50
 hours old) among the stale feeds. It is not stale. Today's run returned
 `{"ok":true,"season":2025,"skipped":"already built","players":610,
 "throughWeek":18}` — it is a prior-season reference table, complete through week
 18, and it is *supposed* to stop rewriting itself. Age is not evidence on its
 own; what the job says it did is. Row 7 should not have been on that list.
 
-### 104c. The deployed worker contains code that is in no branch
+### 121c. The deployed worker contains code that is in no branch
 
 The bundle changed at 2026-09-14T10:47:30Z, 35 minutes before this audit. Two
 source changes:
@@ -12746,9 +14035,9 @@ assumes those two are the same thing; from today that assumption has a
 counter-example, and a board-affecting edit made the same way would show up here
 as an unexplained difference with nothing in git to explain it.
 
-### 104d. The two boards still disagree on a fifth of the board
+### 121d. The two boards still disagree on a fifth of the board
 
-Re-run of §103c on a completely different overlay — yesterday's was 24 hours
+Re-run of §120c on a completely different overlay — yesterday's was 24 hours
 stale, today's is 23 minutes old:
 
 ```
@@ -12758,16 +14047,16 @@ largest gap  $28                $29   (A.J. Brown $30 static vs $1 served)
 same rank    14                 9
 ```
 
-The share barely moves. That settles what §103c could only suggest: this is
+The share barely moves. That settles what §120c could only suggest: this is
 structural, not a property of one day's odds.
 
-§97a's pair moved again and reversed. Static fallback: Collins $28, Wilson $27
+§114a's pair moved again and reversed. Static fallback: Collins $28, Wilson $27
 (adjacent curve slots, identical committed points). Served: **Collins WR12 $25,
 Wilson WR11 $29** — a $4 split, with Wilson above Collins today and below him
 yesterday. Six days of chasing this pair; the pair is noise and the recipe
 mismatch is the signal.
 
-### 104e. The rest
+### 121e. The rest
 
 - CI **76/76**, `origin/main` unchanged at `2ee4ec5`, nothing to merge.
 - Harness self-test **23/23**.
@@ -12792,15 +14081,15 @@ mismatch is the signal.
 - The branch is **27 commits ahead of `main`**, whose `tools/live-board.mjs` is
   still the pre-09-02 harness — retired pricing, no availability scaling, no
   error when it is wrong.
-## 105. September 15: the deployed worker is a feature branch, and two of my numbers were wrong
+## 122. September 15: the deployed worker is a feature branch, and two of my numbers were wrong
 
 D1 clock 2026-09-15 11:22:29Z, container 11:22:42Z — in step for the fourth
 day. All four board feeds refreshed at 11:01:22Z, twenty minutes before this
 audit, and a new `odds_overlay` row 5 (`nflverse-usage`) has appeared now that
 week 1 is complete. Row 7 is 74 hours old and still correct: it reports
-`skipped: already built` by design (§104b).
+`skipped: already built` by design (§121b).
 
-### 105a. Correction to §104c: the deployment is not "code in no branch" — it is an unmerged branch
+### 122a. Correction to §121c: the deployment is not "code in no branch" — it is an unmerged branch
 
 Yesterday I reported that the deployed bundle carried two source edits present
 in no branch, and inferred someone had deployed from a working copy. **Both
@@ -12849,7 +14138,7 @@ The lesson for the audit itself: **search all refs, not the most recent few.**
 `git grep` over `for-each-ref` costs one command and would have got this right
 the first time.
 
-### 105b. Correction to §104b: never report a hang rate from a partial day
+### 122b. Correction to §121b: never report a hang rate from a partial day
 
 Yesterday I wrote that 09-14 ran at 10%, recovered from 09-13's 48%. That was
 measured at 11:23, four hours into the day. The full day reads:
@@ -12886,7 +14175,7 @@ tick, which points at the tick's own budget rather than at what any of them
 fetches. All four board feeds still completed normally at 11:01, so the daily
 pulls are getting through; it is the quarter-hourly work that dies.
 
-### 105c. Row 94: same two prices wrong, and the curve paragraph in a third state
+### 122c. Row 94: same two prices wrong, and the curve paragraph in a third state
 
 ```
                     story (Sept 8)   09-14        09-15
@@ -12913,10 +14202,10 @@ is right.
 ```
 
 Three days, three different answers, from a sentence that was never looked up.
-§103b's rule does not need more evidence than this: **look a price up, never
+§120b's rule does not need more evidence than this: **look a price up, never
 derive one.**
 
-### 105d. The two-board gap, day three
+### 122d. The two-board gap, day three
 
 ```
              09-13              09-14              09-15
@@ -12926,10 +14215,10 @@ same rank    14                 9                  13
 ```
 
 Three overlays — one 24 hours stale, one 23 minutes old, one 20 minutes old —
-and the share moves by less than a point. §96a's pair moved again: static
+and the share moves by less than a point. §113a's pair moved again: static
 Collins $28 / Wilson $27 against served **Collins WR12 $25, Wilson WR10 $29**.
 
-### 105e. The rest
+### 122e. The rest
 
 - CI **76/76** after merging `origin/main` (`168d171`); the merge conflicted in
   `HANDOFF.md` because `main` added its own §75, so my 75–88 became 76–89 and
@@ -12937,7 +14226,7 @@ Collins $28 / Wilson $27 against served **Collins WR12 $25, Wilson WR10 $29**.
 - Harness self-test **23/23**.
 - Repo vs deployed: **1380 player-rows across four boards, 0 differences**;
   `VEGAS_WEIGHT`, `LEAGUE_BUDGET`, `MIN_BID`, `CURVE`, `COLUMN_NORM` identical.
-  See §105a for why this check is weaker than it looks.
+  See §122a for why this check is weaker than it looks.
 - Routine still `enabled: false`, untouched since 2026-09-09 13:05:36Z; live
   prompt still **47,183 chars / `9c578c415408`**.
 - Tamper predicates clean: one published row (94), no published-unverified row,
@@ -12952,14 +14241,14 @@ Collins $28 / Wilson $27 against served **Collins WR12 $25, Wilson WR10 $29**.
   shape as the hung jobs: **the status is not a reliable signal of the
   outcome**, in either direction.
 - The branch is **28 commits ahead of `main`**.
-## 106. September 16: every Week 1 game now has two recaps, and the deployment is back in step
+## 123. September 16: every Week 1 game now has two recaps, and the deployment is back in step
 
 D1 clock 2026-09-16 11:22:24Z, container 11:23:23Z. All four board feeds
 refreshed at 11:01:28Z. Row 7 is 98 hours old and still correct by design
-(§101b). `main` moved to `1ee60e4` and added five sections, so my 76–90 became
+(§118b). `main` moved to `1ee60e4` and added five sections, so my 76–90 became
 81–95 and 66 internal cross-references shifted with them.
 
-### 106a. `lead_story` has gained a full duplicate set of Week 1 recaps
+### 123a. `lead_story` has gained a full duplicate set of Week 1 recaps
 
 `lead_story` jumped from 97 to **111** overnight. Rows 98–111 are fourteen new
 rows, every one `category='recap'`, `verified=1`, `published=0`, all created in
@@ -12976,7 +14265,7 @@ the strip, one sitting in the lead-story table. `lead_story_run` is still 58,
 so the paused lead-story Routine did not write them, and nothing in the run log
 accounts for the batch.
 
-Why this matters more than it did as §102d, when it was two rows:
+Why this matters more than it did as §119d, when it was two rows:
 
 - The front page takes **the newest row with `verified=1 AND published=1`** as
   the lead story. All sixteen are already `verified=1`. A single `published`
@@ -12991,7 +14280,7 @@ Nothing is published and I have not touched any of it. But the blast radius of
 one accidental flag has gone from two rows to sixteen, and the rows arrived
 while the column was paused.
 
-### 106b. The deployment is back on `main` — and one branch it served has still never merged
+### 123b. The deployment is back on `main` — and one branch it served has still never merged
 
 Today's bundle is 1,468,201 bytes and carries 974 top-level symbols. Every one
 of them is in `origin/main` except the three esbuild generates (`__defProp`,
@@ -13005,7 +14294,7 @@ claude/trusting-ptolemy-950fxw   (served 09-15)   MERGED
 claude/iron-tuna-in-season-2oxwqe (served 09-14)  NOT MERGED  — still 3 commits ahead
 ```
 
-So the sharpest form of §105a is this: **on 09-14 the production Worker served a
+So the sharpest form of §122a is this: **on 09-14 the production Worker served a
 branch that has never been merged and is still unmerged today** — `f25b087`
 "The schedule refresh stops asking ESPN for the preseason once the season is
 here" and `2ce8cd9` "The desk's verbs are not first names". Readers got that
@@ -13018,7 +14307,7 @@ vs deployed" check is still conditional: it passed today because the deployment
 *is* `main`, and it passed on 09-14 and 09-15 only because those branches
 happened not to touch the board.
 
-### 106c. Hang rate: 09-15 closed at 38%
+### 123c. Hang rate: 09-15 closed at 38%
 
 ```
 09-09   22 / 112   20%
@@ -13031,11 +14320,11 @@ happened not to touch the board.
 09-16   39 / 187   21%  (partial, 11:22 — not a figure to quote)
 ```
 
-Two of the last four days above a third. §105b's rule held: the partial read
+Two of the last four days above a third. §122b's rule held: the partial read
 (41%) was close but not the number, and the number to record is always the
 closed day.
 
-### 106d. Row 94 keeps sliding
+### 123d. Row 94 keeps sliding
 
 ```
                     story (Sept 8)   09-14      09-15      09-16
@@ -13054,7 +14343,7 @@ The curve paragraph is wrong at WR20 again: today's served column reads WR20
 $12" is false at its first term and "24 through 26 all cost $10" is true. Four
 days: wrong, right, wrong-at-WR20, wrong-at-WR20.
 
-### 106e. The two-board gap, day four
+### 123e. The two-board gap, day four
 
 ```
              09-13    09-14    09-15    09-16
@@ -13063,11 +14352,11 @@ largest gap  $28      $29      $29      $29     (A.J. Brown $30 static vs $1 ser
 same rank    14       9        13       11
 ```
 
-Four overlays, four days, a range of 1.4 points. §97a's pair reversed back:
+Four overlays, four days, a range of 1.4 points. §114a's pair reversed back:
 static Collins $28 / Wilson $27 against served **Collins WR10 $30, Wilson WR12
 $28**, which is exactly where they were on 09-13.
 
-### 106f. D1 grew six-fold and the rows do not explain it
+### 123f. D1 grew six-fold and the rows do not explain it
 
 `size_after` went from 12.3 MB on 09-15 to **78.1 MB** today. The row counts do
 not account for it:
@@ -13084,7 +14373,7 @@ free pages or journal overhead rather than content — **but I have not
 established that**, and it is recorded here as an unexplained observation
 rather than a diagnosis.
 
-### 106g. The rest
+### 123g. The rest
 
 - CI **76/76**; harness self-test **23/23**.
 - Repo vs deployed: **1380 player-rows across four boards, 0 differences**;
@@ -13097,12 +14386,12 @@ rather than a diagnosis.
   failure pattern has nothing new to add.
 - A new `odds_overlay` row 5 (`nflverse-usage`) is now refreshing hourly.
 - The branch is **30 commits ahead of `main`**.
-## 107. September 17: D1 has tripled again, and the board is serving yesterday
+## 124. September 17: D1 has tripled again, and the board is serving yesterday
 
 D1 clock 2026-09-17 11:23:18Z. `main` moved to `f52434b` and added six sections,
 so my 81–96 became 87–102 and 71 internal cross-references shifted with them.
 
-### 107a. The database is 195 MB and under 3% of it is data
+### 124a. The database is 195 MB and under 3% of it is data
 
 ```
 09-15   12.3 MB
@@ -13147,12 +14436,12 @@ observation**, per standing rule (3). It is worth telling Ken regardless,
 because D1 bills on stored bytes and this is a 16x increase in two days with no
 new content behind it.
 
-It is also the first thing I have seen that could plausibly connect to §103a's
+It is also the first thing I have seen that could plausibly connect to §120a's
 hangs — a database growing this fast makes writes slower, and the jobs that die
 are the ones that write. I have no evidence for that link and am not claiming
 it; I note it only so tomorrow looks for it.
 
-### 107b. `odds-refresh` hung again, so today's board is yesterday's board
+### 124b. `odds-refresh` hung again, so today's board is yesterday's board
 
 ```
 odds-refresh  2026-09-17 11:01:04  finished NEVER  ok null
@@ -13165,14 +14454,14 @@ Third time now (09-11, 09-13, 09-17). `odds_overlay` row 1 is stamped
 **byte-identical** to yesterday's capture. Rows 5 and 6 are 25.4 hours old;
 `usage-refresh` did not run today either.
 
-That has a consequence worth stating plainly, because it is the trap from §102:
+That has a consequence worth stating plainly, because it is the trap from §119:
 **every board figure in this section is identical to yesterday's — not because
 nothing moved, but because the board did not move.** Tate $10/WR27, Robinson
 $2/WR42, the 21.2% gap, Collins $30 / Wilson $28 — all the same numbers as
-§106, off the same frozen overlay. An audit that only compared today to
+§123, off the same frozen overlay. An audit that only compared today to
 yesterday would have called this stability.
 
-### 107c. Hang rate: 09-16 closed at 17%
+### 124c. Hang rate: 09-16 closed at 17%
 
 ```
 09-11   46 / 225   20%
@@ -13186,10 +14475,10 @@ yesterday would have called this stability.
 
 A new job is in the rotation: `line-ledger`, 120 runs in 36 hours on the
 fifteen-minute tick, 24 of them hung (20%). Over that window `news-scan` is at
-23%, `schedule-refresh` 41%, `board-freeze` 13%. The pattern from §105b holds —
+23%, `schedule-refresh` 41%, `board-freeze` 13%. The pattern from §122b holds —
 it is spread across everything sharing the tick.
 
-### 107d. Row 94, fifth day wrong
+### 124d. Row 94, fifth day wrong
 
 Two published prices still contradict the live board, and the figures are
 yesterday's because the board is yesterday's:
@@ -13206,7 +14495,7 @@ prose             1,060.8 / 207.2  1,025.9 / 200.4
 Served WR20 is $13 and WR21–23 are $12, so the curve paragraph's first sentence
 is false at its first term for a third straight day.
 
-### 107e. The recap rows are stable at sixteen
+### 124e. The recap rows are stable at sixteen
 
 Still exactly sixteen `category='recap'` rows in `lead_story`, still all
 `verified=1, published=0`, `max(id)` still 111, `lead_story_run` still 58. No
@@ -13215,14 +14504,14 @@ in the repo and the deployed bundle alike. `content_pieces` holds 17 published
 `game-recap` rows across the same sixteen games. Nothing published, nothing
 touched.
 
-### 107f. The deployment is `main` again
+### 124f. The deployment is `main` again
 
 987 top-level symbols in today's bundle, every one in `origin/main` except
 `__defProp`, `__name` and `worker_default`. Second consecutive day in step
 after the two branch builds of 09-14 and 09-15. `claude/iron-tuna-in-season-2oxwqe`,
 which production served on 09-14, is still unmerged.
 
-### 107g. The rest
+### 124g. The rest
 
 - CI **78/78** — `main` added two new checks, so the count moved from 76.
 - Harness self-test **23/23**.
@@ -13235,7 +14524,7 @@ which production served on 09-14, is still unmerged.
   09-14 and 09-15 have nothing new to add today.
 - The branch is **32 commits ahead of `main`**.
 
-## 108. September 18: Pollard's price broke, and three of the pinned story's four are now wrong
+## 125. September 18: Pollard's price broke, and three of the pinned story's four are now wrong
 
 D1 clock 2026-09-18 11:23:02Z. `main` moved to `479036f` and added no HANDOFF
 sections, so the merge was clean and my numbering is untouched for the first
@@ -13246,7 +14535,7 @@ The feeds all refreshed at 11:01:12Z and I confirmed the overlay actually moved
 off it. That is standing rule (4), and today it matters, because the board
 really did move.
 
-### 108a. Tony Pollard has gone from $5 to $3
+### 125a. Tony Pollard has gone from $5 to $3
 
 ```
                   story (Sept 8)        today        max bid the story gives
@@ -13273,7 +14562,7 @@ all cost $10, so its second sentence remains true.
 
 Nothing edited. The column is still paused.
 
-### 108b. D1 is 285 MB and the content is 5 MB
+### 125b. D1 is 285 MB and the content is 5 MB
 
 ```
           file        measured content
@@ -13283,7 +14572,7 @@ Nothing edited. The column is still paused.
 09-18   285.6 MB      5.0 MB   (1.8%)
 ```
 
-Same measurement as §107a, same seven tables, every text column:
+Same measurement as §124a, same seven tables, every text column:
 
 ```
 content_pieces 1.03 · page_views 0.98 · odds_snapshots 0.96 · odds_overlay 0.74
@@ -13300,7 +14589,7 @@ thing to watch: they are weekly and **09-20 is the next Sunday**, so if the
 growth is unreclaimed space, Sunday is when something either changes or
 demonstrably does not.
 
-### 108c. The odds job recovered, and 09-17 closed at 18%
+### 125c. The odds job recovered, and 09-17 closed at 18%
 
 `odds-refresh` finished normally today (11:01:11 → ok, 374 matched), after
 hanging on 09-11, 09-13 and 09-17.
@@ -13315,9 +14604,9 @@ hanging on 09-11, 09-13 and 09-17.
 09-18   47 / 173   27%  (partial, 11:22 — not a figure to quote)
 ```
 
-### 108d. `usage-refresh` is not hanging — it is not running at all
+### 125d. `usage-refresh` is not hanging — it is not running at all
 
-Distinct from §103a's failure mode and worth separating. `usage-refresh` last ran
+Distinct from §120a's failure mode and worth separating. `usage-refresh` last ran
 2026-09-16 10:01:26 (`ok=1`, `throughWeek: 1`). For 09-17 and 09-18 there is **no
 row in `job_runs` at all** — not a hung row, not a failed row, nothing. It ran
 on 09-15 and 09-16 on consecutive days, so it is not weekly like the prunes.
@@ -13328,7 +14617,7 @@ it is not due until week 2's data is final, **I have not established**, and the
 difference matters: one is a bug, the other is the design working. Recorded as
 an open question rather than a finding.
 
-### 108e. The two-board gap, day six
+### 125e. The two-board gap, day six
 
 ```
              09-13    09-14    09-15    09-16    09-17    09-18
@@ -13341,10 +14630,10 @@ same rank    14       9        13       11       11       14
 for that reason; today's is independent. Six days, a 2-point band, and the
 largest gap has been A.J. Brown at $29 every single day.
 
-§97's pair: static Collins $28 / Wilson $27 against served **Collins WR10 $30,
+§114's pair: static Collins $28 / Wilson $27 against served **Collins WR10 $30,
 Wilson WR12 $28**.
 
-### 108f. The rest
+### 125f. The rest
 
 - Deployed bundle: 987 top-level symbols, every one in `origin/main` except
   `__defProp`, `__name`, `worker_default`. **Third consecutive day in step.**
@@ -13362,12 +14651,12 @@ Wilson WR12 $28**.
   prompt still **47,183 chars / `9c578c415408`**.
 - Tamper predicates clean: one published row (94), no published-unverified row,
   no analyst row published, 67 audit rows.
-## 109. September 19: `main` is red, the recap strip is gone, and a frozen overlay still moved the board
+## 126. September 19: `main` is red, the recap strip is gone, and a frozen overlay still moved the board
 
 D1 clock 2026-09-19 11:22:33Z. `main` moved to `9a98b21c` and added four
 sections, so my 87–104 became 91–108 and 78 internal cross-references shifted.
 
-### 109a. CI is failing, and it is failing on `main` itself
+### 126a. CI is failing, and it is failing on `main` itself
 
 **First red CI in this audit's history.** Two of the 76 checks fail:
 
@@ -13386,9 +14675,9 @@ rebuilt, and the front page's replacement "desk section" is not yet wired to
 Not mine to fix and not something I touched. Recorded so that tomorrow does not
 re-derive it, and so a green run is not assumed.
 
-### 109b. The recap strip has been removed from the homepage
+### 126b. The recap strip has been removed from the homepage
 
-This changes §106 materially. `front.html` now has **zero** references to
+This changes §123 materially. `front.html` now has **zero** references to
 `/api/recaps` and zero `rcp-` classes; the tests assert "the strip is gone from
 the homepage" and "nothing on the page fetches /api/recaps", and both pass. A
 "desk section" reading `/api/content` replaces it — that is the half that does
@@ -13400,7 +14689,7 @@ becoming the lead story, still labelled "Insight" if that happens, since
 `LEAD_CATEGORIES` is unchanged at six keys in repo and deployed bundle alike.
 The duplication argument is weaker today; the publish-flag argument is not.
 
-### 109c. The overlay froze and the board moved anyway
+### 126c. The overlay froze and the board moved anyway
 
 `odds-refresh` hung at 11:01:24 — fourth time (09-11, 09-13, 09-17, 09-19).
 `odds_overlay` row 1 is stamped 09-18 11:01:12Z and I confirmed it is
@@ -13425,7 +14714,7 @@ Robinson $2/WR41 — so **three of four published prices are still wrong**, with
 Pollard printed at $5 against $3 served and a $6 max bid. Sixth day. The curve
 paragraph is wrong at WR20 for a fifth day.
 
-### 109d. Collins is now the fifth-worst gap on the board
+### 126d. Collins is now the fifth-worst gap on the board
 
 ```
 A.J. Brown      static WR10 $30  ->  served WR57 $1    -29
@@ -13435,7 +14724,7 @@ Chase Brown     static RB13 $28  ->  served RB9  $39   +11
 Nico Collins    static WR11 $28  ->  served WR17 $17   -11
 ```
 
-§93's pair has stopped being a tie story and become a gap story: a reader whose
+§110's pair has stopped being a tie story and become a gap story: a reader whose
 `/api/board` request fails sees **$28** for a player the live board prices at
 **$17**.
 
@@ -13447,7 +14736,7 @@ largest      $28      $29      $29      $29      $29      $29      $29
 
 Seven days, a 2.3-point band, A.J. Brown the worst every single day.
 
-### 109e. D1 growth has decelerated sharply
+### 126e. D1 growth has decelerated sharply
 
 ```
           file        measured content
@@ -13467,7 +14756,7 @@ own, without the weekly prune, which is still not due until tomorrow (09-20).
 Still an unexplained observation. Tomorrow's prune Sunday is now a weaker test
 than it looked, since the growth decelerated before it ran.
 
-### 109f. Hang rate: 09-18 closed at 35%
+### 126f. Hang rate: 09-18 closed at 35%
 
 ```
 09-13  109 / 229   48%
@@ -13483,7 +14772,7 @@ Third time a partial read has understated the closed day (10 vs 24, 41 vs 38 —
 that one over — 27 vs 35). `usage-refresh` still has **no `job_runs` row at all**
 for a third day; overlay row 5 is 73 hours old.
 
-### 109g. The deployment is an unmerged branch again
+### 126g. The deployment is an unmerged branch again
 
 Today's bundle is 1,405,237 bytes — **80 KB smaller** than yesterday, because
 the league-platform connectors are gone (`PROVIDER_ESPN`, `PROVIDER_YAHOO`,
@@ -13502,7 +14791,7 @@ and 09-19. Board code is untouched on this one — all seven board symbols have
 identical counts against `main`, and the comparison below is clean — but that is
 the third sample of a mechanism nobody has decided to stop.
 
-### 109h. The rest
+### 126h. The rest
 
 - Repo vs deployed: **1380 player-rows across four boards, 0 differences**.
 - Harness self-test **23/23**.

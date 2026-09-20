@@ -305,6 +305,14 @@ p{color:var(--sec);margin:0 0 16px}
 <p class="is-empty" id="rkEmpty">Reading the board&hellip;</p>
 <p class="is-note" id="rkFoot"></p>
 
+<!-- The two lines under each name, explained where the reader meets them. The
+     sixteen published rankings pages carry the same section in their own words;
+     the lines themselves come from it-reads.js, shared with them. This one has
+     to cover four horizons rather than two, so it says "a one-week board" and
+     "a longer one" instead of naming them. -->
+<h2>How to read the two lines under a name</h2>
+<p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is where he ranks at his own position on the board you have selected and at your scoring, and what he has actually done to get there: the points a game he has scored so far, the volume behind them, and whether that board&rsquo;s projection backs that rate or marks it down, plus an injury or a usage swing where there is one. Before he has played there is nothing to report, and the line says what a rank like his is worth at his position instead. <b>Opportunity</b> is what is in front of him: on a one-week board the fixture, how hard the defense across from him has been on points allowed, and what the market implies his offense will score against its own season mean; on a longer board the games and byes he has left and how hard the defenses on that slate have been. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score. Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
+
 </div><!-- /.wrap -->
 
 <!-- Everything after the board, on the tinted surface: where else to go, and
@@ -358,6 +366,13 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-season.js" defer></script>
 <script src="/it-league.js" defer></script>
 <script src="/it-sync.js" defer></script>
+<!-- The two lines under each name, shared with the sixteen /weekly-* and
+     /season-long-* rankings pages (it-reads.js). The grammar and the tiers live
+     there so the same player cannot be "a weekly WR1" on one page and "a WR2"
+     on the other; this page passes in the only two things it alone knows —
+     which of the four boards is on screen, and the points it re-scored in the
+     browser at the reader's own league settings. -->
+<script src="/it-reads.js" defer></script>
 <script>
 (function () {
   // Three boards, four horizons, seven position views, four scoring settings,
@@ -436,11 +451,38 @@ p{color:var(--sec);margin:0 0 16px}
     ros: [['rank', 'ROS rank'], ['player', 'Player'], ['team', 'Team'], ['it', 'Remaining pts'], ['ppg', 'Pts / game'], ['games', 'Games'], ['byes', 'Bye'], ['sched', 'Schedule'], ['trend', 'Role trend'], ['conf', 'Risk / confidence'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['inj', 'Injury']],
     playoffs: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['it', 'Wks 15–17 pts'], ['ppg', 'Avg / game'], ['games', 'Games'], ['opps', 'Opponents'], ['sched', 'Schedule'], ['conf', 'Confidence'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['inj', 'Injury']]
   };
+  // THE TWO LINES, from the shared grammar in it-reads.js. All this page has to
+  // decide is what to feed it, and unlike the published rankings pages it has
+  // to decide it per render: the reader picks one of FOUR boards and the "#"
+  // column follows him, so the rank in the sentence follows him too or the row
+  // contradicts itself. The rank is the POSITIONAL one on that board (`bRank`
+  // for the blend, `cRank` for the consensus, and so on) even when the table is
+  // ranking the pooled flex slot, because the tier is a statement about the
+  // player at his own position; on FLEX the number is spelled out so it cannot
+  // be read as the "#" beside it. The points are `bp(r)`, the same re-scored
+  // figure the Iron Tuna column prints, so the sentence is at the reader's own
+  // scoring and not at the PPR the payload arrived in.
+  function reads(r) {
+    if (!window.ITReads) return '';
+    var f = board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v';
+    // The season line is re-scored here too. `form.points` arrived scored at
+    // the payload's own preset, and printing that beside a projection this page
+    // scored at the reader's league settings would put two different scorings
+    // in one sentence. `form.stats` is the raw line, exactly so this can.
+    var fm = r.p.form, ppg = null;
+    if (fm && fm.games > 0 && fm.stats) {
+      var fp = score(fm.stats, r.p.position, fm.games);
+      if (fp != null) ppg = fp / fm.games;
+    }
+    return ITReads.cell(r.p, { horizon: horizon, spellOut: pos === 'FLEX',
+      rank: r[f + 'Rank'], points: bp(r), formPpg: ppg });
+  }
+
   function cell(r, key, rankField) {
     var p = r.p, w0 = p.weeks && p.weeks.find(function (w) { return !w.bye && !w.out; });
     switch (key) {
       case 'rank': return '<td class="num">' + r[rankField] + '</td>';
-      case 'player': return '<td class="p"><a href="/in-season/player/' + slug(p.name) + '?pos=' + e(p.position) + '"><b>' + e(p.name) + '</b></a><span>' + e(p.position) + '</span>' + rosterTag(p) + '</td>';
+      case 'player': return '<td class="p"><a href="/in-season/player/' + slug(p.name) + '?pos=' + e(p.position) + '"><b>' + e(p.name) + '</b></a><span>' + e(p.position) + '</span>' + rosterTag(p) + reads(r) + '</td>';
       case 'team': return '<td>' + e(p.team) + '</td>';
       case 'opp': return '<td>' + (p.byes.length && !w0 ? '<span class="is-status">BYE</span>' : w0 ? e((w0.home ? 'vs ' : 'at ') + w0.opponent) : '—') + '</td>';
       case 'opps': return '<td>' + e(p.weeks.map(function (w) { return w.bye ? 'BYE' : w.out ? 'OUT' : (w.home ? 'vs ' : '@') + w.opponent; }).join(', ')) + '</td>';

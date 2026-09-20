@@ -11,3 +11,4 @@ tools
 .git
 .wrangler
 .github
+.claude

@@ -1060,8 +1060,8 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   const head = front.indexOf('var COVER_TURN_MS =');
   const tail = front.indexOf('// ── end cover rotation', head);
   if (head < 0 || tail < 0) { console.error('FAIL: the cover rotation block is not in front.html'); process.exit(1); }
-  const R = new Function(front.slice(head, tail) + '; return { coverBand, coverFace, COVER_TURN_MS, DESK_BAND, HERO_POOL };')();
-  const { coverBand, coverFace } = R;
+  const R = new Function(front.slice(head, tail) + '; return { coverBand, coverFace, coverFaces, coverPick, coverLead, COVER_TURN_MS, DESK_BAND, HERO_POOL, CARD_POOL };')();
+  const { coverBand, coverFace, coverFaces, coverPick, coverLead } = R;
   const TURN = R.COVER_TURN_MS;
   const at = h => Date.UTC(2026, 8, 18, 12) + h * 3600 * 1000;
   const ids = a => a.map(p => p.headline).join(',');
@@ -1186,6 +1186,45 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   ok('one gap, and it is the face', (coverFace([gaps[0]], null, at(1)) || {}).name === 'v');
   ok('one gap that is the card’s own player leaves the hero to the desk',
     coverFace([gaps[0]], gaps[0], at(1)) === null);
+
+  // ── the runners-up behind the face ──────────────────────────────────────
+  // The picture can fail on a NAME: the player lookup does not carry a face
+  // for everybody, and heroPaint was given one name and painted nothing when
+  // it could not resolve it. Standing still that was a rare miss on one
+  // player. On a clock it is an hour of every day, chosen at random off the
+  // board, with no photograph on the cover. The painter walks the pool now.
+  const pool = t => coverFaces(gaps, null, at(0) + t * TURN).map(g => g.name);
+  ok('the turn’s pick leads the list', pool(2)[0] === faceAt(2), pool(2).join(','));
+  ok('and the rest of the pool is behind him',
+    pool(2).length === R.HERO_POOL && new Set(pool(2)).size === R.HERO_POOL, pool(2).join(','));
+  ok('every turn offers the same cast in a different order',
+    [0, 1, 2, 3].every(t => pool(t).slice().sort().join('') === pool(0).slice().sort().join('')),
+    pool(0).join(',') + ' / ' + pool(1).join(','));
+  ok('the player the Fantasy card names is not in the list either',
+    !coverFaces(gaps, gaps[0], at(3)).some(g => g.name === 'v'));
+  ok('an empty board offers nobody rather than throwing', coverFaces([], null, at(1)).length === 0);
+
+  // ── the two card readings ───────────────────────────────────────────────
+  // THE THIRD AND FOURTH PATHS ONTO THE COVER. §88 enumerated two. The Fantasy
+  // card took the strongest BUY and the DFS card took bestVegasValues[0], so
+  // the cover changed hourly above two readings that did not change all week.
+  const rows = 'abcdefg'.split('').map(n => ({ name: n }));
+  const pick = t => (coverPick(rows, at(0) + t * TURN) || {}).name;
+  const picks = [];
+  for (let t = 0; t < 6; t++) picks.push(pick(t));
+  ok('a card reading is not the same player every turn', new Set(picks).size > 1, picks.join(','));
+  ok('it changes on every turn', picks.every((x, i) => !i || x !== picks[i - 1]), picks.join(','));
+  ok('it comes off the leaders, not the whole board',
+    picks.every(x => rows.slice(0, R.CARD_POOL).some(r => r.name === x)), picks.join(','));
+  ok('it is a function of the clock alone', pick(3) === pick(3));
+  ok('a board of one is printed as it is', (coverPick([rows[0]], at(5)) || {}).name === 'a');
+  ok('an empty board is no reading rather than a throw', coverPick([], at(5)) === null);
+
+  // A superlative belongs to the leader alone: a caption still claiming the
+  // top of the board once the turn has moved off it is simply false.
+  ok('the leader is known as the leader', coverLead(rows, rows[0]) === true);
+  ok('and a runner-up is not', coverLead(rows, rows[3]) === false);
+  ok('an empty board has no leader', coverLead([], undefined) === false);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

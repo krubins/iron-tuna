@@ -165,7 +165,7 @@ const stubs = {
   _availTable: () => ({}), _withAvailability: p => p, _availPool: pool => pool
 };
 const code = deps.join('\n') + '\n' + _oddsRoundSrc + '\nvar boardsPayload = __stubBoards({ scoringRules, PROJECTIONS, teamKey, scoreAny, _oddsNorm, _oddsRound });\n' + region +
-  '\nreturn { leagueReady, leagueNormalizeSettings, leagueEffectiveSettings, leagueScore, leagueScoringKey, leagueSettingsLabel, leagueResolvePlayer, leagueMapPlayers, leagueOptimize, leagueStarterSlots, leagueRosterSize, leagueEmptyRoster, LEAGUE_PROVIDERS, leagueCreateRow, leagueLoad, leagueList, leagueManualUpsert, leagueSetDefault, leagueDisconnect, leagueBoard, leagueLineup, leaguePickups, leagueMatchup, leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailabilityLookup, leagueSummary, leagueRoutes, makeToken, SCORING_BASE, scoringRules, scoreAny, PROJECTIONS, _oddsNorm, teamKey, flagOn, LEAGUE_STALE_MS, leagueRowToLeague };';
+  '\nreturn { leagueReady, leagueNormalizeSettings, leagueEffectiveSettings, leagueScore, leagueScoringKey, leagueSettingsLabel, leagueResolvePlayer, leagueNameSuggestions, leagueRosterCheck, leagueMapPlayers, leagueOptimize, leagueStarterSlots, leagueRosterSize, leagueEmptyRoster, LEAGUE_PROVIDERS, leagueCreateRow, leagueLoad, leagueList, leagueManualUpsert, leagueSetDefault, leagueDisconnect, leagueBoard, leagueLineup, leaguePickups, leagueMatchup, leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailabilityLookup, leagueSummary, leagueRoutes, makeToken, SCORING_BASE, scoringRules, scoreAny, PROJECTIONS, _oddsNorm, teamKey, flagOn, LEAGUE_STALE_MS, leagueRowToLeague };';
 const H = new Function(...Object.keys(stubs), '__stubBoards', code)(...Object.values(stubs), stubBoards);
 
 // ── a world: rooms of real players, in the shape a reader saves one ───────
@@ -264,6 +264,73 @@ console.log('\nplayer-id matching');
   ok('a defense resolves by club', H.leagueResolvePlayer({ name: 'HOU DEF', position: 'DEF', team: 'HOU' }).key === H._oddsNorm('Houston Texans') + '|DEF');
   ok('an unknown name is a miss with a reason', H.leagueResolvePlayer({ name: 'Nobody Atall', position: 'RB', team: 'BUF' }).key === null && /not on the board/.test(H.leagueResolvePlayer({ name: 'Nobody Atall', position: 'RB' }).reason));
   ok('an unranked position is refused', /not ranked/.test(H.leagueResolvePlayer({ name: 'Some Linebacker', position: 'LB' }).reason));
+
+  // ── the clarifier ────────────────────────────────────────────────────────
+  // THE FAILURE THIS EXISTS FOR. A reader pasted a twelve-team grid, pressed
+  // Save, and was handed "Not on the board (kept by name, scored 0): A
+  // Bornegales, S Vaki, M Lloyd, J Williams, D Hampton, E Johnson, B Robinson,
+  // D Tuten." Every one of those is answerable — two are one misread letter
+  // from a real player, three are a surname the initial cannot split, two are
+  // genuinely off the board — and the answer was asked of nobody. The list was
+  // a report of eight holes, delivered at the one moment the reader could no
+  // longer fill them.
+  //
+  // So: the same names, and what the board now offers for each. These are
+  // pinned by NAME rather than by count, because the whole value of a
+  // suggestion list is that the right player is in it.
+  console.log('\nthe names it could not place, and what it offers instead');
+  {
+    const ask = (name, pos) => H.leagueRosterCheck([{ name, pos }])[0];
+    const names = r => (r.suggestions || []).map(x => x.name);
+
+    // One misread letter. The list is the right player and nobody else.
+    const bor = ask('A Bornegales');
+    ok('a surname off by one letter finds its player', !bor.ok && names(bor)[0] === 'Andy Borregales', names(bor).join(', '));
+    ok('and offers nothing else, because nothing else is close', names(bor).length === 1, names(bor).join(', '));
+    const tut = ask('D Tuten');
+    ok('a wrong initial does not hide the only surname that matches',
+      !tut.ok && names(tut)[0] === 'Bhayshul Tuten' && names(tut).length === 1, names(tut).join(', '));
+
+    // One surname, several players. This is the case a resolver must never
+    // guess at, and the case a reader answers in one click.
+    const jw = ask('J Williams');
+    ok('an ambiguous surname comes back as the choice it is',
+      !jw.ok && names(jw).indexOf('Jameson Williams') >= 0 && names(jw).indexOf('Javonte Williams') >= 0, names(jw).join(', '));
+    ok('with the matching initial at the top', names(jw).slice(0, 2).every(n => /^Ja/.test(n)), names(jw).join(', '));
+    const br = ask('B Robinson', 'RB');
+    ok('a position narrows it to the two it could be',
+      !br.ok && names(br).length === 2 && names(br).indexOf('Bijan Robinson') >= 0 && names(br).indexOf('Brian Robinson Jr.') >= 0, names(br).join(', '));
+
+    // Honest about what is not there. Padding the list with six unrelated
+    // D-names is worse than an empty one: it invites a wrong pick.
+    ok('a player the board does not carry offers nothing', names(ask('S Vaki', 'RB')).length === 0, names(ask('S Vaki', 'RB')).join(', '));
+    ok('and is still asked about rather than passed over', ask('S Vaki', 'RB').ok === false);
+    ok('a name that is nothing like a player offers nothing', names(ask('Qqqq Zzzzzzz')).length === 0);
+
+    // A defense the grid printed as a city that is two teams.
+    const ny = ask('New York');
+    ok('an ambiguous defense offers both of them',
+      !ny.ok && names(ny).length === 2 && names(ny).every(n => /^New York/.test(n)), names(ny).join(', '));
+
+    // What the check says is fine, the save resolves. This is the contract:
+    // one resolver, asked twice, or the panel lies about the roster.
+    const board = H.PROJECTIONS.filter(p => p.position === 'WR')[0];
+    const good = ask(board.name, 'WR');
+    ok('a name the board carries is not asked about', good.ok === true && good.resolved === board.name);
+    ok('and the check agrees with the resolver the save uses',
+      H.leagueResolvePlayer({ name: board.name, position: 'WR' }).key !== null);
+    ok('a bare surname with one home is placed without asking', ask('K Walker III').ok === true);
+    ok('every ask carries the name it was asked about', ask('J Williams').name === 'J Williams');
+    ok('a blank name is skipped rather than asked about', H.leagueRosterCheck([{ name: '   ' }, { name: 'J Williams' }]).length === 1);
+
+    // Cheap enough to run after every read AND after every answer.
+    const t0 = Date.now();
+    H.leagueRosterCheck(Array.from({ length: 240 }, (_, i) => ({ name: 'Zz Nobodyxx' + i })));
+    const ms = Date.now() - t0;
+    ok('a whole league of unplaceable names checks in well under a second', ms < 900, ms + 'ms');
+  }
+
+  console.log('\nthe map rows');
   const db = fakeDb(); const env = { LEADS_DB: db };
   await H.leagueReady(env);
   const m = await H.leagueMapPlayers(env, 'manual', [{ providerPlayerId: '1', name: wr.name, position: 'WR', team: wr.team }, { providerPlayerId: '2', name: 'Nobody Atall', position: 'RB', team: 'BUF' }, { providerPlayerId: '1', name: wr.name, position: 'WR' }]);

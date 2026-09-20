@@ -3,10 +3,32 @@
 ## Architecture and scope
 
 Iron Tuna serves static HTML through `_worker.js`, with no package install/build step.
-The existing odds subsystem still powers Vegas projections. Tuna Market Signal is a
-separate analytical layer for current betting markets, opening/current line movement,
-cross-book confirmation and steam. It does not alter projections or optimizer rankings
-without a separate calibrated decision.
+Tuna Market Signal is the analytical layer for current betting markets, opening/current
+line movement, cross-book confirmation and steam.
+
+**It also feeds the weekly projections, and has since September 15, 2026.** The
+sentence that used to sit here — that it does not alter projections or optimizer
+rankings — was true when it was written and stopped being true when the projection
+bridge landed. On every successful poll, `tmsStoreForProjections` converts the
+normalized prop rows into the snapshot contract and writes them to `odds_snapshots`
+(`tmsProjectionRows` pairs the Over and Under per book/player/market and maps PropLine's
+market names to Iron Tuna's stat keys). From there:
+
+    odds_snapshots -> marketHistoryWeek -> marketPropsFrom -> vegasProjection
+                   -> the week board's vegas.basis = 'props'
+                   -> the DFS slate's market read and the Market read build
+
+So a player the books priced this week carries a projection built from his own quoted
+lines, and a player they did not carries his game's environment, discounted for it.
+See `docs/dfs-metrics.md`, "What the market actually said about him".
+
+**To check whether it is working**, read `props` on the health payload
+(`GET /api/health`). It reports this week only, and separates the four states:
+`live` (fresh rows matched to board players), `stale` (collection stopped),
+`unmatched` (rows arriving but matching nobody on the board — the silent failure, where
+every projection quietly falls back to the game line), and `empty` (nothing written).
+`snapshots` beside it counts the whole table across every week it keeps, so it can read
+healthy while this week's props are not reaching anything.
 
 As of September 10, 2026, **PropLine is the preferred Tuna Market Signal provider**.
 If `PROPLINE_API_KEY` is present and `TMS_PROVIDER` is not explicitly set, the Worker
@@ -59,7 +81,47 @@ Use Cloudflare Worker secrets. Never put provider keys in frontend code or GitHu
 | `TMS_LICENSED_IMPORT` | off | Admin-only normalized import path |
 
 Default PropLine prop markets are:
-`player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td`.
+`player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_attempts,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td`
+(ten of a cap of twelve).
+
+**The yardage and reception markets are what a projection is built from.**
+`VEGAS_MARKETS` names a core per position — receiving yards or receptions for a
+receiver, passing yards or passing TDs for a quarterback — and an anytime-
+touchdown price is not one of them, except for a running back, where it is half
+the core. A feed that returns only `player_anytime_td` therefore produces a very
+healthy row count and **zero** market projections for receivers, tight ends and
+quarterbacks. If you are narrowing `TMS_PROP_MARKETS`, keep at least one yardage
+or reception market or the projections quietly revert to the game lines.
+
+`player_rush_attempts` scores nothing and is requested anyway: it is the market
+the DFS slate's implied-touches number is built from, and without it that number
+is a carry count guessed as `rushYd / 4.3`.
+
+### Checking what actually came back
+
+The poll records what it asked for and what arrived, at `health.markets` on
+`GET /api/tuna-market`:
+
+```
+markets: {
+  requested: [...],              the market keys sent on every per-event call
+  returned:  { player_reception_yds: 214, player_anytime_td: 396, ... },
+  events:    17,                 games that got a prop call this poll
+  drops:     { total, byReason, byMarket }
+}
+```
+
+`drops` is the one to read when a market is requested and does not come back.
+Normalizing rejects rows for defined reasons — `no_line`, `no_player`, `price`,
+`no_timestamp`, `alternate_ladder` — and every rejection is counted by reason and
+by market. Before this existed each was a bare `continue`, which is how a feed
+can lose eight of its nine markets without anything saying so. A clean pull
+records nothing, so any entry at all is a signal.
+
+Note that an anytime-touchdown market carries no line and is exempt from the
+line check, while every yardage and reception market must have one. That
+asymmetry is why a line-parsing fault presents as "the books only post
+touchdowns": the exempt market survives and the rest disappear.
 
 Historical movement and steam require a PropLine tier that exposes those features.
 If movement is unavailable, current game lines and props still collect and Iron Tuna

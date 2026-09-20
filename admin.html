@@ -731,6 +731,37 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   var HLTH = null, hlthOpen = null;
   var ago = function(ts){ if (!ts) return '<span style="color:var(--muted)">never</span>'; var h = (Date.now() - ts) / 3600000; return esc(h < 1 ? Math.round(h * 60) + ' min ago' : h < 48 ? h.toFixed(1) + ' h ago' : Math.round(h / 24) + ' d ago') + ' <span style="color:var(--muted)">' + esc(new Date(ts).toLocaleString()) + '</span>'; };
   var pill = function(t, kind){ return '<span class="badge" style="' + (kind === 'ok' ? 'background:#e6f4ee;color:#0e6b4a' : kind === 'bad' ? 'background:#fde8e8;color:#9b1c1c' : kind === 'warn' ? 'background:#fff4d6;color:#8a5a00' : '') + '">' + esc(t) + '</span>'; };
+  // ── this week's player props, in words ────────────────────────────────
+  // The row count beside it spans every week the store keeps, so it reads
+  // healthy long after collection stops. This one is this week only, and it
+  // answers the question in English rather than leaving it to be inferred
+  // from a number: is the betting market actually reaching the projections?
+  var PROP_WORD = { passYd: 'passing yards', passTD: 'passing TDs', passInt: 'interceptions',
+    rushYd: 'rushing yards', rushAtt: 'carries', rushTD: 'rushing TDs', recYd: 'receiving yards',
+    rec: 'receptions', recTD: 'receiving TDs', anytimeTD: 'anytime TD' };
+  var PROP_STATE = {
+    live:      ['Working', 'ok'],
+    td_only:   ['Touchdowns only', 'warn'],
+    stale:     ['Collection stopped', 'warn'],
+    unmatched: ['Reaching nobody', 'bad'],
+    empty:     ['Nothing this week', 'bad'],
+    no_week:   ['Out of season', '']
+  };
+  var PROPS_STATE_CSS = '.tile .props-state{display:block;margin-bottom:6px;font-size:12px;line-height:1}';
+  (function(){ var st = document.createElement('style'); st.textContent = PROPS_STATE_CSS; document.head.appendChild(st); })();
+  function propsTile(p){
+    if (!p) return tile('Betting props', '—', 'No answer from the health board.');
+    var st = PROP_STATE[p.state] || ['Unknown', ''];
+    var mix = Object.keys(p.byMarket || {}).sort(function(a, b){ return p.byMarket[b].players - p.byMarket[a].players; })
+      .slice(0, 4).map(function(k){ return (PROP_WORD[k] || k) + ' ' + p.byMarket[k].players; }).join(' · ');
+    // The badge on its own line above the count. Inline, it sits in the tile's
+    // hero font and wraps mid-phrase — "Working 214" over "players" — and it
+    // did so differently in every state, because the badge words are different
+    // lengths. A line of its own reads the same in all five.
+    var head = '<div class="props-state">' + pill(st[0], st[1]) + '</div>'
+      + (p.matched != null ? num(p.matched) + ' player' + (p.matched === 1 ? '' : 's') : '\u2014');
+    return tile('Betting props', head, esc(mix || (p.note || '').slice(0, 90)));
+  }
   function hlthRender(j){
     HLTH = j;
     var st = j.status === 'ok' ? pill('OK', 'ok') : j.status === 'down' ? pill('DOWN', 'bad') : pill('DEGRADED', 'warn');
@@ -741,6 +772,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       tile('Current week', esc(wk), esc(j.phaseLabel || '') + (j.counts ? ' · ' + j.counts.completed + ' final, ' + j.counts.inProgress + ' live, ' + j.counts.upcoming + ' to play' : ''), true) +
       tile('Season odds', u.odds ? esc(u.odds.provider) : '—', ago(u.odds && u.odds.updatedAt)) +
       tile('Betting snapshots', u.snapshots ? num(u.snapshots.rows) + ' rows' : '—', ago(u.snapshots && u.snapshots.last)) +
+      propsTile(u.props) +
       tile('Weekly stats', u.usage ? 'through wk ' + u.usage.throughWeek : '—', ago(u.usage && u.usage.updatedAt)) +
       tile('ROS rankings', r.ros ? 'week ' + r.ros.week : '—', ago(r.ros && r.ros.builtAt)) +
       tile('Failed jobs (7d)', num((j.failedJobs || []).length), (j.missing || []).length + ' missing · ' + (j.stale || []).length + ' stale');
@@ -751,6 +783,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     var rows = [['NFL schedule', u.schedule && u.schedule.updatedAt, u.schedule ? u.schedule.games + ' games, ' + u.schedule.provider : ''],
       ['Season odds overlay', u.odds && u.odds.updatedAt, u.odds ? u.odds.matched + ' matched' : ''],
       ['Betting snapshots', u.snapshots && u.snapshots.last, u.snapshots ? u.snapshots.subjects + ' subjects, ' + u.snapshots.books + ' books' : ''],
+      ['Player props, this week', u.props && u.props.lastAt, u.props ? u.props.note : 'not reported'],
       ['Weekly stats and snaps', u.usage && u.usage.updatedAt, u.usage ? u.usage.players + ' players' : ''],
       ['Injury list', u.availability && u.availability.updatedAt, u.availability ? 'as of ' + u.availability.asOf : ''],
       ['Depth charts', u.depthCharts && u.depthCharts.updatedAt, ''],
@@ -924,7 +957,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     fetch('/api/admin/dfs?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
       .then(function(r){ return r.json(); })
       .then(function(j){
-        if (!j || !j.ok || !j.imported || !j.imported.ok) { $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Not imported.</b> ' + esc((j && (j.error || (j.imported && j.imported.error === 'no_db' ? 'No database is bound, so nothing can be stored.' : j.imported && j.imported.error))) || 'unknown error'); return; }
+        // j.note before j.error: a refusal the route can explain (a single-game
+        // export, say) carries the sentence saying what to do about it, and the
+        // bare token behind it says nothing to whoever is standing at the form.
+        if (!j || !j.ok || !j.imported || !j.imported.ok) { $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Not imported.</b> ' + esc((j && (j.note || j.error || (j.imported && j.imported.error === 'no_db' ? 'No database is bound, so nothing can be stored.' : j.imported && j.imported.error))) || 'unknown error'); return; }
         $('dfsResult').className = 'result ok'; $('dfsMsg').innerHTML = '<b>Imported ' + esc(j.imported.stored) + ' rows for week ' + esc(j.imported.week == null ? '—' : j.imported.week) + '.</b>'; $('dfsCsv').value = ''; dfsStatus(j);
       })
       .catch(function(e){ $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Network error.</b> ' + esc((e && e.message) || ''); })

@@ -128,6 +128,14 @@ jobs:
         if: ${{ !cancelled() }}
         run: node --check it-season.js
 
+      # /dfs-coach.js is the Value Coach under the DFS lineup recommendation, and
+      # it is the one script on that page that talks to an API. A syntax error
+      # there leaves a chat panel that never answers, on a page whose own inline
+      # script keeps working — so nothing else on /dfs would look wrong.
+      - name: Parse dfs-coach.js
+        if: ${{ !cancelled() }}
+        run: node --check dfs-coach.js
+
       # /it-ranks.js is the board behind all sixteen per-position rankings pages.
       # A syntax error there leaves every one of them saying "Reading the
       # board..." forever, with no console anyone is watching.
@@ -458,6 +466,9 @@ jobs:
       - name: DFS adapters, Vegas Value Score, stacks and optimizer
         if: ${{ !cancelled() }}
         run: node tools/test-dfs.mjs
+      - name: The Value Coach on the DFS lineup
+        if: ${{ !cancelled() }}
+        run: node tools/test-dfs-coach.mjs
       - name: DraftKings main-slate importer
         if: ${{ !cancelled() }}
         run: node tools/test-draftkings-import.mjs
@@ -760,6 +771,15 @@ jobs:
       - name: "The saved league: normalization, crosswalk and the personalized modules"
         if: ${{ !cancelled() }}
         run: node tools/test-league-sync.mjs
+
+      # THROWS: every league ever created answered "D1_ERROR: Wrong number of
+      # parameter bindings" because one INSERT bound eighteen values into
+      # seventeen placeholders. A statement that parses can still be wrong, and
+      # only a database counts the ? — so this counts them, and prepares the
+      # league writes against the schema the worker creates for itself.
+      - name: Every SQL statement binds what it asks for
+        if: ${{ !cancelled() }}
+        run: node tools/test-worker-sql.mjs
 
       # Every deployed script that the pages load. it-sync.js is loaded by
       # nine in-season pages; a syntax error there takes the league strip and
