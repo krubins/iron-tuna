@@ -24,6 +24,39 @@ derived from the Iron Tuna week board at the site's own scoring rules.
 | **Typical entry** | What an ordinary entry on the slate projects for. Entries are DRAWN rather than averaged: seat by seat in a shuffled order, each seat taken by an eligible player with probability proportional to his modeled ownership, nobody twice, and nobody the remaining budget cannot afford once the other open seats are paid for. 4,000 draws off a fixed seed; the mean of the ones that fill a legal roster. Computed in `fieldAverage()` in `dfs-optimizer.js`. | This is the scale the lineup card prints in parentheses beside a build's projection, so a total has something to be measured against. **Whole rosters are drawn because a per-seat average is not a lineup**: an ownership-weighted mean of each seat prices every seat as if the other eight were free, and on the test fixture it returned a typical entry twenty points above the optimal lineup, which no legal roster can be. Every draw here is a roster somebody could submit, so their mean is below the best of them by construction. It is **not** an optimum, a cash line or a winning score, it inherits every limitation of the modeled ownership above, and the seed is fixed so an unchanged board prints the same number every solve. A reader's locks and exclusions do not enter it — they change his roster, not the field's. Players marked unavailable do come off. With no ownership on the board, no cap, a seat no available player can fill, or too few legal draws to average, it returns null and the page prints nothing. |
 | **Stack score** | For each game side: QB plus the two best-projected pass catchers' market points, indexed to the slate's best stack (100). | From `buildDfsStacks()`; the bring-back is the other side's top catcher. |
 
+## Where the lineup card's numbers say they came from
+
+Every figure in the lineup card's stat row carries its own explanation, opened
+by hovering it, tabbing to it or tapping it: a short account of what the number
+is, and under a rule, the arithmetic that produced **that roster's** value
+rather than a definition. The triggers are real buttons, so the explanation is
+reachable without a mouse, and each tip is the button's sibling wired up with
+`aria-describedby`, so a screen reader announces the figure as the control and
+the explanation as its description.
+
+| Figure | What its tip shows |
+|---|---|
+| DraftKings FPPG | That the operator average is history and not a forecast, plus the nine averages totalled. Says so plainly when a player has no average in the salary file and there is nothing to total. |
+| Iron Tuna Projection | The consensus → market → Iron Tuna ladder at roster level, with how many of the nine the books actually priced. The ladder is printed only when every seat carries both sides. |
+| Tuna Edge | The subtraction itself: projection minus operator average. |
+| Salary used | The spend against the cap and what is left, with why leftover money is not waste. |
+
+The typical entry in parentheses is the one figure with no tip. The paragraph
+directly under the stat row already gives it in full sentences, including how
+the draws are made and that the ownership behind them is modeled rather than
+fed, so a tip would be a second copy of that to keep in step. The alternate
+cards print the figure without repeating the paragraph; they sit under the lead
+board, which a reader has already passed.
+
+Two cascade hazards live in this row and are commented where they bite. The
+site's own `.is-stat span` rule (site.css) paints **any** span inside a stat
+tile as that tile's small uppercase caption, and `.is-board .is-stat span`
+repaints it in the board's muted grey; both outrank an unscoped tooltip class,
+so every selector for these tips is scoped under `.is-stat` and, for colour,
+under `.is-board .is-stat`. The tip is anchored to the stat **tile** rather
+than to the number, because the projection and its parenthetical wrap onto two
+lines in a narrow column and a tip hung off the first number covers the second.
+
 ## Contest types
 
 `/api/dfs?site=dk|fd&contest=cash|single|3max|gpp|showdown` returns the same
