@@ -2042,7 +2042,32 @@ p{color:var(--sec);margin:0 0 16px}
     var f = Math.pow(10, places == null ? 1 : places);
     return Math.round(Number(v) * f) / f;
   }
-  function coachRow(p, extra) {
+  // §97 put a market block on every slate row and §96 put a weekly availability
+  // verdict beside it. Neither was reaching the coach, so it could quote a
+  // fitted number with the same confidence as a quoted one and never mention
+  // that a man is Questionable. Both read through the page's OWN helpers
+  // (marketChipFor, marketPhrase) rather than a second vocabulary here, so the
+  // coach cannot describe a player differently from the row above it.
+  function coachMarket(p, brief) {
+    var m = p && p.market; if (!m) return null;
+    var out = { read: marketChipFor(m)[0], trust: m.shrink, points: coachN(m.points) };
+    if (brief) return out;
+    if (m.pricedLabels && m.pricedLabels.length) out.posted = m.pricedLabels.join(', ');
+    if (m.books) out.books = m.books;
+    if (m.ageHours != null) out.pulledHoursAgo = coachN(m.ageHours);
+    if (m.shortOfProjection) out.quotedOnlyOnHisTouchdown = true;
+    if (m.tdProbability != null && m.tdDevigged) out.tdFromTheBooks = true;
+    return out;
+  }
+  function coachStatus(p) {
+    if (!p || !p.weekStatus) return null;
+    var out = { designation: p.weekStatus };
+    if (p.weekStatusBasis) out.from = p.weekStatusBasis;
+    if (p.weekStatusNote) out.note = p.weekStatusNote;
+    if (p.available === false) out.playing = false;
+    return out;
+  }
+  function coachRow(p, extra, brief) {
     var r = {
       name: p.name, pos: p.position, team: p.team,
       opp: p.opponent ? (p.home === false ? '@' : 'vs ') + p.opponent : null,
@@ -2059,7 +2084,9 @@ p{color:var(--sec);margin:0 0 16px}
       vvs: p.vegasValueScore == null ? null : Number(p.vegasValueScore),
       cashScore: p.cashScore == null ? null : Number(p.cashScore),
       tourneyScore: p.tournamentScore == null ? null : Number(p.tournamentScore),
-      chalk: p.chalk || null
+      chalk: p.chalk || null,
+      market: coachMarket(p, brief),
+      status: coachStatus(p)
     };
     if (extra) for (var k in extra) r[k] = extra[k];
     for (var j in r) if (r[j] == null) delete r[j];
@@ -2084,6 +2111,7 @@ p{color:var(--sec);margin:0 0 16px}
         return coachRow(merged, {
           slot: p.slot,
           role: rank === 1 ? playerFit(p, l, qb, sh) : null,
+          marketSays: rank === 1 && full.market ? marketPhrase(full) : null,
           tag: qb && p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE') ? 'stack with ' + qb.name
              : qb && p.team === qb.opponent && p.position !== 'DST' ? 'bring-back against ' + qb.name : null
         });
@@ -2236,7 +2264,7 @@ p{color:var(--sec);margin:0 0 16px}
     var benchKey = contest === 'cash' ? 'cashScore' : contest === 'gpp' || contest === '3max' ? 'tournamentScore' : 'value';
     var bench = (view.players || []).filter(function (p) { return p.onBoard && !inLineup[p.key]; })
       .sort(function (a, b) { return (Number(b[benchKey]) || 0) - (Number(a[benchKey]) || 0); })
-      .slice(0, 30).map(function (p) { return coachRow(p); });
+      .slice(0, 30).map(function (p) { return coachRow(p, null, true); });
     var stackRows = (view.stacks || []).slice(0, 16).map(function (g) {
       return { game: g.game, total: coachN(g.total), impliedAway: coachN(g.impliedAway), impliedHome: coachN(g.impliedHome),
                awayQb: g.away && g.away.qb ? g.away.qb.name : null, homeQb: g.home && g.home.qb ? g.home.qb.name : null,
@@ -2248,6 +2276,10 @@ p{color:var(--sec);margin:0 0 16px}
       slate: { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: view.label, week: slate.week,
                cap: parseInt($('dfCap').value, 10) || view.cap, pricedPlayers: solverPool.length,
                medianVegasPerK: coachN(view.medianVegasPerK, 2),
+               marketCoverage: view.props ? { pricedPlayers: view.props.priced, ofPlayers: view.props.players,
+                 percent: view.props.coverage, markets: (view.props.marketLabels || []).join(', ') || null,
+                 avgBooks: view.props.avgBooks, freshestHours: coachN(view.props.freshestHours),
+                 quotedOnlyOnTouchdown: view.props.quotedButShort || undefined } : undefined,
                salariesFrom: slate.source === 'upload' ? 'the reader’s own uploaded salary file' : 'the site’s salary feed' },
       setup: { gameStyle: gs.label || gameStyle || 'Classic', gameStyleNote: gs.note || null,
                games: gameStyle === 'best-ball' ? 'season-long player pool' : selectedGameKeys().length + ' selected game(s)',

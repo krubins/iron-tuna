@@ -127,6 +127,28 @@ console.log('\nthe prompt');
   ok('it answers inside the contest shape the reader chose',
      /Answer inside the shape the reader is actually in/.test(s));
   ok('it writes for a chat panel that renders no markdown', /does NOT render markdown/.test(s) && /NO markdown/.test(s));
+  // §96 and §97 added two facts to every slate row that change what a correct
+  // answer says. A glossary that does not carry them lets the coach quote a
+  // fitted number as confidently as a quoted one, and call a Questionable man
+  // a clean recommendation.
+  ok('it explains whether the books priced him, in the page\u2019s own words',
+     ['PROPS when a sportsbook posted his own lines', 'LINES when nothing of his was posted',
+      'FITTED when even the game was unpriced', 'TD ONLY'].every((k) => s.includes(k)));
+  ok('it reads the market as confidence and not as quality',
+     /USE THIS AS CONFIDENCE, NOT AS QUALITY/.test(s)
+     && /A quoted 16\.0 and a fitted 16\.0 are not the same number/.test(s)
+     && /treat an expensive quoted player as priced, not as automatically correct/.test(s));
+  ok('it knows what trust means, so it cannot read the shrink backwards',
+     /1 for a fully quoted man, about 0\.8 off a game line, about 0\.55 off a fitted rating, 0 for nobody/.test(s));
+  ok('it can answer whether the market read is worth trusting this week',
+     /slate\.marketCoverage says how much of the whole board was priced/.test(s));
+  ok('it says a flagged player is flagged, and never invents one',
+     /never call a flagged man healthy, and never invent a designation the data does not carry/.test(s));
+  ok('it knows Questionable is deliberately still on the board, and Out is not',
+     /QUESTIONABLE STAYS ON THE BOARD ON PURPOSE/.test(s)
+     && /playing false means the reader locked him in himself/.test(s));
+  ok('it names the four sources that decide, including the one no injury report sees',
+     /the roster file \(a practice-squad or free-agent body the injury report would never mention\)/.test(s));
   ok('it places no bets and enters no contests',
      /must not tell anyone what to wager/.test(s) && /only builds a roster to copy/.test(s));
   // THE LINE IN SETUP MODE. "Which contest should I enter" is a strategy
@@ -191,8 +213,9 @@ console.log('\nthe payload the proxy will accept');
 
 console.log('\nthe row the coach is handed');
 {
-  const mod = [lift(/function fppgEdge\(/), lift(/function coachN\(/), lift(/function coachRow\(/),
-    'export { coachN, coachRow };'].join('\n');
+  const mod = [lift(/function fppgEdge\(/), lift(/function coachN\(/), lift(/var MARKET_CHIP = /),
+    lift(/function marketChipFor\(/), lift(/function coachMarket\(/), lift(/function coachStatus\(/),
+    lift(/function coachRow\(/), 'export { coachN, coachRow };'].join('\n');
   const { coachN, coachRow } = await import('data:text/javascript;base64,' + Buffer.from(mod, 'utf8').toString('base64'));
   ok('a number is rounded, never re-derived', coachN(18.44) === 18.4 && coachN(18.46) === 18.5 && coachN(0.0173, 2) === 0.02);
   ok('a missing number stays missing', coachN(null) === null && coachN(undefined) === null && coachN('x') === null);
@@ -212,6 +235,38 @@ console.log('\nthe row the coach is handed');
   ok('the market disagreement rides along as its own words', r.marketDelta === 'BUY +1.5');
 
   const thin = coachRow({ name: 'Bears ', position: 'DST', team: 'CHI', salary: 2600, ironTunaPoints: 7.1 });
+  // A quoted man, a fitted man and a flagged man have to arrive distinguishable.
+  const quoted = coachRow({ name: 'Puka Nacua', position: 'WR', team: 'LAR', salary: 7800, ironTunaPoints: 18.4,
+    market: { basis: 'props', shrink: 1, points: 19.06, quoted: true, pricedLabels: ['receiving yards', 'receptions'],
+              books: 6, ageHours: 0.6, tdProbability: 41.2, tdDevigged: true, tdBooks: 5, shortOfProjection: false } });
+  ok('a quoted player arrives quoted, with what was posted and how fresh it is',
+     quoted.market.read === 'PROPS' && quoted.market.trust === 1 && quoted.market.points === 19.1
+     && quoted.market.posted === 'receiving yards, receptions' && quoted.market.books === 6
+     && quoted.market.pulledHoursAgo === 0.6 && quoted.market.tdFromTheBooks === true,
+     JSON.stringify(quoted.market));
+  const fitted = coachRow({ name: 'Nobody Priced', position: 'WR', team: 'CHI', salary: 4200, ironTunaPoints: 9.1,
+    market: { basis: 'ratings', shrink: 0.55, points: 9.4, quoted: false, pricedLabels: [], shortOfProjection: false } });
+  ok('a fitted player is not dressed as a quoted one',
+     fitted.market.read === 'FITTED' && fitted.market.trust === 0.55
+     && !('posted' in fitted.market) && !('books' in fitted.market) && !('tdFromTheBooks' in fitted.market),
+     JSON.stringify(fitted.market));
+  ok('a man quoted only on his touchdown says so, because that is not a projection',
+     coachRow({ name: 'TD Only', position: 'RB', team: 'NYJ', salary: 5000, ironTunaPoints: 10,
+       market: { basis: 'gamelines+props', shrink: 0.85, points: 10.2, quoted: true, pricedLabels: [],
+                 shortOfProjection: true } }).market.quotedOnlyOnHisTouchdown === true);
+  ok('a flagged player carries the designation, its wording and which source answered',
+     (() => {
+       const q = coachRow({ name: 'Sore Receiver', position: 'WR', team: 'BUF', salary: 6000, ironTunaPoints: 11,
+         weekStatus: 'Questionable', weekStatusNote: 'hamstring', weekStatusBasis: 'injury-report' });
+       return q.status.designation === 'Questionable' && q.status.note === 'hamstring'
+         && q.status.from === 'injury-report' && !('playing' in q.status);
+     })());
+  ok('a man who is not playing is marked as not playing, not merely flagged',
+     coachRow({ name: 'Practice Squad', position: 'WR', team: 'LAC', salary: 3000, ironTunaPoints: 4,
+       weekStatus: 'practice squad', weekStatusBasis: 'roster', available: false }).status.playing === false);
+  ok('a player nothing flagged carries no status at all, rather than a healthy claim',
+     !('status' in coachRow({ name: 'Fine', position: 'TE', team: 'GB', salary: 3800, ironTunaPoints: 8 })));
+
   ok('a field the board does not carry is absent, not zero',
      !('own' in thin) && !('dkFppg' in thin) && !('tdPct' in thin) && thin.proj === 7.1,
      JSON.stringify(thin));
@@ -311,6 +366,16 @@ console.log('\nthe page');
   ok('an unfinished setup and a format with no Classic roster are answered, not refused',
      /if \(site === 'dk' && \(!setupReady\(\) \|\| !styleSupportsOptimizer\(\)\)\) return setupContext\(\);/.test(ctx)
      && !ctx.split('\n').some((l) => /!setupReady\(\)|!styleSupportsOptimizer\(\)/.test(l) && /return \{ blocked:/.test(l)));
+  ok('the roster the page recommends carries the page\u2019s own market sentence, and the bench does not',
+     /marketSays: rank === 1 && full\.market \? marketPhrase\(full\) : null,/.test(page));
+  ok('the bench says only whether its number is quoted or fitted, which is what a swap needs',
+     /\.slice\(0, 30\)\.map\(function \(p\) \{ return coachRow\(p, null, true\); \}\)/.test(ctx)
+     && /if \(brief\) return out;/.test(page));
+  ok('the slate says how much of the board the books priced',
+     /marketCoverage: view\.props \?/.test(ctx) && /percent: view\.props\.coverage/.test(ctx)
+     && /avgBooks: view\.props\.avgBooks/.test(ctx) && /freshestHours: coachN\(view\.props\.freshestHours\)/.test(ctx));
+  ok('the market and availability reads come from the page\u2019s own helpers, not a second vocabulary',
+     /read: marketChipFor\(m\)\[0\]/.test(page) && !/PROPS'/.test(lift(/function coachMarket\(/)));
   ok('the context carries the contest, the roster, the swaps and the board behind them',
      ['slate:', 'setup:', 'build:', 'thesis:', 'lineups:', 'pivots:', 'boardNotInLineup:', 'games:']
        .every((k) => ctx.includes(k)));
