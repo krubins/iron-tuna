@@ -43,6 +43,12 @@ It may not:
 
 The newsroom prompt states this rule explicitly and the fact checker continues to reject numeric claims that are not in the research packet.
 
+## Interactive features
+
+The Value Coach is the same rule in a chat panel. On the auction board (`index.html`) and on the DFS lineup (`dfs-coach.js`, mounted by `dfs.html`) it is handed the page's completed numbers as JSON and asked to explain them. It may compare them, say which one drove a decision, and answer general football questions from its own knowledge. It may not calculate, re-rank, interpolate or replace a projection, value, floor, ceiling, ownership, leverage or salary, and it may not supply a number the page does not carry. Both prompts state this explicitly.
+
+Neither coach holds a metric of its own: the DFS panel transports what `dfs-optimizer.js` and `buildDfsSlate`/`dfsMetrics` produced and nothing else. Both reach the model through `/api/coach`, the server-side proxy, so no provider key reaches a browser.
+
 ## Model policy
 
 `NEWSROOM_LLM_MODEL` is separate from the general `LLM_MODEL`. Production pins the newsroom to `claude-sonnet-4-6`.
@@ -54,6 +60,7 @@ This separation is deliberate. A future decision to use Opus for an interactive 
 `tools/test-ai-boundary.mjs` is run by GitHub Actions. It fails when:
 
 - a provider or LLM call appears inside the ranking, projection or DFS numeric engines;
+- (in `tools/test-dfs-coach.mjs`) the DFS Value Coach stops forbidding recomputation, starts carrying a metric of its own, or reaches a provider directly;
 - the newsroom stops passing an explicit editorial model;
 - the newsroom prompt stops prohibiting numeric recomputation;
 - the deployed newsroom model is changed from Sonnet to Opus.
