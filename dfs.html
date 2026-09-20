@@ -126,32 +126,132 @@ p{color:var(--sec);margin:0 0 16px}
 .is-board .btn.alt{background:rgba(70,214,172,.14);color:#46d6ac;border-color:#46d6ac}
 
 /* The roster explains itself at three levels: a thesis above it, one sentence
-   under each player, and a detailed read beside the table on wide screens. */
+   per player behind the plus beside his name, and a detailed read under the
+   table.
+
+   The fit sentence used to live inside the Player cell, beside a breakdown
+   column that took a third of the board. Two narrow columns fought for the
+   same width and the sentence lost: every note wrapped to eight or nine lines
+   and the player's name broke across two of them. The note is now a
+   disclosure row spanning the table, the table gets the board's full width,
+   and the breakdown sits underneath it in columns rather than in a rail. */
 .df-explain-summary{margin:0 var(--space-5) var(--space-4);padding:15px 17px;border:1px solid rgba(255,255,255,.13);
   border-radius:10px;background:rgba(255,255,255,.055)}
 .df-explain-summary h4{margin:0 0 8px;font-size:15px;text-transform:uppercase;letter-spacing:.09em;color:#46d6ac}
 .df-explain-summary p{margin:0;color:#d5e2df;font-size:16px;line-height:1.66}
-.df-lead-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(285px,.85fr);gap:18px;align-items:start;padding:0 var(--space-5) var(--space-4)}
-.df-lead-table{min-width:0;overflow:auto;border:1px solid rgba(255,255,255,.09);border-radius:9px}
-.df-lead-table table{margin:0}
-.df-breakdown{border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.055);padding:15px 16px}
+.df-lead-grid{display:block;padding:0 var(--space-5) var(--space-4)}
+.df-lead-table{min-width:0;overflow-x:auto;border:1px solid rgba(255,255,255,.09);border-radius:9px}
+.df-lead-table table{margin:0;min-width:620px}
+.df-card-table{overflow-x:auto}
+.df-card-table table{min-width:0}
+.df-breakdown{border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.055);
+  padding:15px 18px 17px;margin-top:16px;display:block}
 .df-breakdown h4{margin:0 0 10px;font-size:15px;color:#fff}
-.df-breakdown-section{border-top:1px solid rgba(255,255,255,.10);padding:11px 0 0;margin-top:11px}
-.df-breakdown-section:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.df-breakdown-body{columns:260px 4;column-gap:28px}
+.df-breakdown-section{border-top:1px solid rgba(255,255,255,.10);padding:11px 0 0;margin-top:11px;break-inside:avoid}
 .df-breakdown-section b{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#46d6ac;margin-bottom:4px}
 .df-breakdown-section p{margin:0;color:#bcd0cc;font-size:12.5px;line-height:1.55}
-.df-fit{display:block;margin-top:5px;max-width:62ch;font-size:11.5px;line-height:1.42;color:var(--muted);font-weight:400}
+
+/* ── the roster row ───────────────────────────────────────────────────────
+   A player, his numbers, and then his one sentence under both. */
+.df-pcell{white-space:normal}
+.df-pwrap{display:flex;align-items:center;gap:11px;min-width:0}
+.df-face{display:inline-grid;place-items:center;position:relative;overflow:hidden;vertical-align:middle;
+  width:38px;height:38px;min-width:38px;border-radius:50%;
+  background:rgba(255,255,255,.10);color:#bcd0cc}
+.df-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+.df-face i{font-style:normal;font-size:12px;font-weight:800;letter-spacing:.02em;color:inherit}
+.df-face.team{border-radius:8px;background:rgba(255,255,255,.07)}
+.df-face.team img{object-fit:contain;object-position:center;padding:5px}
+.df-face.team i{font-size:10px}
+.df-card .df-face{width:32px;height:32px;min-width:32px;background:var(--elev);color:var(--sec)}
+.df-pname{display:block;min-width:0}
+.df-pname-line{display:block}
+.df-pname .is-status{display:block;margin-top:2px}
+.df-prow td{border-bottom:1px solid var(--board-line);padding-top:11px;padding-bottom:11px}
+.df-card .df-prow td{border-bottom:1px solid var(--line)}
+.df-prow:first-child td{padding-top:12px}
+
+/* The note is a disclosure. Nine sentences open at once is a wall of prose
+   between the reader and the numbers; "why him" is a question about one seat,
+   so the plus beside each name answers that seat and nothing else. */
+.df-fit-toggle{appearance:none;border:1px solid rgba(255,255,255,.22);background:transparent;color:#bcd0cc;
+  width:19px;height:19px;min-width:19px;border-radius:50%;padding:0;margin-left:8px;cursor:pointer;
+  display:inline-grid;place-items:center;vertical-align:1px;line-height:1;transition:border-color .12s ease,color .12s ease,background .12s ease}
+.df-fit-toggle::before{content:"+";font-family:var(--font-mono);font-size:13px;font-weight:700;margin-top:-1px}
+.df-fit-toggle[aria-expanded="true"]::before{content:"\2212"}
+.df-fit-toggle:hover{border-color:#46d6ac;color:#46d6ac}
+.df-fit-toggle[aria-expanded="true"]{border-color:#46d6ac;color:#46d6ac;background:rgba(70,214,172,.12)}
+.df-card .df-fit-toggle{border-color:var(--line2);color:var(--sec)}
+.df-card .df-fit-toggle:hover,.df-card .df-fit-toggle[aria-expanded="true"]{border-color:var(--teal);color:var(--teal);background:rgba(14,124,99,.08)}
+.df-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.df-fitrow{display:none}
+.df-fitrow.open{display:table-row}
+.df-prow.open td{border-bottom:0;padding-bottom:4px}
+.df-fitrow td{border-bottom:1px solid var(--board-line);padding-top:0;padding-bottom:12px;vertical-align:top}
+.df-card .df-fitrow td{border-bottom:1px solid var(--line)}
+.df-fitrow td:first-child{width:1px}
+.df-lead-table tbody tr:last-child td,.df-card tbody tr:last-child td,
+.df-lead-table tbody tr:nth-last-child(2) td,.df-card tbody tr:nth-last-child(2) td{border-bottom:0}
+.df-fit{display:block;max-width:min(104ch,calc(100vw - 86px));font-size:12.5px;line-height:1.5;color:var(--muted);font-weight:400}
 .is-board .df-fit{color:#9fb6b1}
-.df-card .df-fit{font-size:11px}
-@media(max-width:900px){
-  .df-lead-grid{grid-template-columns:1fr;padding:0 var(--space-4) var(--space-4)}
-  .df-explain-summary{margin-left:var(--space-4);margin-right:var(--space-4)}
-  .df-breakdown{order:2}
+.df-card .df-fit{font-size:11.5px;max-width:78ch}
+/* The market read, opened by the same plus: its own paragraph under the fit
+   note rather than a second sentence run into it, because one is about the
+   roster's shape and the other about where the number came from. */
+.df-fitrow .df-mktline{max-width:min(104ch,calc(100vw - 86px));margin-top:6px;font-size:12px;line-height:1.45}
+.is-board .df-fitrow .df-mktline{color:#8fa3a0}
+.df-card .df-fitrow .df-mktline{font-size:11px;max-width:78ch}
+.is-board .df-mkt-quoted{color:#46d6ac}
+.is-board .df-mkt-inferred,.is-board .df-mkt-fitted{color:#9fb6b1}
+.df-pname-line .df-mkt-quoted,.df-pname-line .df-mkt-inferred,.df-pname-line .df-mkt-fitted{margin-left:2px;white-space:nowrap}
+
+/* The board is the answer, so on a wide screen it is allowed out past the
+   1200px column the rest of the page reads in. Centred on the viewport, not
+   on the wrap, so it stays symmetrical. */
+@media(min-width:1180px){
+  .df-main>#sec-lineup{width:min(calc(100vw - 40px),1440px);margin-left:calc(50% - min(calc(50vw - 20px),720px))}
 }
+@media(max-width:900px){
+  .df-lead-grid{padding:0 var(--space-4) var(--space-4)}
+  .df-explain-summary{margin-left:var(--space-4);margin-right:var(--space-4)}
+}
+/* On a phone the roster stops being a table. Seven columns inside a scroller
+   either squeeze the name to one word a line or hide the note off the right
+   edge; neither is readable. Each player becomes a block instead -- face and
+   name, his numbers on the line under them with their headings attached, and
+   the note under both -- which is the same reading order, unscrolled. */
 @media(max-width:620px){
   .df-lead-grid{padding-left:10px;padding-right:10px}
   .df-explain-summary{margin-left:10px;margin-right:10px}
-  .df-fit{max-width:44ch}
+  .df-face{width:34px;height:34px;min-width:34px}
+  .df-lead-table{overflow-x:visible}
+  .df-lead-table table,.df-card-table table{min-width:0;display:block}
+  .df-lead-table thead,.df-card-table thead{display:none}
+  .df-lead-table tbody,.df-card-table tbody{display:block}
+  .df-prow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));column-gap:10px;row-gap:10px;padding:13px 13px 0}
+  .df-prow td,.df-fitrow td{display:block;border:0;padding:0}
+  .df-prow td:nth-child(1){grid-column:1;grid-row:1;align-self:center;justify-self:start;width:auto}
+  .df-prow td:nth-child(2){grid-column:2/-1;grid-row:1;min-width:0}
+  .df-prow td.num{grid-row:2;text-align:left;font-size:13px;align-self:start}
+  .df-prow td:nth-child(3){grid-column:1} .df-prow td:nth-child(4){grid-column:2}
+  .df-prow td:nth-child(5){grid-column:3} .df-prow td:nth-child(6){grid-column:4}
+  .df-prow td:nth-child(7){grid-column:5}
+  .df-prow td.num::before{content:attr(data-lab);display:block;font-family:var(--font-mono);
+    font-size:9px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;color:#8fa3a0;font-weight:700;margin-bottom:2px}
+  .df-card .df-prow td.num::before{color:var(--muted)}
+  .df-prow td{border-bottom:0}
+  .df-prow{border-bottom:1px solid var(--board-line);padding-bottom:13px}
+  .df-card .df-prow{border-bottom:1px solid var(--line)}
+  .df-prow.open{border-bottom:0;padding-bottom:0}
+  .df-prow.open td{padding-bottom:0}
+  .df-fitrow.open{display:block}
+  .df-fitrow{padding:9px 13px 13px;border-bottom:1px solid var(--board-line)}
+  .df-card .df-fitrow{border-bottom:1px solid var(--line)}
+  .df-fitrow td[aria-hidden]{display:none}
+  .df-lead-table tbody tr:last-child,.df-card tbody tr:last-child,
+  .df-lead-table tbody tr:nth-last-child(2),.df-card tbody tr:nth-last-child(2){border-bottom:0}
+  .df-fit{font-size:12.5px;max-width:none}
 }
 
 /* ── the Value Coach ─────────────────────────────────────────────────────────
@@ -258,14 +358,16 @@ p{color:var(--sec);margin:0 0 16px}
    is actually looking at. They belong on the roster row, because the row is
    where the disagreement happens. The chips above the board are the undo:
    every constraint the build is carrying, visible without opening anything. */
-/* The two controls ride in the player cell, under his fit line, rather than in
-   an eighth column: at the lead board's width a column of their own was paid
-   for out of the name -- every name broke one word to a line and the buttons
-   ended up behind a horizontal scroll, which is no way to reach the control
-   that changes the roster. */
-.df-lead-table th:nth-child(2),.df-lead-table td:nth-child(2){min-width:230px}
-.df-act{display:inline-flex;flex-wrap:wrap;gap:5px;white-space:nowrap;margin-top:8px}
-.df-card .df-act{margin-top:7px}
+/* The pair rides the NAME LINE, beside the plus that opens the note. A column
+   of their own was paid for out of the name and put them behind a horizontal
+   scroll; the disclosure row is worse, because a control that changes the
+   roster cannot sit behind a toggle the reader has to find first. The name
+   line already carries this row's controls, so they join it and wrap with it,
+   and the phone's five-column grid maps columns 1-7 and stays untouched. */
+.df-act{display:inline-flex;flex-wrap:wrap;gap:4px;vertical-align:middle;margin-left:6px}
+.df-act button{white-space:nowrap}
+.df-player-actions .df-act{margin-left:0}
+.df-act-note{margin-top:10px}
 .df-act button{font:700 10px var(--font-mono);letter-spacing:.07em;text-transform:uppercase;cursor:pointer;
   border:1px solid var(--line2);border-radius:5px;background:var(--bg);color:var(--sec);padding:4px 7px}
 .df-act button:hover{border-color:var(--teal);color:var(--teal)}
@@ -355,6 +457,17 @@ p{color:var(--sec);margin:0 0 16px}
 .df-custom-games .btn{margin-top:10px;padding:8px 15px;font-size:13px}
 .df-setup-state{margin:0;padding:12px 20px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--panel)}
 .df-setup-state.ready{color:var(--teal);font-weight:800}
+/* The footer strip of the plate carries the state sentence and the way into
+   the coach, because the moment a reader is unsure which contest to enter is
+   the moment they are looking at these three selects. */
+.df-setup-foot{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);background:var(--panel)}
+.df-setup-foot .df-setup-state{flex:1 1 320px;border-top:0;background:transparent}
+.df-setup-coach{appearance:none;cursor:pointer;margin:0 20px 12px;font:800 12.5px/1.2 var(--font-body);display:inline-flex;align-items:center;gap:7px;
+  border:1px solid var(--teal);border-radius:9px;background:var(--bg);color:var(--teal);padding:9px 13px}
+@media(min-width:721px){.df-setup-coach{margin:12px 20px}}
+.df-setup-coach:hover{background:rgba(14,124,99,.08)}
+.df-setup-coach:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.df-setup-coach svg{width:15px;height:15px;fill:currentColor;flex:0 0 auto}
 .df-play-week{margin:20px 0;border:1px solid rgba(191,145,0,.38);border-radius:14px;padding:20px;background:linear-gradient(180deg,rgba(191,145,0,.09),rgba(191,145,0,.025))}
 .df-play-week-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--goldink);font-weight:800}
 .df-play-week h2{margin:5px 0 8px;font-size:clamp(22px,3vw,30px)}
@@ -473,6 +586,11 @@ p{color:var(--sec);margin:0 0 16px}
 /* The white column between the two tinted bands. */
 .df-main{padding-top:var(--space-4)}
 .df-main>.df-play-week:first-child{margin-top:0}
+/* The roster now opens the column, directly under the setup band it is
+   solved from, so its section rule does not need the full gap a section
+   following another section does. */
+.df-main>#sec-lineup:first-of-type{margin-top:0}
+.df-main>#sec-lineup:first-of-type>.is-sec:first-child{margin-top:var(--space-5)}
 /* The reader's own salary file is its own offer, not a third academy card. */
 .df-main .df-up{margin-top:var(--space-5)}
 
@@ -611,7 +729,13 @@ p{color:var(--sec);margin:0 0 16px}
     <div class="df-game-grid" id="dfGameGrid"></div>
     <button class="btn alt" id="dfCustomDone" type="button">Use selected games</button>
   </div>
-  <p class="df-setup-state" id="dfSetupState">Complete all three selections to build and evaluate the contest.</p>
+  <div class="df-setup-foot">
+    <p class="df-setup-state" id="dfSetupState">Complete all three selections to build and evaluate the contest.</p>
+    <button type="button" class="df-setup-coach" id="dfSetupCoach" aria-controls="dfCoach" title="The Value Coach answers on this setup too: what each Game Style builds, which games belong in the pool and what the payout structure does to the roster.">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c5 0 9 3.4 9 7.6 0 4.2-4 7.6-9 7.6-.9 0-1.8-.1-2.6-.3L4 21l1.2-3.6C3.2 16 2 13.5 2 10.6 2 6.4 7 3 12 3Z"/></svg>
+      Not sure? Ask the Value Coach
+    </button>
+  </div>
 </div>
 
   </div>
@@ -622,6 +746,45 @@ p{color:var(--sec);margin:0 0 16px}
      plate and the dark lineup board are the two heaviest objects on the page
      and nothing around them competes for the same attention. -->
 <div class="wrap wide df-main">
+
+<!-- ── the lineup ─────────────────────────────────────────────────────────────
+     The first section on the page and the default one, because it is the only
+     thing on this site a DFS reader has to have before lock: a roster, under
+     the cap, for the contest they are entering. Everything else here -- the
+     values table, the stacks, the touchdown board, the scoring environment --
+     is the evidence behind it, and it now sits behind it.
+
+     It solves on load. A reader who arrives, reads the roster and leaves has
+     got the whole product; the controls are for the reader who wants to argue
+     with it, and they are folded away until that reader opens them. -->
+<section id="sec-lineup">
+  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>This week’s lineup</h2><a class="is-sec-more" href="#values">The board behind it &rarr;</a></div></div>
+  <p class="df-sub">Solved against the cap for the contest shape above, on the same market numbers that price the season-long board. <b>Nothing on this page enters a contest</b> &mdash; it builds a roster to read and copy.</p>
+  <div id="dfLineups"></div>
+
+  <!-- ── the branches ─────────────────────────────────────────────────────────
+       The two questions a reader has the moment they have read a lineup: what
+       else could go in each seat, and what does the same slate look like if I
+       am playing the other kind of contest. Pivots answer the first at every
+       slot; the shape switch above answers the second. -->
+  <div id="dfPivots"></div>
+
+  <details class="df-tune" id="dfTune">
+    <summary>Fine-tune the build &mdash; objective, stacking, locks and exclusions</summary>
+    <p class="is-note">The contest shape above already sets these. Change one and the roster re-solves on your settings instead of the preset.</p>
+    <div class="rk-controls">
+      <div class="rk-seg" id="dfMode" role="group" aria-label="Objective"><button type="button" data-mode="ironTuna">Iron Tuna optimal</button><button type="button" data-mode="floor">Safest floor</button><button type="button" data-mode="ceiling">Highest ceiling</button><button type="button" data-mode="leverage">Leverage</button><button type="button" data-mode="market" title="The weekly betting market, taken at the strength of its own evidence: a quoted player prop counts for all of itself, a number inferred from the game line counts for less, and a player nobody priced falls back to the consensus projection.">Market read</button><button type="button" data-mode="vegas">Vegas optimal</button><button type="button" data-mode="consensus">Consensus</button><button type="button" data-mode="vegasEdge">Vegas Edge</button></div>
+      <label class="rk-check"><input type="checkbox" id="dfStack"> QB stack</label>
+      <label class="rk-check"><input type="checkbox" id="dfBring"> Bring-back</label>
+      <label class="rk-check">Max per team <input type="number" id="dfMaxTeam" min="1" max="9" value="4" style="width:52px"></label>
+      <label class="rk-check">Cap $<input type="number" id="dfCap" min="10000" step="100" style="width:80px"></label>
+      <label class="rk-check">Lineups <input type="number" id="dfN" min="1" max="20" value="3" style="width:52px"></label>
+      <button class="btn" type="button" id="dfBuild">Rebuild</button>
+    </div>
+    <p class="is-note">Click a name in the pool to lock him into every lineup, twice to exclude him, again to clear. The Require and Exclude buttons on the roster itself write the same list, and every constraint on it appears above the roster with an undo.</p>
+    <div class="is-scroll"><table class="is-table" id="dfPool"><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfPoolFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Vegas</th><th>Market</th><th class="num">Consensus</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+  </details>
+</section>
 
 <section class="df-play-week" id="dfPlayWeek">
   <div class="df-play-week-label">Play of the Week</div>
@@ -698,45 +861,6 @@ p{color:var(--sec);margin:0 0 16px}
       <p>A lean is a gap of at least 5% between the model and the sportsbook&rsquo;s median line, not a recommendation. <b>The line shown is the sportsbook&rsquo;s, not the venue&rsquo;s</b> &mdash; pick&rsquo;em venues post their own and they differ; check the number in front of you before you enter. Every row is a quoted market: where no book has priced a player there is no line to disagree with and he is left off.</p>
     </div>
   </div>
-</section>
-
-<!-- ── the lineup ─────────────────────────────────────────────────────────────
-     The first section on the page and the default one, because it is the only
-     thing on this site a DFS reader has to have before lock: a roster, under
-     the cap, for the contest they are entering. Everything else here -- the
-     values table, the stacks, the touchdown board, the scoring environment --
-     is the evidence behind it, and it now sits behind it.
-
-     It solves on load. A reader who arrives, reads the roster and leaves has
-     got the whole product; the controls are for the reader who wants to argue
-     with it, and they are folded away until that reader opens them. -->
-<section id="sec-lineup">
-  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>This week’s lineup</h2><a class="is-sec-more" href="#values">The board behind it &rarr;</a></div></div>
-  <p class="df-sub">Solved against the cap for the contest shape above, on the same market numbers that price the season-long board. <b>Nothing on this page enters a contest</b> &mdash; it builds a roster to read and copy.</p>
-  <div id="dfLineups"></div>
-
-  <!-- ── the branches ─────────────────────────────────────────────────────────
-       The two questions a reader has the moment they have read a lineup: what
-       else could go in each seat, and what does the same slate look like if I
-       am playing the other kind of contest. Pivots answer the first at every
-       slot; the shape switch above answers the second. -->
-  <div id="dfPivots"></div>
-
-  <details class="df-tune" id="dfTune">
-    <summary>Fine-tune the build &mdash; objective, stacking, locks and exclusions</summary>
-    <p class="is-note">The contest shape above already sets these. Change one and the roster re-solves on your settings instead of the preset.</p>
-    <div class="rk-controls">
-      <div class="rk-seg" id="dfMode" role="group" aria-label="Objective"><button type="button" data-mode="ironTuna">Iron Tuna optimal</button><button type="button" data-mode="floor">Safest floor</button><button type="button" data-mode="ceiling">Highest ceiling</button><button type="button" data-mode="leverage">Leverage</button><button type="button" data-mode="market" title="The weekly betting market, taken at the strength of its own evidence: a quoted player prop counts for all of itself, a number inferred from the game line counts for less, and a player nobody priced falls back to the consensus projection.">Market read</button><button type="button" data-mode="vegas">Vegas optimal</button><button type="button" data-mode="consensus">Consensus</button><button type="button" data-mode="vegasEdge">Vegas Edge</button></div>
-      <label class="rk-check"><input type="checkbox" id="dfStack"> QB stack</label>
-      <label class="rk-check"><input type="checkbox" id="dfBring"> Bring-back</label>
-      <label class="rk-check">Max per team <input type="number" id="dfMaxTeam" min="1" max="9" value="4" style="width:52px"></label>
-      <label class="rk-check">Cap $<input type="number" id="dfCap" min="10000" step="100" style="width:80px"></label>
-      <label class="rk-check">Lineups <input type="number" id="dfN" min="1" max="20" value="3" style="width:52px"></label>
-      <button class="btn" type="button" id="dfBuild">Rebuild</button>
-    </div>
-    <p class="is-note">Click a name in the pool to lock him into every lineup, twice to exclude him, again to clear. The Require and Exclude buttons on the roster itself write the same list, and every constraint on it appears above the roster with an undo.</p>
-    <div class="is-scroll"><table class="is-table" id="dfPool"><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfPoolFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Vegas</th><th>Market</th><th class="num">Consensus</th><th>Status</th></tr></thead><tbody></tbody></table></div>
-  </details>
 </section>
 
 <section id="sec-dash" hidden>
@@ -977,6 +1101,59 @@ p{color:var(--sec);margin:0 0 16px}
           : 'No player prop has reached this slate. The Market read build falls back to the consensus projection.') : ''];
     $('dfCards').innerHTML = out.join('');
   }
+  // ── the faces ─────────────────────────────────────────────────────────────
+  // The roster is a list of people, so it carries their photographs. The
+  // identity index, the ESPN -> NFL -> initials fallback and the slug matching
+  // all live in /player-search.js already; this only asks it for the player.
+  //
+  // That file is deferred, so the first solve can run before it is there. The
+  // markup therefore carries the NAME rather than a resolved URL, and the
+  // photo is mounted afterwards -- again when the index announces itself --
+  // which also means a roster rendered before the index loads still fills in.
+  var FACE_ESPN = 'https://a.espncdn.com/i/headshots/nfl/players/full/';
+  var FACE_NFL = 'https://static.www.nfl.com/image/upload/f_auto,q_auto/league/';
+  var FACE_TEAM = 'https://a.espncdn.com/i/teamlogos/nfl/500/';
+  function faceInitials(name) {
+    var parts = String(name || '').replace(/[^A-Za-z .'-]/g, '').split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    return ((parts[0][0] || '') + (parts.length > 1 ? (parts[parts.length - 1][0] || '') : '')).toUpperCase();
+  }
+  function faceHtml(p) {
+    if (!p) return '';
+    var dst = (p.position || '') === 'DST' || (p.slot || '') === 'DST';
+    return '<span class="df-face' + (dst ? ' team' : '') + '" data-face-name="' + e(p.name || '')
+      + '" data-face-team="' + e(p.team || '') + '" data-face-pos="' + e(p.position || '') + '" aria-hidden="true">'
+      + '<i>' + e(dst ? (p.team || '').slice(0, 3) : faceInitials(p.name)) + '</i></span>';
+  }
+  function mountFaces(scope) {
+    var host = scope || document;
+    var boxes = host.querySelectorAll ? host.querySelectorAll('.df-face:not([data-face-done])') : [];
+    for (var i = 0; i < boxes.length; i++) {
+      var box = boxes[i];
+      var team = box.getAttribute('data-face-team') || '';
+      var srcs = [];
+      if (box.classList.contains('team')) {
+        if (team) srcs.push(FACE_TEAM + team.toLowerCase() + '.png');
+      } else {
+        var hit = null;
+        try { if (window.ITPlayerSearch && window.ITPlayerSearch.resolve) hit = window.ITPlayerSearch.resolve(box.getAttribute('data-face-name')); } catch (err) { hit = null; }
+        if (!hit) continue;                    // leave the initials; try again when the index lands
+        if (hit.e) srcs.push(FACE_ESPN + hit.e + '.png');
+        if (hit.h) srcs.push(FACE_NFL + hit.h);
+      }
+      box.setAttribute('data-face-done', '1');
+      if (!srcs.length) continue;
+      (function (el, list) {
+        var img = document.createElement('img'), at = 0;
+        img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
+        img.onerror = function () { if (++at < list.length) img.src = list[at]; else img.remove(); };
+        img.src = list[0];
+        el.appendChild(img);
+      })(box, srcs);
+    }
+  }
+  document.addEventListener('it-player-search-ready', function () { mountFaces(document); });
+
   function playerButton(p, extraClass) {
     if (!p) return '';
     var key = p.key || p.id || '';
@@ -1317,14 +1494,14 @@ p{color:var(--sec);margin:0 0 16px}
       ? 'Tuna Edge uses this as the first portfolio spine because it combines ceiling with enough ownership and salary flexibility to support meaningful pivots in the other entries.'
       : 'Tuna Edge prefers this combination because it keeps a strong median projection while adding correlation selectively rather than turning the entire lineup into one game bet.';
     function sec(title, body) { return '<div class="df-breakdown-section"><b>' + e(title) + '</b><p>' + e(body) + '</p></div>'; }
-    return '<aside class="df-breakdown" aria-label="Detailed lineup explanation"><h4>Lineup Breakdown</h4>'
+    return '<aside class="df-breakdown" aria-label="Detailed lineup explanation"><h4>Lineup Breakdown</h4><div class="df-breakdown-body">'
       + sec('Construction', construction)
       + sec('Betting Market Read', marketText)
       + sec('Correlation and Fit', corr)
       + sec('Salary Decisions', salaryText)
       + sec('Key Risks', risk)
       + sec('Why Tuna Edge Chose It', why)
-      + '</aside>';
+      + '</div></aside>';
   }
 
   // ── require and exclude, from the roster row ──────────────────────────────
@@ -1422,17 +1599,38 @@ p{color:var(--sec);margin:0 0 16px}
       + stat(n1(l.projPoints), 'Iron Tuna Projection', true)
       + stat(lineupEdge == null ? '—' : (lineupEdge > 0 ? '+' : '') + n1(lineupEdge), 'Tuna Edge')
       + stat(money(l.salary), 'Salary used');
-    var rows = l.players.map(function (p) {
-      return '<tr><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
-        + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span>'
+    // Two rows per player, not two columns. The fit sentence used to share the
+    // Player cell, which made it a narrow column of its own: at the lead
+    // board's width every note wrapped to eight or nine lines and pushed the
+    // numbers down with it. It is a note ABOUT the row, so it now sits under
+    // the row and spans the whole table, and the face sits where the reader
+    // looks for the player.
+    //
+    // The market read arrived in the same cell and is the same shape of thing:
+    // a glanceable chip and a paragraph explaining it. So they split. The CHIP
+    // rides on the name line, where "is this number a posted price or a fitted
+    // one" is a one-glance question and the chip already carries the sentence
+    // as its title. The PARAGRAPH joins the fit note behind the plus, because
+    // it answers the same question the plus is for.
+    var rows = l.players.map(function (p, ri) {
+      var fitId = 'dffit-' + i + '-' + ri;
+      var mkt = marketPhrase(p);
+      return '<tr class="df-prow"><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
+        + '<td class="df-pcell"><span class="df-pwrap">' + faceHtml(p)
+        + '<span class="df-pname"><span class="df-pname-line">' + playerButton(p) + playerTag(p, qb)
+        + ' ' + marketTag(p)
+        + '<button class="df-fit-toggle" type="button" data-fit="' + fitId + '" aria-controls="' + fitId + '" aria-expanded="false">'
+        + '<span class="df-sr">Why ' + e(p.name || 'this player') + ' is in this lineup</span></button>'
+        + rosterActions(p) + '</span>'
+        + '<span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></span></span></td>'
+        + '<td class="num" data-lab="Salary">' + money(p.salary) + '</td>'
+        + '<td class="num" data-lab="' + e(fppgLabel()) + '">' + fppgText(p) + '</td>'
+        + '<td class="num" data-lab="Iron Tuna">' + n1(p.proj) + '</td>'
+        + '<td class="num" data-lab="Tuna Edge">' + edgeHtml(p) + '</td>'
+        + '<td class="num" data-lab="Own">' + (p.ownership == null ? '—' : n1(p.ownership) + '%') + '</td></tr>'
+        + '<tr class="df-fitrow" id="' + fitId + '"><td aria-hidden="true"></td><td colspan="6">'
         + '<span class="df-fit">' + e(playerFit(p, l, qb, sh)) + '</span>'
-        + '<span class="df-mktline">' + marketTag(p) + ' ' + e(marketPhrase(p)) + '</span>'
-        + rosterActions(p) + '</td>'
-        + '<td class="num">' + money(p.salary) + '</td>'
-        + '<td class="num">' + fppgText(p) + '</td>'
-        + '<td class="num">' + n1(p.proj) + '</td>'
-        + '<td class="num">' + edgeHtml(p) + '</td>'
-        + '<td class="num">' + (p.ownership == null ? '—' : n1(p.ownership) + '%') + '</td></tr>';
+        + (mkt ? '<span class="df-mktline">' + e(mkt) + '</span>' : '') + '</td></tr>';
     }).join('');
     var meter = '<div class="df-meterwrap"><div class="is-meter' + (l.remaining < 400 ? ' tight' : '') + '"><i style="width:' + pct + '%"></i></div>'
       + '<div class="df-caplab"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div></div>';
@@ -1446,14 +1644,14 @@ p{color:var(--sec);margin:0 0 16px}
         + '<div class="df-explain-summary"><h4>Why This Lineup</h4><p>' + e(lineupSummary(l, sh, qb)) + '</p></div>'
         + propsNote(l)
         + '<div class="is-stats">' + stats + '</div>' + meter
-        + '<div class="df-lead-grid"><div class="df-lead-main"><div class="df-lead-table">' + table + '</div>'
-        + '<p class="df-fit" style="margin-top:9px">Disagree with a seat? <b>Require</b> holds that player in every lineup; <b>Exclude</b> solves the slate again without him. The same pair sits on every alternate below, and on any player on the board from his name. One list of constraints drives all of them, and it is above the roster with an undo.</p>'
-        + '</div>' + breakdownHtml(l, sh, qb) + '</div>'
+        + '<div class="df-lead-grid"><div class="df-lead-table">' + table + '</div>'
+        + '<p class="df-fit df-act-note">Disagree with a seat? <b>Require</b> holds that player in every lineup; <b>Exclude</b> solves the slate again without him. The same pair sits on every alternate below, and on any player on the board from his name. One list of constraints drives all of them, and it is above the roster with an undo.</p>'
+        + breakdownHtml(l, sh, qb) + '</div>'
         + '<div class="is-board-foot">' + foot + '</div></div>';
     }
     return '<div class="df-card">'
       + '<div class="df-card-head"><h4>Alternate ' + i + '</h4><span class="df-why">' + n1(l[keys[0]]) + ' ' + e((STAT_LABEL[keys[0]] || 'pts').toLowerCase()) + '</span></div>'
-      + '<div class="is-stats">' + stats + '</div>' + meter + table
+      + '<div class="is-stats">' + stats + '</div>' + meter + '<div class="df-card-table">' + table + '</div>'
       + '<div class="df-card-foot">' + foot + '</div></div>';
   }
 
@@ -1521,6 +1719,12 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   var built = null;
+  // The Play of the Week is the page's own read on which contest shape this
+  // slate rewards, and it is computed in renderPlayOfWeek() from the same
+  // optimizer the roster comes from. It is kept here so the coach can quote
+  // it while the reader is still choosing a structure, rather than being
+  // asked for a recommendation it would otherwise have to invent.
+  var playWeek = null;
 
   // The coach reads the page through coachContext() rather than holding its
   // own copy of anything, so every state change only has to tell it to look
@@ -1749,10 +1953,12 @@ p{color:var(--sec);margin:0 0 16px}
     if (!setupReady()) {
       state.className='df-setup-state';
       state.textContent=!gameStyle?'First select Game Style.':!gameChoice?'Next select the Games / player pool.':!payoutStructure?'Finally select the Payout Structure.':'Complete the custom game selection.';
+      coachSync();
       return false;
     }
     state.className='df-setup-state ready';
     state.textContent=(gs?gs.label:gameStyle)+' · '+(gameStyle==='best-ball'?'Season-long player pool':keys.length+' selected game'+(keys.length===1?'':'s'))+' · '+(py?py.label:payoutStructure)+'.';
+    coachSync();
     return true;
   }
   function renderFormatNotice() {
@@ -1851,6 +2057,7 @@ p{color:var(--sec);margin:0 0 16px}
             : 'The next best rosters under the same rules, for a second and third entry.') + '</p>'
           + '<div class="df-alts">' + alts.map(function (l, i) { return lineupCard(l, i + 1, sh, false); }).join('') + '</div>' : '')
       + (r.note ? '<p class="is-note">' + e(r.note) + '</p>' : '');
+    mountFaces($('dfLineups'));
     renderPivots(lead, players);
     coachSync();
   }
@@ -1871,7 +2078,32 @@ p{color:var(--sec);margin:0 0 16px}
     var f = Math.pow(10, places == null ? 1 : places);
     return Math.round(Number(v) * f) / f;
   }
-  function coachRow(p, extra) {
+  // §97 put a market block on every slate row and §96 put a weekly availability
+  // verdict beside it. Neither was reaching the coach, so it could quote a
+  // fitted number with the same confidence as a quoted one and never mention
+  // that a man is Questionable. Both read through the page's OWN helpers
+  // (marketChipFor, marketPhrase) rather than a second vocabulary here, so the
+  // coach cannot describe a player differently from the row above it.
+  function coachMarket(p, brief) {
+    var m = p && p.market; if (!m) return null;
+    var out = { read: marketChipFor(m)[0], trust: m.shrink, points: coachN(m.points) };
+    if (brief) return out;
+    if (m.pricedLabels && m.pricedLabels.length) out.posted = m.pricedLabels.join(', ');
+    if (m.books) out.books = m.books;
+    if (m.ageHours != null) out.pulledHoursAgo = coachN(m.ageHours);
+    if (m.shortOfProjection) out.quotedOnlyOnHisTouchdown = true;
+    if (m.tdProbability != null && m.tdDevigged) out.tdFromTheBooks = true;
+    return out;
+  }
+  function coachStatus(p) {
+    if (!p || !p.weekStatus) return null;
+    var out = { designation: p.weekStatus };
+    if (p.weekStatusBasis) out.from = p.weekStatusBasis;
+    if (p.weekStatusNote) out.note = p.weekStatusNote;
+    if (p.available === false) out.playing = false;
+    return out;
+  }
+  function coachRow(p, extra, brief) {
     var r = {
       name: p.name, pos: p.position, team: p.team,
       opp: p.opponent ? (p.home === false ? '@' : 'vs ') + p.opponent : null,
@@ -1888,7 +2120,9 @@ p{color:var(--sec);margin:0 0 16px}
       vvs: p.vegasValueScore == null ? null : Number(p.vegasValueScore),
       cashScore: p.cashScore == null ? null : Number(p.cashScore),
       tourneyScore: p.tournamentScore == null ? null : Number(p.tournamentScore),
-      chalk: p.chalk || null
+      chalk: p.chalk || null,
+      market: coachMarket(p, brief),
+      status: coachStatus(p)
     };
     if (extra) for (var k in extra) r[k] = extra[k];
     for (var j in r) if (r[j] == null) delete r[j];
@@ -1913,20 +2147,141 @@ p{color:var(--sec);margin:0 0 16px}
         return coachRow(merged, {
           slot: p.slot,
           role: rank === 1 ? playerFit(p, l, qb, sh) : null,
+          marketSays: rank === 1 && full.market ? marketPhrase(full) : null,
           tag: qb && p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE') ? 'stack with ' + qb.name
              : qb && p.team === qb.opponent && p.position !== 'DST' ? 'bring-back against ' + qb.name : null
         });
       })
     };
   }
+  // ── the setup the coach can also answer on ────────────────────────────────
+  // The three selects above are a strategy decision and not paperwork: the
+  // payout structure picks the objective the optimizer solves for, and the
+  // game pool decides who is eligible for it. So the coach is handed the
+  // page's own catalog of choices - every option those selects actually offer,
+  // each with the note printed under it - and answers there too, before there
+  // is a roster to ask about. A recommendation is then always one of the
+  // options in front of the reader rather than a contest the lobby does not
+  // carry. The lineup context takes the payouts alone, because "should I be in
+  // a double up instead" is a question a reader asks with the roster on screen.
+  // What the reader set in the fine-tune panel. It rides with the roster, and
+  // it rides with an unfinished page too when a complete setup is what failed
+  // to produce one: a lock, an exclusion or a cap is usually the reason, and
+  // the coach cannot name which without being told what they are.
+  function coachBuild(byKey) {
+    return { objective: ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode,
+             qbStack: !!$('dfStack').checked, bringBack: !!$('dfBring').checked,
+             maxPerTeam: parseInt($('dfMaxTeam').value, 10) || null,
+             cap: parseInt($('dfCap').value, 10) || (slate && slate.cap) || null,
+             lineupsRequested: parseInt($('dfN').value, 10) || 1,
+             tunedByReader: tuned,
+             locked: Object.keys(marks).filter(function (k) { return marks[k] === 'lock' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
+             excluded: Object.keys(marks).filter(function (k) { return marks[k] === 'excl' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
+             note: built && built.note || null };
+  }
+  function setupChoices(all) {
+    var out = {
+      payouts: Object.keys(PAYOUTS).map(function (k) {
+        var py = PAYOUTS[k], sh = SHAPES[py.shape] || {};
+        var row = { payout: py.label, means: py.note, ironTunaSolvesItAs: sh.head || null };
+        if (k === payoutStructure) row.chosen = true;
+        return row;
+      })
+    };
+    if (!all) return out;
+    out.gameStyles = Object.keys(GAME_STYLES).map(function (k) {
+      var gs = GAME_STYLES[k];
+      var row = { gameStyle: gs.label, means: gs.note, ironTunaSolvesARoster: k === 'classic' };
+      if (k === gameStyle) row.chosen = true;
+      return row;
+    });
+    var totals = {};
+    (slate && slate.stacks || []).forEach(function (g) { var k = stackGameKey(g); if (k) totals[k] = g; });
+    out.games = (slate ? gamesForSlate(slate) : []).slice(0, 16).map(function (g) {
+      var st = totals[g.key];
+      var row = { game: g.label, kickoff: kickoffText(g.start) || null, pricedPlayers: g.players || null,
+                  total: st ? coachN(st.total) : null,
+                  impliedAway: st ? coachN(st.impliedAway) : null, impliedHome: st ? coachN(st.impliedHome) : null };
+      if (selectedGames[g.key]) row.selected = true;
+      return row;
+    });
+    return out;
+  }
+  // noLineup is the reason a FINISHED setup still put no roster on the page -
+  // an infeasible solve, or a game pool with no priced players in it. The page
+  // used to answer that with a refusal pointing at the fine-tune panel, which
+  // left the reader holding the one question the coach is best placed to
+  // answer: which constraint to drop. It is setup mode with that reason, the
+  // fine-tune settings that caused it, and the same catalog underneath.
+  function setupContext(noLineup) {
+    var gs = GAME_STYLES[gameStyle] || {}, py = PAYOUTS[payoutStructure] || {};
+    var keys = selectedGameKeys();
+    var awaiting = noLineup
+      ? noLineup + ' Ask which one to drop, or ask about the contest setup above while you are here.'
+      : !gameStyle
+      ? 'Ask which Game Style matches the contest you are looking at, and the coach will take you through the three choices above in order.'
+      : !gameChoice || (gameChoice === 'custom' && !keys.length)
+      ? 'Game Style is set. Ask which games belong in the pool, or what the rest of this setup does to the roster Iron Tuna will solve.'
+      : !payoutStructure
+      ? 'One choice left. Ask which payout structure fits your bankroll and how many entries you want, and the coach will answer from the structures this page offers.'
+      : 'Ask about the setup above: what this Game Style builds, which games belong in the pool, and what the payout structure does to the roster.';
+    var out = {
+      mode: 'setup',
+      page: 'Iron Tuna DFS contest setup',
+      awaiting: awaiting,
+      readerIsChoosing: noLineup ? 'which constraint to loosen so a roster fits'
+                        : !gameStyle ? 'Game Style' : (!gameChoice || (gameChoice === 'custom' && !keys.length)) ? 'Games'
+                        : !payoutStructure ? 'Payout Structure' : 'whether the setup they have picked is the right one',
+      setup: { gameStyle: gs.label || null, gameStyleNote: gs.note || null,
+               games: gameStyle === 'best-ball' ? 'season-long player pool' : keys.length ? keys.length + ' selected game(s)' : null,
+               payout: py.label || null, payoutNote: py.note || null,
+               ironTunaSolvesARoster: styleSupportsOptimizer(),
+               whyNoRosterYet: noLineup ? noLineup
+                 : !styleSupportsOptimizer()
+                 ? 'Iron Tuna solves a roster for Classic only, so this Game Style gets the format read and no lineup.'
+                 : 'The roster is solved once all three choices are made.' },
+      choices: setupChoices(true),
+      slate: slate
+        ? { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: slate.label, week: slate.week,
+            cap: slate.cap, pricedPlayers: (slate.players || []).filter(function (p) { return p.onBoard; }).length,
+            salariesFrom: slate.source === 'upload' ? 'the reader\u2019s own uploaded salary file' : 'the site\u2019s salary feed' }
+        : { site: 'DraftKings', note: 'No salary slate is loaded yet, so the page lists no games to choose from.' },
+      playOfTheWeek: playWeek
+    };
+    // A setup that is finished and still solved nothing is a constraints
+    // question, so the constraints go with it.
+    if (noLineup) {
+      var view = null;
+      try { view = filteredSlate(); } catch (err) { view = null; }
+      var byKey = {};
+      ((view || slate || {}).players || []).forEach(function (p) { if (p.key) byKey[p.key] = p; });
+      out.build = coachBuild(byKey);
+      out.buildMeaning = 'The setup above is complete; these are the fine-tune settings the solve ran under, and one of them is why no roster came back.';
+    }
+    return out;
+  }
+
   function coachContext() {
     if (isPickem()) return { blocked: 'Pick’em boards are higher-or-lower on a posted line, not a salary-cap roster. Switch to DraftKings or FanDuel for a lineup the coach can talk through.' };
+    // Before the setup is finished - and on a DraftKings format Iron Tuna does
+    // not solve a roster for - the coach answers on the setup instead of
+    // refusing the question. It is the same coach on the same page; only the
+    // thing it is looking at changes.
+    if (site === 'dk' && (!setupReady() || !styleSupportsOptimizer())) return setupContext();
     if (!slate) return { blocked: 'There is no priced slate loaded yet, so there is no lineup for the coach to read. Upload your contest’s salary file above, or come back once the salaries post.' };
-    if (site === 'dk' && !setupReady()) return { blocked: 'Set Game Style, Games and Payout Structure above. The coach answers about the roster Iron Tuna solves for the contest you are actually entering, so it waits for that setup.' };
-    if (site === 'dk' && !styleSupportsOptimizer()) return { blocked: 'The Classic solver is hidden for this DraftKings format, so there is no roster on the page for the coach to explain. Switch the Game Style to Classic for a lineup it can read.' };
-    if (!built || !built.lineups || !built.lineups.length) return { blocked: 'No legal lineup fits the current cap, locks and exclusions. Loosen one in the fine-tune panel and the coach can pick the roster up from there.' };
+    // A finished setup that solved nothing is still a question the coach can
+    // answer - which lock, exclusion or cap to loosen - so it falls back to
+    // setup mode carrying that reason rather than refusing. Off DraftKings
+    // there is no setup plate to fall back to, so the reason stands alone.
+    if (!built || !built.lineups || !built.lineups.length) {
+      var stuck = 'No legal lineup fits the current cap, locks and exclusions. Loosen one in the fine-tune panel and the coach can pick the roster up from there.';
+      return site === 'dk' ? setupContext(stuck) : { blocked: stuck };
+    }
     var view = filteredSlate();
-    if (!view) return { blocked: 'The selected games do not carry a priced player pool yet.' };
+    if (!view) {
+      var thin = 'The selected games do not carry a priced player pool yet.';
+      return site === 'dk' ? setupContext(thin) : { blocked: thin };
+    }
     var sh = SHAPES[contest] || SHAPES.single;
     var gs = GAME_STYLES[gameStyle] || {};
     var py = PAYOUTS[payoutStructure] || {};
@@ -1944,30 +2299,32 @@ p{color:var(--sec);margin:0 0 16px}
     var benchKey = contest === 'cash' ? 'cashScore' : contest === 'gpp' || contest === '3max' ? 'tournamentScore' : 'value';
     var bench = (view.players || []).filter(function (p) { return p.onBoard && !inLineup[p.key]; })
       .sort(function (a, b) { return (Number(b[benchKey]) || 0) - (Number(a[benchKey]) || 0); })
-      .slice(0, 30).map(function (p) { return coachRow(p); });
+      .slice(0, 30).map(function (p) { return coachRow(p, null, true); });
     var stackRows = (view.stacks || []).slice(0, 16).map(function (g) {
       return { game: g.game, total: coachN(g.total), impliedAway: coachN(g.impliedAway), impliedHome: coachN(g.impliedHome),
                awayQb: g.away && g.away.qb ? g.away.qb.name : null, homeQb: g.home && g.home.qb ? g.home.qb.name : null,
                awayStackSalary: g.away ? g.away.stackSalary : null, homeStackSalary: g.home ? g.home.stackSalary : null };
     });
     return {
+      mode: 'lineup',
       page: 'Iron Tuna DFS lineup recommendation',
       slate: { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: view.label, week: slate.week,
                cap: parseInt($('dfCap').value, 10) || view.cap, pricedPlayers: solverPool.length,
                medianVegasPerK: coachN(view.medianVegasPerK, 2),
+               marketCoverage: view.props ? { pricedPlayers: view.props.priced, ofPlayers: view.props.players,
+                 percent: view.props.coverage, markets: (view.props.marketLabels || []).join(', ') || null,
+                 avgBooks: view.props.avgBooks, freshestHours: coachN(view.props.freshestHours),
+                 quotedOnlyOnTouchdown: view.props.quotedButShort || undefined } : undefined,
                salariesFrom: slate.source === 'upload' ? 'the reader’s own uploaded salary file' : 'the site’s salary feed' },
       setup: { gameStyle: gs.label || gameStyle || 'Classic', gameStyleNote: gs.note || null,
                games: gameStyle === 'best-ball' ? 'season-long player pool' : selectedGameKeys().length + ' selected game(s)',
                payout: py.label || payoutStructure || null, payoutNote: py.note || null,
                contestShape: sh.head, contestReasoning: sh.why },
-      build: { objective: ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode,
-               qbStack: !!$('dfStack').checked, bringBack: !!$('dfBring').checked,
-               maxPerTeam: parseInt($('dfMaxTeam').value, 10) || null,
-               lineupsRequested: parseInt($('dfN').value, 10) || 1,
-               tunedByReader: tuned,
-               locked: Object.keys(marks).filter(function (k) { return marks[k] === 'lock' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
-               excluded: Object.keys(marks).filter(function (k) { return marks[k] === 'excl' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
-               note: built.note || null },
+      // The reader can still be in the wrong contest for the week they are
+      // looking at, so the alternatives ride along with the roster too.
+      choices: setupChoices(false),
+      playOfTheWeek: playWeek,
+      build: coachBuild(byKey),
       thesis: lineupSummary(lead, sh, (function () { for (var i = 0; i < lead.players.length; i++) if (lead.players[i].slot === 'QB') return lead.players[i]; return null; })()),
       lineups: built.lineups.slice(0, 3).map(function (l, i) { return coachLineup(l, i + 1, byKey, sh); }),
       pivots: pivots,
@@ -1999,6 +2356,7 @@ p{color:var(--sec);margin:0 0 16px}
   function renderPlayOfWeek(s) {
     var host=$('dfPlayWeekBody'); if(!host || !s || !window.ITDfs) return;
     var players=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
+    playWeek=null;
     if(players.length<9){ $('dfPlayWeekTitle').textContent='Play of the Week: waiting for a complete slate'; host.innerHTML='<p class="is-note">The recommendation will publish when enough salaries and projections are available to compare contest shapes.</p>'; return; }
     var base={cap:s.cap,slots:s.slots,flex:s.flex,maxPerTeam:4,lineups:1,seed:17};
     var cash=ITDfs.build(players,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:3}));
@@ -2026,6 +2384,16 @@ p{color:var(--sec);margin:0 0 16px}
       : 'No book priced any pick in this build, so the comparison below is Iron Tuna against the game lines \u2014 two models sharing most of their inputs, not a disagreement with money. The bar for moving up the payout curve is doubled for it, which is why this week sits where the chance of winning is best.';
     $('dfPlayWeekTitle').textContent='Play of the Week: '+pick.rec;
     $('dfPlayWeekDek').textContent=pick.rationale;
+    // The page has now done the comparison; the coach quotes this rather than
+    // producing a contest recommendation of its own. The evidence line goes
+    // with it as plain text, because what the edge is measured against is the
+    // first thing to say when a reader asks whether to move up the curve.
+    playWeek={ recommendedPayout:pick.rec, tag:pick.tag, why:pick.rationale,
+               projectionVsMarketPct:pick.edge, floorRetentionPct:pick.floorRetention,
+               ceilingMultiplePct:pick.ceilingMultiple,
+               marketEvidence:evidence.replace(/<[^>]+>/g, ''),
+               basis:'Iron Tuna solved a floor build, a ceiling build and a leverage build from this slate and compared them against the market read for the same roster.' };
+    coachSync();
     host.innerHTML='<div class="df-play-week-copy"><p><b>Why this contest:</b> '+e(pick.rationale)+'</p>'
       +'<p class="df-props" style="margin:10px 0">'+evidence+'</p>'
       +'<p>Head-to-Head remains the easiest format to win on any single entry. Iron Tuna moves away from it only when the model can buy enough additional ceiling or leverage without surrendering too much of the lineup\u2019s core projection.</p><p class="is-note">This is a model-based contest recommendation, not a guarantee of profit. Contest fees, field strength and actual payout tables still matter.</p></div>'
@@ -2210,6 +2578,9 @@ p{color:var(--sec);margin:0 0 16px}
       window.addEventListener('load', mountCoach);
     }
     $('dfCoachFab').addEventListener('click', toggleCoach);
+    // The plate's own way in. A reader stuck on the three selects should not
+    // have to guess that the floating launcher answers on them too.
+    $('dfSetupCoach').addEventListener('click', openCoach);
     $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; selectedGames = {}; gameUniverseSig = ''; gameChoice=''; payoutStructure=''; load(); });
     $('dfGameStyleSelect').addEventListener('change', function () {
       gameStyle=this.value; gameChoice=''; payoutStructure=''; selectedGames={}; gameUniverseSig='';
@@ -2300,7 +2671,20 @@ p{color:var(--sec);margin:0 0 16px}
     });
     // Copy takes the roster to the clipboard as names, which is what every
     // lobby's paste box wants. It copies; it does not enter anything.
+    // The fit sentence is the answer to "why him", which is a question the
+    // reader asks about ONE seat at a time. Printing all nine at once buried
+    // the numbers, so each one opens from the plus beside its own name.
     $('dfLineups').addEventListener('click', function (ev) {
+      var t = ev.target.closest('.df-fit-toggle');
+      if (t) {
+        var row = t.closest('tr'), fit = row && row.nextElementSibling;
+        if (!fit || !fit.classList.contains('df-fitrow')) return;
+        var open = t.getAttribute('aria-expanded') !== 'true';
+        t.setAttribute('aria-expanded', open ? 'true' : 'false');
+        fit.classList.toggle('open', open);
+        row.classList.toggle('open', open);
+        return;
+      }
       var b = ev.target.closest('button[data-copy]'); if (!b || !built) return;
       var l = built.lineups[parseInt(b.getAttribute('data-copy'), 10)]; if (!l) return;
       var text = l.players.map(function (p) { return p.slot + '  ' + p.name + '  ' + money(p.salary); }).join('\n');

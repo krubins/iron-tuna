@@ -581,14 +581,20 @@ console.log('\nthe DFS page explanations');
   // with the solve, so the two controls sit on the roster row.
   ok('every roster row carries a Require and an Exclude control',
      page.includes('function rosterActions(p)') && page.includes("data-mark=\"lock\"") && page.includes("data-mark=\"excl\"")
-     && page.includes("+ rosterActions(p) + '</td>'"));
+     && page.includes("+ rosterActions(p) + '</span>'"));
+  // They sit on the NAME LINE beside the plus, never inside the disclosure
+  // row: a control that changes the roster cannot live behind a toggle the
+  // reader has to find first.
+  ok('and they sit on the name line, not behind the note toggle',
+     /df-fit-toggle[\s\S]{0,260}rosterActions\(p\)[\s\S]{0,40}df-pname-line|df-fit-toggle[\s\S]{0,300}rosterActions\(p\)/.test(page)
+     && !/df-fitrow[\s\S]{0,400}rosterActions\(p\)/.test(page));
   // The controls were on the lead board only at first, which left a reader
   // looking at Alternate 2 with no way to drop the man in front of him. The
   // row markup is shared, so the alternates carry the same pair and write the
   // same one list of constraints.
   ok('the alternates carry them too, off the same shared row markup and the same constraint list',
-     !page.includes('lead ? rosterActions') && page.includes('.df-card .df-act')
-     && /var rows = l\.players\.map\([\s\S]{0,900}rosterActions\(p\)/.test(page));
+     !page.includes('lead ? rosterActions')
+     && /var rows = l\.players\.map\([\s\S]{0,1400}rosterActions\(p\)/.test(page));
   ok('the player drawer can require or exclude anyone on the board, not only the nine on the roster',
      page.includes('Require in every lineup') && page.includes('Exclude from every lineup'));
   ok('every require/exclude control writes the same marks store and re-solves',

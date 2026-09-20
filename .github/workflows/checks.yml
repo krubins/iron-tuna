@@ -772,6 +772,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-league-sync.mjs
 
+      # THROWS: every league ever created answered "D1_ERROR: Wrong number of
+      # parameter bindings" because one INSERT bound eighteen values into
+      # seventeen placeholders. A statement that parses can still be wrong, and
+      # only a database counts the ? — so this counts them, and prepares the
+      # league writes against the schema the worker creates for itself.
+      - name: Every SQL statement binds what it asks for
+        if: ${{ !cancelled() }}
+        run: node tools/test-worker-sql.mjs
+
       # Every deployed script that the pages load. it-sync.js is loaded by
       # nine in-season pages; a syntax error there takes the league strip and
       # the personalized modules off all of them at once.
