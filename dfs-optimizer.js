@@ -52,6 +52,13 @@
   var VARIANCE = { QB: { floor: 0.62, ceil: 1.55 }, RB: { floor: 0.55, ceil: 1.75 }, WR: { floor: 0.45, ceil: 1.95 },
                    TE: { floor: 0.45, ceil: 1.9 }, DST: { floor: 0.4, ceil: 2.1 }, K: { floor: 0.5, ceil: 1.6 } };
   function band(p) { return VARIANCE[p.position] || VARIANCE.WR; }
+  // A row the slate stands behind, whichever rung of the projection ladder
+  // produced its number. This used to read `p.onBoard !== false`, which asked
+  // whether the player was in the curated preseason pool -- a different
+  // question, and the one that kept every $3,000 body off the optimizer even
+  // after the slate had priced and measured him. A slate built before the
+  // ladder existed carries no `projected`, so an onBoard row still qualifies.
+  function projected(p) { return p && (p.projected === true || (p.projected === undefined && p.onBoard !== false)); }
   function ceilOf(p) { return isFinite(p.ceiling) && p.ceiling > 0 ? p.ceiling : p.ironTunaPoints * band(p).ceil; }
   function floorOf(p) { return isFinite(p.floor) && p.floor > 0 ? p.floor : p.ironTunaPoints * band(p).floor; }
   function ownOf(p) { return isFinite(p.ownership) && p.ownership > 0 ? p.ownership : null; }
@@ -84,7 +91,13 @@
     // priced, and when nobody was priced it quietly becomes the consensus
     // build rather than pretending otherwise.
     market: { label: 'Market read (props first)', pts: function (p) { return isFinite(p.marketPoints) ? p.marketPoints : (isFinite(p.ironTunaPoints) ? p.ironTunaPoints : 0); } },
-    floor: { label: 'Safest floor', pts: function (p) { return floorOf(p); } },
+    // `cash: true` marks a mode that is won on certainty rather than upside.
+    // A supplemental projection is a season average -- what a man has already
+    // done -- and a season average is the one number that cannot tell you
+    // whether he has a floor THIS week. So these modes decline to spend the
+    // cap on one unless the reader locks him, which is a decision, and the
+    // builder does not overrule a decision.
+    floor: { label: 'Safest floor', cash: true, pts: function (p) { return floorOf(p); } },
     ceiling: { label: 'Highest ceiling', pts: function (p) { return ceilOf(p); } },
     leverage: { label: 'Ceiling per point of ownership', pts: function (p) {
       var own = ownOf(p), c = ceilOf(p);
@@ -332,12 +345,16 @@
     // single lineup is seeded, unless the reader has explicitly locked him --
     // a lock is a decision, and the builder does not overrule a decision, it
     // only declines to make this one on its own.
-    var benched = [];
+    var benched = [], thin = [];
     var pool = players.filter(function (p) {
       // An uncapped format prices nobody, so a missing salary is the normal
       // state there rather than a row the board could not read.
-      if (!(p && p.onBoard !== false && (capped ? p.salary > 0 : true) && !excl[p.id] && isFinite(mode.pts(p)) && mode.pts(p) > 0)) return false;
+      if (!(projected(p) && (capped ? p.salary > 0 : true) && !excl[p.id] && isFinite(mode.pts(p)) && mode.pts(p) > 0)) return false;
       if (p.available === false && !lock[p.id] && !o.includeUnavailable) { benched.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, status: p.weekStatus || 'Out' }); return false; }
+      // Reported the way the benched are, rather than dropped in silence: a
+      // reader who asked for the safest floor is entitled to know which cheap
+      // bodies were available and which the mode declined to reach for.
+      if (p.supplemental && mode.cash && !lock[p.id] && !o.includeSupplemental) { thin.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, basis: p.projectionBasis || 'usage' }); return false; }
       return true;
     });
     // A lock the board cannot honor -- a player who is off the slate, unpriced,
@@ -546,6 +563,10 @@
           marketPoints: isFinite(p.marketPoints) ? seat(p, i, p.marketPoints) : null, marketQuoted: !!p.marketQuoted,
           market: p.market || null, teamTotal: isFinite(p.teamTotal) ? p.teamTotal : null,
           tdProbability: isFinite(p.tdProbability) ? p.tdProbability : null, tdBasis: p.tdBasis || null, tdBooks: isFinite(p.tdBooks) ? p.tdBooks : null,
+          // Where this seat's number came from. A card that prints a $3,000
+          // body next to a $9,000 one owes the reader the difference between
+          // a blended projection and a season average.
+          projectionBasis: p.projectionBasis || 'board', supplemental: !!p.supplemental,
           weekStatus: p.weekStatus || null, available: p.available !== false }; }),
         salary: salary, remaining: capped ? cfg.cap - salary : null, points: Math.round(bestS * 10) / 10, mode: o.mode || 'ironTuna',
         projPoints: Math.round(bestL.reduce(function (s, p, i) { return s + p.ironTunaPoints * slotMult(cfg, i); }, 0) * 10) / 10,
@@ -553,13 +574,15 @@
         ceilingPoints: Math.round(bestL.reduce(function (s, p, i) { return s + ceilOf(p) * slotMult(cfg, i); }, 0) * 10) / 10,
         ownership: owned.length === bestL.length ? Math.round(owned.reduce(function (s, v) { return s + v; }, 0) * 10) / 10 : null,
         marketPoints: Math.round(bestL.reduce(function (s, p, i) { return s + (isFinite(p.marketPoints) ? p.marketPoints * slotMult(cfg, i) : 0); }, 0) * 10) / 10,
-        quoted: bestL.filter(function (p) { return p.marketQuoted; }).length });
+        quoted: bestL.filter(function (p) { return p.marketQuoted; }).length,
+        supplemental: bestL.filter(function (p) { return p.supplemental; }).length });
       bestL.forEach(function (p) { used[p.id] = (used[p.id] || 0) + 1; });
     }
     return { ok: results.length > 0, mode: mode.label, lineups: results, poolSize: pool.length, cap: cfg.cap,
              format: fmt ? fmt.key : null, formatLabel: fmt ? fmt.label : null, kind: fmt ? fmt.kind : 'salary',
              slots: cfg.slots.slice(), capped: capped, multiplier: cfg.mult || null, minTeams: cfg.minTeams || 0,
              benched: benched, benchedCount: benched.length,
+             thin: thin, thinCount: thin.length,
              note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? ' satisfies' : 's satisfy') + ' the constraints.' : null };
   }
 
@@ -581,7 +604,7 @@
     var n = Math.max(1, Math.min(24, o.picks || 6));
     var stat = o.stat === 'touchdowns' ? 'touchdowns' : o.stat === 'yards' ? 'yards' : 'points';
     var pool = (players || []).filter(function (p) {
-      return p && p.onBoard !== false && p.available !== false && isFinite(p.ironTunaPoints) && p.ironTunaPoints > 0;
+      return projected(p) && p.available !== false && isFinite(p.ironTunaPoints) && p.ironTunaPoints > 0;
     });
     var rows = pool.map(function (p) {
       var market = isFinite(p.marketPoints) ? p.marketPoints : (isFinite(p.consensusPoints) ? p.consensusPoints : null);
@@ -592,8 +615,11 @@
                market: market == null ? null : Math.round(market * 10) / 10,
                edge: edge, direction: edge == null ? null : (edge >= 0 ? 'more' : 'less'),
                tdProbability: isFinite(p.tdProbability) ? p.tdProbability : null,
-               basis: p.marketQuoted ? 'quoted-prop' : 'game-line',
-               quoted: !!p.marketQuoted };
+               // A supplemental row has no game line behind it either: its
+               // number is his own season average, and calling that a
+               // game-line read would overstate the case for taking a side.
+               basis: p.marketQuoted ? 'quoted-prop' : p.supplemental ? 'season-average' : 'game-line',
+               quoted: !!p.marketQuoted, supplemental: !!p.supplemental };
     }).filter(function (r) { return stat === 'touchdowns' ? r.tdProbability != null : r.edge != null; });
     rows.sort(function (a, b) {
       if (stat === 'touchdowns') return (b.tdProbability - a.tdProbability) || (Math.abs(b.edge || 0) - Math.abs(a.edge || 0));
@@ -667,7 +693,7 @@
     // applied here. The unavailable do come off: nobody's average entry
     // starts a man who is not playing.
     var pool = (players || []).filter(function (p) {
-      return p && p.onBoard !== false && p.available !== false && p.salary > 0
+      return projected(p) && p.available !== false && p.salary > 0
         && isFinite(p.ironTunaPoints) && p.ironTunaPoints > 0
         && isFinite(p.ownership) && p.ownership > 0;
     });

@@ -330,7 +330,7 @@ console.log('\nfreshness');
 
 console.log('\nthe DFS metrics');
 {
-  const mk = (name, pos, sal, it, v, conf, td) => ({ name, position: pos, team: 'X', salary: sal, onBoard: true, ironTunaPoints: it, vegasPoints: v, consensusPoints: it, vegasConfidence: conf, tdProbability: td, vegasBasis: 'props' });
+  const mk = (name, pos, sal, it, v, conf, td) => ({ name, position: pos, team: 'X', salary: sal, onBoard: true, projected: true, supplemental: false, projectionBasis: 'board', ironTunaPoints: it, vegasPoints: v, consensusPoints: it, vegasConfidence: conf, tdProbability: td, vegasBasis: 'props' });
   const rows = [mk('A', 'WR', 9000, 22, 23, 'HIGH', 55), mk('B', 'WR', 5000, 15, 16, 'HIGH', 40), mk('C', 'WR', 4000, 8, 8, 'LOW', 20), mk('D', 'RB', 8000, 18, 18, 'MEDIUM', 50), mk('E', 'RB', 4500, 13, 12, 'MEDIUM', 35), mk('F', 'QB', 7000, 20, 21, 'HIGH', 0)];
   const m = H.dfsMetrics(rows, 'gpp');
   const B = m.rows.find(r => r.name === 'B'), C = m.rows.find(r => r.name === 'C');
