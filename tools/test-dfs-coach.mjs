@@ -75,6 +75,11 @@ console.log('the module');
      coach.startersFor({ mode: 'setup' }) === coach.SETUP_STARTERS
      && coach.startersFor({ mode: 'lineup' }) === coach.STARTERS
      && coach.startersFor(null) === coach.STARTERS);
+  // A finished setup that solved nothing is setup mode too, but "which payout
+  // structure" is not what that reader wants to know.
+  ok('a setup that solved nothing opens on the constraint, not on the contest',
+     coach.startersFor({ mode: 'setup', build: { locked: ['X'] } }) === coach.STUCK_STARTERS
+     && coach.STUCK_STARTERS.every((q) => /\?$/.test(q)));
   ok('a setup with no lineup is something to answer, not something to wait for',
      /function grounded\(ctx\) \{ return !!\(ctx && \(ctx\.mode === 'setup' \|\| \(ctx\.lineups && ctx\.lineups\.length\)\)\); \}/.test(src)
      && /if \(!grounded\(ctx\)\) \{ refresh\(\); return; \}/.test(src));
@@ -140,6 +145,9 @@ console.log('\nthe prompt');
      /Keep the page\u2019s order - style, then games, then payout/.test(s));
   ok('and it says plainly which format Iron Tuna solves a roster for',
      /Iron Tuna solves a roster for Classic only/.test(s));
+  ok('a finished setup that solved nothing is answered on the constraints, not by changing the contest',
+     /Name the one most likely to be the blocker and say what dropping it costs/.test(s)
+     && /do not treat it as a reason to change the contest/.test(s));
 }
 
 console.log('\nthe reply');
@@ -288,9 +296,14 @@ console.log('\nthe page');
 
   const ctx = lift(/function coachContext\(/);
   ok('with nothing on the page to ground an answer the coach is told why, rather than asked anyway',
-     (ctx.match(/return \{ blocked:/g) || []).length >= 3);
+     (ctx.match(/blocked:/g) || []).length >= 4);
   ok('the blocked reasons cover the states with neither a roster nor a setup to talk about',
      [/isPickem\(\)/, /!slate/, /!built \|\| !built\.lineups/].every((re) => re.test(ctx)));
+  // On FanDuel and the pick'em boards there is no setup plate to fall back to,
+  // so a dead end there is still a refusal with a reason.
+  ok('a dead end away from the DraftKings setup is still answered with a reason, not with a setup it does not have',
+     /return site === 'dk' \? setupContext\(stuck\) : \{ blocked: stuck \};/.test(ctx)
+     && /return site === 'dk' \? setupContext\(thin\) : \{ blocked: thin \};/.test(ctx));
   // THE CHANGE THIS BLOCK EXISTS FOR. An unfinished setup used to be a refusal:
   // the reader was told to go and fill in three selects, which is exactly the
   // moment they had a question. Both of those states hand the coach the setup
@@ -305,8 +318,20 @@ console.log('\nthe page');
      /mode: 'lineup'/.test(ctx) && /mode: 'setup'/.test(lift(/function setupContext\(/)));
   ok('the roster context carries the other payout structures too, because that question outlives the build',
      /choices: setupChoices\(false\)/.test(ctx) && /playOfTheWeek: playWeek/.test(ctx));
+  const build = lift(/function coachBuild\(/);
   ok('it carries the locks, exclusions and the forced player the reader set',
-     /forcedIn: whatIfKey/.test(ctx) && /locked:/.test(ctx) && /excluded:/.test(ctx));
+     /build: coachBuild\(byKey\)/.test(ctx) && /forcedIn: whatIfKey/.test(build)
+     && /locked:/.test(build) && /excluded:/.test(build) && /cap:/.test(build));
+  // THE STATE THIS BLOCK EXISTS FOR. A finished setup that solves nothing used
+  // to be a refusal pointing at the fine-tune panel, which left the reader
+  // holding the one question the coach is best placed to answer: which
+  // constraint to drop. It is setup mode with that reason and those settings.
+  ok('a finished setup that solved nothing falls back to the setup, carrying why',
+     /setupContext\(stuck\)/.test(ctx) && /setupContext\(thin\)/.test(ctx)
+     && /function setupContext\(noLineup\)/.test(page));
+  ok('and the constraints that caused it ride along, so the coach can name the blocker',
+     /out\.build = coachBuild\(byKey\);/.test(lift(/function setupContext\(/))
+     && /whyNoRosterYet: noLineup \? noLineup/.test(lift(/function setupContext\(/)));
   // /api/coach refuses a body over 80,000 bytes. Every list in the payload is
   // capped where it is built, so a 14-game slate cannot silently 413.
   const setup = lift(/function setupContext\(/);

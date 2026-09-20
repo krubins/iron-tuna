@@ -56,7 +56,7 @@
   var SYSTEM = [
     'You are the Iron Tuna Value Coach, answering questions about ONE thing: the Iron Tuna DFS page this reader is looking at - the contest they are setting up, the slate behind it, and the lineup Iron Tuna solves once that setup is done.',
     '',
-    'WHICH OF THE TWO YOU ARE ANSWERING. The JSON carries a mode. When it is "lineup" there is a solved roster in the data and the question is about that roster. When it is "setup" the reader is still at the three selects the page opens with - Game Style (the roster format), Games (which matchups make up the eligible player pool) and Payout Structure (how the contest pays) - and there is no roster yet. In setup mode your job is that choice: what each option builds, which one fits what the reader tells you they want, and what it does to the roster Iron Tuna will solve afterwards. The choices object lists exactly what those selects offer, each with the note the page prints under it. Recommend from that list and nothing else: never invent a contest, a payout table, an entry fee, a field size, a prize pool or an entry limit, because the page does not carry those and DraftKings\u2019 lobby is where they live.',
+    'WHICH OF THE TWO YOU ARE ANSWERING. The JSON carries a mode. When it is "lineup" there is a solved roster in the data and the question is about that roster. When it is "setup" the reader is still at the three selects the page opens with - Game Style (the roster format), Games (which matchups make up the eligible player pool) and Payout Structure (how the contest pays) - and there is no roster yet. In setup mode your job is that choice: what each option builds, which one fits what the reader tells you they want, and what it does to the roster Iron Tuna will solve afterwards. Setup mode also covers the case where all three ARE answered and the solve still returned nothing: whyNoRosterYet says so and a build object carries the fine-tune settings it ran under - the cap, the locks, the exclusions, the forced player, the per-team limit. Name the one most likely to be the blocker and say what dropping it costs; do not treat it as a reason to change the contest. The choices object lists exactly what those selects offer, each with the note the page prints under it. Recommend from that list and nothing else: never invent a contest, a payout table, an entry fee, a field size, a prize pool or an entry limit, because the page does not carry those and DraftKings\u2019 lobby is where they live.',
     '',
     'WHERE YOUR NUMBERS COME FROM. The JSON at the end of this prompt is the page itself: the contest the reader configured or is configuring, the roster the optimizer solved, the swap at every slot, the players it left on the board, and the game environments behind all of it. Every salary, projection, floor, ceiling, ownership, leverage, value, Tuna Edge, touchdown probability and implied team total you quote must be taken from that JSON, exactly as it is written there. Do NOT calculate, re-rank, re-project, interpolate, normalize or replace any of those numbers, and do not invent one that is not there. If a number the reader asks for is not in the data, say plainly that the page does not carry it. You may use your own football knowledge freely for everything that is NOT one of this page\'s numbers: roles, usage, schemes, injuries, matchups, why a game sets up the way the market says it does.',
     '',
@@ -91,7 +91,19 @@
     'What is the difference between a 50/50 and a Double Up?',
     'I have one entry and want the best shot at a profit. What should I play?'
   ];
-  function startersFor(ctx) { return ctx && ctx.mode === 'setup' ? SETUP_STARTERS : STARTERS; }
+  // Setup mode has a second shape: the three selects are answered and the
+  // solve still came back with nothing. The question there is not which
+  // contest to enter, it is which constraint to drop.
+  var STUCK_STARTERS = [
+    'Why does no lineup fit my settings?',
+    'Which lock or exclusion should I drop first?',
+    'Is the cap or the player pool the problem?',
+    'Which payout structure fits this slate?'
+  ];
+  function startersFor(ctx) {
+    if (!ctx || ctx.mode !== 'setup') return STARTERS;
+    return ctx.build ? STUCK_STARTERS : SETUP_STARTERS;
+  }
 
   // Shrinks in the order the reader's question is least likely to need: the
   // board rows behind the roster first, then the games, then the alternates,
@@ -225,7 +237,8 @@
       starters = startersFor(ctx);
       var why = ctx && ctx.blocked ? ctx.blocked : 'Build a lineup above and the coach can answer questions about it.';
       elLede.textContent = !ready ? why : setup
-        ? (ctx.awaiting || 'Ask about the contest setup above.') + ' It is loaded with every option those selects offer and the games on this week\u2019s board.'
+        ? (ctx.awaiting || 'Ask about the contest setup above.')
+          + (ctx.build ? ' It has the settings that solve ran under.' : ' It is loaded with every option those selects offer and the games on this week\u2019s board.')
         : 'Ask about the roster above. The coach is loaded with your contest setup, every player in the build, the swap at each slot, the board it chose from and the game environments behind it.';
       if (elLive) elLive.textContent = setup ? 'live on your setup' : 'live on this lineup';
       elText.placeholder = setup
@@ -352,7 +365,8 @@
   }
 
   var api = { mount: mount, SYSTEM: SYSTEM, STARTERS: STARTERS, SETUP_STARTERS: SETUP_STARTERS,
-              startersFor: startersFor, tidy: tidy, fit: fit, JSON_BUDGET: JSON_BUDGET };
+              STUCK_STARTERS: STUCK_STARTERS, startersFor: startersFor, tidy: tidy, fit: fit,
+              JSON_BUDGET: JSON_BUDGET };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.ITDfsCoach = api;
 })(typeof window !== 'undefined' ? window : globalThis);

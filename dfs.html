@@ -1787,6 +1787,22 @@ p{color:var(--sec);margin:0 0 16px}
   // options in front of the reader rather than a contest the lobby does not
   // carry. The lineup context takes the payouts alone, because "should I be in
   // a double up instead" is a question a reader asks with the roster on screen.
+  // What the reader set in the fine-tune panel. It rides with the roster, and
+  // it rides with an unfinished page too when a complete setup is what failed
+  // to produce one: a lock, an exclusion or a cap is usually the reason, and
+  // the coach cannot name which without being told what they are.
+  function coachBuild(byKey) {
+    return { objective: ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode,
+             qbStack: !!$('dfStack').checked, bringBack: !!$('dfBring').checked,
+             maxPerTeam: parseInt($('dfMaxTeam').value, 10) || null,
+             cap: parseInt($('dfCap').value, 10) || (slate && slate.cap) || null,
+             lineupsRequested: parseInt($('dfN').value, 10) || 1,
+             tunedByReader: tuned,
+             forcedIn: whatIfKey ? whatIfName : null,
+             locked: Object.keys(marks).filter(function (k) { return marks[k] === 'lock' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
+             excluded: Object.keys(marks).filter(function (k) { return marks[k] === 'excl' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
+             note: built && built.note || null };
+  }
   function setupChoices(all) {
     var out = {
       payouts: Object.keys(PAYOUTS).map(function (k) {
@@ -1815,27 +1831,37 @@ p{color:var(--sec);margin:0 0 16px}
     });
     return out;
   }
-  function setupContext() {
+  // noLineup is the reason a FINISHED setup still put no roster on the page -
+  // an infeasible solve, or a game pool with no priced players in it. The page
+  // used to answer that with a refusal pointing at the fine-tune panel, which
+  // left the reader holding the one question the coach is best placed to
+  // answer: which constraint to drop. It is setup mode with that reason, the
+  // fine-tune settings that caused it, and the same catalog underneath.
+  function setupContext(noLineup) {
     var gs = GAME_STYLES[gameStyle] || {}, py = PAYOUTS[payoutStructure] || {};
     var keys = selectedGameKeys();
-    var awaiting = !gameStyle
+    var awaiting = noLineup
+      ? noLineup + ' Ask which one to drop, or ask about the contest setup above while you are here.'
+      : !gameStyle
       ? 'Ask which Game Style matches the contest you are looking at, and the coach will take you through the three choices above in order.'
       : !gameChoice || (gameChoice === 'custom' && !keys.length)
       ? 'Game Style is set. Ask which games belong in the pool, or what the rest of this setup does to the roster Iron Tuna will solve.'
       : !payoutStructure
       ? 'One choice left. Ask which payout structure fits your bankroll and how many entries you want, and the coach will answer from the structures this page offers.'
       : 'Ask about the setup above: what this Game Style builds, which games belong in the pool, and what the payout structure does to the roster.';
-    return {
+    var out = {
       mode: 'setup',
       page: 'Iron Tuna DFS contest setup',
       awaiting: awaiting,
-      readerIsChoosing: !gameStyle ? 'Game Style' : (!gameChoice || (gameChoice === 'custom' && !keys.length)) ? 'Games'
+      readerIsChoosing: noLineup ? 'which constraint to loosen so a roster fits'
+                        : !gameStyle ? 'Game Style' : (!gameChoice || (gameChoice === 'custom' && !keys.length)) ? 'Games'
                         : !payoutStructure ? 'Payout Structure' : 'whether the setup they have picked is the right one',
       setup: { gameStyle: gs.label || null, gameStyleNote: gs.note || null,
                games: gameStyle === 'best-ball' ? 'season-long player pool' : keys.length ? keys.length + ' selected game(s)' : null,
                payout: py.label || null, payoutNote: py.note || null,
                ironTunaSolvesARoster: styleSupportsOptimizer(),
-               whyNoRosterYet: !styleSupportsOptimizer()
+               whyNoRosterYet: noLineup ? noLineup
+                 : !styleSupportsOptimizer()
                  ? 'Iron Tuna solves a roster for Classic only, so this Game Style gets the format read and no lineup.'
                  : 'The roster is solved once all three choices are made.' },
       choices: setupChoices(true),
@@ -1846,6 +1872,17 @@ p{color:var(--sec);margin:0 0 16px}
         : { site: 'DraftKings', note: 'No salary slate is loaded yet, so the page lists no games to choose from.' },
       playOfTheWeek: playWeek
     };
+    // A setup that is finished and still solved nothing is a constraints
+    // question, so the constraints go with it.
+    if (noLineup) {
+      var view = null;
+      try { view = filteredSlate(); } catch (err) { view = null; }
+      var byKey = {};
+      ((view || slate || {}).players || []).forEach(function (p) { if (p.key) byKey[p.key] = p; });
+      out.build = coachBuild(byKey);
+      out.buildMeaning = 'The setup above is complete; these are the fine-tune settings the solve ran under, and one of them is why no roster came back.';
+    }
+    return out;
   }
 
   function coachContext() {
@@ -1856,9 +1893,19 @@ p{color:var(--sec);margin:0 0 16px}
     // thing it is looking at changes.
     if (site === 'dk' && (!setupReady() || !styleSupportsOptimizer())) return setupContext();
     if (!slate) return { blocked: 'There is no priced slate loaded yet, so there is no lineup for the coach to read. Upload your contest’s salary file above, or come back once the salaries post.' };
-    if (!built || !built.lineups || !built.lineups.length) return { blocked: 'No legal lineup fits the current cap, locks and exclusions. Loosen one in the fine-tune panel and the coach can pick the roster up from there.' };
+    // A finished setup that solved nothing is still a question the coach can
+    // answer - which lock, exclusion or cap to loosen - so it falls back to
+    // setup mode carrying that reason rather than refusing. Off DraftKings
+    // there is no setup plate to fall back to, so the reason stands alone.
+    if (!built || !built.lineups || !built.lineups.length) {
+      var stuck = 'No legal lineup fits the current cap, locks and exclusions. Loosen one in the fine-tune panel and the coach can pick the roster up from there.';
+      return site === 'dk' ? setupContext(stuck) : { blocked: stuck };
+    }
     var view = filteredSlate();
-    if (!view) return { blocked: 'The selected games do not carry a priced player pool yet.' };
+    if (!view) {
+      var thin = 'The selected games do not carry a priced player pool yet.';
+      return site === 'dk' ? setupContext(thin) : { blocked: thin };
+    }
     var sh = SHAPES[contest] || SHAPES.single;
     var gs = GAME_STYLES[gameStyle] || {};
     var py = PAYOUTS[payoutStructure] || {};
@@ -1897,15 +1944,7 @@ p{color:var(--sec);margin:0 0 16px}
       // looking at, so the alternatives ride along with the roster too.
       choices: setupChoices(false),
       playOfTheWeek: playWeek,
-      build: { objective: ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode,
-               qbStack: !!$('dfStack').checked, bringBack: !!$('dfBring').checked,
-               maxPerTeam: parseInt($('dfMaxTeam').value, 10) || null,
-               lineupsRequested: parseInt($('dfN').value, 10) || 1,
-               tunedByReader: tuned,
-               forcedIn: whatIfKey ? whatIfName : null,
-               locked: Object.keys(marks).filter(function (k) { return marks[k] === 'lock' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
-               excluded: Object.keys(marks).filter(function (k) { return marks[k] === 'excl' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
-               note: built.note || null },
+      build: coachBuild(byKey),
       thesis: lineupSummary(lead, sh, (function () { for (var i = 0; i < lead.players.length; i++) if (lead.players[i].slot === 'QB') return lead.players[i]; return null; })()),
       lineups: built.lineups.slice(0, 3).map(function (l, i) { return coachLineup(l, i + 1, byKey, sh); }),
       pivots: pivots,
