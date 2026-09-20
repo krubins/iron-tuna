@@ -1373,7 +1373,14 @@ const TMS_SOURCE = 'https://the-odds-api.com/';
 const TMS_PROPLINE_SOURCE = 'https://prop-line.com/';
 const TMS_PROPLINE_API = 'https://api.prop-line.com/v1/';
 const TMS_PROPLINE_BOOKS = 'draftkings,fanduel,pinnacle,bovada,betmgm,betrivers,fanatics,hardrock';
-const TMS_PROPLINE_MARKETS = 'player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td';
+// The nine fantasy-scoring markets, plus rush attempts — which scores nothing
+// and is the market the slate's implied-touches number is actually built from
+// (buildDfsSlate falls back to rushYd/4.3 without it, which is a guess at a
+// carry count the books will happily quote). ODDS_API_MARKET_MAP already maps
+// it to `rushAtt` and VEGAS_MARKETS lists it among the running back's extras,
+// so nothing downstream needed teaching; the request simply never asked.
+// Ten of a cap of twelve.
+const TMS_PROPLINE_MARKETS = 'player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_attempts,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td';
 // A quote is stale when the collector has not SEEN it lately, not when the book
 // last touched it: a line that has held for six hours is still the book's
 // line. Two poll intervals, so one missed hourly poll does not empty the board.
@@ -1388,25 +1395,63 @@ const tmsInt = (v, fallback, min, max) => Number.isFinite(Number(v)) && v !== ''
 const tmsList = v => String(v || '').split(',').map(s => s.trim()).filter(Boolean);
 const tmsKey = r => JSON.stringify([r.provider, r.event, r.book, r.market, r.player, r.side]);
 const tmsGroup = r => JSON.stringify([r.provider, r.event, r.market, r.player, r.side, r.line]);
-function tmsNormalize(events, observed, provider = 'the-odds-api', source = TMS_SOURCE) {
+// The line on an outcome, whatever the feed calls it and whatever type it
+// arrives as. A book API that returns "62.5" instead of 62.5 is not a broken
+// feed, and a strict typeof check silently dropped every such row. An
+// anytime-touchdown market has no line at all and is not affected either way,
+// which is exactly why a strict check here could hide itself: touchdown prices
+// kept flowing while every yardage and reception line vanished, and the board
+// looked busy and could not project a receiver from any of it.
+function tmsOutcomeLine(o) {
+  for (const k of ['point', 'line', 'handicap']) {
+    const v = o == null ? null : o[k];
+    if (v == null || v === '') continue;
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+// The player a player market is about. `description` is The Odds API's field;
+// other feeds put the name on `participant` or `player`.
+function tmsOutcomePlayer(o) {
+  for (const k of ['description', 'participant', 'player', 'player_name']) {
+    const v = o == null ? null : o[k];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return '';
+}
+// Normalizing drops rows, and every drop used to be a bare `continue`. That is
+// how a feed loses eight of its nine markets without anything saying so. The
+// tally is per reason and per market, it costs a counter, and it is the
+// difference between "the books only posted touchdowns" and "we threw the rest
+// away" — two diagnoses with nothing in common and no way to tell them apart.
+function tmsNormalize(events, observed, provider = 'the-odds-api', source = TMS_SOURCE, drops) {
   if (!Array.isArray(events)) throw new Error('invalid_schema');
   const rows = [];
+  const drop = (reason, market) => {
+    if (!drops) return;
+    drops.total = (drops.total || 0) + 1;
+    drops.byReason = drops.byReason || {}; drops.byReason[reason] = (drops.byReason[reason] || 0) + 1;
+    if (market) { drops.byMarket = drops.byMarket || {}; drops.byMarket[market] = (drops.byMarket[market] || 0) + 1; }
+  };
   for (const e of events) {
-    if (!e.id || !e.sport_key || !Number.isFinite(Date.parse(e.commence_time))) continue;
+    if (!e.id || !e.sport_key || !Number.isFinite(Date.parse(e.commence_time))) { drop('event_shape'); continue; }
     for (const b of e.bookmakers || []) for (const m of b.markets || []) {
       // Alternate ladders need their own identity; do not mix them with main lines.
-      if (!b.key || !m.key || m.key.includes('alternate')) continue;
+      if (!b.key || !m.key) { drop('market_shape'); continue; }
+      if (m.key.includes('alternate')) { drop('alternate_ladder', m.key); continue; }
       const updated = Date.parse(m.last_update || b.last_update);
-      if (!Number.isFinite(updated) || updated > observed + 60000) continue;
+      if (!Number.isFinite(updated) || updated > observed + 60000) { drop('no_timestamp', m.key); continue; }
       for (const o of m.outcomes || []) {
-        if (!o.name || typeof o.price !== 'number' || !Number.isFinite(o.price) || o.price <= 1) continue;
-        if (o.point != null && (typeof o.point !== 'number' || !Number.isFinite(o.point))) continue;
-        if (m.key !== 'h2h' && o.point == null && !/(^|_)anytime_td$/.test(m.key)) continue;
-        if (m.key.startsWith('player_') && !o.description) continue;
+        if (!o.name || typeof o.price !== 'number' || !Number.isFinite(o.price) || o.price <= 1) { drop('price', m.key); continue; }
+        const line = tmsOutcomeLine(o);
+        if (m.key !== 'h2h' && line == null && !/(^|_)anytime_td$/.test(m.key)) { drop('no_line', m.key); continue; }
+        const player = tmsOutcomePlayer(o);
+        if (m.key.startsWith('player_') && !player) { drop('no_player', m.key); continue; }
         rows.push({ provider, source, event: String(e.id), sport: e.sport_key,
           matchup: `${e.away_team || ''} at ${e.home_team || ''}`, starts: Date.parse(e.commence_time),
-          book: b.key, market: m.key, player: o.description || '', side: o.name,
-          line: o.point ?? null, price: o.price, updated, observed });
+          book: b.key, market: m.key, player, side: o.name,
+          line, price: o.price, updated, observed });
       }
     }
   }
@@ -1417,7 +1462,7 @@ function tmsAmericanToDecimal(price) {
   if (!Number.isFinite(n) || (n > -100 && n < 100)) return null;
   return n > 0 ? 1 + n / 100 : 1 + 100 / Math.abs(n);
 }
-function tmsNormalizePropline(events, observed) {
+function tmsNormalizePropline(events, observed, drops) {
   if (!Array.isArray(events)) throw new Error('invalid_schema');
   const converted = events.map(e => ({ ...e, bookmakers: (e.bookmakers || []).map(b => ({
     ...b, markets: (b.markets || []).map(m => ({ ...m, outcomes: (m.outcomes || []).map(o => {
@@ -1425,7 +1470,7 @@ function tmsNormalizePropline(events, observed) {
       return price == null ? { ...o, price: NaN } : { ...o, price };
     }) }))
   })) }));
-  return tmsPrimaryPropRows(tmsNormalize(converted, observed, 'propline', TMS_PROPLINE_SOURCE));
+  return tmsPrimaryPropRows(tmsNormalize(converted, observed, 'propline', TMS_PROPLINE_SOURCE, drops));
 }
 function tmsNumberOrNull(v) {
   if (v == null || v === '') return null;
@@ -1463,6 +1508,24 @@ function tmsPrimaryPropRows(rows) {
     if (best) keep.push(...best.rows);
   }
   return keep;
+}
+// Which games get a prop call, and in what order.
+//
+// SOONEST FIRST, then capped. The provider's window is nine days and an NFL
+// week is seven, so it routinely holds this Sunday, this Monday AND next
+// Thursday — more games than the per-poll cap. Unsorted, the events that got a
+// call were whatever order the provider happened to return them in, which
+// could spend the entire budget on games a week out while this Sunday went
+// unpriced. The slate anyone is building is always the nearest one.
+const TMS_PROPLINE_EVENT_CAP = 20;
+const TMS_PROPLINE_WINDOW_MS = 9 * 86400000;
+function tmsPropLineEvents(list, observed) {
+  return (Array.isArray(list) ? list : []).filter(e => {
+    const starts = Date.parse(e && e.commence_time);
+    // An hour's grace on the near side: a game that has just kicked off is
+    // still the week being built around.
+    return e && e.id && Number.isFinite(starts) && starts > observed - 3600000 && starts < observed + TMS_PROPLINE_WINDOW_MS;
+  }).sort((x, y) => Date.parse(x.commence_time) - Date.parse(y.commence_time)).slice(0, TMS_PROPLINE_EVENT_CAP);
 }
 async function tmsPropLineHttp(path, params, env, request = fetch) {
   const url = new URL(TMS_PROPLINE_API + path);
@@ -1541,13 +1604,14 @@ const TMS_PROVIDERS = {
     if (!/^[a-z0-9_]+$/.test(sport)) throw new Error('invalid_sport');
     const bookmakers = tmsList(env.TMS_BOOKMAKERS || TMS_PROPLINE_BOOKS).filter(v => /^[a-z0-9_]+$/.test(v)).slice(0, 12).join(',');
     const markets = tmsList(env.TMS_PROP_MARKETS || TMS_PROPLINE_MARKETS).filter(v => /^[a-z0-9_]+$/.test(v)).slice(0, 12);
+    // What the request asked for, what came back, and what was thrown away on
+    // the way in. Without this, a feed that answers nine markets and survives
+    // one is indistinguishable from a feed that only ever posts one.
+    const drops = {};
     const game = await tmsPropLineHttp('sports/' + sport + '/odds', { markets: 'h2h,spreads,totals', bookmakers }, env);
-    const rows = tmsNormalizePropline(game.data, observed);
+    const rows = tmsNormalizePropline(game.data, observed, drops);
     const eventResult = await tmsPropLineHttp('sports/' + sport + '/events', {}, env);
-    const events = (Array.isArray(eventResult.data) ? eventResult.data : []).filter(e => {
-      const starts = Date.parse(e.commence_time);
-      return e.id && Number.isFinite(starts) && starts > observed - 3600000 && starts < observed + 9 * 86400000;
-    }).slice(0, 20);
+    const events = tmsPropLineEvents(eventResult.data, observed);
     let quota = { remaining: eventResult.remaining ?? game.remaining, used: eventResult.used ?? game.used, limit: eventResult.limit ?? game.limit };
     // Free current odds plus our own snapshots are the default. Paid history is opt-in.
     let movementAvailable = env.PROPLINE_MOVEMENT === '1';
@@ -1556,7 +1620,7 @@ const TMS_PROVIDERS = {
       if (markets.length) {
         const current = await tmsPropLineHttp('sports/' + sport + '/events/' + encodeURIComponent(e.id) + '/odds', { markets: markets.join(','), bookmakers }, env);
         currentEventId = String(current.data?.id || e.id);
-        rows.push(...tmsNormalizePropline([current.data], observed));
+        rows.push(...tmsNormalizePropline([current.data], observed, drops));
         quota = { remaining: current.remaining, used: current.used, limit: current.limit };
       }
       if (movementAvailable) {
@@ -1571,7 +1635,10 @@ const TMS_PROVIDERS = {
         }
       }
     }
-    return { rows, quota, provider: 'propline' };
+    const byMarket = {};
+    for (const r of rows) if (r.market) byMarket[r.market] = (byMarket[r.market] || 0) + 1;
+    return { rows, quota, provider: 'propline',
+             markets: { requested: markets, returned: byMarket, events: events.length, drops } };
   } },
   'the-odds-api': { async pull(env, observed) {
     if (!env.ODDS_API_KEY) throw new Error('missing_odds_api_key');
@@ -1707,6 +1774,7 @@ async function tmsPoll(env, now = Date.now()) {
     try { projection = await tmsStoreForProjections(env, result.rows, now); }
     catch (e) { projection = { ok: false, error: 'projection_store_failed' }; }
     status = { status: result.rows.length ? 'ok' : 'empty', rows: result.rows.length, quota: result.quota,
+               markets: result.markets || null,
                projection: projection ? { ok: !!projection.ok, eligible: projection.eligible || 0,
                  written: projection.written || 0, unchanged: projection.unchanged || 0,
                  skipped: projection.skipped || null, error: projection.error || null } : null };

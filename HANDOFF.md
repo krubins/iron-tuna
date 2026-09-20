@@ -11495,3 +11495,79 @@ narrowed, or the PropLine tier not returning the yardage markets for each
 event — and that is a configuration question, not a code one. What changed here
 is that the site now says which of those it is instead of presenting a healthy
 row count over a board that cannot use it.
+
+## 97. September 20: the yardage markets were always being asked for
+
+Ken: *"Let's add the yardage markets to the feed."*
+
+They were never missing from the request. `TMS_PROPLINE_MARKETS` has listed all
+nine scoring markets since the PropLine adapter landed, and the per-event call
+sends every one of them on every game. There was nothing to add. So either the
+provider is not returning them, or something between the response and the store
+was throwing them away — and nothing on the site could say which.
+
+### The asymmetry that hides a line-parsing fault
+
+`tmsNormalize` required an outcome's line to be a number:
+
+```js
+if (o.point != null && (typeof o.point !== 'number' || !Number.isFinite(o.point))) continue;
+if (m.key !== 'h2h' && o.point == null && !/(^|_)anytime_td$/.test(m.key)) continue;
+```
+
+**An anytime-touchdown market has no line and is explicitly exempt.** Every
+yardage and reception market must have one. So a feed sending `"62.5"` instead
+of `62.5` — an ordinary thing for a book API to do — loses every yardage and
+reception row and keeps every touchdown price, and the result is a busy board
+that cannot project a single receiver. That is the exact shape of §96's
+symptom, and it would have looked identical to a provider that only posts
+touchdowns.
+
+`tmsOutcomeLine()` now coerces a numeric line from `point`, `line` or
+`handicap`, whatever type it arrives as, and `tmsOutcomePlayer()` reads the
+player from `description`, `participant`, `player` or `player_name`. Tolerance,
+not invention: a genuinely absent line, an unparseable one (`"n/a"`) and a
+player market with no player are all still dropped.
+
+This is a hardening, not a confirmed diagnosis. The live feed is unreachable
+from here and the provider's real payload has not been seen. What settles it is
+the next item.
+
+### Every drop is counted now
+
+Normalizing rejected rows in five places and every one was a bare `continue`.
+`tmsNormalize` now takes an optional tally and fills it by reason
+(`no_line`, `no_player`, `price`, `no_timestamp`, `alternate_ladder`,
+`market_shape`, `event_shape`) and by market. The poll reports it, with what it
+asked for and what came back, at `health.markets` on `GET /api/tuna-market`:
+
+    markets: { requested: [...], returned: { player_reception_yds: 214, ... },
+               events: 17, drops: { total, byReason, byMarket } }
+
+A clean pull records nothing, so any entry is a signal. "The books only post
+touchdowns" and "we threw the rest away" are different diagnoses with nothing in
+common, and until now there was no way to tell them apart.
+
+### Two real faults found on the way
+
+**The per-event cap was spending itself on the wrong games.** The event window
+is nine days; an NFL week is seven. It routinely holds this Sunday, this Monday
+*and* next Thursday — more than the cap of twenty. The list was sliced with no
+sort, so the twenty games that got a prop call were whatever order the provider
+returned, and the budget could go to games a week out while this Sunday went
+unpriced. `tmsPropLineEvents()` now filters, **sorts soonest-first**, then caps.
+Pulled out as a named function because it is a policy worth testing, and it is
+tested.
+
+**Rush attempts were never requested.** `ODDS_API_MARKET_MAP` maps it to
+`rushAtt` and `VEGAS_MARKETS` lists it among a running back's extras, so
+nothing downstream needed teaching — the request simply never asked. It scores
+nothing, and it is the market the DFS slate's implied-touches number is built
+from; without it that number is a carry count guessed as `rushYd / 4.3`. Now ten
+markets of a cap of twelve.
+
+Guarded by `tools/test-tuna-market.mjs`: a string line survives and is coerced,
+alternate line and player keys are read, an absent or unparseable line is still
+dropped, a touchdown market still needs no line, the drop tally by reason and
+market, a clean pull tallying nothing, the market list keeping its yardage
+markets under the cap, and the soonest games being the ones priced.
