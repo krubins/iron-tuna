@@ -13795,7 +13795,7 @@ async function leagueCreateRow(env, email, provider, providerLeagueId, name, sea
   if (count && count.n >= 12) throw new LeagueProviderError('too_many_leagues', 'Twelve leagues is the limit per account.');
   const id = crypto.randomUUID();
   const overrides = opts && opts.providerUserId ? { __providerUserId: String(opts.providerUserId) } : {};
-  await env.LEADS_DB.prepare('INSERT INTO leagues (id, email, provider, provider_league_id, name, season, sport, num_teams, status, settings, overrides, user_team_id, is_default, created_at, updated_at, sync_status, next_sync_at, failures) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)')
+  await env.LEADS_DB.prepare('INSERT INTO leagues (id, email, provider, provider_league_id, name, season, sport, num_teams, status, settings, overrides, user_team_id, is_default, created_at, updated_at, sync_status, next_sync_at, failures) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
     .bind(id, email, provider, String(providerLeagueId), name || null, season || null, 'nfl', (opts && opts.numTeams) || null, 'unknown', JSON.stringify((opts && opts.settings) || leagueDefaultSettings()), JSON.stringify(overrides), (opts && opts.userTeamId) || null, count && count.n === 0 ? 1 : 0, now, now, provider === 'manual' ? 'manual' : 'never', now, 0).run();
   const row = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE id=?').bind(id).first();
   return { row, created: true };
