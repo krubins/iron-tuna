@@ -302,7 +302,83 @@
              benched: benched, benchedCount: benched.length,
              note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? '' : 's') + ' satisfy the constraints.' : null };
   }
-  var api = { MODES: MODES, build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf };
+  // ── which contest this slate is worth entering ───────────────────────────
+  // A step up the payout curve — Head-to-Head, Multiplier, single-entry
+  // tournament, multi-entry tournament — trades a lower chance of cashing for
+  // a bigger payoff. The case for taking a step is that the model can buy
+  // ceiling without giving up much median, and the measure of that is the gap
+  // between Iron Tuna's number for a roster and THE MARKET's for the same one.
+  //
+  // That gap is only worth acting on to the extent the market's number is
+  // really the market's. On a slate the books have priced, it is a
+  // disagreement with money. On a slate they have not, the "market" number is
+  // the game total split across an offense — which shares most of its inputs
+  // with the projection it is being compared to, so the two agreeing means
+  // very little and the two disagreeing means less. Acting on that gap is
+  // taking real risk on the strength of two models arguing with each other.
+  //
+  // So the thresholds are divided by how much of the roster was actually
+  // quoted. A fully quoted roster moves up the curve on the evidence it has.
+  // An unquoted one needs twice the gap to justify the same risk, which on
+  // most weeks leaves it where the chance of winning is best.
+  var PICKS = {
+    h2h: { rec: 'Head-to-Head', tag: 'Highest hit rate',
+      why: 'The highest-confidence path is still to maximize the chance of beating one opponent. The current slate does not offer enough extra ceiling at a small enough projection cost to justify moving materially up the payout curve.' },
+    multiplier: { rec: 'Multiplier', tag: 'Measured step up the payout curve',
+      why: 'The slate offers enough projected edge and upside to take more risk than Head-to-Head, but not enough to justify the volatility of a large tournament. A multiplier is the middle ground: fewer winners, meaningfully better payoff, and less dependence on a perfect ceiling outcome.' },
+    single: { rec: 'Tournament - Single Entry', tag: 'Upside without a major projection sacrifice',
+      why: 'The tournament build adds meaningful ceiling and correlation without giving away much median projection. This is the kind of week where accepting a lower cashing probability can be justified by the larger payoff available when the roster hits.' },
+    multi: { rec: 'Tournament - Multi-Entry', tag: 'Risk justified by separation',
+      why: 'The leverage build keeps nearly all of the high-floor lineup\u2019s median projection while creating materially more ceiling and differentiation. That combination makes the larger payout curve more attractive than it is on a normal week, despite the lower chance of cashing.' }
+  };
+  function sum(l, key) { return l && l.players ? l.players.reduce(function (n, p) { var v = Number(p[key]); return n + (isFinite(v) ? v : 0); }, 0) : 0; }
+  // How much of a roster the books actually priced, and on what.
+  function evidenceOf(l) {
+    var ps = (l && l.players) || [];
+    var quoted = ps.filter(function (p) { return p.marketQuoted; });
+    var mkts = {};
+    quoted.forEach(function (p) { ((p.market && p.market.priced) || []).forEach(function (m) { mkts[m] = (mkts[m] || 0) + 1; }); });
+    var tdMkt = ps.filter(function (p) { return p.tdBasis === 'anytime-td-market'; }).length;
+    var books = quoted.map(function (p) { return (p.market && p.market.books) || 0; }).filter(function (n) { return n > 0; });
+    return { quoted: quoted.length, of: ps.length,
+             coverage: ps.length ? quoted.length / ps.length : 0,
+             markets: Object.keys(mkts).sort(),
+             tdQuoted: tdMkt,
+             books: books.length ? Math.round(books.reduce(function (a, b) { return a + b; }, 0) / books.length * 10) / 10 : null };
+  }
+  function contestPick(o) {
+    var C = o && o.cash, T = o && o.tournament, L = (o && o.leverage) || T;
+    if (!C || !T) return null;
+    // The lineup's OWN aggregates. Summing a per-player field here is how this
+    // came to compare zeroes for a year: the builder already totals the
+    // projection, the floor and the ceiling, and those totals are correct.
+    var cashProj = isFinite(C.projPoints) ? C.projPoints : sum(C, 'proj');
+    var cashFloor = isFinite(C.floorPoints) ? C.floorPoints : 0;
+    var cashCeil = isFinite(C.ceilingPoints) ? C.ceilingPoints : 0;
+    var tourProj = isFinite(T.projPoints) ? T.projPoints : sum(T, 'proj');
+    var tourCeil = isFinite(T.ceilingPoints) ? T.ceilingPoints : 0;
+    var levProj = isFinite(L.projPoints) ? L.projPoints : sum(L, 'proj');
+    var levCeil = isFinite(L.ceilingPoints) ? L.ceilingPoints : 0;
+    // Against the market read, which is the quoted props where there are any
+    // and the game line discounted for not being quoted where there are not.
+    var market = isFinite(T.marketPoints) && T.marketPoints > 0 ? T.marketPoints : sum(T, 'marketPoints');
+    var edge = market > 0 && tourProj > 0 ? (tourProj - market) / market : 0;
+    var ev = evidenceOf(T);
+    var need = 2 - ev.coverage;                 // fully quoted 1x, unquoted 2x
+    var pick = PICKS.h2h;
+    if (edge >= 0.05 * need && levProj >= cashProj * 0.97 && levCeil >= cashCeil * 1.10) pick = PICKS.multi;
+    else if (edge >= 0.035 * need && tourProj >= cashProj * 0.97 && tourCeil >= cashCeil * 1.07) pick = PICKS.single;
+    else if (edge >= 0.018 * need && tourProj >= cashProj * 0.985) pick = PICKS.multiplier;
+    return { rec: pick.rec, tag: pick.tag, rationale: pick.why,
+             edge: Math.round(edge * 1000) / 10, need: Math.round(need * 100) / 100,
+             marketPoints: Math.round(market * 10) / 10,
+             cashProj: cashProj, tourProj: tourProj, levProj: levProj,
+             floorRetention: cashProj > 0 ? Math.round(cashFloor / cashProj * 100) : 0,
+             ceilingMultiple: tourProj > 0 ? Math.round(tourCeil / tourProj * 100) : 0,
+             evidence: ev };
+  }
+
+  var api = { MODES: MODES, build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf, contestPick: contestPick };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.ITDfs = api;
 })(typeof window !== 'undefined' ? window : globalThis);

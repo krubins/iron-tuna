@@ -11681,3 +11681,66 @@ would have added, and that the refusal carries its evidence) and
 `tools/test-boards.mjs` (end to end: a touchdown-only man is `gamelines+props`,
 his touchdown line is the market's, his yardage is untouched, and his number
 moves off the game line's).
+
+## 100. September 20: Play of the Week has recommended Head-to-Head every week since it shipped
+
+Ken: *"Play of the Week should factor in the other props too."*
+
+It should, and while wiring that in the recommendation turned out never to have
+worked at all.
+
+### It compared zero with zero
+
+```js
+var cashProj = lineupStat(C, 'ironTunaPoints');
+```
+
+`ironTunaPoints` is not a field on a lineup player. The builder calls it
+`proj`. So `lineupStat` summed `undefined` across nine slots and returned 0 for
+the cash, tournament and leverage projections alike; `vegas` was 0 for the same
+reason; `edge` was `0 > 0 ? ... : 0`, so 0; and every threshold in the ladder
+needs a positive edge. **Head-to-Head, on every slate the site has ever
+served**, with a meaningless "+0.0%" printed beside it.
+
+The builder has totalled `projPoints`, `floorPoints` and `ceilingPoints`
+correctly on every lineup the whole time. The page was re-summing them by hand,
+with the wrong key, next to the right answer.
+
+Worse: §94 put `vegasPoints` onto lineup players for the fit lines, which made
+`vegas` positive while `tourProj` stayed 0 — so the panel was about to start
+printing **−100.0%**. Caught here, three days before anyone would have seen it.
+
+### And now it factors the props
+
+The gap that justifies a step up the payout curve is now measured against the
+**market read** (`marketPoints` — quoted props where there are any, the game
+line discounted for not being quoted where there are not), and the thresholds
+scale with how much of the roster the books actually priced:
+
+    need = 2 - coverage
+
+A fully quoted roster is taken at face value. One nobody priced needs twice the
+gap. The reason is the same one §99 was about: on an unquoted slate the market
+number is the game total split across an offense, which shares most of its
+inputs with the projection being compared to it. The two agreeing means very
+little and the two disagreeing means less, and moving up a payout curve on that
+is taking real money risk on two models arguing with each other.
+
+A 2.0% edge now recommends a Multiplier when the books are behind it and stays
+at Head-to-Head when they are not. Same slate, same number, different evidence.
+
+The panel says which: how many picks were priced, across how many books, on
+which markets, how many carry a quoted rather than derived touchdown price —
+or, plainly, that no book priced any of them and the bar was doubled for it.
+
+### Where it lives now
+
+`ITDfs.contestPick()` in `dfs-optimizer.js`. It was forty lines of thresholds
+inline in a render function, reachable only by string-matching the page, which
+is how it sat broken for its whole life. It is now a pure function tested
+against real builds: that the totals are the builder's own and not zero, that
+the edge is measured against the market read, that coverage moves the bar and
+not the number, that a market of zero is not an edge of −100%, and that a real
+build off the fixture slate produces a real recommendation.
+
+`lineupStat` and its private variance table are deleted.

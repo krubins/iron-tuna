@@ -1667,17 +1667,11 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
     $('dfTd').hidden = !list.length;
   }
-  var POTW_VARIANCE={QB:{floor:.62,ceil:1.55},RB:{floor:.55,ceil:1.75},WR:{floor:.45,ceil:1.95},TE:{floor:.45,ceil:1.9},DST:{floor:.4,ceil:2.1},K:{floor:.5,ceil:1.6}};
-  function lineupStat(l, key) {
-    return l && l.players ? l.players.reduce(function (n,p) {
-      var v=Number(p[key]);
-      if ((!isFinite(v) || v<=0) && (key==='floor'||key==='ceiling')) {
-        var band=POTW_VARIANCE[p.position]||POTW_VARIANCE.WR, base=Number(p.ironTunaPoints)||0;
-        v=base*(key==='floor'?band.floor:band.ceil);
-      }
-      return n+(isFinite(v)?v:0);
-    },0) : 0;
-  }
+  // lineupStat and its private variance table are gone. They re-summed per
+  // player what the builder already totals correctly on the lineup, and the
+  // key they summed for the projection (`ironTunaPoints`) is not a field on a
+  // lineup player — it is `proj` — so every total was zero. ITDfs.contestPick
+  // reads the builder's own totals.
   function renderPlayOfWeek(s) {
     var host=$('dfPlayWeekBody'); if(!host || !s || !window.ITDfs) return;
     var players=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
@@ -1687,22 +1681,31 @@ p{color:var(--sec);margin:0 0 16px}
     var tour=ITDfs.build(players,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
     var lev=ITDfs.build(players,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
     if(!cash.ok||!tour.ok){ $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">Iron Tuna could not yet build comparable legal contest shapes from the current slate.</p>'; return; }
-    var C=cash.lineups[0], T=tour.lineups[0], L=lev.ok?lev.lineups[0]:T;
-    var cashProj=lineupStat(C,'ironTunaPoints'), cashFloor=lineupStat(C,'floor'), cashCeil=lineupStat(C,'ceiling');
-    var tourProj=lineupStat(T,'ironTunaPoints'), tourCeil=lineupStat(T,'ceiling');
-    var levProj=lineupStat(L,'ironTunaPoints'), levCeil=lineupStat(L,'ceiling');
-    var vegas=lineupStat(T,'vegasPoints');
-    var edge=vegas>0?(tourProj-vegas)/vegas:0;
-    var rec='Head-to-Head', rationale='The highest-confidence path is still to maximize the chance of beating one opponent. The current slate does not offer enough extra ceiling at a small enough projection cost to justify moving materially up the payout curve.';
-    var tag='Highest hit rate';
-    if(edge>=.05 && levProj>=cashProj*.97 && levCeil>=cashCeil*1.10){rec='Tournament - Multi-Entry';tag='Risk justified by separation';rationale='The leverage build keeps nearly all of the high-floor lineup’s median projection while creating materially more ceiling and differentiation. That combination makes the larger payout curve more attractive than it is on a normal week, despite the lower chance of cashing.';}
-    else if(edge>=.035 && tourProj>=cashProj*.97 && tourCeil>=cashCeil*1.07){rec='Tournament - Single Entry';tag='Upside without a major projection sacrifice';rationale='The tournament build adds meaningful ceiling and correlation without giving away much median projection. This is the kind of week where accepting a lower cashing probability can be justified by the larger payoff available when the roster hits.';}
-    else if(edge>=.018 && tourProj>=cashProj*.985){rec='Multiplier';tag='Measured step up the payout curve';rationale='The slate offers enough projected edge and upside to take more risk than Head-to-Head, but not enough to justify the volatility of a large tournament. A multiplier is the middle ground: fewer winners, meaningfully better payoff, and less dependence on a perfect ceiling outcome.';}
-    $('dfPlayWeekTitle').textContent='Play of the Week: '+rec;
-    $('dfPlayWeekDek').textContent=rationale;
-    var stability=cashProj>0?cashFloor/cashProj:0, upside=tourProj>0?tourCeil/tourProj:0;
-    host.innerHTML='<div class="df-play-week-copy"><p><b>Why this contest:</b> '+e(rationale)+'</p><p>Head-to-Head remains the easiest format to win on any single entry. Iron Tuna moves away from it only when the model can buy enough additional ceiling or leverage without surrendering too much of the lineup’s core projection.</p><p class="is-note">This is a model-based contest recommendation, not a guarantee of profit. Contest fees, field strength and actual payout tables still matter.</p></div>'
-      +'<div class="df-play-week-score"><b>'+e(rec)+'</b><span>'+e(tag)+'</span><b style="margin-top:13px">'+(edge>=0?'+':'')+(edge*100).toFixed(1)+'%</b><span>Iron Tuna projection vs. Vegas-derived projection in the ceiling build</span><b style="margin-top:13px">'+(stability*100).toFixed(0)+'% / '+(upside*100).toFixed(0)+'%</b><span>Floor retention / ceiling multiple</span></div>';
+    // The decision lives in the optimizer, where it can be tested against real
+    // lineups. It used to be assembled here out of per-player sums, and the
+    // field it summed for the projection does not exist on a lineup player
+    // (it is `proj`), so every total was zero, every threshold compared zero
+    // to zero, and the answer was Head-to-Head on every slate ever served.
+    var pick = ITDfs.contestPick({ cash: cash.lineups[0], tournament: tour.lineups[0], leverage: lev.ok ? lev.lineups[0] : tour.lineups[0] });
+    if (!pick) { $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">Iron Tuna could not yet build comparable legal contest shapes from the current slate.</p>'; return; }
+    var ev = pick.evidence;
+    // What the recommendation is standing on. A step up the payout curve is a
+    // real risk, and the reader is owed the difference between "the books
+    // disagree with us" and "our two models disagree with each other".
+    var evidence = ev.quoted
+      ? 'The books priced <b>' + ev.quoted + ' of ' + ev.of + '</b> picks in the ceiling build'
+        + (ev.books ? ' across ' + ev.books + ' books' : '')
+        + (ev.markets.length ? ' (' + ev.markets.map(function(m){ return MARKET_LABEL[m] || m; }).join(', ') + ')' : '')
+        + (ev.tdQuoted ? ', with ' + ev.tdQuoted + ' quoted touchdown price' + (ev.tdQuoted === 1 ? '' : 's') : '')
+        + '. The edge below is measured against those quoted lines.'
+        + (ev.coverage < 0.999 ? ' The rest carry their game\u2019s environment, so the bar for moving up the payout curve is raised by ' + Math.round((pick.need - 1) * 100) + '%.' : '')
+      : 'No book priced any pick in this build, so the comparison below is Iron Tuna against the game lines \u2014 two models sharing most of their inputs, not a disagreement with money. The bar for moving up the payout curve is doubled for it, which is why this week sits where the chance of winning is best.';
+    $('dfPlayWeekTitle').textContent='Play of the Week: '+pick.rec;
+    $('dfPlayWeekDek').textContent=pick.rationale;
+    host.innerHTML='<div class="df-play-week-copy"><p><b>Why this contest:</b> '+e(pick.rationale)+'</p>'
+      +'<p class="df-props" style="margin:10px 0">'+evidence+'</p>'
+      +'<p>Head-to-Head remains the easiest format to win on any single entry. Iron Tuna moves away from it only when the model can buy enough additional ceiling or leverage without surrendering too much of the lineup\u2019s core projection.</p><p class="is-note">This is a model-based contest recommendation, not a guarantee of profit. Contest fees, field strength and actual payout tables still matter.</p></div>'
+      +'<div class="df-play-week-score"><b>'+e(pick.rec)+'</b><span>'+e(pick.tag)+'</span><b style="margin-top:13px">'+(pick.edge>=0?'+':'')+n1(pick.edge)+'%</b><span>Iron Tuna projection vs. the market read for the same roster'+(ev.quoted?'':', which no book priced')+'</span><b style="margin-top:13px">'+pick.floorRetention+'% / '+pick.ceilingMultiple+'%</b><span>Floor retention / ceiling multiple</span></div>';
   }
 
   function render() {

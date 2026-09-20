@@ -195,6 +195,45 @@ Every source fails soft. A missing injury pull, a missing roster file, or a
 slate built with no week number leaves every player available, exactly as
 before any of this existed. A missing feed must never empty a board.
 
+## Play of the Week
+
+`ITDfs.contestPick()` picks a rung on the payout curve — Head-to-Head,
+Multiplier, single-entry tournament, multi-entry tournament — by comparing
+three builds of the same slate (floor, ceiling, leverage).
+
+What decides it is the gap between Iron Tuna's number for the ceiling roster
+and **the market read for the same roster** (`marketPoints`, not raw
+`vegasPoints`), together with how much ceiling the tournament and leverage
+builds buy for how little median.
+
+**The thresholds scale with how much of the roster the books actually priced.**
+`need = 2 − coverage`: a fully quoted roster is taken at face value, one nobody
+priced needs twice the gap. The reason is that on an unquoted slate the "market"
+number is the game total split across an offense, which shares most of its
+inputs with the projection it is being compared to — the two agreeing means
+very little and the two disagreeing means less, and stepping up a payout curve
+on it is taking real risk on two models arguing with each other.
+
+| Rung | Edge required (fully quoted) | Also requires |
+|---|---|---|
+| Multiplier | 1.8% | tournament median ≥ 98.5% of cash |
+| Tournament, single entry | 3.5% | tournament median ≥ 97% of cash, ceiling ≥ 107% |
+| Tournament, multi-entry | 5.0% | leverage median ≥ 97% of cash, ceiling ≥ 110% |
+
+The panel prints the evidence: how many picks the books priced, across how many
+books, on which markets, and how many carry a quoted rather than derived
+touchdown price — or says plainly that none of them were priced and the bar was
+doubled for it.
+
+### The bug it was born with
+
+The recommendation summed per-player projections off `ironTunaPoints`, which is
+not a field on a lineup player — the builder calls it `proj`. Every total was
+zero, every threshold compared zero with zero, and **the answer was
+Head-to-Head on every slate the site ever served.** The builder's own
+`projPoints`, `floorPoints` and `ceilingPoints` were correct the whole time and
+unused. `contestPick` reads those.
+
 ## What is deliberately not here
 
 - No metric is invented for marketing. Each row above is used by the DFS lens

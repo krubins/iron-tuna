@@ -440,6 +440,104 @@ console.log('\nthe weekly betting market');
      litBuild.lineups[0].players.filter(x => x.marketQuoted).every(x => x.market.pricedLabels.length > 0 && x.market.books > 0));
 }
 
+// ── Play of the Week ──────────────────────────────────────────────────────
+// Two things this guards.
+//
+// The first is the bug it was born with. The recommendation compared a cash
+// build's projection against a tournament build's, and it summed those
+// projections off a per-player field that does not exist on a lineup player:
+// the builder calls it `proj`, the page asked for `ironTunaPoints`. Every
+// total was zero, every threshold compared zero with zero, and the answer was
+// Head-to-Head on every slate the site has ever served. The builder's own
+// lineup totals were correct the whole time and sitting unused.
+//
+// The second is the request: the step up a payout curve is a real risk, and
+// the gap that justifies it has to be a disagreement with MONEY. Where the
+// books priced nobody, the "market" number is the game total split across an
+// offense, which shares most of its inputs with the projection it is being
+// compared to — so the thresholds are divided by how much of the roster was
+// actually quoted, and an unquoted slate needs twice the gap.
+console.log('\nPlay of the Week');
+{
+  // proj 100, market 90 => an 11.1% edge, comfortably past every threshold.
+  const build = (proj, market, ceil, floor, quoted, n) => ({
+    projPoints: proj, marketPoints: market, ceilingPoints: ceil, floorPoints: floor,
+    players: Array.from({ length: n || 9 }, (_, i) => ({
+      proj: proj / (n || 9), marketPoints: market / (n || 9),
+      marketQuoted: i < (quoted == null ? (n || 9) : quoted),
+      market: { priced: ['recYd', 'rec'], books: 6 },
+      tdBasis: i < (quoted == null ? (n || 9) : quoted) ? 'anytime-td-market' : 'derived'
+    }))
+  });
+
+  ok('nothing to compare yields no recommendation', DFS.contestPick({}) === null && DFS.contestPick({ cash: build(100, 90, 200, 60) }) === null);
+
+  // A fully quoted roster with a real edge climbs the curve.
+  const hot = DFS.contestPick({
+    cash: build(100, 90, 150, 70),
+    tournament: build(100, 90, 200, 60),
+    leverage: build(99, 90, 210, 55)
+  });
+  ok('the projection totals are the builder\'s own, not a sum of a field that is not there',
+     hot.cashProj === 100 && hot.tourProj === 100, JSON.stringify({ c: hot.cashProj, t: hot.tourProj }));
+  ok('the edge is measured against the market read', near(hot.edge, 11.1, 0.2), String(hot.edge));
+  ok('a fully quoted roster is taken at face value', hot.need === 1 && hot.evidence.coverage === 1);
+  ok('...and a real edge moves off Head-to-Head', hot.rec !== 'Head-to-Head', hot.rec);
+  ok('...all the way to multi-entry when leverage keeps the median and buys ceiling',
+     hot.rec === 'Tournament - Multi-Entry', hot.rec);
+
+  // The same numbers with nobody priced. The bar doubles, and 11.1% still
+  // clears it — the evidence is reported either way.
+  const unpriced = DFS.contestPick({
+    cash: build(100, 90, 150, 70, 0),
+    tournament: build(100, 90, 200, 60, 0),
+    leverage: build(99, 90, 210, 55, 0)
+  });
+  ok('an unquoted roster doubles the bar', unpriced.need === 2 && unpriced.evidence.coverage === 0);
+  ok('...and says nobody was priced', unpriced.evidence.quoted === 0 && unpriced.evidence.of === 9);
+
+  // A modest edge is enough when the books are behind it, and is not when
+  // they are not. This is the whole of the request, in one pair.
+  // 2.0% clears the multiplier bar at full coverage (1.8%) and misses the
+  // doubled one (3.6%). Same slate, same number, different evidence.
+  const modest = (quoted) => DFS.contestPick({
+    cash: build(100, 98, 150, 70, quoted),
+    tournament: build(100, 98, 200, 60, quoted),
+    leverage: build(99, 98, 205, 55, quoted)
+  });
+  ok('a 2% edge on a fully quoted roster is acted on', modest(9).rec === 'Multiplier', modest(9).rec);
+  ok('...and the same 2% on a roster nobody priced is not', modest(0).rec === 'Head-to-Head', modest(0).rec);
+  ok('...because the bar moved, not the number', near(modest(9).edge, modest(0).edge, 0.001));
+
+  // Half-priced sits between the two.
+  const half = modest(5);
+  ok('partial coverage raises the bar in proportion', near(half.need, 2 - 5 / 9, 0.01));
+
+  ok('no edge stays at the highest hit rate',
+     DFS.contestPick({ cash: build(100, 100, 150, 70), tournament: build(100, 100, 152, 60) }).rec === 'Head-to-Head');
+  ok('a market number of zero is not an edge of minus one hundred percent',
+     DFS.contestPick({ cash: build(100, 0, 150, 70), tournament: build(100, 0, 200, 60) }).edge === 0);
+
+  // The evidence a reader is shown.
+  ok('the evidence names the markets and the books behind them',
+     hot.evidence.markets.join(',') === 'rec,recYd' && hot.evidence.books === 6);
+  ok('...and how many touchdown prices were quoted rather than derived', hot.evidence.tdQuoted === 9);
+  ok('the floor retention and ceiling multiple are real numbers now',
+     hot.floorRetention === 70 && hot.ceilingMultiple === 200);
+
+  // End to end against a real build off the fixture slate.
+  const play = slate.players.filter(p => p.onBoard).map(p => ({ ...p, id: p.key }));
+  const base = { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, lineups: 1, seed: 17 };
+  const real = DFS.contestPick({
+    cash: DFS.build(play, { ...base, mode: 'floor', maxPerTeam: 3 }).lineups[0],
+    tournament: DFS.build(play, { ...base, mode: 'ceiling', stack: true, maxPerTeam: 4 }).lineups[0],
+    leverage: DFS.build(play, { ...base, mode: 'leverage', stack: true, bringBack: true, maxPerTeam: 4 }).lineups[0]
+  });
+  ok('a real build produces a real projection total, not zero', real.cashProj > 0 && real.tourProj > 0);
+  ok('...and a recommendation from the list', ['Head-to-Head', 'Multiplier', 'Tournament - Single Entry', 'Tournament - Multi-Entry'].includes(real.rec));
+  ok('...and counts the fixture slate, which no book priced, as unquoted', real.evidence.quoted === 0 && real.need === 2);
+}
+
 console.log('\nthe DFS page explanations');
 {
   const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
@@ -453,7 +551,16 @@ console.log('\nthe DFS page explanations');
   ok('selected games actually filter the optimizer and every DFS board', page.includes('function filteredSlate()') && page.includes('selectedGames[playerGameKey(p)]') && page.includes('dashboard(view); envTable(view); values(view); pool(view); stacks(view); tdBoard(view);'));
   ok('non-Classic formats do not receive an illegal Classic roster', page.includes("function styleSupportsOptimizer() { return site !== 'dk' || gameStyle === 'classic'; }") && page.includes('The Classic lineup solver is hidden because this DraftKings format uses different roster or scoring rules.'));
   ok('DraftKings terminology retains hover help', page.includes('.df-term:hover::after') && page.includes('data-tip="The roster and scoring format DraftKings uses.') && page.includes('data-tip="How the contest awards prizes.'));
-  ok('Play of the Week evaluates payout risk and reward', page.includes('id="dfPlayWeek"') && page.includes('function renderPlayOfWeek(s)') && page.includes("rec='Head-to-Head'") && page.includes("rec='Multiplier'") && page.includes("rec='Tournament - Single Entry'") && page.includes("rec='Tournament - Multi-Entry'") && page.includes('moves away from it only when the model can buy enough additional ceiling or leverage'));
+  // The thresholds moved into the optimizer, where they are exercised against
+  // real lineups rather than matched as strings in a page.
+  ok('Play of the Week evaluates payout risk and reward', page.includes('id="dfPlayWeek"') && page.includes('function renderPlayOfWeek(s)')
+     && page.includes('ITDfs.contestPick(') && page.includes('moves away from it only when the model can buy enough additional ceiling or leverage'));
+  ok('every contest on the curve is named by the optimizer, not the page',
+     ['Head-to-Head', 'Multiplier', 'Tournament - Single Entry', 'Tournament - Multi-Entry']
+       .every(r => Object.values(DFS.MODES) && JSON.stringify(DFS.contestPick({ cash: { projPoints: 1, players: [] }, tournament: { projPoints: 1, players: [] } })) !== null && fs.readFileSync(path.join(ROOT, 'dfs-optimizer.js'), 'utf8').includes(r)));
+  ok('the page says what the recommendation is standing on', page.includes('The edge is measured against those quoted lines.') || page.includes('The edge below is measured against those quoted lines.'));
+  ok('...and says plainly when no book priced any of it', page.includes('No book priced any pick in this build') && page.includes('not a disagreement with money'));
+  ok('the page no longer re-sums lineup totals off a field that is not there', !page.includes('function lineupStat'));
   ok('DFS Academy links to the two new strategy articles', page.includes('href="/dfs-getting-started"') && page.includes('href="/dfs-strategy-guide"') && fs.existsSync(path.join(ROOT,'dfs-getting-started.html')) && fs.existsSync(path.join(ROOT,'dfs-strategy-guide.html')));
   ok('the lead roster has a larger summary, side breakdown, and player fit lines', page.includes('.df-explain-summary p{margin:0;color:#d5e2df;font-size:16px') && page.includes('Lineup Breakdown') && page.includes('class="df-fit"'));
   ok('player names expose a calculation drawer', page.includes('id="dfPlayerModal"') && page.includes('function openPlayerCalc') && page.includes('df-player-link'));
