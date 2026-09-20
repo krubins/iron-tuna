@@ -12236,7 +12236,87 @@ turns deep on both the harness and `/dfs` itself: the newest answer is inside
 the visible log and the input is on screen in every one, where at 650 the same
 question previously rendered into nothing.
 
-## 107. September 20: "pulled 52h ago" was never a pull
+---
+
+## 107. September 20: /dfs solved one contest out of thirteen
+
+The Game Style select has offered the whole DraftKings menu since it shipped —
+Classic, Showdown Captain Mode, Tiers, Pick6, Snake, the two Madden formats and
+the rest. Choosing any of them but Classic got this:
+
+> **Showdown Captain Mode selected.** The Classic lineup solver is hidden
+> because this DraftKings format uses different roster or scoring rules.
+
+That was honest and it was also the whole product missing. A reader who plays
+the Sunday-night Showdown had a thirteen-item menu and one answer in it.
+
+**The roster is now a property of the format, not a constant.** `FORMATS` in
+`dfs-optimizer.js` is the table of what each contest actually builds, and
+`build()` solves whichever of them it is handed:
+
+| Family | Roster | Cap |
+|---|---|---|
+| Classic (incl. Madden Classic) | the nine slots, one FLEX | the site's |
+| Showdown / In-Game / Madden Showdown | 1 Captain + 5 FLEX, any position, both teams | $50,000 |
+| FanDuel Single Game | 1 MVP + 5 FLEX, same shape | $60,000 |
+| Tiers | one player out of each posted tier | none |
+| Snake / Flash Draft / Snake Showdown | a target roster and the order to take it in | none |
+| Pick6 / Single Stat | not a roster at all — `pickBoard()` | none |
+| Best Ball | a draft question, and it says so | — |
+
+Four things the solver had to learn:
+
+- **Multiplier seats.** A Captain scores 1.5x **and costs 1.5x**. Both numbers,
+  or the roster is a fiction: a Captain carried at his FLEX price is several
+  thousand dollars of cap nobody gave you. Every per-seat figure the page prints
+  — salary, projection, floor, ceiling, the operator's average and the market
+  read — is scaled by the seat; ownership, touchdown probability and the raw
+  Vegas and consensus lines are the player's and are left alone.
+- **Who wears it.** Points and salary scale by the same 1.5, so value per dollar
+  is *identical* for all six men and cannot pick the Captain; the answer only
+  shows up in the total. The improvement loop gained a seat-exchange move that
+  reads it. On the fixture game it finds the exact optimum.
+- **A lineup key that can tell two entries apart.** The same six men with a
+  different Captain are two different entries. The de-duplicator now includes
+  the multiplier seat in the key; classic keys are unchanged.
+- **No cap at all.** `cap: 0` means uncapped, `remaining` comes back null rather
+  than zero, and the greedy fill stops dividing by a salary the contest never
+  charges — an uncapped contest is won by taking the most points, and ranking
+  the board by price there would be sorting on nothing.
+
+**The file is the authority on what it priced.** `/api/dfs/slate` used to refuse
+a single-game export with a 400; it reads it now. `dfsCollapseSingleGame()`
+folds the two rows DraftKings writes for one man into one, keeping the FLEX
+price as the salary every board compares against and the operator's own Captain
+price in `salaryBySlot`, so the builder charges what the lobby charges rather
+than 1.5x arrived at here. FanDuel writes one row with the seat in its
+roster-position list, and that row is left at the price the file gave it. The
+admin importer still refuses one, because `dfs_salaries` is the main slate every
+reader is served.
+
+**Nothing is invented.** A Showdown style over a main-slate file does not build
+a roster off main-slate salaries — it names the file to upload. A Tiers contest
+on a slate carrying no tiers does not band players by salary — it names the file
+to upload. The tiers come off FanDuel's `Tier` column or DraftKings' own
+`TIER n` roster position and nowhere else. Every refusal left on the page is a
+missing file or a missing column, and each one says what to do about it.
+
+One bug found on the way: the page looked for the quarterback by **slot**, and a
+Showdown has no QB slot. Every sentence built on it ("there is no same-team
+QB/pass-catcher stack in this build") was written about a quarterback the page
+had failed to find, with one sitting in the Captain seat. `lineupQb()` finds him
+by position.
+
+`tools/test-dfs.mjs` is 297 now: the collapse, both roster tables held in step
+against the worker's, the Captain's two multipliers, the both-teams rule, the
+exact optimum on a six-seat roster, one-per-tier, the uncapped builds and the
+pick board. Driven in Chromium across Classic, Showdown over the wrong file,
+Showdown over the right one, Tiers with no tiers, a snake draft, Pick6 and
+FanDuel single game: every board renders what it claims and no page throws.
+
+---
+
+## 108. September 20: "pulled 52h ago" was never a pull
 
 Reported from the DFS recommended roster: a player's market line read **pulled
 52h ago**, and the obvious reading was that the odds feed had stopped two days
@@ -12283,5 +12363,7 @@ the report; the label was the bug.
 Gates: `test-market` 130 (the pull clock is stamped by a pull that changed
 nothing, and the two clocks disagree), `test-worker-odds` 113 (a quiet market
 read minutes ago is live, not stale; an unstamped store says so), `test-dfs`
-289 (both clocks on the slate note, and the page says "line last moved", never
-"pulled"), `test-dfs-coach` 123.
+360 (both clocks on the slate note, and the page says "line last moved", never
+"pulled"), `test-dfs-coach` 125. Merged with §107's single-game work: the slate
+note's coverage call carries the pull clock through `seats`-shaped rosters
+unchanged, because the clock is the store's and not the format's.
