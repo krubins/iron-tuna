@@ -267,17 +267,17 @@ img{max-width:100%}
 .hm-read-card .m{margin-top:auto;padding-top:12px;font-size:11.5px;color:var(--ink-3)}
 
 /* ── 5 · how it works, and the disclosures ── */
-.hm-how{margin-top:clamp(40px,5vw,64px);background:var(--card);border-top:1px solid var(--line)}
-.hm-how .wrap{padding-top:clamp(32px,4.4vw,52px);padding-bottom:clamp(30px,4vw,48px)}
-.hm-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:22px;margin-top:18px}
-.hm-step .n{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;font-size:12.5px;font-weight:800}
-.hm-step h3{margin-top:10px;font-size:16px;font-weight:800}
-.hm-step p{margin-top:6px;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.hm-how{margin-top:clamp(28px,3.4vw,44px);background:var(--card);border-top:1px solid var(--line)}
+.hm-how .wrap{padding-top:clamp(18px,2.4vw,26px);padding-bottom:clamp(18px,2.4vw,28px)}
+.hm-how h2{font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--ink-2)}
+.hm-note{margin-top:6px;font-size:12px;line-height:1.6;color:var(--ink-3);max-width:96ch}
+.hm-note b{color:var(--ink-2)}
+.hm-note a{color:var(--brand);font-weight:700}
 /* The disclosures live here, in the section that explains the method, rather
    than only in the footer: this is where a reader is actually deciding what the
    numbers are worth. The footer's copyright line stays; its duplicate copy of
    this paragraph does not. */
-.hm-legal{margin-top:28px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;line-height:1.6;color:var(--ink-3);max-width:96ch}
+.hm-legal{margin-top:10px;font-size:12px;line-height:1.6;color:var(--ink-3);max-width:96ch}
 .hm-legal b{color:var(--ink-2)}
 .hm-legal p + p{margin-top:8px}
 
@@ -594,30 +594,19 @@ img{max-width:100%}
 <!-- ── 5 · how the number is made, and the disclosures ──────────────────────
      Stated ONCE, at the foot of the page, and the target of the hero's "See
      How It Works" link. The three-step explanation used to appear in three
-     different places on this page in three different wordings; this is the
-     only one. The required disclosures sit directly under it, where a reader
+     different places on this page in three different wordings, then as a
+     three-column band here; it is now one footnote-scale line, because the
+     page's job is the boards and the method is a reference note. The longer
+     version lives at /faq. The required disclosures sit directly under it, where a reader
      is deciding what the numbers are worth, rather than only in the footer. -->
 <section class="hm-how" id="how" aria-labelledby="howHead">
   <div class="wrap">
-    <div class="hm-sec-head"><h2 id="howHead">How it works</h2></div>
-    <p class="hm-sub">Three inputs, in this order. Every board on the site is built from them and nothing else.</p>
-    <div class="hm-steps">
-      <div class="hm-step">
-        <span class="n">1</span>
-        <h3>The market</h3>
-        <p>Game totals, spreads and player props, pulled on a schedule. A sportsbook has its own money behind a number and corrects it in public within minutes of news landing.</p>
-      </div>
-      <div class="hm-step">
-        <span class="n">2</span>
-        <h3>The consensus</h3>
-        <p>Expert projections, blended toward the market where a book prices the player and left alone where none does. The gap between the two is printed, never hidden.</p>
-      </div>
-      <div class="hm-step">
-        <span class="n">3</span>
-        <h3>Your league</h3>
-        <p>Scoring, roster slots and waiver budget, saved once in this browser with no account. Every board restates its numbers in your points instead of somebody else&rsquo;s. <a href="/my-league#settings" style="color:var(--brand);font-weight:700">Customize my league &rarr;</a></p>
-      </div>
-    </div>
+    <h2 id="howHead">How it works</h2>
+    <p class="hm-note">Three inputs, in this order, and every board on the site is built from them and nothing else.
+      <b>1 &middot; The market</b> &mdash; game totals, spreads and player props, pulled on a schedule, with a sportsbook&rsquo;s own money behind each number.
+      <b>2 &middot; The consensus</b> &mdash; expert projections, blended toward the market where a book prices the player and left alone where none does; the gap between the two is printed, never hidden.
+      <b>3 &middot; Your league</b> &mdash; scoring, roster slots and waiver budget, saved once in this browser with no account, so every board restates its numbers in your points.
+      <a href="/faq#faq-start">The longer version &rarr;</a> &middot; <a href="/my-league#settings">Customize my league &rarr;</a></p>
     <div class="hm-legal">
       <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league&rsquo;s scoring. Projections are not guarantees.</p>
       <p><b>For social and entertainment purposes only.</b> Every number on this site &mdash; projections, odds, salaries and contract prices alike &mdash; is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
