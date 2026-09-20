@@ -87,6 +87,21 @@ console.log('the module');
      /elLive\.textContent = setup \? 'live on your setup' : 'live on this lineup'/.test(src)
      && /elText\.placeholder = setup/.test(src)
      && /starters = startersFor\(ctx\)/.test(src));
+  // THE ANSWER HAS TO BE ON SCREEN. Everything in the dock except the
+  // conversation is flex:0 0 auto, so the body was the only child left to
+  // absorb the overflow on a short window: it collapsed to zero height and a
+  // reader who pressed Enter watched the box clear and nothing arrive. The
+  // module says when there is a conversation and the page gives it the room.
+  ok('a conversation puts the panel in its talking shape, so the page can give it the room',
+     /host\.classList\.toggle\('df-coach-talking', msgs\.length > 0\)/.test(src));
+  ok('and the newest turn is scrolled to in the panel as well as in the log',
+     /elBody\.scrollTop = elBody\.scrollHeight/.test(src)
+     && /if \(!streaming && elMain\) elMain\.scrollTop = elMain\.scrollHeight/.test(src));
+  ok('the page gives the conversation a floor nothing can squeeze it below',
+     /\.df-coach-body:not\(:empty\)\{min-height:\d+px\}/.test(page));
+  ok('and hands it the room the openers and the lede were holding',
+     /\.df-coach-talking \.df-coach-lede\{display:none\}/.test(page)
+     && /\.df-coach-talking \.df-coach-chips\{[^}]*flex-wrap:nowrap[^}]*overflow-x:auto/.test(page));
   // A dock is closed by its page; an inline panel minimizes itself. The module
   // does both so it does not depend on being floated.
   ok('a host that closes is closed, and one that does not still minimizes in place',
