@@ -311,7 +311,7 @@ p{color:var(--sec);margin:0 0 16px}
      to cover four horizons rather than two, so it says "a one-week board" and
      "a longer one" instead of naming them. -->
 <h2>How to read the two lines under a name</h2>
-<p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is what the board you have selected makes of him: where he ranks at his own position on that board and at your scoring, what a rank like that is worth at that position, the points behind it, and an injury or a usage swing where there is one. <b>Opportunity</b> is what is in front of him: on a one-week board the fixture, how hard the defense across from him has been on points allowed, and what the market implies his offense will score against its own season mean; on a longer board the games and byes he has left and how hard the defenses on that slate have been. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score. Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
+<p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is where he ranks at his own position on the board you have selected and at your scoring, and what he has actually done to get there: the points a game he has scored so far, the volume behind them, and whether that board&rsquo;s projection backs that rate or marks it down, plus an injury or a usage swing where there is one. Before he has played there is nothing to report, and the line says what a rank like his is worth at his position instead. <b>Opportunity</b> is what is in front of him: on a one-week board the fixture, how hard the defense across from him has been on points allowed, and what the market implies his offense will score against its own season mean; on a longer board the games and byes he has left and how hard the defenses on that slate have been. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score. Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
 
 </div><!-- /.wrap -->
 
@@ -465,8 +465,17 @@ p{color:var(--sec);margin:0 0 16px}
   function reads(r) {
     if (!window.ITReads) return '';
     var f = board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v';
+    // The season line is re-scored here too. `form.points` arrived scored at
+    // the payload's own preset, and printing that beside a projection this page
+    // scored at the reader's league settings would put two different scorings
+    // in one sentence. `form.stats` is the raw line, exactly so this can.
+    var fm = r.p.form, ppg = null;
+    if (fm && fm.games > 0 && fm.stats) {
+      var fp = score(fm.stats, r.p.position, fm.games);
+      if (fp != null) ppg = fp / fm.games;
+    }
     return ITReads.cell(r.p, { horizon: horizon, spellOut: pos === 'FLEX',
-      rank: r[f + 'Rank'], points: bp(r) });
+      rank: r[f + 'Rank'], points: bp(r), formPpg: ppg });
   }
 
   function cell(r, key, rankField) {

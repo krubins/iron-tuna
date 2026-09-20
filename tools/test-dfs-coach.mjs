@@ -169,14 +169,37 @@ console.log('\nthe page');
   ok('the panel sits with the lineup, under the roster and its pivots', (() => {
     const sec = page.indexOf('<section id="sec-lineup">');
     const end = page.indexOf('</section>', sec);
-    const host = page.indexOf('<div id="dfCoach"></div>');
+    const host = page.indexOf('<div id="dfCoach"');
     return sec >= 0 && host > page.indexOf('<div id="dfPivots">', sec) && host < end;
   })());
   ok('it is mounted against the page’s own state, not a copy',
      /ITDfsCoach\.mount\(\{ host: \$\('dfCoach'\), context: coachContext \}\)/.test(page));
   ok('a deferred script that has not landed yet cannot break a build',
-     /if \(window\.ITDfsCoach\) coachPanel = ITDfsCoach\.mount/.test(page)
+     /if \(!mountCoach\(\)\) \{/.test(page)
      && /function coachSync\(\) \{ if \(coachPanel\) try \{ coachPanel\.refresh\(\); \} catch/.test(page));
+
+  // THE BUG THIS BLOCK EXISTS FOR. The panel used to be an empty <div> that
+  // dfs-coach.js filled, so a page served without that file showed nothing at
+  // all between the pivots and the fine-tune panel: no coach, no error, no
+  // clue. The chrome now ships in the markup and the script only replaces it.
+  ok('the panel is in the markup, so a missing script leaves a reason and not a gap', (() => {
+    const at = page.indexOf('<div id="dfCoach"');
+    const host = page.slice(at, page.indexOf('</div>\n\n', at));
+    return /class="df-coach"/.test(host) && /df-coach-title/.test(host) && /id="dfCoachBoot"/.test(host);
+  })());
+  ok('the mount is guarded on the script being there AND on it not throwing',
+     /if \(!window\.ITDfsCoach \|\| typeof ITDfsCoach\.mount !== 'function'\) return false;/.test(page)
+     && /catch \(err\) \{ coachPanel = null; \}/.test(page));
+  ok('a coach that never loaded says so where the panel would be',
+     /coachBoot\('The Value Coach did not load with the page\.', true\)/.test(page));
+  ok('and offers a retry that re-fetches the file rather than only telling the reader to reload',
+     /function coachReload\(\)/.test(page) && /sc\.src = '\/dfs-coach\.js\?r=' \+ Date\.now\(\)/.test(page)
+     && /sc\.onerror = function/.test(page));
+  ok('a retry that arrives but cannot start is not silent either',
+     /if \(!mountCoach\(\)\) coachBoot\('The coach loaded but could not start/.test(page));
+  ok('the retry button has a style to wear', /\.df-coach-retry\{/.test(page));
+  ok('the badge stops saying "starting" once it is clear nothing started',
+     /var live = \$\('dfCoachLive'\); if \(live\) live\.textContent = badge \|\| 'not loaded';/.test(page));
 
   const ctx = lift(/function coachContext\(/);
   ok('with no roster on the page the coach is told why, rather than asked anyway',

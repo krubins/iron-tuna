@@ -11310,3 +11310,125 @@ bubble, and the payload carries the solved roster, its pivots, the bench and
 the games — re-read correctly after switching the contest from Head-to-Head to
 a multi-entry tournament. No page errors at 1280 or 390px.
 
+
+## 94. September 20: the coach panel was an empty div, and said nothing when it stayed empty
+
+§93 shipped the Value Coach on the DFS lineup as an empty `<div id="dfCoach">`
+that `dfs-coach.js` filled on DOMContentLoaded. On the deployed site the panel
+did not appear. The code was not the problem: CI asserts the script tag and the
+host element are both in `dfs.html`, and it passed on the merge commit.
+
+**The failure mode was the problem.** An empty div that a separate deferred file
+fills has exactly one appearance when that file does not arrive: nothing. No
+panel, no error, no clue, and the rest of the page works perfectly, so there is
+nothing to tell a reader or a maintainer that anything is missing. It cannot be
+told apart from a page that was never meant to have a coach.
+
+So the panel's chrome now ships in the markup and `mount()` replaces it:
+
+- `mountCoach()` is guarded on `window.ITDfsCoach` existing AND on `mount()`
+  not throwing, and returns whether it took. Nothing else calls `mount()`.
+- When it does not take, `coachBoot()` writes the reason where the panel is,
+  moves the badge off "starting" (a panel reading "starting" over a sentence
+  saying it never started is worse than no panel), and offers **Try again**.
+- `coachReload()` re-fetches `/dfs-coach.js` with a cache-buster, because the
+  usual reason for a retry is a file that was not there the first time and a
+  browser that cached that miss would never see it land. It reports both ways it
+  can fail: the file still missing, or the file arriving and not starting.
+- A `window.load` retry is also registered, which costs nothing and covers a
+  script that resolves late.
+
+`coachSync()` was already a no-op with no panel, so a missing script still
+cannot break a build.
+
+| Where | What |
+|---|---|
+| `dfs.html` | the host carries `.df-coach` chrome and `#dfCoachBoot`; `mountCoach()`, `coachBoot()`, `coachReload()`; `.df-coach-retry`. |
+| `tools/test-dfs-coach.mjs` | 53 now: the chrome is in the markup, the mount is guarded both ways, a failure says so, the retry re-fetches with a cache-buster, a retry that arrives but cannot start is not silent, and the badge stops claiming to be starting. |
+
+Driven in Chromium both ways: with `/dfs-coach.js` answering 404 the panel
+renders at full width with the reason and a Try again button and no page errors;
+with the file then served, pressing it mounts the live coach and the message is
+gone. The normal path is unchanged.
+
+**Still unverified: whether this is what was wrong on the live site.** This
+session cannot reach irontuna.com (the environment's egress policy), so the
+deployed `/dfs-coach.js` was never fetched. If the asset is genuinely absent the
+panel will now say so instead of vanishing, which is the point either way.
+
+## 95. September 20: a rank is not a performance
+
+The two lines under every name (§92) said where a player ranked and what he
+was projected for, and the second clause of the PLAYER line was the first one
+said again:
+
+> RB3 the rest of the way, **elite at the position**, 14.7 points a game.
+
+"Elite at the position" is `tierOf(position, rank)`. It is derived from the
+rank printed two words earlier and carries no information the `#` column did
+not already have. Nothing on the row said how the player had actually played.
+
+**The usage overlay was already in hand.** `boardsContext` reads
+`usageCacheRead` for the role trend, and `roleTrendFrom` used two fields of it
+and dropped the rest — including `season.stats`, the raw line accumulated week
+by week, and the volume that produced it. The same shape as §92's defensive
+side of a fixture: computed, then thrown away.
+
+`seasonFormFrom(u, position, rules)` now builds a `form` block on every board
+row, in the same shape as `consensus`:
+
+| Field | What it is |
+|---|---|
+| `stats` | the RAW accumulated season line |
+| `points`, `ppg` | that line scored at this board's scoring |
+| `volume`, `volumeUnit` | touches for a back, targets for a receiver, passing yards for a passer |
+| `games`, `tds`, `snapPct` | what a reader checks next |
+
+The line rides along raw for the same reason `consensus.stats` does:
+`/rankings` re-scores every stat line in the browser at the reader's own
+league settings, and a form figure scored here at PPR would sit in one
+sentence beside a projection scored there at his. It re-scores this too.
+
+**What the line says now.** Production leads, the tier is the fallback:
+
+> RB1 the rest of the way, 27.3 points a game so far on 19.0 touches over 3
+> games, **which the board marks down to 14.7 going forward**, with usage up
+> 30% on his own average.
+
+The comparison is the insight. A board projecting well under a player's own
+rate is saying his scoring has outrun what drives it; one projecting over it
+is saying the opposite. Neither is visible in a rank. It is drawn only on a
+multi-week horizon, where both numbers are per-game rates — a one-week total
+against a season average would be a comparison between different units — and
+two numbers less than a tenth apart read as "much the same" rather than as a
+judgement. A player who has not played has no form at all, and there the tier
+is all the board has to say about him; in September that is every row.
+
+### The bug this surfaced: every quarterback read "usage up 1100%"
+
+`roleTrendFrom` counted `passAttempts` on the LATEST week's side and not in
+the season average, which accumulated only targets and carries. So a passer's
+38 attempts were being divided by his three rushes a game.
+
+It was not only a printed number. `role.factor` scales every stat on the Iron
+Tuna board, so the clamp at `ROLE_CLAMP` (0.9–1.1) was pinned high for every
+quarterback, and pinned the wrong way for any whose attempts dipped. Bounded
+at 10%, and wrong on every QB row all season.
+
+`buildUsageOverlay` now accumulates `season.passAttempts`, and `roleTrendFrom`
+counts it on both sides. A row cached before that field existed has attempts
+on one side only; that is not a trend of zero, so it returns `no data` rather
+than a number it cannot support.
+
+| Where | What |
+|---|---|
+| `_worker.js` | `seasonFormFrom`; `form` on every board row; `season.passAttempts` accumulated; `roleTrendFrom` compares like with like. |
+| `it-reads.js` | the form branch leads `player()`, `forwardOf()` draws the comparison, `vol()` prints yards whole and touches to a tenth. |
+| `rankings.html` | re-scores `form.stats` and passes `formPpg`, so the sentence is at the reader's scoring. |
+| the seventeen explainers | rewritten: Player leads on what he has done, and says the tier is what stands in before he has played. |
+| `tools/test-ranks.mjs` | the tier is reachable only from the not-played branch; the comparison is drawn only between per-game rates; yards are whole. |
+| `tools/test-boards.mjs` | the season line is shipped raw and scored, volume is per position, a player with no line gets null rather than 0.0, and a passer is compared against his own attempts. |
+
+`node tools/test-ranks.mjs` (84) and `node tools/test-boards.mjs` (95) pass.
+Both surfaces were driven in a real Chromium against a worker-built payload
+with three weeks of usage behind it.
