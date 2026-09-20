@@ -413,21 +413,34 @@ p{color:var(--sec);margin:0 0 16px}
 .df-act button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
 .df-act button.drop[aria-pressed="true"]{background:var(--danger);border-color:var(--danger);color:#fff}
 .df-act-note{margin-top:10px}
-.df-constraints{margin:0 0 14px;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--panel);padding:11px 13px}
-.df-constraints.has{border-color:var(--teal)}
-.df-constraints-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.df-constraints-top>b{font-family:var(--font-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.df-req-search{position:relative;flex:1 1 240px;min-width:0;max-width:400px}
-.df-req-search input{width:100%;font:inherit;font-size:14px;padding:8px 11px;border:1px solid var(--line2);border-radius:8px;background:var(--bg);color:var(--text)}
-.df-req-list{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 4px);background:var(--bg);border:1px solid var(--line2);border-radius:8px;box-shadow:0 14px 30px rgba(0,0,0,.14);max-height:260px;overflow:auto}
+.df-must{margin:0 0 16px;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--panel);padding:13px 15px}
+.df-must.has{border-color:var(--teal)}
+.df-must-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:9px}
+.df-must-head>b{font-family:var(--font-mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--teal)}
+.df-must-head>span{flex:1 1 34ch;font-size:12.5px;line-height:1.5;color:var(--sec)}
+.df-must-head .df-clear{border:0;background:transparent;color:var(--sec);font:700 12px var(--font-body);cursor:pointer;text-decoration:underline;padding:0}
+/* The box itself. It has to look like something you put players IN, so it keeps
+   its border and its height whether or not it is holding anybody. */
+.df-must-box{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:48px;
+  border:1px dashed var(--line2);border-radius:10px;background:var(--bg);padding:8px 10px}
+.df-must.has .df-must-box{border-style:solid;border-color:rgba(14,124,99,.45)}
+.df-must-chips{display:contents}
+.df-must-empty{font-size:13px;color:var(--muted)}
+.df-must.has .df-must-empty{display:none}
+/* The search drops out of the Add button rather than sitting in the row, so the
+   box keeps its shape while a name is being typed. */
+.df-req-wrap{position:relative;margin-left:auto}
+.df-req-search{position:absolute;z-index:61;right:0;top:calc(100% + 6px);width:min(360px,78vw)}
+.df-req-search input{width:100%;font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--teal);border-radius:8px;background:var(--bg);color:var(--text);box-shadow:0 10px 26px rgba(0,0,0,.12)}
+.df-req-list{position:absolute;z-index:62;left:0;right:0;top:calc(100% + 4px);background:var(--bg);border:1px solid var(--line2);border-radius:8px;box-shadow:0 14px 30px rgba(0,0,0,.14);max-height:260px;overflow:auto}
 .df-req-list button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);font:inherit;padding:9px 11px;cursor:pointer;text-align:left}
 .df-req-list button:last-child{border-bottom:0}
 .df-req-list button:hover,.df-req-list button:focus{background:var(--panel)}
 .df-req-list button[disabled]{opacity:.55;cursor:default}
 .df-req-list small{color:var(--muted);white-space:nowrap}
-#dfReqHint{margin:8px 0 0}
 #dfConstraintChips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-#dfConstraintChips:not(:empty){margin-top:10px}
+#dfConstraintChips:not(:empty){margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+.df-out-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .df-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid;border-radius:20px;padding:3px 5px 3px 11px;font-size:12.5px;font-weight:700}
 .df-chip.keep{color:var(--teal);border-color:var(--teal);background:rgba(14,124,99,.08)}
 .df-chip.drop{color:var(--danger);border-color:var(--danger);background:rgba(200,60,60,.07)}
@@ -435,7 +448,7 @@ p{color:var(--sec);margin:0 0 16px}
 .df-chip button{border:0;background:transparent;color:inherit;font:700 14px/1 var(--font-body);cursor:pointer;padding:3px 5px;border-radius:50%}
 .df-chip button:hover{background:rgba(0,0,0,.09)}
 .df-constraints-top .df-clear{margin-left:auto;border:0;background:transparent;color:var(--sec);font:700 12px var(--font-body);cursor:pointer;text-decoration:underline}
-.df-constraints .df-warn{flex:1 1 100%;margin:0;font-size:12.5px;line-height:1.5;color:var(--danger)}
+.df-must .df-warn{flex:1 1 100%;margin:0;font-size:12.5px;line-height:1.5;color:var(--danger)}
 .df-stack{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;background:var(--panel)}
 .df-stack h3{margin:0 0 6px} .df-stack .side{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;font-size:14px}
 .df-stack b{color:var(--text)} .df-stack .is-status{display:inline}
@@ -814,17 +827,30 @@ p{color:var(--sec);margin:0 0 16px}
        because it carries a search field: re-solving replaces the roster, and a
        field that is replaced mid-word loses what you were typing. Only the
        chips under it are re-rendered. -->
-  <div class="df-constraints" id="dfConstraints" hidden>
-    <div class="df-constraints-top">
-      <b>Your constraints</b>
-      <button type="button" class="df-req-open" id="dfReqOpen" aria-expanded="false" aria-controls="dfReqSearch">Require a player</button>
-      <div class="df-req-search" id="dfReqSearch" hidden>
-        <input id="dfReqInput" type="search" autocomplete="off" spellcheck="false" placeholder="Type a name, then pick him&hellip;" aria-label="Require a player in every lineup" aria-controls="dfReqList" aria-autocomplete="list">
-        <div class="df-req-list" id="dfReqList" role="listbox" hidden></div>
-      </div>
+  <!-- ── must include ────────────────────────────────────────────────────────
+       A BOX, at the top of the roster, that the reader fills with the players
+       already committed. It reads as a container with things in it rather than
+       a list of settings, because that is what it is: on a Saturday the entry
+       is half-submitted, those men are facts, and the roster underneath is
+       whatever is still open around them. Excluded players ride underneath it,
+       smaller, because they are the opposite instruction and a rarer one. -->
+  <div class="df-must" id="dfConstraints" hidden>
+    <div class="df-must-head">
+      <b>Must include</b>
+      <span>Players you have already used. Every roster below is built around them, and the other slots re-solve to fit.</span>
       <button type="button" class="df-clear" data-mark="clearall" id="dfClearMarks" hidden>Clear all</button>
     </div>
-    <p class="is-note" id="dfReqHint">Press <b>Require a player</b> and add everyone you already have locked in, one after another; Iron Tuna solves the rest of the roster around them. On the roster below, the pin holds a player the builder already found, and the &times; drops one.</p>
+    <div class="df-must-box" id="dfMustBox">
+      <div class="df-must-chips" id="dfMustChips"></div>
+      <span class="df-must-empty" id="dfMustEmpty">Nobody yet &mdash; the roster below is Iron Tuna&rsquo;s own nine.</span>
+      <div class="df-req-wrap">
+        <button type="button" class="df-req-open" id="dfReqOpen" aria-expanded="false" aria-controls="dfReqSearch">Add a player</button>
+        <div class="df-req-search" id="dfReqSearch" hidden>
+          <input id="dfReqInput" type="search" autocomplete="off" spellcheck="false" placeholder="Type a name, then pick him&hellip;" aria-label="Add a player who must be included" aria-controls="dfReqList" aria-autocomplete="list">
+          <div class="df-req-list" id="dfReqList" role="listbox" hidden></div>
+        </div>
+      </div>
+    </div>
     <div id="dfConstraintChips"></div>
   </div>
   <div id="dfLineups"></div>
@@ -1671,23 +1697,32 @@ p{color:var(--sec);margin:0 0 16px}
     if (!view) { host.hidden = true; return; }
     host.hidden = false;
     var rows = markedRows();
-    host.classList.toggle('has', rows.length > 0);
+    var must = rows.filter(function (r) { return r.kind === 'lock'; });
+    var out = rows.filter(function (r) { return r.kind === 'excl'; });
+    // `has` is about the BOX, so it turns on for the men in it, not for an
+    // exclusion, which is the opposite instruction and lives under the box.
+    host.classList.toggle('has', must.length > 0);
     $('dfClearMarks').hidden = !rows.length;
+    var chip = function (r, kind) {
+      return '<span class="df-chip ' + kind + '">' + e(r.p.name)
+        + ' <small>' + e(r.p.position + ' \u00b7 ' + r.p.team) + '</small>'
+        + '<button type="button" data-mark="clear" data-mark-key="' + e(r.key) + '" aria-label="' + e('Take ' + r.p.name + ' out of the box') + '" title="' + e('Take ' + r.p.name + ' out') + '">\u00d7</button></span>';
+    };
+    $('dfMustChips').innerHTML = must.map(function (r) { return chip(r, 'keep'); }).join('');
+
     // A required player the solve could not seat is said out loud rather than
     // left for the reader to notice by reading nine rows.
     var missing = [];
     if (l) {
       var on = {}; l.players.forEach(function (p) { on[markKeyOf(p)] = 1; });
-      missing = rows.filter(function (r) { return r.kind === 'lock' && !on[r.key]; });
+      missing = must.filter(function (r) { return !on[r.key]; });
     }
-    var benchedReq = rows.filter(function (r) { return r.kind === 'lock' && r.p.available === false; });
-    $('dfConstraintChips').innerHTML = rows.map(function (r) {
-        return '<span class="df-chip ' + (r.kind === 'lock' ? 'keep' : 'drop') + '"><small>' + (r.kind === 'lock' ? 'Required' : 'Excluded') + '</small> ' + e(r.p.name)
-          + '<button type="button" data-mark="clear" data-mark-key="' + e(r.key) + '" aria-label="' + e('Clear ' + r.p.name) + '" title="' + e('Clear ' + r.p.name) + '">\u00d7</button></span>';
-      }).join('')
-      + (missing.length ? '<p class="df-warn">' + e(missing.map(function (r) { return r.p.name; }).join(' and ')) + ' could not be seated under the current cap and rules, so the roster above is solved without ' + (missing.length > 1 ? 'them' : 'him') + '.</p>' : '')
+    var benchedReq = must.filter(function (r) { return r.p.available === false; });
+    $('dfConstraintChips').innerHTML =
+      (out.length ? '<span class="df-out-label">Also excluded</span>' + out.map(function (r) { return chip(r, 'drop'); }).join('') : '')
+      + (missing.length ? '<p class="df-warn">' + e(missing.map(function (r) { return r.p.name; }).join(' and ')) + ' could not be seated under the current cap and rules, so the roster below is solved without ' + (missing.length > 1 ? 'them' : 'him') + '.</p>' : '')
       + benchedReq.map(function (r) {
-          return '<p class="df-warn"><b>' + e(r.p.name) + '</b> is required. He is not playing this week'
+          return '<p class="df-warn"><b>' + e(r.p.name) + '</b> is in the box. He is not playing this week'
             + (r.p.weekStatus ? ' (' + e(r.p.weekStatus) + (r.p.weekStatusNote ? ': ' + e(r.p.weekStatusNote) : '') + ')' : '')
             + ', so he is in the roster only because you put him there.</p>';
         }).join('');
@@ -1793,7 +1828,7 @@ p{color:var(--sec);margin:0 0 16px}
         + propsNote(l)
         + '<div class="is-stats">' + stats + '</div>' + fieldNote(l) + meter
         + '<div class="df-lead-grid"><div class="df-lead-table">' + table + '</div>'
-        + '<p class="df-fit df-act-note">Disagree with a seat? The <b>&times;</b> beside a player solves the slate again without him; the <b>pin</b> holds him in every lineup while the other slots re-solve around him. Both sit on every alternate below too. A player who is not in the roster at all goes in through <b>Require a player</b> above it, by name. Every one of them lands in the single list of constraints above, each with an undo.</p>'
+        + '<p class="df-fit df-act-note">Disagree with a seat? The <b>&times;</b> beside a player solves the slate again without him; the <b>pin</b> puts him in the <b>Must include</b> box above, so every re-solve keeps him. Both sit on every alternate below too. A player who is not in the roster at all goes into the box by name, with <b>Add a player</b>.</p>'
         + breakdownHtml(l, sh, qb) + '</div>'
         + '<div class="is-board-foot">' + foot + '</div></div>';
     }
