@@ -7,6 +7,13 @@
  * to /api/roster-read, which answers with names only — no starter, bench or IR,
  * because a grid does not print them. The reader then says which team is theirs.
  *
+ * TYPED OR PASTED TEXT goes to the same reader. Half the leagues that print a
+ * roster grid print it as selectable text, and a reader who has it on the
+ * clipboard as words should not have to screenshot their own screen to be
+ * understood. /api/roster-read has always taken a `text` field; this is the box
+ * that fills it. Both boxes beside this one on /my-league take typing or a
+ * screenshot, and a third that took only one of the two read as the odd one out.
+ *
  * It lives in its own file because the page mounts it TWICE: once in the manual
  * league form under §01, and once in §02, where a reader who never opens §01
  * pastes their rosters into the section that promises them. Two copies of a
@@ -22,6 +29,8 @@
  *   opts.teams     a room already known, to open with
  *   opts.mine      which of those is the reader's
  *   opts.label     the box's heading; '' when the host already titles it
+ *   opts.text      false to drop the textarea, where the host already prints
+ *                  one of its own under this box (the by-hand form in §01)
  *   opts.note      the line under the label, in the host's own words
  *   opts.onRead    (state) after a read lands
  *   opts.onPick    (state) when the reader names their team
@@ -118,16 +127,24 @@
     // The host may already be a titled card, as §02's is; a second heading over
     // the same box reads as two things stacked rather than one.
     var label = o.label === undefined ? 'Every roster from one screenshot' : o.label;
+    var wantText = o.text !== false;
     host.innerHTML = '<div class="is-field rg-field">' + (label ? '<label>' + esc(label) + '</label>' : '') +
       '<p class="is-note" style="margin:0 0 6px">' + esc(o.note || 'A league roster grid holds all of the teams at once. Names only: your starting lineup is projected from the scoring, not read off the page. Send more than one image at a time if the grid does not fit in one shot.') + '</p>' +
+      (wantText
+        ? '<label class="is-intake-lab" for="' + id + 'txt">Type, paste or drag in</label>' +
+          '<textarea class="is-input is-intake-text" id="' + id + 'txt" data-text rows="5" spellcheck="false" ' +
+            'placeholder="' + esc('Team Rocket\nJosh Allen QB BUF\nBijan Robinson RB ATL\n\nThe Other Guys\nJalen Hurts QB PHI\n…') + '"></textarea>'
+        : '') +
       '<div class="mg-drop" data-drop tabindex="0" role="group" aria-label="Paste, drop or choose roster screenshots">' +
         '<b>Paste a screenshot, or drop one in</b>' +
         '<span>Copy the roster grid and press <kbd>' + (mac ? '⌘' : 'Ctrl+') + 'V</kbd> — here or anywhere on this form — or drag the image onto this box, or <button type="button" class="mg-pick" data-pick>choose files</button>.</span>' +
       '</div>' +
       '<input type="file" accept="image/*" multiple hidden data-file>' +
+      (wantText ? '<div class="is-btns" style="margin:8px 0 0"><button type="button" class="is-btn sec" data-read>Read this</button></div>' : '') +
       '<p class="is-note" data-msg style="margin:6px 0 0" role="status" aria-live="polite"></p><div data-out></div></div>';
 
     var drop = host.querySelector('[data-drop]'), fileIn = host.querySelector('[data-file]');
+    var textEl = host.querySelector('[data-text]');
     var msgEl = host.querySelector('[data-msg]'), outEl = host.querySelector('[data-out]');
     function msg(t, bad) { msgEl.textContent = t || ''; msgEl.style.color = bad ? 'var(--danger)' : ''; }
 
@@ -143,6 +160,19 @@
       if (!imgs.length) { msg('There is no image on the clipboard. Copy the roster grid as a screenshot first.', true); return; }
       e.preventDefault(); read(imgs);
     });
+
+    if (textEl) {
+      // A screenshot pasted while the cursor sits in the box is still a
+      // screenshot. The document listener steps aside for a textarea — it has
+      // to, or typing into one would be hijacked — so this box handles its own.
+      // Plain text falls straight through and lands in the textarea as typing.
+      textEl.addEventListener('paste', function (e) {
+        var imgs = imagesIn(e.clipboardData);
+        if (!imgs.length) return;
+        e.preventDefault(); read(imgs);
+      });
+      host.querySelector('[data-read]').addEventListener('click', function () { readText(); });
+    }
 
     // A drop that misses the box is the browser navigating away to the image,
     // taking the half-filled form with it — the one failure here that costs work
@@ -161,13 +191,35 @@
       read(imgs);
     });
 
+    // One sender for both ways in. /api/roster-read takes images, text, or both,
+    // and answers in the same shape either way, so adopt() never has to know
+    // which of the two the reader used.
+    function send(body) {
+      return root.fetch('/api/roster-read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json(); })
+        .then(adopt)
+        .catch(function () { msg('The reader did not answer. Try again in a moment.', true); });
+    }
+
     function read(files) {
       var list = [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); }).slice(0, 8);
       if (!list.length) { msg('Those are not images.', true); return; }
       msg('Reading ' + list.length + ' screenshot' + (list.length === 1 ? '' : 's') + '… a whole grid can take a minute.');
-      Promise.all(list.map(shrink)).then(function (images) {
-        return root.fetch('/api/roster-read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ images: images }) }).then(function (r) { return r.json(); });
-      }).then(adopt).catch(function () { msg('The reader did not answer. Try again, or type your roster instead.', true); });
+      // Whatever is typed in the box rides along as a note: a reader who pasted
+      // a screenshot AND wrote "the last two teams are cut off" meant both.
+      var note = textEl ? (textEl.value || '').trim().slice(0, 2000) : '';
+      Promise.all(list.map(shrink))
+        .then(function (images) { return send(note ? { images: images, text: note } : { images: images }); })
+        .catch(function () { msg('That image could not be read in this browser.', true); });
+    }
+
+    // The typed path. Whole rosters as words — most league pages print them as
+    // selectable text, and copying them is one keystroke fewer than a screenshot.
+    function readText() {
+      var t = textEl ? (textEl.value || '').trim() : '';
+      if (!t) { msg('Type or paste the rosters in the box first, or paste a screenshot.', true); return; }
+      msg('Reading what you pasted… a whole league can take a minute.');
+      send({ text: t.slice(0, 20000) });
     }
 
     // A read REPLACES what the last one found. Appending would double a team when
@@ -211,7 +263,7 @@
       render();
     }
 
-    state.clear = function () { state.teams = []; state.mine = -1; state.partial = false; render(); msg(''); };
+    state.clear = function () { state.teams = []; state.mine = -1; state.partial = false; if (textEl) textEl.value = ''; render(); msg(''); };
     state.say = msg;
 
     // A host mounted twice — the manual form is torn down and rebuilt every time

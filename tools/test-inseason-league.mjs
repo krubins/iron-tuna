@@ -387,19 +387,35 @@ console.log('\nthe form and the importer');
   ok('the by-hand league form mounts the importer',
     read('my-league.html').includes('id="mfImp"') && read('my-league.html').includes('ITInSeasonUI.importer($(\'mfImp\')'));
 
-  // §02 mounts the three boxes, and mounts the form WITHOUT its own importer.
-  // Both halves matter: the boxes with no handle to apply through would read a
+  // §02 mounts the boxes, and mounts the form WITHOUT its own importer. Both
+  // halves matter: the boxes with no handle to apply through would read a
   // league and have nowhere to put it, and the form keeping its four-tab
   // importer would ask the same question twice on one screen.
   {
     const ml = read('my-league.html');
-    ok('/my-league §02 mounts the three boxes', ml.includes('id="mlIntake"') && ml.includes('ITInSeasonUI.intake('));
+    ok('/my-league §02 mounts the boxes', ml.includes('id="mlIntake"') && ml.includes('ITInSeasonUI.intake('));
     ok('and drops the form\'s own importer so the page asks once', /leagueForm\([\s\S]{0,120}?importer:\s*false/.test(ml));
-    // What matters is the wiring, not how close together it is written. §02
-    // mounts TWO rows now — the readers, and the lineup card under them — so
-    // the handler they apply through is named once instead of inlined twice,
-    // and an adjacency check went red on a page that still does the thing.
-    const rows = [...ml.matchAll(/ITInSeasonUI\.intake\(([\s\S]{0,800}?)\}\);/g)].map(m => m[1]);
+
+    // What matters is the wiring, not how close together it is written — and
+    // not how long the call is either. A fixed-width window over the source
+    // went red once when the row grew a comment, so the call is walked to its
+    // own closing paren instead of guessed at.
+    const callsTo = (src, name) => {
+      const out = [];
+      for (const m of src.matchAll(new RegExp(name.replace(/[.$]/g, '\\$&') + '\\(', 'g'))) {
+        let i = m.index + m[0].length - 1, depth = 0, quote = null, esc = false;
+        for (; i < src.length; i++) {
+          const ch = src[i];
+          if (quote) { if (esc) esc = false; else if (ch === '\\\\') esc = true; else if (ch === quote) quote = null; continue; }
+          if (ch === '\'' || ch === '"' || ch === '`') { quote = ch; continue; }
+          if (ch === '(') depth++;
+          else if (ch === ')') { depth--; if (!depth) break; }
+        }
+        out.push(src.slice(m.index + m[0].length, i));
+      }
+      return out;
+    };
+    const rows = callsTo(ml, 'ITInSeasonUI.intake');
     ok('every intake row is handed somewhere to apply what it read',
       rows.length > 0 && rows.every(r => /onApply:\s*(?:function|[A-Za-z_$][\w$]*)/.test(r)),
       rows.length + ' row(s)');
@@ -409,6 +425,55 @@ console.log('\nthe form and the importer');
         ? named.every(n => new RegExp(n + '\\s*=\\s*function[\\s\\S]{0,200}form\\.apply\\(').test(ml))
         : /onApply:\s*function[\s\S]{0,200}form\.apply\(/.test(ml),
       named.join(', '));
+
+    // THE BUTTON THAT SHOULD NOT HAVE BEEN A BUTTON. The row's footer used to
+    // offer "Copy my cheat sheet across" to a reader who had already built one
+    // in this browser — a button for a thing the page could simply do, sitting
+    // under three boxes asking for what the cheat sheet already knew. The page
+    // now reads it on load and applies it, and asks the row not to draw the
+    // button. Both halves are pinned: an apply with the strip still drawn would
+    // offer to do a thing that was already done.
+    ok('§02 reads the cheat sheet itself rather than offering a button',
+      /fromDraftApp\(\)/.test(ml) && rows.every(r => /draft:\s*false/.test(r)));
+    ok('and applies what it read through the same handle the boxes use',
+      /apply\(sheet,/.test(ml));
+    // Only when §02 has nothing of its own. A reader who set these settings here
+    // meant them, and a draft board from August must not overwrite them on load.
+    ok('but never over settings the reader already saved here',
+      /!ITInSeason\.has\(\)[\s\S]{0,80}fromDraftApp\(\)/.test(ml));
+
+    // The row itself: three boxes, or the two the cheat sheet cannot answer.
+    // The cheat sheet carries scoring, lineup and team count; it has never
+    // carried a FAAB budget — cfg.budget is the AUCTION budget, a different
+    // number — nor a room full of players, so those two boxes stay either way.
+    const cards = ml.slice(ml.indexOf('var cards;'), ml.indexOf('ITInSeasonUI.intake('));
+    ok('with no cheat sheet the row is scoring, rosters and FAAB',
+      /cards\s*=\s*\['scoring',\s*rosters,\s*'faab'\]/.test(cards), cards.slice(0, 200));
+    ok('with one, the scoring box is the only one dropped',
+      /cards\s*=\s*\[rosters,\s*\{\s*kind:\s*'faab'/.test(cards), cards.slice(0, 200));
+    ok('and the lineup card that used to sit under the row is gone',
+      !ml.includes('mlLineup') && !/kind:\s*'roster'/.test(ml));
+    ok('the cheat sheet is never read as a FAAB budget',
+      !/budget/.test(importSrc.slice(importSrc.indexOf('function fromDraftApp'), importSrc.indexOf('root.ITInSeasonImport ='))));
+  }
+
+  // The third box takes words as well as a picture. /api/roster-read has always
+  // accepted a `text` field; until now nothing in the browser filled it, so the
+  // one box of the three that could not be typed into was the one asking for
+  // the longest answer.
+  {
+    const rg = read('it-roster-grid.js');
+    ok('the rosters box has a textarea', /data-text/.test(rg) && /is-intake-text/.test(rg));
+    ok('and a button that sends what is in it', /\[data-read\][\s\S]{0,200}readText\(\)/.test(rg));
+    ok('typed rosters go to the reader as text', /function readText\(\)[\s\S]{0,400}send\(\{\s*text:/.test(rg));
+    ok('and a screenshot pasted into the textarea is still read as one',
+      /textEl\.addEventListener\('paste'[\s\S]{0,300}read\(imgs\)/.test(rg));
+    ok('the worker takes text with no image at all',
+      /const text = String\(body\.text[\s\S]{0,200}!images\.length && !text\.trim\(\)/.test(worker));
+    // The by-hand form in §01 prints its own roster textarea further down the
+    // same card, so its grid stays image-only: two boxes of names on one card
+    // is a reader typing their team into the wrong one.
+    ok('§01\'s grid keeps one textarea, not two', /mfGrid'\)[\s\S]{0,400}text:\s*false/.test(read('my-league.html')));
   }
   ok('the form returns the handle the boxes apply through',
     /return \{\s*\n[\s\S]{0,600}apply: function \(partial, source, n\)/.test(uiSrc));
