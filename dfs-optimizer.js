@@ -318,7 +318,7 @@
     }
     return { ok: results.length > 0, mode: mode.label, lineups: results, poolSize: pool.length, cap: cfg.cap,
              benched: benched, benchedCount: benched.length,
-             note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? '' : 's') + ' satisfy the constraints.' : null };
+             note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? ' satisfies' : 's satisfy') + ' the constraints.' : null };
   }
   // ── which contest this slate is worth entering ───────────────────────────
   // A step up the payout curve — Head-to-Head, Multiplier, single-entry

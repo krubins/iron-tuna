@@ -264,7 +264,8 @@ p{color:var(--sec);margin:0 0 16px}
    ended up behind a horizontal scroll, which is no way to reach the control
    that changes the roster. */
 .df-lead-table th:nth-child(2),.df-lead-table td:nth-child(2){min-width:230px}
-.df-act{display:inline-flex;gap:5px;white-space:nowrap;margin-top:8px}
+.df-act{display:inline-flex;flex-wrap:wrap;gap:5px;white-space:nowrap;margin-top:8px}
+.df-card .df-act{margin-top:7px}
 .df-act button{font:700 10px var(--font-mono);letter-spacing:.07em;text-transform:uppercase;cursor:pointer;
   border:1px solid var(--line2);border-radius:5px;background:var(--bg);color:var(--sec);padding:4px 7px}
 .df-act button:hover{border-color:var(--teal);color:var(--teal)}
@@ -1451,7 +1452,7 @@ p{color:var(--sec);margin:0 0 16px}
         + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span>'
         + '<span class="df-fit">' + e(playerFit(p, l, qb, sh)) + '</span>'
         + '<span class="df-mktline">' + marketTag(p) + ' ' + e(marketPhrase(p)) + '</span>'
-        + (lead ? rosterActions(p) : '') + '</td>'
+        + rosterActions(p) + '</td>'
         + '<td class="num">' + money(p.salary) + '</td>'
         + '<td class="num">' + fppgText(p) + '</td>'
         + '<td class="num">' + n1(p.proj) + '</td>'
@@ -1471,7 +1472,7 @@ p{color:var(--sec);margin:0 0 16px}
         + propsNote(l)
         + '<div class="is-stats">' + stats + '</div>' + meter
         + '<div class="df-lead-grid"><div class="df-lead-main"><div class="df-lead-table">' + table + '</div>'
-        + '<p class="df-fit" style="margin-top:9px">Disagree with a seat? <b>Require</b> holds that player in every lineup; <b>Exclude</b> solves the slate again without him. Any player on the board can be required from his name, and both constraints are listed above the roster with an undo.</p>'
+        + '<p class="df-fit" style="margin-top:9px">Disagree with a seat? <b>Require</b> holds that player in every lineup; <b>Exclude</b> solves the slate again without him. The same pair sits on every alternate below, and on any player on the board from his name. One list of constraints drives all of them, and it is above the roster with an undo.</p>'
         + '</div>' + breakdownHtml(l, sh, qb) + '</div>'
         + '<div class="is-board-foot">' + foot + '</div></div>';
     }

@@ -571,9 +571,16 @@ console.log('\nthe DFS page explanations');
   // Requiring and excluding used to be reachable only from the pool table
   // inside the closed fine-tune panel. The roster is where the reader argues
   // with the solve, so the two controls sit on the roster row.
-  ok('the solved roster carries a Require and an Exclude control on every row',
+  ok('every roster row carries a Require and an Exclude control',
      page.includes('function rosterActions(p)') && page.includes("data-mark=\"lock\"") && page.includes("data-mark=\"excl\"")
-     && page.includes("(lead ? rosterActions(p) : '')"));
+     && page.includes("+ rosterActions(p) + '</td>'"));
+  // The controls were on the lead board only at first, which left a reader
+  // looking at Alternate 2 with no way to drop the man in front of him. The
+  // row markup is shared, so the alternates carry the same pair and write the
+  // same one list of constraints.
+  ok('the alternates carry them too, off the same shared row markup and the same constraint list',
+     !page.includes('lead ? rosterActions') && page.includes('.df-card .df-act')
+     && /var rows = l\.players\.map\([\s\S]{0,900}rosterActions\(p\)/.test(page));
   ok('the player drawer can require or exclude anyone on the board, not only the nine on the roster',
      page.includes('Require in every lineup') && page.includes('Exclude from every lineup'));
   ok('every require/exclude control writes the same marks store and re-solves',
@@ -745,6 +752,12 @@ console.log('\nthe optimizer');
   const both = DFS.build(players, { ...base, mode: 'ironTuna', lock: ['jahmyrgibbs|RB'], exclude: ['jahmyrgibbs|RB'] });
   ok('a player required and excluded at once is excluded, and a lineup still builds',
      both.ok && !both.lineups[0].players.some(p => p.id === 'jahmyrgibbs|RB'));
+  // The note is read far more often now that a reader can add constraints from
+  // the roster, so it has to agree with its own number.
+  const oneOnly = DFS.build(players, { ...base, mode: 'ironTuna', lineups: 3, cap: 47000 });
+  ok('the shortfall note agrees with its own count',
+     !oneOnly.note || /^Only 1 distinct lineup satisfies /.test(oneOnly.note) || /^Only \d+ distinct lineups satisfy /.test(oneOnly.note),
+     oneOnly.note);
   const stacked = DFS.build(players, { ...base, mode: 'vegas', stack: true, stackSize: 1 });
   const qb = stacked.lineups[0].players.find(p => p.slot === 'QB');
   ok('a QB stack puts a pass-catcher from his team in the lineup', stacked.lineups[0].players.some(p => p.team === qb.team && /WR|TE/.test(p.position)), JSON.stringify(stacked.lineups[0].players.map(p => p.name)));
