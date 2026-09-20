@@ -116,6 +116,7 @@ p{color:var(--sec);margin:0 0 16px}
 .df-banked.pending{color:var(--muted);background:var(--elev)}
 .is-board .df-banked{color:#46d6ac;background:rgba(70,214,172,.15)}
 .is-board .df-banked.pending{color:#8fa3a0;background:rgba(255,255,255,.1)}
+.df-playedoff{color:var(--muted)}
 .df-fieldnote{margin:10px var(--space-5) var(--space-4);font-size:12.5px;line-height:1.55;color:#9fb6b1;max-width:86ch}
 .df-fieldnote b{color:#d5e2df;font-weight:700}
 .df-caplab{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;
@@ -1246,9 +1247,11 @@ p{color:var(--sec);margin:0 0 16px}
 
     $('dfPlayerTitle').textContent = p.name || 'Player calculation';
     $('dfPlayerSub').textContent = [p.position, p.team, p.opponent ? ('vs ' + p.opponent) : '', money(p.salary)].filter(Boolean).join(' · ');
+    var scored = actualOf(p);
     var boxes = [
+      scored != null ? metricBox(n1(scored), 'Final') : '',
       metricBox(operatorFppg != null && isFinite(operatorFppg) ? n1(operatorFppg) : '—', 'DraftKings FPPG'),
-      metricBox(n1(p.ironTunaPoints), 'Iron Tuna Projection'),
+      metricBox(n1(p.ironTunaPoints), scored != null ? 'Projected beforehand' : 'Iron Tuna Projection'),
       metricBox(projectionEdge == null ? '—' : (projectionEdge > 0 ? '+' : '') + n1(projectionEdge), 'Tuna Edge'),
       metricBox(n1(p.vegasPoints), 'Market proj'),
       metricBox(n1(p.consensusPoints), 'Consensus'),
@@ -1260,6 +1263,15 @@ p{color:var(--sec);margin:0 0 16px}
     ].join('');
 
     var rows = '';
+    // Everything below is pre-game arithmetic. Said once, at the top, rather
+    // than qualified eight times.
+    if (isPlayed(p)) {
+      rows += calcRow('His game is final',
+        scored != null
+          ? 'He scored ' + n1(scored) + ' under ' + (slate.label || 'the site') + '\u2019 own rules. Everything below is how Iron Tuna arrived at the ' + n1(proj) + ' it projected beforehand \u2014 a record of the calculation, not a read on him now. He is off the value boards for the same reason: no entry submitted now can contain him.'
+          : 'His game is over. Iron Tuna stores no box score for a defense, so the numbers below are still the pre-game estimate rather than what the defense did. He is off the value boards either way: no entry submitted now can contain him.',
+        scored != null ? 'Projected ' + n1(proj) + '  \u2192  Scored ' + n1(scored) : '');
+    }
     rows += calcRow('1. Projection', 'Iron Tuna starts with the consensus projection, moves it toward the betting-market projection according to market confidence, and applies the current usage-role adjustment where enough season data exists.',
       'Consensus ' + n1(p.consensusPoints) + ' pts  →  Market ' + n1(p.vegasPoints) + ' pts  →  Iron Tuna ' + n1(p.ironTunaPoints) + ' pts');
     rows += calcRow('2. ' + fppgLabel() + ' comparison', fppgLabel() + ' is the operator’s historical fantasy-points-per-game average, not its projection for this matchup. The difference below is the simple visual edge: Iron Tuna’s forward projection minus that historical baseline.',
@@ -1292,14 +1304,40 @@ p{color:var(--sec);margin:0 0 16px}
     document.body.style.overflow = '';
   }
 
+  // Said whenever a board drops men because their games are finished. The
+  // page already does this for players who are not playing (benchedNote); a
+  // name a reader expected to find, silently gone, is the same problem.
+  //
+  // One note per host, replaced rather than stacked: the metrics note is
+  // static markup that is never rewritten, and the contest note is rewritten
+  // on every render, so both are handled by stripping the old span first.
+  function playedOffNote(host, off, total) {
+    if (!host) return;
+    var base = host.innerHTML.replace(/\s*<span class="df-playedoff">[\s\S]*?<\/span>/, '');
+    host.innerHTML = base + (off
+      ? ' <span class="df-playedoff">' + off + ' of the ' + total + ' '
+        + (off === 1 ? 'is not listed because his game is over' : 'are not listed because their games are over')
+        + ' \u2014 no entry submitted now can contain ' + (off === 1 ? 'him' : 'them')
+        + '. The player pool below still carries ' + (off === 1 ? 'him' : 'them') + ', at what ' + (off === 1 ? 'he' : 'they') + ' scored.</span>'
+      : '');
+  }
   function metrics(s) {
-    var m = s.metrics || null; var rows = s.players.filter(function (p) { return p.onBoard && typeof p.value === 'number'; });
+    // These are shopping boards -- "who is worth a seat" -- and a man whose
+    // game is over cannot take one. Value, cash score and tournament score are
+    // all indexed off a projection that has been overtaken by the result, so
+    // leaving him in ranks him on a number nobody can act on. He stays in the
+    // player pool below, which is the board's reference list and prints what
+    // he actually scored.
+    var m = s.metrics || null;
+    var priced = s.players.filter(function (p) { return p.onBoard && typeof p.value === 'number'; });
+    var rows = stillToPlay(priced), metricsOff = priced.length - rows.length;
     $('dfMetrics').hidden = board !== 'metrics'; $('dfMetricsNote').hidden = board !== 'metrics'; $('dfValues').hidden = board === 'metrics' ? true : $('dfValues').hidden;
     if (board !== 'metrics') return;
     var key = m && m.sortBy ? m.sortBy : 'leverage';
     rows.sort(function (a, b) { return (b[key] || 0) - (a[key] || 0); });
     $('dfMetrics').querySelector('tbody').innerHTML = rows.slice(0, 40).map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num"><b>' + e(p.value) + '</b></td><td class="num">' + n1(p.floor) + '</td><td class="num">' + n1(p.ceiling) + '</td><td class="num">' + n1(p.ownership) + '%</td><td class="num">' + n1(p.leverage) + '</td><td class="num">' + e(p.cashScore) + '</td><td class="num">' + e(p.tournamentScore) + '</td><td>' + e(p.chalk || '') + '</td></tr>'; }).join('');
     $('dfMetrics').hidden = !rows.length;
+    playedOffNote($('dfMetricsNote'), metricsOff, priced.length);
   }
   function desk() {
     fetch('/api/newsroom?lens=dfs&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
@@ -1317,9 +1355,11 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfContestNote').innerHTML = 'Sorted for <b>' + e(m ? m.label : sh.head) + '</b> \u2014 ' + e(m ? m.note : sh.why.split('.')[0] + '.') + ' Change the contest at the top of the page.';
     if (board === 'metrics') { metrics(s); press($('dfBoard'), 'data-board', board); return; }
     $('dfMetrics').hidden = true; $('dfMetricsNote').hidden = true;
-    var list = s.boards[board] || [];
+    var full = s.boards[board] || [];
+    var list = stillToPlay(full);
     $('dfValues').querySelector('tbody').innerHTML = list.map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? ' ' + (p.home === false ? '@' : 'vs ') + p.opponent : '')) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.ironTunaPoints) + '</b></td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + ' <span class="is-status">' + e(p.vegasBasis) + '</span></td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + delta(p.marketDelta) + '</td><td class="num">' + n1(p.tdProbability) + '%</td><td class="num">' + n1(p.teamTotal) + '</td><td class="num"><b>' + e(p.vegasValueScore) + '</b></td></tr>'; }).join('');
     $('dfValues').hidden = !list.length; press($('dfBoard'), 'data-board', board);
+    playedOffNote($('dfContestNote'), full.length - list.length, full.length);
   }
   // ── what the books said about him ─────────────────────────────────────────
   // The Vegas column prints one number for two very different things: a
@@ -1716,7 +1756,9 @@ p{color:var(--sec);margin:0 0 16px}
       var already = marks[p.key] === 'lock';
       return '<button type="button" role="option" data-require-key="' + e(p.key) + '"' + (already ? ' disabled' : '')
         + '><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' \u00b7 ' + p.team) + '</small> ' + weekTag(p) + '</span>'
-        + '<small>' + (already ? 'already required' : money(p.salary) + ' \u00b7 IT ' + n1(p.ironTunaPoints)) + '</small></button>';
+        + '<small>' + (already ? 'already required'
+            : money(p.salary) + ' \u00b7 ' + (actualOf(p) != null ? n1(actualOf(p)) + ' final' : isPlayed(p) ? n1(p.ironTunaPoints) + ' est, game over' : 'IT ' + n1(p.ironTunaPoints)))
+        + '</small></button>';
     }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
     box.hidden = false;
   }

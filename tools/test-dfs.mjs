@@ -1205,6 +1205,31 @@ console.log('\nthe slate, partly played');
      page.includes('if (isPlayed(cur)) return;') && page.includes('|| isPlayed(q)) return false'));
   ok('the pool table prints the same number for a played man as the roster does',
      page.includes("n1(actualOf(p) != null ? actualOf(p) : p.ironTunaPoints) + bankedMark(p)"));
+  // The boards that answer "who is worth a seat" are not reference lists: a
+  // man whose game is over cannot take one, and value, cash score and
+  // tournament score are all indexed off a projection the result has
+  // overtaken. He comes off them, and the page says so rather than leaving a
+  // reader to wonder where a name went.
+  ok('the value boards and the metrics board drop the men whose games are over',
+     page.includes('var rows = stillToPlay(priced)') && page.includes('var list = stillToPlay(full)'));
+  ok('and both say how many came off and where to still find them',
+     page.includes('function playedOffNote(host, off, total)')
+     && page.includes('not listed because their games are over')
+     && page.includes('The player pool below still carries ')
+     && page.includes("playedOffNote($('dfMetricsNote')") && page.includes("playedOffNote($('dfContestNote')"));
+  ok('the note is replaced rather than stacked when a reader switches boards',
+     page.includes("host.innerHTML.replace(/\\s*<span class=\"df-playedoff\">[\\s\\S]*?<\\/span>/, '')"));
+  // The calculation modal is a record of how the projection was built. It
+  // stays -- but it leads with what actually happened, rather than walking a
+  // reader through eight steps of forecast for a game that is over.
+  ok('the player calculation leads with the result and frames the rest as pre-game',
+     page.includes("metricBox(n1(scored), 'Final')")
+     && page.includes("scored != null ? 'Projected beforehand' : 'Iron Tuna Projection'")
+     && page.includes('a record of the calculation, not a read on him now'));
+  // Requiring a played man is exactly how a reader tells the builder about an
+  // entry he already holds, so he stays in the search -- at what he scored.
+  ok('the require-a-player search offers a played man at his actual score',
+     page.includes("actualOf(p) != null ? n1(actualOf(p)) + ' final'") && page.includes("' est, game over'"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

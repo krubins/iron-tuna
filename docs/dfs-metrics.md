@@ -274,6 +274,14 @@ ask `isBanked()` / `isPlayed()` first:
 | `propsNote()` | Counts quoted props and the best touchdown price among the seats still to play, and says how many no longer carry a market. |
 | `pivotRows()` | Neither side of a swap may be a finished game: the seat cannot be vacated and the replacement cannot be entered. |
 | The player pool | Prints the actual with the `final` mark, so the board and the roster never show two different numbers for the same man. |
+| The value boards and the metrics board | Drop the men whose games are over, and say how many came off. These answer "who is worth a seat", and a played man cannot take one — his Value, Cash and Tournament scores are all indexed off a projection the result has overtaken. |
+| The player calculation modal | Leads with `Final` and relabels the projection `Projected beforehand`; the eight derivation steps stay, framed as a record of how the number was built rather than a read on him now. |
+| Require a player | Keeps him — pinning a played man is how a reader tells the builder about an entry he already holds — and shows his actual rather than the projection. |
+
+The split is deliberate: a **reference** surface (the pool, the modal, the
+require search) keeps a played player and prints what he scored; a **shopping**
+surface (the value boards, the metrics board, the pivots, the optimizer pool)
+drops him, because nothing submitted now can contain him.
 
 The wording is verified by rendering the page — no node gate can read prose —
 and `tools/test-dfs.mjs` pins that each branch exists.
