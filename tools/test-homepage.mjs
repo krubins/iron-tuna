@@ -203,7 +203,10 @@ const read = page => page.evaluate(() => {
   const text = el => (el ? el.textContent.replace(/\s+/g, ' ').trim() : null);
   return {
     h1: text(document.querySelector('h1')),
+    claim: text(document.querySelector('.hm-claim')),
     lede: text(document.querySelector('.hm-lede')),
+    claimPx: (() => { const e = document.querySelector('.hm-claim'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
+    ledePx: (() => { const e = document.querySelector('.hm-lede'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
     cta: [...document.querySelectorAll('.hm-cta a')].map(a => `${a.textContent.trim()}|${a.getAttribute('href')}`),
     how: (() => { const a = document.querySelector('.hm-how-link'); return a && `${a.textContent.trim()}|${a.getAttribute('href')}`; })(),
     clock: vis('hmClock') ? text(document.getElementById('hmClock')) : null,
@@ -253,8 +256,15 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const r = await read(page);
   ok(`${tag}: the headline is the thesis`,
      r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.', r.h1);
+  // The conversion, in its own line above the lede and set larger than it. This
+  // is the sentence the page cannot afford a reader to skim past, so it is
+  // asserted separately from the copy around it.
+  ok(`${tag}: the claim line states the conversion`,
+     r.claim === 'Iron Tuna converts sportsbook lines and player props into fantasy point projections.', r.claim);
+  ok(`${tag}: and it is set larger than the lede under it`,
+     r.claimPx > r.ledePx, `${r.claimPx} vs ${r.ledePx}`);
   ok(`${tag}: the supporting line says what the site does`,
-     r.lede === 'Iron Tuna converts sportsbook lines and player props into fantasy point projections, rankings, trade values and DFS lineups. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.', r.lede);
+     r.lede === 'Those projections become weekly rankings, trade values and DFS lineups, scored at your league\u2019s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.', r.lede);
   ok(`${tag}: two buttons, one per lane`,
      r.cta.join(' / ') === 'Get Fantasy Advice|/fantasy / Build a DFS Lineup|/dfs', r.cta.join(' / '));
   ok(`${tag}: and a smaller link into the method, on this page`,

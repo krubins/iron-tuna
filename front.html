@@ -147,7 +147,14 @@ img{max-width:100%}
 .hm-clock .live{color:var(--gold)}
 .hm-h1{font-size:clamp(30px,5.2vw,58px);line-height:1.04;letter-spacing:-.02em;font-weight:800;max-width:19ch}
 .hm-h1 em{font-style:normal;color:var(--teal)}
-.hm-lede{margin-top:18px;max-width:62ch;font-size:clamp(15px,1.7vw,19px);line-height:1.5;color:#c6d2d0}
+/* The one sentence that says what this site DOES, set apart from the copy
+   around it: bigger than the lede, white rather than grey, and pushed off a
+   teal rule so a reader who reads the headline and nothing else still leaves
+   knowing a betting line becomes a fantasy point total here. Capped at 44ch
+   so it breaks to two or three lines and reads as a statement rather than as
+   a paragraph. */
+.hm-claim{margin-top:20px;max-width:44ch;font-size:clamp(17px,2.15vw,24px);line-height:1.34;font-weight:700;color:#fff;border-left:3px solid var(--teal);padding-left:16px}
+.hm-lede{margin-top:16px;max-width:62ch;font-size:clamp(14.5px,1.6vw,17px);line-height:1.55;color:#c6d2d0}
 .hm-cta{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:26px}
 .hm-btn{display:inline-flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:800;letter-spacing:.02em;padding:14px 22px;border-radius:7px;border:1px solid transparent}
 .hm-btn.primary{background:var(--teal);color:#06231c}
@@ -166,9 +173,10 @@ img{max-width:100%}
    painter and is the only thing that opens the second column. */
 .hm-hero{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(26px,4vw,48px);align-items:center}
 .hm-hero.has-edge{grid-template-columns:minmax(0,1fr) minmax(0,330px)}
-/* The headline is capped at 19ch and the lede at 62ch, so neither reflows when
-   the column narrows — the picture arrives beside the copy, it does not move
-   it. Below 900px the picture goes under the buttons instead. */
+/* The headline is capped at 19ch, the claim at 44ch and the lede at 62ch, so
+   none of them reflows when the column narrows — the picture arrives beside the
+   copy, it does not move it. Below 900px the picture goes under the buttons
+   instead. */
 @media(max-width:900px){.hm-hero.has-edge{grid-template-columns:minmax(0,1fr)}
   .hm-edge{max-width:380px}}
 .hm-edge{min-width:0}
@@ -414,11 +422,13 @@ img{max-width:100%}
      The thesis, in one headline, above the fold on every viewport: a betting
      line is a better projection than a published projection is, and this page
      is where that line becomes fantasy points. The headline draws the contrast
-     the site exists on, and the lede answers it in that order — what we
-     convert the line INTO first, then why the line is worth converting: real
-     money, paid quant teams and a number that moves the minute news lands.
-     "The betting market knows more" named neither, and asked the reader to
-     take the premise on faith. Two destinations under it
+     the site exists on; the claim under it, set larger and off a teal rule, is
+     the conversion itself in one sentence, because that is the sentence a
+     reader must not be able to miss; the lede then carries what the projection
+     turns into and why the line was worth converting: real money, paid quant
+     teams and a number that moves the minute news lands. "The betting market
+     knows more" named none of it, and asked the reader to take the premise on
+     faith. Two destinations under it
      and nothing else, because there are only two things this site does. The
      class stays `hero-band` because the generated rankings ribbon is
      positioned against it (tools/test-ranks.mjs).
@@ -431,7 +441,8 @@ img{max-width:100%}
    <div class="hm-hero-copy">
     <p class="hm-clock" id="hmClock" hidden></p>
     <h1 class="hm-h1">Anyone can publish a projection. <em>Vegas has money on theirs.</em></h1>
-    <p class="hm-lede">Iron Tuna converts sportsbook lines and player props into fantasy point projections, rankings, trade values and DFS lineups. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.</p>
+    <p class="hm-claim">Iron Tuna converts sportsbook lines and player props into fantasy point projections.</p>
+    <p class="hm-lede">Those projections become weekly rankings, trade values and DFS lineups, scored at your league’s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.</p>
     <div class="hm-cta">
       <a class="hm-btn primary" href="/fantasy">Get Fantasy Advice</a>
       <a class="hm-btn second" href="/dfs">Build a DFS Lineup</a>
