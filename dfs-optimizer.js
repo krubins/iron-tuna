@@ -1,20 +1,39 @@
 /* Iron Tuna — the DFS lineup builder.
  *
  * Runs in the browser (and in node for its tests): a slate of priced players
- * in, N lineups out, under a salary cap and the site's roster, honoring
- * locks, exclusions, a QB stack, a bring-back, and a per-team maximum. The
- * objective is whichever number the mode names: Iron Tuna, Vegas, Consensus,
- * Vegas Edge (the Vegas line plus its Market Delta, which is the market's
- * disagreement with the consensus counted twice on purpose), or one of the
- * three contest shapes -- floor, ceiling, leverage -- which exist because the
- * best lineup in a double-up is not the best lineup in a 150,000-entry
- * tournament.
+ * in, N lineups out, under the contest's cap and the contest's roster,
+ * honoring locks, exclusions, a QB stack, a bring-back, and a per-team
+ * maximum. The objective is whichever number the mode names: Iron Tuna,
+ * Vegas, Consensus, Vegas Edge (the Vegas line plus its Market Delta, which
+ * is the market's disagreement with the consensus counted twice on purpose),
+ * or one of the three contest shapes -- floor, ceiling, leverage -- which
+ * exist because the best lineup in a double-up is not the best lineup in a
+ * 150,000-entry tournament.
  *
- * The method is a randomized greedy fill followed by single- and pair-swap
- * improvement, repeated; it is not an exact solver and does not claim to be. For a nine-
- * slot roster it lands within a fraction of a point of the exact optimum on
- * every fixture in tools/test-dfs.mjs, and it runs in milliseconds, which is
- * what a page that re-solves on every click needs.
+ * THE ROSTER IS NOT ALWAYS THE CLASSIC ONE. A lobby sells a dozen shapes of
+ * contest and they do not share a roster, so for a year this file could only
+ * answer one of them and every other Game Style on /dfs was met with "the
+ * solver is hidden". FORMATS below is the table of what each one actually
+ * builds, and build() solves whichever of them it is handed:
+ *
+ *   classic    — nine slots, one FLEX, the site's cap. What this always did.
+ *   showdown   — a single game: one Captain at 1.5x points and 1.5x salary,
+ *                five FLEX, any position in any seat, both teams represented.
+ *                FanDuel sells the same roster and calls the seat MVP.
+ *   tiers      — no salary cap at all. One player out of each posted tier, so
+ *                the whole contest is which body inside a bucket, not price.
+ *   draft      — a snake or a live draft. No cap either, because there is
+ *                nothing to spend; what the solve is worth is the ORDER.
+ *   picks      — Pick6 and the single-stat contests, which are not a roster:
+ *                they ask for players and a direction on a posted line. These
+ *                do not go through build() at all; pickBoard() answers them.
+ *
+ * The method for the roster formats is a randomized greedy fill followed by
+ * single-swap, pair-swap and seat-exchange improvement, repeated; it is not an
+ * exact solver and does not claim to be. For a nine-slot roster it lands
+ * within a fraction of a point of the exact optimum on every fixture in
+ * tools/test-dfs.mjs, and it runs in milliseconds, which is what a page that
+ * re-solves on every click needs.
  *
  * A man who is not going to play on Sunday never reaches the board at all.
  * The slate decides that (rows carry available:false, and weekStatus says
@@ -77,25 +96,174 @@
   };
   function mulberry(seed) { var a = seed >>> 0; return function () { a += 0x6D2B79F5; var t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-  // Which slots a position may fill.
-  function eligible(pos, slot, flex) { return slot === pos || (slot === 'FLEX' && flex.indexOf(pos) >= 0); }
+  // ── what each contest actually builds ─────────────────────────────────────
+  // A slot that names a position (QB, RB, DST) takes that position and nothing
+  // else. Every other seat -- FLEX on the classic roster, CPT on a DraftKings
+  // Showdown, MVP on a FanDuel single game, UTIL anywhere -- is an open seat,
+  // and `flex` is the format's list of the positions allowed to sit in one.
+  // That is the whole difference between a classic FLEX (three positions) and
+  // a Showdown FLEX (all six), and it is why eligibility is a property of the
+  // format rather than a constant in this file.
+  var ANY_POSITION = ['QB', 'RB', 'WR', 'TE', 'K', 'DST'];
+  var POSITION_SLOT = { QB: 1, RB: 1, WR: 1, TE: 1, K: 1, DST: 1 };
+  var CLASSIC_SLOTS = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DST'];
+  var CLASSIC_FLEX = ['RB', 'WR', 'TE'];
+
+  // Verified against the operators' published rules, 20 Sep 2026. Both caps,
+  // both multiplier seats and the both-teams rule are what the lobby enforces
+  // at the moment this was written; when an operator changes one, THIS TABLE
+  // is the only thing that should have to change. FanDuel moved its MVP to
+  // 1.5x salary (it used to be free) and added a sixth seat in 2025, which is
+  // why the two single-game rosters are now the same shape at different caps.
+  var FORMATS = {
+    'dk-classic': { key: 'dk-classic', kind: 'salary', site: 'dk', label: 'DraftKings Classic',
+      roster: 'One QB, two RB, three WR, one TE, one FLEX and a defense, under a $50,000 cap.',
+      cap: 50000, slots: CLASSIC_SLOTS, flex: CLASSIC_FLEX },
+    'dk-showdown': { key: 'dk-showdown', kind: 'salary', site: 'dk', single: true, label: 'DraftKings Showdown Captain Mode',
+      roster: 'One Captain and five FLEX out of a single game, under a $50,000 cap. The Captain scores 1.5x and costs 1.5x, and both teams have to be represented.',
+      cap: 50000, slots: ['CPT', 'FLEX', 'FLEX', 'FLEX', 'FLEX', 'FLEX'], flex: ANY_POSITION,
+      mult: { CPT: 1.5 }, minTeams: 2 },
+    'fd-classic': { key: 'fd-classic', kind: 'salary', site: 'fd', label: 'FanDuel Classic',
+      roster: 'One QB, two RB, three WR, one TE, one FLEX and a defense, under a $60,000 cap.',
+      cap: 60000, slots: CLASSIC_SLOTS, flex: CLASSIC_FLEX },
+    'fd-single': { key: 'fd-single', kind: 'salary', site: 'fd', single: true, label: 'FanDuel Single Game',
+      roster: 'One MVP and five FLEX out of a single game, under a $60,000 cap. The MVP scores 1.5x and costs 1.5x, and both teams have to be represented.',
+      cap: 60000, slots: ['MVP', 'FLEX', 'FLEX', 'FLEX', 'FLEX', 'FLEX'], flex: ANY_POSITION,
+      mult: { MVP: 1.5 }, minTeams: 2 },
+    // No cap, so there is no value-per-dollar to solve: the contest is one
+    // body out of each posted bucket. The tiers come off the lobby file --
+    // FanDuel prints a Tier column and DraftKings names the tier in the roster
+    // position -- and tierFormat() below turns whatever the file carried into
+    // a roster. A slate with no tiers on it cannot be solved as a Tiers
+    // contest, and says so rather than inventing buckets out of salary.
+    tiers: { key: 'tiers', kind: 'tiers', label: 'Tiers',
+      roster: 'One player out of each posted tier. There is no salary cap, so the question at every tier is which body, never which price.',
+      cap: 0, flex: ANY_POSITION },
+    // A draft has no cap either, and the roster is filled a pick at a time
+    // against opponents who are taking the same players. So the solve is a
+    // TARGET -- the roster to draft toward if the board falls your way -- and
+    // the order beside it is what to take first. Neither is a cap solution and
+    // the page does not print one.
+    draft: { key: 'draft', kind: 'draft', label: 'Snake draft',
+      roster: 'A live draft has no salary cap; what it has is a board that empties. The roster below is the target and the order beside it is the priority.',
+      cap: 0, slots: CLASSIC_SLOTS, flex: CLASSIC_FLEX },
+    'draft-single': { key: 'draft-single', kind: 'draft', single: true, label: 'Single-game snake draft',
+      roster: 'A live draft out of one game. No salary cap, six open seats, and the order beside the roster is the priority.',
+      cap: 0, slots: ['FLEX', 'FLEX', 'FLEX', 'FLEX', 'FLEX', 'FLEX'], flex: ANY_POSITION, minTeams: 2 },
+    // Not a roster at all. Pick6 and the single-stat contests hand you a line
+    // the operator posted and ask for a direction on it, so a lineup card
+    // would be the wrong answer in the right shape. pickBoard() answers these.
+    picks: { key: 'picks', kind: 'picks', label: 'Player picks',
+      roster: 'These contests post their own line on a player and ask which side of it you want. There is no roster and no cap, so the answer is the players the model disagrees with the market about, and by how much.' },
+    // Season-long. The site has a whole draft room for this and the weekly
+    // slate is the wrong tool; naming it here is what keeps /dfs from
+    // pretending otherwise.
+    season: { key: 'season', kind: 'season', label: 'Best Ball',
+      roster: 'Best Ball drafts once for a season and starts the best scorers for you. That is a draft question, not a slate question.' }
+  };
+
+  // The DraftKings lobby's Game Style, and which roster above it builds. The
+  // Madden styles are the same rosters over a simulated slate, and In-Game
+  // Showdown is the Showdown roster entered late -- the roster rules do not
+  // change once the ball is in the air, only what is left to project.
+  var GAME_STYLE_FORMAT = {
+    classic: 'classic', 'madden-classic': 'classic',
+    'showdown-captain': 'showdown', 'in-game-showdown': 'showdown', 'madden-showdown-captain': 'showdown',
+    tiers: 'tiers',
+    snake: 'draft', 'flash-draft': 'draft', 'snake-showdown': 'draft-single',
+    pick6: 'picks', 'single-stat-yards': 'picks', 'single-stat-touchdowns': 'picks',
+    'best-ball': 'season'
+  };
+  // A Game Style names a roster; the site names the cap and the seat. Resolve
+  // both together so nothing downstream has to know that DraftKings calls the
+  // multiplier seat a Captain and FanDuel calls it an MVP.
+  function formatFor(site, gameStyle) {
+    var s = site === 'fd' ? 'fd' : 'dk';
+    var fam = GAME_STYLE_FORMAT[gameStyle] || 'classic';
+    if (fam === 'classic') return FORMATS[s + '-classic'];
+    if (fam === 'showdown') return FORMATS[s === 'fd' ? 'fd-single' : 'dk-showdown'];
+    return FORMATS[fam] || FORMATS[s + '-classic'];
+  }
+  // A Tiers roster out of whatever tiers the lobby file actually carried. One
+  // seat per distinct tier, in the file's own order, and nothing at all when
+  // the file carried none -- a Tiers contest solved against invented buckets
+  // is a lineup nobody can enter.
+  function tierFormat(players) {
+    var seen = {}, order = [];
+    (players || []).forEach(function (p) {
+      var t = p && p.tier != null && p.tier !== '' ? String(p.tier) : null;
+      if (!t || seen[t]) return;
+      seen[t] = 1; order.push(t);
+    });
+    order.sort(function (a, b) {
+      var na = parseFloat(a), nb = parseFloat(b);
+      if (isFinite(na) && isFinite(nb) && na !== nb) return na - nb;
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
+    if (!order.length) return null;
+    var slots = [], tierSlots = {};
+    order.forEach(function (t, i) { var name = 'T' + (i + 1); slots.push(name); tierSlots[name] = t; });
+    var f = FORMATS.tiers;
+    return { key: 'tiers', kind: 'tiers', label: f.label, roster: f.roster, cap: 0,
+             slots: slots, tierSlots: tierSlots, flex: ANY_POSITION, tiers: order };
+  }
+
+  // Which slots a player may fill. A tier seat asks one question and one only;
+  // everything else is a position seat or an open seat.
+  function eligible(p, slot, cfg) {
+    if (cfg.tierSlots && cfg.tierSlots[slot] != null) return p.tier != null && String(p.tier) === String(cfg.tierSlots[slot]);
+    if (slot === p.position) return true;
+    return !POSITION_SLOT[slot] && (cfg.flex || CLASSIC_FLEX).indexOf(p.position) >= 0;
+  }
+  // A multiplier seat scores 1.5x and costs 1.5x. BOTH numbers, or the roster
+  // is a fiction: a Captain carried at his FLEX price is several thousand
+  // dollars of cap nobody gave you, and the lineup does not exist in the lobby.
+  function slotMult(cfg, i) { var m = cfg.mult && cfg.mult[cfg.slots[i]]; return isFinite(m) && m > 0 ? m : 1; }
+  function salAt(cfg, p, i) {
+    var slot = cfg.slots[i];
+    // The lobby file is the authority when it carries the number. DraftKings
+    // exports the Captain as his own row at his own price, so a slate built
+    // from that file knows what the seat costs rather than deriving it.
+    if (p.salaryBySlot && isFinite(p.salaryBySlot[slot])) return Number(p.salaryBySlot[slot]);
+    var base = Number(p.salary);
+    if (!isFinite(base)) return 0;
+    var m = slotMult(cfg, i);
+    return m === 1 ? base : Math.round(base * m);
+  }
+  // The QB the stack is built around. On the classic roster he sits in the QB
+  // slot; on a Showdown there is no QB slot at all and he is whichever seat a
+  // quarterback took -- the Captain as often as not, which is the single most
+  // common Showdown build there is.
+  function qbOf(lineup, cfg) {
+    var at = cfg.slots.indexOf('QB');
+    if (at >= 0) return lineup[at] || null;
+    for (var i = 0; i < lineup.length; i++) if (lineup[i] && lineup[i].position === 'QB') return lineup[i];
+    return null;
+  }
 
   function valid(lineup, cfg) {
-    var team = {}, salary = 0, ids = {};
+    var team = {}, salary = 0, ids = {}, teams = 0;
     for (var i = 0; i < lineup.length; i++) {
       var p = lineup[i]; if (!p) return false;
       if (ids[p.id]) return false; ids[p.id] = 1;
-      salary += p.salary; team[p.team] = (team[p.team] || 0) + 1;
+      if (!eligible(p, cfg.slots[i], cfg)) return false;
+      salary += salAt(cfg, p, i);
+      if (!team[p.team]) teams++;
+      team[p.team] = (team[p.team] || 0) + 1;
       if (cfg.maxPerTeam && team[p.team] > cfg.maxPerTeam) return false;
     }
-    if (salary > cfg.cap) return false;
+    if (cfg.cap > 0 && salary > cfg.cap) return false;
+    // Both teams, on a single-game roster. DraftKings and FanDuel both reject
+    // an entry that is six bodies from one side, so a solver that can return
+    // one is a solver that hands a reader a rejected entry.
+    if (cfg.minTeams && teams < cfg.minTeams) return false;
     // A required player is a CONSTRAINT, not a preference. The greedy fill can
     // fail to seat one (two locked quarterbacks, a lock whose only slot was
     // taken), and a roster that quietly drops the player the reader asked for
     // is worse than no roster at all: it answers a question nobody asked.
     if (cfg.lock) for (var lid in cfg.lock) if (!ids[lid]) return false;
     if (cfg.stack) {
-      var qb = lineup[cfg.slots.indexOf('QB')];
+      var qb = qbOf(lineup, cfg);
       if (!qb) return false;
       var mates = lineup.filter(function (p) { return p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE'); }).length;
       if (mates < (cfg.stackSize || 1)) return false;
@@ -108,20 +276,23 @@
   }
 
   // How far a lineup is from legal: 0 when valid(); otherwise one unit per
-  // duplicate, per body over a team maximum, per missing stack mate or
-  // bring-back, and one per $500 over the cap.
+  // duplicate, per body over a team maximum, per team short of the minimum,
+  // per missing stack mate or bring-back, and one per $500 over the cap.
   function penalty(lineup, cfg) {
-    var team = {}, salary = 0, ids = {}, pen = 0;
+    var team = {}, salary = 0, ids = {}, pen = 0, teams = 0;
     for (var i = 0; i < lineup.length; i++) {
       var p = lineup[i]; if (!p) return 1e6;
       if (ids[p.id]) pen += 1; ids[p.id] = 1;
-      salary += p.salary; team[p.team] = (team[p.team] || 0) + 1;
+      salary += salAt(cfg, p, i);
+      if (!team[p.team]) teams++;
+      team[p.team] = (team[p.team] || 0) + 1;
     }
     if (cfg.lock) for (var lid in cfg.lock) if (!ids[lid]) pen += 1;
     if (cfg.maxPerTeam) for (var t in team) if (team[t] > cfg.maxPerTeam) pen += team[t] - cfg.maxPerTeam;
-    if (salary > cfg.cap) pen += (salary - cfg.cap) / 500;
+    if (cfg.minTeams && teams < cfg.minTeams) pen += cfg.minTeams - teams;
+    if (cfg.cap > 0 && salary > cfg.cap) pen += (salary - cfg.cap) / 500;
     if (cfg.stack) {
-      var qb = lineup[cfg.slots.indexOf('QB')];
+      var qb = qbOf(lineup, cfg);
       if (!qb) return pen + 10;
       var mates = lineup.filter(function (p) { return p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE'); }).length;
       if (mates < (cfg.stackSize || 1)) pen += (cfg.stackSize || 1) - mates;
@@ -133,8 +304,26 @@
   function build(players, options) {
     var o = options || {};
     var mode = MODES[o.mode] || MODES.ironTuna;
-    var cfg = { cap: o.cap, slots: o.slots, flex: o.flex || ['RB', 'WR', 'TE'], maxPerTeam: o.maxPerTeam || 0,
+    // A format supplies the roster; explicit slots/cap/flex still win, because
+    // the fine-tune panel lets a reader lower the cap on a format that names
+    // one and the page has always passed those three straight through.
+    var fmt = typeof o.format === 'string' ? FORMATS[o.format] : (o.format || null);
+    var cap = o.cap != null ? o.cap : (fmt ? fmt.cap : 0);
+    var cfg = { cap: isFinite(cap) && cap > 0 ? cap : 0,
+                slots: o.slots || (fmt && fmt.slots) || CLASSIC_SLOTS,
+                flex: o.flex || (fmt && fmt.flex) || CLASSIC_FLEX,
+                mult: o.mult || (fmt && fmt.mult) || null,
+                tierSlots: o.tierSlots || (fmt && fmt.tierSlots) || null,
+                minTeams: o.minTeams != null ? o.minTeams : (fmt && fmt.minTeams) || 0,
+                maxPerTeam: o.maxPerTeam || 0,
                 stack: !!o.stack, stackSize: o.stackSize || 1, bringBack: !!o.bringBack };
+    var capped = cfg.cap > 0;
+    // A seat that pays a multiple has to be able to move between seats, and
+    // the pair-swap below can only exchange a rostered player for a pool one.
+    // Without this flag the Captain is whoever the greedy fill happened to
+    // seat first, which is the difference between a Showdown build and a list.
+    var multiplied = false;
+    for (var mi = 0; mi < cfg.slots.length; mi++) if (slotMult(cfg, mi) !== 1) { multiplied = true; break; }
     var lock = {}; (o.lock || []).forEach(function (id) { lock[id] = 1; });
     var excl = {}; (o.exclude || []).forEach(function (id) { excl[id] = 1; });
     // A player who is not playing this week is not a cheap play, he is a zero,
@@ -145,7 +334,9 @@
     // only declines to make this one on its own.
     var benched = [];
     var pool = players.filter(function (p) {
-      if (!(p && p.onBoard !== false && p.salary > 0 && !excl[p.id] && isFinite(mode.pts(p)) && mode.pts(p) > 0)) return false;
+      // An uncapped format prices nobody, so a missing salary is the normal
+      // state there rather than a row the board could not read.
+      if (!(p && p.onBoard !== false && (capped ? p.salary > 0 : true) && !excl[p.id] && isFinite(mode.pts(p)) && mode.pts(p) > 0)) return false;
       if (p.available === false && !lock[p.id] && !o.includeUnavailable) { benched.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, status: p.weekStatus || 'Out' }); return false; }
       return true;
     });
@@ -159,61 +350,78 @@
     var rnd = mulberry(o.seed || 7);
     var n = Math.max(1, Math.min(20, o.lineups || 1));
     var results = [], used = {};
-    var score = function (l) { return l.reduce(function (s, p) { return s + mode.pts(p); }, 0); };
+    var score = function (l) { return l.reduce(function (s, p, i) { return s + mode.pts(p) * slotMult(cfg, i); }, 0); };
+    // Two lineups made of the same six men with a different Captain are two
+    // different entries, so on a multiplier roster the seat is part of what
+    // makes a lineup distinct. On a classic roster it is not, and the key is
+    // the sorted list of ids it has always been.
+    var keyOf = function (l) {
+      return l.map(function (p, i) { return (multiplied && slotMult(cfg, i) !== 1 ? cfg.slots[i] + ':' : '') + p.id; }).sort().join('|');
+    };
 
     function attempt(noise, avoid) {
       var slots = cfg.slots.slice();
       var lineup = new Array(slots.length).fill(null);
       var taken = {}, salary = 0, team = {};
-      var place = function (p, i) { lineup[i] = p; taken[p.id] = 1; salary += p.salary; team[p.team] = (team[p.team] || 0) + 1; };
-      // Locks first, into a dedicated slot before FLEX: a required running back
-      // who takes the FLEX seat because it was scanned first strands the other
-      // required back with nowhere legal to sit.
+      var place = function (p, i) { lineup[i] = p; taken[p.id] = 1; salary += salAt(cfg, p, i); team[p.team] = (team[p.team] || 0) + 1; };
+      // Locks first, into a dedicated slot before the open seats: a required
+      // running back who takes the FLEX because it was scanned first strands
+      // the other required back with nowhere legal to sit.
       for (var id in lock) {
         var lp = pool.filter(function (p) { return p.id === id; })[0];
         if (!lp) continue;
         var fit = [];
-        for (var i = 0; i < slots.length; i++) if (!lineup[i] && eligible(lp.position, slots[i], cfg.flex)) fit.push(i);
-        fit.sort(function (a, b) { return (slots[a] === 'FLEX' ? 1 : 0) - (slots[b] === 'FLEX' ? 1 : 0); });
+        for (var i = 0; i < slots.length; i++) if (!lineup[i] && eligible(lp, slots[i], cfg)) fit.push(i);
+        fit.sort(function (a, b) { return (POSITION_SLOT[slots[a]] ? 0 : 1) - (POSITION_SLOT[slots[b]] ? 0 : 1); });
         if (fit.length) place(lp, fit[0]);
       }
       // Then greedy by value per dollar with noise, thinnest slots first
       // (the slot with the fewest eligible players is the one a late pick
-      // cannot rescue), FLEX last.
-      var depth = function (i) { return slots[i] === 'FLEX' ? 1e6 : pool.filter(function (p) { return eligible(p.position, slots[i], cfg.flex); }).length; };
+      // cannot rescue), open seats last.
+      // A position seat and a tier seat both draw from a narrow list, so they
+      // are filled first; an open seat can take anyone left and goes last.
+      var narrow = function (i) { return !!POSITION_SLOT[slots[i]] || !!(cfg.tierSlots && cfg.tierSlots[slots[i]] != null); };
+      var depth = function (i) { return narrow(i) ? pool.filter(function (p) { return eligible(p, slots[i], cfg); }).length : 1e6; };
       var order = slots.map(function (s, i) { return i; }).filter(function (i) { return !lineup[i]; })
         .sort(function (a, b) { return depth(a) - depth(b); });
       // The cheapest fill the other open slots could take, so the budget a
       // pick may spend is what the roster can afford, not a flat guess.
       var cheapest = function (openIdx) {
+        if (!capped) return 0;
         var sum = 0;
         for (var j = 0; j < openIdx.length; j++) {
           var m = Infinity;
-          for (var c = 0; c < pool.length; c++) if (!taken[pool[c].id] && eligible(pool[c].position, slots[openIdx[j]], cfg.flex) && pool[c].salary < m) m = pool[c].salary;
+          for (var c = 0; c < pool.length; c++) if (!taken[pool[c].id] && eligible(pool[c], slots[openIdx[j]], cfg) && salAt(cfg, pool[c], openIdx[j]) < m) m = salAt(cfg, pool[c], openIdx[j]);
           sum += isFinite(m) ? m : 0;
         }
         return sum;
       };
       for (var k = 0; k < order.length; k++) {
         var si = order[k], slot = slots[si];
-        var budget = cfg.cap - salary;
+        var budget = capped ? cfg.cap - salary : Infinity;
         var minRest = cheapest(order.slice(k + 1));
         var fits = function (p, strict) {
-          if (taken[p.id] || !eligible(p.position, slot, cfg.flex)) return false;
-          if (p.salary > budget - minRest) return false;
+          if (taken[p.id] || !eligible(p, slot, cfg)) return false;
+          if (capped && salAt(cfg, p, si) > budget - minRest) return false;
           if (cfg.maxPerTeam && (team[p.team] || 0) >= cfg.maxPerTeam) return false;
           if (strict && avoid && avoid[p.id] && rnd() < 0.7) return false;
           return true;
         };
         var cands = pool.filter(function (p) { return fits(p, true); });
         if (!cands.length) cands = pool.filter(function (p) { return fits(p, false); });
-        if (!cands.length) cands = pool.filter(function (p) { return !taken[p.id] && eligible(p.position, slot, cfg.flex); }).sort(function (a, b) { return a.salary - b.salary; }).slice(0, 1);
+        if (!cands.length) cands = pool.filter(function (p) { return !taken[p.id] && eligible(p, slot, cfg); }).sort(function (a, b) { return salAt(cfg, a, si) - salAt(cfg, b, si); }).slice(0, 1);
         if (!cands.length) return null;
         // Stack: the QB's mates are preferred while the stack is unmet.
-        var qb = lineup[slots.indexOf('QB')];
+        var qb = qbOf(lineup, cfg);
+        var rank = function (p) {
+          // With no cap there is no per-dollar question: an uncapped format is
+          // won by taking the most points, and dividing by a salary the
+          // contest never charges would rank the board by price for nothing.
+          return capped ? mode.pts(p) / Math.max(1, salAt(cfg, p, si)) * 1000 : mode.pts(p);
+        };
         cands.sort(function (a, b) {
-          var va = mode.pts(a) / a.salary * 1000 + noise * rnd(), vb = mode.pts(b) / b.salary * 1000 + noise * rnd();
-          if (cfg.stack && qb && slot !== 'QB') {
+          var va = rank(a) + noise * rnd(), vb = rank(b) + noise * rnd();
+          if (cfg.stack && qb && a !== qb && b !== qb) {
             var ma = (a.team === qb.team && (a.position === 'WR' || a.position === 'TE')) ? 1 : 0, mb = (b.team === qb.team && (b.position === 'WR' || b.position === 'TE')) ? 1 : 0;
             var need = cfg.stackSize - lineup.filter(function (p) { return p && p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE'); }).length;
             if (need > 0 && ma !== mb) return mb - ma;
@@ -231,10 +439,11 @@
       // penalty for every constraint the lineup breaks: a swap that repairs
       // the roster is always worth more than one that adds a point. Single
       // swaps first, then pairs of swaps among the strongest candidates for
-      // each slot, until nothing moves.
+      // each slot, then -- on a roster with a multiplier seat -- exchanging
+      // two rostered players' seats, until nothing moves.
       var cost = function (l) { return score(l) - 100 * penalty(l, cfg); };
       var topK = slots.map(function (slot) {
-        return pool.filter(function (p) { return eligible(p.position, slot, cfg.flex); })
+        return pool.filter(function (p) { return eligible(p, slot, cfg); })
           .sort(function (a, b) { return mode.pts(b) - mode.pts(a); }).slice(0, 14);
       });
       var improved = true, guard = 0, cur = cost(lineup);
@@ -245,7 +454,7 @@
           var best = null, bestC = cur;
           for (var c = 0; c < pool.length; c++) {
             var q = pool[c];
-            if (taken[q.id] || !eligible(q.position, slots[i2], cfg.flex)) continue;
+            if (taken[q.id] || !eligible(q, slots[i2], cfg)) continue;
             var trial = lineup.slice(); trial[i2] = q;
             var tc = cost(trial);
             if (tc > bestC + 1e-9) { best = q; bestC = tc; }
@@ -253,6 +462,22 @@
           if (best) { delete taken[lineup[i2].id]; taken[best.id] = 1; lineup[i2] = best; cur = bestC; improved = true; }
         }
         if (improved) continue;
+        // Who wears the multiplier. Both the points and the salary scale by
+        // the same 1.5, so value per dollar cannot tell the greedy fill which
+        // of six men to captain -- it is the same ratio for all of them. The
+        // answer only shows up in the TOTAL, which is what this move reads.
+        if (multiplied) {
+          for (var s1 = 0; s1 < lineup.length && !improved; s1++) {
+            for (var s2 = s1 + 1; s2 < lineup.length; s2++) {
+              if (slotMult(cfg, s1) === slotMult(cfg, s2)) continue;
+              if (!eligible(lineup[s2], slots[s1], cfg) || !eligible(lineup[s1], slots[s2], cfg)) continue;
+              var t3 = lineup.slice(); t3[s1] = lineup[s2]; t3[s2] = lineup[s1];
+              var c3 = cost(t3);
+              if (c3 > cur + 1e-9) { lineup[s1] = t3[s1]; lineup[s2] = t3[s2]; cur = c3; improved = true; break; }
+            }
+          }
+          if (improved) continue;
+        }
         for (var a = 0; a < lineup.length && !improved; a++) {
           if (lock[lineup[a].id]) continue;
           for (var b = a + 1; b < lineup.length && !improved; b++) {
@@ -280,46 +505,112 @@
       for (var t = 0; t < 40; t++) {
         var l = attempt(t === 0 && li === 0 ? 0 : 2.5, li ? used : null);
         if (!l) continue;
-        var key = l.map(function (p) { return p.id; }).sort().join('|');
+        var key = keyOf(l);
         if (results.some(function (r) { return r.key === key; })) continue;
         var s = score(l);
         if (s > bestS) { bestS = s; bestL = l; }
       }
       if (!bestL) break;
-      var salary = bestL.reduce(function (s, p) { return s + p.salary; }, 0);
+      var salary = bestL.reduce(function (s, p, i) { return s + salAt(cfg, p, i); }, 0);
       // The objective is `points`, and it is not always a projection: in the
       // leverage mode it is a discounted ceiling, which is a ranking number and
       // not a total anybody should read as "what this lineup scores". So the
       // real projection, the floor, the ceiling and the modeled ownership ride
       // alongside it and the page prints those.
+      //
+      // Every number below that answers "what does THIS SEAT contribute" is
+      // scaled by the seat's multiplier -- the salary charged, the points, the
+      // projection, the floor and ceiling, the operator's average and the
+      // market read -- because that is what the seat is worth and what the
+      // lineup totals have to add up to. The numbers that describe the PLAYER
+      // rather than the seat (his ownership, his touchdown probability, his
+      // team's total, the raw Vegas and consensus lines) are his own and are
+      // left alone. `baseSalary`, `baseProj` and `multiplier` ride along so a
+      // card can print both halves of that.
       var owned = bestL.map(ownOf).filter(function (v) { return v != null; });
-      results.push({ key: bestL.map(function (p) { return p.id; }).sort().join('|'), players: bestL.map(function (p, i) { return { slot: cfg.slots[i], id: p.id, name: p.name, position: p.position, team: p.team, opponent: p.opponent, salary: p.salary, points: Math.round(mode.pts(p) * 10) / 10,
-          proj: Math.round(p.ironTunaPoints * 10) / 10, operatorFppg: p.operatorFppg == null ? null : Math.round(Number(p.operatorFppg) * 10) / 10,
+      var seat = function (p, i, v) { return v == null || !isFinite(v) ? null : Math.round(v * slotMult(cfg, i) * 10) / 10; };
+      results.push({ key: keyOf(bestL), players: bestL.map(function (p, i) { return { slot: cfg.slots[i], multiplier: slotMult(cfg, i), tier: p.tier != null ? p.tier : null,
+          id: p.id, name: p.name, position: p.position, team: p.team, opponent: p.opponent,
+          salary: salAt(cfg, p, i), baseSalary: isFinite(p.salary) ? Number(p.salary) : null,
+          points: Math.round(mode.pts(p) * slotMult(cfg, i) * 10) / 10,
+          proj: seat(p, i, p.ironTunaPoints), baseProj: isFinite(p.ironTunaPoints) ? Math.round(p.ironTunaPoints * 10) / 10 : null,
+          operatorFppg: p.operatorFppg == null ? null : seat(p, i, Number(p.operatorFppg)),
           operatorFppgBasis: p.operatorFppg == null ? null : (p.operatorFppgBasis || 'operator'),
-          projectionVsFppg: p.projectionVsFppg == null ? null : Math.round(Number(p.projectionVsFppg) * 10) / 10,
-          floor: Math.round(floorOf(p) * 10) / 10, ceiling: Math.round(ceilOf(p) * 10) / 10, ownership: ownOf(p), leverage: isFinite(p.leverage) ? p.leverage : null,
+          projectionVsFppg: p.projectionVsFppg == null ? null : seat(p, i, Number(p.projectionVsFppg)),
+          floor: seat(p, i, floorOf(p)), ceiling: seat(p, i, ceilOf(p)), ownership: ownOf(p), leverage: isFinite(p.leverage) ? p.leverage : null,
           // The market evidence rides along so a card can say what the books
           // said about a man rather than only what he is projected for. These
           // also feed the fit lines, which had been reading vegasPoints and
           // teamTotal off an object that never carried either.
           vegasPoints: isFinite(p.vegasPoints) ? p.vegasPoints : null, consensusPoints: isFinite(p.consensusPoints) ? p.consensusPoints : null,
-          marketPoints: isFinite(p.marketPoints) ? p.marketPoints : null, marketQuoted: !!p.marketQuoted,
+          marketPoints: isFinite(p.marketPoints) ? seat(p, i, p.marketPoints) : null, marketQuoted: !!p.marketQuoted,
           market: p.market || null, teamTotal: isFinite(p.teamTotal) ? p.teamTotal : null,
           tdProbability: isFinite(p.tdProbability) ? p.tdProbability : null, tdBasis: p.tdBasis || null, tdBooks: isFinite(p.tdBooks) ? p.tdBooks : null,
           weekStatus: p.weekStatus || null, available: p.available !== false }; }),
-        salary: salary, remaining: cfg.cap - salary, points: Math.round(bestS * 10) / 10, mode: o.mode || 'ironTuna',
-        projPoints: Math.round(bestL.reduce(function (s, p) { return s + p.ironTunaPoints; }, 0) * 10) / 10,
-        floorPoints: Math.round(bestL.reduce(function (s, p) { return s + floorOf(p); }, 0) * 10) / 10,
-        ceilingPoints: Math.round(bestL.reduce(function (s, p) { return s + ceilOf(p); }, 0) * 10) / 10,
+        salary: salary, remaining: capped ? cfg.cap - salary : null, points: Math.round(bestS * 10) / 10, mode: o.mode || 'ironTuna',
+        projPoints: Math.round(bestL.reduce(function (s, p, i) { return s + p.ironTunaPoints * slotMult(cfg, i); }, 0) * 10) / 10,
+        floorPoints: Math.round(bestL.reduce(function (s, p, i) { return s + floorOf(p) * slotMult(cfg, i); }, 0) * 10) / 10,
+        ceilingPoints: Math.round(bestL.reduce(function (s, p, i) { return s + ceilOf(p) * slotMult(cfg, i); }, 0) * 10) / 10,
         ownership: owned.length === bestL.length ? Math.round(owned.reduce(function (s, v) { return s + v; }, 0) * 10) / 10 : null,
-        marketPoints: Math.round(bestL.reduce(function (s, p) { return s + (isFinite(p.marketPoints) ? p.marketPoints : 0); }, 0) * 10) / 10,
+        marketPoints: Math.round(bestL.reduce(function (s, p, i) { return s + (isFinite(p.marketPoints) ? p.marketPoints * slotMult(cfg, i) : 0); }, 0) * 10) / 10,
         quoted: bestL.filter(function (p) { return p.marketQuoted; }).length });
       bestL.forEach(function (p) { used[p.id] = (used[p.id] || 0) + 1; });
     }
     return { ok: results.length > 0, mode: mode.label, lineups: results, poolSize: pool.length, cap: cfg.cap,
+             format: fmt ? fmt.key : null, formatLabel: fmt ? fmt.label : null, kind: fmt ? fmt.kind : 'salary',
+             slots: cfg.slots.slice(), capped: capped, multiplier: cfg.mult || null, minTeams: cfg.minTeams || 0,
              benched: benched, benchedCount: benched.length,
              note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? ' satisfies' : 's satisfy') + ' the constraints.' : null };
   }
+
+  // ── the contests that are not a roster ───────────────────────────────────
+  // Pick6 and the single-stat contests post their own line on a player and ask
+  // which side of it you want. There is no cap and no roster, so a lineup card
+  // would be the wrong answer in the right shape. What the model can honestly
+  // offer is the players it disagrees with the MARKET about most, and by how
+  // much -- a posted line is beatable exactly where somebody's number is wrong,
+  // and the size of the disagreement is the whole case for taking a side.
+  //
+  // The operator's own line is not in this data and this does not pretend it
+  // is: `basis` says whether the comparison was against a quoted prop or
+  // against the game line sliced up, and an unquoted read is the weaker case
+  // by construction. The touchdown variant ranks on the anytime-touchdown
+  // number instead, because that is the stat that contest settles on.
+  function pickBoard(players, options) {
+    var o = options || {};
+    var n = Math.max(1, Math.min(24, o.picks || 6));
+    var stat = o.stat === 'touchdowns' ? 'touchdowns' : o.stat === 'yards' ? 'yards' : 'points';
+    var pool = (players || []).filter(function (p) {
+      return p && p.onBoard !== false && p.available !== false && isFinite(p.ironTunaPoints) && p.ironTunaPoints > 0;
+    });
+    var rows = pool.map(function (p) {
+      var market = isFinite(p.marketPoints) ? p.marketPoints : (isFinite(p.consensusPoints) ? p.consensusPoints : null);
+      var edge = market == null ? null : Math.round((p.ironTunaPoints - market) * 10) / 10;
+      return { id: p.id, name: p.name, position: p.position, team: p.team, opponent: p.opponent,
+               salary: isFinite(p.salary) ? Number(p.salary) : null,
+               proj: Math.round(p.ironTunaPoints * 10) / 10,
+               market: market == null ? null : Math.round(market * 10) / 10,
+               edge: edge, direction: edge == null ? null : (edge >= 0 ? 'more' : 'less'),
+               tdProbability: isFinite(p.tdProbability) ? p.tdProbability : null,
+               basis: p.marketQuoted ? 'quoted-prop' : 'game-line',
+               quoted: !!p.marketQuoted };
+    }).filter(function (r) { return stat === 'touchdowns' ? r.tdProbability != null : r.edge != null; });
+    rows.sort(function (a, b) {
+      if (stat === 'touchdowns') return (b.tdProbability - a.tdProbability) || (Math.abs(b.edge || 0) - Math.abs(a.edge || 0));
+      // A quoted disagreement is a disagreement with money; an unquoted one is
+      // two models arguing. Both are printed, the quoted one first.
+      if (a.quoted !== b.quoted) return a.quoted ? -1 : 1;
+      return Math.abs(b.edge) - Math.abs(a.edge);
+    });
+    var picks = rows.slice(0, n);
+    var quoted = picks.filter(function (r) { return r.quoted; }).length;
+    return { ok: picks.length > 0, kind: 'picks', stat: stat, picks: picks, poolSize: pool.length,
+             quoted: quoted, of: picks.length,
+             note: !picks.length ? 'Nothing on this slate carries both a projection and a market number to compare it to.'
+                 : quoted ? quoted + ' of these ' + picks.length + ' carry a posted prop; the rest are the game line sliced up, which is a weaker case for taking a side.'
+                 : 'The books have not posted props on this slate, so every read here is the game line sliced up rather than a disagreement with money.' };
+  }
+
   // ── what an ordinary entry scores ────────────────────────────────────────
   // A projection printed by itself has no scale. 133.8 is a good number or a
   // bad one entirely according to what the rest of the field puts up, and the
@@ -355,8 +646,15 @@
   function fieldAverage(players, options) {
     var o = options || {};
     var slots = o.slots || [];
-    var flex = o.flex || ['RB', 'WR', 'TE'];
+    var flex = o.flex || CLASSIC_FLEX;
     var cap = isFinite(o.cap) && o.cap > 0 ? Number(o.cap) : 0;
+    // The seats of whatever roster this is. A Showdown's Captain charges half
+    // again as much and scores half again as much, so the field's entries are
+    // drawn against the seat's numbers, not the man's -- an average entry
+    // priced at FLEX salaries across a Captain roster is an average of
+    // rosters nobody could submit.
+    var cfg = { slots: slots, flex: flex, mult: o.mult || null, tierSlots: o.tierSlots || null };
+    var minTeams = o.minTeams || 0;
     // Four thousand draws holds the printed tenth steady: across seeds the
     // sample mean of a full main slate moves by about a quarter point, and
     // the seed is fixed anyway, so the same board always prints the same
@@ -384,17 +682,19 @@
     for (var i = 0; i < slots.length; i++) {
       var idx = [], min = Infinity;
       for (var j = 0; j < pool.length; j++) {
-        if (!eligible(pool[j].position, slots[i], flex)) continue;
-        idx.push(j); if (pool[j].salary < min) min = pool[j].salary;
+        if (!eligible(pool[j], slots[i], cfg)) continue;
+        idx.push(j); if (salAt(cfg, pool[j], i) < min) min = salAt(cfg, pool[j], i);
       }
       // A seat no available, owned player can fill has no average, and eight
       // seats out of nine is not an entry.
       if (!idx.length) return null;
       var seat = { n: idx.length, at: new Int32Array(idx.length), own: new Float64Array(idx.length),
                    sal: new Float64Array(idx.length), pts: new Float64Array(idx.length) };
+      var m = slotMult(cfg, i);
       for (var c0 = 0; c0 < idx.length; c0++) {
         var q = pool[idx[c0]];
-        seat.at[c0] = idx[c0]; seat.own[c0] = q.ownership; seat.sal[c0] = q.salary; seat.pts[c0] = q.ironTunaPoints;
+        seat.at[c0] = idx[c0]; seat.own[c0] = q.ownership;
+        seat.sal[c0] = salAt(cfg, q, i); seat.pts[c0] = q.ironTunaPoints * m;
       }
       seats.push(seat); floorCost.push(min);
     }
@@ -427,6 +727,15 @@
         if (pick < 0) { dead = true; break; }
         at = seat2.at[pick]; taken[at] = 1; chosen[filled++] = at;
         salary += seat2.sal[pick]; pts += seat2.pts[pick];
+      }
+      // Both teams, where the roster requires them. The whole claim this
+      // number rests on is that every entry in the sample is one somebody
+      // could submit; a six-man Showdown entry from one side of the game is
+      // rejected at the lobby, so it is rejected here rather than averaged in.
+      if (!dead && minTeams > 1) {
+        var side = {}, sides = 0;
+        for (var g = 0; g < filled; g++) { var tm = pool[chosen[g]].team; if (!side[tm]) { side[tm] = 1; sides++; } }
+        if (sides < minTeams) dead = true;
       }
       for (var f = 0; f < filled; f++) taken[chosen[f]] = 0;
       if (dead) continue;
@@ -470,7 +779,7 @@
     single: { rec: 'Tournament - Single Entry', tag: 'Upside without a major projection sacrifice',
       why: 'The tournament build adds meaningful ceiling and correlation without giving away much median projection. This is the kind of week where accepting a lower cashing probability can be justified by the larger payoff available when the roster hits.' },
     multi: { rec: 'Tournament - Multi-Entry', tag: 'Risk justified by separation',
-      why: 'The leverage build keeps nearly all of the high-floor lineup\u2019s median projection while creating materially more ceiling and differentiation. That combination makes the larger payout curve more attractive than it is on a normal week, despite the lower chance of cashing.' }
+      why: 'The leverage build keeps nearly all of the high-floor lineup’s median projection while creating materially more ceiling and differentiation. That combination makes the larger payout curve more attractive than it is on a normal week, despite the lower chance of cashing.' }
   };
   function sum(l, key) { return l && l.players ? l.players.reduce(function (n, p) { var v = Number(p[key]); return n + (isFinite(v) ? v : 0); }, 0) : 0; }
   // How much of a roster the books actually priced, and on what.
@@ -519,7 +828,10 @@
              evidence: ev };
   }
 
-  var api = { MODES: MODES, build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf, contestPick: contestPick, fieldAverage: fieldAverage };
+  var api = { MODES: MODES, FORMATS: FORMATS, GAME_STYLE_FORMAT: GAME_STYLE_FORMAT, ANY_POSITION: ANY_POSITION,
+              formatFor: formatFor, tierFormat: tierFormat, eligibleIn: eligible,
+              build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf,
+              contestPick: contestPick, fieldAverage: fieldAverage, pickBoard: pickBoard };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.ITDfs = api;
 })(typeof window !== 'undefined' ? window : globalThis);

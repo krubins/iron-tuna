@@ -34,7 +34,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
@@ -377,10 +377,12 @@ console.log('\nthe page');
   // THE CHANGE THIS BLOCK EXISTS FOR. An unfinished setup used to be a refusal:
   // the reader was told to go and fill in three selects, which is exactly the
   // moment they had a question. Both of those states hand the coach the setup
-  // now, and only the thing it is looking at changes.
-  ok('an unfinished setup and a format with no Classic roster are answered, not refused',
-     /if \(site === 'dk' && \(!setupReady\(\) \|\| !styleSupportsOptimizer\(\)\)\) return setupContext\(\);/.test(ctx)
-     && !ctx.split('\n').some((l) => /!setupReady\(\)|!styleSupportsOptimizer\(\)/.test(l) && /return \{ blocked:/.test(l)));
+  // now, and only the thing it is looking at changes. The second of them used
+  // to be "this is not Classic"; it is now "this slate cannot price the roster
+  // that format asks for", which is a question the coach can actually answer.
+  ok('an unfinished setup and a format this slate cannot price are answered, not refused',
+     /if \(site === 'dk' && \(!setupReady\(\) \|\| !solveFormat\(\)\.ready\)\) return setupContext\(\);/.test(ctx)
+     && !ctx.split('\n').some((l) => /!setupReady\(\)|!solveFormat\(\)\.ready/.test(l) && /return \{ blocked:/.test(l)));
   ok('the roster the page recommends carries the page\u2019s own market sentence, and the bench does not',
      /marketSays: rank === 1 && full\.market \? marketPhrase\(full\) : null,/.test(page));
   ok('the bench says only whether its number is quoted or fitted, which is what a swap needs',
@@ -414,14 +416,17 @@ console.log('\nthe page');
      && /function setupContext\(noLineup\)/.test(page));
   ok('and the constraints that caused it ride along, so the coach can name the blocker',
      /out\.build = coachBuild\(byKey\);/.test(lift(/function setupContext\(/))
-     && /whyNoRosterYet: noLineup \? noLineup/.test(lift(/function setupContext\(/)));
+     && /whyNoRosterYet:[\s\S]{0,120}if \(noLineup\) return noLineup;/.test(lift(/function setupContext\(/)));
   // /api/coach refuses a body over 80,000 bytes. Every list in the payload is
   // capped where it is built, so a 14-game slate cannot silently 413.
   const setup = lift(/function setupContext\(/);
   ok('the setup context carries the three choices, what is still missing and the slate behind them',
      ['awaiting:', 'readerIsChoosing:', 'setup:', 'choices:', 'slate:', 'playOfTheWeek:'].every((k) => setup.includes(k)));
-  ok('it says which format Iron Tuna solves a roster for rather than leaving an empty board unexplained',
-     /ironTunaSolvesARoster: styleSupportsOptimizer\(\)/.test(setup) && /whyNoRosterYet:/.test(setup));
+  ok('it says which roster this format builds, and why this slate cannot, rather than leaving an empty board unexplained',
+     /ironTunaSolvesARoster:[\s\S]{0,160}solveFormat\(\)/.test(setup)
+     && /roster:[\s\S]{0,120}f\.fmt\.roster/.test(setup)
+     && /whyNoRosterYet:/.test(setup)
+     && /if \(f && !f\.ready\) return f\.blocked;/.test(setup));
   ok('a page with no salaries still answers on the two choices that do not need them',
      /No salary slate is loaded yet, so the page lists no games to choose from/.test(setup));
   ok('every list in the payload is capped',
@@ -433,11 +438,11 @@ console.log('\nthe page');
   const syncs = (page.match(/coachSync\(\);/g) || []).length;
   ok('every state that changes the roster tells the coach to look again', syncs >= 7, syncs + ' calls');
   ok('including the solve that finds nothing legal',
-     /No lineup satisfies those constraints[\s\S]{0,200}coachSync\(\);/.test(page));
+     /No lineup satisfies those constraints[\s\S]{0,400}coachSync\(\);/.test(page));
   ok('including an incomplete DraftKings setup',
      /function showGameScopeRequired\(\)[\s\S]*?coachSync\(\);\n  \}/.test(page));
-  ok('including a format with no Classic roster to show',
-     /function renderFormatNotice\(\)[\s\S]*?coachSync\(\);\n  \}/.test(page));
+  ok('including a format this slate cannot price',
+     /function renderFormatNotice\(f\)[\s\S]*?coachSync\(\);\n  \}/.test(page));
   ok('including a slate that never loaded',
      /function slateNone\([\s\S]*?coachSync\(\);\n  \}/.test(page));
   ok('and the pick’em board, which has no cap and no roster at all',
@@ -465,8 +470,20 @@ console.log('\nthe page');
      && /marketEvidence:evidence\.replace\(\/<\[\^>\]\+>\/g, ''\)/.test(page));
   ok('and it is the optimizer\u2019s own decision, not a second copy of the thresholds',
      /var pick = ITDfs\.contestPick\(/.test(page) && !/playWeek=\{[\s\S]{0,400}edge>=\./.test(page));
+  // The box has several ways out now -- a pick contest has no payout curve, an
+  // uncapped one has no trade to weigh, and a thin board cannot compare shapes
+  // -- so the property that matters is not the distance to any one of them: it
+  // is that the clear happens before the FIRST of them can return.
   ok('and it is cleared rather than left stale when the slate cannot support one',
-     /playWeek=null;\n    if\(players\.length<9\)/.test(page));
+     (() => {
+       const fn = lift(/function renderPlayOfWeek\(/);
+       const at = fn.indexOf('playWeek=null;');
+       if (at < 0) return false;
+       // Counting `return` catches the inline callbacks too, so the property
+       // is checked where it actually bites: every exit path writes the box's
+       // title and body, and the clear has to come before any of them can.
+       return at < fn.indexOf("$('dfPlayWeekTitle')") && at < fn.indexOf('host.innerHTML');
+     })());
   ok('a setup choice that rebuilds nothing still tells the coach to look again',
      (lift(/function updateSetupState\(/).match(/coachSync\(\);/g) || []).length >= 2);
 }
@@ -478,6 +495,11 @@ console.log('\nthe catalog the setup coach recommends from');
   // of the things in the select in front of the reader.
   const mod = [
     lift(/var GAME_STYLES = \{/), lift(/var PAYOUTS = \{/), lift(/var SHAPES = \{/), lift(/function coachN\(/),
+    // The real optimizer, because the catalog now says what each Game Style
+    // BUILDS, and that answer has to be the builder's rather than a second
+    // copy of the roster table living in the page.
+    'const ITDfs = (await import(' + JSON.stringify(pathToFileURL(path.join(ROOT, 'dfs-optimizer.js')).href) + ')).default;',
+    "var site = 'dk';",
     "var gameStyle = 'classic', payoutStructure = 'double-up';",
     "var selectedGames = { 'LAR|SEA': true };",
     "var slate = { stacks: [{ game: 'LAR @ SEA', away: { team: 'LAR' }, home: { team: 'SEA' }, total: 47.53, impliedAway: 23.29, impliedHome: 24.24 }] };",
@@ -498,8 +520,22 @@ console.log('\nthe catalog the setup coach recommends from');
      all.payouts.every((r) => typeof r.ironTunaSolvesItAs === 'string' && r.ironTunaSolvesItAs.length));
   ok('every game style the select offers is there too',
      all.gameStyles.length === Object.keys(GAME_STYLES).length);
-  ok('and only Classic claims a solved roster',
-     all.gameStyles.filter((r) => r.ironTunaSolvesARoster).map((r) => r.gameStyle).join() === GAME_STYLES.classic.label);
+  // This used to read "only Classic claims a solved roster", which was the
+  // limitation and not the design. Every format with a ROSTER now claims one
+  // and names it; the two that have no roster at all -- Best Ball, which is a
+  // season-long draft, and the pick contests, which post their own line -- are
+  // the only ones that do not, and they say what they are instead.
+  ok('every format with a roster claims a solved one, and names the roster it builds',
+     all.gameStyles.filter((r) => r.ironTunaSolvesARoster).every((r) => typeof r.roster === 'string' && r.roster.length)
+     && ['Classic', 'Showdown Captain Mode', 'Tiers', 'Snake', 'Snake Showdown', 'In-Game Showdown', 'Madden Classic', 'Madden Showdown Captain Mode', 'Flash Draft']
+          .every((label) => all.gameStyles.some((r) => r.gameStyle === label && r.ironTunaSolvesARoster)),
+     JSON.stringify(all.gameStyles.filter((r) => !r.ironTunaSolvesARoster).map((r) => r.gameStyle)));
+  ok('and the formats that are not a roster at all do not pretend to be one',
+     ['Best Ball', 'Pick6', 'Single Stat - Total Yards', 'Single Stat - Touchdowns']
+       .every((label) => all.gameStyles.some((r) => r.gameStyle === label && !r.ironTunaSolvesARoster)));
+  ok('a format that needs its own salary file says which file',
+     all.gameStyles.find((r) => r.gameStyle === 'Showdown Captain Mode').needs === 'the single-game salary export from the contest lobby'
+     && all.gameStyles.find((r) => r.gameStyle === 'Tiers').needs === 'the Tiers export, which carries the buckets');
   ok('what the reader has already chosen is marked as chosen',
      all.payouts.filter((r) => r.chosen).map((r) => r.payout).join() === 'Double Up'
      && all.gameStyles.filter((r) => r.chosen).map((r) => r.gameStyle).join() === 'Classic');
