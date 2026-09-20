@@ -201,7 +201,8 @@ console.log('\nthe prompt');
   ok('and a board line is not dressed up as a detailed row',
      /quote what you have and say plainly what a line does not carry/.test(s));
   ok('a missing name is read as off this board, and a trimmed index is not read as one',
-     /he is outside the games the reader selected, or he is not playing/.test(s)
+     /he is outside the games the reader selected, he is not playing, or his game has already been played/.test(s)
+     && /which is a fact about the clock, never a view on the player/.test(s)
      && /say the deep end of it was trimmed rather than calling a missing player unavailable/.test(s));
 }
 
@@ -244,7 +245,17 @@ console.log('\nthe payload the proxy will accept');
   ok('an oversized payload is fitted under the budget', JSON.stringify(after).length <= coach.JSON_BUDGET,
      before + ' -> ' + JSON.stringify(after).length + ' (budget ' + coach.JSON_BUDGET + ')');
   ok('the budget leaves room for the prompt inside the proxy\u2019s 40,000-character cap',
-     coach.JSON_BUDGET + coach.SYSTEM.length < 40000);
+     coach.JSON_BUDGET + coach.SYSTEM.length + 1 < 40000,
+     coach.SYSTEM.length + ' + 1 + ' + coach.JSON_BUDGET);
+  // THE DAY THIS BECAME A DERIVED NUMBER. The budget was a constant beside a
+  // prompt that grows: slateBoard took it to 29,000 against a 10,186-character
+  // prompt, and the banked-points vocabulary landed on main the same afternoon
+  // and spent all 814 characters of the margin. A prompt edit must not be able
+  // to silently push the payload past a cap that SLICES rather than refuses.
+  ok('and it is measured off the prompt rather than written down beside it',
+     /var JSON_BUDGET = PROXY_SYSTEM_CAP - SYSTEM\.length - PROMPT_JOIN - PROMPT_HEADROOM;/.test(src)
+     && /var PROXY_SYSTEM_CAP = 40000;/.test(src)
+     && !/var JSON_BUDGET = \d/.test(src));
   ok('the roster and the contest it was solved for survive every trim',
      after.lineups.length >= 1 && after.lineups[0].players.length === 9 && after.setup && after.build && after.thesis);
   ok('and the model is told what was dropped rather than left to assume it saw everything',
@@ -347,7 +358,8 @@ console.log('\nthe whole board the coach can now read');
   // coach used to answer it by listing the three receivers that happened to
   // be in the lineup. Every priced player the solve could have used is one
   // line of the index now, so the answer is in the data.
-  const mod = [lift(/function coachN\(/), lift(/function coachBoard\(/), lift(/function coachBoardNote\(/),
+  const mod = [lift(/function coachN\(/), lift(/function isPlayed\(/), lift(/function coachBoard\(/),
+    lift(/function coachBoardNote\(/),
     "var COACH_BOARD_COLUMNS = 'name|team|opp|salary|proj|ceiling|own|value|status';",
     'export { coachBoard, coachBoardNote, COACH_BOARD_COLUMNS };'].join('\n');
   const { coachBoard, coachBoardNote, COACH_BOARD_COLUMNS } =
@@ -363,6 +375,10 @@ console.log('\nthe whole board the coach can now read');
       weekStatus: 'Questionable' },
     { onBoard: true, name: 'Hurt Back', position: 'RB', team: 'LAC', salary: 5200, ironTunaPoints: 9.9,
       weekStatus: 'Out', available: false },
+    // #297: his game is final, so no entry submitted now could contain him.
+    { onBoard: true, name: 'Early Game', position: 'WR', team: 'MIA', opponent: 'NE', home: true, salary: 5600,
+      ironTunaPoints: 16.2, ceiling: 30.1, ownership: 18.4, value: 132, cashScore: 140,
+      gamePlayed: true, actualPoints: 21.3 },
     { onBoard: false, name: 'Unpriced Body', position: 'WR', team: 'SF', salary: 3000 }
   ] };
   const b = coachBoard(view, 'cashScore');
@@ -376,6 +392,14 @@ console.log('\nthe whole board the coach can now read');
      b.WR[0].startsWith('Cheap Receiver'));
   ok('a man who is not playing is not offered as an option',
      !b.RB && !b.WR.some((r) => /Hurt Back/.test(r)));
+  // He would otherwise sit at the top of the index on his finished afternoon
+  // and read as the best body at his price, which is the one recommendation
+  // nobody can act on.
+  ok('and neither is a man whose game is already over, however well he scored',
+     !b.WR.some((r) => /Early Game/.test(r)), JSON.stringify(b.WR));
+  ok('the note says that is the clock talking and not a view on the player',
+     /has already played, which is a fact about the clock and never a view on the player/
+       .test(coachBoardNote('cashScore')));
   ok('and a body the board could not price is not on it either',
      !b.WR.some((r) => /Unpriced Body/.test(r)));
   ok('the index says what it is and what it is not, in the data beside it',
