@@ -13512,7 +13512,10 @@ function leaguePoolIndex() {
       if (!byLast.get(lk).includes(row)) byLast.get(lk).push(row);
     }
   }
-  _LEAGUE_POOL = { byKey, byLast, defByTeam, defByName };
+  // A flat list too, for the clarifier: when a name resolves to nothing the
+  // question is "which of these did you mean", and that is asked of the whole
+  // board rather than of one surname key.
+  _LEAGUE_POOL = { byKey, byLast, defByTeam, defByName, rows: [...byKey.values()] };
   return _LEAGUE_POOL;
 }
 // One provider player -> one key, or a miss with a reason. `hint` is what the
@@ -13554,6 +13557,118 @@ function leagueResolvePlayer(hint) {
              reason: team ? 'surname, position and club' : 'surname, initial and position' };
   }
   return { key: null, confidence: 'none', reason: 'not on the board' };
+}
+
+// ── the clarifier ──────────────────────────────────────────────────────────
+// WHY THIS EXISTS. A roster grid read off a screenshot gets some names wrong,
+// and the ones it gets wrong are exactly the ones nobody can fix afterwards.
+// "A Bornegales" is Andy Borregales with one letter misread. "J Williams" is
+// two players and the grid does not say which. The save answered with a list
+// of the names it had kept by name and scored zero — a report of a problem,
+// handed to the only person who could have solved it, at the one moment they
+// no longer could. Asking costs one round trip and nothing else, and the
+// alternative to asking is a roster with holes in it all season.
+//
+// The nearest names on the board, for a name the resolver could not place.
+// Distance is measured on the SURNAME, because that is the token a grid prints
+// in full and the token an initial cannot disambiguate; the first initial then
+// orders what the surname found. A misread surname ("Bornegales") is one or
+// two edits from the real one; an ambiguous one ("Williams") is zero edits
+// from several, and both come back here as a list to choose from.
+const LEAGUE_ASK_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+// Levenshtein, abandoned once every cell in a row exceeds `max`: past the cap
+// the exact distance does not matter, and the cap is what keeps this cheap
+// over a four-hundred-row board asked about a dozen times.
+function leagueEditDistance(a, b, max) {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = new Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    const cur = new Array(b.length + 1);
+    cur[0] = i;
+    let best = i;
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (cur[j] < best) best = cur[j];
+    }
+    if (best > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function leagueNameSuggestions(hint, limit) {
+  const pool = leaguePoolIndex();
+  const want = leaguePos(hint && hint.position);
+  const name = String((hint && hint.name) || '').trim();
+  const team = teamKey(hint && hint.team);
+  if (!name) return [];
+  const asked = leagueLastKeys(name);
+  const first = _oddsNorm(name)[0] || '';
+  const whole = _oddsNorm(name);
+  // A short surname tolerates one edit, a long one two: "Hall" is one edit from
+  // "Hill" and they are different players, while "Borregales" survives a typo
+  // without ever being mistaken for anyone else.
+  // How far apart two keys may be and still be the same name. A four-letter
+  // surname tolerates one edit and no more — "Hall" is one edit from "Hill"
+  // and they are different players — while a long one survives a typo without
+  // ever being mistaken for anyone else. Measured on the SHORTER key, so a
+  // three-letter fragment cannot borrow a long name's allowance.
+  const allow = (a, b) => Math.max(1, Math.min(2, Math.floor(Math.min(a.length, b.length) / 4)));
+  // A pair that is further apart than its own allowance is not a candidate at
+  // all. leagueEditDistance abandons at its cap and answers cap+1, so the cap
+  // passed here is the allowance itself and anything over it drops out — the
+  // alternative pads six unrelated D-names under a misread "D Tuten".
+  const near = (a, b) => { const cap = allow(a, b); const d = leagueEditDistance(a, b, cap); return d <= cap ? d : null; };
+  const out = [];
+  for (const row of pool.rows) {
+    if (want && row.position !== want) continue;
+    let d = null;
+    if (row.position === 'DEF') {
+      // A defense is asked for by nickname or city, not by a surname.
+      if (team && row.team === team) d = 0;
+      else for (const k of leagueDefKeys(row.name)) { const n = near(whole, k); if (n !== null && (d === null || n < d)) d = n; }
+    } else {
+      const keys = leagueLastKeys(row.name);
+      for (const a of asked) for (const b of keys) { const n = near(a, b); if (n !== null && (d === null || n < d)) d = n; }
+    }
+    if (d === null) continue;
+    // Same first initial first, then same club, then the closer surname. A
+    // reader scanning six names finds theirs at the top or not at all.
+    const ini = (_oddsNorm(row.name)[0] || '') === first ? 0 : 1;
+    out.push({ name: row.name, pos: row.position, team: row.team || '', _r: (d * 4) + (ini * 2) + (team && row.team === team ? 0 : 1) });
+  }
+  out.sort((a, b) => a._r - b._r || a.name.localeCompare(b.name));
+  return out.slice(0, Math.max(1, Math.min(12, limit || 6))).map(r => ({ name: r.name, pos: r.pos, team: r.team }));
+}
+// One read roster, checked against the board without writing anything. Same
+// walk the save makes — a name with no position is tried at each one and taken
+// only where exactly one lands — so a name this says is fine is a name the
+// save will resolve, and a name it asks about is one the save would have
+// scored zero.
+function leagueRosterCheck(players) {
+  const out = [];
+  for (const raw of (Array.isArray(players) ? players : []).slice(0, 400)) {
+    const name = String((raw && (raw.name || raw)) || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!name) continue;
+    const pos = leaguePos(raw && (raw.pos || raw.position)) || '';
+    const team = teamKey(raw && raw.team) || '';
+    let hit = null;
+    if (LEAGUE_POSITIONS.has(pos)) {
+      const r = leagueResolvePlayer({ name, position: pos, team });
+      if (r.key) hit = { name: r.name, pos };
+    } else {
+      const hits = [];
+      for (const p of LEAGUE_ASK_POSITIONS) {
+        const r = leagueResolvePlayer({ name, position: p, team });
+        if (r.key) hits.push({ name: r.name, pos: p });
+      }
+      if (hits.length === 1) hit = hits[0];
+    }
+    if (hit) { out.push({ name, ok: true, pos: hit.pos, resolved: hit.name }); continue; }
+    out.push({ name, ok: false, pos: pos || null, team: team || null, suggestions: leagueNameSuggestions({ name, position: pos, team }, 6) });
+  }
+  return out;
 }
 // Resolve every player a league carries, writing the map rows and the misses.
 // Confidence 'none' rows are misses: they stay on the roster by name so the
@@ -16139,6 +16254,19 @@ export default {
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
       return handleRosterRead(request, env, c);
+    }
+    // Which of those names the board can place, and what the rest might be.
+    // No model, no database, no write — it reads PROJECTIONS, which is already
+    // in this isolate, so the box can ask it after every read and again after
+    // every answer without costing the reader a wait.
+    if (url.pathname === '/api/roster-check') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false, error: 'Method not allowed' }, 405, c);
+      if (!originAllowed(request, env)) return json({ ok: false, error: 'Origin not allowed' }, 403, c);
+      let body;
+      try { body = await request.json(); } catch (e) { return json({ ok: false, error: 'Bad JSON' }, 400, c); }
+      return json({ ok: true, players: leagueRosterCheck(body && body.players) }, 200, c);
     }
     // Serve static assets, but tell browsers to revalidate HTML every load so
     // updates show up without a hard refresh (the app is a single index.html).

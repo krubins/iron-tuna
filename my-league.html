@@ -140,6 +140,18 @@ p{color:var(--sec);margin:0 0 16px}
 .mg-drop:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .mg-drop.over{border-style:solid;border-color:var(--teal);background:rgba(14,124,99,.07)}
 .mg-pick{padding:0;border:0;background:none;font:inherit;font-weight:700;color:var(--teal);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+/* The names the board could not place, and the question about each. It is a
+   panel rather than a warning colour: a misread letter is normal, and a reader
+   who is asked eight questions in red reads it as eight things going wrong. */
+.rg-ask{margin:10px 0 0;padding:12px 14px;border:1px solid var(--line2);border-left:3px solid var(--gold);border-radius:var(--radius-md);background:var(--bg)}
+.rg-ask-h{margin:0 0 8px;font-size:var(--fs-xs);color:var(--sec);line-height:1.6}
+.rg-ask-h b{color:var(--text)}
+.rg-asks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rg-asks li{display:flex;flex-direction:column;gap:4px}
+.rg-ask-n{font-size:var(--fs-xs);font-weight:700;color:var(--text);line-height:1.3}
+.rg-ask-n small{display:block;font-size:var(--fs-3xs);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rg-ask-p,.rg-ask-t{font-size:var(--fs-xs);padding:6px 8px}
+.rg-ask.done{border-left-color:var(--teal)}
 .mg-pick:hover{color:var(--text)}
 .mg-pick:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* Settings: the form on the left at a fixed width, and what it changes on the right. */
@@ -416,12 +428,28 @@ function rosterGrid(el) {
     // The card above already carries the number and the title.
     label: '',
     note: 'Paste the grid as text or as a screenshot \u2014 either one reads. Names only: who starts is projected from the scoring, not read off the page. Send more than one image together if the grid does not fit in one shot.',
-    onPick: function () { msg(''); }
+    onPick: function () { msg(''); },
+    // A new answer is a new state of play, so the one warning below is armed
+    // again: a reader who fixes six of eight names should be told about the two.
+    onCheck: function () { warned = false; }
   });
+
+  // The save asks once about names still unplaced, and saves on the second
+  // press. Blocking outright would hold a whole league hostage to a kicker the
+  // board has never carried; saying nothing is how eight names ended up scored
+  // zero for a season. Once is the number of times to ask.
+  var warned = false;
 
   document.getElementById('mlGridSave').addEventListener('click', function () {
     if (!grid || !grid.teams.length) { msg('Paste a screenshot of the rosters first.', true); return; }
     if (grid.mine < 0) { msg('Pick which of those teams is yours.', true); return; }
+    if (grid.unplaced > 0 && !warned) {
+      warned = true;
+      msg('<b>' + grid.unplaced + (grid.unplaced === 1 ? ' name is' : ' names are') + ' still unplaced.</b> Answer the question' +
+          (grid.unplaced === 1 ? '' : 's') + ' above so ' + (grid.unplaced === 1 ? 'it counts' : 'they count') +
+          ', or press Save again to store ' + (grid.unplaced === 1 ? 'it' : 'them') + ' by name and scored zero.', true);
+      return;
+    }
     if (!window.ITSync || !window.ITInSeason) { msg('League sync could not load in this browser.', true); return; }
     var btn = this;
     btn.disabled = true;

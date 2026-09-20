@@ -475,6 +475,51 @@ console.log('\nthe form and the importer');
     // is a reader typing their team into the wrong one.
     ok('§01\'s grid keeps one textarea, not two', /mfGrid'\)[\s\S]{0,400}text:\s*false/.test(read('my-league.html')));
   }
+
+  // THE NAMES IT COULD NOT PLACE. A reader saved a twelve-team grid and was
+  // handed a list of eight names kept by name and scored zero — a report of
+  // eight holes, delivered at the one moment they could no longer be filled.
+  // The resolver's own answers are pinned in test-league-sync.mjs, against the
+  // real board; what is pinned here is that the box actually asks.
+  {
+    const rg = read('it-roster-grid.js');
+    const ml = read('my-league.html');
+    ok('every read is checked against the board', /function check\(\)[\s\S]{0,400}'\/api\/roster-check'/.test(rg));
+    ok('and the check runs after the read, not only on save', /if \(typeof o\.onRead === 'function'\) o\.onRead\(state\);\s*\n\s*check\(\);/.test(rg));
+    ok('a room the box opens with is checked too', /o\.teams && o\.teams\.length\)[\s\S]{0,400}check\(\);/.test(rg));
+    ok('an unplaced name becomes a question with the board\'s candidates',
+      /renderAsks/.test(rg) && /suggestions/.test(rg) && /Which player is this\?/.test(rg));
+    ok('the reader can keep a name the board has never carried', /'keep'[\s\S]{0,120}kept\[/.test(rg));
+    ok('and type one the suggestions missed', /data-type/.test(rg) && /ITPlayerSearch\.search/.test(rg));
+    // The second check is the point: it is the board answering, not the box
+    // assuming that what the reader picked is a name the board carries.
+    ok('every answer is re-checked rather than believed', /function applyFix\([\s\S]{0,300}check\(\);/.test(rg));
+    ok('a stale answer cannot overwrite a newer one', /seq !== checkSeq/.test(rg));
+    ok('the count is published for the host to act on', /state\.unplaced = asks\.length/.test(rg) && /onCheck/.test(rg));
+    // A check that cannot reach the network must not hold the rosters hostage.
+    ok('a failed check clears the asks instead of blocking the save',
+      /\.catch\(function \(\)[\s\S]{0,240}state\.unplaced = 0/.test(rg));
+
+    ok('§02\'s save asks once about what is still unplaced, then saves',
+      /grid\.unplaced > 0 && !warned/.test(ml) && /warned = true/.test(ml) && /press Save again/.test(ml));
+    ok('and a fresh answer arms that question again', /onCheck: function \(\) \{ warned = false/.test(ml));
+    ok('the worker answers the check without a model or a write',
+      /url\.pathname === '\/api\/roster-check'[\s\S]{0,600}leagueRosterCheck\(/.test(worker) && /'\/api\/roster-check'/.test(rg));
+    ok('and only for this site', /roster-check'[\s\S]{0,400}originAllowed\(request, env\)/.test(worker));
+    // One resolver, asked twice. Two would drift, and the panel would be
+    // telling the reader a name is fine that the save then scores zero.
+    const checkFn = worker.slice(worker.indexOf('function leagueRosterCheck'), worker.indexOf('// Resolve every player a league carries'));
+    ok('the check resolves with the same function the save does', /leagueResolvePlayer\(/.test(checkFn));
+    ok('and tries a bare name at every position, as the save does',
+      /LEAGUE_ASK_POSITIONS/.test(checkFn) && /hits\.length === 1/.test(checkFn));
+    // Every class the panel renders has to exist, or the questions land as an
+    // unstyled pile in the middle of the card.
+    // rg-ask* only. `rg-field` is a selector hook for the drag zone, wearing
+    // the `is-field` beside it for looks, and has no rules of its own.
+    const askClasses = [...new Set([...rg.matchAll(/class="([^"]+)"/g)].flatMap(m => m[1].split(/\s+/)).filter(c => /^rg-ask/.test(c)))];
+    const missing = askClasses.filter(c => !ml.includes('.' + c) && !read('site.css').includes('.' + c));
+    ok('every class the asks panel renders is styled', missing.length === 0, missing.join(', '));
+  }
   ok('the form returns the handle the boxes apply through',
     /return \{\s*\n[\s\S]{0,600}apply: function \(partial, source, n\)/.test(uiSrc));
   // The styles the widget names have to exist, or the reader gets an unstyled
