@@ -449,13 +449,19 @@ console.log('\nthis week’s props, end to end');
   // A fake D1 that answers the two queries propsHealth makes, and nothing else.
   // Two reads: the totals, and the market mix. `mix` defaults to a yardage
   // market so the ordinary cases stay `live`.
-  const db = (tot, subjects, mix) => ({ LEADS_DB: {
+  // `pulledAt` is the pull clock: when the store last READ the feed, which is
+  // a different question from when a price last moved and is why the two are
+  // stubbed separately here.
+  const db = (tot, subjects, mix, pulledAt) => ({ LEADS_DB: {
     prepare(sql) {
       return {
         bind() { return this; },
         async run() { return {}; },                       // the DDL snapshotReady runs
         async first() { return /COUNT\(\*\)/.test(sql) ? tot : {}; },
         async all() {
+          if (/odds_snapshot_pulls/.test(sql)) {
+            return { results: pulledAt ? [{ subject_type: 'player', ts: pulledAt, seen: 400, changed: 3 }] : [] };
+          }
           if (/GROUP BY market/.test(sql)) return { results: mix || [{ market: 'recYd', players: 2, rows: 8 }] };
           return { results: (subjects || []).map(x => ({ subject: x })) };
         }
@@ -467,14 +473,31 @@ console.log('\nthis week’s props, end to end');
   const other = W._oddsNorm('Test Runner');
   const stranger = W._oddsNorm('Nobody At All');
 
-  const live = await W.propsHealth(db({ rows: 420, subjects: 2, markets: 5, books: 7, last: Date.now() - 20 * 60000 }, [known, other]), 2026, 3);
+  const live = await W.propsHealth(db({ rows: 420, subjects: 2, markets: 5, books: 7, last: Date.now() - 20 * 60000 }, [known, other], null, Date.now() - 10 * 60000), 2026, 3);
   ok('fresh rows matched to board players read live', live.state === 'live' && live.matched === 2, JSON.stringify(live));
-  ok('...and it reports the markets, the books and the age', live.markets === 5 && live.books === 7 && live.ageHours < 1);
+  ok('...and it reports the markets, the books and the age of the newest move', live.markets === 5 && live.books === 7 && live.lastMoveHours < 1);
   ok('...and says the projection is reading them', /reading them/.test(live.note));
 
-  const stale = await W.propsHealth(db({ rows: 420, subjects: 2, markets: 5, books: 7, last: Date.now() - 30 * HOUR }, [known, other]), 2026, 3);
-  ok('rows that stopped arriving read stale, not live', stale.state === 'stale' && stale.ageHours > W.PROPS_STALE_HOURS);
-  ok('...and say the poll has stopped rather than blaming the join', /poll has stopped/.test(stale.note));
+  const stale = await W.propsHealth(db({ rows: 420, subjects: 2, markets: 5, books: 7, last: Date.now() - 30 * HOUR }, [known, other], null, Date.now() - 30 * HOUR), 2026, 3);
+  ok('a poll that stopped reading the feed is stale', stale.state === 'stale' && stale.pullAgeHours > W.PROPS_STALE_HOURS);
+  ok('...and says the poll has stopped rather than blaming the join', /has not read the feed/.test(stale.note));
+
+  // The bug this pair exists to prevent. Until 2026-09-20 the store's newest
+  // row WAS the freshness signal, so a market that simply stopped moving read
+  // as a dead collector: the board said "the poll has stopped" and the DFS
+  // page said "pulled 52h ago" about lines the poll had confirmed minutes
+  // earlier. An unchanged line writes no row, so only the pull clock can tell
+  // a quiet market from a broken one.
+  const quiet = await W.propsHealth(db({ rows: 420, subjects: 2, markets: 5, books: 7, last: Date.now() - 52 * HOUR }, [known, other], null, Date.now() - 12 * 60000), 2026, 3);
+  ok('a quiet market read minutes ago is live, not stale', quiet.state === 'live' && quiet.lastMoveHours > 50 && quiet.pullAgeHours < 1);
+  ok('...and the note gives both clocks without calling either a pull',
+     /feed was read within the hour/.test(quiet.note) && /newest line move landed 52 hours ago/.test(quiet.note) && !/pulled/.test(quiet.note));
+
+  // A store written before the pull clock existed has no stamp to read, and
+  // must fall back rather than claim a read it cannot prove.
+  const unstamped = await W.propsHealth(db({ rows: 420, subjects: 2, markets: 5, books: 7, last: Date.now() - 30 * HOUR }, [known, other]), 2026, 3);
+  ok('with no pull clock it falls back to the last move', unstamped.state === 'stale' && unstamped.pullAgeHours === null);
+  ok('...and says it cannot tell, rather than blaming the poll', /no pull clock yet/.test(unstamped.note));
 
   // The silent failure. Every count looks healthy; nothing reaches a board row.
   const unmatched = await W.propsHealth(db({ rows: 900, subjects: 3, markets: 6, books: 8, last: Date.now() - 10 * 60000 }, [stranger, 'someoneelse', 'thirdguy']), 2026, 3);

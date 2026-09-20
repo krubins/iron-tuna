@@ -1448,9 +1448,15 @@ p{color:var(--sec);margin:0 0 16px}
     if (m.quoted) {
       return 'The books posted ' + (m.pricedLabels && m.pricedLabels.length ? m.pricedLabels.join(', ') : 'props') + ' on him'
         + (m.books ? ' across ' + m.books + ' book' + (m.books === 1 ? '' : 's') : '')
-        + (m.ageHours != null ? ', pulled ' + (m.ageHours < 1 ? 'within the hour' : Math.round(m.ageHours) + 'h ago') : '')
         + (p.tdBasis === 'anytime-td-market' && p.tdProbability != null ? '. Anytime touchdown ' + n1(p.tdProbability) + '%, devigged from the market' : '')
         + '.'
+        // This number is the last time one of his books MOVED, not the last
+        // time the feed was read: the snapshot store keeps a row only when a
+        // price changes. It said "pulled 52h ago" about lines the poll had
+        // confirmed minutes earlier, which read as a broken feed when it was a
+        // settled market. The read time belongs to the whole slate and is in
+        // the market-coverage note under the board, so it is said once there.
+        + (m.lastMoveHours != null ? ' His line last moved ' + (m.lastMoveHours < 1 ? 'within the hour' : Math.round(m.lastMoveHours) + 'h ago') + '.' : '')
         // A partial quote is not a full one, and the gap is the part of his
         // line that is still the game environment rather than a posted price.
         + (m.status === 'partial' && m.missing && m.missing.length
@@ -2687,7 +2693,7 @@ p{color:var(--sec);margin:0 0 16px}
     if (brief) return out;
     if (m.pricedLabels && m.pricedLabels.length) out.posted = m.pricedLabels.join(', ');
     if (m.books) out.books = m.books;
-    if (m.ageHours != null) out.pulledHoursAgo = coachN(m.ageHours);
+    if (m.lastMoveHours != null) out.lineLastMovedHours = coachN(m.lastMoveHours);
     if (m.shortOfProjection) out.quotedOnlyOnHisTouchdown = true;
     if (m.tdProbability != null && m.tdDevigged) out.tdFromTheBooks = true;
     return out;
@@ -2926,7 +2932,9 @@ p{color:var(--sec);margin:0 0 16px}
                typicalEntryPoints: fieldAvg ? coachN(fieldAvg.points) : undefined,
                marketCoverage: view.props ? { pricedPlayers: view.props.priced, ofPlayers: view.props.players,
                  percent: view.props.coverage, markets: (view.props.marketLabels || []).join(', ') || null,
-                 avgBooks: view.props.avgBooks, freshestHours: coachN(view.props.freshestHours),
+                 avgBooks: view.props.avgBooks,
+                 feedReadHoursAgo: coachN(view.props.pullAgeHours),
+                 newestLineMoveHours: coachN(view.props.freshestMoveHours),
                  quotedOnlyOnTouchdown: view.props.quotedButShort || undefined } : undefined,
                salariesFrom: 'the site’s salary feed' },
       setup: { gameStyle: gs.label || gameStyle || 'Classic', gameStyleNote: gs.note || null,
