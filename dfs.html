@@ -100,6 +100,15 @@ p{color:var(--sec);margin:0 0 16px}
 .is-board .df-tag.chalk{color:#f2c66a;background:rgba(242,169,0,.16)}
 .is-board .df-tag.lev{color:#46d6ac;background:rgba(70,214,172,.15)}
 .is-board .df-tag.stack{color:#bcd0cc;background:rgba(255,255,255,.1)}
+/* The field's average entry, in parentheses inside the projection's own
+   figure: smaller and quieter than the number it qualifies, because it is the
+   scale and not the claim. It rides INSIDE .is-stat b, so the size is relative
+   to that clamp and it shrinks with it. */
+.is-stat .is-par{font-family:var(--font-display);font-size:.52em;color:var(--muted);letter-spacing:.01em}
+.is-board .is-stat .is-par{color:#8fa3a0}
+.is-board .is-stat.key .is-par{color:#8fa3a0}
+.df-fieldnote{margin:10px var(--space-5) var(--space-4);font-size:12.5px;line-height:1.55;color:#9fb6b1;max-width:86ch}
+.df-fieldnote b{color:#d5e2df;font-weight:700}
 .df-caplab{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;
   letter-spacing:.06em;text-transform:uppercase;color:#8fa3a0;margin:7px 0 0}
 .df-card .df-caplab{color:var(--muted)}
@@ -215,6 +224,7 @@ p{color:var(--sec);margin:0 0 16px}
 @media(max-width:900px){
   .df-lead-grid{padding:0 var(--space-4) var(--space-4)}
   .df-explain-summary{margin-left:var(--space-4);margin-right:var(--space-4)}
+  .df-fieldnote{margin-left:var(--space-4);margin-right:var(--space-4)}
 }
 /* On a phone the roster stops being a table. Seven columns inside a scroller
    either squeeze the name to one word a line or hide the note off the right
@@ -224,6 +234,7 @@ p{color:var(--sec);margin:0 0 16px}
 @media(max-width:620px){
   .df-lead-grid{padding-left:10px;padding-right:10px}
   .df-explain-summary{margin-left:10px;margin-right:10px}
+  .df-fieldnote{margin-left:10px;margin-right:10px}
   .df-face{width:34px;height:34px;min-width:34px}
   .df-lead-table{overflow-x:visible}
   .df-lead-table table,.df-card-table table{min-width:0;display:block}
@@ -1665,6 +1676,17 @@ p{color:var(--sec);margin:0 0 16px}
           + (tdMkt[0].tdBooks ? ' across ' + tdMkt[0].tdBooks + ' books' : '') + ', devigged. ' : '')
       + 'The rest carry their game\u2019s environment, discounted for not being quoted.</p>';
   }
+  // Says out loud what the parenthetical is, once, on the lead board. The
+  // alternates carry the same number with the same tooltip and no second copy
+  // of the paragraph.
+  function fieldNote(l) {
+    if (!fieldAvg || !isFinite(fieldAvg.points)) return '';
+    var over = Number(l.projPoints) - Number(fieldAvg.points);
+    return '<p class="df-fieldnote"><b>' + n1(fieldAvg.points) + ' is the typical entry.</b> '
+      + 'Rosters drawn off this board seat by seat on Iron Tuna\u2019s modeled ownership, under the same cap and the same roster format, then averaged: what an ordinary lineup on this slate projects for. '
+      + 'This build projects ' + (Math.abs(over) < 0.05 ? 'level with it' : n1(Math.abs(over)) + ' points ' + (over > 0 ? 'above' : 'below') + ' it') + '. '
+      + 'It is a bar to clear, not a score to aim at, and the ownership behind it is Iron Tuna\u2019s model rather than a feed.</p>';
+  }
   function lineupCard(l, i, sh, lead) {
     var qb = null; for (var k = 0; k < l.players.length; k++) if (l.players[k].slot === 'QB') qb = l.players[k];
     var full = l.salary + Math.max(0, l.remaining);
@@ -1674,8 +1696,14 @@ p{color:var(--sec);margin:0 0 16px}
     var allHaveFppg = l.players.every(function (p) { return p.operatorFppg != null && isFinite(Number(p.operatorFppg)); });
     var dkFppg = allHaveFppg ? l.players.reduce(function (sum, p) { return sum + Number(p.operatorFppg); }, 0) : null;
     var lineupEdge = dkFppg == null ? null : Number(l.projPoints) - dkFppg;
+    // The projection carries the field's average entry in parentheses beside
+    // it. A lineup number with nothing next to it is a number without a
+    // scale, and the reader was being asked to supply the scale himself.
+    var fieldPar = fieldAvg && isFinite(fieldAvg.points)
+      ? ' <small class="is-par" title="' + n1(fieldAvg.points) + ' is what a typical entry on this slate projects for: rosters drawn seat by seat on the modeled ownership of the board, under the same cap.">(' + n1(fieldAvg.points) + ')</small>'
+      : '';
     var stats = stat(dkFppg == null ? '—' : n1(dkFppg), 'DraftKings FPPG')
-      + stat(n1(l.projPoints), 'Iron Tuna Projection', true)
+      + stat(n1(l.projPoints) + fieldPar, 'Iron Tuna Projection', true)
       + stat(lineupEdge == null ? '—' : (lineupEdge > 0 ? '+' : '') + n1(lineupEdge), 'Tuna Edge')
       + stat(money(l.salary), 'Salary used');
     // Two rows per player, not two columns. The fit sentence used to share the
@@ -1722,7 +1750,7 @@ p{color:var(--sec);margin:0 0 16px}
         + '<div class="is-board-head"><h3>' + e(sh.head) + '</h3><span class="is-board-sub">' + sub + '</span></div>'
         + '<div class="df-explain-summary"><h4>Why This Lineup</h4><p>' + e(lineupSummary(l, sh, qb)) + '</p></div>'
         + propsNote(l)
-        + '<div class="is-stats">' + stats + '</div>' + meter
+        + '<div class="is-stats">' + stats + '</div>' + fieldNote(l) + meter
         + '<div class="df-lead-grid"><div class="df-lead-table">' + table + '</div>'
         + '<p class="df-fit df-act-note">Disagree with a seat? <b>Require</b> holds that player in every lineup; <b>Exclude</b> solves the slate again without him. The same pair sits on every alternate below, and on any player on the board from his name. One list of constraints drives all of them, and it is above the roster with an undo.</p>'
         + breakdownHtml(l, sh, qb) + '</div>'
@@ -1798,6 +1826,11 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   var built = null;
+  // What an ordinary entry on this slate projects for, from the optimizer's
+  // fieldAverage(). It is solved once per build off the whole priced board
+  // rather than per card, because it is a property of the SLATE and not of
+  // any lineup: every card prints the same one beside its own number.
+  var fieldAvg = null;
   // The Play of the Week is the page's own read on which contest shape this
   // slate rewards, and it is computed in renderPlayOfWeek() from the same
   // optimizer the roster comes from. It is kept here so the coach can quote
@@ -2175,6 +2208,9 @@ p{color:var(--sec);margin:0 0 16px}
     if (!view) { showGameScopeRequired(); return; }
     var players = view.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
     var eligible = {}; players.forEach(function (p) { eligible[p.id] = true; });
+    // Before the solve, because the field does not depend on it: this is the
+    // bar, and the roster is measured against the bar.
+    fieldAvg = ITDfs.fieldAverage ? ITDfs.fieldAverage(players, { slots: view.slots, flex: view.flex, cap: parseInt($('dfCap').value, 10) || view.cap }) : null;
     var lock = [], excl = []; for (var k in marks) { if (!eligible[k]) continue; if (marks[k] === 'lock') lock.push(k); else if (marks[k] === 'excl') excl.push(k); }
     var sh = SHAPES[contest] || SHAPES.single;
     var r = ITDfs.build(players, { mode: mode, cap: parseInt($('dfCap').value, 10) || view.cap, slots: view.slots, flex: view.flex, lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked, maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
@@ -2275,6 +2311,11 @@ p{color:var(--sec);margin:0 0 16px}
       label: rank === 1 ? 'the recommended lineup' : 'alternate ' + (rank - 1),
       salary: l.salary, salaryLeft: l.remaining,
       projPoints: coachN(l.projPoints), floorPoints: coachN(l.floorPoints), ceilingPoints: coachN(l.ceilingPoints),
+      // The page prints the field's average beside the projection, so the
+      // coach carries the same comparison rather than being asked a question
+      // about a number on the screen it cannot see.
+      typicalEntryPoints: fieldAvg ? coachN(fieldAvg.points) : null,
+      vsTypicalEntry: fieldAvg ? coachN(Number(l.projPoints) - Number(fieldAvg.points)) : null,
       avgOwn: coachN(l.ownership),
       players: l.players.map(function (p) {
         var full = byKey[p.id] || p;
@@ -2451,6 +2492,7 @@ p{color:var(--sec);margin:0 0 16px}
       slate: { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: view.label, week: slate.week,
                cap: parseInt($('dfCap').value, 10) || view.cap, pricedPlayers: solverPool.length,
                medianVegasPerK: coachN(view.medianVegasPerK, 2),
+               typicalEntryPoints: fieldAvg ? coachN(fieldAvg.points) : undefined,
                marketCoverage: view.props ? { pricedPlayers: view.props.priced, ofPlayers: view.props.players,
                  percent: view.props.coverage, markets: (view.props.marketLabels || []).join(', ') || null,
                  avgBooks: view.props.avgBooks, freshestHours: coachN(view.props.freshestHours),
