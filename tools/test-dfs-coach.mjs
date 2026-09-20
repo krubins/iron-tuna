@@ -255,8 +255,12 @@ console.log('\nthe page');
   ok('the context carries the contest, the roster, the swaps and the board behind them',
      ['slate:', 'setup:', 'build:', 'thesis:', 'lineups:', 'pivots:', 'boardNotInLineup:', 'games:']
        .every((k) => ctx.includes(k)));
-  ok('it carries the locks, exclusions and the forced player the reader set',
-     /forcedIn: whatIfKey/.test(ctx) && /locked:/.test(ctx) && /excluded:/.test(ctx));
+  // `forcedIn` went with the What If box: forcing one player is what Require
+  // does now, for any number of them, so the two lists below are the whole of
+  // what the reader set and the coach no longer has a third name for one of
+  // them.
+  ok('it carries the constraints the reader set, and no longer a separate forced player',
+     /locked:/.test(ctx) && /excluded:/.test(ctx) && !/forcedIn/.test(ctx));
   // /api/coach refuses a body over 80,000 bytes. Every list in the payload is
   // capped where it is built, so a 14-game slate cannot silently 413.
   ok('every list in the payload is capped',

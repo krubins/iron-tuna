@@ -423,17 +423,6 @@ p{color:var(--sec);margin:0 0 16px}
 .df-calc:first-child{border-top:0}.df-calc h3{font-size:14px;margin:0 0 5px}.df-calc p{font-size:13px;line-height:1.55;margin:0}
 .df-formula{font-family:var(--font-mono);font-size:11.5px;color:var(--sec);background:var(--panel);border-radius:7px;padding:8px 10px;margin-top:7px;overflow-wrap:anywhere}
 .df-player-foot{font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin-top:10px}
-.df-whatif{border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--panel);padding:14px 16px;margin:14px 0 16px}
-.df-whatif.active{border-color:var(--teal);box-shadow:inset 0 0 0 1px var(--teal)}
-.df-whatif-head{display:flex;gap:16px;align-items:flex-start;justify-content:space-between}
-.df-whatif-head b{display:block;color:var(--text);font-size:15px;margin:2px 0 3px}
-.df-whatif-head p{font-size:12.5px;line-height:1.5;margin:0;max-width:72ch}
-.df-whatif-search{position:relative;max-width:560px;margin-top:10px}
-.df-whatif-search input{width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line2);border-radius:8px;background:var(--bg);color:var(--text)}
-.df-whatif-list{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 4px);background:var(--bg);border:1px solid var(--line2);border-radius:8px;box-shadow:0 14px 30px rgba(0,0,0,.14);max-height:280px;overflow:auto}
-.df-whatif-list button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);font:inherit;padding:9px 11px;cursor:pointer;text-align:left}
-.df-whatif-list button:last-child{border-bottom:0}.df-whatif-list button:hover,.df-whatif-list button:focus{background:var(--panel)}
-.df-whatif-list small{color:var(--muted);white-space:nowrap}
 .df-edge-up{color:var(--teal);font-weight:700}.df-edge-down{color:var(--danger);font-weight:700}.df-edge-flat{color:var(--muted)}
 .df-player-actions{margin-top:14px}
 @media(max-width:560px){.df-player-sheet{width:100vw;padding:18px}.df-player-grid{grid-template-columns:1fr 1fr}}
@@ -471,8 +460,7 @@ p{color:var(--sec);margin:0 0 16px}
 /* THE UA SHEET'S [hidden] IS SPECIFICITY (0,1,0) — the same as any class — and
    loses to an author sheet at a tie, so `.rk-seg{display:inline-flex}` and
    `.btn{display:inline-block}` were both beating it: the board switch stayed on
-   screen for venues that have no boards, and the What If box's "Clear" button
-   shipped visible with nothing to clear. front.html carries the same one-line
+   screen for venues that have no boards. front.html carries the same one-line
    fix for the same reason. This makes the attribute mean what it says. */
 [hidden]{display:none !important}
 
@@ -725,21 +713,6 @@ p{color:var(--sec);margin:0 0 16px}
 <section id="sec-lineup">
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>This week’s lineup</h2><a class="is-sec-more" href="#values">The board behind it &rarr;</a></div></div>
   <p class="df-sub">Solved against the cap for the contest shape above, on the same market numbers that price the season-long board. <b>Nothing on this page enters a contest</b> &mdash; it builds a roster to read and copy.</p>
-  <div class="df-whatif" id="dfWhatIf">
-    <div class="df-whatif-head">
-      <div>
-        <span class="df-player-kicker">What if?</span>
-        <b>I particularly favor one player</b>
-        <p>Start typing a player. Pick a match and Iron Tuna will force that player into the lineup, then re-solve every other slot under the same contest rules and salary cap. Once the roster is on screen you can also <b>Require</b> or <b>Exclude</b> any player from his own row, and require anyone else on the board from the drawer behind his name.</p>
-      </div>
-      <button class="btn alt" type="button" id="dfWhatIfClear" hidden>Clear</button>
-    </div>
-    <div class="df-whatif-search">
-      <input id="dfWhatIfInput" type="search" autocomplete="off" spellcheck="false" placeholder="Start typing a player name…" aria-label="Player to force into the lineup" aria-controls="dfWhatIfList" aria-autocomplete="list">
-      <div class="df-whatif-list" id="dfWhatIfList" role="listbox" hidden></div>
-    </div>
-    <p class="is-note" id="dfWhatIfState">As you type, matching players will appear below just like the cheat-sheet What If box.</p>
-  </div>
   <div id="dfLineups"></div>
 
   <!-- ── the branches ─────────────────────────────────────────────────────────
@@ -886,7 +859,6 @@ p{color:var(--sec);margin:0 0 16px}
   var site = 'dk', sec = 'lineup', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
   var gameStyle = '', gameChoice = '', payoutStructure = '';
   var selectedGames = {}, gameUniverseSig = '';
-  var whatIfKey = null, whatIfName = '';
   var GAME_STYLES = {
     'flash-draft': { label:'Flash Draft', note:'A live-game format. The player pool and available choices can change as the game unfolds.', single:false },
     classic: { label:'Classic', note:'The standard multi-game $50,000 salary-cap format. Iron Tuna can fully optimize this format from the loaded salary slate.', single:false, optimizer:true },
@@ -1087,8 +1059,7 @@ p{color:var(--sec);margin:0 0 16px}
       (tournamentBase ? 'Indexed ceiling ≈ ' + tournamentBase.toFixed(1) + ' × ownership factor ' + ownFactor.toFixed(2) + ' = ' : '') + tourney);
     rows += calcRow('Selected contest: ' + sh.head, selected, '');
     var pk = e(p.key || '');
-    rows += '<div class="df-player-actions"><button class="btn alt" type="button" data-player-whatif="' + pk + '">What if I build with ' + e(p.name) + '?</button>'
-      + '<span class="df-act" style="margin-left:9px">'
+    rows += '<div class="df-player-actions"><span class="df-act">'
       + '<button type="button" data-mark="lock" data-mark-key="' + pk + '" aria-pressed="' + (isRequired(p.key) ? 'true' : 'false') + '">' + (isRequired(p.key) ? 'Required' : 'Require in every lineup') + '</button>'
       + '<button type="button" class="drop" data-mark="excl" data-mark-key="' + pk + '" aria-pressed="' + (marks[p.key] === 'excl' ? 'true' : 'false') + '">' + (marks[p.key] === 'excl' ? 'Excluded' : 'Exclude from every lineup') + '</button></span></div>';
 
@@ -1361,10 +1332,9 @@ p{color:var(--sec);margin:0 0 16px}
   // must carry the player, 'excl' means none may. The roster row writes it too,
   // so the reader never has to open the fine-tune panel and find a name in two
   // hundred rows to say "keep him" or "not him" about a player already on
-  // screen. The What If box's forced player reads as required here as well, and
-  // clearing it there clears it here.
+  // screen.
   function markKeyOf(p) { return String((p && (p.id || p.key)) || ''); }
-  function isRequired(key) { return marks[key] === 'lock' || whatIfKey === key; }
+  function isRequired(key) { return marks[key] === 'lock'; }
   function rosterActions(p) {
     var k = markKeyOf(p); if (!k) return '';
     var req = isRequired(k);
@@ -1381,10 +1351,9 @@ p{color:var(--sec);margin:0 0 16px}
   function markedRows() {
     var view = filteredSlate(), by = {};
     ((view && view.players) || []).forEach(function (p) { if (p.key) by[p.key] = p; });
-    var out = [], seen = {};
-    if (whatIfKey && by[whatIfKey]) { out.push({ key: whatIfKey, kind: 'lock', p: by[whatIfKey] }); seen[whatIfKey] = 1; }
+    var out = [];
     Object.keys(marks).forEach(function (k) {
-      if (seen[k] || !marks[k] || !by[k]) return;
+      if (!marks[k] || !by[k]) return;
       out.push({ key: k, kind: marks[k], p: by[k] });
     });
     return out;
@@ -1399,6 +1368,7 @@ p{color:var(--sec);margin:0 0 16px}
       var on = {}; l.players.forEach(function (p) { on[markKeyOf(p)] = 1; });
       missing = rows.filter(function (r) { return r.kind === 'lock' && !on[r.key]; });
     }
+    var benchedReq = rows.filter(function (r) { return r.kind === 'lock' && r.p.available === false; });
     return '<div class="df-constraints"><b>Your constraints</b>'
       + rows.map(function (r) {
           return '<span class="df-chip ' + (r.kind === 'lock' ? 'keep' : 'drop') + '"><small>' + (r.kind === 'lock' ? 'Required' : 'Excluded') + '</small> ' + e(r.p.name)
@@ -1406,6 +1376,11 @@ p{color:var(--sec);margin:0 0 16px}
         }).join('')
       + '<button type="button" class="df-clear" data-mark="clearall">Clear all</button>'
       + (missing.length ? '<p class="df-warn">' + e(missing.map(function (r) { return r.p.name; }).join(' and ')) + ' could not be seated under the current cap and rules, so the roster above is solved without ' + (missing.length > 1 ? 'them' : 'him') + '.</p>' : '')
+      + benchedReq.map(function (r) {
+          return '<p class="df-warn"><b>' + e(r.p.name) + '</b> is required. He is not playing this week'
+            + (r.p.weekStatus ? ' (' + e(r.p.weekStatus) + (r.p.weekStatusNote ? ': ' + e(r.p.weekStatusNote) : '') + ')' : '')
+            + ', so he is in the roster only because you put him there.</p>';
+        }).join('')
       + '</div>';
   }
 
@@ -1678,7 +1653,7 @@ p{color:var(--sec);margin:0 0 16px}
   function setGameKeys(keys) {
     selectedGames = {};
     (keys || []).forEach(function (k) { selectedGames[k] = true; });
-    clearWhatIf(false); marks = {};
+    marks = {};
   }
   function setupReady() {
     if (site !== 'dk') return true;
@@ -1820,71 +1795,16 @@ p{color:var(--sec);margin:0 0 16px}
     coachSync();
   }
 
-  function whatIfPlayers() {
-    var s = filteredSlate();
-    return (s && s.players || []).filter(function (p) { return p.onBoard && p.key; }).sort(function (a, b) { return (b.ironTunaPoints || 0) - (a.ironTunaPoints || 0); });
-  }
-  function whatIfMatches(value) {
-    var q = String(value || '').trim().toLowerCase();
-    if (!q) return [];
-    return whatIfPlayers().filter(function (p) {
-      return String(p.name || '').toLowerCase().indexOf(q) >= 0 ||
-             String(p.team || '').toLowerCase().indexOf(q) >= 0 ||
-             String(p.position || '').toLowerCase().indexOf(q) >= 0;
-    }).slice(0, 10);
-  }
-  function renderWhatIfList() {
-    var box = $('dfWhatIfList'), value = $('dfWhatIfInput').value;
-    var list = whatIfMatches(value);
-    if (!value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
-    box.innerHTML = list.map(function (p) {
-      return '<button type="button" role="option" data-whatif-key="' + e(p.key) + '"><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' · ' + p.team) + '</small> ' + weekTag(p) + '</span><small>' + money(p.salary) + ' · IT ' + n1(p.ironTunaPoints) + '</small></button>';
-    }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
-    box.hidden = false;
-  }
-  function setWhatIf(p) {
-    if (!p || !p.key) return;
-    whatIfKey = p.key; whatIfName = p.name || 'Selected player';
-    if (marks[whatIfKey] === 'excl') delete marks[whatIfKey];
-    $('dfWhatIfInput').value = p.name + ' (' + p.position + ' · ' + p.team + ')';
-    $('dfWhatIfList').hidden = true;
-    $('dfWhatIfClear').hidden = false;
-    $('dfWhatIf').classList.add('active');
-    $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is forced into the lineup. Every other slot is re-solved around that choice.'
-      + (p.available === false ? ' <b>He is not playing this week' + (p.weekStatus ? ' (' + e(p.weekStatus) + (p.weekStatusNote ? ': ' + e(p.weekStatusNote) : '') + ')' : '') + '</b>, so he is in only because you put him there.' : '');
-    build();
-  }
-  function chooseBestWhatIf() {
-    var value = $('dfWhatIfInput').value.trim();
-    var list = whatIfMatches(value);
-    if (!list.length) return;
-    var q = value.toLowerCase();
-    var exact = list.find(function (p) { return p.name.toLowerCase() === q; });
-    setWhatIf(exact || list[0]);
-  }
-  function clearWhatIf(rebuild) {
-    whatIfKey = null; whatIfName = '';
-    $('dfWhatIfInput').value = '';
-    $('dfWhatIfList').hidden = true; $('dfWhatIfList').innerHTML = '';
-    $('dfWhatIfClear').hidden = true; $('dfWhatIf').classList.remove('active');
-    $('dfWhatIfState').textContent = 'As you type, matching players will appear below just like the cheat-sheet What If box.';
-    if (rebuild) build();
-  }
   // Every require/exclude control on the page lands here: the roster rows, the
-  // chips above the board and the player drawer. It writes `marks`, keeps the
-  // What If box honest about the player it forced, repaints the pool table so
-  // the fine-tune panel agrees with the roster, and re-solves.
+  // chips above the board and the player drawer. It writes `marks`, repaints
+  // the pool table so the fine-tune panel agrees with the roster, and re-solves.
   function applyMark(act, key) {
-    if (act === 'clearall') { marks = {}; clearWhatIf(false); }
+    if (act === 'clearall') marks = {};
     else if (!key) return;
-    else if (act === 'clear') { delete marks[key]; if (whatIfKey === key) clearWhatIf(false); }
-    else if (act === 'lock') {
-      if (isRequired(key)) { delete marks[key]; if (whatIfKey === key) clearWhatIf(false); }
-      else marks[key] = 'lock';
-    } else if (act === 'excl') {
-      if (marks[key] === 'excl') delete marks[key];
-      else { marks[key] = 'excl'; if (whatIfKey === key) clearWhatIf(false); }
-    } else return;
+    else if (act === 'clear') delete marks[key];
+    else if (act === 'lock') { if (isRequired(key)) delete marks[key]; else marks[key] = 'lock'; }
+    else if (act === 'excl') { if (marks[key] === 'excl') delete marks[key]; else marks[key] = 'excl'; }
+    else return;
     var view = filteredSlate(); if (view) pool(view);
     tuned = true; build();
   }
@@ -1912,12 +1832,10 @@ p{color:var(--sec);margin:0 0 16px}
     var players = view.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
     var eligible = {}; players.forEach(function (p) { eligible[p.id] = true; });
     var lock = [], excl = []; for (var k in marks) { if (!eligible[k]) continue; if (marks[k] === 'lock') lock.push(k); else if (marks[k] === 'excl') excl.push(k); }
-    if (whatIfKey && eligible[whatIfKey] && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey);
     var sh = SHAPES[contest] || SHAPES.single;
     var r = ITDfs.build(players, { mode: mode, cap: parseInt($('dfCap').value, 10) || view.cap, slots: view.slots, flex: view.flex, lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked, maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
     built = r.ok ? r : null;
     if (!r.ok) {
-      if (whatIfKey) $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is selected, but no legal lineup fits the current cap and constraints.';
       $('dfLineups').innerHTML = constraintBar(null)
         + '<p class="is-empty">No lineup satisfies those constraints under that cap. Clear one of the constraints above, or loosen the cap and stacking rules in the fine-tune panel below.</p>';
       $('dfPivots').innerHTML = '';
@@ -2047,7 +1965,6 @@ p{color:var(--sec);margin:0 0 16px}
                maxPerTeam: parseInt($('dfMaxTeam').value, 10) || null,
                lineupsRequested: parseInt($('dfN').value, 10) || 1,
                tunedByReader: tuned,
-               forcedIn: whatIfKey ? whatIfName : null,
                locked: Object.keys(marks).filter(function (k) { return marks[k] === 'lock' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
                excluded: Object.keys(marks).filter(function (k) { return marks[k] === 'excl' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
                note: built.note || null },
@@ -2201,7 +2118,6 @@ p{color:var(--sec);margin:0 0 16px}
   function slateOk(j) {
     slate = j;
     if (site === 'dk' && !gameUniverseSig) selectedGames = {};
-    if (whatIfKey && !(j.players || []).some(function (p) { return p.key === whatIfKey; })) clearWhatIf(false);
     var stamp = j.source === 'upload'
       ? 'Priced from your own ' + (j.label || 'salary') + ' file. It was read in this browser and stored nowhere on the site.'
       : 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
@@ -2294,7 +2210,7 @@ p{color:var(--sec);margin:0 0 16px}
       window.addEventListener('load', mountCoach);
     }
     $('dfCoachFab').addEventListener('click', toggleCoach);
-    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; selectedGames = {}; gameUniverseSig = ''; gameChoice=''; payoutStructure=''; clearWhatIf(false); load(); });
+    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; selectedGames = {}; gameUniverseSig = ''; gameChoice=''; payoutStructure=''; load(); });
     $('dfGameStyleSelect').addEventListener('change', function () {
       gameStyle=this.value; gameChoice=''; payoutStructure=''; selectedGames={}; gameUniverseSig='';
       $('dfPayoutSelect').value=''; $('dfPayoutSelect').disabled=true; $('dfCustomGames').hidden=true;
@@ -2317,19 +2233,6 @@ p{color:var(--sec);margin:0 0 16px}
       payoutStructure=this.value; payoutToContest(); updateSetupState(); render();
       try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({event:'dfs_payout_structure',uid:localStorage.getItem('it.uid')||'',props:{path:location.pathname,payout:payoutStructure,site:site}})],{type:'application/json'})); } catch(x){}
     });
-    $('dfWhatIfInput').addEventListener('input', renderWhatIfList);
-    $('dfWhatIfInput').addEventListener('focus', renderWhatIfList);
-    $('dfWhatIfInput').addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter') { ev.preventDefault(); chooseBestWhatIf(); }
-      if (ev.key === 'Escape') $('dfWhatIfList').hidden = true;
-    });
-    $('dfWhatIfList').addEventListener('click', function (ev) {
-      var b = ev.target.closest('button[data-whatif-key]'); if (!b) return;
-      var key = b.getAttribute('data-whatif-key');
-      var p = whatIfPlayers().find(function (x) { return x.key === key; });
-      setWhatIf(p);
-    });
-    $('dfWhatIfClear').addEventListener('click', function () { clearWhatIf(true); });
     // The salary file. The server caps the body at a million characters, so a
     // file past that is refused here rather than truncated into a CSV that
     // parses and quietly leaves half the slate off the board.
@@ -2382,11 +2285,6 @@ p{color:var(--sec);margin:0 0 16px}
     });
     $('dfPool').addEventListener('click', function (ev) { if (ev.target.closest('.df-player-link')) return; var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; var view=filteredSlate(); if (view) pool(view); tuned = true; build(); });
     document.addEventListener('click', function (ev) {
-      var wi = ev.target.closest('[data-player-whatif]');
-      if (wi) {
-        var p0 = whatIfPlayers().find(function (p) { return p.key === wi.getAttribute('data-player-whatif'); });
-        closePlayerCalc(); setWhatIf(p0); return;
-      }
       var player = ev.target.closest('.df-player-link');
       if (player) {
         ev.preventDefault(); ev.stopPropagation();

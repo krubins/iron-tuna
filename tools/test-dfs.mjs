@@ -566,8 +566,16 @@ console.log('\nthe DFS page explanations');
   ok('player names expose a calculation drawer', page.includes('id="dfPlayerModal"') && page.includes('function openPlayerCalc') && page.includes('df-player-link'));
   ok('the player drawer labels modeled ownership as a model', page.includes('Modeled ownership') && page.includes('not an operator or third-party ownership feed'));
   ok('DraftKings FPPG is always paired with the Iron Tuna projection and edge', page.includes('DraftKings FPPG') && page.includes('Iron Tuna Projection') && page.includes('Tuna Edge') && page.includes('historical fantasy-points-per-game average'));
-  ok('the DFS What If box autocompletes from typed player names', page.includes('id="dfWhatIfInput"') && page.includes('function renderWhatIfList') && page.includes("addEventListener('input', renderWhatIfList)") && page.includes('data-whatif-key'));
-  ok('the What If selection becomes an optimizer lock only when the player is eligible for the selected games', page.includes("if (whatIfKey && eligible[whatIfKey] && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey)"));
+  // The What If box forced ONE player in by name, which is what Require does
+  // now for any number of them, from the roster row, the alternates or the
+  // drawer. Two controls for one job is one too many, so the box came out --
+  // markup, styles, its five functions, its listeners and the coach's separate
+  // `forcedIn` name for the player it held.
+  ok('the What If box is gone, root and branch',
+     !/whatIf|WhatIf|df-whatif|data-whatif-key/.test(page));
+  ok('and Require is the one way in, from every roster and from any name on the board',
+     page.includes("function isRequired(key) { return marks[key] === 'lock'; }")
+     && page.includes('function rosterActions(p)') && page.includes('Require in every lineup'));
   // Requiring and excluding used to be reachable only from the pool table
   // inside the closed fine-tune panel. The roster is where the reader argues
   // with the solve, so the two controls sit on the roster row.
@@ -586,9 +594,13 @@ console.log('\nthe DFS page explanations');
   ok('every require/exclude control writes the same marks store and re-solves',
      page.includes('function applyMark(act, key)') && page.includes("marks[key] = 'lock'") && page.includes("marks[key] = 'excl'")
      && page.includes("['dfLineups', 'dfPlayerBody'].forEach"));
-  ok('requiring a player the What If box already forced reads as required, and clearing it clears both',
-     page.includes("function isRequired(key) { return marks[key] === 'lock' || whatIfKey === key; }")
-     && page.includes('if (whatIfKey === key) clearWhatIf(false)'));
+  // A lock is a decision and the builder does not overrule a decision, but the
+  // page says what the decision was: this warning used to live in the What If
+  // box, and it belongs to the constraint, not to the control that set it.
+  ok('requiring a man who is not playing still says so, now on the constraint itself',
+     page.includes("r.kind === 'lock' && r.p.available === false")
+     && page.includes('He is not playing this week')
+     && page.includes('only because you put him there'));
   ok('every constraint the build carries is listed above the roster with its own undo',
      page.includes('function constraintBar(l)') && page.includes('Your constraints') && page.includes("data-mark=\"clear\"")
      && page.includes("data-mark=\"clearall\"") && page.includes('constraintBar(lead) + benchedNote(r)'));
