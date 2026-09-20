@@ -675,7 +675,7 @@ console.log('\nthe DFS page explanations');
   // somebody not in the roster, the pin holds one the builder already found.
   ok('the pin and the name search are both kept, because they reach different players',
      page.includes('id="dfReqOpen"') && page.includes('class="df-pin"')
-     && page.includes('the pin holds a player the builder already found'));
+     && page.includes('puts him in the <b>Must include</b> box above'));
   // The search is behind a pill now, so it is a thing the reader asks for
   // rather than a field sitting open above every roster.
   ok('the require search opens from a pill and stays open for the next name',
@@ -695,13 +695,23 @@ console.log('\nthe DFS page explanations');
   // A lock is a decision and the builder does not overrule a decision, but the
   // page says what the decision was: this warning used to live in the What If
   // box, and it belongs to the constraint, not to the control that set it.
-  ok('requiring a man who is not playing still says so, now on the constraint itself',
-     page.includes("r.kind === 'lock' && r.p.available === false")
+  ok('a man in the box who is not playing still says so, on the box itself',
+     page.includes('must.filter(function (r) { return r.p.available === false; })')
      && page.includes('He is not playing this week')
      && page.includes('only because you put him there'));
-  ok('every constraint the build carries is listed above the roster with its own undo',
-     page.includes('function renderConstraints(l)') && page.includes('Your constraints') && page.includes("data-mark=\"clear\"")
-     && page.includes("data-mark=\"clearall\"") && page.includes('renderConstraints(lead);'));
+  // The box is the point: a container at the top of the roster that the reader
+  // fills with the men already committed, so it reads as "these are in" rather
+  // than as a row of settings.
+  ok('the players who must be included sit in a box of their own at the top of the roster',
+     page.includes('function renderConstraints(l)') && page.includes('>Must include<')
+     && page.includes('id="dfMustBox"') && page.includes("$('dfMustChips').innerHTML")
+     && page.includes("data-mark=\"clear\"") && page.includes("data-mark=\"clearall\"")
+     && page.includes('renderConstraints(lead);'));
+  ok('the box keeps its shape when it is empty, and says so',
+     page.includes('id="dfMustEmpty"') && page.includes('min-height:48px')
+     && page.includes('Nobody yet'));
+  ok('an exclusion is filed under the box, not mixed in with the men who are in',
+     page.includes('Also excluded') && page.includes("host.classList.toggle('has', must.length > 0)"));
   // A reader who already has three men in a submitted entry has to put those
   // three IN by name; the roster rows only reach the nine the builder chose.
   // The search takes them one after another and never closes on a pick.
