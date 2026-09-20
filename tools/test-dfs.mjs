@@ -25,7 +25,7 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // a market number by the same factors the season blend does, so lifting it
   // here is what keeps this test honest about which one it is exercising.
   cut('const BLEND_SHRINK', 'function blendComponents') + '\n' + cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, BLEND_SHRINK };'
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, BLEND_SHRINK };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 
@@ -549,7 +549,44 @@ console.log('\nthe DFS page explanations');
   ok('Payout Structure maps to optimizer risk shapes', page.includes("h2h: { label:'Head-to-Head', shape:'cash'") && page.includes("'double-up': { label:'Double Up', shape:'cash'") && page.includes("multiplier: { label:'Multiplier', shape:'single'") && page.includes("'tournament-multi': { label:'Tournament - Multi-Entry', shape:'gpp'"));
   ok('the setup is sequential and required', page.includes("if (!gameStyle || !gameChoice || !payoutStructure) return false") && page.includes("First select Game Style.") && page.includes("Next select the Games / player pool.") && page.includes("Finally select the Payout Structure."));
   ok('selected games actually filter the optimizer and every DFS board', page.includes('function filteredSlate()') && page.includes('selectedGames[playerGameKey(p)]') && page.includes('dashboard(view); envTable(view); values(view); pool(view); stacks(view); tdBoard(view);'));
-  ok('non-Classic formats do not receive an illegal Classic roster', page.includes("function styleSupportsOptimizer() { return site !== 'dk' || gameStyle === 'classic'; }") && page.includes('The Classic lineup solver is hidden because this DraftKings format uses different roster or scoring rules.'));
+  // This used to assert the limitation -- Classic or nothing -- because that
+  // was the only way to be sure a Showdown never got a nine-slot roster. The
+  // guarantee is the same and the mechanism is not: every Game Style resolves
+  // to its OWN roster, and the only thing that stops a solve is a slate that
+  // cannot price the roster the format asks for.
+  ok('every format is solved against its own roster, and never against another format\u2019s',
+     page.includes('function solveFormat()') && page.includes('ITDfs.formatFor(site, style)')
+     && page.includes('format: f.fmt, slots: f.fmt.slots, flex: f.fmt.flex')
+     && page.includes("mult: f.fmt.mult || null, tierSlots: f.fmt.tierSlots || null, minTeams: f.fmt.minTeams || 0"));
+  ok('a single-game roster is never priced off the main slate, and says which file it needs',
+     page.includes("fmt.kind === 'salary' && fmt.single && priced !== 'single-game'")
+     && page.includes('Export the single-game CSV from the contest lobby and upload it above'));
+  ok('a Tiers roster is never invented out of salary bands',
+     page.includes("ITDfs.tierFormat(") && page.includes('inventing buckets out of salary would build a roster nobody can enter'));
+  ok('a contest with no roster gets the board it actually asks for, not a lineup card',
+     page.includes('function renderPicks(f, players)') && page.includes('ITDfs.pickBoard(players,')
+     && page.includes('Model leans') && page.includes('posts its own line on a player'));
+  // The pick contests are the one format with no seats to count, and the line
+  // above the board counted them unguarded: `fmt.slots.length` on a format
+  // that has no slots threw inside build(), which left the page showing the
+  // "complete the setup" placeholder for a setup that was complete.
+  ok('and the line above the board counts no seats where a format has none',
+     page.includes("if (fmt.slots && fmt.slots.length) bits.push(fmt.slots.length + ' seat'"));
+  ok('an uncapped roster draws no cap meter and prints no spend',
+     page.includes('var capped = l.remaining != null;') && page.includes("'No salary cap'")
+     && page.includes("var meter = !capped ? '' :"));
+  ok('a multiplier seat is chipped on the roster row and keeps its base price behind it',
+     page.includes('df-mult') && page.includes('This seat scores ') && page.includes('in a FLEX seat'));
+  // A Showdown roster has no QB SLOT -- the seats are a Captain and five FLEX
+  // -- so every sentence that looked for the quarterback by slot ("there is no
+  // same-team QB/pass-catcher stack in this build") was written about a
+  // quarterback the page had failed to find, with one sitting in the Captain
+  // seat. He is found by position now, everywhere it matters.
+  ok('the quarterback is found wherever he is sitting, not only in a QB slot',
+     page.includes('function lineupQb(l)')
+     && page.includes("for (var j = 0; j < ps.length; j++) if (ps[j].position === 'QB') return ps[j];")
+     && !/for \(var k = 0; k < l\.players\.length; k\+\+\) if \(l\.players\[k\]\.slot === 'QB'\)/.test(page)
+     && (page.match(/lineupQb\(/g) || []).length >= 4);
   ok('DraftKings terminology retains hover help', page.includes('.df-term:hover::after') && page.includes('data-tip="The roster and scoring format DraftKings uses.') && page.includes('data-tip="How the contest awards prizes.'));
   // The thresholds moved into the optimizer, where they are exercised against
   // real lineups rather than matched as strings in a page.
@@ -627,10 +664,15 @@ console.log('\nthe DFS page explanations');
      page.includes('renderConstraints(null);') && page.includes('Clear one of the constraints above'));
   // "Clear a constraint" is the wrong advice to a reader whose required men are
   // already in a submitted entry. The arithmetic is the useful answer.
+  // It takes the resolved FORMAT now, not a bare slot list: on a multiplier
+  // roster the Captain seat costs half again as much, and arithmetic that
+  // priced the man rather than the seat would tell a reader his required pair
+  // fits under the cap when it does not.
   ok('and a roster that cannot fit the required players says why, in money',
-     page.includes('function shortfallNote(players, lockKeys, slots, flex, cap)')
+     page.includes('function shortfallNote(players, lockKeys, f, cap)')
      && page.includes('The cheapest legal fill for the other ')
-     && page.includes('cannot all be seated: this roster has no free slot'));
+     && page.includes('cannot all be seated: this roster has no free slot')
+     && page.includes('var seatCost = function (q, slot)'));
   ok('a required player the solve could not seat is said out loud rather than quietly dropped',
      page.includes('could not be seated under the current cap and rules'));
   ok('a man who is not playing is marked in the player pool, not quietly dropped', page.includes('function weekTag(p)') && page.includes('df-week-out') && page.includes('df-row-out'));
@@ -855,6 +897,225 @@ console.log('\nthe optimizer');
      'leverage kept ' + heavy(chalkFree.lineups[0]) + ' chalk bodies');
   ok('a lineup reports its total modeled ownership when the board carries it',
      typeof chalkFree.lineups[0].ownership === 'number' && chalkFree.lineups[0].ownership > 0);
+}
+
+// ── the contests that are not Classic ──────────────────────────────────────
+// A lobby sells a dozen shapes of contest out of files with the same columns
+// and completely different rosters behind them. For a year this page could
+// only answer one of them. These are the rest: the roster each one builds,
+// where that roster comes from, and the two things that must never happen --
+// a Captain priced at his FLEX salary, and a roster invented for a contest
+// whose rules this slate does not carry.
+console.log('\nthe single-game file');
+{
+  // DraftKings exports the Captain as his own row at 1.5x the FLEX price.
+  const dkShowCsv = 'Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\n'
+    + 'QB,"Josh Allen (1)",Josh Allen,1,CPT,17100,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\n'
+    + 'QB,"Josh Allen (2)",Josh Allen,2,FLEX,11400,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\n'
+    + 'RB,"Breece Hall (3)",Breece Hall,3,CPT,15300,BUF@NYJ 09/14/2026 01:00PM ET,NYJ,17.5\n'
+    + 'RB,"Breece Hall (4)",Breece Hall,4,FLEX,10200,BUF@NYJ 09/14/2026 01:00PM ET,NYJ,17.5\n';
+  const parsed = H.parseDfsCsv('dk', dkShowCsv);
+  ok('a Showdown export is named a single-game file', H.dfsSlateShape(parsed.rows) === 'single-game');
+  const folded = H.dfsCollapseSingleGame(parsed.rows, 'dk');
+  ok('and the two rows for one man fold into one', folded.length === 2);
+  ok('the row keeps the FLEX price, which is the number every board compares against',
+     folded.every(r => r.salary === 11400 || r.salary === 10200));
+  // The seat price comes off the FILE, not from 1.5x arrived at here: it is
+  // the operator's own number and the only one a reader can check in the lobby.
+  ok('and carries the operator’s own price for the Captain seat',
+     folded.find(r => r.name === 'Josh Allen').salaryBySlot.CPT === 17100
+     && folded.find(r => r.name === 'Breece Hall').salaryBySlot.CPT === 15300);
+  // FanDuel writes one row per player with the seat in its roster-position
+  // list, the way DraftKings writes "RB/FLEX" on a main slate. One row is one
+  // price, and it is the base price.
+  const fdShow = H.parseDfsCsv('fd', 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n'
+    + '1,QB,Josh,Josh Allen,Allen,24.1,1,15000,BUF@NYJ,BUF,NYJ,,,,MVP/FLEX\n'
+    + '2,RB,Breece,Breece Hall,Hall,17.5,1,13000,BUF@NYJ,NYJ,BUF,,,,MVP/FLEX\n');
+  const fdFold = H.dfsCollapseSingleGame(fdShow.rows, 'fd');
+  ok('a FanDuel single-game row is left at the price the file gave it, not divided by 1.5',
+     fdFold.length === 2 && fdFold[0].salary === 15000 && !fdFold[0].salaryBySlot);
+
+  // End to end: the roster comes off the shape of the file.
+  const one = SAL.filter(s => s.team === 'BUF' || s.team === 'NYJ');
+  const show = H.buildDfsSlate('dk', one, WEEK, { shape: 'single-game' });
+  ok('a single-game slate is built for the single-game roster',
+     show.format === 'single-game' && show.slots.length === 6 && show.slots[0] === 'CPT'
+     && show.cap === 50000 && show.minTeams === 2 && show.multiplierSeat === 'CPT',
+     JSON.stringify({ slots: show.slots, cap: show.cap }));
+  ok('...where any position may sit in any seat, which is the whole difference from a FLEX',
+     ['QB', 'RB', 'WR', 'TE', 'K', 'DST'].every(p => show.flex.includes(p)));
+  ok('a main slate is untouched by any of it',
+     slate.format === 'classic' && slate.slots.length === 9 && slate.multiplier === null && slate.minTeams === 0);
+  ok('the two roster tables agree, because a reader compares the page to the lobby and not to us',
+     (() => {
+       const w = H.DFS_SITES.dk.single, o = DFS.FORMATS['dk-showdown'];
+       const wf = H.DFS_SITES.fd.single, of = DFS.FORMATS['fd-single'];
+       return w.cap === o.cap && w.slots.join() === o.slots.join() && w.flex.join() === o.flex.join()
+         && w.mult.CPT === o.mult.CPT && w.minTeams === o.minTeams
+         && wf.cap === of.cap && wf.slots.join() === of.slots.join() && wf.mult.MVP === of.mult.MVP;
+     })());
+}
+
+console.log('\nthe tiers a Tiers contest posts');
+{
+  const fd = H.parseDfsCsv('fd', 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n'
+    + '1,QB,Josh,Josh Allen,Allen,24.1,1,9200,BUF@NYJ,BUF,NYJ,,,1,QB\n'
+    + '2,RB,Breece,Breece Hall,Hall,17.5,1,8000,BUF@NYJ,NYJ,BUF,,,2,RB\n');
+  ok('FanDuel’s Tier column comes across', fd.rows[0].tier === '1' && fd.rows[1].tier === '2');
+  const dkTier = H.parseDfsCsv('dk', 'Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\n'
+    + 'QB,"Josh Allen (1)",Josh Allen,1,TIER 1,8200,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\n'
+    + 'RB,"Jahmyr Gibbs (2)",Jahmyr Gibbs,2,RB/FLEX,8900,DET@GB 09/14/2026 04:25PM ET,DET,21.3\n');
+  ok('DraftKings names its tier in the roster-position cell, and a main slate’s does not',
+     dkTier.rows[0].tier === '1' && dkTier.rows[1].tier === null);
+  // The buckets are the contest's, never ours. A slate with none cannot be
+  // solved as a Tiers contest, and says so rather than banding by salary.
+  ok('a slate with no tiers builds no Tiers roster at all',
+     DFS.tierFormat(slate.players.filter(p => p.onBoard)) === null);
+  const tiered = slate.players.filter(p => p.onBoard).map((p, i) => ({ ...p, id: p.key, tier: String((i % 4) + 1) }));
+  const tf = DFS.tierFormat(tiered);
+  ok('and a slate that carries them gets one seat per tier, in the contest’s own order',
+     tf.slots.length === 4 && tf.tiers.join() === '1,2,3,4' && tf.cap === 0);
+  const tr = DFS.build(tiered, { format: tf, mode: 'ironTuna' });
+  ok('the roster takes exactly one player out of each tier',
+     tr.ok && tr.lineups[0].players.length === 4
+     && tr.lineups[0].players.map(p => String(p.tier)).sort().join() === '1,2,3,4',
+     JSON.stringify((tr.lineups[0] || { players: [] }).players.map(p => p.slot + '=' + p.tier)));
+  ok('...and no cap is reported, because the contest charges none',
+     tr.lineups[0].remaining === null && tr.capped === false);
+}
+
+console.log('\nthe Showdown roster');
+{
+  const one = H.buildDfsSlate('dk', SAL.filter(s => s.team === 'BUF' || s.team === 'NYJ'), WEEK, { shape: 'single-game' });
+  const players = one.players.filter(p => p.onBoard).map(p => ({ ...p, id: p.key }));
+  const fmt = DFS.formatFor('dk', 'showdown-captain');
+  const r = DFS.build(players, { format: fmt, mode: 'ironTuna', lineups: 3, seed: 7 });
+  ok('a Showdown lineup is built', r.ok && r.lineups[0].players.length === 6 && r.kind === 'salary');
+  const L = r.lineups[0];
+  const cpt = L.players.find(p => p.slot === 'CPT');
+  ok('one seat is the Captain and the rest are FLEX',
+     !!cpt && L.players.filter(p => p.slot === 'FLEX').length === 5);
+  // BOTH numbers, or the roster is a fiction: a Captain carried at his FLEX
+  // price is several thousand dollars of cap nobody gave you.
+  ok('the Captain scores 1.5x AND costs 1.5x', cpt.multiplier === 1.5
+     && near(cpt.proj, Math.round(cpt.baseProj * 1.5 * 10) / 10, 0.11)
+     && cpt.salary === Math.round(cpt.baseSalary * 1.5));
+  ok('the lineup totals are the seats, not the men',
+     L.salary === L.players.reduce((s, p) => s + p.salary, 0)
+     && near(L.projPoints, L.players.reduce((s, p) => s + p.proj, 0), 0.31),
+     JSON.stringify({ salary: L.salary, proj: L.projPoints }));
+  ok('it respects the cap at the prices the seats actually charge', L.salary <= 50000);
+  ok('both teams are in it, because an entry with one is rejected at the lobby',
+     new Set(L.players.map(p => p.team)).size >= 2);
+  ok('every seat takes any position, which a classic FLEX does not',
+     r.lineups.some(l => l.players.some(p => p.slot === 'FLEX' && (p.position === 'QB' || p.position === 'DST'))));
+  // Both the points and the salary scale by the same 1.5, so value per dollar
+  // is identical for every candidate and cannot pick the Captain. The answer
+  // only shows up in the total, which is what the seat-exchange move reads.
+  ok('the Captain is chosen by the lineup total, not by value per dollar',
+     near(L.points, (() => {
+       let best = 0;
+       const cap = 50000;
+       for (let ci = 0; ci < players.length; ci++) {
+         const rest = players.filter((_, i) => i !== ci);
+         const rec = (start, picked, sal, pts) => {
+           if (picked.length === 5) {
+             if (sal > cap) return;
+             if (new Set([players[ci].team, ...picked.map(p => p.team)]).size < 2) return;
+             if (pts > best) best = pts;
+             return;
+           }
+           for (let i = start; i < rest.length; i++) {
+             const q = rest[i];
+             if (sal + q.salary > cap) continue;
+             picked.push(q); rec(i + 1, picked, sal + q.salary, pts + q.ironTunaPoints); picked.pop();
+           }
+         };
+         rec(0, [], Math.round(players[ci].salary * 1.5), players[ci].ironTunaPoints * 1.5);
+       }
+       return Math.round(best * 10) / 10;
+     })(), 0.11), String(L.points));
+  // Two lineups made of the same six men with a different Captain are two
+  // different entries, and a de-duplicator that could not tell them apart
+  // would quietly refuse to offer the second one.
+  ok('the same six men with a different Captain are a different lineup',
+     new Set(r.lineups.map(l => l.key)).size === r.lineups.length);
+  ok('a locked player is seated and may still wear the Captain seat',
+     (() => { const k = players.find(p => p.position === 'TE').key;
+              const lk = DFS.build(players, { format: fmt, mode: 'ironTuna', lock: [k] });
+              return lk.ok && lk.lineups[0].players.some(p => p.id === k); })());
+  // Both operators reject a six-body entry from one side of the game.
+  const oneSide = players.filter(p => p.team === 'BUF');
+  ok('a pool with only one team in it builds nothing rather than a rejected entry',
+     DFS.build(oneSide, { format: fmt, mode: 'ironTuna' }).ok === false);
+  // The file's own price for the seat wins over 1.5x derived here.
+  const priced = players.map(p => ({ ...p, salaryBySlot: { CPT: p.salary * 2 } }));
+  const pr = DFS.build(priced, { format: fmt, mode: 'ironTuna' });
+  ok('when the file priced the Captain seat, that is the price charged',
+     pr.ok && (() => { const c = pr.lineups[0].players.find(p => p.slot === 'CPT'); return c.salary === c.baseSalary * 2; })());
+  ok('FanDuel sells the same roster at its own cap and calls the seat MVP',
+     (() => { const f = DFS.formatFor('fd', 'showdown-captain');
+              const fr = DFS.build(players, { format: f, mode: 'ironTuna' });
+              return f.cap === 60000 && fr.ok && fr.lineups[0].players[0].slot === 'MVP'
+                && fr.lineups[0].salary <= 60000; })());
+}
+
+console.log('\nthe formats with no cap at all');
+{
+  const players = slate.players.filter(p => p.onBoard).map(p => ({ ...p, id: p.key }));
+  const dr = DFS.formatFor('dk', 'snake');
+  const r = DFS.build(players, { format: dr, mode: 'ironTuna' });
+  ok('a draft target is built over the classic seats with no cap',
+     r.ok && r.capped === false && r.lineups[0].players.length === 9 && r.lineups[0].remaining === null);
+  // With no cap there is no per-dollar question, and dividing by a salary the
+  // contest never charges would rank the board by price for nothing.
+  ok('...and it takes the best player at every seat rather than the best value',
+     (() => {
+       const best = {};
+       players.forEach(p => { if (!best[p.position] || p.ironTunaPoints > best[p.position].ironTunaPoints) best[p.position] = p; });
+       const qb = r.lineups[0].players.find(p => p.slot === 'QB');
+       return qb.id === best.QB.id;
+     })());
+  ok('a single-game draft seats six and still needs both teams',
+     (() => { const f = DFS.formatFor('dk', 'snake-showdown');
+              const one = players.filter(p => p.team === 'BUF' || p.team === 'NYJ');
+              const dd = DFS.build(one, { format: f, mode: 'ironTuna' });
+              return f.slots.length === 6 && f.minTeams === 2 && dd.ok
+                && new Set(dd.lineups[0].players.map(p => p.team)).size >= 2; })());
+  ok('a player with no salary at all is still draftable, because a draft prices nobody',
+     (() => { const free = players.map(p => ({ ...p, salary: 0 }));
+              return DFS.build(free, { format: dr, mode: 'ironTuna' }).ok === true
+                && DFS.build(free, { format: DFS.FORMATS['dk-classic'], mode: 'ironTuna' }).ok === false; })());
+}
+
+console.log('\nthe contests that are not a roster');
+{
+  const players = slate.players.filter(p => p.onBoard).map(p => ({ ...p, id: p.key }));
+  const pb = DFS.pickBoard(players, { picks: 6 });
+  ok('Pick6 gets a board of picks, not a roster', pb.ok && pb.kind === 'picks' && pb.picks.length === 6);
+  ok('every pick carries the model, the market, the gap and the side it points to',
+     pb.picks.every(p => typeof p.proj === 'number' && typeof p.market === 'number'
+       && typeof p.edge === 'number' && (p.direction === 'more' || p.direction === 'less')));
+  ok('the largest disagreement is first', pb.picks.every((p, i) => i === 0 || Math.abs(p.edge) <= Math.abs(pb.picks[i - 1].edge) + 1e-9));
+  // A quoted disagreement is a disagreement with money; an unquoted one is two
+  // models sharing most of their inputs. The board says which, on every row.
+  ok('and says on every row whether a book actually posted a price',
+     pb.picks.every(p => p.basis === 'quoted-prop' || p.basis === 'game-line')
+     && /the game line sliced up/.test(pb.note));
+  const td = DFS.pickBoard(players, { stat: 'touchdowns', picks: 5 });
+  ok('the touchdown contest ranks on the touchdown number instead',
+     td.ok && td.stat === 'touchdowns'
+     && td.picks.every((p, i) => i === 0 || p.tdProbability <= td.picks[i - 1].tdProbability + 1e-9));
+  ok('Best Ball is named a season format rather than given a Sunday roster',
+     DFS.formatFor('dk', 'best-ball').kind === 'season');
+  ok('every Game Style on the page resolves to a format',
+     ['flash-draft', 'classic', 'showdown-captain', 'pick6', 'best-ball', 'tiers', 'in-game-showdown',
+      'single-stat-yards', 'single-stat-touchdowns', 'snake', 'snake-showdown', 'madden-classic', 'madden-showdown-captain']
+       .every(k => { const f = DFS.formatFor('dk', k); return f && typeof f.roster === 'string' && f.roster.length; }));
+  ok('the Madden styles build the rosters they are modelled on',
+     DFS.formatFor('dk', 'madden-classic').key === 'dk-classic'
+     && DFS.formatFor('dk', 'madden-showdown-captain').key === 'dk-showdown'
+     && DFS.formatFor('dk', 'in-game-showdown').key === 'dk-showdown');
 }
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
