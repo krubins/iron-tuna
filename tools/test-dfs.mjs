@@ -961,15 +961,22 @@ console.log('\nthe field\'s average entry');
   const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
   ok('the page solves the field average off the whole priced board', page.includes('ITDfs.fieldAverage(players, { slots: view.slots, flex: view.flex, cap:'));
   ok('the lineup card prints it in parentheses beside the projection',
-     page.includes("stat(projStat + fieldPar, 'Iron Tuna Projection', true)") && page.includes("is-par\">(' + tip("));
+     page.includes("stat(projStat + fieldPar, 'Iron Tuna Projection', true)")
+     && page.includes("' <small class=\"is-par\">(' + n1(fieldAvg.points) + ')</small>'"));
+  // The paragraph under the stat row explains this number in full sentences,
+  // so the parenthetical carries no tip of its own and no native title. Two
+  // copies of one explanation is two copies to keep in step.
+  ok('and the parenthetical leans on that paragraph rather than repeating it behind a hover',
+     !/is-par\">\(' \+ tip\(/.test(page) && !/class="is-par" title=/.test(page)
+     && page.includes('is the typical entry.'));
 
   // Every figure in the stat row says where it came from. These are source
   // assertions because no node gate here has a DOM; the hover, the focus and
   // the tap were driven in a browser before the change was pushed.
   ok('all four stats carry an explanation, not just the projection',
      ['fppgStat', 'projStat', 'edgeStat', 'salStat'].every(v => page.includes('var ' + v + ' = tip(')));
-  ok('and the field average carries a second one of its own, because it is got a different way',
-     (page.match(/= tip\(|\+ tip\(/g) || []).length >= 5);
+  ok('and only those four, since nothing else on the card explains them',
+     (page.match(/= tip\(|\+ tip\(/g) || []).length === 4);
   ok('the trigger is a real button, so a keyboard and a phone can open it too',
      page.includes('<button type="button" class="is-tipbtn" aria-describedby="'));
   // The tip must be the button's SIBLING. As a child it becomes part of the
@@ -992,7 +999,9 @@ console.log('\nthe field\'s average entry');
      !page.includes('var(--font-sans)') && page.includes('.is-stat .is-tip{')
      && /\.is-stat \.is-tip\{[\s\S]{0,400}?font-family:var\(--font-body\)/.test(page));
   ok('every tip carries this roster\'s own arithmetic rather than a definition',
-     page.includes('is-tipsum') && page.includes("'Consensus ' + n1(conTot)") && page.includes("' legal rosters drawn "));
+     page.includes('is-tipsum') && page.includes("'Consensus ' + n1(conTot)")
+     && page.includes("'Nine operator averages = '") && page.includes("DraftKings FPPG ' + n1(dkFppg)")
+     && page.includes("money(l.salary) + ' of ' + money(full)"));
   ok('the parenthetical no longer carries a native title, which would open a second tooltip over the first',
      !/class="is-par" title=/.test(page));
   ok('the board says in words what the parenthetical is', page.includes('is the typical entry.'));

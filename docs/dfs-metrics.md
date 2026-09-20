@@ -38,9 +38,15 @@ the explanation as its description.
 |---|---|
 | DraftKings FPPG | That the operator average is history and not a forecast, plus the nine averages totalled. Says so plainly when a player has no average in the salary file and there is nothing to total. |
 | Iron Tuna Projection | The consensus → market → Iron Tuna ladder at roster level, with how many of the nine the books actually priced. The ladder is printed only when every seat carries both sides. |
-| Typical entry (the parenthetical) | How many legal rosters were drawn, their average spend, and this build's distance from the typical one. Gets its own tip rather than sharing the projection's, because the two numbers are arrived at in completely different ways. |
 | Tuna Edge | The subtraction itself: projection minus operator average. |
 | Salary used | The spend against the cap and what is left, with why leftover money is not waste. |
+
+The typical entry in parentheses is the one figure with no tip. The paragraph
+directly under the stat row already gives it in full sentences, including how
+the draws are made and that the ownership behind them is modeled rather than
+fed, so a tip would be a second copy of that to keep in step. The alternate
+cards print the figure without repeating the paragraph; they sit under the lead
+board, which a reader has already passed.
 
 Two cascade hazards live in this row and are commented where they bite. The
 site's own `.is-stat span` rule (site.css) paints **any** span inside a stat

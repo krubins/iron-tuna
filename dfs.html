@@ -132,10 +132,11 @@ p{color:var(--sec);margin:0 0 16px}
 
    The tip hangs off the whole stat TILE, not off the number inside it. It was
    anchored to the number first, and a browser showed why that is wrong: the
-   figure and its parenthetical wrap onto two lines whenever the column is
-   narrow, and a tall tip opening under the first number lands squarely on the
-   second one, covering it and swallowing its hover. Anchored to the tile, it
-   opens below the label, where it covers no trigger at any width. */
+   projection and the field average in parentheses beside it wrap onto two
+   lines whenever the column is narrow, and a tall tip opening under the first
+   lands squarely on the second, hiding a figure the reader is meant to be
+   comparing against. Anchored to the tile, it opens below the label, clear of
+   both. */
 .is-stat{position:relative}
 .is-stat .is-tipwrap{display:inline-block;margin:0;font:inherit;color:inherit;
   letter-spacing:inherit;text-transform:none}
@@ -1782,9 +1783,11 @@ p{color:var(--sec);margin:0 0 16px}
           + (tdMkt[0].tdBooks ? ' across ' + tdMkt[0].tdBooks + ' books' : '') + ', devigged. ' : '')
       + 'The rest carry their game\u2019s environment, discounted for not being quoted.</p>';
   }
-  // Says out loud what the parenthetical is, once, on the lead board. The
-  // alternates carry the same number with the same tooltip and no second copy
-  // of the paragraph.
+  // Says out loud what the parenthetical is, once, on the lead board. It is
+  // the ONLY place that number is explained -- the parenthetical itself
+  // carries no tip, because this paragraph makes one redundant. The
+  // alternates print the same figure without repeating the paragraph: they
+  // sit directly under this board, and a reader has already passed it.
   function fieldNote(l) {
     if (!fieldAvg || !isFinite(fieldAvg.points)) return '';
     var over = Number(l.projPoints) - Number(fieldAvg.points);
@@ -1835,19 +1838,14 @@ p{color:var(--sec);margin:0 0 16px}
         : 'Consensus ' + n1(conTot) + '  \u2192  Market ' + n1(mktTot) + '  \u2192  Iron Tuna ' + n1(l.projPoints) + ' pts')
         + ' \u00b7 ' + quoted + ' of ' + l.players.length + ' priced by the books');
     // The field's average entry rides in parentheses inside the projection's
-    // own figure, as its scale. It is a second number and so it gets a second
-    // explanation: the two are arrived at in completely different ways, and
-    // one tip covering both would bury that.
-    var fieldPar = '';
-    if (fieldAvg && isFinite(fieldAvg.points)) {
-      var over = Number(l.projPoints) - Number(fieldAvg.points);
-      fieldPar = ' <small class="is-par">(' + tip(n1(fieldAvg.points), false,
-        'What an ordinary entry scores.',
-        'Iron Tuna draws rosters off this same board the way the field fills them: a seat at a time, each one taken by a player eligible for it in proportion to how heavily the field is modeled to own him, under this cap, nobody twice and nobody the rest of the roster cannot afford. Those draws are averaged. Ownership here is Iron Tuna\u2019s model rather than a licensed feed, so treat this as a scale and not a precise line.',
-        fieldAvg.entries + ' legal rosters drawn \u00b7 average spend ' + money(fieldAvg.salary)
-          + ' \u00b7 typical ' + n1(fieldAvg.points) + ', this build ' + (over >= 0 ? '+' : '\u2212') + n1(Math.abs(over)))
-        + ')</small>';
-    }
+    // own figure, as its scale. It carries NO tip of its own: the paragraph
+    // under this row already says what it is and how it was arrived at, in
+    // full sentences and without asking anybody to hover anything, and a
+    // second copy of that behind a hover is a second copy to keep in step.
+    // The figures around it have no such paragraph, which is why they do.
+    var fieldPar = fieldAvg && isFinite(fieldAvg.points)
+      ? ' <small class="is-par">(' + n1(fieldAvg.points) + ')</small>'
+      : '';
     var edgeStat = tip(lineupEdge == null ? '—' : (lineupEdge > 0 ? '+' : '') + n1(lineupEdge), true,
       'The forecast minus the history.',
       'How far Iron Tuna\u2019s forward projection sits from DraftKings\u2019 historical average for these same nine players. A positive number means the model expects more from this roster than its past scoring would suggest, which is a statement about the matchup and the price, not about the players being underrated.',
