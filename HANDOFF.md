@@ -11609,3 +11609,75 @@ Guarded by `tools/test-worker-odds.mjs` (the state machine, including one
 yardage market being enough to return to `live`, and stale winning over
 `td_only`) and `tools/test-health.mjs` (the tile exists, renders, has a word
 for every state the payload can emit, and prints market names in English).
+
+## 99. September 20: the touchdown price moved nothing, and the rest was thrown away
+
+Ken: *"This calculation shouldn't just be based on TDs only. It should factor
+other Prop info."*
+
+Right, and worse than that. Two separate places were discarding market
+information, and between them the most widely posted prop in football affected
+no number anywhere on the site.
+
+### 1. The anytime-touchdown price never reached a projection
+
+A board row is a STAT LINE, scored later. The touchdown price is a probability,
+so it lived in its own block (`vp.td`) and the merge that builds the Vegas line
+only ever took the count markets:
+
+```js
+v = { ...weeklyStats(full, pos, playable, env), ...vp.stats };   // and nothing else
+```
+
+`vp.stats` holds the yardage and reception markets. It never holds the anytime
+price, because the price is not a count. So unless a book also hung a rushing-
+or receiving-touchdown COUNT market on the same player — rare — a 41% anytime
+price on a receiver told the board **nothing**. It printed beside the number and
+was absent from it.
+
+`applyMarketTd()` now scales the line's own touchdown components to the market's
+expectation, which keeps the rush/receive split the market does not speak to. A
+baseline of 0.45 receiving and 0.05 rushing, against a market expecting 0.40,
+becomes 0.36 and 0.04. A quarterback's **passing** touchdowns are left alone: an
+anytime price is him crossing the line, never him throwing it, which is also
+what `tdPointsFor` already assumed. A priced touchdown COUNT still wins, because
+a count carries the two-score games a binary cannot.
+
+The implied count is the price itself, matching what `vegasProjection.points`
+already does with it. Both understate a man who can score twice, and they
+understate it identically — the two numbers sit side by side and must not
+disagree about the same market. Correcting that understatement is a change to
+both, on purpose, and not this one.
+
+### 2. A man with no core market had every quoted price discarded
+
+`vegasProjection` returns `no_core_market` when nothing in `VEGAS_MARKETS.core`
+is priced, and `buildBoards` gated the whole merge on `vp.ok`. So a receiver
+with an anytime price and no yardage line fell all the way back to the game
+line, and his touchdown price — real information about a real part of his
+afternoon — went in the bin.
+
+It is true that he cannot be projected **from the market alone**: a number built
+from a touchdown price and nothing else would be three points and a lie. That is
+why the refusal stands. But the refusal now carries the pieces — `stats`, `td`,
+`books`, `ageHours` — for a caller that has a baseline to lay them on, and
+`buildBoards` is that caller. Basis **`gamelines+props`**: the environment as
+the baseline, every quoted market on top of it. `BLEND_SHRINK` rates it 0.85,
+between a plain game line (0.8) and a partial market read (0.9).
+
+`points` is still deliberately absent from that return. There isn't one.
+
+### On the slate
+
+`quoted: true` (the books priced him) and `marketStandalone: false` (not a
+market read on his own). The `td_only` health state and the slate's own note
+both stop saying the prices went nowhere, because they no longer do: they say
+the touchdown side of each line is the market's and the yardage side is still
+the game's, and why.
+
+Guarded by `tools/test-market.mjs` (the scaling, the split, the quarterback
+rule, the zero baseline, that the applied line scores what the points path
+would have added, and that the refusal carries its evidence) and
+`tools/test-boards.mjs` (end to end: a touchdown-only man is `gamelines+props`,
+his touchdown line is the market's, his yardage is untouched, and his number
+moves off the game line's).

@@ -93,6 +93,44 @@ coverage block counts them as `quotedButShort`, separately from `priced`, and
 and "the books quoted only his touchdown" are different facts with different
 fixes, and they are indistinguishable unless something says so.
 
+### Every posted prop counts, not only the ones that make a projection
+
+Two things used to throw market information away:
+
+1. **The anytime-touchdown price never reached a projection at all.** A board
+   row is a stat line that is scored later; the touchdown price lived in its own
+   block beside the line and never touched it. So the most widely posted prop in
+   football moved no number anywhere, unless a book also hung a rushing- or
+   receiving-touchdown *count* market on the same player, which is rare.
+
+2. **A player with no core market had every one of his quoted prices
+   discarded.** No yardage or reception line meant `no_core_market`, and the
+   whole market read went in the bin — including a perfectly good touchdown
+   price.
+
+Now:
+
+- `applyMarketTd()` scales a stat line's own touchdown components to the
+  market's expectation, preserving the rush/receive split the market says
+  nothing about. A quarterback's passing touchdowns are left alone, because an
+  anytime price is about him crossing the line, not throwing it. A priced
+  touchdown **count** still wins — a count carries the two-score games a binary
+  cannot.
+- A player with quoted markets but no core market gets basis
+  **`gamelines+props`**: the game-line environment as the baseline, with every
+  quoted market laid on top. `BLEND_SHRINK` rates it **0.85** — better grounded
+  than a game line alone (0.8), short of a projection the market could have
+  produced by itself (`props-partial`, 0.9).
+
+The implied touchdown count is the price itself, matching what
+`vegasProjection.points` already does with it. Both understate a player who can
+score twice — P(at least one) is below E(count) — and they understate it
+identically, which is the point: the two numbers sit side by side and must not
+disagree about the same market.
+
+On the slate, such a player reads `quoted: true` (the books priced him) with
+`marketStandalone: false` (not a market read on his own).
+
 ### The Market read build
 
 `mode: 'market'` ("Market read (props first)") maximizes `marketPoints`. The

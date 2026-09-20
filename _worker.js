@@ -5516,7 +5516,7 @@ async function propsHealth(env, season, week) {
              note: state === 'live'
                ? matched + ' board player' + (matched === 1 ? ' carries' : 's carry') + ' a quoted prop this week, across ' + markets + ' market' + (markets === 1 ? '' : 's') + ' and ' + books + ' book' + (books === 1 ? '' : 's') + ', pulled ' + (ageHours < 1 ? 'within the hour' : ageHours + ' hours ago') + '. The weekly Vegas projection is reading them.'
                : state === 'td_only'
-               ? 'The books are posting on ' + matched + ' board players this week, and the only market in the store is ' + names.join(', ') + '. A projection needs a yardage or reception line, so receivers, tight ends and quarterbacks are all still on the game line. The feed is running; it is carrying one market.'
+               ? 'The books are posting on ' + matched + ' board players this week, and the only market in the store is ' + names.join(', ') + '. That is applied \u2014 the touchdown price sets the touchdown side of every one of those players \u2014 but the yardage and reception sides still come from the game line, because no book posted one. A yardage or reception market is what a standalone market projection is built from.'
                : state === 'stale'
                ? 'Props were collected for this week but the newest is ' + ageHours + ' hours old. The poll has stopped; the board is serving the last lines it got.'
                : 'The store holds ' + subjects.length + ' priced subjects for this week and NONE of them match a player on the board. The collector is working and every projection is still falling back to the game line \u2014 the name join is broken.' };
@@ -5556,6 +5556,48 @@ const VEGAS_MARKETS = {
   WR: { core: ['recYd', 'rec'], extra: ['anytimeTD', 'recTD', 'rushYd'] },
   TE: { core: ['recYd', 'rec'], extra: ['anytimeTD', 'recTD', 'rushYd'] }
 };
+// Which touchdown the anytime market is ABOUT, per position. A quarterback's
+// anytime-touchdown price is him crossing the goal line, never him throwing
+// it, so scaling his passTD by a market that says nothing about passing would
+// be plainly wrong. tdPointsFor already prices a QB's at the rushing rate.
+const VEGAS_TD_STATS = { QB: ['rushTD'], RB: ['rushTD', 'recTD'], WR: ['recTD', 'rushTD'], TE: ['recTD', 'rushTD'] };
+// The anytime-touchdown price, applied to a stat line.
+//
+// A board row is a STAT line that is scored later, and the anytime market is a
+// PROBABILITY rather than a count, so it lives in its own block and never
+// reached the line at all. The consequence was quiet and large: the most
+// widely posted prop in football moved no projection anywhere, unless a book
+// also hung a rushing- or receiving-touchdown COUNT market on the same player,
+// which is rare. A 41% anytime price on a receiver told the board nothing.
+//
+// So the line's own touchdown components are SCALED to the market's
+// expectation, which keeps the rush/receive split the market does not speak
+// to. A baseline of 0.45 receiving and 0.05 rushing, against a market
+// expecting 0.40 in total, becomes 0.36 and 0.04. A baseline expecting no
+// touchdown at all has no split to preserve, so the market's number goes on
+// the position's primary one.
+//
+// The implied count is the price itself, matching what vegasProjection.points
+// already does with it (p x points-per-TD). Both understate a player who can
+// score twice — P(at least one) is below E(count) — and they understate it
+// identically, which is the point: the two numbers appear side by side and
+// must not disagree about the same market. Correcting the understatement is a
+// change to both, on purpose, and not this one.
+function applyMarketTd(stats, pos, td) {
+  const p = td && td.probability != null ? Number(td.probability) / 100 : null;
+  if (p == null || !Number.isFinite(p) || p < 0) return stats;
+  const keys = VEGAS_TD_STATS[String(pos || '').toUpperCase()];
+  if (!keys) return stats;
+  const base = keys.reduce((sum, k) => sum + (Number(stats[k]) || 0), 0);
+  const out = { ...stats };
+  if (base > 0) {
+    const f = p / base;
+    for (const k of keys) if (stats[k] != null) out[k] = _oddsRound(Number(stats[k]) * f * 100) / 100;
+  } else {
+    out[keys[0]] = _oddsRound(p * 100) / 100;
+  }
+  return out;
+}
 // A yardage/count market is turned into an expected value; an anytimeTD market
 // is a probability and is handled on its own path below.
 const VEGAS_COUNT_MARKETS = ['passYd', 'passTD', 'passInt', 'rushYd', 'rushTD', 'rushAtt',
@@ -5710,10 +5752,26 @@ function vegasProjection(markets, position, rules, ctx) {
   // from one extra market and silence is not a partial projection, it is a
   // guess with a Vegas label on it.
   if (!have.size || coreMissing.length === spec.core.length) {
+    // UNAVAILABLE AS A STANDALONE PROJECTION, and not therefore worthless. A
+    // receiver with an anytime-touchdown price and no yardage line cannot be
+    // projected from the market alone — a number built from his touchdown
+    // price and nothing else would be three points and a lie — but the price
+    // is real information about a real part of his afternoon, and throwing it
+    // away left the most commonly posted prop in football affecting nothing.
+    // So the pieces travel with the refusal, for a caller that has a baseline
+    // to put them on. `points` is deliberately absent: there isn't one.
+    const thinStats = {};
+    for (const [m, v] of Object.entries(priced)) if (m !== 'rushAtt') thinStats[m] = v.expected;
     return { ok: false, status: 'unavailable', position: pos,
              label: 'Vegas projection unavailable',
              reason: !have.size ? 'no_markets' : 'no_core_market',
-             missing: spec.core.filter(m => !have.has(m)), priced: [...have] };
+             missing: spec.core.filter(m => !have.has(m)), priced: [...have],
+             stats: thinStats,
+             td: td && td.probability != null
+               ? { probability: Math.round(td.probability * 1000) / 10, pointsPerTd: tdPointsFor(pos, rules || SCORING_BASE),
+                   books: td.books, devigged: td.devigged, source: 'anytime-td-market' } : null,
+             books: books.size,
+             ageHours: c.asOf ? Math.round(Math.max(0, (Date.now() - c.asOf) / 3600000) * 10) / 10 : null };
   }
 
   // Stats, in Iron Tuna's own keys, from priced markets ONLY.
@@ -6664,7 +6722,7 @@ function buildBoards(ctx, opts) {
     }
     const cStats = {}, vStats = {}, iStats = {};
     const weekRows = [];
-    let games = 0; const byes = []; let confSum = 0, confN = 0; let propsWeeks = 0, postedWeeks = 0, fittedWeeks = 0;
+    let games = 0; const byes = []; let confSum = 0, confN = 0; let propsWeeks = 0, postedWeeks = 0, fittedWeeks = 0, thinWeeks = 0;
     let oppAllowedSum = 0, oppN = 0;
     const seasonVegas = ctx.overlay && ctx.overlay[k] ? ctx.overlay[k] : null;   // the season blend, for the ROS line
     for (const w of weeks) {
@@ -6684,8 +6742,23 @@ function buildBoards(ctx, opts) {
         vp = vegasProjection(mk.props, p.position, rules, { asOf: mk.asOf, injuryStatus: a ? a.status : null });
         if (vp.ok) {
           v = { ...weeklyStats(full, p.position, playable, env), ...vp.stats };   // priced stats replace the environment's
+          // ...and so does the touchdown price, which used to reach the block
+          // beside the line and never the line itself. A priced TD COUNT still
+          // wins: a count carries the two-score games a binary cannot.
+          if (!vp.tdCountedFromMarket) v = applyMarketTd(v, p.position, vp.td);
           basis = vp.status === 'full' ? 'props' : 'props-partial';
           conf = vp.confidence; propsWeeks++;
+        } else if (vp.reason === 'no_core_market' && vp.priced && vp.priced.length) {
+          // THIN, and not nothing. No core market means no projection can be
+          // built out of the market by itself — but every market the books DID
+          // post is still a better answer for that part of his line than the
+          // game total split across an offense. So the environment is the
+          // baseline and the quoted pieces are laid on top of it. It is named
+          // for what it is: game lines, with props where there are props.
+          v = applyMarketTd({ ...weeklyStats(full, p.position, playable, env), ...(vp.stats || {}) }, p.position, vp.td);
+          basis = 'gamelines+props';
+          conf = 'MEDIUM'; thinWeeks++;
+          if (a && a.status && VEGAS_OUT_RE.test(String(a.status))) conf = 'LOW';
         }
       }
       if (!v) {
@@ -6718,7 +6791,9 @@ function buildBoards(ctx, opts) {
         // man indistinguishable from one no book has looked at, and the
         // difference is the whole diagnosis when a feed is carrying one market.
         vegasProjection: vp && vp.ok ? { status: vp.status, label: vp.label, confidence: vp.confidence, td: vp.td, priced: vp.priced, missing: vp.missingCore, books: vp.books, ageHours: vp.ageHours, reasons: vp.confidenceReasons }
-          : (vp ? { status: vp.status, label: vp.label, reason: vp.reason, priced: vp.priced || [], missing: vp.missing || [] } : null) });
+          : (vp ? { status: vp.status, label: vp.label, reason: vp.reason, priced: vp.priced || [], missing: vp.missing || [],
+                    td: vp.td || null, books: vp.books == null ? null : vp.books, ageHours: vp.ageHours == null ? null : vp.ageHours,
+                    applied: !!(vp.reason === 'no_core_market' && vp.priced && vp.priced.length) } : null) });
     }
     const vegasConf = confN ? _confFrom(confSum / confN) : 'LOW';
     // Iron Tuna's own confidence: the Vegas grade lifted one step when a
@@ -6737,8 +6812,10 @@ function buildBoards(ctx, opts) {
         label: (oppAllowedSum / oppN) <= 11 ? 'Hard' : (oppAllowedSum / oppN) >= 22 ? 'Easy' : 'Average' } : null,
       consensus: { stats: _roundStats(cStats), points: cp },
       vegas: { stats: _roundStats(vStats), points: vpz, confidence: vegasConf,
-               basis: propsWeeks ? (propsWeeks === games ? 'props' : 'props+gamelines') : postedWeeks ? (fittedWeeks ? 'gamelines+ratings' : 'gamelines') : fittedWeeks ? 'ratings' : 'none',
-               propsWeeks, postedWeeks, fittedWeeks,
+               basis: propsWeeks ? (propsWeeks === games ? 'props' : 'props+gamelines')
+                 : thinWeeks ? 'gamelines+props'
+                 : postedWeeks ? (fittedWeeks ? 'gamelines+ratings' : 'gamelines') : fittedWeeks ? 'ratings' : 'none',
+               propsWeeks, postedWeeks, fittedWeeks, thinWeeks,
                td: weekRows.find(x => x.vegasProjection && x.vegasProjection.td) ? weekRows.find(x => x.vegasProjection && x.vegasProjection.td).vegasProjection.td : null },
       ironTuna: { stats: _roundStats(iStats), points: ip, confidence: itConf },
       seasonOverlay: seasonVegas ? true : false
@@ -9085,7 +9162,10 @@ function freshnessReport(stamps, kind, now) {
 // points under the same rules, so the interpolation is in one unit; the
 // shrink is the normalization, and it is what keeps "100% market" from
 // meaning "100% a curve fit" on a player nobody priced.
-const BLEND_SHRINK = { props: 1, 'props-partial': 0.9, 'props+gamelines': 0.95, gamelines: 0.8, 'gamelines+ratings': 0.7, ratings: 0.55, none: 0 };
+// 'gamelines+props' is a game-line projection with the quoted markets laid on
+// top: better grounded than the game line alone, short of a projection the
+// market could have produced by itself, and it sits between them.
+const BLEND_SHRINK = { props: 1, 'props-partial': 0.9, 'props+gamelines': 0.95, 'gamelines+props': 0.85, gamelines: 0.8, 'gamelines+ratings': 0.7, ratings: 0.55, none: 0 };
 function blendComponents(p) {
   const role = p.roleTrend && p.roleTrend.applied ? p.roleTrend.factor : 1;
   const fantasy = _oddsRound((p.consensus.points || 0) * role);
@@ -12104,8 +12184,11 @@ function dfsMarketRead(p, w0, vegasPts, consensusPts) {
   // there is nothing to build a line out of. Before this he was indis-
   // tinguishable from a man nobody looked at, which is how a feed carrying one
   // market looks exactly like a feed carrying none.
+  // Quoted, with no core market, and the pieces were laid on the game-line
+  // baseline rather than thrown away. Still worth naming — he is not a full
+  // market read — but he is no longer a man whose props went nowhere.
   const short = !vp && raw && raw.reason === 'no_core_market' && Array.isArray(raw.priced) && raw.priced.length
-    ? { priced: raw.priced.slice(), missing: Array.isArray(raw.missing) ? raw.missing.slice() : [] } : null;
+    ? { priced: raw.priced.slice(), missing: Array.isArray(raw.missing) ? raw.missing.slice() : [], applied: !!raw.applied } : null;
   const td = (vp && vp.td) || (p && p.vegas && p.vegas.td) || null;
   const c = Number.isFinite(consensusPts) ? consensusPts : 0;
   const v = Number.isFinite(vegasPts) ? vegasPts : c;
@@ -12113,11 +12196,17 @@ function dfsMarketRead(p, w0, vegasPts, consensusPts) {
   return {
     basis, shrink,
     points: _oddsRound(c + shrink * (v - c)),
-    quoted: /^props/.test(basis),
+    // Any basis carrying props is quoted: 'gamelines+props' is a man the books
+    // priced, laid on a game-line baseline, and calling him unquoted would put
+    // him back with the players nobody looked at.
+    quoted: /props/.test(basis),
+    // ...while only a basis the market could stand up on its own is a full
+    // market read. The page prints the difference.
+    marketStandalone: /^props/.test(basis),
     priced, pricedLabels: priced.map(m => DFS_PROP_LABEL[m] || m),
     missing: vp && Array.isArray(vp.missing) ? vp.missing.slice() : [],
     // Quoted, but not on anything a projection can be built from.
-    shortOfProjection: !!short,
+    shortOfProjection: !!short, shortApplied: !!(short && short.applied),
     shortPriced: short ? short.priced : [], shortPricedLabels: short ? short.priced.map(m => DFS_PROP_LABEL[m] || m) : [],
     shortMissing: short ? short.missing : [], shortMissingLabels: short ? short.missing.map(m => DFS_PROP_LABEL[m] || m) : [],
     books: vp && Number.isFinite(vp.books) ? vp.books : null,
@@ -12169,7 +12258,7 @@ function dfsPropNote(cov) {
   // prices and nothing else looks identical to a slate with no props at all
   // unless somebody says this out loud.
   if (!cov.priced && cov.quotedButShort) {
-    return 'The books have posted on ' + cov.quotedButShort + ' player' + (cov.quotedButShort === 1 ? '' : 's') + ' here, but only ' + cov.shortMarketLabels.join(' and ') + ' \u2014 and a market projection needs a yardage or reception line before a price means anything. So every number on this slate is still the game line\u2019s environment, discounted for it, and the prop-first build falls back to the consensus projection. This is a feed carrying one market, not a feed carrying none.';
+    return 'The books have posted on ' + cov.quotedButShort + ' player' + (cov.quotedButShort === 1 ? '' : 's') + ' here, but only ' + cov.shortMarketLabels.join(' and ') + '. Those prices are applied \u2014 they set that side of each player\u2019s line \u2014 and the rest of it still comes from his game\u2019s environment, because no book posted a yardage or reception market on him. That is what a standalone market projection is built from, so these read as game lines carrying props rather than as a market read.';
   }
   if (!cov.priced) {
     return 'No player prop has reached this slate. Books post them; none are in the feed behind this build, so every market number here is the game line\u2019s environment applied to the player\u2019s share of it, and is discounted accordingly. The prop-first build falls back to the consensus projection rather than presenting a fitted number as a market read.';

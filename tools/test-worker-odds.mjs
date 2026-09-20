@@ -491,8 +491,11 @@ console.log('\nthis week’s props, end to end');
   const tdOnly = await W.propsHealth(db({ rows: 900, subjects: 2, markets: 1, books: 8, last: Date.now() - 10 * 60000 },
     [known, other], [{ market: 'anytimeTD', players: 2, rows: 900 }]), 2026, 3);
   ok('a touchdown-only week is its own state, not "live"', tdOnly.state === 'td_only');
-  ok('...and says the feed is running and carrying one market',
-     /carrying one market/.test(tdOnly.note) && /needs a yardage or reception line/.test(tdOnly.note));
+  ok('...and says the touchdown price IS applied, not discarded',
+     /That is applied/.test(tdOnly.note) && /sets the touchdown side/.test(tdOnly.note));
+  ok('...and says what still comes from the game line, and why',
+     /yardage and reception sides still come from the game line/.test(tdOnly.note)
+     && /standalone market projection is built from/.test(tdOnly.note));
   ok('...and names what it would take to be projectable', tdOnly.projectableMarkets.length === 0);
   ok('one yardage market is enough to make it live again',
      (await W.propsHealth(db({ rows: 900, subjects: 2, markets: 2, books: 8, last: Date.now() }, [known, other],

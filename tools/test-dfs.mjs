@@ -316,7 +316,16 @@ console.log('\nthe weekly betting market');
   ok('the trust ladder is the site\'s own BLEND_SHRINK, not a copy',
      H.BLEND_SHRINK.props === 1 && H.BLEND_SHRINK.gamelines === 0.8 && H.BLEND_SHRINK.ratings === 0.55 && H.BLEND_SHRINK.none === 0);
   ok('every basis the board can emit has a trust factor',
-     ['props', 'props-partial', 'props+gamelines', 'gamelines', 'gamelines+ratings', 'ratings', 'none'].every(b => H.BLEND_SHRINK[b] != null));
+     ['props', 'props-partial', 'props+gamelines', 'gamelines+props', 'gamelines', 'gamelines+ratings', 'ratings', 'none'].every(b => H.BLEND_SHRINK[b] != null));
+  // A game line with the quoted markets laid on it is better grounded than the
+  // game line alone and short of what the market could produce by itself.
+  ok('a game line carrying props sits between the two it is made of',
+     H.BLEND_SHRINK['gamelines+props'] > H.BLEND_SHRINK.gamelines
+     && H.BLEND_SHRINK['gamelines+props'] < H.BLEND_SHRINK['props-partial']);
+  const laid = H.dfsMarketRead({ vegas: { basis: 'gamelines+props', confidence: 'MEDIUM' } }, { env: {} }, 18.4, 14.0);
+  ok('...and a man on it counts as quoted, not as one nobody looked at', laid.quoted === true);
+  ok('...while still not being a standalone market read', laid.marketStandalone === false);
+  ok('...and a full props man is both', H.dfsMarketRead({ vegas: { basis: 'props' } }, { env: {} }, 18.4, 14.0).marketStandalone === true);
 
   // Coverage, said as a number. `hasProps` was a boolean and a boolean cannot
   // answer "priced how much of it, by how many books, how long ago".
@@ -344,9 +353,11 @@ console.log('\nthe weekly betting market');
      tdOnlyCov.priced === 0 && tdOnlyCov.quotedButShort === 2 && tdOnlyCov.shortMarketLabels.join(',') === 'anytime TD');
   ok('...and the note says the books DID post, rather than claiming they did not',
      /The books have posted on 2 players/.test(H.dfsPropNote(tdOnlyCov)) && /anytime TD/.test(H.dfsPropNote(tdOnlyCov)));
-  ok('...and says why that is not enough, and what it fell back to',
-     /needs a yardage or reception line/.test(H.dfsPropNote(tdOnlyCov)) && /falls back to the consensus/.test(H.dfsPropNote(tdOnlyCov))
-     && /one market, not a feed carrying none/.test(H.dfsPropNote(tdOnlyCov)));
+  ok('...and says the prices ARE applied, rather than that they went nowhere',
+     /Those prices are applied/.test(H.dfsPropNote(tdOnlyCov)) && /set that side/.test(H.dfsPropNote(tdOnlyCov)));
+  ok('...and says what is still coming from the game line, and why',
+     /still comes from his game/.test(H.dfsPropNote(tdOnlyCov))
+     && /standalone market projection is built from/.test(H.dfsPropNote(tdOnlyCov)));
 
   const noneCov = H.dfsPropCoverage([{ onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [] } }]);
   ok('with nothing priced the note says so and says what it falls back to',
