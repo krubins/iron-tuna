@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 const src = readFileSync(new URL('../_worker.js', import.meta.url), 'utf8');
 const section = src.slice(src.indexOf('// TUNA MARKET SIGNAL START'), src.indexOf('// TUNA MARKET SIGNAL END'));
 let calls = 0, response;
-const api = new Function('fetch', 'adminOk', section + '\nreturn {tmsNormalize,tmsNormalizePropline,tmsAmericanToDecimal,tmsApplyPropLineMovement,tmsPrimaryPropRows,tmsProjectionRows,tmsSignals,tmsHttp,tmsReady,tmsStore,tmsPoll,tmsRoutes,TMS_PROVIDERS};')(
+const api = new Function('fetch', 'adminOk', section + '\nreturn {tmsNormalize,tmsNormalizePropline,tmsAmericanToDecimal,tmsApplyPropLineMovement,tmsPrimaryPropRows,tmsProjectionRows,tmsSignals,tmsHttp,tmsReady,tmsStore,tmsPoll,tmsRoutes,TMS_PROVIDERS,tmsPropLineEvents,TMS_PROPLINE_EVENT_CAP};')(
   async () => { calls++; return response.clone(); }, (env, key) => !!env.LEADS_EXPORT_KEY && key === env.LEADS_EXPORT_KEY);
 const db = new DatabaseSync(':memory:');
 const wrap = (sql, args = []) => ({ bind: (...values) => wrap(sql, values),
@@ -189,4 +189,119 @@ assert.equal((await (await req('/api/tuna-market')).json()).status, 'disabled');
 delete env.TMS_PROVIDER;
 env.TMS_ENABLED = '0'; assert.equal((await (await req('/api/tuna-market')).json()).status, 'disabled');
 new Function(readFileSync(new URL('../tuna-market.js', import.meta.url), 'utf8'));
+// ── every market survives normalizing, not just the touchdown one ─────────
+// The failure this guards is the one that hides itself. An anytime-touchdown
+// market has no line, so it is exempt from the line check; every yardage and
+// reception market must carry one. A strict `typeof point === 'number'` test
+// therefore dropped every quoted yardage line whose feed sent "62.5" as a
+// string, kept every touchdown price, and reported nothing — a board full of
+// quoted markets that could not project a single receiver.
+{
+  const now = Date.now();
+  const ev = (outcomes) => ([{ id: 'ev1', sport_key: 'americanfootball_nfl', commence_time: new Date(now + 86400000).toISOString(),
+    home_team: 'B', away_team: 'A',
+    bookmakers: [{ key: 'dk', last_update: new Date(now).toISOString(), markets: [
+      { key: 'player_reception_yds', last_update: new Date(now).toISOString(), outcomes }] }] }]);
+
+  // A line as a string is a line.
+  const asString = api.tmsNormalize(ev([{ name: 'Over', description: 'A Receiver', point: '62.5', price: 1.9 }]), now);
+  assert.equal(asString.length, 1, 'a numeric string line must not be dropped');
+  assert.equal(asString[0].line, 62.5);
+  assert.equal(typeof asString[0].line, 'number', 'and it must be coerced, not passed through as a string');
+
+  // A number is still a number.
+  assert.equal(api.tmsNormalize(ev([{ name: 'Over', description: 'A Receiver', point: 62.5, price: 1.9 }]), now)[0].line, 62.5);
+
+  // Feeds that name the line or the player differently.
+  assert.equal(api.tmsNormalize(ev([{ name: 'Over', description: 'A Receiver', line: 48.5, price: 1.9 }]), now)[0].line, 48.5);
+  assert.equal(api.tmsNormalize(ev([{ name: 'Over', participant: 'A Receiver', point: 48.5, price: 1.9 }]), now)[0].player, 'A Receiver');
+
+  // Genuinely absent is still dropped — tolerance is not invention.
+  assert.equal(api.tmsNormalize(ev([{ name: 'Over', description: 'A Receiver', price: 1.9 }]), now).length, 0);
+  assert.equal(api.tmsNormalize(ev([{ name: 'Over', description: 'A Receiver', point: 'n/a', price: 1.9 }]), now).length, 0);
+  assert.equal(api.tmsNormalize(ev([{ name: 'Over', point: 62.5, price: 1.9 }]), now).length, 0, 'a player market with no player is not a row');
+
+  // A touchdown market needs no line and must keep working.
+  const td = [{ id: 'ev1', sport_key: 'americanfootball_nfl', commence_time: new Date(now + 86400000).toISOString(),
+    home_team: 'B', away_team: 'A',
+    bookmakers: [{ key: 'dk', last_update: new Date(now).toISOString(), markets: [
+      { key: 'player_anytime_td', last_update: new Date(now).toISOString(),
+        outcomes: [{ name: 'Yes', description: 'A Receiver', price: 2.4 }] }] }] }];
+  assert.equal(api.tmsNormalize(td, now).length, 1);
+  assert.equal(api.tmsNormalize(td, now)[0].line, null);
+
+  // Every drop is counted, by reason and by market, so a feed losing eight of
+  // its nine markets cannot do it silently again.
+  const drops = {};
+  api.tmsNormalize(ev([
+    { name: 'Over', description: 'A Receiver', price: 1.9 },                    // no line
+    { name: 'Over', description: 'B Receiver', point: 40.5, price: 0.5 },       // impossible price
+    { name: 'Over', point: 40.5, price: 1.9 }                                   // no player
+  ]), now, 'propline', 'src', drops);
+  assert.equal(drops.total, 3);
+  assert.equal(drops.byReason.no_line, 1);
+  assert.equal(drops.byReason.price, 1);
+  assert.equal(drops.byReason.no_player, 1);
+  assert.equal(drops.byMarket.player_reception_yds, 3, 'the tally names the market that is losing rows');
+
+  // A clean pull counts nothing, so the tally is a signal rather than noise.
+  const clean = {};
+  api.tmsNormalize(ev([{ name: 'Over', description: 'A Receiver', point: 62.5, price: 1.9 }]), now, 'propline', 'src', clean);
+  assert.equal(clean.total, undefined);
+
+  // The PropLine path carries the same tolerance and the same accounting: its
+  // prices are American and are converted before any of this runs.
+  const plDrops = {};
+  const pl = api.tmsNormalizePropline([{ id: 'ev1', sport_key: 'americanfootball_nfl',
+    commence_time: new Date(now + 86400000).toISOString(), home_team: 'B', away_team: 'A',
+    bookmakers: [{ key: 'dk', last_update: new Date(now).toISOString(), markets: [
+      { key: 'player_reception_yds', last_update: new Date(now).toISOString(),
+        outcomes: [{ name: 'Over', description: 'A Receiver', point: '62.5', price: -110 },
+                   { name: 'Under', description: 'A Receiver', point: '62.5', price: -110 }] }] }] }], now, plDrops);
+  assert.equal(pl.length, 2, 'PropLine yardage lines as strings must survive');
+  assert.equal(pl[0].line, 62.5);
+  assert.equal(plDrops.total, undefined);
+}
+
+// ── the request itself ────────────────────────────────────────────────────
+{
+  const M = api.TMS_PROVIDERS.propline;
+  assert.ok(M && typeof M.pull === 'function');
+  // Every scoring market plus rush attempts, which the implied-touches number
+  // on the DFS slate is built from and which the list never used to ask for.
+  const src = readFileSync(new URL('../_worker.js', import.meta.url), 'utf8');
+  const list = /const TMS_PROPLINE_MARKETS = '([^']+)'/.exec(src)[1].split(',');
+  for (const m of ['player_pass_yds', 'player_pass_tds', 'player_rush_yds', 'player_rush_attempts',
+                   'player_reception_yds', 'player_receptions', 'player_anytime_td']) {
+    assert.ok(list.includes(m), 'the default prop request lost ' + m);
+  }
+  assert.ok(list.length <= 12, 'the provider caps the market list at twelve');
+  // Yardage and reception markets are the ones a projection needs; a request
+  // that carries only the touchdown market cannot project a receiver at all.
+  assert.ok(list.filter(m => /yds|receptions|attempts/.test(m)).length >= 5);
+
+  // The events that get a prop call are the SOONEST ones. A nine-day window
+  // holds more than one NFL week, and the cap must not be spent on games a
+  // week out while this Sunday goes unpriced.
+  const now = Date.now();
+  const day = 86400000;
+  const at = (id, ms) => ({ id, commence_time: new Date(ms).toISOString() });
+  const far = Array.from({ length: 20 }, (_, i) => at('far' + i, now + 8 * day + i * 60000));
+  const soon = Array.from({ length: 5 }, (_, i) => at('soon' + i, now + day + i * 60000));
+  const picked = api.tmsPropLineEvents([...far, ...soon], now);
+  assert.equal(picked.length, api.TMS_PROPLINE_EVENT_CAP, 'the per-poll cap still holds');
+  for (let i = 0; i < 5; i++) {
+    assert.ok(picked.some(e => e.id === 'soon' + i), 'the nearest games must be the ones priced (soon' + i + ' was skipped)');
+  }
+  assert.ok(picked[0].id.startsWith('soon'), 'and they come first');
+  // Order in, order out: already-sorted input is not disturbed.
+  assert.deepEqual(api.tmsPropLineEvents(soon, now).map(e => e.id), soon.map(e => e.id));
+  // The window still bounds both ends, and a malformed row is not an event.
+  assert.equal(api.tmsPropLineEvents([at('old', now - 5 * day), at('late', now + 20 * day)], now).length, 0);
+  assert.equal(api.tmsPropLineEvents([{ commence_time: new Date(now + day).toISOString() }, { id: 'x' }, null], now).length, 0);
+  // A game that kicked off within the hour is still this week's.
+  assert.equal(api.tmsPropLineEvents([at('live', now - 1800000)], now).length, 1);
+}
+
+
 console.log('Tuna Market Signal: PropLine normalization and native movement, line/price separation, freshness, source isolation, SQLite storage, idempotency, concurrent polling, quota cooldown, auth, licensed splits and UI parse passed.');

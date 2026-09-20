@@ -143,6 +143,34 @@ console.log('\nstatus mapping on a stub feed');
     entry('Two Ways', 'RB', 'Out', 'PUP-P', iso(kickoff + 3 * day))                 // active/PUP: can be activated any day
   ]));
   ok('week-to-week statuses map to nothing', built.matched === 0 && built.skipped.weekToWeek === 6, JSON.stringify(built.skipped));
+  // ...on the SEASON list. They are exactly what a single slate needs, so the
+  // same pull keeps them in a second table that touches no projection.
+  const wk = built.weekly;
+  ok('a questionable tag reaches the weekly table', wk['healthyback|RB'] && wk['healthyback|RB'].status === 'Questionable');
+  ok('so does doubtful', wk['freshinjury|WR'] && wk['freshinjury|WR'].status === 'Doubtful');
+  ok('probable, day-to-day and active are not designations', !wk['kickerman|K'] && !wk['dandresuffix|TE'] && !wk['otherposition|RB']);
+  ok('active/PUP is Out for the week even though it is no season line change', wk['twoways|RB'] && wk['twoways|RB'].status === 'Out');
+  ok('the weekly table never moves a season line', built.matched === 0 && built.weeklyMatched === 3, JSON.stringify(Object.keys(wk)));
+}
+{
+  // A one-game absence is not a season line change, which is the whole reason
+  // the slate needed its own table: the season list drops these on purpose.
+  const built = W.buildAvailabilityOverlay(feedOf([
+    entry('Kicker Man', 'PK', 'Out', undefined, undefined),
+    entry('Fresh Injury', 'WR', 'Out', undefined, iso(kickoff + 10 * day)),
+    entry('Healthy Back', 'RB', 'Injured Reserve', 'IR-R', iso(kickoff + 31 * day))
+  ]));
+  ok('a man the season list drops is still Out for this week', built.weekly['kickerman|K'].status === 'Out' && !built.players['kickerman|K']);
+  ok('a one-game absence is Out for that week', built.weekly['freshinjury|WR'].status === 'Out');
+  ok('a reserve list is Out for the week as well', built.weekly['healthyback|RB'].status === 'Out');
+  ok('the weekly entry carries who he is and why', built.weekly['kickerman|K'].position === 'K' && built.weekly['kickerman|K'].team && built.weekly['kickerman|K'].asOf === '2026-09-02');
+  // Two entries for one man: the worse designation stands, as the season list
+  // keeps the longer absence.
+  const both = W.buildAvailabilityOverlay(feedOf([
+    entry('Healthy Back', 'RB', 'Questionable', 'QUESTIONABLE', undefined),
+    entry('Healthy Back', 'RB', 'Out', undefined, undefined)
+  ]));
+  ok('duplicate designations keep the worse one', both.weekly['healthyback|RB'].status === 'Out');
 }
 {
   const built = W.buildAvailabilityOverlay(feedOf([

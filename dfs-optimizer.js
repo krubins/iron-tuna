@@ -16,6 +16,11 @@
  * every fixture in tools/test-dfs.mjs, and it runs in milliseconds, which is
  * what a page that re-solves on every click needs.
  *
+ * A man who is not going to play on Sunday never reaches the board at all.
+ * The slate decides that (rows carry available:false, and weekStatus says
+ * why); this file only refuses to spend the cap on him, and a reader's lock
+ * is the one thing that puts him back.
+ *
  * NOTHING HERE SUBMITS AN ENTRY. It builds a table to look at.
  */
 (function (root) {
@@ -50,6 +55,16 @@
     vegas: { label: 'Vegas optimal', pts: function (p) { return p.vegasPoints; } },
     consensus: { label: 'Consensus optimal', pts: function (p) { return p.consensusPoints; } },
     vegasEdge: { label: 'Vegas Edge', pts: function (p) { return p.vegasPoints + (p.marketDelta && p.marketDelta.points > 0 ? p.marketDelta.points : 0); } },
+    // The weekly betting market, taken at the strength of its own evidence.
+    // `vegas` above maximizes the raw market number and cannot tell a quoted
+    // prop from a game total sliced up, so it will spend $7,000 on a curve fit
+    // that happens to read high. This one maximizes the slate's marketPoints:
+    // the same number shrunk by how it was arrived at and pulled the rest of
+    // the way back toward the consensus, which is also its fallback on a week
+    // the books have not posted. It prefers the player somebody actually
+    // priced, and when nobody was priced it quietly becomes the consensus
+    // build rather than pretending otherwise.
+    market: { label: 'Market read (props first)', pts: function (p) { return isFinite(p.marketPoints) ? p.marketPoints : (isFinite(p.ironTunaPoints) ? p.ironTunaPoints : 0); } },
     floor: { label: 'Safest floor', pts: function (p) { return floorOf(p); } },
     ceiling: { label: 'Highest ceiling', pts: function (p) { return ceilOf(p); } },
     leverage: { label: 'Ceiling per point of ownership', pts: function (p) {
@@ -116,7 +131,18 @@
                 stack: !!o.stack, stackSize: o.stackSize || 1, bringBack: !!o.bringBack };
     var lock = {}; (o.lock || []).forEach(function (id) { lock[id] = 1; });
     var excl = {}; (o.exclude || []).forEach(function (id) { excl[id] = 1; });
-    var pool = players.filter(function (p) { return p && p.onBoard !== false && p.salary > 0 && !excl[p.id] && isFinite(mode.pts(p)) && mode.pts(p) > 0; });
+    // A player who is not playing this week is not a cheap play, he is a zero,
+    // and a zero at $5,800 is the worst thing this function can do with a cap.
+    // The slate marks him available:false; he comes off the board before a
+    // single lineup is seeded, unless the reader has explicitly locked him --
+    // a lock is a decision, and the builder does not overrule a decision, it
+    // only declines to make this one on its own.
+    var benched = [];
+    var pool = players.filter(function (p) {
+      if (!(p && p.onBoard !== false && p.salary > 0 && !excl[p.id] && isFinite(mode.pts(p)) && mode.pts(p) > 0)) return false;
+      if (p.available === false && !lock[p.id] && !o.includeUnavailable) { benched.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, status: p.weekStatus || 'Out' }); return false; }
+      return true;
+    });
     var rnd = mulberry(o.seed || 7);
     var n = Math.max(1, Math.min(20, o.lineups || 1));
     var results = [], used = {};
@@ -253,18 +279,106 @@
           proj: Math.round(p.ironTunaPoints * 10) / 10, operatorFppg: p.operatorFppg == null ? null : Math.round(Number(p.operatorFppg) * 10) / 10,
           operatorFppgBasis: p.operatorFppg == null ? null : (p.operatorFppgBasis || 'operator'),
           projectionVsFppg: p.projectionVsFppg == null ? null : Math.round(Number(p.projectionVsFppg) * 10) / 10,
-          floor: Math.round(floorOf(p) * 10) / 10, ceiling: Math.round(ceilOf(p) * 10) / 10, ownership: ownOf(p), leverage: isFinite(p.leverage) ? p.leverage : null }; }),
+          floor: Math.round(floorOf(p) * 10) / 10, ceiling: Math.round(ceilOf(p) * 10) / 10, ownership: ownOf(p), leverage: isFinite(p.leverage) ? p.leverage : null,
+          // The market evidence rides along so a card can say what the books
+          // said about a man rather than only what he is projected for. These
+          // also feed the fit lines, which had been reading vegasPoints and
+          // teamTotal off an object that never carried either.
+          vegasPoints: isFinite(p.vegasPoints) ? p.vegasPoints : null, consensusPoints: isFinite(p.consensusPoints) ? p.consensusPoints : null,
+          marketPoints: isFinite(p.marketPoints) ? p.marketPoints : null, marketQuoted: !!p.marketQuoted,
+          market: p.market || null, teamTotal: isFinite(p.teamTotal) ? p.teamTotal : null,
+          tdProbability: isFinite(p.tdProbability) ? p.tdProbability : null, tdBasis: p.tdBasis || null, tdBooks: isFinite(p.tdBooks) ? p.tdBooks : null,
+          weekStatus: p.weekStatus || null, available: p.available !== false }; }),
         salary: salary, remaining: cfg.cap - salary, points: Math.round(bestS * 10) / 10, mode: o.mode || 'ironTuna',
         projPoints: Math.round(bestL.reduce(function (s, p) { return s + p.ironTunaPoints; }, 0) * 10) / 10,
         floorPoints: Math.round(bestL.reduce(function (s, p) { return s + floorOf(p); }, 0) * 10) / 10,
         ceilingPoints: Math.round(bestL.reduce(function (s, p) { return s + ceilOf(p); }, 0) * 10) / 10,
-        ownership: owned.length === bestL.length ? Math.round(owned.reduce(function (s, v) { return s + v; }, 0) * 10) / 10 : null });
+        ownership: owned.length === bestL.length ? Math.round(owned.reduce(function (s, v) { return s + v; }, 0) * 10) / 10 : null,
+        marketPoints: Math.round(bestL.reduce(function (s, p) { return s + (isFinite(p.marketPoints) ? p.marketPoints : 0); }, 0) * 10) / 10,
+        quoted: bestL.filter(function (p) { return p.marketQuoted; }).length });
       bestL.forEach(function (p) { used[p.id] = (used[p.id] || 0) + 1; });
     }
     return { ok: results.length > 0, mode: mode.label, lineups: results, poolSize: pool.length, cap: cfg.cap,
+             benched: benched, benchedCount: benched.length,
              note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? '' : 's') + ' satisfy the constraints.' : null };
   }
-  var api = { MODES: MODES, build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf };
+  // ── which contest this slate is worth entering ───────────────────────────
+  // A step up the payout curve — Head-to-Head, Multiplier, single-entry
+  // tournament, multi-entry tournament — trades a lower chance of cashing for
+  // a bigger payoff. The case for taking a step is that the model can buy
+  // ceiling without giving up much median, and the measure of that is the gap
+  // between Iron Tuna's number for a roster and THE MARKET's for the same one.
+  //
+  // That gap is only worth acting on to the extent the market's number is
+  // really the market's. On a slate the books have priced, it is a
+  // disagreement with money. On a slate they have not, the "market" number is
+  // the game total split across an offense — which shares most of its inputs
+  // with the projection it is being compared to, so the two agreeing means
+  // very little and the two disagreeing means less. Acting on that gap is
+  // taking real risk on the strength of two models arguing with each other.
+  //
+  // So the thresholds are divided by how much of the roster was actually
+  // quoted. A fully quoted roster moves up the curve on the evidence it has.
+  // An unquoted one needs twice the gap to justify the same risk, which on
+  // most weeks leaves it where the chance of winning is best.
+  var PICKS = {
+    h2h: { rec: 'Head-to-Head', tag: 'Highest hit rate',
+      why: 'The highest-confidence path is still to maximize the chance of beating one opponent. The current slate does not offer enough extra ceiling at a small enough projection cost to justify moving materially up the payout curve.' },
+    multiplier: { rec: 'Multiplier', tag: 'Measured step up the payout curve',
+      why: 'The slate offers enough projected edge and upside to take more risk than Head-to-Head, but not enough to justify the volatility of a large tournament. A multiplier is the middle ground: fewer winners, meaningfully better payoff, and less dependence on a perfect ceiling outcome.' },
+    single: { rec: 'Tournament - Single Entry', tag: 'Upside without a major projection sacrifice',
+      why: 'The tournament build adds meaningful ceiling and correlation without giving away much median projection. This is the kind of week where accepting a lower cashing probability can be justified by the larger payoff available when the roster hits.' },
+    multi: { rec: 'Tournament - Multi-Entry', tag: 'Risk justified by separation',
+      why: 'The leverage build keeps nearly all of the high-floor lineup\u2019s median projection while creating materially more ceiling and differentiation. That combination makes the larger payout curve more attractive than it is on a normal week, despite the lower chance of cashing.' }
+  };
+  function sum(l, key) { return l && l.players ? l.players.reduce(function (n, p) { var v = Number(p[key]); return n + (isFinite(v) ? v : 0); }, 0) : 0; }
+  // How much of a roster the books actually priced, and on what.
+  function evidenceOf(l) {
+    var ps = (l && l.players) || [];
+    var quoted = ps.filter(function (p) { return p.marketQuoted; });
+    var mkts = {};
+    quoted.forEach(function (p) { ((p.market && p.market.priced) || []).forEach(function (m) { mkts[m] = (mkts[m] || 0) + 1; }); });
+    var tdMkt = ps.filter(function (p) { return p.tdBasis === 'anytime-td-market'; }).length;
+    var books = quoted.map(function (p) { return (p.market && p.market.books) || 0; }).filter(function (n) { return n > 0; });
+    return { quoted: quoted.length, of: ps.length,
+             coverage: ps.length ? quoted.length / ps.length : 0,
+             markets: Object.keys(mkts).sort(),
+             tdQuoted: tdMkt,
+             books: books.length ? Math.round(books.reduce(function (a, b) { return a + b; }, 0) / books.length * 10) / 10 : null };
+  }
+  function contestPick(o) {
+    var C = o && o.cash, T = o && o.tournament, L = (o && o.leverage) || T;
+    if (!C || !T) return null;
+    // The lineup's OWN aggregates. Summing a per-player field here is how this
+    // came to compare zeroes for a year: the builder already totals the
+    // projection, the floor and the ceiling, and those totals are correct.
+    var cashProj = isFinite(C.projPoints) ? C.projPoints : sum(C, 'proj');
+    var cashFloor = isFinite(C.floorPoints) ? C.floorPoints : 0;
+    var cashCeil = isFinite(C.ceilingPoints) ? C.ceilingPoints : 0;
+    var tourProj = isFinite(T.projPoints) ? T.projPoints : sum(T, 'proj');
+    var tourCeil = isFinite(T.ceilingPoints) ? T.ceilingPoints : 0;
+    var levProj = isFinite(L.projPoints) ? L.projPoints : sum(L, 'proj');
+    var levCeil = isFinite(L.ceilingPoints) ? L.ceilingPoints : 0;
+    // Against the market read, which is the quoted props where there are any
+    // and the game line discounted for not being quoted where there are not.
+    var market = isFinite(T.marketPoints) && T.marketPoints > 0 ? T.marketPoints : sum(T, 'marketPoints');
+    var edge = market > 0 && tourProj > 0 ? (tourProj - market) / market : 0;
+    var ev = evidenceOf(T);
+    var need = 2 - ev.coverage;                 // fully quoted 1x, unquoted 2x
+    var pick = PICKS.h2h;
+    if (edge >= 0.05 * need && levProj >= cashProj * 0.97 && levCeil >= cashCeil * 1.10) pick = PICKS.multi;
+    else if (edge >= 0.035 * need && tourProj >= cashProj * 0.97 && tourCeil >= cashCeil * 1.07) pick = PICKS.single;
+    else if (edge >= 0.018 * need && tourProj >= cashProj * 0.985) pick = PICKS.multiplier;
+    return { rec: pick.rec, tag: pick.tag, rationale: pick.why,
+             edge: Math.round(edge * 1000) / 10, need: Math.round(need * 100) / 100,
+             marketPoints: Math.round(market * 10) / 10,
+             cashProj: cashProj, tourProj: tourProj, levProj: levProj,
+             floorRetention: cashProj > 0 ? Math.round(cashFloor / cashProj * 100) : 0,
+             ceilingMultiple: tourProj > 0 ? Math.round(tourCeil / tourProj * 100) : 0,
+             evidence: ev };
+  }
+
+  var api = { MODES: MODES, build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf, contestPick: contestPick };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.ITDfs = api;
 })(typeof window !== 'undefined' ? window : globalThis);

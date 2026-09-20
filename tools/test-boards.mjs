@@ -251,6 +251,41 @@ console.log('\na priced prop, and the why behind it');
   ok('the sentence says several markets moved up', /independent markets have moved upward/.test(why.summary), why.summary);
   ok('and names volume as the stronger signal over touchdown probability', /volume/.test(why.summary) && /rather than touchdown/.test(why.summary), why.summary);
   ok('the summary asserts nothing the drivers do not show', !/injur|coach|knows|trade|insider/i.test(why.summary));
+  // The touchdown price reaches the LINE, not just the block beside it. The
+  // board is a stat line scored later, so a price that never touched the line
+  // never touched the number: the most widely posted prop in football moved
+  // nothing.
+  const dP = d.weeks[0].vegasProjection.td.probability / 100;
+  ok('the touchdown price moves the priced player\'s touchdown line',
+     d.vegas.stats.recTD != null && near((d.vegas.stats.recTD || 0) + (d.vegas.stats.rushTD || 0), dP, 0.06),
+     JSON.stringify({ recTD: d.vegas.stats.recTD, rushTD: d.vegas.stats.rushTD, p: dP }));
+
+  // ── a touchdown price and nothing else ─────────────────────────────────
+  // No core market, so no standalone market projection — and the price is
+  // still applied to the game-line baseline instead of being thrown away.
+  const tdOnlyHist = { anytimeTD: H.marketHistoryFrom([rows('dk', 'anytimeTD', 1, 210, null, t0), rows('fd', 'anytimeTD', 1, 165, null, t1)]) };
+  const bt = H.buildBoards(ctx({ weekMarkets: { deltareceiver: tdOnlyHist } }), { horizon: 'week', preset: 'ppr' });
+  const tdOnlyMan = bt.players.find(p => p.name === 'Delta Receiver');
+  const baseline = H.buildBoards(ctx({ weekMarkets: {} }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Delta Receiver');
+  ok('a man with only a touchdown price is not called a market projection', tdOnlyMan.vegas.basis === 'gamelines+props', tdOnlyMan.vegas.basis);
+  ok('...and is not left on the plain game line either', baseline.vegas.basis === 'gamelines');
+  // Against the projection's OWN devigged number, not the history board's
+  // display probability: the two are computed by different paths, and what
+  // must agree is the line and the price that was applied to it. The tolerance
+  // clears _roundStats, which rounds every served stat to a tenth.
+  const tdP = tdOnlyMan.weeks[0].vegasProjection.td.probability / 100;
+  ok('...his touchdown line IS the market\'s',
+     near((tdOnlyMan.vegas.stats.recTD || 0) + (tdOnlyMan.vegas.stats.rushTD || 0), tdP, 0.06),
+     JSON.stringify({ td: tdOnlyMan.vegas.stats.recTD, want: tdP }));
+  ok('...and his yardage still comes from the environment, untouched',
+     near(tdOnlyMan.vegas.stats.recYd, baseline.vegas.stats.recYd, 0.01));
+  ok('...so his number moved off the game line\'s', tdOnlyMan.vegas.points !== baseline.vegas.points);
+  ok('the week row says the quoted markets were applied',
+     tdOnlyMan.weeks[0].vegasProjection && tdOnlyMan.weeks[0].vegasProjection.applied === true
+     && tdOnlyMan.weeks[0].vegasProjection.priced.join(',') === 'anytimeTD');
+  ok('the week counts it as its own kind, not as a props week',
+     tdOnlyMan.vegas.thinWeeks === 1 && tdOnlyMan.vegas.propsWeeks === 0);
+
   const quiet = b.players.find(p => p.name === 'Echo Receiver');
   ok('a player with no market movement gets an honest sentence', /agree|environment/.test(quiet.why.summary), quiet.why.summary);
 }
