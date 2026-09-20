@@ -150,6 +150,13 @@ console.log('\nVegas Edge');
   ok('and the model\'s TD number is the Poisson chance of at least one', Math.abs(row('Big Riser', 'anytimeTD').model - Math.round((1 - Math.exp(-0.55)) * 1000) / 10) < 0.01);
   ok('every row says it was quoted, names the label and the opponent, and never a book', pb.every(r => r.basis === 'quoted' && r.label && r.opponent && !('perBook' in r) && !('book' in r)));
   ok('the summary counts rows, players, markets and books', e.propSummary.rows === 3 && e.propSummary.players === 2 && e.propSummary.markets === 3 && e.propSummary.books === 2 && e.propSummary.capped === false, JSON.stringify(e.propSummary));
+  // WHICH markets, not just how many. A total reads the same whether the books
+  // posted nine markets or only anytime touchdowns, and only one of those two
+  // feeds can project a receiver.
+  ok('...and breaks the rows down by market, so one market cannot read as nine',
+     e.propSummary.byMarket && Object.keys(e.propSummary.byMarket).length === 3
+     && Object.values(e.propSummary.byMarket).reduce((s, n) => s + n, 0) === e.propSummary.rows,
+     JSON.stringify(e.propSummary.byMarket));
   ok('widest disagreement first', pb.every((r, i) => i === 0 || Math.abs(pb[i - 1].edge ?? -1) >= Math.abs(r.edge ?? -1)));
   ok('games are ranked by total with implied points and movement', e.gameEnvironments[0].total === 47.5 && e.gameEnvironments[0].movement.spread === 3);
   ok('hidden signals are the game-script insights', e.hiddenSignals.length === 1 && e.hiddenSignals[0].type === 'game_script_change');

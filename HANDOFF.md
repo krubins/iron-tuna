@@ -11488,3 +11488,546 @@ closes it and focus returns to the button. At 390px the dock is 374px wide,
 fully on screen, with the send button reachable. With `/dfs-coach.js` answering
 404 the launcher is grey and titled with the reason, the dock opens to the
 message and a working Try again, and the retry restores both.
+## 96. September 19: the DraftKings roster maker recommended a man who was not playing
+
+The report: the DFS lineup builder put **Theo Wease Jr.** in a recommended
+roster. He was not going to play. He is not hurt either — he is on the
+**Chargers' practice squad**, and the board still prices him as a Miami
+receiver with a 682-yard season line.
+
+That is two failures wearing one coat, and both of them ran the whole way from
+the board to the lineup without anything asking the only question a slate
+cares about: **is he going to be on the field on Sunday?**
+
+**Nothing on the DFS path had ever asked it.** `dfs-optimizer.js` filtered its
+pool on three things — on the board, a salary above zero, a positive
+projection — and `dfs.html` contained the string "injury" exactly zero times.
+The slate row did carry an `injury` field, and nothing read it.
+
+**The availability list could not have answered it anyway.** It is built for a
+seventeen-game question and drops week-to-week designations on purpose (§48): a
+Questionable tag, or a plain "Out" with no return date, is not a change to a
+season line, so `_availStatusOf` maps it to nothing and the board never hears
+about it. Correct for the board. Useless for one afternoon.
+
+**And no injury report of any kind would have caught this player**, because he
+is not injured. A practice-squad signing appears on no injury report anywhere.
+
+### What now decides who is on the board
+
+Four sources, in this order. Every slate row carries `weekStatus`,
+`weekStatusNote` and `weekStatusBasis`, and the basis says which one answered.
+
+| Basis | Source | Catches |
+|---|---|---|
+| `injury-report` | This week's designations, kept by the same 11:00Z ESPN pull in a **second table** (`weekly`) beside the season list. It moves no projection and touches no `gamesOut`. | Out, Doubtful, Questionable, and active/PUP — the one "Out" the season list declines by design. |
+| `reserve-list` | The season list read against the week number. `gamesOut` counts from Week 1, so four games out is Weeks 1–4 — the convention `tools/availability.json` states in its own header ("first eligible Week 5" = 4), read rather than re-derived. | IR, PUP, NFI, suspensions, the exempt list. |
+| `roster` | Sleeper's player file (`buildSleeperRoster`), the file `/api/live` and the depth-chart job already read. Status and club, per player. | **The Wease case.** Not on an active roster at all: practice squad, free agent, inactive. |
+| `salary-file` | FanDuel's `Injury Indicator` column, which the parser had been discarding. DraftKings' export carries none, which is why it is last. | Whatever the operator itself marked. |
+
+`available: false` is the verdict. **Out and Doubtful come off the board.
+Questionable stays on it**, printed, because that call belongs to the reader
+and benching every questionable body would empty a slate.
+
+An unavailable player is off the value boards, off the stacks and bring-backs,
+and out of the ownership model — he cannot take ownership share from a man who
+is playing.
+
+### Two things it deliberately does not do
+
+- **A lock overrules it.** `ITDfs.build` keeps a locked player in the pool
+  whatever his status, and the What If panel says so in as many words. The
+  builder declines to make this call on its own; it does not overrule one the
+  reader has already made.
+- **A team change is flagged, not benched.** When the roster file has a player
+  at a club the board does not, he still plays — but the projection beside his
+  name was built for another offense. The row carries `teamChanged` and
+  `rosterTeam`, and the page prints "now LAC" next to him rather than passing a
+  stale line off as a current read.
+
+### What the reader sees
+
+The pool table greys the row and prints the designation in its Status column.
+Above the lineup, a note names who came off and why — *"3 players off the
+board: the injury report rules them out or doubtful for this week…"* — and ends
+with how to put one back. Silence was the old behaviour and it was the worst
+part: a reader expecting a name and not seeing it was owed the reason.
+
+### Fail-soft, everywhere
+
+A missing ESPN pull, a missing or thin Sleeper file, a slate built with no week
+number, an overlay row written before `weekly` existed: each one leaves every
+player available, exactly as before any of this shipped. The weekly table is
+validated separately from the season list and on a bad shape gives up only
+itself. **A feed that is down must never empty a board** — that failure is
+worse than the one being fixed.
+
+Guarded by `tools/test-dfs.mjs` ("who is not playing this week", 30 assertions
+from each source in isolation through to no lineup containing a benched man)
+and `tools/test-worker-availability.mjs` (the weekly table, and that it still
+moves no season line). `docs/dfs-metrics.md` carries the table above.
+
+## 97. September 19: the slate could not tell a quoted prop from a sliced-up game total
+
+The ask: use the week's prop bets to predict players and drive the DFS
+recommendations; fall back to something else where the books have not posted.
+
+**The pipeline was already complete.** The market snapshot job writes
+`odds_snapshots`, `marketHistoryWeek` reads them, `marketPropsFrom` shapes one
+player's markets, `vegasProjection` converts his quoted lines into fantasy
+points, and the week board records the basis on `p.vegas`. The slate was
+already reading that board.
+
+**What was missing was that nothing downstream could tell what it was holding.**
+A quoted player and an unquoted one both arrived as `vegasPoints`. For the
+first that number is his own props — 62.5 receiving yards, 4.5 receptions, a
+devigged 41% anytime-touchdown price — a forecast of *him*, made with money at
+stake. For the second it is the game total and spread split across an offense:
+a forecast of his *game* with his name attached. The optimizer saw one field
+and let a prop-grounded 18.4 and a curve-fitted 18.4 compete for the same
+roster spot on identical terms.
+
+### The evidence now travels with the number
+
+`dfsMarketRead()` puts a `market` block on every slate row: the basis, the
+markets a book actually posted (`priced`, with plain-language labels), the book
+count, the age of the pull, the devigged touchdown price with its books — and
+`shrink`, how far the number is trusted.
+
+**`shrink` is `BLEND_SHRINK`, the site's own ladder, not a copy.** The slate
+discounts a market number by exactly the factors the season blend uses. A
+second table here would drift, and the slate and the board would end up
+disagreeing about the same player on the same afternoon. The test lifts the
+real declaration out of `_worker.js` rather than restating it.
+
+### The fallback is the consensus
+
+`marketPoints = consensus + shrink × (market − consensus)`
+
+A fully quoted player keeps his whole market number. A player priced only off
+his game line keeps 80% of the distance. A fitted team rating keeps 55%. A
+player with no market at all lands exactly on the consensus projection. So the
+degradation is to the experts' number, never to a curve fit wearing a Vegas
+label — which is what the second half of the ask was about.
+
+### The Market read build
+
+A new objective, `mode: 'market'`, maximizes `marketPoints`. The existing
+`vegas` mode is left alone: it maximizes the raw market number, which some
+readers want, and it demonstrably cannot see the difference — the test puts two
+receivers at the same salary with the same 16.0 raw market number, one quoted
+and one not, and `vegas` reads them as identical while `market` takes the
+quoted man.
+
+Being quoted is not a licence to be expensive. A priced $8,600 receiver can
+still lose his slot to value, and should. What it buys is that his number is
+not marked down.
+
+### What the reader sees
+
+- The player pool gains a **Market** column: `PROPS` with the book count,
+  `LINES`, or `FITTED`, with the full sentence on hover.
+- Every recommended player carries a line naming what the books posted on him
+  — "The books posted receiving yards, receptions across 6 books, pulled within
+  the hour. Anytime touchdown 41.2%, devigged from the market." — or saying
+  plainly that nobody priced him and what his number is instead.
+- The lead card says how much of *this roster* the market priced, names the
+  best quoted touchdown price in it, and when none of it was priced says so.
+- The slate dashboard reports coverage as a number, not a boolean: priced how
+  many of how many, by how many books, how fresh, which markets.
+
+### Two things fixed on the way
+
+`playerFit` and `lineupSummary` had been reading `vegasPoints`, `consensusPoints`
+and `teamTotal` off the lineup player object, which never carried any of them —
+so the market clauses in the fit lines and the "strongest market-versus-consensus
+signal" sentence had been dead code. The optimizer now carries those fields
+onto every picked player, and they work.
+
+### The state of the feed
+
+No prop provider key is configured in `wrangler.jsonc` (`PROPLINE_API_KEY`,
+`ODDS_API_KEY` are secrets, and `hasProps` could not be checked from the
+sandbox: the egress policy refuses irontuna.com). So the empty-feed path is
+very likely the live one today, and it is tested as carefully as the loaded
+one: the fixture slate carries no props and proves the consensus fallback, and
+a second fixture with props posted proves the primary path.
+
+Guarded by `tools/test-dfs.mjs` ("the weekly betting market", 38 assertions).
+`docs/dfs-metrics.md` carries the table and the provider chain.
+
+## 98. September 19: "is it working?" was not a question anything could answer
+
+Ken: *"I think we had set it up to get props. Please check to see if it's
+working."*
+
+**It is set up.** `TMS_ENABLED=1`, `TMS_PROVIDER=propline` in `wrangler.jsonc`;
+`tmsPoll` runs on every quarter-hour tick behind an hourly lease; and since
+§72 (`Use PropLine props in player projections`, Sept 15)
+`tmsStoreForProjections` bridges the normalized prop rows into
+`odds_snapshots`, which is what `marketHistoryWeek` reads and what the week
+board turns into `vegas.basis === 'props'`. §80 (Sept 16) is direct evidence
+the collection was working: the complaint there was that the READ side showed
+only a few anytime-TD rows while *"the feeds were collecting the whole
+market."*
+
+**It could not be confirmed from here.** The egress policy refuses
+irontuna.com, by curl and by fetch alike, so production is unobservable from
+this session. That is a session limit, not a finding, and it is why the answer
+below is a diagnostic rather than a verdict.
+
+**But nothing on the site could have answered it either**, which is the real
+defect. `snapshotStatus` — the only prop-ish number on the health board —
+counts the whole `odds_snapshots` table across every week it keeps (200 days).
+A collector that stopped three weeks ago reads as perfectly healthy: thousands
+of rows, dozens of books, plenty of markets. It cannot distinguish the state
+everyone actually cares about.
+
+### `props` on the health payload
+
+`propsHealth(env, season, week)` answers this week only, and separates the four
+states that the row count cannot:
+
+| State | What it means |
+|---|---|
+| `live` | Fresh rows, matched to players on the board. Working; the note says how many players, markets and books, and how old the pull is. |
+| `stale` | Rows exist for the week but the newest is over 12 hours old. The poll has stopped; the board is serving the last lines it got. |
+| `unmatched` | **The silent one.** Rows are arriving and fresh, and *none of their subjects match a board player*. The collector looks perfect, and every projection is quietly falling back to the game line, because the join is by normalized name and one side of it moved. |
+| `empty` | Nothing written for this week. Provider unkeyed, poll failing, or the week just turned. |
+
+The match is computed the way `buildBoards` computes it — normalized name
+against `_oddsProjectionIndex()` — so the health board cannot agree with itself
+while disagreeing with the boards. An ambiguous name (one normalized name at
+two positions) is `null` in that index and is **not** counted as matched,
+because `buildBoards` will not apply a prop to it either. A D1 failure reports
+as a failure and is never flattened into `empty`.
+
+`GET /api/health` → `updates.props`.
+
+### The doc said the opposite
+
+`docs/TUNA-MARKET-SIGNAL.md` opened with "It does not alter projections or
+optimizer rankings without a separate calibrated decision." True when written,
+false since §72 put the projection bridge in, and false twice over since §97
+put the market read on the slate. A setup doc asserting that the thing is not
+wired is a good way to end up unsure whether it is wired. It now carries the
+chain, `odds_snapshots → marketHistoryWeek → vegasProjection → vegas.basis →
+the slate`, and points at `props` on the health payload for checking it.
+
+Guarded by `tools/test-worker-odds.mjs` ("this week's props, end to end"):
+each of the four states against a fake D1, coverage measured against the board
+rather than the store, the ambiguous-name rule, out of season, and a read
+failure.
+
+## 99. September 19: 720 quoted props, and not one of them could project a receiver
+
+Ken, checking the Quoted Props board: *"There are quite a few anytime TD props
+and it says that there are 720 props."*
+
+Props are flowing. The collection is fine. And the number does not mean what it
+looks like it means.
+
+**A market projection needs a CORE market before a price means anything**
+(`VEGAS_MARKETS`), and an anytime-touchdown price is not one, except for a
+running back:
+
+| Position | Core markets | With only an anytime-TD price |
+|---|---|---|
+| WR, TE | `recYd`, `rec` | **no projection** |
+| QB | `passYd`, `passTD` | **no projection** |
+| RB | `rushYd`, `anytimeTD` | partial — the TD price is half his core |
+
+`vegasProjection` returns `unavailable / no_core_market` for the first two, so
+every receiver, tight end and quarterback falls back to the game line, and
+`vegas.basis` never reaches `props`. That is how "we have 720 props" and "no
+player carries a market projection" are both true on the same afternoon. Pinned
+in `tools/test-market.mjs`, "an anytime-touchdown-only feed", against the real
+projection code rather than a restatement of it.
+
+### Three places were hiding it
+
+**1. The Vegas Edge summary printed a total, not a mix.** `propSummary` has
+counted distinct markets since §80 and the page never printed the number:
+"720 quoted markets on N players across B books" reads identically for nine
+markets and for one. It now prints the breakdown — *anytime TD 612 · receiving
+yards 58 · receptions 50* — and, when only one market is posted, says in words
+that player projections are still coming from the game lines and why.
+
+**2. The board threw the diagnosis away.** `buildBoards` kept
+`vegasProjection.reason` and `.priced` only on the SUCCESS branch; an
+unavailable projection was reduced to `{status, label}`. So a man the books had
+priced on his touchdown and a man no book had looked at arrived downstream
+identical. Both now carry `reason`, `priced` and `missing`.
+
+**3. The slate could not tell those two men apart either.** A new state on the
+market read, `shortOfProjection`: quoted, and not on anything a projection can
+be built from. It is counted separately in the coverage
+(`quotedButShort`, `shortMarkets`), and it is the FIRST thing the note says
+when it applies, because it is the confusing one:
+
+> The books have posted on 214 players here, but only anytime TD — and a
+> market projection needs a yardage or reception line before a price means
+> anything. So every number on this slate is still the game line's
+> environment, discounted for it... This is a feed carrying one market, not a
+> feed carrying none.
+
+The player pool shows `TD ONLY` rather than `LINES`, and the player's line
+says what the books posted and what a projection would have needed.
+
+### What this does not do
+
+It does not make the feed carry yardage lines. If the breakdown on Vegas Edge
+comes back overwhelmingly `anytimeTD`, the fix is upstream — `TMS_PROP_MARKETS`
+narrowed, or the PropLine tier not returning the yardage markets for each
+event — and that is a configuration question, not a code one. What changed here
+is that the site now says which of those it is instead of presenting a healthy
+row count over a board that cannot use it.
+
+## 100. September 20: the yardage markets were always being asked for
+
+Ken: *"Let's add the yardage markets to the feed."*
+
+They were never missing from the request. `TMS_PROPLINE_MARKETS` has listed all
+nine scoring markets since the PropLine adapter landed, and the per-event call
+sends every one of them on every game. There was nothing to add. So either the
+provider is not returning them, or something between the response and the store
+was throwing them away — and nothing on the site could say which.
+
+### The asymmetry that hides a line-parsing fault
+
+`tmsNormalize` required an outcome's line to be a number:
+
+```js
+if (o.point != null && (typeof o.point !== 'number' || !Number.isFinite(o.point))) continue;
+if (m.key !== 'h2h' && o.point == null && !/(^|_)anytime_td$/.test(m.key)) continue;
+```
+
+**An anytime-touchdown market has no line and is explicitly exempt.** Every
+yardage and reception market must have one. So a feed sending `"62.5"` instead
+of `62.5` — an ordinary thing for a book API to do — loses every yardage and
+reception row and keeps every touchdown price, and the result is a busy board
+that cannot project a single receiver. That is the exact shape of §99's
+symptom, and it would have looked identical to a provider that only posts
+touchdowns.
+
+`tmsOutcomeLine()` now coerces a numeric line from `point`, `line` or
+`handicap`, whatever type it arrives as, and `tmsOutcomePlayer()` reads the
+player from `description`, `participant`, `player` or `player_name`. Tolerance,
+not invention: a genuinely absent line, an unparseable one (`"n/a"`) and a
+player market with no player are all still dropped.
+
+This is a hardening, not a confirmed diagnosis. The live feed is unreachable
+from here and the provider's real payload has not been seen. What settles it is
+the next item.
+
+### Every drop is counted now
+
+Normalizing rejected rows in five places and every one was a bare `continue`.
+`tmsNormalize` now takes an optional tally and fills it by reason
+(`no_line`, `no_player`, `price`, `no_timestamp`, `alternate_ladder`,
+`market_shape`, `event_shape`) and by market. The poll reports it, with what it
+asked for and what came back, at `health.markets` on `GET /api/tuna-market`:
+
+    markets: { requested: [...], returned: { player_reception_yds: 214, ... },
+               events: 17, drops: { total, byReason, byMarket } }
+
+A clean pull records nothing, so any entry is a signal. "The books only post
+touchdowns" and "we threw the rest away" are different diagnoses with nothing in
+common, and until now there was no way to tell them apart.
+
+### Two real faults found on the way
+
+**The per-event cap was spending itself on the wrong games.** The event window
+is nine days; an NFL week is seven. It routinely holds this Sunday, this Monday
+*and* next Thursday — more than the cap of twenty. The list was sliced with no
+sort, so the twenty games that got a prop call were whatever order the provider
+returned, and the budget could go to games a week out while this Sunday went
+unpriced. `tmsPropLineEvents()` now filters, **sorts soonest-first**, then caps.
+Pulled out as a named function because it is a policy worth testing, and it is
+tested.
+
+**Rush attempts were never requested.** `ODDS_API_MARKET_MAP` maps it to
+`rushAtt` and `VEGAS_MARKETS` lists it among a running back's extras, so
+nothing downstream needed teaching — the request simply never asked. It scores
+nothing, and it is the market the DFS slate's implied-touches number is built
+from; without it that number is a carry count guessed as `rushYd / 4.3`. Now ten
+markets of a cap of twelve.
+
+Guarded by `tools/test-tuna-market.mjs`: a string line survives and is coerced,
+alternate line and player keys are read, an absent or unparseable line is still
+dropped, a touchdown market still needs no line, the drop tally by reason and
+market, a clean pull tallying nothing, the market list keeping its yardage
+markets under the cap, and the soonest games being the ones priced.
+
+## 101. September 20: "How do I check /api/tuna-market?"
+
+A fair question, and the third time in this thread that the answer to "is it
+working" was a URL and a field name. Ken is not going to read JSON, and should
+not have to. The diagnostics from §98 and §100 were real and they were in the
+wrong place.
+
+**The health board now says it in words**, as a tile beside the others:
+
+| Tile reads | State | What it means |
+|---|---|---|
+| **Working** | `live` | The books are pricing this week's players and the projections are reading them. |
+| **Touchdowns only** | `td_only` | Fresh, matched, and carrying no yardage or reception market — so receivers, tight ends and quarterbacks are all still on the game line. The feed is running; it is carrying one market. |
+| **Collection stopped** | `stale` | Props exist for the week, newest is over 12 hours old. |
+| **Reaching nobody** | `unmatched` | Rows arriving and matching no board player. The silent one. |
+| **Nothing this week** | `empty` | Nothing written. |
+| **Out of season** | `no_week` | No regular-season week is current. |
+
+Under it, the market mix in English — *receiving yards 214 · anytime TD 396 ·
+receptions 190* — and the full sentence in the feeds table beside the last
+update time.
+
+`td_only` is a new state, and it is the one §99 was about: a healthy row count
+that cannot project a receiver, because `VEGAS_MARKETS` wants a yardage or
+reception line and an anytime-touchdown price is not one. `propsHealth` now
+reads the market mix out of `odds_snapshots` — the same store the projections
+read, not the provider's own report of itself — and a week with no market in
+`passYd, passTD, rushYd, recYd, rec` is `td_only` however many rows it holds.
+Staleness is checked first: a week that stopped collecting AND carries one
+market reads `stale`, because the fix is the poll, not the provider.
+
+Where to look: **/admin → In-season health → Betting props.**
+
+Guarded by `tools/test-worker-odds.mjs` (the state machine, including one
+yardage market being enough to return to `live`, and stale winning over
+`td_only`) and `tools/test-health.mjs` (the tile exists, renders, has a word
+for every state the payload can emit, and prints market names in English).
+
+## 102. September 20: the touchdown price moved nothing, and the rest was thrown away
+
+Ken: *"This calculation shouldn't just be based on TDs only. It should factor
+other Prop info."*
+
+Right, and worse than that. Two separate places were discarding market
+information, and between them the most widely posted prop in football affected
+no number anywhere on the site.
+
+### 1. The anytime-touchdown price never reached a projection
+
+A board row is a STAT LINE, scored later. The touchdown price is a probability,
+so it lived in its own block (`vp.td`) and the merge that builds the Vegas line
+only ever took the count markets:
+
+```js
+v = { ...weeklyStats(full, pos, playable, env), ...vp.stats };   // and nothing else
+```
+
+`vp.stats` holds the yardage and reception markets. It never holds the anytime
+price, because the price is not a count. So unless a book also hung a rushing-
+or receiving-touchdown COUNT market on the same player — rare — a 41% anytime
+price on a receiver told the board **nothing**. It printed beside the number and
+was absent from it.
+
+`applyMarketTd()` now scales the line's own touchdown components to the market's
+expectation, which keeps the rush/receive split the market does not speak to. A
+baseline of 0.45 receiving and 0.05 rushing, against a market expecting 0.40,
+becomes 0.36 and 0.04. A quarterback's **passing** touchdowns are left alone: an
+anytime price is him crossing the line, never him throwing it, which is also
+what `tdPointsFor` already assumed. A priced touchdown COUNT still wins, because
+a count carries the two-score games a binary cannot.
+
+The implied count is the price itself, matching what `vegasProjection.points`
+already does with it. Both understate a man who can score twice, and they
+understate it identically — the two numbers sit side by side and must not
+disagree about the same market. Correcting that understatement is a change to
+both, on purpose, and not this one.
+
+### 2. A man with no core market had every quoted price discarded
+
+`vegasProjection` returns `no_core_market` when nothing in `VEGAS_MARKETS.core`
+is priced, and `buildBoards` gated the whole merge on `vp.ok`. So a receiver
+with an anytime price and no yardage line fell all the way back to the game
+line, and his touchdown price — real information about a real part of his
+afternoon — went in the bin.
+
+It is true that he cannot be projected **from the market alone**: a number built
+from a touchdown price and nothing else would be three points and a lie. That is
+why the refusal stands. But the refusal now carries the pieces — `stats`, `td`,
+`books`, `ageHours` — for a caller that has a baseline to lay them on, and
+`buildBoards` is that caller. Basis **`gamelines+props`**: the environment as
+the baseline, every quoted market on top of it. `BLEND_SHRINK` rates it 0.85,
+between a plain game line (0.8) and a partial market read (0.9).
+
+`points` is still deliberately absent from that return. There isn't one.
+
+### On the slate
+
+`quoted: true` (the books priced him) and `marketStandalone: false` (not a
+market read on his own). The `td_only` health state and the slate's own note
+both stop saying the prices went nowhere, because they no longer do: they say
+the touchdown side of each line is the market's and the yardage side is still
+the game's, and why.
+
+Guarded by `tools/test-market.mjs` (the scaling, the split, the quarterback
+rule, the zero baseline, that the applied line scores what the points path
+would have added, and that the refusal carries its evidence) and
+`tools/test-boards.mjs` (end to end: a touchdown-only man is `gamelines+props`,
+his touchdown line is the market's, his yardage is untouched, and his number
+moves off the game line's).
+
+## 103. September 20: Play of the Week has recommended Head-to-Head every week since it shipped
+
+Ken: *"Play of the Week should factor in the other props too."*
+
+It should, and while wiring that in the recommendation turned out never to have
+worked at all.
+
+### It compared zero with zero
+
+```js
+var cashProj = lineupStat(C, 'ironTunaPoints');
+```
+
+`ironTunaPoints` is not a field on a lineup player. The builder calls it
+`proj`. So `lineupStat` summed `undefined` across nine slots and returned 0 for
+the cash, tournament and leverage projections alike; `vegas` was 0 for the same
+reason; `edge` was `0 > 0 ? ... : 0`, so 0; and every threshold in the ladder
+needs a positive edge. **Head-to-Head, on every slate the site has ever
+served**, with a meaningless "+0.0%" printed beside it.
+
+The builder has totalled `projPoints`, `floorPoints` and `ceilingPoints`
+correctly on every lineup the whole time. The page was re-summing them by hand,
+with the wrong key, next to the right answer.
+
+Worse: §97 put `vegasPoints` onto lineup players for the fit lines, which made
+`vegas` positive while `tourProj` stayed 0 — so the panel was about to start
+printing **−100.0%**. Caught here, three days before anyone would have seen it.
+
+### And now it factors the props
+
+The gap that justifies a step up the payout curve is now measured against the
+**market read** (`marketPoints` — quoted props where there are any, the game
+line discounted for not being quoted where there are not), and the thresholds
+scale with how much of the roster the books actually priced:
+
+    need = 2 - coverage
+
+A fully quoted roster is taken at face value. One nobody priced needs twice the
+gap. The reason is the same one §102 was about: on an unquoted slate the market
+number is the game total split across an offense, which shares most of its
+inputs with the projection being compared to it. The two agreeing means very
+little and the two disagreeing means less, and moving up a payout curve on that
+is taking real money risk on two models arguing with each other.
+
+A 2.0% edge now recommends a Multiplier when the books are behind it and stays
+at Head-to-Head when they are not. Same slate, same number, different evidence.
+
+The panel says which: how many picks were priced, across how many books, on
+which markets, how many carry a quoted rather than derived touchdown price —
+or, plainly, that no book priced any of them and the bar was doubled for it.
+
+### Where it lives now
+
+`ITDfs.contestPick()` in `dfs-optimizer.js`. It was forty lines of thresholds
+inline in a render function, reachable only by string-matching the page, which
+is how it sat broken for its whole life. It is now a pure function tested
+against real builds: that the totals are the builder's own and not zero, that
+the edge is measured against the market read, that coverage moves the bar and
+not the number, that a market of zero is not an edge of −100%, and that a real
+build off the fixture slate produces a real recommendation.
+
+`lineupStat` and its private variance table are deleted.

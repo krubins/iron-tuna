@@ -238,6 +238,18 @@ p{color:var(--sec);margin:0 0 16px}
 .df-h3 em{font-family:var(--font-body);font-style:normal;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted)}
 .df-lock{color:var(--teal);font-weight:800} .df-excl{color:var(--danger);font-weight:800;text-decoration:line-through}
 #dfPool td.p{cursor:pointer} #dfPool td.p:hover{text-decoration:underline}
+.df-mkt-quoted{color:var(--teal);font-weight:800;letter-spacing:.06em;font-size:11px}
+.df-mkt-quoted small{font-weight:600;opacity:.7}
+.df-mkt-inferred{color:var(--muted);font-weight:700;letter-spacing:.06em;font-size:11px}
+.df-mkt-fitted{color:var(--muted);font-weight:600;letter-spacing:.06em;font-size:11px;opacity:.7}
+.df-props{border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:8px;padding:10px 14px;margin:12px 0;background:var(--panel);font-size:13px}
+.df-props b{color:var(--text)}
+.df-mktline{display:block;font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35}
+.df-week-out{color:var(--danger);font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+.df-week-q{color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+#dfPool tr.df-row-out td{opacity:.55}
+.df-benched{border:1px solid var(--line);border-left:3px solid var(--danger);border-radius:8px;padding:10px 14px;margin:12px 0;background:var(--panel);font-size:13px}
+.df-benched b{color:var(--text)}
 .df-stack{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;background:var(--panel)}
 .df-stack h3{margin:0 0 6px} .df-stack .side{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;font-size:14px}
 .df-stack b{color:var(--text)} .df-stack .is-status{display:inline}
@@ -705,7 +717,7 @@ p{color:var(--sec);margin:0 0 16px}
     <summary>Fine-tune the build &mdash; objective, stacking, locks and exclusions</summary>
     <p class="is-note">The contest shape above already sets these. Change one and the roster re-solves on your settings instead of the preset.</p>
     <div class="rk-controls">
-      <div class="rk-seg" id="dfMode" role="group" aria-label="Objective"><button type="button" data-mode="ironTuna">Iron Tuna optimal</button><button type="button" data-mode="floor">Safest floor</button><button type="button" data-mode="ceiling">Highest ceiling</button><button type="button" data-mode="leverage">Leverage</button><button type="button" data-mode="vegas">Vegas optimal</button><button type="button" data-mode="consensus">Consensus</button><button type="button" data-mode="vegasEdge">Vegas Edge</button></div>
+      <div class="rk-seg" id="dfMode" role="group" aria-label="Objective"><button type="button" data-mode="ironTuna">Iron Tuna optimal</button><button type="button" data-mode="floor">Safest floor</button><button type="button" data-mode="ceiling">Highest ceiling</button><button type="button" data-mode="leverage">Leverage</button><button type="button" data-mode="market" title="The weekly betting market, taken at the strength of its own evidence: a quoted player prop counts for all of itself, a number inferred from the game line counts for less, and a player nobody priced falls back to the consensus projection.">Market read</button><button type="button" data-mode="vegas">Vegas optimal</button><button type="button" data-mode="consensus">Consensus</button><button type="button" data-mode="vegasEdge">Vegas Edge</button></div>
       <label class="rk-check"><input type="checkbox" id="dfStack"> QB stack</label>
       <label class="rk-check"><input type="checkbox" id="dfBring"> Bring-back</label>
       <label class="rk-check">Max per team <input type="number" id="dfMaxTeam" min="1" max="9" value="4" style="width:52px"></label>
@@ -714,7 +726,7 @@ p{color:var(--sec);margin:0 0 16px}
       <button class="btn" type="button" id="dfBuild">Rebuild</button>
     </div>
     <p class="is-note">Click a name in the pool to lock him into every lineup, twice to exclude him, again to clear.</p>
-    <div class="is-scroll"><table class="is-table" id="dfPool"><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfPoolFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Vegas</th><th class="num">Consensus</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+    <div class="is-scroll"><table class="is-table" id="dfPool"><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfPoolFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Vegas</th><th>Market</th><th class="num">Consensus</th><th>Status</th></tr></thead><tbody></tbody></table></div>
   </details>
 </section>
 
@@ -947,7 +959,14 @@ p{color:var(--sec);margin:0 0 16px}
     var out = [card('Slate', e(s.label) + ' · Week ' + e(s.week), on.length + ' priced players on the board, cap ' + money(s.cap) + '.'),
       card('Median value', n1(s.medianVegasPerK) + ' pts / $1K', 'What the market implies an ordinary dollar buys on this slate.'),
       s.boards.bestVegasValues[0] ? card('Best value', e(s.boards.bestVegasValues[0].name), 'VVS ' + s.boards.bestVegasValues[0].vegasValueScore + ' at ' + money(s.boards.bestVegasValues[0].salary) + '.') : '',
-      s.boards.expensiveFades[0] ? card('Expensive fade', e(s.boards.expensiveFades[0].name), money(s.boards.expensiveFades[0].salary) + ', ' + e(s.boards.expensiveFades[0].marketDelta.classification.toLowerCase()) + '.') : ''];
+      s.boards.expensiveFades[0] ? card('Expensive fade', e(s.boards.expensiveFades[0].name), money(s.boards.expensiveFades[0].salary) + ', ' + e(s.boards.expensiveFades[0].marketDelta.classification.toLowerCase()) + '.') : '',
+      // Prop coverage, said as a number rather than a boolean: it is what
+      // decides whether the Market read build is standing on quoted prices or
+      // on the consensus, and the reader should not have to guess which.
+      s.props ? card('Books priced', s.props.priced + ' of ' + s.props.players + (s.props.coverage ? ' \u00b7 ' + s.props.coverage + '%' : ''),
+        s.props.priced
+          ? e((s.props.marketLabels || []).slice(0, 4).join(', ')) + (s.props.avgBooks ? ', ' + s.props.avgBooks + ' books apiece' : '') + '.'
+          : 'No player prop has reached this slate. The Market read build falls back to the consensus projection.') : ''];
     $('dfCards').innerHTML = out.join('');
   }
   function playerButton(p, extraClass) {
@@ -1072,9 +1091,79 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfValues').querySelector('tbody').innerHTML = list.map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? ' ' + (p.home === false ? '@' : 'vs ') + p.opponent : '')) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.ironTunaPoints) + '</b></td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + ' <span class="is-status">' + e(p.vegasBasis) + '</span></td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + delta(p.marketDelta) + '</td><td class="num">' + n1(p.tdProbability) + '%</td><td class="num">' + n1(p.teamTotal) + '</td><td class="num"><b>' + e(p.vegasValueScore) + '</b></td></tr>'; }).join('');
     $('dfValues').hidden = !list.length; press($('dfBoard'), 'data-board', board);
   }
+  // ── what the books said about him ─────────────────────────────────────────
+  // The Vegas column prints one number for two very different things: a
+  // player the books quoted props on, and a player whose number was inferred
+  // from his game's total. This says which, in one chip, because a reader
+  // deciding between two men at the same price is entitled to know that one
+  // of them was actually priced by somebody with money at stake.
+  var MARKET_LABEL = { passYd: 'passing yards', passTD: 'passing TDs', passInt: 'interceptions', rushYd: 'rushing yards',
+                       rushAtt: 'carries', rushTD: 'rushing TDs', recYd: 'receiving yards', rec: 'receptions',
+                       recTD: 'receiving TDs', anytimeTD: 'anytime TD' };
+  // A man priced on one market only is neither PROPS nor plain LINES: the
+  // books looked at him, and it was not enough to project from.
+  function marketChipFor(m) {
+    if (m && m.shortOfProjection) return ['TD ONLY', 'inferred'];
+    return MARKET_CHIP[m && m.basis] || MARKET_CHIP.none;
+  }
+  var MARKET_CHIP = { 'props': ['PROPS', 'quoted'], 'props-partial': ['PROPS', 'quoted'], 'props+gamelines': ['PROPS', 'quoted'],
+                      'gamelines': ['LINES', 'inferred'], 'gamelines+ratings': ['LINES', 'inferred'],
+                      'ratings': ['FITTED', 'fitted'], 'none': ['\u2014', 'fitted'] };
+  function marketPhrase(p) {
+    var m = p && p.market;
+    if (!m) return '';
+    if (m.quoted) {
+      return 'The books posted ' + (m.pricedLabels && m.pricedLabels.length ? m.pricedLabels.join(', ') : 'props') + ' on him'
+        + (m.books ? ' across ' + m.books + ' book' + (m.books === 1 ? '' : 's') : '')
+        + (m.ageHours != null ? ', pulled ' + (m.ageHours < 1 ? 'within the hour' : Math.round(m.ageHours) + 'h ago') : '')
+        + (p.tdBasis === 'anytime-td-market' && p.tdProbability != null ? '. Anytime touchdown ' + n1(p.tdProbability) + '%, devigged from the market' : '')
+        + '.'
+        // A partial quote is not a full one, and the gap is the part of his
+        // line that is still the game environment rather than a posted price.
+        + (m.status === 'partial' && m.missing && m.missing.length
+            ? ' No line posted on ' + m.missing.map(function (k) { return MARKET_LABEL[k] || k; }).join(' or ') + ', so that part is still the game environment.' : '');
+    }
+    // Priced, and still not projectable. The most confusing row on the board
+    // until somebody says why: the books DID post on him.
+    if (m.shortOfProjection) {
+      return 'The books posted ' + (m.shortPricedLabels || []).join(', ') + ' on him and nothing else. A market projection needs '
+        + ((m.shortMissingLabels || []).join(' or ') || 'a yardage or reception line')
+        + ', so his number here is still his game\u2019s environment, discounted for it.';
+    }
+    if (m.basis === 'ratings' || m.basis === 'none') {
+      return 'No book priced him and no line is posted on his game. This number is a fitted team rating, and the build discounts it to ' + Math.round((m.shrink || 0) * 100) + '% of the way from the consensus.';
+    }
+    return 'No player prop was posted on him. His market number is his game\u2019s total and spread split across the offense, worth ' + Math.round((m.shrink || 0) * 100) + '% of the way from the consensus in a market build.';
+  }
+  function marketTag(p) {
+    var m = p && p.market;
+    if (!m) return '<span class="df-mkt-fitted">\u2014</span>';
+    var chip = marketChipFor(m);
+    return '<span class="df-mkt-' + chip[1] + '" title="' + e(marketPhrase(p)) + '">' + chip[0]
+      + (m.quoted && m.books ? ' <small>' + m.books + '</small>' : '') + '</span>';
+  }
+  // The week's designation, printed wherever a player is offered. "Out" here
+  // is the injury report's word for the game in front of the reader, not the
+  // season list's: a man the report has ruled out is off the board and says
+  // so, and a Questionable tag is printed and left on it, because that call
+  // belongs to the reader.
+  function weekTag(p) {
+    if (!p) return '';
+    var bits = [];
+    if (p.weekStatus) {
+      var off = p.available === false;
+      var why = (p.weekStatusNote || '') + (p.weekStatusBasis === 'salary-file' ? ' (the salary file\u2019s own indicator)'
+        : p.weekStatusBasis === 'reserve-list' ? ' (reserve list)' : p.weekStatusBasis === 'roster' ? '' : '');
+      bits.push('<span class="df-week-' + (off ? 'out' : 'q') + '"' + (why.trim() ? ' title="' + e(why.trim()) + '"' : '') + '>' + e(p.weekStatus) + '</span>');
+    }
+    // He plays, but for someone else now. The projection beside him was built
+    // for his old offense, so the reader is told rather than left to notice.
+    if (p.teamChanged && p.rosterTeam) bits.push('<span class="df-week-q" title="The projection here was built for ' + e(p.team) + '.">now ' + e(p.rosterTeam) + '</span>');
+    return bits.join(' ');
+  }
   function pool(s) {
     var on = s.players.filter(function (p) { return p.onBoard; });
-    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '') + '</td></tr>'; }).join('');
+    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr' + (p.available === false ? ' class="df-row-out"' : '') + '><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td>' + marketTag(p) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + [weekTag(p), (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '')].filter(Boolean).join(' ') + '</td></tr>'; }).join('');
   }
   // ── the shape switch ──────────────────────────────────────────────────────
   // Writes the preset into the fine-tune controls rather than solving off a
@@ -1227,6 +1316,31 @@ p{color:var(--sec);margin:0 0 16px}
       + '</aside>';
   }
 
+  // How much of THIS roster the books actually priced, and what they said
+  // about the touchdowns. A market-driven recommendation that will not show
+  // its market is just an assertion, so the card carries the evidence and
+  // says plainly when there is none.
+  function propsNote(l) {
+    var cov = (slate && slate.props) || null;
+    var quoted = l.players.filter(function (p) { return p.marketQuoted; });
+    var tdMkt = l.players.filter(function (p) { return p.tdBasis === 'anytime-td-market' && finite(p.tdProbability); })
+      .sort(function (a, b) { return Number(b.tdProbability) - Number(a.tdProbability); });
+    if (!quoted.length) {
+      return '<p class="df-props"><b>No player prop is behind this lineup.</b> '
+        + (cov && cov.players ? 'The books have not posted on any of the ' + cov.players + ' players on this slate. ' : '')
+        + 'Every market number here is the game line\u2019s total and spread split across an offense, which the build discounts for exactly that reason, and a player nobody priced falls back to the consensus projection rather than to a fitted number wearing a Vegas label. '
+        + (tdMkt.length ? '' : 'Touchdown odds are derived from the projected workload, not quoted.')
+        + '</p>';
+    }
+    return '<p class="df-props"><b>' + quoted.length + ' of ' + l.players.length + ' picks are priced by the books.</b> '
+      + quoted.slice(0, 4).map(function (p) {
+          return e(p.name) + ' (' + (p.market.pricedLabels || []).slice(0, 3).join(', ') + (p.market.books ? ', ' + p.market.books + ' books' : '') + ')';
+        }).join('; ')
+      + (quoted.length > 4 ? ' and ' + (quoted.length - 4) + ' more' : '') + '. '
+      + (tdMkt.length ? 'Best quoted touchdown price in the roster: ' + e(tdMkt[0].name) + ' at ' + n1(tdMkt[0].tdProbability) + '%'
+          + (tdMkt[0].tdBooks ? ' across ' + tdMkt[0].tdBooks + ' books' : '') + ', devigged. ' : '')
+      + 'The rest carry their game\u2019s environment, discounted for not being quoted.</p>';
+  }
   function lineupCard(l, i, sh, lead) {
     var qb = null; for (var k = 0; k < l.players.length; k++) if (l.players[k].slot === 'QB') qb = l.players[k];
     var full = l.salary + Math.max(0, l.remaining);
@@ -1243,7 +1357,8 @@ p{color:var(--sec);margin:0 0 16px}
     var rows = l.players.map(function (p) {
       return '<tr><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
         + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span>'
-        + '<span class="df-fit">' + e(playerFit(p, l, qb, sh)) + '</span></td>'
+        + '<span class="df-fit">' + e(playerFit(p, l, qb, sh)) + '</span>'
+        + '<span class="df-mktline">' + marketTag(p) + ' ' + e(marketPhrase(p)) + '</span></td>'
         + '<td class="num">' + money(p.salary) + '</td>'
         + '<td class="num">' + fppgText(p) + '</td>'
         + '<td class="num">' + n1(p.proj) + '</td>'
@@ -1260,6 +1375,7 @@ p{color:var(--sec);margin:0 0 16px}
       return '<div class="is-board">'
         + '<div class="is-board-head"><h3>' + e(sh.head) + '</h3><span class="is-board-sub">' + sub + '</span></div>'
         + '<div class="df-explain-summary"><h4>Why This Lineup</h4><p>' + e(lineupSummary(l, sh, qb)) + '</p></div>'
+        + propsNote(l)
         + '<div class="is-stats">' + stats + '</div>' + meter
         + '<div class="df-lead-grid"><div class="df-lead-main"><div class="df-lead-table">' + table + '</div></div>' + breakdownHtml(l, sh, qb) + '</div>'
         + '<div class="is-board-foot">' + foot + '</div></div>';
@@ -1626,7 +1742,7 @@ p{color:var(--sec);margin:0 0 16px}
     var list = whatIfMatches(value);
     if (!value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
     box.innerHTML = list.map(function (p) {
-      return '<button type="button" role="option" data-whatif-key="' + e(p.key) + '"><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' · ' + p.team) + '</small></span><small>' + money(p.salary) + ' · IT ' + n1(p.ironTunaPoints) + '</small></button>';
+      return '<button type="button" role="option" data-whatif-key="' + e(p.key) + '"><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' · ' + p.team) + '</small> ' + weekTag(p) + '</span><small>' + money(p.salary) + ' · IT ' + n1(p.ironTunaPoints) + '</small></button>';
     }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
     box.hidden = false;
   }
@@ -1638,7 +1754,8 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfWhatIfList').hidden = true;
     $('dfWhatIfClear').hidden = false;
     $('dfWhatIf').classList.add('active');
-    $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is forced into the lineup. Every other slot is re-solved around that choice.';
+    $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is forced into the lineup. Every other slot is re-solved around that choice.'
+      + (p.available === false ? ' <b>He is not playing this week' + (p.weekStatus ? ' (' + e(p.weekStatus) + (p.weekStatusNote ? ': ' + e(p.weekStatusNote) : '') + ')' : '') + '</b>, so he is in only because you put him there.' : '');
     build();
   }
   function chooseBestWhatIf() {
@@ -1656,6 +1773,21 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfWhatIfClear').hidden = true; $('dfWhatIf').classList.remove('active');
     $('dfWhatIfState').textContent = 'As you type, matching players will appear below just like the cheat-sheet What If box.';
     if (rebuild) build();
+  }
+  // What the builder refused to spend the cap on. It is said out loud rather
+  // than left as a silently smaller pool: a reader expecting a name and not
+  // seeing it is owed the reason, and "he is not playing this week" is a better
+  // answer than a lineup that quietly differs from last week's. A locked player
+  // is never in this list, because a lock overrules the whole thing.
+  function benchedNote(r) {
+    var list = (r && r.benched) || [];
+    if (!list.length) return '';
+    var top = list.slice().sort(function (a, b) { return b.salary - a.salary; }).slice(0, 6);
+    return '<p class="df-benched"><b>' + list.length + ' player' + (list.length === 1 ? '' : 's') + ' off the board:</b> '
+      + (list.length === 1 ? 'he is' : 'they are') + ' not playing this week \u2014 ruled out, doubtful, or not on an active roster. '
+      + top.map(function (p) { return e(p.name) + ' (' + e(p.position) + ' \u00b7 ' + e(p.team) + ', ' + e(p.status) + ')'; }).join(', ')
+      + (list.length > top.length ? ' and ' + (list.length - top.length) + ' more' : '')
+      + '. Lock one in the player pool below to build around him anyway.</p>';
   }
   function build() {
     if (!slate || !window.ITDfs) { coachSync(); return; }
@@ -1678,7 +1810,8 @@ p{color:var(--sec);margin:0 0 16px}
     }
     var lead = r.lineups[0];
     var alts = r.lineups.slice(1);
-    $('dfLineups').innerHTML = lineupCard(lead, 0, sh, true)
+    $('dfLineups').innerHTML = benchedNote(r)
+      + lineupCard(lead, 0, sh, true)
       + (alts.length ? '<h3 class="df-h3">Branch off it <em>' + alts.length + ' more</em></h3><p class="df-sub">' + (contest === 'gpp'
             ? 'The same core, re-solved to sit on different players. Entering a large field with one lineup is entering it with one opinion.'
             : 'The next best rosters under the same rules, for a second and third entry.') + '</p>'
@@ -1825,17 +1958,11 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
     $('dfTd').hidden = !list.length;
   }
-  var POTW_VARIANCE={QB:{floor:.62,ceil:1.55},RB:{floor:.55,ceil:1.75},WR:{floor:.45,ceil:1.95},TE:{floor:.45,ceil:1.9},DST:{floor:.4,ceil:2.1},K:{floor:.5,ceil:1.6}};
-  function lineupStat(l, key) {
-    return l && l.players ? l.players.reduce(function (n,p) {
-      var v=Number(p[key]);
-      if ((!isFinite(v) || v<=0) && (key==='floor'||key==='ceiling')) {
-        var band=POTW_VARIANCE[p.position]||POTW_VARIANCE.WR, base=Number(p.ironTunaPoints)||0;
-        v=base*(key==='floor'?band.floor:band.ceil);
-      }
-      return n+(isFinite(v)?v:0);
-    },0) : 0;
-  }
+  // lineupStat and its private variance table are gone. They re-summed per
+  // player what the builder already totals correctly on the lineup, and the
+  // key they summed for the projection (`ironTunaPoints`) is not a field on a
+  // lineup player — it is `proj` — so every total was zero. ITDfs.contestPick
+  // reads the builder's own totals.
   function renderPlayOfWeek(s) {
     var host=$('dfPlayWeekBody'); if(!host || !s || !window.ITDfs) return;
     var players=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
@@ -1845,22 +1972,31 @@ p{color:var(--sec);margin:0 0 16px}
     var tour=ITDfs.build(players,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
     var lev=ITDfs.build(players,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
     if(!cash.ok||!tour.ok){ $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">Iron Tuna could not yet build comparable legal contest shapes from the current slate.</p>'; return; }
-    var C=cash.lineups[0], T=tour.lineups[0], L=lev.ok?lev.lineups[0]:T;
-    var cashProj=lineupStat(C,'ironTunaPoints'), cashFloor=lineupStat(C,'floor'), cashCeil=lineupStat(C,'ceiling');
-    var tourProj=lineupStat(T,'ironTunaPoints'), tourCeil=lineupStat(T,'ceiling');
-    var levProj=lineupStat(L,'ironTunaPoints'), levCeil=lineupStat(L,'ceiling');
-    var vegas=lineupStat(T,'vegasPoints');
-    var edge=vegas>0?(tourProj-vegas)/vegas:0;
-    var rec='Head-to-Head', rationale='The highest-confidence path is still to maximize the chance of beating one opponent. The current slate does not offer enough extra ceiling at a small enough projection cost to justify moving materially up the payout curve.';
-    var tag='Highest hit rate';
-    if(edge>=.05 && levProj>=cashProj*.97 && levCeil>=cashCeil*1.10){rec='Tournament - Multi-Entry';tag='Risk justified by separation';rationale='The leverage build keeps nearly all of the high-floor lineup’s median projection while creating materially more ceiling and differentiation. That combination makes the larger payout curve more attractive than it is on a normal week, despite the lower chance of cashing.';}
-    else if(edge>=.035 && tourProj>=cashProj*.97 && tourCeil>=cashCeil*1.07){rec='Tournament - Single Entry';tag='Upside without a major projection sacrifice';rationale='The tournament build adds meaningful ceiling and correlation without giving away much median projection. This is the kind of week where accepting a lower cashing probability can be justified by the larger payoff available when the roster hits.';}
-    else if(edge>=.018 && tourProj>=cashProj*.985){rec='Multiplier';tag='Measured step up the payout curve';rationale='The slate offers enough projected edge and upside to take more risk than Head-to-Head, but not enough to justify the volatility of a large tournament. A multiplier is the middle ground: fewer winners, meaningfully better payoff, and less dependence on a perfect ceiling outcome.';}
-    $('dfPlayWeekTitle').textContent='Play of the Week: '+rec;
-    $('dfPlayWeekDek').textContent=rationale;
-    var stability=cashProj>0?cashFloor/cashProj:0, upside=tourProj>0?tourCeil/tourProj:0;
-    host.innerHTML='<div class="df-play-week-copy"><p><b>Why this contest:</b> '+e(rationale)+'</p><p>Head-to-Head remains the easiest format to win on any single entry. Iron Tuna moves away from it only when the model can buy enough additional ceiling or leverage without surrendering too much of the lineup’s core projection.</p><p class="is-note">This is a model-based contest recommendation, not a guarantee of profit. Contest fees, field strength and actual payout tables still matter.</p></div>'
-      +'<div class="df-play-week-score"><b>'+e(rec)+'</b><span>'+e(tag)+'</span><b style="margin-top:13px">'+(edge>=0?'+':'')+(edge*100).toFixed(1)+'%</b><span>Iron Tuna projection vs. Vegas-derived projection in the ceiling build</span><b style="margin-top:13px">'+(stability*100).toFixed(0)+'% / '+(upside*100).toFixed(0)+'%</b><span>Floor retention / ceiling multiple</span></div>';
+    // The decision lives in the optimizer, where it can be tested against real
+    // lineups. It used to be assembled here out of per-player sums, and the
+    // field it summed for the projection does not exist on a lineup player
+    // (it is `proj`), so every total was zero, every threshold compared zero
+    // to zero, and the answer was Head-to-Head on every slate ever served.
+    var pick = ITDfs.contestPick({ cash: cash.lineups[0], tournament: tour.lineups[0], leverage: lev.ok ? lev.lineups[0] : tour.lineups[0] });
+    if (!pick) { $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">Iron Tuna could not yet build comparable legal contest shapes from the current slate.</p>'; return; }
+    var ev = pick.evidence;
+    // What the recommendation is standing on. A step up the payout curve is a
+    // real risk, and the reader is owed the difference between "the books
+    // disagree with us" and "our two models disagree with each other".
+    var evidence = ev.quoted
+      ? 'The books priced <b>' + ev.quoted + ' of ' + ev.of + '</b> picks in the ceiling build'
+        + (ev.books ? ' across ' + ev.books + ' books' : '')
+        + (ev.markets.length ? ' (' + ev.markets.map(function(m){ return MARKET_LABEL[m] || m; }).join(', ') + ')' : '')
+        + (ev.tdQuoted ? ', with ' + ev.tdQuoted + ' quoted touchdown price' + (ev.tdQuoted === 1 ? '' : 's') : '')
+        + '. The edge below is measured against those quoted lines.'
+        + (ev.coverage < 0.999 ? ' The rest carry their game\u2019s environment, so the bar for moving up the payout curve is raised by ' + Math.round((pick.need - 1) * 100) + '%.' : '')
+      : 'No book priced any pick in this build, so the comparison below is Iron Tuna against the game lines \u2014 two models sharing most of their inputs, not a disagreement with money. The bar for moving up the payout curve is doubled for it, which is why this week sits where the chance of winning is best.';
+    $('dfPlayWeekTitle').textContent='Play of the Week: '+pick.rec;
+    $('dfPlayWeekDek').textContent=pick.rationale;
+    host.innerHTML='<div class="df-play-week-copy"><p><b>Why this contest:</b> '+e(pick.rationale)+'</p>'
+      +'<p class="df-props" style="margin:10px 0">'+evidence+'</p>'
+      +'<p>Head-to-Head remains the easiest format to win on any single entry. Iron Tuna moves away from it only when the model can buy enough additional ceiling or leverage without surrendering too much of the lineup\u2019s core projection.</p><p class="is-note">This is a model-based contest recommendation, not a guarantee of profit. Contest fees, field strength and actual payout tables still matter.</p></div>'
+      +'<div class="df-play-week-score"><b>'+e(pick.rec)+'</b><span>'+e(pick.tag)+'</span><b style="margin-top:13px">'+(pick.edge>=0?'+':'')+n1(pick.edge)+'%</b><span>Iron Tuna projection vs. the market read for the same roster'+(ev.quoted?'':', which no book priced')+'</span><b style="margin-top:13px">'+pick.floorRetention+'% / '+pick.ceilingMultiple+'%</b><span>Floor retention / ceiling multiple</span></div>';
   }
 
   function render() {
