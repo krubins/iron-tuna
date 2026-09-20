@@ -12031,3 +12031,80 @@ not the number, that a market of zero is not an edge of −100%, and that a real
 build off the fixture slate produces a real recommendation.
 
 `lineupStat` and its private variance table are deleted.
+
+
+## 104. September 20: the coach had nothing to say about the decision that produces the lineup
+
+The DFS page opens with three selects — Game Style, Games, Payout Structure —
+and solves nothing until all three are answered. The Value Coach sat behind
+them: `coachContext()` returned `{blocked: 'Set Game Style, Games and Payout
+Structure above…'}`, so the panel told a reader to go and fill in a form at
+exactly the moment they had a question about it. That is backwards. The payout
+structure *is* the strategy decision: it picks the objective the optimizer
+solves for (cash → floor, single-entry → projection plus correlation,
+multi-entry → ceiling discounted by modeled ownership), and the game pool
+decides who is eligible for it. A reader who does not know whether they want a
+Double Up or a single-entry tournament does not need a roster. They need the
+coach.
+
+So the coach answers there too. The context now carries a `mode`:
+
+- **`setup`** — the reader is at the selects, or has chosen a Game Style Iron
+  Tuna does not solve a roster for. The payload is the page's own catalog:
+  every option those selects offer with the note printed under it, what Iron
+  Tuna would solve for each payout (`SHAPES[...].head`), the games on the
+  loaded slate with their posted totals and implied team totals, what is
+  already chosen, what is still missing, and `playOfTheWeek`.
+- **`lineup`** — unchanged, plus the other payout structures and
+  `playOfTheWeek`, because "should I be in a double up instead" is a question a
+  reader asks with the roster on screen.
+
+`playOfTheWeek` is §103's `ITDfs.contestPick()` output, captured in
+`renderPlayOfWeek()`: the recommended payout, the edge against the market read,
+floor retention, ceiling multiple, and the evidence line as plain text, so the
+coach can say what that edge is measured against instead of quoting a number
+with no provenance.
+
+A finished setup that still puts no roster on the page — an infeasible solve,
+or a game pool with no priced players — is setup mode too, carrying the reason
+as `whyNoRosterYet` and the fine-tune settings it ran under (`build`: the cap,
+the locks, the exclusions, the forced player, the per-team limit) so the coach
+can name the blocker. That used to be a refusal pointing at the fine-tune
+panel, which left the reader holding the one question the coach is best placed
+to answer: which constraint to drop. The panel opens on constraint chips there,
+not contest chips. Off DraftKings there is no setup plate to fall back to, so
+the reason still stands alone as `{blocked}`.
+
+`{blocked}` is now only for the states with no setup behind them: the pick'em
+board, no priced slate, and those same dead ends on FanDuel.
+
+**The boundary holds one step earlier.** Asked "which contest should I enter,"
+a model will happily invent one, or an entry fee, or a field size, none of
+which this page carries and all of which live in the DraftKings lobby. The
+prompt recommends from the catalog and nothing else, and where it names which
+structure this slate rewards it quotes `playOfTheWeek` — the page's own
+comparison of a floor build, a ceiling build and a leverage build, kept from
+`renderPlayOfWeek()` rather than recomputed. Picking a structure is strategy
+and is in scope; naming a stake is not, and the prompt says so in as many
+words.
+
+| Where | What |
+|---|---|
+| `dfs.html` | `setupChoices(all)`, `setupContext(noLineup)` and `coachBuild(byKey)` shared by both; `mode` on both contexts; `playWeek` kept from `renderPlayOfWeek()`; `coachSync()` from both halves of `updateSetupState()`, so a choice that rebuilds nothing still re-points the panel; `.df-setup-foot` / `.df-setup-coach` and the **Not sure? Ask the Value Coach** button on the setup plate, wired to `openCoach`. |
+| `dfs-coach.js` | the two-mode prompt, the structure-choosing clause and the blocked-solve clause; `SETUP_STARTERS`, `STUCK_STARTERS` and `startersFor()`; `grounded()` replacing the roster-only gate in `refresh()` and `ask()`; the badge, lede and placeholder following the mode; a `fit()` trim for the game list that never touches the menu of options itself. |
+| `docs/ai-calculation-boundary.md` | the catalog rule, and the CI line that guards it. |
+| `tools/test-dfs-coach.mjs` | 101 now: the setup and stuck starters and the mode-aware chrome, the prompt's setup clauses, the two contexts, the dead ends that fall back and the ones that cannot, and `setupChoices()` executed against the page's own `GAME_STYLES`/`PAYOUTS`/`SHAPES` so the menu cannot drift from the selects. |
+
+`node tools/test-dfs-coach.mjs` (101), `node tools/test-dfs.mjs` (111),
+`test-content`, `test-chrome`, `test-seo`, `test-analytics`, `test-css-tokens`
+and `test-ai-boundary` pass. Driven in Chromium against a stubbed slate and a
+stubbed `/api/coach`: the setup button opens the dock with the badge on **live
+on your setup** and the four setup chips live with nothing chosen; the lede
+names the next choice as the reader makes each one; a Showdown Game Style
+stays in setup mode with `whyNoRosterYet`; completing a Classic setup flips the
+badge back to the lineup and the payload to the solved roster; and dropping the
+cap to $11,000 on that complete setup puts the panel back into setup mode with
+the constraint chips, `readerIsChoosing: 'which constraint to loosen so a roster
+fits'` and `build.cap: 11000` in the payload. The captured payloads are 5.4KB in
+setup mode, 6.3KB with the constraints, and 19.7KB with a roster, all inside the
+28,000-character budget. No page errors at 1280 or 390px.

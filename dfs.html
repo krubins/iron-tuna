@@ -319,6 +319,17 @@ p{color:var(--sec);margin:0 0 16px}
 .df-custom-games .btn{margin-top:10px;padding:8px 15px;font-size:13px}
 .df-setup-state{margin:0;padding:12px 20px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--panel)}
 .df-setup-state.ready{color:var(--teal);font-weight:800}
+/* The footer strip of the plate carries the state sentence and the way into
+   the coach, because the moment a reader is unsure which contest to enter is
+   the moment they are looking at these three selects. */
+.df-setup-foot{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);background:var(--panel)}
+.df-setup-foot .df-setup-state{flex:1 1 320px;border-top:0;background:transparent}
+.df-setup-coach{appearance:none;cursor:pointer;margin:0 20px 12px;font:800 12.5px/1.2 var(--font-body);display:inline-flex;align-items:center;gap:7px;
+  border:1px solid var(--teal);border-radius:9px;background:var(--bg);color:var(--teal);padding:9px 13px}
+@media(min-width:721px){.df-setup-coach{margin:12px 20px}}
+.df-setup-coach:hover{background:rgba(14,124,99,.08)}
+.df-setup-coach:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.df-setup-coach svg{width:15px;height:15px;fill:currentColor;flex:0 0 auto}
 .df-play-week{margin:20px 0;border:1px solid rgba(191,145,0,.38);border-radius:14px;padding:20px;background:linear-gradient(180deg,rgba(191,145,0,.09),rgba(191,145,0,.025))}
 .df-play-week-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--goldink);font-weight:800}
 .df-play-week h2{margin:5px 0 8px;font-size:clamp(22px,3vw,30px)}
@@ -587,7 +598,13 @@ p{color:var(--sec);margin:0 0 16px}
     <div class="df-game-grid" id="dfGameGrid"></div>
     <button class="btn alt" id="dfCustomDone" type="button">Use selected games</button>
   </div>
-  <p class="df-setup-state" id="dfSetupState">Complete all three selections to build and evaluate the contest.</p>
+  <div class="df-setup-foot">
+    <p class="df-setup-state" id="dfSetupState">Complete all three selections to build and evaluate the contest.</p>
+    <button type="button" class="df-setup-coach" id="dfSetupCoach" aria-controls="dfCoach" title="The Value Coach answers on this setup too: what each Game Style builds, which games belong in the pool and what the payout structure does to the roster.">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c5 0 9 3.4 9 7.6 0 4.2-4 7.6-9 7.6-.9 0-1.8-.1-2.6-.3L4 21l1.2-3.6C3.2 16 2 13.5 2 10.6 2 6.4 7 3 12 3Z"/></svg>
+      Not sure? Ask the Value Coach
+    </button>
+  </div>
 </div>
 
   </div>
@@ -1450,6 +1467,12 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   var built = null;
+  // The Play of the Week is the page's own read on which contest shape this
+  // slate rewards, and it is computed in renderPlayOfWeek() from the same
+  // optimizer the roster comes from. It is kept here so the coach can quote
+  // it while the reader is still choosing a structure, rather than being
+  // asked for a recommendation it would otherwise have to invent.
+  var playWeek = null;
 
   // The coach reads the page through coachContext() rather than holding its
   // own copy of anything, so every state change only has to tell it to look
@@ -1678,10 +1701,12 @@ p{color:var(--sec);margin:0 0 16px}
     if (!setupReady()) {
       state.className='df-setup-state';
       state.textContent=!gameStyle?'First select Game Style.':!gameChoice?'Next select the Games / player pool.':!payoutStructure?'Finally select the Payout Structure.':'Complete the custom game selection.';
+      coachSync();
       return false;
     }
     state.className='df-setup-state ready';
     state.textContent=(gs?gs.label:gameStyle)+' · '+(gameStyle==='best-ball'?'Season-long player pool':keys.length+' selected game'+(keys.length===1?'':'s'))+' · '+(py?py.label:payoutStructure)+'.';
+    coachSync();
     return true;
   }
   function renderFormatNotice() {
@@ -1885,14 +1910,135 @@ p{color:var(--sec);margin:0 0 16px}
       })
     };
   }
+  // ── the setup the coach can also answer on ────────────────────────────────
+  // The three selects above are a strategy decision and not paperwork: the
+  // payout structure picks the objective the optimizer solves for, and the
+  // game pool decides who is eligible for it. So the coach is handed the
+  // page's own catalog of choices - every option those selects actually offer,
+  // each with the note printed under it - and answers there too, before there
+  // is a roster to ask about. A recommendation is then always one of the
+  // options in front of the reader rather than a contest the lobby does not
+  // carry. The lineup context takes the payouts alone, because "should I be in
+  // a double up instead" is a question a reader asks with the roster on screen.
+  // What the reader set in the fine-tune panel. It rides with the roster, and
+  // it rides with an unfinished page too when a complete setup is what failed
+  // to produce one: a lock, an exclusion or a cap is usually the reason, and
+  // the coach cannot name which without being told what they are.
+  function coachBuild(byKey) {
+    return { objective: ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode,
+             qbStack: !!$('dfStack').checked, bringBack: !!$('dfBring').checked,
+             maxPerTeam: parseInt($('dfMaxTeam').value, 10) || null,
+             cap: parseInt($('dfCap').value, 10) || (slate && slate.cap) || null,
+             lineupsRequested: parseInt($('dfN').value, 10) || 1,
+             tunedByReader: tuned,
+             forcedIn: whatIfKey ? whatIfName : null,
+             locked: Object.keys(marks).filter(function (k) { return marks[k] === 'lock' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
+             excluded: Object.keys(marks).filter(function (k) { return marks[k] === 'excl' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
+             note: built && built.note || null };
+  }
+  function setupChoices(all) {
+    var out = {
+      payouts: Object.keys(PAYOUTS).map(function (k) {
+        var py = PAYOUTS[k], sh = SHAPES[py.shape] || {};
+        var row = { payout: py.label, means: py.note, ironTunaSolvesItAs: sh.head || null };
+        if (k === payoutStructure) row.chosen = true;
+        return row;
+      })
+    };
+    if (!all) return out;
+    out.gameStyles = Object.keys(GAME_STYLES).map(function (k) {
+      var gs = GAME_STYLES[k];
+      var row = { gameStyle: gs.label, means: gs.note, ironTunaSolvesARoster: k === 'classic' };
+      if (k === gameStyle) row.chosen = true;
+      return row;
+    });
+    var totals = {};
+    (slate && slate.stacks || []).forEach(function (g) { var k = stackGameKey(g); if (k) totals[k] = g; });
+    out.games = (slate ? gamesForSlate(slate) : []).slice(0, 16).map(function (g) {
+      var st = totals[g.key];
+      var row = { game: g.label, kickoff: kickoffText(g.start) || null, pricedPlayers: g.players || null,
+                  total: st ? coachN(st.total) : null,
+                  impliedAway: st ? coachN(st.impliedAway) : null, impliedHome: st ? coachN(st.impliedHome) : null };
+      if (selectedGames[g.key]) row.selected = true;
+      return row;
+    });
+    return out;
+  }
+  // noLineup is the reason a FINISHED setup still put no roster on the page -
+  // an infeasible solve, or a game pool with no priced players in it. The page
+  // used to answer that with a refusal pointing at the fine-tune panel, which
+  // left the reader holding the one question the coach is best placed to
+  // answer: which constraint to drop. It is setup mode with that reason, the
+  // fine-tune settings that caused it, and the same catalog underneath.
+  function setupContext(noLineup) {
+    var gs = GAME_STYLES[gameStyle] || {}, py = PAYOUTS[payoutStructure] || {};
+    var keys = selectedGameKeys();
+    var awaiting = noLineup
+      ? noLineup + ' Ask which one to drop, or ask about the contest setup above while you are here.'
+      : !gameStyle
+      ? 'Ask which Game Style matches the contest you are looking at, and the coach will take you through the three choices above in order.'
+      : !gameChoice || (gameChoice === 'custom' && !keys.length)
+      ? 'Game Style is set. Ask which games belong in the pool, or what the rest of this setup does to the roster Iron Tuna will solve.'
+      : !payoutStructure
+      ? 'One choice left. Ask which payout structure fits your bankroll and how many entries you want, and the coach will answer from the structures this page offers.'
+      : 'Ask about the setup above: what this Game Style builds, which games belong in the pool, and what the payout structure does to the roster.';
+    var out = {
+      mode: 'setup',
+      page: 'Iron Tuna DFS contest setup',
+      awaiting: awaiting,
+      readerIsChoosing: noLineup ? 'which constraint to loosen so a roster fits'
+                        : !gameStyle ? 'Game Style' : (!gameChoice || (gameChoice === 'custom' && !keys.length)) ? 'Games'
+                        : !payoutStructure ? 'Payout Structure' : 'whether the setup they have picked is the right one',
+      setup: { gameStyle: gs.label || null, gameStyleNote: gs.note || null,
+               games: gameStyle === 'best-ball' ? 'season-long player pool' : keys.length ? keys.length + ' selected game(s)' : null,
+               payout: py.label || null, payoutNote: py.note || null,
+               ironTunaSolvesARoster: styleSupportsOptimizer(),
+               whyNoRosterYet: noLineup ? noLineup
+                 : !styleSupportsOptimizer()
+                 ? 'Iron Tuna solves a roster for Classic only, so this Game Style gets the format read and no lineup.'
+                 : 'The roster is solved once all three choices are made.' },
+      choices: setupChoices(true),
+      slate: slate
+        ? { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: slate.label, week: slate.week,
+            cap: slate.cap, pricedPlayers: (slate.players || []).filter(function (p) { return p.onBoard; }).length,
+            salariesFrom: slate.source === 'upload' ? 'the reader\u2019s own uploaded salary file' : 'the site\u2019s salary feed' }
+        : { site: 'DraftKings', note: 'No salary slate is loaded yet, so the page lists no games to choose from.' },
+      playOfTheWeek: playWeek
+    };
+    // A setup that is finished and still solved nothing is a constraints
+    // question, so the constraints go with it.
+    if (noLineup) {
+      var view = null;
+      try { view = filteredSlate(); } catch (err) { view = null; }
+      var byKey = {};
+      ((view || slate || {}).players || []).forEach(function (p) { if (p.key) byKey[p.key] = p; });
+      out.build = coachBuild(byKey);
+      out.buildMeaning = 'The setup above is complete; these are the fine-tune settings the solve ran under, and one of them is why no roster came back.';
+    }
+    return out;
+  }
+
   function coachContext() {
     if (isPickem()) return { blocked: 'Pick’em boards are higher-or-lower on a posted line, not a salary-cap roster. Switch to DraftKings or FanDuel for a lineup the coach can talk through.' };
+    // Before the setup is finished - and on a DraftKings format Iron Tuna does
+    // not solve a roster for - the coach answers on the setup instead of
+    // refusing the question. It is the same coach on the same page; only the
+    // thing it is looking at changes.
+    if (site === 'dk' && (!setupReady() || !styleSupportsOptimizer())) return setupContext();
     if (!slate) return { blocked: 'There is no priced slate loaded yet, so there is no lineup for the coach to read. Upload your contest’s salary file above, or come back once the salaries post.' };
-    if (site === 'dk' && !setupReady()) return { blocked: 'Set Game Style, Games and Payout Structure above. The coach answers about the roster Iron Tuna solves for the contest you are actually entering, so it waits for that setup.' };
-    if (site === 'dk' && !styleSupportsOptimizer()) return { blocked: 'The Classic solver is hidden for this DraftKings format, so there is no roster on the page for the coach to explain. Switch the Game Style to Classic for a lineup it can read.' };
-    if (!built || !built.lineups || !built.lineups.length) return { blocked: 'No legal lineup fits the current cap, locks and exclusions. Loosen one in the fine-tune panel and the coach can pick the roster up from there.' };
+    // A finished setup that solved nothing is still a question the coach can
+    // answer - which lock, exclusion or cap to loosen - so it falls back to
+    // setup mode carrying that reason rather than refusing. Off DraftKings
+    // there is no setup plate to fall back to, so the reason stands alone.
+    if (!built || !built.lineups || !built.lineups.length) {
+      var stuck = 'No legal lineup fits the current cap, locks and exclusions. Loosen one in the fine-tune panel and the coach can pick the roster up from there.';
+      return site === 'dk' ? setupContext(stuck) : { blocked: stuck };
+    }
     var view = filteredSlate();
-    if (!view) return { blocked: 'The selected games do not carry a priced player pool yet.' };
+    if (!view) {
+      var thin = 'The selected games do not carry a priced player pool yet.';
+      return site === 'dk' ? setupContext(thin) : { blocked: thin };
+    }
     var sh = SHAPES[contest] || SHAPES.single;
     var gs = GAME_STYLES[gameStyle] || {};
     var py = PAYOUTS[payoutStructure] || {};
@@ -1917,6 +2063,7 @@ p{color:var(--sec);margin:0 0 16px}
                awayStackSalary: g.away ? g.away.stackSalary : null, homeStackSalary: g.home ? g.home.stackSalary : null };
     });
     return {
+      mode: 'lineup',
       page: 'Iron Tuna DFS lineup recommendation',
       slate: { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: view.label, week: slate.week,
                cap: parseInt($('dfCap').value, 10) || view.cap, pricedPlayers: solverPool.length,
@@ -1926,15 +2073,11 @@ p{color:var(--sec);margin:0 0 16px}
                games: gameStyle === 'best-ball' ? 'season-long player pool' : selectedGameKeys().length + ' selected game(s)',
                payout: py.label || payoutStructure || null, payoutNote: py.note || null,
                contestShape: sh.head, contestReasoning: sh.why },
-      build: { objective: ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode,
-               qbStack: !!$('dfStack').checked, bringBack: !!$('dfBring').checked,
-               maxPerTeam: parseInt($('dfMaxTeam').value, 10) || null,
-               lineupsRequested: parseInt($('dfN').value, 10) || 1,
-               tunedByReader: tuned,
-               forcedIn: whatIfKey ? whatIfName : null,
-               locked: Object.keys(marks).filter(function (k) { return marks[k] === 'lock' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
-               excluded: Object.keys(marks).filter(function (k) { return marks[k] === 'excl' && byKey[k]; }).map(function (k) { return byKey[k].name; }),
-               note: built.note || null },
+      // The reader can still be in the wrong contest for the week they are
+      // looking at, so the alternatives ride along with the roster too.
+      choices: setupChoices(false),
+      playOfTheWeek: playWeek,
+      build: coachBuild(byKey),
       thesis: lineupSummary(lead, sh, (function () { for (var i = 0; i < lead.players.length; i++) if (lead.players[i].slot === 'QB') return lead.players[i]; return null; })()),
       lineups: built.lineups.slice(0, 3).map(function (l, i) { return coachLineup(l, i + 1, byKey, sh); }),
       pivots: pivots,
@@ -1966,6 +2109,7 @@ p{color:var(--sec);margin:0 0 16px}
   function renderPlayOfWeek(s) {
     var host=$('dfPlayWeekBody'); if(!host || !s || !window.ITDfs) return;
     var players=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
+    playWeek=null;
     if(players.length<9){ $('dfPlayWeekTitle').textContent='Play of the Week: waiting for a complete slate'; host.innerHTML='<p class="is-note">The recommendation will publish when enough salaries and projections are available to compare contest shapes.</p>'; return; }
     var base={cap:s.cap,slots:s.slots,flex:s.flex,maxPerTeam:4,lineups:1,seed:17};
     var cash=ITDfs.build(players,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:3}));
@@ -1993,6 +2137,16 @@ p{color:var(--sec);margin:0 0 16px}
       : 'No book priced any pick in this build, so the comparison below is Iron Tuna against the game lines \u2014 two models sharing most of their inputs, not a disagreement with money. The bar for moving up the payout curve is doubled for it, which is why this week sits where the chance of winning is best.';
     $('dfPlayWeekTitle').textContent='Play of the Week: '+pick.rec;
     $('dfPlayWeekDek').textContent=pick.rationale;
+    // The page has now done the comparison; the coach quotes this rather than
+    // producing a contest recommendation of its own. The evidence line goes
+    // with it as plain text, because what the edge is measured against is the
+    // first thing to say when a reader asks whether to move up the curve.
+    playWeek={ recommendedPayout:pick.rec, tag:pick.tag, why:pick.rationale,
+               projectionVsMarketPct:pick.edge, floorRetentionPct:pick.floorRetention,
+               ceilingMultiplePct:pick.ceilingMultiple,
+               marketEvidence:evidence.replace(/<[^>]+>/g, ''),
+               basis:'Iron Tuna solved a floor build, a ceiling build and a leverage build from this slate and compared them against the market read for the same roster.' };
+    coachSync();
     host.innerHTML='<div class="df-play-week-copy"><p><b>Why this contest:</b> '+e(pick.rationale)+'</p>'
       +'<p class="df-props" style="margin:10px 0">'+evidence+'</p>'
       +'<p>Head-to-Head remains the easiest format to win on any single entry. Iron Tuna moves away from it only when the model can buy enough additional ceiling or leverage without surrendering too much of the lineup\u2019s core projection.</p><p class="is-note">This is a model-based contest recommendation, not a guarantee of profit. Contest fees, field strength and actual payout tables still matter.</p></div>'
@@ -2178,6 +2332,9 @@ p{color:var(--sec);margin:0 0 16px}
       window.addEventListener('load', mountCoach);
     }
     $('dfCoachFab').addEventListener('click', toggleCoach);
+    // The plate's own way in. A reader stuck on the three selects should not
+    // have to guess that the floating launcher answers on them too.
+    $('dfSetupCoach').addEventListener('click', openCoach);
     $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; selectedGames = {}; gameUniverseSig = ''; gameChoice=''; payoutStructure=''; clearWhatIf(false); load(); });
     $('dfGameStyleSelect').addEventListener('change', function () {
       gameStyle=this.value; gameChoice=''; payoutStructure=''; selectedGames={}; gameUniverseSig='';
