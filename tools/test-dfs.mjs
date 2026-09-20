@@ -610,28 +610,56 @@ console.log('\nthe DFS page explanations');
   // `forcedIn` name for the player it held.
   ok('the What If box is gone, root and branch',
      !/whatIf|WhatIf|df-whatif|data-whatif-key/.test(page));
-  ok('and Require is the one way in, from every roster and from any name on the board',
+  ok('and Require is the one way in, from the pill above the roster or from any name on the board',
      page.includes("function isRequired(key) { return marks[key] === 'lock'; }")
-     && page.includes('function rosterActions(p)') && page.includes('Require in every lineup'));
+     && page.includes('id="dfReqOpen"') && page.includes('Require in every lineup'));
   // Requiring and excluding used to be reachable only from the pool table
   // inside the closed fine-tune panel. The roster is where the reader argues
   // with the solve, so the two controls sit on the roster row.
-  ok('every roster row carries a Require and an Exclude control',
-     page.includes('function rosterActions(p)') && page.includes("data-mark=\"lock\"") && page.includes("data-mark=\"excl\"")
-     && page.includes("+ rosterActions(p) + '</span>'"));
-  // They sit on the NAME LINE beside the plus, never inside the disclosure
-  // row: a control that changes the roster cannot live behind a toggle the
-  // reader has to find first.
-  ok('and they sit on the name line, not behind the note toggle',
-     /df-fit-toggle[\s\S]{0,260}rosterActions\(p\)[\s\S]{0,40}df-pname-line|df-fit-toggle[\s\S]{0,300}rosterActions\(p\)/.test(page)
-     && !/df-fitrow[\s\S]{0,400}rosterActions\(p\)/.test(page));
+  // Dropping a man is a cross at the LEFT of his row, ahead of his face,
+  // which is where a list of removable things puts it. It is the only control
+  // on the roster: requiring starts above it, because the man a reader wants
+  // to require is usually not one of the nine already on screen.
+  // Two glyphs at the LEFT of the row, ahead of the face: pin him in, cross
+  // him out. Worded buttons on the name line put the same two words on
+  // eighteen rows.
+  ok('every roster row carries a cross and a pin, ahead of his face',
+     page.includes('function rosterMarks(p)') && page.includes('class="df-x"') && page.includes('class="df-pin"')
+     && page.includes("data-mark=\"excl\"") && page.includes("data-mark=\"lock\"")
+     && page.includes("rosterMarks(p) + faceHtml(p)"));
+  ok('and the pin shows whether that player is being held',
+     /df-pin[\s\S]{0,200}aria-pressed="' \+ \(req \? 'true' : 'false'\)/.test(page)
+     && page.includes(".df-pin[aria-pressed=\"true\"]"));
+  ok('the roster carries no worded Require or Exclude button any more',
+     !page.includes('function rosterActions(p)') && !/df-pname-line[\s\S]{0,400}data-mark="lock"/.test(page));
+  // The control that showed a man was required is gone from the row, so the
+  // row says it another way.
+  ok('a required player is still marked as such on his row',
+     page.includes('function requiredTag(p)') && page.includes('df-tag req')
+     && page.includes('playerTag(p, qb) + requiredTag(p)'));
   // The controls were on the lead board only at first, which left a reader
   // looking at Alternate 2 with no way to drop the man in front of him. The
   // row markup is shared, so the alternates carry the same pair and write the
   // same one list of constraints.
-  ok('the alternates carry them too, off the same shared row markup and the same constraint list',
-     !page.includes('lead ? rosterActions')
-     && /var rows = l\.players\.map\([\s\S]{0,1400}rosterActions\(p\)/.test(page));
+  ok('the alternates carry both marks too, off the same shared row markup and the same constraint list',
+     !page.includes('lead ? rosterMarks')
+     && /var rows = l\.players\.map\([\s\S]{0,1400}rosterMarks\(p\)/.test(page));
+  // The pin and the search reach different men on purpose: the search is for
+  // somebody not in the roster, the pin holds one the builder already found.
+  ok('the pin and the name search are both kept, because they reach different players',
+     page.includes('id="dfReqOpen"') && page.includes('class="df-pin"')
+     && page.includes('the pin holds a player the builder already found'));
+  // The search is behind a pill now, so it is a thing the reader asks for
+  // rather than a field sitting open above every roster.
+  ok('the require search opens from a pill and stays open for the next name',
+     page.includes('function openRequire(on)') && page.includes('id="dfReqSearch" hidden')
+     && page.includes("pill.setAttribute('aria-expanded', on ? 'true' : 'false')")
+     && page.includes("input.value = ''; input.focus();"));
+  // A pick empties the list it was clicked in, and a detached node reports no
+  // ancestors -- so without this the click read as "outside the search" and
+  // closed it after every name.
+  ok('and a pick does not read as a click outside the search',
+     /data-require-key[\s\S]{0,600}ev\.stopPropagation\(\);[\s\S]{0,80}requireByKey/.test(page));
   ok('the player drawer can require or exclude anyone on the board, not only the nine on the roster',
      page.includes('Require in every lineup') && page.includes('Exclude from every lineup'));
   ok('every require/exclude control writes the same marks store and re-solves',
@@ -1053,6 +1081,29 @@ console.log('\nthe Showdown roster');
   const pr = DFS.build(priced, { format: fmt, mode: 'ironTuna' });
   ok('when the file priced the Captain seat, that is the price charged',
      pr.ok && (() => { const c = pr.lineups[0].players.find(p => p.slot === 'CPT'); return c.salary === c.baseSalary * 2; })());
+  // main's field average draws whole legal rosters and averages what they
+  // project for, and the claim it rests on is that every entry in the sample
+  // is one somebody could submit. On a Captain roster that means the seat's
+  // price and the seat's points, not the man's, and it means both teams --
+  // a six-man entry from one side of the game is rejected at the lobby.
+  {
+    const top = Math.max(...players.map(p => p.ironTunaPoints));
+    const owned = players.map(p => ({ ...p, ownership: Math.round((4 + 26 * (p.ironTunaPoints / top)) * 10) / 10 }));
+    const fa = DFS.fieldAverage(owned, { slots: fmt.slots, flex: fmt.flex, cap: fmt.cap, mult: fmt.mult, minTeams: fmt.minTeams });
+    ok('the field average draws the Showdown roster too', fa && fa.slots === 6 && fa.basis === 'modeled-ownership', JSON.stringify(fa));
+    // The optimum is the most any legal roster projects for, so an average of
+    // legal rosters cannot exceed it. It did on a Captain roster while the
+    // draw was still pricing seats at FLEX salaries.
+    const best = DFS.build(owned, { format: fmt, mode: 'ironTuna' }).lineups[0];
+    ok('...and the typical entry stays under the optimum, which is what says the seats were priced',
+       fa.points < best.projPoints, fa.points + ' vs ' + best.projPoints);
+    ok('...and spends no more than the cap the seats actually charge', fa.salary <= fmt.cap, String(fa.salary));
+    // A pool with one team in it can draw no legal single-game entry at all,
+    // so there is no typical one and it says so rather than averaging entries
+    // the lobby would reject.
+    ok('a one-team pool has no field to average on a roster that needs two',
+       DFS.fieldAverage(owned.filter(p => p.team === 'BUF'), { slots: fmt.slots, flex: fmt.flex, cap: fmt.cap, mult: fmt.mult, minTeams: 2 }) === null);
+  }
   ok('FanDuel sells the same roster at its own cap and calls the seat MVP',
      (() => { const f = DFS.formatFor('fd', 'showdown-captain');
               const fr = DFS.build(players, { format: f, mode: 'ironTuna' });
@@ -1116,6 +1167,98 @@ console.log('\nthe contests that are not a roster');
      DFS.formatFor('dk', 'madden-classic').key === 'dk-classic'
      && DFS.formatFor('dk', 'madden-showdown-captain').key === 'dk-showdown'
      && DFS.formatFor('dk', 'in-game-showdown').key === 'dk-showdown');
+}
+
+// The second number on the lineup card: what an ORDINARY entry on this slate
+// projects for, so the roster's own projection has a scale beside it. The
+// method is the ownership model the slate already carries -- each seat is the
+// ownership-weighted mean projection of the players eligible for it -- so
+// these tests are as much about what it REFUSES to print as about the number.
+console.log('\nthe field\'s average entry');
+{
+  const players = slate.players.filter(p => p.onBoard).map(p => ({ ...p, id: p.key }));
+  const base = { slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, cap: 50000 };
+  ok('a board with no modeled ownership has no field to average', DFS.fieldAverage(players, base) === null);
+
+  // Ownership that rises with the projection, which is roughly what the
+  // model does: the field pays up for the best players.
+  const top = Math.max(...players.map(p => p.ironTunaPoints));
+  const owned = players.map(p => ({ ...p, ownership: Math.round((4 + 26 * (p.ironTunaPoints / top)) * 10) / 10 }));
+  const fa = DFS.fieldAverage(owned, base);
+  ok('with ownership on the board it returns a number and says where it came from',
+     fa && typeof fa.points === 'number' && fa.points > 0 && fa.basis === 'modeled-ownership', JSON.stringify(fa));
+  ok('it counts one seat per roster slot', fa.slots === H.DFS_SITES.dk.slots.length);
+  const solved = DFS.build(owned, { ...base, cap: 50000, mode: 'ironTuna', lineups: 1 }).lineups[0];
+  ok('the optimal lineup beats the typical entry', solved.projPoints > fa.points, solved.projPoints + ' vs ' + fa.points);
+  // A nine-man roster of the worst bodies on the board is still a floor the
+  // average cannot go under, and the best nine a ceiling it cannot go over.
+  const asc = owned.slice().sort((a, b) => a.ironTunaPoints - b.ironTunaPoints);
+  const worst9 = asc.slice(0, 9).reduce((n, p) => n + p.ironTunaPoints, 0);
+  const best9 = asc.slice(-9).reduce((n, p) => n + p.ironTunaPoints, 0);
+  ok('and it sits inside the board, between the worst nine and the best nine',
+     fa.points > worst9 && fa.points < best9, [worst9, fa.points, best9].join(' / '));
+
+  // Ownership is a weight, not a total: doubling every share describes the
+  // same field and must produce the same average.
+  const doubled = DFS.fieldAverage(owned.map(p => ({ ...p, ownership: p.ownership * 2 })), base);
+  ok('scaling every ownership share leaves the average where it was', near(doubled.points, fa.points, 0.05));
+
+  // The field is the field. A reader's own locks and exclusions are not
+  // passed to it at all, and the one thing that does move it is a man who is
+  // not playing -- nobody's average entry starts him.
+  const out = owned.map(p => p.position === 'QB' ? { ...p, available: false } : p);
+  ok('a slate whose every quarterback is out has no average entry', DFS.fieldAverage(out, base) === null);
+  // It follows the board it is drawn from: the fixture is fifteen bodies for
+  // nine seats, too tight to thin out further, so the projections move
+  // instead of the pool.
+  ok('a board where every projection is worth a point more raises it, by about the nine points it added',
+     near(DFS.fieldAverage(owned.map(p => ({ ...p, ironTunaPoints: p.ironTunaPoints + 1 })), base).points - fa.points, 9, 0.3));
+  ok('and halving every projection halves it',
+     near(DFS.fieldAverage(owned.map(p => ({ ...p, ironTunaPoints: p.ironTunaPoints / 2 })), base).points, fa.points / 2, 0.6));
+
+  // The cap is not decoration: every entry in the sample is one somebody
+  // could submit, which is the whole reason the sample exists.
+  ok('the typical entry can afford itself', fa.salary <= 50000, fa.salary + ' of 50000');
+  // The fixture is fifteen players for nine seats under a $50,000 cap, so
+  // most draws dead-end on affordability and are thrown away rather than
+  // repaired into something the field would not have entered. What survives
+  // still has to be a sample and not an anecdote.
+  ok('and it is an average of a real sample, not of one draw', fa.entries >= 200 && fa.trials >= 200, JSON.stringify(fa));
+  ok('a slate nobody could field a legal roster on returns null',
+     DFS.fieldAverage(owned.map(p => ({ ...p, salary: 40000 })), base) === null);
+  ok('and so does a call with no cap to build under', DFS.fieldAverage(owned, { slots: base.slots, flex: base.flex }) === null);
+
+  // Printed to a tenth, so the tenth has to hold still. The page fixes the
+  // seed, and a reader who re-solves an unchanged board must not watch the
+  // field's average wander.
+  ok('the same board draws the same number twice', DFS.fieldAverage(owned, base).points === fa.points);
+  const shifted = DFS.fieldAverage(owned, { ...base, seed: 991 });
+  ok('and a different seed lands within a quarter point of it',
+     Math.abs(shifted.points - fa.points) <= 0.25, shifted.points + ' vs ' + fa.points);
+
+  // Half a roster is not a typical entry, so a seat nobody can fill prints
+  // nothing rather than a total that quietly counts eight slots.
+  ok('a board with no defense at all returns null rather than an eight-man average',
+     DFS.fieldAverage(owned.filter(p => p.position !== 'DST'), base) === null);
+  ok('and so does a call with no roster format to fill', DFS.fieldAverage(owned, {}) === null);
+
+  // What the page does with it.
+  const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+  // The field is entering the contest the READER picked, so it is drawn for
+  // the resolved format -- its seats, its cap, its multiplier seat and its
+  // both-teams rule -- and not for whatever roster the slate was priced for.
+  // Those differ: a snake draft over a main slate carries a $50,000 cap the
+  // contest does not charge.
+  ok('the page solves the field average off the whole priced board, for the roster it is actually solving',
+     page.includes('ITDfs.fieldAverage(players, { slots: f.fmt.slots, flex: f.fmt.flex, cap: cap,')
+     && page.includes("mult: f.fmt.mult || null, tierSlots: f.fmt.tierSlots || null, minTeams: f.fmt.minTeams || 0 }) : null;"));
+  ok('the lineup card prints it in parentheses beside the projection',
+     page.includes("stat(n1(l.projPoints) + fieldPar, 'Iron Tuna Projection', true)"));
+  ok('the board says in words what the parenthetical is', page.includes('is the typical entry.'));
+  ok('the coach is handed the same number rather than left to derive one',
+     page.includes('typicalEntryPoints') && page.includes('vsTypicalEntry')
+     && fs.readFileSync(path.join(ROOT, 'dfs-coach.js'), 'utf8').includes('typicalEntryPoints'));
+  ok('the method is written down', fs.readFileSync(path.join(ROOT, 'docs/dfs-metrics.md'), 'utf8').includes('Typical entry'));
 }
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -611,6 +611,147 @@
                  : 'The books have not posted props on this slate, so every read here is the game line sliced up rather than a disagreement with money.' };
   }
 
+  // ── what an ordinary entry scores ────────────────────────────────────────
+  // A projection printed by itself has no scale. 133.8 is a good number or a
+  // bad one entirely according to what the rest of the field puts up, and the
+  // page never said what that was. This is the second number: what a typical
+  // entry on this slate, under this cap, in this roster format, projects for.
+  //
+  // It is built out of the one thing the slate already models about the
+  // field, which is projected ownership -- the share of entries expected to
+  // roster a man (MODELED on this site, not a licensed feed; see
+  // docs/dfs-metrics.md). The method is to draw entries the way the field
+  // fills them: seat by seat in a shuffled order, each seat taken by a player
+  // eligible for it with probability proportional to his ownership, nobody
+  // twice, and nobody the remaining budget cannot afford once the other open
+  // seats are paid for. Average what those entries project for.
+  //
+  // IT IS A SAMPLE MEAN, AND IT IS DRAWN THAT WAY ON PURPOSE. The obvious
+  // shortcut -- average each seat's eligible players by ownership and add the
+  // seats up -- is not the average of any field, because nothing in it has to
+  // pay for itself: it prices every seat as if the other eight were free. On
+  // the test fixture that shortcut returned a "typical entry" twenty points
+  // ABOVE the optimal lineup, which is a provable impossibility, since the
+  // optimum is the most any legal roster projects for. Tilting the weights
+  // toward cheaper players until the average spend hits the cap fixed the
+  // size of the error and not its nature; it was still above the optimum.
+  // Drawing whole legal rosters cannot be: every entry in the sample is one
+  // somebody could submit, so their average is under the best of them.
+  //
+  // The draw is seeded, so a board that has not changed prints the same
+  // number every time it is solved. What it is NOT: an optimum, a cash line,
+  // or a score any particular entry will land on. The field's average does
+  // not win a tournament and is not offered as a target -- it is the bar a
+  // build clears before its other claims matter.
+  function fieldAverage(players, options) {
+    var o = options || {};
+    var slots = o.slots || [];
+    var flex = o.flex || CLASSIC_FLEX;
+    var cap = isFinite(o.cap) && o.cap > 0 ? Number(o.cap) : 0;
+    // The seats of whatever roster this is. A Showdown's Captain charges half
+    // again as much and scores half again as much, so the field's entries are
+    // drawn against the seat's numbers, not the man's -- an average entry
+    // priced at FLEX salaries across a Captain roster is an average of
+    // rosters nobody could submit.
+    var cfg = { slots: slots, flex: flex, mult: o.mult || null, tierSlots: o.tierSlots || null };
+    var minTeams = o.minTeams || 0;
+    // Four thousand draws holds the printed tenth steady: across seeds the
+    // sample mean of a full main slate moves by about a quarter point, and
+    // the seed is fixed anyway, so the same board always prints the same
+    // number. It costs a few tens of milliseconds next to the solve's
+    // seconds.
+    var trials = Math.max(200, Math.min(20000, o.trials || 4000));
+    if (!slots.length || !cap) return null;
+    // The field is the field. A reader's locks and exclusions change his own
+    // roster, not what the other entries are going to own, so neither is
+    // applied here. The unavailable do come off: nobody's average entry
+    // starts a man who is not playing.
+    var pool = (players || []).filter(function (p) {
+      return p && p.onBoard !== false && p.available !== false && p.salary > 0
+        && isFinite(p.ironTunaPoints) && p.ironTunaPoints > 0
+        && isFinite(p.ownership) && p.ownership > 0;
+    });
+    if (pool.length < slots.length) return null;
+    // Who can sit in which seat, and the cheapest body each seat could ever
+    // be filled with, resolved once: both are asked for on every one of the
+    // thousands of draws below and neither changes between them. The seats
+    // are kept as parallel numeric arrays rather than lists of player
+    // objects, because the draw walks them end to end a few hundred thousand
+    // times and a property lookup per step is the whole cost of this.
+    var seats = [], floorCost = [];
+    for (var i = 0; i < slots.length; i++) {
+      var idx = [], min = Infinity;
+      for (var j = 0; j < pool.length; j++) {
+        if (!eligible(pool[j], slots[i], cfg)) continue;
+        idx.push(j); if (salAt(cfg, pool[j], i) < min) min = salAt(cfg, pool[j], i);
+      }
+      // A seat no available, owned player can fill has no average, and eight
+      // seats out of nine is not an entry.
+      if (!idx.length) return null;
+      var seat = { n: idx.length, at: new Int32Array(idx.length), own: new Float64Array(idx.length),
+                   sal: new Float64Array(idx.length), pts: new Float64Array(idx.length) };
+      var m = slotMult(cfg, i);
+      for (var c0 = 0; c0 < idx.length; c0++) {
+        var q = pool[idx[c0]];
+        seat.at[c0] = idx[c0]; seat.own[c0] = q.ownership;
+        seat.sal[c0] = salAt(cfg, q, i); seat.pts[c0] = q.ironTunaPoints * m;
+      }
+      seats.push(seat); floorCost.push(min);
+    }
+    var rnd = mulberry(o.seed || 7);
+    var order = [], taken = new Uint8Array(pool.length), chosen = new Int32Array(slots.length);
+    for (var s0 = 0; s0 < slots.length; s0++) order.push(s0);
+    var drawn = 0, total = 0, spend = 0;
+    for (var t = 0; t < trials; t++) {
+      // Shuffle the seats. Filling them in a fixed order would hand the last
+      // seat every one of the cap's rounding errors and quietly make one slot
+      // the slate's bargain bin in every entry the sample draws.
+      for (var sh = order.length - 1; sh > 0; sh--) {
+        var k = Math.floor(rnd() * (sh + 1)), tmp = order[sh]; order[sh] = order[k]; order[k] = tmp;
+      }
+      var salary = 0, pts = 0, filled = 0, dead = false;
+      for (var a = 0; a < order.length && !dead; a++) {
+        var seat2 = seats[order[a]];
+        // What the other open seats still have to be paid for.
+        var rest = 0;
+        for (var b = a + 1; b < order.length; b++) rest += floorCost[order[b]];
+        var room = cap - salary - rest;
+        var w = 0, c, at;
+        for (c = 0; c < seat2.n; c++) { if (!taken[seat2.at[c]] && seat2.sal[c] <= room) w += seat2.own[c]; }
+        if (!(w > 0)) { dead = true; break; }
+        var hit = rnd() * w, pick = -1;
+        for (c = 0; c < seat2.n; c++) {
+          if (taken[seat2.at[c]] || seat2.sal[c] > room) continue;
+          hit -= seat2.own[c]; if (hit <= 0) { pick = c; break; }
+        }
+        if (pick < 0) { dead = true; break; }
+        at = seat2.at[pick]; taken[at] = 1; chosen[filled++] = at;
+        salary += seat2.sal[pick]; pts += seat2.pts[pick];
+      }
+      // Both teams, where the roster requires them. The whole claim this
+      // number rests on is that every entry in the sample is one somebody
+      // could submit; a six-man Showdown entry from one side of the game is
+      // rejected at the lobby, so it is rejected here rather than averaged in.
+      if (!dead && minTeams > 1) {
+        var side = {}, sides = 0;
+        for (var g = 0; g < filled; g++) { var tm = pool[chosen[g]].team; if (!side[tm]) { side[tm] = 1; sides++; } }
+        if (sides < minTeams) dead = true;
+      }
+      for (var f = 0; f < filled; f++) taken[chosen[f]] = 0;
+      if (dead) continue;
+      drawn++; total += pts; spend += salary;
+    }
+    // A board that cannot be filled legally has no typical entry, and a
+    // sample too thin to average is not one either: a board where nine legal
+    // seats can hardly be drawn at all is a board whose typical entry this
+    // does not know, and saying so is the answer.
+    if (drawn < Math.max(100, trials * 0.05)) return null;
+    return { points: Math.round(total / drawn * 10) / 10,
+             salary: Math.round(spend / drawn),
+             basis: 'modeled-ownership', entries: drawn, trials: trials,
+             pool: pool.length, slots: slots.length };
+  }
+
   // ── which contest this slate is worth entering ───────────────────────────
   // A step up the payout curve — Head-to-Head, Multiplier, single-entry
   // tournament, multi-entry tournament — trades a lower chance of cashing for
@@ -689,7 +830,8 @@
 
   var api = { MODES: MODES, FORMATS: FORMATS, GAME_STYLE_FORMAT: GAME_STYLE_FORMAT, ANY_POSITION: ANY_POSITION,
               formatFor: formatFor, tierFormat: tierFormat, eligibleIn: eligible,
-              build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf, contestPick: contestPick, pickBoard: pickBoard };
+              build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf,
+              contestPick: contestPick, fieldAverage: fieldAverage, pickBoard: pickBoard };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.ITDfs = api;
 })(typeof window !== 'undefined' ? window : globalThis);
