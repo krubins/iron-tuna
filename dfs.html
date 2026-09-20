@@ -148,6 +148,11 @@ p{color:var(--sec);margin:0 0 16px}
   border-radius:10px;background:rgba(255,255,255,.055)}
 .df-explain-summary h4{margin:0 0 8px;font-size:15px;text-transform:uppercase;letter-spacing:.09em;color:#46d6ac}
 .df-explain-summary p{margin:0;color:#d5e2df;font-size:16px;line-height:1.66}
+/* The explanation now rides inside the lead grid, under the roster it is
+   explaining, so it takes the grid's gutter instead of the board's own and
+   does not indent twice at any width. */
+.df-lead-grid>.df-explain-summary{margin:var(--space-4) 0 0}
+.df-lead-grid>.df-props{margin:var(--space-4) 0 0}
 .df-lead-grid{display:block;padding:0 var(--space-5) var(--space-4)}
 .df-lead-table{min-width:0;overflow-x:auto;border:1px solid rgba(255,255,255,.09);border-radius:9px}
 .df-lead-table table{margin:0;min-width:620px}
@@ -1787,14 +1792,20 @@ p{color:var(--sec);margin:0 0 16px}
     var sub = e((slate.label || '') + (slate.week ? ' · Week ' + slate.week : '') + ' · ' + (ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode));
     var foot = '<button class="btn alt" type="button" data-copy="' + i + '">Copy this lineup</button>'
       + '<span class="df-copy">' + e(l.players.map(function (p) { return p.name; }).join(' · ')) + '</span>';
+    // The answer first, then the argument for it. A reader who has just told
+    // the page what contest they are entering is owed the roster and what it
+    // projects for before any prose: the score line, the salary bar, the nine
+    // names. Everything that explains the build -- why this lineup, what the
+    // books priced, the breakdown -- now sits underneath the table, in the
+    // order a reader asks for it once they have seen the roster.
     if (lead) {
       return '<div class="is-board">'
         + '<div class="is-board-head"><h3>' + e(sh.head) + '</h3><span class="is-board-sub">' + sub + '</span></div>'
-        + '<div class="df-explain-summary"><h4>Why This Lineup</h4><p>' + e(lineupSummary(l, sh, qb)) + '</p></div>'
-        + propsNote(l)
         + '<div class="is-stats">' + stats + '</div>' + fieldNote(l) + meter
         + '<div class="df-lead-grid"><div class="df-lead-table">' + table + '</div>'
         + '<p class="df-fit df-act-note">Disagree with a seat? The <b>&times;</b> beside a player solves the slate again without him; the <b>pin</b> puts him in the <b>Must include</b> box above, so every re-solve keeps him. Both sit on every alternate below too. A player who is not in the roster at all goes into the box by name, with <b>Add a player</b>.</p>'
+        + '<div class="df-explain-summary"><h4>Why This Lineup</h4><p>' + e(lineupSummary(l, sh, qb)) + '</p></div>'
+        + propsNote(l)
         + breakdownHtml(l, sh, qb) + '</div>'
         + '<div class="is-board-foot">' + foot + '</div></div>';
     }
