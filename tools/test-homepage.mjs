@@ -252,9 +252,9 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
   ok(`${tag}: the headline is the thesis`,
-     r.h1 === 'Betting lines beat expert projections. We turn them into fantasy points.', r.h1);
+     r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.', r.h1);
   ok(`${tag}: the supporting line says what the site does`,
-     r.lede === 'Sportsbooks back every number with real money, full-time quant teams and live analytics, and they correct it within minutes of news. Iron Tuna converts those lines and player props into fantasy point projections, rankings, trade values and DFS lineups.', r.lede);
+     r.lede === 'Iron Tuna converts sportsbook lines and player props into fantasy point projections, rankings, trade values and DFS lineups. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.', r.lede);
   ok(`${tag}: two buttons, one per lane`,
      r.cta.join(' / ') === 'Get Fantasy Advice|/fantasy / Build a DFS Lineup|/dfs', r.cta.join(' / '));
   ok(`${tag}: and a smaller link into the method, on this page`,
@@ -436,7 +436,7 @@ MODE = 'dead';
 for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
-  ok(`${tag}: the hero still says the thing`, r.h1 === 'Betting lines beat expert projections. We turn them into fantasy points.');
+  ok(`${tag}: the hero still says the thing`, r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.');
   ok(`${tag}: both buttons still work`, r.cta.length === 2);
   ok(`${tag}: the dateline is absent rather than loading`, r.clock === null);
   ok(`${tag}: the Fantasy card keeps its links and drops its reading`,
