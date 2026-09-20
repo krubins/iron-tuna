@@ -371,11 +371,17 @@ console.log('\nthe page');
      && /Ask the Value Coach/.test(page) && /\.df-setup-coach\{/.test(page));
   ok('and it opens the dock rather than toggling it shut from across the page',
      /\$\('dfSetupCoach'\)\.addEventListener\('click', openCoach\);/.test(page));
-  // The page compares a floor build, a ceiling build and a leverage build and
-  // prints which structure this slate rewards. The coach quotes that; without
-  // it, "which contest should I enter" has no page number behind it at all.
+  // ITDfs.contestPick() compares a floor build, a ceiling build and a leverage
+  // build and says which structure this slate rewards. The coach quotes that;
+  // without it, "which contest should I enter" has no page number behind it at
+  // all. The evidence line rides along as plain text, because what the edge is
+  // measured against is the first thing to say about it.
   ok('the page\u2019s own contest recommendation is kept for the coach to quote',
-     /playWeek=\{ recommendedPayout:rec/.test(page) && /projectionVsVegasPct:coachN\(edge\*100\)/.test(page));
+     /playWeek=\{ recommendedPayout:pick\.rec/.test(page)
+     && /projectionVsMarketPct:pick\.edge/.test(page)
+     && /marketEvidence:evidence\.replace\(\/<\[\^>\]\+>\/g, ''\)/.test(page));
+  ok('and it is the optimizer\u2019s own decision, not a second copy of the thresholds',
+     /var pick = ITDfs\.contestPick\(/.test(page) && !/playWeek=\{[\s\S]{0,400}edge>=\./.test(page));
   ok('and it is cleared rather than left stale when the slate cannot support one',
      /playWeek=null;\n    if\(players\.length<9\)/.test(page));
   ok('a setup choice that rebuilds nothing still tells the coach to look again',

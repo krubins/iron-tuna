@@ -415,7 +415,21 @@ p{color:var(--sec);margin:0 0 16px}
         $('vePropsMoreWrap').hidden = j.propBoard.length <= PROPS_SHOW;
         $('vePropsMore').addEventListener('click', function () { showAll = !showAll; drawProps(); });
         if (j.propSummary) {
-          $('vePropsNote').textContent = j.propSummary.rows + ' quoted markets on ' + j.propSummary.players + ' players across ' + j.propSummary.books + ' book' + (j.propSummary.books === 1 ? '' : 's') + '.' + (j.propSummary.capped ? ' The board is capped; the widest disagreements are kept.' : '');
+          // WHICH markets, not just how many rows. "720 quoted markets" reads
+          // the same whether the books posted nine markets or only anytime
+          // touchdowns, and those are very different feeds: a receiver cannot
+          // be projected from a touchdown price alone, so a one-market feed
+          // leaves every projection on the game line while looking healthy.
+          var PROP_NAME = { passYd: 'passing yards', passTD: 'passing TDs', passInt: 'interceptions',
+            rushYd: 'rushing yards', rushAtt: 'carries', rushTD: 'rushing TDs', recYd: 'receiving yards',
+            rec: 'receptions', recTD: 'receiving TDs', anytimeTD: 'anytime TD' };
+          var by = j.propSummary.byMarket || {};
+          var mix = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; })
+            .map(function (k) { return (PROP_NAME[k] || k) + ' ' + by[k]; });
+          $('vePropsNote').textContent = j.propSummary.rows + ' quoted markets on ' + j.propSummary.players + ' players across ' + j.propSummary.books + ' book' + (j.propSummary.books === 1 ? '' : 's') + '.'
+            + (mix.length ? ' ' + mix.join(' · ') + '.' : '')
+            + (mix.length === 1 ? ' Only one market is posted, so player projections still come from the game lines: a yardage or reception line is what a market projection is built from.' : '')
+            + (j.propSummary.capped ? ' The board is capped; the widest disagreements are kept.' : '');
           $('vePropsNote').hidden = false;
         }
       }
