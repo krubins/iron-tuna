@@ -227,6 +227,7 @@ console.log('\nthe payload the proxy will accept');
   // ~47 characters, which is what a real line measures: a fourteen-character
   // name, a team, a matchup and seven numbers.
   const boardLine = (pos, i) => 'A. Player ' + pos + i + '|SEA|@LAR|' + (3000 + i * 10) + '|12.4|24.4|9.1|104';
+  const boardColumns = 'name|team|opp|salary|proj|ceiling|own|value|basis|status';
   const boardOf = (n) => Object.fromEntries(Object.entries(n)
     .map(([pos, k]) => [pos, Array.from({ length: k }, (_, i) => boardLine(pos, i))]));
   const big = {
@@ -235,7 +236,7 @@ console.log('\nthe payload the proxy will accept');
     pivots: Array.from({ length: 9 }, (_, i) => ({ slot: 'FLEX', outName: 'a', inName: 'b', dProj: i })),
     boardNotInLineup: Array.from({ length: 30 }, (_, i) => row(i)),
     slateBoard: boardOf({ QB: 42, RB: 150, WR: 250, TE: 90, DST: 28 }),
-    slateBoardColumns: 'name|team|opp|salary|proj|ceiling|own|value|status',
+    slateBoardColumns: boardColumns,
     games: Array.from({ length: 16 }, (_, i) => ({ game: 'A at B ' + i, total: 44.5 }))
   };
   const before = JSON.stringify(big).length;
@@ -358,14 +359,16 @@ console.log('\nthe whole board the coach can now read');
   // coach used to answer it by listing the three receivers that happened to
   // be in the lineup. Every priced player the solve could have used is one
   // line of the index now, so the answer is in the data.
-  const mod = [lift(/function coachN\(/), lift(/function isPlayed\(/), lift(/function coachBoard\(/),
-    lift(/function coachBoardNote\(/),
-    "var COACH_BOARD_COLUMNS = 'name|team|opp|salary|proj|ceiling|own|value|status';",
+  const mod = [lift(/function coachN\(/), lift(/function isPlayed\(/), lift(/function projected\(/),
+    lift(/function coachBoard\(/), lift(/function coachBoardNote\(/),
+    "var COACH_BOARD_COLUMNS = 'name|team|opp|salary|proj|ceiling|own|value|basis|status';",
     'export { coachBoard, coachBoardNote, COACH_BOARD_COLUMNS };'].join('\n');
   const { coachBoard, coachBoardNote, COACH_BOARD_COLUMNS } =
     await import('data:text/javascript;base64,' + Buffer.from(mod, 'utf8').toString('base64'));
   ok('the page and its gate agree on the columns',
      page.includes("var COACH_BOARD_COLUMNS = '" + COACH_BOARD_COLUMNS + "';"));
+  ok('and the note names the columns the page actually emits',
+     coachBoardNote('value').includes(COACH_BOARD_COLUMNS));
 
   const view = { players: [
     { onBoard: true, name: 'Garrett Wilson', position: 'WR', team: 'NYJ', opponent: 'BUF', home: true,
@@ -379,13 +382,31 @@ console.log('\nthe whole board the coach can now read');
     { onBoard: true, name: 'Early Game', position: 'WR', team: 'MIA', opponent: 'NE', home: true, salary: 5600,
       ironTunaPoints: 16.2, ceiling: 30.1, ownership: 18.4, value: 132, cashScore: 140,
       gamePlayed: true, actualPoints: 21.3 },
+    // #301: not on this week's board, but the solve can use him, so the index
+    // has to carry him — he is the cheap body a price question is about.
+    { onBoard: false, projected: true, supplemental: true, supplementalGames: 3,
+      name: 'Season Line', position: 'WR', team: 'ARI', opponent: 'LAR', home: false, salary: 3000,
+      ironTunaPoints: 7.44, ceiling: 15.1, ownership: 4.1, value: 96, cashScore: 88 },
     { onBoard: false, name: 'Unpriced Body', position: 'WR', team: 'SF', salary: 3000 }
   ] };
   const b = coachBoard(view, 'cashScore');
   ok('every priced player the solve could use is on it, grouped by position',
-     Object.keys(b).join() === 'WR' && b.WR.length === 2, JSON.stringify(b));
+     Object.keys(b).join() === 'WR' && b.WR.length === 3, JSON.stringify(b));
+  // THE REGRESSION THIS BLOCKS. #301 moved the solve, the bench and the pool
+  // table from `onBoard` to `projected`, which let the supplemental
+  // minimum-salary tier in. An index still filtering on `onBoard` would be
+  // the one pool on the page missing them, and they are the cheap bodies a
+  // question about a price point is most often about.
+  ok('including the supplemental tier, which is eligible without being on the board',
+     b.WR.some((r) => r.startsWith('Season Line|')), JSON.stringify(b.WR));
+  ok('and his line says his number is a season average, not a forecast',
+     b.WR.find((r) => r.startsWith('Season Line|')) === 'Season Line|ARI|@LAR|3000|7.4|15.1|4.1|96|season',
+     b.WR.find((r) => r.startsWith('Season Line|')));
+  ok('the note explains that basis rather than leaving it as a bare word',
+     /A basis of "season" marks a supplemental row/.test(coachBoardNote('value'))
+     && /what he has done rather than a forecast of Sunday/.test(coachBoardNote('value')));
   ok('the line is the page\u2019s own numbers, rounded and not re-derived',
-     b.WR[0] === 'Cheap Receiver|CHI|@DET|4800|11.1|22.2|6.2|121|Questionable', b.WR[0]);
+     b.WR[0] === 'Cheap Receiver|CHI|@DET|4800|11.1|22.2|6.2|121||Questionable', b.WR[0]);
   ok('a player nothing flagged ends his line early rather than padding it',
      b.WR[1] === 'Garrett Wilson|NYJ|vs BUF|6000|14.2|26.4|12.5|103', b.WR[1]);
   ok('it is sorted by the key this contest is judged on, so a trim cuts the names it cares least about',
