@@ -957,7 +957,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     fetch('/api/admin/dfs?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
       .then(function(r){ return r.json(); })
       .then(function(j){
-        if (!j || !j.ok || !j.imported || !j.imported.ok) { $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Not imported.</b> ' + esc((j && (j.error || (j.imported && j.imported.error === 'no_db' ? 'No database is bound, so nothing can be stored.' : j.imported && j.imported.error))) || 'unknown error'); return; }
+        // j.note before j.error: a refusal the route can explain (a single-game
+        // export, say) carries the sentence saying what to do about it, and the
+        // bare token behind it says nothing to whoever is standing at the form.
+        if (!j || !j.ok || !j.imported || !j.imported.ok) { $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Not imported.</b> ' + esc((j && (j.note || j.error || (j.imported && j.imported.error === 'no_db' ? 'No database is bound, so nothing can be stored.' : j.imported && j.imported.error))) || 'unknown error'); return; }
         $('dfsResult').className = 'result ok'; $('dfsMsg').innerHTML = '<b>Imported ' + esc(j.imported.stored) + ' rows for week ' + esc(j.imported.week == null ? '—' : j.imported.week) + '.</b>'; $('dfsCsv').value = ''; dfsStatus(j);
       })
       .catch(function(e){ $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Network error.</b> ' + esc((e && e.message) || ''); })

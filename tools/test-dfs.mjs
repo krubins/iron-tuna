@@ -28,6 +28,10 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, BLEND_SHRINK };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
+// The scheduled workflow's own CSV writer, so the false-positive gate below
+// tests the file the import actually receives rather than a hand-rolled one.
+const { draftablesToCsv } = await import('./import-draftkings-salaries.mjs');
+const parseDfsCsv_forTest = csv => H.parseDfsCsv('dk', csv);
 
 console.log('\nthe lobby CSVs');
 {
@@ -84,6 +88,66 @@ console.log('\nclassic or single game');
   ] };
   ok('two players with one name is still classic', H.dfsSlateShape(twins.rows) === 'classic');
   ok('an empty file is classic, not a captain file', H.dfsSlateShape([]) === 'classic');
+
+  // The shape test guards the ONE CSV path left in. The reader upload that
+  // first used it went away with its panel on 2026-09-20, so if the desk's
+  // import stops calling it, nothing does and a Showdown file priced against
+  // the classic cap reaches every reader. Asserted against the route source
+  // because the import needs a key and a D1 to run for real.
+  const adminRoute = cut("if (url.pathname === '/api/admin/dfs')", 'return json(out, 200, c);');
+  ok('the desk import refuses a single-game file before storing it',
+     /dfsSlateShape\(parsed\.rows\) === 'single-game'/.test(adminRoute)
+     && adminRoute.indexOf('dfsSlateShape') < adminRoute.indexOf('dfsStore'), 'the guard must run before dfsStore');
+  // and it refuses whatever `slate` says, because dfsSalariesRead() takes the
+  // latest fetched_at for the site and week without ever filtering on that
+  // column: a single-game file stored under any slate name is still what
+  // /api/dfs hands out.
+  ok('the refusal does not depend on the slate name',
+     !/single-game'[\s\S]{0,200}b\.slate/.test(adminRoute));
+  const salariesRead = cut('async function dfsSalariesRead', '// \u2500\u2500 the slate \u2500');
+  ok('and that read really is slate-blind, which is why', !/WHERE[^']*slate\s*=/.test(salariesRead));
+}
+
+// The scheduled DraftKings workflow posts to that same import, and it merges
+// every Classic pool for the week into one file. A weekly merge repeats no
+// player, but this is the false positive that would take the Monday import
+// down silently, so it is pinned with the importer's own CSV writer rather
+// than reasoned about.
+console.log('\nthe weekly import is not mistaken for a captain file');
+{
+  const TEAMS = 'BUF NYJ MIA NE KC LV LAC DEN BAL CIN CLE PIT HOU IND JAX TEN PHI DAL NYG WAS GB CHI DET MIN SF SEA LA ARI'.split(' ');
+  const FIRST = 'James Michael Robert John David William Richard Joseph Thomas Charles Daniel Matthew Anthony Donald Mark Paul Steven Andrew Kenneth Joshua Kevin Brian George Edward Ronald Timothy Jason Jeffrey Ryan Jacob'.split(' ');
+  const LAST = 'Smith Johnson Williams Brown Jones Garcia Miller Davis Rodriguez Martinez Hernandez Lopez Gonzalez Wilson Anderson Taylor Moore Jackson Martin Lee Perez Thompson White Harris Clark Lewis Robinson Walker Young King'.split(' ');
+  const SLOTS = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'DST', 'WR', 'RB', 'TE'];
+  const draftables = [];
+  let n = 0;
+  for (let g = 0; g < 14; g++) {
+    const away = TEAMS[g * 2], home = TEAMS[g * 2 + 1];
+    for (const team of [away, home]) {
+      for (let k = 0; k < SLOTS.length; k++) {
+        const position = SLOTS[k];
+        // Distinct names the way a real lobby has them: dfsSlateShape compares
+        // on letters only, so "Player 1" and "Player 2" would read as one man.
+        const displayName = position === 'DST' ? team + ' Defense'
+          : FIRST[n % FIRST.length] + ' ' + LAST[(n * 7 + k) % LAST.length] + (n % 29 === 0 ? ' Jr.' : '');
+        n++;
+        const row = { draftableId: 100000 + n * 7 + k, playerId: 200000 + n * 7 + k, playerDkId: 300000 + n * 7 + k,
+          displayName, position, salary: 3000 + ((n * 137) % 60) * 100, teamAbbreviation: team,
+          competition: { competitionId: g, name: away + ' @ ' + home, startTime: '2026-09-13T17:00:00Z' },
+          draftStatAttributes: [{ id: 90, value: '10.5' }] };
+        draftables.push(row);
+        // The lobby lists a skill player twice, once per roster slot. The
+        // importer collapses that; if it ever stops, this is where it shows.
+        if (position !== 'DST') draftables.push({ ...row, draftableId: 900000 + n * 7 + k, rosterSlotId: 70 });
+      }
+    }
+  }
+  const weekly = parseDfsCsv_forTest(draftablesToCsv({ draftables }).csv);
+  ok('the merged weekly file parses', !weekly.error && weekly.rows.length === 14 * 2 * SLOTS.length, weekly.error || String(weekly.rows.length));
+  ok('and a full week of real games is classic, not a captain file', H.dfsSlateShape(weekly.rows) === 'classic');
+  const names = new Set(weekly.rows.map(r => r.name.toLowerCase().replace(/[^a-z]/g, '') + '|' + r.position));
+  ok('because a week repeats no player, which is what the quarter-file rule counts', names.size === weekly.rows.length,
+     names.size + ' of ' + weekly.rows.length);
 }
 
 console.log('\nsite scoring');
@@ -558,11 +622,18 @@ console.log('\nthe DFS page explanations');
      page.includes('function solveFormat()') && page.includes('ITDfs.formatFor(site, style)')
      && page.includes('format: f.fmt, slots: f.fmt.slots, flex: f.fmt.flex')
      && page.includes("mult: f.fmt.mult || null, tierSlots: f.fmt.tierSlots || null, minTeams: f.fmt.minTeams || 0"));
-  ok('a single-game roster is never priced off the main slate, and says which file it needs',
+  // The reader upload went on 2026-09-20, so there is no longer a file a
+  // reader can hand the site. The guarantee this asserts is unchanged and is
+  // the one that matters: a single-game roster is never priced off main-slate
+  // salaries. What changed is the sentence, which must not point at a control
+  // that no longer exists.
+  ok('a single-game roster is never priced off the main slate, and says so rather than printing one',
      page.includes("fmt.kind === 'salary' && fmt.single && priced !== 'single-game'")
-     && page.includes('Export the single-game CSV from the contest lobby and upload it above'));
+     && page.includes('a roster you could not enter')
+     && page.includes('The board declines to do that rather than print one')
+     && !page.includes('upload it above'));
   ok('a Tiers roster is never invented out of salary bands',
-     page.includes("ITDfs.tierFormat(") && page.includes('inventing buckets out of salary would build a roster nobody can enter'));
+     page.includes("ITDfs.tierFormat(") && page.includes('Inventing buckets out of salary would build a roster nobody can enter'));
   ok('a contest with no roster gets the board it actually asks for, not a lineup card',
      page.includes('function renderPicks(f, players)') && page.includes('ITDfs.pickBoard(players,')
      && page.includes('Model leans') && page.includes('posts its own line on a player'));

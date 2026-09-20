@@ -11973,6 +11973,11 @@ const _dfsPos = p => { const u = String(p || '').toUpperCase(); return u === 'DE
 // operators' to rename and the repeated player row is the shape of a captain
 // file whatever they call it. One shared name between two players on a slate
 // happens; a file where a quarter of the rows repeat a player does not.
+//
+// Called by POST /api/admin/dfs, the desk's CSV import, which is now the only
+// CSV path in: the reader upload at POST /api/dfs/slate was its first consumer
+// and was removed with the panel that fed it on 2026-09-20. The admin import
+// had never had this guard, so it inherited it the same day.
 const DFS_MULTIPLIER_SLOT = /\b(CPT|MVP)\b/;
 function dfsSlateShape(rows) {
   const list = rows || [];
@@ -11986,7 +11991,14 @@ function dfsSlateShape(rows) {
 // A single-game file prices the same man twice: once in the multiplier seat
 // and once in a FLEX. Left alone that is two rows for one player -- a board
 // that lists him twice and a roster that could seat him twice -- so they fold
-// into one row here. The row keeps the FLEX price as its salary, because that
+// into one row here.
+//
+// NO PRODUCTION CALLER, for the same reason dfsSlateShape lost its first one:
+// the reader upload at POST /api/dfs/slate went on 2026-09-20 with the panel
+// that fed it, and the desk import stores main slates only. This and the
+// `shape` branch in buildDfsSlate below are what a single-game slate needs the
+// day one reaches the site again, and tools/test-dfs.mjs holds both to the
+// operators' rules meanwhile. Neither is reachable from a request today. The row keeps the FLEX price as its salary, because that
 // is the number every board on the page compares against, and carries the
 // operator's own price for the multiplier seat in `salaryBySlot` so the
 // builder charges what DraftKings charges rather than 1.5x arrived at here.
@@ -14835,64 +14847,6 @@ export default {
       }
       return json(slate, 200, { ...c, 'cache-control': 'public, max-age=300' });
     }
-    // The reader's own lobby export, priced and then thrown away.
-    //
-    // /api/dfs above serves the desk's import: one main slate a week, the same
-    // rows for everybody. A reader entering a different contest already has the
-    // salary file, because the site they play on hands it to them on the
-    // contest page. This takes that file, runs it through the same parser and
-    // the same slate builder, and hands back the boards. It is the CSV path of
-    // docs/data-sources.md carried to where it belongs: the act of obtaining
-    // the data stays with the person already entitled to it.
-    //
-    // It STORES NOTHING. dfs_salaries is keyed by site and week with no reader
-    // on it, so one reader's upload written there would be what every other
-    // reader is shown. The parse is per request, the response is uncacheable,
-    // and the file itself never leaves the reader's browser except to be
-    // scored. Importing to the shared table stays an admin action.
-    if (url.pathname === '/api/dfs/slate') {
-      const c = corsHeaders(request.headers.get('Origin'));
-      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
-      if (request.method !== 'POST') return json({ ok: false, error: 'method', note: 'POST { site, csv } to price a salary file.' }, 405, c);
-      if (await rl(env, request, 'dfsup', 60, 600)) return json({ ok: false, error: 'too_many', note: 'That is a lot of files in ten minutes. Wait a moment and try again.' }, 429, c);
-      // Measure the body before parsing it. The admin import can take the JSON
-      // straight because a key gets you there; anyone at all gets here, and a
-      // request.json() on an unbounded body is memory spent before the first
-      // check runs. The headroom over the CSV cap below is JSON escaping.
-      let raw = '';
-      try { raw = await request.text(); } catch (e) { return json({ ok: false, error: 'bad_body' }, 400, c); }
-      if (raw.length > 1400000) return json({ ok: false, error: 'too_big',
-        note: 'That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.' }, 413, c);
-      let b = {}; try { b = JSON.parse(raw); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); }
-      const site = DFS_SITES[b.site] ? b.site : null;
-      if (!site) return json({ ok: false, error: 'site', note: 'Choose DraftKings or FanDuel before reading a file.' }, 400, c);
-      const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 1000000));
-      if (parsed.error) return json({ ok: false, error: parsed.error,
-        note: 'That file did not read as a ' + DFS_SITES[site].label + ' salary export. Download it from the contest lobby and upload it unchanged.' }, 400, c);
-      // A single-game file used to be refused here, because every board was
-      // built for the classic cap and pricing a captain against it would have
-      // shown a reader a lineup nobody can enter. The roster is now read off
-      // the file instead: the shape decides the cap, the seats and the
-      // multiplier, so the Showdown export builds a Showdown roster.
-      const shape = dfsSlateShape(parsed.rows);
-      const sched = await scheduleCacheRead(env);
-      const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
-      const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
-      const [board, usage, avail, roster] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null)]);
-      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, { usage, week, availability: avail, roster, shape });
-      slate.week = week;
-      // No salariesAsOf: the reader's file has no import time, and a timestamp
-      // for when they happened to press the button would say nothing true.
-      slate.source = 'upload'; slate.salariesAsOf = null;
-      slate.stacks = buildDfsStacks(slate, state);
-      if (flagOn(env, 'DFS_CONTENT')) {
-        const contest = DFS_CONTESTS[b.contest] ? b.contest : 'gpp';
-        const m = dfsMetrics(slate.players, contest);
-        slate.metrics = { contest: m.contest, label: m.label, note: m.note, sortBy: m.sortBy, ownershipBasis: m.ownershipBasis, medianPerK: m.medianPerK, contests: Object.fromEntries(Object.entries(DFS_CONTESTS).map(([k, v]) => [k, v.label])) };
-        slate.stackScores = dfsStackScores(slate.stacks);
-      }
-      return json(slate, 200, { ...c, 'cache-control': 'no-store' });
-    }
     // The newsroom: the public feed the homes read, the staff, one analyst,
     // the Fantasy/Market blend, and the Vega/Brooks disagreements.
     if (url.pathname === '/api/newsroom') {
@@ -15843,14 +15797,20 @@ export default {
         if (!site) return json({ ok: false, error: 'site must be dk or fd' }, 400, c);
         const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 2000000));
         if (parsed.error) return json({ ok: false, error: parsed.error }, 400, c);
-        const source = site === 'dk' && b.source === 'draftkings-automation' ? b.source : 'csv';
-        // dfs_salaries is keyed by site and week with no contest on it, so a
-        // single-game file imported here becomes the main slate every reader
-        // is served: a board of six men at captain prices. The reader upload
-        // at /api/dfs/slate prices one of these per request without storing
-        // it, which is where a Showdown file belongs.
+        // A showdown export prices a captain or MVP at a multiplier the classic
+        // roster does not have, so importing one here would mis-price the board
+        // every reader is shown - silently, because the rows parse and store
+        // like any other. The refusal is unconditional rather than scoped to
+        // slate 'main' for two reasons. dfsSalariesRead() takes the latest
+        // fetched_at for the site and week and does NOT filter on the slate
+        // column, so a single-game file stored under any slate name is still
+        // what /api/dfs serves; and the scheduled workflow already posts
+        // slate 'weekly', so a guard scoped to 'main' would skip the one
+        // importer that runs unattended. Importing a showdown slate
+        // deliberately needs that read to learn about slates first.
         if (dfsSlateShape(parsed.rows) === 'single-game') return json({ ok: false, error: 'single_game',
-          note: 'That is a single-game export. It prices a captain or MVP seat the main slate does not have, and this table is the main slate every reader is served. Price it at /api/dfs/slate instead, which reads one file per request and stores nothing.' }, 400, c);
+          note: 'That is a single-game (Showdown/MVP) export: it prices a captain at a multiplier the classic roster does not have, and every board on the site is built for the classic cap. Import a main-slate file instead.' }, 400, c);
+        const source = site === 'dk' && b.source === 'draftkings-automation' ? b.source : 'csv';
         out.imported = await dfsStore(env, site, parsed.rows, { season: sched ? sched.season : null, week: b.week != null ? Number(b.week) : week, slate: b.slate || 'main', source });
       }
       for (const site of Object.keys(DFS_SITES)) {
