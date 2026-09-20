@@ -426,13 +426,6 @@ p{color:var(--sec);margin:0 0 16px}
 .df-stack{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;background:var(--panel)}
 .df-stack h3{margin:0 0 6px} .df-stack .side{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;font-size:14px}
 .df-stack b{color:var(--text)} .df-stack .is-status{display:inline}
-.df-up{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;background:var(--panel)}
-.df-up-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.df-up .btn{padding:8px 16px;font-size:14px}
-.df-up-state{font-size:13px;color:var(--muted);flex:1;min-width:24ch;line-height:1.5}
-.df-up-state.bad{color:var(--danger)}
-.df-up [hidden]{display:none}
-.df-up textarea{width:100%;margin:10px 0 0;font:12px/1.4 ui-monospace,monospace;padding:8px;border:1px solid var(--line2);border-radius:8px;background:var(--bg);color:var(--text)}
 .df-shape-diff{font-size:14px;color:var(--muted);margin:2px 0 14px;line-height:1.6}
 .df-shape-diff b{color:var(--sec)}
 .df-strategy-compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0 16px}
@@ -626,9 +619,6 @@ p{color:var(--sec);margin:0 0 16px}
    following another section does. */
 .df-main>#sec-lineup:first-of-type{margin-top:0}
 .df-main>#sec-lineup:first-of-type>.is-sec:first-child{margin-top:var(--space-5)}
-/* The reader's own salary file is its own offer, not a third academy card. */
-.df-main .df-up{margin-top:var(--space-5)}
-
 .df-est{display:inline-block;margin-left:4px;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#b7791f;vertical-align:2px}
 </style>
 
@@ -860,26 +850,6 @@ p{color:var(--sec);margin:0 0 16px}
     <div id="dfPlayerBody"></div>
     <p class="df-player-foot">These are model inputs and calculations, not guarantees. Modeled ownership is an Iron Tuna estimate, not an operator or third-party ownership feed.</p>
   </div>
-</div>
-
-<!-- ── the reader's own salary file ───────────────────────────────────────────
-     The salaries above are the desk's import: one main slate a week, the same
-     rows for every reader. Anyone entering a different contest already holds
-     their own salary file, because the site they play on hands it to them on
-     the contest page. This prices that file against the same boards.
-
-     It stays with the reader. The file is posted to be parsed and scored, is
-     stored nowhere on the server, and lives in this browser until they clear
-     it. Nothing here submits an entry, and nothing here reaches an operator. -->
-<div class="df-up" id="dfUp" hidden>
-  <div class="df-up-row">
-    <label class="btn alt" for="dfUpFile">Choose salary file<input id="dfUpFile" type="file" accept=".csv,text/csv" hidden></label>
-    <button class="btn alt" type="button" id="dfUpPaste">Paste instead</button>
-    <button class="btn alt" type="button" id="dfUpClear" hidden>Back to the site&rsquo;s slate</button>
-    <span class="df-up-state" id="dfUpState">Playing a different slate? Export the salary CSV from your contest lobby and price it here. It stays in this browser.</span>
-  </div>
-  <textarea id="dfUpText" rows="4" hidden spellcheck="false" placeholder="Paste the salary CSV here, then press Read the file."></textarea>
-  <div class="df-up-row" id="dfUpReadRow" hidden style="margin-top:10px"><button class="btn" type="button" id="dfUpRead">Read the file</button></div>
 </div>
 
 <!-- ── pick'em ────────────────────────────────────────────────────────────────
@@ -2421,7 +2391,7 @@ p{color:var(--sec);margin:0 0 16px}
       slate: slate
         ? { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: slate.label, week: slate.week,
             cap: slate.cap, pricedPlayers: (slate.players || []).filter(function (p) { return p.onBoard; }).length,
-            salariesFrom: slate.source === 'upload' ? 'the reader\u2019s own uploaded salary file' : 'the site\u2019s salary feed' }
+            salariesFrom: 'the site\u2019s salary feed' }
         : { site: 'DraftKings', note: 'No salary slate is loaded yet, so the page lists no games to choose from.' },
       playOfTheWeek: playWeek
     };
@@ -2445,7 +2415,7 @@ p{color:var(--sec);margin:0 0 16px}
     // refusing the question. It is the same coach on the same page; only the
     // thing it is looking at changes.
     if (site === 'dk' && (!setupReady() || !styleSupportsOptimizer())) return setupContext();
-    if (!slate) return { blocked: 'There is no priced slate loaded yet, so there is no lineup for the coach to read. Upload your contest’s salary file above, or come back once the salaries post.' };
+    if (!slate) return { blocked: 'There is no priced slate loaded yet, so there is no lineup for the coach to read. Come back once the salaries post.' };
     // A finished setup that solved nothing is still a question the coach can
     // answer - which lock, exclusion or cap to loosen - so it falls back to
     // setup mode carrying that reason rather than refusing. Off DraftKings
@@ -2493,7 +2463,7 @@ p{color:var(--sec);margin:0 0 16px}
                  percent: view.props.coverage, markets: (view.props.marketLabels || []).join(', ') || null,
                  avgBooks: view.props.avgBooks, freshestHours: coachN(view.props.freshestHours),
                  quotedOnlyOnTouchdown: view.props.quotedButShort || undefined } : undefined,
-               salariesFrom: slate.source === 'upload' ? 'the reader’s own uploaded salary file' : 'the site’s salary feed' },
+               salariesFrom: 'the site’s salary feed' },
       setup: { gameStyle: gs.label || gameStyle || 'Classic', gameStyleNote: gs.note || null,
                games: gameStyle === 'best-ball' ? 'season-long player pool' : selectedGameKeys().length + ' selected game(s)',
                payout: py.label || payoutStructure || null, payoutNote: py.note || null,
@@ -2650,23 +2620,10 @@ p{color:var(--sec);margin:0 0 16px}
       .then(function (j) { if (j && j.ok) pickem(j); else $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; })
       .catch(function () { $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; });
   }
-  // ── the reader's own salary file ─────────────────────────────────────────
-  // Held in this browser and nowhere else: kept in memory for the session and
-  // mirrored to localStorage so a reload does not lose it. Storage can throw
-  // (private windows, a file past the quota), so every touch is guarded and
-  // the in-memory copy is what the page actually reads.
-  var upMem = {};
-  function upKey(s) { return 'it.dfs.csv.' + s; }
-  function upGet(s) { if (upMem[s]) return upMem[s]; try { return localStorage.getItem(upKey(s)) || ''; } catch (err) { return ''; } }
-  function upSet(s, csv) { upMem[s] = csv || ''; try { if (csv) localStorage.setItem(upKey(s), csv); else localStorage.removeItem(upKey(s)); } catch (err) {} }
-  function upState(msg, bad) { var el = $('dfUpState'); el.textContent = msg; el.className = 'df-up-state' + (bad ? ' bad' : ''); }
-
   function slateOk(j) {
     slate = j;
     if (site === 'dk' && !gameUniverseSig) selectedGames = {};
-    var stamp = j.source === 'upload'
-      ? 'Priced from your own ' + (j.label || 'salary') + ' file. It was read in this browser and stored nowhere on the site.'
-      : 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
+    var stamp = 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
     $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + e(stamp);
     render();
   }
@@ -2677,33 +2634,9 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
     $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
     if ($('dfConstraints')) $('dfConstraints').hidden = true;
-    $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted. Upload your own contest\u2019s salary file above and the roster builds off that.</p>';
+    $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted.</p>';
     $('dfPivots').innerHTML = ''; built = null;
     coachSync();
-  }
-  // Price the reader's file. A file the parser refuses is theirs to fix, so the
-  // reason is printed and the page falls back to the site's own slate rather
-  // than sitting on a blank board — and a refused file is not kept.
-  function loadUpload(csv) {
-    upState('Reading your file\u2026', false);
-    fetch('/api/dfs/slate', { method: 'POST', headers: { 'content-type': 'application/json' },
-                              body: JSON.stringify({ site: site, csv: csv, contest: contest }) })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (!j || !j.ok) {
-          upSet(site, ''); $('dfUpClear').hidden = true;
-          upState((j && j.note) || 'That file could not be read.', true);
-          loadSite();
-          return;
-        }
-        upSet(site, csv);
-        $('dfUpClear').hidden = false;
-        upState('Your file: ' + j.players.length + ' priced rows'
-                + (j.unmatched ? ' \u00b7 ' + j.unmatched + ' of them are not on this week\u2019s board' : '')
-                + '. Stored in this browser only.', false);
-        slateOk(j);
-      })
-      .catch(function () { upState('The slate did not answer. Your file was not read.', true); });
   }
   function loadSite() {
     fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
@@ -2731,7 +2664,6 @@ p{color:var(--sec);margin:0 0 16px}
       $('dfNav').hidden = true;
       SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = true; });
       $('sec-pickem').hidden = false;
-      $('dfUp').hidden = true;
       $('dfConfig').hidden = true; $('dfPlayWeek').hidden=true;
       $('dfNote').textContent = '';
       coachSync();
@@ -2741,15 +2673,19 @@ p{color:var(--sec);margin:0 0 16px}
     $('sec-pickem').hidden = true;
     if (site !== 'dk') { gameStyle='classic'; gameChoice='all'; payoutStructure='h2h'; }
     applyGameStyle();
-    $('dfUp').hidden = site === 'dk' && gameStyle === 'best-ball';
     $('dfSiteNote').textContent = site === 'dk'
       ? 'Choose Game Style, Games and Payout Structure below. Iron Tuna will not apply the Classic optimizer to a different DraftKings format.'
       : 'Classic salary cap · $60,000. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
-    var mine = upGet(site);
-    $('dfUpClear').hidden = !mine;
-    if (!mine) upState('Playing a different slate? Export the salary CSV from your contest lobby and price it here. It stays in this browser.', false);
-    if (mine) loadUpload(mine); else loadSite();
+    loadSite();
   }
+  // The salary-file panel that used to sit under the board is gone (2026-09-20),
+  // and with it the only control a reader had for deleting the CSV it kept.
+  // A file uploaded before that is still in this browser under the old keys, so
+  // clear them once on boot rather than leaving data behind that the page
+  // promised was the reader's to remove. Guarded: storage throws in a private
+  // window, and nothing here is worth failing the page over.
+  try { ['dk', 'fd'].forEach(function (s) { localStorage.removeItem('it.dfs.csv.' + s); }); } catch (err) {}
+
   document.addEventListener('DOMContentLoaded', function () {
     press($('dfMode'), 'data-mode', mode); applyShape(); show();
     if (!mountCoach()) {
@@ -2782,35 +2718,6 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfPayoutSelect').addEventListener('change', function () {
       payoutStructure=this.value; payoutToContest(); updateSetupState(); render();
       try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({event:'dfs_payout_structure',uid:localStorage.getItem('it.uid')||'',props:{path:location.pathname,payout:payoutStructure,site:site}})],{type:'application/json'})); } catch(x){}
-    });
-    // The salary file. The server caps the body at a million characters, so a
-    // file past that is refused here rather than truncated into a CSV that
-    // parses and quietly leaves half the slate off the board.
-    $('dfUpFile').addEventListener('change', function (ev) {
-      var f = ev.target.files && ev.target.files[0];
-      ev.target.value = '';
-      if (!f) return;
-      if (f.size > 1000000) { upState('That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.', true); return; }
-      var fr = new FileReader();
-      fr.onload = function () { marks = {}; loadUpload(String(fr.result || '')); };
-      fr.onerror = function () { upState('That file could not be read from your computer.', true); };
-      fr.readAsText(f);
-    });
-    $('dfUpPaste').addEventListener('click', function () {
-      var open = $('dfUpText').hidden;
-      $('dfUpText').hidden = !open; $('dfUpReadRow').hidden = !open;
-      if (open) $('dfUpText').focus();
-    });
-    $('dfUpRead').addEventListener('click', function () {
-      var csv = $('dfUpText').value;
-      if (!csv.trim()) { upState('Paste the salary CSV first.', true); return; }
-      marks = {}; loadUpload(csv);
-    });
-    $('dfUpClear').addEventListener('click', function () {
-      upSet(site, ''); marks = {};
-      $('dfUpClear').hidden = true; $('dfUpText').value = ''; $('dfUpText').hidden = true; $('dfUpReadRow').hidden = true;
-      upState('Back on the site\u2019s slate. Your file is gone from this browser.', false);
-      loadSite();
     });
     $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
     $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); var view=filteredSlate(); if (view) values(view); });

@@ -10032,9 +10032,21 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
   `.is-hero-how` line down to `#df-method`). The `.is-actions` pill row that
   used to sit between the lede and that line — Build this week's lineup →
   `#sec-lineup` and Price my own salary file → `#dfUp` — was removed on
-  2026-09-20: the first pill only scrolled to a section already a screen away,
-  and nobody prices their own salary file. `#dfUp` itself is untouched; it is
-  hidden and unhidden by `load()` on site/format, never by that link.
+  2026-09-20, and **the reader salary upload went with it the same day**: the
+  `#dfUp` panel, its four handlers, the `it.dfs.csv.*` localStorage copy, the
+  `loadUpload()` path and the public `POST /api/dfs/slate` route are all gone.
+  `load()` now calls `loadSite()` unconditionally, so `/dfs` serves the desk's
+  imported slate and nothing else. Two consequences worth knowing:
+  - `/dfs` **clears `it.dfs.csv.dk` and `it.dfs.csv.fd` once on boot**. The
+    panel was the only control that deleted a stored file, and it promised the
+    file was the reader's to remove, so removing the panel without the purge
+    would strand the CSV in their browser for good.
+  - `dfsSlateShape()` in `_worker.js` has **no production caller left** — the
+    upload route was its only one. It is kept, with a comment saying so, because
+    `POST /api/admin/dfs` has never had that guard and a showdown file imported
+    as the main slate would mis-price the board. `tools/test-dfs.mjs` still
+    exercises it (6 gates under "classic or single game").
+  `parseDfsCsv` is untouched and still carries the desk import.
 - **The venue and board switchers (`#dfSite`, `#dfNav`) moved up** from below
   the setup, the Play of the Week and the Academy cards to directly under the
   head, with `#dfNote` and `#dfSiteNote` beside them. Same ids, same script;
