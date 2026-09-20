@@ -185,6 +185,24 @@ console.log('\nthe prompt');
   ok('a finished setup that solved nothing is answered on the constraints, not by changing the contest',
      /Name the one most likely to be the blocker and say what dropping it costs/.test(s)
      && /do not treat it as a reason to change the contest/.test(s));
+  // WHAT THIS PARAGRAPH REPLACED. The coach saw the roster, the swaps and the
+  // thirty best alternates, so "who is the best $4,800 wide receiver" came
+  // back as "the full board was trimmed from this prompt, so I can only speak
+  // to the players the page surfaced" — about a slate whose every priced row
+  // is in the pool table on screen. The whole eligible board rides along now,
+  // and the prompt has to say so or the model will keep hedging on it.
+  ok('the whole eligible board is in the data, and a player the page never printed is answerable from it',
+     /slateBoard is every player on this slate the solve could legally have used/.test(s)
+     && /the complete eligible pool and not a shortlist/.test(s)
+     && /never tell a reader the page did not surface a player who is sitting on one of those lines/.test(s));
+  ok('it can read a line, because the columns are named rather than guessed',
+     /separated by a pipe in the order slateBoardColumns names them/.test(s)
+     && /a line stops early when the columns after it are empty/.test(s));
+  ok('and a board line is not dressed up as a detailed row',
+     /quote what you have and say plainly what a line does not carry/.test(s));
+  ok('a missing name is read as off this board, and a trimmed index is not read as one',
+     /he is outside the games the reader selected, or he is not playing/.test(s)
+     && /say the deep end of it was trimmed rather than calling a missing player unavailable/.test(s));
 }
 
 console.log('\nthe reply');
@@ -204,11 +222,19 @@ console.log('\nthe payload the proxy will accept');
   const row = (i) => ({ name: 'Player ' + i, pos: 'WR', team: 'LAR', salary: 5000 + i, proj: 12.3, floor: 6.1,
                         ceiling: 24.4, own: 9.1, leverage: 2.7, vegas: 12.9, consensus: 11.8, value: 104,
                         role: 'Supplies the salary relief that keeps the premium core intact while still projecting points, '.repeat(6) });
+  // A fourteen-game board: 560 priced players, more than twice what fits.
+  // ~47 characters, which is what a real line measures: a fourteen-character
+  // name, a team, a matchup and seven numbers.
+  const boardLine = (pos, i) => 'A. Player ' + pos + i + '|SEA|@LAR|' + (3000 + i * 10) + '|12.4|24.4|9.1|104';
+  const boardOf = (n) => Object.fromEntries(Object.entries(n)
+    .map(([pos, k]) => [pos, Array.from({ length: k }, (_, i) => boardLine(pos, i))]));
   const big = {
     slate: { site: 'DraftKings' }, setup: { contestShape: 'Cash' }, build: { objective: 'Safest floor' },
     thesis: 'x', lineups: [1, 2, 3].map(() => ({ players: Array.from({ length: 9 }, (_, i) => row(i)) })),
     pivots: Array.from({ length: 9 }, (_, i) => ({ slot: 'FLEX', outName: 'a', inName: 'b', dProj: i })),
     boardNotInLineup: Array.from({ length: 30 }, (_, i) => row(i)),
+    slateBoard: boardOf({ QB: 42, RB: 150, WR: 250, TE: 90, DST: 28 }),
+    slateBoardColumns: 'name|team|opp|salary|proj|ceiling|own|value|status',
     games: Array.from({ length: 16 }, (_, i) => ({ game: 'A at B ' + i, total: 44.5 }))
   };
   const before = JSON.stringify(big).length;
@@ -224,6 +250,33 @@ console.log('\nthe payload the proxy will accept');
   ok('and the model is told what was dropped rather than left to assume it saw everything',
      Array.isArray(after.trimmedFromThisPrompt) && after.trimmedFromThisPrompt.length > 0,
      JSON.stringify(after.trimmedFromThisPrompt));
+  // THE ONE LIST THAT MUST NOT GO. Everything else in the payload is detail
+  // about players the page already printed; the board index is the only thing
+  // in here that can answer about a player it did not. An index that is
+  // dropped whole puts the coach back to refusing a question about a price
+  // point, which is the bug this rides on, so it is capped and never emptied.
+  ok('the board index survives a payload twice too big, capped rather than dropped',
+     after.slateBoard && Object.keys(after.slateBoard).length === 5
+     && Object.keys(after.slateBoard).every((pos) => after.slateBoard[pos].length > 0),
+     JSON.stringify(Object.fromEntries(Object.entries(after.slateBoard || {}).map(([k, v]) => [k, v.length]))));
+  ok('it is cut from the tail of each position, so the best body at every price is still there',
+     after.slateBoard.WR.length < 250 && after.slateBoard.WR[0] === boardLine('WR', 0)
+     && after.slateBoard.DST.length === 28,
+     after.slateBoard.WR.length + ' WRs kept');
+  ok('and the cut is declared, so a name that was trimmed is not reported as a man who is not playing',
+     after.trimmedFromThisPrompt.some((t) => /board index/.test(t)),
+     JSON.stringify(after.trimmedFromThisPrompt));
+  // A main slate is the case that actually matters, and it is the case the
+  // budget was raised for: the whole board has to reach the model intact.
+  {
+    const main = JSON.parse(JSON.stringify(big));
+    main.slateBoard = boardOf({ QB: 32, RB: 110, WR: 170, TE: 60, DST: 16 });
+    const fitted = coach.fit(main);
+    const kept = Object.values(fitted.slateBoard).reduce((n, l) => n + l.length, 0);
+    ok('a main slate reaches the model whole, every priced player on it',
+       kept === 388 && JSON.stringify(fitted).length <= coach.JSON_BUDGET,
+       kept + ' of 388, ' + JSON.stringify(fitted).length + ' chars');
+  }
 }
 
 console.log('\nthe row the coach is handed');
@@ -285,6 +338,53 @@ console.log('\nthe row the coach is handed');
   ok('a field the board does not carry is absent, not zero',
      !('own' in thin) && !('dkFppg' in thin) && !('tdPct' in thin) && thin.proj === 7.1,
      JSON.stringify(thin));
+}
+
+console.log('\nthe whole board the coach can now read');
+{
+  // THE QUESTION THIS BLOCK EXISTS FOR. "Who is the best $4,800 wide
+  // receiver?" is a question about a player the page did not print, and the
+  // coach used to answer it by listing the three receivers that happened to
+  // be in the lineup. Every priced player the solve could have used is one
+  // line of the index now, so the answer is in the data.
+  const mod = [lift(/function coachN\(/), lift(/function coachBoard\(/), lift(/function coachBoardNote\(/),
+    "var COACH_BOARD_COLUMNS = 'name|team|opp|salary|proj|ceiling|own|value|status';",
+    'export { coachBoard, coachBoardNote, COACH_BOARD_COLUMNS };'].join('\n');
+  const { coachBoard, coachBoardNote, COACH_BOARD_COLUMNS } =
+    await import('data:text/javascript;base64,' + Buffer.from(mod, 'utf8').toString('base64'));
+  ok('the page and its gate agree on the columns',
+     page.includes("var COACH_BOARD_COLUMNS = '" + COACH_BOARD_COLUMNS + "';"));
+
+  const view = { players: [
+    { onBoard: true, name: 'Garrett Wilson', position: 'WR', team: 'NYJ', opponent: 'BUF', home: true,
+      salary: 6000, ironTunaPoints: 14.24, ceiling: 26.41, ownership: 12.53, value: 103, cashScore: 98 },
+    { onBoard: true, name: 'Cheap Receiver', position: 'WR', team: 'CHI', opponent: 'DET', home: false,
+      salary: 4800, ironTunaPoints: 11.14, ceiling: 22.24, ownership: 6.21, value: 121, cashScore: 130,
+      weekStatus: 'Questionable' },
+    { onBoard: true, name: 'Hurt Back', position: 'RB', team: 'LAC', salary: 5200, ironTunaPoints: 9.9,
+      weekStatus: 'Out', available: false },
+    { onBoard: false, name: 'Unpriced Body', position: 'WR', team: 'SF', salary: 3000 }
+  ] };
+  const b = coachBoard(view, 'cashScore');
+  ok('every priced player the solve could use is on it, grouped by position',
+     Object.keys(b).join() === 'WR' && b.WR.length === 2, JSON.stringify(b));
+  ok('the line is the page\u2019s own numbers, rounded and not re-derived',
+     b.WR[0] === 'Cheap Receiver|CHI|@DET|4800|11.1|22.2|6.2|121|Questionable', b.WR[0]);
+  ok('a player nothing flagged ends his line early rather than padding it',
+     b.WR[1] === 'Garrett Wilson|NYJ|vs BUF|6000|14.2|26.4|12.5|103', b.WR[1]);
+  ok('it is sorted by the key this contest is judged on, so a trim cuts the names it cares least about',
+     b.WR[0].startsWith('Cheap Receiver'));
+  ok('a man who is not playing is not offered as an option',
+     !b.RB && !b.WR.some((r) => /Hurt Back/.test(r)));
+  ok('and a body the board could not price is not on it either',
+     !b.WR.some((r) => /Unpriced Body/.test(r)));
+  ok('the index says what it is and what it is not, in the data beside it',
+     /whole\s+eligible board rather than a shortlist/.test(coachBoardNote('cashScore'))
+     && coachBoardNote('cashScore').includes(COACH_BOARD_COLUMNS)
+     && /best cashScore first/.test(coachBoardNote('cashScore')));
+  ok('an empty board is an empty object, not a crash',
+     JSON.stringify(coachBoard(null, 'value')) === '{}'
+     && JSON.stringify(coachBoard({ players: [] }, 'value')) === '{}');
 }
 
 console.log('\nthe page');
@@ -396,8 +496,14 @@ console.log('\nthe page');
   ok('the market and availability reads come from the page\u2019s own helpers, not a second vocabulary',
      /read: marketChipFor\(m\)\[0\]/.test(page) && !/PROPS'/.test(lift(/function coachMarket\(/)));
   ok('the context carries the contest, the roster, the swaps and the board behind them',
-     ['slate:', 'setup:', 'build:', 'thesis:', 'lineups:', 'pivots:', 'boardNotInLineup:', 'games:']
+     ['slate:', 'setup:', 'build:', 'thesis:', 'lineups:', 'pivots:', 'boardNotInLineup:', 'slateBoard:', 'games:']
        .every((k) => ctx.includes(k)));
+  ok('and the WHOLE board behind them, not only the thirty rows the page surfaced',
+     /slateBoard: coachBoard\(view, benchKey\)/.test(ctx)
+     && /slateBoardColumns: COACH_BOARD_COLUMNS/.test(ctx)
+     && /slateBoardMeaning: coachBoardNote\(benchKey\)/.test(ctx));
+  ok('a solve that came back with nothing gets the pool too, because which lock to drop is a question about it',
+     /out\.slateBoard = coachBoard\(view, 'value'\);/.test(lift(/function setupContext\(/)));
   ok('and says which of the two questions it is answering, so the panel and the model agree',
      /mode: 'lineup'/.test(ctx) && /mode: 'setup'/.test(lift(/function setupContext\(/)));
   ok('the roster context carries the other payout structures too, because that question outlives the build',

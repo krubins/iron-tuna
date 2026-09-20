@@ -49,6 +49,8 @@ The Value Coach is the same rule in a chat panel. On the auction board (`index.h
 
 Neither coach holds a metric of its own: the DFS panel transports what `dfs-optimizer.js` and `buildDfsSlate`/`dfsMetrics` produced and nothing else. Both reach the model through `/api/coach`, the server-side proxy, so no provider key reaches a browser.
 
+The DFS panel carries the WHOLE eligible board, not only the rows the page printed. `slateBoard` is every priced player in the selected games that the solve could have used, grouped by position, one delimited line each (`name|team|opp|salary|proj|ceiling|own|value|status`) built by `coachBoard()` in `dfs.html`. It is transport, not a second metric: each cell is the same number `coachRow` would carry, rounded by `coachN` and nothing more, and a line that has no number for a column leaves it empty rather than filling it in. It exists because a reader asking for the best receiver at a given salary is asking about a player the recommendation never printed, and a coach that can only see the roster answers that by refusing. The prompt says the index is the complete pool, says which columns it carries and which it does not, and says that a name absent from it is out of the game pool or not playing — never that its number is unknown and could be estimated.
+
 The DFS panel also answers before a roster exists, at the Game Style / Games / Payout Structure selects the page opens with. The same rule holds one step earlier: it is handed the page's own catalog of options (`GAME_STYLES`, `PAYOUTS` and the shape each one solves as, plus the games on the loaded slate with their posted totals) and recommends from that list. It may not invent a contest, a payout table, an entry fee, a field size, a prize pool or an entry limit, because the page carries none of those. Where it names which structure this slate rewards, it quotes `playOfTheWeek` — the page's own comparison of a floor build, a ceiling build and a leverage build — rather than producing a recommendation of its own. Picking a structure is strategy and is in scope; naming a stake is not, and the prompt says so.
 
 ## Model policy
@@ -62,7 +64,7 @@ This separation is deliberate. A future decision to use Opus for an interactive 
 `tools/test-ai-boundary.mjs` is run by GitHub Actions. It fails when:
 
 - a provider or LLM call appears inside the ranking, projection or DFS numeric engines;
-- (in `tools/test-dfs-coach.mjs`) the DFS Value Coach stops forbidding recomputation, starts carrying a metric of its own, reaches a provider directly, or starts recommending contest structures from outside the page's own catalog;
+- (in `tools/test-dfs-coach.mjs`) the DFS Value Coach stops forbidding recomputation, starts carrying a metric of its own, reaches a provider directly, starts recommending contest structures from outside the page's own catalog, or stops carrying the whole eligible board (the board index is capped under budget pressure, never dropped, and `coachBoard()` is executed against a fixture so a line cannot start re-deriving what it prints);
 - the newsroom stops passing an explicit editorial model;
 - the newsroom prompt stops prohibiting numeric recomputation;
 - the deployed newsroom model is changed from Sonnet to Opus.

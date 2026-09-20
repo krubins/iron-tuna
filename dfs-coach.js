@@ -49,7 +49,14 @@
   // fourteen-game board with three lineups and a deep bench is not something
   // to find out about in production, so the payload is fitted to a budget
   // here and says in the data what it dropped.
-  var JSON_BUDGET = 28000;
+  //
+  // It went to 29,000 when slateBoard arrived: the whole eligible board is
+  // around 19,000 characters of delimited text on a main slate, which is most
+  // of the payload, and every character the budget gives back is another two
+  // dozen players the coach can still see. What is left over the prompt's own
+  // length is the margin against the 40,000 cap, and tools/test-dfs-coach.mjs
+  // asserts the two together stay under it.
+  var JSON_BUDGET = 29000;
 
   // The boundary, the format and the compliance line. The live state is
   // appended as JSON by ask(); everything before it is fixed.
@@ -59,6 +66,8 @@
     'WHICH OF THE TWO YOU ARE ANSWERING. The JSON carries a mode. When it is "lineup" there is a solved roster in the data and the question is about that roster. When it is "setup" the reader is still at the three selects the page opens with - Game Style (the roster format), Games (which matchups make up the eligible player pool) and Payout Structure (how the contest pays) - and there is no roster yet. In setup mode your job is that choice: what each option builds, which one fits what the reader tells you they want, and what it does to the roster Iron Tuna will solve afterwards. Setup mode also covers the case where all three ARE answered and the solve still returned nothing: whyNoRosterYet says so and a build object carries the fine-tune settings it ran under - the cap, the locks, the exclusions, the forced player, the per-team limit. Name the one most likely to be the blocker and say what dropping it costs; do not treat it as a reason to change the contest. The choices object lists exactly what those selects offer, each with the note the page prints under it. Recommend from that list and nothing else: never invent a contest, a payout table, an entry fee, a field size, a prize pool or an entry limit, because the page does not carry those and DraftKings\u2019 lobby is where they live.',
     '',
     'WHERE YOUR NUMBERS COME FROM. The JSON at the end of this prompt is the page itself: the contest the reader configured or is configuring, the roster the optimizer solved, the swap at every slot, the players it left on the board, and the game environments behind all of it. Every salary, projection, floor, ceiling, ownership, leverage, value, Tuna Edge, touchdown probability and implied team total you quote must be taken from that JSON, exactly as it is written there. Do NOT calculate, re-rank, re-project, interpolate, normalize or replace any of those numbers, and do not invent one that is not there. If a number the reader asks for is not in the data, say plainly that the page does not carry it. You may use your own football knowledge freely for everything that is NOT one of this page\'s numbers: roles, usage, schemes, injuries, matchups, why a game sets up the way the market says it does.',
+    '',
+    'THE WHOLE BOARD IS IN THE DATA, so a question about a player the page never printed is still a question you can answer. slateBoard is every player on this slate the solve could legally have used, grouped by position, one compact line each: the fields are separated by a pipe in the order slateBoardColumns names them, and a line stops early when the columns after it are empty. It is the complete eligible pool and not a shortlist, so answer the best receiver at a price, the cheapest body who still projects, or who else plays in a given game FROM IT, and never tell a reader the page did not surface a player who is sitting on one of those lines. A line carries the columns slateBoardColumns names and nothing more: the market read, the floor, the touchdown price, the leverage and the wording of an injury note live on the detailed rows - the roster, the swaps, boardNotInLineup - so quote what you have and say plainly what a line does not carry. A name that is not in slateBoard is not on this board at all: he is outside the games the reader selected, or he is not playing. If trimmedFromThisPrompt says the board index was cut, say the deep end of it was trimmed rather than calling a missing player unavailable.',
     '',
     'WHAT THE FIELDS MEAN. proj is Iron Tuna\'s forward projection for this week. dkFppg is the operator\'s HISTORICAL fantasy-points-per-game average, not a projection, and tunaEdge is proj minus that average. floor and ceiling are the projection widened by positional variance. own is Iron Tuna\'s MODELED ownership, not a feed from the site. leverage is ceiling per point of modeled ownership. value, cashScore and tournamentScore are indexed to the slate: 100 is ordinary, above 100 is better than the slate norm. vegas is the market-implied projection and consensus is the projection feeds; marketDelta is the market\'s disagreement with them. vvs is market-implied points per $1,000 of salary, indexed the same way. typicalEntryPoints is what an ORDINARY entry on this slate projects for - legal rosters drawn off this board on the modeled ownership, under the same cap, and averaged - and vsTypicalEntry is this roster\u2019s projection minus that. It is the page\u2019s scale for a projection, printed in parentheses beside it; it is not a cash line, not a winning score, and it is only as good as the modeled ownership under it. Salary left over is not waste: the roster keeps it when spending it would buy a worse fit.',
     '',
@@ -109,10 +118,26 @@
     return ctx.build ? STUCK_STARTERS : SETUP_STARTERS;
   }
 
+  // Cuts the board index down rather than dropping it, and only ever from the
+  // tail of each position, which the page sorted worst-last for this contest.
+  // A reader asking about a price point is asking about a player the page did
+  // not print, so an index that is gone entirely puts the coach straight back
+  // to refusing the question it was added to answer.
+  function capBoard(o, n) {
+    if (!o.slateBoard) return null;
+    var cut = false;
+    Object.keys(o.slateBoard).forEach(function (pos) {
+      var list = o.slateBoard[pos];
+      if (list && list.length > n) { o.slateBoard[pos] = list.slice(0, n); cut = true; }
+    });
+    return cut ? 'the deep end of the board index, which now keeps the top ' + n + ' at each position' : null;
+  }
   // Shrinks in the order the reader's question is least likely to need: the
   // board rows behind the roster first, then the games, then the alternates,
-  // then the swaps. The roster itself and the contest it was solved for are
-  // never dropped — without them there is nothing to answer about.
+  // then the swaps, and the board index last of all because it is the only
+  // thing in here that can answer about a player the page never printed. The
+  // roster itself and the contest it was solved for are never dropped —
+  // without them there is nothing to answer about.
   function fit(ctx) {
     var out = ctx, dropped = [];
     var size = function (o) { return JSON.stringify(o).length; };
@@ -126,7 +151,11 @@
       // list is the games. The options themselves - the game styles and the
       // payout structures - are never trimmed: a recommendation has to come
       // from the whole menu the selects offer or it is not the page's menu.
-      function (o) { if (o.choices && (o.choices.games || []).length > 8) { o.choices.games = o.choices.games.slice(0, 8); return 'the later kickoffs in the game list'; } return null; }
+      function (o) { if (o.choices && (o.choices.games || []).length > 8) { o.choices.games = o.choices.games.slice(0, 8); return 'the later kickoffs in the game list'; } return null; },
+      function (o) { return capBoard(o, 120); },
+      function (o) { return capBoard(o, 80); },
+      function (o) { return capBoard(o, 40); },
+      function (o) { return capBoard(o, 24); }
     ];
     for (var i = 0; i < trims.length && size(out) > JSON_BUDGET; i++) {
       var copy = JSON.parse(JSON.stringify(out));
@@ -254,8 +283,8 @@
       var why = ctx && ctx.blocked ? ctx.blocked : 'Build a lineup above and the coach can answer questions about it.';
       elLede.textContent = !ready ? why : setup
         ? (ctx.awaiting || 'Ask about the contest setup above.')
-          + (ctx.build ? ' It has the settings that solve ran under.' : ' It is loaded with every option those selects offer and the games on this week\u2019s board.')
-        : 'Ask about the roster above. The coach is loaded with your contest setup, every player in the build, the swap at each slot, the board it chose from and the game environments behind it.';
+          + (ctx.build ? ' It has the settings that solve ran under and the player pool behind them.' : ' It is loaded with every option those selects offer and the games on this week\u2019s board.')
+        : 'Ask about the roster above. The coach is loaded with your contest setup, every player in the build, the swap at each slot, every priced player on the slate it chose from and the game environments behind them.';
       if (elLive) elLive.textContent = setup ? 'live on your setup' : 'live on this lineup';
       elText.placeholder = setup
         ? 'Ask which Game Style, game pool or payout structure fits the contest you want. Enter to send.'

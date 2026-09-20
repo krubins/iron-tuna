@@ -2731,6 +2731,60 @@ p{color:var(--sec);margin:0 0 16px}
     for (var j in r) if (r[j] == null) delete r[j];
     return r;
   }
+  // THE WHOLE BOARD, not the part of it the page happened to print. The coach
+  // saw the roster, the nine swaps and the thirty best alternates, so a reader
+  // who asked for the best receiver at $4,800 was told the full board had been
+  // trimmed from the prompt — about a slate whose every priced row is in the
+  // pool table on the screen in front of them. Every player the solve could
+  // legally have used rides along now, one line each.
+  //
+  // A LINE, NOT AN OBJECT. The prompt has a character budget (dfs-coach.js
+  // JSON_BUDGET), and a four-hundred-man board is around 19,000 characters as
+  // delimited text against roughly three times that as JSON objects, most of
+  // it repeated key names. The columns are named once, in COACH_BOARD_COLUMNS,
+  // and every number on a line is the page's own, rounded the way coachRow
+  // rounds it. Nothing here computes anything.
+  //
+  // Sorted inside each position by the key the alternates are sorted by, so
+  // when fit() has to cut the index it drops the names this contest cares
+  // least about and keeps the best body at every price.
+  var COACH_BOARD_COLUMNS = 'name|team|opp|salary|proj|ceiling|own|value|status';
+  function coachBoard(view, key) {
+    var by = {};
+    ((view && view.players) || []).forEach(function (p) {
+      // A man who is Out, Doubtful or not on a roster is already off the
+      // board: the solve cannot use him, so offering him from the index would
+      // be offering a player the page would refuse to build with. Questionable
+      // stays, flagged, because that call belongs to the reader.
+      if (!p.onBoard || p.available === false) return;
+      (by[p.position] || (by[p.position] = [])).push(p);
+    });
+    var out = {};
+    Object.keys(by).sort().forEach(function (pos) {
+      out[pos] = by[pos].sort(function (a, b) { return (Number(b[key]) || 0) - (Number(a[key]) || 0); })
+        .map(function (p) {
+          var cells = [p.name, p.team,
+                       // The same matchup string coachRow prints, so the index
+                       // can answer "who else is in that game" on its own: the
+                       // game environments are the first list fit() trims.
+                       p.opponent ? (p.home === false ? '@' : 'vs ') + p.opponent : '',
+                       p.salary == null ? '' : Number(p.salary),
+                       coachN(p.ironTunaPoints != null ? p.ironTunaPoints : p.proj),
+                       coachN(p.ceiling), coachN(p.ownership),
+                       p.value == null ? '' : Number(p.value), p.weekStatus || ''];
+          while (cells.length && (cells[cells.length - 1] == null || cells[cells.length - 1] === '')) cells.pop();
+          return cells.map(function (c) { return c == null ? '' : c; }).join('|');
+        });
+    });
+    return out;
+  }
+  function coachBoardNote(key) {
+    return 'Every player on this slate the solve could have used, grouped by position, one line each in the order '
+      + COACH_BOARD_COLUMNS + ', best ' + key + ' first, with the empty trailing columns dropped. This is the whole '
+      + 'eligible board rather than a shortlist: a name that is not here is outside the games the reader selected, or '
+      + 'is not playing this week. The market read, the floor, the leverage and the availability note live on the '
+      + 'detailed rows above, not on these lines.';
+  }
   function coachLineup(l, rank, byKey, sh) {
     var qb = lineupQb(l);
     return {
@@ -2875,6 +2929,14 @@ p{color:var(--sec);margin:0 0 16px}
       ((view || slate || {}).players || []).forEach(function (p) { if (p.key) byKey[p.key] = p; });
       out.build = coachBuild(byKey);
       out.buildMeaning = 'The setup above is complete; these are the fine-tune settings the solve ran under, and one of them is why no roster came back.';
+      // Which constraint to drop is a question about the pool the constraint
+      // is being applied to, so the pool goes with it: without the board the
+      // coach can say a lock is expensive and not who else there was.
+      if (view) {
+        out.slateBoard = coachBoard(view, 'value');
+        out.slateBoardColumns = COACH_BOARD_COLUMNS;
+        out.slateBoardMeaning = coachBoardNote('value');
+      }
     }
     return out;
   }
@@ -2954,6 +3016,9 @@ p{color:var(--sec);margin:0 0 16px}
         : 'Each row is the next best body at that seat. A swap that costs almost nothing marks a slot the solve is indifferent about; one that costs three points marks a slot the roster is built on.',
       boardNotInLineup: bench,
       boardNotInLineupSortedBy: benchKey,
+      slateBoard: coachBoard(view, benchKey),
+      slateBoardColumns: COACH_BOARD_COLUMNS,
+      slateBoardMeaning: coachBoardNote(benchKey),
       games: stackRows
     };
   }
