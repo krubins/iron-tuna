@@ -10028,8 +10028,13 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
 
 **The DFS page (`/dfs`), same pass.**
 
-- **Same page head** (`In-Season · DFS`, 39px `h1`, lede, `.is-actions`: Build
-  this week's lineup → `#sec-lineup`, Price my own salary file → `#dfUp`).
+- **Same page head** (`In-Season · DFS`, 39px `h1`, lede, then the quiet
+  `.is-hero-how` line down to `#df-method`). The `.is-actions` pill row that
+  used to sit between the lede and that line — Build this week's lineup →
+  `#sec-lineup` and Price my own salary file → `#dfUp` — was removed on
+  2026-09-20: the first pill only scrolled to a section already a screen away,
+  and nobody prices their own salary file. `#dfUp` itself is untouched; it is
+  hidden and unhidden by `load()` on site/format, never by that link.
 - **The venue and board switchers (`#dfSite`, `#dfNav`) moved up** from below
   the setup, the Play of the Week and the Academy cards to directly under the
   head, with `#dfNote` and `#dfSiteNote` beside them. Same ids, same script;
