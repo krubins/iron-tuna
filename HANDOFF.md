@@ -12108,3 +12108,57 @@ the constraint chips, `readerIsChoosing: 'which constraint to loosen so a roster
 fits'` and `build.cap: 11000` in the payload. The captured payloads are 5.4KB in
 setup mode, 6.3KB with the constraints, and 19.7KB with a roster, all inside the
 28,000-character budget. No page errors at 1280 or 390px.
+## 105. September 20: the coach could not tell a quoted number from a fitted one
+
+§96 gave every slate row a weekly availability verdict and §97 gave it a market
+block, and both reached the page: the pool has a Market column, every
+recommended player carries a sentence naming what the books posted on him, and
+a flagged man is tagged in his row. Neither reached the **coach**. Its context
+carried `vegas`, `consensus` and `marketDelta` and stopped there, so it could
+quote a curve-fitted 16.0 with exactly the confidence of a quoted 16.0, and
+recommend a Questionable receiver without mentioning that he is Questionable.
+The page and the panel under it were describing the same player differently.
+
+**Both now ride on every row, read through the page's own helpers.**
+`coachMarket()` takes its label from `marketChipFor()` and the recommended
+roster's sentence from `marketPhrase()`, the same two functions that write the
+Market column and its hover text, so the coach cannot invent a second
+vocabulary and drift from what the reader is looking at.
+
+| Field | What it carries |
+|---|---|
+| `market.read` | PROPS, LINES, FITTED or TD ONLY, the chip the pool prints. |
+| `market.trust` | The `BLEND_SHRINK` factor: how much of the distance from consensus to market the page keeps. |
+| `market.points` | The shrunk number the market build actually maximizes. |
+| `market.posted` / `books` / `pulledHoursAgo` | Which markets a book put up, how many books, how old the pull is. |
+| `market.tdFromTheBooks` | The touchdown probability is a devigged price, not a Poisson tail. |
+| `marketSays` | The page's own full sentence, on the recommended roster only. |
+| `status.designation` / `note` / `from` | The week's tag, its wording, and which of the four sources answered. |
+| `status.playing: false` | Off the board. He is in a lineup only because the reader locked him. |
+| `slate.marketCoverage` | Priced how many of how many, by how many books, how fresh. |
+
+**The glossary says what to do with them**, which is the half that matters. The
+market read is CONFIDENCE, NOT QUALITY: a quoted 16.0 and a fitted 16.0 are not
+the same number, and an expensive quoted player is priced rather than
+automatically correct. On availability: a player with no `status` is one
+nothing flagged, Questionable is deliberately still on the board because that
+call is the reader's, `playing: false` means the reader locked him in himself,
+and the coach must never call a flagged man healthy or invent a designation the
+data does not carry.
+
+**Size.** The prompt is 8,226 characters against the proxy's 40,000, leaving
+the 28,000 JSON budget intact. The full market block rides on the roster and
+the swaps; a bench row takes `coachRow(p, null, true)` and carries only
+`read`, `trust` and `points`, which is what a swap decision needs.
+
+| Where | What |
+|---|---|
+| `dfs.html` | `coachMarket(p, brief)`, `coachStatus(p)`, both on `coachRow`; `marketSays` on the lead lineup; `slate.marketCoverage` off `view.props`. |
+| `dfs-coach.js` | two glossary paragraphs, WHETHER THE BOOKS PRICED HIM and WHETHER HE IS PLAYING. |
+| `tools/test-dfs-coach.mjs` | 119 now: the glossary clauses, a quoted row arriving quoted and a fitted row not dressed as one, TD-only saying so, a flagged row carrying its source, an unflagged row carrying no status at all rather than a healthy claim, the bench's brief block, and the market label coming from the page's helper rather than a second table. |
+
+Driven in Chromium against a slate carrying both shapes: the payload shows
+`PROPS trust 1` with its posted markets and book count beside `FITTED trust
+0.55` with neither, the page's own sentence on the recommended roster and not
+on the bench, a Questionable receiver with his note and source, and eight of
+nine roster rows carrying no status field at all.
