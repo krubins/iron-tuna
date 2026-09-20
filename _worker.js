@@ -1373,7 +1373,14 @@ const TMS_SOURCE = 'https://the-odds-api.com/';
 const TMS_PROPLINE_SOURCE = 'https://prop-line.com/';
 const TMS_PROPLINE_API = 'https://api.prop-line.com/v1/';
 const TMS_PROPLINE_BOOKS = 'draftkings,fanduel,pinnacle,bovada,betmgm,betrivers,fanatics,hardrock';
-const TMS_PROPLINE_MARKETS = 'player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td';
+// The nine fantasy-scoring markets, plus rush attempts — which scores nothing
+// and is the market the slate's implied-touches number is actually built from
+// (buildDfsSlate falls back to rushYd/4.3 without it, which is a guess at a
+// carry count the books will happily quote). ODDS_API_MARKET_MAP already maps
+// it to `rushAtt` and VEGAS_MARKETS lists it among the running back's extras,
+// so nothing downstream needed teaching; the request simply never asked.
+// Ten of a cap of twelve.
+const TMS_PROPLINE_MARKETS = 'player_pass_yds,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_attempts,player_rush_tds,player_reception_yds,player_reception_tds,player_receptions,player_anytime_td';
 // A quote is stale when the collector has not SEEN it lately, not when the book
 // last touched it: a line that has held for six hours is still the book's
 // line. Two poll intervals, so one missed hourly poll does not empty the board.
@@ -1388,25 +1395,63 @@ const tmsInt = (v, fallback, min, max) => Number.isFinite(Number(v)) && v !== ''
 const tmsList = v => String(v || '').split(',').map(s => s.trim()).filter(Boolean);
 const tmsKey = r => JSON.stringify([r.provider, r.event, r.book, r.market, r.player, r.side]);
 const tmsGroup = r => JSON.stringify([r.provider, r.event, r.market, r.player, r.side, r.line]);
-function tmsNormalize(events, observed, provider = 'the-odds-api', source = TMS_SOURCE) {
+// The line on an outcome, whatever the feed calls it and whatever type it
+// arrives as. A book API that returns "62.5" instead of 62.5 is not a broken
+// feed, and a strict typeof check silently dropped every such row. An
+// anytime-touchdown market has no line at all and is not affected either way,
+// which is exactly why a strict check here could hide itself: touchdown prices
+// kept flowing while every yardage and reception line vanished, and the board
+// looked busy and could not project a receiver from any of it.
+function tmsOutcomeLine(o) {
+  for (const k of ['point', 'line', 'handicap']) {
+    const v = o == null ? null : o[k];
+    if (v == null || v === '') continue;
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+// The player a player market is about. `description` is The Odds API's field;
+// other feeds put the name on `participant` or `player`.
+function tmsOutcomePlayer(o) {
+  for (const k of ['description', 'participant', 'player', 'player_name']) {
+    const v = o == null ? null : o[k];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return '';
+}
+// Normalizing drops rows, and every drop used to be a bare `continue`. That is
+// how a feed loses eight of its nine markets without anything saying so. The
+// tally is per reason and per market, it costs a counter, and it is the
+// difference between "the books only posted touchdowns" and "we threw the rest
+// away" — two diagnoses with nothing in common and no way to tell them apart.
+function tmsNormalize(events, observed, provider = 'the-odds-api', source = TMS_SOURCE, drops) {
   if (!Array.isArray(events)) throw new Error('invalid_schema');
   const rows = [];
+  const drop = (reason, market) => {
+    if (!drops) return;
+    drops.total = (drops.total || 0) + 1;
+    drops.byReason = drops.byReason || {}; drops.byReason[reason] = (drops.byReason[reason] || 0) + 1;
+    if (market) { drops.byMarket = drops.byMarket || {}; drops.byMarket[market] = (drops.byMarket[market] || 0) + 1; }
+  };
   for (const e of events) {
-    if (!e.id || !e.sport_key || !Number.isFinite(Date.parse(e.commence_time))) continue;
+    if (!e.id || !e.sport_key || !Number.isFinite(Date.parse(e.commence_time))) { drop('event_shape'); continue; }
     for (const b of e.bookmakers || []) for (const m of b.markets || []) {
       // Alternate ladders need their own identity; do not mix them with main lines.
-      if (!b.key || !m.key || m.key.includes('alternate')) continue;
+      if (!b.key || !m.key) { drop('market_shape'); continue; }
+      if (m.key.includes('alternate')) { drop('alternate_ladder', m.key); continue; }
       const updated = Date.parse(m.last_update || b.last_update);
-      if (!Number.isFinite(updated) || updated > observed + 60000) continue;
+      if (!Number.isFinite(updated) || updated > observed + 60000) { drop('no_timestamp', m.key); continue; }
       for (const o of m.outcomes || []) {
-        if (!o.name || typeof o.price !== 'number' || !Number.isFinite(o.price) || o.price <= 1) continue;
-        if (o.point != null && (typeof o.point !== 'number' || !Number.isFinite(o.point))) continue;
-        if (m.key !== 'h2h' && o.point == null && !/(^|_)anytime_td$/.test(m.key)) continue;
-        if (m.key.startsWith('player_') && !o.description) continue;
+        if (!o.name || typeof o.price !== 'number' || !Number.isFinite(o.price) || o.price <= 1) { drop('price', m.key); continue; }
+        const line = tmsOutcomeLine(o);
+        if (m.key !== 'h2h' && line == null && !/(^|_)anytime_td$/.test(m.key)) { drop('no_line', m.key); continue; }
+        const player = tmsOutcomePlayer(o);
+        if (m.key.startsWith('player_') && !player) { drop('no_player', m.key); continue; }
         rows.push({ provider, source, event: String(e.id), sport: e.sport_key,
           matchup: `${e.away_team || ''} at ${e.home_team || ''}`, starts: Date.parse(e.commence_time),
-          book: b.key, market: m.key, player: o.description || '', side: o.name,
-          line: o.point ?? null, price: o.price, updated, observed });
+          book: b.key, market: m.key, player, side: o.name,
+          line, price: o.price, updated, observed });
       }
     }
   }
@@ -1417,7 +1462,7 @@ function tmsAmericanToDecimal(price) {
   if (!Number.isFinite(n) || (n > -100 && n < 100)) return null;
   return n > 0 ? 1 + n / 100 : 1 + 100 / Math.abs(n);
 }
-function tmsNormalizePropline(events, observed) {
+function tmsNormalizePropline(events, observed, drops) {
   if (!Array.isArray(events)) throw new Error('invalid_schema');
   const converted = events.map(e => ({ ...e, bookmakers: (e.bookmakers || []).map(b => ({
     ...b, markets: (b.markets || []).map(m => ({ ...m, outcomes: (m.outcomes || []).map(o => {
@@ -1425,7 +1470,7 @@ function tmsNormalizePropline(events, observed) {
       return price == null ? { ...o, price: NaN } : { ...o, price };
     }) }))
   })) }));
-  return tmsPrimaryPropRows(tmsNormalize(converted, observed, 'propline', TMS_PROPLINE_SOURCE));
+  return tmsPrimaryPropRows(tmsNormalize(converted, observed, 'propline', TMS_PROPLINE_SOURCE, drops));
 }
 function tmsNumberOrNull(v) {
   if (v == null || v === '') return null;
@@ -1463,6 +1508,24 @@ function tmsPrimaryPropRows(rows) {
     if (best) keep.push(...best.rows);
   }
   return keep;
+}
+// Which games get a prop call, and in what order.
+//
+// SOONEST FIRST, then capped. The provider's window is nine days and an NFL
+// week is seven, so it routinely holds this Sunday, this Monday AND next
+// Thursday — more games than the per-poll cap. Unsorted, the events that got a
+// call were whatever order the provider happened to return them in, which
+// could spend the entire budget on games a week out while this Sunday went
+// unpriced. The slate anyone is building is always the nearest one.
+const TMS_PROPLINE_EVENT_CAP = 20;
+const TMS_PROPLINE_WINDOW_MS = 9 * 86400000;
+function tmsPropLineEvents(list, observed) {
+  return (Array.isArray(list) ? list : []).filter(e => {
+    const starts = Date.parse(e && e.commence_time);
+    // An hour's grace on the near side: a game that has just kicked off is
+    // still the week being built around.
+    return e && e.id && Number.isFinite(starts) && starts > observed - 3600000 && starts < observed + TMS_PROPLINE_WINDOW_MS;
+  }).sort((x, y) => Date.parse(x.commence_time) - Date.parse(y.commence_time)).slice(0, TMS_PROPLINE_EVENT_CAP);
 }
 async function tmsPropLineHttp(path, params, env, request = fetch) {
   const url = new URL(TMS_PROPLINE_API + path);
@@ -1541,13 +1604,14 @@ const TMS_PROVIDERS = {
     if (!/^[a-z0-9_]+$/.test(sport)) throw new Error('invalid_sport');
     const bookmakers = tmsList(env.TMS_BOOKMAKERS || TMS_PROPLINE_BOOKS).filter(v => /^[a-z0-9_]+$/.test(v)).slice(0, 12).join(',');
     const markets = tmsList(env.TMS_PROP_MARKETS || TMS_PROPLINE_MARKETS).filter(v => /^[a-z0-9_]+$/.test(v)).slice(0, 12);
+    // What the request asked for, what came back, and what was thrown away on
+    // the way in. Without this, a feed that answers nine markets and survives
+    // one is indistinguishable from a feed that only ever posts one.
+    const drops = {};
     const game = await tmsPropLineHttp('sports/' + sport + '/odds', { markets: 'h2h,spreads,totals', bookmakers }, env);
-    const rows = tmsNormalizePropline(game.data, observed);
+    const rows = tmsNormalizePropline(game.data, observed, drops);
     const eventResult = await tmsPropLineHttp('sports/' + sport + '/events', {}, env);
-    const events = (Array.isArray(eventResult.data) ? eventResult.data : []).filter(e => {
-      const starts = Date.parse(e.commence_time);
-      return e.id && Number.isFinite(starts) && starts > observed - 3600000 && starts < observed + 9 * 86400000;
-    }).slice(0, 20);
+    const events = tmsPropLineEvents(eventResult.data, observed);
     let quota = { remaining: eventResult.remaining ?? game.remaining, used: eventResult.used ?? game.used, limit: eventResult.limit ?? game.limit };
     // Free current odds plus our own snapshots are the default. Paid history is opt-in.
     let movementAvailable = env.PROPLINE_MOVEMENT === '1';
@@ -1556,7 +1620,7 @@ const TMS_PROVIDERS = {
       if (markets.length) {
         const current = await tmsPropLineHttp('sports/' + sport + '/events/' + encodeURIComponent(e.id) + '/odds', { markets: markets.join(','), bookmakers }, env);
         currentEventId = String(current.data?.id || e.id);
-        rows.push(...tmsNormalizePropline([current.data], observed));
+        rows.push(...tmsNormalizePropline([current.data], observed, drops));
         quota = { remaining: current.remaining, used: current.used, limit: current.limit };
       }
       if (movementAvailable) {
@@ -1571,7 +1635,10 @@ const TMS_PROVIDERS = {
         }
       }
     }
-    return { rows, quota, provider: 'propline' };
+    const byMarket = {};
+    for (const r of rows) if (r.market) byMarket[r.market] = (byMarket[r.market] || 0) + 1;
+    return { rows, quota, provider: 'propline',
+             markets: { requested: markets, returned: byMarket, events: events.length, drops } };
   } },
   'the-odds-api': { async pull(env, observed) {
     if (!env.ODDS_API_KEY) throw new Error('missing_odds_api_key');
@@ -1707,6 +1774,7 @@ async function tmsPoll(env, now = Date.now()) {
     try { projection = await tmsStoreForProjections(env, result.rows, now); }
     catch (e) { projection = { ok: false, error: 'projection_store_failed' }; }
     status = { status: result.rows.length ? 'ok' : 'empty', rows: result.rows.length, quota: result.quota,
+               markets: result.markets || null,
                projection: projection ? { ok: !!projection.ok, eligible: projection.eligible || 0,
                  written: projection.written || 0, unchanged: projection.unchanged || 0,
                  skipped: projection.skipped || null, error: projection.error || null } : null };
@@ -2050,6 +2118,30 @@ function _availStatusOf(entry) {
   if (/^Out$/i.test(st) && fs !== 'PUP-P') return { status: 'Out', min: AVAIL_MIN_GAMES, reserve: false, needsDate: true };
   return null;
 }
+// THIS WEEK'S designation, which is the part the block above throws away.
+// Everything above answers a SEASON question, and by §48 a Questionable tag —
+// or a plain "Out" with no return date — is not a change to a full-season
+// line, so it maps to nothing and the board never hears about it. A single
+// slate asks the opposite question. Spending $5,800 of a $50,000 cap on a
+// receiver the report ruled out on Friday is the one mistake a lineup builder
+// must not make, and the feed already says so.
+//
+// So the same pull keeps a second table beside the first: the game status the
+// report carries for the week in front of us, for every board player who has
+// one. It never touches gamesOut, the pro-rating factor, or anything the
+// season path reads.
+function _availWeekStatusOf(entry) {
+  if (_availStatusOf(entry)) return 'Out';   // IR, PUP, NFI, suspended, exempt, ruled out
+  const st = String((entry && entry.status) || '').trim();
+  // Active/PUP is the one "Out" the season list declines on purpose (he can be
+  // activated any day, so it is no season line change). He is still not playing
+  // on Sunday, which is the only question being asked here.
+  if (/^out$/i.test(st)) return 'Out';
+  if (/^doubtful$/i.test(st)) return 'Doubtful';
+  if (/^questionable$/i.test(st)) return 'Questionable';
+  return null;                                // Probable, Day-To-Day, Active: he is expected to play
+}
+const AVAIL_WEEK_RANK = { Out: 3, Doubtful: 2, Questionable: 1 };
 // Week 1 kicks off on the Thursday after Labor Day (the first Monday of September).
 function _availKickoff(year) {
   const first = new Date(Date.UTC(year, 8, 1)).getUTCDay();
@@ -2092,6 +2184,7 @@ function buildAvailabilityOverlay(feed) {
   const kickoff = _availKickoff(year);
   const board = _availBoardIndex();
   const players = {};
+  const weekly = {};
   const skipped = { unlisted: 0, weekToWeek: 0, short: 0 };
   let entries = 0;
   for (const t of teams) for (const e of (t && Array.isArray(t.injuries)) ? t.injuries : []) {
@@ -2101,17 +2194,24 @@ function buildAvailabilityOverlay(feed) {
     const key = _oddsNorm(a.displayName) + '|' + pos;
     const p = board.get(key);
     if (!p) { skipped.unlisted++; continue; }
+    const type = String((e.details || {}).type || '').trim();
+    const note = ((type && !/^(Undisclosed|Suspension|Personal)$/i.test(type) ? type + ': ' : '') + String(e.shortComment || '').trim()).slice(0, 160);
+    // This week first, and independently: a Questionable tag reaches no other
+    // table here, and a slate is the one reader that needs it.
+    const wk = _availWeekStatusOf(e);
+    if (wk && !(weekly[key] && AVAIL_WEEK_RANK[weekly[key].status] >= AVAIL_WEEK_RANK[wk])) {
+      weekly[key] = { name: p.name, position: p.position, team: p.team, status: wk, note, asOf: asOf.slice(0, 10) };
+    }
     const m = _availStatusOf(e);
     if (!m) { skipped.weekToWeek++; continue; }
     const gamesOut = _availGamesOut(e, kickoff, m);
     if (!gamesOut) { skipped.short++; continue; }
     if (players[key] && players[key].gamesOut >= gamesOut) continue;   // two entries for one man: the longer absence
-    const type = String((e.details || {}).type || '').trim();
-    const note = ((type && !/^(Undisclosed|Suspension|Personal)$/i.test(type) ? type + ': ' : '') + String(e.shortComment || '').trim()).slice(0, 160);
     players[key] = { name: p.name, position: p.position, team: p.team, status: m.status, gamesOut, note,
                      source: 'ESPN injury feed ' + asOf.slice(0, 10), asOf: asOf.slice(0, 10) };
   }
-  return { players, matched: Object.keys(players).length, teams: teams.length, entries, skipped, asOf };
+  return { players, weekly, matched: Object.keys(players).length, weeklyMatched: Object.keys(weekly).length,
+           teams: teams.length, entries, skipped, asOf };
 }
 // committed ∪ live, live winning per player except downward on gamesOut (see the
 // note at the top of this block). Every entry records the committed number so
@@ -2127,10 +2227,12 @@ function availabilityMerge(committed, live) {
   return out;
 }
 let _AVAIL_TABLE = availabilityMerge(AVAILABILITY, null);   // what every sync reader below sees
+let _AVAIL_WEEK = {};     // this week's designations; empty until a live row carries them
 let _AVAIL_AT = 0;        // when the memo was last loaded from D1 (0 = never)
 let _AVAIL_LIVE_AT = 0;   // updated_at of the live row behind it (0 = committed block only)
 let _AVAIL_KICK_AT = 0;
 function _availTable() { return _AVAIL_TABLE; }
+function _availWeekTable() { return _AVAIL_WEEK; }
 // The merged table, loaded once per isolate-quarter-hour. oddsCacheRead calls
 // this first, so every path that reads the overlay has the live list in place
 // before blendProjections / applyAvailability run.
@@ -2138,9 +2240,16 @@ async function availabilityTable(env) {
   if (_AVAIL_AT && Date.now() - _AVAIL_AT < AVAIL_MEMO_MS) return _AVAIL_TABLE;
   const live = await availabilityCacheRead(env);
   _AVAIL_TABLE = availabilityMerge(AVAILABILITY, live && live.players);
+  _AVAIL_WEEK = (live && live.weekly) || {};
   _AVAIL_LIVE_AT = live ? live.updatedAt : 0;
   _AVAIL_AT = Date.now();
   return _AVAIL_TABLE;
+}
+// The pair a slate needs: the season list (which weeks a man on a reserve
+// list is missing) and this week's report. Loading the first fills the second.
+async function availabilityForWeek(env) {
+  const table = await availabilityTable(env);
+  return { table, weekly: _availWeekTable() };
 }
 // The factor a market (full-season) line takes for this player.
 function _availFactor(key) {
@@ -3836,13 +3945,17 @@ async function oddsCacheWrite(env, overlay, provider, matched) {
 }
 // The live availability list: row 3 of the same table, same lifecycle, no
 // migration. payload = { asOf, players: { "<norm>|<POS>": { name, position,
-// team, status, gamesOut, note, source, asOf } } }, provider 'espn-injuries',
+// team, status, gamesOut, note, source, asOf } }, weekly: { "<norm>|<POS>":
+// { name, position, team, status, note, asOf } } }, provider 'espn-injuries',
 // matched = the number of board players listed, updated_at = when it was pulled.
+// `weekly` is this week's game-status designations and is read separately: an
+// older row written before it existed simply has none, which is why nothing
+// below treats its absence as a broken row.
 async function availabilityCacheWrite(env, built) {
   await oddsCacheInit(env);
   await env.LEADS_DB.prepare(
     'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (3, ?, ?, ?, ?)'
-  ).bind(JSON.stringify({ asOf: built.asOf, players: built.players }), 'espn-injuries', built.matched, Date.now()).run();
+  ).bind(JSON.stringify({ asOf: built.asOf, players: built.players, weekly: built.weekly || {} }), 'espn-injuries', built.matched, Date.now()).run();
 }
 // Strict on the way back: a row that is not exactly the shape written above is
 // not used at all, rather than half-used.
@@ -3857,6 +3970,22 @@ function _availValidPlayers(players) {
   }
   return out;
 }
+// The weekly designations are read on their own terms and FAIL SOFT, not
+// hard: a row written before they existed, or one whose weekly half is
+// malformed, gives up the weekly table and keeps the season list. The season
+// list moves a projection; this one only decides whether a slate offers a man
+// up, so losing it must never cost the board its availability pro-rating.
+function _availValidWeekly(weekly) {
+  if (!weekly || typeof weekly !== 'object' || Array.isArray(weekly)) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(weekly)) {
+    if (!/^[a-z]*\|[A-Z]{1,4}$/.test(k) || !v || typeof v !== 'object') continue;
+    if (typeof v.status !== 'string' || !AVAIL_WEEK_RANK[v.status]) continue;
+    out[k] = { name: String(v.name || ''), position: String(v.position || ''), team: String(v.team || ''),
+               status: v.status, note: String(v.note || ''), asOf: String(v.asOf || '') };
+  }
+  return out;
+}
 async function availabilityCacheRead(env) {
   if (!env || !env.LEADS_DB) return null;
   try {
@@ -3866,7 +3995,8 @@ async function availabilityCacheRead(env) {
     const j = JSON.parse(row.payload);
     const players = _availValidPlayers(j && j.players);
     if (!players) return null;
-    return { players, asOf: String(j.asOf || ''), provider: row.provider, matched: row.matched, updatedAt: row.updated_at };
+    return { players, weekly: _availValidWeekly(j && j.weekly), asOf: String(j.asOf || ''),
+             provider: row.provider, matched: row.matched, updatedAt: row.updated_at };
   } catch (e) { return null; }
 }
 
@@ -3952,7 +4082,7 @@ async function runAvailabilityRefresh(env) {
   let built;
   try { built = buildAvailabilityOverlay(feed); }
   catch (e) { return { ok: false, error: 'build failed: ' + ((e && e.message) || 'failed') }; }
-  const info = { teams: built.teams, entries: built.entries, matched: built.matched, skipped: built.skipped, asOf: built.asOf };
+  const info = { teams: built.teams, entries: built.entries, matched: built.matched, weeklyMatched: built.weeklyMatched, skipped: built.skipped, asOf: built.asOf };
   if (built.teams < AVAIL_MIN_TEAMS) return { ok: false, error: 'thin_feed', ...info };
   if (built.matched < AVAIL_MIN_MATCHED) return { ok: false, error: 'insufficient_coverage', ...info };
   await availabilityCacheWrite(env, built);
@@ -3983,7 +4113,12 @@ async function availabilityReport(env) {
   }).sort((x, y) => x.position.localeCompare(y.position) || x.name.localeCompare(y.name));
   return {
     feed: AVAIL_FEED_URL,
-    live: live ? { asOf: live.asOf, matched: live.matched, updatedAt: live.updatedAt, ageHours: +((Date.now() - live.updatedAt) / 3600000).toFixed(1) } : null,
+    live: live ? { asOf: live.asOf, matched: live.matched, weeklyMatched: Object.keys(live.weekly || {}).length,
+                   updatedAt: live.updatedAt, ageHours: +((Date.now() - live.updatedAt) / 3600000).toFixed(1) } : null,
+    // This week's designations never move a season line, so they are reported
+    // beside the list rather than inside it. The DFS slate is what reads them.
+    weekly: Object.values((live && live.weekly) || {}).map(w => ({ name: w.name, position: w.position, team: w.team, status: w.status, note: w.note }))
+      .sort((x, y) => String(x.position).localeCompare(String(y.position)) || String(x.name).localeCompare(String(y.name))),
     serving: live ? 'committed block + live row (union, live wins, never fewer games out)' : 'committed block only (no usable live row)',
     committed: Object.keys(AVAILABILITY).length,
     merged: affected.length,
@@ -5306,6 +5441,87 @@ function _gameLineMove(g, gm) {
     book: (sp.source === 'book' || to.source === 'book') && b ? b.name : null
   };
 }
+// Are this week's player props actually reaching the board?
+//
+// snapshotStatus below counts the whole table across every season and week it
+// still keeps, so a store that stopped collecting three weeks ago reads as
+// healthy. That is not the question anyone asks. The question is whether the
+// props being collected right now are landing on THIS week's players, and it
+// has four distinguishable answers that the row count alone cannot separate:
+//
+//   empty      nothing was written for this week. The provider is unkeyed,
+//              the poll is failing, or the week just turned over.
+//   stale      rows exist but the newest is old. The poll has stopped.
+//   unmatched  rows exist and are fresh, but none of their subjects match a
+//              player on the board. This is the silent one: the collector
+//              looks perfect and every projection still reads `gamelines`,
+//              because the join is by normalized name and something on one
+//              side of it changed.
+//   live       fresh rows, matched to board players. Working.
+//
+// The match is computed the same way buildBoards computes it — the normalized
+// name, against the same projection index — so this cannot agree with the
+// health board while the boards disagree with both.
+const PROPS_STALE_HOURS = 12;
+async function propsHealth(env, season, week) {
+  if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
+  if (week == null) return { ok: true, state: 'no_week', note: 'No regular-season week is current, so no weekly props are expected.' };
+  try {
+    const tot = await env.LEADS_DB.prepare(
+      'SELECT COUNT(*) AS rows, COUNT(DISTINCT subject) AS subjects, COUNT(DISTINCT market) AS markets, ' +
+      'COUNT(DISTINCT book) AS books, MAX(ts) AS last FROM odds_snapshots ' +
+      'WHERE season IS ? AND week IS ? AND subject_type = ?')
+      .bind(season == null ? null : Number(season), Number(week), 'player').first();
+    // WHICH markets, off the same store the projections read. A total cannot
+    // tell a feed that posts nine markets from one that posts only touchdowns,
+    // and only one of those can project a receiver.
+    const mix = await env.LEADS_DB.prepare(
+      'SELECT market, COUNT(DISTINCT subject) AS players, COUNT(*) AS rows FROM odds_snapshots ' +
+      'WHERE season IS ? AND week IS ? AND subject_type = ? GROUP BY market ORDER BY players DESC')
+      .bind(season == null ? null : Number(season), Number(week), 'player').all();
+    const byMarket = {};
+    for (const r of (mix.results || [])) byMarket[String(r.market)] = { players: Number(r.players) || 0, rows: Number(r.rows) || 0 };
+    const rows = Number((tot && tot.rows) || 0);
+    const last = tot && tot.last ? Number(tot.last) : null;
+    const ageHours = last ? Math.round((Date.now() - last) / 360000) / 10 : null;
+    if (!rows) {
+      return { ok: true, state: 'empty', season, week, rows: 0, subjects: 0, matched: 0, coverage: 0,
+               note: 'No player prop has been written for this week. Check that the market provider is keyed and that its poll is running.' };
+    }
+    const q = await env.LEADS_DB.prepare(
+      'SELECT DISTINCT subject FROM odds_snapshots WHERE season IS ? AND week IS ? AND subject_type = ?')
+      .bind(season == null ? null : Number(season), Number(week), 'player').all();
+    // The same join buildBoards makes: normalized name against the projection
+    // index. A subject that matches nothing here is a prop no board row reads.
+    const idx = _oddsProjectionIndex();
+    const subjects = (q.results || []).map(r => String(r.subject || ''));
+    const matched = subjects.filter(sub => idx.get(sub) !== undefined && idx.get(sub) !== null).length;
+    const boardPlayers = idx.size;
+    const markets = Number((tot && tot.markets) || 0), books = Number((tot && tot.books) || 0);
+    // A projection is built from a yardage or reception line. A week whose only
+    // market is the anytime touchdown has a healthy row count and cannot
+    // project a receiver, a tight end or a quarterback (VEGAS_MARKETS.core) —
+    // its own state, because the fix is at the provider, not here.
+    const PROJECTABLE = ['passYd', 'passTD', 'rushYd', 'recYd', 'rec'];
+    const projectable = PROJECTABLE.filter(m => byMarket[m]);
+    const state = matched === 0 ? 'unmatched'
+      : (ageHours != null && ageHours > PROPS_STALE_HOURS) ? 'stale'
+      : !projectable.length ? 'td_only'
+      : 'live';
+    const names = Object.keys(byMarket).sort((x, y) => byMarket[y].players - byMarket[x].players);
+    return { ok: true, state, season, week, rows, subjects: subjects.length, matched, boardPlayers,
+             coverage: boardPlayers ? Math.round(matched / boardPlayers * 1000) / 10 : 0,
+             markets, books, lastAt: last, ageHours, byMarket,
+             marketNames: names, projectableMarkets: projectable,
+             note: state === 'live'
+               ? matched + ' board player' + (matched === 1 ? ' carries' : 's carry') + ' a quoted prop this week, across ' + markets + ' market' + (markets === 1 ? '' : 's') + ' and ' + books + ' book' + (books === 1 ? '' : 's') + ', pulled ' + (ageHours < 1 ? 'within the hour' : ageHours + ' hours ago') + '. The weekly Vegas projection is reading them.'
+               : state === 'td_only'
+               ? 'The books are posting on ' + matched + ' board players this week, and the only market in the store is ' + names.join(', ') + '. That is applied \u2014 the touchdown price sets the touchdown side of every one of those players \u2014 but the yardage and reception sides still come from the game line, because no book posted one. A yardage or reception market is what a standalone market projection is built from.'
+               : state === 'stale'
+               ? 'Props were collected for this week but the newest is ' + ageHours + ' hours old. The poll has stopped; the board is serving the last lines it got.'
+               : 'The store holds ' + subjects.length + ' priced subjects for this week and NONE of them match a player on the board. The collector is working and every projection is still falling back to the game line \u2014 the name join is broken.' };
+  } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+}
 async function snapshotStatus(env) {
   if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
   try {
@@ -5340,6 +5556,48 @@ const VEGAS_MARKETS = {
   WR: { core: ['recYd', 'rec'], extra: ['anytimeTD', 'recTD', 'rushYd'] },
   TE: { core: ['recYd', 'rec'], extra: ['anytimeTD', 'recTD', 'rushYd'] }
 };
+// Which touchdown the anytime market is ABOUT, per position. A quarterback's
+// anytime-touchdown price is him crossing the goal line, never him throwing
+// it, so scaling his passTD by a market that says nothing about passing would
+// be plainly wrong. tdPointsFor already prices a QB's at the rushing rate.
+const VEGAS_TD_STATS = { QB: ['rushTD'], RB: ['rushTD', 'recTD'], WR: ['recTD', 'rushTD'], TE: ['recTD', 'rushTD'] };
+// The anytime-touchdown price, applied to a stat line.
+//
+// A board row is a STAT line that is scored later, and the anytime market is a
+// PROBABILITY rather than a count, so it lives in its own block and never
+// reached the line at all. The consequence was quiet and large: the most
+// widely posted prop in football moved no projection anywhere, unless a book
+// also hung a rushing- or receiving-touchdown COUNT market on the same player,
+// which is rare. A 41% anytime price on a receiver told the board nothing.
+//
+// So the line's own touchdown components are SCALED to the market's
+// expectation, which keeps the rush/receive split the market does not speak
+// to. A baseline of 0.45 receiving and 0.05 rushing, against a market
+// expecting 0.40 in total, becomes 0.36 and 0.04. A baseline expecting no
+// touchdown at all has no split to preserve, so the market's number goes on
+// the position's primary one.
+//
+// The implied count is the price itself, matching what vegasProjection.points
+// already does with it (p x points-per-TD). Both understate a player who can
+// score twice — P(at least one) is below E(count) — and they understate it
+// identically, which is the point: the two numbers appear side by side and
+// must not disagree about the same market. Correcting the understatement is a
+// change to both, on purpose, and not this one.
+function applyMarketTd(stats, pos, td) {
+  const p = td && td.probability != null ? Number(td.probability) / 100 : null;
+  if (p == null || !Number.isFinite(p) || p < 0) return stats;
+  const keys = VEGAS_TD_STATS[String(pos || '').toUpperCase()];
+  if (!keys) return stats;
+  const base = keys.reduce((sum, k) => sum + (Number(stats[k]) || 0), 0);
+  const out = { ...stats };
+  if (base > 0) {
+    const f = p / base;
+    for (const k of keys) if (stats[k] != null) out[k] = _oddsRound(Number(stats[k]) * f * 100) / 100;
+  } else {
+    out[keys[0]] = _oddsRound(p * 100) / 100;
+  }
+  return out;
+}
 // A yardage/count market is turned into an expected value; an anytimeTD market
 // is a probability and is handled on its own path below.
 const VEGAS_COUNT_MARKETS = ['passYd', 'passTD', 'passInt', 'rushYd', 'rushTD', 'rushAtt',
@@ -5494,10 +5752,26 @@ function vegasProjection(markets, position, rules, ctx) {
   // from one extra market and silence is not a partial projection, it is a
   // guess with a Vegas label on it.
   if (!have.size || coreMissing.length === spec.core.length) {
+    // UNAVAILABLE AS A STANDALONE PROJECTION, and not therefore worthless. A
+    // receiver with an anytime-touchdown price and no yardage line cannot be
+    // projected from the market alone — a number built from his touchdown
+    // price and nothing else would be three points and a lie — but the price
+    // is real information about a real part of his afternoon, and throwing it
+    // away left the most commonly posted prop in football affecting nothing.
+    // So the pieces travel with the refusal, for a caller that has a baseline
+    // to put them on. `points` is deliberately absent: there isn't one.
+    const thinStats = {};
+    for (const [m, v] of Object.entries(priced)) if (m !== 'rushAtt') thinStats[m] = v.expected;
     return { ok: false, status: 'unavailable', position: pos,
              label: 'Vegas projection unavailable',
              reason: !have.size ? 'no_markets' : 'no_core_market',
-             missing: spec.core.filter(m => !have.has(m)), priced: [...have] };
+             missing: spec.core.filter(m => !have.has(m)), priced: [...have],
+             stats: thinStats,
+             td: td && td.probability != null
+               ? { probability: Math.round(td.probability * 1000) / 10, pointsPerTd: tdPointsFor(pos, rules || SCORING_BASE),
+                   books: td.books, devigged: td.devigged, source: 'anytime-td-market' } : null,
+             books: books.size,
+             ageHours: c.asOf ? Math.round(Math.max(0, (Date.now() - c.asOf) / 3600000) * 10) / 10 : null };
   }
 
   // Stats, in Iron Tuna's own keys, from priced markets ONLY.
@@ -5646,7 +5920,7 @@ function buildUsageOverlay(season, weekly, snaps) {
     if (r.week > maxWeek) maxWeek = r.week;
     const k = key(r.name, r.position);
     const rec = players[k] || (players[k] = { name: r.name, position: r.position, team: r.team,
-      latest: null, season: { games: 0, targets: 0, carries: 0, receptions: 0, airYards: 0, tds: 0, points: 0, stats: {} } });
+      latest: null, season: { games: 0, targets: 0, carries: 0, passAttempts: 0, receptions: 0, airYards: 0, tds: 0, points: 0, stats: {} } });
     rec.team = r.team;
     rec.season.games++;
     // The RAW season stat line, accumulated week by week. Points are not stored
@@ -5658,6 +5932,11 @@ function buildUsageOverlay(season, weekly, snaps) {
     _addStats(rec.season.stats || (rec.season.stats = {}), r.stats);
     rec.season.targets += r.usage.targets || 0;
     rec.season.carries += r.usage.carries || 0;
+    // Attempts are accumulated for the same reason targets and carries are:
+    // roleTrendFrom counts them on the LATEST week's side, and without them
+    // here it was dividing a quarterback's 38 attempts by his three rushes a
+    // game. See the note there.
+    rec.season.passAttempts += r.usage.passAttempts || 0;
     rec.season.receptions += r.usage.receptions || 0;
     rec.season.airYards += r.usage.airYards || 0;
     rec.season.tds += (r.stats.rushTD || 0) + (r.stats.recTD || 0);
@@ -6392,14 +6671,56 @@ function explainDelta(row, movement, env, delta) {
 function roleTrendFrom(u) {
   if (!u || !u.latest || !u.season || !(u.season.games > 0)) return { label: 'no data', pct: null, factor: 1, games: 0, applied: false };
   const g = u.season.games;
-  const touches = (u.latest.usage.targets || 0) + (u.latest.usage.carries || 0) + (u.latest.usage.passAttempts || 0);
-  const avg = ((u.season.targets || 0) + (u.season.carries || 0)) / g;
+  // BOTH SIDES COUNT THE SAME THINGS. The latest week's side has always
+  // included pass attempts; the season average did not, so a quarterback's 38
+  // attempts were being divided by his three rushes a game and every passer
+  // read "usage up 1100%". The factor is clamped to ROLE_CLAMP, so the damage
+  // to a projection was bounded at 10% -- but it was there, on every QB, in the
+  // wrong direction for anyone whose attempts dipped, and the percentage the
+  // pages printed was nonsense on its face.
+  const att = u.latest.usage.passAttempts || 0;
+  const touches = (u.latest.usage.targets || 0) + (u.latest.usage.carries || 0) + att;
+  // A row cached before season.passAttempts existed has attempts on one side
+  // and not the other. That is not a trend of zero, it is a trend this cache
+  // cannot support, and it says so rather than guessing.
+  const seasonAtt = u.season.passAttempts;
+  if (att > 0 && !(seasonAtt > 0)) return { label: 'no data', pct: null, factor: 1, games: g, applied: false };
+  const avg = ((u.season.targets || 0) + (u.season.carries || 0) + (seasonAtt || 0)) / g;
   if (!(avg > 0) || !(touches >= 0)) return { label: 'no data', pct: null, factor: 1, games: g, applied: false };
   const pct = (touches - avg) / avg;
   const applied = g >= ROLE_MIN_GAMES;
   const factor = applied ? Math.min(ROLE_CLAMP[1], Math.max(ROLE_CLAMP[0], 1 + ROLE_GAIN * pct)) : 1;
   return { label: pct > 0.15 ? 'up' : pct < -0.15 ? 'down' : 'flat', pct: Math.round(pct * 100), factor: _oddsRound(factor * 100) / 100,
            games: g, latestTouches: touches, avgTouches: _oddsRound(avg), applied };
+}
+
+// A player's SEASON TO DATE, out of the same usage overlay the role trend is
+// read from: the raw accumulated line, the points it is worth at this board's
+// scoring, and the volume that produced them. Null when he has not played, and
+// null rather than zero for any figure the overlay does not carry -- a cache
+// written before `season.stats` existed has no line, and a board that printed
+// 0.0 points a game for it would be inventing a bad week out of a missing one.
+//
+// VOLUME IS PER POSITION because the number that matters is. A back is his
+// touches, a receiver his targets, a passer his yards; a kicker and a defense
+// have no volume a reader reasons about, so they get none rather than a figure
+// that means nothing. Attempts are not accumulated into the season block by
+// buildUsageOverlay, which is why a quarterback reads in yards.
+function seasonFormFrom(u, position, rules) {
+  const sea = u && u.season ? u.season : null;
+  const games = sea ? Number(sea.games) || 0 : 0;
+  if (!sea || games <= 0) return null;
+  const stats = sea.stats && Object.keys(sea.stats).length ? sea.stats : null;
+  if (!stats) return null;
+  const pts = _oddsRound(scoreAny(stats, position, rules, games));
+  const carries = Number(sea.carries) || 0, rec = Number(sea.receptions) || 0, tgt = Number(sea.targets) || 0;
+  let volume = null, volumeUnit = null;
+  if (position === 'RB') { volume = _oddsRound((carries + rec) / games); volumeUnit = 'touches'; }
+  else if (position === 'WR' || position === 'TE') { volume = _oddsRound(tgt / games); volumeUnit = 'targets'; }
+  else if (position === 'QB' && Number.isFinite(stats.passYd)) { volume = _oddsRound(stats.passYd / games); volumeUnit = 'passing yards'; }
+  const snapPct = u.latest && u.latest.usage && Number.isFinite(u.latest.usage.snapPct) ? u.latest.usage.snapPct : null;
+  return { games, stats: _roundStats(stats), points: pts, ppg: _oddsRound(pts / games),
+           volume, volumeUnit, tds: Number(sea.tds) || 0, snapPct };
 }
 
 // THE BOARD. `ctx` is everything read once for the request; `opts` is what
@@ -6433,6 +6754,21 @@ function buildBoards(ctx, opts) {
     if (af <= 0) continue;                         // out for the year: nothing to rank
     const u = ctx.usage && ctx.usage.players ? ctx.usage.players[k] : null;
     const role = roleTrendFrom(u);
+    // WHAT HE HAS ACTUALLY DONE. The usage overlay is already read for the role
+    // trend and everything else in it was being thrown away, so a board could
+    // say where a player ranks and what he is projected for and not one word
+    // about how he has played. A rank is not a performance: "RB3" and "elite at
+    // the position" are the same fact said twice, and neither tells a reader
+    // whether the ranking is built on volume he is actually getting.
+    //
+    // Shipped in the same shape as `consensus`: the RAW season line plus points
+    // at this board's scoring. /rankings re-scores every stat line in the
+    // browser at the reader's own league settings, and a form figure scored
+    // here at PPR would disagree with the column beside it; with the line
+    // aboard it can re-score this too. `tds` and `snapPct` ride along because
+    // they are what a reader checks next — whether the scoring is touchdown-fed
+    // and whether the role is his.
+    const form = seasonFormFrom(u, p.position, rules);
     // The weeks he is unavailable: the first `gamesOut` weeks WITH A GAME from
     // the current week onward, across the whole schedule. Anchored to now, not
     // to the horizon: a four-game absence that starts in Week 2 is over long
@@ -6448,7 +6784,7 @@ function buildBoards(ctx, opts) {
     }
     const cStats = {}, vStats = {}, iStats = {};
     const weekRows = [];
-    let games = 0; const byes = []; let confSum = 0, confN = 0; let propsWeeks = 0, postedWeeks = 0, fittedWeeks = 0;
+    let games = 0; const byes = []; let confSum = 0, confN = 0; let propsWeeks = 0, postedWeeks = 0, fittedWeeks = 0, thinWeeks = 0;
     let oppAllowedSum = 0, oppN = 0;
     const seasonVegas = ctx.overlay && ctx.overlay[k] ? ctx.overlay[k] : null;   // the season blend, for the ROS line
     for (const w of weeks) {
@@ -6468,8 +6804,23 @@ function buildBoards(ctx, opts) {
         vp = vegasProjection(mk.props, p.position, rules, { asOf: mk.asOf, injuryStatus: a ? a.status : null });
         if (vp.ok) {
           v = { ...weeklyStats(full, p.position, playable, env), ...vp.stats };   // priced stats replace the environment's
+          // ...and so does the touchdown price, which used to reach the block
+          // beside the line and never the line itself. A priced TD COUNT still
+          // wins: a count carries the two-score games a binary cannot.
+          if (!vp.tdCountedFromMarket) v = applyMarketTd(v, p.position, vp.td);
           basis = vp.status === 'full' ? 'props' : 'props-partial';
           conf = vp.confidence; propsWeeks++;
+        } else if (vp.reason === 'no_core_market' && vp.priced && vp.priced.length) {
+          // THIN, and not nothing. No core market means no projection can be
+          // built out of the market by itself — but every market the books DID
+          // post is still a better answer for that part of his line than the
+          // game total split across an offense. So the environment is the
+          // baseline and the quoted pieces are laid on top of it. It is named
+          // for what it is: game lines, with props where there are props.
+          v = applyMarketTd({ ...weeklyStats(full, p.position, playable, env), ...(vp.stats || {}) }, p.position, vp.td);
+          basis = 'gamelines+props';
+          conf = 'MEDIUM'; thinWeeks++;
+          if (a && a.status && VEGAS_OUT_RE.test(String(a.status))) conf = 'LOW';
         }
       }
       if (!v) {
@@ -6494,7 +6845,17 @@ function buildBoards(ctx, opts) {
         basis, confidence: conf, kickoff: env.kickoff, status: env.status, gameState: _fixtureState(env, state),
         consensusPts: _oddsRound(scoreAny(c, p.position, rules, 1)), vegasPts: _oddsRound(scoreAny(v, p.position, rules, 1)),
         ironTunaPts: _oddsRound(scoreAny(i, p.position, rules, 1)),
-        vegasProjection: vp && vp.ok ? { status: vp.status, label: vp.label, confidence: vp.confidence, td: vp.td, priced: vp.priced, missing: vp.missingCore, books: vp.books, ageHours: vp.ageHours, reasons: vp.confidenceReasons } : (vp ? { status: vp.status, label: vp.label } : null) });
+        // An UNAVAILABLE projection carries its evidence too. A player whose
+        // only quoted market is his anytime touchdown has been priced by the
+        // books and still cannot be projected from them, because a WR needs a
+        // yardage or reception line before a market number means anything
+        // (VEGAS_MARKETS.core). Dropping `reason` and `priced` here made that
+        // man indistinguishable from one no book has looked at, and the
+        // difference is the whole diagnosis when a feed is carrying one market.
+        vegasProjection: vp && vp.ok ? { status: vp.status, label: vp.label, confidence: vp.confidence, td: vp.td, priced: vp.priced, missing: vp.missingCore, books: vp.books, ageHours: vp.ageHours, reasons: vp.confidenceReasons }
+          : (vp ? { status: vp.status, label: vp.label, reason: vp.reason, priced: vp.priced || [], missing: vp.missing || [],
+                    td: vp.td || null, books: vp.books == null ? null : vp.books, ageHours: vp.ageHours == null ? null : vp.ageHours,
+                    applied: !!(vp.reason === 'no_core_market' && vp.priced && vp.priced.length) } : null) });
     }
     const vegasConf = confN ? _confFrom(confSum / confN) : 'LOW';
     // Iron Tuna's own confidence: the Vegas grade lifted one step when a
@@ -6508,13 +6869,15 @@ function buildBoards(ctx, opts) {
       name: p.name, position: p.position === 'DEF' ? 'DST' : p.position, pos: p.position, team, key: k,
       games, byes, weeks: weekRows,
       injury: a ? { status: a.status, gamesOut, note: a.note || '' } : null,
-      roleTrend: role,
+      roleTrend: role, form,
       scheduleDifficulty: oppN ? { avgOpponentDefRank: _oddsRound(oppAllowedSum / oppN),
         label: (oppAllowedSum / oppN) <= 11 ? 'Hard' : (oppAllowedSum / oppN) >= 22 ? 'Easy' : 'Average' } : null,
       consensus: { stats: _roundStats(cStats), points: cp },
       vegas: { stats: _roundStats(vStats), points: vpz, confidence: vegasConf,
-               basis: propsWeeks ? (propsWeeks === games ? 'props' : 'props+gamelines') : postedWeeks ? (fittedWeeks ? 'gamelines+ratings' : 'gamelines') : fittedWeeks ? 'ratings' : 'none',
-               propsWeeks, postedWeeks, fittedWeeks,
+               basis: propsWeeks ? (propsWeeks === games ? 'props' : 'props+gamelines')
+                 : thinWeeks ? 'gamelines+props'
+                 : postedWeeks ? (fittedWeeks ? 'gamelines+ratings' : 'gamelines') : fittedWeeks ? 'ratings' : 'none',
+               propsWeeks, postedWeeks, fittedWeeks, thinWeeks,
                td: weekRows.find(x => x.vegasProjection && x.vegasProjection.td) ? weekRows.find(x => x.vegasProjection && x.vegasProjection.td).vegasProjection.td : null },
       ironTuna: { stats: _roundStats(iStats), points: ip, confidence: itConf },
       seasonOverlay: seasonVegas ? true : false
@@ -6961,8 +7324,16 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   }
   propBoard.sort((a, b) => Math.abs(b.edge == null ? -1 : b.edge) - Math.abs(a.edge == null ? -1 : a.edge) ||
     String(a.name).localeCompare(String(b.name)) || PROP_BOARD_ORDER.indexOf(a.market) - PROP_BOARD_ORDER.indexOf(b.market));
+  // Which markets, and how many of each. The count of distinct markets was
+  // already here and the page never printed it, so "720 quoted markets" could
+  // be nine markets or it could be one, and nothing on the site said which.
+  // That is the difference between a feed that can project a receiver and one
+  // that cannot, so it is now a breakdown rather than a total.
+  const propByMarket = {};
+  for (const r of propBoard) propByMarket[r.market] = (propByMarket[r.market] || 0) + 1;
   const propSummary = { rows: propBoard.length, players: new Set(propBoard.map(r => r.key)).size,
-    markets: new Set(propBoard.map(r => r.market)).size, books: propBooks.size, capped: propBoard.length > PROP_BOARD_CAP };
+    markets: new Set(propBoard.map(r => r.market)).size, byMarket: propByMarket, books: propBooks.size,
+    capped: propBoard.length > PROP_BOARD_CAP };
   // Game environments, with movement off the game snapshots.
   // The model's OWN expected points per club this week, read off the boards the
   // players already carry (weekEnvironment put it there as env.expected: club
@@ -8853,7 +9224,10 @@ function freshnessReport(stamps, kind, now) {
 // points under the same rules, so the interpolation is in one unit; the
 // shrink is the normalization, and it is what keeps "100% market" from
 // meaning "100% a curve fit" on a player nobody priced.
-const BLEND_SHRINK = { props: 1, 'props-partial': 0.9, 'props+gamelines': 0.95, gamelines: 0.8, 'gamelines+ratings': 0.7, ratings: 0.55, none: 0 };
+// 'gamelines+props' is a game-line projection with the quoted markets laid on
+// top: better grounded than the game line alone, short of a projection the
+// market could have produced by itself, and it sits between them.
+const BLEND_SHRINK = { props: 1, 'props-partial': 0.9, 'props+gamelines': 0.95, 'gamelines+props': 0.85, gamelines: 0.8, 'gamelines+ratings': 0.7, ratings: 0.55, none: 0 };
 function blendComponents(p) {
   const role = p.roleTrend && p.roleTrend.applied ? p.roleTrend.factor : 1;
   const fantasy = _oddsRound((p.consensus.points || 0) * role);
@@ -9083,7 +9457,7 @@ const DFS_CONTESTS = {
 };
 const DFS_VARIANCE = { QB: { floor: 0.62, ceil: 1.55 }, RB: { floor: 0.55, ceil: 1.75 }, WR: { floor: 0.45, ceil: 1.95 }, TE: { floor: 0.45, ceil: 1.9 }, DST: { floor: 0.4, ceil: 2.1 }, K: { floor: 0.5, ceil: 1.6 } };
 function dfsMetrics(rows, contest) {
-  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0 && r.salary > 0);
+  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0 && r.salary > 0 && r.available !== false);
   if (!on.length) return { contest: DFS_CONTESTS[contest] ? contest : 'gpp', rows: [], note: 'no priced players' };
   // Value: Iron Tuna points per $1K, indexed to the slate median (100 = an ordinary dollar).
   const perK = on.map(r => r.ironTunaPoints / (r.salary / 1000));
@@ -10686,11 +11060,13 @@ async function contentContext(env, weekNumber, opts) {
   // The DFS slates, priced and measured, where salaries exist.
   const dfs = {};
   if (flagOn(env, 'DFS_CONTENT') && week.ok && curWeek != null) {
+    const avail = await availabilityForWeek(env).catch(() => null);
+    const roster = await rosterStatusTable().catch(() => null);
     for (const site of ['dk', 'fd']) {
       try {
         const sal = await dfsSalariesRead(env, site, sched.season, curWeek);
         if (!sal || !sal.rows.length) continue;
-        const slate = buildDfsSlate(site, sal.rows, week, { usage });
+        const slate = buildDfsSlate(site, sal.rows, week, { usage, week: curWeek, availability: avail, roster });
         slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
         slate.metrics = dfsMetrics(slate.players, 'gpp'); slate.stackScores = dfsStackScores(slate.stacks);
         dfs[site] = slate;
@@ -11619,7 +11995,7 @@ function parseDfsCsv(site, text) {
                   operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else if (site === 'fd') {
-    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position'), iFppg = idx('FPPG');
+    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position'), iFppg = idx('FPPG'), iInj = idx('Injury Indicator');
     if (iPos < 0 || iSal < 0 || (iNick < 0 && iFirst < 0)) return { rows: [], error: 'not a FanDuel salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
@@ -11627,6 +12003,11 @@ function parseDfsCsv(site, text) {
       const fppg = iFppg >= 0 ? parseFloat(f[iFppg]) : NaN;
       rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
                   rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null,
+                  // FanDuel prints its own designation in the lobby file (O, D,
+                  // Q, IR, NA). DraftKings' export carries none, which is why
+                  // the injury report behind the slate is the primary source
+                  // and this is only the fallback.
+                  injuryIndicator: iInj >= 0 ? String(f[iInj] || '').trim().toUpperCase() || null : null,
                   operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else return { rows: [], error: 'unknown site' };
@@ -11692,14 +12073,277 @@ function dfsOperatorFppg(site, s, rules, usage) {
   const flat = { ...rules, passingYardBonuses: [], rushingYardBonuses: [], receptionBonuses: [], rbReceptionBonuses: [], receivingYardBonuses: [] };
   return { value: _oddsRound(scoreStats(u.season.stats, pos, flat) / games), basis: 'computed', games };
 }
-function buildDfsSlate(site, salaries, week, opts) {
+// ── who is not playing on Sunday ───────────────────────────────────────────
+// The season board can afford to price a man the report has ruled out: it is
+// answering a question about seventeen games and his line is already
+// pro-rated. A slate cannot. One afternoon, one cap, and a $5,800 receiver
+// who is inactive is $5,800 of a $50,000 budget spent on a certain zero — the
+// single worst thing a lineup builder can do, and the feed said so on Friday.
+//
+// Three sources answer it here, in this order, and a fourth — the roster file
+// in the block below — answers the case none of them can see. `weekStatusBasis`
+// on every row says which one spoke.
+//   injury-report — this week's designation (Out, Doubtful, Questionable). The
+//             report's own word for the game in front of us, kept by the same
+//             pull that feeds the season list and read nowhere else.
+//   reserve-list — the season list, whose gamesOut counts from Week 1, so a man
+//             carrying four games out is out for Weeks 1-4 and back in Week 5.
+//             That is the convention tools/availability.json states in its
+//             own header ("first eligible Week 5" = 4), read here rather than
+//             re-derived. With no week number there is nothing to compare, so
+//             this source stays silent rather than guessing.
+//   salary-file — the operator's own indicator, for FanDuel, whose lobby CSV
+//             carries one. DraftKings' does not, which is why it is last.
+//
+// Out and Doubtful take a player off the board. Questionable is printed and
+// left on it: that is a judgment the reader is entitled to make, and taking
+// every questionable body off a slate would empty it.
+const DFS_BENCH_RE = /^(out|doubtful|ir|pup|nfi|suspended|exempt)$/i;
+const DFS_FILE_STATUS = { O: 'Out', IR: 'Out', NA: 'Out', D: 'Doubtful', Q: 'Questionable' };
+function dfsWeekStatus(avail, key, week, fileIndicator) {
+  const w = key && ((avail && avail.weekly) || {})[key];
+  if (w && w.status) return { status: w.status, note: w.note || '', basis: 'injury-report' };
+  const a = key && ((avail && avail.table) || {})[key];
+  const games = a ? Number(a.gamesOut) || 0 : 0;
+  const wk = Number(week);
+  if (a && games > 0 && Number.isFinite(wk) && wk >= 1 && wk <= games) {
+    return { status: a.status || 'Out', note: a.note || '', basis: 'reserve-list' };
+  }
+  const f = DFS_FILE_STATUS[String(fileIndicator || '').trim().toUpperCase()];
+  if (f) return { status: f, note: '', basis: 'salary-file' };
+  return null;
+}
+function dfsAvailable(status) { return !(status && DFS_BENCH_RE.test(String(status).trim())); }
+
+// ── the roster, as of today ────────────────────────────────────────────────
+// The injury report above only knows about men who are hurt. It is not the
+// only way to not play on Sunday, and on a slate it is not even the most
+// expensive one.
+//
+// A board row is a season projection: written once, pro-rated since, and
+// carrying the club the player was on the day the file was built. Football
+// does not hold still. A receiver cut in September and signed to another
+// team's practice squad is still on the board at his old club with his old
+// line, he appears on no injury report anywhere, because he is not injured,
+// and an optimizer looking only at points per dollar will take him every
+// single time -- he is cheap and the board says he scores. That is how a man
+// who cannot dress on Sunday ends up in a recommended lineup.
+//
+// Sleeper's player file answers it directly, for every player, and the site
+// already reads that file twice (the depth-chart job, and /api/live, which
+// serves the browser the very same `status` field for the Value Coach's
+// injury line). So the slate reads it too:
+//
+//   status  Active, Inactive, Practice Squad, Injured Reserve, PUP, ... —
+//           anything but Active means he is not dressing, and he comes off
+//           the board.
+//   team    his club TODAY. A disagreement with the board is not a reason to
+//           bench him — he may well play — but it does mean the projection
+//           beside his name was built for a different offense, so it is
+//           flagged and printed rather than passed off as a current read.
+//
+// FAIL SOFT, without exception. An upstream that is down, slow, throttled or
+// reshaped leaves the slate exactly as it was before any of this existed: a
+// missing roster file must never empty a board.
+const SLEEPER_PLAYERS_URL = 'https://api.sleeper.app/v1/players/nfl';
+const ROSTER_MEMO_MS = 3600000;
+const ROSTER_FANT = ['QB', 'RB', 'WR', 'TE', 'K'];
+function buildSleeperRoster(all) {
+  const out = {};
+  const fant = new Set(ROSTER_FANT);
+  for (const id in (all || {})) {
+    const p = all[id];
+    if (!p || !fant.has(p.position)) continue;
+    const name = p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
+    if (!name) continue;
+    const key = _oddsNorm(name) + '|' + p.position;
+    // A name at two positions is dropped rather than guessed, the way the
+    // availability index and the odds matcher both do it.
+    if (key in out) { out[key] = null; continue; }
+    out[key] = { name, team: p.team ? teamKey(p.team) : null, status: String(p.status || '').trim() || null };
+  }
+  for (const k of Object.keys(out)) if (!out[k]) delete out[k];
+  return out;
+}
+let _ROSTER_TABLE = null, _ROSTER_AT = 0;
+async function rosterStatusTable() {
+  if (_ROSTER_TABLE && Date.now() - _ROSTER_AT < ROSTER_MEMO_MS) return _ROSTER_TABLE;
+  try {
+    const r = await fetch(SLEEPER_PLAYERS_URL, { cf: { cacheTtl: 21600, cacheEverything: true } });
+    if (!r.ok) return _ROSTER_TABLE;
+    const all = await r.json();
+    const built = buildSleeperRoster(all);
+    // A file that came back with almost nobody in it is a broken pull, not a
+    // league that released everyone. Same fail-safe as the availability pull.
+    if (Object.keys(built).length < 200) return _ROSTER_TABLE;
+    _ROSTER_TABLE = built; _ROSTER_AT = Date.now();
+    return _ROSTER_TABLE;
+  } catch (e) { return _ROSTER_TABLE; }
+}
+// What the roster file says about one man. `null` means it has nothing to add:
+// he is not in the file (so nothing is asserted), or he is active where the
+// board says he is.
+function dfsRosterCheck(roster, names, pos, boardTeam) {
+  if (!roster || !pos) return null;
+  let r = null;
+  for (const n of names) { const hit = n && roster[_oddsNorm(n) + '|' + pos]; if (hit) { r = hit; break; } }
+  if (!r) return null;
+  if (r.status && !/^active$/i.test(r.status)) return { kind: 'roster', status: r.status, team: r.team };
+  if (!r.team) return { kind: 'roster', status: 'Free agent', team: null };
+  if (boardTeam && r.team !== teamKey(boardTeam)) return { kind: 'team', status: null, team: r.team };
+  return null;
+}
+// ── what the market actually says about this player, this week ─────────────
+// A slate's Vegas column is not one kind of number, and until now nothing
+// downstream could tell which kind it was holding.
+//
+// For a player the books have priced, it is his own quoted props — 62.5
+// receiving yards, 4.5 receptions, a 38% anytime-touchdown price — converted
+// to fantasy points at the site's rules. That is a forecast of HIM, made by
+// people with money at stake, and it is the best weekly prediction on this
+// site. For a player nobody posted a prop on, it is the game total and the
+// spread split into an offense and handed to him by his share of it. That is
+// a forecast of his GAME with his name attached. Over seventeen weeks the
+// difference washes out. On one slate it is the difference between a read and
+// a guess, and both were arriving in the same `vegasPoints` field, so a
+// prop-grounded 18.4 and a curve-fitted 18.4 competed for the same roster
+// spot on identical terms.
+//
+// This keeps the evidence attached to the number:
+//
+//   basis     props | props-partial | props+gamelines | gamelines |
+//             gamelines+ratings | ratings | none — the ladder, best first.
+//   priced    the markets a book actually posted on him this week, so the
+//             page can say WHICH props, not just that there were some.
+//   books     how many books priced him, and how old the pull is.
+//   shrink    how far that number is trusted, on the SAME ladder the season
+//             blend uses (BLEND_SHRINK, one definition for the whole site): a
+//             quoted prop is worth all of itself, a fitted team rating a
+//             little over half.
+//   points    the market number after that shrink, pulled the rest of the way
+//             back toward the consensus projection. This is what a
+//             prop-driven build maximizes, and its FALLBACK IS THE CONSENSUS,
+//             not a guess: a player nobody priced lands on the experts'
+//             number rather than on a curve fit wearing a Vegas label.
+//
+// So a player nobody priced is never silently dropped and never silently
+// promoted. He keeps a number, the number says where it came from, and it is
+// worth less than a quoted one.
+const DFS_PROP_LABEL = { passYd: 'passing yards', passTD: 'passing TDs', passInt: 'interceptions',
+  rushYd: 'rushing yards', rushAtt: 'carries', rushTD: 'rushing TDs',
+  recYd: 'receiving yards', rec: 'receptions', recTD: 'receiving TDs', anytimeTD: 'anytime TD' };
+function dfsMarketRead(p, w0, vegasPts, consensusPts) {
+  const basis = (p && p.vegas && p.vegas.basis) || 'none';
+  const shrink = BLEND_SHRINK[basis] != null ? BLEND_SHRINK[basis] : BLEND_SHRINK.none;
+  // The week's own projection block, where this week's props were priced.
+  // A season horizon has none, and an unavailable one is not evidence.
+  const raw = w0 && w0.vegasProjection && w0.vegasProjection.status ? w0.vegasProjection : null;
+  const vp = raw && raw.status !== 'unavailable' ? raw : null;
+  // PRICED BUT SHORT. A projection needs a core market before a quote means
+  // anything: a receiver needs a yardage or reception line, a quarterback a
+  // passing line. A man whose only posted market is his anytime touchdown HAS
+  // been priced by the books and still gets the game-line number, because
+  // there is nothing to build a line out of. Before this he was indis-
+  // tinguishable from a man nobody looked at, which is how a feed carrying one
+  // market looks exactly like a feed carrying none.
+  // Quoted, with no core market, and the pieces were laid on the game-line
+  // baseline rather than thrown away. Still worth naming — he is not a full
+  // market read — but he is no longer a man whose props went nowhere.
+  const short = !vp && raw && raw.reason === 'no_core_market' && Array.isArray(raw.priced) && raw.priced.length
+    ? { priced: raw.priced.slice(), missing: Array.isArray(raw.missing) ? raw.missing.slice() : [], applied: !!raw.applied } : null;
+  const td = (vp && vp.td) || (p && p.vegas && p.vegas.td) || null;
+  const c = Number.isFinite(consensusPts) ? consensusPts : 0;
+  const v = Number.isFinite(vegasPts) ? vegasPts : c;
+  const priced = vp && Array.isArray(vp.priced) ? vp.priced.slice() : [];
+  return {
+    basis, shrink,
+    points: _oddsRound(c + shrink * (v - c)),
+    // Any basis carrying props is quoted: 'gamelines+props' is a man the books
+    // priced, laid on a game-line baseline, and calling him unquoted would put
+    // him back with the players nobody looked at.
+    quoted: /props/.test(basis),
+    // ...while only a basis the market could stand up on its own is a full
+    // market read. The page prints the difference.
+    marketStandalone: /^props/.test(basis),
+    priced, pricedLabels: priced.map(m => DFS_PROP_LABEL[m] || m),
+    missing: vp && Array.isArray(vp.missing) ? vp.missing.slice() : [],
+    // Quoted, but not on anything a projection can be built from.
+    shortOfProjection: !!short, shortApplied: !!(short && short.applied),
+    shortPriced: short ? short.priced : [], shortPricedLabels: short ? short.priced.map(m => DFS_PROP_LABEL[m] || m) : [],
+    shortMissing: short ? short.missing : [], shortMissingLabels: short ? short.missing.map(m => DFS_PROP_LABEL[m] || m) : [],
+    books: vp && Number.isFinite(vp.books) ? vp.books : null,
+    ageHours: vp && Number.isFinite(vp.ageHours) ? vp.ageHours : null,
+    status: vp ? vp.status : null,
+    confidence: (p && p.vegas && p.vegas.confidence) || 'LOW',
+    // The anytime-touchdown price is the one prop that speaks directly to a
+    // slate: a devigged market probability that he reaches the end zone, from
+    // the books, rather than a Poisson tail off a projected carry count.
+    tdProbability: td && td.probability != null ? td.probability : null,
+    tdBooks: td && Number.isFinite(td.books) ? td.books : null,
+    tdDevigged: !!(td && td.devigged)
+  };
+}
+// How much of this slate the books have actually priced. `hasProps` was a
+// boolean, and a boolean cannot answer the question a reader deciding whether
+// to trust a market build is actually asking: priced how much of it, by how
+// many books, how long ago, and what is everyone else standing on.
+function dfsPropCoverage(rows) {
+  const on = (rows || []).filter(r => r.onBoard && r.available !== false && r.market);
+  const basis = {};
+  const markets = new Set(), shortMarkets = new Set();
+  let priced = 0, short = 0, books = 0, bookN = 0, fresh = null;
+  for (const r of on) {
+    const m = r.market;
+    basis[m.basis] = (basis[m.basis] || 0) + 1;
+    // Priced, but on nothing a projection can be built from. Counted apart,
+    // because "the books ignored him" and "the books quoted only his
+    // touchdown" are different facts with different fixes.
+    if (m.shortOfProjection) { short++; for (const k of m.shortPriced) shortMarkets.add(k); }
+    if (!m.quoted) continue;
+    priced++;
+    if (m.books) { books += m.books; bookN++; }
+    if (m.ageHours != null && (fresh == null || m.ageHours < fresh)) fresh = m.ageHours;
+    for (const k of m.priced) markets.add(k);
+  }
+  return { players: on.length, priced, coverage: on.length ? Math.round(priced / on.length * 100) : 0,
+           basis, markets: [...markets].sort(), marketLabels: [...markets].sort().map(k => DFS_PROP_LABEL[k] || k),
+           quotedButShort: short, shortMarkets: [...shortMarkets].sort(),
+           shortMarketLabels: [...shortMarkets].sort().map(k => DFS_PROP_LABEL[k] || k),
+           avgBooks: bookN ? Math.round(books / bookN * 10) / 10 : null, freshestHours: fresh };
+}
+// Said in one sentence, because every DFS surface prints it and they must not
+// drift. It never claims a prop that is not there and never hides one that is.
+function dfsPropNote(cov) {
+  if (!cov || !cov.players) return null;
+  // The confusing state, and the one worth naming first: the books HAVE posted,
+  // and none of it can carry a projection. A slate full of anytime-touchdown
+  // prices and nothing else looks identical to a slate with no props at all
+  // unless somebody says this out loud.
+  if (!cov.priced && cov.quotedButShort) {
+    return 'The books have posted on ' + cov.quotedButShort + ' player' + (cov.quotedButShort === 1 ? '' : 's') + ' here, but only ' + cov.shortMarketLabels.join(' and ') + '. Those prices are applied \u2014 they set that side of each player\u2019s line \u2014 and the rest of it still comes from his game\u2019s environment, because no book posted a yardage or reception market on him. That is what a standalone market projection is built from, so these read as game lines carrying props rather than as a market read.';
+  }
+  if (!cov.priced) {
+    return 'No player prop has reached this slate. Books post them; none are in the feed behind this build, so every market number here is the game line\u2019s environment applied to the player\u2019s share of it, and is discounted accordingly. The prop-first build falls back to the consensus projection rather than presenting a fitted number as a market read.';
+  }
+  return 'The books have priced ' + cov.priced + ' of ' + cov.players + ' players on this slate (' + cov.coverage + '%)'
+    + (cov.avgBooks ? ', ' + cov.avgBooks + ' books apiece' : '')
+    + (cov.freshestHours != null ? ', pulled ' + (cov.freshestHours < 1 ? 'within the hour' : Math.round(cov.freshestHours) + ' hours ago') : '')
+    + '. Markets quoted: ' + cov.marketLabels.join(', ') + '.'
+    + (cov.quotedButShort ? ' Another ' + cov.quotedButShort + ' carry only ' + cov.shortMarketLabels.join(' and ') + ', which is not enough to build a projection from.' : '')
+    + ' Everyone else carries the game line\u2019s environment, discounted for it.';
+}
+function buildDfsSlate(site, salaries, board, opts) {
   const S = DFS_SITES[site];
   const rules = scoringRules('ppr', SCORING_SITE[site]);
-  const usage = opts && opts.usage ? opts.usage : null;
+  const o = opts || {};
+  const usage = o.usage || null;
+  const avail = o.availability || null;
+  const roster = o.roster || null;
+  const week = Number.isFinite(Number(o.week)) ? Number(o.week) : null;
   const byKey = new Map();
-  for (const p of (week && week.players) || []) byKey.set(p.key, p);
+  for (const p of (board && board.players) || []) byKey.set(p.key, p);
   const defByTeam = new Map();
-  for (const p of (week && week.players) || []) if (p.pos === 'DEF') defByTeam.set(p.team, p);
+  for (const p of (board && board.players) || []) if (p.pos === 'DEF') defByTeam.set(p.team, p);
   const rows = [];
   for (const s of salaries || []) {
     const pos = s.position;
@@ -11707,9 +12351,18 @@ function buildDfsSlate(site, salaries, week, opts) {
     const operatorFppg = fppg.value;
     const p = pos === 'DST' ? defByTeam.get(teamKey(s.team)) : byKey.get(_oddsNorm(s.name) + '|' + pos);
     if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, onBoard: false }); continue; }
+    const rst = dfsRosterCheck(roster, [s.name, p.name], pos, p.team);
+    // The injury report first (it is this week's own word), then the reserve
+    // list, then the roster file, then the salary file's indicator. A man off
+    // an active roster is 'Out' here because that is what it means for Sunday.
+    const wk = dfsWeekStatus(avail, p.key, week, s.injuryIndicator)
+      || (rst && rst.kind === 'roster' ? { status: 'Out', note: 'Not on an active roster (' + rst.status + (rst.team ? ', ' + rst.team : '') + ')', basis: 'roster' } : null);
     const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
     const v = pts('vegas'), c = pts('consensus'), it = pts('ironTuna');
     const w0 = p.weeks.find(x => x.env) || null;
+    // Scored at the SITE's rules, like everything else on the row: a prop is
+    // a stat line, and a stat line is worth different points on DK than on FD.
+    const mkt = dfsMarketRead(p, w0, v, c);
     const lam = (p.ironTuna.stats.rushTD || 0) + (p.ironTuna.stats.recTD || 0);
     rows.push({
       name: p.name, position: pos, team: p.team, opponent: w0 ? w0.opponent : s.opponent, home: w0 ? w0.home : null, salary: s.salary, onBoard: true, key: p.key, siteName: s.name.trim(),
@@ -11718,16 +12371,26 @@ function buildDfsSlate(site, salaries, week, opts) {
       projectionVsFppg: operatorFppg == null ? null : _oddsRound(it - operatorFppg),
       vegasPerK: _oddsRound(v / (s.salary / 1000) * 100) / 100, ironTunaPerK: _oddsRound(it / (s.salary / 1000) * 100) / 100,
       marketDelta: p.marketDelta, vegasBasis: p.vegas.basis, vegasConfidence: p.vegas.confidence,
+      // What the books actually posted on him this week, and the number that
+      // carries. `marketPoints` is what a prop-first build maximizes.
+      market: mkt, marketPoints: mkt.points, marketShrink: mkt.shrink, marketQuoted: mkt.quoted,
       tdProbability: p.vegas.td ? p.vegas.td.probability : Math.round((1 - Math.exp(-lam)) * 1000) / 10, tdBasis: p.vegas.td ? 'anytime-td-market' : 'derived',
+      tdBooks: mkt.tdBooks, tdDevigged: mkt.tdDevigged,
       teamTotal: w0 && w0.env ? (w0.env.implied != null ? w0.env.implied : w0.env.expected) : null, teamTotalPosted: !!(w0 && w0.env && w0.env.posted),
       // The matchup a reader opens a row for: when the game kicks off and how
       // stingy the defense across from him is (1 = fewest points allowed).
       kickoff: w0 ? w0.kickoff || null : null, opponentDefRank: w0 && w0.env && w0.env.opponentDefRank ? w0.env.opponentDefRank : null,
       gameTotal: null, impliedTouches: _oddsRound((p.vegas.stats.rec || 0) + (p.vegas.stats.rushAtt != null ? p.vegas.stats.rushAtt : (p.vegas.stats.rushYd || 0) / 4.3)),
-      injury: p.injury ? p.injury.status : null, why: p.why ? p.why.summary : ''
+      injury: p.injury ? p.injury.status : null, why: p.why ? p.why.summary : '',
+      // This week, not this season. `available` is what the optimizer reads.
+      weekStatus: wk ? wk.status : null, weekStatusNote: wk ? wk.note : '', weekStatusBasis: wk ? wk.basis : null,
+      available: dfsAvailable(wk && wk.status),
+      // He plays, but not where the board thinks: the projection beside his
+      // name was built for another offense. Said, never silently priced.
+      rosterTeam: rst ? rst.team : null, teamChanged: !!(rst && rst.kind === 'team')
     });
   }
-  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0);
+  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0 && r.available !== false);
   const med = _median(on.map(r => r.vegasPerK)) || 1;
   for (const r of on) r.vegasValueScore = Math.round(r.vegasPerK / med * 100);
   const skill = on.filter(r => r.position !== 'DST' && r.position !== 'K');
@@ -11737,9 +12400,13 @@ function buildDfsSlate(site, salaries, week, opts) {
     volumeValues: skill.filter(r => r.position !== 'QB').sort((a, b) => (b.impliedTouches / b.salary) - (a.impliedTouches / a.salary)).slice(0, 20).map(r => ({ ...r, touchesPerK: _oddsRound(r.impliedTouches / (r.salary / 1000) * 10) / 10 })),
     expensiveFades: skill.filter(r => r.salary >= 6000 && r.marketDelta && r.marketDelta.points < 0).sort((a, b) => a.marketDelta.points - b.marketDelta.points).slice(0, 15)
   };
+  const benched = rows.filter(r => r.onBoard && r.available === false);
+  const cov = dfsPropCoverage(rows);
   return { ok: rows.length > 0, contract: DFS_CONTRACT, site, label: S.label, cap: S.cap, slots: S.slots, flex: S.flex, scoring: 'site', players: rows.sort((a, b) => b.salary - a.salary),
            medianVegasPerK: _oddsRound(med * 100) / 100, unmatched: rows.filter(r => !r.onBoard).length, boards,
-           hasProps: on.some(r => /^props/.test(r.vegasBasis)), note: on.some(r => /^props/.test(r.vegasBasis)) ? null : 'No priced player prop has reached this slate. Books post props; none are in the feed behind this build, so every Vegas number is the game line’s environment applied to the player’s line.' };
+           unavailable: benched.length,
+           unavailableNames: benched.sort((a, b) => b.salary - a.salary).slice(0, 25).map(r => ({ name: r.name, position: r.position, team: r.team, salary: r.salary, status: r.weekStatus, basis: r.weekStatusBasis })),
+           hasProps: on.some(r => r.marketQuoted), props: cov, note: dfsPropNote(cov) };
 }
 // Game stacks: every game on the slate ranked by total, with each side's
 // QB and his two most-targeted pass catchers, and the bring-back on the
@@ -11747,7 +12414,7 @@ function buildDfsSlate(site, salaries, week, opts) {
 function buildDfsStacks(slate, state) {
   const games = (state && state.ok && state.games) || [];
   const byTeam = {};
-  for (const r of slate.players) if (r.onBoard) (byTeam[r.team] = byTeam[r.team] || []).push(r);
+  for (const r of slate.players) if (r.onBoard && r.available !== false) (byTeam[r.team] = byTeam[r.team] || []).push(r);
   const side = t => {
     const list = (byTeam[t] || []);
     const qb = list.filter(r => r.position === 'QB').sort((a, b) => b.vegasPoints - a.vegasPoints)[0] || null;
@@ -12013,11 +12680,16 @@ async function healthPayload(env, opts) {
     dfsSalariesRead(env, 'dk', sched ? sched.season : null, week).catch(() => null), dfsSalariesRead(env, 'fd', sched ? sched.season : null, week).catch(() => null),
     jobBoard(env, now)
   ]);
+  const props = await propsHealth(env, sched ? sched.season : null, week).catch(() => null);
   const snapMeta = m => m ? { season: m.season, week: m.week, builtAt: m.builtAt, rows: (m.rows || []).length } : null;
   const updates = {
     schedule: sched ? { updatedAt: sched.updatedAt, provider: sched.provider, season: sched.season, games: sched.games.length } : null,
     odds: odds ? { updatedAt: odds.updatedAt, provider: odds.provider, matched: odds.matched } : null,
     snapshots: snaps && snaps.ok ? { last: snaps.last, first: snaps.first, rows: snaps.rows, subjects: snaps.subjects, books: snaps.books } : null,
+    // The row counts above span every week the store still keeps. This one
+    // answers whether THIS week's props are reaching the board, and says which
+    // link is broken when they are not.
+    props: props && props.ok ? props : null,
     usage: usage ? { updatedAt: usage.updatedAt, season: usage.season, throughWeek: usage.throughWeek, players: Object.keys(usage.players || {}).length } : null,
     // Last season's copy of the same overlay, which /stats serves behind its
     // season buttons. Missing is not a fault -- the daily job builds it -- but
@@ -13959,8 +14631,8 @@ export default {
       if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
         ...dfsNoSalariesNote(site, Date.now()),
         operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
-      const [board, usage] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null)]);
-      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage });
+      const [board, usage, avail, roster] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null)]);
+      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage, week, availability: avail, roster });
       slate.week = week; slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
       if (flagOn(env, 'DFS_CONTENT')) {
         const contest = DFS_CONTESTS[url.searchParams.get('contest')] ? url.searchParams.get('contest') : 'gpp';
@@ -14008,9 +14680,10 @@ export default {
         note: 'That is a single-game file: it prices a captain or MVP at a multiplier the classic roster does not have. Every board here is built for the classic cap, so pricing it would show you a lineup you cannot enter. Upload a main-slate export instead.' }, 400, c);
       const sched = await scheduleCacheRead(env);
       const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
-      const [board, usage] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null)]);
-      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, { usage });
-      slate.week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      const [board, usage, avail, roster] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null)]);
+      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, { usage, week, availability: avail, roster });
+      slate.week = week;
       // No salariesAsOf: the reader's file has no import time, and a timestamp
       // for when they happened to press the button would say nothing true.
       slate.source = 'upload'; slate.salariesAsOf = null;

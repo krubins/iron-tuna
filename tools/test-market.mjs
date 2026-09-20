@@ -57,7 +57,7 @@ const M = new Function(
   'return { scoringRules, scoreStats, SCORING_BASE, tdPointsFor, PROVIDERS, PROVIDER_KINDS, ' +
   'providerRun, providerReport, PROVIDER_UNAVAILABLE, snapshotWrite, snapshotStatus, ' +
   'marketHistoryFrom, marketHistory, marketHistoryAll, marketAgreement, _median, _snapSame, ' +
-  'vegasProjection, vegasCountMarket, vegasTdProbability, vegasConfidence, VEGAS_MARKETS, ' +
+  'vegasProjection, vegasCountMarket, vegasTdProbability, vegasConfidence, VEGAS_MARKETS, applyMarketTd, VEGAS_TD_STATS, ' +
   '_oddsImpliedProb, _oddsDevigOver, parseOddsApiEvent, buildVegasOverlay, snapshotSubject, _snapLookup };'
 )(_oddsRound, teamKey, _oddsNorm, ODDS_CV, stub,
   [ { name: "Ja'Marr Chase", position: 'WR', team: 'CIN', projectedStats: { rec: 100, recYd: 1400, recTD: 10 } },
@@ -371,6 +371,75 @@ console.log('\nthe projection itself');
   // Only an extra market: not enough to call it a projection.
   const thin = M.vegasProjection({ rushYd: [mk(12.5, 'dk')] }, 'WR', R, { asOf: Date.now() });
   ok('one non-core market is not a projection', !thin.ok && thin.reason === 'no_core_market');
+
+  // ── an anytime-touchdown-only feed ──────────────────────────────────────
+  // The shape a thin prop feed actually takes: books post a touchdown price on
+  // everybody and a yardage line on nobody. It looks like a healthy feed —
+  // hundreds of quoted markets — and it cannot project a receiver or a
+  // quarterback, because neither of their core markets is a touchdown price.
+  // Only the running back survives it, and only partially, because anytimeTD
+  // is half of HIS core. This is why "we have 720 props" and "no player has a
+  // market projection" are both true at once, and it is pinned here so the two
+  // halves of that sentence can never drift apart.
+  const tdOnly = pos => M.vegasProjection({ anytimeTD: [{ book: 'dk', overOdds: -110, underOdds: -110 }, { book: 'fd', overOdds: -120, underOdds: 100 }] }, pos, R, { asOf: Date.now() });
+  ok('a touchdown price alone cannot project a receiver', !tdOnly('WR').ok && tdOnly('WR').reason === 'no_core_market');
+  ok('...nor a tight end', !tdOnly('TE').ok && tdOnly('TE').reason === 'no_core_market');
+  ok('...nor a quarterback', !tdOnly('QB').ok && tdOnly('QB').reason === 'no_core_market');
+  ok('...but it is half a running back\'s core, so he gets a partial one',
+     tdOnly('RB').ok && tdOnly('RB').status === 'partial' && tdOnly('RB').missingCore.includes('rushYd'));
+  ok('the unavailable answer still reports what WAS priced, so the gap is diagnosable',
+     tdOnly('WR').priced.join(',') === 'anytimeTD' && tdOnly('WR').missing.includes('recYd') && tdOnly('WR').missing.includes('rec'));
+  ok('a single yardage line rescues the receiver the touchdown price could not',
+     M.vegasProjection({ recYd: [mk(52.5, 'dk')], anytimeTD: [{ book: 'dk', overOdds: -110, underOdds: -110 }] }, 'WR', R, { asOf: Date.now() }).ok === true);
+  ok('the core markets are what that turns on, per position',
+     M.VEGAS_MARKETS.WR.core.join(',') === 'recYd,rec' && M.VEGAS_MARKETS.QB.core.join(',') === 'passYd,passTD'
+     && M.VEGAS_MARKETS.RB.core.join(',') === 'rushYd,anytimeTD');
+
+  // ── a touchdown price that goes nowhere is not a market read ────────────
+  // What the refusal above carries. A receiver with an anytime price and no
+  // yardage line cannot be projected FROM THE MARKET ALONE — a number built
+  // from his touchdown price and nothing else would be three points and a lie
+  // — but the price is real information about a real part of his afternoon,
+  // and it used to be discarded whole. The pieces now travel with the refusal
+  // so a caller holding a baseline can lay them on it.
+  const refused = tdOnly('WR');
+  ok('the refusal carries the touchdown price it refused to project from',
+     refused.td && refused.td.probability > 45 && refused.td.probability < 56 && refused.td.source === 'anytime-td-market');
+  ok('...and the books behind it', refused.books === 2);
+  ok('...and a stats block, empty here because only a binary was priced',
+     refused.stats && Object.keys(refused.stats).length === 0);
+  ok('...and still no points, because there is no standalone number to give',
+     refused.points === undefined);
+  const thinYds = M.vegasProjection({ rushYd: [mk(12.5, 'dk'), mk(13.5, 'fd')] }, 'WR', R, { asOf: Date.now() });
+  ok('a non-core market that WAS priced comes across as a stat to lay on',
+     thinYds.stats && near(thinYds.stats.rushYd, 13, 1.5), JSON.stringify(thinYds.stats));
+
+  // ── the touchdown price applied to a stat line ──────────────────────────
+  // The board is a stat line scored later, so a price that never reaches the
+  // line never reaches the number. It does now, by scaling the line's own
+  // touchdown components to the market's expectation — which keeps the
+  // rush/receive split the market says nothing about.
+  const td40 = { probability: 40, pointsPerTd: 6 };
+  const scaled = M.applyMarketTd({ recYd: 70, rec: 5, recTD: 0.45, rushTD: 0.05 }, 'WR', td40);
+  ok('the touchdown total becomes the market\'s', near(scaled.recTD + scaled.rushTD, 0.4, 0.02), JSON.stringify(scaled));
+  ok('...and the split between them is preserved', near(scaled.recTD / scaled.rushTD, 9, 0.3));
+  ok('...and nothing else on the line is touched', scaled.recYd === 70 && scaled.rec === 5);
+  const up = M.applyMarketTd({ recTD: 0.1, rushTD: 0 }, 'WR', { probability: 60 });
+  ok('a market higher than the baseline raises it', near(up.recTD, 0.6, 0.02));
+  const fromZero = M.applyMarketTd({ recYd: 40, recTD: 0, rushTD: 0 }, 'WR', td40);
+  ok('a baseline expecting no touchdown takes the market number outright', near(fromZero.recTD, 0.4, 0.02));
+  // A quarterback's anytime price is him crossing the line, never him throwing
+  // it. Scaling passTD by a market that says nothing about passing is wrong.
+  const qb = M.applyMarketTd({ passYd: 250, passTD: 1.8, rushTD: 0.3 }, 'QB', td40);
+  ok('a quarterback\'s passing touchdowns are left alone', qb.passTD === 1.8);
+  ok('...and only his rushing touchdown takes the market', near(qb.rushTD, 0.4, 0.02));
+  ok('no price, no change', M.applyMarketTd({ recTD: 0.5 }, 'WR', null).recTD === 0.5);
+  ok('a position the market does not cover is untouched', M.applyMarketTd({ x: 1 }, 'K', td40).x === 1);
+  // The implied count is the price itself, matching what points does with it,
+  // so the two numbers cannot disagree about the same market.
+  const applied = M.applyMarketTd({ recYd: 0, rec: 0, recTD: 0.5, rushTD: 0 }, 'WR', { probability: 40, pointsPerTd: 6 });
+  ok('the applied line scores what the points path would have added',
+     near(M.scoreStats(applied, 'WR', R), 0.4 * 6, 0.05), String(M.scoreStats(applied, 'WR', R)));
 
   // A count TD market beats the binary, because it carries multi-score games.
   const counted = M.vegasProjection({
