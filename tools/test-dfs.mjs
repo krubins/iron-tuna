@@ -599,7 +599,7 @@ console.log('\nthe DFS page explanations');
      page.includes('Require in every lineup') && page.includes('Exclude from every lineup'));
   ok('every require/exclude control writes the same marks store and re-solves',
      page.includes('function applyMark(act, key)') && page.includes("marks[key] = 'lock'") && page.includes("marks[key] = 'excl'")
-     && page.includes("['dfLineups', 'dfPlayerBody'].forEach"));
+     && page.includes("['dfLineups', 'dfPlayerBody', 'dfConstraints'].forEach"));
   // A lock is a decision and the builder does not overrule a decision, but the
   // page says what the decision was: this warning used to live in the What If
   // box, and it belongs to the constraint, not to the control that set it.
@@ -608,10 +608,29 @@ console.log('\nthe DFS page explanations');
      && page.includes('He is not playing this week')
      && page.includes('only because you put him there'));
   ok('every constraint the build carries is listed above the roster with its own undo',
-     page.includes('function constraintBar(l)') && page.includes('Your constraints') && page.includes("data-mark=\"clear\"")
-     && page.includes("data-mark=\"clearall\"") && page.includes('constraintBar(lead) + benchedNote(r)'));
+     page.includes('function renderConstraints(l)') && page.includes('Your constraints') && page.includes("data-mark=\"clear\"")
+     && page.includes("data-mark=\"clearall\"") && page.includes('renderConstraints(lead);'));
+  // A reader who already has three men in a submitted entry has to put those
+  // three IN by name; the roster rows only reach the nine the builder chose.
+  // The search takes them one after another and never closes on a pick.
+  ok('a player can be required by name, as many as the reader has',
+     page.includes('id="dfReqInput"') && page.includes('function requireMatches(value)')
+     && page.includes('function requireByKey(key)') && page.includes("marks[key] = 'lock'")
+     && page.includes('data-require-key'));
+  ok('and the search survives the re-solve it triggers, so the next name can be typed straight away',
+     page.includes('id="dfConstraints" hidden') && page.includes("$('dfConstraintChips').innerHTML")
+     && !/\$\('dfLineups'\)\.innerHTML = [^;]*dfReqInput/.test(page)
+     && page.includes("input.value = ''; input.focus();"));
+  ok('a name already required cannot be required twice',
+     page.includes("var already = marks[p.key] === 'lock'") && page.includes('already required'));
   ok('the constraints stay on screen when they leave no legal lineup, so they can be undone',
-     page.includes("$('dfLineups').innerHTML = constraintBar(null)") && page.includes('Clear one of the constraints above'));
+     page.includes('renderConstraints(null);') && page.includes('Clear one of the constraints above'));
+  // "Clear a constraint" is the wrong advice to a reader whose required men are
+  // already in a submitted entry. The arithmetic is the useful answer.
+  ok('and a roster that cannot fit the required players says why, in money',
+     page.includes('function shortfallNote(players, lockKeys, slots, flex, cap)')
+     && page.includes('The cheapest legal fill for the other ')
+     && page.includes('cannot all be seated: this roster has no free slot'));
   ok('a required player the solve could not seat is said out loud rather than quietly dropped',
      page.includes('could not be seated under the current cap and rules'));
   ok('a man who is not playing is marked in the player pool, not quietly dropped', page.includes('function weekTag(p)') && page.includes('df-week-out') && page.includes('df-row-out'));

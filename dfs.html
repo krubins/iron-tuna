@@ -377,16 +377,28 @@ p{color:var(--sec);margin:0 0 16px}
 .is-board .df-act button:hover{border-color:#46d6ac;color:#46d6ac}
 .is-board .df-act button.drop:hover{border-color:#f0a0a0;color:#f0a0a0}
 .is-board .df-act button[aria-pressed="true"]{background:#0e7c63;border-color:#46d6ac;color:#fff}
-.df-constraints{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px;
-  border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--panel);padding:11px 13px}
-.df-constraints>b{font-family:var(--font-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.df-constraints{margin:0 0 14px;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--panel);padding:11px 13px}
+.df-constraints.has{border-color:var(--teal)}
+.df-constraints-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.df-constraints-top>b{font-family:var(--font-mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.df-req-search{position:relative;flex:1 1 260px;min-width:0;max-width:420px}
+.df-req-search input{width:100%;font:inherit;font-size:14px;padding:8px 11px;border:1px solid var(--line2);border-radius:8px;background:var(--bg);color:var(--text)}
+.df-req-list{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 4px);background:var(--bg);border:1px solid var(--line2);border-radius:8px;box-shadow:0 14px 30px rgba(0,0,0,.14);max-height:260px;overflow:auto}
+.df-req-list button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);font:inherit;padding:9px 11px;cursor:pointer;text-align:left}
+.df-req-list button:last-child{border-bottom:0}
+.df-req-list button:hover,.df-req-list button:focus{background:var(--panel)}
+.df-req-list button[disabled]{opacity:.55;cursor:default}
+.df-req-list small{color:var(--muted);white-space:nowrap}
+#dfReqHint{margin:8px 0 0}
+#dfConstraintChips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#dfConstraintChips:not(:empty){margin-top:10px}
 .df-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid;border-radius:20px;padding:3px 5px 3px 11px;font-size:12.5px;font-weight:700}
 .df-chip.keep{color:var(--teal);border-color:var(--teal);background:rgba(14,124,99,.08)}
 .df-chip.drop{color:var(--danger);border-color:var(--danger);background:rgba(200,60,60,.07)}
 .df-chip small{font-weight:700;opacity:.75;font-size:10px;letter-spacing:.07em;text-transform:uppercase}
 .df-chip button{border:0;background:transparent;color:inherit;font:700 14px/1 var(--font-body);cursor:pointer;padding:3px 5px;border-radius:50%}
 .df-chip button:hover{background:rgba(0,0,0,.09)}
-.df-constraints .df-clear{margin-left:auto;border:0;background:transparent;color:var(--sec);font:700 12px var(--font-body);cursor:pointer;text-decoration:underline}
+.df-constraints-top .df-clear{margin-left:auto;border:0;background:transparent;color:var(--sec);font:700 12px var(--font-body);cursor:pointer;text-decoration:underline}
 .df-constraints .df-warn{flex:1 1 100%;margin:0;font-size:12.5px;line-height:1.5;color:var(--danger)}
 .df-stack{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;background:var(--panel)}
 .df-stack h3{margin:0 0 6px} .df-stack .side{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;font-size:14px}
@@ -760,6 +772,24 @@ p{color:var(--sec);margin:0 0 16px}
 <section id="sec-lineup">
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>This week’s lineup</h2><a class="is-sec-more" href="#values">The board behind it &rarr;</a></div></div>
   <p class="df-sub">Solved against the cap for the contest shape above, on the same market numbers that price the season-long board. <b>Nothing on this page enters a contest</b> &mdash; it builds a roster to read and copy.</p>
+  <!-- ── the constraints ─────────────────────────────────────────────────────
+       Everything the reader has told the builder, above the roster it produced,
+       with an undo on each one. It lives here rather than inside #dfLineups
+       because it carries a search field: re-solving replaces the roster, and a
+       field that is replaced mid-word loses what you were typing. Only the
+       chips under it are re-rendered. -->
+  <div class="df-constraints" id="dfConstraints" hidden>
+    <div class="df-constraints-top">
+      <b>Your constraints</b>
+      <div class="df-req-search">
+        <input id="dfReqInput" type="search" autocomplete="off" spellcheck="false" placeholder="Require a player by name&hellip;" aria-label="Require a player in every lineup" aria-controls="dfReqList" aria-autocomplete="list">
+        <div class="df-req-list" id="dfReqList" role="listbox" hidden></div>
+      </div>
+      <button type="button" class="df-clear" data-mark="clearall" id="dfClearMarks" hidden>Clear all</button>
+    </div>
+    <p class="is-note" id="dfReqHint">Add every player you have already locked in, one after another, and Iron Tuna solves the rest of the roster around them. Exclude anyone you do not want from his row below.</p>
+    <div id="dfConstraintChips"></div>
+  </div>
   <div id="dfLineups"></div>
 
   <!-- ── the branches ─────────────────────────────────────────────────────────
@@ -1535,9 +1565,49 @@ p{color:var(--sec);margin:0 0 16px}
     });
     return out;
   }
-  function constraintBar(l) {
+  // Find a player by name and require him. This is the case the roster rows
+  // cannot serve: on a Saturday a reader already has three men locked into
+  // the entry they submitted, and those three are not the nine the builder
+  // happened to choose -- they have to be put IN by name before the rest is
+  // solved around them. One at a time, as many as they like.
+  function requirable() {
+    var v = filteredSlate();
+    return ((v && v.players) || []).filter(function (p) { return p.key && p.onBoard; })
+      .sort(function (a, b) { return (b.ironTunaPoints || 0) - (a.ironTunaPoints || 0); });
+  }
+  function requireMatches(value) {
+    var q = String(value || '').trim().toLowerCase();
+    if (!q) return [];
+    return requirable().filter(function (p) {
+      return String(p.name || '').toLowerCase().indexOf(q) >= 0
+          || String(p.team || '').toLowerCase().indexOf(q) >= 0
+          || String(p.position || '').toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 10);
+  }
+  function renderRequireList() {
+    var box = $('dfReqList'), input = $('dfReqInput');
+    if (!box || !input) return;
+    var value = input.value;
+    if (!value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
+    var list = requireMatches(value);
+    box.innerHTML = list.map(function (p) {
+      var already = marks[p.key] === 'lock';
+      return '<button type="button" role="option" data-require-key="' + e(p.key) + '"' + (already ? ' disabled' : '')
+        + '><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' \u00b7 ' + p.team) + '</small> ' + weekTag(p) + '</span>'
+        + '<small>' + (already ? 'already required' : money(p.salary) + ' \u00b7 IT ' + n1(p.ironTunaPoints)) + '</small></button>';
+    }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
+    box.hidden = false;
+  }
+  // The chips, the warnings and the Clear all. Everything else in the bar is
+  // static markup that outlives a re-solve.
+  function renderConstraints(l) {
+    var host = $('dfConstraints'); if (!host) return;
+    var view = filteredSlate();
+    if (!view) { host.hidden = true; return; }
+    host.hidden = false;
     var rows = markedRows();
-    if (!rows.length) return '';
+    host.classList.toggle('has', rows.length > 0);
+    $('dfClearMarks').hidden = !rows.length;
     // A required player the solve could not seat is said out loud rather than
     // left for the reader to notice by reading nine rows.
     var missing = [];
@@ -1546,19 +1616,16 @@ p{color:var(--sec);margin:0 0 16px}
       missing = rows.filter(function (r) { return r.kind === 'lock' && !on[r.key]; });
     }
     var benchedReq = rows.filter(function (r) { return r.kind === 'lock' && r.p.available === false; });
-    return '<div class="df-constraints"><b>Your constraints</b>'
-      + rows.map(function (r) {
-          return '<span class="df-chip ' + (r.kind === 'lock' ? 'keep' : 'drop') + '"><small>' + (r.kind === 'lock' ? 'Required' : 'Excluded') + '</small> ' + e(r.p.name)
-            + '<button type="button" data-mark="clear" data-mark-key="' + e(r.key) + '" aria-label="' + e('Clear ' + r.p.name) + '" title="' + e('Clear ' + r.p.name) + '">\u00d7</button></span>';
-        }).join('')
-      + '<button type="button" class="df-clear" data-mark="clearall">Clear all</button>'
+    $('dfConstraintChips').innerHTML = rows.map(function (r) {
+        return '<span class="df-chip ' + (r.kind === 'lock' ? 'keep' : 'drop') + '"><small>' + (r.kind === 'lock' ? 'Required' : 'Excluded') + '</small> ' + e(r.p.name)
+          + '<button type="button" data-mark="clear" data-mark-key="' + e(r.key) + '" aria-label="' + e('Clear ' + r.p.name) + '" title="' + e('Clear ' + r.p.name) + '">\u00d7</button></span>';
+      }).join('')
       + (missing.length ? '<p class="df-warn">' + e(missing.map(function (r) { return r.p.name; }).join(' and ')) + ' could not be seated under the current cap and rules, so the roster above is solved without ' + (missing.length > 1 ? 'them' : 'him') + '.</p>' : '')
       + benchedReq.map(function (r) {
           return '<p class="df-warn"><b>' + e(r.p.name) + '</b> is required. He is not playing this week'
             + (r.p.weekStatus ? ' (' + e(r.p.weekStatus) + (r.p.weekStatusNote ? ': ' + e(r.p.weekStatusNote) : '') + ')' : '')
             + ', so he is in the roster only because you put him there.</p>';
-        }).join('')
-      + '</div>';
+        }).join('');
   }
 
   // How much of THIS roster the books actually priced, and what they said
@@ -1966,6 +2033,7 @@ p{color:var(--sec);margin:0 0 16px}
     var gs=GAME_STYLES[gameStyle] || {};
     if (styleSupportsOptimizer()) return;
     built=null;
+    if ($('dfConstraints')) $('dfConstraints').hidden = true;
     $('dfLineups').innerHTML='<div class="is-empty"><b>'+e(gs.label || gameStyle)+' selected.</b> The Classic lineup solver is hidden because this DraftKings format uses different roster or scoring rules. Iron Tuna will use this selection to tailor the DFS format analysis without presenting a Classic roster as legal for this contest.</div>';
     $('dfPivots').innerHTML='';
     coachSync();
@@ -1991,6 +2059,7 @@ p{color:var(--sec);margin:0 0 16px}
   }
   function showGameScopeRequired() {
     built = null;
+    if ($('dfConstraints')) $('dfConstraints').hidden = true;
     $('dfLineups').innerHTML = '<p class="is-empty"><b>Complete Game Style, Games and Payout Structure above.</b> Iron Tuna will not build or evaluate the contest until the actual DraftKings setup is defined.</p>';
     $('dfPivots').innerHTML = '';
     $('dfPool').querySelector('tbody').innerHTML = '';
@@ -2001,6 +2070,17 @@ p{color:var(--sec);margin:0 0 16px}
     coachSync();
   }
 
+  // A pick from the search: require him, empty the field, keep the focus for
+  // the next name.
+  function requireByKey(key) {
+    if (!key) return;
+    marks[key] = 'lock';
+    var input = $('dfReqInput');
+    if (input) { input.value = ''; input.focus(); }
+    var box = $('dfReqList'); if (box) { box.hidden = true; box.innerHTML = ''; }
+    var view = filteredSlate(); if (view) pool(view);
+    tuned = true; build();
+  }
   // Every require/exclude control on the page lands here: the roster rows, the
   // chips above the board and the player drawer. It writes `marks`, repaints
   // the pool table so the fine-tune panel agrees with the roster, and re-solves.
@@ -2030,6 +2110,52 @@ p{color:var(--sec);margin:0 0 16px}
       + (list.length > top.length ? ' and ' + (list.length - top.length) + ' more' : '')
       + '. Lock one in the player pool below to build around him anyway.</p>';
   }
+  // When required players leave no legal roster, "clear a constraint" is the
+  // wrong advice: a reader whose three men are already in a submitted entry
+  // cannot clear any of them. The useful answer is the arithmetic -- what the
+  // required men cost, what the cheapest legal fill for the seats they leave
+  // costs, and by how much the two overrun the cap.
+  function shortfallNote(players, lockKeys, slots, flex, cap) {
+    if (!lockKeys.length) return '';
+    var byId = {}; players.forEach(function (q) { byId[q.id] = q; });
+    var req = lockKeys.map(function (k) { return byId[k]; }).filter(Boolean);
+    if (!req.length) return '';
+    var fits = function (q, slot) { return slot === q.position || (slot === 'FLEX' && flex.indexOf(q.position) >= 0); };
+    // Seat the required men the way the builder does: a dedicated slot before
+    // FLEX, so a second back is not stranded by the first taking the flex.
+    var open = slots.slice(), taken = {}, unseated = [];
+    req.forEach(function (q) {
+      var at = -1;
+      for (var i = 0; i < open.length; i++) if (open[i] && open[i] !== 'FLEX' && fits(q, open[i])) { at = i; break; }
+      if (at < 0) for (var j = 0; j < open.length; j++) if (open[j] && fits(q, open[j])) { at = j; break; }
+      if (at < 0) { unseated.push(q); return; }
+      open[at] = null; taken[q.id] = 1;
+    });
+    var names = req.map(function (q) { return q.name; });
+    var listed = names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] : names[0];
+    if (unseated.length) {
+      return '<p class="df-warn">' + e(listed) + ' cannot all be seated: this roster has no free slot '
+        + e(unseated.map(function (q) { return q.name; }).join(' or ')) + ' may fill.</p>';
+    }
+    var reqSalary = req.reduce(function (t, q) { return t + Number(q.salary || 0); }, 0);
+    var restSalary = 0, rest = 0, impossible = false;
+    open.filter(Boolean).forEach(function (slot) {
+      rest += 1;
+      var best = null;
+      players.forEach(function (q) {
+        if (taken[q.id] || !fits(q, slot)) return;
+        if (!best || Number(q.salary) < Number(best.salary)) best = q;
+      });
+      if (!best) { impossible = true; return; }
+      taken[best.id] = 1; restSalary += Number(best.salary || 0);
+    });
+    if (impossible) return '<p class="df-warn">' + e(listed) + ' left a seat this board has nobody to fill.</p>';
+    var need = reqSalary + restSalary;
+    if (need <= cap) return '';
+    return '<p class="df-warn"><b>' + e(listed) + '</b> cost ' + money(reqSalary) + '. The cheapest legal fill for the other '
+      + rest + ' seat' + (rest === 1 ? '' : 's') + ' is ' + money(restSalary) + ', so the roster cannot come in under '
+      + money(cap) + ' — it is ' + money(need - cap) + ' over. Raise the cap in the fine-tune panel, or drop one of the required players.</p>';
+  }
   function build() {
     if (!slate || !window.ITDfs) { coachSync(); return; }
     if (site === 'dk' && (!setupReady() || !styleSupportsOptimizer())) { if(!setupReady()) showGameScopeRequired(); else renderFormatNotice(); return; }
@@ -2042,7 +2168,8 @@ p{color:var(--sec);margin:0 0 16px}
     var r = ITDfs.build(players, { mode: mode, cap: parseInt($('dfCap').value, 10) || view.cap, slots: view.slots, flex: view.flex, lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked, maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
     built = r.ok ? r : null;
     if (!r.ok) {
-      $('dfLineups').innerHTML = constraintBar(null)
+      renderConstraints(null);
+      $('dfLineups').innerHTML = shortfallNote(players, lock, view.slots, view.flex || ['RB', 'WR', 'TE'], parseInt($('dfCap').value, 10) || view.cap)
         + '<p class="is-empty">No lineup satisfies those constraints under that cap. Clear one of the constraints above, or loosen the cap and stacking rules in the fine-tune panel below.</p>';
       $('dfPivots').innerHTML = '';
       coachSync();
@@ -2050,7 +2177,8 @@ p{color:var(--sec);margin:0 0 16px}
     }
     var lead = r.lineups[0];
     var alts = r.lineups.slice(1);
-    $('dfLineups').innerHTML = constraintBar(lead) + benchedNote(r)
+    renderConstraints(lead);
+    $('dfLineups').innerHTML = benchedNote(r)
       + lineupCard(lead, 0, sh, true)
       + (alts.length ? '<h3 class="df-h3">Branch off it <em>' + alts.length + ' more</em></h3><p class="df-sub">' + (contest === 'gpp'
             ? 'The same core, re-solved to sit on different players. Entering a large field with one lineup is entering it with one opinion.'
@@ -2498,6 +2626,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfEmpty').textContent = (msg || 'No ' + (label || 'site') + ' salaries are loaded for this week.') + ' The scoring environment still reads from the game lines on Game Intel.';
     $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
     $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
+    if ($('dfConstraints')) $('dfConstraints').hidden = true;
     $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted. Upload your own contest\u2019s salary file above and the roster builds off that.</p>';
     $('dfPivots').innerHTML = ''; built = null;
     coachSync();
@@ -2642,10 +2771,34 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mode = b.getAttribute('data-mode'); press(this, 'data-mode', mode); tuned = true; build(); });
     $('dfTune').addEventListener('change', function (ev) { if (ev.target.closest('#dfMode')) return; tuned = true; build(); });
     $('dfBuild').addEventListener('click', function () { tuned = true; build(); });
+    // Require by name. Picking does not close the search: the reader who has
+    // three men already locked into a submitted entry is adding all three, so
+    // the field clears, keeps focus and waits for the next one.
+    $('dfReqInput').addEventListener('input', renderRequireList);
+    $('dfReqInput').addEventListener('focus', renderRequireList);
+    $('dfReqInput').addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') { $('dfReqList').hidden = true; return; }
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      var list = requireMatches(this.value).filter(function (p) { return marks[p.key] !== 'lock'; });
+      if (!list.length) return;
+      var q = this.value.trim().toLowerCase();
+      var exact = list.filter(function (p) { return String(p.name || '').toLowerCase() === q; })[0];
+      requireByKey((exact || list[0]).key);
+    });
+    $('dfReqList').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-require-key]');
+      if (!b || b.disabled) return;
+      requireByKey(b.getAttribute('data-require-key'));
+    });
+    document.addEventListener('click', function (ev) {
+      if (!ev.target.closest('.df-req-search')) { var box = $('dfReqList'); if (box) box.hidden = true; }
+    });
     // Require / exclude, from wherever it was clicked: the roster rows and the
     // constraint chips live inside #dfLineups, the drawer's pair inside the
-    // modal, and both write through the one applier.
-    ['dfLineups', 'dfPlayerBody'].forEach(function (id) {
+    // modal, and both write through the one applier. The bar's own chips sit
+    // outside #dfLineups now, so it is wired too.
+    ['dfLineups', 'dfPlayerBody', 'dfConstraints'].forEach(function (id) {
       var host = $(id); if (!host) return;
       host.addEventListener('click', function (ev) {
         var b = ev.target.closest('[data-mark]'); if (!b) return;
