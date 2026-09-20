@@ -11571,3 +11571,41 @@ alternate line and player keys are read, an absent or unparseable line is still
 dropped, a touchdown market still needs no line, the drop tally by reason and
 market, a clean pull tallying nothing, the market list keeping its yardage
 markets under the cap, and the soonest games being the ones priced.
+
+## 98. September 20: "How do I check /api/tuna-market?"
+
+A fair question, and the third time in this thread that the answer to "is it
+working" was a URL and a field name. Ken is not going to read JSON, and should
+not have to. The diagnostics from §95 and §97 were real and they were in the
+wrong place.
+
+**The health board now says it in words**, as a tile beside the others:
+
+| Tile reads | State | What it means |
+|---|---|---|
+| **Working** | `live` | The books are pricing this week's players and the projections are reading them. |
+| **Touchdowns only** | `td_only` | Fresh, matched, and carrying no yardage or reception market — so receivers, tight ends and quarterbacks are all still on the game line. The feed is running; it is carrying one market. |
+| **Collection stopped** | `stale` | Props exist for the week, newest is over 12 hours old. |
+| **Reaching nobody** | `unmatched` | Rows arriving and matching no board player. The silent one. |
+| **Nothing this week** | `empty` | Nothing written. |
+| **Out of season** | `no_week` | No regular-season week is current. |
+
+Under it, the market mix in English — *receiving yards 214 · anytime TD 396 ·
+receptions 190* — and the full sentence in the feeds table beside the last
+update time.
+
+`td_only` is a new state, and it is the one §96 was about: a healthy row count
+that cannot project a receiver, because `VEGAS_MARKETS` wants a yardage or
+reception line and an anytime-touchdown price is not one. `propsHealth` now
+reads the market mix out of `odds_snapshots` — the same store the projections
+read, not the provider's own report of itself — and a week with no market in
+`passYd, passTD, rushYd, recYd, rec` is `td_only` however many rows it holds.
+Staleness is checked first: a week that stopped collecting AND carries one
+market reads `stale`, because the fix is the poll, not the provider.
+
+Where to look: **/admin → In-season health → Betting props.**
+
+Guarded by `tools/test-worker-odds.mjs` (the state machine, including one
+yardage market being enough to return to `live`, and stale winning over
+`td_only`) and `tools/test-health.mjs` (the tile exists, renders, has a word
+for every state the payload can emit, and prints market names in English).

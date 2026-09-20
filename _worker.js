@@ -5472,6 +5472,15 @@ async function propsHealth(env, season, week) {
       'COUNT(DISTINCT book) AS books, MAX(ts) AS last FROM odds_snapshots ' +
       'WHERE season IS ? AND week IS ? AND subject_type = ?')
       .bind(season == null ? null : Number(season), Number(week), 'player').first();
+    // WHICH markets, off the same store the projections read. A total cannot
+    // tell a feed that posts nine markets from one that posts only touchdowns,
+    // and only one of those can project a receiver.
+    const mix = await env.LEADS_DB.prepare(
+      'SELECT market, COUNT(DISTINCT subject) AS players, COUNT(*) AS rows FROM odds_snapshots ' +
+      'WHERE season IS ? AND week IS ? AND subject_type = ? GROUP BY market ORDER BY players DESC')
+      .bind(season == null ? null : Number(season), Number(week), 'player').all();
+    const byMarket = {};
+    for (const r of (mix.results || [])) byMarket[String(r.market)] = { players: Number(r.players) || 0, rows: Number(r.rows) || 0 };
     const rows = Number((tot && tot.rows) || 0);
     const last = tot && tot.last ? Number(tot.last) : null;
     const ageHours = last ? Math.round((Date.now() - last) / 360000) / 10 : null;
@@ -5488,13 +5497,26 @@ async function propsHealth(env, season, week) {
     const subjects = (q.results || []).map(r => String(r.subject || ''));
     const matched = subjects.filter(sub => idx.get(sub) !== undefined && idx.get(sub) !== null).length;
     const boardPlayers = idx.size;
-    const state = matched === 0 ? 'unmatched' : (ageHours != null && ageHours > PROPS_STALE_HOURS) ? 'stale' : 'live';
     const markets = Number((tot && tot.markets) || 0), books = Number((tot && tot.books) || 0);
+    // A projection is built from a yardage or reception line. A week whose only
+    // market is the anytime touchdown has a healthy row count and cannot
+    // project a receiver, a tight end or a quarterback (VEGAS_MARKETS.core) —
+    // its own state, because the fix is at the provider, not here.
+    const PROJECTABLE = ['passYd', 'passTD', 'rushYd', 'recYd', 'rec'];
+    const projectable = PROJECTABLE.filter(m => byMarket[m]);
+    const state = matched === 0 ? 'unmatched'
+      : (ageHours != null && ageHours > PROPS_STALE_HOURS) ? 'stale'
+      : !projectable.length ? 'td_only'
+      : 'live';
+    const names = Object.keys(byMarket).sort((x, y) => byMarket[y].players - byMarket[x].players);
     return { ok: true, state, season, week, rows, subjects: subjects.length, matched, boardPlayers,
              coverage: boardPlayers ? Math.round(matched / boardPlayers * 1000) / 10 : 0,
-             markets, books, lastAt: last, ageHours,
+             markets, books, lastAt: last, ageHours, byMarket,
+             marketNames: names, projectableMarkets: projectable,
              note: state === 'live'
                ? matched + ' board player' + (matched === 1 ? ' carries' : 's carry') + ' a quoted prop this week, across ' + markets + ' market' + (markets === 1 ? '' : 's') + ' and ' + books + ' book' + (books === 1 ? '' : 's') + ', pulled ' + (ageHours < 1 ? 'within the hour' : ageHours + ' hours ago') + '. The weekly Vegas projection is reading them.'
+               : state === 'td_only'
+               ? 'The books are posting on ' + matched + ' board players this week, and the only market in the store is ' + names.join(', ') + '. A projection needs a yardage or reception line, so receivers, tight ends and quarterbacks are all still on the game line. The feed is running; it is carrying one market.'
                : state === 'stale'
                ? 'Props were collected for this week but the newest is ' + ageHours + ' hours old. The poll has stopped; the board is serving the last lines it got.'
                : 'The store holds ' + subjects.length + ' priced subjects for this week and NONE of them match a player on the board. The collector is working and every projection is still falling back to the game line \u2014 the name join is broken.' };

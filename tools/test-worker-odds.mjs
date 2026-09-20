@@ -447,13 +447,18 @@ console.log('\nthis week’s props, end to end');
 {
   const HOUR = 3600000;
   // A fake D1 that answers the two queries propsHealth makes, and nothing else.
-  const db = (tot, subjects) => ({ LEADS_DB: {
+  // Two reads: the totals, and the market mix. `mix` defaults to a yardage
+  // market so the ordinary cases stay `live`.
+  const db = (tot, subjects, mix) => ({ LEADS_DB: {
     prepare(sql) {
       return {
         bind() { return this; },
         async run() { return {}; },                       // the DDL snapshotReady runs
         async first() { return /COUNT\(\*\)/.test(sql) ? tot : {}; },
-        async all() { return { results: (subjects || []).map(x => ({ subject: x })) }; }
+        async all() {
+          if (/GROUP BY market/.test(sql)) return { results: mix || [{ market: 'recYd', players: 2, rows: 8 }] };
+          return { results: (subjects || []).map(x => ({ subject: x })) };
+        }
       };
     }
   } });
@@ -476,6 +481,25 @@ console.log('\nthis week’s props, end to end');
   ok('fresh rows matching nobody on the board are called out, not called healthy',
      unmatched.state === 'unmatched' && unmatched.matched === 0 && unmatched.rows === 900);
   ok('...and the note names the broken link', /name join is broken/.test(unmatched.note) && /falling back to the game line/.test(unmatched.note));
+
+  // The market mix, off the same store the projections read.
+  ok('the markets are reported, not just counted',
+     live.byMarket.recYd && live.byMarket.recYd.players === 2 && live.marketNames.includes('recYd'));
+
+  // A week whose only market is the anytime touchdown: healthy row count,
+  // fresh, matched to the board, and it cannot project a receiver.
+  const tdOnly = await W.propsHealth(db({ rows: 900, subjects: 2, markets: 1, books: 8, last: Date.now() - 10 * 60000 },
+    [known, other], [{ market: 'anytimeTD', players: 2, rows: 900 }]), 2026, 3);
+  ok('a touchdown-only week is its own state, not "live"', tdOnly.state === 'td_only');
+  ok('...and says the feed is running and carrying one market',
+     /carrying one market/.test(tdOnly.note) && /needs a yardage or reception line/.test(tdOnly.note));
+  ok('...and names what it would take to be projectable', tdOnly.projectableMarkets.length === 0);
+  ok('one yardage market is enough to make it live again',
+     (await W.propsHealth(db({ rows: 900, subjects: 2, markets: 2, books: 8, last: Date.now() }, [known, other],
+       [{ market: 'anytimeTD', players: 2, rows: 800 }, { market: 'recYd', players: 2, rows: 100 }]), 2026, 3)).state === 'live');
+  ok('a touchdown-only week that ALSO stopped collecting reads stale first',
+     (await W.propsHealth(db({ rows: 900, subjects: 2, markets: 1, books: 8, last: Date.now() - 40 * HOUR }, [known, other],
+       [{ market: 'anytimeTD', players: 2, rows: 900 }]), 2026, 3)).state === 'stale');
 
   const empty = await W.propsHealth(db({ rows: 0, subjects: 0, markets: 0, books: 0, last: null }, []), 2026, 3);
   ok('no rows for the week is its own state', empty.state === 'empty' && empty.rows === 0);

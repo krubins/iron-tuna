@@ -221,5 +221,25 @@ console.log('\nthe worker source');
   ok('the admin page has the health board with every editorial action', /id="hlth/.test(adminHtml) && /data-act=/.test(adminHtml) && ['preview', 'regenerate', 'publish', 'unpublish', 'edit'].every(a => new RegExp("b\\('" + a + "'").test(adminHtml)));
   ok('and a rerun button per job', /data-rerun=/.test(adminHtml));
 }
+// ── the admin page says it in words ──────────────────────────────────────
+// Every previous round of this ended with "open this URL and read the JSON".
+// The health board is where somebody actually looks, so the answer lives there
+// as a tile and a sentence, not as a field to be inferred from.
+console.log('\nthe props tile on the admin page');
+{
+  const admin = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  ok('the health board has a betting-props tile', admin.includes('function propsTile(p)') && admin.includes("tile('Betting props'"));
+  ok('...that it actually renders', admin.includes('propsTile(u.props)'));
+  ok('every state the payload can report has a word for it',
+     ['live', 'td_only', 'stale', 'unmatched', 'empty', 'no_week'].every(k => new RegExp(k + ':\\s*\\[').test(admin)));
+  ok('the states read as English, not as field names',
+     admin.includes("['Working', 'ok']") && admin.includes("['Touchdowns only', 'warn']")
+     && admin.includes("['Reaching nobody', 'bad']") && admin.includes("['Collection stopped', 'warn']"));
+  ok('the market names are printed in words too', admin.includes('PROP_WORD') && admin.includes("recYd: 'receiving yards'"));
+  ok('and the feed table carries the full sentence', admin.includes("['Player props, this week'") && admin.includes('u.props.note'));
+  for (const block of admin.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Function(block[1]);
+  ok('the admin page still parses', true);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
