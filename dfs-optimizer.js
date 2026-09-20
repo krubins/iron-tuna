@@ -59,8 +59,30 @@
   // after the slate had priced and measured him. A slate built before the
   // ladder existed carries no `projected`, so an onBoard row still qualifies.
   function projected(p) { return p && (p.projected === true || (p.projected === undefined && p.onBoard !== false)); }
-  function ceilOf(p) { return isFinite(p.ceiling) && p.ceiling > 0 ? p.ceiling : p.ironTunaPoints * band(p).ceil; }
-  function floorOf(p) { return isFinite(p.floor) && p.floor > 0 ? p.floor : p.ironTunaPoints * band(p).floor; }
+  // A game that has been played is not a projection any more. The slate hangs
+  // `actualPoints` on a man whose game is final (dfsActualFor in _worker.js),
+  // and from here on that number is the only one anybody reads about him: the
+  // median, the floor and the ceiling of a finished afternoon are all the same
+  // number, and a leverage discount on points already banked means nothing.
+  //
+  // Zero is a value here, not a miss. A man who dressed and did nothing
+  // scored nothing, and `banked` has to say so rather than fall through to the
+  // projection and quote Thursday at him. Only null/undefined is absence.
+  function banked(p) {
+    if (!p || !p.gamePlayed) return null;
+    // `isFinite(null)` is TRUE -- the global coerces, and Number(null) is 0.
+    // A defense whose game is over carries gamePlayed with a null actual (the
+    // stored box score has no defensive line), so without the null check it
+    // banks at zero: it drops out of every lineup and out of the field's draw,
+    // scored nothing. The page render caught it; the assertion below pins it.
+    if (p.actualPoints == null) return null;
+    return isFinite(p.actualPoints) ? Number(p.actualPoints) : null;
+  }
+  function ceilOf(p) { var a = banked(p); if (a != null) return a; return isFinite(p.ceiling) && p.ceiling > 0 ? p.ceiling : p.ironTunaPoints * band(p).ceil; }
+  function floorOf(p) { var a = banked(p); if (a != null) return a; return isFinite(p.floor) && p.floor > 0 ? p.floor : p.ironTunaPoints * band(p).floor; }
+  // The projection a lineup totals, which is a RESULT for anybody whose game
+  // is over. Written once so every total on the card agrees with every other.
+  function projOf(p) { var a = banked(p); return a == null ? p.ironTunaPoints : a; }
   function ownOf(p) { return isFinite(p.ownership) && p.ownership > 0 ? p.ownership : null; }
 
   // The objective a mode climbs. The first four are projections; the last three
@@ -107,6 +129,15 @@
       return c * Math.min(1.35, Math.max(0.72, Math.pow(12 / Math.max(2, own), 0.35)));
     } }
   };
+  // Applied to every objective above, outside whatever that objective does:
+  // leverage must not discount a banked score by its ownership, and the market
+  // mode must not prefer a prop to a result.
+  (function () {
+    for (var k in MODES) MODES[k].pts = (function (f) {
+      return function (p) { var a = banked(p); return a == null ? f(p) : a; };
+    })(MODES[k].pts);
+  })();
+
   function mulberry(seed) { var a = seed >>> 0; return function () { a += 0x6D2B79F5; var t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
   // ── what each contest actually builds ─────────────────────────────────────
@@ -345,15 +376,36 @@
     // single lineup is seeded, unless the reader has explicitly locked him --
     // a lock is a decision, and the builder does not overrule a decision, it
     // only declines to make this one on its own.
-    var benched = [], thin = [];
+    var benched = [], played = [], thin = [];
     var pool = players.filter(function (p) {
       // An uncapped format prices nobody, so a missing salary is the normal
       // state there rather than a row the board could not read.
-      if (!(projected(p) && (capped ? p.salary > 0 : true) && !excl[p.id] && isFinite(mode.pts(p)) && mode.pts(p) > 0)) return false;
+      if (!(projected(p) && (capped ? p.salary > 0 : true) && !excl[p.id])) return false;
+      var pts = mode.pts(p);
+      // A banked zero is a real number, not a missing one. The points test
+      // would drop a locked man whose game ended 0.0, which is the one case
+      // where the reader already knows the number and asked for it on his
+      // roster anyway.
+      if (!isFinite(pts) || (!(pts > 0) && !(lock[p.id] && banked(p) != null))) return false;
       if (p.available === false && !lock[p.id] && !o.includeUnavailable) { benched.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, status: p.weekStatus || 'Out' }); return false; }
+      // HIS GAME IS OVER. He is not a play any more -- no entry submitted now
+      // can contain him -- so the builder will not spend a seat on him, however
+      // well he scored. A lock is the exception, as it is everywhere else in
+      // this function: a reader totalling an entry he already has is telling
+      // the builder those seats are taken, and the banked points come with
+      // them. Without this the "optimal" lineup is a hindsight lineup: it
+      // fills up with whoever happened to go off on Thursday and answers a
+      // question nobody asked.
+      if (banked(p) != null && !lock[p.id] && !o.includePlayed) {
+        played.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, points: Math.round(banked(p) * 10) / 10 });
+        return false;
+      }
       // Reported the way the benched are, rather than dropped in silence: a
       // reader who asked for the safest floor is entitled to know which cheap
-      // bodies were available and which the mode declined to reach for.
+      // bodies were available and which the mode declined to reach for. It
+      // sits after the played check on purpose: a finished game is the whole
+      // story about a man, and how his number was arrived at stops mattering
+      // the moment it is a result rather than an estimate.
       if (p.supplemental && mode.cash && !lock[p.id] && !o.includeSupplemental) { thin.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, basis: p.projectionBasis || 'usage' }); return false; }
       return true;
     });
@@ -550,7 +602,10 @@
           id: p.id, name: p.name, position: p.position, team: p.team, opponent: p.opponent,
           salary: salAt(cfg, p, i), baseSalary: isFinite(p.salary) ? Number(p.salary) : null,
           points: Math.round(mode.pts(p) * slotMult(cfg, i) * 10) / 10,
-          proj: seat(p, i, p.ironTunaPoints), baseProj: isFinite(p.ironTunaPoints) ? Math.round(p.ironTunaPoints * 10) / 10 : null,
+          // A played seat's projection is what he SCORED, and it is a per-seat
+          // number like every other one here: a captain's finished afternoon
+          // is worth his multiplier too.
+          proj: seat(p, i, projOf(p)), baseProj: isFinite(projOf(p)) ? Math.round(projOf(p) * 10) / 10 : null,
           operatorFppg: p.operatorFppg == null ? null : seat(p, i, Number(p.operatorFppg)),
           operatorFppgBasis: p.operatorFppg == null ? null : (p.operatorFppgBasis || 'operator'),
           projectionVsFppg: p.projectionVsFppg == null ? null : seat(p, i, Number(p.projectionVsFppg)),
@@ -567,9 +622,21 @@
           // body next to a $9,000 one owes the reader the difference between
           // a blended projection and a season average.
           projectionBasis: p.projectionBasis || 'board', supplemental: !!p.supplemental,
+          // Banked, not projected: his game is final and `points` above is
+          // what he actually scored. `actualBasis` says where it came from,
+          // and a DST whose game is over carries gamePlayed with no actual,
+          // because the stored box score has no defensive line in it.
+          gamePlayed: !!p.gamePlayed, actual: banked(p) == null ? null : Math.round(banked(p) * 10) / 10, actualBasis: p.actualBasis || null,
           weekStatus: p.weekStatus || null, available: p.available !== false }; }),
         salary: salary, remaining: capped ? cfg.cap - salary : null, points: Math.round(bestS * 10) / 10, mode: o.mode || 'ironTuna',
-        projPoints: Math.round(bestL.reduce(function (s, p, i) { return s + p.ironTunaPoints * slotMult(cfg, i); }, 0) * 10) / 10,
+        projPoints: Math.round(bestL.reduce(function (s, p, i) { return s + projOf(p) * slotMult(cfg, i); }, 0) * 10) / 10,
+        // How much of that total is already in the books, and how much of it
+        // is still a guess. A reader deciding what to do with a roster at
+        // four o'clock needs the split, not the sum. Counted at the seat's
+        // multiplier, like the total it is a part of.
+        bankedPoints: Math.round(bestL.reduce(function (s, p, i) { var a = banked(p); return s + (a == null ? 0 : a * slotMult(cfg, i)); }, 0) * 10) / 10,
+        bankedPlayers: bestL.filter(function (p) { return banked(p) != null; }).length,
+        playedPlayers: bestL.filter(function (p) { return p.gamePlayed; }).length,
         floorPoints: Math.round(bestL.reduce(function (s, p, i) { return s + floorOf(p) * slotMult(cfg, i); }, 0) * 10) / 10,
         ceilingPoints: Math.round(bestL.reduce(function (s, p, i) { return s + ceilOf(p) * slotMult(cfg, i); }, 0) * 10) / 10,
         ownership: owned.length === bestL.length ? Math.round(owned.reduce(function (s, v) { return s + v; }, 0) * 10) / 10 : null,
@@ -583,6 +650,10 @@
              slots: cfg.slots.slice(), capped: capped, multiplier: cfg.mult || null, minTeams: cfg.minTeams || 0,
              benched: benched, benchedCount: benched.length,
              thin: thin, thinCount: thin.length,
+             // Off the board because their game is finished, not because
+             // anything is wrong with them. The page says so rather than
+             // leaving a reader to wonder where Thursday's players went.
+             played: played, playedCount: played.length,
              note: results.length < n ? 'Only ' + results.length + ' distinct lineup' + (results.length === 1 ? ' satisfies' : 's satisfy') + ' the constraints.' : null };
   }
 
@@ -692,9 +763,15 @@
     // roster, not what the other entries are going to own, so neither is
     // applied here. The unavailable do come off: nobody's average entry
     // starts a man who is not playing.
+    //
+    // A man whose game is over STAYS IN THE DRAW, at what he actually scored.
+    // The field submitted its entries before kickoff, so the typical entry
+    // owns him at his real number -- that is the whole point of the swap. He
+    // survives a zero, too: `projOf` returns the banked score, and a banked
+    // zero is what an ordinary entry that rostered him is carrying.
     var pool = (players || []).filter(function (p) {
       return projected(p) && p.available !== false && p.salary > 0
-        && isFinite(p.ironTunaPoints) && p.ironTunaPoints > 0
+        && isFinite(projOf(p)) && (projOf(p) > 0 || banked(p) != null)
         && isFinite(p.ownership) && p.ownership > 0;
     });
     if (pool.length < slots.length) return null;
@@ -720,7 +797,7 @@
       for (var c0 = 0; c0 < idx.length; c0++) {
         var q = pool[idx[c0]];
         seat.at[c0] = idx[c0]; seat.own[c0] = q.ownership;
-        seat.sal[c0] = salAt(cfg, q, i); seat.pts[c0] = q.ironTunaPoints * m;
+        seat.sal[c0] = salAt(cfg, q, i); seat.pts[c0] = projOf(q) * m;
       }
       seats.push(seat); floorCost.push(min);
     }
@@ -772,9 +849,14 @@
     // seats can hardly be drawn at all is a board whose typical entry this
     // does not know, and saying so is the answer.
     if (drawn < Math.max(100, trials * 0.05)) return null;
+    var bankedPool = pool.filter(function (p) { return banked(p) != null; }).length;
     return { points: Math.round(total / drawn * 10) / 10,
              salary: Math.round(spend / drawn),
-             basis: 'modeled-ownership', entries: drawn, trials: trials,
+             // 'part-played' is the honest label once some of the slate is in
+             // the books: the benchmark is then part result, part projection,
+             // and the page should not print it as a pure forecast.
+             basis: bankedPool ? 'modeled-ownership,part-played' : 'modeled-ownership',
+             bankedPool: bankedPool, entries: drawn, trials: trials,
              pool: pool.length, slots: slots.length };
   }
 
