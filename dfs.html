@@ -695,30 +695,35 @@ p{color:var(--sec);margin:0 0 16px}
    groups directly below that, then a setup plate, a gold plate, two cards and
    five tab sections — every one of them the same width on the same ground, with
    nothing but a heading's size to say where one object ended and the next
-   began. The homepage answers the same reader with a dark opening band, a
-   ribbon of destinations under it and a tinted/white alternation down the rest;
-   this page had none of the three.
+   began. It then spent a while opening on the opposite mistake: a dark band
+   carrying a thesis and a lede, which is a pitch, and a reader who has clicked
+   DFS has already been pitched. It pushed the first control most of a screen
+   down and told him nothing he did not know.
 
-   So it gets them, in the in-season palette, with NO NEW COLORS and NO NEW
-   CONTROLS. Every token below is one site.css already declares — the masthead
-   set (--mast, --mast-ink, --mast-accent) for the dark band, the --panel band
-   and the white card for the rest — and the three things added are:
+   So the page opens on the work instead, in the in-season palette, with NO NEW
+   COLORS and NO NEW CONTROLS. Every token below is one site.css already
+   declares — the --panel band and the white card — and the two things carrying
+   the page are:
 
-     1. ONE DARK BAND at the top, continuing the masthead rather than starting a
-        second white surface under it. The thesis, the NFL clock that was a grey
-        plate three objects down, and the two actions.
-     2. ONE STICKY RIBBON under it, carrying the two switches that govern every
-        board on this page — the venue and the board. They were loose pills in
-        the flow, so a reader eleven rows into the values table could not reach
-        them without scrolling back to the top. Now they follow him down.
-     3. A TINTED / WHITE ALTERNATION for the rest, on site.css's own .is-band,
+     1. ONE STICKY RIBBON at the top, carrying the two switches that govern
+        every board on this page — the venue and the board. They were loose
+        pills in the flow, so a reader eleven rows into the values table could
+        not reach them without scrolling back to the top. Now they follow him
+        down, and they are the first thing he meets.
+     2. A TINTED / WHITE ALTERNATION for the rest, on site.css's own .is-band,
         so the setup, the answer, and the footer matter read as three objects.
 
-   The first two are .is-hero and .is-ribbon IN site.css rather than here:
-   /fantasy wears the same two, and inlining a page's chrome twice is how the
-   chrome drifted the last time. What stays below is this page's own.
+   The ribbon is .is-ribbon IN site.css rather than here: /fantasy wears the
+   same one, and inlining a page's chrome twice is how the chrome drifted the
+   last time. What stays below is this page's own.
 
    Nothing here moves an id, a control, a string or a line of script. */
+
+/* The page's h1, kept in the document and off the screen. Removing the opening
+   band left nowhere to show a heading, and a page with no h1 is a page search
+   and a screen reader both have to guess at. Same off-screen idiom .skip-link
+   uses in site.css, so there is one way to do this rather than two. */
+.df-h1{position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden}
 
 /* THE UA SHEET'S [hidden] IS SPECIFICITY (0,1,0) — the same as any class — and
    loses to an author sheet at a tie, so `.rk-seg{display:inline-flex}` and
@@ -732,6 +737,12 @@ p{color:var(--sec);margin:0 0 16px}
 .df-ribbon-lab-board{margin-left:auto}
 .is-ribbon-in:has(#dfNav[hidden]) .df-ribbon-lab-board{display:none}
 @media(max-width:1080px){.df-ribbon-lab-board{margin-left:0}}
+
+/* The NFL clock now dates the setup band rather than the band that used to open
+   the page. .its-strip paints itself --panel, which is the tinted band's own
+   ground, so inside a band it would read as a bare outline; white is what every
+   other plate on a band already does (see .is-band .is-plate in site.css). */
+.is-band .its-strip{background:var(--bg)}
 
 /* The white column between the two tinted bands. */
 .df-main{padding-top:var(--space-4)}
@@ -768,31 +779,23 @@ p{color:var(--sec);margin:0 0 16px}
 </div></header>
 <main id="main">
 
-<!-- ── 1 · the opening band ────────────────────────────────────────────────
-     The page used to begin on the same white ground its tables are on, so the
-     first thing a reader met was a heading with no band around it and then a
-     row of pills. This continues the masthead instead: the thesis, the NFL
-     clock as a dateline rather than the grey plate it used to sit in three
-     objects lower, and the one quiet line down to the method. Same ids, same
-     script — it-season.js still paints [data-season-strip] wherever it is. -->
-<section class="is-hero">
-  <div class="wrap wide">
-    <p class="is-hero-date">
-      <span class="is-eyebrow">In-Season &middot; DFS</span>
-      <span class="its-strip" data-season-strip></span>
-    </p>
-    <h1>The lineup, solved. <em>Then the ways to break it.</em></h1>
-    <p class="is-lede">Daily fantasy is one slate, one set of game lines and one cap. Iron Tuna solves that cap against the market&rsquo;s own numbers and gives you the roster first &mdash; then the branches off it: the build that clears a double-up, the build that wins a big field, and the swap available at every slot.</p>
-    <a class="is-hero-how" href="#df-method">Where these numbers come from</a>
-  </div>
-</section>
+<!-- ── 1 · the heading, and nothing else ───────────────────────────────────
+     A reader on /dfs knows what DFS is and why he opened this page, so the band
+     that used to tell him both is gone and the page opens on its first control.
+     The h1 stays in the document for search and for a screen reader, off screen,
+     because there is no longer a place on the page to show one. The NFL clock it
+     used to carry moved into the setup band below, where it dates the slate the
+     reader is about to pick — it-season.js paints [data-season-strip] wherever
+     it is, so nothing about the clock changes but where it sits. -->
+<h1 class="df-h1">DFS: the market read, aimed at one slate</h1>
 
 <!-- ── 2 · the venue and the board ────────────────────────────────────────────────
-     The two switches that govern every board on the page, in a ribbon under
-     the band the way the rankings ribbon sits under the homepage hero. They
-     were two unlabelled pill groups loose in the column, which meant a reader
-     eleven rows into the values table had to scroll back to the top to change
-     board. Sticky, so they come with him. Same ids, same buttons, same
+     The two switches that govern every board on the page, in a ribbon directly
+     under the masthead the way the rankings ribbon sits under the homepage one.
+     They were two unlabelled pill groups loose in the column, which meant a
+     reader eleven rows into the values table had to scroll back to the top to
+     change board. Sticky, so they come with him, and first, so the page opens
+     on a control rather than on a paragraph. Same ids, same buttons, same
      handlers; only the markup around them is new. -->
 <nav class="is-ribbon" aria-label="Venue and board">
   <div class="is-ribbon-in">
@@ -812,6 +815,7 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="wrap wide">
     <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">Setup</span><h2>Set up the slate</h2><a class="is-sec-more" href="/dfs-getting-started">How the lobby works &rarr;</a></div></div>
     <p class="df-sub">Three choices, in this order: the roster format, the games that define the eligible player pool, and the way the contest pays. Every board below is solved for what you pick here.</p>
+    <div class="its-strip" data-season-strip></div>
     <p class="is-note" id="dfNote"></p>
     <p class="is-note" id="dfSiteNote"></p>
 
