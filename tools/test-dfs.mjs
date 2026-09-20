@@ -160,6 +160,27 @@ console.log('\nthe DFS page explanations');
   ok('DraftKings FPPG is always paired with the Iron Tuna projection and edge', page.includes('DraftKings FPPG') && page.includes('Iron Tuna Projection') && page.includes('Tuna Edge') && page.includes('historical fantasy-points-per-game average'));
   ok('the DFS What If box autocompletes from typed player names', page.includes('id="dfWhatIfInput"') && page.includes('function renderWhatIfList') && page.includes("addEventListener('input', renderWhatIfList)") && page.includes('data-whatif-key'));
   ok('the What If selection becomes an optimizer lock only when the player is eligible for the selected games', page.includes("if (whatIfKey && eligible[whatIfKey] && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey)"));
+  // Requiring and excluding used to be reachable only from the pool table
+  // inside the closed fine-tune panel. The roster is where the reader argues
+  // with the solve, so the two controls sit on the roster row.
+  ok('the solved roster carries a Require and an Exclude control on every row',
+     page.includes('function rosterActions(p)') && page.includes("data-mark=\"lock\"") && page.includes("data-mark=\"excl\"")
+     && page.includes("(lead ? rosterActions(p) : '')"));
+  ok('the player drawer can require or exclude anyone on the board, not only the nine on the roster',
+     page.includes('Require in every lineup') && page.includes('Exclude from every lineup'));
+  ok('every require/exclude control writes the same marks store and re-solves',
+     page.includes('function applyMark(act, key)') && page.includes("marks[key] = 'lock'") && page.includes("marks[key] = 'excl'")
+     && page.includes("['dfLineups', 'dfPlayerBody'].forEach"));
+  ok('requiring a player the What If box already forced reads as required, and clearing it clears both',
+     page.includes("function isRequired(key) { return marks[key] === 'lock' || whatIfKey === key; }")
+     && page.includes('if (whatIfKey === key) clearWhatIf(false)'));
+  ok('every constraint the build carries is listed above the roster with its own undo',
+     page.includes('function constraintBar(l)') && page.includes('Your constraints') && page.includes("data-mark=\"clear\"")
+     && page.includes("data-mark=\"clearall\"") && page.includes('constraintBar(lead) + lineupCard(lead, 0, sh, true)'));
+  ok('the constraints stay on screen when they leave no legal lineup, so they can be undone',
+     page.includes("$('dfLineups').innerHTML = constraintBar(null)") && page.includes('Clear one of the constraints above'));
+  ok('a required player the solve could not seat is said out loud rather than quietly dropped',
+     page.includes('could not be seated under the current cap and rules'));
   const scripts = [...page.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
   ok('every inline DFS script parses', (() => { try { scripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
 }
@@ -277,6 +298,32 @@ console.log('\nthe optimizer');
   ok('a lock is honored', locked.lineups[0].players.some(p => p.id === 'aaronrodgers|QB'));
   const excluded = DFS.build(players, { ...base, mode: 'ironTuna', exclude: ['jahmyrgibbs|RB'] });
   ok('an exclusion is honored', !excluded.lineups[0].players.some(p => p.id === 'jahmyrgibbs|RB'));
+  // A required player is a CONSTRAINT, not a preference, and that is the whole
+  // point of a Require button: several at once all have to be seated, each in a
+  // slot his position may fill.
+  const backs = players.filter(p => p.position === 'RB').sort((a, b) => a.salary - b.salary).slice(0, 2).map(p => p.id);
+  const manyLocks = DFS.build(players, { ...base, mode: 'ironTuna', lock: backs });
+  ok('two required running backs are both seated', manyLocks.ok && backs.every(id => manyLocks.lineups[0].players.some(p => p.id === id)),
+     JSON.stringify((manyLocks.lineups[0] || { players: [] }).players.map(p => p.slot + ':' + p.name)));
+  ok('and every one of them lands in a slot his position may fill',
+     manyLocks.ok && manyLocks.lineups[0].players.every(p => p.slot === p.position || (p.slot === 'FLEX' && /RB|WR|TE/.test(p.position))));
+  // The cap, the stack and the team maximum are constraints too, and a lock may
+  // never be honored by breaking one of them. When the requirements genuinely
+  // do not fit, the answer is NO LINEUP -- a roster quietly missing the player
+  // the reader required answers a question nobody asked.
+  const tooMany = DFS.build(players, { ...base, mode: 'ironTuna', lock: players.filter(p => p.position === 'RB').map(p => p.id) });
+  ok('requirements that cannot fit under the cap return no lineup, never a lineup missing one of them',
+     !tooMany.ok || tooMany.lineups.every(l => l.salary <= 50000 && players.filter(p => p.position === 'RB').every(q => l.players.some(p => p.id === q.id))));
+  const lockedStack = DFS.build(players, { ...base, mode: 'ironTuna', lock: ['jahmyrgibbs|RB'], stack: true, bringBack: true });
+  ok('a required player does not get honored by breaking the stack or the cap',
+     !lockedStack.ok || (lockedStack.lineups[0].salary <= 50000
+       && lockedStack.lineups[0].players.some(p => p.id === 'jahmyrgibbs|RB')));
+  // Required and excluded in the same breath is the reader contradicting
+  // himself; the exclusion is the narrower instruction and it wins, rather than
+  // the whole board coming back empty.
+  const both = DFS.build(players, { ...base, mode: 'ironTuna', lock: ['jahmyrgibbs|RB'], exclude: ['jahmyrgibbs|RB'] });
+  ok('a player required and excluded at once is excluded, and a lineup still builds',
+     both.ok && !both.lineups[0].players.some(p => p.id === 'jahmyrgibbs|RB'));
   const stacked = DFS.build(players, { ...base, mode: 'vegas', stack: true, stackSize: 1 });
   const qb = stacked.lineups[0].players.find(p => p.slot === 'QB');
   ok('a QB stack puts a pass-catcher from his team in the lineup', stacked.lineups[0].players.some(p => p.team === qb.team && /WR|TE/.test(p.position)), JSON.stringify(stacked.lineups[0].players.map(p => p.name)));
