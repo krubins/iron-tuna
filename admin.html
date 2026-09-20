@@ -783,7 +783,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     var rows = [['NFL schedule', u.schedule && u.schedule.updatedAt, u.schedule ? u.schedule.games + ' games, ' + u.schedule.provider : ''],
       ['Season odds overlay', u.odds && u.odds.updatedAt, u.odds ? u.odds.matched + ' matched' : ''],
       ['Betting snapshots', u.snapshots && u.snapshots.last, u.snapshots ? u.snapshots.subjects + ' subjects, ' + u.snapshots.books + ' books' : ''],
-      ['Player props, this week', u.props && u.props.lastAt, u.props ? u.props.note : 'not reported'],
+      // The pull clock, not the newest row: an unchanged line writes nothing, so
+      // `lastAt` is when a price last MOVED and this column says "Last update".
+      // A settled market read it as a two-day-old feed. `lastPullAt` is the
+      // fallback's fallback for a store stamped before the clock existed.
+      ['Player props, this week', u.props && (u.props.lastPullAt || u.props.lastAt), u.props ? u.props.note : 'not reported'],
       ['Weekly stats and snaps', u.usage && u.usage.updatedAt, u.usage ? u.usage.players + ' players' : ''],
       ['Injury list', u.availability && u.availability.updatedAt, u.availability ? 'as of ' + u.availability.asOf : ''],
       ['Depth charts', u.depthCharts && u.depthCharts.updatedAt, ''],

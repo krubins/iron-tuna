@@ -5139,7 +5139,15 @@ const SNAP_DDL = [
     'line REAL, over_odds INTEGER, under_odds INTEGER, game_id TEXT, raw_subject TEXT)',
   'CREATE INDEX IF NOT EXISTS ix_snap_subject ON odds_snapshots (subject, market, ts)',
   'CREATE INDEX IF NOT EXISTS ix_snap_latest ON odds_snapshots (subject, market, book, ts)',
-  'CREATE INDEX IF NOT EXISTS ix_snap_week ON odds_snapshots (season, week, ts)'
+  'CREATE INDEX IF NOT EXISTS ix_snap_week ON odds_snapshots (season, week, ts)',
+  // WHEN THE STORE LAST LOOKED, which the rows themselves cannot say. Because
+  // an unchanged line writes nothing, the newest row's ts is the last time a
+  // price MOVED, and every surface that called that number "pulled Nh ago" was
+  // telling a reader something false: a line the poll confirmed twenty minutes
+  // ago reads as 52 hours old the moment the market goes quiet, and the health
+  // board could not tell a stopped poll from a settled one. One row per subject
+  // type, stamped by every pull that reaches the store.
+  'CREATE TABLE IF NOT EXISTS odds_snapshot_pulls (subject_type TEXT PRIMARY KEY, ts INTEGER NOT NULL, seen INTEGER, changed INTEGER)'
 ];
 // Additive migrations for a table that may already exist. Each is a no-op
 // once applied and is allowed to fail (D1 raises on a duplicate column).
@@ -5213,7 +5221,49 @@ async function snapshotWrite(env, rows, ctx) {
     try { await env.LEADS_DB.batch(chunk); written += chunk.length; }
     catch (e) { for (const st of chunk) { try { await st.run(); written++; } catch (e2) {} } }
   }
+  // The pull clock (SNAP_DDL). A pull that found every line unchanged wrote
+  // nothing and is still a pull; stamping it here is what lets a surface say
+  // "read 12 minutes ago, last moved 52 hours ago" instead of collapsing the
+  // two into one wrong number. One upsert per subject type, so a pull carrying
+  // players and games costs two writes however many rows it saw.
+  const seenBy = {}, changedBy = {};
+  for (const r of list) { const t = String(r.subjectType || 'player'); seenBy[t] = (seenBy[t] || 0) + 1; }
+  for (const r of fresh) { const t = String(r.subjectType || 'player'); changedBy[t] = (changedBy[t] || 0) + 1; }
+  for (const [t, n] of Object.entries(seenBy)) {
+    try {
+      await env.LEADS_DB.prepare(
+        'INSERT INTO odds_snapshot_pulls (subject_type, ts, seen, changed) VALUES (?, ?, ?, ?) ' +
+        // The guard matters: two pulls can overlap across isolates, and a slow
+        // one landing after a fast one must not wind the clock backwards.
+        'ON CONFLICT(subject_type) DO UPDATE SET ts = excluded.ts, seen = excluded.seen, changed = excluded.changed ' +
+        'WHERE excluded.ts > odds_snapshot_pulls.ts')
+        .bind(t, ts, n, changedBy[t] || 0).run();
+    } catch (e) {}
+  }
   return { ok: true, seen: list.length, written, unchanged: list.length - fresh.length };
+}
+// The pull clock, by subject type: when the store last SAW this kind of market,
+// whether or not anything in it had moved. Empty until the first pull under the
+// odds_snapshot_pulls table, and every caller must handle that -- a store that
+// has never been stamped cannot be asked when it last ran.
+async function snapshotPulls(env) {
+  if (!(await snapshotReady(env))) return {};
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT subject_type, ts, seen, changed FROM odds_snapshot_pulls').all();
+    const out = {};
+    for (const r of (q.results || [])) {
+      const at = Number(r.ts) || null;
+      if (at) out[String(r.subject_type)] = { at, seen: Number(r.seen) || 0, changed: Number(r.changed) || 0 };
+    }
+    return out;
+  } catch (e) { return {}; }
+}
+// When the store last read player props, or null. The one call every surface
+// that wants to print a pull age makes.
+async function snapshotPulledAt(env, subjectType) {
+  const pulls = await snapshotPulls(env);
+  const row = pulls[subjectType || 'player'];
+  return row ? row.at : null;
 }
 async function snapshotPrune(env, keepDays) {
   if (!(await snapshotReady(env))) return { ok: false };
@@ -5463,6 +5513,12 @@ function _gameLineMove(g, gm) {
 // name, against the same projection index — so this cannot agree with the
 // health board while the boards disagree with both.
 const PROPS_STALE_HOURS = 12;
+// Hours, said the way a person says them. Under an hour is "within the hour"
+// rather than "0.3 hours ago", which is how a live feed ended up reading like
+// a rounding error on the health board.
+const _propsAgo = h => h == null ? 'at an unknown time'
+  : h < 1 ? 'within the hour'
+  : Math.round(h) + ' hour' + (Math.round(h) === 1 ? '' : 's') + ' ago';
 async function propsHealth(env, season, week) {
   if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
   if (week == null) return { ok: true, state: 'no_week', note: 'No regular-season week is current, so no weekly props are expected.' };
@@ -5483,7 +5539,14 @@ async function propsHealth(env, season, week) {
     for (const r of (mix.results || [])) byMarket[String(r.market)] = { players: Number(r.players) || 0, rows: Number(r.rows) || 0 };
     const rows = Number((tot && tot.rows) || 0);
     const last = tot && tot.last ? Number(tot.last) : null;
-    const ageHours = last ? Math.round((Date.now() - last) / 360000) / 10 : null;
+    // Two different clocks, and reporting one of them as the other is the bug
+    // this pair replaces. `lastMoveHours` is how long since a price CHANGED,
+    // which is all the append-only store can say on its own; `pullAgeHours` is
+    // how long since the poll actually read the feed, which is the question a
+    // reader looking at a quiet market is really asking.
+    const lastMoveHours = last ? Math.round((Date.now() - last) / 360000) / 10 : null;
+    const pulledAt = await snapshotPulledAt(env, 'player');
+    const pullAgeHours = pulledAt ? Math.round((Date.now() - pulledAt) / 360000) / 10 : null;
     if (!rows) {
       return { ok: true, state: 'empty', season, week, rows: 0, subjects: 0, matched: 0, coverage: 0,
                note: 'No player prop has been written for this week. Check that the market provider is keyed and that its poll is running.' };
@@ -5504,21 +5567,32 @@ async function propsHealth(env, season, week) {
     // its own state, because the fix is at the provider, not here.
     const PROJECTABLE = ['passYd', 'passTD', 'rushYd', 'recYd', 'rec'];
     const projectable = PROJECTABLE.filter(m => byMarket[m]);
+    // STALE means the POLL stopped, not that the books went quiet. A settled
+    // market can hold every line for two days with the feed running perfectly,
+    // and calling that stale sent somebody looking for a broken collector. The
+    // last-move age is the fallback only for a store written before the pull
+    // clock existed and never stamped since.
+    const freshnessHours = pullAgeHours != null ? pullAgeHours : lastMoveHours;
     const state = matched === 0 ? 'unmatched'
-      : (ageHours != null && ageHours > PROPS_STALE_HOURS) ? 'stale'
+      : (freshnessHours != null && freshnessHours > PROPS_STALE_HOURS) ? 'stale'
       : !projectable.length ? 'td_only'
       : 'live';
     const names = Object.keys(byMarket).sort((x, y) => byMarket[y].players - byMarket[x].players);
     return { ok: true, state, season, week, rows, subjects: subjects.length, matched, boardPlayers,
              coverage: boardPlayers ? Math.round(matched / boardPlayers * 1000) / 10 : 0,
-             markets, books, lastAt: last, ageHours, byMarket,
+             markets, books, lastAt: last, lastMoveHours, lastPullAt: pulledAt, pullAgeHours, byMarket,
              marketNames: names, projectableMarkets: projectable,
              note: state === 'live'
-               ? matched + ' board player' + (matched === 1 ? ' carries' : 's carry') + ' a quoted prop this week, across ' + markets + ' market' + (markets === 1 ? '' : 's') + ' and ' + books + ' book' + (books === 1 ? '' : 's') + ', pulled ' + (ageHours < 1 ? 'within the hour' : ageHours + ' hours ago') + '. The weekly Vegas projection is reading them.'
+               ? matched + ' board player' + (matched === 1 ? ' carries' : 's carry') + ' a quoted prop this week, across ' + markets + ' market' + (markets === 1 ? '' : 's') + ' and ' + books + ' book' + (books === 1 ? '' : 's') + '. '
+                 + (pullAgeHours != null ? 'The feed was read ' + _propsAgo(pullAgeHours) + '; ' : '')
+                 + (lastMoveHours != null ? 'the newest line move landed ' + _propsAgo(lastMoveHours) + '. ' : '')
+                 + 'The weekly Vegas projection is reading them.'
                : state === 'td_only'
                ? 'The books are posting on ' + matched + ' board players this week, and the only market in the store is ' + names.join(', ') + '. That is applied \u2014 the touchdown price sets the touchdown side of every one of those players \u2014 but the yardage and reception sides still come from the game line, because no book posted one. A yardage or reception market is what a standalone market projection is built from.'
                : state === 'stale'
-               ? 'Props were collected for this week but the newest is ' + ageHours + ' hours old. The poll has stopped; the board is serving the last lines it got.'
+               ? (pullAgeHours != null
+                   ? 'The poll has not read the feed in ' + pullAgeHours + ' hours. The board is serving the last lines it got.'
+                   : 'No price in this week\u2019s props has moved in ' + lastMoveHours + ' hours and the store carries no pull clock yet, so whether the poll is running cannot be told from here. Check the collector.')
                : 'The store holds ' + subjects.length + ' priced subjects for this week and NONE of them match a player on the board. The collector is working and every projection is still falling back to the game line \u2014 the name join is broken.' };
   } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
 }
@@ -5700,13 +5774,19 @@ function vegasConfidence(f) {
   } else if (f.agreement < VEGAS_CONF_MIN_AGREE) {
     demote('the books disagree with each other');
   }
-  if (f.ageHours == null) demote('the pull has no timestamp');
-  else if (f.ageHours > VEGAS_CONF_STALE_HOURS) demote('the lines are more than a day and a half old');
+  // `lastMoveHours` is how long since a book MOVED his number, not how long
+  // since the feed was read: the store writes a row only on a change. Both
+  // still belong here -- a line nobody has touched in a day and a half is
+  // either a settled market or a player the books quietly stopped posting, and
+  // this cannot tell them apart -- but the reasons must say what they mean,
+  // because they are printed to readers on the player page.
+  if (f.lastMoveHours == null) demote('his line carries no timestamp');
+  else if (f.lastMoveHours > VEGAS_CONF_STALE_HOURS) demote('no book has moved his line in more than a day and a half');
 
   // Not a demotion, but worth saying: fresh-ish rather than fresh.
   const soft = [];
-  if (f.ageHours != null && f.ageHours > VEGAS_CONF_FRESH_HOURS && f.ageHours <= VEGAS_CONF_STALE_HOURS) {
-    soft.push('the lines are over half a day old');
+  if (f.lastMoveHours != null && f.lastMoveHours > VEGAS_CONF_FRESH_HOURS && f.lastMoveHours <= VEGAS_CONF_STALE_HOURS) {
+    soft.push('no book has moved his line in over half a day');
   }
   if (f.marketCount < 3) soft.push('only ' + f.marketCount + ' market' + (f.marketCount === 1 ? '' : 's') + ' priced');
 
@@ -5771,7 +5851,7 @@ function vegasProjection(markets, position, rules, ctx) {
                ? { probability: Math.round(td.probability * 1000) / 10, pointsPerTd: tdPointsFor(pos, rules || SCORING_BASE),
                    books: td.books, devigged: td.devigged, source: 'anytime-td-market' } : null,
              books: books.size,
-             ageHours: c.asOf ? Math.round(Math.max(0, (Date.now() - c.asOf) / 3600000) * 10) / 10 : null };
+             lastMoveHours: c.asOf ? Math.round(Math.max(0, (Date.now() - c.asOf) / 3600000) * 10) / 10 : null };
   }
 
   // Stats, in Iron Tuna's own keys, from priced markets ONLY.
@@ -5804,10 +5884,14 @@ function vegasProjection(markets, position, rules, ctx) {
   const points = _oddsRound(base + (hasCountTd ? 0 : tdPoints));
 
   const agreement = agrees.length ? agrees.reduce((a, b) => a + b, 0) / agrees.length : null;
-  const ageHours = c.asOf ? Math.max(0, (Date.now() - c.asOf) / 3600000) : null;
+  // NOT the age of the pull. `c.asOf` is the newest row in the snapshot store
+  // for this player, and the store keeps a row only when a price changes, so
+  // this is the last time one of his books MOVED. The surfaces that print it
+  // say so; snapshotPulledAt is what answers "when did we last read the feed".
+  const lastMoveHours = c.asOf ? Math.max(0, (Date.now() - c.asOf) / 3600000) : null;
   const confidence = vegasConfidence({
     coreMissing: coreMissing.length, marketCount: have.size, books: books.size,
-    agreement, ageHours, injuryStatus: c.injuryStatus || null
+    agreement, lastMoveHours, injuryStatus: c.injuryStatus || null
   });
   const partial = coreMissing.length > 0;
   return {
@@ -5824,7 +5908,7 @@ function vegasProjection(markets, position, rules, ctx) {
     books: books.size,
     agreement: agreement == null ? null : Math.round(agreement * 100) / 100,
     asOf: c.asOf || null,
-    ageHours: ageHours == null ? null : Math.round(ageHours * 10) / 10,
+    lastMoveHours: lastMoveHours == null ? null : Math.round(lastMoveHours * 10) / 10,
     confidence: confidence.level,
     confidenceDemotions: confidence.demotions,
     confidenceReasons: confidence.reasons
@@ -6852,9 +6936,9 @@ function buildBoards(ctx, opts) {
         // (VEGAS_MARKETS.core). Dropping `reason` and `priced` here made that
         // man indistinguishable from one no book has looked at, and the
         // difference is the whole diagnosis when a feed is carrying one market.
-        vegasProjection: vp && vp.ok ? { status: vp.status, label: vp.label, confidence: vp.confidence, td: vp.td, priced: vp.priced, missing: vp.missingCore, books: vp.books, ageHours: vp.ageHours, reasons: vp.confidenceReasons }
+        vegasProjection: vp && vp.ok ? { status: vp.status, label: vp.label, confidence: vp.confidence, td: vp.td, priced: vp.priced, missing: vp.missingCore, books: vp.books, lastMoveHours: vp.lastMoveHours, reasons: vp.confidenceReasons }
           : (vp ? { status: vp.status, label: vp.label, reason: vp.reason, priced: vp.priced || [], missing: vp.missing || [],
-                    td: vp.td || null, books: vp.books == null ? null : vp.books, ageHours: vp.ageHours == null ? null : vp.ageHours,
+                    td: vp.td || null, books: vp.books == null ? null : vp.books, lastMoveHours: vp.lastMoveHours == null ? null : vp.lastMoveHours,
                     applied: !!(vp.reason === 'no_core_market' && vp.priced && vp.priced.length) } : null) });
     }
     const vegasConf = confN ? _confFrom(confSum / confN) : 'LOW';
@@ -11117,11 +11201,13 @@ async function contentContext(env, weekNumber, opts) {
   if (flagOn(env, 'DFS_CONTENT') && week.ok && curWeek != null) {
     const avail = await availabilityForWeek(env).catch(() => null);
     const roster = await rosterStatusTable().catch(() => null);
+    // When the store last READ the props feed, which no row in it can say.
+    const propsPulledAt = await snapshotPulledAt(env, 'player').catch(() => null);
     for (const site of ['dk', 'fd']) {
       try {
         const sal = await dfsSalariesRead(env, site, sched.season, curWeek);
         if (!sal || !sal.rows.length) continue;
-        const slate = buildDfsSlate(site, sal.rows, week, { usage, week: curWeek, availability: avail, roster });
+        const slate = buildDfsSlate(site, sal.rows, week, { usage, week: curWeek, availability: avail, roster, propsPulledAt });
         slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
         slate.metrics = dfsMetrics(slate.players, 'gpp'); slate.stackScores = dfsStackScores(slate.stacks);
         dfs[site] = slate;
@@ -11931,9 +12017,21 @@ async function newsroomStatus(env) {
 // NOTHING HERE SUBMITS AN ENTRY. The optimizer builds lineups for a reader to
 // look at and copy; there is no path from this code to a DFS site.
 const DFS_CONTRACT = 1;
+// Two rosters per site, because a lobby sells two shapes of salary contest
+// out of files with identical columns. `single` is the single-game roster:
+// six seats out of one game, the first of them a multiplier seat that scores
+// 1.5x and costs 1.5x, any position allowed in any seat, and both teams
+// required. Those numbers are the operators' published rules as of
+// 20 Sep 2026 -- FanDuel moved its MVP to 1.5x salary and added a sixth seat
+// in 2025, which is why the two single-game rosters are now the same shape at
+// different caps. dfs-optimizer.js carries the same table for the browser and
+// tools/test-dfs.mjs holds the two in step.
+const DFS_SINGLE_FLEX = ['QB', 'RB', 'WR', 'TE', 'K', 'DST'];
 const DFS_SITES = {
-  dk: { label: 'DraftKings', cap: 50000, slots: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DST'], flex: ['RB', 'WR', 'TE'], scoring: 'dk' },
-  fd: { label: 'FanDuel', cap: 60000, slots: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DST'], flex: ['RB', 'WR', 'TE'], scoring: 'fd' }
+  dk: { label: 'DraftKings', cap: 50000, slots: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DST'], flex: ['RB', 'WR', 'TE'], scoring: 'dk',
+        single: { label: 'Showdown Captain Mode', seat: 'CPT', cap: 50000, slots: ['CPT', 'FLEX', 'FLEX', 'FLEX', 'FLEX', 'FLEX'], flex: DFS_SINGLE_FLEX, mult: { CPT: 1.5 }, minTeams: 2 } },
+  fd: { label: 'FanDuel', cap: 60000, slots: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DST'], flex: ['RB', 'WR', 'TE'], scoring: 'fd',
+        single: { label: 'Single Game', seat: 'MVP', cap: 60000, slots: ['MVP', 'FLEX', 'FLEX', 'FLEX', 'FLEX', 'FLEX'], flex: DFS_SINGLE_FLEX, mult: { MVP: 1.5 }, minTeams: 2 } }
 };
 // Site scoring, as published. DK: full PPR, three-point bonuses at 300
 // passing and 100 rushing or receiving yards, -1 per interception and per
@@ -12017,10 +12115,12 @@ const _dfsPos = p => { const u = String(p || '').toUpperCase(); return u === 'DE
 // file whatever they call it. One shared name between two players on a slate
 // happens; a file where a quarter of the rows repeat a player does not.
 //
-// Called by POST /api/admin/dfs, the desk's CSV import, which is now the only
-// CSV path in: the reader upload at POST /api/dfs/slate was its first consumer
-// and was removed with the panel that fed it on 2026-09-20. The admin import
-// had never had this guard, so it inherited it the same day.
+// Called by both CSV paths in. The desk's import at POST /api/admin/dfs uses
+// it to REFUSE a single-game file, because dfs_salaries is the main slate
+// every reader is served. The reader upload at POST /api/dfs/slate uses it to
+// ACCEPT one, because that route stores nothing and prices the file for the
+// one reader who handed it over. Same question, opposite answers, and the
+// difference is whether the rows become everybody's board or nobody's.
 const DFS_MULTIPLIER_SLOT = /\b(CPT|MVP)\b/;
 function dfsSlateShape(rows) {
   const list = rows || [];
@@ -12030,6 +12130,45 @@ function dfsSlateShape(rows) {
   let dup = 0;
   for (const r of list) { const k = _oddsNorm(r.name) + '|' + r.position; if (seen.has(k)) dup++; else seen.add(k); }
   return dup * 4 > list.length ? 'single-game' : 'classic';
+}
+// A single-game file prices the same man twice: once in the multiplier seat
+// and once in a FLEX. Left alone that is two rows for one player -- a board
+// that lists him twice and a roster that could seat him twice -- so they fold
+// into one row here.
+//
+// Reached from POST /api/dfs/slate, where a reader hands over the export their
+// own contest lobby gave them. The desk import never stores one of these, so
+// that route is the only way a Showdown or Tiers roster gets real prices. The row keeps the FLEX price as its salary, because that
+// is the number every board on the page compares against, and carries the
+// operator's own price for the multiplier seat in `salaryBySlot` so the
+// builder charges what DraftKings charges rather than 1.5x arrived at here.
+//
+// FanDuel exports one row per player with the seat in its roster-position
+// list ("MVP/FLEX"), the way DraftKings writes "RB/FLEX" on a main slate. One
+// row means one price, which is the base price, and the multiplier is applied
+// at entry -- so a lone multiplier row is left exactly as it is rather than
+// divided by 1.5 to guess at a number the file never carried.
+function dfsCollapseSingleGame(rows, site) {
+  const seat = (DFS_SITES[site] && DFS_SITES[site].single && DFS_SITES[site].single.seat) || 'CPT';
+  const groups = new Map();
+  for (const r of rows || []) {
+    const k = _oddsNorm(r.name) + '|' + r.position + '|' + (r.team || '');
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
+  }
+  const out = [];
+  for (const group of groups.values()) {
+    const up = group.filter(r => DFS_MULTIPLIER_SLOT.test(r.rosterPosition || ''));
+    const flat = group.filter(r => !DFS_MULTIPLIER_SLOT.test(r.rosterPosition || ''));
+    // With no roster-position column at all, the cheaper row is the FLEX
+    // price: the multiplier seat costs more by construction on both sites.
+    const base = (flat.length ? flat : group).slice().sort((a, b) => a.salary - b.salary)[0];
+    const top = (up.length ? up : group).slice().sort((a, b) => b.salary - a.salary)[0];
+    const row = { ...base };
+    if (top && top !== base && Number.isFinite(top.salary) && top.salary > base.salary) row.salaryBySlot = { [seat]: top.salary };
+    out.push(row);
+  }
+  return out;
 }
 // ── the CSV each lobby exports ─────────────────────────────────────────────
 // DraftKings: Position, Name + ID, Name, ID, Roster Position, Salary, Game Info, TeamAbbrev, AvgPointsPerGame
@@ -12050,12 +12189,19 @@ function parseDfsCsv(site, text) {
       const m = /^([A-Z]{2,3})@([A-Z]{2,3})/.exec(game);
       const opp = m ? (teamKey(m[1]) === team ? teamKey(m[2]) : teamKey(m[1])) : null;
       const fppg = iFppg >= 0 ? parseFloat(f[iFppg]) : NaN;
+      const roster = iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null;
+      // DraftKings has no Tier column; a Tiers export names the tier in the
+      // roster-position cell instead ("TIER 3"). Only that exact shape counts
+      // as a tier. A main slate's "RB/FLEX" is not one, and nothing here is
+      // inferred from salary -- a Tiers roster built out of invented buckets
+      // is a lineup nobody can enter.
+      const tier = roster ? (roster.match(/^(?:TIER\s*)?(\d{1,2})$/) || [])[1] || null : null;
       rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
-                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null,
+                  rosterPosition: roster, tier,
                   operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else if (site === 'fd') {
-    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position'), iFppg = idx('FPPG'), iInj = idx('Injury Indicator');
+    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position'), iFppg = idx('FPPG'), iInj = idx('Injury Indicator'), iTier = idx('Tier');
     if (iPos < 0 || iSal < 0 || (iNick < 0 && iFirst < 0)) return { rows: [], error: 'not a FanDuel salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
@@ -12068,6 +12214,12 @@ function parseDfsCsv(site, text) {
                   // the injury report behind the slate is the primary source
                   // and this is only the fallback.
                   injuryIndicator: iInj >= 0 ? String(f[iInj] || '').trim().toUpperCase() || null : null,
+                  // A Tiers contest has no salary cap: the whole contest is
+                  // which body out of each posted bucket, and the bucket is
+                  // this column. Blank on every other kind of file, which is
+                  // what keeps a Tiers roster from being invented out of
+                  // salary bands on a slate that never carried tiers.
+                  tier: iTier >= 0 && String(f[iTier] || '').trim() ? String(f[iTier]).trim() : null,
                   operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else return { rows: [], error: 'unknown site' };
@@ -12332,7 +12484,9 @@ function dfsMarketRead(p, w0, vegasPts, consensusPts) {
     shortPriced: short ? short.priced : [], shortPricedLabels: short ? short.priced.map(m => DFS_PROP_LABEL[m] || m) : [],
     shortMissing: short ? short.missing : [], shortMissingLabels: short ? short.missing.map(m => DFS_PROP_LABEL[m] || m) : [],
     books: vp && Number.isFinite(vp.books) ? vp.books : null,
-    ageHours: vp && Number.isFinite(vp.ageHours) ? vp.ageHours : null,
+    // How long since a book moved his number, NOT how long since the feed was
+    // read. The slate note carries the read time; this one is his alone.
+    lastMoveHours: vp && Number.isFinite(vp.lastMoveHours) ? vp.lastMoveHours : null,
     status: vp ? vp.status : null,
     confidence: (p && p.vegas && p.vegas.confidence) || 'LOW',
     // The anytime-touchdown price is the one prop that speaks directly to a
@@ -12347,7 +12501,7 @@ function dfsMarketRead(p, w0, vegasPts, consensusPts) {
 // boolean, and a boolean cannot answer the question a reader deciding whether
 // to trust a market build is actually asking: priced how much of it, by how
 // many books, how long ago, and what is everyone else standing on.
-function dfsPropCoverage(rows) {
+function dfsPropCoverage(rows, pulledAt) {
   const on = (rows || []).filter(r => r.onBoard && r.available !== false && r.market);
   const basis = {};
   const markets = new Set(), shortMarkets = new Set();
@@ -12362,14 +12516,22 @@ function dfsPropCoverage(rows) {
     if (!m.quoted) continue;
     priced++;
     if (m.books) { books += m.books; bookN++; }
-    if (m.ageHours != null && (fresh == null || m.ageHours < fresh)) fresh = m.ageHours;
+    if (m.lastMoveHours != null && (fresh == null || m.lastMoveHours < fresh)) fresh = m.lastMoveHours;
     for (const k of m.priced) markets.add(k);
   }
   return { players: on.length, priced, coverage: on.length ? Math.round(priced / on.length * 100) : 0,
            basis, markets: [...markets].sort(), marketLabels: [...markets].sort().map(k => DFS_PROP_LABEL[k] || k),
            quotedButShort: short, shortMarkets: [...shortMarkets].sort(),
            shortMarketLabels: [...shortMarkets].sort().map(k => DFS_PROP_LABEL[k] || k),
-           avgBooks: bookN ? Math.round(books / bookN * 10) / 10 : null, freshestHours: fresh };
+           avgBooks: bookN ? Math.round(books / bookN * 10) / 10 : null,
+           // The two clocks, apart. `freshestMoveHours` is the most recently
+           // moved line on the slate; `pullAgeHours` is when the store last
+           // read the feed. A slate can be read every hour and still show a
+           // freshest move two days old, which is a quiet market, not a dead
+           // one, and printing only the first said the opposite.
+           freshestMoveHours: fresh,
+           pullAgeHours: Number.isFinite(pulledAt) && pulledAt > 0
+             ? Math.round((Date.now() - pulledAt) / 360000) / 10 : null };
 }
 // Said in one sentence, because every DFS surface prints it and they must not
 // drift. It never claims a prop that is not there and never hides one that is.
@@ -12387,8 +12549,10 @@ function dfsPropNote(cov) {
   }
   return 'The books have priced ' + cov.priced + ' of ' + cov.players + ' players on this slate (' + cov.coverage + '%)'
     + (cov.avgBooks ? ', ' + cov.avgBooks + ' books apiece' : '')
-    + (cov.freshestHours != null ? ', pulled ' + (cov.freshestHours < 1 ? 'within the hour' : Math.round(cov.freshestHours) + ' hours ago') : '')
-    + '. Markets quoted: ' + cov.marketLabels.join(', ') + '.'
+    + '.'
+    + (cov.pullAgeHours != null ? ' The feed was read ' + _propsAgo(cov.pullAgeHours) + '.' : '')
+    + (cov.freshestMoveHours != null ? ' The most recent line move on the slate landed ' + _propsAgo(cov.freshestMoveHours) + '.' : '')
+    + ' Markets quoted: ' + cov.marketLabels.join(', ') + '.'
     + (cov.quotedButShort ? ' Another ' + cov.quotedButShort + ' carry only ' + cov.shortMarketLabels.join(' and ') + ', which is not enough to build a projection from.' : '')
     + ' Everyone else carries the game line\u2019s environment, discounted for it.';
 }
@@ -12432,17 +12596,24 @@ function buildDfsSlate(site, salaries, board, opts) {
   const roster = o.roster || null;
   const actuals = o.actuals || null;
   const week = Number.isFinite(Number(o.week)) ? Number(o.week) : null;
+  // Which roster this file builds. A single-game export has the same columns
+  // as a main slate and a completely different roster behind it, so the shape
+  // decides the cap, the seats and which positions may sit in them, and the
+  // duplicate multiplier rows fold away before anything is priced.
+  const shape = o.shape === 'single-game' ? 'single-game' : 'classic';
+  const seats = shape === 'single-game' ? S.single : S;
+  const priced = shape === 'single-game' ? dfsCollapseSingleGame(salaries, site) : (salaries || []);
   const byKey = new Map();
   for (const p of (board && board.players) || []) byKey.set(p.key, p);
   const defByTeam = new Map();
   for (const p of (board && board.players) || []) if (p.pos === 'DEF') defByTeam.set(p.team, p);
   const rows = [];
-  for (const s of salaries || []) {
+  for (const s of priced) {
     const pos = s.position;
     const fppg = dfsOperatorFppg(site, s, rules, usage);
     const operatorFppg = fppg.value;
     const p = pos === 'DST' ? defByTeam.get(teamKey(s.team)) : byKey.get(_oddsNorm(s.name) + '|' + pos);
-    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, onBoard: false }); continue; }
+    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, salaryBySlot: s.salaryBySlot || null, tier: s.tier || null, operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, onBoard: false }); continue; }
     const rst = dfsRosterCheck(roster, [s.name, p.name], pos, p.team);
     // The injury report first (it is this week's own word), then the reserve
     // list, then the roster file, then the salary file's indicator. A man off
@@ -12458,6 +12629,10 @@ function buildDfsSlate(site, salaries, board, opts) {
     const lam = (p.ironTuna.stats.rushTD || 0) + (p.ironTuna.stats.recTD || 0);
     rows.push({
       name: p.name, position: pos, team: p.team, opponent: w0 ? w0.opponent : s.opponent, home: w0 ? w0.home : null, salary: s.salary, onBoard: true, key: p.key, siteName: s.name.trim(),
+      // What the multiplier seat costs, when the file said so, and which
+      // bucket a Tiers contest put him in. Null on a main slate, which is
+      // every slate that is not one of those two contests.
+      salaryBySlot: s.salaryBySlot || null, tier: s.tier || null,
       vegasPoints: v, ironTunaPoints: it, consensusPoints: c,
       // His game is over, so the projections above are describing an
       // afternoon that already happened. Everything downstream -- the
@@ -12498,8 +12673,15 @@ function buildDfsSlate(site, salaries, board, opts) {
     expensiveFades: skill.filter(r => r.salary >= 6000 && r.marketDelta && r.marketDelta.points < 0).sort((a, b) => a.marketDelta.points - b.marketDelta.points).slice(0, 15)
   };
   const benched = rows.filter(r => r.onBoard && r.available === false);
-  const cov = dfsPropCoverage(rows);
-  return { ok: rows.length > 0, contract: DFS_CONTRACT, site, label: S.label, cap: S.cap, slots: S.slots, flex: S.flex, scoring: 'site', players: rows.sort((a, b) => b.salary - a.salary),
+  const cov = dfsPropCoverage(rows, o.propsPulledAt);
+  return { ok: rows.length > 0, contract: DFS_CONTRACT, site, label: S.label, cap: seats.cap, slots: seats.slots, flex: seats.flex, scoring: 'site', players: rows.sort((a, b) => b.salary - a.salary),
+           // The roster this slate was priced for, said out loud, so nothing
+           // downstream has to re-derive it from the shape of the file.
+           format: shape, formatLabel: shape === 'single-game' ? S.label + ' ' + S.single.label : S.label + ' Classic',
+           multiplier: shape === 'single-game' ? S.single.mult : null,
+           multiplierSeat: shape === 'single-game' ? S.single.seat : null,
+           minTeams: shape === 'single-game' ? S.single.minTeams : 0,
+           tiers: [...new Set(rows.map(r => r.tier).filter(Boolean))],
            medianVegasPerK: _oddsRound(med * 100) / 100, unmatched: rows.filter(r => !r.onBoard).length, boards,
            unavailable: benched.length,
            unavailableNames: benched.sort((a, b) => b.salary - a.salary).slice(0, 25).map(r => ({ name: r.name, position: r.position, team: r.team, salary: r.salary, status: r.weekStatus, basis: r.weekStatusBasis })),
@@ -14843,8 +15025,8 @@ export default {
       if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
         ...dfsNoSalariesNote(site, Date.now()),
         operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
-      const [board, usage, avail, roster, actuals] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null), dfsActualsForWeek(env, sched, week).catch(() => null)]);
-      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage, week, availability: avail, roster, actuals });
+      const [board, usage, avail, roster, propsPulledAt, actuals] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null), snapshotPulledAt(env, 'player').catch(() => null), dfsActualsForWeek(env, sched, week).catch(() => null)]);
+      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage, week, availability: avail, roster, propsPulledAt, actuals });
       // How much of the slate is already in the books. The page needs this to
       // say whether a total is a projection, a result, or part of each.
       slate.played = actuals ? { games: actuals.games, final: actuals.final, teams: [...actuals.teams].sort() } : null;
@@ -14856,6 +15038,78 @@ export default {
         slate.stackScores = dfsStackScores(slate.stacks);
       }
       return json(slate, 200, { ...c, 'cache-control': 'public, max-age=300' });
+    }
+    // The reader's own lobby export, priced and then thrown away.
+    //
+    // REMOVED 2026-09-20 (#293) and restored the same day, because the finding
+    // that removed it stopped being true in between. The panel went on the
+    // grounds that nobody used it -- and nobody did, because there was nothing
+    // to use it FOR: a main-slate file got you the board you already had, and
+    // a Showdown file got you a 400. The site solved one contest.
+    //
+    // It now solves thirteen, and five of them -- Showdown Captain Mode,
+    // In-Game Showdown, Madden Showdown Captain, FanDuel Single Game and
+    // Tiers -- are priced on a file the desk import never stores. Without this
+    // route those five can explain their roster and never build one. So the
+    // route is back, and the control that feeds it is not: the always-on panel
+    // nobody used stays gone, and /dfs asks for a file only where a format
+    // needs one it cannot otherwise get.
+    //
+    // /api/dfs above serves the desk's import: one main slate a week, the same
+    // rows for everybody. A reader entering a different contest already has the
+    // salary file, because the site they play on hands it to them on the
+    // contest page. This takes that file, runs it through the same parser and
+    // the same slate builder, and hands back the boards. It is the CSV path of
+    // docs/data-sources.md carried to where it belongs: the act of obtaining
+    // the data stays with the person already entitled to it.
+    //
+    // It STORES NOTHING. dfs_salaries is keyed by site and week with no reader
+    // on it, so one reader's upload written there would be what every other
+    // reader is shown. The parse is per request, the response is uncacheable,
+    // and the file itself never leaves the reader's browser except to be
+    // scored. Importing to the shared table stays an admin action.
+    if (url.pathname === '/api/dfs/slate') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false, error: 'method', note: 'POST { site, csv } to price a salary file.' }, 405, c);
+      if (await rl(env, request, 'dfsup', 60, 600)) return json({ ok: false, error: 'too_many', note: 'That is a lot of files in ten minutes. Wait a moment and try again.' }, 429, c);
+      // Measure the body before parsing it. The admin import can take the JSON
+      // straight because a key gets you there; anyone at all gets here, and a
+      // request.json() on an unbounded body is memory spent before the first
+      // check runs. The headroom over the CSV cap below is JSON escaping.
+      let raw = '';
+      try { raw = await request.text(); } catch (e) { return json({ ok: false, error: 'bad_body' }, 400, c); }
+      if (raw.length > 1400000) return json({ ok: false, error: 'too_big',
+        note: 'That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.' }, 413, c);
+      let b = {}; try { b = JSON.parse(raw); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); }
+      const site = DFS_SITES[b.site] ? b.site : null;
+      if (!site) return json({ ok: false, error: 'site', note: 'Choose DraftKings or FanDuel before reading a file.' }, 400, c);
+      const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 1000000));
+      if (parsed.error) return json({ ok: false, error: parsed.error,
+        note: 'That file did not read as a ' + DFS_SITES[site].label + ' salary export. Download it from the contest lobby and upload it unchanged.' }, 400, c);
+      // A single-game file used to be refused here, because every board was
+      // built for the classic cap and pricing a captain against it would have
+      // shown a reader a lineup nobody can enter. The roster is now read off
+      // the file instead: the shape decides the cap, the seats and the
+      // multiplier, so the Showdown export builds a Showdown roster.
+      const shape = dfsSlateShape(parsed.rows);
+      const sched = await scheduleCacheRead(env);
+      const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+      const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      const [board, usage, avail, roster] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null)]);
+      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, { usage, week, availability: avail, roster, shape });
+      slate.week = week;
+      // No salariesAsOf: the reader's file has no import time, and a timestamp
+      // for when they happened to press the button would say nothing true.
+      slate.source = 'upload'; slate.salariesAsOf = null;
+      slate.stacks = buildDfsStacks(slate, state);
+      if (flagOn(env, 'DFS_CONTENT')) {
+        const contest = DFS_CONTESTS[b.contest] ? b.contest : 'gpp';
+        const m = dfsMetrics(slate.players, contest);
+        slate.metrics = { contest: m.contest, label: m.label, note: m.note, sortBy: m.sortBy, ownershipBasis: m.ownershipBasis, medianPerK: m.medianPerK, contests: Object.fromEntries(Object.entries(DFS_CONTESTS).map(([k, v]) => [k, v.label])) };
+        slate.stackScores = dfsStackScores(slate.stacks);
+      }
+      return json(slate, 200, { ...c, 'cache-control': 'no-store' });
     }
     // The newsroom: the public feed the homes read, the staff, one analyst,
     // the Fantasy/Market blend, and the Vega/Brooks disagreements.
