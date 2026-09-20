@@ -171,6 +171,9 @@ p{color:var(--sec);margin:0 0 16px}
 .df-coach-toggle{appearance:none;border:1px solid var(--line2);background:var(--bg);border-radius:8px;font:inherit;
   font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;color:var(--sec);padding:6px 12px;cursor:pointer}
 .df-coach-toggle:hover{border-color:var(--teal);color:var(--teal)}
+.df-coach-retry{appearance:none;border:1px solid var(--teal);background:var(--bg);border-radius:8px;font:inherit;
+  font-size:var(--fs-2xs);font-weight:700;color:var(--teal);padding:5px 11px;margin-left:4px;cursor:pointer}
+.df-coach-retry:hover{background:rgba(14,124,99,.08)}
 .df-coach-main{padding:14px 16px 16px}
 .df-coach-lede{font-size:var(--fs-sm);line-height:1.6;color:var(--sec);margin:0 0 12px;max-width:84ch}
 .df-coach-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
@@ -677,7 +680,10 @@ p{color:var(--sec);margin:0 0 16px}
        breakdown, pivots. The reader's next question goes the other way, and it
        is always specific to what they just read. The Value Coach takes it
        here, loaded with the same state the page solved from. -->
-  <div id="dfCoach"></div>
+  <div id="dfCoach" class="df-coach">
+    <div class="df-coach-head"><span class="df-coach-title">Value Coach<span class="df-coach-live" id="dfCoachLive">starting</span></span></div>
+    <div class="df-coach-main"><p class="df-coach-lede" id="dfCoachBoot">Starting the coach that answers questions about the roster above&hellip;</p></div>
+  </div>
 
   <details class="df-tune" id="dfTune">
     <summary>Fine-tune the build &mdash; objective, stacking, locks and exclusions</summary>
@@ -1298,6 +1304,37 @@ p{color:var(--sec);margin:0 0 16px}
   // fires before it lands must not throw.
   var coachPanel = null;
   function coachSync() { if (coachPanel) try { coachPanel.refresh(); } catch (err) {} }
+  // dfs-coach.js is a separate deferred file, so it can be absent: a deploy that
+  // has not carried it yet, a blocked or failed request, an extension. The panel
+  // itself is in the markup above either way, and these three turn that into a
+  // reason the reader can act on instead of a gap between the pivots and the
+  // fine-tune panel. mount() replaces everything inside the host, so a message
+  // written here disappears the moment the coach actually starts.
+  function mountCoach() {
+    if (coachPanel) return true;
+    if (!window.ITDfsCoach || typeof ITDfsCoach.mount !== 'function') return false;
+    try { coachPanel = ITDfsCoach.mount({ host: $('dfCoach'), context: coachContext }); }
+    catch (err) { coachPanel = null; }
+    return !!coachPanel;
+  }
+  // The badge moves with the message. A panel that says "starting" over a
+  // sentence explaining that it never started is worse than no panel at all.
+  function coachBoot(msg, retry, badge) {
+    var el = $('dfCoachBoot'); if (!el) return;
+    var live = $('dfCoachLive'); if (live) live.textContent = badge || 'not loaded';
+    el.innerHTML = e(msg) + (retry ? ' <button type="button" class="df-coach-retry" id="dfCoachRetry">Try again</button>' : '');
+    var b = $('dfCoachRetry'); if (b) b.addEventListener('click', coachReload);
+  }
+  function coachReload() {
+    coachBoot('Fetching the coach\u2026', false, 'fetching');
+    var sc = document.createElement('script');
+    // Cache-busted: the usual reason for a retry is a file that was not there
+    // the first time, and a browser that cached that miss would never see it.
+    sc.src = '/dfs-coach.js?r=' + Date.now();
+    sc.onload = function () { if (!mountCoach()) coachBoot('The coach loaded but could not start. Reload the page.', false); };
+    sc.onerror = function () { coachBoot('The coach still did not load. Everything else on this page works; try again in a few minutes.', true); };
+    document.head.appendChild(sc);
+  }
 
   // ── exact DraftKings game pool ────────────────────────────────────────────
   // Classic contests are not all the same slate. The selected games are the
@@ -1935,7 +1972,10 @@ p{color:var(--sec);margin:0 0 16px}
   }
   document.addEventListener('DOMContentLoaded', function () {
     press($('dfMode'), 'data-mode', mode); applyShape(); show();
-    if (window.ITDfsCoach) coachPanel = ITDfsCoach.mount({ host: $('dfCoach'), context: coachContext });
+    if (!mountCoach()) {
+      coachBoot('The Value Coach did not load with the page.', true);
+      window.addEventListener('load', mountCoach);
+    }
     $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; selectedGames = {}; gameUniverseSig = ''; gameChoice=''; payoutStructure=''; clearWhatIf(false); load(); });
     $('dfGameStyleSelect').addEventListener('change', function () {
       gameStyle=this.value; gameChoice=''; payoutStructure=''; selectedGames={}; gameUniverseSig='';
