@@ -10041,11 +10041,24 @@ The rankings ribbon (`<!--ranks:ribbon-->`) is generated and was not touched.
     panel was the only control that deleted a stored file, and it promised the
     file was the reader's to remove, so removing the panel without the purge
     would strand the CSV in their browser for good.
-  - `dfsSlateShape()` in `_worker.js` has **no production caller left** — the
-    upload route was its only one. It is kept, with a comment saying so, because
-    `POST /api/admin/dfs` has never had that guard and a showdown file imported
-    as the main slate would mis-price the board. `tools/test-dfs.mjs` still
-    exercises it (6 gates under "classic or single game").
+  - `dfsSlateShape()` in `_worker.js` was briefly left with no caller — the
+    upload route was its only one — and was **wired into `POST /api/admin/dfs`
+    the same day**, which is now the only CSV path in. A single-game
+    (Showdown/MVP) export is refused before `dfsStore`, so it cannot reach the
+    board every reader is shown. The refusal is **unconditional, not scoped to
+    `slate: 'main'`**, because `dfsSalariesRead()` takes the latest
+    `fetched_at` for the site and week and never filters on the `slate`
+    column: a single-game file stored under any slate name is still what
+    `/api/dfs` serves — and the scheduled workflow posts `slate: 'weekly'`,
+    so a guard scoped to `'main'` would have skipped the one importer that
+    runs unattended. Importing one deliberately would need that read to learn
+    about slates first. Three gates in `tools/test-dfs.mjs` hold this —
+    the guard runs and runs *before* `dfsStore`, the refusal ignores `slate`,
+    and the read is still slate-blind — plus three more pinning the false
+    positive that would matter most: the scheduled DraftKings workflow merges
+    every Classic pool for the week, and that merged file must still read
+    `classic`. It is built with the importer's own `draftablesToCsv`, so the
+    gate tests the file the route actually receives.
   `parseDfsCsv` is untouched and still carries the desk import.
 - **The venue and board switchers (`#dfSite`, `#dfNav`) moved up** from below
   the setup, the Play of the Week and the Academy cards to directly under the
