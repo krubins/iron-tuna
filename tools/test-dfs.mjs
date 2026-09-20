@@ -1035,7 +1035,49 @@ console.log('\nthe field\'s average entry');
   const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
   ok('the page solves the field average off the whole priced board', page.includes('ITDfs.fieldAverage(players, { slots: view.slots, flex: view.flex, cap:'));
   ok('the lineup card prints it in parentheses beside the projection',
-     page.includes("stat(n1(l.projPoints) + fieldPar, 'Iron Tuna Projection', true)"));
+     page.includes("stat(projStat + fieldPar, 'Iron Tuna Projection', true)")
+     && page.includes("' <small class=\"is-par\">(' + n1(fieldAvg.points) + ')</small>'"));
+  // The paragraph under the stat row explains this number in full sentences,
+  // so the parenthetical carries no tip of its own and no native title. Two
+  // copies of one explanation is two copies to keep in step.
+  ok('and the parenthetical leans on that paragraph rather than repeating it behind a hover',
+     !/is-par\">\(' \+ tip\(/.test(page) && !/class="is-par" title=/.test(page)
+     && page.includes('is the typical entry.'));
+
+  // Every figure in the stat row says where it came from. These are source
+  // assertions because no node gate here has a DOM; the hover, the focus and
+  // the tap were driven in a browser before the change was pushed.
+  ok('all four stats carry an explanation, not just the projection',
+     ['fppgStat', 'projStat', 'edgeStat', 'salStat'].every(v => page.includes('var ' + v + ' = tip(')));
+  ok('and only those four, since nothing else on the card explains them',
+     (page.match(/= tip\(|\+ tip\(/g) || []).length === 4);
+  ok('the trigger is a real button, so a keyboard and a phone can open it too',
+     page.includes('<button type="button" class="is-tipbtn" aria-describedby="'));
+  // The tip must be the button's SIBLING. As a child it becomes part of the
+  // button's accessible name, and a screen reader reads the whole paragraph
+  // where it should read "133.8".
+  ok('the tip is described by the button rather than swallowed into its name',
+     /<\/button>'\s*\n?\s*\+ '<span class="is-tip" id="' \+ id \+ '" role="tooltip">/.test(page));
+  ok('the tip survives the pointer travelling onto it, so the arithmetic can be copied',
+     /\.is-stat \.is-tip:hover\{[\s\S]{0,80}?opacity:1/.test(page));
+  // The site's own label rule, `.is-stat span`, paints every span in a stat
+  // tile as that tile's little uppercase caption, and it outranks a bare
+  // `.is-tip`. A browser caught this the first time: the tooltip rendered in
+  // uppercase mono and the 42-point figure shrank to caption size. The board
+  // variant of the same rule then repainted every figure in the muted grey.
+  ok('the tooltip selectors outrank the stat tile\'s own label rule',
+     !/\n\.is-tip\{/.test(page) && !/\n\.is-tipwrap\{/.test(page)
+     && page.includes('.is-stat .is-tip{') && page.includes('.is-stat .is-tipwrap{')
+     && page.includes('.is-board .is-stat .is-tipwrap{'));
+  ok('and the tip uses a font token this stylesheet actually defines',
+     !page.includes('var(--font-sans)') && page.includes('.is-stat .is-tip{')
+     && /\.is-stat \.is-tip\{[\s\S]{0,400}?font-family:var\(--font-body\)/.test(page));
+  ok('every tip carries this roster\'s own arithmetic rather than a definition',
+     page.includes('is-tipsum') && page.includes("'Consensus ' + n1(conTot)")
+     && page.includes("'Nine operator averages = '") && page.includes("DraftKings FPPG ' + n1(dkFppg)")
+     && page.includes("money(l.salary) + ' of ' + money(full)"));
+  ok('the parenthetical no longer carries a native title, which would open a second tooltip over the first',
+     !/class="is-par" title=/.test(page));
   ok('the board says in words what the parenthetical is', page.includes('is the typical entry.'));
   ok('the coach is handed the same number rather than left to derive one',
      page.includes('typicalEntryPoints') && page.includes('vsTypicalEntry')

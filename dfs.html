@@ -109,6 +109,64 @@ p{color:var(--sec);margin:0 0 16px}
 .is-board .is-stat.key .is-par{color:#8fa3a0}
 .df-fieldnote{margin:10px var(--space-5) var(--space-4);font-size:12.5px;line-height:1.55;color:#9fb6b1;max-width:86ch}
 .df-fieldnote b{color:#d5e2df;font-weight:700}
+/* Where a number came from, on hover, on keyboard focus and on a tap. Every
+   figure in the stat row is the end of an arithmetic the reader never sees,
+   and a label alone ("IRON TUNA PROJECTION") names the number without saying
+   where it was got. The tip carries THIS roster's actual numbers rather than
+   a definition, which is the same thing the player calculation panel does one
+   level down.
+
+   The trigger is a real <button> so a keyboard reaches it and a phone can open
+   it -- hover alone is a desktop-only affordance -- and the tip is the
+   button's SIBLING rather than its child, so a screen reader reads the figure
+   as the control's name and the explanation as its description instead of
+   reading the whole paragraph as the name.
+
+   EVERY SELECTOR HERE IS SCOPED UNDER .is-stat ON PURPOSE. site.css:920 is
+   `.is-stat span`, which paints ANY span inside a stat tile as that tile's
+   little uppercase label: 10px, letter-spaced, block. A bare `.is-tip` loses
+   to it on specificity, and the first cut of this shipped a tooltip rendered
+   in uppercase mono and a 42-point figure shrunk to label size, because the
+   button inherited the label's font through `font:inherit`. The extra class
+   is what outranks that rule; do not simplify these selectors back.
+
+   The tip hangs off the whole stat TILE, not off the number inside it. It was
+   anchored to the number first, and a browser showed why that is wrong: the
+   projection and the field average in parentheses beside it wrap onto two
+   lines whenever the column is narrow, and a tall tip opening under the first
+   lands squarely on the second, hiding a figure the reader is meant to be
+   comparing against. Anchored to the tile, it opens below the label, clear of
+   both. */
+.is-stat{position:relative}
+.is-stat .is-tipwrap{display:inline-block;margin:0;font:inherit;color:inherit;
+  letter-spacing:inherit;text-transform:none}
+.is-stat .is-tipbtn{appearance:none;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;
+  letter-spacing:inherit;line-height:inherit;text-transform:none;cursor:help;
+  border-bottom:1px dotted rgba(0,0,0,.28)}
+/* site.css:924 is `.is-board .is-stat span{color:#8fa3a0}`, one element
+   selector stronger than the wrapper rule above, so on the dark board it
+   repainted every figure in the muted label grey -- the teal key number
+   included. This puts the colour back under the tile's own. */
+.is-board .is-stat .is-tipwrap{color:inherit;font:inherit;letter-spacing:inherit;text-transform:none}
+.is-board .is-stat .is-tipbtn{border-bottom-color:rgba(255,255,255,.3)}
+.is-stat .is-tipbtn:hover,.is-stat .is-tipbtn:focus{border-bottom-style:solid}
+.is-stat .is-tip{position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:min(330px,78vw);
+  display:block;margin:0;padding:11px 13px;border-radius:9px;border:1px solid var(--line);
+  background:var(--panel);color:var(--sec);
+  font-family:var(--font-body);font-size:12.5px;font-weight:400;line-height:1.5;letter-spacing:0;
+  text-transform:none;text-align:left;box-shadow:0 14px 34px rgba(0,0,0,.35);
+  opacity:0;visibility:hidden;transition:opacity .12s ease;pointer-events:none}
+.is-stat .is-tip b{display:block;margin:0 0 5px;font-family:var(--font-body);font-size:12.5px;
+  font-weight:700;line-height:1.5;letter-spacing:0;color:var(--text)}
+.is-stat .is-tipsum{display:block;margin-top:7px;padding-top:7px;border-top:1px solid var(--line);
+  font-family:var(--font-mono);font-size:11px;font-weight:400;line-height:1.45;color:var(--muted);
+  letter-spacing:.02em;text-transform:none}
+.is-stat .is-tipbtn:hover+.is-tip,.is-stat .is-tipbtn:focus+.is-tip,.is-stat .is-tip:hover{
+  opacity:1;visibility:visible;pointer-events:auto}
+.is-stat .is-tipwrap.right .is-tip{left:auto;right:0}
+.is-board .is-stat .is-tip{background:#16211f;border-color:rgba(255,255,255,.17);color:#cfe0dc}
+.is-board .is-stat .is-tip b{color:#fff}
+.is-board .is-stat .is-tipsum{border-top-color:rgba(255,255,255,.14);color:#8fa3a0}
 .df-caplab{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;
   letter-spacing:.06em;text-transform:uppercase;color:#8fa3a0;margin:7px 0 0}
 .df-card .df-caplab{color:var(--muted)}
@@ -235,6 +293,13 @@ p{color:var(--sec);margin:0 0 16px}
   .df-lead-grid{padding-left:10px;padding-right:10px}
   .df-explain-summary{margin-left:10px;margin-right:10px}
   .df-fieldnote{margin-left:10px;margin-right:10px}
+  /* On a phone a 330px tip hanging off a stat tile runs past the card's right
+     edge and gets clipped, because four tiles in two columns leave no room
+     beside any of them. So it stops hanging off the tile and becomes a panel
+     under the whole stat row, full width, which is where there IS room. */
+  .is-stat{position:static}
+  .is-stats{position:relative}
+  .is-stat .is-tip,.is-stat .is-tipwrap.right .is-tip{left:0;right:0;width:auto}
   .df-face{width:34px;height:34px;min-width:34px}
   .df-lead-table{overflow-x:visible}
   .df-lead-table table,.df-card-table table{min-width:0;display:block}
@@ -1719,9 +1784,11 @@ p{color:var(--sec);margin:0 0 16px}
           + (tdMkt[0].tdBooks ? ' across ' + tdMkt[0].tdBooks + ' books' : '') + ', devigged. ' : '')
       + 'The rest carry their game\u2019s environment, discounted for not being quoted.</p>';
   }
-  // Says out loud what the parenthetical is, once, on the lead board. The
-  // alternates carry the same number with the same tooltip and no second copy
-  // of the paragraph.
+  // Says out loud what the parenthetical is, once, on the lead board. It is
+  // the ONLY place that number is explained -- the parenthetical itself
+  // carries no tip, because this paragraph makes one redundant. The
+  // alternates print the same figure without repeating the paragraph: they
+  // sit directly under this board, and a reader has already passed it.
   function fieldNote(l) {
     if (!fieldAvg || !isFinite(fieldAvg.points)) return '';
     var over = Number(l.projPoints) - Number(fieldAvg.points);
@@ -1739,16 +1806,60 @@ p{color:var(--sec);margin:0 0 16px}
     var allHaveFppg = l.players.every(function (p) { return p.operatorFppg != null && isFinite(Number(p.operatorFppg)); });
     var dkFppg = allHaveFppg ? l.players.reduce(function (sum, p) { return sum + Number(p.operatorFppg); }, 0) : null;
     var lineupEdge = dkFppg == null ? null : Number(l.projPoints) - dkFppg;
-    // The projection carries the field's average entry in parentheses beside
-    // it. A lineup number with nothing next to it is a number without a
-    // scale, and the reader was being asked to supply the scale himself.
+    // Each figure says where it came from, on hover, on focus and on a tap.
+    // A stat row names its numbers and explains none of them, which leaves the
+    // reader to take "133.8" on trust -- and this page's whole claim is that
+    // its numbers are arrived at rather than asserted. So every one of them
+    // carries the arithmetic that produced IT, with this roster's own values
+    // in it: the same thing the player calculation panel does a level down.
+    var tipN = 0;
+    var tip = function (shown, right, head, body, sum) {
+      var id = 'dfstat-' + i + '-' + (++tipN);
+      return '<span class="is-tipwrap' + (right ? ' right' : '') + '">'
+        + '<button type="button" class="is-tipbtn" aria-describedby="' + id + '">' + shown + '</button>'
+        + '<span class="is-tip" id="' + id + '" role="tooltip"><b>' + e(head) + '</b>' + e(body)
+        + (sum ? '<span class="is-tipsum">' + e(sum) + '</span>' : '') + '</span></span>';
+    };
+    // The consensus and the market totals behind the projection, printed only
+    // when every seat carries both: a ladder missing two of its nine rungs
+    // would be a different number wearing the same arrow.
+    var allHaveSides = l.players.every(function (p) { return isFinite(Number(p.consensusPoints)) && isFinite(Number(p.vegasPoints)); });
+    var conTot = allHaveSides ? l.players.reduce(function (n, p) { return n + Number(p.consensusPoints); }, 0) : null;
+    var mktTot = allHaveSides ? l.players.reduce(function (n, p) { return n + Number(p.vegasPoints); }, 0) : null;
+    var quoted = l.players.filter(function (p) { return p.marketQuoted; }).length;
+    var fppgStat = tip(dkFppg == null ? '—' : n1(dkFppg), false,
+      'DraftKings\u2019 history, not a forecast.',
+      'DraftKings ships a fantasy-points-per-game average with its salary file. It describes games already played, knows nothing about this matchup, and is here to be compared against, not to be built on. The figure is the nine players\u2019 averages added up.',
+      dkFppg == null ? 'A player on this roster has no average in the salary file, so there is nothing to total.'
+        : 'Nine operator averages = ' + n1(dkFppg) + ' pts');
+    var projStat = tip(n1(l.projPoints), false,
+      'Nine projections, added up.',
+      'Each player starts at the consensus projection, moves toward the betting market by how much of him the books actually priced, and takes a usage-role adjustment once the season carries enough games. Every number is then scored under this site\u2019s own rules. The roster\u2019s figure is those nine added together.',
+      (conTot == null ? 'Nine player projections = ' + n1(l.projPoints) + ' pts'
+        : 'Consensus ' + n1(conTot) + '  \u2192  Market ' + n1(mktTot) + '  \u2192  Iron Tuna ' + n1(l.projPoints) + ' pts')
+        + ' \u00b7 ' + quoted + ' of ' + l.players.length + ' priced by the books');
+    // The field's average entry rides in parentheses inside the projection's
+    // own figure, as its scale. It carries NO tip of its own: the paragraph
+    // under this row already says what it is and how it was arrived at, in
+    // full sentences and without asking anybody to hover anything, and a
+    // second copy of that behind a hover is a second copy to keep in step.
+    // The figures around it have no such paragraph, which is why they do.
     var fieldPar = fieldAvg && isFinite(fieldAvg.points)
-      ? ' <small class="is-par" title="' + n1(fieldAvg.points) + ' is what a typical entry on this slate projects for: rosters drawn seat by seat on the modeled ownership of the board, under the same cap.">(' + n1(fieldAvg.points) + ')</small>'
+      ? ' <small class="is-par">(' + n1(fieldAvg.points) + ')</small>'
       : '';
-    var stats = stat(dkFppg == null ? '—' : n1(dkFppg), 'DraftKings FPPG')
-      + stat(n1(l.projPoints) + fieldPar, 'Iron Tuna Projection', true)
-      + stat(lineupEdge == null ? '—' : (lineupEdge > 0 ? '+' : '') + n1(lineupEdge), 'Tuna Edge')
-      + stat(money(l.salary), 'Salary used');
+    var edgeStat = tip(lineupEdge == null ? '—' : (lineupEdge > 0 ? '+' : '') + n1(lineupEdge), true,
+      'The forecast minus the history.',
+      'How far Iron Tuna\u2019s forward projection sits from DraftKings\u2019 historical average for these same nine players. A positive number means the model expects more from this roster than its past scoring would suggest, which is a statement about the matchup and the price, not about the players being underrated.',
+      dkFppg == null ? 'No operator average for one of these nine, so there is nothing to subtract.'
+        : 'Iron Tuna ' + n1(l.projPoints) + ' \u2212 DraftKings FPPG ' + n1(dkFppg) + ' = ' + (lineupEdge > 0 ? '+' : '') + n1(lineupEdge) + ' pts');
+    var salStat = tip(money(l.salary), true,
+      'What the roster costs.',
+      'The nine salaries added up, against the cap set in the fine-tune panel. Money left on the table is not waste: the solve keeps it whenever spending it would buy a worse fit, and a roster that spends every dollar on a worse nine is a worse roster.',
+      money(l.salary) + ' of ' + money(full) + ' \u00b7 ' + money(l.remaining) + ' left');
+    var stats = stat(fppgStat, 'DraftKings FPPG')
+      + stat(projStat + fieldPar, 'Iron Tuna Projection', true)
+      + stat(edgeStat, 'Tuna Edge')
+      + stat(salStat, 'Salary used');
     // Two rows per player, not two columns. The fit sentence used to share the
     // Player cell, which made it a narrow column of its own: at the lead
     // board's width every note wrapped to eight or nine lines and pushed the
