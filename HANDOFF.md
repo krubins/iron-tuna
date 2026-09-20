@@ -11488,3 +11488,61 @@ closes it and focus returns to the button. At 390px the dock is 374px wide,
 fully on screen, with the send button reachable. With `/dfs-coach.js` answering
 404 the launcher is grey and titled with the reason, the dock opens to the
 message and a working Try again, and the retry restores both.
+
+
+## 96. September 20: the coach had nothing to say about the decision that produces the lineup
+
+The DFS page opens with three selects — Game Style, Games, Payout Structure —
+and solves nothing until all three are answered. The Value Coach sat behind
+them: `coachContext()` returned `{blocked: 'Set Game Style, Games and Payout
+Structure above…'}`, so the panel told a reader to go and fill in a form at
+exactly the moment they had a question about it. That is backwards. The payout
+structure *is* the strategy decision: it picks the objective the optimizer
+solves for (cash → floor, single-entry → projection plus correlation,
+multi-entry → ceiling discounted by modeled ownership), and the game pool
+decides who is eligible for it. A reader who does not know whether they want a
+Double Up or a single-entry tournament does not need a roster. They need the
+coach.
+
+So the coach answers there too. The context now carries a `mode`:
+
+- **`setup`** — the reader is at the selects, or has chosen a Game Style Iron
+  Tuna does not solve a roster for. The payload is the page's own catalog:
+  every option those selects offer with the note printed under it, what Iron
+  Tuna would solve for each payout (`SHAPES[...].head`), the games on the
+  loaded slate with their posted totals and implied team totals, what is
+  already chosen, what is still missing, and `playOfTheWeek`.
+- **`lineup`** — unchanged, plus the other payout structures and
+  `playOfTheWeek`, because "should I be in a double up instead" is a question a
+  reader asks with the roster on screen.
+
+`{blocked}` is now only for the states with neither: the pick'em board, no
+priced slate, an infeasible solve.
+
+**The boundary holds one step earlier.** Asked "which contest should I enter,"
+a model will happily invent one, or an entry fee, or a field size, none of
+which this page carries and all of which live in the DraftKings lobby. The
+prompt recommends from the catalog and nothing else, and where it names which
+structure this slate rewards it quotes `playOfTheWeek` — the page's own
+comparison of a floor build, a ceiling build and a leverage build, kept from
+`renderPlayOfWeek()` rather than recomputed. Picking a structure is strategy
+and is in scope; naming a stake is not, and the prompt says so in as many
+words.
+
+| Where | What |
+|---|---|
+| `dfs.html` | `setupChoices(all)` and `setupContext()`; `mode` on both contexts; `playWeek` kept from `renderPlayOfWeek()`; `coachSync()` from both halves of `updateSetupState()`, so a choice that rebuilds nothing still re-points the panel; `.df-setup-foot` / `.df-setup-coach` and the **Not sure? Ask the Value Coach** button on the setup plate, wired to `openCoach`. |
+| `dfs-coach.js` | the two-mode prompt and the structure-choosing clause; `SETUP_STARTERS` and `startersFor()`; `grounded()` replacing the roster-only gate in `refresh()` and `ask()`; the badge, lede and placeholder following the mode; a `fit()` trim for the game list that never touches the menu of options itself. |
+| `docs/ai-calculation-boundary.md` | the catalog rule, and the CI line that guards it. |
+| `tools/test-dfs-coach.mjs` | 96 now: the setup starters and the mode-aware chrome, the prompt's setup clauses, the two contexts, and `setupChoices()` executed against the page's own `GAME_STYLES`/`PAYOUTS`/`SHAPES` so the menu cannot drift from the selects. |
+
+`node tools/test-dfs-coach.mjs` (96), `node tools/test-dfs.mjs` (111),
+`test-content`, `test-chrome`, `test-seo`, `test-analytics`, `test-css-tokens`
+and `test-ai-boundary` pass. Driven in Chromium against a stubbed slate and a
+stubbed `/api/coach`: the setup button opens the dock with the badge on **live
+on your setup** and the four setup chips live with nothing chosen; the lede
+names the next choice as the reader makes each one; a Showdown Game Style
+stays in setup mode with `whyNoRosterYet`; completing a Classic setup flips the
+badge back to the lineup and the payload to the solved roster. The captured
+payloads are 5.4KB in setup mode and 19.7KB with a roster, both inside the
+28,000-character budget. No page errors at 1280 or 390px.

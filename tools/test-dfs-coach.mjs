@@ -5,7 +5,7 @@
 // The auction board's coach has always been keyed into the page's own numbers
 // rather than into fantasy football in general; this is that coach aimed at
 // the solved DFS roster, so a reader can ask the follow-up question the
-// recommendation provokes. Four ways that goes wrong quietly:
+// recommendation provokes. Five ways that goes wrong quietly:
 //
 //   1. THE BOUNDARY. Iron Tuna's numbers are software outputs (see
 //      docs/ai-calculation-boundary.md). A chat panel sitting under a salary
@@ -22,6 +22,13 @@
 //      Miss one and the coach answers about a lineup that is no longer there.
 //   4. THE SIZE. /api/coach refuses a body over 80,000 bytes, so the context
 //      is capped where it is assembled rather than trusted to stay small.
+//   5. THE SETUP. The coach also answers at the three selects the page opens
+//      with, before any roster exists, because choosing the contest is the
+//      decision that produces the roster. That mode has its own way to go
+//      wrong: a model asked "which contest should I enter" will happily
+//      invent one, or an entry fee, or a field size, none of which the page
+//      carries. It answers from the page's own catalog of options or not at
+//      all, and it still names no stake.
 //
 // Pure source reading plus the module itself — no browser, no network.
 import fs from 'fs';
@@ -58,6 +65,23 @@ console.log('the module');
   ok('it exports a panel to mount and the prompt it mounts with',
      typeof coach.mount === 'function' && typeof coach.SYSTEM === 'string' && Array.isArray(coach.STARTERS));
   ok('it offers the reader somewhere to start', coach.STARTERS.length >= 3 && coach.STARTERS.every((q) => /\?$/.test(q)));
+  // A reader at the three selects has no roster to ask about, so the openers
+  // cannot be about one.
+  ok('and somewhere else to start when there is no roster yet, only a contest to pick',
+     Array.isArray(coach.SETUP_STARTERS) && coach.SETUP_STARTERS.length >= 3
+     && coach.SETUP_STARTERS.every((q) => /\?$/.test(q))
+     && !coach.SETUP_STARTERS.some((q) => coach.STARTERS.includes(q)));
+  ok('the openers follow the mode the page is in',
+     coach.startersFor({ mode: 'setup' }) === coach.SETUP_STARTERS
+     && coach.startersFor({ mode: 'lineup' }) === coach.STARTERS
+     && coach.startersFor(null) === coach.STARTERS);
+  ok('a setup with no lineup is something to answer, not something to wait for',
+     /function grounded\(ctx\) \{ return !!\(ctx && \(ctx\.mode === 'setup' \|\| \(ctx\.lineups && ctx\.lineups\.length\)\)\); \}/.test(src)
+     && /if \(!grounded\(ctx\)\) \{ refresh\(\); return; \}/.test(src));
+  ok('and the chrome says which of the two it is reading, rather than claiming a lineup that is not there',
+     /elLive\.textContent = setup \? 'live on your setup' : 'live on this lineup'/.test(src)
+     && /elText\.placeholder = setup/.test(src)
+     && /starters = startersFor\(ctx\)/.test(src));
   // A dock is closed by its page; an inline panel minimizes itself. The module
   // does both so it does not depend on being floated.
   ok('a host that closes is closed, and one that does not still minimizes in place',
@@ -100,6 +124,22 @@ console.log('\nthe prompt');
   ok('it writes for a chat panel that renders no markdown', /does NOT render markdown/.test(s) && /NO markdown/.test(s));
   ok('it places no bets and enters no contests',
      /must not tell anyone what to wager/.test(s) && /only builds a roster to copy/.test(s));
+  // THE LINE IN SETUP MODE. "Which contest should I enter" is a strategy
+  // question and the coach answers it. "How much should I put on it" is not.
+  ok('picking a structure is its job; naming a stake is not',
+     /Recommending which contest STRUCTURE suits a build is strategy and is your job/.test(s)
+     && /name no entry fee and no stake even when the reader asks for one/.test(s));
+  ok('it knows which of the two questions it is being asked',
+     /The JSON carries a mode\./.test(s) && /When it is "setup"/.test(s) && /When it is "lineup"/.test(s));
+  ok('it recommends only from the options the page actually offers',
+     /Recommend from that list and nothing else/.test(s)
+     && /never invent a contest, a payout table, an entry fee, a field size, a prize pool or an entry limit/.test(s));
+  ok('the contest recommendation is the page\u2019s, quoted, not the model\u2019s own',
+     /The page\u2019s own read is playOfTheWeek/.test(s) && /Quote it as the page\u2019s call/.test(s));
+  ok('it keeps the order the page asks the three questions in',
+     /Keep the page\u2019s order - style, then games, then payout/.test(s));
+  ok('and it says plainly which format Iron Tuna solves a roster for',
+     /Iron Tuna solves a roster for Classic only/.test(s));
 }
 
 console.log('\nthe reply');
@@ -247,21 +287,39 @@ console.log('\nthe page');
      /var live = \$\('dfCoachLive'\); if \(live\) live\.textContent = badge \|\| 'not loaded';/.test(page));
 
   const ctx = lift(/function coachContext\(/);
-  ok('with no roster on the page the coach is told why, rather than asked anyway',
-     (ctx.match(/return \{ blocked:/g) || []).length >= 5);
-  ok('the blocked reasons cover every state that has no lineup',
-     [/isPickem\(\)/, /!slate/, /!setupReady\(\)/, /!styleSupportsOptimizer\(\)/, /!built \|\| !built\.lineups/]
-       .every((re) => re.test(ctx)));
+  ok('with nothing on the page to ground an answer the coach is told why, rather than asked anyway',
+     (ctx.match(/return \{ blocked:/g) || []).length >= 3);
+  ok('the blocked reasons cover the states with neither a roster nor a setup to talk about',
+     [/isPickem\(\)/, /!slate/, /!built \|\| !built\.lineups/].every((re) => re.test(ctx)));
+  // THE CHANGE THIS BLOCK EXISTS FOR. An unfinished setup used to be a refusal:
+  // the reader was told to go and fill in three selects, which is exactly the
+  // moment they had a question. Both of those states hand the coach the setup
+  // now, and only the thing it is looking at changes.
+  ok('an unfinished setup and a format with no Classic roster are answered, not refused',
+     /if \(site === 'dk' && \(!setupReady\(\) \|\| !styleSupportsOptimizer\(\)\)\) return setupContext\(\);/.test(ctx)
+     && !ctx.split('\n').some((l) => /!setupReady\(\)|!styleSupportsOptimizer\(\)/.test(l) && /return \{ blocked:/.test(l)));
   ok('the context carries the contest, the roster, the swaps and the board behind them',
      ['slate:', 'setup:', 'build:', 'thesis:', 'lineups:', 'pivots:', 'boardNotInLineup:', 'games:']
        .every((k) => ctx.includes(k)));
+  ok('and says which of the two questions it is answering, so the panel and the model agree',
+     /mode: 'lineup'/.test(ctx) && /mode: 'setup'/.test(lift(/function setupContext\(/)));
+  ok('the roster context carries the other payout structures too, because that question outlives the build',
+     /choices: setupChoices\(false\)/.test(ctx) && /playOfTheWeek: playWeek/.test(ctx));
   ok('it carries the locks, exclusions and the forced player the reader set',
      /forcedIn: whatIfKey/.test(ctx) && /locked:/.test(ctx) && /excluded:/.test(ctx));
   // /api/coach refuses a body over 80,000 bytes. Every list in the payload is
   // capped where it is built, so a 14-game slate cannot silently 413.
+  const setup = lift(/function setupContext\(/);
+  ok('the setup context carries the three choices, what is still missing and the slate behind them',
+     ['awaiting:', 'readerIsChoosing:', 'setup:', 'choices:', 'slate:', 'playOfTheWeek:'].every((k) => setup.includes(k)));
+  ok('it says which format Iron Tuna solves a roster for rather than leaving an empty board unexplained',
+     /ironTunaSolvesARoster: styleSupportsOptimizer\(\)/.test(setup) && /whyNoRosterYet:/.test(setup));
+  ok('a page with no salaries still answers on the two choices that do not need them',
+     /No salary slate is loaded yet, so the page lists no games to choose from/.test(setup));
   ok('every list in the payload is capped',
      /pivotRows\(lead, solverPool\)\.slice\(0, 9\)/.test(ctx) && /\.slice\(0, 30\)/.test(ctx)
-     && /\(view\.stacks \|\| \[\]\)\.slice\(0, 16\)/.test(ctx) && /built\.lineups\.slice\(0, 3\)/.test(ctx));
+     && /\(view\.stacks \|\| \[\]\)\.slice\(0, 16\)/.test(ctx) && /built\.lineups\.slice\(0, 3\)/.test(ctx)
+     && /\.slice\(0, 16\)\.map/.test(lift(/function setupChoices\(/)));
 
   // Every terminal state re-points the coach at the page.
   const syncs = (page.match(/coachSync\(\);/g) || []).length;
@@ -279,6 +337,67 @@ console.log('\nthe page');
 
   ok('the reader is told what the panel is and is not',
      page.includes('It does not enter contests or place bets.') || src.includes('It does not enter contests or place bets.'));
+
+  // The floating launcher is at the bottom of the window; the three selects are
+  // at the top of the page. A reader stuck on them should not have to guess
+  // that the thing in the corner answers on this too.
+  ok('the setup plate carries its own way into the coach',
+     /<button type="button" class="df-setup-coach" id="dfSetupCoach" aria-controls="dfCoach"[^>]*>/.test(page)
+     && /Ask the Value Coach/.test(page) && /\.df-setup-coach\{/.test(page));
+  ok('and it opens the dock rather than toggling it shut from across the page',
+     /\$\('dfSetupCoach'\)\.addEventListener\('click', openCoach\);/.test(page));
+  // The page compares a floor build, a ceiling build and a leverage build and
+  // prints which structure this slate rewards. The coach quotes that; without
+  // it, "which contest should I enter" has no page number behind it at all.
+  ok('the page\u2019s own contest recommendation is kept for the coach to quote',
+     /playWeek=\{ recommendedPayout:rec/.test(page) && /projectionVsVegasPct:coachN\(edge\*100\)/.test(page));
+  ok('and it is cleared rather than left stale when the slate cannot support one',
+     /playWeek=null;\n    if\(players\.length<9\)/.test(page));
+  ok('a setup choice that rebuilds nothing still tells the coach to look again',
+     (lift(/function updateSetupState\(/).match(/coachSync\(\);/g) || []).length >= 2);
+}
+
+console.log('\nthe catalog the setup coach recommends from');
+{
+  // Executed against the page's own tables, because the whole point of the
+  // catalog is that it IS the page's options: a recommendation has to be one
+  // of the things in the select in front of the reader.
+  const mod = [
+    lift(/var GAME_STYLES = \{/), lift(/var PAYOUTS = \{/), lift(/var SHAPES = \{/), lift(/function coachN\(/),
+    "var gameStyle = 'classic', payoutStructure = 'double-up';",
+    "var selectedGames = { 'LAR|SEA': true };",
+    "var slate = { stacks: [{ game: 'LAR @ SEA', away: { team: 'LAR' }, home: { team: 'SEA' }, total: 47.53, impliedAway: 23.29, impliedHome: 24.24 }] };",
+    "function stackGameKey(g) { return g.away.team + '|' + g.home.team; }",
+    "function kickoffText() { return 'Sun 4:05 PM ET'; }",
+    "function gamesForSlate() { return Array.from({ length: 20 }, (_, i) => ({ key: i ? 'A' + i + '|B' + i : 'LAR|SEA', label: i ? 'A' + i + ' @ B' + i : 'LAR @ SEA', players: 40, start: null })); }",
+    lift(/function setupChoices\(/),
+    'export { setupChoices, PAYOUTS, GAME_STYLES };'
+  ].join('\n');
+  const { setupChoices, PAYOUTS, GAME_STYLES } = await import('data:text/javascript;base64,' + Buffer.from(mod, 'utf8').toString('base64'));
+  const all = setupChoices(true);
+
+  ok('every payout structure the select offers is in the catalog, with the note the page prints under it',
+     all.payouts.length === Object.keys(PAYOUTS).length
+     && Object.keys(PAYOUTS).every((k) => all.payouts.some((r) => r.payout === PAYOUTS[k].label && r.means === PAYOUTS[k].note)),
+     JSON.stringify(all.payouts.map((r) => r.payout)));
+  ok('each one says what Iron Tuna would solve for it, so the advice lands on a build and not a vibe',
+     all.payouts.every((r) => typeof r.ironTunaSolvesItAs === 'string' && r.ironTunaSolvesItAs.length));
+  ok('every game style the select offers is there too',
+     all.gameStyles.length === Object.keys(GAME_STYLES).length);
+  ok('and only Classic claims a solved roster',
+     all.gameStyles.filter((r) => r.ironTunaSolvesARoster).map((r) => r.gameStyle).join() === GAME_STYLES.classic.label);
+  ok('what the reader has already chosen is marked as chosen',
+     all.payouts.filter((r) => r.chosen).map((r) => r.payout).join() === 'Double Up'
+     && all.gameStyles.filter((r) => r.chosen).map((r) => r.gameStyle).join() === 'Classic');
+  ok('the games carry the market the page posted for them, rounded and not re-derived',
+     all.games[0].game === 'LAR @ SEA' && all.games[0].total === 47.5
+     && all.games[0].impliedAway === 23.3 && all.games[0].impliedHome === 24.2 && all.games[0].selected === true,
+     JSON.stringify(all.games[0]));
+  ok('a game with no posted total is absent, not zero',
+     all.games[1].total === null && !('selected' in all.games[1]));
+  ok('the game list is capped where it is built', all.games.length === 16);
+  ok('the roster context takes the payouts alone, because that is the question a reader asks with a lineup on screen',
+     !!setupChoices(false).payouts && !setupChoices(false).games && !setupChoices(false).gameStyles);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
