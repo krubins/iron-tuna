@@ -88,7 +88,7 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - The week is read from the NFL schedule, never from the calendar: a week is current until its own last game has finished. If the schedule feed does not answer, every surface says so rather than guessing — a wrong week silently mislabels every number under it.
 - Where a board has no data it says so explicitly. It is blank rather than stale.
 - Game lines and player data via nflverse (CC BY 4.0).
-- **Parts of the site are AI-generated and labeled where they are**: the analyst desk, some of the daily editorial coverage, and the Value Coach. The projections, rankings, prices and market numbers are computed, not written.
+- **Nearly all of the writing on the site is AI-generated, and all of it is human-guided**: the analyst desk, the daily editorial coverage and the Value Coach are model-written under human direction and review. The projections, rankings, prices and market numbers are computed rather than written — off betting-market odds and thousands of real auction and draft selections — so what those pieces are written from is priced data, not an opinion column.
 - Every external data source, the license it is used under and the attribution it carries is published at https://irontuna.com/data.
 - Team and player images are referenced from their publishers’ own image hosts and remain the property of their owners. Iron Tuna is not affiliated with, endorsed by or licensed by the NFL, any club, any fantasy platform or any sportsbook or DFS operator.
 
@@ -99,6 +99,7 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - What is a "Market Delta"? The gap between the market's number for a player and the consensus projection, in points and in ranking slots. It is printed rather than hidden.
 - What is VVS? Market-implied points per $1,000 of DFS salary, indexed to the slate median. 100 is ordinary, 130 is a bargain.
 - Does it work for any league? Yes — PPR, half-PPR and standard in season; salary-cap, keeper, Superflex, 2-QB and any custom scoring on the draft side.
+- Is any of this written by AI? Nearly all of it, and people guide all of it. The numbers are computed rather than written, off betting-market odds and thousands of real auction and draft selections; the analyst desk, the daily editorial coverage and the Value Coach are model-generated from that same data, under human direction and review.
 
 ## Links
 - Home: https://irontuna.com/
