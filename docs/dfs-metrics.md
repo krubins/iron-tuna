@@ -258,6 +258,26 @@ reader could see.
 | Lineup totals | `projPoints` counts banked players at what they scored. `bankedPoints` / `bankedPlayers` split the settled part from the part still to come, and the card prints the split in words. |
 | Typical entry | Played players **stay in the draw**, at their actual score. The field submitted before kickoff, so an ordinary entry owns them at what they did — including a zero. `basis` becomes `modeled-ownership,part-played` so nothing downstream prints it as a pure projection. |
 
+### The prose
+
+Every sentence the page generates about a player is written forward — a
+projection, a ceiling, a market disagreement, a downside, a devigged touchdown
+price — and none of it is true once his game has been played. So the generators
+ask `isBanked()` / `isPlayed()` first:
+
+| Generator | On a played seat |
+|---|---|
+| `playerFit()` | Drops the anchor/punt/leverage thesis for what the seat returned on the salary it cost. A played defense says its number is still the pre-game estimate. |
+| `marketPhrase()` | The books' pre-game prices are named as history, not as something to act on. |
+| `lineupSummary()` | Market signal is drawn from the seats **still to play**; the anchor sentence stops calling a banked man a "projected scoring base"; a stack whose game is over is described as spent, with what it actually returned. |
+| `breakdownHtml()` | Market gap and Key Risks both come from the seats still to play — a man who has scored has no downside left. Construction names how much of the spend has already returned. When nothing is left to play, each section says so instead of inventing a forecast. |
+| `propsNote()` | Counts quoted props and the best touchdown price among the seats still to play, and says how many no longer carry a market. |
+| `pivotRows()` | Neither side of a swap may be a finished game: the seat cannot be vacated and the replacement cannot be entered. |
+| The player pool | Prints the actual with the `final` mark, so the board and the roster never show two different numbers for the same man. |
+
+The wording is verified by rendering the page — no node gate can read prose —
+and `tools/test-dfs.mjs` pins that each branch exists.
+
 Two honest gaps, both of which can only understate a player:
 
 - **Defenses and kickers.** `normalizeGameSummary()` collects passing,

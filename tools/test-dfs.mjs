@@ -737,7 +737,8 @@ console.log('\nthe DFS page explanations');
   ok('the player pool says whether a man was quoted or inferred', page.includes('function marketTag(p)') && page.includes('df-mkt-quoted') && page.includes('df-mkt-inferred') && page.includes('MARKET_CHIP'));
   ok('every recommended player carries what the books actually posted on him', page.includes('function marketPhrase(p)') && page.includes('The books posted ') && page.includes('df-mktline'));
   ok('the lead card shows how much of the roster the market priced, and says so when none of it was',
-     page.includes('function propsNote(l)') && page.includes('picks are priced by the books') && page.includes('No player prop is behind this lineup'));
+     page.includes('function propsNote(l)') && page.includes(' priced by the books.</b>')
+     && page.includes('No player prop is behind ') && page.includes('the rest of this lineup') && page.includes('this lineup'));
   ok('the slate dashboard reports prop coverage as a number, not a boolean', page.includes("card('Books priced'") && page.includes('s.props.coverage'));
   ok('a quoted anytime-touchdown price is named as devigged market, never as a derived one', page.includes("p.tdBasis === 'anytime-td-market'") && page.includes('devigged'));
   ok('a partly quoted man says which part of his line is still the game environment', page.includes("m.status === 'partial'") && page.includes('still the game environment'));
@@ -1170,6 +1171,40 @@ console.log('\nthe slate, partly played');
   ok('the coach is told which part of the roster is a result', page.includes('bankedPoints')
      && fs.readFileSync(path.join(ROOT, 'dfs-coach.js'), 'utf8').includes('bankedPoints'));
   ok('the method is written down', fs.readFileSync(path.join(ROOT, 'docs/dfs-metrics.md'), 'utf8').includes('Played games'));
+
+  // The prose. Every sentence this page generates about a player is written
+  // forward -- a projection, a ceiling, a market gap, a downside, a touchdown
+  // price -- and none of it is true once the game has been played. These pin
+  // the branches that say so instead; the wording is checked by rendering the
+  // page, which is the only thing that can read it.
+  ok('the page asks whether a seat has played before it writes a sentence about him',
+     page.includes('function actualOf(') && page.includes('function isBanked(') && page.includes('function isPlayed(') && page.includes('function stillToPlay('));
+  ok('a finished seat gets its own fit line rather than an anchor-or-punt thesis',
+     page.includes('His game is final: ') && page.includes('The seat is settled whatever the rest of the roster does.'));
+  ok('and a played defense says its number is still the pre-game estimate',
+     page.includes('still the pre-game estimate'));
+  ok('the market read on a finished game is history, not a price to act on',
+     page.includes('What the books priced beforehand is settled now'));
+  ok('the roster summary draws its market signal from the seats still to play',
+     page.includes('var live = stillToPlay(l.players)') && page.includes('signal still to play is'));
+  ok('and it stops calling a banked man a projected scoring base',
+     page.includes('already in the books') && page.includes('providing the largest projected scoring base'));
+  ok('the breakdown picks its market gap and its risk from the seats still to play',
+     page.includes('among the seats still to play') && page.includes('among the offensive players still to play'));
+  ok('a stack whose game is over is described as spent, not as correlation to come',
+     page.includes('stack has already played') && page.includes('stack has been played'));
+  ok('the breakdown says how much of the spend has already returned',
+     page.includes('of that spend has already returned'));
+  ok('a roster with nothing left to play says so rather than warning about risk',
+     page.includes('There is no risk left in this roster to describe')
+     && page.includes('Every game in this roster has been played')
+     && page.includes('Every seat has played, so there is no market case left to make'));
+  ok('the prop note counts only the seats that still carry a market',
+     page.includes('picks still to play') && page.includes('no longer ') && page.includes('Best quoted touchdown price still to come'));
+  ok('neither side of a pivot can be a finished game',
+     page.includes('if (isPlayed(cur)) return;') && page.includes('|| isPlayed(q)) return false'));
+  ok('the pool table prints the same number for a played man as the roster does',
+     page.includes("n1(actualOf(p) != null ? actualOf(p) : p.ironTunaPoints) + bankedMark(p)"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

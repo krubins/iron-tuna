@@ -1340,6 +1340,16 @@ p{color:var(--sec);margin:0 0 16px}
                       'gamelines': ['LINES', 'inferred'], 'gamelines+ratings': ['LINES', 'inferred'],
                       'ratings': ['FITTED', 'fitted'], 'none': ['\u2014', 'fitted'] };
   function marketPhrase(p) {
+    // The market read is a forecast, and a forecast about a finished game is
+    // history. Printing "the books posted 68.5 receiving yards on him, pulled
+    // 3h ago" beside a man who has already played invites the reader to act
+    // on it.
+    if (isBanked(p)) {
+      return 'His game is final: ' + n1(actualOf(p)) + ' points. What the books priced beforehand is settled now, and the build is not projecting him any more.';
+    }
+    if (isPlayed(p)) {
+      return 'His game is over. Iron Tuna stores no box score for a defense, so the number beside him is still the pre-game estimate.';
+    }
     var m = p && p.market;
     if (!m) return '';
     if (m.quoted) {
@@ -1393,7 +1403,7 @@ p{color:var(--sec);margin:0 0 16px}
   }
   function pool(s) {
     var on = s.players.filter(function (p) { return p.onBoard; });
-    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr' + (p.available === false ? ' class="df-row-out"' : '') + '><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td>' + marketTag(p) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + [weekTag(p), (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '')].filter(Boolean).join(' ') + '</td></tr>'; }).join('');
+    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr' + (p.available === false ? ' class="df-row-out"' : '') + '><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(actualOf(p) != null ? actualOf(p) : p.ironTunaPoints) + bankedMark(p) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td>' + marketTag(p) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + [weekTag(p), (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '')].filter(Boolean).join(' ') + '</td></tr>'; }).join('');
   }
   // ── the shape switch ──────────────────────────────────────────────────────
   // Writes the preset into the fine-tune controls rather than solving off a
@@ -1427,6 +1437,28 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   function finite(v) { return v != null && isFinite(Number(v)); }
+  // ── a seat whose game is over ─────────────────────────────────────────────
+  // Every sentence this page generates about a player is written forward: a
+  // projection, a ceiling, a market disagreement, a downside, a touchdown
+  // price. None of that is true once the game has been played, and a roster
+  // note that says the market is 2.7 points ahead of consensus on a man who
+  // finished two hours ago is simply wrong. So the prose below asks these
+  // three first.
+  //
+  // Two shapes carry the same fact: a lineup row calls it `actual` (the
+  // optimizer's card) and a slate row calls it `actualPoints` (the board).
+  // Both are read here so the pool table and the roster can never print
+  // different numbers for the same man.
+  function actualOf(p) {
+    if (!p || !p.gamePlayed) return null;
+    var a = p.actual != null ? p.actual : p.actualPoints;
+    return a == null || !isFinite(Number(a)) ? null : Number(a);
+  }
+  function isBanked(p) { return actualOf(p) != null; }
+  // Played, but not scorable: a defense, whose game is over and whose number
+  // is still the estimate because no defensive box score is stored.
+  function isPlayed(p) { return !!(p && p.gamePlayed); }
+  function stillToPlay(list) { return (list || []).filter(function (p) { return !isPlayed(p); }); }
   function pproj(p) { return finite(p.proj) ? Number(p.proj) : finite(p.ironTunaPoints) ? Number(p.ironTunaPoints) : 0; }
   function pceil(p) { return finite(p.ceiling) ? Number(p.ceiling) : pproj(p); }
   function pfloor(p) { return finite(p.floor) ? Number(p.floor) : pproj(p) * .72; }
@@ -1440,6 +1472,19 @@ p{color:var(--sec);margin:0 0 16px}
     return l.players.filter(function (p) { return p.team === qb.opponent && p.position !== 'DST'; });
   }
   function playerFit(p, l, qb, sh) {
+    // Nothing below this is true of a man whose game is over. He is not an
+    // anchor, a punt, a leverage play or a risk any more -- he is a number,
+    // and the only thing left to say about the seat is what it returned on
+    // the salary it cost.
+    if (isBanked(p)) {
+      var got = actualOf(p), per = Number(p.salary || 0) > 0 ? got / (Number(p.salary) / 1000) : null;
+      return 'His game is final: ' + n1(got) + ' points on ' + money(p.salary) + ' of cap'
+        + (per != null ? ', ' + n1(per) + ' per $1,000' : '')
+        + '. The seat is settled whatever the rest of the roster does.';
+    }
+    if (isPlayed(p)) {
+      return 'His game is over, but Iron Tuna stores no box score for a defense, so the ' + n1(pproj(p)) + ' beside him is still the pre-game estimate rather than what the defense did.';
+    }
     var ps = l.players.slice().sort(function (a, b) { return pproj(b) - pproj(a); });
     var ss = l.players.slice().sort(function (a, b) { return Number(b.salary || 0) - Number(a.salary || 0); });
     var avgSalary = avg(l.players, function (x) { return Number(x.salary || 0); });
@@ -1484,7 +1529,12 @@ p{color:var(--sec);margin:0 0 16px}
     var sorted = l.players.slice().sort(function (a, b) { return pproj(b) - pproj(a); });
     var chalk = l.players.filter(function (p) { return finite(p.ownership) && Number(p.ownership) >= 20; }).length;
     var ownAvg = avg(l.players.filter(function (p) { return finite(p.ownership); }), function (p) { return Number(p.ownership); });
-    var market = l.players.filter(function (p) { return finite(p.vegasPoints) && finite(p.consensusPoints); })
+    // The market signal is drawn from the seats STILL TO PLAY. A disagreement
+    // between the books and the consensus about a game that finished an hour
+    // ago is not a reason to hold this roster; it is a fact about a forecast
+    // that has already been graded.
+    var live = stillToPlay(l.players), bankedSeats = l.players.filter(isBanked);
+    var market = live.filter(function (p) { return finite(p.vegasPoints) && finite(p.consensusPoints); })
       .sort(function (a, b) { return (Number(b.vegasPoints)-Number(b.consensusPoints)) - (Number(a.vegasPoints)-Number(a.consensusPoints)); })[0];
     var marketGap = market ? Number(market.vegasPoints) - Number(market.consensusPoints) : 0;
     var objective = contest === 'cash'
@@ -1495,16 +1545,35 @@ p{color:var(--sec);margin:0 0 16px}
       ? 'This is the lead build for a three-entry portfolio. It keeps a high-ceiling core while spreading the most uncertain decisions across three related lineups, so one wrong leverage call does not have to be the same wrong call in every entry.'
       : 'This is the best one-shot roster. It keeps the strongest projection and salary-value core, then adds enough ceiling and useful correlation to win a single-entry field. Because there is no second lineup to rescue an overaggressive bet, it uses leverage selectively rather than chasing low ownership for its own sake.';
     var anchors = sorted.slice(0,2).map(function (p) { return p.name; }).join(' and ');
-    var relation = catchers.length
-      ? 'The lineup pairs ' + qb.name + ' with ' + catchers.map(function (p) { return p.name; }).join(' and ') + (backs.length ? ', with ' + backs.map(function (p) { return p.name; }).join(' and ') + ' on the other side' : '') + ', creating intentional passing-game correlation.'
-      : 'The build is not dependent on a concentrated quarterback stack, so more of the scoring can arrive independently across games.';
+    // A stack whose game has been played is not correlation waiting to happen;
+    // it either fired or it did not, and the roster can say which.
+    var stackMen = catchers.length ? [qb].concat(catchers) : [];
+    var stackDone = stackMen.length && stackMen.every(isBanked);
+    var relation = !catchers.length
+      ? 'The build is not dependent on a concentrated quarterback stack, so more of the scoring can arrive independently across games.'
+      : stackDone
+      ? 'The ' + qb.name + ' stack has already played: ' + qb.name + ' and ' + catchers.map(function (p) { return p.name; }).join(' and ') + ' returned ' + n1(stackMen.reduce(function (n, p) { return n + actualOf(p); }, 0)) + ' points between them, and that correlation is spent either way.'
+      : 'The lineup pairs ' + qb.name + ' with ' + catchers.map(function (p) { return p.name; }).join(' and ') + (backs.length ? ', with ' + backs.map(function (p) { return p.name; }).join(' and ') + ' on the other side' : '') + ', creating intentional passing-game correlation.';
     var marketText = market && marketGap > .5
-      ? 'The strongest market-versus-consensus signal inside the roster is ' + market.name + ', with the market ' + n1(marketGap) + ' fantasy points higher than consensus.'
+      ? 'The strongest market-versus-consensus signal still to play is ' + market.name + ', with the market ' + n1(marketGap) + ' fantasy points higher than consensus.'
+      : !live.length
+      ? 'Every seat has played, so there is no market case left to make: the roster is what it scored.'
       : 'The roster is not being carried by one extreme market disagreement; its edge is spread across the construction.';
     var ownText = ownAvg
       ? 'Modeled ownership averages ' + n1(ownAvg) + '% across the priced players' + (chalk ? ', including ' + chalk + ' player' + (chalk === 1 ? '' : 's') + ' at 20% or more' : '') + '.'
       : '';
-    return objective + ' It spends ' + money(l.salary) + ' and leaves ' + money(l.remaining) + ', with ' + anchors + ' providing the largest projected scoring base. ' + relation + ' ' + marketText + (ownText ? ' ' + ownText : '');
+    // "Projected scoring base" is a lie about a man who has already scored, so
+    // the sentence says which it is, and adds what is banked when part of the
+    // roster is in the books.
+    var anchorsBanked = sorted.slice(0, 2).filter(isBanked).length;
+    var baseText = anchorsBanked === 2 ? 'providing the largest scoring base, both of them already in the books'
+      : anchorsBanked === 1 ? 'providing the largest scoring base, one of them already in the books'
+      : 'providing the largest projected scoring base';
+    var playedSeats = l.players.filter(isPlayed);
+    var playedText = playedSeats.length
+      ? ' ' + playedSeats.length + ' of the ' + l.players.length + ' seats ' + (playedSeats.length === 1 ? 'has' : 'have') + ' already played and can no longer move, so what follows describes the ' + live.length + ' still to come.'
+      : '';
+    return objective + ' It spends ' + money(l.salary) + ' and leaves ' + money(l.remaining) + ', with ' + anchors + ' ' + baseText + '.' + playedText + ' ' + relation + ' ' + marketText + (ownText ? ' ' + ownText : '');
   }
 
   function breakdownHtml(l, sh, qb) {
@@ -1513,21 +1582,34 @@ p{color:var(--sec);margin:0 0 16px}
     var catchers = lineupCatchers(l, qb), backs = lineupBringbacks(l, qb);
     var owned = l.players.filter(function (p) { return finite(p.ownership); });
     var ownAvg = avg(owned, function (p) { return Number(p.ownership); });
-    var market = l.players.filter(function (p) { return finite(p.vegasPoints) && finite(p.consensusPoints); })
+    // Both of these are claims about what is still to come, so both are drawn
+    // from the seats that have not played. A market gap on a finished game is
+    // a graded forecast, and a man who has already scored has no downside
+    // left to warn anybody about.
+    var live = stillToPlay(l.players), bankedSeats = l.players.filter(isBanked);
+    var market = live.filter(function (p) { return finite(p.vegasPoints) && finite(p.consensusPoints); })
       .sort(function (a, b) { return Math.abs(Number(b.vegasPoints)-Number(b.consensusPoints)) - Math.abs(Number(a.vegasPoints)-Number(a.consensusPoints)); })[0];
-    var risky = l.players.filter(function (p) { return p.position !== 'DST'; }).slice()
+    var risky = live.filter(function (p) { return p.position !== 'DST'; }).slice()
       .sort(function (a, b) { return (pfloor(a)/Math.max(1,pproj(a))) - (pfloor(b)/Math.max(1,pproj(b))); })[0];
-    var construction = 'Salary is concentrated most heavily in ' + pricey.name + ' at ' + money(pricey.salary) + '. ' + cheap.name + ' at ' + money(cheap.salary) + ' is the lowest-cost piece, which helps the roster keep ' + money(l.remaining) + ' unused rather than forcing a worse fit just to spend every dollar.';
+    var construction = 'Salary is concentrated most heavily in ' + pricey.name + ' at ' + money(pricey.salary) + '. ' + cheap.name + ' at ' + money(cheap.salary) + ' is the lowest-cost piece, which helps the roster keep ' + money(l.remaining) + ' unused rather than forcing a worse fit just to spend every dollar.'
+      + (bankedSeats.length ? ' ' + money(bankedSeats.reduce(function (n, p) { return n + Number(p.salary || 0); }, 0)) + ' of that spend has already returned ' + n1(bankedSeats.reduce(function (n, p) { return n + actualOf(p); }, 0)) + ' points and cannot be moved.' : '');
     var marketText = market
-      ? market.name + ' has the biggest market/consensus gap in this lineup: ' + n1(Number(market.vegasPoints)-Number(market.consensusPoints)) + ' fantasy points. ' + (finite(market.teamTotal) ? market.team + ' is implied for ' + n1(market.teamTotal) + ' points.' : 'That gap is part of the projection case, not a standalone reason to roster him.')
+      ? market.name + ' has the biggest market/consensus gap among the seats still to play: ' + n1(Number(market.vegasPoints)-Number(market.consensusPoints)) + ' fantasy points. ' + (finite(market.teamTotal) ? market.team + ' is implied for ' + n1(market.teamTotal) + ' points.' : 'That gap is part of the projection case, not a standalone reason to roster him.')
+      : !live.length
+      ? 'Every game in this roster has been played, so there is no market read left to give: the numbers above are results.'
       : 'The lineup is using the blended Iron Tuna projection without a usable player-level market/consensus gap for this slate.';
-    var corr = catchers.length
-      ? qb.name + ' is paired with ' + catchers.map(function (p) { return p.name; }).join(' and ') + '. ' + (backs.length ? 'The bring-back is ' + backs.map(function (p) { return p.name; }).join(' and ') + ', so the lineup benefits if that game stays aggressive on both sides.' : 'There is no opposing bring-back, so the build captures same-team passing upside without requiring a full shootout.')
-      : 'There is no same-team QB/pass-catcher stack in this build. That lowers game-level dependency, which is more useful in cash than in a top-heavy tournament.';
+    var stackMen = catchers.length ? [qb].concat(catchers) : [];
+    var corr = !catchers.length
+      ? 'There is no same-team QB/pass-catcher stack in this build. That lowers game-level dependency, which is more useful in cash than in a top-heavy tournament.'
+      : stackMen.every(isBanked)
+      ? 'The ' + qb.name + ' stack has been played. ' + qb.name + ' and ' + catchers.map(function (p) { return p.name; }).join(' and ') + ' scored ' + n1(stackMen.reduce(function (n, p) { return n + actualOf(p); }, 0)) + ' between them' + (backs.length ? ', and the bring-back through ' + backs.map(function (p) { return p.name; }).join(' and ') + ' is settled with it' : '') + '. Whatever the correlation was worth, it has already been paid.'
+      : qb.name + ' is paired with ' + catchers.map(function (p) { return p.name; }).join(' and ') + '. ' + (backs.length ? 'The bring-back is ' + backs.map(function (p) { return p.name; }).join(' and ') + ', so the lineup benefits if that game stays aggressive on both sides.' : 'There is no opposing bring-back, so the build captures same-team passing upside without requiring a full shootout.');
     var salaryText = 'The expensive slot is ' + pricey.name + ' because the optimizer values the points attached to that salary more than the alternatives. The savings from ' + cheap.name + ' are only useful because they preserve the stronger projection at the top instead of creating another weak punt.';
     var risk = risky
-      ? risky.name + ' has the widest downside relative to his projection among the offensive players in this roster, with a ' + n1(pfloor(risky)) + ' floor against a ' + n1(pproj(risky)) + ' projection. ' + (ownAvg ? 'The lineup also carries about ' + n1(ownAvg) + '% average modeled ownership, which ' + (contest === 'gpp' ? 'can limit uniqueness if the popular pieces fail to separate from the field.' : 'is acceptable here because the objective is survival, not uniqueness.') : '')
-      : 'The main risk is that the optimizer’s projected roles do not materialize as expected.';
+      ? risky.name + ' has the widest downside relative to his projection among the offensive players still to play, with a ' + n1(pfloor(risky)) + ' floor against a ' + n1(pproj(risky)) + ' projection. ' + (ownAvg ? 'The lineup also carries about ' + n1(ownAvg) + '% average modeled ownership, which ' + (contest === 'gpp' ? 'can limit uniqueness if the popular pieces fail to separate from the field.' : 'is acceptable here because the objective is survival, not uniqueness.') : '')
+      : !live.length
+      ? 'There is no risk left in this roster to describe. Every seat has played, and the total above is what it scored.'
+      : 'The main risk is that the optimizer\u2019s projected roles do not materialize as expected.';
     var why = contest === 'cash'
       ? 'Tuna Edge prefers this combination because it buys the most dependable projected production it can under the cap without paying for unnecessary correlation or low-owned volatility.'
       : contest === 'gpp'
@@ -1674,22 +1756,31 @@ p{color:var(--sec);margin:0 0 16px}
   // says plainly when there is none.
   function propsNote(l) {
     var cov = (slate && slate.props) || null;
-    var quoted = l.players.filter(function (p) { return p.marketQuoted; });
-    var tdMkt = l.players.filter(function (p) { return p.tdBasis === 'anytime-td-market' && finite(p.tdProbability); })
+    // Only the seats still to play. A posted prop and a devigged touchdown
+    // price are both forecasts, and quoting one on a man who finished an hour
+    // ago reads as something the reader could still act on.
+    var live = stillToPlay(l.players), settled = l.players.length - live.length;
+    var settledText = settled ? ' ' + settled + ' of the ' + l.players.length + ' seats ' + (settled === 1 ? 'has' : 'have') + ' already played and no longer ' + (settled === 1 ? 'carries' : 'carry') + ' a market.' : '';
+    var quoted = live.filter(function (p) { return p.marketQuoted; });
+    var tdMkt = live.filter(function (p) { return p.tdBasis === 'anytime-td-market' && finite(p.tdProbability); })
       .sort(function (a, b) { return Number(b.tdProbability) - Number(a.tdProbability); });
+    if (!live.length) {
+      return '<p class="df-props"><b>Every game in this roster has been played.</b> There is no market behind it any more: the numbers on the card are results, not prices.</p>';
+    }
     if (!quoted.length) {
-      return '<p class="df-props"><b>No player prop is behind this lineup.</b> '
+      return '<p class="df-props"><b>No player prop is behind ' + (settled ? 'the rest of this lineup' : 'this lineup') + '.</b> '
         + (cov && cov.players ? 'The books have not posted on any of the ' + cov.players + ' players on this slate. ' : '')
+        + (settledText ? settledText.trim() + ' ' : '')
         + 'Every market number here is the game line\u2019s total and spread split across an offense, which the build discounts for exactly that reason, and a player nobody priced falls back to the consensus projection rather than to a fitted number wearing a Vegas label. '
         + (tdMkt.length ? '' : 'Touchdown odds are derived from the projected workload, not quoted.')
         + '</p>';
     }
-    return '<p class="df-props"><b>' + quoted.length + ' of ' + l.players.length + ' picks are priced by the books.</b> '
+    return '<p class="df-props"><b>' + quoted.length + ' of the ' + live.length + ' picks still to play ' + (quoted.length === 1 ? 'is' : 'are') + ' priced by the books.</b>' + settledText + ' '
       + quoted.slice(0, 4).map(function (p) {
           return e(p.name) + ' (' + (p.market.pricedLabels || []).slice(0, 3).join(', ') + (p.market.books ? ', ' + p.market.books + ' books' : '') + ')';
         }).join('; ')
       + (quoted.length > 4 ? ' and ' + (quoted.length - 4) + ' more' : '') + '. '
-      + (tdMkt.length ? 'Best quoted touchdown price in the roster: ' + e(tdMkt[0].name) + ' at ' + n1(tdMkt[0].tdProbability) + '%'
+      + (tdMkt.length ? 'Best quoted touchdown price still to come: ' + e(tdMkt[0].name) + ' at ' + n1(tdMkt[0].tdProbability) + '%'
           + (tdMkt[0].tdBooks ? ' across ' + tdMkt[0].tdBooks + ' books' : '') + ', devigged. ' : '')
       + 'The rest carry their game\u2019s environment, discounted for not being quoted.</p>';
   }
@@ -1712,19 +1803,26 @@ p{color:var(--sec);margin:0 0 16px}
   // it (dfsActualFor in _worker.js), and saying so is better than letting a
   // reader assume the whole roster is settled.
   function bankedMark(p) {
-    if (!p || !p.gamePlayed) return '';
-    if (p.actual == null) return ' <span class="df-banked pending" title="This game is over, but Iron Tuna has no box score for a defense, so this is still the projection.">est</span>';
-    return ' <span class="df-banked" title="' + n1(p.actual) + ' is what he actually scored. His game is final, so this is a result rather than a projection.">final</span>';
+    if (!isPlayed(p)) return '';
+    var a = actualOf(p);
+    if (a == null) return ' <span class="df-banked pending" title="This game is over, but Iron Tuna has no box score for a defense, so this is still the projection.">est</span>';
+    return ' <span class="df-banked" title="' + n1(a) + ' is what he actually scored. His game is final, so this is a result rather than a projection.">final</span>';
   }
   // How much of a total is already settled. A reader at four o'clock is not
   // asking what the roster projects for, he is asking what is left to come.
   function bankedNote(l) {
     if (!l || !l.playedPlayers) return '';
+    var seats = l.players.length, done = l.playedPlayers, scored = l.bankedPlayers, live = seats - done;
     var left = Number(l.projPoints) - Number(l.bankedPoints || 0);
+    var site = e(slate.label || 'the site');
     return '<p class="df-fieldnote"><b>' + n1(l.bankedPoints || 0) + ' of these ' + n1(l.projPoints) + ' points are already in the books.</b> '
-      + l.bankedPlayers + ' of the ' + l.players.length + ' seats ' + (l.bankedPlayers === 1 ? 'has' : 'have') + ' played, and carr' + (l.bankedPlayers === 1 ? 'ies' : 'y') + ' what was actually scored under ' + e(slate.label || 'the site') + '\u2019 own rules; '
-      + 'the other ' + (l.players.length - l.bankedPlayers) + (l.players.length - l.bankedPlayers === 1 ? ' is still a projection, worth ' : ' are still projections, worth ') + n1(left) + '. '
-      + (l.playedPlayers > l.bankedPlayers ? 'A defense whose game is over is counted among those projections, because Iron Tuna stores no defensive box score. ' : '')
+      + done + ' of the ' + seats + ' seats ' + (done === 1 ? 'has' : 'have') + ' played'
+      + (done === scored
+          ? ' and carr' + (done === 1 ? 'ies' : 'y') + ' what was actually scored under ' + site + '\u2019 own rules. '
+          : '. ' + scored + ' of them carr' + (scored === 1 ? 'ies' : 'y') + ' what was actually scored under ' + site + '\u2019 own rules; the '
+            + (done - scored === 1 ? 'other keeps its estimate' : 'others keep their estimates')
+            + ', because Iron Tuna stores no box score for a defense. ')
+      + 'The ' + live + ' still to come ' + (live === 1 ? 'is a projection, worth ' : 'are projections, worth ') + n1(left) + ' between them. '
       + 'Players whose games are finished are off the board for new lineups, since no entry submitted now can contain them; pin one to keep him in a roster you already hold.</p>';
   }
   function lineupCard(l, i, sh, lead) {
@@ -1816,9 +1914,14 @@ p{color:var(--sec);margin:0 0 16px}
     var contra = contest === 'gpp';
     var out = [];
     l.players.forEach(function (cur) {
+      // Neither side of a swap can involve a finished game. The seat itself is
+      // settled -- a man who has played cannot be taken out of an entry -- and
+      // a player whose game is over cannot be put into one, so offering him as
+      // "the next best body" is offering something nobody can do.
+      if (isPlayed(cur)) return;
       var room = cap - l.salary + cur.salary;
       var cands = players.filter(function (q) {
-        if (inL[q.id] || q.salary > room) return false;
+        if (inL[q.id] || q.salary > room || isPlayed(q)) return false;
         if (!(cur.slot === q.position || (cur.slot === 'FLEX' && flex.indexOf(q.position) >= 0))) return false;
         if (!isFinite(pts(q)) || pts(q) <= 0) return false;
         if (contra && cur.ownership != null && q.ownership != null && q.ownership >= cur.ownership) return false;
