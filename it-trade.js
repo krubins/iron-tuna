@@ -172,6 +172,115 @@
     return null;
   }
 
+  // ── what it might have been ───────────────────────────────────────────────
+  // WHY THIS EXISTS. A line the resolver cannot place is handed back to the
+  // reader as an empty box: "type the name". That box knows the whole board
+  // and was telling the reader nothing — so a name it half-read ("K Mon…")
+  // had to be retyped in full, from memory, by someone who was pasting a
+  // roster precisely so they would not have to type it.
+  //
+  // resolve() is deliberately strict: it answers one player or nothing, and it
+  // never guesses, because a guess puts a stranger on a roster. This is the
+  // other half of that bargain. It is allowed to be generous, because nothing
+  // it returns is acted on — every one of these is a name the reader has to
+  // pick before it counts, and resolve() still has the last word on the pick.
+  //
+  // Capped Levenshtein: past `max` the exact distance does not matter, and the
+  // cap is what keeps this cheap over a board of four hundred rows typed at.
+  // Transpositions count as ONE edit, not two. Two letters swapped is the
+  // commonest typo there is and a routine screenshot misread, and plain
+  // Levenshtein charges it double: "Waddel" sits two edits from "Waddle",
+  // outside a six-letter surname's allowance, so the box offered nothing for
+  // a name that was one slip away. Widening the allowance instead would have
+  // let "Hall" reach "Hill", which are two players.
+  //
+  // The early abandon is safe: every path to the end crosses every row, so the
+  // final distance is never less than the smallest cell in any row.
+  function editDistance(a, b, max) {
+    if (a === b) return 0;
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    var prev2 = null, prev = [], cur, i, j, best;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur = [i]; best = i;
+      for (j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+        if (i > 1 && j > 1 && a.charAt(i - 1) === b.charAt(j - 2) && a.charAt(i - 2) === b.charAt(j - 1)) {
+          cur[j] = Math.min(cur[j], prev2[j - 2] + 1);
+        }
+        if (cur[j] < best) best = cur[j];
+      }
+      if (best > max) return max + 1;
+      prev2 = prev; prev = cur;
+    }
+    return prev[b.length];
+  }
+  // How far apart two words may be and still be the same word. A four-letter
+  // surname tolerates one edit and no more — "Hall" is one edit from "Hill"
+  // and they are different players — while a long one survives a typo without
+  // being mistaken for anyone. Measured on the shorter, so a three-letter
+  // fragment cannot borrow a long name's allowance.
+  function slack(a, b) { return Math.max(1, Math.min(2, Math.floor(Math.min(a.length, b.length) / 4))); }
+
+  // One line (or one half-typed name) → the players it could be, best first.
+  //   suggest(pool, 'k mon')          → Kyle Monangai, …
+  //   suggest(pool, 'K Bornegales K') → the kicker whose surname is one edit off
+  //   suggest(pool, '')               → the top of the board, which is what an
+  //                                     empty box should offer to open with
+  // Slot words, club abbreviations and bare numbers are dropped first, so a
+  // whole pasted line works as well as a typed fragment. A position written on
+  // the line is obeyed: "K Mon RB" never offers a kicker.
+  function suggest(pool, text, limit) {
+    if (!pool || !pool.list) return [];
+    var n = Math.max(1, Math.min(25, limit || 8));
+    var all = words(text);
+    // A LEADING SINGLE LETTER IS AN INITIAL, NOT A SLOT. Every one-letter slot
+    // label — k, d, w, r, t — is also somebody's first initial, and posOf()
+    // takes the first hit it finds: "K Monangai RB" read as a kicker, and the
+    // running back it plainly says it is was filtered out of its own answer.
+    // So the hint here comes from the spelled-out labels only, and the leading
+    // letter is kept as what it is, the initial that tells Kyle from Kenneth.
+    var hint = posOf(all.filter(function (w, i) { return !(i === 0 && w.length === 1); }).join(' '));
+    var toks = all.filter(function (w, i) {
+      if (i === 0 && w.length === 1) return true;
+      return !SLOT_WORDS[w] && !TEAM_ABBR[w] && !pool.teams[w] && !/^[0-9.]+$/.test(w);
+    });
+    var q = toks.join(' ');
+    // fold() turns punctuation into a space, so "Ja'Marr" is two words here
+    // and a reader typing "jamarr" prefixes neither. The run-together copy is
+    // only ever compared as a prefix, so it costs nothing and answers that.
+    var qq = q.replace(/ /g, '');
+    var out = [];
+    for (var i = 0; i < pool.list.length; i++) {
+      var r = pool.list[i];
+      if (hint && r.pos !== hint) continue;
+      var rank = q ? rankFor(r, toks, q, qq) : 4;
+      if (rank < 0) continue;
+      out.push({ r: r, rank: rank, i: i });
+      if (!q && out.length >= n) break;            // the board is already in order
+    }
+    // The pool arrives in board order, so index is value order: among names
+    // that match equally well, the one worth more is the one being looked for.
+    out.sort(function (a, b) { return (a.rank - b.rank) || (a.i - b.i); });
+    return out.slice(0, n).map(function (h) { return h.r; });
+  }
+  function rankFor(r, toks, q, qq) {
+    if (r.f.indexOf(q) === 0) return 0;                       // "ja marr" → Ja'Marr Chase
+    if (qq.length >= 2 && r.f.replace(/ /g, '').indexOf(qq) === 0) return 0;  // "jamarr" → the same man
+    var last = toks[toks.length - 1], surname = r.w[r.w.length - 1];
+    // Initial (or first name) and surname, the way a grid prints one. Both
+    // halves have to fit, or "j w" offers every W and every J on the board.
+    if (toks.length > 1 && surname.indexOf(last) === 0 && r.w[0].indexOf(toks[0]) === 0) return 1;
+    for (var t = 0; t < toks.length; t++) {
+      if (toks[t].length < 2) continue;                       // a lone initial is not a search
+      for (var w = 0; w < r.w.length; w++) if (r.w[w].indexOf(toks[t]) === 0) return 2;
+    }
+    // A misread letter. Only on the surname, and only once the reader has
+    // typed enough of it to mean something.
+    if (last && last.length >= 4 && editDistance(last, surname, slack(last, surname)) <= slack(last, surname)) return 3;
+    return -1;
+  }
+
   // Is this non-player line a team name, or noise? Noise is anything made only
   // of slot labels, club abbreviations, numbers and short status tokens —
   // "QB - BUF (3)", "Bye: 7", "Proj 18.4", "W/R/T". A team name has at least
@@ -401,7 +510,7 @@
   }
 
   return {
-    fold: fold, makePool: makePool, resolve: resolve, parseRosters: parseRosters, isNoise: isNoise,
+    fold: fold, makePool: makePool, resolve: resolve, suggest: suggest, parseRosters: parseRosters, isNoise: isNoise,
     lineupValue: lineupValue, normSlots: normSlots, findTrades: findTrades, BENCH_W: BENCH_W
   };
 });
