@@ -11432,3 +11432,59 @@ than a number it cannot support.
 `node tools/test-ranks.mjs` (84) and `node tools/test-boards.mjs` (95) pass.
 Both surfaces were driven in a real Chromium against a worker-built payload
 with three weeks of usage behind it.
+
+## 95. September 20: the coach was at the bottom of the page, which is nowhere
+
+§93 put the Value Coach in the lineup section, under the roster and its pivots,
+on the reasoning that a question belongs beside what provoked it. In practice
+that is the wrong end of a long section: below the lead board, below the
+alternates, below the pivot table, directly above the fine-tune panel. A reader
+working through the roster scrolls past the answer to their question without
+meeting the thing that answers it, and the first report of it was that the
+coach is "a box well below everything else."
+
+**It is a launcher and a dock now**, which is the shape the auction board has
+used since launch and for the same reason: the button travels with the reader
+instead of waiting at a fixed depth, and the coach opens beside the numbers
+being asked about rather than a screen below them.
+
+- `.df-coach-fab` is a teal pill at the bottom right, icon plus the words
+  "Value Coach" (an icon alone does not say what it opens). It carries
+  `aria-expanded` and `aria-controls`, and folds away while the dock is open
+  rather than sitting under it.
+- `.df-coach` is now `position: fixed`, 390px, capped at `min(76vh, 700px)`,
+  at z-index 301: over the tooltips (120) and under the player-calculation
+  modal (1000), which still takes Escape first because it is on top. The head
+  and the input are pinned and the conversation is the only part that scrolls.
+- Both sit at page level, after the last `</section>`. A fixed dock nested in a
+  container that hides with a section switch would vanish with it.
+- On a phone it is a sheet across the width (`left/right: 8px`) rather than a
+  390px box half off the edge.
+- Open and close move exactly two things, the dock's `hidden` and the button's
+  `aria-expanded`, so there is no third variable to disagree with them. Opening
+  calls `coachSync()` (a dock opened before the roster existed would otherwise
+  show a stale reason) and moves focus into the input; closing returns focus to
+  the launcher.
+
+`mount()` takes an `onClose` now. With one the header button reads **Close** and
+shuts the dock; without one it keeps the in-place minimize, so the module still
+stands alone on a page that embeds it inline.
+
+**§94's failure mode survives the move**, which took one addition: the dock is
+closed by default, so a reader only meets a boot failure by opening it. The
+launcher itself goes grey with the reason on its `title` when the coach behind
+it never loaded, and a successful **Try again** puts it back.
+
+| Where | What |
+|---|---|
+| `dfs.html` | `.df-coach-fab` / `.df-coach-fab-bad`, the fixed-dock CSS and its phone sheet, the launcher and dock markup at page level, `coachOpen`/`openCoach`/`closeCoach`/`toggleCoach`, Escape sharing with the player modal. |
+| `dfs-coach.js` | `opts.onClose`: Close instead of Minimize, and the header button defers to the page. |
+| `tools/test-dfs-coach.mjs` | 66 now: page-level placement, closed-by-default, the two states moving together, the sync and focus on open, Escape ordering, the z-index band, the scroll containment, the phone sheet, and the launcher's failure and recovery. |
+
+Driven in Chromium at 1280 and 390: closed on load, the launcher anchored 18px
+off both edges, opening shows the dock fully inside the viewport (390x496) with
+the launcher faded out, the starter chip still reaches a streamed reply, Escape
+closes it and focus returns to the button. At 390px the dock is 374px wide,
+fully on screen, with the send button reachable. With `/dfs-coach.js` answering
+404 the launcher is grey and titled with the reason, the dock opens to the
+message and a working Try again, and the retry restores both.
