@@ -7,9 +7,12 @@
  * opponent, a schedule grade and an injury column, ten columns apart and off the
  * right edge of a phone. So every row carries two sentences under the name:
  *
- *   PLAYER       where he ranks at his own position, what a rank like that is
- *                worth AT THAT POSITION, the points behind it, and an injury or
- *                a usage swing where there is one.
+ *   PLAYER       where he ranks at his own position, WHAT HE HAS ACTUALLY DONE
+ *                (the points a game he has scored, the volume behind them, and
+ *                whether the projection ahead of him backs that rate or marks
+ *                it down), and an injury or a usage swing where there is one.
+ *                A rank is not a performance, so the positional tier is the
+ *                FALLBACK, for a player who has not played yet.
  *   OPPORTUNITY  what is in front of him — on a one-week board the fixture, the
  *                matchup and the scoring environment; on a multi-week board the
  *                games, byes and slate still to come.
@@ -42,6 +45,10 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
   function n1(v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); }
+  // Volume reads in the units the figure is actually counted in: a tenth of a
+  // target or a touch is a real distinction over a season, a tenth of a yard is
+  // not, and "281.0 passing yards a game" is a decimal nobody asked for.
+  function vol(v, unit) { return unit === 'passing yards' ? String(Math.round(v)) : n1(v); }
 
   // THE TIERS. A rank is a number; "WR9" does not tell a reader whether that is
   // a lineup lock or a bench stash, and the answer differs by position — TE6 is
@@ -86,6 +93,15 @@
     return (Math.round(Math.abs(d) * 10) / 10).toFixed(1) + (unit ? ' ' + unit : '') + (d > 0 ? ' above' : ' below');
   }
   function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+  // The board's forward rate against the rate he has actually run at. The
+  // threshold is a tenth of a point, below which the two numbers are the same
+  // number and saying either "marks down" or "backs" would be reading a
+  // rounding difference as a judgement.
+  function forwardOf(ppg, projPerGame, proj) {
+    var d = projPerGame - ppg;
+    if (!isFinite(d) || Math.abs(d) < 0.1) return 'and the board projects much the same going forward';
+    return 'which the board marks ' + (d < 0 ? 'down' : 'up') + ' to ' + proj + ' going forward';
+  }
   function listOf(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
 
   // THE PLAYER LINE. Who he is on the board the reader is looking at, in the
@@ -108,14 +124,45 @@
       : o.spellOut && POS_LONG[p.position] ? ord(rank) + ' among ' + POS_LONG[p.position]
       : esc(p.position) + rank;
     var bits = [head + HZ[hz].when];
-    var tier = tierOf(p.position, rank);
-    if (tier) bits.push(tier);
     // The points clause is dropped for a player with no game on this board: a
     // 0.0 there is an absence, not a projection, and printing it as one beside
-    // a tier would read as a collapse.
+    // a rank would read as a collapse.
     var pts = o.points;
-    if (pts != null && isFinite(pts) && p.games > 0) {
-      bits.push(hz === 'week' ? n1(pts) + ' points projected' : n1(pts / p.games) + ' points a game');
+    var proj = pts != null && isFinite(pts) && p.games > 0
+      ? (hz === 'week' ? n1(pts) : n1(pts / p.games))
+      : null;
+
+    // WHAT HE HAS ACTUALLY DONE COMES FIRST, where the board knows it. A rank
+    // is not a performance, and the positional tier that used to sit here was
+    // the rank said a second way: "RB3, elite at the position" tells a reader
+    // nothing he did not already have from the "#" column. The season line
+    // does — what he has scored, the volume he scored it on, and whether the
+    // projection ahead of him backs that rate or marks it down.
+    //
+    // THE COMPARISON IS THE INSIGHT. A board projecting well under a player's
+    // own rate is saying his scoring has outrun what is driving it; one
+    // projecting over it is saying the opposite. Both are worth a reader's
+    // attention and neither is visible in a rank. It is only drawn on a
+    // multi-week horizon, where the projection is a per-game rate and the two
+    // numbers are the same kind of thing; a one-week total against a season
+    // average would be a comparison between different units.
+    var f = p.form;
+    var played = f && f.games > 0 && f.ppg != null && isFinite(o.formPpg == null ? f.ppg : o.formPpg);
+    if (played) {
+      var ppg = o.formPpg == null ? f.ppg : o.formPpg;
+      var run = n1(ppg) + ' points a game so far' +
+        (f.volume != null && f.volumeUnit ? ' on ' + vol(f.volume, f.volumeUnit) + ' ' + esc(f.volumeUnit) : '') +
+        ' over ' + plural(f.games, 'game');
+      bits.push(run);
+      if (proj != null) {
+        bits.push(hz === 'week' ? proj + ' projected this week' : forwardOf(ppg, pts / p.games, proj));
+      }
+    } else {
+      // NOTHING PLAYED YET, so there is nothing to report and the tier is all
+      // the board has to say about him. In September that is every row.
+      var tier = tierOf(p.position, rank);
+      if (tier) bits.push(tier);
+      if (proj != null) bits.push(proj + (hz === 'week' ? ' points projected' : ' points a game projected'));
     }
     var s = bits.join(', ');
     // ONE trailing clause, not two. An injury is the fact that changes a

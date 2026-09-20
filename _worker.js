@@ -5920,7 +5920,7 @@ function buildUsageOverlay(season, weekly, snaps) {
     if (r.week > maxWeek) maxWeek = r.week;
     const k = key(r.name, r.position);
     const rec = players[k] || (players[k] = { name: r.name, position: r.position, team: r.team,
-      latest: null, season: { games: 0, targets: 0, carries: 0, receptions: 0, airYards: 0, tds: 0, points: 0, stats: {} } });
+      latest: null, season: { games: 0, targets: 0, carries: 0, passAttempts: 0, receptions: 0, airYards: 0, tds: 0, points: 0, stats: {} } });
     rec.team = r.team;
     rec.season.games++;
     // The RAW season stat line, accumulated week by week. Points are not stored
@@ -5932,6 +5932,11 @@ function buildUsageOverlay(season, weekly, snaps) {
     _addStats(rec.season.stats || (rec.season.stats = {}), r.stats);
     rec.season.targets += r.usage.targets || 0;
     rec.season.carries += r.usage.carries || 0;
+    // Attempts are accumulated for the same reason targets and carries are:
+    // roleTrendFrom counts them on the LATEST week's side, and without them
+    // here it was dividing a quarterback's 38 attempts by his three rushes a
+    // game. See the note there.
+    rec.season.passAttempts += r.usage.passAttempts || 0;
     rec.season.receptions += r.usage.receptions || 0;
     rec.season.airYards += r.usage.airYards || 0;
     rec.season.tds += (r.stats.rushTD || 0) + (r.stats.recTD || 0);
@@ -6666,14 +6671,56 @@ function explainDelta(row, movement, env, delta) {
 function roleTrendFrom(u) {
   if (!u || !u.latest || !u.season || !(u.season.games > 0)) return { label: 'no data', pct: null, factor: 1, games: 0, applied: false };
   const g = u.season.games;
-  const touches = (u.latest.usage.targets || 0) + (u.latest.usage.carries || 0) + (u.latest.usage.passAttempts || 0);
-  const avg = ((u.season.targets || 0) + (u.season.carries || 0)) / g;
+  // BOTH SIDES COUNT THE SAME THINGS. The latest week's side has always
+  // included pass attempts; the season average did not, so a quarterback's 38
+  // attempts were being divided by his three rushes a game and every passer
+  // read "usage up 1100%". The factor is clamped to ROLE_CLAMP, so the damage
+  // to a projection was bounded at 10% -- but it was there, on every QB, in the
+  // wrong direction for anyone whose attempts dipped, and the percentage the
+  // pages printed was nonsense on its face.
+  const att = u.latest.usage.passAttempts || 0;
+  const touches = (u.latest.usage.targets || 0) + (u.latest.usage.carries || 0) + att;
+  // A row cached before season.passAttempts existed has attempts on one side
+  // and not the other. That is not a trend of zero, it is a trend this cache
+  // cannot support, and it says so rather than guessing.
+  const seasonAtt = u.season.passAttempts;
+  if (att > 0 && !(seasonAtt > 0)) return { label: 'no data', pct: null, factor: 1, games: g, applied: false };
+  const avg = ((u.season.targets || 0) + (u.season.carries || 0) + (seasonAtt || 0)) / g;
   if (!(avg > 0) || !(touches >= 0)) return { label: 'no data', pct: null, factor: 1, games: g, applied: false };
   const pct = (touches - avg) / avg;
   const applied = g >= ROLE_MIN_GAMES;
   const factor = applied ? Math.min(ROLE_CLAMP[1], Math.max(ROLE_CLAMP[0], 1 + ROLE_GAIN * pct)) : 1;
   return { label: pct > 0.15 ? 'up' : pct < -0.15 ? 'down' : 'flat', pct: Math.round(pct * 100), factor: _oddsRound(factor * 100) / 100,
            games: g, latestTouches: touches, avgTouches: _oddsRound(avg), applied };
+}
+
+// A player's SEASON TO DATE, out of the same usage overlay the role trend is
+// read from: the raw accumulated line, the points it is worth at this board's
+// scoring, and the volume that produced them. Null when he has not played, and
+// null rather than zero for any figure the overlay does not carry -- a cache
+// written before `season.stats` existed has no line, and a board that printed
+// 0.0 points a game for it would be inventing a bad week out of a missing one.
+//
+// VOLUME IS PER POSITION because the number that matters is. A back is his
+// touches, a receiver his targets, a passer his yards; a kicker and a defense
+// have no volume a reader reasons about, so they get none rather than a figure
+// that means nothing. Attempts are not accumulated into the season block by
+// buildUsageOverlay, which is why a quarterback reads in yards.
+function seasonFormFrom(u, position, rules) {
+  const sea = u && u.season ? u.season : null;
+  const games = sea ? Number(sea.games) || 0 : 0;
+  if (!sea || games <= 0) return null;
+  const stats = sea.stats && Object.keys(sea.stats).length ? sea.stats : null;
+  if (!stats) return null;
+  const pts = _oddsRound(scoreAny(stats, position, rules, games));
+  const carries = Number(sea.carries) || 0, rec = Number(sea.receptions) || 0, tgt = Number(sea.targets) || 0;
+  let volume = null, volumeUnit = null;
+  if (position === 'RB') { volume = _oddsRound((carries + rec) / games); volumeUnit = 'touches'; }
+  else if (position === 'WR' || position === 'TE') { volume = _oddsRound(tgt / games); volumeUnit = 'targets'; }
+  else if (position === 'QB' && Number.isFinite(stats.passYd)) { volume = _oddsRound(stats.passYd / games); volumeUnit = 'passing yards'; }
+  const snapPct = u.latest && u.latest.usage && Number.isFinite(u.latest.usage.snapPct) ? u.latest.usage.snapPct : null;
+  return { games, stats: _roundStats(stats), points: pts, ppg: _oddsRound(pts / games),
+           volume, volumeUnit, tds: Number(sea.tds) || 0, snapPct };
 }
 
 // THE BOARD. `ctx` is everything read once for the request; `opts` is what
@@ -6707,6 +6754,21 @@ function buildBoards(ctx, opts) {
     if (af <= 0) continue;                         // out for the year: nothing to rank
     const u = ctx.usage && ctx.usage.players ? ctx.usage.players[k] : null;
     const role = roleTrendFrom(u);
+    // WHAT HE HAS ACTUALLY DONE. The usage overlay is already read for the role
+    // trend and everything else in it was being thrown away, so a board could
+    // say where a player ranks and what he is projected for and not one word
+    // about how he has played. A rank is not a performance: "RB3" and "elite at
+    // the position" are the same fact said twice, and neither tells a reader
+    // whether the ranking is built on volume he is actually getting.
+    //
+    // Shipped in the same shape as `consensus`: the RAW season line plus points
+    // at this board's scoring. /rankings re-scores every stat line in the
+    // browser at the reader's own league settings, and a form figure scored
+    // here at PPR would disagree with the column beside it; with the line
+    // aboard it can re-score this too. `tds` and `snapPct` ride along because
+    // they are what a reader checks next — whether the scoring is touchdown-fed
+    // and whether the role is his.
+    const form = seasonFormFrom(u, p.position, rules);
     // The weeks he is unavailable: the first `gamesOut` weeks WITH A GAME from
     // the current week onward, across the whole schedule. Anchored to now, not
     // to the horizon: a four-game absence that starts in Week 2 is over long
@@ -6807,7 +6869,7 @@ function buildBoards(ctx, opts) {
       name: p.name, position: p.position === 'DEF' ? 'DST' : p.position, pos: p.position, team, key: k,
       games, byes, weeks: weekRows,
       injury: a ? { status: a.status, gamesOut, note: a.note || '' } : null,
-      roleTrend: role,
+      roleTrend: role, form,
       scheduleDifficulty: oppN ? { avgOpponentDefRank: _oddsRound(oppAllowedSum / oppN),
         label: (oppAllowedSum / oppN) <= 11 ? 'Hard' : (oppAllowedSum / oppN) >= 22 ? 'Easy' : 'Average' } : null,
       consensus: { stats: _roundStats(cStats), points: cp },

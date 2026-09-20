@@ -11201,7 +11201,238 @@ real Chromium against a worker-built payload — the sixteen pages at desktop an
 390px, and `/rankings` across all four horizons, all four boards and QB / RB /
 FLEX / K / DST, with no page errors.
 
-## 93. September 19: the DraftKings roster maker recommended a man who was not playing
+## 91. September 19: the DraftKings sportsbook is fenced, and that is now enforced
+
+Closing out the open pull requests left one carrying something `main` did not
+have. PR #222 ("DraftKings' sportsbook lines and props, by book") answered a
+request of Ken's from September 13 with a finding rather than a feature:
+
+**DraftKings' sportsbook cannot be read by a scheduled job.** Every API path
+tried — `/sites/US-SB/api/v5/eventgroups/88808`,
+`/api/sportscontent/<site>/v1/leagues/88808`, the navigation and category
+endpoints — answers a non-browser client with an Akamai "Access Denied" (403)
+whatever the headers, and the page loads the Akamai Bot Manager sensor. A
+runner would be refused exactly as a curl is. Getting past that means defeating
+bot detection, which this repo does not do, and the sportsbook terms prohibit
+automated access regardless.
+
+The distinction that makes it worth writing down: **the DFS lobby is not
+fenced and the sportsbook is.** `www.draftkings.com/lobby` and
+`api.draftkings.com/draftgroups`, which the weekly salary workflow reads,
+answered an unauthenticated fetch normally on the same day. So "we already pull
+DraftKings data" is true and is not evidence that the lines can be pulled too.
+
+**Why it is in the red list and not only in the inventory.** A note in
+`docs/data-sources.md` tells someone who goes looking. The next person to want
+this book's own numbers will reach for the host first and find out the same way,
+a day at a time. `tools/test-data-sources.mjs` now carries
+`sportsbook(-nash)?.draftkings.com` in `FORBIDDEN`, so the attempt fails the
+build with the reason attached. The guard's own tests check that the rule
+catches both hosts, leaves the word "sportsbook" in prose alone — the front page
+says it constantly — and does not touch the lobby host that does answer.
+
+**What was not taken.** The PR also added about 120 lines to `_worker.js` for a
+per-book view of the stored observations (`GET /api/tuna-market/book?book=…`,
+`TMS_BOOK_LABELS`) plus its tests and a section in
+`docs/TUNA-MARKET-SIGNAL.md`. That is a product feature nobody is waiting on,
+written against a September 12 worker, and the market feed moved to
+SportsGameOdds in §72 after it. Rebasing it would be rewriting it. It stays on
+`claude/draftkings-book-board` at `c410b8d0` if the per-book board is ever
+wanted; the finding above is the part that had to survive, and now has.
+
+## 93. September 19: the DFS lineup could not be asked a question
+
+`/dfs` explains its roster in one direction only. The lead board prints a
+thesis over the table, a sentence under every player, a six-part breakdown
+beside it and the next best body at every seat. All of it is written before
+the reader arrives, and none of it answers the question the reader actually
+has, which is always a follow-up to something they just read: why him and not
+the cheaper one, what this build looks like in a bigger field, which seat is
+the one to change.
+
+The auction board has had the answer to that shape of question since launch.
+Its Value Coach is a chat keyed into the page's OWN numbers — this manager's
+budget, this board's values — which is the whole reason it beats a chatbot in
+another tab. It had never been pointed at the DFS lineup.
+
+**`dfs-coach.js`** is that coach, aimed at the roster: a panel under the
+recommendation and its pivots, not the app's floating dock, because this page
+is a document and a bubble over a salary table covers the numbers the question
+is about. It renders the chat, streams the reply token by token off
+`/api/coach` (the same server-side proxy, so the key stays on the server) and
+holds no state of its own — it reads the page through a `context` function on
+every ask, so it cannot answer about a lineup that is no longer on screen.
+
+**`coachContext()` in `dfs.html`** is that function, and it is assembled from
+the objects the page just rendered: the contest setup (game style, games,
+payout, the shape and its reasoning), the build (objective, stack, bring-back,
+max per team, the reader's locks, exclusions and forced player), the thesis,
+up to three solved lineups with `playerFit`'s own sentence on each seat of the
+lead, the pivot at every slot, the thirty best players it left on the board
+(sorted by the score the chosen shape is solved on) and the game environments
+behind all of it. Where there is no roster — pick'em, no slate, an incomplete
+DraftKings setup, a format with no Classic solve, an infeasible cap — it
+returns a `blocked` sentence instead, and the panel prints that and disables
+itself rather than taking a question it cannot ground.
+
+**THE COACH CALCULATES NOTHING**, which is the same boundary the newsroom
+writes under (`docs/ai-calculation-boundary.md`). Every number it can speak
+was computed by `dfs-optimizer.js` or by `buildDfsSlate`/`dfsMetrics` and
+handed to it as data; the prompt forbids recomputing, re-ranking,
+interpolating or inventing one in as many words, and tells it to say the page
+does not carry a number rather than produce it. The module itself names no
+metric, so there is nothing in it to compute one from. Football knowledge is
+still its own — roles, usage, schemes, matchups — because that is not one of
+this page's numbers.
+
+**The 40,000-character trap.** `/api/coach` SLICES an oversized `system`
+rather than refusing it, which would hand the model a JSON object cut off
+mid-object with no way to know. `fit()` holds the payload to 28,000
+characters, shedding in the order a follow-up is least likely to need (the
+board behind the roster, then the smaller games, then the alternates, then
+the rest of the board, then the smaller swaps), never the roster or the
+contest it was solved for, and it writes `trimmedFromThisPrompt` into the data
+so the model is told what it is missing.
+
+| Where | What |
+|---|---|
+| `dfs-coach.js` | `ITDfsCoach.mount({host, context})`, the system prompt, `fit()`, `tidy()` (a stray asterisk is unbolded, not shown), the SSE reader with a 45s first-byte and 20s idle timeout. A streaming token touches only its own bubble and the log is `aria-busy` until the answer is done, so a screen reader hears it once, complete. |
+| `dfs.html` | `.df-coach*` (light panel, teal accent, 390px-safe), `<div id="dfCoach">` between the pivots and the fine-tune panel, `coachContext()`, and `coachSync()` on every state that changes the roster — a solve, an infeasible solve, an incomplete setup, a non-Classic format, a slate that never loaded, the pick'em board. |
+| `docs/ai-calculation-boundary.md` | an "Interactive features" section: the rule is the same in a chat panel as in the newsroom. |
+| `tools/test-dfs-coach.mjs` | 46 assertions — the prompt's boundary and format clauses, one `fetch` and no provider key, the module carrying no metric, `fit()` under budget with the roster intact, `coachRow` passing numbers through and leaving a missing one absent rather than zero, and the page's wiring including every `coachSync()`. |
+| `.github/workflows/checks.yml` | `node --check dfs-coach.js` with the other shared client scripts, and the test beside `test-dfs.mjs`. |
+
+`node tools/test-dfs-coach.mjs` (46), `node tools/test-dfs.mjs` (111) and
+`node tools/test-ai-boundary.mjs` pass. Driven in a real Chromium against a
+worker-built slate and a stubbed `/api/coach`: the panel is disabled with its
+reason before the setup is complete, live after it, the reply streams into the
+bubble, and the payload carries the solved roster, its pivots, the bench and
+the games — re-read correctly after switching the contest from Head-to-Head to
+a multi-entry tournament. No page errors at 1280 or 390px.
+
+
+## 94. September 20: the coach panel was an empty div, and said nothing when it stayed empty
+
+§93 shipped the Value Coach on the DFS lineup as an empty `<div id="dfCoach">`
+that `dfs-coach.js` filled on DOMContentLoaded. On the deployed site the panel
+did not appear. The code was not the problem: CI asserts the script tag and the
+host element are both in `dfs.html`, and it passed on the merge commit.
+
+**The failure mode was the problem.** An empty div that a separate deferred file
+fills has exactly one appearance when that file does not arrive: nothing. No
+panel, no error, no clue, and the rest of the page works perfectly, so there is
+nothing to tell a reader or a maintainer that anything is missing. It cannot be
+told apart from a page that was never meant to have a coach.
+
+So the panel's chrome now ships in the markup and `mount()` replaces it:
+
+- `mountCoach()` is guarded on `window.ITDfsCoach` existing AND on `mount()`
+  not throwing, and returns whether it took. Nothing else calls `mount()`.
+- When it does not take, `coachBoot()` writes the reason where the panel is,
+  moves the badge off "starting" (a panel reading "starting" over a sentence
+  saying it never started is worse than no panel), and offers **Try again**.
+- `coachReload()` re-fetches `/dfs-coach.js` with a cache-buster, because the
+  usual reason for a retry is a file that was not there the first time and a
+  browser that cached that miss would never see it land. It reports both ways it
+  can fail: the file still missing, or the file arriving and not starting.
+- A `window.load` retry is also registered, which costs nothing and covers a
+  script that resolves late.
+
+`coachSync()` was already a no-op with no panel, so a missing script still
+cannot break a build.
+
+| Where | What |
+|---|---|
+| `dfs.html` | the host carries `.df-coach` chrome and `#dfCoachBoot`; `mountCoach()`, `coachBoot()`, `coachReload()`; `.df-coach-retry`. |
+| `tools/test-dfs-coach.mjs` | 53 now: the chrome is in the markup, the mount is guarded both ways, a failure says so, the retry re-fetches with a cache-buster, a retry that arrives but cannot start is not silent, and the badge stops claiming to be starting. |
+
+Driven in Chromium both ways: with `/dfs-coach.js` answering 404 the panel
+renders at full width with the reason and a Try again button and no page errors;
+with the file then served, pressing it mounts the live coach and the message is
+gone. The normal path is unchanged.
+
+**Still unverified: whether this is what was wrong on the live site.** This
+session cannot reach irontuna.com (the environment's egress policy), so the
+deployed `/dfs-coach.js` was never fetched. If the asset is genuinely absent the
+panel will now say so instead of vanishing, which is the point either way.
+
+## 95. September 20: a rank is not a performance
+
+The two lines under every name (§92) said where a player ranked and what he
+was projected for, and the second clause of the PLAYER line was the first one
+said again:
+
+> RB3 the rest of the way, **elite at the position**, 14.7 points a game.
+
+"Elite at the position" is `tierOf(position, rank)`. It is derived from the
+rank printed two words earlier and carries no information the `#` column did
+not already have. Nothing on the row said how the player had actually played.
+
+**The usage overlay was already in hand.** `boardsContext` reads
+`usageCacheRead` for the role trend, and `roleTrendFrom` used two fields of it
+and dropped the rest — including `season.stats`, the raw line accumulated week
+by week, and the volume that produced it. The same shape as §92's defensive
+side of a fixture: computed, then thrown away.
+
+`seasonFormFrom(u, position, rules)` now builds a `form` block on every board
+row, in the same shape as `consensus`:
+
+| Field | What it is |
+|---|---|
+| `stats` | the RAW accumulated season line |
+| `points`, `ppg` | that line scored at this board's scoring |
+| `volume`, `volumeUnit` | touches for a back, targets for a receiver, passing yards for a passer |
+| `games`, `tds`, `snapPct` | what a reader checks next |
+
+The line rides along raw for the same reason `consensus.stats` does:
+`/rankings` re-scores every stat line in the browser at the reader's own
+league settings, and a form figure scored here at PPR would sit in one
+sentence beside a projection scored there at his. It re-scores this too.
+
+**What the line says now.** Production leads, the tier is the fallback:
+
+> RB1 the rest of the way, 27.3 points a game so far on 19.0 touches over 3
+> games, **which the board marks down to 14.7 going forward**, with usage up
+> 30% on his own average.
+
+The comparison is the insight. A board projecting well under a player's own
+rate is saying his scoring has outrun what drives it; one projecting over it
+is saying the opposite. Neither is visible in a rank. It is drawn only on a
+multi-week horizon, where both numbers are per-game rates — a one-week total
+against a season average would be a comparison between different units — and
+two numbers less than a tenth apart read as "much the same" rather than as a
+judgement. A player who has not played has no form at all, and there the tier
+is all the board has to say about him; in September that is every row.
+
+### The bug this surfaced: every quarterback read "usage up 1100%"
+
+`roleTrendFrom` counted `passAttempts` on the LATEST week's side and not in
+the season average, which accumulated only targets and carries. So a passer's
+38 attempts were being divided by his three rushes a game.
+
+It was not only a printed number. `role.factor` scales every stat on the Iron
+Tuna board, so the clamp at `ROLE_CLAMP` (0.9–1.1) was pinned high for every
+quarterback, and pinned the wrong way for any whose attempts dipped. Bounded
+at 10%, and wrong on every QB row all season.
+
+`buildUsageOverlay` now accumulates `season.passAttempts`, and `roleTrendFrom`
+counts it on both sides. A row cached before that field existed has attempts
+on one side only; that is not a trend of zero, so it returns `no data` rather
+than a number it cannot support.
+
+| Where | What |
+|---|---|
+| `_worker.js` | `seasonFormFrom`; `form` on every board row; `season.passAttempts` accumulated; `roleTrendFrom` compares like with like. |
+| `it-reads.js` | the form branch leads `player()`, `forwardOf()` draws the comparison, `vol()` prints yards whole and touches to a tenth. |
+| `rankings.html` | re-scores `form.stats` and passes `formPpg`, so the sentence is at the reader's scoring. |
+| the seventeen explainers | rewritten: Player leads on what he has done, and says the tier is what stands in before he has played. |
+| `tools/test-ranks.mjs` | the tier is reachable only from the not-played branch; the comparison is drawn only between per-game rates; yards are whole. |
+| `tools/test-boards.mjs` | the season line is shipped raw and scored, volume is per position, a player with no line gets null rather than 0.0, and a passer is compared against his own attempts. |
+
+`node tools/test-ranks.mjs` (84) and `node tools/test-boards.mjs` (95) pass.
+Both surfaces were driven in a real Chromium against a worker-built payload
+with three weeks of usage behind it.
+## 96. September 19: the DraftKings roster maker recommended a man who was not playing
 
 The report: the DFS lineup builder put **Theo Wease Jr.** in a recommended
 roster. He was not going to play. He is not hurt either — he is on the
@@ -11280,7 +11511,7 @@ from each source in isolation through to no lineup containing a benched man)
 and `tools/test-worker-availability.mjs` (the weekly table, and that it still
 moves no season line). `docs/dfs-metrics.md` carries the table above.
 
-## 94. September 19: the slate could not tell a quoted prop from a sliced-up game total
+## 97. September 19: the slate could not tell a quoted prop from a sliced-up game total
 
 The ask: use the week's prop bets to predict players and drive the DFS
 recommendations; fall back to something else where the books have not posted.
@@ -11369,7 +11600,7 @@ a second fixture with props posted proves the primary path.
 Guarded by `tools/test-dfs.mjs` ("the weekly betting market", 38 assertions).
 `docs/dfs-metrics.md` carries the table and the provider chain.
 
-## 95. September 19: "is it working?" was not a question anything could answer
+## 98. September 19: "is it working?" was not a question anything could answer
 
 Ken: *"I think we had set it up to get props. Please check to see if it's
 working."*
@@ -11421,7 +11652,7 @@ as a failure and is never flattened into `empty`.
 
 `docs/TUNA-MARKET-SIGNAL.md` opened with "It does not alter projections or
 optimizer rankings without a separate calibrated decision." True when written,
-false since §72 put the projection bridge in, and false twice over since §94
+false since §72 put the projection bridge in, and false twice over since §97
 put the market read on the slate. A setup doc asserting that the thing is not
 wired is a good way to end up unsure whether it is wired. It now carries the
 chain, `odds_snapshots → marketHistoryWeek → vegasProjection → vegas.basis →
@@ -11432,7 +11663,7 @@ each of the four states against a fake D1, coverage measured against the board
 rather than the store, the ambiguous-name rule, out of season, and a read
 failure.
 
-## 96. September 19: 720 quoted props, and not one of them could project a receiver
+## 99. September 19: 720 quoted props, and not one of them could project a receiver
 
 Ken, checking the Quoted Props board: *"There are quite a few anytime TD props
 and it says that there are 720 props."*
@@ -11496,7 +11727,7 @@ event — and that is a configuration question, not a code one. What changed her
 is that the site now says which of those it is instead of presenting a healthy
 row count over a board that cannot use it.
 
-## 97. September 20: the yardage markets were always being asked for
+## 100. September 20: the yardage markets were always being asked for
 
 Ken: *"Let's add the yardage markets to the feed."*
 
@@ -11519,7 +11750,7 @@ if (m.key !== 'h2h' && o.point == null && !/(^|_)anytime_td$/.test(m.key)) conti
 yardage and reception market must have one. So a feed sending `"62.5"` instead
 of `62.5` — an ordinary thing for a book API to do — loses every yardage and
 reception row and keeps every touchdown price, and the result is a busy board
-that cannot project a single receiver. That is the exact shape of §96's
+that cannot project a single receiver. That is the exact shape of §99's
 symptom, and it would have looked identical to a provider that only posts
 touchdowns.
 
@@ -11572,11 +11803,11 @@ dropped, a touchdown market still needs no line, the drop tally by reason and
 market, a clean pull tallying nothing, the market list keeping its yardage
 markets under the cap, and the soonest games being the ones priced.
 
-## 98. September 20: "How do I check /api/tuna-market?"
+## 101. September 20: "How do I check /api/tuna-market?"
 
 A fair question, and the third time in this thread that the answer to "is it
 working" was a URL and a field name. Ken is not going to read JSON, and should
-not have to. The diagnostics from §95 and §97 were real and they were in the
+not have to. The diagnostics from §98 and §100 were real and they were in the
 wrong place.
 
 **The health board now says it in words**, as a tile beside the others:
@@ -11594,7 +11825,7 @@ Under it, the market mix in English — *receiving yards 214 · anytime TD 396 �
 receptions 190* — and the full sentence in the feeds table beside the last
 update time.
 
-`td_only` is a new state, and it is the one §96 was about: a healthy row count
+`td_only` is a new state, and it is the one §99 was about: a healthy row count
 that cannot project a receiver, because `VEGAS_MARKETS` wants a yardage or
 reception line and an anytime-touchdown price is not one. `propsHealth` now
 reads the market mix out of `odds_snapshots` — the same store the projections
@@ -11610,7 +11841,7 @@ yardage market being enough to return to `live`, and stale winning over
 `td_only`) and `tools/test-health.mjs` (the tile exists, renders, has a word
 for every state the payload can emit, and prints market names in English).
 
-## 99. September 20: the touchdown price moved nothing, and the rest was thrown away
+## 102. September 20: the touchdown price moved nothing, and the rest was thrown away
 
 Ken: *"This calculation shouldn't just be based on TDs only. It should factor
 other Prop info."*
@@ -11682,7 +11913,7 @@ would have added, and that the refusal carries its evidence) and
 his touchdown line is the market's, his yardage is untouched, and his number
 moves off the game line's).
 
-## 100. September 20: Play of the Week has recommended Head-to-Head every week since it shipped
+## 103. September 20: Play of the Week has recommended Head-to-Head every week since it shipped
 
 Ken: *"Play of the Week should factor in the other props too."*
 
@@ -11706,7 +11937,7 @@ The builder has totalled `projPoints`, `floorPoints` and `ceilingPoints`
 correctly on every lineup the whole time. The page was re-summing them by hand,
 with the wrong key, next to the right answer.
 
-Worse: §94 put `vegasPoints` onto lineup players for the fit lines, which made
+Worse: §97 put `vegasPoints` onto lineup players for the fit lines, which made
 `vegas` positive while `tourProj` stayed 0 — so the panel was about to start
 printing **−100.0%**. Caught here, three days before anyone would have seen it.
 
@@ -11720,7 +11951,7 @@ scale with how much of the roster the books actually priced:
     need = 2 - coverage
 
 A fully quoted roster is taken at face value. One nobody priced needs twice the
-gap. The reason is the same one §99 was about: on an unquoted slate the market
+gap. The reason is the same one §102 was about: on an unquoted slate the market
 number is the game total split across an offense, which shares most of its
 inputs with the projection being compared to it. The two agreeing means very
 little and the two disagreeing means less, and moving up a payout curve on that

@@ -314,6 +314,52 @@ console.log('\nrole trend from usage');
   const early = H.roleTrendFrom({ ...u, season: { games: 2, targets: 16, carries: 0 } });
   ok('but not before', early.applied === false && early.factor === 1);
   ok('no usage is no data, not zero', H.roleTrendFrom(null).label === 'no data' && H.roleTrendFrom(null).factor === 1);
+
+  // A PASSER'S ATTEMPTS WERE COUNTED ON ONE SIDE ONLY, so 38 attempts were
+  // being divided by his three rushes a game: every quarterback read "usage up
+  // 1100%", and the factor that came out of it scaled his projection too.
+  const qb = { season: { games: 3, targets: 0, carries: 9, passAttempts: 105 },
+               latest: { usage: { passAttempts: 46 } } };
+  const qr = H.roleTrendFrom(qb);
+  ok('a passer is compared against his own attempts, not against his rushes',
+     qr.avgTouches === 38 && qr.latestTouches === 46 && qr.pct === 21, JSON.stringify(qr));
+  const old = H.roleTrendFrom({ season: { games: 3, targets: 0, carries: 9 }, latest: { usage: { passAttempts: 46 } } });
+  ok('and a cache written before attempts were stored says no data, not 1100%',
+     old.label === 'no data' && old.factor === 1, JSON.stringify(old));
+  ok('a runner is unaffected by the change', r.label === 'up' && r.pct === 50);
+}
+
+// -- what he has actually done ----------------------------------------------
+// The usage overlay was read for the role trend and everything else in it was
+// discarded, so a board could say where a player ranks and what he is
+// projected for and not one word about how he has played.
+console.log('\nevery row carries the season line it has actually produced');
+{
+  const usage = { throughWeek: 3, players: {
+    'betaback|RB': { latest: { usage: { carries: 14, targets: 2, snapPct: 52 } },
+      season: { games: 3, targets: 7, carries: 41, receptions: 5, tds: 1,
+                stats: { rushYd: 181, rushTD: 1, rec: 5, recYd: 28 } } },
+    'deltareceiver|WR': { latest: { usage: { targets: 3 } },
+      season: { games: 3, targets: 34, carries: 0, receptions: 19, tds: 0,
+                stats: { rec: 19, recYd: 214 } } },
+    // Played, but cached before season.stats existed: no line to score.
+    'gammaback|RB': { latest: { usage: { carries: 9 } }, season: { games: 2, targets: 4, carries: 20 } } } };
+  const b = H.buildBoards(ctx({ usage }), { horizon: 'ros', preset: 'ppr' });
+  const beta = b.players.find(p => p.name === 'Beta Back');
+  ok('the season line rides along raw, so a browser can re-score it',
+     beta.form && beta.form.stats.rushYd === 181 && beta.form.games === 3);
+  ok('and scored at the board\'s own scoring',
+     near(beta.form.points, H.scoreAny(beta.form.stats, 'RB', rules, 3), 0.06) &&
+     near(beta.form.ppg, _oddsRound(beta.form.points / 3), 0.06), JSON.stringify(beta.form));
+  ok('volume is touches for a back', beta.form.volumeUnit === 'touches' && near(beta.form.volume, _oddsRound(46 / 3), 0.06));
+  const delta = b.players.find(p => p.name === 'Delta Receiver');
+  ok('and targets for a receiver', delta.form.volumeUnit === 'targets' && near(delta.form.volume, _oddsRound(34 / 3), 0.06));
+  ok('a player who has not played carries no form at all',
+     b.players.find(p => p.name === 'Echo Receiver').form === null);
+  ok('nor does one whose cache has no line to score, rather than a 0.0',
+     b.players.find(p => p.name === 'Gamma Back').form === null);
+  ok('a kicker and a defense get no volume rather than a meaningless one',
+     b.players.filter(p => p.position === 'K' || p.position === 'DST').every(p => !p.form || p.form.volume == null));
 }
 
 console.log('\na projection for a game that has kicked off is a result, not a projection');
