@@ -268,6 +268,76 @@ Head-to-Head on every slate the site ever served.** The builder's own
 `projPoints`, `floorPoints` and `ceilingPoints` were correct the whole time and
 unused. `contestPick` reads those.
 
+## Played games
+
+Once a slate starts, part of it stops being a forecast. A player whose club's
+game is **final** carries `actualPoints` on his slate row: what he scored,
+run through the same site rules as everything else on the board
+(`scoringRules('ppr', SCORING_SITE[site])`), from the box score already stored
+in `game_summaries`. `dfsActualsForWeek()` reads that table and never fetches —
+`/api/dfs` is public and cached for five minutes, and a fourteen-game slate
+would otherwise hit ESPN fourteen times per cache miss. A game whose box score
+has not been stored yet simply reads as unplayed, which is what the page said
+yesterday.
+
+**Final only.** A game in progress has a box score too, and half of one is not
+what a man scored; a roster totalled on partial stats reads low for a reason no
+reader could see.
+
+| Where | What changes |
+|---|---|
+| Every optimizer mode | Reads the banked number ahead of its own objective. A finished afternoon has no spread left, so floor, median and ceiling are all that one number, and the leverage mode does not discount points already scored by anybody's ownership. |
+| The proposed roster | A player whose game is over is **off the board**: no entry submitted now can contain him, so building him into a "recommended" lineup would be hindsight, not a recommendation. He is listed in `played` with the reason. A **lock is the exception** — a reader totalling an entry he already holds is telling the builder those seats are taken, and the banked points come with them. |
+| Lineup totals | `projPoints` counts banked players at what they scored. `bankedPoints` / `bankedPlayers` split the settled part from the part still to come, and the card prints the split in words. |
+| Typical entry | Played players **stay in the draw**, at their actual score. The field submitted before kickoff, so an ordinary entry owns them at what they did — including a zero. `basis` becomes `modeled-ownership,part-played` so nothing downstream prints it as a pure projection. |
+
+### The prose
+
+Every sentence the page generates about a player is written forward — a
+projection, a ceiling, a market disagreement, a downside, a devigged touchdown
+price — and none of it is true once his game has been played. So the generators
+ask `isBanked()` / `isPlayed()` first:
+
+| Generator | On a played seat |
+|---|---|
+| `playerFit()` | Drops the anchor/punt/leverage thesis for what the seat returned on the salary it cost. A played defense says its number is still the pre-game estimate. |
+| `marketPhrase()` | The books' pre-game prices are named as history, not as something to act on. |
+| `lineupSummary()` | Market signal is drawn from the seats **still to play**; the anchor sentence stops calling a banked man a "projected scoring base"; a stack whose game is over is described as spent, with what it actually returned. |
+| `breakdownHtml()` | Market gap and Key Risks both come from the seats still to play — a man who has scored has no downside left. Construction names how much of the spend has already returned. When nothing is left to play, each section says so instead of inventing a forecast. |
+| `propsNote()` | Counts quoted props and the best touchdown price among the seats still to play, and says how many no longer carry a market. |
+| `pivotRows()` | Neither side of a swap may be a finished game: the seat cannot be vacated and the replacement cannot be entered. |
+| The player pool | Prints the actual with the `final` mark, so the board and the roster never show two different numbers for the same man. |
+| The value boards and the metrics board | Drop the men whose games are over, and say how many came off. These answer "who is worth a seat", and a played man cannot take one — his Value, Cash and Tournament scores are all indexed off a projection the result has overtaken. |
+| The player calculation modal | Leads with `Final` and relabels the projection `Projected beforehand`; the eight derivation steps stay, framed as a record of how the number was built rather than a read on him now. |
+| Require a player | Keeps him — pinning a played man is how a reader tells the builder about an entry he already holds — and shows his actual rather than the projection. |
+
+The split is deliberate: a **reference** surface (the pool, the modal, the
+require search) keeps a played player and prints what he scored; a **shopping**
+surface (the value boards, the metrics board, the pivots, the optimizer pool)
+drops him, because nothing submitted now can contain him.
+
+The wording is verified by rendering the page — no node gate can read prose —
+and `tools/test-dfs.mjs` pins that each branch exists.
+
+Two honest gaps, both of which can only understate a player:
+
+- **Defenses and kickers.** `normalizeGameSummary()` collects passing,
+  rushing, receiving and fumbles. A DST is scored on sacks, takeaways, return
+  touchdowns and points allowed; a kicker on field goals and extra points.
+  None of those are in the stored payload. So either one, with its game final,
+  carries `gamePlayed: true` with `actualPoints: null` and an `actualBasis` of
+  `no-defense-box-score` / `no-kicking-box-score`, keeps its projection, and
+  the page marks it `est` rather than letting a reader assume the whole roster
+  is settled. DraftKings Classic has no kicker slot, so in practice this is
+  the defense. Closing it means collecting those lines in
+  `normalizeGameSummary()` and versioning the cached payload.
+- **Return touchdowns.** The normalized box score carries no returns, so a man
+  whose only score was a kick or punt return reads as the rest of his line.
+  A played man with no box-score line at all is scored **zero**
+  (`actualBasis: 'box-score-absent'`), because he dressed and did nothing —
+  that is a result, not a missing number, and quoting Thursday's projection at
+  him would be worse.
+
 ## What is deliberately not here
 
 - No metric is invented for marketing. Each row above is used by the DFS lens
