@@ -384,8 +384,11 @@ console.log('\nthe page');
   ok('the roster context carries the other payout structures too, because that question outlives the build',
      /choices: setupChoices\(false\)/.test(ctx) && /playOfTheWeek: playWeek/.test(ctx));
   const build = lift(/function coachBuild\(/);
-  ok('it carries the locks, exclusions and the forced player the reader set',
-     /build: coachBuild\(byKey\)/.test(ctx) && /forcedIn: whatIfKey/.test(build)
+  // `forcedIn` went with the What If box: forcing one player by name is what
+  // Require does now, for any number of them, so `locked` and `excluded` are
+  // the whole of what the reader set and the coach has no third name for one.
+  ok('it carries the constraints the reader set, and no longer a separate forced player',
+     /build: coachBuild\(byKey\)/.test(ctx) && !/forcedIn/.test(build)
      && /locked:/.test(build) && /excluded:/.test(build) && /cap:/.test(build));
   // THE STATE THIS BLOCK EXISTS FOR. A finished setup that solves nothing used
   // to be a refusal pointing at the fine-tune panel, which left the reader
