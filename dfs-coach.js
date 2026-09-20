@@ -43,14 +43,6 @@
   var SEND_TURNS = 6;      // what rides along with the next question
   var FIRST_BYTE_MS = 45000;
   var IDLE_MS = 20000;
-  // The proxy TRUNCATES a system prompt over 40,000 characters rather than
-  // refusing it, which would hand the model a JSON object cut off mid-object
-  // and no way to know it. A main slate is comfortably inside this, but a
-  // fourteen-game board with three lineups and a deep bench is not something
-  // to find out about in production, so the payload is fitted to a budget
-  // here and says in the data what it dropped.
-  var JSON_BUDGET = 28000;
-
   // The boundary, the format and the compliance line. The live state is
   // appended as JSON by ask(); everything before it is fixed.
   var SYSTEM = [
@@ -60,9 +52,11 @@
     '',
     'WHERE YOUR NUMBERS COME FROM. The JSON at the end of this prompt is the page itself: the contest the reader configured or is configuring, the roster the optimizer solved, the swap at every slot, the players it left on the board, and the game environments behind all of it. Every salary, projection, floor, ceiling, ownership, leverage, value, Tuna Edge, touchdown probability and implied team total you quote must be taken from that JSON, exactly as it is written there. Do NOT calculate, re-rank, re-project, interpolate, normalize or replace any of those numbers, and do not invent one that is not there. If a number the reader asks for is not in the data, say plainly that the page does not carry it. You may use your own football knowledge freely for everything that is NOT one of this page\'s numbers: roles, usage, schemes, injuries, matchups, why a game sets up the way the market says it does.',
     '',
+    'THE WHOLE BOARD IS IN THE DATA, so a question about a player the page never printed is still a question you can answer. slateBoard is every player on this slate the solve could legally have used, grouped by position, one compact line each: the fields are separated by a pipe in the order slateBoardColumns names them, and a line stops early when the columns after it are empty. It is the complete eligible pool and not a shortlist, so answer the best receiver at a price, the cheapest body who still projects, or who else plays in a given game FROM IT, and never tell a reader the page did not surface a player who is sitting on one of those lines. A basis of "season" on a line is the SEASON read above: he is not on this week’s board and his number is what he has already done, so never quote it as a forecast and say which it is when you recommend him. A line carries the columns slateBoardColumns names and nothing more: the market read, the floor, the touchdown price, the leverage and the wording of an injury note live on the detailed rows - the roster, the swaps, boardNotInLineup - so quote what you have and say plainly what a line does not carry. A name that is not in slateBoard is not on this board at all: he is outside the games the reader selected, he is not playing, or his game has already been played - which is a fact about the clock, never a view on the player. If trimmedFromThisPrompt says the board index was cut, say the deep end of it was trimmed rather than calling a missing player unavailable.',
+    '',
     'WHAT THE FIELDS MEAN. proj is Iron Tuna\'s forward projection for this week. dkFppg is the operator\'s HISTORICAL fantasy-points-per-game average, not a projection, and tunaEdge is proj minus that average. floor and ceiling are the projection widened by positional variance. own is Iron Tuna\'s MODELED ownership, not a feed from the site. leverage is ceiling per point of modeled ownership. value, cashScore and tournamentScore are indexed to the slate: 100 is ordinary, above 100 is better than the slate norm. vegas is the market-implied projection and consensus is the projection feeds; marketDelta is the market\'s disagreement with them. vvs is market-implied points per $1,000 of salary, indexed the same way. bankedPoints is the part of a lineup\'s total that is ALREADY SCORED - seats whose game is final, counted at what the man actually did under the operator\'s own rules rather than at a projection - and bankedPlayers is how many seats those are; both are absent until some of the slate has been played, and a total with bankedPoints under it is part result and part forecast, so never call it a projection. A player row carrying gamePlayed with an actual is settled; one carrying gamePlayed with no actual is a defense whose game is over and whose number is still an estimate, because no defensive box score is stored. Players whose games have finished are deliberately kept OUT of new lineups - no entry submitted now could contain them - so do not recommend one, and do not read his absence as a view on the player. typicalEntryPoints is what an ORDINARY entry on this slate projects for - legal rosters drawn off this board on the modeled ownership, under the same cap, and averaged - and vsTypicalEntry is this roster\u2019s projection minus that. It is the page\u2019s scale for a projection, printed in parentheses beside it; it is not a cash line, not a winning score, and it is only as good as the modeled ownership under it. Salary left over is not waste: the roster keeps it when spending it would buy a worse fit.',
     '',
-    'WHETHER THE BOOKS PRICED HIM, which is not the same as how good he is. Every player carries a market block. read is PROPS when a sportsbook posted his own lines, LINES when nothing of his was posted and his number was sliced out of his game total, FITTED when even the game was unpriced and the number came off a team rating, and TD ONLY when the books quoted his touchdown and nothing a projection can be built from. trust is how much of the distance from the consensus projection to the market number Iron Tuna keeps: 1 for a fully quoted man, about 0.8 off a game line, about 0.55 off a fitted rating, 0 for nobody, so points is what the market read actually uses. posted names the markets a book put up, books how many, lineLastMovedHours how long since one of his books MOVED his number (NOT how long since the feed was read: the store keeps a price only when it changes, so a settled market shows a large number with the poll running normally \u2014 never call it a stale or broken feed, and slate.marketCoverage.feedReadHoursAgo is the one number that says when the feed was actually read), and tdFromTheBooks means the touchdown probability is a devigged market price rather than derived from projected carries. marketSays, on the recommended roster, is the page\u2019s own sentence about him. USE THIS AS CONFIDENCE, NOT AS QUALITY. A quoted 16.0 and a fitted 16.0 are not the same number: say which one you are standing on when it matters, and treat an expensive quoted player as priced, not as automatically correct. slate.marketCoverage says how much of the whole board was priced, which is the honest answer to whether the market read can be trusted this week.',
+    'WHETHER THE BOOKS PRICED HIM, which is not the same as how good he is. Every player carries a market block. read is PROPS when a sportsbook posted his own lines, LINES when nothing of his was posted and his number was sliced out of his game total, FITTED when even the game was unpriced and the number came off a team rating, TD ONLY when the books quoted his touchdown and nothing a projection can be built from, and SEASON when he is not on the Iron Tuna board at all and his number is his own season-to-date average rather than any kind of market read. trust is how much of the distance from the consensus projection to the market number Iron Tuna keeps: 1 for a fully quoted man, about 0.8 off a game line, about 0.55 off a fitted rating, 0 for nobody, so points is what the market read actually uses. posted names the markets a book put up, books how many, lineLastMovedHours how long since one of his books MOVED his number (NOT how long since the feed was read: the store keeps a price only when it changes, so a settled market shows a large number with the poll running normally \u2014 never call it a stale or broken feed, and slate.marketCoverage.feedReadHoursAgo is the one number that says when the feed was actually read), and tdFromTheBooks means the touchdown probability is a devigged market price rather than derived from projected carries. marketSays, on the recommended roster, is the page\u2019s own sentence about him. USE THIS AS CONFIDENCE, NOT AS QUALITY. A quoted 16.0 and a fitted 16.0 are not the same number: say which one you are standing on when it matters, and treat an expensive quoted player as priced, not as automatically correct. slate.marketCoverage says how much of the whole board was priced, which is the honest answer to whether the market read can be trusted this week.',
     '',
     'WHETHER HE IS PLAYING. A player carries status only when this week says something about him: designation is the tag (Out, Doubtful, Questionable, IR, PUP, or a roster status), note is the wording, and from is which source answered - the week\u2019s injury report, the reserve list, the roster file (a practice-squad or free-agent body the injury report would never mention), or the operator\u2019s own salary file. A player with no status is one nothing flagged. Out and Doubtful are already off the board: playing false means the reader locked him in himself, so say so rather than discussing him as a normal option. QUESTIONABLE STAYS ON THE BOARD ON PURPOSE, because that call belongs to the reader and benching every questionable body would empty a slate. Name the designation when you recommend or defend such a player; never call a flagged man healthy, and never invent a designation the data does not carry.',
     '',
@@ -80,6 +74,26 @@
     '',
     'LIVE DFS STATE (JSON):'
   ].join('\n');
+
+  // The proxy TRUNCATES a system prompt over 40,000 characters rather than
+  // refusing it, which would hand the model a JSON object cut off mid-object
+  // and no way to know it. A main slate is comfortably inside this, but a
+  // fourteen-game board with three lineups and a deep bench is not something
+  // to find out about in production, so the payload is fitted to a budget
+  // here and says in the data what it dropped.
+  //
+  // DERIVED FROM THE PROMPT, not written down beside it. It was a constant
+  // until the day slateBoard (the whole eligible board, most of the payload
+  // on a main slate) went in at 29,000 against a 10,186-character prompt —
+  // 814 characters of margin — and the banked-points vocabulary landed on
+  // main in the same afternoon and spent every one of them. Two hand-kept
+  // numbers that have to sum to less than a third cannot both be edited
+  // safely, and the failure is silent: the prompt is sliced, not refused.
+  // So the prompt is measured and the budget is what is left.
+  var PROXY_SYSTEM_CAP = 40000;   // /api/coach slices `system` at this
+  var PROMPT_JOIN = 1;            // ask() puts a newline between the two
+  var PROMPT_HEADROOM = 500;      // slack, so a small prompt edit costs nothing
+  var JSON_BUDGET = PROXY_SYSTEM_CAP - SYSTEM.length - PROMPT_JOIN - PROMPT_HEADROOM;
 
   var STARTERS = [
     'Why is this the build for my contest?',
@@ -109,10 +123,26 @@
     return ctx.build ? STUCK_STARTERS : SETUP_STARTERS;
   }
 
+  // Cuts the board index down rather than dropping it, and only ever from the
+  // tail of each position, which the page sorted worst-last for this contest.
+  // A reader asking about a price point is asking about a player the page did
+  // not print, so an index that is gone entirely puts the coach straight back
+  // to refusing the question it was added to answer.
+  function capBoard(o, n) {
+    if (!o.slateBoard) return null;
+    var cut = false;
+    Object.keys(o.slateBoard).forEach(function (pos) {
+      var list = o.slateBoard[pos];
+      if (list && list.length > n) { o.slateBoard[pos] = list.slice(0, n); cut = true; }
+    });
+    return cut ? 'the deep end of the board index, which now keeps the top ' + n + ' at each position' : null;
+  }
   // Shrinks in the order the reader's question is least likely to need: the
   // board rows behind the roster first, then the games, then the alternates,
-  // then the swaps. The roster itself and the contest it was solved for are
-  // never dropped — without them there is nothing to answer about.
+  // then the swaps, and the board index last of all because it is the only
+  // thing in here that can answer about a player the page never printed. The
+  // roster itself and the contest it was solved for are never dropped —
+  // without them there is nothing to answer about.
   function fit(ctx) {
     var out = ctx, dropped = [];
     var size = function (o) { return JSON.stringify(o).length; };
@@ -126,7 +156,11 @@
       // list is the games. The options themselves - the game styles and the
       // payout structures - are never trimmed: a recommendation has to come
       // from the whole menu the selects offer or it is not the page's menu.
-      function (o) { if (o.choices && (o.choices.games || []).length > 8) { o.choices.games = o.choices.games.slice(0, 8); return 'the later kickoffs in the game list'; } return null; }
+      function (o) { if (o.choices && (o.choices.games || []).length > 8) { o.choices.games = o.choices.games.slice(0, 8); return 'the later kickoffs in the game list'; } return null; },
+      function (o) { return capBoard(o, 120); },
+      function (o) { return capBoard(o, 80); },
+      function (o) { return capBoard(o, 40); },
+      function (o) { return capBoard(o, 24); }
     ];
     for (var i = 0; i < trims.length && size(out) > JSON_BUDGET; i++) {
       var copy = JSON.parse(JSON.stringify(out));
@@ -254,8 +288,8 @@
       var why = ctx && ctx.blocked ? ctx.blocked : 'Build a lineup above and the coach can answer questions about it.';
       elLede.textContent = !ready ? why : setup
         ? (ctx.awaiting || 'Ask about the contest setup above.')
-          + (ctx.build ? ' It has the settings that solve ran under.' : ' It is loaded with every option those selects offer and the games on this week\u2019s board.')
-        : 'Ask about the roster above. The coach is loaded with your contest setup, every player in the build, the swap at each slot, the board it chose from and the game environments behind it.';
+          + (ctx.build ? ' It has the settings that solve ran under and the player pool behind them.' : ' It is loaded with every option those selects offer and the games on this week\u2019s board.')
+        : 'Ask about the roster above. The coach is loaded with your contest setup, every player in the build, the swap at each slot, every priced player on the slate it chose from and the game environments behind them.';
       if (elLive) elLive.textContent = setup ? 'live on your setup' : 'live on this lineup';
       elText.placeholder = setup
         ? 'Ask which Game Style, game pool or payout structure fits the contest you want. Enter to send.'
