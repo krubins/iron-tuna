@@ -884,5 +884,89 @@ console.log('\nthe optimizer');
   ok('a lineup reports its total modeled ownership when the board carries it',
      typeof chalkFree.lineups[0].ownership === 'number' && chalkFree.lineups[0].ownership > 0);
 }
+// The second number on the lineup card: what an ORDINARY entry on this slate
+// projects for, so the roster's own projection has a scale beside it. The
+// method is the ownership model the slate already carries -- each seat is the
+// ownership-weighted mean projection of the players eligible for it -- so
+// these tests are as much about what it REFUSES to print as about the number.
+console.log('\nthe field\'s average entry');
+{
+  const players = slate.players.filter(p => p.onBoard).map(p => ({ ...p, id: p.key }));
+  const base = { slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, cap: 50000 };
+  ok('a board with no modeled ownership has no field to average', DFS.fieldAverage(players, base) === null);
+
+  // Ownership that rises with the projection, which is roughly what the
+  // model does: the field pays up for the best players.
+  const top = Math.max(...players.map(p => p.ironTunaPoints));
+  const owned = players.map(p => ({ ...p, ownership: Math.round((4 + 26 * (p.ironTunaPoints / top)) * 10) / 10 }));
+  const fa = DFS.fieldAverage(owned, base);
+  ok('with ownership on the board it returns a number and says where it came from',
+     fa && typeof fa.points === 'number' && fa.points > 0 && fa.basis === 'modeled-ownership', JSON.stringify(fa));
+  ok('it counts one seat per roster slot', fa.slots === H.DFS_SITES.dk.slots.length);
+  const solved = DFS.build(owned, { ...base, cap: 50000, mode: 'ironTuna', lineups: 1 }).lineups[0];
+  ok('the optimal lineup beats the typical entry', solved.projPoints > fa.points, solved.projPoints + ' vs ' + fa.points);
+  // A nine-man roster of the worst bodies on the board is still a floor the
+  // average cannot go under, and the best nine a ceiling it cannot go over.
+  const asc = owned.slice().sort((a, b) => a.ironTunaPoints - b.ironTunaPoints);
+  const worst9 = asc.slice(0, 9).reduce((n, p) => n + p.ironTunaPoints, 0);
+  const best9 = asc.slice(-9).reduce((n, p) => n + p.ironTunaPoints, 0);
+  ok('and it sits inside the board, between the worst nine and the best nine',
+     fa.points > worst9 && fa.points < best9, [worst9, fa.points, best9].join(' / '));
+
+  // Ownership is a weight, not a total: doubling every share describes the
+  // same field and must produce the same average.
+  const doubled = DFS.fieldAverage(owned.map(p => ({ ...p, ownership: p.ownership * 2 })), base);
+  ok('scaling every ownership share leaves the average where it was', near(doubled.points, fa.points, 0.05));
+
+  // The field is the field. A reader's own locks and exclusions are not
+  // passed to it at all, and the one thing that does move it is a man who is
+  // not playing -- nobody's average entry starts him.
+  const out = owned.map(p => p.position === 'QB' ? { ...p, available: false } : p);
+  ok('a slate whose every quarterback is out has no average entry', DFS.fieldAverage(out, base) === null);
+  // It follows the board it is drawn from: the fixture is fifteen bodies for
+  // nine seats, too tight to thin out further, so the projections move
+  // instead of the pool.
+  ok('a board where every projection is worth a point more raises it, by about the nine points it added',
+     near(DFS.fieldAverage(owned.map(p => ({ ...p, ironTunaPoints: p.ironTunaPoints + 1 })), base).points - fa.points, 9, 0.3));
+  ok('and halving every projection halves it',
+     near(DFS.fieldAverage(owned.map(p => ({ ...p, ironTunaPoints: p.ironTunaPoints / 2 })), base).points, fa.points / 2, 0.6));
+
+  // The cap is not decoration: every entry in the sample is one somebody
+  // could submit, which is the whole reason the sample exists.
+  ok('the typical entry can afford itself', fa.salary <= 50000, fa.salary + ' of 50000');
+  // The fixture is fifteen players for nine seats under a $50,000 cap, so
+  // most draws dead-end on affordability and are thrown away rather than
+  // repaired into something the field would not have entered. What survives
+  // still has to be a sample and not an anecdote.
+  ok('and it is an average of a real sample, not of one draw', fa.entries >= 200 && fa.trials >= 200, JSON.stringify(fa));
+  ok('a slate nobody could field a legal roster on returns null',
+     DFS.fieldAverage(owned.map(p => ({ ...p, salary: 40000 })), base) === null);
+  ok('and so does a call with no cap to build under', DFS.fieldAverage(owned, { slots: base.slots, flex: base.flex }) === null);
+
+  // Printed to a tenth, so the tenth has to hold still. The page fixes the
+  // seed, and a reader who re-solves an unchanged board must not watch the
+  // field's average wander.
+  ok('the same board draws the same number twice', DFS.fieldAverage(owned, base).points === fa.points);
+  const shifted = DFS.fieldAverage(owned, { ...base, seed: 991 });
+  ok('and a different seed lands within a quarter point of it',
+     Math.abs(shifted.points - fa.points) <= 0.25, shifted.points + ' vs ' + fa.points);
+
+  // Half a roster is not a typical entry, so a seat nobody can fill prints
+  // nothing rather than a total that quietly counts eight slots.
+  ok('a board with no defense at all returns null rather than an eight-man average',
+     DFS.fieldAverage(owned.filter(p => p.position !== 'DST'), base) === null);
+  ok('and so does a call with no roster format to fill', DFS.fieldAverage(owned, {}) === null);
+
+  // What the page does with it.
+  const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+  ok('the page solves the field average off the whole priced board', page.includes('ITDfs.fieldAverage(players, { slots: view.slots, flex: view.flex, cap:'));
+  ok('the lineup card prints it in parentheses beside the projection',
+     page.includes("stat(n1(l.projPoints) + fieldPar, 'Iron Tuna Projection', true)"));
+  ok('the board says in words what the parenthetical is', page.includes('is the typical entry.'));
+  ok('the coach is handed the same number rather than left to derive one',
+     page.includes('typicalEntryPoints') && page.includes('vsTypicalEntry')
+     && fs.readFileSync(path.join(ROOT, 'dfs-coach.js'), 'utf8').includes('typicalEntryPoints'));
+  ok('the method is written down', fs.readFileSync(path.join(ROOT, 'docs/dfs-metrics.md'), 'utf8').includes('Typical entry'));
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
