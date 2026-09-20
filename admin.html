@@ -747,12 +747,19 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     empty:     ['Nothing this week', 'bad'],
     no_week:   ['Out of season', '']
   };
+  var PROPS_STATE_CSS = '.tile .props-state{display:block;margin-bottom:6px;font-size:12px;line-height:1}';
+  (function(){ var st = document.createElement('style'); st.textContent = PROPS_STATE_CSS; document.head.appendChild(st); })();
   function propsTile(p){
     if (!p) return tile('Betting props', '—', 'No answer from the health board.');
     var st = PROP_STATE[p.state] || ['Unknown', ''];
     var mix = Object.keys(p.byMarket || {}).sort(function(a, b){ return p.byMarket[b].players - p.byMarket[a].players; })
       .slice(0, 4).map(function(k){ return (PROP_WORD[k] || k) + ' ' + p.byMarket[k].players; }).join(' · ');
-    var head = pill(st[0], st[1]) + (p.matched != null ? ' ' + num(p.matched) + ' players' : '');
+    // The badge on its own line above the count. Inline, it sits in the tile's
+    // hero font and wraps mid-phrase — "Working 214" over "players" — and it
+    // did so differently in every state, because the badge words are different
+    // lengths. A line of its own reads the same in all five.
+    var head = '<div class="props-state">' + pill(st[0], st[1]) + '</div>'
+      + (p.matched != null ? num(p.matched) + ' player' + (p.matched === 1 ? '' : 's') : '\u2014');
     return tile('Betting props', head, esc(mix || (p.note || '').slice(0, 90)));
   }
   function hlthRender(j){

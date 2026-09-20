@@ -236,6 +236,10 @@ console.log('\nthe props tile on the admin page');
      admin.includes("['Working', 'ok']") && admin.includes("['Touchdowns only', 'warn']")
      && admin.includes("['Reaching nobody', 'bad']") && admin.includes("['Collection stopped', 'warn']"));
   ok('the market names are printed in words too', admin.includes('PROP_WORD') && admin.includes("recYd: 'receiving yards'"));
+  // The badge on its own line: inline it sits in the tile's hero font and
+  // wraps mid-phrase, differently in each state, because the state words are
+  // different lengths.
+  ok('the state badge does not share a line with the count', admin.includes('props-state') && admin.includes('display:block'));
   ok('and the feed table carries the full sentence', admin.includes("['Player props, this week'") && admin.includes('u.props.note'));
   for (const block of admin.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Function(block[1]);
   ok('the admin page still parses', true);
