@@ -12661,11 +12661,36 @@ FanDuel import job and no feed, which is what made the switch empty in the
 first place. Fix the salaries before restoring the switch, or the button comes
 back as honest as it was.
 
-**What a reader loses.** The pick'em board, which was a real board on a real
-market and will need rebuilding rather than un-deleting if it comes back. The
-sportsbook-median-versus-model comparison behind it is `/api/boards` plus
-`PRIMARY` and `LEAN_PCT`; the git history for this commit has the whole
-function.
+**THE PICK'EM BOARD IS NOT COMING BACK, AND THE DATA UNDER IT NEVER LEFT.**
+That is a decision, not an oversight. Unlike FanDuel above, nothing here is
+being kept warm: `#sec-pickem`, `PICKEM`, `isPickem`, `pickem()`,
+`loadPickem()`, `PRIMARY` and `LEAN_PCT` are gone from `dfs.html` and are not
+coming back in some later commit. Do not rebuild it.
+
+What the board actually was is worth being precise about, because it is easy
+to mistake it for a data source. It was a VIEW and nothing else. It called
+`/api/boards`, read `p.vegas.stats[passYd|rushYd|recYd]` against
+`p.ironTuna.stats` for the same stat, kept the rows whose `p.vegas.basis`
+started `props`, and printed the gap. It computed nothing that anything else
+consumed, wrote nothing, and stored nothing. Deleting it removed a table from
+a page and touched no number anywhere.
+
+**Every one of those inputs is still read, by the projection path that always
+read them.** `p.vegas.stats` is what `buildDfsSlate` uses for `impliedTouches`;
+the props-based market number reaches every slate row as `market`,
+`marketPoints`, `marketShrink` and `marketQuoted`, with `vegasBasis` and
+`vegasConfidence` beside it and `marketDelta` measuring the disagreement the
+pick'em board was printing by hand. `dfsPropCoverage` and `dfsPropNote` still
+report how much of the slate the books priced, `BLEND_SHRINK` still weights
+`props` above `props-partial` above `gamelines`, and Vegas Values is that same
+market read per $1,000. The props feed is load-bearing for the whole site and
+this change did not go near it.
+
+So the rule for anyone reading this later: the market's implied player line
+belongs in the projections, where it is blended, shrunk toward the consensus
+by basis, and labelled. It does not belong on a standalone board that quotes a
+sportsbook median next to a venue whose posted line we do not hold, however
+carefully the caption explains the difference.
 
 **Gates.** `tools/test-dfs.mjs` and `tools/test-dfs-coach.mjs` assert the
 source lines this touched, so six assertions were rewritten against the
