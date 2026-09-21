@@ -90,7 +90,7 @@ p{color:var(--sec);margin:0 0 16px}
 .ml-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-5);margin:0 0 var(--space-6)}
 .ml-step{border-top:2px solid var(--line2);padding-top:var(--space-3);display:flex;flex-direction:column;gap:4px}
 .ml-sn{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:var(--fs-2xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
-.ml-sn i{font-style:normal;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--teal);display:inline-grid;place-items:center;font-size:11px;letter-spacing:0}
+.ml-sn i{font-style:normal;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--teal);display:inline-grid;place-items:center;font-size:12.5px;letter-spacing:0}
 .ml-step b{font-size:var(--fs-sm);color:var(--text);line-height:1.35}
 .ml-step span{font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
 /* The platforms as tiles with a status badge, not a row of pills that said
@@ -514,7 +514,7 @@ function rosterGrid(el) {
     return rows.map(function (r) { var o = (ov || []).indexOf((r[1] === 'tePremium' ? 'extras.' : 'scoring.') + r[1]) >= 0; return '<tr><td>' + esc(r[0]) + (o ? ' <span class="is-tag is-accent">your correction</span>' : '') + '</td><td class="num"><input class="is-input" style="width:80px" type="number" step="0.01" data-sc="' + r[1] + '" value="' + esc(r[2]) + '"></td></tr>'; }).join('');
   }
   function rosterRows(S, ov) {
-    return ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SFLEX', 'REC_FLEX', 'WRRB_FLEX', 'K', 'DEF', 'BN', 'IR', 'TAXI'].map(function (k) { var o = (ov || []).indexOf('roster.' + k) >= 0; return '<label style="display:inline-flex;flex-direction:column;margin:4px 8px 4px 0;font-size:12px;font-weight:700">' + esc(slotLabel(k)) + (o ? ' *' : '') + '<input class="is-input" style="width:56px" type="number" min="0" max="20" data-ro="' + k + '" value="' + esc(S.roster[k] || 0) + '"></label>'; }).join('') + (Object.keys(S.roster.other || {}).length ? '<p class="is-note">Other slots kept but not used in lineups: ' + esc(Object.keys(S.roster.other).map(function (k) { return k + ' ×' + S.roster.other[k]; }).join(', ')) + '</p>' : '');
+    return ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SFLEX', 'REC_FLEX', 'WRRB_FLEX', 'K', 'DEF', 'BN', 'IR', 'TAXI'].map(function (k) { var o = (ov || []).indexOf('roster.' + k) >= 0; return '<label style="display:inline-flex;flex-direction:column;margin:4px 8px 4px 0;font-size:13.5px;font-weight:700">' + esc(slotLabel(k)) + (o ? ' *' : '') + '<input class="is-input" style="width:56px" type="number" min="0" max="20" data-ro="' + k + '" value="' + esc(S.roster[k] || 0) + '"></label>'; }).join('') + (Object.keys(S.roster.other || {}).length ? '<p class="is-note">Other slots kept but not used in lineups: ' + esc(Object.keys(S.roster.other).map(function (k) { return k + ' ×' + S.roster.other[k]; }).join(', ')) + '</p>' : '');
   }
   function card(L) {
     var s = L.sync || {};

@@ -45,11 +45,11 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
-h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
-.lede{font-size:clamp(18px,2.2vw,21px);color:var(--sec);margin:0 0 26px;max-width:680px}
+h1{font-size:clamp(30px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
+h2{font-size:clamp(23px,3vw,28px);margin:34px 0 10px;letter-spacing:.01em}
+.lede{font-size:clamp(20px,2.2vw,23px);color:var(--sec);margin:0 0 26px;max-width:680px}
 p{color:var(--sec);margin:0 0 16px}
-.eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-top:42px}
+.eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-top:42px}
 .btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:14px 28px;letter-spacing:.02em;border:none;cursor:pointer;box-shadow:0 8px 26px rgba(191,145,0,.28)}
 .btn:hover{filter:brightness(1.06);text-decoration:none}
 .btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
@@ -60,14 +60,14 @@ p{color:var(--sec);margin:0 0 16px}
 ul.clean{list-style:none;padding:0;margin:14px 0}
 ul.clean li{padding:8px 0 8px 26px;position:relative;color:var(--sec)}
 ul.clean li:before{content:"";position:absolute;left:0;top:14px;width:10px;height:10px;border-radius:2px;background:var(--teal)}
-table{width:100%;border-collapse:collapse;font-size:15px;margin:16px 0}
+table{width:100%;border-collapse:collapse;font-size:17px;margin:16px 0}
 th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
-th{color:var(--sec);font-size:14px}
+th{color:var(--sec);font-size:15.5px}
 td.you{color:var(--goldink);font-weight:700}
 .cta-band{background:linear-gradient(180deg,rgba(14,124,99,.07),rgba(14,124,99,.02));border:1px solid rgba(14,124,99,.3);border-radius:16px;padding:28px;text-align:center;margin:40px 0}
 .cta-band h2{margin-top:0}
 .related{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
-.related a{background:var(--elev);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:14px;color:var(--sec)}
+.related a{background:var(--elev);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:15.5px;color:var(--sec)}
 .related a:hover{border-color:var(--teal);color:var(--text);text-decoration:none}
 @media(max-width:640px){.grid{grid-template-columns:1fr}}
 </style>
@@ -77,7 +77,7 @@ td.you{color:var(--goldink);font-weight:700}
 .nav-dd .nav-dd-menu{display:flex;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility 0s linear .3s;position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:0;background:var(--panel);border:1px solid rgba(14,124,99,.4);border-radius:12px;padding:8px;z-index:40;min-width:170px;box-shadow:0 10px 26px rgba(17,24,32,.12),0 0 16px rgba(14,124,99,.14);flex-direction:column}
 .nav-dd .nav-dd-menu::before{content:"";position:absolute;top:-16px;left:-14px;right:-14px;height:18px}
 .nav-dd:hover .nav-dd-menu,.nav-dd:focus-within .nav-dd-menu{visibility:visible;opacity:1;transition-delay:0s}
-.nav-dd .nav-dd-menu a{display:block;margin:0;padding:12px 16px;border-radius:8px;text-transform:none;letter-spacing:.02em;font-size:14px;color:var(--sec)}
+.nav-dd .nav-dd-menu a{display:block;margin:0;padding:12px 16px;border-radius:8px;text-transform:none;letter-spacing:.02em;font-size:15.5px;color:var(--sec)}
 .nav-dd .nav-dd-menu a:hover{background:rgba(14,124,99,.13);color:var(--text);text-decoration:none}
 
 body.pg-ins{background:
@@ -91,20 +91,20 @@ body.pg-ins::after{content:"";position:fixed;inset:0;pointer-events:none;opacity
 .art-head{position:relative;padding-top:38px}
 .art-head::before{content:"";position:absolute;top:-150px;left:50%;transform:translateX(-50%);width:min(820px,100vw);height:420px;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at center,rgba(14,124,99,.20) 0%,rgba(14,124,99,.08) 42%,rgba(14,124,99,0) 72%)}
 .art-head>*{position:relative;z-index:1}
-.byline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13.5px;color:var(--muted);margin:2px 0 10px}
+.byline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:15px;color:var(--muted);margin:2px 0 10px}
 .byline b{color:var(--sec);font-weight:600}
 .byline .dot{opacity:.5}
-.chip{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;border-radius:4px;padding:3px 8px;border:1px solid var(--line2);color:var(--muted);background:transparent;display:inline-block}
+.chip{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;border-radius:4px;padding:3px 8px;border:1px solid var(--line2);color:var(--muted);background:transparent;display:inline-block}
 .chip.under{color:var(--teal);border-color:rgba(14,124,99,.5)}
 .chip.over{color:var(--danger);border-color:rgba(192,50,47,.5)}
 .chip.fair{color:var(--goldink);border-color:rgba(191,145,0,.45)}
 /* ── article canvas ── */
 .art{max-width:960px}
-.art .lede{font-size:clamp(17px,2.1vw,20px);max-width:760px}
-.alsofmt{font-size:13.5px;color:var(--muted);margin:4px 0 0}
+.art .lede{font-size:clamp(19px,2.1vw,22px);max-width:760px}
+.alsofmt{font-size:15px;color:var(--muted);margin:4px 0 0}
 /* in-drop index */
 .toc{display:flex;flex-wrap:wrap;gap:9px;margin:24px 0 8px}
-.toc a{display:inline-flex;align-items:center;gap:9px;padding:9px 15px;border:1px solid var(--line);border-radius:999px;background:rgba(17,24,32,.02);font-size:13.5px;color:var(--sec);transition:border-color .15s ease,box-shadow .15s ease}
+.toc a{display:inline-flex;align-items:center;gap:9px;padding:9px 15px;border:1px solid var(--line);border-radius:999px;background:rgba(17,24,32,.02);font-size:15px;color:var(--sec);transition:border-color .15s ease,box-shadow .15s ease}
 .toc a:hover{border-color:rgba(14,124,99,.55);box-shadow:0 0 14px rgba(14,124,99,.12);text-decoration:none;color:var(--text)}
 .tdot{width:8px;height:8px;border-radius:50%;background:var(--line2);flex:0 0 auto}
 .tdot.under{background:var(--teal);box-shadow:0 0 8px rgba(14,124,99,.6)}
@@ -116,14 +116,14 @@ section.call:first-of-type{border-top:0}
 .call-side{position:relative}
 .cn{font-family:'Bebas Neue','Impact',sans-serif;font-size:88px;line-height:.85;color:rgba(14,124,99,.30);text-shadow:0 0 30px rgba(14,124,99,.25);user-select:none}
 .cmeta{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:16px}
-.cpos{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.cconf{font-size:12px;color:var(--muted)}
+.cpos{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.cconf{font-size:13.5px;color:var(--muted)}
 .call-main{max-width:660px}
-section.call h2{font-size:clamp(21px,3vw,27px);line-height:1.22;margin:2px 0 14px}
-.call-main p{font-size:16.5px;line-height:1.75;color:var(--sec);margin:0 0 14px}
+section.call h2{font-size:clamp(23px,3vw,28px);line-height:1.22;margin:2px 0 14px}
+.call-main p{font-size:18.5px;line-height:1.75;color:var(--sec);margin:0 0 14px}
 .playline{color:var(--sec)}
 .playline b{color:var(--text)}
-.statline{font-size:13.5px;font-style:italic;color:var(--muted);margin:2px 0 0;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.statline{font-size:15px;font-style:italic;color:var(--muted);margin:2px 0 0;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
 /* effect range bar — small, instrumented */
 .ebar{position:relative;display:inline-block;width:96px;height:3px;background:var(--line2);border-radius:2px;vertical-align:middle;margin-left:10px;flex:0 0 auto}
 .ebar::before{content:"";position:absolute;left:50%;top:-3px;width:1px;height:9px;background:var(--muted);opacity:.7}
@@ -131,13 +131,13 @@ section.call h2{font-size:clamp(21px,3vw,27px);line-height:1.22;margin:2px 0 14p
 .ebar i.pos{background:var(--teal);box-shadow:0 0 8px rgba(14,124,99,.5)}
 .ebar i.neg{background:var(--danger);box-shadow:0 0 8px rgba(192,50,47,.4);transform:translateX(-100%)}
 /* prev / next drop nav */
-.dropnav{display:flex;justify-content:space-between;gap:16px;border-top:1px solid var(--line);margin-top:46px;padding-top:22px;font-size:14.5px}
+.dropnav{display:flex;justify-content:space-between;gap:16px;border-top:1px solid var(--line);margin-top:46px;padding-top:22px;font-size:16px}
 .dropnav .dn{max-width:46%}
-.dropnav .dn small{display:block;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.dropnav .dn small{display:block;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 .dropnav .dn a{font-weight:700}
 .dropnav .dn.next{text-align:right;margin-left:auto}
 .dropnav .locked{color:var(--muted);font-weight:600}
-.endnote{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;font-size:13.5px;line-height:1.7;color:var(--muted)}
+.endnote{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;font-size:15px;line-height:1.7;color:var(--muted)}
 .endnote b{color:var(--sec)}
 .endnote a{color:var(--teal)}
 @media(max-width:700px){
@@ -152,60 +152,60 @@ section.call h2{font-size:clamp(21px,3vw,27px);line-height:1.22;margin:2px 0 14p
 .statrow{display:flex;gap:44px;flex-wrap:wrap;margin:26px 0 6px}
 .statrow .st{min-width:90px}
 .statrow .st b{display:block;font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;font-size:44px;line-height:1;color:var(--text);text-shadow:0 0 22px rgba(14,124,99,.3)}
-.statrow .st span{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.nextdrop{display:inline-flex;align-items:center;gap:10px;margin:18px 0 0;padding:9px 16px;border:1px solid rgba(14,124,99,.35);border-radius:999px;font-size:13.5px;color:var(--sec);background:rgba(14,124,99,.06);box-shadow:0 0 16px rgba(14,124,99,.08)}
+.statrow .st span{font-size:13.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.nextdrop{display:inline-flex;align-items:center;gap:10px;margin:18px 0 0;padding:9px 16px;border:1px solid rgba(14,124,99,.35);border-radius:999px;font-size:15px;color:var(--sec);background:rgba(14,124,99,.06);box-shadow:0 0 16px rgba(14,124,99,.08)}
 .nextdrop .pulse{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px rgba(14,124,99,.9);animation:itpulse 2.2s ease-in-out infinite}
 @keyframes itpulse{0%,100%{opacity:1}50%{opacity:.35}}
 .feat{border:1px solid rgba(14,124,99,.3);border-radius:14px;padding:24px 26px;margin:26px 0 8px;background:linear-gradient(180deg,rgba(14,124,99,.06),rgba(14,124,99,.015) 60%),var(--panel);box-shadow:0 0 30px rgba(14,124,99,.09)}
-.feat .feat-tag{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
+.feat .feat-tag{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
 .feat-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 6px}
 .feat-tabs:empty{display:none}
-.feat-tabs button{background:var(--elev);border:1px solid var(--line2);color:var(--sec);border-radius:999px;padding:7px 15px;font-size:13px;font-weight:600;cursor:pointer}
+.feat-tabs button{background:var(--elev);border:1px solid var(--line2);color:var(--sec);border-radius:999px;padding:7px 15px;font-size:14.5px;font-weight:600;cursor:pointer}
 .feat-tabs button.on{border-color:rgba(14,124,99,.6);color:var(--teal);background:rgba(14,124,99,.1)}
 .feat.feat-open section.call{grid-template-columns:96px minmax(0,1fr);gap:24px;margin-top:28px;padding-top:24px}
 .feat.feat-open .cn{font-size:64px}
 .feat section.call:first-of-type{border-top:0}
 .feat ul{list-style:none;margin:0 0 16px;padding:0}
-.feat li{display:flex;gap:11px;align-items:baseline;padding:7px 0;font-size:15.5px;color:var(--sec);border-bottom:1px solid rgba(17,24,32,.035)}
+.feat li{display:flex;gap:11px;align-items:baseline;padding:7px 0;font-size:17.5px;color:var(--sec);border-bottom:1px solid rgba(17,24,32,.035)}
 .feat li:last-child{border-bottom:0}
 .feat li .tdot{position:relative;top:-1px}
-.feat-editions{display:flex;gap:10px;flex-wrap:wrap;font-size:14px}
+.feat-editions{display:flex;gap:10px;flex-wrap:wrap;font-size:15.5px}
 .feat-editions a{padding:8px 16px;border:1px solid var(--line2);border-radius:9px;color:var(--sec);font-weight:600}
 .feat-editions a:hover{border-color:rgba(14,124,99,.6);color:var(--text);text-decoration:none;box-shadow:0 0 14px rgba(14,124,99,.14)}
 .fmt-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}
 @media(max-width:720px){.fmt-cards{grid-template-columns:1fr}}
 .fmt-cards a.card{display:block;margin:0;color:var(--text);border-color:rgba(14,124,99,.28);box-shadow:0 0 16px rgba(14,124,99,.08);transition:box-shadow .2s ease,border-color .2s ease}
 .fmt-cards a.card:hover{border-color:rgba(14,124,99,.6);box-shadow:0 0 26px rgba(14,124,99,.18);text-decoration:none}
-.fmt-cards .fc-title{font-size:19px;font-weight:800;margin-bottom:6px}
-.fmt-cards p{margin:0;font-size:14px}
+.fmt-cards .fc-title{font-size:21px;font-weight:800;margin-bottom:6px}
+.fmt-cards p{margin:0;font-size:15.5px}
 .drop-list{list-style:none;padding:0;margin:18px 0}
 .drop-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border:1px solid var(--line);border-radius:10px;margin:9px 0;background:var(--panel)}
 .drop-list li:hover{border-color:rgba(14,124,99,.4)}
 .drop-list li.future{opacity:.62}
-.drop-list .dl-date{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--muted);white-space:nowrap}
+.drop-list .dl-date{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14.5px;color:var(--muted);white-space:nowrap}
 .drop-list a{font-weight:700}
-input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);border-radius:9px;padding:12px 14px;font-size:15px;width:min(320px,100%)}
+input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);border-radius:9px;padding:12px 14px;font-size:17px;width:min(320px,100%)}
 .vault-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
-.filters button,.filters select,.filters input{background:var(--elev);border:1px solid var(--line2);color:var(--sec);border-radius:9px;padding:8px 13px;font-size:14px;cursor:pointer}
+.filters button,.filters select,.filters input{background:var(--elev);border:1px solid var(--line2);color:var(--sec);border-radius:9px;padding:8px 13px;font-size:15.5px;cursor:pointer}
 .filters button.on{border-color:var(--teal);color:var(--teal);background:rgba(14,124,99,.1)}
-.count-pill{font-size:13px;color:var(--muted);margin-left:auto;align-self:center}
-.tailored{margin:10px 0 12px;padding:10px 14px;background:rgba(14,124,99,.08);border:1px solid rgba(14,124,99,.32);border-radius:9px;font-size:14.5px;line-height:1.55;color:var(--sec)}
+.count-pill{font-size:14.5px;color:var(--muted);margin-left:auto;align-self:center}
+.tailored{margin:10px 0 12px;padding:10px 14px;background:rgba(14,124,99,.08);border:1px solid rgba(14,124,99,.32);border-radius:9px;font-size:16px;line-height:1.55;color:var(--sec)}
 .tailored b{color:var(--teal)}
-.xfmt{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0;font-size:14px}
+.xfmt{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0;font-size:15.5px}
 .locked-band{border:1px dashed var(--gold);border-radius:14px;padding:22px;background:rgba(191,145,0,.05);margin:34px 0}
 .locked-band h2{margin-top:0;color:var(--goldink)}
 /* legacy classes still used by vault/premium renderers */
-.badge{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:14px;padding:4px 11px;margin-right:8px;margin-bottom:4px}
+.badge{display:inline-block;font-size:13.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:14px;padding:4px 11px;margin-right:8px;margin-bottom:4px}
 .v-under{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid rgba(14,124,99,.45)}
 .v-over{background:rgba(192,50,47,.12);color:var(--danger);border:1px solid rgba(192,50,47,.45)}
 .v-fair{background:rgba(191,145,0,.1);color:var(--goldink);border:1px solid rgba(191,145,0,.4)}
 .v-dep{background:var(--elev);color:var(--sec);border:1px solid var(--line2)}
 .badge.plain{background:var(--elev);color:var(--muted);border:1px solid var(--line)}
 article.ins{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:18px 0}
-article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
-.effect{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;color:var(--goldink);margin:10px 0 12px}
-.fmt{font-size:14.5px;color:var(--sec);padding:9px 12px;border-left:3px solid var(--teal);background:var(--elev);border-radius:0 8px 8px 0;margin:7px 0}
+article.ins h2{margin:8px 0 10px;font-size:clamp(21px,2.6vw,26px)}
+.effect{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:var(--goldink);margin:10px 0 12px}
+.fmt{font-size:16px;color:var(--sec);padding:9px 12px;border-left:3px solid var(--teal);background:var(--elev);border-radius:0 8px 8px 0;margin:7px 0}
 .fmt b{color:var(--text);letter-spacing:.04em}
 </style>
 
@@ -324,23 +324,23 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <div class="nextdrop" id="nextdrop" style="margin-top:14px"><span class="pulse"></span><span>Next drop</span></div>
 <div class="xfmt">Also available as <a href="/snake-insights">snake draft insights</a>.</div>
 <div class="eyebrow">Every drop</div>
-<ul class="drop-list"><li data-release="2026-07-04"><div><a class="dl-main" href="/auction-insights-2026-07-04" data-locked="Drops Saturday, July 4, 2026">Auction Insights &mdash; Saturday, July 4, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Patrick Mahomes is a reputation trap if drafted as a &middot; Miami is the most fragile fantasy ecosystem in footb&hellip;</div></div><span class="dl-date">2026-07-04</span></li>
-<li data-release="2026-07-09"><div><a class="dl-main" href="/auction-insights-2026-07-09" data-locked="Drops Thursday, July 9, 2026">Auction Insights &mdash; Thursday, July 9, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Drake Maye is the best elite-QB value &middot; New England became a classic year-three quarterback &hellip;</div></div><span class="dl-date">2026-07-09</span></li>
-<li data-release="2026-07-16"><div><a class="dl-main" href="/auction-insights-2026-07-16" data-locked="Drops Thursday, July 16, 2026">Auction Insights &mdash; Thursday, July 16, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Josh Allen remains the safest overall QB1, but not t &middot; Arizona is the clearest macro fade because the offen&hellip;</div></div><span class="dl-date">2026-07-16</span></li>
-<li data-release="2026-07-23"><div><a class="dl-main" href="/auction-insights-2026-07-23" data-locked="Drops Thursday, July 23, 2026">Auction Insights &mdash; Thursday, July 23, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Lamar Jackson’s market still prices old rushing cert &middot; James Cook is one of the best prices on the board&hellip;</div></div><span class="dl-date">2026-07-23</span></li>
-<li data-release="2026-07-30"><div><a class="dl-main" href="/auction-insights-2026-07-30" data-locked="Drops Thursday, July 30, 2026">Auction Insights &mdash; Thursday, July 30, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">The 2026 PUP return-window change slightly increases &middot; Detroit’s offense gets the single cleanest schedule &hellip;</div></div><span class="dl-date">2026-07-30</span></li>
-<li data-release="2026-08-06"><div><a class="dl-main" href="/auction-insights-2026-08-06" data-locked="Drops Thursday, August 6, 2026">Auction Insights &mdash; Thursday, August 6, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Cleveland’s team environment should improve more tha &middot; New York Giants volume is likely to shift from three&hellip;</div></div><span class="dl-date">2026-08-06</span></li>
-<li data-release="2026-08-10"><div><a class="dl-main" href="/auction-insights-2026-08-10" data-locked="Drops Monday, August 10, 2026">Auction Insights &mdash; Monday, August 10, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Buffalo combines elite QB play, top-tier line play,  &middot; Maye’s 2025 efficiency profile was not fluky&hellip;</div></div><span class="dl-date">2026-08-10</span></li>
-<li data-release="2026-08-13"><div><a class="dl-main" href="/auction-insights-2026-08-13" data-locked="Drops Thursday, August 13, 2026">Auction Insights &mdash; Thursday, August 13, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">The Jets’ schedule opens softer than the market is p &middot; Daniels benefits from Washington’s offensive-line in&hellip;</div></div><span class="dl-date">2026-08-13</span></li>
-<li data-release="2026-08-17"><div><a class="dl-main" href="/auction-insights-2026-08-17" data-locked="Drops Monday, August 17, 2026">Auction Insights &mdash; Monday, August 17, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Chicago’s 2026 schedule creates unusual weekly-prep  &middot; Hurts’ favorable schedule prevents a stronger fade&hellip;</div></div><span class="dl-date">2026-08-17</span></li>
-<li data-release="2026-08-20"><div><a class="dl-main" href="/auction-insights-2026-08-20" data-locked="Drops Thursday, August 20, 2026">Auction Insights &mdash; Thursday, August 20, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Green Bay’s late-season home weather is a real hidde &middot; Purdy’s weapon room is stronger but target competiti&hellip;</div></div><span class="dl-date">2026-08-20</span></li>
-<li data-release="2026-08-24"><div><a class="dl-main" href="/auction-insights-2026-08-24" data-locked="Drops Monday, August 24, 2026">Auction Insights &mdash; Monday, August 24, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">The anytime onside-kick declaration rule marginally  &middot; Justin Herbert is the best midrange QB value&hellip;</div></div><span class="dl-date">2026-08-24</span></li>
-<li data-release="2026-08-27"><div><a class="dl-main" href="/auction-insights-2026-08-27" data-locked="Drops Thursday, August 27, 2026">Auction Insights &mdash; Thursday, August 27, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">The Ravens lost hidden support structure on offense &middot; Matthew Stafford is expensive for a non-rushing QB, &hellip;</div></div><span class="dl-date">2026-08-27</span></li>
-<li data-release="2026-08-31"><div><a class="dl-main" href="/auction-insights-2026-08-31" data-locked="Drops Monday, August 31, 2026">Auction Insights &mdash; Monday, August 31, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">The 49ers became more top-heavy at WR &middot; Jordan Love is quietly viable because the Packers’ l&hellip;</div></div><span class="dl-date">2026-08-31</span></li>
-<li data-release="2026-09-03"><div><a class="dl-main" href="/auction-insights-2026-09-03" data-locked="Drops Thursday, September 3, 2026">Auction Insights &mdash; Thursday, September 3, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Kansas City is no longer a pure pass funnel &middot; Cam Ward is interesting mainly because Brian Daboll &hellip;</div></div><span class="dl-date">2026-09-03</span></li></ul>
+<ul class="drop-list"><li data-release="2026-07-04"><div><a class="dl-main" href="/auction-insights-2026-07-04" data-locked="Drops Saturday, July 4, 2026">Auction Insights &mdash; Saturday, July 4, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">Patrick Mahomes is a reputation trap if drafted as a &middot; Miami is the most fragile fantasy ecosystem in footb&hellip;</div></div><span class="dl-date">2026-07-04</span></li>
+<li data-release="2026-07-09"><div><a class="dl-main" href="/auction-insights-2026-07-09" data-locked="Drops Thursday, July 9, 2026">Auction Insights &mdash; Thursday, July 9, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">Drake Maye is the best elite-QB value &middot; New England became a classic year-three quarterback &hellip;</div></div><span class="dl-date">2026-07-09</span></li>
+<li data-release="2026-07-16"><div><a class="dl-main" href="/auction-insights-2026-07-16" data-locked="Drops Thursday, July 16, 2026">Auction Insights &mdash; Thursday, July 16, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">Josh Allen remains the safest overall QB1, but not t &middot; Arizona is the clearest macro fade because the offen&hellip;</div></div><span class="dl-date">2026-07-16</span></li>
+<li data-release="2026-07-23"><div><a class="dl-main" href="/auction-insights-2026-07-23" data-locked="Drops Thursday, July 23, 2026">Auction Insights &mdash; Thursday, July 23, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">Lamar Jackson’s market still prices old rushing cert &middot; James Cook is one of the best prices on the board&hellip;</div></div><span class="dl-date">2026-07-23</span></li>
+<li data-release="2026-07-30"><div><a class="dl-main" href="/auction-insights-2026-07-30" data-locked="Drops Thursday, July 30, 2026">Auction Insights &mdash; Thursday, July 30, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">The 2026 PUP return-window change slightly increases &middot; Detroit’s offense gets the single cleanest schedule &hellip;</div></div><span class="dl-date">2026-07-30</span></li>
+<li data-release="2026-08-06"><div><a class="dl-main" href="/auction-insights-2026-08-06" data-locked="Drops Thursday, August 6, 2026">Auction Insights &mdash; Thursday, August 6, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">Cleveland’s team environment should improve more tha &middot; New York Giants volume is likely to shift from three&hellip;</div></div><span class="dl-date">2026-08-06</span></li>
+<li data-release="2026-08-10"><div><a class="dl-main" href="/auction-insights-2026-08-10" data-locked="Drops Monday, August 10, 2026">Auction Insights &mdash; Monday, August 10, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">Buffalo combines elite QB play, top-tier line play,  &middot; Maye’s 2025 efficiency profile was not fluky&hellip;</div></div><span class="dl-date">2026-08-10</span></li>
+<li data-release="2026-08-13"><div><a class="dl-main" href="/auction-insights-2026-08-13" data-locked="Drops Thursday, August 13, 2026">Auction Insights &mdash; Thursday, August 13, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">The Jets’ schedule opens softer than the market is p &middot; Daniels benefits from Washington’s offensive-line in&hellip;</div></div><span class="dl-date">2026-08-13</span></li>
+<li data-release="2026-08-17"><div><a class="dl-main" href="/auction-insights-2026-08-17" data-locked="Drops Monday, August 17, 2026">Auction Insights &mdash; Monday, August 17, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">Chicago’s 2026 schedule creates unusual weekly-prep  &middot; Hurts’ favorable schedule prevents a stronger fade&hellip;</div></div><span class="dl-date">2026-08-17</span></li>
+<li data-release="2026-08-20"><div><a class="dl-main" href="/auction-insights-2026-08-20" data-locked="Drops Thursday, August 20, 2026">Auction Insights &mdash; Thursday, August 20, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">Green Bay’s late-season home weather is a real hidde &middot; Purdy’s weapon room is stronger but target competiti&hellip;</div></div><span class="dl-date">2026-08-20</span></li>
+<li data-release="2026-08-24"><div><a class="dl-main" href="/auction-insights-2026-08-24" data-locked="Drops Monday, August 24, 2026">Auction Insights &mdash; Monday, August 24, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">The anytime onside-kick declaration rule marginally  &middot; Justin Herbert is the best midrange QB value&hellip;</div></div><span class="dl-date">2026-08-24</span></li>
+<li data-release="2026-08-27"><div><a class="dl-main" href="/auction-insights-2026-08-27" data-locked="Drops Thursday, August 27, 2026">Auction Insights &mdash; Thursday, August 27, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">The Ravens lost hidden support structure on offense &middot; Matthew Stafford is expensive for a non-rushing QB, &hellip;</div></div><span class="dl-date">2026-08-27</span></li>
+<li data-release="2026-08-31"><div><a class="dl-main" href="/auction-insights-2026-08-31" data-locked="Drops Monday, August 31, 2026">Auction Insights &mdash; Monday, August 31, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">The 49ers became more top-heavy at WR &middot; Jordan Love is quietly viable because the Packers’ l&hellip;</div></div><span class="dl-date">2026-08-31</span></li>
+<li data-release="2026-09-03"><div><a class="dl-main" href="/auction-insights-2026-09-03" data-locked="Drops Thursday, September 3, 2026">Auction Insights &mdash; Thursday, September 3, 2026</a><div class="dl-teaser" style="font-size:15px;color:var(--muted)">Kansas City is no longer a pure pass funnel &middot; Cam Ward is interesting mainly because Brian Daboll &hellip;</div></div><span class="dl-date">2026-09-03</span></li></ul>
 <div class="card"><strong><a href="/insights-vault">The Insight Vault &mdash; 30 more, free</a></strong><p>A bonus set of player-level calls, unlocked with your email. No purchase.</p></div>
-<div class="card"><strong style="display:block;font-size:19px;margin-bottom:6px">The rest of the research set</strong>
-<p style="font-size:14.5px">These are the public sample. The premium set &mdash; 150 more calls at QB, RB, WR, and TE, including the late-round targets and the prices with a specific number attached &mdash; ships with the <a href="https://irontuna.com/?buy=1">one-time $9.99 Draft Day unlock</a>, recalculated to your exact league size, scoring, and roster inside the app. The 2026 draft-season set is complete and stays available all season for keeper, dynasty and trade decisions.</p></div>
+<div class="card"><strong style="display:block;font-size:21px;margin-bottom:6px">The rest of the research set</strong>
+<p style="font-size:16px">These are the public sample. The premium set &mdash; 150 more calls at QB, RB, WR, and TE, including the late-round targets and the prices with a specific number attached &mdash; ships with the <a href="https://irontuna.com/?buy=1">one-time $9.99 Draft Day unlock</a>, recalculated to your exact league size, scoring, and roster inside the app. The 2026 draft-season set is complete and stays available all season for keeper, dynasty and trade decisions.</p></div>
 <div class="eyebrow">More</div><div class="related"><a href="/insights">All formats</a><a href="/auction-draft-strategy">Auction draft strategy</a><a href="/guides">All guides</a></div>
 </main>
 <script>
