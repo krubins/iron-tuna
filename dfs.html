@@ -894,6 +894,25 @@ p{color:var(--sec);margin:0 0 16px}
      and nothing around them competes for the same attention. -->
 <div class="wrap wide df-main">
 
+<!-- ── the lead story ──────────────────────────────────────
+     The desk was three moves from a reader: pick The Slate on the board
+     switcher, scroll past the scoring cards, and there were six equal boxes.
+     A story nobody can reach is a story nobody reads, and the DFS lens of a
+     recap is written specifically for the person setting a lineup on this
+     page. It is its own section now, above the boards and outside them, so it
+     is on the page whichever board is open -- and on Pick'em too, where the
+     five panes are all hidden and the desk used to disappear entirely.
+
+     Unnumbered, like /fantasy's. The numbered chapters are the boards, one
+     visible at a time; news is not one of them. Same well, same CSS
+     (.nr-well in site.css), the DFS lens in place of the weekly byline. -->
+<section>
+  <div class="is-sec" id="desk"><div class="is-sec-top"><span class="is-sec-n">Lead</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
+    <p>The desk’s newest packages read for the slate: price, ownership, leverage. <a href="/analysts/park">Lena Park</a> writes the DFS lens of every shared story. <a href="/analysts">The desk, and the AI disclosure &rarr;</a></p></div>
+  <div class="nr-well" id="dfDesk"></div>
+  <p class="is-empty" id="dfDeskEmpty">Reading the desk&hellip;</p>
+</section>
+
 <!-- ── the lineup ─────────────────────────────────────────────────────────────
      The first section on the page and the default one, because it is the only
      thing on this site a DFS reader has to have before lock: a roster, under
@@ -1026,10 +1045,6 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>The Slate</h2></div></div>
   <p class="df-sub">What the board looks like underneath the lineup: the market&rsquo;s scoring environment, the widest values, and the desk&rsquo;s reading of the week.</p>
   <div class="is-grid" id="dfCards"></div>
-  <h3>The newsroom, DFS lens</h3>
-  <p class="is-note">The desk’s newest packages read for the slate: price, ownership, leverage. <a href="/analysts/park">Lena Park</a> writes the DFS lens of every shared story. <a href="/analysts">The desk, and the AI disclosure &rarr;</a></p>
-  <div class="is-grid" id="dfDesk"></div>
-  <p class="is-empty" id="dfDeskEmpty">Reading the desk&hellip;</p>
   <h3>This week’s scoring environment</h3>
   <div class="is-scroll"><table class="is-table" id="dfTable" hidden><thead><tr><th>Club</th><th>Opponent</th><th class="num">Implied points</th><th class="num">Game total</th></tr></thead><tbody id="dfBody"></tbody></table></div>
   <p class="is-empty" id="dfEmpty">Reading the slate&hellip;</p>
@@ -1505,7 +1520,57 @@ p{color:var(--sec);margin:0 0 16px}
   function desk() {
     fetch('/api/newsroom?lens=dfs&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok || !j.pieces.length) { $('dfDeskEmpty').textContent = 'The desk has not published this week yet.'; return; }
-      $('dfDesk').innerHTML = j.pieces.map(function (p) { var by = p.byline || {}; return '<div class="is-card"><span class="is-tag">' + e(p.dfsTitle || p.title) + ' · Week ' + e(p.week) + '</span><h3><a href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a></h3><p>' + e(p.dek || '') + '</p><p class="is-note">DFS lens by <a href="/analysts/' + e(by.dfsAnalyst) + '">' + e(by.dfsName) + '</a></p></div>'; }).join('');
+      // WHO A PIECE IS ABOUT. The desk's own subject list off `components[].player`,
+      // three at most, which is what /player-search.js reads off `data-player-focus`
+      // to hang the faces. A piece that names nobody carries no attribute and the
+      // script falls back to the headline. Same rule /fantasy's well uses.
+      var focus = function (p) {
+        var who = [], parts = p.components || [];
+        for (var i = 0; i < parts.length && who.length < 3; i++) {
+          var n = parts[i] && parts[i].player;
+          if (n && who.indexOf(n) < 0) who.push(n);
+        }
+        return who.length ? ' data-player-focus="' + e(who.join('|')) + '"' : '';
+      };
+      var av = function (name) { return String(name || '').split(' ').map(function (w) { return w.charAt(0); }).join(''); };
+      var ago = function (iso) {
+        if (!iso) return ''; var t = new Date(iso).getTime(); if (!isFinite(t)) return '';
+        var m = Math.round((Date.now() - t) / 60000);
+        if (m < 60) return Math.max(m, 1) + 'm ago'; if (m < 1440) return Math.round(m / 60) + 'h ago'; if (m < 10080) return Math.round(m / 1440) + 'd ago';
+        try { return new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }); } catch (x) { return ''; }
+      };
+      // The DFS TITLE, not the weekly one: a package shared by both lenses is
+      // named for what it is on this page ("Showdown read", not "Game Recap").
+      var kicker = function (p) { return e(p.dfsTitle || p.title) + ' &middot; Week ' + e(p.week); };
+      // And the DFS BYLINE. A shared story is written twice and this page runs
+      // the lens it is showing, which is the one the reader is being asked to
+      // trust with a lineup.
+      var byline = function (p) {
+        var by = p.byline || {};
+        return '<span class="nr-by"><span class="nr-av">' + e(av(by.dfsName)) + '</span><a href="/analysts/' + e(by.dfsAnalyst) + '">' + e(by.dfsName) + '</a>' +
+          (p.publishedAt ? '<span class="nr-time">' + e(ago(p.publishedAt)) + '</span>' : '') + '</span>';
+      };
+      // THE LEAD IS THE NEWEST PIECE, not a chosen one: the feed is ordered by
+      // publication and the desk's slots decide what lands when.
+      var lead = j.pieces[0], rest = j.pieces.slice(1, 6);
+      var html = '<article class="nr-lead"' + focus(lead) + '>' +
+        '<span class="nr-kicker">' + kicker(lead) + '<span class="nr-flag">Latest</span></span>' +
+        '<h3><a href="' + e(lead.url) + '">' + e(lead.headline || lead.title) + '</a></h3>' +
+        (lead.dek ? '<p>' + e(lead.dek) + '</p>' : '') +
+        '<a class="nr-lead-go" href="' + e(lead.url) + '">Read the story &rarr;</a>' +
+        byline(lead) + '</article>';
+      if (rest.length) {
+        html += '<div class="nr-rail"><p class="nr-rail-h">More from the desk</p><ul>' + rest.map(function (p) {
+          // The <li> has no heading of its own, so `data-player-head` names the
+          // element the faces go in front of.
+          return '<li' + focus(p) + '><span class="nr-kicker">' + kicker(p) + '</span>' +
+            '<a data-player-head href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a>' + byline(p) + '</li>';
+        }).join('') + '</ul></div>';
+      }
+      // One published piece is a lead with nothing beside it: .nr-well-solo drops
+      // the second column rather than holding 42% of the band open beside it.
+      $('dfDesk').className = 'nr-well' + (rest.length ? '' : ' nr-well-solo');
+      $('dfDesk').innerHTML = html;
       $('dfDeskEmpty').hidden = true;
     }).catch(function () { $('dfDeskEmpty').textContent = 'The desk did not answer.'; });
   }

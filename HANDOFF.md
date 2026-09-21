@@ -12675,3 +12675,60 @@ the column is the taller and the lead ends on its own copy. The section order
 is asserted off the rendered page rather than the source: desk, now, board,
 startsit, disagree, tools, top to bottom, with the ribbon's six jumps in the
 same order.
+
+---
+
+## 113. September 21: /dfs kept its newsroom behind a tab
+
+Ken, after §112 landed on /fantasy: "do the same for the dfs page."
+
+**What was wrong.** /dfs's desk was three moves from a reader: pick **The
+Slate** on the board switcher, scroll past the scoring-environment cards, and
+there were six equal `.is-card` boxes. Worse, `#sec-dash` is one of five panes
+`show()` toggles, so on any other board the desk was not on the page at all —
+and on the Pick'em venue, where `load()` hides all five panes, it disappeared
+entirely. The DFS lens of a recap is written specifically for the person
+setting a lineup on this page, and that person had to go looking for it.
+
+**What it is now.** The same well /fantasy runs (`.nr-well`, §112), in the DFS
+lens, as its own section directly under the Setup band and above the boards.
+
+- **Outside the panes, not inside one.** It is a plain `<section>` in
+  `.df-main`, not a `sec-<k>`, so `show()` never touches it: it is on the page
+  whichever board is open, and it survives the Pick'em branch that hides all
+  five. That is the whole point of moving it.
+- **The DFS lens, end to end.** The kicker is `dfsTitle || title` and the
+  byline is `dfsName` / `dfsAnalyst`, not the weekly analyst. A package shared
+  by both lenses is written twice; this page runs the one it is showing, which
+  is the one a reader is being asked to trust with a lineup.
+- **The faces come from the same attribute as everywhere else.**
+  `data-player-focus` off `components[].player`, three at most, read by
+  `/player-search.js`, which /dfs already loads.
+- **Unnumbered, like /fantasy's.** The numbered chapters here are the boards,
+  one visible at a time. News is not one of them, so its sec-head carries
+  `Lead` where a number would go.
+
+**Where it sits, and the one thing that decides it.** Above `#sec-lineup`. /dfs
+has no hero — §"dfs: drop the opening band" removed it so the page opens on a
+control — so the analogue of /fantasy's "first thing under the hero" is "first
+thing under the Setup band", which is the question every board below is solved
+for. News above *that* would undo the change that put the control first. The
+cost is that the solved roster, which is the product, now starts a well lower
+down; that is the same trade /fantasy made when the lead went above **Do this
+now**.
+
+| Where | What |
+|---|---|
+| `dfs.html` | The newsroom leaves `#sec-dash` for its own section above the lineup; `#dfDesk` is a `.nr-well`; `desk()` builds the lead card and the column, with `focus`, `av`, `ago`, `kicker` and `byline` helpers, instead of six `.is-card` boxes. |
+
+No CSS: `.nr-well` and everything under it shipped with §112, which is why
+this is one file.
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
+plus `test-homepage` under `REQUIRE_BROWSER=1` (99/99) and the four `--check`
+generators clean. The three inline scripts parse; no stray control bytes; tags
+balance. Rendered in Chromium at 1360px and 430px against a stubbed
+`/api/newsroom?lens=dfs` in three shapes — six pieces, one piece, an empty feed
+— with no page errors and no horizontal overflow. The well paints at y=926 and
+`#sec-lineup` at y=1693, so the order on the rendered page is Setup, the desk,
+the lineup; the byline reads Lena Park and the kicker reads the DFS title.
