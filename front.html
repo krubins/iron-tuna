@@ -82,10 +82,13 @@
    lane control inside it — so an anchor jump has to stop clear of it or it
    lands with the section head hidden behind it. */
 html{scroll-behavior:smooth;scroll-padding-top:56px}
-/* Archivo is here for its WIDTH axis, not just its weights: the hero headline
-   is a claim and a counter-claim, and the counter-claim is set expanded rather
-   than recoloured. Instrument Serif has exactly two jobs on this page — the
-   hero's claim and the lead story's deck — so the two families never blur. */
+/* TWO families on this page and no more. The hero used to read as three: the
+   headline's two clauses were set 29 width units apart on Archivo's width
+   axis, which is far enough that they stopped looking like one typeface, and
+   the claim under them was a serif. The width trick is gone — the headline is
+   one face at one width — so what is left above the fold is Archivo for the
+   argument and Instrument Serif for the claim, which is a pairing rather than
+   a pile. The serif's other and only job is the lead story's deck. */
 body{background:var(--bg);color:var(--ink);font-family:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-stretch:100%;line-height:1.48;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
 a{color:inherit;text-decoration:none}
 img{max-width:100%}
@@ -198,10 +201,13 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    It is a claim and a counter-claim, and the counter-claim used to be marked
    by turning it mint green. Colouring one phrase of a headline is the oldest
    tell in template design and it wastes the contrast on a highlighter.
-   Both clauses are the same white here. What separates them is Archivo's
-   WIDTH axis: the thing anyone can do is set at normal width and mid weight,
-   and the thing only a sportsbook does is set expanded and heavy. The
-   rhetoric is carried by the letterforms.
+   Both clauses are the same white here. The counter-claim was then set on
+   Archivo's WIDTH axis instead, at 125% against the first clause's 96%, and
+   29 units of width apart is far enough that the two clauses stopped looking
+   like one typeface — a third font in a hero that already carries two. Both
+   clauses now sit at the body's width and track identically. What separates
+   them is WEIGHT alone, 500 against 800, which is the contrast a single
+   family is built to carry.
    `em` stays the element — the emphasis is real, the styling of it is not
    italic — and the h1's textContent is unchanged (tools/test-homepage.mjs). */
 /* Leading was 1.0, which is tighter than this face wants at 50px: "projection."
@@ -209,17 +215,22 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    four-line block rather than as claim and counter-claim. 1.06 here, with the
    clause break carrying its own step, separates them without a paragraph gap. */
 .hm-h1{font-size:clamp(29px,4.1vw,50px);line-height:1.06;letter-spacing:-.021em;font-weight:500}
-/* The measure is set on each CLAUSE, not on the h1, because `ch` resolves
-   against the element's own font: capping the h1 would measure both clauses in
-   the narrow one and break the expanded clause onto three ragged lines with
-   "theirs." alone on the last. Two lines each, which is what the contrast
-   needs to read as two lines of argument. */
-.hm-h1 .c1{display:block;max-width:22ch;font-stretch:96%}
-.hm-h1 em{display:block;max-width:21ch;margin-top:.16em;font-style:normal;font-stretch:125%;font-weight:800;letter-spacing:-.028em}
-/* The one sentence that says what this site DOES. Set in the serif, which
-   appears exactly twice on this page, and pushed off a brass rule — brass
-   because this sentence IS the money claim. Capped at 38ch so it breaks to
-   two or three lines and reads as a statement rather than as a paragraph. */
+/* The measure is set on each CLAUSE, not on the h1, so each one breaks where
+   its own length wants to: the first runs two lines, the counter-claim one.
+   The caps differ because `ch` resolves against the element's own font and the
+   bolder clause sets a wider `0` — 24ch on the `em` is the same measure 22ch
+   is on the first clause, not a longer line. */
+.hm-h1 .c1{display:block;max-width:22ch}
+.hm-h1 em{display:block;max-width:24ch;margin-top:.16em;font-style:normal;font-weight:800}
+/* The one sentence that says what this site DOES. This is the page's second
+   family and its last — Instrument Serif, the same face the lead story's deck
+   carries — pushed off a brass rule, brass because this sentence IS the money
+   claim. A serif under a sans headline is a pairing the eye reads as one
+   intention; it only looked like clutter while the headline itself was
+   running two widths. Capped at 38ch so it breaks to two or three lines and
+   reads as a statement rather than as a paragraph.
+   It must stay larger than the lede (tools/test-homepage.mjs), which the floor
+   of this clamp holds at every width. */
 .hm-claim{margin-top:28px;max-width:38ch;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400;font-size:clamp(20px,2.3vw,27px);line-height:1.34;color:#fff;border-left:2px solid var(--gold);padding-left:var(--hm-rule)}
 /* 58ch was a measure the column no longer has now that the photograph is a
    real column beside it, so the lede set three lines that each broke in a
