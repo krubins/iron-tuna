@@ -189,6 +189,72 @@ row reads `gamelines` or `ratings`, and every surface says so. That is a
 configuration state, not a failure, and it is why the fallback is specified as
 carefully as the primary path.
 
+## Where a player's projection comes from
+
+`PROJECTIONS` in `_worker.js` is a curated preseason pool of about four hundred
+names, and `tools/merge-projections.mjs` is forbidden from growing it —
+"existing roster only: no players are added or removed". DraftKings prices
+roughly twice that many bodies. The surplus is almost exactly the $3,000
+minimum-salary tier: the backup who is playing because the report ruled
+somebody out on Friday.
+
+Until the ladder, every one of those men arrived as a stub with
+`onBoard: false` and was filtered out of the metrics, the value boards, the
+stacks and the optimizer. The only trace of him was the upload panel's "N of
+them are not on this week's board". **This was never a prop-coverage problem.**
+The market side already degrades on its own — props → game lines → fitted team
+ratings, each rung named (see *What the market actually said about him*) — so a
+man no book has posted on gets a number the moment he is *on* the board. The
+break was that he was not on it at all.
+
+So a priced row falls through a ladder, and `projectionBasis` says which rung
+caught it:
+
+| `projectionBasis` | Source | Covers |
+|---|---|---|
+| `board` | The curated projection, blended with the market exactly as described above. | The ~377 players the pool carries that a DraftKings Classic roster can use (345 skill plus 32 defenses; kickers are not on the roster). |
+| `usage` | His own season-to-date line from the nflverse overlay, per game, put through the **same** `weeklyStats()` scaler the board uses — touchdowns follow the week environment fully, yards at the square root — then scored at `SCORING_SITE`. | Anyone who has taken a snap this season. `supplementalGames` is the game count behind it. |
+| `operator` | The operator's own published season average, already parsed onto the row as `operatorFppg`. | The veteran who is priced and has not played. |
+| `none` | Nothing. He stays off the board. | A true debut. Inventing a number for a man with no football behind him is worse than the blank. |
+
+A row off any rung below `board` carries `supplemental: true`, and every
+surface gates on `projected` rather than `onBoard` — "has a number we stand
+behind" and "is in the curated pool" stopped being the same question. The slate
+reports `supplemented` and `unprojected` beside `unmatched`, because one number
+made a debut and a starter the pool had never heard of look identical.
+
+Three deliberate limits:
+
+- **A supplemental number is backward-looking, and graded `LOW`.** It is what
+  he has done, not what Sunday asks of him, and for this tier those are rarely
+  the same thing: the $3,000 back about to see eighteen carries has a season
+  line built on four snaps a game. The ladder makes the tier visible, priced
+  and pickable. **It does not claim to have found the leverage** — pairing it
+  with the availability layer above, which is what promotes such a player in
+  the first place, is where that signal lives.
+- **Cash builds decline it.** `dfsMetrics(rows, 'cash')` drops supplemental
+  rows, and the optimizer's `floor` mode does the same (reporting them in
+  `thin`, the way it reports the benched). A cash game is won on a floor, and a
+  season average is the one number that cannot tell you whether a man has one
+  this week. A reader's lock overrules this, as it overrules everything else.
+- **Defenses are never supplemented.** A defense matches by club, so an
+  unmatched one means the board itself is missing, and there is no per-player
+  usage line behind a defense to fall back on.
+
+Once a supplemental player's game is final, `dfsActualFor` hangs his box
+score on the row exactly as it does for a board row, and everything downstream
+reads `actualPoints` ahead of the projection (see *Played games*). That
+pairing matters more here than anywhere else on the slate: a backward-looking
+number and a finished game look identical until one of them says which it is,
+and a supplemental row must never be the last man still quoting a season
+average at an afternoon that has been played.
+
+A supplemental row claims no market of any kind: `dfsMarketRead` grades it
+`none`, whose shrink is 0, so its market read *is* its own number rather than a
+curve fit wearing a Vegas label. It counts in the prop-coverage denominator as
+a man the books have not priced. Surfaces print it as `SEASON` rather than
+`FITTED`, which would claim a curve nobody fitted.
+
 ## Who is on the board at all
 
 Every metric above assumes the player is going to be on the field. That is not

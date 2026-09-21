@@ -9691,8 +9691,16 @@ const DFS_CONTESTS = {
 };
 const DFS_VARIANCE = { QB: { floor: 0.62, ceil: 1.55 }, RB: { floor: 0.55, ceil: 1.75 }, WR: { floor: 0.45, ceil: 1.95 }, TE: { floor: 0.45, ceil: 1.9 }, DST: { floor: 0.4, ceil: 2.1 }, K: { floor: 0.5, ceil: 1.6 } };
 function dfsMetrics(rows, contest) {
-  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0 && r.salary > 0 && r.available !== false);
-  if (!on.length) return { contest: DFS_CONTESTS[contest] ? contest : 'gpp', rows: [], note: 'no priced players' };
+  const c0 = DFS_CONTESTS[contest] ? contest : 'gpp';
+  // A supplemental projection is what a man has already done, and a cash game
+  // is won on what he is about to do. Cash needs a floor, and a season
+  // average is the one number that cannot tell you whether a player has one
+  // this week, so these rows are measured everywhere and ranked nowhere that
+  // rewards certainty. They stay in every tournament shape, which is the
+  // contest the $3,000 seat exists for in the first place.
+  const on = rows.filter(r => r.projected && r.ironTunaPoints > 0 && r.salary > 0 && r.available !== false &&
+    !(c0 === 'cash' && r.supplemental));
+  if (!on.length) return { contest: c0, rows: [], note: 'no priced players' };
   // Value: Iron Tuna points per $1K, indexed to the slate median (100 = an ordinary dollar).
   const perK = on.map(r => r.ironTunaPoints / (r.salary / 1000));
   const med = _median(perK) || 1;
@@ -9719,8 +9727,11 @@ function dfsMetrics(rows, contest) {
     r.chalk = r.ownership >= 20 ? (r.value >= 105 ? 'good chalk' : 'bad chalk') : null;
     delete r._salRank; delete r._posN;
   }
-  const c = DFS_CONTESTS[contest] ? contest : 'gpp';
-  return { contest: c, label: DFS_CONTESTS[c].label, note: DFS_CONTESTS[c].note, sortBy: DFS_CONTESTS[c].sortBy, medianPerK: _oddsRound(med * 100) / 100, ownershipBasis: 'modeled', rows: on };
+  return { contest: c0, label: DFS_CONTESTS[c0].label, note: DFS_CONTESTS[c0].note, sortBy: DFS_CONTESTS[c0].sortBy,
+           medianPerK: _oddsRound(med * 100) / 100, ownershipBasis: 'modeled',
+           // How much of what is measured here came off a rung below the
+           // board, so a surface can say so without counting the rows itself.
+           supplemental: on.filter(r => r.supplemental).length, rows: on };
 }
 // Stack score: the game's total, the side's implied points and the QB's
 // projection, indexed to the slate's best.
@@ -12557,7 +12568,11 @@ function dfsRosterCheck(roster, names, pos, boardTeam) {
 const DFS_PROP_LABEL = { passYd: 'passing yards', passTD: 'passing TDs', passInt: 'interceptions',
   rushYd: 'rushing yards', rushAtt: 'carries', rushTD: 'rushing TDs',
   recYd: 'receiving yards', rec: 'receptions', recTD: 'receiving TDs', anytimeTD: 'anytime TD' };
-function dfsMarketRead(p, w0, vegasPts, consensusPts) {
+// `supplemental` says the row has no board projection behind it either, so
+// its number is his own season average rather than any kind of market read.
+// It rides on the market block rather than being re-derived by each surface,
+// because the page and the coach must not describe the same man two ways.
+function dfsMarketRead(p, w0, vegasPts, consensusPts, supplemental) {
   const basis = (p && p.vegas && p.vegas.basis) || 'none';
   const shrink = BLEND_SHRINK[basis] != null ? BLEND_SHRINK[basis] : BLEND_SHRINK.none;
   // The week's own projection block, where this week's props were priced.
@@ -12581,7 +12596,7 @@ function dfsMarketRead(p, w0, vegasPts, consensusPts) {
   const v = Number.isFinite(vegasPts) ? vegasPts : c;
   const priced = vp && Array.isArray(vp.priced) ? vp.priced.slice() : [];
   return {
-    basis, shrink,
+    basis, shrink, supplemental: !!supplemental,
     points: _oddsRound(c + shrink * (v - c)),
     // Any basis carrying props is quoted: 'gamelines+props' is a man the books
     // priced, laid on a game-line baseline, and calling him unquoted would put
@@ -12615,7 +12630,11 @@ function dfsMarketRead(p, w0, vegasPts, consensusPts) {
 // to trust a market build is actually asking: priced how much of it, by how
 // many books, how long ago, and what is everyone else standing on.
 function dfsPropCoverage(rows, pulledAt) {
-  const on = (rows || []).filter(r => r.onBoard && r.available !== false && r.market);
+  // Every row carrying a market read, which is every projected row: a
+  // supplemental player gets one graded 'none', so he counts in the
+  // denominator as a man the books have not priced rather than vanishing
+  // from a percentage that is supposed to describe the whole slate.
+  const on = (rows || []).filter(r => r.projected && r.available !== false && r.market);
   const basis = {};
   const markets = new Set(), shortMarkets = new Set();
   let priced = 0, short = 0, books = 0, bookN = 0, fresh = null;
@@ -12668,6 +12687,71 @@ function dfsPropNote(cov) {
     + ' Markets quoted: ' + cov.marketLabels.join(', ') + '.'
     + (cov.quotedButShort ? ' Another ' + cov.quotedButShort + ' carry only ' + cov.shortMarketLabels.join(' and ') + ', which is not enough to build a projection from.' : '')
     + ' Everyone else carries the game line\u2019s environment, discounted for it.';
+}
+// ── the projection ladder ──────────────────────────────────────────────────
+// PROJECTIONS is a curated preseason pool of about four hundred names, and
+// tools/merge-projections.mjs is forbidden from growing it ("existing roster
+// only: no players are added or removed"). DraftKings prices roughly twice
+// that many bodies, and the surplus is almost exactly the $3,000
+// minimum-salary tier: the backup who is playing because the report ruled
+// somebody out on Friday. Every one of those men used to arrive here as a
+// stub with onBoard:false and then be filtered out of the metrics, the value
+// boards, the stacks and the optimizer, so a punt play the operator had
+// priced was invisible on the slate that priced it. The upload panel's "N of
+// them are not on this week's board" was the only trace of him.
+//
+// It was never a market problem. The market side already degrades on its own
+// (props -> gamelines -> fitted ratings, each rung named), so a man no book
+// has posted on still gets a number the moment he is ON the board. The break
+// is that he is not on it at all.
+//
+// So a row falls through a ladder now and says which rung caught it:
+//   board     a curated projection, blended with the market. Unchanged.
+//   usage     his own season-to-date line from the nflverse overlay, per
+//             game, scaled by his club's week exactly as weeklyStats scales
+//             a projection. Covers anyone who has taken a snap this year.
+//   operator  the operator's own season average, already parsed onto the row
+//             (DraftKings' AvgPointsPerGame, FanDuel's FPPG). Catches the
+//             veteran who is priced and has not played.
+//   none      a true debut. He stays off the board, because inventing a
+//             number for a man with no football behind him is worse than the
+//             blank was.
+//
+// A supplemental number is BACKWARD-LOOKING and graded LOW on purpose. It is
+// what he has done, not what Sunday asks of him, and for this tier those are
+// rarely the same thing: the $3,000 back about to see eighteen carries has a
+// season line built on four snaps a game. The ladder makes the tier visible,
+// priced and pickable. It does not claim to have found the leverage, which is
+// why dfsMetrics keeps these rows out of a cash build and the optimizer's
+// floor mode does the same.
+//
+// DST is not supplemented: a defense matches by club, so an unmatched one
+// means the board itself is missing, and there is no per-player usage line
+// behind it to fall back on. Kickers are not on a DraftKings Classic roster.
+const DFS_SUPP_POS = /^(QB|RB|WR|TE)$/;
+function dfsSupplemental(s, pos, rules, usage, fppg, env) {
+  if (!DFS_SUPP_POS.test(pos)) return null;
+  const u = usage && usage.players ? usage.players[_oddsNorm(s.name) + '|' + pos] : null;
+  const games = u && u.season ? Number(u.season.games) || 0 : 0;
+  const line = u && u.season && u.season.stats && Object.keys(u.season.stats).length ? u.season.stats : null;
+  if (line && games > 0) {
+    // Per game, then scaled by the club's week: touchdowns follow the
+    // environment fully and yards at the square root. That is weeklyStats'
+    // own rule and the one the board applies to a projection, so a
+    // supplemental row moves with the game total like every other row.
+    // Only `factor` is read for a skill position, which is as well: the
+    // board's week block carries it and drops allowedFactor, which only a
+    // defense or a kicker would want.
+    const stats = weeklyStats(line, pos, games, env || { factor: 1, allowedFactor: 1 });
+    const points = _oddsRound(scoreAny(stats, pos, rules, 1));
+    if (points > 0) return { basis: 'usage', points, stats, games };
+  }
+  // No football this season. The operator has still priced him and published
+  // an average; it is a worse number than his own line and a real one.
+  if (fppg && fppg.basis === 'operator' && fppg.value > 0) {
+    return { basis: 'operator', points: _oddsRound(fppg.value), stats: null, games: null };
+  }
+  return null;
 }
 // One slate row against those box scores.
 //
@@ -12728,13 +12812,86 @@ function buildDfsSlate(site, salaries, board, opts) {
   for (const p of (board && board.players) || []) byKey.set(p.key, p);
   const defByTeam = new Map();
   for (const p of (board && board.players) || []) if (p.pos === 'DEF') defByTeam.set(p.team, p);
+  // The week's fixture by club, lifted off the board. A supplemental row has
+  // no board player of its own to carry one, and the club's environment is
+  // the same number whoever is standing in front of it, so the first board
+  // row on that team answers for all of them.
+  const envByTeam = new Map();
+  for (const p of (board && board.players) || []) {
+    const t = teamKey(p.team);
+    if (envByTeam.has(t)) continue;
+    const w = (p.weeks || []).find(x => x.env);
+    if (w) envByTeam.set(t, w);
+  }
   const rows = [];
   for (const s of priced) {
     const pos = s.position;
     const fppg = dfsOperatorFppg(site, s, rules, usage);
     const operatorFppg = fppg.value;
     const p = pos === 'DST' ? defByTeam.get(teamKey(s.team)) : byKey.get(_oddsNorm(s.name) + '|' + pos);
-    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, salaryBySlot: s.salaryBySlot || null, tier: s.tier || null, operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, onBoard: false }); continue; }
+    if (!p || !p.games) {
+      const team = teamKey(s.team);
+      const sw = envByTeam.get(team) || null;
+      const rst = dfsRosterCheck(roster, [s.name], pos, team);
+      const wk = dfsWeekStatus(avail, _oddsNorm(s.name) + '|' + pos, week, s.injuryIndicator)
+        || (rst && rst.kind === 'roster' ? { status: 'Out', note: 'Not on an active roster (' + rst.status + (rst.team ? ', ' + rst.team : '') + ')', basis: 'roster' } : null);
+      const supp = dfsSupplemental(s, pos, rules, usage, fppg, sw ? sw.env : null);
+      const base = { name: s.name, position: pos, team, opponent: sw ? sw.opponent : s.opponent, salary: s.salary,
+        salaryBySlot: s.salaryBySlot || null, tier: s.tier || null,
+        operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games,
+        operatorFppgLabel: site === 'dk' ? 'DraftKings FPPG' : 'FanDuel FPPG',
+        onBoard: false, projectionBasis: supp ? supp.basis : 'none', supplemental: !!supp, projected: !!supp };
+      if (!supp) { rows.push({ ...base, weekStatus: wk ? wk.status : null, weekStatusNote: wk ? wk.note : '', weekStatusBasis: wk ? wk.basis : null, available: dfsAvailable(wk && wk.status) }); continue; }
+      // The three numbers are the same number. There is no consensus
+      // projection to blend against and no market to blend toward, and
+      // printing three different figures off one line would invent a
+      // disagreement nobody has. dfsMarketRead with no board player grades
+      // the basis 'none', whose shrink is zero, so his market read IS his
+      // own number rather than a curve fit wearing a Vegas label.
+      const pts = supp.points;
+      const mkt = dfsMarketRead(null, null, pts, pts, true);
+      rows.push({ ...base, key: _oddsNorm(s.name) + '|' + pos, siteName: s.name.trim(),
+        home: sw ? sw.home : null,
+        vegasPoints: pts, ironTunaPoints: pts, consensusPoints: pts,
+        // His game is over, so the season average beside his name is
+        // describing an afternoon that already happened -- and for this tier
+        // that is the likeliest reading of all, because a backward-looking
+        // number and a finished game look identical until one of them says
+        // so. A supplemental row banks its box score exactly as a board row
+        // does; it is visible now, so it cannot be the one row on the slate
+        // still quoting an estimate at a game that has been played.
+        ...dfsActualFor(actuals, s.name, team, pos, rules),
+        // The edge is a comparison, and a comparison needs two sources. When
+        // the projection came off the SAME figure the edge would measure it
+        // against -- the operator's average taken whole, or the season line
+        // that also produced the computed average -- the answer is 0.0 by
+        // construction, and 0.0 in that column reads as "the model agrees
+        // with DraftKings to the tenth" rather than "these are one number".
+        // It stays blank there. Where the two really are different sources
+        // (his own line against the operator's published average) it is a
+        // real comparison and it is kept.
+        projectionVsFppg: operatorFppg == null || supp.basis === 'operator' || fppg.basis !== 'operator'
+          ? null : _oddsRound(pts - operatorFppg),
+        supplementalGames: supp.games,
+        vegasPerK: _oddsRound(pts / (s.salary / 1000) * 100) / 100, ironTunaPerK: _oddsRound(pts / (s.salary / 1000) * 100) / 100,
+        marketDelta: null, vegasBasis: 'none', vegasConfidence: 'LOW',
+        market: mkt, marketPoints: mkt.points, marketShrink: mkt.shrink, marketQuoted: false,
+        // No anytime-touchdown price and no projected carry count to take a
+        // Poisson tail off, so the row says it has none rather than printing
+        // a zero that reads like a forecast.
+        tdProbability: null, tdBasis: null, tdBooks: null, tdDevigged: false,
+        teamTotal: sw && sw.env ? (sw.env.implied != null ? sw.env.implied : sw.env.expected) : null,
+        teamTotalPosted: !!(sw && sw.env && sw.env.posted),
+        kickoff: sw ? sw.kickoff || null : null, opponentDefRank: sw && sw.env && sw.env.opponentDefRank ? sw.env.opponentDefRank : null,
+        gameTotal: null, impliedTouches: null, injury: null,
+        why: supp.basis === 'usage'
+          ? 'Not on this week’s board. Projected from his own ' + supp.games + '-game season line, scaled by his club’s week.'
+          : 'Not on this week’s board and has not played this season. Projected from the operator’s published season average.',
+        weekStatus: wk ? wk.status : null, weekStatusNote: wk ? wk.note : '', weekStatusBasis: wk ? wk.basis : null,
+        available: dfsAvailable(wk && wk.status),
+        rosterTeam: rst ? rst.team : null, teamChanged: !!(rst && rst.kind === 'team') });
+      continue;
+    }
     const rst = dfsRosterCheck(roster, [s.name, p.name], pos, p.team);
     // The injury report first (it is this week's own word), then the reserve
     // list, then the roster file, then the salary file's indicator. A man off
@@ -12750,6 +12907,11 @@ function buildDfsSlate(site, salaries, board, opts) {
     const lam = (p.ironTuna.stats.rushTD || 0) + (p.ironTuna.stats.recTD || 0);
     rows.push({
       name: p.name, position: pos, team: p.team, opponent: w0 ? w0.opponent : s.opponent, home: w0 ? w0.home : null, salary: s.salary, onBoard: true, key: p.key, siteName: s.name.trim(),
+      // Which rung of the projection ladder produced the number below. A
+      // board row is the top rung; `projected` is the flag every surface
+      // gates on, because "has a number we stand behind" and "is in the
+      // curated pool" stopped being the same question when the ladder landed.
+      projectionBasis: 'board', supplemental: false, projected: it > 0,
       // What the multiplier seat costs, when the file said so, and which
       // bucket a Tiers contest put him in. Null on a main slate, which is
       // every slate that is not one of those two contests.
@@ -12783,17 +12945,21 @@ function buildDfsSlate(site, salaries, board, opts) {
       rosterTeam: rst ? rst.team : null, teamChanged: !!(rst && rst.kind === 'team')
     });
   }
-  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0 && r.available !== false);
+  const on = rows.filter(r => r.projected && r.vegasPoints > 0 && r.available !== false);
   const med = _median(on.map(r => r.vegasPerK)) || 1;
   for (const r of on) r.vegasValueScore = Math.round(r.vegasPerK / med * 100);
   const skill = on.filter(r => r.position !== 'DST' && r.position !== 'K');
   const boards = {
     bestVegasValues: on.filter(r => r.salary >= 3000).sort((a, b) => b.vegasValueScore - a.vegasValueScore).slice(0, 20),
-    tdUpside: skill.sort((a, b) => (b.tdProbability / b.salary) - (a.tdProbability / a.salary)).slice(0, 20).map(r => ({ ...r, tdPerK: _oddsRound(r.tdProbability / (r.salary / 1000) * 10) / 10 })),
-    volumeValues: skill.filter(r => r.position !== 'QB').sort((a, b) => (b.impliedTouches / b.salary) - (a.impliedTouches / a.salary)).slice(0, 20).map(r => ({ ...r, touchesPerK: _oddsRound(r.impliedTouches / (r.salary / 1000) * 10) / 10 })),
+    // Both of these rank on a number a supplemental row does not have: there
+    // is no anytime-touchdown price on a man no book posted, and no projected
+    // carry count behind a season average. Requiring the figure keeps him off
+    // a board he cannot be ranked on instead of sorting him by NaN.
+    tdUpside: skill.filter(r => Number.isFinite(r.tdProbability)).sort((a, b) => (b.tdProbability / b.salary) - (a.tdProbability / a.salary)).slice(0, 20).map(r => ({ ...r, tdPerK: _oddsRound(r.tdProbability / (r.salary / 1000) * 10) / 10 })),
+    volumeValues: skill.filter(r => r.position !== 'QB' && Number.isFinite(r.impliedTouches)).sort((a, b) => (b.impliedTouches / b.salary) - (a.impliedTouches / a.salary)).slice(0, 20).map(r => ({ ...r, touchesPerK: _oddsRound(r.impliedTouches / (r.salary / 1000) * 10) / 10 })),
     expensiveFades: skill.filter(r => r.salary >= 6000 && r.marketDelta && r.marketDelta.points < 0).sort((a, b) => a.marketDelta.points - b.marketDelta.points).slice(0, 15)
   };
-  const benched = rows.filter(r => r.onBoard && r.available === false);
+  const benched = rows.filter(r => r.projected && r.available === false);
   const cov = dfsPropCoverage(rows, o.propsPulledAt);
   return { ok: rows.length > 0, contract: DFS_CONTRACT, site, label: S.label, cap: seats.cap, slots: seats.slots, flex: seats.flex, scoring: 'site', players: rows.sort((a, b) => b.salary - a.salary),
            // The roster this slate was priced for, said out loud, so nothing
@@ -12804,6 +12970,15 @@ function buildDfsSlate(site, salaries, board, opts) {
            minTeams: shape === 'single-game' ? S.single.minTeams : 0,
            tiers: [...new Set(rows.map(r => r.tier).filter(Boolean))],
            medianVegasPerK: _oddsRound(med * 100) / 100, unmatched: rows.filter(r => !r.onBoard).length, boards,
+           // `unmatched` is how many priced rows the curated board does not
+           // carry; `supplemented` is how many of those the ladder rescued,
+           // and `unprojected` is what is genuinely left over. The three used
+           // to be one number, which is why a slate could report two hundred
+           // missing men and give a reader no way to tell a debut from a
+           // starter the pool had simply never heard of.
+           supplemented: rows.filter(r => r.supplemental).length,
+           unprojected: rows.filter(r => !r.projected).length,
+           projectionBases: ['board', 'usage', 'operator', 'none'],
            unavailable: benched.length,
            unavailableNames: benched.sort((a, b) => b.salary - a.salary).slice(0, 25).map(r => ({ name: r.name, position: r.position, team: r.team, salary: r.salary, status: r.weekStatus, basis: r.weekStatusBasis })),
            hasProps: on.some(r => r.marketQuoted), props: cov, note: dfsPropNote(cov) };
@@ -12814,7 +12989,7 @@ function buildDfsSlate(site, salaries, board, opts) {
 function buildDfsStacks(slate, state) {
   const games = (state && state.ok && state.games) || [];
   const byTeam = {};
-  for (const r of slate.players) if (r.onBoard && r.available !== false) (byTeam[r.team] = byTeam[r.team] || []).push(r);
+  for (const r of slate.players) if (r.projected && r.available !== false) (byTeam[r.team] = byTeam[r.team] || []).push(r);
   const side = t => {
     const list = (byTeam[t] || []);
     const qb = list.filter(r => r.position === 'QB').sort((a, b) => b.vegasPoints - a.vegasPoints)[0] || null;
@@ -15145,6 +15320,16 @@ export default {
       const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
       if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
         ...dfsNoSalariesNote(site, Date.now()),
+        // The setup plate on /dfs asks for a Game Style, then the GAMES in the
+        // contest, and it built that list out of the priced slate. So a week
+        // whose salaries are not posted yet left step two disabled with an
+        // empty list behind it and the reader stuck on step one, unable to
+        // finish a setup that does not need salaries to be answered. The week's
+        // fixtures are known from the schedule long before anyone prices them,
+        // so they ship with the empty slate and the plate stays answerable
+        // while the lobby is still empty.
+        week,
+        games: week ? weekGames(sched, week, Date.now()).map(g => ({ away: g.away, home: g.home, kickoff: g.kickoff })) : [],
         operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
       const [board, usage, avail, roster, propsPulledAt, actuals] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null), snapshotPulledAt(env, 'player').catch(() => null), dfsActualsForWeek(env, sched, week).catch(() => null)]);
       const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage, week, availability: avail, roster, propsPulledAt, actuals });
