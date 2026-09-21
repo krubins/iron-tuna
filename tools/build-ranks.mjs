@@ -176,7 +176,7 @@ const RIBBON_CSS = `${CSS_OPEN}
 .rk-ribbon .rkr-item { position: relative; display: flex; align-items: center; flex: 0 0 auto }
 .rk-ribbon .rkr-link {
   display: flex; align-items: center; white-space: nowrap; text-decoration: none;
-  font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  font-size: 14px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
   color: var(--rkr-mut); padding: 14px 13px; border-bottom: 3px solid transparent; min-height: 46px;
 }
 .rk-ribbon .rkr-link:hover, .rk-ribbon .rkr-link:focus-visible {
@@ -199,7 +199,7 @@ const RIBBON_CSS = `${CSS_OPEN}
 .rk-ribbon .rkr-has-menu:focus-within .rkr-menu { visibility: visible; opacity: 1; transition-delay: 0s }
 .rk-ribbon .rkr-menu a {
   display: block; padding: 9px 12px; border-radius: 7px; white-space: nowrap; text-decoration: none;
-  font-size: 13.5px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--rkr-mut);
+  font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--rkr-mut);
 }
 .rk-ribbon .rkr-menu a:hover, .rk-ribbon .rkr-menu a:focus-visible {
   background: var(--rkr-panel); color: var(--rkr-ink); text-decoration: none;
@@ -213,7 +213,7 @@ const RIBBON_CSS = `${CSS_OPEN}
   /* And with the menu gone, so is the caret: an arrow that opens nothing is a
      promise the band cannot keep. The trigger is a plain link to the hub. */
   .rk-ribbon .rkr-has-menu > .rkr-link::after { content: none }
-  .rk-ribbon .rkr-link { padding: 12px 10px; font-size: 11.5px; letter-spacing: .05em }
+  .rk-ribbon .rkr-link { padding: 12px 10px; font-size: 13px; letter-spacing: .05em }
   .rk-ribbon-in {
     padding: 0 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
   }

@@ -69,17 +69,24 @@
   --mast-accent: #2dd4a3;
 
   /* ── type ─────────────────────────────────────────────────────────────────
-     A 1.25 scale off a 16px base. Before this, front.html alone computed 31
+     A 1.25 scale off an 18px base. Before this, front.html alone computed 31
      distinct sizes including 9.5px, 13.3333px and four half-pixel steps.
-     Use these; do not invent intermediate values. */
-  --fs-3xs: 11px;
-  --fs-2xs: 12px;
-  --fs-xs:  13px;
-  --fs-sm:  14px;
-  --fs-md:  16px;
-  --fs-lg:  20px;
-  --fs-xl:  25px;
-  --fs-2xl: 31px;
+     Use these; do not invent intermediate values.
+
+     The base was 16px until 2026-09-21, when every size on the site went up.
+     Reading and UI text took the full 12%; the bump tapers to nothing by 36px,
+     so the display end of the ladder (--fs-3xl, --fs-4xl) is untouched — those
+     sizes were already large, and the layouts that use them are fitted to
+     them. That taper is why the steps above --fs-md read as 1.22 rather than
+     1.25: the ladder is being compressed from the top, on purpose. */
+  --fs-3xs: 12.5px;
+  --fs-2xs: 13.5px;
+  --fs-xs:  14.5px;
+  --fs-sm:  15.5px;
+  --fs-md:  18px;
+  --fs-lg:  22px;
+  --fs-xl:  27px;
+  --fs-2xl: 32px;
   --fs-3xl: 39px;
   --fs-4xl: 49px;
 
@@ -394,7 +401,7 @@ footer.site a:hover { color: var(--text) }
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5);
 }
-.is-card h3 { margin: 0 0 var(--space-2); font-size: 18px }
+.is-card h3 { margin: 0 0 var(--space-2); font-size: 20px }
 .is-card p { margin: 0; font-size: var(--fs-md); color: var(--sec); line-height: 1.55 }
 .is-tag {
   display: inline-block; font-size: var(--fs-3xs); font-weight: 800; letter-spacing: .1em;
@@ -402,7 +409,7 @@ footer.site a:hover { color: var(--text) }
   border: 1px solid #f0e0b0; border-radius: 3px; padding: 2px 8px; margin-bottom: var(--space-2);
 }
 .is-tag.is-live { color: var(--teal); background: rgba(14, 124, 99, .1); border-color: rgba(14, 124, 99, .3) }
-.is-table { width: 100%; border-collapse: collapse; font-size: 15px }
+.is-table { width: 100%; border-collapse: collapse; font-size: 17px }
 .is-table th, .is-table td { padding: var(--space-3); border-bottom: 1px solid var(--line); text-align: left }
 .is-table th { color: var(--muted); font-size: var(--fs-sm); font-weight: 700; text-transform: uppercase; letter-spacing: .08em }
 .is-table td.num { text-align: right; font-variant-numeric: tabular-nums }
@@ -456,7 +463,7 @@ footer.site a:hover { color: var(--text) }
 
 /* The one number a row exists to print. Display face, tabular, bigger than the
    text around it, so a reader scanning a column lands on it first. */
-.is-val { font-family: var(--font-display); font-size: 22px; font-weight: 400; letter-spacing: .02em; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap }
+.is-val { font-family: var(--font-display); font-size: 24px; font-weight: 400; letter-spacing: .02em; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap }
 .is-table td.num, .is-table th.num { text-align: right; font-variant-numeric: tabular-nums }
 .is-table .is-who { color: var(--text); font-weight: 600 }
 .is-table .is-who small { font-weight: 400; color: var(--muted); font-size: var(--fs-xs) }
@@ -477,7 +484,7 @@ footer.site a:hover { color: var(--text) }
 
 .is-lane { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-5) }
 .is-lane-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3) }
-.is-lane-head h3 { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1; letter-spacing: .03em; text-transform: uppercase; margin: 0 }
+.is-lane-head h3 { font-family: var(--font-display); font-weight: 400; font-size: 31px; line-height: 1; letter-spacing: .03em; text-transform: uppercase; margin: 0 }
 .is-lane-head span { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
 .is-lane > p { margin: var(--space-3) 0 0; font-size: var(--fs-md); color: var(--sec); line-height: 1.55 }
 /* Two columns: eleven tools in one column made the card twice the height of
@@ -701,7 +708,7 @@ footer.site a:hover { color: var(--text) }
    rendering its byline as an unstyled paragraph. */
 .byline {
   display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
-  font-size: 13.5px; color: var(--muted); margin: 2px 0 10px;
+  font-size: 15px; color: var(--muted); margin: 2px 0 10px;
 }
 .byline b { color: var(--sec); font-weight: 600 }
 .byline .dot { opacity: .5 }
@@ -751,7 +758,7 @@ footer.site a:hover { color: var(--text) }
 .is-sec::after { content: ""; position: absolute; left: 0; bottom: -2px; width: 56px; height: 2px; background: var(--teal) }
 .is-sec-top { display: flex; align-items: baseline; gap: var(--space-4); flex-wrap: wrap }
 .is-sec h2, .is-sec .is-sec-h {
-  font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 3.4vw, 34px);
+  font-family: var(--font-display); font-weight: 400; font-size: clamp(28px, 3.4vw, 34px);
   letter-spacing: .045em; line-height: 1; margin: 0; text-transform: uppercase; color: var(--text);
 }
 .is-sec .is-sec-n {
@@ -793,7 +800,7 @@ footer.site a:hover { color: var(--text) }
   padding-right: var(--space-3); border-right: 1px solid rgba(255, 255, 255, .16);
 }
 .is-hero h1 {
-  color: var(--mast-ink-hi); font-size: clamp(30px, 4.6vw, 52px); line-height: 1.05;
+  color: var(--mast-ink-hi); font-size: clamp(31px, 4.6vw, 52px); line-height: 1.05;
   max-width: 24ch; margin: 0 0 var(--space-4); letter-spacing: -.015em; text-wrap: balance;
 }
 /* The clause the page is actually FOR is the only colored words in the band.
@@ -850,12 +857,12 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
   letter-spacing: .16em; text-transform: uppercase; color: var(--muted); flex: 0 0 auto;
 }
 .is-ribbon .rk-seg { background: var(--bg); flex: 0 0 auto }
-.is-ribbon .rk-seg button { padding: 8px 13px; font-size: 13px }
+.is-ribbon .rk-seg button { padding: 8px 13px; font-size: 14.5px }
 /* A ribbon of section anchors, for a page whose whole-page control is simply
    where on it you are. Same band, same height, same weight as the switches. */
 .is-ribbon-jump { display: flex; align-items: stretch; flex-wrap: wrap; gap: 2px; min-width: 0 }
 .is-ribbon-jump a {
-  display: flex; align-items: center; white-space: nowrap; font-size: 12.5px; font-weight: 800;
+  display: flex; align-items: center; white-space: nowrap; font-size: 14px; font-weight: 800;
   letter-spacing: .07em; text-transform: uppercase; color: var(--sec);
   padding: 10px 11px; border-radius: 6px;
 }
@@ -871,9 +878,9 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
   }
   .is-ribbon-in::-webkit-scrollbar { display: none }
   .is-ribbon .rk-seg { flex-wrap: nowrap }
-  .is-ribbon .rk-seg button { padding: 8px 10px; font-size: 12.5px }
+  .is-ribbon .rk-seg button { padding: 8px 10px; font-size: 14px }
   .is-ribbon-jump { flex-wrap: nowrap }
-  .is-ribbon-jump a { padding: 9px 9px; font-size: 11.5px; letter-spacing: .05em }
+  .is-ribbon-jump a { padding: 9px 9px; font-size: 13px; letter-spacing: .05em }
 }
 
 /* ── surfaces ───────────────────────────────────────────────────────────────
@@ -906,7 +913,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
   display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: baseline;
   justify-content: space-between; padding: var(--space-4) var(--space-5) 0;
 }
-.is-board .is-board-head h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 27px; letter-spacing: .04em; text-transform: uppercase; line-height: 1 }
+.is-board .is-board-head h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 28px; letter-spacing: .04em; text-transform: uppercase; line-height: 1 }
 .is-board .is-board-head .is-board-sub { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: #8fa3a0 }
 .is-board table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm) }
 .is-board th, .is-board td { padding: 10px var(--space-3); border-bottom: 1px solid var(--board-line); text-align: left }
@@ -926,7 +933,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 .is-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: var(--space-4); margin: var(--space-4) 0 }
 .is-stat b {
   display: block; font-family: var(--font-display); font-weight: 400;
-  font-size: clamp(30px, 4.2vw, 42px); line-height: .95; letter-spacing: .02em;
+  font-size: clamp(31px, 4.2vw, 42px); line-height: .95; letter-spacing: .02em;
   font-variant-numeric: tabular-nums; color: var(--text);
 }
 .is-stat.key b { color: var(--teal) }
@@ -965,9 +972,9 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 .is-act-k { font-family: var(--font-mono); font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--teal) }
 .is-act.gold .is-act-k { color: var(--goldink) }
 .is-act.flat .is-act-k { color: var(--muted) }
-.is-act-h { font-size: 22px; line-height: 1.2; font-weight: 700; color: var(--text); letter-spacing: -.01em }
+.is-act-h { font-size: 24px; line-height: 1.2; font-weight: 700; color: var(--text); letter-spacing: -.01em }
 .is-act-h em { font-style: normal; color: var(--teal) }
-.is-act p { margin: 0; font-size: 15px; color: var(--sec); line-height: 1.55 }
+.is-act p { margin: 0; font-size: 17px; color: var(--sec); line-height: 1.55 }
 .is-act-go { margin-top: auto; padding-top: var(--space-2); font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
 @media (prefers-reduced-motion: reduce) { .is-act:hover { transform: none } }
 
@@ -990,16 +997,16 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 .nr-card:hover h3 { color: var(--teal) }
 .nr-kicker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
 .nr-nfl-logo { display: block; width: 18px; height: 18px; object-fit: contain; flex: 0 0 auto }
-.nr-card h3 { margin: 0; font-size: 19px; line-height: 1.3; font-weight: 700; color: var(--text); letter-spacing: -.005em; overflow-wrap: anywhere }
+.nr-card h3 { margin: 0; font-size: 21px; line-height: 1.3; font-weight: 700; color: var(--text); letter-spacing: -.005em; overflow-wrap: anywhere }
 .nr-card h3 a { color: inherit }
 .nr-card h3 a:hover { text-decoration: none }
 .nr-card h3 .it-story-focus { display: flex; margin: 0 0 10px; vertical-align: baseline }
 .nr-card p { margin: 0; color: var(--sec); font-size: var(--fs-md); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
 .nr-by { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--sec); margin-top: auto; padding-top: 4px; min-width: 0 }
 .nr-by a { color: inherit; font-weight: 700 }
-.nr-av { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--teal); color: #fff; font-weight: 800; font-size: 10px }
+.nr-av { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--teal); color: #fff; font-weight: 800; font-size: 11px }
 .nr-time { margin-left: auto; color: var(--muted); white-space: nowrap; flex: 0 0 auto }
-.nr-riv, .nr-st { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; border: 1px solid var(--line2); color: var(--sec) }
+.nr-riv, .nr-st { flex: 0 0 auto; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; border: 1px solid var(--line2); color: var(--sec) }
 .nr-st.ok { color: var(--teal); background: rgba(14, 124, 99, .1); border-color: rgba(14, 124, 99, .3) }
 .nr-st.held { color: var(--goldink); background: #fdf4e2; border-color: #f0e0b0 }
 .nr-card.pending h3 { color: var(--sec); font-weight: 600 }
@@ -1035,7 +1042,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
   transition: border-color .12s ease, box-shadow .12s ease;
 }
 .nr-lead:hover { border-color: var(--teal); box-shadow: 0 10px 30px rgba(15, 23, 25, .07) }
-.nr-lead h3 { margin: 0; font-size: clamp(26px, 2.9vw, 36px); line-height: 1.18; font-weight: 800; letter-spacing: -.015em; color: var(--text); overflow-wrap: anywhere }
+.nr-lead h3 { margin: 0; font-size: clamp(28px, 2.9vw, 36px); line-height: 1.18; font-weight: 800; letter-spacing: -.015em; color: var(--text); overflow-wrap: anywhere }
 .nr-lead h3 a { color: inherit }
 .nr-lead h3 a:hover { color: var(--teal); text-decoration: none }
 /* The faces are the lead's picture, so they take their own row above the
@@ -1044,10 +1051,10 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 .nr-lead h3 .it-story-focus .it-player-face { width: 72px; height: 72px; min-width: 72px; border-radius: 12px }
 /* The lead's deck runs whole. Two clamped lines are what make six cards scan;
    a lead clamped to two lines is only a bigger card. */
-.nr-lead p { margin: 0; color: var(--sec); font-size: 18px; line-height: 1.55 }
+.nr-lead p { margin: 0; color: var(--sec); font-size: 20px; line-height: 1.55 }
 .nr-lead-go { font-size: var(--fs-xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
 .nr-lead .nr-by { margin-top: 0; padding-top: var(--space-4); border-top: 1px solid var(--line) }
-.nr-flag { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; color: var(--goldink); background: #fdf4e2; border: 1px solid #f0e0b0 }
+.nr-flag { flex: 0 0 auto; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; color: var(--goldink); background: #fdf4e2; border: 1px solid #f0e0b0 }
 
 .nr-rail { display: flex; flex-direction: column; min-width: 0 }
 .nr-rail-h { margin: 0 0 var(--space-3); font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
@@ -1083,7 +1090,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
   font-size: clamp(42px, 6vw, 72px); line-height: .92; letter-spacing: .015em;
   text-transform: uppercase; color: var(--goldink);
 }
-.nr-lead.is-boast h3 { font-size: clamp(20px, 2.1vw, 26px); font-weight: 700; letter-spacing: -.005em }
+.nr-lead.is-boast h3 { font-size: clamp(22px, 2.1vw, 28px); font-weight: 700; letter-spacing: -.005em }
 .nr-lead.is-boast .nr-by { border-top-color: rgba(242, 169, 0, .35) }
 
 @media (max-width: 900px) { .nr-well { grid-template-columns: minmax(0, 1fr) } }
@@ -1171,7 +1178,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 .rk-ribbon .rkr-item { position: relative; display: flex; align-items: center; flex: 0 0 auto }
 .rk-ribbon .rkr-link {
   display: flex; align-items: center; white-space: nowrap; text-decoration: none;
-  font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  font-size: 14px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
   color: var(--rkr-mut); padding: 14px 13px; border-bottom: 3px solid transparent; min-height: 46px;
 }
 .rk-ribbon .rkr-link:hover, .rk-ribbon .rkr-link:focus-visible {
@@ -1194,7 +1201,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 .rk-ribbon .rkr-has-menu:focus-within .rkr-menu { visibility: visible; opacity: 1; transition-delay: 0s }
 .rk-ribbon .rkr-menu a {
   display: block; padding: 9px 12px; border-radius: 7px; white-space: nowrap; text-decoration: none;
-  font-size: 13.5px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--rkr-mut);
+  font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--rkr-mut);
 }
 .rk-ribbon .rkr-menu a:hover, .rk-ribbon .rkr-menu a:focus-visible {
   background: var(--rkr-panel); color: var(--rkr-ink); text-decoration: none;
@@ -1208,7 +1215,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
   /* And with the menu gone, so is the caret: an arrow that opens nothing is a
      promise the band cannot keep. The trigger is a plain link to the hub. */
   .rk-ribbon .rkr-has-menu > .rkr-link::after { content: none }
-  .rk-ribbon .rkr-link { padding: 12px 10px; font-size: 11.5px; letter-spacing: .05em }
+  .rk-ribbon .rkr-link { padding: 12px 10px; font-size: 13px; letter-spacing: .05em }
   .rk-ribbon-in {
     padding: 0 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
   }
@@ -1281,7 +1288,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
    run the width of a desk monitor.
 
    THE SPECIFICITY IS LOAD-BEARING on /rankings. Its own sheet carries
-   `.rk-table td.p span { display:block; font-size:12px; color:var(--muted) }`
+   `.rk-table td.p span { display:block; font-size:13.5px; color:var(--muted) }`
    for the position under the name, inline and therefore later than this file,
    so every rule below has to out-specify it — three classes, not two — and the
    key has to name its own `display`, which on the other sixteen pages it
@@ -1311,7 +1318,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
    the columns keep lining up. */
 .rk-open {
   appearance: none; border: 1px solid var(--line2); background: var(--bg); border-radius: 6px;
-  width: 26px; height: 26px; line-height: 1; cursor: pointer; color: var(--sec); font: inherit; font-size: 13px;
+  width: 26px; height: 26px; line-height: 1; cursor: pointer; color: var(--sec); font: inherit; font-size: 14.5px;
 }
 .rk-open:hover { border-color: var(--teal); color: var(--text) }
 .rk-open[aria-expanded="true"] { background: var(--text); border-color: var(--text); color: #fff }
