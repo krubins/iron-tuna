@@ -921,6 +921,21 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
   var vacant = function (id, head, detail) { $(id + 'H').textContent = head; $(id + 'P').textContent = detail || ''; };
   // The synced league: the strip, or the call to connect one; and the week's
   // three numbers on the card once the summary answers.
+  //
+  // IT RUNS ON DOMContentLoaded, AND THAT IS THE WHOLE POINT. /it-sync.js is a
+  // deferred script, so it has not executed while this inline one is being
+  // parsed: `window.ITSync` read at this IIFE's top level is undefined, the
+  // guard is false, and the block never runs at all. Nothing throws and
+  // nothing is logged -- the page simply never paints the league strip, never
+  // offers the connect call, never hides "Save my league" for a reader who
+  // already saved one, and never opens the Your Week card. Every other page
+  // that reads ITSync reaches it from inside a boot function, which is why
+  // /fantasy was the only one with the bug.
+  //
+  // DOMContentLoaded fires AFTER every deferred script has run, so the guard
+  // means what it says here. The same rule governs the scoring preset in the
+  // script below: read a deferred global at boot, never at parse.
+  function syncBoot() {
   if (window.ITSync) ITSync.load().then(function () {
     ITSync.strip($('fnSync'), { week: true });
     var LS = ITSync.active();
@@ -938,6 +953,9 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
       $('fnWeekP').innerHTML = bits.length ? bits.join(' · ') : 'Nothing to act on yet.';
     }).catch(function () { $('fnWeekP').textContent = 'Your league did not answer.'; });
   });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', syncBoot);
+  else syncBoot();
   fetch('/api/newsroom?lens=weekly&limit=3', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
     if (!j || !j.ok || !j.pieces.length) { vacant('fnDeskEmpty', 'The desk has not published this week yet.', 'The first package lands at its slot once the games are final. Nothing here is stale; there is simply nothing yet.'); return; }
     var av = function (name) { return String(name || '').split(' ').map(function (w) { return w.charAt(0); }).join(''); };
