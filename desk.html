@@ -547,7 +547,14 @@ body.dk-tailback #dkTitle{max-width:920px}
     var both = j.lens === 'both' && j.body && j.body.dfs;
     $('dkTabs').hidden = !both;
     [].forEach.call($('dkTabs').querySelectorAll('button'), function (b) { var on = b.getAttribute('data-lens') === lens; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.classList.toggle('on', on); });
-    var title = lens === 'dfs' && j.dfsTitle ? j.dfsTitle : (j.headline || j.title);
+    // THE HEADLINE OF THE LENS ON SCREEN. A package that runs in both is
+    // written twice and, since 2026-09-21, headlined twice; this tab used to
+    // fall back to the kind's generic dfsTitle ("Showdown read") because there
+    // was no DFS sentence to print. A piece written before that column existed
+    // still has none, and drops back through the old order.
+    var title = lens === 'dfs'
+      ? (j.dfsHeadline || j.dfsTitle || j.headline || j.title)
+      : (j.headline || j.title);
     setHead(title);
     // `j.title` is the STORED title with its edition trailer already stripped,
     // so a per-game piece arrives as its matchup and the week is added once.
@@ -556,7 +563,8 @@ body.dk-tailback #dkTitle{max-width:920px}
     $('dkKicker').innerHTML =
       (nflWide ? '<img class="dk-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' : '') +
       (lens === 'dfs' ? 'DFS' : 'Weekly Fantasy') + ' &middot; ' + e(j.title) + ' &middot; Week ' + e(j.week) + (j.game ? ' &middot; Final' : '') + (j.edition > 1 ? ' &middot; update ' + e(j.edition) : '');
-    $('dkBody').innerHTML = byline(j, lens) + (j.dek ? '<p class="dk-dek">' + e(j.dek) + '</p>' : '') + (lens === 'weekly' ? rivalryBox(j) : '') +
+    var dek = lens === 'dfs' ? (j.dfsDek || j.dek) : j.dek;
+    $('dkBody').innerHTML = byline(j, lens) + (dek ? '<p class="dk-dek">' + e(dek) + '</p>' : '') + (lens === 'weekly' ? rivalryBox(j) : '') +
       (j.status === 'published' ? lensBody(j, lens, j.sections ? j.sections[lens] : null) + (lens === 'weekly' ? callsBox(j) : '') : '');
     if (lens === 'dfs' && j.brief && j.brief.dfs && j.brief.dfs.note) $('dkBody').innerHTML += '<p class="is-note">' + e(j.brief.dfs.note) + '</p>';
     // Keep the hash. The body is painted after the page loads, so the browser
