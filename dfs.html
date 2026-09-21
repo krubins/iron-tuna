@@ -1568,12 +1568,33 @@ p{color:var(--sec);margin:0 0 16px}
         return '<span class="nr-by"><span class="nr-av">' + e(av(by.dfsName)) + '</span><a href="/analysts/' + e(by.dfsAnalyst) + '">' + e(by.dfsName) + '</a>' +
           (p.publishedAt ? '<span class="nr-time">' + e(ago(p.publishedAt)) + '</span>' : '') + '</span>';
       };
+      // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only
+      // when one of its own pre-kickoff calls cleared the headline bar, only
+      // for that player and only once (_voiceBlock, _worker.js). The Monday
+      // scorecard is a `both` kind, so that headline reaches this page too:
+      // `newsroomFeedPayload` returns ONE stored `headline` for both lenses
+      // and only the title and byline differ by lens. Printed as the first two
+      // words of the lead it read as punctuation; it is the banner over the
+      // card, and the call under it.
+      //
+      // Third copy of this split (`fantasy.html`'s well and `desk.html`'s
+      // article page are the others), which is the same duplication the five
+      // helpers above it already carry between this page and the Fantasy
+      // one. When the regexp moves it moves in all three.
+      var BOAST = /^\s*you['\u2019]re\s+welcome\s*[:\u2013\u2014.!-]*\s*/i;
+      var boast = function (p) {
+        var h = String((p && (p.headline || p.title)) || ''), m = BOAST.exec(h);
+        if (!m) return '';
+        return h.slice(m[0].length).trim() || '';
+      };
       // THE LEAD IS THE NEWEST PIECE, not a chosen one: the feed is ordered by
       // publication and the desk's slots decide what lands when.
       var lead = j.pieces[0], rest = j.pieces.slice(1, 6);
-      var html = '<article class="nr-lead"' + focus(lead) + '>' +
+      var crow = boast(lead);
+      var html = '<article class="nr-lead' + (crow ? ' is-boast' : '') + '"' + focus(lead) + '>' +
         '<span class="nr-kicker">' + kicker(lead) + '<span class="nr-flag">Latest</span></span>' +
-        '<h3><a href="' + e(lead.url) + '">' + e(lead.headline || lead.title) + '</a></h3>' +
+        (crow ? '<p class="nr-boast">You\u2019re welcome.</p>' : '') +
+        '<h3><a href="' + e(lead.url) + '">' + e(crow || lead.headline || lead.title) + '</a></h3>' +
         (lead.dek ? '<p>' + e(lead.dek) + '</p>' : '') +
         '<a class="nr-lead-go" href="' + e(lead.url) + '">Read the story &rarr;</a>' +
         byline(lead) + '</article>';

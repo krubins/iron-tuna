@@ -285,6 +285,13 @@ img{max-width:100%}
 .hm-lead p{font-size:15px;line-height:1.55;color:var(--ink-2)}
 .hm-lead .go{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
 .hm-lead .m{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-3)}
+/* The boast on the lead, at the lead's scale rather than the card's: the
+   headline under it is bigger here, so the banner is too, and the warm ground
+   is the same one .nr-lead.is-boast uses on /fantasy and /dfs. */
+.hm-lead.is-boast{border-color:rgba(242,169,0,.55);background:linear-gradient(180deg,#fffaef,var(--card) 58%)}
+.hm-lead .boast{display:block;font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:clamp(34px,3.4vw,46px);line-height:.94;letter-spacing:.015em;text-transform:uppercase;color:var(--gold-ink)}
+.hm-lead.is-boast h3{font-size:clamp(20px,2.1vw,26px);font-weight:700;letter-spacing:-.005em}
+.hm-lead.is-boast .m{border-top-color:rgba(242,169,0,.35)}
 .hm-rail{display:flex;flex-direction:column;min-width:0}
 .hm-rail-h{margin-bottom:12px;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
 .hm-rail ul{list-style:none;display:flex;flex-direction:column;justify-content:space-between;gap:12px;flex:1 1 auto}
@@ -312,6 +319,18 @@ img{max-width:100%}
    Same treatment the story cards elsewhere on the site use. */
 .hm-read-card h3 .it-story-focus{display:flex;margin:0 0 9px}
 .hm-read-card h3 .it-player-face{width:46px;height:46px;min-width:46px;border-radius:9px}
+/* THE BOAST, at this band's scale. The desk may open a headline with "YOU'RE
+   WELCOME:" only when one of its own pre-kickoff calls cleared the headline
+   bar (_voiceBlock, _worker.js), and the other three surfaces that print a
+   desk headline give that phrase a banner. This band has no lead card to hang
+   an 86px one on -- three cards of equal width, 16px headlines -- so it is
+   sized to the card instead of to the page: big against the 16px under it,
+   small in absolute terms, and the card takes the same warm ground the
+   Fantasy well's lead does. The call runs under it in the headline, as
+   everywhere else. */
+.hm-read-card.is-boast{border-color:rgba(242,169,0,.55);background:linear-gradient(180deg,#fffaef,var(--card) 62%)}
+.hm-read-card .boast{display:block;margin-top:7px;font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:clamp(26px,2.4vw,34px);line-height:.94;letter-spacing:.015em;text-transform:uppercase;color:var(--gold-ink)}
+.hm-read-card.is-boast h3{margin-top:5px}
 .hm-read-card p{margin-top:7px;font-size:13px;line-height:1.45;color:var(--ink-2)}
 .hm-read-card .m{margin-top:auto;padding-top:12px;font-size:11.5px;color:var(--ink-3)}
 
@@ -1141,6 +1160,20 @@ img{max-width:100%}
       });
       return out;
     };
+    // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only when
+    // one of its own pre-kickoff calls cleared the headline bar, only for that
+    // player and only once (_voiceBlock, _worker.js). Printed as the first two
+    // words of a 16px card headline it read as punctuation; it is a line of
+    // its own over the headline here, and the call under it.
+    //
+    // Fourth copy of this split; `fantasy.html`, `dfs.html` and `desk.html`
+    // carry the other three. When the regexp moves it moves in all four.
+    var BOAST = /^\s*you['\u2019]re\s+welcome\s*[:\u2013\u2014.!-]*\s*/i;
+    var boast = function (p) {
+      var h = String((p && (p.headline || p.title)) || ''), m = BOAST.exec(h);
+      if (!m) return '';
+      return h.slice(m[0].length).trim() || '';
+    };
 
     // ── the lead, and the five beside it ────────────────────────────────────
     // THE NEWEST PIECE LEADS, always: the feed is ordered by publication and
@@ -1158,10 +1191,15 @@ img{max-width:100%}
     var leadSubject = named(leadWho, lead.headline || '');
     if (!leadSubject.length) leadSubject = named(leadWho, lead.dek || '');
     var leadPick = (leadSubject.length ? leadSubject : leadWho).slice(0, 3);
-    var leadHtml = '<article class="hm-lead"'
+    // The lead takes the boast as well. It is the biggest card on the page,
+    // and a banner that appears on the three cards below it but not above them
+    // reads as a bug rather than as a rule.
+    var leadCrow = boast(lead);
+    var leadHtml = '<article class="hm-lead' + (leadCrow ? ' is-boast' : '') + '"'
       + (leadPick.length ? ' data-player-focus="' + esc(leadPick.join('|')) + '"' : '') + '>'
       + '<span class="t">' + esc(lead.title || 'The desk') + '<span class="flag">Latest</span></span>'
-      + '<h3><a href="' + esc(lead.url) + '">' + esc(lead.headline) + '</a></h3>'
+      + (leadCrow ? '<span class="boast">You\u2019re welcome.</span>' : '')
+      + '<h3><a href="' + esc(lead.url) + '">' + esc(leadCrow || lead.headline) + '</a></h3>'
       + (lead.dek ? '<p>' + esc(lead.dek) + '</p>' : '')
       + '<a class="go" href="' + esc(lead.url) + '">Read the story &rarr;</a>'
       + '<span class="m">' + by(lead) + '</span></article>';
@@ -1171,9 +1209,10 @@ img{max-width:100%}
             var w = whoOf(p), sub = named(w, p.headline || '');
             if (!sub.length) sub = named(w, p.dek || '');
             var pk = (sub.length ? sub : w).slice(0, 3);
+            var cr = boast(p);
             return '<li' + (pk.length ? ' data-player-focus="' + esc(pk.join('|')) + '"' : '') + '>'
               + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
-              + '<h3><a href="' + esc(p.url) + '">' + esc(p.headline) + '</a></h3>'
+              + '<h3><a href="' + esc(p.url) + '">' + esc(cr || p.headline) + '</a></h3>'
               + '<span class="m">' + by(p) + '</span></li>';
           }).join('') + '</ul></div>';
     }
@@ -1184,16 +1223,12 @@ img{max-width:100%}
     show($('lead'), true);
 
     // ── the cards, which are the rotation, minus whatever is leading ────────
-    // coverBand's pool and its 24-hour floor are untouched; the lead is only
-    // removed from what gets PRINTED, so the same headline is never on this
-    // page twice.
     // The cards rotate over what is NOT already leading, so the band is still
     // three and the same headline is never on this page twice. coverBand's own
     // rules -- the pool depth, the hourly turn, the 24-hour floor -- are
     // untouched; it is handed a list with the lead removed, not a new policy.
     var pieces = coverBand(live.slice(1), Date.now());
-    if (!pieces.length) { try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('leadWell')); } catch (e) {} return; }
-    $('readGrid').innerHTML = pieces.map(function (p) {
+    if (!pieces.length) { try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('leadWell')); } catch (e) {} return; }    $('readGrid').innerHTML = pieces.map(function (p) {
       var when = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + esc(p.week) : '');
       var who = whoOf(p);
       // `byline` is an object ({analyst, name, role, avatar, ...}), not a
@@ -1202,10 +1237,12 @@ img{max-width:100%}
       var subject = named(who, p.headline || '');
       if (!subject.length) subject = named(who, p.dek || '');
       var pick = (subject.length ? subject : who).slice(0, 3);
-      return '<a class="hm-read-card" href="' + esc(p.url) + '"'
+      var crow = boast(p);
+      return '<a class="hm-read-card' + (crow ? ' is-boast' : '') + '" href="' + esc(p.url) + '"'
         + (pick.length ? ' data-player-focus="' + esc(pick.join('|')) + '"' : '') + '>'
         + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
-        + '<h3>' + esc(p.headline) + '</h3>'
+        + (crow ? '<span class="boast">You\u2019re welcome.</span>' : '')
+        + '<h3>' + esc(crow || p.headline) + '</h3>'
         + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '')
         + '<span class="m">' + (when ? esc(when) : '') + (byline ? (when ? ' · ' : '') + esc(byline) : '') + '</span>'
         + '</a>';
@@ -1226,8 +1263,10 @@ img{max-width:100%}
     // photograph should not be rotated off the story at the top of the page.
     heroPaint('desk', live.filter(function (p) { return whoOf(p).length; })
       .map(function (p) {
+        // The gap line is 13px. The boast is not worth two of its words
+        // there, and the hero is not where it is being made; the call is.
         return { name: whoOf(p)[0], kicker: 'What the desk is on today',
-                 gap: p.headline || p.title, href: p.url };
+                 gap: boast(p) || p.headline || p.title, href: p.url };
       }));
   });
 })();
