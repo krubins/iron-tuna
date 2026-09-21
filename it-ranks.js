@@ -333,7 +333,7 @@
       var sl = slug(p.name);
       return '<tr id="p-' + esc(sl) + '"' + (focus && focus === sl ? ' class="rk-hit"' : '') + '>' + opener +
         '<td class="num">' + (primaryRank(p) == null ? '—' : esc(p.position) + primaryRank(p)) + '</td>' +
-        '<td class="rk-who"><a href="/in-season/player/' + sl + '?pos=' + esc(p.position) + '"><b>' + esc(p.name) + '</b></a>' +
+        '<td class="rk-who"><a href="/player/' + sl + '"><b>' + esc(p.name) + '</b></a>' +
           (pos === 'ALL' || pos === 'FLEX' ? '<small>' + esc(p.position) + '</small>' : '') +
           '<button class="rk-share" type="button" data-share="' + esc(sl) +
             '" aria-label="Copy a link to ' + esc(p.name) + ' on this board">Link</button>' +

@@ -483,7 +483,7 @@ p{color:var(--sec);margin:0 0 16px}
     var p = r.p, w0 = p.weeks && p.weeks.find(function (w) { return !w.bye && !w.out; });
     switch (key) {
       case 'rank': return '<td class="num">' + r[rankField] + '</td>';
-      case 'player': return '<td class="p"><a href="/in-season/player/' + slug(p.name) + '?pos=' + e(p.position) + '"><b>' + e(p.name) + '</b></a><span>' + e(p.position) + '</span>' + rosterTag(p) + reads(r) + '</td>';
+      case 'player': return '<td class="p"><a href="/player/' + slug(p.name) + '"><b>' + e(p.name) + '</b></a><span>' + e(p.position) + '</span>' + rosterTag(p) + reads(r) + '</td>';
       case 'team': return '<td>' + e(p.team) + '</td>';
       case 'opp': return '<td>' + (p.byes.length && !w0 ? '<span class="is-status">BYE</span>' : w0 ? e((w0.home ? 'vs ' : 'at ') + w0.opponent) : '—') + '</td>';
       case 'opps': return '<td>' + e(p.weeks.map(function (w) { return w.bye ? 'BYE' : w.out ? 'OUT' : (w.home ? 'vs ' : '@') + w.opponent; }).join(', ')) + '</td>';

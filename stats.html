@@ -200,7 +200,7 @@
     var s = p.season || null, l = p.latest || null, u = l && l.usage ? l.usage : {};
     switch (key) {
       case 'rank': return '<td class="num">' + (p.rank ? e(p.position) + p.rank : '—') + '</td>';
-      case 'player': return '<td class="rk-who"><a href="/in-season/player/' + slug(p.name) + '?pos=' + e(p.position) + '"><b>' + e(p.name) + '</b></a><small>' + e(p.position) + '</small></td>';
+      case 'player': return '<td class="rk-who"><a href="/player/' + slug(p.name) + '"><b>' + e(p.name) + '</b></a><small>' + e(p.position) + '</small></td>';
       case 'team': return '<td>' + e(p.team) + '</td>';
       case 'games': return '<td class="num">' + n0(s ? s.games : null) + '</td>';
       case 'points': return '<td class="num"><b>' + n1(view === 'season' ? (s ? s.points : null) : (l ? l.points : null)) + '</b></td>';

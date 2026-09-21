@@ -9593,6 +9593,36 @@ function playerLd(p, row, url) {
   }).replace(/</g, '\\u003c') + '</' + 'script>';
 }
 
+// The card's two buttons, WHILE THE SEASON IS OPEN.
+//
+// The shell ships an offseason pair — "Price him in your league" and "Open the
+// Auction Manager", both pointing into the draft rooms. That was right when the
+// only way onto this page was from a draft board. It is not right now that
+// every in-season board links here: tools/test-chrome.mjs already bans the
+// draft rooms from the site's chrome on the grounds that "in week 2 they are
+// the site telling a visitor it is still July", and a reader who arrives from
+// the weekly rankings would have walked straight into exactly that.
+//
+// So in season the card leads with the page that answers the question that
+// brought them — this week's intel for this player — and offers his position's
+// board as the way back out. /in-season/player/<slug> is gated on the same
+// POST_DRAFT_OPEN, so the link is only ever written when it resolves to the
+// intel page rather than to the waiting-list gate.
+//
+// Out of season nothing is rewritten and the shell's own pair stands.
+const PC_BOARD = { QB: 'qb', RB: 'rb', WR: 'wr', TE: 'te', K: 'k', DEF: 'dst' };
+function playerCta(p) {
+  const e = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const board = PC_BOARD[p.p];
+  return '<div class="pc-cta">'
+    + '<a class="pc-btn" href="/in-season/player/' + e(p.slug) + '">This week\u2019s intel</a>'
+    + (board
+        ? '<a class="pc-btn alt" href="/weekly-' + board + '-rankings">Every '
+          + e((PC_POS_WORD[p.p] || p.p).toLowerCase()) + ' this week</a>'
+        : '')
+    + '</div>';
+}
+
 // ── /players ───────────────────────────────────────────────────────────────
 // The hub the ~400 cards hang off. A set of pages a crawler can only reach
 // through sitemap.xml is a set of pages it reaches slowly and ranks poorly;
@@ -9677,7 +9707,7 @@ function rkPreHtml(pre) {
     const cr = rankOf(p, 'consensus'), vr = rankOf(p, 'vegas');
     return '<tr id="p-' + e(slug(p.name)) + '">' +
       '<td class="num">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
-      '<td class="rk-who"><a href="/in-season/player/' + e(slug(p.name)) + '?pos=' + e(p.position) + '"><b>' + e(p.name) + '</b></a>' +
+      '<td class="rk-who"><a href="/player/' + e(slug(p.name)) + '"><b>' + e(p.name) + '</b></a>' +
         (pre.pos === 'ALL' || pre.pos === 'FLEX' ? '<small>' + e(p.position) + '</small>' : '') + '</td>' +
       '<td>' + e(p.team) + '</td>' + opp +
       '<td class="rk-fan rk-pts">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
@@ -17548,6 +17578,13 @@ export default {
             .replace('<div class="pc-nums" id="pcNums"></div>',
               () => '<div class="pc-nums" id="pcNums">' + __ph.nums + '</div>')
             .replace('</head>', () => playerLd(__m.player, __m.row, __m.url) + '\n</head>');
+          // In season the two buttons change; out of season the shell's own
+          // pair is left exactly as it ships.
+          if (POST_DRAFT_OPEN(env)) {
+            const __cta = playerCta(__m.player);
+            __html = __html.replace(
+              /<div class="pc-cta">[\s\S]*?<\/div>/, () => __cta);
+          }
         }
         if (__m.analyst) {
           __html = __html

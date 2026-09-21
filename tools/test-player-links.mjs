@@ -416,5 +416,89 @@ console.log('\nwiring');
   ]) ok(`${f} re-links after it paints`, read(f).includes(`.${call}(`));
 }
 
+
+// ── every board sends a player name to the same place ──────────────────────
+// The prose linker above has always pointed at /player/<slug>. The BOARDS did
+// not: seven of them linked /in-season/player/<slug>?pos=<POS> instead, so one
+// site had two player pages and the name in a story and the same name one row
+// down on a board went to different ones.
+//
+// That was survivable while the card was noindex. It stopped being survivable
+// when _worker.js made /player/<slug> indexable: the boards are where a
+// player's name appears most, and every one of those links was pointing at a
+// page that tells crawlers not to index it. So the boards were moved onto the
+// card, and this is what holds them there.
+console.log('\nthe boards link the card');
+{
+  // Every surface that renders a player row or chip. Named rather than
+  // globbed: a new board that links players is meant to fail this list once,
+  // and be added to it deliberately.
+  //
+  // _worker.js is read through rkPreHtml alone. The file renders board rows
+  // there AND renders the card's own in-season button, which is SUPPOSED to
+  // point at /in-season/player/<slug> — reading the whole file would fail the
+  // rule on the one link the rule does not cover.
+  const BOARDS = ['rankings.html', 'vegas-edge.html', 'stats.html', 'hidden-value.html',
+                  'weekly-intel.html', 'it-ranks.js', '_worker.js'];
+  const rowsOf = (f) => {
+    const src = read(f);
+    if (f !== '_worker.js') return src;
+    const i = src.indexOf('function rkPreHtml(pre) {');
+    return i < 0 ? '' : src.slice(i, src.indexOf('\n}', i));
+  };
+  for (const f of BOARDS) {
+    const src = rowsOf(f);
+    ok(`${f} links /player/<slug>`, /href="\/player\/' \+ /.test(src));
+    // The old address, and the dead query that rode along with it: nothing on
+    // the card has ever read ?pos=.
+    ok(`${f} no longer links the noindex page`, !/href="\/in-season\/player\/' \+ /.test(src));
+    ok(`${f} carries no dead ?pos= on a player link`, !/\/player\/' \+ [^\n]*\?pos=/.test(src));
+  }
+}
+
+// ── the in-season page is still reachable ──────────────────────────────────
+// Moving the boards off /in-season/player/<slug> would have orphaned it: no
+// page on the site would have linked it, and it is noindex, so nothing would
+// have found it at all. The card links it back, and in season it is the card's
+// FIRST button — because a reader arriving from the weekly rankings wants this
+// week, and the two buttons the shell ships are both draft-room promotions.
+console.log('\nthe card leads back to the week');
+{
+  const worker = read('_worker.js');
+  ok('the worker builds the in-season pair', /function playerCta\(p\) \{/.test(worker));
+  const cta = worker.slice(worker.indexOf('function playerCta(p) {'));
+  ok('its first button is this week’s intel for this player',
+     cta.indexOf("/in-season/player/") > 0
+     && cta.indexOf("/in-season/player/") < cta.indexOf("/weekly-"));
+  ok('its second is that player’s own board', /\/weekly-' \+ board \+ '-rankings/.test(cta));
+  // Only while the season is open. /in-season/player/<slug> is gated on the
+  // same flag, so writing the link when it is off would point at the
+  // waiting-list gate.
+  ok('and it is written only while the season is open',
+     /if \(POST_DRAFT_OPEN\(env\)\) \{[\s\S]{0,200}playerCta/.test(worker));
+
+  // The block the worker replaces has to still be in the shell, verbatim. A
+  // replace() that matches nothing returns its input, so a renamed class here
+  // would leave the draft-room buttons on every in-season arrival with no
+  // error anywhere.
+  const shell = read('player.html');
+  ok('the shell still carries the block the worker replaces',
+     /<div class="pc-cta">[\s\S]*?<\/div>/.test(shell));
+  ok('and out of season it still ships the auction pair',
+     /pc-cta[\s\S]{0,400}auctiondraft\?screen=cheat/.test(shell));
+
+  // Every position on the card maps to a board, or the second button vanishes
+  // for the positions it cannot name.
+  const map = (worker.match(/const PC_BOARD = \{[\s\S]*?\};/) || [''])[0];
+  for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) {
+    ok(`a ${pos} card knows its board`, new RegExp(pos + ": '").test(map));
+  }
+  // ...and each of those boards is a page that exists.
+  for (const b of ['qb', 'rb', 'wr', 'te', 'k', 'dst']) {
+    ok(`/weekly-${b}-rankings is a real page`, fs.existsSync(path.join(ROOT, `weekly-${b}-rankings.html`)));
+  }
+}
+
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
