@@ -198,10 +198,25 @@ export async function run(env = process.env, now = Date.now()) {
     site: 'dk', csv: converted.csv, slate: 'weekly', source: 'draftkings-automation', ...(week ? { week: Number(week) } : {})
   }) });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok || !body.ok || !body.imported || body.imported.rows < MIN_PLAYERS) {
-    throw new Error(`Iron Tuna import failed (HTTP ${response.status}): ${body.error || 'invalid response'}`);
+  // THE FIELD IS `stored`, NOT `rows`. dfsStore() has always answered
+  // { ok, stored, ... } and this guard has always read `.rows`, so it compared
+  // `undefined < MIN_PLAYERS` — false — and passed every import, including one
+  // that saved nothing. The same misreading emptied the line below: `imported`
+  // was undefined, JSON.stringify dropped it, and the workflow log showed how
+  // many players were FETCHED from DraftKings with no mention of how many
+  // reached the table. An unattended job that cannot fail is not a safe job.
+  const stored = body.imported && Number(body.imported.stored);
+  const attempted = body.imported && Number(body.imported.attempted);
+  if (!response.ok || !body.ok || !body.imported || !Number.isFinite(stored) || stored < MIN_PLAYERS) {
+    throw new Error(`Iron Tuna import failed (HTTP ${response.status}): ${body.error || (body.imported ? `stored ${stored} rows` : 'invalid response')}`);
   }
-  return { ...result, imported: body.imported.rows, season: body.season, week: body.week };
+  // A partial write is its own failure: the board would be served a slate
+  // missing whichever players the dropped statements carried, which reads as
+  // a thin lobby rather than as a broken import.
+  if (Number.isFinite(attempted) && stored < attempted) {
+    throw new Error(`Iron Tuna stored ${stored} of ${attempted} rows; the slate would be incomplete.`);
+  }
+  return { ...result, imported: stored, attempted, season: body.season, week: body.week };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

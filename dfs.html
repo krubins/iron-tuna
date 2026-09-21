@@ -1149,6 +1149,12 @@ p{color:var(--sec);margin:0 0 16px}
   // are the same games under different prices, and they keep the plate
   // answerable until the lobby posts.
   var scheduleGames = [];
+  // WHICH SLATE THE BOARD IS SHOWING, and which single games the desk has
+  // priced. Before the desk imported Showdown files there was one slate a week
+  // and neither question existed. Now a reader who picks Showdown Captain and
+  // a matchup gets DraftKings' own prices for that game if the desk holds
+  // them, and the file route only where it does not.
+  var loadedSlate = null, availableSingles = [];
   var GAME_STYLES = {
     'flash-draft': { label:'Flash Draft', note:'A live-game format. The player pool and available choices can change as the game unfolds.', single:false },
     classic: { label:'Classic', note:'The standard multi-game $50,000 salary-cap format, solved from the loaded salary slate.', single:false, optimizer:true },
@@ -2460,6 +2466,31 @@ p{color:var(--sec);margin:0 0 16px}
     }).filter(Boolean);
   }
   function selectedGameKeys() { return Object.keys(selectedGames).filter(function (k) { return selectedGames[k]; }); }
+  // The desk slate this setup asks for, or null for the main board. A
+  // single-game format with exactly one game chosen wants that game's own
+  // price list; everything else wants the week's Classic slate. Returns null
+  // for a game the desk has not imported, so the board falls through to the
+  // file route rather than fetching a slate that does not exist.
+  function deskSlateFor() {
+    if (typeof ITDfs === 'undefined') return null;
+    var style = site === 'dk' ? (gameStyle || 'classic') : 'classic';
+    var fmt = ITDfs.formatFor(site, style);
+    if (!fmt || !fmt.single || fmt.kind !== 'salary') return null;
+    var keys = selectedGameKeys();
+    if (keys.length !== 1) return null;
+    return availableSingles.indexOf(keys[0]) >= 0 ? 'sd:' + keys[0] : null;
+  }
+  // Re-fetch only when the answer actually changed. Every select on the plate
+  // calls this, and re-solving the same slate on each keystroke would throw
+  // away the reader's locks and excludes for nothing.
+  function syncSlate() {
+    if (upGet(site)) return false;
+    var want = deskSlateFor();
+    if (want === loadedSlate) return false;
+    marks = {};
+    loadSite(want);
+    return true;
+  }
   function gameScopeRequired() { return site === 'dk' && !!gameStyle && gameStyle !== 'best-ball' && !isPickem(); }
   // ── which roster this setup asks for ──────────────────────────────────────
   // A Game Style names a roster and ITDfs.FORMATS is the table of what each
@@ -2527,7 +2558,15 @@ p{color:var(--sec);margin:0 0 16px}
     }
     if (fmt.kind === 'salary' && fmt.single && priced !== 'single-game') {
       out.ready = false;
-      out.blocked = (site === 'fd' ? 'FanDuel' : 'DraftKings') + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. Building ' + fmt.label + ' from the main slate would seat a ' + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' at a price nobody is charged \u2014 a roster you could not enter \u2014 so the board declines rather than printing one. Hand over the export from the contest lobby and it solves exactly.';
+      out.blocked = (site === 'fd' ? 'FanDuel' : 'DraftKings') + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. Building ' + fmt.label + ' from the main slate would seat a ' + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' at a price nobody is charged \u2014 a roster you could not enter \u2014 so the board declines rather than printing one. Hand over the export from the contest lobby and it solves exactly.'
+        // The desk imports these now, so a reader whose matchup is missing is
+        // told which ones are here rather than left to guess whether the site
+        // does this at all. Silent when the desk holds none, because then the
+        // file is the only answer and listing nothing says nothing.
+        + (availableSingles.length
+           ? ' The desk has already priced ' + availableSingles.map(function (k) { return k.replace('|', ' vs '); }).join(', ')
+             + ' for this week, so those solve here without a file.'
+           : '');
       out.needsFile = true;
       return out;
     }
@@ -3610,6 +3649,7 @@ p{color:var(--sec);margin:0 0 16px}
   }
   function slateOk(j) {
     slate = j;
+    loadedSlate = j.source === 'upload' ? null : (j.slate && j.slate !== 'main' ? j.slate : null);
     scheduleGames = [];
     slateToken += 1; playWeekMemo = null;
     if (site === 'dk' && !gameUniverseSig) selectedGames = {};
@@ -3642,8 +3682,13 @@ p{color:var(--sec);margin:0 0 16px}
     // offers the export that solves it.
     build();
   }
-  function loadSite() {
-    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
+  function loadSite(slate) {
+    var want = slate || null;
+    loadedSlate = want;
+    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest) + (want ? '&slate=' + encodeURIComponent(want) : '')).then(function (r) { return r.json(); }).then(function (j) {
+      // The list of priced single games rides on every answer, hit or miss, so
+      // a reader whose matchup is not imported still learns which ones are.
+      if (j && Array.isArray(j.singleGames)) availableSingles = j.singleGames;
       if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label, j && j.games); return; }
       slateOk(j);
     }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
@@ -3780,10 +3825,10 @@ p{color:var(--sec);margin:0 0 16px}
       $('dfPayoutSelect').value=''; $('dfPayoutSelect').disabled=true; $('dfCustomGames').hidden=true;
       populateGamesSelect(slate || {players:[],stacks:[]}); updateSetupState();
       if (gameStyle==='best-ball') $('dfGamesSelect').disabled=false;
-      render();
+      if (!syncSlate()) render();
       try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({event:'dfs_game_style',uid:localStorage.getItem('it.uid')||'',props:{path:location.pathname,gameStyle:gameStyle,site:site}})],{type:'application/json'})); } catch(x){}
     });
-    $('dfGamesSelect').addEventListener('change', function () { applyGameChoice(); render(); });
+    $('dfGamesSelect').addEventListener('change', function () { applyGameChoice(); if (!syncSlate()) render(); });
     $('dfGameGrid').addEventListener('click', function (ev) {
       var b=ev.target.closest('[data-game-key]'); if(!b)return;
       var key=b.getAttribute('data-game-key'); if(selectedGames[key])delete selectedGames[key];else selectedGames[key]=true;
@@ -3791,7 +3836,7 @@ p{color:var(--sec);margin:0 0 16px}
     });
     $('dfCustomDone').addEventListener('click', function () {
       if(!selectedGameKeys().length){$('dfGamesHelp').textContent='Select at least one game for the custom pool.';return;}
-      gameChoice='custom'; $('dfPayoutSelect').disabled=false; $('dfCustomGames').hidden=true; updateSetupState(); render();
+      gameChoice='custom'; $('dfPayoutSelect').disabled=false; $('dfCustomGames').hidden=true; updateSetupState(); if (!syncSlate()) render();
     });
     $('dfPayoutSelect').addEventListener('change', function () {
       payoutStructure=this.value; payoutToContest(); updateSetupState(); render();
