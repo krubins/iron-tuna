@@ -106,8 +106,14 @@
   --space-6: 32px;
   --space-7: 48px;
 
+  /* The gutter between a page's body column and a rail beside it. Rails are
+     chrome, not a second column of prose, so they sit further off the middle
+     than two body elements would; past 1400px there is room for more. */
+  --rail-gap: 48px;
+
   --header-h: 64px;
 }
+@media (min-width: 1400px) { :root { --rail-gap: 64px } }
 
 /* ── base ───────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box }
@@ -1133,7 +1139,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 /* ── a two-column page body ────────────────────────────────────────────────
    Main and a rail. Collapses to one column early, because a 300px rail beside
    a table is worse than a rail under it. */
-.is-split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-6); align-items: start }
+.is-split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--rail-gap); align-items: start }
 @media (max-width: 980px) { .is-split { grid-template-columns: minmax(0, 1fr) } }
 .is-rail { display: flex; flex-direction: column; gap: var(--space-4); position: sticky; top: var(--space-4) }
 @media (max-width: 980px) { .is-rail { position: static } }

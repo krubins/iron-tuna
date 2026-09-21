@@ -96,9 +96,8 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
    player rail comes up next to the navigation rather than stranding itself
    1,200px below the fold on a phone. */
 .sl-shell{max-width:1440px;margin:0 auto;padding:var(--space-5) var(--space-5) var(--space-7);
-  display:grid;grid-template-columns:224px minmax(0,1fr) 312px;gap:var(--space-5) var(--rail-gap,48px);
+  display:grid;grid-template-columns:224px minmax(0,1fr) 312px;gap:var(--space-5) var(--rail-gap);
   grid-template-areas:"nav main upd";align-items:start}
-@media(min-width:1400px){.sl-shell{--rail-gap:64px}}
 /* The left rail carries a shade so the column reads as chrome rather than as a
    third body of text sharing the page's white. */
 .sl-left{grid-area:nav;min-width:0;position:sticky;top:calc(var(--header-h) + var(--space-4));
