@@ -12911,6 +12911,16 @@ desktop and 42px on a phone, with the call itself under it at headline size.
 - **`.nr-lead p.nr-boast`, not `.nr-boast`.** `.nr-lead p` sets the deck's
   18px, and the banner and the deck are both paragraphs inside the same card.
 
+**And on `/dfs`.** Ken, once §114 had given that page a well of its own: "do
+the dfs one too." It needed it. The Monday scorecard is a `both` kind, and
+`newsroomFeedPayload` returns ONE stored `headline` for both lenses — only the
+title and the byline differ by lens — so the boast reaches `/dfs` verbatim and
+was printing raw in its lead. The split is the same eight lines, which makes
+three copies of it; that is the same duplication the five helpers beside it
+(`focus`, `av`, `ago`, `kicker`, `byline`) already carry between that page and
+the Fantasy one, so it is written the way the file is written rather than
+lifted into a shared script for one regexp. Each copy names the other two.
+
 **And on the article page.** Ken, on seeing the well: "Yes, put the banner on
 the article page too." The piece the well links to carried the same problem in
 its `<h1>`, so `desk.html` splits the same phrase with the same regexp and the
@@ -12928,6 +12938,7 @@ sentence, not the layout.
 | `site.css` | The reading step across the `.is-*` furniture and the `.nr-*` story card and well; `.nr-lead.is-boast`, `.nr-lead p.nr-boast`. |
 | `fantasy.html` | Its own `.fn-riv-*` and `.fn-tool` type lifted with the rest; the newsroom painter splits the desk's boast off the lead headline. |
 | `desk.html` | `#dkBoast` above the `<h1>`, `.dk-boast` and `body.dk-boasting`; `setHead()` replaces both direct writes to `#dkTitle`. |
+| `dfs.html` | The same split in its own well, added once §114 gave the page one. |
 
 **Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
 plus `test-homepage` under `REQUIRE_BROWSER=1` (99/99) and the four `--check`
@@ -12942,4 +12953,19 @@ desk and ten more) rendered clean at both widths. `desk.html` rendered at the
 same two widths against a stubbed `/api/content/piece` in the same three
 headline shapes plus the index: the banner at 86px and 46px over a 31px and
 25px headline, the ordinary headline left at 39px and 31px with no banner and
-no `dk-boasting`, and the index carrying neither.
+no `dk-boasting`, and the index carrying neither. `/dfs` rendered at the same
+two widths in five shapes — a boast lead behind five pieces, a boast as the
+only piece, a lead with no boast, a headline that is nothing but the boast, and
+an empty feed — all clean, with the kicker reading the DFS title and the byline
+the DFS analyst in each.
+
+**The banner is one line, measured rather than assumed.** With Bebas Neue
+actually loaded, "YOU'RE WELCOME." sets 757px wide at 86px on the article page,
+604px at 72px in a well, and 382px and 328px at the phone sizes: one line in
+all four, inside every column that holds it. The string is fixed, so those are
+the permanent worst cases and not a sample. Where the face fails to load it
+wraps to two lines on the fallback, which is the degradation to want.
+
+**Not done, on purpose.** `front.html` paints `p.headline` straight into the
+desk band's `<h3>`, so a boasting headline still reads whole there. That band
+is not a `.nr-well` and the page is part generated; it wants its own pass.

@@ -720,6 +720,9 @@ section{margin:0 0 var(--space-6)}
     // and the call under it. Split only when the DESK wrote it and only when
     // a headline survives the split — the page never adds a boast to a piece
     // that did not make one, and never prints a card with no headline.
+    //
+    // Three copies of this split: here, `dfs.html`'s well and `desk.html`'s
+    // article page. When the regexp moves it moves in all three.
     var BOAST = /^\s*you['\u2019]re\s+welcome\s*[:\u2013\u2014.!-]*\s*/i;
     var boast = function (p) {
       var h = String((p && (p.headline || p.title)) || ''), m = BOAST.exec(h);
