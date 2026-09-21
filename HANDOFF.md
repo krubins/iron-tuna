@@ -15888,3 +15888,125 @@ A.J. Brown at $29 for the seventh consecutive day. Nico Collins holds at $11
   no analyst row published, 67 audit rows. Sixteen recap rows, none published,
   `lead_story_run` still 58, `LEAD_CATEGORIES` still six keys in repo and
   deployed alike.
+
+## 140. September 21: D1 stopped serving reads, and this session lost every snapshot it had
+
+Two failures today, one of them reader-facing and one of them mine.
+
+### 140a. The D1 free-tier daily row-read limit is exhausted, account-wide
+
+At 11:23:16Z a query returned normally. The next one, seconds later, returned:
+
+```
+Your account has exceeded D1's free tier daily row read limit.
+Upgrade to a paid plan or wait until tomorrow (midnight UTC) to continue.
+```
+
+This is not a throttle on big queries. `SELECT 1` still works — it reads no
+rows — but **`SELECT id, updated_at FROM odds_overlay WHERE id=1` is refused**.
+A single-row primary-key lookup. Every row read on the account is blocked until
+00:00 UTC.
+
+`_worker.js` reads D1 for the board (`oddsCacheRead`), the lead story, the
+recaps, the rankings, the health page and the job log. **If the Worker is
+hitting the same wall, irontuna.com cannot serve a price to anyone right now.**
+I cannot confirm that from here — the egress proxy blocks irontuna.com, and the
+only other instrument I have is D1 itself — so I am reporting the limit as
+measured and the consequence as inferred, not observed.
+
+What I can say about the cause is narrow. The free tier allows 5 million row
+reads a day. This audit's queries read on the order of 10⁵ rows across a whole
+session — a couple of percent — so **the audit did not cause this**, though it
+may well have been the query that crossed the line. The plausible source is the
+Worker's own fifteen-minute tick scanning tables that have grown: `odds_snapshots`
+went 2,761 → 22,758 rows in six days, and a full scan of it every tick is 2.2
+million reads a day on its own. That is arithmetic, not evidence — nothing I can
+query today would confirm it.
+
+Two things follow regardless:
+
+- **This is a billing decision, not a bug.** Someone has to either upgrade the
+  D1 plan or cut the read volume. It will recur at midnight + however long the
+  budget lasts.
+- **I am cutting my own contribution.** The daily content-byte measurement
+  (§139a) read 60–80k rows a day to answer a question that is now settled. It is
+  retired. Future audits should prefer `meta.rows_read` awareness and indexed
+  lookups over table scans.
+
+### 140b. The container was recycled, and it took the snapshots and the branch with it
+
+The session container restarted overnight. Two consequences, both worth
+recording because neither was obvious:
+
+**Every overlay snapshot is gone.** `/tmp/claude-0/.../scratchpad` came back
+empty: `overlay-0903.json` through `overlay-0920.json`, every `avail-*.json`,
+every `qb/rb/wr/te-*.json`, and all the measurement scripts. That archive was
+the only thing that let §125 rebuild the September 8 board and prove row 94's
+table was right on the day. **It cannot be rebuilt** — `odds_overlay` row 1 is
+updated in place, so the past is gone unless it was copied somewhere durable.
+
+This is the "durable server-side overlay snapshot" that has been on the open
+list since early September, and it stopped being a nice-to-have today. A daily
+`INSERT INTO odds_snapshots`-style copy of row 1, or an R2 object, would have
+cost nothing and would have preserved the record.
+
+**The git branch came back pointing at `origin/main`.** The local
+`claude/tet-macmillan-price-logic-nyxid5` was recreated at `12078fb9` — main's
+head — 1,410 commits behind the pushed branch and 102 ahead on main's side.
+That is why `git merge origin/main` said "Already up to date" this morning, and
+why `tools/test-live-board.mjs` appeared to have been deleted and
+`tools/live-board.mjs` appeared to have shrunk to 4,957 bytes: I was looking at
+main's copy, which is still the pre-09-02 harness this file has been warning
+about for two weeks.
+
+Nothing was lost — everything was pushed — but **had I committed today's audit
+onto that branch and pushed, I would have been pushing main's tree under my
+branch's name.** The check that caught it was comparing `git rev-parse HEAD`
+against `origin/main` before doing anything, and that now belongs in the daily
+routine: **after any container restart, verify the local branch actually points
+at your pushed work before you write to it.**
+
+Recovered with `git reset --hard origin/claude/tet-macmillan-price-logic-nyxid5`.
+
+### 140c. The recap rows have doubled
+
+`lead_story` went 111 → **125**; `category='recap'` rows went 16 → **30**, one
+per game across Weeks 1 and 2. All still `verified=1, published=0`.
+`lead_story_run` is still 58, so the paused column did not write them.
+`LEAD_CATEGORIES` still has six keys and no `recap`, in repo and deployed bundle
+alike.
+
+Thirty rows, every one a publish-flag away from replacing the pinned lead story
+with something that renders as "Insight" and serves `category: null`.
+
+### 140d. No board measurement today
+
+`odds_overlay` row 1 is stamped 2026-09-20 11:01:04Z — **24.4 hours old**, so
+`odds-refresh` hung for the fifth time (09-11, 09-13, 09-17, 09-19, 09-21).
+Rows 5 and 7 are 5 and 9 days old respectively.
+
+But the honest statement is stronger than "the board is stale": **I could not
+measure the board at all today.** The overlay snapshots are gone (§140b) and D1
+will not serve the rows to rebuild one (§140a). So row 94's four prices, the
+curve paragraph, the two-board gap and the Collins/Wilson pair have **no
+measurement for 2026-09-21**. Unmeasured, not unchanged — standing rule (5).
+
+The last reading stands as the last reading: on 09-20 only Tate was wrong, and
+the curve paragraph was correct for the first time since 09-14.
+
+### 140e. What did run
+
+- **CI 80/80** on the restored branch (`main` added two more checks).
+- **Harness self-test 23/23** — `tools/test-live-board.mjs` is intact on my
+  branch, whatever main's copy looks like.
+- **Repo vs deployed: 690 player-rows across two boards, 0 differences**, with
+  `VEGAS_WEIGHT`, `LEAGUE_BUDGET`, `MIN_BID`, `CURVE` and `COLUMN_NORM`
+  identical. Fewer rows than usual because the comparison had to be rebuilt
+  against the committed board plus a synthetic overlay rather than a live one.
+- **The deployed bundle is `main` exactly**: 995 top-level symbols, all in
+  `origin/main` except `__defProp`, `__name` and `worker_default`. First day
+  since 09-18 without an unmerged branch in production.
+- D1 `size_after` is **208.0 MB**, down from 238.3, continuing to fall.
+- The lead-story column Routine could not be checked today — `list_triggers`
+  was not called, to avoid spending reads, and the prompt hash has been
+  unmeasurable since 09-19 in any case.
