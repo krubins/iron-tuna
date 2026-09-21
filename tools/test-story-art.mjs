@@ -440,14 +440,21 @@ console.log('\nthe pages');
     const src = read('front.html');
     ok('front.html paints the hero picture from the player lookup',
        /heroEdgePlate/.test(src) && /ITPlayerSearch/.test(src) && /PS\.plate\(/.test(src));
+    // "the players they are about" is the HEADLINE's subject since 2026-09-21,
+    // not the piece's whole cast: a JAX-at-DEN recap headlined on a Jaguar was
+    // stamped with the three Broncos its findings open on. The stamp is still
+    // required; what narrows it is `named()`, and both are checked so neither
+    // can be dropped without this failing.
     ok('...and stamps the desk cards with the players they are about',
-       /data-player-focus=/.test(src));
+       /data-player-focus=/.test(src) && /var named = function \(who, text\)/.test(src)
+       && /named\(who, p\.headline/.test(src));
     ok('...and gives each card’s reading a face', /readPic\(/.test(src) && /has-pic/.test(src));
-    // The page's outline is its five sections and the hero picture is not a
-    // sixth — tools/test-homepage.mjs asserts that order in the browser, and
-    // this catches a stray <section> before it gets that far.
-    ok('the hero picture is an aside, so the page still has exactly five sections',
-       /<aside class="hm-edge"/.test(src) && (src.match(/<section class=/g) || []).length === 5);
+    // The page's outline is its six sections (the lead story joined them on
+    // 2026-09-21) and the hero picture is not a seventh — tools/test-homepage.mjs
+    // asserts that order in the browser, and this catches a stray <section>
+    // before it gets that far.
+    ok('the hero picture is an aside, so the page still has exactly six sections',
+       /<aside class="hm-edge"/.test(src) && (src.match(/<section class=/g) || []).length === 6);
   }
   ok('it-action.js parses and defines the map', (() => { const w = makeDom(); new Function('window', read('it-action.js'))(w); return !!w.ITActionShots; })());
   let checked = '';

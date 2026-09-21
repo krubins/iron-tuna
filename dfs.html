@@ -1513,17 +1513,42 @@ p{color:var(--sec);margin:0 0 16px}
   function desk() {
     fetch('/api/newsroom?lens=dfs&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok || !j.pieces.length) { $('dfDeskEmpty').textContent = 'The desk has not published this week yet.'; return; }
-      // WHO A PIECE IS ABOUT. The desk's own subject list off `components[].player`,
-      // three at most, which is what /player-search.js reads off `data-player-focus`
-      // to hang the faces. A piece that names nobody carries no attribute and the
-      // script falls back to the headline. Same rule /fantasy's well uses.
+      // WHO A PIECE IS ABOUT: THE SUBJECT OF ITS HEADLINE FIRST.
+      // `components[].player` is the desk's cast for the WHOLE piece, in the
+      // order the story tells it. Stamping the first three of them put three
+      // Broncos over "Parker Washington's 43% target share makes him the
+      // clearest roster add of the week" on 2026-09-21: the recap is a
+      // JAX-at-DEN game and its findings open on the winning side, so the
+      // picture was of three men the sentence above it never mentions.
+      //
+      // A card's picture is its headline's subject. So the cast is filtered to
+      // the players the headline actually names, and only when it names none of
+      // them does the whole cast stand in. Matching is against the piece's OWN
+      // cast, never the league, which is what makes a bare surname safe here:
+      // "Washington" among four men from one game is Parker Washington, where
+      // against the whole index it is also a city and a football team.
+      var named = function (who, text) {
+        var hay = ' ' + String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ') + ' ';
+        var hit = function (n) {
+          var full = String(n).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+          if (!full) return false;
+          if (hay.indexOf(' ' + full + ' ') >= 0) return true;
+          var last = full.split(' ').pop();
+          return last.length > 2 && hay.indexOf(' ' + last + ' ') >= 0;
+        };
+        return who.filter(hit);
+      };
       var focus = function (p) {
-        var who = [], parts = p.components || [];
-        for (var i = 0; i < parts.length && who.length < 3; i++) {
+        var who = [], parts = p.components || [], i;
+        for (i = 0; i < parts.length; i++) {
           var n = parts[i] && parts[i].player;
           if (n && who.indexOf(n) < 0) who.push(n);
         }
-        return who.length ? ' data-player-focus="' + e(who.join('|')) + '"' : '';
+        if (!who.length) return '';
+        var subject = named(who, p.headline || '');
+        if (!subject.length) subject = named(who, p.dek || '');
+        var pick = (subject.length ? subject : who).slice(0, 3);
+        return ' data-player-focus="' + e(pick.join('|')) + '"';
       };
       var av = function (name) { return String(name || '').split(' ').map(function (w) { return w.charAt(0); }).join(''); };
       var ago = function (iso) {
