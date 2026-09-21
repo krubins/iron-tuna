@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// The rankings section: the ribbon under the hero, the per-position pages under
-// its two menus, and the board that fills them.
+// The rankings section: the ribbon under the header, the per-position pages
+// under its two menus, and the board that fills them.
 //   node tools/test-ranks.mjs
 //
 // WHAT THIS EXISTS FOR. Three failures here are silent — the page renders, the
 // build gates pass, and only a reader finds out:
 //
-//   1. THE RIBBON DRIFTS. It is one link set on twenty pages. build-ranks.mjs
+//   1. THE RIBBON DRIFTS. It is one link set on nineteen pages. build-ranks.mjs
 //      generates it, but a hand edit inside the sentinels survives until the
 //      next run of the tool, and nobody runs a tool they have not been told is
 //      stale. So the link set is compared BYTE FOR BYTE across every page that
@@ -88,7 +88,10 @@ console.log('\nthe ribbon is generated, and identical on every page that carries
 const RIB = /<!--ranks:ribbon-->([\s\S]*?)<!--\/ranks:ribbon-->/;
 const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.test(read(f))).sort();
 {
-  ok('the ribbon is on the front page', carriers.includes('front.html'));
+  // The front page is NOT a carrier: the choose-your-game band took this slot
+  // under its hero, and a reader who has just been told what the site does is
+  // asked which game they play before they are offered a board.
+  ok('the ribbon is off the front page', !carriers.includes('front.html'));
   ok('on the full rankings tool', carriers.includes('rankings.html'));
   ok('on all sixteen rankings pages', allBoards.every((f) => carriers.includes(f)));
   ok('and on the three other destinations', LANES.every((f) => carriers.includes(f)));
@@ -105,7 +108,7 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
   ok('there is exactly one ribbon shape', shapes.size === 1,
     shapes.size + ' variants, e.g. ' + [...shapes.values()].map((v) => v[0]).slice(0, 4).join(' / '));
 
-  const rib = read('front.html').match(RIB)[1];
+  const rib = read('rankings.html').match(RIB)[1];
   const links = [...rib.matchAll(/<a[^>]*class="rkr-link[^"]*"[^>]*>([\s\S]*?)<\/a>/g)].map((m) => m[1].trim());
   ok('it carries the six destinations, in order',
     links.join('|') === 'Stats|This Week&rsquo;s Rankings|Season Long Rankings|Hidden Value|Previews|The Line', links.join('|'));
@@ -119,24 +122,27 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
   }
 }
 
-// ── the ribbon sits under the hero, not somewhere else ───────────────────────
-console.log('\nwhere the ribbon sits');
+// ── what sits under the front page's hero ────────────────────────────────────
+console.log('\nwhat sits under the front page\u2019s hero');
 {
   const front = read('front.html');
   const heroStart = front.indexOf('<section class="hero-band"');
   const heroEnd = front.indexOf('</section>', heroStart);
-  const ribAt = front.indexOf('<!--ranks:ribbon-->');
+  const bandAt = front.indexOf('<div class="hm-choose">');
   const nextSec = front.indexOf('<section', heroEnd);
   ok('the hero band is still the first section', heroStart > 0);
-  ok('it is after the hero band', ribAt > heroEnd, `hero ends ${heroEnd}, ribbon at ${ribAt}`);
-  ok('and before anything else on the page', ribAt < nextSec, `next section at ${nextSec}`);
+  ok('the choose-your-game band is after it', bandAt > heroEnd, `hero ends ${heroEnd}, band at ${bandAt}`);
+  ok('and before anything else on the page', bandAt < nextSec, `next section at ${nextSec}`);
+  ok('it states the question and nothing else',
+     /<span class="hm-choose-k">Choose your game<\/span>/.test(front));
   // The homepage's own in-page anchor ribbon — the sticky bar of lane tabs and
   // section jumps — came off with the sections it pointed at in the September
-  // 2026 rewrite. This band is the only ribbon on the page now, and it navigates
-  // AWAY to the boards, which is the distinction that used to need policing.
+  // 2026 rewrite, and the generated rankings ribbon came off this slot after
+  // it. Neither may come back: one navigated away mid-pitch, the other was a
+  // second bar of the same shape.
   ok('there is no second, in-page ribbon to confuse it with',
      !/<div class="ribbon"[^>]*>/.test(front));
-  ok('and this one carries the ribbon links', /rkr-link/.test(front.slice(ribAt, nextSec)));
+  ok('and no ribbon link is left on the page', !/rkr-link/.test(front));
 }
 
 // ── the dropdown is not inside a scroll container ────────────────────────────
@@ -154,10 +160,11 @@ console.log('\nthe menu can actually hang out of the band');
     /@media[^{]*860px[\s\S]*?\.rk-ribbon-in\s*\{[^}]*overflow-x:\s*auto/.test(css));
   ok('and the menus really are off there', /@media[^{]*860px[\s\S]*?\.rkr-menu\s*\{\s*display:\s*none/.test(css));
   ok('the menu opens on focus as well as hover', /\.rkr-has-menu:focus-within \.rkr-menu/.test(css));
-  // front.html links no stylesheet, so it carries its own copy of the same
-  // bytes. If the two ever differ the ribbon is styled on one surface only.
-  const frontCss = read('front.html').match(/\/\* ranks:css \*\/([\s\S]*?)\/\* \/ranks:css \*\//);
-  ok('front.html carries the identical block', !!frontCss && frontCss[1] === css);
+  // site.css is the only carrier of the block. front.html links no stylesheet
+  // and held a second inline copy while the ribbon sat under its hero; with the
+  // ribbon off that page, a copy left behind would be styling for an element
+  // that is not there.
+  ok('front.html carries no stale copy of it', !read('front.html').includes('/* ranks:css */'));
 }
 
 // ── every new page is gated with the rest of the section ─────────────────────

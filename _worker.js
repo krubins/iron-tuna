@@ -81,7 +81,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // sitemap while the gate is shut. Spell them out.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
-  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap',
+  '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach',
   '/weekly-rankings', '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
   '/weekly-te-rankings', '/weekly-flex-rankings', '/weekly-k-rankings', '/weekly-dst-rankings',
   '/season-long-rankings', '/season-long-qb-rankings', '/season-long-rb-rankings',

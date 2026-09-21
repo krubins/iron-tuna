@@ -161,6 +161,7 @@ const COLUMN_PAGES = {
 const APP_PAGES = new Set([
   'rankings.html', 'trade-finder.html', 'faab.html', 'dfs.html',
   'my-league.html', 'my-week.html', 'waivers.html', 'depth-charts.html',
+  'value-coach.html',
 ]);
 
 const COLLECTION_PAGES = new Set([
@@ -180,6 +181,7 @@ const PARENT = {
   'waivers.html': IN_SEASON, 'faab.html': IN_SEASON, 'trade-finder.html': IN_SEASON,
   'my-league.html': IN_SEASON, 'my-week.html': IN_SEASON, 'weekly-intel.html': IN_SEASON,
   'rankings.html': IN_SEASON, 'depth-charts.html': IN_SEASON,
+  'value-coach.html': IN_SEASON,
   'vegas-edge.html': MARKET, 'game-intel.html': MARKET, 'hidden-value.html': MARKET,
   'previews.html': MARKET, 'the-line.html': MARKET, 'what-they-arent-telling-you.html': MARKET,
   'desk.html': IN_SEASON, 'analysts.html': READ, 'play-caller-premium.html': READ,

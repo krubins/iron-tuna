@@ -877,6 +877,19 @@ jobs:
           REQUIRE_BROWSER: '1'
         run: node tools/test-boards-render.mjs
 
+      # The season-long Value Coach. It belongs with the browser suites rather
+      # than the file-reading ones because the failures that matter are all
+      # runtime: a panel that stays enabled when the boards refuse, a payload
+      # that outgrows the proxy's 40,000-character system cap and is sliced
+      # silently, and a board fetched at the wrong scoring. /api/boards and
+      # /api/coach are both stubbed — the coach stub streams SSE in the shape
+      # streamResponse sends, so the panel's reader is exercised for real.
+      - name: The Value Coach, driven
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-value-coach.mjs
+
       # STILL NOT run here: tools/test-you-column.mjs, tools/test-market-anchors.mjs,
       # tools/test-vegas-slider.mjs and tools/test-qb-curve.mjs, which need react
       # and react-dom on top of the browser to mount the draft app, and
