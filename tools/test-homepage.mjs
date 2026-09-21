@@ -294,7 +294,7 @@ console.log('\nsix sections, in order, and nothing else');
   ok('hero, lead, cards, disagreements, articles, method',
      r.order.join(' > ') === 'heroBand > lead > hm-sec > different > articles > how', r.order.join(' > '));
   ok('the two product cards are named as specified',
-     r.lanes.join(' / ') === 'Fantasy This Week / DFS This Week', r.lanes.join(' / '));
+     r.lanes.join(' / ') === 'Season Long Fantasy / DFS', r.lanes.join(' / '));
   // The five destinations each card owes, as routes that exist.
   const want = ['/weekly-rankings', '/fantasy#startsit', '/season-long-rankings', '/trade-finder', '/faab',
                 '/dfs#dfPlayWeek', '/dfs#lineup', '/dfs#dfTune', '/dfs#stacks', '/dfs#values'];
