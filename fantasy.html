@@ -113,9 +113,7 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
   .sl-shell{grid-template-columns:200px minmax(0,1fr);grid-template-areas:"nav upd" "nav main"}
   .sl-right{position:static}
 }
-@media(max-width:860px){
-  .sl-right{background:none;border:0;border-radius:0;padding:0}
-}
+
 @media(max-width:860px){
   .sl-shell{grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "upd" "main";padding:var(--space-4) var(--space-4) var(--space-6)}
   .sl-left{position:static;background:none;border:0;border-radius:0;padding:0}
@@ -231,6 +229,15 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 .sl-upd-dots i{display:block;width:5px;height:5px;border-radius:50%;background:var(--line2)}
 .sl-upd-dots i.on{background:var(--teal)}
 .sl-upd-note{margin:var(--space-3) 0 0;font-size:var(--fs-2xs);color:var(--muted);line-height:1.5}
+/* The bar is the rail's module header now, so it spans the rail rather than
+   the card that used to hold it. */
+.sl-right .sl-upd-h{padding:8px var(--space-3);border-bottom:1px solid var(--line)}
+.sl-right .sl-upd{border:0;border-radius:0}
+.sl-right .sl-upd-body{padding:var(--space-3)}
+.sl-right .sl-upd-name{font-size:18px}
+.sl-right .sl-upd-foot{padding:7px var(--space-3)}
+.sl-right .is-vacant{margin:0;padding:var(--space-3);background:none;border:0;border-radius:0}
+.sl-right .sl-upd-note{margin:0;padding:0 var(--space-3) var(--space-3)}
 
 /* ── what the column does to the shared objects ─────────────────────────────
    Three of them assume they are 1,200px wide because until now every page
@@ -276,6 +283,172 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 .fn-tool b{display:block;color:var(--text);font-size:19px;margin-bottom:4px}
 .fn-tool span{display:block;font-size:var(--fs-sm);line-height:1.55}
 .fn-side .is-card{margin-bottom:0}
+
+/* ══ THE MODULE GRID ═══════════════════════════════════════════════════════
+   Ken, 2026-09-21: "it doesn't look polished. Make it look like ESPN's
+   layout." What ESPN does is not a look, it is a geometry: a GRAY FIELD with
+   WHITE MODULES on it, each module opening on a compact header bar that names
+   it and links out of it, and everything inside set about a third smaller
+   than an editorial page would set it. Headlines are a divided list rather
+   than a stack of cards, tables are dense and striped, and the rails are the
+   same modules, narrower.
+
+   What this does NOT take is the livery. The red, the faces and the chrome
+   are someone else's paper; the palette and the two faces here stay Iron
+   Tuna's. Everything below is scoped to this page.
+
+   The rails stop being shaded because the shade was doing the field's job:
+   on a gray page a white rail is already chrome. The phone layout is untouched
+   — the rail rules sit behind min-width:861px, above the breakpoint where the
+   rail becomes a chip row. */
+:root{--field:#e8ecf0;--mod-r:6px}
+body{background:var(--field)}
+
+/* The nameplate is the one white band above the field. */
+.sl-mast{background:var(--bg);border-bottom:1px solid var(--line2)}
+.sl-mast .sl-in{padding-top:var(--space-4);padding-bottom:var(--space-3)}
+.sl-mast h1{font-size:clamp(25px,3.2vw,38px);letter-spacing:.02em}
+.sl-deck{margin-top:var(--space-2);max-width:74ch;font-size:var(--fs-sm)}
+.sl-mast .is-actions{margin-top:var(--space-3)}
+.sl-shell{padding-top:var(--space-4);padding-bottom:var(--space-6);gap:var(--space-3) var(--rail-gap)}
+
+/* ── a module ──────────────────────────────────────────────────────────────
+   Every section on this page is already a header div followed by its body, so
+   the pair becomes the module: the header is the bar, the body is the well
+   under it, and the two are joined by the border they share. */
+.sl-main .is-sec{margin:0;padding:8px var(--space-4) 7px;background:var(--panel);
+  border:1px solid var(--line2);border-bottom:1px solid var(--line);
+  border-radius:var(--mod-r) var(--mod-r) 0 0}
+.sl-main .is-sec::after{display:none}
+.sl-main .is-sec-top{align-items:center;gap:var(--space-2) var(--space-3)}
+.sl-main .is-sec h2{font-size:19px;line-height:1.05;letter-spacing:.04em}
+.sl-main .is-sec .is-sec-n{font-size:var(--fs-3xs);letter-spacing:.16em}
+.sl-main .is-sec .is-sec-more{font-size:var(--fs-3xs);letter-spacing:.08em}
+.sl-main .is-sec p{margin:4px 0 0;max-width:none;font-size:var(--fs-xs);line-height:1.5;color:var(--muted)}
+.sl-main .is-sec + section{margin:0 0 var(--space-3);padding:var(--space-4);background:var(--bg);
+  border:1px solid var(--line2);border-top:0;border-radius:0 0 var(--mod-r) var(--mod-r)}
+
+/* The deck is a module whose header is nested one level in. */
+.sl-main .is-band{margin:0 0 var(--space-3);padding:0;background:var(--bg);
+  border:1px solid var(--line2);border-radius:var(--mod-r)}
+.sl-main .is-band .is-sec{border-width:0 0 1px}
+.sl-main .is-band .is-deck{margin:0;padding:var(--space-4);gap:var(--space-3)}
+.sl-main .is-act{padding:var(--space-3) var(--space-4);gap:5px;border-radius:var(--mod-r)}
+.sl-main .is-act-h{font-size:17px;line-height:1.25}
+.sl-main .is-act p{font-size:var(--fs-xs);line-height:1.5}
+.sl-main .is-act-go{padding-top:var(--space-1);font-size:var(--fs-3xs)}
+
+/* ── the headline list ─────────────────────────────────────────────────────
+   Three bordered cards became one divided list: the lead at the top, the
+   rest under it, one rule between each. */
+.sl-stories{gap:0;margin:0}
+.sl-story{padding:var(--space-3) 0;gap:3px;background:none;border:0;border-radius:0;box-shadow:none}
+.sl-story + .sl-story{border-top:1px solid var(--line)}
+.sl-story:first-child{padding-top:0}
+.sl-story:last-child{padding-bottom:0}
+.sl-story:hover{border-color:transparent;box-shadow:none}
+.sl-story h3{font-size:16px;line-height:1.3;font-weight:700;letter-spacing:-.005em}
+.sl-story p{font-size:var(--fs-xs);line-height:1.5;color:var(--muted)}
+.sl-story .nr-by{margin-top:4px;padding-top:5px;border-top:0}
+.sl-story h3 .it-story-focus .it-player-face{width:34px;height:34px;min-width:34px;border-radius:6px}
+.sl-story.lead{padding:0 0 var(--space-3)}
+.sl-story.lead h3{font-size:clamp(19px,1.9vw,23px);line-height:1.2}
+.sl-story.lead p{font-size:var(--fs-sm)}
+.sl-story.lead h3 .it-story-focus .it-player-face{width:44px;height:44px;min-width:44px}
+/* The boast keeps its gold, as a rule down the side rather than a fill. */
+.sl-story.is-boast{padding-left:var(--space-3);background:none;border-left:3px solid var(--gold)}
+.sl-story p.sl-boast{font-size:clamp(21px,2.4vw,28px);line-height:.98}
+.sl-story.is-boast h3{font-size:16px}
+
+/* ── the boards ────────────────────────────────────────────────────────────
+   The plate loses its own box inside a module — two borders around one table
+   is the thing that read as unfinished — and the table halves its row height.
+   Even rows are tinted, which is how a 30-row board stays scannable. */
+.sl-main .is-plate{margin:0;padding:0;background:none;border:0;border-radius:0;overflow:visible}
+.sl-main .is-plate-head{border-bottom:1px solid var(--line)}
+.sl-main .is-plate-head > span,.sl-main .is-plate-head > div{padding:0 0 var(--space-2);border-left:0}
+.sl-main .is-plate .is-table th:first-child,.sl-main .is-plate .is-table td:first-child{padding-left:6px}
+.sl-main .is-plate .is-table th:last-child,.sl-main .is-plate .is-table td:last-child{padding-right:6px}
+.sl-main .is-table{font-size:13.5px}
+.sl-main .is-table th{padding:7px 6px;font-size:10px;letter-spacing:.04em}
+.sl-main .is-table td{padding:6px}
+.sl-main .is-table tbody tr:nth-child(even) td{background:var(--panel)}
+.sl-main .is-table .is-who small{font-size:11px}
+/* A board row is a ROW, not a card: nothing in it wraps, the projection is
+   set at the row's own size rather than in the display face, and the delta is
+   a chip. That is what takes a row from 70px to about 34 and lets twelve of
+   them be read at a glance, which is the whole point of a board. */
+.sl-main .is-table th,.sl-main .is-table td{white-space:nowrap}
+/* Nothing in a row wraps, so the board holds 38px rows at every width and
+   reaches its last column by scrolling rather than by growing. Below about
+   1,350px the eighth column is past the edge, so the scrollbar is left ON
+   rather than hidden: a column cut off with no affordance is the same bug as
+   a column that is not there. */
+.sl-main .is-scroll{scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.sl-main .is-scroll::-webkit-scrollbar{height:8px}
+.sl-main .is-scroll::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+.sl-main .is-scroll::-webkit-scrollbar-track{background:transparent}
+/* Every other column is as wide as its content; the player column takes the
+   slack, so a name is never clipped to buy room for a two-letter team. */
+.sl-main .is-table th:nth-child(2),.sl-main .is-table td:nth-child(2){width:100%}
+.sl-main .is-table .is-val{font-family:var(--font-body);font-size:14.5px;font-weight:800;letter-spacing:0}
+.sl-main .is-table .is-rank{width:2.5ch;font-size:10.5px;color:var(--muted)}
+.sl-main .is-table .is-tag{padding:2px 5px;font-size:9.5px;letter-spacing:.03em}
+.sl-main .is-table .it-player-face{width:22px;height:22px;min-width:22px;border-radius:4px}
+.sl-main .is-plate-state{padding:var(--space-5) 0;font-size:var(--fs-sm)}
+.sl-main .is-plate-foot{padding:var(--space-3) 0 0;gap:var(--space-2) var(--space-4);border-top:1px solid var(--line)}
+.sl-main .is-plate-foot p{font-size:var(--fs-xs)}
+
+/* ── the cards inside a module ─────────────────────────────────────────────
+   A white card on a white well is a border; inside a module they take the
+   tint instead, which is the same relationship the field has to the page. */
+.sl-main .is-card{padding:var(--space-3) var(--space-4);background:var(--panel);border-radius:var(--mod-r)}
+.sl-main .is-card h3{margin-bottom:5px;font-size:17px;line-height:1.3}
+.sl-main .is-card p{font-size:var(--fs-xs);line-height:1.5}
+.sl-main .is-card .is-note{font-size:var(--fs-2xs)}
+.sl-main .is-split{gap:var(--space-3)}
+.sl-main .is-rail{gap:var(--space-3)}
+.sl-main .is-stats{gap:var(--space-2)}
+.sl-edge{padding:0;background:none;border:0;border-radius:0}
+.sl-edge h3{margin-bottom:var(--space-2);font-size:20px;line-height:1.25}
+.sl-edge p{margin-bottom:var(--space-3);font-size:var(--fs-sm);line-height:1.6}
+.sl-edge .sl-edge-note{font-size:var(--fs-xs)}
+.fn-riv{padding:0;gap:var(--space-4)}
+.fn-riv-head b{font-size:17px}
+.fn-riv-pick{padding:var(--space-2) 0}
+.fn-riv-pick h3{font-size:15.5px;line-height:1.3}
+.fn-riv-pick p,.fn-riv-stand,.fn-riv-foot{font-size:var(--fs-xs);line-height:1.5}
+.fn-tools{gap:var(--space-2)}
+.fn-tool{padding:var(--space-3) var(--space-4);border-radius:var(--mod-r)}
+.fn-tool b{margin-bottom:2px;font-size:15.5px}
+.fn-tool span{font-size:var(--fs-xs);line-height:1.45}
+
+.sl-main .is-vacant,.sl-right .is-vacant{padding:var(--space-4) 0;background:none;border:0;border-radius:0}
+.sl-main .is-vacant-msg b{font-size:16px}
+.sl-main .is-vacant-msg span,.sl-right .is-vacant-msg span{font-size:var(--fs-xs);line-height:1.5}
+.sl-right .is-vacant-msg b{font-size:15px;line-height:1.3}
+
+/* ── the rails as modules ──────────────────────────────────────────────────
+   Above the phone breakpoint both rails are white modules on the field, each
+   opening on the same tinted header bar the middle column uses. */
+/* The player rail is a module at every width: on a phone it is the one block
+   that is not a chip row, and content lying straight on the field there reads
+   as a section that lost its box. */
+.sl-right{padding:0;background:var(--bg);border:1px solid var(--line2);
+  border-radius:var(--mod-r);overflow:hidden}
+@media(min-width:861px){
+  .sl-left{padding:0;background:var(--bg);border:1px solid var(--line2);
+    border-radius:var(--mod-r);overflow:hidden}
+  .sl-nav{padding-top:0;border-top:0}
+  .sl-nav-h{margin:0;padding:8px var(--space-3);background:var(--panel);border-bottom:1px solid var(--line)}
+  .sl-nav ul{padding:0 var(--space-3)}
+  .sl-nav a{padding:7px 0}
+  .sl-nav b{font-size:14.5px}
+  .sl-nav span{margin-top:1px;font-size:11px}
+  .sl-nav-more{margin:0;padding:var(--space-3);border-top:1px solid var(--line)}
+  .sl-nav-more p{margin-bottom:6px}
+  .sl-nav-more a{padding:3px 0;font-size:var(--fs-2xs)}
+}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://irontuna.com/fantasy","name":"Season Long Fantasy Football: The Odds Makers’ Edge","description":"Season long fantasy football read off the betting market first: weekly rankings, a rest-of-season board, the next five weeks, the week’s start/sit call and the signal engine’s own read — all restated at your league’s scoring.","url":"https://irontuna.com/fantasy","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/fantasy"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Season Long Fantasy Football: The Odds Makers’ Edge"}]}]}</script>
@@ -364,8 +537,11 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
      detections follow. Nothing here is written that /api/ros-update or
      /api/signals did not return, and both are painted hidden until they do. -->
 <aside class="sl-right">
+  <!-- The bar names the module whether or not an update has landed, which is
+       what every other module on the page does. The count inside it is written
+       by id, so it does not care that it now sits outside the card. -->
+  <div class="sl-upd-h"><b>Player updates</b><span class="sl-upd-n" id="slUpdN"></span></div>
   <div class="sl-upd" id="slUpd" hidden>
-    <div class="sl-upd-h"><b>Player updates</b><span class="sl-upd-n" id="slUpdN"></span></div>
     <div class="sl-upd-body" id="slUpdBody" aria-live="polite"></div>
     <div class="sl-upd-foot">
       <button type="button" id="slUpdPrev" aria-label="Previous player update">Prev</button>
