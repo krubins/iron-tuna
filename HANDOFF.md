@@ -12939,6 +12939,7 @@ sentence, not the layout.
 | `fantasy.html` | Its own `.fn-riv-*` and `.fn-tool` type lifted with the rest; the newsroom painter splits the desk's boast off the lead headline. |
 | `desk.html` | `#dkBoast` above the `<h1>`, `.dk-boast` and `body.dk-boasting`; `setHead()` replaces both direct writes to `#dkTitle`. |
 | `dfs.html` | The same split in its own well, added once §114 gave the page one. |
+| `front.html` | `.hm-read-card .boast` and `.is-boast` in the Reading band, sized to the card; the split also cleans the hero's gap line. |
 
 **Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
 plus `test-homepage` under `REQUIRE_BROWSER=1` (99/99) and the four `--check`
@@ -12957,7 +12958,11 @@ no `dk-boasting`, and the index carrying neither. `/dfs` rendered at the same
 two widths in five shapes — a boast lead behind five pieces, a boast as the
 only piece, a lead with no boast, a headline that is nothing but the boast, and
 an empty feed — all clean, with the kicker reading the DFS title and the byline
-the DFS analyst in each.
+the DFS analyst in each. `front.html` rendered at the same two widths in three
+shapes — a boast on the cover, a cover with none, and a headline that is
+nothing but the boast — with the banner one line at 33px and 26px, the other
+two cards untouched beside it, and the hero's gap line carrying the call
+rather than the phrase.
 
 **The banner is one line, measured rather than assumed.** With Bebas Neue
 actually loaded, "YOU'RE WELCOME." sets 757px wide at 86px on the article page,
@@ -12966,6 +12971,19 @@ all four, inside every column that holds it. The string is fixed, so those are
 the permanent worst cases and not a sample. Where the face fails to load it
 wraps to two lines on the fallback, which is the degradation to want.
 
-**Not done, on purpose.** `front.html` paints `p.headline` straight into the
-desk band's `<h3>`, so a boasting headline still reads whole there. That band
-is not a `.nr-well` and the page is part generated; it wants its own pass.
+**And on the front page.** Ken: "do the front.html one too." The Reading band
+has no lead to hang an 86px banner on — three cards of equal width with 16px
+headlines — so the banner is sized to the CARD rather than to the page:
+`clamp(26px, 2.4vw, 34px)`, big against the 16px under it and small in
+absolute terms, on the same warm ground the Fantasy well's lead takes. The
+card keeps its place in the grid; a boast does not earn a row of its own on a
+cover that rotates three stories every turn.
+
+The same split also cleans the hero's gap line, which carries the desk
+headline at 13px through `heroPaint('desk', …)`. Two words of boast are not
+worth a fifth of that line, and the hero is not where the claim is being made.
+Fourth copy of the regexp; each of the four names the other three.
+
+`build-front.mjs` does not write `front.html` any more (its own header says
+so, since the September rewrite), so this is hand-edited like the rest of the
+page and the rebuild gate has nothing to say about it.
