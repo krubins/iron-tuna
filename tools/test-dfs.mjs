@@ -754,6 +754,27 @@ console.log('\nthe DFS page explanations');
   // or the page solves a nine-seat roster against six-seat prices.
   ok('...and every setup change routes through it, falling back to a plain render',
      (page.match(/if \(!syncSlate\(\)\) render\(\);/g) || []).length === 3);
+  // WHOSE GAME THE REFUSAL IS ABOUT. The first version of this notice ended by
+  // announcing which matchups the desk had priced and said nothing about the
+  // one the reader had chosen, so a reader who picked the other game on the
+  // slate read "the desk has already priced LA vs NYG" directly under a board
+  // that would not solve. That reads as a broken site rather than as a game
+  // nobody has imported.
+  ok('the single-game refusal names the matchup the reader actually picked',
+     page.includes('var deskHas = one && availableSingles.indexOf(one) >= 0;')
+     && page.includes("'The desk has not imported ' + prettyGame(one)"));
+  ok('...and lists the other games as OTHER games, never as this one',
+     page.includes("var others = availableSingles.filter(function (k) { return k !== one; })")
+     && page.includes("' The desk has imported ' + others.join"));
+  // And the choice itself is labelled, so the reader does not have to pick a
+  // game to find out whether it can solve.
+  ok('the games picker says which matchups the desk has priced',
+     page.includes("var markSingles = !!(style.single && fmt && fmt.kind === 'salary');")
+     && page.includes("bits.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file')"));
+  ok('...on the custom grid too, which is the other way a pool is chosen',
+     page.includes("if (markSingles) meta.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file');"));
+  ok('...and a multi-game format is not labelled, because any game solves there',
+     page.includes('style.single && fmt'));
   ok('a Tiers roster is never invented out of salary bands',
      page.includes("ITDfs.tierFormat(") && page.includes('inventing them out of salary would build a roster nobody can enter'));
   // The always-on panel that #293 removed does not come back. The route does,

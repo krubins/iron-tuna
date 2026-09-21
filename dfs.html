@@ -2504,6 +2504,9 @@ p{color:var(--sec);margin:0 0 16px}
     }).filter(Boolean);
   }
   function selectedGameKeys() { return Object.keys(selectedGames).filter(function (k) { return selectedGames[k]; }); }
+  // A game key as a reader reads it. One spelling, shared by the picker and
+  // the notice, so a matchup cannot be named two ways on the same screen.
+  function prettyGame(k) { return String(k || '').replace('|', ' vs '); }
   // The desk slate this setup asks for, or null for the main board. A
   // single-game format with exactly one game chosen wants that game's own
   // price list; everything else wants the week's Classic slate. Returns null
@@ -2594,14 +2597,23 @@ p{color:var(--sec);margin:0 0 16px}
     }
     if (fmt.kind === 'salary' && fmt.single && priced !== 'single-game') {
       out.ready = false;
-      out.blocked = siteLabel() + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. Building ' + fmt.label + ' from the main slate would seat a ' + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' at a price nobody is charged \u2014 a roster you could not enter \u2014 so the board declines rather than printing one. Hand over the export from the contest lobby and it solves exactly.'
-        // The desk imports these now, so a reader whose matchup is missing is
-        // told which ones are here rather than left to guess whether the site
-        // does this at all. Silent when the desk holds none, because then the
-        // file is the only answer and listing nothing says nothing.
-        + (availableSingles.length
-           ? ' The desk has already priced ' + availableSingles.map(function (k) { return k.replace('|', ' vs '); }).join(', ')
-             + ' for this week, so those solve here without a file.'
+      // WHOSE GAME THIS IS ABOUT. The first version of this notice ended by
+      // announcing which matchups the desk had priced -- and said nothing
+      // about the one the reader had actually chosen. A reader who picked the
+      // other game on the slate read "the desk has already priced LA vs NYG"
+      // directly under a board that would not solve, which reads as a broken
+      // site rather than as a game nobody has imported. So the sentence now
+      // leads with their own matchup and says where it stands.
+      var picked = selectedGameKeys();
+      var one = picked.length === 1 ? picked[0] : null;
+      var deskHas = one && availableSingles.indexOf(one) >= 0;
+      var others = availableSingles.filter(function (k) { return k !== one; }).map(prettyGame);
+      out.blocked = (one ? (deskHas ? prettyGame(one) + ' is priced here, but this board is still holding the main slate \u2014 reload the page and it will solve. ' : 'The desk has not imported ' + prettyGame(one) + ' for this week. ') : '')
+        + siteLabel() + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. Building ' + fmt.label + ' from the main slate would seat a ' + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' at a price nobody is charged \u2014 a roster you could not enter \u2014 so the board declines rather than printing one. Hand over the export from the contest lobby and it solves exactly.'
+        // And which OTHER games are already here, named as what they are: a
+        // different matchup, not this one.
+        + (others.length
+           ? ' The desk has imported ' + others.join(', ') + ' this week, which solve' + (others.length === 1 ? 's' : '') + ' here without a file.'
            : '');
       out.needsFile = true;
       return out;
@@ -2696,6 +2708,15 @@ p{color:var(--sec);margin:0 0 16px}
       setGameKeys([games[0].key]);
     }
     var style = GAME_STYLES[gameStyle] || {};
+    var fmt = typeof ITDfs !== 'undefined' && gameStyle ? ITDfs.formatFor(site, gameStyle) : null;
+    // WHICH MATCHUPS CAN ACTUALLY SOLVE HERE. On a single-game format the
+    // choice is not cosmetic: the desk imports a Showdown price list per game,
+    // and a game it has not imported can only be priced from the reader's own
+    // export. Marking them is what stops a reader picking the one game on the
+    // slate that cannot solve and reading the refusal as a broken board. The
+    // multi-game formats are unaffected -- they solve from the main slate
+    // whichever games are chosen.
+    var markSingles = !!(style.single && fmt && fmt.kind === 'salary');
     var html = '<option value="">Select Games…</option>';
     var buckets = gameBuckets(games);
     if (!style.single) {
@@ -2705,8 +2726,10 @@ p{color:var(--sec);margin:0 0 16px}
       if (buckets.prime.length) html += '<option value="prime">Primetime games</option>';
     }
     games.forEach(function (g) {
-      var meta = kickoffText(g.start);
-      html += '<option value="game:' + e(g.key) + '">' + e(g.label) + (meta ? ' · ' + e(meta) : '') + '</option>';
+      var bits = [];
+      var meta = kickoffText(g.start); if (meta) bits.push(meta);
+      if (markSingles) bits.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file');
+      html += '<option value="game:' + e(g.key) + '">' + e(g.label) + (bits.length ? ' · ' + e(bits.join(' · ')) : '') + '</option>';
     });
     if (!style.single && games.length > 1) html += '<option value="custom">Custom game selection…</option>';
     sel.innerHTML = html;
@@ -2716,6 +2739,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfGameGrid').innerHTML = games.map(function (g) {
       var meta=[]; var kt=kickoffText(g.start); if(kt) meta.push(kt);
       meta.push(g.unpriced ? 'salaries not posted yet' : g.players+' eligible player'+(g.players===1?'':'s'));
+      if (markSingles) meta.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file');
       return '<button class="df-game-choice" type="button" data-game-key="'+e(g.key)+'" aria-pressed="'+(selectedGames[g.key]?'true':'false')+'"><b>'+e(g.label)+'</b><small>'+e(meta.join(' · '))+'</small></button>';
     }).join('');
     sel.dataset.all=JSON.stringify(buckets.all); sel.dataset.early=JSON.stringify(buckets.early); sel.dataset.late=JSON.stringify(buckets.late); sel.dataset.prime=JSON.stringify(buckets.prime);
