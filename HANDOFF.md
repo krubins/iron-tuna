@@ -12688,7 +12688,6 @@ is asserted off the rendered page rather than the source: desk, now, board,
 startsit, disagree, tools, top to bottom, with the ribbon's six jumps in the
 same order.
 
-
 ## 113. September 21: /dfs offered four venues and had coverage for one
 
 The ribbon under the masthead asked the reader to choose a venue before it
@@ -12791,3 +12790,245 @@ accurate again now that the worker was reverted; the acceptance criterion in
 operators' exports, which `parseDfsCsv` still satisfies; and the trademark
 notice on `/data`, which over-lists rather than under-lists and is a legal
 disclosure, not a feature inventory.
+
+---
+
+## 114. September 21: /dfs kept its newsroom behind a tab
+
+Ken, after §112 landed on /fantasy: "do the same for the dfs page."
+
+**What was wrong.** /dfs's desk was three moves from a reader: pick **The
+Slate** on the board switcher, scroll past the scoring-environment cards, and
+there were six equal `.is-card` boxes. Worse, `#sec-dash` is one of five panes
+`show()` toggles, so on any other board the desk was not on the page at all —
+and on the Pick'em venue, where `load()` hid all five panes, it disappeared
+entirely. (§113 removed that venue while this was in review; the pane problem
+it shared is the one that remains.) The DFS lens of a recap is written specifically for the person
+setting a lineup on this page, and that person had to go looking for it.
+
+**What it is now.** The same well /fantasy runs (`.nr-well`, §112), in the DFS
+lens, as its own section directly under the Setup band and above the boards.
+
+- **Outside the panes, not inside one.** It is a plain `<section>` in
+  `.df-main`, not a `sec-<k>`, so `show()` never touches it: it is on the page
+  whichever board is open, and no future pane can take it off the page the way
+  the retired Pick'em branch did. That is the whole point of moving it.
+- **The DFS lens, end to end.** The kicker is `dfsTitle || title` and the
+  byline is `dfsName` / `dfsAnalyst`, not the weekly analyst. A package shared
+  by both lenses is written twice; this page runs the one it is showing, which
+  is the one a reader is being asked to trust with a lineup.
+- **The faces come from the same attribute as everywhere else.**
+  `data-player-focus` off `components[].player`, three at most, read by
+  `/player-search.js`, which /dfs already loads.
+- **Unnumbered, like /fantasy's.** The numbered chapters here are the boards,
+  one visible at a time. News is not one of them, so its sec-head carries
+  `Lead` where a number would go.
+
+**Where it sits, and the one thing that decides it.** Above `#sec-lineup`. /dfs
+has no hero — §"dfs: drop the opening band" removed it so the page opens on a
+control — so the analogue of /fantasy's "first thing under the hero" is "first
+thing under the Setup band", which is the question every board below is solved
+for. News above *that* would undo the change that put the control first. The
+cost is that the solved roster, which is the product, now starts a well lower
+down; that is the same trade /fantasy made when the lead went above **Do this
+now**.
+
+| Where | What |
+|---|---|
+| `dfs.html` | The newsroom leaves `#sec-dash` for its own section above the lineup; `#dfDesk` is a `.nr-well`; `desk()` builds the lead card and the column, with `focus`, `av`, `ago`, `kicker` and `byline` helpers, instead of six `.is-card` boxes. |
+
+No CSS: `.nr-well` and everything under it shipped with §112, which is why
+this is one file.
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
+plus `test-homepage` under `REQUIRE_BROWSER=1` (99/99) and the four `--check`
+generators clean. The three inline scripts parse; no stray control bytes; tags
+balance. Rendered in Chromium at 1360px and 430px against a stubbed
+`/api/newsroom?lens=dfs` in three shapes — six pieces, one piece, an empty feed
+— with no page errors and no horizontal overflow. The well paints at y=926 and
+`#sec-lineup` at y=1693, so the order on the rendered page is Setup, the desk,
+the lineup; the byline reads Lena Park and the kicker reads the DFS title.
+
+---
+
+## 115. September 21: the /dfs lead moves above the setup band
+
+Ken, on §114: "move the dfs newsroom to be just below the hero."
+
+§114 put the desk at the top of the white column, under the setup band, and
+said so: /dfs has no hero, so "first thing under the hero" was read as "first
+thing under the setup band", because the setup band is the question every
+board is solved for and §"dfs: drop the opening band" had put that control
+first on purpose. That reading was mine, not the instruction's. The
+instruction is the position /fantasy's well holds — first thing under the
+ribbon, before anything else on the page — and that is where it is now.
+
+**What it costs, said plainly, because it undoes part of an earlier
+decision.** The page no longer opens on a control. A reader arriving at /dfs
+reads a story and scrolls to set the slate. The ribbon is above the well and
+sticky, so any board is still one click away, and the setup band is the next
+thing under the fold rather than something buried; but the "opens on a
+control rather than on a paragraph" property of §"the board" is gone, and it
+went deliberately.
+
+**A bug §114 shipped, fixed by the same move.** While the newsroom sat inside
+`.df-main` it was that column's first `<section>`, so
+`.df-main>#sec-lineup:first-of-type` and its `.is-sec` companion (both from
+`efc10b9`) quietly stopped matching and the roster lost its margin rules.
+Nothing failed; the spacing was just wrong for four hours. The well is in its
+own `.df-lead` column now and `#sec-lineup` is the first section of `.df-main`
+again — checked in the browser, not by reading the selector:
+`document.querySelector('.df-main > section').id` is `sec-lineup` and its
+computed `margin-top` is back to `0px`.
+
+| Where | What |
+|---|---|
+| `dfs.html` | The newsroom section moves from `.df-main` to its own `.df-lead` column between the ribbon and the setup band; the setup band drops `is-band-top`, since it no longer butts the masthead; `.df-lead` carries `.df-main`'s top padding, because the ribbon takes itself off the page when the board switcher is hidden and the well would otherwise butt the masthead. |
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
+plus `test-homepage` under `REQUIRE_BROWSER=1` (99/99) and the four `--check`
+generators clean. Three inline scripts parse; no stray control bytes; tags
+balance. Rendered in Chromium at 1360px and 430px against a stubbed
+`/api/newsroom?lens=dfs` in three shapes — six pieces, one piece, an empty
+feed — with no page errors and no horizontal overflow. The order read off the
+rendered page is the desk at y=83, the setup band at y=830 and the lineup at
+y=1608.
+
+---
+
+## 116. September 21: a 52px hero over 14px prose, and a boast printed as punctuation
+
+Ken, reading `/fantasy` the morning after §112 shipped the well: "The font on
+the hero is fine. The font on everything below is too small. Also, 'You're
+welcome.' should be more prominent. We want to boast about our successes."
+
+### The reading step
+
+The opening band runs a headline at up to 52px over a 20px lede. Everything
+under it was 14px — section intros, card bodies, the plate's own states, the
+two columns of Vega vs. Brooks — and the deck's card copy and the page's
+standing notes were 13px. That is a drop of more than a third at the exact
+point where a reader stops scanning the page and starts reading it, and it is
+why the whole page under the band read as fine print.
+
+The rule now is that **nothing below the hero that is prose is under 15px**:
+
+| | Was | Is |
+|---|---|---|
+| Section intros, card bodies, plate and empty states, standing notes, the rivalry columns | 13–14px | 16px |
+| Copy inside a grid card (the deck's four decisions, a story card's teaser) | 13px | 15px |
+| Card and pick headings | 16px | 18px |
+| The deck's card headline | 20px | 22px |
+| Data tables (`.is-table`) | 14px | 15px |
+| Meta lines: bylines, kickers, rank chips, table headers | 11–12px | one step up |
+
+Data tables went to 15px and no further, on purpose: a board is scanned in
+columns and what constrains it is the width of the row, not the size of the
+type. The meta lines moved up with the copy rather than staying put, so a
+byline still reads as the line under a headline instead of as a second voice
+beside it.
+
+This is in `site.css`, which is the one copy of the in-season furniture, so it
+lands on `/dfs`, `/in-season`, `/weekly-intel` and the eight tools as well as
+`/fantasy`. That is the point of the file; fixing it on one page is how the
+chrome drifted the first time.
+
+### The boast
+
+`_voiceBlock` (`_worker.js`) lets the desk open a headline with **`YOU'RE
+WELCOME:`** only when one of the site's own pre-kickoff calls cleared the
+headline bar, only for that player, and only once. The phrase is already
+rationed to the rarest thing the desk has to say — and the well spent the whole
+of that rationing rendering it as the first two words of a 30px headline, where
+it read as punctuation in front of the sentence that actually mattered.
+
+It is the banner over the lead card now: the display face, gold ink, 72px on a
+desktop and 42px on a phone, with the call itself under it at headline size.
+`.nr-lead.is-boast` warms the card's border and ground to match.
+
+- **The site never writes the phrase.** The well splits it off the desk's own
+  headline, with `BOAST` in `fantasy.html`, and only when a headline survives
+  the split. A piece that made no boast paints as an ordinary lead; so does a
+  headline that is nothing but the boast, which would otherwise leave a card
+  with a banner and no story.
+- **`Latest` stays on the flag.** It says why this piece is the lead, which is
+  a different claim from the boast and still the reader's question.
+- **`.nr-lead p.nr-boast`, not `.nr-boast`.** `.nr-lead p` sets the deck's
+  18px, and the banner and the deck are both paragraphs inside the same card.
+
+**And on `/dfs`.** Ken, once §114 had given that page a well of its own: "do
+the dfs one too." It needed it. The Monday scorecard is a `both` kind, and
+`newsroomFeedPayload` returns ONE stored `headline` for both lenses — only the
+title and the byline differ by lens — so the boast reaches `/dfs` verbatim and
+was printing raw in its lead. The split is the same eight lines, which makes
+three copies of it; that is the same duplication the five helpers beside it
+(`focus`, `av`, `ago`, `kicker`, `byline`) already carry between that page and
+the Fantasy one, so it is written the way the file is written rather than
+lifted into a shared script for one regexp. Each copy names the other two.
+
+**And on the article page.** Ken, on seeing the well: "Yes, put the banner on
+the article page too." The piece the well links to carried the same problem in
+its `<h1>`, so `desk.html` splits the same phrase with the same regexp and the
+same two guards, prints it above the headline at 86px (46px on a phone), and
+steps the headline itself down to `--fs-2xl` while the banner is up so the two
+read as one head rather than as two competing ones. `body.dk-boasting` carries
+that step. `setHead()` is the one place either page's `<h1>` is written now,
+the archive branch included, so an ordinary piece and the desk index cannot
+inherit a banner from a boast the reader opened before them. `document.title`
+keeps the desk's headline whole: a browser tab and a shared link want the
+sentence, not the layout.
+
+| Where | What |
+|---|---|
+| `site.css` | The reading step across the `.is-*` furniture and the `.nr-*` story card and well; `.nr-lead.is-boast`, `.nr-lead p.nr-boast`. |
+| `fantasy.html` | Its own `.fn-riv-*` and `.fn-tool` type lifted with the rest; the newsroom painter splits the desk's boast off the lead headline. |
+| `desk.html` | `#dkBoast` above the `<h1>`, `.dk-boast` and `body.dk-boasting`; `setHead()` replaces both direct writes to `#dkTitle`. |
+| `dfs.html` | The same split in its own well, added once §114 gave the page one. |
+| `front.html` | `.hm-read-card .boast` and `.is-boast` in the Reading band, sized to the card; the split also cleans the hero's gap line. |
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
+plus `test-homepage` under `REQUIRE_BROWSER=1` (99/99) and the four `--check`
+generators clean. Rendered in Chromium at 1360px and 430px against a stubbed
+`/api/newsroom` in four shapes — a boast lead behind five pieces, a lead with
+no boast, a boast as the only published piece, and a headline that is the boast
+and nothing else — with no page errors and no horizontal overflow, and the
+banner measured at 72px and 42px with the two fallback shapes painting as an
+ordinary lead. Eighteen pages that share the furniture (`/fantasy`, `/dfs`,
+`/in-season`, `/weekly-intel`, `/my-league`, `/rankings`, `/vegas-edge`, the
+desk and ten more) rendered clean at both widths. `desk.html` rendered at the
+same two widths against a stubbed `/api/content/piece` in the same three
+headline shapes plus the index: the banner at 86px and 46px over a 31px and
+25px headline, the ordinary headline left at 39px and 31px with no banner and
+no `dk-boasting`, and the index carrying neither. `/dfs` rendered at the same
+two widths in five shapes — a boast lead behind five pieces, a boast as the
+only piece, a lead with no boast, a headline that is nothing but the boast, and
+an empty feed — all clean, with the kicker reading the DFS title and the byline
+the DFS analyst in each. `front.html` rendered at the same two widths in three
+shapes — a boast on the cover, a cover with none, and a headline that is
+nothing but the boast — with the banner one line at 33px and 26px, the other
+two cards untouched beside it, and the hero's gap line carrying the call
+rather than the phrase.
+
+**The banner is one line, measured rather than assumed.** With Bebas Neue
+actually loaded, "YOU'RE WELCOME." sets 757px wide at 86px on the article page,
+604px at 72px in a well, and 382px and 328px at the phone sizes: one line in
+all four, inside every column that holds it. The string is fixed, so those are
+the permanent worst cases and not a sample. Where the face fails to load it
+wraps to two lines on the fallback, which is the degradation to want.
+
+**And on the front page.** Ken: "do the front.html one too." The Reading band
+has no lead to hang an 86px banner on — three cards of equal width with 16px
+headlines — so the banner is sized to the CARD rather than to the page:
+`clamp(26px, 2.4vw, 34px)`, big against the 16px under it and small in
+absolute terms, on the same warm ground the Fantasy well's lead takes. The
+card keeps its place in the grid; a boast does not earn a row of its own on a
+cover that rotates three stories every turn.
+
+The same split also cleans the hero's gap line, which carries the desk
+headline at 13px through `heroPaint('desk', …)`. Two words of boast are not
+worth a fifth of that line, and the hero is not where the claim is being made.
+Fourth copy of the regexp; each of the four names the other three.
+
+`build-front.mjs` does not write `front.html` any more (its own header says
+so, since the September rewrite), so this is hand-edited like the rest of the
+page and the rebuild gate has nothing to say about it.

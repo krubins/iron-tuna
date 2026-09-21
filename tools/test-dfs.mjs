@@ -835,6 +835,28 @@ console.log('\nthe DFS page explanations');
   ok('Play of the Week weighs a single-game contest over the selected game only',
      page.includes("var src = fmt && fmt.single ? (filteredSlate() || s) : s;")
      && page.includes("var pool = (src.players || []).filter(function (p) { return projected(p); });"));
+  // WHOSE GAME THE NOTICE IS ABOUT. The first version of it ended by
+  // announcing which matchups the desk had priced and said nothing about the
+  // one the reader had chosen, so a reader who picked the other game on the
+  // slate read "the desk has already priced LA vs NYG" directly under a board
+  // that was not solving on their own game. That reads as a broken site
+  // rather than as a game nobody has imported. The notice is an estimate
+  // rather than a refusal now, and it still leads with their matchup.
+  ok('the single-game estimate names the matchup the reader actually picked',
+     page.includes('var deskHas = one && availableSingles.indexOf(one) >= 0;')
+     && page.includes("'The desk has not imported ' + prettyGame(one)"));
+  ok('...and lists the other games as OTHER games, never as this one',
+     page.includes("var others = availableSingles.filter(function (k) { return k !== one; })")
+     && page.includes("' The desk has imported ' + others.join"));
+  // And the choice itself is labelled, so the reader does not have to pick a
+  // game to find out whether it can solve.
+  ok('the games picker says which matchups the desk has priced',
+     page.includes("var markSingles = !!(style.single && fmt && fmt.kind === 'salary');")
+     && page.includes("bits.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file')"));
+  ok('...on the custom grid too, which is the other way a pool is chosen',
+     page.includes("if (markSingles) meta.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file');"));
+  ok('...and a multi-game format is not labelled, because any game solves there',
+     page.includes('style.single && fmt'));
   // The always-on panel that #293 removed does not come back. The route does,
   // because five formats are priced on a file the desk import never stores,
   // and the control for it is scoped to the notice that needs it.
