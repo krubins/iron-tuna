@@ -590,15 +590,19 @@ console.log('\nthe page');
      /var live = \$\('dfCoachLive'\); if \(live\) live\.textContent = badge \|\| 'not loaded';/.test(page));
 
   const ctx = lift(/function coachContext\(/);
+  // Every exit that cannot hand the coach a roster hands it a reason instead:
+  // one outright refusal for a week with no prices, and the setup plate
+  // carrying the reason for the two that still have a setup to answer on.
   ok('with nothing on the page to ground an answer the coach is told why, rather than asked anyway',
-     (ctx.match(/blocked:/g) || []).length >= 4);
+     ((ctx.match(/blocked:/g) || []).length
+      + (ctx.match(/setupContext\((?:stuck|thin)\)/g) || []).length) >= 3);
   ok('the blocked reasons cover the states with neither a roster nor a setup to talk about',
-     [/isPickem\(\)/, /!slate/, /!built \|\| !built\.lineups/].every((re) => re.test(ctx)));
-  // On FanDuel and the pick'em boards there is no setup plate to fall back to,
-  // so a dead end there is still a refusal with a reason.
-  ok('a dead end away from the DraftKings setup is still answered with a reason, not with a setup it does not have',
-     /return site === 'dk' \? setupContext\(stuck\) : \{ blocked: stuck \};/.test(ctx)
-     && /return site === 'dk' \? setupContext\(thin\) : \{ blocked: thin \};/.test(ctx));
+     [/!slate/, /!built \|\| !built\.lineups/].every((re) => re.test(ctx)));
+  // DraftKings is the only venue now, so every dead end has the setup plate
+  // behind it and the coach answers on the setup rather than refusing.
+  ok('a dead end is answered with the setup the reader is standing in, not with a refusal',
+     /return setupContext\(stuck\);/.test(ctx)
+     && /return setupContext\(thin\);/.test(ctx));
   // THE CHANGE THIS BLOCK EXISTS FOR. An unfinished setup used to be a refusal:
   // the reader was told to go and fill in three selects, which is exactly the
   // moment they had a question. Both of those states hand the coach the setup
@@ -606,7 +610,7 @@ console.log('\nthe page');
   // to be "this is not Classic"; it is now "this slate cannot price the roster
   // that format asks for", which is a question the coach can actually answer.
   ok('an unfinished setup and a format this slate cannot price are answered, not refused',
-     /if \(site === 'dk' && \(!setupReady\(\) \|\| !solveFormat\(\)\.ready\)\) return setupContext\(\);/.test(ctx)
+     /if \(!setupReady\(\) \|\| !solveFormat\(\)\.ready\) return setupContext\(\);/.test(ctx)
      && !ctx.split('\n').some((l) => /!setupReady\(\)|!solveFormat\(\)\.ready/.test(l) && /return \{ blocked:/.test(l)));
   ok('the roster the page recommends carries the page\u2019s own market sentence, and the bench does not',
      /marketSays: rank === 1 && full\.market \? marketPhrase\(full\) : null,/.test(page));
@@ -686,9 +690,6 @@ console.log('\nthe page');
   ok('including a slate that never loaded',
      /function slateNone\([\s\S]*?\n    build\(\);\n  \}/.test(page)
      && /function build\(\) \{[\s\S]{0,600}?if \(!window\.ITDfs\) \{ coachSync\(\); return; \}/.test(page));
-  ok('and the pick’em board, which has no cap and no roster at all',
-     /loadPickem\(\);/.test(page) && /coachSync\(\);\n      loadPickem\(\);/.test(page));
-
   ok('the reader is told what the panel is and is not',
      page.includes('It does not enter contests or place bets.') || src.includes('It does not enter contests or place bets.'));
 
