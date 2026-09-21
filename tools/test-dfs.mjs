@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// DFS (Steps 26-28): the lobby CSV adapter, the site scoring,
+// DFS (Steps 26-28): the lobby CSV adapters for both sites, the site scoring,
 // the Vegas Value Score, the stacks, and the optimizer under every constraint.
 //   node tools/test-dfs.mjs
 import fs from 'fs';
@@ -41,7 +41,7 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // The contest scores, so the ladder's cash exclusion is tested against the
   // real dfsMetrics rather than asserted about it.
   cut('const DFS_CONTESTS = {', '// \u2500\u2500 analyst memory') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, DFS_FPPG_PINS, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, BLEND_SHRINK, dfsMetrics, dfsSupplemental };'
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, BLEND_SHRINK, dfsMetrics, dfsSupplemental };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 // The scheduled workflow's own CSV writer, so the false-positive gate below
@@ -57,15 +57,19 @@ console.log('\nthe lobby CSVs');
   ok('DraftKings FPPG comes across as historical operator data', a.rows[0].operatorFppg === 24.1 && a.rows[1].operatorFppg === 21.3);
   ok('the opponent comes out of Game Info', a.rows[0].opponent === 'NYJ' && a.rows[1].opponent === 'GB');
   ok('a defense is a DST with its club', a.rows[2].position === 'DST' && a.rows[2].team === 'CHI');
-  // The FanDuel parser came out on 2026-09-21 with the rest of that operator's
-  // support. A file in its shape is now refused rather than read, which is the
-  // behavior worth holding: a lobby export that parses under the wrong site
-  // would be priced against the wrong cap.
   const fd = 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n1,QB,Josh,Josh Allen,Allen,24.1,1,9200,BUF@NYJ,BUF,NYJ,,,,QB\n2,D,,Chicago Bears,,7,1,4000,CHI@MIN,CHI,MIN,,,,D\n';
-  ok('a FanDuel export is not parsed at all now', H.parseDfsCsv('fd', fd).error === 'unknown site');
-  ok('nor read as a DraftKings one, whose columns it does not have', H.parseDfsCsv('dk', fd).error === 'not a DraftKings salary CSV');
+  const b = H.parseDfsCsv('fd', fd);
+  ok('a FanDuel CSV parses', !b.error && b.rows.length === 2, b.error);
+  ok('the nickname is the name and D is a DST', b.rows[0].name === 'Josh Allen' && b.rows[1].position === 'DST');
+  ok('FanDuel FPPG comes across through the same normalized field', b.rows[0].operatorFppg === 24.1);
+  ok('a file from the wrong site is refused', !!H.parseDfsCsv('dk', fd).error && !!H.parseDfsCsv('fd', dk).error);
   ok('an empty file is refused', H.parseDfsCsv('dk', '').error === 'empty');
-  ok('the roster position comes across', a.rows[1].rosterPosition === 'RB/FLEX');
+  ok('the roster position comes across', a.rows[1].rosterPosition === 'RB/FLEX' && b.rows[0].rosterPosition === 'QB');
+  // FanDuel prints its own designation in the lobby file. DraftKings does not,
+  // which is why the injury report behind the slate is the primary source and
+  // this column is only the fallback.
+  const fdInj = H.parseDfsCsv('fd', 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n1,WR,Garrett,Garrett Wilson,Wilson,14.2,1,7000,BUF@NYJ,NYJ,BUF,O,Knee,,WR\n2,QB,Josh,Josh Allen,Allen,24.1,1,9200,BUF@NYJ,BUF,NYJ,,,,QB\n');
+  ok('the FanDuel injury indicator is read off the file', fdInj.rows[0].injuryIndicator === 'O' && fdInj.rows[1].injuryIndicator === null);
 }
 
 // The reader upload takes whatever file the reader has, so it has to know a
@@ -81,13 +85,9 @@ console.log('\nclassic or single game');
   const dkShow = H.parseDfsCsv('dk', 'Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\nQB,"Josh Allen (1)",Josh Allen,1,CPT,12300,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\nQB,"Josh Allen (2)",Josh Allen,2,FLEX,8200,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\n');
   ok('a DraftKings captain file is named', H.dfsSlateShape(dkShow.rows) === 'single-game');
 
-  // The multiplier seat is still recognized under the other operator's word
-  // for it. No FanDuel file reaches the worker any more, but the shape test is
-  // what stands between a captain and the classic cap, and a seat name it does
-  // not know is the one failure it exists to prevent.
-  ok('a multiplier seat is named whatever the operator calls it',
-     H.dfsSlateShape([{ name: 'Josh Allen', position: 'QB', rosterPosition: 'MVP' },
-                      { name: 'Josh Allen', position: 'QB', rosterPosition: 'FLEX' }]) === 'single-game');
+  // FanDuel single game: the same shape under a different word.
+  const fdShow = H.parseDfsCsv('fd', 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n1,QB,Josh,Josh Allen,Allen,24.1,1,17000,BUF@NYJ,BUF,NYJ,,,,MVP\n2,QB,Josh,Josh Allen,Allen,24.1,1,15000,BUF@NYJ,BUF,NYJ,,,,FLEX\n');
+  ok('a FanDuel MVP file is named', H.dfsSlateShape(fdShow.rows) === 'single-game');
 
   // The token is the operators' to rename, so the repeated player row is
   // caught on its own with no Roster Position column in the file at all.
@@ -168,14 +168,13 @@ console.log('\nthe weekly import is not mistaken for a captain file');
 
 console.log('\nsite scoring');
 {
-  const dk = H.scoringRules('ppr', H.SCORING_SITE.dk);
+  const dk = H.scoringRules('ppr', H.SCORING_SITE.dk), fd = H.scoringRules('ppr', H.SCORING_SITE.fd);
   ok('DraftKings pays the 300-yard passing bonus', near(H.scoreStats({ passYd: 300, passTD: 2 }, 'QB', dk), 12 + 8 + 3));
   ok('and the 100-yard rushing bonus', near(H.scoreStats({ rushYd: 100 }, 'RB', dk), 13));
   ok('DraftKings is full PPR', near(H.scoreStats({ rec: 5 }, 'WR', dk), 5));
-  ok('it takes a point per interception and one per fumble',
-     near(H.scoreStats({ passInt: 1 }, 'QB', dk), -1) && near(H.scoreStats({ fumLost: 1 }, 'RB', dk), -1));
-  // The FanDuel rule set went with that operator's support on 2026-09-21.
-  ok('and it is the only rule set on the table', Object.keys(H.SCORING_SITE).join() === 'dk');
+  ok('FanDuel is half PPR with no bonus', near(H.scoreStats({ rec: 5, rushYd: 100 }, 'RB', fd), 12.5));
+  ok('both take a point per interception', near(H.scoreStats({ passInt: 1 }, 'QB', dk), -1) && near(H.scoreStats({ passInt: 1 }, 'QB', fd), -1));
+  ok('a fumble costs one on DK and two on FD', near(H.scoreStats({ fumLost: 1 }, 'RB', dk), -1) && near(H.scoreStats({ fumLost: 1 }, 'RB', fd), -2));
 }
 
 // A week board with known per-game lines.
@@ -242,10 +241,8 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
 // one catching a different case is the whole point: the injury report knows
 // about the hurt, the reserve list knows who is still serving a long absence,
 // the roster file knows who is not on a roster at all (a practice-squad
-// signing appears on no injury report anywhere). A fourth read the operator's
-// own designation off a FanDuel lobby file; it went with that parser on
-// 2026-09-21, because DraftKings' export carries no such column and nothing
-// left could produce the `salary-file` basis it reported.
+// signing appears on no injury report anywhere), and the FanDuel salary file
+// carries the operator's own indicator.
 console.log('\nwho is not playing this week');
 {
   const avail = {
@@ -254,23 +251,20 @@ console.log('\nwho is not playing this week');
               'jamesonwilliams|WR': { status: 'Doubtful', note: 'Hamstring' } },
     table: { 'breecehall|RB': { status: 'IR', gamesOut: 4, note: 'Knee' } }
   };
-  ok('the injury report rules a man out', H.dfsWeekStatus(avail, 'garrettwilson|WR', 3).status === 'Out');
-  ok('...and says where that came from', H.dfsWeekStatus(avail, 'garrettwilson|WR', 3).basis === 'injury-report');
-  ok('a questionable tag is carried, not swallowed', H.dfsWeekStatus(avail, 'khalilshakir|WR', 3).status === 'Questionable');
-  ok('a healthy player gets no status at all', H.dfsWeekStatus(avail, 'joshallen|QB', 3) === null);
+  ok('the injury report rules a man out', H.dfsWeekStatus(avail, 'garrettwilson|WR', 3, null).status === 'Out');
+  ok('...and says where that came from', H.dfsWeekStatus(avail, 'garrettwilson|WR', 3, null).basis === 'injury-report');
+  ok('a questionable tag is carried, not swallowed', H.dfsWeekStatus(avail, 'khalilshakir|WR', 3, null).status === 'Questionable');
+  ok('a healthy player gets no status at all', H.dfsWeekStatus(avail, 'joshallen|QB', 3, null) === null);
 
   // gamesOut counts from Week 1, which is the convention the availability file
   // states in its own header: "first eligible Week 5" is four games out.
-  ok('a reserve-list absence covers the weeks it spans', H.dfsWeekStatus(avail, 'breecehall|RB', 3).status === 'IR');
-  ok('...and ends when it ends', H.dfsWeekStatus(avail, 'breecehall|RB', 5) === null);
-  ok('...and says nothing at all without a week to compare', H.dfsWeekStatus(avail, 'breecehall|RB', null) === null);
+  ok('a reserve-list absence covers the weeks it spans', H.dfsWeekStatus(avail, 'breecehall|RB', 3, null).status === 'IR');
+  ok('...and ends when it ends', H.dfsWeekStatus(avail, 'breecehall|RB', 5, null) === null);
+  ok('...and says nothing at all without a week to compare', H.dfsWeekStatus(avail, 'breecehall|RB', null, null) === null);
 
-  // A fourth argument used to carry the salary file's own indicator. Nothing
-  // passes one now, and a stray one must not resurrect a source the board no
-  // longer has: a man with no injury report and no reserve listing is simply
-  // unknown here, and the roster check below is what still answers for him.
-  ok('a retired salary-file indicator cannot put a status back on the board',
-     H.dfsWeekStatus(null, 'x|WR', 3, 'O') === null && H.dfsWeekStatus(null, 'x|WR', 3, 'Q') === null);
+  ok('the FanDuel file indicator is read when nothing else has him', H.dfsWeekStatus(null, 'x|WR', 3, 'O').status === 'Out'
+     && H.dfsWeekStatus(null, 'x|WR', 3, 'Q').status === 'Questionable' && H.dfsWeekStatus(null, 'x|WR', 3, '') === null);
+  ok('...and the report outranks it', H.dfsWeekStatus(avail, 'khalilshakir|WR', 3, 'O').status === 'Questionable');
 
   ok('Out and Doubtful come off the board, Questionable stays on it',
      H.dfsAvailable('Out') === false && H.dfsAvailable('Doubtful') === false && H.dfsAvailable('IR') === false
@@ -988,8 +982,7 @@ console.log('\nthe operator average when the file has none');
   ok('a figure the desk pinned by hand fills a blank the overlay cannot, as an estimate', pinned.operatorFppg === 13 && pinned.operatorFppgBasis === 'computed');
   const loveUsage = { players: { [_oddsNorm('Jeremiyah Love') + '|RB']: { season: { games: 1, stats: { rushYd: 80, rushTD: 1, rec: 2, recYd: 10 } } } } };
   ok('and the overlay wins over the pin when it has his line', H.buildDfsSlate('dk', [...sal, love], WEEK, { usage: loveUsage }).players.find(p => p.name === 'Jeremiyah Love').operatorFppg === 17);
-  ok('the pin is per site, so it cannot follow a player onto another operator\u2019s board',
-     Object.keys(H.DFS_FPPG_PINS).join() === 'dk' && !H.DFS_FPPG_PINS.fd);
+  ok('the pin is per site', H.buildDfsSlate('fd', [...sal, love], WEEK, {}).players.find(p => p.name === 'Jeremiyah Love').operatorFppg === null);
 }
 
 console.log('\nthe projection ladder');
@@ -1289,16 +1282,15 @@ console.log('\nthe single-game file');
   ok('and carries the operator’s own price for the Captain seat',
      folded.find(r => r.name === 'Josh Allen').salaryBySlot.CPT === 17100
      && folded.find(r => r.name === 'Breece Hall').salaryBySlot.CPT === 15300);
-  // An export that names the seat in a roster-position list ("MVP/FLEX")
-  // rather than as a second row carries one price, and that price is the base
-  // price. No lobby file reaching this worker is shaped that way now, so the
-  // rows go to the collapser directly rather than through a parser that would
-  // refuse the file.
-  const oneRow = [{ name: 'Josh Allen', position: 'QB', team: 'BUF', salary: 15000, rosterPosition: 'MVP/FLEX' },
-                  { name: 'Breece Hall', position: 'RB', team: 'NYJ', salary: 13000, rosterPosition: 'MVP/FLEX' }];
-  const oneFold = H.dfsCollapseSingleGame(oneRow, 'dk');
-  ok('a lone multiplier row is left at the price the file gave it, not divided by 1.5',
-     oneFold.length === 2 && oneFold[0].salary === 15000 && !oneFold[0].salaryBySlot);
+  // FanDuel writes one row per player with the seat in its roster-position
+  // list, the way DraftKings writes "RB/FLEX" on a main slate. One row is one
+  // price, and it is the base price.
+  const fdShow = H.parseDfsCsv('fd', 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n'
+    + '1,QB,Josh,Josh Allen,Allen,24.1,1,15000,BUF@NYJ,BUF,NYJ,,,,MVP/FLEX\n'
+    + '2,RB,Breece,Breece Hall,Hall,17.5,1,13000,BUF@NYJ,NYJ,BUF,,,,MVP/FLEX\n');
+  const fdFold = H.dfsCollapseSingleGame(fdShow.rows, 'fd');
+  ok('a FanDuel single-game row is left at the price the file gave it, not divided by 1.5',
+     fdFold.length === 2 && fdFold[0].salary === 15000 && !fdFold[0].salaryBySlot);
 
   // End to end: the roster comes off the shape of the file.
   const one = SAL.filter(s => s.team === 'BUF' || s.team === 'NYJ');
@@ -1314,23 +1306,19 @@ console.log('\nthe single-game file');
   ok('the two roster tables agree, because a reader compares the page to the lobby and not to us',
      (() => {
        const w = H.DFS_SITES.dk.single, o = DFS.FORMATS['dk-showdown'];
+       const wf = H.DFS_SITES.fd.single, of = DFS.FORMATS['fd-single'];
        return w.cap === o.cap && w.slots.join() === o.slots.join() && w.flex.join() === o.flex.join()
-         && w.mult.CPT === o.mult.CPT && w.minTeams === o.minTeams;
+         && w.mult.CPT === o.mult.CPT && w.minTeams === o.minTeams
+         && wf.cap === of.cap && wf.slots.join() === of.slots.join() && wf.mult.MVP === of.mult.MVP;
      })());
-  // The optimizer carried a FanDuel roster until 2026-09-21 and this gate
-  // cross-checked it against DFS_SITES.fd the way the pair above still does
-  // for DraftKings. The worker's fd entry outlived it, so nothing on the
-  // optimizer side is left to compare it to.
-  ok('no FanDuel roster survives in the optimizer for a reader to be shown',
-     !Object.keys(DFS.FORMATS).some(k => /^fd-/.test(k))
-     && !Object.values(DFS.FORMATS).some(f => f.site === 'fd' || (f.mult && f.mult.MVP)));
 }
 
 console.log('\nthe tiers a Tiers contest posts');
 {
-  // A dedicated Tier column was FanDuel's, and it went with that parser on
-  // 2026-09-21. DraftKings names the tier in the roster-position cell, so that
-  // is the one path a Tiers contest can be priced from now.
+  const fd = H.parseDfsCsv('fd', 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n'
+    + '1,QB,Josh,Josh Allen,Allen,24.1,1,9200,BUF@NYJ,BUF,NYJ,,,1,QB\n'
+    + '2,RB,Breece,Breece Hall,Hall,17.5,1,8000,BUF@NYJ,NYJ,BUF,,,2,RB\n');
+  ok('FanDuel’s Tier column comes across', fd.rows[0].tier === '1' && fd.rows[1].tier === '2');
   const dkTier = H.parseDfsCsv('dk', 'Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\n'
     + 'QB,"Josh Allen (1)",Josh Allen,1,TIER 1,8200,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\n'
     + 'RB,"Jahmyr Gibbs (2)",Jahmyr Gibbs,2,RB/FLEX,8900,DET@GB 09/14/2026 04:25PM ET,DET,21.3\n');
@@ -1445,14 +1433,11 @@ console.log('\nthe Showdown roster');
     ok('a one-team pool has no field to average on a roster that needs two',
        DFS.fieldAverage(owned.filter(p => p.team === 'BUF'), { slots: fmt.slots, flex: fmt.flex, cap: fmt.cap, mult: fmt.mult, minTeams: 2 }) === null);
   }
-  // The site argument is ignored but still accepted: dfs.html and
-  // dfs-optimizer.js deploy as two unversioned files, so a browser mid-deploy
-  // can hold one of each, and an arity change would have it read 'dk' as the
-  // Game Style and solve a Showdown as a Classic.
-  ok('the Game Style alone names the roster, whatever site is passed beside it',
-     ['dk', 'fd', '', undefined].every(st =>
-       DFS.formatFor(st, 'showdown-captain').key === 'dk-showdown'
-       && DFS.formatFor(st, 'classic').key === 'dk-classic'));
+  ok('FanDuel sells the same roster at its own cap and calls the seat MVP',
+     (() => { const f = DFS.formatFor('fd', 'showdown-captain');
+              const fr = DFS.build(players, { format: f, mode: 'ironTuna' });
+              return f.cap === 60000 && fr.ok && fr.lineups[0].players[0].slot === 'MVP'
+                && fr.lineups[0].salary <= 60000; })());
 }
 
 console.log('\nthe formats with no cap at all');

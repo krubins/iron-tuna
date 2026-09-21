@@ -5037,19 +5037,19 @@ const PROVIDER_INJURY = [
 ];
 
 // ── DFS salaries ───────────────────────────────────────────────────────────
-// DECLARED, NOT IMPLEMENTED, ON PURPOSE. DraftKings publishes no documented
-// public salary API, and the routes that exist are undocumented endpoints
-// behind a contest page -- taking them would be scraping, which this repo
-// does not do. The interface is here so a licensed
+// DECLARED, NOT IMPLEMENTED, ON PURPOSE. Neither DraftKings nor FanDuel
+// publishes a documented public salary API, and the routes that exist are
+// undocumented endpoints behind a contest page -- taking them would be
+// scraping, which this repo does not do. The interface is here so a licensed
 // feed is a config change rather than a refactor: set DFS_SALARY_API and
 // DFS_SALARY_API_KEY and the adapter below carries the response into the same
 // normalized record every other provider returns. Until then the kind reports
 // "not configured" and /dfs shows the scoring environment it can actually
 // source, with no salary column invented to fill the gap.
 const PROVIDER_DFS = [
-  // The operators' own salary endpoints are deliberately absent. That is their
-  // data, their terms prohibit systematic retrieval, and Iron Tuna is a
-  // commercial product with a public face. Salaries come
+  // DraftKings' and FanDuel's own salary endpoints are deliberately absent.
+  // That is the operators' data, their terms prohibit systematic retrieval,
+  // and Iron Tuna is a commercial product with a public face. Salaries come
   // from the lobby CSV the contest entrant exports themselves (parseDfsCsv,
   // /api/admin/dfs), or from a licensed feed. See docs/data-sources.md.
   { name: 'licensed-salary-feed', free: false,
@@ -10093,7 +10093,7 @@ function _rowFor(p, extra) {
 // leverage under the metrics, or the reason there is none.
 function _dfsBlock(ctx, teams) {
   const out = { available: false, sites: {}, note: null };
-  for (const site of Object.keys(DFS_SITES)) {
+  for (const site of ['dk', 'fd']) {
     const s = ctx.dfs && ctx.dfs[site];
     if (!s || !s.metrics || !s.metrics.rows.length) continue;
     let rows = s.metrics.rows;
@@ -10741,7 +10741,7 @@ function packetKDst(ctx) {
   // implied total.
   const streaming = dst.filter(d => d.consensusRank > 12 && d.ironTunaRank <= 14).slice(0, 6);
   const avoid = dst.filter(d => d.consensusRank <= 12 && d.ironTunaRank >= 16).slice(0, 5);
-  return { defenses: dst.slice(0, 20), kickers: k, streaming, avoid, dfs: _dfsBlock(ctx, null), kickerNote: 'kickers are discussed only for formats that roster them; DraftKings main slates do not' };
+  return { defenses: dst.slice(0, 20), kickers: k, streaming, avoid, dfs: _dfsBlock(ctx, null), kickerNote: 'kickers are discussed only for formats that roster them; neither DraftKings nor FanDuel main slates do' };
 }
 function packetBreaking(ctx, events) {
   const W = (ctx.week && ctx.week.players) || [];
@@ -11214,7 +11214,7 @@ async function contentContext(env, weekNumber, opts) {
     const roster = await rosterStatusTable().catch(() => null);
     // When the store last READ the props feed, which no row in it can say.
     const propsPulledAt = await snapshotPulledAt(env, 'player').catch(() => null);
-    for (const site of Object.keys(DFS_SITES)) {
+    for (const site of ['dk', 'fd']) {
       try {
         const sal = await dfsSalariesRead(env, site, sched.season, curWeek);
         if (!sal || !sal.rows.length) continue;
@@ -11232,7 +11232,7 @@ async function contentContext(env, weekNumber, opts) {
     snapshots: snaps && snaps.ok && snaps.last ? { provider: 'odds_snapshots', at: snaps.last } : null,
     usage: usage ? { provider: 'nflverse', at: usage.updatedAt || usage.builtAt } : null,
     depth: depth ? { provider: depth.source || 'espn-depth', at: depth.asOf } : null,
-    dfs: dfs.dk ? { provider: 'csv', at: dfs.dk.salariesAsOf } : null
+    dfs: dfs.dk ? { provider: 'csv', at: dfs.dk.salariesAsOf } : dfs.fd ? { provider: 'csv', at: dfs.fd.salariesAsOf } : null
   };
   return { sched, state, week: week.ok ? week : null, next: next.ok ? next : null, depth, usage, signals, gameMarkets, weekMarkets,
            injuriesList, injuriesByTeam, weekNumber, rules: scoringRules(preset), nameIndex: _oddsProjectionIndex(), dfs, stamps, ...(opts || {}) };
@@ -12028,36 +12028,35 @@ async function newsroomStatus(env) {
 // NOTHING HERE SUBMITS AN ENTRY. The optimizer builds lineups for a reader to
 // look at and copy; there is no path from this code to a DFS site.
 const DFS_CONTRACT = 1;
-// Two rosters, because the lobby sells two shapes of salary contest out of
-// files with identical columns. `single` is the single-game roster: six seats
-// out of one game, the first of them a multiplier seat that scores 1.5x and
-// costs 1.5x, any position allowed in any seat, and both teams required.
-// Those numbers are DraftKings' published rules as of 20 Sep 2026.
-// dfs-optimizer.js carries the same table for the browser and
-// tools/test-dfs.mjs holds the two tables in step.
-//
-// DraftKings is the only operator here. The FanDuel entry came out on
-// 2026-09-21 with the venue switch on /dfs: it had no import job, no feed and
-// no way for a reader to select it, so it was a second roster table going
-// stale where nobody could see it. This object is still keyed by site because
-// the stored rows, the routes and the boards all carry the key, and a table
-// with one row in it is what makes a second operator a data change.
+// Two rosters per site, because a lobby sells two shapes of salary contest
+// out of files with identical columns. `single` is the single-game roster:
+// six seats out of one game, the first of them a multiplier seat that scores
+// 1.5x and costs 1.5x, any position allowed in any seat, and both teams
+// required. Those numbers are the operators' published rules as of
+// 20 Sep 2026 -- FanDuel moved its MVP to 1.5x salary and added a sixth seat
+// in 2025, which is why the two single-game rosters are now the same shape at
+// different caps. dfs-optimizer.js carries the same table for the browser and
+// tools/test-dfs.mjs holds the two in step.
 const DFS_SINGLE_FLEX = ['QB', 'RB', 'WR', 'TE', 'K', 'DST'];
 const DFS_SITES = {
   dk: { label: 'DraftKings', cap: 50000, slots: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DST'], flex: ['RB', 'WR', 'TE'], scoring: 'dk',
         single: { label: 'Showdown Captain Mode', seat: 'CPT', cap: 50000, slots: ['CPT', 'FLEX', 'FLEX', 'FLEX', 'FLEX', 'FLEX'], flex: DFS_SINGLE_FLEX, mult: { CPT: 1.5 }, minTeams: 2 } },
+  fd: { label: 'FanDuel', cap: 60000, slots: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DST'], flex: ['RB', 'WR', 'TE'], scoring: 'fd',
+        single: { label: 'Single Game', seat: 'MVP', cap: 60000, slots: ['MVP', 'FLEX', 'FLEX', 'FLEX', 'FLEX', 'FLEX'], flex: DFS_SINGLE_FLEX, mult: { MVP: 1.5 }, minTeams: 2 } }
 };
 // Site scoring, as published. DK: full PPR, three-point bonuses at 300
 // passing and 100 rushing or receiving yards, -1 per interception and per
-// fumble lost. An ordinary rule set for the one scoring engine.
+// fumble lost. FD: half PPR, -1 per interception, -2 per fumble lost, no
+// bonuses. Both are ordinary rule sets for the one scoring engine.
 const SCORING_SITE = {
   dk: { receptionPoints: 1, rbReceptionPoints: 1, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -1,
         passingYardBonuses: [{ at: 300, points: 3 }], rushingYardBonuses: [{ at: 100, points: 3 }], receivingYardBonuses: [{ at: 100, points: 3 }] },
+  fd: { receptionPoints: 0.5, rbReceptionPoints: 0.5, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -2 }
 };
 // When the DraftKings workflow runs, as UTC weekday and hour, mirrored from
 // .github/workflows/draftkings-salaries.yml (tools/test-draftkings-import.mjs
 // holds the two in step). A blank board is told the next one rather than left
-// without a clock.
+// without a clock. FanDuel has no import job, so it is not promised one.
 const DFS_IMPORT_SCHEDULE = [{ dow: 2, hour: 10 }, { dow: 2, hour: 14 }, { dow: 3, hour: 14 }];
 function dfsImportWindow(now) {
   const at = Number.isFinite(now) ? now : Date.now();
@@ -12081,7 +12080,7 @@ const _dfsWhenET = ms => new Date(ms).toLocaleString('en-US', { timeZone: 'Ameri
 // says the update ran and found nothing, and that the desk loads it by hand.
 function dfsNoSalariesNote(site, now) {
   const label = DFS_SITES[site].label;
-  const w = dfsImportWindow(now);
+  const w = site === 'dk' ? dfsImportWindow(now) : { last: null, next: null };
   if (!w.next) return { note: 'No ' + label + ' salaries are posted for this week yet. Salaries go up when the lobby does; the scoring environment below still reads from the game lines.' };
   const at = Number.isFinite(now) ? now : Date.now();
   if (w.next - at > 2 * 86400000 && w.last) {
@@ -12111,14 +12110,14 @@ async function dfsReady(env) {
     return true;
   } catch (e) { return false; }
 }
-// A DST row names the club; the board names the club's defense. Both resolve
-// to the team key.
+// A DST row on either site names the club; the board names the club's
+// defense. Both resolve to the team key.
 const _dfsPos = p => { const u = String(p || '').toUpperCase(); return u === 'DEF' || u === 'D' || u === 'D/ST' ? 'DST' : u; };
-// Which contest a salary file is for. The lobby sells single-game contests out
+// Which contest a salary file is for. Both sites sell single-game contests out
 // of a file with the same columns as the main slate, and the difference is a
 // multiplier slot the classic roster does not have: DraftKings prices the
-// captain as a second CPT row for the same player. Priced against the classic
-// cap and roster, that file builds a lineup nobody can
+// captain as a second CPT row for the same player, FanDuel an MVP. Priced
+// against the classic cap and roster, that file builds a lineup nobody can
 // enter, so the reader upload names it and stops rather than quietly costing
 // someone an entry fee.
 //
@@ -12133,12 +12132,6 @@ const _dfsPos = p => { const u = String(p || '').toUpperCase(); return u === 'DE
 // ACCEPT one, because that route stores nothing and prices the file for the
 // one reader who handed it over. Same question, opposite answers, and the
 // difference is whether the rows become everybody's board or nobody's.
-// MVP is still matched although no FanDuel file reaches this worker any more.
-// This regex decides whether a file is single-game, and the only cost of an
-// extra token is recognizing a seat name we do not expect. The cost of missing
-// one is the failure the whole function exists to prevent: a captain priced
-// against the classic cap, and a reader handed a lineup the lobby rejects. The
-// note above already says the token is the operator's to rename.
 const DFS_MULTIPLIER_SLOT = /\b(CPT|MVP)\b/;
 function dfsSlateShape(rows) {
   const list = rows || [];
@@ -12161,10 +12154,10 @@ function dfsSlateShape(rows) {
 // operator's own price for the multiplier seat in `salaryBySlot` so the
 // builder charges what DraftKings charges rather than 1.5x arrived at here.
 //
-// An export that lists the seat in a roster-position list ("MVP/FLEX") rather
-// than as a second row, the way DraftKings writes "RB/FLEX" on a main slate,
-// carries one row and therefore one price: the base price, with the multiplier
-// applied at entry. A lone multiplier row is left exactly as it is rather than
+// FanDuel exports one row per player with the seat in its roster-position
+// list ("MVP/FLEX"), the way DraftKings writes "RB/FLEX" on a main slate. One
+// row means one price, which is the base price, and the multiplier is applied
+// at entry -- so a lone multiplier row is left exactly as it is rather than
 // divided by 1.5 to guess at a number the file never carried.
 function dfsCollapseSingleGame(rows, site) {
   const seat = (DFS_SITES[site] && DFS_SITES[site].single && DFS_SITES[site].single.seat) || 'CPT';
@@ -12179,7 +12172,7 @@ function dfsCollapseSingleGame(rows, site) {
     const up = group.filter(r => DFS_MULTIPLIER_SLOT.test(r.rosterPosition || ''));
     const flat = group.filter(r => !DFS_MULTIPLIER_SLOT.test(r.rosterPosition || ''));
     // With no roster-position column at all, the cheaper row is the FLEX
-    // price: the multiplier seat costs more by construction.
+    // price: the multiplier seat costs more by construction on both sites.
     const base = (flat.length ? flat : group).slice().sort((a, b) => a.salary - b.salary)[0];
     const top = (up.length ? up : group).slice().sort((a, b) => b.salary - a.salary)[0];
     const row = { ...base };
@@ -12188,13 +12181,9 @@ function dfsCollapseSingleGame(rows, site) {
   }
   return out;
 }
-// ── the CSV the lobby exports ──────────────────────────────────────────────
+// ── the CSV each lobby exports ─────────────────────────────────────────────
 // DraftKings: Position, Name + ID, Name, ID, Roster Position, Salary, Game Info, TeamAbbrev, AvgPointsPerGame
-//
-// `site` is still the first argument and still checked. DraftKings is the only
-// one the table carries, so the only thing it can do now is refuse a file
-// posted under a site this worker does not serve -- which is what the routes
-// want it to do.
+// FanDuel:    Id, Position, First Name, Nickname, Last Name, FPPG, Played, Salary, Game, Team, Opponent, Injury Indicator, Injury Details, Tier, Roster Position
 function parseDfsCsv(site, text) {
   const lines = String(text || '').replace(/\r/g, '').split('\n').filter(l => l.trim());
   if (lines.length < 2) return { rows: [], error: 'empty' };
@@ -12220,6 +12209,28 @@ function parseDfsCsv(site, text) {
       const tier = roster ? (roster.match(/^(?:TIER\s*)?(\d{1,2})$/) || [])[1] || null : null;
       rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
                   rosterPosition: roster, tier,
+                  operatorFppg: Number.isFinite(fppg) ? fppg : null });
+    }
+  } else if (site === 'fd') {
+    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position'), iFppg = idx('FPPG'), iInj = idx('Injury Indicator'), iTier = idx('Tier');
+    if (iPos < 0 || iSal < 0 || (iNick < 0 && iFirst < 0)) return { rows: [], error: 'not a FanDuel salary CSV' };
+    for (let i = 1; i < lines.length; i++) {
+      const f = _csvSplit(lines[i]);
+      const name = iNick >= 0 && f[iNick] ? f[iNick] : ((f[iFirst] || '') + ' ' + (f[iLast] || '')).trim();
+      const fppg = iFppg >= 0 ? parseFloat(f[iFppg]) : NaN;
+      rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null,
+                  // FanDuel prints its own designation in the lobby file (O, D,
+                  // Q, IR, NA). DraftKings' export carries none, which is why
+                  // the injury report behind the slate is the primary source
+                  // and this is only the fallback.
+                  injuryIndicator: iInj >= 0 ? String(f[iInj] || '').trim().toUpperCase() || null : null,
+                  // A Tiers contest has no salary cap: the whole contest is
+                  // which body out of each posted bucket, and the bucket is
+                  // this column. Blank on every other kind of file, which is
+                  // what keeps a Tiers roster from being invented out of
+                  // salary bands on a slate that never carried tiers.
+                  tier: iTier >= 0 && String(f[iTier] || '').trim() ? String(f[iTier]).trim() : null,
                   operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else return { rows: [], error: 'unknown site' };
@@ -12304,18 +12315,15 @@ function dfsOperatorFppg(site, s, rules, usage) {
 //             own header ("first eligible Week 5" = 4), read here rather than
 //             re-derived. With no week number there is nothing to compare, so
 //             this source stays silent rather than guessing.
-//
-// There were three. `salary-file` -- the operator's own designation, read off
-// a lobby CSV that carries one -- went with the FanDuel parser on 2026-09-21.
-// DraftKings' export has no such column, so nothing could produce it any more
-// and a basis no row can carry is worse than no basis at all: it reads on the
-// page as a source the board still consults.
+//   salary-file — the operator's own indicator, for FanDuel, whose lobby CSV
+//             carries one. DraftKings' does not, which is why it is last.
 //
 // Out and Doubtful take a player off the board. Questionable is printed and
 // left on it: that is a judgment the reader is entitled to make, and taking
 // every questionable body off a slate would empty it.
 const DFS_BENCH_RE = /^(out|doubtful|ir|pup|nfi|suspended|exempt)$/i;
-function dfsWeekStatus(avail, key, week) {
+const DFS_FILE_STATUS = { O: 'Out', IR: 'Out', NA: 'Out', D: 'Doubtful', Q: 'Questionable' };
+function dfsWeekStatus(avail, key, week, fileIndicator) {
   const w = key && ((avail && avail.weekly) || {})[key];
   if (w && w.status) return { status: w.status, note: w.note || '', basis: 'injury-report' };
   const a = key && ((avail && avail.table) || {})[key];
@@ -12324,6 +12332,8 @@ function dfsWeekStatus(avail, key, week) {
   if (a && games > 0 && Number.isFinite(wk) && wk >= 1 && wk <= games) {
     return { status: a.status || 'Out', note: a.note || '', basis: 'reserve-list' };
   }
+  const f = DFS_FILE_STATUS[String(fileIndicator || '').trim().toUpperCase()];
+  if (f) return { status: f, note: '', basis: 'salary-file' };
   return null;
 }
 function dfsAvailable(status) { return !(status && DFS_BENCH_RE.test(String(status).trim())); }
@@ -12588,8 +12598,8 @@ function dfsPropNote(cov) {
 //             game, scaled by his club's week exactly as weeklyStats scales
 //             a projection. Covers anyone who has taken a snap this year.
 //   operator  the operator's own season average, already parsed onto the row
-//             (DraftKings' AvgPointsPerGame column). Catches the veteran who
-//             is priced and has not played.
+//             (DraftKings' AvgPointsPerGame, FanDuel's FPPG). Catches the
+//             veteran who is priced and has not played.
 //   none      a true debut. He stays off the board, because inventing a
 //             number for a man with no football behind him is worse than the
 //             blank was.
@@ -12702,13 +12712,13 @@ function buildDfsSlate(site, salaries, board, opts) {
       const team = teamKey(s.team);
       const sw = envByTeam.get(team) || null;
       const rst = dfsRosterCheck(roster, [s.name], pos, team);
-      const wk = dfsWeekStatus(avail, _oddsNorm(s.name) + '|' + pos, week)
+      const wk = dfsWeekStatus(avail, _oddsNorm(s.name) + '|' + pos, week, s.injuryIndicator)
         || (rst && rst.kind === 'roster' ? { status: 'Out', note: 'Not on an active roster (' + rst.status + (rst.team ? ', ' + rst.team : '') + ')', basis: 'roster' } : null);
       const supp = dfsSupplemental(s, pos, rules, usage, fppg, sw ? sw.env : null);
       const base = { name: s.name, position: pos, team, opponent: sw ? sw.opponent : s.opponent, salary: s.salary,
         salaryBySlot: s.salaryBySlot || null, tier: s.tier || null,
         operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games,
-        operatorFppgLabel: 'DraftKings FPPG',
+        operatorFppgLabel: site === 'dk' ? 'DraftKings FPPG' : 'FanDuel FPPG',
         onBoard: false, projectionBasis: supp ? supp.basis : 'none', supplemental: !!supp, projected: !!supp };
       if (!supp) { rows.push({ ...base, weekStatus: wk ? wk.status : null, weekStatusNote: wk ? wk.note : '', weekStatusBasis: wk ? wk.basis : null, available: dfsAvailable(wk && wk.status) }); continue; }
       // The three numbers are the same number. There is no consensus
@@ -12765,7 +12775,7 @@ function buildDfsSlate(site, salaries, board, opts) {
     // The injury report first (it is this week's own word), then the reserve
     // list, then the roster file, then the salary file's indicator. A man off
     // an active roster is 'Out' here because that is what it means for Sunday.
-    const wk = dfsWeekStatus(avail, p.key, week)
+    const wk = dfsWeekStatus(avail, p.key, week, s.injuryIndicator)
       || (rst && rst.kind === 'roster' ? { status: 'Out', note: 'Not on an active roster (' + rst.status + (rst.team ? ', ' + rst.team : '') + ')', basis: 'roster' } : null);
     const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
     const v = pts('vegas'), c = pts('consensus'), it = pts('ironTuna');
@@ -12791,7 +12801,7 @@ function buildDfsSlate(site, salaries, board, opts) {
       // optimizer's objective, the floor, the ceiling, the typical entry --
       // reads `actualPoints` ahead of them when it is there.
       ...dfsActualFor(actuals, p.name, p.team, pos, rules),
-      operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, operatorFppgLabel: 'DraftKings FPPG',
+      operatorFppg, operatorFppgBasis: fppg.basis, operatorFppgGames: fppg.games, operatorFppgLabel: site === 'dk' ? 'DraftKings FPPG' : 'FanDuel FPPG',
       projectionVsFppg: operatorFppg == null ? null : _oddsRound(it - operatorFppg),
       vegasPerK: _oddsRound(v / (s.salary / 1000) * 100) / 100, ironTunaPerK: _oddsRound(it / (s.salary / 1000) * 100) / 100,
       marketDelta: p.marketDelta, vegasBasis: p.vegas.basis, vegasConfidence: p.vegas.confidence,
@@ -13059,7 +13069,7 @@ function healthAssess(h, now) {
     if (!ros || !ros.builtAt) missing.push({ feed: 'rankings', label: 'Rest-of-season snapshot', why: 'no Wednesday snapshot has run; the rankings update has nothing to compare' });
     else if (wk != null && ros.week != null && ros.week < wk - 1) stale.push({ feed: 'rankings', label: 'Rest-of-season snapshot', ageHours: age(ros.builtAt), limitHours: 8 * 24, note: 'built for week ' + ros.week + ', now week ' + wk });
     const sites = (u.dfs && Object.keys(u.dfs).filter(s => u.dfs[s] && u.dfs[s].fetchedAt)) || [];
-    if (!sites.length) missing.push({ feed: 'dfs', label: 'DFS salaries', why: 'no salaries loaded for the week; /in-season/dfs says so' });
+    if (!sites.length) missing.push({ feed: 'dfs', label: 'DFS salaries', why: 'no salaries for the week on either site; /in-season/dfs says so' });
     else for (const s of sites) { const a = age(u.dfs[s].fetchedAt); if (a > HEALTH_STALE_H.dfs) stale.push({ feed: 'dfs', label: 'DFS salaries (' + s + ')', ageHours: a, limitHours: HEALTH_STALE_H.dfs }); }
     if (u.usage && u.usage.throughWeek != null && wk != null && u.usage.throughWeek < wk - 2) stale.push({ feed: 'usage', label: 'Weekly stats and snaps', ageHours: ages.usage, limitHours: HEALTH_STALE_H.usage, note: 'through week ' + u.usage.throughWeek + ', now week ' + wk });
   }
@@ -13116,12 +13126,12 @@ async function healthPayload(env, opts) {
   const sched = await scheduleCacheRead(env);
   const state = sched ? nflSeasonState(sched, now) : { ok: false, error: 'no_schedule' };
   const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
-  const [odds, snaps, usage, usagePrior, avail, depth, rosList, next3List, playoffList, dk, jobs] = await Promise.all([
+  const [odds, snaps, usage, usagePrior, avail, depth, rosList, next3List, playoffList, dk, fd, jobs] = await Promise.all([
     oddsCacheRead(env).catch(() => null), snapshotStatus(env).catch(() => null), usageCacheRead(env).catch(() => null),
     usageCacheRead(env, MARKET_PRIOR_ROW).catch(() => null),
     availabilityCacheRead(env).catch(() => null), _overlayRowMeta(env, DEPTH_ROW),
     rosSnapshots(env, 'ros', 1), rosSnapshots(env, 'next3', 1), rosSnapshots(env, 'playoffs', 1),
-    dfsSalariesRead(env, 'dk', sched ? sched.season : null, week).catch(() => null),
+    dfsSalariesRead(env, 'dk', sched ? sched.season : null, week).catch(() => null), dfsSalariesRead(env, 'fd', sched ? sched.season : null, week).catch(() => null),
     jobBoard(env, now)
   ]);
   const props = await propsHealth(env, sched ? sched.season : null, week).catch(() => null);
@@ -13142,7 +13152,7 @@ async function healthPayload(env, opts) {
     availability: avail ? { updatedAt: avail.updatedAt, asOf: avail.asOf, matched: avail.matched } : null,
     depthCharts: depth ? { updatedAt: depth.updatedAt || depth.asOf, source: depth.source || 'espn-depth', teams: Object.keys(depth.teams || {}).length } : null,
     rankings: { ros: snapMeta(rosList[0]), next3: snapMeta(next3List[0]), playoffs: snapMeta(playoffList[0]) },
-    dfs: { dk: dk ? { fetchedAt: dk.fetchedAt, rows: dk.rows.length } : null }
+    dfs: { dk: dk ? { fetchedAt: dk.fetchedAt, rows: dk.rows.length } : null, fd: fd ? { fetchedAt: fd.fetchedAt, rows: fd.rows.length } : null }
   };
   const report = providerReport(env);
   const editorial = await _editorialRows(env, state, sched, now);
@@ -15178,7 +15188,7 @@ export default {
       _MARKET_MEMO = { key: mkey, at: Date.now(), out };
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
     }
-    // DFS: the slate, priced. ?site=dk, the only one served.
+    // DFS: the slate, priced. ?site=dk|fd.
     if (url.pathname === '/api/dfs') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
@@ -15222,10 +15232,10 @@ export default {
     // to use it FOR: a main-slate file got you the board you already had, and
     // a Showdown file got you a 400. The site solved one contest.
     //
-    // It now solves thirteen, and four of them -- Showdown Captain Mode,
-    // In-Game Showdown, Madden Showdown Captain and Tiers -- are priced on a
-    // file the desk import never stores. Without this route those four can
-    // explain their roster and never build one. So the
+    // It now solves thirteen, and five of them -- Showdown Captain Mode,
+    // In-Game Showdown, Madden Showdown Captain, FanDuel Single Game and
+    // Tiers -- are priced on a file the desk import never stores. Without this
+    // route those five can explain their roster and never build one. So the
     // route is back, and the control that feeds it is not: the always-on panel
     // nobody used stays gone, and /dfs asks for a file only where a format
     // needs one it cannot otherwise get.
@@ -15258,7 +15268,7 @@ export default {
         note: 'That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.' }, 413, c);
       let b = {}; try { b = JSON.parse(raw); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); }
       const site = DFS_SITES[b.site] ? b.site : null;
-      if (!site) return json({ ok: false, error: 'site', note: 'That file has to be posted as a DraftKings export; it is the only lobby this board prices.' }, 400, c);
+      if (!site) return json({ ok: false, error: 'site', note: 'Choose DraftKings or FanDuel before reading a file.' }, 400, c);
       const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 1000000));
       if (parsed.error) return json({ ok: false, error: parsed.error,
         note: 'That file did not read as a ' + DFS_SITES[site].label + ' salary export. Download it from the contest lobby and upload it unchanged.' }, 400, c);
@@ -16233,7 +16243,7 @@ export default {
       if (request.method === 'POST') {
         let b = {}; try { b = await request.json(); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); }
         const site = DFS_SITES[b.site] ? b.site : null;
-        if (!site) return json({ ok: false, error: 'site must be dk' }, 400, c);
+        if (!site) return json({ ok: false, error: 'site must be dk or fd' }, 400, c);
         const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 2000000));
         if (parsed.error) return json({ ok: false, error: parsed.error }, 400, c);
         // A showdown export prices a captain or MVP at a multiplier the classic
@@ -16249,7 +16259,7 @@ export default {
         // deliberately needs that read to learn about slates first.
         if (dfsSlateShape(parsed.rows) === 'single-game') return json({ ok: false, error: 'single_game',
           note: 'That is a single-game (Showdown/MVP) export: it prices a captain at a multiplier the classic roster does not have, and every board on the site is built for the classic cap. Import a main-slate file instead.' }, 400, c);
-        const source = b.source === 'draftkings-automation' ? b.source : 'csv';
+        const source = site === 'dk' && b.source === 'draftkings-automation' ? b.source : 'csv';
         out.imported = await dfsStore(env, site, parsed.rows, { season: sched ? sched.season : null, week: b.week != null ? Number(b.week) : week, slate: b.slate || 'main', source });
       }
       for (const site of Object.keys(DFS_SITES)) {

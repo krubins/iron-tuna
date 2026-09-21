@@ -27,8 +27,8 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 | `static.www.nfl.com` | Team and player imagery, hot-linked | ~1,680 URL references across the deployed HTML, none fetched server-side | **Unreviewed and OPEN.** Copyrighted images served from the league's CDN. See R4. |
 | `thumb.wikimedia.org` and `upload.wikimedia.org` (resolved via `commons.wikimedia.org` and `www.wikidata.org` at build time) | Game photographs for the story art on `/`, `/in-season/desk`, `/lead`: one openly licensed action photo per player, hot-linked as a Commons thumbnail | `tools/build-action-shots.mjs` (build-time lookup, never the Worker), `it-action.js` (the deployed map), `storyArt()` in `player-search.js` | **Green, with an obligation.** Only CC0, public-domain, CC BY and CC BY-SA files are kept (`LICENSE_OK` in the tool; NC and ND never match). CC BY / CC BY-SA require the photographer, the license and a link to it wherever the file is shown, and that a cropped copy says so; `storyArt()` prints exactly that under every use and `tools/test-story-art.mjs` fails the build if it stops. See R9. |
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
-| DFS lobby CSV (desk import) | DraftKings salaries for the week's main slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. Single-game (Showdown/MVP) files are refused rather than mis-priced against the classic cap; the refusal is unconditional, because `dfsSalariesRead` does not filter on the `slate` column and would serve one stored under any slate name, and because the scheduled workflow below posts `slate: 'weekly'`. |
-| DFS lobby CSV (reader upload) | — | — | **Removed and restored 2026-09-20.** The always-on panel went (nobody used it, because the site solved one contest and a Showdown file was refused). `POST /api/dfs/slate` came back the same day, because /dfs now solves thirteen formats and four of them — Showdown Captain Mode, In-Game Showdown, Madden Showdown Captain and Tiers — are priced on a file the desk import never stores. The control is scoped: /dfs asks for a file only on a format that needs one. The route **stores nothing** — the parse is per request, the response is uncacheable, and the file is kept in the reader's own browser so their next visit does not have to re-pick it. |
+| DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. Single-game (Showdown/MVP) files are refused rather than mis-priced against the classic cap; the refusal is unconditional, because `dfsSalariesRead` does not filter on the `slate` column and would serve one stored under any slate name, and because the scheduled workflow below posts `slate: 'weekly'`. |
+| DFS lobby CSV (reader upload) | — | — | **Removed and restored 2026-09-20.** The always-on panel went (nobody used it, because the site solved one contest and a Showdown file was refused). `POST /api/dfs/slate` came back the same day, because /dfs now solves thirteen formats and five of them — Showdown Captain Mode, In-Game Showdown, Madden Showdown Captain, FanDuel Single Game and Tiers — are priced on a file the desk import never stores. Four of those five are what the page can reach since the venue switch came off it on 2026-09-21 (HANDOFF §112); FanDuel Single Game is still built and still tested, and `POST /api/dfs/slate` still prices it for `{site:'fd'}`, but no control on `/dfs` selects it. The control is scoped: /dfs asks for a file only on a format that needs one. The route **stores nothing** — the parse is per request, the response is uncacheable, and the file is kept in the reader's own browser so their next visit does not have to re-pick it. |
 | DraftKings lobby + draftables (scheduled repository workflow) | DraftKings NFL weekly Classic salaries across the Thursday-through-Monday game window | `tools/import-draftkings-salaries.mjs`, `.github/workflows/draftkings-salaries.yml` → `POST /api/admin/dfs` | **Red / owner-directed exception.** Undocumented, keyless operator endpoints; automated access may conflict with operator terms and can change without notice. The workflow merges all available multi-game Classic pools for the target NFL week, excludes Showdown/single-game pricing, validates 40+ players and all five positions, then imports the combined player set. It authenticates with a short-lived GitHub Actions identity token restricted to this repository, workflow and `main` branch. |
 
 ### Infrastructure — not content, no data-licensing question
@@ -57,16 +57,7 @@ against the live services, so removing them changed no behavior. The old
 owner-directed, once-weekly repository workflow that stays outside the deployed
 Worker. It merges the available multi-game Classic salary pools across the
 Thursday-through-Monday NFL week and sends a validated combined CSV through the
-existing admin import.
-
-FanDuel is gone from the product entirely as of 2026-09-21, not merely absent
-as a host. The venue switch came off /dfs, then the FanDuel roster tables, CSV
-parser, scoring rules and site key came out of `dfs-optimizer.js` and
-`_worker.js`. `api.fanduel.com` stays listed above because that table is a
-record of what this Worker must never fetch, and
-`tools/test-data-sources.mjs` still fails the build if a call to it appears.
-Rows already written to `dfs_salaries` under `site = 'fd'` are left in place
-and are no longer read by anything.
+existing admin import. FanDuel remains absent.
 
 ### Evaluated and not adopted
 

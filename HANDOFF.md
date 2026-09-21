@@ -6972,6 +6972,13 @@ Vegas Values, Lineup Builder, Game Stacks, TD Board, with a DraftKings /
 FanDuel switch. Everything on it is the week board (`buildBoards`, horizon
 `week`) re-scored under the site's rules and priced by the site's salaries.
 
+> **The venue switch came off the page on 2026-09-21 (§112).** Everything else
+> in this section still stands, and so does FanDuel everywhere below the page:
+> `DFS_SITES.fd`, `SCORING_SITE.fd`, the `fd` branch of `parseDfsCsv`, the
+> `/admin` importer and `GET /api/dfs?site=fd` are all intact and tested.
+> `dfs.html` alone stopped offering the choice. Read §112 before restoring the
+> switch or removing anything it left behind.
+
 **Salaries.** `dfs_salaries` in D1 (append-only; the newest `fetched_at` for a
 site, season and week is the slate). Three ways in: the lobby CSV of either
 site pasted into `/admin` (POST `/api/admin/dfs` with `{site, csv, week?}`,
@@ -11300,7 +11307,7 @@ max per team, the reader's locks, exclusions and forced player), the thesis,
 up to three solved lineups with `playerFit`'s own sentence on each seat of the
 lead, the pivot at every slot, the thirty best players it left on the board
 (sorted by the score the chosen shape is solved on) and the game environments
-behind all of it. Where there is no roster — pick'em, no slate, an incomplete
+behind all of it. Where there is no roster — no slate, an incomplete
 DraftKings setup, a format with no Classic solve, an infeasible cap — it
 returns a `blocked` sentence instead, and the panel prints that and disables
 itself rather than taking a question it cannot ground.
@@ -11327,7 +11334,7 @@ so the model is told what it is missing.
 | Where | What |
 |---|---|
 | `dfs-coach.js` | `ITDfsCoach.mount({host, context})`, the system prompt, `fit()`, `tidy()` (a stray asterisk is unbolded, not shown), the SSE reader with a 45s first-byte and 20s idle timeout. A streaming token touches only its own bubble and the log is `aria-busy` until the answer is done, so a screen reader hears it once, complete. |
-| `dfs.html` | `.df-coach*` (light panel, teal accent, 390px-safe), `<div id="dfCoach">` between the pivots and the fine-tune panel, `coachContext()`, and `coachSync()` on every state that changes the roster — a solve, an infeasible solve, an incomplete setup, a non-Classic format, a slate that never loaded, the pick'em board. |
+| `dfs.html` | `.df-coach*` (light panel, teal accent, 390px-safe), `<div id="dfCoach">` between the pivots and the fine-tune panel, `coachContext()`, and `coachSync()` on every state that changes the roster — a solve, an infeasible solve, an incomplete setup, a non-Classic format, a slate that never loaded. |
 | `docs/ai-calculation-boundary.md` | an "Interactive features" section: the rule is the same in a chat panel as in the newsroom. |
 | `tools/test-dfs-coach.mjs` | 46 assertions — the prompt's boundary and format clauses, one `fetch` and no provider key, the module carrying no metric, `fit()` under budget with the roster intact, `coachRow` passing numbers through and leaving a missing one absent rather than zero, and the page's wiring including every `coachSync()`. |
 | `.github/workflows/checks.yml` | `node --check dfs-coach.js` with the other shared client scripts, and the test beside `test-dfs.mjs`. |
@@ -12108,6 +12115,11 @@ the reason still stands alone as `{blocked}`.
 `{blocked}` is now only for the states with no setup behind them: the pick'em
 board, no priced slate, and those same dead ends on FanDuel.
 
+> **Since §112 the page is DraftKings-only, so every dead end has the setup
+> plate behind it** and `{blocked}` is down to one state: no priced slate. The
+> pick'em branch and the off-DraftKings branch both came out of
+> `coachContext()` with the board and the switch.
+
 **The boundary holds one step earlier.** Asked "which contest should I enter,"
 a model will happily invent one, or an entry fee, or a field size, none of
 which this page carries and all of which live in the DraftKings lobby. The
@@ -12597,3 +12609,82 @@ lifted the other name too.
 the control-byte scan. Verified by reintroducing each bug in turn: `onBoard`
 for `projected` fails 5 assertions including both pool comparisons, `isPlayed`
 for `isBanked` fails the same 5, and the tree restores clean at 170.
+
+
+## 112. September 21: /dfs offered four venues and had coverage for one
+
+The ribbon under the masthead asked the reader to choose a venue before it
+asked anything else: DraftKings, FanDuel, Pick'em, Sleeper picks. Three of
+those four were a button that worked, in the sense that pressing it changed
+the board, and did not work, in the sense that the board it changed to was
+built on a feed this site does not hold. FanDuel had no import job and no
+configured feed, so it was a switch to an empty slate. The pick'em board read
+`/api/boards` and printed the SPORTSBOOK median against the model, with a
+paragraph under it explaining that the line shown was not the venue's own —
+which is honest, and is also three-quarters of a control bar advertising
+inventory we do not carry.
+
+**What came off `dfs.html`.** The `#dfSite` group and its ribbon label, the
+`?site=` query parameter, the pick'em board (`#sec-pickem`, `PICKEM`,
+`isPickem`, `pickem`, `loadPickem`), and every venue branch behind them:
+`setupReady`, `solveFormat`, `applyGameStyle`, `coachContext`, the coach's
+slate label and the two `{blocked}` returns §104 put there for the venues with
+no setup plate. `site` is now a constant `'dk'` in the page script. It is a
+constant rather than a removed argument because the API route, the stored
+upload key and the board copy all read it, and because an operator is a
+config change and should stay one. The four `/dfs?site=` links in the
+in-season DFS lane are one `/dfs` link.
+
+**The ribbon takes itself off when it is empty.** The board switch already
+hid on a format with no salary-cap boards, and the venue switch beside it was
+what kept the bar populated in that state. With it gone the bar rendered as a
+19px bordered white strip under the masthead with nothing in it.
+`.is-ribbon:has(#dfNav[hidden])` takes the whole bar off instead.
+
+**FANDUEL IS NOT REMOVED, AND THAT IS DELIBERATE.** It was removed, in two
+commits that touched `dfs-optimizer.js` and `_worker.js`, and both were
+reverted before they went anywhere near main. The owner's call: FanDuel may be
+made to work, so the machinery stays where it is and stays tested. Intact and
+covered by gates today:
+
+| Where | What |
+|---|---|
+| `_worker.js` | `DFS_SITES.fd`, `SCORING_SITE.fd`, the `fd` branch of `parseDfsCsv`, `DFS_FILE_STATUS` and the `salary-file` week-status basis it feeds (§48's fourth source, and FanDuel's `Injury Indicator` column is its only producer), the `fd` half of the two site loops, `GET /api/dfs?site=fd`, and `POST /api/admin/dfs` with `{site:'fd'}`. |
+| `dfs-optimizer.js` | `fd-classic` and `fd-single`, and the `site` argument to `formatFor()` that reaches them. |
+| `admin.html` | The DFS card's site picker, which is the only UI anywhere that still selects FanDuel. |
+| `dfs.html` | Nothing. The page is the one surface that stopped. |
+
+So the shortest path back to a FanDuel board is the ribbon markup and the
+`?site=` parameter in `dfs.html`; nothing underneath needs rebuilding. What
+that path does NOT get you is a slate to put on the board — there is still no
+FanDuel import job and no feed, which is what made the switch empty in the
+first place. Fix the salaries before restoring the switch, or the button comes
+back as honest as it was.
+
+**What a reader loses.** The pick'em board, which was a real board on a real
+market and will need rebuilding rather than un-deleting if it comes back. The
+sportsbook-median-versus-model comparison behind it is `/api/boards` plus
+`PRIMARY` and `LEAN_PCT`; the git history for this commit has the whole
+function.
+
+**Gates.** `tools/test-dfs.mjs` and `tools/test-dfs-coach.mjs` assert the
+source lines this touched, so six assertions were rewritten against the
+collapsed branches and one — the coach's sync on the pick'em board — was
+dropped with the board it covered. Every node gate in `checks.yml` passes
+including `test-dry-run`, plus the four `--check` generators and the
+control-byte scan. `/dfs` rendered at 1100px and 390px against a stubbed API:
+ribbon reads "Board", no page errors, no horizontal overflow, and no FanDuel,
+Sleeper, Underdog or PrizePicks string left in the body text.
+
+**The docs this contradicted, and what was done about them.** §58 above
+described the venue switch as current and now carries a pointer here. §104's
+`{blocked}` list and §109's no-roster list both named the pick'em board.
+`docs/ip-attribution-review.md` row 8 claimed the pick'em trademarks appear on
+`/dfs` and `/in-season`; they no longer appear on either. The homepage DFS
+card promised FanDuel salaries and a pick'em board. Left alone on purpose:
+`docs/dfs-metrics.md` and the `salary-file` basis table in §48, which are
+accurate again now that the worker was reverted; the acceptance criterion in
+`docs/in-season-conversion-spec-addendum-1.md` that the CSV upload parse both
+operators' exports, which `parseDfsCsv` still satisfies; and the trademark
+notice on `/data`, which over-lists rather than under-lists and is a legal
+disclosure, not a feature inventory.

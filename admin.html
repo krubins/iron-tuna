@@ -156,8 +156,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
   <div class="card" id="dfsCard">
     <h2>DFS salaries</h2>
-    <p class="meta">Paste a DraftKings lobby CSV export for the main slate. The rows are stored for the current week and <a href="/in-season/dfs">the DFS page</a> reads the newest import. Nothing here submits an entry anywhere.</p>
+    <p class="meta">Paste a DraftKings or FanDuel lobby CSV export for the main slate. The site's rows are stored for the current week and <a href="/in-season/dfs">the DFS page</a> reads the newest import. Nothing here submits an entry anywhere.</p>
     <div class="field">
+      <label for="dfsSite">Site
+        <select id="dfsSite"><option value="dk">DraftKings</option><option value="fd">FanDuel</option></select>
+      </label>
       <label for="dfsWeek">Week <input id="dfsWeek" type="number" min="1" max="18" placeholder="current" style="width:70px"></label>
     </div>
     <textarea id="dfsCsv" rows="6" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;…" spellcheck="false" style="width:100%;font:12px/1.4 ui-monospace,monospace"></textarea>
@@ -790,7 +793,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       ['Depth charts', u.depthCharts && u.depthCharts.updatedAt, ''],
       ['Rankings: rest of season', r.ros && r.ros.builtAt, r.ros ? 'week ' + r.ros.week + ', ' + r.ros.rows + ' rows' : ''],
       ['Rankings: next 3 weeks', r.next3 && r.next3.builtAt, ''], ['Rankings: weeks 15–17', r.playoffs && r.playoffs.builtAt, ''],
-      ['DFS salaries: DraftKings', u.dfs && u.dfs.dk && u.dfs.dk.fetchedAt, u.dfs && u.dfs.dk ? u.dfs.dk.rows + ' rows' : '']];
+      ['DFS salaries: DraftKings', u.dfs && u.dfs.dk && u.dfs.dk.fetchedAt, u.dfs && u.dfs.dk ? u.dfs.dk.rows + ' rows' : ''],
+      ['DFS salaries: FanDuel', u.dfs && u.dfs.fd && u.dfs.fd.fetchedAt, u.dfs && u.dfs.fd ? u.dfs.fd.rows + ' rows' : '']];
     $('hlthUpdates').innerHTML = '<tr><th>Feed</th><th>Last update</th><th></th></tr>' + rows.map(function(x){ return '<tr><td>' + esc(x[0]) + '</td><td>' + ago(x[1]) + '</td><td style="color:var(--muted)">' + esc(x[2]) + '</td></tr>'; }).join('');
     var src = j.sources || {}, srows = [];
     Object.keys(src).forEach(function(kind){ (src[kind] || []).forEach(function(p){ srows.push('<tr><td>' + esc(kind) + '</td><td>' + esc(p.name) + '</td><td>' + (p.configured ? pill('configured', 'ok') : pill('not configured', '')) + (p.free ? '' : ' <span style="color:var(--muted)">paid</span>') + '</td></tr>'); }); });
@@ -934,16 +938,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   $('hlthEditorClose').addEventListener('click', function(){ $('hlthEditor').hidden = true; hlthOpen = null; });
   hlthLoad();
 
-  // DFS salaries: the lobby CSV import and what the route says is loaded. The
-  // sites come off the response rather than a list kept in step by hand here,
-  // which is how this line went on offering FanDuel after the board stopped
-  // pricing it.
-  var DFS_SITE_LABEL = { dk: 'DraftKings' };
+  // DFS salaries: the lobby CSV import and the status of both sites.
   function dfsStatus(j){
     var parts = [];
-    Object.keys(j.sites || {}).forEach(function(site){ var v = j.sites[site], label = DFS_SITE_LABEL[site] || site;
+    ['dk','fd'].forEach(function(site){ var v = j.sites && j.sites[site], label = site === 'dk' ? 'DraftKings' : 'FanDuel';
       parts.push(v ? label + ': ' + v.rows + ' rows (' + esc(v.source || 'csv') + ', ' + esc(new Date(v.fetchedAt).toLocaleString()) + ')' : label + ': nothing loaded'); });
-    if (!parts.length) parts.push('nothing loaded');
     $('dfsStatus').textContent = 'Week ' + (j.week == null ? '—' : j.week) + '. ' + parts.join(' · ');
   }
   function dfsLoad(){
@@ -957,7 +956,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     if (!key) { showGate('Session locked. Enter the key again.'); return; }
     if (!csv.trim()) { $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Paste a CSV first.</b>'; return; }
     var btn = $('dfsBtn'), was = btn.textContent; btn.disabled = true; btn.textContent = 'Importing…';
-    var body = { site: 'dk', csv: csv };
+    var body = { site: $('dfsSite').value, csv: csv };
     if ($('dfsWeek').value) body.week = Number($('dfsWeek').value);
     fetch('/api/admin/dfs?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
       .then(function(r){ return r.json(); })
