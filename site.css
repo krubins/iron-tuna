@@ -991,6 +991,66 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 .nr-st.held { color: var(--goldink); background: #fdf4e2; border-color: #f0e0b0 }
 .nr-card.pending h3 { color: var(--sec); font-weight: 600 }
 
+/* ── the lead story ─────────────────────────────────────────────────────────
+   THE BUG THIS EXISTS FOR. The Fantasy page printed the desk's newest six
+   pieces as six identical cards, so the piece published four minutes ago and
+   the one published two days ago were the same size, the same weight and the
+   same two clamped lines. "Newest first" was the only thing on the page saying
+   which was which, and a reader scanning a grid does not read the order, they
+   read the size. A newsroom front is a lead and a column beside it: the newest
+   piece takes the lead card at the width its picture and its whole deck
+   deserve, and the rest run as headlines down the right, spread over the
+   lead's height so the last rule closes level with it. The spread is CSS, not
+   a measured height, so it survives any headline length. Under 900px the
+   column drops under the lead and the whole well is one reading order.
+
+   Used by /fantasy. The card grid above is still what /dfs and the desk index
+   run, because a section that lists a whole week has no lead to give. */
+.nr-well { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--space-5); align-items: stretch; margin: var(--space-2) 0 var(--space-6) }
+.nr-well-solo { grid-template-columns: minmax(0, 1fr) }
+/* The lead sits at its own height, and the column stretches to the row. When
+   the lead is the taller of the two the rail spreads its five items over that
+   height and the last rule closes level with the card, which is the alignment
+   this well is for. When the column is taller — six short headlines beside a
+   story with a two-line deck — the lead simply ends where its copy ends
+   rather than holding 170px of white above a stranded byline. */
+.nr-lead {
+  align-self: start;
+  display: flex; flex-direction: column; gap: 12px; min-width: 0;
+  background: var(--bg); border: 1px solid var(--line2); border-radius: var(--radius-md);
+  padding: var(--space-6) 26px; color: inherit;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.nr-lead:hover { border-color: var(--teal); box-shadow: 0 10px 30px rgba(15, 23, 25, .07) }
+.nr-lead h3 { margin: 0; font-size: clamp(22px, 2.4vw, 30px); line-height: 1.18; font-weight: 800; letter-spacing: -.015em; color: var(--text); overflow-wrap: anywhere }
+.nr-lead h3 a { color: inherit }
+.nr-lead h3 a:hover { color: var(--teal); text-decoration: none }
+/* The faces are the lead's picture, so they take their own row above the
+   headline at the size a lead earns, not the card's inline thumbnail. */
+.nr-lead h3 .it-story-focus { display: flex; margin: 0 0 14px }
+.nr-lead h3 .it-story-focus .it-player-face { width: 72px; height: 72px; min-width: 72px; border-radius: 12px }
+/* The lead's deck runs whole. Two clamped lines are what make six cards scan;
+   a lead clamped to two lines is only a bigger card. */
+.nr-lead p { margin: 0; color: var(--sec); font-size: var(--fs-md); line-height: 1.55 }
+.nr-lead-go { font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
+.nr-lead .nr-by { margin-top: 0; padding-top: var(--space-4); border-top: 1px solid var(--line) }
+.nr-flag { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; color: var(--goldink); background: #fdf4e2; border: 1px solid #f0e0b0 }
+
+.nr-rail { display: flex; flex-direction: column; min-width: 0 }
+.nr-rail-h { margin: 0 0 var(--space-3); font-size: var(--fs-3xs); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.nr-rail ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-3); flex: 1 1 auto }
+.nr-rail li { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-bottom: var(--space-3); border-bottom: 1px solid var(--line) }
+.nr-rail li:last-child { padding-bottom: 0; border-bottom: 0 }
+.nr-rail li a { display: flex; align-items: center; color: var(--text); font-weight: 700; font-size: var(--fs-sm); line-height: 1.35; overflow-wrap: anywhere }
+.nr-rail li a:hover { color: var(--teal); text-decoration: none }
+.nr-rail .it-story-focus { flex: 0 0 auto; margin: 0 10px 0 0 }
+.nr-rail .it-story-focus .it-player-face { width: 30px; height: 30px; min-width: 30px; border-radius: 6px }
+@media (max-width: 900px) { .nr-well { grid-template-columns: minmax(0, 1fr) } }
+/* The lead's picture is sized against the headline beside it, not the
+   viewport: at phone width 72px faces are a fifth of the screen. */
+@media (max-width: 620px) { .nr-lead h3 .it-story-focus .it-player-face { width: 56px; height: 56px; min-width: 56px; border-radius: 10px } }
+@media (prefers-reduced-motion: reduce) { .nr-lead:hover { box-shadow: none } }
+
 /* Cards get a hairline lift on hover so a grid of them reads as a set of
    things you can open rather than a set of boxes. */
 .is-card { transition: border-color .12s ease, box-shadow .12s ease }

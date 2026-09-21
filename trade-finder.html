@@ -406,6 +406,13 @@ Derrick Henry
     });
     if (mine !== '' && !teams[Number(mine)]) mine = '';
   }
+  // The value is the board's own spelling, so a pick goes straight back
+  // through TR.resolve and lands; the label is what tells two Williamses apart.
+  function optionsFor(rows) {
+    return rows.map(function (r) {
+      return '<option value="' + esc(r.name) + '">' + esc(r.pos + (r.team ? ' \u00b7 ' + r.team : '')) + '</option>';
+    }).join('');
+  }
   function renderTeams() {
     var host = $('tf-teams');
     host.innerHTML = teams.map(function (t, i) {
@@ -417,7 +424,18 @@ Derrick Henry
             return '<span class="chip' + (p.pos === 'K' || p.pos === 'DEF' ? ' ignored' : '') + '">' + esc(p.name) + ' <i>' + esc(p.pos) + '</i><button type="button" title="Remove" data-rm="' + i + ':' + k + '">&times;</button></span>';
           }).join('') + '</div>'
         + (t.unresolved.length ? '<div class="tf-fix">Not recognized:' + t.unresolved.map(function (u, k) {
-            return '<div><span title="' + esc(u) + '">' + esc(u) + '</span><input placeholder="type the name" data-fix="' + i + ':' + k + '" aria-label="Fix this name"><button type="button" class="btn alt small" data-drop="' + i + ':' + k + '">drop</button></div>';
+            // The box opens already knowing what the line might have been.
+            // Asking a reader who pasted a roster to retype a name from memory
+            // is asking them to do the thing the paste was for, and the board
+            // that could not place the line can still say who is close to it.
+            var sug = TR.suggest(pool, u, 8), dl = 'tf-dl-' + i + '-' + k;
+            return '<div><span title="' + esc(u) + '">' + esc(u) + '</span>'
+              + '<input list="' + dl + '" data-fix="' + i + ':' + k + '" autocomplete="off" aria-label="Fix this name"'
+              // One candidate is a question worth putting in the box itself;
+              // several is a list, and the placeholder says how to open it.
+              + ' placeholder="' + esc(sug.length === 1 ? sug[0].name + '?' : sug.length ? 'pick or type the name' : 'type the name') + '">'
+              + '<datalist id="' + dl + '">' + optionsFor(sug) + '</datalist>'
+              + '<button type="button" class="btn alt small" data-drop="' + i + ':' + k + '">drop</button></div>';
           }).join('') + '</div>' : '')
         + '<div class="cnt">' + starters + ' tradeable' + (t.players.length !== starters ? ' (kickers and defenses ignored)' : '') + '</div>'
         + '<button class="mine-btn" type="button" data-mine="' + i + '">' + (String(i) === mine ? 'Your team' : 'This is my team') + '</button>'
@@ -435,6 +453,19 @@ Derrick Henry
     else if ((v = b.getAttribute('data-rm'))) { var a = v.split(':'); teams[+a[0]].players.splice(+a[1], 1); renderTeams(); }
     else if ((v = b.getAttribute('data-drop'))) { var d = v.split(':'); teams[+d[0]].unresolved.splice(+d[1], 1); renderTeams(); }
     else if ((v = b.getAttribute('data-mine')) != null) { mine = v; renderTeams(); }
+  });
+  // Typing narrows the list. The datalist is rebuilt rather than filtered, so
+  // a reader who clears the box and starts a different name is offered that
+  // name rather than the leftovers of the line the parser failed on.
+  $('tf-teams').addEventListener('input', function (ev) {
+    var f = ev.target.getAttribute('data-fix');
+    if (!f || !pool) return;
+    var dl = document.getElementById(ev.target.getAttribute('list'));
+    if (!dl) return;
+    ev.target.style.borderColor = '';
+    var a = f.split(':'), line = (teams[+a[0]] || {}).unresolved || [];
+    // An empty box goes back to offering what the unrecognized line suggested.
+    dl.innerHTML = optionsFor(TR.suggest(pool, ev.target.value.trim() || line[+a[1]] || '', 8));
   });
   $('tf-teams').addEventListener('change', function (ev) {
     var i = ev.target.getAttribute('data-name');

@@ -41,7 +41,7 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // The contest scores, so the ladder's cash exclusion is tested against the
   // real dfsMetrics rather than asserted about it.
   cut('const DFS_CONTESTS = {', '// \u2500\u2500 analyst memory') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, BLEND_SHRINK, dfsMetrics, dfsSupplemental };'
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, scoreAny, SCORING_KDEF, BLEND_SHRINK, dfsMetrics, dfsSupplemental };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 // The scheduled workflow's own CSV writer, so the false-positive gate below
@@ -111,17 +111,43 @@ console.log('\nclassic or single game');
   // the classic cap reaches every reader. Asserted against the route source
   // because the import needs a key and a D1 to run for real.
   const adminRoute = cut("if (url.pathname === '/api/admin/dfs')", 'return json(out, 200, c);');
-  ok('the desk import refuses a single-game file before storing it',
-     /dfsSlateShape\(parsed\.rows\) === 'single-game'/.test(adminRoute)
-     && adminRoute.indexOf('dfsSlateShape') < adminRoute.indexOf('dfsStore'), 'the guard must run before dfsStore');
-  // and it refuses whatever `slate` says, because dfsSalariesRead() takes the
-  // latest fetched_at for the site and week without ever filtering on that
-  // column: a single-game file stored under any slate name is still what
-  // /api/dfs hands out.
-  ok('the refusal does not depend on the slate name',
-     !/single-game'[\s\S]{0,200}b\.slate/.test(adminRoute));
-  const salariesRead = cut('async function dfsSalariesRead', '// \u2500\u2500 the slate \u2500');
-  ok('and that read really is slate-blind, which is why', !/WHERE[^']*slate\s*=/.test(salariesRead));
+  ok('the desk import still reads the shape of the file before storing it',
+     /dfsSlateShape\(parsed\.rows\)/.test(adminRoute)
+     && adminRoute.indexOf('dfsSlateShape') < adminRoute.indexOf('dfsStore'), 'the shape must be known before dfsStore');
+  // THE GUARANTEE, which has not moved: a single-game file must never become
+  // the board a reader asking for the main slate is served. What HAS moved is
+  // how it is kept. It used to be an outright refusal, because
+  // dfsSalariesRead() ignored the slate column and one stored anywhere was the
+  // main board. The read now filters, so the file is accepted and filed under
+  // the matchup it prices -- and the four assertions below are what keep the
+  // old guarantee standing under the new mechanism.
+  //
+  // 1. The key is derived from the file's own clubs, never taken from the
+  //    caller, so no post can file one game's salaries under another.
+  ok('a single-game file is stored under the matchup it actually prices',
+     /const key = dfsSingleGameSlateKey\(parsed\.rows\)/.test(adminRoute)
+     && /under = key;/.test(adminRoute) && /slate: under/.test(adminRoute));
+  // 2. A caller naming a different slate is refused rather than quietly
+  //    overridden -- including one naming 'main' or 'weekly', which is the
+  //    exact move the original refusal existed to stop.
+  ok('...and a post naming a different slate is refused, not silently re-filed',
+     /asked && asked !== key/.test(adminRoute) && /slate_mismatch/.test(adminRoute));
+  // 3. The mirror image: a main-slate file must not land under a game key,
+  //    or the page solves a six-seat roster out of nine-seat prices.
+  ok('...and a main-slate file cannot be stored under a single-game key',
+     /asked && dfsIsSingleSlate\(asked\)/.test(adminRoute));
+  // 4. And the read that made the old refusal necessary now excludes the
+  //    single-game slates by default, so a Showdown import cannot be handed to
+  //    a caller who asked for the classic board. Both halves matter: the
+  //    filter, and taking MAX(fetched_at) WITHIN the slate rather than across
+  //    the week -- across it, a 9am Showdown import would blank an 8am Classic
+  //    one by owning a timestamp the filtered read never returns.
+  const salariesRead = cut('async function dfsSalariesRead', 'async function dfsSingleSlates');
+  ok('the classic read excludes the single-game slates rather than trusting the refusal',
+     /slate NOT LIKE 'sd:%'/.test(salariesRead));
+  ok('...and takes its newest import within that slate, never across the week',
+     (salariesRead.match(/MAX\(fetched_at\)/g) || []).length === 2
+     && !/MAX\(fetched_at\) AS ts FROM dfs_salaries WHERE site = \? AND season IS \? AND week IS \?"/.test(salariesRead));
 }
 
 // The scheduled DraftKings workflow posts to that same import, and it merges
@@ -167,6 +193,27 @@ console.log('\nthe weekly import is not mistaken for a captain file');
 }
 
 console.log('\nsite scoring');
+{
+  // The defense, on DraftKings' table rather than the site's season-long one.
+  // Every K/DEF key an operator supplies used to be dropped by scoringRules,
+  // which reads SCORING_BASE only, so a DST was scored on SCORING_KDEF: a
+  // four-point defensive touchdown, a four-point safety, and a ladder that
+  // pays 5 for ten points allowed where DraftKings pays 4.
+  const dk = H.scoringRules('ppr', H.SCORING_SITE.dk);
+  const D = (o, g) => H.scoreAny({ sacks: 0, ints: 0, fumRec: 0, defTD: 0, stTD: 0, safety: 0, ...o }, 'DST', dk, g || 1);
+  ok('a site\'s defensive rules survive scoringRules at all', dk.defensiveTD === 6 && Array.isArray(dk.pointsAllowed) && dk.pointsAllowed.length === 7,
+     JSON.stringify({ td: dk.defensiveTD, tiers: dk.pointsAllowed && dk.pointsAllowed.length }));
+  ok('a defensive touchdown is six on DraftKings, not the site default of four', near(D({ defTD: 1, ptsAllowed: 24 }), 6, 0.001), String(D({ defTD: 1, ptsAllowed: 24 })));
+  ok('a return touchdown is six', near(D({ stTD: 1, ptsAllowed: 24 }), 6, 0.001));
+  ok('a safety is two, not four', near(D({ safety: 1, ptsAllowed: 24 }), 2, 0.001), String(D({ safety: 1, ptsAllowed: 24 })));
+  ok('a sack is one and a takeaway is two', near(D({ sacks: 1, ptsAllowed: 24 }), 1, 0.001) && near(D({ ints: 1, ptsAllowed: 24 }), 2, 0.001) && near(D({ fumRec: 1, ptsAllowed: 24 }), 2, 0.001));
+  ok('and five sacks earn no bonus, which the site default would pay', near(D({ sacks: 5, ptsAllowed: 24 }), 5, 0.001), String(D({ sacks: 5, ptsAllowed: 24 })));
+  // The ladder, rung by rung. A shutout is ten and a blowout costs four.
+  const ladder = [[0, 10], [3, 7], [6, 7], [7, 4], [13, 4], [14, 1], [20, 1], [21, 0], [27, 0], [28, -1], [34, -1], [35, -4], [52, -4]];
+  const wrong = ladder.filter(([pa, want]) => !near(D({ ptsAllowed: pa }), want, 0.001));
+  ok('the points-allowed ladder pays DraftKings\' figure at every rung', !wrong.length,
+     wrong.map(([pa, want]) => pa + ' allowed wanted ' + want + ', got ' + D({ ptsAllowed: pa })).join('; '));
+}
 {
   const dk = H.scoringRules('ppr', H.SCORING_SITE.dk), fd = H.scoringRules('ppr', H.SCORING_SITE.fd);
   ok('DraftKings pays the 300-yard passing bonus', near(H.scoreStats({ passYd: 300, passTD: 2 }, 'QB', dk), 12 + 8 + 3));
@@ -685,6 +732,28 @@ console.log('\nthe DFS page explanations');
   ok('...but a pick contest is told what it is waiting for rather than asked for an export',
      page.includes("if (fmt.kind === 'picks') {")
      && page.includes('The board fills in as soon as the salaries post.'));
+  // THE DESK'S OWN SINGLE-GAME SLATES. A Showdown used to have exactly one
+  // route to real prices: a CSV the reader downloaded. The desk imports them
+  // now, so the page asks for the matchup it needs and only falls back to the
+  // file where the desk has not priced that game.
+  ok('a single-game format asks the desk for its own matchup rather than the main board',
+     page.includes('function deskSlateFor()')
+     && page.includes("return availableSingles.indexOf(keys[0]) >= 0 ? 'sd:' + keys[0] : null;")
+     && page.includes("'&slate=' + encodeURIComponent(want)"));
+  // ...and only for a game the desk actually holds: an unimported matchup
+  // returns null so the board reaches the file notice instead of fetching a
+  // slate nobody stored.
+  ok('...only for a game the desk has actually priced', page.includes('availableSingles.indexOf(keys[0]) >= 0'));
+  // Re-solving on every keystroke would throw away the reader's locks and
+  // excludes for a slate that did not change.
+  ok('...and re-fetches only when the answer changed', page.includes('if (want === loadedSlate) return false;'));
+  // A reader who handed over their own file keeps it; the desk does not
+  // silently replace what they chose.
+  ok('...and never over a file the reader handed over themselves', page.includes('if (upGet(site)) return false;'));
+  // Switching back to a multi-game format has to come back to the main board,
+  // or the page solves a nine-seat roster against six-seat prices.
+  ok('...and every setup change routes through it, falling back to a plain render',
+     (page.match(/if \(!syncSlate\(\)\) render\(\);/g) || []).length === 3);
   ok('a Tiers roster is never invented out of salary bands',
      page.includes("ITDfs.tierFormat(") && page.includes('inventing them out of salary would build a roster nobody can enter'));
   // The always-on panel that #293 removed does not come back. The route does,
@@ -1669,12 +1738,31 @@ console.log('\nthe slate, partly played');
   const none = H.dfsActualFor(A, 'Khalil Shakir', 'BUF', 'WR', rules);
   ok('a played man with no box-score line is a zero, not a missing number',
      none.gamePlayed === true && none.actualPoints === 0 && none.actualBasis === 'box-score-absent', JSON.stringify(none));
-  // The one hole in this, said out loud rather than papered over: the stored
-  // box score carries passing, rushing, receiving and fumbles, and a defense
-  // is scored on sacks, takeaways, return touchdowns and points allowed.
+  // A defense IS scorable now: normalizeGameSummary builds its line by
+  // inverting the offense across from it. What it cannot do is invent one for
+  // a game stored before that line existed, and a summary at the old contract
+  // has none -- `A` above carries no defence map, which is exactly that case.
   const dst = H.dfsActualFor(A, 'Bills', 'BUF', 'DST', rules);
-  ok('a defense whose game is over says so and still has no actual',
+  ok('a defense from a box score stored before the line existed still has no actual',
      dst.gamePlayed === true && dst.actualPoints === null && dst.actualBasis === 'no-defense-box-score', JSON.stringify(dst));
+  const dline = { sacks: 3, ints: 1, fumRec: 1, defTD: 0, stTD: 0, safety: 0, ptsAllowed: 17 };
+  const withD = { ...A, defense: new Map([['BUF', dline]]) };
+  const scored = H.dfsActualFor(withD, 'Bills', 'BUF', 'DST', rules);
+  ok('and one whose line is stored is scored from it',
+     scored.gamePlayed === true && scored.actualBasis === 'box-score' && scored.actualPoints != null, JSON.stringify(scored));
+  // The invariant that matters: the actual runs through the SAME engine, the
+  // same rules and the same games count as the projection beside it, so the
+  // two are comparable rather than two different scales on one row.
+  ok('through the same call the projection uses',
+     near(scored.actualPoints, _oddsRound(H.scoreAny(dline, 'DST', rules, 1)), 0.001),
+     scored.actualPoints + ' vs ' + H.scoreAny(dline, 'DST', rules, 1));
+  // Three sacks at a point, a pick and a fumble at two each, and seventeen
+  // allowed landing on DraftKings' 14-20 rung for one. Added up by hand.
+  ok('and the arithmetic is the sum of its parts, on DraftKings\' own table',
+     near(scored.actualPoints, 3 + 2 + 2 + 1, 0.001), String(scored.actualPoints));
+  // A defense in a game that has not kicked off is untouched by any of this.
+  ok('a defense whose game is still to come carries no actual at all',
+     H.dfsActualFor(withD, 'Chiefs', 'KC', 'DST', rules).gamePlayed === false);
   // A kicker is the same case as the defense: field goals and extra points
   // are not in the stored box score either, so scoring him off it would bank
   // a silent zero on a man who might have kicked four.

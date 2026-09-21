@@ -217,5 +217,30 @@ console.log('\nthe column still scores exactly as it did');
   ok('the engine reproduces the hand-rolled column scorer', near(worst, 0), 'worst gap ' + worst);
 }
 
+
+// A `const` read above its own declaration throws, it does not read
+// undefined, and `_COL_RULES` calls scoringRules() while the module is still
+// evaluating. When scoringRules learned to read SCORING_KDEF the table was
+// still declared a few thousand lines below that call, which took the whole
+// Worker down on its first evaluation rather than on some later path -- and
+// `node --check` cannot see it, because the file's syntax was never wrong.
+console.log('\nthe scoring tables are declared before they are used');
+{
+  const at = needle => src.indexOf(needle);
+  const kdef = at('const SCORING_KDEF = {'), base = at('const SCORING_BASE = {');
+  const rules = at('function scoringRules(preset, custom) {'), col = at('const _COL_RULES = scoringRules(');
+  ok('every table exists exactly once', kdef > 0 && base > 0 && rules > 0 && col > 0
+     && src.split('const SCORING_KDEF = {').length === 2);
+  ok('the kicker/defense table is declared above scoringRules, which reads it', kdef < rules,
+     'KDEF at ' + kdef + ', scoringRules at ' + rules);
+  ok('and above the module-load call into it', kdef < col, 'KDEF at ' + kdef + ', _COL_RULES at ' + col);
+  // The proof rather than the proxy: evaluate the region in file order and
+  // see that it initializes.
+  const region = src.slice(base, col + 'const _COL_RULES = scoringRules(null, COLUMN_SCORING);'.length);
+  let threw = null;
+  try { new Function(region + '\nreturn _COL_RULES;')(); } catch (e) { threw = e.message; }
+  ok('so the scoring engine initializes in file order', threw === null, threw || '');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

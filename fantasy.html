@@ -183,8 +183,8 @@ section{margin:0 0 var(--space-6)}
 </section>
 
 <!-- ── the ribbon ────────────────────────────────────────────────────
-     Six chapters over 3,400px, and until now nothing but the scrollbar to move
-     between them. These are the page's own section heads, in their own order,
+     The lead well and five chapters over 3,400px, and until now nothing but
+     the scrollbar to move between them. These are the page's own section heads, in their own order,
      and they are the whole list — no destination here that is not on this
      page. /dfs's ribbon carries its venue and board switches instead; the band
      is the same one, from site.css. -->
@@ -192,10 +192,10 @@ section{margin:0 0 var(--space-6)}
   <div class="is-ribbon-in">
     <span class="is-ribbon-lab">This page</span>
     <span class="is-ribbon-jump">
+      <a href="#desk">The Newsroom</a>
       <a href="#now">Do this now</a>
       <a href="#board">This week&rsquo;s board</a>
       <a href="#startsit">The two calls</a>
-      <a href="#desk">The Newsroom</a>
       <a href="#disagree">Vega vs. Brooks</a>
       <a href="#tools">Every tool</a>
     </span>
@@ -205,6 +205,41 @@ section{margin:0 0 var(--space-6)}
 <div class="wrap wide fn-state">
 <div class="its-strip-sync" id="fnSync" hidden></div>
 <div id="fnCta" hidden></div>
+</div>
+
+<!-- ── the lead story ──────────────────────────────────────────────────────
+     Ken, 2026-09-21: "Move the lead story under the hero." It used to open the
+     reading band four screens down, which is where a reader arrives after the
+     week's decisions are already made. The desk publishes eleven pieces a week
+     against the games this page is about, and the newest of them is the first
+     thing the page has to say. It is deliberately ABOVE the deck: what the desk
+     published this morning outranks a decision the reader can still reach in
+     one scroll, and the ribbon directly above carries them there.
+
+     Unnumbered on purpose. The five chapters under it are the page's argument
+     in its own order — decide, then check the evidence, then read — and the
+     lead is news arriving against that order, not a sixth chapter. Same reason
+     the front page's well is not chapter 00. -->
+<div class="wrap wide">
+  <div class="is-sec" id="desk"><div class="is-sec-top"><span class="is-sec-n">Lead</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
+    <p id="fnDeskNote">Eight AI analyst personas, one set of facts. The newest piece leads; the rest of the week is beside it. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p></div>
+  <section>
+    <!-- The lead and the column beside it are painted together into this
+         one node (.nr-well in site.css): the newest piece is the lead
+         card, the next five are the column. It ships as the well rather
+         than the card grid so nothing reflows when the fetch lands. -->
+    <div class="nr-well" id="fnDesk"></div>
+    <!-- One of the two is always in the DOM. A section that quietly renders
+         nothing reads as a section with nothing in it, which is a different
+         claim and a wrong one; this one says why it is empty and where the
+         last pieces are. -->
+    <div class="is-vacant" id="fnDeskEmpty">
+      <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
+      <div class="is-vacant-msg"><b id="fnDeskEmptyH">Reading the desk&hellip;</b><span id="fnDeskEmptyP"></span></div>
+      <a class="is-btn ghost" href="/in-season/desk">Read the desk</a>
+    </div>
+  </section>
+
 </div>
 
 <!-- ── the deck ───────────────────────────────────────────────────────────────
@@ -217,7 +252,7 @@ section{margin:0 0 var(--space-6)}
 
      Two of these four fill from the board that is already loaded, so they cost
      no extra request. Both say so when the board cannot support a call. -->
-<div class="is-band is-band-top">
+<div class="is-band">
 <div class="wrap wide">
 <div class="is-sec" id="now"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Do this now</h2><a class="is-sec-more" href="/weekly-intel">Every tool &rarr;</a></div>
   <p>The four decisions open in a managed league this week. The first two are answered off this week&rsquo;s board; the other two need your rosters, which is one save away.</p></div>
@@ -336,35 +371,22 @@ section{margin:0 0 var(--space-6)}
   </div>
 </section>
 
-<!-- ── the newsroom ────────────────────────────────────────────────────────
-     The in-season desk's newest packages in the Weekly Fantasy lens, and the
-     desk's one standing argument. Both read a route and hide themselves when it
-     has nothing, like every module on this page. -->
+<!-- ── the standing argument ───────────────────────────────────────────────
+     The desk's one recurring disagreement, in the band below. It reads a route
+     and hides itself when the route has nothing, like every module on this
+     page. The newest desk packages are the lead well at the top. -->
 </div>
 
 <!-- ── the reading half ───────────────────────────────────────────────────────
      Everything above is a tool; everything in this band is writing. They were
      the same white ground and the same card, one after another, so the page had
      no seam between "decide something" and "read something". The band is the
-     seam. -->
+     seam. The lead story used to open this band and now opens the page; what is
+     left is the desk's one standing argument, which is a column rather than
+     news and belongs with the reading either way. -->
 <div class="is-band">
 <div class="wrap wide">
-  <div class="is-sec" id="desk"><div class="is-sec-top"><span class="is-sec-n">04</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
-    <p id="fnDeskNote">Eight AI analyst personas, one set of facts, newest first. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p></div>
-  <section>
-    <div class="nr-grid" id="fnDesk"></div>
-    <!-- One of the two is always in the DOM. A section that quietly renders
-         nothing reads as a section with nothing in it, which is a different
-         claim and a wrong one; this one says why it is empty and where the
-         last pieces are. -->
-    <div class="is-vacant" id="fnDeskEmpty">
-      <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
-      <div class="is-vacant-msg"><b id="fnDeskEmptyH">Reading the desk&hellip;</b><span id="fnDeskEmptyP"></span></div>
-      <a class="is-btn ghost" href="/in-season/desk">Read the desk</a>
-    </div>
-  </section>
-
-  <div class="is-sec" id="disagree"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>Vega vs. Brooks</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
+  <div class="is-sec" id="disagree"><div class="is-sec-top"><span class="is-sec-n">04</span><h2>Vega vs. Brooks</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
     <p>The desk&rsquo;s one standing argument. <a href="/analysts/vega">Market Intelligence</a> and <a href="/analysts/brooks">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p></div>
   <section>
     <div class="is-plate">
@@ -385,7 +407,7 @@ section{margin:0 0 var(--space-6)}
 <!-- Nine cards at card weight read as nine things of equal importance, which
      is wrong: four of them are already the deck at the top of the page. This is
      a shelf, at shelf weight. -->
-<div class="is-sec" id="tools"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Everything else in the lane</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
+<div class="is-sec" id="tools"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>Everything else in the lane</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
 <section>
   <div class="fn-tools">
     <a class="fn-tool" href="/rankings"><b>Rankings</b><span>This week, the next three, rest of season and the playoffs &mdash; Iron Tuna, consensus and Vegas side by side.</span></a>
@@ -669,8 +691,50 @@ section{margin:0 0 var(--space-6)}
       if (m < 60) return Math.max(m, 1) + 'm ago'; if (m < 1440) return Math.round(m / 60) + 'h ago'; if (m < 10080) return Math.round(m / 1440) + 'd ago';
       try { return new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }); } catch (x) { return ''; }
     };
-    $('fnDesk').innerHTML = j.pieces.slice(0, 6).map(function (p) { var by = p.byline || {}; return '<article class="nr-card"><span class="nr-kicker">' + e(p.title) + ' &middot; Week ' + e(p.week) + '</span><h3><a href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a></h3>' + (p.dek ? '<p>' + e(p.dek) + '</p>' : '') +
-      '<span class="nr-by"><span class="nr-av">' + e(av(by.name)) + '</span><a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' + (p.rivalry ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') + (p.publishedAt ? '<span class="nr-time">' + e(ago(p.publishedAt)) + '</span>' : '') + '</span></article>'; }).join('');
+    // WHO A PIECE IS ABOUT. `components[].player` is the desk's own subject
+    // list, which is what /player-search.js reads off `data-player-focus` to
+    // hang the faces on: names joined with "|", three at most, because past
+    // three a headline stops reading as one story. A piece that names nobody
+    // carries no attribute and the script falls back to the headline.
+    var focus = function (p) {
+      var who = [], parts = p.components || [];
+      for (var i = 0; i < parts.length && who.length < 3; i++) {
+        var n = parts[i] && parts[i].player;
+        if (n && who.indexOf(n) < 0) who.push(n);
+      }
+      return who.length ? ' data-player-focus="' + e(who.join('|')) + '"' : '';
+    };
+    var kicker = function (p) { return e(p.title) + ' &middot; Week ' + e(p.week); };
+    var byline = function (p) {
+      var by = p.byline || {};
+      return '<span class="nr-by"><span class="nr-av">' + e(av(by.name)) + '</span><a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' +
+        (p.rivalry ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') +
+        (p.publishedAt ? '<span class="nr-time">' + e(ago(p.publishedAt)) + '</span>' : '') + '</span>';
+    };
+    // THE LEAD IS THE NEWEST PIECE, not a chosen one: the feed is ordered by
+    // publication and the desk's own slots decide what lands when. The lead
+    // runs whole — picture, headline at lead size, the whole deck — and the
+    // five behind it run as headlines in the column, which is the difference
+    // between a newsroom front and six boxes of the same size.
+    var lead = j.pieces[0], rest = j.pieces.slice(1, 6);
+    var html = '<article class="nr-lead"' + focus(lead) + '>' +
+      '<span class="nr-kicker">' + kicker(lead) + '<span class="nr-flag">Latest</span></span>' +
+      '<h3><a href="' + e(lead.url) + '">' + e(lead.headline || lead.title) + '</a></h3>' +
+      (lead.dek ? '<p>' + e(lead.dek) + '</p>' : '') +
+      '<a class="nr-lead-go" href="' + e(lead.url) + '">Read the story &rarr;</a>' +
+      byline(lead) + '</article>';
+    if (rest.length) {
+      html += '<div class="nr-rail"><p class="nr-rail-h">More from the desk</p><ul>' + rest.map(function (p) {
+        // The <li> has no heading of its own, so `data-player-head` names the
+        // element the faces go in front of, the way the Weekly Wrap Up does it.
+        return '<li' + focus(p) + '><span class="nr-kicker">' + kicker(p) + '</span>' +
+          '<a data-player-head href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a>' + byline(p) + '</li>';
+      }).join('') + '</ul></div>';
+    }
+    // One published piece is a lead with nothing beside it: .nr-well-solo drops
+    // the second column rather than holding 42% of the band open beside it.
+    $('fnDesk').className = 'nr-well' + (rest.length ? '' : ' nr-well-solo');
+    $('fnDesk').innerHTML = html;
     $('fnDeskEmpty').hidden = true;
   }).catch(function () { vacant('fnDeskEmpty', 'The desk did not answer.', 'The newsroom feed is not responding. Last week\u2019s pieces are still on the desk.'); });
   fetch('/api/disagreements', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
