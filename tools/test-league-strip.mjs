@@ -137,8 +137,9 @@ console.log('\na connected league paints its strip on every page that has one');
 // and every number on this site reads at your exact settings" bar with a Sync
 // your league button. It was pulled on 2026-09-21 because every one of these
 // pages already carries its own connect copy above the fold, so the bar was
-// the second or third ask on one screen. The strip stays hidden, and no page
-// grows the bar back by accident.
+// the second or third ask on one screen. ITSync.cta() and its .its-cta styles
+// went with it, so this now guards against a page reintroducing the bar with
+// markup of its own. The strip stays hidden either way.
 console.log('\nand a signed-in reader with nothing connected is not asked again');
 {
   MODE = 'none';
