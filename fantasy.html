@@ -52,185 +52,10 @@ section{margin:0 0 var(--space-6)}
    already saved one. front.html and /dfs carry the same one-line fix. */
 [hidden]{display:none !important}
 
-/* ══ THE NAMEPLATE ═════════════════════════════════════════════════════════
-   Ken, 2026-09-21: "remove the current hero — the whole box." It was the dark
-   .is-hero band carrying "Your league, re-scored every week", a 52px headline,
-   a full-measure lede, two buttons and a how-it-works link: about 300px of
-   page before anything a reader came for.
-
-   What replaces it is a NAMEPLATE rather than a box — the lane's name, the
-   sentence that says what the lane is for, and the NFL clock as its dateline,
-   on one tinted strip closed with a rule. The page under it is a three-column
-   front, and a front has to start above the fold to read as one.
-
-   The ribbon went with the hero: this page's whole-page control is now the
-   rail down the left, and two bars of navigation for one page is one too
-   many. The scroll-padding the ribbon used to earn is restated here, because
-   `html:has(.is-ribbon)` in site.css no longer matches this page. */
-html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
-@media(max-width:860px){html{scroll-padding-top:68px}}
-.sl-in{max-width:1340px;margin:0 auto;padding:0 var(--space-5)}
-.sl-mast{background:var(--panel);border-bottom:2px solid var(--text)}
-.sl-mast .sl-in{padding-top:var(--space-5);padding-bottom:var(--space-4)}
-.sl-date{display:flex;flex-wrap:wrap;align-items:center;gap:4px var(--space-3);margin:0 0 var(--space-3)}
-.sl-date .is-eyebrow{color:var(--teal);padding-right:var(--space-3);border-right:1px solid var(--line2)}
-.sl-mast h1{font-family:var(--font-display);font-weight:400;text-transform:uppercase;
-  font-size:clamp(28px,4.4vw,52px);line-height:1;letter-spacing:.025em;margin:0;color:var(--text);text-wrap:balance}
-/* The clause the page is FOR is the only colored words on the plate, the same
-   device the homepage headline uses. */
-.sl-mast h1 em{font-style:normal;color:var(--teal)}
-.sl-deck{margin:var(--space-3) 0 0;max-width:82ch;font-size:var(--fs-md);line-height:1.6}
-.sl-mast .is-actions{margin:var(--space-4) 0 0}
-/* The dateline's hairline divides two things. On a phone the clock wraps
-   under the label and the rule is left dividing the label from nothing. */
-@media(max-width:560px){.sl-mast h1{font-size:var(--fs-2xl)}
-.sl-date .is-eyebrow{border-right:0;padding-right:0}}
-
-/* ══ THE THREE-COLUMN FRONT ════════════════════════════════════════════════
-   Rail, front, rail. The left rail is where you are going, the middle is what
-   the desk published, the right is the newest thing known about one player.
-   Both rails stick under the masthead; the middle is the only column that
-   scrolls past them.
-
-   It collapses in two steps, and the grid AREAS do the reordering so the
-   player rail comes up next to the navigation rather than stranding itself
-   1,200px below the fold on a phone. */
-.sl-shell{max-width:1340px;margin:0 auto;padding:var(--space-5) var(--space-5) var(--space-7);
-  display:grid;grid-template-columns:212px minmax(0,1fr) 304px;gap:var(--space-5) var(--space-6);
-  grid-template-areas:"nav main upd";align-items:start}
-.sl-left{grid-area:nav;min-width:0;position:sticky;top:calc(var(--header-h) + var(--space-4))}
-.sl-main{grid-area:main;min-width:0}
-.sl-right{grid-area:upd;min-width:0;position:sticky;top:calc(var(--header-h) + var(--space-4))}
-@media(max-width:1180px){
-  .sl-shell{grid-template-columns:200px minmax(0,1fr);grid-template-areas:"nav upd" "nav main"}
-  .sl-right{position:static}
-}
-@media(max-width:860px){
-  .sl-shell{grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "upd" "main";padding:var(--space-4) var(--space-4) var(--space-6)}
-  .sl-left{position:static}
-}
-
-/* ── the left rail ──────────────────────────────────────────────────────────
-   Five destinations, each with the one line that says what it answers. Two of
-   them leave the page and are marked with an arrow, because a rail that sends
-   you somewhere else without saying so is a trapdoor. Under them, quieter, the
-   rest of this page's own chapters — the ribbon's old job. */
-.sl-nav{border-top:2px solid var(--text);padding-top:var(--space-3)}
-.sl-nav-h{margin:0 0 var(--space-2);font-family:var(--font-mono);font-size:var(--fs-3xs);
-  font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.sl-nav ul{list-style:none;margin:0;padding:0}
-.sl-nav li{border-bottom:1px solid var(--line)}
-.sl-nav li:last-child{border-bottom:0}
-.sl-nav a{display:block;padding:10px 0;color:var(--text)}
-.sl-nav a:hover{text-decoration:none}
-.sl-nav a:hover b{color:var(--teal)}
-.sl-nav b{display:block;font-size:17px;font-weight:800;line-height:1.25;letter-spacing:-.005em}
-.sl-nav .sl-out b::after{content:" \2197";font-weight:400;color:var(--muted)}
-.sl-nav span{display:block;margin-top:2px;font-size:var(--fs-2xs);color:var(--muted);line-height:1.45}
-.sl-nav-more{margin-top:var(--space-4);border-top:1px solid var(--line);padding-top:var(--space-3)}
-.sl-nav-more p{margin:0 0 var(--space-2);font-family:var(--font-mono);font-size:var(--fs-3xs);
-  font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.sl-nav-more a{display:block;padding:4px 0;font-size:var(--fs-xs);font-weight:700;color:var(--sec)}
-.sl-nav-more a:hover{color:var(--teal);text-decoration:none}
-/* On a phone the rail is a sideways-scrolling row of chips, for the same
-   reason the site ribbon is: a wrapping rail of this many items comes out
-   three deep and takes a third of the screen from the thing it navigates. */
-@media(max-width:860px){
-  .sl-nav{border-top:0;padding-top:0}
-  .sl-nav ul{display:flex;gap:var(--space-2);overflow-x:auto;scrollbar-width:none}
-  .sl-nav ul::-webkit-scrollbar{display:none}
-  .sl-nav li{flex:0 0 auto;border-bottom:0}
-  .sl-nav a{padding:8px 13px;border:1px solid var(--line2);border-radius:999px;background:var(--bg);white-space:nowrap}
-  .sl-nav span{display:none}
-  .sl-nav-more{display:flex;gap:var(--space-4);overflow-x:auto;scrollbar-width:none;align-items:baseline}
-  .sl-nav-more::-webkit-scrollbar{display:none}
-  .sl-nav-more p{margin:0;flex:0 0 auto}
-  .sl-nav-more a{white-space:nowrap}
-}
-
-/* ── the stories ────────────────────────────────────────────────────────────
-   Ken, 2026-09-21: "two or three at a time." The well that used to run here
-   was a lead plus a five-headline column, which is a front page for a 1,200px
-   column and not for a 640px one. Three cards, the newest at lead weight. */
-.sl-stories{display:flex;flex-direction:column;gap:var(--space-4);margin:0 0 var(--space-5)}
-.sl-story{display:flex;flex-direction:column;gap:10px;min-width:0;background:var(--bg);
-  border:1px solid var(--line2);border-radius:var(--radius-md);padding:var(--space-5);
-  transition:border-color .12s ease,box-shadow .12s ease}
-.sl-story:hover{border-color:var(--teal);box-shadow:0 8px 24px rgba(15,23,25,.06)}
-.sl-story h3{margin:0;font-size:22px;line-height:1.28;font-weight:700;letter-spacing:-.008em;color:var(--text);overflow-wrap:anywhere}
-.sl-story h3 a{color:inherit}
-.sl-story h3 a:hover{color:var(--teal);text-decoration:none}
-.sl-story p{margin:0;color:var(--sec);font-size:var(--fs-md);line-height:1.55}
-.sl-story .nr-by{margin-top:auto;padding-top:var(--space-3);border-top:1px solid var(--line)}
-.sl-story h3 .it-story-focus{display:flex;margin:0 0 10px}
-.sl-story h3 .it-story-focus .it-player-face{width:44px;height:44px;min-width:44px;border-radius:8px}
-.sl-story.lead{padding:var(--space-6) 26px}
-.sl-story.lead h3{font-size:clamp(26px,2.8vw,32px);line-height:1.18;font-weight:800;letter-spacing:-.015em}
-.sl-story.lead p{font-size:19px}
-.sl-story.lead h3 .it-story-focus .it-player-face{width:60px;height:60px;min-width:60px;border-radius:10px}
-.sl-story-go{font-size:var(--fs-xs);font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
-/* The boast. The desk may open a headline with "YOU'RE WELCOME:" only when one
-   of its own pre-kickoff calls cleared the bar (_voiceBlock, _worker.js), so
-   the phrase is already rationed; printing it as the first two words of the
-   headline spent that rationing on punctuation. Same treatment as .nr-lead. */
-.sl-story.is-boast{border-color:rgba(242,169,0,.55);background:linear-gradient(180deg,#fffaef,var(--panel) 58%)}
-.sl-story p.sl-boast{margin:0 0 -6px;font-family:var(--font-display);font-weight:400;
-  font-size:clamp(34px,5vw,58px);line-height:.92;letter-spacing:.015em;text-transform:uppercase;color:var(--goldink)}
-.sl-story.is-boast h3{font-size:clamp(21px,2.1vw,27px);font-weight:700;letter-spacing:-.005em}
-.sl-story.is-boast .nr-by{border-top-color:rgba(242,169,0,.35)}
-@media(prefers-reduced-motion:reduce){.sl-story:hover{box-shadow:none}}
-
-/* ── AI Edge ────────────────────────────────────────────────────────────────
-   The signal engine's own week, written out. Every sentence is built from a
-   detected insight and the numbers that insight carries; the page cannot say
-   anything /api/signals did not find, which is the same contract buildTake
-   works under in the worker. */
-.sl-edge{background:var(--bg);border:1px solid var(--line2);border-radius:var(--radius-md);padding:var(--space-5) 26px}
-.sl-edge-k{display:block;margin:0 0 var(--space-2);font-family:var(--font-mono);font-size:var(--fs-3xs);
-  font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
-.sl-edge h3{margin:0 0 var(--space-3);font-size:clamp(23px,2.4vw,28px);line-height:1.25;font-weight:800;letter-spacing:-.012em;color:var(--text)}
-.sl-edge p{margin:0 0 var(--space-4);font-size:var(--fs-md);line-height:1.65;color:var(--sec)}
-.sl-edge p:last-child{margin-bottom:0}
-.sl-edge b{color:var(--text)}
-.sl-edge .sl-edge-note{font-size:var(--fs-sm);color:var(--muted);border-top:1px solid var(--line);padding-top:var(--space-3)}
-
-/* ── the player rail ────────────────────────────────────────────────────────
-   One player at a time, newest first: what changed about him, the numbers it
-   changed by, and the card that holds the rest. It rotates on a timer that
-   stops the moment a reader touches it, and it never rotates at all for a
-   reader who has asked for reduced motion. */
-.sl-upd{background:var(--bg);border:1px solid var(--line2);border-radius:var(--radius-md);overflow:hidden}
-.sl-upd-h{display:flex;align-items:center;gap:var(--space-2);padding:9px var(--space-4);
-  border-bottom:1px solid var(--line);background:var(--panel)}
-.sl-upd-h b{font-family:var(--font-mono);font-size:var(--fs-3xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text)}
-.sl-upd-n{margin-left:auto;font-size:var(--fs-2xs);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.sl-upd-body{padding:var(--space-4)}
-.sl-upd-k{font-family:var(--font-mono);font-size:var(--fs-3xs);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
-.sl-upd-name{margin:6px 0 1px;font-size:21px;font-weight:800;line-height:1.2;letter-spacing:-.01em}
-.sl-upd-name a{color:var(--text)}
-.sl-upd-name a:hover{color:var(--teal);text-decoration:none}
-.sl-upd-meta{font-size:var(--fs-2xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.sl-upd-body p{margin:var(--space-3) 0 0;font-size:var(--fs-sm);line-height:1.6;color:var(--sec)}
-.sl-upd-body p b{color:var(--text)}
-.sl-upd-foot{display:flex;align-items:center;gap:6px;padding:8px var(--space-4);border-top:1px solid var(--line)}
-.sl-upd-foot button{appearance:none;background:var(--bg);border:1px solid var(--line2);border-radius:6px;
-  color:var(--sec);font:inherit;font-size:var(--fs-2xs);font-weight:700;padding:4px 9px;cursor:pointer;line-height:1.4}
-.sl-upd-foot button:hover{border-color:var(--teal);color:var(--text)}
-.sl-upd-dots{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
-.sl-upd-dots i{display:block;width:5px;height:5px;border-radius:50%;background:var(--line2)}
-.sl-upd-dots i.on{background:var(--teal)}
-.sl-upd-note{margin:var(--space-3) 0 0;font-size:var(--fs-2xs);color:var(--muted);line-height:1.5}
-
-/* ── what the column does to the shared objects ─────────────────────────────
-   Three of them assume they are 1,200px wide because until now every page
-   that used them was. Inside a 640px column the band has to stop being
-   full-bleed and the split has to stop being a split. */
-.sl-main .is-band{margin:var(--space-6) 0;padding:var(--space-5);border:1px solid var(--line);border-radius:var(--radius-lg)}
-.sl-main .is-band > .wrap{max-width:none;padding:0}
-.sl-main .is-band > .wrap > .is-sec:first-child{margin-top:0}
-.sl-main .is-split{grid-template-columns:minmax(0,1fr)}
-.sl-main .is-rail{position:static}
-.sl-main > .is-sec:first-child{margin-top:0}
+/* The three-column front this page wears — the nameplate, the shell, the
+   rails, the story cards, the AI Edge plate and the player rail — is
+   .sl-* IN site.css, because /dfs wears the same one. What stays here is
+   this page’s own: the standing argument and the tool shelf. */
 
 /* Vega vs. Brooks. Not a table of gaps: two columns, five picks each, each man
    arguing the players he expects to beat the other man's ranking on. The ranks
@@ -369,7 +194,7 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
   <p class="sl-upd-note">Every update is a field that changed between two boards, or a rule the signal engine fired on. Nothing is summarised from a source the page cannot show you.</p>
 </aside>
 
-<div class="sl-main">
+<div class="sl-main sl-narrow">
 
 <!-- ── the stories ────────────────────────────────────────────────────────
      Ken, 2026-09-21: "two or three at a time." The desk publishes eleven
@@ -636,6 +461,7 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 <script src="/it-sync.js" defer></script>
 <script src="/it-inseason.js" defer></script>
 <script src="/it-inseason-ui.js" defer></script>
+<script src="/it-signals.js" defer></script>
 <script>
 /* The Fantasy lane. One board from /api/boards, filtered client-side by the
  * position segmented control — the payload is already loaded, so switching
@@ -1108,11 +934,10 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
  */
 (function () {
   var $ = function (id) { return document.getElementById(id); };
-  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
-  var n1 = function (v) { return (v == null || !isFinite(v)) ? '—' : Number(v).toFixed(1); };
-  var sg = function (v) { return (v == null || !isFinite(v)) ? '—' : (v > 0 ? '+' : '') + Number(v).toFixed(1); };
-  var si = function (v) { return (v == null || !isFinite(v)) ? '—' : (v > 0 ? '+' : '') + Math.round(v); };
-  var slug = function (n) { return String(n).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); };
+  // The number and name helpers are /it-signals.js's, because the sentences
+  // this page prints and the ones /dfs prints have to round the same number
+  // the same way. S is bound at boot, not at parse: it is a deferred script.
+  var S = null, e, n1, slug;
   var vacant = function (id, head, detail) { $(id + 'H').textContent = head; $(id + 'P').textContent = detail || ''; };
   // The scoring preset is read at BOOT, not at parse: /it-inseason.js is a
   // deferred script and has not run while this inline one is being parsed, so
@@ -1206,156 +1031,13 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
       });
   }
 
-  /* ── 2 · putting words to one detected insight ─────────────────────────
-     One template per rule, each naming only fields that rule returns. A rule
-     this page has no template for still prints: its label, its subject and
-     nothing invented around them. */
-  function basisWord(b) {
-    b = String(b || '');
-    if (b.indexOf('props') === 0) return 'a posted player prop';
-    if (b.indexOf('gamelines') === 0) return 'the posted game line rather than a quoted prop';
-    if (b === 'ratings') return 'fitted team ratings, which no book has priced yet';
-    return b || 'the market feed';
-  }
-  function who(s) {
-    if (!s || !s.name) return '';
-    return '<b>' + e(s.name) + '</b>' + (s.position ? ' (' + e(s.position) + (s.team ? ', ' + e(s.team) : '') + ')' : '');
-  }
-  function sentence(ins) {
-    var d = ins.data || {}, s = ins.subject || {}, w = who(s);
-    switch (ins.type) {
-      case 'vegas_above_consensus':
-      case 'vegas_below_consensus':
-        return w + ': the book projects ' + n1(d.vegasPoints) + ' points this week against a consensus ' +
-          n1(d.consensusPoints) + ' — ' + sg(d.pointsDelta) + ' points and ' + si(d.rankDelta) +
-          ' places, off ' + basisWord(d.basis) + '. Iron Tuna blends the two to ' + n1(d.ironTunaPoints) + '.' +
-          (d.summary ? ' ' + e(d.summary) : '');
-      case 'line_movement':
-        if (d.currentProbability != null) {
-          return w + ': his anytime-touchdown price has moved from ' + n1(d.openProbability) + '% to ' +
-            n1(d.currentProbability) + '% since it opened, at ' + e(d.booksMoved) + ' of ' + e(d.books) + ' books.';
-        }
-        return w + ': the ' + e(String(d.label || d.market).toLowerCase()) + ' line has moved from ' + e(d.open) +
-          ' to ' + e(d.current) + ', ' + si(d.percentChange) + '%, at ' + e(d.booksMoved) + ' of ' + e(d.books) + ' books.';
-      case 'role_increase':
-      case 'role_decrease':
-        return w + ': ' + e(d.latestTouches) + ' touches in Week ' + e(d.latestWeek) + ' against a season average of ' +
-          n1(d.seasonAvgTouches) + ' over ' + e(d.games) + ' games — ' + si(d.pct) + '% on his own baseline' +
-          (d.snapPct != null ? ', on ' + Math.round(d.snapPct * 100) + '% of the snaps' : '') + '.';
-      case 'production_below_opportunity':
-        return w + ': ' + e(d.touches) + ' touches in Week ' + e(d.week) + ' were worth ' + n1(d.expectedPoints) +
-          ' points at the league rate and returned ' + n1(d.actualPoints) + '. The work is there; the points are not yet.';
-      case 'production_above_opportunity':
-        return w + ': ' + e(d.touches) + ' touches in Week ' + e(d.week) + ' returned ' + n1(d.actualPoints) +
-          ' points against the ' + n1(d.expectedPoints) + ' the league rate implies. That is efficiency, not volume.';
-      case 'target_consolidation':
-      case 'backfield_consolidation':
-        return w + ': ' + n1(d.share) + '% of ' + e(d.team) + '’s ' +
-          (ins.type === 'target_consolidation' ? 'targets' : 'carries') + ' in Week ' + e(d.week) +
-          ', against ' + n1(d.seasonShare) + '% across the season so far.';
-      case 'td_regression':
-        return w + ': ' + n1(d.actualTdsPerGame) + ' touchdowns a game over ' + e(d.games) +
-          ' against a projected ' + n1(d.projectedTdsPerGame) + '. ' + (d.direction === 'negative'
-            ? 'He is scoring faster than the projection carries him, and that is the direction regression runs against.'
-            : 'He is scoring slower than the projection carries him, and that is the direction regression runs in his favour.');
-      case 'game_script_change':
-        return '<b>' + e(s.game || s.team) + '</b>: the spread has moved ' + sg(d.spreadMove) + ' and the total ' +
-          sg(d.totalMove) + ' since it opened. ' + e(d.interpretation || '');
-      default:
-        return (w || '<b>' + e(s.game || s.team || '') + '</b>') + ': ' + e(ins.label) + '.';
-    }
-  }
-  function headline(ins) {
-    var d = ins.data || {}, s = ins.subject || {}, nm = s.name || s.game || s.team || '';
-    switch (ins.type) {
-      case 'vegas_above_consensus': return 'The book is ' + n1(Math.abs(d.pointsDelta)) + ' points above the consensus on ' + nm;
-      case 'vegas_below_consensus': return 'The book is ' + n1(Math.abs(d.pointsDelta)) + ' points below the consensus on ' + nm;
-      case 'line_movement': return 'The market has moved on ' + nm + ' since the line opened';
-      case 'role_increase': return nm + ' is playing a bigger role than his season average says';
-      case 'role_decrease': return nm + ' is playing a smaller role than his season average says';
-      case 'production_below_opportunity': return nm + ' is not converting the work he is already getting';
-      case 'production_above_opportunity': return nm + ' is beating the work he is getting';
-      case 'target_consolidation': return nm + ' is taking a bigger share of the targets';
-      case 'backfield_consolidation': return nm + ' is taking a bigger share of the carries';
-      case 'td_regression': return nm + ' is scoring at a rate the projection does not carry';
-      case 'game_script_change': return 'The game script has moved in ' + nm;
-      default: return ins.label + ' — ' + nm;
-    }
-  }
-
-  /* ── 3 · the player rail ───────────────────────────────────────────────
-     One player at a time, the Wednesday board's own movers first. It rotates
-     on a timer that stops the moment a reader touches it, and it does not
-     rotate at all for a reader who has asked for reduced motion. */
-  var items = [], at = 0, timer = null;
-  var REDUCED = (function () {
-    try { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-    catch (x) { return false; }
-  })();
-  function paint() {
-    if (!items.length) return;
-    at = (at % items.length + items.length) % items.length;
-    var it = items[at];
-    $('slUpdBody').innerHTML = '<span class="sl-upd-k">' + e(it.kicker) + '</span>' +
-      '<p class="sl-upd-name">' + (it.href ? '<a href="' + e(it.href) + '">' + e(it.name) + '</a>' : e(it.name)) + '</p>' +
-      (it.meta ? '<span class="sl-upd-meta">' + e(it.meta) + '</span>' : '') +
-      '<p>' + it.html + '</p>';
-    $('slUpdN').textContent = (at + 1) + ' of ' + items.length;
-    $('slUpdDots').innerHTML = items.map(function (x, i) { return '<i' + (i === at ? ' class="on"' : '') + '></i>'; }).join('');
-  }
-  function stop() { if (timer) { clearInterval(timer); timer = null; } }
-  function start() { if (!REDUCED && !timer && items.length > 1) timer = setInterval(function () { at++; paint(); }, 8000); }
-  function railBoot() {
-    if (!items.length) {
-      vacant('slUpdEmpty', 'No player update has landed yet.',
-        'The Wednesday board has not moved anybody and the signal engine has not fired. That is a reading, not a gap.');
-      return;
-    }
-    $('slUpdEmpty').hidden = true;
-    $('slUpd').hidden = false;
-    paint(); start();
-    $('slUpdPrev').addEventListener('click', function () { stop(); at--; paint(); });
-    $('slUpdNext').addEventListener('click', function () { stop(); at++; paint(); });
-    var box = $('slUpd');
-    box.addEventListener('mouseenter', stop);
-    box.addEventListener('focusin', stop);
-    box.addEventListener('mouseleave', start);
-  }
-
-  // The Wednesday snapshot diff: the only source here that knows what CHANGED
-  // about a player rather than what is true about him, so it leads the rail.
-  function readMovers() {
-    return fetch('/api/ros-update?scoring=' + preset, { credentials: 'omit' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (!j || !j.ok) return [];
-        var out = [];
-        [].concat(j.risers || [], j.fallers || []).forEach(function (m) {
-          if (!m || !m.name || m.currentRank == null) return;
-          out.push({
-            sort: Math.abs(m.move || 0),
-            key: String(m.name).toLowerCase(),
-            kicker: 'Rest of season \u00b7 ' + (m.move > 0 ? 'riser' : 'faller'),
-            name: m.name, meta: m.position + ' \u00b7 ' + m.team, href: '/player/' + slug(m.name),
-            html: 'Iron Tuna has moved him ' + e(m.position + m.previousRank) + ' to <b>' + e(m.position + m.currentRank) +
-              '</b> on the rest-of-season board' + (m.reasons && m.reasons.length ? ': ' + e(m.reasons.join('; ')) : '') + '.'
-          });
-        });
-        out.sort(function (a, b) { return b.sort - a.sort; });
-        return out;
-      })
-      .catch(function () { return []; });
-  }
-
-  function readSignals() {
-    return fetch('/api/signals?scoring=' + preset, { credentials: 'omit' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) { return (j && j.ok && j.insights) ? j : null; })
-      .catch(function () { return null; });
-  }
-
-  function edgeAndRail(mv, sig) {
-    var ins = (sig && sig.insights) || [];
+  /* ── 2 · the player rail and the AI Edge story ─────────────────────────
+     Both are readings of ONE /api/signals payload, so they can never disagree
+     about what the engine found. The rail itself — its rotation, its templates
+     and the Wednesday movers that lead it — is /it-signals.js, which /dfs
+     wears too. What stays here is the story, which is this page's alone. */
+  function edgeAndRail(res) {
+    var sig = res.signals, ins = res.insights;
 
     // ── the AI Edge story ──────────────────────────────────────────────
     if (!ins.length) {
@@ -1371,11 +1053,11 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
       }
       var offline = (sig.unavailable || []).length;
       $('slEdge').innerHTML = '<span class="sl-edge-k">AI Edge \u00b7 the week off the signal engine</span>' +
-        '<h3>' + e(headline(top[0])) + '</h3>' +
+        '<h3>' + e(S.headline(top[0])) + '</h3>' +
         '<p>' + e('The engine found ' + sig.count + ' thing' + (sig.count === 1 ? '' : 's') +
           ' worth naming this week across ' + (sig.rules || []).length + ' rules. These are the ' + top.length +
           ' it found hardest, each one carrying the numbers it was found from.') + '</p>' +
-        top.map(function (x) { return '<p>' + sentence(x) + '</p>'; }).join('') +
+        top.map(function (x) { return '<p>' + S.sentence(x) + '</p>'; }).join('') +
         '<p class="sl-edge-note">' + e('Every rule is arithmetic over the boards, the line history and the usage overlay, and every sentence above is a template filled from the numbers that rule returned \u2014 not a model\u2019s summary of them.' +
           (offline ? ' ' + offline + ' rule' + (offline === 1 ? ' is' : 's are') + ' listed and returning nothing, because no source publishes what it needs.' : '')) + '</p>';
       $('slEdge').hidden = false;
@@ -1383,29 +1065,24 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
     }
 
     // ── the rail ───────────────────────────────────────────────────────
-    // Movers first, then the engine's own detections, one entry per player.
-    var used = {};
-    mv.forEach(function (m) { if (!used[m.key] && items.length < 12) { used[m.key] = 1; items.push(m); } });
-    ins.forEach(function (x) {
-      var s = x.subject || {};
-      if (!s.name || items.length >= 12) return;
-      var key = String(s.name).toLowerCase();
-      if (used[key]) return;
-      used[key] = 1;
-      items.push({
-        kicker: 'This week \u00b7 ' + x.label, name: s.name,
-        meta: (s.position || '') + (s.team ? ' \u00b7 ' + s.team : ''),
-        href: '/player/' + slug(s.name), html: sentence(x)
-      });
-    });
-    railBoot();
+    S.rail({ box: $('slUpd'), body: $('slUpdBody'), n: $('slUpdN'), dots: $('slUpdDots'),
+             prev: $('slUpdPrev'), next: $('slUpdNext'), empty: $('slUpdEmpty'),
+             emptyH: $('slUpdEmptyH'), emptyP: $('slUpdEmptyP') },
+            S.items(res.movers, ins, 12));
   }
 
   function boot() {
+    // Every global this function reads is a deferred script's, which is why
+    // it is read HERE and not at parse: /fantasy shipped for a fortnight with
+    // an `if (window.ITSync)` at an inline script's top level, and the guard
+    // was simply false every time (tools/test-league-strip.mjs).
+    S = window.ITSignals;
+    if (!S) { vacant('slEdgeEmpty', 'The signal engine did not load.', 'Its script did not reach this browser. The market board still carries the week\u2019s gaps.'); return; }
+    e = S.esc; n1 = S.n1; slug = S.slug;
     var L = window.ITInSeason;
     if (L && L.get()) preset = PRESET[L.scoring()] || 'ppr';
     n5Boot();
-    Promise.all([readMovers(), readSignals()]).then(function (both) { edgeAndRail(both[0] || [], both[1]); });
+    S.read(preset).then(edgeAndRail);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
