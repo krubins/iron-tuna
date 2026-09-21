@@ -789,7 +789,7 @@ p{color:var(--sec);margin:0 0 16px}
    sits beside the stories instead (.sl-front) so the boards below get the
    whole measure. These rules come after site.css, so they beat its own
    media-query versions at equal specificity without needing to repeat them. */
-.df-shell{max-width:1600px;grid-template-columns:212px minmax(0,1fr);grid-template-areas:"nav main"}
+.df-shell{max-width:1600px;grid-template-columns:224px minmax(0,1fr);grid-template-areas:"nav main"}
 @media(max-width:860px){
   .df-shell{grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "main"}
 }
@@ -798,7 +798,6 @@ p{color:var(--sec);margin:0 0 16px}
 .df-shell .sl-left{z-index:2}
 /* The stories are the front's left-hand column; the player rail is beside
    them, not down the page, because below them the boards want the width. */
-.sl-updrail{min-width:0}
 .sl-front>section{margin:0}
 .sl-front>section>.is-sec:first-child{margin-top:0}
 

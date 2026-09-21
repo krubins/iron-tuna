@@ -50,12 +50,17 @@ h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em
 /* Ten questions in one flat list are five groups with a sticky index beside
    them, so a reader looking for the price or the AI disclosure lands on it
    without reading the other eight. */
-.faq-wrap{display:grid;grid-template-columns:220px minmax(0,1fr);gap:var(--space-7);align-items:start}
-.faq-index{position:sticky;top:var(--space-5);display:flex;flex-direction:column;gap:2px;border-left:2px solid var(--line)}
-.faq-index a{padding:8px 14px;font-size:var(--fs-sm);font-weight:600;color:var(--sec);margin-left:-2px;border-left:2px solid transparent}
-.faq-index a:hover{color:var(--teal);text-decoration:none}
-.faq-index a.on{color:var(--teal);font-weight:700;border-left-color:var(--teal)}
-.faq-stuck{margin:var(--space-5) 14px 0;padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md)}
+.faq-wrap{display:grid;grid-template-columns:220px minmax(0,1fr);gap:var(--rail-gap);align-items:start}
+/* The index is shaded for the same reason the season-long rail is: it is the
+   page's chrome, and on white it reads as a second column of copy. The active
+   marker keeps its own 2px edge, now inside the shade rather than on it. */
+.faq-index{position:sticky;top:var(--space-5);display:flex;flex-direction:column;gap:2px;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
+  padding:var(--space-3) var(--space-3) var(--space-4)}
+.faq-index > a{padding:8px 12px;font-size:var(--fs-sm);font-weight:600;color:var(--sec);border-left:2px solid var(--line2)}
+.faq-index > a:hover{color:var(--teal);text-decoration:none}
+.faq-index > a.on{color:var(--teal);font-weight:700;border-left-color:var(--teal)}
+.faq-stuck{margin:var(--space-4) 0 0;padding:14px;background:var(--bg);border:1px solid var(--line2);border-radius:var(--radius-md)}
 .faq-stuck b{display:block;font-size:var(--fs-xs);margin-bottom:4px}
 .faq-stuck span{display:block;font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
 .faq-stuck a{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:var(--fs-xs);font-weight:700}
@@ -70,7 +75,7 @@ h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em
 .faq details[open] summary .faq-plus{display:none}
 .faq details[open] summary .faq-minus{display:block}
 .faq p{color:var(--sec);margin:10px 0 2px 26px;line-height:1.65;max-width:680px}
-@media(max-width:760px){.faq-wrap{grid-template-columns:1fr;gap:var(--space-4)}.faq-index{position:static;flex-direction:row;flex-wrap:wrap;border-left:0;gap:6px}.faq-index a{border:1px solid var(--line2);border-radius:999px;padding:6px 12px;margin:0;font-size:var(--fs-xs)}.faq-index a.on{background:var(--text);color:#fff;border-color:var(--text)}.faq-stuck{display:none}}
+@media(max-width:760px){.faq-wrap{grid-template-columns:1fr;gap:var(--space-4)}.faq-index{position:static;flex-direction:row;flex-wrap:wrap;gap:6px;background:none;border:0;border-radius:0;padding:0}.faq-index > a{border:1px solid var(--line2);border-radius:999px;padding:6px 12px;margin:0;font-size:var(--fs-xs)}.faq-index > a.on{background:var(--text);color:#fff;border-color:var(--text)}.faq-stuck{display:none}}
 footer{border-top:1px solid var(--line);margin-top:42px;padding:24px 0;color:var(--muted);font-size:14.5px}
 footer a{color:var(--sec);margin-right:16px}
 </style>

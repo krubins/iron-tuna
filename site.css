@@ -106,8 +106,14 @@
   --space-6: 32px;
   --space-7: 48px;
 
+  /* The gutter between a page's body column and a rail beside it. Rails are
+     chrome, not a second column of prose, so they sit further off the middle
+     than two body elements would; past 1400px there is room for more. */
+  --rail-gap: 48px;
+
   --header-h: 64px;
 }
+@media (min-width: 1400px) { :root { --rail-gap: 64px } }
 
 /* ── base ───────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box }
@@ -1167,7 +1173,11 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
    `html:has(.is-ribbon)` in site.css no longer matches this page. */
 html:has(.sl-shell){scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 @media(max-width:860px){html:has(.sl-shell){scroll-padding-top:68px}}
-.sl-in{max-width:1340px;margin:0 auto;padding:0 var(--space-5)}
+/* THE SAME NUMBER AS .sl-shell, and it has to be: the nameplate sits directly
+   over the shell and a reader sees one left edge or two. #331 widened the
+   shell to 1,440px and left this at 1,340px, which set the plate 50px inside
+   the rail beneath it on a 1,500px screen. When one moves, both move. */
+.sl-in{max-width:1440px;margin:0 auto;padding:0 var(--space-5)}
 .sl-mast{background:var(--panel);border-bottom:2px solid var(--text)}
 .sl-mast .sl-in{padding-top:var(--space-5);padding-bottom:var(--space-4)}
 .sl-date{display:flex;flex-wrap:wrap;align-items:center;gap:4px var(--space-3);margin:0 0 var(--space-3)}
@@ -1200,19 +1210,31 @@ html:has(.sl-shell){scroll-padding-top:calc(var(--header-h) + var(--space-4))}
    player rail comes up next to the navigation rather than stranding itself
    1,200px below the fold on a phone. A page that runs only two columns
    (/dfs) overrides grid-template-areas and leaves the rest alone. */
-.sl-shell{max-width:1340px;margin:0 auto;padding:var(--space-5) var(--space-5) var(--space-7);
-  display:grid;grid-template-columns:212px minmax(0,1fr) 304px;gap:var(--space-5) var(--space-6);
+.sl-shell{max-width:1440px;margin:0 auto;padding:var(--space-5) var(--space-5) var(--space-7);
+  display:grid;grid-template-columns:224px minmax(0,1fr) 312px;gap:var(--space-5) var(--rail-gap);
   grid-template-areas:"nav main upd";align-items:start}
-.sl-left{grid-area:nav;min-width:0;position:sticky;top:calc(var(--header-h) + var(--space-4))}
+/* Both rails carry a shade so each column reads as chrome rather than as a
+   third body of text sharing the page's white (#331). */
+.sl-left{grid-area:nav;min-width:0;position:sticky;top:calc(var(--header-h) + var(--space-4));
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
+  padding:var(--space-4) var(--space-4) var(--space-5)}
+.sl-left .sl-nav li{border-bottom-color:var(--line2)}
+.sl-left .sl-nav-more{border-top-color:var(--line2)}
 .sl-main{grid-area:main;min-width:0}
-.sl-right{grid-area:upd;min-width:0;position:sticky;top:calc(var(--header-h) + var(--space-4))}
+.sl-right,.sl-updrail{min-width:0;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
+  padding:var(--space-4)}
+.sl-right{grid-area:upd;position:sticky;top:calc(var(--header-h) + var(--space-4))}
 @media(max-width:1180px){
   .sl-shell{grid-template-columns:200px minmax(0,1fr);grid-template-areas:"nav upd" "nav main"}
   .sl-right{position:static}
 }
+/* A shade is a column's edge. With one column there is no edge to draw, so
+   both rails drop it rather than becoming two grey boxes stacked on white. */
 @media(max-width:860px){
   .sl-shell{grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "upd" "main";padding:var(--space-4) var(--space-4) var(--space-6)}
-  .sl-left{position:static}
+  .sl-left{position:static;background:none;border:0;border-radius:0;padding:0}
+  .sl-right,.sl-updrail{background:none;border:0;border-radius:0;padding:0}
 }
 
 /* ── the left rail ──────────────────────────────────────────────────────────
@@ -1230,7 +1252,9 @@ html:has(.sl-shell){scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 .sl-nav a:hover{text-decoration:none}
 .sl-nav a:hover b{color:var(--teal)}
 .sl-nav b{display:block;font-size:17px;font-weight:800;line-height:1.25;letter-spacing:-.005em}
-.sl-nav .sl-out b::after{content:" \2197";font-weight:400;color:var(--muted)}
+/* A no-break space, not a plain one: at the rail's width the arrow was
+   breaking onto a line of its own under "Season Long Rankings". */
+.sl-nav .sl-out b::after{content:"\00a0\2197";font-weight:400;color:var(--muted)}
 .sl-nav span{display:block;margin-top:2px;font-size:var(--fs-2xs);color:var(--muted);line-height:1.45}
 .sl-nav-more{margin-top:var(--space-4);border-top:1px solid var(--line);padding-top:var(--space-3)}
 .sl-nav-more p{margin:0 0 var(--space-2);font-family:var(--font-mono);font-size:var(--fs-3xs);
@@ -1342,14 +1366,14 @@ html:has(.sl-shell){scroll-padding-top:calc(var(--header-h) + var(--space-4))}
    the page: below the stories the boards need the whole width. It sits beside
    them instead, in a grid of its own at the top of the column, and everything
    under it gets the full measure. */
-.sl-front{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:var(--space-6);align-items:start;margin-bottom:var(--space-5)}
+.sl-front{display:grid;grid-template-columns:minmax(0,1fr) 312px;gap:var(--rail-gap);align-items:start;margin-bottom:var(--space-5)}
 .sl-front .sl-stories{margin-bottom:0}
 @media(max-width:980px){.sl-front{grid-template-columns:minmax(0,1fr);gap:var(--space-5)}}
 
 /* ── a two-column page body ────────────────────────────────────────────────
    Main and a rail. Collapses to one column early, because a 300px rail beside
    a table is worse than a rail under it. */
-.is-split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-6); align-items: start }
+.is-split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--rail-gap); align-items: start }
 @media (max-width: 980px) { .is-split { grid-template-columns: minmax(0, 1fr) } }
 .is-rail { display: flex; flex-direction: column; gap: var(--space-4); position: sticky; top: var(--space-4) }
 @media (max-width: 980px) { .is-rail { position: static } }
