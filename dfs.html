@@ -762,6 +762,55 @@ p{color:var(--sec);margin:0 0 16px}
   .sl-nav .rk-seg button[aria-pressed="true"]{box-shadow:none;border-color:var(--teal);padding-left:13px}
 }
 
+/* ══ THE SCOREBOARD DRESS — THIS PAGE'S OWN HALF ══════════════════════════
+   The dress itself is `body.sl-dress` in site.css, which this page wears and
+   /fantasy wears; the header over that block says what the four moves are and
+   why it lives there rather than in the two pages. What stays here is what
+   only this page has the markup for.
+
+   The rail is the whole of it. /fantasy's rail is a list of links, so the
+   shared block pads `.sl-nav ul` and the dividers inset with it. This rail is
+   a group of BUTTONS — #dfNav, the board switch — which that selector does
+   not reach, so its rows sat flush against the rail's new edge with their
+   dividers running into it. The padding goes on the buttons rather than on
+   the group, which leaves the dividers full-bleed and the pressed board's
+   marker on the true edge of the rail: a sidebar row with an accent bar, not
+   an indented one with a bar floating 16px inside it.
+
+   Only above 860px. Below it the shared block takes the rail's ground and its
+   header bar off, and this page's own media query turns the same buttons into
+   a scrolling row of pills — padding a pill by the rail gutter would make it
+   an oval. */
+@media(min-width:861px){
+  body.sl-dress .sl-nav .rk-seg button{padding:9px var(--space-4);font-size:14.5px}
+  body.sl-dress .sl-nav .rk-seg button[aria-pressed="true"]{box-shadow:inset 3px 0 0 var(--teal);
+    padding-left:calc(var(--space-4) - 3px)}
+}
+
+/* The page's own feature blocks, carried to the dress's density. The shared
+   block reaches .is-sec, .is-table, .is-card and the rails; these four are
+   this page's alone, and left at their old weights they read as three
+   different pages stacked — a 31px gold headline and a 20px card title over a
+   board whose rows are 42px. Radii square up to --sl-r with everything else;
+   nothing here changes a color or a layout. */
+body.sl-dress .df-stack{border-radius:var(--sl-r);border-color:var(--line2);padding:10px 14px;margin:10px 0}
+body.sl-dress .df-stack h3{font-size:17px;line-height:1.3}
+body.sl-dress .df-stack .side{font-size:14.5px;gap:10px}
+body.sl-dress .df-play-week{border-radius:var(--sl-r);padding:var(--space-5)}
+body.sl-dress .df-play-week-label{font-family:var(--font-body);font-size:11px;letter-spacing:.12em}
+body.sl-dress .df-play-week h2{font-size:clamp(21px,2.2vw,26px);line-height:1.2}
+body.sl-dress .df-play-week-dek{font-size:var(--fs-sm);line-height:1.55}
+body.sl-dress .df-play-week-copy{font-size:var(--fs-sm);line-height:1.6}
+body.sl-dress .df-play-week-score b{font-size:19px}
+body.sl-dress .df-reading-card{border-radius:var(--sl-r);border-color:var(--line2);padding:var(--space-4)}
+body.sl-dress .df-reading-card h3{font-size:17px;line-height:1.3}
+body.sl-dress .df-reading-card p{font-size:var(--fs-2xs);line-height:1.5}
+body.sl-dress .df-reading-head b,body.sl-dress .df-config-title b{font-size:17px}
+body.sl-dress .df-reading-head span,body.sl-dress .df-config-title span{font-family:var(--font-body);font-size:11px;letter-spacing:.11em}
+body.sl-dress .df-config{border-radius:var(--sl-r);border-color:var(--line2)}
+body.sl-dress .df-must,body.sl-dress .df-tune{border-radius:var(--sl-r);border-color:var(--line2)}
+body.sl-dress .df-sub{font-size:var(--fs-2xs);color:var(--muted);line-height:1.55}
+
 /* The NFL clock now dates the setup band rather than the band that used to open
    the page. .its-strip paints itself --panel, which is the tinted band's own
    ground, so inside a band it would read as a bare outline; white is what every
@@ -822,7 +871,7 @@ p{color:var(--sec);margin:0 0 16px}
 <link rel="stylesheet" href="/tuna-market.css">
 <script defer src="/tuna-market.js"></script>
 </head>
-<body>
+<body class="sl-dress">
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
