@@ -53,9 +53,10 @@ h2{font-size:var(--fs-xl);line-height:1.25;margin:0 0 10px;letter-spacing:-.005e
    the three numbers and the button stay on screen while the copy scrolls. It
    was a table dropped into the prose a screen down, and the pricing band
    another two screens below it. */
-.av-split{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:var(--space-6);align-items:start;margin-top:-4px}
-.av-side{position:sticky;top:var(--space-5);display:flex;flex-direction:column;gap:var(--space-4)}
-.av-side .is-plate{margin:0}
+.av-split{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:var(--rail-gap);align-items:start;margin-top:-4px}
+.av-side{position:sticky;top:var(--space-5);display:flex;flex-direction:column;gap:var(--space-4);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-4)}
+.av-side .is-plate{margin:0;background:var(--bg);border-color:var(--line2)}
 .av-side .is-table{font-size:var(--fs-sm)}
 .av-side .is-plate-foot{flex-direction:column;align-items:flex-start;gap:4px}
 .av-cta{background:#e9f5f1;border:1px solid #bfe3d8;border-radius:var(--radius-md);padding:var(--space-5);text-align:center}
@@ -71,7 +72,7 @@ h2{font-size:var(--fs-xl);line-height:1.25;margin:0 0 10px;letter-spacing:-.005e
 .av-q summary::before{content:"+";flex:0 0 auto;width:16px;color:var(--teal);font-weight:700;text-align:center}
 .av-q[open] summary::before{content:"\2212"}
 .av-q p{margin:0 0 14px 28px;max-width:680px;line-height:1.6}
-@media(max-width:900px){.av-split{grid-template-columns:1fr}.av-side{position:static}}
+@media(max-width:900px){.av-split{grid-template-columns:1fr}.av-side{position:static;background:none;border:0;border-radius:0;padding:0}}
 p{color:var(--sec);margin:0 0 16px}
 .eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-top:42px}
 .btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:14px 28px;letter-spacing:.02em;border:none;cursor:pointer;box-shadow:0 8px 26px rgba(191,145,0,.28)}
