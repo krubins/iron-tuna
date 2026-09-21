@@ -33,9 +33,43 @@
 <meta property="og:url" content="https://irontuna.com/">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
-:root{--brand:#0e7c63;--brand-dark:#0a6151;--brand-tint:#e9f5f1;--brand-line:#bfe3d8;--value-red:#c8322b;--ink:#0f1719;--ink-2:#3f4e58;--ink-3:#6d7c86;--line:#e1e7ea;--bg:#f4f7f7;--card:#ffffff;--mast:#0b1614;--gold:#f2a900;--gold-ink:#7a5300;--teal:#2dd4a3}
+/* ── the palette ──────────────────────────────────────────────────────────
+   Ken, 2026-09-21: re-skinned off the teal-black/mint scheme, which dressed a
+   betting-market product as a generic SaaS dashboard — one rounded white card
+   per section, one soft grey shadow under each, and no way to tell the lead
+   story from the footnote.
+
+   The ground is the thing this site is actually about: a sportsbook board and
+   the sheet you read it off. The dark board carries the surfaces where the
+   MARKET speaks (masthead, hero, the disagreement table); light stock and white
+   plates carry the surfaces where IRON TUNA speaks.
+
+   THE THREE ACCENTS EACH HAVE ONE JOB, and none of them decorates:
+     --brand (#0e7c63)  the site's voice on light. Links, kickers, section
+                        marks, the lane buttons. It is site.css's accent and
+                        every other page's, and tools/test-reading-view.mjs
+                        pins it here so the front page cannot drift off the
+                        other pages on its own — which is exactly what a
+                        re-skin of this file tries to do.
+     --gold             money. The hero's claim, each lane's live reading, Iron
+                        Tuna's own column on the board, the boast, and the one
+                        commercial button in the masthead. Nothing else.
+     --teal             live, ON DARK ONLY. #2dd4a3 is about 1.9:1 on white, so
+                        it appears on the board and nowhere else: the dateline,
+                        the hero's action, and "start" decisions. */
+:root{
+  --brand:#0e7c63;--brand-dark:#0a6151;--brand-tint:#e9f5f1;--brand-line:#bfe3d8;
+  --value-red:#c8322b;
+  --ink:#0f1719;--ink-2:#3f4e58;--ink-3:#6d7c86;
+  --line:#dde3e2;--bg:#f0f2f1;--card:#ffffff;
+  --mast:#0b1614;
+  --gold:#f2a900;--gold-ink:#7a5300;
+  --teal:#2dd4a3;
+  /* On the board: one ink for type, one for the quiet column. */
+  --on-board:#dfe9e6;--on-board-2:#8ba09c;
+}
 *{box-sizing:border-box;margin:0;padding:0}
 /* The UA sheet's [hidden] is specificity (0,1,0) — the same as any class — and
    loses to an author sheet at a tie, so `.vs-wrap{display:grid}` kept rendering
@@ -48,61 +82,56 @@
    lane control inside it — so an anchor jump has to stop clear of it or it
    lands with the section head hidden behind it. */
 html{scroll-behavior:smooth;scroll-padding-top:56px}
-body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+/* Archivo is here for its WIDTH axis, not just its weights: the hero headline
+   is a claim and a counter-claim, and the counter-claim is set expanded rather
+   than recoloured. Instrument Serif has exactly two jobs on this page — the
+   hero's claim and the lead story's deck — so the two families never blur. */
+body{background:var(--bg);color:var(--ink);font-family:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-stretch:100%;line-height:1.48;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
 a{color:inherit;text-decoration:none}
 img{max-width:100%}
-.wrap{max-width:1260px;margin:0 auto;padding:0 18px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+/* One focus treatment for the whole page: brass on the board, navy on stock.
+   Both clear 3:1 against their ground. */
+a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:2px}
+.mast a:focus-visible,.hero-band a:focus-visible,.hm-diff-plate a:focus-visible{outline-color:var(--gold)}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}
+}
 
-
-/* ── masthead ── */
-.mast{background:var(--mast);border-bottom:3px solid var(--brand)}
+/* ── masthead ──────────────────────────────────────────────────────────────
+   No rule under it any more. The masthead and the hero are the SAME navy
+   board, top of page to the ribbon, and a divider between them would cut one
+   surface into two. The ribbon on oat stock is what ends the board. */
+.mast{background:var(--mast)}
 /* min-height, not height: the nav is a row of links whose width depends on
    the reader's viewport, and on a narrow laptop it wraps. A fixed height
    let the second row spill out of the black band and sit on top of the
    ribbon; this lets the band grow to hold whatever it is given.
    Above the wrap point it is pixel-identical to a fixed 64px. */
-.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:64px;padding-top:6px;padding-bottom:6px}
+.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:64px;padding-top:6px;padding-bottom:6px}
 .mast-brand{display:inline-flex;align-items:center;flex:0 0 auto}
-.mast-logo{height:40px;width:auto;display:block}
+.mast-logo{height:32px;width:auto;display:block}
 .mast-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
 .mast-jump{display:flex;align-items:center;gap:2px;min-width:0;margin-left:auto}
-.mast-jump a{color:#cfd4da;font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:8px 10px;border-radius:4px}
-.mast-jump a:hover{color:#fff;background:rgba(255,255,255,.08)}
-.mast-nav a{color:#cfd4da;font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:8px 10px;border-radius:4px}
-.mast-nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
-.mast-nav a.cta{background:var(--brand);color:#fff;margin-left:6px}
+/* Sentence case, no tracking. The tracked-out ALL-CAPS label was on nine
+   different elements of this page and it is off all nine: it is the single
+   loudest piece of template chrome a page can wear, and it told a reader
+   nothing that weight and colour do not. */
+.mast-jump a,.mast-nav a{color:#a9bab6;font-size:13.5px;font-weight:600;letter-spacing:0;padding:8px 9px;border-radius:3px}
+.mast-jump a:hover,.mast-nav a:hover{color:#fff;background:rgba(255,255,255,.07)}
+.mast-nav a.cta{background:var(--brand);color:#fff;margin-left:6px;font-weight:700}
+.mast-nav a.cta:hover{background:var(--brand-dark)}
 /* Sign In sits with the account buttons rather than in the section ribbon: it
    is a thing you DO, not a place on the page, and in the ribbon it fell past
    the right edge at every desktop width. Dimmer and set slightly apart so it
    reads as account rather than as another section anchor. */
-.mast-nav a.mast-signin{color:#9aa3ac;margin-left:10px}
+.mast-nav a.mast-signin{color:#7d918d;margin-left:8px;font-size:13px}
 .mast-nav a.mast-signin:hover{color:#fff}
-.mast-nav a.cta:hover{background:var(--brand-dark)}
-.mast-nav a.cta-gold{background:var(--gold);color:#1a1205;margin-left:6px}
+/* Brass is the money accent, and "Customize My League" is where a reader puts
+   their own money on the line, so it is the one brass control in the chrome. */
+.mast-nav a.cta-gold{background:var(--gold);color:#1a1205;margin-left:6px;font-weight:700}
 .mast-nav a.cta-gold:hover{filter:brightness(1.07)}
-
-/* ── footer ── */
-.foot{margin-top:40px;background:#fff;border-top:1px solid var(--line)}
-.foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 18px 34px;font-size:13px;color:var(--ink-3)}
-.foot a:hover{color:var(--brand)}
-/* The footer sitemap takes a line of its own above the legal run: flex-basis
-   100% breaks it out of the footer's single wrapping row so it reads as a group
-   rather than nine more items in the copyright line. Same nine destinations as
-   the shared footer on every other page. */
-.foot-nav{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
-.foot-nav a{font-weight:700;color:var(--ink-2)}
-/* /admin is not a destination a visitor navigates to; it is the operator's only
-   link in. It sits at the end of the row, quiet. */
-.foot-admin{font-size:12px;color:var(--ink-3);opacity:.7}
-.foot .fm{margin-left:auto}
-.mast-jump a,.mast-nav a{padding:8px 7px;letter-spacing:.06em}
-.mast-jump a{font-size:11.5px;padding-left:6px;padding-right:6px}
-.mast-nav a.mast-signin{font-size:11.5px;margin-left:4px}
-.mast .wrap{gap:10px}
-.mast-logo{height:32px}
-/* The band grows to hold a wrapped nav rather than spilling out of it: the base
-   rule is min-height, so this only needs to allow the wrap. */
-@media(max-width:900px){ .mast .wrap{flex-wrap:wrap;padding-top:8px;padding-bottom:8px;row-gap:6px} }
 
 /* ── the masthead on a phone ──────────────────────────────────────────────
    Nine links in a centered wrapping row came out as three ragged lines of
@@ -111,69 +140,97 @@ img{max-width:100%}
    the section jumps share one row (the jumps scroll sideways rather than
    wrap), and the two actions become a full-width pair underneath, which also
    makes them thumb-sized instead of 30px pills. */
+@media(max-width:900px){ .mast .wrap{flex-wrap:wrap;padding-top:8px;padding-bottom:8px;row-gap:6px} }
 @media(max-width:760px){
   .mast .wrap{padding:9px 14px 10px;row-gap:9px;column-gap:10px;align-items:center}
   .mast-logo{height:26px}
-  /* Row one: wordmark, then the seven section jumps on ONE line that scrolls
+  /* Row one: wordmark, then the section jumps on ONE line that scrolls
      sideways — never a second and third wrapped line. */
   .mast-jump{flex:1 1 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-left:6px}
-  .mast-jump::after{content:"";flex:0 0 22px;align-self:stretch;position:sticky;right:0;margin-left:-22px;pointer-events:none;background:linear-gradient(90deg,rgba(16,17,20,0),var(--mast))}
+  .mast-jump::after{content:"";flex:0 0 22px;align-self:stretch;position:sticky;right:0;margin-left:-22px;pointer-events:none;background:linear-gradient(90deg,rgba(11,22,20,0),var(--mast))}
   .mast-jump::-webkit-scrollbar{display:none}
-  .mast-jump a{flex:0 0 auto;font-size:11.5px;padding:8px 8px;letter-spacing:.07em}
+  .mast-jump a{flex:0 0 auto;font-size:13px;padding:8px 7px}
   /* Row two: the two actions, equal and full width, at a size a thumb can hit. */
   .mast-nav{flex:1 1 100%;gap:9px;flex-wrap:nowrap}
-  .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;font-size:12.5px;letter-spacing:.04em;padding:11px 8px;border-radius:6px}
+  .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;justify-content:center;font-size:13.5px;padding:11px 8px;border-radius:3px}
   /* Sign In rides along on that row at its own width — it is a text link, not a
      third button, and giving it an equal third would say otherwise. */
   .mast-nav a.mast-signin{flex:0 0 auto;margin-left:0;padding-left:2px;padding-right:8px}
 }
-@media(max-width:380px){ .mast-logo{height:22px} .mast-jump a{font-size:11px;padding:8px 6px} }
+@media(max-width:380px){ .mast-logo{height:22px} .mast-jump a{font-size:12.5px;padding:8px 6px} }
 
+/* ── footer ── */
+.foot{margin-top:0;background:var(--card);border-top:1px solid var(--line)}
+.foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 20px 34px;font-size:13px;color:var(--ink-3)}
+.foot a:hover{color:var(--brand)}
+/* The footer sitemap takes a line of its own above the legal run: flex-basis
+   100% breaks it out of the footer's single wrapping row so it reads as a group
+   rather than nine more items in the copyright line. Same nine destinations as
+   the shared footer on every other page. */
+.foot-nav{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.foot-nav a{font-weight:600;color:var(--ink-2)}
+/* /admin is not a destination a visitor navigates to; it is the operator's only
+   link in. It sits at the end of the row, quiet. */
+.foot-admin{font-size:12px;color:var(--ink-3);opacity:.7}
+.foot .fm{margin-left:auto;line-height:1.55}
 
 /* ══ the homepage ══════════════════════════════════════════════════════════
-   Five sections and nothing else: the hero, the two product cards, the market
-   disagreements, the current articles, and how the number is made with the
-   disclosures under it. Every band below the hero paints from a live feed and
-   HIDES ITSELF when that feed has no current answer — there are no skeletons,
-   no "loading" copy and no empty shells on this page. */
+   Six sections and nothing else: the hero, the lead story, the two product
+   cards, the market disagreements, the current articles, and how the number is
+   made with the disclosures under it. Every band below the hero paints from a
+   live feed and HIDES ITSELF when that feed has no current answer — there are
+   no skeletons, no "loading" copy and no empty shells on this page. */
 
 /* ── 1 · the hero ── */
-.hero-band{background:var(--mast);color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}
-.hero-band .wrap{padding-top:clamp(34px,6vw,64px);padding-bottom:clamp(30px,5vw,56px)}
+.hero-band{background:var(--mast);color:#fff}
+.hero-band .wrap{padding-top:clamp(38px,6vw,76px);padding-bottom:clamp(36px,5.4vw,68px)}
 /* The clock is written hidden and revealed only once /api/season answers with a
    real week. A dateline that says it is loading is worse than no dateline. */
-.hm-clock{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--teal);margin-bottom:16px}
-.hm-clock b{color:#fff;font-weight:800}
-.hm-clock .live{color:var(--gold)}
-.hm-h1{font-size:clamp(30px,5.2vw,58px);line-height:1.04;letter-spacing:-.02em;font-weight:800;max-width:19ch}
-.hm-h1 em{font-style:normal;color:var(--teal)}
-/* The one sentence that says what this site DOES, set apart from the copy
-   around it: bigger than the lede, white rather than grey, and pushed off a
-   teal rule so a reader who reads the headline and nothing else still leaves
-   knowing a betting line becomes a fantasy point total here. Capped at 44ch
-   so it breaks to two or three lines and reads as a statement rather than as
-   a paragraph. */
-.hm-claim{margin-top:20px;max-width:44ch;font-size:clamp(17px,2.15vw,24px);line-height:1.34;font-weight:700;color:#fff;border-left:3px solid var(--teal);padding-left:16px}
-.hm-lede{margin-top:16px;max-width:62ch;font-size:clamp(14.5px,1.6vw,17px);line-height:1.55;color:#c6d2d0}
-.hm-cta{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:26px}
-.hm-btn{display:inline-flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:800;letter-spacing:.02em;padding:14px 22px;border-radius:7px;border:1px solid transparent}
+.hm-clock{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--on-board-2);margin-bottom:20px;padding-left:12px;border-left:2px solid var(--teal)}
+.hm-clock b{color:#fff;font-weight:700}
+.hm-clock .live{color:var(--teal);font-weight:700}
+/* ── the headline, which is the one bold thing on this page ───────────────
+   It is a claim and a counter-claim, and the counter-claim used to be marked
+   by turning it mint green. Colouring one phrase of a headline is the oldest
+   tell in template design and it wastes the contrast on a highlighter.
+   Both clauses are the same white here. What separates them is Archivo's
+   WIDTH axis: the thing anyone can do is set at normal width and mid weight,
+   and the thing only a sportsbook does is set expanded and heavy. The
+   rhetoric is carried by the letterforms.
+   `em` stays the element — the emphasis is real, the styling of it is not
+   italic — and the h1's textContent is unchanged (tools/test-homepage.mjs). */
+.hm-h1{font-size:clamp(28px,4.5vw,53px);line-height:1.0;letter-spacing:-.02em;font-weight:500}
+/* The measure is set on each CLAUSE, not on the h1, because `ch` resolves
+   against the element's own font: capping the h1 would measure both clauses in
+   the narrow one and break the expanded clause onto three ragged lines with
+   "theirs." alone on the last. Two lines each, which is what the contrast
+   needs to read as two lines of argument. */
+.hm-h1 .c1{display:block;max-width:22ch;font-stretch:96%}
+.hm-h1 em{display:block;max-width:21ch;margin-top:.1em;font-style:normal;font-stretch:125%;font-weight:800;letter-spacing:-.028em}
+/* The one sentence that says what this site DOES. Set in the serif, which
+   appears exactly twice on this page, and pushed off a brass rule — brass
+   because this sentence IS the money claim. Capped at 40ch so it breaks to
+   two or three lines and reads as a statement rather than as a paragraph. */
+.hm-claim{margin-top:24px;max-width:40ch;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400;font-size:clamp(20px,2.5vw,29px);line-height:1.26;color:#fff;border-left:2px solid var(--gold);padding-left:18px}
+.hm-lede{margin-top:18px;max-width:58ch;font-size:clamp(14.5px,1.6vw,16.5px);line-height:1.6;color:#a8bab6}
+.hm-cta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:28px}
+.hm-btn{display:inline-flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:700;padding:14px 22px;border-radius:3px;border:1px solid transparent}
 .hm-btn.primary{background:var(--teal);color:#06231c}
 .hm-btn.primary:hover{filter:brightness(1.08)}
-.hm-btn.second{background:transparent;color:#fff;border-color:rgba(255,255,255,.34)}
-.hm-btn.second:hover{background:rgba(255,255,255,.1);border-color:#fff}
-.hm-btn:focus-visible,.hm-how-link:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.hm-btn.second{background:transparent;color:#fff;border-color:rgba(255,255,255,.32)}
+.hm-btn.second:hover{background:rgba(255,255,255,.09);border-color:#fff}
 /* Deliberately smaller and quieter than the two buttons: it is the third thing
    to do on this page, not a third button competing with the first two. */
-.hm-how-link{display:inline-block;margin-top:16px;font-size:13px;font-weight:600;color:#9fb1ae;border-bottom:1px solid rgba(159,177,174,.42);padding-bottom:1px}
+.hm-how-link{display:inline-block;margin-top:18px;font-size:13.5px;font-weight:600;color:#8fa5a1;border-bottom:1px solid rgba(143,165,161,.42);padding-bottom:1px}
 .hm-how-link:hover{color:#fff;border-bottom-color:#fff}
 /* ── the hero's picture ──────────────────────────────────────────────────
    ONE column until there is a photograph to put beside the headline, so an
    unfilled hero is exactly the hero this page had before rather than a
    headline with an empty gutter next to it. `has-edge` is added by the
    painter and is the only thing that opens the second column. */
-.hm-hero{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(26px,4vw,48px);align-items:center}
-.hm-hero.has-edge{grid-template-columns:minmax(0,1fr) minmax(0,330px)}
-/* The headline is capped at 19ch, the claim at 44ch and the lede at 62ch, so
+.hm-hero{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(26px,4vw,52px);align-items:center}
+.hm-hero.has-edge{grid-template-columns:minmax(0,1fr) minmax(0,320px)}
+/* The headline is capped at 17ch, the claim at 40ch and the lede at 58ch, so
    none of them reflows when the column narrows — the picture arrives beside the
    copy, it does not move it. Below 900px the picture goes under the buttons
    instead. */
@@ -182,38 +239,53 @@ img{max-width:100%}
 .hm-edge{min-width:0}
 .hm-edge[hidden]{display:none}
 /* The shape is set here rather than in player-search.js: the plate fills
-   whatever box it is given, and this is the box. */
-.hm-edge .it-plate-shot{height:auto;aspect-ratio:4/3;border-radius:12px;background:rgba(255,255,255,.07);box-shadow:0 18px 44px rgba(0,0,0,.36)}
-.hm-edge .it-plate-shot i{font-size:28px;color:#7e918e}
-.hm-edge .it-art-credit{margin-top:9px;font-size:10.5px;line-height:1.4;color:#8b9b99}
+   whatever box it is given, and this is the box. Square corners and a hairline
+   rather than a 12px radius over a 44px drop shadow — this is a photograph
+   pinned to a board, not a card floating over one. */
+.hm-edge .it-plate-shot{height:auto;aspect-ratio:4/3;border-radius:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14)}
+.hm-edge .it-plate-shot i{font-size:28px;color:#6d827e}
+.hm-edge .it-art-credit{margin-top:9px;font-size:10.5px;line-height:1.4;color:#7d918d}
 .hm-edge .it-art-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+/* The plate is wrapped in a link when the feed hands over a story to point at.
+   It carried no style of its own, so the photograph had no hover and no focus
+   ring even though it was the biggest link in the hero. */
+.he-link{display:block;border-radius:2px}
+.he-link:hover .it-plate-shot{border-color:rgba(45,212,163,.7)}
 .he-meta{display:flex;flex-direction:column;gap:3px;margin-top:14px}
-.he-k{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--brand)}
-.he-name{font-size:18px;font-weight:800;line-height:1.2;color:#fff}
-.he-sub{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#9fb1ae}
-.he-gap{margin-top:4px;font-size:13px;line-height:1.45;color:#c6d2d0}
+.he-k{font-size:12px;font-weight:700;color:var(--teal)}
+.he-name{font-size:19px;font-weight:700;font-stretch:112%;line-height:1.2;color:#fff}
+.he-sub{font-size:12.5px;font-weight:600;color:var(--on-board-2)}
+.he-gap{margin-top:5px;font-size:13px;line-height:1.5;color:#a8bab6}
 
-/* ── shared section furniture ── */
-.hm-sec{padding-top:clamp(34px,4.6vw,56px)}
-.hm-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
-.hm-sec-head h2{font-size:clamp(20px,2.5vw,27px);line-height:1.15;letter-spacing:-.01em;font-weight:800}
-.hm-sec-head a{font-size:12.5px;font-weight:700;color:var(--brand)}
+/* ── shared section furniture ─────────────────────────────────────────────
+   Section headings take the hero's expanded voice, one step down, so the page
+   reads as one typographic system rather than a hero plus five widgets. */
+.hm-sec{padding-top:clamp(36px,4.6vw,60px)}
+.hm-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;padding-bottom:10px;border-bottom:2px solid var(--ink)}
+.hm-sec-head h2{font-size:clamp(20px,2.4vw,27px);line-height:1.12;letter-spacing:-.014em;font-weight:700;font-stretch:112%}
+.hm-sec-head a{font-size:13.5px;font-weight:600;color:var(--brand)}
 .hm-sec-head a:hover{text-decoration:underline}
-.hm-sub{font-size:14px;line-height:1.5;color:var(--ink-2);max-width:74ch;margin-bottom:18px}
-.hm-fine{margin-top:12px;font-size:12px;line-height:1.55;color:var(--ink-3)}
+.hm-sub{margin-top:14px;font-size:14.5px;line-height:1.55;color:var(--ink-2);max-width:70ch;margin-bottom:18px}
+.hm-fine{margin-top:12px;font-size:12.5px;line-height:1.55;color:var(--ink-3)}
 
-/* ── 2 · the two product cards ── */
-.hm-lanes{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.hm-lane{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px 24px 20px;box-shadow:0 1px 2px rgba(15,23,25,.04)}
-.hm-lane h2{font-size:clamp(21px,2.6vw,28px);line-height:1.1;letter-spacing:-.01em;font-weight:800}
-.hm-lane > p{margin-top:8px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+/* ── 2 · the two product cards ────────────────────────────────────────────
+   ONE plate divided by ONE rule, not two cards side by side. They were two
+   identical rounded boxes with identical shadows, which said "two products,
+   pick one"; the site has one product with two doors, and a shared plate with
+   a rule down the middle says that instead. */
+.hm-lanes{display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--card);border:1px solid var(--line);border-radius:2px}
+.hm-lane{display:flex;flex-direction:column;padding:26px 26px 22px;min-width:0}
+.hm-lane + .hm-lane{border-left:1px solid var(--line)}
+.hm-lane h2{font-size:clamp(20px,2.4vw,26px);line-height:1.12;letter-spacing:-.014em;font-weight:700;font-stretch:112%}
+.hm-lane > p{margin-top:8px;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:42ch}
 /* The live reading. Written hidden; revealed only with a real current output on
    it, so a card whose feed is quiet is a card of links rather than a card of
-   apologies. */
-.hm-read{margin-top:18px;border:1px solid var(--brand-line);background:var(--brand-tint);border-radius:9px;padding:14px 16px}
-.hm-read .k{display:block;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-dark)}
-.hm-read .h{display:block;margin-top:6px;font-size:16px;font-weight:800;line-height:1.25;color:var(--ink)}
-.hm-read .d{display:block;margin-top:5px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+   apologies. Brass rule, because the reading is the number with money behind
+   it — the same mark the hero's claim carries. */
+.hm-read{margin-top:20px;border:0;border-left:2px solid var(--gold);background:#fdf6e7;border-radius:0;padding:14px 16px}
+.hm-read .k{display:block;font-size:12px;font-weight:700;color:var(--gold-ink)}
+.hm-read .h{display:block;margin-top:5px;font-size:16.5px;font-weight:700;line-height:1.25;color:var(--ink)}
+.hm-read .d{display:block;margin-top:5px;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
 /* The card's one reading is about one player, so it carries his face. The
    column only exists once a picture is in it (`has-pic`, set by the painter),
    because an empty 58px gutter beside three lines of type is worse than no
@@ -221,91 +293,196 @@ img{max-width:100%}
    photograph is unreadable, and it would owe a credit line longer than the
    reading it sits beside. */
 .hm-read .pic{display:none}
-.hm-read.has-pic{display:grid;grid-template-columns:58px minmax(0,1fr);column-gap:13px;align-items:start}
+.hm-read.has-pic{display:grid;grid-template-columns:56px minmax(0,1fr);column-gap:13px;align-items:start}
 .hm-read.has-pic .pic{display:block;grid-column:1;grid-row:1/span 3}
 .hm-read.has-pic .k,.hm-read.has-pic .h,.hm-read.has-pic .d{grid-column:2}
-.hm-read .pic .it-plate-shot{height:auto;aspect-ratio:1/1;border-radius:8px;background:#e3eae8}
+.hm-read .pic .it-plate-shot{height:auto;aspect-ratio:1/1;border-radius:2px;background:#ece7d9}
 .hm-read .pic .it-plate-shot i{font-size:15px}
-.hm-links{list-style:none;margin-top:18px;display:grid;gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.hm-links a{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);padding:11px 2px;font-size:14px;font-weight:700}
-.hm-links a span{font-size:12.5px;font-weight:400;color:var(--ink-3);text-align:right}
+/* A ruled index, not a stack of one-pixel grid gaps faking rules. */
+.hm-links{list-style:none;margin-top:20px;border-top:1px solid var(--line)}
+.hm-links li{border-bottom:1px solid var(--line)}
+.hm-links a{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:11px 0;font-size:14.5px;font-weight:600}
+.hm-links a span{font-size:13px;font-weight:400;color:var(--ink-3);text-align:right}
 .hm-links a:hover{color:var(--brand)}
 .hm-links a:hover span{color:var(--brand)}
-.hm-lane-go{margin-top:auto;padding-top:18px}
-.hm-lane-go a{display:inline-flex;align-items:center;justify-content:center;width:100%;background:var(--brand);color:#fff;font-size:14.5px;font-weight:800;padding:13px 18px;border-radius:7px}
+.hm-lane-go{margin-top:auto;padding-top:20px}
+.hm-lane-go a{display:inline-flex;align-items:center;justify-content:center;width:100%;background:var(--brand);color:#fff;font-size:14.5px;font-weight:700;padding:13px 18px;border-radius:3px}
 .hm-lane-go a:hover{background:var(--brand-dark)}
+@media(max-width:900px){
+  .hm-lanes{grid-template-columns:1fr}
+  .hm-lane + .hm-lane{border-left:0;border-top:1px solid var(--line)}
+}
 
-/* ── 3 · where the market sees something different ── */
-.hm-diff-plate{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+/* ── 3 · where the market sees something different ────────────────────────
+   The argument the whole site is built on, so it gets the board itself: the
+   same navy the hero is on, dropped into the middle of the stock. Three
+   numbers on one player, weighted so a reader can see which one is being
+   asked to act on — the consensus quiet, the market plain, and Iron Tuna's own
+   column carrying the brass rule and the only tint on the table.
+   It was five grey columns of identical 14px type, which is a spreadsheet. */
+.hm-diff-plate{background:var(--mast);border-radius:2px;overflow:hidden}
 .hm-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.hm-table{width:100%;border-collapse:collapse;min-width:680px}
-.hm-table th,.hm-table td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle}
-.hm-table thead th{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);background:#fafcfc;white-space:nowrap}
-.hm-table tbody tr:last-child td{border-bottom:0}
-.hm-table .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.hm-table .who b{display:block;font-size:14.5px;font-weight:700;line-height:1.2}
-.hm-table .who small{display:block;margin-top:2px;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+.hm-table{width:100%;border-collapse:collapse;min-width:700px}
+.hm-table th,.hm-table td{padding:13px 16px;text-align:left;font-size:14.5px;vertical-align:middle}
+.hm-table thead th{font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--on-board-2);background:transparent;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.15);padding-top:16px;padding-bottom:12px}
+/* The row rule goes on the ROW, not on the cells. The player cell is a flex
+   container (it has to be, to sit a 46px face beside a two-line name), and a
+   flex box paints its border at its own bottom edge rather than at the row's —
+   so a per-cell rule came out as a short line under the player column and a
+   second, lower one under the numbers. Under border-collapse a tr border is
+   painted once, across the whole row. */
+.hm-table tbody td{color:var(--on-board)}
+.hm-table tbody tr{border-bottom:1px solid rgba(255,255,255,.13)}
+.hm-table tbody tr:last-child{border-bottom:0}
+.hm-table .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--on-board-2)}
+.hm-table .who b{display:block;font-size:15.5px;font-weight:700;line-height:1.2;color:#fff}
+.hm-table .who small{display:block;margin-top:2px;font-size:12px;letter-spacing:0;text-transform:none;color:var(--on-board-2)}
 /* player-search.js puts the player's face at the front of the cell it finds
    him in. The shared default is 34px, which is a marker in a long table; this
    is a five-row board where the player IS the row, so his picture is worth
    the width. */
 .hm-table .who.it-player-cell{display:flex;align-items:center;gap:12px}
-.hm-table .who .it-player-face{width:48px;height:48px;min-width:48px;border-radius:9px;margin:0}
+.hm-table .who .it-player-face{width:46px;height:46px;min-width:46px;border-radius:3px;margin:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);color:#8ba09c}
 /* Iron Tuna's own number is the one the reader is meant to act on, so it is the
-   only column with weight on it. */
-.hm-table .mine{font-weight:800;color:var(--ink)}
-.hm-act{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:5px 9px;border-radius:4px;white-space:nowrap}
-.hm-act.up{background:var(--brand-tint);color:var(--brand-dark);border:1px solid var(--brand-line)}
-.hm-act.down{background:#fdeceb;color:var(--value-red);border:1px solid #f3c9c6}
-.hm-act-why{display:block;margin-top:4px;font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+   only column with weight, the only one in brass rule, and the only tinted
+   column on the board. */
+.hm-table thead th:nth-child(4){color:#fff;font-weight:700;border-bottom:2px solid var(--gold)}
+/* The column is RAISED, not tinted gold: #f2a900 at any usable alpha over
+   the near-black green goes olive and muddies the numbers sitting on it.
+   The brass rule under the header carries the money mark on its own, and a
+   neutral lift is what says "this column is the one to read". */
+.hm-table tbody td:nth-child(4){background:rgba(255,255,255,.05)}
+.hm-table .mine{font-weight:800;font-size:17px;color:#fff}
+.hm-act{display:inline-block;font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;padding:4px 10px;border-radius:2px;white-space:nowrap}
+.hm-act.up{background:rgba(45,212,163,.15);color:#5fe0ba;border:1px solid rgba(45,212,163,.36)}
+.hm-act.down{background:rgba(232,119,108,.14);color:#f09a92;border:1px solid rgba(232,119,108,.34)}
+.hm-act-why{display:block;margin-top:5px;font-size:12.5px;color:var(--on-board-2);white-space:nowrap}
 
-/* ── 4 · the current articles ── */
-.hm-reads{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-.hm-read-card{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
-.hm-read-card:hover{border-color:var(--brand-line)}
-.hm-read-card .t{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--brand-dark)}
-.hm-read-card h3{margin-top:8px;font-size:16px;line-height:1.3;font-weight:700}
+/* ── the lead story ───────────────────────────────────────────────────────
+   The front page carried the desk only as three rotating cards two screens
+   down, all the same size, so the piece published an hour ago and the one
+   from Tuesday were the same object. This is the well /fantasy and /dfs
+   already open on, in this page's own palette: newest piece as the lead with
+   its picture and its whole deck, the next five as headlines beside it. It is
+   the first thing under the hero, which is the whole point of a lead.
+   The lead is marked by a 3px ink rule across its top — the heaviest rule on
+   the stock — rather than by being a slightly larger box than the boxes below
+   it, which is how it was told apart before. */
+/* Clear of the section head's rule: the lead plate carries a 3px rule of its
+   own and the two stacked read as one thick bar that stopped halfway across
+   the page. */
+.hm-well{margin-top:18px;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:28px;align-items:stretch}
+.hm-well-solo{grid-template-columns:minmax(0,1fr)}
+/* The lead sits at its own height and the column stretches to the row, so the
+   column's last rule closes level with the card when the card is the taller
+   and the card does not hold white space open when it is not. */
+.hm-lead{align-self:start;display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--card);border:1px solid var(--line);border-top:3px solid var(--ink);border-radius:0 0 2px 2px;padding:24px 26px 26px}
+.hm-lead:hover{border-color:var(--brand-line);border-top-color:var(--brand)}
+.hm-lead .t{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
+.hm-lead .flag{font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;border-radius:2px;padding:1px 7px;color:var(--gold-ink);background:#fdf3dc}
+.hm-lead h3{font-size:clamp(23px,2.5vw,32px);line-height:1.13;font-weight:700;font-stretch:108%;letter-spacing:-.018em;color:var(--ink);overflow-wrap:anywhere}
+.hm-lead h3 a{color:inherit}
+.hm-lead h3 a:hover{color:var(--brand)}
+.hm-lead h3 .it-story-focus{display:flex;margin:0 0 14px}
+.hm-lead h3 .it-player-face{width:72px;height:72px;min-width:72px;border-radius:3px}
+/* The lead's deck runs whole, and it is the serif's second and last job on
+   this page: it is the only place below the hero that is reading rather than
+   scanning. The cards below clamp theirs to keep three of them scannable, and
+   a lead clamped to two lines is only a bigger card. */
+.hm-lead p{font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:19px;line-height:1.45;color:var(--ink-2)}
+.hm-lead .go{font-size:13.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
+.hm-lead .m{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3)}
+/* The boast on the lead, at the lead's scale rather than the card's: the
+   headline under it is bigger here, so the banner is too. Brass ground and
+   brass rule, which is the same mark the reading and the claim carry — the
+   desk is claiming it called this one. */
+.hm-lead.is-boast{border-top-color:var(--gold);background:linear-gradient(180deg,#fff8e8,var(--card) 56%)}
+.hm-lead.is-boast:hover{border-top-color:var(--gold)}
+.hm-lead .boast{display:block;font-stretch:125%;font-weight:900;font-size:clamp(28px,2.9vw,38px);line-height:.98;letter-spacing:-.025em;text-transform:uppercase;color:var(--gold-ink)}
+.hm-lead.is-boast h3{font-size:clamp(20px,2.1vw,26px);font-weight:600;font-stretch:104%;letter-spacing:-.012em}
+.hm-lead.is-boast .m{border-top-color:rgba(242,169,0,.4)}
+.hm-rail{display:flex;flex-direction:column;min-width:0}
+.hm-rail-h{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--ink);font-size:12.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink)}
+.hm-rail ul{list-style:none;display:flex;flex-direction:column;justify-content:space-between;gap:13px;flex:1 1 auto}
+.hm-rail li{display:flex;flex-direction:column;gap:5px;min-width:0;padding-bottom:13px;border-bottom:1px solid var(--line)}
+.hm-rail li:last-child{padding-bottom:0;border-bottom:0}
+.hm-rail li .t{font-size:12px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
+.hm-rail li h3{display:flex;align-items:center;font-size:15px;line-height:1.32;font-weight:600}
+.hm-rail li h3 a{color:var(--ink)}
+.hm-rail li h3 a:hover{color:var(--brand)}
+.hm-rail li h3 .it-story-focus{flex:0 0 auto;margin:0 10px 0 0}
+.hm-rail li h3 .it-player-face{width:32px;height:32px;min-width:32px;border-radius:3px}
+.hm-rail li .m{font-size:12px;color:var(--ink-3)}
+@media(max-width:900px){.hm-well{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:620px){.hm-lead h3 .it-player-face{width:56px;height:56px;min-width:56px;border-radius:3px}
+  .hm-lead p{font-size:18px}}
+
+/* ── 4 · the current articles ─────────────────────────────────────────────
+   Ruled entries, not boxes. These are the third-most important thing on the
+   page and they were wearing the same bordered, rounded, shadowed card as the
+   lead story and the two lanes. A rule over each headline is enough to group
+   it, and it leaves the lead plate as the only plate in the lower half. */
+.hm-reads{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
+.hm-read-card{display:flex;flex-direction:column;background:transparent;border:0;border-top:2px solid var(--ink);border-radius:0;padding:13px 0 0}
+.hm-read-card:hover{border-top-color:var(--brand)}
+.hm-read-card:hover h3{color:var(--brand)}
+.hm-read-card .t{font-size:12px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
+.hm-read-card h3{margin-top:7px;font-size:17px;line-height:1.28;font-weight:700;font-stretch:104%;letter-spacing:-.01em}
 /* The faces the desk's own findings name, on their own row ABOVE the headline
    rather than inline at the front of it — set inline they push the first line
    of type around them and the headline reads as though it starts mid-sentence.
    Same treatment the story cards elsewhere on the site use. */
-.hm-read-card h3 .it-story-focus{display:flex;margin:0 0 9px}
-.hm-read-card h3 .it-player-face{width:46px;height:46px;min-width:46px;border-radius:9px}
-.hm-read-card p{margin-top:7px;font-size:13px;line-height:1.45;color:var(--ink-2)}
-.hm-read-card .m{margin-top:auto;padding-top:12px;font-size:11.5px;color:var(--ink-3)}
+.hm-read-card h3 .it-story-focus{display:flex;margin:0 0 10px}
+.hm-read-card h3 .it-player-face{width:46px;height:46px;min-width:46px;border-radius:3px}
+/* THE BOAST, at this band's scale. The desk may open a headline with "YOU'RE
+   WELCOME:" only when one of its own pre-kickoff calls cleared the headline
+   bar (_voiceBlock, _worker.js), and the other three surfaces that print a
+   desk headline give that phrase a banner. This band has no lead card to hang
+   a 38px one on -- three entries of equal width -- so it is sized to the
+   entry instead of to the page, and the entry takes the brass rule that marks
+   every other claim on this page. The call runs under it in the headline, as
+   everywhere else. */
+.hm-read-card.is-boast{border-top-color:var(--gold)}
+.hm-read-card.is-boast:hover{border-top-color:var(--gold)}
+.hm-read-card .boast{display:block;margin-top:6px;font-stretch:125%;font-weight:900;font-size:clamp(23px,2.2vw,29px);line-height:.98;letter-spacing:-.022em;text-transform:uppercase;color:var(--gold-ink)}
+.hm-read-card.is-boast h3{margin-top:5px;font-weight:600}
+.hm-read-card p{margin-top:7px;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.hm-read-card .m{margin-top:auto;padding-top:12px;font-size:12px;color:var(--ink-3)}
 
 /* ── 5 · how it works, and the disclosures ── */
-.hm-how{margin-top:clamp(28px,3.4vw,44px);background:var(--card);border-top:1px solid var(--line)}
-.hm-how .wrap{padding-top:clamp(18px,2.4vw,26px);padding-bottom:clamp(18px,2.4vw,28px)}
-.hm-how h2{font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--ink-2)}
-.hm-note{margin-top:6px;font-size:12px;line-height:1.6;color:var(--ink-3);max-width:96ch}
+.hm-how{margin-top:clamp(34px,4vw,52px);background:var(--card);border-top:1px solid var(--line)}
+.hm-how .wrap{padding-top:clamp(20px,2.4vw,28px);padding-bottom:clamp(20px,2.4vw,30px)}
+.hm-how h2{font-size:14px;font-weight:700;font-stretch:108%;letter-spacing:0;color:var(--ink)}
+.hm-note{margin-top:7px;font-size:12.5px;line-height:1.65;color:var(--ink-3);max-width:92ch}
 .hm-note b{color:var(--ink-2)}
-.hm-note a{color:var(--brand);font-weight:700}
+.hm-note a{color:var(--brand);font-weight:600}
+.hm-note a:hover{text-decoration:underline}
 /* The disclosures live here, in the section that explains the method, rather
    than only in the footer: this is where a reader is actually deciding what the
    numbers are worth. The footer's copyright line stays; its duplicate copy of
    this paragraph does not. */
-.hm-legal{margin-top:10px;font-size:12px;line-height:1.6;color:var(--ink-3);max-width:96ch}
+.hm-legal{margin-top:12px;font-size:12.5px;line-height:1.65;color:var(--ink-3);max-width:92ch}
 .hm-legal b{color:var(--ink-2)}
 .hm-legal p + p{margin-top:8px}
 
 @media(max-width:900px){
-  .hm-lanes{grid-template-columns:1fr}
-  .hm-h1{max-width:none}
+  .hm-h1 .c1,.hm-h1 em{max-width:none}
 }
 @media(max-width:560px){
   /* The label and its note stop competing for one line and stack instead: on a
      phone "Rest of season rankings" beside "The horizon that decides trades"
      left both of them at three words a line. */
-  .hm-links a{flex-direction:column;align-items:flex-start;gap:2px;padding:12px 2px}
+  .hm-links a{flex-direction:column;align-items:flex-start;gap:2px;padding:12px 0}
   .hm-links a span{text-align:left}
   .hm-cta{gap:10px}
   .hm-btn{flex:1 1 100%;padding:13px 16px}
-  .hm-table th,.hm-table td{padding:10px}
+  .hm-lane{padding:22px 18px 20px}
+  .hm-table th,.hm-table td{padding:11px 12px}
   /* The board is a sideways scroller on a phone and the player column is the
      one that has to stay narrow, so the face goes back to a marker. */
-  .hm-table .who .it-player-face{width:34px;height:34px;min-width:34px;border-radius:7px}
+  .hm-table .who .it-player-face{width:34px;height:34px;min-width:34px;border-radius:3px}
   .hm-table .who.it-player-cell{gap:9px}
+  .hm-reads{gap:20px}
 }
 
 /* Visually hidden, still read aloud: the two product cards need a heading of
@@ -440,7 +617,7 @@ img{max-width:100%}
   <div class="wrap hm-hero" id="hmHero">
    <div class="hm-hero-copy">
     <p class="hm-clock" id="hmClock" hidden></p>
-    <h1 class="hm-h1">Anyone can publish a projection. <em>Vegas has money on theirs.</em></h1>
+    <h1 class="hm-h1"><span class="c1">Anyone can publish a projection.</span> <em>Vegas has money on theirs.</em></h1>
     <p class="hm-claim">Iron Tuna converts sportsbook lines and player props into fantasy point projections.</p>
     <p class="hm-lede">Those projections become weekly rankings, trade values and DFS lineups, scored at your league’s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.</p>
     <div class="hm-cta">
@@ -507,6 +684,24 @@ img{max-width:100%}
 <!--/ranks:ribbon-->
 
 <main class="wrap" id="main">
+
+  <!-- ── 1 · the lead story ─────────────────────────────────────────────────
+       Ken, 2026-09-21: the front page still had no lead. It had the desk as
+       three rotating cards below the two product lanes and the disagreement
+       table, which is a list, not a front. The newest published piece leads
+       the page now, with the next five beside it, off the same /api/newsroom
+       read the cards below already use -- so the two can never disagree about
+       what the desk has published.
+
+       Hidden until it is painted, like every other module here: a heading
+       over an empty well is worse than no heading. -->
+  <section class="hm-sec" id="lead" hidden aria-labelledby="leadHead">
+    <div class="hm-sec-head">
+      <h2 id="leadHead">The lead story</h2>
+      <a href="/in-season/desk">All articles &rarr;</a>
+    </div>
+    <div class="hm-well" id="leadWell"></div>
+  </section>
 
   <!-- ── 2 · the two product cards ──────────────────────────────────────────
        The whole product, in two cards. Each one lists the five destinations
@@ -900,6 +1095,83 @@ img{max-width:100%}
   // board, a caption still claiming the top of the board is false, which is
   // the one thing a page arguing from the market cannot afford to be.
   function coverLead(rows, pick) { return !!(rows.length && rows[0] === pick); }
+  // ── WHOSE FACE, AND WHOSE SENTENCE ──────────────────────────────────────
+  // The hero's desk card took `whoOf(p)[0]` — the subject of the piece's FIRST
+  // finding — and printed the piece's HEADLINE beneath him. Nothing tied those
+  // two picks together: a story's findings are ordered by the story, not by
+  // who the headline is about. On 2026-09-21 the cover ran Nate Adkins's
+  // photograph over "Parker Washington's 43% target share after Week 2 makes
+  // him the clearest roster add of the week". A real player, a real sentence,
+  // and the two had nothing to do with each other, which reads as a site that
+  // does not know who it is talking about.
+  //
+  // So a face is offered with a line, and the line may not be about anybody
+  // ELSE. A headline that names no player still belongs to the piece's first
+  // subject — "Three lineups the market moved overnight" over the man the
+  // piece is about is the desk's own framing, not a mismatch. A headline that
+  // names one of the piece's other subjects belongs to him and to nobody else.
+  var COVER_SUFFIX = /^(?:jr|sr|ii|iii|iv|v)$/;
+  // Loose enough to survive punctuation and a possessive ("Washington's"),
+  // strict enough to stay on word boundaries: text is reduced to space-
+  // delimited lowercase words and searched for a name as whole words.
+  function coverWords(s) {
+    s = String(s == null ? '' : s);
+    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    return ' ' + s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ | $/g, '') + ' ';
+  }
+  function coverLast(name) {
+    var w = coverWords(name).split(' ').filter(Boolean);
+    while (w.length > 1 && COVER_SUFFIX.test(w[w.length - 1])) w.pop();
+    return w.length ? w[w.length - 1] : '';
+  }
+  // Which of `cast` a line is about. A full name settles it; a bare surname
+  // counts only when nobody else on the piece answers to it, because the wrong
+  // Williams under a line about the other one is this same bug in a smaller
+  // frame. Nobody, one man, or — ambiguously — several.
+  function coverAbout(text, cast) {
+    var t = coverWords(text), full = [], last = [], i, n, l;
+    for (i = 0; i < cast.length; i++) {
+      n = coverWords(cast[i]).replace(/^ | $/g, '');
+      if (n && t.indexOf(' ' + n + ' ') >= 0) { full.push(cast[i]); continue; }
+      l = coverLast(cast[i]);
+      if (l.length >= 3 && t.indexOf(' ' + l + ' ') >= 0) last.push(cast[i]);
+    }
+    return full.length ? full : last;
+  }
+  // The { name, line } pairs one piece can put on the hero, best first: the
+  // headline over the man it is about, then the piece's other findings under
+  // their own lines. A subject already paired is not offered a second line,
+  // and a line about somebody else is offered to nobody.
+  //
+  // `lead` overrides the piece's stored headline, for a caller that has one it
+  // has already cleaned up — the cover hands over the DE-BOASTED headline,
+  // since "You're welcome:" is not worth two words of a 13px line. It is the
+  // same sentence about the same man either way.
+  function coverSubjects(piece, lead) {
+    var parts = (piece && piece.components) || [], cast = [], out = [], seen = {}, i, c, about;
+    lead = lead || (piece && piece.headline) || '';
+    for (i = 0; i < parts.length; i++) {
+      c = parts[i];
+      if (c && c.player && cast.indexOf(c.player) < 0) cast.push(c.player);
+    }
+    if (!cast.length) return out;
+    var add = function (name, line) {
+      if (!name || !line || seen[name]) return;
+      seen[name] = 1;
+      out.push({ name: name, line: line });
+    };
+    about = coverAbout(lead, cast);
+    if (about.length === 1) add(about[0], lead);
+    else if (!about.length) add(cast[0], lead);
+    for (i = 0; i < parts.length; i++) {
+      c = parts[i];
+      if (!c || !c.player || !c.headline) continue;
+      about = coverAbout(c.headline, cast);
+      if (about.length > 1 || (about.length === 1 && about[0] !== c.player)) continue;
+      add(c.player, c.headline);
+    }
+    return out;
+  }
   // ── end cover rotation ───────────────────────────────────────────────────
 
   // ── the market disagreements, and the Fantasy card's reading ─────────────
@@ -1045,13 +1317,30 @@ img{max-width:100%}
     // the eyebrow and the headline with nothing under it: a card that says
     // the desk published and does not say what. Those rows are skipped here
     // and the piece is still in the archive at its URL.
-    var pieces = coverBand((j.pieces || []).filter(function (p) { return p && p.url && p.headline; }), Date.now());
-    if (!pieces.length) return;
-    // Who a piece is about: the players its own findings name. The card is
-    // stamped with them and player-search.js draws their faces at the head of
-    // the headline, so the group reads as three stories about named people
-    // rather than three paragraphs. A piece with no findings is stamped with
-    // nothing and keeps the plain card it has always had.
+    var live = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; });
+    if (!live.length) return;
+
+    // WHO A PIECE IS ABOUT: THE SUBJECT OF ITS HEADLINE FIRST.
+    // `components[].player` is the desk's cast for the WHOLE piece, in the
+    // order the story tells it, and stamping the first three of them put three
+    // Broncos over "Parker Washington's 43% target share makes him the
+    // clearest roster add of the week" — a JAX-at-DEN recap whose findings
+    // open on the side that won.
+    //
+    // `coverAbout` (above, #319) already answers "which of this cast is this
+    // line about", and answers it more carefully than a substring test: a full
+    // name settles it, a bare surname counts only when nobody else on the
+    // piece answers to it. It is the hero's rule, so it is the cards' rule
+    // too — one implementation, exercised by one set of gates.
+    var subjectOf = function (p, cast) {
+      if (!cast.length) return [];
+      var about = coverAbout(p.headline || '', cast);
+      if (!about.length) about = coverAbout(p.dek || '', cast);
+      return (about.length ? about : cast).slice(0, 3);
+    };
+    // The cast, unfiltered. The HERO PHOTOGRAPH below still reads this one:
+    // it wants a name it can look a picture up for, and it captions itself
+    // with the finding, so the story's own order is the right order there.
     var whoOf = function (p) {
       var out = [];
       (p.components || []).forEach(function (c) {
@@ -1059,16 +1348,80 @@ img{max-width:100%}
       });
       return out;
     };
-    $('readGrid').innerHTML = pieces.map(function (p) {
+    // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only when
+    // one of its own pre-kickoff calls cleared the headline bar, only for that
+    // player and only once (_voiceBlock, _worker.js). Printed as the first two
+    // words of a 16px card headline it read as punctuation; it is a line of
+    // its own over the headline here, and the call under it.
+    //
+    // Fourth copy of this split; `fantasy.html`, `dfs.html` and `desk.html`
+    // carry the other three. When the regexp moves it moves in all four.
+    var BOAST = /^\s*you['\u2019]re\s+welcome\s*[:\u2013\u2014.!-]*\s*/i;
+    var boast = function (p) {
+      var h = String((p && (p.headline || p.title)) || ''), m = BOAST.exec(h);
+      if (!m) return '';
+      return h.slice(m[0].length).trim() || '';
+    };
+
+    // ── the lead, and the five beside it ────────────────────────────────────
+    // THE NEWEST PIECE LEADS, always: the feed is ordered by publication and
+    // the desk's own slots decide what lands when, so nothing here chooses a
+    // story. That is deliberately NOT the rotation the cards below run on --
+    // the cards exist to keep the week's work visible for longer than an hour,
+    // and a lead that rotated would be a front page that changes its mind.
+    var lead = live[0], railPieces = live.slice(1, 6);
+    var by = function (p) {
+      var n = p.byline && p.byline.name ? p.byline.name : '';
+      var w = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + p.week : '');
+      return esc([w, n].filter(Boolean).join(' \u00b7 '));
+    };
+    var leadPick = subjectOf(lead, whoOf(lead));
+    // The lead takes the boast as well. It is the biggest card on the page,
+    // and a banner that appears on the three cards below it but not above them
+    // reads as a bug rather than as a rule.
+    var leadCrow = boast(lead);
+    var leadHtml = '<article class="hm-lead' + (leadCrow ? ' is-boast' : '') + '"'
+      + (leadPick.length ? ' data-player-focus="' + esc(leadPick.join('|')) + '"' : '') + '>'
+      + '<span class="t">' + esc(lead.title || 'The desk') + '<span class="flag">Latest</span></span>'
+      + (leadCrow ? '<span class="boast">You\u2019re welcome.</span>' : '')
+      + '<h3><a href="' + esc(lead.url) + '">' + esc(leadCrow || lead.headline) + '</a></h3>'
+      + (lead.dek ? '<p>' + esc(lead.dek) + '</p>' : '')
+      + '<a class="go" href="' + esc(lead.url) + '">Read the story &rarr;</a>'
+      + '<span class="m">' + by(lead) + '</span></article>';
+    if (railPieces.length) {
+      leadHtml += '<div class="hm-rail"><p class="hm-rail-h">More from the desk</p><ul>'
+        + railPieces.map(function (p) {
+            var pk = subjectOf(p, whoOf(p)), cr = boast(p);
+            return '<li' + (pk.length ? ' data-player-focus="' + esc(pk.join('|')) + '"' : '') + '>'
+              + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
+              + '<h3><a href="' + esc(p.url) + '">' + esc(cr || p.headline) + '</a></h3>'
+              + '<span class="m">' + by(p) + '</span></li>';
+          }).join('') + '</ul></div>';
+    }
+    // One published piece is a lead with nothing beside it; the second column
+    // is dropped rather than left holding 42% of the row open.
+    $('leadWell').className = 'hm-well' + (railPieces.length ? '' : ' hm-well-solo');
+    $('leadWell').innerHTML = leadHtml;
+    show($('lead'), true);
+
+    // ── the cards, which are the rotation, minus whatever is leading ────────
+    // The cards rotate over what is NOT already leading, so the band is still
+    // three and the same headline is never on this page twice. coverBand's own
+    // rules -- the pool depth, the hourly turn, the 24-hour floor -- are
+    // untouched; it is handed a list with the lead removed, not a new policy.
+    var pieces = coverBand(live.slice(1), Date.now());
+    if (!pieces.length) { try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('leadWell')); } catch (e) {} return; }    $('readGrid').innerHTML = pieces.map(function (p) {
       var when = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + esc(p.week) : '');
       var who = whoOf(p);
       // `byline` is an object ({analyst, name, role, avatar, ...}), not a
       // string; escaping it whole printed "[object Object]" under every card.
       var byline = p.byline && p.byline.name ? p.byline.name : '';
-      return '<a class="hm-read-card" href="' + esc(p.url) + '"'
-        + (who.length ? ' data-player-focus="' + esc(who.slice(0, 3).join('|')) + '"' : '') + '>'
+      var pick = subjectOf(p, who), crow = boast(p);
+      return '<a class="hm-read-card' + (crow ? ' is-boast' : '') + '" href="' + esc(p.url) + '"'
+        + (pick.length ? ' data-player-focus="' + esc(pick.join('|')) + '"' : '') + '>'
         + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
-        + '<h3>' + esc(p.headline) + '</h3>'
+        + (crow ? '<span class="boast">You\u2019re welcome.</span>' : '')
+        + '<h3>' + esc(crow || p.headline) + '</h3>'
         + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '')
         + '<span class="m">' + (when ? esc(when) : '') + (byline ? (when ? ' · ' : '') + esc(byline) : '') + '</span>'
         + '</a>';
@@ -1077,19 +1430,37 @@ img{max-width:100%}
     // The faces on the cards just painted. player-search.js watches the
     // document and would reach them on its own; calling it here means they
     // arrive with the cards rather than a frame later.
-    try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('readGrid')); } catch (e) {}
+    try { if (window.ITPlayerSearch) { ITPlayerSearch.decorateStories($('leadWell')); ITPlayerSearch.decorateStories($('readGrid')); } } catch (e) {}
     // The hero's first choice: the first piece in the band that is about
     // somebody, so the picture follows the story the rotation put on top
     // rather than pinning itself to the newest row underneath it.
     // All of them are offered, not just the first: a subject the lookup
     // carries no face for hands the photograph to the story behind him rather
     // than losing the band for the hour.
-    heroPaint('desk', pieces.filter(function (p) { return whoOf(p).length; })
-      .map(function (p) {
-        return { name: whoOf(p)[0], kicker: 'What the desk is on today',
-                 gap: p.headline || p.title, href: p.url };
-      }));
-  });
+    // EACH SUBJECT ARRIVES WITH THE LINE THAT NAMES HIM (`coverSubjects`
+    // above), so the face and the sentence under it are about the same man.
+    // This used to be `whoOf(p)[0]` under `p.headline` — two unrelated picks
+    // off one row, and a cover that ran one player's photograph over another
+    // player's news.
+    //
+    // The headline handed over is the DE-BOASTED one: the gap line is 13px,
+    // the boast is not worth two of its words there, and the hero is not where
+    // it is being made — the call is. Stripping the prefix does not change who
+    // the line is about, so the pairing is unaffected.
+    //
+    // `live`, not `pieces`: the cards below are the rotation MINUS whatever is
+    // leading, so the lead's subject is not in that list at all, and the hero
+    // would be showing the second story's man while the first one is the
+    // headline above him. The hero is the desk's current subject; the current
+    // piece is the one leading the page.
+    var deskCands = [];
+    live.forEach(function (p) {
+      coverSubjects(p, boast(p) || p.headline).forEach(function (s) {
+        deskCands.push({ name: s.name, kicker: 'What the desk is on today',
+                         gap: s.line, href: p.url });
+      });
+    });
+    heroPaint('desk', deskCands);  });
 })();
 </script>
 </body>

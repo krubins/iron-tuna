@@ -38,7 +38,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, weekCase, weekFrameProblems, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, _weeksPlayed, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK, packetCalledItWeek, weekPublishedCalls, gradeStoryCall, CALL_PUSH_PTS, WEEK_WINS_MAX, WEEK_MISSES_MAX, CONDITIONAL_SECTIONS };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, weekCase, weekFrameProblems, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, _weeksPlayed, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, _lensHead, _lensDek, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK, packetCalledItWeek, weekPublishedCalls, gradeStoryCall, CALL_PUSH_PTS, WEEK_WINS_MAX, WEEK_MISSES_MAX, CONDITIONAL_SECTIONS };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -398,7 +398,7 @@ console.log('\nthe fact check');
 {
   const packet = H._finishBrief({ meta: { kind: 'trade-desk', lens: 'both' }, rivalry: null, players: [{ name: 'CeeDee Lamb', targets: 12, share: 34 }] });
   packet.allowed.names.push('Evan Brooks', 'Lena Park'); packet.allowed.analysts = ['Evan Brooks', 'Lena Park'];
-  const good = { headline: 'Lamb is a target', dek: 'x', weekly: { target: [{ player: 'CeeDee Lamb', why: '12 targets, a 34% share' }], tradeAway: [], reasoning: ['Brooks likes the share.'], marketCounterpoint: [] }, dfs: { attack: [], fade: [], reasoning: ['Park: no salaries loaded.'] }, calls: [] };
+  const good = { headline: 'Lamb is a target', dek: 'x', dfsHeadline: 'Lamb is the chalk', dfsDek: 'x', weekly: { target: [{ player: 'CeeDee Lamb', why: '12 targets, a 34% share' }], tradeAway: [], reasoning: ['Brooks likes the share.'], marketCounterpoint: [] }, dfs: { attack: [], fade: [], reasoning: ['Park: no salaries loaded.'] }, calls: [] };
   ok('a draft inside the packet, in the right shape, passes', H.factCheck(good, packet).ok, H.factCheck(good, packet).problems.join(';'));
   const bad = JSON.parse(JSON.stringify(good)); bad.weekly.reasoning = ['Jerry Jeudy had 155 yards.'];
   const v = H.factCheck(bad, packet);
@@ -415,6 +415,36 @@ console.log('\nthe fact check');
   const mv = H.factCheck(miss, packet);
   ok('a missing lens or section is caught', mv.problems.includes('missing:dfs') && mv.problems.includes('missing:weekly.tradeAway'));
   ok('every kind has weekly sections, and every both-lens kind has DFS sections', Object.entries(H.CONTENT_KINDS).every(([k, v]) => H.sectionsFor(k, 'weekly').length >= 4 && (v.lens === 'both' ? H.sectionsFor(k, 'dfs').length >= 3 : H.sectionsFor(k, 'dfs').length === 0)));
+
+  // A HEADLINE PER LENS (2026-09-21). /dfs printed the Weekly Fantasy sentence
+  // under the DFS byline -- "the clearest roster add of the week" over a
+  // lineup page -- because a piece carried one headline for two lenses. A
+  // both-lens piece owes a DFS headline and is HELD without one, exactly as it
+  // is held for a missing section; a weekly-only piece is never asked.
+  const noDfsHead = JSON.parse(JSON.stringify(good)); delete noDfsHead.dfsHeadline;
+  ok('a both-lens piece with no DFS headline is held', H.factCheck(noDfsHead, packet).problems.includes('missing:dfsHeadline'));
+  const blankDfsHead = JSON.parse(JSON.stringify(good)); blankDfsHead.dfsHeadline = '   ';
+  ok('and a blank one does not count as one', H.factCheck(blankDfsHead, packet).problems.includes('missing:dfsHeadline'));
+  const weeklyOnly = H._finishBrief({ meta: { kind: 'ros-rankings', lens: 'weekly' }, rivalry: null, players: [{ name: 'CeeDee Lamb', targets: 12, share: 34 }] });
+  const wOnlyBody = { headline: 'Movers', dek: 'x', weekly: Object.fromEntries(H.sectionsFor('ros-rankings', 'weekly').map(k => [k, []])), calls: [] };
+  ok('a weekly-only piece is never asked for one', !H.factCheck(wOnlyBody, weeklyOnly).problems.some(p => /dfsHeadline/.test(p)),
+     H.factCheck(wOnlyBody, weeklyOnly).problems.join(';'));
+  // The week-frame check reads both pairs, so a DFS headline cannot preview a
+  // week that has already been played while the weekly one gets it right.
+  const meta = { storyType: 'retrospective', week: 2, forwardWeek: 3 };
+  ok('the week frame is checked on the DFS headline too',
+     H.weekFrameProblems({ headline: 'What Week 2 taught us', dek: 'x', dfsHeadline: 'Week 2 chalk to roster', dfsDek: 'x' }, meta)
+      .some(p => /^week:dfsHeadline/.test(p)));
+  ok('and a DFS headline that looks back is fine',
+     !H.weekFrameProblems({ headline: 'What Week 2 taught us', dek: 'x', dfsHeadline: 'What Week 2 taught us about Week 3 pricing', dfsDek: 'x' }, meta)
+       .some(p => /dfsHeadline/.test(p)));
+  // The feed serves the lens it was asked for, and falls back rather than
+  // going blank on a row stored before the column existed.
+  const row = { headline: 'W', dek: 'wd', dfs_headline: 'D', dfs_dek: 'dd' };
+  const old = { headline: 'W', dek: 'wd', dfs_headline: null, dfs_dek: null };
+  ok('the weekly lane reads the weekly pair', H._lensHead(row, 'weekly') === 'W' && H._lensDek(row, 'weekly') === 'wd');
+  ok('the DFS lane reads the DFS pair', H._lensHead(row, 'dfs') === 'D' && H._lensDek(row, 'dfs') === 'dd');
+  ok('a row written before the column falls back to the weekly pair', H._lensHead(old, 'dfs') === 'W' && H._lensDek(old, 'dfs') === 'wd');
 }
 
 // The first live Thursday preview (2026-09-09) was held over headline words:
@@ -855,7 +885,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   ok('the fact check asks the scorecard for its sections and holds a draft without them', (() => {
     const packet = H._finishBrief({ meta: { kind: 'what-tuna-got-right', lens: 'both', analyst: 'mercer', dfsAnalyst: 'park' }, ...p });
     packet.allowed.analysts = ['Jack Mercer', 'Lena Park'];
-    const full = { headline: 'Cy Huge is the week', dek: 'x', weekly: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'weekly', packet).map(k => [k, ['Cy Huge scored 25.']])), dfs: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'dfs', packet).map(k => [k, ['Cy Huge scored 25.']])) };
+    const full = { headline: 'Cy Huge is the week', dek: 'x', dfsHeadline: 'Cy Huge is the price', dfsDek: 'x', weekly: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'weekly', packet).map(k => [k, ['Cy Huge scored 25.']])), dfs: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'dfs', packet).map(k => [k, ['Cy Huge scored 25.']])) };
     const missing = { ...full, weekly: { theRecord: ['Cy Huge scored 25.'] } };
     return H.factCheck(full, packet).ok && H.factCheck(missing, packet).problems.some(x => /missing:weekly.biggestWins/.test(x));
   })());
@@ -1060,8 +1090,8 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   const head = front.indexOf('var COVER_TURN_MS =');
   const tail = front.indexOf('// ── end cover rotation', head);
   if (head < 0 || tail < 0) { console.error('FAIL: the cover rotation block is not in front.html'); process.exit(1); }
-  const R = new Function(front.slice(head, tail) + '; return { coverBand, coverFace, coverFaces, coverPick, coverLead, COVER_TURN_MS, DESK_BAND, HERO_POOL, CARD_POOL };')();
-  const { coverBand, coverFace, coverFaces, coverPick, coverLead } = R;
+  const R = new Function(front.slice(head, tail) + '; return { coverBand, coverFace, coverFaces, coverPick, coverLead, coverSubjects, COVER_TURN_MS, DESK_BAND, HERO_POOL, CARD_POOL };')();
+  const { coverBand, coverFace, coverFaces, coverPick, coverLead, coverSubjects } = R;
   const TURN = R.COVER_TURN_MS;
   const at = h => Date.UTC(2026, 8, 18, 12) + h * 3600 * 1000;
   const ids = a => a.map(p => p.headline).join(',');
@@ -1203,6 +1233,78 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   ok('the player the Fantasy card names is not in the list either',
     !coverFaces(gaps, gaps[0], at(3)).some(g => g.name === 'v'));
   ok('an empty board offers nobody rather than throwing', coverFaces([], null, at(1)).length === 0);
+
+  // ── the face and the sentence under it ──────────────────────────────────
+  // THE HERO RAN ONE PLAYER'S PHOTOGRAPH OVER ANOTHER PLAYER'S NEWS. The desk
+  // card took the subject of the piece's FIRST finding and printed the piece's
+  // HEADLINE beneath him, two picks off one row with nothing tying them
+  // together. On 2026-09-21 that was Nate Adkins's face over "Parker
+  // Washington's 43% target share after Week 2 makes him the clearest roster
+  // add of the week". `coverSubjects` pairs a face with a line, and the line
+  // may not be about anybody else.
+  {
+    const waivers = {
+      headline: 'Parker Washington\u2019s 43% target share after Week 2 makes him the clearest roster add of the week',
+      components: [
+        { n: 1, player: 'Nate Adkins', headline: 'Nate Adkins is the Denver tight end now' },
+        { n: 2, player: 'Parker Washington', headline: 'Parker Washington ran a route on 43% of the dropbacks' }
+      ]
+    };
+    const subs = coverSubjects(waivers);
+    ok('the headline goes to the player it names, not to the first finding',
+      subs.length > 0 && subs[0].name === 'Parker Washington' && subs[0].line === waivers.headline,
+      JSON.stringify(subs[0] || null));
+    ok('the other subject is still offered, under his own finding',
+      subs.some(s2 => s2.name === 'Nate Adkins' && s2.line === waivers.components[0].headline),
+      JSON.stringify(subs));
+    ok('nobody is offered twice', new Set(subs.map(s2 => s2.name)).size === subs.length, JSON.stringify(subs));
+    // THE RULE, stated against the cast the piece itself names: no face is
+    // ever offered with a line about one of the piece's other subjects.
+    const cast = waivers.components.map(c => c.player);
+    ok('no subject carries a line about one of the others',
+      subs.every(s2 => !cast.some(other => other !== s2.name && s2.line.includes(other))),
+      JSON.stringify(subs));
+
+    // A headline that names nobody is the desk's own framing of its story, not
+    // a mismatch: it belongs to the piece's first subject, which is what the
+    // card's own face stamp does with it.
+    const framed = coverSubjects({ headline: 'Three lineups the market moved overnight', components: [
+      { n: 1, player: 'Puka Nacua', headline: 'a' }, { n: 2, player: 'James Cook', headline: 'b' } ] });
+    ok('a headline that names nobody still leads with the piece\u2019s first subject',
+      framed.length > 0 && framed[0].name === 'Puka Nacua'
+      && framed[0].line === 'Three lineups the market moved overnight', JSON.stringify(framed[0] || null));
+
+    // How the desk actually writes a second reference.
+    ok('a surname on its own counts', (coverSubjects({ headline: 'Adkins has the Denver tight end job',
+      components: [{ n: 1, player: 'Nate Adkins', headline: 'x' }, { n: 2, player: 'Courtland Sutton', headline: 'y' }] })[0] || {}).name === 'Nate Adkins');
+    ok('a suffix and a possessive do not break the match',
+      (coverSubjects({ headline: 'Marvin Harrison Jr.\u2019s target share is up',
+        components: [{ n: 1, player: 'Trey McBride', headline: 'x' }, { n: 2, player: 'Marvin Harrison Jr.', headline: 'y' }] })[0] || {}).name === 'Marvin Harrison Jr.');
+    // A surname two men on the piece answer to is nobody's: the line is not
+    // offered with either face rather than guessed at.
+    const shared = coverSubjects({ headline: 'Williams is the back to own this week', components: [
+      { n: 1, player: 'Kyren Williams', headline: 'Kyren Williams took every goal-line carry' },
+      { n: 2, player: 'Javonte Williams', headline: 'Javonte Williams is the Dallas lead back' } ] });
+    ok('an ambiguous surname is offered to nobody',
+      shared.every(s2 => !/back to own/.test(s2.line)), JSON.stringify(shared));
+    ok('and the two are still offered under their own findings',
+      shared.length === 2 && shared[0].name === 'Kyren Williams' && shared[1].name === 'Javonte Williams',
+      JSON.stringify(shared));
+
+    // A piece the desk broke into no findings names nobody, so it offers no
+    // face and the hero falls through to the market gap below it.
+    ok('a piece with no findings offers nothing rather than throwing',
+      coverSubjects({ headline: 'What Sunday taught us' }).length === 0
+      && coverSubjects({}).length === 0 && coverSubjects(null).length === 0);
+
+    // The page must actually use it: the old call site built its candidate
+    // from `whoOf(p)[0]` and `p.headline`, which is the bug in one line.
+    // The cover hands it the de-boasted headline, so the call carries a
+    // second argument: match the call, not one exact spelling of it.
+    ok('the desk hero is built from coverSubjects', /coverSubjects\(p[,)]/.test(front));
+    ok('and no longer pairs the first finding with the headline',
+      !/name:\s*whoOf\(p\)\[0\]/.test(front));
+  }
 
   // ── the two card readings ───────────────────────────────────────────────
   // THE THIRD AND FOURTH PATHS ONTO THE COVER. §88 enumerated two. The Fantasy

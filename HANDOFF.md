@@ -12893,3 +12893,293 @@ balance. Rendered in Chromium at 1360px and 430px against a stubbed
 feed — with no page errors and no horizontal overflow. The order read off the
 rendered page is the desk at y=83, the setup band at y=830 and the lineup at
 y=1608.
+
+---
+
+## 116. September 21: a 52px hero over 14px prose, and a boast printed as punctuation
+
+Ken, reading `/fantasy` the morning after §112 shipped the well: "The font on
+the hero is fine. The font on everything below is too small. Also, 'You're
+welcome.' should be more prominent. We want to boast about our successes."
+
+### The reading step
+
+The opening band runs a headline at up to 52px over a 20px lede. Everything
+under it was 14px — section intros, card bodies, the plate's own states, the
+two columns of Vega vs. Brooks — and the deck's card copy and the page's
+standing notes were 13px. That is a drop of more than a third at the exact
+point where a reader stops scanning the page and starts reading it, and it is
+why the whole page under the band read as fine print.
+
+The rule now is that **nothing below the hero that is prose is under 15px**:
+
+| | Was | Is |
+|---|---|---|
+| Section intros, card bodies, plate and empty states, standing notes, the rivalry columns | 13–14px | 16px |
+| Copy inside a grid card (the deck's four decisions, a story card's teaser) | 13px | 15px |
+| Card and pick headings | 16px | 18px |
+| The deck's card headline | 20px | 22px |
+| Data tables (`.is-table`) | 14px | 15px |
+| Meta lines: bylines, kickers, rank chips, table headers | 11–12px | one step up |
+
+Data tables went to 15px and no further, on purpose: a board is scanned in
+columns and what constrains it is the width of the row, not the size of the
+type. The meta lines moved up with the copy rather than staying put, so a
+byline still reads as the line under a headline instead of as a second voice
+beside it.
+
+This is in `site.css`, which is the one copy of the in-season furniture, so it
+lands on `/dfs`, `/in-season`, `/weekly-intel` and the eight tools as well as
+`/fantasy`. That is the point of the file; fixing it on one page is how the
+chrome drifted the first time.
+
+### The boast
+
+`_voiceBlock` (`_worker.js`) lets the desk open a headline with **`YOU'RE
+WELCOME:`** only when one of the site's own pre-kickoff calls cleared the
+headline bar, only for that player, and only once. The phrase is already
+rationed to the rarest thing the desk has to say — and the well spent the whole
+of that rationing rendering it as the first two words of a 30px headline, where
+it read as punctuation in front of the sentence that actually mattered.
+
+It is the banner over the lead card now: the display face, gold ink, 72px on a
+desktop and 42px on a phone, with the call itself under it at headline size.
+`.nr-lead.is-boast` warms the card's border and ground to match.
+
+- **The site never writes the phrase.** The well splits it off the desk's own
+  headline, with `BOAST` in `fantasy.html`, and only when a headline survives
+  the split. A piece that made no boast paints as an ordinary lead; so does a
+  headline that is nothing but the boast, which would otherwise leave a card
+  with a banner and no story.
+- **`Latest` stays on the flag.** It says why this piece is the lead, which is
+  a different claim from the boast and still the reader's question.
+- **`.nr-lead p.nr-boast`, not `.nr-boast`.** `.nr-lead p` sets the deck's
+  18px, and the banner and the deck are both paragraphs inside the same card.
+
+**And on `/dfs`.** Ken, once §114 had given that page a well of its own: "do
+the dfs one too." It needed it. The Monday scorecard is a `both` kind, and
+`newsroomFeedPayload` returns ONE stored `headline` for both lenses — only the
+title and the byline differ by lens — so the boast reaches `/dfs` verbatim and
+was printing raw in its lead. The split is the same eight lines, which makes
+three copies of it; that is the same duplication the five helpers beside it
+(`focus`, `av`, `ago`, `kicker`, `byline`) already carry between that page and
+the Fantasy one, so it is written the way the file is written rather than
+lifted into a shared script for one regexp. Each copy names the other two.
+
+**And on the article page.** Ken, on seeing the well: "Yes, put the banner on
+the article page too." The piece the well links to carried the same problem in
+its `<h1>`, so `desk.html` splits the same phrase with the same regexp and the
+same two guards, prints it above the headline at 86px (46px on a phone), and
+steps the headline itself down to `--fs-2xl` while the banner is up so the two
+read as one head rather than as two competing ones. `body.dk-boasting` carries
+that step. `setHead()` is the one place either page's `<h1>` is written now,
+the archive branch included, so an ordinary piece and the desk index cannot
+inherit a banner from a boast the reader opened before them. `document.title`
+keeps the desk's headline whole: a browser tab and a shared link want the
+sentence, not the layout.
+
+| Where | What |
+|---|---|
+| `site.css` | The reading step across the `.is-*` furniture and the `.nr-*` story card and well; `.nr-lead.is-boast`, `.nr-lead p.nr-boast`. |
+| `fantasy.html` | Its own `.fn-riv-*` and `.fn-tool` type lifted with the rest; the newsroom painter splits the desk's boast off the lead headline. |
+| `desk.html` | `#dkBoast` above the `<h1>`, `.dk-boast` and `body.dk-boasting`; `setHead()` replaces both direct writes to `#dkTitle`. |
+| `dfs.html` | The same split in its own well, added once §114 gave the page one. |
+| `front.html` | `.hm-read-card .boast` and `.is-boast` in the Reading band, sized to the card; the split also cleans the hero's gap line. |
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
+plus `test-homepage` under `REQUIRE_BROWSER=1` (99/99) and the four `--check`
+generators clean. Rendered in Chromium at 1360px and 430px against a stubbed
+`/api/newsroom` in four shapes — a boast lead behind five pieces, a lead with
+no boast, a boast as the only published piece, and a headline that is the boast
+and nothing else — with no page errors and no horizontal overflow, and the
+banner measured at 72px and 42px with the two fallback shapes painting as an
+ordinary lead. Eighteen pages that share the furniture (`/fantasy`, `/dfs`,
+`/in-season`, `/weekly-intel`, `/my-league`, `/rankings`, `/vegas-edge`, the
+desk and ten more) rendered clean at both widths. `desk.html` rendered at the
+same two widths against a stubbed `/api/content/piece` in the same three
+headline shapes plus the index: the banner at 86px and 46px over a 31px and
+25px headline, the ordinary headline left at 39px and 31px with no banner and
+no `dk-boasting`, and the index carrying neither. `/dfs` rendered at the same
+two widths in five shapes — a boast lead behind five pieces, a boast as the
+only piece, a lead with no boast, a headline that is nothing but the boast, and
+an empty feed — all clean, with the kicker reading the DFS title and the byline
+the DFS analyst in each. `front.html` rendered at the same two widths in three
+shapes — a boast on the cover, a cover with none, and a headline that is
+nothing but the boast — with the banner one line at 33px and 26px, the other
+two cards untouched beside it, and the hero's gap line carrying the call
+rather than the phrase.
+
+**The banner is one line, measured rather than assumed.** With Bebas Neue
+actually loaded, "YOU'RE WELCOME." sets 757px wide at 86px on the article page,
+604px at 72px in a well, and 382px and 328px at the phone sizes: one line in
+all four, inside every column that holds it. The string is fixed, so those are
+the permanent worst cases and not a sample. Where the face fails to load it
+wraps to two lines on the fallback, which is the degradation to want.
+
+**And on the front page.** Ken: "do the front.html one too." The Reading band
+has no lead to hang an 86px banner on — three cards of equal width with 16px
+headlines — so the banner is sized to the CARD rather than to the page:
+`clamp(26px, 2.4vw, 34px)`, big against the 16px under it and small in
+absolute terms, on the same warm ground the Fantasy well's lead takes. The
+card keeps its place in the grid; a boast does not earn a row of its own on a
+cover that rotates three stories every turn.
+
+The same split also cleans the hero's gap line, which carries the desk
+headline at 13px through `heroPaint('desk', …)`. Two words of boast are not
+worth a fifth of that line, and the hero is not where the claim is being made.
+Fourth copy of the regexp; each of the four names the other three.
+
+`build-front.mjs` does not write `front.html` any more (its own header says
+so, since the September rewrite), so this is hand-edited like the rest of the
+page and the rebuild gate has nothing to say about it.
+
+---
+
+## 117. September 21: the front page had no lead, and the lead had the wrong face
+
+Ken, on §115: "This still has not added a lead story on the front page, which
+was the primary concern. Also, the story on the DFS page is that Parker
+Washington should be added, which does not apply in DFS. Also, the picture
+looks like it shows 3 broncos, even though the story is about 1 jaguar, which
+doesn't make sense."
+
+Three things. Two are fixed here; the third is a data-model gap and is written
+up at the end because it needs a decision, not a patch.
+
+### 1. The front page now leads with the desk
+
+`/fantasy` and `/dfs` got the well in §112 and §115 and the front page never
+did: it carried the desk as three rotating cards, two screens down, below the
+product lanes and the disagreement table. That is a list, not a front.
+
+`<section id="lead">` is the first thing under the hero and the ribbon,
+painted from the same `/api/newsroom` read the cards below already use, so the
+two cannot disagree about what the desk has published. Newest piece leads with
+its picture and its whole deck; the next five run as headlines beside it. It
+is the well the other two pages run, rewritten in this page's own palette —
+front.html does not load `site.css`, so `.nr-*` was not available and
+`.hm-well` / `.hm-lead` / `.hm-rail` are its local equivalents.
+
+**The rotation below it is untouched.** `coverBand` keeps its pool depth, its
+hourly turn and its 24-hour floor; it is handed `live.slice(1)` instead of
+`live`, so the band is still three cards and the lead is never printed twice
+on one page. The hero photograph now reads `live` rather than the rotated
+band: the hero is the desk's CURRENT subject, and the current piece is the one
+leading the page, so the photograph should not rotate off it.
+
+### 2. The picture is the headline's subject, not the piece's cast
+
+`components[].player` is the desk's cast for the WHOLE piece, in the order the
+story tells it. Stamping `data-player-focus` with the first three of them is
+what produced the screenshot: a JAX-at-DEN recap headlined "Parker
+Washington's 43% target share after Week 2 makes him the clearest roster add
+of the week", over photographs of Bo Nix, Courtland Sutton and RJ Harvey,
+because the recap's findings open on the side that won.
+
+The stamp is the headline's subject, then the deck's, and only when neither
+names anyone does the whole cast stand in. The match is full name or bare
+surname, and the surname is safe **because the candidates are the piece's own
+cast**: "Washington" among four men from one game is Parker Washington, where
+against the league index it is also a city and a football team. That is why
+this is not `/player-search.js`'s job — it matches against everybody.
+
+**One rule, not two.** §116 landed `coverAbout(text, cast)` on the front page
+for the hero's face-and-line pairing while this was open, answering the same
+question and answering it better: a full name settles it, a bare surname
+counts only when nobody else on the piece answers to it. front.html's
+`subjectOf` asks `coverAbout`, so the cover cannot answer "who is this about"
+two different ways; `/fantasy` and `/dfs` carry the same rule as a page helper
+the way they each carry their own copy of `BOAST`. And the hero reads `live`
+rather than the rotated band, because the cards are the rotation MINUS the
+lead — left on `pieces` it would have run the second story's man under the
+first story's headline, which is the bug one frame over.
+
+Checked in the browser on the real shape: the lead's stamp is `Parker
+Washington` alone, one face, on all three surfaces; the column's five rows
+stamp `Rashod Bateman`, `Bo Nix`, `Aaron Jones`, `Puka Nacua` and nothing —
+each its own headline's subject, with `Bo Nix` the cast fallback for "The four
+backfields that changed hands on Sunday", which names nobody.
+
+### 3. What is NOT fixed: the DFS lane prints weekly headlines
+
+A piece has exactly one `headline` and one `dek` — single columns on
+`content_pieces`, written for the Weekly Fantasy lens. The DFS lens exists
+only as `body.dfs`, the sections in `NEWSROOM_SECTIONS[kind].dfs`. So
+`/api/newsroom?lens=dfs` hands `/dfs` a piece whose DFS body is real analysis
+and whose headline is the week's fantasy story, and the page prints that
+headline under Lena Park's byline. "The clearest roster add of the week" is a
+waiver call; it is not wrong, it is simply not a DFS sentence, and no page
+change can make it one. The fix is a DFS headline and deck of its own, which
+means the writer, the schema and the feed. It is not in this change.
+
+| Where | What |
+|---|---|
+| `front.html` | `#lead` section, `.hm-well` / `.hm-lead` / `.hm-rail` CSS, the well painter, `named()`, cards from `live.slice(1)`, hero from `live`. The lead and the column also take §116's boast banner: it landed on the three cards while this was open, and a banner on the cards but not on the lead above them reads as a bug rather than a rule. |
+| `fantasy.html`, `dfs.html` | `focus()` picks the headline's subject out of the cast. |
+| `tools/test-homepage.mjs` | Six sections, not five, and named in order. `leadFaces` / `leadFocus` counted separately from `cardFaces`, so faces missing off the lead is a different failure from faces missing off the cards. |
+| `tools/test-story-art.mjs` | Six `<section>`s; the stamp assertion now also requires `named()` and its use on the headline, so neither half can be dropped silently. |
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
+plus `test-homepage` under `REQUIRE_BROWSER=1` (100/100) and the four
+`--check` generators clean. Inline scripts parse on all three pages; no stray
+control bytes; tags balance. Rendered in Chromium at 1360px and 430px against
+the exact feed shape from the screenshot, on all three pages, with no page
+errors and no horizontal overflow.
+---
+
+## 118. September 21: a headline per lens
+
+Ken, choosing between the three options §117 left open: "do option 1 for the
+DFS headline."
+
+§117 could not fix the complaint it recorded. A piece had exactly one
+`headline` and one `dek` — single columns on `content_pieces`, written for the
+Weekly Fantasy lens — so `/dfs` printed "Parker Washington's 43% target share
+makes him the clearest roster add of the week" under Lena Park's byline. The
+DFS *body* was real analysis; the sentence over it was a waiver call, and no
+page change could make it anything else. A package that runs in both lenses is
+WRITTEN twice and was HEADLINED once.
+
+Now it is headlined twice.
+
+**The writer is asked, and the draft is held without it.** `writeNewsroomPiece`
+adds `dfsHeadline` and `dfsDek` to the shape it demands, and only for a piece
+whose lens is `both`, so a weekly-only kind's prompt is byte-for-byte what it
+was. `factCheck` pushes `missing:dfsHeadline` when a both-lens draft arrives
+without one — the same treatment a missing section gets, for the same reason:
+the alternative is publishing the thing this exists to stop. `weekFrameProblems`
+reads the DFS pair too, so a DFS headline cannot preview a week that has
+already been played while the weekly one gets it right.
+
+**Stored, and served to whoever asked.** `dfs_headline` / `dfs_dek` are two
+more additive columns on the migration list `newsroomReady` already walks.
+`_lensHead` / `_lensDek` pick the pair for the lens being served, and
+`newsroomFeedPayload` reads them, so `/dfs` gets the DFS sentence without the
+page knowing anything changed. The article page gets BOTH pairs and chooses in
+the browser, the way it already chose `dfsTitle`; its DFS tab used to fall back
+to that generic label ("Showdown read") precisely because there was no DFS
+sentence to print. The admin editor lifts the DFS pair out of an edited body
+exactly as it lifts the weekly one, so an edit cannot leave one lens on the old
+headline.
+
+**What a row written before today does.** Nothing changes for it: both readers
+fall back to the weekly pair rather than going blank, so the lane reads as it
+did this morning. The desk republishes every kind every week, so the fallback
+empties itself without a backfill, and the columns stay null on the rows that
+never had a DFS lens at all.
+
+| Where | What |
+|---|---|
+| `_worker.js` | `dfs_headline` / `dfs_dek` columns; the two keys in the writer's shape, asked only of a both-lens piece; `missing:dfsHeadline` in `factCheck`; `weekFrameProblems` over all four fields; `contentStore` writes them; `_lensHead` / `_lensDek`; the feed serves by lens; the piece payload carries both pairs; the editor lifts both. |
+| `desk.html` | The DFS tab prints the DFS headline and deck, falling back through `dfsTitle` to the weekly pair. |
+| `tools/test-newsroom.mjs` | A both-lens draft with no DFS headline is held, a blank one does not count, a weekly-only piece is never asked; the week frame is checked on the DFS headline; `_lensHead` / `_lensDek` serve each lens and fall back. |
+| `tools/test-dry-run.mjs` | The simulated writer produces the pair — without it the fact check held every both-lens piece and the whole week collapsed, which is the requirement proving itself — and the week now asserts that every both-lens row stores one and every weekly-only row stores none. |
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included
+(113, up one for the new assertion) and `test-newsroom` at 364, plus
+`test-homepage` under `REQUIRE_BROWSER=1` (104) and the four `--check`
+generators clean. `_worker.js` and `desk.html` parse.
+
+**What this does not do.** It does not backfill. Pieces published before this
+keep one headline and `/dfs` keeps showing it until each kind next runs. The
+first pieces with a real DFS headline arrive at their normal slots.
