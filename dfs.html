@@ -750,10 +750,14 @@ p{color:var(--sec);margin:0 0 16px}
 .df-main{padding-top:var(--space-4)}
 .df-main>.df-play-week:first-child{margin-top:0}
 /* The roster now opens the column, directly under the setup band it is
-   solved from, so its section rule does not need the full gap a section
-   following another section does. */
+   solved from: the board itself is the first thing in the section, and the
+   section rule, the note under it and the Must include box follow it. So the
+   gap at the top of the column is the board's, and the rule that names it
+   keeps the full space a section gets after a board above it. */
 .df-main>#sec-lineup:first-of-type{margin-top:0}
-.df-main>#sec-lineup:first-of-type>.is-sec:first-child{margin-top:var(--space-5)}
+.df-main>#sec-lineup:first-of-type>#dfLineups:first-child{margin-top:var(--space-5)}
+.df-main>#sec-lineup>#dfLineups:first-child>:first-child{margin-top:0}
+.df-main>#sec-lineup>#dfLineups:empty{margin:0}
 .df-est{display:inline-block;margin-left:4px;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#b7791f;vertical-align:2px}
 </style>
 
@@ -906,30 +910,39 @@ p{color:var(--sec);margin:0 0 16px}
      got the whole product; the controls are for the reader who wants to argue
      with it, and they are folded away until that reader opens them. -->
 <section id="sec-lineup">
+  <!-- ── the roster, first ──────────────────────────────────────────────────────
+       The three selects in the band above are a question and the board is its
+       answer, so nothing is allowed to sit between them. The section rule, the
+       line saying what was solved and the Must include box are underneath the
+       board now: a reader who has just named the contest they are entering gets
+       the roster on the next line rather than a heading and two paragraphs
+       about it. -->
+  <div id="dfLineups"></div>
+
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>This week’s lineup</h2><a class="is-sec-more" href="#values">The board behind it &rarr;</a></div></div>
   <p class="df-sub">Solved against the cap for the contest shape above, on the same market numbers that price the season-long board. <b>Nothing on this page enters a contest</b> &mdash; it builds a roster to read and copy.</p>
   <!-- ── the constraints ─────────────────────────────────────────────────────
-       Everything the reader has told the builder, above the roster it produced,
+       Everything the reader has told the builder, under the roster it produced,
        with an undo on each one. It lives here rather than inside #dfLineups
        because it carries a search field: re-solving replaces the roster, and a
        field that is replaced mid-word loses what you were typing. Only the
        chips under it are re-rendered. -->
   <!-- ── must include ────────────────────────────────────────────────────────
-       A BOX, at the top of the roster, that the reader fills with the players
-       already committed. It reads as a container with things in it rather than
-       a list of settings, because that is what it is: on a Saturday the entry
-       is half-submitted, those men are facts, and the roster underneath is
-       whatever is still open around them. Excluded players ride underneath it,
+       A BOX, under the roster, that the reader fills with the players already
+       committed. It reads as a container with things in it rather than a list
+       of settings, because that is what it is: on a Saturday the entry is
+       half-submitted, those men are facts, and the roster above it is whatever
+       is still open around them. Excluded players ride underneath it,
        smaller, because they are the opposite instruction and a rarer one. -->
   <div class="df-must" id="dfConstraints" hidden>
     <div class="df-must-head">
       <b>Must include</b>
-      <span>Players you have already used. Every roster below is built around them, and the other slots re-solve to fit.</span>
+      <span>Players you have already used. Every roster above is built around them, and the other slots re-solve to fit.</span>
       <button type="button" class="df-clear" data-mark="clearall" id="dfClearMarks" hidden>Clear all</button>
     </div>
     <div class="df-must-box" id="dfMustBox">
       <div class="df-must-chips" id="dfMustChips"></div>
-      <span class="df-must-empty" id="dfMustEmpty">Nobody yet &mdash; the roster below is Iron Tuna&rsquo;s own nine.</span>
+      <span class="df-must-empty" id="dfMustEmpty">Nobody yet &mdash; the roster above is Iron Tuna&rsquo;s own nine.</span>
       <div class="df-req-wrap">
         <button type="button" class="df-req-open" id="dfReqOpen" aria-expanded="false" aria-controls="dfReqSearch">Add a player</button>
         <div class="df-req-search" id="dfReqSearch" hidden>
@@ -940,7 +953,6 @@ p{color:var(--sec);margin:0 0 16px}
     </div>
     <div id="dfConstraintChips"></div>
   </div>
-  <div id="dfLineups"></div>
 
   <!-- ── the branches ─────────────────────────────────────────────────────────
        The two questions a reader has the moment they have read a lineup: what
@@ -961,7 +973,7 @@ p{color:var(--sec);margin:0 0 16px}
       <label class="rk-check">Lineups <input type="number" id="dfN" min="1" max="20" value="3" style="width:52px"></label>
       <button class="btn" type="button" id="dfBuild">Rebuild</button>
     </div>
-    <p class="is-note">Click a name in the pool to lock him into every lineup, twice to exclude him, again to clear. The Require and Exclude buttons on the roster itself write the same list, and every constraint on it appears above the roster with an undo.</p>
+    <p class="is-note">Click a name in the pool to lock him into every lineup, twice to exclude him, again to clear. The Require and Exclude buttons on the roster itself write the same list, and every constraint on it appears in the Must include box under the roster with an undo.</p>
     <div class="is-scroll"><table class="is-table" id="dfPool"><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfPoolFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Vegas</th><th>Market</th><th class="num">Consensus</th><th>Status</th></tr></thead><tbody></tbody></table></div>
   </details>
 </section>
@@ -1964,7 +1976,7 @@ p{color:var(--sec);margin:0 0 16px}
     var benchedReq = must.filter(function (r) { return r.p.available === false; });
     $('dfConstraintChips').innerHTML =
       (out.length ? '<span class="df-out-label">Also excluded</span>' + out.map(function (r) { return chip(r, 'drop'); }).join('') : '')
-      + (missing.length ? '<p class="df-warn">' + e(missing.map(function (r) { return r.p.name; }).join(' and ')) + ' could not be seated under the current cap and rules, so the roster below is solved without ' + (missing.length > 1 ? 'them' : 'him') + '.</p>' : '')
+      + (missing.length ? '<p class="df-warn">' + e(missing.map(function (r) { return r.p.name; }).join(' and ')) + ' could not be seated under the current cap and rules, so the roster above is solved without ' + (missing.length > 1 ? 'them' : 'him') + '.</p>' : '')
       + benchedReq.map(function (r) {
           return '<p class="df-warn"><b>' + e(r.p.name) + '</b> is in the box. He is not playing this week'
             + (r.p.weekStatus ? ' (' + e(r.p.weekStatus) + (r.p.weekStatusNote ? ': ' + e(r.p.weekStatusNote) : '') + ')' : '')
