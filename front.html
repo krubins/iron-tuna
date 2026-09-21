@@ -912,6 +912,83 @@ img{max-width:100%}
   // board, a caption still claiming the top of the board is false, which is
   // the one thing a page arguing from the market cannot afford to be.
   function coverLead(rows, pick) { return !!(rows.length && rows[0] === pick); }
+  // ── WHOSE FACE, AND WHOSE SENTENCE ──────────────────────────────────────
+  // The hero's desk card took `whoOf(p)[0]` — the subject of the piece's FIRST
+  // finding — and printed the piece's HEADLINE beneath him. Nothing tied those
+  // two picks together: a story's findings are ordered by the story, not by
+  // who the headline is about. On 2026-09-21 the cover ran Nate Adkins's
+  // photograph over "Parker Washington's 43% target share after Week 2 makes
+  // him the clearest roster add of the week". A real player, a real sentence,
+  // and the two had nothing to do with each other, which reads as a site that
+  // does not know who it is talking about.
+  //
+  // So a face is offered with a line, and the line may not be about anybody
+  // ELSE. A headline that names no player still belongs to the piece's first
+  // subject — "Three lineups the market moved overnight" over the man the
+  // piece is about is the desk's own framing, not a mismatch. A headline that
+  // names one of the piece's other subjects belongs to him and to nobody else.
+  var COVER_SUFFIX = /^(?:jr|sr|ii|iii|iv|v)$/;
+  // Loose enough to survive punctuation and a possessive ("Washington's"),
+  // strict enough to stay on word boundaries: text is reduced to space-
+  // delimited lowercase words and searched for a name as whole words.
+  function coverWords(s) {
+    s = String(s == null ? '' : s);
+    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    return ' ' + s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ | $/g, '') + ' ';
+  }
+  function coverLast(name) {
+    var w = coverWords(name).split(' ').filter(Boolean);
+    while (w.length > 1 && COVER_SUFFIX.test(w[w.length - 1])) w.pop();
+    return w.length ? w[w.length - 1] : '';
+  }
+  // Which of `cast` a line is about. A full name settles it; a bare surname
+  // counts only when nobody else on the piece answers to it, because the wrong
+  // Williams under a line about the other one is this same bug in a smaller
+  // frame. Nobody, one man, or — ambiguously — several.
+  function coverAbout(text, cast) {
+    var t = coverWords(text), full = [], last = [], i, n, l;
+    for (i = 0; i < cast.length; i++) {
+      n = coverWords(cast[i]).replace(/^ | $/g, '');
+      if (n && t.indexOf(' ' + n + ' ') >= 0) { full.push(cast[i]); continue; }
+      l = coverLast(cast[i]);
+      if (l.length >= 3 && t.indexOf(' ' + l + ' ') >= 0) last.push(cast[i]);
+    }
+    return full.length ? full : last;
+  }
+  // The { name, line } pairs one piece can put on the hero, best first: the
+  // headline over the man it is about, then the piece's other findings under
+  // their own lines. A subject already paired is not offered a second line,
+  // and a line about somebody else is offered to nobody.
+  //
+  // `lead` overrides the piece's stored headline, for a caller that has one it
+  // has already cleaned up — the cover hands over the DE-BOASTED headline,
+  // since "You're welcome:" is not worth two words of a 13px line. It is the
+  // same sentence about the same man either way.
+  function coverSubjects(piece, lead) {
+    var parts = (piece && piece.components) || [], cast = [], out = [], seen = {}, i, c, about;
+    lead = lead || (piece && piece.headline) || '';
+    for (i = 0; i < parts.length; i++) {
+      c = parts[i];
+      if (c && c.player && cast.indexOf(c.player) < 0) cast.push(c.player);
+    }
+    if (!cast.length) return out;
+    var add = function (name, line) {
+      if (!name || !line || seen[name]) return;
+      seen[name] = 1;
+      out.push({ name: name, line: line });
+    };
+    about = coverAbout(lead, cast);
+    if (about.length === 1) add(about[0], lead);
+    else if (!about.length) add(cast[0], lead);
+    for (i = 0; i < parts.length; i++) {
+      c = parts[i];
+      if (!c || !c.player || !c.headline) continue;
+      about = coverAbout(c.headline, cast);
+      if (about.length > 1 || (about.length === 1 && about[0] !== c.player)) continue;
+      add(c.player, c.headline);
+    }
+    return out;
+  }
   // ── end cover rotation ───────────────────────────────────────────────────
 
   // ── the market disagreements, and the Fantasy card's reading ─────────────
@@ -1112,13 +1189,24 @@ img{max-width:100%}
     // All of them are offered, not just the first: a subject the lookup
     // carries no face for hands the photograph to the story behind him rather
     // than losing the band for the hour.
-    heroPaint('desk', pieces.filter(function (p) { return whoOf(p).length; })
-      .map(function (p) {
-        // The gap line is 13px. The boast is not worth two of its words
-        // there, and the hero is not where it is being made; the call is.
-        return { name: whoOf(p)[0], kicker: 'What the desk is on today',
-                 gap: boast(p) || p.headline || p.title, href: p.url };
-      }));
+    // EACH SUBJECT ARRIVES WITH THE LINE THAT NAMES HIM (`coverSubjects`
+    // above), so the face and the sentence under it are about the same man.
+    // This used to be `whoOf(p)[0]` under `p.headline` — two unrelated picks
+    // off one row, and a cover that ran one player's photograph over another
+    // player's news.
+    //
+    // The headline handed over is the DE-BOASTED one: the gap line is 13px,
+    // the boast is not worth two of its words there, and the hero is not where
+    // it is being made — the call is. Stripping the prefix does not change who
+    // the line is about, so the pairing is unaffected.
+    var deskCands = [];
+    pieces.forEach(function (p) {
+      coverSubjects(p, boast(p) || p.headline).forEach(function (s) {
+        deskCands.push({ name: s.name, kicker: 'What the desk is on today',
+                         gap: s.line, href: p.url });
+      });
+    });
+    heroPaint('desk', deskCands);
   });
 })();
 </script>
