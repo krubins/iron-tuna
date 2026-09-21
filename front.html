@@ -186,7 +186,12 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hero-band .wrap{padding-top:clamp(38px,6vw,76px);padding-bottom:clamp(36px,5.4vw,68px)}
 /* The clock is written hidden and revealed only once /api/season answers with a
    real week. A dateline that says it is loading is worse than no dateline. */
-.hm-clock{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--on-board-2);margin-bottom:20px;padding-left:12px;border-left:2px solid var(--teal)}
+/* The dateline and the claim are the two lines in this column that hang off a
+   rule, and they hang off the SAME indent (--hm-rule): two rules set at 12px
+   and 18px gave the column three left edges in six lines, which is most of
+   what made it read as untidy. Everything else in the column is flush left. */
+.hm-hero-copy{--hm-rule:16px}
+.hm-clock{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2);margin-bottom:26px;padding-left:var(--hm-rule);border-left:2px solid var(--teal)}
 .hm-clock b{color:#fff;font-weight:700}
 .hm-clock .live{color:var(--teal);font-weight:700}
 /* ── the headline, which is the one bold thing on this page ───────────────
@@ -199,29 +204,36 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    rhetoric is carried by the letterforms.
    `em` stays the element — the emphasis is real, the styling of it is not
    italic — and the h1's textContent is unchanged (tools/test-homepage.mjs). */
-.hm-h1{font-size:clamp(28px,4.5vw,53px);line-height:1.0;letter-spacing:-.02em;font-weight:500}
+/* Leading was 1.0, which is tighter than this face wants at 50px: "projection."
+   and "Vegas" collided across the clause break and the two clauses read as one
+   four-line block rather than as claim and counter-claim. 1.06 here, with the
+   clause break carrying its own step, separates them without a paragraph gap. */
+.hm-h1{font-size:clamp(29px,4.1vw,50px);line-height:1.06;letter-spacing:-.021em;font-weight:500}
 /* The measure is set on each CLAUSE, not on the h1, because `ch` resolves
    against the element's own font: capping the h1 would measure both clauses in
    the narrow one and break the expanded clause onto three ragged lines with
    "theirs." alone on the last. Two lines each, which is what the contrast
    needs to read as two lines of argument. */
 .hm-h1 .c1{display:block;max-width:22ch;font-stretch:96%}
-.hm-h1 em{display:block;max-width:21ch;margin-top:.1em;font-style:normal;font-stretch:125%;font-weight:800;letter-spacing:-.028em}
+.hm-h1 em{display:block;max-width:21ch;margin-top:.16em;font-style:normal;font-stretch:125%;font-weight:800;letter-spacing:-.028em}
 /* The one sentence that says what this site DOES. Set in the serif, which
    appears exactly twice on this page, and pushed off a brass rule — brass
-   because this sentence IS the money claim. Capped at 40ch so it breaks to
+   because this sentence IS the money claim. Capped at 38ch so it breaks to
    two or three lines and reads as a statement rather than as a paragraph. */
-.hm-claim{margin-top:24px;max-width:40ch;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400;font-size:clamp(20px,2.5vw,29px);line-height:1.26;color:#fff;border-left:2px solid var(--gold);padding-left:18px}
-.hm-lede{margin-top:18px;max-width:58ch;font-size:clamp(14.5px,1.6vw,16.5px);line-height:1.6;color:#a8bab6}
-.hm-cta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:28px}
-.hm-btn{display:inline-flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:700;padding:14px 22px;border-radius:3px;border:1px solid transparent}
+.hm-claim{margin-top:28px;max-width:38ch;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400;font-size:clamp(20px,2.3vw,27px);line-height:1.34;color:#fff;border-left:2px solid var(--gold);padding-left:var(--hm-rule)}
+/* 58ch was a measure the column no longer has now that the photograph is a
+   real column beside it, so the lede set three lines that each broke in a
+   different place. 52ch is the measure this width actually holds. */
+.hm-lede{margin-top:22px;max-width:52ch;font-size:clamp(14.5px,1.45vw,16px);line-height:1.65;color:#a3b6b2}
+.hm-cta{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:32px}
+.hm-btn{display:inline-flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:700;letter-spacing:.005em;padding:15px 24px;border-radius:3px;border:1px solid transparent}
 .hm-btn.primary{background:var(--teal);color:#06231c}
 .hm-btn.primary:hover{filter:brightness(1.08)}
 .hm-btn.second{background:transparent;color:#fff;border-color:rgba(255,255,255,.32)}
 .hm-btn.second:hover{background:rgba(255,255,255,.09);border-color:#fff}
 /* Deliberately smaller and quieter than the two buttons: it is the third thing
    to do on this page, not a third button competing with the first two. */
-.hm-how-link{display:inline-block;margin-top:18px;font-size:13.5px;font-weight:600;color:#8fa5a1;border-bottom:1px solid rgba(143,165,161,.42);padding-bottom:1px}
+.hm-how-link{display:inline-block;margin-top:20px;font-size:13px;font-weight:600;letter-spacing:.01em;color:#8fa5a1;border-bottom:1px solid rgba(143,165,161,.35);padding-bottom:2px}
 .hm-how-link:hover{color:#fff;border-bottom-color:#fff}
 /* ── the hero's picture ──────────────────────────────────────────────────
    ONE column until there is a photograph to put beside the headline, so an
@@ -229,33 +241,49 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    headline with an empty gutter next to it. `has-edge` is added by the
    painter and is the only thing that opens the second column. */
 .hm-hero{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(26px,4vw,52px);align-items:center}
-.hm-hero.has-edge{grid-template-columns:minmax(0,1fr) minmax(0,320px)}
-/* The headline is capped at 17ch, the claim at 40ch and the lede at 58ch, so
-   none of them reflows when the column narrows — the picture arrives beside the
-   copy, it does not move it. Below 900px the picture goes under the buttons
-   instead. */
+/* The picture is a COLUMN, not a thumbnail parked beside a headline. It was
+   320px wide and 4:3, which left it ending level with the lede while the copy
+   ran on for another 250px — a photograph floating in the top half of a band
+   whose bottom half was empty. It now runs the full height of the copy: the
+   row stretches, the plate takes whatever height the copy leaves after the
+   caption and the meta under it, and the photograph crops to fill it. */
+.hm-hero.has-edge{grid-template-columns:minmax(0,1fr) minmax(0,clamp(330px,30vw,440px));align-items:stretch}
+/* The headline is capped clause by clause, the claim at 38ch and the lede at
+   52ch, so none of them reflows when the column narrows — the picture arrives
+   beside the copy, it does not move it. Below 900px the picture goes under the
+   buttons instead. */
 @media(max-width:900px){.hm-hero.has-edge{grid-template-columns:minmax(0,1fr)}
-  .hm-edge{max-width:380px}}
-.hm-edge{min-width:0}
+  .hm-edge{max-width:420px}
+  /* Under the buttons there is no copy to match, so the plate goes back to
+     being a shape of its own rather than filling a height nothing sets. */
+  .hm-edge .it-plate-shot{flex:0 0 auto;aspect-ratio:4/3;min-height:0}}
+.hm-edge{min-width:0;display:flex;flex-direction:column}
 .hm-edge[hidden]{display:none}
+/* The chain that lets the photograph take the leftover height: the plate well,
+   the optional link around the figure and the figure itself all pass the
+   stretch down, and the shot is the one flexible box in it. */
+.he-plate{flex:1 1 auto;display:flex;min-height:0}
+.he-plate .he-link,.he-plate .it-plate{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;width:100%}
 /* The shape is set here rather than in player-search.js: the plate fills
    whatever box it is given, and this is the box. Square corners and a hairline
    rather than a 12px radius over a 44px drop shadow — this is a photograph
    pinned to a board, not a card floating over one. */
-.hm-edge .it-plate-shot{height:auto;aspect-ratio:4/3;border-radius:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14)}
-.hm-edge .it-plate-shot i{font-size:28px;color:#6d827e}
-.hm-edge .it-art-credit{margin-top:9px;font-size:10.5px;line-height:1.4;color:#7d918d}
+.hm-edge .it-plate-shot{flex:1 1 auto;height:auto;aspect-ratio:auto;min-height:clamp(230px,24vw,320px);border-radius:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14)}
+.hm-edge .it-plate-shot i{font-size:34px;color:#6d827e}
+.hm-edge .it-art-credit{margin-top:10px;font-size:11px;line-height:1.45;color:#7d918d}
 .hm-edge .it-art-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 /* The plate is wrapped in a link when the feed hands over a story to point at.
    It carried no style of its own, so the photograph had no hover and no focus
    ring even though it was the biggest link in the hero. */
 .he-link{display:block;border-radius:2px}
 .he-link:hover .it-plate-shot{border-color:rgba(45,212,163,.7)}
-.he-meta{display:flex;flex-direction:column;gap:3px;margin-top:14px}
-.he-k{font-size:12px;font-weight:700;color:var(--teal)}
-.he-name{font-size:19px;font-weight:700;font-stretch:112%;line-height:1.2;color:#fff}
-.he-sub{font-size:12.5px;font-weight:600;color:var(--on-board-2)}
-.he-gap{margin-top:5px;font-size:13px;line-height:1.5;color:#a8bab6}
+/* The caption block is sized to the wider column it now sits under, and it is
+   flush with the picture above it rather than a size smaller again. */
+.he-meta{display:flex;flex-direction:column;gap:4px;margin-top:16px;flex:0 0 auto}
+.he-k{font-size:12px;font-weight:700;letter-spacing:.01em;color:var(--teal)}
+.he-name{font-size:21px;font-weight:700;font-stretch:112%;line-height:1.18;color:#fff}
+.he-sub{font-size:12.5px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2)}
+.he-gap{margin-top:7px;font-size:13.5px;line-height:1.5;color:#a3b6b2}
 
 /* ── shared section furniture ─────────────────────────────────────────────
    Section headings take the hero's expanded voice, one step down, so the page
