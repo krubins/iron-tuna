@@ -206,8 +206,11 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    29 units of width apart is far enough that the two clauses stopped looking
    like one typeface — a third font in a hero that already carries two. Both
    clauses now sit at the body's width and track identically. What separates
-   them is WEIGHT alone, 500 against 800, which is the contrast a single
-   family is built to carry.
+   them is WEIGHT and SIZE: 500 at the h1's size against 800 at 1.16 of it,
+   which is the contrast one family is built to carry. Size is set in `em` so
+   it rides the h1's own clamp — the counter-claim is 16% bigger than the
+   clause above it at 29px on a phone and at 50px on a desk, rather than
+   punching at one width and shouting at the other.
    `em` stays the element — the emphasis is real, the styling of it is not
    italic — and the h1's textContent is unchanged (tools/test-homepage.mjs). */
 /* Leading was 1.0, which is tighter than this face wants at 50px: "projection."
@@ -217,11 +220,14 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-h1{font-size:clamp(29px,4.1vw,50px);line-height:1.06;letter-spacing:-.021em;font-weight:500}
 /* The measure is set on each CLAUSE, not on the h1, so each one breaks where
    its own length wants to: the first runs two lines, the counter-claim one.
-   The caps differ because `ch` resolves against the element's own font and the
-   bolder clause sets a wider `0` — 24ch on the `em` is the same measure 22ch
-   is on the first clause, not a longer line. */
+   The caps differ because `ch` resolves against the element's own font, and
+   the counter-claim's is both bolder and bigger — its `0` is wider, so 25ch
+   there is a far LONGER line than 22ch is on the clause above. It is set to
+   the 23.6ch the sentence actually measures, plus slack: the counter-claim
+   lands whole on one line wherever the column is wide enough to hold it, and
+   wraps to two where it is not. */
 .hm-h1 .c1{display:block;max-width:22ch}
-.hm-h1 em{display:block;max-width:24ch;margin-top:.16em;font-style:normal;font-weight:800}
+.hm-h1 em{display:block;max-width:25ch;margin-top:.1em;font-style:normal;font-size:1.16em;font-weight:800}
 /* The one sentence that says what this site DOES. This is the page's second
    family and its last — Instrument Serif, the same face the lead story's deck
    carries — pushed off a brass rule, brass because this sentence IS the money
