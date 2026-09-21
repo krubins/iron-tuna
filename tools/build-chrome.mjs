@@ -112,6 +112,12 @@ const FOOT_LINKS = [
   { label: 'Fantasy', href: '/fantasy' },
   { label: 'DFS', href: '/dfs' },
   { label: 'Articles', href: '/in-season/desk' },
+  // The hub the ~400 player cards hang off. In the footer rather than the nav
+  // because it is a directory, not a board: nobody opens it to read it, they
+  // arrive at it hunting one name. A set of pages reachable only through
+  // sitemap.xml is a set a crawler reaches last and ranks lowest, and this is
+  // the one link that fixes it — on every page the chrome is stamped onto.
+  { label: 'Players', href: '/players' },
   { label: 'How It Works', href: '/faq#faq-start' },
   { label: 'Data Sources', href: '/data' },
   { label: 'FAQ', href: '/faq' },

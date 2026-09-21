@@ -446,6 +446,7 @@ p{margin:0}
     <li><a href="/fantasy">Fantasy</a></li>
     <li><a href="/dfs">DFS</a></li>
     <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
     <li><a href="/faq">FAQ</a></li>
@@ -494,8 +495,10 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       .then(function (j) { cb(j); })
       .catch(function () { cb(null); });
   }
-  function playerLink(name, pos) {
-    return '<a href="/in-season/player/' + slug(name) + '?pos=' + e(pos) + '">' + e(name) + '</a>';
+  // The position was only ever here to build a ?pos= the card never read. The
+  // card is addressed by slug alone.
+  function playerLink(name) {
+    return '<a href="/player/' + slug(name) + '">' + e(name) + '</a>';
   }
   function whenReady(fn) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn();
@@ -509,7 +512,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   function hbCard(kind, label, b, rows, big) {
     if (!b || !b.name) return '';
     for (var i = 0; i < rows.length; i++) if (rows[i][1] == null) return '';
-    var h = '<div class="hb-card"><i class="' + kind + '">' + label + '</i><b>' + playerLink(b.name, b.position) + '</b>'
+    var h = '<div class="hb-card"><i class="' + kind + '">' + label + '</i><b>' + playerLink(b.name) + '</b>'
           + '<small>' + e((b.team ? b.team + ' · ' : '') + b.position) + '</small>';
     if (big) h += '<div class="hb-row big"><span>' + big[0] + '</span><span>' + big[1] + '</span></div>';
     rows.forEach(function (r) { h += '<div class="hb-row"><span>' + r[0] + '</span><span>' + r[1] + '</span></div>'; });
@@ -653,7 +656,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // ── Vegas vs. Experts, off /api/vegas-edge ────────────────────────────────
   function veCard(p, kind) {
     var d = p.delta || {};
-    return '<div class="ve-card ' + kind + '"><b>' + playerLink(p.name, p.position) + '</b> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span>' +
+    return '<div class="ve-card ' + kind + '"><b>' + playerLink(p.name) + '</b> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span>' +
       '<div class="ve-ranks"><span>Consensus <b>' + e(p.position) + p.consensusRank + '</b></span><span>Vegas <b>' + e(p.position) + p.vegasRank + '</b></span><span>Iron Tuna <b>' + e(p.position) + p.ironTunaRank + '</b></span></div>' +
       '<span class="ve-cls ' + kind + '">' + e(d.classification || '') + '</span><span class="ve-conf">' + e(sign(d.rank, ' slots') + ' · ' + sign(d.points, ' pts') + ' · ' + (p.confidence || '') + ' · ' + (p.basis || '')) + '</span>' +
       (p.why ? '<p>' + e(p.why) + '</p>' : '') + '</div>';
@@ -673,13 +676,13 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var td = (j.tdBoard || []).slice(0, 6), vol = (j.volumeBoard || []).slice(0, 6);
     if (td.length) {
       $('veTd').querySelector('tbody').innerHTML = td.map(function (t, i) {
-        return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerLink(t.name, t.position) + ' <span class="is-status">' + e(t.position + ' · ' + t.team) + '</span></td><td>' + e(t.opponent || '—') + '</td>' +
+        return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerLink(t.name) + ' <span class="is-status">' + e(t.position + ' · ' + t.team) + '</span></td><td>' + e(t.opponent || '—') + '</td>' +
           '<td class="num"><b>' + n1(t.probability) + '%</b>' + (t.basis === 'derived' ? ' <span class="is-status">derived</span>' : '') + '</td><td class="num">' + (t.expectedTds == null ? '—' : (Math.round(t.expectedTds * 100) / 100).toFixed(2)) + '</td></tr>';
       }).join('');
     }
     if (vol.length) {
       $('veVol').querySelector('tbody').innerHTML = vol.map(function (v, i) {
-        return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerLink(v.name, v.position) + ' <span class="is-status">' + e(v.position + ' · ' + v.team) + '</span></td>' +
+        return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerLink(v.name) + ' <span class="is-status">' + e(v.position + ' · ' + v.team) + '</span></td>' +
           '<td class="num">' + n1(v.receptions) + '</td><td class="num">' + n1(v.rushYards) + '</td><td class="num">' + n1(v.recYards) + '</td><td class="num"><b>' + n1(v.impliedTouches) + '</b></td></tr>';
       }).join('');
     }
@@ -750,7 +753,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       var opp = !w0 ? '—' : w0.bye ? '<span class="is-status">BYE</span>' : w0.out ? '<span class="is-status">OUT</span>' : e((w0.home ? 'vs ' : 'at ') + w0.opponent);
       var d = r.delta || {}, cls = /BUY|HIGHER/.test(d.classification || '') ? 'buy' : /FADE|LOWER/.test(d.classification || '') ? 'fade' : 'agree';
       return '<tr><td class="num">' + r[rankField] + '</td>' +
-        '<td class="p">' + playerLink(p.name, p.position) + '<span>' + e(p.position) + (p.injury ? ' · ' + e(p.injury.status) : '') + '</span></td>' +
+        '<td class="p">' + playerLink(p.name) + '<span>' + e(p.position) + (p.injury ? ' · ' + e(p.injury.status) : '') + '</span></td>' +
         '<td>' + e(p.team) + '</td><td>' + opp + '</td>' +
         '<td class="num"><b>' + n1(r.i) + '</b></td>' +
         '<td class="num">' + e(p.position) + (r.cRank == null ? '—' : r.cRank) + '</td>' +
@@ -788,7 +791,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   get('/api/ros-update', function (j) {
     if (!j || !j.ok || !((j.risers && j.risers.length) || (j.fallers && j.fallers.length))) return;
     var mover = function (m) {
-      return '<li><b>' + playerLink(m.name, m.position) + '</b> ' + e(m.position + ' · ' + m.team) + ': ' + e(m.position) + m.previousRank + ' → ' + e(m.position) + m.currentRank +
+      return '<li><b>' + playerLink(m.name) + '</b> ' + e(m.position + ' · ' + m.team) + ': ' + e(m.position) + m.previousRank + ' → ' + e(m.position) + m.currentRank +
         (m.reasons && m.reasons.length ? '<small>' + e(m.reasons.join('; ')) + '</small>' : '') + '</li>';
     };
     var h = '';
