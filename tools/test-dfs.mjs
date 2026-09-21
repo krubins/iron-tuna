@@ -111,17 +111,43 @@ console.log('\nclassic or single game');
   // the classic cap reaches every reader. Asserted against the route source
   // because the import needs a key and a D1 to run for real.
   const adminRoute = cut("if (url.pathname === '/api/admin/dfs')", 'return json(out, 200, c);');
-  ok('the desk import refuses a single-game file before storing it',
-     /dfsSlateShape\(parsed\.rows\) === 'single-game'/.test(adminRoute)
-     && adminRoute.indexOf('dfsSlateShape') < adminRoute.indexOf('dfsStore'), 'the guard must run before dfsStore');
-  // and it refuses whatever `slate` says, because dfsSalariesRead() takes the
-  // latest fetched_at for the site and week without ever filtering on that
-  // column: a single-game file stored under any slate name is still what
-  // /api/dfs hands out.
-  ok('the refusal does not depend on the slate name',
-     !/single-game'[\s\S]{0,200}b\.slate/.test(adminRoute));
-  const salariesRead = cut('async function dfsSalariesRead', '// \u2500\u2500 the slate \u2500');
-  ok('and that read really is slate-blind, which is why', !/WHERE[^']*slate\s*=/.test(salariesRead));
+  ok('the desk import still reads the shape of the file before storing it',
+     /dfsSlateShape\(parsed\.rows\)/.test(adminRoute)
+     && adminRoute.indexOf('dfsSlateShape') < adminRoute.indexOf('dfsStore'), 'the shape must be known before dfsStore');
+  // THE GUARANTEE, which has not moved: a single-game file must never become
+  // the board a reader asking for the main slate is served. What HAS moved is
+  // how it is kept. It used to be an outright refusal, because
+  // dfsSalariesRead() ignored the slate column and one stored anywhere was the
+  // main board. The read now filters, so the file is accepted and filed under
+  // the matchup it prices -- and the four assertions below are what keep the
+  // old guarantee standing under the new mechanism.
+  //
+  // 1. The key is derived from the file's own clubs, never taken from the
+  //    caller, so no post can file one game's salaries under another.
+  ok('a single-game file is stored under the matchup it actually prices',
+     /const key = dfsSingleGameSlateKey\(parsed\.rows\)/.test(adminRoute)
+     && /under = key;/.test(adminRoute) && /slate: under/.test(adminRoute));
+  // 2. A caller naming a different slate is refused rather than quietly
+  //    overridden -- including one naming 'main' or 'weekly', which is the
+  //    exact move the original refusal existed to stop.
+  ok('...and a post naming a different slate is refused, not silently re-filed',
+     /asked && asked !== key/.test(adminRoute) && /slate_mismatch/.test(adminRoute));
+  // 3. The mirror image: a main-slate file must not land under a game key,
+  //    or the page solves a six-seat roster out of nine-seat prices.
+  ok('...and a main-slate file cannot be stored under a single-game key',
+     /asked && dfsIsSingleSlate\(asked\)/.test(adminRoute));
+  // 4. And the read that made the old refusal necessary now excludes the
+  //    single-game slates by default, so a Showdown import cannot be handed to
+  //    a caller who asked for the classic board. Both halves matter: the
+  //    filter, and taking MAX(fetched_at) WITHIN the slate rather than across
+  //    the week -- across it, a 9am Showdown import would blank an 8am Classic
+  //    one by owning a timestamp the filtered read never returns.
+  const salariesRead = cut('async function dfsSalariesRead', 'async function dfsSingleSlates');
+  ok('the classic read excludes the single-game slates rather than trusting the refusal',
+     /slate NOT LIKE 'sd:%'/.test(salariesRead));
+  ok('...and takes its newest import within that slate, never across the week',
+     (salariesRead.match(/MAX\(fetched_at\)/g) || []).length === 2
+     && !/MAX\(fetched_at\) AS ts FROM dfs_salaries WHERE site = \? AND season IS \? AND week IS \?"/.test(salariesRead));
 }
 
 // The scheduled DraftKings workflow posts to that same import, and it merges
@@ -706,6 +732,28 @@ console.log('\nthe DFS page explanations');
   ok('...but a pick contest is told what it is waiting for rather than asked for an export',
      page.includes("if (fmt.kind === 'picks') {")
      && page.includes('The board fills in as soon as the salaries post.'));
+  // THE DESK'S OWN SINGLE-GAME SLATES. A Showdown used to have exactly one
+  // route to real prices: a CSV the reader downloaded. The desk imports them
+  // now, so the page asks for the matchup it needs and only falls back to the
+  // file where the desk has not priced that game.
+  ok('a single-game format asks the desk for its own matchup rather than the main board',
+     page.includes('function deskSlateFor()')
+     && page.includes("return availableSingles.indexOf(keys[0]) >= 0 ? 'sd:' + keys[0] : null;")
+     && page.includes("'&slate=' + encodeURIComponent(want)"));
+  // ...and only for a game the desk actually holds: an unimported matchup
+  // returns null so the board reaches the file notice instead of fetching a
+  // slate nobody stored.
+  ok('...only for a game the desk has actually priced', page.includes('availableSingles.indexOf(keys[0]) >= 0'));
+  // Re-solving on every keystroke would throw away the reader's locks and
+  // excludes for a slate that did not change.
+  ok('...and re-fetches only when the answer changed', page.includes('if (want === loadedSlate) return false;'));
+  // A reader who handed over their own file keeps it; the desk does not
+  // silently replace what they chose.
+  ok('...and never over a file the reader handed over themselves', page.includes('if (upGet(site)) return false;'));
+  // Switching back to a multi-game format has to come back to the main board,
+  // or the page solves a nine-seat roster against six-seat prices.
+  ok('...and every setup change routes through it, falling back to a plain render',
+     (page.match(/if \(!syncSlate\(\)\) render\(\);/g) || []).length === 3);
   ok('a Tiers roster is never invented out of salary bands',
      page.includes("ITDfs.tierFormat(") && page.includes('inventing them out of salary would build a roster nobody can enter'));
   // The always-on panel that #293 removed does not come back. The route does,

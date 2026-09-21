@@ -12204,7 +12204,7 @@ function dfsNoSalariesNote(site, now) {
     note: 'No ' + label + ' salaries are posted for this week yet. The next scheduled update is ' + _dfsWhenET(w.next) + '.' };
 }
 const DFS_DDL = [
-  'CREATE TABLE IF NOT EXISTS dfs_salaries (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, slate TEXT, season INTEGER, week INTEGER, name TEXT NOT NULL, position TEXT NOT NULL, team TEXT, opponent TEXT, salary INTEGER NOT NULL, site_id TEXT, operator_fppg REAL, source TEXT, fetched_at INTEGER NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS dfs_salaries (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, slate TEXT, season INTEGER, week INTEGER, name TEXT NOT NULL, position TEXT NOT NULL, team TEXT, opponent TEXT, salary INTEGER NOT NULL, site_id TEXT, operator_fppg REAL, roster_position TEXT, source TEXT, fetched_at INTEGER NOT NULL)',
   'CREATE INDEX IF NOT EXISTS ix_dfs_site_week ON dfs_salaries (site, season, week, fetched_at)'
 ];
 let _DFS_READY = false;
@@ -12219,6 +12219,17 @@ async function dfsReady(env) {
     if (!(cols.results || []).some(c => c.name === 'operator_fppg')) {
       await env.LEADS_DB.prepare('ALTER TABLE dfs_salaries ADD COLUMN operator_fppg REAL').run();
     }
+    // The seat the row was priced for, straight out of the file's Roster
+    // Position cell. A main slate writes 'RB/FLEX' here and nothing reads it;
+    // a single-game file writes 'CPT' or 'FLEX' and EVERYTHING reads it,
+    // because that cell is the only thing that says which of a player's two
+    // rows is the Captain. Without it a stored Showdown slate is two
+    // indistinguishable prices for one man, so this column is what makes
+    // storing one possible at all. A Tiers file names its bucket in the same
+    // cell, which is why the column is the raw text rather than a flag.
+    if (!(cols.results || []).some(c => c.name === 'roster_position')) {
+      await env.LEADS_DB.prepare('ALTER TABLE dfs_salaries ADD COLUMN roster_position TEXT').run();
+    }
     _DFS_READY = true;
     return true;
   } catch (e) { return false; }
@@ -12226,6 +12237,27 @@ async function dfsReady(env) {
 // A DST row on either site names the club; the board names the club's
 // defense. Both resolve to the team key.
 const _dfsPos = p => { const u = String(p || '').toUpperCase(); return u === 'DEF' || u === 'D' || u === 'D/ST' ? 'DST' : u; };
+// DraftKings has no Tier column; a Tiers export names the tier in the
+// roster-position cell ("TIER 3"). Only that exact shape counts as one -- a
+// main slate's "RB/FLEX" is not, and nothing is inferred from salary. Lifted
+// out of parseDfsCsv() because a row read back out of dfs_salaries has to
+// reach the same answer from the same cell; two copies of this rule is two
+// ways for the stored slate and the uploaded one to disagree.
+const _dfsTierFrom = roster => roster ? (String(roster).match(/^(?:TIER\s*)?(\d{1,2})$/) || [])[1] || null : null;
+// The slate key a single-game file is stored under. Alphabetical, so it is the
+// same string the page builds for the game the reader picked (gameKeyTeams in
+// dfs.html) and neither side has to translate. The 'sd:' prefix is what every
+// classic read excludes: without it a Showdown import would be served as the
+// main board to everybody, which is exactly why the desk refused one until now.
+const DFS_SINGLE_SLATE = 'sd:';
+function dfsSingleGameSlateKey(rows) {
+  const teams = [...new Set((rows || []).map(r => teamKey(r.team)).filter(Boolean))].sort();
+  // Two clubs, no more and no fewer. A file with three is not one game, and a
+  // file with one is a export we cannot name a matchup from -- either way,
+  // storing it under a game key would be a claim the file does not support.
+  return teams.length === 2 ? DFS_SINGLE_SLATE + teams.join('|') : null;
+}
+const dfsIsSingleSlate = slate => String(slate || '').startsWith(DFS_SINGLE_SLATE);
 // Which contest a salary file is for. Both sites sell single-game contests out
 // of a file with the same columns as the main slate, and the difference is a
 // multiplier slot the classic roster does not have: DraftKings prices the
@@ -12319,7 +12351,7 @@ function parseDfsCsv(site, text) {
       // as a tier. A main slate's "RB/FLEX" is not one, and nothing here is
       // inferred from salary -- a Tiers roster built out of invented buckets
       // is a lineup nobody can enter.
-      const tier = roster ? (roster.match(/^(?:TIER\s*)?(\d{1,2})$/) || [])[1] || null : null;
+      const tier = _dfsTierFrom(roster);
       rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
                   rosterPosition: roster, tier,
                   operatorFppg: Number.isFinite(fppg) ? fppg : null });
@@ -12354,22 +12386,74 @@ async function dfsStore(env, site, rows, meta) {
   if (!(await dfsReady(env))) return { ok: false, error: 'no_db' };
   const m = meta || {};
   const ts = Date.now();
-  const stmt = env.LEADS_DB.prepare('INSERT INTO dfs_salaries (site, slate, season, week, name, position, team, opponent, salary, site_id, operator_fppg, source, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const stmt = env.LEADS_DB.prepare('INSERT INTO dfs_salaries (site, slate, season, week, name, position, team, opponent, salary, site_id, operator_fppg, roster_position, source, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   let n = 0;
   for (let i = 0; i < rows.length; i += 50) {
-    const chunk = rows.slice(i, i + 50).map(r => stmt.bind(site, m.slate || 'main', m.season || null, m.week || null, r.name, r.position, r.team || null, r.opponent || null, Math.round(r.salary), r.siteId || null, r.operatorFppg != null && Number.isFinite(Number(r.operatorFppg)) ? Number(r.operatorFppg) : null, m.source || 'csv', ts));
+    const chunk = rows.slice(i, i + 50).map(r => stmt.bind(site, m.slate || 'main', m.season || null, m.week || null, r.name, r.position, r.team || null, r.opponent || null, Math.round(r.salary), r.siteId || null, r.operatorFppg != null && Number.isFinite(Number(r.operatorFppg)) ? Number(r.operatorFppg) : null, r.rosterPosition || null, m.source || 'csv', ts));
     try { await env.LEADS_DB.batch(chunk); n += chunk.length; } catch (e) { for (const s of chunk) { try { await s.run(); n++; } catch (e2) {} } }
   }
-  return { ok: true, stored: n, site, slate: m.slate || 'main', season: m.season, week: m.week, fetchedAt: ts };
+  // `attempted` beside `stored`, because the insert above swallows a failed
+  // row: the batch is retried one statement at a time and a statement that
+  // throws twice is dropped silently. Without both numbers a partial write is
+  // indistinguishable from a whole one, and a store that saved nothing still
+  // answers ok:true.
+  return { ok: true, stored: n, attempted: rows.length, site, slate: m.slate || 'main', season: m.season, week: m.week, fetchedAt: ts };
 }
-async function dfsSalariesRead(env, site, season, week) {
+// THE SLATE THIS READ IS FOR, which it used to have no opinion about.
+//
+// It took the latest fetched_at for the site and week and returned whatever
+// came back, so every row stored that week was the main board -- which is why
+// the desk import refused a single-game file outright: store one and the next
+// reader asking for the Classic slate gets six seats out of one game. The
+// fourth argument is that opinion. Omitted, it reads the CLASSIC slates only
+// ('main' and the scheduled importer's 'weekly'), so all four existing callers
+// keep the board they asked for and can no longer be handed a Showdown by
+// accident. Named, it reads exactly that slate.
+//
+// MAX(fetched_at) is taken WITHIN the chosen slate, never across the week.
+// Across it, a Showdown import at 9am would hide a Classic import from 8am
+// even with the rows correctly filtered afterwards -- the timestamp would
+// belong to a slate this read is not returning, and the answer would be empty.
+//
+// Rows come back in the same camelCase shape parseDfsCsv() produces rather
+// than raw D1 columns, because dfsCollapseSingleGame() reads `rosterPosition`
+// to find the Captain. Normalizing here is what lets a stored Showdown slate
+// go through the same collapse as an uploaded one instead of a second way to
+// work out which row is the multiplier seat.
+async function dfsSalariesRead(env, site, season, week, slate) {
   if (!(await dfsReady(env))) return null;
+  const want = slate == null ? null : String(slate);
   try {
-    const latest = await env.LEADS_DB.prepare('SELECT MAX(fetched_at) AS ts FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ?').bind(site, season, week).first();
+    // FOUR LITERAL STATEMENTS, not one with the predicate spliced in. Building
+    // the WHERE by concatenation hid the ? count from tools/test-worker-sql.mjs,
+    // and that gate exists because a bind list and a placeholder list written at
+    // opposite ends of one statement silently disagreed in production for every
+    // league ever created. SQL this file cannot count is how that comes back.
+    const latest = want == null
+      ? await env.LEADS_DB.prepare("SELECT MAX(fetched_at) AS ts FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND (slate IS NULL OR slate NOT LIKE 'sd:%')").bind(site, season, week).first()
+      : await env.LEADS_DB.prepare('SELECT MAX(fetched_at) AS ts FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND slate = ?').bind(site, season, week, want).first();
     if (!latest || !latest.ts) return null;
-    const q = await env.LEADS_DB.prepare('SELECT name, position, team, opponent, salary, site_id, operator_fppg, slate, source FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND fetched_at = ?').bind(site, season, week, latest.ts).all();
-    return { rows: q.results || [], fetchedAt: latest.ts };
+    const q = want == null
+      ? await env.LEADS_DB.prepare("SELECT name, position, team, opponent, salary, site_id, operator_fppg, roster_position, slate, source FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND (slate IS NULL OR slate NOT LIKE 'sd:%') AND fetched_at = ?").bind(site, season, week, latest.ts).all()
+      : await env.LEADS_DB.prepare('SELECT name, position, team, opponent, salary, site_id, operator_fppg, roster_position, slate, source FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND slate = ? AND fetched_at = ?').bind(site, season, week, want, latest.ts).all();
+    const rows = (q.results || []).map(r => ({
+      name: r.name, position: r.position, team: r.team, opponent: r.opponent, salary: r.salary,
+      siteId: r.site_id, operatorFppg: r.operator_fppg,
+      rosterPosition: r.roster_position || null, tier: _dfsTierFrom(r.roster_position),
+      slate: r.slate, source: r.source
+    }));
+    return { rows, fetchedAt: latest.ts, slate: rows.length ? rows[0].slate : want };
   } catch (e) { return null; }
+}
+// Which single-game slates the desk holds for this week, newest import per
+// game. The page asks so it can tell a reader who picked Showdown Captain
+// whether their matchup is priced here or still wants their own export.
+async function dfsSingleSlates(env, site, season, week) {
+  if (!(await dfsReady(env))) return [];
+  try {
+    const q = await env.LEADS_DB.prepare("SELECT slate, MAX(fetched_at) AS ts, COUNT(*) AS rows FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND slate LIKE 'sd:%' GROUP BY slate ORDER BY slate").bind(site, season, week).all();
+    return (q.results || []).map(r => ({ slate: r.slate, game: String(r.slate).slice(3), fetchedAt: r.ts, rows: r.rows }));
+  } catch (e) { return []; }
 }
 
 // ── the slate ──────────────────────────────────────────────────────────────
@@ -15317,8 +15401,21 @@ export default {
       const sched = await scheduleCacheRead(env);
       const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
       const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
-      const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
-      if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
+      // Which slate the reader is asking for. Absent, it is the main board,
+      // exactly as before. `?slate=sd:BUF|NYJ` is the desk's own import of
+      // that single game, priced on DraftKings' Showdown file -- the six-seat
+      // roster the page could previously only build from a CSV the reader
+      // downloaded themselves.
+      const wantRaw = String(url.searchParams.get('slate') || '').trim();
+      const want = wantRaw && dfsIsSingleSlate(wantRaw) ? wantRaw.slice(0, 40) : null;
+      const singles = await dfsSingleSlates(env, site, sched ? sched.season : null, week).catch(() => []);
+      const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week, want);
+      if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: want ? 'no_slate' : 'no_salaries',
+        // The games the desk DOES hold, even on a miss: a reader who asked for
+        // a matchup nobody imported is told which ones are there rather than
+        // just that theirs is not.
+        singleGames: singles.map(x => x.game),
+        requestedSlate: want || undefined,
         ...dfsNoSalariesNote(site, Date.now()),
         // The setup plate on /dfs asks for a Game Style, then the GAMES in the
         // contest, and it built that list out of the priced slate. So a week
@@ -15332,11 +15429,17 @@ export default {
         games: week ? weekGames(sched, week, Date.now()).map(g => ({ away: g.away, home: g.home, kickoff: g.kickoff })) : [],
         operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
       const [board, usage, avail, roster, propsPulledAt, actuals] = await Promise.all([boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), usageCacheRead(env).catch(() => null), availabilityForWeek(env).catch(() => null), rosterStatusTable().catch(() => null), snapshotPulledAt(env, 'player').catch(() => null), dfsActualsForWeek(env, sched, week).catch(() => null)]);
-      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage, week, availability: avail, roster, propsPulledAt, actuals });
+      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, { usage, week, availability: avail, roster, propsPulledAt, actuals, shape: dfsSlateShape(sal.rows) });
       // How much of the slate is already in the books. The page needs this to
       // say whether a total is a projection, a result, or part of each.
       slate.played = actuals ? { games: actuals.games, final: actuals.final, teams: [...actuals.teams].sort() } : null;
       slate.week = week; slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
+      // What the page needs to offer the choice: which slate it is looking at,
+      // and which single games the desk has priced. Both ride on the main
+      // response too, so the board can tell a reader picking Showdown Captain
+      // that their matchup is already here before they go looking for a file.
+      slate.slate = want || 'main';
+      slate.singleGames = singles.map(x => x.game);
       if (flagOn(env, 'DFS_CONTENT')) {
         const contest = DFS_CONTESTS[url.searchParams.get('contest')] ? url.searchParams.get('contest') : 'gpp';
         const m = dfsMetrics(slate.players, contest);
@@ -16367,25 +16470,49 @@ export default {
         if (!site) return json({ ok: false, error: 'site must be dk or fd' }, 400, c);
         const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 2000000));
         if (parsed.error) return json({ ok: false, error: parsed.error }, 400, c);
-        // A showdown export prices a captain or MVP at a multiplier the classic
-        // roster does not have, so importing one here would mis-price the board
-        // every reader is shown - silently, because the rows parse and store
-        // like any other. The refusal is unconditional rather than scoped to
-        // slate 'main' for two reasons. dfsSalariesRead() takes the latest
-        // fetched_at for the site and week and does NOT filter on the slate
-        // column, so a single-game file stored under any slate name is still
-        // what /api/dfs serves; and the scheduled workflow already posts
-        // slate 'weekly', so a guard scoped to 'main' would skip the one
-        // importer that runs unattended. Importing a showdown slate
-        // deliberately needs that read to learn about slates first.
-        if (dfsSlateShape(parsed.rows) === 'single-game') return json({ ok: false, error: 'single_game',
-          note: 'That is a single-game (Showdown/MVP) export: it prices a captain at a multiplier the classic roster does not have, and every board on the site is built for the classic cap. Import a main-slate file instead.' }, 400, c);
+        // A single-game export used to be refused here outright. The reason
+        // was never that the rows were unwelcome -- it was that
+        // dfsSalariesRead() ignored the slate column, so one stored under any
+        // name became the main board every reader was served. That read now
+        // filters, and takes its MAX(fetched_at) within the slate, so a
+        // Showdown import can sit beside the week's Classic slate without
+        // touching it. The guard therefore stops being "no single-game files"
+        // and becomes "no file stored under a slate it was not priced for",
+        // which is the hazard the old refusal was actually standing in for.
+        const shape = dfsSlateShape(parsed.rows);
+        const asked = b.slate == null ? null : String(b.slate);
+        let under = asked || 'main';
+        if (shape === 'single-game') {
+          // The key is DERIVED, never taken on trust: it is the two clubs the
+          // file itself prices. A caller naming a different matchup is filing
+          // Buffalo's prices under Kansas City, and a caller naming a classic
+          // slate is doing exactly what the old refusal existed to prevent.
+          const key = dfsSingleGameSlateKey(parsed.rows);
+          if (!key) return json({ ok: false, error: 'single_game_teams',
+            note: 'That is a single-game export, but its rows do not name exactly two clubs, so there is no matchup to file it under.' }, 400, c);
+          if (asked && asked !== key) return json({ ok: false, error: 'slate_mismatch',
+            note: 'That file prices ' + key.slice(3).replace('|', ' vs ') + ', so it is stored as ' + key + '. It was posted as ' + asked + ', which would file one game\u2019s salaries under another.' }, 400, c);
+          under = key;
+        } else if (asked && dfsIsSingleSlate(asked)) {
+          // The mirror image: a main-slate file under a game key would have
+          // the page solve a six-seat Captain roster out of nine-seat prices.
+          return json({ ok: false, error: 'slate_mismatch',
+            note: 'That is a main-slate file. Storing it as ' + asked + ' would offer a single-game roster built from nine-seat prices, which is a lineup nobody can enter.' }, 400, c);
+        }
         const source = site === 'dk' && b.source === 'draftkings-automation' ? b.source : 'csv';
-        out.imported = await dfsStore(env, site, parsed.rows, { season: sched ? sched.season : null, week: b.week != null ? Number(b.week) : week, slate: b.slate || 'main', source });
+        // One store call for both shapes, and no early return: the per-site
+        // summary below is what the admin page reads back, and a Showdown
+        // import that skipped it would answer with an empty sites block.
+        out.imported = await dfsStore(env, site, parsed.rows, { season: sched ? sched.season : null, week: b.week != null ? Number(b.week) : week, slate: under, source });
+        out.imported.shape = shape;
       }
       for (const site of Object.keys(DFS_SITES)) {
         const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
-        out.sites[site] = sal ? { rows: sal.rows.length, fetchedAt: sal.fetchedAt, source: sal.rows[0] && sal.rows[0].source } : null;
+        const singles = await dfsSingleSlates(env, site, sched ? sched.season : null, week).catch(() => []);
+        out.sites[site] = sal || singles.length
+          ? { rows: sal ? sal.rows.length : 0, fetchedAt: sal ? sal.fetchedAt : null, source: sal && sal.rows[0] && sal.rows[0].source,
+              singleGames: singles.map(x => ({ game: x.game, rows: x.rows, fetchedAt: x.fetchedAt })) }
+          : null;
       }
       return json(out, 200, c);
     }

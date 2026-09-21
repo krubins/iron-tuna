@@ -466,6 +466,10 @@ jobs:
       - name: DFS adapters, Vegas Value Score, stacks and optimizer
         if: ${{ !cancelled() }}
         run: node tools/test-dfs.mjs
+      - name: The slate a stored salary row belongs to
+        if: ${{ !cancelled() }}
+        run: node tools/test-dfs-slates.mjs
+
       - name: The Value Coach on the DFS lineup
         if: ${{ !cancelled() }}
         run: node tools/test-dfs-coach.mjs
