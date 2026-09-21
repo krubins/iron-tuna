@@ -1921,5 +1921,51 @@ console.log('\nthe slate, partly played');
      page.includes("actualOf(p) != null ? n1(actualOf(p)) + ' final'") && page.includes("' est, game over'"));
 }
 
+console.log('\nthe per-team maximum against a narrowed game pool');
+{
+  // NINE SEATS OUT OF ONE GAME IS TWO CLUBS, so five men from one of them at
+  // a minimum. Every contest shape carries a per-team cap -- three for cash,
+  // four for a single entry -- and on a full slate that is a preference. On a
+  // pool narrowed to one game it is a contradiction, and the optimizer answers
+  // a contradiction with nothing: a reader who picked Classic, one game and
+  // Double Up was told "no lineup satisfies those constraints" while looking
+  // at a board with two full rosters on it.
+  const one = (team, opp, base) => [
+    ['QB', 'QB', 6800, base + 6], ['RB1', 'RB', 7000, base + 4], ['RB2', 'RB', 5200, base + 1], ['RB3', 'RB', 4000, base - 2],
+    ['WR1', 'WR', 7800, base + 5], ['WR2', 'WR', 6200, base + 2], ['WR3', 'WR', 4800, base], ['WR4', 'WR', 3400, base - 3],
+    ['TE1', 'TE', 5000, base], ['TE2', 'TE', 3200, base - 4], ['DST', 'DST', 3000, base - 5]
+  ].map(([slot, position, salary, pts]) => ({
+    id: team + ' ' + slot, key: team + ' ' + slot, name: team + ' ' + slot, position, team, opponent: opp, salary,
+    onBoard: true, projected: true, available: true, ironTunaPoints: pts, vegasPoints: pts, consensusPoints: pts,
+    floorPoints: pts * 0.72, ceilingPoints: pts * 1.35, operatorFppg: pts - 0.6
+  }));
+  const pool = [...one('NYG', 'LA', 12), ...one('LA', 'NYG', 13)];
+  const base = { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'ironTuna', lineups: 1 };
+  ok('three men from a club cannot fill nine seats out of one game', !DFS.build(pool, { ...base, maxPerTeam: 3 }).ok);
+  ok('nor can four', !DFS.build(pool, { ...base, maxPerTeam: 4 }).ok);
+  const raised = DFS.build(pool, { ...base, maxPerTeam: 5 });
+  ok('...and five -- the seats over the clubs, rounded up -- does', raised.ok && raised.lineups[0].players.length === 9);
+  ok('the roster it builds is legal on both sides of that cap',
+     raised.ok && Object.values(raised.lineups[0].players.reduce((n, p) => ({ ...n, [p.team]: (n[p.team] || 0) + 1 }), {})).every(c => c <= 5));
+
+  // The page is what has to know this: the reader never typed a per-team cap,
+  // the contest shape did, and the floor is arithmetic rather than taste.
+  const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+  ok('the page works the floor out from the seats and the clubs in the pool',
+     /function teamCapFor\(want, seats, players\)/.test(page) && page.includes('var floor = Math.ceil(seats / teams);'));
+  ok('a reader who asked for no per-team cap at all still gets none',
+     page.includes('if (!want || !(seats > 0) || !teams) return want || 0;'));
+  ok('the solve is handed the raised cap rather than the raw box',
+     page.includes('var teamCap = teamCapFor(wantTeamCap, seats, players);') && page.includes('maxPerTeam: teamCap,'));
+  ok('the shape preset is clamped before it is written into the panel',
+     page.includes("$('dfMaxTeam').value = teamCapFor(preset,"));
+  ok('the panel is rewritten with what was solved, and the board says why',
+     page.includes("if (teamCap !== wantTeamCap) $('dfMaxTeam').value = teamCap;")
+     && page.includes('The per-team maximum was raised from'));
+  ok('Play of the Week weighs its three shapes under the same floor',
+     page.includes('maxPerTeam:teamCapFor(cross,seats,pool)')
+     && page.includes('maxPerTeam:teamCapFor(seats<=6?cross:3,seats,pool)'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

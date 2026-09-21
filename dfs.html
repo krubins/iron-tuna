@@ -1606,6 +1606,30 @@ p{color:var(--sec);margin:0 0 16px}
     var on = s.players.filter(function (p) { return projected(p); });
     $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr' + (p.available === false ? ' class="df-row-out"' : '') + '><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' \u00b7 ' + p.team) + '</span>' + suppTag(p) + '</td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(actualOf(p) != null ? actualOf(p) : p.ironTunaPoints) + bankedMark(p) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td>' + marketTag(p) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + [weekTag(p), (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '')].filter(Boolean).join(' ') + '</td></tr>'; }).join('');
   }
+  // ── the per-team maximum, against the pool it has to be met from ──────
+  // Every shape carries one -- a cash roster takes three men from a club, a
+  // single entry four -- and on a full slate that is a preference. On a
+  // narrowed pool it is arithmetic: nine seats out of one game is two clubs,
+  // so five from one of them at minimum, and a preset of three does not
+  // produce a careful roster, it produces no roster at all. That is what a
+  // reader choosing Classic and one game used to get -- "no lineup satisfies
+  // those constraints" against a board with two full rosters on it.
+  //
+  // The floor below is what the seats and the clubs in the pool leave.
+  // Nothing hands the optimizer less than it, and a reader who asked for no
+  // per-team cap at all still gets none.
+  function poolTeams(players) {
+    var seen = {}, n = 0;
+    (players || []).forEach(function (p) { var t = p && p.team; if (t && !seen[t]) { seen[t] = 1; n += 1; } });
+    return n;
+  }
+  function teamCapFor(want, seats, players) {
+    var teams = poolTeams(players);
+    if (!want || !(seats > 0) || !teams) return want || 0;
+    var floor = Math.ceil(seats / teams);
+    return want < floor ? floor : want;
+  }
+
   // ── the shape switch ──────────────────────────────────────────────────────
   // Writes the preset into the fine-tune controls rather than solving off a
   // hidden copy of them, so what a reader sees in the panel is always what was
@@ -1619,14 +1643,20 @@ p{color:var(--sec);margin:0 0 16px}
     // The cap box is meaningless on a format that has none, and a per-team
     // maximum of three is a nine-slot number: on a six-seat single-game roster
     // with two teams in it, it would forbid the 5-1 split both operators
-    // allow. Both follow the format rather than the contest shape.
+    // allow. Both follow the format rather than the contest shape -- and the
+    // preset goes through teamCapFor() on the way into the box, because the
+    // same arithmetic applies to a nine-seat roster whose GAME POOL the reader
+    // has narrowed to one game, not only to a format that is single-game by
+    // construction.
     var f = typeof ITDfs !== 'undefined' ? solveFormat() : null;
     var fmt = f && f.fmt;
     if ($('dfCap')) $('dfCap').disabled = !!(fmt && !(fmt.cap > 0));
     if (tuned) return;
     mode = sh.mode; press($('dfMode'), 'data-mode', mode);
     $('dfStack').checked = sh.stack; $('dfBring').checked = sh.bring;
-    $('dfMaxTeam').value = fmt && fmt.single && fmt.slots ? fmt.slots.length - 1 : sh.maxTeam;
+    var preset = fmt && fmt.single && fmt.slots ? fmt.slots.length - 1 : sh.maxTeam;
+    var pv = filteredSlate();
+    $('dfMaxTeam').value = teamCapFor(preset, (fmt && fmt.slots ? fmt.slots.length : 9), pv && pv.players);
     $('dfN').value = sh.n;
   }
 
@@ -2958,17 +2988,31 @@ p{color:var(--sec);margin:0 0 16px}
     // to draw against rather than inventing a typical spend.
     fieldAvg = ITDfs.fieldAverage ? ITDfs.fieldAverage(players, { slots: f.fmt.slots, flex: f.fmt.flex, cap: cap,
       mult: f.fmt.mult || null, tierSlots: f.fmt.tierSlots || null, minTeams: f.fmt.minTeams || 0 }) : null;
+    // The per-team maximum the panel is showing, raised to what the selected
+    // games can actually seat. Narrowing the pool to one game is not a request
+    // for a contradiction, so the floor wins over the preset -- and the box is
+    // rewritten with what was used, because this panel's whole contract is
+    // that it shows the settings the roster was solved on.
+    var seats = (f.fmt.slots || []).length;
+    var wantTeamCap = parseInt($('dfMaxTeam').value, 10) || 0;
+    var teamCap = teamCapFor(wantTeamCap, seats, players);
+    if (teamCap !== wantTeamCap) $('dfMaxTeam').value = teamCap;
+    var teamCapNote = teamCap !== wantTeamCap
+      ? '<p class="is-note">The selected games carry ' + poolTeams(players) + ' clubs between them, so a ' + seats
+        + '-seat roster cannot take fewer than ' + teamCap + ' players from one of them. The per-team maximum was raised from '
+        + wantTeamCap + ' to ' + teamCap + ' for this build.</p>'
+      : '';
     // The roster, the cap, the multiplier seat and the both-teams rule all
     // come from the resolved format rather than from the site's classic
     // defaults, which is what lets every Game Style on the plate solve.
     var r = ITDfs.build(players, { mode: mode, cap: cap, format: f.fmt, slots: f.fmt.slots, flex: f.fmt.flex,
       mult: f.fmt.mult || null, tierSlots: f.fmt.tierSlots || null, minTeams: f.fmt.minTeams || 0,
       lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked,
-      maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
+      maxPerTeam: teamCap, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
     built = r.ok ? r : null;
     if (!r.ok) {
       renderConstraints(null);
-      $('dfLineups').innerHTML = shortfallNote(players, lock, f, cap)
+      $('dfLineups').innerHTML = teamCapNote + shortfallNote(players, lock, f, cap)
         + '<p class="is-empty">No lineup satisfies those constraints' + (cap ? ' under that cap' : '') + '. Clear one of the constraints above, or loosen the ' + (cap ? 'cap and ' : '') + 'stacking rules in the fine-tune panel below.</p>';
       $('dfPivots').innerHTML = '';
       coachSync();
@@ -2979,6 +3023,7 @@ p{color:var(--sec);margin:0 0 16px}
     renderConstraints(lead);
     $('dfLineups').innerHTML = benchedNote(r)
       + formatLine(f, r)
+      + teamCapNote
       + lineupCard(lead, 0, sh, true)
       + (alts.length ? '<h3 class="df-h3">Branch off it <em>' + alts.length + ' more</em></h3><p class="df-sub">' + (contest === 'gpp'
             ? 'The same core, re-solved to sit on different players. Entering a large field with one lineup is entering it with one opinion.'
@@ -3468,7 +3513,7 @@ p{color:var(--sec);margin:0 0 16px}
     if(pool.length<seats){ $('dfPlayWeekTitle').textContent='Play of the Week: waiting for a complete slate'; host.innerHTML='<p class="is-note">The recommendation will publish when enough salaries and projections are available to compare contest shapes.</p>'; return; }
     var base={cap:(fmt?fmt.cap:s.cap),slots:(fmt?fmt.slots:s.slots),flex:(fmt?fmt.flex:s.flex),
               mult:(fmt?(fmt.mult||null):(s.multiplier||null)),minTeams:(fmt?(fmt.minTeams||0):(s.minTeams||0)),
-              tierSlots:(fmt&&fmt.tierSlots)||null,maxPerTeam:cross,lineups:1,seed:17};
+              tierSlots:(fmt&&fmt.tierSlots)||null,maxPerTeam:teamCapFor(cross,seats,pool),lineups:1,seed:17};
     // Everything the three builds read, in one string. The payout structure and
     // the chosen games are deliberately absent: neither is an input to any of
     // them, and including them would re-solve for a question that did not
@@ -3478,7 +3523,7 @@ p{color:var(--sec);margin:0 0 16px}
     var STILL_FORMING = 'Iron Tuna could not yet build comparable legal contest shapes from the current slate.';
     if (!memo) {
       var players=pool.map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
-      var cash=ITDfs.build(players,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:seats<=6?cross:3}));
+      var cash=ITDfs.build(players,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:teamCapFor(seats<=6?cross:3,seats,pool)}));
       var tour=ITDfs.build(players,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
       var lev=ITDfs.build(players,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
       // The decision lives in the optimizer, where it can be tested against real
