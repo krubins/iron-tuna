@@ -45,13 +45,16 @@ concurrency:
 jobs:
   import:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Raised from 5 when the single-game import landed: the job now makes one
+    # draftables call and one POST per Showdown group on top of the Classic
+    # pools, which is roughly sixteen more of each on a full Sunday.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Find and import the full weekly Classic player pool
+      - name: Find and import the weekly Classic pool and each single-game slate
         env:
           IRON_TUNA_ADMIN_URL: ${{ vars.IRON_TUNA_ADMIN_URL }}
           INPUT_DRAFT_GROUP_ID: ${{ inputs.draft_group_id }}
