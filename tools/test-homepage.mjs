@@ -197,6 +197,14 @@ async function open(width, height, at) {
   await page.goto(BASE, { waitUntil: 'networkidle' });
   return { page, ctx };
 }
+// The eleven destinations the two product cards owe, in the order they are
+// written, as routes that exist. Hoisted because two passes need them: the live
+// one checks that each is present, and the refusing one checks that a quiet
+// feed costs the cards their reading and none of these.
+const LANE_WANT = ['/weekly-rankings', '/fantasy#startsit', '/season-long-rankings', '/trade-finder', '/faab',
+                   '/value-coach',
+                   '/dfs#dfPlayWeek', '/dfs#lineup', '/dfs#dfTune', '/dfs#stacks', '/dfs#values'];
+const LANE_LINKS = LANE_WANT.length;
 const LOADING = /Reading the board|Reading the market|Reading the desk|Reading the slate|Reading today|Waiting for this week|Loading the current case|Coming soon|Loading…/i;
 const read = page => page.evaluate(() => {
   const vis = id => { const e = document.getElementById(id); return !!e && e.getClientRects().length > 0; };
@@ -296,12 +304,11 @@ console.log('\nsix sections, in order, and nothing else');
   ok('the two product cards are named as specified',
      r.lanes.join(' / ') === 'Season Long Fantasy / DFS', r.lanes.join(' / '));
   // The five destinations each card owes, as routes that exist.
-  const want = ['/weekly-rankings', '/fantasy#startsit', '/season-long-rankings', '/trade-finder', '/faab',
-                '/dfs#dfPlayWeek', '/dfs#lineup', '/dfs#dfTune', '/dfs#stacks', '/dfs#values'];
-  ok('the Fantasy card links rankings, start/sit, rest of season, trades and waivers',
-     want.slice(0, 5).every(h => r.laneLinks.includes(h)), r.laneLinks.slice(0, 5).join(','));
+  const want = LANE_WANT;
+  ok('the Fantasy card links rankings, start/sit, rest of season, trades, waivers and the coach',
+     want.slice(0, 6).every(h => r.laneLinks.includes(h)), r.laneLinks.slice(0, 6).join(','));
   ok('the DFS card links contest, lineup, the multi-lineup builder, stacks and values',
-     want.slice(5).every(h => r.laneLinks.includes(h)), r.laneLinks.slice(5).join(','));
+     want.slice(6).every(h => r.laneLinks.includes(h)), r.laneLinks.slice(6).join(','));
   ok('and nothing else is a card link', r.laneLinks.length === want.length, String(r.laneLinks.length));
   ok('the method section is on the page and is the hero link’s target', r.how5 === true);
   await ctx.close();
@@ -501,8 +508,11 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   ok(`${tag}: the hero still says the thing`, r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.');
   ok(`${tag}: both buttons still work`, r.cta.length === 2);
   ok(`${tag}: the dateline is absent rather than loading`, r.clock === null);
+  // LANE_LINKS is the count the live pass pins by name (six on the Fantasy
+  // card, five on the DFS one). Here it is only the count: the point of this
+  // pass is that a quiet feed costs the cards their READING and not one link.
   ok(`${tag}: the Fantasy card keeps its links and drops its reading`,
-     r.fnRead === null && r.laneLinks.length === 10);
+     r.fnRead === null && r.laneLinks.length === LANE_LINKS, `${r.laneLinks.length} links`);
   ok(`${tag}: the DFS card too`, r.dfRead === null);
   ok(`${tag}: the disagreement section is hidden, not empty`, r.diff === false && r.rows.length === 0);
   ok(`${tag}: the articles section is hidden, not empty`, r.articles === false && r.cards.length === 0);
