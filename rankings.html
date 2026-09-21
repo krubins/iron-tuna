@@ -93,8 +93,8 @@ html{scroll-padding-top:calc(var(--header-h) + 14px)}
 .rk-setup-foot:has(> p:not(:empty):not([hidden])){display:block}
 .rk-setup-foot .is-note,.rk-setup-foot .rk-playoff-cta{margin:0}
 .rk-setup-foot > * + *{margin-top:6px}
-/* The sync strip and the sync prompt are light-palette objects /it-sync.js
-   styles itself; they sit above the plate rather than inside its rows. */
+/* The sync strip is a light-palette object /it-sync.js styles itself; it sits
+   above the plate rather than inside its rows. */
 .rk-sync:empty{display:none}
 @media(max-width:560px){.rk-row > .rk-lab{flex:1 1 100%}}
 p{color:var(--sec);margin:0 0 16px}
@@ -214,7 +214,6 @@ p{color:var(--sec);margin:0 0 16px}
 
 <div class="rk-sync">
   <div class="its-strip-sync" id="rkSync" hidden></div>
-  <div id="rkCta" hidden></div>
 </div>
 
 <!-- ── the board controls ──────────────────────────────────────────────
@@ -585,7 +584,7 @@ p{color:var(--sec);margin:0 0 16px}
     if (window.ITSync) ITSync.load().then(function (st) {
       var LS = ITSync.active();
       ITSync.strip($('rkSync'), { week: true });
-      if (!LS) { ITSync.cta($('rkCta'), 'rankings'); return; }
+      if (!LS) return;
       $('rkLeague').hidden = false;
       preset = 'league'; setPressed($('rkScoring'), 'data-preset', preset); load(horizon);
     });

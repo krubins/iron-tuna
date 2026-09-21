@@ -141,7 +141,6 @@ section{margin:0 0 var(--space-6)}
 
 <div class="sl-in fn-state">
 <div class="its-strip-sync" id="fnSync" hidden></div>
-<div id="fnCta" hidden></div>
 </div>
 
 <div class="sl-shell">
@@ -765,7 +764,7 @@ section{margin:0 0 var(--space-6)}
   if (window.ITSync) ITSync.load().then(function () {
     ITSync.strip($('fnSync'), { week: true });
     var LS = ITSync.active();
-    if (!LS) { ITSync.cta($('fnCta'), 'generic'); return; }
+    if (!LS) return;
     if ($('fnSaveBtn')) $('fnSaveBtn').hidden = true;
     $('fnScoring').innerHTML = '<b>Customized for your league:</b> ' + e(LS.name) + ' · ' + e(LS.label);
     $('fnWeekCard').hidden = false;
