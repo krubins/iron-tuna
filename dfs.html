@@ -1221,6 +1221,9 @@ p{color:var(--sec);margin:0 0 16px}
   function press(host, attr, val) { if (!host) return; [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); }); }
   function show() { SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = k !== sec; }); press($('dfNav'), 'data-sec', sec); }
   function fppgLabel() { return site === 'dk' ? 'DK FPPG' : site === 'fd' ? 'FD FPPG' : 'FPPG'; }
+  // The operator by name, for the sentences that have to say whose lobby
+  // the reader is being sent back to.
+  function siteLabel() { return site === 'fd' ? 'FanDuel' : 'DraftKings'; }
   // A computed average (no operator number in the file) is printed as an estimate, never as DraftKings' own figure.
   function fppgText(p) { return p && p.operatorFppg != null && isFinite(p.operatorFppg) ? n1(p.operatorFppg) + (p.operatorFppgBasis === 'computed' ? '<i class="df-est" title="No operator average in the salary file; season box score at site scoring, before yardage bonuses.">est</i>' : '') : '—'; }
   function fppgEdge(p) {
@@ -2479,6 +2482,33 @@ p{color:var(--sec);margin:0 0 16px}
       out.blocked = 'Best Ball drafts once for a whole season and starts the best scorers for you, so there is no weekly cap to solve against and no Sunday roster to set. That contest is won in the draft room: the Best Ball board, the stacking guide and the draft strategy pages are built for it.';
       return out;
     }
+    // NOTHING PRICED AT ALL. Every branch below reads the loaded slate, and
+    // without one they answer the wrong question: a Showdown was told the main
+    // slate cannot price a Captain on a week where no main slate exists
+    // either, and Classic was declared ready and then met build()'s own
+    // `if (!slate) return`, which printed one flat sentence about salaries and
+    // offered no way past it. A reader who had answered all three steps of the
+    // setup was left with nothing to do but come back on Sunday.
+    //
+    // They do not have to wait. The desk imports ONE MAIN SLATE a week and it
+    // lands when the lobby posts, but the contest the reader is entering is
+    // already priced on its own page -- that is where the Showdown file comes
+    // from in the first place -- and /api/dfs/slate prices that file against
+    // this week's projections without the desk. So the board names which of
+    // the two it is short of and takes the file now.
+    if (!slate) {
+      out.ready = false;
+      // A pick contest has no roster and no salary file to hand over, so it is
+      // told the truth about what it is waiting for rather than asked for an
+      // export that does not exist.
+      if (fmt.kind === 'picks') {
+        out.blocked = 'This contest posts its own line on a player rather than a roster, and the board reads those lines against the week\u2019s player pool. No ' + siteLabel() + ' slate is priced for this week yet, so there is nothing to read them against. The board fills in as soon as the salaries post.';
+        return out;
+      }
+      out.blocked = 'No ' + siteLabel() + ' salaries are posted for this week yet, so the desk\u2019s slate has nothing to build this roster from. You do not have to wait for it: the contest you are entering is already priced on its own page in the lobby, and that export is all this board needs. Hand it over and the board solves the roster it was priced for, on this week\u2019s projections.';
+      out.needsFile = true;
+      return out;
+    }
     if (fmt.kind === 'tiers') {
       var tv = filteredSlate() || slate || {};
       var tf = ITDfs.tierFormat((tv.players || []).filter(function (p) { return projected(p); }));
@@ -2877,7 +2907,12 @@ p{color:var(--sec);margin:0 0 16px}
       + money(cap) + ' — it is ' + money(need - cap) + ' over. Raise the cap in the fine-tune panel, or drop one of the required players.</p>';
   }
   function build() {
-    if (!slate || !window.ITDfs) { coachSync(); return; }
+    // An unpriced week used to return here, which is why the board answered a
+    // Showdown reader with one sentence about salaries and no way forward.
+    // solveFormat() now has an answer for a missing slate -- what is missing
+    // and the file that fixes it -- so the only thing that still stops the
+    // board dead is the optimizer failing to load.
+    if (!window.ITDfs) { coachSync(); return; }
     if (site === 'dk' && !setupReady()) { showGameScopeRequired(); return; }
     var f = solveFormat();
     if (!f.ready) { fieldAvg = null; renderFormatNotice(f); return; }
@@ -3469,7 +3504,31 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   function render() {
-    if (!slate) return;
+    // NO PRICED SLATE. Everything below this line reads slate.*, which is why
+    // the function stopped here -- but the three selects above it are still
+    // answerable from the schedule's own fixtures, and stopping meant that
+    // answering them changed nothing on the board. A reader who chose Showdown
+    // Captain, picked their game and named the payout was still looking at the
+    // "complete the setup" notice that was written before they started. The
+    // setup line and the lineup box are refreshed for the answer they just
+    // gave; build() has its own account of an unpriced week and the file that
+    // ends it.
+    if (!slate) {
+      updateSetupState();
+      var f0 = solveFormat();
+      if (f0.kind === 'season') sec = 'lineup';
+      show();
+      // showGameScopeRequired() hides the section nav while the setup is
+      // unanswered, and render() is the only thing that puts it back. An
+      // unpriced week never ran this far, so finishing the setup left the nav
+      // hidden for good -- with The Slate behind it, which is where the
+      // sentence explaining the empty boards is printed. Best Ball keeps it
+      // hidden for the same reason it does on a priced week: there is no
+      // weekly board under it to reach.
+      $('dfNav').hidden = !setupReady() || f0.kind === 'season';
+      build();
+      return;
+    }
     $('dfCap').value = slate.cap;
     refreshFppgHeads();
     populateGamesSelect(slate);
@@ -3563,13 +3622,21 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
     $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
     if ($('dfConstraints')) $('dfConstraints').hidden = true;
-    $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted.</p>';
     $('dfPivots').innerHTML = ''; built = null;
-    // render() stops at `if (!slate) return`, so the setup plate is refreshed
-    // here or not at all: the fixtures arrived with this response, and without
-    // this the reader is left on the disabled step two they started on.
+    // The games list is repopulated here or not at all: the fixtures arrived
+    // with this response and render() does not rebuild the list on a week it
+    // has no slate for, so without this the reader is left on the disabled
+    // step two they started on.
     if (site === 'dk' && !isPickem()) applyGameStyle();
-    coachSync();
+    // The lineup box used to be written here, one sentence for every format
+    // and every setup: "There is no lineup to solve until the salaries are
+    // posted." It was the last thing a reader saw after answering all three
+    // steps for a Showdown, and it was a dead end -- the file route that would
+    // have priced their contest is rendered into this box and never reached
+    // it. The box now answers through the same path every other unsolvable
+    // state uses, so an unpriced week names the format the reader chose and
+    // offers the export that solves it.
+    build();
   }
   function loadSite() {
     fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {

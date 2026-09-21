@@ -658,6 +658,33 @@ console.log('\nthe DFS page explanations');
      && page.includes('so the board declines rather than printing one')
      && page.includes('out.needsFile = true;')
      && page.includes("f.needsFile ? uploadControl(fmt) : ''"));
+  // AN UNPRICED WEEK IS NOT A DEAD END. The desk imports one main slate a week;
+  // before it lands, /dfs answered every format and every setup with the same
+  // sentence -- "There is no lineup to solve until the salaries are posted" --
+  // written straight into the lineup box by slateNone(). A reader who had
+  // answered all three steps for a Showdown Captain got that and nothing else,
+  // and the file route that would have priced their contest is rendered INTO
+  // that box, so it could never be reached. The contest is already priced in
+  // the reader's own lobby and /api/dfs/slate prices that file without the
+  // desk, so the board asks for it instead of sending them away.
+  ok('an unpriced week names what is missing and offers the file, rather than one flat sentence',
+     // The markup assignment, not the prose: the sentence itself survives in
+     // the comment that records why it went, and a gate that could not tell
+     // the two apart would fail the next time that comment is reflowed.
+     !page.includes('<p class="is-empty">There is no lineup to solve')
+     && page.includes('if (!slate) {\n      out.ready = false;')
+     && page.includes('No \' + siteLabel() + \' salaries are posted for this week yet')
+     && page.includes('the contest you are entering is already priced on its own page in the lobby'));
+  ok('...and the board is actually re-solved for it, at load and on every answer the reader gives',
+     page.includes('if (!window.ITDfs) { coachSync(); return; }')
+     && !page.includes('if (!slate || !window.ITDfs) { coachSync(); return; }')
+     && page.includes("if (f0.kind === 'season') sec = 'lineup';")
+     && page.includes("$('dfNav').hidden = !setupReady() || f0.kind === 'season';"));
+  // A pick contest has no roster and no lobby export, so it is never asked for
+  // a file it cannot produce.
+  ok('...but a pick contest is told what it is waiting for rather than asked for an export',
+     page.includes("if (fmt.kind === 'picks') {")
+     && page.includes('The board fills in as soon as the salaries post.'));
   ok('a Tiers roster is never invented out of salary bands',
      page.includes("ITDfs.tierFormat(") && page.includes('inventing them out of salary would build a roster nobody can enter'));
   // The always-on panel that #293 removed does not come back. The route does,

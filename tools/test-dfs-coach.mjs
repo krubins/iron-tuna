@@ -676,8 +676,16 @@ console.log('\nthe page');
      /function showGameScopeRequired\(\)[\s\S]*?coachSync\(\);\n  \}/.test(page));
   ok('including a format this slate cannot price',
      /function renderFormatNotice\(f\)[\s\S]*?coachSync\(\);\n  \}/.test(page));
+  // slateNone() no longer writes the lineup box itself. An unpriced week used
+  // to end there on one flat sentence about salaries; it now hands off to
+  // build(), which names the format the reader chose and offers the export
+  // that prices it. So the sync moved with the handoff, and BOTH links are
+  // asserted here rather than the single call that used to close the function:
+  // slateNone must reach build(), and build() must not be able to return
+  // without telling the coach. The two gates above cover its other exits.
   ok('including a slate that never loaded',
-     /function slateNone\([\s\S]*?coachSync\(\);\n  \}/.test(page));
+     /function slateNone\([\s\S]*?\n    build\(\);\n  \}/.test(page)
+     && /function build\(\) \{[\s\S]{0,600}?if \(!window\.ITDfs\) \{ coachSync\(\); return; \}/.test(page));
   ok('and the pick’em board, which has no cap and no roster at all',
      /loadPickem\(\);/.test(page) && /coachSync\(\);\n      loadPickem\(\);/.test(page));
 
