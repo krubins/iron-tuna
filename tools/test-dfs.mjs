@@ -168,25 +168,52 @@ console.log('\nthe weekly import is not mistaken for a captain file');
 
 console.log('\nsite scoring');
 {
-  // The defense, on DraftKings' table rather than the site's season-long one.
-  // Every K/DEF key an operator supplies used to be dropped by scoringRules,
-  // which reads SCORING_BASE only, so a DST was scored on SCORING_KDEF: a
-  // four-point defensive touchdown, a four-point safety, and a ladder that
-  // pays 5 for ten points allowed where DraftKings pays 4.
-  const dk = H.scoringRules('ppr', H.SCORING_SITE.dk);
-  const D = (o, g) => H.scoreAny({ sacks: 0, ints: 0, fumRec: 0, defTD: 0, stTD: 0, safety: 0, ...o }, 'DST', dk, g || 1);
-  ok('a site\'s defensive rules survive scoringRules at all', dk.defensiveTD === 6 && Array.isArray(dk.pointsAllowed) && dk.pointsAllowed.length === 7,
-     JSON.stringify({ td: dk.defensiveTD, tiers: dk.pointsAllowed && dk.pointsAllowed.length }));
-  ok('a defensive touchdown is six on DraftKings, not the site default of four', near(D({ defTD: 1, ptsAllowed: 24 }), 6, 0.001), String(D({ defTD: 1, ptsAllowed: 24 })));
-  ok('a return touchdown is six', near(D({ stTD: 1, ptsAllowed: 24 }), 6, 0.001));
-  ok('a safety is two, not four', near(D({ safety: 1, ptsAllowed: 24 }), 2, 0.001), String(D({ safety: 1, ptsAllowed: 24 })));
-  ok('a sack is one and a takeaway is two', near(D({ sacks: 1, ptsAllowed: 24 }), 1, 0.001) && near(D({ ints: 1, ptsAllowed: 24 }), 2, 0.001) && near(D({ fumRec: 1, ptsAllowed: 24 }), 2, 0.001));
-  ok('and five sacks earn no bonus, which the site default would pay', near(D({ sacks: 5, ptsAllowed: 24 }), 5, 0.001), String(D({ sacks: 5, ptsAllowed: 24 })));
-  // The ladder, rung by rung. A shutout is ten and a blowout costs four.
-  const ladder = [[0, 10], [3, 7], [6, 7], [7, 4], [13, 4], [14, 1], [20, 1], [21, 0], [27, 0], [28, -1], [34, -1], [35, -4], [52, -4]];
-  const wrong = ladder.filter(([pa, want]) => !near(D({ ptsAllowed: pa }), want, 0.001));
-  ok('the points-allowed ladder pays DraftKings\' figure at every rung', !wrong.length,
-     wrong.map(([pa, want]) => pa + ' allowed wanted ' + want + ', got ' + D({ ptsAllowed: pa })).join('; '));
+  // The defense, on the OPERATORS' table rather than the site's season-long
+  // one. Every K/DEF key an operator supplies used to be dropped by
+  // scoringRules, which reads SCORING_BASE only, so a DST was scored on
+  // SCORING_KDEF: a four-point defensive touchdown, a four-point safety, and
+  // a ladder paying 5 for ten points allowed where both operators pay 4.
+  //
+  // Run over BOTH sites, because they price a defense identically and the
+  // FanDuel half was the one left behind: the same line scored 8 on
+  // DraftKings and 11 on FanDuel, and the 11 was nobody's number.
+  for (const site of ['dk', 'fd']) {
+    const S = site.toUpperCase();
+    const r = H.scoringRules('ppr', H.SCORING_SITE[site]);
+    const D = (o, g) => H.scoreAny({ sacks: 0, ints: 0, fumRec: 0, defTD: 0, stTD: 0, safety: 0, ...o }, 'DST', r, g || 1);
+    ok(S + ": a site's defensive rules survive scoringRules at all",
+       r.defensiveTD === 6 && Array.isArray(r.pointsAllowed) && r.pointsAllowed.length === 7,
+       JSON.stringify({ td: r.defensiveTD, tiers: r.pointsAllowed && r.pointsAllowed.length }));
+    ok(S + ': a defensive touchdown is six, not the site default of four', near(D({ defTD: 1, ptsAllowed: 24 }), 6, 0.001), String(D({ defTD: 1, ptsAllowed: 24 })));
+    ok(S + ': a return touchdown is six', near(D({ stTD: 1, ptsAllowed: 24 }), 6, 0.001));
+    ok(S + ': a safety is two, not four', near(D({ safety: 1, ptsAllowed: 24 }), 2, 0.001), String(D({ safety: 1, ptsAllowed: 24 })));
+    ok(S + ': a sack is one and a takeaway is two',
+       near(D({ sacks: 1, ptsAllowed: 24 }), 1, 0.001) && near(D({ ints: 1, ptsAllowed: 24 }), 2, 0.001) && near(D({ fumRec: 1, ptsAllowed: 24 }), 2, 0.001));
+    ok(S + ': five sacks earn no bonus, which the site default would pay', near(D({ sacks: 5, ptsAllowed: 24 }), 5, 0.001), String(D({ sacks: 5, ptsAllowed: 24 })));
+    // The ladder, rung by rung. 21-27 is in here deliberately: it is the
+    // commonest band in football, and the first source that gave the ladder
+    // left that rung out.
+    const ladder = [[0, 10], [3, 7], [6, 7], [7, 4], [13, 4], [14, 1], [20, 1], [21, 0], [27, 0], [28, -1], [34, -1], [35, -4], [52, -4]];
+    const wrong = ladder.filter(([pa, want]) => !near(D({ ptsAllowed: pa }), want, 0.001));
+    ok(S + ": the points-allowed ladder pays the operator's figure at every rung", !wrong.length,
+       wrong.map(([pa, want]) => pa + ' allowed wanted ' + want + ', got ' + D({ ptsAllowed: pa })).join('; '));
+  }
+  // Sharing the defensive table must not leak the offensive one: the
+  // operators differ there, and a stray spread would quietly make FanDuel
+  // full PPR with DraftKings' yardage bonuses.
+  const rdk = H.scoringRules('ppr', H.SCORING_SITE.dk), rfd = H.scoringRules('ppr', H.SCORING_SITE.fd);
+  const dline = { sacks: 3, ints: 1, fumRec: 1, defTD: 0, stTD: 0, safety: 0, ptsAllowed: 17 };
+  const wr = { rec: 6, recYd: 100, recTD: 1 };
+  ok('the two sites price the same defensive line alike',
+     near(H.scoreAny(dline, 'DST', rdk, 1), H.scoreAny(dline, 'DST', rfd, 1), 0.001),
+     'dk ' + H.scoreAny(dline, 'DST', rdk, 1) + ', fd ' + H.scoreAny(dline, 'DST', rfd, 1));
+  ok('and still price the same RECEIVER differently',
+     near(H.scoreStats(wr, 'WR', rdk), 25, 0.001) && near(H.scoreStats(wr, 'WR', rfd), 19, 0.001),
+     'dk ' + H.scoreStats(wr, 'WR', rdk) + ', fd ' + H.scoreStats(wr, 'WR', rfd));
+  ok('FanDuel keeps half-PPR receptions, its heavier fumble and no yardage bonus',
+     rfd.receptionPoints === 0.5 && rfd.rbReceptionPoints === 0.5 && rfd.fumbleLost === -2
+     && !(rfd.receivingYardBonuses || []).length,
+     JSON.stringify({ rec: rfd.receptionPoints, fum: rfd.fumbleLost, bonuses: (rfd.receivingYardBonuses || []).length }));
 }
 {
   const dk = H.scoringRules('ppr', H.SCORING_SITE.dk), fd = H.scoringRules('ppr', H.SCORING_SITE.fd);

@@ -12143,30 +12143,44 @@ const DFS_SITES = {
 // passing and 100 rushing or receiving yards, -1 per interception and per
 // fumble lost. FD: half PPR, -1 per interception, -2 per fumble lost, no
 // bonuses. Both are ordinary rule sets for the one scoring engine.
+// Both operators price a DEFENSE identically: a point a sack, two for a
+// takeaway, six for a return touchdown, two for a safety or a blocked kick,
+// and the same seven-rung points-allowed ladder. They differ on the OFFENSE
+// (DraftKings is full PPR with yardage bonuses, FanDuel half PPR with none),
+// which is why only this half is shared.
+//
+// Written once rather than copied: a second copy of a seven-rung ladder
+// drifts silently, and a defense scored a point out on the commonest band in
+// football is the kind of wrong nobody notices. Split it the day one of them
+// changes its table.
+//
+// Checked 2026-09-20 (DraftKings) and 2026-09-21 (FanDuel). Neither
+// operator's rules page is reachable from here -- the egress proxy blocks
+// both -- so each value comes from independent web searches that agree with
+// one another, with the per-event figures and the ladder confirmed
+// separately, and the 21-27 rung confirmed on its own because the first
+// source that gave the ladder omitted it. Worth re-checking against the
+// operators' own pages from a machine that can reach them.
+const OPERATOR_DST = {
+  sackPoints: 1, sackBonuses: [], interception: 2, defensiveFumbleRecovery: 2,
+  defensiveTD: 6, specialTeamsTD: 6, safety: 2, specialTeams2pt: 2,
+  pointsAllowed: [{ min: 0, max: 0, points: 10 }, { min: 1, max: 6, points: 7 },
+                  { min: 7, max: 13, points: 4 }, { min: 14, max: 20, points: 1 },
+                  { min: 21, max: 27, points: 0 }, { min: 28, max: 34, points: -1 },
+                  { min: 35, max: 999, points: -4 }]
+};
 const SCORING_SITE = {
   dk: { receptionPoints: 1, rbReceptionPoints: 1, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -1,
         passingYardBonuses: [{ at: 300, points: 3 }], rushingYardBonuses: [{ at: 100, points: 3 }], receivingYardBonuses: [{ at: 100, points: 3 }],
-        // The defense, on DraftKings' own table rather than the site's
-        // season-long default. Without these a DST fell through to
-        // SCORING_KDEF -- a four-point defensive touchdown, a four-point
-        // safety and a ten-rung points-allowed ladder, none of them DK's --
-        // so every DFS defense, projected and scored, was on the wrong scale.
-        //
-        // Checked 2026-09-20. DraftKings' own rules page is unreachable from
-        // here (the egress proxy blocks draftkings.com), so these come from
-        // two independent web searches that agree with each other; the
-        // per-event values and the ladder were each confirmed without the
-        // other being quoted in the query. Worth re-checking against the
-        // operator's page from a machine that can reach it.
-        sackPoints: 1, sackBonuses: [], interception: 2, defensiveFumbleRecovery: 2,
-        defensiveTD: 6, specialTeamsTD: 6, safety: 2, specialTeams2pt: 2,
-        pointsAllowed: [{ min: 0, max: 0, points: 10 }, { min: 1, max: 6, points: 7 },
-                        { min: 7, max: 13, points: 4 }, { min: 14, max: 20, points: 1 },
-                        { min: 21, max: 27, points: 0 }, { min: 28, max: 34, points: -1 },
-                        { min: 35, max: 999, points: -4 }] },
-  fd: { receptionPoints: 0.5, rbReceptionPoints: 0.5, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -2 }
-};
-// When the DraftKings workflow runs, as UTC weekday and hour, mirrored from
+        ...OPERATOR_DST },
+  fd: { receptionPoints: 0.5, rbReceptionPoints: 0.5, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -2,
+        // Without this a FanDuel defense fell through to SCORING_KDEF, the
+        // site's season-long table: a four-point defensive touchdown, a
+        // four-point safety and a ten-rung ladder, none of them FanDuel's.
+        // The same line scored 8 on DraftKings and 11 here, and the 11 was
+        // nobody's number.
+        ...OPERATOR_DST }
+};// When the DraftKings workflow runs, as UTC weekday and hour, mirrored from
 // .github/workflows/draftkings-salaries.yml (tools/test-draftkings-import.mjs
 // holds the two in step). A blank board is told the next one rather than left
 // without a clock. FanDuel has no import job, so it is not promised one.

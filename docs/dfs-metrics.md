@@ -405,13 +405,20 @@ stat-name guess. Every key it does read is one the offensive box score already
 parses, and every value is checked against the other team's lines in the real
 2025 Week 1 fixture (`tools/test-content.mjs`).
 
-**Scored on DraftKings' table, not the site's.** `SCORING_SITE.dk` now carries
-the operator's DST values — a six-point defensive touchdown, a two-point
-safety, no sack bonus, and DraftKings' seven-rung points-allowed ladder
-(`0 → +10`, `1–6 → +7`, `7–13 → +4`, `14–20 → +1`, `21–27 → 0`, `28–34 → −1`,
-`35+ → −4`). Before this, a DST fell through to `SCORING_KDEF`, the site's
-season-long default, so every DFS defense — projected as well as scored — was
-on the wrong scale. Two things had to change for that to take effect:
+**Scored on the operators' table, not the site's.** Both `SCORING_SITE.dk` and
+`SCORING_SITE.fd` carry the operator DST values, shared as `OPERATOR_DST` — a
+six-point defensive touchdown, a two-point safety, no sack bonus, and the
+seven-rung points-allowed ladder (`0 → +10`, `1–6 → +7`, `7–13 → +4`,
+`14–20 → +1`, `21–27 → 0`, `28–34 → −1`, `35+ → −4`).
+
+DraftKings and FanDuel price a defense **identically**; they differ on the
+offense, where DraftKings is full PPR with yardage bonuses and FanDuel half PPR
+with none. So the defensive half is written once rather than copied — a second
+seven-rung ladder drifts silently — and split the day one of them changes.
+Before this, a DST fell through to `SCORING_KDEF`, the site's season-long
+default, so every DFS defense on both sites — projected as well as scored — was
+on the wrong scale: the same line scored 8 on DraftKings and 11 on FanDuel, and
+the 11 was nobody's number. Two things had to change for that to take effect:
 
 - `scoringRules()` read `SCORING_BASE` only, so every K/DEF key an operator or
   a league supplied was silently dropped. It now reads both tables, and knows
@@ -426,11 +433,14 @@ on the wrong scale. Two things had to change for that to take effect:
   `tools/test-scoring.mjs` pins the declaration order and evaluates the engine
   in file order.
 
-The DraftKings values were checked on 2026-09-20 against two independent web
-searches that agree with each other. The operator's own rules page is
-unreachable from the build environment (the egress proxy blocks
-`draftkings.com`), so they are corroborated rather than read from the source;
-worth re-checking from a machine that can reach it.
+The values were checked on 2026-09-20 (DraftKings) and 2026-09-21 (FanDuel)
+against independent web searches that agree with one another, with the
+per-event figures and the ladder confirmed separately. FanDuel's `21–27` rung
+was confirmed on its own, because the first source that gave its ladder omitted
+that rung and it is the commonest band in football. Neither operator's rules
+page is reachable from the build environment (the egress proxy blocks both), so
+these are corroborated rather than read from the source; worth re-checking from
+a machine that can reach them.
 
 ### What is still missing, and which way it leans
 
@@ -439,22 +449,23 @@ Every one of these can only **understate** a player, never inflate one:
 - **Kickers.** Field goals and extra points are not in the box score and
   nothing in it inverts into them, so a played kicker keeps his projection with
   `actualBasis: 'no-kicking-box-score'` and the page marks him `est`.
-  DraftKings Classic has no kicker slot, so in practice this is inert.
+  Neither operator's Classic roster has a kicker slot, so in practice this is
+  inert.
 - **A defense from an old payload.** A summary stored before the defensive
   line existed carries no `defense`, and the board treats that as a defense it
   cannot score (`no-defense-box-score`, marked `est`) rather than as a defense
   that did nothing. `SUMMARY_CONTRACT` re-reads each such game once.
-- **Blocked kicks, and returned extra points or two-point conversions.**
-  DraftKings pays two apiece; the inversion cannot see either. A blocked-kick
+- **Blocked kicks, and returned extra points or two-point conversions.** Both
+  operators pay two apiece; the inversion cannot see either. A blocked-kick
   *touchdown* is counted, as a defensive score.
 - **Return touchdowns, for an offensive player.** The box score carries no
   returns, so a man whose only score was a kick or punt return reads as the
   rest of his line. A played man with no box-score line at all is scored
   **zero** (`actualBasis: 'box-score-absent'`), because he dressed and did
   nothing — that is a result, not a missing number.
-- **FanDuel.** `SCORING_SITE.fd` still overrides nothing for DST, so a FanDuel
-  defense is on the site's season-long table. Same fix, whenever FanDuel's
-  values are to hand.
+- **FanDuel salaries are not automated.** The scheduled import is
+  DraftKings-only, so a FanDuel slate is priced from the lobby CSV the entrant
+  uploads (`POST /api/dfs/slate`). Nothing is stored; the parse is per request.
 
 ## What is deliberately not here
 
