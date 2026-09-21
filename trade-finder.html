@@ -148,7 +148,6 @@ select.tf-sel{font:inherit;font-size:15.5px;padding:8px 10px;border:1px solid va
 </div>
 
 <div class="its-strip-sync" id="tfSync" hidden></div>
-<div id="tfCta" hidden></div>
 <div class="tf-step" id="tf-synced" hidden>
   <h3>Your league, every roster</h3>
   <p class="sub" id="tfSyncSub">Every roster in your room is already here. Load them and the finder searches real managers, or read the matches the desk found first.</p>
@@ -516,7 +515,7 @@ Derrick Henry
   if (window.ITSync) ITSync.load().then(function () {
     ITSync.strip($('tfSync'), { week: true });
     var LS = ITSync.active();
-    if (!LS) { ITSync.cta($('tfCta'), 'trades'); return; }
+    if (!LS) return;
     $('tf-synced').hidden = false;
     $('tf-load-league').addEventListener('click', loadLeague);
   });
