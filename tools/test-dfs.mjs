@@ -809,7 +809,7 @@ console.log('\nthe DFS page explanations');
   ok('...and on a pick contest, which has no roster to compare shapes across',
      page.includes('not a payout question') && page.includes('no payout curve to move along'));
   ok('...and names the format it advised on, once the reader has chosen one',
-     page.includes("var named = fmt && fmt.label && (site !== 'dk' || setupReady());"));
+     page.includes("var named = fmt && fmt.label && setupReady();"));
   ok('a slate priced from a reader\u2019s file says so, and offers the way back',
      page.includes("slate.source === 'upload'") && page.includes('Priced from your own file, kept in this browser')
      && page.includes("id=\"dfUpClear\""));

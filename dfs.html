@@ -705,11 +705,11 @@ p{color:var(--sec);margin:0 0 16px}
    declares — the --panel band and the white card — and the two things carrying
    the page are:
 
-     1. ONE STICKY RIBBON at the top, carrying the two switches that govern
-        every board on this page — the venue and the board. They were loose
-        pills in the flow, so a reader eleven rows into the values table could
-        not reach them without scrolling back to the top. Now they follow him
-        down, and they are the first thing he meets.
+     1. ONE STICKY RIBBON at the top, carrying the board switch that governs
+        every board on this page. It was a loose pill group in the flow, so a
+        reader eleven rows into the values table could not reach it without
+        scrolling back to the top. Now it follows him down, and it is the
+        first thing he meets.
      2. A TINTED / WHITE ALTERNATION for the rest, on site.css's own .is-band,
         so the setup, the answer, and the footer matter read as three objects.
 
@@ -728,15 +728,17 @@ p{color:var(--sec);margin:0 0 16px}
 /* THE UA SHEET'S [hidden] IS SPECIFICITY (0,1,0) — the same as any class — and
    loses to an author sheet at a tie, so `.rk-seg{display:inline-flex}` and
    `.btn{display:inline-block}` were both beating it: the board switch stayed on
-   screen for venues that have no boards. front.html carries the same one-line
+   screen for formats that have no boards. front.html carries the same one-line
    fix for the same reason. This makes the attribute mean what it says. */
 [hidden]{display:none !important}
 
-/* The board switch takes itself off on a venue, or a DraftKings format, with no
-   salary-cap boards; its label goes with it rather than labelling nothing. */
-.df-ribbon-lab-board{margin-left:auto}
+/* The board switch takes itself off on a DraftKings format with no salary-cap
+   boards. Its label goes with it rather than labelling nothing, and so does the
+   ribbon around them: the venue switch used to keep that ribbon populated, and
+   with the venue switch gone an empty one is a bordered white strip under the
+   masthead with nothing in it. */
 .is-ribbon-in:has(#dfNav[hidden]) .df-ribbon-lab-board{display:none}
-@media(max-width:1080px){.df-ribbon-lab-board{margin-left:0}}
+.is-ribbon:has(#dfNav[hidden]){display:none}
 
 /* The NFL clock now dates the setup band rather than the band that used to open
    the page. .its-strip paints itself --panel, which is the tinted band's own
@@ -789,18 +791,17 @@ p{color:var(--sec);margin:0 0 16px}
      it is, so nothing about the clock changes but where it sits. -->
 <h1 class="df-h1">DFS: the market read, aimed at one slate</h1>
 
-<!-- ── 2 · the venue and the board ────────────────────────────────────────────────
-     The two switches that govern every board on the page, in a ribbon directly
-     under the masthead the way the rankings ribbon sits under the homepage one.
-     They were two unlabelled pill groups loose in the column, which meant a
+<!-- ── 2 · the board ────────────────────────────────────────────────
+     The switch that governs every board on the page, in a ribbon directly
+     under the masthead the way the rankings ribbon sits under the homepage
+     one. It was an unlabelled pill group loose in the column, which meant a
      reader eleven rows into the values table had to scroll back to the top to
-     change board. Sticky, so they come with him, and first, so the page opens
-     on a control rather than on a paragraph. Same ids, same buttons, same
-     handlers; only the markup around them is new. -->
-<nav class="is-ribbon" aria-label="Venue and board">
+     change board. Sticky, so it comes with him, and first, so the page opens
+     on a control rather than on a paragraph. The venue switch that used to
+     sit beside it is gone: DraftKings is the only venue we carry, so there
+     was never a second thing to choose. -->
+<nav class="is-ribbon" aria-label="Board">
   <div class="is-ribbon-in">
-    <span class="is-ribbon-lab" id="dfSiteLab">Venue</span>
-    <div class="rk-seg" id="dfSite" role="group" aria-labelledby="dfSiteLab"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button><button type="button" data-site="pk">Pick&rsquo;em</button><button type="button" data-site="sl">Sleeper picks</button></div>
     <span class="is-ribbon-lab df-ribbon-lab-board" id="dfNavLab">Board</span>
     <div class="rk-seg" id="dfNav" role="group" aria-labelledby="dfNavLab"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
   </div>
@@ -992,36 +993,6 @@ p{color:var(--sec);margin:0 0 16px}
   </div>
 </div>
 
-<!-- ── pick'em ────────────────────────────────────────────────────────────────
-     Underdog, PrizePicks and Sleeper post a stat line and ask higher or lower.
-     There is no cap and no salary, so none of the salary-cap sections below
-     apply and they are hidden on these two venues.
-
-     WHAT THIS BOARD DOES NOT HAVE is the venue's own posted line. Iron Tuna
-     does not hold an Underdog or PrizePicks feed, and inventing one from the
-     sportsbook median and calling it theirs would be the single most misleading
-     thing on this site. So the board prints the SPORTSBOOK median against the
-     model, says which is which, and tells the reader to compare it to the line
-     actually in front of them. -->
-<section id="sec-pickem" hidden>
-  <div class="is-plate">
-    <div class="is-plate-head">
-      <span>Pick&rsquo;em board &mdash; where the model leans off the line</span>
-      <span id="pkVenue">Pick&rsquo;em</span>
-    </div>
-    <div class="is-scroll" id="pkWrap" hidden>
-      <table class="is-table">
-        <thead><tr><th>Player</th><th>Stat</th><th class="num">Book median</th><th class="num">Iron Tuna</th><th class="num">Gap</th><th>Lean</th></tr></thead>
-        <tbody id="pkBody"></tbody>
-      </table>
-    </div>
-    <p class="is-plate-state" id="pkState">Reading the player markets&hellip;</p>
-    <div class="is-plate-foot">
-      <p>A lean is a gap of at least 5% between the model and the sportsbook&rsquo;s median line, not a recommendation. <b>The line shown is the sportsbook&rsquo;s, not the venue&rsquo;s</b> &mdash; pick&rsquo;em venues post their own and they differ; check the number in front of you before you enter. Every row is a quoted market: where no book has priced a player there is no line to disagree with and he is left off.</p>
-    </div>
-  </div>
-</section>
-
 <section id="sec-dash" hidden>
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>The Slate</h2></div></div>
   <p class="df-sub">What the board looks like underneath the lineup: the market&rsquo;s scoring environment, the widest values, and the desk&rsquo;s reading of the week.</p>
@@ -1136,10 +1107,12 @@ p{color:var(--sec);margin:0 0 16px}
   var $ = function (id) { return document.getElementById(id); };
   var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
   var money = function (v) { return v == null ? '—' : '$' + Number(v).toLocaleString('en-US'); };
-  var SITES = { dk: 1, fd: 1, pk: 1, sl: 1 };
   var SECS = { lineup: 1, values: 1, stacks: 1, td: 1, dash: 1 };
   var SEC_IDS = ['lineup', 'values', 'stacks', 'td', 'dash'];
-  var site = 'dk', sec = 'lineup', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
+  // DraftKings is the only venue we carry. `site` stays a constant because the
+  // API route, the stored upload key and the board copy all key off it.
+  var site = 'dk';
+  var sec = 'lineup', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
   var gameStyle = '', gameChoice = '', payoutStructure = '';
   var selectedGames = {}, gameUniverseSig = '';
   // The week's fixtures, as the schedule knows them, for the weeks where the
@@ -1215,8 +1188,6 @@ p{color:var(--sec);margin:0 0 16px}
   };
   var contest = 'single';
   try {
-    var q = new URLSearchParams(location.search).get('site');
-    if (q && SITES[q]) site = q;
     var hash = (location.hash || '').replace('#', '');
     // 'builder' was this section's old name and a saved link still uses it.
     if (hash === 'builder') hash = 'lineup';
@@ -1230,10 +1201,10 @@ p{color:var(--sec);margin:0 0 16px}
   // control on the page was dead and the slate never fetched.
   function press(host, attr, val) { if (!host) return; [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); }); }
   function show() { SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = k !== sec; }); press($('dfNav'), 'data-sec', sec); }
-  function fppgLabel() { return site === 'dk' ? 'DK FPPG' : site === 'fd' ? 'FD FPPG' : 'FPPG'; }
+  function fppgLabel() { return 'DK FPPG'; }
   // The operator by name, for the sentences that have to say whose lobby
   // the reader is being sent back to.
-  function siteLabel() { return site === 'fd' ? 'FanDuel' : 'DraftKings'; }
+  function siteLabel() { return 'DraftKings'; }
   // A computed average (no operator number in the file) is printed as an estimate, never as DraftKings' own figure.
   function fppgText(p) { return p && p.operatorFppg != null && isFinite(p.operatorFppg) ? n1(p.operatorFppg) + (p.operatorFppgBasis === 'computed' ? '<i class="df-est" title="No operator average in the salary file; season box score at site scoring, before yardage bonuses.">est</i>' : '') : '—'; }
   function fppgEdge(p) {
@@ -2476,8 +2447,7 @@ p{color:var(--sec);margin:0 0 16px}
   // file route rather than fetching a slate that does not exist.
   function deskSlateFor() {
     if (typeof ITDfs === 'undefined') return null;
-    var style = site === 'dk' ? (gameStyle || 'classic') : 'classic';
-    var fmt = ITDfs.formatFor(site, style);
+    var fmt = ITDfs.formatFor(site, gameStyle || 'classic');
     if (!fmt || !fmt.single || fmt.kind !== 'salary') return null;
     var keys = selectedGameKeys();
     if (keys.length !== 1) return null;
@@ -2494,7 +2464,7 @@ p{color:var(--sec);margin:0 0 16px}
     loadSite(want);
     return true;
   }
-  function gameScopeRequired() { return site === 'dk' && !!gameStyle && gameStyle !== 'best-ball' && !isPickem(); }
+  function gameScopeRequired() { return !!gameStyle && gameStyle !== 'best-ball'; }
   // ── which roster this setup asks for ──────────────────────────────────────
   // A Game Style names a roster and ITDfs.FORMATS is the table of what each
   // one builds; the loaded salary file names the roster it was PRICED for.
@@ -2511,8 +2481,7 @@ p{color:var(--sec);margin:0 0 16px}
   function solveFormat() {
     if (typeof ITDfs === 'undefined') return { fmt: null, kind: 'salary', ready: false, blocked: 'The lineup builder did not load with the page.' };
     var priced = slate && slate.format === 'single-game' ? 'single-game' : 'classic';
-    // Off DraftKings there is no Game Style plate, so the file decides alone.
-    var style = site === 'dk' ? (gameStyle || 'classic') : (priced === 'single-game' ? 'showdown-captain' : 'classic');
+    var style = gameStyle || 'classic';
     var fmt = ITDfs.formatFor(site, style);
     var out = { style: style, fmt: fmt, kind: fmt.kind, ready: true, blocked: '', priced: priced };
     if (fmt.kind === 'season') {
@@ -2573,7 +2542,7 @@ p{color:var(--sec);margin:0 0 16px}
       var deskHas = one && availableSingles.indexOf(one) >= 0;
       var others = availableSingles.filter(function (k) { return k !== one; }).map(prettyGame);
       out.blocked = (one ? (deskHas ? prettyGame(one) + ' is priced here, but this board is still holding the main slate \u2014 reload the page and it will solve. ' : 'The desk has not imported ' + prettyGame(one) + ' for this week. ') : '')
-        + (site === 'fd' ? 'FanDuel' : 'DraftKings') + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. Building ' + fmt.label + ' from the main slate would seat a ' + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' at a price nobody is charged \u2014 a roster you could not enter \u2014 so the board declines rather than printing one. Hand over the export from the contest lobby and it solves exactly.'
+        + siteLabel() + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. Building ' + fmt.label + ' from the main slate would seat a ' + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' at a price nobody is charged \u2014 a roster you could not enter \u2014 so the board declines rather than printing one. Hand over the export from the contest lobby and it solves exactly.'
         // And which OTHER games are already here, named as what they are: a
         // different matchup, not this one.
         + (others.length
@@ -2598,7 +2567,6 @@ p{color:var(--sec);margin:0 0 16px}
     marks = {};
   }
   function setupReady() {
-    if (site !== 'dk') return true;
     if (!gameStyle || !gameChoice || !payoutStructure) return false;
     if (gameStyle !== 'best-ball' && !selectedGameKeys().length) return false;
     return true;
@@ -2980,7 +2948,7 @@ p{color:var(--sec);margin:0 0 16px}
     // and the file that fixes it -- so the only thing that still stops the
     // board dead is the optimizer failing to load.
     if (!window.ITDfs) { coachSync(); return; }
-    if (site === 'dk' && !setupReady()) { showGameScopeRequired(); return; }
+    if (!setupReady()) { showGameScopeRequired(); return; }
     var f = solveFormat();
     if (!f.ready) { fieldAvg = null; renderFormatNotice(f); return; }
     var view = filteredSlate();
@@ -3347,7 +3315,7 @@ p{color:var(--sec);margin:0 0 16px}
                })() },
       choices: setupChoices(true),
       slate: slate
-        ? { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: slate.label, week: slate.week,
+        ? { site: siteLabel(), label: slate.label, week: slate.week,
             cap: slate.cap, pricedPlayers: (slate.players || []).filter(function (p) { return projected(p); }).length,
             salariesFrom: 'the site\u2019s salary feed' }
         : { site: 'DraftKings', note: 'No salary slate is loaded yet, so the page lists no games to choose from.' },
@@ -3375,25 +3343,23 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   function coachContext() {
-    if (isPickem()) return { blocked: 'Pick’em boards are higher-or-lower on a posted line, not a salary-cap roster. Switch to DraftKings or FanDuel for a lineup the coach can talk through.' };
     // Before the setup is finished - and when the loaded slate cannot price the
     // roster the chosen format asks for - the coach answers on the setup
     // instead of refusing the question. It is the same coach on the same page;
     // only the thing it is looking at changes.
-    if (site === 'dk' && (!setupReady() || !solveFormat().ready)) return setupContext();
+    if (!setupReady() || !solveFormat().ready) return setupContext();
     if (!slate) return { blocked: 'There is no priced slate loaded yet, so there is no lineup for the coach to read. Come back once the salaries post.' };
     // A finished setup that solved nothing is still a question the coach can
     // answer - which lock, exclusion or cap to loosen - so it falls back to
-    // setup mode carrying that reason rather than refusing. Off DraftKings
-    // there is no setup plate to fall back to, so the reason stands alone.
+    // setup mode carrying that reason rather than refusing.
     if (!built || !built.lineups || !built.lineups.length) {
       var stuck = 'No legal lineup fits the current cap, locks and exclusions. Loosen one in the fine-tune panel and the coach can pick the roster up from there.';
-      return site === 'dk' ? setupContext(stuck) : { blocked: stuck };
+      return setupContext(stuck);
     }
     var view = filteredSlate();
     if (!view) {
       var thin = 'The selected games do not carry a priced player pool yet.';
-      return site === 'dk' ? setupContext(thin) : { blocked: thin };
+      return setupContext(thin);
     }
     var sh = SHAPES[contest] || SHAPES.single;
     var gs = GAME_STYLES[gameStyle] || {};
@@ -3421,7 +3387,7 @@ p{color:var(--sec);margin:0 0 16px}
     return {
       mode: 'lineup',
       page: 'Iron Tuna DFS lineup recommendation',
-      slate: { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: view.label, week: slate.week,
+      slate: { site: siteLabel(), label: view.label, week: slate.week,
                cap: parseInt($('dfCap').value, 10) || view.cap, pricedPlayers: solverPool.length,
                medianVegasPerK: coachN(view.medianVegasPerK, 2),
                typicalEntryPoints: fieldAvg ? coachN(fieldAvg.points) : undefined,
@@ -3551,7 +3517,7 @@ p{color:var(--sec);margin:0 0 16px}
     // The format is named only once the reader has actually chosen one. Before
     // that the box is the week's general read and labelling it "Classic" would
     // answer a question nobody has asked yet.
-    var named = fmt && fmt.label && (site !== 'dk' || setupReady());
+    var named = fmt && fmt.label && setupReady();
     $('dfPlayWeekTitle').textContent='Play of the Week: '+pick.rec + (named ? ' \u00b7 ' + fmt.label : '');
     $('dfPlayWeekDek').textContent=pick.rationale;
     // The page has now done the comparison; the coach quotes this rather than
@@ -3601,7 +3567,7 @@ p{color:var(--sec);margin:0 0 16px}
     populateGamesSelect(slate);
     updateSetupState();
     renderPlayOfWeek(slate);
-    if (site === 'dk' && !setupReady()) { showGameScopeRequired(); return; }
+    if (!setupReady()) { showGameScopeRequired(); return; }
     payoutToContest();
     var view = filteredSlate();
     if (!view) { showGameScopeRequired(); return; }
@@ -3617,66 +3583,12 @@ p{color:var(--sec);margin:0 0 16px}
     build();
   }
 
-  // ── pick'em ──────────────────────────────────────────────────────────────
-  // Underdog, PrizePicks and Sleeper are higher/lower on a posted stat line, so
-  // there is no salary and no cap and none of the sections above apply. The
-  // board is the market's implied line for the one stat each position is really
-  // priced on, against the model's own, off the same /api/boards every other
-  // surface reads.
-  var PICKEM = { pk: 'Underdog / PrizePicks', sl: 'Sleeper picks' };
-  var PRIMARY = { QB: ['passYd', 'Pass yds'], RB: ['rushYd', 'Rush yds'], WR: ['recYd', 'Rec yds'], TE: ['recYd', 'Rec yds'] };
-  var LEAN_PCT = 0.05;
-  var pickemLoaded = false;
-  function isPickem() { return site === 'pk' || site === 'sl'; }
-  function pickem(board) {
-    var rows = [];
-    (board && board.players || []).forEach(function (p) {
-      var m = PRIMARY[p.position];
-      if (!m || !p.vegas || !p.ironTuna || !p.games) return;
-      var line = p.vegas.stats ? p.vegas.stats[m[0]] : null;
-      var model = p.ironTuna.stats ? p.ironTuna.stats[m[0]] : null;
-      // QUOTED ONLY. With no posted prop the "line" is the game line applied to
-      // the player, which is what the model is built from too — so comparing
-      // them produces rounding, and a pick'em board of rounding is the worst
-      // thing this site could ship.
-      if (!(p.vegas.basis && p.vegas.basis.indexOf('props') === 0)) return;
-      if (line == null || model == null || line < 20) return;
-      var per = p.games || 1, l = line / per, mo = model / per;
-      rows.push({ name: p.name, pos: p.position, team: p.team, label: m[1], line: l, model: mo, pct: (mo - l) / l });
-    });
-    rows.sort(function (a, b) { return Math.abs(b.pct) - Math.abs(a.pct); });
-    rows = rows.slice(0, 14);
-    if (!rows.length) {
-      $('pkState').textContent = 'No priced player prop has reached this board for the week, so there is no posted line to read the model against. Books have props up; this build is not carrying them. The board is blank rather than filled with the model compared to itself.';
-      return;
-    }
-    $('pkBody').innerHTML = rows.map(function (r) {
-      var lean = Math.abs(r.pct) < LEAN_PCT ? '<span class="is-tag is-flat">No lean</span>'
-        : '<span class="is-tag is-accent">' + (r.pct > 0 ? 'Over' : 'Under') + '</span>';
-      return '<tr><td class="is-who">' + e(r.name) + ' <small>' + e(r.pos + ' \u00b7 ' + r.team) + '</small></td>' +
-        '<td>' + e(r.label) + '</td><td class="num">' + n1(r.line) + '</td>' +
-        '<td class="num"><span class="is-val">' + n1(r.model) + '</span></td>' +
-        '<td class="num">' + (r.pct > 0 ? '+' : '') + (r.pct * 100).toFixed(0) + '%</td>' +
-        '<td>' + lean + '</td></tr>';
-    }).join('');
-    $('pkWrap').hidden = false;
-    $('pkState').hidden = true;
-  }
-  function loadPickem() {
-    $('pkVenue').textContent = PICKEM[site] || 'Pick’em';
-    if (pickemLoaded) return;
-    pickemLoaded = true;
-    fetch('/api/boards?horizon=week&pos=ALL&scoring=ppr', { credentials: 'omit' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) { if (j && j.ok) pickem(j); else $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; })
-      .catch(function () { $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; });
-  }
   function slateOk(j) {
     slate = j;
     loadedSlate = j.source === 'upload' ? null : (j.slate && j.slate !== 'main' ? j.slate : null);
     scheduleGames = [];
     slateToken += 1; playWeekMemo = null;
-    if (site === 'dk' && !gameUniverseSig) selectedGames = {};
+    if (!gameUniverseSig) selectedGames = {};
     var stamp = 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
     $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + e(stamp);
     render();
@@ -3695,7 +3607,7 @@ p{color:var(--sec);margin:0 0 16px}
     // with this response and render() does not rebuild the list on a week it
     // has no slate for, so without this the reader is left on the disabled
     // step two they started on.
-    if (site === 'dk' && !isPickem()) applyGameStyle();
+    applyGameStyle();
     // The lineup box used to be written here, one sentence for every format
     // and every setup: "There is no lineup to solve until the salaries are
     // posted." It was the last thing a reader saw after answering all three
@@ -3718,11 +3630,9 @@ p{color:var(--sec);margin:0 0 16px}
     }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
   }
   function applyGameStyle() {
-    var dk = site === 'dk' && !isPickem();
-    $('dfConfig').hidden = !dk;
-    $('dfPlayWeek').hidden = !dk;
+    $('dfConfig').hidden = false;
+    $('dfPlayWeek').hidden = false;
     $('dfGameStyleSelect').value = gameStyle;
-    if (!dk) return false;
     populateGamesSelect(slate || {players:[],stacks:[]});
     $('dfPayoutSelect').disabled = !gameChoice || (gameChoice==='custom' && !selectedGameKeys().length);
     if (payoutStructure) $('dfPayoutSelect').value=payoutStructure;
@@ -3787,24 +3697,8 @@ p{color:var(--sec);margin:0 0 16px}
       .catch(function () { upState('The slate did not answer. Your file was not read.', true); build(); });
   }
   function load() {
-    press($('dfSite'), 'data-site', site);
-    if (isPickem()) {
-      $('dfSiteNote').textContent = 'Higher or lower on a posted stat line; the board shows where the model leans. No cap, no salaries.';
-      $('dfNav').hidden = true;
-      SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = true; });
-      $('sec-pickem').hidden = false;
-      $('dfConfig').hidden = true; $('dfPlayWeek').hidden=true;
-      $('dfNote').textContent = '';
-      coachSync();
-      loadPickem();
-      return;
-    }
-    $('sec-pickem').hidden = true;
-    if (site !== 'dk') { gameStyle='classic'; gameChoice='all'; payoutStructure='h2h'; }
     applyGameStyle();
-    $('dfSiteNote').textContent = site === 'dk'
-      ? 'Choose Game Style, Games and Payout Structure below. Every format is solved against its own roster \u2014 Classic\u2019s nine slots, a Showdown Captain at 1.5\u00d7, a Tiers board with no cap \u2014 and never against another format\u2019s.'
-      : 'Classic salary cap · $60,000. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
+    $('dfSiteNote').textContent = 'Choose Game Style, Games and Payout Structure below. Every format is solved against its own roster \u2014 Classic\u2019s nine slots, a Showdown Captain at 1.5\u00d7, a Tiers board with no cap \u2014 and never against another format\u2019s.';
     // A file the reader already handed over is theirs until they clear it. The
     // boot-time purge that shipped with the panel's removal is gone with this:
     // it deleted a reader's stored CSV on every load, which is the opposite of
@@ -3843,7 +3737,6 @@ p{color:var(--sec);margin:0 0 16px}
     // The plate's own way in. A reader stuck on the three selects should not
     // have to guess that the floating launcher answers on them too.
     $('dfSetupCoach').addEventListener('click', openCoach);
-    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; selectedGames = {}; gameUniverseSig = ''; gameChoice=''; payoutStructure=''; load(); });
     $('dfGameStyleSelect').addEventListener('change', function () {
       gameStyle=this.value; gameChoice=''; payoutStructure=''; selectedGames={}; gameUniverseSig='';
       $('dfPayoutSelect').value=''; $('dfPayoutSelect').disabled=true; $('dfCustomGames').hidden=true;
