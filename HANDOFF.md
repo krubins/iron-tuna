@@ -12738,10 +12738,23 @@ desktop and 42px on a phone, with the call itself under it at headline size.
 - **`.nr-lead p.nr-boast`, not `.nr-boast`.** `.nr-lead p` sets the deck's
   18px, and the banner and the deck are both paragraphs inside the same card.
 
+**And on the article page.** Ken, on seeing the well: "Yes, put the banner on
+the article page too." The piece the well links to carried the same problem in
+its `<h1>`, so `desk.html` splits the same phrase with the same regexp and the
+same two guards, prints it above the headline at 86px (46px on a phone), and
+steps the headline itself down to `--fs-2xl` while the banner is up so the two
+read as one head rather than as two competing ones. `body.dk-boasting` carries
+that step. `setHead()` is the one place either page's `<h1>` is written now,
+the archive branch included, so an ordinary piece and the desk index cannot
+inherit a banner from a boast the reader opened before them. `document.title`
+keeps the desk's headline whole: a browser tab and a shared link want the
+sentence, not the layout.
+
 | Where | What |
 |---|---|
 | `site.css` | The reading step across the `.is-*` furniture and the `.nr-*` story card and well; `.nr-lead.is-boast`, `.nr-lead p.nr-boast`. |
 | `fantasy.html` | Its own `.fn-riv-*` and `.fn-tool` type lifted with the rest; the newsroom painter splits the desk's boast off the lead headline. |
+| `desk.html` | `#dkBoast` above the `<h1>`, `.dk-boast` and `body.dk-boasting`; `setHead()` replaces both direct writes to `#dkTitle`. |
 
 **Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
 plus `test-homepage` under `REQUIRE_BROWSER=1` (99/99) and the four `--check`
@@ -12752,4 +12765,8 @@ and nothing else — with no page errors and no horizontal overflow, and the
 banner measured at 72px and 42px with the two fallback shapes painting as an
 ordinary lead. Eighteen pages that share the furniture (`/fantasy`, `/dfs`,
 `/in-season`, `/weekly-intel`, `/my-league`, `/rankings`, `/vegas-edge`, the
-desk and ten more) rendered clean at both widths.
+desk and ten more) rendered clean at both widths. `desk.html` rendered at the
+same two widths against a stubbed `/api/content/piece` in the same three
+headline shapes plus the index: the banner at 86px and 46px over a 31px and
+25px headline, the ordinary headline left at 39px and 31px with no banner and
+no `dk-boasting`, and the index carrying neither.
