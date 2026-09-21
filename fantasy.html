@@ -95,10 +95,17 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
    It collapses in two steps, and the grid AREAS do the reordering so the
    player rail comes up next to the navigation rather than stranding itself
    1,200px below the fold on a phone. */
-.sl-shell{max-width:1340px;margin:0 auto;padding:var(--space-5) var(--space-5) var(--space-7);
-  display:grid;grid-template-columns:212px minmax(0,1fr) 304px;gap:var(--space-5) var(--space-6);
+.sl-shell{max-width:1440px;margin:0 auto;padding:var(--space-5) var(--space-5) var(--space-7);
+  display:grid;grid-template-columns:224px minmax(0,1fr) 312px;gap:var(--space-5) var(--rail-gap,48px);
   grid-template-areas:"nav main upd";align-items:start}
-.sl-left{grid-area:nav;min-width:0;position:sticky;top:calc(var(--header-h) + var(--space-4))}
+@media(min-width:1400px){.sl-shell{--rail-gap:64px}}
+/* The left rail carries a shade so the column reads as chrome rather than as a
+   third body of text sharing the page's white. */
+.sl-left{grid-area:nav;min-width:0;position:sticky;top:calc(var(--header-h) + var(--space-4));
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
+  padding:var(--space-4) var(--space-4) var(--space-5)}
+.sl-left .sl-nav li{border-bottom-color:var(--line2)}
+.sl-left .sl-nav-more{border-top-color:var(--line2)}
 .sl-main{grid-area:main;min-width:0}
 .sl-right{grid-area:upd;min-width:0;position:sticky;top:calc(var(--header-h) + var(--space-4))}
 @media(max-width:1180px){
@@ -107,7 +114,7 @@ html{scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 }
 @media(max-width:860px){
   .sl-shell{grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "upd" "main";padding:var(--space-4) var(--space-4) var(--space-6)}
-  .sl-left{position:static}
+  .sl-left{position:static;background:none;border:0;border-radius:0;padding:0}
 }
 
 /* ── the left rail ──────────────────────────────────────────────────────────
