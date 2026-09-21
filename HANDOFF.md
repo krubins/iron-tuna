@@ -12848,3 +12848,48 @@ balance. Rendered in Chromium at 1360px and 430px against a stubbed
 — with no page errors and no horizontal overflow. The well paints at y=926 and
 `#sec-lineup` at y=1693, so the order on the rendered page is Setup, the desk,
 the lineup; the byline reads Lena Park and the kicker reads the DFS title.
+
+---
+
+## 115. September 21: the /dfs lead moves above the setup band
+
+Ken, on §114: "move the dfs newsroom to be just below the hero."
+
+§114 put the desk at the top of the white column, under the setup band, and
+said so: /dfs has no hero, so "first thing under the hero" was read as "first
+thing under the setup band", because the setup band is the question every
+board is solved for and §"dfs: drop the opening band" had put that control
+first on purpose. That reading was mine, not the instruction's. The
+instruction is the position /fantasy's well holds — first thing under the
+ribbon, before anything else on the page — and that is where it is now.
+
+**What it costs, said plainly, because it undoes part of an earlier
+decision.** The page no longer opens on a control. A reader arriving at /dfs
+reads a story and scrolls to set the slate. The ribbon is above the well and
+sticky, so any board is still one click away, and the setup band is the next
+thing under the fold rather than something buried; but the "opens on a
+control rather than on a paragraph" property of §"the board" is gone, and it
+went deliberately.
+
+**A bug §114 shipped, fixed by the same move.** While the newsroom sat inside
+`.df-main` it was that column's first `<section>`, so
+`.df-main>#sec-lineup:first-of-type` and its `.is-sec` companion (both from
+`efc10b9`) quietly stopped matching and the roster lost its margin rules.
+Nothing failed; the spacing was just wrong for four hours. The well is in its
+own `.df-lead` column now and `#sec-lineup` is the first section of `.df-main`
+again — checked in the browser, not by reading the selector:
+`document.querySelector('.df-main > section').id` is `sec-lineup` and its
+computed `margin-top` is back to `0px`.
+
+| Where | What |
+|---|---|
+| `dfs.html` | The newsroom section moves from `.df-main` to its own `.df-lead` column between the ribbon and the setup band; the setup band drops `is-band-top`, since it no longer butts the masthead; `.df-lead` carries `.df-main`'s top padding, because the ribbon takes itself off the page when the board switcher is hidden and the well would otherwise butt the masthead. |
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
+plus `test-homepage` under `REQUIRE_BROWSER=1` (99/99) and the four `--check`
+generators clean. Three inline scripts parse; no stray control bytes; tags
+balance. Rendered in Chromium at 1360px and 430px against a stubbed
+`/api/newsroom?lens=dfs` in three shapes — six pieces, one piece, an empty
+feed — with no page errors and no horizontal overflow. The order read off the
+rendered page is the desk at y=83, the setup band at y=830 and the lineup at
+y=1608.
