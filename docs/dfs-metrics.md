@@ -385,24 +385,76 @@ drops him, because nothing submitted now can contain him.
 The wording is verified by rendering the page — no node gate can read prose —
 and `tools/test-dfs.mjs` pins that each branch exists.
 
-Two honest gaps, both of which can only understate a player:
+### The defense
 
-- **Defenses and kickers.** `normalizeGameSummary()` collects passing,
-  rushing, receiving and fumbles. A DST is scored on sacks, takeaways, return
-  touchdowns and points allowed; a kicker on field goals and extra points.
-  None of those are in the stored payload. So either one, with its game final,
-  carries `gamePlayed: true` with `actualPoints: null` and an `actualBasis` of
-  `no-defense-box-score` / `no-kicking-box-score`, keeps its projection, and
-  the page marks it `est` rather than letting a reader assume the whole roster
-  is settled. DraftKings Classic has no kicker slot, so in practice this is
-  the defense. Closing it means collecting those lines in
-  `normalizeGameSummary()` and versioning the cached payload.
-- **Return touchdowns.** The normalized box score carries no returns, so a man
-  whose only score was a kick or punt return reads as the rest of his line.
-  A played man with no box-score line at all is scored **zero**
-  (`actualBasis: 'box-score-absent'`), because he dressed and did nothing —
-  that is a result, not a missing number, and quoting Thursday's projection at
-  him would be worse.
+A DST is scored from a line `normalizeGameSummary()` builds by **inverting the
+offense across from it**, because that is what those statistics are: a sack by
+this defense is a sack taken by that quarterback, an interception by this
+defense is one he threw, and a fumble this defense recovered is one they lost.
+
+| Stat | Where it comes from |
+|---|---|
+| `sacks` | the opposing passers' `sacks-sackYardsLost` |
+| `ints` | the opposing passers' interceptions thrown |
+| `fumRec` | the opposing players' fumbles lost |
+| `ptsAllowed` | the other side's final score — the same convention the DST *projection* uses (the opponent's implied team total), so projected and scored defenses are measured alike |
+| `defTD` / `stTD` / `safety` | the scoring plays, matched on the play's own type and only when it is a touchdown, so an ordinary drive is never counted as a return |
+
+Nothing here reads ESPN's own defensive categories, so it cannot drift from a
+stat-name guess. Every key it does read is one the offensive box score already
+parses, and every value is checked against the other team's lines in the real
+2025 Week 1 fixture (`tools/test-content.mjs`).
+
+**Scored on DraftKings' table, not the site's.** `SCORING_SITE.dk` now carries
+the operator's DST values — a six-point defensive touchdown, a two-point
+safety, no sack bonus, and DraftKings' seven-rung points-allowed ladder
+(`0 → +10`, `1–6 → +7`, `7–13 → +4`, `14–20 → +1`, `21–27 → 0`, `28–34 → −1`,
+`35+ → −4`). Before this, a DST fell through to `SCORING_KDEF`, the site's
+season-long default, so every DFS defense — projected as well as scored — was
+on the wrong scale. Two things had to change for that to take effect:
+
+- `scoringRules()` read `SCORING_BASE` only, so every K/DEF key an operator or
+  a league supplied was silently dropped. It now reads both tables, and knows
+  the difference between a bonus array (`{at, points}`) and a tier array
+  (`{min, max, points}`) — reading a ladder with the bonus filter emptied it,
+  which is how a defense quietly stopped being scored for what it allowed. The
+  client (`scoreDefense` in `it-league.js`) has always honored those
+  overrides, so this is also the two halves agreeing again.
+- `SCORING_KDEF` moved above `scoringRules`, which now reads it at module load
+  through `_COL_RULES`. A `const` read above its declaration throws rather
+  than reading undefined, and `node --check` cannot see it — so
+  `tools/test-scoring.mjs` pins the declaration order and evaluates the engine
+  in file order.
+
+The DraftKings values were checked on 2026-09-20 against two independent web
+searches that agree with each other. The operator's own rules page is
+unreachable from the build environment (the egress proxy blocks
+`draftkings.com`), so they are corroborated rather than read from the source;
+worth re-checking from a machine that can reach it.
+
+### What is still missing, and which way it leans
+
+Every one of these can only **understate** a player, never inflate one:
+
+- **Kickers.** Field goals and extra points are not in the box score and
+  nothing in it inverts into them, so a played kicker keeps his projection with
+  `actualBasis: 'no-kicking-box-score'` and the page marks him `est`.
+  DraftKings Classic has no kicker slot, so in practice this is inert.
+- **A defense from an old payload.** A summary stored before the defensive
+  line existed carries no `defense`, and the board treats that as a defense it
+  cannot score (`no-defense-box-score`, marked `est`) rather than as a defense
+  that did nothing. `SUMMARY_CONTRACT` re-reads each such game once.
+- **Blocked kicks, and returned extra points or two-point conversions.**
+  DraftKings pays two apiece; the inversion cannot see either. A blocked-kick
+  *touchdown* is counted, as a defensive score.
+- **Return touchdowns, for an offensive player.** The box score carries no
+  returns, so a man whose only score was a kick or punt return reads as the
+  rest of his line. A played man with no box-score line at all is scored
+  **zero** (`actualBasis: 'box-score-absent'`), because he dressed and did
+  nothing — that is a result, not a missing number.
+- **FanDuel.** `SCORING_SITE.fd` still overrides nothing for DST, so a FanDuel
+  defense is on the site's season-long table. Same fix, whenever FanDuel's
+  values are to hand.
 
 ## What is deliberately not here
 
