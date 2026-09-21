@@ -12603,7 +12603,8 @@ for `isBanked` fails the same 5, and the tree restores clean at 170.
 ## 112. September 21: the Newsroom had six stories and no lead
 
 Ken's note, against the Fantasy page's chapter 04: "Use the Newsroom stories
-as Lead Story for the fantasy page."
+as Lead Story for the fantasy page." Then, on the first build of it: "Move the
+lead story under the hero."
 
 **What was wrong.** `/fantasy` painted the desk's newest six pieces into
 `.nr-grid` — six cards of the same width, the same 17px headline and the same
@@ -12614,7 +12615,13 @@ which. A reader scanning a grid does not read the order. They read the size.
 
 **What it is now.** One well (`#fnDesk`, `.nr-well` in `site.css`): the newest
 piece is the lead — its picture, its headline at lead size, its whole deck —
-and the next five run as headlines down a column beside it.
+and the next five run as headlines down a column beside it. It is the first
+section under the hero band, above the deck of decisions that used to open the
+page. The desk publishes eleven pieces a week against the games this page is
+about, and the newest of them is the first thing the page has to say; a
+decision is still one scroll away and the ribbon directly above the well names
+it. Same placement the front page's well took in §"The news well", and for the
+same reason.
 
 - **The lead is the newest piece, never a chosen one.** `/api/newsroom` is
   already ordered by publication and the desk's slots decide what lands when,
@@ -12641,12 +12648,21 @@ and the next five run as headlines down a column beside it.
   behind it — which is the same shape that stranded the front page's Top
   Headlines column in §68p.
 
+**The well is unnumbered, and the chapters renumber under it.** The six
+chapters were the page's own argument in its own order — decide, then check the
+evidence, then read — and news arriving at the top is not a seventh chapter of
+that argument. The well's sec-head carries `Lead` where a number would go, the
+way `/dfs` heads its Setup, More and Method sections, and the five chapters
+left run 01 through 05. The ribbon lists the page in the page's order, so
+**The Newsroom** is its first jump now; the deck below the well loses
+`is-band-top`, because it is no longer the band that butts the hero.
+
 The card grid is untouched and still what `/dfs` and the desk index run: a
 section listing a whole week has no lead to give.
 
 | Where | What |
 |---|---|
-| `fantasy.html` | `#fnDesk` ships as `.nr-well`; the painter builds the lead card and the rail instead of six cards; the section note says the newest piece leads. |
+| `fantasy.html` | The Newsroom moves out of the reading band to directly under the hero, unnumbered; `#fnDesk` ships as `.nr-well`; the painter builds the lead card and the rail instead of six cards; the ribbon reorders; Vega vs. Brooks and Everything else become 04 and 05. |
 | `site.css` | `.nr-well`, `.nr-well-solo`, `.nr-lead`, `.nr-lead-go`, `.nr-flag`, `.nr-rail` under the story card block. |
 
 **Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
@@ -12655,4 +12671,7 @@ generators clean. Rendered in Chromium at 1360px and 430px against a stubbed
 `/api/newsroom` in four shapes — six pieces, three pieces, one piece, and the
 empty feed — with no page errors and no horizontal overflow. At three pieces
 the column's last rule lands on the lead's bottom to the pixel (2731); at six
-the column is the taller and the lead ends on its own copy.
+the column is the taller and the lead ends on its own copy. The section order
+is asserted off the rendered page rather than the source: desk, now, board,
+startsit, disagree, tools, top to bottom, with the ribbon's six jumps in the
+same order.
