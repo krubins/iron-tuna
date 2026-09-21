@@ -14,7 +14,7 @@
 // build-chrome.mjs --check already fails when a page's chrome is stale against
 // the generator. This file asserts the things that would still be true of a
 // consistently-wrong generator: that the link set is the five-item one and the
-// footer the nine-item one, that nothing retired has crept back into either,
+// footer the ten-item one, that nothing retired has crept back into either,
 // that the mobile disclosure nav is wired up, and that the one header button
 // says what it actually does.
 import fs from 'fs';
@@ -63,11 +63,11 @@ console.log('\nevery destination is reachable from every page');
   // links; there is nothing else in it, which is the point of the pass that
   // wrote this. Every one of them must be on every page.
   const MUST_NAV = ['/fantasy', '/dfs', '/in-season/desk', '/faq#faq-start', '/player'];
-  // Nine footer links, and the same nine on every page: the two lanes, the
-  // articles, how it works, the data inventory, the FAQ, the two legal
-  // documents and support.
-  const MUST_FOOT = ['/fantasy', '/dfs', '/in-season/desk', '/faq#faq-start',
-    '/data', '/faq', '/privacy', '/terms', '/support'];
+  // Ten footer links, and the same ten on every page: the two lanes, the
+  // articles, the player directory, how it works, the data inventory, the FAQ,
+  // the two legal documents and support.
+  const MUST_FOOT = ['/fantasy', '/dfs', '/in-season/desk', '/players',
+    '/faq#faq-start', '/data', '/faq', '/privacy', '/terms', '/support'];
   const badNav = [], badFoot = [];
   for (const f of pages) {
     const nav = hrefs(header(read(f)));
@@ -147,12 +147,15 @@ console.log('\nthe nav link set is identical everywhere');
     [...shapes.keys()][0] === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/player',
     [...shapes.keys()][0]);
 
-  // The same nine footer links, in the same order, everywhere.
+  // The same ten footer links, in the same order, everywhere.
+  // Players joined them when /player/<slug> became indexable: ~400 cards
+  // reachable only through sitemap.xml are ~400 cards a crawler gets to last,
+  // and the footer is the one place a link lands on every page at once.
   const footOf = (f) => hrefs((read(f).match(/<nav class="foot-nav"[\s\S]*?<\/nav>/) || [''])[0]).join(',');
   const footShapes = new Set(allPages.map(footOf));
   ok('there is exactly one footer shape', footShapes.size === 1, [...footShapes].slice(0, 3).join(' / '));
-  ok('and it is the nine-item one',
-    [...footShapes][0] === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/data,/faq,/privacy,/terms,/support',
+  ok('and it is the ten-item one',
+    [...footShapes][0] === '/fantasy,/dfs,/in-season/desk,/players,/faq#faq-start,/data,/faq,/privacy,/terms,/support',
     [...footShapes][0]);
 }
 

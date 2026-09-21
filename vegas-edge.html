@@ -305,6 +305,7 @@ p{color:var(--sec);margin:0 0 16px}
     <li><a href="/fantasy">Fantasy</a></li>
     <li><a href="/dfs">DFS</a></li>
     <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
     <li><a href="/faq">FAQ</a></li>
@@ -330,7 +331,7 @@ p{color:var(--sec);margin:0 0 16px}
   var sign = function (v, unit) { return v == null ? '—' : (v > 0 ? '+' : '') + v + (unit || ''); };
   function card(p, kind) {
     var d = p.delta;
-    return '<div class="ve-card"><b><a href="/in-season/player/' + slug(p.name) + '?pos=' + e(p.position) + '">' + e(p.name) + '</a></b> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span>' +
+    return '<div class="ve-card"><b><a href="/player/' + slug(p.name) + '">' + e(p.name) + '</a></b> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span>' +
       '<div class="ve-ranks"><span>Consensus <b>' + e(p.position) + p.consensusRank + '</b></span><span>Vegas <b>' + e(p.position) + p.vegasRank + '</b></span><span>Iron Tuna <b>' + e(p.position) + p.ironTunaRank + '</b></span></div>' +
       '<span class="ve-cls ' + kind + '">' + e(d.classification) + ' · ' + sign(d.rank, ' slots') + ' · ' + sign(d.points, ' pts') + '</span><span class="ve-conf">' + e(p.confidence) + ' · ' + e(p.basis) + '</span>' +
       (p.why ? '<p>' + e(p.why) + '</p>' : '') + '</div>';

@@ -370,7 +370,20 @@ footer.site a:hover { color: var(--text) }
 /* ── the in-season section ─────────────────────────────────────────────────
    Shared by the eight tools under /weekly-intel … /my-league. Each page owns
    its own content; this is only the furniture they have in common, kept here
-   rather than inlined eight times, which is how the chrome drifted before. */
+   rather than inlined eight times, which is how the chrome drifted before.
+
+   THE READING STEP. Ken, 2026-09-21, against /fantasy: "The font on the hero
+   is fine. The font on everything below is too small." It was. The band above
+   ran a 52px headline over a 20px lede, and then every word under it dropped
+   to 14px, with the deck's card copy and the page's standing notes at 13px --
+   a step down of more than a third at the exact point where the reader stops
+   scanning and starts reading. Nothing below the hero that is PROSE is under
+   15px now: section intros, card bodies, plate and empty states and the notes
+   read at 16px, and copy inside a grid card at 15px. The meta lines (bylines,
+   kickers, rank chips) moved up one step with them, so they still read as the
+   line under the copy rather than as a second voice beside it. Data tables
+   went to 15px and no further: a board is scanned in columns, and what
+   constrains it is the width of the row, not the size of the type. */
 .is-eyebrow {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-xs);
   letter-spacing: .18em; text-transform: uppercase; color: var(--teal); margin: var(--space-6) 0 var(--space-2);
@@ -381,24 +394,24 @@ footer.site a:hover { color: var(--text) }
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5);
 }
-.is-card h3 { margin: 0 0 var(--space-2); font-size: var(--fs-md) }
-.is-card p { margin: 0; font-size: var(--fs-sm); color: var(--sec); line-height: 1.55 }
+.is-card h3 { margin: 0 0 var(--space-2); font-size: 18px }
+.is-card p { margin: 0; font-size: var(--fs-md); color: var(--sec); line-height: 1.55 }
 .is-tag {
   display: inline-block; font-size: var(--fs-3xs); font-weight: 800; letter-spacing: .1em;
   text-transform: uppercase; color: var(--goldink); background: #fdf4e2;
   border: 1px solid #f0e0b0; border-radius: 3px; padding: 2px 8px; margin-bottom: var(--space-2);
 }
 .is-tag.is-live { color: var(--teal); background: rgba(14, 124, 99, .1); border-color: rgba(14, 124, 99, .3) }
-.is-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm) }
+.is-table { width: 100%; border-collapse: collapse; font-size: 15px }
 .is-table th, .is-table td { padding: var(--space-3); border-bottom: 1px solid var(--line); text-align: left }
-.is-table th { color: var(--muted); font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .08em }
+.is-table th { color: var(--muted); font-size: var(--fs-sm); font-weight: 700; text-transform: uppercase; letter-spacing: .08em }
 .is-table td.num { text-align: right; font-variant-numeric: tabular-nums }
 .is-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch }
 .is-status { font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
 .is-status.live { color: var(--danger) }
 .is-status.final { color: var(--text) }
-.is-note { font-size: var(--fs-xs); color: var(--muted); line-height: 1.6; margin: var(--space-4) 0 0 }
-.is-empty { color: var(--muted); font-size: var(--fs-sm); margin: var(--space-4) 0 }
+.is-note { font-size: var(--fs-sm); color: var(--muted); line-height: 1.6; margin: var(--space-4) 0 0 }
+.is-empty { color: var(--muted); font-size: var(--fs-md); margin: var(--space-4) 0 }
 
 /* ── the footer's gambling disclosure ────────────────────────────────────────
    Written by tools/build-chrome.mjs onto every page, not only the ones that
@@ -434,8 +447,8 @@ footer.site a:hover { color: var(--text) }
   display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: center;
   padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line);
 }
-.is-plate-foot p { margin: 0; flex: 1; min-width: 22ch; font-size: var(--fs-xs); color: var(--muted); line-height: 1.6 }
-.is-plate-state { margin: 0; padding: var(--space-6) var(--space-4); font-size: var(--fs-sm); color: var(--muted); line-height: 1.6 }
+.is-plate-foot p { margin: 0; flex: 1; min-width: 22ch; font-size: var(--fs-sm); color: var(--muted); line-height: 1.6 }
+.is-plate-state { margin: 0; padding: var(--space-6) var(--space-4); font-size: var(--fs-md); color: var(--muted); line-height: 1.6 }
 .is-plate .is-table { margin: 0 }
 .is-plate .is-table th:first-child, .is-plate .is-table td:first-child { padding-left: var(--space-4) }
 .is-plate .is-table th:last-child, .is-plate .is-table td:last-child { padding-right: var(--space-4) }
@@ -446,7 +459,7 @@ footer.site a:hover { color: var(--text) }
 .is-val { font-family: var(--font-display); font-size: 22px; font-weight: 400; letter-spacing: .02em; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap }
 .is-table td.num, .is-table th.num { text-align: right; font-variant-numeric: tabular-nums }
 .is-table .is-who { color: var(--text); font-weight: 600 }
-.is-table .is-who small { font-weight: 400; color: var(--muted); font-size: var(--fs-2xs) }
+.is-table .is-who small { font-weight: 400; color: var(--muted); font-size: var(--fs-xs) }
 .is-rank { font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 700; color: var(--teal) }
 
 /* Tags. .is-tag is the gold default already here; these are the ones every
@@ -466,7 +479,7 @@ footer.site a:hover { color: var(--text) }
 .is-lane-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3) }
 .is-lane-head h3 { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1; letter-spacing: .03em; text-transform: uppercase; margin: 0 }
 .is-lane-head span { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
-.is-lane > p { margin: var(--space-3) 0 0; font-size: var(--fs-sm); color: var(--sec); line-height: 1.55 }
+.is-lane > p { margin: var(--space-3) 0 0; font-size: var(--fs-md); color: var(--sec); line-height: 1.55 }
 /* Two columns: eleven tools in one column made the card twice the height of
    the one beside it and put its Open button a screen below the fold. */
 .is-lane ul { list-style: none; margin: var(--space-4) 0; padding: 0; flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--space-4); align-content: start }
@@ -749,7 +762,7 @@ footer.site a:hover { color: var(--text) }
   margin-left: auto; font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--teal); white-space: nowrap;
 }
-.is-sec p { margin: var(--space-3) 0 0; font-size: var(--fs-sm); color: var(--sec); line-height: 1.6; max-width: 78ch }
+.is-sec p { margin: var(--space-3) 0 0; font-size: var(--fs-md); color: var(--sec); line-height: 1.6; max-width: 78ch }
 
 /* ── the opening band, and the ribbon under it ───────────────────────────────
    The homepage opens on a dark band that continues the masthead, with a ribbon
@@ -952,9 +965,9 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 .is-act-k { font-family: var(--font-mono); font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--teal) }
 .is-act.gold .is-act-k { color: var(--goldink) }
 .is-act.flat .is-act-k { color: var(--muted) }
-.is-act-h { font-size: var(--fs-lg); line-height: 1.2; font-weight: 700; color: var(--text); letter-spacing: -.01em }
+.is-act-h { font-size: 22px; line-height: 1.2; font-weight: 700; color: var(--text); letter-spacing: -.01em }
 .is-act-h em { font-style: normal; color: var(--teal) }
-.is-act p { margin: 0; font-size: var(--fs-xs); color: var(--sec); line-height: 1.55 }
+.is-act p { margin: 0; font-size: 15px; color: var(--sec); line-height: 1.55 }
 .is-act-go { margin-top: auto; padding-top: var(--space-2); font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
 @media (prefers-reduced-motion: reduce) { .is-act:hover { transform: none } }
 
@@ -975,14 +988,14 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 }
 .nr-card:hover { border-color: var(--line2); box-shadow: 0 8px 24px rgba(15, 23, 25, .06); text-decoration: none }
 .nr-card:hover h3 { color: var(--teal) }
-.nr-kicker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--fs-3xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
+.nr-kicker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
 .nr-nfl-logo { display: block; width: 18px; height: 18px; object-fit: contain; flex: 0 0 auto }
-.nr-card h3 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 700; color: var(--text); letter-spacing: -.005em; overflow-wrap: anywhere }
+.nr-card h3 { margin: 0; font-size: 19px; line-height: 1.3; font-weight: 700; color: var(--text); letter-spacing: -.005em; overflow-wrap: anywhere }
 .nr-card h3 a { color: inherit }
 .nr-card h3 a:hover { text-decoration: none }
 .nr-card h3 .it-story-focus { display: flex; margin: 0 0 10px; vertical-align: baseline }
-.nr-card p { margin: 0; color: var(--sec); font-size: var(--fs-sm); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
-.nr-by { display: flex; align-items: center; gap: 8px; font-size: var(--fs-2xs); color: var(--sec); margin-top: auto; padding-top: 4px; min-width: 0 }
+.nr-card p { margin: 0; color: var(--sec); font-size: var(--fs-md); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.nr-by { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--sec); margin-top: auto; padding-top: 4px; min-width: 0 }
 .nr-by a { color: inherit; font-weight: 700 }
 .nr-av { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--teal); color: #fff; font-weight: 800; font-size: 10px }
 .nr-time { margin-left: auto; color: var(--muted); white-space: nowrap; flex: 0 0 auto }
@@ -990,6 +1003,94 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 .nr-st.ok { color: var(--teal); background: rgba(14, 124, 99, .1); border-color: rgba(14, 124, 99, .3) }
 .nr-st.held { color: var(--goldink); background: #fdf4e2; border-color: #f0e0b0 }
 .nr-card.pending h3 { color: var(--sec); font-weight: 600 }
+
+/* ── the lead story ─────────────────────────────────────────────────────────
+   THE BUG THIS EXISTS FOR. The Fantasy page printed the desk's newest six
+   pieces as six identical cards, so the piece published four minutes ago and
+   the one published two days ago were the same size, the same weight and the
+   same two clamped lines. "Newest first" was the only thing on the page saying
+   which was which, and a reader scanning a grid does not read the order, they
+   read the size. A newsroom front is a lead and a column beside it: the newest
+   piece takes the lead card at the width its picture and its whole deck
+   deserve, and the rest run as headlines down the right, spread over the
+   lead's height so the last rule closes level with it. The spread is CSS, not
+   a measured height, so it survives any headline length. Under 900px the
+   column drops under the lead and the whole well is one reading order.
+
+   Used by /fantasy. The card grid above is still what /dfs and the desk index
+   run, because a section that lists a whole week has no lead to give. */
+.nr-well { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--space-5); align-items: stretch; margin: var(--space-2) 0 var(--space-6) }
+.nr-well-solo { grid-template-columns: minmax(0, 1fr) }
+/* The lead sits at its own height, and the column stretches to the row. When
+   the lead is the taller of the two the rail spreads its five items over that
+   height and the last rule closes level with the card, which is the alignment
+   this well is for. When the column is taller — six short headlines beside a
+   story with a two-line deck — the lead simply ends where its copy ends
+   rather than holding 170px of white above a stranded byline. */
+.nr-lead {
+  align-self: start;
+  display: flex; flex-direction: column; gap: 12px; min-width: 0;
+  background: var(--bg); border: 1px solid var(--line2); border-radius: var(--radius-md);
+  padding: var(--space-6) 26px; color: inherit;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.nr-lead:hover { border-color: var(--teal); box-shadow: 0 10px 30px rgba(15, 23, 25, .07) }
+.nr-lead h3 { margin: 0; font-size: clamp(26px, 2.9vw, 36px); line-height: 1.18; font-weight: 800; letter-spacing: -.015em; color: var(--text); overflow-wrap: anywhere }
+.nr-lead h3 a { color: inherit }
+.nr-lead h3 a:hover { color: var(--teal); text-decoration: none }
+/* The faces are the lead's picture, so they take their own row above the
+   headline at the size a lead earns, not the card's inline thumbnail. */
+.nr-lead h3 .it-story-focus { display: flex; margin: 0 0 14px }
+.nr-lead h3 .it-story-focus .it-player-face { width: 72px; height: 72px; min-width: 72px; border-radius: 12px }
+/* The lead's deck runs whole. Two clamped lines are what make six cards scan;
+   a lead clamped to two lines is only a bigger card. */
+.nr-lead p { margin: 0; color: var(--sec); font-size: 18px; line-height: 1.55 }
+.nr-lead-go { font-size: var(--fs-xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
+.nr-lead .nr-by { margin-top: 0; padding-top: var(--space-4); border-top: 1px solid var(--line) }
+.nr-flag { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; color: var(--goldink); background: #fdf4e2; border: 1px solid #f0e0b0 }
+
+.nr-rail { display: flex; flex-direction: column; min-width: 0 }
+.nr-rail-h { margin: 0 0 var(--space-3); font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.nr-rail ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-3); flex: 1 1 auto }
+.nr-rail li { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-bottom: var(--space-3); border-bottom: 1px solid var(--line) }
+.nr-rail li:last-child { padding-bottom: 0; border-bottom: 0 }
+.nr-rail li a { display: flex; align-items: center; color: var(--text); font-weight: 700; font-size: var(--fs-md); line-height: 1.4; overflow-wrap: anywhere }
+.nr-rail li a:hover { color: var(--teal); text-decoration: none }
+.nr-rail .it-story-focus { flex: 0 0 auto; margin: 0 10px 0 0 }
+.nr-rail .it-story-focus .it-player-face { width: 30px; height: 30px; min-width: 30px; border-radius: 6px }
+
+/* ── the boast ──────────────────────────────────────────────────────────────
+   Ken, 2026-09-21: "'You're welcome.' should be more prominent. We want to
+   boast about our successes."
+
+   The Monday scorecard is the one piece the desk is allowed to crow in. The
+   worker offers its writer the opening "YOU'RE WELCOME:" only when a single
+   call clears the headline bar, only for that player, and never more than
+   once (_voiceBlock, _worker.js) -- so the phrase is already rationed, and
+   printing it as the first two words of a 30px headline spent the whole of
+   that rationing on punctuation. It is the banner over the lead now, in the
+   display face, and the call itself -- which is the part that is actually the
+   boast -- runs under it at headline size.
+
+   The site never writes the phrase itself. The well splits it off only when
+   the desk's own headline opens with it AND a headline is left underneath;
+   anything else paints as an ordinary lead. */
+.nr-lead.is-boast { border-color: rgba(242, 169, 0, .55); background: linear-gradient(180deg, #fffaef, var(--panel) 58%) }
+/* Specific enough to beat `.nr-lead p`, which sets the dek's 18px: the banner
+   and the deck are both paragraphs inside the lead card. */
+.nr-lead p.nr-boast {
+  margin: 0 0 -4px; font-family: var(--font-display); font-weight: 400;
+  font-size: clamp(42px, 6vw, 72px); line-height: .92; letter-spacing: .015em;
+  text-transform: uppercase; color: var(--goldink);
+}
+.nr-lead.is-boast h3 { font-size: clamp(20px, 2.1vw, 26px); font-weight: 700; letter-spacing: -.005em }
+.nr-lead.is-boast .nr-by { border-top-color: rgba(242, 169, 0, .35) }
+
+@media (max-width: 900px) { .nr-well { grid-template-columns: minmax(0, 1fr) } }
+/* The lead's picture is sized against the headline beside it, not the
+   viewport: at phone width 72px faces are a fifth of the screen. */
+@media (max-width: 620px) { .nr-lead h3 .it-story-focus .it-player-face { width: 56px; height: 56px; min-width: 56px; border-radius: 10px } }
+@media (prefers-reduced-motion: reduce) { .nr-lead:hover { box-shadow: none } }
 
 /* Cards get a hairline lift on hover so a grid of them reads as a set of
    things you can open rather than a set of boxes. */
@@ -1016,8 +1117,8 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
 .is-vacant-ic { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; background: var(--elev); display: grid; place-items: center; color: var(--muted) }
 .is-vacant-ic svg { width: 16px; height: 16px }
 .is-vacant-msg { flex: 1; min-width: 0 }
-.is-vacant b { display: block; font-size: var(--fs-sm); color: var(--text); line-height: 1.4 }
-.is-vacant span { display: block; font-size: var(--fs-xs); color: var(--muted); line-height: 1.5; margin-top: 2px }
+.is-vacant b { display: block; font-size: var(--fs-md); color: var(--text); line-height: 1.4 }
+.is-vacant span { display: block; font-size: var(--fs-sm); color: var(--muted); line-height: 1.5; margin-top: 2px }
 .is-vacant span:empty { display: none }
 .is-vacant .is-btn { flex: 0 0 auto }
 @media (max-width: 560px) { .is-vacant { flex-wrap: wrap } .is-vacant .is-btn { flex: 1 1 100% } }
@@ -1319,3 +1420,70 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
   .it-viz-body { grid-template-columns: minmax(0, 1fr) }
   .it-viz-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)) }
 }
+
+/* ── /players — the directory every player card hangs off ────────────────────
+   Rendered at the edge into [data-players-index] (playersIndexHtml, _worker.js).
+   Multi-column because it is 409 names and a single column is nine screens of
+   scrolling; column-count rather than grid so a section breaks wherever it has
+   to instead of being padded to a rectangle. */
+.pl-index { margin: var(--space-6) 0 }
+.pl-sec { margin: 0 0 var(--space-6); break-inside: avoid }
+.pl-sec h2 {
+  margin: 0 0 var(--space-3); padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line); font-size: var(--fs-md);
+}
+.pl-sec h2 .is-status { margin-left: 6px }
+.pl-list { margin: 0; padding: 0; list-style: none; column-width: 15rem; column-gap: var(--space-5) }
+.pl-list li { break-inside: avoid; padding: 3px 0; font-size: var(--fs-sm) }
+.pl-list li span { color: var(--muted); font-size: var(--fs-xs) }
+
+/* ── the board's pre-render, and its deep links ──────────────────────────────
+   [data-rk-prerender] is the top of the board served WITH the page (see
+   ranksPrerender in _worker.js). /it-ranks.js removes it the moment the live
+   board has painted, so nothing here needs a hidden state: it either is the
+   board for a few hundred milliseconds, or it is the board for a crawler that
+   will never run the script. It is styled as the real one because it is the
+   real one's rows. */
+[data-rk-prerender] .rk-basis { color: var(--muted); font-size: var(--fs-xs) }
+
+/* The row, or the game card, a shared link names. Both selectors, because a
+   link can arrive two ways: ?player= / ?game=, which the script marks, and
+   #p-<slug> / #g-<slug>, which the browser marks on its own and which keeps
+   working with no script running at all. */
+tbody tr[id^="p-"]:target, tbody tr[id^="g-"]:target,
+tbody tr.rk-hit { background: color-mix(in srgb, var(--teal) 10%, transparent) }
+tbody tr.rk-hit > td:first-child,
+tbody tr[id^="p-"]:target > td:first-child,
+tbody tr[id^="g-"]:target > td:first-child { box-shadow: inset 3px 0 0 var(--teal) }
+.rk-game[id^="g-"]:target, .rk-game.rk-hit,
+.ww-game[id^="g-"]:target, .ww-game.rk-hit {
+  border-color: var(--teal); box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 16%, transparent);
+}
+/* On a wrap card the control sits in the body rather than in a heading row,
+   because the heading there is the recap's own link and must stay one target. */
+.ww-body > .gm-share { float: right; margin-left: var(--space-2) }
+/* The card's heading carries the copy control, so it is a row rather than a
+   line of text. */
+.rk-game h3 { display: flex; align-items: center; gap: var(--space-2) }
+
+/* The copy-a-link control, one per row. Quiet until the row is hovered or
+   something in it takes focus, so 250 rows do not read as 250 buttons — and
+   always shown where there is no hover to reveal it with. */
+.rk-share {
+  margin-left: 6px; padding: 0 5px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--panel); color: var(--muted); font: inherit; font-size: var(--fs-xs);
+  line-height: 1.6; cursor: pointer; opacity: 0; transition: opacity .12s ease;
+}
+.rk-who:hover .rk-share, tr:hover .rk-share, .rk-share:focus-visible { opacity: 1 }
+.rk-share:hover { border-color: var(--teal); color: var(--text) }
+.rk-share[data-copied] { opacity: 1; border-color: var(--teal); color: var(--teal) }
+@media (hover: none) { .rk-share { opacity: 1 } }
+
+/* The same control on a game card, where there is one per card rather than one
+   per row and it can simply sit in the header. */
+.gm-share {
+  margin-left: auto; padding: 1px 7px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--panel); color: var(--muted); font: inherit; font-size: var(--fs-xs); cursor: pointer;
+}
+.gm-share:hover { border-color: var(--teal); color: var(--text) }
+.gm-share[data-copied] { border-color: var(--teal); color: var(--teal) }

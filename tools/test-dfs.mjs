@@ -24,8 +24,24 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // The market-trust ladder is the site's, not a copy: the DFS slate shrinks
   // a market number by the same factors the season blend does, so lifting it
   // here is what keeps this test honest about which one it is exercising.
-  cut('const BLEND_SHRINK', 'function blendComponents') + '\n' + cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, BLEND_SHRINK };'
+  cut('const BLEND_SHRINK', 'function blendComponents') + '\n' +
+  // The box-score stat line lives with the box scores, not with the DFS
+  // block, because the recaps score the same afternoon through it.
+  cut('function boxScoreStatLine', '\n// \u2500\u2500 what the week') + '\n' +
+  // The "how long ago" phrasing is shared with the health board, so it is cut
+  // in rather than restated here: the slate note and the board must not drift.
+  cut('const PROPS_STALE_HOURS', 'async function propsHealth') + '\n' +
+  // weeklyStats and the two environment sets are the board's own scaler, and
+  // the projection ladder puts a supplemental row through the SAME one rather
+  // than a second rule that could drift from it. Cut in for that reason: the
+  // test must exercise the real scaler, not a stand-in that always agrees.
+  cut('// A season line, made per game', 'const _addStats =') + '\n' +
+  cut('const WEEK_ENV_CLAMP', '// The blend weight on the Vegas side') + '\n' +
+  cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
+  // The contest scores, so the ladder's cash exclusion is tested against the
+  // real dfsMetrics rather than asserted about it.
+  cut('const DFS_CONTESTS = {', '// \u2500\u2500 analyst memory') + '\n' +
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, scoreAny, SCORING_KDEF, BLEND_SHRINK, dfsMetrics, dfsSupplemental };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 // The scheduled workflow's own CSV writer, so the false-positive gate below
@@ -95,17 +111,43 @@ console.log('\nclassic or single game');
   // the classic cap reaches every reader. Asserted against the route source
   // because the import needs a key and a D1 to run for real.
   const adminRoute = cut("if (url.pathname === '/api/admin/dfs')", 'return json(out, 200, c);');
-  ok('the desk import refuses a single-game file before storing it',
-     /dfsSlateShape\(parsed\.rows\) === 'single-game'/.test(adminRoute)
-     && adminRoute.indexOf('dfsSlateShape') < adminRoute.indexOf('dfsStore'), 'the guard must run before dfsStore');
-  // and it refuses whatever `slate` says, because dfsSalariesRead() takes the
-  // latest fetched_at for the site and week without ever filtering on that
-  // column: a single-game file stored under any slate name is still what
-  // /api/dfs hands out.
-  ok('the refusal does not depend on the slate name',
-     !/single-game'[\s\S]{0,200}b\.slate/.test(adminRoute));
-  const salariesRead = cut('async function dfsSalariesRead', '// \u2500\u2500 the slate \u2500');
-  ok('and that read really is slate-blind, which is why', !/WHERE[^']*slate\s*=/.test(salariesRead));
+  ok('the desk import still reads the shape of the file before storing it',
+     /dfsSlateShape\(parsed\.rows\)/.test(adminRoute)
+     && adminRoute.indexOf('dfsSlateShape') < adminRoute.indexOf('dfsStore'), 'the shape must be known before dfsStore');
+  // THE GUARANTEE, which has not moved: a single-game file must never become
+  // the board a reader asking for the main slate is served. What HAS moved is
+  // how it is kept. It used to be an outright refusal, because
+  // dfsSalariesRead() ignored the slate column and one stored anywhere was the
+  // main board. The read now filters, so the file is accepted and filed under
+  // the matchup it prices -- and the four assertions below are what keep the
+  // old guarantee standing under the new mechanism.
+  //
+  // 1. The key is derived from the file's own clubs, never taken from the
+  //    caller, so no post can file one game's salaries under another.
+  ok('a single-game file is stored under the matchup it actually prices',
+     /const key = dfsSingleGameSlateKey\(parsed\.rows\)/.test(adminRoute)
+     && /under = key;/.test(adminRoute) && /slate: under/.test(adminRoute));
+  // 2. A caller naming a different slate is refused rather than quietly
+  //    overridden -- including one naming 'main' or 'weekly', which is the
+  //    exact move the original refusal existed to stop.
+  ok('...and a post naming a different slate is refused, not silently re-filed',
+     /asked && asked !== key/.test(adminRoute) && /slate_mismatch/.test(adminRoute));
+  // 3. The mirror image: a main-slate file must not land under a game key,
+  //    or the page solves a six-seat roster out of nine-seat prices.
+  ok('...and a main-slate file cannot be stored under a single-game key',
+     /asked && dfsIsSingleSlate\(asked\)/.test(adminRoute));
+  // 4. And the read that made the old refusal necessary now excludes the
+  //    single-game slates by default, so a Showdown import cannot be handed to
+  //    a caller who asked for the classic board. Both halves matter: the
+  //    filter, and taking MAX(fetched_at) WITHIN the slate rather than across
+  //    the week -- across it, a 9am Showdown import would blank an 8am Classic
+  //    one by owning a timestamp the filtered read never returns.
+  const salariesRead = cut('async function dfsSalariesRead', 'async function dfsSingleSlates');
+  ok('the classic read excludes the single-game slates rather than trusting the refusal',
+     /slate NOT LIKE 'sd:%'/.test(salariesRead));
+  ok('...and takes its newest import within that slate, never across the week',
+     (salariesRead.match(/MAX\(fetched_at\)/g) || []).length === 2
+     && !/MAX\(fetched_at\) AS ts FROM dfs_salaries WHERE site = \? AND season IS \? AND week IS \?"/.test(salariesRead));
 }
 
 // The scheduled DraftKings workflow posts to that same import, and it merges
@@ -151,6 +193,27 @@ console.log('\nthe weekly import is not mistaken for a captain file');
 }
 
 console.log('\nsite scoring');
+{
+  // The defense, on DraftKings' table rather than the site's season-long one.
+  // Every K/DEF key an operator supplies used to be dropped by scoringRules,
+  // which reads SCORING_BASE only, so a DST was scored on SCORING_KDEF: a
+  // four-point defensive touchdown, a four-point safety, and a ladder that
+  // pays 5 for ten points allowed where DraftKings pays 4.
+  const dk = H.scoringRules('ppr', H.SCORING_SITE.dk);
+  const D = (o, g) => H.scoreAny({ sacks: 0, ints: 0, fumRec: 0, defTD: 0, stTD: 0, safety: 0, ...o }, 'DST', dk, g || 1);
+  ok('a site\'s defensive rules survive scoringRules at all', dk.defensiveTD === 6 && Array.isArray(dk.pointsAllowed) && dk.pointsAllowed.length === 7,
+     JSON.stringify({ td: dk.defensiveTD, tiers: dk.pointsAllowed && dk.pointsAllowed.length }));
+  ok('a defensive touchdown is six on DraftKings, not the site default of four', near(D({ defTD: 1, ptsAllowed: 24 }), 6, 0.001), String(D({ defTD: 1, ptsAllowed: 24 })));
+  ok('a return touchdown is six', near(D({ stTD: 1, ptsAllowed: 24 }), 6, 0.001));
+  ok('a safety is two, not four', near(D({ safety: 1, ptsAllowed: 24 }), 2, 0.001), String(D({ safety: 1, ptsAllowed: 24 })));
+  ok('a sack is one and a takeaway is two', near(D({ sacks: 1, ptsAllowed: 24 }), 1, 0.001) && near(D({ ints: 1, ptsAllowed: 24 }), 2, 0.001) && near(D({ fumRec: 1, ptsAllowed: 24 }), 2, 0.001));
+  ok('and five sacks earn no bonus, which the site default would pay', near(D({ sacks: 5, ptsAllowed: 24 }), 5, 0.001), String(D({ sacks: 5, ptsAllowed: 24 })));
+  // The ladder, rung by rung. A shutout is ten and a blowout costs four.
+  const ladder = [[0, 10], [3, 7], [6, 7], [7, 4], [13, 4], [14, 1], [20, 1], [21, 0], [27, 0], [28, -1], [34, -1], [35, -4], [52, -4]];
+  const wrong = ladder.filter(([pa, want]) => !near(D({ ptsAllowed: pa }), want, 0.001));
+  ok('the points-allowed ladder pays DraftKings\' figure at every rung', !wrong.length,
+     wrong.map(([pa, want]) => pa + ' allowed wanted ' + want + ', got ' + D({ ptsAllowed: pa })).join('; '));
+}
 {
   const dk = H.scoringRules('ppr', H.SCORING_SITE.dk), fd = H.scoringRules('ppr', H.SCORING_SITE.fd);
   ok('DraftKings pays the 300-yard passing bonus', near(H.scoreStats({ passYd: 300, passTD: 2 }, 'QB', dk), 12 + 8 + 3));
@@ -338,13 +401,13 @@ console.log('\nthe weekly betting market');
 {
   // A player the books priced: three markets, six books, an anytime-TD price.
   const priced = { vegas: { basis: 'props', confidence: 'HIGH', td: null } };
-  const w0 = { env: {}, vegasProjection: { status: 'full', priced: ['rec', 'recYd', 'anytimeTD'], missing: [], books: 6, ageHours: 0.4,
+  const w0 = { env: {}, vegasProjection: { status: 'full', priced: ['rec', 'recYd', 'anytimeTD'], missing: [], books: 6, lastMoveHours: 0.4,
                                            td: { probability: 41.2, books: 6, devigged: true } } };
   const m = H.dfsMarketRead(priced, w0, 18.4, 14.0);
   ok('a quoted player is marked quoted', m.quoted === true && m.basis === 'props');
   ok('the markets the books actually posted come across, in words', m.priced.join(',') === 'anytimeTD,rec,recYd'.split(',').sort().join(',') || m.priced.length === 3);
   ok('...with a plain-language label for each', m.pricedLabels.includes('receiving yards') && m.pricedLabels.includes('receptions'));
-  ok('the book count and the age of the pull come across', m.books === 6 && m.ageHours === 0.4);
+  ok('the book count and the age of his last line move come across', m.books === 6 && m.lastMoveHours === 0.4);
   ok('a fully quoted projection is trusted in full', m.shrink === 1 && near(m.points, 18.4, 0.05));
   ok('the devigged anytime-touchdown price comes across with its books', m.tdProbability === 41.2 && m.tdBooks === 6 && m.tdDevigged === true);
 
@@ -394,24 +457,34 @@ console.log('\nthe weekly betting market');
   // Coverage, said as a number. `hasProps` was a boolean and a boolean cannot
   // answer "priced how much of it, by how many books, how long ago".
   const rows = [
-    { onBoard: true, market: { basis: 'props', quoted: true, priced: ['rec', 'recYd'], books: 6, ageHours: 2 } },
-    { onBoard: true, market: { basis: 'props-partial', quoted: true, priced: ['anytimeTD'], books: 4, ageHours: 0.5 } },
-    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], books: null, ageHours: null } },
-    { onBoard: true, available: false, market: { basis: 'props', quoted: true, priced: ['rec'], books: 9, ageHours: 1 } },
-    { onBoard: false }
+    { onBoard: true, projected: true, market: { basis: 'props', quoted: true, priced: ['rec', 'recYd'], books: 6, lastMoveHours: 2 } },
+    { onBoard: true, projected: true, market: { basis: 'props-partial', quoted: true, priced: ['anytimeTD'], books: 4, lastMoveHours: 0.5 } },
+    { onBoard: true, projected: true, market: { basis: 'gamelines', quoted: false, priced: [], books: null, lastMoveHours: null } },
+    { onBoard: true, projected: true, available: false, market: { basis: 'props', quoted: true, priced: ['rec'], books: 9, lastMoveHours: 1 } },
+    { onBoard: false, projected: false }
   ];
-  const cov = H.dfsPropCoverage(rows);
+  const cov = H.dfsPropCoverage(rows, Date.now() - 30 * 60000);
   ok('coverage counts the priced against the playable', cov.players === 3 && cov.priced === 2 && cov.coverage === 67);
   ok('a benched man is not counted as slate coverage', cov.avgBooks === 5);
   ok('the union of quoted markets is reported', cov.markets.join(',') === 'anytimeTD,rec,recYd');
-  ok('and the freshest pull behind them', cov.freshestHours === 0.5);
+  ok('and the most recently moved line behind them', cov.freshestMoveHours === 0.5);
+  // The two clocks are different questions and the note used to answer only
+  // the first while claiming it was the second. A feed read half an hour ago
+  // is live however long the books have sat on their numbers.
+  ok('...beside when the feed was actually read', cov.pullAgeHours === 0.5 && cov.pullAgeHours !== null);
   ok('the note quotes the real numbers', /2 of 3 players/.test(H.dfsPropNote(cov)) && /receiving yards/.test(H.dfsPropNote(cov)));
+  ok('the note says read, not pulled, and keeps the move separate',
+     /feed was read within the hour/.test(H.dfsPropNote(cov))
+     && /most recent line move on the slate landed within the hour/.test(H.dfsPropNote(cov))
+     && !/pulled/.test(H.dfsPropNote(cov)));
+  ok('a slate with no pull clock yet simply does not claim one',
+     !/feed was read/.test(H.dfsPropNote(H.dfsPropCoverage(rows))));
   // The whole slate priced on touchdowns and nothing else: the state that
   // reads as "props are working" on one page and "no props" on another.
   const tdOnlyCov = H.dfsPropCoverage([
-    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: true, shortPriced: ['anytimeTD'] } },
-    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: true, shortPriced: ['anytimeTD'] } },
-    { onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: false, shortPriced: [] } }
+    { onBoard: true, projected: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: true, shortPriced: ['anytimeTD'] } },
+    { onBoard: true, projected: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: true, shortPriced: ['anytimeTD'] } },
+    { onBoard: true, projected: true, market: { basis: 'gamelines', quoted: false, priced: [], shortOfProjection: false, shortPriced: [] } }
   ]);
   ok('a touchdown-only slate counts the priced-but-short apart from the unpriced',
      tdOnlyCov.priced === 0 && tdOnlyCov.quotedButShort === 2 && tdOnlyCov.shortMarketLabels.join(',') === 'anytime TD');
@@ -423,7 +496,7 @@ console.log('\nthe weekly betting market');
      /still comes from his game/.test(H.dfsPropNote(tdOnlyCov))
      && /standalone market projection is built from/.test(H.dfsPropNote(tdOnlyCov)));
 
-  const noneCov = H.dfsPropCoverage([{ onBoard: true, market: { basis: 'gamelines', quoted: false, priced: [] } }]);
+  const noneCov = H.dfsPropCoverage([{ onBoard: true, projected: true, market: { basis: 'gamelines', quoted: false, priced: [] } }]);
   ok('with nothing priced the note says so and says what it falls back to',
      /No player prop has reached this slate/.test(H.dfsPropNote(noneCov)) && /falls back to the consensus/.test(H.dfsPropNote(noneCov)));
   ok('an empty slate says nothing rather than claiming 0%', H.dfsPropNote(H.dfsPropCoverage([])) === null);
@@ -622,18 +695,168 @@ console.log('\nthe DFS page explanations');
      page.includes('function solveFormat()') && page.includes('ITDfs.formatFor(site, style)')
      && page.includes('format: f.fmt, slots: f.fmt.slots, flex: f.fmt.flex')
      && page.includes("mult: f.fmt.mult || null, tierSlots: f.fmt.tierSlots || null, minTeams: f.fmt.minTeams || 0"));
-  // The guarantee: a single-game roster is never priced off main-slate
-  // salaries. What the reader is offered instead is the one thing that fixes
-  // it -- the contest's own export -- and the control for that is rendered
-  // into this notice rather than sitting over every board.
-  ok('a single-game roster is never priced off the main slate, and asks for the file that would fix it',
+  // A single-game roster off the main slate used to be refused outright,
+  // because main-slate salaries are not the ones the contest charges. It is
+  // built now -- which six men, and who wears the multiplier, is the half of
+  // the answer that survives the difference -- and the half that does not is
+  // handled rather than hidden: the prices printed stay the slate's real ones
+  // and the CAP is scaled to what six seats and a 1.5x multiplier are worth on
+  // a board priced for nine, so the budget bites the way the lobby's does.
+  ok('a single-game roster is built off the main slate against an equivalent budget, never off invented prices',
      page.includes("fmt.kind === 'salary' && fmt.single && priced !== 'single-game'")
-     && page.includes('a roster you could not enter')
-     && page.includes('so the board declines rather than printing one')
-     && page.includes('out.needsFile = true;')
-     && page.includes("f.needsFile ? uploadControl(fmt) : ''"));
-  ok('a Tiers roster is never invented out of salary bands',
-     page.includes("ITDfs.tierFormat(") && page.includes('inventing them out of salary would build a roster nobody can enter'));
+     && page.includes("out.approx = 'pricing';")
+     && page.includes('out.capBasis = equivalentCap(fmt);')
+     && page.includes('function equivalentCap(fmt)')
+     && page.includes('return Math.round(pricedCap * units / pricedSeats / 100) * 100;'));
+  // The estimate is never silent, and the file that ends it is inside the
+  // sentence that admits to it.
+  ok('...and says so above the roster, with the export that prices it exactly',
+     page.includes('var approxNote = f.approx')
+     && page.includes('Estimated from the main slate')
+     && page.includes('and the lobby will charge you different ones.')
+     && page.includes("(f.needsFile ? uploadControl(f.fmt) : '')")
+     && page.includes('+ approxNote'));
+  // The panel shows the budget that was used rather than the lobby number the
+  // board did not solve against -- and a format with its own cap takes its own
+  // cap back, so an equivalent budget cannot leak into the next format.
+  ok('...and the cap box carries the budget the roster was solved on',
+     page.includes("if (!tuned && $('dfCap') && f.fmt.cap > 0) $('dfCap').value = f.capBasis || f.fmt.cap;"));
+  // AN UNPRICED WEEK IS NOT A DEAD END. The desk imports one main slate a week;
+  // before it lands, /dfs answered every format and every setup with the same
+  // sentence -- "There is no lineup to solve until the salaries are posted" --
+  // written straight into the lineup box by slateNone(). A reader who had
+  // answered all three steps for a Showdown Captain got that and nothing else,
+  // and the file route that would have priced their contest is rendered INTO
+  // that box, so it could never be reached. The contest is already priced in
+  // the reader's own lobby and /api/dfs/slate prices that file without the
+  // desk, so the board asks for it instead of sending them away.
+  ok('an unpriced week names what is missing and offers the file, rather than one flat sentence',
+     // The markup assignment, not the prose: the sentence itself survives in
+     // the comment that records why it went, and a gate that could not tell
+     // the two apart would fail the next time that comment is reflowed.
+     !page.includes('<p class="is-empty">There is no lineup to solve')
+     && page.includes('if (!slate) {\n      out.ready = false;')
+     && page.includes('No \' + siteLabel() + \' salaries are posted for this week yet')
+     && page.includes('the contest you are entering is already priced on its own page in the lobby'));
+  ok('...and the board is actually re-solved for it, at load and on every answer the reader gives',
+     page.includes('if (!window.ITDfs) { coachSync(); return; }')
+     && !page.includes('if (!slate || !window.ITDfs) { coachSync(); return; }')
+     && page.includes("if (f0.kind === 'season') sec = 'lineup';")
+     && page.includes("$('dfNav').hidden = !setupReady() || f0.kind === 'season';"));
+  // A pick contest has no roster and no lobby export, so it is never asked for
+  // a file it cannot produce.
+  ok('...but a pick contest is told what it is waiting for rather than asked for an export',
+     page.includes("if (fmt.kind === 'picks') {")
+     && page.includes('The board fills in as soon as the salaries post.'));
+  // THE DESK'S OWN SINGLE-GAME SLATES. A Showdown used to have exactly one
+  // route to real prices: a CSV the reader downloaded. The desk imports them
+  // now, so the page asks for the matchup it needs and only falls back to the
+  // file where the desk has not priced that game.
+  ok('a single-game format asks the desk for its own matchup rather than the main board',
+     page.includes('function deskSlateFor()')
+     && page.includes("return availableSingles.indexOf(keys[0]) >= 0 ? 'sd:' + keys[0] : null;")
+     && page.includes("'&slate=' + encodeURIComponent(want)"));
+  // ...and only for a game the desk actually holds: an unimported matchup
+  // returns null so the board reaches the file notice instead of fetching a
+  // slate nobody stored.
+  ok('...only for a game the desk has actually priced', page.includes('availableSingles.indexOf(keys[0]) >= 0'));
+  // Re-solving on every keystroke would throw away the reader's locks and
+  // excludes for a slate that did not change.
+  ok('...and re-fetches only when the answer changed', page.includes('if (want === loadedSlate) return false;'));
+  // A reader who handed over their own file keeps it; the desk does not
+  // silently replace what they chose.
+  ok('...and never over a file the reader handed over themselves', page.includes('if (upGet(site)) return false;'));
+  // Switching back to a multi-game format has to come back to the main board,
+  // or the page solves a nine-seat roster against six-seat prices.
+  ok('...and every setup change routes through it, falling back to a plain render',
+     (page.match(/if \(!syncSlate\(\)\) render\(\);/g) || []).length === 3);
+  // A Tiers contest posts its own buckets and the main slate carries none, so
+  // the board used to decline the format. It cuts the pool into price bands
+  // and solves that instead -- the file's own tiers still win where the file
+  // is here -- and it never lets the bands pass for the contest's.
+  ok('a Tiers roster falls back to price bands, and the file\u2019s own tiers still win',
+     page.includes('var tf = ITDfs.tierFormat(tp);')
+     && page.includes('if (tf) { out.fmt = tf; out.tierCount = tf.tiers.length; return out; }')
+     && page.includes('var derived = ITDfs.salaryTierFormat(tp);')
+     && page.includes("out.approx = 'tiers';"));
+  ok('...and the board says whose bands they are',
+     page.includes('Bands, not the contest')
+     && page.includes('bands by salary, most expensive first')
+     && page.includes('Price the Tiers export and the board solves the posted tiers exactly.'));
+  // The bands are the BOARD's, so they are written onto the copies the solve
+  // runs on. Writing them onto the slate would leave a derived tier on a
+  // player every other format shares.
+  ok('...onto the solve\u2019s own copies, never onto the slate',
+     page.includes('if (f.tierOf) players.forEach(function (q) { q.tier = f.tierOf(q); });'));
+  // The coach speaks about the roster on screen, so an estimated board is
+  // declared to it: a reader must not be told a main-slate price is the
+  // lobby's, or that Iron Tuna's bands are the contest's tiers.
+  ok('the Value Coach is told when the board it describes is an estimate',
+     page.includes('approximation: (function () {')
+     && page.includes('kind: f.approx, whatWasEstimated: f.approxNote')
+     && page.includes('solvedAgainstCap: f.capBasis || undefined'));
+  // A single-game contest is compared over the game the reader picked. Six
+  // seats drawn from four games is not a contest anybody can enter.
+  // WHEN THERE IS NO ROSTER, THE BOARD SAYS WHY. Every failed solve used to
+  // print the same sentence -- clear a constraint, loosen the cap -- and a
+  // reader whose games had already kicked off, or whose window carried no
+  // defense, had nothing to clear. Each obstacle names itself now, and the
+  // generic sentence is only what is left when none of them fits.
+  ok('a board with no roster on it names the obstacle rather than blaming the constraints',
+     page.includes('function noRosterNote(r, players, f, cap, lockKeys, exclKeys)')
+     && page.includes('has already been played.')                       // the week is over
+     && page.includes('is available this week.')                        // everybody ruled out
+     && page.includes('can fill the ')                                  // a seat nobody fills
+     && page.includes('requires players from both teams')               // the both-teams rule
+     && page.includes('eligible player')                                // fewer bodies than seats
+     && page.includes('The cheapest legal roster '));                   // the cap
+  ok('...and the generic sentence is printed only when nothing more precise is known',
+     page.includes('var why = shortfallNote(players, lock, f, cap) || noRosterNote(r, players, f, cap, lock, excl);')
+     && page.includes("+ (why ? '' : '<p class=\"is-empty\">No lineup satisfies those constraints'"));
+  // The pool it describes is the one the SOLVE had: an exclusion is out, a man
+  // who is not playing is out, a man whose game is over is out, and a lock
+  // overrules all three. A sentence about a board the optimizer never saw
+  // would send the reader after the wrong thing.
+  ok('...against the pool the optimizer actually solved from',
+     page.includes('if (exclOn[q.id]) return;')
+     && page.includes('if (!lockOn[q.id] && (q.available === false || isPlayed(q))) return;')
+     && page.includes('if (!thinOn[q.id]) pool.push(q);'));
+  // A cash objective declines a season average, and on a thin slate that rule
+  // is what empties the seat. Running the same check with those men back in is
+  // how the page tells a short slate from a strict objective, and it says
+  // which of the two the reader is looking at.
+  ok('...and separates a slate that cannot fill the roster from an objective that will not',
+     page.includes('if (withThin.length > pool.length && !problem(withThin)) {')
+     && page.includes('will not spend a seat on a season average'));
+  // Telling a reader to widen a pool they cannot widen -- a single-game
+  // format, or a pool that is already the whole slate -- is noise.
+  ok('...and only offers a wider pool where there is one to offer',
+     page.includes('var canWiden = !!(games && !fmt.single && slate && games < (gamesForSlate(slate) || []).length);'));
+  ok('Play of the Week weighs a single-game contest over the selected game only',
+     page.includes("var src = fmt && fmt.single ? (filteredSlate() || s) : s;")
+     && page.includes("var pool = (src.players || []).filter(function (p) { return projected(p); });"));
+  // WHOSE GAME THE NOTICE IS ABOUT. The first version of it ended by
+  // announcing which matchups the desk had priced and said nothing about the
+  // one the reader had chosen, so a reader who picked the other game on the
+  // slate read "the desk has already priced LA vs NYG" directly under a board
+  // that was not solving on their own game. That reads as a broken site
+  // rather than as a game nobody has imported. The notice is an estimate
+  // rather than a refusal now, and it still leads with their matchup.
+  ok('the single-game estimate names the matchup the reader actually picked',
+     page.includes('var deskHas = one && availableSingles.indexOf(one) >= 0;')
+     && page.includes("'The desk has not imported ' + prettyGame(one)"));
+  ok('...and lists the other games as OTHER games, never as this one',
+     page.includes("var others = availableSingles.filter(function (k) { return k !== one; })")
+     && page.includes("' The desk has imported ' + others.join"));
+  // And the choice itself is labelled, so the reader does not have to pick a
+  // game to find out whether it can solve.
+  ok('the games picker says which matchups the desk has priced',
+     page.includes("var markSingles = !!(style.single && fmt && fmt.kind === 'salary');")
+     && page.includes("bits.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file')"));
+  ok('...on the custom grid too, which is the other way a pool is chosen',
+     page.includes("if (markSingles) meta.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file');"));
+  ok('...and a multi-game format is not labelled, because any game solves there',
+     page.includes('style.single && fmt'));
   // The always-on panel that #293 removed does not come back. The route does,
   // because five formats are priced on a file the desk import never stores,
   // and the control for it is scoped to the notice that needs it.
@@ -666,7 +889,7 @@ console.log('\nthe DFS page explanations');
   ok('...and on a pick contest, which has no roster to compare shapes across',
      page.includes('not a payout question') && page.includes('no payout curve to move along'));
   ok('...and names the format it advised on, once the reader has chosen one',
-     page.includes("var named = fmt && fmt.label && (site !== 'dk' || setupReady());"));
+     page.includes("var named = fmt && fmt.label && setupReady();"));
   ok('a slate priced from a reader\u2019s file says so, and offers the way back',
      page.includes("slate.source === 'upload'") && page.includes('Priced from your own file, kept in this browser')
      && page.includes("id=\"dfUpClear\""));
@@ -827,8 +1050,15 @@ console.log('\nthe DFS page explanations');
   ok('the objective row offers a prop-first market build', page.includes('data-mode="market"') && page.includes('Market read'));
   ok('the player pool says whether a man was quoted or inferred', page.includes('function marketTag(p)') && page.includes('df-mkt-quoted') && page.includes('df-mkt-inferred') && page.includes('MARKET_CHIP'));
   ok('every recommended player carries what the books actually posted on him', page.includes('function marketPhrase(p)') && page.includes('The books posted ') && page.includes('df-mktline'));
+  // The store writes a row only when a price changes, so the per-player age is
+  // the last MOVE, never the last pull. Calling it a pull told a reader the
+  // feed was two days dead when it had been read minutes earlier.
+  ok('a player\u2019s market age is called a line move, not a pull',
+     page.includes('His line last moved ') && page.includes('m.lastMoveHours')
+     && !/pulled '/.test(page) && !page.includes('pulledHoursAgo'));
   ok('the lead card shows how much of the roster the market priced, and says so when none of it was',
-     page.includes('function propsNote(l)') && page.includes('picks are priced by the books') && page.includes('No player prop is behind this lineup'));
+     page.includes('function propsNote(l)') && page.includes(' priced by the books.</b>')
+     && page.includes('No player prop is behind ') && page.includes('the rest of this lineup') && page.includes('this lineup'));
   ok('the slate dashboard reports prop coverage as a number, not a boolean', page.includes("card('Books priced'") && page.includes('s.props.coverage'));
   ok('a quoted anytime-touchdown price is named as devigged market, never as a derived one', page.includes("p.tdBasis === 'anytime-td-market'") && page.includes('devigged'));
   ok('a partly quoted man says which part of his line is still the game environment', page.includes("m.status === 'partial'") && page.includes('still the game environment'));
@@ -923,6 +1153,158 @@ console.log('\nthe operator average when the file has none');
   const loveUsage = { players: { [_oddsNorm('Jeremiyah Love') + '|RB']: { season: { games: 1, stats: { rushYd: 80, rushTD: 1, rec: 2, recYd: 10 } } } } };
   ok('and the overlay wins over the pin when it has his line', H.buildDfsSlate('dk', [...sal, love], WEEK, { usage: loveUsage }).players.find(p => p.name === 'Jeremiyah Love').operatorFppg === 17);
   ok('the pin is per site', H.buildDfsSlate('fd', [...sal, love], WEEK, {}).players.find(p => p.name === 'Jeremiyah Love').operatorFppg === null);
+}
+
+console.log('\nthe projection ladder');
+{
+  // The bug this section exists for: DraftKings prices roughly twice as many
+  // bodies as the curated PROJECTIONS pool carries, and the surplus is almost
+  // exactly the $3,000 minimum-salary tier. Every one of them used to arrive
+  // as a stub with onBoard:false and be filtered out of the metrics, the
+  // value boards, the stacks and the optimizer -- so a punt play the operator
+  // had priced was invisible on the slate that priced it.
+  const punt = { name: 'Elic Ayomanor', position: 'WR', team: 'DET', opponent: 'GB', salary: 3000, operatorFppg: null };
+  const debut = { name: 'Nobody Atall', position: 'RB', team: 'BUF', opponent: 'NYJ', salary: 3000, operatorFppg: null };
+  const vet = { name: 'Priced Veteran', position: 'TE', team: 'NYJ', opponent: 'BUF', salary: 3000, operatorFppg: 6.4 };
+  // Four games: 20 catches, 240 receiving yards, 2 TDs. At DK PPR that is
+  // (20 + 24 + 12) / 4 = 14 a game, and no 100-yard bonus, because a season
+  // total cannot say which game earned one.
+  const puntUsage = { players: { [_oddsNorm('Elic Ayomanor') + '|WR']: { season: { games: 4, stats: { rec: 20, recYd: 240, recTD: 2 } } } } };
+  const s = H.buildDfsSlate('dk', [...SAL, punt, debut, vet], WEEK, { usage: puntUsage });
+  const row = s.players.find(p => p.name === 'Elic Ayomanor');
+  const none = s.players.find(p => p.name === 'Nobody Atall');
+  const oper = s.players.find(p => p.name === 'Priced Veteran');
+
+  ok('a priced man the board has never heard of still reaches the slate', !!row && row.onBoard === false);
+  ok('...and carries a projection off his own season line', near(row.ironTunaPoints, 14, 0.11), String(row.ironTunaPoints));
+  ok('...which says out loud that it is a season line, not a board projection', row.projectionBasis === 'usage' && row.supplemental === true && row.supplementalGames === 4);
+  ok('...and is graded low, because it is what he has done and not a forecast of Sunday', row.vegasConfidence === 'LOW');
+  ok('...and gets a key, without which the optimizer cannot hold him', row.key === _oddsNorm('Elic Ayomanor') + '|WR');
+  ok('...and his three numbers agree, because one line produced all three', row.vegasPoints === row.ironTunaPoints && row.consensusPoints === row.ironTunaPoints);
+  ok('...and claims no market, rather than a fit nobody fitted', row.market.basis === 'none' && row.marketQuoted === false && row.market.points === row.ironTunaPoints);
+  ok('...and no touchdown price, rather than a zero that reads like a forecast', row.tdProbability === null && row.tdBasis === null);
+  ok('...and takes the club’s fixture off the board rather than leaving it blank', row.opponent === 'GB' && row.teamTotal === 24);
+
+  // Found by rendering the page: the edge column printed 0.0 for every
+  // supplemental row, which reads as "the model agrees with DraftKings to the
+  // tenth" when it actually means both figures are the same number.
+  ok('...and claims no edge over an average derived from the same line it was built from', row.projectionVsFppg === null);
+  // The page has a client-side fallback that recomputes the edge when the
+  // server sends none, for slates served before projectionVsFppg existed. On
+  // a supplemental row the null is a decision, not a gap, and letting that
+  // fallback fire put the flat 0.0 straight back on screen.
+  ok('...and the page does not quietly recompute the edge it was deliberately not sent',
+     /if \(p\.supplemental\) return null;/.test(fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8')));
+  const twoSource = { name: 'Two Source', position: 'WR', team: 'DET', opponent: 'GB', salary: 3000, operatorFppg: 9.5 };
+  const ts = H.buildDfsSlate('dk', [...SAL, twoSource], WEEK, { usage: { players: { [_oddsNorm('Two Source') + '|WR']: { season: { games: 2, stats: { rec: 10, recYd: 120, recTD: 1 } } } } } })
+    .players.find(p => p.name === 'Two Source');
+  ok('...but keeps the edge where his own line really is a second source against the operator’s',
+     ts.projectionBasis === 'usage' && ts.operatorFppgBasis === 'operator' && near(ts.projectionVsFppg, _oddsRound(ts.ironTunaPoints - 9.5), 0.11));
+
+  ok('a man with no football behind him falls to the operator’s own average', oper.projectionBasis === 'operator' && near(oper.ironTunaPoints, 6.4, 0.01) && oper.supplemental === true);
+  ok('and a true debut stays off the board rather than being given an invented number', none.projected === false && none.projectionBasis === 'none' && none.ironTunaPoints === undefined);
+
+  ok('a board row says which rung it came off too', s.players.find(p => p.name === 'Josh Allen').projectionBasis === 'board' && s.players.find(p => p.name === 'Josh Allen').supplemental === false);
+  // Three rescued, not two: the fixture's own $3,000 'Nobody Famous' is a man
+  // the board has never carried and the operator has priced, which is the
+  // case this whole section is about, and he is now picked up by the same
+  // ladder rather than staying a stub.
+  ok('the slate counts the rescued and the genuinely missing apart',
+     s.supplemented === 3 && s.unprojected === 1 && s.unmatched === 4,
+     s.supplemented + '/' + s.unprojected + '/' + s.unmatched);
+  ok('...and the fixture\u2019s own unmatched $3,000 body is one of the rescued',
+     s.players.find(p => p.name === 'Nobody Famous').projectionBasis === 'operator');
+
+  // The number moves with the game, exactly as a board projection does: this
+  // is weeklyStats' own rule (touchdowns follow the environment, yards at the
+  // square root) rather than a second scaler that could drift from it.
+  const hot = { ...WEEK, players: WEEK.players.map(p => p.team === 'DET'
+    ? { ...p, weeks: [{ ...p.weeks[0], env: { ...p.weeks[0].env, factor: 1.2 } }] } : p) };
+  const scaled = H.buildDfsSlate('dk', [...SAL, punt], hot, { usage: puntUsage }).players.find(p => p.name === 'Elic Ayomanor');
+  ok('a supplemental number is scaled by his club’s week, like every other row', scaled.ironTunaPoints > row.ironTunaPoints, scaled.ironTunaPoints + ' vs ' + row.ironTunaPoints);
+
+  // A defense matches by club, so an unmatched one means the board itself is
+  // missing -- and there is no per-player usage line behind a defense to fall
+  // back on. Supplementing one would be inventing the number outright.
+  const ghostD = { name: 'Ghost Defense', position: 'DST', team: 'MIN', opponent: 'CHI', salary: 3000, operatorFppg: 8 };
+  ok('a defense is never supplemented, because there is no line behind it to use',
+     H.buildDfsSlate('dk', [...SAL, ghostD], WEEK, { usage: puntUsage }).players.find(p => p.name === 'Ghost Defense').projected === false);
+
+  // The measured board, which is what every DFS surface actually reads.
+  const gpp = H.dfsMetrics(s.players, 'gpp');
+  ok('a supplemental row is measured with everyone else in a tournament', gpp.rows.some(r => r.name === 'Elic Ayomanor') && gpp.supplemental === 3, String(gpp.supplemental));
+  ok('...and is scored on the same value scale rather than a private one', typeof gpp.rows.find(r => r.name === 'Elic Ayomanor').value === 'number');
+  // Cash is won on a floor, and a season average is the one number that
+  // cannot tell you whether a man has one this week.
+  const cash = H.dfsMetrics(s.players, 'cash');
+  ok('...and is kept out of a cash build, where certainty is the whole game', !cash.rows.some(r => r.supplemental) && cash.supplemental === 0);
+  ok('...while the board rows are all still there', cash.rows.length === gpp.rows.length - 3, cash.rows.length + ' vs ' + gpp.rows.length);
+
+  // An unavailable supplemental man is benched like anyone else: a $3,000
+  // certain zero is still a certain zero.
+  const outSlate = H.buildDfsSlate('dk', [...SAL, punt], WEEK, { usage: puntUsage, week: 1,
+    availability: { weekly: { [_oddsNorm('Elic Ayomanor') + '|WR']: { status: 'Out', note: 'hamstring' } } } });
+  const benched = outSlate.players.find(p => p.name === 'Elic Ayomanor');
+  ok('a supplemental man the report ruled out is benched like anyone else', benched.available === false && benched.weekStatus === 'Out');
+  ok('...and is named in the slate’s unavailable list rather than dropped in silence', outSlate.unavailableNames.some(u => u.name === 'Elic Ayomanor'));
+
+  // The optimizer is the surface the tier exists for.
+  const pool = s.players.filter(p => p.projected).map(p => ({ ...p, id: p.key }));
+  const gppBuild = DFS.build(pool, { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'ceiling', lineups: 1 });
+  ok('the optimizer can now reach a minimum-salary body at all', gppBuild.ok && gppBuild.poolSize > slate.players.filter(p => p.onBoard).length);
+  const floorBuild = DFS.build(pool, { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'floor', lineups: 1 });
+  ok('...but the safest-floor build declines to spend the cap on one', floorBuild.ok && floorBuild.lineups[0].players.every(p => !p.supplemental) && floorBuild.thinCount === 3, String(floorBuild.thinCount));
+  ok('...and says which ones it declined, rather than dropping them in silence', floorBuild.thin.some(t => t.name === 'Elic Ayomanor' && t.basis === 'usage'));
+  const doc = fs.readFileSync(path.join(ROOT, 'docs/dfs-metrics.md'), 'utf8');
+  ok('the ladder is written down, every rung of it',
+     /Where a player\u2019s projection comes from|Where a player's projection comes from/.test(doc)
+     && ['`board`', '`usage`', '`operator`', '`none`'].every(r => doc.includes(r))
+     && /backward-looking/.test(doc) && /does not claim to have found the leverage/.test(doc));
+  const locked = DFS.build(pool, { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'floor', lock: [_oddsNorm('Elic Ayomanor') + '|WR'], lineups: 1 });
+  ok('...unless the reader locks him, because a lock is a decision', locked.ok && locked.lineups[0].players.some(p => p.id === _oddsNorm('Elic Ayomanor') + '|WR'));
+  ok('a lineup seat says which rung its number came off', gppBuild.lineups[0].players.every(p => typeof p.projectionBasis === 'string'));
+
+  // A board outage is a different failure from one man missing from the pool:
+  // every row falls to a season average, and a page that says "4 of them"
+  // when it means "all of them" reads like a working board built the usual
+  // way. The card changes its sentence rather than understating it.
+  const noBoard = H.buildDfsSlate('dk', [...SAL, punt], null, { usage: puntUsage });
+  ok('with no board at all every skill row falls to a season line rather than the page emptying',
+     noBoard.supplemented > 0 && noBoard.players.filter(p => p.projected).every(p => p.supplemental));
+  ok('...and the page says so in place of the count, rather than understating it',
+     /None of this slate is on Iron Tuna\u2019s board|None of this slate is on Iron Tuna’s board/.test(fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8')));
+
+  // The ladder and the played-game work have to compose, and they meet on
+  // exactly the row most likely to be misread: a backward-looking number and
+  // a finished game look identical until one of them says which it is. A
+  // supplemental row banks its box score like every other visible row, so it
+  // is never the one man on the slate still quoting a season average at a
+  // game that has been played.
+  {
+    const bl = (name, team, o) => ({ name, key: _oddsNorm(name), team,
+      pass: { att: 0, cmp: 0, yd: 0, td: 0, int: 0 }, rush: { att: 0, yd: 0, td: 0, ...((o || {}).rush || {}) },
+      rec: { tgt: 0, rec: 0, yd: 0, td: 0, ...((o || {}).rec || {}) }, fumLost: 0 });
+    const ayo = bl('Elic Ayomanor', 'DET', { rec: { tgt: 9, rec: 7, yd: 88, td: 1 } });
+    const acts = { games: 13, final: 2, teams: new Set(['DET', 'GB']),
+      lines: new Map([[ayo.key, [ayo]]]) };
+    const done = H.buildDfsSlate('dk', [...SAL, punt], WEEK, { usage: puntUsage, actuals: acts })
+      .players.find(p => p.name === 'Elic Ayomanor');
+    // 7 receptions, 88 yards, a touchdown at DraftKings PPR: 7 + 8.8 + 6.
+    ok('a supplemental man whose game is over banks his box score like anyone else',
+       done.gamePlayed === true && done.actualBasis === 'box-score' && near(done.actualPoints, 21.8, 0.11), JSON.stringify({ g: done.gamePlayed, a: done.actualPoints }));
+    ok('...and still says his projection was a season line, because that is what it was',
+       done.projectionBasis === 'usage' && done.supplemental === true);
+    ok('...and the optimizer will not spend a seat on a finished afternoon',
+       DFS.build([done].concat(s.players.filter(p => p.projected && p.name !== 'Elic Ayomanor')).map(p => ({ ...p, id: p.key })),
+         { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'ceiling', lineups: 1 })
+         .played.some(x => x.name === 'Elic Ayomanor'));
+  }
+
+  // A slate served before the ladder shipped has no `projected` field at all,
+  // and a reader with a cached page must not lose his board to a missing key.
+  const legacy = s.players.filter(p => p.onBoard).map(p => { const q = { ...p, id: p.key }; delete q.projected; delete q.supplemental; return q; });
+  ok('a pre-ladder slate still builds, because onBoard answers when projected is absent',
+     DFS.build(legacy, { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'ironTuna', lineups: 1 }).ok);
 }
 
 console.log('\nthe optimizer');
@@ -1426,5 +1808,265 @@ console.log('\nthe field\'s average entry');
      && fs.readFileSync(path.join(ROOT, 'dfs-coach.js'), 'utf8').includes('typicalEntryPoints'));
   ok('the method is written down', fs.readFileSync(path.join(ROOT, 'docs/dfs-metrics.md'), 'utf8').includes('Typical entry'));
 }
+
+// A slate that is partly played. Once a game is final the projection beside a
+// man's name is describing an afternoon that already happened, so the board
+// stops quoting it: the roster totals on what he SCORED, and so does the
+// typical entry, because the field submitted its entries before kickoff and
+// owns him at his real number.
+console.log('\nthe slate, partly played');
+{
+  const rules = H.scoringRules('ppr', H.SCORING_SITE.dk);
+  const line = (name, team, o = {}) => ({ name, key: _oddsNorm(name), team,
+    pass: { att: 0, cmp: 0, yd: 0, td: 0, int: 0, ...(o.pass || {}) },
+    rush: { att: 0, yd: 0, td: 0, ...(o.rush || {}) },
+    rec: { tgt: 0, rec: 0, yd: 0, td: 0, ...(o.rec || {}) },
+    fumLost: o.fumLost || 0 });
+  const actualsOf = (teams, lines) => ({ games: 13, final: teams.length, teams: new Set(teams),
+    lines: lines.reduce((m, l) => (m.set(l.key, (m.get(l.key) || []).concat([l])), m), new Map()) });
+
+  // 320 passing yards is 12.8 plus the 300-yard bonus; three touchdowns are
+  // 12; the interception is -1; 30 rushing yards are 3 and the score is 6.
+  const qb = line('Josh Allen', 'BUF', { pass: { yd: 320, td: 3, int: 1 }, rush: { att: 4, yd: 30, td: 1 } });
+  const A = actualsOf(['BUF', 'NYJ'], [qb]);
+  const got = H.dfsActualFor(A, 'Josh Allen', 'BUF', 'QB', rules);
+  ok('a finished game is scored on the box score, at the site\'s own rules',
+     got.gamePlayed === true && got.actualBasis === 'box-score' && near(got.actualPoints, 35.8, 0.01), JSON.stringify(got));
+  ok('a man whose game has not kicked off carries no actual at all',
+     H.dfsActualFor(A, 'Somebody Else', 'KC', 'WR', rules).gamePlayed === false);
+  // He dressed and did nothing. That is a zero, not an unknown, and the board
+  // has to say zero rather than keep quoting Thursday's estimate at him.
+  const none = H.dfsActualFor(A, 'Khalil Shakir', 'BUF', 'WR', rules);
+  ok('a played man with no box-score line is a zero, not a missing number',
+     none.gamePlayed === true && none.actualPoints === 0 && none.actualBasis === 'box-score-absent', JSON.stringify(none));
+  // A defense IS scorable now: normalizeGameSummary builds its line by
+  // inverting the offense across from it. What it cannot do is invent one for
+  // a game stored before that line existed, and a summary at the old contract
+  // has none -- `A` above carries no defence map, which is exactly that case.
+  const dst = H.dfsActualFor(A, 'Bills', 'BUF', 'DST', rules);
+  ok('a defense from a box score stored before the line existed still has no actual',
+     dst.gamePlayed === true && dst.actualPoints === null && dst.actualBasis === 'no-defense-box-score', JSON.stringify(dst));
+  const dline = { sacks: 3, ints: 1, fumRec: 1, defTD: 0, stTD: 0, safety: 0, ptsAllowed: 17 };
+  const withD = { ...A, defense: new Map([['BUF', dline]]) };
+  const scored = H.dfsActualFor(withD, 'Bills', 'BUF', 'DST', rules);
+  ok('and one whose line is stored is scored from it',
+     scored.gamePlayed === true && scored.actualBasis === 'box-score' && scored.actualPoints != null, JSON.stringify(scored));
+  // The invariant that matters: the actual runs through the SAME engine, the
+  // same rules and the same games count as the projection beside it, so the
+  // two are comparable rather than two different scales on one row.
+  ok('through the same call the projection uses',
+     near(scored.actualPoints, _oddsRound(H.scoreAny(dline, 'DST', rules, 1)), 0.001),
+     scored.actualPoints + ' vs ' + H.scoreAny(dline, 'DST', rules, 1));
+  // Three sacks at a point, a pick and a fumble at two each, and seventeen
+  // allowed landing on DraftKings' 14-20 rung for one. Added up by hand.
+  ok('and the arithmetic is the sum of its parts, on DraftKings\' own table',
+     near(scored.actualPoints, 3 + 2 + 2 + 1, 0.001), String(scored.actualPoints));
+  // A defense in a game that has not kicked off is untouched by any of this.
+  ok('a defense whose game is still to come carries no actual at all',
+     H.dfsActualFor(withD, 'Chiefs', 'KC', 'DST', rules).gamePlayed === false);
+  // A kicker is the same case as the defense: field goals and extra points
+  // are not in the stored box score either, so scoring him off it would bank
+  // a silent zero on a man who might have kicked four.
+  const k = H.dfsActualFor(A, 'Tyler Bass', 'BUF', 'K', rules);
+  ok('a kicker whose game is over keeps his projection too, for the same reason',
+     k.gamePlayed === true && k.actualPoints === null && k.actualBasis === 'no-kicking-box-score', JSON.stringify(k));
+  // Two men normalize to the same name often enough that taking the first is
+  // somebody's wrong stat line. The club breaks the tie.
+  const twins = actualsOf(['BUF', 'NYJ', 'LA'], [line('Mike Williams', 'NYJ', { rec: { rec: 4, yd: 50 } }), line('Mike Williams', 'LA', { rec: { rec: 9, yd: 140, td: 2 } })]);
+  ok('two players with the same normalized name are told apart by their club',
+     near(H.dfsActualFor(twins, 'Mike Williams', 'NYJ', 'WR', rules).actualPoints, 9, 0.01)
+     && near(H.dfsActualFor(twins, 'Mike Williams', 'LA', 'WR', rules).actualPoints, 38, 0.01));
+
+  // ── and what the optimizer does with it ────────────────────────────────
+  // A board of its own, because the slate fixture above is fifteen bodies
+  // for nine seats with $6,800 of headroom: locking anybody expensive in it
+  // is infeasible whether or not his game has been played, which would test
+  // the cap rather than this.
+  const mk = (id, position, pts, salary, team) => ({ id, key: id, name: id, position, team,
+    ironTunaPoints: pts, vegasPoints: pts, consensusPoints: pts, marketPoints: pts,
+    salary, onBoard: true, available: true, ownership: 10 });
+  const players = [
+    mk('qb1', 'QB', 22, 7000, 'BUF'), mk('qb2', 'QB', 18, 6000, 'KC'),
+    mk('rb1', 'RB', 20, 7000, 'DET'), mk('rb2', 'RB', 16, 6000, 'NYJ'), mk('rb3', 'RB', 12, 5000, 'LA'),
+    mk('wr1', 'WR', 19, 7000, 'CIN'), mk('wr2', 'WR', 15, 6000, 'MIA'), mk('wr3', 'WR', 13, 5000, 'SEA'), mk('wr4', 'WR', 11, 4000, 'ATL'),
+    mk('te1', 'TE', 12, 4000, 'KC'), mk('te2', 'TE', 9, 3000, 'BAL'),
+    mk('d1', 'DST', 8, 3000, 'CHI'), mk('d2', 'DST', 7, 2500, 'PIT')
+  ];
+  const base = { slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, cap: 50000 };
+  // His game is over and he went off for fifty. He is still not a play.
+  const bank = (id, pts) => players.map(p => p.id === id ? { ...p, gamePlayed: true, actualPoints: pts, actualBasis: 'box-score' } : p);
+  const played = bank('qb1', 50);
+  const built = DFS.build(played, { ...base, mode: 'ironTuna', lineups: 1 });
+  ok('a man whose game is finished is off the board, however well he scored',
+     built.ok && !built.lineups[0].players.some(p => p.id === 'qb1'));
+  ok('and the build says where he went rather than leaving a reader to wonder',
+     built.playedCount === 1 && built.played[0].id === 'qb1' && near(built.played[0].points, 50, 0.01), JSON.stringify(built.played));
+  // A lock is a decision, here as everywhere else in the builder: a reader
+  // totalling an entry he already has is saying those seats are taken.
+  const locked = DFS.build(played, { ...base, mode: 'ironTuna', lineups: 1, lock: ['qb1'] });
+  const row = locked.ok ? locked.lineups[0].players.find(p => p.id === 'qb1') : null;
+  ok('a locked one is seated, at what he actually scored', row && near(row.points, 50, 0.01) && near(row.actual, 50, 0.01) && row.gamePlayed === true, JSON.stringify(row));
+  ok('and a played afternoon has no spread left: his floor and his ceiling are that number too',
+     row && near(row.floor, 50, 0.01) && near(row.ceiling, 50, 0.01), row ? [row.floor, row.ceiling].join(' / ') : 'no row');
+  ok('the card splits what is banked from what is still a guess',
+     locked.lineups[0].bankedPlayers === 1 && near(locked.lineups[0].bankedPoints, 50, 0.01)
+     && locked.lineups[0].projPoints > 50, JSON.stringify({ b: locked.lineups[0].bankedPoints, p: locked.lineups[0].projPoints }));
+  // Zero is a value. The pool drops anyone the objective scores at nothing,
+  // which would quietly lose a locked man whose game ended 0.0 -- the one
+  // case where the reader already knows the number and asked for it anyway.
+  const goose = DFS.build(bank('qb1', 0), { ...base, mode: 'ironTuna', lineups: 1, lock: ['qb1'] });
+  ok('a locked man who scored nothing is still seated on his zero',
+     goose.ok && goose.lineups[0].players.some(p => p.id === 'qb1' && p.points === 0));
+  // A defense whose game is over has gamePlayed with a NULL actual, because
+  // the stored box score has no defensive line. `isFinite(null)` is true in
+  // JavaScript -- the global coerces and Number(null) is 0 -- so without an
+  // explicit null check it banks at zero: the defense drops off the board and
+  // out of the field's draw, scored nothing. A page render caught this.
+  const dstOver = players.map(p => p.id === 'd1' ? { ...p, gamePlayed: true, actualPoints: null, actualBasis: 'no-defense-box-score' } : p);
+  const withDst = DFS.build(dstOver, { ...base, mode: 'ironTuna', lineups: 1 });
+  const dstRow = withDst.ok ? withDst.lineups[0].players.find(p => p.slot === 'DST') : null;
+  ok('a played defense with no actual keeps its projection rather than banking a zero',
+     withDst.ok && withDst.playedCount === 0 && dstRow && dstRow.id === 'd1' && near(dstRow.points, 8, 0.01) && dstRow.actual === null,
+     JSON.stringify({ played: withDst.playedCount, row: dstRow }));
+  ok('and it stays in the field\'s draw at that projection, not at nothing',
+     near(DFS.fieldAverage(dstOver, base).points, DFS.fieldAverage(players, base).points, 0.01));
+
+  // Leverage discounts a CEILING by how many entries own it. There is nothing
+  // to discount once the points are in the books.
+  const lev = DFS.build(bank('qb1', 50).map(p => ({ ...p, ownership: 40 })), { ...base, mode: 'leverage', lineups: 1, lock: ['qb1'] });
+  ok('leverage does not discount points a man has already scored',
+     lev.ok && near(lev.lineups[0].players.find(p => p.id === 'qb1').points, 50, 0.01));
+
+  // ── and what the typical entry does with it ────────────────────────────
+  const fa0 = DFS.fieldAverage(players, base);
+  // The field owns him at what he scored, not at what he was projected for,
+  // because the field submitted before kickoff. So the benchmark moves with
+  // his result in both directions.
+  const faUp = DFS.fieldAverage(bank('qb1', 60), base);
+  const faDown = DFS.fieldAverage(bank('qb1', 0), base);
+  ok('a big afternoon from a rostered man lifts the typical entry', faUp.points > fa0.points, faUp.points + ' vs ' + fa0.points);
+  ok('and a goose egg from one drags it down', faDown.points < fa0.points, faDown.points + ' vs ' + fa0.points);
+  ok('the benchmark stops calling itself a pure projection once part of the slate is played',
+     faUp.basis === 'modeled-ownership,part-played' && faUp.bankedPool === 1 && fa0.basis === 'modeled-ownership', faUp.basis);
+  // A man who scored nothing is still a man the field rostered: dropping him
+  // from the draw would flatter the benchmark by replacing him with somebody
+  // who is still projecting.
+  ok('a banked zero stays in the field\'s draw rather than being filtered out as a missing projection',
+     faDown.bankedPool === 1 && faDown.pool === fa0.pool, JSON.stringify({ pool: faDown.pool, was: fa0.pool, banked: faDown.bankedPool }));
+
+  // What the page does with it.
+  const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+  ok('the page marks a banked line rather than printing it as a projection', page.includes('df-banked'));
+  ok('and says in words how much of the total is already in the books', page.includes('already in the books'));
+  ok('the coach is told which part of the roster is a result', page.includes('bankedPoints')
+     && fs.readFileSync(path.join(ROOT, 'dfs-coach.js'), 'utf8').includes('bankedPoints'));
+  ok('the method is written down', fs.readFileSync(path.join(ROOT, 'docs/dfs-metrics.md'), 'utf8').includes('Played games'));
+
+  // The prose. Every sentence this page generates about a player is written
+  // forward -- a projection, a ceiling, a market gap, a downside, a touchdown
+  // price -- and none of it is true once the game has been played. These pin
+  // the branches that say so instead; the wording is checked by rendering the
+  // page, which is the only thing that can read it.
+  ok('the page asks whether a seat has played before it writes a sentence about him',
+     page.includes('function actualOf(') && page.includes('function isBanked(') && page.includes('function isPlayed(') && page.includes('function stillToPlay('));
+  ok('a finished seat gets its own fit line rather than an anchor-or-punt thesis',
+     page.includes('His game is final: ') && page.includes('The seat is settled whatever the rest of the roster does.'));
+  ok('and a played defense says its number is still the pre-game estimate',
+     page.includes('still the pre-game estimate'));
+  ok('the market read on a finished game is history, not a price to act on',
+     page.includes('What the books priced beforehand is settled now'));
+  ok('the roster summary draws its market signal from the seats still to play',
+     page.includes('var live = stillToPlay(l.players)') && page.includes('signal still to play is'));
+  ok('and it stops calling a banked man a projected scoring base',
+     page.includes('already in the books') && page.includes('providing the largest projected scoring base'));
+  ok('the breakdown picks its market gap and its risk from the seats still to play',
+     page.includes('among the seats still to play') && page.includes('among the offensive players still to play'));
+  ok('a stack whose game is over is described as spent, not as correlation to come',
+     page.includes('stack has already played') && page.includes('stack has been played'));
+  ok('the breakdown says how much of the spend has already returned',
+     page.includes('of that spend has already returned'));
+  ok('a roster with nothing left to play says so rather than warning about risk',
+     page.includes('There is no risk left in this roster to describe')
+     && page.includes('Every game in this roster has been played')
+     && page.includes('Every seat has played, so there is no market case left to make'));
+  ok('the prop note counts only the seats that still carry a market',
+     page.includes('picks still to play') && page.includes('no longer ') && page.includes('Best quoted touchdown price still to come'));
+  ok('neither side of a pivot can be a finished game',
+     page.includes('if (isPlayed(cur)) return;') && page.includes('|| isPlayed(q)) return false'));
+  ok('the pool table prints the same number for a played man as the roster does',
+     page.includes("n1(actualOf(p) != null ? actualOf(p) : p.ironTunaPoints) + bankedMark(p)"));
+  // The boards that answer "who is worth a seat" are not reference lists: a
+  // man whose game is over cannot take one, and value, cash score and
+  // tournament score are all indexed off a projection the result has
+  // overtaken. He comes off them, and the page says so rather than leaving a
+  // reader to wonder where a name went.
+  ok('the value boards and the metrics board drop the men whose games are over',
+     page.includes('var rows = stillToPlay(priced)') && page.includes('var list = stillToPlay(full)'));
+  ok('and both say how many came off and where to still find them',
+     page.includes('function playedOffNote(host, off, total)')
+     && page.includes('not listed because their games are over')
+     && page.includes('The player pool below still carries ')
+     && page.includes("playedOffNote($('dfMetricsNote')") && page.includes("playedOffNote($('dfContestNote')"));
+  ok('the note is replaced rather than stacked when a reader switches boards',
+     page.includes("host.innerHTML.replace(/\\s*<span class=\"df-playedoff\">[\\s\\S]*?<\\/span>/, '')"));
+  // The calculation modal is a record of how the projection was built. It
+  // stays -- but it leads with what actually happened, rather than walking a
+  // reader through eight steps of forecast for a game that is over.
+  ok('the player calculation leads with the result and frames the rest as pre-game',
+     page.includes("metricBox(n1(scored), 'Final')")
+     && page.includes("scored != null ? 'Projected beforehand' : 'Iron Tuna Projection'")
+     && page.includes('a record of the calculation, not a read on him now'));
+  // Requiring a played man is exactly how a reader tells the builder about an
+  // entry he already holds, so he stays in the search -- at what he scored.
+  ok('the require-a-player search offers a played man at his actual score',
+     page.includes("actualOf(p) != null ? n1(actualOf(p)) + ' final'") && page.includes("' est, game over'"));
+}
+
+console.log('\nthe per-team maximum against a narrowed game pool');
+{
+  // NINE SEATS OUT OF ONE GAME IS TWO CLUBS, so five men from one of them at
+  // a minimum. Every contest shape carries a per-team cap -- three for cash,
+  // four for a single entry -- and on a full slate that is a preference. On a
+  // pool narrowed to one game it is a contradiction, and the optimizer answers
+  // a contradiction with nothing: a reader who picked Classic, one game and
+  // Double Up was told "no lineup satisfies those constraints" while looking
+  // at a board with two full rosters on it.
+  const one = (team, opp, base) => [
+    ['QB', 'QB', 6800, base + 6], ['RB1', 'RB', 7000, base + 4], ['RB2', 'RB', 5200, base + 1], ['RB3', 'RB', 4000, base - 2],
+    ['WR1', 'WR', 7800, base + 5], ['WR2', 'WR', 6200, base + 2], ['WR3', 'WR', 4800, base], ['WR4', 'WR', 3400, base - 3],
+    ['TE1', 'TE', 5000, base], ['TE2', 'TE', 3200, base - 4], ['DST', 'DST', 3000, base - 5]
+  ].map(([slot, position, salary, pts]) => ({
+    id: team + ' ' + slot, key: team + ' ' + slot, name: team + ' ' + slot, position, team, opponent: opp, salary,
+    onBoard: true, projected: true, available: true, ironTunaPoints: pts, vegasPoints: pts, consensusPoints: pts,
+    floorPoints: pts * 0.72, ceilingPoints: pts * 1.35, operatorFppg: pts - 0.6
+  }));
+  const pool = [...one('NYG', 'LA', 12), ...one('LA', 'NYG', 13)];
+  const base = { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'ironTuna', lineups: 1 };
+  ok('three men from a club cannot fill nine seats out of one game', !DFS.build(pool, { ...base, maxPerTeam: 3 }).ok);
+  ok('nor can four', !DFS.build(pool, { ...base, maxPerTeam: 4 }).ok);
+  const raised = DFS.build(pool, { ...base, maxPerTeam: 5 });
+  ok('...and five -- the seats over the clubs, rounded up -- does', raised.ok && raised.lineups[0].players.length === 9);
+  ok('the roster it builds is legal on both sides of that cap',
+     raised.ok && Object.values(raised.lineups[0].players.reduce((n, p) => ({ ...n, [p.team]: (n[p.team] || 0) + 1 }), {})).every(c => c <= 5));
+
+  // The page is what has to know this: the reader never typed a per-team cap,
+  // the contest shape did, and the floor is arithmetic rather than taste.
+  const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+  ok('the page works the floor out from the seats and the clubs in the pool',
+     /function teamCapFor\(want, seats, players\)/.test(page) && page.includes('var floor = Math.ceil(seats / teams);'));
+  ok('a reader who asked for no per-team cap at all still gets none',
+     page.includes('if (!want || !(seats > 0) || !teams) return want || 0;'));
+  ok('the solve is handed the raised cap rather than the raw box',
+     page.includes('var teamCap = teamCapFor(wantTeamCap, seats, players);') && page.includes('maxPerTeam: teamCap,'));
+  ok('the shape preset is clamped before it is written into the panel',
+     page.includes("$('dfMaxTeam').value = teamCapFor(preset,"));
+  ok('the panel is rewritten with what was solved, and the board says why',
+     page.includes("if (teamCap !== wantTeamCap) $('dfMaxTeam').value = teamCap;")
+     && page.includes('The per-team maximum was raised from'));
+  ok('Play of the Week weighs its three shapes under the same floor',
+     page.includes('maxPerTeam:teamCapFor(cross,seats,pool)')
+     && page.includes('maxPerTeam:teamCapFor(seats<=6?cross:3,seats,pool)'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

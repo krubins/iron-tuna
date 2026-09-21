@@ -9,7 +9,12 @@
  *      labels, byes and projections. resolve() turns one line into one player
  *      the board knows, or nothing; parseRosters() turns a whole paste into
  *      teams. Nothing here invents a player: a name the board does not carry
- *      is reported as unresolved, never guessed.
+ *      is reported as unresolved, never guessed — and suggest() then offers the
+ *      reader the names it is nearest to, because an empty box on a page that
+ *      knows the whole board is a question asked of the wrong party. An
+ *      unresolved line is also never promoted to a TEAM name: that was how a
+ *      misread player used to invent a thirteenth team and take a real one's
+ *      roster with it (see nameShape).
  *
  *   2. LINEUPS. A roster is worth what it STARTS. lineupValue() fills the
  *      league's own slots (QB/RB/WR/TE, flex, superflex) greedily by points —
@@ -172,6 +177,115 @@
     return null;
   }
 
+  // ── what it might have been ───────────────────────────────────────────────
+  // WHY THIS EXISTS. A line the resolver cannot place is handed back to the
+  // reader as an empty box: "type the name". That box knows the whole board
+  // and was telling the reader nothing — so a name it half-read ("K Mon…")
+  // had to be retyped in full, from memory, by someone who was pasting a
+  // roster precisely so they would not have to type it.
+  //
+  // resolve() is deliberately strict: it answers one player or nothing, and it
+  // never guesses, because a guess puts a stranger on a roster. This is the
+  // other half of that bargain. It is allowed to be generous, because nothing
+  // it returns is acted on — every one of these is a name the reader has to
+  // pick before it counts, and resolve() still has the last word on the pick.
+  //
+  // Capped Levenshtein: past `max` the exact distance does not matter, and the
+  // cap is what keeps this cheap over a board of four hundred rows typed at.
+  // Transpositions count as ONE edit, not two. Two letters swapped is the
+  // commonest typo there is and a routine screenshot misread, and plain
+  // Levenshtein charges it double: "Waddel" sits two edits from "Waddle",
+  // outside a six-letter surname's allowance, so the box offered nothing for
+  // a name that was one slip away. Widening the allowance instead would have
+  // let "Hall" reach "Hill", which are two players.
+  //
+  // The early abandon is safe: every path to the end crosses every row, so the
+  // final distance is never less than the smallest cell in any row.
+  function editDistance(a, b, max) {
+    if (a === b) return 0;
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    var prev2 = null, prev = [], cur, i, j, best;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur = [i]; best = i;
+      for (j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+        if (i > 1 && j > 1 && a.charAt(i - 1) === b.charAt(j - 2) && a.charAt(i - 2) === b.charAt(j - 1)) {
+          cur[j] = Math.min(cur[j], prev2[j - 2] + 1);
+        }
+        if (cur[j] < best) best = cur[j];
+      }
+      if (best > max) return max + 1;
+      prev2 = prev; prev = cur;
+    }
+    return prev[b.length];
+  }
+  // How far apart two words may be and still be the same word. A four-letter
+  // surname tolerates one edit and no more — "Hall" is one edit from "Hill"
+  // and they are different players — while a long one survives a typo without
+  // being mistaken for anyone. Measured on the shorter, so a three-letter
+  // fragment cannot borrow a long name's allowance.
+  function slack(a, b) { return Math.max(1, Math.min(2, Math.floor(Math.min(a.length, b.length) / 4))); }
+
+  // One line (or one half-typed name) → the players it could be, best first.
+  //   suggest(pool, 'k mon')          → Kyle Monangai, …
+  //   suggest(pool, 'K Bornegales K') → the kicker whose surname is one edit off
+  //   suggest(pool, '')               → the top of the board, which is what an
+  //                                     empty box should offer to open with
+  // Slot words, club abbreviations and bare numbers are dropped first, so a
+  // whole pasted line works as well as a typed fragment. A position written on
+  // the line is obeyed: "K Mon RB" never offers a kicker.
+  function suggest(pool, text, limit) {
+    if (!pool || !pool.list) return [];
+    var n = Math.max(1, Math.min(25, limit || 8));
+    var all = words(text);
+    // A LEADING SINGLE LETTER IS AN INITIAL, NOT A SLOT. Every one-letter slot
+    // label — k, d, w, r, t — is also somebody's first initial, and posOf()
+    // takes the first hit it finds: "K Monangai RB" read as a kicker, and the
+    // running back it plainly says it is was filtered out of its own answer.
+    // So the hint here comes from the spelled-out labels only, and the leading
+    // letter is kept as what it is, the initial that tells Kyle from Kenneth.
+    var hint = posOf(all.filter(function (w, i) { return !(i === 0 && w.length === 1); }).join(' '));
+    var toks = all.filter(function (w, i) {
+      if (i === 0 && w.length === 1) return true;
+      return !SLOT_WORDS[w] && !TEAM_ABBR[w] && !pool.teams[w] && !/^[0-9.]+$/.test(w);
+    });
+    var q = toks.join(' ');
+    // fold() turns punctuation into a space, so "Ja'Marr" is two words here
+    // and a reader typing "jamarr" prefixes neither. The run-together copy is
+    // only ever compared as a prefix, so it costs nothing and answers that.
+    var qq = q.replace(/ /g, '');
+    var out = [];
+    for (var i = 0; i < pool.list.length; i++) {
+      var r = pool.list[i];
+      if (hint && r.pos !== hint) continue;
+      var rank = q ? rankFor(r, toks, q, qq) : 4;
+      if (rank < 0) continue;
+      out.push({ r: r, rank: rank, i: i });
+      if (!q && out.length >= n) break;            // the board is already in order
+    }
+    // The pool arrives in board order, so index is value order: among names
+    // that match equally well, the one worth more is the one being looked for.
+    out.sort(function (a, b) { return (a.rank - b.rank) || (a.i - b.i); });
+    return out.slice(0, n).map(function (h) { return h.r; });
+  }
+  function rankFor(r, toks, q, qq) {
+    if (r.f.indexOf(q) === 0) return 0;                       // "ja marr" → Ja'Marr Chase
+    if (qq.length >= 2 && r.f.replace(/ /g, '').indexOf(qq) === 0) return 0;  // "jamarr" → the same man
+    var last = toks[toks.length - 1], surname = r.w[r.w.length - 1];
+    // Initial (or first name) and surname, the way a grid prints one. Both
+    // halves have to fit, or "j w" offers every W and every J on the board.
+    if (toks.length > 1 && surname.indexOf(last) === 0 && r.w[0].indexOf(toks[0]) === 0) return 1;
+    for (var t = 0; t < toks.length; t++) {
+      if (toks[t].length < 2) continue;                       // a lone initial is not a search
+      for (var w = 0; w < r.w.length; w++) if (r.w[w].indexOf(toks[t]) === 0) return 2;
+    }
+    // A misread letter. Only on the surname, and only once the reader has
+    // typed enough of it to mean something.
+    if (last && last.length >= 4 && editDistance(last, surname, slack(last, surname)) <= slack(last, surname)) return 3;
+    return -1;
+  }
+
   // Is this non-player line a team name, or noise? Noise is anything made only
   // of slot labels, club abbreviations, numbers and short status tokens —
   // "QB - BUF (3)", "Bye: 7", "Proj 18.4", "W/R/T". A team name has at least
@@ -188,6 +302,69 @@
     return real.length === 0;
   }
   var HEADER_PREFIX = /^\s*(team|roster|owner|manager)\s*[:#-]\s*/i;
+  // A line that opens with one of these is announcing a team, whatever follows
+  // it. "Team Kelce" is a manager with a favourite player, not a tight end.
+  var HEADER_WORD = { team: 1, roster: 1, owner: 1, manager: 1, squad: 1, the: 1 };
+
+  // IS THIS UNPLACEABLE LINE A PLAYER, OR A TEAM NAME?
+  //
+  // THE BUG THIS EXISTS FOR. A bare name the board could not place — "J
+  // Williams", "A Bornegales", the shapes a screenshot produces — was promoted
+  // to a TEAM NAME, and then swallowed every player under it. A twelve-team
+  // paste came back as thirteen teams, one of them called after a running back,
+  // with the real team's name gone and its players filed under a stranger. The
+  // reader was told none of it: an unplaceable player is reported in the fix
+  // box, but a team name is just a team name, so the line that went wrong was
+  // the one line that produced no complaint.
+  //
+  // The two are told apart by SHAPE, and there are two shapes worth telling:
+  //
+  //   'initial'  An initial and a surname — "J Williams", "D Hampton", "S
+  //              Vaki". This is how a roster grid prints a player and it is
+  //              not how anybody names a team. Nothing else has to agree: even
+  //              a name the board has never carried is a player written this
+  //              way, which matters, because a player the board does not carry
+  //              is exactly the one that used to disappear.
+  //
+  //   'surname'  Two ordinary words whose second is a surname the board
+  //              carries, or is one slip from one: "Mike Johnson", "Andy
+  //              Borregales". Half the leagues in the world name their teams
+  //              after the people who manage them, so this shape is a player
+  //              only in the middle of a roster — see the caller.
+  //
+  // Everything else is a team. A name that announces itself ("Team:", "Roster
+  // —"), one that opens with a team word, one whose last word is nobody's
+  // surname: "Ken's Krushers", "Gridiron Giants" and "Mahomes Alone" all stay
+  // teams. A defense is skipped when checking surnames, because the pool
+  // indexes one under its nickname and its city, and a team named after the
+  // Giants is not a man called Giants.
+  //
+  // Where it stays genuinely ambiguous this errs toward PLAYER, because the
+  // two mistakes do not cost the same. A team name read as a player shows up
+  // in the fix box, where one click drops it. A player read as a team invents
+  // a team, steals the players beneath it, and says nothing at all.
+  function nameShape(line, pool) {
+    if (!pool || !pool.list) return '';
+    var all = words(line);
+    if (!all.length || HEADER_WORD[all[0]]) return '';
+    // Slot labels, clubs and numbers are not part of a name — but a LEADING
+    // single letter is an initial, and the one thing telling Kyle from Kenneth.
+    var toks = all.filter(function (w, i) {
+      if (i === 0 && w.length === 1) return true;
+      return !SLOT_WORDS[w] && !TEAM_ABBR[w] && !pool.teams[w] && !/^[0-9.]+$/.test(w);
+    });
+    if (toks.length !== 2) return '';
+    var last = toks[1];
+    if (last.length < 3) return '';
+    if (toks[0].length === 1) return 'initial';
+    for (var i = 0; i < pool.list.length; i++) {
+      var r = pool.list[i];
+      if (r.pos === 'DEF') continue;
+      var surname = r.w[r.w.length - 1];
+      if (surname === last || editDistance(last, surname, slack(last, surname)) <= slack(last, surname)) return 'surname';
+    }
+    return '';
+  }
 
   // A whole paste → teams. Every line is either a player the board knows, noise,
   // or a team name. A team name opens a new team once the current one has a
@@ -203,10 +380,19 @@
       cur = { name: name || ('Team ' + (teams.length + 1)), players: [], unresolved: [] };
       teams.push(cur);
     }
+    // A blank line is how a paste separates one team from the next, and it is
+    // the one thing that tells a manager-named team from a misread player.
+    // Plenty of leagues call a team "Mike Johnson"; nothing about those two
+    // words says team rather than man, but after a blank it is announcing a
+    // roster and mid-roster it is on one. True to start with, because the
+    // first line of a paste is a header, not a stray.
+    var blankBefore = true;
     lines.forEach(function (rawLine) {
       var line = rawLine.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '').trim();
-      if (!line) return;
-      if (/^[-=_~*#]{3,}$/.test(line)) return;
+      if (!line) { blankBefore = true; return; }
+      if (/^[-=_~*#]{3,}$/.test(line)) { blankBefore = true; return; }
+      var afterBreak = blankBefore;
+      blankBefore = false;
       // Cells of a table row: the player is usually the first cell that resolves.
       var cells = line.split(/\t|\s{3,}|\s\|\s/).map(function (c) { return c.trim(); }).filter(Boolean);
       var row = null;
@@ -227,13 +413,38 @@
       // one, otherwise a player we could not place — those are told apart by the
       // word count and whether the line carried a position or club marker.
       var bw = words(body);
+      var shape = explicit ? '' : nameShape(line, pool);
       var looksLikePlayer = !explicit && ((posOf(line) && bw.length >= 2 && bw.length <= 6)
         // One word that is a surname the board carries more than once ("Brown")
         // is a player we cannot place, not a team called Brown.
-        || (bw.length === 1 && (pool.byLast[bw[0]] || []).length > 1));
-      if (looksLikePlayer) { (cur ? cur.unresolved : unresolved).push(line); return; }
+        || (bw.length === 1 && (pool.byLast[bw[0]] || []).length > 1)
+        // A bare name with no position on it, which is what a grid prints and
+        // what a screenshot returns. See nameShape above for the whole story:
+        // these two clauses are what stops "J Williams" becoming a team.
+        || shape === 'initial'
+        // The ordinary-looking one only mid-roster: after a blank line, or as
+        // the first thing in the paste, the same two words are a team.
+        || (shape === 'surname' && !afterBreak && cur && cur.players.length > 0));
+      if (looksLikePlayer) {
+        // Into a team, not into a bag the page never reads: an unplaceable
+        // player is only worth reporting where the reader can answer for it.
+        if (!cur) open(null);
+        cur.unresolved.push(line);
+        return;
+      }
       if (!cur || cur.players.length) open(body.slice(0, 60));
-      // else: a second header before any player — keep the first name
+      // A second header before any player. Two cases, and they used to be one:
+      //
+      //   "Team Awesome / Owner: Ken / <players>" is ONE team, and the first
+      //   name is the one to keep — the second line is a subtitle.
+      //
+      //   But a junk line that opened a team of its own, then a blank, then
+      //   the real header, is not that. The empty team was never real: it was
+      //   a garbled line the parser could not place, and discarding the header
+      //   that follows it cost the reader their team's name AND filed its
+      //   whole roster under the junk. A header after a break renames the
+      //   empty team rather than being thrown away.
+      else if (afterBreak) cur.name = body.slice(0, 60);
     });
     teams = teams.filter(function (t) { return t.players.length || t.unresolved.length; });
     return { teams: teams, unresolved: unresolved, duplicates: dupes };
@@ -401,7 +612,7 @@
   }
 
   return {
-    fold: fold, makePool: makePool, resolve: resolve, parseRosters: parseRosters, isNoise: isNoise,
+    fold: fold, makePool: makePool, resolve: resolve, suggest: suggest, parseRosters: parseRosters, isNoise: isNoise,
     lineupValue: lineupValue, normSlots: normSlots, findTrades: findTrades, BENCH_W: BENCH_W
   };
 });

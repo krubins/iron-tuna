@@ -204,6 +204,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       <button class="btn" id="nrResume" type="button" hidden>Resume automatic publishing</button>
       <button class="btn" id="nrScan" type="button">Run breaking-news scan</button>
       <button class="btn" id="nrGrade" type="button">Grade analyst calls</button>
+      <!-- Pieces published before the DFS headline column existed fall back to
+           the Weekly Fantasy sentence on /dfs. This writes them one of their
+           own, from their own published DFS sections. Preview first: the
+           button shows what it would store and changes nothing until the
+           second click. -->
+      <button class="btn" id="nrDfsHead" type="button">Preview DFS headlines for week&hellip;</button>
+      <button class="btn" id="nrDfsHeadGo" type="button" hidden style="font-weight:800">Write the 0 previewed above</button>
       <span class="meta" id="nrAuto"></span>
     </div>
     <div class="note">Paused, every validated piece is stored as <b>held · awaiting approval</b> and nothing reaches the site until Approve is pressed in the Editorial table below. The pause is a database setting, so it survives a deploy; FLAG_AUTO_PUBLISH=0 in the Worker vars does the same from the dashboard.</div>
@@ -783,7 +790,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     var rows = [['NFL schedule', u.schedule && u.schedule.updatedAt, u.schedule ? u.schedule.games + ' games, ' + u.schedule.provider : ''],
       ['Season odds overlay', u.odds && u.odds.updatedAt, u.odds ? u.odds.matched + ' matched' : ''],
       ['Betting snapshots', u.snapshots && u.snapshots.last, u.snapshots ? u.snapshots.subjects + ' subjects, ' + u.snapshots.books + ' books' : ''],
-      ['Player props, this week', u.props && u.props.lastAt, u.props ? u.props.note : 'not reported'],
+      // The pull clock, not the newest row: an unchanged line writes nothing, so
+      // `lastAt` is when a price last MOVED and this column says "Last update".
+      // A settled market read it as a two-day-old feed. `lastPullAt` is the
+      // fallback's fallback for a store stamped before the clock existed.
+      ['Player props, this week', u.props && (u.props.lastPullAt || u.props.lastAt), u.props ? u.props.note : 'not reported'],
       ['Weekly stats and snaps', u.usage && u.usage.updatedAt, u.usage ? u.usage.players + ' players' : ''],
       ['Injury list', u.availability && u.availability.updatedAt, u.availability ? 'as of ' + u.availability.asOf : ''],
       ['Depth charts', u.depthCharts && u.depthCharts.updatedAt, ''],
@@ -843,6 +854,44 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   $('nrResume').addEventListener('click', function(){ nrAction('resume'); });
   $('nrScan').addEventListener('click', function(){ nrAction('scan'); });
   $('nrGrade').addEventListener('click', function(){ nrAction('grade'); });
+  // ── re-headlining the pieces that predate the DFS headline column ────────
+  // Two clicks, never one. The first previews: the worker reads each piece's
+  // published DFS sections, asks for a headline over them and returns what it
+  // WOULD store without touching a row. The second writes exactly that set.
+  // These rows are on the live site, so a single mis-click must not rewrite a
+  // week of headlines.
+  var dfsHeadWeek = null;
+  function dfsHeadRun(commit){
+    var key = getKey(); if (!key) { showGate('Session locked. Enter the key again.'); return; }
+    hlthMsg('nrResult', '', (commit ? 'Writing' : 'Previewing') + ' DFS headlines for week ' + esc(dfsHeadWeek) + '\u2026');
+    fetch('/api/admin/newsroom?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'dfs-headlines', week: dfsHeadWeek, commit: !!commit }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || !j.ok) { hlthMsg('nrResult', 'bad', '<b>DFS headlines failed.</b> ' + esc((j && (j.error || j.note)) || '')); $('nrDfsHeadGo').hidden = true; return; }
+        var c = j.counts || {}, rows = (j.pieces || []).map(function(p){
+          return '<tr><td>' + esc(p.kind) + '</td><td style="color:var(--muted)">' + esc(p.was || '') + '</td><td><b>' + esc(p.headline) + '</b><br><span style="color:var(--muted)">' + esc(p.dek || '') + '</span></td></tr>';
+        }).join('');
+        var bad = (j.failed || []).map(function(f){ return '<tr><td>' + esc(f.kind) + '</td><td colspan="2" style="color:var(--danger)">left alone: ' + esc(f.why) + '</td></tr>'; }).join('');
+        hlthMsg('nrResult', 'ok', '<b>Week ' + esc(j.week) + '</b> \u00b7 ' + esc(c.missing) + ' without a DFS headline, ' + esc(c.eligible) + ' on both-lens kinds, ' +
+          (j.committed ? esc(c.written) + ' written' : esc(c.previewed) + ' previewed') + ', ' + esc(c.failed) + ' left alone.' +
+          ((rows || bad) ? '<table class="tbl" style="margin-top:8px"><tr><th>Kind</th><th>Weekly headline</th><th>' + (j.committed ? 'Written' : 'Would write') + '</th></tr>' + rows + bad + '</table>' : ''));
+        $('nrDfsHeadGo').textContent = 'Write the ' + ((j.pieces || []).length) + ' previewed above';
+        $('nrDfsHeadGo').hidden = j.committed || !(j.pieces || []).length;
+        hlthLoad();
+      })
+      .catch(function(e){ hlthMsg('nrResult', 'bad', 'Network error: ' + esc((e && e.message) || '')); });
+  }
+  $('nrDfsHead').addEventListener('click', function(){
+    var w = prompt('Which week? Pieces published before the DFS headline column will be shown with the headline they would get. Nothing is written yet.');
+    if (w == null) return;
+    if (!/^\d{1,2}$/.test(String(w).trim())) { hlthMsg('nrResult', 'bad', 'A week number, 1 to 18.'); return; }
+    dfsHeadWeek = parseInt(String(w).trim(), 10); $('nrDfsHeadGo').hidden = true; dfsHeadRun(false);
+  });
+  $('nrDfsHeadGo').addEventListener('click', function(){
+    if (dfsHeadWeek == null) return;
+    if (confirm('Write these DFS headlines onto week ' + dfsHeadWeek + '? They go straight onto pieces already on the site.')) dfsHeadRun(true);
+  });
   // ── saved leagues ────────────────────────────────────────────────────────
   function lsLoad(q){
     var key = getKey(); if (!key) return;

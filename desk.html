@@ -45,6 +45,19 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 /* The page head the section pages wear (fantasy.html, in-season.html, dfs.html, vegas-edge.html). */
 h1{font-size:var(--fs-3xl);line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 var(--space-3);max-width:22ch;text-wrap:pretty}
 @media(max-width:560px){h1{font-size:var(--fs-2xl)}}
+/* THE BOAST. The same device as the Fantasy page's news well (.nr-boast, and
+   the note above it in site.css), on the page the well links to. _voiceBlock
+   lets the desk open a headline with "YOU'RE WELCOME:" only when one of the
+   site's own pre-kickoff calls cleared the headline bar, only for that player
+   and only once, so the phrase is the rarest thing the desk has to say --
+   and as the first two words of the h1 it read as punctuation in front of the
+   sentence that mattered. It is the banner over the headline here, and the
+   call runs under it. The headline steps down to --fs-2xl while the banner is
+   up, so the two read as one head rather than as two competing ones. */
+.dk-boast{margin:0 0 4px;font-family:var(--font-display);font-weight:400;font-size:clamp(46px,7vw,86px);line-height:.92;letter-spacing:.015em;text-transform:uppercase;color:var(--goldink);max-width:22ch}
+.dk-boast[hidden]{display:none}
+body.dk-boasting #dkTitle{font-size:var(--fs-2xl);max-width:34ch}
+@media(max-width:560px){body.dk-boasting #dkTitle{font-size:var(--fs-xl)}}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 .btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
@@ -188,6 +201,9 @@ body.dk-tailback #dkTitle{max-width:920px}
 </div></header>
 <main id="main" class="wrap">
 <p class="is-eyebrow" id="dkEyebrow">The Desk &middot; In-Season</p>
+<!-- The banner over a boasting headline, painted by setHead() below and
+     hidden on every other piece and on the index. -->
+<p class="dk-boast" id="dkBoast" hidden></p>
 <h1 id="dkTitle" data-no-player-focus>The In-Season Desk</h1>
 <p class="is-lede" id="dkLede">The week&rsquo;s pieces, in the order the week produces them. Every fact in them comes from the box score, the depth chart, the injury list, the usage file or the betting market; a piece is published only when its prose stayed inside that data, and shows the data itself when it did not.</p>
 <div class="is-actions" id="dkActions">
@@ -227,6 +243,7 @@ body.dk-tailback #dkTitle{max-width:920px}
     <li><a href="/fantasy">Fantasy</a></li>
     <li><a href="/dfs">DFS</a></li>
     <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
     <li><a href="/faq">FAQ</a></li>
@@ -508,13 +525,38 @@ body.dk-tailback #dkTitle{max-width:920px}
     return '<p class="is-note">A piece from the desk’s first calendar, kept as published. The current calendar is <a href="/in-season/desk">here</a>.</p>' + out;
   }
   var current = null, lens = 'weekly';
+  // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only when
+  // one of its own pre-kickoff calls cleared the headline bar, only for that
+  // player and only once (_voiceBlock, _worker.js). Ken, 2026-09-21: "'You're
+  // welcome.' should be more prominent. We want to boast about our successes."
+  // The page splits it off the headline and prints it as the banner above.
+  // The phrase is never invented here: the split happens only when the DESK
+  // wrote it AND a headline survives it, so a piece that made no boast and a
+  // headline that is nothing but the boast both paint an ordinary head. Same
+  // rule and same regexp as the Fantasy page's news well.
+  var BOAST = /^\s*you['\u2019]re\s+welcome\s*[:\u2013\u2014.!-]*\s*/i;
+  function setHead(title) {
+    var h = String(title == null ? '' : title), m = BOAST.exec(h);
+    var rest = m ? h.slice(m[0].length).trim() : '';
+    $('dkTitle').textContent = rest || h;
+    $('dkBoast').textContent = rest ? 'You\u2019re welcome.' : '';
+    $('dkBoast').hidden = !rest;
+    document.body.classList.toggle('dk-boasting', !!rest);
+  }
   function paintLens() {
     var j = current; if (!j) return;
     var both = j.lens === 'both' && j.body && j.body.dfs;
     $('dkTabs').hidden = !both;
     [].forEach.call($('dkTabs').querySelectorAll('button'), function (b) { var on = b.getAttribute('data-lens') === lens; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.classList.toggle('on', on); });
-    var title = lens === 'dfs' && j.dfsTitle ? j.dfsTitle : (j.headline || j.title);
-    $('dkTitle').textContent = title;
+    // THE HEADLINE OF THE LENS ON SCREEN. A package that runs in both is
+    // written twice and, since 2026-09-21, headlined twice; this tab used to
+    // fall back to the kind's generic dfsTitle ("Showdown read") because there
+    // was no DFS sentence to print. A piece written before that column existed
+    // still has none, and drops back through the old order.
+    var title = lens === 'dfs'
+      ? (j.dfsHeadline || j.dfsTitle || j.headline || j.title)
+      : (j.headline || j.title);
+    setHead(title);
     // `j.title` is the STORED title with its edition trailer already stripped,
     // so a per-game piece arrives as its matchup and the week is added once.
     var nflWide = /^NFL\s+League-Wide$/i.test(String(j.title || '').trim());
@@ -522,7 +564,8 @@ body.dk-tailback #dkTitle{max-width:920px}
     $('dkKicker').innerHTML =
       (nflWide ? '<img class="dk-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' : '') +
       (lens === 'dfs' ? 'DFS' : 'Weekly Fantasy') + ' &middot; ' + e(j.title) + ' &middot; Week ' + e(j.week) + (j.game ? ' &middot; Final' : '') + (j.edition > 1 ? ' &middot; update ' + e(j.edition) : '');
-    $('dkBody').innerHTML = byline(j, lens) + (j.dek ? '<p class="dk-dek">' + e(j.dek) + '</p>' : '') + (lens === 'weekly' ? rivalryBox(j) : '') +
+    var dek = lens === 'dfs' ? (j.dfsDek || j.dek) : j.dek;
+    $('dkBody').innerHTML = byline(j, lens) + (dek ? '<p class="dk-dek">' + e(dek) + '</p>' : '') + (lens === 'weekly' ? rivalryBox(j) : '') +
       (j.status === 'published' ? lensBody(j, lens, j.sections ? j.sections[lens] : null) + (lens === 'weekly' ? callsBox(j) : '') : '');
     if (lens === 'dfs' && j.brief && j.brief.dfs && j.brief.dfs.note) $('dkBody').innerHTML += '<p class="is-note">' + e(j.brief.dfs.note) + '</p>';
     // Keep the hash. The body is painted after the page loads, so the browser
@@ -582,7 +625,7 @@ body.dk-tailback #dkTitle{max-width:920px}
     if (j.status === 'skipped') pre += '<div class="dk-held">Nothing worth publishing this week' + (j.brief && j.brief.reason ? ': ' + e(String(j.brief.reason).replace(/_/g, ' ')) : '') + '. The desk publishes less rather than filling a slot.</div>';
     $('dkPre').innerHTML = pre;
     var post = '';
-    if (j.legacy) { $('dkTabs').hidden = true; $('dkTitle').textContent = j.title; $('dkKicker').textContent = 'From the archive'; $('dkBody').innerHTML = legacyPiece(j); }
+    if (j.legacy) { $('dkTabs').hidden = true; setHead(j.title); $('dkKicker').textContent = 'From the archive'; $('dkBody').innerHTML = legacyPiece(j); }
     else paintLens();
     paintArt(j);
     if (j.brief) {

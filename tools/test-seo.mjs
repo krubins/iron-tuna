@@ -614,5 +614,259 @@ console.log('\nllms.txt');
   ok('every group carries at least one directive', silent.length === 0, silent.map((g) => g.agent).join(', '));
 }
 
+
+// ── /player/<slug> ───────────────────────────────────────────────────────────
+// ~400 URLs served from ONE shell, the /analysts/<id> problem at twenty times
+// the size: the shell ships noindex and canonicalises to /player, so every card
+// told a crawler "I am really the empty lookup box", and the one word a reader
+// searches for — a name — was the one word the HTML never held. _worker.js now
+// rewrites the head and pre-renders the card for each. As above, this lifts the
+// REAL code out of the worker and runs it rather than describing it.
+console.log('\n/player/<slug>');
+{
+  const src = read('_worker.js');
+  const lift = (a, b) => { const i = src.indexOf(a); return i < 0 ? null : src.slice(i, src.indexOf(b, i) + b.length); };
+  const idxFn = lift('async function playerIndex(env, url) {', '\n}');
+  const seo = lift('function playerSeo(env, p, row) {', '\n}');
+  const hdr = lift('function playerHeader(p, row) {', '\n}');
+  const ld = lift('function playerLd(p, row, url) {', '\n}');
+  const fold = lift('function _pcFold(s) {', '\n}');
+  ok('the worker still carries the per-player head', !!idxFn && !!seo && !!hdr && !!ld);
+
+  // THE IDENTITY IS NOT COPIED. The worker parses /player-search.js rather than
+  // keeping its own roster; if that block is ever renamed the parse yields
+  // nothing, every slug misses, and ~400 URLs quietly go back to noindex — a
+  // failure with no symptom short of a traffic chart. So the shape is asserted.
+  const search = read('player-search.js');
+  const raw = /var INDEX_RAW = "([\s\S]*?)";/.exec(search);
+  ok('the generated player index still parses', !!raw);
+  const rows = [], clubs = {};
+  for (const line of (raw ? raw[1] : '').split('\\n')) {
+    const c = line.split('|');
+    if (c.length < 4 || !c[0] || !c[1] || !c[3]) continue;
+    rows.push({ slug: c[0], n: c[1], t: c[2] || '', p: c[3] });
+    if (c[3] === 'DEF' && c[2]) clubs[c[2]] = c[1];
+  }
+  ok('it carries a roster worth indexing', rows.length > 300, String(rows.length));
+
+  // AND THE WORKER'S OWN PARSER IS RUN, not re-implemented above it. Everything
+  // else here re-derives the roster from the file and checks the result; that
+  // would pass a playerIndex whose regex or whose split had drifted, and the
+  // only symptom in production is 409 pages quietly staying noindex — it fails
+  // SAFE (the shell still serves, the card still assembles in the browser), so
+  // nothing would be visibly broken and nothing would alert.
+  //
+  // It reads the file through env.ASSETS, which is a Workers binding and does
+  // not exist here, so the binding is stubbed with the real bytes off disk.
+  {
+    const idxFnSrc = lift('async function playerIndex(env, url) {', '\n}');
+    const run = new Function('search', `
+      let _PLAYER_IDX = null, _PLAYER_IDX_AT = 0;
+      const env = { ASSETS: { fetch: async () => ({ ok: true, text: async () => search }) } };
+      ${idxFnSrc}
+      return playerIndex(env, 'https://irontuna.com/player/x').then(() => _PLAYER_IDX);
+    `);
+    const live = await run(search);
+    ok('the worker\u2019s own parser reads the shipped index',
+       !!live && live.rows.length === rows.length, live ? String(live.rows.length) : 'null');
+    ok('and resolves a slug to the same player the file names',
+       !!live && live.by.get(rows[0].slug) && live.by.get(rows[0].slug).n === rows[0].n);
+    ok('and derives all 32 clubs through it',
+       !!live && Object.keys(live.clubs).length === 32,
+       live ? String(Object.keys(live.clubs).length) : 'null');
+    // An asset that 404s, or a file whose generated block was renamed, must
+    // leave the index null rather than half-built: a half-built index is a
+    // subset of players silently losing their cards.
+    const dead = new Function(`
+      let _PLAYER_IDX = null, _PLAYER_IDX_AT = 0;
+      const env = { ASSETS: { fetch: async () => ({ ok: false, text: async () => '' }) } };
+      ${idxFnSrc}
+      return playerIndex(env, 'https://irontuna.com/player/x').then((r) => r);
+    `);
+    ok('an unreachable asset yields no index rather than half of one',
+       (await dead()) == null);
+  }
+  // The club names come out of the index's own DEF rows, so all 32 must be
+  // there or a card prints an abbreviation where it should print a club.
+  ok('all 32 clubs are derivable from its DEF rows', Object.keys(clubs).length === 32,
+    String(Object.keys(clubs).length));
+
+  // The worker's fold and the browser's fold have to agree character for
+  // character, or a name matches on one side and not the other and the card
+  // loses its numbers.
+  const browserFold = (search.match(/function fold\(s\) \{[\s\S]*?\n  \}/) || [''])[0];
+  for (const part of ["normalize('NFD')", "[\\u0300-\\u036f]", '[^a-z0-9 ]+', '\\s+']) {
+    ok(`the worker's fold still matches the browser's on ${part}`,
+      !!fold && fold.includes(part) && browserFold.includes(part));
+  }
+
+  const shell = read('player.html');
+  // The shell must stay noindex ON DISK, for the reason analyst.html must: it
+  // is what /player/<slug> is BUILT from, not what is served there.
+  ok('the shell on disk is still noindex', /<meta name="robots" content="noindex,follow">/.test(shell));
+
+  // Every string the worker replaces has to still be in the file, verbatim.
+  // A replace() that matches nothing does not throw — it returns the input —
+  // so a shell edited out from under the worker fails silently and the card
+  // serves empty with an index directive on it, which is the worst of both.
+  const needed = [
+    '<meta name="robots" content="noindex,follow">',
+    '<div id="pcCard" hidden>',
+    '<h1 id="pcName"></h1>',
+    '<p class="pc-club" id="pcClub"></p>',
+    '<div class="pc-nums" id="pcNums"></div>',
+    '<link rel="canonical" href="',
+    '<meta name="description" content="',
+  ];
+  const gone = needed.filter((n) => !shell.includes(n));
+  ok('the shell still carries every string the worker rewrites', gone.length === 0, gone.join(' | '));
+
+  // The pre-render must be what the page's own script writes, or hydration
+  // repaints the card and the reader watches it flicker.
+  ok('the club line matches the markup the page hydrates with',
+    /'<b>' \+ \(POS_WORD\[p\.p\] \|\| p\.p\) \+ '<\/b>'/.test(shell)
+    && !!hdr && hdr.includes("'<b>' + e(PC_POS_WORD[p.p] || p.p) + '</b>'"));
+  ok('the number tiles match numEl',
+    /d\.className = 'pc-num'/.test(shell)
+    && !!hdr && hdr.includes("'<div class=\"pc-num\"><i>'"));
+  // And the title must be the one the page sets, or the tab changes under a
+  // reader who watched the page load.
+  const clientTitle = (shell.match(/doc\.title = (p\.n \+ [^;]+);/) || [, ''])[1];
+  ok('the edge title is the title the page sets',
+    clientTitle.includes("auction value & projection | Iron Tuna")
+    && !!seo && seo.includes("auction value & projection | Iron Tuna"), clientTitle);
+
+  // Run it. A card with a name on it is the whole point.
+  const fns = new Function('_PLAYER_IDX', 'COLUMN_POSITIONS',
+    [fold, lift('const PC_POS_WORD = {', '};'), seo, hdr, ld].join('\n')
+    + '\nreturn { playerSeo, playerHeader, playerLd };')(
+      { by: new Map(rows.map((p) => [p.slug, p])), rows, clubs }, ['QB', 'RB', 'WR', 'TE']);
+  const one = rows.find((p) => p.p === 'RB' && p.t && p.t !== 'FA');
+  const m = fns.playerSeo({}, one, { pts: 271.4, v: 58, rank: 3, of: 96 });
+  const h = fns.playerHeader(one, { pts: 271.4, v: 58, rank: 3, of: 96 });
+  ok('the head names the player', m.title.startsWith(one.n) && m.desc.includes(one.n));
+  ok('the description carries the numbers a searcher asked for',
+    m.desc.includes('271.4') && m.desc.includes('$58') && m.desc.includes('RB3'));
+  ok('the canonical is the card, not the shell', m.url === 'https://irontuna.com/player/' + one.slug);
+  ok('the pre-rendered card names the player and prices him',
+    h.name === one.n && h.nums.includes('271.4') && h.nums.includes('$58'));
+  ok('the club line resolves the abbreviation to a club', h.clubLine.includes(clubs[one.t] || '\u0000'));
+  // A kicker and a defense are not on the auction board. The tiles must be
+  // EMPTY rather than zeroed: the page's own basis line explains why on
+  // hydration, and a "$0" would be a number the site does not stand behind.
+  for (const pos of ['K', 'DEF']) {
+    const q = rows.find((p) => p.p === pos);
+    if (!q) continue;
+    ok(`an unpriced ${pos} gets a card with no invented number`,
+      fns.playerHeader(q, null).nums === '' && !/\$/.test(fns.playerSeo({}, q, null).desc));
+  }
+  let parsed = null;
+  try { parsed = JSON.parse(fns.playerLd(one, { pts: 1, v: 1, rank: 1, of: 2 }, m.url)
+    .replace(/^<script[^>]*>/, '').replace(/<\/script>$/, '').replace(/\\u003c/g, '<')); } catch (e) {}
+  ok('the JSON-LD parses', !!parsed);
+  // A footballer is a person; the analyst personas above are software and are
+  // typed as software. Neither may borrow the other's type.
+  ok('a player is marked up as a Person', parsed && parsed.mainEntity['@type'] === 'Person');
+  ok('and it hangs off the one organization', parsed
+    && parsed.publisher['@id'] === 'https://irontuna.com/#organization');
+}
+
+// ── /players ─────────────────────────────────────────────────────────────────
+// The hub. ~400 cards reachable only through sitemap.xml are ~400 cards a
+// crawler reaches last and ranks lowest, so one page links every one of them
+// and the footer links that page.
+console.log('\n/players');
+{
+  const src = read('_worker.js');
+  const i = src.indexOf('function playersIndexHtml(idx) {');
+  ok('the worker still renders the directory', i > 0);
+  const hub = read('players.html');
+  ok('the shell carries the host the worker fills',
+    hub.includes('<div class="pl-index" data-players-index></div>'));
+  ok('the shell claims /players', /<link rel="canonical" href="https:\/\/irontuna\.com\/players">/.test(hub));
+  ok('and it is indexable', !/name="robots"[^>]*noindex/.test(hub));
+  // No script on it: it is links, and links do not need one. If that ever
+  // changes the page becomes another shell a crawler is handed empty.
+  const own = (hub.match(/<script(?![^>]*\bsrc=)(?![^>]*ld\+json)[^>]*>([\s\S]*?)<\/script>/g) || [])
+    .filter((b) => !/gtag|dataLayer|nav-toggle/.test(b));
+  ok('the list needs no JavaScript', own.length === 0, String(own.length));
+  ok('the sitemap advertises it',
+    read('sitemap.xml').includes('<loc>https://irontuna.com/players</loc>'));
+}
+
+// ── the rankings board, pre-rendered ─────────────────────────────────────────
+// Sixteen pages shipped as an empty div for /it-ranks.js to fill. The crawlers
+// robots.txt invites by name do not run JavaScript, so the board this site is
+// FOR reached them with not one player's name on it.
+console.log('\nthe rankings board, pre-rendered');
+{
+  const src = read('_worker.js');
+  const lift = (a, b) => { const i = src.indexOf(a); return i < 0 ? null : src.slice(i, src.indexOf(b, i) + b.length); };
+  const pre = lift('async function ranksPrerender(env, html) {', '\n}');
+  const html = lift('function rkPreHtml(pre) {', '\n}');
+  const ld = lift('function rkPreLd(pre, url) {', '\n}');
+  ok('the worker still carries the pre-render', !!pre && !!html && !!ld);
+
+  // NO ROUTE TABLE: the horizon and the position are read off each page's own
+  // data-rk-* attributes. So the host regex has to match every shell that has
+  // one, or that page silently goes back to shipping empty.
+  const shells = pages.filter((f) => read(f).includes('data-rk-board'));
+  ok('there are rankings shells to pre-render', shells.length >= 16, String(shells.length));
+  const unmatched = shells.filter((f) => !/<div class="rk-board"[\s\S]{0,600}?>/.test(read(f)));
+  ok('the worker finds the host on every one of them', unmatched.length === 0, unmatched.join(', '));
+  const noAttrs = shells.filter((f) => !/data-rk-horizon="(week|ros)"/.test(read(f))
+    || !/data-rk-pos="[A-Z]+"/.test(read(f)));
+  ok('every shell declares the board it is', noAttrs.length === 0, noAttrs.join(', '));
+
+  // The handoff. Two boards of the same rows left in the DOM is two boards a
+  // screen reader walks and a crawler weighs, so the pre-render is REMOVED —
+  // not hidden — once the live one has painted.
+  const ranks = read('it-ranks.js');
+  ok('the board adopts the pre-render', ranks.includes("host.querySelector('[data-rk-prerender]')"));
+  ok('and removes it once it has painted', /if \(pre\) \{ pre\.remove\(\); pre = null; \}/.test(ranks));
+  ok('and does not overwrite it with "Reading the board"', ranks.includes('empty.hidden = !!pre;'));
+  // A pre-render on screen makes the file's usual "nothing rather than a stale
+  // board" line false: those rows arrived WITH the page.
+  ok('a failed fetch keeps the rows that came with the page', /function stall\(\)/.test(ranks)
+    && ranks.includes('served with this page'));
+}
+
+// ── the boards have addresses ────────────────────────────────────────────────
+// Every board on this site was one URL: the reader who sorted, filtered and
+// found the row worth arguing about had nothing to send but "go to the
+// rankings page and do what I did", and a crawler had one address where there
+// are hundreds of useful views.
+console.log('\nthe boards have addresses');
+{
+  const boards = ['it-ranks.js', 'fantasy.html', 'previews.html', 'weekly-wrap.html'];
+  for (const f of boards) {
+    const src = read(f);
+    ok(`${f} reads its view out of the URL`, /new URLSearchParams\(location\.search\)/.test(src));
+    ok(`${f} writes it back`, /history\.replaceState/.test(src));
+    // pushState would make sorting a column a page the back button has to walk
+    // back out through.
+    ok(`${f} does not push a history entry`, !/history\.pushState/.test(src));
+    ok(`${f} gives each row an id to link to`, /id="[pg]-' \+ (e|esc)\(sl\)/.test(src));
+    ok(`${f} offers a link to copy`, /data-share="/.test(src));
+    // The clipboard can be refused — no permission, no secure context. The
+    // address bar is updated first and unconditionally so the reader is still
+    // left with the right URL in front of them.
+    // Comments are stripped first: the one above each of these handlers
+    // explains the ordering at length, and matching the word "clipboard"
+    // inside it would fail the very rule it is describing.
+    const bare = src.replace(/^\s*\/\/.*$/gm, '');
+    const click = (bare.match(/data-share'\);[\s\S]{0,600}/) || [''])[0];
+    const atSync = click.indexOf('syncUrl()'), atClip = click.indexOf('clipboard');
+    ok(`${f} updates the address bar before it tries the clipboard`,
+      atSync > 0 && (atClip < 0 || atSync < atClip), `syncUrl@${atSync} clipboard@${atClip}`);
+  }
+  // The anchors work with no script at all, which is the form a crawler and a
+  // pasted link both meet first.
+  const css = read('site.css');
+  ok('a linked row is marked without JavaScript', /tr\[id\^="p-"\]:target/.test(css));
+  ok('a linked game card is too', /\.ww-game\[id\^="g-"\]:target/.test(css));
+}
+
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

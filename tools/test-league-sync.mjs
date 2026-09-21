@@ -38,7 +38,7 @@ const deps = [
   cut('const PROJECTIONS = [', '\n];') + '\n];',
   cut('const SCORING_BASE = {', 'function scoreStats(stats, position, rules) {'),
   fnCut('function scoreStats(stats, position, rules) {'),
-  cut('const SCORING_KDEF = {', '// -- the three boards'),
+  cut('// -- kickers and defenses, scored', '// -- the three boards'),
   cut('function etOffsetHours(ms) {', 'function etClock(ms) {'), cut('function etParts(ms) {', 'const _etDow = '),
   cut('const NEWSROOM_FLAGS = {', 'function flagReport(env) {'),
   cutLine('const json = (obj, status, c) =>'), cutLine('function adminOk(env, key)'),

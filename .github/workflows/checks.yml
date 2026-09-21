@@ -466,6 +466,10 @@ jobs:
       - name: DFS adapters, Vegas Value Score, stacks and optimizer
         if: ${{ !cancelled() }}
         run: node tools/test-dfs.mjs
+      - name: The slate a stored salary row belongs to
+        if: ${{ !cancelled() }}
+        run: node tools/test-dfs-slates.mjs
+
       - name: The Value Coach on the DFS lineup
         if: ${{ !cancelled() }}
         run: node tools/test-dfs-coach.mjs
@@ -857,6 +861,21 @@ jobs:
         env:
           REQUIRE_BROWSER: '1'
         run: node tools/test-homepage.mjs
+
+      # tools/test-boards-render.mjs is the same idea aimed at the in-season
+      # boards. It arrived with the September 2026 pass that gave the rankings
+      # pages a pre-render served from the edge and gave /weekly-*-rankings,
+      # /fantasy, /previews and /weekly-wrap a URL that says what is on screen.
+      # None of that is visible to a file-reading gate: a board that throws on
+      # load, a pre-render that is never removed, or a copy button wired to
+      # nothing passes every other suite in tools/. It runs the worker's own
+      # rkPreHtml rather than a stand-in, so a change to the pre-render shows up
+      # here rather than on irontuna.com.
+      - name: The in-season boards, rendered
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-boards-render.mjs
 
       # STILL NOT run here: tools/test-you-column.mjs, tools/test-market-anchors.mjs,
       # tools/test-vegas-slider.mjs and tools/test-qb-curve.mjs, which need react

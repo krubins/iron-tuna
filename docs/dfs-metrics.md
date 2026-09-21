@@ -189,6 +189,72 @@ row reads `gamelines` or `ratings`, and every surface says so. That is a
 configuration state, not a failure, and it is why the fallback is specified as
 carefully as the primary path.
 
+## Where a player's projection comes from
+
+`PROJECTIONS` in `_worker.js` is a curated preseason pool of about four hundred
+names, and `tools/merge-projections.mjs` is forbidden from growing it —
+"existing roster only: no players are added or removed". DraftKings prices
+roughly twice that many bodies. The surplus is almost exactly the $3,000
+minimum-salary tier: the backup who is playing because the report ruled
+somebody out on Friday.
+
+Until the ladder, every one of those men arrived as a stub with
+`onBoard: false` and was filtered out of the metrics, the value boards, the
+stacks and the optimizer. The only trace of him was the upload panel's "N of
+them are not on this week's board". **This was never a prop-coverage problem.**
+The market side already degrades on its own — props → game lines → fitted team
+ratings, each rung named (see *What the market actually said about him*) — so a
+man no book has posted on gets a number the moment he is *on* the board. The
+break was that he was not on it at all.
+
+So a priced row falls through a ladder, and `projectionBasis` says which rung
+caught it:
+
+| `projectionBasis` | Source | Covers |
+|---|---|---|
+| `board` | The curated projection, blended with the market exactly as described above. | The ~377 players the pool carries that a DraftKings Classic roster can use (345 skill plus 32 defenses; kickers are not on the roster). |
+| `usage` | His own season-to-date line from the nflverse overlay, per game, put through the **same** `weeklyStats()` scaler the board uses — touchdowns follow the week environment fully, yards at the square root — then scored at `SCORING_SITE`. | Anyone who has taken a snap this season. `supplementalGames` is the game count behind it. |
+| `operator` | The operator's own published season average, already parsed onto the row as `operatorFppg`. | The veteran who is priced and has not played. |
+| `none` | Nothing. He stays off the board. | A true debut. Inventing a number for a man with no football behind him is worse than the blank. |
+
+A row off any rung below `board` carries `supplemental: true`, and every
+surface gates on `projected` rather than `onBoard` — "has a number we stand
+behind" and "is in the curated pool" stopped being the same question. The slate
+reports `supplemented` and `unprojected` beside `unmatched`, because one number
+made a debut and a starter the pool had never heard of look identical.
+
+Three deliberate limits:
+
+- **A supplemental number is backward-looking, and graded `LOW`.** It is what
+  he has done, not what Sunday asks of him, and for this tier those are rarely
+  the same thing: the $3,000 back about to see eighteen carries has a season
+  line built on four snaps a game. The ladder makes the tier visible, priced
+  and pickable. **It does not claim to have found the leverage** — pairing it
+  with the availability layer above, which is what promotes such a player in
+  the first place, is where that signal lives.
+- **Cash builds decline it.** `dfsMetrics(rows, 'cash')` drops supplemental
+  rows, and the optimizer's `floor` mode does the same (reporting them in
+  `thin`, the way it reports the benched). A cash game is won on a floor, and a
+  season average is the one number that cannot tell you whether a man has one
+  this week. A reader's lock overrules this, as it overrules everything else.
+- **Defenses are never supplemented.** A defense matches by club, so an
+  unmatched one means the board itself is missing, and there is no per-player
+  usage line behind a defense to fall back on.
+
+Once a supplemental player's game is final, `dfsActualFor` hangs his box
+score on the row exactly as it does for a board row, and everything downstream
+reads `actualPoints` ahead of the projection (see *Played games*). That
+pairing matters more here than anywhere else on the slate: a backward-looking
+number and a finished game look identical until one of them says which it is,
+and a supplemental row must never be the last man still quoting a season
+average at an afternoon that has been played.
+
+A supplemental row claims no market of any kind: `dfsMarketRead` grades it
+`none`, whose shrink is 0, so its market read *is* its own number rather than a
+curve fit wearing a Vegas label. It counts in the prop-coverage denominator as
+a man the books have not priced. Surfaces print it as `SEASON` rather than
+`FITTED`, which would claim a curve nobody fitted.
+
 ## Who is on the board at all
 
 Every metric above assumes the player is going to be on the field. That is not
@@ -267,6 +333,128 @@ zero, every threshold compared zero with zero, and **the answer was
 Head-to-Head on every slate the site ever served.** The builder's own
 `projPoints`, `floorPoints` and `ceilingPoints` were correct the whole time and
 unused. `contestPick` reads those.
+
+## Played games
+
+Once a slate starts, part of it stops being a forecast. A player whose club's
+game is **final** carries `actualPoints` on his slate row: what he scored,
+run through the same site rules as everything else on the board
+(`scoringRules('ppr', SCORING_SITE[site])`), from the box score already stored
+in `game_summaries`. `dfsActualsForWeek()` reads that table and never fetches —
+`/api/dfs` is public and cached for five minutes, and a fourteen-game slate
+would otherwise hit ESPN fourteen times per cache miss. A game whose box score
+has not been stored yet simply reads as unplayed, which is what the page said
+yesterday.
+
+**Final only.** A game in progress has a box score too, and half of one is not
+what a man scored; a roster totalled on partial stats reads low for a reason no
+reader could see.
+
+| Where | What changes |
+|---|---|
+| Every optimizer mode | Reads the banked number ahead of its own objective. A finished afternoon has no spread left, so floor, median and ceiling are all that one number, and the leverage mode does not discount points already scored by anybody's ownership. |
+| The proposed roster | A player whose game is over is **off the board**: no entry submitted now can contain him, so building him into a "recommended" lineup would be hindsight, not a recommendation. He is listed in `played` with the reason. A **lock is the exception** — a reader totalling an entry he already holds is telling the builder those seats are taken, and the banked points come with them. |
+| Lineup totals | `projPoints` counts banked players at what they scored. `bankedPoints` / `bankedPlayers` split the settled part from the part still to come, and the card prints the split in words. |
+| Typical entry | Played players **stay in the draw**, at their actual score. The field submitted before kickoff, so an ordinary entry owns them at what they did — including a zero. `basis` becomes `modeled-ownership,part-played` so nothing downstream prints it as a pure projection. |
+
+### The prose
+
+Every sentence the page generates about a player is written forward — a
+projection, a ceiling, a market disagreement, a downside, a devigged touchdown
+price — and none of it is true once his game has been played. So the generators
+ask `isBanked()` / `isPlayed()` first:
+
+| Generator | On a played seat |
+|---|---|
+| `playerFit()` | Drops the anchor/punt/leverage thesis for what the seat returned on the salary it cost. A played defense says its number is still the pre-game estimate. |
+| `marketPhrase()` | The books' pre-game prices are named as history, not as something to act on. |
+| `lineupSummary()` | Market signal is drawn from the seats **still to play**; the anchor sentence stops calling a banked man a "projected scoring base"; a stack whose game is over is described as spent, with what it actually returned. |
+| `breakdownHtml()` | Market gap and Key Risks both come from the seats still to play — a man who has scored has no downside left. Construction names how much of the spend has already returned. When nothing is left to play, each section says so instead of inventing a forecast. |
+| `propsNote()` | Counts quoted props and the best touchdown price among the seats still to play, and says how many no longer carry a market. |
+| `pivotRows()` | Neither side of a swap may be a finished game: the seat cannot be vacated and the replacement cannot be entered. |
+| The player pool | Prints the actual with the `final` mark, so the board and the roster never show two different numbers for the same man. |
+| The value boards and the metrics board | Drop the men whose games are over, and say how many came off. These answer "who is worth a seat", and a played man cannot take one — his Value, Cash and Tournament scores are all indexed off a projection the result has overtaken. |
+| The player calculation modal | Leads with `Final` and relabels the projection `Projected beforehand`; the eight derivation steps stay, framed as a record of how the number was built rather than a read on him now. |
+| Require a player | Keeps him — pinning a played man is how a reader tells the builder about an entry he already holds — and shows his actual rather than the projection. |
+
+The split is deliberate: a **reference** surface (the pool, the modal, the
+require search) keeps a played player and prints what he scored; a **shopping**
+surface (the value boards, the metrics board, the pivots, the optimizer pool)
+drops him, because nothing submitted now can contain him.
+
+The wording is verified by rendering the page — no node gate can read prose —
+and `tools/test-dfs.mjs` pins that each branch exists.
+
+### The defense
+
+A DST is scored from a line `normalizeGameSummary()` builds by **inverting the
+offense across from it**, because that is what those statistics are: a sack by
+this defense is a sack taken by that quarterback, an interception by this
+defense is one he threw, and a fumble this defense recovered is one they lost.
+
+| Stat | Where it comes from |
+|---|---|
+| `sacks` | the opposing passers' `sacks-sackYardsLost` |
+| `ints` | the opposing passers' interceptions thrown |
+| `fumRec` | the opposing players' fumbles lost |
+| `ptsAllowed` | the other side's final score — the same convention the DST *projection* uses (the opponent's implied team total), so projected and scored defenses are measured alike |
+| `defTD` / `stTD` / `safety` | the scoring plays, matched on the play's own type and only when it is a touchdown, so an ordinary drive is never counted as a return |
+
+Nothing here reads ESPN's own defensive categories, so it cannot drift from a
+stat-name guess. Every key it does read is one the offensive box score already
+parses, and every value is checked against the other team's lines in the real
+2025 Week 1 fixture (`tools/test-content.mjs`).
+
+**Scored on DraftKings' table, not the site's.** `SCORING_SITE.dk` now carries
+the operator's DST values — a six-point defensive touchdown, a two-point
+safety, no sack bonus, and DraftKings' seven-rung points-allowed ladder
+(`0 → +10`, `1–6 → +7`, `7–13 → +4`, `14–20 → +1`, `21–27 → 0`, `28–34 → −1`,
+`35+ → −4`). Before this, a DST fell through to `SCORING_KDEF`, the site's
+season-long default, so every DFS defense — projected as well as scored — was
+on the wrong scale. Two things had to change for that to take effect:
+
+- `scoringRules()` read `SCORING_BASE` only, so every K/DEF key an operator or
+  a league supplied was silently dropped. It now reads both tables, and knows
+  the difference between a bonus array (`{at, points}`) and a tier array
+  (`{min, max, points}`) — reading a ladder with the bonus filter emptied it,
+  which is how a defense quietly stopped being scored for what it allowed. The
+  client (`scoreDefense` in `it-league.js`) has always honored those
+  overrides, so this is also the two halves agreeing again.
+- `SCORING_KDEF` moved above `scoringRules`, which now reads it at module load
+  through `_COL_RULES`. A `const` read above its declaration throws rather
+  than reading undefined, and `node --check` cannot see it — so
+  `tools/test-scoring.mjs` pins the declaration order and evaluates the engine
+  in file order.
+
+The DraftKings values were checked on 2026-09-20 against two independent web
+searches that agree with each other. The operator's own rules page is
+unreachable from the build environment (the egress proxy blocks
+`draftkings.com`), so they are corroborated rather than read from the source;
+worth re-checking from a machine that can reach it.
+
+### What is still missing, and which way it leans
+
+Every one of these can only **understate** a player, never inflate one:
+
+- **Kickers.** Field goals and extra points are not in the box score and
+  nothing in it inverts into them, so a played kicker keeps his projection with
+  `actualBasis: 'no-kicking-box-score'` and the page marks him `est`.
+  DraftKings Classic has no kicker slot, so in practice this is inert.
+- **A defense from an old payload.** A summary stored before the defensive
+  line existed carries no `defense`, and the board treats that as a defense it
+  cannot score (`no-defense-box-score`, marked `est`) rather than as a defense
+  that did nothing. `SUMMARY_CONTRACT` re-reads each such game once.
+- **Blocked kicks, and returned extra points or two-point conversions.**
+  DraftKings pays two apiece; the inversion cannot see either. A blocked-kick
+  *touchdown* is counted, as a defensive score.
+- **Return touchdowns, for an offensive player.** The box score carries no
+  returns, so a man whose only score was a kick or punt return reads as the
+  rest of his line. A played man with no box-score line at all is scored
+  **zero** (`actualBasis: 'box-score-absent'`), because he dressed and did
+  nothing — that is a result, not a missing number.
+- **FanDuel.** `SCORING_SITE.fd` still overrides nothing for DST, so a FanDuel
+  defense is on the site's season-long table. Same fix, whenever FanDuel's
+  values are to hand.
 
 ## What is deliberately not here
 

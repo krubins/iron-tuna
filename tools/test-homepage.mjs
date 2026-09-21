@@ -4,7 +4,7 @@
 //
 // It replaces tools/test-position-lens.mjs, which drove the sticky ribbon's
 // Auction/Snake edition switch and the Position Intel grid under it. Both came
-// off in the September 2026 rewrite: "/" is five sections now — hero, the two
+// off in the September 2026 rewrite: "/" is six sections now — hero, the lead,
 // product cards, the market disagreements, the desk's current pieces, and the
 // method with the disclosures under it — and the draft-season controls went with
 // the draft-season modules.
@@ -203,7 +203,10 @@ const read = page => page.evaluate(() => {
   const text = el => (el ? el.textContent.replace(/\s+/g, ' ').trim() : null);
   return {
     h1: text(document.querySelector('h1')),
+    claim: text(document.querySelector('.hm-claim')),
     lede: text(document.querySelector('.hm-lede')),
+    claimPx: (() => { const e = document.querySelector('.hm-claim'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
+    ledePx: (() => { const e = document.querySelector('.hm-lede'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
     cta: [...document.querySelectorAll('.hm-cta a')].map(a => `${a.textContent.trim()}|${a.getAttribute('href')}`),
     how: (() => { const a = document.querySelector('.hm-how-link'); return a && `${a.textContent.trim()}|${a.getAttribute('href')}`; })(),
     clock: vis('hmClock') ? text(document.getElementById('hmClock')) : null,
@@ -233,6 +236,12 @@ const read = page => page.evaluate(() => {
     // card, and the lookup's own markers in the disagreement table.
     readPics: document.querySelectorAll('.hm-read.has-pic .it-plate').length,
     cardFaces: document.querySelectorAll('#readGrid .it-player-face').length,
+    // The lead well joined the cards as the desk's front on 2026-09-21, and it
+    // takes the newest piece — which is the one most likely to carry findings.
+    // Counted separately so a regression can be told apart: faces missing from
+    // the lead is a different bug from faces missing off the cards.
+    leadFaces: document.querySelectorAll('#leadWell .it-player-face').length,
+    leadFocus: document.querySelectorAll('#leadWell [data-player-focus]').length,
     articles: vis('articles'),
     cards: [...document.querySelectorAll('#readGrid .hm-read-card')].map(a => a.getAttribute('href')),
     how5: vis('how'),
@@ -252,9 +261,16 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
   ok(`${tag}: the headline is the thesis`,
-     r.h1 === 'The betting market knows more. Put it in your lineup.', r.h1);
+     r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.', r.h1);
+  // The conversion, in its own line above the lede and set larger than it. This
+  // is the sentence the page cannot afford a reader to skim past, so it is
+  // asserted separately from the copy around it.
+  ok(`${tag}: the claim line states the conversion`,
+     r.claim === 'Iron Tuna converts sportsbook lines and player props into fantasy point projections.', r.claim);
+  ok(`${tag}: and it is set larger than the lede under it`,
+     r.claimPx > r.ledePx, `${r.claimPx} vs ${r.ledePx}`);
   ok(`${tag}: the supporting line says what the site does`,
-     r.lede === 'Iron Tuna translates sportsbook lines, player props and market movement into weekly rankings, trade values and DFS lineups.', r.lede);
+     r.lede === 'Those projections become weekly rankings, trade values and DFS lineups, scored at your league\u2019s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.', r.lede);
   ok(`${tag}: two buttons, one per lane`,
      r.cta.join(' / ') === 'Get Fantasy Advice|/fantasy / Build a DFS Lineup|/dfs', r.cta.join(' / '));
   ok(`${tag}: and a smaller link into the method, on this page`,
@@ -266,13 +282,17 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   await ctx.close();
 }
 
-// ── 2. the five sections, in the order the spec names ───────────────────────
-console.log('\nfive sections, in order, and nothing else');
+// ── 2. the six sections, in the order the spec names ────────────────────────
+// Five until 2026-09-21, when the lead story took the slot directly under the
+// hero. It is a section, not an aside: it is the desk's front, the first thing
+// on the page, and the order below is the whole outline — a seventh section
+// appearing anywhere still fails here.
+console.log('\nsix sections, in order, and nothing else');
 {
   const { page, ctx } = await open(1280, 900);
   const r = await read(page);
-  ok('hero, cards, disagreements, articles, method',
-     r.order.join(' > ') === 'heroBand > hm-sec > different > articles > how', r.order.join(' > '));
+  ok('hero, lead, cards, disagreements, articles, method',
+     r.order.join(' > ') === 'heroBand > lead > hm-sec > different > articles > how', r.order.join(' > '));
   ok('the two product cards are named as specified',
      r.lanes.join(' / ') === 'Fantasy This Week / DFS This Week', r.lanes.join(' / '));
   // The five destinations each card owes, as routes that exist.
@@ -358,7 +378,16 @@ console.log('\nwith the boards answering');
 
   // The faces on the two card readings and on the desk's cards.
   ok('each card’s one reading carries the face of the player it names', r.readPics === 2, String(r.readPics));
-  ok('the desk’s cards carry the faces their findings name', r.cardFaces >= 3, String(r.cardFaces));
+  // THE SUBJECT OF THE HEADLINE, not the piece's whole cast (2026-09-21): a
+  // JAX-at-DEN recap headlined on a Jaguar was drawn with the three Broncos
+  // its findings open on. A piece whose headline names none of its cast still
+  // falls back to the cast, which is what both fixture pieces do, so the
+  // counts below are the same as they were before the lead was split out —
+  // they have just moved from three cards to a lead plus two.
+  ok('the desk’s front carries the faces its findings name',
+     r.leadFaces + r.cardFaces >= 3, r.leadFaces + ' lead + ' + r.cardFaces + ' cards');
+  ok('the lead is one of them, and is stamped with its own subject',
+     r.leadFaces >= 1 && r.leadFocus >= 1, r.leadFaces + '/' + r.leadFocus);
 
   ok('and no loading copy survives anywhere on the page', !LOADING.test(r.body),
      (r.body.match(LOADING) || [''])[0]);
@@ -389,7 +418,40 @@ console.log('\nwith the desk naming nobody');
   ok('never the player the Fantasy card already recommends',
      r.edgeName !== 'Drake London' && /Drake London/.test(r.fnRead || ''), r.edgeName);
   ok('a piece with no findings still gets a card, just no faces on it',
-     r.cards.length === 3 && r.cardFaces === 0, r.cards.length + '/' + r.cardFaces);
+     r.cards.length === 3 && r.cardFaces === 0 && r.leadFaces === 0,
+     r.cards.length + '/' + r.cardFaces + '/' + r.leadFaces);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+
+// ── 3b2. the face and the sentence under it ────────────────────────────────
+// THE HERO RAN ONE PLAYER'S PHOTOGRAPH OVER ANOTHER PLAYER'S NEWS. The desk
+// card took the subject of the piece's FIRST finding and printed the piece's
+// HEADLINE under him — two picks off one row with nothing tying them together.
+// Reported on 2026-09-21: Nate Adkins's photograph, captioned "Parker
+// Washington's 43% target share after Week 2 makes him the clearest roster add
+// of the week". Both real, and about different men.
+console.log('\nwith a headline about the piece\u2019s second finding');
+{
+  const full = CONTENT.pieces;
+  const WAIVERS = { kind: 'waiver-wire', title: 'Waiver Wire', week: 3, publishedAt: FRESH,
+    headline: 'Parker Washington\u2019s 43% target share after Week 2 makes him the clearest roster add of the week',
+    dek: 'The Jacksonville routes are not going back.',
+    url: '/in-season/desk/waiver-wire/3', byline: 'Iron Tuna desk',
+    components: [
+      { n: 1, player: 'Nate Adkins', headline: 'Nate Adkins is the Denver tight end now' },
+      { n: 2, player: 'Parker Washington', headline: 'Parker Washington ran a route on 43% of the dropbacks' } ] };
+  CONTENT.pieces = [WAIVERS, ...full];
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  ok('the hero carries a picture', r.edge === true && r.edgePlate === true);
+  ok('it is the player the headline is about', r.edgeName === 'Parker Washington', r.edgeName);
+  ok('and the caption under him is that headline', r.edgeGap === WAIVERS.headline, r.edgeGap);
+  // The assertion the bug would fail: the man in the frame and the man in the
+  // sentence are the same man.
+  ok('the face and the sentence are about the same man',
+     !r.edgeGap.includes('Nate Adkins') && r.edgeName !== 'Nate Adkins',
+     r.edgeName + ' / ' + r.edgeGap);
   CONTENT.pieces = full;
   await ctx.close();
 }
@@ -436,7 +498,7 @@ MODE = 'dead';
 for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
-  ok(`${tag}: the hero still says the thing`, r.h1 === 'The betting market knows more. Put it in your lineup.');
+  ok(`${tag}: the hero still says the thing`, r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.');
   ok(`${tag}: both buttons still work`, r.cta.length === 2);
   ok(`${tag}: the dateline is absent rather than loading`, r.clock === null);
   ok(`${tag}: the Fantasy card keeps its links and drops its reading`,

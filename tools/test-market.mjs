@@ -56,6 +56,7 @@ const M = new Function(
   `${scoring}\n${odds}\n${adapter}\n${providers}\n${snapshots}\n${vegas}\n${overlay}\n` +
   'return { scoringRules, scoreStats, SCORING_BASE, tdPointsFor, PROVIDERS, PROVIDER_KINDS, ' +
   'providerRun, providerReport, PROVIDER_UNAVAILABLE, snapshotWrite, snapshotStatus, ' +
+  'snapshotPulls, snapshotPulledAt, ' +
   'marketHistoryFrom, marketHistory, marketHistoryAll, marketAgreement, _median, _snapSame, ' +
   'vegasProjection, vegasCountMarket, vegasTdProbability, vegasConfidence, VEGAS_MARKETS, applyMarketTd, VEGAS_TD_STATS, ' +
   '_oddsImpliedProb, _oddsDevigOver, parseOddsApiEvent, buildVegasOverlay, snapshotSubject, _snapLookup };'
@@ -121,8 +122,16 @@ console.log('\nthe provider layer');
 // A minimal in-memory D1 that answers only the statements this store issues.
 function fakeDb() {
   const rows = [];
+  // The pull clock, keyed by subject type. Separate from `rows` on purpose:
+  // the whole point of the table is that it records a pull the rows cannot,
+  // because an unchanged line writes no row at all.
+  const pulls = new Map();
   const run = (sql, args) => {
     if (/^CREATE|^ALTER/i.test(sql)) return { meta: {} };
+    if (/^INSERT INTO odds_snapshot_pulls/i.test(sql)) {
+      pulls.set(args[0], { subject_type: args[0], ts: args[1], seen: args[2], changed: args[3] });
+      return { meta: { changes: 1 } };
+    }
     if (/^INSERT INTO odds_snapshots/i.test(sql)) {
       rows.push({ ts: args[0], season: args[1], week: args[2], book: args[3], subject_type: args[4],
                   subject: args[5], market: args[6], line: args[7], over_odds: args[8],
@@ -137,6 +146,7 @@ function fakeDb() {
     return { meta: {} };
   };
   const all = (sql, args) => {
+    if (/FROM odds_snapshot_pulls/i.test(sql)) return { results: [...pulls.values()] };
     if (/GROUP BY book, subject_type, subject, market/i.test(sql)) {
       const by = new Map();
       for (const r of rows) {
@@ -169,7 +179,7 @@ function fakeDb() {
     st.first = () => first(sql, []);
     return st;
   };
-  return { _rows: rows, prepare, batch: async (stmts) => stmts.map(s => s.run()) };
+  return { _rows: rows, _pulls: pulls, prepare, batch: async (stmts) => stmts.map(s => s.run()) };
 }
 
 console.log('\nthe historical betting store');
@@ -187,6 +197,16 @@ console.log('\nthe historical betting store');
   // six figures of identical rows a week.
   const b = await M.snapshotWrite(env, [row('dk', 59.5, -110, -110), row('fd', 60.5, -112, -108)], { ts: t0 + 3600000 });
   ok('an unchanged line writes nothing', b.written === 0 && b.unchanged === 2, JSON.stringify(b));
+
+  // ...and that is exactly why the pull is stamped separately. Reading the
+  // newest row back as "when we last pulled" is what made the DFS board tell a
+  // reader his line was "pulled 52h ago" an hour after the poll confirmed it.
+  ok('a pull that changed nothing still records that it happened',
+     (await M.snapshotPulledAt(env, 'player')) === t0 + 3600000, JSON.stringify([...db._pulls.values()]));
+  ok('...and counts what it saw against what actually moved',
+     db._pulls.get('player').seen === 2 && db._pulls.get('player').changed === 0);
+  ok('the two clocks disagree, which is the whole point',
+     (await M.snapshotPulledAt(env, 'player')) > Math.max(...db._rows.map(r => r.ts)));
 
   // Juice moving with the number standing still IS a move: the de-vigged
   // probability changed, so the projection changes.
@@ -454,10 +474,10 @@ console.log('\nthe projection itself');
 
 console.log('\nconfidence');
 {
-  const base = { coreMissing: 0, marketCount: 5, books: 5, agreement: 1, ageHours: 1, injuryStatus: null };
+  const base = { coreMissing: 0, marketCount: 5, books: 5, agreement: 1, lastMoveHours: 1, injuryStatus: null };
   ok('everything present and fresh is HIGH', M.vegasConfidence(base).level === 'HIGH');
   ok('one book drops it', M.vegasConfidence({ ...base, books: 1, agreement: null }).level !== 'HIGH');
-  ok('stale lines drop it', M.vegasConfidence({ ...base, ageHours: 60 }).level !== 'HIGH');
+  ok('a line no book has moved in days drops it', M.vegasConfidence({ ...base, lastMoveHours: 60 }).level !== 'HIGH');
   ok('books disagreeing drops it', M.vegasConfidence({ ...base, agreement: 0.3 }).level !== 'HIGH');
   ok('a missing core market drops it', M.vegasConfidence({ ...base, coreMissing: 1 }).level !== 'HIGH');
   ok('a player ruled out drops it hard',
@@ -466,11 +486,11 @@ console.log('\nconfidence');
   ok('a questionable tag is a caution, not a disqualification',
      M.vegasConfidence({ ...base, injuryStatus: 'Questionable' }).level === 'HIGH');
   ok('two problems together are LOW, not MEDIUM',
-     M.vegasConfidence({ ...base, books: 1, ageHours: 60 }).level === 'LOW');
+     M.vegasConfidence({ ...base, books: 1, lastMoveHours: 60 }).level === 'LOW');
   ok('every downgrade says why in words',
-     M.vegasConfidence({ ...base, books: 1, agreement: null, ageHours: 60 }).reasons.length >= 2);
+     M.vegasConfidence({ ...base, books: 1, agreement: null, lastMoveHours: 60 }).reasons.length >= 2);
   ok('the worst case is LOW, not an error',
-     M.vegasConfidence({ coreMissing: 2, marketCount: 1, books: 1, agreement: null, ageHours: null,
+     M.vegasConfidence({ coreMissing: 2, marketCount: 1, books: 1, agreement: null, lastMoveHours: null,
                          injuryStatus: 'IR' }).level === 'LOW');
 }
 

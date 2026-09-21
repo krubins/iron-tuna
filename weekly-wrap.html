@@ -262,6 +262,7 @@
     <li><a href="/fantasy">Fantasy</a></li>
     <li><a href="/dfs">DFS</a></li>
     <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
     <li><a href="/faq">FAQ</a></li>
@@ -304,7 +305,44 @@
       chips = document.getElementById('wwChips'),
       title = document.getElementById('wwTitle');
   var ET = 'America/New_York', GAME_MS = 3.75 * 3600000, REFRESH_MS = 120000;
-  var filter = 'all', currentWeek = null;
+  var filter = 'all', currentWeek = null, focus = '', painted = false;
+  // A game's address on this page. ?week= has always been here; a GAME had no
+  // link at all, so "look at this one" meant sending the week and saying which
+  // card to scroll to.
+  //
+  // Built from the two clubs rather than from the game id the desk slugs,
+  // because /api/weekly-wrap does not carry an id — and because on a page whose
+  // subject is one week, "atl-at-kc" is the readable spelling and the week is
+  // already in the URL beside it.
+  function gslug(g) {
+    return String((g.away || '') + '-at-' + (g.home || ''))
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+  function viewQuery(game) {
+    var qs;
+    try { qs = new URLSearchParams(location.search); } catch (x) { qs = new URLSearchParams(); }
+    var put = function (k, v) { if (v) qs.set(k, v); else qs.delete(k); };
+    put('filter', filter !== 'all' ? filter : '');
+    put('game', game || '');
+    return qs.toString();
+  }
+  function syncUrl() {
+    if (!window.history || !history.replaceState) return;
+    var qs = viewQuery(focus);
+    try { history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + (focus ? '#g-' + focus : '')); } catch (x) {}
+  }
+  function shareUrl(game) {
+    var qs = viewQuery(game);
+    return location.origin + location.pathname + (qs ? '?' + qs : '') + '#g-' + game;
+  }
+  (function readUrl() {
+    var qs;
+    try { qs = new URLSearchParams(location.search); } catch (x) { return; }
+    var fl = qs.get('filter');
+    if (fl === 'recap' || fl === 'rest') filter = fl;
+    focus = String(qs.get('game') || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!focus && /^#g-[a-z0-9-]+$/.test(location.hash || '')) focus = location.hash.slice(3);
+  })();
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -377,7 +415,11 @@
   function card(g, now) {
     var st = stateOf(g, now);
     var cls = st === 'recap' ? '' : st === 'pending' ? ' pending' : st === 'upcoming' ? ' up' : '';
-    var out = ['<article class="ww-game' + cls + '" data-state="' + st + '">', scoreBlock(g, st), '<div class="ww-body">'];
+    var sl = gslug(g);
+    var out = ['<article class="ww-game' + cls + (focus === sl ? ' rk-hit' : '') + '" id="g-' + esc(sl) +
+      '" data-state="' + st + '">', scoreBlock(g, st), '<div class="ww-body">',
+      '<button class="gm-share" type="button" data-share="' + esc(sl) +
+      '" aria-label="Copy a link to ' + esc(g.matchup || sl) + '">Link</button>'];
     if (st === 'recap') {
       var r = g.recap;
       out.push('<h3><a href="' + esc(r.url) + '">' + esc(r.headline) + '</a></h3>');
@@ -505,12 +547,43 @@
     [].slice.call(tools.querySelectorAll('[data-filter]')).forEach(function (b) {
       b.setAttribute('aria-pressed', b.getAttribute('data-filter') === filter ? 'true' : 'false');
     });
+    // A card the filter has just hidden cannot be scrolled to, so the reader
+    // their link was sent to is taken there only once the cards are settled.
+    if (focus && !painted) {
+      var hit = document.getElementById('g-' + focus);
+      if (hit && !hit.hidden && hit.scrollIntoView) {
+        try { hit.scrollIntoView({ block: 'center' }); } catch (x) { hit.scrollIntoView(); }
+      }
+      painted = true;
+    }
+    syncUrl();
   }
   tools.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-filter]');
     if (!b) return;
     filter = b.getAttribute('data-filter');
     applyFilter();
+  });
+  cards.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('button[data-share]');
+    if (!b) return;
+    var g = b.getAttribute('data-share');
+    // The address bar first and unconditionally: a browser that refuses the
+    // clipboard still leaves the reader the right URL to copy by hand.
+    focus = g;
+    syncUrl();
+    [].slice.call(cards.querySelectorAll('.ww-game.rk-hit')).forEach(function (el) { el.classList.remove('rk-hit'); });
+    var art = b.closest('.ww-game');
+    if (art) art.classList.add('rk-hit');
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl(g)).then(function () {
+          b.setAttribute('data-copied', '1');
+          b.textContent = 'Copied';
+          setTimeout(function () { b.removeAttribute('data-copied'); b.textContent = 'Link'; }, 1600);
+        }, function () {});
+      }
+    } catch (x) {}
   });
 
   var wkParam = (location.search.match(/[?&]week=(\d{1,2})(?:&|$)/) || [])[1] || null;

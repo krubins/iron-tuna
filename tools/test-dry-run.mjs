@@ -218,7 +218,11 @@ function fakeModel(body) {
           calledIn: packet.biggestWins[i % packet.biggestWins.length].source === 'story' ? packet.biggestWins[i % packet.biggestWins.length].story : 'the frozen board' }
       : {}) }] : [sentence(i), nm(i + 1) + ' is the pivot at ' + nu(i + 1) + '.']]));
   const out = { headline: nm(0) + ' is the story of the week', dek: 'What ' + nm(0) + ' told us about next week.', weekly: fill('weekly'), calls: [{ player: nm(0), direction: 'start', recommendation: 'start him', rank: null, confidence: 'HIGH', rationale: nu(0) + ' says so', evidence: [nu(0)] }], rivalryLine: null };
-  if (S.dfs) out.dfs = fill('dfs');
+  // A piece that runs in both lenses is headlined twice (2026-09-21): the
+  // weekly sentence, and one written for a reader building a lineup. The fact
+  // check holds a both-lens draft without it, so the model this simulation
+  // stands in for has to produce it or the whole week comes back held.
+  if (S.dfs) { out.dfs = fill('dfs'); out.dfsHeadline = nm(0) + ' is the price to pay on this slate'; out.dfsDek = 'What ' + nm(0) + ' costs against what he returns.'; }
   if (packet.rivalry) { const line = 'Brooks has ' + packet.rivalry.player + ' at ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; Vega, reading the market, has him ' + packet.rivalry.position + packet.rivalry.vega.rank + '.'; out.rivalryLine = line; out.weekly[lensKeys('weekly')[0]].push(line); }
   return JSON.stringify(out);
 }
@@ -352,6 +356,12 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('no retired kind ran', P.every(r => H.CONTENT_KINDS[r.kind]) && Object.keys(H.LEGACY_CONTENT).every(k => !P.some(r => r.kind === k)));
   const pub = P.filter(r => r.status === 'published');
   ok('every published piece carries the weekly lens, a headline, a byline and a version, and every both-lens piece the DFS lens too', pub.length >= 9 && pub.every(r => { const b = JSON.parse(r.body); return b.weekly && (H.CONTENT_KINDS[r.kind].lens === 'both' ? !!b.dfs : !b.dfs) && r.headline && r.analyst && r.version >= 1; }), String(pub.length));
+  // AND A HEADLINE FOR THE LENS IT IS READ IN. /dfs printed the Weekly Fantasy
+  // sentence under the DFS byline until the column existed; a both-lens piece
+  // now stores its own, and a weekly-only piece stores none.
+  ok('every both-lens piece stores a DFS headline, and a weekly-only piece stores none',
+     pub.every(r => H.CONTENT_KINDS[r.kind].lens === 'both' ? (!!r.dfs_headline && !!r.dfs_dek) : !r.dfs_headline),
+     pub.map(r => r.kind + ':' + (r.dfs_headline ? 'y' : 'n')).join(' '));
   ok('the rest-of-season rankings are weekly-only: no DFS lens written, none stored', at('ros-rankings', 2)[0] && at('ros-rankings', 2)[0].status === 'published' && db.T.content_pieces.filter(r => r.kind === 'ros-rankings' && r.status === 'published').every(r => r.lens === 'weekly' && !JSON.parse(r.body).dfs && !JSON.parse(r.brief).dfs));
   ok('the DFS lens says no salaries are loaded rather than inventing a number', pub.filter(r => H.CONTENT_KINDS[r.kind].lens === 'both').every(r => { const p = JSON.parse(r.brief); return p.dfs && p.dfs.available === false; }));
   ok('every published piece passed the fact check', pub.every(r => JSON.parse(r.violations).length === 0));

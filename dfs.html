@@ -113,6 +113,16 @@ p{color:var(--sec);margin:0 0 16px}
 .is-stat .is-par{font-family:var(--font-display);font-size:.52em;color:var(--muted);letter-spacing:.01em}
 .is-board .is-stat .is-par{color:#8fa3a0}
 .is-board .is-stat.key .is-par{color:#8fa3a0}
+/* A number that is not a projection. Once a game is final the figure in the
+   Iron Tuna column is what the man SCORED, and a reader scanning the column
+   has no other way to tell the two apart. Quiet, because it qualifies the
+   number rather than competing with it. */
+.df-banked{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--teal);background:rgba(14,124,99,.1);border-radius:3px;padding:1px 4px;margin-left:5px;vertical-align:1px}
+.df-banked.pending{color:var(--muted);background:var(--elev)}
+.is-board .df-banked{color:#46d6ac;background:rgba(70,214,172,.15)}
+.is-board .df-banked.pending{color:#8fa3a0;background:rgba(255,255,255,.1)}
+.df-playedoff{color:var(--muted)}
 .df-fieldnote{margin:10px var(--space-5) var(--space-4);font-size:12.5px;line-height:1.55;color:#9fb6b1;max-width:86ch}
 .df-fieldnote b{color:#d5e2df;font-weight:700}
 /* Where a number came from, on hover, on keyboard focus and on a tap. Every
@@ -444,6 +454,16 @@ p{color:var(--sec);margin:0 0 16px}
 #dfPool tr.df-row-out td{opacity:.55}
 .df-benched{border:1px solid var(--line);border-left:3px solid var(--danger);border-radius:8px;padding:10px 14px;margin:12px 0;background:var(--panel);font-size:13px}
 .df-benched b{color:var(--text)}
+/* What the board had to estimate to answer at all: a single-game roster priced
+   off the main slate, or tiers cut out of salary because the contest's own
+   buckets are in a file nobody has handed over. Amber rather than teal, and
+   heavier than the format line under it, because a reader who copies the six
+   names without reading it has copied prices the lobby will not charge. The
+   file that ends the estimate sits inside the box. */
+.df-approx{border:1px solid var(--line);border-left:3px solid #b7791f;border-radius:8px;padding:11px 14px;margin:12px 0;background:var(--panel)}
+.df-approx b{display:block;font-family:var(--font-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#b7791f}
+.df-approx p{margin:5px 0 0;color:var(--sec);font-size:13px;line-height:1.55;max-width:88ch}
+.df-approx .df-up-inline{margin-top:10px}
 /* Which roster was solved, above the roster. One line, so the plate at the top
    of the page and the table under it can be read as the same answer. */
 .df-formatline{border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:8px;padding:10px 14px;margin:12px 0;
@@ -685,52 +705,76 @@ p{color:var(--sec);margin:0 0 16px}
    groups directly below that, then a setup plate, a gold plate, two cards and
    five tab sections — every one of them the same width on the same ground, with
    nothing but a heading's size to say where one object ended and the next
-   began. The homepage answers the same reader with a dark opening band, a
-   ribbon of destinations under it and a tinted/white alternation down the rest;
-   this page had none of the three.
+   began. It then spent a while opening on the opposite mistake: a dark band
+   carrying a thesis and a lede, which is a pitch, and a reader who has clicked
+   DFS has already been pitched. It pushed the first control most of a screen
+   down and told him nothing he did not know.
 
-   So it gets them, in the in-season palette, with NO NEW COLORS and NO NEW
-   CONTROLS. Every token below is one site.css already declares — the masthead
-   set (--mast, --mast-ink, --mast-accent) for the dark band, the --panel band
-   and the white card for the rest — and the three things added are:
+   So the page opens on the work instead, in the in-season palette, with NO NEW
+   COLORS and NO NEW CONTROLS. Every token below is one site.css already
+   declares — the --panel band and the white card — and the two things carrying
+   the page are:
 
-     1. ONE DARK BAND at the top, continuing the masthead rather than starting a
-        second white surface under it. The thesis, the NFL clock that was a grey
-        plate three objects down, and the two actions.
-     2. ONE STICKY RIBBON under it, carrying the two switches that govern every
-        board on this page — the venue and the board. They were loose pills in
-        the flow, so a reader eleven rows into the values table could not reach
-        them without scrolling back to the top. Now they follow him down.
-     3. A TINTED / WHITE ALTERNATION for the rest, on site.css's own .is-band,
+     1. ONE STICKY RIBBON at the top, carrying the board switch that governs
+        every board on this page. It was a loose pill group in the flow, so a
+        reader eleven rows into the values table could not reach it without
+        scrolling back to the top. Now it follows him down, and it is the
+        first thing he meets.
+     2. A TINTED / WHITE ALTERNATION for the rest, on site.css's own .is-band,
         so the setup, the answer, and the footer matter read as three objects.
 
-   The first two are .is-hero and .is-ribbon IN site.css rather than here:
-   /fantasy wears the same two, and inlining a page's chrome twice is how the
-   chrome drifted the last time. What stays below is this page's own.
+   The ribbon is .is-ribbon IN site.css rather than here: /fantasy wears the
+   same one, and inlining a page's chrome twice is how the chrome drifted the
+   last time. What stays below is this page's own.
 
    Nothing here moves an id, a control, a string or a line of script. */
+
+/* The page's h1, kept in the document and off the screen. Removing the opening
+   band left nowhere to show a heading, and a page with no h1 is a page search
+   and a screen reader both have to guess at. Same off-screen idiom .skip-link
+   uses in site.css, so there is one way to do this rather than two. */
+.df-h1{position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden}
 
 /* THE UA SHEET'S [hidden] IS SPECIFICITY (0,1,0) — the same as any class — and
    loses to an author sheet at a tie, so `.rk-seg{display:inline-flex}` and
    `.btn{display:inline-block}` were both beating it: the board switch stayed on
-   screen for venues that have no boards. front.html carries the same one-line
+   screen for formats that have no boards. front.html carries the same one-line
    fix for the same reason. This makes the attribute mean what it says. */
 [hidden]{display:none !important}
 
-/* The board switch takes itself off on a venue, or a DraftKings format, with no
-   salary-cap boards; its label goes with it rather than labelling nothing. */
-.df-ribbon-lab-board{margin-left:auto}
+/* The board switch takes itself off on a DraftKings format with no salary-cap
+   boards. Its label goes with it rather than labelling nothing, and so does the
+   ribbon around them: the venue switch used to keep that ribbon populated, and
+   with the venue switch gone an empty one is a bordered white strip under the
+   masthead with nothing in it. */
 .is-ribbon-in:has(#dfNav[hidden]) .df-ribbon-lab-board{display:none}
-@media(max-width:1080px){.df-ribbon-lab-board{margin-left:0}}
+.is-ribbon:has(#dfNav[hidden]){display:none}
+
+/* The NFL clock now dates the setup band rather than the band that used to open
+   the page. .its-strip paints itself --panel, which is the tinted band's own
+   ground, so inside a band it would read as a bare outline; white is what every
+   other plate on a band already does (see .is-band .is-plate in site.css). */
+.is-band .its-strip{background:var(--bg)}
+
+/* The lead story's own column, above the setup band. It takes the same top
+   padding .df-main does, because the ribbon above it takes itself off the page
+   when the board switcher is hidden (.is-ribbon:has(#dfNav[hidden])) and the
+   well would otherwise butt the masthead. Its section carries no top margin:
+   it is the first thing on the page, with nothing above it to be spaced from. */
+.df-lead{padding-top:var(--space-4)}
+.df-lead>section{margin-top:0}
+.df-lead>section>.is-sec:first-child{margin-top:0}
 
 /* The white column between the two tinted bands. */
 .df-main{padding-top:var(--space-4)}
 .df-main>.df-play-week:first-child{margin-top:0}
 /* The roster now opens the column, directly under the setup band it is
    solved from, so its section rule does not need the full gap a section
-   following another section does. */
+   following another section does -- and the board hangs straight off that
+   rule, with the note about it and the Must include box below it. */
 .df-main>#sec-lineup:first-of-type{margin-top:0}
 .df-main>#sec-lineup:first-of-type>.is-sec:first-child{margin-top:var(--space-5)}
+.df-main>#sec-lineup>.is-sec+#dfLineups>:first-child{margin-top:0}
 .df-est{display:inline-block;margin-left:4px;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#b7791f;vertical-align:2px}
 </style>
 
@@ -758,50 +802,74 @@ p{color:var(--sec);margin:0 0 16px}
 </div></header>
 <main id="main">
 
-<!-- ── 1 · the opening band ────────────────────────────────────────────────
-     The page used to begin on the same white ground its tables are on, so the
-     first thing a reader met was a heading with no band around it and then a
-     row of pills. This continues the masthead instead: the thesis, the NFL
-     clock as a dateline rather than the grey plate it used to sit in three
-     objects lower, and the one quiet line down to the method. Same ids, same
-     script — it-season.js still paints [data-season-strip] wherever it is. -->
-<section class="is-hero">
-  <div class="wrap wide">
-    <p class="is-hero-date">
-      <span class="is-eyebrow">In-Season &middot; DFS</span>
-      <span class="its-strip" data-season-strip></span>
-    </p>
-    <h1>The lineup, solved. <em>Then the ways to break it.</em></h1>
-    <p class="is-lede">Daily fantasy is one slate, one set of game lines and one cap. Iron Tuna solves that cap against the market&rsquo;s own numbers and gives you the roster first &mdash; then the branches off it: the build that clears a double-up, the build that wins a big field, and the swap available at every slot.</p>
-    <a class="is-hero-how" href="#df-method">Where these numbers come from</a>
-  </div>
-</section>
+<!-- ── 1 · the heading, and nothing else ───────────────────────────────────
+     A reader on /dfs knows what DFS is and why he opened this page, so the band
+     that used to tell him both is gone and the page opens on its first control.
+     The h1 stays in the document for search and for a screen reader, off screen,
+     because there is no longer a place on the page to show one. The NFL clock it
+     used to carry moved into the setup band below, where it dates the slate the
+     reader is about to pick — it-season.js paints [data-season-strip] wherever
+     it is, so nothing about the clock changes but where it sits. -->
+<h1 class="df-h1">DFS: the market read, aimed at one slate</h1>
 
-<!-- ── 2 · the venue and the board ────────────────────────────────────────────────
-     The two switches that govern every board on the page, in a ribbon under
-     the band the way the rankings ribbon sits under the homepage hero. They
-     were two unlabelled pill groups loose in the column, which meant a reader
-     eleven rows into the values table had to scroll back to the top to change
-     board. Sticky, so they come with him. Same ids, same buttons, same
-     handlers; only the markup around them is new. -->
-<nav class="is-ribbon" aria-label="Venue and board">
+<!-- ── 2 · the board ────────────────────────────────────────────────
+     The switch that governs every board on the page, in a ribbon directly
+     under the masthead the way the rankings ribbon sits under the homepage
+     one. It was an unlabelled pill group loose in the column, which meant a
+     reader eleven rows into the values table had to scroll back to the top to
+     change board. Sticky, so it comes with him, and first, so the page opens
+     on a control rather than on a paragraph. The venue switch that used to
+     sit beside it is gone: DraftKings is the only venue we carry, so there
+     was never a second thing to choose. -->
+<nav class="is-ribbon" aria-label="Board">
   <div class="is-ribbon-in">
-    <span class="is-ribbon-lab" id="dfSiteLab">Venue</span>
-    <div class="rk-seg" id="dfSite" role="group" aria-labelledby="dfSiteLab"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button><button type="button" data-site="pk">Pick&rsquo;em</button><button type="button" data-site="sl">Sleeper picks</button></div>
     <span class="is-ribbon-lab df-ribbon-lab-board" id="dfNavLab">Board</span>
     <div class="rk-seg" id="dfNav" role="group" aria-labelledby="dfNavLab"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
   </div>
 </nav>
+
+<!-- ── the lead story ──────────────────────────────────────
+     Ken, 2026-09-21: "move the dfs newsroom to be just below the hero." /dfs
+     has no hero band -- §1 above says why -- so the position that answers the
+     instruction is the one /fantasy's well holds: first thing under the
+     ribbon, before anything else on the page. It opened the white column
+     below the setup band until now, which is the same argument one band late.
+
+     What this costs, said plainly because it undoes part of an earlier
+     decision: the setup band is the one question every board is solved for,
+     and it was put first so the page would open on a control rather than on
+     a paragraph. It now opens on a story and the control is one scroll down.
+     That is the instruction, and the ribbon above the well still carries a
+     reader to any board in one click.
+
+     Unnumbered. The numbered chapters are the boards, one visible at a time;
+     news is not one of them. Same well, same CSS (.nr-well in site.css), the
+     DFS lens in place of the weekly byline.
+
+     It is also OUTSIDE .df-main, which matters beyond where it reads: while
+     it sat inside that column it was the column's first <section>, and
+     `.df-main>#sec-lineup:first-of-type` (efc10b9) stopped matching, so the
+     roster silently lost its margin rules. The lineup is that column's first
+     section again. -->
+<div class="wrap wide df-lead">
+  <section>
+    <div class="is-sec" id="desk"><div class="is-sec-top"><span class="is-sec-n">Lead</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
+      <p>The desk’s newest packages read for the slate: price, ownership, leverage. <a href="/analysts/park">Lena Park</a> writes the DFS lens of every shared story. <a href="/analysts">The desk, and the AI disclosure &rarr;</a></p></div>
+    <div class="nr-well" id="dfDesk"></div>
+    <p class="is-empty" id="dfDeskEmpty">Reading the desk&hellip;</p>
+  </section>
+</div>
 
 <!-- ── 3 · the setup band ────────────────────────────────────────────────
      The one question the whole page depends on, on the tinted surface so it
      reads as a step the reader completes rather than as the first of nine
      white blocks. The plate inside it, its three ordered selects and its help
      lines are exactly as they were. -->
-<div class="is-band is-band-top">
+<div class="is-band">
   <div class="wrap wide">
     <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">Setup</span><h2>Set up the slate</h2><a class="is-sec-more" href="/dfs-getting-started">How the lobby works &rarr;</a></div></div>
     <p class="df-sub">Three choices, in this order: the roster format, the games that define the eligible player pool, and the way the contest pays. Every board below is solved for what you pick here.</p>
+    <div class="its-strip" data-season-strip></div>
     <p class="is-note" id="dfNote"></p>
     <p class="is-note" id="dfSiteNote"></p>
 
@@ -891,30 +959,39 @@ p{color:var(--sec);margin:0 0 16px}
      got the whole product; the controls are for the reader who wants to argue
      with it, and they are folded away until that reader opens them. -->
 <section id="sec-lineup">
+  <!-- ── the rule, then the board ───────────────────────────────────────────────
+       The three selects in the band above are a question and the board is
+       its answer, so the one thing allowed between them is the rule that
+       names the answer. The line saying what was solved and the Must include
+       box sit underneath the board instead: a reader who has just named the
+       contest they are entering gets the roster itself next, not two
+       paragraphs about it. -->
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>This week’s lineup</h2><a class="is-sec-more" href="#values">The board behind it &rarr;</a></div></div>
+  <div id="dfLineups"></div>
+
   <p class="df-sub">Solved against the cap for the contest shape above, on the same market numbers that price the season-long board. <b>Nothing on this page enters a contest</b> &mdash; it builds a roster to read and copy.</p>
   <!-- ── the constraints ─────────────────────────────────────────────────────
-       Everything the reader has told the builder, above the roster it produced,
+       Everything the reader has told the builder, under the roster it produced,
        with an undo on each one. It lives here rather than inside #dfLineups
        because it carries a search field: re-solving replaces the roster, and a
        field that is replaced mid-word loses what you were typing. Only the
        chips under it are re-rendered. -->
   <!-- ── must include ────────────────────────────────────────────────────────
-       A BOX, at the top of the roster, that the reader fills with the players
-       already committed. It reads as a container with things in it rather than
-       a list of settings, because that is what it is: on a Saturday the entry
-       is half-submitted, those men are facts, and the roster underneath is
-       whatever is still open around them. Excluded players ride underneath it,
+       A BOX, under the roster, that the reader fills with the players already
+       committed. It reads as a container with things in it rather than a list
+       of settings, because that is what it is: on a Saturday the entry is
+       half-submitted, those men are facts, and the roster above it is whatever
+       is still open around them. Excluded players ride underneath it,
        smaller, because they are the opposite instruction and a rarer one. -->
   <div class="df-must" id="dfConstraints" hidden>
     <div class="df-must-head">
       <b>Must include</b>
-      <span>Players you have already used. Every roster below is built around them, and the other slots re-solve to fit.</span>
+      <span>Players you have already used. Every roster above is built around them, and the other slots re-solve to fit.</span>
       <button type="button" class="df-clear" data-mark="clearall" id="dfClearMarks" hidden>Clear all</button>
     </div>
     <div class="df-must-box" id="dfMustBox">
       <div class="df-must-chips" id="dfMustChips"></div>
-      <span class="df-must-empty" id="dfMustEmpty">Nobody yet &mdash; the roster below is Iron Tuna&rsquo;s own nine.</span>
+      <span class="df-must-empty" id="dfMustEmpty">Nobody yet &mdash; the roster above is Iron Tuna&rsquo;s own nine.</span>
       <div class="df-req-wrap">
         <button type="button" class="df-req-open" id="dfReqOpen" aria-expanded="false" aria-controls="dfReqSearch">Add a player</button>
         <div class="df-req-search" id="dfReqSearch" hidden>
@@ -925,7 +1002,6 @@ p{color:var(--sec);margin:0 0 16px}
     </div>
     <div id="dfConstraintChips"></div>
   </div>
-  <div id="dfLineups"></div>
 
   <!-- ── the branches ─────────────────────────────────────────────────────────
        The two questions a reader has the moment they have read a lineup: what
@@ -946,7 +1022,7 @@ p{color:var(--sec);margin:0 0 16px}
       <label class="rk-check">Lineups <input type="number" id="dfN" min="1" max="20" value="3" style="width:52px"></label>
       <button class="btn" type="button" id="dfBuild">Rebuild</button>
     </div>
-    <p class="is-note">Click a name in the pool to lock him into every lineup, twice to exclude him, again to clear. The Require and Exclude buttons on the roster itself write the same list, and every constraint on it appears above the roster with an undo.</p>
+    <p class="is-note">Click a name in the pool to lock him into every lineup, twice to exclude him, again to clear. The Require and Exclude buttons on the roster itself write the same list, and every constraint on it appears in the Must include box under the roster with an undo.</p>
     <div class="is-scroll"><table class="is-table" id="dfPool"><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfPoolFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Vegas</th><th>Market</th><th class="num">Consensus</th><th>Status</th></tr></thead><tbody></tbody></table></div>
   </details>
 </section>
@@ -978,44 +1054,10 @@ p{color:var(--sec);margin:0 0 16px}
   </div>
 </div>
 
-<!-- ── pick'em ────────────────────────────────────────────────────────────────
-     Underdog, PrizePicks and Sleeper post a stat line and ask higher or lower.
-     There is no cap and no salary, so none of the salary-cap sections below
-     apply and they are hidden on these two venues.
-
-     WHAT THIS BOARD DOES NOT HAVE is the venue's own posted line. Iron Tuna
-     does not hold an Underdog or PrizePicks feed, and inventing one from the
-     sportsbook median and calling it theirs would be the single most misleading
-     thing on this site. So the board prints the SPORTSBOOK median against the
-     model, says which is which, and tells the reader to compare it to the line
-     actually in front of them. -->
-<section id="sec-pickem" hidden>
-  <div class="is-plate">
-    <div class="is-plate-head">
-      <span>Pick&rsquo;em board &mdash; where the model leans off the line</span>
-      <span id="pkVenue">Pick&rsquo;em</span>
-    </div>
-    <div class="is-scroll" id="pkWrap" hidden>
-      <table class="is-table">
-        <thead><tr><th>Player</th><th>Stat</th><th class="num">Book median</th><th class="num">Iron Tuna</th><th class="num">Gap</th><th>Lean</th></tr></thead>
-        <tbody id="pkBody"></tbody>
-      </table>
-    </div>
-    <p class="is-plate-state" id="pkState">Reading the player markets&hellip;</p>
-    <div class="is-plate-foot">
-      <p>A lean is a gap of at least 5% between the model and the sportsbook&rsquo;s median line, not a recommendation. <b>The line shown is the sportsbook&rsquo;s, not the venue&rsquo;s</b> &mdash; pick&rsquo;em venues post their own and they differ; check the number in front of you before you enter. Every row is a quoted market: where no book has priced a player there is no line to disagree with and he is left off.</p>
-    </div>
-  </div>
-</section>
-
 <section id="sec-dash" hidden>
   <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>The Slate</h2></div></div>
   <p class="df-sub">What the board looks like underneath the lineup: the market&rsquo;s scoring environment, the widest values, and the desk&rsquo;s reading of the week.</p>
   <div class="is-grid" id="dfCards"></div>
-  <h3>The newsroom, DFS lens</h3>
-  <p class="is-note">The desk’s newest packages read for the slate: price, ownership, leverage. <a href="/analysts/park">Lena Park</a> writes the DFS lens of every shared story. <a href="/analysts">The desk, and the AI disclosure &rarr;</a></p>
-  <div class="is-grid" id="dfDesk"></div>
-  <p class="is-empty" id="dfDeskEmpty">Reading the desk&hellip;</p>
   <h3>This week’s scoring environment</h3>
   <div class="is-scroll"><table class="is-table" id="dfTable" hidden><thead><tr><th>Club</th><th>Opponent</th><th class="num">Implied points</th><th class="num">Game total</th></tr></thead><tbody id="dfBody"></tbody></table></div>
   <p class="is-empty" id="dfEmpty">Reading the slate&hellip;</p>
@@ -1098,6 +1140,7 @@ p{color:var(--sec);margin:0 0 16px}
     <li><a href="/fantasy">Fantasy</a></li>
     <li><a href="/dfs">DFS</a></li>
     <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
     <li><a href="/faq">FAQ</a></li>
@@ -1122,16 +1165,31 @@ p{color:var(--sec);margin:0 0 16px}
   var $ = function (id) { return document.getElementById(id); };
   var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
   var money = function (v) { return v == null ? '—' : '$' + Number(v).toLocaleString('en-US'); };
-  var SITES = { dk: 1, fd: 1, pk: 1, sl: 1 };
   var SECS = { lineup: 1, values: 1, stacks: 1, td: 1, dash: 1 };
   var SEC_IDS = ['lineup', 'values', 'stacks', 'td', 'dash'];
-  var site = 'dk', sec = 'lineup', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
+  // DraftKings is the only venue we carry. `site` stays a constant because the
+  // API route, the stored upload key and the board copy all key off it.
+  var site = 'dk';
+  var sec = 'lineup', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
   var gameStyle = '', gameChoice = '', payoutStructure = '';
   var selectedGames = {}, gameUniverseSig = '';
+  // The week's fixtures, as the schedule knows them, for the weeks where the
+  // salaries are not posted yet. The setup plate reads its Games list out of
+  // the priced slate, and before a slate exists that list was empty -- so the
+  // reader who opened /dfs on a Monday got step one and a dead step two. These
+  // are the same games under different prices, and they keep the plate
+  // answerable until the lobby posts.
+  var scheduleGames = [];
+  // WHICH SLATE THE BOARD IS SHOWING, and which single games the desk has
+  // priced. Before the desk imported Showdown files there was one slate a week
+  // and neither question existed. Now a reader who picks Showdown Captain and
+  // a matchup gets DraftKings' own prices for that game if the desk holds
+  // them, and the file route only where it does not.
+  var loadedSlate = null, availableSingles = [];
   var GAME_STYLES = {
     'flash-draft': { label:'Flash Draft', note:'A live-game format. The player pool and available choices can change as the game unfolds.', single:false },
     classic: { label:'Classic', note:'The standard multi-game $50,000 salary-cap format, solved from the loaded salary slate.', single:false, optimizer:true },
-    'showdown-captain': { label:'Showdown Captain Mode', note:'A single-game salary-cap format with one Captain and five FLEX spots. The Captain earns 1.5x fantasy points and costs 1.5x salary. DraftKings prices it on a file of its own, and the site reads only the main slate, so the board explains the roster rather than solving one.', single:true },
+    'showdown-captain': { label:'Showdown Captain Mode', note:'A single-game salary-cap format with one Captain and five FLEX spots. The Captain earns 1.5x fantasy points and costs 1.5x salary. DraftKings prices it on a file of its own; without that file the board builds it from the main slate\u2019s prices against an equivalent budget, and says so above the roster.', single:true },
     pick6: { label:'Pick6', note:'A player-outcome format rather than a traditional salary-cap roster. Game selection narrows the relevant player pool.', single:false },
     'best-ball': { label:'Best Ball', note:'Draft once for a season or multiweek contest. DraftKings automatically uses the highest-scoring eligible players each scoring period.', season:true },
     tiers: { label:'Tiers', note:'No salary cap. Select one player from each DraftKings tier, so relative choices inside each tier matter more than price.', single:false },
@@ -1188,8 +1246,6 @@ p{color:var(--sec);margin:0 0 16px}
   };
   var contest = 'single';
   try {
-    var q = new URLSearchParams(location.search).get('site');
-    if (q && SITES[q]) site = q;
     var hash = (location.hash || '').replace('#', '');
     // 'builder' was this section's old name and a saved link still uses it.
     if (hash === 'builder') hash = 'lineup';
@@ -1203,12 +1259,22 @@ p{color:var(--sec);margin:0 0 16px}
   // control on the page was dead and the slate never fetched.
   function press(host, attr, val) { if (!host) return; [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); }); }
   function show() { SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = k !== sec; }); press($('dfNav'), 'data-sec', sec); }
-  function fppgLabel() { return site === 'dk' ? 'DK FPPG' : site === 'fd' ? 'FD FPPG' : 'FPPG'; }
+  function fppgLabel() { return 'DK FPPG'; }
+  // The operator by name, for the sentences that have to say whose lobby
+  // the reader is being sent back to.
+  function siteLabel() { return 'DraftKings'; }
   // A computed average (no operator number in the file) is printed as an estimate, never as DraftKings' own figure.
   function fppgText(p) { return p && p.operatorFppg != null && isFinite(p.operatorFppg) ? n1(p.operatorFppg) + (p.operatorFppgBasis === 'computed' ? '<i class="df-est" title="No operator average in the salary file; season box score at site scoring, before yardage bonuses.">est</i>' : '') : '—'; }
   function fppgEdge(p) {
     if (!p) return null;
     if (p.projectionVsFppg != null && isFinite(p.projectionVsFppg)) return Number(p.projectionVsFppg);
+    // On a supplemental row a null edge is a DECISION, not a missing field:
+    // his projection and the average beside it came off the same season line,
+    // so the difference is 0.0 by construction. The fallback below exists for
+    // a row served before projectionVsFppg did, and letting it fire here
+    // printed a flat 0.0 that reads as the model agreeing with DraftKings to
+    // the tenth rather than as one number shown twice.
+    if (p.supplemental) return null;
     var proj = p.ironTunaPoints != null ? p.ironTunaPoints : p.proj;
     if (proj == null || p.operatorFppg == null || !isFinite(proj) || !isFinite(p.operatorFppg)) return null;
     return Number(proj) - Number(p.operatorFppg);
@@ -1222,18 +1288,42 @@ p{color:var(--sec);margin:0 0 16px}
     ['dfPoolFppgHead','dfMetricsFppgHead','dfValuesFppgHead'].forEach(function (id) { var el = $(id); if (el) el.textContent = fppgLabel(); });
   }
   function delta(d) { if (!d) return '—'; var cls = /BUY|HIGHER/.test(d.classification) ? 'buy' : /FADE|LOWER/.test(d.classification) ? 'fade' : 'agree'; return '<span class="rk-conf" style="' + (cls === 'buy' ? 'color:var(--teal)' : cls === 'fade' ? 'color:var(--danger)' : '') + '">' + e(d.classification) + (d.points != null ? ' ' + (d.points > 0 ? '+' : '') + d.points : '') + '</span>'; }
+  // A row the slate carries a number for, off any rung of the projection
+  // ladder. Every filter on this page used to ask `p.onBoard`, which is a
+  // narrower question -- whether he is in the curated preseason pool -- and
+  // answering it hid the whole minimum-salary tier from a page whose job is
+  // to price a slate. A response built before the ladder shipped has no
+  // `projected` field, so onBoard still answers for it.
+  function projected(p) { return !!p && (p.projected === true || (p.projected === undefined && !!p.onBoard)); }
+  // Said once, so the four surfaces that print it cannot drift. A
+  // supplemental number is his own season line, not a forecast of Sunday.
+  var SUPP_NOTE = 'Not on this week’s board. Projected from his season-to-date line, scaled by his club’s week, and graded low.';
+  function suppTag(p) { return p && p.supplemental ? ' <span class="is-status" title="' + SUPP_NOTE + '">season avg</span>' : ''; }
   function envTable(s) {
     var rows = []; var seen = {}; var totals = {};
     (s.stacks || []).forEach(function (g) { if (g.home && g.home.team) totals[g.home.team] = g.total; if (g.away && g.away.team) totals[g.away.team] = g.total; });
-    (s.players || []).forEach(function (p) { if (!p.onBoard || !p.teamTotal || seen[p.team]) return; seen[p.team] = 1; rows.push({ team: p.team, opp: p.opponent, at: p.home === false ? 'at' : 'vs', imp: p.teamTotal, posted: p.teamTotalPosted, total: totals[p.team] }); });
+    (s.players || []).forEach(function (p) { if (!projected(p) || !p.teamTotal || seen[p.team]) return; seen[p.team] = 1; rows.push({ team: p.team, opp: p.opponent, at: p.home === false ? 'at' : 'vs', imp: p.teamTotal, posted: p.teamTotalPosted, total: totals[p.team] }); });
     rows.sort(function (a, b) { return b.imp - a.imp; });
     $('dfBody').innerHTML = rows.map(function (r) { return '<tr><td><b>' + e(r.team) + '</b></td><td>' + e((r.at || '') + ' ' + (r.opp || '')) + '</td><td class="num">' + n1(r.imp) + (r.posted ? '' : ' <span class="is-status">fitted</span>') + '</td><td class="num">' + n1(r.total) + '</td></tr>'; }).join('');
     $('dfTable').hidden = !rows.length; $('dfEmpty').hidden = !!rows.length;
   }
   function dashboard(s) {
-    var on = s.players.filter(function (p) { return p.onBoard; });
+    var on = s.players.filter(function (p) { return projected(p); });
     var card = function (t, h, p) { return '<div class="is-card"><span class="is-tag is-live">' + t + '</span><h3>' + h + '</h3><p>' + p + '</p></div>'; };
-    var out = [card('Slate', e(s.label) + ' · Week ' + e(s.week), on.length + ' priced players on the board, cap ' + money(s.cap) + '.'),
+    var out = [card('Slate', e(s.label) + ' · Week ' + e(s.week), on.length + ' priced players on the board, cap ' + money(s.cap) + '.'
+        // The minimum-salary tier is mostly men the curated pool has never
+        // heard of, and it is the tier a reader scrolls to last and needs
+        // most. Saying how much of the board is standing on a season line
+        // rather than a projection is the difference between a full slate and
+        // a slate that looks full.
+        // When EVERY row came off a season line the board itself is missing,
+        // not the odd minimum-salary body, and "4 of them" understates that
+        // to the point of misleading: the reader is looking at a page that
+        // works like a slate and was built by a different method end to end.
+        + (s.supplemented && s.supplemented === on.length
+            ? ' None of this slate is on Iron Tuna’s board, so every number here is a season average rather than a projection. Treat the whole page as an estimate.'
+            : s.supplemented ? ' ' + s.supplemented + ' of them are projected from a season line rather than the board, and are marked.' : '')
+        + (s.unprojected ? ' ' + s.unprojected + (s.unprojected === 1 ? ' more carries' : ' more carry') + ' no projection at all.' : '')),
       card('Median value', n1(s.medianVegasPerK) + ' pts / $1K', 'What the market implies an ordinary dollar buys on this slate.'),
       s.boards.bestVegasValues[0] ? card('Best value', e(s.boards.bestVegasValues[0].name), 'VVS ' + s.boards.bestVegasValues[0].vegasValueScore + ' at ' + money(s.boards.bestVegasValues[0].salary) + '.') : '',
       s.boards.expensiveFades[0] ? card('Expensive fade', e(s.boards.expensiveFades[0].name), money(s.boards.expensiveFades[0].salary) + ', ' + e(s.boards.expensiveFades[0].marketDelta.classification.toLowerCase()) + '.') : '',
@@ -1349,9 +1439,11 @@ p{color:var(--sec);margin:0 0 16px}
 
     $('dfPlayerTitle').textContent = p.name || 'Player calculation';
     $('dfPlayerSub').textContent = [p.position, p.team, p.opponent ? ('vs ' + p.opponent) : '', money(p.salary)].filter(Boolean).join(' · ');
+    var scored = actualOf(p);
     var boxes = [
+      scored != null ? metricBox(n1(scored), 'Final') : '',
       metricBox(operatorFppg != null && isFinite(operatorFppg) ? n1(operatorFppg) : '—', 'DraftKings FPPG'),
-      metricBox(n1(p.ironTunaPoints), 'Iron Tuna Projection'),
+      metricBox(n1(p.ironTunaPoints), scored != null ? 'Projected beforehand' : 'Iron Tuna Projection'),
       metricBox(projectionEdge == null ? '—' : (projectionEdge > 0 ? '+' : '') + n1(projectionEdge), 'Tuna Edge'),
       metricBox(n1(p.vegasPoints), 'Market proj'),
       metricBox(n1(p.consensusPoints), 'Consensus'),
@@ -1363,6 +1455,15 @@ p{color:var(--sec);margin:0 0 16px}
     ].join('');
 
     var rows = '';
+    // Everything below is pre-game arithmetic. Said once, at the top, rather
+    // than qualified eight times.
+    if (isPlayed(p)) {
+      rows += calcRow('His game is final',
+        scored != null
+          ? 'He scored ' + n1(scored) + ' under ' + (slate.label || 'the site') + '\u2019 own rules. Everything below is how Iron Tuna arrived at the ' + n1(proj) + ' it projected beforehand \u2014 a record of the calculation, not a read on him now. He is off the value boards for the same reason: no entry submitted now can contain him.'
+          : 'His game is over. Iron Tuna stores no box score for a defense, so the numbers below are still the pre-game estimate rather than what the defense did. He is off the value boards either way: no entry submitted now can contain him.',
+        scored != null ? 'Projected ' + n1(proj) + '  \u2192  Scored ' + n1(scored) : '');
+    }
     rows += calcRow('1. Projection', 'Iron Tuna starts with the consensus projection, moves it toward the betting-market projection according to market confidence, and applies the current usage-role adjustment where enough season data exists.',
       'Consensus ' + n1(p.consensusPoints) + ' pts  →  Market ' + n1(p.vegasPoints) + ' pts  →  Iron Tuna ' + n1(p.ironTunaPoints) + ' pts');
     rows += calcRow('2. ' + fppgLabel() + ' comparison', fppgLabel() + ' is the operator’s historical fantasy-points-per-game average, not its projection for this matchup. The difference below is the simple visual edge: Iron Tuna’s forward projection minus that historical baseline.',
@@ -1395,19 +1496,144 @@ p{color:var(--sec);margin:0 0 16px}
     document.body.style.overflow = '';
   }
 
+  // Said whenever a board drops men because their games are finished. The
+  // page already does this for players who are not playing (benchedNote); a
+  // name a reader expected to find, silently gone, is the same problem.
+  //
+  // One note per host, replaced rather than stacked: the metrics note is
+  // static markup that is never rewritten, and the contest note is rewritten
+  // on every render, so both are handled by stripping the old span first.
+  function playedOffNote(host, off, total) {
+    if (!host) return;
+    var base = host.innerHTML.replace(/\s*<span class="df-playedoff">[\s\S]*?<\/span>/, '');
+    host.innerHTML = base + (off
+      ? ' <span class="df-playedoff">' + off + ' of the ' + total + ' '
+        + (off === 1 ? 'is not listed because his game is over' : 'are not listed because their games are over')
+        + ' \u2014 no entry submitted now can contain ' + (off === 1 ? 'him' : 'them')
+        + '. The player pool below still carries ' + (off === 1 ? 'him' : 'them') + ', at what ' + (off === 1 ? 'he' : 'they') + ' scored.</span>'
+      : '');
+  }
   function metrics(s) {
-    var m = s.metrics || null; var rows = s.players.filter(function (p) { return p.onBoard && typeof p.value === 'number'; });
+    // These are shopping boards -- "who is worth a seat" -- and a man whose
+    // game is over cannot take one. Value, cash score and tournament score are
+    // all indexed off a projection that has been overtaken by the result, so
+    // leaving him in ranks him on a number nobody can act on. He stays in the
+    // player pool below, which is the board's reference list and prints what
+    // he actually scored.
+    var m = s.metrics || null;
+    var priced = s.players.filter(function (p) { return projected(p) && typeof p.value === 'number'; });
+    var rows = stillToPlay(priced), metricsOff = priced.length - rows.length;
     $('dfMetrics').hidden = board !== 'metrics'; $('dfMetricsNote').hidden = board !== 'metrics'; $('dfValues').hidden = board === 'metrics' ? true : $('dfValues').hidden;
     if (board !== 'metrics') return;
     var key = m && m.sortBy ? m.sortBy : 'leverage';
     rows.sort(function (a, b) { return (b[key] || 0) - (a[key] || 0); });
-    $('dfMetrics').querySelector('tbody').innerHTML = rows.slice(0, 40).map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num"><b>' + e(p.value) + '</b></td><td class="num">' + n1(p.floor) + '</td><td class="num">' + n1(p.ceiling) + '</td><td class="num">' + n1(p.ownership) + '%</td><td class="num">' + n1(p.leverage) + '</td><td class="num">' + e(p.cashScore) + '</td><td class="num">' + e(p.tournamentScore) + '</td><td>' + e(p.chalk || '') + '</td></tr>'; }).join('');
+    $('dfMetrics').querySelector('tbody').innerHTML = rows.slice(0, 40).map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span>' + suppTag(p) + '</td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num"><b>' + e(p.value) + '</b></td><td class="num">' + n1(p.floor) + '</td><td class="num">' + n1(p.ceiling) + '</td><td class="num">' + n1(p.ownership) + '%</td><td class="num">' + n1(p.leverage) + '</td><td class="num">' + e(p.cashScore) + '</td><td class="num">' + e(p.tournamentScore) + '</td><td>' + e(p.chalk || '') + '</td></tr>'; }).join('');
     $('dfMetrics').hidden = !rows.length;
+    playedOffNote($('dfMetricsNote'), metricsOff, priced.length);
   }
   function desk() {
     fetch('/api/newsroom?lens=dfs&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok || !j.pieces.length) { $('dfDeskEmpty').textContent = 'The desk has not published this week yet.'; return; }
-      $('dfDesk').innerHTML = j.pieces.map(function (p) { var by = p.byline || {}; return '<div class="is-card"><span class="is-tag">' + e(p.dfsTitle || p.title) + ' · Week ' + e(p.week) + '</span><h3><a href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a></h3><p>' + e(p.dek || '') + '</p><p class="is-note">DFS lens by <a href="/analysts/' + e(by.dfsAnalyst) + '">' + e(by.dfsName) + '</a></p></div>'; }).join('');
+      // WHO A PIECE IS ABOUT: THE SUBJECT OF ITS HEADLINE FIRST.
+      // `components[].player` is the desk's cast for the WHOLE piece, in the
+      // order the story tells it. Stamping the first three of them put three
+      // Broncos over "Parker Washington's 43% target share makes him the
+      // clearest roster add of the week": the recap is a JAX-at-DEN game and
+      // its findings open on the side that won, so the picture was of three men
+      // the sentence above it never mentions.
+      //
+      // The rule is front.html's `coverAbout` (#319), which is the hero's rule
+      // there: a full name settles it; a bare surname counts only when nobody
+      // else on the piece answers to it, because the wrong Williams under a
+      // line about the other one is this same bug in a smaller frame. Matching
+      // runs against the piece's OWN cast, never the league, which is what
+      // makes the surname safe at all -- "Washington" among four men from one
+      // game is Parker Washington, where against the index it is also a city
+      // and a football team. Fourth copy of a page helper, like BOAST above;
+      // when the rule moves it moves in all of them.
+      var subjectWords = function (t) { return ' ' + String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() + ' '; };
+      var about = function (text, cast) {
+        var t = subjectWords(text), full = [], last = [], i, n, l;
+        for (i = 0; i < cast.length; i++) {
+          n = subjectWords(cast[i]).replace(/^ | $/g, '');
+          if (n && t.indexOf(' ' + n + ' ') >= 0) { full.push(cast[i]); continue; }
+          l = n.split(' ').pop();
+          if (l.length >= 3 && t.indexOf(' ' + l + ' ') >= 0) last.push(cast[i]);
+        }
+        return full.length ? full : last;
+      };
+      var focus = function (p) {
+        var cast = [], parts = p.components || [], i;
+        for (i = 0; i < parts.length; i++) {
+          var n = parts[i] && parts[i].player;
+          if (n && cast.indexOf(n) < 0) cast.push(n);
+        }
+        if (!cast.length) return '';
+        var subject = about(p.headline || '', cast);
+        if (!subject.length) subject = about(p.dek || '', cast);
+        var pick = (subject.length ? subject : cast).slice(0, 3);
+        return ' data-player-focus="' + e(pick.join('|')) + '"';
+      };
+      var av = function (name) { return String(name || '').split(' ').map(function (w) { return w.charAt(0); }).join(''); };
+      var ago = function (iso) {
+        if (!iso) return ''; var t = new Date(iso).getTime(); if (!isFinite(t)) return '';
+        var m = Math.round((Date.now() - t) / 60000);
+        if (m < 60) return Math.max(m, 1) + 'm ago'; if (m < 1440) return Math.round(m / 60) + 'h ago'; if (m < 10080) return Math.round(m / 1440) + 'd ago';
+        try { return new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }); } catch (x) { return ''; }
+      };
+      // The DFS TITLE, not the weekly one: a package shared by both lenses is
+      // named for what it is on this page ("Showdown read", not "Game Recap").
+      var kicker = function (p) { return e(p.dfsTitle || p.title) + ' &middot; Week ' + e(p.week); };
+      // And the DFS BYLINE. A shared story is written twice and this page runs
+      // the lens it is showing, which is the one the reader is being asked to
+      // trust with a lineup.
+      var byline = function (p) {
+        var by = p.byline || {};
+        return '<span class="nr-by"><span class="nr-av">' + e(av(by.dfsName)) + '</span><a href="/analysts/' + e(by.dfsAnalyst) + '">' + e(by.dfsName) + '</a>' +
+          (p.publishedAt ? '<span class="nr-time">' + e(ago(p.publishedAt)) + '</span>' : '') + '</span>';
+      };
+      // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only
+      // when one of its own pre-kickoff calls cleared the headline bar, only
+      // for that player and only once (_voiceBlock, _worker.js). The Monday
+      // scorecard is a `both` kind, so that headline reaches this page too:
+      // `newsroomFeedPayload` returns ONE stored `headline` for both lenses
+      // and only the title and byline differ by lens. Printed as the first two
+      // words of the lead it read as punctuation; it is the banner over the
+      // card, and the call under it.
+      //
+      // Third copy of this split (`fantasy.html`'s well and `desk.html`'s
+      // article page are the others), which is the same duplication the five
+      // helpers above it already carry between this page and the Fantasy
+      // one. When the regexp moves it moves in all three.
+      var BOAST = /^\s*you['\u2019]re\s+welcome\s*[:\u2013\u2014.!-]*\s*/i;
+      var boast = function (p) {
+        var h = String((p && (p.headline || p.title)) || ''), m = BOAST.exec(h);
+        if (!m) return '';
+        return h.slice(m[0].length).trim() || '';
+      };
+      // THE LEAD IS THE NEWEST PIECE, not a chosen one: the feed is ordered by
+      // publication and the desk's slots decide what lands when.
+      var lead = j.pieces[0], rest = j.pieces.slice(1, 6);
+      var crow = boast(lead);
+      var html = '<article class="nr-lead' + (crow ? ' is-boast' : '') + '"' + focus(lead) + '>' +
+        '<span class="nr-kicker">' + kicker(lead) + '<span class="nr-flag">Latest</span></span>' +
+        (crow ? '<p class="nr-boast">You\u2019re welcome.</p>' : '') +
+        '<h3><a href="' + e(lead.url) + '">' + e(crow || lead.headline || lead.title) + '</a></h3>' +
+        (lead.dek ? '<p>' + e(lead.dek) + '</p>' : '') +
+        '<a class="nr-lead-go" href="' + e(lead.url) + '">Read the story &rarr;</a>' +
+        byline(lead) + '</article>';
+      if (rest.length) {
+        html += '<div class="nr-rail"><p class="nr-rail-h">More from the desk</p><ul>' + rest.map(function (p) {
+          // The <li> has no heading of its own, so `data-player-head` names the
+          // element the faces go in front of.
+          return '<li' + focus(p) + '><span class="nr-kicker">' + kicker(p) + '</span>' +
+            '<a data-player-head href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a>' + byline(p) + '</li>';
+        }).join('') + '</ul></div>';
+      }
+      // One published piece is a lead with nothing beside it: .nr-well-solo drops
+      // the second column rather than holding 42% of the band open beside it.
+      $('dfDesk').className = 'nr-well' + (rest.length ? '' : ' nr-well-solo');
+      $('dfDesk').innerHTML = html;
       $('dfDeskEmpty').hidden = true;
     }).catch(function () { $('dfDeskEmpty').textContent = 'The desk did not answer.'; });
   }
@@ -1420,9 +1646,11 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfContestNote').innerHTML = 'Sorted for <b>' + e(m ? m.label : sh.head) + '</b> \u2014 ' + e(m ? m.note : sh.why.split('.')[0] + '.') + ' Change the contest at the top of the page.';
     if (board === 'metrics') { metrics(s); press($('dfBoard'), 'data-board', board); return; }
     $('dfMetrics').hidden = true; $('dfMetricsNote').hidden = true;
-    var list = s.boards[board] || [];
+    var full = s.boards[board] || [];
+    var list = stillToPlay(full);
     $('dfValues').querySelector('tbody').innerHTML = list.map(function (p) { return '<tr><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? ' ' + (p.home === false ? '@' : 'vs ') + p.opponent : '')) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.ironTunaPoints) + '</b></td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + ' <span class="is-status">' + e(p.vegasBasis) + '</span></td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + delta(p.marketDelta) + '</td><td class="num">' + n1(p.tdProbability) + '%</td><td class="num">' + n1(p.teamTotal) + '</td><td class="num"><b>' + e(p.vegasValueScore) + '</b></td></tr>'; }).join('');
     $('dfValues').hidden = !list.length; press($('dfBoard'), 'data-board', board);
+    playedOffNote($('dfContestNote'), full.length - list.length, full.length);
   }
   // ── what the books said about him ─────────────────────────────────────────
   // The Vegas column prints one number for two very different things: a
@@ -1436,6 +1664,11 @@ p{color:var(--sec);margin:0 0 16px}
   // A man priced on one market only is neither PROPS nor plain LINES: the
   // books looked at him, and it was not enough to project from.
   function marketChipFor(m) {
+    // No board projection behind him either, so his number is his own season
+    // average. The generic 'none' chip reads FITTED, which would claim a
+    // curve nobody fitted. Decided here so the row, the coach and anything
+    // else reading a market block cannot describe the same man two ways.
+    if (m && m.supplemental) return ['SEASON', 'fitted'];
     if (m && m.shortOfProjection) return ['TD ONLY', 'inferred'];
     return MARKET_CHIP[m && m.basis] || MARKET_CHIP.none;
   }
@@ -1443,14 +1676,36 @@ p{color:var(--sec);margin:0 0 16px}
                       'gamelines': ['LINES', 'inferred'], 'gamelines+ratings': ['LINES', 'inferred'],
                       'ratings': ['FITTED', 'fitted'], 'none': ['\u2014', 'fitted'] };
   function marketPhrase(p) {
+    // The market read is a forecast, and a forecast about a finished game is
+    // history. Printing "the books posted 68.5 receiving yards on him, pulled
+    // 3h ago" beside a man who has already played invites the reader to act
+    // on it.
+    if (isBanked(p)) {
+      return 'His game is final: ' + n1(actualOf(p)) + ' points. What the books priced beforehand is settled now, and the build is not projecting him any more.';
+    }
+    if (isPlayed(p)) {
+      return 'His game is over. Iron Tuna stores no box score for a defense, so the number beside him is still the pre-game estimate.';
+    }
     var m = p && p.market;
     if (!m) return '';
+    // Said before anything about books, because for this row there are none.
+    if (p.supplemental) {
+      return p.projectionBasis === 'operator'
+        ? 'Not on this week’s board, and no football behind him this season. The number beside his name is the operator’s own published season average. No book has posted a market on him.'
+        : 'Not on this week’s board. The number beside his name is his own ' + (p.supplementalGames || 0) + '-game season line, per game, scaled by his club’s week. It is what he has done, not a forecast of Sunday, and no book has posted a market on him.';
+    }
     if (m.quoted) {
       return 'The books posted ' + (m.pricedLabels && m.pricedLabels.length ? m.pricedLabels.join(', ') : 'props') + ' on him'
         + (m.books ? ' across ' + m.books + ' book' + (m.books === 1 ? '' : 's') : '')
-        + (m.ageHours != null ? ', pulled ' + (m.ageHours < 1 ? 'within the hour' : Math.round(m.ageHours) + 'h ago') : '')
         + (p.tdBasis === 'anytime-td-market' && p.tdProbability != null ? '. Anytime touchdown ' + n1(p.tdProbability) + '%, devigged from the market' : '')
         + '.'
+        // This number is the last time one of his books MOVED, not the last
+        // time the feed was read: the snapshot store keeps a row only when a
+        // price changes. It said "pulled 52h ago" about lines the poll had
+        // confirmed minutes earlier, which read as a broken feed when it was a
+        // settled market. The read time belongs to the whole slate and is in
+        // the market-coverage note under the board, so it is said once there.
+        + (m.lastMoveHours != null ? ' His line last moved ' + (m.lastMoveHours < 1 ? 'within the hour' : Math.round(m.lastMoveHours) + 'h ago') + '.' : '')
         // A partial quote is not a full one, and the gap is the part of his
         // line that is still the game environment rather than a posted price.
         + (m.status === 'partial' && m.missing && m.missing.length
@@ -1495,9 +1750,33 @@ p{color:var(--sec);margin:0 0 16px}
     return bits.join(' ');
   }
   function pool(s) {
-    var on = s.players.filter(function (p) { return p.onBoard; });
-    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr' + (p.available === false ? ' class="df-row-out"' : '') + '><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td>' + marketTag(p) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + [weekTag(p), (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '')].filter(Boolean).join(' ') + '</td></tr>'; }).join('');
+    var on = s.players.filter(function (p) { return projected(p); });
+    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr' + (p.available === false ? ' class="df-row-out"' : '') + '><td class="p" data-key="' + e(p.key) + '"><span class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + playerButton(p) + '</span> <span class="is-status">' + e(p.position + ' \u00b7 ' + p.team) + '</span>' + suppTag(p) + '</td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(actualOf(p) != null ? actualOf(p) : p.ironTunaPoints) + bankedMark(p) + '</td><td class="num">' + fppgText(p) + '</td><td class="num">' + edgeHtml(p) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td>' + marketTag(p) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + [weekTag(p), (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '')].filter(Boolean).join(' ') + '</td></tr>'; }).join('');
   }
+  // ── the per-team maximum, against the pool it has to be met from ──────
+  // Every shape carries one -- a cash roster takes three men from a club, a
+  // single entry four -- and on a full slate that is a preference. On a
+  // narrowed pool it is arithmetic: nine seats out of one game is two clubs,
+  // so five from one of them at minimum, and a preset of three does not
+  // produce a careful roster, it produces no roster at all. That is what a
+  // reader choosing Classic and one game used to get -- "no lineup satisfies
+  // those constraints" against a board with two full rosters on it.
+  //
+  // The floor below is what the seats and the clubs in the pool leave.
+  // Nothing hands the optimizer less than it, and a reader who asked for no
+  // per-team cap at all still gets none.
+  function poolTeams(players) {
+    var seen = {}, n = 0;
+    (players || []).forEach(function (p) { var t = p && p.team; if (t && !seen[t]) { seen[t] = 1; n += 1; } });
+    return n;
+  }
+  function teamCapFor(want, seats, players) {
+    var teams = poolTeams(players);
+    if (!want || !(seats > 0) || !teams) return want || 0;
+    var floor = Math.ceil(seats / teams);
+    return want < floor ? floor : want;
+  }
+
   // ── the shape switch ──────────────────────────────────────────────────────
   // Writes the preset into the fine-tune controls rather than solving off a
   // hidden copy of them, so what a reader sees in the panel is always what was
@@ -1511,14 +1790,20 @@ p{color:var(--sec);margin:0 0 16px}
     // The cap box is meaningless on a format that has none, and a per-team
     // maximum of three is a nine-slot number: on a six-seat single-game roster
     // with two teams in it, it would forbid the 5-1 split both operators
-    // allow. Both follow the format rather than the contest shape.
+    // allow. Both follow the format rather than the contest shape -- and the
+    // preset goes through teamCapFor() on the way into the box, because the
+    // same arithmetic applies to a nine-seat roster whose GAME POOL the reader
+    // has narrowed to one game, not only to a format that is single-game by
+    // construction.
     var f = typeof ITDfs !== 'undefined' ? solveFormat() : null;
     var fmt = f && f.fmt;
     if ($('dfCap')) $('dfCap').disabled = !!(fmt && !(fmt.cap > 0));
     if (tuned) return;
     mode = sh.mode; press($('dfMode'), 'data-mode', mode);
     $('dfStack').checked = sh.stack; $('dfBring').checked = sh.bring;
-    $('dfMaxTeam').value = fmt && fmt.single && fmt.slots ? fmt.slots.length - 1 : sh.maxTeam;
+    var preset = fmt && fmt.single && fmt.slots ? fmt.slots.length - 1 : sh.maxTeam;
+    var pv = filteredSlate();
+    $('dfMaxTeam').value = teamCapFor(preset, (fmt && fmt.slots ? fmt.slots.length : 9), pv && pv.players);
     $('dfN').value = sh.n;
   }
 
@@ -1550,6 +1835,28 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   function finite(v) { return v != null && isFinite(Number(v)); }
+  // ── a seat whose game is over ─────────────────────────────────────────────
+  // Every sentence this page generates about a player is written forward: a
+  // projection, a ceiling, a market disagreement, a downside, a touchdown
+  // price. None of that is true once the game has been played, and a roster
+  // note that says the market is 2.7 points ahead of consensus on a man who
+  // finished two hours ago is simply wrong. So the prose below asks these
+  // three first.
+  //
+  // Two shapes carry the same fact: a lineup row calls it `actual` (the
+  // optimizer's card) and a slate row calls it `actualPoints` (the board).
+  // Both are read here so the pool table and the roster can never print
+  // different numbers for the same man.
+  function actualOf(p) {
+    if (!p || !p.gamePlayed) return null;
+    var a = p.actual != null ? p.actual : p.actualPoints;
+    return a == null || !isFinite(Number(a)) ? null : Number(a);
+  }
+  function isBanked(p) { return actualOf(p) != null; }
+  // Played, but not scorable: a defense, whose game is over and whose number
+  // is still the estimate because no defensive box score is stored.
+  function isPlayed(p) { return !!(p && p.gamePlayed); }
+  function stillToPlay(list) { return (list || []).filter(function (p) { return !isPlayed(p); }); }
   function pproj(p) { return finite(p.proj) ? Number(p.proj) : finite(p.ironTunaPoints) ? Number(p.ironTunaPoints) : 0; }
   function pceil(p) { return finite(p.ceiling) ? Number(p.ceiling) : pproj(p); }
   function pfloor(p) { return finite(p.floor) ? Number(p.floor) : pproj(p) * .72; }
@@ -1563,6 +1870,19 @@ p{color:var(--sec);margin:0 0 16px}
     return l.players.filter(function (p) { return p.team === qb.opponent && p.position !== 'DST'; });
   }
   function playerFit(p, l, qb, sh) {
+    // Nothing below this is true of a man whose game is over. He is not an
+    // anchor, a punt, a leverage play or a risk any more -- he is a number,
+    // and the only thing left to say about the seat is what it returned on
+    // the salary it cost.
+    if (isBanked(p)) {
+      var got = actualOf(p), per = Number(p.salary || 0) > 0 ? got / (Number(p.salary) / 1000) : null;
+      return 'His game is final: ' + n1(got) + ' points on ' + money(p.salary) + ' of cap'
+        + (per != null ? ', ' + n1(per) + ' per $1,000' : '')
+        + '. The seat is settled whatever the rest of the roster does.';
+    }
+    if (isPlayed(p)) {
+      return 'His game is over, but Iron Tuna stores no box score for a defense, so the ' + n1(pproj(p)) + ' beside him is still the pre-game estimate rather than what the defense did.';
+    }
     var ps = l.players.slice().sort(function (a, b) { return pproj(b) - pproj(a); });
     var ss = l.players.slice().sort(function (a, b) { return Number(b.salary || 0) - Number(a.salary || 0); });
     var avgSalary = avg(l.players, function (x) { return Number(x.salary || 0); });
@@ -1607,7 +1927,12 @@ p{color:var(--sec);margin:0 0 16px}
     var sorted = l.players.slice().sort(function (a, b) { return pproj(b) - pproj(a); });
     var chalk = l.players.filter(function (p) { return finite(p.ownership) && Number(p.ownership) >= 20; }).length;
     var ownAvg = avg(l.players.filter(function (p) { return finite(p.ownership); }), function (p) { return Number(p.ownership); });
-    var market = l.players.filter(function (p) { return finite(p.vegasPoints) && finite(p.consensusPoints); })
+    // The market signal is drawn from the seats STILL TO PLAY. A disagreement
+    // between the books and the consensus about a game that finished an hour
+    // ago is not a reason to hold this roster; it is a fact about a forecast
+    // that has already been graded.
+    var live = stillToPlay(l.players), bankedSeats = l.players.filter(isBanked);
+    var market = live.filter(function (p) { return finite(p.vegasPoints) && finite(p.consensusPoints); })
       .sort(function (a, b) { return (Number(b.vegasPoints)-Number(b.consensusPoints)) - (Number(a.vegasPoints)-Number(a.consensusPoints)); })[0];
     var marketGap = market ? Number(market.vegasPoints) - Number(market.consensusPoints) : 0;
     var objective = contest === 'cash'
@@ -1618,16 +1943,35 @@ p{color:var(--sec);margin:0 0 16px}
       ? 'This is the lead build for a three-entry portfolio. It keeps a high-ceiling core while spreading the most uncertain decisions across three related lineups, so one wrong leverage call does not have to be the same wrong call in every entry.'
       : 'This is the best one-shot roster. It keeps the strongest projection and salary-value core, then adds enough ceiling and useful correlation to win a single-entry field. Because there is no second lineup to rescue an overaggressive bet, it uses leverage selectively rather than chasing low ownership for its own sake.';
     var anchors = sorted.slice(0,2).map(function (p) { return p.name; }).join(' and ');
-    var relation = catchers.length
-      ? 'The lineup pairs ' + qb.name + ' with ' + catchers.map(function (p) { return p.name; }).join(' and ') + (backs.length ? ', with ' + backs.map(function (p) { return p.name; }).join(' and ') + ' on the other side' : '') + ', creating intentional passing-game correlation.'
-      : 'The build is not dependent on a concentrated quarterback stack, so more of the scoring can arrive independently across games.';
+    // A stack whose game has been played is not correlation waiting to happen;
+    // it either fired or it did not, and the roster can say which.
+    var stackMen = catchers.length ? [qb].concat(catchers) : [];
+    var stackDone = stackMen.length && stackMen.every(isBanked);
+    var relation = !catchers.length
+      ? 'The build is not dependent on a concentrated quarterback stack, so more of the scoring can arrive independently across games.'
+      : stackDone
+      ? 'The ' + qb.name + ' stack has already played: ' + qb.name + ' and ' + catchers.map(function (p) { return p.name; }).join(' and ') + ' returned ' + n1(stackMen.reduce(function (n, p) { return n + actualOf(p); }, 0)) + ' points between them, and that correlation is spent either way.'
+      : 'The lineup pairs ' + qb.name + ' with ' + catchers.map(function (p) { return p.name; }).join(' and ') + (backs.length ? ', with ' + backs.map(function (p) { return p.name; }).join(' and ') + ' on the other side' : '') + ', creating intentional passing-game correlation.';
     var marketText = market && marketGap > .5
-      ? 'The strongest market-versus-consensus signal inside the roster is ' + market.name + ', with the market ' + n1(marketGap) + ' fantasy points higher than consensus.'
+      ? 'The strongest market-versus-consensus signal still to play is ' + market.name + ', with the market ' + n1(marketGap) + ' fantasy points higher than consensus.'
+      : !live.length
+      ? 'Every seat has played, so there is no market case left to make: the roster is what it scored.'
       : 'The roster is not being carried by one extreme market disagreement; its edge is spread across the construction.';
     var ownText = ownAvg
       ? 'Modeled ownership averages ' + n1(ownAvg) + '% across the priced players' + (chalk ? ', including ' + chalk + ' player' + (chalk === 1 ? '' : 's') + ' at 20% or more' : '') + '.'
       : '';
-    return objective + ' It spends ' + money(l.salary) + ' and leaves ' + money(l.remaining) + ', with ' + anchors + ' providing the largest projected scoring base. ' + relation + ' ' + marketText + (ownText ? ' ' + ownText : '');
+    // "Projected scoring base" is a lie about a man who has already scored, so
+    // the sentence says which it is, and adds what is banked when part of the
+    // roster is in the books.
+    var anchorsBanked = sorted.slice(0, 2).filter(isBanked).length;
+    var baseText = anchorsBanked === 2 ? 'providing the largest scoring base, both of them already in the books'
+      : anchorsBanked === 1 ? 'providing the largest scoring base, one of them already in the books'
+      : 'providing the largest projected scoring base';
+    var playedSeats = l.players.filter(isPlayed);
+    var playedText = playedSeats.length
+      ? ' ' + playedSeats.length + ' of the ' + l.players.length + ' seats ' + (playedSeats.length === 1 ? 'has' : 'have') + ' already played and can no longer move, so what follows describes the ' + live.length + ' still to come.'
+      : '';
+    return objective + ' It spends ' + money(l.salary) + ' and leaves ' + money(l.remaining) + ', with ' + anchors + ' ' + baseText + '.' + playedText + ' ' + relation + ' ' + marketText + (ownText ? ' ' + ownText : '');
   }
 
   function breakdownHtml(l, sh, qb) {
@@ -1636,21 +1980,34 @@ p{color:var(--sec);margin:0 0 16px}
     var catchers = lineupCatchers(l, qb), backs = lineupBringbacks(l, qb);
     var owned = l.players.filter(function (p) { return finite(p.ownership); });
     var ownAvg = avg(owned, function (p) { return Number(p.ownership); });
-    var market = l.players.filter(function (p) { return finite(p.vegasPoints) && finite(p.consensusPoints); })
+    // Both of these are claims about what is still to come, so both are drawn
+    // from the seats that have not played. A market gap on a finished game is
+    // a graded forecast, and a man who has already scored has no downside
+    // left to warn anybody about.
+    var live = stillToPlay(l.players), bankedSeats = l.players.filter(isBanked);
+    var market = live.filter(function (p) { return finite(p.vegasPoints) && finite(p.consensusPoints); })
       .sort(function (a, b) { return Math.abs(Number(b.vegasPoints)-Number(b.consensusPoints)) - Math.abs(Number(a.vegasPoints)-Number(a.consensusPoints)); })[0];
-    var risky = l.players.filter(function (p) { return p.position !== 'DST'; }).slice()
+    var risky = live.filter(function (p) { return p.position !== 'DST'; }).slice()
       .sort(function (a, b) { return (pfloor(a)/Math.max(1,pproj(a))) - (pfloor(b)/Math.max(1,pproj(b))); })[0];
-    var construction = 'Salary is concentrated most heavily in ' + pricey.name + ' at ' + money(pricey.salary) + '. ' + cheap.name + ' at ' + money(cheap.salary) + ' is the lowest-cost piece, which helps the roster keep ' + money(l.remaining) + ' unused rather than forcing a worse fit just to spend every dollar.';
+    var construction = 'Salary is concentrated most heavily in ' + pricey.name + ' at ' + money(pricey.salary) + '. ' + cheap.name + ' at ' + money(cheap.salary) + ' is the lowest-cost piece, which helps the roster keep ' + money(l.remaining) + ' unused rather than forcing a worse fit just to spend every dollar.'
+      + (bankedSeats.length ? ' ' + money(bankedSeats.reduce(function (n, p) { return n + Number(p.salary || 0); }, 0)) + ' of that spend has already returned ' + n1(bankedSeats.reduce(function (n, p) { return n + actualOf(p); }, 0)) + ' points and cannot be moved.' : '');
     var marketText = market
-      ? market.name + ' has the biggest market/consensus gap in this lineup: ' + n1(Number(market.vegasPoints)-Number(market.consensusPoints)) + ' fantasy points. ' + (finite(market.teamTotal) ? market.team + ' is implied for ' + n1(market.teamTotal) + ' points.' : 'That gap is part of the projection case, not a standalone reason to roster him.')
+      ? market.name + ' has the biggest market/consensus gap among the seats still to play: ' + n1(Number(market.vegasPoints)-Number(market.consensusPoints)) + ' fantasy points. ' + (finite(market.teamTotal) ? market.team + ' is implied for ' + n1(market.teamTotal) + ' points.' : 'That gap is part of the projection case, not a standalone reason to roster him.')
+      : !live.length
+      ? 'Every game in this roster has been played, so there is no market read left to give: the numbers above are results.'
       : 'The lineup is using the blended Iron Tuna projection without a usable player-level market/consensus gap for this slate.';
-    var corr = catchers.length
-      ? qb.name + ' is paired with ' + catchers.map(function (p) { return p.name; }).join(' and ') + '. ' + (backs.length ? 'The bring-back is ' + backs.map(function (p) { return p.name; }).join(' and ') + ', so the lineup benefits if that game stays aggressive on both sides.' : 'There is no opposing bring-back, so the build captures same-team passing upside without requiring a full shootout.')
-      : 'There is no same-team QB/pass-catcher stack in this build. That lowers game-level dependency, which is more useful in cash than in a top-heavy tournament.';
+    var stackMen = catchers.length ? [qb].concat(catchers) : [];
+    var corr = !catchers.length
+      ? 'There is no same-team QB/pass-catcher stack in this build. That lowers game-level dependency, which is more useful in cash than in a top-heavy tournament.'
+      : stackMen.every(isBanked)
+      ? 'The ' + qb.name + ' stack has been played. ' + qb.name + ' and ' + catchers.map(function (p) { return p.name; }).join(' and ') + ' scored ' + n1(stackMen.reduce(function (n, p) { return n + actualOf(p); }, 0)) + ' between them' + (backs.length ? ', and the bring-back through ' + backs.map(function (p) { return p.name; }).join(' and ') + ' is settled with it' : '') + '. Whatever the correlation was worth, it has already been paid.'
+      : qb.name + ' is paired with ' + catchers.map(function (p) { return p.name; }).join(' and ') + '. ' + (backs.length ? 'The bring-back is ' + backs.map(function (p) { return p.name; }).join(' and ') + ', so the lineup benefits if that game stays aggressive on both sides.' : 'There is no opposing bring-back, so the build captures same-team passing upside without requiring a full shootout.');
     var salaryText = 'The expensive slot is ' + pricey.name + ' because the optimizer values the points attached to that salary more than the alternatives. The savings from ' + cheap.name + ' are only useful because they preserve the stronger projection at the top instead of creating another weak punt.';
     var risk = risky
-      ? risky.name + ' has the widest downside relative to his projection among the offensive players in this roster, with a ' + n1(pfloor(risky)) + ' floor against a ' + n1(pproj(risky)) + ' projection. ' + (ownAvg ? 'The lineup also carries about ' + n1(ownAvg) + '% average modeled ownership, which ' + (contest === 'gpp' ? 'can limit uniqueness if the popular pieces fail to separate from the field.' : 'is acceptable here because the objective is survival, not uniqueness.') : '')
-      : 'The main risk is that the optimizer’s projected roles do not materialize as expected.';
+      ? risky.name + ' has the widest downside relative to his projection among the offensive players still to play, with a ' + n1(pfloor(risky)) + ' floor against a ' + n1(pproj(risky)) + ' projection. ' + (ownAvg ? 'The lineup also carries about ' + n1(ownAvg) + '% average modeled ownership, which ' + (contest === 'gpp' ? 'can limit uniqueness if the popular pieces fail to separate from the field.' : 'is acceptable here because the objective is survival, not uniqueness.') : '')
+      : !live.length
+      ? 'There is no risk left in this roster to describe. Every seat has played, and the total above is what it scored.'
+      : 'The main risk is that the optimizer\u2019s projected roles do not materialize as expected.';
     var why = contest === 'cash'
       ? 'Tuna Edge prefers this combination because it buys the most dependable projected production it can under the cap without paying for unnecessary correlation or low-owned volatility.'
       : contest === 'gpp'
@@ -1724,7 +2081,7 @@ p{color:var(--sec);margin:0 0 16px}
   // solved around them. One at a time, as many as they like.
   function requirable() {
     var v = filteredSlate();
-    return ((v && v.players) || []).filter(function (p) { return p.key && p.onBoard; })
+    return ((v && v.players) || []).filter(function (p) { return p.key && projected(p); })
       .sort(function (a, b) { return (b.ironTunaPoints || 0) - (a.ironTunaPoints || 0); });
   }
   function requireMatches(value) {
@@ -1757,7 +2114,9 @@ p{color:var(--sec);margin:0 0 16px}
       var already = marks[p.key] === 'lock';
       return '<button type="button" role="option" data-require-key="' + e(p.key) + '"' + (already ? ' disabled' : '')
         + '><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' \u00b7 ' + p.team) + '</small> ' + weekTag(p) + '</span>'
-        + '<small>' + (already ? 'already required' : money(p.salary) + ' \u00b7 IT ' + n1(p.ironTunaPoints)) + '</small></button>';
+        + '<small>' + (already ? 'already required'
+            : money(p.salary) + ' \u00b7 ' + (actualOf(p) != null ? n1(actualOf(p)) + ' final' : isPlayed(p) ? n1(p.ironTunaPoints) + ' est, game over' : 'IT ' + n1(p.ironTunaPoints)))
+        + '</small></button>';
     }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
     box.hidden = false;
   }
@@ -1768,6 +2127,13 @@ p{color:var(--sec);margin:0 0 16px}
     var view = filteredSlate();
     if (!view) { host.hidden = true; return; }
     host.hidden = false;
+    // "Iron Tuna's own nine" was true of the only roster this page used to
+    // build. It now builds a six-seat Showdown and a tier board as well, so
+    // the sentence counts the seats in front of the reader.
+    var seatWords = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+    var fSeats = solveFormat();
+    var nSeats = fSeats && fSeats.fmt && fSeats.fmt.slots ? fSeats.fmt.slots.length : 9;
+    if ($('dfMustEmpty')) $('dfMustEmpty').textContent = 'Nobody yet \u2014 the roster above is Iron Tuna\u2019s own ' + (seatWords[nSeats] || nSeats) + '.';
     var rows = markedRows();
     var must = rows.filter(function (r) { return r.kind === 'lock'; });
     var out = rows.filter(function (r) { return r.kind === 'excl'; });
@@ -1792,7 +2158,7 @@ p{color:var(--sec);margin:0 0 16px}
     var benchedReq = must.filter(function (r) { return r.p.available === false; });
     $('dfConstraintChips').innerHTML =
       (out.length ? '<span class="df-out-label">Also excluded</span>' + out.map(function (r) { return chip(r, 'drop'); }).join('') : '')
-      + (missing.length ? '<p class="df-warn">' + e(missing.map(function (r) { return r.p.name; }).join(' and ')) + ' could not be seated under the current cap and rules, so the roster below is solved without ' + (missing.length > 1 ? 'them' : 'him') + '.</p>' : '')
+      + (missing.length ? '<p class="df-warn">' + e(missing.map(function (r) { return r.p.name; }).join(' and ')) + ' could not be seated under the current cap and rules, so the roster above is solved without ' + (missing.length > 1 ? 'them' : 'him') + '.</p>' : '')
       + benchedReq.map(function (r) {
           return '<p class="df-warn"><b>' + e(r.p.name) + '</b> is in the box. He is not playing this week'
             + (r.p.weekStatus ? ' (' + e(r.p.weekStatus) + (r.p.weekStatusNote ? ': ' + e(r.p.weekStatusNote) : '') + ')' : '')
@@ -1806,22 +2172,31 @@ p{color:var(--sec);margin:0 0 16px}
   // says plainly when there is none.
   function propsNote(l) {
     var cov = (slate && slate.props) || null;
-    var quoted = l.players.filter(function (p) { return p.marketQuoted; });
-    var tdMkt = l.players.filter(function (p) { return p.tdBasis === 'anytime-td-market' && finite(p.tdProbability); })
+    // Only the seats still to play. A posted prop and a devigged touchdown
+    // price are both forecasts, and quoting one on a man who finished an hour
+    // ago reads as something the reader could still act on.
+    var live = stillToPlay(l.players), settled = l.players.length - live.length;
+    var settledText = settled ? ' ' + settled + ' of the ' + l.players.length + ' seats ' + (settled === 1 ? 'has' : 'have') + ' already played and no longer ' + (settled === 1 ? 'carries' : 'carry') + ' a market.' : '';
+    var quoted = live.filter(function (p) { return p.marketQuoted; });
+    var tdMkt = live.filter(function (p) { return p.tdBasis === 'anytime-td-market' && finite(p.tdProbability); })
       .sort(function (a, b) { return Number(b.tdProbability) - Number(a.tdProbability); });
+    if (!live.length) {
+      return '<p class="df-props"><b>Every game in this roster has been played.</b> There is no market behind it any more: the numbers on the card are results, not prices.</p>';
+    }
     if (!quoted.length) {
-      return '<p class="df-props"><b>No player prop is behind this lineup.</b> '
+      return '<p class="df-props"><b>No player prop is behind ' + (settled ? 'the rest of this lineup' : 'this lineup') + '.</b> '
         + (cov && cov.players ? 'The books have not posted on any of the ' + cov.players + ' players on this slate. ' : '')
+        + (settledText ? settledText.trim() + ' ' : '')
         + 'Every market number here is the game line\u2019s total and spread split across an offense, which the build discounts for exactly that reason, and a player nobody priced falls back to the consensus projection rather than to a fitted number wearing a Vegas label. '
         + (tdMkt.length ? '' : 'Touchdown odds are derived from the projected workload, not quoted.')
         + '</p>';
     }
-    return '<p class="df-props"><b>' + quoted.length + ' of ' + l.players.length + ' picks are priced by the books.</b> '
+    return '<p class="df-props"><b>' + quoted.length + ' of the ' + live.length + ' picks still to play ' + (quoted.length === 1 ? 'is' : 'are') + ' priced by the books.</b>' + settledText + ' '
       + quoted.slice(0, 4).map(function (p) {
           return e(p.name) + ' (' + (p.market.pricedLabels || []).slice(0, 3).join(', ') + (p.market.books ? ', ' + p.market.books + ' books' : '') + ')';
         }).join('; ')
       + (quoted.length > 4 ? ' and ' + (quoted.length - 4) + ' more' : '') + '. '
-      + (tdMkt.length ? 'Best quoted touchdown price in the roster: ' + e(tdMkt[0].name) + ' at ' + n1(tdMkt[0].tdProbability) + '%'
+      + (tdMkt.length ? 'Best quoted touchdown price still to come: ' + e(tdMkt[0].name) + ' at ' + n1(tdMkt[0].tdProbability) + '%'
           + (tdMkt[0].tdBooks ? ' across ' + tdMkt[0].tdBooks + ' books' : '') + ', devigged. ' : '')
       + 'The rest carry their game\u2019s environment, discounted for not being quoted.</p>';
   }
@@ -1836,7 +2211,37 @@ p{color:var(--sec);margin:0 0 16px}
     return '<p class="df-fieldnote"><b>' + n1(fieldAvg.points) + ' is the typical entry.</b> '
       + 'Rosters drawn off this board seat by seat on Iron Tuna\u2019s modeled ownership, under the same cap and the same roster format, then averaged: what an ordinary lineup on this slate projects for. '
       + 'This build projects ' + (Math.abs(over) < 0.05 ? 'level with it' : n1(Math.abs(over)) + ' points ' + (over > 0 ? 'above' : 'below') + ' it') + '. '
+      + (fieldAvg.bankedPool ? 'Part of that number is settled: the field entered before kickoff, so an ordinary entry owns the players whose games are finished at what they actually scored. '
+          : '')
       + 'It is a bar to clear, not a score to aim at, and the ownership behind it is Iron Tuna\u2019s model rather than a feed.</p>';
+  }
+  // FINAL means the figure beside his name is what he scored, not what he is
+  // projected for. A defense is the one seat that can be past kickoff and
+  // still carry a projection: the stored box score has no defensive line in
+  // it (dfsActualFor in _worker.js), and saying so is better than letting a
+  // reader assume the whole roster is settled.
+  function bankedMark(p) {
+    if (!isPlayed(p)) return '';
+    var a = actualOf(p);
+    if (a == null) return ' <span class="df-banked pending" title="This game is over, but Iron Tuna has no box score for a defense, so this is still the projection.">est</span>';
+    return ' <span class="df-banked" title="' + n1(a) + ' is what he actually scored. His game is final, so this is a result rather than a projection.">final</span>';
+  }
+  // How much of a total is already settled. A reader at four o'clock is not
+  // asking what the roster projects for, he is asking what is left to come.
+  function bankedNote(l) {
+    if (!l || !l.playedPlayers) return '';
+    var seats = l.players.length, done = l.playedPlayers, scored = l.bankedPlayers, live = seats - done;
+    var left = Number(l.projPoints) - Number(l.bankedPoints || 0);
+    var site = e(slate.label || 'the site');
+    return '<p class="df-fieldnote"><b>' + n1(l.bankedPoints || 0) + ' of these ' + n1(l.projPoints) + ' points are already in the books.</b> '
+      + done + ' of the ' + seats + ' seats ' + (done === 1 ? 'has' : 'have') + ' played'
+      + (done === scored
+          ? ' and carr' + (done === 1 ? 'ies' : 'y') + ' what was actually scored under ' + site + '\u2019 own rules. '
+          : '. ' + scored + ' of them carr' + (scored === 1 ? 'ies' : 'y') + ' what was actually scored under ' + site + '\u2019 own rules; the '
+            + (done - scored === 1 ? 'other keeps its estimate' : 'others keep their estimates')
+            + ', because Iron Tuna stores no box score for a defense. ')
+      + 'The ' + live + ' still to come ' + (live === 1 ? 'is a projection, worth ' : 'are projections, worth ') + n1(left) + ' between them. '
+      + 'Players whose games are finished are off the board for new lineups, since no entry submitted now can contain them; pin one to keep him in a roster you already hold.</p>';
   }
   function lineupCard(l, i, sh, lead) {
     var qb = lineupQb(l);
@@ -1950,7 +2355,7 @@ p{color:var(--sec);margin:0 0 16px}
         + '<span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></span></span></td>'
         + '<td class="num" data-lab="Salary">' + salCell + '</td>'
         + '<td class="num" data-lab="' + e(fppgLabel()) + '">' + fppgText(p) + '</td>'
-        + '<td class="num" data-lab="Iron Tuna">' + n1(p.proj) + '</td>'
+        + '<td class="num" data-lab="Iron Tuna">' + n1(p.proj) + bankedMark(p) + '</td>'
         + '<td class="num" data-lab="Tuna Edge">' + edgeHtml(p) + '</td>'
         + '<td class="num" data-lab="Own">' + (p.ownership == null ? '—' : n1(p.ownership) + '%') + '</td></tr>'
         + '<tr class="df-fitrow" id="' + fitId + '"><td aria-hidden="true"></td><td colspan="6">'
@@ -1968,7 +2373,7 @@ p{color:var(--sec);margin:0 0 16px}
         + '<div class="is-board-head"><h3>' + e(sh.head) + '</h3><span class="is-board-sub">' + sub + '</span></div>'
         + '<div class="df-explain-summary"><h4>Why This Lineup</h4><p>' + e(lineupSummary(l, sh, qb)) + '</p></div>'
         + propsNote(l)
-        + '<div class="is-stats">' + stats + '</div>' + fieldNote(l) + meter
+        + '<div class="is-stats">' + stats + '</div>' + bankedNote(l) + fieldNote(l) + meter
         + '<div class="df-lead-grid"><div class="df-lead-table">' + table + '</div>'
         + '<p class="df-fit df-act-note">Disagree with a seat? The <b>&times;</b> beside a player solves the slate again without him; the <b>pin</b> puts him in the <b>Must include</b> box above, so every re-solve keeps him. Both sit on every alternate below too. A player who is not in the roster at all goes into the box by name, with <b>Add a player</b>.</p>'
         + breakdownHtml(l, sh, qb) + '</div>'
@@ -2001,6 +2406,11 @@ p{color:var(--sec);margin:0 0 16px}
     var contra = contest === 'gpp';
     var out = [];
     l.players.forEach(function (cur) {
+      // Neither side of a swap can involve a finished game. The seat itself is
+      // settled -- a man who has played cannot be taken out of an entry -- and
+      // a player whose game is over cannot be put into one, so offering him as
+      // "the next best body" is offering something nobody can do.
+      if (isPlayed(cur)) return;
       var mult = cur.multiplier || 1;
       var seatCost = function (q) {
         if (q.salaryBySlot && isFinite(q.salaryBySlot[cur.slot])) return Number(q.salaryBySlot[cur.slot]);
@@ -2008,7 +2418,7 @@ p{color:var(--sec);margin:0 0 16px}
       };
       var room = cap ? cap - l.salary + cur.salary : Infinity;
       var cands = players.filter(function (q) {
-        if (inL[q.id] || seatCost(q) > room) return false;
+        if (inL[q.id] || seatCost(q) > room || isPlayed(q)) return false;
         if (!ITDfs.eligibleIn(q, cur.slot, cfg)) return false;
         if (!isFinite(pts(q)) || pts(q) <= 0) return false;
         if (contra && cur.ownership != null && q.ownership != null && q.ownership >= cur.ownership) return false;
@@ -2066,6 +2476,16 @@ p{color:var(--sec);margin:0 0 16px}
   // it while the reader is still choosing a structure, rather than being
   // asked for a recommendation it would otherwise have to invent.
   var playWeek = null;
+  // The three solves behind the Play of the Week are the most expensive thing
+  // on the page, and they used to run on every setup change: picking a Game
+  // Style, then the Games, then the Payout Structure paid for nine optimizer
+  // builds before the first roster was asked for, which is why each step of
+  // the plate felt slow to answer. The box depends on the player pool and the
+  // resolved roster format and on nothing else the plate touches -- not the
+  // games chosen, not the payout -- so the result is kept and re-used until
+  // one of those actually changes. `slateToken` is the pool's identity: an
+  // uploaded file carries no timestamp to tell it apart by.
+  var playWeekMemo = null, slateToken = 0;
 
   // The coach reads the page through coachContext() rather than holding its
   // own copy of anything, so every state change only has to tell it to look
@@ -2176,7 +2596,7 @@ p{color:var(--sec);margin:0 0 16px}
       if (!map[key].start) map[key].start = kickoffDate(g);
     });
     (s && s.players || []).forEach(function (p) {
-      if (!p.onBoard || !p.team || !p.opponent) return;
+      if (!projected(p) || !p.team || !p.opponent) return;
       var key = playerGameKey(p); if (!key) return;
       if (!map[key]) {
         var away = p.home === false ? p.team : (p.home === true ? p.opponent : '');
@@ -2186,14 +2606,59 @@ p{color:var(--sec);margin:0 0 16px}
       map[key].players += 1;
       if (!map[key].start) map[key].start = kickoffDate(p);
     });
-    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) {
+    var out = Object.keys(map).map(function (k) { return map[k]; });
+    // Nothing priced yet. The games themselves are still known, so the list is
+    // the schedule's rather than nothing at all: the reader can name the
+    // contest they are entering now, and the board fills in behind the answer
+    // once the salaries land.
+    if (!out.length) out = scheduleGames.slice();
+    return out.sort(function (a, b) {
       if (a.start && b.start && a.start.getTime() !== b.start.getTime()) return a.start - b.start;
       if (a.start && !b.start) return -1; if (!a.start && b.start) return 1;
       return a.label.localeCompare(b.label);
     });
   }
+  // The schedule's fixtures in the shape gamesForSlate() hands back, so every
+  // reader of that list -- the select, the custom grid, the coach -- takes the
+  // unpriced week without knowing it is unpriced. `players` is 0 because none
+  // are priced; the grid says so in words rather than printing the zero.
+  function scheduleGameList(rows) {
+    return (rows || []).map(function (g) {
+      var away = String(g.away || '').trim().toUpperCase(), home = String(g.home || '').trim().toUpperCase();
+      var key = gameKeyTeams(away, home);
+      if (!key) return null;
+      return { key: key, away: away, home: home, label: away + ' @ ' + home, players: 0, start: kickoffDate(g), unpriced: true };
+    }).filter(Boolean);
+  }
   function selectedGameKeys() { return Object.keys(selectedGames).filter(function (k) { return selectedGames[k]; }); }
-  function gameScopeRequired() { return site === 'dk' && !!gameStyle && gameStyle !== 'best-ball' && !isPickem(); }
+  // A game key as a reader reads it. One spelling, shared by the picker and
+  // the notice, so a matchup cannot be named two ways on the same screen.
+  function prettyGame(k) { return String(k || '').replace('|', ' vs '); }
+  // The desk slate this setup asks for, or null for the main board. A
+  // single-game format with exactly one game chosen wants that game's own
+  // price list; everything else wants the week's Classic slate. Returns null
+  // for a game the desk has not imported, so the board falls through to the
+  // file route rather than fetching a slate that does not exist.
+  function deskSlateFor() {
+    if (typeof ITDfs === 'undefined') return null;
+    var fmt = ITDfs.formatFor(site, gameStyle || 'classic');
+    if (!fmt || !fmt.single || fmt.kind !== 'salary') return null;
+    var keys = selectedGameKeys();
+    if (keys.length !== 1) return null;
+    return availableSingles.indexOf(keys[0]) >= 0 ? 'sd:' + keys[0] : null;
+  }
+  // Re-fetch only when the answer actually changed. Every select on the plate
+  // calls this, and re-solving the same slate on each keystroke would throw
+  // away the reader's locks and excludes for nothing.
+  function syncSlate() {
+    if (upGet(site)) return false;
+    var want = deskSlateFor();
+    if (want === loadedSlate) return false;
+    marks = {};
+    loadSite(want);
+    return true;
+  }
+  function gameScopeRequired() { return !!gameStyle && gameStyle !== 'best-ball'; }
   // ── which roster this setup asks for ──────────────────────────────────────
   // A Game Style names a roster and ITDfs.FORMATS is the table of what each
   // one builds; the loaded salary file names the roster it was PRICED for.
@@ -2210,8 +2675,7 @@ p{color:var(--sec);margin:0 0 16px}
   function solveFormat() {
     if (typeof ITDfs === 'undefined') return { fmt: null, kind: 'salary', ready: false, blocked: 'The lineup builder did not load with the page.' };
     var priced = slate && slate.format === 'single-game' ? 'single-game' : 'classic';
-    // Off DraftKings there is no Game Style plate, so the file decides alone.
-    var style = site === 'dk' ? (gameStyle || 'classic') : (priced === 'single-game' ? 'showdown-captain' : 'classic');
+    var style = gameStyle || 'classic';
     var fmt = ITDfs.formatFor(site, style);
     var out = { style: style, fmt: fmt, kind: fmt.kind, ready: true, blocked: '', priced: priced };
     if (fmt.kind === 'season') {
@@ -2219,21 +2683,110 @@ p{color:var(--sec);margin:0 0 16px}
       out.blocked = 'Best Ball drafts once for a whole season and starts the best scorers for you, so there is no weekly cap to solve against and no Sunday roster to set. That contest is won in the draft room: the Best Ball board, the stacking guide and the draft strategy pages are built for it.';
       return out;
     }
+    // NOTHING PRICED AT ALL. Every branch below reads the loaded slate, and
+    // without one they answer the wrong question: a Showdown was told the main
+    // slate cannot price a Captain on a week where no main slate exists
+    // either, and Classic was declared ready and then met build()'s own
+    // `if (!slate) return`, which printed one flat sentence about salaries and
+    // offered no way past it. A reader who had answered all three steps of the
+    // setup was left with nothing to do but come back on Sunday.
+    //
+    // They do not have to wait. The desk imports ONE MAIN SLATE a week and it
+    // lands when the lobby posts, but the contest the reader is entering is
+    // already priced on its own page -- that is where the Showdown file comes
+    // from in the first place -- and /api/dfs/slate prices that file against
+    // this week's projections without the desk. So the board names which of
+    // the two it is short of and takes the file now.
+    if (!slate) {
+      out.ready = false;
+      // A pick contest has no roster and no salary file to hand over, so it is
+      // told the truth about what it is waiting for rather than asked for an
+      // export that does not exist.
+      if (fmt.kind === 'picks') {
+        out.blocked = 'This contest posts its own line on a player rather than a roster, and the board reads those lines against the week\u2019s player pool. No ' + siteLabel() + ' slate is priced for this week yet, so there is nothing to read them against. The board fills in as soon as the salaries post.';
+        return out;
+      }
+      out.blocked = 'No ' + siteLabel() + ' salaries are posted for this week yet, so the desk\u2019s slate has nothing to build this roster from. You do not have to wait for it: the contest you are entering is already priced on its own page in the lobby, and that export is all this board needs. Hand it over and the board solves the roster it was priced for, on this week\u2019s projections.';
+      out.needsFile = true;
+      return out;
+    }
     if (fmt.kind === 'tiers') {
       var tv = filteredSlate() || slate || {};
-      var tf = ITDfs.tierFormat((tv.players || []).filter(function (p) { return p.onBoard; }));
-      if (!tf) {
+      var tp = (tv.players || []).filter(function (p) { return projected(p); });
+      var tf = ITDfs.tierFormat(tp);
+      if (tf) { out.fmt = tf; out.tierCount = tf.tiers.length; return out; }
+      // The lobby file's own buckets are not here, so the board cuts the pool
+      // into price bands and solves that instead of declining. It is not the
+      // contest's grouping and never says it is: `approx` is what puts the
+      // sentence saying so on the board, above the roster, with the export
+      // that replaces the bands with the posted tiers.
+      var derived = ITDfs.salaryTierFormat(tp);
+      if (!derived) {
         out.ready = false;
-        out.blocked = 'A Tiers contest has no salary cap: it posts its own buckets and asks for one player out of each. The buckets are in the contest\u2019s own export, and the desk\u2019s main slate carries none \u2014 inventing them out of salary would build a roster nobody can enter. Hand over the Tiers CSV and the board solves it exactly.';
+        out.blocked = 'A Tiers contest asks for one player out of each posted bucket, and there are not enough priced players on this slate to cut into bands, let alone to fill a roster. Hand over the Tiers CSV and the board solves the posted tiers exactly.';
         out.needsFile = true;
         return out;
       }
-      out.fmt = tf; out.tierCount = tf.tiers.length;
+      out.fmt = derived.fmt; out.tierOf = derived.tierOf; out.tierCount = derived.fmt.tiers.length;
+      out.approx = 'tiers';
+      out.approxNote = 'A Tiers contest posts its own buckets and the desk\u2019s main slate carries none, so the board cut the eligible pool into ' + derived.fmt.tiers.length
+        + ' bands by salary, most expensive first, and took one man out of each. Those bands are Iron Tuna\u2019s own and not the contest\u2019s: which body is worth the seat in each band is the answer here, and the band numbers are not ' + siteLabel() + '\u2019 own. Price the Tiers export and the board solves the posted tiers exactly.';
+      out.needsFile = true;
       return out;
     }
     if (fmt.kind === 'salary' && fmt.single && priced !== 'single-game') {
-      out.ready = false;
-      out.blocked = (site === 'fd' ? 'FanDuel' : 'DraftKings') + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. Building ' + fmt.label + ' from the main slate would seat a ' + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' at a price nobody is charged \u2014 a roster you could not enter \u2014 so the board declines rather than printing one. Hand over the export from the contest lobby and it solves exactly.';
+      // THE PRICES ARE THE MAIN SLATE'S, and they are not this contest's.
+      // DraftKings prices a single-game contest on a file of its own, and the
+      // board used to decline the whole format for it. It builds now, because
+      // the useful half of the answer -- which six men out of this game, and
+      // who takes the multiplier seat -- survives the difference between the
+      // two price lists.
+      //
+      // What does not survive is the budget. The main slate prices nine seats
+      // against its cap; this contest prices six, one of them at 1.5x. So the
+      // salaries printed stay the slate's real ones and the CAP is scaled by
+      // the same ratio instead: a roster under the equivalent budget is a
+      // roster the lobby's own cap would also have made you choose between.
+      // Both facts go on the board above the roster, with the export that
+      // replaces the estimate with the contest's own prices.
+      //
+      // WHOSE GAME THIS IS ABOUT. The sentence leads with the reader's own
+      // matchup and where it stands, because a note that opens by announcing
+      // which OTHER games the desk has priced reads as a broken site rather
+      // than as a game nobody has imported.
+      var picked = selectedGameKeys();
+      var one = picked.length === 1 ? picked[0] : null;
+      var deskHas = one && availableSingles.indexOf(one) >= 0;
+      var others = availableSingles.filter(function (k) { return k !== one; }).map(prettyGame);
+      out.approx = 'pricing';
+      out.capBasis = equivalentCap(fmt);
+      // A COPY of the format, never the shared one, carrying the budget that
+      // was actually solved against and a roster line that does not quote the
+      // lobby's cap underneath it. The seat rules are the contest's own and
+      // are not touched.
+      var seat = fmt.mult ? Object.keys(fmt.mult)[0] : 'CPT';
+      var seatName = seat === 'MVP' ? 'MVP' : 'Captain';
+      if (out.capBasis > 0) {
+        out.fmt = {};
+        for (var fk in fmt) out.fmt[fk] = fmt[fk];
+        out.fmt.cap = out.capBasis;
+        out.fmt.roster = 'One ' + seatName + ' and five FLEX out of a single game. The ' + seatName
+          + ' scores 1.5x and costs 1.5x, and both teams have to be represented. The cap named here is the main slate\u2019s equivalent of the lobby\u2019s, because the prices are the main slate\u2019s.';
+      }
+      out.approxNote = (one
+          ? (deskHas ? prettyGame(one) + ' is priced here exactly, but this board is still holding the main slate \u2014 reload the page and it solves on the contest\u2019s own salaries. '
+                     : 'The desk has not imported ' + prettyGame(one) + ' for this week. ')
+          : '')
+        + siteLabel() + ' prices this contest in a file of its own: its own salaries, six seats, and a '
+        + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' who scores and costs 1.5\u00d7. The roster below is built from the main slate\u2019s prices'
+        + (out.capBasis ? ' against an equivalent budget of ' + money(out.capBasis) + ' \u2014 the same share of the cap six seats and a 1.5\u00d7 multiplier take out of a nine-seat board' : '')
+        + '. Read the shape: which six men, and who wears the multiplier. The dollar figures are the main slate\u2019s and the lobby will charge you different ones.'
+        // The other games the desk holds, named as what they are: a different
+        // matchup, not this one.
+        + (others.length
+           ? ' The desk has imported ' + others.join(', ') + ' this week, which solve' + (others.length === 1 ? 's' : '') + ' here exactly \u2014 but ' + (others.length === 1 ? 'that is a different matchup' : 'those are different matchups') + '.'
+           : '')
+        + ' Price the export from the contest lobby and this board solves your own game exactly.';
       out.needsFile = true;
       return out;
     }
@@ -2247,13 +2800,26 @@ p{color:var(--sec);margin:0 0 16px}
   // The cap actually solved against. An uncapped format has none, and passing
   // the fine-tune number anyway would invent one the contest never charges.
   function capNow(f) { return f && f.fmt && f.fmt.cap > 0 ? (parseInt($('dfCap').value, 10) || f.fmt.cap) : 0; }
+  // What this format's cap is WORTH on prices it was not written for. A
+  // Showdown's $50,000 buys six seats on Showdown prices, one of them at
+  // 1.5\u00d7 -- 6.5 seats' worth. The main slate prices nine seats against its
+  // own cap, so 6.5 of those nine is the budget that bites the same way. The
+  // salaries on the board stay real and the constraint stays honest; the
+  // alternative is rewriting every price on the page, which would put numbers
+  // nobody is charged in front of the reader.
+  function equivalentCap(fmt) {
+    var pricedSeats = (slate && slate.slots && slate.slots.length) || 9;
+    var pricedCap = (slate && slate.cap > 0 ? slate.cap : 0) || fmt.cap || 0;
+    if (!(pricedCap > 0) || !(pricedSeats > 0) || !fmt.slots || !fmt.slots.length) return fmt.cap || 0;
+    var units = fmt.slots.reduce(function (t, k) { var m = fmt.mult && fmt.mult[k]; return t + (isFinite(m) && m > 0 ? Number(m) : 1); }, 0);
+    return Math.round(pricedCap * units / pricedSeats / 100) * 100;
+  }
   function setGameKeys(keys) {
     selectedGames = {};
     (keys || []).forEach(function (k) { selectedGames[k] = true; });
     marks = {};
   }
   function setupReady() {
-    if (site !== 'dk') return true;
     if (!gameStyle || !gameChoice || !payoutStructure) return false;
     if (gameStyle !== 'best-ball' && !selectedGameKeys().length) return false;
     return true;
@@ -2302,6 +2868,16 @@ p{color:var(--sec);margin:0 0 16px}
       if (Object.keys(kept).length === 1 && !gameChoice) gameChoice = 'game:' + Object.keys(kept)[0];
     }
     gameUniverseSig = sig;
+    // Neither the slate nor the schedule knows of a game this week. The select
+    // said "Select Games…" and refused to open, which reads as a broken
+    // control rather than an empty week, so it says which it is.
+    if (!games.length) {
+      sel.innerHTML = '<option value="">No games listed for this week yet…</option>';
+      sel.disabled = true;
+      custom.hidden = true;
+      $('dfGameGrid').innerHTML = '';
+      return;
+    }
     // One game on the slate is not a choice. A single-game export carries
     // exactly one, so pick it rather than asking.
     if (games.length === 1 && !selectedGameKeys().length) {
@@ -2318,6 +2894,15 @@ p{color:var(--sec);margin:0 0 16px}
       setGameKeys([games[0].key]);
     }
     var style = GAME_STYLES[gameStyle] || {};
+    var fmt = typeof ITDfs !== 'undefined' && gameStyle ? ITDfs.formatFor(site, gameStyle) : null;
+    // WHICH MATCHUPS CAN ACTUALLY SOLVE HERE. On a single-game format the
+    // choice is not cosmetic: the desk imports a Showdown price list per game,
+    // and a game it has not imported can only be priced from the reader's own
+    // export. Marking them is what stops a reader picking the one game on the
+    // slate that cannot solve and reading the refusal as a broken board. The
+    // multi-game formats are unaffected -- they solve from the main slate
+    // whichever games are chosen.
+    var markSingles = !!(style.single && fmt && fmt.kind === 'salary');
     var html = '<option value="">Select Games…</option>';
     var buckets = gameBuckets(games);
     if (!style.single) {
@@ -2327,8 +2912,10 @@ p{color:var(--sec);margin:0 0 16px}
       if (buckets.prime.length) html += '<option value="prime">Primetime games</option>';
     }
     games.forEach(function (g) {
-      var meta = kickoffText(g.start);
-      html += '<option value="game:' + e(g.key) + '">' + e(g.label) + (meta ? ' · ' + e(meta) : '') + '</option>';
+      var bits = [];
+      var meta = kickoffText(g.start); if (meta) bits.push(meta);
+      if (markSingles) bits.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file');
+      html += '<option value="game:' + e(g.key) + '">' + e(g.label) + (bits.length ? ' · ' + e(bits.join(' · ')) : '') + '</option>';
     });
     if (!style.single && games.length > 1) html += '<option value="custom">Custom game selection…</option>';
     sel.innerHTML = html;
@@ -2336,7 +2923,9 @@ p{color:var(--sec);margin:0 0 16px}
     if (gameChoice && [].some.call(sel.options,function(o){return o.value===gameChoice;})) sel.value=gameChoice; else if(gameChoice!=='custom') gameChoice='';
     custom.hidden = gameChoice !== 'custom';
     $('dfGameGrid').innerHTML = games.map(function (g) {
-      var meta=[]; var kt=kickoffText(g.start); if(kt) meta.push(kt); meta.push(g.players+' eligible player'+(g.players===1?'':'s'));
+      var meta=[]; var kt=kickoffText(g.start); if(kt) meta.push(kt);
+      meta.push(g.unpriced ? 'salaries not posted yet' : g.players+' eligible player'+(g.players===1?'':'s'));
+      if (markSingles) meta.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file');
       return '<button class="df-game-choice" type="button" data-game-key="'+e(g.key)+'" aria-pressed="'+(selectedGames[g.key]?'true':'false')+'"><b>'+e(g.label)+'</b><small>'+e(meta.join(' · '))+'</small></button>';
     }).join('');
     sel.dataset.all=JSON.stringify(buckets.all); sel.dataset.early=JSON.stringify(buckets.early); sel.dataset.late=JSON.stringify(buckets.late); sel.dataset.prime=JSON.stringify(buckets.prime);
@@ -2364,7 +2953,7 @@ p{color:var(--sec);margin:0 0 16px}
     if (!gameStyle) $('dfGamesHelp').textContent='The exact game pool matters because players outside it cannot be used.';
     else if (gameStyle==='best-ball') $('dfGamesHelp').textContent='Best Ball uses a season-long player pool rather than a single weekly slate.';
     else if (gameChoice==='custom') $('dfGamesHelp').textContent=keys.length ? keys.length+' games selected in the custom player pool.' : 'Select every game included in the contest, then confirm the custom pool.';
-    else $('dfGamesHelp').textContent=gameChoice ? (keys.length+' game'+(keys.length===1?'':'s')+' selected for the eligible player pool.') : 'Choose the same game window or matchup shown in DraftKings.';
+    else $('dfGamesHelp').textContent=gameChoice ? (keys.length+' game'+(keys.length===1?'':'s')+' selected'+(slate?' for the eligible player pool.':'. The player pool fills in when the salaries post.')) : 'Choose the same game window or matchup shown in DraftKings.';
     $('dfPayoutHelp').textContent = py ? py.note : 'Select the way the contest pays before Iron Tuna chooses the appropriate risk profile.';
     // Each step's number becomes a check once that step is answered.
     var done = { dfGameStyleSelect: !!gameStyle, dfGamesSelect: !!gameChoice && (gameChoice !== 'custom' || keys.length > 0), dfPayoutSelect: !!payoutStructure };
@@ -2377,7 +2966,11 @@ p{color:var(--sec);margin:0 0 16px}
       return false;
     }
     state.className='df-setup-state ready';
-    state.textContent=(gs?gs.label:gameStyle)+' · '+(gameStyle==='best-ball'?'Season-long player pool':keys.length+' selected game'+(keys.length===1?'':'s'))+' · '+(py?py.label:payoutStructure)+'.';
+    // A setup answered on an unpriced week is a complete answer, and saying so
+    // matters: the reader has done everything asked of them and the blank board
+    // below is the lobby's fault, not theirs.
+    state.textContent=(gs?gs.label:gameStyle)+' · '+(gameStyle==='best-ball'?'Season-long player pool':keys.length+' selected game'+(keys.length===1?'':'s'))+' · '+(py?py.label:payoutStructure)+'.'
+      + (slate ? '' : ' Setup is complete; the board solves as soon as the salaries post.');
     coachSync();
     return true;
   }
@@ -2413,7 +3006,7 @@ p{color:var(--sec);margin:0 0 16px}
     Object.keys(boards).forEach(function (name) {
       q.boards[name] = Array.isArray(boards[name]) ? boards[name].filter(function (p) { return selectedGames[playerGameKey(p)]; }) : boards[name];
     });
-    var vals = q.players.filter(function (p) { return p.onBoard && p.salary > 0 && isFinite(p.vegasPoints); }).map(function (p) { return p.vegasPoints / (p.salary / 1000); }).sort(function (a, b) { return a - b; });
+    var vals = q.players.filter(function (p) { return projected(p) && p.salary > 0 && isFinite(p.vegasPoints); }).map(function (p) { return p.vegasPoints / (p.salary / 1000); }).sort(function (a, b) { return a - b; });
     if (vals.length) q.medianVegasPerK = vals.length % 2 ? vals[(vals.length - 1) / 2] : (vals[vals.length / 2 - 1] + vals[vals.length / 2]) / 2;
     q.label = (slate.label || 'DraftKings') + ' · ' + keys.length + ' selected game' + (keys.length === 1 ? '' : 's');
     return q;
@@ -2549,6 +3142,121 @@ p{color:var(--sec);margin:0 0 16px}
   // cannot clear any of them. The useful answer is the arithmetic -- what the
   // required men cost, what the cheapest legal fill for the seats they leave
   // costs, and by how much the two overrun the cap.
+  // ── why there is no roster, said precisely ────────────────────────────────
+  // "No lineup satisfies those constraints" is true of every failed solve and
+  // useful for none of them. A reader whose games have already kicked off, or
+  // whose window has no defense in it, has nothing to "clear": the sentence
+  // sent them to a fine-tune panel that could not have helped. Each obstacle
+  // below names itself and the one move that ends it, and the generic
+  // sentence is what is left when none of them fits.
+  //
+  // The pool is rebuilt here on the optimizer's own rules -- an exclusion is
+  // out, a man who is not playing is out, a man whose game is over is out, a
+  // season average is out of a cash build, and a lock overrules all four,
+  // because a lock is a decision -- so the sentence describes the board the
+  // solve actually had rather than the one on screen.
+  function noRosterNote(r, players, f, cap, lockKeys, exclKeys) {
+    if (!f || !f.fmt) return '';
+    var fmt = f.fmt, slots = fmt.slots || [];
+    if (!slots.length) return '';
+    var cfg = { flex: fmt.flex, tierSlots: fmt.tierSlots || null };
+    var lockOn = {}; (lockKeys || []).forEach(function (k) { lockOn[k] = 1; });
+    var exclOn = {}; (exclKeys || []).forEach(function (k) { exclOn[k] = 1; });
+    var thinOn = {}; ((r && r.thin) || []).forEach(function (t) { thinOn[t.id] = 1; });
+    var pool = [], withThin = [];
+    players.forEach(function (q) {
+      if (exclOn[q.id]) return;
+      if (!lockOn[q.id] && (q.available === false || isPlayed(q))) return;
+      withThin.push(q);
+      if (!thinOn[q.id]) pool.push(q);
+    });
+
+    // The first thing wrong with a given board, in the order a reader can do
+    // something about it. Run twice: once on what the solve had, and once with
+    // the season-average bodies a cash objective declined, which is how the
+    // page can tell a thin slate from a strict objective.
+    var problem = function (list) {
+      if (!list.length) return { code: 'empty' };
+      var empty = [], seen = {};
+      slots.forEach(function (slot) {
+        if (seen[slot]) return; seen[slot] = 1;
+        if (!list.some(function (q) { return ITDfs.eligibleIn(q, slot, cfg); })) empty.push(slot);
+      });
+      if (empty.length) return { code: 'seat', seats: empty };
+      if (fmt.minTeams > 1 && poolTeams(list) < fmt.minTeams) return { code: 'clubs', clubs: poolTeams(list) };
+      if (list.length < slots.length) return { code: 'bodies', have: list.length };
+      if (cap > 0) {
+        var taken = {}, total = 0, gap = false;
+        slots.forEach(function (slot) {
+          var m = (fmt.mult && fmt.mult[slot]) || 1;
+          var cost = function (q) {
+            if (q.salaryBySlot && isFinite(q.salaryBySlot[slot])) return Number(q.salaryBySlot[slot]);
+            return Math.round(Number(q.salary || 0) * m);
+          };
+          var best = null;
+          list.forEach(function (q) {
+            if (taken[q.id] || !ITDfs.eligibleIn(q, slot, cfg)) return;
+            if (!best || cost(q) < cost(best)) best = q;
+          });
+          if (!best) { gap = true; return; }
+          taken[best.id] = 1; total += cost(best);
+        });
+        if (!gap && total > cap) return { code: 'cap', total: total };
+      }
+      return null;
+    };
+    var why = problem(pool);
+    if (!why) return '';
+
+    var games = selectedGameKeys().length;
+    var theGames = games === 1 ? 'the game you selected' : games ? 'the ' + games + ' games you selected' : 'this slate';
+    // Only offered where there is another game to add. On a single-game
+    // format, or a pool that is already the whole slate, telling a reader to
+    // widen it is telling them to do something the page will not let them do.
+    var canWiden = !!(games && !fmt.single && slate && games < (gamesForSlate(slate) || []).length);
+    var widen = canWiden ? 'Add a game to the pool above, or ' : '';
+    var warn = function (body) { return '<p class="df-warn">' + body + '</p>'; };
+
+    // THE OBJECTIVE, NOT THE BOARD. A cash build will not spend a seat on a
+    // season average, and on a thin slate that rule is what empties the seat.
+    // The reader is told which of the two they are looking at.
+    if (withThin.length > pool.length && !problem(withThin)) {
+      var m = ITDfs.MODES[mode];
+      return warn('<b>' + ((r && r.thinCount) || (withThin.length - pool.length)) + ' of the men who could fill this roster are projected from a season line rather than this week\u2019s board.</b> The '
+        + e((m && m.label) || mode) + ' objective will not spend a seat on a season average, and without them ' + e(theGames) + ' cannot fill the roster. '
+        + 'Switch the objective in the fine-tune panel below, or require one of them in the Must include box, and the roster solves.');
+    }
+
+    if (why.code === 'empty') {
+      var playedAll = players.length && players.every(function (q) { return isPlayed(q); });
+      var outAll = players.length && players.every(function (q) { return q.available === false || isPlayed(q); });
+      if (playedAll) return warn('<b>Every game in ' + e(theGames) + ' has already been played.</b> No entry submitted now can contain those players, so there is no roster to build. Select a game that has not kicked off.');
+      if (outAll) return warn('<b>Nobody in ' + e(theGames) + ' is available this week.</b> Every player in the pool is ruled out or has already played, so there is nothing to seat.');
+      if (exclKeys && exclKeys.length) return warn('<b>Everything in ' + e(theGames) + ' is excluded.</b> Clear an exclusion in the Must include box and the roster solves again.');
+      return warn('<b>No priced, projected player is in ' + e(theGames) + '.</b> The salary file and the projection board have to agree on a man before he can be seated. '
+        + (canWiden ? 'Add a game to the pool above, or hand' : 'Hand') + ' over the contest export and the board prices it.');
+    }
+    if (why.code === 'seat') {
+      var what = fmt.tierSlots ? 'band' : 'seat';
+      var many = why.seats.length > 1;
+      return warn('<b>Nothing in ' + e(theGames) + ' can fill the ' + e(why.seats.join(' or the ')) + ' ' + what + (many ? 's' : '') + '.</b> The roster cannot be legal without '
+        + (many ? 'them' : 'it') + '. ' + widen + (widen ? 'clear' : 'Clear') + ' an exclusion so the men who fill ' + (many ? 'those seats' : 'that seat') + ' come back, or hand over the contest export.');
+    }
+    if (why.code === 'clubs') {
+      return warn('<b>' + (why.clubs === 1 ? 'Only one club in ' + e(theGames) + ' is priced on this board.' : 'No club in ' + e(theGames) + ' is priced on this board.')
+        + '</b> ' + e(fmt.label) + ' requires players from both teams, so no legal roster can be built from it. Hand over the contest export, which prices both sides, or pick a game the desk has priced in full.');
+    }
+    if (why.code === 'bodies') {
+      return warn('<b>' + e(theGames.charAt(0).toUpperCase() + theGames.slice(1)) + ' leave ' + why.have + ' eligible player' + (why.have === 1 ? '' : 's') + ' for ' + slots.length
+        + ' seats.</b> No player can fill two of them, so this pool cannot complete the roster. ' + (canWiden ? 'Add a game to the pool above, or hand' : 'Hand') + ' over the contest export if the slate itself is short.');
+    }
+    if (why.code === 'cap') {
+      return warn('<b>The cheapest legal roster ' + e(theGames) + ' can make costs ' + money(why.total) + '.</b> That is ' + money(why.total - cap) + ' over the ' + money(cap)
+        + ' cap being solved against, so no lineup fits. Raise the cap in the fine-tune panel' + (canWiden ? ', add a game to the pool above' : '') + ', or clear an exclusion.');
+    }
+    return '';
+  }
+
   function shortfallNote(players, lockKeys, f, cap) {
     if (!lockKeys.length || !f || !f.fmt) return '';
     var slots = f.fmt.slots, cfg = { flex: f.fmt.flex, tierSlots: f.fmt.tierSlots || null };
@@ -2602,13 +3310,22 @@ p{color:var(--sec);margin:0 0 16px}
       + money(cap) + ' — it is ' + money(need - cap) + ' over. Raise the cap in the fine-tune panel, or drop one of the required players.</p>';
   }
   function build() {
-    if (!slate || !window.ITDfs) { coachSync(); return; }
-    if (site === 'dk' && !setupReady()) { showGameScopeRequired(); return; }
+    // An unpriced week used to return here, which is why the board answered a
+    // Showdown reader with one sentence about salaries and no way forward.
+    // solveFormat() now has an answer for a missing slate -- what is missing
+    // and the file that fixes it -- so the only thing that still stops the
+    // board dead is the optimizer failing to load.
+    if (!window.ITDfs) { coachSync(); return; }
+    if (!setupReady()) { showGameScopeRequired(); return; }
     var f = solveFormat();
     if (!f.ready) { fieldAvg = null; renderFormatNotice(f); return; }
     var view = filteredSlate();
     if (!view) { showGameScopeRequired(); return; }
-    var players = view.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
+    var players = view.players.filter(function (p) { return projected(p); }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
+    // A derived Tiers board carries no tier on the player -- the bands are the
+    // board's own, worked out from price -- so they are written onto the copies
+    // the solve runs on rather than onto the slate, which other formats share.
+    if (f.tierOf) players.forEach(function (q) { q.tier = f.tierOf(q); });
     // Pick6 and the single-stat contests are not a roster, so they do not get
     // a roster-shaped answer. renderPicks() gives them the one the contest
     // actually asks for.
@@ -2616,6 +3333,12 @@ p{color:var(--sec);margin:0 0 16px}
     var eligible = {}; players.forEach(function (p) { eligible[p.id] = true; });
     var lock = [], excl = []; for (var k in marks) { if (!eligible[k]) continue; if (marks[k] === 'lock') lock.push(k); else if (marks[k] === 'excl') excl.push(k); }
     var sh = SHAPES[contest] || SHAPES.single;
+    // The cap box follows the format. A single-game roster approximated on the
+    // main slate's prices is solved against the equivalent budget rather than
+    // the lobby's own number (see solveFormat), and the panel shows what was
+    // used -- otherwise the box would keep a cap from whichever format the
+    // reader looked at last and quietly solve the next one against it.
+    if (!tuned && $('dfCap') && f.fmt.cap > 0) $('dfCap').value = f.capBasis || f.fmt.cap;
     var cap = capNow(f);
     // Before the solve, because the field does not depend on it: this is the
     // bar, and the roster is measured against the bar. It is drawn for the
@@ -2627,18 +3350,44 @@ p{color:var(--sec);margin:0 0 16px}
     // to draw against rather than inventing a typical spend.
     fieldAvg = ITDfs.fieldAverage ? ITDfs.fieldAverage(players, { slots: f.fmt.slots, flex: f.fmt.flex, cap: cap,
       mult: f.fmt.mult || null, tierSlots: f.fmt.tierSlots || null, minTeams: f.fmt.minTeams || 0 }) : null;
+    // The per-team maximum the panel is showing, raised to what the selected
+    // games can actually seat. Narrowing the pool to one game is not a request
+    // for a contradiction, so the floor wins over the preset -- and the box is
+    // rewritten with what was used, because this panel's whole contract is
+    // that it shows the settings the roster was solved on.
+    var seats = (f.fmt.slots || []).length;
+    var wantTeamCap = parseInt($('dfMaxTeam').value, 10) || 0;
+    var teamCap = teamCapFor(wantTeamCap, seats, players);
+    if (teamCap !== wantTeamCap) $('dfMaxTeam').value = teamCap;
+    var teamCapNote = teamCap !== wantTeamCap
+      ? '<p class="is-note">The selected games carry ' + poolTeams(players) + ' clubs between them, so a ' + seats
+        + '-seat roster cannot take fewer than ' + teamCap + ' players from one of them. The per-team maximum was raised from '
+        + wantTeamCap + ' to ' + teamCap + ' for this build.</p>'
+      : '';
     // The roster, the cap, the multiplier seat and the both-teams rule all
     // come from the resolved format rather than from the site's classic
     // defaults, which is what lets every Game Style on the plate solve.
+    // What the board is estimating, and the file that ends the estimate. It
+    // rides above the roster rather than under it: a reader who takes the six
+    // names and stops should have read this first.
+    var approxNote = f.approx
+      ? '<div class="df-approx"><b>' + (f.approx === 'tiers' ? 'Bands, not the contest\u2019s tiers' : 'Estimated from the main slate') + '</b>'
+        + '<p>' + e(f.approxNote || '') + '</p>' + (f.needsFile ? uploadControl(f.fmt) : '') + '</div>'
+      : '';
     var r = ITDfs.build(players, { mode: mode, cap: cap, format: f.fmt, slots: f.fmt.slots, flex: f.fmt.flex,
       mult: f.fmt.mult || null, tierSlots: f.fmt.tierSlots || null, minTeams: f.fmt.minTeams || 0,
       lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked,
-      maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
+      maxPerTeam: teamCap, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
     built = r.ok ? r : null;
     if (!r.ok) {
       renderConstraints(null);
-      $('dfLineups').innerHTML = shortfallNote(players, lock, f, cap)
-        + '<p class="is-empty">No lineup satisfies those constraints' + (cap ? ' under that cap' : '') + '. Clear one of the constraints above, or loosen the ' + (cap ? 'cap and ' : '') + 'stacking rules in the fine-tune panel below.</p>';
+      // The reader's own constraints first, because those are the ones they
+      // can undo in a click; then the board's own reason, which is usually
+      // not a constraint at all. The generic sentence is printed only when
+      // neither has anything to say.
+      var why = shortfallNote(players, lock, f, cap) || noRosterNote(r, players, f, cap, lock, excl);
+      $('dfLineups').innerHTML = approxNote + teamCapNote + why
+        + (why ? '' : '<p class="is-empty">No lineup satisfies those constraints' + (cap ? ' under that cap' : '') + '. Clear one of the constraints above, or loosen the ' + (cap ? 'cap and ' : '') + 'stacking rules in the fine-tune panel below.</p>');
       $('dfPivots').innerHTML = '';
       coachSync();
       return;
@@ -2648,6 +3397,8 @@ p{color:var(--sec);margin:0 0 16px}
     renderConstraints(lead);
     $('dfLineups').innerHTML = benchedNote(r)
       + formatLine(f, r)
+      + approxNote
+      + teamCapNote
       + lineupCard(lead, 0, sh, true)
       + (alts.length ? '<h3 class="df-h3">Branch off it <em>' + alts.length + ' more</em></h3><p class="df-sub">' + (contest === 'gpp'
             ? 'The same core, re-solved to sit on different players. Entering a large field with one lineup is entering it with one opinion.'
@@ -2687,7 +3438,7 @@ p{color:var(--sec);margin:0 0 16px}
     if (brief) return out;
     if (m.pricedLabels && m.pricedLabels.length) out.posted = m.pricedLabels.join(', ');
     if (m.books) out.books = m.books;
-    if (m.ageHours != null) out.pulledHoursAgo = coachN(m.ageHours);
+    if (m.lastMoveHours != null) out.lineLastMovedHours = coachN(m.lastMoveHours);
     if (m.shortOfProjection) out.quotedOnlyOnHisTouchdown = true;
     if (m.tdProbability != null && m.tdDevigged) out.tdFromTheBooks = true;
     return out;
@@ -2719,11 +3470,122 @@ p{color:var(--sec);margin:0 0 16px}
       tourneyScore: p.tournamentScore == null ? null : Number(p.tournamentScore),
       chalk: p.chalk || null,
       market: coachMarket(p, brief),
-      status: coachStatus(p)
+      status: coachStatus(p),
+      // Where `proj` came from. Without this the coach reads a season average
+      // as a forward projection and recommends a $3,000 body with the same
+      // confidence as a $9,000 one, which is the exact mistake this tier
+      // invites.
+      projectionFrom: p.supplemental ? (p.projectionBasis === 'operator' ? 'operator season average, not on the board' : 'his own season-to-date line, not on the board') : null,
+      projectionGames: p.supplemental && p.supplementalGames ? Number(p.supplementalGames) : null,
+      // WHETHER THIS AFTERNOON ALREADY HAPPENED. #297's vocabulary block told
+      // the coach that "a player row carrying gamePlayed with an actual is
+      // settled" — and no row carried either field, so the only place the
+      // played half of a slate reached the model was the lineup's
+      // bankedPoints total. A reader asking at four o'clock why a seat
+      // projects what it does was answered off an estimate the board had
+      // already replaced, and the prompt was describing a field that did not
+      // exist. Both travel now, through the page's own actualOf() so the row
+      // and the `final` chip beside it cannot disagree.
+      //
+      // A zero is a RESULT here (he dressed and did nothing), which is why
+      // this reads gamePlayed rather than testing the number: actual 0 is
+      // settled, a missing actual is not.
+      gamePlayed: p.gamePlayed ? true : null,
+      actual: p.gamePlayed ? coachN(actualOf(p)) : null,
+      // Why there is no actual, in the slate's own words: a defense or a
+      // kicker is scored on stats the stored box score never collected, so
+      // his number is still the projection.
+      actualFrom: p.gamePlayed && p.actualBasis ? p.actualBasis : null
     };
     if (extra) for (var k in extra) r[k] = extra[k];
     for (var j in r) if (r[j] == null) delete r[j];
     return r;
+  }
+  // THE WHOLE BOARD, not the part of it the page happened to print. The coach
+  // saw the roster, the nine swaps and the thirty best alternates, so a reader
+  // who asked for the best receiver at $4,800 was told the full board had been
+  // trimmed from the prompt — about a slate whose every priced row is in the
+  // pool table on the screen in front of them. Every player the solve could
+  // legally have used rides along now, one line each.
+  //
+  // A LINE, NOT AN OBJECT. The prompt has a character budget (dfs-coach.js
+  // JSON_BUDGET), and a four-hundred-man board is around 19,000 characters as
+  // delimited text against roughly three times that as JSON objects, most of
+  // it repeated key names. The columns are named once, in COACH_BOARD_COLUMNS,
+  // and every number on a line is the page's own, rounded the way coachRow
+  // rounds it. Nothing here computes anything.
+  //
+  // Sorted inside each position by the key the alternates are sorted by, so
+  // when fit() has to cut the index it drops the names this contest cares
+  // least about and keeps the best body at every price.
+  var COACH_BOARD_COLUMNS = 'name|team|opp|salary|proj|ceiling|own|value|basis|status';
+  function coachBoard(view, key) {
+    var by = {};
+    ((view && view.players) || []).forEach(function (p) {
+      // ELIGIBILITY IS projected(), NOT onBoard. #301 supplemented the
+      // minimum-salary tier with men who are not on this week's board at all
+      // and whose number is their own season line, and moved the solve, the
+      // bench and the pool table onto `projected` to let them in. An index
+      // still filtering on `onBoard` would be the one pool on the page
+      // missing them -- and they are the cheap bodies a question about a
+      // price point is most often about.
+      //
+      // A man who is Out, Doubtful or not on a roster is off the board, and so
+      // is one whose afternoon is BANKED: no entry submitted now could contain
+      // him, which is why the builder refuses to spend a seat on him.
+      //
+      // BANKED, NOT PLAYED, and the difference is a real seat. The builder
+      // excludes on `banked(p) != null` — a scored actual — not on
+      // gamePlayed, so a defense or a kicker whose game is final but whose
+      // number is still the projection stays in the pool and can be seated in
+      // the recommended roster. Filtering this index on isPlayed dropped
+      // exactly those men, which made it the one pool on the page missing a
+      // player the roster above it had already used. It marks them instead.
+      // Questionable stays too, flagged, because that call belongs to the
+      // reader.
+      if (!projected(p) || p.available === false || isBanked(p)) return;
+      (by[p.position] || (by[p.position] = [])).push(p);
+    });
+    var out = {};
+    Object.keys(by).sort().forEach(function (pos) {
+      out[pos] = by[pos].sort(function (a, b) { return (Number(b[key]) || 0) - (Number(a[key]) || 0); })
+        .map(function (p) {
+          var cells = [p.name, p.team,
+                       // The same matchup string coachRow prints, so the index
+                       // can answer "who else is in that game" on its own: the
+                       // game environments are the first list fit() trims.
+                       p.opponent ? (p.home === false ? '@' : 'vs ') + p.opponent : '',
+                       p.salary == null ? '' : Number(p.salary),
+                       coachN(p.ironTunaPoints != null ? p.ironTunaPoints : p.proj),
+                       coachN(p.ceiling), coachN(p.ownership),
+                       p.value == null ? '' : Number(p.value),
+                       // What the projection IS, where it is not a forward
+                       // read on a game still to come. `est` wins over
+                       // `season` because the clock is the more urgent fact:
+                       // a number for an afternoon that is already over is
+                       // not a forecast of anything, whatever it was built
+                       // from.
+                       p.gamePlayed ? 'est' : p.supplemental ? 'season' : '',
+                       p.weekStatus || ''];
+          while (cells.length && (cells[cells.length - 1] == null || cells[cells.length - 1] === '')) cells.pop();
+          return cells.map(function (c) { return c == null ? '' : c; }).join('|');
+        });
+    });
+    return out;
+  }
+  function coachBoardNote(key) {
+    return 'Every player on this slate the solve could have used, grouped by position, one line each in the order '
+      + COACH_BOARD_COLUMNS + ', best ' + key + ' first, with the empty trailing columns dropped. This is the whole '
+      + 'eligible board rather than a shortlist: a name that is not here is outside the games the reader selected, is '
+      + 'not playing this week, or has already played, which is a fact about the clock and never a view on the player. '
+      + 'A basis of "season" marks a supplemental row: he is not on this week\u2019s board, and his number is his own '
+      + 'season-to-date line scaled by his club\u2019s week, so it is what he has done rather than a forecast of Sunday. '
+      + 'A basis of "est" marks a man whose game is already final and who has no box score to be scored from \u2014 a '
+      + 'defense or a kicker \u2014 so the number beside him is still the projection it was before kickoff. The builder '
+      + 'can still seat him, which is why he is here, but say what that number is before recommending him. Anyone whose '
+      + 'afternoon produced an actual is off this index entirely: no entry submitted now could contain him. '
+      + 'The market read, the floor, the leverage and the availability note live on the detailed rows above, not on '
+      + 'these lines.';
   }
   function coachLineup(l, rank, byKey, sh) {
     var qb = lineupQb(l);
@@ -2732,6 +3594,11 @@ p{color:var(--sec);margin:0 0 16px}
       label: rank === 1 ? 'the recommended lineup' : 'alternate ' + (rank - 1),
       salary: l.salary, salaryLeft: l.remaining,
       projPoints: coachN(l.projPoints), floorPoints: coachN(l.floorPoints), ceilingPoints: coachN(l.ceilingPoints),
+      // Part of a partly-played slate's total is a result, not a forecast. The
+      // coach is told which part rather than left to add the rows up itself
+      // and call the sum a projection.
+      bankedPoints: l.playedPlayers ? coachN(l.bankedPoints) : null,
+      bankedPlayers: l.playedPlayers ? l.bankedPlayers : null,
       // The page prints the field's average beside the projection, so the
       // coach carries the same comparison rather than being asked a question
       // about a number on the screen it cannot see.
@@ -2845,6 +3712,10 @@ p{color:var(--sec);margin:0 0 16px}
                payout: py.label || null, payoutNote: py.note || null,
                ironTunaSolvesARoster: (function () { var f = typeof ITDfs !== 'undefined' ? solveFormat() : null; return !!(f && f.ready && f.kind !== 'picks'); })(),
                roster: (function () { var f = typeof ITDfs !== 'undefined' ? solveFormat() : null; return f && f.fmt ? f.fmt.roster : null; })(),
+               approximation: (function () {
+                 var f = typeof ITDfs !== 'undefined' ? solveFormat() : null;
+                 return f && f.approx ? f.approxNote : undefined;
+               })(),
                whyNoRosterYet: (function () {
                  if (noLineup) return noLineup;
                  var f = typeof ITDfs !== 'undefined' ? solveFormat() : null;
@@ -2854,8 +3725,8 @@ p{color:var(--sec);margin:0 0 16px}
                })() },
       choices: setupChoices(true),
       slate: slate
-        ? { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: slate.label, week: slate.week,
-            cap: slate.cap, pricedPlayers: (slate.players || []).filter(function (p) { return p.onBoard; }).length,
+        ? { site: siteLabel(), label: slate.label, week: slate.week,
+            cap: slate.cap, pricedPlayers: (slate.players || []).filter(function (p) { return projected(p); }).length,
             salariesFrom: 'the site\u2019s salary feed' }
         : { site: 'DraftKings', note: 'No salary slate is loaded yet, so the page lists no games to choose from.' },
       playOfTheWeek: playWeek
@@ -2869,30 +3740,36 @@ p{color:var(--sec);margin:0 0 16px}
       ((view || slate || {}).players || []).forEach(function (p) { if (p.key) byKey[p.key] = p; });
       out.build = coachBuild(byKey);
       out.buildMeaning = 'The setup above is complete; these are the fine-tune settings the solve ran under, and one of them is why no roster came back.';
+      // Which constraint to drop is a question about the pool the constraint
+      // is being applied to, so the pool goes with it: without the board the
+      // coach can say a lock is expensive and not who else there was.
+      if (view) {
+        out.slateBoard = coachBoard(view, 'value');
+        out.slateBoardColumns = COACH_BOARD_COLUMNS;
+        out.slateBoardMeaning = coachBoardNote('value');
+      }
     }
     return out;
   }
 
   function coachContext() {
-    if (isPickem()) return { blocked: 'Pick’em boards are higher-or-lower on a posted line, not a salary-cap roster. Switch to DraftKings or FanDuel for a lineup the coach can talk through.' };
     // Before the setup is finished - and when the loaded slate cannot price the
     // roster the chosen format asks for - the coach answers on the setup
     // instead of refusing the question. It is the same coach on the same page;
     // only the thing it is looking at changes.
-    if (site === 'dk' && (!setupReady() || !solveFormat().ready)) return setupContext();
+    if (!setupReady() || !solveFormat().ready) return setupContext();
     if (!slate) return { blocked: 'There is no priced slate loaded yet, so there is no lineup for the coach to read. Come back once the salaries post.' };
     // A finished setup that solved nothing is still a question the coach can
     // answer - which lock, exclusion or cap to loosen - so it falls back to
-    // setup mode carrying that reason rather than refusing. Off DraftKings
-    // there is no setup plate to fall back to, so the reason stands alone.
+    // setup mode carrying that reason rather than refusing.
     if (!built || !built.lineups || !built.lineups.length) {
       var stuck = 'No legal lineup fits the current cap, locks and exclusions. Loosen one in the fine-tune panel and the coach can pick the roster up from there.';
-      return site === 'dk' ? setupContext(stuck) : { blocked: stuck };
+      return setupContext(stuck);
     }
     var view = filteredSlate();
     if (!view) {
       var thin = 'The selected games do not carry a priced player pool yet.';
-      return site === 'dk' ? setupContext(thin) : { blocked: thin };
+      return setupContext(thin);
     }
     var sh = SHAPES[contest] || SHAPES.single;
     var gs = GAME_STYLES[gameStyle] || {};
@@ -2902,14 +3779,14 @@ p{color:var(--sec);margin:0 0 16px}
     var lead = built.lineups[0];
     var inLineup = {};
     built.lineups.forEach(function (l) { l.players.forEach(function (p) { inLineup[p.id] = 1; }); });
-    var solverPool = (view.players || []).filter(function (p) { return p.onBoard; })
+    var solverPool = (view.players || []).filter(function (p) { return projected(p); })
       .map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
     var pivots = pivotRows(lead, solverPool).slice(0, 9).map(function (r) {
       return { slot: r.slot, outName: r.out.name, inName: r.into.name, inPos: r.into.position, inTeam: r.into.team,
                dProj: coachN(r.dProj), dCeiling: coachN(r.dCeil), dSalary: r.dSal, inOwn: coachN(r.own) };
     });
     var benchKey = contest === 'cash' ? 'cashScore' : contest === 'gpp' || contest === '3max' ? 'tournamentScore' : 'value';
-    var bench = (view.players || []).filter(function (p) { return p.onBoard && !inLineup[p.key]; })
+    var bench = (view.players || []).filter(function (p) { return projected(p) && !inLineup[p.key]; })
       .sort(function (a, b) { return (Number(b[benchKey]) || 0) - (Number(a[benchKey]) || 0); })
       .slice(0, 30).map(function (p) { return coachRow(p, null, true); });
     var stackRows = (view.stacks || []).slice(0, 16).map(function (g) {
@@ -2920,15 +3797,26 @@ p{color:var(--sec);margin:0 0 16px}
     return {
       mode: 'lineup',
       page: 'Iron Tuna DFS lineup recommendation',
-      slate: { site: site === 'dk' ? 'DraftKings' : site === 'fd' ? 'FanDuel' : site, label: view.label, week: slate.week,
+      slate: { site: siteLabel(), label: view.label, week: slate.week,
                cap: parseInt($('dfCap').value, 10) || view.cap, pricedPlayers: solverPool.length,
                medianVegasPerK: coachN(view.medianVegasPerK, 2),
                typicalEntryPoints: fieldAvg ? coachN(fieldAvg.points) : undefined,
                marketCoverage: view.props ? { pricedPlayers: view.props.priced, ofPlayers: view.props.players,
                  percent: view.props.coverage, markets: (view.props.marketLabels || []).join(', ') || null,
-                 avgBooks: view.props.avgBooks, freshestHours: coachN(view.props.freshestHours),
+                 avgBooks: view.props.avgBooks,
+                 feedReadHoursAgo: coachN(view.props.pullAgeHours),
+                 newestLineMoveHours: coachN(view.props.freshestMoveHours),
                  quotedOnlyOnTouchdown: view.props.quotedButShort || undefined } : undefined,
                salariesFrom: 'the site’s salary feed' },
+      // WHAT THIS BOARD IS ESTIMATING, if anything. The coach speaks about the
+      // roster on screen, and on an approximated one it must not hand a reader
+      // prices the lobby will not charge, or band numbers the contest never
+      // posted, as though they were the operator's own.
+      approximation: (function () {
+        var f = typeof ITDfs !== 'undefined' ? solveFormat() : null;
+        return f && f.approx ? { kind: f.approx, whatWasEstimated: f.approxNote,
+                                 solvedAgainstCap: f.capBasis || undefined } : undefined;
+      })(),
       setup: { gameStyle: gs.label || gameStyle || 'Classic', gameStyleNote: gs.note || null,
                games: gameStyle === 'best-ball' ? 'season-long player pool' : selectedGameKeys().length + ' selected game(s)',
                payout: py.label || payoutStructure || null, payoutNote: py.note || null,
@@ -2946,6 +3834,9 @@ p{color:var(--sec);margin:0 0 16px}
         : 'Each row is the next best body at that seat. A swap that costs almost nothing marks a slot the solve is indifferent about; one that costs three points marks a slot the roster is built on.',
       boardNotInLineup: bench,
       boardNotInLineupSortedBy: benchKey,
+      slateBoard: coachBoard(view, benchKey),
+      slateBoardColumns: COACH_BOARD_COLUMNS,
+      slateBoardMeaning: coachBoardNote(benchKey),
       games: stackRows
     };
   }
@@ -2957,7 +3848,7 @@ p{color:var(--sec);margin:0 0 16px}
     }).join('') || '<p class="is-empty">No game on this slate carries a posted total yet.</p>';
   }
   function tdBoard(s) {
-    var list = s.players.filter(function (p) { return p.onBoard && p.position !== 'DST'; }).sort(function (a, b) { return b.tdProbability - a.tdProbability; }).slice(0, 40);
+    var list = s.players.filter(function (p) { return projected(p) && p.position !== 'DST' && isFinite(p.tdProbability); }).sort(function (a, b) { return b.tdProbability - a.tdProbability; }).slice(0, 40);
     $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
     $('dfTd').hidden = !list.length;
   }
@@ -2966,9 +3857,23 @@ p{color:var(--sec);margin:0 0 16px}
   // key they summed for the projection (`ironTunaPoints`) is not a field on a
   // lineup player — it is `proj` — so every total was zero. ITDfs.contestPick
   // reads the builder's own totals.
+
+  // What the recommendation is standing on. A step up the payout curve is a
+  // real risk, and the reader is owed the difference between "the books
+  // disagree with us" and "our two models disagree with each other".
+  function evidenceLine(pick) {
+    var ev = pick.evidence;
+    return ev.quoted
+      ? 'The books priced <b>' + ev.quoted + ' of ' + ev.of + '</b> picks in the ceiling build'
+        + (ev.books ? ' across ' + ev.books + ' books' : '')
+        + (ev.markets.length ? ' (' + ev.markets.map(function(m){ return MARKET_LABEL[m] || m; }).join(', ') + ')' : '')
+        + (ev.tdQuoted ? ', with ' + ev.tdQuoted + ' quoted touchdown price' + (ev.tdQuoted === 1 ? '' : 's') : '')
+        + '. The edge below is measured against those quoted lines.'
+        + (ev.coverage < 0.999 ? ' The rest carry their game\u2019s environment, so the bar for moving up the payout curve is raised by ' + Math.round((pick.need - 1) * 100) + '%.' : '')
+      : 'No book priced any pick in this build, so the comparison below is Iron Tuna against the game lines \u2014 two models sharing most of their inputs, not a disagreement with money. The bar for moving up the payout curve is doubled for it, which is why this week sits where the chance of winning is best.';
+  }
   function renderPlayOfWeek(s) {
     var host=$('dfPlayWeekBody'); if(!host || !s || !window.ITDfs) return;
-    var players=(s.players||[]).filter(function(p){return p.onBoard;}).map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
     playWeek=null;
     // Which contest the advice is FOR. The reader picked a Game Style, and the
     // payout question is "what should I enter with this roster" -- so it is the
@@ -2976,6 +3881,12 @@ p{color:var(--sec);margin:0 0 16px}
     // the slate's own roster only where the format could not be resolved.
     var pf = solveFormat();
     var fmt = pf.ready && pf.fmt && pf.fmt.slots ? pf.fmt : null;
+    // A single-game contest is weighed over the game the reader picked, not
+    // over the whole board: six seats drawn from four games is not a contest
+    // anybody can enter, and the shapes would be compared on a roster that
+    // does not exist. Every other format reads the full slate, as before.
+    var src = fmt && fmt.single ? (filteredSlate() || s) : s;
+    var pool = (src.players || []).filter(function (p) { return projected(p); });
     // Two formats have no payout curve to weigh. A contest with no cap cannot
     // be traded off against one -- there is no budget to spend differently for
     // more ceiling -- and a pick contest has no roster to compare shapes of at
@@ -2992,37 +3903,45 @@ p{color:var(--sec);margin:0 0 16px}
     }
     var seats=((fmt && fmt.slots) || s.slots || []).length||9;
     var cross=seats<=6?Math.max(1,seats-1):4;
-    if(players.length<seats){ $('dfPlayWeekTitle').textContent='Play of the Week: waiting for a complete slate'; host.innerHTML='<p class="is-note">The recommendation will publish when enough salaries and projections are available to compare contest shapes.</p>'; return; }
+    if(pool.length<seats){ $('dfPlayWeekTitle').textContent='Play of the Week: waiting for a complete slate'; host.innerHTML='<p class="is-note">The recommendation will publish when enough salaries and projections are available to compare contest shapes.</p>'; return; }
     var base={cap:(fmt?fmt.cap:s.cap),slots:(fmt?fmt.slots:s.slots),flex:(fmt?fmt.flex:s.flex),
               mult:(fmt?(fmt.mult||null):(s.multiplier||null)),minTeams:(fmt?(fmt.minTeams||0):(s.minTeams||0)),
-              tierSlots:(fmt&&fmt.tierSlots)||null,maxPerTeam:cross,lineups:1,seed:17};
-    var cash=ITDfs.build(players,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:seats<=6?cross:3}));
-    var tour=ITDfs.build(players,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
-    var lev=ITDfs.build(players,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
-    if(!cash.ok||!tour.ok){ $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">Iron Tuna could not yet build comparable legal contest shapes from the current slate.</p>'; return; }
-    // The decision lives in the optimizer, where it can be tested against real
-    // lineups. It used to be assembled here out of per-player sums, and the
-    // field it summed for the projection does not exist on a lineup player
-    // (it is `proj`), so every total was zero, every threshold compared zero
-    // to zero, and the answer was Head-to-Head on every slate ever served.
-    var pick = ITDfs.contestPick({ cash: cash.lineups[0], tournament: tour.lineups[0], leverage: lev.ok ? lev.lineups[0] : tour.lineups[0] });
-    if (!pick) { $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">Iron Tuna could not yet build comparable legal contest shapes from the current slate.</p>'; return; }
-    var ev = pick.evidence;
-    // What the recommendation is standing on. A step up the payout curve is a
-    // real risk, and the reader is owed the difference between "the books
-    // disagree with us" and "our two models disagree with each other".
-    var evidence = ev.quoted
-      ? 'The books priced <b>' + ev.quoted + ' of ' + ev.of + '</b> picks in the ceiling build'
-        + (ev.books ? ' across ' + ev.books + ' books' : '')
-        + (ev.markets.length ? ' (' + ev.markets.map(function(m){ return MARKET_LABEL[m] || m; }).join(', ') + ')' : '')
-        + (ev.tdQuoted ? ', with ' + ev.tdQuoted + ' quoted touchdown price' + (ev.tdQuoted === 1 ? '' : 's') : '')
-        + '. The edge below is measured against those quoted lines.'
-        + (ev.coverage < 0.999 ? ' The rest carry their game\u2019s environment, so the bar for moving up the payout curve is raised by ' + Math.round((pick.need - 1) * 100) + '%.' : '')
-      : 'No book priced any pick in this build, so the comparison below is Iron Tuna against the game lines \u2014 two models sharing most of their inputs, not a disagreement with money. The bar for moving up the payout curve is doubled for it, which is why this week sits where the chance of winning is best.';
+              tierSlots:(fmt&&fmt.tierSlots)||null,maxPerTeam:teamCapFor(cross,seats,pool),lineups:1,seed:17};
+    // Everything the three builds read, in one string. The payout structure and
+    // the chosen games are deliberately absent: neither is an input to any of
+    // them, and including them would re-solve for a question that did not
+    // change. A miss re-solves; a hit re-prints from what the last solve found.
+    var sig = [slateToken, pool.length, JSON.stringify(base), seats].join('|');
+    var memo = playWeekMemo && playWeekMemo.sig === sig ? playWeekMemo : null;
+    var STILL_FORMING = 'Iron Tuna could not yet build comparable legal contest shapes from the current slate.';
+    if (!memo) {
+      var players=pool.map(function(p){var q={};for(var k in p)q[k]=p[k];q.id=p.key;return q;});
+      var cash=ITDfs.build(players,Object.assign({},base,{mode:'floor',stack:false,bringBack:false,maxPerTeam:teamCapFor(seats<=6?cross:3,seats,pool)}));
+      var tour=ITDfs.build(players,Object.assign({},base,{mode:'ceiling',stack:true,bringBack:false}));
+      var lev=ITDfs.build(players,Object.assign({},base,{mode:'leverage',stack:true,bringBack:true}));
+      // The decision lives in the optimizer, where it can be tested against real
+      // lineups. It used to be assembled here out of per-player sums, and the
+      // field it summed for the projection does not exist on a lineup player
+      // (it is `proj`), so every total was zero, every threshold compared zero
+      // to zero, and the answer was Head-to-Head on every slate ever served.
+      if (cash.ok && tour.ok) {
+        var pick = ITDfs.contestPick({ cash: cash.lineups[0], tournament: tour.lineups[0], leverage: lev.ok ? lev.lineups[0] : tour.lineups[0] });
+      }
+      // A board that cannot be solved is remembered too. Re-running three
+      // failing builds on the next click costs exactly what the successful
+      // ones do and tells the reader nothing new.
+      memo = playWeekMemo = { sig: sig, pick: pick || null, evidence: pick ? evidenceLine(pick) : '' };
+    }
+    if (!memo.pick) { $('dfPlayWeekTitle').textContent='Play of the Week: board still forming'; host.innerHTML='<p class="is-note">'+STILL_FORMING+'</p>'; return; }
+    // `pick` is the same binding the solve above declared -- `var` is the
+    // function's, not the block's -- and on a memo hit that solve never ran, so
+    // it is read back from what did. Everything below this line is printing.
+    pick = memo.pick;
+    var ev = pick.evidence, evidence = memo.evidence;
     // The format is named only once the reader has actually chosen one. Before
     // that the box is the week's general read and labelling it "Classic" would
     // answer a question nobody has asked yet.
-    var named = fmt && fmt.label && (site !== 'dk' || setupReady());
+    var named = fmt && fmt.label && setupReady();
     $('dfPlayWeekTitle').textContent='Play of the Week: '+pick.rec + (named ? ' \u00b7 ' + fmt.label : '');
     $('dfPlayWeekDek').textContent=pick.rationale;
     // The page has now done the comparison; the coach quotes this rather than
@@ -3042,13 +3961,37 @@ p{color:var(--sec);margin:0 0 16px}
   }
 
   function render() {
-    if (!slate) return;
+    // NO PRICED SLATE. Everything below this line reads slate.*, which is why
+    // the function stopped here -- but the three selects above it are still
+    // answerable from the schedule's own fixtures, and stopping meant that
+    // answering them changed nothing on the board. A reader who chose Showdown
+    // Captain, picked their game and named the payout was still looking at the
+    // "complete the setup" notice that was written before they started. The
+    // setup line and the lineup box are refreshed for the answer they just
+    // gave; build() has its own account of an unpriced week and the file that
+    // ends it.
+    if (!slate) {
+      updateSetupState();
+      var f0 = solveFormat();
+      if (f0.kind === 'season') sec = 'lineup';
+      show();
+      // showGameScopeRequired() hides the section nav while the setup is
+      // unanswered, and render() is the only thing that puts it back. An
+      // unpriced week never ran this far, so finishing the setup left the nav
+      // hidden for good -- with The Slate behind it, which is where the
+      // sentence explaining the empty boards is printed. Best Ball keeps it
+      // hidden for the same reason it does on a priced week: there is no
+      // weekly board under it to reach.
+      $('dfNav').hidden = !setupReady() || f0.kind === 'season';
+      build();
+      return;
+    }
     $('dfCap').value = slate.cap;
     refreshFppgHeads();
     populateGamesSelect(slate);
     updateSetupState();
     renderPlayOfWeek(slate);
-    if (site === 'dk' && !setupReady()) { showGameScopeRequired(); return; }
+    if (!setupReady()) { showGameScopeRequired(); return; }
     payoutToContest();
     var view = filteredSlate();
     if (!view) { showGameScopeRequired(); return; }
@@ -3064,90 +4007,56 @@ p{color:var(--sec);margin:0 0 16px}
     build();
   }
 
-  // ── pick'em ──────────────────────────────────────────────────────────────
-  // Underdog, PrizePicks and Sleeper are higher/lower on a posted stat line, so
-  // there is no salary and no cap and none of the sections above apply. The
-  // board is the market's implied line for the one stat each position is really
-  // priced on, against the model's own, off the same /api/boards every other
-  // surface reads.
-  var PICKEM = { pk: 'Underdog / PrizePicks', sl: 'Sleeper picks' };
-  var PRIMARY = { QB: ['passYd', 'Pass yds'], RB: ['rushYd', 'Rush yds'], WR: ['recYd', 'Rec yds'], TE: ['recYd', 'Rec yds'] };
-  var LEAN_PCT = 0.05;
-  var pickemLoaded = false;
-  function isPickem() { return site === 'pk' || site === 'sl'; }
-  function pickem(board) {
-    var rows = [];
-    (board && board.players || []).forEach(function (p) {
-      var m = PRIMARY[p.position];
-      if (!m || !p.vegas || !p.ironTuna || !p.games) return;
-      var line = p.vegas.stats ? p.vegas.stats[m[0]] : null;
-      var model = p.ironTuna.stats ? p.ironTuna.stats[m[0]] : null;
-      // QUOTED ONLY. With no posted prop the "line" is the game line applied to
-      // the player, which is what the model is built from too — so comparing
-      // them produces rounding, and a pick'em board of rounding is the worst
-      // thing this site could ship.
-      if (!(p.vegas.basis && p.vegas.basis.indexOf('props') === 0)) return;
-      if (line == null || model == null || line < 20) return;
-      var per = p.games || 1, l = line / per, mo = model / per;
-      rows.push({ name: p.name, pos: p.position, team: p.team, label: m[1], line: l, model: mo, pct: (mo - l) / l });
-    });
-    rows.sort(function (a, b) { return Math.abs(b.pct) - Math.abs(a.pct); });
-    rows = rows.slice(0, 14);
-    if (!rows.length) {
-      $('pkState').textContent = 'No priced player prop has reached this board for the week, so there is no posted line to read the model against. Books have props up; this build is not carrying them. The board is blank rather than filled with the model compared to itself.';
-      return;
-    }
-    $('pkBody').innerHTML = rows.map(function (r) {
-      var lean = Math.abs(r.pct) < LEAN_PCT ? '<span class="is-tag is-flat">No lean</span>'
-        : '<span class="is-tag is-accent">' + (r.pct > 0 ? 'Over' : 'Under') + '</span>';
-      return '<tr><td class="is-who">' + e(r.name) + ' <small>' + e(r.pos + ' \u00b7 ' + r.team) + '</small></td>' +
-        '<td>' + e(r.label) + '</td><td class="num">' + n1(r.line) + '</td>' +
-        '<td class="num"><span class="is-val">' + n1(r.model) + '</span></td>' +
-        '<td class="num">' + (r.pct > 0 ? '+' : '') + (r.pct * 100).toFixed(0) + '%</td>' +
-        '<td>' + lean + '</td></tr>';
-    }).join('');
-    $('pkWrap').hidden = false;
-    $('pkState').hidden = true;
-  }
-  function loadPickem() {
-    $('pkVenue').textContent = PICKEM[site] || 'Pick’em';
-    if (pickemLoaded) return;
-    pickemLoaded = true;
-    fetch('/api/boards?horizon=week&pos=ALL&scoring=ppr', { credentials: 'omit' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) { if (j && j.ok) pickem(j); else $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; })
-      .catch(function () { $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; });
-  }
   function slateOk(j) {
     slate = j;
-    if (site === 'dk' && !gameUniverseSig) selectedGames = {};
+    loadedSlate = j.source === 'upload' ? null : (j.slate && j.slate !== 'main' ? j.slate : null);
+    scheduleGames = [];
+    slateToken += 1; playWeekMemo = null;
+    if (!gameUniverseSig) selectedGames = {};
     var stamp = 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
     $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + e(stamp);
     render();
   }
-  function slateNone(msg, label) {
+  function slateNone(msg, label, games) {
     slate = null;
+    scheduleGames = scheduleGameList(games);
+    slateToken += 1; playWeekMemo = null;
     $('dfNote').textContent = msg;
     $('dfEmpty').textContent = (msg || 'No ' + (label || 'site') + ' salaries are loaded for this week.') + ' The scoring environment still reads from the game lines on Game Intel.';
     $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
     $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
     if ($('dfConstraints')) $('dfConstraints').hidden = true;
-    $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted.</p>';
     $('dfPivots').innerHTML = ''; built = null;
-    coachSync();
+    // The games list is repopulated here or not at all: the fixtures arrived
+    // with this response and render() does not rebuild the list on a week it
+    // has no slate for, so without this the reader is left on the disabled
+    // step two they started on.
+    applyGameStyle();
+    // The lineup box used to be written here, one sentence for every format
+    // and every setup: "There is no lineup to solve until the salaries are
+    // posted." It was the last thing a reader saw after answering all three
+    // steps for a Showdown, and it was a dead end -- the file route that would
+    // have priced their contest is rendered into this box and never reached
+    // it. The box now answers through the same path every other unsolvable
+    // state uses, so an unpriced week names the format the reader chose and
+    // offers the export that solves it.
+    build();
   }
-  function loadSite() {
-    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label); return; }
+  function loadSite(slate) {
+    var want = slate || null;
+    loadedSlate = want;
+    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest) + (want ? '&slate=' + encodeURIComponent(want) : '')).then(function (r) { return r.json(); }).then(function (j) {
+      // The list of priced single games rides on every answer, hit or miss, so
+      // a reader whose matchup is not imported still learns which ones are.
+      if (j && Array.isArray(j.singleGames)) availableSingles = j.singleGames;
+      if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label, j && j.games); return; }
       slateOk(j);
     }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
   }
   function applyGameStyle() {
-    var dk = site === 'dk' && !isPickem();
-    $('dfConfig').hidden = !dk;
-    $('dfPlayWeek').hidden = !dk;
+    $('dfConfig').hidden = false;
+    $('dfPlayWeek').hidden = false;
     $('dfGameStyleSelect').value = gameStyle;
-    if (!dk) return false;
     populateGamesSelect(slate || {players:[],stacks:[]});
     $('dfPayoutSelect').disabled = !gameChoice || (gameChoice==='custom' && !selectedGameKeys().length);
     if (payoutStructure) $('dfPayoutSelect').value=payoutStructure;
@@ -3200,31 +4109,20 @@ p{color:var(--sec);margin:0 0 16px}
         }
         upSet(site, csv);
         upState('Your file: ' + j.players.length + ' priced rows'
-                + (j.unmatched ? ' \u00b7 ' + j.unmatched + ' of them are not on this week\u2019s board' : '')
+                // What was missing used to be one number, and one number made
+                // a debut and a starter the curated pool had never heard of
+                // look identical. Now it says how many the ladder rescued and
+                // how many are genuinely left with nothing behind them.
+                + (j.supplemented ? ' \u00b7 ' + j.supplemented + ' projected from a season line rather than the board' : '')
+                + (j.unprojected ? ' \u00b7 ' + j.unprojected + (j.unprojected === 1 ? ' carries' : ' carry') + ' no projection at all' : '')
                 + '. Kept in this browser only.', false);
         slateOk(j);
       })
       .catch(function () { upState('The slate did not answer. Your file was not read.', true); build(); });
   }
   function load() {
-    press($('dfSite'), 'data-site', site);
-    if (isPickem()) {
-      $('dfSiteNote').textContent = 'Higher or lower on a posted stat line; the board shows where the model leans. No cap, no salaries.';
-      $('dfNav').hidden = true;
-      SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = true; });
-      $('sec-pickem').hidden = false;
-      $('dfConfig').hidden = true; $('dfPlayWeek').hidden=true;
-      $('dfNote').textContent = '';
-      coachSync();
-      loadPickem();
-      return;
-    }
-    $('sec-pickem').hidden = true;
-    if (site !== 'dk') { gameStyle='classic'; gameChoice='all'; payoutStructure='h2h'; }
     applyGameStyle();
-    $('dfSiteNote').textContent = site === 'dk'
-      ? 'Choose Game Style, Games and Payout Structure below. Every format is solved against its own roster \u2014 Classic\u2019s nine slots, a Showdown Captain at 1.5\u00d7, a Tiers board with no cap \u2014 and never against another format\u2019s.'
-      : 'Classic salary cap · $60,000. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
+    $('dfSiteNote').textContent = 'Choose Game Style, Games and Payout Structure below. Every format is solved against its own roster \u2014 Classic\u2019s nine slots, a Showdown Captain at 1.5\u00d7, a Tiers board with no cap \u2014 and never against another format\u2019s.';
     // A file the reader already handed over is theirs until they clear it. The
     // boot-time purge that shipped with the panel's removal is gone with this:
     // it deleted a reader's stored CSV on every load, which is the opposite of
@@ -3263,16 +4161,15 @@ p{color:var(--sec);margin:0 0 16px}
     // The plate's own way in. A reader stuck on the three selects should not
     // have to guess that the floating launcher answers on them too.
     $('dfSetupCoach').addEventListener('click', openCoach);
-    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; selectedGames = {}; gameUniverseSig = ''; gameChoice=''; payoutStructure=''; load(); });
     $('dfGameStyleSelect').addEventListener('change', function () {
       gameStyle=this.value; gameChoice=''; payoutStructure=''; selectedGames={}; gameUniverseSig='';
       $('dfPayoutSelect').value=''; $('dfPayoutSelect').disabled=true; $('dfCustomGames').hidden=true;
       populateGamesSelect(slate || {players:[],stacks:[]}); updateSetupState();
       if (gameStyle==='best-ball') $('dfGamesSelect').disabled=false;
-      render();
+      if (!syncSlate()) render();
       try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({event:'dfs_game_style',uid:localStorage.getItem('it.uid')||'',props:{path:location.pathname,gameStyle:gameStyle,site:site}})],{type:'application/json'})); } catch(x){}
     });
-    $('dfGamesSelect').addEventListener('change', function () { applyGameChoice(); render(); });
+    $('dfGamesSelect').addEventListener('change', function () { applyGameChoice(); if (!syncSlate()) render(); });
     $('dfGameGrid').addEventListener('click', function (ev) {
       var b=ev.target.closest('[data-game-key]'); if(!b)return;
       var key=b.getAttribute('data-game-key'); if(selectedGames[key])delete selectedGames[key];else selectedGames[key]=true;
@@ -3280,7 +4177,7 @@ p{color:var(--sec);margin:0 0 16px}
     });
     $('dfCustomDone').addEventListener('click', function () {
       if(!selectedGameKeys().length){$('dfGamesHelp').textContent='Select at least one game for the custom pool.';return;}
-      gameChoice='custom'; $('dfPayoutSelect').disabled=false; $('dfCustomGames').hidden=true; updateSetupState(); render();
+      gameChoice='custom'; $('dfPayoutSelect').disabled=false; $('dfCustomGames').hidden=true; updateSetupState(); if (!syncSlate()) render();
     });
     $('dfPayoutSelect').addEventListener('change', function () {
       payoutStructure=this.value; payoutToContest(); updateSetupState(); render();
