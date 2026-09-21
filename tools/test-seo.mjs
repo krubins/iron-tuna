@@ -648,6 +648,44 @@ console.log('\n/player/<slug>');
     if (c[3] === 'DEF' && c[2]) clubs[c[2]] = c[1];
   }
   ok('it carries a roster worth indexing', rows.length > 300, String(rows.length));
+
+  // AND THE WORKER'S OWN PARSER IS RUN, not re-implemented above it. Everything
+  // else here re-derives the roster from the file and checks the result; that
+  // would pass a playerIndex whose regex or whose split had drifted, and the
+  // only symptom in production is 409 pages quietly staying noindex — it fails
+  // SAFE (the shell still serves, the card still assembles in the browser), so
+  // nothing would be visibly broken and nothing would alert.
+  //
+  // It reads the file through env.ASSETS, which is a Workers binding and does
+  // not exist here, so the binding is stubbed with the real bytes off disk.
+  {
+    const idxFnSrc = lift('async function playerIndex(env, url) {', '\n}');
+    const run = new Function('search', `
+      let _PLAYER_IDX = null, _PLAYER_IDX_AT = 0;
+      const env = { ASSETS: { fetch: async () => ({ ok: true, text: async () => search }) } };
+      ${idxFnSrc}
+      return playerIndex(env, 'https://irontuna.com/player/x').then(() => _PLAYER_IDX);
+    `);
+    const live = await run(search);
+    ok('the worker\u2019s own parser reads the shipped index',
+       !!live && live.rows.length === rows.length, live ? String(live.rows.length) : 'null');
+    ok('and resolves a slug to the same player the file names',
+       !!live && live.by.get(rows[0].slug) && live.by.get(rows[0].slug).n === rows[0].n);
+    ok('and derives all 32 clubs through it',
+       !!live && Object.keys(live.clubs).length === 32,
+       live ? String(Object.keys(live.clubs).length) : 'null');
+    // An asset that 404s, or a file whose generated block was renamed, must
+    // leave the index null rather than half-built: a half-built index is a
+    // subset of players silently losing their cards.
+    const dead = new Function(`
+      let _PLAYER_IDX = null, _PLAYER_IDX_AT = 0;
+      const env = { ASSETS: { fetch: async () => ({ ok: false, text: async () => '' }) } };
+      ${idxFnSrc}
+      return playerIndex(env, 'https://irontuna.com/player/x').then((r) => r);
+    `);
+    ok('an unreachable asset yields no index rather than half of one',
+       (await dead()) == null);
+  }
   // The club names come out of the index's own DEF rows, so all 32 must be
   // there or a card prints an abbreviation where it should print a club.
   ok('all 32 clubs are derivable from its DEF rows', Object.keys(clubs).length === 32,
