@@ -155,14 +155,14 @@
   // The shared styles, once.
   try {
     var css = doc.createElement('style');
-    css.textContent = '.its-strip-sync[hidden]{display:none}.its-strip-sync{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:13px;color:var(--sec);padding:10px 14px;border:1px solid var(--line2);border-radius:10px;background:var(--elev);margin:12px 0}' +
+    css.textContent = '.its-strip-sync[hidden]{display:none}.its-strip-sync{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:14.5px;color:var(--sec);padding:10px 14px;border:1px solid var(--line2);border-radius:10px;background:var(--elev);margin:12px 0}' +
       '.its-strip-sync .its-lab{font-weight:700;color:var(--text)}.its-strip-sync b{color:var(--text)}.its-sel{font:inherit;padding:4px 8px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--text)}' +
-      '.its-sync.stale{color:var(--danger)}.its-btn{font:inherit;font-size:12px;font-weight:700;padding:5px 10px;border-radius:14px;border:1px solid var(--teal);background:rgba(14,124,99,.1);color:var(--teal);cursor:pointer}.its-btn[disabled]{opacity:.6}' +
+      '.its-sync.stale{color:var(--danger)}.its-btn{font:inherit;font-size:13.5px;font-weight:700;padding:5px 10px;border-radius:14px;border:1px solid var(--teal);background:rgba(14,124,99,.1);color:var(--teal);cursor:pointer}.its-btn[disabled]{opacity:.6}' +
       '.its-link{font-weight:700}.its-warn{flex-basis:100%;color:var(--danger);font-weight:700}' +
       '.its-cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--teal);border-radius:12px;background:rgba(14,124,99,.06);margin:14px 0}' +
-      '.its-tag{display:inline-block;margin-left:5px;padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle;border:1px solid var(--line2);color:var(--muted);background:var(--elev)}' +
+      '.its-tag{display:inline-block;margin-left:5px;padding:1px 7px;border-radius:10px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle;border:1px solid var(--line2);color:var(--muted);background:var(--elev)}' +
       '.its-tag.mine{color:var(--teal);border-color:rgba(14,124,99,.4);background:rgba(14,124,99,.1)}.its-tag.avail{color:#8a5a00;border-color:rgba(181,120,0,.4);background:rgba(224,160,0,.12)}.its-tag.opp{color:var(--danger);border-color:rgba(160,40,40,.35);background:rgba(200,50,50,.08)}' +
-      '.its-story{border-left:3px solid var(--teal);padding:10px 14px;margin:16px 0;background:var(--elev);border-radius:0 10px 10px 0}.its-story p{margin:4px 0;font-size:14px}';
+      '.its-story{border-left:3px solid var(--teal);padding:10px 14px;margin:16px 0;background:var(--elev);border-radius:0 10px 10px 0}.its-story p{margin:4px 0;font-size:15.5px}';
     (doc.head || doc.documentElement).appendChild(css);
   } catch (e) {}
   root.ITSync = { load: load, state: state, active: active, select: select, invalidate: invalidate, api: api, strip: strip, cta: cta, callouts: callouts, ago: ago, esc: esc, onChange: onChange, syncLine: syncLine };

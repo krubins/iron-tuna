@@ -170,10 +170,10 @@
       '.it-player-face{display:inline-grid;place-items:center;position:relative;overflow:hidden;'
       + 'width:34px;height:34px;min-width:34px;border-radius:7px;background:var(--elev,#edf1f2);'
       + 'vertical-align:middle;color:var(--muted,#738087);font-style:normal;font-weight:800;'
-      + 'font-size:10px;line-height:1;margin-right:9px}'
+      + 'font-size:11px;line-height:1;margin-right:9px}'
       + '.it-player-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;'
       + 'object-position:top center}'
-      + '.it-player-face i{font-style:normal;font-size:10px;font-weight:800;color:inherit}'
+      + '.it-player-face i{font-style:normal;font-size:11px;font-weight:800;color:inherit}'
       + 'td.it-player-cell{white-space:normal}'
       + 'td.it-player-cell>.it-player-face{margin-top:-2px;margin-bottom:-2px}'
       + '.it-story-focus{display:inline-flex;align-items:center;vertical-align:middle;margin:0 10px 3px 0}'
@@ -187,7 +187,7 @@
       + '.it-art{margin:0 0 20px;display:flex;flex-direction:column;gap:12px;min-width:0}'
       + '.it-art>img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;'
       + 'object-position:50% 30%;border-radius:8px;background:var(--elev,#edf1f2)}'
-      + '.it-art-credit{font-size:11px;line-height:1.4;color:var(--muted,#738087);margin:-6px 0 0}'
+      + '.it-art-credit{font-size:12.5px;line-height:1.4;color:var(--muted,#738087);margin:-6px 0 0}'
       + '.it-art-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}'
       + '.it-art-cast{display:flex;flex-wrap:wrap;gap:10px 22px}'
       + '.it-art-face{display:inline-flex;align-items:center;gap:10px;color:inherit;text-decoration:none;min-width:0}'
@@ -195,8 +195,8 @@
       + '.it-art-face:hover b{color:var(--teal,#0e7c63)}'
       + '.it-art-face .it-player-face{margin:0}'
       + '.it-art-meta{display:flex;flex-direction:column;min-width:0}'
-      + '.it-art-meta b{font-size:13.5px;line-height:1.15;color:var(--text,#101317)}'
-      + '.it-art-meta span{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;'
+      + '.it-art-meta b{font-size:15px;line-height:1.15;color:var(--text,#101317)}'
+      + '.it-art-meta span{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;'
       + 'color:var(--muted,#738087);margin-top:2px}'
       // One player, one rectangle (plateEl). The shape is the caller's: this
       // only says the picture fills whatever box it is given. A headshot is a
@@ -208,7 +208,7 @@
       + '.it-plate-shot>*{grid-area:1/1}'
       + '.it-plate-shot img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block}'
       + '.it-plate.action .it-plate-shot img{object-position:50% 30%}'
-      + '.it-plate-shot i{font-style:normal;font-weight:800;font-size:18px;letter-spacing:.02em;color:var(--muted,#738087)}'
+      + '.it-plate-shot i{font-style:normal;font-weight:800;font-size:20px;letter-spacing:.02em;color:var(--muted,#738087)}'
       + '.it-plate .it-art-credit{margin:6px 0 0}';
     doc.head.appendChild(s);
   }

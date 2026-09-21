@@ -43,47 +43,47 @@
    its verdict chip and its arrow row. tools/build-chrome.mjs also anchors the
    shared stylesheet link on this block. */
 .tl-warn{border:1px solid var(--line,#e3e8ec);border-left:4px solid var(--gold,#f2a900);background:var(--panel,#f7f9fa);border-radius:10px;padding:14px 16px;margin:18px 0}
-.tl-warn p{margin:0 0 8px;font-size:14px;line-height:1.55;color:var(--sec,#39454f)}
+.tl-warn p{margin:0 0 8px;font-size:15.5px;line-height:1.55;color:var(--sec,#39454f)}
 .tl-warn p:last-child{margin-bottom:0}
 .tl-warn b{color:var(--text,#111820)}
 .tl-ticket{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 6px}
 .tl-stat{flex:1 1 150px;background:var(--panel,#f7f9fa);border:1px solid var(--line,#e3e8ec);border-radius:10px;padding:12px 14px}
-.tl-stat .k{display:block;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#6b7a85)}
-.tl-stat .v{display:block;font-size:22px;font-weight:800;color:var(--text,#111820);line-height:1.3}
+.tl-stat .k{display:block;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#6b7a85)}
+.tl-stat .v{display:block;font-size:24px;font-weight:800;color:var(--text,#111820);line-height:1.3}
 .tl-game{border-top:1px solid var(--line,#e3e8ec);padding:22px 0 6px}
 .tl-game:first-of-type{border-top:0}
 .tl-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:2px}
-.tl-head h3{margin:0;font-size:clamp(19px,2.4vw,23px);line-height:1.2}
-.tl-kick{color:var(--muted,#6b7a85);font-size:13px}
-.tl-mkt{width:100%;border-collapse:collapse;font-size:14px;margin:12px 0 6px}
+.tl-head h3{margin:0;font-size:clamp(21px,2.4vw,25px);line-height:1.2}
+.tl-kick{color:var(--muted,#6b7a85);font-size:14.5px}
+.tl-mkt{width:100%;border-collapse:collapse;font-size:15.5px;margin:12px 0 6px}
 .tl-mkt th,.tl-mkt td{padding:8px 10px;border-bottom:1px solid var(--line,#e3e8ec);text-align:left;vertical-align:top}
-.tl-mkt th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#6b7a85);font-weight:700}
+.tl-mkt th{font-size:13.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#6b7a85);font-weight:700}
 .tl-mkt td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tl-mkt tr.on td{background:rgba(14,124,99,.05)}
-.tl-chip{display:inline-block;border-radius:4px;padding:3px 9px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;white-space:nowrap}
+.tl-chip{display:inline-block;border-radius:4px;padding:3px 9px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;white-space:nowrap}
 .tl-chip.hot{background:rgba(14,124,99,.10);color:var(--teal,#0e7c63);border:1px solid rgba(14,124,99,.34)}
 .tl-chip.warm{background:rgba(150,110,0,.10);color:var(--goldink,#7a5300);border:1px solid rgba(150,110,0,.30)}
 .tl-chip.pass{background:var(--elev,#eef2f5);color:var(--sec,#39454f);border:1px solid var(--line2,#ccd6dc)}
 .tl-chip.shut{background:rgba(192,50,47,.07);color:var(--danger,#c0322f);border:1px solid rgba(192,50,47,.28)}
 .tl-say{color:var(--sec,#39454f);margin:8px 0}
-.tl-bet{background:var(--panel,#f7f9fa);border:1px solid var(--line,#e3e8ec);border-radius:10px;padding:11px 14px;margin:10px 0 0;color:var(--text,#111820);font-size:14.5px}
+.tl-bet{background:var(--panel,#f7f9fa);border:1px solid var(--line,#e3e8ec);border-radius:10px;padding:11px 14px;margin:10px 0 0;color:var(--text,#111820);font-size:16px}
 .tl-bet b{color:var(--teal,#0e7c63)}
 .tl-bet.none{color:var(--sec,#39454f)}
 .tl-bet.none b{color:var(--sec,#39454f)}
 .tl-arrows{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
-.tl-arrow{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line,#e3e8ec);border-radius:20px;padding:5px 12px;font-size:13.5px;background:var(--bg,#fff);color:var(--sec,#39454f)}
+.tl-arrow{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line,#e3e8ec);border-radius:20px;padding:5px 12px;font-size:15px;background:var(--bg,#fff);color:var(--sec,#39454f)}
 .tl-arrow b{color:var(--text,#111820);font-weight:700}
-.tl-arrow .g{font-size:14px;font-weight:800;line-height:1}
+.tl-arrow .g{font-size:15.5px;font-weight:800;line-height:1}
 .tl-arrow.up{border-color:rgba(14,124,99,.34)}
 .tl-arrow.up .g{color:var(--teal,#0e7c63)}
 .tl-arrow.down{border-color:rgba(192,50,47,.28)}
 .tl-arrow.down .g{color:var(--danger,#c0322f)}
 .tl-arrow.flat .g{color:var(--muted,#6b7a85)}
-.tl-sub{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#6b7a85);margin:14px 0 0}
+.tl-sub{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#6b7a85);margin:14px 0 0}
 .tl-mkt tr.tl-read td{color:var(--ink-2,#3b4650)}
-.tl-mkt td small{display:block;font-size:11px;color:var(--muted,#6b7a85)}
+.tl-mkt td small{display:block;font-size:12.5px;color:var(--muted,#6b7a85)}
 .tl-more{margin:0 0 8px}
-.tl-more summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--brand,#0e7c63);padding:4px 0}
+.tl-more summary{cursor:pointer;font-size:14px;font-weight:700;color:var(--brand,#0e7c63);padding:4px 0}
 .tl-more .tl-mkt{margin-top:4px}
 .tl-rec td.num,.tl-rec th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tl-rec .win{color:var(--teal,#0e7c63);font-weight:700}

@@ -929,7 +929,7 @@ console.log('\nthe DFS page explanations');
   ok('...and says plainly when no book priced any of it', page.includes('No book priced any pick in this build') && page.includes('not a disagreement with money'));
   ok('the page no longer re-sums lineup totals off a field that is not there', !page.includes('function lineupStat'));
   ok('DFS Academy links to the two new strategy articles', page.includes('href="/dfs-getting-started"') && page.includes('href="/dfs-strategy-guide"') && fs.existsSync(path.join(ROOT,'dfs-getting-started.html')) && fs.existsSync(path.join(ROOT,'dfs-strategy-guide.html')));
-  ok('the lead roster has a larger summary, side breakdown, and player fit lines', page.includes('.df-explain-summary p{margin:0;color:#d5e2df;font-size:16px') && page.includes('Lineup Breakdown') && page.includes('class="df-fit"'));
+  ok('the lead roster has a larger summary, side breakdown, and player fit lines', page.includes('.df-explain-summary p{margin:0;color:#d5e2df;font-size:18px') && page.includes('Lineup Breakdown') && page.includes('class="df-fit"'));
   ok('player names expose a calculation drawer', page.includes('id="dfPlayerModal"') && page.includes('function openPlayerCalc') && page.includes('df-player-link'));
   ok('the player drawer labels modeled ownership as a model', page.includes('Modeled ownership') && page.includes('not an operator or third-party ownership feed'));
   ok('DraftKings FPPG is always paired with the Iron Tuna projection and edge', page.includes('DraftKings FPPG') && page.includes('Iron Tuna Projection') && page.includes('Tuna Edge') && page.includes('historical fantasy-points-per-game average'));
