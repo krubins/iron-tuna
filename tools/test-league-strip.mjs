@@ -65,7 +65,10 @@ const ok = (n, c, x = '') => { if (c) { pass++; console.log(`  ok   ${n}`); } el
 // Every in-season page that carries a strip is here. A page that grows one and
 // is not added is a page this gate does not cover, so the list is the contract.
 const PAGES = [
-  ['/fantasy.html', 'fnSync', 'fnCta'],
+  // /fantasy dropped its connect call on 2026-09-21: the section leads with
+  // its own copy for a reader with nothing connected, so there is no CTA slot
+  // to assert here. The strip still paints for a synced reader.
+  ['/fantasy.html', 'fnSync', null],
   ['/rankings.html', 'rkSync', 'rkCta'],
   ['/faab.html', 'faSync', 'faCta'],
   ['/my-week.html', 'mwSync', null],
