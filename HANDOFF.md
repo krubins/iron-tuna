@@ -12675,3 +12675,81 @@ the column is the taller and the lead ends on its own copy. The section order
 is asserted off the rendered page rather than the source: desk, now, board,
 startsit, disagree, tools, top to bottom, with the ribbon's six jumps in the
 same order.
+
+---
+
+## 113. September 21: a 52px hero over 14px prose, and a boast printed as punctuation
+
+Ken, reading `/fantasy` the morning after §112 shipped the well: "The font on
+the hero is fine. The font on everything below is too small. Also, 'You're
+welcome.' should be more prominent. We want to boast about our successes."
+
+### The reading step
+
+The opening band runs a headline at up to 52px over a 20px lede. Everything
+under it was 14px — section intros, card bodies, the plate's own states, the
+two columns of Vega vs. Brooks — and the deck's card copy and the page's
+standing notes were 13px. That is a drop of more than a third at the exact
+point where a reader stops scanning the page and starts reading it, and it is
+why the whole page under the band read as fine print.
+
+The rule now is that **nothing below the hero that is prose is under 15px**:
+
+| | Was | Is |
+|---|---|---|
+| Section intros, card bodies, plate and empty states, standing notes, the rivalry columns | 13–14px | 16px |
+| Copy inside a grid card (the deck's four decisions, a story card's teaser) | 13px | 15px |
+| Card and pick headings | 16px | 18px |
+| The deck's card headline | 20px | 22px |
+| Data tables (`.is-table`) | 14px | 15px |
+| Meta lines: bylines, kickers, rank chips, table headers | 11–12px | one step up |
+
+Data tables went to 15px and no further, on purpose: a board is scanned in
+columns and what constrains it is the width of the row, not the size of the
+type. The meta lines moved up with the copy rather than staying put, so a
+byline still reads as the line under a headline instead of as a second voice
+beside it.
+
+This is in `site.css`, which is the one copy of the in-season furniture, so it
+lands on `/dfs`, `/in-season`, `/weekly-intel` and the eight tools as well as
+`/fantasy`. That is the point of the file; fixing it on one page is how the
+chrome drifted the first time.
+
+### The boast
+
+`_voiceBlock` (`_worker.js`) lets the desk open a headline with **`YOU'RE
+WELCOME:`** only when one of the site's own pre-kickoff calls cleared the
+headline bar, only for that player, and only once. The phrase is already
+rationed to the rarest thing the desk has to say — and the well spent the whole
+of that rationing rendering it as the first two words of a 30px headline, where
+it read as punctuation in front of the sentence that actually mattered.
+
+It is the banner over the lead card now: the display face, gold ink, 72px on a
+desktop and 42px on a phone, with the call itself under it at headline size.
+`.nr-lead.is-boast` warms the card's border and ground to match.
+
+- **The site never writes the phrase.** The well splits it off the desk's own
+  headline, with `BOAST` in `fantasy.html`, and only when a headline survives
+  the split. A piece that made no boast paints as an ordinary lead; so does a
+  headline that is nothing but the boast, which would otherwise leave a card
+  with a banner and no story.
+- **`Latest` stays on the flag.** It says why this piece is the lead, which is
+  a different claim from the boast and still the reader's question.
+- **`.nr-lead p.nr-boast`, not `.nr-boast`.** `.nr-lead p` sets the deck's
+  18px, and the banner and the deck are both paragraphs inside the same card.
+
+| Where | What |
+|---|---|
+| `site.css` | The reading step across the `.is-*` furniture and the `.nr-*` story card and well; `.nr-lead.is-boast`, `.nr-lead p.nr-boast`. |
+| `fantasy.html` | Its own `.fn-riv-*` and `.fn-tool` type lifted with the rest; the newsroom painter splits the desk's boast off the lead headline. |
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
+plus `test-homepage` under `REQUIRE_BROWSER=1` (99/99) and the four `--check`
+generators clean. Rendered in Chromium at 1360px and 430px against a stubbed
+`/api/newsroom` in four shapes — a boast lead behind five pieces, a lead with
+no boast, a boast as the only published piece, and a headline that is the boast
+and nothing else — with no page errors and no horizontal overflow, and the
+banner measured at 72px and 42px with the two fallback shapes painting as an
+ordinary lead. Eighteen pages that share the furniture (`/fantasy`, `/dfs`,
+`/in-season`, `/weekly-intel`, `/my-league`, `/rankings`, `/vegas-edge`, the
+desk and ten more) rendered clean at both widths.
