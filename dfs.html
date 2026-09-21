@@ -2980,6 +2980,121 @@ p{color:var(--sec);margin:0 0 16px}
   // cannot clear any of them. The useful answer is the arithmetic -- what the
   // required men cost, what the cheapest legal fill for the seats they leave
   // costs, and by how much the two overrun the cap.
+  // ── why there is no roster, said precisely ────────────────────────────────
+  // "No lineup satisfies those constraints" is true of every failed solve and
+  // useful for none of them. A reader whose games have already kicked off, or
+  // whose window has no defense in it, has nothing to "clear": the sentence
+  // sent them to a fine-tune panel that could not have helped. Each obstacle
+  // below names itself and the one move that ends it, and the generic
+  // sentence is what is left when none of them fits.
+  //
+  // The pool is rebuilt here on the optimizer's own rules -- an exclusion is
+  // out, a man who is not playing is out, a man whose game is over is out, a
+  // season average is out of a cash build, and a lock overrules all four,
+  // because a lock is a decision -- so the sentence describes the board the
+  // solve actually had rather than the one on screen.
+  function noRosterNote(r, players, f, cap, lockKeys, exclKeys) {
+    if (!f || !f.fmt) return '';
+    var fmt = f.fmt, slots = fmt.slots || [];
+    if (!slots.length) return '';
+    var cfg = { flex: fmt.flex, tierSlots: fmt.tierSlots || null };
+    var lockOn = {}; (lockKeys || []).forEach(function (k) { lockOn[k] = 1; });
+    var exclOn = {}; (exclKeys || []).forEach(function (k) { exclOn[k] = 1; });
+    var thinOn = {}; ((r && r.thin) || []).forEach(function (t) { thinOn[t.id] = 1; });
+    var pool = [], withThin = [];
+    players.forEach(function (q) {
+      if (exclOn[q.id]) return;
+      if (!lockOn[q.id] && (q.available === false || isPlayed(q))) return;
+      withThin.push(q);
+      if (!thinOn[q.id]) pool.push(q);
+    });
+
+    // The first thing wrong with a given board, in the order a reader can do
+    // something about it. Run twice: once on what the solve had, and once with
+    // the season-average bodies a cash objective declined, which is how the
+    // page can tell a thin slate from a strict objective.
+    var problem = function (list) {
+      if (!list.length) return { code: 'empty' };
+      var empty = [], seen = {};
+      slots.forEach(function (slot) {
+        if (seen[slot]) return; seen[slot] = 1;
+        if (!list.some(function (q) { return ITDfs.eligibleIn(q, slot, cfg); })) empty.push(slot);
+      });
+      if (empty.length) return { code: 'seat', seats: empty };
+      if (fmt.minTeams > 1 && poolTeams(list) < fmt.minTeams) return { code: 'clubs', clubs: poolTeams(list) };
+      if (list.length < slots.length) return { code: 'bodies', have: list.length };
+      if (cap > 0) {
+        var taken = {}, total = 0, gap = false;
+        slots.forEach(function (slot) {
+          var m = (fmt.mult && fmt.mult[slot]) || 1;
+          var cost = function (q) {
+            if (q.salaryBySlot && isFinite(q.salaryBySlot[slot])) return Number(q.salaryBySlot[slot]);
+            return Math.round(Number(q.salary || 0) * m);
+          };
+          var best = null;
+          list.forEach(function (q) {
+            if (taken[q.id] || !ITDfs.eligibleIn(q, slot, cfg)) return;
+            if (!best || cost(q) < cost(best)) best = q;
+          });
+          if (!best) { gap = true; return; }
+          taken[best.id] = 1; total += cost(best);
+        });
+        if (!gap && total > cap) return { code: 'cap', total: total };
+      }
+      return null;
+    };
+    var why = problem(pool);
+    if (!why) return '';
+
+    var games = selectedGameKeys().length;
+    var theGames = games === 1 ? 'the game you selected' : games ? 'the ' + games + ' games you selected' : 'this slate';
+    // Only offered where there is another game to add. On a single-game
+    // format, or a pool that is already the whole slate, telling a reader to
+    // widen it is telling them to do something the page will not let them do.
+    var canWiden = !!(games && !fmt.single && slate && games < (gamesForSlate(slate) || []).length);
+    var widen = canWiden ? 'Add a game to the pool above, or ' : '';
+    var warn = function (body) { return '<p class="df-warn">' + body + '</p>'; };
+
+    // THE OBJECTIVE, NOT THE BOARD. A cash build will not spend a seat on a
+    // season average, and on a thin slate that rule is what empties the seat.
+    // The reader is told which of the two they are looking at.
+    if (withThin.length > pool.length && !problem(withThin)) {
+      var m = ITDfs.MODES[mode];
+      return warn('<b>' + ((r && r.thinCount) || (withThin.length - pool.length)) + ' of the men who could fill this roster are projected from a season line rather than this week\u2019s board.</b> The '
+        + e((m && m.label) || mode) + ' objective will not spend a seat on a season average, and without them ' + e(theGames) + ' cannot fill the roster. '
+        + 'Switch the objective in the fine-tune panel below, or require one of them in the Must include box, and the roster solves.');
+    }
+
+    if (why.code === 'empty') {
+      var playedAll = players.length && players.every(function (q) { return isPlayed(q); });
+      var outAll = players.length && players.every(function (q) { return q.available === false || isPlayed(q); });
+      if (playedAll) return warn('<b>Every game in ' + e(theGames) + ' has already been played.</b> No entry submitted now can contain those players, so there is no roster to build. Select a game that has not kicked off.');
+      if (outAll) return warn('<b>Nobody in ' + e(theGames) + ' is available this week.</b> Every player in the pool is ruled out or has already played, so there is nothing to seat.');
+      if (exclKeys && exclKeys.length) return warn('<b>Everything in ' + e(theGames) + ' is excluded.</b> Clear an exclusion in the Must include box and the roster solves again.');
+      return warn('<b>No priced, projected player is in ' + e(theGames) + '.</b> The salary file and the projection board have to agree on a man before he can be seated. '
+        + (canWiden ? 'Add a game to the pool above, or hand' : 'Hand') + ' over the contest export and the board prices it.');
+    }
+    if (why.code === 'seat') {
+      var what = fmt.tierSlots ? 'band' : 'seat';
+      var many = why.seats.length > 1;
+      return warn('<b>Nothing in ' + e(theGames) + ' can fill the ' + e(why.seats.join(' or the ')) + ' ' + what + (many ? 's' : '') + '.</b> The roster cannot be legal without '
+        + (many ? 'them' : 'it') + '. ' + widen + (widen ? 'clear' : 'Clear') + ' an exclusion so the men who fill ' + (many ? 'those seats' : 'that seat') + ' come back, or hand over the contest export.');
+    }
+    if (why.code === 'clubs') {
+      return warn('<b>' + (why.clubs === 1 ? 'Only one club in ' + e(theGames) + ' is priced on this board.' : 'No club in ' + e(theGames) + ' is priced on this board.')
+        + '</b> ' + e(fmt.label) + ' requires players from both teams, so no legal roster can be built from it. Hand over the contest export, which prices both sides, or pick a game the desk has priced in full.');
+    }
+    if (why.code === 'bodies') {
+      return warn('<b>' + e(theGames.charAt(0).toUpperCase() + theGames.slice(1)) + ' leave ' + why.have + ' eligible player' + (why.have === 1 ? '' : 's') + ' for ' + slots.length
+        + ' seats.</b> No player can fill two of them, so this pool cannot complete the roster. ' + (canWiden ? 'Add a game to the pool above, or hand' : 'Hand') + ' over the contest export if the slate itself is short.');
+    }
+    if (why.code === 'cap') {
+      return warn('<b>The cheapest legal roster ' + e(theGames) + ' can make costs ' + money(why.total) + '.</b> That is ' + money(why.total - cap) + ' over the ' + money(cap)
+        + ' cap being solved against, so no lineup fits. Raise the cap in the fine-tune panel' + (canWiden ? ', add a game to the pool above' : '') + ', or clear an exclusion.');
+    }
+    return '';
+  }
+
   function shortfallNote(players, lockKeys, f, cap) {
     if (!lockKeys.length || !f || !f.fmt) return '';
     var slots = f.fmt.slots, cfg = { flex: f.fmt.flex, tierSlots: f.fmt.tierSlots || null };
@@ -3104,8 +3219,13 @@ p{color:var(--sec);margin:0 0 16px}
     built = r.ok ? r : null;
     if (!r.ok) {
       renderConstraints(null);
-      $('dfLineups').innerHTML = approxNote + teamCapNote + shortfallNote(players, lock, f, cap)
-        + '<p class="is-empty">No lineup satisfies those constraints' + (cap ? ' under that cap' : '') + '. Clear one of the constraints above, or loosen the ' + (cap ? 'cap and ' : '') + 'stacking rules in the fine-tune panel below.</p>';
+      // The reader's own constraints first, because those are the ones they
+      // can undo in a click; then the board's own reason, which is usually
+      // not a constraint at all. The generic sentence is printed only when
+      // neither has anything to say.
+      var why = shortfallNote(players, lock, f, cap) || noRosterNote(r, players, f, cap, lock, excl);
+      $('dfLineups').innerHTML = approxNote + teamCapNote + why
+        + (why ? '' : '<p class="is-empty">No lineup satisfies those constraints' + (cap ? ' under that cap' : '') + '. Clear one of the constraints above, or loosen the ' + (cap ? 'cap and ' : '') + 'stacking rules in the fine-tune panel below.</p>');
       $('dfPivots').innerHTML = '';
       coachSync();
       return;

@@ -797,6 +797,41 @@ console.log('\nthe DFS page explanations');
      && page.includes('solvedAgainstCap: f.capBasis || undefined'));
   // A single-game contest is compared over the game the reader picked. Six
   // seats drawn from four games is not a contest anybody can enter.
+  // WHEN THERE IS NO ROSTER, THE BOARD SAYS WHY. Every failed solve used to
+  // print the same sentence -- clear a constraint, loosen the cap -- and a
+  // reader whose games had already kicked off, or whose window carried no
+  // defense, had nothing to clear. Each obstacle names itself now, and the
+  // generic sentence is only what is left when none of them fits.
+  ok('a board with no roster on it names the obstacle rather than blaming the constraints',
+     page.includes('function noRosterNote(r, players, f, cap, lockKeys, exclKeys)')
+     && page.includes('has already been played.')                       // the week is over
+     && page.includes('is available this week.')                        // everybody ruled out
+     && page.includes('can fill the ')                                  // a seat nobody fills
+     && page.includes('requires players from both teams')               // the both-teams rule
+     && page.includes('eligible player')                                // fewer bodies than seats
+     && page.includes('The cheapest legal roster '));                   // the cap
+  ok('...and the generic sentence is printed only when nothing more precise is known',
+     page.includes('var why = shortfallNote(players, lock, f, cap) || noRosterNote(r, players, f, cap, lock, excl);')
+     && page.includes("+ (why ? '' : '<p class=\"is-empty\">No lineup satisfies those constraints'"));
+  // The pool it describes is the one the SOLVE had: an exclusion is out, a man
+  // who is not playing is out, a man whose game is over is out, and a lock
+  // overrules all three. A sentence about a board the optimizer never saw
+  // would send the reader after the wrong thing.
+  ok('...against the pool the optimizer actually solved from',
+     page.includes('if (exclOn[q.id]) return;')
+     && page.includes('if (!lockOn[q.id] && (q.available === false || isPlayed(q))) return;')
+     && page.includes('if (!thinOn[q.id]) pool.push(q);'));
+  // A cash objective declines a season average, and on a thin slate that rule
+  // is what empties the seat. Running the same check with those men back in is
+  // how the page tells a short slate from a strict objective, and it says
+  // which of the two the reader is looking at.
+  ok('...and separates a slate that cannot fill the roster from an objective that will not',
+     page.includes('if (withThin.length > pool.length && !problem(withThin)) {')
+     && page.includes('will not spend a seat on a season average'));
+  // Telling a reader to widen a pool they cannot widen -- a single-game
+  // format, or a pool that is already the whole slate -- is noise.
+  ok('...and only offers a wider pool where there is one to offer',
+     page.includes('var canWiden = !!(games && !fmt.single && slate && games < (gamesForSlate(slate) || []).length);'));
   ok('Play of the Week weighs a single-game contest over the selected game only',
      page.includes("var src = fmt && fmt.single ? (filteredSlate() || s) : s;")
      && page.includes("var pool = (src.players || []).filter(function (p) { return projected(p); });"));
