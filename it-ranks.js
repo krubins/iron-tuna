@@ -65,6 +65,10 @@
 
   var PRESETS = [['standard', 'Standard'], ['half', 'Half PPR'], ['ppr', 'PPR']];
   var STORE = 'it.ranks.scoring';
+  // The columns ?sort= may name. A closed list, because the value lands in
+  // sortVal's switch and an unknown key would silently sort by nothing.
+  var SORT_KEYS = ['rank', 'player', 'team', 'opp', 'games', 'cpts', 'crank',
+                   'vpts', 'vrank', 'gap', 'extra'];
 
   function esc(v) {
     return String(v == null ? '' : v)
@@ -99,6 +103,79 @@
     var sortKey = 'rank', sortDir = 1;
     var open = {};               // player key -> drawer open
     var allOpen = false;
+    var focus = '';              // the row ?player= names, until the reader moves
+    var painted = false;         // whether the live board has rendered once
+
+    // The board served WITH the page: the top of it, at PPR, written into this
+    // host at the edge by ranksPrerender in _worker.js. It is a real board, not
+    // a placeholder — the same boardsPayload the fetch below asks for — so it
+    // stands until the live one has painted, and the reader never sees
+    // "Reading the board…" on a page that arrived with 60 rows on it.
+    var pre = host.querySelector('[data-rk-prerender]');
+
+    // ── the view, in the URL ───────────────────────────────────────────────
+    // Sixteen boards, one address each: a reader who sorted by the gap,
+    // filtered to one club and found the row worth arguing about could send the
+    // group chat nothing but "go to the rankings page and do what I did". So
+    // the URL now says what is on screen, and an address that says so restores
+    // it — for the next reader, and for a crawler, which sees as many useful
+    // views as there are links to them.
+    //
+    // ?player= and #p-<slug> name the same row. The hash is the one that works
+    // with no script at all, so it is honored too and it is what the share
+    // button writes alongside the query.
+    (function readUrl() {
+      var qs;
+      try { qs = new URLSearchParams(location.search); } catch (e) { return; }
+      var sc = qs.get('scoring');
+      if (/^(standard|half|ppr)$/.test(sc || '')) preset = sc;
+      var so = qs.get('sort');
+      if (so && SORT_KEYS.indexOf(so) >= 0) sortKey = so;
+      if (qs.get('dir') === 'desc') sortDir = -1;
+      q = (qs.get('q') || '').trim();
+      focus = String(qs.get('player') || '').toLowerCase();
+      if (!focus && /^#p-[a-z0-9-]+$/.test(location.hash || '')) focus = location.hash.slice(3);
+    })();
+
+    // The reader's own params, laid over whatever else is on the URL. Built by
+    // EDITING the current query rather than by replacing it, so a campaign tag
+    // or a referrer param survives a click on a column heading.
+    //
+    // A value at its default is deleted rather than written: a bare page should
+    // have a bare URL, or every share carries ?sort=rank&dir=asc and the reader
+    // has to read three defaults to find the one thing that is not.
+    function viewQuery(slug) {
+      var qs;
+      try { qs = new URLSearchParams(location.search); } catch (e) { qs = new URLSearchParams(); }
+      var put = function (k, v) { if (v) qs.set(k, v); else qs.delete(k); };
+      put('scoring', preset !== 'ppr' ? preset : '');
+      put('sort', sortKey !== 'rank' ? sortKey : '');
+      put('dir', sortDir < 0 ? 'desc' : '');
+      put('q', q);
+      put('player', slug || '');
+      return qs.toString();
+    }
+    // replaceState, never pushState: sorting a column is not a page the back
+    // button should have to walk back out through.
+    var syncTimer = null;
+    function syncUrl() {
+      // Coalesced, because render() runs on every keystroke in the filter box
+      // and browsers rate-limit replaceState. The last state within the window
+      // is the one that lands, which is the one on screen.
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = setTimeout(syncUrlNow, 250);
+    }
+    function syncUrlNow() {
+      if (!window.history || !history.replaceState) return;
+      var s = viewQuery(focus);
+      try {
+        history.replaceState(null, '', location.pathname + (s ? '?' + s : '') + (focus ? '#p-' + focus : ''));
+      } catch (e) {}
+    }
+    function shareUrl(slug) {
+      var s = viewQuery(slug);
+      return location.origin + location.pathname + (s ? '?' + s : '') + '#p-' + slug;
+    }
 
     // ── the chrome around the table ────────────────────────────────────────
     var tools = el('div', 'rk-tools');
@@ -151,7 +228,11 @@
     var empty = el('p', 'is-empty', 'Reading the board&hellip;');
     var foot = el('p', 'is-note');
 
-    host.appendChild(tools);
+    // The buttons go ABOVE the pre-rendered board and everything else below
+    // it, so for the moment both are on screen the page reads in its normal
+    // order: controls, board, notes. When render() drops the pre-render the
+    // arrangement is the one this file has always produced.
+    if (pre) host.insertBefore(tools, pre); else host.appendChild(tools);
     host.appendChild(stamp);
     host.appendChild(scroll);
     host.appendChild(empty);
@@ -246,10 +327,16 @@
         ? '<td><button class="rk-open" type="button" data-open="' + esc(p.key) + '" aria-expanded="' + (open[p.key] ? 'true' : 'false') +
           '" aria-label="Show every remaining week for ' + esc(p.name) + '">' + (open[p.key] ? '&minus;' : '+') + '</button></td>'
         : '';
-      return '<tr>' + opener +
+      // The row's own address. The id is what #p-<slug> lands on with no
+      // script running at all; the button copies the whole view, this row
+      // included, which is the thing a reader actually wants to paste.
+      var sl = slug(p.name);
+      return '<tr id="p-' + esc(sl) + '"' + (focus && focus === sl ? ' class="rk-hit"' : '') + '>' + opener +
         '<td class="num">' + (primaryRank(p) == null ? '—' : esc(p.position) + primaryRank(p)) + '</td>' +
-        '<td class="rk-who"><a href="/in-season/player/' + slug(p.name) + '?pos=' + esc(p.position) + '"><b>' + esc(p.name) + '</b></a>' +
+        '<td class="rk-who"><a href="/in-season/player/' + sl + '?pos=' + esc(p.position) + '"><b>' + esc(p.name) + '</b></a>' +
           (pos === 'ALL' || pos === 'FLEX' ? '<small>' + esc(p.position) + '</small>' : '') +
+          '<button class="rk-share" type="button" data-share="' + esc(sl) +
+            '" aria-label="Copy a link to ' + esc(p.name) + ' on this board">Link</button>' +
           reads(p) +
         '</td>' +
         '<td>' + esc(p.team) + '</td>' + oppCell +
@@ -330,6 +417,13 @@
       });
 
       var span = (wantWeeks ? 11 : 10);
+      // A linked row arrives closed, and a season board's whole answer for one
+      // player is inside the drawer. Opening it is done once, on the first
+      // paint, so a reader who then closes it does not have it reopened under
+      // them on the next sort.
+      if (focus && !painted && wantWeeks) {
+        rows.forEach(function (p) { if (slug(p.name) === focus) open[p.key] = true; });
+      }
       thead.innerHTML = headHtml();
       tbody.innerHTML = rows.slice(0, 250).map(function (p) {
         return rowHtml(p) + (wantWeeks && open[p.key] ? weeksHtml(p, span) : '');
@@ -347,6 +441,25 @@
         (payload.season ? ' &middot; ' + esc(payload.season) + ' season' : '') +
         (payload.played ? ' &middot; ' + payload.played + ' player' + (payload.played === 1 ? ' whose game has' : 's whose games have') + ' kicked off are off the board' : '');
 
+      // The live board has painted, so the copy served with the page steps
+      // aside. Removed rather than hidden: two tables of the same rows in the
+      // DOM is two tables a screen reader walks and a crawler weighs.
+      if (pre) { pre.remove(); pre = null; }
+
+      // Take the reader to the row their link named, once.
+      if (focus && !painted) {
+        var hit = null;
+        // ?player= is whatever was typed into the address bar, and a selector
+        // built from it can be invalid. A row that cannot be found is not an
+        // error worth breaking the board over.
+        try { hit = tbody.querySelector('#p-' + (window.CSS && CSS.escape ? CSS.escape(focus) : focus)); } catch (e) {}
+        if (hit && hit.scrollIntoView) {
+          try { hit.scrollIntoView({ block: 'center' }); } catch (e) { hit.scrollIntoView(); }
+        }
+      }
+      painted = true;
+      syncUrl();
+
       var src = payload.sources || {};
       foot.innerHTML = 'The <b>Betting Odds</b> column reads its basis off the market: <b>props</b> is a priced player prop, ' +
         '<b>gamelines</b> is the posted game line&rsquo;s scoring environment applied to his line, and <b>ratings</b> is a fixture no ' +
@@ -356,21 +469,41 @@
     }
 
     function load() {
-      empty.hidden = false;
+      // With a board already on screen there is nothing to wait for, and
+      // replacing 60 real rows with the word "Reading" would be a downgrade the
+      // reader watches happen.
+      empty.hidden = !!pre;
       empty.textContent = 'Reading the board…';
       table.hidden = true;
       var url = '/api/boards?horizon=' + encodeURIComponent(horizon) +
         '&pos=' + encodeURIComponent(pos) + '&scoring=' + encodeURIComponent(preset);
       fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) {
-        if (!j || !j.ok || !j.players) {
-          empty.textContent = 'The board did not answer. Nothing is shown rather than a ranking that may be stale.';
-          return;
-        }
+        if (!j || !j.ok || !j.players) { stall(); return; }
         cache[preset] = j;
         render();
-      }).catch(function () {
-        empty.textContent = 'The board did not answer. Nothing is shown rather than a ranking that may be stale.';
-      });
+      }).catch(function () { stall(); });
+    }
+
+    // The board did not answer. Which sentence is honest depends on whether
+    // anything is on screen.
+    //
+    // With nothing up, the rule the rest of this file holds to applies: show no
+    // table rather than one that may be stale.
+    //
+    // With the pre-render up, that rule does not apply and repeating it would
+    // be false. Those rows were built at the edge for THIS request and arrived
+    // with the HTML — they are as old as the page, not as old as a cache. What
+    // is actually lost is the rest of the board and the buttons, so that is
+    // what it says.
+    function stall() {
+      if (pre) {
+        empty.hidden = false;
+        empty.textContent = 'Showing the top of the board, which was served with this page. '
+          + 'The full board and the scoring buttons need a connection to the site.';
+        return;
+      }
+      empty.hidden = false;
+      empty.textContent = 'The board did not answer. Nothing is shown rather than a ranking that may be stale.';
     }
 
     // ── events ────────────────────────────────────────────────────────────
@@ -390,6 +523,31 @@
       render();
     });
     tbody.addEventListener('click', function (ev) {
+      var sh = ev.target.closest('button[data-share]');
+      if (sh) {
+        var sl = sh.getAttribute('data-share');
+        // The address bar is updated FIRST and unconditionally. A browser that
+        // refuses the clipboard — no permission, no secure context, an old
+        // engine — still leaves the reader with the right URL in front of them
+        // to copy by hand, which is the whole job; the button is the shortcut.
+        focus = sl;
+        syncUrl();
+        var done = function () {
+          sh.setAttribute('data-copied', '1');
+          sh.textContent = 'Copied';
+          setTimeout(function () { sh.removeAttribute('data-copied'); sh.textContent = 'Link'; }, 1600);
+        };
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareUrl(sl)).then(done, function () {});
+          }
+        } catch (e) {}
+        // Move the highlight onto the row whose link was just taken.
+        [].forEach.call(tbody.querySelectorAll('tr.rk-hit'), function (tr) { tr.classList.remove('rk-hit'); });
+        var tr = sh.closest('tr');
+        if (tr) tr.classList.add('rk-hit');
+        return;
+      }
       var b = ev.target.closest('button[data-open]');
       if (!b) return;
       var k = b.getAttribute('data-open');

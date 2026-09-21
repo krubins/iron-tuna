@@ -1379,3 +1379,70 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 60px) }
   .it-viz-body { grid-template-columns: minmax(0, 1fr) }
   .it-viz-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)) }
 }
+
+/* ── /players — the directory every player card hangs off ────────────────────
+   Rendered at the edge into [data-players-index] (playersIndexHtml, _worker.js).
+   Multi-column because it is 409 names and a single column is nine screens of
+   scrolling; column-count rather than grid so a section breaks wherever it has
+   to instead of being padded to a rectangle. */
+.pl-index { margin: var(--space-6) 0 }
+.pl-sec { margin: 0 0 var(--space-6); break-inside: avoid }
+.pl-sec h2 {
+  margin: 0 0 var(--space-3); padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line); font-size: var(--fs-md);
+}
+.pl-sec h2 .is-status { margin-left: 6px }
+.pl-list { margin: 0; padding: 0; list-style: none; column-width: 15rem; column-gap: var(--space-5) }
+.pl-list li { break-inside: avoid; padding: 3px 0; font-size: var(--fs-sm) }
+.pl-list li span { color: var(--muted); font-size: var(--fs-xs) }
+
+/* ── the board's pre-render, and its deep links ──────────────────────────────
+   [data-rk-prerender] is the top of the board served WITH the page (see
+   ranksPrerender in _worker.js). /it-ranks.js removes it the moment the live
+   board has painted, so nothing here needs a hidden state: it either is the
+   board for a few hundred milliseconds, or it is the board for a crawler that
+   will never run the script. It is styled as the real one because it is the
+   real one's rows. */
+[data-rk-prerender] .rk-basis { color: var(--muted); font-size: var(--fs-xs) }
+
+/* The row, or the game card, a shared link names. Both selectors, because a
+   link can arrive two ways: ?player= / ?game=, which the script marks, and
+   #p-<slug> / #g-<slug>, which the browser marks on its own and which keeps
+   working with no script running at all. */
+tbody tr[id^="p-"]:target, tbody tr[id^="g-"]:target,
+tbody tr.rk-hit { background: color-mix(in srgb, var(--teal) 10%, transparent) }
+tbody tr.rk-hit > td:first-child,
+tbody tr[id^="p-"]:target > td:first-child,
+tbody tr[id^="g-"]:target > td:first-child { box-shadow: inset 3px 0 0 var(--teal) }
+.rk-game[id^="g-"]:target, .rk-game.rk-hit,
+.ww-game[id^="g-"]:target, .ww-game.rk-hit {
+  border-color: var(--teal); box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 16%, transparent);
+}
+/* On a wrap card the control sits in the body rather than in a heading row,
+   because the heading there is the recap's own link and must stay one target. */
+.ww-body > .gm-share { float: right; margin-left: var(--space-2) }
+/* The card's heading carries the copy control, so it is a row rather than a
+   line of text. */
+.rk-game h3 { display: flex; align-items: center; gap: var(--space-2) }
+
+/* The copy-a-link control, one per row. Quiet until the row is hovered or
+   something in it takes focus, so 250 rows do not read as 250 buttons — and
+   always shown where there is no hover to reveal it with. */
+.rk-share {
+  margin-left: 6px; padding: 0 5px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--panel); color: var(--muted); font: inherit; font-size: var(--fs-xs);
+  line-height: 1.6; cursor: pointer; opacity: 0; transition: opacity .12s ease;
+}
+.rk-who:hover .rk-share, tr:hover .rk-share, .rk-share:focus-visible { opacity: 1 }
+.rk-share:hover { border-color: var(--teal); color: var(--text) }
+.rk-share[data-copied] { opacity: 1; border-color: var(--teal); color: var(--teal) }
+@media (hover: none) { .rk-share { opacity: 1 } }
+
+/* The same control on a game card, where there is one per card rather than one
+   per row and it can simply sit in the header. */
+.gm-share {
+  margin-left: auto; padding: 1px 7px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--panel); color: var(--muted); font: inherit; font-size: var(--fs-xs); cursor: pointer;
+}
+.gm-share:hover { border-color: var(--teal); color: var(--text) }
+.gm-share[data-copied] { border-color: var(--teal); color: var(--teal) }

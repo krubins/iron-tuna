@@ -139,6 +139,7 @@
     <li><a href="/fantasy">Fantasy</a></li>
     <li><a href="/dfs">DFS</a></li>
     <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
     <li><a href="/faq">FAQ</a></li>
@@ -163,10 +164,54 @@
   // for the same fixture, and the movement off the game snapshots. This page
   // renders that block and nothing else — the arithmetic belongs in one place.
   var games = null, sort = 'total', view = 'cards', stampNote = '';
+  var focus = '', painted = false;
   var $ = function (id) { return document.getElementById(id); };
+  // The same slugify the desk uses on a game id (_gameSlug, _worker.js), so
+  // ?game= names the same fixture here as it does at
+  // /in-season/desk/<kind>/<week>/<game>. One spelling per game, site-wide.
+  var gslug = function (id) { return String(id || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); };
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
   var signed = function (v) { return v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : '') + (Math.round(v * 10) / 10).toFixed(1); };
+
+  // ── the view, in the URL ──────────────────────────────────────────────
+  // The whole slate was one address, so the answer to "look at what the model
+  // says about this one game" was "open the previews page and scroll". A game
+  // now has a link, and the sort and the layout ride along with it so the
+  // person who opens it sees the page the person who sent it was looking at.
+  (function readUrl() {
+    var qs;
+    try { qs = new URLSearchParams(location.search); } catch (x) { return; }
+    var so = qs.get('sort');
+    if (so === 'total' || so === 'kickoff' || so === 'gap') sort = so;
+    var vw = qs.get('view');
+    if (vw === 'cards' || vw === 'table') view = vw;
+    focus = gslug(qs.get('game') || '');
+    if (!focus && /^#g-[a-z0-9-]+$/.test(location.hash || '')) focus = location.hash.slice(3);
+  })();
+
+  function viewQuery(g) {
+    var qs;
+    try { qs = new URLSearchParams(location.search); } catch (x) { qs = new URLSearchParams(); }
+    var put = function (k, v) { if (v) qs.set(k, v); else qs.delete(k); };
+    put('sort', sort !== 'total' ? sort : '');
+    put('view', view !== 'cards' ? view : '');
+    put('game', g || '');
+    return qs.toString();
+  }
+  function syncUrl() {
+    if (!window.history || !history.replaceState) return;
+    var qs = viewQuery(focus);
+    try { history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + (focus ? '#g-' + focus : '')); } catch (x) {}
+  }
+  function shareUrl(g) {
+    var qs = viewQuery(g);
+    return location.origin + location.pathname + (qs ? '?' + qs : '') + '#g-' + g;
+  }
+  function shareBtn(g) {
+    return '<button class="gm-share" type="button" data-share="' + e(gslug(g.id)) +
+      '" aria-label="Copy a link to ' + e(g.game) + '">Link</button>';
+  }
 
   function press(host, attr, val) {
     [].forEach.call(host.querySelectorAll('button'), function (b) {
@@ -196,8 +241,9 @@
     // enough to say" rather than as agreement.
     var gapCls = g.gapAgrees == null ? '' : g.gapAgrees ? 'rk-agree' : 'rk-diverge';
     var gapText = g.gap == null ? 'not enough to say' : signed(g.gap) + (g.gapAgrees ? ' · agrees' : ' · diverges');
-    return '<article class="rk-game">' +
-      '<h3>' + e(g.game) + '</h3>' +
+    var sl = gslug(g.id);
+    return '<article class="rk-game' + (focus === sl ? ' rk-hit' : '') + '" id="g-' + e(sl) + '">' +
+      '<h3>' + e(g.game) + shareBtn(g) + '</h3>' +
       '<p class="rk-kick">' + e(kick(g.kickoff)) + (g.status && g.status !== 'pre' ? ' &middot; ' + e(g.status) : '') + '</p>' +
       '<dl>' +
       '<dt>Posted total</dt><dd>' + n1(g.total) + '</dd>' +
@@ -213,8 +259,9 @@
 
   function row(g) {
     var gapCls = g.gap == null ? 'flat' : g.gapAgrees ? 'flat' : g.gap > 0 ? 'up' : 'down';
-    return '<tr>' +
-      '<td class="rk-who"><b>' + e(g.game) + '</b></td>' +
+    var sl = gslug(g.id);
+    return '<tr id="g-' + e(sl) + '"' + (focus === sl ? ' class="rk-hit"' : '') + '>' +
+      '<td class="rk-who"><b>' + e(g.game) + '</b>' + shareBtn(g) + '</td>' +
       '<td>' + e(kick(g.kickoff)) + '</td>' +
       '<td class="num">' + n1(g.total) + '</td>' +
       '<td>' + (g.favorite ? e(g.favorite) : '—') + '</td>' +
@@ -242,14 +289,48 @@
     $('pvStamp').innerHTML = rows.length + ' game' + (rows.length === 1 ? '' : 's') + ' with a posted line' +
       (diverge ? ' &middot; the model and the book are more than two points apart on <b>' + diverge + '</b> of them' : ' &middot; the model and the book agree on all of them') +
       (stampNote ? ' &middot; ' + e(stampNote) : '');
+    if (focus && !painted) {
+      var hit = null;
+      // ?game= is whatever was typed; a selector built from it can be invalid,
+      // and a fixture that is not on this week's slate is not an error.
+      try { hit = document.getElementById('g-' + focus); } catch (x) {}
+      if (hit && hit.scrollIntoView) {
+        try { hit.scrollIntoView({ block: 'center' }); } catch (x) { hit.scrollIntoView(); }
+      }
+    }
+    painted = true;
+    syncUrl();
     $('pvFoot').innerHTML = 'Implied points are the posted total split by the posted spread. The <b>Iron Tuna total</b> is the site&rsquo;s own expectation for the same fixture, ' +
       'fitted from club ratings off the games that do carry a line and projected onto the ones that do not &mdash; so it is a model of the market, not a second market. ' +
       'Movement is measured from the opening line this site first recorded, never rewritten by a book that starts quoting late.';
   }
 
+  // One handler for both layouts: the cards and the table are two renderings
+  // of the same slate and the button is the same button in each.
+  function copyClick(ev) {
+    var b = ev.target.closest('button[data-share]');
+    if (!b) return;
+    var g = b.getAttribute('data-share');
+    // The address bar is updated first and unconditionally, so a browser that
+    // refuses the clipboard still leaves the right URL in front of the reader.
+    focus = g;
+    syncUrl();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl(g)).then(function () {
+          b.setAttribute('data-copied', '1');
+          b.textContent = 'Copied';
+          setTimeout(function () { b.removeAttribute('data-copied'); b.textContent = 'Link'; }, 1600);
+        }, function () {});
+      }
+    } catch (x) {}
+  }
+
   function boot() {
     $('pvSort').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sort = b.getAttribute('data-sort'); render(); });
     $('pvView').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; view = b.getAttribute('data-view'); render(); });
+    $('pvCards').addEventListener('click', copyClick);
+    $('pvBody').addEventListener('click', copyClick);
     fetch('/api/vegas-edge').then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok) {
         $('pvEmpty').textContent = 'The market board did not answer. Nothing is shown rather than a line that may be stale.';

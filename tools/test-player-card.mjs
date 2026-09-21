@@ -163,8 +163,19 @@ ok('the worker rewrites the slug route onto the shell',
 ok('the rewrite target is extensionless', !worker.includes("new URL('/player.html'"));
 ok('the card is noindex, like the other rendered shells',
    /name="robots"[^>]*noindex/.test(card));
-ok('the card is not advertised in the sitemap',
-   !read('sitemap.xml').includes('irontuna.com/player'));
+// THE SHELL is not advertised — /player is the empty lookup box, it is noindex
+// above, and listing it would be the site asking for a crawl and refusing it.
+//
+// THE CARDS are, one line per slug. That is the opposite of what this file
+// asserted until _worker.js learned to rewrite the head and pre-render the card
+// for each of them (playerSeo / playerHeader / playerLd, the same shape
+// /analysts/<id> already used). An indexable page nobody is told about is the
+// bug; the noindex shell in the sitemap is the other one. Both are checked.
+const sitemapXml = read('sitemap.xml');
+ok('the shell itself is not advertised in the sitemap',
+   !/<loc>https:\/\/irontuna\.com\/player<\/loc>/.test(sitemapXml));
+ok('the cards are advertised, one URL per slug',
+   (sitemapXml.match(/<loc>https:\/\/irontuna\.com\/player\/[a-z0-9-]+<\/loc>/g) || []).length > 300);
 
 // ── how the homepage reaches the lookup ────────────────────────────────────
 // The box used to ride in the homepage's sticky in-page ribbon, which is how it

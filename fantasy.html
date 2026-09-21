@@ -431,6 +431,7 @@ section{margin:0 0 var(--space-6)}
     <li><a href="/fantasy">Fantasy</a></li>
     <li><a href="/dfs">DFS</a></li>
     <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/players">Players</a></li>
     <li><a href="/faq#faq-start">How It Works</a></li>
     <li><a href="/data">Data Sources</a></li>
     <li><a href="/faq">FAQ</a></li>
@@ -469,6 +470,37 @@ section{margin:0 0 var(--space-6)}
   var PRESET = { 'PPR': 'ppr', 'Half PPR': 'half', 'Standard': 'standard' };
   var AGREE = 0.5;                     // under half a point the two boards agree
   var data = null, pos = 'RB';
+  var focus = '', painted = false;
+  var slug = function (n) { return String(n).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); };
+
+  // ── the view, in the URL ────────────────────────────────────────────────
+  // This board was one address for five positions, so "look at the tight ends
+  // this week" was not a link. It is now, and a row on it is too.
+  (function readUrl() {
+    var qs;
+    try { qs = new URLSearchParams(location.search); } catch (x) { return; }
+    var p = String(qs.get('pos') || '').toUpperCase();
+    if (/^(QB|RB|WR|TE|FLEX)$/.test(p)) pos = p;
+    focus = String(qs.get('player') || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!focus && /^#p-[a-z0-9-]+$/.test(location.hash || '')) focus = location.hash.slice(3);
+  })();
+  function viewQuery(player) {
+    var qs;
+    try { qs = new URLSearchParams(location.search); } catch (x) { qs = new URLSearchParams(); }
+    var put = function (k, v) { if (v) qs.set(k, v); else qs.delete(k); };
+    put('pos', pos !== 'RB' ? pos : '');
+    put('player', player || '');
+    return qs.toString();
+  }
+  function syncUrl() {
+    if (!window.history || !history.replaceState) return;
+    var qs = viewQuery(focus);
+    try { history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + (focus ? '#p-' + focus : '')); } catch (x) {}
+  }
+  function shareUrl(p) {
+    var qs = viewQuery(p);
+    return location.origin + location.pathname + (qs ? '?' + qs : '') + '#p-' + p;
+  }
 
   function tag(d) {
     if (d == null) return '<span class="is-tag is-plain">—</span>';
@@ -504,9 +536,12 @@ section{margin:0 0 var(--space-6)}
     }
     $('fnBody').innerHTML = rows.map(function (p, i) {
       var d = p.marketDelta ? p.marketDelta.points : null;
-      return '<tr>' +
+      var sl = slug(p.name);
+      return '<tr id="p-' + e(sl) + '"' + (focus === sl ? ' class="rk-hit"' : '') + '>' +
         '<td class="is-rank">' + String(i + 1).padStart(2, '0') + '</td>' +
-        '<td class="is-who">' + e(p.name) + ' <small>' + e(p.position) + '</small></td>' +
+        '<td class="is-who">' + e(p.name) + ' <small>' + e(p.position) + '</small>' +
+          '<button class="rk-share" type="button" data-share="' + e(sl) +
+          '" aria-label="Copy a link to ' + e(p.name) + ' on this board">Link</button></td>' +
         '<td>' + e(p.team) + '</td>' +
         '<td>' + e(opp(p)) + '</td>' +
         '<td class="num"><span class="is-val">' + n1(p.ironTuna.points) + '</span></td>' +
@@ -517,6 +552,17 @@ section{margin:0 0 var(--space-6)}
     }).join('');
     $('fnWrap').hidden = false;
     $('fnState').hidden = true;
+    if (focus && !painted) {
+      // A link can name a player who is not on the position this board is
+      // showing. That is not an error: the position in the same URL is what
+      // decides which twelve rows are up, and the row simply is not among them.
+      var hit = document.getElementById('p-' + focus);
+      if (hit && hit.scrollIntoView) {
+        try { hit.scrollIntoView({ block: 'center' }); } catch (x) { hit.scrollIntoView(); }
+      }
+      painted = true;
+    }
+    syncUrl();
     flexCall();
     biggestBuy();
   }
@@ -640,6 +686,32 @@ section{margin:0 0 var(--space-6)}
     $('fnPos').addEventListener('change', function (ev) {
       if (!ev.target.name) return;
       pos = ev.target.value; render();
+    });
+    // ?pos= arrived before the control was read, so the control is moved onto
+    // it rather than the other way round — otherwise the URL says TE and the
+    // button group still says RB.
+    var picked = $('fnPos').querySelector('input[value="' + pos + '"]');
+    if (picked) picked.checked = true;
+    $('fnBody').addEventListener('click', function (ev) {
+      var b = ev.target.closest && ev.target.closest('button[data-share]');
+      if (!b) return;
+      var sl = b.getAttribute('data-share');
+      // The address bar first and unconditionally, so a refused clipboard still
+      // leaves the reader the right URL in front of them.
+      focus = sl;
+      syncUrl();
+      [].forEach.call($('fnBody').querySelectorAll('tr.rk-hit'), function (tr) { tr.classList.remove('rk-hit'); });
+      var tr = b.closest('tr');
+      if (tr) tr.classList.add('rk-hit');
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(shareUrl(sl)).then(function () {
+            b.setAttribute('data-copied', '1');
+            b.textContent = 'Copied';
+            setTimeout(function () { b.removeAttribute('data-copied'); b.textContent = 'Link'; }, 1600);
+          }, function () {});
+        }
+      } catch (x) {}
     });
     render();
     fetch('/api/boards?horizon=week&pos=ALL&scoring=' + preset, { credentials: 'omit' })
