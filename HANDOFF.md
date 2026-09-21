@@ -13125,3 +13125,61 @@ plus `test-homepage` under `REQUIRE_BROWSER=1` (100/100) and the four
 control bytes; tags balance. Rendered in Chromium at 1360px and 430px against
 the exact feed shape from the screenshot, on all three pages, with no page
 errors and no horizontal overflow.
+---
+
+## 118. September 21: a headline per lens
+
+Ken, choosing between the three options §117 left open: "do option 1 for the
+DFS headline."
+
+§117 could not fix the complaint it recorded. A piece had exactly one
+`headline` and one `dek` — single columns on `content_pieces`, written for the
+Weekly Fantasy lens — so `/dfs` printed "Parker Washington's 43% target share
+makes him the clearest roster add of the week" under Lena Park's byline. The
+DFS *body* was real analysis; the sentence over it was a waiver call, and no
+page change could make it anything else. A package that runs in both lenses is
+WRITTEN twice and was HEADLINED once.
+
+Now it is headlined twice.
+
+**The writer is asked, and the draft is held without it.** `writeNewsroomPiece`
+adds `dfsHeadline` and `dfsDek` to the shape it demands, and only for a piece
+whose lens is `both`, so a weekly-only kind's prompt is byte-for-byte what it
+was. `factCheck` pushes `missing:dfsHeadline` when a both-lens draft arrives
+without one — the same treatment a missing section gets, for the same reason:
+the alternative is publishing the thing this exists to stop. `weekFrameProblems`
+reads the DFS pair too, so a DFS headline cannot preview a week that has
+already been played while the weekly one gets it right.
+
+**Stored, and served to whoever asked.** `dfs_headline` / `dfs_dek` are two
+more additive columns on the migration list `newsroomReady` already walks.
+`_lensHead` / `_lensDek` pick the pair for the lens being served, and
+`newsroomFeedPayload` reads them, so `/dfs` gets the DFS sentence without the
+page knowing anything changed. The article page gets BOTH pairs and chooses in
+the browser, the way it already chose `dfsTitle`; its DFS tab used to fall back
+to that generic label ("Showdown read") precisely because there was no DFS
+sentence to print. The admin editor lifts the DFS pair out of an edited body
+exactly as it lifts the weekly one, so an edit cannot leave one lens on the old
+headline.
+
+**What a row written before today does.** Nothing changes for it: both readers
+fall back to the weekly pair rather than going blank, so the lane reads as it
+did this morning. The desk republishes every kind every week, so the fallback
+empties itself without a backfill, and the columns stay null on the rows that
+never had a DFS lens at all.
+
+| Where | What |
+|---|---|
+| `_worker.js` | `dfs_headline` / `dfs_dek` columns; the two keys in the writer's shape, asked only of a both-lens piece; `missing:dfsHeadline` in `factCheck`; `weekFrameProblems` over all four fields; `contentStore` writes them; `_lensHead` / `_lensDek`; the feed serves by lens; the piece payload carries both pairs; the editor lifts both. |
+| `desk.html` | The DFS tab prints the DFS headline and deck, falling back through `dfsTitle` to the weekly pair. |
+| `tools/test-newsroom.mjs` | A both-lens draft with no DFS headline is held, a blank one does not count, a weekly-only piece is never asked; the week frame is checked on the DFS headline; `_lensHead` / `_lensDek` serve each lens and fall back. |
+| `tools/test-dry-run.mjs` | The simulated writer produces the pair — without it the fact check held every both-lens piece and the whole week collapsed, which is the requirement proving itself — and the week now asserts that every both-lens row stores one and every weekly-only row stores none. |
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included
+(113, up one for the new assertion) and `test-newsroom` at 364, plus
+`test-homepage` under `REQUIRE_BROWSER=1` (104) and the four `--check`
+generators clean. `_worker.js` and `desk.html` parse.
+
+**What this does not do.** It does not backfill. Pieces published before this
+keep one headline and `/dfs` keeps showing it until each kind next runs. The
+first pieces with a real DFS headline arrive at their normal slots.

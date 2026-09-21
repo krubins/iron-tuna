@@ -10100,7 +10100,14 @@ async function newsroomReady(env) {
     for (const q of CALLS_DDL) await env.LEADS_DB.prepare(q).run();
     // Columns the desk's table grew for the newsroom. SQLite has no ADD COLUMN
     // IF NOT EXISTS; a duplicate column is an error we expect and swallow.
-    for (const col of ['analyst TEXT', 'lens TEXT', 'version INTEGER', 'rivalry TEXT', 'headline TEXT', 'dek TEXT', 'game_id TEXT', 'components TEXT', 'wrap TEXT']) {
+    // `dfs_headline` / `dfs_dek`: a package that runs in both lenses is WRITTEN
+    // twice and, until 2026-09-21, was HEADLINED once. /dfs printed the Weekly
+    // Fantasy sentence over Lena Park's byline -- "the clearest roster add of
+    // the week" is a waiver call, not a DFS read -- because there was nowhere
+    // for a DFS headline to live. Now there is. A row stored before these
+    // columns existed has them null and the feed falls back to the weekly
+    // pair, so the lane reads as it did rather than going blank.
+    for (const col of ['analyst TEXT', 'lens TEXT', 'version INTEGER', 'rivalry TEXT', 'headline TEXT', 'dek TEXT', 'game_id TEXT', 'components TEXT', 'wrap TEXT', 'dfs_headline TEXT', 'dfs_dek TEXT']) {
       try { await env.LEADS_DB.prepare('ALTER TABLE content_pieces ADD COLUMN ' + col).run(); } catch (e) {}
     }
     // What a graded call actually scored, kept as numbers so the Monday
@@ -11122,6 +11129,11 @@ function factCheck(body, packet) {
   }
   if (!body || typeof body.headline !== 'string' || !body.headline.trim()) problems.push('missing:headline');
   else for (const p of weekFrameProblems(body, packet.meta)) problems.push(p);
+  // The DFS headline is required on exactly the pieces that have a DFS lens,
+  // and held when it is absent for the same reason a missing section is: the
+  // alternative is /dfs printing the weekly sentence under the DFS byline,
+  // which is what this exists to stop. A weekly-only kind is never asked.
+  if (packet.meta.lens === 'both' && (!body || typeof body.dfsHeadline !== 'string' || !body.dfsHeadline.trim())) problems.push('missing:dfsHeadline');
   return { ok: !problems.length, problems: [...new Set(problems)] };
 }
 // "Week" before a number is a proper noun. The sentence-case rule the writer
@@ -11140,7 +11152,7 @@ function weekFrameProblems(body, meta) {
   const out = [];
   if (!meta || meta.storyType !== 'retrospective' || meta.week == null || meta.forwardWeek == null || meta.forwardWeek === meta.week) return out;
   const played = new RegExp('\\bweek\\s+' + meta.week + '\\b(?!\\d)', 'i'), forward = new RegExp('\\bweek\\s+' + meta.forwardWeek + '\\b(?!\\d)', 'i');
-  for (const field of ['headline', 'dek']) {
+  for (const field of ['headline', 'dek', 'dfsHeadline', 'dfsDek']) {
     const t = String(body[field] || '');
     if (played.test(t) && !forward.test(t) && !WEEK_LOOKBACK.test(t)) out.push('week:' + field + ' names Week ' + meta.week + ', which has been played, as if previewing it; say it looks back ("what Week ' + meta.week + ' taught") or name Week ' + meta.forwardWeek + ' as the subject ("Week ' + meta.forwardWeek + ' intel")');
   }
@@ -11184,7 +11196,15 @@ function compactForWriter(packet, budget) {
 async function writeNewsroomPiece(env, kind, packet) {
   const K = CONTENT_KINDS[kind];
   const lenses = packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly'];
-  const shape = '{"headline":"...","dek":"one sentence, the finding","' + lenses.map(l => l + '":' + _lensShape(kind, l, packet)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
+  // A HEADLINE PER LENS. `headline`/`dek` are the Weekly Fantasy sentence; a
+  // piece that also runs in DFS gets `dfsHeadline`/`dfsDek`, because the two
+  // lenses are two different questions about one set of facts and a reader
+  // setting a lineup is not being told who to add off waivers. Asked for only
+  // when the piece has a DFS lens, so a weekly-only kind's shape is unchanged.
+  const dfsHead = lenses.includes('dfs')
+    ? '"dfsHeadline":"the same story as the headline, said for a reader building a lineup on this slate: price, ownership, leverage or role, never a waiver or trade call","dfsDek":"one sentence, the DFS finding",'
+    : '';
+  const shape = '{"headline":"...","dek":"one sentence, the finding",' + dfsHead + '"' + lenses.map(l => l + '":' + _lensShape(kind, l, packet)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
   const user = 'KIND: ' + kind + ' (' + ((packet.meta && packet.meta.title) || K.title) + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
     'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
     '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
@@ -11274,10 +11294,10 @@ function _wrapOf(body) {
 }
 async function contentStore(env, rec) {
   await newsroomReady(env);
-  await env.LEADS_DB.prepare('INSERT INTO content_pieces (season, week, kind, slug, title, status, brief, body, violations, model, created_at, published_at, analyst, lens, version, rivalry, headline, dek, game_id, components, wrap) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+  await env.LEADS_DB.prepare('INSERT INTO content_pieces (season, week, kind, slug, title, status, brief, body, violations, model, created_at, published_at, analyst, lens, version, rivalry, headline, dek, game_id, components, wrap, dfs_headline, dfs_dek) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
     .bind(rec.season, rec.week, rec.kind, rec.slug, rec.title, rec.status, JSON.stringify(rec.brief || null), JSON.stringify(rec.body || null), JSON.stringify(rec.violations || []), rec.model || null, Date.now(), rec.status === 'published' ? Date.now() : null,
           rec.analyst || null, rec.lens || null, rec.version || 1, rec.rivalry ? JSON.stringify(rec.rivalry) : null, rec.headline || null, rec.dek || null, rec.gameId ? String(rec.gameId) : null,
-          rec.components ? JSON.stringify(rec.components) : null, rec.wrap || null).run();
+          rec.components ? JSON.stringify(rec.components) : null, rec.wrap || null, rec.dfsHeadline || null, rec.dfsDek || null).run();
 }
 // Everything a packet reads, read once. Extends the desk's context with the
 // freshness stamps and the DFS slates under the metrics.
@@ -11411,6 +11431,8 @@ async function produceContent(env, kind, opts) {
   const rivalry = packet.rivalry && written.body && written.body.rivalryLine ? { ...packet.rivalry, line: String(written.body.rivalryLine).slice(0, 300) } : null;
   await contentStore(env, { season, week, kind, gameId, slug, title, status, brief: packet, body: written.body, violations, model: written.model, analyst, lens: packet.meta.lens, version, rivalry,
                            headline: written.body ? weekCase(String(written.body.headline || '').slice(0, 200)) : null, dek: written.body ? weekCase(String(written.body.dek || '').slice(0, 400)) : null,
+                           dfsHeadline: written.body && written.body.dfsHeadline ? weekCase(String(written.body.dfsHeadline).slice(0, 200)) : null,
+                           dfsDek: written.body && written.body.dfsDek ? weekCase(String(written.body.dfsDek).slice(0, 400)) : null,
                            components: _componentsOf(written.body), wrap: _wrapOf(written.body) });
   let calls = { stored: 0 };
   if (status === 'published' && written.body) {
@@ -11504,6 +11526,13 @@ async function runContentTick(env) {
   }
   return { ok: true, at: Date.now(), results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? r.due : false)) };
 }
+// THE HEADLINE FOR THE LENS BEING SERVED. A package that runs in both lenses
+// is written twice and headlined twice (`dfs_headline`, 2026-09-21). A row
+// stored before that column existed has it null, and every lane falls back to
+// the weekly sentence rather than going blank: the desk republishes each week,
+// so the fallback empties itself without anything being backfilled.
+const _lensHead = (row, lens) => (lens === 'dfs' && row.dfs_headline) ? row.dfs_headline : row.headline;
+const _lensDek = (row, lens) => (lens === 'dfs' && row.dfs_headline) ? (row.dfs_dek || null) : row.dek;
 const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, dfsAnalyst: d.id, dfsName: d.name }; };
 // A per-game row gets a fourth segment: the game, slugified. `_gameSlug` is
 // idempotent, so the segment read back off the path rebuilds the stored slug
@@ -11575,7 +11604,10 @@ async function contentPiecePayload(env, kind, season, week, game) {
     // comes back as its matchup and the page prints the week itself.
     return { ok: true, contract: CONTENT_CONTRACT, kind, title: _pieceTitle(row), subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
              game: row.game_id || null, matchup: brief && brief.meta ? brief.meta.matchup || null : null, url: _pieceUrl(row),
-             edition: _pieceEdition(row), headline: weekCase(row.headline) || null, dek: weekCase(row.dek) || null, byline: _bylineOf(row), lens, legacy: !K,
+             edition: _pieceEdition(row), headline: weekCase(row.headline) || null, dek: weekCase(row.dek) || null,
+             // Both pairs ride along; /in-season/desk switches lens in the
+             // browser and picks, the same way it already picks `dfsTitle`.
+             dfsHeadline: weekCase(row.dfs_headline) || null, dfsDek: weekCase(row.dfs_dek) || null, byline: _bylineOf(row), lens, legacy: !K,
              createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly', brief), dfs: sectionsFor(kind, 'dfs', brief) }, objectSections: NEWSROOM_OBJECT_SECTIONS,
              body, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
@@ -11655,7 +11687,7 @@ async function newsroomFeedPayload(env, lens, limit) {
     const want = Math.min(60, limit || 20);
     // Over-fetch: the rows the expiry and the lens drop would otherwise leave
     // the feed short of what the page asked for.
-    const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, rivalry, game_id, components FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, want + 24)).all();
+    const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, dfs_headline, dfs_dek, rivalry, game_id, components FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, want + 24)).all();
     let rows = (q.results || []);
     // ONE ROW PER STORY. A live piece re-produced on its slug has several
     // published versions, and the opener's recap was stored twice by two
@@ -11677,7 +11709,7 @@ async function newsroomFeedPayload(env, lens, limit) {
     // per-game row IS the matchup: six rows all reading "Game Recap" would say
     // nothing about which game. `components` are the findings the rail breaks
     // the story into once it is no longer the lead.
-    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, expired, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, edition: _pieceEdition(r), publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry,
+    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, expired, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: _lensHead(r, lens), dek: _lensDek(r, lens), version: r.version || 1, edition: _pieceEdition(r), publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry,
       game: r.game_id || null, perGame: !!(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].perGame), components: parse(r.components) })) };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
@@ -13427,10 +13459,17 @@ async function contentAdmin(env, action, kind, season, week, body, game) {
   // columns, lifted out of the draft at store time; an edit that only wrote
   // `body` left the old headline on every card. Lift them again here, the
   // same way contentStore does, so what the editor saved is what is shown.
-  const headline = b.headline != null && String(b.headline).trim() ? String(b.headline).trim().slice(0, 200) : (row.headline || null);
-  const dek = b.dek != null && String(b.dek).trim() ? String(b.dek).trim().slice(0, 400) : (row.dek || null);
-  await env.LEADS_DB.prepare('UPDATE content_pieces SET body = ?, violations = ?, model = ?, headline = ?, dek = ? WHERE id = ?').bind(JSON.stringify(b), JSON.stringify(warnings), 'editor', headline, dek, row.id).run();
-  row.body = JSON.stringify(b); row.violations = JSON.stringify(warnings); row.model = 'editor'; row.headline = headline; row.dek = dek;
+  const lift = (v, was, n) => (v != null && String(v).trim()) ? String(v).trim().slice(0, n) : (was || null);
+  const headline = lift(b.headline, row.headline, 200);
+  const dek = lift(b.dek, row.dek, 400);
+  // The DFS pair is lifted the same way. An edit that rewrote the weekly
+  // headline and left this one alone used to leave /dfs on the old sentence,
+  // which is the drift the lift exists to prevent, one lens over.
+  const dfsHeadline = lift(b.dfsHeadline, row.dfs_headline, 200);
+  const dfsDek = lift(b.dfsDek, row.dfs_dek, 400);
+  await env.LEADS_DB.prepare('UPDATE content_pieces SET body = ?, violations = ?, model = ?, headline = ?, dek = ?, dfs_headline = ?, dfs_dek = ? WHERE id = ?').bind(JSON.stringify(b), JSON.stringify(warnings), 'editor', headline, dek, dfsHeadline, dfsDek, row.id).run();
+  row.body = JSON.stringify(b); row.violations = JSON.stringify(warnings); row.model = 'editor';
+  row.headline = headline; row.dek = dek; row.dfs_headline = dfsHeadline; row.dfs_dek = dfsDek;
   return { ok: true, action, warnings, piece: full() };
 }
 

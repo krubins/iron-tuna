@@ -38,7 +38,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, weekCase, weekFrameProblems, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, _weeksPlayed, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK, packetCalledItWeek, weekPublishedCalls, gradeStoryCall, CALL_PUSH_PTS, WEEK_WINS_MAX, WEEK_MISSES_MAX, CONDITIONAL_SECTIONS };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, rivalryColumns, RIVALRY_PICKS, RIVALRY_COLUMN_KIND, runRivalryColumn, setBoards: f => { boardsPayload = f; }, rivalryColumnRead, rivalryLedger, weekFinishRanks, gradeRivalryCall, runCallsGrade, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normalizeCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRevivable, weekCase, weekFrameProblems, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, WRITER_MAX_TOKENS, _anthropicStreamText, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE, _vindication, _freezeRows, _voiceBlock, _weeksPlayed, CALLED_MIN_PTS, CALLED_MIN_RANKS, CALLED_HEADLINE_PTS, CALLED_HEADLINE_RANKS, pieceExpired, _staleRule, _lensHead, _lensDek, weekGames, _forwardRows, _fwdPlayers, packetQb, _perGameOrder, _pieceEdition, REWRITE_HELD_MAX, RECAPS_PER_TICK, packetCalledItWeek, weekPublishedCalls, gradeStoryCall, CALL_PUSH_PTS, WEEK_WINS_MAX, WEEK_MISSES_MAX, CONDITIONAL_SECTIONS };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => USAGE, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -398,7 +398,7 @@ console.log('\nthe fact check');
 {
   const packet = H._finishBrief({ meta: { kind: 'trade-desk', lens: 'both' }, rivalry: null, players: [{ name: 'CeeDee Lamb', targets: 12, share: 34 }] });
   packet.allowed.names.push('Evan Brooks', 'Lena Park'); packet.allowed.analysts = ['Evan Brooks', 'Lena Park'];
-  const good = { headline: 'Lamb is a target', dek: 'x', weekly: { target: [{ player: 'CeeDee Lamb', why: '12 targets, a 34% share' }], tradeAway: [], reasoning: ['Brooks likes the share.'], marketCounterpoint: [] }, dfs: { attack: [], fade: [], reasoning: ['Park: no salaries loaded.'] }, calls: [] };
+  const good = { headline: 'Lamb is a target', dek: 'x', dfsHeadline: 'Lamb is the chalk', dfsDek: 'x', weekly: { target: [{ player: 'CeeDee Lamb', why: '12 targets, a 34% share' }], tradeAway: [], reasoning: ['Brooks likes the share.'], marketCounterpoint: [] }, dfs: { attack: [], fade: [], reasoning: ['Park: no salaries loaded.'] }, calls: [] };
   ok('a draft inside the packet, in the right shape, passes', H.factCheck(good, packet).ok, H.factCheck(good, packet).problems.join(';'));
   const bad = JSON.parse(JSON.stringify(good)); bad.weekly.reasoning = ['Jerry Jeudy had 155 yards.'];
   const v = H.factCheck(bad, packet);
@@ -415,6 +415,36 @@ console.log('\nthe fact check');
   const mv = H.factCheck(miss, packet);
   ok('a missing lens or section is caught', mv.problems.includes('missing:dfs') && mv.problems.includes('missing:weekly.tradeAway'));
   ok('every kind has weekly sections, and every both-lens kind has DFS sections', Object.entries(H.CONTENT_KINDS).every(([k, v]) => H.sectionsFor(k, 'weekly').length >= 4 && (v.lens === 'both' ? H.sectionsFor(k, 'dfs').length >= 3 : H.sectionsFor(k, 'dfs').length === 0)));
+
+  // A HEADLINE PER LENS (2026-09-21). /dfs printed the Weekly Fantasy sentence
+  // under the DFS byline -- "the clearest roster add of the week" over a
+  // lineup page -- because a piece carried one headline for two lenses. A
+  // both-lens piece owes a DFS headline and is HELD without one, exactly as it
+  // is held for a missing section; a weekly-only piece is never asked.
+  const noDfsHead = JSON.parse(JSON.stringify(good)); delete noDfsHead.dfsHeadline;
+  ok('a both-lens piece with no DFS headline is held', H.factCheck(noDfsHead, packet).problems.includes('missing:dfsHeadline'));
+  const blankDfsHead = JSON.parse(JSON.stringify(good)); blankDfsHead.dfsHeadline = '   ';
+  ok('and a blank one does not count as one', H.factCheck(blankDfsHead, packet).problems.includes('missing:dfsHeadline'));
+  const weeklyOnly = H._finishBrief({ meta: { kind: 'ros-rankings', lens: 'weekly' }, rivalry: null, players: [{ name: 'CeeDee Lamb', targets: 12, share: 34 }] });
+  const wOnlyBody = { headline: 'Movers', dek: 'x', weekly: Object.fromEntries(H.sectionsFor('ros-rankings', 'weekly').map(k => [k, []])), calls: [] };
+  ok('a weekly-only piece is never asked for one', !H.factCheck(wOnlyBody, weeklyOnly).problems.some(p => /dfsHeadline/.test(p)),
+     H.factCheck(wOnlyBody, weeklyOnly).problems.join(';'));
+  // The week-frame check reads both pairs, so a DFS headline cannot preview a
+  // week that has already been played while the weekly one gets it right.
+  const meta = { storyType: 'retrospective', week: 2, forwardWeek: 3 };
+  ok('the week frame is checked on the DFS headline too',
+     H.weekFrameProblems({ headline: 'What Week 2 taught us', dek: 'x', dfsHeadline: 'Week 2 chalk to roster', dfsDek: 'x' }, meta)
+      .some(p => /^week:dfsHeadline/.test(p)));
+  ok('and a DFS headline that looks back is fine',
+     !H.weekFrameProblems({ headline: 'What Week 2 taught us', dek: 'x', dfsHeadline: 'What Week 2 taught us about Week 3 pricing', dfsDek: 'x' }, meta)
+       .some(p => /dfsHeadline/.test(p)));
+  // The feed serves the lens it was asked for, and falls back rather than
+  // going blank on a row stored before the column existed.
+  const row = { headline: 'W', dek: 'wd', dfs_headline: 'D', dfs_dek: 'dd' };
+  const old = { headline: 'W', dek: 'wd', dfs_headline: null, dfs_dek: null };
+  ok('the weekly lane reads the weekly pair', H._lensHead(row, 'weekly') === 'W' && H._lensDek(row, 'weekly') === 'wd');
+  ok('the DFS lane reads the DFS pair', H._lensHead(row, 'dfs') === 'D' && H._lensDek(row, 'dfs') === 'dd');
+  ok('a row written before the column falls back to the weekly pair', H._lensHead(old, 'dfs') === 'W' && H._lensDek(old, 'dfs') === 'wd');
 }
 
 // The first live Thursday preview (2026-09-09) was held over headline words:
@@ -855,7 +885,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   ok('the fact check asks the scorecard for its sections and holds a draft without them', (() => {
     const packet = H._finishBrief({ meta: { kind: 'what-tuna-got-right', lens: 'both', analyst: 'mercer', dfsAnalyst: 'park' }, ...p });
     packet.allowed.analysts = ['Jack Mercer', 'Lena Park'];
-    const full = { headline: 'Cy Huge is the week', dek: 'x', weekly: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'weekly', packet).map(k => [k, ['Cy Huge scored 25.']])), dfs: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'dfs', packet).map(k => [k, ['Cy Huge scored 25.']])) };
+    const full = { headline: 'Cy Huge is the week', dek: 'x', dfsHeadline: 'Cy Huge is the price', dfsDek: 'x', weekly: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'weekly', packet).map(k => [k, ['Cy Huge scored 25.']])), dfs: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'dfs', packet).map(k => [k, ['Cy Huge scored 25.']])) };
     const missing = { ...full, weekly: { theRecord: ['Cy Huge scored 25.'] } };
     return H.factCheck(full, packet).ok && H.factCheck(missing, packet).problems.some(x => /missing:weekly.biggestWins/.test(x));
   })());
