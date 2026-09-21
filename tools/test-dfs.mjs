@@ -1306,11 +1306,16 @@ console.log('\nthe single-game file');
   ok('the two roster tables agree, because a reader compares the page to the lobby and not to us',
      (() => {
        const w = H.DFS_SITES.dk.single, o = DFS.FORMATS['dk-showdown'];
-       const wf = H.DFS_SITES.fd.single, of = DFS.FORMATS['fd-single'];
        return w.cap === o.cap && w.slots.join() === o.slots.join() && w.flex.join() === o.flex.join()
-         && w.mult.CPT === o.mult.CPT && w.minTeams === o.minTeams
-         && wf.cap === of.cap && wf.slots.join() === of.slots.join() && wf.mult.MVP === of.mult.MVP;
+         && w.mult.CPT === o.mult.CPT && w.minTeams === o.minTeams;
      })());
+  // The optimizer carried a FanDuel roster until 2026-09-21 and this gate
+  // cross-checked it against DFS_SITES.fd the way the pair above still does
+  // for DraftKings. The worker's fd entry outlived it, so nothing on the
+  // optimizer side is left to compare it to.
+  ok('no FanDuel roster survives in the optimizer for a reader to be shown',
+     !Object.keys(DFS.FORMATS).some(k => /^fd-/.test(k))
+     && !Object.values(DFS.FORMATS).some(f => f.site === 'fd' || (f.mult && f.mult.MVP)));
 }
 
 console.log('\nthe tiers a Tiers contest posts');
@@ -1433,11 +1438,14 @@ console.log('\nthe Showdown roster');
     ok('a one-team pool has no field to average on a roster that needs two',
        DFS.fieldAverage(owned.filter(p => p.team === 'BUF'), { slots: fmt.slots, flex: fmt.flex, cap: fmt.cap, mult: fmt.mult, minTeams: 2 }) === null);
   }
-  ok('FanDuel sells the same roster at its own cap and calls the seat MVP',
-     (() => { const f = DFS.formatFor('fd', 'showdown-captain');
-              const fr = DFS.build(players, { format: f, mode: 'ironTuna' });
-              return f.cap === 60000 && fr.ok && fr.lineups[0].players[0].slot === 'MVP'
-                && fr.lineups[0].salary <= 60000; })());
+  // The site argument is ignored but still accepted: dfs.html and
+  // dfs-optimizer.js deploy as two unversioned files, so a browser mid-deploy
+  // can hold one of each, and an arity change would have it read 'dk' as the
+  // Game Style and solve a Showdown as a Classic.
+  ok('the Game Style alone names the roster, whatever site is passed beside it',
+     ['dk', 'fd', '', undefined].every(st =>
+       DFS.formatFor(st, 'showdown-captain').key === 'dk-showdown'
+       && DFS.formatFor(st, 'classic').key === 'dk-classic'));
 }
 
 console.log('\nthe formats with no cap at all');

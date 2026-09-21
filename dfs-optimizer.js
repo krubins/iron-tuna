@@ -19,7 +19,6 @@
  *   classic    — nine slots, one FLEX, the site's cap. What this always did.
  *   showdown   — a single game: one Captain at 1.5x points and 1.5x salary,
  *                five FLEX, any position in any seat, both teams represented.
- *                FanDuel sells the same roster and calls the seat MVP.
  *   tiers      — no salary cap at all. One player out of each posted tier, so
  *                the whole contest is which body inside a bucket, not price.
  *   draft      — a snake or a live draft. No cap either, because there is
@@ -142,9 +141,9 @@
 
   // ── what each contest actually builds ─────────────────────────────────────
   // A slot that names a position (QB, RB, DST) takes that position and nothing
-  // else. Every other seat -- FLEX on the classic roster, CPT on a DraftKings
-  // Showdown, MVP on a FanDuel single game, UTIL anywhere -- is an open seat,
-  // and `flex` is the format's list of the positions allowed to sit in one.
+  // else. Every other seat -- FLEX on the classic roster, CPT on a Showdown,
+  // UTIL anywhere -- is an open seat, and `flex` is the format's list of the
+  // positions allowed to sit in one.
   // That is the whole difference between a classic FLEX (three positions) and
   // a Showdown FLEX (all six), and it is why eligibility is a property of the
   // format rather than a constant in this file.
@@ -153,12 +152,10 @@
   var CLASSIC_SLOTS = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DST'];
   var CLASSIC_FLEX = ['RB', 'WR', 'TE'];
 
-  // Verified against the operators' published rules, 20 Sep 2026. Both caps,
-  // both multiplier seats and the both-teams rule are what the lobby enforces
-  // at the moment this was written; when an operator changes one, THIS TABLE
-  // is the only thing that should have to change. FanDuel moved its MVP to
-  // 1.5x salary (it used to be free) and added a sixth seat in 2025, which is
-  // why the two single-game rosters are now the same shape at different caps.
+  // Verified against DraftKings' published rules, 20 Sep 2026. The cap, the
+  // Captain's 1.5x and the both-teams rule are what the lobby enforces at the
+  // moment this was written; when DraftKings changes one, THIS TABLE is the
+  // only thing that should have to change.
   var FORMATS = {
     'dk-classic': { key: 'dk-classic', kind: 'salary', site: 'dk', label: 'DraftKings Classic',
       roster: 'One QB, two RB, three WR, one TE, one FLEX and a defense, under a $50,000 cap.',
@@ -167,19 +164,12 @@
       roster: 'One Captain and five FLEX out of a single game, under a $50,000 cap. The Captain scores 1.5x and costs 1.5x, and both teams have to be represented.',
       cap: 50000, slots: ['CPT', 'FLEX', 'FLEX', 'FLEX', 'FLEX', 'FLEX'], flex: ANY_POSITION,
       mult: { CPT: 1.5 }, minTeams: 2 },
-    'fd-classic': { key: 'fd-classic', kind: 'salary', site: 'fd', label: 'FanDuel Classic',
-      roster: 'One QB, two RB, three WR, one TE, one FLEX and a defense, under a $60,000 cap.',
-      cap: 60000, slots: CLASSIC_SLOTS, flex: CLASSIC_FLEX },
-    'fd-single': { key: 'fd-single', kind: 'salary', site: 'fd', single: true, label: 'FanDuel Single Game',
-      roster: 'One MVP and five FLEX out of a single game, under a $60,000 cap. The MVP scores 1.5x and costs 1.5x, and both teams have to be represented.',
-      cap: 60000, slots: ['MVP', 'FLEX', 'FLEX', 'FLEX', 'FLEX', 'FLEX'], flex: ANY_POSITION,
-      mult: { MVP: 1.5 }, minTeams: 2 },
     // No cap, so there is no value-per-dollar to solve: the contest is one
     // body out of each posted bucket. The tiers come off the lobby file --
-    // FanDuel prints a Tier column and DraftKings names the tier in the roster
-    // position -- and tierFormat() below turns whatever the file carried into
-    // a roster. A slate with no tiers on it cannot be solved as a Tiers
-    // contest, and says so rather than inventing buckets out of salary.
+    // DraftKings names the tier in the roster position -- and tierFormat()
+    // below turns whatever the file carried into a roster. A slate with no
+    // tiers on it cannot be solved as a Tiers contest, and says so rather
+    // than inventing buckets out of salary.
     tiers: { key: 'tiers', kind: 'tiers', label: 'Tiers',
       roster: 'One player out of each posted tier. There is no salary cap, so the question at every tier is which body, never which price.',
       cap: 0, flex: ANY_POSITION },
@@ -218,15 +208,21 @@
     pick6: 'picks', 'single-stat-yards': 'picks', 'single-stat-touchdowns': 'picks',
     'best-ball': 'season'
   };
-  // A Game Style names a roster; the site names the cap and the seat. Resolve
-  // both together so nothing downstream has to know that DraftKings calls the
-  // multiplier seat a Captain and FanDuel calls it an MVP.
+  // A Game Style names a roster and DraftKings is the only lobby the site
+  // carries, so the style alone decides it.
+  //
+  // `site` is still the first argument and is still ignored. This file and
+  // dfs.html are two unversioned assets off the same origin, so a browser can
+  // hold one from before a deploy and one from after. Drop the argument and
+  // that browser passes 'dk' where the Game Style belongs, GAME_STYLE_FORMAT
+  // misses, and a Showdown silently solves as a Classic -- a roster the lobby
+  // would reject, handed over without a word. An ignored argument cannot do
+  // that, which is worth more than the line it costs.
   function formatFor(site, gameStyle) {
-    var s = site === 'fd' ? 'fd' : 'dk';
     var fam = GAME_STYLE_FORMAT[gameStyle] || 'classic';
-    if (fam === 'classic') return FORMATS[s + '-classic'];
-    if (fam === 'showdown') return FORMATS[s === 'fd' ? 'fd-single' : 'dk-showdown'];
-    return FORMATS[fam] || FORMATS[s + '-classic'];
+    if (fam === 'classic') return FORMATS['dk-classic'];
+    if (fam === 'showdown') return FORMATS['dk-showdown'];
+    return FORMATS[fam] || FORMATS['dk-classic'];
   }
   // A Tiers roster out of whatever tiers the lobby file actually carried. One
   // seat per distinct tier, in the file's own order, and nothing at all when
@@ -297,9 +293,9 @@
       if (cfg.maxPerTeam && team[p.team] > cfg.maxPerTeam) return false;
     }
     if (cfg.cap > 0 && salary > cfg.cap) return false;
-    // Both teams, on a single-game roster. DraftKings and FanDuel both reject
-    // an entry that is six bodies from one side, so a solver that can return
-    // one is a solver that hands a reader a rejected entry.
+    // Both teams, on a single-game roster. DraftKings rejects an entry that is
+    // six bodies from one side, so a solver that can return one is a solver
+    // that hands a reader a rejected entry.
     if (cfg.minTeams && teams < cfg.minTeams) return false;
     // A required player is a CONSTRAINT, not a preference. The greedy fill can
     // fail to seat one (two locked quarterbacks, a lock whose only slot was

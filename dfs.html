@@ -2497,7 +2497,7 @@ p{color:var(--sec);margin:0 0 16px}
     }
     if (fmt.kind === 'salary' && fmt.single && priced !== 'single-game') {
       out.ready = false;
-      out.blocked = siteLabel() + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. Building ' + fmt.label + ' from the main slate would seat a ' + (fmt.mult && fmt.mult.MVP ? 'MVP' : 'Captain') + ' at a price nobody is charged \u2014 a roster you could not enter \u2014 so the board declines rather than printing one. Hand over the export from the contest lobby and it solves exactly.';
+      out.blocked = siteLabel() + ' prices a single-game contest on a file of its own: different salaries, six seats and a multiplier the main slate does not have. Building ' + fmt.label + ' from the main slate would seat a Captain at a price nobody is charged \u2014 a roster you could not enter \u2014 so the board declines rather than printing one. Hand over the export from the contest lobby and it solves exactly.';
       out.needsFile = true;
       return out;
     }
