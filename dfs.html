@@ -289,12 +289,6 @@ p{color:var(--sec);margin:0 0 16px}
 .is-board .df-mkt-inferred,.is-board .df-mkt-fitted{color:#9fb6b1}
 .df-pname-line .df-mkt-quoted,.df-pname-line .df-mkt-inferred,.df-pname-line .df-mkt-fitted{margin-left:2px;white-space:nowrap}
 
-/* The board is the answer, so on a wide screen it is allowed out past the
-   1200px column the rest of the page reads in. Centred on the viewport, not
-   on the wrap, so it stays symmetrical. */
-@media(min-width:1180px){
-  .df-main>#sec-lineup{width:min(calc(100vw - 40px),1440px);margin-left:calc(50% - min(calc(50vw - 20px),720px))}
-}
 @media(max-width:900px){
   .df-lead-grid{padding:0 var(--space-4) var(--space-4)}
   .df-explain-summary{margin-left:var(--space-4);margin-right:var(--space-4)}
@@ -729,11 +723,10 @@ p{color:var(--sec);margin:0 0 16px}
 
    Nothing here moves an id, a control, a string or a line of script. */
 
-/* The page's h1, kept in the document and off the screen. Removing the opening
-   band left nowhere to show a heading, and a page with no h1 is a page search
-   and a screen reader both have to guess at. Same off-screen idiom .skip-link
-   uses in site.css, so there is one way to do this rather than two. */
-.df-h1{position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden}
+/* The h1 was off the screen from the day the opening band was removed: there
+   was nowhere left to show a heading, and a page with no h1 is a page search
+   and a screen reader both have to guess at. The nameplate is somewhere to
+   show one, so it is on the screen again and the off-screen idiom is gone. */
 
 /* THE UA SHEET'S [hidden] IS SPECIFICITY (0,1,0) — the same as any class — and
    loses to an author sheet at a tie, so `.rk-seg{display:inline-flex}` and
@@ -742,13 +735,32 @@ p{color:var(--sec);margin:0 0 16px}
    fix for the same reason. This makes the attribute mean what it says. */
 [hidden]{display:none !important}
 
-/* The board switch takes itself off on a DraftKings format with no salary-cap
-   boards. Its label goes with it rather than labelling nothing, and so does the
-   ribbon around them: the venue switch used to keep that ribbon populated, and
-   with the venue switch gone an empty one is a bordered white strip under the
-   masthead with nothing in it. */
-.is-ribbon-in:has(#dfNav[hidden]) .df-ribbon-lab-board{display:none}
-.is-ribbon:has(#dfNav[hidden]){display:none}
+/* ── the board switch, down the rail ────────────────────────────────────────
+   #dfNav is the same element, with the same id, the same five buttons and the
+   same handler: it moved out of the sticky ribbon and into the left rail, and
+   not one line of script changed with it. What changes is its axis — a rail is
+   a column — and that it now reads as the first group in the page's
+   navigation rather than as a bar of its own.
+
+   It still takes itself off on a DraftKings format with no salary-cap boards,
+   and its heading goes with it rather than labelling nothing. */
+.sl-nav .rk-seg{display:flex;flex-direction:column;width:100%;border:0;border-radius:0;background:transparent;flex-wrap:nowrap}
+.sl-nav .rk-seg button{border-left:0;border-bottom:1px solid var(--line);padding:9px 0;text-align:left;
+  font-size:15px;font-weight:800;letter-spacing:-.005em;color:var(--text)}
+.sl-nav .rk-seg button:last-child{border-bottom:0}
+.sl-nav .rk-seg button:hover{background:transparent;color:var(--teal)}
+/* The pressed board is named by a rule down its left edge, not by a teal fill:
+   filled pills in a column read as five buttons, and this is a place marker. */
+.sl-nav .rk-seg button[aria-pressed="true"]{background:transparent;color:var(--teal);box-shadow:inset 2px 0 0 var(--teal);padding-left:10px}
+.sl-nav-board[hidden],.sl-nav .rk-seg[hidden]{display:none !important}
+.sl-nav:has(#dfNav[hidden]) .df-ribbon-lab-board{display:none}
+@media(max-width:860px){
+  .sl-nav .rk-seg{flex-direction:row;gap:var(--space-2);overflow-x:auto;scrollbar-width:none}
+  .sl-nav .rk-seg::-webkit-scrollbar{display:none}
+  .sl-nav .rk-seg button{flex:0 0 auto;border-bottom:0;border:1px solid var(--line2);border-radius:999px;
+    padding:8px 13px;background:var(--bg);white-space:nowrap}
+  .sl-nav .rk-seg button[aria-pressed="true"]{box-shadow:none;border-color:var(--teal);padding-left:13px}
+}
 
 /* The NFL clock now dates the setup band rather than the band that used to open
    the page. .its-strip paints itself --panel, which is the tinted band's own
@@ -756,17 +768,45 @@ p{color:var(--sec);margin:0 0 16px}
    other plate on a band already does (see .is-band .is-plate in site.css). */
 .is-band .its-strip{background:var(--bg)}
 
-/* The lead story's own column, above the setup band. It takes the same top
-   padding .df-main does, because the ribbon above it takes itself off the page
-   when the board switcher is hidden (.is-ribbon:has(#dfNav[hidden])) and the
-   well would otherwise butt the masthead. Its section carries no top margin:
-   it is the first thing on the page, with nothing above it to be spaced from. */
-.df-lead{padding-top:var(--space-4)}
-.df-lead>section{margin-top:0}
-.df-lead>section>.is-sec:first-child{margin-top:0}
+/* ── what the rail costs the board, said plainly ────────────────────────────
+   The lineup board used to break out past the 1,200px column on a wide screen
+   — width:min(100vw - 40px, 1440px), centred on the viewport — because it is
+   the answer this page exists to give. It cannot do that any more, and the
+   reason is geometry rather than taste: a breakout centred on the viewport
+   runs under a rail that is pinned to the left of it, and this page now has
+   one that stays there the whole way down because it carries the board
+   switch.
+
+   So the board takes the column, and the column is made wider to pay for it:
+   .df-shell is 1,600px where the three-column front is 1,340px, which puts
+   the boards at about 1,308px against the 1,200px the rest of the page read
+   in before. On a 1440-wide screen the lineup board is the one thing that
+   ends up narrower than it was. Its table sets min-width:620px and scrolls
+   inside its own frame, so nothing about it breaks; it is less roomy, and
+   that is the trade for a switch the reader can always reach. */
+/* Two columns, not three, and 1,600px rather than 1,340px: the third column
+   the shared shell declares is the player rail, and on this page that rail
+   sits beside the stories instead (.sl-front) so the boards below get the
+   whole measure. These rules come after site.css, so they beat its own
+   media-query versions at equal specificity without needing to repeat them. */
+.df-shell{max-width:1600px;grid-template-columns:224px minmax(0,1fr);grid-template-areas:"nav main"}
+@media(max-width:860px){
+  .df-shell{grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "main"}
+}
+/* The nameplate is the shell's width, not the three-column front's. */
+.df-mast .sl-in{max-width:1600px}
+.df-shell .sl-left{z-index:2}
+/* The stories are the front's left-hand column; the player rail is beside
+   them, not down the page, because below them the boards want the width. */
+.sl-front>section{margin:0}
+.sl-front>section>.is-sec:first-child{margin-top:0}
 
 /* The white column between the two tinted bands. */
 .df-main{padding-top:var(--space-4)}
+/* Inside the shell the column supplies its own measure, so the wrap that used
+   to cap it at 1,200px is gone from the markup and these rules address the
+   column directly. */
+.sl-main>.df-main{max-width:none;padding-left:0;padding-right:0}
 .df-main>.df-play-week:first-child{margin-top:0}
 /* The roster now opens the column, directly under the setup band it is
    solved from, so its section rule does not need the full gap a section
@@ -802,62 +842,87 @@ p{color:var(--sec);margin:0 0 16px}
 </div></header>
 <main id="main">
 
-<!-- ── 1 · the heading, and nothing else ───────────────────────────────────
-     A reader on /dfs knows what DFS is and why he opened this page, so the band
-     that used to tell him both is gone and the page opens on its first control.
-     The h1 stays in the document for search and for a screen reader, off screen,
-     because there is no longer a place on the page to show one. The NFL clock it
-     used to carry moved into the setup band below, where it dates the slate the
-     reader is about to pick — it-season.js paints [data-season-strip] wherever
-     it is, so nothing about the clock changes but where it sits. -->
-<h1 class="df-h1">DFS: the market read, aimed at one slate</h1>
-
-<!-- ── 2 · the board ────────────────────────────────────────────────
-     The switch that governs every board on the page, in a ribbon directly
-     under the masthead the way the rankings ribbon sits under the homepage
-     one. It was an unlabelled pill group loose in the column, which meant a
-     reader eleven rows into the values table had to scroll back to the top to
-     change board. Sticky, so it comes with him, and first, so the page opens
-     on a control rather than on a paragraph. The venue switch that used to
-     sit beside it is gone: DraftKings is the only venue we carry, so there
-     was never a second thing to choose. -->
-<nav class="is-ribbon" aria-label="Board">
-  <div class="is-ribbon-in">
-    <span class="is-ribbon-lab df-ribbon-lab-board" id="dfNavLab">Board</span>
-    <div class="rk-seg" id="dfNav" role="group" aria-labelledby="dfNavLab"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
+<!-- ── the nameplate ──────────────────────────────────────────────────────
+     /dfs had no opening band at all: the h1 was off the screen and the page
+     started on the board switcher, on the argument that a reader here already
+     knows what DFS is. That argument holds against a 300px hero and not
+     against a nameplate, which is a strip: the lane's name, the sentence the
+     lane is FOR, and nothing else. /fantasy wears the same one from the day
+     before this, and the pair of them are now the two doors into the section
+     rather than two different-looking pages. -->
+<section class="sl-mast df-mast">
+  <div class="sl-in">
+    <p class="sl-date">
+      <span class="is-eyebrow">In-Season &middot; DFS</span>
+      <span class="its-strip" data-season-strip></span>
+    </p>
+    <h1>DFS: <em>the odds makers&rsquo; edge</em> to one slate, one cap and one lineup</h1>
+    <p class="sl-deck">Every salary on the slate read against market-implied points, then solved against the cap for the contest you are actually entering.</p>
   </div>
-</nav>
+</section>
 
-<!-- ── the lead story ──────────────────────────────────────
-     Ken, 2026-09-21: "move the dfs newsroom to be just below the hero." /dfs
-     has no hero band -- §1 above says why -- so the position that answers the
-     instruction is the one /fantasy's well holds: first thing under the
-     ribbon, before anything else on the page. It opened the white column
-     below the setup band until now, which is the same argument one band late.
+<div class="sl-shell df-shell">
 
-     What this costs, said plainly because it undoes part of an earlier
-     decision: the setup band is the one question every board is solved for,
-     and it was put first so the page would open on a control rather than on
-     a paragraph. It now opens on a story and the control is one scroll down.
-     That is the instruction, and the ribbon above the well still carries a
-     reader to any board in one click.
+<!-- ── the left rail ──────────────────────────────────────────────────────
+     The board switch and the page's destinations, in one column that sticks.
+     #dfNav is the SAME element it was in the ribbon — same id, same five
+     buttons, same click handler, same `hidden` — so nothing in the script
+     below knows it moved. What it gains is a reader who can still reach it
+     eleven rows into the values table, which was the whole point of the
+     ribbon, plus a place to name the rest of the page beside it. -->
+<aside class="sl-left">
+  <nav class="sl-nav" aria-label="DFS">
+    <p class="sl-nav-h df-ribbon-lab-board" id="dfNavLab">Board</p>
+    <div class="rk-seg" id="dfNav" role="group" aria-labelledby="dfNavLab"><button type="button" data-sec="lineup">The Lineup</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button><button type="button" data-sec="dash">The Slate</button></div>
+    <div class="sl-nav-more">
+      <p>Also here</p>
+      <a href="#desk">The Newsroom</a>
+      <a href="#setup">Set up the slate</a>
+      <a href="#df-method">Where the numbers come from</a>
+      <a href="/dfs-getting-started">How the lobby works</a>
+      <a href="/fantasy">Season Long</a>
+    </div>
+  </nav>
+</aside>
 
-     Unnumbered. The numbered chapters are the boards, one visible at a time;
-     news is not one of them. Same well, same CSS (.nr-well in site.css), the
-     DFS lens in place of the weekly byline.
+<div class="sl-main">
 
-     It is also OUTSIDE .df-main, which matters beyond where it reads: while
-     it sat inside that column it was the column's first <section>, and
-     `.df-main>#sec-lineup:first-of-type` (efc10b9) stopped matching, so the
-     roster silently lost its margin rules. The lineup is that column's first
-     section again. -->
-<div class="wrap wide df-lead">
+<!-- ── the front: the desk, and the newest thing known about one player ────
+     Ken, 2026-09-22: the same front /fantasy wears. Three stories where there
+     were six, and a player rail beside them.
+
+     The rail sits BESIDE the stories rather than down the page, which is the
+     one place this page's front differs from the other's. Below the stories
+     are the boards, and a 300px column taken out of them for the whole scroll
+     would cost the lineup board more than the rail is worth. -->
+<div class="sl-front">
   <section>
     <div class="is-sec" id="desk"><div class="is-sec-top"><span class="is-sec-n">Lead</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
-      <p>The desk’s newest packages read for the slate: price, ownership, leverage. <a href="/analysts/park">Lena Park</a> writes the DFS lens of every shared story. <a href="/analysts">The desk, and the AI disclosure &rarr;</a></p></div>
-    <div class="nr-well" id="dfDesk"></div>
-    <p class="is-empty" id="dfDeskEmpty">Reading the desk&hellip;</p>
+      <p>The desk&rsquo;s newest packages read for the slate: price, ownership, leverage. <a href="/analysts/park">Lena Park</a> writes the DFS lens of every shared story. <a href="/analysts">The desk, and the AI disclosure &rarr;</a></p></div>
+    <div class="sl-stories" id="dfDesk" hidden></div>
+    <div class="is-vacant" id="dfDeskEmpty">
+      <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
+      <div class="is-vacant-msg"><b id="dfDeskEmptyH">Reading the desk&hellip;</b><span id="dfDeskEmptyP"></span></div>
+      <a class="is-btn ghost" href="/in-season/desk">Read the desk</a>
+    </div>
   </section>
+
+  <aside class="sl-updrail">
+    <div class="sl-upd" id="dfUpd" hidden>
+      <div class="sl-upd-h"><b>Player updates</b><span class="sl-upd-n" id="dfUpdN"></span></div>
+      <div class="sl-upd-body" id="dfUpdBody" aria-live="polite"></div>
+      <div class="sl-upd-foot">
+        <button type="button" id="dfUpdPrev" aria-label="Previous player update">Prev</button>
+        <button type="button" id="dfUpdNext" aria-label="Next player update">Next</button>
+        <span class="sl-upd-dots" id="dfUpdDots" aria-hidden="true"></span>
+      </div>
+    </div>
+    <div class="is-vacant" id="dfUpdEmpty">
+      <span class="is-vacant-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg></span>
+      <div class="is-vacant-msg"><b id="dfUpdEmptyH">Reading the board&hellip;</b><span id="dfUpdEmptyP"></span></div>
+    </div>
+    <p class="sl-upd-note">Every update is a field that changed between two boards, or a rule the signal engine fired on. These are season-long reads on the men who are also on this slate, not salary calls.</p>
+  </aside>
 </div>
 
 <!-- ── 3 · the setup band ────────────────────────────────────────────────
@@ -865,8 +930,8 @@ p{color:var(--sec);margin:0 0 16px}
      reads as a step the reader completes rather than as the first of nine
      white blocks. The plate inside it, its three ordered selects and its help
      lines are exactly as they were. -->
-<div class="is-band">
-  <div class="wrap wide">
+<div class="is-band" id="setup">
+  <div class="wrap">
     <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">Setup</span><h2>Set up the slate</h2><a class="is-sec-more" href="/dfs-getting-started">How the lobby works &rarr;</a></div></div>
     <p class="df-sub">Three choices, in this order: the roster format, the games that define the eligible player pool, and the way the contest pays. Every board below is solved for what you pick here.</p>
     <div class="its-strip" data-season-strip></div>
@@ -946,7 +1011,7 @@ p{color:var(--sec);margin:0 0 16px}
      White ground between the two tinted bands, so the gold Play of the Week
      plate and the dark lineup board are the two heaviest objects on the page
      and nothing around them competes for the same attention. -->
-<div class="wrap wide df-main">
+<div class="df-main">
 
 <!-- ── the lineup ─────────────────────────────────────────────────────────────
      The first section on the page and the default one, because it is the only
@@ -1092,7 +1157,7 @@ p{color:var(--sec);margin:0 0 16px}
      section, where the numbers come from, and the market signal. Same copy,
      same links, same order. -->
 <div class="is-band">
-  <div class="wrap wide">
+  <div class="wrap">
 
 <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">More</span><h2>The rest of the section</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
 <div class="is-grid">
@@ -1111,6 +1176,10 @@ p{color:var(--sec);margin:0 0 16px}
 
   </div>
 </div><!-- /.is-band -->
+
+</div><!-- /.sl-main -->
+</div><!-- /.sl-shell -->
+
 <!-- ── the follow-up ──────────────────────────────────────────────────────────
      The roster explains itself in one direction: thesis, player notes,
      breakdown, pivots. The reader's next question goes the other way, and it
@@ -1159,6 +1228,7 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-season.js" defer></script>
 <script src="/dfs-optimizer.js" defer></script>
 <script src="/dfs-coach.js" defer></script>
+<script src="/it-signals.js" defer></script>
 <script>
 (function () {
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
@@ -1171,6 +1241,26 @@ p{color:var(--sec);margin:0 0 16px}
   // API route, the stored upload key and the board copy all key off it.
   var site = 'dk';
   var sec = 'lineup', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
+  // ── a board is a link ───────────────────────────────────────────────────
+  // The front page has sent readers to /dfs#lineup, /dfs#values, /dfs#stacks
+  // and /dfs#builder since those lane cards were written, and not one of those
+  // anchors has ever existed on this page: the sections are id="sec-lineup"
+  // and friends, and they are `hidden` until the switch picks them, so even
+  // the right id would not have scrolled to anything. Every one of those links
+  // has been landing readers at the top of the page with the default board up.
+  //
+  // The fix belongs here rather than in the links, because "which board" is
+  // this page's state and not an anchor: the hash NAMES A BOARD and the switch
+  // opens it. Both spellings are read, the bare name and the section id, so
+  // the links already written and any written against the markup both work.
+  // #builder is the fine-tune panel, which lives inside the lineup board.
+  (function fromHash() {
+    var h = String(location.hash || '').replace(/^#/, '');
+    if (!h) return;
+    if (h === 'builder' || h === 'dfTune') h = 'lineup';
+    h = h.replace(/^sec-/, '');
+    if (SEC_IDS.indexOf(h) >= 0) sec = h;
+  })();
   var gameStyle = '', gameChoice = '', payoutStructure = '';
   var selectedGames = {}, gameUniverseSig = '';
   // The week's fixtures, as the schedule knows them, for the weeks where the
@@ -1531,9 +1621,36 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfMetrics').hidden = !rows.length;
     playedOffNote($('dfMetricsNote'), metricsOff, priced.length);
   }
+  // The desk's empty state: a reason line and a detail line, never a bare
+  // sentence under a ruled heading. The shared .is-vacant object, like the
+  // one /fantasy prints.
+  function deskVacant(head, detail) {
+    $('dfDeskEmptyH').textContent = head;
+    $('dfDeskEmptyP').textContent = detail || '';
+  }
+  // ── the player rail ─────────────────────────────────────────────────────
+  // The newest thing known about one player, one at a time, off the same two
+  // reads /fantasy's rail runs on: the Wednesday snapshot diff first, because
+  // it is the only source that knows what CHANGED about a player, then the
+  // signal engine's own detections. The templates and the rotation are
+  // /it-signals.js, which is why there is no copy of them on this page.
+  //
+  // These are SEASON-LONG reads on men who happen to be on this slate, not
+  // salary calls, and the note under the rail says so. A DFS reader still
+  // wants to know that a back's role doubled on Sunday.
+  function updates() {
+    var S = window.ITSignals;
+    if (!S) { $('dfUpdEmptyH').textContent = 'The signal engine did not load.'; $('dfUpdEmptyP').textContent = 'Its script did not reach this browser.'; return; }
+    S.read('ppr').then(function (res) {
+      S.rail({ box: $('dfUpd'), body: $('dfUpdBody'), n: $('dfUpdN'), dots: $('dfUpdDots'),
+               prev: $('dfUpdPrev'), next: $('dfUpdNext'), empty: $('dfUpdEmpty'),
+               emptyH: $('dfUpdEmptyH'), emptyP: $('dfUpdEmptyP') },
+              S.items(res.movers, res.insights, 12));
+    });
+  }
   function desk() {
-    fetch('/api/newsroom?lens=dfs&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok || !j.pieces.length) { $('dfDeskEmpty').textContent = 'The desk has not published this week yet.'; return; }
+    fetch('/api/newsroom?lens=dfs&limit=3', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok || !j.pieces.length) { deskVacant('The desk has not published this week yet.', 'The first package lands at its slot once the games are final. Nothing here is stale; there is simply nothing yet.'); return; }
       // WHO A PIECE IS ABOUT: THE SUBJECT OF ITS HEADLINE FIRST.
       // `components[].player` is the desk's cast for the WHOLE piece, in the
       // order the story tells it. Stamping the first three of them put three
@@ -1611,31 +1728,28 @@ p{color:var(--sec);margin:0 0 16px}
         if (!m) return '';
         return h.slice(m[0].length).trim() || '';
       };
-      // THE LEAD IS THE NEWEST PIECE, not a chosen one: the feed is ordered by
-      // publication and the desk's slots decide what lands when.
-      var lead = j.pieces[0], rest = j.pieces.slice(1, 6);
-      var crow = boast(lead);
-      var html = '<article class="nr-lead' + (crow ? ' is-boast' : '') + '"' + focus(lead) + '>' +
-        '<span class="nr-kicker">' + kicker(lead) + '<span class="nr-flag">Latest</span></span>' +
-        (crow ? '<p class="nr-boast">You\u2019re welcome.</p>' : '') +
-        '<h3><a href="' + e(lead.url) + '">' + e(crow || lead.headline || lead.title) + '</a></h3>' +
-        (lead.dek ? '<p>' + e(lead.dek) + '</p>' : '') +
-        '<a class="nr-lead-go" href="' + e(lead.url) + '">Read the story &rarr;</a>' +
-        byline(lead) + '</article>';
-      if (rest.length) {
-        html += '<div class="nr-rail"><p class="nr-rail-h">More from the desk</p><ul>' + rest.map(function (p) {
-          // The <li> has no heading of its own, so `data-player-head` names the
-          // element the faces go in front of.
-          return '<li' + focus(p) + '><span class="nr-kicker">' + kicker(p) + '</span>' +
-            '<a data-player-head href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a>' + byline(p) + '</li>';
-        }).join('') + '</ul></div>';
-      }
-      // One published piece is a lead with nothing beside it: .nr-well-solo drops
-      // the second column rather than holding 42% of the band open beside it.
-      $('dfDesk').className = 'nr-well' + (rest.length ? '' : ' nr-well-solo');
-      $('dfDesk').innerHTML = html;
+      // THREE STORIES, NOT SIX. Ken, 2026-09-22: the same front /fantasy wears.
+      // The newest piece keeps the lead weight it earns -- the feed is ordered
+      // by publication and the desk's slots decide what lands when -- and two
+      // run as cards under it, because this column is a front page and not a
+      // six-box grid. The rest of the week is one link away in the section
+      // head. Same split, same cards and the same CSS as /fantasy's, in
+      // site.css, so the two fronts cannot drift apart.
+      var pieces = j.pieces.slice(0, 3);
+      var card = function (p, isLead) {
+        var crow = boast(p);
+        return '<article class="sl-story' + (isLead ? ' lead' : '') + (crow ? ' is-boast' : '') + '"' + focus(p) + '>' +
+          '<span class="nr-kicker">' + kicker(p) + (isLead ? '<span class="nr-flag">Latest</span>' : '') + '</span>' +
+          (crow ? '<p class="sl-boast">You\u2019re welcome.</p>' : '') +
+          '<h3><a href="' + e(p.url) + '">' + e(crow || p.headline || p.title) + '</a></h3>' +
+          (p.dek ? '<p>' + e(p.dek) + '</p>' : '') +
+          (isLead ? '<a class="sl-story-go" href="' + e(p.url) + '">Read the story &rarr;</a>' : '') +
+          byline(p) + '</article>';
+      };
+      $('dfDesk').innerHTML = pieces.map(function (p, i) { return card(p, i === 0); }).join('');
+      $('dfDesk').hidden = false;
       $('dfDeskEmpty').hidden = true;
-    }).catch(function () { $('dfDeskEmpty').textContent = 'The desk did not answer.'; });
+    }).catch(function () { deskVacant('The desk did not answer.', 'The newsroom feed is not responding. Last week\u2019s pieces are still on the desk.'); });
   }
   function values(s) {
     // The contest note is printed for every board, not just the metrics one:
@@ -4186,6 +4300,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
     $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); var view=filteredSlate(); if (view) values(view); });
     desk();
+    updates();
     // Anything moved by hand in the fine-tune panel takes the build off the
     // preset and rebuilds immediately, so the roster on screen always matches
     // the controls under it.

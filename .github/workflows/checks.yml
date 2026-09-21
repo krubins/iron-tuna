@@ -890,6 +890,22 @@ jobs:
           REQUIRE_BROWSER: '1'
         run: node tools/test-value-coach.mjs
 
+      # The synced league's strip. /fantasy read `window.ITSync` at the top
+      # level of an inline script, which runs while the document is being
+      # parsed -- before /it-sync.js, which is deferred. The global was
+      # undefined, the `if (window.ITSync)` around the block was false, and the
+      # whole feature was skipped in silence: no strip, no connect call, no
+      # Your Week card, and "Save my league" still on screen for a reader who
+      # had saved one. Nothing threw, so no gate here could see it, and none
+      # could have: the code is right and only its ORDER against the deferred
+      # scripts is wrong. This drives the real /it-sync.js against a stubbed
+      # /api/leagues on every page that carries a strip.
+      - name: The synced league's strip, on every page that has one
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node tools/test-league-strip.mjs
+
       # STILL NOT run here: tools/test-you-column.mjs, tools/test-market-anchors.mjs,
       # tools/test-vegas-slider.mjs and tools/test-qb-curve.mjs, which need react
       # and react-dom on top of the browser to mount the draft app, and
