@@ -56,6 +56,18 @@ const calls = [...writer.matchAll(/llmText\(([^\n]+)\)/g)].map(m => m[1]);
 ok(calls.length >= 1, 'newsroom has an LLM prose call');
 ok(calls.every(c => /editorialModel\s*$/.test(c)), 'every newsroom LLM call uses the dedicated editorial model');
 
+// The DFS headline backfill (2026-09-21) writes onto pieces already published.
+// It is prose over prose -- a headline for sections the fact check already
+// cleared -- but it is still a newsroom LLM call, so it answers to the same
+// model rule, and it still runs the packet's own two checks before it stores
+// anything.
+const backfill = section(worker, 'async function dfsHeadlineFor(', 'async function runDfsHeadlineBackfill(', 'dfsHeadlineFor');
+const backfillCalls = [...backfill.matchAll(/llmText\(([^\n]+)\)/g)].map(m => m[1]);
+ok(backfillCalls.length === 1, 'the DFS headline backfill has exactly one LLM prose call');
+ok(backfillCalls.every(c => /\bmodel\s*$/.test(c)), 'every DFS backfill LLM call uses the dedicated editorial model');
+ok(backfill.includes('validateDraft(') && backfill.includes('weekFrameProblems('), 'the DFS backfill validates against the packet before it stores');
+ok(!/boardsPayload\(|buildDfsSlate\(|dfsMetrics\(/.test(backfill), 'the DFS backfill never recomputes a board, slate or metric');
+
 const legacyWriter = section(worker, 'async function writePiece(', '// -- the newsroom', 'legacy writePiece');
 ok(legacyWriter.includes('const editorialModel = newsroomEditorialModel(env);'), 'legacy writer selects the dedicated editorial model');
 const legacyCalls = [...legacyWriter.matchAll(/llmText\(([^\n]+)\)/g)].map(m => m[1]);

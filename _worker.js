@@ -11441,6 +11441,98 @@ async function produceContent(env, kind, opts) {
   }
   return { ok: true, kind, week, game: gameId, status, version, edition, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [], wrote: true };
 }
+// ── backfilling a DFS headline onto a piece that predates the column ───────
+// §118 gave a both-lens piece a headline per lens and said plainly that it does
+// not backfill: a piece published before `dfs_headline` existed keeps one
+// headline and /dfs falls back to it until that kind next runs. Ken asked for
+// the published Week 2 pieces to be re-headlined rather than left to age out.
+//
+// THIS DOES NOT RE-RUN THE WRITER, and the distinction is the whole design.
+// Re-writing a published piece would put fresh prose through a packet that no
+// longer describes the week — the injury list has moved, the lines have moved,
+// the games are played — and would change what a story already on the site
+// says. The model is handed the piece's OWN published DFS sections and asked
+// for one headline and one sentence over them. That is a rewrite of prose the
+// fact check already vouched for, not a second reading of the facts.
+//
+// It is held to the same boundary anyway. `validateDraft` runs against the
+// packet the row stored, so a backfilled headline cannot name a player or a
+// number the piece never carried, and `weekFrameProblems` runs so it cannot
+// preview a week that has been played. A row whose headline fails is LEFT
+// ALONE and keeps falling back to the weekly pair: an old headline is wrong in
+// a way a reader can see through, and an invented one is not.
+const DFS_BACKFILL_SYSTEM = 'You write DFS headlines for Iron Tuna. You are given a story that has already been published and fact-checked, and its DFS sections. Write one headline and one sentence for a reader building a lineup on this slate: price, ownership, leverage, role. Never a waiver, trade or season-long roster call. Use only what the sections below already say; introduce no player, team or number that is not in them. Reply with JSON only: {"dfsHeadline":"...","dfsDek":"..."}';
+async function dfsHeadlineFor(env, row, model) {
+  let body = null, packet = null;
+  try { body = JSON.parse(row.body); } catch (e) { return { ok: false, why: 'unreadable body' }; }
+  try { packet = JSON.parse(row.brief); } catch (e) { packet = null; }
+  if (!body || !body.dfs || typeof body.dfs !== 'object') return { ok: false, why: 'no DFS lens in the stored body' };
+  const user = 'THE STORY, AS PUBLISHED\nWeekly headline: ' + String(row.headline || '') +
+    '\nWeekly deck: ' + String(row.dek || '') +
+    '\n\nITS DFS SECTIONS (the only source of words):\n' + JSON.stringify(body.dfs, null, 0).slice(0, 12000);
+  const a = await llmText(env, DFS_BACKFILL_SYSTEM, user, 400, 60000, model);
+  if (!a.ok) return { ok: false, why: a.error || 'model did not answer' };
+  let out = null;
+  try { const m = a.text.match(/\{[\s\S]*\}/); out = m ? JSON.parse(m[0]) : null; } catch (e) { out = null; }
+  if (!out || typeof out.dfsHeadline !== 'string' || !out.dfsHeadline.trim()) return { ok: false, why: 'no headline in the reply' };
+  const headline = weekCase(String(out.dfsHeadline).trim().slice(0, 200));
+  const dek = out.dfsDek ? weekCase(String(out.dfsDek).trim().slice(0, 400)) : null;
+  // The same two checks the writer's own output faces.
+  if (packet && packet.allowed) {
+    const v = validateDraft(JSON.stringify({ dfsHeadline: headline, dfsDek: dek }), packet.allowed);
+    if (!v.ok) return { ok: false, why: 'outside the packet: ' + v.names.concat(v.numbers).slice(0, 4).join(', ') };
+  }
+  if (packet && packet.meta) {
+    const wf = weekFrameProblems({ dfsHeadline: headline, dfsDek: dek }, packet.meta);
+    if (wf.length) return { ok: false, why: wf[0].slice(0, 120) };
+  }
+  return { ok: true, headline, dek };
+}
+// `preview` is the default on purpose: this writes to rows a reader is already
+// looking at, so the first call shows what it would store and changes nothing.
+// Pass `commit: true` to store. `limit` caps one run, because a week of a
+// per-game kind is sixteen model calls and a mis-click should not be sixty.
+async function runDfsHeadlineBackfill(env, opts) {
+  const o = opts || {};
+  if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  await newsroomReady(env);
+  const sched = await scheduleCacheRead(env);
+  const season = o.season != null ? o.season : (sched ? sched.season : null);
+  const week = o.week != null ? o.week : null;
+  if (season == null || week == null) return { ok: false, error: 'season_and_week' };
+  const limit = Math.max(1, Math.min(40, o.limit || 20));
+  const commit = o.commit === true;
+  const model = newsroomEditorialModel(env);
+  let rows = [];
+  try {
+    rows = ((await env.LEADS_DB.prepare(
+      "SELECT id, kind, slug, week, season, headline, dek, body, brief, game_id FROM content_pieces"
+      + " WHERE status = 'published' AND season = ? AND week = ?"
+      + " AND (dfs_headline IS NULL OR dfs_headline = '') ORDER BY published_at DESC").bind(season, week).all()).results || []);
+  } catch (e) { return { ok: false, error: 'unavailable' }; }
+  // ONE ROW PER SLUG, newest first: a piece re-published on its slug has
+  // several rows and only the one the feed serves needs a headline.
+  const seen = new Set();
+  rows = rows.filter(r => { if (seen.has(r.slug)) return false; seen.add(r.slug); return true; });
+  // Only the kinds that HAVE a DFS lens today. A weekly-only kind's rows are
+  // supposed to have a null here and must not be given one.
+  const eligible = rows.filter(r => CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].lens === 'both');
+  const skippedKind = rows.length - eligible.length;
+  const done = [], failed = [];
+  for (const r of eligible.slice(0, limit)) {
+    const got = await dfsHeadlineFor(env, r, model);
+    if (!got.ok) { failed.push({ kind: r.kind, slug: r.slug, why: got.why }); continue; }
+    if (commit) {
+      try { await env.LEADS_DB.prepare('UPDATE content_pieces SET dfs_headline = ?, dfs_dek = ? WHERE id = ?').bind(got.headline, got.dek, r.id).run(); }
+      catch (e) { failed.push({ kind: r.kind, slug: r.slug, why: 'write failed' }); continue; }
+    }
+    done.push({ kind: r.kind, slug: r.slug, was: r.headline, headline: got.headline, dek: got.dek });
+  }
+  return { ok: true, season, week, committed: commit, model,
+           counts: { missing: rows.length, eligible: eligible.length, notBothLens: skippedKind,
+                     attempted: Math.min(eligible.length, limit), written: commit ? done.length : 0, previewed: commit ? 0 : done.length, failed: failed.length },
+           pieces: done, failed };
+}
 async function revalidateHeld(env, kind, latest, packet, d, season, gameId) {
   let body = null; try { body = JSON.parse(latest.body); } catch (e) { return null; }
   if (!body || typeof body !== 'object') return null;
@@ -12127,6 +12219,15 @@ async function newsroomAdmin(env, action, body) {
     // game every time; the board passes one so the editor can pick.
     const gameId = String(b.game || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) || null;
     const r = await produceContent(env, kind, { force: true, events: b.events, gameId });
+    return { ok: !!r.ok, action, ...r };
+  }
+  // Re-headline published pieces that predate the DFS headline column. Shows
+  // what it would write unless the editor passes commit; see
+  // runDfsHeadlineBackfill for why it never re-runs the writer.
+  if (action === 'dfs-headlines') {
+    const week = /^\d{1,2}$/.test(String(b.week || '')) ? parseInt(b.week, 10) : null;
+    if (week == null) return { ok: false, error: 'week_required' };
+    const r = await runDfsHeadlineBackfill(env, { week, commit: b.commit === true, limit: b.limit });
     return { ok: !!r.ok, action, ...r };
   }
   if (action === 'scan') return { ok: true, action, scan: await runNewsScan(env) };
