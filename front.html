@@ -259,6 +259,54 @@ img{max-width:100%}
 .hm-act.down{background:#fdeceb;color:var(--value-red);border:1px solid #f3c9c6}
 .hm-act-why{display:block;margin-top:4px;font-size:11.5px;color:var(--ink-3);white-space:nowrap}
 
+/* ── the lead story ──
+   The front page carried the desk only as three rotating cards two screens
+   down, all the same size, so the piece published an hour ago and the one
+   from Tuesday were the same object. This is the well /fantasy and /dfs
+   already open on, in this page's own palette: newest piece as the lead with
+   its picture and its whole deck, the next five as headlines beside it. It is
+   the first thing under the hero, which is the whole point of a lead. */
+.hm-well{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;align-items:stretch}
+.hm-well-solo{grid-template-columns:minmax(0,1fr)}
+/* The lead sits at its own height and the column stretches to the row, so the
+   column's last rule closes level with the card when the card is the taller
+   and the card does not hold white space open when it is not. */
+.hm-lead{align-self:start;display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:26px}
+.hm-lead:hover{border-color:var(--brand-line)}
+.hm-lead .t{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--brand-dark)}
+.hm-lead .flag{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;padding:1px 6px;color:var(--gold-ink);background:#fdf4e2;border:1px solid #f0e0b0}
+.hm-lead h3{font-size:clamp(22px,2.4vw,30px);line-height:1.18;font-weight:800;letter-spacing:-.015em;color:var(--ink);overflow-wrap:anywhere}
+.hm-lead h3 a{color:inherit}
+.hm-lead h3 a:hover{color:var(--brand)}
+.hm-lead h3 .it-story-focus{display:flex;margin:0 0 14px}
+.hm-lead h3 .it-player-face{width:72px;height:72px;min-width:72px;border-radius:12px}
+/* The lead's deck runs whole; the cards below clamp theirs to keep three of
+   them scannable, and a lead clamped to two lines is only a bigger card. */
+.hm-lead p{font-size:15px;line-height:1.55;color:var(--ink-2)}
+.hm-lead .go{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
+.hm-lead .m{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-3)}
+/* The boast on the lead, at the lead's scale rather than the card's: the
+   headline under it is bigger here, so the banner is too, and the warm ground
+   is the same one .nr-lead.is-boast uses on /fantasy and /dfs. */
+.hm-lead.is-boast{border-color:rgba(242,169,0,.55);background:linear-gradient(180deg,#fffaef,var(--card) 58%)}
+.hm-lead .boast{display:block;font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:clamp(34px,3.4vw,46px);line-height:.94;letter-spacing:.015em;text-transform:uppercase;color:var(--gold-ink)}
+.hm-lead.is-boast h3{font-size:clamp(20px,2.1vw,26px);font-weight:700;letter-spacing:-.005em}
+.hm-lead.is-boast .m{border-top-color:rgba(242,169,0,.35)}
+.hm-rail{display:flex;flex-direction:column;min-width:0}
+.hm-rail-h{margin-bottom:12px;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.hm-rail ul{list-style:none;display:flex;flex-direction:column;justify-content:space-between;gap:12px;flex:1 1 auto}
+.hm-rail li{display:flex;flex-direction:column;gap:6px;min-width:0;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.hm-rail li:last-child{padding-bottom:0;border-bottom:0}
+.hm-rail li .t{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--brand-dark)}
+.hm-rail li h3{display:flex;align-items:center;font-size:14px;line-height:1.35;font-weight:700}
+.hm-rail li h3 a{color:var(--ink)}
+.hm-rail li h3 a:hover{color:var(--brand)}
+.hm-rail li h3 .it-story-focus{flex:0 0 auto;margin:0 9px 0 0}
+.hm-rail li h3 .it-player-face{width:30px;height:30px;min-width:30px;border-radius:6px}
+.hm-rail li .m{font-size:11.5px;color:var(--ink-3)}
+@media(max-width:900px){.hm-well{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:620px){.hm-lead h3 .it-player-face{width:56px;height:56px;min-width:56px;border-radius:10px}}
+
 /* ── 4 · the current articles ── */
 .hm-reads{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
 .hm-read-card{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
@@ -519,6 +567,24 @@ img{max-width:100%}
 <!--/ranks:ribbon-->
 
 <main class="wrap" id="main">
+
+  <!-- ── 1 · the lead story ─────────────────────────────────────────────────
+       Ken, 2026-09-21: the front page still had no lead. It had the desk as
+       three rotating cards below the two product lanes and the disagreement
+       table, which is a list, not a front. The newest published piece leads
+       the page now, with the next five beside it, off the same /api/newsroom
+       read the cards below already use -- so the two can never disagree about
+       what the desk has published.
+
+       Hidden until it is painted, like every other module here: a heading
+       over an empty well is worse than no heading. -->
+  <section class="hm-sec" id="lead" hidden aria-labelledby="leadHead">
+    <div class="hm-sec-head">
+      <h2 id="leadHead">The lead story</h2>
+      <a href="/in-season/desk">All articles &rarr;</a>
+    </div>
+    <div class="hm-well" id="leadWell"></div>
+  </section>
 
   <!-- ── 2 · the two product cards ──────────────────────────────────────────
        The whole product, in two cards. Each one lists the five destinations
@@ -1134,13 +1200,30 @@ img{max-width:100%}
     // the eyebrow and the headline with nothing under it: a card that says
     // the desk published and does not say what. Those rows are skipped here
     // and the piece is still in the archive at its URL.
-    var pieces = coverBand((j.pieces || []).filter(function (p) { return p && p.url && p.headline; }), Date.now());
-    if (!pieces.length) return;
-    // Who a piece is about: the players its own findings name. The card is
-    // stamped with them and player-search.js draws their faces at the head of
-    // the headline, so the group reads as three stories about named people
-    // rather than three paragraphs. A piece with no findings is stamped with
-    // nothing and keeps the plain card it has always had.
+    var live = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; });
+    if (!live.length) return;
+
+    // WHO A PIECE IS ABOUT: THE SUBJECT OF ITS HEADLINE FIRST.
+    // `components[].player` is the desk's cast for the WHOLE piece, in the
+    // order the story tells it, and stamping the first three of them put three
+    // Broncos over "Parker Washington's 43% target share makes him the
+    // clearest roster add of the week" — a JAX-at-DEN recap whose findings
+    // open on the side that won.
+    //
+    // `coverAbout` (above, #319) already answers "which of this cast is this
+    // line about", and answers it more carefully than a substring test: a full
+    // name settles it, a bare surname counts only when nobody else on the
+    // piece answers to it. It is the hero's rule, so it is the cards' rule
+    // too — one implementation, exercised by one set of gates.
+    var subjectOf = function (p, cast) {
+      if (!cast.length) return [];
+      var about = coverAbout(p.headline || '', cast);
+      if (!about.length) about = coverAbout(p.dek || '', cast);
+      return (about.length ? about : cast).slice(0, 3);
+    };
+    // The cast, unfiltered. The HERO PHOTOGRAPH below still reads this one:
+    // it wants a name it can look a picture up for, and it captions itself
+    // with the finding, so the story's own order is the right order there.
     var whoOf = function (p) {
       var out = [];
       (p.components || []).forEach(function (c) {
@@ -1162,15 +1245,63 @@ img{max-width:100%}
       if (!m) return '';
       return h.slice(m[0].length).trim() || '';
     };
-    $('readGrid').innerHTML = pieces.map(function (p) {
+
+    // ── the lead, and the five beside it ────────────────────────────────────
+    // THE NEWEST PIECE LEADS, always: the feed is ordered by publication and
+    // the desk's own slots decide what lands when, so nothing here chooses a
+    // story. That is deliberately NOT the rotation the cards below run on --
+    // the cards exist to keep the week's work visible for longer than an hour,
+    // and a lead that rotated would be a front page that changes its mind.
+    var lead = live[0], railPieces = live.slice(1, 6);
+    var by = function (p) {
+      var n = p.byline && p.byline.name ? p.byline.name : '';
+      var w = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + p.week : '');
+      return esc([w, n].filter(Boolean).join(' \u00b7 '));
+    };
+    var leadPick = subjectOf(lead, whoOf(lead));
+    // The lead takes the boast as well. It is the biggest card on the page,
+    // and a banner that appears on the three cards below it but not above them
+    // reads as a bug rather than as a rule.
+    var leadCrow = boast(lead);
+    var leadHtml = '<article class="hm-lead' + (leadCrow ? ' is-boast' : '') + '"'
+      + (leadPick.length ? ' data-player-focus="' + esc(leadPick.join('|')) + '"' : '') + '>'
+      + '<span class="t">' + esc(lead.title || 'The desk') + '<span class="flag">Latest</span></span>'
+      + (leadCrow ? '<span class="boast">You\u2019re welcome.</span>' : '')
+      + '<h3><a href="' + esc(lead.url) + '">' + esc(leadCrow || lead.headline) + '</a></h3>'
+      + (lead.dek ? '<p>' + esc(lead.dek) + '</p>' : '')
+      + '<a class="go" href="' + esc(lead.url) + '">Read the story &rarr;</a>'
+      + '<span class="m">' + by(lead) + '</span></article>';
+    if (railPieces.length) {
+      leadHtml += '<div class="hm-rail"><p class="hm-rail-h">More from the desk</p><ul>'
+        + railPieces.map(function (p) {
+            var pk = subjectOf(p, whoOf(p)), cr = boast(p);
+            return '<li' + (pk.length ? ' data-player-focus="' + esc(pk.join('|')) + '"' : '') + '>'
+              + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
+              + '<h3><a href="' + esc(p.url) + '">' + esc(cr || p.headline) + '</a></h3>'
+              + '<span class="m">' + by(p) + '</span></li>';
+          }).join('') + '</ul></div>';
+    }
+    // One published piece is a lead with nothing beside it; the second column
+    // is dropped rather than left holding 42% of the row open.
+    $('leadWell').className = 'hm-well' + (railPieces.length ? '' : ' hm-well-solo');
+    $('leadWell').innerHTML = leadHtml;
+    show($('lead'), true);
+
+    // ── the cards, which are the rotation, minus whatever is leading ────────
+    // The cards rotate over what is NOT already leading, so the band is still
+    // three and the same headline is never on this page twice. coverBand's own
+    // rules -- the pool depth, the hourly turn, the 24-hour floor -- are
+    // untouched; it is handed a list with the lead removed, not a new policy.
+    var pieces = coverBand(live.slice(1), Date.now());
+    if (!pieces.length) { try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('leadWell')); } catch (e) {} return; }    $('readGrid').innerHTML = pieces.map(function (p) {
       var when = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + esc(p.week) : '');
       var who = whoOf(p);
       // `byline` is an object ({analyst, name, role, avatar, ...}), not a
       // string; escaping it whole printed "[object Object]" under every card.
       var byline = p.byline && p.byline.name ? p.byline.name : '';
-      var crow = boast(p);
+      var pick = subjectOf(p, who), crow = boast(p);
       return '<a class="hm-read-card' + (crow ? ' is-boast' : '') + '" href="' + esc(p.url) + '"'
-        + (who.length ? ' data-player-focus="' + esc(who.slice(0, 3).join('|')) + '"' : '') + '>'
+        + (pick.length ? ' data-player-focus="' + esc(pick.join('|')) + '"' : '') + '>'
         + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
         + (crow ? '<span class="boast">You\u2019re welcome.</span>' : '')
         + '<h3>' + esc(crow || p.headline) + '</h3>'
@@ -1182,7 +1313,7 @@ img{max-width:100%}
     // The faces on the cards just painted. player-search.js watches the
     // document and would reach them on its own; calling it here means they
     // arrive with the cards rather than a frame later.
-    try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('readGrid')); } catch (e) {}
+    try { if (window.ITPlayerSearch) { ITPlayerSearch.decorateStories($('leadWell')); ITPlayerSearch.decorateStories($('readGrid')); } } catch (e) {}
     // The hero's first choice: the first piece in the band that is about
     // somebody, so the picture follows the story the rotation put on top
     // rather than pinning itself to the newest row underneath it.
@@ -1199,15 +1330,20 @@ img{max-width:100%}
     // the boast is not worth two of its words there, and the hero is not where
     // it is being made — the call is. Stripping the prefix does not change who
     // the line is about, so the pairing is unaffected.
+    //
+    // `live`, not `pieces`: the cards below are the rotation MINUS whatever is
+    // leading, so the lead's subject is not in that list at all, and the hero
+    // would be showing the second story's man while the first one is the
+    // headline above him. The hero is the desk's current subject; the current
+    // piece is the one leading the page.
     var deskCands = [];
-    pieces.forEach(function (p) {
+    live.forEach(function (p) {
       coverSubjects(p, boast(p) || p.headline).forEach(function (s) {
         deskCands.push({ name: s.name, kicker: 'What the desk is on today',
                          gap: s.line, href: p.url });
       });
     });
-    heroPaint('desk', deskCands);
-  });
+    heroPaint('desk', deskCands);  });
 })();
 </script>
 </body>

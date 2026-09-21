@@ -1513,17 +1513,45 @@ p{color:var(--sec);margin:0 0 16px}
   function desk() {
     fetch('/api/newsroom?lens=dfs&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok || !j.pieces.length) { $('dfDeskEmpty').textContent = 'The desk has not published this week yet.'; return; }
-      // WHO A PIECE IS ABOUT. The desk's own subject list off `components[].player`,
-      // three at most, which is what /player-search.js reads off `data-player-focus`
-      // to hang the faces. A piece that names nobody carries no attribute and the
-      // script falls back to the headline. Same rule /fantasy's well uses.
-      var focus = function (p) {
-        var who = [], parts = p.components || [];
-        for (var i = 0; i < parts.length && who.length < 3; i++) {
-          var n = parts[i] && parts[i].player;
-          if (n && who.indexOf(n) < 0) who.push(n);
+      // WHO A PIECE IS ABOUT: THE SUBJECT OF ITS HEADLINE FIRST.
+      // `components[].player` is the desk's cast for the WHOLE piece, in the
+      // order the story tells it. Stamping the first three of them put three
+      // Broncos over "Parker Washington's 43% target share makes him the
+      // clearest roster add of the week": the recap is a JAX-at-DEN game and
+      // its findings open on the side that won, so the picture was of three men
+      // the sentence above it never mentions.
+      //
+      // The rule is front.html's `coverAbout` (#319), which is the hero's rule
+      // there: a full name settles it; a bare surname counts only when nobody
+      // else on the piece answers to it, because the wrong Williams under a
+      // line about the other one is this same bug in a smaller frame. Matching
+      // runs against the piece's OWN cast, never the league, which is what
+      // makes the surname safe at all -- "Washington" among four men from one
+      // game is Parker Washington, where against the index it is also a city
+      // and a football team. Fourth copy of a page helper, like BOAST above;
+      // when the rule moves it moves in all of them.
+      var subjectWords = function (t) { return ' ' + String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() + ' '; };
+      var about = function (text, cast) {
+        var t = subjectWords(text), full = [], last = [], i, n, l;
+        for (i = 0; i < cast.length; i++) {
+          n = subjectWords(cast[i]).replace(/^ | $/g, '');
+          if (n && t.indexOf(' ' + n + ' ') >= 0) { full.push(cast[i]); continue; }
+          l = n.split(' ').pop();
+          if (l.length >= 3 && t.indexOf(' ' + l + ' ') >= 0) last.push(cast[i]);
         }
-        return who.length ? ' data-player-focus="' + e(who.join('|')) + '"' : '';
+        return full.length ? full : last;
+      };
+      var focus = function (p) {
+        var cast = [], parts = p.components || [], i;
+        for (i = 0; i < parts.length; i++) {
+          var n = parts[i] && parts[i].player;
+          if (n && cast.indexOf(n) < 0) cast.push(n);
+        }
+        if (!cast.length) return '';
+        var subject = about(p.headline || '', cast);
+        if (!subject.length) subject = about(p.dek || '', cast);
+        var pick = (subject.length ? subject : cast).slice(0, 3);
+        return ' data-player-focus="' + e(pick.join('|')) + '"';
       };
       var av = function (name) { return String(name || '').split(' ').map(function (w) { return w.charAt(0); }).join(''); };
       var ago = function (iso) {

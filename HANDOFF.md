@@ -13032,3 +13032,96 @@ Fourth copy of the regexp; each of the four names the other three.
 `build-front.mjs` does not write `front.html` any more (its own header says
 so, since the September rewrite), so this is hand-edited like the rest of the
 page and the rebuild gate has nothing to say about it.
+
+---
+
+## 117. September 21: the front page had no lead, and the lead had the wrong face
+
+Ken, on §115: "This still has not added a lead story on the front page, which
+was the primary concern. Also, the story on the DFS page is that Parker
+Washington should be added, which does not apply in DFS. Also, the picture
+looks like it shows 3 broncos, even though the story is about 1 jaguar, which
+doesn't make sense."
+
+Three things. Two are fixed here; the third is a data-model gap and is written
+up at the end because it needs a decision, not a patch.
+
+### 1. The front page now leads with the desk
+
+`/fantasy` and `/dfs` got the well in §112 and §115 and the front page never
+did: it carried the desk as three rotating cards, two screens down, below the
+product lanes and the disagreement table. That is a list, not a front.
+
+`<section id="lead">` is the first thing under the hero and the ribbon,
+painted from the same `/api/newsroom` read the cards below already use, so the
+two cannot disagree about what the desk has published. Newest piece leads with
+its picture and its whole deck; the next five run as headlines beside it. It
+is the well the other two pages run, rewritten in this page's own palette —
+front.html does not load `site.css`, so `.nr-*` was not available and
+`.hm-well` / `.hm-lead` / `.hm-rail` are its local equivalents.
+
+**The rotation below it is untouched.** `coverBand` keeps its pool depth, its
+hourly turn and its 24-hour floor; it is handed `live.slice(1)` instead of
+`live`, so the band is still three cards and the lead is never printed twice
+on one page. The hero photograph now reads `live` rather than the rotated
+band: the hero is the desk's CURRENT subject, and the current piece is the one
+leading the page, so the photograph should not rotate off it.
+
+### 2. The picture is the headline's subject, not the piece's cast
+
+`components[].player` is the desk's cast for the WHOLE piece, in the order the
+story tells it. Stamping `data-player-focus` with the first three of them is
+what produced the screenshot: a JAX-at-DEN recap headlined "Parker
+Washington's 43% target share after Week 2 makes him the clearest roster add
+of the week", over photographs of Bo Nix, Courtland Sutton and RJ Harvey,
+because the recap's findings open on the side that won.
+
+The stamp is the headline's subject, then the deck's, and only when neither
+names anyone does the whole cast stand in. The match is full name or bare
+surname, and the surname is safe **because the candidates are the piece's own
+cast**: "Washington" among four men from one game is Parker Washington, where
+against the league index it is also a city and a football team. That is why
+this is not `/player-search.js`'s job — it matches against everybody.
+
+**One rule, not two.** §116 landed `coverAbout(text, cast)` on the front page
+for the hero's face-and-line pairing while this was open, answering the same
+question and answering it better: a full name settles it, a bare surname
+counts only when nobody else on the piece answers to it. front.html's
+`subjectOf` asks `coverAbout`, so the cover cannot answer "who is this about"
+two different ways; `/fantasy` and `/dfs` carry the same rule as a page helper
+the way they each carry their own copy of `BOAST`. And the hero reads `live`
+rather than the rotated band, because the cards are the rotation MINUS the
+lead — left on `pieces` it would have run the second story's man under the
+first story's headline, which is the bug one frame over.
+
+Checked in the browser on the real shape: the lead's stamp is `Parker
+Washington` alone, one face, on all three surfaces; the column's five rows
+stamp `Rashod Bateman`, `Bo Nix`, `Aaron Jones`, `Puka Nacua` and nothing —
+each its own headline's subject, with `Bo Nix` the cast fallback for "The four
+backfields that changed hands on Sunday", which names nobody.
+
+### 3. What is NOT fixed: the DFS lane prints weekly headlines
+
+A piece has exactly one `headline` and one `dek` — single columns on
+`content_pieces`, written for the Weekly Fantasy lens. The DFS lens exists
+only as `body.dfs`, the sections in `NEWSROOM_SECTIONS[kind].dfs`. So
+`/api/newsroom?lens=dfs` hands `/dfs` a piece whose DFS body is real analysis
+and whose headline is the week's fantasy story, and the page prints that
+headline under Lena Park's byline. "The clearest roster add of the week" is a
+waiver call; it is not wrong, it is simply not a DFS sentence, and no page
+change can make it one. The fix is a DFS headline and deck of its own, which
+means the writer, the schema and the feed. It is not in this change.
+
+| Where | What |
+|---|---|
+| `front.html` | `#lead` section, `.hm-well` / `.hm-lead` / `.hm-rail` CSS, the well painter, `named()`, cards from `live.slice(1)`, hero from `live`. The lead and the column also take §116's boast banner: it landed on the three cards while this was open, and a banner on the cards but not on the lead above them reads as a bug rather than a rule. |
+| `fantasy.html`, `dfs.html` | `focus()` picks the headline's subject out of the cast. |
+| `tools/test-homepage.mjs` | Six sections, not five, and named in order. `leadFaces` / `leadFocus` counted separately from `cardFaces`, so faces missing off the lead is a different failure from faces missing off the cards. |
+| `tools/test-story-art.mjs` | Six `<section>`s; the stamp assertion now also requires `named()` and its use on the headline, so neither half can be dropped silently. |
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
+plus `test-homepage` under `REQUIRE_BROWSER=1` (100/100) and the four
+`--check` generators clean. Inline scripts parse on all three pages; no stray
+control bytes; tags balance. Rendered in Chromium at 1360px and 430px against
+the exact feed shape from the screenshot, on all three pages, with no page
+errors and no horizontal overflow.

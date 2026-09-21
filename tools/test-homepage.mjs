@@ -4,7 +4,7 @@
 //
 // It replaces tools/test-position-lens.mjs, which drove the sticky ribbon's
 // Auction/Snake edition switch and the Position Intel grid under it. Both came
-// off in the September 2026 rewrite: "/" is five sections now — hero, the two
+// off in the September 2026 rewrite: "/" is six sections now — hero, the lead,
 // product cards, the market disagreements, the desk's current pieces, and the
 // method with the disclosures under it — and the draft-season controls went with
 // the draft-season modules.
@@ -236,6 +236,12 @@ const read = page => page.evaluate(() => {
     // card, and the lookup's own markers in the disagreement table.
     readPics: document.querySelectorAll('.hm-read.has-pic .it-plate').length,
     cardFaces: document.querySelectorAll('#readGrid .it-player-face').length,
+    // The lead well joined the cards as the desk's front on 2026-09-21, and it
+    // takes the newest piece — which is the one most likely to carry findings.
+    // Counted separately so a regression can be told apart: faces missing from
+    // the lead is a different bug from faces missing off the cards.
+    leadFaces: document.querySelectorAll('#leadWell .it-player-face').length,
+    leadFocus: document.querySelectorAll('#leadWell [data-player-focus]').length,
     articles: vis('articles'),
     cards: [...document.querySelectorAll('#readGrid .hm-read-card')].map(a => a.getAttribute('href')),
     how5: vis('how'),
@@ -276,13 +282,17 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   await ctx.close();
 }
 
-// ── 2. the five sections, in the order the spec names ───────────────────────
-console.log('\nfive sections, in order, and nothing else');
+// ── 2. the six sections, in the order the spec names ────────────────────────
+// Five until 2026-09-21, when the lead story took the slot directly under the
+// hero. It is a section, not an aside: it is the desk's front, the first thing
+// on the page, and the order below is the whole outline — a seventh section
+// appearing anywhere still fails here.
+console.log('\nsix sections, in order, and nothing else');
 {
   const { page, ctx } = await open(1280, 900);
   const r = await read(page);
-  ok('hero, cards, disagreements, articles, method',
-     r.order.join(' > ') === 'heroBand > hm-sec > different > articles > how', r.order.join(' > '));
+  ok('hero, lead, cards, disagreements, articles, method',
+     r.order.join(' > ') === 'heroBand > lead > hm-sec > different > articles > how', r.order.join(' > '));
   ok('the two product cards are named as specified',
      r.lanes.join(' / ') === 'Fantasy This Week / DFS This Week', r.lanes.join(' / '));
   // The five destinations each card owes, as routes that exist.
@@ -368,7 +378,16 @@ console.log('\nwith the boards answering');
 
   // The faces on the two card readings and on the desk's cards.
   ok('each card’s one reading carries the face of the player it names', r.readPics === 2, String(r.readPics));
-  ok('the desk’s cards carry the faces their findings name', r.cardFaces >= 3, String(r.cardFaces));
+  // THE SUBJECT OF THE HEADLINE, not the piece's whole cast (2026-09-21): a
+  // JAX-at-DEN recap headlined on a Jaguar was drawn with the three Broncos
+  // its findings open on. A piece whose headline names none of its cast still
+  // falls back to the cast, which is what both fixture pieces do, so the
+  // counts below are the same as they were before the lead was split out —
+  // they have just moved from three cards to a lead plus two.
+  ok('the desk’s front carries the faces its findings name',
+     r.leadFaces + r.cardFaces >= 3, r.leadFaces + ' lead + ' + r.cardFaces + ' cards');
+  ok('the lead is one of them, and is stamped with its own subject',
+     r.leadFaces >= 1 && r.leadFocus >= 1, r.leadFaces + '/' + r.leadFocus);
 
   ok('and no loading copy survives anywhere on the page', !LOADING.test(r.body),
      (r.body.match(LOADING) || [''])[0]);
@@ -399,7 +418,8 @@ console.log('\nwith the desk naming nobody');
   ok('never the player the Fantasy card already recommends',
      r.edgeName !== 'Drake London' && /Drake London/.test(r.fnRead || ''), r.edgeName);
   ok('a piece with no findings still gets a card, just no faces on it',
-     r.cards.length === 3 && r.cardFaces === 0, r.cards.length + '/' + r.cardFaces);
+     r.cards.length === 3 && r.cardFaces === 0 && r.leadFaces === 0,
+     r.cards.length + '/' + r.cardFaces + '/' + r.leadFaces);
   CONTENT.pieces = full;
   await ctx.close();
 }
