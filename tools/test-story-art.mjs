@@ -443,11 +443,13 @@ console.log('\nthe pages');
     // "the players they are about" is the HEADLINE's subject since 2026-09-21,
     // not the piece's whole cast: a JAX-at-DEN recap headlined on a Jaguar was
     // stamped with the three Broncos its findings open on. The stamp is still
-    // required; what narrows it is `named()`, and both are checked so neither
-    // can be dropped without this failing.
+    // required; what narrows it is `subjectOf`, which asks `coverAbout` — the
+    // same rule the hero pairs its face and its line with, so the cover cannot
+    // answer "who is this about" two different ways. All three are checked, so
+    // none can be dropped without this failing.
     ok('...and stamps the desk cards with the players they are about',
-       /data-player-focus=/.test(src) && /var named = function \(who, text\)/.test(src)
-       && /named\(who, p\.headline/.test(src));
+       /data-player-focus=/.test(src) && /var subjectOf = function \(p, cast\)/.test(src)
+       && /coverAbout\(p\.headline/.test(src) && /function coverAbout\(text, cast\)/.test(src));
     ok('...and gives each card’s reading a face', /readPic\(/.test(src) && /has-pic/.test(src));
     // The page's outline is its six sections (the lead story joined them on
     // 2026-09-21) and the hero picture is not a seventh — tools/test-homepage.mjs

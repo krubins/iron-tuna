@@ -978,6 +978,83 @@ img{max-width:100%}
   // board, a caption still claiming the top of the board is false, which is
   // the one thing a page arguing from the market cannot afford to be.
   function coverLead(rows, pick) { return !!(rows.length && rows[0] === pick); }
+  // ── WHOSE FACE, AND WHOSE SENTENCE ──────────────────────────────────────
+  // The hero's desk card took `whoOf(p)[0]` — the subject of the piece's FIRST
+  // finding — and printed the piece's HEADLINE beneath him. Nothing tied those
+  // two picks together: a story's findings are ordered by the story, not by
+  // who the headline is about. On 2026-09-21 the cover ran Nate Adkins's
+  // photograph over "Parker Washington's 43% target share after Week 2 makes
+  // him the clearest roster add of the week". A real player, a real sentence,
+  // and the two had nothing to do with each other, which reads as a site that
+  // does not know who it is talking about.
+  //
+  // So a face is offered with a line, and the line may not be about anybody
+  // ELSE. A headline that names no player still belongs to the piece's first
+  // subject — "Three lineups the market moved overnight" over the man the
+  // piece is about is the desk's own framing, not a mismatch. A headline that
+  // names one of the piece's other subjects belongs to him and to nobody else.
+  var COVER_SUFFIX = /^(?:jr|sr|ii|iii|iv|v)$/;
+  // Loose enough to survive punctuation and a possessive ("Washington's"),
+  // strict enough to stay on word boundaries: text is reduced to space-
+  // delimited lowercase words and searched for a name as whole words.
+  function coverWords(s) {
+    s = String(s == null ? '' : s);
+    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    return ' ' + s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ | $/g, '') + ' ';
+  }
+  function coverLast(name) {
+    var w = coverWords(name).split(' ').filter(Boolean);
+    while (w.length > 1 && COVER_SUFFIX.test(w[w.length - 1])) w.pop();
+    return w.length ? w[w.length - 1] : '';
+  }
+  // Which of `cast` a line is about. A full name settles it; a bare surname
+  // counts only when nobody else on the piece answers to it, because the wrong
+  // Williams under a line about the other one is this same bug in a smaller
+  // frame. Nobody, one man, or — ambiguously — several.
+  function coverAbout(text, cast) {
+    var t = coverWords(text), full = [], last = [], i, n, l;
+    for (i = 0; i < cast.length; i++) {
+      n = coverWords(cast[i]).replace(/^ | $/g, '');
+      if (n && t.indexOf(' ' + n + ' ') >= 0) { full.push(cast[i]); continue; }
+      l = coverLast(cast[i]);
+      if (l.length >= 3 && t.indexOf(' ' + l + ' ') >= 0) last.push(cast[i]);
+    }
+    return full.length ? full : last;
+  }
+  // The { name, line } pairs one piece can put on the hero, best first: the
+  // headline over the man it is about, then the piece's other findings under
+  // their own lines. A subject already paired is not offered a second line,
+  // and a line about somebody else is offered to nobody.
+  //
+  // `lead` overrides the piece's stored headline, for a caller that has one it
+  // has already cleaned up — the cover hands over the DE-BOASTED headline,
+  // since "You're welcome:" is not worth two words of a 13px line. It is the
+  // same sentence about the same man either way.
+  function coverSubjects(piece, lead) {
+    var parts = (piece && piece.components) || [], cast = [], out = [], seen = {}, i, c, about;
+    lead = lead || (piece && piece.headline) || '';
+    for (i = 0; i < parts.length; i++) {
+      c = parts[i];
+      if (c && c.player && cast.indexOf(c.player) < 0) cast.push(c.player);
+    }
+    if (!cast.length) return out;
+    var add = function (name, line) {
+      if (!name || !line || seen[name]) return;
+      seen[name] = 1;
+      out.push({ name: name, line: line });
+    };
+    about = coverAbout(lead, cast);
+    if (about.length === 1) add(about[0], lead);
+    else if (!about.length) add(cast[0], lead);
+    for (i = 0; i < parts.length; i++) {
+      c = parts[i];
+      if (!c || !c.player || !c.headline) continue;
+      about = coverAbout(c.headline, cast);
+      if (about.length > 1 || (about.length === 1 && about[0] !== c.player)) continue;
+      add(c.player, c.headline);
+    }
+    return out;
+  }
   // ── end cover rotation ───────────────────────────────────────────────────
 
   // ── the market disagreements, and the Fantasy card's reading ─────────────
@@ -1128,27 +1205,21 @@ img{max-width:100%}
 
     // WHO A PIECE IS ABOUT: THE SUBJECT OF ITS HEADLINE FIRST.
     // `components[].player` is the desk's cast for the WHOLE piece, in the
-    // order the story tells it, and stamping the first three of them put
-    // three Broncos over "Parker Washington's 43% target share makes him the
-    // clearest roster add of the week" on 2026-09-21 — the recap is a
-    // JAX-at-DEN game and its findings open on the winning side, so the
-    // picture was of three men the sentence above it never mentions.
+    // order the story tells it, and stamping the first three of them put three
+    // Broncos over "Parker Washington's 43% target share makes him the
+    // clearest roster add of the week" — a JAX-at-DEN recap whose findings
+    // open on the side that won.
     //
-    // A card's picture is its headline's subject. The cast is filtered to the
-    // players the headline names, and only when it names none of them does
-    // the whole cast stand in. Matching is against the piece's OWN cast,
-    // never the league, which is what makes a bare surname safe here:
-    // "Washington" among four men from one game is Parker Washington, where
-    // against the whole index it is also a city and a football team.
-    var named = function (who, text) {
-      var hay = ' ' + String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ') + ' ';
-      return who.filter(function (n) {
-        var full = String(n).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-        if (!full) return false;
-        if (hay.indexOf(' ' + full + ' ') >= 0) return true;
-        var last = full.split(' ').pop();
-        return last.length > 2 && hay.indexOf(' ' + last + ' ') >= 0;
-      });
+    // `coverAbout` (above, #319) already answers "which of this cast is this
+    // line about", and answers it more carefully than a substring test: a full
+    // name settles it, a bare surname counts only when nobody else on the
+    // piece answers to it. It is the hero's rule, so it is the cards' rule
+    // too — one implementation, exercised by one set of gates.
+    var subjectOf = function (p, cast) {
+      if (!cast.length) return [];
+      var about = coverAbout(p.headline || '', cast);
+      if (!about.length) about = coverAbout(p.dek || '', cast);
+      return (about.length ? about : cast).slice(0, 3);
     };
     // The cast, unfiltered. The HERO PHOTOGRAPH below still reads this one:
     // it wants a name it can look a picture up for, and it captions itself
@@ -1187,10 +1258,7 @@ img{max-width:100%}
       var w = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + p.week : '');
       return esc([w, n].filter(Boolean).join(' \u00b7 '));
     };
-    var leadWho = whoOf(lead);
-    var leadSubject = named(leadWho, lead.headline || '');
-    if (!leadSubject.length) leadSubject = named(leadWho, lead.dek || '');
-    var leadPick = (leadSubject.length ? leadSubject : leadWho).slice(0, 3);
+    var leadPick = subjectOf(lead, whoOf(lead));
     // The lead takes the boast as well. It is the biggest card on the page,
     // and a banner that appears on the three cards below it but not above them
     // reads as a bug rather than as a rule.
@@ -1206,10 +1274,7 @@ img{max-width:100%}
     if (railPieces.length) {
       leadHtml += '<div class="hm-rail"><p class="hm-rail-h">More from the desk</p><ul>'
         + railPieces.map(function (p) {
-            var w = whoOf(p), sub = named(w, p.headline || '');
-            if (!sub.length) sub = named(w, p.dek || '');
-            var pk = (sub.length ? sub : w).slice(0, 3);
-            var cr = boast(p);
+            var pk = subjectOf(p, whoOf(p)), cr = boast(p);
             return '<li' + (pk.length ? ' data-player-focus="' + esc(pk.join('|')) + '"' : '') + '>'
               + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
               + '<h3><a href="' + esc(p.url) + '">' + esc(cr || p.headline) + '</a></h3>'
@@ -1234,10 +1299,7 @@ img{max-width:100%}
       // `byline` is an object ({analyst, name, role, avatar, ...}), not a
       // string; escaping it whole printed "[object Object]" under every card.
       var byline = p.byline && p.byline.name ? p.byline.name : '';
-      var subject = named(who, p.headline || '');
-      if (!subject.length) subject = named(who, p.dek || '');
-      var pick = (subject.length ? subject : who).slice(0, 3);
-      var crow = boast(p);
+      var pick = subjectOf(p, who), crow = boast(p);
       return '<a class="hm-read-card' + (crow ? ' is-boast' : '') + '" href="' + esc(p.url) + '"'
         + (pick.length ? ' data-player-focus="' + esc(pick.join('|')) + '"' : '') + '>'
         + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
@@ -1258,17 +1320,30 @@ img{max-width:100%}
     // All of them are offered, not just the first: a subject the lookup
     // carries no face for hands the photograph to the story behind him rather
     // than losing the band for the hour.
-    // `live`, not `pieces`: the hero is the desk's CURRENT subject, and the
-    // current piece is the one leading the page. The cards rotate; the
-    // photograph should not be rotated off the story at the top of the page.
-    heroPaint('desk', live.filter(function (p) { return whoOf(p).length; })
-      .map(function (p) {
-        // The gap line is 13px. The boast is not worth two of its words
-        // there, and the hero is not where it is being made; the call is.
-        return { name: whoOf(p)[0], kicker: 'What the desk is on today',
-                 gap: boast(p) || p.headline || p.title, href: p.url };
-      }));
-  });
+    // EACH SUBJECT ARRIVES WITH THE LINE THAT NAMES HIM (`coverSubjects`
+    // above), so the face and the sentence under it are about the same man.
+    // This used to be `whoOf(p)[0]` under `p.headline` — two unrelated picks
+    // off one row, and a cover that ran one player's photograph over another
+    // player's news.
+    //
+    // The headline handed over is the DE-BOASTED one: the gap line is 13px,
+    // the boast is not worth two of its words there, and the hero is not where
+    // it is being made — the call is. Stripping the prefix does not change who
+    // the line is about, so the pairing is unaffected.
+    //
+    // `live`, not `pieces`: the cards below are the rotation MINUS whatever is
+    // leading, so the lead's subject is not in that list at all, and the hero
+    // would be showing the second story's man while the first one is the
+    // headline above him. The hero is the desk's current subject; the current
+    // piece is the one leading the page.
+    var deskCands = [];
+    live.forEach(function (p) {
+      coverSubjects(p, boast(p) || p.headline).forEach(function (s) {
+        deskCands.push({ name: s.name, kicker: 'What the desk is on today',
+                         gap: s.line, href: p.url });
+      });
+    });
+    heroPaint('desk', deskCands);  });
 })();
 </script>
 </body>

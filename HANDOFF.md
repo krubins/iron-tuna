@@ -13076,13 +13076,23 @@ Washington's 43% target share after Week 2 makes him the clearest roster add
 of the week", over photographs of Bo Nix, Courtland Sutton and RJ Harvey,
 because the recap's findings open on the side that won.
 
-`named(cast, text)` filters the cast to the players a given string actually
-names; the stamp is the headline's names, then the deck's, and only when
-neither names anyone does the whole cast stand in. The match is full name or
-bare surname, and the surname is safe **because the candidates are the piece's
-own cast**: "Washington" among four men from one game is Parker Washington,
-where against the league index it is also a city and a football team. That is
-why this is not `/player-search.js`'s job — it matches against everybody.
+The stamp is the headline's subject, then the deck's, and only when neither
+names anyone does the whole cast stand in. The match is full name or bare
+surname, and the surname is safe **because the candidates are the piece's own
+cast**: "Washington" among four men from one game is Parker Washington, where
+against the league index it is also a city and a football team. That is why
+this is not `/player-search.js`'s job — it matches against everybody.
+
+**One rule, not two.** §116 landed `coverAbout(text, cast)` on the front page
+for the hero's face-and-line pairing while this was open, answering the same
+question and answering it better: a full name settles it, a bare surname
+counts only when nobody else on the piece answers to it. front.html's
+`subjectOf` asks `coverAbout`, so the cover cannot answer "who is this about"
+two different ways; `/fantasy` and `/dfs` carry the same rule as a page helper
+the way they each carry their own copy of `BOAST`. And the hero reads `live`
+rather than the rotated band, because the cards are the rotation MINUS the
+lead — left on `pieces` it would have run the second story's man under the
+first story's headline, which is the bug one frame over.
 
 Checked in the browser on the real shape: the lead's stamp is `Parker
 Washington` alone, one face, on all three surfaces; the column's five rows

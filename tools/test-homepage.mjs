@@ -424,6 +424,38 @@ console.log('\nwith the desk naming nobody');
   await ctx.close();
 }
 
+// ── 3b2. the face and the sentence under it ────────────────────────────────
+// THE HERO RAN ONE PLAYER'S PHOTOGRAPH OVER ANOTHER PLAYER'S NEWS. The desk
+// card took the subject of the piece's FIRST finding and printed the piece's
+// HEADLINE under him — two picks off one row with nothing tying them together.
+// Reported on 2026-09-21: Nate Adkins's photograph, captioned "Parker
+// Washington's 43% target share after Week 2 makes him the clearest roster add
+// of the week". Both real, and about different men.
+console.log('\nwith a headline about the piece\u2019s second finding');
+{
+  const full = CONTENT.pieces;
+  const WAIVERS = { kind: 'waiver-wire', title: 'Waiver Wire', week: 3, publishedAt: FRESH,
+    headline: 'Parker Washington\u2019s 43% target share after Week 2 makes him the clearest roster add of the week',
+    dek: 'The Jacksonville routes are not going back.',
+    url: '/in-season/desk/waiver-wire/3', byline: 'Iron Tuna desk',
+    components: [
+      { n: 1, player: 'Nate Adkins', headline: 'Nate Adkins is the Denver tight end now' },
+      { n: 2, player: 'Parker Washington', headline: 'Parker Washington ran a route on 43% of the dropbacks' } ] };
+  CONTENT.pieces = [WAIVERS, ...full];
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  ok('the hero carries a picture', r.edge === true && r.edgePlate === true);
+  ok('it is the player the headline is about', r.edgeName === 'Parker Washington', r.edgeName);
+  ok('and the caption under him is that headline', r.edgeGap === WAIVERS.headline, r.edgeGap);
+  // The assertion the bug would fail: the man in the frame and the man in the
+  // sentence are the same man.
+  ok('the face and the sentence are about the same man',
+     !r.edgeGap.includes('Nate Adkins') && r.edgeName !== 'Nate Adkins',
+     r.edgeName + ' / ' + r.edgeGap);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+
 // ── 3c. the two card readings take turns as well ───────────────────────────
 // THE THIRD AND FOURTH PATHS ONTO THE COVER. §88 enumerated two and fixed both;
 // the readings under them printed the top row of a board that barely moves
