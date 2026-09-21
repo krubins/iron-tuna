@@ -178,8 +178,9 @@
     // body out of each posted bucket. The tiers come off the lobby file --
     // FanDuel prints a Tier column and DraftKings names the tier in the roster
     // position -- and tierFormat() below turns whatever the file carried into
-    // a roster. A slate with no tiers on it cannot be solved as a Tiers
-    // contest, and says so rather than inventing buckets out of salary.
+    // a roster. A slate with no tiers on it falls back to salaryTierFormat(),
+    // which cuts the pool into price bands of its own; the bands are never
+    // passed off as the contest's, and the file's tiers win wherever they are.
     tiers: { key: 'tiers', kind: 'tiers', label: 'Tiers',
       roster: 'One player out of each posted tier. There is no salary cap, so the question at every tier is which body, never which price.',
       cap: 0, flex: ANY_POSITION },
@@ -251,6 +252,41 @@
     return { key: 'tiers', kind: 'tiers', label: f.label, roster: f.roster, cap: 0,
              slots: slots, tierSlots: tierSlots, flex: ANY_POSITION, tiers: order };
   }
+
+  // ── tiers when the lobby file is not here ─────────────────────────────────
+  // A Tiers contest posts its own buckets and the desk's main slate carries
+  // none, so this board used to decline the format outright. It builds one
+  // now, off the only ordering the main slate does carry: PRICE. The pool is
+  // cut into bands of equal size, most expensive first, and the roster takes
+  // one body out of each.
+  //
+  // These are Iron Tuna's bands and not DraftKings', and every surface that
+  // prints one says so. The distinction is the whole point: the shape of the
+  // answer -- which man is worth the seat in each band -- survives the
+  // difference between the two groupings; the bucket numbers do not.
+  //
+  // Bands are assigned by RANK rather than by a salary cut, so every band has
+  // a body in it whatever the prices do, and the seat count follows the pool
+  // when the pool is too thin for the full six.
+  function salaryTierFormat(players, count) {
+    var pool = (players || []).filter(function (p) { return projected(p) && Number(p.salary) > 0; })
+      .sort(function (a, b) { return Number(b.salary) - Number(a.salary); });
+    var want = count > 0 ? count : 6;
+    // Two bodies a band, at least, or a "choice" of tiers is one legal roster.
+    var n = Math.min(want, Math.floor(pool.length / 2));
+    if (n < 2) return null;
+    var tierOf = {}, tiers = [];
+    for (var t = 0; t < n; t++) tiers.push(String(t + 1));
+    pool.forEach(function (p, i) { tierOf[idOf(p)] = String(Math.floor(i * n / pool.length) + 1); });
+    var slots = [], tierSlots = {};
+    tiers.forEach(function (t, i) { var name = 'T' + (i + 1); slots.push(name); tierSlots[name] = t; });
+    var f = FORMATS.tiers;
+    return { fmt: { key: 'tiers', kind: 'tiers', label: f.label, cap: 0, derived: 'salary',
+                    roster: 'One player out of each of ' + n + ' price bands. The contest posts its own tiers and this slate carries none, so the bands are Iron Tuna\u2019s own: the pool sorted by salary and cut into ' + n + ' equal groups.',
+                    slots: slots, tierSlots: tierSlots, flex: ANY_POSITION, tiers: tiers },
+             tierOf: function (p) { return tierOf[idOf(p)] || null; } };
+  }
+  function idOf(p) { return p ? (p.id != null ? p.id : p.key) : null; }
 
   // Which slots a player may fill. A tier seat asks one question and one only;
   // everything else is a position seat or an open seat.
@@ -937,7 +973,7 @@
   }
 
   var api = { MODES: MODES, FORMATS: FORMATS, GAME_STYLE_FORMAT: GAME_STYLE_FORMAT, ANY_POSITION: ANY_POSITION,
-              formatFor: formatFor, tierFormat: tierFormat, eligibleIn: eligible,
+              formatFor: formatFor, tierFormat: tierFormat, salaryTierFormat: salaryTierFormat, eligibleIn: eligible,
               build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf,
               contestPick: contestPick, fieldAverage: fieldAverage, pickBoard: pickBoard };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
