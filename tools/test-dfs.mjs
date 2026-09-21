@@ -695,16 +695,32 @@ console.log('\nthe DFS page explanations');
      page.includes('function solveFormat()') && page.includes('ITDfs.formatFor(site, style)')
      && page.includes('format: f.fmt, slots: f.fmt.slots, flex: f.fmt.flex')
      && page.includes("mult: f.fmt.mult || null, tierSlots: f.fmt.tierSlots || null, minTeams: f.fmt.minTeams || 0"));
-  // The guarantee: a single-game roster is never priced off main-slate
-  // salaries. What the reader is offered instead is the one thing that fixes
-  // it -- the contest's own export -- and the control for that is rendered
-  // into this notice rather than sitting over every board.
-  ok('a single-game roster is never priced off the main slate, and asks for the file that would fix it',
+  // A single-game roster off the main slate used to be refused outright,
+  // because main-slate salaries are not the ones the contest charges. It is
+  // built now -- which six men, and who wears the multiplier, is the half of
+  // the answer that survives the difference -- and the half that does not is
+  // handled rather than hidden: the prices printed stay the slate's real ones
+  // and the CAP is scaled to what six seats and a 1.5x multiplier are worth on
+  // a board priced for nine, so the budget bites the way the lobby's does.
+  ok('a single-game roster is built off the main slate against an equivalent budget, never off invented prices',
      page.includes("fmt.kind === 'salary' && fmt.single && priced !== 'single-game'")
-     && page.includes('a roster you could not enter')
-     && page.includes('so the board declines rather than printing one')
-     && page.includes('out.needsFile = true;')
-     && page.includes("f.needsFile ? uploadControl(fmt) : ''"));
+     && page.includes("out.approx = 'pricing';")
+     && page.includes('out.capBasis = equivalentCap(fmt);')
+     && page.includes('function equivalentCap(fmt)')
+     && page.includes('return Math.round(pricedCap * units / pricedSeats / 100) * 100;'));
+  // The estimate is never silent, and the file that ends it is inside the
+  // sentence that admits to it.
+  ok('...and says so above the roster, with the export that prices it exactly',
+     page.includes('var approxNote = f.approx')
+     && page.includes('Estimated from the main slate')
+     && page.includes('and the lobby will charge you different ones.')
+     && page.includes("(f.needsFile ? uploadControl(f.fmt) : '')")
+     && page.includes('+ approxNote'));
+  // The panel shows the budget that was used rather than the lobby number the
+  // board did not solve against -- and a format with its own cap takes its own
+  // cap back, so an equivalent budget cannot leak into the next format.
+  ok('...and the cap box carries the budget the roster was solved on',
+     page.includes("if (!tuned && $('dfCap') && f.fmt.cap > 0) $('dfCap').value = f.capBasis || f.fmt.cap;"));
   // AN UNPRICED WEEK IS NOT A DEAD END. The desk imports one main slate a week;
   // before it lands, /dfs answered every format and every setup with the same
   // sentence -- "There is no lineup to solve until the salaries are posted" --
@@ -754,13 +770,79 @@ console.log('\nthe DFS page explanations');
   // or the page solves a nine-seat roster against six-seat prices.
   ok('...and every setup change routes through it, falling back to a plain render',
      (page.match(/if \(!syncSlate\(\)\) render\(\);/g) || []).length === 3);
-  // WHOSE GAME THE REFUSAL IS ABOUT. The first version of this notice ended by
+  // A Tiers contest posts its own buckets and the main slate carries none, so
+  // the board used to decline the format. It cuts the pool into price bands
+  // and solves that instead -- the file's own tiers still win where the file
+  // is here -- and it never lets the bands pass for the contest's.
+  ok('a Tiers roster falls back to price bands, and the file\u2019s own tiers still win',
+     page.includes('var tf = ITDfs.tierFormat(tp);')
+     && page.includes('if (tf) { out.fmt = tf; out.tierCount = tf.tiers.length; return out; }')
+     && page.includes('var derived = ITDfs.salaryTierFormat(tp);')
+     && page.includes("out.approx = 'tiers';"));
+  ok('...and the board says whose bands they are',
+     page.includes('Bands, not the contest')
+     && page.includes('bands by salary, most expensive first')
+     && page.includes('Price the Tiers export and the board solves the posted tiers exactly.'));
+  // The bands are the BOARD's, so they are written onto the copies the solve
+  // runs on. Writing them onto the slate would leave a derived tier on a
+  // player every other format shares.
+  ok('...onto the solve\u2019s own copies, never onto the slate',
+     page.includes('if (f.tierOf) players.forEach(function (q) { q.tier = f.tierOf(q); });'));
+  // The coach speaks about the roster on screen, so an estimated board is
+  // declared to it: a reader must not be told a main-slate price is the
+  // lobby's, or that Iron Tuna's bands are the contest's tiers.
+  ok('the Value Coach is told when the board it describes is an estimate',
+     page.includes('approximation: (function () {')
+     && page.includes('kind: f.approx, whatWasEstimated: f.approxNote')
+     && page.includes('solvedAgainstCap: f.capBasis || undefined'));
+  // A single-game contest is compared over the game the reader picked. Six
+  // seats drawn from four games is not a contest anybody can enter.
+  // WHEN THERE IS NO ROSTER, THE BOARD SAYS WHY. Every failed solve used to
+  // print the same sentence -- clear a constraint, loosen the cap -- and a
+  // reader whose games had already kicked off, or whose window carried no
+  // defense, had nothing to clear. Each obstacle names itself now, and the
+  // generic sentence is only what is left when none of them fits.
+  ok('a board with no roster on it names the obstacle rather than blaming the constraints',
+     page.includes('function noRosterNote(r, players, f, cap, lockKeys, exclKeys)')
+     && page.includes('has already been played.')                       // the week is over
+     && page.includes('is available this week.')                        // everybody ruled out
+     && page.includes('can fill the ')                                  // a seat nobody fills
+     && page.includes('requires players from both teams')               // the both-teams rule
+     && page.includes('eligible player')                                // fewer bodies than seats
+     && page.includes('The cheapest legal roster '));                   // the cap
+  ok('...and the generic sentence is printed only when nothing more precise is known',
+     page.includes('var why = shortfallNote(players, lock, f, cap) || noRosterNote(r, players, f, cap, lock, excl);')
+     && page.includes("+ (why ? '' : '<p class=\"is-empty\">No lineup satisfies those constraints'"));
+  // The pool it describes is the one the SOLVE had: an exclusion is out, a man
+  // who is not playing is out, a man whose game is over is out, and a lock
+  // overrules all three. A sentence about a board the optimizer never saw
+  // would send the reader after the wrong thing.
+  ok('...against the pool the optimizer actually solved from',
+     page.includes('if (exclOn[q.id]) return;')
+     && page.includes('if (!lockOn[q.id] && (q.available === false || isPlayed(q))) return;')
+     && page.includes('if (!thinOn[q.id]) pool.push(q);'));
+  // A cash objective declines a season average, and on a thin slate that rule
+  // is what empties the seat. Running the same check with those men back in is
+  // how the page tells a short slate from a strict objective, and it says
+  // which of the two the reader is looking at.
+  ok('...and separates a slate that cannot fill the roster from an objective that will not',
+     page.includes('if (withThin.length > pool.length && !problem(withThin)) {')
+     && page.includes('will not spend a seat on a season average'));
+  // Telling a reader to widen a pool they cannot widen -- a single-game
+  // format, or a pool that is already the whole slate -- is noise.
+  ok('...and only offers a wider pool where there is one to offer',
+     page.includes('var canWiden = !!(games && !fmt.single && slate && games < (gamesForSlate(slate) || []).length);'));
+  ok('Play of the Week weighs a single-game contest over the selected game only',
+     page.includes("var src = fmt && fmt.single ? (filteredSlate() || s) : s;")
+     && page.includes("var pool = (src.players || []).filter(function (p) { return projected(p); });"));
+  // WHOSE GAME THE NOTICE IS ABOUT. The first version of it ended by
   // announcing which matchups the desk had priced and said nothing about the
   // one the reader had chosen, so a reader who picked the other game on the
   // slate read "the desk has already priced LA vs NYG" directly under a board
-  // that would not solve. That reads as a broken site rather than as a game
-  // nobody has imported.
-  ok('the single-game refusal names the matchup the reader actually picked',
+  // that was not solving on their own game. That reads as a broken site
+  // rather than as a game nobody has imported. The notice is an estimate
+  // rather than a refusal now, and it still leads with their matchup.
+  ok('the single-game estimate names the matchup the reader actually picked',
      page.includes('var deskHas = one && availableSingles.indexOf(one) >= 0;')
      && page.includes("'The desk has not imported ' + prettyGame(one)"));
   ok('...and lists the other games as OTHER games, never as this one',
@@ -775,8 +857,6 @@ console.log('\nthe DFS page explanations');
      page.includes("if (markSingles) meta.push(availableSingles.indexOf(g.key) >= 0 ? 'priced here' : 'needs your file');"));
   ok('...and a multi-game format is not labelled, because any game solves there',
      page.includes('style.single && fmt'));
-  ok('a Tiers roster is never invented out of salary bands',
-     page.includes("ITDfs.tierFormat(") && page.includes('inventing them out of salary would build a roster nobody can enter'));
   // The always-on panel that #293 removed does not come back. The route does,
   // because five formats are priced on a file the desk import never stores,
   // and the control for it is scoped to the notice that needs it.
@@ -1940,6 +2020,52 @@ console.log('\nthe slate, partly played');
   // entry he already holds, so he stays in the search -- at what he scored.
   ok('the require-a-player search offers a played man at his actual score',
      page.includes("actualOf(p) != null ? n1(actualOf(p)) + ' final'") && page.includes("' est, game over'"));
+}
+
+console.log('\nthe per-team maximum against a narrowed game pool');
+{
+  // NINE SEATS OUT OF ONE GAME IS TWO CLUBS, so five men from one of them at
+  // a minimum. Every contest shape carries a per-team cap -- three for cash,
+  // four for a single entry -- and on a full slate that is a preference. On a
+  // pool narrowed to one game it is a contradiction, and the optimizer answers
+  // a contradiction with nothing: a reader who picked Classic, one game and
+  // Double Up was told "no lineup satisfies those constraints" while looking
+  // at a board with two full rosters on it.
+  const one = (team, opp, base) => [
+    ['QB', 'QB', 6800, base + 6], ['RB1', 'RB', 7000, base + 4], ['RB2', 'RB', 5200, base + 1], ['RB3', 'RB', 4000, base - 2],
+    ['WR1', 'WR', 7800, base + 5], ['WR2', 'WR', 6200, base + 2], ['WR3', 'WR', 4800, base], ['WR4', 'WR', 3400, base - 3],
+    ['TE1', 'TE', 5000, base], ['TE2', 'TE', 3200, base - 4], ['DST', 'DST', 3000, base - 5]
+  ].map(([slot, position, salary, pts]) => ({
+    id: team + ' ' + slot, key: team + ' ' + slot, name: team + ' ' + slot, position, team, opponent: opp, salary,
+    onBoard: true, projected: true, available: true, ironTunaPoints: pts, vegasPoints: pts, consensusPoints: pts,
+    floorPoints: pts * 0.72, ceilingPoints: pts * 1.35, operatorFppg: pts - 0.6
+  }));
+  const pool = [...one('NYG', 'LA', 12), ...one('LA', 'NYG', 13)];
+  const base = { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, mode: 'ironTuna', lineups: 1 };
+  ok('three men from a club cannot fill nine seats out of one game', !DFS.build(pool, { ...base, maxPerTeam: 3 }).ok);
+  ok('nor can four', !DFS.build(pool, { ...base, maxPerTeam: 4 }).ok);
+  const raised = DFS.build(pool, { ...base, maxPerTeam: 5 });
+  ok('...and five -- the seats over the clubs, rounded up -- does', raised.ok && raised.lineups[0].players.length === 9);
+  ok('the roster it builds is legal on both sides of that cap',
+     raised.ok && Object.values(raised.lineups[0].players.reduce((n, p) => ({ ...n, [p.team]: (n[p.team] || 0) + 1 }), {})).every(c => c <= 5));
+
+  // The page is what has to know this: the reader never typed a per-team cap,
+  // the contest shape did, and the floor is arithmetic rather than taste.
+  const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+  ok('the page works the floor out from the seats and the clubs in the pool',
+     /function teamCapFor\(want, seats, players\)/.test(page) && page.includes('var floor = Math.ceil(seats / teams);'));
+  ok('a reader who asked for no per-team cap at all still gets none',
+     page.includes('if (!want || !(seats > 0) || !teams) return want || 0;'));
+  ok('the solve is handed the raised cap rather than the raw box',
+     page.includes('var teamCap = teamCapFor(wantTeamCap, seats, players);') && page.includes('maxPerTeam: teamCap,'));
+  ok('the shape preset is clamped before it is written into the panel',
+     page.includes("$('dfMaxTeam').value = teamCapFor(preset,"));
+  ok('the panel is rewritten with what was solved, and the board says why',
+     page.includes("if (teamCap !== wantTeamCap) $('dfMaxTeam').value = teamCap;")
+     && page.includes('The per-team maximum was raised from'));
+  ok('Play of the Week weighs its three shapes under the same floor',
+     page.includes('maxPerTeam:teamCapFor(cross,seats,pool)')
+     && page.includes('maxPerTeam:teamCapFor(seats<=6?cross:3,seats,pool)'));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
