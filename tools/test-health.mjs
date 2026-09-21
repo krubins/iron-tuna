@@ -139,7 +139,7 @@ console.log('\nthe assessment');
   const regular = { ok: true, phase: 'regular', week: { type: 'REG', number: 3 } };
   const fresh = { state: regular, llm: true, jobs: { failed: [] },
     updates: { schedule: { updatedAt: h(2) }, odds: { updatedAt: h(3) }, snapshots: { last: h(1) }, usage: { updatedAt: h(20), throughWeek: 2 }, availability: { updatedAt: h(3) },
-               depthCharts: { updatedAt: h(30) }, rankings: { ros: { builtAt: h(100), week: 3 } }, dfs: { dk: { fetchedAt: h(10) }, fd: null } },
+               depthCharts: { updatedAt: h(30) }, rankings: { ros: { builtAt: h(100), week: 3 } }, dfs: { dk: { fetchedAt: h(10) } } },
     sources: { odds: [{ name: 'the-odds-api', configured: true }], stats: [{ name: 'nflverse', configured: true }] } };
   const a = H.healthAssess(fresh, now);
   ok('a fresh in-season system is ok', a.status === 'ok' && a.inSeason && a.missing.length === 0 && a.stale.length === 0, JSON.stringify(a.missing) + JSON.stringify(a.stale));
@@ -156,7 +156,7 @@ console.log('\nthe assessment');
   ok('no Wednesday snapshot is a missing feed in season', noRos.missing.some(m => m.feed === 'rankings'));
   const oldRos = H.healthAssess({ ...fresh, state: { ...regular, week: { type: 'REG', number: 6 } }, updates: { ...fresh.updates, rankings: { ros: { builtAt: h(500), week: 3 } } } }, now);
   ok('a snapshot from three weeks ago is stale, and says which weeks', oldRos.stale.some(s => s.feed === 'rankings' && /week 3, now week 6/.test(s.note)));
-  const noDfs = H.healthAssess({ ...fresh, updates: { ...fresh.updates, dfs: { dk: null, fd: null } } }, now);
+  const noDfs = H.healthAssess({ ...fresh, updates: { ...fresh.updates, dfs: { dk: null } } }, now);
   ok('no salaries on either site is a missing feed', noDfs.missing.some(m => m.feed === 'dfs'));
   const noKey = H.healthAssess({ ...fresh, llm: false }, now);
   ok('no writer key is named, with what it costs', noKey.missing.some(m => m.feed === 'llm' && /held/.test(m.why)));
