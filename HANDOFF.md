@@ -13183,3 +13183,59 @@ generators clean. `_worker.js` and `desk.html` parse.
 **What this does not do.** It does not backfill. Pieces published before this
 keep one headline and `/dfs` keeps showing it until each kind next runs. The
 first pieces with a real DFS headline arrive at their normal slots.
+
+---
+
+## 119. September 21: re-headlining the pieces that predate the column
+
+Ken, on §118's closing line: "re-headline the published week 2 pieces."
+
+§118 shipped the per-lens headline and said plainly that it does not backfill:
+a piece published before `dfs_headline` existed keeps one headline and /dfs
+falls back to it until that kind next runs. This is the backfill.
+
+**It does not re-run the writer, and that is the whole design.** Re-writing a
+published piece would put fresh prose through a packet that no longer
+describes the week — the injury list has moved, the lines have moved, the
+games are played — and would change what a story already on the site says.
+`dfsHeadlineFor` hands the model the piece's OWN published DFS sections and
+asks for one headline and one sentence over them. That is a rewrite of prose
+the fact check already vouched for, not a second reading of the facts.
+
+**Held to the same boundary anyway.** `validateDraft` runs against the packet
+the row stored, so a backfilled headline cannot name a player or a number the
+piece never carried, and `weekFrameProblems` runs so it cannot preview a week
+that has been played. A row whose headline fails either check is LEFT ALONE
+and keeps falling back to the weekly pair: an old headline is wrong in a way a
+reader can see through, and an invented one is not.
+
+**Two clicks, never one.** The admin action previews by default: it returns
+what it WOULD store, per piece, next to the weekly headline it would sit
+beside, and touches no row. `commit: true` writes exactly that set. One run is
+capped (default 20, hard 40) because a week of a per-game kind is sixteen
+model calls and a mis-click should not be sixty. Only kinds whose lens is
+`both` TODAY are eligible, so a weekly-only kind's null stays null; one row per
+slug, so a piece republished on its slug is headlined once.
+
+**A test that was passing by doing nothing.** The first version of the
+boundary gate below read `ok('name', cond)` — the convention in
+`test-newsroom.mjs` — but `tools/test-ai-boundary.mjs` takes `ok(cond, msg)`.
+Every new assertion was therefore `ok('a non-empty string')`, which is always
+true. It was caught by deliberately breaking the worker to watch the gate fail
+and finding that it did not. Both assertions now fail when the model override
+or the validation is removed, which was verified rather than assumed.
+
+| Where | What |
+|---|---|
+| `_worker.js` | `DFS_BACKFILL_SYSTEM`, `dfsHeadlineFor`, `runDfsHeadlineBackfill`, and the `dfs-headlines` admin action. |
+| `admin.html` | Preview and write buttons under the newsroom controls, with the per-piece table of what it would store. |
+| `tools/test-ai-boundary.mjs` | The backfill has exactly one LLM call, on the dedicated editorial model; it validates before storing; it recomputes nothing. |
+| `tools/test-newsroom.mjs` | The backfill prompt is told to use only the published sections and what a DFS headline is not. |
+
+**Checked:** every node gate in `checks.yml` passes, `test-dry-run` included
+(113) and `test-newsroom` at 366, plus the four `--check` generators clean.
+`_worker.js` and `admin.html` parse; no stray control bytes.
+
+**Not run.** This session cannot reach irontuna.com — the egress policy denies
+it — so nothing has been backfilled. The preview is the first thing to run, on
+the admin board, and it changes nothing until the second button.
