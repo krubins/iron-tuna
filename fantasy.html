@@ -109,27 +109,27 @@ section{margin:0 0 var(--space-6)}
 .fn-riv-col{min-width:0}
 .fn-riv-head{display:flex;align-items:center;gap:var(--space-2);padding-bottom:var(--space-2);border-bottom:2px solid var(--teal)}
 .fn-riv-av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:var(--fs-3xs);flex:none}
-.fn-riv-head b{display:block;font-size:var(--fs-md);line-height:1.2}
+.fn-riv-head b{display:block;font-size:18px;line-height:1.2}
 .fn-riv-head a{color:inherit}
-.fn-riv-head small{display:block;font-size:var(--fs-3xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
-.fn-riv-rec{margin-left:auto;text-align:right;font-size:var(--fs-3xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);line-height:1.35}
+.fn-riv-head small{display:block;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
+.fn-riv-rec{margin-left:auto;text-align:right;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);line-height:1.35}
 .fn-riv-rec b{display:block;font-size:var(--fs-md);letter-spacing:0;color:var(--text)}
-.fn-riv-stand{margin:var(--space-3) 0 0;font-size:var(--fs-sm);line-height:1.55;font-style:italic;color:var(--muted)}
-.fn-riv-foot{grid-column:1/-1;border-top:1px solid var(--line);padding-top:var(--space-3);font-size:var(--fs-sm);line-height:1.55;color:var(--sec)}
+.fn-riv-stand{margin:var(--space-3) 0 0;font-size:var(--fs-md);line-height:1.55;font-style:italic;color:var(--muted)}
+.fn-riv-foot{grid-column:1/-1;border-top:1px solid var(--line);padding-top:var(--space-3);font-size:var(--fs-md);line-height:1.55;color:var(--sec)}
 .fn-riv-foot p{margin:0 0 var(--space-2)}.fn-riv-foot p:last-child{margin:0}.fn-riv-foot b{color:var(--text)}
 .fn-riv-pick{padding:var(--space-3) 0;border-top:1px solid var(--line)}
-.fn-riv-pick h3{margin:0;font-size:var(--fs-md);line-height:1.3}
-.fn-riv-pick h3 small{font-weight:400;font-size:var(--fs-3xs);color:var(--muted);margin-left:6px}
-.fn-riv-ranks{margin:2px 0 4px;font-size:var(--fs-3xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.fn-riv-pick h3{margin:0;font-size:18px;line-height:1.3}
+.fn-riv-pick h3 small{font-weight:400;font-size:var(--fs-2xs);color:var(--muted);margin-left:6px}
+.fn-riv-ranks{margin:2px 0 4px;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .fn-riv-ranks b{color:var(--text)}.fn-riv-ranks i{font-style:normal;font-weight:400;margin:0 5px}
-.fn-riv-pick p{margin:0;font-size:var(--fs-sm);line-height:1.55;color:var(--sec)}
+.fn-riv-pick p{margin:0;font-size:var(--fs-md);line-height:1.55;color:var(--sec)}
 @media(max-width:760px){.fn-riv{grid-template-columns:1fr}}
 .fn-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:var(--space-3)}
 .fn-tool{display:block;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-md);
   padding:var(--space-4) var(--space-5);color:var(--sec);transition:border-color .12s ease,box-shadow .12s ease}
 .fn-tool:hover{border-color:var(--teal);text-decoration:none;box-shadow:0 6px 18px rgba(15,23,25,.05)}
-.fn-tool b{display:block;color:var(--text);font-size:var(--fs-md);margin-bottom:4px}
-.fn-tool span{display:block;font-size:var(--fs-xs);line-height:1.55}
+.fn-tool b{display:block;color:var(--text);font-size:17px;margin-bottom:4px}
+.fn-tool span{display:block;font-size:var(--fs-sm);line-height:1.55}
 .fn-side .is-card{margin-bottom:0}
 </style>
 
@@ -711,15 +711,36 @@ section{margin:0 0 var(--space-6)}
         (p.rivalry ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') +
         (p.publishedAt ? '<span class="nr-time">' + e(ago(p.publishedAt)) + '</span>' : '') + '</span>';
     };
+    // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only
+    // when one of its own pre-kickoff calls cleared the headline bar, only
+    // for that player and only once (_voiceBlock, _worker.js). Ken, on the
+    // first Monday it ran: "'You're welcome.' should be more prominent. We
+    // want to boast about our successes." As the first two words of the lead
+    // headline it read as punctuation; it is the banner over the card now,
+    // and the call under it. Split only when the DESK wrote it and only when
+    // a headline survives the split — the page never adds a boast to a piece
+    // that did not make one, and never prints a card with no headline.
+    //
+    // Three copies of this split: here, `dfs.html`'s well and `desk.html`'s
+    // article page. When the regexp moves it moves in all three.
+    var BOAST = /^\s*you['\u2019]re\s+welcome\s*[:\u2013\u2014.!-]*\s*/i;
+    var boast = function (p) {
+      var h = String((p && (p.headline || p.title)) || ''), m = BOAST.exec(h);
+      if (!m) return '';
+      var rest = h.slice(m[0].length).trim();
+      return rest || '';
+    };
     // THE LEAD IS THE NEWEST PIECE, not a chosen one: the feed is ordered by
     // publication and the desk's own slots decide what lands when. The lead
     // runs whole — picture, headline at lead size, the whole deck — and the
     // five behind it run as headlines in the column, which is the difference
     // between a newsroom front and six boxes of the same size.
     var lead = j.pieces[0], rest = j.pieces.slice(1, 6);
-    var html = '<article class="nr-lead"' + focus(lead) + '>' +
+    var crow = boast(lead);
+    var html = '<article class="nr-lead' + (crow ? ' is-boast' : '') + '"' + focus(lead) + '>' +
       '<span class="nr-kicker">' + kicker(lead) + '<span class="nr-flag">Latest</span></span>' +
-      '<h3><a href="' + e(lead.url) + '">' + e(lead.headline || lead.title) + '</a></h3>' +
+      (crow ? '<p class="nr-boast">You\u2019re welcome.</p>' : '') +
+      '<h3><a href="' + e(lead.url) + '">' + e(crow || lead.headline || lead.title) + '</a></h3>' +
       (lead.dek ? '<p>' + e(lead.dek) + '</p>' : '') +
       '<a class="nr-lead-go" href="' + e(lead.url) + '">Read the story &rarr;</a>' +
       byline(lead) + '</article>';

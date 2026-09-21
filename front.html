@@ -271,6 +271,18 @@ img{max-width:100%}
    Same treatment the story cards elsewhere on the site use. */
 .hm-read-card h3 .it-story-focus{display:flex;margin:0 0 9px}
 .hm-read-card h3 .it-player-face{width:46px;height:46px;min-width:46px;border-radius:9px}
+/* THE BOAST, at this band's scale. The desk may open a headline with "YOU'RE
+   WELCOME:" only when one of its own pre-kickoff calls cleared the headline
+   bar (_voiceBlock, _worker.js), and the other three surfaces that print a
+   desk headline give that phrase a banner. This band has no lead card to hang
+   an 86px one on -- three cards of equal width, 16px headlines -- so it is
+   sized to the card instead of to the page: big against the 16px under it,
+   small in absolute terms, and the card takes the same warm ground the
+   Fantasy well's lead does. The call runs under it in the headline, as
+   everywhere else. */
+.hm-read-card.is-boast{border-color:rgba(242,169,0,.55);background:linear-gradient(180deg,#fffaef,var(--card) 62%)}
+.hm-read-card .boast{display:block;margin-top:7px;font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:clamp(26px,2.4vw,34px);line-height:.94;letter-spacing:.015em;text-transform:uppercase;color:var(--gold-ink)}
+.hm-read-card.is-boast h3{margin-top:5px}
 .hm-read-card p{margin-top:7px;font-size:13px;line-height:1.45;color:var(--ink-2)}
 .hm-read-card .m{margin-top:auto;padding-top:12px;font-size:11.5px;color:var(--ink-3)}
 
@@ -1059,16 +1071,32 @@ img{max-width:100%}
       });
       return out;
     };
+    // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only when
+    // one of its own pre-kickoff calls cleared the headline bar, only for that
+    // player and only once (_voiceBlock, _worker.js). Printed as the first two
+    // words of a 16px card headline it read as punctuation; it is a line of
+    // its own over the headline here, and the call under it.
+    //
+    // Fourth copy of this split; `fantasy.html`, `dfs.html` and `desk.html`
+    // carry the other three. When the regexp moves it moves in all four.
+    var BOAST = /^\s*you['\u2019]re\s+welcome\s*[:\u2013\u2014.!-]*\s*/i;
+    var boast = function (p) {
+      var h = String((p && (p.headline || p.title)) || ''), m = BOAST.exec(h);
+      if (!m) return '';
+      return h.slice(m[0].length).trim() || '';
+    };
     $('readGrid').innerHTML = pieces.map(function (p) {
       var when = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + esc(p.week) : '');
       var who = whoOf(p);
       // `byline` is an object ({analyst, name, role, avatar, ...}), not a
       // string; escaping it whole printed "[object Object]" under every card.
       var byline = p.byline && p.byline.name ? p.byline.name : '';
-      return '<a class="hm-read-card" href="' + esc(p.url) + '"'
+      var crow = boast(p);
+      return '<a class="hm-read-card' + (crow ? ' is-boast' : '') + '" href="' + esc(p.url) + '"'
         + (who.length ? ' data-player-focus="' + esc(who.slice(0, 3).join('|')) + '"' : '') + '>'
         + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
-        + '<h3>' + esc(p.headline) + '</h3>'
+        + (crow ? '<span class="boast">You\u2019re welcome.</span>' : '')
+        + '<h3>' + esc(crow || p.headline) + '</h3>'
         + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '')
         + '<span class="m">' + (when ? esc(when) : '') + (byline ? (when ? ' · ' : '') + esc(byline) : '') + '</span>'
         + '</a>';
@@ -1086,8 +1114,10 @@ img{max-width:100%}
     // than losing the band for the hour.
     heroPaint('desk', pieces.filter(function (p) { return whoOf(p).length; })
       .map(function (p) {
+        // The gap line is 13px. The boast is not worth two of its words
+        // there, and the hero is not where it is being made; the call is.
         return { name: whoOf(p)[0], kicker: 'What the desk is on today',
-                 gap: p.headline || p.title, href: p.url };
+                 gap: boast(p) || p.headline || p.title, href: p.url };
       }));
   });
 })();
