@@ -82,11 +82,20 @@
    lane control inside it — so an anchor jump has to stop clear of it or it
    lands with the section head hidden behind it. */
 html{scroll-behavior:smooth;scroll-padding-top:56px}
-/* Archivo is here for its WIDTH axis, not just its weights: the hero headline
-   is a claim and a counter-claim, and the counter-claim is set expanded rather
-   than recoloured. Instrument Serif has exactly two jobs on this page — the
-   hero's claim and the lead story's deck — so the two families never blur. */
-body{background:var(--bg);color:var(--ink);font-family:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-stretch:100%;line-height:1.48;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+/* TWO families on this page and no more. The hero used to read as three: the
+   headline's two clauses were set 29 width units apart on Archivo's width
+   axis, which is far enough that they stopped looking like one typeface, and
+   the claim under them was a serif. The width trick is gone — the headline is
+   one face at one width — so what is left above the fold is Archivo for the
+   argument and Instrument Serif for the claim, which is a pairing rather than
+   a pile. The serif's other and only job is the lead story's deck.
+
+   The font-size below is this page's copy of site.css's --fs-md. The cover
+   page is the one reading surface that does not link site.css, so anything
+   here without a size of its own used to land on the browser's 16px default
+   — which matched the base by luck until it moved to 18px on 2026-09-21.
+   If --fs-md moves again, move this with it. */
+body{background:var(--bg);color:var(--ink);font-family:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-stretch:100%;font-size:18px;line-height:1.48;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
 a{color:inherit;text-decoration:none}
 img{max-width:100%}
 .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
@@ -118,16 +127,10 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    different elements of this page and it is off all nine: it is the single
    loudest piece of template chrome a page can wear, and it told a reader
    nothing that weight and colour do not. */
-.mast-jump a,.mast-nav a{color:#a9bab6;font-size:13.5px;font-weight:600;letter-spacing:0;padding:8px 9px;border-radius:3px}
+.mast-jump a,.mast-nav a{color:#a9bab6;font-size:15px;font-weight:600;letter-spacing:0;padding:8px 9px;border-radius:3px}
 .mast-jump a:hover,.mast-nav a:hover{color:#fff;background:rgba(255,255,255,.07)}
 .mast-nav a.cta{background:var(--brand);color:#fff;margin-left:6px;font-weight:700}
 .mast-nav a.cta:hover{background:var(--brand-dark)}
-/* Sign In sits with the account buttons rather than in the section ribbon: it
-   is a thing you DO, not a place on the page, and in the ribbon it fell past
-   the right edge at every desktop width. Dimmer and set slightly apart so it
-   reads as account rather than as another section anchor. */
-.mast-nav a.mast-signin{color:#7d918d;margin-left:8px;font-size:13px}
-.mast-nav a.mast-signin:hover{color:#fff}
 /* Brass is the money accent, and "Customize My League" is where a reader puts
    their own money on the line, so it is the one brass control in the chrome. */
 .mast-nav a.cta-gold{background:var(--gold);color:#1a1205;margin-left:6px;font-weight:700}
@@ -149,19 +152,18 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
   .mast-jump{flex:1 1 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-left:6px}
   .mast-jump::after{content:"";flex:0 0 22px;align-self:stretch;position:sticky;right:0;margin-left:-22px;pointer-events:none;background:linear-gradient(90deg,rgba(11,22,20,0),var(--mast))}
   .mast-jump::-webkit-scrollbar{display:none}
-  .mast-jump a{flex:0 0 auto;font-size:13px;padding:8px 7px}
-  /* Row two: the two actions, equal and full width, at a size a thumb can hit. */
+  .mast-jump a{flex:0 0 auto;font-size:14.5px;padding:8px 7px}
+  /* Row two: the action, full width, at a size a thumb can hit. The rule still
+     names .cta as well as .cta-gold so a second button added here shares the
+     row evenly rather than needing the query edited. */
   .mast-nav{flex:1 1 100%;gap:9px;flex-wrap:nowrap}
-  .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;justify-content:center;font-size:13.5px;padding:11px 8px;border-radius:3px}
-  /* Sign In rides along on that row at its own width — it is a text link, not a
-     third button, and giving it an equal third would say otherwise. */
-  .mast-nav a.mast-signin{flex:0 0 auto;margin-left:0;padding-left:2px;padding-right:8px}
+  .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;justify-content:center;font-size:15px;padding:11px 8px;border-radius:3px}
 }
-@media(max-width:380px){ .mast-logo{height:22px} .mast-jump a{font-size:12.5px;padding:8px 6px} }
+@media(max-width:380px){ .mast-logo{height:22px} .mast-jump a{font-size:14px;padding:8px 6px} }
 
 /* ── footer ── */
 .foot{margin-top:0;background:var(--card);border-top:1px solid var(--line)}
-.foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 20px 34px;font-size:13px;color:var(--ink-3)}
+.foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 20px 34px;font-size:14.5px;color:var(--ink-3)}
 .foot a:hover{color:var(--brand)}
 /* The footer sitemap takes a line of its own above the legal run: flex-basis
    100% breaks it out of the footer's single wrapping row so it reads as a group
@@ -171,7 +173,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .foot-nav a{font-weight:600;color:var(--ink-2)}
 /* /admin is not a destination a visitor navigates to; it is the operator's only
    link in. It sits at the end of the row, quiet. */
-.foot-admin{font-size:12px;color:var(--ink-3);opacity:.7}
+.foot-admin{font-size:13.5px;color:var(--ink-3);opacity:.7}
 .foot .fm{margin-left:auto;line-height:1.55}
 
 /* ══ the homepage ══════════════════════════════════════════════════════════
@@ -186,42 +188,68 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hero-band .wrap{padding-top:clamp(38px,6vw,76px);padding-bottom:clamp(36px,5.4vw,68px)}
 /* The clock is written hidden and revealed only once /api/season answers with a
    real week. A dateline that says it is loading is worse than no dateline. */
-.hm-clock{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--on-board-2);margin-bottom:20px;padding-left:12px;border-left:2px solid var(--teal)}
+/* The dateline and the claim are the two lines in this column that hang off a
+   rule, and they hang off the SAME indent (--hm-rule): two rules set at 12px
+   and 18px gave the column three left edges in six lines, which is most of
+   what made it read as untidy. Everything else in the column is flush left. */
+.hm-hero-copy{--hm-rule:16px}
+.hm-clock{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2);margin-bottom:26px;padding-left:var(--hm-rule);border-left:2px solid var(--teal)}
 .hm-clock b{color:#fff;font-weight:700}
 .hm-clock .live{color:var(--teal);font-weight:700}
 /* ── the headline, which is the one bold thing on this page ───────────────
    It is a claim and a counter-claim, and the counter-claim used to be marked
    by turning it mint green. Colouring one phrase of a headline is the oldest
    tell in template design and it wastes the contrast on a highlighter.
-   Both clauses are the same white here. What separates them is Archivo's
-   WIDTH axis: the thing anyone can do is set at normal width and mid weight,
-   and the thing only a sportsbook does is set expanded and heavy. The
-   rhetoric is carried by the letterforms.
+   Both clauses are the same white here. The counter-claim was then set on
+   Archivo's WIDTH axis instead, at 125% against the first clause's 96%, and
+   29 units of width apart is far enough that the two clauses stopped looking
+   like one typeface — a third font in a hero that already carries two. Both
+   clauses now sit at the body's width and track identically. What separates
+   them is WEIGHT and SIZE: 500 at the h1's size against 800 at 1.16 of it,
+   which is the contrast one family is built to carry. Size is set in `em` so
+   it rides the h1's own clamp — the counter-claim is 16% bigger than the
+   clause above it at 29px on a phone and at 50px on a desk, rather than
+   punching at one width and shouting at the other.
    `em` stays the element — the emphasis is real, the styling of it is not
    italic — and the h1's textContent is unchanged (tools/test-homepage.mjs). */
-.hm-h1{font-size:clamp(28px,4.5vw,53px);line-height:1.0;letter-spacing:-.02em;font-weight:500}
-/* The measure is set on each CLAUSE, not on the h1, because `ch` resolves
-   against the element's own font: capping the h1 would measure both clauses in
-   the narrow one and break the expanded clause onto three ragged lines with
-   "theirs." alone on the last. Two lines each, which is what the contrast
-   needs to read as two lines of argument. */
-.hm-h1 .c1{display:block;max-width:22ch;font-stretch:96%}
-.hm-h1 em{display:block;max-width:21ch;margin-top:.1em;font-style:normal;font-stretch:125%;font-weight:800;letter-spacing:-.028em}
-/* The one sentence that says what this site DOES. Set in the serif, which
-   appears exactly twice on this page, and pushed off a brass rule — brass
-   because this sentence IS the money claim. Capped at 40ch so it breaks to
-   two or three lines and reads as a statement rather than as a paragraph. */
-.hm-claim{margin-top:24px;max-width:40ch;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400;font-size:clamp(20px,2.5vw,29px);line-height:1.26;color:#fff;border-left:2px solid var(--gold);padding-left:18px}
-.hm-lede{margin-top:18px;max-width:58ch;font-size:clamp(14.5px,1.6vw,16.5px);line-height:1.6;color:#a8bab6}
-.hm-cta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:28px}
-.hm-btn{display:inline-flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:700;padding:14px 22px;border-radius:3px;border:1px solid transparent}
+/* Leading was 1.0, which is tighter than this face wants at 50px: "projection."
+   and "Vegas" collided across the clause break and the two clauses read as one
+   four-line block rather than as claim and counter-claim. 1.06 here, with the
+   clause break carrying its own step, separates them without a paragraph gap. */
+.hm-h1{font-size:clamp(30px,4.1vw,50px);line-height:1.06;letter-spacing:-.021em;font-weight:500}
+/* The measure is set on each CLAUSE, not on the h1, so each one breaks where
+   its own length wants to: the first runs two lines, the counter-claim one.
+   The caps differ because `ch` resolves against the element's own font, and
+   the counter-claim's is both bolder and bigger — its `0` is wider, so 25ch
+   there is a far LONGER line than 22ch is on the clause above. It is set to
+   the 23.6ch the sentence actually measures, plus slack: the counter-claim
+   lands whole on one line wherever the column is wide enough to hold it, and
+   wraps to two where it is not. */
+.hm-h1 .c1{display:block;max-width:22ch}
+.hm-h1 em{display:block;max-width:25ch;margin-top:.1em;font-style:normal;font-size:1.16em;font-weight:800}
+/* The one sentence that says what this site DOES. This is the page's second
+   family and its last — Instrument Serif, the same face the lead story's deck
+   carries — pushed off a brass rule, brass because this sentence IS the money
+   claim. A serif under a sans headline is a pairing the eye reads as one
+   intention; it only looked like clutter while the headline itself was
+   running two widths. Capped at 38ch so it breaks to two or three lines and
+   reads as a statement rather than as a paragraph.
+   It must stay larger than the lede (tools/test-homepage.mjs), which the floor
+   of this clamp holds at every width. */
+.hm-claim{margin-top:28px;max-width:38ch;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400;font-size:clamp(22px,2.3vw,28px);line-height:1.34;color:#fff;border-left:2px solid var(--gold);padding-left:var(--hm-rule)}
+/* 58ch was a measure the column no longer has now that the photograph is a
+   real column beside it, so the lede set three lines that each broke in a
+   different place. 52ch is the measure this width actually holds. */
+.hm-lede{margin-top:22px;max-width:52ch;font-size:clamp(16px,1.45vw,18px);line-height:1.65;color:#a3b6b2}
+.hm-cta{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:32px}
+.hm-btn{display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;letter-spacing:.005em;padding:15px 24px;border-radius:3px;border:1px solid transparent}
 .hm-btn.primary{background:var(--teal);color:#06231c}
 .hm-btn.primary:hover{filter:brightness(1.08)}
 .hm-btn.second{background:transparent;color:#fff;border-color:rgba(255,255,255,.32)}
 .hm-btn.second:hover{background:rgba(255,255,255,.09);border-color:#fff}
 /* Deliberately smaller and quieter than the two buttons: it is the third thing
    to do on this page, not a third button competing with the first two. */
-.hm-how-link{display:inline-block;margin-top:18px;font-size:13.5px;font-weight:600;color:#8fa5a1;border-bottom:1px solid rgba(143,165,161,.42);padding-bottom:1px}
+.hm-how-link{display:inline-block;margin-top:20px;font-size:14.5px;font-weight:600;letter-spacing:.01em;color:#8fa5a1;border-bottom:1px solid rgba(143,165,161,.35);padding-bottom:2px}
 .hm-how-link:hover{color:#fff;border-bottom-color:#fff}
 /* ── the hero's picture ──────────────────────────────────────────────────
    ONE column until there is a photograph to put beside the headline, so an
@@ -229,44 +257,60 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    headline with an empty gutter next to it. `has-edge` is added by the
    painter and is the only thing that opens the second column. */
 .hm-hero{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(26px,4vw,52px);align-items:center}
-.hm-hero.has-edge{grid-template-columns:minmax(0,1fr) minmax(0,320px)}
-/* The headline is capped at 17ch, the claim at 40ch and the lede at 58ch, so
-   none of them reflows when the column narrows — the picture arrives beside the
-   copy, it does not move it. Below 900px the picture goes under the buttons
-   instead. */
+/* The picture is a COLUMN, not a thumbnail parked beside a headline. It was
+   320px wide and 4:3, which left it ending level with the lede while the copy
+   ran on for another 250px — a photograph floating in the top half of a band
+   whose bottom half was empty. It now runs the full height of the copy: the
+   row stretches, the plate takes whatever height the copy leaves after the
+   caption and the meta under it, and the photograph crops to fill it. */
+.hm-hero.has-edge{grid-template-columns:minmax(0,1fr) minmax(0,clamp(330px,30vw,440px));align-items:stretch}
+/* The headline is capped clause by clause, the claim at 38ch and the lede at
+   52ch, so none of them reflows when the column narrows — the picture arrives
+   beside the copy, it does not move it. Below 900px the picture goes under the
+   buttons instead. */
 @media(max-width:900px){.hm-hero.has-edge{grid-template-columns:minmax(0,1fr)}
-  .hm-edge{max-width:380px}}
-.hm-edge{min-width:0}
+  .hm-edge{max-width:420px}
+  /* Under the buttons there is no copy to match, so the plate goes back to
+     being a shape of its own rather than filling a height nothing sets. */
+  .hm-edge .it-plate-shot{flex:0 0 auto;aspect-ratio:4/3;min-height:0}}
+.hm-edge{min-width:0;display:flex;flex-direction:column}
 .hm-edge[hidden]{display:none}
+/* The chain that lets the photograph take the leftover height: the plate well,
+   the optional link around the figure and the figure itself all pass the
+   stretch down, and the shot is the one flexible box in it. */
+.he-plate{flex:1 1 auto;display:flex;min-height:0}
+.he-plate .he-link,.he-plate .it-plate{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;width:100%}
 /* The shape is set here rather than in player-search.js: the plate fills
    whatever box it is given, and this is the box. Square corners and a hairline
    rather than a 12px radius over a 44px drop shadow — this is a photograph
    pinned to a board, not a card floating over one. */
-.hm-edge .it-plate-shot{height:auto;aspect-ratio:4/3;border-radius:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14)}
-.hm-edge .it-plate-shot i{font-size:28px;color:#6d827e}
-.hm-edge .it-art-credit{margin-top:9px;font-size:10.5px;line-height:1.4;color:#7d918d}
+.hm-edge .it-plate-shot{flex:1 1 auto;height:auto;aspect-ratio:auto;min-height:clamp(230px,24vw,320px);border-radius:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14)}
+.hm-edge .it-plate-shot i{font-size:34px;color:#6d827e}
+.hm-edge .it-art-credit{margin-top:10px;font-size:12.5px;line-height:1.45;color:#7d918d}
 .hm-edge .it-art-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 /* The plate is wrapped in a link when the feed hands over a story to point at.
    It carried no style of its own, so the photograph had no hover and no focus
    ring even though it was the biggest link in the hero. */
 .he-link{display:block;border-radius:2px}
 .he-link:hover .it-plate-shot{border-color:rgba(45,212,163,.7)}
-.he-meta{display:flex;flex-direction:column;gap:3px;margin-top:14px}
-.he-k{font-size:12px;font-weight:700;color:var(--teal)}
-.he-name{font-size:19px;font-weight:700;font-stretch:112%;line-height:1.2;color:#fff}
-.he-sub{font-size:12.5px;font-weight:600;color:var(--on-board-2)}
-.he-gap{margin-top:5px;font-size:13px;line-height:1.5;color:#a8bab6}
+/* The caption block is sized to the wider column it now sits under, and it is
+   flush with the picture above it rather than a size smaller again. */
+.he-meta{display:flex;flex-direction:column;gap:4px;margin-top:16px;flex:0 0 auto}
+.he-k{font-size:13.5px;font-weight:700;letter-spacing:.01em;color:var(--teal)}
+.he-name{font-size:23px;font-weight:700;font-stretch:112%;line-height:1.18;color:#fff}
+.he-sub{font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2)}
+.he-gap{margin-top:7px;font-size:15px;line-height:1.5;color:#a3b6b2}
 
 /* ── shared section furniture ─────────────────────────────────────────────
    Section headings take the hero's expanded voice, one step down, so the page
    reads as one typographic system rather than a hero plus five widgets. */
 .hm-sec{padding-top:clamp(36px,4.6vw,60px)}
 .hm-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;padding-bottom:10px;border-bottom:2px solid var(--ink)}
-.hm-sec-head h2{font-size:clamp(20px,2.4vw,27px);line-height:1.12;letter-spacing:-.014em;font-weight:700;font-stretch:112%}
-.hm-sec-head a{font-size:13.5px;font-weight:600;color:var(--brand)}
+.hm-sec-head h2{font-size:clamp(22px,2.4vw,28px);line-height:1.12;letter-spacing:-.014em;font-weight:700;font-stretch:112%}
+.hm-sec-head a{font-size:15px;font-weight:600;color:var(--brand)}
 .hm-sec-head a:hover{text-decoration:underline}
-.hm-sub{margin-top:14px;font-size:14.5px;line-height:1.55;color:var(--ink-2);max-width:70ch;margin-bottom:18px}
-.hm-fine{margin-top:12px;font-size:12.5px;line-height:1.55;color:var(--ink-3)}
+.hm-sub{margin-top:14px;font-size:16px;line-height:1.55;color:var(--ink-2);max-width:70ch;margin-bottom:18px}
+.hm-fine{margin-top:12px;font-size:14px;line-height:1.55;color:var(--ink-3)}
 
 /* ── 2 · the two product cards ────────────────────────────────────────────
    ONE plate divided by ONE rule, not two cards side by side. They were two
@@ -276,16 +320,16 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-lanes{display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--card);border:1px solid var(--line);border-radius:2px}
 .hm-lane{display:flex;flex-direction:column;padding:26px 26px 22px;min-width:0}
 .hm-lane + .hm-lane{border-left:1px solid var(--line)}
-.hm-lane h2{font-size:clamp(20px,2.4vw,26px);line-height:1.12;letter-spacing:-.014em;font-weight:700;font-stretch:112%}
-.hm-lane > p{margin-top:8px;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:42ch}
+.hm-lane h2{font-size:clamp(22px,2.4vw,28px);line-height:1.12;letter-spacing:-.014em;font-weight:700;font-stretch:112%}
+.hm-lane > p{margin-top:8px;font-size:15.5px;line-height:1.5;color:var(--ink-2);max-width:42ch}
 /* The live reading. Written hidden; revealed only with a real current output on
    it, so a card whose feed is quiet is a card of links rather than a card of
    apologies. Brass rule, because the reading is the number with money behind
    it — the same mark the hero's claim carries. */
 .hm-read{margin-top:20px;border:0;border-left:2px solid var(--gold);background:#fdf6e7;border-radius:0;padding:14px 16px}
-.hm-read .k{display:block;font-size:12px;font-weight:700;color:var(--gold-ink)}
-.hm-read .h{display:block;margin-top:5px;font-size:16.5px;font-weight:700;line-height:1.25;color:var(--ink)}
-.hm-read .d{display:block;margin-top:5px;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.hm-read .k{display:block;font-size:13.5px;font-weight:700;color:var(--gold-ink)}
+.hm-read .h{display:block;margin-top:5px;font-size:18.5px;font-weight:700;line-height:1.25;color:var(--ink)}
+.hm-read .d{display:block;margin-top:5px;font-size:15px;line-height:1.45;color:var(--ink-2)}
 /* The card's one reading is about one player, so it carries his face. The
    column only exists once a picture is in it (`has-pic`, set by the painter),
    because an empty 58px gutter beside three lines of type is worse than no
@@ -297,16 +341,16 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-read.has-pic .pic{display:block;grid-column:1;grid-row:1/span 3}
 .hm-read.has-pic .k,.hm-read.has-pic .h,.hm-read.has-pic .d{grid-column:2}
 .hm-read .pic .it-plate-shot{height:auto;aspect-ratio:1/1;border-radius:2px;background:#ece7d9}
-.hm-read .pic .it-plate-shot i{font-size:15px}
+.hm-read .pic .it-plate-shot i{font-size:17px}
 /* A ruled index, not a stack of one-pixel grid gaps faking rules. */
 .hm-links{list-style:none;margin-top:20px;border-top:1px solid var(--line)}
 .hm-links li{border-bottom:1px solid var(--line)}
-.hm-links a{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:11px 0;font-size:14.5px;font-weight:600}
-.hm-links a span{font-size:13px;font-weight:400;color:var(--ink-3);text-align:right}
+.hm-links a{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:11px 0;font-size:16px;font-weight:600}
+.hm-links a span{font-size:14.5px;font-weight:400;color:var(--ink-3);text-align:right}
 .hm-links a:hover{color:var(--brand)}
 .hm-links a:hover span{color:var(--brand)}
 .hm-lane-go{margin-top:auto;padding-top:20px}
-.hm-lane-go a{display:inline-flex;align-items:center;justify-content:center;width:100%;background:var(--brand);color:#fff;font-size:14.5px;font-weight:700;padding:13px 18px;border-radius:3px}
+.hm-lane-go a{display:inline-flex;align-items:center;justify-content:center;width:100%;background:var(--brand);color:#fff;font-size:16px;font-weight:700;padding:13px 18px;border-radius:3px}
 .hm-lane-go a:hover{background:var(--brand-dark)}
 @media(max-width:900px){
   .hm-lanes{grid-template-columns:1fr}
@@ -323,8 +367,8 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-diff-plate{background:var(--mast);border-radius:2px;overflow:hidden}
 .hm-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .hm-table{width:100%;border-collapse:collapse;min-width:700px}
-.hm-table th,.hm-table td{padding:13px 16px;text-align:left;font-size:14.5px;vertical-align:middle}
-.hm-table thead th{font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--on-board-2);background:transparent;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.15);padding-top:16px;padding-bottom:12px}
+.hm-table th,.hm-table td{padding:13px 16px;text-align:left;font-size:16px;vertical-align:middle}
+.hm-table thead th{font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--on-board-2);background:transparent;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.15);padding-top:16px;padding-bottom:12px}
 /* The row rule goes on the ROW, not on the cells. The player cell is a flex
    container (it has to be, to sit a 46px face beside a two-line name), and a
    flex box paints its border at its own bottom edge rather than at the row's —
@@ -335,8 +379,8 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-table tbody tr{border-bottom:1px solid rgba(255,255,255,.13)}
 .hm-table tbody tr:last-child{border-bottom:0}
 .hm-table .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--on-board-2)}
-.hm-table .who b{display:block;font-size:15.5px;font-weight:700;line-height:1.2;color:#fff}
-.hm-table .who small{display:block;margin-top:2px;font-size:12px;letter-spacing:0;text-transform:none;color:var(--on-board-2)}
+.hm-table .who b{display:block;font-size:17.5px;font-weight:700;line-height:1.2;color:#fff}
+.hm-table .who small{display:block;margin-top:2px;font-size:13.5px;letter-spacing:0;text-transform:none;color:var(--on-board-2)}
 /* player-search.js puts the player's face at the front of the cell it finds
    him in. The shared default is 34px, which is a marker in a long table; this
    is a five-row board where the player IS the row, so his picture is worth
@@ -352,11 +396,11 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    The brass rule under the header carries the money mark on its own, and a
    neutral lift is what says "this column is the one to read". */
 .hm-table tbody td:nth-child(4){background:rgba(255,255,255,.05)}
-.hm-table .mine{font-weight:800;font-size:17px;color:#fff}
-.hm-act{display:inline-block;font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;padding:4px 10px;border-radius:2px;white-space:nowrap}
+.hm-table .mine{font-weight:800;font-size:19px;color:#fff}
+.hm-act{display:inline-block;font-size:14.5px;font-weight:700;letter-spacing:0;text-transform:none;padding:4px 10px;border-radius:2px;white-space:nowrap}
 .hm-act.up{background:rgba(45,212,163,.15);color:#5fe0ba;border:1px solid rgba(45,212,163,.36)}
 .hm-act.down{background:rgba(232,119,108,.14);color:#f09a92;border:1px solid rgba(232,119,108,.34)}
-.hm-act-why{display:block;margin-top:5px;font-size:12.5px;color:var(--on-board-2);white-space:nowrap}
+.hm-act-why{display:block;margin-top:5px;font-size:14px;color:var(--on-board-2);white-space:nowrap}
 
 /* ── the lead story ───────────────────────────────────────────────────────
    The front page carried the desk only as three rotating cards two screens
@@ -378,9 +422,9 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    and the card does not hold white space open when it is not. */
 .hm-lead{align-self:start;display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--card);border:1px solid var(--line);border-top:3px solid var(--ink);border-radius:0 0 2px 2px;padding:24px 26px 26px}
 .hm-lead:hover{border-color:var(--brand-line);border-top-color:var(--brand)}
-.hm-lead .t{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
-.hm-lead .flag{font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;border-radius:2px;padding:1px 7px;color:var(--gold-ink);background:#fdf3dc}
-.hm-lead h3{font-size:clamp(23px,2.5vw,32px);line-height:1.13;font-weight:700;font-stretch:108%;letter-spacing:-.018em;color:var(--ink);overflow-wrap:anywhere}
+.hm-lead .t{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:14px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
+.hm-lead .flag{font-size:13.5px;font-weight:600;letter-spacing:0;text-transform:none;border-radius:2px;padding:1px 7px;color:var(--gold-ink);background:#fdf3dc}
+.hm-lead h3{font-size:clamp(25px,2.5vw,33px);line-height:1.13;font-weight:700;font-stretch:108%;letter-spacing:-.018em;color:var(--ink);overflow-wrap:anywhere}
 .hm-lead h3 a{color:inherit}
 .hm-lead h3 a:hover{color:var(--brand)}
 .hm-lead h3 .it-story-focus{display:flex;margin:0 0 14px}
@@ -389,33 +433,33 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    this page: it is the only place below the hero that is reading rather than
    scanning. The cards below clamp theirs to keep three of them scannable, and
    a lead clamped to two lines is only a bigger card. */
-.hm-lead p{font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:19px;line-height:1.45;color:var(--ink-2)}
-.hm-lead .go{font-size:13.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
-.hm-lead .m{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3)}
+.hm-lead p{font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:21px;line-height:1.45;color:var(--ink-2)}
+.hm-lead .go{font-size:15px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
+.hm-lead .m{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-3)}
 /* The boast on the lead, at the lead's scale rather than the card's: the
    headline under it is bigger here, so the banner is too. Brass ground and
    brass rule, which is the same mark the reading and the claim carry — the
    desk is claiming it called this one. */
 .hm-lead.is-boast{border-top-color:var(--gold);background:linear-gradient(180deg,#fff8e8,var(--card) 56%)}
 .hm-lead.is-boast:hover{border-top-color:var(--gold)}
-.hm-lead .boast{display:block;font-stretch:125%;font-weight:900;font-size:clamp(28px,2.9vw,38px);line-height:.98;letter-spacing:-.025em;text-transform:uppercase;color:var(--gold-ink)}
-.hm-lead.is-boast h3{font-size:clamp(20px,2.1vw,26px);font-weight:600;font-stretch:104%;letter-spacing:-.012em}
+.hm-lead .boast{display:block;font-stretch:125%;font-weight:900;font-size:clamp(29px,2.9vw,38px);line-height:.98;letter-spacing:-.025em;text-transform:uppercase;color:var(--gold-ink)}
+.hm-lead.is-boast h3{font-size:clamp(22px,2.1vw,28px);font-weight:600;font-stretch:104%;letter-spacing:-.012em}
 .hm-lead.is-boast .m{border-top-color:rgba(242,169,0,.4)}
 .hm-rail{display:flex;flex-direction:column;min-width:0}
-.hm-rail-h{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--ink);font-size:12.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink)}
+.hm-rail-h{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--ink);font-size:14px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink)}
 .hm-rail ul{list-style:none;display:flex;flex-direction:column;justify-content:space-between;gap:13px;flex:1 1 auto}
 .hm-rail li{display:flex;flex-direction:column;gap:5px;min-width:0;padding-bottom:13px;border-bottom:1px solid var(--line)}
 .hm-rail li:last-child{padding-bottom:0;border-bottom:0}
-.hm-rail li .t{font-size:12px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
-.hm-rail li h3{display:flex;align-items:center;font-size:15px;line-height:1.32;font-weight:600}
+.hm-rail li .t{font-size:13.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
+.hm-rail li h3{display:flex;align-items:center;font-size:17px;line-height:1.32;font-weight:600}
 .hm-rail li h3 a{color:var(--ink)}
 .hm-rail li h3 a:hover{color:var(--brand)}
 .hm-rail li h3 .it-story-focus{flex:0 0 auto;margin:0 10px 0 0}
 .hm-rail li h3 .it-player-face{width:32px;height:32px;min-width:32px;border-radius:3px}
-.hm-rail li .m{font-size:12px;color:var(--ink-3)}
+.hm-rail li .m{font-size:13.5px;color:var(--ink-3)}
 @media(max-width:900px){.hm-well{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:620px){.hm-lead h3 .it-player-face{width:56px;height:56px;min-width:56px;border-radius:3px}
-  .hm-lead p{font-size:18px}}
+  .hm-lead p{font-size:20px}}
 
 /* ── 4 · the current articles ─────────────────────────────────────────────
    Ruled entries, not boxes. These are the third-most important thing on the
@@ -426,8 +470,8 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-read-card{display:flex;flex-direction:column;background:transparent;border:0;border-top:2px solid var(--ink);border-radius:0;padding:13px 0 0}
 .hm-read-card:hover{border-top-color:var(--brand)}
 .hm-read-card:hover h3{color:var(--brand)}
-.hm-read-card .t{font-size:12px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
-.hm-read-card h3{margin-top:7px;font-size:17px;line-height:1.28;font-weight:700;font-stretch:104%;letter-spacing:-.01em}
+.hm-read-card .t{font-size:13.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
+.hm-read-card h3{margin-top:7px;font-size:19px;line-height:1.28;font-weight:700;font-stretch:104%;letter-spacing:-.01em}
 /* The faces the desk's own findings name, on their own row ABOVE the headline
    rather than inline at the front of it — set inline they push the first line
    of type around them and the headline reads as though it starts mid-sentence.
@@ -444,16 +488,16 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    everywhere else. */
 .hm-read-card.is-boast{border-top-color:var(--gold)}
 .hm-read-card.is-boast:hover{border-top-color:var(--gold)}
-.hm-read-card .boast{display:block;margin-top:6px;font-stretch:125%;font-weight:900;font-size:clamp(23px,2.2vw,29px);line-height:.98;letter-spacing:-.022em;text-transform:uppercase;color:var(--gold-ink)}
+.hm-read-card .boast{display:block;margin-top:6px;font-stretch:125%;font-weight:900;font-size:clamp(25px,2.2vw,30px);line-height:.98;letter-spacing:-.022em;text-transform:uppercase;color:var(--gold-ink)}
 .hm-read-card.is-boast h3{margin-top:5px;font-weight:600}
-.hm-read-card p{margin-top:7px;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
-.hm-read-card .m{margin-top:auto;padding-top:12px;font-size:12px;color:var(--ink-3)}
+.hm-read-card p{margin-top:7px;font-size:15px;line-height:1.5;color:var(--ink-2)}
+.hm-read-card .m{margin-top:auto;padding-top:12px;font-size:13.5px;color:var(--ink-3)}
 
 /* ── 5 · how it works, and the disclosures ── */
 .hm-how{margin-top:clamp(34px,4vw,52px);background:var(--card);border-top:1px solid var(--line)}
 .hm-how .wrap{padding-top:clamp(20px,2.4vw,28px);padding-bottom:clamp(20px,2.4vw,30px)}
-.hm-how h2{font-size:14px;font-weight:700;font-stretch:108%;letter-spacing:0;color:var(--ink)}
-.hm-note{margin-top:7px;font-size:12.5px;line-height:1.65;color:var(--ink-3);max-width:92ch}
+.hm-how h2{font-size:15.5px;font-weight:700;font-stretch:108%;letter-spacing:0;color:var(--ink)}
+.hm-note{margin-top:7px;font-size:14px;line-height:1.65;color:var(--ink-3);max-width:92ch}
 .hm-note b{color:var(--ink-2)}
 .hm-note a{color:var(--brand);font-weight:600}
 .hm-note a:hover{text-decoration:underline}
@@ -461,7 +505,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    than only in the footer: this is where a reader is actually deciding what the
    numbers are worth. The footer's copyright line stays; its duplicate copy of
    this paragraph does not. */
-.hm-legal{margin-top:12px;font-size:12.5px;line-height:1.65;color:var(--ink-3);max-width:92ch}
+.hm-legal{margin-top:12px;font-size:14px;line-height:1.65;color:var(--ink-3);max-width:92ch}
 .hm-legal b{color:var(--ink-2)}
 .hm-legal p + p{margin-top:8px}
 
@@ -490,84 +534,19 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    page above two cards that already carry their names. */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
-/* ranks:css */
-/* ── the section ribbon (generated by tools/build-ranks.mjs) ─────────────────
-   Under the hero on the front page, under the header everywhere else. Five
-   destinations; the two rankings menus drop every position down on hover and on
-   keyboard focus. Do not hand-edit — run the tool. */
-.rk-ribbon {
-  --rkr-ink: var(--ink, var(--text, #111820));
-  --rkr-mut: var(--ink-2, var(--sec, #39454f));
-  --rkr-line: var(--line, #e3e8ec);
-  --rkr-brand: var(--brand, #0e7c63);
-  --rkr-card: var(--card, #ffffff);
-  --rkr-panel: var(--panel, var(--brand-tint, #f7f9fa));
-  background: var(--rkr-card); border-bottom: 1px solid var(--rkr-line);
-  border-top: 1px solid var(--rkr-line);
-  box-shadow: 0 1px 4px rgba(16, 19, 23, .05); position: relative;
-  /* Above front.html's sticky .topbars (z-index 40), or a dropped menu that
-     reaches down past the lead story is painted behind it. Still under the
-     player-search menu, which is fixed and parented to <body>. */
-  z-index: 45;
+/* ── the choose-your-game band ───────────────────────────────────────────────
+   The band directly under the hero, where the generated rankings ribbon used
+   to sit. It keeps that band's stock — a white rule-bounded strip against the
+   hero's dark mast — so the page still reads as "the thesis, then a break,
+   then the product", and it carries one line of type instead of six links.
+   Nothing in it is a control, so nothing in it is styled as one. */
+.hm-choose{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(16,19,23,.05);position:relative;z-index:45}
+.hm-choose-in{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:center;min-height:46px}
+.hm-choose-k{font-size:14px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);text-align:center}
+@media (max-width:860px){
+  .hm-choose-in{padding:0 12px}
+  .hm-choose-k{font-size:13px;letter-spacing:.05em}
 }
-/* NO OVERFLOW ON THIS ROW. A menu cannot hang out of a scroll container:
-   overflow-x:auto with overflow-y:visible computes to overflow-y:auto — the
-   spec is explicit about it — so the dropdown would be clipped at the band's
-   46px and turned into a scrollbar. The homepage's own sticky ribbon learned
-   this the hard way with the player-lookup menu it carried. The band wraps
-   instead of scrolling here; on a phone, where the menus are off anyway, the
-   media query below turns the sideways scroll back on. */
-.rk-ribbon-in {
-  max-width: 1180px; margin: 0 auto; padding: 0 20px;
-  display: flex; align-items: stretch; flex-wrap: wrap; gap: 2px;
-}
-.rk-ribbon .rkr-item { position: relative; display: flex; align-items: center; flex: 0 0 auto }
-.rk-ribbon .rkr-link {
-  display: flex; align-items: center; white-space: nowrap; text-decoration: none;
-  font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--rkr-mut); padding: 14px 13px; border-bottom: 3px solid transparent; min-height: 46px;
-}
-.rk-ribbon .rkr-link:hover, .rk-ribbon .rkr-link:focus-visible {
-  color: var(--rkr-ink); border-bottom-color: var(--rkr-brand); text-decoration: none;
-}
-.rk-ribbon .rkr-link[aria-current="page"] { color: var(--rkr-ink); border-bottom-color: var(--rkr-brand) }
-.rk-ribbon .rkr-has-menu > .rkr-link::after { content: "\25BE"; margin-left: 6px; font-size: .85em; opacity: .7 }
-.rk-ribbon .rkr-menu {
-  display: flex; flex-direction: column; visibility: hidden; opacity: 0;
-  transition: opacity .12s ease, visibility 0s linear .3s;
-  position: absolute; top: 100%; left: 0; z-index: 60; min-width: 232px;
-  background: var(--rkr-card); border: 1px solid var(--rkr-line); border-top: 2px solid var(--rkr-brand);
-  border-radius: 0 0 10px 10px; padding: 6px;
-  box-shadow: 0 14px 30px rgba(16, 19, 23, .16);
-}
-/* Bridges the 0px gap between the trigger and the menu so the pointer can cross
-   it without the menu closing under it. */
-.rk-ribbon .rkr-menu::before { content: ""; position: absolute; top: -8px; left: 0; right: 0; height: 10px }
-.rk-ribbon .rkr-has-menu:hover .rkr-menu,
-.rk-ribbon .rkr-has-menu:focus-within .rkr-menu { visibility: visible; opacity: 1; transition-delay: 0s }
-.rk-ribbon .rkr-menu a {
-  display: block; padding: 9px 12px; border-radius: 7px; white-space: nowrap; text-decoration: none;
-  font-size: 13.5px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--rkr-mut);
-}
-.rk-ribbon .rkr-menu a:hover, .rk-ribbon .rkr-menu a:focus-visible {
-  background: var(--rkr-panel); color: var(--rkr-ink); text-decoration: none;
-}
-.rk-ribbon .rkr-menu a[aria-current="page"] { color: var(--rkr-brand); font-weight: 800 }
-/* A hover menu is unreachable on touch, so below the desktop breakpoint the
-   trigger is simply a link to the category's hub — which lists every position as
-   a chip, as does every position page. Nothing is lost; the menu was a shortcut. */
-@media (max-width: 860px) {
-  .rk-ribbon .rkr-menu { display: none }
-  /* And with the menu gone, so is the caret: an arrow that opens nothing is a
-     promise the band cannot keep. The trigger is a plain link to the hub. */
-  .rk-ribbon .rkr-has-menu > .rkr-link::after { content: none }
-  .rk-ribbon .rkr-link { padding: 12px 10px; font-size: 11.5px; letter-spacing: .05em }
-  .rk-ribbon-in {
-    padding: 0 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
-  }
-  .rk-ribbon-in::-webkit-scrollbar { display: none }
-}
-/* /ranks:css */
 </style>
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://irontuna.com/#website","name":"Iron Tuna","url":"https://irontuna.com/","inLanguage":"en-US","publisher":{"@id":"https://irontuna.com/#organization"},"description":"Analytics consistently beats intuition. Iron Tuna combines market intel, advanced analytics and AI analysis: the betting market read first, the consensus second, and your league’s scoring on top of both. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup."},{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna prices every NFL player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring — weekly rankings, waiver prices, DFS values and model-vs-market game lines in season, and custom draft values before it.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
 </head>
@@ -585,9 +564,19 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
     <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">Articles</a><a href="/faq#faq-start">How It Works</a><a href="/player">Search</a>
   </nav>
   <nav class="mast-nav">
-    <!-- Sign In stays where it was and stays secondary: a quiet text link, not
-         a button, beside the one filled control in the masthead. -->
-    <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
+    <!-- NO SIGN IN HERE, deliberately. The link used to sit in this slot and it
+         pointed at /auctiondraft?signin=1, because the account system was built
+         inside the draft app and that is the only door into it. In September
+         that is a homepage inviting a reader into a draft room, and there is
+         nothing on this side of the season to sign in FOR: every in-season
+         board, tool and reading is open to everyone.
+
+         PUT IT BACK WHEN THE IN-SEASON SUBSCRIPTION SHIPS — the one that closes
+         Value Coach and the other premium in-season features. It needs its own
+         address by then, not the draft room's: a reader paying for an
+         in-season product should not land in an auction to log into it. The
+         styles this link used (.mast-signin, and its rule in the phone query)
+         came off with it; they are in git history at this line. -->
     <!-- Not "Sync My League". The platform connectors were removed
          (docs/saved-league.md); /my-league is where a reader describes their
          league, and that is what this button promises. -->
@@ -661,27 +650,19 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
   </div>
 </section>
 
-<!-- The generated rankings ribbon (tools/build-ranks.mjs), the same band on
-     the sixteen rankings boards and on /stats, /hidden-value, /previews and
-     /the-line. It sits directly under the hero on every one of them. -->
-<!--ranks:ribbon-->
-<nav class="rk-ribbon" aria-label="Rankings and intel">
-  <div class="rk-ribbon-in">
-    <a class="rkr-link rkr-item" href="/stats">Stats</a>
-    <span class="rkr-item rkr-has-menu">
-      <a class="rkr-link" href="/weekly-rankings">This Week&rsquo;s Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-rankings">Overall</a><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defense / special teams</a></span>
-    </span>
-    <span class="rkr-item rkr-has-menu">
-      <a class="rkr-link" href="/season-long-rankings">Season Long Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-rankings">Overall</a><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defense / special teams</a></span>
-    </span>
-    <a class="rkr-link rkr-item" href="/hidden-value">Hidden Value</a>
-    <a class="rkr-link rkr-item" href="/previews">Previews</a>
-    <a class="rkr-link rkr-item" href="/the-line">The Line</a>
-  </div>
-</nav>
-<!--/ranks:ribbon-->
+<!-- ── the choose-your-game band ──────────────────────────────────────────────
+     The generated rankings ribbon (tools/build-ranks.mjs) used to sit here. It
+     was a list of boards, and a reader who has just been told what the site
+     does does not want a board yet — they want to say which game they play. The
+     band is that question, and the two cards below it are the two answers.
+
+     It is a plain div rather than a sectioning element: the page's outline is
+     its six sections (tools/test-homepage.mjs asserts that list by name), and a
+     one-line band is not a seventh. The rankings ribbon is unchanged on the nineteen pages that still
+     carry the sentinel; only the front page dropped it. -->
+<div class="hm-choose">
+  <div class="hm-choose-in"><span class="hm-choose-k">Choose your game</span></div>
+</div>
 
 <main class="wrap" id="main">
 
@@ -717,7 +698,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
     <div class="hm-lanes">
 
       <div class="hm-lane">
-        <h2>Fantasy This Week</h2>
+        <h2>Season Long Fantasy</h2>
         <p>Your league, re-priced off the betting market and restated at your own scoring.</p>
         <div class="hm-read" id="fnRead" hidden data-player-links>
           <span class="pic" id="fnReadPic"></span>
@@ -731,12 +712,13 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
           <li><a href="/season-long-rankings">Rest of season rankings<span>The horizon that decides trades</span></a></li>
           <li><a href="/trade-finder">Trade values<span>Deals both sides accept</span></a></li>
           <li><a href="/faab">Waivers<span>What a claim is worth in your dollars</span></a></li>
+          <li><a href="/value-coach">Value Coach<span>Ask about a start, a trade or a claim</span></a></li>
         </ul>
         <div class="hm-lane-go"><a href="/fantasy">Get Fantasy Advice</a></div>
       </div>
 
       <div class="hm-lane">
-        <h2>DFS This Week</h2>
+        <h2>DFS</h2>
         <p>One slate, one set of lines, one cap &mdash; every salary read against market-implied points.</p>
         <div class="hm-read" id="dfRead" hidden data-player-links>
           <span class="pic" id="dfReadPic"></span>

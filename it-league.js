@@ -1162,7 +1162,7 @@
     if (!doc || !doc.head || doc.getElementById(STYLE_ID)) return;
     var el = doc.createElement('style');
     el.id = STYLE_ID;
-    el.textContent = '.it-yours{margin:6px 0 0;padding:6px 10px;font-size:12.5px;font-style:normal;' +
+    el.textContent = '.it-yours{margin:6px 0 0;padding:6px 10px;font-size:14px;font-style:normal;' +
       'line-height:1.45;border-left:3px solid var(--teal,#2dd4a3);border-radius:0 4px 4px 0;' +
       'background:rgba(45,212,163,0.09)}' +
       '.it-dollars{color:var(--teal,#2dd4a3);font-weight:700;white-space:nowrap}';

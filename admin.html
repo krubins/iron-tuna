@@ -24,17 +24,17 @@ a:hover{text-decoration:underline}
 .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
 header.site{position:sticky;top:0;z-index:10;background:rgba(11,17,23,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 header.site .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
-.brand{font-weight:800;letter-spacing:.14em;font-size:15px;color:var(--text);white-space:nowrap}
+.brand{font-weight:800;letter-spacing:.14em;font-size:17px;color:var(--text);white-space:nowrap}
 .brand b{color:var(--teal)}
-.brand .tag{color:var(--muted);font-weight:600;letter-spacing:.06em;margin-left:10px;text-transform:uppercase;font-size:12px}
+.brand .tag{color:var(--muted);font-weight:600;letter-spacing:.06em;margin-left:10px;text-transform:uppercase;font-size:13.5px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.btn{background:var(--elev);color:var(--sec);border:1px solid var(--line);border-radius:9px;padding:7px 13px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn{background:var(--elev);color:var(--sec);border:1px solid var(--line);border-radius:9px;padding:7px 13px;font-size:14.5px;cursor:pointer;font-family:inherit}
 .btn:hover{border-color:var(--teal);color:var(--text)}
 .btn.primary{background:rgba(45,212,163,.14);color:var(--teal);border-color:var(--teal)}
 main{padding:22px 0 60px}
-h1{font-size:24px;margin:18px 0 4px}
-h2{font-size:16px;margin:0 0 12px;letter-spacing:.01em}
-.meta{color:var(--muted);font-size:13px;margin:0 0 18px}
+h1{font-size:26px;margin:18px 0 4px}
+h2{font-size:18px;margin:0 0 12px;letter-spacing:.01em}
+.meta{color:var(--muted);font-size:14.5px;margin:0 0 18px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:0 0 16px}
 .tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:0 0 16px}
 @media(max-width:960px){.tiles{grid-template-columns:repeat(3,1fr)}}
@@ -44,60 +44,60 @@ h2{font-size:16px;margin:0 0 12px;letter-spacing:.01em}
 @media(max-width:960px){#trafTiles{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:560px){#trafTiles{grid-template-columns:repeat(2,1fr)}}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
-.tile .lbl{color:var(--muted);font-size:12px;letter-spacing:.04em}
-.tile .val{font-size:24px;font-weight:600;margin-top:2px}
+.tile .lbl{color:var(--muted);font-size:13.5px;letter-spacing:.04em}
+.tile .val{font-size:26px;font-weight:600;margin-top:2px}
 .tile.hero .val{font-size:34px}
-.tile .sub{color:var(--muted);font-size:12px;margin-top:2px}
+.tile .sub{color:var(--muted);font-size:13.5px;margin-top:2px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:860px){.grid2{grid-template-columns:1fr}}
 .tblwrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13.5px;margin:4px 0 0}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:4px 0 0}
 th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
-th{color:var(--muted);font-size:12px;letter-spacing:.04em;font-weight:600}
+th{color:var(--muted);font-size:13.5px;letter-spacing:.04em;font-weight:600}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-.badge{display:inline-block;font-size:11px;border-radius:12px;padding:1px 9px;border:1px solid var(--line2);color:var(--sec)}
+.badge{display:inline-block;font-size:12.5px;border-radius:12px;padding:1px 9px;border:1px solid var(--line2);color:var(--sec)}
 .badge.ok{color:var(--teal);border-color:rgba(45,212,163,.5)}
 .badge.warn{color:var(--danger);border-color:rgba(239,91,91,.5)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
-.chip{background:var(--elev);border:1px solid var(--line);border-radius:16px;padding:4px 12px;font-size:12.5px;color:var(--sec)}
+.chip{background:var(--elev);border:1px solid var(--line);border-radius:16px;padding:4px 12px;font-size:14px;color:var(--sec)}
 .chip b{color:var(--text);font-weight:600}
-.empty{color:var(--muted);font-size:13.5px;padding:10px 0}
-.note{color:var(--muted);font-size:12.5px;margin-top:10px}
+.empty{color:var(--muted);font-size:15px;padding:10px 0}
+.note{color:var(--muted);font-size:14px;margin-top:10px}
 .ranges{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
 .bar{height:6px;border-radius:3px;background:var(--teal);opacity:.5;display:inline-block;min-width:2px;vertical-align:middle}
 h1.sec{margin-top:34px;padding-top:26px;border-top:1px solid var(--line)}
 /* gate */
 #gate .card{max-width:420px;margin:60px auto}
-#gate input{width:100%;background:var(--elev);border:1px solid var(--line2);border-radius:9px;color:var(--text);padding:11px 13px;font-size:14px;margin:10px 0 12px;font-family:inherit}
+#gate input{width:100%;background:var(--elev);border:1px solid var(--line2);border-radius:9px;color:var(--text);padding:11px 13px;font-size:15.5px;margin:10px 0 12px;font-family:inherit}
 #gate input:focus{outline:none;border-color:var(--teal)}
-#gateErr{color:var(--danger);font-size:13px;min-height:18px;margin:0 0 8px}
+#gateErr{color:var(--danger);font-size:14.5px;min-height:18px;margin:0 0 8px}
 /* forms (comp access) */
 .field{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 12px}
-.field input[type=email],.field input[type=text],.field select{background:var(--elev);border:1px solid var(--line2);border-radius:9px;color:var(--text);padding:10px 12px;font-size:14px;font-family:inherit}
+.field input[type=email],.field input[type=text],.field select{background:var(--elev);border:1px solid var(--line2);border-radius:9px;color:var(--text);padding:10px 12px;font-size:15.5px;font-family:inherit}
 .field input[type=email]{flex:1 1 260px;min-width:0}
 .field input:focus,.field select:focus{outline:none;border-color:var(--teal)}
-.field label{color:var(--sec);font-size:13px;display:inline-flex;align-items:center;gap:7px}
+.field label{color:var(--sec);font-size:14.5px;display:inline-flex;align-items:center;gap:7px}
 .btn[disabled]{opacity:.55;cursor:default}
-.result{font-size:13.5px;margin:12px 0 0;display:none}
+.result{font-size:15px;margin:12px 0 0;display:none}
 .result.show{display:block}
 .result .msg{color:var(--sec)}
 .result.ok .msg b{color:var(--teal)}
 .result.bad .msg b{color:var(--danger)}
 .linkrow{display:flex;gap:8px;margin:10px 0 0}
-.linkrow input{flex:1 1 auto;min-width:0;background:var(--elev);border:1px solid var(--line2);border-radius:9px;color:var(--sec);padding:9px 11px;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.linkrow input{flex:1 1 auto;min-width:0;background:var(--elev);border:1px solid var(--line2);border-radius:9px;color:var(--sec);padding:9px 11px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 /* chart */
-.legend{display:flex;gap:18px;margin:0 0 8px;font-size:13px;color:var(--sec)}
+.legend{display:flex;gap:18px;margin:0 0 8px;font-size:14.5px;color:var(--sec)}
 .legend .key{display:inline-flex;align-items:center;gap:7px}
 .legend .swatch{width:14px;height:3px;border-radius:2px;display:inline-block}
 #chartbox,#trafChartbox{position:relative}
 #chart,#trafChart{width:100%;display:block}
-#tip,#trafTip{position:absolute;pointer-events:none;background:var(--elev);border:1px solid var(--line2);border-radius:9px;padding:8px 11px;font-size:12.5px;color:var(--sec);display:none;box-shadow:0 8px 22px rgba(0,0,0,.5);z-index:5;white-space:nowrap}
+#tip,#trafTip{position:absolute;pointer-events:none;background:var(--elev);border:1px solid var(--line2);border-radius:9px;padding:8px 11px;font-size:14px;color:var(--sec);display:none;box-shadow:0 8px 22px rgba(0,0,0,.5);z-index:5;white-space:nowrap}
 #tip b,#trafTip b{color:var(--text)}
 #tip .row,#trafTip .row{display:flex;align-items:center;gap:7px;margin-top:2px}
 #tip .dot,#trafTip .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 details.tbl{margin-top:12px}
-details.tbl summary{color:var(--muted);font-size:12.5px;cursor:pointer}
-footer.site{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);font-size:13px}
+details.tbl summary{color:var(--muted);font-size:14px;cursor:pointer}
+footer.site{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);font-size:14.5px}
 
 /* Visible keyboard focus (WCAG 2.4.7). Gold reads >=9:1 on every surface in this palette.
    Listed per element so this beats the `outline:none` in the input rules above. */
@@ -118,7 +118,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 <section id="gate">
   <div class="card">
     <h2>Admin access</h2>
-    <p style="color:var(--sec);font-size:14px;margin:0">Enter the admin key (<code>LEADS_EXPORT_KEY</code>) to load the dashboard. It stays in this browser only.</p>
+    <p style="color:var(--sec);font-size:15.5px;margin:0">Enter the admin key (<code>LEADS_EXPORT_KEY</code>) to load the dashboard. It stays in this browser only.</p>
     <input id="keyInput" type="password" placeholder="Admin key" autocomplete="off">
     <div id="gateErr"></div>
     <button class="btn primary" id="unlockBtn" type="button">Unlock dashboard</button>
@@ -163,7 +163,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       </label>
       <label for="dfsWeek">Week <input id="dfsWeek" type="number" min="1" max="18" placeholder="current" style="width:70px"></label>
     </div>
-    <textarea id="dfsCsv" rows="6" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;…" spellcheck="false" style="width:100%;font:12px/1.4 ui-monospace,monospace"></textarea>
+    <textarea id="dfsCsv" rows="6" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;…" spellcheck="false" style="width:100%;font:13.5px/1.4 ui-monospace,monospace"></textarea>
     <div class="field" style="margin-top:8px"><button class="btn primary" id="dfsBtn" type="button">Import CSV</button></div>
     <div class="result" id="dfsResult"><div class="msg" id="dfsMsg"></div></div>
     <div class="note" id="dfsStatus">Loading salary status…</div>
@@ -243,7 +243,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <div id="hlthEditor" hidden>
       <h2 id="hlthEditorTitle" style="margin-top:14px"></h2>
       <div class="meta" id="hlthEditorMeta"></div>
-      <textarea id="hlthEditorBody" rows="18" spellcheck="false" style="width:100%;font:12px/1.45 ui-monospace,monospace"></textarea>
+      <textarea id="hlthEditorBody" rows="18" spellcheck="false" style="width:100%;font:13.5px/1.45 ui-monospace,monospace"></textarea>
       <div class="field" style="margin-top:8px">
         <button class="btn primary" id="hlthEditorSave" type="button">Save edit</button>
         <button class="btn" id="hlthEditorClose" type="button">Close</button>
@@ -754,7 +754,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     empty:     ['Nothing this week', 'bad'],
     no_week:   ['Out of season', '']
   };
-  var PROPS_STATE_CSS = '.tile .props-state{display:block;margin-bottom:6px;font-size:12px;line-height:1}';
+  var PROPS_STATE_CSS = '.tile .props-state{display:block;margin-bottom:6px;font-size:13.5px;line-height:1}';
   (function(){ var st = document.createElement('style'); st.textContent = PROPS_STATE_CSS; document.head.appendChild(st); })();
   function propsTile(p){
     if (!p) return tile('Betting props', '—', 'No answer from the health board.');

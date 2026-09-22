@@ -258,6 +258,56 @@ console.log('\n/fantasy');
   await ctx.close();
 }
 
+console.log('\n/dfs');
+{
+  // NOTHING IN CI OPENED THIS PAGE UNTIL NOW. /dfs carries the largest inline
+  // script on the site and every gate that covered it was node reading source
+  // text, which cannot see a throw on load. It was rebuilt on 2026-09-22 —
+  // nameplate, left rail, three stories, player rail — and the board switch
+  // moved out of a sticky ribbon and into that rail, so the one thing most
+  // worth asserting is that the switch still switches from where it now
+  // lives.
+  //
+  // The slate feed is not stubbed here, so the page runs its own
+  // not-ready path: the switch takes itself off, the boards stay hidden and
+  // each well prints its empty state. That is the state to assert for free;
+  // the switch is then forced on to exercise the handler.
+  const { page, ctx, errs } = await open('/dfs.html');
+  ok('nothing threw', errs.length === 0, errs.join(' | '));
+  ok('the nameplate is on the screen, not off it',
+     await page.locator('.sl-mast h1').isVisible());
+  ok('the rail carries the five boards', await page.locator('.sl-nav #dfNav button').count() === 5);
+  ok('and the rest of the page beside them', await page.locator('.sl-nav-more a').count() > 0);
+  ok('the desk says why it is empty rather than nothing',
+     ((await page.locator('#dfDeskEmptyH').textContent()) || '').length > 0);
+  ok('so does the player rail', ((await page.locator('#dfUpdEmptyH').textContent()) || '').length > 0);
+  // The switch hides itself until the slate is set up; forcing it on is how
+  // this harness reaches the handler without stubbing the whole lobby.
+  await page.evaluate(() => { document.getElementById('dfNav').hidden = false; });
+  await page.locator('.sl-nav #dfNav button[data-sec="stacks"]').click();
+  await page.waitForTimeout(200);
+  ok('a rail button shows its board', await page.locator('#sec-stacks').isVisible());
+  ok('and hides the one that was up', await page.locator('#sec-lineup').isHidden());
+  ok('and marks itself pressed',
+     await page.locator('.sl-nav #dfNav button[data-sec="stacks"]').getAttribute('aria-pressed') === 'true');
+  await ctx.close();
+}
+{
+  // The front page has linked /dfs#values and /dfs#builder since those lane
+  // cards were written, and neither anchor has ever existed here: the sections
+  // are id="sec-values" and they are hidden until the switch picks them. The
+  // hash names a BOARD now, so the links that were already written work.
+  const { page, ctx, errs } = await open('/dfs.html#values');
+  ok('#values opens the values board', await page.locator('#sec-values').isVisible(), errs.join(' | '));
+  await ctx.close();
+}
+{
+  const { page, ctx } = await open('/dfs.html#builder');
+  ok('#builder lands on the lineup, which is where the builder is',
+     await page.locator('#sec-lineup').isVisible());
+  await ctx.close();
+}
+
 console.log('\n/previews');
 {
   const { page, ctx, errs } = await open('/previews.html');
