@@ -16010,3 +16010,144 @@ the curve paragraph was correct for the first time since 09-14.
 - The lead-story column Routine could not be checked today — `list_triggers`
   was not called, to avoid spending reads, and the prompt hash has been
   unmeasurable since 09-19 in any case.
+
+## 141. September 22: reads came back, the archive restarted, and Tate is now $3 under
+
+Instruments first (standing rule 7): the branch is correct this morning — `HEAD`
+= `origin/claude/tet-macmillan-price-logic-nyxid5` = `70b04424`, not `origin/main`
+— and the scratchpad survived. Both were wrong yesterday.
+
+### 141a. D1 is serving reads again, and the database is still shrinking
+
+The daily budget reset at 00:00 UTC and reads work normally: a one-row indexed
+lookup that was refused yesterday now returns in 0.3 ms reading exactly 1 row.
+
+```
+09-19   297.7 MB   (peak)
+09-20   238.3 MB
+09-21   208.0 MB
+09-22   149.2 MB
+```
+
+Half the peak, still falling, with no prune having run since 09-13. That is a
+fourth consecutive day of decline and settles §139a's reading: the size was
+never the content.
+
+**The read-limit question is not settled, though.** Yesterday the account
+exhausted 5 million row reads by 11:23 UTC — roughly 440,000 an hour. Today at
+11:23 UTC reads still work. I cannot see account-level usage from here, so I
+cannot tell whether the burn rate dropped, whether yesterday was a one-off, or
+whether today's exhaustion is simply later. The honest position is that **it
+happened once, it will recur if the cause persists, and nothing I can measure
+tells me which.** It remains Ken's call: raise the D1 plan or cut read volume.
+
+The suspect I named yesterday has weakened. `odds_snapshots` was the table I
+pointed at, and the database halving without a prune suggests something else was
+carrying the bytes. I am not naming a replacement suspect without evidence.
+
+### 141b. The feeds all recovered, including two that had been out for days
+
+```
+row 1 nflverse              2026-09-22 11:00:25Z    0.4h
+row 2 teamctx               2026-09-22 11:00:25Z    0.4h
+row 3 espn-injuries         2026-09-22 11:00:25Z    0.4h
+row 4 nflverse+espn         2026-09-22 11:00:26Z    0.4h
+row 5 nflverse-usage        2026-09-22 10:00:28Z    1.4h   <- back after 5 days
+row 6 espn-depth            2026-09-19 10:00:37Z   73.4h
+row 7 nflverse-usage-prior  2026-09-12 09:00:21Z  242.4h   (by design)
+```
+
+`odds-refresh` finished normally. **`usage-refresh` ran for the first time since
+09-16** — five days with no `job_runs` row at all (§125d) — so that absence
+resolved itself without explanation.
+
+`depth-charts` is the one still out, and it is now failing honestly rather than
+hanging: today's run recorded **`ok=0`, error `"thin"`** — the same
+refuse-a-bad-payload guard the overlay uses. It last succeeded 09-20 15:00 with
+32 teams. A recorded failure is a considerable improvement on a null row.
+
+### 141c. Row 94: one price wrong, and the gap on it has trebled
+
+```
+                  story (Sept 8)   09-20        09-22
+Carnell Tate      $11, WR25        $10, WR27    $8,  WR27    wrong by $3
+Cam Ward          $1,  QB26        $1,  QB26    $1,  QB26    matches
+Tony Pollard      $5,  RB29        $5,  RB29    $5,  RB29    matches
+Wan'Dale Robinson $3,  WR38        $3,  WR40    $3,  WR40    matches on price
+```
+
+Only one of the four is wrong — but it is wrong by **$3 on an $11 printed
+figure, a 27% overstatement**, where two days ago it was $1. The story also
+tells the reader to bid Tate up to **$13**, against a board that now prices him
+at $8. On the count of wrong figures this row looks better than it did last
+week; on the size of the worst error it is the worst it has been.
+
+The curve paragraph has swapped halves again. Served WR20–23 are all $12, so
+"receivers ranked 20 through 23 all cost $12" is **true**; WR24 is $11 against
+WR25–26 at $10, so "the next three, 24 through 26, all cost $10" is **false at
+WR24**. Across ten days that sentence pair has been wrong, right, wrong, wrong,
+wrong, wrong, right, unmeasured, half-wrong — nine distinct verdicts on two
+sentences nobody looked up.
+
+### 141d. The two-board gap, and A.J. Brown's seven-day run ends
+
+```
+             09-13  09-14  09-15  09-16  09-17  09-18  09-19  09-20  09-22
+differing    21.8%  22.1%  22.6%  21.2%  21.2%  20.6%  20.3%  21.2%  21.5%
+largest      $28    $29    $29    $29    $29    $29    $29    $29    $18
+```
+
+(09-21 has no measurement.) The share has now sat between 20.3% and 22.6% for
+nine measured days. The largest gap finally moved: A.J. Brown, $29 every day
+since 09-14, is gone from the top five, and **Puka Nacua replaces him — static
+WR1 $78 against served WR5 $60**. Nico Collins holds at $11 (static $28, served
+WR17 $17), a fourth day.
+
+### 141e. The recap rows keep accumulating
+
+`lead_story` 125 → **127**; `category='recap'` 30 → **32**. Still every one
+`verified=1, published=0`; `lead_story_run` still 58; `LEAD_CATEGORIES` still
+six keys with no `recap` in repo and deployed bundle alike. Thirty-two rows now,
+each a publish-flag from the lead slot.
+
+### 141f. The hang rate collapsed on the day D1 stopped answering
+
+```
+09-18   77 / 179   43%
+09-19  144 / 331   44%
+09-20   67 / 258   26%
+09-21    1 / 105    1%     <- the day D1 refused every row read
+09-22   67 / 134   50%  (partial, 11:23 — not a figure to quote)
+```
+
+One hung run in 105, on a day when only 105 runs started at all against a normal
+250–400. Two readings are consistent with that and I cannot separate them: the
+tick largely stopped running, or the jobs that did run failed fast against a
+database that refused instantly rather than stalling. **Recorded as a
+correlation, not a cause** — but it is the second signal this week pointing at
+the tick's dependencies rather than its code.
+
+### 141g. The archive restarts, with a hole in it
+
+The overlay snapshot archive begins again today: `overlay-0922.json`,
+`availfull-0922.json` and the four position slices. **2026-09-03 to 2026-09-21
+is permanently missing.** Any future claim about what the board said on one of
+those days is now unverifiable, including the reconstruction in §125 that proved
+row 94's table was right on publication day. That evidence was already used; it
+cannot be produced again.
+
+The durable server-side snapshot remains the fix and remains unbuilt.
+
+### 141h. The rest
+
+- **CI 82/82** (`main` added two more checks); **harness 23/23**.
+- **Repo vs deployed: 690 player-rows across two boards, 0 differences**;
+  `VEGAS_WEIGHT`, `LEAGUE_BUDGET`, `MIN_BID`, `CURVE`, `COLUMN_NORM` identical.
+- The deployed bundle is **`main` exactly** — 995 top-level symbols, all in
+  `origin/main` bar the three esbuild generates. Second consecutive day, after
+  four unmerged-branch days out of seven.
+- Tamper predicates clean: one published row (94), no published-unverified row,
+  no analyst row published, 67 audit rows.
+- The lead-story Routine and the live prompt hash were not checked, to keep the
+  read budget small and because `list_triggers` has not returned
+  `session_request` since 09-19. Unverified, not unchanged.
