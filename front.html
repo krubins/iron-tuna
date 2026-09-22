@@ -193,7 +193,16 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    and 18px gave the column three left edges in six lines, which is most of
    what made it read as untidy. Everything else in the column is flush left. */
 .hm-hero-copy{--hm-rule:16px}
-.hm-clock{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2);margin-bottom:26px;padding-left:var(--hm-rule);border-left:2px solid var(--teal)}
+/* inline-BLOCK, not inline-flex. As a flex row the dateline's three parts —
+   "Regular season ·", <b>Week 4</b>, "· kicks off …" — were three flex items
+   on one unwrapping line, so on a phone each one wrapped INSIDE itself and
+   the strip read "Regular / season ·" / "Week / 4" / "· kicks off Wed, 9/23, /
+   10:54 PM ET". It is a sentence; it wraps like one, at its spaces, and only
+   the week itself is held together. The gap went with the flex: the copy
+   already carries a space either side of each middot, so the 8px was being
+   added to a space that was already there. */
+.hm-clock{display:inline-block;font-size:14px;font-weight:600;letter-spacing:.02em;line-height:1.45;color:var(--on-board-2);margin-bottom:26px;padding-left:var(--hm-rule);border-left:2px solid var(--teal)}
+.hm-clock b,.hm-clock .live{white-space:nowrap}
 .hm-clock b{color:#fff;font-weight:700}
 .hm-clock .live{color:var(--teal);font-weight:700}
 /* ── the headline, which is the one bold thing on this page ───────────────
@@ -498,6 +507,27 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-how .wrap{padding-top:clamp(20px,2.4vw,28px);padding-bottom:clamp(20px,2.4vw,30px)}
 .hm-how h2{font-size:15.5px;font-weight:700;font-stretch:108%;letter-spacing:0;color:var(--ink)}
 .hm-note{margin-top:7px;font-size:14px;line-height:1.65;color:var(--ink-3);max-width:92ch}
+/* ── the three inputs ──────────────────────────────────────────────────────
+   They were bold run-ins inside .hm-note: a numbered list of three things,
+   set as one running paragraph, in a 92ch measure that ran out at half the
+   width of an 1,180px band and left the right half of the method empty. They
+   are three things, so they are three columns, ruled apart the way the two
+   lane cards above them are — the number is the mark, the name is the
+   heading, and the definition sits under it at note weight. Same words, same
+   links, same order; this is the block's shape, not its copy. */
+.hm-how-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:13px;border-top:1px solid var(--line)}
+.hm-input{padding:13px 24px 2px;border-left:1px solid var(--line);min-width:0}
+.hm-input:first-child{border-left:0;padding-left:0}
+.hm-input:last-child{padding-right:0}
+.hm-input-n{display:block;font-size:11.5px;font-weight:800;letter-spacing:.11em;color:var(--brand)}
+.hm-input h3{margin:1px 0 3px;font-size:15.5px;font-weight:700;font-stretch:108%;letter-spacing:0;color:var(--ink)}
+.hm-input p{margin:0;font-size:14px;line-height:1.6;color:var(--ink-3)}
+.hm-how-more{margin-top:13px}
+@media(max-width:820px){
+  .hm-how-grid{grid-template-columns:minmax(0,1fr)}
+  .hm-input{border-left:0;border-top:1px solid var(--line);padding:11px 0 4px}
+  .hm-input:first-child{border-top:0}
+}
 .hm-note b{color:var(--ink-2)}
 .hm-note a{color:var(--brand);font-weight:600}
 .hm-note a:hover{text-decoration:underline}
@@ -796,11 +826,29 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 <section class="hm-how" id="how" aria-labelledby="howHead">
   <div class="wrap">
     <h2 id="howHead">How it works</h2>
-    <p class="hm-note">Three inputs, in this order, and every board on the site is built from them and nothing else.
-      <b>1 &middot; The market</b> &mdash; game totals, spreads and player props, pulled on a schedule and converted into projected fantasy points, with a sportsbook&rsquo;s own money and a paid modelling staff behind each number.
-      <b>2 &middot; The consensus</b> &mdash; expert projections, blended toward the market where a book prices the player and left alone where none does; the gap between the two is printed, never hidden.
-      <b>3 &middot; Your league</b> &mdash; scoring, roster slots and waiver budget, saved once in this browser with no account, so every board restates its numbers in your points.
-      <a href="/faq#faq-start">The longer version &rarr;</a> &middot; <a href="/my-league#settings">Customize my league &rarr;</a></p>
+    <p class="hm-note">Three inputs, in this order, and every board on the site is built from them and nothing else.</p>
+    <!-- Three columns rather than three bold run-ins in one paragraph. The
+         page's outline is its six <section>s and tools/test-homepage.mjs
+         asserts that list by name, so these are divs: a column of a method
+         block is not a seventh section. -->
+    <div class="hm-how-grid">
+      <div class="hm-input">
+        <span class="hm-input-n">1</span>
+        <h3>The market</h3>
+        <p>Game totals, spreads and player props, pulled on a schedule and converted into projected fantasy points, with a sportsbook&rsquo;s own money and a paid modelling staff behind each number.</p>
+      </div>
+      <div class="hm-input">
+        <span class="hm-input-n">2</span>
+        <h3>The consensus</h3>
+        <p>Expert projections, blended toward the market where a book prices the player and left alone where none does; the gap between the two is printed, never hidden.</p>
+      </div>
+      <div class="hm-input">
+        <span class="hm-input-n">3</span>
+        <h3>Your league</h3>
+        <p>Scoring, roster slots and waiver budget, saved once in this browser with no account, so every board restates its numbers in your points.</p>
+      </div>
+    </div>
+    <p class="hm-note hm-how-more"><a href="/faq#faq-start">The longer version &rarr;</a> &middot; <a href="/my-league#settings">Customize my league &rarr;</a></p>
     <div class="hm-legal">
       <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league&rsquo;s scoring. Projections are not guarantees.</p>
       <p><b>For social and entertainment purposes only.</b> Every number on this site &mdash; projections, odds, salaries and contract prices alike &mdash; is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
