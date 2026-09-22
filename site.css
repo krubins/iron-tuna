@@ -1487,15 +1487,6 @@ body.sl-dress .sl-mast .is-btn.ghost:hover{border-color:var(--mast-accent);color
    the clock wraps under the label from about 900 on this plate, so from 900
    it is a rule dividing the label from nothing. */
 @media(max-width:900px){body.sl-dress .sl-date .is-eyebrow{border-right:0;padding-right:0}}
-/* The connect bar between the plate and the shell. A teal-bordered rounded
-   box directly under a dark masthead is a second nameplate; this is a promo
-   strip, so it reads as one. (.its-cta is /it-sync.js's, injected at run
-   time — (0,1,0) against the (0,2,0) below, so order does not decide it.) */
-body.sl-dress .its-cta{margin:var(--space-4) 0 0;padding:10px var(--space-4);border-radius:var(--sl-r);
-  border-color:var(--line2);background:var(--panel)}
-body.sl-dress .its-cta b{font-size:var(--fs-sm)}
-body.sl-dress .its-cta .is-btn{padding:9px 16px;border-radius:4px;font-size:var(--fs-3xs);
-  font-weight:800;letter-spacing:.06em;text-transform:uppercase}
 
 /* ── 2 · section heads ──────────────────────────────────────────────────── */
 /* A section head is a label. It was a 28px display line with a 56px teal nub
