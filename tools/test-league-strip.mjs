@@ -65,12 +65,12 @@ const ok = (n, c, x = '') => { if (c) { pass++; console.log(`  ok   ${n}`); } el
 // Every in-season page that carries a strip is here. A page that grows one and
 // is not added is a page this gate does not cover, so the list is the contract.
 const PAGES = [
-  ['/fantasy.html', 'fnSync', 'fnCta'],
-  ['/rankings.html', 'rkSync', 'rkCta'],
-  ['/faab.html', 'faSync', 'faCta'],
-  ['/my-week.html', 'mwSync', null],
-  ['/trade-finder.html', 'tfSync', 'tfCta'],
-  ['/in-season.html', 'isSync', null]
+  ['/fantasy.html', 'fnSync'],
+  ['/rankings.html', 'rkSync'],
+  ['/faab.html', 'faSync'],
+  ['/my-week.html', 'mwSync'],
+  ['/trade-finder.html', 'tfSync'],
+  ['/in-season.html', 'isSync']
 ];
 
 // ── the server ──────────────────────────────────────────────────────────────
@@ -132,15 +132,22 @@ console.log('\na connected league paints its strip on every page that has one');
   }
 }
 
-console.log('\nand a signed-in reader with nothing connected gets the call instead');
+// ── and nothing is asked of a reader with nothing connected ─────────────────
+// These pages used to paint ITSync.cta() here: a tinted "Connect your league
+// and every number on this site reads at your exact settings" bar with a Sync
+// your league button. It was pulled on 2026-09-21 because every one of these
+// pages already carries its own connect copy above the fold, so the bar was
+// the second or third ask on one screen. ITSync.cta() and its .its-cta styles
+// went with it, so this now guards against a page reintroducing the bar with
+// markup of its own. The strip stays hidden either way.
+console.log('\nand a signed-in reader with nothing connected is not asked again');
 {
   MODE = 'none';
-  for (const [p, strip, cta] of PAGES) {
-    if (!cta) continue;
+  for (const [p, strip] of PAGES) {
     const { page, ctx, errs } = await open(p);
     ok(`${p} threw nothing`, errs.length === 0, errs.join(' | '));
     ok(`${p} hid #${strip}`, !(await shown(page, strip)));
-    ok(`${p} painted #${cta}`, await shown(page, cta));
+    ok(`${p} painted no connect bar`, await page.evaluate(() => !document.querySelector('.its-cta')));
     await ctx.close();
   }
 }

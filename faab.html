@@ -192,7 +192,6 @@ table.fa .mine{color:var(--teal);font-weight:800}
 </figure>
 
 <div class="its-strip-sync" id="faSync" hidden></div>
-<div id="faCta" hidden></div>
 <!-- The synced room: the Pickup Advisor on players nobody in THIS league
      owns, with a drop and a bid range. Rendered only for a reader with a
      connected league; the Sleeper/manual flow below is untouched. -->
@@ -330,7 +329,7 @@ Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
     ITSync.load().then(function () {
       ITSync.strip($('faSync'), { week: true });
       var LS = ITSync.active();
-      if (!LS) { ITSync.cta($('faCta'), 'pickups'); return; }
+      if (!LS) return;
       $('fa-synced').hidden = false;
       $('fsHead').textContent = 'Pickup Advisor · ' + LS.name;
       $('fsMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; var generic = b.getAttribute('data-mode') === 'generic'; [].forEach.call(this.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); }); $('fsRows').hidden = generic; $('fa-connect').hidden = !generic; $('fsSub').hidden = generic; $('fsNote').hidden = generic; });

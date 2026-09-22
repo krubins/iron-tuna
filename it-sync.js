@@ -17,7 +17,6 @@
  *   ITSync.select(id)             -> make a league active on this device
  *   ITSync.api(path, opts)        -> fetch on this origin with the session cookie
  *   ITSync.strip(el)              -> "League: X ▼ · Saved 8m ago · My League"
- *   ITSync.cta(el, context)       -> the acquisition call, only where it belongs
  *   ITSync.callouts(root)         -> On Your Roster / Available badges on player links
  *   ITSync.ago(ts), ITSync.esc(s), ITSync.onChange(fn)
  */
@@ -96,25 +95,6 @@
       var s = el.querySelector('select'); if (s) s.addEventListener('change', function () { select(this.value); if (o.onChange) o.onChange(active()); else root.location.reload(); });
     });
   }
-  // ── the call to action ─────────────────────────────────────────────────────
-  // Only for a reader who is signed in and has nothing connected; a synced
-  // reader sees the feature instead, and a visitor sees the section's own
-  // copy. `context` picks the sentence.
-  var CTA = {
-    pickups: 'Want recommendations based on players actually available in your league?',
-    rankings: 'Connect your league to rank players using your exact scoring settings.',
-    trades: 'Connect your league to find actual trade partners.',
-    lineup: 'Connect your league and Iron Tuna sets your best lineup from your actual roster.',
-    generic: 'Connect your league and every number on this site reads at your exact settings.'
-  };
-  function cta(el, context) {
-    if (!el) return;
-    load().then(function (st) {
-      if (!st || !st.signedIn || st.leagues.length) { el.hidden = true; return; }
-      el.hidden = false;
-      el.innerHTML = '<div class="its-cta"><b>' + esc(CTA[context] || CTA.generic) + '</b> <a class="is-btn primary" href="/my-league#connect">Sync your league</a></div>';
-    });
-  }
   // ── callouts on stories and cards ──────────────────────────────────────────
   // Every /player/<slug> link inside `scope` gets a small tag: On your roster,
   // Available in your league, Rostered by X. One call per page, sixty names
@@ -159,11 +139,10 @@
       '.its-strip-sync .its-lab{font-weight:700;color:var(--text)}.its-strip-sync b{color:var(--text)}.its-sel{font:inherit;padding:4px 8px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--text)}' +
       '.its-sync.stale{color:var(--danger)}.its-btn{font:inherit;font-size:13.5px;font-weight:700;padding:5px 10px;border-radius:14px;border:1px solid var(--teal);background:rgba(14,124,99,.1);color:var(--teal);cursor:pointer}.its-btn[disabled]{opacity:.6}' +
       '.its-link{font-weight:700}.its-warn{flex-basis:100%;color:var(--danger);font-weight:700}' +
-      '.its-cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--teal);border-radius:12px;background:rgba(14,124,99,.06);margin:14px 0}' +
       '.its-tag{display:inline-block;margin-left:5px;padding:1px 7px;border-radius:10px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle;border:1px solid var(--line2);color:var(--muted);background:var(--elev)}' +
       '.its-tag.mine{color:var(--teal);border-color:rgba(14,124,99,.4);background:rgba(14,124,99,.1)}.its-tag.avail{color:#8a5a00;border-color:rgba(181,120,0,.4);background:rgba(224,160,0,.12)}.its-tag.opp{color:var(--danger);border-color:rgba(160,40,40,.35);background:rgba(200,50,50,.08)}' +
       '.its-story{border-left:3px solid var(--teal);padding:10px 14px;margin:16px 0;background:var(--elev);border-radius:0 10px 10px 0}.its-story p{margin:4px 0;font-size:15.5px}';
     (doc.head || doc.documentElement).appendChild(css);
   } catch (e) {}
-  root.ITSync = { load: load, state: state, active: active, select: select, invalidate: invalidate, api: api, strip: strip, cta: cta, callouts: callouts, ago: ago, esc: esc, onChange: onChange, syncLine: syncLine };
+  root.ITSync = { load: load, state: state, active: active, select: select, invalidate: invalidate, api: api, strip: strip, callouts: callouts, ago: ago, esc: esc, onChange: onChange, syncLine: syncLine };
 })(window, document);
