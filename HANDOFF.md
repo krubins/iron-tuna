@@ -16151,3 +16151,118 @@ The durable server-side snapshot remains the fix and remains unbuilt.
 - The lead-story Routine and the live prompt hash were not checked, to keep the
   read budget small and because `list_triggers` has not returned
   `session_request` since 09-19. Unverified, not unchanged.
+
+## 142. September 23: the 09-21 hang figure measured the logger, not the hangs
+
+Instruments first: branch correct (`HEAD` = `origin/claude/tet-macmillan-price-logic-nyxid5`
+= `13d15212`), scratchpad intact at 16 files, D1 serving reads. Both feeds moved
+overnight — `overlay-0923.json` and `availfull-0923.json` both differ from
+yesterday's — so today's board figures are measured on a board that actually
+changed.
+
+### 142a. Correction to §141f: 09-21's 1% is not a data point
+
+Yesterday I recorded that the hang rate fell to 1 run in 105 on the day D1
+refused every read, and called it "a correlation worth keeping". The closed
+numbers now make that reading untenable:
+
+```
+09-20    36 / 115    31%
+09-21     1 / 105     1%     <- D1 refused all reads from ~11:23Z
+09-22   177 / 287    62%     <- the highest yet; I reported 50% partial
+09-23    34 / 184    18%  (partial, 11:22 — not a figure to quote)
+```
+
+09-22 closed at **62%**, the worst day on record, immediately after the 1% day.
+Nothing recovered and nothing got better. What actually happened on 09-21 is
+simpler and duller: **only 105 runs started at all**, against 250–400 on a
+normal day, because `runScheduledTick` reads `JOB_SCHEDULE` state out of D1
+before it decides what is due. A tick that cannot read cannot enqueue, and a job
+that never starts writes no row to hang.
+
+So the 1% measured **the logger's availability, not the jobs' behaviour**. Both
+the numerator and the denominator collapsed together, which is exactly the shape
+a ratio should never be trusted through. Retracted.
+
+The lesson generalises past this incident and is worth keeping: **when a rate
+drops, check whether the denominator dropped with it.** I published a
+correlation yesterday that one day's more data destroyed.
+
+### 142b. Row 94: two wrong today, and they swapped places
+
+```
+                  story (Sept 8)   09-22       09-23
+Carnell Tate      $11, WR25        $8,  WR27   $10, WR27    wrong by $1 (was $3)
+Cam Ward          $1,  QB26        $1,  QB26   $1,  QB27    matches on price
+Tony Pollard      $5,  RB29        $5,  RB29   $5,  RB29    matches exactly
+Wan'Dale Robinson $3,  WR38        $3,  WR40   $2,  WR42    wrong by $1 (was right)
+```
+
+Tate recovered two dollars; Robinson lost one. Two of four are wrong today
+against one yesterday and three on 09-18. Over six measured days the count of
+wrong prices in this table has run 3, 3, 1, 1, 1, 2 — and every individual
+figure has been both right and wrong at least once.
+
+The curve paragraph is unchanged from yesterday: served WR20–24 are all $12 and
+WR25–27 all $10, so "receivers ranked 20 through 23 all cost $12" is **true**
+and "the next three, 24 through 26, all cost $10" is **false at WR24**.
+
+Fifteen days pinned. The point is not which figure is wrong this morning; it is
+that a reader checking any of them against their sheet gets a different answer
+depending on the day, because none of them was looked up.
+
+### 142c. The two-board gap has genuinely narrowed
+
+```
+             09-13  09-14  09-15  09-16  09-17  09-18  09-19  09-20  09-22  09-23
+differing    21.8%  22.1%  22.6%  21.2%  21.2%  20.6%  20.3%  21.2%  21.5%  19.4%
+largest      $28    $29    $29    $29    $29    $29    $29    $29    $18    $10
+same rank    14     9      13     11     11     14     9      8      9      7
+```
+
+**19.4% is the lowest of the series, and the largest single gap has fallen from
+$29 (seven straight days) to $18 to $10 in three measurements.** Today's worst
+are Jalen Hurts and Jayden Daniels at $10, both quarterbacks; Puka Nacua, A.J.
+Brown and Nico Collins have all dropped out of the top five.
+
+That is a real improvement and worth saying plainly. It is also not a fix: the
+two boards still price a fifth of the roster differently, and the mechanism —
+one walks the curve, the other interpolates two worlds and walks an envelope —
+is untouched. The gap narrowed because the availability list is shorter this
+week, not because the recipes agree.
+
+### 142d. Everything that was broken last week is running
+
+```
+row 1 nflverse              2026-09-23 11:01:41Z   0.4h
+row 2 teamctx               2026-09-23 11:01:40Z   0.4h
+row 3 espn-injuries         2026-09-23 11:01:40Z   0.4h
+row 4 nflverse+espn         2026-09-23 11:01:41Z   0.4h
+row 5 nflverse-usage        2026-09-23 10:01:53Z   1.4h
+row 6 espn-depth            2026-09-23 10:01:57Z   1.4h   <- back after 4 days
+row 7 nflverse-usage-prior  2026-09-12 09:00:21Z  242h    (by design)
+```
+
+`depth-charts` has recovered — it failed honestly with `ok=0, "thin"` on 09-22
+and is writing again today. `odds-refresh` finished normally for a second day.
+Six of seven overlay rows are current; the seventh is meant to be static.
+
+### 142e. The rest
+
+- **D1 is 167.2 MB**, up from 149.2 — the first rise since the 297.7 MB peak,
+  and small. Reads are serving normally at 11:22Z, the hour at which they were
+  refused on 09-21. Whether the limit recurs is still unknowable from here.
+- **CI 82/82**; **harness 23/23**.
+- **Repo vs deployed: 690 player-rows across two boards, 0 differences.**
+- The deployed bundle is **byte-identical to yesterday's** (1,482,420 bytes) and
+  is `main` exactly — 995 symbols, all in `origin/main` bar the three esbuild
+  generates. **Third consecutive day on `main`**, the longest run since this
+  check started.
+- Recap rows unchanged at **32**; `max(id)` still 127; `lead_story_run` still
+  58; none published; `LEAD_CATEGORIES` still six keys with no `recap` in repo
+  and deployed bundle alike.
+- Tamper predicates clean: one published row (94), no published-unverified row,
+  67 audit rows.
+- The lead-story Routine and the live prompt hash were not re-checked;
+  `list_triggers` has not returned `session_request` since 09-19. Unverified,
+  not unchanged.
