@@ -16266,3 +16266,75 @@ Six of seven overlay rows are current; the seventh is meant to be static.
 - The lead-story Routine and the live prompt hash were not re-checked;
   `list_triggers` has not returned `session_request` since 09-19. Unverified,
   not unchanged.
+
+## 143. September 24: the Cloudflare connector needs re-authorising, so most of this audit could not run
+
+Instruments first, and this time one of them is the story.
+
+Branch correct (`HEAD` = `origin/claude/tet-macmillan-price-logic-nyxid5` =
+`36f18efd`), scratchpad intact at 23 files. But **the Cloudflare Developer
+Platform MCP server is no longer authorised for this session.** All 23 of its
+tools — `d1_database_query`, `workers_get_worker_code`, the rest — are gone.
+I searched for them rather than assuming; they do not resolve.
+
+### 143a. What that removes, and what it does not mean
+
+Six of this audit's ten standing checks run through that connector:
+
+```
+board measurement (row 94's four prices, the curve paragraph)   D1
+the two-board gap                                               D1
+feed freshness and the overlay snapshot                         D1
+recap-row count and publish state                               D1
+the daily hang rate                                             D1
+the deployed-bundle / which-branch check                        Workers API
+```
+
+None of them ran today. Every one is **unmeasured, not unchanged** (rule 5).
+
+The distinction from 09-21 matters and I want it on the record: that day **D1
+itself refused reads**, which meant the Worker was probably also unable to
+serve, so the site was likely degraded. **Today the database is presumably
+fine and my instrument is broken.** I have no evidence either way about
+irontuna.com, and the absence of evidence is mine, not the site's. Saying
+"the site is fine" today would be as wrong as saying "the site is down".
+
+**This needs Ken:** the Cloudflare connector has to be re-authorised from
+claude.ai's connector settings. I cannot run the OAuth flow from a scheduled
+session. Until it is reconnected, the daily audit is reduced to the repo-side
+checks below and the reader-facing questions — the pinned story's prices, the
+recap rows, whether the feeds are running — cannot be answered at all.
+
+It also exposes something structural that was always true and never written
+down: **this audit has a single point of failure it does not control.** Three
+of the last four days have lost checks to something outside the repo — the
+container recycle on 09-21, D1's read limit the same day, the connector today.
+The snapshot archive is the one piece of insulation that would survive all
+three, and it is still the thing that does not exist (§140b).
+
+### 143b. What did run, with its limits stated
+
+- **CI 82/82** after merging `origin/main` (`cfae3caf`); no HANDOFF conflict
+  today.
+- **Harness self-test 23/23.**
+- **Repo vs deployed: 690 player-rows across two boards, 0 differences**, with
+  `VEGAS_WEIGHT`, `LEAGUE_BUDGET`, `MIN_BID`, `CURVE` and `COLUMN_NORM`
+  identical — **but the "deployed" side is yesterday's cached bundle**, because
+  the Workers API is unreachable. What this actually proves is narrower than
+  usual: *the bundle deployed on 09-23 still agrees with today's `main` on every
+  board constant.* It says nothing about what is deployed now.
+- The cached 09-23 bundle still carries 995 top-level symbols, all present in
+  today's `origin/main` except `__defProp`, `__name` and `worker_default`. So
+  `main` has not moved away from what was deployed yesterday in any way that
+  touches the board.
+
+### 143c. The standing items are unchanged because nothing could change them
+
+Carried forward untested: row 94 pinned sixteen days with every figure in its
+table having been both right and wrong on some day; 32 recap rows
+`verified=1, published=0`, each one flag from the lead slot; the two boards
+disagreeing on ~19% of the roster; the tick's 18–62% hang rate; the D1 read
+limit that fired once on 09-21 and may fire again; `odds-refresh`'s five hangs.
+
+The last measured values are §142's. They are five days old by the time anything
+acts on them if the connector stays down.
