@@ -124,13 +124,13 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:68px;padding-top:6px;padding-bottom:6px}
 .mast-brand{display:inline-flex;align-items:center;flex:0 0 auto;align-self:stretch;margin:-6px 8px -6px -20px;padding:0 38px 0 24px;background:var(--brand);clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%)}
 .mast-brand:hover{background:var(--brand-dark)}
-/* Solid white on the green block, not the metal gradient every other page's
-   header wears on black. The gradient's lower stops (#6f928b, #46555e) sit
-   within a few shades of --brand, so on this block the letters faded out at
-   their feet and the mark read as smudged. CSS fill outranks the path group's
-   fill attribute, so the shared markup stays untouched. */
-.mast-logo{height:38px;width:auto;display:block}
-.mast-logo g{fill:#fff}
+/* Ken, 2026-09-25: the homepage sets the name as plain bold type, not the
+   staggered outlined mark every other page's header draws. On the green block
+   the stagger (a tall I and A around shorter letters) read as a font error.
+   This is the homepage only; tools/wordmark.mjs still owns the mark
+   everywhere else. Archivo is already loaded here, and its fallback stack is
+   a bold sans, so a slow font load costs nothing worse than Helvetica. */
+.mast-word{display:block;font-size:26px;line-height:1;font-weight:900;font-stretch:112%;letter-spacing:.01em;text-transform:uppercase;color:#fff;white-space:nowrap}
 .mast-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
 .mast-jump{display:flex;align-items:center;gap:2px;min-width:0;margin-right:auto}
 /* Sentence case, no tracking. The tracked-out ALL-CAPS label was on nine
@@ -156,7 +156,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 @media(max-width:900px){ .mast .wrap{flex-wrap:wrap;padding-top:8px;padding-bottom:8px;row-gap:6px} }
 @media(max-width:760px){
   .mast .wrap{padding:9px 14px 10px;row-gap:9px;column-gap:10px;align-items:center}
-  .mast-logo{height:30px}
+  .mast-word{font-size:22px}
   .mast-brand{margin:-9px 2px -9px -14px;padding:0 28px 0 14px}
   /* Row one: wordmark, then the section jumps on ONE line that scrolls
      sideways — never a second and third wrapped line. */
@@ -170,7 +170,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
   .mast-nav{flex:1 1 100%;gap:9px;flex-wrap:nowrap}
   .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;justify-content:center;font-size:16.5px;padding:11px 8px;border-radius:3px}
 }
-@media(max-width:380px){ .mast-logo{height:26px} .mast-jump a{font-size:15px;padding:8px 6px} }
+@media(max-width:380px){ .mast-word{font-size:19px} .mast-jump a{font-size:15px;padding:8px 6px} }
 
 /* ── footer ── */
 .foot{margin-top:0;background:var(--card);border-top:1px solid var(--line)}
@@ -773,7 +773,7 @@ body.hm-dress .hm-choose-k{font-size:14px;letter-spacing:.09em}
 </head>
 <body class="hm-dress">
 <header class="mast"><div class="wrap">
-  <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
+  <a class="mast-brand" href="/" aria-label="Iron Tuna home"><span class="mast-word" aria-hidden="true">Iron Tuna</span></a>
   <!-- The same five destinations, in the same order, as the shared chrome on
        every other page (tools/build-chrome.mjs NAV). The front page used to
        carry four of its own, so clicking off "/" changed the nav.
