@@ -125,10 +125,12 @@ console.log('\nthe front page is light chrome over a black masthead');
   const root = (src.match(/:root\{[^}]*\}/) || [''])[0];
   ok('the front page is on the light palette', /--bg:\s*#f[0-9a-f]{5}/i.test(root), root.slice(0, 90));
   ok('and shares the site accent as --brand', /--brand:\s*#0e7c63/i.test(root), root.slice(0, 90));
-  // The masthead and the hero band ARE dark, and the wordmark on them is the
-  // light-on-dark metal. That is why front.html is exempt from the sweep above.
+  // The masthead band IS dark. Its wordmark is no longer the metal mark
+  // (Ken, 2026-09-25): the homepage sets the name as plain bold white type on
+  // the green brand block. It must not regress to the dark-ink mark either.
   ok('the masthead band stays black', /--mast:\s*#0b1614/i.test(root));
-  ok('and keeps the metal wordmark that belongs on it', src.includes('stop-color="#dde8ee"'));
+  ok('and sets the name as plain bold type on it',
+     /<span class="mast-word"[^>]*>Iron Tuna<\/span>/.test(src) && !src.includes('stop-color="#3d4c57"'));
 }
 
 console.log('\nthe draft app is the one dark surface left');
