@@ -16338,3 +16338,81 @@ limit that fired once on 09-21 and may fire again; `odds-refresh`'s five hangs.
 
 The last measured values are §142's. They are five days old by the time anything
 acts on them if the connector stays down.
+
+## 144. September 25: second day without Cloudflare, and the board is now two days unmeasured
+
+Instruments: branch correct (`HEAD` = `origin/claude/tet-macmillan-price-logic-nyxid5`
+= `905599f8`), scratchpad intact at 23 files. **The Cloudflare connector is
+still unauthorised** — I searched for `d1_database_query` and
+`workers_get_worker_code` by name rather than assuming, and neither resolves.
+Second consecutive day.
+
+### 144a. The count of what is going unmeasured
+
+This is the substance of today's entry, because the substance is an absence.
+
+```
+                                             last measured   days stale
+row 94's four prices + curve paragraph        09-23            2
+the two-board gap                             09-23            2
+feed freshness / overlay snapshot             09-23            2
+recap-row count and publish state             09-23            2
+daily hang rate                               09-22 (closed)   3
+which branch is deployed                      09-23            2
+D1 size and read-limit state                  09-23            2
+```
+
+Every one is **unmeasured, not unchanged** (rule 5), and the gap widens by a day
+for each day the connector stays down. Nothing here is a finding about the site;
+it is a finding about the audit.
+
+Two things are worth saying about *why* this matters more than a normal missed
+day. First, the overlay is updated in place, so a day without a snapshot is a
+day that **cannot be reconstructed later** — the same property that made the
+09-21 container recycle permanent (§140b). Second, the figures that matter most
+here are the ones that move: row 94's prices changed on five of the eight days
+they were measured, and the wrong-price count ran 3, 3, 1, 1, 1, 2. A two-day
+hole in that series is not a pause, it is missing data in the middle of an
+active signal.
+
+### 144b. Still Ken's to fix, and still nothing I can do about it
+
+The Cloudflare Developer Platform connector needs re-authorising from claude.ai's
+connector settings. A scheduled, non-interactive session cannot run the OAuth
+flow — I cannot work around this, and there is no second route to D1 from here
+(the egress proxy blocks irontuna.com, so the public API is not a fallback
+either).
+
+Until it is reconnected the daily audit is the repo-side checks below, and every
+reader-facing question — what the pinned story's prices are against the live
+board, whether the feeds are running, whether any of the 32 recap rows has been
+published — is unanswerable.
+
+### 144c. What ran, and exactly what it proves
+
+- **CI 82/82** after merging `origin/main` (`e7f234e8`); no HANDOFF conflict.
+- **Harness self-test 23/23.**
+- **Board comparison: 690 player-rows across two boards, 0 differences**, all
+  five board constants identical — **against the cached 09-23 bundle**, because
+  the Workers API is unreachable. Stated precisely: *the bundle that was
+  deployed on 09-23 still agrees with today's `main` on every board constant.*
+  It is silent on what is deployed now, and it has been silent for two days.
+- The cached bundle's 995 top-level symbols are all present in today's `main`
+  except the three esbuild generates, so `main` has not moved away from the
+  last-seen deployment in any way that touches pricing.
+
+That last point is the one piece of genuine reassurance available today: `main`
+has changed a good deal in two days (two more merges, 39 insertions in the last
+one alone) and **none of it has touched `PROJECTIONS`, `COLUMN_CURVE`,
+`VEGAS_WEIGHT`, `_colPrice`, `blendProjections`, `applyAvailability` or
+`COLUMN_NORM`.** If a deployment went out from `main` today, it would price the
+board exactly as the last one I could see did.
+
+### 144d. Carried forward, untested for a second day
+
+Row 94 pinned seventeen days, every figure in its table having been both right
+and wrong on some day; 32 recap rows `verified=1, published=0`, each one flag
+from the lead slot; the two boards disagreeing on ~19% of the roster; the tick's
+18–62% hang rate; the D1 read limit that fired once on 09-21; `odds-refresh`'s
+five hangs; the durable overlay snapshot that would have insulated the audit
+from all three of the last week's outages and still does not exist.
