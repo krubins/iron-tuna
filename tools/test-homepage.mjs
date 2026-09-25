@@ -194,9 +194,17 @@ async function open(width, height, at) {
   await ctx.addInitScript(t => { Date.now = () => t; }, at == null ? CLOCK : at);
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(`${width}px: ${e.message}`));
+  // The player pictures, answered locally. The hero hands its frame to the
+  // next candidate when every image of a player fails to load, so a run with
+  // no route to the CDNs would test the failure path on every pass. og.png
+  // stands in for any photograph; `imagesDown` makes them all fail instead.
+  await page.route(/espncdn\.com|static\.www\.nfl\.com|wikimedia\.org/, r =>
+    imagesDown ? r.abort() : r.fulfill({ status: 200, contentType: 'image/png', body: STUB_IMG }));
   await page.goto(BASE, { waitUntil: 'networkidle' });
   return { page, ctx };
 }
+const STUB_IMG = fs.readFileSync(path.join(ROOT, 'og.png'));
+let imagesDown = false;
 // The eleven destinations the two product cards owe, in the order they are
 // written, as routes that exist. Hoisted because two passes need them: the live
 // one checks that each is present, and the refusing one checks that a quiet
@@ -573,6 +581,23 @@ console.log('\nwith only two disagreements on the board');
   ok('and nothing on the page apologizes for it', !LOADING.test(r.body));
   EDGE.vsExperts = full;
   await ctx.close();
+}
+
+// ── a hero whose pictures will not load ─────────────────────────────────────
+// Ken, 2026-09-25: the cover's biggest frame showed a dark box reading "BJ"
+// (Brian Robinson Jr., whom the lookup knows by name only). A frame holding
+// nothing but initials is the empty band this page is written never to show:
+// when no candidate's picture loads, the hero is hidden instead.
+console.log('\nthe hero, with every player picture failing');
+{
+  imagesDown = true;
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const r = await read(page);
+  ok('the hero is hidden rather than showing initials in the frame', r.edge === false, JSON.stringify({ edge: r.edge, name: r.edgeName }));
+  ok('and the lead story still leads', await page.evaluate(() => !!document.querySelector('#leadWell .hm-lead h3')));
+  await ctx.close();
+  imagesDown = false;
 }
 
 ok('no page threw', errors.length === 0, errors.join(' | '));
