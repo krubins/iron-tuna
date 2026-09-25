@@ -126,14 +126,13 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    straight on the black bar in white, and a green slash between it and the
    section links does the separating the block used to. */
 .mast-brand{display:inline-flex;align-items:center;flex:0 0 auto;align-self:stretch}
-.mast-brand:hover .mast-word{color:#dfe9e6}
+.mast-brand:hover .mast-logo{filter:brightness(1.12)}
 .mast-slash{flex:0 0 auto;margin:0 6px 0 4px;font-size:2.25rem;font-weight:300;line-height:1;color:var(--brand-bright);user-select:none}
-/* Ken, 2026-09-25: the homepage sets the name as plain bold type, not the
-   staggered outlined mark every other page's header draws. On the green block
-   the stagger (a tall I and A around shorter letters) read as a font error.
-   This is the homepage only; tools/wordmark.mjs still owns the mark
-   everywhere else. It is the page's one family, at its heaviest weight. */
-.mast-word{display:block;font-size:1.625rem;line-height:1;font-weight:900;letter-spacing:.01em;text-transform:uppercase;color:#fff;white-space:nowrap}
+/* The metal wordmark, the same staggered mark tools/wordmark.mjs draws on every
+   other page's header (Ken, 2026-09-25: plain type on the front was a
+   regression). It sits straight on the black bar now, which is the ground the
+   metal gradient was drawn for, so it keeps its own fill. */
+.mast-logo{height:2.375rem;width:auto;display:block}
 .mast-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
 .mast-jump{display:flex;align-items:center;gap:2px;min-width:0;margin-right:auto}
 /* Sentence case, no tracking. The tracked-out ALL-CAPS label was on nine
@@ -159,7 +158,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 @media(max-width:900px){ .mast .wrap{flex-wrap:wrap;padding-top:8px;padding-bottom:8px;row-gap:6px} }
 @media(max-width:760px){
   .mast .wrap{padding:9px 14px 10px;row-gap:9px;column-gap:10px;align-items:center}
-  .mast-word{font-size:1.375rem}
+  .mast-logo{height:1.875rem}
   .mast-slash{margin:0 0 0 2px;font-size:1.875rem}
   /* Row one: wordmark, then the section jumps on ONE line that scrolls
      sideways — never a second and third wrapped line. */
@@ -173,7 +172,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
   .mast-nav{flex:1 1 100%;gap:9px;flex-wrap:nowrap}
   .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;justify-content:center;font-size:1.03125rem;padding:11px 8px;border-radius:3px}
 }
-@media(max-width:380px){ .mast-word{font-size:1.1875rem} .mast-jump a{font-size:0.9375rem;padding:8px 6px} }
+@media(max-width:380px){ .mast-logo{height:1.625rem} .mast-jump a{font-size:0.9375rem;padding:8px 6px} }
 
 /* ── footer ── */
 .foot{margin-top:0;background:var(--card);border-top:1px solid var(--line)}
@@ -236,17 +235,13 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 /* The section keeps its heading for the outline; the rail's own header does
    the visible job, as "Top Headlines". */
 .hm-front #lead .hm-sec-head{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-/* Nothing to put in the middle or on the right: the promo takes the row
+/* Nothing to put in the middle or on the right: Quick Links takes the row
    rather than sitting beside two empty columns. */
 .hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))){grid-template-columns:minmax(0,1fr);grid-template-areas:"left"}
-.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))) .hm-left{flex-direction:row;flex-wrap:wrap}
-.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))) .hm-promo{flex:1 1 420px}
-.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))) .hm-quick{flex:1 1 260px}
-.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))) .hm-cta{flex-direction:row;flex-wrap:wrap}
-.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))) .hm-btn{flex:0 1 240px}
 
-/* The promo card, dark, the way the network's own promo sits at the top of its
-   left rail. The claim stays larger than the lede (tools/test-homepage.mjs). */
+/* The promo card: what the site is, for a first-time reader, at the top of
+   the method section. Dark, with the claim beside the two buttons on a wide
+   screen. The claim stays larger than the lede (tools/test-homepage.mjs). */
 .hm-promo{background:var(--mast);color:#fff;border-radius:8px;padding:22px 20px 20px;box-shadow:0 1px 3px rgba(16,19,23,.12)}
 .hm-promo-k{font-size:0.875rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
 .hm-claim{font-weight:400;font-size:1.4375rem;line-height:1.24;color:#fff;border-left:2px solid var(--gold);padding-left:12px}
@@ -257,8 +252,6 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-btn.primary:hover{background:var(--teal);color:#06231c}
 .hm-btn.second{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
 .hm-btn.second:hover{background:rgba(255,255,255,.1);border-color:#fff}
-.hm-how-link{display:inline-block;margin-top:14px;font-size:0.84375rem;font-weight:600;color:#8fa5a1;border-bottom:1px solid rgba(143,165,161,.35);padding-bottom:1px}
-.hm-how-link:hover{color:#fff;border-bottom-color:#fff}
 .hm-promo a:focus-visible{outline-color:var(--gold)}
 
 /* Quick Links: a white card of plain rows. */
@@ -320,9 +313,11 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    phone front opens on its lead. */
 @media(max-width:1100px){
   .hm-front{grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"edge rail" "lead rail" "left left";row-gap:0}
-  .hm-left{flex-direction:row;flex-wrap:wrap;margin-top:18px}
-  .hm-promo{flex:1 1 380px}
-  .hm-quick{flex:1 1 240px}
+  .hm-left{margin-top:18px}
+  /* Across the page's width below the lead, the links run in columns. */
+  .hm-quick ul{display:grid;grid-template-columns:repeat(auto-fill,minmax(12rem,1fr));column-gap:24px}
+  .hm-quick li + li{border-top:0}
+  .hm-quick li{border-bottom:1px solid var(--line)}
 }
 @media(max-width:900px){
   .hm-front{grid-template-columns:minmax(0,1fr);grid-template-areas:"edge" "lead" "rail" "left"}
@@ -652,7 +647,6 @@ body.hm-dress .hm-claim{margin-top:17px;max-width:44ch;font-size:clamp(1.375rem,
 body.hm-dress .hm-lede{margin-top:13px;max-width:64ch;font-size:clamp(1.03125rem,1.3vw,1.125rem);line-height:1.55}
 body.hm-dress .hm-cta{margin-top:19px;gap:10px}
 body.hm-dress .hm-btn{font-size:1.0625rem;padding:11px 19px}
-body.hm-dress .hm-how-link{margin-top:13px;font-size:0.9375rem}
 
 /* ── 2 · section heads ──────────────────────────────────────────────────── */
 body.hm-dress .hm-sec{padding-top:clamp(24px,3vw,38px)}
@@ -785,19 +779,16 @@ body.hm-dress .hm-choose-k{font-size:0.875rem;letter-spacing:.09em}
    does the same when the center runs longer. The gutters between cards and
    between sections come down to 12-16px so the page reads as one run of
    stories rather than islands on grey. */
-.hm-front{grid-template-columns:18.75rem minmax(0,1fr) 21.25rem;column-gap:16px;align-items:stretch;padding-top:16px;padding-bottom:0}
+.hm-front{grid-template-columns:15rem minmax(0,1fr) 21.25rem;column-gap:16px;align-items:stretch;padding-top:16px;padding-bottom:0}
 .hm-left{gap:12px}
 /* Quick Links rides at the foot of the Top Headlines card whenever the rail
    is painted (the lead painter moves it there; see `quick` in the script).
    Left under the promo it made the left column the tallest by a screenful,
    and stretching the other two to meet it only turned grey holes into white
    ones. One card on the right, headlines then links, levels the front. */
-@media(min-width:1101px){ .hm-front:has(.hm-rail .hm-quick) .hm-promo{flex:1 1 auto} }
-.hm-rail .hm-quick{background:none;box-shadow:none;border-radius:0;padding:0;margin-top:22px}
-.hm-front .hm-rail .hm-quick ul{display:grid;grid-template-columns:1fr 1fr;column-gap:16px;gap:0 16px;flex:none}
-.hm-front .hm-rail .hm-quick li{display:block;padding:0;border-bottom:1px solid var(--line)}
-.hm-front .hm-rail .hm-quick li + li{border-top:0}
-.hm-front .hm-rail .hm-quick a{padding:8px 0;font-size:1rem}
+/* Quick Links is the whole left column: a card that runs the height of the
+   front, like the network's own left ribbon. */
+@media(min-width:1101px){ .hm-quick{flex:1 1 auto} }
 .hm-front .hm-lead{align-self:stretch}
 .hm-front .hm-lead .m{margin-top:auto}
 .hm-front .hm-rail{align-self:stretch;display:flex;flex-direction:column}
@@ -816,12 +807,23 @@ body.hm-dress .hm-reads{gap:16px}
   .hm-front{grid-template-columns:minmax(0,1fr)}
   .hm-front .hm-rail{margin-top:12px}
 }
+/* The promo in the method section: claim and lede on the left, the two
+   buttons on the right, one dark card across the band. */
+.hm-how .hm-promo{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"k k" "claim cta" "lede cta";column-gap:32px;align-items:start;margin-bottom:24px}
+.hm-how .hm-promo-k{grid-area:k}
+.hm-how .hm-promo .hm-claim{grid-area:claim;margin-top:0;max-width:52ch}
+.hm-how .hm-promo .hm-lede{grid-area:lede;max-width:80ch}
+.hm-how .hm-promo .hm-cta{grid-area:cta;margin-top:0;align-self:center;min-width:15rem}
+@media(max-width:760px){
+  .hm-how .hm-promo{grid-template-columns:minmax(0,1fr);grid-template-areas:"k" "claim" "lede" "cta"}
+  .hm-how .hm-promo .hm-cta{margin-top:18px;min-width:0}
+}
 </style>
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://irontuna.com/#website","name":"Iron Tuna","url":"https://irontuna.com/","inLanguage":"en-US","publisher":{"@id":"https://irontuna.com/#organization"},"description":"Analytics consistently beats intuition. Iron Tuna combines market intel, advanced analytics and AI analysis: the betting market read first, the consensus second, and your league’s scoring on top of both. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup."},{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna prices every NFL player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring — weekly rankings, waiver prices, DFS values and model-vs-market game lines in season, and custom draft values before it.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
 </head>
 <body class="hm-dress">
 <header class="mast"><div class="wrap">
-  <a class="mast-brand" href="/" aria-label="Iron Tuna home"><span class="mast-word" aria-hidden="true">Iron Tuna</span></a><span class="mast-slash" aria-hidden="true">/</span>
+  <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a><span class="mast-slash" aria-hidden="true">/</span>
   <!-- The same five destinations, in the same order, as the shared chrome on
        every other page (tools/build-chrome.mjs NAV). The front page used to
        carry four of its own, so clicking off "/" changed the nav.
@@ -890,21 +892,12 @@ body.hm-dress .hm-reads{gap:16px}
 <section class="hero-band" id="heroBand">
   <div class="wrap hm-front" id="hmHero">
    <div class="hm-left">
-    <div class="hm-hero-copy hm-promo">
-      <p class="hm-promo-k">How Iron Tuna works</p>
-      <p class="hm-claim">Iron Tuna converts sportsbook lines and player props into fantasy point projections.</p>
-      <p class="hm-lede">Those projections become weekly rankings, trade values and DFS lineups, scored at your league’s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.</p>
-      <div class="hm-cta">
-        <a class="hm-btn primary" href="/fantasy">Get Fantasy Advice</a>
-        <a class="hm-btn second" href="/dfs">Build a DFS Lineup</a>
-      </div>
-      <!-- The one smaller link, and it lands on section 5 of this page rather
-           than on /faq: the method is explained here, so the reader never
-           leaves the page to find out what the numbers are. -->
-      <a class="hm-how-link" href="#how">See How It Works</a>
-    </div>
-    <!-- Quick Links, the way a sports front carries them under its promo. The
-         destinations readers go to most, one click each. A different class
+    <!-- Quick Links: the front's left column, the way a sports front runs its
+         ribbon of destinations down the left. The destinations readers go to
+         most, one click each. (Ken, 2026-09-25: the "How Iron Tuna works"
+         promo used to sit above it; a returning reader does not need the
+         site explained on every visit, so it moved to the method section at
+         the foot of the page.) A different class
          from the lane cards' `.hm-links` on purpose: the cards' eleven links
          are asserted as a set, and this list is not part of it. -->
     <nav class="hm-quick" aria-label="Quick links">
@@ -1091,6 +1084,18 @@ body.hm-dress .hm-reads{gap:16px}
      is deciding what the numbers are worth, rather than only in the footer. -->
 <section class="hm-how" id="how" aria-labelledby="howHead">
   <div class="wrap">
+    <!-- What the site is, for a first-time reader. It opened the front page
+         until 2026-09-25; it lives here now, beside the method it summarizes,
+         so the top of the page is news for the reader who comes back. -->
+    <div class="hm-hero-copy hm-promo">
+      <p class="hm-promo-k">How Iron Tuna works</p>
+      <p class="hm-claim">Iron Tuna converts sportsbook lines and player props into fantasy point projections.</p>
+      <p class="hm-lede">Those projections become weekly rankings, trade values and DFS lineups, scored at your league’s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.</p>
+      <div class="hm-cta">
+        <a class="hm-btn primary" href="/fantasy">Get Fantasy Advice</a>
+        <a class="hm-btn second" href="/dfs">Build a DFS Lineup</a>
+      </div>
+    </div>
     <h2 id="howHead">How it works</h2>
     <p class="hm-note">Three inputs, in this order, and every board on the site is built from them and nothing else.</p>
     <!-- Three columns rather than three bold run-ins in one paragraph. The
@@ -1723,14 +1728,7 @@ body.hm-dress .hm-reads{gap:16px}
     // One published piece is a lead with nothing beside it; the second column
     // is dropped rather than left holding 42% of the row open.
     $('leadWell').className = 'hm-well' + (railPieces.length ? '' : ' hm-well-solo');
-    // Quick Links is held by reference across the repaint: it may be sitting
-    // in the rail this innerHTML is about to throw away.
-    var quick = document.querySelector('.hm-quick');
     $('leadWell').innerHTML = leadHtml;
-    if (quick) {
-      var rail = $('leadWell').querySelector('.hm-rail');
-      (rail || document.querySelector('.hm-left')).appendChild(quick);
-    }
     show($('lead'), true);
 
     // ── the cards, which are the rotation, minus whatever is leading ────────
