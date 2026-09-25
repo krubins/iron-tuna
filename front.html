@@ -121,17 +121,23 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    let the second row spill out of the black band and sit on top of the
    ribbon; this lets the band grow to hold whatever it is given.
    Above the wrap point it is pixel-identical to a fixed 64px. */
-.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:64px;padding-top:6px;padding-bottom:6px}
-.mast-brand{display:inline-flex;align-items:center;flex:0 0 auto;align-self:stretch;margin:-6px 8px -6px -20px;padding:0 34px 0 22px;background:var(--brand);clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%)}
+.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:68px;padding-top:6px;padding-bottom:6px}
+.mast-brand{display:inline-flex;align-items:center;flex:0 0 auto;align-self:stretch;margin:-6px 8px -6px -20px;padding:0 38px 0 24px;background:var(--brand);clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%)}
 .mast-brand:hover{background:var(--brand-dark)}
-.mast-logo{height:32px;width:auto;display:block}
+/* Solid white on the green block, not the metal gradient every other page's
+   header wears on black. The gradient's lower stops (#6f928b, #46555e) sit
+   within a few shades of --brand, so on this block the letters faded out at
+   their feet and the mark read as smudged. CSS fill outranks the path group's
+   fill attribute, so the shared markup stays untouched. */
+.mast-logo{height:38px;width:auto;display:block}
+.mast-logo g{fill:#fff}
 .mast-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
 .mast-jump{display:flex;align-items:center;gap:2px;min-width:0;margin-right:auto}
 /* Sentence case, no tracking. The tracked-out ALL-CAPS label was on nine
    different elements of this page and it is off all nine: it is the single
    loudest piece of template chrome a page can wear, and it told a reader
    nothing that weight and colour do not. */
-.mast-jump a,.mast-nav a{color:#fff;font-size:15.5px;font-weight:700;letter-spacing:0;padding:8px 11px;border-radius:3px}
+.mast-jump a,.mast-nav a{color:#fff;font-size:17px;font-weight:700;letter-spacing:0;padding:8px 11px;border-radius:3px}
 .mast-jump a:hover,.mast-nav a:hover{color:#fff;background:rgba(255,255,255,.07)}
 .mast-nav a.cta{background:var(--brand);color:#fff;margin-left:6px;font-weight:700}
 .mast-nav a.cta:hover{background:var(--brand-dark)}
@@ -150,25 +156,25 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 @media(max-width:900px){ .mast .wrap{flex-wrap:wrap;padding-top:8px;padding-bottom:8px;row-gap:6px} }
 @media(max-width:760px){
   .mast .wrap{padding:9px 14px 10px;row-gap:9px;column-gap:10px;align-items:center}
-  .mast-logo{height:26px}
+  .mast-logo{height:30px}
   .mast-brand{margin:-9px 2px -9px -14px;padding:0 28px 0 14px}
   /* Row one: wordmark, then the section jumps on ONE line that scrolls
      sideways — never a second and third wrapped line. */
   .mast-jump{flex:1 1 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-left:6px}
   .mast-jump::after{content:"";flex:0 0 22px;align-self:stretch;position:sticky;right:0;margin-left:-22px;pointer-events:none;background:linear-gradient(90deg,rgba(11,22,20,0),var(--mast))}
   .mast-jump::-webkit-scrollbar{display:none}
-  .mast-jump a{flex:0 0 auto;font-size:14.5px;padding:8px 7px}
+  .mast-jump a{flex:0 0 auto;font-size:16px;padding:8px 7px}
   /* Row two: the action, full width, at a size a thumb can hit. The rule still
      names .cta as well as .cta-gold so a second button added here shares the
      row evenly rather than needing the query edited. */
   .mast-nav{flex:1 1 100%;gap:9px;flex-wrap:nowrap}
-  .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;justify-content:center;font-size:15px;padding:11px 8px;border-radius:3px}
+  .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;justify-content:center;font-size:16.5px;padding:11px 8px;border-radius:3px}
 }
-@media(max-width:380px){ .mast-logo{height:22px} .mast-jump a{font-size:14px;padding:8px 6px} }
+@media(max-width:380px){ .mast-logo{height:26px} .mast-jump a{font-size:15px;padding:8px 6px} }
 
 /* ── footer ── */
 .foot{margin-top:0;background:var(--card);border-top:1px solid var(--line)}
-.foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 20px 34px;font-size:14.5px;color:var(--ink-3)}
+.foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 20px 34px;font-size:16px;color:var(--ink-3)}
 .foot a:hover{color:var(--brand)}
 /* The footer sitemap takes a line of its own above the legal run: flex-basis
    100% breaks it out of the footer's single wrapping row so it reads as a group
@@ -178,7 +184,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .foot-nav a{font-weight:600;color:var(--ink-2)}
 /* /admin is not a destination a visitor navigates to; it is the operator's only
    link in. It sits at the end of the row, quiet. */
-.foot-admin{font-size:13.5px;color:var(--ink-3);opacity:.7}
+.foot-admin{font-size:14.5px;color:var(--ink-3);opacity:.7}
 .foot .fm{margin-left:auto;line-height:1.55}
 
 /* ══ the homepage ══════════════════════════════════════════════════════════
@@ -197,14 +203,14 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    page's h1; only its dress changed. The dateline rides the right end. */
 .hm-tagbar{background:#12211e;border-top:1px solid rgba(255,255,255,.06);border-bottom:3px solid var(--brand)}
 .hm-tagbar-in{display:flex;align-items:center;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;min-height:40px;padding-top:7px;padding-bottom:7px}
-.hm-h1{font-size:15px;line-height:1.35;letter-spacing:.005em;font-weight:500;color:var(--on-board-2)}
+.hm-h1{font-size:17px;line-height:1.35;letter-spacing:.005em;font-weight:500;color:var(--on-board-2)}
 .hm-h1 .c1{font-weight:500}
 .hm-h1 em{font-style:normal;font-weight:800;color:#fff}
 /* The clock is written hidden and revealed only once /api/season answers with a
    real week. A dateline that says it is loading is worse than no dateline. */
 /* inline-BLOCK, not inline-flex (2026-09-22): the dateline is a sentence and
    wraps like one, at its spaces, with only the week itself held together. */
-.hm-clock{display:inline-block;font-size:13.5px;font-weight:600;letter-spacing:.02em;line-height:1.45;color:var(--on-board-2)}
+.hm-clock{display:inline-block;font-size:15px;font-weight:600;letter-spacing:.02em;line-height:1.45;color:var(--on-board-2)}
 .hm-clock b,.hm-clock .live{white-space:nowrap}
 .hm-clock b{color:#fff;font-weight:700}
 .hm-clock .live{color:var(--teal);font-weight:700}
@@ -220,7 +226,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    painter writes into #leadWell are grid items of THIS grid and can be placed
    in the center and right columns while staying inside the lead section. */
 .hero-band{background:var(--bg);color:var(--ink)}
-.hm-front{display:grid;grid-template-columns:272px minmax(0,1fr) 316px;grid-template-areas:"left edge rail" "left lead rail";grid-template-rows:auto 1fr;column-gap:20px;align-items:start;padding-top:20px;padding-bottom:6px}
+.hm-front{display:grid;grid-template-columns:300px minmax(0,1fr) 340px;grid-template-areas:"left edge rail" "left lead rail";grid-template-rows:auto 1fr;column-gap:20px;align-items:start;padding-top:20px;padding-bottom:6px}
 .hm-left{grid-area:left;display:flex;flex-direction:column;gap:16px;min-width:0}
 .hm-front #lead,.hm-front #leadWell{display:contents}
 .hm-front #lead[hidden]{display:none !important}
@@ -240,11 +246,11 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    left rail. The claim keeps the serif and stays larger than the lede
    (tools/test-homepage.mjs). */
 .hm-promo{background:var(--mast);color:#fff;border-radius:8px;padding:22px 20px 20px;box-shadow:0 1px 3px rgba(16,19,23,.12)}
-.hm-promo-k{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
+.hm-promo-k{font-size:14px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
 .hm-claim{font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400;font-size:23px;line-height:1.24;color:#fff;border-left:2px solid var(--gold);padding-left:12px}
 .hm-lede{margin-top:14px;font-size:14.5px;line-height:1.55;color:#a3b6b2}
 .hm-cta{display:flex;flex-direction:column;gap:9px;margin-top:18px}
-.hm-btn{display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;letter-spacing:.005em;padding:11px 16px;border-radius:999px;border:1px solid transparent;text-align:center}
+.hm-btn{display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;letter-spacing:.005em;padding:11px 16px;border-radius:999px;border:1px solid transparent;text-align:center}
 .hm-btn.primary{background:#fff;color:var(--ink)}
 .hm-btn.primary:hover{background:var(--teal);color:#06231c}
 .hm-btn.second{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
@@ -255,10 +261,10 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 
 /* Quick Links: a white card of plain rows. */
 .hm-quick{background:var(--card);border-radius:8px;padding:16px 18px 8px;box-shadow:0 1px 3px rgba(16,19,23,.1)}
-.hm-quick-h{font-size:16px;font-weight:800;color:var(--ink);padding-bottom:10px;border-bottom:1px solid var(--line)}
+.hm-quick-h{font-size:19px;font-weight:800;color:var(--ink);padding-bottom:10px;border-bottom:1px solid var(--line)}
 .hm-quick ul{list-style:none}
 .hm-quick li + li{border-top:1px solid var(--line)}
-.hm-quick a{display:block;padding:10px 0;font-size:15px;font-weight:600;color:var(--ink-2)}
+.hm-quick a{display:block;padding:10px 0;font-size:17px;font-weight:600;color:var(--ink-2)}
 .hm-quick a:hover{color:var(--brand)}
 
 /* ── the hero's picture ──────────────────────────────────────────────────
@@ -276,10 +282,10 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .he-link{display:block}
 .he-link:hover .it-plate-shot{filter:brightness(1.05)}
 .he-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:12px 18px 13px;background:var(--mast)}
-.he-k{flex:1 1 100%;font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--teal)}
-.he-name{font-size:21px;font-weight:800;line-height:1.2;color:#fff}
-.he-sub{font-size:13.5px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2)}
-.he-gap{flex:1 1 100%;font-size:15px;line-height:1.45;color:#c3d1ce}
+.he-k{flex:1 1 100%;font-size:14px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--teal)}
+.he-name{font-size:24px;font-weight:800;line-height:1.2;color:#fff}
+.he-sub{font-size:15px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2)}
+.he-gap{flex:1 1 100%;font-size:17px;line-height:1.45;color:#c3d1ce}
 .he-gap[hidden]{display:none}
 
 /* The lead card: under the photograph, the story's headline at the size the
@@ -298,12 +304,12 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 
 /* Top Headlines: one white card down the right, plain ruled rows. */
 .hm-front .hm-rail{grid-area:rail;background:var(--card);border-radius:8px;padding:16px 18px 12px;box-shadow:0 1px 3px rgba(16,19,23,.1)}
-.hm-front .hm-rail-h{font-size:16px;font-weight:800;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}
+.hm-front .hm-rail-h{font-size:19px;font-weight:800;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}
 .hm-front .hm-rail ul{justify-content:flex-start}
 .hm-front .hm-rail li h3{font-size:15.5px;line-height:1.35}
 .hm-front .hm-rail li .t{font-size:12.5px}
 .hm-front .hm-rail li .m{font-size:12.5px}
-.hm-rail-all{display:block;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;font-weight:700;color:var(--brand)}
+.hm-rail-all{display:block;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:16px;font-weight:700;color:var(--brand)}
 .hm-rail-all:hover{text-decoration:underline}
 
 /* ── the front, narrower ──
@@ -311,7 +317,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    900px the whole front is one column, lead first, the way the network's
    phone front opens on its lead. */
 @media(max-width:1100px){
-  .hm-front{grid-template-columns:minmax(0,1fr) 300px;grid-template-areas:"edge rail" "lead rail" "left left";row-gap:0}
+  .hm-front{grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"edge rail" "lead rail" "left left";row-gap:0}
   .hm-left{flex-direction:row;flex-wrap:wrap;margin-top:18px}
   .hm-promo{flex:1 1 380px}
   .hm-quick{flex:1 1 240px}
@@ -323,9 +329,9 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 }
 @media(max-width:560px){
   .hm-tagbar-in{padding-left:14px;padding-right:14px}
-  .hm-h1{font-size:14px}
+  .hm-h1{font-size:16px}
   .hm-front{padding-top:14px;padding-left:12px;padding-right:12px}
-  .he-name{font-size:19px}
+  .he-name{font-size:21px}
   .hm-front .hm-lead{padding:16px 16px 18px}
 }
 
@@ -337,7 +343,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-sec-head h2{font-size:clamp(22px,2.4vw,28px);line-height:1.12;letter-spacing:-.014em;font-weight:700;font-stretch:112%}
 .hm-sec-head a{font-size:15px;font-weight:600;color:var(--brand)}
 .hm-sec-head a:hover{text-decoration:underline}
-.hm-sub{margin-top:14px;font-size:16px;line-height:1.55;color:var(--ink-2);max-width:70ch;margin-bottom:18px}
+.hm-sub{margin-top:14px;font-size:18px;line-height:1.55;color:var(--ink-2);max-width:70ch;margin-bottom:18px}
 .hm-fine{margin-top:12px;font-size:14px;line-height:1.55;color:var(--ink-3)}
 
 /* ── 2 · the two product cards ────────────────────────────────────────────
@@ -428,7 +434,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-act{display:inline-block;font-size:14.5px;font-weight:700;letter-spacing:0;text-transform:none;padding:4px 10px;border-radius:2px;white-space:nowrap}
 .hm-act.up{background:rgba(45,212,163,.15);color:#5fe0ba;border:1px solid rgba(45,212,163,.36)}
 .hm-act.down{background:rgba(232,119,108,.14);color:#f09a92;border:1px solid rgba(232,119,108,.34)}
-.hm-act-why{display:block;margin-top:5px;font-size:14px;color:var(--on-board-2);white-space:nowrap}
+.hm-act-why{display:block;margin-top:5px;font-size:15px;color:var(--on-board-2);white-space:nowrap}
 
 /* ── the lead story ───────────────────────────────────────────────────────
    The front page carried the desk only as three rotating cards two screens
@@ -450,8 +456,8 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    and the card does not hold white space open when it is not. */
 .hm-lead{align-self:start;display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--card);border:1px solid var(--line);border-top:3px solid var(--ink);border-radius:0 0 2px 2px;padding:24px 26px 26px}
 .hm-lead:hover{border-color:var(--brand-line);border-top-color:var(--brand)}
-.hm-lead .t{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:14px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
-.hm-lead .flag{font-size:13.5px;font-weight:600;letter-spacing:0;text-transform:none;border-radius:2px;padding:1px 7px;color:var(--gold-ink);background:#fdf3dc}
+.hm-lead .t{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:15.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
+.hm-lead .flag{font-size:14.5px;font-weight:600;letter-spacing:0;text-transform:none;border-radius:2px;padding:1px 7px;color:var(--gold-ink);background:#fdf3dc}
 .hm-lead h3{font-size:clamp(25px,2.5vw,33px);line-height:1.13;font-weight:700;font-stretch:108%;letter-spacing:-.018em;color:var(--ink);overflow-wrap:anywhere}
 .hm-lead h3 a{color:inherit}
 .hm-lead h3 a:hover{color:var(--brand)}
@@ -462,7 +468,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    scanning. The cards below clamp theirs to keep three of them scannable, and
    a lead clamped to two lines is only a bigger card. */
 .hm-lead p{font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:21px;line-height:1.45;color:var(--ink-2)}
-.hm-lead .go{font-size:15px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
+.hm-lead .go{font-size:16.5px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
 .hm-lead .m{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-3)}
 /* The boast on the lead, at the lead's scale rather than the card's: the
    headline under it is bigger here, so the banner is too. Brass ground and
@@ -518,14 +524,14 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-read-card.is-boast:hover{border-top-color:var(--gold)}
 .hm-read-card .boast{display:block;margin-top:6px;font-stretch:125%;font-weight:900;font-size:clamp(25px,2.2vw,30px);line-height:.98;letter-spacing:-.022em;text-transform:uppercase;color:var(--gold-ink)}
 .hm-read-card.is-boast h3{margin-top:5px;font-weight:600}
-.hm-read-card p{margin-top:7px;font-size:15px;line-height:1.5;color:var(--ink-2)}
-.hm-read-card .m{margin-top:auto;padding-top:12px;font-size:13.5px;color:var(--ink-3)}
+.hm-read-card p{margin-top:7px;font-size:16.5px;line-height:1.5;color:var(--ink-2)}
+.hm-read-card .m{margin-top:auto;padding-top:12px;font-size:15px;color:var(--ink-3)}
 
 /* ── 5 · how it works, and the disclosures ── */
 .hm-how{margin-top:clamp(34px,4vw,52px);background:var(--card);border-top:1px solid var(--line)}
 .hm-how .wrap{padding-top:clamp(20px,2.4vw,28px);padding-bottom:clamp(20px,2.4vw,30px)}
-.hm-how h2{font-size:15.5px;font-weight:700;font-stretch:108%;letter-spacing:0;color:var(--ink)}
-.hm-note{margin-top:7px;font-size:14px;line-height:1.65;color:var(--ink-3);max-width:92ch}
+.hm-how h2{font-size:18px;font-weight:700;font-stretch:108%;letter-spacing:0;color:var(--ink)}
+.hm-note{margin-top:7px;font-size:16px;line-height:1.65;color:var(--ink-3);max-width:92ch}
 /* ── the three inputs ──────────────────────────────────────────────────────
    They were bold run-ins inside .hm-note: a numbered list of three things,
    set as one running paragraph, in a 92ch measure that ran out at half the
@@ -538,9 +544,9 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-input{padding:13px 24px 2px;border-left:1px solid var(--line);min-width:0}
 .hm-input:first-child{border-left:0;padding-left:0}
 .hm-input:last-child{padding-right:0}
-.hm-input-n{display:block;font-size:11.5px;font-weight:800;letter-spacing:.11em;color:var(--brand)}
-.hm-input h3{margin:1px 0 3px;font-size:15.5px;font-weight:700;font-stretch:108%;letter-spacing:0;color:var(--ink)}
-.hm-input p{margin:0;font-size:14px;line-height:1.6;color:var(--ink-3)}
+.hm-input-n{display:block;font-size:13px;font-weight:800;letter-spacing:.11em;color:var(--brand)}
+.hm-input h3{margin:1px 0 3px;font-size:18px;font-weight:700;font-stretch:108%;letter-spacing:0;color:var(--ink)}
+.hm-input p{margin:0;font-size:16px;line-height:1.6;color:var(--ink-3)}
 .hm-how-more{margin-top:13px}
 @media(max-width:820px){
   .hm-how-grid{grid-template-columns:minmax(0,1fr)}
@@ -554,7 +560,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    than only in the footer: this is where a reader is actually deciding what the
    numbers are worth. The footer's copyright line stays; its duplicate copy of
    this paragraph does not. */
-.hm-legal{margin-top:12px;font-size:14px;line-height:1.65;color:var(--ink-3);max-width:92ch}
+.hm-legal{margin-top:12px;font-size:16px;line-height:1.65;color:var(--ink-3);max-width:92ch}
 .hm-legal b{color:var(--ink-2)}
 .hm-legal p + p{margin-top:8px}
 
@@ -586,7 +592,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    Nothing in it is a control, so nothing in it is styled as one. */
 .hm-choose{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(16,19,23,.05);position:relative;z-index:45}
 .hm-choose-in{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:center;min-height:46px}
-.hm-choose-k{font-size:14px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);text-align:center}
+.hm-choose-k{font-size:15px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);text-align:center}
 @media (max-width:860px){
   .hm-choose-in{padding:0 12px}
   .hm-choose-k{font-size:13px;letter-spacing:.05em}
@@ -640,23 +646,23 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    ceiling (16px), so the rule holds at every width in between rather than
    only at the two the gate measures. A wider measure is what buys the height:
    44ch sets the sentence in two lines where 38ch set it in three. */
-body.hm-dress .hm-claim{margin-top:17px;max-width:44ch;font-size:clamp(19px,1.9vw,23px);line-height:1.3}
-body.hm-dress .hm-lede{margin-top:13px;max-width:64ch;font-size:clamp(14.5px,1.15vw,16px);line-height:1.55}
+body.hm-dress .hm-claim{margin-top:17px;max-width:44ch;font-size:clamp(22px,2.1vw,27px);line-height:1.3}
+body.hm-dress .hm-lede{margin-top:13px;max-width:64ch;font-size:clamp(16.5px,1.3vw,18px);line-height:1.55}
 body.hm-dress .hm-cta{margin-top:19px;gap:10px}
-body.hm-dress .hm-btn{font-size:15px;padding:11px 19px}
-body.hm-dress .hm-how-link{margin-top:13px;font-size:13.5px}
+body.hm-dress .hm-btn{font-size:17px;padding:11px 19px}
+body.hm-dress .hm-how-link{margin-top:13px;font-size:15px}
 
 /* ── 2 · section heads ──────────────────────────────────────────────────── */
 body.hm-dress .hm-sec{padding-top:clamp(24px,3vw,38px)}
 body.hm-dress .hm-sec-head{margin-bottom:6px;padding-bottom:7px;border-bottom-width:1px;align-items:center}
-body.hm-dress .hm-sec-head h2{font-size:16px;font-weight:800;font-stretch:104%;letter-spacing:.055em;
+body.hm-dress .hm-sec-head h2{font-size:19px;font-weight:800;font-stretch:104%;letter-spacing:.055em;
   line-height:1.2;text-transform:uppercase}
-body.hm-dress .hm-sec-head a{font-size:12.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
-body.hm-dress .hm-fine{margin-top:9px;font-size:13px;line-height:1.5}
+body.hm-dress .hm-sec-head a{font-size:14px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+body.hm-dress .hm-fine{margin-top:9px;font-size:15px;line-height:1.5}
 
 /* ── 3 · the board ──────────────────────────────────────────────────────── */
-body.hm-dress .hm-table th,body.hm-dress .hm-table td{padding:8px 12px;font-size:14.5px}
-body.hm-dress .hm-table thead th{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+body.hm-dress .hm-table th,body.hm-dress .hm-table td{padding:9px 13px;font-size:16.5px}
+body.hm-dress .hm-table thead th{font-size:13px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
   padding-top:10px;padding-bottom:9px}
 /* One line per player, ABOVE 560px ONLY. `b` and `small` were both
    display:block, so every row was two lines of type beside a 46px face and
@@ -670,12 +676,12 @@ body.hm-dress .hm-table thead th{font-size:11px;font-weight:800;letter-spacing:.
    KC · / at / BUF", four lines where the stacked version takes two. Density
    here is a wide-screen win, and on a phone it costs more than it pays. */
 @media(min-width:561px){
-  body.hm-dress .hm-table .who b{display:inline;font-size:15px;white-space:nowrap}
-  body.hm-dress .hm-table .who small{display:inline;margin:0 0 0 7px;font-size:12.5px;white-space:nowrap}
+  body.hm-dress .hm-table .who b{display:inline;font-size:17px;white-space:nowrap}
+  body.hm-dress .hm-table .who small{display:inline;margin:0 0 0 7px;font-size:14px;white-space:nowrap}
   body.hm-dress .hm-table .who.it-player-cell{gap:9px}
-  body.hm-dress .hm-table .who .it-player-face{width:28px;height:28px;min-width:28px}
+  body.hm-dress .hm-table .who .it-player-face{width:32px;height:32px;min-width:32px}
 }
-body.hm-dress .hm-table .mine{font-size:16px}
+body.hm-dress .hm-table .mine{font-size:18.5px}
 /* And the phone's own version of the same row, which was broken before this
    block existed and stays broken if the query above is all that changes.
    `.who.it-player-cell` is a flex ROW — player-search.js's face, the name and
@@ -699,8 +705,8 @@ body.hm-dress .hm-table .mine{font-size:16px}
 }
 /* The decision and the gap it came from were a chip over a second line. They
    are one statement, so they read as one line. */
-body.hm-dress .hm-act{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px}
-body.hm-dress .hm-act-why{display:inline;margin:0 0 0 8px;font-size:12px}
+body.hm-dress .hm-act{font-size:12.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px}
+body.hm-dress .hm-act-why{display:inline;margin:0 0 0 8px;font-size:14px}
 /* Zebra, under the rules the board already had. On this ground it has to be
    lighter than the lift on Iron Tuna's column, or the one device that says
    "read this column" stops saying it — so the column is raised again on a
@@ -712,45 +718,45 @@ body.hm-dress .hm-table tbody tr:nth-child(even) td:nth-child(4){background:rgba
 /* ── 3b · the lead, the rail, the two lane cards, the desk ──────────────── */
 body.hm-dress .hm-well{margin-top:14px;gap:22px}
 body.hm-dress .hm-lead{padding:16px 18px 18px;gap:9px}
-body.hm-dress .hm-lead h3{font-size:clamp(21px,2.1vw,27px)}
+body.hm-dress .hm-lead h3{font-size:clamp(25px,2.4vw,33px)}
 body.hm-dress .hm-lead h3 .it-story-focus{margin:0 0 10px}
 body.hm-dress .hm-lead h3 .it-player-face{width:52px;height:52px;min-width:52px}
-body.hm-dress .hm-lead p{font-size:18px;line-height:1.4}
-body.hm-dress .hm-lead .m{margin-top:11px;padding-top:10px;font-size:13px}
-body.hm-dress .hm-lead .boast{font-size:clamp(22px,2.2vw,28px)}
-body.hm-dress .hm-lead.is-boast h3{font-size:clamp(18px,1.7vw,23px)}
+body.hm-dress .hm-lead p{font-size:20px;line-height:1.42}
+body.hm-dress .hm-lead .m{margin-top:11px;padding-top:10px;font-size:15px}
+body.hm-dress .hm-lead .boast{font-size:clamp(25px,2.5vw,32px)}
+body.hm-dress .hm-lead.is-boast h3{font-size:clamp(21px,2vw,27px)}
 body.hm-dress .hm-rail ul{gap:9px}
 body.hm-dress .hm-rail li{gap:3px;padding-bottom:9px}
-body.hm-dress .hm-rail li .t{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
-body.hm-dress .hm-rail li h3{font-size:15px;line-height:1.3}
-body.hm-dress .hm-rail li h3 .it-player-face{width:26px;height:26px;min-width:26px}
-body.hm-dress .hm-rail li .m{font-size:12px}
+body.hm-dress .hm-rail li .t{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+body.hm-dress .hm-rail li h3{font-size:17.5px;line-height:1.32}
+body.hm-dress .hm-rail li h3 .it-player-face{width:30px;height:30px;min-width:30px}
+body.hm-dress .hm-rail li .m{font-size:14px}
 body.hm-dress .hm-lane{padding:18px 20px 16px}
-body.hm-dress .hm-lane h2{font-size:clamp(19px,2vw,23px)}
-body.hm-dress .hm-lane > p{margin-top:6px;font-size:14px;line-height:1.45}
+body.hm-dress .hm-lane h2{font-size:clamp(23px,2.3vw,28px)}
+body.hm-dress .hm-lane > p{margin-top:6px;font-size:16.5px;line-height:1.45}
 body.hm-dress .hm-read{margin-top:14px;padding:11px 13px}
-body.hm-dress .hm-read .k{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
-body.hm-dress .hm-read .h{margin-top:4px;font-size:16.5px}
-body.hm-dress .hm-read .d{margin-top:4px;font-size:13.5px;line-height:1.4}
+body.hm-dress .hm-read .k{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+body.hm-dress .hm-read .h{margin-top:4px;font-size:19px}
+body.hm-dress .hm-read .d{margin-top:4px;font-size:16px;line-height:1.42}
 body.hm-dress .hm-read.has-pic{grid-template-columns:44px minmax(0,1fr);column-gap:11px}
 body.hm-dress .hm-links{margin-top:14px}
-body.hm-dress .hm-links a{padding:7px 0;font-size:14.5px}
-body.hm-dress .hm-links a span{font-size:13px}
+body.hm-dress .hm-links a{padding:8px 0;font-size:17px}
+body.hm-dress .hm-links a span{font-size:15px}
 body.hm-dress .hm-lane-go{padding-top:14px}
-body.hm-dress .hm-lane-go a{font-size:14px;padding:10px 16px}
+body.hm-dress .hm-lane-go a{font-size:16.5px;padding:12px 16px}
 body.hm-dress .hm-reads{margin-top:14px;gap:20px}
 body.hm-dress .hm-read-card{border-top-width:2px;padding-top:11px}
-body.hm-dress .hm-read-card .t{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
-body.hm-dress .hm-read-card h3{margin-top:6px;font-size:17px;line-height:1.26}
+body.hm-dress .hm-read-card .t{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+body.hm-dress .hm-read-card h3{margin-top:6px;font-size:19.5px;line-height:1.28}
 /* ── 4 · the one structural change ───────────────────────────────────────
    The desk cards put the face on its own line above the headline, which at
    46px is a block of grey between a kicker and the line it belongs to. The
    rail beside them already sets the same face inline in the headline; the
    cards do it too now, at the rail's size. */
 body.hm-dress .hm-read-card h3 .it-story-focus{display:inline-flex;align-items:center;margin:0 9px 0 0}
-body.hm-dress .hm-read-card h3 .it-player-face{width:28px;height:28px;min-width:28px}
+body.hm-dress .hm-read-card h3 .it-player-face{width:32px;height:32px;min-width:32px}
 body.hm-dress .hm-choose-in{min-height:38px}
-body.hm-dress .hm-choose-k{font-size:12.5px;letter-spacing:.09em}
+body.hm-dress .hm-choose-k{font-size:14px;letter-spacing:.09em}
 /* ── below the front: the same white cards on the same stock ──
    The lanes, the board and the desk cards take the front's card treatment
    (8px corners, a hairline shadow, no border) so the page reads as one sports
