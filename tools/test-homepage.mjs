@@ -211,6 +211,10 @@ const read = page => page.evaluate(() => {
   const text = el => (el ? el.textContent.replace(/\s+/g, ' ').trim() : null);
   return {
     h1: text(document.querySelector('h1')),
+    // The thesis is the site's tagline (2026-09-25): it rides the bar under the
+    // nav, not the hero, and is set at a tagline's size rather than a story's.
+    tagline: !!document.querySelector('.hm-tagbar h1'),
+    h1Px: (() => { const e = document.querySelector('h1'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
     claim: text(document.querySelector('.hm-claim')),
     lede: text(document.querySelector('.hm-lede')),
     claimPx: (() => { const e = document.querySelector('.hm-claim'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
@@ -270,6 +274,7 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const r = await read(page);
   ok(`${tag}: the headline is the thesis`,
      r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.', r.h1);
+  ok(`${tag}: and it is a tagline, not a headline`, r.tagline && r.h1Px <= 18, `${r.tagline} ${r.h1Px}px`);
   // The conversion, in its own line above the lede and set larger than it. This
   // is the sentence the page cannot afford a reader to skim past, so it is
   // asserted separately from the copy around it.

@@ -98,11 +98,11 @@ html{scroll-behavior:smooth;scroll-padding-top:56px}
 body{background:var(--bg);color:var(--ink);font-family:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-stretch:100%;font-size:18px;line-height:1.48;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
 a{color:inherit;text-decoration:none}
 img{max-width:100%}
-.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.wrap{max-width:1280px;margin:0 auto;padding:0 20px}
 /* One focus treatment for the whole page: brass on the board, navy on stock.
    Both clear 3:1 against their ground. */
 a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:2px}
-.mast a:focus-visible,.hero-band a:focus-visible,.hm-diff-plate a:focus-visible{outline-color:var(--gold)}
+.mast a:focus-visible,.hm-tagbar a:focus-visible,.hm-promo a:focus-visible,.hm-edge a:focus-visible,.hm-diff-plate a:focus-visible{outline-color:var(--gold)}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}
@@ -112,22 +112,26 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    No rule under it any more. The masthead and the hero are the SAME navy
    board, top of page to the ribbon, and a divider between them would cut one
    surface into two. The ribbon on oat stock is what ends the board. */
-.mast{background:var(--mast)}
+.mast{background:var(--mast);box-shadow:0 1px 0 rgba(255,255,255,.04)}
+/* Ken, 2026-09-25: styled after ESPN's bar. The wordmark sits on a slanted
+   block of the brand green, the way the network's sits on its red, and the
+   section links are white and heavier so the bar reads as the site's spine. */
 /* min-height, not height: the nav is a row of links whose width depends on
    the reader's viewport, and on a narrow laptop it wraps. A fixed height
    let the second row spill out of the black band and sit on top of the
    ribbon; this lets the band grow to hold whatever it is given.
    Above the wrap point it is pixel-identical to a fixed 64px. */
 .mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:64px;padding-top:6px;padding-bottom:6px}
-.mast-brand{display:inline-flex;align-items:center;flex:0 0 auto}
+.mast-brand{display:inline-flex;align-items:center;flex:0 0 auto;align-self:stretch;margin:-6px 8px -6px -20px;padding:0 34px 0 22px;background:var(--brand);clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%)}
+.mast-brand:hover{background:var(--brand-dark)}
 .mast-logo{height:32px;width:auto;display:block}
 .mast-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
-.mast-jump{display:flex;align-items:center;gap:2px;min-width:0;margin-left:auto}
+.mast-jump{display:flex;align-items:center;gap:2px;min-width:0;margin-right:auto}
 /* Sentence case, no tracking. The tracked-out ALL-CAPS label was on nine
    different elements of this page and it is off all nine: it is the single
    loudest piece of template chrome a page can wear, and it told a reader
    nothing that weight and colour do not. */
-.mast-jump a,.mast-nav a{color:#a9bab6;font-size:15px;font-weight:600;letter-spacing:0;padding:8px 9px;border-radius:3px}
+.mast-jump a,.mast-nav a{color:#fff;font-size:15.5px;font-weight:700;letter-spacing:0;padding:8px 11px;border-radius:3px}
 .mast-jump a:hover,.mast-nav a:hover{color:#fff;background:rgba(255,255,255,.07)}
 .mast-nav a.cta{background:var(--brand);color:#fff;margin-left:6px;font-weight:700}
 .mast-nav a.cta:hover{background:var(--brand-dark)}
@@ -147,6 +151,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 @media(max-width:760px){
   .mast .wrap{padding:9px 14px 10px;row-gap:9px;column-gap:10px;align-items:center}
   .mast-logo{height:26px}
+  .mast-brand{margin:-9px 2px -9px -14px;padding:0 28px 0 14px}
   /* Row one: wordmark, then the section jumps on ONE line that scrolls
      sideways — never a second and third wrapped line. */
   .mast-jump{flex:1 1 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-left:6px}
@@ -183,123 +188,143 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    live feed and HIDES ITSELF when that feed has no current answer — there are
    no skeletons, no "loading" copy and no empty shells on this page. */
 
-/* ── 1 · the hero ── */
-.hero-band{background:var(--mast);color:#fff}
-.hero-band .wrap{padding-top:clamp(38px,6vw,76px);padding-bottom:clamp(36px,5.4vw,68px)}
+/* ── the tagline bar ──────────────────────────────────────────────────────
+   Ken, 2026-09-25: the thesis is a TAGLINE. It was a 50px two-clause headline
+   in the hero, which read as the lead story of the page rather than as the
+   line the site signs its name with. It is a slim bar under the nav now,
+   the same board as the masthead one step lighter, at a tagline's size: the
+   first clause quiet, the counter-claim in white and heavier. It is still the
+   page's h1; only its dress changed. The dateline rides the right end. */
+.hm-tagbar{background:#12211e;border-top:1px solid rgba(255,255,255,.06);border-bottom:3px solid var(--brand)}
+.hm-tagbar-in{display:flex;align-items:center;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;min-height:40px;padding-top:7px;padding-bottom:7px}
+.hm-h1{font-size:15px;line-height:1.35;letter-spacing:.005em;font-weight:500;color:var(--on-board-2)}
+.hm-h1 .c1{font-weight:500}
+.hm-h1 em{font-style:normal;font-weight:800;color:#fff}
 /* The clock is written hidden and revealed only once /api/season answers with a
    real week. A dateline that says it is loading is worse than no dateline. */
-/* The dateline and the claim are the two lines in this column that hang off a
-   rule, and they hang off the SAME indent (--hm-rule): two rules set at 12px
-   and 18px gave the column three left edges in six lines, which is most of
-   what made it read as untidy. Everything else in the column is flush left. */
-.hm-hero-copy{--hm-rule:16px}
-.hm-clock{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2);margin-bottom:26px;padding-left:var(--hm-rule);border-left:2px solid var(--teal)}
+.hm-clock{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2)}
 .hm-clock b{color:#fff;font-weight:700}
 .hm-clock .live{color:var(--teal);font-weight:700}
-/* ── the headline, which is the one bold thing on this page ───────────────
-   It is a claim and a counter-claim, and the counter-claim used to be marked
-   by turning it mint green. Colouring one phrase of a headline is the oldest
-   tell in template design and it wastes the contrast on a highlighter.
-   Both clauses are the same white here. The counter-claim was then set on
-   Archivo's WIDTH axis instead, at 125% against the first clause's 96%, and
-   29 units of width apart is far enough that the two clauses stopped looking
-   like one typeface — a third font in a hero that already carries two. Both
-   clauses now sit at the body's width and track identically. What separates
-   them is WEIGHT and SIZE: 500 at the h1's size against 800 at 1.16 of it,
-   which is the contrast one family is built to carry. Size is set in `em` so
-   it rides the h1's own clamp — the counter-claim is 16% bigger than the
-   clause above it at 29px on a phone and at 50px on a desk, rather than
-   punching at one width and shouting at the other.
-   `em` stays the element — the emphasis is real, the styling of it is not
-   italic — and the h1's textContent is unchanged (tools/test-homepage.mjs). */
-/* Leading was 1.0, which is tighter than this face wants at 50px: "projection."
-   and "Vegas" collided across the clause break and the two clauses read as one
-   four-line block rather than as claim and counter-claim. 1.06 here, with the
-   clause break carrying its own step, separates them without a paragraph gap. */
-.hm-h1{font-size:clamp(30px,4.1vw,50px);line-height:1.06;letter-spacing:-.021em;font-weight:500}
-/* The measure is set on each CLAUSE, not on the h1, so each one breaks where
-   its own length wants to: the first runs two lines, the counter-claim one.
-   The caps differ because `ch` resolves against the element's own font, and
-   the counter-claim's is both bolder and bigger — its `0` is wider, so 25ch
-   there is a far LONGER line than 22ch is on the clause above. It is set to
-   the 23.6ch the sentence actually measures, plus slack: the counter-claim
-   lands whole on one line wherever the column is wide enough to hold it, and
-   wraps to two where it is not. */
-.hm-h1 .c1{display:block;max-width:22ch}
-.hm-h1 em{display:block;max-width:25ch;margin-top:.1em;font-style:normal;font-size:1.16em;font-weight:800}
-/* The one sentence that says what this site DOES. This is the page's second
-   family and its last — Instrument Serif, the same face the lead story's deck
-   carries — pushed off a brass rule, brass because this sentence IS the money
-   claim. A serif under a sans headline is a pairing the eye reads as one
-   intention; it only looked like clutter while the headline itself was
-   running two widths. Capped at 38ch so it breaks to two or three lines and
-   reads as a statement rather than as a paragraph.
-   It must stay larger than the lede (tools/test-homepage.mjs), which the floor
-   of this clamp holds at every width. */
-.hm-claim{margin-top:28px;max-width:38ch;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400;font-size:clamp(22px,2.3vw,28px);line-height:1.34;color:#fff;border-left:2px solid var(--gold);padding-left:var(--hm-rule)}
-/* 58ch was a measure the column no longer has now that the photograph is a
-   real column beside it, so the lede set three lines that each broke in a
-   different place. 52ch is the measure this width actually holds. */
-.hm-lede{margin-top:22px;max-width:52ch;font-size:clamp(16px,1.45vw,18px);line-height:1.65;color:#a3b6b2}
-.hm-cta{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:32px}
-.hm-btn{display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;letter-spacing:.005em;padding:15px 24px;border-radius:3px;border:1px solid transparent}
-.hm-btn.primary{background:var(--teal);color:#06231c}
-.hm-btn.primary:hover{filter:brightness(1.08)}
-.hm-btn.second{background:transparent;color:#fff;border-color:rgba(255,255,255,.32)}
-.hm-btn.second:hover{background:rgba(255,255,255,.09);border-color:#fff}
-/* Deliberately smaller and quieter than the two buttons: it is the third thing
-   to do on this page, not a third button competing with the first two. */
-.hm-how-link{display:inline-block;margin-top:20px;font-size:14.5px;font-weight:600;letter-spacing:.01em;color:#8fa5a1;border-bottom:1px solid rgba(143,165,161,.35);padding-bottom:2px}
+
+/* ── 1 · the front ────────────────────────────────────────────────────────
+   Laid out the way a sports network lays out its front (ESPN's, by Ken's
+   request): light stock, three columns of white cards, the lead photograph
+   the biggest thing on the page.
+     left 272px   the promo card and Quick Links
+     center       the photograph, and the lead story directly under it
+     right 316px  Top Headlines
+   #lead and #leadWell are display:contents, so the lead card and the rail the
+   painter writes into #leadWell are grid items of THIS grid and can be placed
+   in the center and right columns while staying inside the lead section. */
+.hero-band{background:var(--bg);color:var(--ink)}
+.hm-front{display:grid;grid-template-columns:272px minmax(0,1fr) 316px;grid-template-areas:"left edge rail" "left lead rail";grid-template-rows:auto 1fr;column-gap:20px;align-items:start;padding-top:20px;padding-bottom:6px}
+.hm-left{grid-area:left;display:flex;flex-direction:column;gap:16px;min-width:0}
+.hm-front #lead,.hm-front #leadWell{display:contents}
+.hm-front #lead[hidden]{display:none !important}
+/* The section keeps its heading for the outline; the rail's own header does
+   the visible job, as "Top Headlines". */
+.hm-front #lead .hm-sec-head{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* Nothing to put in the middle or on the right: the promo takes the row
+   rather than sitting beside two empty columns. */
+.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))){grid-template-columns:minmax(0,1fr);grid-template-areas:"left"}
+.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))) .hm-left{flex-direction:row;flex-wrap:wrap}
+.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))) .hm-promo{flex:1 1 420px}
+.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))) .hm-quick{flex:1 1 260px}
+.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))) .hm-cta{flex-direction:row;flex-wrap:wrap}
+.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))) .hm-btn{flex:0 1 240px}
+
+/* The promo card, dark, the way the network's own promo sits at the top of its
+   left rail. The claim keeps the serif and stays larger than the lede
+   (tools/test-homepage.mjs). */
+.hm-promo{background:var(--mast);color:#fff;border-radius:8px;padding:22px 20px 20px;box-shadow:0 1px 3px rgba(16,19,23,.12)}
+.hm-promo-k{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
+.hm-claim{font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400;font-size:23px;line-height:1.24;color:#fff;border-left:2px solid var(--gold);padding-left:12px}
+.hm-lede{margin-top:14px;font-size:14.5px;line-height:1.55;color:#a3b6b2}
+.hm-cta{display:flex;flex-direction:column;gap:9px;margin-top:18px}
+.hm-btn{display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;letter-spacing:.005em;padding:11px 16px;border-radius:999px;border:1px solid transparent;text-align:center}
+.hm-btn.primary{background:#fff;color:var(--ink)}
+.hm-btn.primary:hover{background:var(--teal);color:#06231c}
+.hm-btn.second{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
+.hm-btn.second:hover{background:rgba(255,255,255,.1);border-color:#fff}
+.hm-how-link{display:inline-block;margin-top:14px;font-size:13.5px;font-weight:600;color:#8fa5a1;border-bottom:1px solid rgba(143,165,161,.35);padding-bottom:1px}
 .hm-how-link:hover{color:#fff;border-bottom-color:#fff}
+.hm-promo a:focus-visible{outline-color:var(--gold)}
+
+/* Quick Links: a white card of plain rows. */
+.hm-quick{background:var(--card);border-radius:8px;padding:16px 18px 8px;box-shadow:0 1px 3px rgba(16,19,23,.1)}
+.hm-quick-h{font-size:16px;font-weight:800;color:var(--ink);padding-bottom:10px;border-bottom:1px solid var(--line)}
+.hm-quick ul{list-style:none}
+.hm-quick li + li{border-top:1px solid var(--line)}
+.hm-quick a{display:block;padding:10px 0;font-size:15px;font-weight:600;color:var(--ink-2)}
+.hm-quick a:hover{color:var(--brand)}
+
 /* ── the hero's picture ──────────────────────────────────────────────────
-   ONE column until there is a photograph to put beside the headline, so an
-   unfilled hero is exactly the hero this page had before rather than a
-   headline with an empty gutter next to it. `has-edge` is added by the
-   painter and is the only thing that opens the second column. */
-.hm-hero{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(26px,4vw,52px);align-items:center}
-/* The picture is a COLUMN, not a thumbnail parked beside a headline. It was
-   320px wide and 4:3, which left it ending level with the lede while the copy
-   ran on for another 250px — a photograph floating in the top half of a band
-   whose bottom half was empty. It now runs the full height of the copy: the
-   row stretches, the plate takes whatever height the copy leaves after the
-   caption and the meta under it, and the photograph crops to fill it. */
-.hm-hero.has-edge{grid-template-columns:minmax(0,1fr) minmax(0,clamp(330px,30vw,440px));align-items:stretch}
-/* The headline is capped clause by clause, the claim at 38ch and the lede at
-   52ch, so none of them reflows when the column narrows — the picture arrives
-   beside the copy, it does not move it. Below 900px the picture goes under the
-   buttons instead. */
-@media(max-width:900px){.hm-hero.has-edge{grid-template-columns:minmax(0,1fr)}
-  .hm-edge{max-width:420px}
-  /* Under the buttons there is no copy to match, so the plate goes back to
-     being a shape of its own rather than filling a height nothing sets. */
-  .hm-edge .it-plate-shot{flex:0 0 auto;aspect-ratio:4/3;min-height:0}}
-.hm-edge{min-width:0;display:flex;flex-direction:column}
+   The biggest thing on the front, as on the network's: a wide photograph on a
+   white card, captioned in a dark strip across its foot. The lead story card
+   joins it underneath so the two read as one plate. */
+.hm-edge{grid-area:edge;min-width:0;display:flex;flex-direction:column;background:var(--card);border-radius:8px 8px 0 0;overflow:hidden;box-shadow:0 1px 3px rgba(16,19,23,.1);position:relative}
 .hm-edge[hidden]{display:none}
-/* The chain that lets the photograph take the leftover height: the plate well,
-   the optional link around the figure and the figure itself all pass the
-   stretch down, and the shot is the one flexible box in it. */
-.he-plate{flex:1 1 auto;display:flex;min-height:0}
+.he-plate{display:flex;min-height:0}
 .he-plate .he-link,.he-plate .it-plate{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;width:100%}
-/* The shape is set here rather than in player-search.js: the plate fills
-   whatever box it is given, and this is the box. Square corners and a hairline
-   rather than a 12px radius over a 44px drop shadow — this is a photograph
-   pinned to a board, not a card floating over one. */
-.hm-edge .it-plate-shot{flex:1 1 auto;height:auto;aspect-ratio:auto;min-height:clamp(230px,24vw,320px);border-radius:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14)}
-.hm-edge .it-plate-shot i{font-size:34px;color:#6d827e}
-.hm-edge .it-art-credit{margin-top:10px;font-size:12.5px;line-height:1.45;color:#7d918d}
+.hm-edge .it-plate-shot{flex:1 1 auto;height:auto;aspect-ratio:16/9;min-height:0;border-radius:0;background:#1a2a27;border:0}
+.hm-edge .it-plate-shot i{font-size:44px;color:#6d827e}
+.hm-edge .it-art-credit{position:absolute;top:8px;right:10px;margin:0;font-size:11.5px;line-height:1.3;color:rgba(255,255,255,.75);background:rgba(0,0,0,.45);padding:2px 7px;border-radius:3px}
 .hm-edge .it-art-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
-/* The plate is wrapped in a link when the feed hands over a story to point at.
-   It carried no style of its own, so the photograph had no hover and no focus
-   ring even though it was the biggest link in the hero. */
-.he-link{display:block;border-radius:2px}
-.he-link:hover .it-plate-shot{border-color:rgba(45,212,163,.7)}
-/* The caption block is sized to the wider column it now sits under, and it is
-   flush with the picture above it rather than a size smaller again. */
-.he-meta{display:flex;flex-direction:column;gap:4px;margin-top:16px;flex:0 0 auto}
-.he-k{font-size:13.5px;font-weight:700;letter-spacing:.01em;color:var(--teal)}
-.he-name{font-size:23px;font-weight:700;font-stretch:112%;line-height:1.18;color:#fff}
-.he-sub{font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2)}
-.he-gap{margin-top:7px;font-size:15px;line-height:1.5;color:#a3b6b2}
+.he-link{display:block}
+.he-link:hover .it-plate-shot{filter:brightness(1.05)}
+.he-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:12px 18px 13px;background:var(--mast)}
+.he-k{flex:1 1 100%;font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--teal)}
+.he-name{font-size:21px;font-weight:800;line-height:1.2;color:#fff}
+.he-sub{font-size:13.5px;font-weight:600;letter-spacing:.02em;color:var(--on-board-2)}
+.he-gap{flex:1 1 100%;font-size:15px;line-height:1.45;color:#c3d1ce}
+.he-gap[hidden]{display:none}
+
+/* The lead card: under the photograph, the story's headline at the size the
+   network sets the one under its lead photo. Without a photograph it is a
+   card of its own with a full radius. */
+.hm-front .hm-lead{grid-area:lead;border-radius:0 0 8px 8px;border:0;border-top:3px solid var(--brand);box-shadow:0 1px 3px rgba(16,19,23,.1);padding:20px 22px 20px}
+.hm-front #heroEdge[hidden] ~ #lead .hm-lead{border-radius:8px;grid-row:1 / span 2}
+.hm-front .hm-lead:hover{border-top-color:var(--brand-dark)}
+.hm-front .hm-lead h3{font-size:clamp(24px,2.2vw,30px)}
+.hm-front .hm-lead p{font-size:19px}
+.hm-front .hm-lead .m{margin-top:6px}
+/* The player the photograph already shows is not drawn again as a tile
+   under it. The faces stay in the markup (the rail and the cards still carry
+   theirs); only the lead's row is not shown while the photograph is up. */
+.hm-front:has(#heroEdge:not([hidden])) .hm-lead h3 .it-story-focus{display:none}
+
+/* Top Headlines: one white card down the right, plain ruled rows. */
+.hm-front .hm-rail{grid-area:rail;background:var(--card);border-radius:8px;padding:16px 18px 12px;box-shadow:0 1px 3px rgba(16,19,23,.1)}
+.hm-front .hm-rail-h{font-size:16px;font-weight:800;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}
+.hm-front .hm-rail ul{justify-content:flex-start}
+.hm-front .hm-rail li h3{font-size:15.5px;line-height:1.35}
+.hm-front .hm-rail li .t{font-size:12.5px}
+.hm-front .hm-rail li .m{font-size:12.5px}
+.hm-rail-all{display:block;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;font-weight:700;color:var(--brand)}
+.hm-rail-all:hover{text-decoration:underline}
+
+/* ── the front, narrower ──
+   Under 1100px the left rail drops below the photograph and headlines; under
+   900px the whole front is one column, lead first, the way the network's
+   phone front opens on its lead. */
+@media(max-width:1100px){
+  .hm-front{grid-template-columns:minmax(0,1fr) 300px;grid-template-areas:"edge rail" "lead rail" "left left";row-gap:0}
+  .hm-left{flex-direction:row;flex-wrap:wrap;margin-top:18px}
+  .hm-promo{flex:1 1 380px}
+  .hm-quick{flex:1 1 240px}
+}
+@media(max-width:900px){
+  .hm-front{grid-template-columns:minmax(0,1fr);grid-template-areas:"edge" "lead" "rail" "left"}
+  .hm-front .hm-rail{margin-top:16px}
+  .hm-front #heroEdge[hidden] ~ #lead .hm-lead{grid-row:auto}
+}
+@media(max-width:560px){
+  .hm-tagbar-in{padding-left:14px;padding-right:14px}
+  .hm-h1{font-size:14px}
+  .hm-front{padding-top:14px;padding-left:12px;padding-right:12px}
+  .he-name{font-size:19px}
+  .hm-front .hm-lead{padding:16px 16px 18px}
+}
 
 /* ── shared section furniture ─────────────────────────────────────────────
    Section headings take the hero's expanded voice, one step down, so the page
@@ -509,17 +534,12 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-legal b{color:var(--ink-2)}
 .hm-legal p + p{margin-top:8px}
 
-@media(max-width:900px){
-  .hm-h1 .c1,.hm-h1 em{max-width:none}
-}
 @media(max-width:560px){
   /* The label and its note stop competing for one line and stack instead: on a
      phone "Rest of season rankings" beside "The horizon that decides trades"
      left both of them at three words a line. */
   .hm-links a{flex-direction:column;align-items:flex-start;gap:2px;padding:12px 0}
   .hm-links a span{text-align:left}
-  .hm-cta{gap:10px}
-  .hm-btn{flex:1 1 100%;padding:13px 16px}
   .hm-lane{padding:22px 18px 20px}
   .hm-table th,.hm-table td{padding:11px 12px}
   /* The board is a sideways scroller on a phone and the player column is the
@@ -547,6 +567,19 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
   .hm-choose-in{padding:0 12px}
   .hm-choose-k{font-size:13px;letter-spacing:.05em}
 }
+/* ── below the front: the same white cards on the same stock ──
+   The lanes, the board and the desk cards take the front's card treatment
+   (8px corners, a hairline shadow, no border) so the page reads as one sports
+   front top to bottom rather than a front over a different site. */
+.hm-lanes{border:0;border-radius:8px;box-shadow:0 1px 3px rgba(16,19,23,.1);overflow:hidden}
+.hm-diff-plate{border-radius:8px}
+.hm-reads{gap:18px}
+.hm-read-card{background:var(--card);border-top:0;border-radius:8px;box-shadow:0 1px 3px rgba(16,19,23,.1);padding:16px 18px 16px;border-left:3px solid var(--ink)}
+.hm-read-card:hover{border-top-color:transparent;border-left-color:var(--brand)}
+.hm-read-card.is-boast{border-left-color:var(--gold)}
+.hm-sec-head{border-bottom-width:1px;border-bottom-color:var(--line)}
+.hm-sec-head h2{font-size:clamp(20px,2vw,24px);font-weight:800;font-stretch:100%}
+
 </style>
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://irontuna.com/#website","name":"Iron Tuna","url":"https://irontuna.com/","inLanguage":"en-US","publisher":{"@id":"https://irontuna.com/#organization"},"description":"Analytics consistently beats intuition. Iron Tuna combines market intel, advanced analytics and AI analysis: the betting market read first, the consensus second, and your league’s scoring on top of both. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup."},{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna prices every NFL player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring — weekly rankings, waiver prices, DFS values and model-vs-market game lines in season, and custom draft values before it.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
 </head>
@@ -584,39 +617,72 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
   </nav>
 </div></header>
 
-<!-- ── 1 · the hero ──────────────────────────────────────────────────────────
-     The thesis, in one headline, above the fold on every viewport: a betting
-     line is a better projection than a published projection is, and this page
-     is where that line becomes fantasy points. The headline draws the contrast
-     the site exists on; the claim under it, set larger and off a teal rule, is
-     the conversion itself in one sentence, because that is the sentence a
-     reader must not be able to miss; the lede then carries what the projection
-     turns into and why the line was worth converting: real money, paid quant
-     teams and a number that moves the minute news lands. "The betting market
-     knows more" named none of it, and asked the reader to take the premise on
-     faith. Two destinations under it
-     and nothing else, because there are only two things this site does. The
-     class stays `hero-band` because the generated rankings ribbon is
-     positioned against it (tools/test-ranks.mjs).
-
-     The clock is the one live element up here and it is written HIDDEN: it is
-     revealed only once /api/season answers with a real week. A dateline that
-     says it is loading is not a dateline. -->
-<section class="hero-band" id="heroBand">
-  <div class="wrap hm-hero" id="hmHero">
-   <div class="hm-hero-copy">
-    <p class="hm-clock" id="hmClock" hidden></p>
+<!-- ── the tagline bar ─────────────────────────────────────────────────────────
+     Ken, 2026-09-25: "Anyone can publish a projection. Vegas has money on
+     theirs." is the site's TAGLINE, not a story. It was set as a 50px hero
+     headline, which made the top of the page read like an article about
+     projections. It rides a slim bar under the nav now, the way a network
+     carries its line under the logo, and the front below it is laid out like a
+     sports front (ESPN's): a promo rail on the left, the desk's lead with its
+     photograph in the middle, and the top headlines down the right.
+     It is still the page's one h1, word for word (tools/test-homepage.mjs):
+     the tagline is what the page is about, it just is not dressed as news.
+     The dateline moved up here with it, off the hero's copy column. -->
+<div class="hm-tagbar">
+  <div class="wrap hm-tagbar-in">
     <h1 class="hm-h1"><span class="c1">Anyone can publish a projection.</span> <em>Vegas has money on theirs.</em></h1>
-    <p class="hm-claim">Iron Tuna converts sportsbook lines and player props into fantasy point projections.</p>
-    <p class="hm-lede">Those projections become weekly rankings, trade values and DFS lineups, scored at your league’s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.</p>
-    <div class="hm-cta">
-      <a class="hm-btn primary" href="/fantasy">Get Fantasy Advice</a>
-      <a class="hm-btn second" href="/dfs">Build a DFS Lineup</a>
+    <p class="hm-clock" id="hmClock" hidden></p>
+  </div>
+</div>
+
+<!-- ── 1 · the front ───────────────────────────────────────────────────────────
+     Three columns on a desk, one below 900px:
+       left    the pitch as a promo card (the claim, the lede, the two lane
+               buttons and the method link), then a Quick Links card;
+       center  the hero's photograph with the lead story directly under it;
+       right   "Top Headlines", the next five pieces off the desk.
+     The lead is still its own section (#lead) and still the second one on the
+     page; it sits INSIDE the front so its lead card and its headline rail can
+     take the center and right columns. #lead and #leadWell are
+     `display:contents` for that, so their children are the front's grid items.
+
+     Every band still follows the page's one rule: the photograph, the lead and
+     the rail are written hidden and appear only with real data. When all three
+     are quiet the promo card takes the full width rather than sitting beside two
+     empty columns. The class stays `hero-band` because tools/test-ranks.mjs
+     finds the hero by it. -->
+<section class="hero-band" id="heroBand">
+  <div class="wrap hm-front" id="hmHero">
+   <div class="hm-left">
+    <div class="hm-hero-copy hm-promo">
+      <p class="hm-promo-k">How Iron Tuna works</p>
+      <p class="hm-claim">Iron Tuna converts sportsbook lines and player props into fantasy point projections.</p>
+      <p class="hm-lede">Those projections become weekly rankings, trade values and DFS lineups, scored at your league’s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.</p>
+      <div class="hm-cta">
+        <a class="hm-btn primary" href="/fantasy">Get Fantasy Advice</a>
+        <a class="hm-btn second" href="/dfs">Build a DFS Lineup</a>
+      </div>
+      <!-- The one smaller link, and it lands on section 5 of this page rather
+           than on /faq: the method is explained here, so the reader never
+           leaves the page to find out what the numbers are. -->
+      <a class="hm-how-link" href="#how">See How It Works</a>
     </div>
-    <!-- The one smaller link, and it lands on section 5 of this page rather
-         than on /faq: the method is explained here, so the reader never leaves
-         the page to find out what the numbers are. -->
-    <a class="hm-how-link" href="#how">See How It Works</a>
+    <!-- Quick Links, the way a sports front carries them under its promo. The
+         destinations readers go to most, one click each. A different class
+         from the lane cards' `.hm-links` on purpose: the cards' eleven links
+         are asserted as a set, and this list is not part of it. -->
+    <nav class="hm-quick" aria-label="Quick links">
+      <p class="hm-quick-h">Quick Links</p>
+      <ul>
+        <li><a href="/weekly-rankings">Weekly rankings</a></li>
+        <li><a href="/fantasy#startsit">Start or sit</a></li>
+        <li><a href="/faab">Waiver prices</a></li>
+        <li><a href="/trade-finder">Trade values</a></li>
+        <li><a href="/dfs#lineup">DFS lineup</a></li>
+        <li><a href="/vegas-edge">The market board</a></li>
+        <li><a href="/value-coach">Value Coach</a></li>
+      </ul>
+    </nav>
    </div>
    <!-- ── the hero's picture ────────────────────────────────────────────────
         ONE player, photographed, because a page whose whole argument is about
@@ -625,10 +691,8 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
         writing about today, or — when the desk names nobody — the widest
         market disagreement on this week's board.
 
-        It obeys the same rule as every other band here. It is written hidden,
-        it is revealed only with a real player and a real line about him, and
-        the hero is a single column until it fills, so an empty feed leaves no
-        gutter beside the headline rather than a frame with nothing in it.
+        It obeys the same rule as every other band here. It is written hidden
+        and is revealed only with a real player and a real line about him.
 
         When it falls back to the board it skips the player the Fantasy card
         already recommends: the same man pictured twice above the fold is the
@@ -636,8 +700,8 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
         not filtered that way — the desk writing about him today is a second
         fact about him, not a repeat of the first.
 
-        An <aside> rather than a <section> on purpose — the page's five
-        sections are its outline and this is not a sixth. -->
+        An <aside> rather than a <section> on purpose — the page's sections
+        are its outline and this is not one of them. -->
    <aside class="hm-edge" id="heroEdge" hidden>
      <div class="he-plate" id="heroEdgePlate"></div>
      <div class="he-meta">
@@ -647,6 +711,20 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
        <span class="he-gap" id="heroEdgeGap"></span>
      </div>
    </aside>
+   <!-- ── 1 · the lead story ───────────────────────────────────────────────
+        Ken, 2026-09-21: the front page had no lead. The newest published piece
+        leads the page, with the next five beside it as Top Headlines, off the
+        same /api/newsroom read the cards below use -- so the two can never
+        disagree about what the desk has published.
+
+        Hidden until it is painted, like every other module here. -->
+   <section class="hm-sec" id="lead" hidden aria-labelledby="leadHead">
+     <div class="hm-sec-head">
+       <h2 id="leadHead">The lead story</h2>
+       <a href="/in-season/desk">All articles &rarr;</a>
+     </div>
+     <div class="hm-well" id="leadWell"></div>
+   </section>
   </div>
 </section>
 
@@ -665,24 +743,6 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 </div>
 
 <main class="wrap" id="main">
-
-  <!-- ── 1 · the lead story ─────────────────────────────────────────────────
-       Ken, 2026-09-21: the front page still had no lead. It had the desk as
-       three rotating cards below the two product lanes and the disagreement
-       table, which is a list, not a front. The newest published piece leads
-       the page now, with the next five beside it, off the same /api/newsroom
-       read the cards below already use -- so the two can never disagree about
-       what the desk has published.
-
-       Hidden until it is painted, like every other module here: a heading
-       over an empty well is worse than no heading. -->
-  <section class="hm-sec" id="lead" hidden aria-labelledby="leadHead">
-    <div class="hm-sec-head">
-      <h2 id="leadHead">The lead story</h2>
-      <a href="/in-season/desk">All articles &rarr;</a>
-    </div>
-    <div class="hm-well" id="leadWell"></div>
-  </section>
 
   <!-- ── 2 · the two product cards ──────────────────────────────────────────
        The whole product, in two cards. Each one lists the five destinations
@@ -940,6 +1000,12 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
       $('heroEdgeName').textContent = p.n;
       $('heroEdgeSub').textContent = p.p + (p.t ? ' · ' + p.t : '');
       $('heroEdgeGap').textContent = c.gap || '';
+      // The lead story sits directly under the photograph now, so a caption
+      // that repeats the lead's headline word for word is the same sentence
+      // twice in one plate. It stays in the caption's text and is only not
+      // shown; a caption about anything else still shows.
+      var leadH = document.querySelector('#leadWell .hm-lead h3 a');
+      $('heroEdgeGap').hidden = !!(leadH && c.gap && leadH.textContent.trim() === String(c.gap).trim());
       show($('heroEdge'), true);
       $('hmHero').classList.add('has-edge');
       heroFrom = from;
@@ -1371,14 +1437,15 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
       + '<a class="go" href="' + esc(lead.url) + '">Read the story &rarr;</a>'
       + '<span class="m">' + by(lead) + '</span></article>';
     if (railPieces.length) {
-      leadHtml += '<div class="hm-rail"><p class="hm-rail-h">More from the desk</p><ul>'
+      // "Top Headlines", as a sports front heads the rail down its right side.
+      leadHtml += '<div class="hm-rail"><p class="hm-rail-h">Top Headlines</p><ul>'
         + railPieces.map(function (p) {
             var pk = subjectOf(p, whoOf(p)), cr = boast(p);
             return '<li' + (pk.length ? ' data-player-focus="' + esc(pk.join('|')) + '"' : '') + '>'
               + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
               + '<h3><a href="' + esc(p.url) + '">' + esc(cr || p.headline) + '</a></h3>'
               + '<span class="m">' + by(p) + '</span></li>';
-          }).join('') + '</ul></div>';
+          }).join('') + '</ul><a class="hm-rail-all" href="/in-season/desk">All articles &rarr;</a></div>';
     }
     // One published piece is a lead with nothing beside it; the second column
     // is dropped rather than left holding 42% of the row open.
