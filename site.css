@@ -1378,6 +1378,240 @@ html:has(.sl-shell){scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 .is-rail { display: flex; flex-direction: column; gap: var(--space-4); position: sticky; top: var(--space-4) }
 @media (max-width: 980px) { .is-rail { position: static } }
 
+/* ══ THE SCOREBOARD DRESS ═════════════════════════════════════════════════
+   Worn by adding `sl-dress` to <body>. /fantasy and /dfs wear it; nothing
+   else does, and nothing below matches a page that has not asked for it.
+
+   WHY IT EXISTS. Ken, 2026-09-21, of /fantasy: it "looks very AI generated."
+   It did, and /dfs did worse. The reason was uniformity. Both pages ran the
+   same three beats down their whole length — a 40px Bebas heading in caps, a
+   paragraph explaining the heading, a white rounded card — at one weight and
+   one density, and the boards inside those cards ran 100px rows for eleven
+   columns of numbers. Pages whose whole job is ranking priced players were
+   reading like brochures about pages that rank priced players.
+
+   THE FOUR MOVES. Every rule below is one of them:
+
+     1 · A NAMEPLATE, NOT A TINTED STRIP. The plate goes dark on --mast and
+         the inks declared for it, the NFL clock becomes its dateline, and
+         past 1,000px the four children of .sl-in read as a masthead rather
+         than as a column with an empty right half beside it.
+     2 · THREE TYPE WEIGHTS, NOT ONE. Bebas stays on the nameplate and comes
+         off everything else. Section heads drop to a heavy 19px label with
+         the number as a chip; the standfirst under each drops to a caption.
+     3 · DENSITY. 42px rows, zebra, a rank gutter, a hover row, headers that
+         do not wrap and one line per player. Three times the rows per screen.
+     4 · STRUCTURE. The stories become a lead with two under it; both rails
+         lose the grey ground and take a dark header bar instead.
+
+   WHY IT IS HERE RATHER THAN IN THE TWO PAGES. It was written inline in
+   fantasy.html first and lifted the day /dfs asked for the same thing. The
+   comment over .sl-shell a few hundred lines up says why: the shell is in
+   this file BECAUSE two pages wear it, and a second page wearing a second
+   copy is how the chrome drifted the last time. When a value here changes it
+   changes on both pages, which is the point.
+
+   WHAT IS NOT HERE. Anything only one page owns: /fantasy's plates, its
+   segmented controls, its deck, its AI Edge card, its rivalry columns and
+   its tool shelf are in fantasy.html; /dfs's rail buttons, its dark lineup
+   board and its slate setup are in dfs.html. The test is whether the other
+   page has the markup at all.
+
+   No new colors: every value below is a token declared at the top of this
+   file, plus the two geometry tokens on body.sl-dress itself.
+   ══════════════════════════════════════════════════════════════════════════ */
+body.sl-dress{
+  /* One step off --bg and lighter than --panel: a standings stripe has to be
+     visible on a laptop screen at an angle and invisible in a screenshot. */
+  --sl-stripe:#f5f8f9;
+  /* Squarer than --radius-md. A results table with 12px corners reads as a
+     card about a table; 5px reads as the table. */
+  --sl-r:5px;
+}
+
+/* ── 1 · the nameplate ──────────────────────────────────────────────────── */
+body.sl-dress .sl-mast{background:var(--mast);border-bottom:3px solid var(--mast-accent)}
+body.sl-dress .sl-mast .sl-in{padding-top:var(--space-4);padding-bottom:var(--space-5)}
+/* 40px, and a measure. The old clamp topped out at 52px with max-width:none,
+   so on a 1,440px screen the headline ran the full plate and the deck under
+   it started 120px down the page. */
+body.sl-dress .sl-mast h1{font-size:clamp(25px,3.1vw,40px);line-height:1.04;letter-spacing:.015em;
+  max-width:34ch;color:var(--mast-ink-hi)}
+body.sl-dress .sl-mast h1 em{color:var(--mast-accent)}
+body.sl-dress .sl-deck{color:var(--mast-ink);font-size:var(--fs-sm);line-height:1.55;max-width:74ch;
+  margin-top:var(--space-2)}
+body.sl-dress .sl-date{margin-bottom:var(--space-3);gap:4px var(--space-3)}
+body.sl-dress .sl-date .is-eyebrow{font-size:var(--fs-3xs);letter-spacing:.16em;color:var(--mast-accent);
+  border-right-color:rgba(255,255,255,.22)}
+/* The clock is the dateline on the band, not the grey plate it is on white.
+   Same treatment .is-hero gives it in site.css, restated because that
+   selector does not match this page. */
+body.sl-dress .sl-mast .its-strip{background:transparent;border:0;border-radius:0;padding:0;margin:0;
+  color:var(--mast-ink);font-size:var(--fs-xs);gap:6px var(--space-3)}
+body.sl-dress .sl-mast .its-strip .its-phase{color:var(--mast-accent)}
+body.sl-dress .sl-mast .its-strip .its-week,
+body.sl-dress .sl-mast .its-strip .its-state{color:#fff}
+body.sl-dress .sl-mast .its-strip .its-counts,
+body.sl-dress .sl-mast .its-strip .its-next,
+body.sl-dress .sl-mast .its-strip .its-note{color:var(--mast-dim)}
+body.sl-dress .sl-mast .its-strip .its-next{margin-left:0}
+body.sl-dress .sl-mast .is-actions{margin-top:var(--space-4);gap:var(--space-2)}
+body.sl-dress .sl-mast .is-hint{color:var(--mast-dim)}
+body.sl-dress .sl-mast .is-hint b{color:#fff}
+/* A pill on a masthead reads as a chat bubble. Buttons square up, and the
+   ghost one has to be re-inked because --sec on --line2 is not on this
+   ground at all. */
+body.sl-dress .is-actions .is-btn{border-radius:4px;padding:10px 18px;font-size:var(--fs-xs);
+  font-weight:800;letter-spacing:.05em}
+body.sl-dress .sl-mast .is-btn.ghost{color:#fff;border-color:rgba(255,255,255,.34)}
+body.sl-dress .sl-mast .is-btn.ghost:hover{border-color:var(--mast-accent);color:var(--mast-accent)}
+/* Stacked, the plate is the headline over a 74ch lede over two buttons, and
+   past 1,000px that is 300px of band with an empty right half beside it. The
+   four children are the same four children; the wide screen just reads them
+   as a masthead — clock across the top, name on the left, what the page does
+   and the one action on the right — instead of as a column. */
+@media(min-width:1000px){
+  body.sl-dress .sl-mast .sl-in{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);
+    column-gap:var(--space-7);align-items:start}
+  body.sl-dress .sl-mast .sl-date{grid-column:1/-1;grid-row:1}
+  body.sl-dress .sl-mast h1{grid-column:1;grid-row:2/4;max-width:none;align-self:center}
+  body.sl-dress .sl-deck{grid-column:2;grid-row:2;margin:0}
+  body.sl-dress .sl-mast .is-actions{grid-column:2;grid-row:3;margin:var(--space-4) 0 0}
+  /* A plate with no action row — /dfs has none — leaves row 3 empty and the
+     deck stranded at the top of a column the headline fills. With nothing
+     under it, the deck takes both rows and centres against the headline. */
+  body.sl-dress .sl-mast .sl-in:not(:has(.is-actions)) .sl-deck{grid-row:2/4;align-self:center}
+}
+@media(max-width:560px){body.sl-dress .sl-mast h1{font-size:26px;max-width:none}}
+/* The dateline's hairline divides two things. site.css drops it at 560px;
+   the clock wraps under the label from about 900 on this plate, so from 900
+   it is a rule dividing the label from nothing. */
+@media(max-width:900px){body.sl-dress .sl-date .is-eyebrow{border-right:0;padding-right:0}}
+
+/* ── 2 · section heads ──────────────────────────────────────────────────── */
+/* A section head is a label. It was a 28px display line with a 56px teal nub
+   under a 2px black rule, which is a headline, and the page carried nine of
+   them plus a nameplate. The rule thins, the number becomes a chip, the title
+   becomes a label and the teal moves into the chip. */
+body.sl-dress .is-sec{margin:var(--space-6) 0 var(--space-4);padding-bottom:var(--space-2);
+  border-bottom:1px solid var(--line2)}
+body.sl-dress .is-sec::after{width:84px;height:2px;bottom:-1px}
+body.sl-dress .is-sec-top{align-items:center;gap:var(--space-3)}
+body.sl-dress .is-sec h2{font-family:var(--font-body);font-size:19px;font-weight:800;line-height:1.2;
+  letter-spacing:.02em;text-transform:uppercase;margin:0}
+body.sl-dress .is-sec .is-sec-n{flex:0 0 auto;font-size:11px;font-weight:800;letter-spacing:.1em;
+  color:#fff;background:var(--teal);border-radius:3px;padding:3px 7px;line-height:1}
+body.sl-dress .is-sec .is-sec-more{margin-left:auto;font-size:var(--fs-3xs);font-weight:800;
+  letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+/* The standfirst under each head is context, not a second lede. */
+body.sl-dress .is-sec p{margin-top:var(--space-2);font-size:var(--fs-sm);line-height:1.5;
+  color:var(--muted);max-width:76ch}
+body.sl-dress .is-sec p a{font-weight:700}
+
+/* The density pass. 42px rows, one line each, and headers that do not wrap:
+   "Iron Tuna" and "Market delta" were both breaking to two lines, which set
+   the header band 60px tall before a single row was drawn. */
+body.sl-dress .is-table{font-size:15px}
+body.sl-dress .is-table th{padding:8px;font-size:11px;font-weight:800;letter-spacing:.07em;
+  white-space:nowrap;color:var(--muted);background:var(--bg);border-bottom:2px solid var(--line2)}
+body.sl-dress .is-table td{padding:0 8px;height:42px;white-space:nowrap;vertical-align:middle;
+  border-bottom:1px solid var(--line)}
+body.sl-dress .is-table tbody tr:nth-child(even)>td{background:var(--sl-stripe)}
+body.sl-dress .is-table tbody tr:hover>td{background:color-mix(in srgb,var(--teal) 7%,var(--bg))}
+body.sl-dress .is-table .is-rank{width:34px;padding-right:0;text-align:center;font-size:12px;
+  color:var(--muted)}
+/* A name column that wraps is what made the rows 110px tall. Nowrap is the
+   whole fix and it needs no max-width: capping the cell clipped the position
+   tag behind it, because .rk-share is opacity:0 rather than display:none and
+   still takes its 46px of the line. Twelve rows of names cannot run the
+   column out on their own, and .is-scroll is there for the day one does. */
+body.sl-dress .is-table .is-who{font-size:15px;font-weight:700}
+body.sl-dress .is-table .rk-share{margin-left:5px;padding:0 4px;border-radius:3px;
+  font-size:var(--fs-3xs);line-height:1.5}
+body.sl-dress .is-table .is-who small{margin-left:5px;font-size:11px;font-weight:800;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+/* /player-search.js injects the face at 34px with white-space:normal on the
+   cell. Both are right for a story and wrong for a standings row. */
+body.sl-dress .is-table .it-player-face{width:26px;height:26px;min-width:26px;border-radius:4px;
+  margin-right:8px}
+body.sl-dress .is-table td.it-player-cell{white-space:nowrap}
+/* The one number the row exists for, at the weight of a score rather than the
+   size of a headline: 24px Bebas beside 15px Inter was two type systems in
+   one row. */
+body.sl-dress .is-val{font-family:var(--font-body);font-size:15px;font-weight:800;letter-spacing:0}
+body.sl-dress .is-table .is-tag{margin:0;padding:2px 6px;font-size:10px;letter-spacing:.03em;
+  white-space:nowrap;border-radius:3px}
+body.sl-dress .is-vacant.in-plate{padding:var(--space-4)}
+
+/* ── 4 · the newsroom ───────────────────────────────────────────────────── */
+/* A lead across the column with two under it. Three boxes of equal weight in
+   a vertical stack is a feed; a front has a lead. */
+body.sl-dress .sl-stories{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);
+  margin-bottom:var(--space-5)}
+body.sl-dress .sl-story.lead{grid-column:1/-1}
+@media(max-width:720px){body.sl-dress .sl-stories{grid-template-columns:1fr}}
+body.sl-dress .sl-story{border-radius:var(--sl-r);border-color:var(--line2);padding:var(--space-4);gap:8px}
+body.sl-dress .sl-story h3{font-size:18px;line-height:1.3}
+body.sl-dress .sl-story p{font-size:var(--fs-sm);line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+body.sl-dress .sl-story.lead{padding:var(--space-5)}
+body.sl-dress .sl-story.lead h3{font-size:clamp(23px,2.3vw,29px);line-height:1.18}
+body.sl-dress .sl-story.lead p{font-size:var(--fs-md);-webkit-line-clamp:2}
+body.sl-dress .nr-kicker{font-size:11px;letter-spacing:.09em}
+
+/* ── 6 · the two calls, the clock and the AI Edge ───────────────────────── */
+body.sl-dress .is-card{border-radius:var(--sl-r);border-color:var(--line2);
+  padding:var(--space-4) var(--space-5)}
+body.sl-dress .is-card h3{font-size:18px}
+body.sl-dress .is-card p{font-size:var(--fs-sm);line-height:1.55}
+body.sl-dress .is-tag{font-size:10.5px;letter-spacing:.11em;padding:2px 7px;border-radius:3px}
+body.sl-dress .is-note{font-size:var(--fs-2xs);line-height:1.55;margin-top:var(--space-3)}
+body.sl-dress .is-btns{margin-top:var(--space-4)}
+body.sl-dress .is-btns .is-btn{padding:9px 16px;border-radius:4px;font-size:var(--fs-3xs);
+  font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+body.sl-dress .is-stats{gap:var(--space-3);margin:var(--space-3) 0}
+body.sl-dress .is-vacant{border-radius:var(--sl-r);border-color:var(--line2)}
+body.sl-dress .is-vacant b{font-size:var(--fs-sm)}
+body.sl-dress .is-vacant span{font-size:var(--fs-2xs)}
+body.sl-dress .is-vacant .is-btn{padding:8px 14px;border-radius:4px;font-size:var(--fs-3xs);
+  font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+/* Both rails lose the grey ground and take a dark header bar instead. A rail
+   is chrome; a tinted box of prose beside a white column is a third article. */
+body.sl-dress .sl-left,body.sl-dress .sl-right,body.sl-dress .sl-updrail{background:var(--bg);border-color:var(--line2);
+  border-radius:var(--sl-r);padding:0;overflow:hidden}
+body.sl-dress .sl-nav{border-top:0;padding-top:0}
+body.sl-dress .sl-nav-h{margin:0;padding:9px var(--space-4);background:var(--mast);
+  font-family:var(--font-body);font-size:11px;font-weight:800;letter-spacing:.14em;
+  color:var(--mast-ink-hi)}
+body.sl-dress .sl-nav ul{padding:0 var(--space-4)}
+body.sl-dress .sl-nav a{padding:9px 0}
+body.sl-dress .sl-nav b{font-size:14.5px;font-weight:700}
+body.sl-dress .sl-nav span{font-size:11.5px;line-height:1.35;margin-top:1px}
+body.sl-dress .sl-nav-more{margin-top:0;padding:var(--space-3) var(--space-4) var(--space-4);
+  background:var(--panel);border-top-color:var(--line2)}
+body.sl-dress .sl-nav-more p{font-family:var(--font-body);font-size:11px;letter-spacing:.13em}
+body.sl-dress .sl-nav-more a{font-size:var(--fs-2xs);padding:3px 0}
+body.sl-dress .sl-upd{border:0;border-radius:0}
+body.sl-dress .sl-upd-h{background:var(--mast);border-bottom:0;padding:9px var(--space-4)}
+body.sl-dress .sl-upd-h b{font-family:var(--font-body);font-size:11px;font-weight:800;
+  letter-spacing:.14em;color:var(--mast-ink-hi)}
+body.sl-dress .sl-upd-n{color:var(--mast-dim)}
+body.sl-dress .sl-upd-name{font-size:18px}
+body.sl-dress .sl-upd-k{font-family:var(--font-body);font-size:10.5px;letter-spacing:.11em}
+body.sl-dress .sl-upd-body p{font-size:var(--fs-2xs);line-height:1.55}
+body.sl-dress .sl-right>.is-vacant,body.sl-dress .sl-updrail>.is-vacant{border:0;border-radius:0}
+body.sl-dress .sl-upd-note{padding:0 var(--space-4) var(--space-4);margin-top:var(--space-3)}
+/* With one column there is no rail edge to draw, so the header bars come off
+   with the borders the shell already drops at 860px. */
+@media(max-width:860px){
+  body.sl-dress .sl-left,body.sl-dress .sl-right,body.sl-dress .sl-updrail{background:none;border:0;border-radius:0;overflow:visible}
+  body.sl-dress .sl-nav-h{background:none;color:var(--muted);padding:0 0 var(--space-2)}
+  body.sl-dress .sl-nav ul,body.sl-dress .sl-nav-more{padding-left:0;padding-right:0}
+  body.sl-dress .sl-nav-more{background:none}
+  body.sl-dress .sl-upd{border:1px solid var(--line2);border-radius:var(--sl-r)}
+  body.sl-dress .sl-upd-note{padding:0}
+}
+
 /* ══ THE RANKINGS SECTION ══════════════════════════════════════════════════
    The ribbon's own block is GENERATED by tools/build-ranks.mjs and lives
    between the two sentinels below — the identical block is injected into
