@@ -229,7 +229,11 @@ const read = page => page.evaluate(() => {
     ledePx: (() => { const e = document.querySelector('.hm-lede'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
     cta: [...document.querySelectorAll('.hm-cta a')].map(a => `${a.textContent.trim()}|${a.getAttribute('href')}`),
     promoIn: (() => { const e = document.querySelector('.hm-promo'); return e ? (e.closest('#how') ? 'how' : e.closest('#heroBand') ? 'hero' : 'other') : null; })(),
-    leftCol: [...document.querySelectorAll('.hm-front .hm-left > *')].map(e => e.className),
+    leftCol: document.querySelectorAll('.hm-front .hm-left').length,
+    // Quick Links: the strip directly under the tagline bar (2026-09-26).
+    quickAfterTagbar: (() => { const q = document.querySelector('.hm-quick'); return !!q && q.previousElementSibling === document.querySelector('.hm-tagbar'); })(),
+    quickLinks: [...document.querySelectorAll('.hm-quick a')].map(a => a.getAttribute('href')),
+    quickRows: (() => { const t = [...document.querySelectorAll('.hm-quick li')].map(li => Math.round(li.getBoundingClientRect().top)); return new Set(t).size; })(),
     clock: vis('hmClock') ? text(document.getElementById('hmClock')) : null,
     lanes: [...document.querySelectorAll('.hm-lane > h2')].map(e => e.textContent.trim()),
     laneLinks: [...document.querySelectorAll('.hm-links a')].map(a => a.getAttribute('href')),
@@ -296,11 +300,15 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   ok(`${tag}: two buttons, one per lane`,
      r.cta.join(' / ') === 'Get Fantasy Advice|/fantasy / Build a DFS Lineup|/dfs', r.cta.join(' / '));
   // Ken, 2026-09-25: the promo explains the site, and a returning reader does
-  // not need that at the top of every visit. It lives in the method section;
-  // the front's left column is Quick Links alone, like a sports front's ribbon.
+  // not need that at the top of every visit. It lives in the method section.
+  // 2026-09-26: the front is two columns (lead, headlines) and Quick Links is
+  // one row under the tagline bar, scrolling sideways on a phone, not wrapping.
   ok(`${tag}: the site explainer sits in the method section, not the front`, r.promoIn === 'how', String(r.promoIn));
-  ok(`${tag}: and the front's left column is Quick Links`,
-     r.leftCol.length === 1 && /hm-quick/.test(r.leftCol[0]), r.leftCol.join(','));
+  ok(`${tag}: the front has no left column`, r.leftCol === 0, String(r.leftCol));
+  ok(`${tag}: Quick Links is the strip under the tagline bar`, r.quickAfterTagbar);
+  ok(`${tag}: with its seven links, on one row`,
+     r.quickLinks.join(' ') === '/weekly-rankings /fantasy#startsit /faab /trade-finder /dfs#lineup /vegas-edge /value-coach' && r.quickRows === 1,
+     r.quickLinks.join(' ') + ' rows=' + r.quickRows);
   ok(`${tag}: the hero is the first section on the page`, r.order[0] === 'heroBand', r.order.slice(0, 2).join(','));
   ok(`${tag}: the page does not scroll sideways`, r.overflow === 0, String(r.overflow));
   // The one heading level that must not be skipped: h1 then h2s.

@@ -62,7 +62,7 @@
   --brand:#0e7c63;--brand-dark:#0a6151;--brand-bright:#1fb488;--brand-tint:#e9f5f1;--brand-line:#bfe3d8;
   --value-red:#c8322b;
   --ink:#0f1719;--ink-2:#3f4e58;--ink-3:#6d7c86;
-  --line:#dde3e2;--bg:#f0f2f1;--card:#ffffff;
+  --line:#dde3e2;--bg:#ffffff;--card:#ffffff;
   --mast:#0b1614;
   --gold:#f2a900;--gold-ink:#7a5300;
   --teal:#2dd4a3;
@@ -218,26 +218,27 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-clock .live{color:var(--teal);font-weight:700}
 
 /* ── 1 · the front ────────────────────────────────────────────────────────
-   Laid out the way a sports network lays out its front (ESPN's, by Ken's
-   request): light stock, three columns of white cards, the lead photograph
-   the biggest thing on the page.
-     left 272px   the promo card and Quick Links
-     center       the photograph, and the lead story directly under it
-     right 316px  Top Headlines
+   Ken, 2026-09-26: an editorial front, not three floating cards on grey. The
+   cards (white plates, rounded corners, soft shadows, inner padding) read as
+   an admin dashboard. The page is white now, and the front is two columns
+   split by a hairline, the way a news front rules its columns:
+     left  2fr   the photograph, and the lead story directly under it
+     right 1fr   Top Headlines
+   Quick Links left the grid for a strip under the tagline bar (.hm-quick).
+   ONE GUTTER: 32px either side of the rule on a desk, 16px on a phone.
    #lead and #leadWell are display:contents, so the lead card and the rail the
    painter writes into #leadWell are grid items of THIS grid and can be placed
-   in the center and right columns while staying inside the lead section. */
+   in the two columns while staying inside the lead section. */
 .hero-band{background:var(--bg);color:var(--ink)}
-.hm-front{display:grid;grid-template-columns:300px minmax(0,1fr) 340px;grid-template-areas:"left edge rail" "left lead rail";grid-template-rows:auto 1fr;column-gap:20px;align-items:start;padding-top:20px;padding-bottom:6px}
-.hm-left{grid-area:left;display:flex;flex-direction:column;gap:16px;min-width:0}
+.hm-front{--front-gutter:32px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);grid-template-areas:"edge rail" "lead rail";grid-template-rows:auto 1fr;column-gap:var(--front-gutter);align-items:start;padding-top:var(--front-gutter);padding-bottom:var(--front-gutter)}
 .hm-front #lead,.hm-front #leadWell{display:contents}
 .hm-front #lead[hidden]{display:none !important}
 /* The section keeps its heading for the outline; the rail's own header does
    the visible job, as "Top Headlines". */
 .hm-front #lead .hm-sec-head{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-/* Nothing to put in the middle or on the right: Quick Links takes the row
-   rather than sitting beside two empty columns. */
-.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))){grid-template-columns:minmax(0,1fr);grid-template-areas:"left"}
+/* Nothing painted yet: no photograph and no lead. The front collapses rather
+   than holding a gutter's worth of empty white above the next band. */
+.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))){padding:0}
 
 /* The promo card: what the site is, for a first-time reader, at the top of
    the method section. Dark, with the claim beside the two buttons on a wide
@@ -254,19 +255,27 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-btn.second:hover{background:rgba(255,255,255,.1);border-color:#fff}
 .hm-promo a:focus-visible{outline-color:var(--gold)}
 
-/* Quick Links: a white card of plain rows. */
-.hm-quick{background:var(--card);border-radius:8px;padding:16px 18px 8px;box-shadow:0 1px 3px rgba(16,19,23,.1)}
-.hm-quick-h{font-size:1.1875rem;font-weight:800;color:var(--ink);padding-bottom:10px;border-bottom:1px solid var(--line)}
-.hm-quick ul{list-style:none}
-.hm-quick li + li{border-top:1px solid var(--line)}
-.hm-quick a{display:block;padding:10px 0;font-size:1.0625rem;font-weight:600;color:var(--ink-2)}
+/* Quick Links: one slim row under the tagline bar, ruled off from the front
+   by a hairline. Set in px, not rem: the root size grows to 21px on a wide
+   window, and a utility strip should not grow with the stories. On a phone
+   the row scrolls sideways rather than wrapping into a block. */
+.hm-quick{background:var(--bg);border-bottom:1px solid var(--line)}
+.hm-quick ul{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:44px}
+.hm-quick li{flex:0 0 auto}
+.hm-quick a{display:block;padding:11px 0;font-size:15px;line-height:1.4;font-weight:500;color:var(--ink-2);white-space:nowrap}
 .hm-quick a:hover{color:var(--brand)}
+@media(max-width:900px){
+  .hm-quick-in{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .hm-quick-in::-webkit-scrollbar{display:none}
+  .hm-quick ul{justify-content:flex-start;width:max-content}
+  .hm-quick a{font-size:14px}
+}
 
 /* ── the hero's picture ──────────────────────────────────────────────────
    The biggest thing on the front, as on the network's: a wide photograph on a
    white card, captioned in a dark strip across its foot. The lead story card
    joins it underneath so the two read as one plate. */
-.hm-edge{grid-area:edge;min-width:0;display:flex;flex-direction:column;background:var(--card);border-radius:8px 8px 0 0;overflow:hidden;box-shadow:0 1px 3px rgba(16,19,23,.1);position:relative}
+.hm-edge{grid-area:edge;min-width:0;display:flex;flex-direction:column;overflow:hidden;position:relative}
 .hm-edge[hidden]{display:none}
 .he-plate{display:flex;min-height:0}
 .he-plate .he-link,.he-plate .it-plate{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;width:100%}
@@ -283,11 +292,12 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .he-gap{flex:1 1 100%;font-size:1.0625rem;line-height:1.45;color:#c3d1ce}
 .he-gap[hidden]{display:none}
 
-/* The lead card: under the photograph, the story's headline at the size the
-   network sets the one under its lead photo. Without a photograph it is a
-   card of its own with a full radius. */
-.hm-front .hm-lead{grid-area:lead;border-radius:0 0 8px 8px;border:0;border-top:3px solid var(--brand);box-shadow:0 1px 3px rgba(16,19,23,.1);padding:20px 22px 20px}
-.hm-front #heroEdge[hidden] ~ #lead .hm-lead{border-radius:8px;grid-row:1 / span 2}
+/* The lead story: under the photograph, the story's headline at the size the
+   network sets the one under its lead photo. No plate: no background, border
+   box, radius or side padding, so its type lines up with the photograph's left
+   edge. Without a photograph it takes both rows of the column. */
+.hm-front .hm-lead{grid-area:lead;background:none;border:0;border-top:3px solid var(--brand);border-radius:0;box-shadow:none;padding:20px 0 0}
+.hm-front #heroEdge[hidden] ~ #lead .hm-lead{grid-row:1 / span 2;border-top-color:var(--ink);padding-top:16px}
 .hm-front .hm-lead:hover{border-top-color:var(--brand-dark)}
 .hm-front .hm-lead h3{font-size:clamp(1.5rem,2.2vw,1.875rem)}
 .hm-front .hm-lead p{font-size:1.1875rem}
@@ -297,9 +307,12 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    theirs); only the lead's row is not shown while the photograph is up. */
 .hm-front:has(#heroEdge:not([hidden])) .hm-lead h3 .it-story-focus{display:none}
 
-/* Top Headlines: one white card down the right, plain ruled rows. */
-.hm-front .hm-rail{grid-area:rail;background:var(--card);border-radius:8px;padding:16px 18px 12px;box-shadow:0 1px 3px rgba(16,19,23,.1)}
-.hm-front .hm-rail-h{font-size:1.1875rem;font-weight:800;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}
+/* Top Headlines: plain ruled rows down the right, set off from the lead by
+   a hairline with a gutter either side of it. The heading's cap line sits on
+   the photograph's top edge. */
+.hm-front .hm-rail{grid-area:rail;align-self:stretch;display:flex;flex-direction:column;background:none;border-radius:0;box-shadow:none;padding:0;position:relative}
+.hm-front .hm-rail::before{content:"";position:absolute;top:0;bottom:0;left:calc(var(--front-gutter) / -2);border-left:1px solid var(--line)}
+.hm-front .hm-rail-h{font-size:1.1875rem;font-weight:800;line-height:1;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:12px}
 .hm-front .hm-rail ul{justify-content:flex-start}
 .hm-front .hm-rail li h3{font-size:0.96875rem;line-height:1.35}
 .hm-front .hm-rail li .t{font-size:0.78125rem}
@@ -308,28 +321,19 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-rail-all:hover{text-decoration:underline}
 
 /* ── the front, narrower ──
-   Under 1100px the left rail drops below the photograph and headlines; under
-   900px the whole front is one column, lead first, the way the network's
-   phone front opens on its lead. */
-@media(max-width:1100px){
-  .hm-front{grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"edge rail" "lead rail" "left left";row-gap:0}
-  .hm-left{margin-top:18px}
-  /* Across the page's width below the lead, the links run in columns. */
-  .hm-quick ul{display:grid;grid-template-columns:repeat(auto-fill,minmax(12rem,1fr));column-gap:24px}
-  .hm-quick li + li{border-top:0}
-  .hm-quick li{border-bottom:1px solid var(--line)}
-}
+   Under 900px the front is one column, lead first and the headlines under
+   it, the way the network's phone front opens on its lead. The rule between
+   the columns turns to a rule above the rail. */
 @media(max-width:900px){
-  .hm-front{grid-template-columns:minmax(0,1fr);grid-template-areas:"edge" "lead" "rail" "left"}
-  .hm-front .hm-rail{margin-top:16px}
+  .hm-front{--front-gutter:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"edge" "lead" "rail";grid-template-rows:auto}
   .hm-front #heroEdge[hidden] ~ #lead .hm-lead{grid-row:auto}
+  .hm-front .hm-rail{margin-top:var(--front-gutter);padding-top:var(--front-gutter);border-top:1px solid var(--line)}
+  .hm-front .hm-rail::before{display:none}
 }
 @media(max-width:560px){
   .hm-tagbar-in{padding-left:14px;padding-right:14px}
   .hm-h1{font-size:1rem}
-  .hm-front{padding-top:14px;padding-left:12px;padding-right:12px}
   .he-name{font-size:1.3125rem}
-  .hm-front .hm-lead{padding:16px 16px 18px}
 }
 
 /* ── shared section furniture ─────────────────────────────────────────────
@@ -713,7 +717,7 @@ body.hm-dress .hm-table tbody tr:nth-child(even) td:nth-child(4){background:rgba
 
 /* ── 3b · the lead, the rail, the two lane cards, the desk ──────────────── */
 body.hm-dress .hm-well{margin-top:14px;gap:22px}
-body.hm-dress .hm-lead{padding:16px 18px 18px;gap:9px}
+body.hm-dress .hm-lead{gap:9px}
 body.hm-dress .hm-lead h3{font-size:clamp(1.5625rem,2.4vw,2.0625rem)}
 body.hm-dress .hm-lead h3 .it-story-focus{margin:0 0 10px}
 body.hm-dress .hm-lead h3 .it-player-face{width:52px;height:52px;min-width:52px}
@@ -768,30 +772,12 @@ body.hm-dress .hm-choose-k{font-size:0.875rem;letter-spacing:.09em}
 /* ── the width, and the gaps (Ken, 2026-09-25) ───────────────────────────────
    FLUID, NOT A 1,280px COLUMN. The page used to stop at 1,280px and leave
    the rest of a wide window as grey margin. It now runs to 1,880px with a
-   gutter that grows from 16px to 40px, the two side columns are sized in rem
-   so they widen with the type (see the root size at the top), and the center
-   column takes everything else. That is how the network's front behaves: drag
-   the window wider and the stories widen with it.
+   gutter that grows from 16px to 40px, and the front's two columns are
+   fractions of it: drag the window wider and the stories widen with it.
 
-   NO GREY HOLES. The three columns of the front end level. The lead card and
-   Top Headlines stretch to the bottom of whichever column is tallest, with
-   their last line pinned to the foot, and the left column's Quick Links card
-   does the same when the center runs longer. The gutters between cards and
-   between sections come down to 12-16px so the page reads as one run of
-   stories rather than islands on grey. */
-.hm-front{grid-template-columns:15rem minmax(0,1fr) 21.25rem;column-gap:16px;align-items:stretch;padding-top:16px;padding-bottom:0}
-.hm-left{gap:12px}
-/* Quick Links rides at the foot of the Top Headlines card whenever the rail
-   is painted (the lead painter moves it there; see `quick` in the script).
-   Left under the promo it made the left column the tallest by a screenful,
-   and stretching the other two to meet it only turned grey holes into white
-   ones. One card on the right, headlines then links, levels the front. */
-/* Quick Links is the whole left column: a card that runs the height of the
-   front, like the network's own left ribbon. */
-@media(min-width:1101px){ .hm-quick{flex:1 1 auto} }
-.hm-front .hm-lead{align-self:stretch}
+   The lead and Top Headlines end level (2026-09-26: two columns now, not
+   three), each with its last line pinned to the foot. */
 .hm-front .hm-lead .m{margin-top:auto}
-.hm-front .hm-rail{align-self:stretch;display:flex;flex-direction:column}
 .hm-front .hm-rail ul{flex:0 0 auto}
 .hm-front .hm-rail-all{margin-top:auto}
 .hm-choose{margin-top:16px}
@@ -799,14 +785,6 @@ body.hm-dress .hm-sec{padding-top:16px}
 body.hm-dress .hm-sub{margin-top:10px;margin-bottom:12px}
 body.hm-dress .hm-reads{gap:16px}
 .hm-how{margin-top:24px}
-@media(max-width:1100px){
-  .hm-front{grid-template-columns:minmax(0,1fr) 20rem}
-  .hm-left{margin-top:12px}
-}
-@media(max-width:900px){
-  .hm-front{grid-template-columns:minmax(0,1fr)}
-  .hm-front .hm-rail{margin-top:12px}
-}
 /* The promo in the method section: claim and lede on the left, the two
    buttons on the right, one dark card across the band. */
 .hm-how .hm-promo{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"k k" "claim cta" "lede cta";column-gap:32px;align-items:start;margin-bottom:24px}
@@ -873,6 +851,27 @@ body.hm-dress .hm-reads{gap:16px}
   </div>
 </div>
 
+<!-- ── Quick Links ─────────────────────────────────────────────────────────────
+     Ken, 2026-09-26: a strip under the tagline bar, not a column of the front.
+     As the front's left column it took a fifth of the width for seven links
+     and left a tall empty card under them. One row here, scrolling sideways
+     on a phone rather than wrapping into a block. A different class from the
+     lane cards' `.hm-links` on purpose: the cards' eleven links are asserted
+     as a set, and this list is not part of it. -->
+<nav class="hm-quick" aria-label="Quick links">
+  <div class="wrap hm-quick-in">
+    <ul>
+      <li><a href="/weekly-rankings">Weekly rankings</a></li>
+      <li><a href="/fantasy#startsit">Start or sit</a></li>
+      <li><a href="/faab">Waiver prices</a></li>
+      <li><a href="/trade-finder">Trade values</a></li>
+      <li><a href="/dfs#lineup">DFS lineup</a></li>
+      <li><a href="/vegas-edge">The market board</a></li>
+      <li><a href="/value-coach">Value Coach</a></li>
+    </ul>
+  </div>
+</nav>
+
 <!-- ── 1 · the front ───────────────────────────────────────────────────────────
      Three columns on a desk, one below 900px:
        left    the pitch as a promo card (the claim, the lede, the two lane
@@ -891,28 +890,6 @@ body.hm-dress .hm-reads{gap:16px}
      finds the hero by it. -->
 <section class="hero-band" id="heroBand">
   <div class="wrap hm-front" id="hmHero">
-   <div class="hm-left">
-    <!-- Quick Links: the front's left column, the way a sports front runs its
-         ribbon of destinations down the left. The destinations readers go to
-         most, one click each. (Ken, 2026-09-25: the "How Iron Tuna works"
-         promo used to sit above it; a returning reader does not need the
-         site explained on every visit, so it moved to the method section at
-         the foot of the page.) A different class
-         from the lane cards' `.hm-links` on purpose: the cards' eleven links
-         are asserted as a set, and this list is not part of it. -->
-    <nav class="hm-quick" aria-label="Quick links">
-      <p class="hm-quick-h">Quick Links</p>
-      <ul>
-        <li><a href="/weekly-rankings">Weekly rankings</a></li>
-        <li><a href="/fantasy#startsit">Start or sit</a></li>
-        <li><a href="/faab">Waiver prices</a></li>
-        <li><a href="/trade-finder">Trade values</a></li>
-        <li><a href="/dfs#lineup">DFS lineup</a></li>
-        <li><a href="/vegas-edge">The market board</a></li>
-        <li><a href="/value-coach">Value Coach</a></li>
-      </ul>
-    </nav>
-   </div>
    <!-- ── the hero's picture ────────────────────────────────────────────────
         ONE player, photographed, because a page whose whole argument is about
         football players had no picture of one on it. Who it is comes off a
