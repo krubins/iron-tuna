@@ -2567,6 +2567,10 @@ body.sl-dress .df-sub{font-size:var(--fs-2xs);color:var(--muted);line-height:1.5
     var cfg = { flex: f.fmt.flex, tierSlots: f.fmt.tierSlots || null };
     var cap = capNow(f);
     var contra = contest === 'gpp';
+    // A man the builder declined for having no points on record is not "the
+    // next best body" either; offering him here would put back, one seat at a
+    // time, exactly the zero the solve was told to avoid.
+    var noRecord = ITDfs.scorelessOn ? ITDfs.scorelessOn(players) : function () { return false; };
     var out = [];
     l.players.forEach(function (cur) {
       // Neither side of a swap can involve a finished game. The seat itself is
@@ -2582,6 +2586,7 @@ body.sl-dress .df-sub{font-size:var(--fs-2xs);color:var(--muted);line-height:1.5
       var room = cap ? cap - l.salary + cur.salary : Infinity;
       var cands = players.filter(function (q) {
         if (inL[q.id] || seatCost(q) > room || isPlayed(q)) return false;
+        if (noRecord(q)) return false;
         if (!ITDfs.eligibleIn(q, cur.slot, cfg)) return false;
         if (!isFinite(pts(q)) || pts(q) <= 0) return false;
         if (contra && cur.ownership != null && q.ownership != null && q.ownership >= cur.ownership) return false;
@@ -3300,6 +3305,22 @@ body.sl-dress .df-sub{font-size:var(--fs-2xs);color:var(--muted);line-height:1.5
       + (list.length > top.length ? ' and ' + (list.length - top.length) + ' more' : '')
       + '. Lock one in the player pool below to build around him anyway.</p>';
   }
+  // The same courtesy for the men the builder declined because nothing on
+  // record says they score: an operator average of 0.0, or no snap this
+  // season. They are the ones who kept turning up in a roster and posting a
+  // zero, so the builder no longer reaches for them on its own; a reader who
+  // wants one anyway locks him, and the lock is the decision to take the risk.
+  function scorelessNote(r) {
+    var list = (r && r.scoreless) || [];
+    if (!list.length) return '';
+    var top = list.slice().sort(function (a, b) { return (b.proj || 0) - (a.proj || 0); }).slice(0, 6);
+    return '<p class="df-benched"><b>' + list.length + ' player' + (list.length === 1 ? '' : 's') + ' with no fantasy points on record left out:</b> '
+      + (list.length === 1 ? 'he has' : 'they have') + ' not scored a point this season, so a projection for '
+      + (list.length === 1 ? 'him' : 'them') + ' has nothing behind it and the likeliest result is a zero. '
+      + top.map(function (p) { return e(p.name) + ' (' + e(p.position) + ' \u00b7 ' + e(p.team) + (p.proj != null ? ', proj ' + n1(p.proj) : '') + ')'; }).join(', ')
+      + (list.length > top.length ? ' and ' + (list.length - top.length) + ' more' : '')
+      + '. Lock one in the player pool below only if you mean to take that chance.</p>';
+  }
   // When required players leave no legal roster, "clear a constraint" is the
   // wrong advice: a reader whose three men are already in a submitted entry
   // cannot clear any of them. The useful answer is the arithmetic -- what the
@@ -3326,9 +3347,11 @@ body.sl-dress .df-sub{font-size:var(--fs-2xs);color:var(--muted);line-height:1.5
     var lockOn = {}; (lockKeys || []).forEach(function (k) { lockOn[k] = 1; });
     var exclOn = {}; (exclKeys || []).forEach(function (k) { exclOn[k] = 1; });
     var thinOn = {}; ((r && r.thin) || []).forEach(function (t) { thinOn[t.id] = 1; });
+    var scorelessOn = {}; ((r && r.scoreless) || []).forEach(function (t) { scorelessOn[t.id] = 1; });
     var pool = [], withThin = [];
     players.forEach(function (q) {
       if (exclOn[q.id]) return;
+      if (scorelessOn[q.id]) return;
       if (!lockOn[q.id] && (q.available === false || isPlayed(q))) return;
       withThin.push(q);
       if (!thinOn[q.id]) pool.push(q);
@@ -3549,7 +3572,7 @@ body.sl-dress .df-sub{font-size:var(--fs-2xs);color:var(--muted);line-height:1.5
       // not a constraint at all. The generic sentence is printed only when
       // neither has anything to say.
       var why = shortfallNote(players, lock, f, cap) || noRosterNote(r, players, f, cap, lock, excl);
-      $('dfLineups').innerHTML = approxNote + teamCapNote + why
+      $('dfLineups').innerHTML = scorelessNote(r) + approxNote + teamCapNote + why
         + (why ? '' : '<p class="is-empty">No lineup satisfies those constraints' + (cap ? ' under that cap' : '') + '. Clear one of the constraints above, or loosen the ' + (cap ? 'cap and ' : '') + 'stacking rules in the fine-tune panel below.</p>');
       $('dfPivots').innerHTML = '';
       coachSync();
@@ -3559,6 +3582,7 @@ body.sl-dress .df-sub{font-size:var(--fs-2xs);color:var(--muted);line-height:1.5
     var alts = r.lineups.slice(1);
     renderConstraints(lead);
     $('dfLineups').innerHTML = benchedNote(r)
+      + scorelessNote(r)
       + formatLine(f, r)
       + approxNote
       + teamCapNote

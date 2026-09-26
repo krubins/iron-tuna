@@ -84,6 +84,38 @@
   // is over. Written once so every total on the card agrees with every other.
   function projOf(p) { var a = banked(p); return a == null ? p.ironTunaPoints : a; }
   function ownOf(p) { return isFinite(p.ownership) && p.ownership > 0 ? p.ownership : null; }
+  // NO FANTASY POINTS ON RECORD. The builder kept proposing men who went on to
+  // score a zero (reported 26 Sep 2026), and they had one thing in common: a
+  // projection off the board and nothing behind it -- an operator average of
+  // 0.0, or no average at all and no snap in the season line. A projection is
+  // a guess about Sunday; a man who has never put a point on the board is the
+  // one case where the guess has nothing to stand on, and the likeliest
+  // outcome of rostering him is the zero he already has. So he comes off the
+  // board the way an inactive man does, is reported by name, and a lock puts
+  // him back -- the reader who is taking the zero on purpose says so.
+  //
+  // Skill positions only. A defense or a kicker plays every snap his club
+  // plays, and a defense's average can sit at or under zero after a bad week
+  // without saying anything about whether he will be on the field.
+  //
+  // The rule only speaks on a slate that carries a track record at all. A
+  // board whose salary file had no averages column, or a Week 1 file that
+  // printed 0.0 beside every name, is a board with no evidence either way,
+  // and reading it as "nobody has scored" would empty the slate.
+  var TRACKED_POS = { QB: 1, RB: 1, WR: 1, TE: 1 };
+  function fppgOf(p) { var v = p ? p.operatorFppg : null; return v == null || v === '' || !isFinite(Number(v)) ? null : Number(v); }
+  function scorelessOn(players) {
+    var tracked = (players || []).some(function (p) { var v = fppgOf(p); return v != null && v > 0; });
+    return function (p) {
+      if (!tracked || !p || !TRACKED_POS[p.position]) return false;
+      var v = fppgOf(p);
+      if (v != null) return v <= 0;
+      // No average printed, and the season line counted his games and found
+      // none: he has not taken a snap this year. Null games means the line
+      // was never read, which is no evidence, and he stays.
+      return p.operatorFppgGames === 0;
+    };
+  }
 
   // The objective a mode climbs. The first four are projections; the last three
   // are contest shapes, and they exist because "the best lineup" is a different
@@ -412,7 +444,8 @@
     // single lineup is seeded, unless the reader has explicitly locked him --
     // a lock is a decision, and the builder does not overrule a decision, it
     // only declines to make this one on its own.
-    var benched = [], played = [], thin = [];
+    var benched = [], played = [], thin = [], scoreless = [];
+    var noRecord = scorelessOn(players);
     var pool = players.filter(function (p) {
       // An uncapped format prices nobody, so a missing salary is the normal
       // state there rather than a row the board could not read.
@@ -443,6 +476,9 @@
       // story about a man, and how his number was arrived at stops mattering
       // the moment it is a result rather than an estimate.
       if (p.supplemental && mode.cash && !lock[p.id] && !o.includeSupplemental) { thin.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, basis: p.projectionBasis || 'usage' }); return false; }
+      // Every mode, not just cash: a tournament ceiling multiplied off a man
+      // with no points on record is a multiple of nothing. See scorelessOn.
+      if (noRecord(p) && !lock[p.id] && !o.includeScoreless) { scoreless.push({ id: p.id, name: p.name, position: p.position, team: p.team, salary: p.salary, proj: isFinite(p.ironTunaPoints) ? Math.round(p.ironTunaPoints * 10) / 10 : null, fppg: fppgOf(p) }); return false; }
       return true;
     });
     // A lock the board cannot honor -- a player who is off the slate, unpriced,
@@ -686,6 +722,8 @@
              slots: cfg.slots.slice(), capped: capped, multiplier: cfg.mult || null, minTeams: cfg.minTeams || 0,
              benched: benched, benchedCount: benched.length,
              thin: thin, thinCount: thin.length,
+             // Off the board because nothing on record says they score.
+             scoreless: scoreless, scorelessCount: scoreless.length,
              // Off the board because their game is finished, not because
              // anything is wrong with them. The page says so rather than
              // leaving a reader to wonder where Thursday's players went.
@@ -974,7 +1012,7 @@
 
   var api = { MODES: MODES, FORMATS: FORMATS, GAME_STYLE_FORMAT: GAME_STYLE_FORMAT, ANY_POSITION: ANY_POSITION,
               formatFor: formatFor, tierFormat: tierFormat, salaryTierFormat: salaryTierFormat, eligibleIn: eligible,
-              build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf,
+              build: build, valid: valid, ceilingOf: ceilOf, floorOf: floorOf, scorelessOn: scorelessOn,
               contestPick: contestPick, fieldAverage: fieldAverage, pickBoard: pickBoard };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.ITDfs = api;

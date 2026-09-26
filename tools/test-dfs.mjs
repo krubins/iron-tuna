@@ -2068,5 +2068,58 @@ console.log('\nthe per-team maximum against a narrowed game pool');
      && page.includes('maxPerTeam:teamCapFor(seats<=6?cross:3,seats,pool)'));
 }
 
+// ── no fantasy points on record ───────────────────────────────────────────
+// The request this guards (26 Sep 2026): the builder kept proposing men who
+// then scored a zero. A skill player whose operator average is 0.0, or who
+// has no average and no game in the season line, is left out unless locked,
+// reported by name, and never offered back as a pivot.
+console.log('\nno fantasy points on record');
+{
+  const mk = (id, position, team, opponent, salary, pts, fppg, extra = {}) => ({ id, key: id, name: id, position, team, opponent, salary,
+    ironTunaPoints: pts, vegasPoints: pts, consensusPoints: pts, projected: true, available: true, operatorFppg: fppg, ...extra });
+  const pool = [
+    mk('qb1', 'QB', 'AAA', 'BBB', 7000, 20, 21), mk('qb2', 'QB', 'BBB', 'AAA', 6000, 17, 18),
+    mk('rb1', 'RB', 'AAA', 'BBB', 7000, 17, 16), mk('rb2', 'RB', 'BBB', 'AAA', 6000, 14, 13), mk('rb3', 'RB', 'CCC', 'DDD', 5000, 11, 10), mk('rb4', 'RB', 'DDD', 'CCC', 4000, 8, 7),
+    mk('wr1', 'WR', 'AAA', 'BBB', 7000, 17, 17), mk('wr2', 'WR', 'BBB', 'AAA', 6000, 14, 14), mk('wr3', 'WR', 'CCC', 'DDD', 5000, 11, 12),
+    mk('wr4', 'WR', 'DDD', 'CCC', 4000, 9, 8), mk('wr5', 'WR', 'CCC', 'DDD', 3500, 7, 6),
+    mk('te1', 'TE', 'AAA', 'BBB', 5000, 10, 10), mk('te2', 'TE', 'CCC', 'DDD', 3500, 6, 5),
+    mk('dst1', 'DST', 'CCC', 'DDD', 3000, 7, -1), mk('dst2', 'DST', 'DDD', 'CCC', 2500, 6, 0),
+    // The trap: a $3,000 receiver the board projects for 15 and who has never
+    // scored, and a back with no average and no game in the season line.
+    mk('zeroWR', 'WR', 'DDD', 'CCC', 3000, 15, 0),
+    mk('ghostRB', 'RB', 'CCC', 'DDD', 3000, 14, null, { operatorFppgGames: 0 })
+  ];
+  const opts = { cap: 50000, slots: H.DFS_SITES.dk.slots, flex: H.DFS_SITES.dk.flex, lineups: 3, seed: 7 };
+  const names = r => r.lineups.flatMap(l => l.players.map(x => x.id));
+  const loose = DFS.build(pool, { ...opts, mode: 'ironTuna', includeScoreless: true });
+  ok('the fixture is a real trap: with the rule off, the solve takes a scoreless man', loose.ok && names(loose).some(id => id === 'zeroWR' || id === 'ghostRB'));
+  for (const mode of ['ironTuna', 'vegas', 'floor', 'ceiling', 'leverage', 'market']) {
+    const r = DFS.build(pool, { ...opts, mode });
+    ok('no ' + mode + ' lineup rosters a man with no fantasy points on record',
+       r.ok && !names(r).includes('zeroWR') && !names(r).includes('ghostRB'));
+  }
+  const r = DFS.build(pool, { ...opts, mode: 'ironTuna' });
+  ok('the builder names who it left out, with the projection it declined',
+     r.scorelessCount === 2 && r.scoreless.some(x => x.name === 'zeroWR' && x.proj === 15 && x.fppg === 0) && r.scoreless.some(x => x.name === 'ghostRB'));
+  ok('a defense at or under zero is not treated as scoreless', !r.scoreless.some(x => x.position === 'DST'));
+  const locked = DFS.build(pool, { ...opts, mode: 'ironTuna', lock: ['zeroWR'], lineups: 1 });
+  ok('a lock is the reader knowingly taking the zero, and it is honored',
+     locked.ok && names(locked).includes('zeroWR') && !locked.scoreless.some(x => x.id === 'zeroWR'));
+  const noRecord = DFS.scorelessOn(pool);
+  ok('an unread season line (null games) is no evidence, and the man stays',
+     !noRecord(mk('x', 'WR', 'AAA', 'BBB', 3000, 9, null)) && noRecord(mk('y', 'WR', 'AAA', 'BBB', 3000, 9, null, { operatorFppgGames: 0 })));
+  // A file with no averages, or a Week 1 file with 0.0 beside every name,
+  // carries no track record either way; the rule must not empty that board.
+  const blank = pool.map(p => ({ ...p, operatorFppg: 0 }));
+  const b = DFS.build(blank, { ...opts, mode: 'ironTuna', lineups: 1 });
+  ok('a slate with no scoring on record at all leaves everyone on the board', b.ok && b.scorelessCount === 0);
+  const page = fs.readFileSync(path.join(ROOT, 'dfs.html'), 'utf8');
+  ok('the page says who it left out and that a lock is taking the chance',
+     page.includes('function scorelessNote(r)') && page.includes('with no fantasy points on record left out:')
+     && (page.match(/scorelessNote\(r\) \+|\+ scorelessNote\(r\)/g) || []).length === 2);
+  ok('the pivot table does not offer a scoreless man back as the next best body',
+     page.includes('var noRecord = ITDfs.scorelessOn ? ITDfs.scorelessOn(players)') && page.includes('if (noRecord(q)) return false;'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
