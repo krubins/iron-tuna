@@ -424,6 +424,10 @@
   // caption is attached when that source is the one on screen and dropped the
   // moment the image falls back to a headshot — a credit naming a
   // photographer under somebody else's cutout would be worse than none.
+  //
+  // `opts.onfail` is called once every source has failed and only the
+  // initials are left, so a caller whose frame is the page's lead picture
+  // (the homepage hero) can hand it to somebody else instead.
   function plateEl(p, opts) {
     opts = opts || {};
     if (!p) return null;
@@ -457,7 +461,7 @@
       };
       img.onerror = function () {
         if (++at < srcs.length) img.src = srcs[at];
-        else { img.remove(); if (credit) credit.remove(); }
+        else { img.remove(); if (credit) credit.remove(); if (opts.onfail) opts.onfail(); }
       };
       img.src = srcs[0];
       box.appendChild(img);

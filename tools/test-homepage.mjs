@@ -194,9 +194,17 @@ async function open(width, height, at) {
   await ctx.addInitScript(t => { Date.now = () => t; }, at == null ? CLOCK : at);
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(`${width}px: ${e.message}`));
+  // The player pictures, answered locally. The hero hands its frame to the
+  // next candidate when every image of a player fails to load, so a run with
+  // no route to the CDNs would test the failure path on every pass. og.png
+  // stands in for any photograph; `imagesDown` makes them all fail instead.
+  await page.route(/espncdn\.com|static\.www\.nfl\.com|wikimedia\.org/, r =>
+    imagesDown ? r.abort() : r.fulfill({ status: 200, contentType: 'image/png', body: STUB_IMG }));
   await page.goto(BASE, { waitUntil: 'networkidle' });
   return { page, ctx };
 }
+const STUB_IMG = fs.readFileSync(path.join(ROOT, 'og.png'));
+let imagesDown = false;
 // The eleven destinations the two product cards owe, in the order they are
 // written, as routes that exist. Hoisted because two passes need them: the live
 // one checks that each is present, and the refusing one checks that a quiet
@@ -211,12 +219,17 @@ const read = page => page.evaluate(() => {
   const text = el => (el ? el.textContent.replace(/\s+/g, ' ').trim() : null);
   return {
     h1: text(document.querySelector('h1')),
+    // The thesis is the site's tagline (2026-09-25): it rides the bar under the
+    // nav, not the hero, and is set at a tagline's size rather than a story's.
+    tagline: !!document.querySelector('.hm-tagbar h1'),
+    h1Px: (() => { const e = document.querySelector('h1'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
     claim: text(document.querySelector('.hm-claim')),
     lede: text(document.querySelector('.hm-lede')),
     claimPx: (() => { const e = document.querySelector('.hm-claim'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
     ledePx: (() => { const e = document.querySelector('.hm-lede'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
     cta: [...document.querySelectorAll('.hm-cta a')].map(a => `${a.textContent.trim()}|${a.getAttribute('href')}`),
-    how: (() => { const a = document.querySelector('.hm-how-link'); return a && `${a.textContent.trim()}|${a.getAttribute('href')}`; })(),
+    promoIn: (() => { const e = document.querySelector('.hm-promo'); return e ? (e.closest('#how') ? 'how' : e.closest('#heroBand') ? 'hero' : 'other') : null; })(),
+    leftCol: [...document.querySelectorAll('.hm-front .hm-left > *')].map(e => e.className),
     clock: vis('hmClock') ? text(document.getElementById('hmClock')) : null,
     lanes: [...document.querySelectorAll('.hm-lane > h2')].map(e => e.textContent.trim()),
     laneLinks: [...document.querySelectorAll('.hm-links a')].map(a => a.getAttribute('href')),
@@ -270,6 +283,7 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const r = await read(page);
   ok(`${tag}: the headline is the thesis`,
      r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.', r.h1);
+  ok(`${tag}: and it is a tagline, not a headline`, r.tagline && r.h1Px <= 18, `${r.tagline} ${r.h1Px}px`);
   // The conversion, in its own line above the lede and set larger than it. This
   // is the sentence the page cannot afford a reader to skim past, so it is
   // asserted separately from the copy around it.
@@ -281,8 +295,12 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
      r.lede === 'Those projections become weekly rankings, trade values and DFS lineups, scored at your league\u2019s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.', r.lede);
   ok(`${tag}: two buttons, one per lane`,
      r.cta.join(' / ') === 'Get Fantasy Advice|/fantasy / Build a DFS Lineup|/dfs', r.cta.join(' / '));
-  ok(`${tag}: and a smaller link into the method, on this page`,
-     r.how === 'See How It Works|#how', r.how);
+  // Ken, 2026-09-25: the promo explains the site, and a returning reader does
+  // not need that at the top of every visit. It lives in the method section;
+  // the front's left column is Quick Links alone, like a sports front's ribbon.
+  ok(`${tag}: the site explainer sits in the method section, not the front`, r.promoIn === 'how', String(r.promoIn));
+  ok(`${tag}: and the front's left column is Quick Links`,
+     r.leftCol.length === 1 && /hm-quick/.test(r.leftCol[0]), r.leftCol.join(','));
   ok(`${tag}: the hero is the first section on the page`, r.order[0] === 'heroBand', r.order.slice(0, 2).join(','));
   ok(`${tag}: the page does not scroll sideways`, r.overflow === 0, String(r.overflow));
   // The one heading level that must not be skipped: h1 then h2s.
@@ -310,7 +328,7 @@ console.log('\nsix sections, in order, and nothing else');
   ok('the DFS card links contest, lineup, the multi-lineup builder, stacks and values',
      want.slice(6).every(h => r.laneLinks.includes(h)), r.laneLinks.slice(6).join(','));
   ok('and nothing else is a card link', r.laneLinks.length === want.length, String(r.laneLinks.length));
-  ok('the method section is on the page and is the hero link’s target', r.how5 === true);
+  ok('the method section is on the page', r.how5 === true);
   await ctx.close();
 }
 
@@ -568,6 +586,23 @@ console.log('\nwith only two disagreements on the board');
   ok('and nothing on the page apologizes for it', !LOADING.test(r.body));
   EDGE.vsExperts = full;
   await ctx.close();
+}
+
+// ── a hero whose pictures will not load ─────────────────────────────────────
+// Ken, 2026-09-25: the cover's biggest frame showed a dark box reading "BJ"
+// (Brian Robinson Jr., whom the lookup knows by name only). A frame holding
+// nothing but initials is the empty band this page is written never to show:
+// when no candidate's picture loads, the hero is hidden instead.
+console.log('\nthe hero, with every player picture failing');
+{
+  imagesDown = true;
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const r = await read(page);
+  ok('the hero is hidden rather than showing initials in the frame', r.edge === false, JSON.stringify({ edge: r.edge, name: r.edgeName }));
+  ok('and the lead story still leads', await page.evaluate(() => !!document.querySelector('#leadWell .hm-lead h3')));
+  await ctx.close();
+  imagesDown = false;
 }
 
 ok('no page threw', errors.length === 0, errors.join(' | '));
