@@ -233,6 +233,21 @@ const read = page => page.evaluate(() => {
     // Quick Links: the strip directly under the tagline bar (2026-09-26).
     quickAfterTagbar: (() => { const q = document.querySelector('.hm-quick'); return !!q && q.previousElementSibling === document.querySelector('.hm-tagbar'); })(),
     quickLinks: [...document.querySelectorAll('.hm-quick a')].map(a => a.getAttribute('href')),
+    // The lead headline is the biggest type in the front (2026-09-26): the
+    // photograph's caption used to outrank it. Every rendered text node in the
+    // front but the headline's own, against the headline. The photograph's
+    // frame is skipped: its initials are the picture's stand-in, not type.
+    leadPx: (() => { const e = document.querySelector('#leadWell .hm-lead h3'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
+    frontMaxPx: (() => {
+      const h = document.querySelector('#leadWell .hm-lead h3'); let max = 0;
+      for (const e of document.querySelectorAll('#hmHero *')) {
+        if (h && (e === h || h.contains(e)) || e.closest('.it-plate-shot') || !e.getClientRects().length) continue;
+        if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+        max = Math.max(max, parseFloat(getComputedStyle(e).fontSize));
+      }
+      return max;
+    })(),
+    captionPx: (() => { const e = document.getElementById('heroEdgeName'); return e && e.getClientRects().length ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
     quickRows: (() => { const t = [...document.querySelectorAll('.hm-quick li')].map(li => Math.round(li.getBoundingClientRect().top)); return new Set(t).size; })(),
     clock: vis('hmClock') ? text(document.getElementById('hmClock')) : null,
     lanes: [...document.querySelectorAll('.hm-lane > h2')].map(e => e.textContent.trim()),
@@ -310,6 +325,12 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
      r.quickLinks.join(' ') === '/weekly-rankings /fantasy#startsit /faab /trade-finder /dfs#lineup /vegas-edge /value-coach' && r.quickRows === 1,
      r.quickLinks.join(' ') + ' rows=' + r.quickRows);
   ok(`${tag}: the hero is the first section on the page`, r.order[0] === 'heroBand', r.order.slice(0, 2).join(','));
+  // Clearly the biggest, not by a hair: before this the caption's 24px bold
+  // name sat a few px under a 28px headline and out-shouted it.
+  ok(`${tag}: the lead headline is clearly the biggest type in the front`,
+     r.leadPx > 0 && r.leadPx >= 1.3 * r.frontMaxPx, `${r.leadPx}px vs ${r.frontMaxPx}px`);
+  ok(`${tag}: and the photograph's caption is set as a caption`,
+     r.captionPx > 0 && r.captionPx <= 15, `${r.captionPx}px`);
   ok(`${tag}: the page does not scroll sideways`, r.overflow === 0, String(r.overflow));
   // The one heading level that must not be skipped: h1 then h2s.
   ok(`${tag}: there is exactly one h1`, r.headings.filter(x => x.startsWith('H1:')).length === 1);

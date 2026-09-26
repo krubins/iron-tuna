@@ -285,23 +285,33 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-edge .it-art-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .he-link{display:block}
 .he-link:hover .it-plate-shot{filter:brightness(1.05)}
-.he-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:12px 18px 13px;background:var(--mast)}
-.he-k{flex:1 1 100%;font-size:0.875rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--teal)}
-.he-name{font-size:1.5rem;font-weight:800;line-height:1.2;color:#fff}
-.he-sub{font-size:0.9375rem;font-weight:600;letter-spacing:.02em;color:var(--on-board-2)}
-.he-gap{flex:1 1 100%;font-size:1.0625rem;line-height:1.45;color:#c3d1ce}
+/* The caption (2026-09-26): a photo caption, not a second headline. It used
+   to carry the page's biggest type (a kicker, a 24px bold name and a 17px
+   sentence) and the lead headline under it read as the footnote. Now it is
+   one or two quiet lines: who is pictured as a small tag, and the gap line
+   when it says something the headline does not. The kicker stays in the
+   markup for the tests and the link's label; it is not shown. */
+.he-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 0;padding:8px 14px 9px;background:var(--mast)}
+.he-k{display:none}
+.he-name{font-size:15px;font-weight:400;line-height:1.4;color:var(--on-board)}
+.he-sub{font-size:14px;font-weight:400;line-height:1.4;letter-spacing:.02em;color:var(--on-board-2)}
+.he-sub:not(:empty)::before{content:"\00a0\00b7\00a0"}
+.he-gap{flex:1 1 100%;font-size:14px;line-height:1.45;color:var(--on-board-2)}
 .he-gap[hidden]{display:none}
 
-/* The lead story: under the photograph, the story's headline at the size the
-   network sets the one under its lead photo. No plate: no background, border
-   box, radius or side padding, so its type lines up with the photograph's left
-   edge. Without a photograph it takes both rows of the column. */
-.hm-front .hm-lead{grid-area:lead;background:none;border:0;border-top:3px solid var(--brand);border-radius:0;box-shadow:none;padding:20px 0 0}
-.hm-front #heroEdge[hidden] ~ #lead .hm-lead{grid-row:1 / span 2;border-top-color:var(--ink);padding-top:16px}
-.hm-front .hm-lead:hover{border-top-color:var(--brand-dark)}
-.hm-front .hm-lead h3{font-size:clamp(1.5rem,2.2vw,1.875rem)}
-.hm-front .hm-lead p{font-size:1.1875rem}
-.hm-front .hm-lead .m{margin-top:6px}
+/* The lead story: under the photograph, and the biggest type on the page
+   (2026-09-26). No plate and no rule between it and the photograph: the
+   picture, its caption and the story are one unit, 16px apart. Set in px:
+   the root size grows to 21px on a wide window, and the headline is sized
+   against the column, not the root. Without a photograph it takes both rows
+   of the column. */
+.hm-front .hm-lead{grid-area:lead;gap:10px;background:none;border:0;border-radius:0;box-shadow:none;padding:16px 0 0}
+.hm-front #heroEdge[hidden] ~ #lead .hm-lead{grid-row:1 / span 2;padding-top:0}
+.hm-front .hm-lead .t{font-size:13px;font-weight:700;line-height:1.3;letter-spacing:.07em;text-transform:uppercase;color:var(--brand)}
+.hm-front .hm-lead h3{max-width:30ch;font-size:clamp(26px,calc(2.6vw + 4px),40px);line-height:1.1;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+.hm-front .hm-lead p{max-width:60ch;font-size:19px;line-height:1.45;font-weight:400;color:var(--ink-2)}
+.hm-front .hm-lead .m{margin-top:0;padding-top:0;border-top:0;font-size:14px;color:var(--ink-3)}
+.hm-front .hm-lead .go{margin-top:4px;font-size:15px}
 /* The player the photograph already shows is not drawn again as a tile
    under it. The faces stay in the markup (the rail and the cards still carry
    theirs); only the lead's row is not shown while the photograph is up. */
@@ -333,7 +343,6 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 @media(max-width:560px){
   .hm-tagbar-in{padding-left:14px;padding-right:14px}
   .hm-h1{font-size:1rem}
-  .he-name{font-size:1.3125rem}
 }
 
 /* ── shared section furniture ─────────────────────────────────────────────
@@ -458,7 +467,6 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-lead{align-self:start;display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--card);border:1px solid var(--line);border-top:3px solid var(--ink);border-radius:0 0 2px 2px;padding:24px 26px 26px}
 .hm-lead:hover{border-color:var(--brand-line);border-top-color:var(--brand)}
 .hm-lead .t{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:0.96875rem;font-weight:700;letter-spacing:0;text-transform:none;color:var(--brand)}
-.hm-lead .flag{font-size:0.90625rem;font-weight:600;letter-spacing:0;text-transform:none;border-radius:2px;padding:1px 7px;color:var(--gold-ink);background:#fdf3dc}
 .hm-lead h3{font-size:clamp(1.5625rem,2.5vw,2.0625rem);line-height:1.13;font-weight:700;letter-spacing:-.018em;color:var(--ink);overflow-wrap:anywhere}
 .hm-lead h3 a{color:inherit}
 .hm-lead h3 a:hover{color:var(--brand)}
@@ -718,11 +726,8 @@ body.hm-dress .hm-table tbody tr:nth-child(even) td:nth-child(4){background:rgba
 /* ── 3b · the lead, the rail, the two lane cards, the desk ──────────────── */
 body.hm-dress .hm-well{margin-top:14px;gap:22px}
 body.hm-dress .hm-lead{gap:9px}
-body.hm-dress .hm-lead h3{font-size:clamp(1.5625rem,2.4vw,2.0625rem)}
 body.hm-dress .hm-lead h3 .it-story-focus{margin:0 0 10px}
 body.hm-dress .hm-lead h3 .it-player-face{width:52px;height:52px;min-width:52px}
-body.hm-dress .hm-lead p{font-size:1.25rem;line-height:1.42}
-body.hm-dress .hm-lead .m{margin-top:11px;padding-top:10px;font-size:0.9375rem}
 body.hm-dress .hm-lead .boast{font-size:clamp(1.5625rem,2.5vw,2rem)}
 body.hm-dress .hm-lead.is-boast h3{font-size:clamp(1.3125rem,2vw,1.6875rem)}
 body.hm-dress .hm-rail ul{gap:9px}
@@ -777,7 +782,6 @@ body.hm-dress .hm-choose-k{font-size:0.875rem;letter-spacing:.09em}
 
    The lead and Top Headlines end level (2026-09-26: two columns now, not
    three), each with its last line pinned to the foot. */
-.hm-front .hm-lead .m{margin-top:auto}
 .hm-front .hm-rail ul{flex:0 0 auto}
 .hm-front .hm-rail-all{margin-top:auto}
 .hm-choose{margin-top:16px}
@@ -1685,12 +1689,15 @@ body.hm-dress .hm-reads{gap:16px}
     var leadCrow = boast(lead);
     var leadHtml = '<article class="hm-lead' + (leadCrow ? ' is-boast' : '') + '"'
       + (leadPick.length ? ' data-player-focus="' + esc(leadPick.join('|')) + '"' : '') + '>'
-      + '<span class="t">' + esc(lead.title || 'The desk') + '<span class="flag">Latest</span></span>'
+      // In a news lead's order (2026-09-26): kicker, headline, dek, the byline
+      // and date, then the link. No "Latest" flag: the lead is the newest
+      // piece by rule, so the flag only ever said what its position says.
+      + '<span class="t">' + esc(lead.title || 'The desk') + '</span>'
       + (leadCrow ? '<span class="boast">You\u2019re welcome.</span>' : '')
       + '<h3><a href="' + esc(lead.url) + '">' + esc(leadCrow || lead.headline) + '</a></h3>'
       + (lead.dek ? '<p>' + esc(lead.dek) + '</p>' : '')
-      + '<a class="go" href="' + esc(lead.url) + '">Read the story &rarr;</a>'
-      + '<span class="m">' + by(lead) + '</span></article>';
+      + '<span class="m">' + by(lead) + '</span>'
+      + '<a class="go" href="' + esc(lead.url) + '">Read the story &rarr;</a></article>';
     if (railPieces.length) {
       // "Top Headlines", as a sports front heads the rail down its right side.
       leadHtml += '<div class="hm-rail"><p class="hm-rail-h">Top Headlines</p><ul>'
