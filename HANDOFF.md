@@ -16416,3 +16416,80 @@ from the lead slot; the two boards disagreeing on ~19% of the roster; the tick's
 18–62% hang rate; the D1 read limit that fired once on 09-21; `odds-refresh`'s
 five hangs; the durable overlay snapshot that would have insulated the audit
 from all three of the last week's outages and still does not exist.
+
+## 145. September 26: third day without Cloudflare, and the worker source has not moved in five
+
+Instruments: branch correct (`HEAD` = `origin/claude/tet-macmillan-price-logic-nyxid5`
+= `5716cf4d`), scratchpad intact at 23 files. **Cloudflare connector still
+unauthorised** — checked by tool name, not assumed; neither
+`d1_database_query` nor `workers_get_worker_code` resolves. Third consecutive
+day.
+
+### 145a. The staleness ledger
+
+```
+                                       last measured   stale by
+row 94 prices + curve paragraph         09-23           3 days
+two-board gap                           09-23           3
+feed freshness / overlay snapshot       09-23           3
+recap rows                              09-23           3
+which branch is deployed                09-23           3
+D1 size and read-limit state            09-23           3
+hang rate (closed)                      09-22           4
+```
+
+All unmeasured, not unchanged. Three overlay snapshots that will never exist,
+in a series where the subject moves: row 94's prices changed on five of the
+eight days they were measured.
+
+### 145b. The one thing worth proving today, and it proves more than yesterday's
+
+Yesterday I could say `main`'s recent commits had not touched the pricing
+symbols. Today the stronger form is available:
+
+```
+git log -1 --format='%h %ad' --date=iso origin/main -- _worker.js
+  eb0d0adc  2026-09-21 16:15:27 +0000
+```
+
+**`_worker.js` has not changed on `main` since 2026-09-21 16:15Z** — five days,
+and crucially *before* the 09-22 and 09-23 deployments I verified byte-for-byte.
+`main` has moved a great deal in that window (today's merge alone was 1,066
+insertions across eight files) and **none of it is the worker**.
+
+So the honest reassurance is no longer "the board constants agree"; it is:
+
+> Any deployment built from `main` at any point in the last three days would be
+> built from a `_worker.js` **identical to the one behind the bundle I last
+> verified**. The board it serves would price exactly as the 09-23 board did.
+
+That covers the case I can reason about. It does **not** cover the case I
+cannot: production has served an **unmerged branch on four of the fourteen days
+this check has run** (§139e), and a branch build is invisible to every
+instrument I still have. If one went out in the last three days, I would have no
+way to know, and the two `dazzling-franklin`/`brave-pascal`-style branches that
+did deploy were only harmless because nobody happened to be editing pricing that
+week.
+
+That is the residual risk, stated plainly: **not that `main` changed the board,
+but that something that is not `main` might have.**
+
+### 145c. What ran
+
+- **CI 82/82** after merging `origin/main` (`17fb7c47`); no HANDOFF conflict.
+- **Harness self-test 23/23.**
+- **Board comparison: 690 player-rows across two boards, 0 differences**, all
+  five constants identical — against the cached 09-23 bundle, which per §145b
+  is now a stronger proxy than it was, because the source behind it has not
+  moved.
+- My branch's `_worker.js` is byte-identical to `origin/main`'s after the merge.
+
+### 145d. Carried forward, untested for a third day
+
+Row 94 pinned eighteen days, every figure in its table having been both right
+and wrong on some day; 32 recap rows `verified=1, published=0`, each one flag
+from the lead slot; the two boards disagreeing on ~19% of the roster; the tick's
+18–62% hang rate; the D1 read limit that fired once on 09-21; `odds-refresh`'s
+five hangs; the durable overlay snapshot, which would have insulated the audit
+from the container recycle, the read limit *and* this connector outage, and
+which is the single highest-value unbuilt thing on the list.
