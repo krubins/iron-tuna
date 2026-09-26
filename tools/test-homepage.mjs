@@ -219,10 +219,10 @@ const read = page => page.evaluate(() => {
   const text = el => (el ? el.textContent.replace(/\s+/g, ' ').trim() : null);
   return {
     h1: text(document.querySelector('h1')),
-    // The thesis is the site's tagline (2026-09-25): it rides the bar under the
-    // nav, not the hero, and is set at a tagline's size rather than a story's.
-    tagline: !!document.querySelector('.hm-tagbar h1'),
-    h1Px: (() => { const e = document.querySelector('h1'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
+    // 2026-09-26: the tagline left the chrome for the method section, and the
+    // page's h1 names the site for the outline without being drawn.
+    tagline: text(document.querySelector('#how .hm-tagline')),
+    h1Hidden: (() => { const e = document.querySelector('h1'); if (!e) return false; const b = e.getBoundingClientRect(); return b.width <= 1 && b.height <= 1; })(),
     claim: text(document.querySelector('.hm-claim')),
     lede: text(document.querySelector('.hm-lede')),
     claimPx: (() => { const e = document.querySelector('.hm-claim'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
@@ -231,7 +231,20 @@ const read = page => page.evaluate(() => {
     promoIn: (() => { const e = document.querySelector('.hm-promo'); return e ? (e.closest('#how') ? 'how' : e.closest('#heroBand') ? 'hero' : 'other') : null; })(),
     leftCol: document.querySelectorAll('.hm-front .hm-left').length,
     // Quick Links: the strip directly under the tagline bar (2026-09-26).
-    quickAfterTagbar: (() => { const q = document.querySelector('.hm-quick'); return !!q && q.previousElementSibling === document.querySelector('.hm-tagbar'); })(),
+    quickUnderMast: (() => { const q = document.querySelector('.hm-quick'), m = document.querySelector('.mast'); return !!q && !!m && Math.abs(q.getBoundingClientRect().top - m.getBoundingClientRect().bottom) < 1; })(),
+    // All the dark chrome above the Quick Links strip: one bar since 2026-09-26.
+    chromePx: (() => { const q = document.querySelector('.hm-quick'); return q ? Math.round(q.getBoundingClientRect().top) : 0; })(),
+    // A section link is either wholly on screen or not drawn at all (inside the
+    // closed phone menu); never a word cut off at the screen's edge.
+    navClipped: [...document.querySelectorAll('.mast-jump a')].filter(a => {
+      if (!a.getClientRects().length) return false;
+      const b = a.getBoundingClientRect(), n = a.closest('.mast-jump').getBoundingClientRect(), cs = getComputedStyle(a);
+      const lines = Math.round((b.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) / parseFloat(cs.lineHeight));
+      return b.left < 0 || b.right > innerWidth || b.left < n.left - 0.5 || b.right > n.right + 0.5 || lines > 1;
+    }).map(a => a.textContent.trim()),
+    navOverlap: (() => { const c = document.querySelector('#navSync'); if (!c || !c.getClientRects().length) return []; const cb = c.getBoundingClientRect();
+      return [...document.querySelectorAll('.mast-jump a')].filter(a => a.getClientRects().length).filter(a => { const b = a.getBoundingClientRect(); return b.right > cb.left && b.left < cb.right && b.bottom > cb.top && b.top < cb.bottom; }).map(a => a.textContent.trim()); })(),
+    navCta: (() => { const c = document.querySelector('#navSync'); return c && c.getClientRects().length ? { href: c.getAttribute('href'), text: c.innerText.trim() } : null; })(),
     quickLinks: [...document.querySelectorAll('.hm-quick a')].map(a => a.getAttribute('href')),
     // The lead headline is the biggest type in the front (2026-09-26): the
     // photograph's caption used to outrank it. Every rendered text node in the
@@ -317,9 +330,19 @@ console.log('\nthe hero says the one thing, at every width');
 for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
-  ok(`${tag}: the headline is the thesis`,
-     r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.', r.h1);
-  ok(`${tag}: and it is a tagline, not a headline`, r.tagline && r.h1Px <= 18, `${r.tagline} ${r.h1Px}px`);
+  // Option B (2026-09-26): the page's one h1 names the site for the outline
+  // and is not drawn; the tagline is a line in the method section, word for word.
+  ok(`${tag}: the h1 names the site`, r.h1 === 'Iron Tuna: fantasy football and DFS, priced off the betting market', r.h1);
+  ok(`${tag}: and is not drawn`, r.h1Hidden === true);
+  ok(`${tag}: the tagline sits in the method section, word for word`,
+     r.tagline === 'Anyone can publish a projection. Vegas has money on theirs.', r.tagline);
+  // ONE bar of chrome above the Quick Links strip, not two (the tagline and
+  // dateline had a bar of their own), and on a phone one 56px row.
+  ok(`${tag}: the dark chrome is one bar`, r.chromePx > 0 && r.chromePx <= (w > 500 ? 72 : 60), r.chromePx + 'px');
+  ok(`${tag}: no section link is cut off or wrapped`, r.navClipped.length === 0, r.navClipped.join(','));
+  ok(`${tag}: and none sits under the button`, r.navOverlap.length === 0, r.navOverlap.join(','));
+  ok(`${tag}: the league button is on screen and goes to the league settings`,
+     !!r.navCta && r.navCta.href === '/my-league#settings' && /My League/.test(r.navCta.text), JSON.stringify(r.navCta));
   // The conversion, in its own line above the lede and set larger than it. This
   // is the sentence the page cannot afford a reader to skim past, so it is
   // asserted separately from the copy around it.
@@ -337,7 +360,7 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   // one row under the tagline bar, scrolling sideways on a phone, not wrapping.
   ok(`${tag}: the site explainer sits in the method section, not the front`, r.promoIn === 'how', String(r.promoIn));
   ok(`${tag}: the front has no left column`, r.leftCol === 0, String(r.leftCol));
-  ok(`${tag}: Quick Links is the strip under the tagline bar`, r.quickAfterTagbar);
+  ok(`${tag}: Quick Links is the strip directly under the header`, r.quickUnderMast);
   ok(`${tag}: with its seven links, on one row`,
      r.quickLinks.join(' ') === '/weekly-rankings /fantasy#startsit /faab /trade-finder /dfs#lineup /vegas-edge /value-coach' && r.quickRows === 1,
      r.quickLinks.join(' ') + ' rows=' + r.quickRows);
@@ -388,7 +411,8 @@ console.log('\nwith the boards answering');
   const { page, ctx } = await open(1280, 900);
   const r = await read(page);
 
-  ok('the dateline names the week off the schedule', /Week 3/.test(r.clock || ''), r.clock);
+  ok('the week chip names the week off the schedule', /^Week 3\b/.test(r.clock || ''), r.clock);
+  ok('and is one short line, not the old dateline sentence', (r.clock || '').length <= 32 && !/Regular season/.test(r.clock || ''), r.clock);
 
   // Each card shows ONE real current output.
   ok('the Fantasy card recommends a real player', /Drake London/.test(r.fnRead || ''), r.fnRead);
@@ -612,13 +636,61 @@ console.log('\nthe card readings take turns too');
      again.fnRead === now.fnRead && again.dfRead === now.dfRead && again.edgeName === now.edgeName);
 }
 
+// ── 3f. the widths in between ──────────────────────────────────────────────
+// The full bar needs about 900px. At 780px, before the menu breakpoint moved to
+// 960px, "How It Works" wrapped and the button sat on top of "Search".
+console.log('\nthe header between phone and desk');
+for (const w of [780, 960, 1024]) {
+  const { page, ctx } = await open(w, 800);
+  const r = await read(page);
+  ok(`${w}px: no section link is cut off, wrapped or under the button`,
+     r.navClipped.length === 0 && r.navOverlap.length === 0, r.navClipped.concat(r.navOverlap).join(','));
+  ok(`${w}px: the chrome is one bar`, r.chromePx > 0 && r.chromePx <= 72, r.chromePx + 'px');
+  await ctx.close();
+}
+
+// ── 3e. the phone menu ─────────────────────────────────────────────────────
+// Below 960px the five sections are a panel behind a real button (2026-09-26),
+// not a row that scrolled sideways with its last link cut off at the edge.
+console.log('\nthe phone menu');
+{
+  const { page, ctx } = await open(390, 844);
+  const m = () => page.evaluate(() => {
+    const b = document.querySelector('.mast-menu');
+    const links = [...document.querySelectorAll('.mast-jump a')];
+    return { expanded: b && b.getAttribute('aria-expanded'), controls: b && b.getAttribute('aria-controls'),
+      shown: links.filter(a => { if (!a.getClientRects().length) return false; const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.height >= 44; }).map(a => a.textContent.trim()),
+      focusInPanel: !!document.activeElement && !!document.activeElement.closest('#mastMenu'),
+      focusOnButton: document.activeElement === b,
+      week: (() => { const e = document.getElementById('hmClockM'); return e && e.getClientRects().length ? e.textContent.trim() : null; })() };
+  });
+  let r = await m();
+  ok('closed, it draws none of the links', r.expanded === 'false' && r.shown.length === 0 && r.controls === 'mastMenu', JSON.stringify(r));
+  await page.click('.mast-menu');
+  r = await m();
+  ok('open, it says so and shows all five as full rows',
+     r.expanded === 'true' && r.shown.join('|') === 'Fantasy|DFS|Articles|How It Works|Search', JSON.stringify(r));
+  ok('focus moves into the panel', r.focusInPanel);
+  ok('and the week chip rides at its foot', /^Week 3\b/.test(r.week || ''), r.week);
+  await page.keyboard.press('Escape');
+  r = await m();
+  ok('Escape closes it and hands focus back to the button', r.expanded === 'false' && r.shown.length === 0 && r.focusOnButton, JSON.stringify(r));
+  await page.click('.mast-menu');
+  // A click that lands outside the header, on no link (a real tap at a fixed
+  // point can land on a story and navigate away).
+  await page.evaluate(() => document.querySelector('.hm-front').dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  r = await m();
+  ok('and a tap outside closes it too', r.expanded === 'false' && r.shown.length === 0, JSON.stringify(r));
+  await ctx.close();
+}
+
 // ── 4. the refusing pass: the whole point of the rewrite ────────────────────
 console.log('\nwith every feed refusing');
 MODE = 'dead';
 for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
-  ok(`${tag}: the hero still says the thing`, r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.');
+  ok(`${tag}: the page still has its h1`, r.h1 === 'Iron Tuna: fantasy football and DFS, priced off the betting market');
   ok(`${tag}: both buttons still work`, r.cta.length === 2);
   ok(`${tag}: the dateline is absent rather than loading`, r.clock === null);
   // LANE_LINKS is the count the live pass pins by name (six on the Fantasy

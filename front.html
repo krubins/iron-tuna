@@ -125,7 +125,7 @@ img{max-width:100%}
 /* One focus treatment for the whole page: brass on the board, navy on stock.
    Both clear 3:1 against their ground. */
 a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:2px}
-.mast a:focus-visible,.hm-tagbar a:focus-visible,.hm-promo a:focus-visible,.hm-edge a:focus-visible,.hm-diff-plate a:focus-visible{outline-color:var(--gold)}
+.mast a:focus-visible,.mast button:focus-visible,.hm-promo a:focus-visible,.hm-edge a:focus-visible,.hm-diff-plate a:focus-visible{outline-color:var(--gold)}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}
@@ -144,7 +144,11 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    let the second row spill out of the black band and sit on top of the
    ribbon; this lets the band grow to hold whatever it is given.
    Above the wrap point it is pixel-identical to a fixed 64px. */
-.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:68px;padding-top:6px;padding-bottom:6px}
+/* ONE BAR (2026-09-26): wordmark, slash, the five sections, then the week
+   chip and the one button on the right, 64px tall with the brand rule under
+   it. The tagline and the dateline used to have a second bar of their own. */
+.mast{border-bottom:3px solid var(--brand);position:relative;z-index:50}
+.mast .wrap{display:flex;align-items:center;gap:10px;min-height:61px}
 /* Ken, 2026-09-25 (second pass): no green block behind the wordmark. It sits
    straight on the black bar in white, and a green slash between it and the
    section links does the separating the block used to. */
@@ -156,46 +160,50 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    regression). It sits straight on the black bar now, which is the ground the
    metal gradient was drawn for, so it keeps its own fill. */
 .mast-logo{height:2.375rem;width:auto;display:block}
-.mast-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
-.mast-jump{display:flex;align-items:center;gap:2px;min-width:0;margin-right:auto}
-/* Sentence case, no tracking. The tracked-out ALL-CAPS label was on nine
-   different elements of this page and it is off all nine: it is the single
-   loudest piece of template chrome a page can wear, and it told a reader
-   nothing that weight and colour do not. */
-.mast-jump a,.mast-nav a{color:#fff;font-size:1.0625rem;font-weight:700;letter-spacing:0;padding:8px 11px;border-radius:3px}
-.mast-jump a:hover,.mast-nav a:hover{color:#fff;background:rgba(255,255,255,.07)}
-.mast-nav a.cta{background:var(--brand);color:#fff;margin-left:6px;font-weight:700}
-.mast-nav a.cta:hover{background:var(--brand-dark)}
+.mast-jump{display:flex;align-items:center;gap:2px;flex:1 1 auto;min-width:0}
+/* Sentence case, no tracking, and quieter than the wordmark: 15px at 600 in
+   white at 85%, full white and a teal underline on hover. */
+.mast-jump a{color:rgba(255,255,255,.85);font-size:var(--fs-15);font-weight:600;line-height:1.3;padding:8px 10px;border-radius:3px;text-decoration:underline 2px transparent;text-underline-offset:7px;transition:color .12s,text-decoration-color .12s}
+.mast-jump a:hover{color:#fff;text-decoration-color:var(--teal)}
+.mast a:focus-visible,.mast button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.mast-nav{display:flex;align-items:center;gap:14px;flex:0 0 auto}
+/* The week, as a chip: the dateline in one line, the live state in teal. */
+.mast-week{font-size:var(--fs-13);font-weight:600;line-height:1.3;color:var(--on-board-2);white-space:nowrap}
+.mast-week .live{color:var(--teal)}
+.mast-week-m{display:none}
 /* Brass is the money accent, and "Customize My League" is where a reader puts
-   their own money on the line, so it is the one brass control in the chrome. */
-.mast-nav a.cta-gold{background:var(--gold);color:#1a1205;margin-left:6px;font-weight:700}
+   their own money on the line, so it is the one brass control in the chrome.
+   Compact (2026-09-26): 36px, 14px type, no longer the biggest thing in the bar. */
+/* inline-block, not inline-flex: a flex box drops the space between
+   "Customize" and "My League", which are two runs so the phone can hide one. */
+.mast-nav a.cta-gold{display:inline-block;height:36px;padding:0 14px;border-radius:4px;background:var(--gold);color:#1a1205;font-size:var(--fs-14);font-weight:600;line-height:36px;white-space:nowrap}
 .mast-nav a.cta-gold:hover{filter:brightness(1.07)}
-
+.mast-menu{display:none;align-items:center;justify-content:center;width:44px;height:44px;margin-right:-10px;padding:0;border:0;border-radius:4px;background:none;color:#fff;cursor:pointer}
+.mast-menu:hover{background:rgba(255,255,255,.07)}
+/* Between the phone and a full desk the chip gives way first. */
+@media(max-width:1100px){ .mast-nav .mast-week{display:none} }
+.mast-jump a{white-space:nowrap}
 /* ── the masthead on a phone ──────────────────────────────────────────────
-   Nine links in a centered wrapping row came out as three ragged lines of
-   different lengths — the single choppiest thing on the page. They are the
-   same nine links here, but each on the line that suits it: the wordmark and
-   the section jumps share one row (the jumps scroll sideways rather than
-   wrap), and the two actions become a full-width pair underneath, which also
-   makes them thumb-sized instead of 30px pills. */
-@media(max-width:900px){ .mast .wrap{flex-wrap:wrap;padding-top:8px;padding-bottom:8px;row-gap:6px} }
-@media(max-width:760px){
-  .mast .wrap{padding:9px 14px 10px;row-gap:9px;column-gap:10px;align-items:center}
-  .mast-logo{height:1.875rem}
-  .mast-slash{margin:0 0 0 2px;font-size:1.875rem}
-  /* Row one: wordmark, then the section jumps on ONE line that scrolls
-     sideways — never a second and third wrapped line. */
-  .mast-jump{flex:1 1 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-left:6px}
-  .mast-jump::after{content:"";flex:0 0 22px;align-self:stretch;position:sticky;right:0;margin-left:-22px;pointer-events:none;background:linear-gradient(90deg,rgba(11,22,20,0),var(--mast))}
-  .mast-jump::-webkit-scrollbar{display:none}
-  .mast-jump a{flex:0 0 auto;font-size:1rem;padding:8px 7px}
-  /* Row two: the action, full width, at a size a thumb can hit. The rule still
-     names .cta as well as .cta-gold so a second button added here shares the
-     row evenly rather than needing the query edited. */
-  .mast-nav{flex:1 1 100%;gap:9px;flex-wrap:nowrap}
-  .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;justify-content:center;font-size:1.03125rem;padding:11px 8px;border-radius:3px}
+   Below 960px, which is where the five sections and the full button stop
+   fitting on one line beside the wordmark (at 780px "How It Works" wrapped
+   and the button sat on top of "Search"). One 56px row: the wordmark, then "My League" and the menu button. The
+   five sections are a panel under the bar, opened by the button, with the
+   week chip at its foot. They used to scroll sideways in the bar, which on a
+   390px phone showed "Artic" cut off at the screen's edge, and the button
+   took a full-width row of its own under them. */
+@media(max-width:959px){
+  .mast .wrap{min-height:53px;padding-top:0;padding-bottom:0}
+  .mast-logo{height:1.625rem}
+  .mast-slash{display:none}
+  .mast-nav{margin-left:auto;gap:6px}
+  .mast-nav a.cta-gold{height:34px;line-height:34px;padding:0 12px}
+  .mast-nav .cta-long{display:none}
+  .mast-menu{display:inline-flex}
+  .mast-jump{display:none}
+  .mast.menu-open .mast-jump{display:flex;flex-direction:column;align-items:stretch;gap:0;position:absolute;top:100%;left:0;right:0;margin-top:3px;padding:6px 0 10px;background:var(--mast);box-shadow:0 12px 24px rgba(0,0,0,.25)}
+  .mast.menu-open .mast-jump a{display:flex;align-items:center;min-height:48px;padding:0 16px;border-radius:0;font-size:var(--fs-16);color:#fff;border-bottom:1px solid rgba(255,255,255,.07)}
+  .mast.menu-open .mast-week-m{display:block;padding:14px 16px 4px}
 }
-@media(max-width:380px){ .mast-logo{height:1.625rem} .mast-jump a{font-size:0.9375rem;padding:8px 6px} }
 
 /* ── footer ── */
 .foot{margin-top:0;background:var(--card);border-top:1px solid var(--line)}
@@ -219,26 +227,11 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    live feed and HIDES ITSELF when that feed has no current answer — there are
    no skeletons, no "loading" copy and no empty shells on this page. */
 
-/* ── the tagline bar ──────────────────────────────────────────────────────
-   Ken, 2026-09-25: the thesis is a TAGLINE. It was a 50px two-clause headline
-   in the hero, which read as the lead story of the page rather than as the
-   line the site signs its name with. It is a slim bar under the nav now,
-   the same board as the masthead one step lighter, at a tagline's size: the
-   first clause quiet, the counter-claim in white and heavier. It is still the
-   page's h1; only its dress changed. The dateline rides the right end. */
-.hm-tagbar{background:#12211e;border-top:1px solid rgba(255,255,255,.06);border-bottom:3px solid var(--brand)}
-.hm-tagbar-in{display:flex;align-items:center;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;min-height:40px;padding-top:7px;padding-bottom:7px}
-.hm-h1{font-size:var(--fs-17);line-height:1.35;letter-spacing:.005em;font-weight:400;color:var(--on-board-2)}
-.hm-h1 .c1{font-weight:400}
-.hm-h1 em{font-style:normal;font-weight:600;color:#fff}
-/* The clock is written hidden and revealed only once /api/season answers with a
-   real week. A dateline that says it is loading is worse than no dateline. */
-/* inline-BLOCK, not inline-flex (2026-09-22): the dateline is a sentence and
-   wraps like one, at its spaces, with only the week itself held together. */
-.hm-clock{display:inline-block;font-size:var(--fs-15);font-weight:600;letter-spacing:.02em;line-height:1.45;color:var(--on-board-2)}
-.hm-clock b,.hm-clock .live{white-space:nowrap}
-.hm-clock b{color:#fff;font-weight:600}
-.hm-clock .live{color:var(--teal);font-weight:600}
+/* The tagline, in the method section's promo since 2026-09-26: the first
+   clause quiet, the counter-claim in white and heavier, as it was in the bar
+   it used to have under the nav. */
+.hm-tagline{margin-top:14px;font-size:var(--fs-17);line-height:1.4;font-weight:400;color:var(--on-board-2)}
+.hm-tagline em{font-style:normal;font-weight:600;color:#fff}
 
 /* ── 1 · the front ────────────────────────────────────────────────────────
    Ken, 2026-09-26: an editorial front, not three floating cards on grey. The
@@ -371,8 +364,6 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
   .hm-front .hm-rail::before{display:none}
 }
 @media(max-width:560px){
-  .hm-tagbar-in{padding-left:14px;padding-right:14px}
-  .hm-h1{font-size:var(--fs-16)}
 }
 
 /* ── shared section furniture ─────────────────────────────────────────────
@@ -818,13 +809,14 @@ body.hm-dress .hm-reads{gap:16px}
 .hm-how{margin-top:24px}
 /* The promo in the method section: claim and lede on the left, the two
    buttons on the right, one dark card across the band. */
-.hm-how .hm-promo{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"k k" "claim cta" "lede cta";column-gap:32px;align-items:start;margin-bottom:24px}
+.hm-how .hm-promo{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"k k" "claim cta" "lede cta" "tag cta";column-gap:32px;align-items:start;margin-bottom:24px}
 .hm-how .hm-promo-k{grid-area:k}
 .hm-how .hm-promo .hm-claim{grid-area:claim;margin-top:0;max-width:52ch}
 .hm-how .hm-promo .hm-lede{grid-area:lede;max-width:80ch}
+.hm-how .hm-promo .hm-tagline{grid-area:tag;margin:14px 0 0}
 .hm-how .hm-promo .hm-cta{grid-area:cta;margin-top:0;align-self:center;min-width:15rem}
 @media(max-width:760px){
-  .hm-how .hm-promo{grid-template-columns:minmax(0,1fr);grid-template-areas:"k" "claim" "lede" "cta"}
+  .hm-how .hm-promo{grid-template-columns:minmax(0,1fr);grid-template-areas:"k" "claim" "lede" "tag" "cta"}
   .hm-how .hm-promo .hm-cta{margin-top:18px;min-width:0}
 }
 </style>
@@ -840,10 +832,14 @@ body.hm-dress .hm-reads{gap:16px}
        layer underneath the two lanes rather than a third lane of its own, and
        the draft rooms are an offseason pitch. Every one of those pages still
        serves at its own URL. -->
-  <nav class="mast-jump" aria-label="Sections of the site">
+  <!-- On a phone this is the menu's panel (2026-09-26): closed, it is not
+       drawn at all, rather than a row of links clipped mid-word at the
+       screen's edge. The week chip rides at its foot there. -->
+  <nav class="mast-jump" id="mastMenu" aria-label="Sections of the site">
     <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">Articles</a><a href="/faq#faq-start">How It Works</a><a href="/player">Search</a>
+    <p class="mast-week mast-week-m" id="hmClockM" hidden></p>
   </nav>
-  <nav class="mast-nav">
+  <div class="mast-nav">
     <!-- NO SIGN IN HERE, deliberately. The link used to sit in this slot and it
          pointed at /auctiondraft?signin=1, because the account system was built
          inside the draft app and that is the only door into it. In September
@@ -860,27 +856,24 @@ body.hm-dress .hm-reads{gap:16px}
     <!-- Not "Sync My League". The platform connectors were removed
          (docs/saved-league.md); /my-league is where a reader describes their
          league, and that is what this button promises. -->
-    <a class="cta-gold" id="navSync" href="/my-league#settings">Customize My League</a>
-  </nav>
+    <!-- The dateline, as a chip (2026-09-26). It had a bar of its own under
+         the nav, with the tagline; one bar of chrome is the whole header now.
+         Written hidden, shown only once /api/season names a real week. -->
+    <p class="mast-week" id="hmClock" hidden></p>
+    <a class="cta-gold" id="navSync" href="/my-league#settings"><span class="cta-long">Customize </span>My League</a>
+    <button class="mast-menu" type="button" aria-expanded="false" aria-controls="mastMenu" aria-label="Menu"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+  </div>
 </div></header>
 
-<!-- ── the tagline bar ─────────────────────────────────────────────────────────
-     Ken, 2026-09-25: "Anyone can publish a projection. Vegas has money on
-     theirs." is the site's TAGLINE, not a story. It was set as a 50px hero
-     headline, which made the top of the page read like an article about
-     projections. It rides a slim bar under the nav now, the way a network
-     carries its line under the logo, and the front below it is laid out like a
-     sports front (ESPN's): a promo rail on the left, the desk's lead with its
-     photograph in the middle, and the top headlines down the right.
-     It is still the page's one h1, word for word (tools/test-homepage.mjs):
-     the tagline is what the page is about, it just is not dressed as news.
-     The dateline moved up here with it, off the hero's copy column. -->
-<div class="hm-tagbar">
-  <div class="wrap hm-tagbar-in">
-    <h1 class="hm-h1"><span class="c1">Anyone can publish a projection.</span> <em>Vegas has money on theirs.</em></h1>
-    <p class="hm-clock" id="hmClock" hidden></p>
-  </div>
-</div>
+<!-- ── the page's h1 ────────────────────────────────────────────────────────────
+     2026-09-26: the tagline ("Anyone can publish a projection. Vegas has money
+     on theirs.") had a bar of its own under the nav, which made two bars of
+     chrome on a desk and about 270px of it on a phone. It moved to the method
+     section (#how), beside the explanation it sums up. The page still needs
+     one h1 for its outline; it names the site and says what it is, and is not
+     drawn, because the front below it is news and the header already carries
+     the name. -->
+<h1 class="sr-only">Iron Tuna: fantasy football and DFS, priced off the betting market</h1>
 
 <!-- ── Quick Links ─────────────────────────────────────────────────────────────
      Ken, 2026-09-26: a strip under the tagline bar, not a column of the front.
@@ -1099,6 +1092,7 @@ body.hm-dress .hm-reads{gap:16px}
       <p class="hm-promo-k">How Iron Tuna works</p>
       <p class="hm-claim">Iron Tuna converts sportsbook lines and player props into fantasy point projections.</p>
       <p class="hm-lede">Those projections become weekly rankings, trade values and DFS lineups, scored at your league’s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.</p>
+      <p class="hm-tagline">Anyone can publish a projection. <em>Vegas has money on theirs.</em></p>
       <div class="hm-cta">
         <a class="hm-btn primary" href="/fantasy">Get Fantasy Advice</a>
         <a class="hm-btn second" href="/dfs">Build a DFS Lineup</a>
@@ -1313,23 +1307,64 @@ body.hm-dress .hm-reads{gap:16px}
     };
   }
 
-  // ── the hero's dateline ──────────────────────────────────────────────────
+  // ── the week chip ────────────────────────────────────────────────────────
   // Shown only for a week the schedule actually names. Off-season, or with the
-  // schedule unreachable, the hero is the headline and the two buttons.
+  // schedule unreachable, there is no chip. It was a dateline bar of its own
+  // ("Regular season · Week 3 · kicks off Thu, 9/17, 4:15 PM ET"); since
+  // 2026-09-26 it is one short line in the header, and the same line again at
+  // the foot of the phone menu, which is where the header's chip goes there.
   (function clock() {
     if (!window.ITSeason) { document.addEventListener('DOMContentLoaded', clock); return; }
     ITSeason.load(function (s) {
-      var el = $('hmClock');
-      if (!el || !s || !s.week || !s.week.label) return;
-      var h = esc(s.phaseLabel || '') + ' &middot; <b>' + esc(s.week.label) + '</b>';
+      if (!s || !s.week || !s.week.label) return;
+      var h = esc(s.week.label);
       if (s.week.status === 'active') {
-        h += ' &middot; <span class="live">' + ((s.counts && s.counts.inProgress) ? esc(s.counts.inProgress) + ' live' : 'under way') + '</span>';
+        h += ' &middot; <span class="live">' + ((s.counts && s.counts.inProgress) ? esc(s.counts.inProgress) + ' live' : 'Live') + '</span>';
       } else if (s.week.status === 'upcoming' && s.week.firstKickoff) {
-        h += ' &middot; kicks off ' + esc(ITSeason.kickoff(s.week.firstKickoff));
+        var k = '';
+        try {
+          k = new Date(s.week.firstKickoff).toLocaleString('en-US',
+            { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit' }).replace(',', '');
+        } catch (e) {}
+        if (k) h += ' &middot; ' + esc(k) + ' ET';
       }
-      el.innerHTML = h;
-      el.hidden = false;
+      ['hmClock', 'hmClockM'].forEach(function (id) {
+        var el = $(id);
+        if (!el) return;
+        el.innerHTML = h;
+        el.hidden = false;
+      });
     });
+  })();
+
+  // ── the phone menu ───────────────────────────────────────────────────────
+  // Below 960px the section links are a panel under the bar, opened by the
+  // menu button, instead of a row that scrolled sideways and showed its last
+  // link cut off at the screen's edge. Escape or a tap outside closes it;
+  // focus goes into the panel on open and back to the button on close.
+  (function menu() {
+    var mast = document.querySelector('.mast'), btn = mast && mast.querySelector('.mast-menu'), panel = $('mastMenu');
+    if (!btn || !panel) return;
+    function set(open, refocus) {
+      mast.classList.toggle('menu-open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) { var first = panel.querySelector('a'); if (first) first.focus(); }
+      else if (refocus) btn.focus();
+    }
+    btn.addEventListener('click', function () { set(btn.getAttribute('aria-expanded') !== 'true', true); });
+    document.addEventListener('keydown', function (e) {
+      if ((e.key === 'Escape' || e.key === 'Esc') && btn.getAttribute('aria-expanded') === 'true') set(false, true);
+    });
+    document.addEventListener('click', function (e) {
+      if (btn.getAttribute('aria-expanded') === 'true' && !mast.contains(e.target)) set(false, false);
+    });
+    // Widened past the phone layout with the menu open: the links are back in
+    // the bar, so the open state is dropped rather than left stale.
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(min-width: 960px)');
+      var drop = function () { if (mq.matches) set(false, false); };
+      if (mq.addEventListener) mq.addEventListener('change', drop); else if (mq.addListener) mq.addListener(drop);
+    }
   })();
 
   // ── WHAT IS ON THE COVER, AND FOR HOW LONG ───────────────────────────────
