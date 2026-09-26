@@ -248,6 +248,23 @@ const read = page => page.evaluate(() => {
       return max;
     })(),
     captionPx: (() => { const e = document.getElementById('heroEdgeName'); return e && e.getClientRects().length ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
+    // The type system (2026-09-26): every piece of visible text on the page.
+    // Screen-reader-only text and aria-hidden ornaments are not type a reader
+    // sees, so they are left out.
+    type: (() => {
+      const weights = new Set(), sizes = new Set(), odd = [];
+      for (const e of document.querySelectorAll('body *')) {
+        if (/^(SCRIPT|STYLE|NOSCRIPT)$/.test(e.tagName) || !e.getClientRects().length) continue;
+        if (e.closest('[aria-hidden="true"],.sr-only')) continue;
+        if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+        const cs = getComputedStyle(e);
+        if (cs.visibility === 'hidden') continue;
+        weights.add(cs.fontWeight); sizes.add(cs.fontSize);
+        if (!/^(400|600|700)$/.test(cs.fontWeight) && odd.length < 5) odd.push(e.tagName + '.' + e.className + ':' + cs.fontWeight);
+      }
+      return { weights: [...weights], sizes: [...sizes].sort((a, b) => parseFloat(a) - parseFloat(b)), odd,
+               family: getComputedStyle(document.body).fontFamily };
+    })(),
     quickRows: (() => { const t = [...document.querySelectorAll('.hm-quick li')].map(li => Math.round(li.getBoundingClientRect().top)); return new Set(t).size; })(),
     clock: vis('hmClock') ? text(document.getElementById('hmClock')) : null,
     lanes: [...document.querySelectorAll('.hm-lane > h2')].map(e => e.textContent.trim()),
@@ -331,6 +348,10 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
      r.leadPx > 0 && r.leadPx >= 1.3 * r.frontMaxPx, `${r.leadPx}px vs ${r.frontMaxPx}px`);
   ok(`${tag}: and the photograph's caption is set as a caption`,
      r.captionPx > 0 && r.captionPx <= 15, `${r.captionPx}px`);
+  // One family, three weights, one scale (2026-09-26).
+  ok(`${tag}: the page is set in Inter`, /^\s*["']?Inter\b/.test(r.type.family), r.type.family);
+  ok(`${tag}: every line of text is at 400, 600 or 700`, r.type.odd.length === 0, r.type.odd.join(', '));
+  ok(`${tag}: and the page uses no more than 12 type sizes`, r.type.sizes.length <= 12, r.type.sizes.join(' '));
   ok(`${tag}: the page does not scroll sideways`, r.overflow === 0, String(r.overflow));
   // The one heading level that must not be skipped: h1 then h2s.
   ok(`${tag}: there is exactly one h1`, r.headings.filter(x => x.startsWith('H1:')).length === 1);
