@@ -199,12 +199,15 @@ async function open(width, height, at) {
   // no route to the CDNs would test the failure path on every pass. og.png
   // stands in for any photograph; `imagesDown` makes them all fail instead.
   await page.route(/espncdn\.com|static\.www\.nfl\.com|wikimedia\.org/, r =>
-    imagesDown ? r.abort() : r.fulfill({ status: 200, contentType: 'image/png', body: STUB_IMG }));
+    imagesDown || (actionDown && /wikimedia\.org/.test(r.request().url())) ? r.abort() : r.fulfill({ status: 200, contentType: 'image/png', body: STUB_IMG }));
   await page.goto(BASE, { waitUntil: 'networkidle' });
   return { page, ctx };
 }
 const STUB_IMG = fs.readFileSync(path.join(ROOT, 'og.png'));
 let imagesDown = false;
+// Only the game photographs (Wikimedia) fail, so the hero falls back to the
+// ESPN headshot: the case the 2026-09-26 headshot panel is for.
+let actionDown = false;
 // The eleven destinations the two product cards owe, in the order they are
 // written, as routes that exist. Hoisted because two passes need them: the live
 // one checks that each is present, and the refusing one checks that a quiet
@@ -649,6 +652,91 @@ for (const w of [780, 960, 1024]) {
   await ctx.close();
 }
 
+// ── 3g. the photography (2026-09-26) ───────────────────────────────────────
+// The hero's credit is under the photograph, not on it, word for word; the
+// frame is 16:9 on a desk and 4:3 on a phone; the image is not lazy and its
+// alt names the player, position and team.
+const photo = page => page.evaluate(() => {
+  const img = document.querySelector('#heroEdge .it-plate-shot img'), shot = document.querySelector('#heroEdge .it-plate-shot');
+  const cred = document.getElementById('heroEdgeCredit');
+  const box = e => { if (!e || !e.getClientRects().length) return null; const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom, w: b.width, h: b.height }; };
+  const ib = box(img), cb = box(cred), sb = box(shot);
+  const p = window.ITPlayerSearch && ITPlayerSearch.resolve('Puka Nacua'), a = p && window.ITActionShots && ITActionShots[p.k];
+  return {
+    fig: (document.querySelector('#heroEdge .it-plate') || {}).className || '',
+    overlap: !!(ib && cb && cb.l < ib.r && cb.r > ib.l && cb.t < ib.b && cb.b > ib.t),
+    onPhoto: !!document.querySelector('#heroEdge .it-plate .it-art-credit'),
+    credit: cred ? cred.textContent.replace(/\s+/g, ' ').trim() : '',
+    links: cred ? [...cred.querySelectorAll('a')].map(x => x.getAttribute('href')) : [],
+    want: a ? { by: a.a || 'Wikimedia Commons', lic: a.l || '', hrefs: [a.s || a.u].concat(a.l ? [a.lu || a.s || a.u] : []) } : null,
+    ratio: sb ? sb.w / sb.h : 0,
+    shotH: sb ? Math.round(sb.h) : 0,
+    lazy: img ? img.loading === 'lazy' : null,
+    alt: img ? img.alt : null,
+    panel: (() => { const e = document.querySelector('#heroEdge .he-panel'); return e && e.getClientRects().length ? e.textContent.trim() : null; })(),
+    captionName: (() => { const e = document.getElementById('heroEdgeName'); return !!e && e.getClientRects().length > 0; })()
+  };
+});
+console.log('\nthe photography');
+for (const [w, want, tag] of [[1280, 16 / 9, 'desktop'], [390, 4 / 3, 'phone']]) {
+  const { page, ctx } = await open(w, 900);
+  await page.waitForTimeout(300);
+  const r = await photo(page);
+  ok(`${tag}: the credit is not on the photograph`, !r.overlap && !r.onPhoto, JSON.stringify({ overlap: r.overlap, onPhoto: r.onPhoto }));
+  ok(`${tag}: and it is the license's credit, word for word, with its links`,
+     !!r.want && r.credit === 'Photo: ' + r.want.by + (r.want.lic ? ', ' + r.want.lic : '') + ', via Wikimedia Commons' + (r.want.by !== 'Wikimedia Commons' ? '; cropped to fit.' : '.')
+       && r.links.join(' ') === r.want.hrefs.join(' '), r.credit + ' | ' + r.links.join(' '));
+  ok(`${tag}: the frame is ${w > 500 ? '16:9' : '4:3'}`, Math.abs(r.ratio - want) / want < 0.01, r.ratio.toFixed(3));
+  ok(`${tag}: the hero image is not lazy, and its alt names him, his position and team`,
+     r.lazy === false && r.alt === 'Puka Nacua, WR, LAR', `${r.lazy} ${r.alt}`);
+  await ctx.close();
+}
+{
+  // No game photograph: the ESPN headshot loads, and is set as a cutout on a
+  // panel with his name, not a head stretched to 16:9.
+  actionDown = true;
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const r = await photo(page);
+  ok('a headshot-only hero is set as a panel with his name', /is-headshot/.test(r.fig) && r.panel === 'Puka NacuaWR · LAR', `${r.fig} | ${r.panel}`);
+  ok('at a fixed height, not stretched to 16:9', r.shotH === 280, r.shotH + 'px');
+  ok('with no credit, and the caption does not repeat the name', r.credit === '' && r.captionName === false, JSON.stringify({ credit: r.credit, cap: r.captionName }));
+  actionDown = false;
+  await ctx.close();
+}
+{
+  // The lead names nobody, so no photograph: the next two pieces stand under
+  // the lead and leave the rail, the rail shows the ones after, and the left
+  // column runs level with the rail instead of stopping a screen short.
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, components: undefined } : p);
+  const { page, ctx } = await open(1280, 900);
+  const r = await page.evaluate(() => {
+    const vis = e => e && e.getClientRects().length > 0;
+    const hrefs = [...document.querySelectorAll('#leadWell .hm-lead h3 a, #leadWell .hm-more h3 a, #leadWell .hm-rail li h3 a')].filter(vis).map(a => a.getAttribute('href'));
+    const left = [...document.querySelectorAll('#leadWell .hm-lead, #leadWell .hm-more')].filter(vis).reduce((m, e) => Math.max(m, e.getBoundingClientRect().bottom), 0);
+    const rail = document.querySelector('#leadWell .hm-rail');
+    return { hrefs, more: [...document.querySelectorAll('#leadWell .hm-more h3')].filter(vis).map(h => h.textContent.trim()),
+      left: Math.round(left), rail: rail ? Math.round(rail.getBoundingClientRect().bottom) : 0 };
+  });
+  ok('with no photograph, the next two stories stand under the lead',
+     r.more.join(' | ') === 'Who inherits the carries in Baltimore | Eleven moves after the injury report', r.more.join(' | '));
+  ok('no story is on the front twice', new Set(r.hrefs).size === r.hrefs.length && r.hrefs.length >= 4, r.hrefs.join(' '));
+  ok('and the left column ends level with the rail', Math.abs(r.rail - r.left) <= 48, `left ${r.left} rail ${r.rail}`);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // With a photograph the front is as it was: no secondary stories, and the
+  // rail carries the five after the lead.
+  const { page, ctx } = await open(1280, 900);
+  const r = await page.evaluate(() => ({
+    more: [...document.querySelectorAll('#leadWell .hm-more')].filter(e => e.getClientRects().length).length,
+    rail: [...document.querySelectorAll('#leadWell .hm-rail li')].filter(e => e.getClientRects().length).length }));
+  ok('with a photograph there are no secondary stories, and the rail keeps its four', r.more === 0 && r.rail === 4, JSON.stringify(r));
+  await ctx.close();
+}
+
 // ── 3e. the phone menu ─────────────────────────────────────────────────────
 // Below 960px the five sections are a panel behind a real button (2026-09-26),
 // not a row that scrolled sideways with its last link cut off at the edge.
@@ -768,6 +856,11 @@ console.log('\nthe hero, with every player picture failing');
   const r = await read(page);
   ok('the hero is hidden rather than showing initials in the frame', r.edge === false, JSON.stringify({ edge: r.edge, name: r.edgeName }));
   ok('and the lead story still leads', await page.evaluate(() => !!document.querySelector('#leadWell .hm-lead h3')));
+  // No initials box in the rail or on the desk's cards: a player with no
+  // photograph gets no thumbnail there (2026-09-26).
+  const boxes = await page.evaluate(() => [...document.querySelectorAll('.hm-rail .it-player-face, .hm-read-card .it-player-face')]
+    .filter(e => e.getClientRects().length && !e.querySelector('img')).map(e => e.textContent.trim()));
+  ok('and no initials box stands in for a thumbnail in the rail or the cards', boxes.length === 0, boxes.join(','));
   await ctx.close();
   imagesDown = false;
 }

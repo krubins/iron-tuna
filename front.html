@@ -112,8 +112,17 @@ a{color:inherit;text-decoration:none}
 .hm-table,.num,.hm-input-n{font-variant-numeric:tabular-nums}
 /* player-search.js draws the initials that stand in for a missing photograph
    at 800; on this page they take the scale's heaviest weight. */
-body .it-player-face i,body .it-plate-shot i{font-weight:700}
-body .it-player-face i{font-size:var(--fs-12)}
+body .it-plate-shot i{font-weight:700}
+body .it-player-face i{font-size:var(--fs-12);font-weight:600}
+/* Every small player image on this page is a 1:1 square, 4px corners, the
+   same crop (2026-09-26). */
+body .it-player-face{border-radius:4px;overflow:hidden}
+body .it-player-face img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;border-radius:inherit}
+/* In the rail and on the desk's cards a player with no photograph gets no
+   thumbnail, not an initials box, and the thumbnail sits at the right end of
+   the headline so the headlines' left edge is the same either way. */
+.hm-rail .it-player-face:not(:has(img)),.hm-read-card .it-player-face:not(:has(img)){display:none}
+.hm-rail .it-story-focus:not(:has(.it-player-face img)),.hm-read-card .it-story-focus:not(:has(.it-player-face img)){display:none}
 /* <small> is the UA's `smaller`, which lands between steps. */
 small{font-size:var(--fs-15)}
 /* <b> is the UA's `bolder`, 700; a bold word inside text takes the label weight. */
@@ -246,7 +255,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    painter writes into #leadWell are grid items of THIS grid and can be placed
    in the two columns while staying inside the lead section. */
 .hero-band{background:var(--bg);color:var(--ink)}
-.hm-front{--front-gutter:32px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);grid-template-areas:"edge rail" "lead rail";grid-template-rows:auto 1fr;column-gap:var(--front-gutter);align-items:start;padding-top:var(--front-gutter);padding-bottom:var(--front-gutter)}
+.hm-front{--front-gutter:32px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);grid-template-areas:"edge rail" "lead rail" "more rail";grid-template-rows:auto auto 1fr;column-gap:var(--front-gutter);align-items:start;padding-top:var(--front-gutter);padding-bottom:var(--front-gutter)}
 .hm-front #lead,.hm-front #leadWell{display:contents}
 .hm-front #lead[hidden]{display:none !important}
 /* The section keeps its heading for the outline; the rail's own header does
@@ -297,8 +306,35 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .he-plate .he-link,.he-plate .it-plate{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;width:100%}
 .hm-edge .it-plate-shot{flex:1 1 auto;height:auto;aspect-ratio:16/9;min-height:0;border-radius:0;background:#1a2a27;border:0}
 .hm-edge .it-plate-shot i{font-size:var(--fs-28);color:#6d827e}
-.hm-edge .it-art-credit{position:absolute;top:8px;right:10px;margin:0;font-size:var(--fs-12);line-height:1.3;color:rgba(255,255,255,.75);background:rgba(0,0,0,.45);padding:2px 7px;border-radius:3px}
-.hm-edge .it-art-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+/* 16:9 on a desk; 4:3 on a phone, where 16:9 is a strip 200px tall. */
+@media(max-width:599px){ .hm-edge .it-plate-shot{aspect-ratio:4/3} }
+/* The headshot fallback (2026-09-26): no game photograph, so player-search.js
+   loads the ESPN cutout, and heroDress() marks the figure `is-headshot`. The
+   cutout stands at the panel's bottom right at a fixed height, on the board's
+   own dark, with his name set large on the left, instead of one head
+   stretched across a 16:9 frame. The initials behind it are not shown. */
+.hm-edge .it-plate.is-headshot .it-plate-shot{aspect-ratio:auto;height:280px;background:var(--mast);position:relative;overflow:hidden}
+.hm-edge .it-plate.is-headshot .it-plate-shot img{width:auto;max-width:62%;height:100%;justify-self:end;align-self:end;object-fit:contain;object-position:right bottom}
+.hm-edge .it-plate.is-headshot .it-plate-shot i{display:none}
+.he-panel{display:none}
+.hm-edge .it-plate.is-headshot .he-panel{display:flex;flex-direction:column;gap:6px;position:absolute;left:24px;bottom:24px;max-width:40%;color:#fff}
+.he-panel b{font-size:var(--fs-28);font-weight:700;line-height:1.1;letter-spacing:-.01em}
+.he-panel span{font-size:var(--fs-15);font-weight:400;color:var(--on-board-2)}
+/* The caption strip says who it is already; under the panel it only keeps a
+   gap line if there is one, and goes when there is none. */
+.hm-edge:has(.is-headshot) .he-name,.hm-edge:has(.is-headshot) .he-sub{display:none}
+.hm-edge:has(.is-headshot) .he-meta:not(:has(.he-gap:not([hidden]):not(:empty))){display:none}
+@media(max-width:599px){
+  .hm-edge .it-plate.is-headshot .it-plate-shot{height:200px}
+  .hm-edge .it-plate.is-headshot .he-panel{left:16px;bottom:16px;max-width:48%}
+  .he-panel b{font-size:var(--fs-22)}
+}
+/* The photograph's credit, in the caption strip under it rather than on it:
+   right-aligned on the name's line, its own line on a phone. */
+.he-credit{margin-left:auto;padding-left:16px;font-size:var(--fs-12);font-weight:400;line-height:1.4;color:var(--on-board-2);text-align:right}
+.he-credit:empty{display:none}
+.he-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+@media(max-width:599px){ .he-credit{flex:1 1 100%;margin-left:0;padding-left:0;text-align:left} }
 .he-link{display:block}
 .he-link:hover .it-plate-shot{filter:brightness(1.05)}
 /* The caption (2026-09-26): a photo caption, not a second headline. It used
@@ -350,6 +386,15 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-front .hm-rail li h3{font-size:var(--fs-17);line-height:1.3;font-weight:600}
 .hm-front .hm-rail li .t{font-size:var(--fs-12)}
 .hm-front .hm-rail li .m{font-size:var(--fs-13);font-weight:400}
+/* The two secondary stories under a lead with no photograph (setNoPhoto). */
+.hm-more{grid-area:more;align-self:start;margin-top:24px}
+.hm-more-item{display:flex;flex-direction:column;gap:6px;padding:18px 0;border-top:1px solid var(--line)}
+.hm-more-item .t{font-size:var(--fs-13);font-weight:600;line-height:1.3;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)}
+.hm-more-item h3{font-size:var(--fs-22);font-weight:600;line-height:1.25;letter-spacing:-.01em;color:var(--ink)}
+.hm-more-item h3 a:hover{color:var(--brand)}
+.hm-more-item p{max-width:65ch;font-size:var(--fs-17);line-height:1.45;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-more-item .m{font-size:var(--fs-13);color:var(--ink-3)}
+.hm-rail li.last{padding-bottom:0;border-bottom:0}
 .hm-rail-all{display:block;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:var(--fs-16);font-weight:600;color:var(--brand)}
 .hm-rail-all:hover{text-decoration:underline}
 
@@ -358,7 +403,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    it, the way the network's phone front opens on its lead. The rule between
    the columns turns to a rule above the rail. */
 @media(max-width:900px){
-  .hm-front{--front-gutter:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"edge" "lead" "rail";grid-template-rows:auto}
+  .hm-front{--front-gutter:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"edge" "lead" "more" "rail";grid-template-rows:auto}
   .hm-front #heroEdge[hidden] ~ #lead .hm-lead{grid-row:auto}
   .hm-front .hm-rail{margin-top:var(--front-gutter);padding-top:var(--front-gutter);border-top:1px solid var(--line)}
   .hm-front .hm-rail::before{display:none}
@@ -405,7 +450,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-read.has-pic{display:grid;grid-template-columns:56px minmax(0,1fr);column-gap:13px;align-items:start}
 .hm-read.has-pic .pic{display:block;grid-column:1;grid-row:1/span 3}
 .hm-read.has-pic .k,.hm-read.has-pic .h,.hm-read.has-pic .d{grid-column:2}
-.hm-read .pic .it-plate-shot{height:auto;aspect-ratio:1/1;border-radius:2px;background:#ece7d9}
+.hm-read .pic .it-plate-shot{height:auto;aspect-ratio:1/1;border-radius:4px;background:#ece7d9}
 .hm-read .pic .it-plate-shot i{font-size:var(--fs-17)}
 /* A ruled index, not a stack of one-pixel grid gaps faking rules. */
 .hm-links{list-style:none;margin-top:20px;border-top:1px solid var(--line)}
@@ -451,7 +496,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    is a five-row board where the player IS the row, so his picture is worth
    the width. */
 .hm-table .who.it-player-cell{display:flex;align-items:center;gap:12px}
-.hm-table .who .it-player-face{width:46px;height:46px;min-width:46px;border-radius:3px;margin:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);color:#8ba09c}
+.hm-table .who .it-player-face{width:46px;height:46px;min-width:46px;border-radius:4px;margin:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);color:#8ba09c}
 /* Iron Tuna's own number is the one the reader is meant to act on, so it is the
    only column with weight, the only one in brass rule, and the only tinted
    column on the board. */
@@ -517,8 +562,9 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-rail li h3{display:flex;align-items:center;font-size:var(--fs-17);line-height:1.32;font-weight:600}
 .hm-rail li h3 a{color:var(--ink)}
 .hm-rail li h3 a:hover{color:var(--brand)}
-.hm-rail li h3 .it-story-focus{flex:0 0 auto;margin:0 10px 0 0}
-.hm-rail li h3 .it-player-face{width:32px;height:32px;min-width:32px;border-radius:3px}
+.hm-rail li h3{justify-content:space-between;gap:12px}
+.hm-rail li h3 .it-story-focus{flex:0 0 auto;order:2;margin:0}
+.hm-rail li h3 .it-player-face{width:32px;height:32px;min-width:32px;border-radius:4px}
 .hm-rail li .m{font-size:var(--fs-14);color:var(--ink-3)}
 @media(max-width:900px){.hm-well{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:620px){.hm-lead h3 .it-player-face{width:56px;height:56px;min-width:56px;border-radius:3px}
@@ -540,7 +586,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
    of type around them and the headline reads as though it starts mid-sentence.
    Same treatment the story cards elsewhere on the site use. */
 .hm-read-card h3 .it-story-focus{display:flex;margin:0 0 10px}
-.hm-read-card h3 .it-player-face{width:46px;height:46px;min-width:46px;border-radius:3px}
+.hm-read-card h3 .it-player-face{width:46px;height:46px;min-width:46px;border-radius:4px}
 /* THE BOAST, at this band's scale. The desk may open a headline with "YOU'RE
    WELCOME:" only when one of its own pre-kickoff calls cleared the headline
    bar (_voiceBlock, _worker.js), and the other three surfaces that print a
@@ -603,7 +649,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
   .hm-table th,.hm-table td{padding:11px 12px}
   /* The board is a sideways scroller on a phone and the player column is the
      one that has to stay narrow, so the face goes back to a marker. */
-  .hm-table .who .it-player-face{width:34px;height:34px;min-width:34px;border-radius:3px}
+  .hm-table .who .it-player-face{width:34px;height:34px;min-width:34px;border-radius:4px}
   .hm-table .who.it-player-cell{gap:9px}
   .hm-reads{gap:20px}
 }
@@ -776,7 +822,8 @@ body.hm-dress .hm-read-card h3{margin-top:6px;font-size:var(--fs-19);line-height
    46px is a block of grey between a kicker and the line it belongs to. The
    rail beside them already sets the same face inline in the headline; the
    cards do it too now, at the rail's size. */
-body.hm-dress .hm-read-card h3 .it-story-focus{display:inline-flex;align-items:center;margin:0 9px 0 0}
+body.hm-dress .hm-read-card h3{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+body.hm-dress .hm-read-card h3 .it-story-focus{display:inline-flex;align-items:center;order:2;margin:0}
 body.hm-dress .hm-read-card h3 .it-player-face{width:32px;height:32px;min-width:32px}
 body.hm-dress .hm-choose-in{min-height:38px}
 body.hm-dress .hm-choose-k{font-size:var(--fs-14);letter-spacing:.09em}
@@ -938,6 +985,7 @@ body.hm-dress .hm-reads{gap:16px}
        <span class="he-k" id="heroEdgeK"></span>
        <b class="he-name" id="heroEdgeName"></b>
        <span class="he-sub" id="heroEdgeSub"></span>
+       <span class="he-credit" id="heroEdgeCredit"></span>
        <span class="he-gap" id="heroEdgeGap"></span>
      </div>
    </aside>
@@ -1263,6 +1311,7 @@ body.hm-dress .hm-reads{gap:16px}
       // the next candidate rather than leaving his initials in it.
       var fig = PS.plate(p, { eager: true, onfail: heroFail(from, rest) });
       if (!fig) continue;
+      heroDress(fig, p);
       box.innerHTML = '';
       if (c.href) {
         var a = document.createElement('a');
@@ -1284,6 +1333,7 @@ body.hm-dress .hm-reads{gap:16px}
       $('heroEdgeGap').hidden = !!(leadH && c.gap && leadH.textContent.trim() === String(c.gap).trim());
       show($('heroEdge'), true);
       $('hmHero').classList.add('has-edge');
+      setNoPhoto(false);
       heroFrom = from;
       return;
     }
@@ -1295,6 +1345,63 @@ body.hm-dress .hm-reads{gap:16px}
     heroFrom = 'desk';
     show($('heroEdge'), false);
     $('hmHero').classList.remove('has-edge');
+    setNoPhoto(true);
+  }
+
+  // What the page does to the plate player-search.js builds for the hero
+  // (2026-09-26), from here rather than in the shared file:
+  //   - the alt names the player, his position and his team;
+  //   - the credit leaves the photograph for the caption strip under it, so
+  //     nothing sits on the picture (every word and link of it is kept: it is
+  //     the license's attribution);
+  //   - a headshot, which is what loads when there is no game photograph, is
+  //     marked `is-headshot` and set as a cutout on a dark panel with the
+  //     name beside it, instead of a head stretched across a 16:9 frame.
+  //     `action` on the figure, which player-search.js sets in its own onload
+  //     (it runs before this listener), is what says the photograph loaded.
+  function heroDress(fig, p) {
+    var img = fig.querySelector('img'), shot = fig.querySelector('.it-plate-shot'), slot = $('heroEdgeCredit');
+    if (slot) slot.innerHTML = '';
+    if (img) img.alt = [p.n, p.p, p.t].filter(Boolean).join(', ');
+    if (shot) {
+      var tag = document.createElement('span');
+      tag.className = 'he-panel';
+      tag.innerHTML = '<b>' + esc(p.n) + '</b><span>' + esc([p.p, p.t].filter(Boolean).join(' \u00b7 ')) + '</span>';
+      shot.appendChild(tag);
+    }
+    if (!img) return;
+    img.addEventListener('load', function () {
+      fig.classList.toggle('is-headshot', !fig.classList.contains('action'));
+      var cap = fig.querySelector('.it-art-credit');
+      if (cap && slot) {
+        slot.innerHTML = '';
+        while (cap.firstChild) slot.appendChild(cap.firstChild);
+        cap.remove();
+      }
+    });
+  }
+
+  // THE LEAD WITHOUT A PICTURE (2026-09-26). With no photograph over it the
+  // lead is a few lines at the top of the column, and the rail beside it ran
+  // a screen further down with white under the lead. Then the next two pieces
+  // stand under the lead as secondary stories and leave the rail, which shows
+  // the pieces after them instead, so nothing on the front appears twice.
+  // With a photograph the front is as it was. Toggled from the hero's own
+  // outcome (painted, cleared, or every image failed), never guessed early.
+  function setNoPhoto(on) {
+    var hero = $('hmHero');
+    if (!hero) return;
+    hero.classList.toggle('no-photo', on);
+    var more = document.querySelector('#leadWell .hm-more');
+    if (more) more.hidden = !on;
+    var items = document.querySelectorAll('#leadWell .hm-rail li'), last = null;
+    for (var i = 0; i < items.length; i++) {
+      var li = items[i], hide = on ? li.classList.contains('in-more') : li.classList.contains('extra');
+      li.hidden = hide;
+      li.classList.remove('last');
+      if (!hide) last = li;
+    }
+    if (last) last.classList.add('last');
   }
 
   function heroFail(from, rest) {
@@ -1304,6 +1411,7 @@ body.hm-dress .hm-reads{gap:16px}
       show($('heroEdge'), false);
       $('hmHero').classList.remove('has-edge');
       if (rest.length) heroPaint(from, rest);
+      else setNoPhoto(true);
     };
   }
 
@@ -1752,7 +1860,12 @@ body.hm-dress .hm-reads{gap:16px}
     // story. That is deliberately NOT the rotation the cards below run on --
     // the cards exist to keep the week's work visible for longer than an hour,
     // and a lead that rotated would be a front page that changes its mind.
-    var lead = live[0], railPieces = live.slice(1, 6);
+    // The rail carries up to seven: the five it shows beside a photograph, and
+    // two more that take the place of the pair that moves under the lead when
+    // there is no photograph (setNoPhoto). The pair moves only if the rail
+    // would still hold two after it.
+    var lead = live[0], railPieces = live.slice(1, 8);
+    var morePieces = live.length - 3 >= 2 ? live.slice(1, 3) : [];
     var by = function (p) {
       var n = p.byline && p.byline.name ? p.byline.name : '';
       var w = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + p.week : '');
@@ -1774,12 +1887,22 @@ body.hm-dress .hm-reads{gap:16px}
       + (lead.dek ? '<p>' + esc(lead.dek) + '</p>' : '')
       + '<span class="m">' + by(lead) + '</span>'
       + '<a class="go" href="' + esc(lead.url) + '">Read the story &rarr;</a></article>';
+    if (morePieces.length) {
+      leadHtml += '<div class="hm-more" hidden>' + morePieces.map(function (p) {
+        var cr = boast(p);
+        return '<article class="hm-more-item"><span class="t">' + esc(p.title || 'The desk') + '</span>'
+          + '<h3><a href="' + esc(p.url) + '">' + esc(cr || p.headline) + '</a></h3>'
+          + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '')
+          + '<span class="m">' + by(p) + '</span></article>';
+      }).join('') + '</div>';
+    }
     if (railPieces.length) {
       // "Top Headlines", as a sports front heads the rail down its right side.
       leadHtml += '<div class="hm-rail"><p class="hm-rail-h">Top Headlines</p><ul>'
-        + railPieces.map(function (p) {
+        + railPieces.map(function (p, i) {
             var pk = subjectOf(p, whoOf(p)), cr = boast(p);
-            return '<li' + (pk.length ? ' data-player-focus="' + esc(pk.join('|')) + '"' : '') + '>'
+            var cls = (i < morePieces.length ? 'in-more' : '') + (i >= 5 ? ' extra' : '');
+            return '<li' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + (pk.length ? ' data-player-focus="' + esc(pk.join('|')) + '"' : '') + '>'
               + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
               + '<h3><a href="' + esc(p.url) + '">' + esc(cr || p.headline) + '</a></h3>'
               + '<span class="m">' + by(p) + '</span></li>';
@@ -1789,6 +1912,7 @@ body.hm-dress .hm-reads{gap:16px}
     // is dropped rather than left holding 42% of the row open.
     $('leadWell').className = 'hm-well' + (railPieces.length ? '' : ' hm-well-solo');
     $('leadWell').innerHTML = leadHtml;
+    setNoPhoto($('hmHero').classList.contains('no-photo'));
     show($('lead'), true);
 
     // ── the cards, which are the rotation, minus whatever is leading ────────
