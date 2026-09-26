@@ -672,6 +672,7 @@ const photo = page => page.evaluate(() => {
     ratio: sb ? sb.w / sb.h : 0,
     shotH: sb ? Math.round(sb.h) : 0,
     lazy: img ? img.loading === 'lazy' : null,
+    priority: img ? img.getAttribute('fetchpriority') : null,
     alt: img ? img.alt : null,
     panel: (() => { const e = document.querySelector('#heroEdge .he-panel'); return e && e.getClientRects().length ? e.textContent.trim() : null; })(),
     captionName: (() => { const e = document.getElementById('heroEdgeName'); return !!e && e.getClientRects().length > 0; })()
@@ -689,6 +690,7 @@ for (const [w, want, tag] of [[1280, 16 / 9, 'desktop'], [390, 4 / 3, 'phone']])
   ok(`${tag}: the frame is ${w > 500 ? '16:9' : '4:3'}`, Math.abs(r.ratio - want) / want < 0.01, r.ratio.toFixed(3));
   ok(`${tag}: the hero image is not lazy, and its alt names him, his position and team`,
      r.lazy === false && r.alt === 'Puka Nacua, WR, LAR', `${r.lazy} ${r.alt}`);
+  ok(`${tag}: and it is fetched at high priority`, r.priority === 'high', String(r.priority));
   await ctx.close();
 }
 {

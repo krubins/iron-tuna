@@ -1309,7 +1309,10 @@ body.hm-dress .hm-reads{gap:16px}
       var rest = cands.slice(i + 1);
       // And one whose every image fails to load at runtime hands the frame to
       // the next candidate rather than leaving his initials in it.
-      var fig = PS.plate(p, { eager: true, onfail: heroFail(from, rest) });
+      // High priority for the lead's own photograph only: the board's gap can
+      // paint first while the newsroom is still answering, and is replaced as
+      // soon as it does, so it should not compete with the one that stays.
+      var fig = PS.plate(p, { eager: true, priority: from === 'desk' ? 'high' : null, onfail: heroFail(from, rest) });
       if (!fig) continue;
       heroDress(fig, p);
       box.innerHTML = '';
