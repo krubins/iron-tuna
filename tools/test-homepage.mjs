@@ -199,12 +199,15 @@ async function open(width, height, at) {
   // no route to the CDNs would test the failure path on every pass. og.png
   // stands in for any photograph; `imagesDown` makes them all fail instead.
   await page.route(/espncdn\.com|static\.www\.nfl\.com|wikimedia\.org/, r =>
-    imagesDown ? r.abort() : r.fulfill({ status: 200, contentType: 'image/png', body: STUB_IMG }));
+    imagesDown || (actionDown && /wikimedia\.org/.test(r.request().url())) ? r.abort() : r.fulfill({ status: 200, contentType: 'image/png', body: STUB_IMG }));
   await page.goto(BASE, { waitUntil: 'networkidle' });
   return { page, ctx };
 }
 const STUB_IMG = fs.readFileSync(path.join(ROOT, 'og.png'));
 let imagesDown = false;
+// Only the game photographs (Wikimedia) fail, so the hero falls back to the
+// ESPN headshot: the case the 2026-09-26 headshot panel is for.
+let actionDown = false;
 // The eleven destinations the two product cards owe, in the order they are
 // written, as routes that exist. Hoisted because two passes need them: the live
 // one checks that each is present, and the refusing one checks that a quiet
@@ -219,17 +222,66 @@ const read = page => page.evaluate(() => {
   const text = el => (el ? el.textContent.replace(/\s+/g, ' ').trim() : null);
   return {
     h1: text(document.querySelector('h1')),
-    // The thesis is the site's tagline (2026-09-25): it rides the bar under the
-    // nav, not the hero, and is set at a tagline's size rather than a story's.
-    tagline: !!document.querySelector('.hm-tagbar h1'),
-    h1Px: (() => { const e = document.querySelector('h1'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
+    // 2026-09-26: the tagline left the chrome for the method section, and the
+    // page's h1 names the site for the outline without being drawn.
+    tagline: text(document.querySelector('#how .hm-tagline')),
+    h1Hidden: (() => { const e = document.querySelector('h1'); if (!e) return false; const b = e.getBoundingClientRect(); return b.width <= 1 && b.height <= 1; })(),
     claim: text(document.querySelector('.hm-claim')),
     lede: text(document.querySelector('.hm-lede')),
     claimPx: (() => { const e = document.querySelector('.hm-claim'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
     ledePx: (() => { const e = document.querySelector('.hm-lede'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
     cta: [...document.querySelectorAll('.hm-cta a')].map(a => `${a.textContent.trim()}|${a.getAttribute('href')}`),
     promoIn: (() => { const e = document.querySelector('.hm-promo'); return e ? (e.closest('#how') ? 'how' : e.closest('#heroBand') ? 'hero' : 'other') : null; })(),
-    leftCol: [...document.querySelectorAll('.hm-front .hm-left > *')].map(e => e.className),
+    leftCol: document.querySelectorAll('.hm-front .hm-left').length,
+    // Quick Links: the strip directly under the tagline bar (2026-09-26).
+    quickUnderMast: (() => { const q = document.querySelector('.hm-quick'), m = document.querySelector('.mast'); return !!q && !!m && Math.abs(q.getBoundingClientRect().top - m.getBoundingClientRect().bottom) < 1; })(),
+    // All the dark chrome above the Quick Links strip: one bar since 2026-09-26.
+    chromePx: (() => { const q = document.querySelector('.hm-quick'); return q ? Math.round(q.getBoundingClientRect().top) : 0; })(),
+    // A section link is either wholly on screen or not drawn at all (inside the
+    // closed phone menu); never a word cut off at the screen's edge.
+    navClipped: [...document.querySelectorAll('.mast-jump a')].filter(a => {
+      if (!a.getClientRects().length) return false;
+      const b = a.getBoundingClientRect(), n = a.closest('.mast-jump').getBoundingClientRect(), cs = getComputedStyle(a);
+      const lines = Math.round((b.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) / parseFloat(cs.lineHeight));
+      return b.left < 0 || b.right > innerWidth || b.left < n.left - 0.5 || b.right > n.right + 0.5 || lines > 1;
+    }).map(a => a.textContent.trim()),
+    navOverlap: (() => { const c = document.querySelector('#navSync'); if (!c || !c.getClientRects().length) return []; const cb = c.getBoundingClientRect();
+      return [...document.querySelectorAll('.mast-jump a')].filter(a => a.getClientRects().length).filter(a => { const b = a.getBoundingClientRect(); return b.right > cb.left && b.left < cb.right && b.bottom > cb.top && b.top < cb.bottom; }).map(a => a.textContent.trim()); })(),
+    navCta: (() => { const c = document.querySelector('#navSync'); return c && c.getClientRects().length ? { href: c.getAttribute('href'), text: c.innerText.trim() } : null; })(),
+    quickLinks: [...document.querySelectorAll('.hm-quick a')].map(a => a.getAttribute('href')),
+    // The lead headline is the biggest type in the front (2026-09-26): the
+    // photograph's caption used to outrank it. Every rendered text node in the
+    // front but the headline's own, against the headline. The photograph's
+    // frame is skipped: its initials are the picture's stand-in, not type.
+    leadPx: (() => { const e = document.querySelector('#leadWell .hm-lead h3'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
+    frontMaxPx: (() => {
+      const h = document.querySelector('#leadWell .hm-lead h3'); let max = 0;
+      for (const e of document.querySelectorAll('#hmHero *')) {
+        if (h && (e === h || h.contains(e)) || e.closest('.it-plate-shot') || !e.getClientRects().length) continue;
+        if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+        max = Math.max(max, parseFloat(getComputedStyle(e).fontSize));
+      }
+      return max;
+    })(),
+    captionPx: (() => { const e = document.getElementById('heroEdgeName'); return e && e.getClientRects().length ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
+    // The type system (2026-09-26): every piece of visible text on the page.
+    // Screen-reader-only text and aria-hidden ornaments are not type a reader
+    // sees, so they are left out.
+    type: (() => {
+      const weights = new Set(), sizes = new Set(), odd = [];
+      for (const e of document.querySelectorAll('body *')) {
+        if (/^(SCRIPT|STYLE|NOSCRIPT)$/.test(e.tagName) || !e.getClientRects().length) continue;
+        if (e.closest('[aria-hidden="true"],.sr-only')) continue;
+        if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+        const cs = getComputedStyle(e);
+        if (cs.visibility === 'hidden') continue;
+        weights.add(cs.fontWeight); sizes.add(cs.fontSize);
+        if (!/^(400|600|700)$/.test(cs.fontWeight) && odd.length < 5) odd.push(e.tagName + '.' + e.className + ':' + cs.fontWeight);
+      }
+      return { weights: [...weights], sizes: [...sizes].sort((a, b) => parseFloat(a) - parseFloat(b)), odd,
+               family: getComputedStyle(document.body).fontFamily };
+    })(),
+    quickRows: (() => { const t = [...document.querySelectorAll('.hm-quick li')].map(li => Math.round(li.getBoundingClientRect().top)); return new Set(t).size; })(),
     clock: vis('hmClock') ? text(document.getElementById('hmClock')) : null,
     lanes: [...document.querySelectorAll('.hm-lane > h2')].map(e => e.textContent.trim()),
     laneLinks: [...document.querySelectorAll('.hm-links a')].map(a => a.getAttribute('href')),
@@ -281,9 +333,19 @@ console.log('\nthe hero says the one thing, at every width');
 for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
-  ok(`${tag}: the headline is the thesis`,
-     r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.', r.h1);
-  ok(`${tag}: and it is a tagline, not a headline`, r.tagline && r.h1Px <= 18, `${r.tagline} ${r.h1Px}px`);
+  // Option B (2026-09-26): the page's one h1 names the site for the outline
+  // and is not drawn; the tagline is a line in the method section, word for word.
+  ok(`${tag}: the h1 names the site`, r.h1 === 'Iron Tuna: fantasy football and DFS, priced off the betting market', r.h1);
+  ok(`${tag}: and is not drawn`, r.h1Hidden === true);
+  ok(`${tag}: the tagline sits in the method section, word for word`,
+     r.tagline === 'Anyone can publish a projection. Vegas has money on theirs.', r.tagline);
+  // ONE bar of chrome above the Quick Links strip, not two (the tagline and
+  // dateline had a bar of their own), and on a phone one 56px row.
+  ok(`${tag}: the dark chrome is one bar`, r.chromePx > 0 && r.chromePx <= (w > 500 ? 72 : 60), r.chromePx + 'px');
+  ok(`${tag}: no section link is cut off or wrapped`, r.navClipped.length === 0, r.navClipped.join(','));
+  ok(`${tag}: and none sits under the button`, r.navOverlap.length === 0, r.navOverlap.join(','));
+  ok(`${tag}: the league button is on screen and goes to the league settings`,
+     !!r.navCta && r.navCta.href === '/my-league#settings' && /My League/.test(r.navCta.text), JSON.stringify(r.navCta));
   // The conversion, in its own line above the lede and set larger than it. This
   // is the sentence the page cannot afford a reader to skim past, so it is
   // asserted separately from the copy around it.
@@ -296,12 +358,26 @@ for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   ok(`${tag}: two buttons, one per lane`,
      r.cta.join(' / ') === 'Get Fantasy Advice|/fantasy / Build a DFS Lineup|/dfs', r.cta.join(' / '));
   // Ken, 2026-09-25: the promo explains the site, and a returning reader does
-  // not need that at the top of every visit. It lives in the method section;
-  // the front's left column is Quick Links alone, like a sports front's ribbon.
+  // not need that at the top of every visit. It lives in the method section.
+  // 2026-09-26: the front is two columns (lead, headlines) and Quick Links is
+  // one row under the tagline bar, scrolling sideways on a phone, not wrapping.
   ok(`${tag}: the site explainer sits in the method section, not the front`, r.promoIn === 'how', String(r.promoIn));
-  ok(`${tag}: and the front's left column is Quick Links`,
-     r.leftCol.length === 1 && /hm-quick/.test(r.leftCol[0]), r.leftCol.join(','));
+  ok(`${tag}: the front has no left column`, r.leftCol === 0, String(r.leftCol));
+  ok(`${tag}: Quick Links is the strip directly under the header`, r.quickUnderMast);
+  ok(`${tag}: with its seven links, on one row`,
+     r.quickLinks.join(' ') === '/weekly-rankings /fantasy#startsit /faab /trade-finder /dfs#lineup /vegas-edge /value-coach' && r.quickRows === 1,
+     r.quickLinks.join(' ') + ' rows=' + r.quickRows);
   ok(`${tag}: the hero is the first section on the page`, r.order[0] === 'heroBand', r.order.slice(0, 2).join(','));
+  // Clearly the biggest, not by a hair: before this the caption's 24px bold
+  // name sat a few px under a 28px headline and out-shouted it.
+  ok(`${tag}: the lead headline is clearly the biggest type in the front`,
+     r.leadPx > 0 && r.leadPx >= 1.3 * r.frontMaxPx, `${r.leadPx}px vs ${r.frontMaxPx}px`);
+  ok(`${tag}: and the photograph's caption is set as a caption`,
+     r.captionPx > 0 && r.captionPx <= 15, `${r.captionPx}px`);
+  // One family, three weights, one scale (2026-09-26).
+  ok(`${tag}: the page is set in Inter`, /^\s*["']?Inter\b/.test(r.type.family), r.type.family);
+  ok(`${tag}: every line of text is at 400, 600 or 700`, r.type.odd.length === 0, r.type.odd.join(', '));
+  ok(`${tag}: and the page uses no more than 12 type sizes`, r.type.sizes.length <= 12, r.type.sizes.join(' '));
   ok(`${tag}: the page does not scroll sideways`, r.overflow === 0, String(r.overflow));
   // The one heading level that must not be skipped: h1 then h2s.
   ok(`${tag}: there is exactly one h1`, r.headings.filter(x => x.startsWith('H1:')).length === 1);
@@ -338,7 +414,8 @@ console.log('\nwith the boards answering');
   const { page, ctx } = await open(1280, 900);
   const r = await read(page);
 
-  ok('the dateline names the week off the schedule', /Week 3/.test(r.clock || ''), r.clock);
+  ok('the week chip names the week off the schedule', /^Week 3\b/.test(r.clock || ''), r.clock);
+  ok('and is one short line, not the old dateline sentence', (r.clock || '').length <= 32 && !/Regular season/.test(r.clock || ''), r.clock);
 
   // Each card shows ONE real current output.
   ok('the Fantasy card recommends a real player', /Drake London/.test(r.fnRead || ''), r.fnRead);
@@ -420,20 +497,51 @@ console.log('\nwith the boards answering');
 }
 
 // ── 3b. the hero's picture with no desk subject ────────────────────────────
-// The desk does not always break a piece into named findings. Then the picture
-// falls back to the board — and never to the player the Fantasy card already
-// recommends, because the same man photographed twice above the fold is the
-// page saying it once and looking like it said it twice.
-console.log('\nwith the desk naming nobody');
+// 2026-09-26: the photograph, its caption and the lead story read as one unit,
+// so the picture is the LEAD's own subject or nothing. It used to fall back to
+// an older story's player, or to a gap off the board, and put him over a lead
+// about somebody else (Davante Adams over a kickers-and-defenses lead).
+console.log('\nwith the lead naming nobody');
 {
   const full = CONTENT.pieces;
   CONTENT.pieces = full.map(p => ({ ...p, components: undefined }));
   const { page, ctx } = await open(1280, 900);
   const r = await read(page);
+  ok('no picture over a lead that names nobody', r.edge === false, String(r.edge));
+  ok('and the lead still leads, taking the column',
+     await page.evaluate(() => !!document.querySelector('#leadWell .hm-lead h3')));
+  ok('a piece with no findings still gets a card, just no faces on it',
+     r.cards.length === 3 && r.cardFaces === 0 && r.leadFaces === 0,
+     r.cards.length + '/' + r.cardFaces + '/' + r.leadFaces);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // The exact case from the live front: the lead names nobody, a story behind
+  // it names a player with a face on file. His picture must not go up.
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, components: undefined } : p);
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  ok('and no older story\u2019s player stands in for it',
+     r.edge === false && r.edgeName !== 'Derrick Henry', `${r.edge} ${r.edgeName}`);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+
+// ── 3c. the hero's picture with no lead at all ────────────────────────────
+// With the newsroom down there is no lead for a picture to contradict, and the
+// board's gap still gives the front a player — never the one the Fantasy card
+// already recommends, because the same man photographed twice above the fold
+// is the page saying it once and looking like it said it twice.
+console.log('\nwith no lead story');
+{
+  const full = CONTENT.pieces, okFlag = CONTENT.ok;
+  CONTENT.ok = false; CONTENT.pieces = [];
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
   ok('the hero still carries a picture', r.edge === true && r.edgePlate === true);
   // One of the widest gaps, taking its turn — the first of them at turn 0.
-  // It used to be the single widest and nothing else, which is how one player
-  // held the cover for a day and a half while the cards under him rotated.
   ok('it is a gap off the top of the board', r.edgeName === 'Cam Ward', r.edgeName);
   ok('and it says so', /market gap/i.test(r.edgeK || ''), r.edgeK);
   ok('but it no longer claims to be the widest, because it takes turns',
@@ -442,9 +550,23 @@ console.log('\nwith the desk naming nobody');
      /19\.9/.test(r.edgeGap || '') && /15\.2/.test(r.edgeGap || '') && /\+4\.7/.test(r.edgeGap || ''), r.edgeGap);
   ok('never the player the Fantasy card already recommends',
      r.edgeName !== 'Drake London' && /Drake London/.test(r.fnRead || ''), r.edgeName);
-  ok('a piece with no findings still gets a card, just no faces on it',
-     r.cards.length === 3 && r.cardFaces === 0 && r.leadFaces === 0,
-     r.cards.length + '/' + r.cardFaces + '/' + r.leadFaces);
+  CONTENT.ok = okFlag; CONTENT.pieces = full;
+  await ctx.close();
+}
+
+// ── 3d. the boast on the lead ─────────────────────────────────────────────
+// "You're welcome." is a label over the headline, not a banner that outranks
+// it: the headline stays the biggest type on the front on the desk's best days.
+console.log('\nwith the lead boasting');
+{
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, headline: 'You\u2019re welcome: ' + p.headline } : p);
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  const boast = await page.evaluate(() => { const e = document.querySelector('#leadWell .hm-lead .boast'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; });
+  ok('the boast is shown', boast > 0);
+  ok('and the headline is still clearly the biggest type in the front',
+     r.leadPx >= 1.3 * r.frontMaxPx && r.leadPx >= 1.3 * boast, `${r.leadPx}px vs ${r.frontMaxPx}px, boast ${boast}px`);
   CONTENT.pieces = full;
   await ctx.close();
 }
@@ -517,13 +639,148 @@ console.log('\nthe card readings take turns too');
      again.fnRead === now.fnRead && again.dfRead === now.dfRead && again.edgeName === now.edgeName);
 }
 
+// ── 3f. the widths in between ──────────────────────────────────────────────
+// The full bar needs about 900px. At 780px, before the menu breakpoint moved to
+// 960px, "How It Works" wrapped and the button sat on top of "Search".
+console.log('\nthe header between phone and desk');
+for (const w of [780, 960, 1024]) {
+  const { page, ctx } = await open(w, 800);
+  const r = await read(page);
+  ok(`${w}px: no section link is cut off, wrapped or under the button`,
+     r.navClipped.length === 0 && r.navOverlap.length === 0, r.navClipped.concat(r.navOverlap).join(','));
+  ok(`${w}px: the chrome is one bar`, r.chromePx > 0 && r.chromePx <= 72, r.chromePx + 'px');
+  await ctx.close();
+}
+
+// ── 3g. the photography (2026-09-26) ───────────────────────────────────────
+// The hero's credit is under the photograph, not on it, word for word; the
+// frame is 16:9 on a desk and 4:3 on a phone; the image is not lazy and its
+// alt names the player, position and team.
+const photo = page => page.evaluate(() => {
+  const img = document.querySelector('#heroEdge .it-plate-shot img'), shot = document.querySelector('#heroEdge .it-plate-shot');
+  const cred = document.getElementById('heroEdgeCredit');
+  const box = e => { if (!e || !e.getClientRects().length) return null; const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom, w: b.width, h: b.height }; };
+  const ib = box(img), cb = box(cred), sb = box(shot);
+  const p = window.ITPlayerSearch && ITPlayerSearch.resolve('Puka Nacua'), a = p && window.ITActionShots && ITActionShots[p.k];
+  return {
+    fig: (document.querySelector('#heroEdge .it-plate') || {}).className || '',
+    overlap: !!(ib && cb && cb.l < ib.r && cb.r > ib.l && cb.t < ib.b && cb.b > ib.t),
+    onPhoto: !!document.querySelector('#heroEdge .it-plate .it-art-credit'),
+    credit: cred ? cred.textContent.replace(/\s+/g, ' ').trim() : '',
+    links: cred ? [...cred.querySelectorAll('a')].map(x => x.getAttribute('href')) : [],
+    want: a ? { by: a.a || 'Wikimedia Commons', lic: a.l || '', hrefs: [a.s || a.u].concat(a.l ? [a.lu || a.s || a.u] : []) } : null,
+    ratio: sb ? sb.w / sb.h : 0,
+    shotH: sb ? Math.round(sb.h) : 0,
+    lazy: img ? img.loading === 'lazy' : null,
+    priority: img ? img.getAttribute('fetchpriority') : null,
+    alt: img ? img.alt : null,
+    panel: (() => { const e = document.querySelector('#heroEdge .he-panel'); return e && e.getClientRects().length ? e.textContent.trim() : null; })(),
+    captionName: (() => { const e = document.getElementById('heroEdgeName'); return !!e && e.getClientRects().length > 0; })()
+  };
+});
+console.log('\nthe photography');
+for (const [w, want, tag] of [[1280, 16 / 9, 'desktop'], [390, 4 / 3, 'phone']]) {
+  const { page, ctx } = await open(w, 900);
+  await page.waitForTimeout(300);
+  const r = await photo(page);
+  ok(`${tag}: the credit is not on the photograph`, !r.overlap && !r.onPhoto, JSON.stringify({ overlap: r.overlap, onPhoto: r.onPhoto }));
+  ok(`${tag}: and it is the license's credit, word for word, with its links`,
+     !!r.want && r.credit === 'Photo: ' + r.want.by + (r.want.lic ? ', ' + r.want.lic : '') + ', via Wikimedia Commons' + (r.want.by !== 'Wikimedia Commons' ? '; cropped to fit.' : '.')
+       && r.links.join(' ') === r.want.hrefs.join(' '), r.credit + ' | ' + r.links.join(' '));
+  ok(`${tag}: the frame is ${w > 500 ? '16:9' : '4:3'}`, Math.abs(r.ratio - want) / want < 0.01, r.ratio.toFixed(3));
+  ok(`${tag}: the hero image is not lazy, and its alt names him, his position and team`,
+     r.lazy === false && r.alt === 'Puka Nacua, WR, LAR', `${r.lazy} ${r.alt}`);
+  ok(`${tag}: and it is fetched at high priority`, r.priority === 'high', String(r.priority));
+  await ctx.close();
+}
+{
+  // No game photograph: the ESPN headshot loads, and is set as a cutout on a
+  // panel with his name, not a head stretched to 16:9.
+  actionDown = true;
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const r = await photo(page);
+  ok('a headshot-only hero is set as a panel with his name', /is-headshot/.test(r.fig) && r.panel === 'Puka NacuaWR · LAR', `${r.fig} | ${r.panel}`);
+  ok('at a fixed height, not stretched to 16:9', r.shotH === 280, r.shotH + 'px');
+  ok('with no credit, and the caption does not repeat the name', r.credit === '' && r.captionName === false, JSON.stringify({ credit: r.credit, cap: r.captionName }));
+  actionDown = false;
+  await ctx.close();
+}
+{
+  // The lead names nobody, so no photograph: the next two pieces stand under
+  // the lead and leave the rail, the rail shows the ones after, and the left
+  // column runs level with the rail instead of stopping a screen short.
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, components: undefined } : p);
+  const { page, ctx } = await open(1280, 900);
+  const r = await page.evaluate(() => {
+    const vis = e => e && e.getClientRects().length > 0;
+    const hrefs = [...document.querySelectorAll('#leadWell .hm-lead h3 a, #leadWell .hm-more h3 a, #leadWell .hm-rail li h3 a')].filter(vis).map(a => a.getAttribute('href'));
+    const left = [...document.querySelectorAll('#leadWell .hm-lead, #leadWell .hm-more')].filter(vis).reduce((m, e) => Math.max(m, e.getBoundingClientRect().bottom), 0);
+    const rail = document.querySelector('#leadWell .hm-rail');
+    return { hrefs, more: [...document.querySelectorAll('#leadWell .hm-more h3')].filter(vis).map(h => h.textContent.trim()),
+      left: Math.round(left), rail: rail ? Math.round(rail.getBoundingClientRect().bottom) : 0 };
+  });
+  ok('with no photograph, the next two stories stand under the lead',
+     r.more.join(' | ') === 'Who inherits the carries in Baltimore | Eleven moves after the injury report', r.more.join(' | '));
+  ok('no story is on the front twice', new Set(r.hrefs).size === r.hrefs.length && r.hrefs.length >= 4, r.hrefs.join(' '));
+  ok('and the left column ends level with the rail', Math.abs(r.rail - r.left) <= 48, `left ${r.left} rail ${r.rail}`);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // With a photograph the front is as it was: no secondary stories, and the
+  // rail carries the five after the lead.
+  const { page, ctx } = await open(1280, 900);
+  const r = await page.evaluate(() => ({
+    more: [...document.querySelectorAll('#leadWell .hm-more')].filter(e => e.getClientRects().length).length,
+    rail: [...document.querySelectorAll('#leadWell .hm-rail li')].filter(e => e.getClientRects().length).length }));
+  ok('with a photograph there are no secondary stories, and the rail keeps its four', r.more === 0 && r.rail === 4, JSON.stringify(r));
+  await ctx.close();
+}
+
+// ── 3e. the phone menu ─────────────────────────────────────────────────────
+// Below 960px the five sections are a panel behind a real button (2026-09-26),
+// not a row that scrolled sideways with its last link cut off at the edge.
+console.log('\nthe phone menu');
+{
+  const { page, ctx } = await open(390, 844);
+  const m = () => page.evaluate(() => {
+    const b = document.querySelector('.mast-menu');
+    const links = [...document.querySelectorAll('.mast-jump a')];
+    return { expanded: b && b.getAttribute('aria-expanded'), controls: b && b.getAttribute('aria-controls'),
+      shown: links.filter(a => { if (!a.getClientRects().length) return false; const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.height >= 44; }).map(a => a.textContent.trim()),
+      focusInPanel: !!document.activeElement && !!document.activeElement.closest('#mastMenu'),
+      focusOnButton: document.activeElement === b,
+      week: (() => { const e = document.getElementById('hmClockM'); return e && e.getClientRects().length ? e.textContent.trim() : null; })() };
+  });
+  let r = await m();
+  ok('closed, it draws none of the links', r.expanded === 'false' && r.shown.length === 0 && r.controls === 'mastMenu', JSON.stringify(r));
+  await page.click('.mast-menu');
+  r = await m();
+  ok('open, it says so and shows all five as full rows',
+     r.expanded === 'true' && r.shown.join('|') === 'Fantasy|DFS|Articles|How It Works|Search', JSON.stringify(r));
+  ok('focus moves into the panel', r.focusInPanel);
+  ok('and the week chip rides at its foot', /^Week 3\b/.test(r.week || ''), r.week);
+  await page.keyboard.press('Escape');
+  r = await m();
+  ok('Escape closes it and hands focus back to the button', r.expanded === 'false' && r.shown.length === 0 && r.focusOnButton, JSON.stringify(r));
+  await page.click('.mast-menu');
+  // A click that lands outside the header, on no link (a real tap at a fixed
+  // point can land on a story and navigate away).
+  await page.evaluate(() => document.querySelector('.hm-front').dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  r = await m();
+  ok('and a tap outside closes it too', r.expanded === 'false' && r.shown.length === 0, JSON.stringify(r));
+  await ctx.close();
+}
+
 // ── 4. the refusing pass: the whole point of the rewrite ────────────────────
 console.log('\nwith every feed refusing');
 MODE = 'dead';
 for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
-  ok(`${tag}: the hero still says the thing`, r.h1 === 'Anyone can publish a projection. Vegas has money on theirs.');
+  ok(`${tag}: the page still has its h1`, r.h1 === 'Iron Tuna: fantasy football and DFS, priced off the betting market');
   ok(`${tag}: both buttons still work`, r.cta.length === 2);
   ok(`${tag}: the dateline is absent rather than loading`, r.clock === null);
   // LANE_LINKS is the count the live pass pins by name (six on the Fantasy
@@ -601,6 +858,11 @@ console.log('\nthe hero, with every player picture failing');
   const r = await read(page);
   ok('the hero is hidden rather than showing initials in the frame', r.edge === false, JSON.stringify({ edge: r.edge, name: r.edgeName }));
   ok('and the lead story still leads', await page.evaluate(() => !!document.querySelector('#leadWell .hm-lead h3')));
+  // No initials box in the rail or on the desk's cards: a player with no
+  // photograph gets no thumbnail there (2026-09-26).
+  const boxes = await page.evaluate(() => [...document.querySelectorAll('.hm-rail .it-player-face, .hm-read-card .it-player-face')]
+    .filter(e => e.getClientRects().length && !e.querySelector('img')).map(e => e.textContent.trim()));
+  ok('and no initials box stands in for a thumbnail in the rail or the cards', boxes.length === 0, boxes.join(','));
   await ctx.close();
   imagesDown = false;
 }
