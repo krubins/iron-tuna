@@ -449,20 +449,51 @@ console.log('\nwith the boards answering');
 }
 
 // ── 3b. the hero's picture with no desk subject ────────────────────────────
-// The desk does not always break a piece into named findings. Then the picture
-// falls back to the board — and never to the player the Fantasy card already
-// recommends, because the same man photographed twice above the fold is the
-// page saying it once and looking like it said it twice.
-console.log('\nwith the desk naming nobody');
+// 2026-09-26: the photograph, its caption and the lead story read as one unit,
+// so the picture is the LEAD's own subject or nothing. It used to fall back to
+// an older story's player, or to a gap off the board, and put him over a lead
+// about somebody else (Davante Adams over a kickers-and-defenses lead).
+console.log('\nwith the lead naming nobody');
 {
   const full = CONTENT.pieces;
   CONTENT.pieces = full.map(p => ({ ...p, components: undefined }));
   const { page, ctx } = await open(1280, 900);
   const r = await read(page);
+  ok('no picture over a lead that names nobody', r.edge === false, String(r.edge));
+  ok('and the lead still leads, taking the column',
+     await page.evaluate(() => !!document.querySelector('#leadWell .hm-lead h3')));
+  ok('a piece with no findings still gets a card, just no faces on it',
+     r.cards.length === 3 && r.cardFaces === 0 && r.leadFaces === 0,
+     r.cards.length + '/' + r.cardFaces + '/' + r.leadFaces);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // The exact case from the live front: the lead names nobody, a story behind
+  // it names a player with a face on file. His picture must not go up.
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, components: undefined } : p);
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  ok('and no older story\u2019s player stands in for it',
+     r.edge === false && r.edgeName !== 'Derrick Henry', `${r.edge} ${r.edgeName}`);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+
+// ── 3c. the hero's picture with no lead at all ────────────────────────────
+// With the newsroom down there is no lead for a picture to contradict, and the
+// board's gap still gives the front a player — never the one the Fantasy card
+// already recommends, because the same man photographed twice above the fold
+// is the page saying it once and looking like it said it twice.
+console.log('\nwith no lead story');
+{
+  const full = CONTENT.pieces, okFlag = CONTENT.ok;
+  CONTENT.ok = false; CONTENT.pieces = [];
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
   ok('the hero still carries a picture', r.edge === true && r.edgePlate === true);
   // One of the widest gaps, taking its turn — the first of them at turn 0.
-  // It used to be the single widest and nothing else, which is how one player
-  // held the cover for a day and a half while the cards under him rotated.
   ok('it is a gap off the top of the board', r.edgeName === 'Cam Ward', r.edgeName);
   ok('and it says so', /market gap/i.test(r.edgeK || ''), r.edgeK);
   ok('but it no longer claims to be the widest, because it takes turns',
@@ -471,9 +502,23 @@ console.log('\nwith the desk naming nobody');
      /19\.9/.test(r.edgeGap || '') && /15\.2/.test(r.edgeGap || '') && /\+4\.7/.test(r.edgeGap || ''), r.edgeGap);
   ok('never the player the Fantasy card already recommends',
      r.edgeName !== 'Drake London' && /Drake London/.test(r.fnRead || ''), r.edgeName);
-  ok('a piece with no findings still gets a card, just no faces on it',
-     r.cards.length === 3 && r.cardFaces === 0 && r.leadFaces === 0,
-     r.cards.length + '/' + r.cardFaces + '/' + r.leadFaces);
+  CONTENT.ok = okFlag; CONTENT.pieces = full;
+  await ctx.close();
+}
+
+// ── 3d. the boast on the lead ─────────────────────────────────────────────
+// "You're welcome." is a label over the headline, not a banner that outranks
+// it: the headline stays the biggest type on the front on the desk's best days.
+console.log('\nwith the lead boasting');
+{
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, headline: 'You\u2019re welcome: ' + p.headline } : p);
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  const boast = await page.evaluate(() => { const e = document.querySelector('#leadWell .hm-lead .boast'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; });
+  ok('the boast is shown', boast > 0);
+  ok('and the headline is still clearly the biggest type in the front',
+     r.leadPx >= 1.3 * r.frontMaxPx && r.leadPx >= 1.3 * boast, `${r.leadPx}px vs ${r.frontMaxPx}px, boast ${boast}px`);
   CONTENT.pieces = full;
   await ctx.close();
 }
