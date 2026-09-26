@@ -6508,10 +6508,14 @@ function scoreKickerStats(stats, rules) {
 // ladder's order is what it restores, and a matchup against a low implied
 // total now reads as the ceiling it is.
 //
-// Opt-in, and only for a projection. A box score is one afternoon and is
-// scored on its own number exactly as before; the season boards and the two
-// client copies (index.html, it-league.js) keep the mean-on-the-ladder rule
-// that tools/test-boards.mjs holds them to.
+// The DEFAULT, because almost everything scored here is a projection: the
+// DFS slate, the weekly and season boards, and the two client copies
+// (index.html, it-league.js), which tools/test-boards.mjs holds to this one.
+// A RESULT is the exception and asks for `{ exact: true }`: a box score is one
+// afternoon on its own number, and season-to-date form is what he has
+// already done. The season boards used to keep the mean-on-the-ladder rule
+// and moved in the follow-up to the DFS fix, so a defense ranks on the same
+// arithmetic in draft season as it does on a slate.
 const PA_SPREAD_SD = 10;
 function _normCdf(z) {
   // Abramowitz & Stegun 7.1.26: accurate to about 1e-7, which is far inside
@@ -6545,15 +6549,15 @@ function scoreDefenseStats(stats, rules, games, opts) {
   pts += (st.st2pt || 0) * s.specialTeams2pt;
   pts += (st.stSafety1pt || 0) * s.specialTeamsSafety1pt;
   if (st.ptsAllowed !== undefined) {
-    if (opts && opts.spread) pts += _paTierExpected(st.ptsAllowed / g, s.pointsAllowed) * g;
-    else pts += _tierPoints(Math.floor(st.ptsAllowed / g), s.pointsAllowed) * g;
+    if (opts && opts.exact) pts += _tierPoints(Math.floor(st.ptsAllowed / g), s.pointsAllowed) * g;
+    else pts += _paTierExpected(st.ptsAllowed / g, s.pointsAllowed) * g;
   }
   return pts;
 }
 // Any position. `games` is how many games the stat line spans, which the
-// points-allowed tiers need because they are per game. `opts.spread` scores a
-// defense's points allowed as a projection (see _paTierExpected); nothing else
-// reads it.
+// points-allowed tiers need because they are per game. A defense's points
+// allowed is scored as a projection (see _paTierExpected) unless `opts.exact`
+// says the line is a result; nothing else reads `opts`.
 function scoreAny(stats, position, rules, games, opts) {
   if (position === 'K') return scoreKickerStats(stats, rules);
   if (position === 'DEF' || position === 'DST') return scoreDefenseStats(stats, rules, games, opts);
@@ -6869,7 +6873,8 @@ function seasonFormFrom(u, position, rules) {
   if (!sea || games <= 0) return null;
   const stats = sea.stats && Object.keys(sea.stats).length ? sea.stats : null;
   if (!stats) return null;
-  const pts = _oddsRound(scoreAny(stats, position, rules, games));
+  // What he has done, so a defense's points allowed is scored as a result.
+  const pts = _oddsRound(scoreAny(stats, position, rules, games, { exact: true }));
   const carries = Number(sea.carries) || 0, rec = Number(sea.receptions) || 0, tgt = Number(sea.targets) || 0;
   let volume = null, volumeUnit = null;
   if (position === 'RB') { volume = _oddsRound((carries + rec) / games); volumeUnit = 'touches'; }
@@ -13394,7 +13399,7 @@ function dfsActualFor(actuals, name, team, pos, rules) {
   if (pos === 'DST' || pos === 'DEF') {
     const d = actuals.defense && actuals.defense.get(team);
     if (!d) return { gamePlayed: true, actualPoints: null, actualBasis: 'no-defense-box-score' };
-    return { gamePlayed: true, actualBasis: 'box-score', actualPoints: _oddsRound(scoreAny(d, 'DST', rules, 1)) };
+    return { gamePlayed: true, actualBasis: 'box-score', actualPoints: _oddsRound(scoreAny(d, 'DST', rules, 1, { exact: true })) };
   }
   // A kicker still is not scorable: field goals and extra points are not in
   // the box score, and nothing in it inverts into them.
@@ -13515,11 +13520,7 @@ function buildDfsSlate(site, salaries, board, opts) {
     // an active roster is 'Out' here because that is what it means for Sunday.
     const wk = dfsWeekStatus(avail, p.key, week, s.injuryIndicator)
       || (rst && rst.kind === 'roster' ? { status: 'Out', note: 'Not on an active roster (' + rst.status + (rst.team ? ', ' + rst.team : '') + ')', basis: 'roster' } : null);
-    // A projection, so a defense's points allowed is scored over the spread
-    // of Sundays it could have rather than on its average alone. Without it
-    // every defense on the slate sat within a point and a half of the rest
-    // and the builder bought the cheapest one every week.
-    const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1, { spread: true }));
+    const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
     // A DEFENSE'S WEEK IS ITS MATCHUP. The board's Iron Tuna line blends the
     // week's environment with the consensus, and the consensus is odds-blind by
     // design: for a defense that is one flat per-game share of a season line,

@@ -41,6 +41,8 @@ const api = new Function(`
   ${grab('countScore')}
   ${grab('scoreSkillPlayer')}
   ${grab('scoreKicker')}
+  ${grab('paNormCdf')}
+  ${grab('paTierExpected')}
   ${grab('scoreDefense')}
   ${grab('scorePlayer')}
   ${grab('vegasRankShifts')}
