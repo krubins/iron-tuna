@@ -3290,6 +3290,26 @@ function scoreKicker(stats = {}, config) {
   pts += (stats.xpMissed || 0) * s.missedExtraPoint;
   return pts;
 }
+// Points allowed as a spread, not a single afternoon. Mirrors _normCdf and
+// _paTierExpected in _worker.js, which carry the reasoning: the ladder is
+// scored at its expected value over a normal spread (SD 10) around the mean
+// rather than on the mean alone, which flattened every defense into the one-
+// and zero-point rungs. tools/test-boards.mjs holds the two copies together.
+function paNormCdf(z) {
+  const t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z / 2);
+  return z >= 0 ? (1 + y) / 2 : (1 - y) / 2;
+}
+function paTierExpected(mean, tiers) {
+  const d = 10, top = Math.ceil(Math.max(0, mean) + 6 * d);
+  let pts = 0, mass = 0;
+  for (let pa = 0; pa <= top; pa++) {
+    const lo = pa === 0 ? 0 : paNormCdf((pa - 0.5 - mean) / d);
+    const w = paNormCdf((pa + 0.5 - mean) / d) - lo;
+    pts += w * applyTierScale(pa, tiers); mass += w;
+  }
+  return mass > 0 ? pts / mass : applyTierScale(Math.floor(mean), tiers);
+}
 function scoreDefense(stats = {}, config, games = 17) {
   const s = config.scoring;
   let pts = 0;
@@ -3302,10 +3322,11 @@ function scoreDefense(stats = {}, config, games = 17) {
   pts += (stats.st2pt || 0) * s.specialTeams2pt;
   pts += (stats.stSafety1pt || 0) * s.specialTeamsSafety1pt;
   if (stats.ptsAllowed !== undefined && games > 0) {
-    // Tiers are integer-bounded (1-3, 4-6, ...) but ppg is fractional — floor it so
-    // values like 3.4 or 20.6 don't fall in a gap and zero out the whole category.
-    const ppg = Math.floor(stats.ptsAllowed / games);
-    pts += applyTierScale(ppg, s.pointsAllowed) * games;
+    // A projection, so the ladder is read over the spread of Sundays around
+    // the mean rather than at the mean alone (see paTierExpected). Whole
+    // points only go onto the ladder, so a fractional mean never falls into a
+    // gap between integer-bounded tiers.
+    pts += paTierExpected(stats.ptsAllowed / games, s.pointsAllowed) * games;
   }
   return pts;
 }
