@@ -37,6 +37,8 @@
 // is the page's own statement about its address.
 
 import fs from 'fs';
+import os from 'os';
+import { spawnSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -865,6 +867,32 @@ console.log('\nthe boards have addresses');
   const css = read('site.css');
   ok('a linked row is marked without JavaScript', /tr\[id\^="p-"\]:target/.test(css));
   ok('a linked game card is too', /\.ww-game\[id\^="g-"\]:target/.test(css));
+}
+
+
+// ── the sitemap holds still overnight ──────────────────────────────────────
+// CI checks out one commit with no history, so build-seo.mjs cannot ask git
+// when the roster behind /player/<slug> last changed. It used to answer with
+// today's date, which made the committed sitemap stale at every UTC midnight
+// and failed the discovery-layer gate on the first commit of each day
+// (27 Sep 2026). The real tool is run here the way CI runs it -- a copy with
+// no .git at all -- with the clock pushed two days on. It must find nothing
+// to rebuild.
+console.log('\nthe sitemap holds still overnight');
+{
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'seo-nohist-'));
+  const skip = /\.(webp|png|jpe?g|gif|ico|woff2?|ttf|mp4)$/i;
+  try {
+    fs.cpSync(ROOT, tmp, { recursive: true, filter: (src) => !src.includes(path.sep + '.git') && !skip.test(src) });
+    const later = 'const D=Date,T=D.now()+2*864e5;globalThis.Date=class extends D{constructor(...a){a.length?super(...a):super(T)}static now(){return T}};';
+    const run = spawnSync(process.execPath, ['--import', 'data:text/javascript,' + encodeURIComponent(later), path.join(tmp, 'tools', 'build-seo.mjs'), '--check'],
+      { cwd: tmp, encoding: 'utf8' });
+    const said = (run.stdout || '') + (run.stderr || '');
+    ok('with no git history and the clock two days on, the discovery layer is still up to date',
+       run.status === 0 && /up to date/.test(said), said.trim().split('\n').slice(0, 3).join(' | '));
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 }
 
 
