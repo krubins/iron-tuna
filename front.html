@@ -405,7 +405,9 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 /* The thumbnail hangs beside the meta line rather than pushing it down: the
    headline's row is as tall as its text, and the meta line keeps clear of it. */
 .hm-front .hm-rail li h3 .it-story-focus{margin-bottom:-22px}
-.hm-front .hm-rail li:has(.it-player-face img) .m{padding-right:var(--sp-48)}
+.hm-front .hm-rail li.pic-slot:has(.it-player-face img) .m{padding-right:var(--sp-48)}
+/* Every third rail story carries the picture (2026-09-27); the rest none. */
+.hm-front .hm-rail li:not(.pic-slot) .it-story-focus{display:none}
 .hm-front .hm-rail li .m{font-size:var(--fs-13);font-weight:400}
 /* The two secondary stories under a lead with no photograph (setNoPhoto). */
 .hm-more{grid-area:more;align-self:start;margin-top:var(--sp-24)}
@@ -1482,11 +1484,13 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
     hero.classList.toggle('no-photo', on);
     var more = document.querySelector('#leadWell .hm-more');
     if (more) more.hidden = !on;
-    var items = document.querySelectorAll('#leadWell .hm-rail li'), last = null;
+    var items = document.querySelectorAll('#leadWell .hm-rail li'), last = null, n = 0;
     for (var i = 0; i < items.length; i++) {
       var li = items[i], hide = on ? li.classList.contains('in-more') : li.classList.contains('extra');
       li.hidden = hide;
       li.classList.remove('last');
+      // Every third story on the rail as it is shown carries the picture.
+      li.classList.toggle('pic-slot', !hide && (++n % 3 === 0));
       if (!hide) last = li;
     }
     if (last) last.classList.add('last');
@@ -1885,7 +1889,7 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
   // winning, forward pieces dropped once their games have kicked off, and the
   // components each piece breaks into. The cover and the desk now answer to one
   // rule, so they cannot disagree about what the desk has published.
-  grab('/api/newsroom?limit=20', function (j) {
+  grab('/api/newsroom?limit=20', function desk(j) {
     var day = function (v) {
       try {
         return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric' }).format(new Date(v));
@@ -1917,6 +1921,19 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
     // and the piece is still in the archive at its URL.
     var live = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; });
     if (!live.length) return;
+    // Which story leads, and which rail slots carry a picture, depend on who
+    // has a photograph on file, and that is player-search.js's lookup, loaded
+    // deferred. Wait for it once; if it never arrives, paint anyway after 3s
+    // with no photographs known (the newest story that is not about kickers
+    // or defenses leads, and the rail keeps the feed's order).
+    var PS = window.ITPlayerSearch;
+    if ((!PS || !PS.resolve) && !desk.waited) {
+      desk.waited = true;
+      var go = function () { if (go.done) return; go.done = true; desk(j); };
+      document.addEventListener('it-player-search-ready', go, { once: true });
+      setTimeout(go, 3000);
+      return;
+    }
 
     // WHO A PIECE IS ABOUT: THE SUBJECT OF ITS HEADLINE FIRST.
     // `components[].player` is the desk's cast for the WHOLE piece, in the
@@ -1962,11 +1979,44 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
     };
 
     // ── the lead, and the five beside it ────────────────────────────────────
-    // THE NEWEST PIECE LEADS, always: the feed is ordered by publication and
-    // the desk's own slots decide what lands when, so nothing here chooses a
-    // story. That is deliberately NOT the rotation the cards below run on --
-    // the cards exist to keep the week's work visible for longer than an hour,
-    // and a lead that rotated would be a front page that changes its mind.
+    // THE LEAD (Ken, 2026-09-27): never a kickers-or-defenses piece, and
+    // always one with a photograph. It is the NEWEST story that clears both:
+    // not about kickers or defenses (by its kind, series name or headline),
+    // and naming a player the hero can picture (the hero's own test: a game
+    // photograph, or an ESPN or NFL headshot, on file). Only if no story in
+    // the feed has a photograph does the newest non-kicker, non-defense story
+    // lead without one; only if every story is kickers or defenses does the
+    // newest lead. It is still not the cards' rotation: the lead is the
+    // newest story that qualifies, so it changes when the desk publishes.
+    var KD = /kicker|defen[cs]e|\bd\/?st\b|\bk\s*&\s*d\b/i;
+    var isKD = function (p) { return KD.test([p.kind, p.title, p.headline].join(' ')); };
+    var PSok = !!(PS && PS.resolve);
+    var pictured = function (r) { return !!r && ((PS.action && PS.action(r.k)) || r.e || r.h); };
+    var heroPhoto = function (p) {
+      if (!PSok) return false;
+      return coverSubjects(p, boast(p) || p.headline).some(function (s) { return pictured(PS.resolve(s.name)); });
+    };
+    var at = -1, i;
+    for (i = 0; i < live.length && at < 0; i++) if (!isKD(live[i]) && heroPhoto(live[i])) at = i;
+    for (i = 0; i < live.length && at < 0; i++) if (!isKD(live[i])) at = i;
+    if (at > 0) live = [live[at]].concat(live.slice(0, at), live.slice(at + 1));
+
+    // EVERY THIRD RAIL STORY HAS A PICTURE (Ken, 2026-09-27): rail slots 3
+    // and 6 show a thumbnail and the others show none. When the story due in
+    // a pictured slot has no face on file, the next story that has one moves
+    // up into the slot, so the rail stays close to newest first. A face here
+    // is what the rail's thumbnail draws: an ESPN or NFL headshot.
+    var railPhoto = function (p) {
+      if (!PSok) return false;
+      return subjectOf(p, whoOf(p)).some(function (n) { var r = PS.resolve(n); return !!r && (r.e || r.h); });
+    };
+    [2, 5].forEach(function (slot) {
+      var k = 1 + slot;                       // live[0] is the lead
+      if (k >= live.length || railPhoto(live[k])) return;
+      for (var m = k + 1; m < live.length; m++) {
+        if (railPhoto(live[m])) { live.splice(k, 0, live.splice(m, 1)[0]); return; }
+      }
+    });
     // The rail carries up to six: the five it shows beside a photograph, and
     // one more for when there is no photograph (setNoPhoto), when the first two
     // move under the lead and the rail shows the next four. Six stories besides
