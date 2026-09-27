@@ -137,7 +137,27 @@ const CONTENT = { ok: true, pieces: [
   { kind: 'weekend-game-plan', title: 'Weekend Game Plan', headline: 'Too many to print',
     week: 3, publishedAt: AGO(26), url: '/in-season/desk/weekend-game-plan/3' },
   // No url: not a card.
-  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: AGO(30) }
+  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: AGO(30) },
+  // The rest of a week's desk (2026-09-26): the live feed returns about a
+  // dozen, and the front (the lead and the rail's seven slots) takes eight of
+  // them, so the cards below have pieces of their own to show.
+  { kind: 'waiver-watch', title: 'Waiver Watch', headline: 'Four adds the market already priced in',
+    dek: 'Claims that cost more than the props say.', week: 3, publishedAt: AGO(33),
+    url: '/in-season/desk/waiver-watch/3', components: [{ n: 1, player: 'Tank Bigsby', headline: 'e' }] },
+  { kind: 'start-sit', title: 'Start/Sit', headline: 'Two starts the consensus is scared of',
+    week: 3, publishedAt: AGO(40), url: '/in-season/desk/start-sit/3' },
+  { kind: 'dfs-core', title: 'DFS Core', headline: 'The cheap tight end every lineup wants',
+    week: 3, publishedAt: AGO(46), url: '/in-season/desk/dfs-core/3' },
+  { kind: 'the-line', title: 'The Line', headline: 'Where the total and the projections disagree',
+    dek: 'Three games the book sees differently.', week: 3, publishedAt: AGO(52),
+    url: '/in-season/desk/the-line/3', components: [{ n: 1, player: 'Cam Ward', headline: 'f' }] },
+  { kind: 'trade-desk', title: 'Trade Desk', headline: 'Sell the running back before Sunday',
+    dek: 'His price peaks this week.', week: 3, publishedAt: AGO(60),
+    url: '/in-season/desk/trade-desk/3', components: [{ n: 1, player: 'James Cook', headline: 'g' }] },
+  { kind: 'injury-read', title: 'Injury Read', headline: 'What the Wednesday report actually changes',
+    week: 3, publishedAt: AGO(70), url: '/in-season/desk/injury-read/3' },
+  { kind: 'kickers', title: 'Kickers & Defenses', headline: 'Streaming picks off the implied totals',
+    week: 3, publishedAt: AGO(80), url: '/in-season/desk/kickers/3' }
 ]};
 // What /api/content would hand back: the same story five times over, in draft.
 // Nothing on the cover may come from here.
@@ -735,7 +755,82 @@ for (const [w, want, tag] of [[1280, 16 / 9, 'desktop'], [390, 4 / 3, 'phone']])
   const r = await page.evaluate(() => ({
     more: [...document.querySelectorAll('#leadWell .hm-more')].filter(e => e.getClientRects().length).length,
     rail: [...document.querySelectorAll('#leadWell .hm-rail li')].filter(e => e.getClientRects().length).length }));
-  ok('with a photograph there are no secondary stories, and the rail keeps its four', r.more === 0 && r.rail === 4, JSON.stringify(r));
+  ok('with a photograph there are no secondary stories, and the rail shows five', r.more === 0 && r.rail === 5, JSON.stringify(r));
+  await ctx.close();
+}
+
+// ── 3h. Top Headlines, and no story twice (2026-09-26) ────────────────────
+// Rail items carry no kicker: the series name starts a quiet meta line with a
+// relative time. Headlines clamp at three lines, share one left edge with or
+// without a thumbnail, and "All articles" sits under the list. The cards below
+// skip every story already on the front, and hide when nothing is left.
+const railRead = page => page.evaluate(() => {
+  const vis = e => e && e.getClientRects().length > 0;
+  const items = [...document.querySelectorAll('#leadWell .hm-rail li')].filter(vis);
+  const all = document.querySelector('#leadWell .hm-rail-all');
+  const last = items[items.length - 1];
+  const stories = [...document.querySelectorAll('#leadWell .hm-lead h3 a, #leadWell .hm-more h3 a, #leadWell .hm-rail li h3 a, #readGrid .hm-read-card')]
+    .filter(vis).map(a => a.getAttribute('href'));
+  return {
+    kickers: items.filter(li => li.querySelector('.t')).length,
+    metas: items.map(li => (li.querySelector('.m') || {}).textContent || ''),
+    lines: items.map(li => { const a = li.querySelector('h3 a'), cs = getComputedStyle(a); return Math.round(a.getBoundingClientRect().height / parseFloat(cs.lineHeight)); }),
+    lefts: [...new Set(items.map(li => Math.round(li.querySelector('h3 a').getBoundingClientRect().left)))],
+    thumbs: items.filter(li => li.querySelector('.it-player-face img')).length,
+    gap: all && last ? Math.round(all.getBoundingClientRect().top - last.getBoundingClientRect().bottom) : null,
+    stories, cards: vis(document.getElementById('articles'))
+  };
+});
+console.log('\nTop Headlines, and no story twice');
+{
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const r = await railRead(page);
+  ok('rail items carry no kicker', r.kickers === 0, String(r.kickers));
+  ok('each meta line starts with the series name', r.metas.length === 5 && r.metas.every(m => /^[A-Z][A-Za-z/& ]+ \u00b7 /.test(m)), r.metas.join(' | '));
+  ok('a piece from three hours ago says so', r.metas[0] === 'Opportunity Report \u00b7 3h ago', r.metas[0]);
+  ok('an older piece gives its day', r.metas.some(m => /\u00b7 (Yesterday|[A-Z][a-z]{2} \d{1,2}\/\d{1,2})$/.test(m)), r.metas.join(' | '));
+  ok('no rail headline runs past three lines', r.lines.every(n => n <= 3), r.lines.join(','));
+  ok('headlines share one left edge, thumbnail or not', r.lefts.length === 1 && r.thumbs >= 1 && r.thumbs < 5, `${r.lefts.join(',')} thumbs ${r.thumbs}`);
+  ok('"All articles" sits under the list', r.gap !== null && r.gap >= 0 && r.gap <= 24, String(r.gap));
+  ok('no story is on the page twice', new Set(r.stories).size === r.stories.length && r.cards, r.stories.join(' '));
+  await ctx.close();
+}
+{
+  // Without a photograph the pair moves under the lead and the rail shows the
+  // next four; the cards still repeat none of them.
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, components: undefined } : p);
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const r = await railRead(page);
+  ok('without a photograph, still no story twice', new Set(r.stories).size === r.stories.length && r.metas.length === 4 && r.cards,
+     `${r.metas.length} rail | ${r.stories.join(' ')}`);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // A headline too long for the rail is clamped at three lines, with the whole
+  // of it in the title.
+  const full = CONTENT.pieces, LONG = 'Who inherits the carries in Baltimore now that the backfield is split three ways and the market has not caught up with the snap counts, the red-zone looks or the goal-line work';
+  CONTENT.pieces = full.map((p, i) => i === 1 ? { ...p, headline: LONG } : p);
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const c = await page.evaluate(() => { const a = document.querySelector('#leadWell .hm-rail li h3 a'); return { title: a.getAttribute('title'), clamped: a.scrollHeight > a.clientHeight + 2, lines: Math.round(a.getBoundingClientRect().height / parseFloat(getComputedStyle(a).lineHeight)) }; });
+  ok('a long rail headline is clamped at three lines, whole in its title', c.clamped && c.lines === 3 && c.title === LONG, JSON.stringify(c));
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // A short feed: the front takes every piece, so the cards section is hidden
+  // rather than repeating the front.
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.slice(0, 6);
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const r = await railRead(page);
+  ok('with a short feed the cards are hidden, not repeated', r.cards === false && new Set(r.stories).size === r.stories.length, `${r.cards} | ${r.stories.join(' ')}`);
+  CONTENT.pieces = full;
   await ctx.close();
 }
 

@@ -384,17 +384,29 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-front .hm-rail ul{justify-content:flex-start}
 /* The rail's type: labels 12, headlines 17 at 600, dates 13. */
 .hm-front .hm-rail li h3{font-size:var(--fs-17);line-height:1.3;font-weight:600}
-.hm-front .hm-rail li .t{font-size:var(--fs-12)}
+/* Every rail item the same (2026-09-26): headline, then one meta line
+   ("Opportunity Report · 3h ago"), 14px apart with a hairline between; the
+   headline clamped at three lines; a 40px thumbnail at the top right only
+   when there is a photograph, so the left edge never moves. */
+.hm-front .hm-rail ul{gap:0}
+.hm-front .hm-rail li{gap:4px;padding:14px 0;border-bottom:1px solid var(--line)}
+.hm-front .hm-rail li:first-child{padding-top:2px}
+.hm-front .hm-rail li.last{padding-bottom:0;border-bottom:0}
+.hm-front .hm-rail li h3{align-items:flex-start}
+.hm-front .hm-rail li h3 a{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;min-width:0}
+.hm-front .hm-rail li h3 .it-player-face{width:40px;height:40px;min-width:40px}
+/* The thumbnail hangs beside the meta line rather than pushing it down: the
+   headline's row is as tall as its text, and the meta line keeps clear of it. */
+.hm-front .hm-rail li h3 .it-story-focus{margin-bottom:-22px}
+.hm-front .hm-rail li:has(.it-player-face img) .m{padding-right:52px}
 .hm-front .hm-rail li .m{font-size:var(--fs-13);font-weight:400}
 /* The two secondary stories under a lead with no photograph (setNoPhoto). */
 .hm-more{grid-area:more;align-self:start;margin-top:24px}
 .hm-more-item{display:flex;flex-direction:column;gap:6px;padding:18px 0;border-top:1px solid var(--line)}
-.hm-more-item .t{font-size:var(--fs-13);font-weight:600;line-height:1.3;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)}
 .hm-more-item h3{font-size:var(--fs-22);font-weight:600;line-height:1.25;letter-spacing:-.01em;color:var(--ink)}
 .hm-more-item h3 a:hover{color:var(--brand)}
 .hm-more-item p{max-width:65ch;font-size:var(--fs-17);line-height:1.45;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hm-more-item .m{font-size:var(--fs-13);color:var(--ink-3)}
-.hm-rail li.last{padding-bottom:0;border-bottom:0}
 .hm-rail-all{display:block;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:var(--fs-16);font-weight:600;color:var(--brand)}
 .hm-rail-all:hover{text-decoration:underline}
 
@@ -558,7 +570,6 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offs
 .hm-rail ul{list-style:none;display:flex;flex-direction:column;justify-content:space-between;gap:13px;flex:1 1 auto}
 .hm-rail li{display:flex;flex-direction:column;gap:5px;min-width:0;padding-bottom:13px;border-bottom:1px solid var(--line)}
 .hm-rail li:last-child{padding-bottom:0;border-bottom:0}
-.hm-rail li .t{font-size:var(--fs-14);font-weight:600;letter-spacing:0;text-transform:none;color:var(--brand)}
 .hm-rail li h3{display:flex;align-items:center;font-size:var(--fs-17);line-height:1.32;font-weight:600}
 .hm-rail li h3 a{color:var(--ink)}
 .hm-rail li h3 a:hover{color:var(--brand)}
@@ -794,12 +805,6 @@ body.hm-dress .hm-well{margin-top:14px;gap:22px}
 body.hm-dress .hm-lead{gap:9px}
 body.hm-dress .hm-lead h3 .it-story-focus{margin:0 0 10px}
 body.hm-dress .hm-lead h3 .it-player-face{width:52px;height:52px;min-width:52px}
-body.hm-dress .hm-rail ul{gap:9px}
-body.hm-dress .hm-rail li{gap:3px;padding-bottom:9px}
-body.hm-dress .hm-rail li .t{font-size:var(--fs-12);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-body.hm-dress .hm-rail li h3{font-size:var(--fs-17);line-height:1.3}
-body.hm-dress .hm-rail li h3 .it-player-face{width:30px;height:30px;min-width:30px}
-body.hm-dress .hm-rail li .m{font-size:var(--fs-13)}
 body.hm-dress .hm-lane{padding:18px 20px 16px}
 body.hm-dress .hm-lane h2{font-size:var(--fs-h2)}
 body.hm-dress .hm-lane > p{margin-top:6px;font-size:var(--fs-17);line-height:1.45}
@@ -848,7 +853,7 @@ body.hm-dress .hm-choose-k{font-size:var(--fs-14);letter-spacing:.09em}
    The lead and Top Headlines end level (2026-09-26: two columns now, not
    three), each with its last line pinned to the foot. */
 .hm-front .hm-rail ul{flex:0 0 auto}
-.hm-front .hm-rail-all{margin-top:auto}
+.hm-front .hm-rail-all{margin-top:16px}
 .hm-choose{margin-top:16px}
 body.hm-dress .hm-sec{padding-top:16px}
 body.hm-dress .hm-sub{margin-top:10px;margin-bottom:12px}
@@ -1806,6 +1811,25 @@ body.hm-dress .hm-reads{gap:16px}
         return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric' }).format(new Date(v));
       } catch (e) { return ''; }
     };
+    // How long ago, for the rail and the secondary stories (2026-09-26): a
+    // news front says "3h ago" for today's pieces, "Yesterday", then the day.
+    // Days are Eastern calendar days, the same zone day() prints in.
+    var etDay = function (v) {
+      try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(v)); } catch (e) { return ''; }
+    };
+    var ago = function (v) {
+      var at = +v || 0, now = Date.now(), d = now - at;
+      if (!at || d < 0) return day(at).replace(',', '');
+      if (d < 3600 * 1000) return Math.max(1, Math.floor(d / 60000)) + 'm ago';
+      if (d < 24 * 3600 * 1000) return Math.floor(d / 3600000) + 'h ago';
+      if (etDay(at) === etDay(now - 24 * 3600 * 1000)) return 'Yesterday';
+      return day(at).replace(',', '');
+    };
+    // The series name and when, as one quiet line: "Opportunity Report · 3h ago".
+    var meta = function (p) {
+      var w = p.publishedAt ? ago(p.publishedAt) : (p.week ? 'Week ' + p.week : '');
+      return esc([p.title || 'The desk', w].filter(Boolean).join(' \u00b7 '));
+    };
     // A CARD NEEDS A HEADLINE OF ITS OWN. `title` is the kind's name, so a
     // row stored without a headline painted "What Tuna Got Right" as both
     // the eyebrow and the headline with nothing under it: a card that says
@@ -1863,11 +1887,12 @@ body.hm-dress .hm-reads{gap:16px}
     // story. That is deliberately NOT the rotation the cards below run on --
     // the cards exist to keep the week's work visible for longer than an hour,
     // and a lead that rotated would be a front page that changes its mind.
-    // The rail carries up to seven: the five it shows beside a photograph, and
-    // two more that take the place of the pair that moves under the lead when
-    // there is no photograph (setNoPhoto). The pair moves only if the rail
-    // would still hold two after it.
-    var lead = live[0], railPieces = live.slice(1, 8);
+    // The rail carries up to six: the five it shows beside a photograph, and
+    // one more for when there is no photograph (setNoPhoto), when the first two
+    // move under the lead and the rail shows the next four. Six stories besides
+    // the lead either way, and the two columns end level. The pair moves only
+    // if the rail would still hold two after it.
+    var lead = live[0], railPieces = live.slice(1, 7);
     var morePieces = live.length - 3 >= 2 ? live.slice(1, 3) : [];
     var by = function (p) {
       var n = p.byline && p.byline.name ? p.byline.name : '';
@@ -1893,10 +1918,10 @@ body.hm-dress .hm-reads{gap:16px}
     if (morePieces.length) {
       leadHtml += '<div class="hm-more" hidden>' + morePieces.map(function (p) {
         var cr = boast(p);
-        return '<article class="hm-more-item"><span class="t">' + esc(p.title || 'The desk') + '</span>'
+        return '<article class="hm-more-item">'
           + '<h3><a href="' + esc(p.url) + '">' + esc(cr || p.headline) + '</a></h3>'
           + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '')
-          + '<span class="m">' + by(p) + '</span></article>';
+          + '<span class="m">' + meta(p) + '</span></article>';
       }).join('') + '</div>';
     }
     if (railPieces.length) {
@@ -1906,9 +1931,11 @@ body.hm-dress .hm-reads{gap:16px}
             var pk = subjectOf(p, whoOf(p)), cr = boast(p);
             var cls = (i < morePieces.length ? 'in-more' : '') + (i >= 5 ? ' extra' : '');
             return '<li' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + (pk.length ? ' data-player-focus="' + esc(pk.join('|')) + '"' : '') + '>'
-              + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
-              + '<h3><a href="' + esc(p.url) + '">' + esc(cr || p.headline) + '</a></h3>'
-              + '<span class="m">' + by(p) + '</span></li>';
+              // No kicker (2026-09-26): the series name is the start of the
+              // meta line. The headline is clamped to three lines on screen,
+              // with the whole of it in the title.
+              + '<h3><a href="' + esc(p.url) + '" title="' + esc(cr || p.headline) + '">' + esc(cr || p.headline) + '</a></h3>'
+              + '<span class="m">' + meta(p) + '</span></li>';
           }).join('') + '</ul><a class="hm-rail-all" href="/in-season/desk">All articles &rarr;</a></div>';
     }
     // One published piece is a lead with nothing beside it; the second column
@@ -1918,12 +1945,17 @@ body.hm-dress .hm-reads{gap:16px}
     setNoPhoto($('hmHero').classList.contains('no-photo'));
     show($('lead'), true);
 
-    // ── the cards, which are the rotation, minus whatever is leading ────────
-    // The cards rotate over what is NOT already leading, so the band is still
-    // three and the same headline is never on this page twice. coverBand's own
-    // rules -- the pool depth, the hourly turn, the 24-hour floor -- are
-    // untouched; it is handed a list with the lead removed, not a new policy.
-    var pieces = coverBand(live.slice(1), Date.now());
+    // ── the cards, which are the rotation, minus whatever is on the front ───
+    // The cards rotate over what is NOT on the front, so the same headline is
+    // never on this page twice. Until 2026-09-26 that was the lead alone, and
+    // the three cards repeated three of the rail's five. The front is the lead
+    // plus the rail's six slots (five beside a photograph; the sixth stands in
+    // when the first two move under a lead without one), so all of them are
+    // left out, whichever way the photograph turns out. coverBand's own rules
+    // -- the pool depth, the hourly turn, the 24-hour floor -- are untouched;
+    // it is handed a shorter list, not a new policy. With nothing left the
+    // section stays hidden rather than repeating the front.
+    var pieces = coverBand(live.slice(1 + railPieces.length), Date.now());
     if (!pieces.length) { try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('leadWell')); } catch (e) {} return; }    $('readGrid').innerHTML = pieces.map(function (p) {
       var when = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + esc(p.week) : '');
       var who = whoOf(p);
