@@ -541,15 +541,69 @@ console.log('\nwith the lead naming nobody');
   await ctx.close();
 }
 {
-  // The exact case from the live front: the lead names nobody, a story behind
-  // it names a player with a face on file. His picture must not go up.
+  // The case from the live front: the newest story names nobody, a story
+  // behind it names a player with a face on file. Since 2026-09-27 the lead is
+  // always a story with a picture, so THAT story leads, with its own player,
+  // and the newest one goes to the rail; the picture never sits over a lead
+  // about somebody else.
   const full = CONTENT.pieces;
   CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, components: undefined } : p);
   const { page, ctx } = await open(1280, 900);
   const r = await read(page);
-  ok('and no older story\u2019s player stands in for it',
-     r.edge === false && r.edgeName !== 'Derrick Henry', `${r.edge} ${r.edgeName}`);
+  const lead = await page.evaluate(() => (document.querySelector('#leadWell .hm-lead h3') || {}).textContent || '');
+  const railHas = await page.evaluate(() => [...document.querySelectorAll('#leadWell .hm-rail li')].filter(l => l.getClientRects().length).map(l => l.querySelector('h3').textContent.trim()));
+  ok('a newest story with no picture gives the lead to the newest one with a picture',
+     /Who inherits the carries in Baltimore/.test(lead) && r.edge === true && r.edgeName === 'Derrick Henry', `${lead} | ${r.edge} ${r.edgeName}`);
+  ok('and the newest story is still on the front, in the rail', railHas.includes('Three lineups the market moved overnight'), railHas.join(' | '));
   CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // The lead is never about kickers or defenses, even when it is the newest
+  // story and names a player with a photograph.
+  const full = CONTENT.pieces;
+  CONTENT.pieces = [{ kind: 'kickers', title: 'Kickers & Defenses', headline: 'Stream these defenses off the implied totals',
+    dek: 'Three units the book likes.', week: 3, publishedAt: FRESH + 60 * 1000, url: '/in-season/desk/kickers-defenses/3',
+    components: [{ n: 1, player: 'Puka Nacua', headline: 'k' }] }].concat(full);
+  const { page, ctx } = await open(1280, 900);
+  const r = await read(page);
+  const lead = await page.evaluate(() => (document.querySelector('#leadWell .hm-lead h3') || {}).textContent || '');
+  ok('a kickers-and-defenses story never leads, even when it is the newest',
+     /Three lineups the market moved overnight/.test(lead) && r.edge === true, `${lead} | ${r.edge}`);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // With the player lookup unreachable the desk still paints, after its 3s
+  // wait, led by the newest story that is not about kickers or defenses.
+  const full = CONTENT.pieces;
+  CONTENT.pieces = [{ kind: 'kickers', title: 'Kickers & Defenses', headline: 'Stream these defenses off the implied totals',
+    week: 3, publishedAt: FRESH + 60 * 1000, url: '/in-season/desk/kickers-defenses/3' }].concat(full);
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await ctx.addInitScript(t => { Date.now = () => t; }, CLOCK);
+  await ctx.route(/player-search\.js/, r => r.abort());
+  const page = await ctx.newPage();
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(3500);
+  const lead = await page.evaluate(() => (document.querySelector('#leadWell .hm-lead h3') || {}).textContent || '');
+  ok('with no player lookup the desk still paints, and still not a kickers lead',
+     /Three lineups the market moved overnight/.test(lead), lead || '(no lead)');
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // Every third story on the rail carries the picture: slot 3 does, the others
+  // do not, and when slot 3's story has no face on file the next one that has
+  // one moves up into it.
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(400);
+  const rail = await page.evaluate(() => [...document.querySelectorAll('#leadWell .hm-rail li')].filter(l => l.getClientRects().length).map(l => {
+    const f = l.querySelector('.it-story-focus'), img = l.querySelector('.it-player-face img');
+    return { h: l.querySelector('h3 a').textContent.trim(), pic: !!(f && f.getClientRects().length && img && img.getClientRects().length) };
+  }));
+  ok('rail story 3 carries a picture and the others do not',
+     rail.length === 5 && rail.map(x => x.pic).join(',') === 'false,false,true,false,false', JSON.stringify(rail));
+  ok('the story with a face moved up into slot 3', rail[2] && rail[2].h === 'Four adds the market already priced in', rail[2] && rail[2].h);
   await ctx.close();
 }
 
@@ -735,7 +789,7 @@ for (const [w, want, tag] of [[1280, 16 / 9, 'desktop'], [390, 4 / 3, 'phone']])
   // the lead and leave the rail, the rail shows the ones after, and the left
   // column runs level with the rail instead of stopping a screen short.
   const full = CONTENT.pieces;
-  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, components: undefined } : p);
+  CONTENT.pieces = full.map(p => ({ ...p, components: undefined }));
   const { page, ctx } = await open(1280, 900);
   const r = await page.evaluate(() => {
     const vis = e => e && e.getClientRects().length > 0;
@@ -804,7 +858,7 @@ console.log('\nTop Headlines, and no story twice');
   // Without a photograph the pair moves under the lead and the rail shows the
   // next four; the cards still repeat none of them.
   const full = CONTENT.pieces;
-  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, components: undefined } : p);
+  CONTENT.pieces = full.map(p => ({ ...p, components: undefined }));
   const { page, ctx } = await open(1280, 900);
   await page.waitForTimeout(300);
   const r = await railRead(page);
