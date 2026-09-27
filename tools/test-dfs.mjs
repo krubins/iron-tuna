@@ -41,7 +41,7 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // The contest scores, so the ladder's cash exclusion is tested against the
   // real dfsMetrics rather than asserted about it.
   cut('const DFS_CONTESTS = {', '// \u2500\u2500 analyst memory') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, scoreAny, SCORING_KDEF, BLEND_SHRINK, dfsMetrics, dfsSupplemental };'
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, scoreAny, SCORING_KDEF, BLEND_SHRINK, dfsMetrics, dfsSupplemental, scoreDefenseStats, _paTierExpected, weeklyStats };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 // The scheduled workflow's own CSV writer, so the false-positive gate below
@@ -200,7 +200,9 @@ console.log('\nsite scoring');
   // four-point defensive touchdown, a four-point safety, and a ladder that
   // pays 5 for ten points allowed where DraftKings pays 4.
   const dk = H.scoringRules('ppr', H.SCORING_SITE.dk);
-  const D = (o, g) => H.scoreAny({ sacks: 0, ints: 0, fumRec: 0, defTD: 0, stTD: 0, safety: 0, ...o }, 'DST', dk, g || 1);
+  // Scored as a RESULT ({ exact: true }): this checks DraftKings' table rung
+  // by rung, and a projection reads the ladder over a spread instead.
+  const D = (o, g) => H.scoreAny({ sacks: 0, ints: 0, fumRec: 0, defTD: 0, stTD: 0, safety: 0, ...o }, 'DST', dk, g || 1, { exact: true });
   ok('a site\'s defensive rules survive scoringRules at all', dk.defensiveTD === 6 && Array.isArray(dk.pointsAllowed) && dk.pointsAllowed.length === 7,
      JSON.stringify({ td: dk.defensiveTD, tiers: dk.pointsAllowed && dk.pointsAllowed.length }));
   ok('a defensive touchdown is six on DraftKings, not the site default of four', near(D({ defTD: 1, ptsAllowed: 24 }), 6, 0.001), String(D({ defTD: 1, ptsAllowed: 24 })));
@@ -1854,9 +1856,11 @@ console.log('\nthe slate, partly played');
   // The invariant that matters: the actual runs through the SAME engine, the
   // same rules and the same games count as the projection beside it, so the
   // two are comparable rather than two different scales on one row.
-  ok('through the same call the projection uses',
-     near(scored.actualPoints, _oddsRound(H.scoreAny(dline, 'DST', rules, 1)), 0.001),
-     scored.actualPoints + ' vs ' + H.scoreAny(dline, 'DST', rules, 1));
+  // Same engine and rules; a result asks for its own number on the ladder
+  // rather than the projection's spread around it.
+  ok('through the same call the projection uses, scored as a result',
+     near(scored.actualPoints, _oddsRound(H.scoreAny(dline, 'DST', rules, 1, { exact: true })), 0.001),
+     scored.actualPoints + ' vs ' + H.scoreAny(dline, 'DST', rules, 1, { exact: true }));
   // Three sacks at a point, a pick and a fumble at two each, and seventeen
   // allowed landing on DraftKings' 14-20 rung for one. Added up by hand.
   ok('and the arithmetic is the sum of its parts, on DraftKings\' own table',
@@ -2119,6 +2123,58 @@ console.log('\nno fantasy points on record');
      && (page.match(/scorelessNote\(r\) \+|\+ scorelessNote\(r\)/g) || []).length === 2);
   ok('the pivot table does not offer a scoreless man back as the next best body',
      page.includes('var noRecord = ITDfs.scorelessOn ? ITDfs.scorelessOn(players)') && page.includes('if (noRecord(q)) return false;'));
+}
+
+// ── defenses: the matchup, and points allowed as a spread ───────────────
+// The request this guards (26 Sep 2026): the builder recommended the bottom
+// defense nearly every week. Two causes. The board's Iron Tuna line blends a
+// defense's matchup with a flat, matchup-blind consensus, and the points-
+// allowed ladder was scored on the average alone, so every defense sat within
+// a couple of points of the rest and the cheapest won on value.
+console.log('\ndefenses: the matchup, and points allowed as a spread');
+{
+  const dk = H.scoringRules('ppr', H.SCORING_SITE.dk);
+  const ladder = dk.pointsAllowed;
+  // Expected ladder points never rise as the mean allowed rises: no cliff.
+  let prev = Infinity, mono = true;
+  for (let m = 0; m <= 45; m += 0.1) { const e = H._paTierExpected(m, ladder); if (e > prev + 1e-9) mono = false; prev = e; }
+  ok('the expected points-allowed score never rises as the mean allowed rises', mono);
+  // The old rule dropped a full point between 20.9 and 21.0 allowed, and
+  // scored 21.4 no better than 24.4. Both are gone under the spread.
+  ok('...and the rounding cliff is gone',
+     H.scoreAny({ ptsAllowed: 20.9 }, 'DST', dk, 1, { exact: true }) - H.scoreAny({ ptsAllowed: 21.0 }, 'DST', dk, 1, { exact: true }) === 1
+     && H._paTierExpected(20.9, ladder) - H._paTierExpected(21.0, ladder) < 0.05
+     && H._paTierExpected(21.4, ladder) > H._paTierExpected(24.4, ladder));
+  ok('a projection facing a low total now carries the upside of a big day', H._paTierExpected(14, ladder) > 1.5);
+  // A result is one afternoon. A projection is scored over the spread by
+  // default; a box score and season-to-date form ask for their own number.
+  ok('asked for exact, a defense scores on its own number as before',
+     H.scoreAny({ sacks: 3, ints: 1, ptsAllowed: 10 }, 'DST', dk, 1, { exact: true }) === 3 + 2 + 4
+     && H.scoreDefenseStats({ ptsAllowed: 340 }, dk, 17, { exact: true }) === 17 * 1);
+  ok('by default a defense is scored as a projection, over the spread',
+     near(H.scoreAny({ ptsAllowed: 21 }, 'DST', dk, 1), H._paTierExpected(21, ladder), 1e-9));
+  ok('the box score and season-to-date form ask for exact',
+     src.includes("actualPoints: _oddsRound(scoreAny(d, 'DST', rules, 1, { exact: true })) };")
+     && src.includes('const pts = _oddsRound(scoreAny(stats, position, rules, games, { exact: true }));'));
+
+  // On the slate: a defense's Iron Tuna number is its matchup line in full.
+  const flat = { sacks: 2.4, ints: 0.8, fumRec: 0.45, defTD: 0.09, ptsAllowed: 22.5 };
+  const easy = { sacks: 3.1, ints: 1.0, fumRec: 0.58, defTD: 0.12, ptsAllowed: 16.2 };
+  const hard = { sacks: 1.8, ints: 0.6, fumRec: 0.34, defTD: 0.07, ptsAllowed: 28.8 };
+  const mid = (a, b) => Object.fromEntries(Object.keys(a).map(k => [k, a[k] + 0.45 * (b[k] - a[k])]));
+  const board = { ok: true, players: [
+    P('Good Matchup D', 'DEF', 'AAA', 'BBB', easy, flat, mid(flat, easy)),
+    P('Bad Matchup D', 'DEF', 'CCC', 'DDD', hard, flat, mid(flat, hard)) ] };
+  const sl = H.buildDfsSlate('dk', [['Good Matchup D', 'DST', 'AAA', 3900], ['Bad Matchup D', 'DST', 'CCC', 2300]].map(([name, position, team, salary]) => ({ name, position, team, salary })), board, {});
+  const gd = sl.players.find(x => x.team === 'AAA'), bd = sl.players.find(x => x.team === 'CCC');
+  ok('a defense on the slate is projected on its matchup, not the flat blend',
+     gd && bd && gd.ironTunaPoints === gd.vegasPoints && bd.ironTunaPoints === bd.vegasPoints);
+  ok('...and consensus mode still carries the flat line', gd.consensusPoints === bd.consensusPoints);
+  ok('the good matchup now out-earns the cheap bad one per dollar',
+     gd.ironTunaPoints / 3.9 > bd.ironTunaPoints / 2.3, gd.ironTunaPoints + ' vs ' + bd.ironTunaPoints);
+  // The old arithmetic, for the record: the blend on the mean ladder.
+  const oldGood = H.scoreAny(mid(flat, easy), 'DST', dk, 1), oldBad = H.scoreAny(mid(flat, hard), 'DST', dk, 1);
+  ok('under the old blend the cheap defense won on value (the reported bug)', oldGood / 3.9 < oldBad / 2.3, oldGood + ' vs ' + oldBad);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

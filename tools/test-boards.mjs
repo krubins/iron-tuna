@@ -148,7 +148,7 @@ console.log('\nkickers and defenses score like the app');
 {
   const app = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const lift = (h) => { const i = app.indexOf('\n' + h); const e = app.indexOf('\n}', i); return app.slice(i, e + 2); };
-  const APP = new Function(lift('function countScore(') + lift('function applyTierScale(') + lift('function scoreKicker(') + lift('function scoreDefense(') +
+  const APP = new Function(lift('function countScore(') + lift('function applyTierScale(') + lift('function scoreKicker(') + lift('function paNormCdf(') + lift('function paTierExpected(') + lift('function scoreDefense(') +
     '\nreturn { scoreKicker, scoreDefense };')();
   const cfg = { scoring: H.SCORING_KDEF };
   const k = POOL[6].projectedStats, dst = POOL[7].projectedStats;
@@ -159,6 +159,16 @@ console.log('\nkickers and defenses score like the app');
   const lg = fs.readFileSync(path.join(ROOT, 'it-league.js'), 'utf8');
   const L = new Function('SCORING_DEFAULTS', 'cfg', lg.slice(lg.indexOf('  function yardageScore('), lg.indexOf('  // The client\'s qbIsPremium')) + '\nreturn { score };')({}, null);
   ok('and it-league.js agrees with both', near(L.score(k, 'K', H.SCORING_KDEF), APP.scoreKicker(k, cfg)) && near(L.score(dst, 'DEF', H.SCORING_KDEF, 17), APP.scoreDefense(dst, cfg, 17)));
+  // Points allowed is read over a spread around the mean in all three copies
+  // (26 Sep 2026), so they are held together across the whole range, not at
+  // one fixture's 20 a game -- and a RESULT, asked for exact, stays on the
+  // ladder at its own number in the worker and the league module alike.
+  const sweep = [0, 3, 9.5, 14, 17.2, 20.9, 21, 24.4, 28, 35, 44].map(m => ({ sacks: 2, ints: 1, ptsAllowed: m * 17 }));
+  ok('the three copies agree on a defense across the points-allowed range',
+     sweep.every(d => near(H.scoreDefenseStats(d, H.SCORING_KDEF, 17), APP.scoreDefense(d, cfg, 17), 1e-6)
+                   && near(L.score(d, 'DEF', H.SCORING_KDEF, 17), APP.scoreDefense(d, cfg, 17), 1e-6)));
+  ok('...and scored as a result, the worker and the league module agree on the plain ladder',
+     sweep.every(d => near(H.scoreDefenseStats(d, H.SCORING_KDEF, 17, { exact: true }), L.score(d, 'DEF', H.SCORING_KDEF, 17, { exact: true }), 1e-9)));
 }
 
 // ── the boards ─────────────────────────────────────────────────────────────

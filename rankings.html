@@ -402,9 +402,9 @@ p{color:var(--sec);margin:0 0 16px}
     out.receptionPoints = rec; out.rbReceptionPoints = rec;
     return out;
   }
-  function score(stats, position, games) {
+  function score(stats, position, games, opts) {
     var L = window.ITLeague; if (!L || !L.score || !stats) return null;
-    return L.score(stats, position === 'DST' ? 'DEF' : position, rules(), games);
+    return L.score(stats, position === 'DST' ? 'DEF' : position, rules(), games, opts);
   }
   function setPressed(host, attr, val) {
     [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); });
@@ -471,7 +471,9 @@ p{color:var(--sec);margin:0 0 16px}
     // in one sentence. `form.stats` is the raw line, exactly so this can.
     var fm = r.p.form, ppg = null;
     if (fm && fm.games > 0 && fm.stats) {
-      var fp = score(fm.stats, r.p.position, fm.games);
+      // A result, not a projection: a defense's points allowed is read on
+      // its own average, as the worker's season form is.
+      var fp = score(fm.stats, r.p.position, fm.games, { exact: true });
       if (fp != null) ppg = fp / fm.games;
     }
     return ITReads.cell(r.p, { horizon: horizon, spellOut: pos === 'FLEX',

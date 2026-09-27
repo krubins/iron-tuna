@@ -309,7 +309,26 @@
     pts += (stats.xpMissed || 0) * (isFinite(s.missedExtraPoint) ? s.missedExtraPoint : KDEF.missedExtraPoint);
     return pts;
   }
-  function scoreDefense(stats, s, games) {
+  // Points allowed as a spread around the mean, not the mean alone. Mirrors
+  // _paTierExpected in _worker.js and paTierExpected in index.html, which
+  // carry the reasoning; tools/test-boards.mjs holds the three together.
+  function paNormCdf(z) {
+    var t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2);
+    var y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z / 2);
+    return z >= 0 ? (1 + y) / 2 : (1 - y) / 2;
+  }
+  function paTierExpected(mean, tiers) {
+    var d = 10, top = Math.ceil(Math.max(0, mean) + 6 * d), pts = 0, mass = 0;
+    for (var pa = 0; pa <= top; pa++) {
+      var lo = pa === 0 ? 0 : paNormCdf((pa - 0.5 - mean) / d);
+      var w = paNormCdf((pa + 0.5 - mean) / d) - lo;
+      pts += w * tierPoints(pa, tiers); mass += w;
+    }
+    return mass > 0 ? pts / mass : tierPoints(Math.floor(mean), tiers);
+  }
+  // `exact` scores a RESULT -- a season-to-date line, what he has already
+  // done -- on its own average, as the worker's { exact: true } does.
+  function scoreDefense(stats, s, games, exact) {
     var g = games > 0 ? games : 17, pts = 0;
     var v = function (k) { return isFinite(s[k]) ? s[k] : KDEF[k]; };
     pts += countScore(stats.sacks || 0, v('sackPoints'), s.sackBonuses || KDEF.sackBonuses);
@@ -320,14 +339,17 @@
     pts += (stats.safety || 0) * v('safety');
     pts += (stats.st2pt || 0) * v('specialTeams2pt');
     pts += (stats.stSafety1pt || 0) * v('specialTeamsSafety1pt');
-    if (stats.ptsAllowed !== undefined) pts += tierPoints(Math.floor(stats.ptsAllowed / g), s.pointsAllowed || KDEF.pointsAllowed) * g;
+    if (stats.ptsAllowed !== undefined) {
+      var ladder = s.pointsAllowed || KDEF.pointsAllowed;
+      pts += (exact ? tierPoints(Math.floor(stats.ptsAllowed / g), ladder) : paTierExpected(stats.ptsAllowed / g, ladder)) * g;
+    }
     return pts;
   }
-  function score(stats, position, scoringOverride, games) {
+  function score(stats, position, scoringOverride, games, opts) {
     var s = scoringOverride || (cfg && cfg.scoring) || SCORING_DEFAULTS;
     stats = stats || {};
     if (position === 'K') return scoreKicker(stats, s);
-    if (position === 'DEF' || position === 'DST') return scoreDefense(stats, s, games);
+    if (position === 'DEF' || position === 'DST') return scoreDefense(stats, s, games, !!(opts && opts.exact));
     var pts = 0;
     pts += yardageScore(stats.passYd || 0, s.passingYardsPerPoint, s.passingYardsThreshold, s.passingYardBonuses);
     pts += (stats.passTD || 0) * s.passingTD;

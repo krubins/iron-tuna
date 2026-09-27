@@ -6490,7 +6490,52 @@ function scoreKickerStats(stats, rules) {
   pts += (st.xpMissed || 0) * (Number.isFinite(s.missedExtraPoint) ? s.missedExtraPoint : -1);
   return pts;
 }
-function scoreDefenseStats(stats, rules, games) {
+// ── points allowed, as a spread rather than a single afternoon ─────────────
+// The points-allowed ladder is steep and scored per game, and a projection is
+// an average. Putting the AVERAGE on the ladder (the floor of 21.4 a game, say)
+// scores every defense as though it allows exactly its mean every week, which
+// no defense does: the 4, 7 and 10 a good one banks on its best Sundays never
+// appear, and the whole league lands in the one- and zero-point rungs. On the
+// DraftKings ladder that put all 32 defenses inside 1.4 points of each other,
+// and the DFS builder -- reading a flat position against a $2,000 price range
+// -- took the cheapest one on every slate (reported 26 Sep 2026).
+//
+// So a projection is scored as the ladder's EXPECTED value over a spread of
+// scores around the mean: a normal curve with a standard deviation of ten
+// points, cut into whole points, everything under a half-point counted as a
+// shutout. Ten is a modeling assumption -- roughly how much one NFL team's
+// score moves from game to game -- not a fitted or sourced constant. The
+// ladder's order is what it restores, and a matchup against a low implied
+// total now reads as the ceiling it is.
+//
+// The DEFAULT, because almost everything scored here is a projection: the
+// DFS slate, the weekly and season boards, and the two client copies
+// (index.html, it-league.js), which tools/test-boards.mjs holds to this one.
+// A RESULT is the exception and asks for `{ exact: true }`: a box score is one
+// afternoon on its own number, and season-to-date form is what he has
+// already done. The season boards used to keep the mean-on-the-ladder rule
+// and moved in the follow-up to the DFS fix, so a defense ranks on the same
+// arithmetic in draft season as it does on a slate.
+const PA_SPREAD_SD = 10;
+function _normCdf(z) {
+  // Abramowitz & Stegun 7.1.26: accurate to about 1e-7, which is far inside
+  // the tenth of a point anything here is printed to.
+  const t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z / 2);
+  return z >= 0 ? (1 + y) / 2 : (1 - y) / 2;
+}
+function _paTierExpected(mean, tiers, sd) {
+  const d = sd > 0 ? sd : PA_SPREAD_SD;
+  const top = Math.ceil(Math.max(0, mean) + 6 * d);
+  let pts = 0, mass = 0;
+  for (let pa = 0; pa <= top; pa++) {
+    const lo = pa === 0 ? 0 : _normCdf((pa - 0.5 - mean) / d);
+    const w = _normCdf((pa + 0.5 - mean) / d) - lo;
+    pts += w * _tierPoints(pa, tiers); mass += w;
+  }
+  return mass > 0 ? pts / mass : _tierPoints(Math.floor(mean), tiers);
+}
+function scoreDefenseStats(stats, rules, games, opts) {
   const s = { ...SCORING_KDEF, ...(rules || {}) };
   const st = stats || {};
   const g = games > 0 ? games : 17;
@@ -6504,16 +6549,18 @@ function scoreDefenseStats(stats, rules, games) {
   pts += (st.st2pt || 0) * s.specialTeams2pt;
   pts += (st.stSafety1pt || 0) * s.specialTeamsSafety1pt;
   if (st.ptsAllowed !== undefined) {
-    const ppg = Math.floor(st.ptsAllowed / g);
-    pts += _tierPoints(ppg, s.pointsAllowed) * g;
+    if (opts && opts.exact) pts += _tierPoints(Math.floor(st.ptsAllowed / g), s.pointsAllowed) * g;
+    else pts += _paTierExpected(st.ptsAllowed / g, s.pointsAllowed) * g;
   }
   return pts;
 }
 // Any position. `games` is how many games the stat line spans, which the
-// points-allowed tiers need because they are per game.
-function scoreAny(stats, position, rules, games) {
+// points-allowed tiers need because they are per game. A defense's points
+// allowed is scored as a projection (see _paTierExpected) unless `opts.exact`
+// says the line is a result; nothing else reads `opts`.
+function scoreAny(stats, position, rules, games, opts) {
   if (position === 'K') return scoreKickerStats(stats, rules);
-  if (position === 'DEF' || position === 'DST') return scoreDefenseStats(stats, rules, games);
+  if (position === 'DEF' || position === 'DST') return scoreDefenseStats(stats, rules, games, opts);
   return scoreStats(stats, position, rules);
 }
 
@@ -6826,7 +6873,8 @@ function seasonFormFrom(u, position, rules) {
   if (!sea || games <= 0) return null;
   const stats = sea.stats && Object.keys(sea.stats).length ? sea.stats : null;
   if (!stats) return null;
-  const pts = _oddsRound(scoreAny(stats, position, rules, games));
+  // What he has done, so a defense's points allowed is scored as a result.
+  const pts = _oddsRound(scoreAny(stats, position, rules, games, { exact: true }));
   const carries = Number(sea.carries) || 0, rec = Number(sea.receptions) || 0, tgt = Number(sea.targets) || 0;
   let volume = null, volumeUnit = null;
   if (position === 'RB') { volume = _oddsRound((carries + rec) / games); volumeUnit = 'touches'; }
@@ -13351,7 +13399,7 @@ function dfsActualFor(actuals, name, team, pos, rules) {
   if (pos === 'DST' || pos === 'DEF') {
     const d = actuals.defense && actuals.defense.get(team);
     if (!d) return { gamePlayed: true, actualPoints: null, actualBasis: 'no-defense-box-score' };
-    return { gamePlayed: true, actualBasis: 'box-score', actualPoints: _oddsRound(scoreAny(d, 'DST', rules, 1)) };
+    return { gamePlayed: true, actualBasis: 'box-score', actualPoints: _oddsRound(scoreAny(d, 'DST', rules, 1, { exact: true })) };
   }
   // A kicker still is not scorable: field goals and extra points are not in
   // the box score, and nothing in it inverts into them.
@@ -13473,7 +13521,19 @@ function buildDfsSlate(site, salaries, board, opts) {
     const wk = dfsWeekStatus(avail, p.key, week, s.injuryIndicator)
       || (rst && rst.kind === 'roster' ? { status: 'Out', note: 'Not on an active roster (' + rst.status + (rst.team ? ', ' + rst.team : '') + ')', basis: 'roster' } : null);
     const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
-    const v = pts('vegas'), c = pts('consensus'), it = pts('ironTuna');
+    // A DEFENSE'S WEEK IS ITS MATCHUP. The board's Iron Tuna line blends the
+    // week's environment with the consensus, and the consensus is odds-blind by
+    // design: for a defense that is one flat per-game share of a season line,
+    // the same number against the best offense on the schedule and the worst.
+    // A skill player's consensus still knows his role; a defense's knows
+    // nothing about Sunday. Blended at 45-60%, it threw away half of the only
+    // signal a defense has, every defense projected within a couple of points
+    // of the rest, and at DraftKings' prices the cheapest one -- the one facing
+    // the best offense -- won on value every week (reported 26 Sep 2026). So
+    // on the slate, a defense is projected on the matchup line in full: props
+    // do not exist for a defense, and the game line or the fitted ratings are
+    // what the Vegas side already is. Consensus mode keeps the flat line.
+    const v = pts('vegas'), c = pts('consensus'), it = pos === 'DST' ? v : pts('ironTuna');
     const w0 = p.weeks.find(x => x.env) || null;
     // Scored at the SITE's rules, like everything else on the row: a prop is
     // a stat line, and a stat line is worth different points on DK than on FD.
