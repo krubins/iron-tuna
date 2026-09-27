@@ -1308,8 +1308,9 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
     // The page must actually use it: the old call site built its candidate
     // from `whoOf(p)[0]` and `p.headline`, which is the bug in one line.
     // The cover hands it the de-boasted headline, so the call carries a
-    // second argument: match the call, not one exact spelling of it.
-    ok('the desk hero is built from coverSubjects', /coverSubjects\(p[,)]/.test(front));
+    // second argument: match the call, not one exact spelling of it. Since
+    // 2026-09-26 it is called on the lead alone (`lead`), not on every piece.
+    ok('the desk hero is built from coverSubjects', /coverSubjects\((p|lead)[,)]/.test(front));
     ok('and no longer pairs the first finding with the headline',
       !/name:\s*whoOf\(p\)\[0\]/.test(front));
   }

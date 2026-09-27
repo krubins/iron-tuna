@@ -451,6 +451,9 @@
       img.alt = opts.alt != null ? opts.alt : (p.n + (p.t ? ', ' + p.t : ''));
       img.decoding = 'async';
       if (!opts.eager) img.loading = 'lazy';
+      // Set before src, or it is too late: the request starts when src is set.
+      // The homepage hero asks for 'high' (2026-09-26); nothing else does.
+      if (opts.priority) img.setAttribute('fetchpriority', opts.priority);
       img.referrerPolicy = 'no-referrer';
       img.onload = function () {
         var live = !!shot && at === 0;
