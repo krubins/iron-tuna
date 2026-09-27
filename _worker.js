@@ -6899,6 +6899,27 @@ function buildBoards(ctx, opts) {
   const wantPos = o.position ? String(o.position).toUpperCase() : null;
   const posMatch = p => !wantPos || wantPos === 'ALL' || p === wantPos ||
     (wantPos === 'FLEX' && (p === 'RB' || p === 'WR' || p === 'TE')) || (wantPos === 'DST' && p === 'DEF');
+  // The week a date falls in: the first regular-season week whose own last
+  // game had not finished by then (the nflSeasonState rule). Before the season
+  // is Week 1; after it, past the last week, so nothing is left to miss.
+  const regWeeks = state && state.ok ? (state.weeks || []).filter(x => x.type === 'REG') : [];
+  const weekOf = ms => {
+    if (!Number.isFinite(ms) || !regWeeks.length) return 1;
+    const b = regWeeks.find(x => x.endsAt > ms);
+    return b ? b.number : regWeeks[regWeeks.length - 1].number + 1;
+  };
+  // THIS WEEK'S injury report (Out / Doubtful / Questionable), which the
+  // availability pull has kept beside the season list since the DFS slate
+  // needed it and which no board read (27 Sep 2026: a receiver ruled out on
+  // Friday still ranked at his full line on the week board). A report older
+  // than a week is about a game already played and is not applied.
+  const nowMs = state && state.ok && Number.isFinite(state.now) ? state.now : Date.now();
+  const weekReport = k => {
+    const w = ctx.week && ctx.week[k];
+    if (!w || !w.status) return null;
+    const at = Date.parse(String(w.asOf || ''));
+    return Number.isFinite(at) && nowMs - at > 7 * 86400000 ? null : w;
+  };
   const rows = [];
   for (const p of ctx.pool) {
     if (!posMatch(p.position)) continue;
@@ -6906,6 +6927,8 @@ function buildBoards(ctx, opts) {
     const k = _oddsNorm(p.name) + '|' + p.position;
     const a = ctx.avail[k] || null;
     const gamesOut = a ? Number(a.gamesOut) || 0 : 0;
+    const wr = curWeek != null ? weekReport(k) : null;
+    const wrOut = !!(wr && (wr.status === 'Out' || wr.status === 'Doubtful'));
     // Games he can play across the season: the availability list, or the
     // whole schedule. His per-game line is the season line over THIS.
     const playable = Math.max(1, AVAILABILITY_GAMES - gamesOut);
@@ -6931,19 +6954,26 @@ function buildBoards(ctx, opts) {
     // they are what a reader checks next — whether the scoring is touchdown-fed
     // and whether the role is his.
     const form = seasonFormFrom(u, p.position, rules);
-    // The weeks he is unavailable: the first `gamesOut` weeks WITH A GAME from
-    // the current week onward, across the whole schedule. Anchored to now, not
-    // to the horizon: a four-game absence that starts in Week 2 is over long
-    // before the fantasy playoffs, and a playoffs board that zeroed him would
-    // be answering the wrong question.
+    // The weeks he is unavailable. `gamesOut` is games missed across the
+    // SEASON, counted from when the absence began: the availability file's own
+    // convention ("first eligible Week 5" = 4) and _availGamesOut's (weeks from
+    // kickoff to the return date). It used to be counted forward from the
+    // current week, so in Week 4 a man due back in Week 5 was held out through
+    // Week 7, and a live placement counted from kickoff was pushed that many
+    // weeks past his return. A live entry is kickoff-based and starts at Week 1;
+    // a hand entry starts in the week of its asOf date. Calendar weeks, byes
+    // included, as the file and dfsWeekStatus count them. Still anchored to
+    // the season, not to the horizon: a four-game absence that starts in Week 2
+    // is over long before the fantasy playoffs.
     const outWeeks = new Set();
-    if (a && curWeek != null && gamesOut > 0) {
-      for (let w = curWeek, left = gamesOut; w <= 18 && left > 0; w++) {
-        const fx = ratings && ratings.fixtures[team] && ratings.fixtures[team][w];
-        if (!fx) continue;                         // a bye does not burn a game of absence
-        outWeeks.add(w); left--;
-      }
+    if (a && gamesOut > 0) {
+      const from = a.live ? 1 : weekOf(a.asOf ? Date.parse(String(a.asOf)) : NaN);
+      for (let w = Math.max(1, from); w < from + gamesOut && w <= 18; w++) outWeeks.add(w);
     }
+    // Ruled out or doubtful for THIS week's game: he does not score in it,
+    // whatever the season list says. Questionable stays on (most play) and
+    // is carried to the Vegas grade as a caution.
+    if (wrOut) outWeeks.add(curWeek);
     const cStats = {}, vStats = {}, iStats = {};
     const weekRows = [];
     let games = 0; const byes = []; let confSum = 0, confN = 0; let propsWeeks = 0, postedWeeks = 0, fittedWeeks = 0, thinWeeks = 0;
@@ -6963,7 +6993,7 @@ function buildBoards(ctx, opts) {
       let vp = null;
       if (props && ctx.nameIndex.get(_oddsNorm(p.name)) !== null) {
         const mk = marketPropsFrom(props);
-        vp = vegasProjection(mk.props, p.position, rules, { asOf: mk.asOf, injuryStatus: a ? a.status : null });
+        vp = vegasProjection(mk.props, p.position, rules, { asOf: mk.asOf, injuryStatus: wr ? wr.status : a ? a.status : null });
         if (vp.ok) {
           v = { ...weeklyStats(full, p.position, playable, env), ...vp.stats };   // priced stats replace the environment's
           // ...and so does the touchdown price, which used to reach the block
@@ -7030,7 +7060,9 @@ function buildBoards(ctx, opts) {
     rows.push({
       name: p.name, position: p.position === 'DEF' ? 'DST' : p.position, pos: p.position, team, key: k,
       games, byes, weeks: weekRows,
-      injury: a ? { status: a.status, gamesOut, note: a.note || '' } : null,
+      // The season list first (it carries the games), else this week's report.
+      injury: a ? { status: a.status, gamesOut, note: a.note || '', ...(wr ? { thisWeek: wr.status } : {}) }
+        : wr ? { status: wr.status, gamesOut: 0, note: wr.note || '', thisWeek: wr.status } : null,
       roleTrend: role, form,
       scheduleDifficulty: oppN ? { avgOpponentDefRank: _oddsRound(oppAllowedSum / oppN),
         label: (oppAllowedSum / oppN) <= 11 ? 'Hard' : (oppAllowedSum / oppN) >= 22 ? 'Easy' : 'Average' } : null,
@@ -7088,11 +7120,11 @@ async function boardsContext(env, opts) {
   if (!sched) return null;
   const state = nflSeasonState(sched, Date.now());
   const curWeek = state.ok && state.week.type === 'REG' ? state.week.number : null;
-  const [avail, usage, overlay, weekMarkets] = await Promise.all([
-    availabilityTable(env), usageCacheRead(env), oddsCacheRead(env),
+  const [availWk, usage, overlay, weekMarkets] = await Promise.all([
+    availabilityForWeek(env), usageCacheRead(env), oddsCacheRead(env),
     curWeek != null ? marketHistoryWeek(env, sched.season, curWeek) : {}
   ]);
-  return { sched, state, ratings: teamRatingsFrom(sched), avail, usage,
+  return { sched, state, ratings: teamRatingsFrom(sched), avail: availWk.table, week: availWk.weekly, usage,
            overlay: overlay ? overlay.overlay : null, weekMarkets, nameIndex: _oddsProjectionIndex(),
            pool: _availPool(PROJECTIONS), rules: scoringRules(o.preset, o.custom) };
 }

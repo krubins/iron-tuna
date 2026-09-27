@@ -201,7 +201,8 @@ console.log('\nthe three boards, this week');
 
 console.log('\nbyes, injuries and the multi-week sums');
 {
-  const avail = { 'betaback|RB': { status: 'IR', gamesOut: 2, note: 'knee' } };
+  // Placed on IR during Week 2, so his two games out are Weeks 2 and 3.
+  const avail = { 'betaback|RB': { status: 'IR', gamesOut: 2, note: 'knee', asOf: new Date(NOW).toISOString().slice(0, 10) } };
   const b = H.buildBoards(ctx({ avail }), { horizon: 'ros', preset: 'ppr' });
   const beta = b.players.find(p => p.name === 'Beta Back');
   ok('an injured player misses the first weeks of the horizon',
@@ -227,10 +228,47 @@ console.log('\nbyes, injuries and the multi-week sums');
   ok('the playoff horizon is three weeks and never 18', week.horizon.weeks.join() === '15,16,17');
   ok('far-out weeks have no posted line and say so', gamma.vegas.basis === 'ratings' && gamma.vegas.confidence === 'LOW', gamma.vegas.basis + ' ' + gamma.vegas.confidence);
   ok('schedule difficulty is reported', !!gamma.scheduleDifficulty && ['Easy', 'Average', 'Hard'].includes(gamma.scheduleDifficulty.label));
+  // gamesOut counts from when the absence began, not from today. A preseason
+  // placement "first eligible Week 2" is over by Week 2; a live entry is
+  // counted from kickoff, so four games out means back in Week 5, not Week 6.
+  const back = H.buildBoards(ctx({ avail: { 'betaback|RB': { status: 'IR', gamesOut: 1, asOf: '2026-08-30' } } }), { horizon: 'ros', preset: 'ppr' })
+    .players.find(p => p.name === 'Beta Back');
+  ok('a preseason absence that has run its course takes no weeks now', back.weeks.every(w => !w.out) && back.injury.status === 'IR',
+     JSON.stringify(back.weeks.slice(0, 3)));
+  const live = H.buildBoards(ctx({ avail: { 'betaback|RB': { status: 'IR', gamesOut: 4, live: true, asOf: '2026-09-12' } } }), { horizon: 'ros', preset: 'ppr' })
+    .players.find(p => p.name === 'Beta Back');
+  ok('a live placement is counted from kickoff', live.weeks.filter(w => w.out).map(w => w.week).join() === '2,3,4',
+     JSON.stringify(live.weeks.filter(w => w.out).map(w => w.week)));
   const n3 = H.buildBoards(ctx(), { horizon: 'next3', preset: 'ppr' });
   const a3 = n3.players.find(p => p.name === 'Alpha Quarterback');
   ok('NEXT 3 sums three posted weeks', a3.games === 3 && a3.vegas.postedWeeks === 3 && a3.vegas.basis === 'gamelines');
   ok('and its points are roughly three times a week', near(a3.consensus.points, 3 * H.buildBoards(ctx(), { horizon: 'week' }).players.find(p => p.name === 'Alpha Quarterback').consensus.points, 0.4));
+}
+
+console.log('\nthis week\'s injury report');
+{
+  const today = new Date(NOW).toISOString().slice(0, 10);
+  const rep = st => ({ 'deltareceiver|WR': { name: 'Delta Receiver', position: 'WR', team: 'DDD', status: st, note: 'Ankle', asOf: today } });
+  const base = H.buildBoards(ctx(), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Delta Receiver');
+  const outB = H.buildBoards(ctx({ week: rep('Out') }), { horizon: 'week', preset: 'ppr' });
+  const out = outB.players.find(p => p.name === 'Delta Receiver');
+  ok('a man ruled out this week scores nothing on the week board', out.games === 0 && out.ironTuna.points === 0 && out.consensus.points === 0 && out.weeks[0].out === true,
+     JSON.stringify([out.games, out.ironTuna.points]));
+  ok('...and ranks behind every healthy receiver', out.ironTuna.rank === 2 && base.ironTuna.points > 0);
+  ok('...and the row says why', out.injury && out.injury.status === 'Out' && out.injury.thisWeek === 'Out' && out.injury.note === 'Ankle');
+  const dbt = H.buildBoards(ctx({ week: rep('Doubtful') }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Delta Receiver');
+  ok('doubtful is benched as the slate benches it', dbt.games === 0 && dbt.ironTuna.points === 0);
+  const q = H.buildBoards(ctx({ week: rep('Questionable') }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Delta Receiver');
+  ok('questionable stays on the board at his line, flagged', q.games === 1 && q.consensus.points === base.consensus.points && q.injury.status === 'Questionable');
+  const ros = H.buildBoards(ctx({ week: rep('Out') }), { horizon: 'ros', preset: 'ppr' }).players.find(p => p.name === 'Delta Receiver');
+  ok('this week\'s report takes this week only', ros.weeks[0].out === true && ros.weeks.slice(1).every(w => !w.out),
+     JSON.stringify(ros.weeks.filter(w => w.out).map(w => w.week)));
+  const stale = { 'deltareceiver|WR': { status: 'Out', note: '', asOf: new Date(NOW - 10 * 86400000).toISOString().slice(0, 10) } };
+  const old = H.buildBoards(ctx({ week: stale }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Delta Receiver');
+  ok('a report older than a week is about a game already played', old.games === 1 && !old.injury);
+  const both = H.buildBoards(ctx({ avail: { 'deltareceiver|WR': { status: 'IR', gamesOut: 1, asOf: '2026-08-30' } }, week: rep('Out') }), { horizon: 'week', preset: 'ppr' })
+    .players.find(p => p.name === 'Delta Receiver');
+  ok('a man on the season list still sitting this week is out, and the row carries both', both.games === 0 && both.injury.status === 'IR' && both.injury.thisWeek === 'Out');
 }
 
 console.log('\na priced prop, and the why behind it');
