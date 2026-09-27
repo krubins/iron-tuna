@@ -278,6 +278,10 @@ const read = page => page.evaluate(() => {
       const h = document.querySelector('#leadWell .hm-lead h3'); let max = 0;
       for (const e of document.querySelectorAll('#hmHero *')) {
         if (h && (e === h || h.contains(e)) || e.closest('.it-plate-shot') || !e.getClientRects().length) continue;
+        // Visually hidden text (the lead section's clipped heading) is not type
+        // a reader sees.
+        let hid = false; for (let a = e; a && a.id !== 'hmHero'; a = a.parentElement) if (a.getBoundingClientRect().width <= 1) { hid = true; break; }
+        if (hid) continue;
         if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
         max = Math.max(max, parseFloat(getComputedStyle(e).fontSize));
       }
@@ -831,6 +835,65 @@ console.log('\nTop Headlines, and no story twice');
   const r = await railRead(page);
   ok('with a short feed the cards are hidden, not repeated', r.cards === false && new Set(r.stories).size === r.stories.length, `${r.cards} | ${r.stories.join(' ')}`);
   CONTENT.pieces = full;
+  await ctx.close();
+}
+
+// ── 3i. below the front, flat (2026-09-27) ────────────────────────────────
+// No plates, no shadows, no corners over 4px; one section head; every
+// section the same distance from the last; a focus ring on every link.
+const below = page => page.evaluate(() => {
+  const vis = e => e && e.getClientRects().length > 0;
+  const zone = [...document.querySelectorAll('.hm-choose, #main, #how, .foot')];
+  const shadows = [], corners = [];
+  for (const root of zone) for (const e of [root, ...root.querySelectorAll('*')]) {
+    if (!vis(e)) continue;
+    const cs = getComputedStyle(e);
+    if (cs.boxShadow && cs.boxShadow !== 'none') shadows.push(e.className || e.tagName);
+  }
+  for (const e of document.querySelectorAll('.hm-lanes, .hm-lane, .hm-read, .hm-read-card, .hm-diff-plate, .hm-promo, .hm-input, .hm-how-grid')) {
+    if (!vis(e)) continue;
+    const cs = getComputedStyle(e);
+    if (['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius'].some(k => parseFloat(cs[k]) > 4)) corners.push(e.className);
+  }
+  const bottom = el => [...el.querySelectorAll('*')].filter(vis).reduce((m, e) => Math.max(m, e.getBoundingClientRect().bottom), 0);
+  const top = el => el.getBoundingClientRect().top;
+  const gaps = [
+    ['front', bottom(document.getElementById('hmHero')), top(document.querySelector('.hm-choose-k'))],
+    ['lanes', bottom(document.querySelector('.hm-lanes')), top(document.querySelector('#different .hm-sec-head'))],
+    ['market', bottom(document.getElementById('different')), top(document.querySelector('#articles .hm-sec-head'))],
+    ['desk', bottom(document.getElementById('articles')), top(document.querySelector('#how .hm-promo'))]
+  ].map(([k, b, t]) => [k, Math.round(t - b)]);
+  const heads = [...document.querySelectorAll('#main .hm-sec-head h2, .hm-choose-k, #howHead')].filter(vis).map(h => {
+    const cs = getComputedStyle(h); return { t: h.textContent.trim(), px: cs.fontSize, w: cs.fontWeight, tt: cs.textTransform };
+  });
+  return { shadows, corners, gaps, heads, gapVar: getComputedStyle(document.documentElement).getPropertyValue('--sec-gap').trim() };
+});
+console.log('\nbelow the front, flat');
+for (const [w, tag] of [[1440, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
+  const { page, ctx } = await open(w, 900);
+  await page.waitForTimeout(300);
+  const r = await below(page);
+  ok(`${tag}: nothing below the front casts a shadow`, r.shadows.length === 0, r.shadows.slice(0, 5).join(','));
+  ok(`${tag}: no card below the front rounds past 4px`, r.corners.length === 0, r.corners.join(','));
+  const gs = r.gaps.map(g => g[1]);
+  ok(`${tag}: every section is the same distance from the last`,
+     Math.max(...gs) - Math.min(...gs) <= 1 && Math.abs(gs[0] - parseFloat(r.gapVar)) <= 1, r.gaps.map(g => g.join(' ')).join(', ') + ' | --sec-gap ' + r.gapVar);
+  ok(`${tag}: one section head, 22px bold, sentence case`,
+     r.heads.length >= 4 && r.heads.every(h => h.px === '22px' && h.w === '700' && h.tt === 'none'), JSON.stringify(r.heads));
+  await ctx.close();
+}
+{
+  // Keyboard focus shows a ring on a link in each section, light and dark.
+  const { page, ctx } = await open(1440, 900);
+  await page.waitForTimeout(300);
+  await page.keyboard.press('Tab');
+  const rings = [];
+  for (const sel of ['.hm-links a', '#different .hm-sec-head a', '#readGrid a', '#how .hm-btn.primary', '#how .hm-how-more a', '.foot-nav a']) {
+    const r = await page.evaluate(sel => { const e = document.querySelector(sel); if (!e) return null; e.focus(); const cs = getComputedStyle(e);
+      return { sel, style: cs.outlineStyle, width: parseFloat(cs.outlineWidth) }; }, sel);
+    rings.push(r);
+  }
+  ok('keyboard focus shows a ring in every section', rings.every(r => r && r.style !== 'none' && r.width >= 2), JSON.stringify(rings));
   await ctx.close();
 }
 
