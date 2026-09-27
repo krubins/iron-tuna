@@ -716,8 +716,17 @@ function applyPlayerUrls(xml) {
   // The cards are rendered from the projections, so the honest date is the day
   // the roster behind them last changed — not today, and not the day this tool
   // happened to run.
+  //
+  // Without history (a shallow checkout, which is what CI has) git cannot
+  // answer, and today is not an answer: it went stale at every UTC midnight, so
+  // the discovery-layer gate failed on the first commit of each day for a
+  // sitemap nobody had touched (27 Sep 2026). The block already committed is
+  // the last date anybody with history computed, so it is carried forward, the
+  // same rule the guides' dates follow. Today is left only for a sitemap that
+  // has never carried the block.
   const d = gitDates('player-search.js');
-  const mod = d ? d.modified : new Date().toISOString().slice(0, 10);
+  const prior = d ? null : (xml.match(/<loc>[^<]*\/player\/[^<]*<\/loc><lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/) || [])[1];
+  const mod = d ? d.modified : prior || new Date().toISOString().slice(0, 10);
   const rows = slugs.map((s) =>
     `  <url><loc>${SITE}/player/${s}</loc><lastmod>${mod}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>`);
   const block = [PL_OPEN, ...rows, PL_CLOSE].join('\n');
