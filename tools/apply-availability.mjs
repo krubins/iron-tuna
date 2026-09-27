@@ -126,7 +126,10 @@ if (bad) process.exit(1);
 const availObj = {};
 for (const e of entries) {
   availObj[norm(e.name) + '|' + String(e.position).toUpperCase()] =
-    { status: e.status, gamesOut: e.gamesOut, note: e.note || '', asOf: file.asOf || '' };
+    // The entry's own date when it has one: the board counts gamesOut from the
+    // week the absence began, so a mid-season placement must not inherit the
+    // preseason entries' date, nor they its.
+    { status: e.status, gamesOut: e.gamesOut, note: e.note || '', asOf: e.asOf || file.asOf || '' };
 }
 const availLines = Object.entries(availObj)
   .map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`)

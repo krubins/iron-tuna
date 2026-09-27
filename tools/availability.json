@@ -6,9 +6,12 @@
     "line captured from PROJECTIONS the first time the entry was applied; the committed row",
     "is season x (17 - gamesOut) / 17. To reinstate a player set gamesOut to 0 and re-run",
     "(the season line comes back), then delete the entry after the next projections merge.",
-    "Apply with `node tools/apply-availability.mjs`; CI runs it with --check."
+    "Apply with `node tools/apply-availability.mjs`; CI runs it with --check.",
+    "Each entry's asOf is the date its absence began, and gamesOut counts from that week (a",
+    "preseason entry from Week 1). An entry without one takes the file's asOf. Keep the original",
+    "date when revising an entry, or the board will count its absence from the new one."
   ],
-  "asOf": "2026-09-02",
+  "asOf": "2026-09-27",
   "seasonGames": 17,
   "players": [
     {
@@ -17,6 +20,7 @@
       "team": "HOU",
       "status": "IR",
       "gamesOut": 17,
+      "asOf": "2026-09-02",
       "note": "Torn ACL in the Aug. 18 joint practice against the Raiders; out for the 2026 season.",
       "source": "ESPN, NFL.com, CBS Sports (Aug. 19-20, 2026); ESPN injury feed 2026-09-02",
       "season": {
@@ -34,6 +38,7 @@
       "team": "NO",
       "status": "IR",
       "gamesOut": 17,
+      "asOf": "2026-09-02",
       "note": "Hamstring; placed on injured reserve without a return designation, out for the season.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -50,6 +55,7 @@
       "team": "NO",
       "status": "IR",
       "gamesOut": 17,
+      "asOf": "2026-09-02",
       "note": "Season-ending knee injury in the Aug. 22 preseason game against the Rams.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -66,6 +72,7 @@
       "team": "NYG",
       "status": "IR",
       "gamesOut": 17,
+      "asOf": "2026-09-02",
       "note": "Torn ACL at the Aug. 25 practice; out for the 2026 season.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -80,6 +87,7 @@
       "team": "GB",
       "status": "Exempt",
       "gamesOut": 6,
+      "asOf": "2026-09-02",
       "note": "Commissioner's exempt list since Aug. 30 after misdemeanor charges from a May arrest. No timeline: he stays off until the commissioner removes him, and the first court date is Nov. 17. Six games is a working estimate, revisit weekly.",
       "source": "ESPN, NFL.com, NBC Sports (Aug. 30, 2026); site Auction Watch 2026-08-31 and 2026-09-02",
       "season": {
@@ -97,6 +105,7 @@
       "team": "NO",
       "status": "IR",
       "gamesOut": 8,
+      "asOf": "2026-09-02",
       "note": "Recurring right hamstring; IR with a return designation, roughly two months out, Week 9 return most likely.",
       "source": "ESPN injury feed 2026-09-02; site Auction Watch 2026-09-02",
       "season": {
@@ -114,6 +123,7 @@
       "team": "ARI",
       "status": "IR",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "Foot complications from the 2025 injury; IR with a return designation, first eligible Week 5.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -130,6 +140,7 @@
       "team": "BAL",
       "status": "IR",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "IR with a return designation at cutdown; first eligible Week 5.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -147,6 +158,7 @@
       "team": "DET",
       "status": "IR",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "Back injury after an MCL sprain in camp; IR with a return designation, first eligible Week 5.",
       "source": "ESPN injury feed 2026-09-02; site Auction Watch 2026-08-27",
       "season": {
@@ -164,6 +176,7 @@
       "team": "GB",
       "status": "IR",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "Ankle; IR with a return designation, first eligible Week 5.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -181,6 +194,7 @@
       "team": "GB",
       "status": "PUP",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "Neck; reserve/PUP, misses at least the first four games and is no lock to return when eligible.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -195,6 +209,7 @@
       "team": "HOU",
       "status": "IR",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "Knee (ACL and MCL) recovery; IR with a return designation, first eligible Week 5.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -212,6 +227,7 @@
       "team": "MIA",
       "status": "IR",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "Waived/injured and reverted to IR; misses at least four games.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -226,6 +242,7 @@
       "team": "PHI",
       "status": "IR",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "Back; IR with a return designation, first eligible Week 5.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -240,6 +257,7 @@
       "team": "SF",
       "status": "IR",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "Calf injury from July 26; IR with a return designation, first eligible Week 5.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -257,6 +275,7 @@
       "team": "SF",
       "status": "PUP",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "Pectoral; reserve/PUP, misses at least the first four games.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -273,6 +292,7 @@
       "team": "SEA",
       "status": "PUP",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "January ACL tear; reserve/PUP, misses at least the first four games and is described as still far from returning.",
       "source": "ESPN injury feed 2026-09-02; site Auction Watch 2026-08-31",
       "season": {
@@ -290,6 +310,7 @@
       "team": "WAS",
       "status": "IR",
       "gamesOut": 4,
+      "asOf": "2026-09-02",
       "note": "Quadriceps; IR with a return designation, first eligible Week 5.",
       "source": "ESPN injury feed 2026-09-02",
       "season": {
@@ -298,6 +319,125 @@
         "rec": 6,
         "recYd": 53,
         "recTD": 1
+      }
+    },
+    {
+      "name": "Jaxson Dart",
+      "position": "QB",
+      "team": "NYG",
+      "status": "IR",
+      "gamesOut": 15,
+      "asOf": "2026-09-24",
+      "note": "Left knee (MCL, PCL, meniscus) in the Week 2 loss to the Rams; IR, out for the rest of the regular season with a possible postseason return.",
+      "source": "ESPN injury feed 2026-09-27 (placed on IR Sept. 24)",
+      "season": {
+        "passYd": 3685,
+        "passTD": 20.8,
+        "passInt": 10.1,
+        "rushYd": 552,
+        "rushTD": 6.5,
+        "fumLost": 3.7
+      }
+    },
+    {
+      "name": "Jonathon Brooks",
+      "position": "RB",
+      "team": "CAR",
+      "status": "IR",
+      "gamesOut": 6,
+      "asOf": "2026-09-23",
+      "note": "Core-muscle surgery after leaving the Week 2 win over the Falcons; IR, at least six weeks, Week 9 return likeliest.",
+      "source": "ESPN injury feed 2026-09-27",
+      "season": {
+        "rushYd": 810,
+        "rushTD": 4.3,
+        "rec": 33,
+        "recYd": 247,
+        "recTD": 1.2,
+        "fumLost": 0.9
+      }
+    },
+    {
+      "name": "Alec Pierce",
+      "position": "WR",
+      "team": "IND",
+      "status": "IR",
+      "gamesOut": 4,
+      "asOf": "2026-09-26",
+      "note": "Left heel, aggravated in Week 2; IR Sept. 26, first eligible Week 7.",
+      "source": "ESPN injury feed 2026-09-27",
+      "season": {
+        "rushYd": 0,
+        "rushTD": 0,
+        "rec": 61,
+        "recYd": 948,
+        "recTD": 5.3,
+        "fumLost": 0.5
+      }
+    },
+    {
+      "name": "Andrei Iosivas",
+      "position": "WR",
+      "team": "CIN",
+      "status": "IR",
+      "gamesOut": 5,
+      "asOf": "2026-09-26",
+      "note": "Thumb ligament surgery; IR Sept. 26, first eligible Week 8.",
+      "source": "ESPN injury feed 2026-09-27",
+      "season": {
+        "rushYd": 11,
+        "rec": 21,
+        "recYd": 235,
+        "recTD": 2.1
+      }
+    },
+    {
+      "name": "Demarcus Robinson",
+      "position": "WR",
+      "team": "SF",
+      "status": "IR",
+      "gamesOut": 4,
+      "asOf": "2026-09-26",
+      "note": "High-ankle sprain in Week 2, 3-to-6-week timeline; IR Sept. 26, first eligible Week 7.",
+      "source": "ESPN injury feed 2026-09-27",
+      "season": {
+        "rushYd": 0,
+        "rec": 3,
+        "recYd": 44,
+        "recTD": 0.3
+      }
+    },
+    {
+      "name": "David Njoku",
+      "position": "TE",
+      "team": "LAC",
+      "status": "IR",
+      "gamesOut": 5,
+      "asOf": "2026-09-23",
+      "note": "Fibula, Week 2 against the Raiders; IR Sept. 23, return date Week 8.",
+      "source": "ESPN injury feed 2026-09-27",
+      "season": {
+        "rec": 40,
+        "recYd": 417,
+        "recTD": 3.9
+      }
+    },
+    {
+      "name": "Brandon Aiyuk",
+      "position": "WR",
+      "team": "SF",
+      "status": "Out",
+      "gamesOut": 17,
+      "asOf": "2026-09-02",
+      "note": "Reserve/did-not-report since last December; the GM said he has played his last snap for the 49ers and the coach does not view him as an option.",
+      "source": "ESPN injury feed 2026-09-27; reserve/left squad since Dec. 2025",
+      "season": {
+        "rushYd": 0,
+        "rushTD": 0,
+        "rec": 1,
+        "recYd": 3,
+        "recTD": 0,
+        "fumLost": 0
       }
     }
   ]
