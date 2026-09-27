@@ -137,7 +137,27 @@ const CONTENT = { ok: true, pieces: [
   { kind: 'weekend-game-plan', title: 'Weekend Game Plan', headline: 'Too many to print',
     week: 3, publishedAt: AGO(26), url: '/in-season/desk/weekend-game-plan/3' },
   // No url: not a card.
-  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: AGO(30) }
+  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: AGO(30) },
+  // The rest of a week's desk (2026-09-26): the live feed returns about a
+  // dozen, and the front (the lead and the rail's seven slots) takes eight of
+  // them, so the cards below have pieces of their own to show.
+  { kind: 'waiver-watch', title: 'Waiver Watch', headline: 'Four adds the market already priced in',
+    dek: 'Claims that cost more than the props say.', week: 3, publishedAt: AGO(33),
+    url: '/in-season/desk/waiver-watch/3', components: [{ n: 1, player: 'Tank Bigsby', headline: 'e' }] },
+  { kind: 'start-sit', title: 'Start/Sit', headline: 'Two starts the consensus is scared of',
+    week: 3, publishedAt: AGO(40), url: '/in-season/desk/start-sit/3' },
+  { kind: 'dfs-core', title: 'DFS Core', headline: 'The cheap tight end every lineup wants',
+    week: 3, publishedAt: AGO(46), url: '/in-season/desk/dfs-core/3' },
+  { kind: 'the-line', title: 'The Line', headline: 'Where the total and the projections disagree',
+    dek: 'Three games the book sees differently.', week: 3, publishedAt: AGO(52),
+    url: '/in-season/desk/the-line/3', components: [{ n: 1, player: 'Cam Ward', headline: 'f' }] },
+  { kind: 'trade-desk', title: 'Trade Desk', headline: 'Sell the running back before Sunday',
+    dek: 'His price peaks this week.', week: 3, publishedAt: AGO(60),
+    url: '/in-season/desk/trade-desk/3', components: [{ n: 1, player: 'James Cook', headline: 'g' }] },
+  { kind: 'injury-read', title: 'Injury Read', headline: 'What the Wednesday report actually changes',
+    week: 3, publishedAt: AGO(70), url: '/in-season/desk/injury-read/3' },
+  { kind: 'kickers', title: 'Kickers & Defenses', headline: 'Streaming picks off the implied totals',
+    week: 3, publishedAt: AGO(80), url: '/in-season/desk/kickers/3' }
 ]};
 // What /api/content would hand back: the same story five times over, in draft.
 // Nothing on the cover may come from here.
@@ -258,6 +278,10 @@ const read = page => page.evaluate(() => {
       const h = document.querySelector('#leadWell .hm-lead h3'); let max = 0;
       for (const e of document.querySelectorAll('#hmHero *')) {
         if (h && (e === h || h.contains(e)) || e.closest('.it-plate-shot') || !e.getClientRects().length) continue;
+        // Visually hidden text (the lead section's clipped heading) is not type
+        // a reader sees.
+        let hid = false; for (let a = e; a && a.id !== 'hmHero'; a = a.parentElement) if (a.getBoundingClientRect().width <= 1) { hid = true; break; }
+        if (hid) continue;
         if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
         max = Math.max(max, parseFloat(getComputedStyle(e).fontSize));
       }
@@ -735,7 +759,141 @@ for (const [w, want, tag] of [[1280, 16 / 9, 'desktop'], [390, 4 / 3, 'phone']])
   const r = await page.evaluate(() => ({
     more: [...document.querySelectorAll('#leadWell .hm-more')].filter(e => e.getClientRects().length).length,
     rail: [...document.querySelectorAll('#leadWell .hm-rail li')].filter(e => e.getClientRects().length).length }));
-  ok('with a photograph there are no secondary stories, and the rail keeps its four', r.more === 0 && r.rail === 4, JSON.stringify(r));
+  ok('with a photograph there are no secondary stories, and the rail shows five', r.more === 0 && r.rail === 5, JSON.stringify(r));
+  await ctx.close();
+}
+
+// ── 3h. Top Headlines, and no story twice (2026-09-26) ────────────────────
+// Rail items carry no kicker: the series name starts a quiet meta line with a
+// relative time. Headlines clamp at three lines, share one left edge with or
+// without a thumbnail, and "All articles" sits under the list. The cards below
+// skip every story already on the front, and hide when nothing is left.
+const railRead = page => page.evaluate(() => {
+  const vis = e => e && e.getClientRects().length > 0;
+  const items = [...document.querySelectorAll('#leadWell .hm-rail li')].filter(vis);
+  const all = document.querySelector('#leadWell .hm-rail-all');
+  const last = items[items.length - 1];
+  const stories = [...document.querySelectorAll('#leadWell .hm-lead h3 a, #leadWell .hm-more h3 a, #leadWell .hm-rail li h3 a, #readGrid .hm-read-card')]
+    .filter(vis).map(a => a.getAttribute('href'));
+  return {
+    kickers: items.filter(li => li.querySelector('.t')).length,
+    metas: items.map(li => (li.querySelector('.m') || {}).textContent || ''),
+    lines: items.map(li => { const a = li.querySelector('h3 a'), cs = getComputedStyle(a); return Math.round(a.getBoundingClientRect().height / parseFloat(cs.lineHeight)); }),
+    lefts: [...new Set(items.map(li => Math.round(li.querySelector('h3 a').getBoundingClientRect().left)))],
+    thumbs: items.filter(li => li.querySelector('.it-player-face img')).length,
+    gap: all && last ? Math.round(all.getBoundingClientRect().top - last.getBoundingClientRect().bottom) : null,
+    stories, cards: vis(document.getElementById('articles'))
+  };
+});
+console.log('\nTop Headlines, and no story twice');
+{
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const r = await railRead(page);
+  ok('rail items carry no kicker', r.kickers === 0, String(r.kickers));
+  ok('each meta line starts with the series name', r.metas.length === 5 && r.metas.every(m => /^[A-Z][A-Za-z/& ]+ \u00b7 /.test(m)), r.metas.join(' | '));
+  ok('a piece from three hours ago says so', r.metas[0] === 'Opportunity Report \u00b7 3h ago', r.metas[0]);
+  ok('an older piece gives its day', r.metas.some(m => /\u00b7 (Yesterday|[A-Z][a-z]{2} \d{1,2}\/\d{1,2})$/.test(m)), r.metas.join(' | '));
+  ok('no rail headline runs past three lines', r.lines.every(n => n <= 3), r.lines.join(','));
+  ok('headlines share one left edge, thumbnail or not', r.lefts.length === 1 && r.thumbs >= 1 && r.thumbs < 5, `${r.lefts.join(',')} thumbs ${r.thumbs}`);
+  ok('"All articles" sits under the list', r.gap !== null && r.gap >= 0 && r.gap <= 24, String(r.gap));
+  ok('no story is on the page twice', new Set(r.stories).size === r.stories.length && r.cards, r.stories.join(' '));
+  await ctx.close();
+}
+{
+  // Without a photograph the pair moves under the lead and the rail shows the
+  // next four; the cards still repeat none of them.
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, components: undefined } : p);
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const r = await railRead(page);
+  ok('without a photograph, still no story twice', new Set(r.stories).size === r.stories.length && r.metas.length === 4 && r.cards,
+     `${r.metas.length} rail | ${r.stories.join(' ')}`);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // A headline too long for the rail is clamped at three lines, with the whole
+  // of it in the title.
+  const full = CONTENT.pieces, LONG = 'Who inherits the carries in Baltimore now that the backfield is split three ways and the market has not caught up with the snap counts, the red-zone looks or the goal-line work';
+  CONTENT.pieces = full.map((p, i) => i === 1 ? { ...p, headline: LONG } : p);
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const c = await page.evaluate(() => { const a = document.querySelector('#leadWell .hm-rail li h3 a'); return { title: a.getAttribute('title'), clamped: a.scrollHeight > a.clientHeight + 2, lines: Math.round(a.getBoundingClientRect().height / parseFloat(getComputedStyle(a).lineHeight)) }; });
+  ok('a long rail headline is clamped at three lines, whole in its title', c.clamped && c.lines === 3 && c.title === LONG, JSON.stringify(c));
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+{
+  // A short feed: the front takes every piece, so the cards section is hidden
+  // rather than repeating the front.
+  const full = CONTENT.pieces;
+  CONTENT.pieces = full.slice(0, 6);
+  const { page, ctx } = await open(1280, 900);
+  await page.waitForTimeout(300);
+  const r = await railRead(page);
+  ok('with a short feed the cards are hidden, not repeated', r.cards === false && new Set(r.stories).size === r.stories.length, `${r.cards} | ${r.stories.join(' ')}`);
+  CONTENT.pieces = full;
+  await ctx.close();
+}
+
+// ── 3i. below the front, flat (2026-09-27) ────────────────────────────────
+// No plates, no shadows, no corners over 4px; one section head; every
+// section the same distance from the last; a focus ring on every link.
+const below = page => page.evaluate(() => {
+  const vis = e => e && e.getClientRects().length > 0;
+  const zone = [...document.querySelectorAll('.hm-choose, #main, #how, .foot')];
+  const shadows = [], corners = [];
+  for (const root of zone) for (const e of [root, ...root.querySelectorAll('*')]) {
+    if (!vis(e)) continue;
+    const cs = getComputedStyle(e);
+    if (cs.boxShadow && cs.boxShadow !== 'none') shadows.push(e.className || e.tagName);
+  }
+  for (const e of document.querySelectorAll('.hm-lanes, .hm-lane, .hm-read, .hm-read-card, .hm-diff-plate, .hm-promo, .hm-input, .hm-how-grid')) {
+    if (!vis(e)) continue;
+    const cs = getComputedStyle(e);
+    if (['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius'].some(k => parseFloat(cs[k]) > 4)) corners.push(e.className);
+  }
+  const bottom = el => [...el.querySelectorAll('*')].filter(vis).reduce((m, e) => Math.max(m, e.getBoundingClientRect().bottom), 0);
+  const top = el => el.getBoundingClientRect().top;
+  const gaps = [
+    ['front', bottom(document.getElementById('hmHero')), top(document.querySelector('.hm-choose-k'))],
+    ['lanes', bottom(document.querySelector('.hm-lanes')), top(document.querySelector('#different .hm-sec-head'))],
+    ['market', bottom(document.getElementById('different')), top(document.querySelector('#articles .hm-sec-head'))],
+    ['desk', bottom(document.getElementById('articles')), top(document.querySelector('#how .hm-promo'))]
+  ].map(([k, b, t]) => [k, Math.round(t - b)]);
+  const heads = [...document.querySelectorAll('#main .hm-sec-head h2, .hm-choose-k, #howHead')].filter(vis).map(h => {
+    const cs = getComputedStyle(h); return { t: h.textContent.trim(), px: cs.fontSize, w: cs.fontWeight, tt: cs.textTransform };
+  });
+  return { shadows, corners, gaps, heads, gapVar: getComputedStyle(document.documentElement).getPropertyValue('--sec-gap').trim() };
+});
+console.log('\nbelow the front, flat');
+for (const [w, tag] of [[1440, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
+  const { page, ctx } = await open(w, 900);
+  await page.waitForTimeout(300);
+  const r = await below(page);
+  ok(`${tag}: nothing below the front casts a shadow`, r.shadows.length === 0, r.shadows.slice(0, 5).join(','));
+  ok(`${tag}: no card below the front rounds past 4px`, r.corners.length === 0, r.corners.join(','));
+  const gs = r.gaps.map(g => g[1]);
+  ok(`${tag}: every section is the same distance from the last`,
+     Math.max(...gs) - Math.min(...gs) <= 1 && Math.abs(gs[0] - parseFloat(r.gapVar)) <= 1, r.gaps.map(g => g.join(' ')).join(', ') + ' | --sec-gap ' + r.gapVar);
+  ok(`${tag}: one section head, 22px bold, sentence case`,
+     r.heads.length >= 4 && r.heads.every(h => h.px === '22px' && h.w === '700' && h.tt === 'none'), JSON.stringify(r.heads));
+  await ctx.close();
+}
+{
+  // Keyboard focus shows a ring on a link in each section, light and dark.
+  const { page, ctx } = await open(1440, 900);
+  await page.waitForTimeout(300);
+  await page.keyboard.press('Tab');
+  const rings = [];
+  for (const sel of ['.hm-links a', '#different .hm-sec-head a', '#readGrid a', '#how .hm-btn.primary', '#how .hm-how-more a', '.foot-nav a']) {
+    const r = await page.evaluate(sel => { const e = document.querySelector(sel); if (!e) return null; e.focus(); const cs = getComputedStyle(e);
+      return { sel, style: cs.outlineStyle, width: parseFloat(cs.outlineWidth) }; }, sel);
+    rings.push(r);
+  }
+  ok('keyboard focus shows a ring in every section', rings.every(r => r && r.style !== 'none' && r.width >= 2), JSON.stringify(rings));
   await ctx.close();
 }
 
