@@ -41,7 +41,7 @@ const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch
   // The contest scores, so the ladder's cash exclusion is tested against the
   // real dfsMetrics rather than asserted about it.
   cut('const DFS_CONTESTS = {', '// \u2500\u2500 analyst memory') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, scoreAny, SCORING_KDEF, BLEND_SHRINK, dfsMetrics, dfsSupplemental };'
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, dfsCollapseSingleGame, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats, dfsWeekStatus, dfsAvailable, buildSleeperRoster, dfsRosterCheck, dfsMarketRead, dfsPropCoverage, dfsPropNote, dfsActualFor, scoreAny, SCORING_KDEF, BLEND_SHRINK, dfsMetrics, dfsSupplemental, scoreDefenseStats, _paTierExpected, weeklyStats };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 // The scheduled workflow's own CSV writer, so the false-positive gate below
@@ -2066,6 +2066,54 @@ console.log('\nthe per-team maximum against a narrowed game pool');
   ok('Play of the Week weighs its three shapes under the same floor',
      page.includes('maxPerTeam:teamCapFor(cross,seats,pool)')
      && page.includes('maxPerTeam:teamCapFor(seats<=6?cross:3,seats,pool)'));
+}
+
+// ── defenses: the matchup, and points allowed as a spread ───────────────
+// The request this guards (26 Sep 2026): the builder recommended the bottom
+// defense nearly every week. Two causes. The board's Iron Tuna line blends a
+// defense's matchup with a flat, matchup-blind consensus, and the points-
+// allowed ladder was scored on the average alone, so every defense sat within
+// a couple of points of the rest and the cheapest won on value.
+console.log('\ndefenses: the matchup, and points allowed as a spread');
+{
+  const dk = H.scoringRules('ppr', H.SCORING_SITE.dk);
+  const ladder = dk.pointsAllowed;
+  // Expected ladder points never rise as the mean allowed rises: no cliff.
+  let prev = Infinity, mono = true;
+  for (let m = 0; m <= 45; m += 0.1) { const e = H._paTierExpected(m, ladder); if (e > prev + 1e-9) mono = false; prev = e; }
+  ok('the expected points-allowed score never rises as the mean allowed rises', mono);
+  // The old rule dropped a full point between 20.9 and 21.0 allowed, and
+  // scored 21.4 no better than 24.4. Both are gone under the spread.
+  ok('...and the rounding cliff is gone',
+     H.scoreAny({ ptsAllowed: 20.9 }, 'DST', dk, 1) - H.scoreAny({ ptsAllowed: 21.0 }, 'DST', dk, 1) === 1
+     && H._paTierExpected(20.9, ladder) - H._paTierExpected(21.0, ladder) < 0.05
+     && H._paTierExpected(21.4, ladder) > H._paTierExpected(24.4, ladder));
+  ok('a projection facing a low total now carries the upside of a big day', H._paTierExpected(14, ladder) > 1.5);
+  // A result is one afternoon. The spread is opt-in and a box score never asks.
+  ok('without the option a defense scores exactly as before (a box score, the season boards)',
+     H.scoreAny({ sacks: 3, ints: 1, ptsAllowed: 10 }, 'DST', dk, 1) === 3 + 2 + 4
+     && H.scoreDefenseStats({ ptsAllowed: 340 }, dk, 17) === 17 * 1);
+  ok('the box-score path does not ask for a spread',
+     src.includes("actualPoints: _oddsRound(scoreAny(d, 'DST', rules, 1)) };"));
+
+  // On the slate: a defense's Iron Tuna number is its matchup line in full.
+  const flat = { sacks: 2.4, ints: 0.8, fumRec: 0.45, defTD: 0.09, ptsAllowed: 22.5 };
+  const easy = { sacks: 3.1, ints: 1.0, fumRec: 0.58, defTD: 0.12, ptsAllowed: 16.2 };
+  const hard = { sacks: 1.8, ints: 0.6, fumRec: 0.34, defTD: 0.07, ptsAllowed: 28.8 };
+  const mid = (a, b) => Object.fromEntries(Object.keys(a).map(k => [k, a[k] + 0.45 * (b[k] - a[k])]));
+  const board = { ok: true, players: [
+    P('Good Matchup D', 'DEF', 'AAA', 'BBB', easy, flat, mid(flat, easy)),
+    P('Bad Matchup D', 'DEF', 'CCC', 'DDD', hard, flat, mid(flat, hard)) ] };
+  const sl = H.buildDfsSlate('dk', [['Good Matchup D', 'DST', 'AAA', 3900], ['Bad Matchup D', 'DST', 'CCC', 2300]].map(([name, position, team, salary]) => ({ name, position, team, salary })), board, {});
+  const gd = sl.players.find(x => x.team === 'AAA'), bd = sl.players.find(x => x.team === 'CCC');
+  ok('a defense on the slate is projected on its matchup, not the flat blend',
+     gd && bd && gd.ironTunaPoints === gd.vegasPoints && bd.ironTunaPoints === bd.vegasPoints);
+  ok('...and consensus mode still carries the flat line', gd.consensusPoints === bd.consensusPoints);
+  ok('the good matchup now out-earns the cheap bad one per dollar',
+     gd.ironTunaPoints / 3.9 > bd.ironTunaPoints / 2.3, gd.ironTunaPoints + ' vs ' + bd.ironTunaPoints);
+  // The old arithmetic, for the record: the blend on the mean ladder.
+  const oldGood = H.scoreAny(mid(flat, easy), 'DST', dk, 1), oldBad = H.scoreAny(mid(flat, hard), 'DST', dk, 1);
+  ok('under the old blend the cheap defense won on value (the reported bug)', oldGood / 3.9 < oldBad / 2.3, oldGood + ' vs ' + oldBad);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
