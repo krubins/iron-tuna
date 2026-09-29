@@ -13239,3 +13239,38 @@ or the validation is removed, which was verified rather than assumed.
 **Not run.** This session cannot reach irontuna.com — the egress policy denies
 it — so nothing has been backfilled. The preview is the first thing to run, on
 the admin board, and it changes nothing until the second button.
+
+## 120. September 29: the odds store spent the D1 read allowance
+
+`/api/season` and `/api/boards` both answered `no_schedule`, so every in-season
+page read "NFL clock unavailable" and "The board did not answer." A forced
+refresh at `/api/admin/season-status?refresh=1` named the cause: `D1_ERROR:
+Your account has exceeded D1's free tier daily row read limit`. The schedule
+pull itself was fine; the write that stores it could not run, and the read
+that serves it could not either.
+
+The reads came from `odds_snapshots`, the append-only line history. Every
+`snapshotWrite` found the last line per (book, subject, market) with a
+`GROUP BY` over the whole store, and it runs on every Tuna Market poll (hourly)
+and every `market-snapshot` job (8 a day, 15 on Sundays). D1 bills rows
+scanned, so each pull cost the entire season's rows, and the bill grew with
+the store, which is why August was fine and late September was not.
+
+- **`odds_latest`** holds the last line per (subject type, subject, market,
+  book). A pull looks up only its own subjects (`subject IN (...)`, ninety to
+  a query) and upserts what it writes in the same batch as the history row.
+  `snapshotSeed` fills it once from the old `GROUP BY` if it is empty, so the
+  first pull after deploy is not a rewrite of every line.
+- **`ix_snap_ts`** on `odds_snapshots (ts)`: the nightly prune scanned the
+  whole store without it. The prune now clears `odds_latest` by the same cutoff.
+- **`snapshotLast`** replaces `snapshotStatus` in `contentContext`, which only
+  read `last`; the full count stays on the health board.
+- **`marketHistoryWeek`** is memoized per isolate for five minutes. Each of
+  the ~80 distinct boards re-read up to 40,000 rows of the same week.
+
+Not verified against production: the sandbox cannot reach irontuna.com or the
+Cloudflare API. D1's query insights (dashboard, the database's metrics) rank
+queries by rows read and are the check that this was the whole bill. The
+owner should also move the account to Workers Paid, whose D1 allowance is
+orders of magnitude larger; this change makes the free allowance survivable,
+not generous.
