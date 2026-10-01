@@ -307,11 +307,17 @@
     // consensus ones, at his own position — never `primaryRank`, which is a
     // pooled RB/WR/TE slot on the FLEX pages. There the number is spelled out
     // instead, so it cannot be read as the "#" beside it.
+    //
+    // `ctx` is the rest of the board, read once per payload, so a line can say
+    // where his volume ranks and what a typical starter does with it. Built
+    // from EVERY row the payload carries, never the filtered view: typing a
+    // club into the filter box must not turn its WR3 into "1st in targets".
+    var readCtx = null;
     function reads(p) {
       if (!window.ITReads) return '';
       return ITReads.cell(p, { horizon: horizon, spellOut: pos === 'FLEX',
         rank: p.consensus ? p.consensus.rank : null,
-        points: p.consensus ? p.consensus.points : null });
+        points: p.consensus ? p.consensus.points : null, ctx: readCtx });
     }
 
     function rowHtml(p) {
@@ -403,6 +409,8 @@
         b.setAttribute('aria-pressed', b.getAttribute('data-preset') === preset ? 'true' : 'false');
       });
 
+      if (window.ITReads && ITReads.context && !payload.readCtx) payload.readCtx = ITReads.context(payload.players);
+      readCtx = payload.readCtx || null;
       var rows = payload.players.slice();
       if (q) {
         var qq = q.toLowerCase();

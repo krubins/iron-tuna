@@ -310,7 +310,7 @@ p{color:var(--sec);margin:0 0 16px}
      to cover four horizons rather than two, so it says "a one-week board" and
      "a longer one" instead of naming them. -->
 <h2>How to read the two lines under a name</h2>
-<p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is where he ranks at his own position on the board you have selected and at your scoring, and what he has actually done to get there: the points a game he has scored so far, the volume behind them, and whether that board&rsquo;s projection backs that rate or marks it down, plus an injury or a usage swing where there is one. Before he has played there is nothing to report, and the line says what a rank like his is worth at his position instead. <b>Opportunity</b> is what is in front of him: on a one-week board the fixture, how hard the defense across from him has been on points allowed, and what the market implies his offense will score against its own season mean; on a longer board the games and byes he has left and how hard the defenses on that slate have been. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score. Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
+<p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is where he ranks at his own position on the board you have selected and at your scoring, and what he has actually done to get there: the points a game he has scored so far, the volume behind them, and whether that board&rsquo;s projection backs that rate or marks it down, plus an injury or a usage swing where there is one. After two games it adds a read on what kind of production it is, measured against a typical starter at his position: touchdown-fed scoring that tends to cool, a big role whose points have not caught up yet, efficiency on thin volume, or steady volume, the most repeatable kind. Before he has played there is nothing to report, and the line says what a rank like his is worth at his position instead. <b>Opportunity</b> is what is in front of him: on a one-week board the fixture, how hard the defense across from him has been on points allowed, and what the market implies his offense will score against its own season mean; on a longer board the games and byes he has left, how hard the defenses on that slate have been and, where it stands out, whether the easy games come now or later, how weeks 15 to 17 grade, and how his offense&rsquo;s projected scoring ranks. On either, any work a teammate&rsquo;s absence leaves open. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score. Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
 
 </div><!-- /.wrap -->
 
@@ -462,22 +462,36 @@ p{color:var(--sec);margin:0 0 16px}
   // be read as the "#" beside it. The points are `bp(r)`, the same re-scored
   // figure the Iron Tuna column prints, so the sentence is at the reader's own
   // scoring and not at the PPR the payload arrived in.
+  // The season line is re-scored here too. `form.points` arrived scored at
+  // the payload's own preset, and printing that beside a projection this page
+  // scored at the reader's league settings would put two different scorings
+  // in one sentence. `form.stats` is the raw line, exactly so this can.
+  function formPpg(p) {
+    var fm = p.form;
+    if (!fm || !(fm.games > 0) || !fm.stats) return null;
+    // A result, not a projection: a defense's points allowed is read on
+    // its own average, as the worker's season form is.
+    var fp = score(fm.stats, p.position, fm.games, { exact: true });
+    return fp == null ? null : fp / fm.games;
+  }
+  // The rest of the board, which the lines read each player against (where
+  // his volume ranks, what a typical starter does with it). Built from every
+  // row of the payload at the reader's scoring, once per payload and scoring,
+  // not on every keystroke in the filter box.
+  var readCtx = null, readCtxKey = '';
+  function readContext(payload) {
+    if (!window.ITReads || !ITReads.context) return null;
+    var k = horizon + '|' + preset + '|' + JSON.stringify(rules());
+    if (readCtx && readCtxKey === k && readCtx.payload === payload) return readCtx.ctx;
+    readCtx = { payload: payload, ctx: ITReads.context(payload.players, { ppgOf: formPpg }) };
+    readCtxKey = k;
+    return readCtx.ctx;
+  }
   function reads(r) {
     if (!window.ITReads) return '';
     var f = board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v';
-    // The season line is re-scored here too. `form.points` arrived scored at
-    // the payload's own preset, and printing that beside a projection this page
-    // scored at the reader's league settings would put two different scorings
-    // in one sentence. `form.stats` is the raw line, exactly so this can.
-    var fm = r.p.form, ppg = null;
-    if (fm && fm.games > 0 && fm.stats) {
-      // A result, not a projection: a defense's points allowed is read on
-      // its own average, as the worker's season form is.
-      var fp = score(fm.stats, r.p.position, fm.games, { exact: true });
-      if (fp != null) ppg = fp / fm.games;
-    }
     return ITReads.cell(r.p, { horizon: horizon, spellOut: pos === 'FLEX',
-      rank: r[f + 'Rank'], points: bp(r), formPpg: ppg });
+      rank: r[f + 'Rank'], points: bp(r), formPpg: formPpg(r.p), ctx: readCtx ? readCtx.ctx : null });
   }
 
   function cell(r, key, rankField) {
@@ -527,6 +541,7 @@ p{color:var(--sec);margin:0 0 16px}
   function render() {
     var payload = (preset === 'league' ? dataL : data)[horizon]; if (!payload) { load(horizon); return; }
     var rows = scored(payload);
+    readContext(payload);
     var rankField = (board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v') + (pos === 'FLEX' ? 'Flex' : 'Rank');
     rows = rows.filter(function (r) { return pos === 'FLEX' ? /^(RB|WR|TE)$/.test(r.p.position) : r.p.position === pos; });
     if (q) { var qq = q.toLowerCase(); rows = rows.filter(function (r) { return r.p.name.toLowerCase().indexOf(qq) >= 0 || r.p.team.toLowerCase() === qq; }); }
