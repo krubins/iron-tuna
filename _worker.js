@@ -4202,7 +4202,7 @@ async function availabilityReport(env) {
 // every game says whether its status came from the feed or from the clock.
 const SEASON_CONTRACT = 1;
 const SEASON_ROW = 4;                       // odds_overlay row 4, same table, same lifecycle
-const SEASON_MAX_AGE_MS = 14 * 86400000;    // a schedule row older than this is not served
+const SEASON_MAX_AGE_MS = 14 * 86400000;    // a row older than this is served only while its season runs (stale)
 const SEASON_MEMO_MS = 300000;              // per-isolate memo; one D1 read behind it
 // How long a game blocks its week when no feed has said the game is over. A
 // three-hour NFL broadcast plus overtime and the long reviews; deliberately
@@ -4750,6 +4750,23 @@ async function scheduleCacheWrite(env, season, games, provider) {
     'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)'
   ).bind(SEASON_ROW, JSON.stringify({ season, games }), provider, games.length, Date.now()).run();
 }
+// Whether a stored schedule row may still be served. A fresh row always may.
+// An older one may too while its own season is still being played: kickoff
+// times are fixed, so a row that stopped refreshing still knows the week and
+// every fixture, and only its scores and late flex moves go stale. Refusing it
+// blanked every in-season surface (the rankings boards, the week strip) the
+// moment the hourly refresh started failing (29 Sep 2026: the row passed a
+// fortnight and /season-long-rankings showed "The board did not answer").
+// `stale` on the season payload says so, and /api/admin/health still flags
+// the schedule past HEALTH_STALE_H. A row whose last fixture kicked off more
+// than a fortnight ago is last season's and is still refused.
+function _seasonRowServable(games, updatedAt, now) {
+  if (!Number.isFinite(updatedAt) || updatedAt <= 0) return false;
+  if (now - updatedAt <= SEASON_MAX_AGE_MS) return true;
+  let last = -Infinity;
+  for (const g of games || []) if (g && Number.isFinite(g.kickoff) && g.kickoff > last) last = g.kickoff;
+  return Number.isFinite(last) && now - last <= SEASON_MAX_AGE_MS;
+}
 let _SEASON_CACHE = null, _SEASON_AT = 0;
 async function scheduleCacheRead(env) {
   if (_SEASON_CACHE && Date.now() - _SEASON_AT < SEASON_MEMO_MS) return _SEASON_CACHE;
@@ -4757,10 +4774,10 @@ async function scheduleCacheRead(env) {
   try {
     const row = await env.LEADS_DB.prepare('SELECT payload, provider, matched, updated_at FROM odds_overlay WHERE id=?')
       .bind(SEASON_ROW).first();
-    if (!row || !row.payload) return null;
-    if (!row.updated_at || Date.now() - row.updated_at > SEASON_MAX_AGE_MS) return null;
+    if (!row || !row.payload || !row.updated_at) return null;
     const j = JSON.parse(row.payload);
     if (!j || !Array.isArray(j.games) || !j.games.length) return null;
+    if (!_seasonRowServable(j.games, row.updated_at, Date.now())) return null;
     _SEASON_CACHE = { season: j.season || 0, games: j.games, provider: row.provider, updatedAt: row.updated_at };
     _SEASON_AT = Date.now();
     return _SEASON_CACHE;
