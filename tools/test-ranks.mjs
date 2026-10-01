@@ -271,7 +271,7 @@ console.log('\nevery row says what the player is and what is in front of him');
     /spellOut: pos === 'FLEX'/.test(js) && /spellOut: pos === 'FLEX'/.test(tool) &&
     /o\.spellOut && POS_LONG\[p\.position\]/.test(playerLine));
   ok('a usage swing is quoted only once three games have earned it',
-    playerLine.includes('roleTrend.applied'));
+    /rt && rt\.applied && rt\.pct != null/.test(reads));
   ok('and a player with no game on the board is not given a 0.0 projection',
     playerLine.includes('p.games > 0'));
 
@@ -284,12 +284,10 @@ console.log('\nevery row says what the player is and what is in front of him');
   ok('and the tier is reached only when nothing has been played',
     /\} else \{[^]{0,400}tierOf\(p\.position, rank\)/.test(playerLine));
   ok('it says the volume the scoring was built on', playerLine.includes('f.volumeUnit'));
-  ok('and compares the projection ahead of him with the rate he has run at',
-    playerLine.includes('forwardOf(') && /marks '? ?\+? ?\(d < 0 \? 'down' : 'up'\)/.test(reads));
-  ok('that comparison is drawn only where both numbers are per-game rates',
-    /hz === 'week' \? proj \+ ' projected this week' : forwardOf\(/.test(playerLine));
-  ok('two numbers a tenth apart are not reported as a judgement',
-    /Math\.abs\(d\) < 0\.1/.test(reads));
+  ok('the projection ahead of him is compared with the rate he has run at, per game on both sides',
+    /var fwd = pts \/ p\.games, gap = \(fwd - ppg\) \/ ppg;/.test(reads));
+  ok('and only a gap of a fifth or more is the story; a smaller one is noise',
+    /Math\.abs\(gap\) >= 0\.2/.test(reads));
   ok('yards are whole numbers and touches are not',
     H.vol(281.04, 'passing yards') === '281' && H.vol(19.04, 'touches') === '19.0');
 
@@ -346,10 +344,11 @@ console.log('\nevery row says what the player is and what is in front of him');
     !/filter\(function \(w\) \{ return !w\.bye && !w\.out; \}\)\[0\]/.test(js) &&
     /w0\.out \?/.test(js));
 
-  // THE BOARD AROUND HIM. A points-a-game figure and a volume figure are two
-  // numbers a reader cannot judge alone, so the lines read every player
-  // against his own position. This RUNS the module on a built board, because
-  // every one of these failures is a sentence that reads fine and is wrong.
+  // THE BOARD AROUND HIM. A line that says the same thing about every
+  // player says nothing, so each row leads on whatever is LEAST ordinary
+  // about that player against his position. This RUNS the module on a built
+  // board, because every failure here is a sentence that reads fine and is
+  // wrong, or the same sentence on every row.
   {
     const win = {};
     new Function('window', reads)(win);
@@ -363,48 +362,54 @@ console.log('\nevery row says what the player is and what is in front of him');
       }
       return ws;
     };
-    // Forty receivers on 40 clubs' worth of ordinary lines: 1.6 points a
-    // target, a fifth of it from touchdowns. Then four that are not ordinary.
+    // Forty receivers with ordinary, slightly varied lines: about 1.6 points a
+    // target, 12 yards a catch, two thirds caught, one score in four games.
+    const line = (tg, opt = {}) => {
+      const g = 4, t = Math.round(tg * g), rec = opt.rec != null ? opt.rec : Math.round(t * 0.66);
+      const recYd = opt.recYd != null ? opt.recYd : rec * 12, recTD = opt.recTD != null ? opt.recTD : 1;
+      const ppg = (rec + recYd / 10 + recTD * 6) / g;
+      return { games: g, ppg, volume: t / g, volumeUnit: 'targets', snapPct: opt.snap != null ? opt.snap : 0.8, stats: { rec, recYd, recTD } };
+    };
     const players = [];
     for (let i = 0; i < 40; i++) {
       const team = 'T' + String.fromCharCode(65 + (i % 26));
-      const tg = 10 - i * 0.15, g = 4, ppg = tg * 1.6;
       players.push({ key: 'w' + i, name: 'Receiver ' + i, position: 'WR', team, games: 12, byes: [9],
         weeks: wk(team, () => 16, false), scheduleDifficulty: { label: 'Average', avgOpponentDefRank: 16 },
-        form: { games: g, ppg, volume: tg, volumeUnit: 'targets', stats: { recTD: ppg * 0.2 / 6 * g } } });
+        form: line(10 - i * 0.15, { recYd: Math.round(10 - i * 0.15) * 4 * 0.66 * (11.5 + (i % 3)) | 0, snap: 0.75 + (i % 5) * 0.03 }) });
     }
     const P = (k) => players.find((p) => p.key === k);
-    P('w2').form = { ...P('w2').form, ppg: 22, stats: { recTD: 22 * 0.5 / 6 * 4 } };   // touchdown-fed
-    P('w1').form = { ...P('w1').form, ppg: 9.9 * 1.0, stats: { recTD: 0 } };            // volume, no payoff
-    P('w35').form = { ...P('w35').form, ppg: 4.75 * 2.6 };                              // efficiency on thin work
-    P('w0').weeks = wk(P('w0').team, (w) => (w < 10 ? 28 : 8), false);                  // easy now, hard later
-    P('w26').weeks = wk(P('w26').team, () => 16, true);                                 // out, same club as w0
+    P('w2').form = line(9.7, { recTD: 7 });                              // touchdown-fed
+    P('w5').form = line(9.2, { recYd: 24 * 21 });                        // a downfield role
+    P('w30').form = line(5.5, { snap: 0.45 });                           // part-time
+    P('w12').form = line(8.2, { rec: 15 });                              // drops his targets
+    P('w0').weeks = wk(P('w0').team, (w) => (w < 10 ? 28 : 8), false);  // easy now, hard later
+    P('w26').weeks = wk(P('w26').team, () => 16, true);                 // out, same club as w0
     const ctx = R.context(players);
-    const line = (k) => R.player(P(k), { horizon: 'ros', rank: 1, points: 150, ctx });
+    const pl = (k, pts) => R.player(P(k), { horizon: 'ros', rank: 9, points: pts != null ? pts : P(k).form.ppg * 12, ctx });
     const opp = (k) => R.opportunity(P(k), { horizon: 'ros', ctx });
 
     ok('the context is built once from the board and exported', typeof R.context === 'function' && ctx.pos.WR.pool >= 8);
-    ok('a touchdown-fed line is called what it is, against the position norm',
-      /Touchdowns are 50% of his points \(typical starter: 20%\)/.test(line('w2')), line('w2'));
-    ok('volume that has not paid yet says the role is there and the points lag it',
-      /The role is there \(2nd in targets among receivers\)/.test(line('w1')), line('w1'));
-    ok('efficiency on thin work is flagged as unlikely to last',
-      /living on efficiency: 2\.60 points a target/.test(line('w35')) && /36th among receivers/.test(line('w35')), line('w35'));
-    ok('an ordinary player gets no filler read', !/typical starter|built on volume/.test(line('w20')), line('w20'));
-    ok('one game is not enough to read', (() => {
+    ok('points a game is not the lead any more', !/points a game so far/.test(pl('w20')) && !/points a game/.test(pl('w5')), pl('w20'));
+    ok('a touchdown-fed line is called what it is, with his own count and the norm',
+      /7 touchdowns in 4 games make up \d+% of his points \(typical starter: \d+%\)/.test(pl('w2')), pl('w2'));
+    ok('a downfield role is read off his yards a catch', /21\.0 yards a catch, 1st among receivers/.test(pl('w5')), pl('w5'));
+    ok('a part-time role is read off his snaps', /Played only 45% of snaps last week/.test(pl('w30')), pl('w30'));
+    ok('a receiver who drops his volume is told so', /Catches only \d+% of his targets \(the lowest among receivers\)/.test(pl('w12')), pl('w12'));
+    ok('four unusual players get four different leads, not one template',
+      new Set(['w2', 'w5', 'w30', 'w12'].map((k) => pl(k).split('. ')[1].slice(0, 12))).size === 4);
+    ok('the board disagreeing sharply with his rate is the story where it is the biggest thing',
+      /The board does not buy the start: it projects/.test(pl('w20', P('w20').form.ppg * 12 * 0.3)), pl('w20', P('w20').form.ppg * 12 * 0.3));
+    ok('one game is said to be one game, not read', (() => {
       const p = { ...P('w2'), form: { ...P('w2').form, games: 1 } };
-      return !/Touchdowns are/.test(R.player(p, { horizon: 'ros', rank: 1, points: 150, ctx }));
+      return /One game played .*too little to read/.test(R.player(p, { horizon: 'ros', rank: 1, points: 150, ctx }));
     })());
-    ok('a board with no context says what it always said and nothing more',
-      !/typical starter/.test(R.player(P('w2'), { horizon: 'ros', rank: 1, points: 150 })));
-    ok('the slate says when the easy games are, not only their average',
-      /The easy part is now: his next four opponents average 28th/.test(opp('w0')), opp('w0'));
-    ok('and grades the fantasy playoffs on their own', /Weeks 15 to 17, the fantasy playoffs, are a hard draw/.test(opp('w0')));
+    ok('the end of a ranking reads as words, not "1st-lowest"', !/1st-(lowest|most|fewest)/.test(players.map((p) => pl(p.key)).join(' ')));
+    ok('the slate leads with when the easy games are', /^The easy part is now: his next four opponents average 28th/.test(opp('w0')), opp('w0'));
     ok('a teammate out at the same position leaves his work open, named with his volume',
-      /Receiver 26 is out for 3 games on this board, leaving his 6\.1 targets a game/.test(opp('w0')), opp('w0'));
+      /Receiver 26 is out for 3 games on this board, leaving his [\d.]+ targets a game/.test(opp('w0')), opp('w0'));
     ok('a player is never his own vacancy', !/Receiver 26 is out/.test(opp('w26')));
-    ok('a mid-pack offense earns no words, an extreme one does',
-      !/His offense projects/.test(opp('w20')) || ctx.env[P('w20').team].rank <= 8 || ctx.env[P('w20').team].rank > ctx.teams - 8);
+    ok('the games left close the line rather than open it', /13 games left|12 games left/.test(opp('w0')) && !/^1\d games left/.test(opp('w0')));
+    ok('an ordinary slate says so with the worker\'s own grade', /with no stretch that stands out/.test(opp('w20')) || /^His offense/.test(opp('w20')), opp('w20'));
     ok('the published boards and the tool both hand it the context',
       /ITReads\.context\(payload\.players\)/.test(js) && /ctx: readCtx/.test(js) &&
       /ITReads\.context\(payload\.players, \{ ppgOf: formPpg \}\)/.test(tool));
