@@ -104,6 +104,148 @@
   }
   function listOf(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
 
+  // THE BOARD AROUND HIM. "14.2 points a game on 7.1 targets" is two numbers
+  // a reader cannot judge alone: is 7.1 a lot, is 2.0 points a target good, is
+  // a third of his scoring coming from touchdowns normal? The answer to every
+  // one is the rest of the board, which the caller already holds. So the
+  // caller builds this ONCE per render from the rows it prints, and both lines
+  // read a player against his own position: where his volume ranks, what a
+  // typical starter does with the same work, how his offense's scoring
+  // environment ranks, and which teammate's work is open because he is out.
+  //
+  // "Typical" is the median of the position's starter pool, by volume (the top
+  // 24 QBs, 36 RBs, 48 WRs, 18 TEs that have played), not of every name on
+  // the board: a WR90's two targets a game would drag every norm toward zero.
+  // Everything is the payload's own fields. Touchdown points are counted at 6
+  // a rushing or receiving score and 4 a passing one, which is what all three
+  // published presets pay; a custom league that pays otherwise moves a share
+  // by a few points, never across a threshold below that matters.
+  var POOL = { QB: 24, RB: 36, WR: 48, TE: 18 };
+  var MIN_GAMES = 2;   // a read on one game is a read on one game
+  function median(a) {
+    if (!a.length) return null;
+    var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  function tdPerGame(f) {
+    var st = f.stats || {};
+    return (6 * ((st.rushTD || 0) + (st.recTD || 0)) + 4 * (st.passTD || 0)) / f.games;
+  }
+  function rushPerGame(f) {
+    var st = f.stats || {};
+    return ((st.rushYd || 0) / 10 + 6 * (st.rushTD || 0)) / f.games;
+  }
+  function outWeeks(p) {
+    var n = 0;
+    (p.weeks || []).forEach(function (w) { if (w && w.out) n++; });
+    return n;
+  }
+  // The work a teammate's absence opens is only the SAME work: a back's touches
+  // go to backs, and receivers and tight ends draw on one pool of targets.
+  function workGroup(position) { return position === 'RB' ? 'RB' : position === 'WR' || position === 'TE' ? 'PC' : ''; }
+
+  function context(players, o) {
+    o = o || {};
+    var ppgOf = o.ppgOf || function (p) { return p.form ? p.form.ppg : null; };
+    var byPos = {}, teamEnv = {}, open = {};
+    (players || []).forEach(function (p) {
+      var f = p.form;
+      if (f && f.games > 0) {
+        var ppg = ppgOf(p);
+        if (ppg != null && isFinite(ppg)) {
+          (byPos[p.position] = byPos[p.position] || []).push({ key: p.key, f: f, ppg: ppg });
+        }
+      }
+      // One club's scoring environment is the same on every one of its rows,
+      // so the first row to carry a week settles it.
+      (p.weeks || []).forEach(function (w) {
+        if (!w || w.bye || !w.env) return;
+        var v = w.env.implied != null ? w.env.implied : w.env.expected;
+        if (v == null || !isFinite(v)) return;
+        var t = teamEnv[p.team] || (teamEnv[p.team] = {});
+        if (t[w.week] == null) t[w.week] = v;
+      });
+      var g = workGroup(p.position), out = outWeeks(p);
+      if (g && out && f && f.games >= MIN_GAMES && f.volume > 0) {
+        var k = p.team + '|' + g;
+        (open[k] = open[k] || []).push({ key: p.key, name: p.name, out: out, volume: f.volume, unit: f.volumeUnit,
+          status: p.injury && p.injury.status ? p.injury.status : 'out' });
+      }
+    });
+
+    var pos = {};
+    Object.keys(byPos).forEach(function (k) {
+      var list = byPos[k].filter(function (r) { return r.f.volume != null && r.f.volume > 0; })
+        .sort(function (a, b) { return b.f.volume - a.f.volume; });
+      var rank = {};
+      list.forEach(function (r, i) { rank[r.key] = i + 1; });
+      var pool = list.slice(0, POOL[k] || 0).filter(function (r) { return r.f.games >= MIN_GAMES && r.ppg > 0; });
+      pos[k] = {
+        volRank: rank, n: list.length, pool: pool.length,
+        eff: median(pool.map(function (r) { return r.ppg / r.f.volume; })),
+        tdShare: median(pool.map(function (r) { return Math.min(1, tdPerGame(r.f) / r.ppg); })),
+        rushShare: median(pool.map(function (r) { return Math.min(1, rushPerGame(r.f) / r.ppg); }))
+      };
+    });
+
+    var teams = Object.keys(teamEnv).map(function (t) {
+      var ws = teamEnv[t], sum = 0, n = 0;
+      Object.keys(ws).forEach(function (w) { sum += ws[w]; n++; });
+      return { team: t, avg: n ? sum / n : null };
+    }).filter(function (t) { return t.avg != null; }).sort(function (a, b) { return b.avg - a.avg; });
+    var env = {};
+    teams.forEach(function (t, i) { env[t.team] = { avg: t.avg, rank: i + 1 }; });
+
+    return { pos: pos, env: env, teams: teams.length, open: open };
+  }
+
+  // THE READ. One sentence on what kind of production it is, because that is
+  // what decides whether it lasts, and a points-a-game figure cannot say it.
+  // Checked in order of how much it should change a reader's mind, and only
+  // the first that fires is said: a touchdown-fed line first (the most
+  // fragile), then volume that has not yet paid (the buy), then efficiency on
+  // thin work (the sell), then volume at an ordinary rate (the safe kind).
+  // A player who is none of these gets no read rather than a filler one.
+  function readOf(p, ppg, c) {
+    var f = p.form, P = c && c.pos ? c.pos[p.position] : null;
+    if (!f || f.games < MIN_GAMES || !P || P.pool < 8 || !(ppg > 0)) return '';
+    var pl = POS_LONG[p.position] || 'players';
+    var typical = 'typical starter';
+    var vr = P.volRank[p.key], deep = POOL[p.position] || 0;
+    var td = Math.min(1, tdPerGame(f) / ppg);
+    var pct = function (x) { return Math.round(x * 100) + '%'; };
+    if (P.tdShare != null && td >= 0.4 && td - P.tdShare >= 0.12) {
+      return 'Touchdowns are ' + pct(td) + ' of his points (' + typical + ': ' + pct(P.tdShare) +
+        '), the least repeatable kind of scoring; expect it to cool unless his volume rises.';
+    }
+    if (p.position === 'QB') {
+      var rs = Math.min(1, rushPerGame(f) / ppg);
+      if (rs >= 0.25 && (P.rushShare == null || rs - P.rushShare >= 0.1)) {
+        return 'His legs supply ' + pct(rs) + ' of his points (' + typical + ': ' + pct(P.rushShare || 0) +
+          '), a floor most passers lack on a quiet day through the air.';
+      }
+      return '';
+    }
+    if (P.eff == null || vr == null || !(f.volume > 0)) return '';
+    var eff = ppg / f.volume, unit = f.volumeUnit === 'touches' ? 'touch' : 'target';
+    var r2 = function (x) { return (Math.round(x * 100) / 100).toFixed(2); };
+    if (vr <= Math.ceil(deep / 3) && eff <= 0.8 * P.eff) {
+      return 'The role is there (' + ord(vr) + ' in ' + esc(f.volumeUnit) + ' among ' + pl + ') but at ' +
+        r2(eff) + ' points a ' + unit + ' (' + typical + ': ' + r2(P.eff) + ')' +
+        (P.tdShare != null && td <= P.tdShare - 0.1 ? ', with few touchdowns,' : '') +
+        ' the points lag it, and that gap usually closes.';
+    }
+    if (vr > Math.ceil(deep / 2) && eff >= 1.25 * P.eff) {
+      return 'He is living on efficiency: ' + r2(eff) + ' points a ' + unit + ' (' + typical + ': ' + r2(P.eff) +
+        ') on volume only ' + ord(vr) + ' among ' + pl + ', which rarely lasts without more of the ball.';
+    }
+    if (vr <= Math.ceil(deep / 4)) {
+      return 'The production is built on volume (' + ord(vr) + ' in ' + esc(f.volumeUnit) + ' among ' + pl +
+        ') at a normal rate per ' + unit + ', the most repeatable kind.';
+    }
+    return '';
+  }
+
   // THE PLAYER LINE. Who he is on the board the reader is looking at, in the
   // order a reader asks it: where he ranks at his own position, what that rank
   // is worth at that position, and the points behind it.
@@ -148,8 +290,10 @@
     // average would be a comparison between different units.
     var f = p.form;
     var played = f && f.games > 0 && f.ppg != null && isFinite(o.formPpg == null ? f.ppg : o.formPpg);
+    var read = '';
     if (played) {
       var ppg = o.formPpg == null ? f.ppg : o.formPpg;
+      read = readOf(p, ppg, o.ctx);
       var run = n1(ppg) + ' points a game so far' +
         (f.volume != null && f.volumeUnit ? ' on ' + vol(f.volume, f.volumeUnit) + ' ' + esc(f.volumeUnit) : '') +
         ' over ' + plural(f.games, 'game');
@@ -173,9 +317,15 @@
       s += ', listed ' + esc(p.injury.status) +
         (p.injury.gamesOut ? ' for the next ' + (p.injury.gamesOut === 1 ? 'game' : p.injury.gamesOut + ' games') : '');
     } else if (p.roleTrend && p.roleTrend.applied && p.roleTrend.label !== 'flat' && p.roleTrend.pct != null) {
-      s += ', with usage ' + (p.roleTrend.pct > 0 ? 'up ' : 'down ') + Math.abs(p.roleTrend.pct) + '% on his own average';
+      // The two counts behind the percentage, where the worker sent them: "up
+      // 35%" is a direction, "24 against an average of 17.8" is a role.
+      var rt = p.roleTrend;
+      s += ', with usage ' + (rt.pct > 0 ? 'up ' : 'down ') + Math.abs(rt.pct) + '% on his own average' +
+        (rt.latestTouches != null && rt.avgTouches != null
+          ? ' (' + rt.latestTouches + ' ' + (p.position === 'QB' ? 'plays' : 'touches and targets') + ' last week against ' + n1(rt.avgTouches) + ')'
+          : '');
     }
-    return s + '.';
+    return s + '.' + (read ? ' ' + read : '');
   }
 
   // THE OPPORTUNITY LINE. What is in front of him, which on a one-week board is
@@ -183,7 +333,33 @@
   function opportunity(p, o) {
     o = o || {};
     var hz = HZ[o.horizon] ? o.horizon : 'week';
-    return hz === 'week' ? weekOpportunity(p) : slateOpportunity(p, hz);
+    var base = hz === 'week' ? weekOpportunity(p) : slateOpportunity(p, hz, o.ctx);
+    var more = [];
+    var v = vacancy(p, hz, o.ctx);
+    if (v) more.push(v);
+    return base + (more.length ? ' ' + more.join(' ') : '');
+  }
+
+  // THE WORK A TEAMMATE LEAVES. The most direct opportunity there is: a back
+  // whose partner is out inherits carries no projection had priced in. Named
+  // only where the payload shows the teammate OUT on this board (weeks[].out)
+  // and has his season volume, which is the number of touches or targets
+  // actually left on the table. Not a claim about who gets them, which no
+  // field here says; the sentence says the work is open, and stops.
+  function vacancy(p, hz, c) {
+    if (!c || !c.open || !(p.games > 0)) return '';
+    var g = workGroup(p.position);
+    // On a one-week board the only weeks are this one, so "out on this board"
+    // already means out this week.
+    var list = g ? (c.open[p.team + '|' + g] || []).filter(function (t) { return t.key !== p.key; }) : [];
+    if (!list.length) return '';
+    list.sort(function (a, b) { return b.volume - a.volume; });
+    var t = list[0];
+    // A depth player's two targets a game being "open" is not news.
+    if (!(t.volume >= (t.unit === 'touches' ? 8 : 4))) return '';
+    return esc(t.name) + ' is ' + (/^(out|ir)/i.test(t.status) ? 'out' : 'listed ' + esc(String(t.status).toLowerCase())) +
+      (hz === 'week' ? ' this week' : ' for ' + plural(t.out, 'game') + ' on this board') + ', leaving his ' + vol(t.volume, t.unit) +
+      ' ' + esc(t.unit) + ' a game to go elsewhere in this offense.';
   }
 
   function weekOpportunity(p) {
@@ -225,7 +401,7 @@
     return parts.join(', ') + '.';
   }
 
-  function slateOpportunity(p, hz) {
+  function slateOpportunity(p, hz, c) {
     if (!(p.games > 0)) return 'No game on this board to grade.';
     var bits = [plural(p.games, 'game') + ' ' + HZ[hz].slate];
     if (p.byes && p.byes.length) {
@@ -245,7 +421,52 @@
           ' slate of defenses, averaging ' + ord(sd.avgOpponentDefRank) + ' by points allowed'
         : 'against a slate this board cannot grade');
     }
-    return bits.join(', ') + '.';
+    var more = p.position === 'DST' ? [] : slateShape(p, hz, c);
+    return bits.join(', ') + '.' + (more.length ? ' ' + more.join(' ') : '');
+  }
+
+  // WHEN THE SLATE IS EASY, AND WHAT HIS OFFENSE IS EXPECTED TO SCORE. One
+  // average over thirteen games hides the two things a season-long manager
+  // acts on: whether the soft games are now or later (hold, or sell high), and
+  // what the slate looks like in weeks 15 to 17, when a title is decided. And
+  // a matchup grade says nothing about the offense he plays in, which caps or
+  // lifts every player in it. Each is said only where it is NOTABLE: an even
+  // schedule, an average playoff draw and a mid-pack offense earn no words.
+  function slateShape(p, hz, c) {
+    var out = [];
+    var games = (p.weeks || []).filter(function (w) { return w && !w.bye && !w.out && w.env && w.env.opponentDefRank; });
+    var avg = function (ws) {
+      var s = 0;
+      ws.forEach(function (w) { s += w.env.opponentDefRank; });
+      return ws.length ? s / ws.length : null;
+    };
+    if (games.length >= 6) {
+      var early = games.slice(0, 4), late = games.slice(4), ea = avg(early), la = avg(late);
+      if (Math.abs(ea - la) >= 5) {
+        var soft = ea > la;
+        out.push((soft ? 'The easy part is now' : 'The hard part is now') + ': his next four opponents average ' +
+          ord(ea) + ' by points allowed, the ' + late.length + ' after that ' + ord(la) +
+          (soft ? '.' : ', so the schedule eases.'));
+      }
+    }
+    if (hz === 'ros') {
+      var po = games.filter(function (w) { return w.week >= 15 && w.week <= 17; });
+      if (po.length >= 2) {
+        var pa = avg(po), g = gradeOf(pa);
+        if (g !== 'an average') {
+          out.push('Weeks 15 to 17, the fantasy playoffs, are ' + g + ' draw (opponents average ' + ord(pa) + ').');
+        }
+      }
+    }
+    var e = c && c.env ? c.env[p.team] : null;
+    if (e && c.teams >= 20) {
+      if (e.rank <= 8) {
+        out.push('His offense projects for ' + n1(e.avg) + ' points a game over this stretch, ' + ord(e.rank) + ' of ' + c.teams + '.');
+      } else if (e.rank > c.teams - 8) {
+        out.push('His offense projects for only ' + n1(e.avg) + ' points a game over this stretch, ' + ord(e.rank) + ' of ' + c.teams + ', which caps everyone in it.');
+      }
+    }
+    return out;
   }
 
   // A defense's remaining slate, from the weeks the payload already carries:
@@ -268,7 +489,7 @@
       '<span class="rk-read rk-read-op"><span class="rk-read-k">Opportunity</span>' + opportunity(p, o) + '</span>';
   }
 
-  window.ITReads = { cell: cell, player: player, opportunity: opportunity,
+  window.ITReads = { cell: cell, player: player, opportunity: opportunity, context: context,
                      tierOf: tierOf, gradeOf: gradeOf, ord: ord, awayFrom: awayFrom,
                      plural: plural, listOf: listOf, TIERS: TIERS, POS_LONG: POS_LONG, HZ: HZ };
 })();
