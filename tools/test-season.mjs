@@ -56,7 +56,8 @@ function _csvSplit(line) {
 const harness = new Function('etOffsetHours', 'teamKey', '_csvSplit', 'NFLVERSE_GAMES_URL', 'oddsCacheInit', 'fetch', '_oddsRound', `
   ${section}
   return { _seasonEtToUtc, _seasonBuckets, seasonGameStatus, nflSeasonState, nflSeasonWeek,
-           mergeSchedule, fetchScheduleNflverse, _espnGame, SEASON_GAME_MS, SEASON_ROUND_LABEL };
+           mergeSchedule, fetchScheduleNflverse, _espnGame, SEASON_GAME_MS, SEASON_ROUND_LABEL,
+           _seasonRowServable, scheduleCacheRead, SEASON_MAX_AGE_MS };
 `);
 const NFLVERSE = 'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv';
 const W = harness(etOffsetHours, teamKey, _csvSplit, NFLVERSE, async () => {}, globalThis.fetch, v => Math.round(v * 10) / 10);
@@ -341,6 +342,33 @@ console.log('\nthe live nflverse schedule');
     ok('and a phase the calendar agrees with',
       ['offseason', 'preseason', 'regular', 'postseason'].includes(st.phase), st.phase);
   }
+}
+
+// ── a schedule row that stopped refreshing ─────────────────────────────────
+// 29 Sep 2026: the hourly refresh had been failing, the row passed a
+// fortnight, scheduleCacheRead refused it, and every in-season surface went
+// dark ("The board did not answer" on /season-long-rankings). Kickoffs are
+// fixed, so a row whose season is still being played is served, marked stale;
+// last season's row is still refused.
+{
+  const DAY = 86400000;
+  const now = Date.UTC(2026, 9, 1, 12);
+  const games = [{ kickoff: now - 20 * DAY }, { kickoff: now + 90 * DAY }];
+  ok('a fresh row is served', W._seasonRowServable(games, now - DAY, now));
+  ok('a row three weeks old is served while its season still has games',
+    W._seasonRowServable(games, now - 21 * DAY, now));
+  ok('a row whose last game was a month ago is not served once it is past a fortnight',
+    !W._seasonRowServable([{ kickoff: now - 30 * DAY }], now - 20 * DAY, now));
+  ok('a row with no updated_at is not served', !W._seasonRowServable(games, 0, now));
+  const realNow = Date.now();
+  const row = { payload: JSON.stringify({ season: 2026, games: [{ kickoff: realNow - 20 * DAY }, { kickoff: realNow + 60 * DAY }] }),
+                provider: 'nflverse', matched: 2, updated_at: realNow - 20 * DAY };
+  const env = { LEADS_DB: { prepare: () => ({ bind: () => ({ first: async () => row }) }) } };
+  const got = await W.scheduleCacheRead(env);
+  ok('scheduleCacheRead serves the old in-season row instead of nothing',
+    !!got && got.games.length === 2 && got.updatedAt === row.updated_at, JSON.stringify(got && got.updatedAt));
+  ok('and the season state built from it says stale',
+    !!got && W.nflSeasonState(got, realNow).stale === true);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
