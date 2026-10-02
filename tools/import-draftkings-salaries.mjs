@@ -330,14 +330,18 @@ export async function run(env = process.env, now = Date.now()) {
   // reached the table. An unattended job that cannot fail is not a safe job.
   const stored = body.imported && Number(body.imported.stored);
   const attempted = body.imported && Number(body.imported.attempted);
+  // The database's own reason for a short store, when the worker has one.
+  // "stored 0 rows" alone is what the log said for every failed run from
+  // 29 Sep 2026 on, and it named no cause.
+  const because = body.imported && body.imported.writeError ? `; database said: ${body.imported.writeError}` : '';
   if (!response.ok || !body.ok || !body.imported || !Number.isFinite(stored) || stored < MIN_PLAYERS) {
-    throw new Error(`Iron Tuna import failed (HTTP ${response.status}): ${body.error || (body.imported ? `stored ${stored} rows` : 'invalid response')}`);
+    throw new Error(`Iron Tuna import failed (HTTP ${response.status}): ${body.error || (body.imported ? `stored ${stored} of ${Number.isFinite(attempted) ? attempted : '?'} rows${because}` : 'invalid response')}`);
   }
   // A partial write is its own failure: the board would be served a slate
   // missing whichever players the dropped statements carried, which reads as
   // a thin lobby rather than as a broken import.
   if (Number.isFinite(attempted) && stored < attempted) {
-    throw new Error(`Iron Tuna stored ${stored} of ${attempted} rows; the slate would be incomplete.`);
+    throw new Error(`Iron Tuna stored ${stored} of ${attempted} rows; the slate would be incomplete${because}.`);
   }
   const out = { ...result, imported: stored, attempted, season: body.season, week: body.week };
 
@@ -365,8 +369,8 @@ export async function run(env = process.env, now = Date.now()) {
       const rb = await r.json().catch(() => ({}));
       const st = rb.imported && Number(rb.imported.stored);
       const at = rb.imported && Number(rb.imported.attempted);
-      if (!r.ok || !rb.ok || !Number.isFinite(st) || st < 1) throw new Error(rb.error ? `${rb.error}: ${rb.note || ''}`.trim() : `HTTP ${r.status}`);
-      if (Number.isFinite(at) && st < at) throw new Error(`stored ${st} of ${at} rows`);
+      if (!r.ok || !rb.ok || !Number.isFinite(st) || st < 1) throw new Error(rb.error ? `${rb.error}: ${rb.note || ''}`.trim() : (rb.imported && rb.imported.writeError ? `stored ${st}; database said: ${rb.imported.writeError}` : `HTTP ${r.status}`));
+      if (Number.isFinite(at) && st < at) throw new Error(`stored ${st} of ${at} rows${rb.imported.writeError ? `; database said: ${rb.imported.writeError}` : ''}`);
       showdown.imported.push({ game: rb.imported.slate ? String(rb.imported.slate).replace(/^sd:/, '') : built.game, players: built.players, rows: st });
     } catch (e) {
       showdown.skipped.push({ group: id, label, reason: (e && e.message) || 'failed' });

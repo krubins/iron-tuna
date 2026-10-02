@@ -217,6 +217,33 @@ console.log('\nwhat the unattended import is allowed to call success');
   // fetched from DraftKings is what made a successful-looking run unreadable.
   ok('...and logs the stored count rather than the fetched one',
      /imported: stored/.test(imp));
+  // From 29 Sep 2026 every scheduled run failed on "stored 0 rows" and nothing
+  // said why: dfsStore swallowed the database's error. It now hands back the
+  // first one, and the importer prints it.
+  ok('the importer prints the database error dfsStore hands back',
+     /body\.imported\.writeError/.test(imp) && /writeError/.test(storeRet));
+}
+
+console.log('\na store the database refuses says why');
+{
+  const H = makeH();
+  const { env } = freshEnv();
+  await H.dfsReady(env);
+  const prepare = env.LEADS_DB.prepare.bind(env.LEADS_DB);
+  // Every insert is refused, the way production refused all of them; the
+  // DDL and PRAGMA reads still answer.
+  env.LEADS_DB.prepare = sql => /^INSERT INTO dfs_salaries/.test(sql)
+    ? { bind() { return { async run() { throw new Error('D1_ERROR: database or disk is full'); } }; } }
+    : prepare(sql);
+  env.LEADS_DB.batch = async list => { for (const s of list) await s.run(); };
+  const r = await H.dfsStore(env, 'dk', H.parseDfsCsv('dk', classicCsv).rows, { season: 2026, week: 4, slate: 'weekly', source: 'csv' });
+  ok('nothing is stored and the count says so', r.stored === 0 && r.attempted === 3, JSON.stringify(r));
+  ok('...and the database\'s own message comes back with it',
+     r.writeError === 'D1_ERROR: database or disk is full', String(r.writeError));
+  const { env: clean } = freshEnv();
+  // A second harness: dfsReady() memoizes per isolate, and this is a new database.
+  const c = await makeH().dfsStore(clean, 'dk', H.parseDfsCsv('dk', classicCsv).rows, { season: 2026, week: 4, slate: 'weekly', source: 'csv' });
+  ok('a clean store carries no error', c.stored === 3 && c.writeError === null, JSON.stringify(c));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

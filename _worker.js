@@ -12974,17 +12974,26 @@ async function dfsStore(env, site, rows, meta) {
   const m = meta || {};
   const ts = Date.now();
   const stmt = env.LEADS_DB.prepare('INSERT INTO dfs_salaries (site, slate, season, week, name, position, team, opponent, salary, site_id, operator_fppg, roster_position, source, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  let n = 0;
+  let n = 0, writeError = null;
+  // D1's own words for the first failure, kept so a short store says WHY.
+  // From 29 Sep 2026 every scheduled DraftKings import stored 0 of its rows
+  // with HTTP 200, and the reason was thrown away here, so neither the
+  // workflow log nor anyone reading it could tell a full database from a
+  // rejected statement. A message is not a secret (no key, no row data).
+  const note = e => { if (!writeError) writeError = String((e && e.message) || e || 'failed').slice(0, 300); };
   for (let i = 0; i < rows.length; i += 50) {
     const chunk = rows.slice(i, i + 50).map(r => stmt.bind(site, m.slate || 'main', m.season || null, m.week || null, r.name, r.position, r.team || null, r.opponent || null, Math.round(r.salary), r.siteId || null, r.operatorFppg != null && Number.isFinite(Number(r.operatorFppg)) ? Number(r.operatorFppg) : null, r.rosterPosition || null, m.source || 'csv', ts));
-    try { await env.LEADS_DB.batch(chunk); n += chunk.length; } catch (e) { for (const s of chunk) { try { await s.run(); n++; } catch (e2) {} } }
+    try { await env.LEADS_DB.batch(chunk); n += chunk.length; } catch (e) {
+      note(e);
+      for (const s of chunk) { try { await s.run(); n++; } catch (e2) { note(e2); } }
+    }
   }
   // `attempted` beside `stored`, because the insert above swallows a failed
   // row: the batch is retried one statement at a time and a statement that
-  // throws twice is dropped silently. Without both numbers a partial write is
+  // throws twice is dropped. Without both numbers a partial write is
   // indistinguishable from a whole one, and a store that saved nothing still
-  // answers ok:true.
-  return { ok: true, stored: n, attempted: rows.length, site, slate: m.slate || 'main', season: m.season, week: m.week, fetchedAt: ts };
+  // answers ok:true. `writeError` is the first failure, null on a clean store.
+  return { ok: true, stored: n, attempted: rows.length, writeError: n < rows.length ? writeError : null, site, slate: m.slate || 'main', season: m.season, week: m.week, fetchedAt: ts };
 }
 // THE SLATE THIS READ IS FOR, which it used to have no opinion about.
 //
