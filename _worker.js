@@ -5200,6 +5200,20 @@ const SNAP_DDL = [
   'CREATE INDEX IF NOT EXISTS ix_snap_subject ON odds_snapshots (subject, market, ts)',
   'CREATE INDEX IF NOT EXISTS ix_snap_latest ON odds_snapshots (subject, market, book, ts)',
   'CREATE INDEX IF NOT EXISTS ix_snap_week ON odds_snapshots (season, week, ts)',
+  // The prune deletes by age, and without this every nightly prune scanned the
+  // whole store. It also makes MAX(ts) a single index read (snapshotLast).
+  'CREATE INDEX IF NOT EXISTS ix_snap_ts ON odds_snapshots (ts)',
+  // THE LAST LINE PER (subject type, subject, market, book), kept beside the
+  // append-only store so a pull can tell a changed line from an unchanged one
+  // by looking up only the subjects it carries. Until 2026-09-29 snapshotWrite
+  // answered that with a GROUP BY over the whole of odds_snapshots on every
+  // pull: every row of the season read thirty-odd times a day, which is what
+  // spent the account's D1 read allowance and took every page that reads D1
+  // down with it (the schedule behind /api/season among them). Keyed subject
+  // first so `subject_type = ? AND subject IN (...)` is an index range.
+  'CREATE TABLE IF NOT EXISTS odds_latest (subject_type TEXT NOT NULL, subject TEXT NOT NULL, market TEXT NOT NULL, ' +
+    'book TEXT NOT NULL, line REAL, over_odds INTEGER, under_odds INTEGER, ts INTEGER NOT NULL, ' +
+    'PRIMARY KEY (subject_type, subject, market, book))',
   // WHEN THE STORE LAST LOOKED, which the rows themselves cannot say. Because
   // an unchanged line writes nothing, the newest row's ts is the last time a
   // price MOVED, and every surface that called that number "pulled Nh ago" was
@@ -5213,14 +5227,35 @@ const SNAP_DDL = [
 // once applied and is allowed to fail (D1 raises on a duplicate column).
 const SNAP_MIGRATIONS = ['ALTER TABLE odds_snapshots ADD COLUMN raw_subject TEXT'];
 let _SNAP_READY = false;
+const _SNAP_SEEDED = new WeakSet();
 async function snapshotReady(env) {
-  if (_SNAP_READY) return true;
+  if (_SNAP_READY) return (await snapshotSeed(env), true);
   if (!env || !env.LEADS_DB) return false;
   try { await env.LEADS_DB.batch(SNAP_DDL.map(q => env.LEADS_DB.prepare(q))); }
   catch (e) { try { for (const q of SNAP_DDL) await env.LEADS_DB.prepare(q).run(); } catch (e2) { return false; } }
   for (const q of SNAP_MIGRATIONS) { try { await env.LEADS_DB.prepare(q).run(); } catch (e) {} }
   _SNAP_READY = true;
+  await snapshotSeed(env);
   return true;
+}
+// A store written before odds_latest existed seeds it once, from the same
+// GROUP BY the write path used to run every pull. After that the table is
+// never empty again and this is a one-row read per isolate. A seed that fails
+// costs one pull's worth of duplicate rows, not a wrong line: every line in
+// that pull is written as a change, and the next pull compares against it.
+async function snapshotSeed(env) {
+  const db = env && env.LEADS_DB;
+  if (!db || _SNAP_SEEDED.has(db)) return;
+  _SNAP_SEEDED.add(db);
+  try {
+    const has = await env.LEADS_DB.prepare('SELECT 1 AS x FROM odds_latest LIMIT 1').first();
+    if (!has) {
+      await env.LEADS_DB.prepare(
+        'INSERT OR REPLACE INTO odds_latest (subject_type, subject, market, book, line, over_odds, under_odds, ts) ' +
+        'SELECT subject_type, subject, market, book, line, over_odds, under_odds, MAX(ts) ' +
+        'FROM odds_snapshots GROUP BY book, subject_type, subject, market').run();
+    }
+  } catch (e) {}
 }
 // THE JOIN KEY. A book writes "Ja'Marr Chase"; the board writes what it
 // writes; the store keys on neither spelling but on the site's own normalized
@@ -5245,16 +5280,29 @@ async function snapshotWrite(env, rows, ctx) {
   const list = (rows || []).filter(r => r && r.book && r.subject && r.market && Number.isFinite(Number(r.line)) && snapshotSubject(r));
   if (!list.length) return { ok: true, seen: 0, written: 0, unchanged: 0 };
   // The latest row per (book, subject, market) already held, so an unchanged
-  // line is recognized without a query per row.
+  // line is recognized without a query per row. Read from odds_latest for the
+  // subjects in THIS pull only (see SNAP_DDL for why not the whole store),
+  // ninety to a query to stay under D1's bound-parameter limit.
   const latest = new Map();
-  try {
-    const q = await env.LEADS_DB.prepare(
-      'SELECT book, subject_type, subject, market, line, over_odds, under_odds, MAX(ts) AS ts ' +
-      'FROM odds_snapshots GROUP BY book, subject_type, subject, market').all();
-    for (const r of (q.results || [])) {
-      latest.set(r.book + ' ' + r.subject_type + ' ' + r.subject + ' ' + r.market, r);
+  const bySubjectType = {};
+  for (const r of list) {
+    const t = String(r.subjectType || 'player');
+    (bySubjectType[t] = bySubjectType[t] || new Set()).add(snapshotSubject(r));
+  }
+  for (const [t, set] of Object.entries(bySubjectType)) {
+    const subjects = [...set];
+    for (let i = 0; i < subjects.length; i += 90) {
+      const part = subjects.slice(i, i + 90);
+      try {
+        const q = await env.LEADS_DB.prepare(
+          'SELECT book, subject_type, subject, market, line, over_odds, under_odds, ts FROM odds_latest ' +
+          'WHERE subject_type = ? AND subject IN (' + part.map(() => '?').join(',') + ')').bind(t, ...part).all();
+        for (const r of (q.results || [])) {
+          latest.set(r.book + ' ' + r.subject_type + ' ' + r.subject + ' ' + r.market, r);
+        }
+      } catch (e) {}
     }
-  } catch (e) {}
+  }
   const season = (ctx && ctx.season) || null, week = (ctx && ctx.week) || null;
   const ts = (ctx && ctx.ts) || Date.now();
   const fresh = [];
@@ -5270,16 +5318,30 @@ async function snapshotWrite(env, rows, ctx) {
   const stmt = env.LEADS_DB.prepare(
     'INSERT INTO odds_snapshots (ts, season, week, book, subject_type, subject, market, line, over_odds, under_odds, game_id, raw_subject) ' +
     'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  // The same line into odds_latest, in the same batch as its history row so
+  // the two cannot disagree. The guard keeps a slow pull that lands after a
+  // fast one from winding a line back.
+  const up = env.LEADS_DB.prepare(
+    'INSERT INTO odds_latest (subject_type, subject, market, book, line, over_odds, under_odds, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ' +
+    'ON CONFLICT(subject_type, subject, market, book) DO UPDATE SET line = excluded.line, over_odds = excluded.over_odds, ' +
+    'under_odds = excluded.under_odds, ts = excluded.ts WHERE excluded.ts >= odds_latest.ts');
+  const odds = v => (v == null ? null : Math.round(Number(v)));
   for (let i = 0; i < fresh.length; i += 50) {
-    const chunk = fresh.slice(i, i + 50).map(r => stmt.bind(
-      ts, season, week, String(r.book), String(r.subjectType || 'player'), snapshotSubject(r),
-      String(r.market), Number(r.line),
-      r.overOdds == null ? null : Math.round(Number(r.overOdds)),
-      r.underOdds == null ? null : Math.round(Number(r.underOdds)),
-      r.gameId == null ? null : String(r.gameId),
-      String(r.subject).slice(0, 80)));
-    try { await env.LEADS_DB.batch(chunk); written += chunk.length; }
-    catch (e) { for (const st of chunk) { try { await st.run(); written++; } catch (e2) {} } }
+    const pairs = fresh.slice(i, i + 50).map(r => [
+      stmt.bind(
+        ts, season, week, String(r.book), String(r.subjectType || 'player'), snapshotSubject(r),
+        String(r.market), Number(r.line), odds(r.overOdds), odds(r.underOdds),
+        r.gameId == null ? null : String(r.gameId),
+        String(r.subject).slice(0, 80)),
+      up.bind(String(r.subjectType || 'player'), snapshotSubject(r), String(r.market), String(r.book),
+        Number(r.line), odds(r.overOdds), odds(r.underOdds), ts)
+    ]);
+    try { await env.LEADS_DB.batch(pairs.flat()); written += pairs.length; }
+    catch (e) {
+      for (const [ins, upd] of pairs) {
+        try { await ins.run(); written++; try { await upd.run(); } catch (e3) {} } catch (e2) {}
+      }
+    }
   }
   // The pull clock (SNAP_DDL). A pull that found every line unchanged wrote
   // nothing and is still a pull; stamping it here is what lets a surface say
@@ -5330,6 +5392,9 @@ async function snapshotPrune(env, keepDays) {
   const cutoff = Date.now() - (keepDays || SNAP_KEEP_DAYS) * 86400000;
   try {
     const r = await env.LEADS_DB.prepare('DELETE FROM odds_snapshots WHERE ts < ?').bind(cutoff).run();
+    // A line no book has touched since the cutoff goes too, exactly as its
+    // history rows just did, so the next quote of it is written as new.
+    try { await env.LEADS_DB.prepare('DELETE FROM odds_latest WHERE ts < ?').bind(cutoff).run(); } catch (e) {}
     return { ok: true, deleted: (r.meta && r.meta.changes) || 0 };
   } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
 }
@@ -5462,7 +5527,21 @@ async function marketHistoryAll(env, subject) {
 // every book is comfortably inside the limit, and a run that hit it would be
 // truncating the OLDEST rows, so the cap is applied to the newest instead.
 const MARKET_WEEK_ROW_CAP = 40000;
+// Memoized per isolate for five minutes, the life of a boards memo entry. Every
+// distinct board (horizon x position x scoring) built its context afresh and
+// each one re-read up to MARKET_WEEK_ROW_CAP rows of the same week; this makes
+// that one read per isolate per five minutes. Keyed on the database too, so a
+// caller handing in a different store never reads another's rows.
+let _MKT_WEEK_MEMO = { db: null, key: '', at: 0, out: null };
 async function marketHistoryWeek(env, season, week) {
+  const mkey = season + '|' + week;
+  const db = env && env.LEADS_DB;
+  if (db && _MKT_WEEK_MEMO.db === db && _MKT_WEEK_MEMO.key === mkey && Date.now() - _MKT_WEEK_MEMO.at < 300000) return _MKT_WEEK_MEMO.out;
+  const out = await _marketHistoryWeekRead(env, season, week);
+  if (db && out && Object.keys(out).length) _MKT_WEEK_MEMO = { db, key: mkey, at: Date.now(), out };
+  return out;
+}
+async function _marketHistoryWeekRead(env, season, week) {
   if (!(await snapshotReady(env))) return {};
   try {
     const q = await env.LEADS_DB.prepare(
@@ -5663,6 +5742,17 @@ async function snapshotStatus(env) {
       'SELECT COUNT(*) AS rows, COUNT(DISTINCT subject) AS subjects, COUNT(DISTINCT book) AS books, ' +
       'COUNT(DISTINCT market) AS markets, MIN(ts) AS first, MAX(ts) AS last FROM odds_snapshots').first();
     return { ok: true, ...tot, keepDays: SNAP_KEEP_DAYS };
+  } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+}
+// When a line last moved, and nothing else. snapshotStatus counts the whole
+// store, which is right for the health board and wrong for the content desk,
+// which asked it on every build only to read `last`. On ix_snap_ts this is one
+// index read.
+async function snapshotLast(env) {
+  if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
+  try {
+    const r = await env.LEADS_DB.prepare('SELECT MAX(ts) AS last FROM odds_snapshots').first();
+    return { ok: true, last: r && r.last != null ? Number(r.last) : null };
   } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
 }
 
@@ -11766,7 +11856,7 @@ async function contentContext(env, weekNumber, opts) {
     boardsPayload(env, { horizon: 'week', position: 'ALL', preset }),
     boardsPayload(env, { horizon: 'next3', position: 'ALL', preset }),
     depthChartsRead(env), usageCacheRead(env), availabilityReport(env).catch(() => null),
-    oddsCacheRead(env).catch(() => null), snapshotStatus(env).catch(() => null), availabilityCacheRead(env).catch(() => null)
+    oddsCacheRead(env).catch(() => null), snapshotLast(env).catch(() => null), availabilityCacheRead(env).catch(() => null)
   ]);
   const curWeek = state.ok && state.week.type === 'REG' ? state.week.number : null;
   const [weekMarkets, gameMarkets] = await Promise.all([
