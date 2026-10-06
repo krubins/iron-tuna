@@ -1077,8 +1077,8 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
      </div>
    </aside>
    <!-- ── 1 · the lead story ───────────────────────────────────────────────
-        Ken, 2026-09-21: the front page had no lead. The newest published piece
-        leads the page, with the next five beside it as Top Headlines, off the
+        Ken, 2026-09-21: the front page had no lead. A recent published piece
+        leads the page (taking turns hourly since 2026-10-04; see leadTurn), with the next five beside it as Top Headlines, off the
         same /api/newsroom read the cards below use -- so the two can never
         disagree about what the desk has published.
 
@@ -1678,6 +1678,21 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
   // board, a caption still claiming the top of the board is false, which is
   // the one thing a page arguing from the market cannot afford to be.
   function coverLead(rows, pick) { return !!(rows.length && rows[0] === pick); }
+  // THE LEAD TAKES TURNS TOO (Ken, 2026-10-04: "the lead story should update
+  // frequently"). Pinned to the newest qualifying story, the lead held from
+  // Friday's last desk piece to Sunday's first, about two days, and through
+  // every overnight gap in the week. So it rotates on the cover's own clock:
+  // each turn the next of the newest LEAD_POOL qualifying stories leads. Fresh
+  // news is exempt, as it is in the band: a story published inside the current
+  // turn leads outright. `cands` is the qualifying stories, newest first; the
+  // return is an index into it, or -1 for none.
+  var LEAD_POOL = 4;
+  function leadTurn(cands, now) {
+    if (!cands.length) return -1;
+    var at = +cands[0].publishedAt || 0;
+    if (at && now - at < COVER_TURN_MS) return 0;
+    return coverTurn(Math.min(cands.length, LEAD_POOL), now);
+  }
   // ── WHOSE FACE, AND WHOSE SENTENCE ──────────────────────────────────────
   // The hero's desk card took `whoOf(p)[0]` — the subject of the piece's FIRST
   // finding — and printed the piece's HEADLINE beneath him. Nothing tied those
@@ -1889,7 +1904,7 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
   // winning, forward pieces dropped once their games have kicked off, and the
   // components each piece breaks into. The cover and the desk now answer to one
   // rule, so they cannot disagree about what the desk has published.
-  grab('/api/newsroom?limit=20', function desk(j) {
+  function desk(j) {
     var day = function (v) {
       try {
         return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric' }).format(new Date(v));
@@ -1986,8 +2001,7 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
     // photograph, or an ESPN or NFL headshot, on file). Only if no story in
     // the feed has a photograph does the newest non-kicker, non-defense story
     // lead without one; only if every story is kickers or defenses does the
-    // newest lead. It is still not the cards' rotation: the lead is the
-    // newest story that qualifies, so it changes when the desk publishes.
+    // newest lead.
     var KD = /kicker|defen[cs]e|\bd\/?st\b|\bk\s*&\s*d\b/i;
     var isKD = function (p) { return KD.test([p.kind, p.title, p.headline].join(' ')); };
     var PSok = !!(PS && PS.resolve);
@@ -1996,9 +2010,16 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
       if (!PSok) return false;
       return coverSubjects(p, boast(p) || p.headline).some(function (s) { return pictured(PS.resolve(s.name)); });
     };
-    var at = -1, i;
-    for (i = 0; i < live.length && at < 0; i++) if (!isKD(live[i]) && heroPhoto(live[i])) at = i;
-    for (i = 0; i < live.length && at < 0; i++) if (!isKD(live[i])) at = i;
+    //
+    // 2026-10-04: and it takes turns. Of the stories that clear those tests,
+    // the newest LEAD_POOL take the lead an hour each (`leadTurn`), except
+    // that a story published inside the current hour leads outright. The
+    // stories that do not lead stay on the rail in the feed's order.
+    var quals = [], i;
+    for (i = 0; i < live.length; i++) if (!isKD(live[i]) && heroPhoto(live[i])) quals.push(i);
+    if (!quals.length) for (i = 0; i < live.length; i++) if (!isKD(live[i])) quals.push(i);
+    var turn = leadTurn(quals.map(function (k) { return live[k]; }), Date.now());
+    var at = turn < 0 ? -1 : quals[turn];
     if (at > 0) live = [live[at]].concat(live.slice(0, at), live.slice(at + 1));
 
     // EVERY THIRD RAIL STORY HAS A PICTURE (Ken, 2026-09-27): rail slots 3
@@ -2037,8 +2058,8 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
     var leadHtml = '<article class="hm-lead' + (leadCrow ? ' is-boast' : '') + '"'
       + (leadPick.length ? ' data-player-focus="' + esc(leadPick.join('|')) + '"' : '') + '>'
       // In a news lead's order (2026-09-26): kicker, headline, dek, the byline
-      // and date, then the link. No "Latest" flag: the lead is the newest
-      // piece by rule, so the flag only ever said what its position says.
+      // and date, then the link. No "Latest" flag: the lead takes turns
+      // (`leadTurn`), so it is not always the newest piece.
       + '<span class="t">' + esc(lead.title || 'The desk') + '</span>'
       + (leadCrow ? '<span class="boast">You\u2019re welcome.</span>' : '')
       + '<h3><a href="' + esc(lead.url) + '">' + esc(leadCrow || lead.headline) + '</a></h3>'
@@ -2086,7 +2107,7 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
     // it is handed a shorter list, not a new policy. With nothing left the
     // section stays hidden rather than repeating the front.
     var pieces = coverBand(live.slice(1 + railPieces.length), Date.now());
-    if (!pieces.length) { try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('leadWell')); } catch (e) {} return; }    $('readGrid').innerHTML = pieces.map(function (p) {
+    if (!pieces.length) { show($('articles'), false); try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('leadWell')); } catch (e) {} return; }    $('readGrid').innerHTML = pieces.map(function (p) {
       var when = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + esc(p.week) : '');
       var who = whoOf(p);
       // `byline` is an object ({analyst, name, role, avatar, ...}), not a
@@ -2140,6 +2161,25 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
     });
     if (deskCands.length) heroPaint('desk', deskCands);
     else heroClear();
+  }
+  function deskRead() { grab('/api/newsroom?limit=20', desk); }
+  deskRead();
+  // THE OPEN PAGE KEEPS UP (2026-10-04). The front painted once, on load, so a
+  // tab left open kept the lead it opened on however many turns went by and
+  // whatever the desk published meanwhile. It re-reads the desk at every turn
+  // boundary, so the lead takes its turn on screen, and every DESK_REFRESH_MS
+  // between, so a story the desk files mid-turn reaches the front. A hidden
+  // tab skips the read and catches up when it is shown again.
+  var DESK_REFRESH_MS = 10 * 60 * 1000, deskStale = false;
+  (function deskNext() {
+    var wait = COVER_TURN_MS - (Date.now() % COVER_TURN_MS);
+    setTimeout(function () {
+      if (document.hidden) deskStale = true; else deskRead();
+      deskNext();
+    }, Math.min(wait, DESK_REFRESH_MS) + 5000);
+  })();
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && deskStale) { deskStale = false; deskRead(); }
   });
 })();
 </script>

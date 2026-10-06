@@ -1098,8 +1098,8 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   const head = front.indexOf('var COVER_TURN_MS =');
   const tail = front.indexOf('// ── end cover rotation', head);
   if (head < 0 || tail < 0) { console.error('FAIL: the cover rotation block is not in front.html'); process.exit(1); }
-  const R = new Function(front.slice(head, tail) + '; return { coverBand, coverFace, coverFaces, coverPick, coverLead, coverSubjects, COVER_TURN_MS, DESK_BAND, HERO_POOL, CARD_POOL };')();
-  const { coverBand, coverFace, coverFaces, coverPick, coverLead, coverSubjects } = R;
+  const R = new Function(front.slice(head, tail) + '; return { coverBand, coverFace, coverFaces, coverPick, coverLead, coverSubjects, leadTurn, COVER_TURN_MS, DESK_BAND, HERO_POOL, CARD_POOL, LEAD_POOL };')();
+  const { coverBand, coverFace, coverFaces, coverPick, coverLead, coverSubjects, leadTurn } = R;
   const TURN = R.COVER_TURN_MS;
   const at = h => Date.UTC(2026, 8, 18, 12) + h * 3600 * 1000;
   const ids = a => a.map(p => p.headline).join(',');
@@ -1127,6 +1127,20 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   ok('the band is a function of the clock alone', ids(coverBand(feed, at(9))) === ids(coverBand(feed, at(9))));
   ok('one piece is printed as it is', ids(coverBand([feed[0]], at(9))) === 'a');
   ok('an empty feed is empty', coverBand([], at(9)).length === 0);
+  // THE LEAD TAKES TURNS (2026-10-04). Fresh news leads outright; otherwise
+  // the newest LEAD_POOL qualifying stories lead an hour each, and the lead
+  // changes every turn.
+  {
+    const c = ['a', 'b', 'c', 'd', 'e', 'f'].map((h, i) => ({ headline: h, publishedAt: at(-2 - i) }));
+    ok('a story published inside the current turn leads outright',
+      [0, 1, 2, 3, 4].every(t => leadTurn([{ ...c[0], publishedAt: at(t) + 60000 }, ...c.slice(1)], at(t) + TURN / 2) === 0));
+    const seq = []; for (let t = 0; t < 8; t++) seq.push(leadTurn(c, at(t)));
+    ok('the lead changes every turn', seq.every((v, i) => i === 0 || v !== seq[i - 1]), seq.join(','));
+    ok('it walks only the newest LEAD_POOL stories', seq.every(v => v >= 0 && v < R.LEAD_POOL) && new Set(seq).size === R.LEAD_POOL, seq.join(','));
+    ok('one story always leads', leadTurn([c[0]], at(5)) === 0);
+    ok('no stories, no lead', leadTurn([], at(5)) === -1);
+    ok('the lead is a function of the clock alone', leadTurn(c, at(7)) === leadTurn(c, at(7)));
+  }
   ok('a piece with no timestamp does not stop the band',
     coverBand([{ url: '/x', headline: 'x' }, { url: '/y', headline: 'y' }, { url: '/z', headline: 'z' }], at(9)).length === 3);
 
