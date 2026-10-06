@@ -1195,10 +1195,31 @@ async function postThreadsThread(env, texts, imageUrl) {
   return posted;
 }
 
+// THE LINKS SAY WHERE THEY WERE POSTED (2026-10-06). page_views reads
+// utm_source before the referrer, and the Threads app sends no referrer, so
+// every click off a Threads post landed as "direct": not one visit in the log
+// was ever credited to Threads. Each irontuna.com link in a post now carries
+// utm_source/medium/campaign, the campaign being the post's format. A link
+// that already names a utm_source is left alone. Pure.
+const THREADS_MAX_CHARS = 500;
+function tagSocialLinks(text, source, campaign) {
+  return String(text).replace(/https?:\/\/(?:www\.)?irontuna\.com[^\s)]*/gi, u => {
+    if (/[?&]utm_source=/i.test(u)) return u;
+    const m = /^([^#]*?)([.,!?;:]*)(#.*)?$/.exec(u);
+    const base = m[1], trail = m[2] || '', hash = m[3] || '';
+    const q = 'utm_source=' + source + '&utm_medium=social' + (campaign ? '&utm_campaign=' + encodeURIComponent(campaign) : '');
+    return base + (base.includes('?') ? '&' : '?') + q + hash + trail;
+  });
+}
+
 async function postAndLogThreads(env, format, id, tweets, imagePath) {
   if (!env.THREADS_USER_ID || !(await getThreadsAccessToken(env))) return { ok: false, error: 'missing_threads_credentials' };
   await maybeRefreshThreadsToken(env);
   const imageUrl = imagePath ? `https://irontuna.com${imagePath}` : undefined;
+  // Threads caps a post at 500 characters and the tag adds about sixty: a post
+  // the tag would push over goes out untagged rather than being refused.
+  const tagged = x => { const y = tagSocialLinks(x, 'threads', format); return y.length <= THREADS_MAX_CHARS ? y : x; };
+  tweets = tweets.map(t => typeof t === 'string' ? tagged(t) : { ...t, text: tagged(t.text) });
   const posted = await postThreadsThread(env, tweets, imageUrl);
   const ok = posted.length > 0 && posted.every(p => p.ok);
   const postIds = posted.map(p => (p.data && p.data.id) || '').filter(Boolean).join(',');
