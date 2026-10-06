@@ -77,5 +77,28 @@ ok('insights.html has the Just Posted block, hidden by default',
   /<div id="justposted" hidden>/.test(insightsHub));
 ok('insights.html fetches /api/posted-insights', insightsHub.includes("fetch('/api/posted-insights')"));
 
+// ── the links a Threads post carries say where they were posted ──────────
+// The Threads app sends no referrer, so an untagged link is counted as a
+// direct visit and the channel cannot be measured (2026-10-06).
+const tagSrc = worker.match(/function tagSocialLinks\(text, source, campaign\) \{[\s\S]*?\n\}/);
+ok('tagSocialLinks is present in _worker.js', !!tagSrc);
+const tag = tagSrc ? new Function(tagSrc[0] + '; return tagSocialLinks;')() : null;
+if (tag) {
+  ok('a bare link gets source, medium and campaign',
+    tag('Read it: https://irontuna.com/snake-insights', 'threads', 'snake') === 'Read it: https://irontuna.com/snake-insights?utm_source=threads&utm_medium=social&utm_campaign=snake');
+  ok('a link with a query string is extended, not broken',
+    tag('https://irontuna.com/dfs?site=dk', 'threads', 'bonus') === 'https://irontuna.com/dfs?site=dk&utm_source=threads&utm_medium=social&utm_campaign=bonus');
+  ok('the tag goes before an anchor, so the anchor still lands',
+    tag('https://irontuna.com/auction-insights-2026-07-04#call-3', 'threads', 'auction') === 'https://irontuna.com/auction-insights-2026-07-04?utm_source=threads&utm_medium=social&utm_campaign=auction#call-3');
+  ok('sentence punctuation after a link stays outside it',
+    tag('See https://www.irontuna.com/faq.', 'threads', 'x') === 'See https://www.irontuna.com/faq?utm_source=threads&utm_medium=social&utm_campaign=x.');
+  ok('a link that already names a source is left alone',
+    tag('https://irontuna.com/?utm_source=newsletter', 'threads', 'x') === 'https://irontuna.com/?utm_source=newsletter');
+  ok('other sites and plain text are untouched',
+    tag('odds at https://example.com/a and #FantasyFootball', 'threads', 'x') === 'odds at https://example.com/a and #FantasyFootball');
+}
+ok('the Threads mirror tags its links before posting', /tagSocialLinks\(x, 'threads', format\)/.test(worker) && /tweets = tweets\.map\(t => typeof t === 'string' \? tagged\(t\)/.test(worker));
+ok('and never tags a post past the 500-character limit', /y\.length <= THREADS_MAX_CHARS \? y : x/.test(worker) && /const THREADS_MAX_CHARS = 500;/.test(worker));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
