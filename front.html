@@ -1392,14 +1392,19 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
       // Robinson Jr. is one. plate() still builds a frame for him, and the
       // biggest thing on the front came out as a dark box reading "BJ". A
       // player with no image on file is skipped for the next candidate.
-      if (!(PS.action && PS.action(p.k)) && !p.e && !p.h) continue;
+      //
+      // AN ACTION SHOT OR NOTHING (Ken, 2026-10-06): "I don't want a player's
+      // face against a black backdrop." A headshot is no longer a picture
+      // here: a player with no game photograph is skipped for the next
+      // candidate, and the plate is asked for the photograph alone.
+      if (!(PS.action && PS.action(p.k))) continue;
       var rest = cands.slice(i + 1);
       // And one whose every image fails to load at runtime hands the frame to
       // the next candidate rather than leaving his initials in it.
       // High priority for the lead's own photograph only: the board's gap can
       // paint first while the newsroom is still answering, and is replaced as
       // soon as it does, so it should not compete with the one that stays.
-      var fig = PS.plate(p, { eager: true, priority: from === 'desk' ? 'high' : null, onfail: heroFail(from, rest) });
+      var fig = PS.plate(p, { eager: true, actionOnly: true, priority: from === 'desk' ? 'high' : null, onfail: heroFail(from, rest) });
       if (!fig) continue;
       heroDress(fig, p);
       box.innerHTML = '';
@@ -1998,14 +2003,16 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
     // always one with a photograph. It is the NEWEST story that clears both:
     // not about kickers or defenses (by its kind, series name or headline),
     // and naming a player the hero can picture (the hero's own test: a game
-    // photograph, or an ESPN or NFL headshot, on file). Only if no story in
+    // photograph on file; since 2026-10-06 a headshot does not count). Only if no story in
     // the feed has a photograph does the newest non-kicker, non-defense story
     // lead without one; only if every story is kickers or defenses does the
     // newest lead.
     var KD = /kicker|defen[cs]e|\bd\/?st\b|\bk\s*&\s*d\b/i;
     var isKD = function (p) { return KD.test([p.kind, p.title, p.headline].join(' ')); };
     var PSok = !!(PS && PS.resolve);
-    var pictured = function (r) { return !!r && ((PS.action && PS.action(r.k)) || r.e || r.h); };
+    // Pictured means an action shot (2026-10-06), the only picture the hero
+    // runs; a headshot alone no longer qualifies a story to lead.
+    var pictured = function (r) { return !!r && !!(PS.action && PS.action(r.k)); };
     var heroPhoto = function (p) {
       if (!PSok) return false;
       return coverSubjects(p, boast(p) || p.headline).some(function (s) { return pictured(PS.resolve(s.name)); });

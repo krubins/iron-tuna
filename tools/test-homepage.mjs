@@ -660,22 +660,22 @@ console.log('\nwith a headline about the piece\u2019s second finding');
 {
   const full = CONTENT.pieces;
   const WAIVERS = { kind: 'waiver-wire', title: 'Waiver Wire', week: 3, publishedAt: FRESH,
-    headline: 'Parker Washington\u2019s 43% target share after Week 2 makes him the clearest roster add of the week',
-    dek: 'The Jacksonville routes are not going back.',
+    headline: 'Calvin Ridley\u2019s 43% target share after Week 2 makes him the clearest roster add of the week',
+    dek: 'The Tennessee routes are not going back.',
     url: '/in-season/desk/waiver-wire/3', byline: 'Iron Tuna desk',
     components: [
-      { n: 1, player: 'Nate Adkins', headline: 'Nate Adkins is the Denver tight end now' },
-      { n: 2, player: 'Parker Washington', headline: 'Parker Washington ran a route on 43% of the dropbacks' } ] };
+      { n: 1, player: 'Courtland Sutton', headline: 'Courtland Sutton is the Denver X receiver now' },
+      { n: 2, player: 'Calvin Ridley', headline: 'Calvin Ridley ran a route on 43% of the dropbacks' } ] };
   CONTENT.pieces = [WAIVERS, ...full];
   const { page, ctx } = await open(1280, 900);
   const r = await read(page);
   ok('the hero carries a picture', r.edge === true && r.edgePlate === true);
-  ok('it is the player the headline is about', r.edgeName === 'Parker Washington', r.edgeName);
+  ok('it is the player the headline is about', r.edgeName === 'Calvin Ridley', r.edgeName);
   ok('and the caption under him is that headline', r.edgeGap === WAIVERS.headline, r.edgeGap);
   // The assertion the bug would fail: the man in the frame and the man in the
   // sentence are the same man.
   ok('the face and the sentence are about the same man',
-     !r.edgeGap.includes('Nate Adkins') && r.edgeName !== 'Nate Adkins',
+     !r.edgeGap.includes('Courtland Sutton') && r.edgeName !== 'Courtland Sutton',
      r.edgeName + ' / ' + r.edgeGap);
   CONTENT.pieces = full;
   await ctx.close();
@@ -772,15 +772,14 @@ for (const [w, want, tag] of [[1280, 16 / 9, 'desktop'], [390, 4 / 3, 'phone']])
   await ctx.close();
 }
 {
-  // No game photograph: the ESPN headshot loads, and is set as a cutout on a
-  // panel with his name, not a head stretched to 16:9.
+  // No game photograph (2026-10-06): the hero runs an action shot or nothing.
+  // The ESPN headshot is up, and it must not stand in for the photograph.
   actionDown = true;
   const { page, ctx } = await open(1280, 900);
   await page.waitForTimeout(300);
-  const r = await photo(page);
-  ok('a headshot-only hero is set as a panel with his name', /is-headshot/.test(r.fig) && r.panel === 'Puka NacuaWR · LAR', `${r.fig} | ${r.panel}`);
-  ok('at a fixed height, not stretched to 16:9', r.shotH === 280, r.shotH + 'px');
-  ok('with no credit, and the caption does not repeat the name', r.credit === '' && r.captionName === false, JSON.stringify({ credit: r.credit, cap: r.captionName }));
+  const r = await read(page);
+  ok('with the game photograph failing, no headshot stands in: the hero is hidden', r.edge === false, JSON.stringify({ edge: r.edge, name: r.edgeName }));
+  ok('and the lead story still leads', await page.evaluate(() => !!document.querySelector('#leadWell .hm-lead h3')));
   actionDown = false;
   await ctx.close();
 }
