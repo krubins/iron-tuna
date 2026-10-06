@@ -443,8 +443,12 @@
     box.appendChild(ini);
     var srcs = [];
     if (shot) srcs.push(shot.u);
-    if (p.e) srcs.push(ESPN + p.e + '.png');
-    if (p.h) srcs.push(NFL + p.h);
+    // `actionOnly` (the homepage hero, 2026-10-06): the game photograph or
+    // nothing. No headshot stands in for it; a failed photograph is onfail.
+    if (!opts.actionOnly) {
+      if (p.e) srcs.push(ESPN + p.e + '.png');
+      if (p.h) srcs.push(NFL + p.h);
+    }
     var credit = shot ? creditEl(shot) : null;
     if (srcs.length) {
       var img = doc.createElement('img'), at = 0;

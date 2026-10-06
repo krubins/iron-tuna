@@ -12202,12 +12202,30 @@ function _staleRule(K) {
   const sample = K.targets([{ dow: 'Sun', status: 'final', state: { status: 'completed' }, kickoff: 0 }, { dow: 'Thu', status: 'final', state: { status: 'completed' }, kickoff: 0 }]);
   return sample.length ? 'never' : 'slate';
 }
+//
+// NOTHING OUTLIVES THE WEEK IT GETS YOU READY FOR (Ken, 2026-10-06). Every
+// rule above, `never` included, gives way once every game of the piece's
+// FORWARD week has kicked off. That is the week after its own for a piece
+// about the played week (Tailback Tuesday, Week 3, is reading for Week 4), and
+// its own week for one stored under the clock's week (the Week 4 Pickup
+// Advisor). With that week played, the advice is spent and stale on a front
+// page. The Monday-night kickoff is the line, not Sunday at one, so the front
+// keeps its reading through Sunday afternoon while the recaps are written. A
+// legacy kind counts as played-week, the later of the two. A forward week
+// with no games still ahead of the piece judges nothing.
 function pieceExpired(row, sched, now) {
   const K = row ? CONTENT_KINDS[row.kind] : null;
   const rule = _staleRule(K);
-  if (rule === 'never' || !sched || row.week == null) return false;
+  if (!sched || row.week == null) return false;
   const off = g => g.state.status === 'postponed' || g.state.status === 'canceled';
   const started = g => !off(g) && g.state.status !== 'upcoming';
+  const fwd = K && K.subject !== 'played' ? row.week : row.week + 1;
+  // Only the games still ahead when it published: news filed during the
+  // Monday game is not spent by that game's kickoff.
+  const pub = +(row.published_at || row.created_at) || 0;
+  const nx = weekGames(sched, fwd, now).filter(g => !off(g) && g.kickoff > pub);
+  if (nx.length && nx.every(started)) return true;
+  if (rule === 'never') return false;
   const gs = weekGames(sched, row.week, now).filter(g => !off(g));
   if (!gs.length) return false;
   if (rule === 'all-started' || rule === 'any-started') {

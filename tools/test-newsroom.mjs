@@ -964,7 +964,7 @@ console.log('\na forward piece leaves the feed when its games kick off');
   const tnf = row('tnf-preview', T(10, 6));
   ok('the Thursday preview is current Thursday morning and gone by Friday', fresh(tnf, at.thuAm) && stale(tnf, at.thuNight) && stale(tnf, at.friAm));
   const twm = row('tnf-what-matters', T(11, 6));
-  ok('Thursday Night: What Matters is about a played game and never expires', fresh(twm, at.friAm) && fresh(twm, at.sunNight) && fresh(twm, at.tueAm));
+  ok('Thursday Night: What Matters stays through the weekend it reads for, and leaves once that week is played', fresh(twm, at.friAm) && fresh(twm, at.sunNight) && stale(twm, at.tueAm));
   const kd = row('kickers-defenses', T(11, 8));
   ok('the Friday streamers are current until the Sunday slate is under way', fresh(kd, at.friAm) && fresh(kd, at.sunNoon) && stale(kd, at.sunEarly) && stale(kd, at.monAm));
   const und = row('underrated', T(10, 7));
@@ -974,9 +974,34 @@ console.log('\na forward piece leaves the feed when its games kick off');
   ok('a Sunday-morning scratch is news until the one o\'clock games', fresh(brkSun, at.sunNoon) && stale(brkSun, at.sunEarly));
   const brkMon = row('breaking', T(14, 21));
   ok('breaking news during the Monday game lasts as long as its week', fresh(brkMon, at.monLate) && stale(brkMon, at.tueAm));
-  ok('what happened never expires', [row('game-recap', T(13, 16, 30), { game_id: 'e1' }), row('what-sunday-taught-us', T(13, 19, 30)), row('what-tuna-got-right', T(14, 6)), row('ros-rankings', T(15, 7)), row('pickup-advisor', T(16, 6))].every(r => fresh(r, at.tueAm) && fresh(r, T(20, 9))));
+  ok('what happened never expires', [row('game-recap', T(13, 16, 30), { game_id: 'e1' }), row('what-sunday-taught-us', T(13, 19, 30)), row('what-tuna-got-right', T(14, 6)), row('ros-rankings', T(15, 7), { week: 2 }), row('pickup-advisor', T(16, 6), { week: 2 })].every(r => fresh(r, at.tueAm) && fresh(r, T(20, 9))));
   ok('with no schedule there is no judgement and the piece stays', !H.pieceExpired(wp, null, at.tueAm));
   ok('a legacy kind, a row without a week, and a week with no games all stay', !H.pieceExpired(row('final-read', T(10, 7)), schedAt(at.tueAm), at.tueAm) && !H.pieceExpired({ ...wp, week: null }, schedAt(at.tueAm), at.tueAm) && !H.pieceExpired({ ...wp, week: 9 }, schedAt(at.tueAm), at.tueAm));
+}
+
+console.log('\nnothing outlives the week it gets you ready for');
+{
+  // Two weeks: Week 1 is played out, Week 2 runs Thursday to Monday night.
+  // A Week 1 Tailback Tuesday (a played-week piece) and the Week 2 Pickup
+  // Advisor (stored under the week it is for) are both reading for Week 2,
+  // and both leave the feed once the last Week 2 game kicks off.
+  const T = (d, h, m) => Date.UTC(2026, 8, d, h + 4, m || 0);
+  const G = (id, wk, d, h, m) => ({ id, type: 'REG', week: wk, kickoff: T(d, h, m), away: id + 'a', home: id + 'h', status: null });
+  const GAMES = [G('w1sun', 1, 13, 13), G('w1mnf', 1, 14, 20, 15),
+                 G('w2thu', 2, 17, 20, 15), G('w2sun', 2, 20, 13), G('w2snf', 2, 20, 20, 20), G('w2mnf', 2, 21, 20, 15)];
+  const schedAt = now => ({ season: 2026, games: GAMES.map(x => ({ ...x, status: now >= x.kickoff + 3.5 * 3600000 ? 'final' : null })) });
+  const stale = (r, when) => H.pieceExpired(r, schedAt(when), when);
+  const row = (kind, week, published_at, extra) => ({ kind, week, season: 2026, status: 'published', published_at, created_at: published_at, ...(extra || {}) });
+  const ttue = row('tailback-tuesday', 1, T(15, 8));
+  const pick = row('pickup-advisor', 2, T(16, 6));
+  const recap = row('game-recap', 1, T(13, 17), { game_id: 'w1sun' });
+  const sunNight = T(20, 21), monLate = T(21, 21), tue = T(22, 9);
+  ok('Week 1 reading for Week 2 stays through the Week 2 Sunday', [ttue, pick, recap].every(r => !stale(r, T(18, 9)) && !stale(r, sunNight)));
+  ok('and leaves once the last Week 2 game has kicked off', [ttue, pick, recap].every(r => stale(r, monLate) && stale(r, tue)));
+  ok('a Week 2 played-week piece is still current then', !stale(row('tailback-tuesday', 2, T(22, 8)), tue) && !stale(row('game-recap', 2, T(20, 17), { game_id: 'w2sun' }), tue));
+  ok('a forward week with no games judges nothing', !stale(row('tailback-tuesday', 2, T(22, 8)), T(30, 9)));
+  ok('a postponed Monday game does not hold the week open',
+    H.pieceExpired(ttue, { season: 2026, games: GAMES.map(x => ({ ...x, status: x.id === 'w2mnf' ? 'postponed' : (sunNight >= x.kickoff + 3.5 * 3600000 ? 'final' : null) })) }, sunNight));
 }
 
 console.log('\na played-week piece looks forward with next week\'s board');
