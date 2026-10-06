@@ -56,7 +56,7 @@ const M = new Function(
   `${scoring}\n${odds}\n${adapter}\n${providers}\n${snapshots}\n${vegas}\n${overlay}\n` +
   'return { scoringRules, scoreStats, SCORING_BASE, tdPointsFor, PROVIDERS, PROVIDER_KINDS, ' +
   'providerRun, providerReport, PROVIDER_UNAVAILABLE, snapshotWrite, snapshotStatus, ' +
-  'snapshotPulls, snapshotPulledAt, ' +
+  'snapshotPulls, snapshotPulledAt, snapshotPrune, snapshotLast, ' +
   'marketHistoryFrom, marketHistory, marketHistoryAll, marketAgreement, _median, _snapSame, ' +
   'vegasProjection, vegasCountMarket, vegasTdProbability, vegasConfidence, VEGAS_MARKETS, applyMarketTd, VEGAS_TD_STATS, ' +
   '_oddsImpliedProb, _oddsDevigOver, parseOddsApiEvent, buildVegasOverlay, snapshotSubject, _snapLookup };'
@@ -126,8 +126,30 @@ function fakeDb() {
   // the whole point of the table is that it records a pull the rows cannot,
   // because an unchanged line writes no row at all.
   const pulls = new Map();
+  // odds_latest, keyed as the worker keys it. The write path reads it instead
+  // of grouping the whole store, so the fake must hold it for "unchanged" to
+  // mean anything.
+  const latest = new Map();
+  const lkey = (t, s, m, b) => [t, s, m, b].join(' ');
   const run = (sql, args) => {
     if (/^CREATE|^ALTER/i.test(sql)) return { meta: {} };
+    if (/^INSERT OR REPLACE INTO odds_latest/i.test(sql)) {
+      for (const r of rows) {
+        const k = lkey(r.subject_type, r.subject, r.market, r.book);
+        if (!latest.has(k) || latest.get(k).ts < r.ts) latest.set(k, { ...r });
+      }
+      return { meta: {} };
+    }
+    if (/^INSERT INTO odds_latest/i.test(sql)) {
+      const [subject_type, subject, market, book, line, over_odds, under_odds, ts] = args;
+      const k = lkey(subject_type, subject, market, book);
+      if (!latest.has(k) || latest.get(k).ts <= ts) latest.set(k, { subject_type, subject, market, book, line, over_odds, under_odds, ts });
+      return { meta: { changes: 1 } };
+    }
+    if (/^DELETE FROM odds_latest WHERE ts/i.test(sql)) {
+      for (const [k, r] of latest) if (r.ts < args[0]) latest.delete(k);
+      return { meta: {} };
+    }
     if (/^INSERT INTO odds_snapshot_pulls/i.test(sql)) {
       pulls.set(args[0], { subject_type: args[0], ts: args[1], seen: args[2], changed: args[3] });
       return { meta: { changes: 1 } };
@@ -147,6 +169,10 @@ function fakeDb() {
   };
   const all = (sql, args) => {
     if (/FROM odds_snapshot_pulls/i.test(sql)) return { results: [...pulls.values()] };
+    if (/FROM odds_latest WHERE subject_type = \? AND subject IN/i.test(sql)) {
+      const [t, ...subs] = args;
+      return { results: [...latest.values()].filter(r => r.subject_type === t && subs.includes(r.subject)) };
+    }
     if (/GROUP BY book, subject_type, subject, market/i.test(sql)) {
       const by = new Map();
       for (const r of rows) {
@@ -164,6 +190,8 @@ function fakeDb() {
     return { results: [] };
   };
   const first = (sql) => {
+    if (/FROM odds_latest LIMIT 1/i.test(sql)) return latest.size ? { x: 1 } : null;
+    if (/^SELECT MAX\(ts\) AS last FROM odds_snapshots/i.test(sql)) return { last: rows.length ? Math.max(...rows.map(r => r.ts)) : null };
     if (/COUNT\(\*\) AS rows/i.test(sql)) {
       return { rows: rows.length, subjects: new Set(rows.map(r => r.subject)).size,
                books: new Set(rows.map(r => r.book)).size, markets: new Set(rows.map(r => r.market)).size,
@@ -179,7 +207,7 @@ function fakeDb() {
     st.first = () => first(sql, []);
     return st;
   };
-  return { _rows: rows, _pulls: pulls, prepare, batch: async (stmts) => stmts.map(s => s.run()) };
+  return { _rows: rows, _pulls: pulls, _latest: latest, prepare, batch: async (stmts) => stmts.map(s => s.run()) };
 }
 
 console.log('\nthe historical betting store');
@@ -244,6 +272,49 @@ console.log('\nthe historical betting store');
 
   const st = await M.snapshotStatus(env);
   ok('the store reports its own size', st.ok && st.rows === 6 && st.books === 3);
+}
+
+console.log('\nthe write path reads only the subjects it carries');
+{
+  // 2026-09-29: the write path grouped the whole store on every pull, and the
+  // store is a season of rows. That spent the account's daily D1 reads and took
+  // the schedule, and every page behind it, down. A pull now looks up its own
+  // subjects in odds_latest; the whole-store GROUP BY survives only as the
+  // one-time seed of a store written before odds_latest existed.
+  const db = fakeDb();
+  const seen = [];
+  const prep = db.prepare;
+  db.prepare = sql => { seen.push(sql); return prep(sql); };
+  const env = { LEADS_DB: db };
+  const row = (subject, line) => ({ book: 'dk', subjectType: 'player', subject, market: 'recYd', line, overOdds: -110, underOdds: -110 });
+  const t0 = Date.UTC(2026, 8, 20, 12);
+  await M.snapshotWrite(env, [row('Test Receiver', 50.5)], { ts: t0 });
+  seen.length = 0;
+  const b = await M.snapshotWrite(env, [row('Test Receiver', 50.5), row('Other Receiver', 40.5)], { ts: t0 + 3600000 });
+  ok('an unchanged line is still recognized', b.written === 1 && b.unchanged === 1, JSON.stringify(b));
+  ok('no pull groups the whole store', !seen.some(q => /GROUP BY/i.test(q)), seen.filter(q => /GROUP BY/i.test(q)).join(' | '));
+  ok('the lookup names the subjects in the pull',
+     seen.some(q => /FROM odds_latest WHERE subject_type = \? AND subject IN \(\?,\?\)/.test(q)));
+  ok('the new line lands in odds_latest', db._latest.size === 2, String(db._latest.size));
+  const last = await M.snapshotLast(env);
+  ok('the last move is one read', last.ok && last.last === t0 + 3600000, JSON.stringify(last));
+}
+{
+  // A store written before this change seeds odds_latest from its history, so
+  // the first pull after deploy does not rewrite every line as a change.
+  const db = fakeDb();
+  db._rows.push({ ts: 1000, season: 2026, week: 3, book: 'dk', subject_type: 'player', subject: 'testreceiver',
+                  market: 'recYd', line: 50.5, over_odds: -110, under_odds: -110, game_id: null, raw_subject: 'Test Receiver' });
+  const w = await M.snapshotWrite({ LEADS_DB: db }, [{ book: 'dk', subjectType: 'player', subject: 'Test Receiver',
+    market: 'recYd', line: 50.5, overOdds: -110, underOdds: -110 }], { ts: 2000 });
+  ok('a pre-existing store is seeded, not rewritten', w.written === 0 && w.unchanged === 1, JSON.stringify(w));
+}
+{
+  const db = fakeDb();
+  const env = { LEADS_DB: db };
+  await M.snapshotWrite(env, [{ book: 'dk', subjectType: 'player', subject: 'Test Receiver', market: 'recYd', line: 50.5 }], { ts: 1000 });
+  await M.snapshotPrune(env, 1);
+  ok('the prune clears odds_latest with the history it drops', db._latest.size === 0 && db._rows.length === 0);
 }
 
 console.log('\nthe join key');
