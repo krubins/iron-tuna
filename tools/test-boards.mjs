@@ -507,6 +507,25 @@ console.log('\nthe market\'s silence: no line on him in a priced game');
   ok('and nothing is carried forward from a week with no line', !ros.weeks[1].carried && ros.vegas.carriedWeeks === 0);
   const empty = H.buildBoards(ctx({ weekMarkets: {}, priorMarkets: prior }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Alpha Quarterback');
   ok('a week with no props posted for anyone reads nothing into anyone', empty.vegas.basis === 'gamelines' && !empty.weeks[0].noLine);
+  // THE LIVE SHAPE (6 Oct 2026). The store's game id is the provider's, never
+  // the schedule's, so a game id on the prop cannot be matched to the fixture.
+  // Both other passers are board players: the backup on his own club, the
+  // starter on the other. They are placed through their clubs' fixtures.
+  const poolQBs = POOL.concat([
+    { name: 'Backup Passer', position: 'QB', team: 'AAA', projectedStats: { passYd: 1500, passTD: 8, passInt: 6 } },
+    { name: 'Kilo Passer', position: 'QB', team: 'CCC', projectedStats: { passYd: 3800, passTD: 24, passInt: 11 } }
+  ]);
+  const live = { backuppasser: { passYd: hist('backuppasser', 'passYd', 180.5, 'prov-ev-77') }, kilopasser: { passYd: hist('kilopasser', 'passYd', 240.5, 'prov-ev-77') } };
+  const lv = H.buildBoards(ctx({ pool: poolQBs, weekMarkets: live, priorMarkets: prior }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Alpha Quarterback');
+  ok('two board passers in his game, under a provider game id, still read as two', lv.marketOut && lv.weeks[0].noLine.status === 'out' && lv.weeks[0].noLine.passers === 2, JSON.stringify(lv.weeks[0].noLine));
+  // And a man OFF the board under the same provider id is placed through the
+  // board player he shares it with.
+  const mixed = { backuppasser: { passYd: hist('backuppasser', 'passYd', 180.5, 'prov-ev-77') }, strangerpasser: { passYd: hist('strangerpasser', 'passYd', 240.5, 'prov-ev-77') } };
+  const mx = H.buildBoards(ctx({ pool: poolQBs, weekMarkets: mixed, priorMarkets: prior }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Alpha Quarterback');
+  ok('a passer off the board is placed by the provider id a board player shares', mx.marketOut && mx.weeks[0].noLine.passers === 2, JSON.stringify(mx.weeks[0].noLine));
+  const elsewhere = { backuppasser: { passYd: hist('backuppasser', 'passYd', 180.5, 'prov-ev-77') }, strangerpasser: { passYd: hist('strangerpasser', 'passYd', 240.5, 'prov-ev-99') } };
+  const ew = H.buildBoards(ctx({ pool: poolQBs, weekMarkets: elsewhere, priorMarkets: prior }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Alpha Quarterback');
+  ok('...and one under an unshared provider id is not assumed into his game', !ew.marketOut && ew.weeks[0].noLine && ew.weeks[0].noLine.status === 'thin' && ew.weeks[0].noLine.passers === 1, JSON.stringify(ew.weeks[0].noLine));
 }
 
 console.log('\nthis week\'s prop, carried into the later weeks');

@@ -6792,23 +6792,40 @@ function marketSlateFrom(weekMarkets, pool, ratings, curWeek) {
     if (teamOf.has(nk)) teamOf.set(nk, null); else teamOf.set(nk, teamKey(p.team));   // an ambiguous name names no club
   }
   const gameOfTeam = new Map();
-  const subjectGame = new Map(), subjectTeam = new Map();
+  const schedGame = team => {
+    if (!team || !ratings) return null;
+    if (!gameOfTeam.has(team)) { const e = weekEnvironment(ratings, team, curWeek); gameOfTeam.set(team, e && !e.bye && e.gameId != null ? String(e.gameId) : null); }
+    return gameOfTeam.get(team);
+  };
+  // THE STORE'S GAME ID IS THE PROVIDER'S, NOT THE SCHEDULE'S. PropLine tags a
+  // prop with its own event id, and the board's fixture carries the schedule
+  // feed's id, so the two never matched and a game's priced men were counted
+  // in two different buckets (6 Oct 2026: the booted quarterback's backup
+  // AND the opposing starter were both priced and the rule saw one passer).
+  // So every subject is placed by the SCHEDULE's id: a board player through
+  // his club's fixture, and a man off the board through the provider id he
+  // shares with a board player who could be placed. Two passes.
+  const first = [];
+  const providerToSched = new Map();
   for (const [subject, markets] of Object.entries(weekMarkets)) {
-    let gid = null, passer = false, skill = false;
+    let pgid = null, passer = false, skill = false;
     for (const [m, h] of Object.entries(markets || {})) {
       if (!h) continue;
-      if (h.gameId != null && gid == null) gid = String(h.gameId);
+      if (h.gameId != null && pgid == null) pgid = String(h.gameId);
       if (m === _MARKET_PASS) passer = true;
       if (_MARKET_SKILL.has(m)) skill = true;
     }
-    const team = teamOf.get(subject) || null;
-    if (team && gid == null && ratings) {
-      if (!gameOfTeam.has(team)) { const e = weekEnvironment(ratings, team, curWeek); gameOfTeam.set(team, e && !e.bye && e.gameId != null ? String(e.gameId) : null); }
-      gid = gameOfTeam.get(team);
-    }
     if (!passer && !skill) continue;
-    if (gid != null) { const g = slot(byGame, gid); if (passer) g.passers.add(subject); if (skill) g.skill.add(subject); subjectGame.set(subject, gid); }
-    if (team) { const t = slot(byTeam, team); if (passer) t.passers.add(subject); if (skill) t.skill.add(subject); subjectTeam.set(subject, team); }
+    const team = teamOf.get(subject) || null;
+    const sgid = schedGame(team);
+    if (pgid != null && sgid != null && !providerToSched.has(pgid)) providerToSched.set(pgid, sgid);
+    first.push({ subject, team, pgid, sgid, passer, skill });
+  }
+  const subjectGame = new Map(), subjectTeam = new Map();
+  for (const s of first) {
+    const gid = s.sgid != null ? s.sgid : s.pgid != null ? (providerToSched.get(s.pgid) || s.pgid) : null;
+    if (gid != null) { const g = slot(byGame, gid); if (s.passer) g.passers.add(s.subject); if (s.skill) g.skill.add(s.subject); subjectGame.set(s.subject, gid); }
+    if (s.team) { const t = slot(byTeam, s.team); if (s.passer) t.passers.add(s.subject); if (s.skill) t.skill.add(s.subject); subjectTeam.set(s.subject, s.team); }
   }
   return { byGame, byTeam, subjectGame, subjectTeam };
 }
