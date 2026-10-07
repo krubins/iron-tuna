@@ -13274,3 +13274,79 @@ queries by rows read and are the check that this was the whole bill. The
 owner should also move the account to Workers Paid, whose D1 allowance is
 orders of magnitude larger; this change makes the free allowance survivable,
 not generous.
+
+## 121. October 7: Jaxson Dart was QB10 on the week board, two weeks after his season ended
+
+The report: Dart was still top ten on `/weekly-qb-rankings`. He hurt his left
+knee on the opening drive of the Week 3 Monday night game at the Rams (Sept.
+21), had surgery, went on injured reserve, and the Giants said he would miss
+the rest of the regular season (giants.com and The Athletic, Sept. 23).
+
+**The live list had him, and then it did not.** §48 made the availability
+list two things: the hand-kept `tools/availability.json`, and a live row the
+11:00Z cron rebuilds from ESPN's injury report. The rule for the committed
+file was written down at the time: *"the feed dropping him is not evidence he
+plays; ESPN clears reserve designations in bulk."* The live row had no such
+rule. It was rebuilt from the feed alone every pull, so the day ESPN stopped
+mentioning Dart (by Oct. 7 the Giants' list carried Jameis Winston, Active,
+and no Dart at all) the row forgot him, his full-season line came back, and
+`buildBoards` divided it over seventeen games and ranked him. `apply-availability
+--fetch` on Oct. 7 shows the same thing for every preseason season-ender in
+the file: Higgins, Neal, Chandler, Austin are all "not on the injury report."
+ESPN's report is the week's news, not a register of who is on reserve.
+
+Three things, and a hand entry:
+
+- **A carry.** `buildAvailabilityOverlay(feed, prior)` now takes the last
+  row the pull wrote (`runAvailabilityRefresh` reads it first; a row too old
+  to serve is too old to carry from). A prior entry the feed no longer
+  **mentions at all** is carried while its window is open: he is out through
+  Week `gamesOut`, and it is not past that week (`_availWeekAt`, the week
+  turning on the Tuesday after Monday night). An entry the feed still lists
+  in any status — Active, Questionable, back on IR-R — is the feed's to
+  decide, as before. A committed entry at `gamesOut: 0` is a hand
+  reinstatement and ends a carry. Carried entries are marked `carried`,
+  `matched` still counts the feed alone (a carry never makes a thin pull look
+  whole), and the admin report prints `from: carried`.
+- **The mid-season floor.** `gamesOut` counts from Week 1. A reserve
+  placement with no return date took the list's minimum from kickoff, so a
+  Week 5 IR placement read as "out Weeks 1–4" and the man was back on the
+  week board at his full line the afternoon he went on IR. `_availGamesOut`
+  now takes the pull's timestamp and counts the floor from the week it falls
+  in: Week 5, no date, IR is out through Week 8. A return date is read as it
+  was. A preseason pull is unchanged.
+- **The phrasing.** `AVAIL_SEASON_ENDING` required "rest of the season" with
+  nothing in between; the Giants' line was "miss the rest of the regular
+  season." It now reads the regular-season, "his season", "ends his season"
+  and "entire season" forms, and still not "the season opener."
+- **The hand entry.** Dart in `tools/availability.json`: IR, 17, `asOf`
+  2026-09-23, with the source. Entries now carry their own `asOf` (the date
+  the absence began, which is the week `buildBoards` starts counting from);
+  `apply-availability.mjs` writes `e.asOf || file.asOf` into the block and
+  validates the shape. The file's own `asOf` is 2026-10-07 and every
+  preseason entry says 2026-09-02 explicitly, so the generated block is
+  byte-identical for them. Without that, bumping the file date would have
+  moved every Week 1 entry's first missed week to Week 5.
+
+**What the reader sees.** Dart's row is zeroed, so he is off the week and
+rest-of-season boards (`af <= 0` in `buildBoards`), off the `it-league.js`
+default board (zero-point rows are dropped; regenerated), Out on the DFS
+slate by the reserve-list rule, and the client's `INJURIES` fallback reads
+"IR: out for the season." `PROJ_VERSION` is 2026.10.7.
+
+**Checked and left alone.** The `--fetch` list of fourteen "no longer listed"
+file entries is this same ESPN behaviour, not fourteen reinstatements: the
+four-game group has run its course by the file's own arithmetic (Weeks 1–4),
+Jacobs is still on the exempt list with two to four more games expected (the
+file says six), and Tyson is still on IR and "weeks away" (the file says
+eight). Both numbers are due a look next week, by hand, as §48 says.
+
+Guarded by `tools/test-worker-availability.mjs` (139, from 111: the week
+arithmetic, the floor from the pull's week, the phrasing both ways, the
+carry in isolation and through the row the pull writes, the hand
+reinstatement, the Active-again case, and the too-old row) and
+`tools/test-boards.mjs` (148: a player out for the year is on neither the
+week nor the ROS board). Every node gate in `checks.yml` but the dry run was
+run locally: 70 pass. Not verified against production: the sandbox cannot
+reach irontuna.com, so the first live pull after deploy is the proof; the
+hand entry holds Dart off the board on its own either way.

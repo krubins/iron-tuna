@@ -302,7 +302,7 @@ const PROJECTIONS = [
   { name: "Joe Burrow", position: "QB", team: "CIN", projectedStats: { passYd: 4132, passTD: 33, passInt: 10.9, rushYd: 189, rushTD: 2.1, fumLost: 2.9 }},
   { name: "Jalen Hurts", position: "QB", team: "PHI", projectedStats: { passYd: 3779, passTD: 23.5, passInt: 9.2, rushYd: 438, rushTD: 9.1, fumLost: 4.1 }},
   { name: "Trevor Lawrence", position: "QB", team: "JAX", projectedStats: { passYd: 3932, passTD: 24.9, passInt: 13, rushYd: 335, rushTD: 4.8, fumLost: 3.8 }},
-  { name: "Jaxson Dart", position: "QB", team: "NYG", projectedStats: { passYd: 3685, passTD: 20.8, passInt: 10.1, rushYd: 552, rushTD: 6.5, fumLost: 3.7 }},
+  { name: "Jaxson Dart", position: "QB", team: "NYG", projectedStats: { passYd: 0, passTD: 0, passInt: 0, rushYd: 0, rushTD: 0, fumLost: 0 }},
   { name: "Brock Purdy", position: "QB", team: "SF", projectedStats: { passYd: 4181, passTD: 27.1, passInt: 13.9, rushYd: 277, rushTD: 3.5, fumLost: 3.7 }},
   { name: "Patrick Mahomes", position: "QB", team: "KC", projectedStats: { passYd: 4001, passTD: 26.4, passInt: 11.7, rushYd: 327, rushTD: 3.3, fumLost: 3 }},
   { name: "Matthew Stafford", position: "QB", team: "LAR", projectedStats: { passYd: 4282, passTD: 34.9, passInt: 9.7, rushYd: 39, fumLost: 3.5 }},
@@ -2071,6 +2071,7 @@ const AVAILABILITY = {
   "devinneal|RB": {"status":"IR","gamesOut":17,"note":"Hamstring; placed on injured reserve without a return designation, out for the season.","asOf":"2026-09-02"},
   "tychandler|RB": {"status":"IR","gamesOut":17,"note":"Season-ending knee injury in the Aug. 22 preseason game against the Rams.","asOf":"2026-09-02"},
   "calvinaustin|WR": {"status":"IR","gamesOut":17,"note":"Torn ACL at the Aug. 25 practice; out for the 2026 season.","asOf":"2026-09-02"},
+  "jaxsondart|QB": {"status":"IR","gamesOut":17,"note":"Left knee injury on the opening drive of the Week 3 Monday night game at the Rams (Sept. 21); surgery and injured reserve, out for the rest of the regular season. ESPN's feed dropped him after the surgery, so the live list cannot carry him.","asOf":"2026-09-23"},
   "joshjacobs|RB": {"status":"Exempt","gamesOut":6,"note":"Commissioner's exempt list since Aug. 30 after misdemeanor charges from a May arrest. No timeline: he stays off until the commissioner removes him, and the first court date is Nov. 17. Six games is a working estimate, revisit weekly.","asOf":"2026-09-02"},
   "jordyntyson|WR": {"status":"IR","gamesOut":8,"note":"Recurring right hamstring; IR with a return designation, roughly two months out, Week 9 return most likely.","asOf":"2026-09-02"},
   "jamesconner|RB": {"status":"IR","gamesOut":4,"note":"Foot complications from the 2025 injury; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
@@ -2099,7 +2100,10 @@ const AVAILABILITY = {
 //     (the feed's return dates are placeholders — Jacobs' exempt-list entry says
 //     Week 3 while the file's considered number is six).
 //   - a player only in the committed block: kept as is. The feed dropping him is
-//     not evidence he plays; ESPN clears reserve designations in bulk.
+//     not evidence he plays; ESPN clears reserve designations in bulk. The same
+//     holds for the live row's own entries: one the feed stops mentioning is
+//     carried from the previous row while his games out still cover the current
+//     week (buildAvailabilityOverlay), and marked `carried`.
 //   - a player only in the live row: a placement the file has not caught up
 //     with. His committed PROJECTIONS row is still the full-season line, so it is
 //     pro-rated on the way out (_withAvailability) and the odds overlay by the
@@ -2118,7 +2122,10 @@ const AVAIL_MAX_AGE_MS = 14 * 86400000; // a live row older than this is ignored
 const AVAIL_MEMO_MS = 900000;           // per-isolate memo of the merged table (one D1 read behind it)
 const AVAIL_MIN_GAMES = 2;              // a one-game absence is not a season line change (§48)
 const AVAIL_RESERVE_MIN = 4;            // IR / reserve-PUP / reserve-NFI: at least four games by rule
-const AVAIL_SEASON_ENDING = /season-ending|out for the (rest of the )?(season|year)|(rest|remainder) of the (\d{4} )?season|(entire|whole) (\d{4} )?season/i;
+// "miss the rest of the regular season" (the Giants on Dart, 23 Sep 2026) is
+// the club's phrasing for a placement that ends a year, and the first draft
+// of this pattern required "rest of the season" with nothing in between.
+const AVAIL_SEASON_ENDING = /season-ending|out for the (rest of the )?(regular )?(season|year)|(rest|remainder) of (the |his )?(\d{4} )?(regular )?(season|year)|(entire|whole) (\d{4} )?season|end(s|ed|ing)? his (\d{4} )?season/i;
 
 const _availF = g => Math.max(0, Math.min(1, 1 - (Number(g) || 0) / AVAILABILITY_GAMES));
 // Feed status -> the vocabulary tools/availability.json uses. ESPN's top-level
@@ -2168,18 +2175,32 @@ function _availKickoff(year) {
   const first = new Date(Date.UTC(year, 8, 1)).getUTCDay();
   return Date.UTC(year, 8, 1 + ((8 - first) % 7) + 3);
 }
+// The regular-season week a moment falls in, counted the way gamesOut is
+// read everywhere (Weeks 1..gamesOut are the weeks missed): the week turns on
+// the Tuesday after Monday night, so a Tuesday IR placement is in the week
+// AFTER the game just played. Before kickoff it is Week 1.
+function _availWeekAt(ms, kickoff) {
+  if (!Number.isFinite(ms)) return 1;
+  return Math.max(1, Math.floor((ms - (kickoff - 2 * 86400000)) / (7 * 86400000)) + 1);
+}
 // Games missed: whole weeks between kickoff and ESPN's return date, never below
 // the list's own minimum, 17 when the return date is past the season or the
 // comment says season-ending. Bye weeks are ignored on purpose — the file's
 // own convention is "first eligible Week 5" = 4. Returns 0 to say "not a
 // season line change" (a return inside AVAIL_MIN_GAMES, or a plain "Out" with
 // no date to go on).
-function _availGamesOut(entry, kickoff, m) {
+//
+// gamesOut counts from Week 1, so a reserve placement with no return date is
+// the list's minimum counted from the week the feed was pulled in, not from
+// kickoff: a Week 5 IR placement is out through Week 8 at least, and until
+// 7 Oct 2026 it was read as "out Weeks 1-4", which put a man placed on IR
+// that morning back on the week board at his full line the same afternoon.
+function _availGamesOut(entry, kickoff, m, nowMs) {
   const text = String((entry && entry.shortComment) || '') + ' ' + String((entry && entry.longComment) || '');
   if (AVAIL_SEASON_ENDING.test(text)) return AVAILABILITY_GAMES;
   const ret = Date.parse(String(((entry && entry.details) || {}).returnDate || ''));
   const weeks = Number.isFinite(ret) ? Math.floor((ret - kickoff) / (7 * 86400000)) : null;
-  if (weeks === null) return m.needsDate ? 0 : m.min;
+  if (weeks === null) return m.needsDate ? 0 : Math.min(AVAILABILITY_GAMES, _availWeekAt(nowMs, kickoff) - 1 + m.min);
   if (weeks >= AVAILABILITY_GAMES) return AVAILABILITY_GAMES;
   if (m.reserve) return Math.max(m.min, weeks);
   return weeks >= m.min ? weeks : 0;
@@ -2197,15 +2218,32 @@ function _availBoardIndex() {
 }
 // The feed, reduced to board players on a reserve list. Same shape per entry as
 // a tools/availability.json row, keyed like AVAILABILITY.
-function buildAvailabilityOverlay(feed) {
+//
+// `prior` is the live row the last pull wrote. ESPN's report is a list of men
+// with something to say about them this week, not a register of who is on
+// reserve: a player whose placement ended his year drops off it once the
+// news is old (Jaxson Dart, IR on 23 Sep 2026, was gone from the feed by
+// 7 Oct with Jameis Winston listed Active in his place), and every one of
+// the four preseason season-enders in tools/availability.json is "not on the
+// injury report" by October. The row used to be rebuilt from the feed alone,
+// so the day ESPN stopped mentioning Dart the live list forgot him and the
+// week board had him back at QB10 on a full line. Now a prior entry the feed
+// no longer MENTIONS AT ALL is carried while its window is open (he is out
+// through Week gamesOut and it is not past that week). An entry the feed
+// still lists in any status -- Active, Questionable, back on IR-R -- is the
+// feed's to decide, exactly as before. A hand entry at gamesOut 0 in the
+// committed block is an explicit reinstatement and ends a carry.
+function buildAvailabilityOverlay(feed, prior) {
   const teams = feed && Array.isArray(feed.injuries) ? feed.injuries : [];
   const stamp = Date.parse(String((feed && feed.timestamp) || ''));
   const asOf = new Date(Number.isFinite(stamp) ? stamp : Date.now()).toISOString();
+  const nowMs = Date.parse(asOf);
   const year = Number(feed && feed.season && feed.season.year) || Number(asOf.slice(0, 4));
   const kickoff = _availKickoff(year);
   const board = _availBoardIndex();
   const players = {};
   const weekly = {};
+  const mentioned = new Set();
   const skipped = { unlisted: 0, weekToWeek: 0, short: 0 };
   let entries = 0;
   for (const t of teams) for (const e of (t && Array.isArray(t.injuries)) ? t.injuries : []) {
@@ -2215,6 +2253,7 @@ function buildAvailabilityOverlay(feed) {
     const key = _oddsNorm(a.displayName) + '|' + pos;
     const p = board.get(key);
     if (!p) { skipped.unlisted++; continue; }
+    mentioned.add(key);
     const type = String((e.details || {}).type || '').trim();
     const note = ((type && !/^(Undisclosed|Suspension|Personal)$/i.test(type) ? type + ': ' : '') + String(e.shortComment || '').trim()).slice(0, 160);
     // This week first, and independently: a Questionable tag reaches no other
@@ -2225,13 +2264,25 @@ function buildAvailabilityOverlay(feed) {
     }
     const m = _availStatusOf(e);
     if (!m) { skipped.weekToWeek++; continue; }
-    const gamesOut = _availGamesOut(e, kickoff, m);
+    const gamesOut = _availGamesOut(e, kickoff, m, nowMs);
     if (!gamesOut) { skipped.short++; continue; }
     if (players[key] && players[key].gamesOut >= gamesOut) continue;   // two entries for one man: the longer absence
     players[key] = { name: p.name, position: p.position, team: p.team, status: m.status, gamesOut, note,
                      source: 'ESPN injury feed ' + asOf.slice(0, 10), asOf: asOf.slice(0, 10) };
   }
-  return { players, weekly, matched: Object.keys(players).length, weeklyMatched: Object.keys(weekly).length,
+  const matched = Object.keys(players).length;   // the feed's own count: a carry never makes a thin pull look whole
+  const carried = [];
+  const week = _availWeekAt(nowMs, kickoff);
+  for (const [key, c] of Object.entries(prior || {})) {
+    if (players[key] || mentioned.has(key) || !board.get(key)) continue;
+    const g = Number(c && c.gamesOut) || 0;
+    if (g < week) continue;                                            // out through Week g, and that week has passed
+    const hand = AVAILABILITY[key];
+    if (hand && !(Number(hand.gamesOut) > 0)) continue;                 // reinstated by hand
+    players[key] = { ...c, gamesOut: g, carried: true };
+    carried.push(key);
+  }
+  return { players, weekly, matched, carried, weeklyMatched: Object.keys(weekly).length,
            teams: teams.length, entries, skipped, asOf };
 }
 // committed ∪ live, live winning per player except downward on gamesOut (see the
@@ -2243,7 +2294,8 @@ function availabilityMerge(committed, live) {
   for (const [k, l] of Object.entries(live || {})) {
     const cg = out[k] ? out[k].committedGamesOut : 0;
     out[k] = { status: l.status, gamesOut: Math.max(Number(l.gamesOut) || 0, cg), note: l.note || '',
-               asOf: l.asOf || '', source: l.source || '', live: true, committedGamesOut: cg };
+               asOf: l.asOf || '', source: l.source || '', live: true, committedGamesOut: cg,
+               ...(l.carried ? { carried: true } : {}) };   // the feed stopped mentioning him; see buildAvailabilityOverlay
   }
   return out;
 }
@@ -4143,10 +4195,14 @@ async function runAvailabilityRefresh(env) {
   let feed;
   try { feed = await fetchInjuriesEspn(); }
   catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+  // The last good row, so a man the feed has stopped mentioning is not
+  // forgotten while he is still out (see buildAvailabilityOverlay). A row
+  // too old to serve is too old to carry, which availabilityCacheRead decides.
+  const prior = await availabilityCacheRead(env);
   let built;
-  try { built = buildAvailabilityOverlay(feed); }
+  try { built = buildAvailabilityOverlay(feed, prior && prior.players); }
   catch (e) { return { ok: false, error: 'build failed: ' + ((e && e.message) || 'failed') }; }
-  const info = { teams: built.teams, entries: built.entries, matched: built.matched, weeklyMatched: built.weeklyMatched, skipped: built.skipped, asOf: built.asOf };
+  const info = { teams: built.teams, entries: built.entries, matched: built.matched, carried: built.carried, weeklyMatched: built.weeklyMatched, skipped: built.skipped, asOf: built.asOf };
   if (built.teams < AVAIL_MIN_TEAMS) return { ok: false, error: 'thin_feed', ...info };
   if (built.matched < AVAIL_MIN_MATCHED) return { ok: false, error: 'insufficient_coverage', ...info };
   await availabilityCacheWrite(env, built);
@@ -4172,7 +4228,7 @@ async function availabilityReport(env) {
     const p = byKey.get(key) || {};
     return { key, name: p.name || key.split('|')[0], position: p.position || key.split('|')[1], team: p.team || '',
              status: a.status, gamesOut: a.gamesOut, committedGamesOut: a.committedGamesOut,
-             from: a.live ? 'live' : 'committed', asOf: a.asOf || '',
+             from: a.carried ? 'carried' : a.live ? 'live' : 'committed', asOf: a.asOf || '',
              factor: +_availF(a.gamesOut).toFixed(3), rowFactor: +_availRowFactor(key).toFixed(3), note: a.note || '' };
   }).sort((x, y) => x.position.localeCompare(y.position) || x.name.localeCompare(y.name));
   return {
