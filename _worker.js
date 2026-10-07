@@ -5510,6 +5510,11 @@ function marketHistoryFrom(rows) {
     tdOpenProbability: tdOpen == null ? null : Math.round(tdOpen * 1000) / 10,
     tdCurrentProbability: tdCurrent == null ? null : Math.round(tdCurrent * 1000) / 10,
     firstSeen: list[0].ts, lastSeen: list[list.length - 1].ts,
+    // The game the market belongs to, where the store recorded one. The
+    // market-absence rule in buildBoards groups a week's priced subjects by
+    // game, so a man with no line can be measured against the men who have
+    // one in HIS game and not against the whole slate.
+    gameId: (() => { for (let i = list.length - 1; i >= 0; i--) { const g = list[i].game_id != null ? list[i].game_id : list[i].gameId; if (g != null && g !== '') return String(g); } return null; })(),
     perBook: books
   };
 }
@@ -5562,11 +5567,39 @@ async function marketHistoryWeek(env, season, week) {
   if (db && out && Object.keys(out).length) _MKT_WEEK_MEMO = { db, key: mkey, at: Date.now(), out };
   return out;
 }
+// WHO HAS BEEN PRICED BEFORE. The market-absence rule (buildBoards) treats a
+// man the books have not posted this week, in a game they have otherwise
+// priced, as a man the market does not expect to play. That reading is only
+// safe for a player the store has priced under the SAME key in a recent week:
+// a board player whose book spelling never matched would otherwise be
+// benched every week of the season. Subjects only, a few weeks back, under
+// its own memo so the week read's single-key memo is not thrashed.
+const MARKET_PRIOR_WEEKS = 2;
+let _MKT_PRIOR_MEMO = { db: null, key: '', at: 0, out: null };
+async function marketSubjectsBefore(env, season, week) {
+  const cur = Number(week);
+  if (!Number.isFinite(cur) || cur <= 1) return new Set();
+  const weeks = [];
+  for (let w = cur - 1; w >= Math.max(1, cur - MARKET_PRIOR_WEEKS); w--) weeks.push(w);
+  const mkey = season + '|' + weeks.join(',');
+  const db = env && env.LEADS_DB;
+  if (db && _MKT_PRIOR_MEMO.db === db && _MKT_PRIOR_MEMO.key === mkey && Date.now() - _MKT_PRIOR_MEMO.at < 600000) return _MKT_PRIOR_MEMO.out;
+  if (!(await snapshotReady(env))) return new Set();
+  const out = new Set();
+  try {
+    const q = await env.LEADS_DB.prepare(
+      'SELECT DISTINCT subject FROM odds_snapshots WHERE season IS ? AND week IN (' + weeks.map(() => '?').join(',') + ") AND subject_type = 'player'")
+      .bind(season == null ? null : Number(season), ...weeks).all();
+    for (const r of (q.results || [])) if (r && r.subject) out.add(String(r.subject));
+  } catch (e) { return new Set(); }
+  if (db) _MKT_PRIOR_MEMO = { db, key: mkey, at: Date.now(), out };
+  return out;
+}
 async function _marketHistoryWeekRead(env, season, week) {
   if (!(await snapshotReady(env))) return {};
   try {
     const q = await env.LEADS_DB.prepare(
-      'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds ' +
+      'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds, game_id ' +
       'FROM odds_snapshots WHERE season IS ? AND week IS ? ORDER BY ts DESC LIMIT ?')
       .bind(season == null ? null : Number(season), week == null ? null : Number(week), MARKET_WEEK_ROW_CAP).all();
     // Newest first under the cap, then back into time order for the history
@@ -6722,6 +6755,102 @@ const WEEK_ENV_CLAMP = [0.72, 1.32];
 const WEEK_ENV_YARD_EXP = 0.5;             // the season path's damping, kept
 // The blend weight on the Vegas side, by what it is built from.
 const IT_BLEND = { HIGH: 0.75, MEDIUM: 0.6, LOW: 0.45 };
+// THE MARKET'S SILENCE IS A MARKET SIGNAL. Books post a player's props when
+// they expect him to play. A man they have left off a game they have otherwise
+// priced -- his own backup carrying the passing line, four of his teammates
+// carrying theirs -- is a man the market does not expect to see, days before
+// the injury report says so (6 Oct 2026: a quarterback in a walking boot,
+// with no prop posted and his backup priced, ranked QB2 on the week board
+// off his season line). So the week board reads the absence:
+//   QB:        two OTHER passers priced in his game (the opponent's and his
+//              own replacement) and no passing line on him.
+//   RB/WR/TE:  MARKET_ABSENT_TEAMMATES board players on his own club priced
+//              with a core market and none on him; or, where the store cannot
+//              name his club's men, MARKET_ABSENT_GAME skill players priced in
+//              his game. The pool is the top of each position, so a man the
+//              books rank outside his own club's top four is not one they
+//              expect to carry the ball.
+// Either way, only for a player the store priced in a RECENT week under the
+// same key (marketSubjectsBefore): the rule reads a line that was there and
+// is not, never a spelling that never matched. His Vegas and Iron Tuna lines
+// carry no points for that game; the consensus line stands, as it has no
+// market in it; the row says why. A partial slate -- one passer priced, or
+// fewer teammates -- is flagged and graded LOW, and nothing more.
+const MARKET_ABSENT_PASSERS = 2;
+const MARKET_ABSENT_TEAMMATES = 3;
+const MARKET_ABSENT_GAME = 8;
+const _MARKET_PASS = 'passYd';
+const _MARKET_SKILL = new Set(['rushYd', 'recYd', 'rec', 'anytimeTD']);
+// This week's priced subjects, grouped by game and by club. Pure.
+function marketSlateFrom(weekMarkets, pool, ratings, curWeek) {
+  const byGame = new Map(), byTeam = new Map();
+  const slot = (map, k) => { if (!map.has(k)) map.set(k, { passers: new Set(), skill: new Set() }); return map.get(k); };
+  if (!weekMarkets || curWeek == null) return { byGame, byTeam, subjectGame: new Map(), subjectTeam: new Map() };
+  const teamOf = new Map();
+  for (const p of pool || []) {
+    const nk = _oddsNorm(p.name);
+    if (teamOf.has(nk)) teamOf.set(nk, null); else teamOf.set(nk, teamKey(p.team));   // an ambiguous name names no club
+  }
+  const gameOfTeam = new Map();
+  const subjectGame = new Map(), subjectTeam = new Map();
+  for (const [subject, markets] of Object.entries(weekMarkets)) {
+    let gid = null, passer = false, skill = false;
+    for (const [m, h] of Object.entries(markets || {})) {
+      if (!h) continue;
+      if (h.gameId != null && gid == null) gid = String(h.gameId);
+      if (m === _MARKET_PASS) passer = true;
+      if (_MARKET_SKILL.has(m)) skill = true;
+    }
+    const team = teamOf.get(subject) || null;
+    if (team && gid == null && ratings) {
+      if (!gameOfTeam.has(team)) { const e = weekEnvironment(ratings, team, curWeek); gameOfTeam.set(team, e && !e.bye && e.gameId != null ? String(e.gameId) : null); }
+      gid = gameOfTeam.get(team);
+    }
+    if (!passer && !skill) continue;
+    if (gid != null) { const g = slot(byGame, gid); if (passer) g.passers.add(subject); if (skill) g.skill.add(subject); subjectGame.set(subject, gid); }
+    if (team) { const t = slot(byTeam, team); if (passer) t.passers.add(subject); if (skill) t.skill.add(subject); subjectTeam.set(subject, team); }
+  }
+  return { byGame, byTeam, subjectGame, subjectTeam };
+}
+// One player against the slate: 'out' (the market has left him off a priced
+// game), 'thin' (the slate around him is only partly posted), or null.
+function marketAbsence(slate, nk, position, team, gameId, pricedBefore) {
+  if (!slate || !pricedBefore) return null;
+  const g = gameId != null ? slate.byGame.get(String(gameId)) : null;
+  const t = team ? slate.byTeam.get(team) : null;
+  const not = (set) => [...(set || [])].filter(s => s !== nk).length;
+  if (position === 'QB') {
+    const passers = Math.max(not(g && g.passers), not(t && t.passers));
+    if (passers >= MARKET_ABSENT_PASSERS) return { status: 'out', passers };
+    if (passers >= 1) return { status: 'thin', passers };
+    return null;
+  }
+  if (position === 'RB' || position === 'WR' || position === 'TE') {
+    const mates = not(t && t.skill), inGame = not(g && g.skill);
+    if (mates >= MARKET_ABSENT_TEAMMATES || inGame >= MARKET_ABSENT_GAME) return { status: 'out', teammates: mates, inGame };
+    if (mates >= 1 || inGame >= 1) return { status: 'thin', teammates: mates, inGame };
+    return null;
+  }
+  return null;
+}
+// THIS WEEK'S PROP, CARRIED FORWARD. A posted prop is the market's view of a
+// player's role, and a role outlives the week it was priced in: the back who
+// opened at 80 rushing yards after the starter went down is not back at his
+// draft-day share next Sunday. So on the multi-week boards, where no later
+// week has a prop of its own, the current week's priced stats are made
+// environment-neutral (this week's factor divided out) and blended into each
+// later week's game-line share at a modest weight that follows the prop's
+// own grade. Modest on purpose: one week's prop also carries one week's
+// matchup, and it is a nudge toward the market's read of the role, never a
+// re-projection. Touchdown prices are not carried; they are the week's.
+const ROS_PROP_CARRY = { HIGH: 0.4, MEDIUM: 0.25, LOW: 0.1 };
+function _envScale(position, stat, env) {
+  const f = env && Number.isFinite(env.factor) ? env.factor : 1;
+  if (position === 'K' || position === 'DEF') return 1;
+  if (_ENV_TD.has(stat)) return f;
+  if (_ENV_YD.has(stat)) return Math.pow(f, WEEK_ENV_YARD_EXP);
+  return 1;
+}
 // A role factor from live usage, applied only once there is enough of it to
 // mean anything, and never allowed to move a line by more than a tenth: it is
 // a nudge toward expected future usage, not a re-projection.
@@ -6953,6 +7082,25 @@ function explainDelta(row, movement, env, delta) {
   }
   return { direction: dir, drivers, summary };
 }
+// The why for a man the market has left off (buildBoards, MARKET_ABSENT_*).
+// Same discipline as explainDelta: the counts are the drivers, and the
+// sentence points at them. No injury story; the slate is the fact.
+function _explainMarketOut(row) {
+  const m = row.marketOut || {};
+  const drivers = [];
+  let what;
+  if (row.pos === 'QB') {
+    drivers.push({ kind: 'slate', market: 'passYd', label: 'Passers priced in his game', from: null, to: m.passers, delta: null, unit: 'players' });
+    what = m.passers + ' other passers carry a passing-yards line in his game and he does not';
+  } else {
+    if (m.teammates) drivers.push({ kind: 'slate', market: 'teammates', label: 'Teammates priced', from: null, to: m.teammates, delta: null, unit: 'players' });
+    if (m.inGame) drivers.push({ kind: 'slate', market: 'inGame', label: 'Skill players priced in his game', from: null, to: m.inGame, delta: null, unit: 'players' });
+    what = (m.teammates >= MARKET_ABSENT_TEAMMATES ? m.teammates + ' of his teammates' : m.inGame + ' skill players in his game')
+      + ' carry a core prop this week and he carries none';
+  }
+  return { direction: 'down', drivers, marketOut: true,
+    summary: 'No line posted on him: ' + what + '. The market side is zero for this game until a prop is posted; the consensus column is his line if he plays.' };
+}
 
 // Live usage into a role trend: the latest week's touches against the
 // season-to-date average, expressed as a factor. Reported always; applied to
@@ -7048,11 +7196,18 @@ function buildBoards(ctx, opts) {
     const at = Date.parse(String(w.asOf || ''));
     return Number.isFinite(at) && nowMs - at > 7 * 86400000 ? null : w;
   };
+  // Who the books HAVE priced this week, by game and by club, and who they
+  // priced in the weeks before. Built once off the whole pool, not the
+  // position asked for, because a receiver's absence is read against his
+  // teammates at every position.
+  const slate = marketSlateFrom(ctx.weekMarkets, ctx.pool, ratings, curWeek);
+  const pricedBefore = ctx.priorMarkets instanceof Set ? ctx.priorMarkets : null;
   const rows = [];
   for (const p of ctx.pool) {
     if (!posMatch(p.position)) continue;
     const team = teamKey(p.team);
-    const k = _oddsNorm(p.name) + '|' + p.position;
+    const nk = _oddsNorm(p.name);
+    const k = nk + '|' + p.position;
     const a = ctx.avail[k] || null;
     const gamesOut = a ? Number(a.gamesOut) || 0 : 0;
     const wr = curWeek != null ? weekReport(k) : null;
@@ -7105,6 +7260,7 @@ function buildBoards(ctx, opts) {
     const cStats = {}, vStats = {}, iStats = {};
     const weekRows = [];
     let games = 0; const byes = []; let confSum = 0, confN = 0; let propsWeeks = 0, postedWeeks = 0, fittedWeeks = 0, thinWeeks = 0;
+    let noLineWeeks = 0, carriedWeeks = 0, marketOut = null, carry = null;
     let oppAllowedSum = 0, oppN = 0;
     const seasonVegas = ctx.overlay && ctx.overlay[k] ? ctx.overlay[k] : null;   // the season blend, for the ROS line
     for (const w of weeks) {
@@ -7130,6 +7286,11 @@ function buildBoards(ctx, opts) {
           if (!vp.tdCountedFromMarket) v = applyMarketTd(v, p.position, vp.td);
           basis = vp.status === 'full' ? 'props' : 'props-partial';
           conf = vp.confidence; propsWeeks++;
+          // The priced stats, made environment-neutral, for the later weeks
+          // of a multi-week board (ROS_PROP_CARRY).
+          carry = { conf: vp.confidence, stats: Object.fromEntries(Object.entries(vp.stats || {})
+            .filter(([, val]) => Number.isFinite(val))
+            .map(([kk, val]) => [kk, val / (_envScale(p.position, kk, env) || 1)])) };
         } else if (vp.reason === 'no_core_market' && vp.priced && vp.priced.length) {
           // THIN, and not nothing. No core market means no projection can be
           // built out of the market by itself — but every market the books DID
@@ -7143,19 +7304,47 @@ function buildBoards(ctx, opts) {
           if (a && a.status && VEGAS_OUT_RE.test(String(a.status))) conf = 'LOW';
         }
       }
+      // NO LINE ON HIM, in a game the books have priced. Read the absence
+      // (marketAbsence): the market has left him off, or the slate around
+      // him is only partly posted.
+      let absent = null;
+      if (!v && w === curWeek && ctx.weekMarkets && p.position !== 'K' && p.position !== 'DEF') {
+        absent = marketAbsence(slate, nk, p.position, team, env.gameId, !!(pricedBefore && pricedBefore.has(nk)));
+      }
+      const isMarketOut = !!(absent && absent.status === 'out');
+      if (isMarketOut) {
+        // No points on the market side for this game. The consensus line
+        // stands: it has no market in it and says what he is worth if he plays.
+        v = Object.fromEntries(Object.keys(c).map(kk => [kk, 0]));
+        basis = 'no-line'; conf = 'LOW'; noLineWeeks++;
+        marketOut = { week: w, ...absent };
+      }
       if (!v) {
         v = weeklyStats(full, p.position, playable, env);
         if (basis === 'gamelines') { conf = 'MEDIUM'; postedWeeks++; }
         else if (basis === 'ratings') { conf = 'LOW'; fittedWeeks++; }
         else { conf = 'LOW'; }
         if (a && a.status && VEGAS_OUT_RE.test(String(a.status))) conf = 'LOW';
+        if (absent) conf = 'LOW';                    // a half-posted slate with nothing on him is not a settled market
+        // A later week of a multi-week board, with this week's prop to carry.
+        if (carry && w !== curWeek) {
+          const cw = ROS_PROP_CARRY[carry.conf] != null ? ROS_PROP_CARRY[carry.conf] : ROS_PROP_CARRY.LOW;
+          for (const [kk, neutral] of Object.entries(carry.stats)) {
+            const target = neutral * _envScale(p.position, kk, env);
+            const cur = v[kk] != null ? v[kk] : 0;
+            v[kk] = cur + cw * (target - cur);
+          }
+          carriedWeeks++;
+        }
       }
       // IRON TUNA: the blend, plus the role nudge where usage has earned it.
+      // A market-out week is zero on this side too: the blend is for weighing
+      // two lines, and the market has not offered one.
       const wgt = IT_BLEND[conf] != null ? IT_BLEND[conf] : IT_BLEND.LOW;
       const i = {};
       for (const kk of new Set([...Object.keys(c), ...Object.keys(v)])) {
         const cv = c[kk] || 0, vv = v[kk] != null ? v[kk] : cv;
-        i[kk] = (cv + wgt * (vv - cv)) * (role.applied && p.position !== 'K' && p.position !== 'DEF' ? role.factor : 1);
+        i[kk] = isMarketOut ? 0 : (cv + wgt * (vv - cv)) * (role.applied && p.position !== 'K' && p.position !== 'DEF' ? role.factor : 1);
       }
       _addStats(cStats, c); _addStats(vStats, v); _addStats(iStats, i);
       confSum += _confScore[conf]; confN++;
@@ -7165,6 +7354,8 @@ function buildBoards(ctx, opts) {
         basis, confidence: conf, kickoff: env.kickoff, status: env.status, gameState: _fixtureState(env, state),
         consensusPts: _oddsRound(scoreAny(c, p.position, rules, 1)), vegasPts: _oddsRound(scoreAny(v, p.position, rules, 1)),
         ironTunaPts: _oddsRound(scoreAny(i, p.position, rules, 1)),
+        ...(absent ? { noLine: absent } : {}),
+        ...(carry && w !== curWeek && basis !== 'no-line' ? { carried: true } : {}),
         // An UNAVAILABLE projection carries its evidence too. A player whose
         // only quoted market is his anytime touchdown has been priced by the
         // books and still cannot be projected from them, because a WR needs a
@@ -7196,12 +7387,15 @@ function buildBoards(ctx, opts) {
         label: (oppAllowedSum / oppN) <= 11 ? 'Hard' : (oppAllowedSum / oppN) >= 22 ? 'Easy' : 'Average' } : null,
       consensus: { stats: _roundStats(cStats), points: cp },
       vegas: { stats: _roundStats(vStats), points: vpz, confidence: vegasConf,
-               basis: propsWeeks ? (propsWeeks === games ? 'props' : 'props+gamelines')
+               basis: noLineWeeks && noLineWeeks === games ? 'no-line'
+                 : propsWeeks ? (propsWeeks === games ? 'props' : 'props+gamelines')
                  : thinWeeks ? 'gamelines+props'
                  : postedWeeks ? (fittedWeeks ? 'gamelines+ratings' : 'gamelines') : fittedWeeks ? 'ratings' : 'none',
-               propsWeeks, postedWeeks, fittedWeeks, thinWeeks,
+               propsWeeks, postedWeeks, fittedWeeks, thinWeeks, noLineWeeks, carriedWeeks,
                td: weekRows.find(x => x.vegasProjection && x.vegasProjection.td) ? weekRows.find(x => x.vegasProjection && x.vegasProjection.td).vegasProjection.td : null },
       ironTuna: { stats: _roundStats(iStats), points: ip, confidence: itConf },
+      // The market left him off a priced game this week (see MARKET_ABSENT_*).
+      ...(marketOut ? { marketOut } : {}),
       seasonOverlay: seasonVegas ? true : false
     });
   }
@@ -7226,7 +7420,7 @@ function buildBoards(ctx, opts) {
       const props = ctx.weekMarkets ? ctx.weekMarkets[_oddsNorm(r.name)] : null;
       const mv = props ? marketPropsFrom(props).movement : {};
       const wk = r.weeks.find(x => x.env);
-      r.why = explainDelta(r, mv, wk ? wk.env : null, r.marketDelta);
+      r.why = r.marketOut ? _explainMarketOut(r) : explainDelta(r, mv, wk ? wk.env : null, r.marketDelta);
     }
   }
   return {
@@ -7248,12 +7442,13 @@ async function boardsContext(env, opts) {
   if (!sched) return null;
   const state = nflSeasonState(sched, Date.now());
   const curWeek = state.ok && state.week.type === 'REG' ? state.week.number : null;
-  const [availWk, usage, overlay, weekMarkets] = await Promise.all([
+  const [availWk, usage, overlay, weekMarkets, priorMarkets] = await Promise.all([
     availabilityForWeek(env), usageCacheRead(env), oddsCacheRead(env),
-    curWeek != null ? marketHistoryWeek(env, sched.season, curWeek) : {}
+    curWeek != null ? marketHistoryWeek(env, sched.season, curWeek) : {},
+    curWeek != null ? marketSubjectsBefore(env, sched.season, curWeek) : new Set()
   ]);
   return { sched, state, ratings: teamRatingsFrom(sched), avail: availWk.table, week: availWk.weekly, usage,
-           overlay: overlay ? overlay.overlay : null, weekMarkets, nameIndex: _oddsProjectionIndex(),
+           overlay: overlay ? overlay.overlay : null, weekMarkets, priorMarkets, nameIndex: _oddsProjectionIndex(),
            pool: _availPool(PROJECTIONS), rules: scoringRules(o.preset, o.custom) };
 }
 let _BOARDS_MEMO = new Map();

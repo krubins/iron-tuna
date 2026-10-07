@@ -410,6 +410,10 @@
       s += ', listed ' + esc(p.injury.status) +
         (p.injury.gamesOut ? ' for the next ' + (p.injury.gamesOut === 1 ? 'game' : p.injury.gamesOut + ' games') : '');
     }
+    // So does the market's silence (marketOut, from buildBoards): on a one-week
+    // board his odds line is zero because no book has posted one, and a reader
+    // should hear that before "0.0 points projected".
+    if (hz === 'week' && p.marketOut) s += ', no line posted on him in a game the books have priced';
     return s + '.' + (body.length ? ' ' + body.join(' ') : '');
   }
 
