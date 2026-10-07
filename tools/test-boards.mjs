@@ -451,5 +451,88 @@ console.log('\na projection for a game that has kicked off is a result, not a pr
   ok('a postponed game has not kicked off', H.playedTeams(postponed).size === 0);
 }
 
+console.log('\nthe market\'s silence: no line on him in a priced game');
+{
+  // Week 2: AAA hosts CCC. Alpha Quarterback (AAA) has no prop. Two OTHER
+  // passers do -- the opponent's and his own replacement -- neither of them
+  // on the board, so the store's game id is all that places them.
+  const gAAA = games.find(g => g.week === 2 && (g.home === 'AAA' || g.away === 'AAA'));
+  const gBBB = games.find(g => g.week === 2 && (g.home === 'BBB' || g.away === 'BBB'));
+  const row = (subject, m, line, gid, ts = 5000) => ({ ts, book: 'dk', subject, subject_type: 'player', market: m, line, over_odds: -110, under_odds: -110, game_id: gid });
+  const hist = (subject, m, line, gid) => H.marketHistoryFrom([row(subject, m, line, gid)]);
+  ok('a market history carries its game id', hist('x', 'passYd', 250.5, gAAA.id).gameId === String(gAAA.id));
+  const twoPassers = { opponentpasser: { passYd: hist('opponentpasser', 'passYd', 240.5, gAAA.id) },
+                       backuppasser: { passYd: hist('backuppasser', 'passYd', 180.5, gAAA.id) } };
+  const prior = new Set(['alphaquarterback', 'echoreceiver']);
+  const base = H.buildBoards(ctx(), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Alpha Quarterback');
+  const b = H.buildBoards(ctx({ weekMarkets: twoPassers, priorMarkets: prior }), { horizon: 'week', preset: 'ppr' });
+  const a = b.players.find(p => p.name === 'Alpha Quarterback');
+  ok('two other passers priced in his game and none on him: the market side is zero', a.vegas.points === 0 && a.ironTuna.points === 0, JSON.stringify([a.vegas.points, a.ironTuna.points]));
+  ok('the consensus line stands', a.consensus.points === base.consensus.points && a.games === 1);
+  ok('the week row says no-line, graded LOW, with the count', a.weeks[0].basis === 'no-line' && a.weeks[0].confidence === 'LOW' && a.weeks[0].noLine && a.weeks[0].noLine.status === 'out' && a.weeks[0].noLine.passers === 2, JSON.stringify(a.weeks[0].noLine));
+  ok('the row carries the flag and the basis', a.marketOut && a.marketOut.week === 2 && a.vegas.basis === 'no-line' && a.vegas.noLineWeeks === 1);
+  ok('the why is the slate, not a story', a.why && a.why.marketOut === true && /2 other passers/.test(a.why.summary) && !/injur/i.test(a.why.summary), a.why && a.why.summary);
+  ok('Market Delta reads the gap', a.marketDelta.points < 0 && a.marketDelta.significant);
+  const noPrior = H.buildBoards(ctx({ weekMarkets: twoPassers }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Alpha Quarterback');
+  ok('a man the store never priced is left alone (a spelling that never matched is not an absence)', noPrior.vegas.basis === 'gamelines' && noPrior.vegas.points > 0 && !noPrior.marketOut && !noPrior.weeks[0].noLine);
+  const onePasser = H.buildBoards(ctx({ weekMarkets: { opponentpasser: twoPassers.opponentpasser }, priorMarkets: prior }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Alpha Quarterback');
+  ok('one other passer is a half-posted slate: flagged thin, graded LOW, line kept', onePasser.vegas.points > 0 && onePasser.vegas.basis === 'gamelines' && onePasser.weeks[0].confidence === 'LOW' && onePasser.weeks[0].noLine && onePasser.weeks[0].noLine.status === 'thin' && !onePasser.marketOut, JSON.stringify(onePasser.weeks[0].noLine));
+  const other = H.buildBoards(ctx({ weekMarkets: { opponentpasser: { passYd: hist('opponentpasser', 'passYd', 240.5, gBBB.id) }, backuppasser: { passYd: hist('backuppasser', 'passYd', 180.5, gBBB.id) } }, priorMarkets: prior }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Alpha Quarterback');
+  ok('passers priced in ANOTHER game say nothing about him', other.vegas.basis === 'gamelines' && !other.weeks[0].noLine);
+  const kicker = b.players.find(p => p.name === 'Golf Kicker');
+  ok('kickers and defenses are never read this way', !kicker.weeks[0].noLine && !b.players.find(p => p.position === 'DST').weeks[0].noLine);
+  // A receiver, read against his own club's priced men. Three AAA board
+  // players carry a core prop; Echo Receiver (AAA) carries none.
+  const mates = [
+    { name: 'Hotel Back', position: 'RB', team: 'AAA', projectedStats: { rushYd: 800, rushTD: 6, rec: 30, recYd: 200, recTD: 1 } },
+    { name: 'India Receiver', position: 'WR', team: 'AAA', projectedStats: { rec: 60, recYd: 800, recTD: 5 } },
+    { name: 'Juliet End', position: 'TE', team: 'AAA', projectedStats: { rec: 50, recYd: 500, recTD: 4 } }
+  ];
+  const pool2 = POOL.concat(mates);
+  const wm = { hotelback: { rushYd: hist('hotelback', 'rushYd', 55.5, null) }, indiareceiver: { recYd: hist('indiareceiver', 'recYd', 60.5, null) }, julietend: { rec: hist('julietend', 'rec', 3.5, null) } };
+  const e = H.buildBoards(ctx({ pool: pool2, weekMarkets: wm, priorMarkets: prior }), { horizon: 'week', preset: 'ppr' });
+  const echo = e.players.find(p => p.name === 'Echo Receiver');
+  ok('three priced teammates and no line on him: the market side is zero', echo.vegas.points === 0 && echo.ironTuna.points === 0 && echo.weeks[0].noLine.status === 'out' && echo.weeks[0].noLine.teammates === 3, JSON.stringify(echo.weeks[0].noLine));
+  ok('...and he ranks behind every receiver on the market boards, at his own rank on consensus',
+     echo.ironTuna.rank === e.players.filter(p => p.position === 'WR').length && echo.vegas.rank === echo.ironTuna.rank && echo.consensus.rank < echo.ironTuna.rank, JSON.stringify([echo.consensus.rank, echo.vegas.rank, echo.ironTuna.rank]));
+  ok('the why names the teammates', /3 of his teammates/.test(echo.why.summary), echo.why.summary);
+  const two = H.buildBoards(ctx({ pool: pool2, weekMarkets: { hotelback: wm.hotelback, indiareceiver: wm.indiareceiver }, priorMarkets: prior }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Echo Receiver');
+  ok('two priced teammates is thin, not out', two.vegas.points > 0 && two.weeks[0].noLine && two.weeks[0].noLine.status === 'thin');
+  const india = e.players.find(p => p.name === 'India Receiver');
+  ok('a priced teammate is read off his own prop', /^props/.test(india.vegas.basis) && !india.weeks[0].noLine, india.vegas.basis);
+  // The multi-week boards: this week only. He is back at his line next week.
+  const ros = H.buildBoards(ctx({ weekMarkets: twoPassers, priorMarkets: prior }), { horizon: 'ros', preset: 'ppr' }).players.find(p => p.name === 'Alpha Quarterback');
+  ok('on the ROS board the absence takes this week only', ros.weeks[0].basis === 'no-line' && ros.weeks[0].vegasPts === 0 && ros.weeks[1].vegasPts > 0 && ros.weeks[1].basis === 'gamelines' && ros.vegas.basis !== 'no-line' && ros.vegas.noLineWeeks === 1,
+     JSON.stringify(ros.weeks.slice(0, 2).map(w => [w.week, w.basis, w.vegasPts])));
+  ok('and nothing is carried forward from a week with no line', !ros.weeks[1].carried && ros.vegas.carriedWeeks === 0);
+  const empty = H.buildBoards(ctx({ weekMarkets: {}, priorMarkets: prior }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Alpha Quarterback');
+  ok('a week with no props posted for anyone reads nothing into anyone', empty.vegas.basis === 'gamelines' && !empty.weeks[0].noLine);
+}
+
+console.log('\nthis week\'s prop, carried into the later weeks');
+{
+  // Delta Receiver: receiving yards 68.5 and receptions 5.5 priced across
+  // two books this week, against a consensus share of 1000/17 and 75/17.
+  const rows = (book, m, line, ts) => ({ ts, book, subject: 'deltareceiver', subject_type: 'player', market: m, line, over_odds: -110, under_odds: -110 });
+  const hist = { recYd: H.marketHistoryFrom([rows('dk', 'recYd', 68.5, 1000), rows('fd', 'recYd', 68.5, 1000)]),
+                 rec: H.marketHistoryFrom([rows('dk', 'rec', 5.5, 1000), rows('fd', 'rec', 5.5, 1000)]) };
+  const plain = H.buildBoards(ctx(), { horizon: 'ros', preset: 'ppr' }).players.find(p => p.name === 'Delta Receiver');
+  const b = H.buildBoards(ctx({ weekMarkets: { deltareceiver: hist } }), { horizon: 'ros', preset: 'ppr' });
+  const d = b.players.find(p => p.name === 'Delta Receiver');
+  ok('this week is the prop itself', /^props/.test(d.weeks[0].basis) && !d.weeks[0].carried);
+  const later = d.weeks.filter(w => w.env && w.week !== 2);
+  ok('every later week with a game carries it', later.length > 0 && later.every(w => w.carried === true) && d.vegas.carriedWeeks === later.length, JSON.stringify([later.length, d.vegas.carriedWeeks]));
+  const w3 = d.weeks.find(w => w.week === 3), p3 = plain.weeks.find(w => w.week === 3);
+  ok('a prop above his share lifts the later weeks\' Vegas line', w3.vegasPts > p3.vegasPts, JSON.stringify([p3.vegasPts, w3.vegasPts]));
+  ok('...by a fraction of the gap, not the whole of it', w3.vegasPts - p3.vegasPts < (d.weeks[0].vegasPts - d.weeks[0].consensusPts), JSON.stringify([w3.vegasPts - p3.vegasPts, d.weeks[0].vegasPts - d.weeks[0].consensusPts]));
+  ok('the basis and grade of a later week are still the game line\'s', w3.basis === 'gamelines' && w3.confidence === 'MEDIUM');
+  ok('the consensus line does not move', d.consensus.points === plain.consensus.points);
+  ok('Iron Tuna follows, between the two', d.ironTuna.points > plain.ironTuna.points && d.ironTuna.points < d.vegas.points + 0.11);
+  const beta = b.players.find(p => p.name === 'Beta Back');
+  ok('a man with no prop this week has nothing carried', !beta.weeks.some(w => w.carried) && beta.vegas.carriedWeeks === 0);
+  const wk = H.buildBoards(ctx({ weekMarkets: { deltareceiver: hist } }), { horizon: 'week', preset: 'ppr' }).players.find(p => p.name === 'Delta Receiver');
+  ok('the week board is untouched by the carry', wk.vegas.carriedWeeks === 0 && !wk.weeks[0].carried);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

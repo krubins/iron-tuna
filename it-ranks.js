@@ -43,8 +43,8 @@
  * board the games, byes and slate still to come). Both are the payload's own
  * numbers said in words, and the grammar and the tiers behind them live in
  * it-reads.js, shared with /rankings so the two cannot drift apart. This board
- * decides only WHAT TO FEED IT: the consensus rank and points, because that is
- * the column this ranking is published on.
+ * decides only WHAT TO FEED IT: the odds rank and points, because that is the
+ * column this ranking is published on (primaryRank says why, with the date).
  *
  * NOTHING IS INVENTED. A number the payload does not carry prints as an em dash.
  * A board that does not answer prints why and shows no table at all, rather than
@@ -274,11 +274,16 @@
       if (!b) return null;
       return pos === 'FLEX' ? b.flexRank : b.rank;
     }
-    // The board's own rank, which is what "#" means on the page: the fantasy
-    // consensus order, because that is the column the ranking is published on.
-    // The odds column keeps its own rank beside it so the disagreement is
-    // visible in slots, not only in points.
-    function primaryRank(p) { return rankOf(p, 'consensus'); }
+    // The board's own rank, which is what "#" means on the page: the BETTING
+    // ODDS order. It was the consensus order until 6 Oct 2026, when a
+    // quarterback in a walking boot, with no prop posted and his backup
+    // priced, sat at QB2 on the week board off his season line: the consensus
+    // is a preseason projection shared out by week, and it does not know what
+    // happened on Sunday. The market does, and it is re-read every hour. So
+    // the ranking is published on the odds column; the consensus keeps its
+    // own rank beside it so the disagreement is visible in slots, not only
+    // in points.
+    function primaryRank(p) { return rankOf(p, 'vegas'); }
 
     function gapCell(p) {
       var d = p.marketDelta || {};
@@ -303,10 +308,10 @@
 
     // THE TWO LINES, from the shared grammar in it-reads.js. All this board has
     // to decide is what to feed it, and here that is settled: the ranking is
-    // PUBLISHED on the consensus board, so the rank and the points are the
-    // consensus ones, at his own position — never `primaryRank`, which is a
-    // pooled RB/WR/TE slot on the FLEX pages. There the number is spelled out
-    // instead, so it cannot be read as the "#" beside it.
+    // PUBLISHED on the odds board (see primaryRank), so the rank and the
+    // points are the market ones, at his own position — never `primaryRank`
+    // itself, which is a pooled RB/WR/TE slot on the FLEX pages. There the
+    // number is spelled out instead, so it cannot be read as the "#" beside it.
     //
     // `ctx` is the rest of the board, read once per payload, so a line can say
     // where his volume ranks and what a typical starter does with it. Built
@@ -316,8 +321,8 @@
     function reads(p) {
       if (!window.ITReads) return '';
       return ITReads.cell(p, { horizon: horizon, spellOut: pos === 'FLEX',
-        rank: p.consensus ? p.consensus.rank : null,
-        points: p.consensus ? p.consensus.points : null, ctx: readCtx });
+        rank: p.vegas ? p.vegas.rank : null,
+        points: p.vegas ? p.vegas.points : null, ctx: readCtx });
     }
 
     function rowHtml(p) {
@@ -327,7 +332,8 @@
       var w0 = p.weeks && p.weeks[0];
       var oppCell = horizon === 'week'
         ? '<td>' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
-            : esc((w0.home ? 'vs ' : 'at ') + w0.opponent) + (w0.out ? ' <span class="is-status">OUT</span>' : '')) + '</td>'
+            : esc((w0.home ? 'vs ' : 'at ') + w0.opponent) + (w0.out ? ' <span class="is-status">OUT</span>'
+              : w0.noLine && w0.noLine.status === 'out' ? ' <span class="is-status">NO LINE</span>' : '')) + '</td>'
         : '<td class="num">' + (p.games == null ? '—' : p.games) + '</td>';
       var opener = wantWeeks
         ? '<td><button class="rk-open" type="button" data-open="' + esc(p.key) + '" aria-expanded="' + (open[p.key] ? 'true' : 'false') +
@@ -471,7 +477,8 @@
       var src = payload.sources || {};
       foot.innerHTML = 'The <b>Betting Odds</b> column reads its basis off the market: <b>props</b> is a priced player prop, ' +
         '<b>gamelines</b> is the posted game line&rsquo;s scoring environment applied to his line, and <b>ratings</b> is a fixture no ' +
-        'book has posted yet, projected from fitted team ratings and graded low. ' +
+        'book has posted yet, projected from fitted team ratings and graded low. <b>no-line</b> is a player the books have left ' +
+        'off a game they have otherwise priced: his market and Iron Tuna lines carry no points for it until a prop is posted, and the consensus column shows his line if he plays. ' +
         (src.props ? esc(src.props) + ' players carry a prop this week. ' : 'No priced player prop has reached this board for the week. Books post them; this feed is not carrying them. ') +
         (src.usage ? 'Usage through week ' + esc(src.usage) + '.' : 'No weekly usage has been published yet.');
     }

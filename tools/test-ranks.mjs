@@ -263,8 +263,13 @@ console.log('\nevery row says what the player is and what is in front of him');
   const playerLine = cutFrom(reads, '  function player(p, o) {', '  // THE OPPORTUNITY LINE');
   ok('the player line is ranked and scored by the CALLER, because only it knows the board',
     playerLine.includes('o.rank') && playerLine.includes('o.points') && !playerLine.includes('p.consensus'));
-  ok('the published pages feed it the consensus, which is the column they rank on',
-    /ITReads\.cell\(p, \{[^]{0,240}p\.consensus\.rank/.test(js));
+  // Published on the ODDS column since 6 Oct 2026 (primaryRank in it-ranks.js
+  // carries the why): the consensus is a preseason line shared out by week and
+  // does not know what happened on Sunday; the market is re-read every hour.
+  ok('the published pages feed it the odds line, which is the column they rank on',
+    /ITReads\.cell\(p, \{[^]{0,240}p\.vegas\.rank/.test(js) && !/ITReads\.cell\(p, \{[^]{0,240}p\.consensus\.rank/.test(js));
+  ok('and "#" is the odds rank, not the consensus rank',
+    /function primaryRank\(p\) \{ return rankOf\(p, 'vegas'\); \}/.test(js));
   ok('and the tool feeds it whichever of four boards the reader picked',
     /f \+ 'Rank'/.test(tool) && /points: bp\(r\)/.test(tool));
   ok('neither hands it a pooled flex slot: that is spelled out instead',
