@@ -1697,6 +1697,28 @@ body.sl-dress .sl-upd-note{padding:0 var(--space-4) var(--space-4);margin-top:va
 }
 /* /ranks:css */
 
+/* ── the sixteen rankings pages: the head above the board ─────────────────
+   Eyebrow, title, lede, week strip, chips, controls, board. Seven things stack
+   before the first row, and until 7 Oct 2026 the h1 and h2 were the browser's
+   own: 2em and 1.5em with the body's 1.6 line-height and 0.67em margins, so a
+   two-word title sat in a 58px box with 24px above and below it, and the first
+   row started 600px down a desktop screen. Headings get a heading's leading
+   here, and every gap between the eyebrow and the board steps down one notch.
+
+   Scoped with :has() to a <main> that carries the board directly, which is
+   these sixteen pages and nothing else: /rankings has .rk-table, and the other
+   in-season tools keep the shared .is-* measure. A browser without :has()
+   keeps the looser spacing and loses nothing. */
+main:has(> .rk-board) > .is-eyebrow { margin: var(--space-5) 0 var(--space-1) }
+main:has(> .rk-board) > h1 { margin: 0 0 var(--space-2); line-height: 1.15; letter-spacing: -.01em }
+main:has(> .rk-board) > .is-lede { font-size: var(--fs-md); margin: 0 0 var(--space-4); max-width: 68ch }
+main:has(> .rk-board) > .its-strip { margin: 0 0 var(--space-4) }
+main:has(> .rk-board) > .rk-chips { margin: 0 0 var(--space-4) }
+main:has(> .rk-board) > h2 { font-size: var(--fs-lg); line-height: 1.25; margin: var(--space-6) 0 var(--space-2) }
+main:has(> .rk-board) > h2 + .is-note, main:has(> .rk-board) > h2 + .is-grid { margin-top: 0 }
+main:has(> .rk-board) > .is-note { max-width: 76ch }
+main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
+
 /* ── the position chips ───────────────────────────────────────────────────
    Every position in the category, on every page in it. This is the whole
    navigation on touch, where the ribbon's hover menus do not exist, and the
@@ -1716,7 +1738,10 @@ body.sl-dress .sl-upd-note{padding:0 var(--space-4) var(--space-4);margin-top:va
    grouped under one spanning header rather than left as two columns among
    eleven. The gap between them gets the color; nothing else on the row does. */
 .rk-board { margin: 0 0 var(--space-6) }
-.rk-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-4) }
+.rk-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-3) }
+/* The stamp line between the controls and the table is a caption for the
+   table, so it sits on the table rather than floating between the two. */
+.rk-board > p.is-note { margin: 0 0 var(--space-2) }
 .rk-seg2 { display: inline-flex; border: 1px solid var(--line2); border-radius: var(--radius-sm); overflow: hidden }
 .rk-seg2 button {
   appearance: none; border: 0; background: var(--bg); cursor: pointer; min-height: 36px; padding: 0 12px;
@@ -1784,6 +1809,48 @@ body.sl-dress .sl-upd-note{padding:0 var(--space-4) var(--space-4);margin-top:va
 .rk-vs td.rk-who .rk-read-pl .rk-read-k, .rk-table td.p .rk-read-pl .rk-read-k { color: var(--teal) }
 .rk-vs td.rk-who .rk-read-op .rk-read-k, .rk-table td.p .rk-read-op .rk-read-k { color: var(--goldink) }
 .rk-vs .rk-basis { font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+
+/* ── the row's density ─────────────────────────────────────────────────────
+   Until 7 Oct 2026 every column shared the width evenly, which left the
+   player cell at its 15rem floor while the gap column held 230px for one
+   nowrap verdict, so the two sentences broke into five short lines each and a
+   row stood 160px tall on a desktop, 250px on the season board. Four moves,
+   all of them width or leading rather than type size:
+
+     1. The player column takes the table's slack (width:100% in an auto
+        table layout hands every other column its own content width and the
+        rest to this one), so the sentences wrap at a measure instead of a
+        sliver. The verdict column is allowed to wrap and given a floor.
+     2. Cells align to the TOP: the rank, team, fixture and every number sit on
+        the player's name line, and the two sentences hang under the name as
+        the row's annotation. Centred, they floated in the middle of a tall
+        row and made the whole row read as empty.
+     3. Column heads drop one type step and lose their nowrap-driving spacing;
+        the header text, not the data, was setting most columns' width.
+     4. Cell padding steps down from 12px to 10px vertical, 8px horizontal.
+
+   The pre-render in _worker.js is the same markup, so this covers it too. */
+.is-table.rk-vs { font-size: 16px }
+.rk-vs th, .rk-vs td { padding: 10px var(--space-2) }
+.rk-vs th { font-size: var(--fs-2xs); letter-spacing: .06em; white-space: nowrap; vertical-align: bottom; line-height: 1.25 }
+.rk-vs th.rk-grp { white-space: normal; padding-bottom: 6px }
+.rk-vs td { vertical-align: top; line-height: 1.5 }
+.rk-vs td.rk-who { width: 100%; padding-top: 8px }
+.rk-vs td.rk-gap { white-space: normal; min-width: 9.5rem }
+.rk-vs td.rk-gap b { white-space: nowrap; line-height: 1.5 }
+.rk-vs td.rk-gap span { line-height: 1.3; margin-top: 2px }
+/* Points, verdict, slots: three short lines, each its own block, so the verdict
+   never breaks mid-phrase and the slots never arrive behind a dangling dot. */
+.rk-vs td.rk-gap .rk-slots { margin-top: 1px; font-weight: 700; color: var(--muted) }
+.rk-vs td:last-child { min-width: 7rem }
+.rk-vs td.rk-pts .rk-basis { margin-top: 1px }
+/* On the pooled boards the position rides beside the name rather than on a
+   line of its own; the margin keeps it from running on ("Alpha BackRB"). */
+.is-table.rk-vs td.rk-who small {
+  display: inline-block; margin-left: 6px; font-size: var(--fs-3xs); font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase; vertical-align: 1px;
+}
+.rk-vs td.rk-who .rk-read:first-of-type { margin-top: 6px }
 
 /* ── the week-by-week drawer ──────────────────────────────────────────────
    Season-long only: a rest-of-season total is a sum, and the thing a reader

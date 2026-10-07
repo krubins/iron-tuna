@@ -10136,7 +10136,7 @@ function rkPreHtml(pre) {
         '<div class="rk-basis">' + e(p.vegas ? p.vegas.basis : '') + '</div></td>' +
       '<td class="rk-mkt rk-rnk">' + (vr == null ? '—' : e(p.position) + vr) + '</td>' +
       '<td class="rk-gap ' + cls + '"><b>' + signed(d.points) + '</b><span>' +
-        e(d.classification || '') + (slots ? ' &middot; ' + e(slots) : '') + '</span></td>' +
+        e(d.classification || '') + '</span>' + (slots ? '<span class="rk-slots">' + e(slots) + '</span>' : '') + '</td>' +
       '</tr>';
   }).join('');
   const hz = pre.payload.horizon || {};

@@ -290,7 +290,8 @@
       var cls = d.points == null ? 'flat' : d.points > 0.05 ? 'up' : d.points < -0.05 ? 'down' : 'flat';
       var slots = d.rank == null ? '' : (d.rank > 0 ? '+' : '') + d.rank + ' slots';
       return '<td class="rk-gap ' + cls + '"><b>' + signed(d.points) + '</b>' +
-        '<span>' + esc(d.classification || '') + (slots ? ' &middot; ' + esc(slots) : '') + '</span></td>';
+        '<span>' + esc(d.classification || '') + '</span>' +
+        (slots ? '<span class="rk-slots">' + esc(slots) + '</span>' : '') + '</td>';
     }
 
     function extraCell(p) {
