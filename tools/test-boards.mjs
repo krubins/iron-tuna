@@ -239,6 +239,16 @@ console.log('\nbyes, injuries and the multi-week sums');
     .players.find(p => p.name === 'Beta Back');
   ok('a live placement is counted from kickoff', live.weeks.filter(w => w.out).map(w => w.week).join() === '2,3,4',
      JSON.stringify(live.weeks.filter(w => w.out).map(w => w.week)));
+  // Out for the year is off the board, whatever week it is and whenever the
+  // placement happened: a Week 3 season-ender (Jaxson Dart, 23 Sep 2026) was
+  // still QB10 on the week board two weeks later because nothing carried him.
+  const gone = { 'betaback|RB': { status: 'IR', gamesOut: 17, asOf: '2026-09-23', note: 'Knee: out for the rest of the regular season' } };
+  const zeroed = POOL.map(p => p.name === 'Beta Back' ? { ...p, projectedStats: { rushYd: 0, rushTD: 0, rec: 0, recYd: 0, recTD: 0 } } : p);
+  for (const horizon of ['week', 'ros']) {
+    const out = H.buildBoards(ctx({ avail: gone, pool: zeroed }), { horizon, preset: 'ppr' });
+    ok(`a player out for the year is not on the ${horizon} board at all`,
+       !out.players.some(p => p.name === 'Beta Back') && out.players.length === POOL.length - 1, out.players.map(p => p.name).join(', '));
+  }
   const n3 = H.buildBoards(ctx(), { horizon: 'next3', preset: 'ppr' });
   const a3 = n3.players.find(p => p.name === 'Alpha Quarterback');
   ok('NEXT 3 sums three posted weeks', a3.games === 3 && a3.vegas.postedWeeks === 3 && a3.vegas.basis === 'gamelines');
