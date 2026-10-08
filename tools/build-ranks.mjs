@@ -148,15 +148,14 @@ const RIBBON_CSS = `${CSS_OPEN}
    destinations; the two rankings menus drop every position down on hover and on
    keyboard focus. Do not hand-edit — run the tool. */
 .rk-ribbon {
-  --rkr-ink: var(--ink, var(--text, #111820));
-  --rkr-mut: var(--ink-2, var(--sec, #39454f));
-  --rkr-line: var(--line, #e3e8ec);
-  --rkr-brand: var(--brand, #0e7c63);
+  --rkr-ink: var(--ink, var(--text, #111418));
+  --rkr-mut: var(--ink-2, var(--sec, #454c57));
+  --rkr-line: var(--line, #e2e4e8);
+  --rkr-brand: var(--brand, #0b4f6c);
   --rkr-card: var(--card, #ffffff);
-  --rkr-panel: var(--panel, var(--brand-tint, #f7f9fa));
+  --rkr-panel: var(--panel, var(--brand-tint, #eef2f7));
   background: var(--rkr-card); border-bottom: 1px solid var(--rkr-line);
-  border-top: 1px solid var(--rkr-line);
-  box-shadow: 0 1px 4px rgba(16, 19, 23, .05); position: relative;
+  border-top: 1px solid var(--rkr-line); position: relative;
   /* Above a page's sticky header (z-index 40), or a dropped menu that reaches
      down past the content is painted behind it. Still under the player-search
      menu, which is fixed and parented to <body>. */
@@ -170,14 +169,14 @@ const RIBBON_CSS = `${CSS_OPEN}
    instead of scrolling here; on a phone, where the menus are off anyway, the
    media query below turns the sideways scroll back on. */
 .rk-ribbon-in {
-  max-width: 1180px; margin: 0 auto; padding: 0 20px;
+  max-width: 1240px; margin: 0 auto; padding: 0 32px;
   display: flex; align-items: stretch; flex-wrap: wrap; gap: 2px;
 }
 .rk-ribbon .rkr-item { position: relative; display: flex; align-items: center; flex: 0 0 auto }
 .rk-ribbon .rkr-link {
   display: flex; align-items: center; white-space: nowrap; text-decoration: none;
-  font-size: 14px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--rkr-mut); padding: 14px 13px; border-bottom: 3px solid transparent; min-height: 46px;
+  font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none;
+  color: var(--rkr-mut); padding: 0 12px; border-bottom: 3px solid transparent; min-height: 48px;
 }
 .rk-ribbon .rkr-link:hover, .rk-ribbon .rkr-link:focus-visible {
   color: var(--rkr-ink); border-bottom-color: var(--rkr-brand); text-decoration: none;
@@ -189,8 +188,7 @@ const RIBBON_CSS = `${CSS_OPEN}
   transition: opacity .12s ease, visibility 0s linear .3s;
   position: absolute; top: 100%; left: 0; z-index: 60; min-width: 232px;
   background: var(--rkr-card); border: 1px solid var(--rkr-line); border-top: 2px solid var(--rkr-brand);
-  border-radius: 0 0 10px 10px; padding: 6px;
-  box-shadow: 0 14px 30px rgba(16, 19, 23, .16);
+  border-radius: 0 0 4px 4px; padding: 6px;
 }
 /* Bridges the 0px gap between the trigger and the menu so the pointer can cross
    it without the menu closing under it. */
@@ -198,13 +196,13 @@ const RIBBON_CSS = `${CSS_OPEN}
 .rk-ribbon .rkr-has-menu:hover .rkr-menu,
 .rk-ribbon .rkr-has-menu:focus-within .rkr-menu { visibility: visible; opacity: 1; transition-delay: 0s }
 .rk-ribbon .rkr-menu a {
-  display: block; padding: 9px 12px; border-radius: 7px; white-space: nowrap; text-decoration: none;
-  font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--rkr-mut);
+  display: block; padding: 10px 12px; border-radius: 4px; white-space: nowrap; text-decoration: none;
+  font-size: 16px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--rkr-ink);
 }
 .rk-ribbon .rkr-menu a:hover, .rk-ribbon .rkr-menu a:focus-visible {
   background: var(--rkr-panel); color: var(--rkr-ink); text-decoration: none;
 }
-.rk-ribbon .rkr-menu a[aria-current="page"] { color: var(--rkr-brand); font-weight: 800 }
+.rk-ribbon .rkr-menu a[aria-current="page"] { color: var(--rkr-brand); font-weight: 600 }
 /* A hover menu is unreachable on touch, so below the desktop breakpoint the
    trigger is simply a link to the category's hub — which lists every position as
    a chip, as does every position page. Nothing is lost; the menu was a shortcut. */
@@ -213,9 +211,9 @@ const RIBBON_CSS = `${CSS_OPEN}
   /* And with the menu gone, so is the caret: an arrow that opens nothing is a
      promise the band cannot keep. The trigger is a plain link to the hub. */
   .rk-ribbon .rkr-has-menu > .rkr-link::after { content: none }
-  .rk-ribbon .rkr-link { padding: 12px 10px; font-size: 13px; letter-spacing: .05em }
+  .rk-ribbon .rkr-link { padding: 0 10px; font-size: 13px; min-height: 44px }
   .rk-ribbon-in {
-    padding: 0 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    padding: 0 16px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
   }
   .rk-ribbon-in::-webkit-scrollbar { display: none }
 }
@@ -283,9 +281,7 @@ function pageHtml(cat, pos) {
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/tuna-mark.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
 /* Every rule this page needs is in site.css (.rk-* and .is-*). The block is kept

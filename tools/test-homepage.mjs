@@ -2,22 +2,19 @@
 // The homepage, driven in a browser.
 //   node tools/test-homepage.mjs
 //
-// It replaces tools/test-position-lens.mjs, which drove the sticky ribbon's
-// Auction/Snake edition switch and the Position Intel grid under it. Both came
-// off in the September 2026 rewrite: "/" is six sections now — hero, the lead,
-// product cards, the market disagreements, the desk's current pieces, and the
-// method with the disclosures under it — and the draft-season controls went with
-// the draft-season modules.
+// October 2026: "/" is the ledger-style front described in docs/design/brief.md.
+// Five sections, in this order: a white centred hero (one headline, one
+// sentence, the search field, three entry points, a hairline and the row of
+// live market figures), the six position tiles, the six newest desk pieces as
+// a ledger, the three How-it-works cards, and the navy KPI band; then the
+// shared footer. The cover rotation, the photograph, the lead story, the two
+// lane cards and the quick-links strip all came off with it.
 //
-// THE RULE THIS EXISTS FOR, and the one the old page broke constantly: A BAND IS
-// EITHER FULL OF REAL CURRENT DATA OR IT IS HIDDEN. The page it replaced opened
-// on "Reading the board…", "Waiting for this week's slate", "Reading the
-// market…" and "Loading the current case…" — four different skeletons above the
-// fold on a Wednesday, because every module reserved its own space and then
-// apologized for being empty. So every feed here is driven TWICE: once answering
-// with real rows, and once refusing outright. The refusing pass is the one that
-// matters, and it asserts the negative directly — no loading copy anywhere in
-// the rendered text.
+// THE RULE THIS EXISTS FOR, and the one the old page broke constantly: A BAND
+// IS EITHER FULL OF REAL CURRENT DATA OR IT IS HIDDEN. So every feed here is
+// driven TWICE: once answering with real rows, and once refusing outright. The
+// refusing pass is the one that matters, and it asserts the negative directly:
+// no loading copy anywhere in the rendered text, and no empty shell.
 //
 // Needs playwright-core plus a Chromium binary (preinstalled at /opt/pw-browsers
 // in Claude Code remote sessions, else set CHROMIUM_PATH, else whatever
@@ -31,10 +28,6 @@ import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-// A SKIP THAT CI COUNTS AS GREEN IS WORSE THAN NO TEST. This file self-skips on
-// a machine with no browser, which is right for a contributor's laptop and
-// wrong for a gate — so CI sets REQUIRE_BROWSER=1 and a missing browser becomes
-// a failure with the command that fixes it. Nothing else about the run changes.
 const REQUIRE = process.env.REQUIRE_BROWSER === '1';
 function absent(what, fix) {
   if (REQUIRE) {
@@ -53,10 +46,6 @@ try {
   absent('needs playwright-core (' + e.message.split('\n')[0] + ')',
          'npm install --no-save --no-package-lock playwright-core@1.56.1');
 }
-// CHROMIUM_PATH wins, then the binaries preinstalled in Claude Code remote
-// sessions, then whatever playwright-core itself installed — which is what a
-// `playwright-core install chromium` on a CI runner leaves behind, and which
-// already honours PLAYWRIGHT_BROWSERS_PATH.
 const CHROME = [
   process.env.CHROMIUM_PATH,
   '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
@@ -87,7 +76,7 @@ const EDGE = { ok: true, week: 'Week 3', vsExperts: {
   fades: [
     mk('Derrick Henry', 'RB', 'BAL', 'CIN', 17.8, 13.1, 14.6, 'STRONG VEGAS FADE', 11),
     mk('Blake Corum', 'RB', 'LAR', 'SEA', 11.5, 7.0, 8.4, 'STRONG VEGAS FADE', 41),
-    // MARKET AGREES is not a disagreement and must never become a row.
+    // MARKET AGREES is not a disagreement and must never become a figure.
     mk('Agreeable Wideout', 'WR', 'SEA', 'LAR', 12.0, 12.1, 12.0, 'MARKET AGREES', 20),
     // A row with a hole in it is dropped, not printed with a dash.
     { name: 'Holey Wideout', position: 'WR', team: 'NYG', opponent: 'DAL',
@@ -95,85 +84,57 @@ const EDGE = { ok: true, week: 'Week 3', vsExperts: {
       delta: { points: -3.0, rank: -9, classification: 'STRONG VEGAS FADE' } }
   ]
 }};
-const DFS = { ok: true, boards: { bestVegasValues: [
-  { name: 'Rome Odunze', position: 'WR', team: 'CHI', salary: 5400, vegasPoints: 14.2, vegasValueScore: 3.21 },
-  { name: 'Tucker Kraft', position: 'TE', team: 'GB', salary: 4200, vegasPoints: 10.9, vegasValueScore: 2.60 },
-  // A row with a hole in it is not a candidate, so a turn can never land on
-  // it and print a card with a gap in it.
-  { name: 'Priceless Receiver', position: 'WR', team: 'NYJ', salary: 0, vegasPoints: 12.0, vegasValueScore: 2.9 }
-]}};
-// THE COVER ROTATES ON A CLOCK, so this test pins one. front.html gives each
-// cover a turn (COVER_TURN_MS, an hour): the desk band slides one story down
-// the feed per turn and the hero takes the next of the week's widest market
-// gaps. Which story leads and whose photograph runs would otherwise depend on
-// what time of day this test happened to run, so the browser's Date.now is
-// frozen at an instant whose turn index is 0 for every pool size the fixtures
-// use — 840 is the lowest common multiple of 1 through 8 — and the fixture
-// publishes its newest piece five minutes before that instant, inside its own
-// turn, so the band is newest-first. Turn by turn, both are covered without a
-// browser in tools/test-newsroom.mjs.
-const TURN_MS = 3600 * 1000;
-const CLOCK = Math.floor(Date.now() / (840 * TURN_MS)) * (840 * TURN_MS);
-const FRESH = CLOCK - 5 * 60 * 1000;
-const AGO = h => FRESH - h * 3600 * 1000;
+// The board behind the sixteen position pages: who is ranked, who carries a
+// market line, and when the odds were read. Counts per position are what the
+// tiles print, so each position gets a different, checkable count.
+const RANK_N = { QB: 34, RB: 72, WR: 98, TE: 42, K: 32, DEF: 32 };
+const RANK_PLAYERS = [];
+Object.entries(RANK_N).forEach(([pos, n]) => {
+  for (let k = 0; k < n; k++) RANK_PLAYERS.push({ name: pos + ' Player ' + k, position: pos, team: 'T' + (k % 16), priced: k % 3 !== 0 });
+});
+const RANK = { ok: true, week: { label: 'Week 3', number: 3, type: 'REG', status: 'upcoming' },
+  oddsAsOf: Date.UTC(2026, 8, 17, 18, 42), oddsProvider: 'propline', marketBoard: true, players: RANK_PLAYERS };
+const NOW = Date.now();
+const AGO = h => NOW - h * 3600 * 1000;
 const CONTENT = { ok: true, pieces: [
-  // `components` are the findings a piece breaks into, each naming the player
-  // it is about. They are what the desk cards draw faces from and what the
-  // hero's picture prefers over the market board.
   { kind: 'final-read', title: 'The Final Read', headline: 'Three lineups the market moved overnight',
-    dek: 'Sunday morning props shifted two flex calls.', week: 3, publishedAt: FRESH,
-    url: '/in-season/desk/final-read/3', byline: 'Iron Tuna desk',
+    dek: 'Sunday morning props shifted two flex calls.', week: 3, publishedAt: AGO(0.1),
+    url: '/in-season/desk/final-read/3', byline: { name: 'Iron Tuna desk' },
     components: [{ n: 1, player: 'Puka Nacua', headline: 'a' }, { n: 2, player: 'James Cook', headline: 'b' }] },
   { kind: 'opportunity-report', title: 'Opportunity Report', headline: 'Who inherits the carries in Baltimore',
     dek: 'Snap share against the implied total.', week: 3, publishedAt: AGO(3),
-    url: '/in-season/desk/opportunity-report/3', byline: 'Iron Tuna desk',
+    url: '/in-season/desk/opportunity-report/3', byline: { name: 'Iron Tuna desk' },
     components: [{ n: 1, player: 'Derrick Henry', headline: 'c' }] },
   { kind: 'rankings-update', title: 'Rankings Update', headline: 'Eleven moves after the injury report',
     week: 3, publishedAt: AGO(5), url: '/in-season/desk/rankings-update/3' },
-  { kind: 'tnf-preview', title: 'TNF Preview', headline: 'The total moved three points in a day',
-    week: 3, publishedAt: AGO(18), url: '/in-season/desk/tnf-preview/3' },
-  // Six sent, three shown: the band is small on purpose, and a new piece
-  // pushes the oldest one out of it.
+  // THE BOAST is split off in a ledger row: the call is the headline.
+  { kind: 'scorecard', title: 'What Tuna Got Right', headline: 'YOU’RE WELCOME: the total moved three points in a day',
+    week: 3, publishedAt: AGO(18), url: '/in-season/desk/scorecard/3' },
+  // No url: not a row.
+  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: AGO(20) },
+  // No headline of its own: not a row either.
+  { kind: 'blank', title: 'Blank', week: 3, publishedAt: AGO(21), url: '/in-season/desk/blank/3' },
   { kind: 'weekend-game-plan', title: 'Weekend Game Plan', headline: 'Too many to print',
     week: 3, publishedAt: AGO(26), url: '/in-season/desk/weekend-game-plan/3' },
-  // No url: not a card.
-  { kind: 'broken', title: 'Broken', headline: 'No destination', week: 3, publishedAt: AGO(30) },
-  // The rest of a week's desk (2026-09-26): the live feed returns about a
-  // dozen, and the front (the lead and the rail's seven slots) takes eight of
-  // them, so the cards below have pieces of their own to show.
   { kind: 'waiver-watch', title: 'Waiver Watch', headline: 'Four adds the market already priced in',
-    dek: 'Claims that cost more than the props say.', week: 3, publishedAt: AGO(33),
-    url: '/in-season/desk/waiver-watch/3', components: [{ n: 1, player: 'Tank Bigsby', headline: 'e' }] },
+    week: 3, publishedAt: AGO(33), url: '/in-season/desk/waiver-watch/3', components: [{ n: 1, player: 'Tank Bigsby', headline: 'e' }] },
+  // Seven qualify; six are shown. This one must not be.
   { kind: 'start-sit', title: 'Start/Sit', headline: 'Two starts the consensus is scared of',
-    week: 3, publishedAt: AGO(40), url: '/in-season/desk/start-sit/3' },
-  { kind: 'dfs-core', title: 'DFS Core', headline: 'The cheap tight end every lineup wants',
-    week: 3, publishedAt: AGO(46), url: '/in-season/desk/dfs-core/3' },
-  { kind: 'the-line', title: 'The Line', headline: 'Where the total and the projections disagree',
-    dek: 'Three games the book sees differently.', week: 3, publishedAt: AGO(52),
-    url: '/in-season/desk/the-line/3', components: [{ n: 1, player: 'Cam Ward', headline: 'f' }] },
-  { kind: 'trade-desk', title: 'Trade Desk', headline: 'Sell the running back before Sunday',
-    dek: 'His price peaks this week.', week: 3, publishedAt: AGO(60),
-    url: '/in-season/desk/trade-desk/3', components: [{ n: 1, player: 'James Cook', headline: 'g' }] },
-  { kind: 'injury-read', title: 'Injury Read', headline: 'What the Wednesday report actually changes',
-    week: 3, publishedAt: AGO(70), url: '/in-season/desk/injury-read/3' },
-  { kind: 'kickers', title: 'Kickers & Defenses', headline: 'Streaming picks off the implied totals',
-    week: 3, publishedAt: AGO(80), url: '/in-season/desk/kickers/3' }
+    week: 3, publishedAt: AGO(40), url: '/in-season/desk/start-sit/3' }
 ]};
 // What /api/content would hand back: the same story five times over, in draft.
-// Nothing on the cover may come from here.
+// Nothing on the front may come from here.
 const ARCHIVE_POISON = { ok: true, pieces: [1, 2, 3, 4, 5].map(v => ({
   kind: 'weekend-preview', title: 'Weekend Preview', status: 'held', version: v,
-  headline: 'HELD DRAFT ' + v + ' — must never reach the cover',
-  dek: 'A draft the fact check stopped.', week: 3, publishedAt: FRESH,
-  url: '/in-season/desk/weekend-preview/3'
+  headline: 'HELD DRAFT ' + v + ' — must never reach the front',
+  week: 3, publishedAt: NOW, url: '/in-season/desk/weekend-preview/3'
 })) };
 const SEASON = { ok: true, phase: 'regular', phaseLabel: 'Regular season',
-  week: { label: 'Week 3', status: 'upcoming', firstKickoff: Date.UTC(2026, 8, 17, 20, 15) },
-  counts: { inProgress: 0 } };
+  week: { label: 'Week 3', status: 'upcoming', firstKickoff: Date.UTC(2026, 8, 17, 20, 15) }, counts: { inProgress: 0 } };
 
 // `live` is the answering pass; `dead` refuses every feed the way an outage or
 // a quiet Wednesday does.
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
 let MODE = 'live';
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
@@ -181,12 +142,7 @@ const server = http.createServer((req, res) => {
     let body = { ok: false, error: 'unavailable' };
     if (MODE === 'live') {
       if (u.pathname === '/api/vegas-edge') body = EDGE;
-      else if (u.pathname === '/api/dfs') body = DFS;
-      // The band reads the PUBLISHED feed. /api/content is the archive — it
-      // carries held drafts and one row per version — and the page used to
-      // read it, which put five unpublished drafts of one story on the cover.
-      // Answering it with poison here means a page that goes back to it fails
-      // these assertions loudly instead of quietly showing drafts again.
+      else if (u.pathname === '/api/rankings') body = RANK;
       else if (u.pathname === '/api/newsroom') body = CONTENT;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
@@ -204,878 +160,300 @@ const BASE = `http://127.0.0.1:${server.address().port}/`;
 
 const browser = await chromium.launch({ executablePath: CHROME });
 const errors = [];
-async function open(width, height, at) {
+async function open(width, height) {
   const ctx = await browser.newContext({ viewport: { width, height } });
-  // The frozen clock, set before any page script runs. Only Date.now is
-  // replaced: the page reads timestamps out of its feeds with new Date(value),
-  // which is unaffected, and the rotation is the one thing that asks the clock
-  // what time it is now. `at` steps it, for the section that drives the cover
-  // a turn forward in a real browser.
-  await ctx.addInitScript(t => { Date.now = () => t; }, at == null ? CLOCK : at);
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(`${width}px: ${e.message}`));
-  // The player pictures, answered locally. The hero hands its frame to the
-  // next candidate when every image of a player fails to load, so a run with
-  // no route to the CDNs would test the failure path on every pass. og.png
-  // stands in for any photograph; `imagesDown` makes them all fail instead.
-  await page.route(/espncdn\.com|static\.www\.nfl\.com|wikimedia\.org/, r =>
-    imagesDown || (actionDown && /wikimedia\.org/.test(r.request().url())) ? r.abort() : r.fulfill({ status: 200, contentType: 'image/png', body: STUB_IMG }));
+  await page.route(/espncdn\.com|static\.www\.nfl\.com|wikimedia\.org|googletagmanager\.com/, r => r.abort());
   await page.goto(BASE, { waitUntil: 'networkidle' });
   return { page, ctx };
 }
-const STUB_IMG = fs.readFileSync(path.join(ROOT, 'og.png'));
-let imagesDown = false;
-// Only the game photographs (Wikimedia) fail, so the hero falls back to the
-// ESPN headshot: the case the 2026-09-26 headshot panel is for.
-let actionDown = false;
-// The eleven destinations the two product cards owe, in the order they are
-// written, as routes that exist. Hoisted because two passes need them: the live
-// one checks that each is present, and the refusing one checks that a quiet
-// feed costs the cards their reading and none of these.
-const LANE_WANT = ['/weekly-rankings', '/fantasy#startsit', '/season-long-rankings', '/trade-finder', '/faab',
-                   '/value-coach',
-                   '/dfs#dfPlayWeek', '/dfs#lineup', '/dfs#dfTune', '/dfs#stacks', '/dfs#values'];
-const LANE_LINKS = LANE_WANT.length;
+
 const LOADING = /Reading the board|Reading the market|Reading the desk|Reading the slate|Reading today|Waiting for this week|Loading the current case|Coming soon|Loading…/i;
 const read = page => page.evaluate(() => {
-  const vis = id => { const e = document.getElementById(id); return !!e && e.getClientRects().length > 0; };
+  const vis = e => !!e && e.getClientRects().length > 0;
+  const byId = id => document.getElementById(id);
   const text = el => (el ? el.textContent.replace(/\s+/g, ' ').trim() : null);
+  const px = el => el ? parseFloat(getComputedStyle(el).fontSize) : 0;
+  const h1 = document.querySelector('h1');
+  const find = document.querySelector('form[role="search"]');
+  const input = find && find.querySelector('input[name="q"]');
   return {
-    h1: text(document.querySelector('h1')),
-    // 2026-09-26: the tagline left the chrome for the method section, and the
-    // page's h1 names the site for the outline without being drawn.
+    h1: text(h1), h1Px: px(h1), h1Drawn: vis(h1), h1Weight: h1 ? getComputedStyle(h1).fontWeight : null,
+    h1Centered: h1 ? Math.abs((h1.getBoundingClientRect().left + h1.getBoundingClientRect().right) / 2 - innerWidth / 2) < 4 : false,
+    lede: text(document.querySelector('.hm-lede')), ledePx: px(document.querySelector('.hm-lede')),
+    ledeW: (() => { const e = document.querySelector('.hm-lede'); return e ? e.getBoundingClientRect().width / px(e) : 0; })(),
+    find: !!find && find.getAttribute('action') === '/player' && (find.getAttribute('method') || 'get').toLowerCase() === 'get',
+    findInput: input ? { search: input.getAttribute('data-player-search'), role: input.getAttribute('role'), ph: input.getAttribute('placeholder') || '',
+      h: input.closest('.search-field') ? input.closest('.search-field').getBoundingClientRect().height : 0,
+      radius: input.closest('.search-field') ? parseFloat(getComputedStyle(input.closest('.search-field')).borderTopLeftRadius) : 0 } : null,
+    entries: [...document.querySelectorAll('.hm-entry a')].map(a => a.getAttribute('href')),
+    // The header chrome, shared with every other page.
+    line: text(document.querySelector('.site-line')),
+    lineSpans: [...document.querySelectorAll('.site-line span')].filter(vis).length,
+    nav: [...document.querySelectorAll('header.site .nav a')].map(a => a.getAttribute('href')),
+    cta: (() => { const c = document.querySelector('header.site a.cta'); return c ? { href: c.getAttribute('href'), text: c.textContent.trim(), shown: vis(c) } : null; })(),
+    tabbar: [...document.querySelectorAll('.tabbar a')].filter(vis).map(a => a.getAttribute('href')),
+    toggle: (() => { const b = document.querySelector('header.site .nav-toggle'); return b && vis(b) ? b.getAttribute('aria-controls') : null; })(),
+    ribbonH: (() => { const r = document.querySelector('header.site > .wrap'); return r ? Math.round(r.getBoundingClientRect().height) : 0; })(),
+    // The market figures.
+    market: vis(byId('different')),
+    figs: [...document.querySelectorAll('#diffBody .hm-fig')].map(f => ({
+      k: text(f.querySelector('.k')), v: text(f.querySelector('.v')), s: text(f.querySelector('.s')),
+      good: f.querySelector('.v').classList.contains('good'), vPx: px(f.querySelector('.v')), kPx: px(f.querySelector('.k')),
+      color: getComputedStyle(f.querySelector('.v')).color
+    })),
+    fine: vis(byId('diffFine')) ? text(byId('diffFine')) : null,
+    tag: (() => { const t = document.querySelector('#diffFine .hm-tag'); return t && vis(t) ? { t: t.textContent.trim(), px: px(t) } : null; })(),
+    // The tiles.
+    tiles: [...document.querySelectorAll('.hm-tile')].map(a => ({ href: a.getAttribute('href'), name: text(a.querySelector('.hm-tile-name')),
+      live: vis(a.querySelector('.hm-tile-live')) ? text(a.querySelector('.hm-tile-live')) : null, svg: !!a.querySelector('svg[aria-hidden="true"]'),
+      w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height) })),
+    tileTops: [...new Set([...document.querySelectorAll('.hm-tile')].map(a => Math.round(a.getBoundingClientRect().top)))].length,
+    // The ledger.
+    articles: vis(byId('articles')),
+    rows: [...document.querySelectorAll('#readGrid .ledger-row')].map(r => ({
+      href: r.getAttribute('href'), name: text(r.querySelector('.ledger-name b')), sub: text(r.querySelector('.ledger-name span')),
+      figs: [...r.querySelectorAll('.ledger-fig')].filter(vis).map(f => ({ k: text(f.querySelector('small')), v: text(f.querySelector('b')), kPx: px(f.querySelector('small')), vPx: px(f.querySelector('b')),
+        right: getComputedStyle(f).textAlign }))
+    })),
+    // How it works, and the band.
+    how: vis(byId('how')),
+    howCards: [...document.querySelectorAll('#how .hm-input')].map(c => ({ h: text(c.querySelector('h3')), radius: parseFloat(getComputedStyle(c).borderTopLeftRadius), border: getComputedStyle(c).borderTopWidth })),
     tagline: text(document.querySelector('#how .hm-tagline')),
-    h1Hidden: (() => { const e = document.querySelector('h1'); if (!e) return false; const b = e.getBoundingClientRect(); return b.width <= 1 && b.height <= 1; })(),
-    claim: text(document.querySelector('.hm-claim')),
-    lede: text(document.querySelector('.hm-lede')),
-    claimPx: (() => { const e = document.querySelector('.hm-claim'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
-    ledePx: (() => { const e = document.querySelector('.hm-lede'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
-    cta: [...document.querySelectorAll('.hm-cta a')].map(a => `${a.textContent.trim()}|${a.getAttribute('href')}`),
-    promoIn: (() => { const e = document.querySelector('.hm-promo'); return e ? (e.closest('#how') ? 'how' : e.closest('#heroBand') ? 'hero' : 'other') : null; })(),
-    leftCol: document.querySelectorAll('.hm-front .hm-left').length,
-    // Quick Links: the strip directly under the tagline bar (2026-09-26).
-    quickUnderMast: (() => { const q = document.querySelector('.hm-quick'), m = document.querySelector('.mast'); return !!q && !!m && Math.abs(q.getBoundingClientRect().top - m.getBoundingClientRect().bottom) < 1; })(),
-    // All the dark chrome above the Quick Links strip: one bar since 2026-09-26.
-    chromePx: (() => { const q = document.querySelector('.hm-quick'); return q ? Math.round(q.getBoundingClientRect().top) : 0; })(),
-    // A section link is either wholly on screen or not drawn at all (inside the
-    // closed phone menu); never a word cut off at the screen's edge.
-    navClipped: [...document.querySelectorAll('.mast-jump a')].filter(a => {
-      if (!a.getClientRects().length) return false;
-      const b = a.getBoundingClientRect(), n = a.closest('.mast-jump').getBoundingClientRect(), cs = getComputedStyle(a);
-      const lines = Math.round((b.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) / parseFloat(cs.lineHeight));
-      return b.left < 0 || b.right > innerWidth || b.left < n.left - 0.5 || b.right > n.right + 0.5 || lines > 1;
-    }).map(a => a.textContent.trim()),
-    navOverlap: (() => { const c = document.querySelector('#navSync'); if (!c || !c.getClientRects().length) return []; const cb = c.getBoundingClientRect();
-      return [...document.querySelectorAll('.mast-jump a')].filter(a => a.getClientRects().length).filter(a => { const b = a.getBoundingClientRect(); return b.right > cb.left && b.left < cb.right && b.bottom > cb.top && b.top < cb.bottom; }).map(a => a.textContent.trim()); })(),
-    navCta: (() => { const c = document.querySelector('#navSync'); return c && c.getClientRects().length ? { href: c.getAttribute('href'), text: c.innerText.trim() } : null; })(),
-    quickLinks: [...document.querySelectorAll('.hm-quick a')].map(a => a.getAttribute('href')),
-    // The lead headline is the biggest type in the front (2026-09-26): the
-    // photograph's caption used to outrank it. Every rendered text node in the
-    // front but the headline's own, against the headline. The photograph's
-    // frame is skipped: its initials are the picture's stand-in, not type.
-    leadPx: (() => { const e = document.querySelector('#leadWell .hm-lead h3'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
-    frontMaxPx: (() => {
-      const h = document.querySelector('#leadWell .hm-lead h3'); let max = 0;
-      for (const e of document.querySelectorAll('#hmHero *')) {
-        if (h && (e === h || h.contains(e)) || e.closest('.it-plate-shot') || !e.getClientRects().length) continue;
-        // Visually hidden text (the lead section's clipped heading) is not type
-        // a reader sees.
-        let hid = false; for (let a = e; a && a.id !== 'hmHero'; a = a.parentElement) if (a.getBoundingClientRect().width <= 1) { hid = true; break; }
-        if (hid) continue;
-        if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
-        max = Math.max(max, parseFloat(getComputedStyle(e).fontSize));
-      }
-      return max;
-    })(),
-    captionPx: (() => { const e = document.getElementById('heroEdgeName'); return e && e.getClientRects().length ? parseFloat(getComputedStyle(e).fontSize) : 0; })(),
-    // The type system (2026-09-26): every piece of visible text on the page.
-    // Screen-reader-only text and aria-hidden ornaments are not type a reader
-    // sees, so they are left out.
+    italics: [...document.querySelectorAll('body *')].filter(e => vis(e) && getComputedStyle(e).fontStyle === 'italic' && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())).length,
+    kpi: vis(byId('kpi')),
+    kpis: [...document.querySelectorAll('#kpiGrid > div')].map(d => ({ v: text(d.querySelector('b')), k: text(d.querySelector('span')), good: d.querySelector('b').classList.contains('good'), px: px(d.querySelector('b')) })),
+    kpiBg: byId('kpi') ? getComputedStyle(byId('kpi')).backgroundColor : null,
+    footBg: getComputedStyle(document.querySelector('footer.site')).backgroundColor,
+    // Section order, top to bottom: the page's whole outline.
+    order: [...document.querySelectorAll('section')].filter(vis).map(s => s.id || s.className).filter(Boolean),
+    allSections: [...document.querySelectorAll('section')].map(s => s.id),
+    // The type system: one family, three weights, the scale.
     type: (() => {
       const weights = new Set(), sizes = new Set(), odd = [];
       for (const e of document.querySelectorAll('body *')) {
-        if (/^(SCRIPT|STYLE|NOSCRIPT)$/.test(e.tagName) || !e.getClientRects().length) continue;
+        if (/^(SCRIPT|STYLE|NOSCRIPT|SVG|PATH)$/i.test(e.tagName) || !e.getClientRects().length) continue;
         if (e.closest('[aria-hidden="true"],.sr-only')) continue;
         if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
         const cs = getComputedStyle(e);
         if (cs.visibility === 'hidden') continue;
-        weights.add(cs.fontWeight); sizes.add(cs.fontSize);
+        weights.add(cs.fontWeight); sizes.add(parseFloat(cs.fontSize));
         if (!/^(400|600|700)$/.test(cs.fontWeight) && odd.length < 5) odd.push(e.tagName + '.' + e.className + ':' + cs.fontWeight);
       }
-      return { weights: [...weights], sizes: [...sizes].sort((a, b) => parseFloat(a) - parseFloat(b)), odd,
-               family: getComputedStyle(document.body).fontFamily };
+      return { weights: [...weights], sizes: [...sizes].sort((a, b) => a - b), odd, family: getComputedStyle(document.body).fontFamily };
     })(),
-    quickRows: (() => { const t = [...document.querySelectorAll('.hm-quick li')].map(li => Math.round(li.getBoundingClientRect().top)); return new Set(t).size; })(),
-    clock: vis('hmClock') ? text(document.getElementById('hmClock')) : null,
-    lanes: [...document.querySelectorAll('.hm-lane > h2')].map(e => e.textContent.trim()),
-    laneLinks: [...document.querySelectorAll('.hm-links a')].map(a => a.getAttribute('href')),
-    fnRead: vis('fnRead') ? text(document.getElementById('fnRead')) : null,
-    dfRead: vis('dfRead') ? text(document.getElementById('dfRead')) : null,
-    diff: vis('different'),
-    rows: [...document.querySelectorAll('#diffBody tr')].map(tr => ({
-      who: text(tr.querySelector('.who b')),
-      nums: [...tr.querySelectorAll('.num')].map(td => td.textContent.trim()),
-      act: text(tr.querySelector('.hm-act')),
-      why: text(tr.querySelector('.hm-act-why'))
-    })),
-    fine: vis('diffFine') ? text(document.getElementById('diffFine')) : null,
-    // The hero's picture. Asserted on the PLATE and the caption rather than on
-    // a loaded <img>: the photo hosts are third-party and a runner may or may
-    // not reach them, and the plate falls back to initials either way — which
-    // is exactly the behaviour that must survive.
-    edge: vis('heroEdge'),
-    edgePlate: !!document.querySelector('#heroEdgePlate .it-plate'),
-    edgeK: text(document.getElementById('heroEdgeK')),
-    edgeName: text(document.getElementById('heroEdgeName')),
-    edgeGap: text(document.getElementById('heroEdgeGap')),
-    edgeCols: (() => { const h = document.getElementById('hmHero'); return h ? h.classList.contains('has-edge') : null; })(),
-    // The faces the page paints: one per card reading, one or more per desk
-    // card, and the lookup's own markers in the disagreement table.
-    readPics: document.querySelectorAll('.hm-read.has-pic .it-plate').length,
-    cardFaces: document.querySelectorAll('#readGrid .it-player-face').length,
-    // The lead well joined the cards as the desk's front on 2026-09-21, and it
-    // takes the newest piece — which is the one most likely to carry findings.
-    // Counted separately so a regression can be told apart: faces missing from
-    // the lead is a different bug from faces missing off the cards.
-    leadFaces: document.querySelectorAll('#leadWell .it-player-face').length,
-    leadFocus: document.querySelectorAll('#leadWell [data-player-focus]').length,
-    articles: vis('articles'),
-    cards: [...document.querySelectorAll('#readGrid .hm-read-card')].map(a => a.getAttribute('href')),
-    how5: vis('how'),
-    // Section order, top to bottom, is the specified one.
-    order: [...document.querySelectorAll('section')].map(s => s.id || s.className).filter(Boolean),
-    // The horizontal overflow a phone would scroll.
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     body: document.body.innerText,
-    // Every heading, so the outline can be checked for a hole.
-    headings: [...document.querySelectorAll('h1,h2,h3')].map(h => h.tagName + ':' + h.textContent.trim().slice(0, 40))
+    headings: [...document.querySelectorAll('h1,h2,h3')].map(h => h.tagName + ':' + h.textContent.trim().slice(0, 40)),
+    shadows: [...document.querySelectorAll('main *, #kpi *')].filter(e => vis(e) && getComputedStyle(e).boxShadow !== 'none').map(e => e.className || e.tagName).slice(0, 5),
+    pills: [...document.querySelectorAll('a, button')].filter(e => vis(e) && parseFloat(getComputedStyle(e).borderTopLeftRadius) > 10).map(e => e.className || e.tagName).slice(0, 5)
   };
 });
 
-// ── 1. the thesis, at both widths ───────────────────────────────────────────
-console.log('\nthe hero says the one thing, at every width');
-for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
+// The scale the brief fixes: 12 is the disclosure label alone, and 17 is the
+// ledger's figure (a 13px label over a 17px figure) and nothing else.
+const SCALE = new Set([12, 13, 14, 16, 17, 19, 23, 28, 34, 44, 56, 68]);
+
+// ── 1. the hero, at both widths ─────────────────────────────────────────────
+console.log('\nthe hero, at every width');
+for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
-  // Option B (2026-09-26): the page's one h1 names the site for the outline
-  // and is not drawn; the tagline is a line in the method section, word for word.
-  ok(`${tag}: the h1 names the site`, r.h1 === 'Iron Tuna: fantasy football and DFS, priced off the betting market', r.h1);
-  ok(`${tag}: and is not drawn`, r.h1Hidden === true);
-  ok(`${tag}: the tagline sits in the method section, word for word`,
-     r.tagline === 'Anyone can publish a projection. Vegas has money on theirs.', r.tagline);
-  // ONE bar of chrome above the Quick Links strip, not two (the tagline and
-  // dateline had a bar of their own), and on a phone one 56px row.
-  ok(`${tag}: the dark chrome is one bar`, r.chromePx > 0 && r.chromePx <= (w > 500 ? 72 : 60), r.chromePx + 'px');
-  ok(`${tag}: no section link is cut off or wrapped`, r.navClipped.length === 0, r.navClipped.join(','));
-  ok(`${tag}: and none sits under the button`, r.navOverlap.length === 0, r.navOverlap.join(','));
-  ok(`${tag}: the league button is on screen and goes to the league settings`,
-     !!r.navCta && r.navCta.href === '/my-league#settings' && /My League/.test(r.navCta.text), JSON.stringify(r.navCta));
-  // The conversion, in its own line above the lede and set larger than it. This
-  // is the sentence the page cannot afford a reader to skim past, so it is
-  // asserted separately from the copy around it.
-  ok(`${tag}: the claim line states the conversion`,
-     r.claim === 'Iron Tuna converts sportsbook lines and player props into fantasy point projections.', r.claim);
-  ok(`${tag}: and it is set larger than the lede under it`,
-     r.claimPx > r.ledePx, `${r.claimPx} vs ${r.ledePx}`);
-  ok(`${tag}: the supporting line says what the site does`,
-     r.lede === 'Those projections become weekly rankings, trade values and DFS lineups, scored at your league\u2019s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.', r.lede);
-  ok(`${tag}: two buttons, one per lane`,
-     r.cta.join(' / ') === 'Get Fantasy Advice|/fantasy / Build a DFS Lineup|/dfs', r.cta.join(' / '));
-  // Ken, 2026-09-25: the promo explains the site, and a returning reader does
-  // not need that at the top of every visit. It lives in the method section.
-  // 2026-09-26: the front is two columns (lead, headlines) and Quick Links is
-  // one row under the tagline bar, scrolling sideways on a phone, not wrapping.
-  ok(`${tag}: the site explainer sits in the method section, not the front`, r.promoIn === 'how', String(r.promoIn));
-  ok(`${tag}: the front has no left column`, r.leftCol === 0, String(r.leftCol));
-  ok(`${tag}: Quick Links is the strip directly under the header`, r.quickUnderMast);
-  ok(`${tag}: with its seven links, on one row`,
-     r.quickLinks.join(' ') === '/weekly-rankings /fantasy#startsit /faab /trade-finder /dfs#lineup /vegas-edge /value-coach' && r.quickRows === 1,
-     r.quickLinks.join(' ') + ' rows=' + r.quickRows);
-  ok(`${tag}: the hero is the first section on the page`, r.order[0] === 'heroBand', r.order.slice(0, 2).join(','));
-  // Clearly the biggest, not by a hair: before this the caption's 24px bold
-  // name sat a few px under a 28px headline and out-shouted it.
-  ok(`${tag}: the lead headline is clearly the biggest type in the front`,
-     r.leadPx > 0 && r.leadPx >= 1.3 * r.frontMaxPx, `${r.leadPx}px vs ${r.frontMaxPx}px`);
-  ok(`${tag}: and the photograph's caption is set as a caption`,
-     r.captionPx > 0 && r.captionPx <= 15, `${r.captionPx}px`);
-  // One family, three weights, one scale (2026-09-26).
-  ok(`${tag}: the page is set in Inter`, /^\s*["']?Inter\b/.test(r.type.family), r.type.family);
+  ok(`${tag}: the one h1 is the thesis`, r.h1 === 'Every player, priced off the betting market.', r.h1);
+  ok(`${tag}: it is drawn, centred, at 44 to 68px, 700`, r.h1Drawn && r.h1Centered && r.h1Px >= 44 && r.h1Px <= 68 && r.h1Weight === '700', `${r.h1Px}px ${r.h1Weight} centred=${r.h1Centered}`);
+  ok(`${tag}: one sentence under it, 19px, inside the measure`,
+     /^Sportsbook lines and player props become fantasy point projections/.test(r.lede || '') && r.ledePx === 19 && r.ledeW <= 60, `${r.ledePx}px ${r.ledeW.toFixed(1)}ch`);
+  ok(`${tag}: the search field is a real form posting ?q= to /player`, r.find === true);
+  ok(`${tag}: with the shared lookup on its input and a placeholder that says what to type`,
+     !!r.findInput && r.findInput.search === 'front' && r.findInput.role === 'combobox' && /player/i.test(r.findInput.ph), JSON.stringify(r.findInput));
+  ok(`${tag}: and it is the one pill on the page, 52px tall`, !!r.findInput && r.findInput.h >= 52 && r.findInput.radius > 20 && r.pills.length === 0, JSON.stringify({ h: r.findInput && r.findInput.h, pills: r.pills }));
+  ok(`${tag}: three entry points as text links`, r.entries.join(' ') === '/fantasy /dfs /in-season/desk', r.entries.join(' '));
+  // The chrome is the shared one.
+  ok(`${tag}: the key phrase line is above the ribbon`, /^Every player priced off the betting market first\./.test(r.line || ''), r.line);
+  ok(`${tag}: ${w > 860 ? 'both sentences show' : 'only the first sentence shows'}`, r.lineSpans === (w > 860 ? 2 : 1), String(r.lineSpans));
+  ok(`${tag}: the ribbon is ${w > 860 ? 60 : 56}px`, r.ribbonH === (w > 860 ? 60 : 56), r.ribbonH + 'px');
+  ok(`${tag}: the nav is the shared five`, r.nav.join(',') === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/player', r.nav.join(','));
+  if (w > 860) {
+    ok(`${tag}: the one header button customizes the league`, !!r.cta && r.cta.shown && r.cta.href === '/my-league#settings' && r.cta.text === 'Customize My League', JSON.stringify(r.cta));
+    ok(`${tag}: no tab bar`, r.tabbar.length === 0);
+  } else {
+    ok(`${tag}: the top bar is the logo and Menu`, r.toggle === 'sitenav' && !!r.cta && !r.cta.shown, JSON.stringify({ toggle: r.toggle, cta: r.cta }));
+    ok(`${tag}: the bottom tab bar has four tabs, the league form among them`, r.tabbar.length === 4 && r.tabbar.includes('/my-league#settings'), r.tabbar.join(','));
+  }
+  ok(`${tag}: the page is set in Geist`, /^\s*["']?Geist\b/.test(r.type.family), r.type.family);
   ok(`${tag}: every line of text is at 400, 600 or 700`, r.type.odd.length === 0, r.type.odd.join(', '));
-  ok(`${tag}: and the page uses no more than 12 type sizes`, r.type.sizes.length <= 12, r.type.sizes.join(' '));
+  ok(`${tag}: every size is on the scale`, r.type.sizes.every(s => SCALE.has(Math.round(s))), r.type.sizes.join(' '));
+  ok(`${tag}: nothing is italic`, r.italics === 0, String(r.italics));
+  ok(`${tag}: nothing casts a shadow`, r.shadows.length === 0, r.shadows.join(','));
   ok(`${tag}: the page does not scroll sideways`, r.overflow === 0, String(r.overflow));
-  // The one heading level that must not be skipped: h1 then h2s.
   ok(`${tag}: there is exactly one h1`, r.headings.filter(x => x.startsWith('H1:')).length === 1);
   await ctx.close();
 }
 
-// ── 2. the six sections, in the order the spec names ────────────────────────
-// Five until 2026-09-21, when the lead story took the slot directly under the
-// hero. It is a section, not an aside: it is the desk's front, the first thing
-// on the page, and the order below is the whole outline — a seventh section
-// appearing anywhere still fails here.
-console.log('\nsix sections, in order, and nothing else');
+// ── 2. the outline ──────────────────────────────────────────────────────────
+console.log('\nfive sections, in order, and nothing else');
 {
-  const { page, ctx } = await open(1280, 900);
+  const { page, ctx } = await open(1440, 900);
   const r = await read(page);
-  ok('hero, lead, cards, disagreements, articles, method',
-     r.order.join(' > ') === 'heroBand > lead > hm-sec > different > articles > how', r.order.join(' > '));
-  ok('the two product cards are named as specified',
-     r.lanes.join(' / ') === 'Season Long Fantasy / DFS', r.lanes.join(' / '));
-  // The five destinations each card owes, as routes that exist.
-  const want = LANE_WANT;
-  ok('the Fantasy card links rankings, start/sit, rest of season, trades, waivers and the coach',
-     want.slice(0, 6).every(h => r.laneLinks.includes(h)), r.laneLinks.slice(0, 6).join(','));
-  ok('the DFS card links contest, lineup, the multi-lineup builder, stacks and values',
-     want.slice(6).every(h => r.laneLinks.includes(h)), r.laneLinks.slice(6).join(','));
-  ok('and nothing else is a card link', r.laneLinks.length === want.length, String(r.laneLinks.length));
-  ok('the method section is on the page', r.how5 === true);
+  ok('hero, tiles, newest, method, band', r.allSections.join(' > ') === 'heroBand > positions > articles > how > kpi', r.allSections.join(' > '));
+  ok('the market figures live inside the hero, not as a sixth section', !r.allSections.includes('different') && !!(await page.$('#heroBand #different')));
+  ok('six tiles, one per position, each linking its weekly board',
+     r.tiles.map(t => t.href).join(' ') === '/weekly-qb-rankings /weekly-rb-rankings /weekly-wr-rankings /weekly-te-rankings /weekly-k-rankings /weekly-dst-rankings', r.tiles.map(t => t.href).join(' '));
+  ok('each tile is portrait, with its own illustration', r.tiles.every(t => t.svg && t.h > t.w), JSON.stringify(r.tiles.map(t => [t.w, t.h])));
+  ok('on one row', r.tileTops === 1, String(r.tileTops));
+  ok('three How-it-works cards, outlined and rounded', r.howCards.length === 3 && r.howCards.every(c => c.radius === 10 && c.border === '1px'), JSON.stringify(r.howCards));
+  ok('the tagline stands in roman under the method head', r.tagline === 'Anyone can publish a projection. Vegas has money on theirs.', r.tagline);
+  ok('the footer is navy', r.footBg === 'rgb(0, 30, 71)', r.footBg);
   await ctx.close();
 }
 
-// ── 3. the live pass: real numbers, and the decision the gap implies ────────
+// ── 3. the live pass ────────────────────────────────────────────────────────
 console.log('\nwith the boards answering');
 {
-  const { page, ctx } = await open(1280, 900);
-  const r = await read(page);
-
-  ok('the week chip names the week off the schedule', /^Week 3\b/.test(r.clock || ''), r.clock);
-  ok('and is one short line, not the old dateline sentence', (r.clock || '').length <= 32 && !/Regular season/.test(r.clock || ''), r.clock);
-
-  // Each card shows ONE real current output.
-  ok('the Fantasy card recommends a real player', /Drake London/.test(r.fnRead || ''), r.fnRead);
-  ok('and states the three numbers behind it',
-     /16\.8/.test(r.fnRead) && /12\.1/.test(r.fnRead) && /15\.2/.test(r.fnRead), r.fnRead);
-  ok('the DFS card shows a real current slate output',
-     /Rome Odunze/.test(r.dfRead || '') && /\$5,400/.test(r.dfRead) && /3\.21/.test(r.dfRead), r.dfRead);
-  // One player, one place: the card's pick is taken out of the table below it.
-  ok('the card’s player is not repeated in the table',
-     !r.rows.some(x => x.who === 'Drake London'), r.rows.map(x => x.who).join(','));
-
-  ok('the disagreement section is shown', r.diff === true);
-  ok('it shows three to five players', r.rows.length >= 3 && r.rows.length <= 5, String(r.rows.length));
-  ok('every row carries all three projections',
-     r.rows.every(x => x.nums.length === 3 && x.nums.every(n => /^\d+\.\d$/.test(n))),
-     JSON.stringify(r.rows.map(x => x.nums)));
-  // The translation the spec asks for: a number turned into an instruction.
-  const ACTIONS = new Set(['Start', 'Sit', 'Upgrade', 'Downgrade', 'Value play', 'Fade']);
-  ok('every row ends in one of the six decisions',
-     r.rows.every(x => ACTIONS.has(x.act)), r.rows.map(x => x.act).join(','));
-  ok('and shows the gap the decision came from',
-     r.rows.every(x => /market [+-]\d+\.\d pts vs consensus/.test(x.why || '')), r.rows.map(x => x.why).join(' / '));
-  // The four rules the mapping encodes, each pinned to a row of the fixture.
-  const by = n => r.rows.find(x => x.who === n);
-  ok('a strong buy on a startable player is a Start', by('Cam Ward') && by('Cam Ward').act === 'Start');
-  ok('a strong buy on a player outside the starting window is a Value play',
-     by('Tank Bigsby') && by('Tank Bigsby').act === 'Value play');
-  ok('a strong fade on a player you would be starting is a Sit',
-     by('Derrick Henry') && by('Derrick Henry').act === 'Sit');
-  ok('a strong fade on a bench player is a Fade', by('Blake Corum') && by('Blake Corum').act === 'Fade');
-  ok('a lean the market likes is an Upgrade', by('James Cook') && by('James Cook').act === 'Upgrade');
-  // The two rows that must never appear.
-  ok('a player the market agrees about is not a disagreement',
-     !r.rows.some(x => x.who === 'Agreeable Wideout'));
-  ok('a row missing a projection is dropped, not printed with a dash',
-     !r.rows.some(x => x.who === 'Holey Wideout') && !r.rows.some(x => x.nums.includes('—')));
-  ok('the table says what scoring the numbers are at',
-     /default scoring/.test(r.fine || '') && /Week 3/.test(r.fine || ''), r.fine);
-
-  ok('the articles section is shown', r.articles === true);
-  ok('it is a SMALL group — three at a time', r.cards.length === 3, String(r.cards.length));
-  ok('every card has a real destination',
-     r.cards.every(h => /^\/in-season\/desk\//.test(h)), r.cards.join(','));
-  // THE ARCHIVE IS NOT THE COVER. Held drafts are served at /api/content in
-  // this harness; a card carrying one means the page read the archive again.
-  ok('no held draft reaches the cover', !/HELD DRAFT/.test(r.body),
-     (r.body.match(/HELD DRAFT \d/) || [''])[0]);
-  ok('and no story appears on the cover twice',
-     new Set(r.cards).size === r.cards.length, r.cards.join(','));
-
-  // ── the hero's picture ────────────────────────────────────────────────
-  // The page had no photograph of a football player on it at all. It has one
-  // now, and who it is comes off a feed rather than a choice: the player the
-  // desk's newest piece is about, else the widest market gap on the board.
-  ok('the hero carries a picture of a player', r.edge === true && r.edgePlate === true);
-  ok('it is the desk’s current subject when the desk names one',
-     r.edgeName === 'Puka Nacua', r.edgeName);
-  ok('and it says that is what it is', /desk/i.test(r.edgeK || ''), r.edgeK);
-  ok('captioned with why he is pictured, in the desk’s own words',
-     r.edgeGap === 'Three lineups the market moved overnight', r.edgeGap);
-  ok('the second hero column exists only once there is a picture in it', r.edgeCols === true);
-
-  // The faces on the two card readings and on the desk's cards.
-  ok('each card’s one reading carries the face of the player it names', r.readPics === 2, String(r.readPics));
-  // THE SUBJECT OF THE HEADLINE, not the piece's whole cast (2026-09-21): a
-  // JAX-at-DEN recap headlined on a Jaguar was drawn with the three Broncos
-  // its findings open on. A piece whose headline names none of its cast still
-  // falls back to the cast, which is what both fixture pieces do, so the
-  // counts below are the same as they were before the lead was split out —
-  // they have just moved from three cards to a lead plus two.
-  ok('the desk’s front carries the faces its findings name',
-     r.leadFaces + r.cardFaces >= 3, r.leadFaces + ' lead + ' + r.cardFaces + ' cards');
-  ok('the lead is one of them, and is stamped with its own subject',
-     r.leadFaces >= 1 && r.leadFocus >= 1, r.leadFaces + '/' + r.leadFocus);
-
-  ok('and no loading copy survives anywhere on the page', !LOADING.test(r.body),
-     (r.body.match(LOADING) || [''])[0]);
-  await ctx.close();
-}
-
-// ── 3b. the hero's picture with no desk subject ────────────────────────────
-// 2026-09-26: the photograph, its caption and the lead story read as one unit,
-// so the picture is the LEAD's own subject or nothing. It used to fall back to
-// an older story's player, or to a gap off the board, and put him over a lead
-// about somebody else (Davante Adams over a kickers-and-defenses lead).
-console.log('\nwith the lead naming nobody');
-{
-  const full = CONTENT.pieces;
-  CONTENT.pieces = full.map(p => ({ ...p, components: undefined }));
-  const { page, ctx } = await open(1280, 900);
-  const r = await read(page);
-  ok('no picture over a lead that names nobody', r.edge === false, String(r.edge));
-  ok('and the lead still leads, taking the column',
-     await page.evaluate(() => !!document.querySelector('#leadWell .hm-lead h3')));
-  ok('a piece with no findings still gets a card, just no faces on it',
-     r.cards.length === 3 && r.cardFaces === 0 && r.leadFaces === 0,
-     r.cards.length + '/' + r.cardFaces + '/' + r.leadFaces);
-  CONTENT.pieces = full;
-  await ctx.close();
-}
-{
-  // The case from the live front: the newest story names nobody, a story
-  // behind it names a player with a face on file. Since 2026-09-27 the lead is
-  // always a story with a picture, so THAT story leads, with its own player,
-  // and the newest one goes to the rail; the picture never sits over a lead
-  // about somebody else.
-  const full = CONTENT.pieces;
-  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, components: undefined } : p);
-  const { page, ctx } = await open(1280, 900);
-  const r = await read(page);
-  const lead = await page.evaluate(() => (document.querySelector('#leadWell .hm-lead h3') || {}).textContent || '');
-  const railHas = await page.evaluate(() => [...document.querySelectorAll('#leadWell .hm-rail li')].filter(l => l.getClientRects().length).map(l => l.querySelector('h3').textContent.trim()));
-  ok('a newest story with no picture gives the lead to the newest one with a picture',
-     /Who inherits the carries in Baltimore/.test(lead) && r.edge === true && r.edgeName === 'Derrick Henry', `${lead} | ${r.edge} ${r.edgeName}`);
-  ok('and the newest story is still on the front, in the rail', railHas.includes('Three lineups the market moved overnight'), railHas.join(' | '));
-  CONTENT.pieces = full;
-  await ctx.close();
-}
-{
-  // The lead is never about kickers or defenses, even when it is the newest
-  // story and names a player with a photograph.
-  const full = CONTENT.pieces;
-  CONTENT.pieces = [{ kind: 'kickers', title: 'Kickers & Defenses', headline: 'Stream these defenses off the implied totals',
-    dek: 'Three units the book likes.', week: 3, publishedAt: FRESH + 60 * 1000, url: '/in-season/desk/kickers-defenses/3',
-    components: [{ n: 1, player: 'Puka Nacua', headline: 'k' }] }].concat(full);
-  const { page, ctx } = await open(1280, 900);
-  const r = await read(page);
-  const lead = await page.evaluate(() => (document.querySelector('#leadWell .hm-lead h3') || {}).textContent || '');
-  ok('a kickers-and-defenses story never leads, even when it is the newest',
-     /Three lineups the market moved overnight/.test(lead) && r.edge === true, `${lead} | ${r.edge}`);
-  CONTENT.pieces = full;
-  await ctx.close();
-}
-{
-  // With the player lookup unreachable the desk still paints, after its 3s
-  // wait, led by the newest story that is not about kickers or defenses.
-  const full = CONTENT.pieces;
-  CONTENT.pieces = [{ kind: 'kickers', title: 'Kickers & Defenses', headline: 'Stream these defenses off the implied totals',
-    week: 3, publishedAt: FRESH + 60 * 1000, url: '/in-season/desk/kickers-defenses/3' }].concat(full);
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  await ctx.addInitScript(t => { Date.now = () => t; }, CLOCK);
-  await ctx.route(/player-search\.js/, r => r.abort());
-  const page = await ctx.newPage();
-  await page.goto(BASE, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(3500);
-  const lead = await page.evaluate(() => (document.querySelector('#leadWell .hm-lead h3') || {}).textContent || '');
-  ok('with no player lookup the desk still paints, and still not a kickers lead',
-     /Three lineups the market moved overnight/.test(lead), lead || '(no lead)');
-  CONTENT.pieces = full;
-  await ctx.close();
-}
-{
-  // Every third story on the rail carries the picture: slot 3 does, the others
-  // do not, and when slot 3's story has no face on file the next one that has
-  // one moves up into it.
-  const { page, ctx } = await open(1280, 900);
-  await page.waitForTimeout(400);
-  const rail = await page.evaluate(() => [...document.querySelectorAll('#leadWell .hm-rail li')].filter(l => l.getClientRects().length).map(l => {
-    const f = l.querySelector('.it-story-focus'), img = l.querySelector('.it-player-face img');
-    return { h: l.querySelector('h3 a').textContent.trim(), pic: !!(f && f.getClientRects().length && img && img.getClientRects().length) };
-  }));
-  ok('rail story 3 carries a picture and the others do not',
-     rail.length === 5 && rail.map(x => x.pic).join(',') === 'false,false,true,false,false', JSON.stringify(rail));
-  ok('the story with a face moved up into slot 3', rail[2] && rail[2].h === 'Four adds the market already priced in', rail[2] && rail[2].h);
-  await ctx.close();
-}
-
-// ── 3c. the hero's picture with no lead at all ────────────────────────────
-// With the newsroom down there is no lead for a picture to contradict, and the
-// board's gap still gives the front a player — never the one the Fantasy card
-// already recommends, because the same man photographed twice above the fold
-// is the page saying it once and looking like it said it twice.
-console.log('\nwith no lead story');
-{
-  const full = CONTENT.pieces, okFlag = CONTENT.ok;
-  CONTENT.ok = false; CONTENT.pieces = [];
-  const { page, ctx } = await open(1280, 900);
-  const r = await read(page);
-  ok('the hero still carries a picture', r.edge === true && r.edgePlate === true);
-  // One of the widest gaps, taking its turn — the first of them at turn 0.
-  ok('it is a gap off the top of the board', r.edgeName === 'Cam Ward', r.edgeName);
-  ok('and it says so', /market gap/i.test(r.edgeK || ''), r.edgeK);
-  ok('but it no longer claims to be the widest, because it takes turns',
-     !/widest/i.test(r.edgeK || ''), r.edgeK);
-  ok('captioned with the two numbers and the gap between them',
-     /19\.9/.test(r.edgeGap || '') && /15\.2/.test(r.edgeGap || '') && /\+4\.7/.test(r.edgeGap || ''), r.edgeGap);
-  ok('never the player the Fantasy card already recommends',
-     r.edgeName !== 'Drake London' && /Drake London/.test(r.fnRead || ''), r.edgeName);
-  CONTENT.ok = okFlag; CONTENT.pieces = full;
-  await ctx.close();
-}
-
-// ── 3d. the boast on the lead ─────────────────────────────────────────────
-// "You're welcome." is a label over the headline, not a banner that outranks
-// it: the headline stays the biggest type on the front on the desk's best days.
-console.log('\nwith the lead boasting');
-{
-  const full = CONTENT.pieces;
-  CONTENT.pieces = full.map((p, i) => i === 0 ? { ...p, headline: 'You\u2019re welcome: ' + p.headline } : p);
-  const { page, ctx } = await open(1280, 900);
-  const r = await read(page);
-  const boast = await page.evaluate(() => { const e = document.querySelector('#leadWell .hm-lead .boast'); return e ? parseFloat(getComputedStyle(e).fontSize) : 0; });
-  ok('the boast is shown', boast > 0);
-  ok('and the headline is still clearly the biggest type in the front',
-     r.leadPx >= 1.3 * r.frontMaxPx && r.leadPx >= 1.3 * boast, `${r.leadPx}px vs ${r.frontMaxPx}px, boast ${boast}px`);
-  CONTENT.pieces = full;
-  await ctx.close();
-}
-
-// ── 3b2. the face and the sentence under it ────────────────────────────────
-// THE HERO RAN ONE PLAYER'S PHOTOGRAPH OVER ANOTHER PLAYER'S NEWS. The desk
-// card took the subject of the piece's FIRST finding and printed the piece's
-// HEADLINE under him — two picks off one row with nothing tying them together.
-// Reported on 2026-09-21: Nate Adkins's photograph, captioned "Parker
-// Washington's 43% target share after Week 2 makes him the clearest roster add
-// of the week". Both real, and about different men.
-console.log('\nwith a headline about the piece\u2019s second finding');
-{
-  const full = CONTENT.pieces;
-  const WAIVERS = { kind: 'waiver-wire', title: 'Waiver Wire', week: 3, publishedAt: FRESH,
-    headline: 'Calvin Ridley\u2019s 43% target share after Week 2 makes him the clearest roster add of the week',
-    dek: 'The Tennessee routes are not going back.',
-    url: '/in-season/desk/waiver-wire/3', byline: 'Iron Tuna desk',
-    components: [
-      { n: 1, player: 'Courtland Sutton', headline: 'Courtland Sutton is the Denver X receiver now' },
-      { n: 2, player: 'Calvin Ridley', headline: 'Calvin Ridley ran a route on 43% of the dropbacks' } ] };
-  CONTENT.pieces = [WAIVERS, ...full];
-  const { page, ctx } = await open(1280, 900);
-  const r = await read(page);
-  ok('the hero carries a picture', r.edge === true && r.edgePlate === true);
-  ok('it is the player the headline is about', r.edgeName === 'Calvin Ridley', r.edgeName);
-  ok('and the caption under him is that headline', r.edgeGap === WAIVERS.headline, r.edgeGap);
-  // The assertion the bug would fail: the man in the frame and the man in the
-  // sentence are the same man.
-  ok('the face and the sentence are about the same man',
-     !r.edgeGap.includes('Courtland Sutton') && r.edgeName !== 'Courtland Sutton',
-     r.edgeName + ' / ' + r.edgeGap);
-  CONTENT.pieces = full;
-  await ctx.close();
-}
-
-// ── 3c. the two card readings take turns as well ───────────────────────────
-// THE THIRD AND FOURTH PATHS ONTO THE COVER. §88 enumerated two and fixed both;
-// the readings under them printed the top row of a board that barely moves
-// inside a week, so the cover changed hourly above a Fantasy call and a DFS
-// value that did not change at all. tools/test-newsroom.mjs drives the picker
-// itself turn by turn; this is the same rule in a real browser, on the page,
-// with the captions attached.
-console.log('\nthe card readings take turns too');
-{
-  const at = async (t) => { const { page, ctx } = await open(1280, 900, t); const r = await read(page); await ctx.close(); return r; };
-  const now = await at(CLOCK);
-  const later = await at(CLOCK + TURN_MS);
-  const who = t => (t || '').split(' ').slice(0, 2).join(' ');
-
-  ok('the Fantasy card names a different player a turn later',
-     who(now.fnRead) !== who(later.fnRead), who(now.fnRead) + ' / ' + who(later.fnRead));
-  ok('and it is still one of the week\u2019s buys', /Cam Ward/.test(later.fnRead || ''), later.fnRead);
-  ok('the DFS card names a different player a turn later',
-     who(now.dfRead) !== who(later.dfRead), who(now.dfRead) + ' / ' + who(later.dfRead));
-
-  // A superlative is the leader's alone. Rotated off the top of its board, a
-  // caption claiming the top of the board would simply be false.
-  ok('the leader is called the best value on the slate',
-     /Best market value/.test(now.dfRead || '') && /Rome Odunze/.test(now.dfRead || ''), now.dfRead);
-  ok('and a runner-up is called a value play instead',
-     /Market value play/.test(later.dfRead || '') && !/Best/.test(later.dfRead || ''), later.dfRead);
-  ok('a slate row the page cannot state in full is never rotated onto',
-     !/Priceless Receiver/.test(now.body + later.body));
-
-  // Off the clock and nothing else: two readers at one moment see one page,
-  // and a reader who reloads is not handed a shuffle.
-  const again = await at(CLOCK);
-  ok('two readings at the same hour agree',
-     again.fnRead === now.fnRead && again.dfRead === now.dfRead && again.edgeName === now.edgeName);
-}
-
-// ── 3f. the widths in between ──────────────────────────────────────────────
-// The full bar needs about 900px. At 780px, before the menu breakpoint moved to
-// 960px, "How It Works" wrapped and the button sat on top of "Search".
-console.log('\nthe header between phone and desk');
-for (const w of [780, 960, 1024]) {
-  const { page, ctx } = await open(w, 800);
-  const r = await read(page);
-  ok(`${w}px: no section link is cut off, wrapped or under the button`,
-     r.navClipped.length === 0 && r.navOverlap.length === 0, r.navClipped.concat(r.navOverlap).join(','));
-  ok(`${w}px: the chrome is one bar`, r.chromePx > 0 && r.chromePx <= 72, r.chromePx + 'px');
-  await ctx.close();
-}
-
-// ── 3g. the photography (2026-09-26) ───────────────────────────────────────
-// The hero's credit is under the photograph, not on it, word for word; the
-// frame is 16:9 on a desk and 4:3 on a phone; the image is not lazy and its
-// alt names the player, position and team.
-const photo = page => page.evaluate(() => {
-  const img = document.querySelector('#heroEdge .it-plate-shot img'), shot = document.querySelector('#heroEdge .it-plate-shot');
-  const cred = document.getElementById('heroEdgeCredit');
-  const box = e => { if (!e || !e.getClientRects().length) return null; const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom, w: b.width, h: b.height }; };
-  const ib = box(img), cb = box(cred), sb = box(shot);
-  const p = window.ITPlayerSearch && ITPlayerSearch.resolve('Puka Nacua'), a = p && window.ITActionShots && ITActionShots[p.k];
-  return {
-    fig: (document.querySelector('#heroEdge .it-plate') || {}).className || '',
-    overlap: !!(ib && cb && cb.l < ib.r && cb.r > ib.l && cb.t < ib.b && cb.b > ib.t),
-    onPhoto: !!document.querySelector('#heroEdge .it-plate .it-art-credit'),
-    credit: cred ? cred.textContent.replace(/\s+/g, ' ').trim() : '',
-    links: cred ? [...cred.querySelectorAll('a')].map(x => x.getAttribute('href')) : [],
-    want: a ? { by: a.a || 'Wikimedia Commons', lic: a.l || '', hrefs: [a.s || a.u].concat(a.l ? [a.lu || a.s || a.u] : []) } : null,
-    ratio: sb ? sb.w / sb.h : 0,
-    shotH: sb ? Math.round(sb.h) : 0,
-    lazy: img ? img.loading === 'lazy' : null,
-    priority: img ? img.getAttribute('fetchpriority') : null,
-    alt: img ? img.alt : null,
-    panel: (() => { const e = document.querySelector('#heroEdge .he-panel'); return e && e.getClientRects().length ? e.textContent.trim() : null; })(),
-    captionName: (() => { const e = document.getElementById('heroEdgeName'); return !!e && e.getClientRects().length > 0; })()
-  };
-});
-console.log('\nthe photography');
-for (const [w, want, tag] of [[1280, 16 / 9, 'desktop'], [390, 4 / 3, 'phone']]) {
-  const { page, ctx } = await open(w, 900);
-  await page.waitForTimeout(300);
-  const r = await photo(page);
-  ok(`${tag}: the credit is not on the photograph`, !r.overlap && !r.onPhoto, JSON.stringify({ overlap: r.overlap, onPhoto: r.onPhoto }));
-  ok(`${tag}: and it is the license's credit, word for word, with its links`,
-     !!r.want && r.credit === 'Photo: ' + r.want.by + (r.want.lic ? ', ' + r.want.lic : '') + ', via Wikimedia Commons' + (r.want.by !== 'Wikimedia Commons' ? '; cropped to fit.' : '.')
-       && r.links.join(' ') === r.want.hrefs.join(' '), r.credit + ' | ' + r.links.join(' '));
-  ok(`${tag}: the frame is ${w > 500 ? '16:9' : '4:3'}`, Math.abs(r.ratio - want) / want < 0.01, r.ratio.toFixed(3));
-  ok(`${tag}: the hero image is not lazy, and its alt names him, his position and team`,
-     r.lazy === false && r.alt === 'Puka Nacua, WR, LAR', `${r.lazy} ${r.alt}`);
-  ok(`${tag}: and it is fetched at high priority`, r.priority === 'high', String(r.priority));
-  await ctx.close();
-}
-{
-  // No game photograph (2026-10-06): the hero runs an action shot or nothing.
-  // The ESPN headshot is up, and it must not stand in for the photograph.
-  actionDown = true;
-  const { page, ctx } = await open(1280, 900);
-  await page.waitForTimeout(300);
-  const r = await read(page);
-  ok('with the game photograph failing, no headshot stands in: the hero is hidden', r.edge === false, JSON.stringify({ edge: r.edge, name: r.edgeName }));
-  ok('and the lead story still leads', await page.evaluate(() => !!document.querySelector('#leadWell .hm-lead h3')));
-  actionDown = false;
-  await ctx.close();
-}
-{
-  // The lead names nobody, so no photograph: the next two pieces stand under
-  // the lead and leave the rail, the rail shows the ones after, and the left
-  // column runs level with the rail instead of stopping a screen short.
-  const full = CONTENT.pieces;
-  CONTENT.pieces = full.map(p => ({ ...p, components: undefined }));
-  const { page, ctx } = await open(1280, 900);
-  const r = await page.evaluate(() => {
-    const vis = e => e && e.getClientRects().length > 0;
-    const hrefs = [...document.querySelectorAll('#leadWell .hm-lead h3 a, #leadWell .hm-more h3 a, #leadWell .hm-rail li h3 a')].filter(vis).map(a => a.getAttribute('href'));
-    const left = [...document.querySelectorAll('#leadWell .hm-lead, #leadWell .hm-more')].filter(vis).reduce((m, e) => Math.max(m, e.getBoundingClientRect().bottom), 0);
-    const rail = document.querySelector('#leadWell .hm-rail');
-    return { hrefs, more: [...document.querySelectorAll('#leadWell .hm-more h3')].filter(vis).map(h => h.textContent.trim()),
-      left: Math.round(left), rail: rail ? Math.round(rail.getBoundingClientRect().bottom) : 0 };
-  });
-  ok('with no photograph, the next two stories stand under the lead',
-     r.more.join(' | ') === 'Who inherits the carries in Baltimore | Eleven moves after the injury report', r.more.join(' | '));
-  ok('no story is on the front twice', new Set(r.hrefs).size === r.hrefs.length && r.hrefs.length >= 4, r.hrefs.join(' '));
-  ok('and the left column ends level with the rail', Math.abs(r.rail - r.left) <= 48, `left ${r.left} rail ${r.rail}`);
-  CONTENT.pieces = full;
-  await ctx.close();
-}
-{
-  // With a photograph the front is as it was: no secondary stories, and the
-  // rail carries the five after the lead.
-  const { page, ctx } = await open(1280, 900);
-  const r = await page.evaluate(() => ({
-    more: [...document.querySelectorAll('#leadWell .hm-more')].filter(e => e.getClientRects().length).length,
-    rail: [...document.querySelectorAll('#leadWell .hm-rail li')].filter(e => e.getClientRects().length).length }));
-  ok('with a photograph there are no secondary stories, and the rail shows five', r.more === 0 && r.rail === 5, JSON.stringify(r));
-  await ctx.close();
-}
-
-// ── 3h. Top Headlines, and no story twice (2026-09-26) ────────────────────
-// Rail items carry no kicker: the series name starts a quiet meta line with a
-// relative time. Headlines clamp at three lines, share one left edge with or
-// without a thumbnail, and "All articles" sits under the list. The cards below
-// skip every story already on the front, and hide when nothing is left.
-const railRead = page => page.evaluate(() => {
-  const vis = e => e && e.getClientRects().length > 0;
-  const items = [...document.querySelectorAll('#leadWell .hm-rail li')].filter(vis);
-  const all = document.querySelector('#leadWell .hm-rail-all');
-  const last = items[items.length - 1];
-  const stories = [...document.querySelectorAll('#leadWell .hm-lead h3 a, #leadWell .hm-more h3 a, #leadWell .hm-rail li h3 a, #readGrid .hm-read-card')]
-    .filter(vis).map(a => a.getAttribute('href'));
-  return {
-    kickers: items.filter(li => li.querySelector('.t')).length,
-    metas: items.map(li => (li.querySelector('.m') || {}).textContent || ''),
-    lines: items.map(li => { const a = li.querySelector('h3 a'), cs = getComputedStyle(a); return Math.round(a.getBoundingClientRect().height / parseFloat(cs.lineHeight)); }),
-    lefts: [...new Set(items.map(li => Math.round(li.querySelector('h3 a').getBoundingClientRect().left)))],
-    thumbs: items.filter(li => li.querySelector('.it-player-face img')).length,
-    gap: all && last ? Math.round(all.getBoundingClientRect().top - last.getBoundingClientRect().bottom) : null,
-    stories, cards: vis(document.getElementById('articles'))
-  };
-});
-console.log('\nTop Headlines, and no story twice');
-{
-  const { page, ctx } = await open(1280, 900);
-  await page.waitForTimeout(300);
-  const r = await railRead(page);
-  ok('rail items carry no kicker', r.kickers === 0, String(r.kickers));
-  ok('each meta line starts with the series name', r.metas.length === 5 && r.metas.every(m => /^[A-Z][A-Za-z/& ]+ \u00b7 /.test(m)), r.metas.join(' | '));
-  ok('a piece from three hours ago says so', r.metas[0] === 'Opportunity Report \u00b7 3h ago', r.metas[0]);
-  ok('an older piece gives its day', r.metas.some(m => /\u00b7 (Yesterday|[A-Z][a-z]{2} \d{1,2}\/\d{1,2})$/.test(m)), r.metas.join(' | '));
-  ok('no rail headline runs past three lines', r.lines.every(n => n <= 3), r.lines.join(','));
-  ok('headlines share one left edge, thumbnail or not', r.lefts.length === 1 && r.thumbs >= 1 && r.thumbs < 5, `${r.lefts.join(',')} thumbs ${r.thumbs}`);
-  ok('"All articles" sits under the list', r.gap !== null && r.gap >= 0 && r.gap <= 24, String(r.gap));
-  ok('no story is on the page twice', new Set(r.stories).size === r.stories.length && r.cards, r.stories.join(' '));
-  await ctx.close();
-}
-{
-  // Without a photograph the pair moves under the lead and the rail shows the
-  // next four; the cards still repeat none of them.
-  const full = CONTENT.pieces;
-  CONTENT.pieces = full.map(p => ({ ...p, components: undefined }));
-  const { page, ctx } = await open(1280, 900);
-  await page.waitForTimeout(300);
-  const r = await railRead(page);
-  ok('without a photograph, still no story twice', new Set(r.stories).size === r.stories.length && r.metas.length === 4 && r.cards,
-     `${r.metas.length} rail | ${r.stories.join(' ')}`);
-  CONTENT.pieces = full;
-  await ctx.close();
-}
-{
-  // A headline too long for the rail is clamped at three lines, with the whole
-  // of it in the title.
-  const full = CONTENT.pieces, LONG = 'Who inherits the carries in Baltimore now that the backfield is split three ways and the market has not caught up with the snap counts, the red-zone looks or the goal-line work';
-  CONTENT.pieces = full.map((p, i) => i === 1 ? { ...p, headline: LONG } : p);
-  const { page, ctx } = await open(1280, 900);
-  await page.waitForTimeout(300);
-  const c = await page.evaluate(() => { const a = document.querySelector('#leadWell .hm-rail li h3 a'); return { title: a.getAttribute('title'), clamped: a.scrollHeight > a.clientHeight + 2, lines: Math.round(a.getBoundingClientRect().height / parseFloat(getComputedStyle(a).lineHeight)) }; });
-  ok('a long rail headline is clamped at three lines, whole in its title', c.clamped && c.lines === 3 && c.title === LONG, JSON.stringify(c));
-  CONTENT.pieces = full;
-  await ctx.close();
-}
-{
-  // A short feed: the front takes every piece, so the cards section is hidden
-  // rather than repeating the front.
-  const full = CONTENT.pieces;
-  CONTENT.pieces = full.slice(0, 6);
-  const { page, ctx } = await open(1280, 900);
-  await page.waitForTimeout(300);
-  const r = await railRead(page);
-  ok('with a short feed the cards are hidden, not repeated', r.cards === false && new Set(r.stories).size === r.stories.length, `${r.cards} | ${r.stories.join(' ')}`);
-  CONTENT.pieces = full;
-  await ctx.close();
-}
-
-// ── 3i. below the front, flat (2026-09-27) ────────────────────────────────
-// No plates, no shadows, no corners over 4px; one section head; every
-// section the same distance from the last; a focus ring on every link.
-const below = page => page.evaluate(() => {
-  const vis = e => e && e.getClientRects().length > 0;
-  const zone = [...document.querySelectorAll('.hm-choose, #main, #how, .foot')];
-  const shadows = [], corners = [];
-  for (const root of zone) for (const e of [root, ...root.querySelectorAll('*')]) {
-    if (!vis(e)) continue;
-    const cs = getComputedStyle(e);
-    if (cs.boxShadow && cs.boxShadow !== 'none') shadows.push(e.className || e.tagName);
-  }
-  for (const e of document.querySelectorAll('.hm-lanes, .hm-lane, .hm-read, .hm-read-card, .hm-diff-plate, .hm-promo, .hm-input, .hm-how-grid')) {
-    if (!vis(e)) continue;
-    const cs = getComputedStyle(e);
-    if (['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius'].some(k => parseFloat(cs[k]) > 4)) corners.push(e.className);
-  }
-  const bottom = el => [...el.querySelectorAll('*')].filter(vis).reduce((m, e) => Math.max(m, e.getBoundingClientRect().bottom), 0);
-  const top = el => el.getBoundingClientRect().top;
-  const gaps = [
-    ['front', bottom(document.getElementById('hmHero')), top(document.querySelector('.hm-choose-k'))],
-    ['lanes', bottom(document.querySelector('.hm-lanes')), top(document.querySelector('#different .hm-sec-head'))],
-    ['market', bottom(document.getElementById('different')), top(document.querySelector('#articles .hm-sec-head'))],
-    ['desk', bottom(document.getElementById('articles')), top(document.querySelector('#how .hm-promo'))]
-  ].map(([k, b, t]) => [k, Math.round(t - b)]);
-  const heads = [...document.querySelectorAll('#main .hm-sec-head h2, .hm-choose-k, #howHead')].filter(vis).map(h => {
-    const cs = getComputedStyle(h); return { t: h.textContent.trim(), px: cs.fontSize, w: cs.fontWeight, tt: cs.textTransform };
-  });
-  return { shadows, corners, gaps, heads, gapVar: getComputedStyle(document.documentElement).getPropertyValue('--sec-gap').trim() };
-});
-console.log('\nbelow the front, flat');
-for (const [w, tag] of [[1440, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
-  const { page, ctx } = await open(w, 900);
-  await page.waitForTimeout(300);
-  const r = await below(page);
-  ok(`${tag}: nothing below the front casts a shadow`, r.shadows.length === 0, r.shadows.slice(0, 5).join(','));
-  ok(`${tag}: no card below the front rounds past 4px`, r.corners.length === 0, r.corners.join(','));
-  const gs = r.gaps.map(g => g[1]);
-  ok(`${tag}: every section is the same distance from the last`,
-     Math.max(...gs) - Math.min(...gs) <= 1 && Math.abs(gs[0] - parseFloat(r.gapVar)) <= 1, r.gaps.map(g => g.join(' ')).join(', ') + ' | --sec-gap ' + r.gapVar);
-  ok(`${tag}: one section head, 22px bold, sentence case`,
-     r.heads.length >= 4 && r.heads.every(h => h.px === '22px' && h.w === '700' && h.tt === 'none'), JSON.stringify(r.heads));
-  await ctx.close();
-}
-{
-  // Keyboard focus shows a ring on a link in each section, light and dark.
   const { page, ctx } = await open(1440, 900);
-  await page.waitForTimeout(300);
-  await page.keyboard.press('Tab');
-  const rings = [];
-  for (const sel of ['.hm-links a', '#different .hm-sec-head a', '#readGrid a', '#how .hm-btn.primary', '#how .hm-how-more a', '.foot-nav a']) {
-    const r = await page.evaluate(sel => { const e = document.querySelector(sel); if (!e) return null; e.focus(); const cs = getComputedStyle(e);
-      return { sel, style: cs.outlineStyle, width: parseFloat(cs.outlineWidth) }; }, sel);
-    rings.push(r);
-  }
-  ok('keyboard focus shows a ring in every section', rings.every(r => r && r.style !== 'none' && r.width >= 2), JSON.stringify(rings));
-  await ctx.close();
-}
-
-// ── 3e. the phone menu ─────────────────────────────────────────────────────
-// Below 960px the five sections are a panel behind a real button (2026-09-26),
-// not a row that scrolled sideways with its last link cut off at the edge.
-console.log('\nthe phone menu');
-{
-  const { page, ctx } = await open(390, 844);
-  const m = () => page.evaluate(() => {
-    const b = document.querySelector('.mast-menu');
-    const links = [...document.querySelectorAll('.mast-jump a')];
-    return { expanded: b && b.getAttribute('aria-expanded'), controls: b && b.getAttribute('aria-controls'),
-      shown: links.filter(a => { if (!a.getClientRects().length) return false; const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.height >= 44; }).map(a => a.textContent.trim()),
-      focusInPanel: !!document.activeElement && !!document.activeElement.closest('#mastMenu'),
-      focusOnButton: document.activeElement === b,
-      week: (() => { const e = document.getElementById('hmClockM'); return e && e.getClientRects().length ? e.textContent.trim() : null; })() };
-  });
-  let r = await m();
-  ok('closed, it draws none of the links', r.expanded === 'false' && r.shown.length === 0 && r.controls === 'mastMenu', JSON.stringify(r));
-  await page.click('.mast-menu');
-  r = await m();
-  ok('open, it says so and shows all five as full rows',
-     r.expanded === 'true' && r.shown.join('|') === 'Fantasy|DFS|Articles|How It Works|Search', JSON.stringify(r));
-  ok('focus moves into the panel', r.focusInPanel);
-  ok('and the week chip rides at its foot', /^Week 3\b/.test(r.week || ''), r.week);
-  await page.keyboard.press('Escape');
-  r = await m();
-  ok('Escape closes it and hands focus back to the button', r.expanded === 'false' && r.shown.length === 0 && r.focusOnButton, JSON.stringify(r));
-  await page.click('.mast-menu');
-  // A click that lands outside the header, on no link (a real tap at a fixed
-  // point can land on a story and navigate away).
-  await page.evaluate(() => document.querySelector('.hm-front').dispatchEvent(new MouseEvent('click', { bubbles: true })));
-  r = await m();
-  ok('and a tap outside closes it too', r.expanded === 'false' && r.shown.length === 0, JSON.stringify(r));
-  await ctx.close();
-}
-
-// ── 4. the refusing pass: the whole point of the rewrite ────────────────────
-console.log('\nwith every feed refusing');
-MODE = 'dead';
-for (const [w, h, tag] of [[1280, 900, 'desktop'], [390, 844, 'phone']]) {
-  const { page, ctx } = await open(w, h);
   const r = await read(page);
-  ok(`${tag}: the page still has its h1`, r.h1 === 'Iron Tuna: fantasy football and DFS, priced off the betting market');
-  ok(`${tag}: both buttons still work`, r.cta.length === 2);
-  ok(`${tag}: the dateline is absent rather than loading`, r.clock === null);
-  // LANE_LINKS is the count the live pass pins by name (six on the Fantasy
-  // card, five on the DFS one). Here it is only the count: the point of this
-  // pass is that a quiet feed costs the cards their READING and not one link.
-  ok(`${tag}: the Fantasy card keeps its links and drops its reading`,
-     r.fnRead === null && r.laneLinks.length === LANE_LINKS, `${r.laneLinks.length} links`);
-  ok(`${tag}: the DFS card too`, r.dfRead === null);
-  ok(`${tag}: the disagreement section is hidden, not empty`, r.diff === false && r.rows.length === 0);
-  ok(`${tag}: the articles section is hidden, not empty`, r.articles === false && r.cards.length === 0);
-  ok(`${tag}: the method and the disclosures are still there`, r.how5 === true);
-  // The picture obeys the same rule as every other band: absent, not a frame
-  // with nothing in it — and the hero goes back to one full-width column so
-  // there is no empty gutter beside the headline either.
-  ok(`${tag}: the hero picture is absent rather than an empty frame`,
-     r.edge === false && r.edgePlate === false && r.edgeCols === false);
-  ok(`${tag}: and the card readings carry no faces`, r.readPics === 0, String(r.readPics));
-  ok(`${tag}: nowhere on the page says it is loading`, !LOADING.test(r.body),
-     (r.body.match(LOADING) || [''])[0]);
-  ok(`${tag}: and it still does not scroll sideways`, r.overflow === 0, String(r.overflow));
+  ok('the market row is shown', r.market === true);
+  ok('with four figures, widest gap first', r.figs.length === 4 && r.figs.map(f => f.v).join(' | ') === '+4.7 pts | +4.7 pts | -4.7 pts | -4.5 pts', r.figs.map(f => f.v).join(' | '));
+  const ACTIONS = new Set(['Start', 'Sit', 'Upgrade', 'Downgrade', 'Value play', 'Fade']);
+  ok('every figure leads with one of the six decisions', r.figs.every(f => ACTIONS.has(f.k.split(' · ')[0])), r.figs.map(f => f.k).join(' / '));
+  const by = n => r.figs.find(f => f.k.includes(n));
+  ok('a strong buy on a startable player is a Start', by('Drake London') && by('Drake London').k.startsWith('Start'));
+  ok('a strong fade on a player you would be starting is a Sit', by('Derrick Henry') && by('Derrick Henry').k.startsWith('Sit'));
+  ok('a strong fade on a bench player is a Fade', by('Blake Corum') && by('Blake Corum').k.startsWith('Fade'));
+  ok('and every figure states the three projections under it',
+     r.figs.every(f => /^Market \d+\.\d · consensus \d+\.\d · Iron Tuna \d+\.\d$/.test(f.s)), r.figs.map(f => f.s).join(' / '));
+  ok('a 13px label over a 28px figure', r.figs.every(f => f.kPx === 13 && f.vPx === 28), JSON.stringify(r.figs.map(f => [f.kPx, f.vPx])));
+  ok('only a positive edge is green, and the negative ones are ink',
+     r.figs.filter(f => f.v.startsWith('+')).every(f => f.good && f.color === 'rgb(10, 106, 76)') && r.figs.filter(f => f.v.startsWith('-')).every(f => !f.good && f.color === 'rgb(17, 20, 24)'),
+     JSON.stringify(r.figs.map(f => [f.v, f.color])));
+  ok('a player the market agrees about is not a figure', !r.figs.some(f => f.k.includes('Agreeable')));
+  ok('a row missing a projection is dropped, not printed with a dash', !r.figs.some(f => f.k.includes('Holey')) && !r.figs.some(f => /—/.test(f.k + f.v + f.s)));
+  ok('the note says the week, the scoring and when the odds were read',
+     /Week 3/.test(r.fine || '') && /default scoring/.test(r.fine || '') && /Odds read .* ET/.test(r.fine || ''), r.fine);
+  ok('under the amber Estimate label, at 12px', !!r.tag && r.tag.t === 'Estimate' && r.tag.px === 12, JSON.stringify(r.tag));
+
+  ok('every tile carries its live line off the board',
+     r.tiles.map(t => t.live).join(' | ') === '34 ranked · 22 priced | 72 ranked · 48 priced | 98 ranked · 65 priced | 42 ranked · 28 priced | 32 ranked · 21 priced | 32 ranked · 21 priced',
+     r.tiles.map(t => t.live).join(' | '));
+
+  ok('the newest ledger is shown', r.articles === true);
+  ok('six rows, newest first', r.rows.length === 6 && r.rows.map(x => x.href).join(' ') === '/in-season/desk/final-read/3 /in-season/desk/opportunity-report/3 /in-season/desk/rankings-update/3 /in-season/desk/scorecard/3 /in-season/desk/weekend-game-plan/3 /in-season/desk/waiver-watch/3',
+     r.rows.map(x => x.href).join(' '));
+  ok('a row without a destination or a headline is not a row', !r.rows.some(x => /No destination|Blank/.test(x.name + x.sub)));
+  ok('the boast comes off the headline in a ledger row', r.rows[3] && r.rows[3].name === 'the total moved three points in a day', r.rows[3] && r.rows[3].name);
+  ok('each row is the headline over the series, then three figure columns',
+     r.rows.every(x => x.figs.length === 3 && x.figs.map(f => f.k).join(',') === 'Published,Week,Players named'), JSON.stringify(r.rows[0] && r.rows[0].figs));
+  ok('each figure is a 13px label over a 17px figure, right-aligned',
+     r.rows.every(x => x.figs.every(f => f.kPx === 13 && f.vPx === 17 && f.right === 'right')), JSON.stringify(r.rows[0] && r.rows[0].figs));
+  ok('a piece from minutes ago says so, and one from yesterday too',
+     r.rows[0].figs[0].v === '6m ago' && r.rows[4].figs[0].v === 'Yesterday', r.rows.map(x => x.figs[0].v).join(' / '));
+  ok('and the players a piece names are counted', r.rows[0].figs[2].v === '2' && r.rows[2].figs[2].v === '0', r.rows.map(x => x.figs[2].v).join(','));
+  ok('no held draft reaches the front', !/HELD DRAFT/.test(r.body), (r.body.match(/HELD DRAFT \d/) || [''])[0]);
+  ok('and no story is on the front twice', new Set(r.rows.map(x => x.href)).size === r.rows.length);
+
+  ok('the KPI band is shown, navy, with white 44px figures', r.kpi === true && r.kpiBg === 'rgb(0, 30, 71)' && r.kpis.every(k => k.px === 44), JSON.stringify({ bg: r.kpiBg, px: r.kpis.map(k => k.px) }));
+  ok('its figures come off the board and the desk',
+     r.kpis.map(k => k.v + ' ' + k.k).join(' | ') === '310 Players ranked this week (Week 3) | 205 Priced off a market line | 7 Pieces the desk published',
+     r.kpis.map(k => k.v + ' ' + k.k).join(' | '));
+  ok('only the market-priced count is mint', r.kpis.filter(k => k.good).map(k => k.k).join() === 'Priced off a market line');
+  ok('and no loading copy survives anywhere on the page', !LOADING.test(r.body), (r.body.match(LOADING) || [''])[0]);
   await ctx.close();
 }
 
-// ── 5. the sixth decision, on a board with room for it ─────────────────────
-// The table is capped at five rows and the fixture above spends all five on the
-// stronger calls, so the downgrade gets a board of its own rather than a sixth
-// row that would silently fall off the bottom.
-console.log('\nwith a board of leans');
+// ── 3b. a short board ───────────────────────────────────────────────────────
+console.log('\nwith a board too short to print');
 {
-  MODE = 'live';   // section 4 left every feed refusing
   const full = EDGE.vsExperts;
-  EDGE.vsExperts = { buys: [full.buys[0], full.buys[3]], fades: [
-    mk('Dallas Goedert', 'TE', 'PHI', 'DAL', 10.9, 9.2, 9.8, 'VEGAS LEANS LOWER', 10),
-    mk('Chuba Hubbard', 'RB', 'CAR', 'ATL', 12.4, 10.9, 11.4, 'VEGAS LEANS LOWER', 22),
-    full.fades[0]
-  ]};
-  const { page, ctx } = await open(1280, 900);
+  EDGE.vsExperts = { buys: full.buys.slice(0, 1), fades: full.fades.slice(0, 1) };
+  const { page, ctx } = await open(1440, 900);
   const r = await read(page);
-  const by = n => r.rows.find(x => x.who === n);
-  ok('a lean the market dislikes is a Downgrade',
-     by('Dallas Goedert') && by('Dallas Goedert').act === 'Downgrade',
-     r.rows.map(x => x.who + '=' + x.act).join(', '));
-  ok('and it is still stated as a gap in points',
-     by('Dallas Goedert') && /market -1\.7 pts vs consensus/.test(by('Dallas Goedert').why));
-  EDGE.vsExperts = full;
-  await ctx.close();
-}
-
-// ── 6. fewer than three disagreements is not a section ──────────────────────
-console.log('\nwith only two disagreements on the board');
-{
-  MODE = 'live';
-  const full = EDGE.vsExperts;
-  // One buy for the card, two rows left over — below the three the spec asks for.
-  EDGE.vsExperts = { buys: [full.buys[0], full.buys[1]], fades: [full.fades[0]] };
-  const { page, ctx } = await open(1280, 900);
-  const r = await read(page);
-  ok('the card still recommends a player', /Drake London/.test(r.fnRead || ''), r.fnRead);
-  ok('but the table is hidden rather than short', r.diff === false, String(r.rows.length));
+  ok('two gaps are not a row: the market figures are hidden rather than short', r.market === false && r.figs.length === 0, String(r.figs.length));
   ok('and nothing on the page apologizes for it', !LOADING.test(r.body));
   EDGE.vsExperts = full;
   await ctx.close();
 }
 
-// ── a hero whose pictures will not load ─────────────────────────────────────
-// Ken, 2026-09-25: the cover's biggest frame showed a dark box reading "BJ"
-// (Brian Robinson Jr., whom the lookup knows by name only). A frame holding
-// nothing but initials is the empty band this page is written never to show:
-// when no candidate's picture loads, the hero is hidden instead.
-console.log('\nthe hero, with every player picture failing');
+// ── 3c. the phone ───────────────────────────────────────────────────────────
+console.log('\non a phone');
 {
-  imagesDown = true;
-  const { page, ctx } = await open(1280, 900);
-  await page.waitForTimeout(300);
+  const { page, ctx } = await open(390, 844);
   const r = await read(page);
-  ok('the hero is hidden rather than showing initials in the frame', r.edge === false, JSON.stringify({ edge: r.edge, name: r.edgeName }));
-  ok('and the lead story still leads', await page.evaluate(() => !!document.querySelector('#leadWell .hm-lead h3')));
-  // No initials box in the rail or on the desk's cards: a player with no
-  // photograph gets no thumbnail there (2026-09-26).
-  const boxes = await page.evaluate(() => [...document.querySelectorAll('.hm-rail .it-player-face, .hm-read-card .it-player-face')]
-    .filter(e => e.getClientRects().length && !e.querySelector('img')).map(e => e.textContent.trim()));
-  ok('and no initials box stands in for a thumbnail in the rail or the cards', boxes.length === 0, boxes.join(','));
+  const row = await page.evaluate(() => {
+    const ul = document.querySelector('.hm-tiles'), first = document.querySelector('.hm-tiles li');
+    const cs = getComputedStyle(ul);
+    return { scrolls: cs.overflowX === 'auto' && ul.scrollWidth > ul.clientWidth, left: Math.round(first.getBoundingClientRect().left),
+      ulLeft: Math.round(ul.getBoundingClientRect().left), figsStacked: new Set([...document.querySelectorAll('#diffBody .hm-fig')].map(f => Math.round(f.getBoundingClientRect().left))).size,
+      tab: (() => { const t = document.querySelector('.tabbar'); const b = t.getBoundingClientRect(); return { h: Math.round(b.height), bottom: Math.round(b.bottom), fixed: getComputedStyle(t).position }; })() };
+  });
+  ok('the tile row scrolls sideways, edge to edge, with the first tile on the gutter', row.scrolls && row.ulLeft === 0 && row.left === 16, JSON.stringify(row));
+  ok('the market figures stack, one per row', row.figsStacked === 1 && r.figs.length === 4, String(row.figsStacked));
+  ok('the tab bar is fixed to the foot of the screen, 68px', row.tab.fixed === 'fixed' && row.tab.h === 68 && row.tab.bottom === 844, JSON.stringify(row.tab));
+  ok('the ledger keeps the published figure beside each headline', r.rows.length === 6 && r.rows.every(x => x.figs.length === 1 && x.figs[0].k === 'Published'), JSON.stringify(r.rows[0] && r.rows[0].figs));
+  ok('and the page does not scroll sideways', r.overflow === 0, String(r.overflow));
   await ctx.close();
-  imagesDown = false;
+}
+
+// ── 3d. the phone menu ──────────────────────────────────────────────────────
+console.log('\nthe phone menu');
+{
+  const { page, ctx } = await open(390, 844);
+  const m = () => page.evaluate(() => {
+    const b = document.querySelector('header.site .nav-toggle');
+    const links = [...document.querySelectorAll('header.site .nav a')];
+    return { expanded: b && b.getAttribute('aria-expanded'), controls: b && b.getAttribute('aria-controls'),
+      shown: links.filter(a => { if (!a.getClientRects().length) return false; const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.height >= 44; }).map(a => a.textContent.trim()),
+      focusOnButton: document.activeElement === b };
+  });
+  let r = await m();
+  ok('closed, it draws none of the links', r.expanded === 'false' && r.shown.length === 0 && r.controls === 'sitenav', JSON.stringify(r));
+  await page.click('header.site .nav-toggle');
+  r = await m();
+  ok('open, it says so and shows all five as full rows', r.expanded === 'true' && r.shown.join('|') === 'Fantasy|DFS|Articles|How It Works|Search', JSON.stringify(r));
+  await page.keyboard.press('Escape');
+  r = await m();
+  ok('Escape closes it and hands focus back to the button', r.expanded === 'false' && r.shown.length === 0 && r.focusOnButton, JSON.stringify(r));
+  await page.click('header.site .nav-toggle');
+  await page.evaluate(() => document.querySelector('#how').dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  r = await m();
+  ok('and a tap outside closes it too', r.expanded === 'false' && r.shown.length === 0, JSON.stringify(r));
+  await ctx.close();
+}
+
+// ── 3e. keyboard focus ──────────────────────────────────────────────────────
+console.log('\nkeyboard focus');
+{
+  const { page, ctx } = await open(1440, 900);
+  const rings = [];
+  for (const sel of ['header.site .nav a', '.hm-entry a', '#different .hm-sec-head a', '.hm-tile', '#readGrid a', '#how .hm-how-more a', '.foot-nav a']) {
+    rings.push(await page.evaluate(sel => { const e = document.querySelector(sel); if (!e) return null; e.focus(); const cs = getComputedStyle(e);
+      return { sel, style: cs.outlineStyle, width: parseFloat(cs.outlineWidth) }; }, sel));
+  }
+  ok('a 3px ring shows on a control in every section', rings.every(r => r && r.style !== 'none' && r.width >= 3), JSON.stringify(rings));
+  // The search field takes the input's own focus treatment: the accent border
+  // and a 3px tint ring on the whole field, not an outline on the bare input.
+  const field = await page.evaluate(() => { const i = document.getElementById('hmFind'); i.focus(); const cs = getComputedStyle(i.closest('.search-field'));
+    return { border: cs.borderTopColor, shadow: cs.boxShadow }; });
+  ok('the search field shows the accent border and the tint ring on focus', field.border === 'rgb(11, 79, 108)' && /3px/.test(field.shadow), JSON.stringify(field));
+  await ctx.close();
+}
+
+// ── 4. the refusing pass: the whole point ───────────────────────────────────
+console.log('\nwith every feed refusing');
+MODE = 'dead';
+for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
+  const { page, ctx } = await open(w, h);
+  const r = await read(page);
+  ok(`${tag}: the page still has its h1 and its search field`, r.h1 === 'Every player, priced off the betting market.' && r.find === true);
+  ok(`${tag}: the three entry points still stand`, r.entries.length === 3);
+  ok(`${tag}: the market row is hidden, not empty`, r.market === false && r.figs.length === 0);
+  ok(`${tag}: the tiles stay, without a live line`, r.tiles.length === 6 && r.tiles.every(t => t.live === null), r.tiles.map(t => t.live).join(','));
+  ok(`${tag}: the ledger is hidden, not empty`, r.articles === false && r.rows.length === 0);
+  ok(`${tag}: the method is still there`, r.how === true);
+  ok(`${tag}: the KPI band is hidden rather than a band of blanks`, r.kpi === false && r.kpis.length === 0);
+  ok(`${tag}: nowhere on the page says it is loading`, !LOADING.test(r.body), (r.body.match(LOADING) || [''])[0]);
+  ok(`${tag}: and it still does not scroll sideways`, r.overflow === 0, String(r.overflow));
+  await ctx.close();
 }
 
 ok('no page threw', errors.length === 0, errors.join(' | '));

@@ -14,7 +14,6 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <title>My League: Save Your League and Every Number Reads It | Iron Tuna</title>
 <meta name="description" content="Set your teams, budget and scoring once and every price, rank and projection Iron Tuna publishes is restated in them — on the cheat sheet, in the stories, and across the in-season section.">
 <link rel="canonical" href="https://irontuna.com/my-league">
@@ -33,6 +32,7 @@
 <meta property="og:url" content="https://irontuna.com/my-league">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
 body{overflow-x:hidden}
@@ -89,32 +89,32 @@ p{color:var(--sec);margin:0 0 16px}
    long connect section below reads as step one rather than as the whole ask. */
 .ml-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-5);margin:0 0 var(--space-6)}
 .ml-step{border-top:2px solid var(--line2);padding-top:var(--space-3);display:flex;flex-direction:column;gap:4px}
-.ml-sn{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:var(--fs-2xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
+.ml-sn{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-2xs);font-weight:700;color:var(--teal)}
 .ml-sn i{font-style:normal;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--teal);display:inline-grid;place-items:center;font-size:12.5px;letter-spacing:0}
 .ml-step b{font-size:var(--fs-sm);color:var(--text);line-height:1.35}
 .ml-step span{font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
 /* The platforms as tiles with a status badge, not a row of pills that said
    "(unavailable)" after every name. The tile is the button; the badge says
    whether it syncs, imports through the extension, or is entered by hand. */
-.ml-tiles-h{font-family:var(--font-mono);font-size:var(--fs-2xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:var(--space-5) 0 var(--space-3)}
+.ml-tiles-h{font-size:var(--fs-2xs);font-weight:700;color:var(--muted);margin:var(--space-5) 0 var(--space-3)}
 .ml-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-3);margin:0}
 .ml-tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:96px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);color:var(--text);font:inherit;text-align:left;cursor:pointer;transition:border-color .12s ease,box-shadow .12s ease}
-.ml-tile:hover{border-color:var(--line2);box-shadow:0 6px 18px rgba(15,23,25,.05)}
-.ml-tile.live{background:rgba(14,124,99,.07);border-color:rgba(14,124,99,.3)}
-.ml-tile.on{border-color:var(--teal);box-shadow:0 0 0 2px rgba(14,124,99,.25)}
-.ml-tile:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.ml-tile:hover{border-color:var(--line2);}
+.ml-tile.live{background:var(--teal-tint);border-color:var(--teal)}
+.ml-tile.on{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal-tint)}
+.ml-tile:focus-visible{outline:3px solid var(--focus,#1d6fd8);outline-offset:2px}
 .ml-tile b{font-size:var(--fs-md);line-height:1.2}
 .ml-tile span{font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
-.ml-badge{margin-top:auto;padding-top:6px;font-size:var(--fs-3xs);font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ml-badge{margin-top:auto;padding-top:6px;font-size:var(--fs-3xs);font-weight:800;color:var(--muted)}
 .ml-badge.up{color:var(--teal)}
 .ml-badge.gold{color:var(--goldink)}
 .ml-badge.off{color:var(--danger)}
-.ml-go{font-size:var(--fs-xs);font-weight:700;color:var(--teal);text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(14,124,99,.35)}
+.ml-go{font-size:var(--fs-xs);font-weight:700;color:var(--teal);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--teal)}
 .ml-go::after{content:" \2192"}
 .ml-tile:hover .ml-go,.ml-tile.on .ml-go{text-decoration-color:var(--teal)}
 .ml-flow{margin:var(--space-4) 0 0;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--bg);padding:var(--space-4) var(--space-5)}
 .ml-flow-h{display:flex;align-items:baseline;gap:var(--space-3);margin:0 0 var(--space-3);padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
-.ml-flow-h span{font-family:var(--font-mono);font-size:var(--fs-2xs);font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+.ml-flow-h span{font-size:var(--fs-2xs);font-weight:800;color:var(--teal)}
 .ml-flow-h b{font-size:var(--fs-md);color:var(--text)}
 .ml-flow p{margin:0 0 var(--space-3)}
 .ml-priv{margin:var(--space-5) 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.6}
@@ -136,9 +136,9 @@ p{color:var(--sec);margin:0 0 16px}
 .mg-drop{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1px dashed var(--line2);border-radius:var(--radius-md);background:var(--bg);transition:border-color .12s ease,background .12s ease}
 .mg-drop b{font-size:var(--fs-sm);line-height:1.3;color:var(--text)}
 .mg-drop span{font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
-.mg-drop kbd{font-family:var(--font-mono);font-size:var(--fs-2xs);font-weight:700;padding:1px 5px;border:1px solid var(--line2);border-radius:4px;background:var(--panel);color:var(--sec)}
-.mg-drop:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.mg-drop.over{border-style:solid;border-color:var(--teal);background:rgba(14,124,99,.07)}
+.mg-drop kbd{font-size:var(--fs-2xs);font-weight:700;padding:1px 5px;border:1px solid var(--line2);border-radius:4px;background:var(--panel);color:var(--sec)}
+.mg-drop:focus-visible{outline:3px solid var(--focus,#1d6fd8);outline-offset:2px}
+.mg-drop.over{border-style:solid;border-color:var(--teal);background:var(--teal-tint)}
 .mg-pick{padding:0;border:0;background:none;font:inherit;font-weight:700;color:var(--teal);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 /* The names the board could not place, and the question about each. It is a
    panel rather than a warning colour: a misread letter is normal, and a reader
@@ -149,17 +149,17 @@ p{color:var(--sec);margin:0 0 16px}
 .rg-asks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .rg-asks li{display:flex;flex-direction:column;gap:4px}
 .rg-ask-n{font-size:var(--fs-xs);font-weight:700;color:var(--text);line-height:1.3}
-.rg-ask-n small{display:block;font-size:var(--fs-3xs);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rg-ask-n small{display:block;font-size:var(--fs-3xs);font-weight:600;color:var(--muted)}
 .rg-ask-p,.rg-ask-t{font-size:var(--fs-xs);padding:6px 8px}
 .rg-ask.done{border-left-color:var(--teal)}
 .mg-pick:hover{color:var(--text)}
-.mg-pick:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.mg-pick:focus-visible{outline:3px solid var(--focus,#1d6fd8);outline-offset:2px}
 /* Settings: the form on the left at a fixed width, and what it changes on the right. */
 .ml-split{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:var(--space-6);align-items:start}
 .ml-form .is-form{padding:var(--space-5)}
 .ml-form > .is-card{padding:var(--space-5)}
 .ml-side{display:flex;flex-direction:column;gap:var(--space-4)}
-.ml-kick{display:block;font-family:var(--font-mono);font-size:var(--fs-2xs);font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);margin:0 0 var(--space-2)}
+.ml-kick{display:block;font-size:var(--fs-2xs);font-weight:800;color:var(--teal);margin:0 0 var(--space-2)}
 .ml-kick.gold{color:var(--goldink)}
 .ml-rows{margin:0}
 .ml-rows div{padding:10px 0;border-top:1px solid var(--line)}
@@ -179,7 +179,7 @@ p{color:var(--sec);margin:0 0 16px}
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
-<header class="site"><div class="wrap">
+<header class="site"><!--chrome:line--><p class="site-line"><span>Every player priced off the betting market first.</span> <span>Restated at your league’s scoring.</span></p><!--/chrome:line--><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
@@ -194,7 +194,15 @@ p{color:var(--sec);margin:0 0 16px}
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
     <!--/chrome:nav-->
-</div></header>
+</div><!--chrome:tabbar-->
+  <nav class="tabbar" aria-label="Sections">
+    <a href="/fantasy"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16M12 4v16"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Fantasy</a>
+    <a href="/dfs"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19h16M6 15l4-5 4 3 4-7"/></svg>DFS</a>
+    <a href="/in-season/desk"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg>Articles</a>
+    <a href="/my-league#settings" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>My league</a>
+  </nav>
+<!--/chrome:tabbar-->
+</header>
 <main id="main">
 
 <!-- the opening band. Same words, same ids, same script; .is-hero is in

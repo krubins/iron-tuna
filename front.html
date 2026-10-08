@@ -14,8 +14,9 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<meta name="theme-color" content="#0b1614">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css">
+<meta name="theme-color" content="#001e47">
 <title>Fantasy, DFS &amp; Betting-Market Reads for Every NFL Week | Iron Tuna</title>
 <meta name="description" content="Analytics consistently beats intuition. Iron Tuna combines market intel, advanced analytics and AI analysis: the betting market read first, the consensus second, and your league’s scoring on top of both. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup.">
 <link rel="canonical" href="https://irontuna.com/">
@@ -36,1279 +37,332 @@
 <meta name="twitter:card" content="summary_large_image">
 <style>
 /* ── the palette ──────────────────────────────────────────────────────────
-   Ken, 2026-09-21: re-skinned off the teal-black/mint scheme, which dressed a
-   betting-market product as a generic SaaS dashboard — one rounded white card
-   per section, one soft grey shadow under each, and no way to tell the lead
-   story from the footnote.
-
-   The ground is the thing this site is actually about: a sportsbook board and
-   the sheet you read it off. The dark board carries the surfaces where the
-   MARKET speaks (masthead, hero, the disagreement table); light stock and white
-   plates carry the surfaces where IRON TUNA speaks.
-
-   THE THREE ACCENTS EACH HAVE ONE JOB, and none of them decorates:
-     --brand (#0e7c63)  the site's voice on light. Links, kickers, section
-                        marks, the lane buttons. It is site.css's accent and
-                        every other page's, and tools/test-reading-view.mjs
-                        pins it here so the front page cannot drift off the
-                        other pages on its own — which is exactly what a
-                        re-skin of this file tries to do.
-     --gold             money. The hero's claim, each lane's live reading, Iron
-                        Tuna's own column on the board, the boast, and the one
-                        commercial button in the masthead. Nothing else.
-     --teal             live, ON DARK ONLY. #2dd4a3 is about 1.9:1 on white, so
-                        it appears on the board and nowhere else: the dateline,
-                        the hero's action, and "start" decisions. */
+   October 2026: the homepage is on site.css like every other page. These are
+   the SAME values restated under the names this page's modules were written
+   against (tools/test-css-tokens.mjs pins the names: a rename is how the
+   undefined --red shipped in August). Nothing here is a second palette.
+     --brand   the one accent, teal, for links and primary actions
+     --ink/-2/-3   text, secondary, labels and metadata
+     --line    hairline rules;  --bg paper;  --card white
+     --gold    the amber disclosure label (--gold-ink is its text)
+     --teal    the same accent under its older name
+     --good    the one reserved colour: a positive market edge in points */
 :root{
-  --brand:#0e7c63;--brand-dark:#0a6151;--brand-bright:#1fb488;--brand-tint:#e9f5f1;--brand-line:#bfe3d8;
-  --value-red:#c8322b;
-  --ink:#0f1719;--ink-2:#3f4e58;--ink-3:#6d7c86;
-  --line:#dde3e2;--bg:#ffffff;--card:#ffffff;
-  --mast:#0b1614;
-  --gold:#f2a900;--gold-ink:#7a5300;
-  --teal:#2dd4a3;
-  /* On the board: one ink for type, one for the quiet column. */
-  --on-board:#dfe9e6;--on-board-2:#8ba09c;
-  /* THE TYPE SYSTEM (2026-09-26): one family, three weights (400 text, 600
-     labels and list headlines, 700 the lead and section headings), and one
-     scale in px. Every font-size on the page is one of these. */
-  --font-body:'Inter','Inter Fallback',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-  --fs-12:12px;--fs-13:13px;--fs-14:14px;--fs-15:15px;--fs-16:16px;--fs-17:17px;
-  --fs-19:19px;--fs-22:22px;--fs-28:28px;
-  --fs-h2:28px;
-  --fs-lead:clamp(26px,calc(2.6vw + 4px),40px);
-  /* ONE SPACING SCALE (2026-09-27): every margin, padding and gap on the
-     page is one of these, and every section is --sec-gap from the last. */
-  --sp-4:4px;--sp-8:8px;--sp-12:12px;--sp-16:16px;--sp-24:24px;--sp-32:32px;--sp-48:48px;--sp-64:64px;
-  --sec-gap:48px;
-  /* The front's gutter, here so the band under it can size its gap off it. */
-  --front-gutter:32px;
+  --brand:#0b4f6c;--brand-dark:#083a50;--brand-tint:#e6eff3;
+  --ink:#111418;--ink-2:#454c57;--ink-3:#5f6672;
+  --line:#e2e4e8;--line-2:#cdd1d7;--bg:#ffffff;--card:#ffffff;--panel:#eef2f7;
+  --mast:#001e47;
+  --gold:#fff2c7;--gold-ink:#6b4500;
+  --teal:#0b4f6c;--good:#0a6a4c;
+  --fs-12:12px;--fs-13:13px;--fs-14:14px;--fs-16:16px;--fs-19:19px;--fs-23:23px;--fs-28:28px;--fs-34:34px;--fs-44:44px;
+  /* The hero's one headline: fluid between 44 and 68, capped near 11ch. */
+  --fs-hero:clamp(44px,5.2vw,68px);
+  --sp-4:4px;--sp-8:8px;--sp-12:12px;--sp-16:16px;--sp-24:24px;--sp-32:32px;--sp-48:48px;--sp-64:64px;--sp-96:96px;
+  --sec-gap:88px;
 }
-@media(max-width:900px){:root{--front-gutter:16px}}
-@media(max-width:560px){:root{--fs-h2:22px;--sec-gap:32px}}
-/* Arial scaled to Inter's metrics, so the page does not reflow when Inter
-   arrives (display=swap). Measured at 390px: the unadjusted swap grew the
-   page 137px below the front; at 105% it moves 16px, and the front itself
-   not at all. Liberation Sans is Arial's metric twin on Linux. */
-@font-face{font-family:'Inter Fallback';src:local('Arial'),local('ArialMT'),local('Liberation Sans'),local('LiberationSans');size-adjust:105%;ascent-override:90%;descent-override:22.5%;line-gap-override:0%}
-*{box-sizing:border-box;margin:0;padding:0}
-/* The UA sheet's [hidden] is specificity (0,1,0) — the same as any class — and
-   loses to an author sheet at a tie, so `.vs-wrap{display:grid}` kept rendering
-   a section the script had hidden. This repo had already patched that one class
-   at a time (.ed-tag, .lead-ctrls, .lead-media below); this makes the attribute
-   mean what it says everywhere, including on the sections that hide themselves
-   when their feed has nothing to show. */
-[hidden]{display:none !important}
-/* One sticky bar sits at the top of the page — the section ribbon, with the
-   lane control inside it — so an anchor jump has to stop clear of it or it
-   lands with the section head hidden behind it. */
-html{font-size:clamp(16px,calc(2px + 1vw),21px);scroll-behavior:smooth;scroll-padding-top:56px}
-/* ONE family on this page. It was Archivo plus Instrument Serif until
-   2026-09-25, then the Helvetica/Arial system stack, which rendered as Arial
-   on Windows and did not match the rest of the site. Since 2026-09-26 it is
-   Inter, the family site.css sets on every other page, in three weights.
+@media(max-width:860px){:root{--sec-gap:56px}}
+body{overflow-x:hidden}
+.hm-sec{margin:var(--sec-gap) 0 0}
+.hm-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-16);flex-wrap:wrap;margin:0 0 var(--sp-16)}
+.hm-sec-head h2{margin:0;font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.hm-sec-head a{font-size:var(--fs-14);font-weight:600;white-space:nowrap}
+.hm-sub{margin:0 0 var(--sp-24);font-size:var(--fs-16);color:var(--ink-2);max-width:60ch}
 
-   SIZES ARE px TOKENS (--fs-*, in :root). The root still grows with the
-   window (16px up to a 1,400px window, 21px at 1,900px and wider), and
-   anything sized in rem or em still follows it, but type does not: a label,
-   a date or a line of body copy is the same size on a laptop and a 27-inch
-   screen. The columns widen; the type stays on the scale. */
-body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:var(--fs-17);line-height:1.48;-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}
-/* Figures line up in columns where they are compared, and nowhere else. */
-.hm-table,.num,.hm-input-n{font-variant-numeric:tabular-nums}
-/* player-search.js draws the initials that stand in for a missing photograph
-   at 800; on this page they take the scale's heaviest weight. */
-body .it-plate-shot i{font-weight:700}
-body .it-player-face i{font-size:var(--fs-12);font-weight:600}
-/* Every small player image on this page is a 1:1 square, 4px corners, the
-   same crop (2026-09-26). */
-body .it-player-face{border-radius:4px;overflow:hidden}
-body .it-player-face img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;border-radius:inherit}
-/* In the rail and on the desk's cards a player with no photograph gets no
-   thumbnail, not an initials box, and the thumbnail sits at the right end of
-   the headline so the headlines' left edge is the same either way. */
-.hm-rail .it-player-face:not(:has(img)),.hm-read-card .it-player-face:not(:has(img)){display:none}
-.hm-rail .it-story-focus:not(:has(.it-player-face img)),.hm-read-card .it-story-focus:not(:has(.it-player-face img)){display:none}
-/* <small> is the UA's `smaller`, which lands between steps. */
-small{font-size:var(--fs-15)}
-/* <b> is the UA's `bolder`, 700; a bold word inside text takes the label weight. */
-b,strong{font-weight:600}
-/* Running text stops at a readable measure. */
-.hm-sub,.hm-note,.hm-fine,.hm-read-card p,.hm-lane p{max-width:65ch}
-img{max-width:100%}
-.wrap{max-width:1880px;margin:0 auto;padding:0 clamp(16px,2vw,40px)}
-/* One focus treatment for the whole page: brass on the board, navy on stock.
-   Both clear 3:1 against their ground. */
-a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:2px}
-.mast a:focus-visible,.mast button:focus-visible,.hm-promo a:focus-visible,.hm-edge a:focus-visible,.hm-diff-plate a:focus-visible{outline-color:var(--gold)}
-@media (prefers-reduced-motion:reduce){
-  html{scroll-behavior:auto}
-  *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}
+/* ── 1 · the hero ─────────────────────────────────────────────────────────
+   White, centred: the headline, one sentence, the search field (the one pill
+   on the page, and it is a field), the three entry points as text links, a
+   hairline, then one row of live market figures with a link to the board. */
+.hm-hero{padding:var(--sp-64) 0 0;text-align:center}
+.hm-hero h1{margin:0 auto var(--sp-16);font-size:var(--fs-hero);font-weight:700;letter-spacing:-.03em;line-height:1.02;max-width:11.5ch}
+.hm-lede{margin:0 auto var(--sp-32);font-size:var(--fs-19);color:var(--ink-2);max-width:56ch;line-height:1.5}
+.hm-find{max-width:640px;margin:0 auto}
+.hm-entry{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--sp-8) var(--sp-32);margin:var(--sp-24) 0 0;padding:0;list-style:none}
+.hm-entry a{font-size:var(--fs-16);font-weight:600}
+.hm-rule{border:0;height:1px;background:var(--line);margin:var(--sp-48) 0 var(--sp-24)}
+
+/* The market figures row. Four cells: a 13px label over the key figure (the
+   gap in points, 28px, green only when the market is the higher number), over
+   the three projections it came from. Written hidden; shown with three or
+   more real rows. On a phone the cells scroll sideways edge to edge. */
+.hm-market{text-align:left}
+.hm-market[hidden]{display:none}
+.hm-figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
+.hm-fig{min-width:0;border-left:1px solid var(--line);padding-left:var(--sp-16)}
+.hm-fig:first-child{border-left:0;padding-left:0}
+.hm-fig .k{display:block;font-size:var(--fs-13);color:var(--ink-3);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-fig .k b{color:var(--ink);font-weight:600}
+.hm-fig .v{display:block;font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.1;margin:2px 0;font-variant-numeric:tabular-nums;color:var(--ink)}
+.hm-fig .v.good{color:var(--good)}
+.hm-fig .s{display:block;font-size:var(--fs-13);color:var(--ink-3);line-height:1.4;font-variant-numeric:tabular-nums}
+.hm-fine{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-8) var(--sp-12);margin:var(--sp-16) 0 0;font-size:var(--fs-13);color:var(--ink-3)}
+.hm-fine a{font-weight:600}
+.hm-tag{display:inline-block;font-size:var(--fs-12);font-weight:600;color:var(--gold-ink);background:var(--gold);border-radius:2px;padding:1px 6px;line-height:1.5}
+@media(max-width:860px){
+  .hm-hero{padding-top:var(--sp-48)}
+  /* One figure per row on a phone, hairlines between: a row of four 28px
+     figures does not fit a 390px screen and a sideways scroll hides the
+     Sit and the Fade behind the two Starts. */
+  .hm-figs{display:block}
+  .hm-fig{border-left:0;padding:var(--sp-12) 0;border-top:1px solid var(--line)}
+  .hm-fig:first-child{border-top:0;padding-top:0}
+  .hm-fig .k{white-space:normal}
 }
 
-/* ── masthead ──────────────────────────────────────────────────────────────
-   No rule under it any more. The masthead and the hero are the SAME navy
-   board, top of page to the ribbon, and a divider between them would cut one
-   surface into two. The ribbon on oat stock is what ends the board. */
-.mast{background:var(--mast);box-shadow:0 1px 0 rgba(255,255,255,.04)}
-/* Ken, 2026-09-25: styled after ESPN's bar. The wordmark sits on a slanted
-   block of the brand green, the way the network's sits on its red, and the
-   section links are white and heavier so the bar reads as the site's spine. */
-/* min-height, not height: the nav is a row of links whose width depends on
-   the reader's viewport, and on a narrow laptop it wraps. A fixed height
-   let the second row spill out of the black band and sit on top of the
-   ribbon; this lets the band grow to hold whatever it is given.
-   Above the wrap point it is pixel-identical to a fixed 64px. */
-/* ONE BAR (2026-09-26): wordmark, slash, the five sections, then the week
-   chip and the one button on the right, 64px tall with the brand rule under
-   it. The tagline and the dateline used to have a second bar of their own. */
-.mast{border-bottom:3px solid var(--brand);position:relative;z-index:50}
-.mast .wrap{display:flex;align-items:center;gap:10px;min-height:61px}
-/* Ken, 2026-09-25 (second pass): no green block behind the wordmark. It sits
-   straight on the black bar in white, and a green slash between it and the
-   section links does the separating the block used to. */
-.mast-brand{display:inline-flex;align-items:center;flex:0 0 auto;align-self:stretch}
-.mast-brand:hover .mast-logo{filter:brightness(1.12)}
-.mast-slash{flex:0 0 auto;margin:0 6px 0 4px;font-size:2.25rem;font-weight:400;line-height:1;color:var(--brand-bright);user-select:none}
-/* The metal wordmark, the same staggered mark tools/wordmark.mjs draws on every
-   other page's header (Ken, 2026-09-25: plain type on the front was a
-   regression). It sits straight on the black bar now, which is the ground the
-   metal gradient was drawn for, so it keeps its own fill. */
-.mast-logo{height:2.375rem;width:auto;display:block}
-.mast-jump{display:flex;align-items:center;gap:2px;flex:1 1 auto;min-width:0}
-/* Sentence case, no tracking, and quieter than the wordmark: 15px at 600 in
-   white at 85%, full white and a teal underline on hover. */
-.mast-jump a{color:rgba(255,255,255,.85);font-size:var(--fs-15);font-weight:600;line-height:1.3;padding:8px 10px;border-radius:3px;text-decoration:underline 2px transparent;text-underline-offset:7px;transition:color .12s,text-decoration-color .12s}
-.mast-jump a:hover{color:#fff;text-decoration-color:var(--teal)}
-.mast a:focus-visible,.mast button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-.mast-nav{display:flex;align-items:center;gap:14px;flex:0 0 auto}
-/* The week, as a chip: the dateline in one line, the live state in teal. */
-.mast-week{font-size:var(--fs-13);font-weight:600;line-height:1.3;color:var(--on-board-2);white-space:nowrap}
-.mast-week .live{color:var(--teal)}
-.mast-week-m{display:none}
-/* Brass is the money accent, and "Customize My League" is where a reader puts
-   their own money on the line, so it is the one brass control in the chrome.
-   Compact (2026-09-26): 36px, 14px type, no longer the biggest thing in the bar. */
-/* inline-block, not inline-flex: a flex box drops the space between
-   "Customize" and "My League", which are two runs so the phone can hide one. */
-.mast-nav a.cta-gold{display:inline-block;height:36px;padding:0 14px;border-radius:4px;background:var(--gold);color:#1a1205;font-size:var(--fs-14);font-weight:600;line-height:36px;white-space:nowrap}
-.mast-nav a.cta-gold:hover{filter:brightness(1.07)}
-.mast-menu{display:none;align-items:center;justify-content:center;width:44px;height:44px;margin-right:-10px;padding:0;border:0;border-radius:4px;background:none;color:#fff;cursor:pointer}
-.mast-menu:hover{background:rgba(255,255,255,.07)}
-/* Between the phone and a full desk the chip gives way first. */
-@media(max-width:1100px){ .mast-nav .mast-week{display:none} }
-.mast-jump a{white-space:nowrap}
-/* ── the masthead on a phone ──────────────────────────────────────────────
-   Below 960px, which is where the five sections and the full button stop
-   fitting on one line beside the wordmark (at 780px "How It Works" wrapped
-   and the button sat on top of "Search"). One 56px row: the wordmark, then "My League" and the menu button. The
-   five sections are a panel under the bar, opened by the button, with the
-   week chip at its foot. They used to scroll sideways in the bar, which on a
-   390px phone showed "Artic" cut off at the screen's edge, and the button
-   took a full-width row of its own under them. */
-@media(max-width:959px){
-  .mast .wrap{min-height:53px;padding-top:0;padding-bottom:0}
-  .mast-logo{height:1.625rem}
-  .mast-slash{display:none}
-  .mast-nav{margin-left:auto;gap:6px}
-  .mast-nav a.cta-gold{height:34px;line-height:34px;padding:0 12px}
-  .mast-nav .cta-long{display:none}
-  .mast-menu{display:inline-flex}
-  .mast-jump{display:none}
-  .mast.menu-open .mast-jump{display:flex;flex-direction:column;align-items:stretch;gap:0;position:absolute;top:100%;left:0;right:0;margin-top:3px;padding:6px 0 10px;background:var(--mast);box-shadow:0 12px 24px rgba(0,0,0,.25)}
-  .mast.menu-open .mast-jump a{display:flex;align-items:center;min-height:48px;padding:0 16px;border-radius:0;font-size:var(--fs-16);color:#fff;border-bottom:1px solid rgba(255,255,255,.07)}
-  .mast.menu-open .mast-week-m{display:block;padding:14px 16px 4px}
+/* ── 2 · the position tiles ───────────────────────────────────────────────
+   Six portrait tiles, one per position, each a link to that position's
+   weekly board: its own illustration in its own palette, the name over a
+   dark fade at the foot, and one line of live data under the name. Six
+   across on a desk; on a phone the row scrolls sideways edge to edge. */
+.hm-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
+.hm-tile{position:relative;display:block;aspect-ratio:3/4;border-radius:10px;overflow:hidden;color:#fff;background:var(--t1)}
+.hm-tile:hover{color:#fff;text-decoration:none}
+.hm-tile:hover .hm-tile-name{text-decoration:underline}
+.hm-tile svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hm-tile-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-16) var(--sp-16);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
+.hm-tile-name{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.2}
+.hm-tile-live{display:block;font-size:var(--fs-13);color:rgba(255,255,255,.86);margin-top:2px;font-variant-numeric:tabular-nums}
+.hm-tile-live[hidden]{display:none}
+@media(max-width:860px){
+  /* scroll-padding matches the gutter, or the snap aligns the first tile to
+     the scrollport's edge and scrolls the row 16px past its own padding. */
+  .hm-tiles{display:flex;overflow-x:auto;margin:0 calc(-1 * var(--gutter));padding:0 var(--gutter);gap:var(--sp-12);scrollbar-width:none;scroll-snap-type:x proximity;scroll-padding-inline:var(--gutter)}
+  .hm-tiles::-webkit-scrollbar{display:none}
+  .hm-tiles li{flex:0 0 44%;scroll-snap-align:start}
+  .hm-tile{width:100%}
 }
 
-/* ── footer ── */
-.foot{margin-top:0;background:var(--card);border-top:1px solid var(--line)}
-.foot .wrap{display:flex;align-items:center;gap:var(--sp-16);flex-wrap:wrap;padding:var(--sp-24) var(--sp-24) var(--sp-32);font-size:var(--fs-16);color:var(--ink-3)}
-.foot a:hover{color:var(--brand)}
-/* The footer sitemap takes a line of its own above the legal run: flex-basis
-   100% breaks it out of the footer's single wrapping row so it reads as a group
-   rather than nine more items in the copyright line. Same nine destinations as
-   the shared footer on every other page. */
-.foot-nav{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-16);padding-bottom:var(--sp-16);border-bottom:1px solid var(--line)}
-.foot-nav a{font-weight:600;color:var(--ink-2)}
-/* /admin is not a destination a visitor navigates to; it is the operator's only
-   link in. It sits at the end of the row, quiet. */
-.foot-admin{font-size:var(--fs-15);color:var(--ink-3);opacity:.7}
-.foot .fm{margin-left:auto;line-height:1.55}
+/* ── 3 · newest, as a ledger ──────────────────────────────────────────────
+   The six newest pieces the desk published, newest first. The name column is
+   the headline over the series; the figure columns are the week, when it was
+   published and how many players the piece names. Hidden outright when the
+   desk has nothing current. */
+#articles[hidden]{display:none}
+.hm-ledger{--cols:3}
+.hm-ledger .ledger-row{grid-template-columns:minmax(0,1fr) 7rem 7rem 7rem}
+@media(max-width:860px){.hm-ledger .ledger-row{grid-template-columns:minmax(0,1fr) auto}}
 
-/* ══ the homepage ══════════════════════════════════════════════════════════
-   Six sections and nothing else: the hero, the lead story, the two product
-   cards, the market disagreements, the current articles, and how the number is
-   made with the disclosures under it. Every band below the hero paints from a
-   live feed and HIDES ITSELF when that feed has no current answer — there are
-   no skeletons, no "loading" copy and no empty shells on this page. */
+/* ── 4 · how it works ─────────────────────────────────────────────────────
+   Three outlined rounded cards: the three inputs, in order. */
+.hm-tagline{margin:0 0 var(--sp-24);font-size:var(--fs-19);color:var(--ink-2);max-width:60ch}
+.hm-how-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-24)}
+.hm-input{border:1px solid var(--line);border-radius:10px;padding:var(--sp-24);background:var(--card)}
+.hm-input h3{margin:0 0 var(--sp-8);font-size:var(--fs-19);font-weight:600}
+.hm-input p{margin:0;font-size:var(--fs-16);color:var(--ink-2);line-height:1.5}
+.hm-how-more{margin:var(--sp-24) 0 0;font-size:var(--fs-16)}
+.hm-how-more a{font-weight:600}
+@media(max-width:860px){.hm-how-grid{grid-template-columns:1fr}}
 
-/* The tagline, in the method section's promo since 2026-09-26: the first
-   clause quiet, the counter-claim in white and heavier, as it was in the bar
-   it used to have under the nav. */
-.hm-tagline{margin-top:var(--sp-16);font-size:var(--fs-17);line-height:1.4;font-weight:400;color:var(--on-board-2)}
-.hm-tagline em{font-style:normal;font-weight:600;color:#fff}
-
-/* ── 1 · the front ────────────────────────────────────────────────────────
-   Ken, 2026-09-26: an editorial front, not three floating cards on grey. The
-   cards (white plates, rounded corners, soft shadows, inner padding) read as
-   an admin dashboard. The page is white now, and the front is two columns
-   split by a hairline, the way a news front rules its columns:
-     left  2fr   the photograph, and the lead story directly under it
-     right 1fr   Top Headlines
-   Quick Links left the grid for a strip under the tagline bar (.hm-quick).
-   ONE GUTTER: 32px either side of the rule on a desk, 16px on a phone.
-   #lead and #leadWell are display:contents, so the lead card and the rail the
-   painter writes into #leadWell are grid items of THIS grid and can be placed
-   in the two columns while staying inside the lead section. */
-.hero-band{background:var(--bg);color:var(--ink)}
-.hm-front{--front-gutter:32px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);grid-template-areas:"edge rail" "lead rail" "more rail";grid-template-rows:auto auto 1fr;column-gap:var(--front-gutter);align-items:start;padding-top:var(--front-gutter);padding-bottom:var(--front-gutter)}
-.hm-front #lead,.hm-front #leadWell{display:contents}
-.hm-front #lead[hidden]{display:none !important}
-/* The section keeps its heading for the outline; the rail's own header does
-   the visible job, as "Top Headlines". */
-.hm-front #lead .hm-sec-head{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-/* Nothing painted yet: no photograph and no lead. The front collapses rather
-   than holding a gutter's worth of empty white above the next band. */
-.hm-front:not(:has(#heroEdge:not([hidden]))):not(:has(#lead:not([hidden]))){padding:0}
-
-/* The promo card: what the site is, for a first-time reader, at the top of
-   the method section. Dark, with the claim beside the two buttons on a wide
-   screen. The claim stays larger than the lede (tools/test-homepage.mjs). */
-.hm-promo{background:var(--mast);color:#fff;border-radius:4px;padding:var(--sp-24)}
-.hm-promo-k{font-size:var(--fs-13);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:var(--sp-12)}
-.hm-claim{font-weight:400;font-size:var(--fs-22);line-height:1.24;color:#fff;border-left:2px solid var(--gold);padding-left:var(--sp-12)}
-.hm-lede{margin-top:var(--sp-16);font-size:var(--fs-15);line-height:1.55;color:#a3b6b2}
-.hm-cta{display:flex;flex-direction:column;gap:var(--sp-8);margin-top:var(--sp-16)}
-.hm-btn{display:flex;align-items:center;justify-content:center;font-size:var(--fs-17);font-weight:600;letter-spacing:.005em;padding:var(--sp-12) var(--sp-16);border-radius:999px;border:1px solid transparent;text-align:center}
-.hm-btn.primary{background:#fff;color:var(--ink)}
-.hm-btn.primary:hover{background:var(--teal);color:#06231c}
-.hm-btn.second{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
-.hm-btn.second:hover{background:rgba(255,255,255,.1);border-color:#fff}
-.hm-promo a:focus-visible{outline-color:var(--gold)}
-
-/* Quick Links: one slim row under the tagline bar, ruled off from the front
-   by a hairline. Set in px, not rem: the root size grows to 21px on a wide
-   window, and a utility strip should not grow with the stories. On a phone
-   the row scrolls sideways rather than wrapping into a block. */
-.hm-quick{background:var(--bg);border-bottom:1px solid var(--line)}
-.hm-quick ul{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-24);min-height:44px}
-.hm-quick li{flex:0 0 auto}
-.hm-quick a{display:block;padding:var(--sp-12) 0;font-size:var(--fs-15);line-height:1.4;font-weight:400;color:var(--ink-2);white-space:nowrap}
-.hm-quick a:hover{color:var(--brand)}
-@media(max-width:900px){
-  .hm-quick-in{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  .hm-quick-in::-webkit-scrollbar{display:none}
-  .hm-quick ul{justify-content:flex-start;width:max-content}
-  .hm-quick a{font-size:var(--fs-14)}
-}
-
-/* ── the hero's picture ──────────────────────────────────────────────────
-   The biggest thing on the front, as on the network's: a wide photograph on a
-   white card, captioned in a dark strip across its foot. The lead story card
-   joins it underneath so the two read as one plate. */
-.hm-edge{grid-area:edge;min-width:0;display:flex;flex-direction:column;overflow:hidden;position:relative}
-.hm-edge[hidden]{display:none}
-.he-plate{display:flex;min-height:0}
-.he-plate .he-link,.he-plate .it-plate{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;width:100%}
-.hm-edge .it-plate-shot{flex:1 1 auto;height:auto;aspect-ratio:16/9;min-height:0;border-radius:0;background:#1a2a27;border:0}
-.hm-edge .it-plate-shot i{font-size:var(--fs-28);color:#6d827e}
-/* 16:9 on a desk; 4:3 on a phone, where 16:9 is a strip 200px tall. */
-@media(max-width:599px){ .hm-edge .it-plate-shot{aspect-ratio:4/3} }
-/* The headshot fallback (2026-09-26): no game photograph, so player-search.js
-   loads the ESPN cutout, and heroDress() marks the figure `is-headshot`. The
-   cutout stands at the panel's bottom right at a fixed height, on the board's
-   own dark, with his name set large on the left, instead of one head
-   stretched across a 16:9 frame. The initials behind it are not shown. */
-.hm-edge .it-plate.is-headshot .it-plate-shot{aspect-ratio:auto;height:280px;background:var(--mast);position:relative;overflow:hidden}
-.hm-edge .it-plate.is-headshot .it-plate-shot img{width:auto;max-width:62%;height:100%;justify-self:end;align-self:end;object-fit:contain;object-position:right bottom}
-.hm-edge .it-plate.is-headshot .it-plate-shot i{display:none}
-.he-panel{display:none}
-.hm-edge .it-plate.is-headshot .he-panel{display:flex;flex-direction:column;gap:var(--sp-8);position:absolute;left:24px;bottom:24px;max-width:40%;color:#fff}
-.he-panel b{font-size:var(--fs-28);font-weight:700;line-height:1.1;letter-spacing:-.01em}
-.he-panel span{font-size:var(--fs-15);font-weight:400;color:var(--on-board-2)}
-/* The caption strip says who it is already; under the panel it only keeps a
-   gap line if there is one, and goes when there is none. */
-.hm-edge:has(.is-headshot) .he-name,.hm-edge:has(.is-headshot) .he-sub{display:none}
-.hm-edge:has(.is-headshot) .he-meta:not(:has(.he-gap:not([hidden]):not(:empty))){display:none}
-@media(max-width:599px){
-  .hm-edge .it-plate.is-headshot .it-plate-shot{height:200px}
-  .hm-edge .it-plate.is-headshot .he-panel{left:16px;bottom:16px;max-width:48%}
-  .he-panel b{font-size:var(--fs-22)}
-}
-/* The photograph's credit, in the caption strip under it rather than on it:
-   right-aligned on the name's line, its own line on a phone. */
-.he-credit{margin-left:auto;padding-left:var(--sp-16);font-size:var(--fs-12);font-weight:400;line-height:1.4;color:var(--on-board-2);text-align:right}
-.he-credit:empty{display:none}
-.he-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
-@media(max-width:599px){ .he-credit{flex:1 1 100%;margin-left:0;padding-left:0;text-align:left} }
-.he-link{display:block}
-.he-link:hover .it-plate-shot{filter:brightness(1.05)}
-/* The caption (2026-09-26): a photo caption, not a second headline. It used
-   to carry the page's biggest type (a kicker, a 24px bold name and a 17px
-   sentence) and the lead headline under it read as the footnote. Now it is
-   one or two quiet lines: who is pictured as a small tag, and the gap line
-   when it says something the headline does not. The kicker stays in the
-   markup for the tests and the link's label; it is not shown. */
-.he-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 0;padding:var(--sp-8) var(--sp-16) var(--sp-8);background:var(--mast)}
-.he-k{display:none}
-.he-name{font-size:var(--fs-15);font-weight:400;line-height:1.4;color:var(--on-board)}
-.he-sub{font-size:var(--fs-14);font-weight:400;line-height:1.4;letter-spacing:.02em;color:var(--on-board-2)}
-.he-sub:not(:empty)::before{content:"\00a0\00b7\00a0"}
-.he-gap{flex:1 1 100%;font-size:var(--fs-14);line-height:1.45;color:var(--on-board-2)}
-.he-gap[hidden]{display:none}
-
-/* The lead story: under the photograph, and the biggest type on the page
-   (2026-09-26). No plate and no rule between it and the photograph: the
-   picture, its caption and the story are one unit, 16px apart. Set in px:
-   the root size grows to 21px on a wide window, and the headline is sized
-   against the column, not the root. Without a photograph it takes both rows
-   of the column. */
-.hm-front .hm-lead{grid-area:lead;gap:var(--sp-12);background:none;border:0;border-radius:0;box-shadow:none;padding:var(--sp-16) 0 0}
-.hm-front #heroEdge[hidden] ~ #lead .hm-lead{grid-row:1 / span 2;padding-top:0}
-.hm-front .hm-lead .t{font-size:var(--fs-13);font-weight:600;line-height:1.3;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)}
-.hm-front .hm-lead h3{max-width:36ch;font-size:var(--fs-lead);line-height:1.1;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
-.hm-front .hm-lead p{max-width:60ch;font-size:var(--fs-19);line-height:1.45;font-weight:400;color:var(--ink-2)}
-.hm-front .hm-lead .m{margin-top:0;padding-top:0;border-top:0;font-size:var(--fs-14);color:var(--ink-3)}
-.hm-front .hm-lead .go{margin-top:var(--sp-4);font-size:var(--fs-15)}
-/* The boast on the lead is a label, not a banner (2026-09-26). At 38px black
-   it outranked the headline under it, so on the desk's best days the biggest
-   thing on the front was two words of self-congratulation. It takes the
-   kicker's size in brass, and the headline keeps the lead's full size. */
-.hm-front .hm-lead.is-boast{background:none}
-.hm-front .hm-lead .boast{font-size:var(--fs-13);font-weight:600;line-height:1.3;letter-spacing:.06em;color:var(--gold-ink)}
-/* The player the photograph already shows is not drawn again as a tile
-   under it. The faces stay in the markup (the rail and the cards still carry
-   theirs); only the lead's row is not shown while the photograph is up. */
-.hm-front:has(#heroEdge:not([hidden])) .hm-lead h3 .it-story-focus{display:none}
-
-/* Top Headlines: plain ruled rows down the right, set off from the lead by
-   a hairline with a gutter either side of it. The heading's cap line sits on
-   the photograph's top edge. */
-.hm-front .hm-rail{grid-area:rail;align-self:stretch;display:flex;flex-direction:column;background:none;border-radius:0;box-shadow:none;padding:0;position:relative}
-.hm-front .hm-rail::before{content:"";position:absolute;top:0;bottom:0;left:calc(var(--front-gutter) / -2);border-left:1px solid var(--line)}
-.hm-front .hm-rail-h{font-size:var(--fs-17);font-weight:700;line-height:1;border-bottom:1px solid var(--line);padding-bottom:var(--sp-12);margin-bottom:var(--sp-12)}
-.hm-front .hm-rail ul{justify-content:flex-start}
-/* The rail's type: labels 12, headlines 17 at 600, dates 13. */
-.hm-front .hm-rail li h3{font-size:var(--fs-17);line-height:1.3;font-weight:600}
-/* Every rail item the same (2026-09-26): headline, then one meta line
-   ("Opportunity Report · 3h ago"), 14px apart with a hairline between; the
-   headline clamped at three lines; a 40px thumbnail at the top right only
-   when there is a photograph, so the left edge never moves. */
-.hm-front .hm-rail ul{gap:0}
-.hm-front .hm-rail li{gap:var(--sp-4);padding:var(--sp-16) 0;border-bottom:1px solid var(--line)}
-.hm-front .hm-rail li:first-child{padding-top:2px}
-.hm-front .hm-rail li.last{padding-bottom:0;border-bottom:0}
-.hm-front .hm-rail li h3{align-items:flex-start}
-.hm-front .hm-rail li h3 a{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;min-width:0}
-.hm-front .hm-rail li h3 .it-player-face{width:40px;height:40px;min-width:40px}
-/* The thumbnail hangs beside the meta line rather than pushing it down: the
-   headline's row is as tall as its text, and the meta line keeps clear of it. */
-.hm-front .hm-rail li h3 .it-story-focus{margin-bottom:-22px}
-.hm-front .hm-rail li.pic-slot:has(.it-player-face img) .m{padding-right:var(--sp-48)}
-/* Every third rail story carries the picture (2026-09-27); the rest none. */
-.hm-front .hm-rail li:not(.pic-slot) .it-story-focus{display:none}
-.hm-front .hm-rail li .m{font-size:var(--fs-13);font-weight:400}
-/* The two secondary stories under a lead with no photograph (setNoPhoto). */
-.hm-more{grid-area:more;align-self:start;margin-top:var(--sp-24)}
-.hm-more-item{display:flex;flex-direction:column;gap:var(--sp-8);padding:var(--sp-16) 0;border-top:1px solid var(--line)}
-.hm-more-item h3{font-size:var(--fs-22);font-weight:600;line-height:1.25;letter-spacing:-.01em;color:var(--ink)}
-.hm-more-item h3 a:hover{color:var(--brand)}
-.hm-more-item p{max-width:65ch;font-size:var(--fs-17);line-height:1.45;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hm-more-item .m{font-size:var(--fs-13);color:var(--ink-3)}
-.hm-rail-all{display:block;margin-top:var(--sp-12);padding-top:var(--sp-12);border-top:1px solid var(--line);font-size:var(--fs-16);font-weight:600;color:var(--brand)}
-.hm-rail-all:hover{text-decoration:underline}
-
-/* ── the front, narrower ──
-   Under 900px the front is one column, lead first and the headlines under
-   it, the way the network's phone front opens on its lead. The rule between
-   the columns turns to a rule above the rail. */
-@media(max-width:900px){
-  .hm-front{--front-gutter:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"edge" "lead" "more" "rail";grid-template-rows:auto}
-  .hm-front #heroEdge[hidden] ~ #lead .hm-lead{grid-row:auto}
-  .hm-front .hm-rail{margin-top:var(--front-gutter);padding-top:var(--front-gutter);border-top:1px solid var(--line)}
-  .hm-front .hm-rail::before{display:none}
-}
-@media(max-width:560px){
-}
-
-/* ── shared section furniture ─────────────────────────────────────────────
-   Section headings take the hero's expanded voice, one step down, so the page
-   reads as one typographic system rather than a hero plus five widgets. */
-.hm-sec{padding-top:clamp(36px,4.6vw,60px)}
-.hm-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-12);flex-wrap:wrap;margin-bottom:var(--sp-8);padding-bottom:var(--sp-12);border-bottom:2px solid var(--ink)}
-.hm-sec-head h2{font-size:var(--fs-h2);line-height:1.12;letter-spacing:-.014em;font-weight:700}
-.hm-sec-head a{font-size:var(--fs-15);font-weight:600;color:var(--brand)}
-.hm-sec-head a:hover{text-decoration:underline}
-.hm-sub{margin-top:var(--sp-16);font-size:var(--fs-17);line-height:1.55;color:var(--ink-2);max-width:70ch;margin-bottom:var(--sp-16)}
-.hm-fine{margin-top:var(--sp-12);font-size:var(--fs-14);line-height:1.55;color:var(--ink-3)}
-
-/* ── 2 · the two product cards ────────────────────────────────────────────
-   ONE plate divided by ONE rule, not two cards side by side. They were two
-   identical rounded boxes with identical shadows, which said "two products,
-   pick one"; the site has one product with two doors, and a shared plate with
-   a rule down the middle says that instead. */
-.hm-lanes{display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--card);border:1px solid var(--line);border-radius:2px}
-.hm-lane{display:flex;flex-direction:column;padding:var(--sp-24) var(--sp-24) var(--sp-24);min-width:0}
-.hm-lane + .hm-lane{border-left:1px solid var(--line)}
-.hm-lane h2{font-size:var(--fs-h2);line-height:1.12;letter-spacing:-.014em;font-weight:700}
-.hm-lane > p{margin-top:var(--sp-8);font-size:var(--fs-15);line-height:1.5;color:var(--ink-2);max-width:42ch}
-/* The live reading. Written hidden; revealed only with a real current output on
-   it, so a card whose feed is quiet is a card of links rather than a card of
-   apologies. Brass rule, because the reading is the number with money behind
-   it — the same mark the hero's claim carries. */
-.hm-read{margin-top:var(--sp-24);border:0;border-left:2px solid var(--gold);background:#fdf6e7;border-radius:0;padding:var(--sp-16) var(--sp-16)}
-.hm-read .k{display:block;font-size:var(--fs-14);font-weight:600;color:var(--gold-ink)}
-.hm-read .h{display:block;margin-top:var(--sp-4);font-size:var(--fs-19);font-weight:600;line-height:1.25;color:var(--ink)}
-.hm-read .d{display:block;margin-top:var(--sp-4);font-size:var(--fs-15);line-height:1.45;color:var(--ink-2)}
-/* The card's one reading is about one player, so it carries his face. The
-   column only exists once a picture is in it (`has-pic`, set by the painter),
-   because an empty 58px gutter beside three lines of type is worse than no
-   picture. A headshot here and never a game photograph: at this size the
-   photograph is unreadable, and it would owe a credit line longer than the
-   reading it sits beside. */
-.hm-read .pic{display:none}
-.hm-read.has-pic{display:grid;grid-template-columns:56px minmax(0,1fr);column-gap:var(--sp-12);align-items:start}
-.hm-read.has-pic .pic{display:block;grid-column:1;grid-row:1/span 3}
-.hm-read.has-pic .k,.hm-read.has-pic .h,.hm-read.has-pic .d{grid-column:2}
-.hm-read .pic .it-plate-shot{height:auto;aspect-ratio:1/1;border-radius:4px;background:#ece7d9}
-.hm-read .pic .it-plate-shot i{font-size:var(--fs-17)}
-/* A ruled index, not a stack of one-pixel grid gaps faking rules. */
-.hm-links{list-style:none;margin-top:var(--sp-24);border-top:1px solid var(--line)}
-.hm-links li{border-bottom:1px solid var(--line)}
-.hm-links a{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-12);padding:var(--sp-12) 0;font-size:var(--fs-16);font-weight:600}
-.hm-links a span{font-size:var(--fs-15);font-weight:400;color:var(--ink-3);text-align:right}
-.hm-links a:hover{color:var(--brand)}
-.hm-links a:hover span{color:var(--brand)}
-.hm-lane-go{margin-top:auto;padding-top:var(--sp-24)}
-.hm-lane-go a{display:inline-flex;align-items:center;justify-content:center;width:100%;background:var(--brand);color:#fff;font-size:var(--fs-16);font-weight:600;padding:var(--sp-12) var(--sp-16);border-radius:3px}
-.hm-lane-go a:hover{background:var(--brand-dark)}
-@media(max-width:900px){
-  .hm-lanes{grid-template-columns:1fr}
-  .hm-lane + .hm-lane{border-left:0;border-top:1px solid var(--line)}
-}
-
-/* ── 3 · where the market sees something different ────────────────────────
-   The argument the whole site is built on, so it gets the board itself: the
-   same navy the hero is on, dropped into the middle of the stock. Three
-   numbers on one player, weighted so a reader can see which one is being
-   asked to act on — the consensus quiet, the market plain, and Iron Tuna's own
-   column carrying the brass rule and the only tint on the table.
-   It was five grey columns of identical 14px type, which is a spreadsheet. */
-.hm-diff-plate{background:var(--mast);border-radius:2px;overflow:hidden}
-.hm-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.hm-table{width:100%;border-collapse:collapse;min-width:700px}
-.hm-table th,.hm-table td{padding:var(--sp-12) var(--sp-16);text-align:left;font-size:var(--fs-16);vertical-align:middle}
-.hm-table thead th{font-size:var(--fs-14);font-weight:600;letter-spacing:0;text-transform:none;color:var(--on-board-2);background:transparent;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.15);padding-top:var(--sp-16);padding-bottom:var(--sp-12)}
-/* The row rule goes on the ROW, not on the cells. The player cell is a flex
-   container (it has to be, to sit a 46px face beside a two-line name), and a
-   flex box paints its border at its own bottom edge rather than at the row's —
-   so a per-cell rule came out as a short line under the player column and a
-   second, lower one under the numbers. Under border-collapse a tr border is
-   painted once, across the whole row. */
-.hm-table tbody td{color:var(--on-board)}
-.hm-table tbody tr{border-bottom:1px solid rgba(255,255,255,.13)}
-.hm-table tbody tr:last-child{border-bottom:0}
-.hm-table .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--on-board-2)}
-.hm-table .who b{display:block;font-size:var(--fs-17);font-weight:600;line-height:1.2;color:#fff}
-.hm-table .who small{display:block;margin-top:2px;font-size:var(--fs-14);letter-spacing:0;text-transform:none;color:var(--on-board-2)}
-/* player-search.js puts the player's face at the front of the cell it finds
-   him in. The shared default is 34px, which is a marker in a long table; this
-   is a five-row board where the player IS the row, so his picture is worth
-   the width. */
-.hm-table .who.it-player-cell{display:flex;align-items:center;gap:var(--sp-12)}
-.hm-table .who .it-player-face{width:46px;height:46px;min-width:46px;border-radius:4px;margin:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);color:#8ba09c}
-/* Iron Tuna's own number is the one the reader is meant to act on, so it is the
-   only column with weight, the only one in brass rule, and the only tinted
-   column on the board. */
-.hm-table thead th:nth-child(4){color:#fff;font-weight:600;border-bottom:2px solid var(--gold)}
-/* The column is RAISED, not tinted gold: #f2a900 at any usable alpha over
-   the near-black green goes olive and muddies the numbers sitting on it.
-   The brass rule under the header carries the money mark on its own, and a
-   neutral lift is what says "this column is the one to read". */
-.hm-table tbody td:nth-child(4){background:rgba(255,255,255,.05)}
-.hm-table .mine{font-weight:600;font-size:var(--fs-19);color:#fff}
-.hm-act{display:inline-block;font-size:var(--fs-15);font-weight:600;letter-spacing:0;text-transform:none;padding:var(--sp-4) var(--sp-12);border-radius:2px;white-space:nowrap}
-.hm-act.up{background:rgba(45,212,163,.15);color:#5fe0ba;border:1px solid rgba(45,212,163,.36)}
-.hm-act.down{background:rgba(232,119,108,.14);color:#f09a92;border:1px solid rgba(232,119,108,.34)}
-.hm-act-why{display:block;margin-top:var(--sp-4);font-size:var(--fs-15);color:var(--on-board-2);white-space:nowrap}
-
-/* ── the lead story ───────────────────────────────────────────────────────
-   The front page carried the desk only as three rotating cards two screens
-   down, all the same size, so the piece published an hour ago and the one
-   from Tuesday were the same object. This is the well /fantasy and /dfs
-   already open on, in this page's own palette: newest piece as the lead with
-   its picture and its whole deck, the next five as headlines beside it. It is
-   the first thing under the hero, which is the whole point of a lead.
-   The lead is marked by a 3px ink rule across its top — the heaviest rule on
-   the stock — rather than by being a slightly larger box than the boxes below
-   it, which is how it was told apart before. */
-/* Clear of the section head's rule: the lead plate carries a 3px rule of its
-   own and the two stacked read as one thick bar that stopped halfway across
-   the page. */
-.hm-well{margin-top:var(--sp-16);display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:var(--sp-32);align-items:stretch}
-.hm-well-solo{grid-template-columns:minmax(0,1fr)}
-/* The lead sits at its own height and the column stretches to the row, so the
-   column's last rule closes level with the card when the card is the taller
-   and the card does not hold white space open when it is not. */
-.hm-lead{align-self:start;display:flex;flex-direction:column;gap:var(--sp-12);min-width:0;background:var(--card);border:1px solid var(--line);border-top:3px solid var(--ink);border-radius:0 0 2px 2px;padding:var(--sp-24) var(--sp-24) var(--sp-24)}
-.hm-lead:hover{border-color:var(--brand-line);border-top-color:var(--brand)}
-.hm-lead .t{display:flex;align-items:center;gap:var(--sp-8);flex-wrap:wrap;font-size:var(--fs-15);font-weight:600;letter-spacing:0;text-transform:none;color:var(--brand)}
-.hm-lead h3{font-size:var(--fs-lead);line-height:1.13;font-weight:700;letter-spacing:-.018em;color:var(--ink);overflow-wrap:anywhere}
-.hm-lead h3 a{color:inherit}
-.hm-lead h3 a:hover{color:var(--brand)}
-.hm-lead h3 .it-story-focus{display:flex;margin:0 0 var(--sp-16)}
-.hm-lead h3 .it-player-face{width:72px;height:72px;min-width:72px;border-radius:3px}
-/* The lead's deck runs whole, and it is the serif's second and last job on
-   this page: it is the only place below the hero that is reading rather than
-   scanning. The cards below clamp theirs to keep three of them scannable, and
-   a lead clamped to two lines is only a bigger card. */
-.hm-lead p{font-size:var(--fs-22);line-height:1.45;color:var(--ink-2)}
-.hm-lead .go{font-size:var(--fs-17);font-weight:600;letter-spacing:0;text-transform:none;color:var(--brand)}
-.hm-lead .m{margin-top:var(--sp-16);padding-top:var(--sp-16);border-top:1px solid var(--line);font-size:var(--fs-14);color:var(--ink-3)}
-/* The boast on the lead, at the lead's scale rather than the card's: the
-   headline under it is bigger here, so the banner is too. Brass ground and
-   brass rule, which is the same mark the reading and the claim carry — the
-   desk is claiming it called this one. */
-.hm-lead.is-boast{border-top-color:var(--gold);background:linear-gradient(180deg,#fff8e8,var(--card) 56%)}
-.hm-lead.is-boast:hover{border-top-color:var(--gold)}
-.hm-lead .boast{display:block;font-weight:600;font-size:var(--fs-13);line-height:.98;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-ink)}
-.hm-lead.is-boast .m{border-top-color:rgba(242,169,0,.4)}
-.hm-rail{display:flex;flex-direction:column;min-width:0}
-.hm-rail-h{margin-bottom:var(--sp-12);padding-bottom:var(--sp-8);border-bottom:1px solid var(--ink);font-size:var(--fs-14);font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink)}
-.hm-rail ul{list-style:none;display:flex;flex-direction:column;justify-content:space-between;gap:var(--sp-12);flex:1 1 auto}
-.hm-rail li{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0;padding-bottom:var(--sp-12);border-bottom:1px solid var(--line)}
-.hm-rail li:last-child{padding-bottom:0;border-bottom:0}
-.hm-rail li h3{display:flex;align-items:center;font-size:var(--fs-17);line-height:1.32;font-weight:600}
-.hm-rail li h3 a{color:var(--ink)}
-.hm-rail li h3 a:hover{color:var(--brand)}
-.hm-rail li h3{justify-content:space-between;gap:var(--sp-12)}
-.hm-rail li h3 .it-story-focus{flex:0 0 auto;order:2;margin:0}
-.hm-rail li h3 .it-player-face{width:32px;height:32px;min-width:32px;border-radius:4px}
-.hm-rail li .m{font-size:var(--fs-14);color:var(--ink-3)}
-@media(max-width:900px){.hm-well{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:620px){.hm-lead h3 .it-player-face{width:56px;height:56px;min-width:56px;border-radius:3px}
-  .hm-lead p{font-size:var(--fs-19)}}
-
-/* ── 4 · the current articles ─────────────────────────────────────────────
-   Ruled entries, not boxes. These are the third-most important thing on the
-   page and they were wearing the same bordered, rounded, shadowed card as the
-   lead story and the two lanes. A rule over each headline is enough to group
-   it, and it leaves the lead plate as the only plate in the lower half. */
-.hm-reads{margin-top:var(--sp-16);display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--sp-24)}
-.hm-read-card{display:flex;flex-direction:column;background:transparent;border:0;border-top:2px solid var(--ink);border-radius:0;padding:var(--sp-12) 0 0}
-.hm-read-card:hover{border-top-color:var(--brand)}
-.hm-read-card:hover h3{color:var(--brand)}
-.hm-read-card .t{font-size:var(--fs-14);font-weight:600;letter-spacing:0;text-transform:none;color:var(--brand)}
-.hm-read-card h3{margin-top:var(--sp-8);font-size:var(--fs-19);line-height:1.28;font-weight:600;letter-spacing:-.01em}
-/* The faces the desk's own findings name, on their own row ABOVE the headline
-   rather than inline at the front of it — set inline they push the first line
-   of type around them and the headline reads as though it starts mid-sentence.
-   Same treatment the story cards elsewhere on the site use. */
-.hm-read-card h3 .it-story-focus{display:flex;margin:0 0 var(--sp-12)}
-.hm-read-card h3 .it-player-face{width:46px;height:46px;min-width:46px;border-radius:4px}
-/* THE BOAST, at this band's scale. The desk may open a headline with "YOU'RE
-   WELCOME:" only when one of its own pre-kickoff calls cleared the headline
-   bar (_voiceBlock, _worker.js), and the other three surfaces that print a
-   desk headline give that phrase a banner. This band has no lead card to hang
-   a 38px one on -- three entries of equal width -- so it is sized to the
-   entry instead of to the page, and the entry takes the brass rule that marks
-   every other claim on this page. The call runs under it in the headline, as
-   everywhere else. */
-.hm-read-card.is-boast{border-top-color:var(--gold)}
-.hm-read-card.is-boast:hover{border-top-color:var(--gold)}
-.hm-read-card .boast{display:block;margin-top:var(--sp-8);font-weight:600;font-size:var(--fs-13);line-height:.98;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-ink)}
-.hm-read-card.is-boast h3{margin-top:var(--sp-4);font-weight:600}
-.hm-read-card p{margin-top:var(--sp-8);font-size:var(--fs-17);line-height:1.5;color:var(--ink-2)}
-.hm-read-card .m{margin-top:auto;padding-top:var(--sp-12);font-size:var(--fs-15);color:var(--ink-3)}
-
-/* ── 5 · how it works, and the disclosures ── */
-.hm-how{margin-top:clamp(34px,4vw,52px);background:var(--card);border-top:1px solid var(--line)}
-.hm-how .wrap{padding-top:clamp(20px,2.4vw,28px);padding-bottom:clamp(20px,2.4vw,30px)}
-.hm-how h2{font-size:var(--fs-17);font-weight:700;letter-spacing:0;color:var(--ink)}
-.hm-note{margin-top:var(--sp-8);font-size:var(--fs-16);line-height:1.65;color:var(--ink-3);max-width:92ch}
-/* ── the three inputs ──────────────────────────────────────────────────────
-   They were bold run-ins inside .hm-note: a numbered list of three things,
-   set as one running paragraph, in a 92ch measure that ran out at half the
-   width of an 1,180px band and left the right half of the method empty. They
-   are three things, so they are three columns, ruled apart the way the two
-   lane cards above them are — the number is the mark, the name is the
-   heading, and the definition sits under it at note weight. Same words, same
-   links, same order; this is the block's shape, not its copy. */
-.hm-how-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:var(--sp-12);border-top:1px solid var(--line)}
-.hm-input{padding:var(--sp-12) var(--sp-24) 2px;border-left:1px solid var(--line);min-width:0}
-.hm-input:first-child{border-left:0;padding-left:0}
-.hm-input:last-child{padding-right:0}
-.hm-input-n{display:block;font-size:var(--fs-13);font-weight:600;letter-spacing:.11em;color:var(--brand)}
-.hm-input h3{margin:1px 0 3px;font-size:var(--fs-17);font-weight:600;letter-spacing:0;color:var(--ink)}
-.hm-input p{margin:0;font-size:var(--fs-16);line-height:1.6;color:var(--ink-3)}
-.hm-how-more{margin-top:var(--sp-12)}
-@media(max-width:820px){
-  .hm-how-grid{grid-template-columns:minmax(0,1fr)}
-  .hm-input{border-left:0;border-top:1px solid var(--line);padding:var(--sp-12) 0 var(--sp-4)}
-  .hm-input:first-child{border-top:0}
-}
-.hm-note b{color:var(--ink-2)}
-.hm-note a{color:var(--brand);font-weight:600}
-.hm-note a:hover{text-decoration:underline}
-/* The disclosures live here, in the section that explains the method, rather
-   than only in the footer: this is where a reader is actually deciding what the
-   numbers are worth. The footer's copyright line stays; its duplicate copy of
-   this paragraph does not. */
-.hm-legal{margin-top:var(--sp-12);font-size:var(--fs-16);line-height:1.65;color:var(--ink-3);max-width:92ch}
-.hm-legal b{color:var(--ink-2)}
-.hm-legal p + p{margin-top:var(--sp-8)}
-
-@media(max-width:560px){
-  /* The label and its note stop competing for one line and stack instead: on a
-     phone "Rest of season rankings" beside "The horizon that decides trades"
-     left both of them at three words a line. */
-  .hm-links a{flex-direction:column;align-items:flex-start;gap:2px;padding:var(--sp-12) 0}
-  .hm-links a span{text-align:left}
-  .hm-lane{padding:var(--sp-24) var(--sp-16) var(--sp-24)}
-  .hm-table th,.hm-table td{padding:var(--sp-12) var(--sp-12)}
-  /* The board is a sideways scroller on a phone and the player column is the
-     one that has to stay narrow, so the face goes back to a marker. */
-  .hm-table .who .it-player-face{width:34px;height:34px;min-width:34px;border-radius:4px}
-  .hm-table .who.it-player-cell{gap:var(--sp-8)}
-  .hm-reads{gap:var(--sp-24)}
-}
-
-/* Visually hidden, still read aloud: the two product cards need a heading of
-   their own for the document outline without putting a redundant one on the
-   page above two cards that already carry their names. */
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-
-/* ── the choose-your-game band ───────────────────────────────────────────────
-   The band directly under the hero, where the generated rankings ribbon used
-   to sit. It keeps that band's stock — a white rule-bounded strip against the
-   hero's dark mast — so the page still reads as "the thesis, then a break,
-   then the product", and it carries one line of type instead of six links.
-   Nothing in it is a control, so nothing in it is styled as one. */
-.hm-choose{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(16,19,23,.05);position:relative;z-index:45}
-.hm-choose-in{max-width:1880px;margin:0 auto;padding:0 clamp(16px,2vw,40px);display:flex;align-items:center;justify-content:center;min-height:46px}
-.hm-choose-k{font-size:var(--fs-13);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);text-align:center}
-@media (max-width:860px){
-  .hm-choose-in{padding:0 var(--sp-12)}
-  .hm-choose-k{font-size:var(--fs-13);letter-spacing:.05em}
-}
-/* ══ THE SCOREBOARD DRESS, ON THE COVER ═══════════════════════════════════
-   Worn by adding `hm-dress` to <body>. /fantasy and /dfs wear the shared
-   `body.sl-dress` in site.css; this page CANNOT — it links no stylesheet and
-   carries its own palette and its own two families — so the same four moves
-   are restated here against this page's own tokens. Its own hook, not
-   `sl-dress`: two different implementations answering to one class name is
-   how the day this page does link site.css becomes a bad day.
-
-   Ken asked for the cover after the two lane pages. I argued it did not have
-   their problem — it is art-directed, and the palette comment 500 lines up
-   says it was re-skinned off exactly the templated look the other two still
-   had. He asked again, so here it is, and the argument was half wrong: the
-   STRUCTURE was already right, and the SCALE was not. Measured at 1,440px
-   before this block, the hero ran about 800px before a reader reached a
-   single number, the board's five rows were 76px each with the player's name
-   on one line and his team on the next, and every section opened with a 28px
-   headline over a black rule. Nothing here re-skins the page. It takes the
-   air out of it.
-
-     1 · THE NAMEPLATE. The hero keeps every element the spec and
-         tools/test-homepage.mjs pin — the two-clause h1, the serif claim
-         larger than the lede, both buttons, the method link, the clock, the
-         picture column — and loses about 300px of the room between them.
-     2 · THREE TYPE WEIGHTS. Section heads drop from a 28px headline to a
-         16px label in caps, which is what a section head is; the h1 and the
-         serif claim stay the only display type on the page, and the kickers
-         at 13.5px stay a clear step below the new heads.
-     3 · DENSITY. The board goes to 44px rows: one line per player, a 28px
-         face, the decision and its reason on one line, zebra under the rules
-         it already had, and Iron Tuna's column still the only lifted one. The
-         lane indexes, the lead, the rail and the desk cards come in with it.
-     4 · STRUCTURE. One change only, because the rest was already right: the
-         desk cards' faces come off their own line and sit inline in the
-         headline, the way the rail beside them already does.
-
-   Every value below is a token this file declares or a literal rgba on the
-   one dark ground (--mast), which is where all four of them are used.
-   ══════════════════════════════════════════════════════════════════════════ */
-
-/* ── 1 · the nameplate ──────────────────────────────────────────────────── */
-/* 38px, not 50px. The counter-claim rides this at 1.16em, so it is still the
-   largest thing on the page by a clear step — it is the room around the
-   clauses that came out, not the contrast between them. */
-/* The claim MUST stay larger than the lede at every width
-   (tools/test-homepage.mjs asserts the computed sizes at 1280 and 390). Both
-   clamps below shrink, and the claim's floor (19px) still clears the lede's
-   ceiling (16px), so the rule holds at every width in between rather than
-   only at the two the gate measures. A wider measure is what buys the height:
-   44ch sets the sentence in two lines where 38ch set it in three. */
-body.hm-dress .hm-claim{margin-top:var(--sp-16);max-width:44ch;font-size:var(--fs-22);line-height:1.3}
-body.hm-dress .hm-lede{margin-top:var(--sp-12);max-width:64ch;font-size:var(--fs-17);line-height:1.55}
-body.hm-dress .hm-cta{margin-top:var(--sp-16);gap:var(--sp-12)}
-body.hm-dress .hm-btn{font-size:var(--fs-17);padding:var(--sp-12) var(--sp-16)}
-
-/* ── 2 · section heads ──────────────────────────────────────────────────── */
-body.hm-dress .hm-sec{padding-top:clamp(24px,3vw,38px)}
-body.hm-dress .hm-sec-head{margin-bottom:var(--sp-8);padding-bottom:var(--sp-8);border-bottom-width:1px;align-items:center}
-body.hm-dress .hm-sec-head h2{font-size:var(--fs-19);font-weight:700;letter-spacing:.055em;
-  line-height:1.2;text-transform:uppercase}
-body.hm-dress .hm-sec-head a{font-size:var(--fs-13);font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-body.hm-dress .hm-fine{margin-top:var(--sp-8);font-size:var(--fs-15);line-height:1.5}
-
-/* ── 3 · the board ──────────────────────────────────────────────────────── */
-body.hm-dress .hm-table th,body.hm-dress .hm-table td{padding:var(--sp-8) var(--sp-12);font-size:var(--fs-17)}
-body.hm-dress .hm-table thead th{font-size:var(--fs-13);font-weight:600;letter-spacing:.06em;text-transform:uppercase;
-  padding-top:var(--sp-12);padding-bottom:var(--sp-8)}
-/* One line per player, ABOVE 560px ONLY. `b` and `small` were both
-   display:block, so every row was two lines of type beside a 46px face and
-   the board's five rows were 380px of a 1,000px page.
-
-   The phone keeps the blocks, and the query below is the reason rather than
-   caution: this board is a sideways scroller on a phone and the page's own
-   560px rule says the player column "has to stay narrow" there. Two stacked
-   blocks each wrap inside a narrow column; one inline run cannot, so setting
-   it inline everywhere broke the name itself — "Travis / Kelce" over "TE · /
-   KC · / at / BUF", four lines where the stacked version takes two. Density
-   here is a wide-screen win, and on a phone it costs more than it pays. */
-@media(min-width:561px){
-  body.hm-dress .hm-table .who b{display:inline;font-size:var(--fs-17);white-space:nowrap}
-  body.hm-dress .hm-table .who small{display:inline;margin:0 0 0 var(--sp-8);font-size:var(--fs-14);white-space:nowrap}
-  body.hm-dress .hm-table .who.it-player-cell{gap:var(--sp-8)}
-  body.hm-dress .hm-table .who .it-player-face{width:32px;height:32px;min-width:32px}
-}
-body.hm-dress .hm-table .mine{font-size:var(--fs-19)}
-/* And the phone's own version of the same row, which was broken before this
-   block existed and stays broken if the query above is all that changes.
-   `.who.it-player-cell` is a flex ROW — player-search.js's face, the name and
-   the meta are three siblings in it — so on a phone the name and the meta sat
-   SIDE BY SIDE in a 150px column and each one broke inside itself: "Travis /
-   Kelce" next to "TE · / KC · at / BUF", five lines for one player. A grid
-   gives the face a column of its own and stacks the two lines of type in the
-   other, which is exactly what .hm-read.has-pic above does about the same
-   problem. Two lines, not five, and the name no longer breaks at all. */
-@media(max-width:560px){
-  body.hm-dress .hm-table .who.it-player-cell{display:grid;grid-template-columns:auto minmax(0,1fr);
-    align-items:center;column-gap:var(--sp-8)}
-  body.hm-dress .hm-table .who .it-player-face{grid-row:1/span 2}
-  /* Both nowrap. Stacking them was only half of it: the table algorithm hands
-     the numeric columns their nowrap widths first and squeezes what is left
-     into the player column, so an unbroken meta line still came out as "TE /
-     · / KC / · / at / BUF" one token per line. Held together, the column asks
-     for the width it needs and the board is a wider scroller — which it
-     already is at this width, and the whole reason .hm-scroll is there. */
-  body.hm-dress .hm-table .who b,body.hm-dress .hm-table .who small{grid-column:2;white-space:nowrap}
-}
-/* The decision and the gap it came from were a chip over a second line. They
-   are one statement, so they read as one line. */
-body.hm-dress .hm-act{font-size:var(--fs-13);font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px var(--sp-8)}
-body.hm-dress .hm-act-why{display:inline;margin:0 0 0 var(--sp-8);font-size:var(--fs-14)}
-/* Zebra, under the rules the board already had. On this ground it has to be
-   lighter than the lift on Iron Tuna's column, or the one device that says
-   "read this column" stops saying it — so the column is raised again on a
-   striped row rather than being overtaken by it. */
-body.hm-dress .hm-table tbody tr:nth-child(even) td{background:rgba(255,255,255,.03)}
-body.hm-dress .hm-table tbody td:nth-child(4){background:rgba(255,255,255,.06)}
-body.hm-dress .hm-table tbody tr:nth-child(even) td:nth-child(4){background:rgba(255,255,255,.09)}
-
-/* ── 3b · the lead, the rail, the two lane cards, the desk ──────────────── */
-body.hm-dress .hm-well{margin-top:var(--sp-16);gap:var(--sp-24)}
-body.hm-dress .hm-lead{gap:var(--sp-8)}
-body.hm-dress .hm-lead h3 .it-story-focus{margin:0 0 var(--sp-12)}
-body.hm-dress .hm-lead h3 .it-player-face{width:52px;height:52px;min-width:52px}
-body.hm-dress .hm-lane{padding:var(--sp-16) var(--sp-24) var(--sp-16)}
-body.hm-dress .hm-lane h2{font-size:var(--fs-h2)}
-body.hm-dress .hm-lane > p{margin-top:var(--sp-8);font-size:var(--fs-17);line-height:1.45}
-body.hm-dress .hm-read{margin-top:var(--sp-16);padding:var(--sp-12) var(--sp-12)}
-body.hm-dress .hm-read .k{font-size:var(--fs-13);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-body.hm-dress .hm-read .h{margin-top:var(--sp-4);font-size:var(--fs-19)}
-body.hm-dress .hm-read .d{margin-top:var(--sp-4);font-size:var(--fs-16);line-height:1.42}
-body.hm-dress .hm-read.has-pic{grid-template-columns:44px minmax(0,1fr);column-gap:var(--sp-12)}
-body.hm-dress .hm-links{margin-top:var(--sp-16)}
-body.hm-dress .hm-links a{padding:var(--sp-8) 0;font-size:var(--fs-17)}
-body.hm-dress .hm-links a span{font-size:var(--fs-15)}
-body.hm-dress .hm-lane-go{padding-top:var(--sp-16)}
-body.hm-dress .hm-lane-go a{font-size:var(--fs-17);padding:var(--sp-12) var(--sp-16)}
-body.hm-dress .hm-reads{margin-top:var(--sp-16);gap:var(--sp-24)}
-body.hm-dress .hm-read-card{border-top-width:2px;padding-top:var(--sp-12)}
-body.hm-dress .hm-read-card .t{font-size:var(--fs-13);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-body.hm-dress .hm-read-card h3{margin-top:var(--sp-8);font-size:var(--fs-19);line-height:1.28}
-/* ── 4 · the one structural change ───────────────────────────────────────
-   The desk cards put the face on its own line above the headline, which at
-   46px is a block of grey between a kicker and the line it belongs to. The
-   rail beside them already sets the same face inline in the headline; the
-   cards do it too now, at the rail's size. */
-body.hm-dress .hm-read-card h3{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-12)}
-body.hm-dress .hm-read-card h3 .it-story-focus{display:inline-flex;align-items:center;order:2;margin:0}
-body.hm-dress .hm-read-card h3 .it-player-face{width:32px;height:32px;min-width:32px}
-body.hm-dress .hm-choose-in{min-height:38px}
-body.hm-dress .hm-choose-k{font-size:var(--fs-14);letter-spacing:.09em}
-/* ── below the front: the same white cards on the same stock ──
-   The lanes, the board and the desk cards take the front's card treatment
-   (8px corners, a hairline shadow, no border) so the page reads as one sports
-   front top to bottom rather than a front over a different site. */
-.hm-reads{gap:var(--sp-16)}
-
-
-/* ── the width, and the gaps (Ken, 2026-09-25) ───────────────────────────────
-   FLUID, NOT A 1,280px COLUMN. The page used to stop at 1,280px and leave
-   the rest of a wide window as grey margin. It now runs to 1,880px with a
-   gutter that grows from 16px to 40px, and the front's two columns are
-   fractions of it: drag the window wider and the stories widen with it.
-
-   The lead and Top Headlines end level (2026-09-26: two columns now, not
-   three), each with its last line pinned to the foot. */
-.hm-front .hm-rail ul{flex:0 0 auto}
-.hm-front .hm-rail-all{margin-top:var(--sp-16)}
-body.hm-dress .hm-sec{padding-top:var(--sp-16)}
-body.hm-dress .hm-sub{margin-top:var(--sp-12);margin-bottom:var(--sp-12)}
-body.hm-dress .hm-reads{gap:var(--sp-16)}
-/* The promo in the method section: claim and lede on the left, the two
-   buttons on the right, one dark card across the band. */
-.hm-how .hm-promo{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"k k" "claim cta" "lede cta" "tag cta";column-gap:var(--sp-32);align-items:start;margin-bottom:var(--sp-24)}
-.hm-how .hm-promo-k{grid-area:k}
-.hm-how .hm-promo .hm-claim{grid-area:claim;margin-top:0;max-width:52ch}
-.hm-how .hm-promo .hm-lede{grid-area:lede;max-width:80ch}
-.hm-how .hm-promo .hm-tagline{grid-area:tag;margin:var(--sp-16) 0 0}
-.hm-how .hm-promo .hm-cta{grid-area:cta;margin-top:0;align-self:center;min-width:15rem}
-@media(max-width:760px){
-  .hm-how .hm-promo{grid-template-columns:minmax(0,1fr);grid-template-areas:"k" "claim" "lede" "tag" "cta"}
-  .hm-how .hm-promo .hm-cta{margin-top:var(--sp-16);min-width:0}
-}
-
-/* ══ BELOW THE FRONT, FLAT (2026-09-27) ════════════════════════════════════
-   The front went editorial on 2026-09-26; everything under it still wore the
-   dashboard: white plates with soft shadows and 8px corners, a coloured left
-   rule on each desk card, a bordered "Choose your game" band, all-caps section
-   heads, and solid green buttons heavier than anything around them. This
-   block is the last word on those sections; the rules it replaced (the
-   plates and shadows in "the width, and the gaps") are gone rather than
-   overridden.
-   - Sections are --sec-gap apart (48px, 32px on a phone), no exceptions.
-   - One section head: 22px/700 sentence case over a 2px ink rule, its link
-     14px/600 in the brand colour.
-   - Items part on hairlines and whitespace, never on plates or shadows.
-   - Hover: headlines go to the brand colour or underline, pictures brighten
-     slightly, buttons fill. Keyboard focus always shows a 2px ring. */
-
-/* Spacing between sections. The front's own padding-bottom is its gutter
-   (32px, 16px below 900px), so "Choose your game" adds the rest of the gap. */
-body.hm-dress .hm-choose{margin-top:calc(var(--sec-gap) - var(--front-gutter))}
-body.hm-dress #main > .hm-sec{padding-top:0}
-body.hm-dress #main > .hm-sec + .hm-sec{padding-top:var(--sec-gap)}
-body.hm-dress #main > .hm-sec:first-child{padding-top:var(--sp-16)}
-body.hm-dress .hm-how{margin-top:var(--sec-gap);border-top:0;background:none}
-body.hm-dress .hm-how .wrap{padding-top:0;padding-bottom:0}
-body.hm-dress .foot{margin-top:var(--sec-gap)}
-
-/* "Choose your game" is the lanes' section head, not a band of its own. The
-   markup stays (tools/test-ranks.mjs pins it); only its dress changes. */
-body.hm-dress .hm-choose{background:none;border:0;box-shadow:none;position:static;z-index:auto}
-body.hm-dress .hm-choose-in{display:block;min-height:0}
-body.hm-dress .hm-choose-k{display:block;padding-bottom:var(--sp-8);border-bottom:2px solid var(--ink);text-align:left}
-
-/* One section head. */
-body.hm-dress .hm-sec-head{align-items:baseline;margin-bottom:var(--sp-16);padding-bottom:var(--sp-8);border-bottom:2px solid var(--ink)}
-body.hm-dress .hm-sec-head h2,body.hm-dress .hm-choose-k,body.hm-dress #howHead{font-size:var(--fs-22);font-weight:700;line-height:1.2;letter-spacing:-.01em;text-transform:none;color:var(--ink)}
-body.hm-dress #howHead{margin-top:var(--sp-32);padding-bottom:var(--sp-8);border-bottom:2px solid var(--ink)}
-body.hm-dress .hm-sec-head a{font-size:var(--fs-14);font-weight:600;letter-spacing:0;text-transform:none;color:var(--brand);white-space:nowrap}
-body.hm-dress .hm-sec-head a:hover{text-decoration:underline}
-
-/* The two lanes: two columns on a hairline, no plate. */
-body.hm-dress .hm-lanes{background:none;border:0;border-radius:0;box-shadow:none;overflow:visible;gap:0}
-body.hm-dress .hm-lane{padding:var(--sp-8) var(--sp-32) 0 0}
-body.hm-dress .hm-lane + .hm-lane{padding:var(--sp-8) 0 0 var(--sp-32);border-left:1px solid var(--line);border-top:0}
-body.hm-dress .hm-read{border-left:0;border-radius:4px}
-body.hm-dress .hm-lane-go a{background:none;color:var(--brand);border:1px solid var(--brand);border-radius:4px;transition:background .12s,color .12s}
-body.hm-dress .hm-lane-go a:hover{background:var(--brand);color:#fff}
-@media(max-width:900px){
-  body.hm-dress .hm-lane{padding:var(--sp-8) 0 0}
-  body.hm-dress .hm-lane + .hm-lane{padding:var(--sp-32) 0 0;margin-top:var(--sp-32);border-left:0;border-top:1px solid var(--line)}
-}
-
-/* The market table keeps its board: the one deliberate dark surface under
-   the front. Rows 48px, Iron Tuna's column marked by its ground alone,
-   decision chips 12px on 4px corners. */
-body.hm-dress .hm-diff-plate{border-radius:4px}
-body.hm-dress .hm-table tbody td{height:48px}
-body.hm-dress .hm-table thead th:nth-child(4){border-bottom:0}
-body.hm-dress .hm-act{font-size:var(--fs-12);font-weight:600;border-radius:4px}
-
-/* The desk's cards: a hairline over each, no plate, no coloured rule. */
-body.hm-dress .hm-reads{gap:var(--sp-32)}
-body.hm-dress .hm-read-card{background:none;border:0;border-top:1px solid var(--line);border-radius:0;box-shadow:none;padding:var(--sp-16) 0 0}
-body.hm-dress .hm-read-card.is-boast{border-top-color:var(--gold)}
-body.hm-dress .hm-read-card:hover h3{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
-
-/* How it works: the columns part on hairlines. */
-body.hm-dress .hm-how-grid{margin-top:var(--sp-16)}
-
-/* Hover and focus, one rule set. */
-body.hm-dress a:hover img{filter:brightness(1.04)}
-body.hm-dress .he-link:hover .it-plate-shot{filter:none}
-body.hm-dress .hm-btn{border-radius:4px}
-body.hm-dress a:focus-visible,body.hm-dress button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-body.hm-dress .mast a:focus-visible,body.hm-dress .mast button:focus-visible,body.hm-dress .hm-promo a:focus-visible,
-body.hm-dress .hm-edge a:focus-visible,body.hm-dress .hm-diff-plate a:focus-visible{outline-color:var(--teal)}
-
-/* Footer: one line of links 24px apart, the legal run at 13px and a
-   readable measure, a hairline above. */
-body.hm-dress .foot-nav{gap:var(--sp-8) var(--sp-24)}
-body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)}
+/* ── 5 · the KPI band ─────────────────────────────────────────────────────
+   site.css .kpi. The band is the last thing before the footer and sits flush
+   against it, so the section gap goes above it only. */
+.hm-kpi{margin-top:var(--sec-gap)}
+.hm-kpi .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:860px){.hm-kpi .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+footer.site {margin-top:0}
 </style>
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://irontuna.com/#website","name":"Iron Tuna","url":"https://irontuna.com/","inLanguage":"en-US","publisher":{"@id":"https://irontuna.com/#organization"},"description":"Analytics consistently beats intuition. Iron Tuna combines market intel, advanced analytics and AI analysis: the betting market read first, the consensus second, and your league’s scoring on top of both. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup."},{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna prices every NFL player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring — weekly rankings, waiver prices, DFS values and model-vs-market game lines in season, and custom draft values before it.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
 </head>
-<body class="hm-dress">
-<header class="mast"><div class="wrap">
-  <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a><span class="mast-slash" aria-hidden="true">/</span>
-  <!-- The same five destinations, in the same order, as the shared chrome on
-       every other page (tools/build-chrome.mjs NAV). The front page used to
-       carry four of its own, so clicking off "/" changed the nav.
-       Market Intel and Draft Tools came off both: the betting market is the
-       layer underneath the two lanes rather than a third lane of its own, and
-       the draft rooms are an offseason pitch. Every one of those pages still
-       serves at its own URL. -->
-  <!-- On a phone this is the menu's panel (2026-09-26): closed, it is not
-       drawn at all, rather than a row of links clipped mid-word at the
-       screen's edge. The week chip rides at its foot there. -->
-  <nav class="mast-jump" id="mastMenu" aria-label="Sections of the site">
-    <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">Articles</a><a href="/faq#faq-start">How It Works</a><a href="/player">Search</a>
-    <p class="mast-week mast-week-m" id="hmClockM" hidden></p>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site"><!--chrome:line--><p class="site-line"><span>Every player priced off the betting market first.</span> <span>Restated at your league’s scoring.</span></p><!--/chrome:line--><div class="wrap">
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
+  <!--chrome:nav-->
+    <nav class="nav" id="sitenav" aria-label="Main">
+      <a href="/fantasy">Fantasy</a>
+      <a href="/dfs">DFS</a>
+      <a href="/in-season/desk">Articles</a>
+      <a href="/faq#faq-start">How It Works</a>
+      <a href="/player">Search</a>
+    </nav>
+    <a class="cta" href="/my-league#settings">Customize My League</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
+    <!--/chrome:nav-->
+</div><!--chrome:tabbar-->
+  <nav class="tabbar" aria-label="Sections">
+    <a href="/fantasy"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16M12 4v16"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Fantasy</a>
+    <a href="/dfs"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19h16M6 15l4-5 4 3 4-7"/></svg>DFS</a>
+    <a href="/in-season/desk"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg>Articles</a>
+    <a href="/my-league#settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>My league</a>
   </nav>
-  <div class="mast-nav">
-    <!-- NO SIGN IN HERE, deliberately. The link used to sit in this slot and it
-         pointed at /auctiondraft?signin=1, because the account system was built
-         inside the draft app and that is the only door into it. In September
-         that is a homepage inviting a reader into a draft room, and there is
-         nothing on this side of the season to sign in FOR: every in-season
-         board, tool and reading is open to everyone.
+<!--/chrome:tabbar-->
+</header>
+<main id="main">
 
-         PUT IT BACK WHEN THE IN-SEASON SUBSCRIPTION SHIPS — the one that closes
-         Value Coach and the other premium in-season features. It needs its own
-         address by then, not the draft room's: a reader paying for an
-         in-season product should not land in an auction to log into it. The
-         styles this link used (.mast-signin, and its rule in the phone query)
-         came off with it; they are in git history at this line. -->
-    <!-- Not "Sync My League". The platform connectors were removed
-         (docs/saved-league.md); /my-league is where a reader describes their
-         league, and that is what this button promises. -->
-    <!-- The dateline, as a chip (2026-09-26). It had a bar of its own under
-         the nav, with the tagline; one bar of chrome is the whole header now.
-         Written hidden, shown only once /api/season names a real week. -->
-    <p class="mast-week" id="hmClock" hidden></p>
-    <a class="cta-gold" id="navSync" href="/my-league#settings"><span class="cta-long">Customize </span>My League</a>
-    <button class="mast-menu" type="button" aria-expanded="false" aria-controls="mastMenu" aria-label="Menu"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-  </div>
-</div></header>
-
-<!-- ── the page's h1 ────────────────────────────────────────────────────────────
-     2026-09-26: the tagline ("Anyone can publish a projection. Vegas has money
-     on theirs.") had a bar of its own under the nav, which made two bars of
-     chrome on a desk and about 270px of it on a phone. It moved to the method
-     section (#how), beside the explanation it sums up. The page still needs
-     one h1 for its outline; it names the site and says what it is, and is not
-     drawn, because the front below it is news and the header already carries
-     the name. -->
-<h1 class="sr-only">Iron Tuna: fantasy football and DFS, priced off the betting market</h1>
-
-<!-- ── Quick Links ─────────────────────────────────────────────────────────────
-     Ken, 2026-09-26: a strip under the tagline bar, not a column of the front.
-     As the front's left column it took a fifth of the width for seven links
-     and left a tall empty card under them. One row here, scrolling sideways
-     on a phone rather than wrapping into a block. A different class from the
-     lane cards' `.hm-links` on purpose: the cards' eleven links are asserted
-     as a set, and this list is not part of it. -->
-<nav class="hm-quick" aria-label="Quick links">
-  <div class="wrap hm-quick-in">
-    <ul>
-      <li><a href="/weekly-rankings">Weekly rankings</a></li>
-      <li><a href="/fantasy#startsit">Start or sit</a></li>
-      <li><a href="/faab">Waiver prices</a></li>
-      <li><a href="/trade-finder">Trade values</a></li>
-      <li><a href="/dfs#lineup">DFS lineup</a></li>
-      <li><a href="/vegas-edge">The market board</a></li>
-      <li><a href="/value-coach">Value Coach</a></li>
+<!-- ── 1 · the hero ─────────────────────────────────────────────────────────
+     White and centred: the one h1, one sentence, the search field, the three
+     entry points, a hairline, and the row of live market figures. The class
+     stays `hero-band` because tools/test-ranks.mjs finds the hero by it. -->
+<section class="hero-band hm-hero" id="heroBand" aria-labelledby="heroHead">
+  <div class="wrap">
+    <h1 id="heroHead">Every player, priced off the betting market.</h1>
+    <p class="hm-lede">Sportsbook lines and player props become fantasy point projections, then weekly rankings, trade values and DFS lineups, scored at your league&rsquo;s settings.</p>
+    <!-- The site's one search box on this page. A real form posting ?q= to
+         /player, with the shared typeahead mounted on the input by
+         /player-search.js (data-player-search). -->
+    <form class="search-field hm-find" role="search" autocomplete="off" action="/player" method="get">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+      <input id="hmFind" name="q" type="search" placeholder="Type a player, a team or a position" aria-label="Look up a player, a team or a position"
+             role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="front">
+    </form>
+    <ul class="hm-entry">
+      <li><a href="/fantasy">Weekly fantasy &rarr;</a></li>
+      <li><a href="/dfs">DFS lineups &rarr;</a></li>
+      <li><a href="/in-season/desk">Articles &rarr;</a></li>
     </ul>
-  </div>
-</nav>
-
-<!-- ── 1 · the front ───────────────────────────────────────────────────────────
-     Three columns on a desk, one below 900px:
-       left    the pitch as a promo card (the claim, the lede, the two lane
-               buttons and the method link), then a Quick Links card;
-       center  the hero's photograph with the lead story directly under it;
-       right   "Top Headlines", the next five pieces off the desk.
-     The lead is still its own section (#lead) and still the second one on the
-     page; it sits INSIDE the front so its lead card and its headline rail can
-     take the center and right columns. #lead and #leadWell are
-     `display:contents` for that, so their children are the front's grid items.
-
-     Every band still follows the page's one rule: the photograph, the lead and
-     the rail are written hidden and appear only with real data. When all three
-     are quiet the promo card takes the full width rather than sitting beside two
-     empty columns. The class stays `hero-band` because tools/test-ranks.mjs
-     finds the hero by it. -->
-<section class="hero-band" id="heroBand">
-  <div class="wrap hm-front" id="hmHero">
-   <!-- ── the hero's picture ────────────────────────────────────────────────
-        ONE player, photographed, because a page whose whole argument is about
-        football players had no picture of one on it. Who it is comes off a
-        feed and is captioned with what that feed says: the man the desk is
-        writing about today, or — when the desk names nobody — the widest
-        market disagreement on this week's board.
-
-        It obeys the same rule as every other band here. It is written hidden
-        and is revealed only with a real player and a real line about him.
-
-        When it falls back to the board it skips the player the Fantasy card
-        already recommends: the same man pictured twice above the fold is the
-        page saying one thing and looking like it said two. A desk subject is
-        not filtered that way — the desk writing about him today is a second
-        fact about him, not a repeat of the first.
-
-        An <aside> rather than a <section> on purpose — the page's sections
-        are its outline and this is not one of them. -->
-   <aside class="hm-edge" id="heroEdge" hidden>
-     <div class="he-plate" id="heroEdgePlate"></div>
-     <div class="he-meta">
-       <span class="he-k" id="heroEdgeK"></span>
-       <b class="he-name" id="heroEdgeName"></b>
-       <span class="he-sub" id="heroEdgeSub"></span>
-       <span class="he-credit" id="heroEdgeCredit"></span>
-       <span class="he-gap" id="heroEdgeGap"></span>
-     </div>
-   </aside>
-   <!-- ── 1 · the lead story ───────────────────────────────────────────────
-        Ken, 2026-09-21: the front page had no lead. A recent published piece
-        leads the page (taking turns hourly since 2026-10-04; see leadTurn), with the next five beside it as Top Headlines, off the
-        same /api/newsroom read the cards below use -- so the two can never
-        disagree about what the desk has published.
-
-        Hidden until it is painted, like every other module here. -->
-   <section class="hm-sec" id="lead" hidden aria-labelledby="leadHead">
-     <div class="hm-sec-head">
-       <h2 id="leadHead">The lead story</h2>
-       <a href="/in-season/desk">All articles &rarr;</a>
-     </div>
-     <div class="hm-well" id="leadWell"></div>
-   </section>
+    <hr class="hm-rule">
+    <!-- The live market figures: the week's widest gaps between what the
+         sportsbook implies and what the consensus projects, each with the
+         decision the gap implies. Hidden until the board answers with at
+         least three rows that carry every number. -->
+    <div class="hm-market" id="different" hidden>
+      <div class="hm-sec-head">
+        <h2 id="diffHead">Where the market sees something different</h2>
+        <a href="/vegas-edge">The whole board &rarr;</a>
+      </div>
+      <ul class="hm-figs" id="diffBody"></ul>
+      <p class="hm-fine" id="diffFine"></p>
+    </div>
   </div>
 </section>
 
-<!-- ── the choose-your-game band ──────────────────────────────────────────────
-     The generated rankings ribbon (tools/build-ranks.mjs) used to sit here. It
-     was a list of boards, and a reader who has just been told what the site
-     does does not want a board yet — they want to say which game they play. The
-     band is that question, and the two cards below it are the two answers.
-
-     It is a plain div rather than a sectioning element: the page's outline is
-     its six sections (tools/test-homepage.mjs asserts that list by name), and a
-     one-line band is not a seventh. The rankings ribbon is unchanged on the nineteen pages that still
-     carry the sentinel; only the front page dropped it. -->
-<div class="hm-choose">
-  <div class="hm-choose-in"><span class="hm-choose-k">Choose your game</span></div>
-</div>
-
-<main class="wrap" id="main">
-
-  <!-- ── 2 · the two product cards ──────────────────────────────────────────
-       The whole product, in two cards. Each one lists the five destinations
-       that lane actually finishes a decision on, and each one carries ONE live
-       reading off the same feed the destination prints from, so the homepage
-       and the lane page can never name different players for the same week.
-
-       Both readings are written hidden and are revealed only with every number
-       on them present. A card whose feed is quiet is a card of links — never a
-       card with a skeleton or a "waiting for this week's slate" on it. -->
-  <section class="hm-sec" aria-labelledby="lanesHead">
-    <h2 id="lanesHead" class="sr-only">This week</h2>
-    <div class="hm-lanes">
-
-      <div class="hm-lane">
-        <h2>Season Long Fantasy</h2>
-        <p>Your league, re-priced off the betting market and restated at your own scoring.</p>
-        <div class="hm-read" id="fnRead" hidden data-player-links>
-          <span class="pic" id="fnReadPic"></span>
-          <span class="k" id="fnReadK"></span>
-          <span class="h" id="fnReadH"></span>
-          <span class="d" id="fnReadD"></span>
-        </div>
-        <ul class="hm-links">
-          <li><a href="/weekly-rankings">Weekly rankings<span>Every position, this week</span></a></li>
-          <li><a href="/fantasy#startsit">Start or sit<span>The week&rsquo;s two calls</span></a></li>
-          <li><a href="/season-long-rankings">Rest of season rankings<span>The horizon that decides trades</span></a></li>
-          <li><a href="/trade-finder">Trade values<span>Deals both sides accept</span></a></li>
-          <li><a href="/faab">Waivers<span>What a claim is worth in your dollars</span></a></li>
-          <li><a href="/value-coach">Value Coach<span>Ask about a start, a trade or a claim</span></a></li>
-        </ul>
-        <div class="hm-lane-go"><a href="/fantasy">Get Fantasy Advice</a></div>
-      </div>
-
-      <div class="hm-lane">
-        <h2>DFS</h2>
-        <p>One slate, one set of lines, one cap &mdash; every salary read against market-implied points.</p>
-        <div class="hm-read" id="dfRead" hidden data-player-links>
-          <span class="pic" id="dfReadPic"></span>
-          <span class="k" id="dfReadK"></span>
-          <span class="h" id="dfReadH"></span>
-          <span class="d" id="dfReadD"></span>
-        </div>
-        <ul class="hm-links">
-          <li><a href="/dfs#dfPlayWeek">Best contest or slate<span>Where the payoff pays for the risk</span></a></li>
-          <li><a href="/dfs#lineup">Recommended lineup<span>Solved against the cap</span></a></li>
-          <li><a href="/dfs#dfTune">Multiple lineup builder<span>Up to twenty off one core</span></a></li>
-          <li><a href="/dfs#stacks">Stacks<span>The games worth correlating</span></a></li>
-          <li><a href="/dfs#values">Market driven values<span>Points per $1,000, off the lines</span></a></li>
-        </ul>
-        <div class="hm-lane-go"><a href="/dfs">Build a DFS Lineup</a></div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ── 3 · where the market sees something different ──────────────────────
-       The argument the whole site is built on, as a table a reader can check:
-       three numbers on the same player and the decision the gap actually
-       implies. Three to five players, never more.
-
-       The section is written HIDDEN and is shown only when the live board
-       returns at least three players with all three projections on them. When
-       the odds feed is quiet there is no heading, no shell and no apology —
-       the page simply goes from the cards to the reading. -->
-  <section class="hm-sec" id="different" hidden aria-labelledby="diffHead">
+<!-- ── 2 · the position tiles ───────────────────────────────────────────────
+     One tile per position, each a link to that position's weekly board. The
+     live line under the name comes off /api/rankings and stays hidden until
+     it does. -->
+<section class="hm-sec" id="positions" aria-labelledby="posHead">
+  <div class="wrap">
     <div class="hm-sec-head">
-      <h2 id="diffHead">Where the market sees something different</h2>
-      <a href="/vegas-edge">The whole board &rarr;</a>
+      <h2 id="posHead">This week, by position</h2>
+      <a href="/weekly-rankings">Every position &rarr;</a>
     </div>
-    <p class="hm-sub">The sportsbook and the projection consensus put two different numbers on the same player. Iron Tuna blends them, and the gap is the decision.</p>
-    <div class="hm-diff-plate">
-      <div class="hm-scroll">
-        <table class="hm-table" data-player-links>
-          <thead><tr>
-            <th scope="col">Player</th>
-            <th scope="col" class="num">Consensus projection</th>
-            <th scope="col" class="num">Market projection</th>
-            <th scope="col" class="num">Iron Tuna projection</th>
-            <th scope="col">Decision</th>
-          </tr></thead>
-          <tbody id="diffBody"></tbody>
-        </table>
-      </div>
-    </div>
-    <p class="hm-fine" id="diffFine"></p>
-  </section>
+    <ul class="hm-tiles">
+      <li><a class="hm-tile" href="/weekly-qb-rankings" style="--t1:#0f4c5c" data-pos="QB">
+        <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#0f4c5c"/><path d="M-10 170 C 30 60, 90 40, 170 20" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/><path d="M-10 190 C 30 90, 90 70, 170 50" fill="none" stroke="#f2c14e" stroke-width="2" opacity=".45"/><ellipse cx="112" cy="58" rx="22" ry="13" transform="rotate(-28 112 58)" fill="#8c4a2b" stroke="#f6e7d2" stroke-width="2"/><path d="M104 52l14 8M106 48l14 8M108 44l14 8" stroke="#f6e7d2" stroke-width="1.5"/></svg>
+        <span class="hm-tile-cap"><span class="hm-tile-name">Quarterbacks</span><span class="hm-tile-live" hidden></span></span>
+      </a></li>
+      <li><a class="hm-tile" href="/weekly-rb-rankings" style="--t1:#1f5a3c" data-pos="RB">
+        <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#1f5a3c"/><g stroke="#e8e3d0" stroke-width="1.5" opacity=".7"><path d="M0 40h150M0 70h150M0 100h150M0 130h150M0 160h150"/></g><path d="M20 190 L55 150 L45 115 L85 80 L75 45 L120 10" fill="none" stroke="#e8e3d0" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="120" cy="10" r="9" fill="#f2c14e"/></svg>
+        <span class="hm-tile-cap"><span class="hm-tile-name">Running backs</span><span class="hm-tile-live" hidden></span></span>
+      </a></li>
+      <li><a class="hm-tile" href="/weekly-wr-rankings" style="--t1:#2f2a68" data-pos="WR">
+        <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#2f2a68"/><g fill="none" stroke="#ffb4a2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M75 195V120"/><path d="M75 120L30 80"/><path d="M75 120L120 80"/><path d="M75 120V60"/><path d="M75 60L45 25"/><path d="M75 60L105 25"/><path d="M75 60V15"/></g><g fill="#ffb4a2"><circle cx="30" cy="80" r="5"/><circle cx="120" cy="80" r="5"/><circle cx="45" cy="25" r="5"/><circle cx="105" cy="25" r="5"/><circle cx="75" cy="15" r="5"/></g></svg>
+        <span class="hm-tile-cap"><span class="hm-tile-name">Wide receivers</span><span class="hm-tile-live" hidden></span></span>
+      </a></li>
+      <li><a class="hm-tile" href="/weekly-te-rankings" style="--t1:#7a3e2b" data-pos="TE">
+        <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#7a3e2b"/><rect x="22" y="40" width="106" height="26" rx="3" fill="#f5d7c4"/><rect x="62" y="66" width="26" height="110" rx="3" fill="#f5d7c4"/><path d="M22 140h30M98 140h30" stroke="#f5d7c4" stroke-width="4" stroke-linecap="round" opacity=".6"/></svg>
+        <span class="hm-tile-cap"><span class="hm-tile-name">Tight ends</span><span class="hm-tile-live" hidden></span></span>
+      </a></li>
+      <li><a class="hm-tile" href="/weekly-k-rankings" style="--t1:#324b6e" data-pos="K">
+        <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#324b6e"/><g fill="none" stroke="#dbe4f2" stroke-width="6" stroke-linecap="round"><path d="M40 20v70M110 20v70M40 90h70M75 90v100"/></g><ellipse cx="62" cy="150" rx="12" ry="8" transform="rotate(-60 62 150)" fill="#ffd166"/><path d="M62 150 C 68 120, 72 108, 76 96" fill="none" stroke="#ffd166" stroke-width="2" stroke-dasharray="3 4"/></svg>
+        <span class="hm-tile-cap"><span class="hm-tile-name">Kickers</span><span class="hm-tile-live" hidden></span></span>
+      </a></li>
+      <li><a class="hm-tile" href="/weekly-dst-rankings" style="--t1:#3b3f46" data-pos="DEF">
+        <svg viewBox="0 0 150 200" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#3b3f46"/><path d="M75 22 L122 40 V98 C122 134 100 158 75 172 C50 158 28 134 28 98 V40 Z" fill="none" stroke="#9fe0c4" stroke-width="5" stroke-linejoin="round"/><path d="M48 70h54M48 92h54M48 114h40" stroke="#9fe0c4" stroke-width="5" stroke-linecap="round"/></svg>
+        <span class="hm-tile-cap"><span class="hm-tile-name">Defenses</span><span class="hm-tile-live" hidden></span></span>
+      </a></li>
+    </ul>
+  </div>
+</section>
 
-  <!-- ── 4 · what the desk published ────────────────────────────────────────
-       A small group of CURRENT articles, off /api/newsroom — the same feed
-       /in-season/desk prints from. Hidden outright when the desk has nothing
-       current: a heading over an empty grid is worse than no heading. -->
-  <section class="hm-sec" id="articles" hidden aria-labelledby="readHead">
+<!-- ── 3 · newest from the desk ─────────────────────────────────────────────
+     Six rows, newest first, off /api/newsroom: the published feed, deduped
+     by slug, the one /in-season/desk reads. Never /api/content, which is the
+     archive and carries held drafts. Hidden outright when nothing is current. -->
+<section class="hm-sec" id="articles" hidden aria-labelledby="readHead">
+  <div class="wrap">
     <div class="hm-sec-head">
-      <h2 id="readHead">Current from the desk</h2>
+      <h2 id="readHead">Newest from the desk</h2>
       <a href="/in-season/desk">All articles &rarr;</a>
     </div>
-    <div class="hm-reads" id="readGrid"></div>
-  </section>
+    <div class="ledger hm-ledger" id="readGrid" data-player-links></div>
+  </div>
+</section>
 
-</main>
-
-<!-- ── 5 · how the number is made, and the disclosures ──────────────────────
-     Stated ONCE, at the foot of the page, and the target of the hero's "See
-     How It Works" link. The three-step explanation used to appear in three
-     different places on this page in three different wordings, then as a
-     three-column band here; it is now one footnote-scale line, because the
-     page's job is the boards and the method is a reference note. The longer
-     version lives at /faq. The required disclosures sit directly under it, where a reader
-     is deciding what the numbers are worth, rather than only in the footer. -->
-<section class="hm-how" id="how" aria-labelledby="howHead">
+<!-- ── 4 · how it works ─────────────────────────────────────────────────────
+     Three inputs, in this order, and every board on the site is built from
+     them and nothing else. The longer version lives at /faq. -->
+<section class="hm-sec" id="how" aria-labelledby="howHead">
   <div class="wrap">
-    <!-- What the site is, for a first-time reader. It opened the front page
-         until 2026-09-25; it lives here now, beside the method it summarizes,
-         so the top of the page is news for the reader who comes back. -->
-    <div class="hm-hero-copy hm-promo">
-      <p class="hm-promo-k">How Iron Tuna works</p>
-      <p class="hm-claim">Iron Tuna converts sportsbook lines and player props into fantasy point projections.</p>
-      <p class="hm-lede">Those projections become weekly rankings, trade values and DFS lineups, scored at your league’s settings. Oddsmakers put real money, full-time quant teams and live analytics behind every number, and correct it within minutes of news.</p>
-      <p class="hm-tagline">Anyone can publish a projection. <em>Vegas has money on theirs.</em></p>
-      <div class="hm-cta">
-        <a class="hm-btn primary" href="/fantasy">Get Fantasy Advice</a>
-        <a class="hm-btn second" href="/dfs">Build a DFS Lineup</a>
-      </div>
+    <div class="hm-sec-head">
+      <h2 id="howHead">How it works</h2>
+      <a href="/faq#faq-start">The longer version &rarr;</a>
     </div>
-    <h2 id="howHead">How it works</h2>
-    <p class="hm-note">Three inputs, in this order, and every board on the site is built from them and nothing else.</p>
-    <!-- Three columns rather than three bold run-ins in one paragraph. The
-         page's outline is its six <section>s and tools/test-homepage.mjs
-         asserts that list by name, so these are divs: a column of a method
-         block is not a seventh section. -->
+    <p class="hm-tagline">Anyone can publish a projection. Vegas has money on theirs.</p>
     <div class="hm-how-grid">
       <div class="hm-input">
-        <span class="hm-input-n">1</span>
         <h3>The market</h3>
         <p>Game totals, spreads and player props, pulled on a schedule and converted into projected fantasy points, with a sportsbook&rsquo;s own money and a paid modelling staff behind each number.</p>
       </div>
       <div class="hm-input">
-        <span class="hm-input-n">2</span>
         <h3>The consensus</h3>
         <p>Expert projections, blended toward the market where a book prices the player and left alone where none does; the gap between the two is printed, never hidden.</p>
       </div>
       <div class="hm-input">
-        <span class="hm-input-n">3</span>
         <h3>Your league</h3>
         <p>Scoring, roster slots and waiver budget, saved once in this browser with no account, so every board restates its numbers in your points.</p>
       </div>
     </div>
-    <p class="hm-note hm-how-more"><a href="/faq#faq-start">The longer version &rarr;</a> &middot; <a href="/my-league#settings">Customize my league &rarr;</a></p>
-    <div class="hm-legal">
-      <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league&rsquo;s scoring. Projections are not guarantees.</p>
-      <p><b>For social and entertainment purposes only.</b> Every number on this site &mdash; projections, odds, salaries and contract prices alike &mdash; is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
-    </div>
+    <p class="hm-how-more"><a href="/my-league#settings">Customize my league &rarr;</a> &middot; <a href="/value-coach">Ask the Value Coach &rarr;</a></p>
   </div>
 </section>
 
-<footer class="foot"><div class="wrap">
-  <!-- ONE ROW, the same nine destinations as the shared footer on every other
-       page (tools/build-chrome.mjs FOOT_LINKS). This used to be two rows and
-       twenty-seven links: a fifteen-link "Tools" nav of draft rooms and
-       individual in-season tools, then a loose run of article columns. Both
-       were a second navigation system reaching the same places under different
-       names, on the highest-authority page on the site.
+</main>
 
-       THE PAGES ARE NOT GONE. /auction-draft-assistant, /superflex-auction-values,
-       /salary-cap-draft-tool, /auction-watch, /rankings, /vegas-edge and the rest
-       all still serve and all still sit in sitemap.xml; they are reached from the
-       lane pages that use them rather than from the homepage footer. -->
+<!-- ── 5 · the KPI band ─────────────────────────────────────────────────────
+     Navy, white figures. Written hidden; shown once /api/rankings answers,
+     with the desk's count joining when /api/newsroom does. -->
+<section class="kpi hm-kpi" id="kpi" hidden aria-labelledby="kpiHead">
+  <div class="wrap">
+    <h2 id="kpiHead" class="sr-only">The board this week</h2>
+    <div class="kpi-grid" id="kpiGrid"></div>
+  </div>
+</section>
+<footer class="site"><div class="wrap">
+  <!--chrome:foot-->
   <nav class="foot-nav" aria-label="Footer">
-    <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">Articles</a><a href="/faq#faq-start">How It Works</a><a href="/data">Data Sources</a><a href="/faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/support">Support</a>
+   <ul>
+    <li><a href="/fantasy">Fantasy</a></li>
+    <li><a href="/dfs">DFS</a></li>
+    <li><a href="/in-season/desk">Articles</a></li>
+    <li><a href="/players">Players</a></li>
+    <li><a href="/faq#faq-start">How It Works</a></li>
+    <li><a href="/data">Data Sources</a></li>
+    <li><a href="/faq">FAQ</a></li>
+    <li><a href="/privacy">Privacy</a></li>
+    <li><a href="/terms">Terms</a></li>
+    <li><a href="/support">Support</a></li>
+   </ul>
   </nav>
-  <!-- Not a navigation destination: /admin is noindex and gated by its own export
-       key, and this is the only link into it from the site. -->
-  <a class="foot-admin" href="/admin" rel="nofollow">Admin</a>
-  <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via <a href="https://github.com/nflverse/nflverse-data" rel="noopener" style="color:inherit;text-decoration:underline">nflverse</a> (CC BY 4.0) &middot; <a href="/data" style="color:inherit;text-decoration:underline">Data &amp; sources</a> &middot; Team and player images remain the property of their owners; Iron Tuna is not affiliated with or endorsed by the NFL or any club</span>
+  <div class="foot-note">
+   <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
+   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-MY-RESET</b>.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span></p>
+  </div>
+  <!--/chrome:foot-->
 </div></footer>
-
 <script src="/it-season.js" defer></script>
-<!-- Player names in the painted bands link to their cards; deferred, and every
-     call into it is guarded, so a band that paints first cannot throw. -->
-<!-- The game photographs the hero's picture prefers, before the lookup that
-     reads them; both deferred, so they run in this order. An empty map is not
-     an error — every plate falls back to the headshot cutout. -->
-<script src="/it-action.js" defer></script>
+<!-- Player names in the painted bands link to their cards, and the hero's
+     search field takes the shared typeahead; deferred, and every call into it
+     is guarded, so a band that paints first cannot throw. -->
 <script src="/player-search.js" defer></script>
 <script>
 // ══ the homepage ═══════════════════════════════════════════════════════════
-// Four live bands, three feeds, one rule: A BAND IS EITHER FULL OF REAL CURRENT
-// DATA OR IT IS HIDDEN. There is no loading copy on this page, no skeleton and
-// no "waiting for this week's slate" — every element that depends on a feed is
-// written `hidden` in the served HTML and is revealed only once every number it
-// prints exists. A quiet feed leaves a shorter page, which is the honest
-// answer, rather than a page of shells.
+// Three live bands, three feeds, one rule: A BAND IS EITHER FULL OF REAL
+// CURRENT DATA OR IT IS HIDDEN. There is no loading copy on this page, no
+// skeleton and no "waiting for this week's slate" — every element that depends
+// on a feed is written `hidden` in the served HTML and is revealed only once
+// every number it prints exists. A quiet feed leaves a shorter page, which is
+// the honest answer, rather than a page of shells.
 //
 // The feeds are the ones the destination pages already print from, so the
-// homepage cannot name a different player for the same week than /fantasy,
-// /dfs or /in-season/desk do:
-//   /api/season   the week, for the hero's dateline
-//   /api/vegas-edge  consensus / market / Iron Tuna projections per player
-//   /api/dfs?site=dk the slate, for the DFS card's one reading
-//   /api/newsroom the desk's current pieces (published, one per story)
+// homepage cannot name a different player for the same week than /vegas-edge,
+// the position boards or /in-season/desk do:
+//   /api/vegas-edge   consensus / market / Iron Tuna projections per player
+//   /api/rankings     the board behind the sixteen position pages: who is
+//                     ranked, who carries a market line, when the odds were read
+//   /api/newsroom     the desk's current pieces (published, one per story)
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -1331,457 +385,7 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
       .catch(function () {});
   }
 
-  // ── the hero's picture ───────────────────────────────────────────────────
-  // Who gets photographed, in order of what the page can actually say about
-  // him: the player the desk's newest piece is about, else the widest market
-  // disagreement on this week's board. The desk wins outright — it is a story
-  // somebody wrote today, where the board is a number — so a desk subject
-  // arriving late still replaces a market one that painted first.
-  //
-  // A name the player lookup does not carry paints nothing. That is the
-  // honest answer; the alternative is a frame around a stranger.
-  // The face on a card's one reading. Headshot only (`photo:false`): see the
-  // note on `.hm-read .pic`. Nothing paints for a name the lookup does not
-  // carry, and the column stays closed.
-  function readPic(boxId, readId, name) {
-    var PS = window.ITPlayerSearch;
-    if (!PS || !PS.resolve || !PS.plate) {
-      document.addEventListener('it-player-search-ready',
-        function () { readPic(boxId, readId, name); }, { once: true });
-      return;
-    }
-    var p = PS.resolve(name), box = $(boxId);
-    if (!p || !box) return;
-    var fig = PS.plate(p, { photo: false });
-    if (!fig) return;
-    box.innerHTML = '';
-    box.appendChild(fig);
-    $(readId).classList.add('has-pic');
-  }
-
-  var heroFrom = null;
-  // `cands` is the turn's pick first and its runners-up behind it, each one
-  // { name, kicker, gap, href }. A LIST, not a name: see `coverFaces` above
-  // for why one name was enough to lose the whole band for an hour. The first
-  // candidate that resolves to a face is the one painted. A list that resolves
-  // to nobody at all still paints nothing, because a frame around a stranger
-  // is worse than no frame, which is the rule the whole page is written to.
-  function heroPaint(from, cands) {
-    if (heroFrom === 'desk' && from !== 'desk') return;
-    // ONLY THE LEAD'S OWN SUBJECT, once a lead is up (2026-09-26). The picture,
-    // its caption and the lead story read as one unit now, so a board gap or
-    // an older story's player over the lead is a photograph of the wrong man
-    // on top of the news. The board's gap stays as the picture only while
-    // there is no lead story to sit under it.
-    if (from !== 'desk' && !$('lead').hidden) return;
-    var PS = window.ITPlayerSearch;
-    // The lookup is deferred, so a feed that answers before it lands waits for
-    // it rather than giving up on the picture.
-    if (!PS || !PS.resolve || !PS.plate) {
-      document.addEventListener('it-player-search-ready',
-        function () { heroPaint(from, cands); }, { once: true });
-      return;
-    }
-    var box = $('heroEdgePlate');
-    if (!box) return;
-    for (var i = 0; i < cands.length; i++) {
-      var c = cands[i], p = PS.resolve(c.name);
-      if (!p) continue;
-      // A PICTURE OR NOTHING (Ken, 2026-09-25). The lookup knows some players
-      // by name only, with no photograph, no ESPN id and no NFL id; Brian
-      // Robinson Jr. is one. plate() still builds a frame for him, and the
-      // biggest thing on the front came out as a dark box reading "BJ". A
-      // player with no image on file is skipped for the next candidate.
-      //
-      // AN ACTION SHOT OR NOTHING (Ken, 2026-10-06): "I don't want a player's
-      // face against a black backdrop." A headshot is no longer a picture
-      // here: a player with no game photograph is skipped for the next
-      // candidate, and the plate is asked for the photograph alone.
-      if (!(PS.action && PS.action(p.k))) continue;
-      var rest = cands.slice(i + 1);
-      // And one whose every image fails to load at runtime hands the frame to
-      // the next candidate rather than leaving his initials in it.
-      // High priority for the lead's own photograph only: the board's gap can
-      // paint first while the newsroom is still answering, and is replaced as
-      // soon as it does, so it should not compete with the one that stays.
-      var fig = PS.plate(p, { eager: true, actionOnly: true, priority: from === 'desk' ? 'high' : null, onfail: heroFail(from, rest) });
-      if (!fig) continue;
-      heroDress(fig, p);
-      box.innerHTML = '';
-      if (c.href) {
-        var a = document.createElement('a');
-        a.className = 'he-link';
-        a.href = c.href;
-        a.setAttribute('aria-label', p.n + ' — ' + c.kicker);
-        a.appendChild(fig);
-        box.appendChild(a);
-      } else box.appendChild(fig);
-      $('heroEdgeK').textContent = c.kicker;
-      $('heroEdgeName').textContent = p.n;
-      $('heroEdgeSub').textContent = p.p + (p.t ? ' · ' + p.t : '');
-      $('heroEdgeGap').textContent = c.gap || '';
-      // The lead story sits directly under the photograph now, so a caption
-      // that repeats the lead's headline word for word is the same sentence
-      // twice in one plate. It stays in the caption's text and is only not
-      // shown; a caption about anything else still shows.
-      var leadH = document.querySelector('#leadWell .hm-lead h3 a');
-      $('heroEdgeGap').hidden = !!(leadH && c.gap && leadH.textContent.trim() === String(c.gap).trim());
-      show($('heroEdge'), true);
-      $('hmHero').classList.add('has-edge');
-      setNoPhoto(false);
-      heroFrom = from;
-      return;
-    }
-  }
-
-  // The lead names nobody: take down whatever the board painted first, and
-  // hold the frame so a late board answer cannot put it back.
-  function heroClear() {
-    heroFrom = 'desk';
-    show($('heroEdge'), false);
-    $('hmHero').classList.remove('has-edge');
-    setNoPhoto(true);
-  }
-
-  // What the page does to the plate player-search.js builds for the hero
-  // (2026-09-26), from here rather than in the shared file:
-  //   - the alt names the player, his position and his team;
-  //   - the credit leaves the photograph for the caption strip under it, so
-  //     nothing sits on the picture (every word and link of it is kept: it is
-  //     the license's attribution);
-  //   - a headshot, which is what loads when there is no game photograph, is
-  //     marked `is-headshot` and set as a cutout on a dark panel with the
-  //     name beside it, instead of a head stretched across a 16:9 frame.
-  //     `action` on the figure, which player-search.js sets in its own onload
-  //     (it runs before this listener), is what says the photograph loaded.
-  function heroDress(fig, p) {
-    var img = fig.querySelector('img'), shot = fig.querySelector('.it-plate-shot'), slot = $('heroEdgeCredit');
-    if (slot) slot.innerHTML = '';
-    if (img) img.alt = [p.n, p.p, p.t].filter(Boolean).join(', ');
-    if (shot) {
-      var tag = document.createElement('span');
-      tag.className = 'he-panel';
-      tag.innerHTML = '<b>' + esc(p.n) + '</b><span>' + esc([p.p, p.t].filter(Boolean).join(' \u00b7 ')) + '</span>';
-      shot.appendChild(tag);
-    }
-    if (!img) return;
-    img.addEventListener('load', function () {
-      fig.classList.toggle('is-headshot', !fig.classList.contains('action'));
-      var cap = fig.querySelector('.it-art-credit');
-      if (cap && slot) {
-        slot.innerHTML = '';
-        while (cap.firstChild) slot.appendChild(cap.firstChild);
-        cap.remove();
-      }
-    });
-  }
-
-  // THE LEAD WITHOUT A PICTURE (2026-09-26). With no photograph over it the
-  // lead is a few lines at the top of the column, and the rail beside it ran
-  // a screen further down with white under the lead. Then the next two pieces
-  // stand under the lead as secondary stories and leave the rail, which shows
-  // the pieces after them instead, so nothing on the front appears twice.
-  // With a photograph the front is as it was. Toggled from the hero's own
-  // outcome (painted, cleared, or every image failed), never guessed early.
-  function setNoPhoto(on) {
-    var hero = $('hmHero');
-    if (!hero) return;
-    hero.classList.toggle('no-photo', on);
-    var more = document.querySelector('#leadWell .hm-more');
-    if (more) more.hidden = !on;
-    var items = document.querySelectorAll('#leadWell .hm-rail li'), last = null, n = 0;
-    for (var i = 0; i < items.length; i++) {
-      var li = items[i], hide = on ? li.classList.contains('in-more') : li.classList.contains('extra');
-      li.hidden = hide;
-      li.classList.remove('last');
-      // Every third story on the rail as it is shown carries the picture.
-      li.classList.toggle('pic-slot', !hide && (++n % 3 === 0));
-      if (!hide) last = li;
-    }
-    if (last) last.classList.add('last');
-  }
-
-  function heroFail(from, rest) {
-    return function () {
-      if (heroFrom !== from) return;
-      heroFrom = from === 'desk' ? 'desk' : null;
-      show($('heroEdge'), false);
-      $('hmHero').classList.remove('has-edge');
-      if (rest.length) heroPaint(from, rest);
-      else setNoPhoto(true);
-    };
-  }
-
-  // ── the week chip ────────────────────────────────────────────────────────
-  // Shown only for a week the schedule actually names. Off-season, or with the
-  // schedule unreachable, there is no chip. It was a dateline bar of its own
-  // ("Regular season · Week 3 · kicks off Thu, 9/17, 4:15 PM ET"); since
-  // 2026-09-26 it is one short line in the header, and the same line again at
-  // the foot of the phone menu, which is where the header's chip goes there.
-  (function clock() {
-    if (!window.ITSeason) { document.addEventListener('DOMContentLoaded', clock); return; }
-    ITSeason.load(function (s) {
-      if (!s || !s.week || !s.week.label) return;
-      var h = esc(s.week.label);
-      if (s.week.status === 'active') {
-        h += ' &middot; <span class="live">' + ((s.counts && s.counts.inProgress) ? esc(s.counts.inProgress) + ' live' : 'Live') + '</span>';
-      } else if (s.week.status === 'upcoming' && s.week.firstKickoff) {
-        var k = '';
-        try {
-          k = new Date(s.week.firstKickoff).toLocaleString('en-US',
-            { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit' }).replace(',', '');
-        } catch (e) {}
-        if (k) h += ' &middot; ' + esc(k) + ' ET';
-      }
-      ['hmClock', 'hmClockM'].forEach(function (id) {
-        var el = $(id);
-        if (!el) return;
-        el.innerHTML = h;
-        el.hidden = false;
-      });
-    });
-  })();
-
-  // ── the phone menu ───────────────────────────────────────────────────────
-  // Below 960px the section links are a panel under the bar, opened by the
-  // menu button, instead of a row that scrolled sideways and showed its last
-  // link cut off at the screen's edge. Escape or a tap outside closes it;
-  // focus goes into the panel on open and back to the button on close.
-  (function menu() {
-    var mast = document.querySelector('.mast'), btn = mast && mast.querySelector('.mast-menu'), panel = $('mastMenu');
-    if (!btn || !panel) return;
-    function set(open, refocus) {
-      mast.classList.toggle('menu-open', open);
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      if (open) { var first = panel.querySelector('a'); if (first) first.focus(); }
-      else if (refocus) btn.focus();
-    }
-    btn.addEventListener('click', function () { set(btn.getAttribute('aria-expanded') !== 'true', true); });
-    document.addEventListener('keydown', function (e) {
-      if ((e.key === 'Escape' || e.key === 'Esc') && btn.getAttribute('aria-expanded') === 'true') set(false, true);
-    });
-    document.addEventListener('click', function (e) {
-      if (btn.getAttribute('aria-expanded') === 'true' && !mast.contains(e.target)) set(false, false);
-    });
-    // Widened past the phone layout with the menu open: the links are back in
-    // the bar, so the open state is dropped rather than left stale.
-    if (window.matchMedia) {
-      var mq = window.matchMedia('(min-width: 960px)');
-      var drop = function () { if (mq.matches) set(false, false); };
-      if (mq.addEventListener) mq.addEventListener('change', drop); else if (mq.addListener) mq.addListener(drop);
-    }
-  })();
-
-  // ── WHAT IS ON THE COVER, AND FOR HOW LONG ───────────────────────────────
-  // Two things on this page name a player at the top of it: the hero's
-  // photograph and the three cards under "Current from the desk". Both used to
-  // pick one subject and hold it until a feed changed underneath them, and on
-  // 2026-09-18 that meant Jeremiyah Love was the face of the site and the top
-  // headline on it for a day and a half.
-  //
-  // He was on the cover TWICE, by two unrelated paths, which is why the first
-  // two attempts at this did not move him:
-  //   1. the desk band's top card was the weekend preview, headlined "fade
-  //      Jeremiyah Love" — fixed by rotating the band, then fixed properly by
-  //      sliding the window down the feed so a story actually comes off;
-  //   2. the hero took `all[0]`, the single widest market gap on the board,
-  //      and his was the widest. Nothing about the band could ever change
-  //      that, and rotating three cards while the photograph stayed put is
-  //      what "Love" still on the cover meant the second and third time.
-  //
-  // So both rotate, on ONE clock, defined once here. A turn is an hour. Every
-  // turn the hero changes face and the band swaps one story, and the two move
-  // together rather than drifting into two different rotations.
-  var COVER_TURN_MS = 3600 * 1000;   // how long one cover holds
-  var COVER_FLOOR_MS = 24 * 3600 * 1000;  // the cover always carries something this fresh
-  var DESK_BAND = 3;                 // cards on the cover at once
-  var DESK_POOL = 8;                 // how deep into the feed the window travels
-  var HERO_POOL = 5;                 // how many market gaps take a turn on the hero
-  function coverTurn(len, now) {
-    return len > 0 ? Math.floor(now / COVER_TURN_MS) % len : 0;
-  }
-  // The band: three wide, sliding one piece down the feed each turn and
-  // wrapping, so every turn one story comes off the cover and another goes up.
-  // Fresh news is exempt: a piece published inside the current turn leads and
-  // brings the two behind it, because a recap filed twenty minutes ago IS the
-  // front page and sliding past it would be the site hiding what it just did.
-  function coverBand(pieces, now) {
-    var pool = pieces.slice(0, DESK_POOL);
-    if (pool.length < 2) return pool;
-    var newest = 0, i;
-    for (i = 0; i < pool.length; i++) newest = Math.max(newest, +pool[i].publishedAt || 0);
-    var band = Math.min(DESK_BAND, pool.length);
-    if (newest && now - newest < COVER_TURN_MS) return pool.slice(0, band);
-    var turn = coverTurn(pool.length, now), out = [];
-    for (i = 0; i < band; i++) out.push(pool[(turn + i) % pool.length]);
-    // THE 24-HOUR FLOOR. A window that has slid into the older half of the
-    // pool can be three pieces from earlier in the week with nothing from
-    // yesterday on it, which is a section headed "Current from the desk"
-    // carrying nothing current. Observed on the morning of 2026-09-19: two
-    // Week 1 columns and the underrated piece, while Friday's preview, the
-    // kickers piece, the Thursday night read and the DET-BUF recap were all
-    // off the cover.
-    //
-    // So if no card in the window was published inside the last day, the last
-    // slot goes to the newest piece that was. The lead slot is left alone —
-    // the rotation still decides what leads — and the cost is accepted
-    // deliberately: while the desk is quiet, one story sits on the cover every
-    // turn. That is the trade Ken chose when the alternative was a cover with
-    // nothing from the last day on it.
-    var fresh = function (p) {
-      var at = +p.publishedAt || 0;
-      return at > 0 && now - at < COVER_FLOOR_MS;
-    };
-    for (i = 0; i < out.length; i++) if (fresh(out[i])) return out;
-    for (i = 0; i < pool.length; i++) {
-      // The feed is newest first, so the first one that qualifies is the one.
-      if (fresh(pool[i])) { out[out.length - 1] = pool[i]; break; }
-    }
-    return out;
-  }
-  // The hero: one of the week's widest gaps rather than THE widest, taking
-  // turns. `skip` is the player the Fantasy card already names, because the top
-  // of the page running the same man twice is the page saying it once and
-  // looking like it said it twice.
-  // `coverFaces` is the turn's pick FIRST and the rest of the pool behind it.
-  // The picture can fail on a NAME: the lookup does not carry a face for
-  // everybody, and `heroPaint` painted nothing when it could not resolve the
-  // one name it was given. Standing still that was a rare miss on one player.
-  // On a clock it is an hour of every day, chosen at random off the board,
-  // with no photograph on the cover at all. The runners-up are what the
-  // painter walks when the turn's pick cannot be drawn. `coverFace` is still
-  // the turn's pick alone.
-  function coverFaces(rows, skip, now) {
-    var pool = [], i;
-    for (i = 0; i < rows.length && pool.length < HERO_POOL; i++) {
-      if (rows[i] !== skip) pool.push(rows[i]);
-    }
-    if (!pool.length) return [];
-    var k = coverTurn(pool.length, now);
-    return pool.slice(k).concat(pool.slice(0, k));
-  }
-  function coverFace(rows, skip, now) {
-    return coverFaces(rows, skip, now)[0] || null;
-  }
-  // THE TWO CARD READINGS WERE THE THIRD AND FOURTH PATHS ONTO THE COVER. §88
-  // enumerated two and fixed both; the Fantasy card took the strongest BUY on
-  // the board and the DFS card took `bestVegasValues[0]`, neither with a clock
-  // anywhere near it. So the cover changed every hour above two readings that
-  // did not change all week — the same complaint, one band down the page.
-  //
-  // They take turns on the clock above now, out of the leaders of their own
-  // board. Every row a turn can land on passed the same test the leader
-  // passed, so this picks WHICH true thing to say and never whether to say a
-  // true one. `cap` is how deep the slot will go; past it is the long tail,
-  // which is not a reading the page would have printed on any hour.
-  var CARD_POOL = 5;
-  function coverPick(rows, now, cap) {
-    var pool = rows.slice(0, Math.min(rows.length, cap || CARD_POOL));
-    return pool.length ? pool[coverTurn(pool.length, now)] : null;
-  }
-  // A superlative belongs to the leader alone. Rotated off the top of its
-  // board, a caption still claiming the top of the board is false, which is
-  // the one thing a page arguing from the market cannot afford to be.
-  function coverLead(rows, pick) { return !!(rows.length && rows[0] === pick); }
-  // THE LEAD TAKES TURNS TOO (Ken, 2026-10-04: "the lead story should update
-  // frequently"). Pinned to the newest qualifying story, the lead held from
-  // Friday's last desk piece to Sunday's first, about two days, and through
-  // every overnight gap in the week. So it rotates on the cover's own clock:
-  // each turn the next of the newest LEAD_POOL qualifying stories leads. Fresh
-  // news is exempt, as it is in the band: a story published inside the current
-  // turn leads outright. `cands` is the qualifying stories, newest first; the
-  // return is an index into it, or -1 for none.
-  var LEAD_POOL = 4;
-  function leadTurn(cands, now) {
-    if (!cands.length) return -1;
-    var at = +cands[0].publishedAt || 0;
-    if (at && now - at < COVER_TURN_MS) return 0;
-    return coverTurn(Math.min(cands.length, LEAD_POOL), now);
-  }
-  // ── WHOSE FACE, AND WHOSE SENTENCE ──────────────────────────────────────
-  // The hero's desk card took `whoOf(p)[0]` — the subject of the piece's FIRST
-  // finding — and printed the piece's HEADLINE beneath him. Nothing tied those
-  // two picks together: a story's findings are ordered by the story, not by
-  // who the headline is about. On 2026-09-21 the cover ran Nate Adkins's
-  // photograph over "Parker Washington's 43% target share after Week 2 makes
-  // him the clearest roster add of the week". A real player, a real sentence,
-  // and the two had nothing to do with each other, which reads as a site that
-  // does not know who it is talking about.
-  //
-  // So a face is offered with a line, and the line may not be about anybody
-  // ELSE. A headline that names no player still belongs to the piece's first
-  // subject — "Three lineups the market moved overnight" over the man the
-  // piece is about is the desk's own framing, not a mismatch. A headline that
-  // names one of the piece's other subjects belongs to him and to nobody else.
-  var COVER_SUFFIX = /^(?:jr|sr|ii|iii|iv|v)$/;
-  // Loose enough to survive punctuation and a possessive ("Washington's"),
-  // strict enough to stay on word boundaries: text is reduced to space-
-  // delimited lowercase words and searched for a name as whole words.
-  function coverWords(s) {
-    s = String(s == null ? '' : s);
-    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
-    return ' ' + s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/^ | $/g, '') + ' ';
-  }
-  function coverLast(name) {
-    var w = coverWords(name).split(' ').filter(Boolean);
-    while (w.length > 1 && COVER_SUFFIX.test(w[w.length - 1])) w.pop();
-    return w.length ? w[w.length - 1] : '';
-  }
-  // Which of `cast` a line is about. A full name settles it; a bare surname
-  // counts only when nobody else on the piece answers to it, because the wrong
-  // Williams under a line about the other one is this same bug in a smaller
-  // frame. Nobody, one man, or — ambiguously — several.
-  function coverAbout(text, cast) {
-    var t = coverWords(text), full = [], last = [], i, n, l;
-    for (i = 0; i < cast.length; i++) {
-      n = coverWords(cast[i]).replace(/^ | $/g, '');
-      if (n && t.indexOf(' ' + n + ' ') >= 0) { full.push(cast[i]); continue; }
-      l = coverLast(cast[i]);
-      if (l.length >= 3 && t.indexOf(' ' + l + ' ') >= 0) last.push(cast[i]);
-    }
-    return full.length ? full : last;
-  }
-  // The { name, line } pairs one piece can put on the hero, best first: the
-  // headline over the man it is about, then the piece's other findings under
-  // their own lines. A subject already paired is not offered a second line,
-  // and a line about somebody else is offered to nobody.
-  //
-  // `lead` overrides the piece's stored headline, for a caller that has one it
-  // has already cleaned up — the cover hands over the DE-BOASTED headline,
-  // since "You're welcome:" is not worth two words of a 13px line. It is the
-  // same sentence about the same man either way.
-  function coverSubjects(piece, lead) {
-    var parts = (piece && piece.components) || [], cast = [], out = [], seen = {}, i, c, about;
-    lead = lead || (piece && piece.headline) || '';
-    for (i = 0; i < parts.length; i++) {
-      c = parts[i];
-      if (c && c.player && cast.indexOf(c.player) < 0) cast.push(c.player);
-    }
-    if (!cast.length) return out;
-    var add = function (name, line) {
-      if (!name || !line || seen[name]) return;
-      seen[name] = 1;
-      out.push({ name: name, line: line });
-    };
-    about = coverAbout(lead, cast);
-    if (about.length === 1) add(about[0], lead);
-    else if (!about.length) add(cast[0], lead);
-    for (i = 0; i < parts.length; i++) {
-      c = parts[i];
-      if (!c || !c.player || !c.headline) continue;
-      about = coverAbout(c.headline, cast);
-      if (about.length > 1 || (about.length === 1 && about[0] !== c.player)) continue;
-      add(c.player, c.headline);
-    }
-    return out;
-  }
-  // ── end cover rotation ───────────────────────────────────────────────────
-
-  // ── the market disagreements, and the Fantasy card's reading ─────────────
-  // Both come off ONE call, so the two bands can never disagree, and the player
-  // the card recommends is deliberately taken OUT of the table below it: one
-  // player, one place on the page.
-  //
+  // ── the market figures ───────────────────────────────────────────────────
   // The decision is derived from the worker's own classification (the five
   // MARKET_DELTA classes) plus Iron Tuna's positional rank, which is what says
   // whether the reader would have been starting the player in the first place:
@@ -1796,7 +400,7 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
     if (cls === 'VEGAS LEANS HIGHER') return { t: 'Upgrade', on: 'up' };
     if (cls === 'VEGAS LEANS LOWER') return { t: 'Downgrade', on: 'down' };
     if (cls === 'STRONG VEGAS FADE') return starting === true ? { t: 'Sit', on: 'down' } : { t: 'Fade', on: 'down' };
-    // MARKET AGREES is not a disagreement, so it is not a row on this table.
+    // MARKET AGREES is not a disagreement, so it is not a figure on this row.
     return null;
   }
   // A row is valid only with all three projections AND a decision on it. Rows
@@ -1806,389 +410,179 @@ body.hm-dress .foot .fm{max-width:65ch;font-size:var(--fs-13);color:var(--ink-3)
       && n1(p.consensusPoints) != null && n1(p.vegasPoints) != null && n1(p.ironTunaPoints) != null
       && p.delta && n1(p.delta.points) != null && decide(p));
   }
-
-  grab('/api/vegas-edge', function (j) {
-    var all = [].concat((j.vsExperts && j.vsExperts.buys) || [], (j.vsExperts && j.vsExperts.fades) || [])
+  // The four widest gaps on the board, the widest first. Three is the floor:
+  // under that the row is hidden rather than short.
+  var MARKET_ROW = 4, MARKET_MIN = 3;
+  function marketRows(j) {
+    return [].concat((j.vsExperts && j.vsExperts.buys) || [], (j.vsExperts && j.vsExperts.fades) || [])
       .filter(usable)
-      .sort(function (a, b) { return Math.abs(b.delta.points) - Math.abs(a.delta.points); });
-
-    // The card takes a BUY: a recommendation to act, not a warning. WHICH buy
-    // is the turn's, out of the week's five strongest — it used to take the
-    // first of them and hold him for as long as he led the board, under a
-    // cover that was changing every hour above him.
-    var card = coverPick(all.filter(function (p) { return decide(p).on === 'up'; }), Date.now());
-    if (card) {
-      var d = decide(card);
-      $('fnReadK').textContent = 'This week’s call · ' + d.t;
-      $('fnReadH').innerHTML = esc(card.name) + ' <small style="font-weight:400;color:var(--ink-3)">'
-        + esc(card.position + ' · ' + card.team + (card.opponent ? ' · ' + card.opponent : '')) + '</small>';
-      $('fnReadD').textContent = 'The market projects ' + n1(card.vegasPoints) + ' points against a consensus '
-        + n1(card.consensusPoints) + '. Iron Tuna prices him at ' + n1(card.ironTunaPoints) + '.';
-      show($('fnRead'), true);
-      relink($('fnRead'));
-      readPic('fnReadPic', 'fnRead', card.name);
-    }
-
-    // The hero's fallback picture, used only if the desk has not named
-    // somebody: one of the week's widest gaps, taking its turn on the clock
-    // above, skipping the man the Fantasy card names. It said "This week's
-    // widest market gap" and showed exactly one player for as long as he led
-    // the board, which is how the same face held the cover for a day and a
-    // half. The caption is no longer a superlative, because the picture is no
-    // longer the maximum.
-    heroPaint('edge', coverFaces(all, card, Date.now()).map(function (f) {
-      return { name: f.name, kicker: 'A market gap this week',
-        gap: 'The market projects ' + n1(f.vegasPoints) + ' points against a consensus '
-          + n1(f.consensusPoints) + ' — ' + signed(f.delta.points) + ' on the week.',
-        href: '/vegas-edge' };
-    }));
-
-    // Three to five players, and never the one the card already named.
-    var rows = all.filter(function (p) { return p !== card; }).slice(0, 5);
-    if (rows.length < 3) return;
-    $('diffBody').innerHTML = rows.map(function (p) {
-      var d = decide(p);
-      return '<tr>'
-        + '<td class="who"><b>' + esc(p.name) + '</b><small>' + esc(p.position + ' · ' + p.team + (p.opponent ? ' · ' + p.opponent : '')) + '</small></td>'
-        + '<td class="num">' + n1(p.consensusPoints) + '</td>'
-        + '<td class="num">' + n1(p.vegasPoints) + '</td>'
-        + '<td class="num mine">' + n1(p.ironTunaPoints) + '</td>'
-        + '<td><span class="hm-act ' + d.on + '">' + esc(d.t) + '</span>'
-        + '<span class="hm-act-why">market ' + esc(signed(p.delta.points)) + ' pts vs consensus</span></td>'
-        + '</tr>';
-    }).join('');
-    $('diffFine').innerHTML = 'Weekly fantasy points' + (j.week ? ' for ' + esc(j.week) : '')
-      + ', at the site’s default scoring. <b>Consensus</b> is the expert blend, <b>Market</b> is the sportsbook-implied number, '
-      + '<b>Iron Tuna</b> blends the two. <a href="/my-league#settings" style="color:var(--brand);font-weight:600">Save your league</a> and every board restates these in your own points.';
+      .sort(function (a, b) { return Math.abs(b.delta.points) - Math.abs(a.delta.points); })
+      .slice(0, MARKET_ROW);
+  }
+  // Only a positive edge is green: the market projecting MORE than the
+  // consensus is the one good figure in this domain. A negative gap is ink,
+  // and the word (Sit, Fade, Downgrade) carries the meaning.
+  function figHtml(p) {
+    var d = decide(p);
+    var pts = Number(p.delta.points);
+    return '<li class="hm-fig">'
+      + '<span class="k"><b>' + esc(d.t) + '</b> &middot; ' + esc(p.name) + ', ' + esc(p.position + ' ' + p.team) + (p.opponent ? ' v ' + esc(p.opponent) : '') + '</span>'
+      + '<span class="v' + (pts > 0 ? ' good' : '') + '">' + esc(signed(pts)) + ' pts</span>'
+      + '<span class="s">Market ' + n1(p.vegasPoints) + ' &middot; consensus ' + n1(p.consensusPoints) + ' &middot; Iron Tuna ' + n1(p.ironTunaPoints) + '</span>'
+      + '</li>';
+  }
+  var oddsStamp = null;
+  function fineHtml(week) {
+    return '<span class="hm-tag">Estimate</span>'
+      + '<span>Weekly fantasy points' + (week ? ' for ' + esc(week) : '') + ', at the site’s default scoring.'
+      + (oddsStamp ? ' Odds read ' + esc(oddsStamp) + '.' : '') + '</span>'
+      + '<a href="/my-league#settings">Save your league</a><span>and every board restates these in your own points.</span>';
+  }
+  var marketWeek = null;
+  grab('/api/vegas-edge', function (j) {
+    var rows = marketRows(j);
+    if (rows.length < MARKET_MIN) return;
+    marketWeek = j.week || null;
+    $('diffBody').innerHTML = rows.map(figHtml).join('');
+    $('diffFine').innerHTML = fineHtml(marketWeek);
     show($('different'), true);
     relink($('diffBody'));
   });
 
-  // ── the DFS card's reading ───────────────────────────────────────────────
-  // A market-driven value off the current DraftKings slate, from the same
-  // /api/dfs the sheet solves from. No slate, no salaries or no value on the
-  // board and the block stays hidden.
-  grab('/api/dfs?site=dk', function (j) {
-    // Every row the slate can state IN FULL, best value first, and the turn's
-    // pick out of the top five of them. A row with a hole in it is not a
-    // candidate at all, so a turn can never land on one and print a card with
-    // a gap in it.
-    var vals = (j.boards && j.boards.bestVegasValues || []).filter(function (r) {
-      return r && r.name && r.vegasValueScore != null && Number(r.salary) > 0 && n1(r.vegasPoints) != null;
+  // ── the tiles and the KPI band ───────────────────────────────────────────
+  // Both off one /api/rankings read, so the live line under a tile and the
+  // band's figures cannot disagree about who is on the board.
+  var POS_KEY = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', DST: 'DEF' };
+  function when(v) {
+    try {
+      return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(v)).replace(',', '') + ' ET';
+    } catch (e) { return ''; }
+  }
+  var kpi = { players: null, priced: null, week: null, pieces: null };
+  function paintKpi() {
+    if (kpi.players == null) return;
+    // Three figures, not four: a count of teams on the board was the fourth
+    // and it is 32 every week of the season, which is furniture, not a figure.
+    var cells = [
+      ['Players ranked this week', kpi.players, ''],
+      ['Priced off a market line', kpi.priced, 'good'],
+      ['Pieces the desk published', kpi.pieces, '']
+    ].filter(function (c) { return c[1] != null; });
+    $('kpiGrid').innerHTML = cells.map(function (c) {
+      return '<div><b' + (c[2] ? ' class="' + c[2] + '"' : '') + '>' + esc(String(c[1])) + '</b><span>' + esc(c[0]) + (kpi.week && c[0] === 'Players ranked this week' ? ' (' + esc(kpi.week) + ')' : '') + '</span></div>';
+    }).join('');
+    show($('kpi'), true);
+  }
+  grab('/api/rankings', function (j) {
+    var players = (j.players || []).filter(function (p) { return p && p.name && POS_KEY[p.position]; });
+    if (!players.length) return;
+    var by = {};
+    players.forEach(function (p) {
+      var k = POS_KEY[p.position];
+      if (!by[k]) by[k] = { n: 0, priced: 0 };
+      by[k].n++;
+      if (p.priced) by[k].priced++;
     });
-    var b = coverPick(vals, Date.now());
-    if (!b) return;
-    $('dfReadK').textContent = 'This week’s slate · '
-      + (coverLead(vals, b) ? 'Best market value' : 'Market value play');
-    $('dfReadH').innerHTML = esc(b.name) + ' <small style="font-weight:400;color:var(--ink-3)">'
-      + esc((b.position ? b.position + ' · ' : '') + b.team) + '</small>';
-    $('dfReadD').textContent = '$' + Number(b.salary).toLocaleString('en-US') + ' on DraftKings for '
-      + n1(b.vegasPoints) + ' market-implied points — a Vegas Value Score of ' + b.vegasValueScore + '.';
-    show($('dfRead'), true);
-    relink($('dfRead'));
-    readPic('dfReadPic', 'dfRead', b.name);
+    var tiles = document.querySelectorAll('.hm-tile[data-pos]');
+    for (var i = 0; i < tiles.length; i++) {
+      var k = tiles[i].getAttribute('data-pos'), c = by[k], live = tiles[i].querySelector('.hm-tile-live');
+      if (!c || !c.n || !live) continue;
+      live.textContent = c.n + ' ranked · ' + c.priced + ' priced';
+      live.hidden = false;
+    }
+    kpi.players = players.length;
+    kpi.priced = players.filter(function (p) { return p.priced; }).length;
+    kpi.week = j.week && j.week.label ? j.week.label : null;
+    if (j.oddsAsOf) {
+      oddsStamp = when(j.oddsAsOf);
+      if (!$('different').hidden) $('diffFine').innerHTML = fineHtml(marketWeek);
+    }
+    paintKpi();
   });
 
-  // ── the desk's current pieces ────────────────────────────────────────────
-  // Three cards, drawn by coverBand() above. Each is drawn only with a
-  // destination and a headline on it; with nothing current the whole section
-  // stays hidden.
-  // THE PUBLISHED FEED, NOT THE ARCHIVE. This read was `/api/content`, which is
-  // `contentListPayload`: every row with a status other than 'unpublished',
-  // newest first, one per VERSION. On 2026-09-18 that meant the eight rows this
-  // band draws from were the published weekend preview, FIVE HELD DRAFTS of the
-  // same preview — each with its own headline, none of which had passed the
-  // fact check — and two other stories. Six of eight cards were one story, five
-  // of them were drafts a reader was never meant to see, and every other piece
-  // the desk had published that week was below the cutoff and unreachable. It
-  // is also the real reason the cover looked stuck on one player: the rotation
-  // was working and most of what it rotated through was the same preview.
-  //
-  // `/api/newsroom` is `newsroomFeedPayload`, which is what /in-season/desk
-  // reads: published rows only, ONE ROW PER SLUG with the newest version
-  // winning, forward pieces dropped once their games have kicked off, and the
-  // components each piece breaks into. The cover and the desk now answer to one
-  // rule, so they cannot disagree about what the desk has published.
+  // ── newest from the desk ─────────────────────────────────────────────────
+  // Six rows, newest first, and only rows with a destination and a headline
+  // of their own. `/api/newsroom` is the published feed: one row per slug,
+  // the newest version winning, forward pieces dropped once their games have
+  // kicked off. `/api/content` is the archive — held drafts, one row per
+  // version — and this page must never read it (that put five drafts of one
+  // preview on the cover in September).
+  var NEWEST = 6;
+  function etDay(v) {
+    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(v)); } catch (e) { return ''; }
+  }
+  function day(v) {
+    try { return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric' }).format(new Date(v)).replace(',', ''); } catch (e) { return ''; }
+  }
+  // "3h ago" for today's pieces, "Yesterday", then the day: Eastern calendar
+  // days, the zone the desk publishes in.
+  function ago(v) {
+    var at = +v || 0, now = Date.now(), d = now - at;
+    if (!at || d < 0) return day(at);
+    if (d < 3600 * 1000) return Math.max(1, Math.floor(d / 60000)) + 'm ago';
+    if (d < 24 * 3600 * 1000) return Math.floor(d / 3600000) + 'h ago';
+    if (etDay(at) === etDay(now - 24 * 3600 * 1000)) return 'Yesterday';
+    return day(at);
+  }
+  // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only when
+  // one of its own calls cleared the bar (_voiceBlock, _worker.js). In a ledger
+  // row it is not worth two words of the headline; the call itself is.
+  var BOAST = /^\s*you['’]re\s+welcome\s*[:–—.!-]*\s*/i;
+  function headlineOf(p) {
+    var h = String((p && p.headline) || ''), m = BOAST.exec(h);
+    return m ? (h.slice(m[0].length).trim() || h) : h;
+  }
+  function named(p) {
+    var out = [];
+    (p.components || []).forEach(function (c) { if (c && c.player && out.indexOf(c.player) < 0) out.push(c.player); });
+    return out.length;
+  }
   function desk(j) {
-    var day = function (v) {
-      try {
-        return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'numeric', day: 'numeric' }).format(new Date(v));
-      } catch (e) { return ''; }
-    };
-    // How long ago, for the rail and the secondary stories (2026-09-26): a
-    // news front says "3h ago" for today's pieces, "Yesterday", then the day.
-    // Days are Eastern calendar days, the same zone day() prints in.
-    var etDay = function (v) {
-      try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(v)); } catch (e) { return ''; }
-    };
-    var ago = function (v) {
-      var at = +v || 0, now = Date.now(), d = now - at;
-      if (!at || d < 0) return day(at).replace(',', '');
-      if (d < 3600 * 1000) return Math.max(1, Math.floor(d / 60000)) + 'm ago';
-      if (d < 24 * 3600 * 1000) return Math.floor(d / 3600000) + 'h ago';
-      if (etDay(at) === etDay(now - 24 * 3600 * 1000)) return 'Yesterday';
-      return day(at).replace(',', '');
-    };
-    // The series name and when, as one quiet line: "Opportunity Report · 3h ago".
-    var meta = function (p) {
-      var w = p.publishedAt ? ago(p.publishedAt) : (p.week ? 'Week ' + p.week : '');
-      return esc([p.title || 'The desk', w].filter(Boolean).join(' \u00b7 '));
-    };
-    // A CARD NEEDS A HEADLINE OF ITS OWN. `title` is the kind's name, so a
-    // row stored without a headline painted "What Tuna Got Right" as both
-    // the eyebrow and the headline with nothing under it: a card that says
-    // the desk published and does not say what. Those rows are skipped here
-    // and the piece is still in the archive at its URL.
-    var live = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; });
+    var live = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).slice(0, NEWEST);
     if (!live.length) return;
-    // Which story leads, and which rail slots carry a picture, depend on who
-    // has a photograph on file, and that is player-search.js's lookup, loaded
-    // deferred. Wait for it once; if it never arrives, paint anyway after 3s
-    // with no photographs known (the newest story that is not about kickers
-    // or defenses leads, and the rail keeps the feed's order).
-    var PS = window.ITPlayerSearch;
-    if ((!PS || !PS.resolve) && !desk.waited) {
-      desk.waited = true;
-      var go = function () { if (go.done) return; go.done = true; desk(j); };
-      document.addEventListener('it-player-search-ready', go, { once: true });
-      setTimeout(go, 3000);
-      return;
-    }
-
-    // WHO A PIECE IS ABOUT: THE SUBJECT OF ITS HEADLINE FIRST.
-    // `components[].player` is the desk's cast for the WHOLE piece, in the
-    // order the story tells it, and stamping the first three of them put three
-    // Broncos over "Parker Washington's 43% target share makes him the
-    // clearest roster add of the week" — a JAX-at-DEN recap whose findings
-    // open on the side that won.
-    //
-    // `coverAbout` (above, #319) already answers "which of this cast is this
-    // line about", and answers it more carefully than a substring test: a full
-    // name settles it, a bare surname counts only when nobody else on the
-    // piece answers to it. It is the hero's rule, so it is the cards' rule
-    // too — one implementation, exercised by one set of gates.
-    var subjectOf = function (p, cast) {
-      if (!cast.length) return [];
-      var about = coverAbout(p.headline || '', cast);
-      if (!about.length) about = coverAbout(p.dek || '', cast);
-      return (about.length ? about : cast).slice(0, 3);
-    };
-    // The cast, unfiltered. The HERO PHOTOGRAPH below still reads this one:
-    // it wants a name it can look a picture up for, and it captions itself
-    // with the finding, so the story's own order is the right order there.
-    var whoOf = function (p) {
-      var out = [];
-      (p.components || []).forEach(function (c) {
-        if (c && c.player && out.indexOf(c.player) < 0) out.push(c.player);
-      });
-      return out;
-    };
-    // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only when
-    // one of its own pre-kickoff calls cleared the headline bar, only for that
-    // player and only once (_voiceBlock, _worker.js). Printed as the first two
-    // words of a 16px card headline it read as punctuation; it is a line of
-    // its own over the headline here, and the call under it.
-    //
-    // Fourth copy of this split; `fantasy.html`, `dfs.html` and `desk.html`
-    // carry the other three. When the regexp moves it moves in all four.
-    var BOAST = /^\s*you['\u2019]re\s+welcome\s*[:\u2013\u2014.!-]*\s*/i;
-    var boast = function (p) {
-      var h = String((p && (p.headline || p.title)) || ''), m = BOAST.exec(h);
-      if (!m) return '';
-      return h.slice(m[0].length).trim() || '';
-    };
-
-    // ── the lead, and the five beside it ────────────────────────────────────
-    // THE LEAD (Ken, 2026-09-27): never a kickers-or-defenses piece, and
-    // always one with a photograph. It is the NEWEST story that clears both:
-    // not about kickers or defenses (by its kind, series name or headline),
-    // and naming a player the hero can picture (the hero's own test: a game
-    // photograph on file; since 2026-10-06 a headshot does not count). Only if no story in
-    // the feed has a photograph does the newest non-kicker, non-defense story
-    // lead without one; only if every story is kickers or defenses does the
-    // newest lead.
-    var KD = /kicker|defen[cs]e|\bd\/?st\b|\bk\s*&\s*d\b/i;
-    var isKD = function (p) { return KD.test([p.kind, p.title, p.headline].join(' ')); };
-    var PSok = !!(PS && PS.resolve);
-    // Pictured means an action shot (2026-10-06), the only picture the hero
-    // runs; a headshot alone no longer qualifies a story to lead.
-    var pictured = function (r) { return !!r && !!(PS.action && PS.action(r.k)); };
-    var heroPhoto = function (p) {
-      if (!PSok) return false;
-      return coverSubjects(p, boast(p) || p.headline).some(function (s) { return pictured(PS.resolve(s.name)); });
-    };
-    //
-    // 2026-10-04: and it takes turns. Of the stories that clear those tests,
-    // the newest LEAD_POOL take the lead an hour each (`leadTurn`), except
-    // that a story published inside the current hour leads outright. The
-    // stories that do not lead stay on the rail in the feed's order.
-    var quals = [], i;
-    for (i = 0; i < live.length; i++) if (!isKD(live[i]) && heroPhoto(live[i])) quals.push(i);
-    if (!quals.length) for (i = 0; i < live.length; i++) if (!isKD(live[i])) quals.push(i);
-    var turn = leadTurn(quals.map(function (k) { return live[k]; }), Date.now());
-    var at = turn < 0 ? -1 : quals[turn];
-    if (at > 0) live = [live[at]].concat(live.slice(0, at), live.slice(at + 1));
-
-    // EVERY THIRD RAIL STORY HAS A PICTURE (Ken, 2026-09-27): rail slots 3
-    // and 6 show a thumbnail and the others show none. When the story due in
-    // a pictured slot has no face on file, the next story that has one moves
-    // up into the slot, so the rail stays close to newest first. A face here
-    // is what the rail's thumbnail draws: an ESPN or NFL headshot.
-    var railPhoto = function (p) {
-      if (!PSok) return false;
-      return subjectOf(p, whoOf(p)).some(function (n) { var r = PS.resolve(n); return !!r && (r.e || r.h); });
-    };
-    [2, 5].forEach(function (slot) {
-      var k = 1 + slot;                       // live[0] is the lead
-      if (k >= live.length || railPhoto(live[k])) return;
-      for (var m = k + 1; m < live.length; m++) {
-        if (railPhoto(live[m])) { live.splice(k, 0, live.splice(m, 1)[0]); return; }
-      }
-    });
-    // The rail carries up to six: the five it shows beside a photograph, and
-    // one more for when there is no photograph (setNoPhoto), when the first two
-    // move under the lead and the rail shows the next four. Six stories besides
-    // the lead either way, and the two columns end level. The pair moves only
-    // if the rail would still hold two after it.
-    var lead = live[0], railPieces = live.slice(1, 7);
-    var morePieces = live.length - 3 >= 2 ? live.slice(1, 3) : [];
-    var by = function (p) {
-      var n = p.byline && p.byline.name ? p.byline.name : '';
-      var w = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + p.week : '');
-      return esc([w, n].filter(Boolean).join(' \u00b7 '));
-    };
-    var leadPick = subjectOf(lead, whoOf(lead));
-    // The lead takes the boast as well. It is the biggest card on the page,
-    // and a banner that appears on the three cards below it but not above them
-    // reads as a bug rather than as a rule.
-    var leadCrow = boast(lead);
-    var leadHtml = '<article class="hm-lead' + (leadCrow ? ' is-boast' : '') + '"'
-      + (leadPick.length ? ' data-player-focus="' + esc(leadPick.join('|')) + '"' : '') + '>'
-      // In a news lead's order (2026-09-26): kicker, headline, dek, the byline
-      // and date, then the link. No "Latest" flag: the lead takes turns
-      // (`leadTurn`), so it is not always the newest piece.
-      + '<span class="t">' + esc(lead.title || 'The desk') + '</span>'
-      + (leadCrow ? '<span class="boast">You\u2019re welcome.</span>' : '')
-      + '<h3><a href="' + esc(lead.url) + '">' + esc(leadCrow || lead.headline) + '</a></h3>'
-      + (lead.dek ? '<p>' + esc(lead.dek) + '</p>' : '')
-      + '<span class="m">' + by(lead) + '</span>'
-      + '<a class="go" href="' + esc(lead.url) + '">Read the story &rarr;</a></article>';
-    if (morePieces.length) {
-      leadHtml += '<div class="hm-more" hidden>' + morePieces.map(function (p) {
-        var cr = boast(p);
-        return '<article class="hm-more-item">'
-          + '<h3><a href="' + esc(p.url) + '">' + esc(cr || p.headline) + '</a></h3>'
-          + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '')
-          + '<span class="m">' + meta(p) + '</span></article>';
-      }).join('') + '</div>';
-    }
-    if (railPieces.length) {
-      // "Top Headlines", as a sports front heads the rail down its right side.
-      leadHtml += '<div class="hm-rail"><p class="hm-rail-h">Top Headlines</p><ul>'
-        + railPieces.map(function (p, i) {
-            var pk = subjectOf(p, whoOf(p)), cr = boast(p);
-            var cls = (i < morePieces.length ? 'in-more' : '') + (i >= 5 ? ' extra' : '');
-            return '<li' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + (pk.length ? ' data-player-focus="' + esc(pk.join('|')) + '"' : '') + '>'
-              // No kicker (2026-09-26): the series name is the start of the
-              // meta line. The headline is clamped to three lines on screen,
-              // with the whole of it in the title.
-              + '<h3><a href="' + esc(p.url) + '" title="' + esc(cr || p.headline) + '">' + esc(cr || p.headline) + '</a></h3>'
-              + '<span class="m">' + meta(p) + '</span></li>';
-          }).join('') + '</ul><a class="hm-rail-all" href="/in-season/desk">All articles &rarr;</a></div>';
-    }
-    // One published piece is a lead with nothing beside it; the second column
-    // is dropped rather than left holding 42% of the row open.
-    $('leadWell').className = 'hm-well' + (railPieces.length ? '' : ' hm-well-solo');
-    $('leadWell').innerHTML = leadHtml;
-    setNoPhoto($('hmHero').classList.contains('no-photo'));
-    show($('lead'), true);
-
-    // ── the cards, which are the rotation, minus whatever is on the front ───
-    // The cards rotate over what is NOT on the front, so the same headline is
-    // never on this page twice. Until 2026-09-26 that was the lead alone, and
-    // the three cards repeated three of the rail's five. The front is the lead
-    // plus the rail's six slots (five beside a photograph; the sixth stands in
-    // when the first two move under a lead without one), so all of them are
-    // left out, whichever way the photograph turns out. coverBand's own rules
-    // -- the pool depth, the hourly turn, the 24-hour floor -- are untouched;
-    // it is handed a shorter list, not a new policy. With nothing left the
-    // section stays hidden rather than repeating the front.
-    var pieces = coverBand(live.slice(1 + railPieces.length), Date.now());
-    if (!pieces.length) { show($('articles'), false); try { if (window.ITPlayerSearch) ITPlayerSearch.decorateStories($('leadWell')); } catch (e) {} return; }    $('readGrid').innerHTML = pieces.map(function (p) {
-      var when = p.publishedAt ? day(p.publishedAt) : (p.week ? 'Week ' + esc(p.week) : '');
-      var who = whoOf(p);
-      // `byline` is an object ({analyst, name, role, avatar, ...}), not a
-      // string; escaping it whole printed "[object Object]" under every card.
-      var byline = p.byline && p.byline.name ? p.byline.name : '';
-      var pick = subjectOf(p, who), crow = boast(p);
-      return '<a class="hm-read-card' + (crow ? ' is-boast' : '') + '" href="' + esc(p.url) + '"'
-        + (pick.length ? ' data-player-focus="' + esc(pick.join('|')) + '"' : '') + '>'
-        + '<span class="t">' + esc(p.title || 'The desk') + '</span>'
-        + (crow ? '<span class="boast">You\u2019re welcome.</span>' : '')
-        + '<h3>' + esc(crow || p.headline) + '</h3>'
-        + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '')
-        + '<span class="m">' + (when ? esc(when) : '') + (byline ? (when ? ' · ' : '') + esc(byline) : '') + '</span>'
+    $('readGrid').innerHTML = live.map(function (p) {
+      var n = named(p);
+      return '<a class="ledger-row" href="' + esc(p.url) + '">'
+        + '<span class="ledger-name"><b>' + esc(headlineOf(p)) + '</b><span>' + esc(p.title || 'The desk') + (p.byline && p.byline.name ? ' · ' + esc(p.byline.name) : '') + '</span></span>'
+        + '<span class="ledger-fig keep"><small>Published</small><b>' + esc(p.publishedAt ? ago(p.publishedAt) : (p.week ? 'Week ' + p.week : '')) + '</b></span>'
+        + '<span class="ledger-fig"><small>Week</small><b>' + esc(p.week != null ? String(p.week) : '') + '</b></span>'
+        + '<span class="ledger-fig"><small>Players named</small><b>' + n + '</b></span>'
         + '</a>';
     }).join('');
     show($('articles'), true);
-    // The faces on the cards just painted. player-search.js watches the
-    // document and would reach them on its own; calling it here means they
-    // arrive with the cards rather than a frame later.
-    try { if (window.ITPlayerSearch) { ITPlayerSearch.decorateStories($('leadWell')); ITPlayerSearch.decorateStories($('readGrid')); } } catch (e) {}
-    // The hero's first choice: the first piece in the band that is about
-    // somebody, so the picture follows the story the rotation put on top
-    // rather than pinning itself to the newest row underneath it.
-    // All of them are offered, not just the first: a subject the lookup
-    // carries no face for hands the photograph to the story behind him rather
-    // than losing the band for the hour.
-    // EACH SUBJECT ARRIVES WITH THE LINE THAT NAMES HIM (`coverSubjects`
-    // above), so the face and the sentence under it are about the same man.
-    // This used to be `whoOf(p)[0]` under `p.headline` — two unrelated picks
-    // off one row, and a cover that ran one player's photograph over another
-    // player's news.
-    //
-    // The headline handed over is the DE-BOASTED one: the gap line is 13px,
-    // the boast is not worth two of its words there, and the hero is not where
-    // it is being made — the call is. Stripping the prefix does not change who
-    // the line is about, so the pairing is unaffected.
-    //
-    // `live`, not `pieces`: the cards below are the rotation MINUS whatever is
-    // leading, so the lead's subject is not in that list at all, and the hero
-    // would be showing the second story's man while the first one is the
-    // headline above him. The hero is the desk's current subject; the current
-    // piece is the one leading the page.
-    //
-    // 2026-09-26: the LEAD's subjects only. Offering every live piece meant a
-    // lead that named nobody (or nobody with a photograph on file) handed the
-    // frame to an older story's player: Davante Adams pictured over a
-    // kickers-and-defenses lead. No face for the lead's own subject means no
-    // picture, and the lead takes the whole column (#heroEdge[hidden] rules).
-    var deskCands = coverSubjects(lead, boast(lead) || lead.headline).map(function (s) {
-      return { name: s.name, kicker: 'What the desk is on today', gap: s.line, href: lead.url };
-    });
-    if (deskCands.length) heroPaint('desk', deskCands);
-    else heroClear();
+    kpi.pieces = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).length;
+    paintKpi();
   }
   function deskRead() { grab('/api/newsroom?limit=20', desk); }
   deskRead();
-  // THE OPEN PAGE KEEPS UP (2026-10-04). The front painted once, on load, so a
-  // tab left open kept the lead it opened on however many turns went by and
-  // whatever the desk published meanwhile. It re-reads the desk at every turn
-  // boundary, so the lead takes its turn on screen, and every DESK_REFRESH_MS
-  // between, so a story the desk files mid-turn reaches the front. A hidden
-  // tab skips the read and catches up when it is shown again.
+  // THE OPEN PAGE KEEPS UP. A tab left open re-reads the desk every ten
+  // minutes, so a story the desk files reaches the front; a hidden tab skips
+  // the read and catches up when it is shown again.
   var DESK_REFRESH_MS = 10 * 60 * 1000, deskStale = false;
-  (function deskNext() {
-    var wait = COVER_TURN_MS - (Date.now() % COVER_TURN_MS);
-    setTimeout(function () {
-      if (document.hidden) deskStale = true; else deskRead();
-      deskNext();
-    }, Math.min(wait, DESK_REFRESH_MS) + 5000);
-  })();
+  setInterval(function () { if (document.hidden) deskStale = true; else deskRead(); }, DESK_REFRESH_MS);
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden && deskStale) { deskStale = false; deskRead(); }
   });
 })();
 </script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
 </body>
 </html>
