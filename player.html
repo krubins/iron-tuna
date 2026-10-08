@@ -29,13 +29,15 @@
      same consequence — it is deliberately absent from sitemap.xml, which
      tools/test-seo.mjs asserts alongside the noindex below. -->
 <meta name="robots" content="noindex,follow">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
 /* ── the lookup, at the top of the card ──
    The same box as the front page's ribbon, mounted by /player-search.js. It is
    here because the second thing a reader does on a player card is look up
    another player, and sending them home to do it is a wasted trip. */
 .pc-find{display:flex;align-items:center;gap:8px;margin:26px 0 0;padding:0 12px;height:42px;max-width:420px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
-.pc-find:focus-within{border-color:var(--teal);background:var(--bg);box-shadow:0 0 0 3px var(--teal-tint)}
+.pc-find:focus-within{border-color:var(--teal);background:var(--bg);box-shadow:0 0 0 3px rgba(14,124,99,.12)}
 .pc-find svg{width:17px;height:17px;flex:0 0 auto;color:var(--muted)}
 .pc-find:focus-within svg{color:var(--teal)}
 .pc-find input{flex:1;min-width:0;border:0;outline:0;background:none;font:inherit;font-size:var(--fs-md);color:var(--text)}
@@ -44,7 +46,7 @@
 /* ── the suggestion menu ──
    Positioned in viewport coordinates by /player-search.js and parented to
    <body>, so these rules cannot depend on an ancestor. */
-.pl-menu{position:fixed;z-index:60;background:var(--bg);border:1px solid var(--line);border-radius:10px;overflow:hidden;max-height:min(60vh,420px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pl-menu{position:fixed;z-index:60;background:var(--bg);border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 34px rgba(16,19,23,.18);overflow:hidden;max-height:min(60vh,420px);overflow-y:auto;-webkit-overflow-scrolling:touch}
 .pl-menu[hidden]{display:none}
 .pl-opt{display:flex;align-items:center;gap:11px;width:100%;padding:9px 13px;border:0;border-bottom:1px solid var(--line);background:none;font:inherit;text-align:left;cursor:pointer;color:var(--text)}
 .pl-opt:last-child{border-bottom:0}
@@ -52,7 +54,7 @@
 .pl-meta{min-width:0}
 .pl-opt b{display:block;font-weight:700;font-size:var(--fs-sm);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pl-opt b em{font-style:normal;background:rgba(242,169,0,.32);border-radius:2px}
-.pl-meta span{display:block;font-size:var(--fs-3xs);font-weight:700;color:var(--muted);margin-top:1px}
+.pl-meta span{display:block;font-size:var(--fs-3xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:1px}
 .pl-face{flex:0 0 auto;width:32px;height:32px;border-radius:4px;background:var(--elev);overflow:hidden;position:relative;display:grid;place-items:center}
 .pl-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
 .pl-face i{font-style:normal;font-size:var(--fs-3xs);font-weight:800;color:var(--muted)}
@@ -61,11 +63,11 @@
 /* ── the head of the card ──
    The club's color is a wash behind the photo and nothing else. It is texture:
    it never carries a number, and no club mark or wordmark is reproduced. */
-.pc-head{display:flex;align-items:center;gap:20px;margin:26px 0 6px;padding:18px 20px;border:1px solid var(--line);border-radius:var(--radius-lg);background:linear-gradient(120deg,var(--wash,var(--teal-tint)),transparent 62%),var(--panel)}
+.pc-head{display:flex;align-items:center;gap:20px;margin:26px 0 6px;padding:18px 20px;border:1px solid var(--line);border-radius:var(--radius-lg);background:linear-gradient(120deg,var(--wash,rgba(14,124,99,.07)),transparent 62%),var(--panel)}
 .pc-shot{flex:0 0 auto;width:96px;height:96px;border-radius:var(--radius-md);background:var(--elev);overflow:hidden;position:relative;display:grid;place-items:center}
 .pc-shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
-.pc-shot i{font-style:normal;font-size:var(--fs-2xl);color:var(--muted);}
-.pc-eyebrow{font-size:var(--fs-3xs);color:var(--teal);display:block}
+.pc-shot i{font-style:normal;font-family:var(--font-display);font-size:var(--fs-2xl);color:var(--muted);letter-spacing:.06em}
+.pc-eyebrow{font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:.18em;text-transform:uppercase;color:var(--teal);display:block}
 .pc-head h1{font-size:clamp(28px,5vw,40px);line-height:1.06;margin:5px 0 4px;letter-spacing:.01em}
 .pc-club{color:var(--sec);font-size:var(--fs-md);margin:0}
 .pc-club b{color:var(--text)}
@@ -74,8 +76,8 @@
 /* ── the three numbers ── */
 .pc-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0 10px}
 .pc-num{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--bg);padding:14px 16px}
-.pc-num i{font-style:normal;display:block;font-size:var(--fs-3xs);font-weight:800;color:var(--muted)}
-.pc-num b{display:block;font-size:38px;line-height:1.05;letter-spacing:.02em;margin-top:5px;color:var(--text)}
+.pc-num i{font-style:normal;display:block;font-size:var(--fs-3xs);font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.pc-num b{display:block;font-family:var(--font-display);font-size:38px;line-height:1.05;letter-spacing:.02em;margin-top:5px;color:var(--text)}
 .pc-num b.money{color:var(--teal)}
 .pc-num span{display:block;font-size:var(--fs-2xs);color:var(--sec);margin-top:3px}
 @media(max-width:620px){.pc-nums{grid-template-columns:1fr}.pc-num b{font-size:32px}}
@@ -92,8 +94,8 @@
 .pc-list a:hover{color:var(--teal)}
 .pc-list p{color:var(--sec);font-size:var(--fs-sm);margin:5px 0 0}
 .pc-tags{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:6px}
-.pc-tag{font-size:var(--fs-3xs);font-weight:800;padding:3px 8px;border-radius:4px;background:var(--elev);color:var(--sec)}
-.pc-tag.under{background:var(--teal-tint);color:var(--teal)}
+.pc-tag{font-size:var(--fs-3xs);font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:20px;background:var(--elev);color:var(--sec)}
+.pc-tag.under{background:rgba(14,124,99,.12);color:var(--teal)}
 .pc-tag.over{background:rgba(192,50,47,.1);color:var(--danger)}
 .pc-when{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.02em}
 .pc-quiet{color:var(--muted);font-size:var(--fs-sm);margin:0}
@@ -105,27 +107,26 @@
 .pc-odds p:last-child{margin:0}
 .pc-odds .pc-boards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
 .pc-board{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);padding:9px 11px}
-.pc-board.odds{border-color:var(--teal);background:var(--teal-tint)}
-.pc-board h3{font-size:var(--fs-3xs);font-weight:800;color:var(--muted);margin:0}
-.pc-board .pc-slot{font-size:28px;line-height:1.1;letter-spacing:.02em;margin-top:3px;color:var(--text)}
+.pc-board.odds{border-color:var(--teal);background:rgba(14,124,99,.06)}
+.pc-board h3{font-size:var(--fs-3xs);font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0}
+.pc-board .pc-slot{font-family:var(--font-display);font-size:28px;line-height:1.1;letter-spacing:.02em;margin-top:3px;color:var(--text)}
 .pc-board .pc-cost{font-size:var(--fs-2xs);color:var(--sec);font-weight:700}
 .pc-odds .pc-fine{font-size:var(--fs-2xs);color:var(--muted);line-height:1.45}
 @media(max-width:520px){.pc-odds .pc-boards{grid-template-columns:1fr}}
 
 /* ── the call to action ── */
 .pc-cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 6px}
-.pc-btn{display:inline-block;background:var(--gold);color:#231700;font-weight:700;border-radius:4px;padding:13px 24px;}
+.pc-btn{display:inline-block;background:var(--gold);color:#231700;font-weight:700;border-radius:26px;padding:13px 24px;box-shadow:0 6px 18px rgba(191,145,0,.26)}
 .pc-btn:hover{filter:brightness(1.06);text-decoration:none}
-.pc-btn.alt{background:var(--teal-tint);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
+.pc-btn.alt{background:rgba(14,124,99,.09);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
 .pc-back{display:inline-block;margin:34px 0 10px;color:var(--teal);font-size:var(--fs-sm)}
 </style>
-<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css"><link rel="stylesheet" href="/tuna-market.css">
 <script defer src="/tuna-market.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
-<header class="site"><!--chrome:line--><p class="site-line"><span>Every player priced off the betting market first.</span> <span>Restated at your league’s scoring.</span></p><!--/chrome:line--><div class="wrap">
+<header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
@@ -140,15 +141,7 @@
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
     <!--/chrome:nav-->
-</div><!--chrome:tabbar-->
-  <nav class="tabbar" aria-label="Sections">
-    <a href="/fantasy"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16M12 4v16"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Fantasy</a>
-    <a href="/dfs"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19h16M6 15l4-5 4 3 4-7"/></svg>DFS</a>
-    <a href="/in-season/desk"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg>Articles</a>
-    <a href="/my-league#settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>My league</a>
-  </nav>
-<!--/chrome:tabbar-->
-</header>
+</div></header>
 
 <main id="main" class="wrap">
   <form class="pc-find" id="pcFind" role="search" autocomplete="off" action="/player" method="get">

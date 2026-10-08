@@ -327,10 +327,10 @@ console.log('\nthe visual zones are the ones the site says it has');
   const shared = read('site.css');
   const bg = (shared.match(/--bg:\s*(#[0-9a-fA-F]{3,6})/) || [])[1] || '';
   ok(`site.css --bg is a light surface (${bg})`, Boolean(bg) && lum(bg) > 0.8, bg || 'token missing');
-  // The one accent is the October 2026 teal, #0b4f6c, about 8.6:1 on white.
-  // #2dd4a3 is about 1.9:1 and every link on the site would fail contrast.
+  // #2dd4a3 is about 1.9:1 on white, so the shared accent has to be the darker
+  // green or every link on the site fails contrast.
   const teal = (shared.match(/--teal:\s*(#[0-9a-fA-F]{3,6})/) || [])[1] || '';
-  ok(`site.css uses the white-safe accent (${teal})`, teal.toLowerCase() === '#0b4f6c', teal || 'token missing');
+  ok(`site.css uses the white-safe accent (${teal})`, teal.toLowerCase() === '#0e7c63', teal || 'token missing');
   // And no content page may redefine the palette back to dark, which is how the
   // inline-:root drift started in the first place.
   const dark = pages.filter((f) => {

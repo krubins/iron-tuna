@@ -426,9 +426,7 @@ console.log('\nthe pages');
   // which took every picture off the page, and the hero picture that put one
   // back. It is on it again: the hero prefers a game photograph to a headshot,
   // so it needs the map, and it needs it before the lookup that reads it.
-  // October 2026: front.html is off the list again. The homepage paints no
-  // photograph: its hero is a headline, a search field and a row of figures.
-  for (const f of ['desk.html', 'lead.html']) {
+  for (const f of ['desk.html', 'lead.html', 'front.html']) {
     const src = read(f);
     const a = src.indexOf('<script src="/it-action.js" defer>'), b = src.indexOf('<script src="/player-search.js" defer>');
     ok(`${f} loads /it-action.js before player-search.js`, a >= 0 && b > a);
@@ -436,6 +434,30 @@ console.log('\nthe pages');
   ok('weekly-wrap.html loads player-search.js for the faces beside its findings', /<script src="\/player-search\.js" defer>/.test(read('weekly-wrap.html')));
   ok('desk.html stamps its feed cards, findings and calls with the player they are about',
      (read('desk.html').match(/data-player-focus=/g) || []).length >= 3);
+  // The homepage's own three pictures: the hero's plate, a face on each card's
+  // one reading, and the desk cards stamped with who their findings name.
+  {
+    const src = read('front.html');
+    ok('front.html paints the hero picture from the player lookup',
+       /heroEdgePlate/.test(src) && /ITPlayerSearch/.test(src) && /PS\.plate\(/.test(src));
+    // "the players they are about" is the HEADLINE's subject since 2026-09-21,
+    // not the piece's whole cast: a JAX-at-DEN recap headlined on a Jaguar was
+    // stamped with the three Broncos its findings open on. The stamp is still
+    // required; what narrows it is `subjectOf`, which asks `coverAbout` — the
+    // same rule the hero pairs its face and its line with, so the cover cannot
+    // answer "who is this about" two different ways. All three are checked, so
+    // none can be dropped without this failing.
+    ok('...and stamps the desk cards with the players they are about',
+       /data-player-focus=/.test(src) && /var subjectOf = function \(p, cast\)/.test(src)
+       && /coverAbout\(p\.headline/.test(src) && /function coverAbout\(text, cast\)/.test(src));
+    ok('...and gives each card’s reading a face', /readPic\(/.test(src) && /has-pic/.test(src));
+    // The page's outline is its six sections (the lead story joined them on
+    // 2026-09-21) and the hero picture is not a seventh — tools/test-homepage.mjs
+    // asserts that order in the browser, and this catches a stray <section>
+    // before it gets that far.
+    ok('the hero picture is an aside, so the page still has exactly six sections',
+       /<aside class="hm-edge"/.test(src) && (src.match(/<section class=/g) || []).length === 6);
+  }
   ok('it-action.js parses and defines the map', (() => { const w = makeDom(); new Function('window', read('it-action.js'))(w); return !!w.ITActionShots; })());
   let checked = '';
   try { checked = execFileSync('node', [path.join(ROOT, 'tools', 'build-action-shots.mjs'), '--check'], { encoding: 'utf8' }); } catch (e) { checked = ''; }

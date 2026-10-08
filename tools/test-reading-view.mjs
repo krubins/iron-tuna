@@ -50,7 +50,7 @@ for (const f of PAGES) {
   const root = (src.match(/:root\{[^}]*\}/) || [''])[0];
   ok(`${f} is white`, /--bg:\s*#fff/i.test(root), root.slice(0, 80));
   ok(`${f} sets near-black type`, /--text:\s*#1[0-9a-f]{5}/i.test(root), root.slice(0, 80));
-  ok(`${f} uses the white-safe teal`, /--teal:\s*#0b4f6c/i.test(root));
+  ok(`${f} uses the white-safe teal`, /--teal:\s*#0e7c63/i.test(root));
   ok(`${f} keeps no dark-theme accent`,
      !/rgba\(45,\s*212,\s*163/.test(src) && !/rgba\(239,\s*91,\s*91/.test(src)
      && !/rgba\(11,\s*17,\s*23/.test(src), 'a dark-theme rgba survived');
@@ -70,18 +70,18 @@ for (const f of PAGES) {
      !/header\.site\s*\{/.test(src));
 }
 
-console.log('\namber is a label, not a button');
+console.log('\ngold is a fill, not an ink');
 {
-  // October 2026: --gold is the amber DISCLOSURE LABEL (#fff2c7) and --goldink
-  // its text. Wherever it carries meaning as text it has to be the darker ink,
-  // and no button is filled with it: the primary action is the accent, white
-  // on teal, squared.
+  // Wherever gold carries meaning as TEXT rather than as a filled button, it has
+  // to be the darker ink. The standing column does this in its two-sided
+  // verdict chip.
   const pcp = fs.readFileSync(path.join(ROOT, 'play-caller-premium.html'), 'utf8');
-  ok('the two-sided verdict chip is ink amber', pcp.includes('color:var(--goldink)'));
+  ok('the two-sided verdict chip is ink gold', pcp.includes('color:var(--goldink)'));
   ok('play-caller-premium.html defines --goldink it reaches for',
      /--goldink:\s*#[0-9a-f]{6}/i.test(pcp));
-  ok('buttons are the accent, not the label colour',
-     PAGES.every(f => { const s = fs.readFileSync(path.join(ROOT, f), 'utf8'); return /\.btn\{[^}]*background:var\(--teal\)/.test(s) && !/\.btn\{[^}]*background:var\(--gold\)/.test(s); }));
+  // The buttons keep the bright fill: dark text on a gold block is fine on white.
+  ok('buttons keep the bright gold fill',
+     PAGES.every(f => fs.readFileSync(path.join(ROOT, f), 'utf8').includes('background:var(--gold)')));
 }
 
 console.log('\nthe rest of the site reads as the same surface');
@@ -109,7 +109,7 @@ console.log('\nthe rest of the site reads as the same surface');
   const shared = fs.readFileSync(path.join(ROOT, 'site.css'), 'utf8');
   const sroot = (shared.match(/:root\s*\{[\s\S]*?\}/) || [''])[0];
   ok('and the shared palette is white', /--bg:\s*#fff/i.test(sroot), sroot.slice(0, 120));
-  ok('on the one accent', /--teal:\s*#0b4f6c/i.test(sroot), sroot.slice(0, 120));
+  ok('on the one accent', /--teal:\s*#0e7c63/i.test(sroot), sroot.slice(0, 120));
   ok('with gold defined as an ink as well as a fill', /--goldink:\s*#[0-9a-f]{6}/i.test(sroot));
   const darkLeft = content.filter((f) => /rgba\(45,\s*212,\s*163/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
   ok('no dark-theme accent survives anywhere', darkLeft.length === 0, darkLeft.slice(0, 5).join(', '));
@@ -119,19 +119,16 @@ console.log('\nthe rest of the site reads as the same surface');
   ok('and no page still draws the dark-ink wordmark on the black band', oldMark.length === 0, oldMark.slice(0, 5).join(', '));
 }
 
-console.log('\nthe front page is paper under the navy ribbon');
+console.log('\nthe front page is light chrome over a black masthead');
 {
-  // October 2026: the homepage takes the shared chrome and restates the shared
-  // palette under the names its modules were written against. Paper ground,
-  // the one accent as --brand, and the navy of the ribbon as --mast.
   const src = fs.readFileSync(path.join(ROOT, FRONT), 'utf8');
   const root = (src.match(/:root\{[^}]*\}/) || [''])[0];
   ok('the front page is on the light palette', /--bg:\s*#f[0-9a-f]{5}/i.test(root), root.slice(0, 90));
-  ok('and shares the site accent as --brand', /--brand:\s*#0b4f6c/i.test(root), root.slice(0, 90));
-  ok('the band is the navy of the ribbon', /--mast:\s*#001e47/i.test(root));
-  // The wordmark is the same outlined SVG every page carries; site.css fills it
-  // navy on the white brand panel, so the gradient stops ride along unchanged.
-  ok('and carries the shared wordmark', src.includes('stop-color="#dde8ee"'));
+  ok('and shares the site accent as --brand', /--brand:\s*#0e7c63/i.test(root), root.slice(0, 90));
+  // The masthead and the hero band ARE dark, and the wordmark on them is the
+  // light-on-dark metal. That is why front.html is exempt from the sweep above.
+  ok('the masthead band stays black', /--mast:\s*#0b1614/i.test(root));
+  ok('and keeps the metal wordmark that belongs on it', src.includes('stop-color="#dde8ee"'));
 }
 
 console.log('\nthe draft app is the one dark surface left');

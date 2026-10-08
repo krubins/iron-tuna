@@ -14,6 +14,7 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <title>Season Long Fantasy Football: The Odds Makers’ Edge | Iron Tuna</title>
 <meta name="description" content="Season long fantasy football read off the betting market first: weekly rankings, a rest-of-season board, the next five weeks, the week’s start/sit call and the signal engine’s own read — all restated at your league’s scoring.">
 <link rel="canonical" href="https://irontuna.com/fantasy">
@@ -32,7 +33,6 @@
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
-<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
 body{overflow-x:hidden}
@@ -67,8 +67,8 @@ section{margin:0 0 var(--space-6)}
 .fn-riv-av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:var(--fs-3xs);flex:none}
 .fn-riv-head b{display:block;font-size:20px;line-height:1.2}
 .fn-riv-head a{color:inherit}
-.fn-riv-head small{display:block;font-size:var(--fs-2xs);font-weight:700;color:var(--teal)}
-.fn-riv-rec{margin-left:auto;text-align:right;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;color:var(--muted);line-height:1.35}
+.fn-riv-head small{display:block;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
+.fn-riv-rec{margin-left:auto;text-align:right;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);line-height:1.35}
 .fn-riv-rec b{display:block;font-size:var(--fs-md);letter-spacing:0;color:var(--text)}
 .fn-riv-stand{margin:var(--space-3) 0 0;font-size:var(--fs-md);line-height:1.55;font-style:italic;color:var(--muted)}
 .fn-riv-foot{grid-column:1/-1;border-top:1px solid var(--line);padding-top:var(--space-3);font-size:var(--fs-md);line-height:1.55;color:var(--sec)}
@@ -76,7 +76,7 @@ section{margin:0 0 var(--space-6)}
 .fn-riv-pick{padding:var(--space-3) 0;border-top:1px solid var(--line)}
 .fn-riv-pick h3{margin:0;font-size:20px;line-height:1.3}
 .fn-riv-pick h3 small{font-weight:400;font-size:var(--fs-2xs);color:var(--muted);margin-left:6px}
-.fn-riv-ranks{margin:2px 0 4px;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;color:var(--muted)}
+.fn-riv-ranks{margin:2px 0 4px;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .fn-riv-ranks b{color:var(--text)}.fn-riv-ranks i{font-style:normal;font-weight:400;margin:0 5px}
 .fn-riv-pick p{margin:0;font-size:var(--fs-md);line-height:1.55;color:var(--sec)}
 /* Two columns of five picks do not fit a 640px reading column, so the rivalry
@@ -86,7 +86,7 @@ section{margin:0 0 var(--space-6)}
 .fn-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(214px,1fr));gap:var(--space-3)}
 .fn-tool{display:block;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-md);
   padding:var(--space-4) var(--space-5);color:var(--sec);transition:border-color .12s ease,box-shadow .12s ease}
-.fn-tool:hover{border-color:var(--teal);text-decoration:none;}
+.fn-tool:hover{border-color:var(--teal);text-decoration:none;box-shadow:0 6px 18px rgba(15,23,25,.05)}
 .fn-tool b{display:block;color:var(--text);font-size:19px;margin-bottom:4px}
 .fn-tool span{display:block;font-size:var(--fs-sm);line-height:1.55}
 .fn-side .is-card{margin-bottom:0}
@@ -107,7 +107,7 @@ section{margin:0 0 var(--space-6)}
 body.fn-page .is-plate{border-radius:var(--sl-r);border-color:var(--line2);background:var(--bg);
   margin:var(--space-3) 0 var(--space-5)}
 body.fn-page .is-plate-head{background:var(--elev);border-bottom-color:var(--line2);
-  font-family:var(--font-body);font-size:var(--fs-3xs);}
+  font-family:var(--font-body);font-size:var(--fs-3xs);letter-spacing:.09em}
 /* Not a flex row. The label is a text run and a <b> — "This week's board —
    RB" — and flex both drops the whitespace between them and refuses to let
    the <b> wrap with the text, which on a phone left "RB" stranded at the
@@ -121,8 +121,8 @@ body.fn-page .is-plate-head>div{padding:0;border-left-color:var(--line2)}
    internet switches a position filter. */
 body.fn-page .is-seg{border:0;border-radius:0;background:transparent;align-self:stretch}
 body.fn-page .is-seg label{border-left:0;border-bottom:3px solid transparent;padding:0 13px;
-  min-height:40px;font-size:var(--fs-3xs);font-weight:800;
-  color:var(--muted);background:transparent}
+  min-height:40px;font-size:var(--fs-3xs);font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);background:transparent}
 body.fn-page .is-seg label:hover{background:transparent;color:var(--text)}
 body.fn-page .is-seg label:has(input:checked){background:transparent;color:var(--text);
   border-bottom-color:var(--teal)}
@@ -138,7 +138,7 @@ body.fn-page .is-plate-foot{padding:10px var(--space-4);border-top-color:var(--l
   background:var(--panel);gap:var(--space-3) var(--space-4)}
 body.fn-page .is-plate-foot p{font-size:var(--fs-2xs);line-height:1.5}
 body.fn-page .is-plate-foot .is-btn{padding:7px 13px;border-radius:4px;font-size:var(--fs-3xs);
-  font-weight:800;}
+  font-weight:800;letter-spacing:.06em;text-transform:uppercase}
 body.fn-page .is-plate-state{padding:var(--space-5) var(--space-4);font-size:var(--fs-sm)}
 
 /* ── 5 · the deck ───────────────────────────────────────────────────────── */
@@ -155,14 +155,14 @@ body.fn-page .is-act{border-radius:var(--sl-r);border-color:var(--line2);border-
   padding:var(--space-4);gap:6px}
 body.fn-page .is-act.gold{border-top-color:var(--gold)}
 body.fn-page .is-act.flat{border-top-color:var(--line2)}
-body.fn-page .is-act-k{font-size:10.5px;}
+body.fn-page .is-act-k{font-size:10.5px;letter-spacing:.12em}
 body.fn-page .is-act-h{font-size:18px;line-height:1.24}
 body.fn-page .is-act p{font-size:var(--fs-sm);line-height:1.45}
-body.fn-page .is-act-go{font-size:10.5px;}
+body.fn-page .is-act-go{font-size:10.5px;letter-spacing:.09em}
 body.fn-page .sl-main .is-band{padding:var(--space-4) var(--space-5) var(--space-5);
   border-radius:var(--sl-r);border-color:var(--line2);margin:var(--space-5) 0}
 body.fn-page .sl-edge{border-radius:var(--sl-r);padding:var(--space-5)}
-body.fn-page .sl-edge-k{font-family:var(--font-body);font-size:11px;}
+body.fn-page .sl-edge-k{font-family:var(--font-body);font-size:11px;letter-spacing:.11em}
 body.fn-page .sl-edge h3{font-size:clamp(21px,2.1vw,25px);line-height:1.22;margin-bottom:var(--space-3)}
 body.fn-page .sl-edge p{font-size:var(--fs-sm);line-height:1.6;margin-bottom:var(--space-3)}
 body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-2xs);line-height:1.5}
@@ -170,7 +170,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-2xs);line-height:1.5}
 /* ── 7 · the standing argument, and the shelf ───────────────────────────── */
 body.fn-page .fn-riv{gap:var(--space-4) var(--space-5);padding:var(--space-4) var(--space-5)}
 body.fn-page .fn-riv-head b{font-size:17px}
-body.fn-page .fn-riv-head small{font-size:10.5px;}
+body.fn-page .fn-riv-head small{font-size:10.5px;letter-spacing:.1em}
 body.fn-page .fn-riv-av{width:26px;height:26px;font-size:11px}
 body.fn-page .fn-riv-stand{font-size:var(--fs-sm);line-height:1.5;margin-top:var(--space-2)}
 body.fn-page .fn-riv-pick{padding:var(--space-3) 0}
@@ -204,7 +204,7 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
 </head>
 <body class="fn-page sl-dress">
 <a class="skip-link" href="#main">Skip to content</a>
-<header class="site"><!--chrome:line--><p class="site-line"><span>Every player priced off the betting market first.</span> <span>Restated at your league’s scoring.</span></p><!--/chrome:line--><div class="wrap">
+<header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
@@ -219,15 +219,7 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
     <!--/chrome:nav-->
-</div><!--chrome:tabbar-->
-  <nav class="tabbar" aria-label="Sections">
-    <a href="/fantasy" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16M12 4v16"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Fantasy</a>
-    <a href="/dfs"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19h16M6 15l4-5 4 3 4-7"/></svg>DFS</a>
-    <a href="/in-season/desk"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg>Articles</a>
-    <a href="/my-league#settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>My league</a>
-  </nav>
-<!--/chrome:tabbar-->
-</header>
+</div></header>
 <main id="main">
 
 <!-- ── the nameplate ──────────────────────────────────────────────────────

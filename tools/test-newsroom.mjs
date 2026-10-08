@@ -1106,22 +1106,275 @@ console.log('\nthe Sunday night of Week 1: drafts sent back, slots starved, edit
   ok('the cap is finite and above one', Number.isInteger(H.REWRITE_HELD_MAX) && H.REWRITE_HELD_MAX > 1 && H.RECAPS_PER_TICK >= 1);
 }
 
-// ── what the homepage reads ──────────────────────────────────────────────
-// The cover rotation (coverBand, coverFace and the rest) came off front.html
-// in October 2026 with the photograph and the three cards it rotated: the
-// homepage lists the six newest pieces as a ledger, newest first, so no one
-// story can hold the cover. What survives is the rule about WHICH FEED it
-// reads. /api/content is the archive: every row that is not 'unpublished',
-// one per VERSION, held drafts included, and it once put five drafts of one
-// preview on the front page. /api/newsroom is the published feed /in-season/
-// desk reads, deduped by slug with expiry applied.
+// ── what is on the cover ──────────────────────────────────────────────────
+// `coverBand` and `coverFace` in front.html decide the two things on "/" that
+// name a player at the top of it: the three cards under "Current from the
+// desk", and the hero's photograph. They are lifted out of the page and run
+// here rather than driven in a browser, because tools/test-homepage.mjs needs
+// Chromium and skips without it.
+//
+// The rule these pin, learned the hard way over three attempts on 2026-09-18:
+// A SUBJECT COMES OFF THE COVER, it does not merely move. Reordering three
+// cards changes the order and never the cast, and neither the first nor the
+// second attempt touched the hero at all, which was running the widest market
+// gap and had been the same man for a day and a half.
 {
   const front = fs.readFileSync(path.join(ROOT, 'front.html'), 'utf8');
-  ok('the homepage reads the published feed', /grab\('\/api\/newsroom/.test(front),
-    'front.html must read /api/newsroom for the desk ledger');
+  const head = front.indexOf('var COVER_TURN_MS =');
+  const tail = front.indexOf('// ── end cover rotation', head);
+  if (head < 0 || tail < 0) { console.error('FAIL: the cover rotation block is not in front.html'); process.exit(1); }
+  const R = new Function(front.slice(head, tail) + '; return { coverBand, coverFace, coverFaces, coverPick, coverLead, coverSubjects, leadTurn, COVER_TURN_MS, DESK_BAND, HERO_POOL, CARD_POOL, LEAD_POOL };')();
+  const { coverBand, coverFace, coverFaces, coverPick, coverLead, coverSubjects, leadTurn } = R;
+  const TURN = R.COVER_TURN_MS;
+  const at = h => Date.UTC(2026, 8, 18, 12) + h * 3600 * 1000;
+  const ids = a => a.map(p => p.headline).join(',');
+
+  // ── the band ────────────────────────────────────────────────────────────
+  const feed = 'abcdefghij'.split('').map((id, i) => ({ url: '/p/' + id, headline: id, publishedAt: at(-i) }));
+
+  ok('three cards, not the whole feed', coverBand(feed, at(6)).length === R.DESK_BAND);
+  ok('a piece published inside the current turn leads', ids(coverBand(feed, at(0) + TURN / 2)) === 'a,b,c',
+    ids(coverBand(feed, at(0) + TURN / 2)));
+
+  const turns = [];
+  for (let t = 0; t < 8; t++) turns.push(coverBand(feed, at(4) + t * TURN).map(p => p.headline));
+  const sets = turns.map(t => t.slice().sort().join());
+  ok('consecutive turns print different stories', sets.every((s2, i) => i === 0 || s2 !== sets[i - 1]), sets.join(' | '));
+  ok('each turn takes one story off and puts one on',
+    turns.every((t, i) => !i || t.filter(x => turns[i - 1].indexOf(x) < 0).length === 1),
+    turns.map(t => t.join('')).join(' '));
+  const onCover = turns.filter(t => t.indexOf('a') >= 0).length;
+  ok('one story is not on every turn', onCover > 0 && onCover < turns.length, `${onCover}/${turns.length}`);
+  ok('the rotation reaches past the three newest', new Set(turns.flat()).size > 3);
+  ok('it never prints the same piece twice in one turn', turns.every(t => new Set(t).size === t.length));
+  ok('and it stays inside the pool rather than reaching the whole archive',
+    [...new Set(turns.flat())].every(x => 'abcdefgh'.includes(x)), [...new Set(turns.flat())].join(','));
+  ok('the band is a function of the clock alone', ids(coverBand(feed, at(9))) === ids(coverBand(feed, at(9))));
+  ok('one piece is printed as it is', ids(coverBand([feed[0]], at(9))) === 'a');
+  ok('an empty feed is empty', coverBand([], at(9)).length === 0);
+  // THE LEAD TAKES TURNS (2026-10-04). Fresh news leads outright; otherwise
+  // the newest LEAD_POOL qualifying stories lead an hour each, and the lead
+  // changes every turn.
+  {
+    const c = ['a', 'b', 'c', 'd', 'e', 'f'].map((h, i) => ({ headline: h, publishedAt: at(-2 - i) }));
+    ok('a story published inside the current turn leads outright',
+      [0, 1, 2, 3, 4].every(t => leadTurn([{ ...c[0], publishedAt: at(t) + 60000 }, ...c.slice(1)], at(t) + TURN / 2) === 0));
+    const seq = []; for (let t = 0; t < 8; t++) seq.push(leadTurn(c, at(t)));
+    ok('the lead changes every turn', seq.every((v, i) => i === 0 || v !== seq[i - 1]), seq.join(','));
+    ok('it walks only the newest LEAD_POOL stories', seq.every(v => v >= 0 && v < R.LEAD_POOL) && new Set(seq).size === R.LEAD_POOL, seq.join(','));
+    ok('one story always leads', leadTurn([c[0]], at(5)) === 0);
+    ok('no stories, no lead', leadTurn([], at(5)) === -1);
+    ok('the lead is a function of the clock alone', leadTurn(c, at(7)) === leadTurn(c, at(7)));
+  }
+  ok('a piece with no timestamp does not stop the band',
+    coverBand([{ url: '/x', headline: 'x' }, { url: '/y', headline: 'y' }, { url: '/z', headline: 'z' }], at(9)).length === 3);
+
+  // WHICH FEED THE COVER READS. The band drew from /api/content, the archive:
+  // every row that is not 'unpublished', one per VERSION. That put five held
+  // drafts of one preview on the front page and pushed every other published
+  // piece below the cutoff. /api/newsroom is the published feed, deduped by
+  // slug, expiry applied — the one /in-season/desk reads.
+  ok('the cover reads the published feed', /grab\('\/api\/newsroom/.test(front),
+    'front.html must read /api/newsroom for the desk band');
   ok('and never the archive endpoint', !/grab\('\/api\/content/.test(front),
     '/api/content carries held drafts and one row per version');
-  ok('and no cover rotation is back on it', !/var COVER_TURN_MS/.test(front));
+
+  // ── the 24-hour floor ───────────────────────────────────────────────────
+  // A window that has slid into the older half of the pool can carry nothing
+  // from the last day, under a heading that says "Current from the desk". The
+  // floor puts the newest recent piece in the last slot when that happens.
+  // The fixture above never triggers it: every piece there is hours old, which
+  // is the point — the floor must be inert when the feed is fresh.
+  {
+    const DAY = 24 * 3600 * 1000;
+    // One fresh piece, the rest from earlier in the week.
+    const stale = ['n', 'o', 'p', 'q', 'r', 's', 't'].map((id, i) => ({
+      url: '/p/' + id, headline: id, publishedAt: at(0) - (30 + i * 6) * 3600 * 1000
+    }));
+    // Two hours old at turn 0, so it is still inside the day eight turns later.
+    // An earlier draft of this fixture published it 20 hours before turn 0 and
+    // watched it age out mid-run, which is the floor working, not failing.
+    const mixed = [{ url: '/p/N', headline: 'N', publishedAt: at(0) - 2 * 3600 * 1000 }].concat(stale);
+
+    const windows = [];
+    for (let t = 0; t < 8; t++) windows.push(coverBand(mixed, at(0) + t * TURN).map(p => p.headline));
+    ok('every turn carries something from the last 24 hours',
+      windows.every(w => w.includes('N')), windows.map(w => w.join('')).join(' '));
+    ok('the floor takes the last slot, not the lead',
+      windows.every(w => w[0] !== 'N' || w.indexOf('N') === 0), windows.map(w => w.join('')).join(' '));
+    ok('the floor never prints the same story twice in one window',
+      windows.every(w => new Set(w).size === w.length), windows.map(w => w.join('')).join(' '));
+    ok('the rest of the window still rotates under it',
+      windows.every((w, i) => !i || w.join() !== windows[i - 1].join()), windows.map(w => w.join('')).join(' '));
+    // AT MOST one, not exactly one, and the difference is the floor's own cost.
+    // On the turn where the sliding window first reaches the pinned piece on
+    // its own, the cast repeats in a new order — [N,n,o] then [n,o,N] — because
+    // the piece the floor was holding in the last slot has become the one the
+    // rotation would have shown anyway. It happens once per cycle, and the
+    // alternative is pinning the newest story to the cover on every turn even
+    // when the window is full of current work, which is the complaint this
+    // whole section started from.
+    ok('and no turn brings more than one new story',
+      windows.every((w, i) => !i || w.filter(x => windows[i - 1].indexOf(x) < 0).length <= 1),
+      windows.map(w => w.join('')).join(' '));
+    ok('the cover is never two identical turns in a row',
+      windows.every((w, i) => !i || w.join() !== windows[i - 1].join()),
+      windows.map(w => w.join('')).join(' '));
+    ok('and over a cycle it still reaches the whole pool',
+      new Set(windows.flat()).size === mixed.length, [...new Set(windows.flat())].join(''));
+
+    // Inert when the window already has something fresh.
+    const allFresh = 'uvwxyz'.split('').map((id, i) => ({
+      url: '/p/' + id, headline: id, publishedAt: at(0) - (2 + i) * 3600 * 1000
+    }));
+    const before = coverBand(allFresh, at(0) + 3 * TURN).map(p => p.headline);
+    ok('a window that is already current is left alone',
+      before.join() === ['u', 'v', 'w', 'x', 'y', 'z'].slice(3, 6).join(), before.join());
+
+    // Nothing fresh anywhere: the floor has nothing to insert and must not
+    // throw, empty the band, or start repeating a piece.
+    const none = coverBand(stale, at(0) + 5 * DAY);
+    ok('a feed with nothing fresh still prints three distinct cards',
+      none.length === 3 && new Set(none.map(p => p.headline)).size === 3,
+      none.map(p => p.headline).join(''));
+  }
+
+  // ── the hero's face ─────────────────────────────────────────────────────
+  // THE ONE THAT WOULD HAVE CAUGHT THE REAL BUG. The hero took the widest gap
+  // on the board and nothing else, so the same player held the cover for as
+  // long as he led it, however often the cards underneath him rotated.
+  const gaps = 'vwxyz12'.split('').map(n => ({ name: n }));
+  const faceAt = t => { const f = coverFace(gaps, null, at(0) + t * TURN); return f && f.name; };
+  const faces = [];
+  for (let t = 0; t < 6; t++) faces.push(faceAt(t));
+  ok('the hero is not the same player every turn', new Set(faces).size > 1, faces.join(','));
+  ok('the hero changes on every turn', faces.every((f, i) => !i || f !== faces[i - 1]), faces.join(','));
+  ok('the hero comes off the widest gaps, not the whole board',
+    faces.every(f => gaps.slice(0, R.HERO_POOL).some(g => g.name === f)), faces.join(','));
+  ok('the hero is a function of the clock alone', faceAt(3) === faceAt(3));
+
+  // The Fantasy card's player is never also the hero: one player, one place.
+  const skipped = [];
+  for (let t = 0; t < 6; t++) { const f = coverFace(gaps, gaps[0], at(0) + t * TURN); skipped.push(f && f.name); }
+  ok('the player the Fantasy card names never takes the hero', !skipped.includes('v'), skipped.join(','));
+  ok('and skipping him does not empty the hero', skipped.every(Boolean), skipped.join(','));
+
+  ok('no gaps on the board means no face rather than a throw', coverFace([], null, at(1)) === null);
+  ok('one gap, and it is the face', (coverFace([gaps[0]], null, at(1)) || {}).name === 'v');
+  ok('one gap that is the card’s own player leaves the hero to the desk',
+    coverFace([gaps[0]], gaps[0], at(1)) === null);
+
+  // ── the runners-up behind the face ──────────────────────────────────────
+  // The picture can fail on a NAME: the player lookup does not carry a face
+  // for everybody, and heroPaint was given one name and painted nothing when
+  // it could not resolve it. Standing still that was a rare miss on one
+  // player. On a clock it is an hour of every day, chosen at random off the
+  // board, with no photograph on the cover. The painter walks the pool now.
+  const pool = t => coverFaces(gaps, null, at(0) + t * TURN).map(g => g.name);
+  ok('the turn’s pick leads the list', pool(2)[0] === faceAt(2), pool(2).join(','));
+  ok('and the rest of the pool is behind him',
+    pool(2).length === R.HERO_POOL && new Set(pool(2)).size === R.HERO_POOL, pool(2).join(','));
+  ok('every turn offers the same cast in a different order',
+    [0, 1, 2, 3].every(t => pool(t).slice().sort().join('') === pool(0).slice().sort().join('')),
+    pool(0).join(',') + ' / ' + pool(1).join(','));
+  ok('the player the Fantasy card names is not in the list either',
+    !coverFaces(gaps, gaps[0], at(3)).some(g => g.name === 'v'));
+  ok('an empty board offers nobody rather than throwing', coverFaces([], null, at(1)).length === 0);
+
+  // ── the face and the sentence under it ──────────────────────────────────
+  // THE HERO RAN ONE PLAYER'S PHOTOGRAPH OVER ANOTHER PLAYER'S NEWS. The desk
+  // card took the subject of the piece's FIRST finding and printed the piece's
+  // HEADLINE beneath him, two picks off one row with nothing tying them
+  // together. On 2026-09-21 that was Nate Adkins's face over "Parker
+  // Washington's 43% target share after Week 2 makes him the clearest roster
+  // add of the week". `coverSubjects` pairs a face with a line, and the line
+  // may not be about anybody else.
+  {
+    const waivers = {
+      headline: 'Parker Washington\u2019s 43% target share after Week 2 makes him the clearest roster add of the week',
+      components: [
+        { n: 1, player: 'Nate Adkins', headline: 'Nate Adkins is the Denver tight end now' },
+        { n: 2, player: 'Parker Washington', headline: 'Parker Washington ran a route on 43% of the dropbacks' }
+      ]
+    };
+    const subs = coverSubjects(waivers);
+    ok('the headline goes to the player it names, not to the first finding',
+      subs.length > 0 && subs[0].name === 'Parker Washington' && subs[0].line === waivers.headline,
+      JSON.stringify(subs[0] || null));
+    ok('the other subject is still offered, under his own finding',
+      subs.some(s2 => s2.name === 'Nate Adkins' && s2.line === waivers.components[0].headline),
+      JSON.stringify(subs));
+    ok('nobody is offered twice', new Set(subs.map(s2 => s2.name)).size === subs.length, JSON.stringify(subs));
+    // THE RULE, stated against the cast the piece itself names: no face is
+    // ever offered with a line about one of the piece's other subjects.
+    const cast = waivers.components.map(c => c.player);
+    ok('no subject carries a line about one of the others',
+      subs.every(s2 => !cast.some(other => other !== s2.name && s2.line.includes(other))),
+      JSON.stringify(subs));
+
+    // A headline that names nobody is the desk's own framing of its story, not
+    // a mismatch: it belongs to the piece's first subject, which is what the
+    // card's own face stamp does with it.
+    const framed = coverSubjects({ headline: 'Three lineups the market moved overnight', components: [
+      { n: 1, player: 'Puka Nacua', headline: 'a' }, { n: 2, player: 'James Cook', headline: 'b' } ] });
+    ok('a headline that names nobody still leads with the piece\u2019s first subject',
+      framed.length > 0 && framed[0].name === 'Puka Nacua'
+      && framed[0].line === 'Three lineups the market moved overnight', JSON.stringify(framed[0] || null));
+
+    // How the desk actually writes a second reference.
+    ok('a surname on its own counts', (coverSubjects({ headline: 'Adkins has the Denver tight end job',
+      components: [{ n: 1, player: 'Nate Adkins', headline: 'x' }, { n: 2, player: 'Courtland Sutton', headline: 'y' }] })[0] || {}).name === 'Nate Adkins');
+    ok('a suffix and a possessive do not break the match',
+      (coverSubjects({ headline: 'Marvin Harrison Jr.\u2019s target share is up',
+        components: [{ n: 1, player: 'Trey McBride', headline: 'x' }, { n: 2, player: 'Marvin Harrison Jr.', headline: 'y' }] })[0] || {}).name === 'Marvin Harrison Jr.');
+    // A surname two men on the piece answer to is nobody's: the line is not
+    // offered with either face rather than guessed at.
+    const shared = coverSubjects({ headline: 'Williams is the back to own this week', components: [
+      { n: 1, player: 'Kyren Williams', headline: 'Kyren Williams took every goal-line carry' },
+      { n: 2, player: 'Javonte Williams', headline: 'Javonte Williams is the Dallas lead back' } ] });
+    ok('an ambiguous surname is offered to nobody',
+      shared.every(s2 => !/back to own/.test(s2.line)), JSON.stringify(shared));
+    ok('and the two are still offered under their own findings',
+      shared.length === 2 && shared[0].name === 'Kyren Williams' && shared[1].name === 'Javonte Williams',
+      JSON.stringify(shared));
+
+    // A piece the desk broke into no findings names nobody, so it offers no
+    // face and the hero falls through to the market gap below it.
+    ok('a piece with no findings offers nothing rather than throwing',
+      coverSubjects({ headline: 'What Sunday taught us' }).length === 0
+      && coverSubjects({}).length === 0 && coverSubjects(null).length === 0);
+
+    // The page must actually use it: the old call site built its candidate
+    // from `whoOf(p)[0]` and `p.headline`, which is the bug in one line.
+    // The cover hands it the de-boasted headline, so the call carries a
+    // second argument: match the call, not one exact spelling of it. Since
+    // 2026-09-26 it is called on the lead alone (`lead`), not on every piece.
+    ok('the desk hero is built from coverSubjects', /coverSubjects\((p|lead)[,)]/.test(front));
+    ok('and no longer pairs the first finding with the headline',
+      !/name:\s*whoOf\(p\)\[0\]/.test(front));
+  }
+
+  // ── the two card readings ───────────────────────────────────────────────
+  // THE THIRD AND FOURTH PATHS ONTO THE COVER. §88 enumerated two. The Fantasy
+  // card took the strongest BUY and the DFS card took bestVegasValues[0], so
+  // the cover changed hourly above two readings that did not change all week.
+  const rows = 'abcdefg'.split('').map(n => ({ name: n }));
+  const pick = t => (coverPick(rows, at(0) + t * TURN) || {}).name;
+  const picks = [];
+  for (let t = 0; t < 6; t++) picks.push(pick(t));
+  ok('a card reading is not the same player every turn', new Set(picks).size > 1, picks.join(','));
+  ok('it changes on every turn', picks.every((x, i) => !i || x !== picks[i - 1]), picks.join(','));
+  ok('it comes off the leaders, not the whole board',
+    picks.every(x => rows.slice(0, R.CARD_POOL).some(r => r.name === x)), picks.join(','));
+  ok('it is a function of the clock alone', pick(3) === pick(3));
+  ok('a board of one is printed as it is', (coverPick([rows[0]], at(5)) || {}).name === 'a');
+  ok('an empty board is no reading rather than a throw', coverPick([], at(5)) === null);
+
+  // A superlative belongs to the leader alone: a caption still claiming the
+  // top of the board once the turn has moved off it is simply false.
+  ok('the leader is known as the leader', coverLead(rows, rows[0]) === true);
+  ok('and a runner-up is not', coverLead(rows, rows[3]) === false);
+  ok('an empty board has no leader', coverLead([], undefined) === false);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

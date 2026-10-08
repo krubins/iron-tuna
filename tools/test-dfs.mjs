@@ -1120,11 +1120,10 @@ console.log('\nthe DFS sheet is the only builder');
   // And the homepage keeps no second copy of any of it.
   ok('the homepage carries no DFS builder',
      !/id="dfsGameStyle"|id="dfsSubmit"|id="dfsBuild"|dfs-setup/.test(front));
-  // October 2026: the homepage links the sheet once, as an entry point under
-  // the search field; the five anchors below are the sheet's own, reached
-  // from /dfs and from the Fantasy page.
-  ok('it links the sheet instead', front.includes('href="/dfs"'));
-  ok('and every anchor the sheet is linked at is a real element or section on it',
+  ok('it links the sheet instead, at the five places that finish the decision',
+     ['/dfs#dfPlayWeek', '/dfs#lineup', '/dfs#dfTune', '/dfs#stacks', '/dfs#values']
+       .every((h) => front.includes('href="' + h + '"')));
+  ok('and every anchor it links is a real element or section on the sheet',
      ['dfPlayWeek', 'dfTune'].every((id) => dfs.includes('id="' + id + '"'))
      && ['lineup', 'stacks', 'values'].every((k) => dfs.includes('id="sec-' + k + '"')));
   ok('the homepage does not load the optimizer it no longer runs',

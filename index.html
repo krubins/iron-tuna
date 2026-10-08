@@ -64,10 +64,9 @@ function gtag_report_conversion(url) {
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Iron Tuna" />
-  <!-- One family, self-hosted (October 2026): Geist from /fonts, the same file
-       site.css serves every other page. The app does not link site.css, so
-       the @font-face is declared here. -->
-  <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <!-- The player lookup behind the ribbon's search box. Plain script, not a
@@ -83,7 +82,6 @@ function gtag_report_conversion(url) {
   <script src="/it-league.js"></script>
   <script src="/it-inseason.js"></script>
   <style>
-@font-face{font-family:'Geist';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
 .hub-hero-row { display: flex; align-items: center; justify-content: center; gap: 44px; width: 100%; }
 .lp-ai-line { animation: aiFade 0.7s ease; }
 @keyframes aiFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -129,9 +127,9 @@ function gtag_report_conversion(url) {
   --pos-te: #f97316;
   --pos-k:  #84cc16;
   --pos-def: #a855f7;
-  --font-display: 'Geist', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
-  --font-body: 'Geist', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
-  --font-mono: 'Geist', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  --font-display: 'Bebas Neue', 'Impact', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 10px;
