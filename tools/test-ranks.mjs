@@ -125,16 +125,18 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
 // ── what sits under the front page's hero ────────────────────────────────────
 console.log('\nwhat sits under the front page\u2019s hero');
 {
+  // October 2026: the hero is the first section and the position tiles are
+  // the second; the choose-your-game band went with the lane cards. Each tile
+  // links a weekly position page, which is this section's own job.
   const front = read('front.html');
-  const heroStart = front.indexOf('<section class="hero-band"');
+  const heroStart = front.indexOf('<section class="hero-band');
   const heroEnd = front.indexOf('</section>', heroStart);
-  const bandAt = front.indexOf('<div class="hm-choose">');
+  const tilesAt = front.indexOf('<section class="hm-sec" id="positions"');
   const nextSec = front.indexOf('<section', heroEnd);
-  ok('the hero band is still the first section', heroStart > 0);
-  ok('the choose-your-game band is after it', bandAt > heroEnd, `hero ends ${heroEnd}, band at ${bandAt}`);
-  ok('and before anything else on the page', bandAt < nextSec, `next section at ${nextSec}`);
-  ok('it states the question and nothing else',
-     /<span class="hm-choose-k">Choose your game<\/span>/.test(front));
+  ok('the hero band is still the first section', heroStart > 0 && heroStart === front.indexOf('<section'));
+  ok('the position tiles are the section after it', tilesAt > heroEnd && tilesAt === nextSec, `hero ends ${heroEnd}, tiles at ${tilesAt}, next ${nextSec}`);
+  ok('and every weekly position page is a tile',
+     POSITIONS.filter((p) => p !== 'flex').every((p) => front.includes('href="/weekly-' + p + '-rankings"')));
   // The homepage's own in-page anchor ribbon — the sticky bar of lane tabs and
   // section jumps — came off with the sections it pointed at in the September
   // 2026 rewrite, and the generated rankings ribbon came off this slot after

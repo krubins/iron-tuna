@@ -243,10 +243,10 @@ ok('the page says so too', /did not answer/.test(r4.stamp), r4.stamp);
 console.log('\nthe homepage link lands here');
 const p3 = await ctx.newPage();
 await p3.goto(BASE + '/', { waitUntil: 'networkidle' });
-const href = await p3.evaluate(() =>
-  [...document.querySelectorAll('.hm-lane')].find(l => /Season Long Fantasy/.test(l.querySelector('h2').textContent))
-    .querySelector('a[href="/value-coach"]') ? '/value-coach' : null);
-ok('the Season Long Fantasy card links the coach', href === '/value-coach', String(href));
+// October 2026: the homepage's hero links the Fantasy lane as an entry point,
+// and the lane page is where the coach is linked from.
+const href = await p3.evaluate(() => document.querySelector('#how a[href="/value-coach"]') ? '/value-coach' : null);
+ok('the homepage links the coach from the method section', href === '/value-coach', String(href));
 
 ok('no page threw', errors.length === 0, errors.join(' | '));
 await browser.close();
