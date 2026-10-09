@@ -227,7 +227,7 @@ const read = page => page.evaluate(() => {
       const pic = r.querySelector('.hm-story-pic'), pb = pic.getBoundingClientRect(), tb = r.querySelector('.hm-story-txt').getBoundingClientRect(), b = r.getBoundingClientRect();
       return { href: r.getAttribute('href'), lead: r.classList.contains('lead'), name: text(r.querySelector('.hm-story-head')), meta: text(r.querySelector('.hm-story-meta')),
         series: text(r.querySelector('.hm-story-chip')), face: pic.getAttribute('data-face-name'), headPx: px(r.querySelector('.hm-story-head')),
-        picLeft: pb.right <= tb.left + 1, picTop: pb.bottom <= tb.top + 1, top: Math.round(b.top), w: Math.round(b.width), radius: parseFloat(getComputedStyle(r).borderTopLeftRadius) };
+        picLeft: pb.right <= tb.left + 1, picTop: pb.bottom <= tb.top + 1, top: Math.round(b.top), w: Math.round(b.width), radius: parseFloat(getComputedStyle(r).borderTopLeftRadius), shadow: getComputedStyle(r).boxShadow };
     }),
     // How it works, and the band.
     how: vis(byId('how')),
@@ -258,7 +258,8 @@ const read = page => page.evaluate(() => {
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     body: document.body.innerText,
     headings: [...document.querySelectorAll('h1,h2,h3')].map(h => h.tagName + ':' + h.textContent.trim().slice(0, 40)),
-    shadows: [...document.querySelectorAll('main *, #kpi *')].filter(e => vis(e) && getComputedStyle(e).boxShadow !== 'none').map(e => e.className || e.tagName).slice(0, 5),
+    // The desk's story cards are the one exception: they lift off the paper.
+    shadows: [...document.querySelectorAll('main *, #kpi *')].filter(e => vis(e) && !e.classList.contains('hm-story') && getComputedStyle(e).boxShadow !== 'none').map(e => e.className || e.tagName).slice(0, 5),
     pills: [...document.querySelectorAll('a, button')].filter(e => vis(e) && parseFloat(getComputedStyle(e).borderTopLeftRadius) > 10).map(e => e.className || e.tagName).slice(0, 5)
   };
 });
@@ -297,7 +298,7 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   ok(`${tag}: every line of text is at 400, 600 or 700`, r.type.odd.length === 0, r.type.odd.join(', '));
   ok(`${tag}: every size is on the scale`, r.type.sizes.every(s => SCALE.has(Math.round(s))), r.type.sizes.join(' '));
   ok(`${tag}: nothing is italic`, r.italics === 0, String(r.italics));
-  ok(`${tag}: nothing casts a shadow`, r.shadows.length === 0, r.shadows.join(','));
+  ok(`${tag}: nothing but the story cards casts a shadow`, r.shadows.length === 0, r.shadows.join(','));
   ok(`${tag}: the page does not scroll sideways`, r.overflow === 0, String(r.overflow));
   ok(`${tag}: there is exactly one h1`, r.headings.filter(x => x.startsWith('H1:')).length === 1);
   await ctx.close();
@@ -367,6 +368,7 @@ console.log('\nwith the boards answering');
   ok('the next four sit in one row under it, photograph on top, rounded 10px',
      r.rows.slice(1).every(x => !x.lead && x.picTop && x.top > r.rows[0].top && x.radius === 10) && new Set(r.rows.slice(1).map(x => x.top)).size === 1,
      JSON.stringify(r.rows.slice(1).map(x => [x.top, x.picTop])));
+  ok('every card casts a soft shadow, like the reference row', r.rows.every(x => x.shadow && x.shadow !== 'none'), r.rows.map(x => x.shadow).join(' | '));
   ok('each card names its time and byline at the foot',
      r.rows[0].meta === '6m ago · Iron Tuna desk' && r.rows[4].meta === 'Yesterday', r.rows.map(x => x.meta).join(' / '));
   ok('the photograph is the first player the piece names; none when it names nobody',
