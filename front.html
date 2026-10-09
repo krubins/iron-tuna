@@ -206,11 +206,14 @@ footer.site {margin-top:0}
     <p class="hm-lede">Sportsbook lines and player props become fantasy point projections, then weekly rankings, trade values and DFS lineups, scored at your league&rsquo;s settings.</p>
     <!-- The site's one search box on this page. A real form posting ?q= to
          /player, with the shared typeahead mounted on the input by
-         /player-search.js (data-player-search). -->
+         /player-search.js (data-player-search). data-search-tools makes it
+         the site's front door as well: on focus it lists the destinations
+         (rankings, trade advice, DFS lineups, player lookup and the rest),
+         and typing filters those and the players together. -->
     <form class="search-field hm-find" role="search" autocomplete="off" action="/player" method="get">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
-      <input id="hmFind" name="q" type="search" placeholder="Type a player, a team or a position" aria-label="Look up a player, a team or a position"
-             role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="front">
+      <input id="hmFind" name="q" type="search" placeholder="Rankings, trade advice, DFS lineups or a player" aria-label="Find rankings, trade advice, DFS lineups or a player"
+             role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="front" data-search-tools>
     </form>
     <ul class="hm-entry">
       <li><a href="/fantasy">Weekly fantasy &rarr;</a></li>
