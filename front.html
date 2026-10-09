@@ -140,26 +140,39 @@ body{overflow-x:hidden}
    The five newest pieces the desk published, newest first: the newest as a
    wide lead card (photograph left, headline right, the time and byline at the
    foot), the next four as a row of cards with the photograph on top. The
-   photograph is the first player the piece names; a piece that names nobody
-   shows its series on navy instead. The series rides on the picture as a
-   small chip. The cards are the one thing on this page that casts a shadow:
-   a soft lift off the paper, as the reference card row does it.
+   photograph is a game photograph of a player the piece is about, off
+   /it-action.js (openly licensed, credited on the card); his headshot when
+   none of them has one; the series on navy when the piece names nobody. The
+   series rides on the picture as a small chip. The cards are the one thing on
+   this page that casts a shadow: a soft lift off the paper, as the reference
+   card row does it.
+   THE CARD IS AN <article>, NOT A LINK (2026-10-09). The photo credit carries
+   two links of its own (the file page and the license), and a link may not
+   sit inside a link; the headline's link stretches over the whole card
+   instead, and the credit sits above it.
    Hidden outright when the desk has nothing current. */
 #articles[hidden]{display:none}
 .hm-news{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-24)}
-.hm-story{display:flex;flex-direction:column;min-width:0;border-radius:10px;overflow:hidden;background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(17,20,24,.06),0 4px 14px rgba(17,20,24,.10);transition:box-shadow .15s ease}
-.hm-story:hover{color:var(--ink);text-decoration:none;box-shadow:0 2px 4px rgba(17,20,24,.08),0 8px 24px rgba(17,20,24,.14)}
-.hm-story:hover .hm-story-head{text-decoration:underline}
+.hm-story{position:relative;display:flex;flex-direction:column;min-width:0;border-radius:10px;overflow:hidden;background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(17,20,24,.06),0 4px 14px rgba(17,20,24,.10);transition:box-shadow .15s ease}
+.hm-story:hover{box-shadow:0 2px 4px rgba(17,20,24,.08),0 8px 24px rgba(17,20,24,.14)}
+.hm-story-head{color:var(--ink)}
+.hm-story-head:hover,.hm-story:hover .hm-story-head{color:var(--ink);text-decoration:underline}
+.hm-story-head::after{content:"";position:absolute;inset:0;z-index:1;border-radius:10px}
 .hm-story-pic{position:relative;aspect-ratio:16/9;overflow:hidden;background:linear-gradient(160deg,#0b3a66,var(--mast));color:#fff;display:grid;place-items:center;flex:none}
 .hm-story-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%}
+.hm-story-pic.is-action img{object-position:center 35%}
 .hm-story-pic .hm-story-alt{font-size:var(--fs-19);font-weight:700;letter-spacing:-.01em;padding:0 var(--sp-16);text-align:center;line-height:1.2}
 .hm-story-pic.has-img .hm-story-alt{visibility:hidden}
 /* Without a photograph the series is already the picture; the chip would say it twice. */
 .hm-story-pic:not(.has-img) .hm-story-chip{display:none}
-.hm-story-chip{position:absolute;left:var(--sp-12);bottom:var(--sp-12);z-index:1;font-size:var(--fs-13);font-weight:600;line-height:1.4;color:var(--ink);background:rgba(255,255,255,.92);border-radius:6px;padding:2px 8px;max-width:calc(100% - 24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-story-chip{position:absolute;left:var(--sp-12);bottom:var(--sp-12);z-index:2;font-size:var(--fs-13);font-weight:600;line-height:1.4;color:var(--ink);background:rgba(255,255,255,.92);border-radius:6px;padding:2px 8px;max-width:calc(100% - 24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hm-story-txt{display:flex;flex-direction:column;flex:1;min-width:0;padding:var(--sp-16) var(--sp-16) var(--sp-12)}
 .hm-story-head{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.3;letter-spacing:-.005em}
 .hm-story-meta{display:block;margin-top:auto;padding-top:var(--sp-16);font-size:var(--fs-14);color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The credit CC BY and CC BY-SA require wherever the photograph is shown. */
+.hm-story-credit{position:relative;z-index:2;display:block;margin-top:4px;font-size:12px;line-height:1.4;color:var(--ink-3);overflow-wrap:anywhere}
+.hm-story-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.hm-story-credit:empty{display:none}
 /* The lead spans the row: photograph on the left, a little under half. */
 .hm-story.lead{grid-column:1/-1;flex-direction:row}
 .hm-story.lead .hm-story-pic{width:38%;aspect-ratio:auto;min-height:250px}
@@ -386,6 +399,7 @@ footer.site {margin-top:0}
 <!-- Player names in the painted bands link to their cards, and the hero's
      search field takes the shared typeahead; deferred, and every call into it
      is guarded, so a band that paints first cannot throw. -->
+<script src="/it-action.js" defer></script>
 <script src="/player-search.js" defer></script>
 <script>
 // ══ the homepage ═══════════════════════════════════════════════════════════
@@ -594,7 +608,13 @@ footer.site {margin-top:0}
   // ── newest from the desk ─────────────────────────────────────────────────
   // Five cards, newest first, and only pieces with a destination and a
   // headline of their own: the newest as the wide lead, the next four in a
-  // row under it. `/api/newsroom` is the published feed: one row per slug,
+  // row under it. A THIN FEED IS FILLED FROM ITS OWN FINDINGS (2026-10-09):
+  // once the forward pieces expire the feed can hold three stories, which
+  // left two holes in the row. The empty slots take the findings of the
+  // stories already listed, each under its own headline and linking to that
+  // finding on the piece, the way the worker's rail breaks a story down once
+  // it is no longer the lead (deskLeadPayload, _worker.js). Never a second
+  // feed, and never /api/content. `/api/newsroom` is the published feed: one row per slug,
   // the newest version winning, forward pieces dropped once their games have
   // kicked off. `/api/content` is the archive — held drafts, one row per
   // version — and this page must never read it (that put five drafts of one
@@ -626,28 +646,121 @@ footer.site {margin-top:0}
     var h = String((p && p.headline) || ''), m = BOAST.exec(h);
     return m ? (h.slice(m[0].length).trim() || h) : h;
   }
-  // The card's photograph: the first player the piece names.
-  function subjectOf(p) {
-    var c = (p.components || []).filter(function (c) { return c && c.player; })[0];
-    return c ? c.player : null;
+  // WHO THE CARD IS ABOUT: the players the piece's findings name, then the
+  // players its headline writes out in full (the Trade Desk and underrated
+  // pieces name nobody in their findings). Read off the piece, never guessed
+  // from prose beyond the headline. Joined with "|" because names carry
+  // spaces; the picture is chosen from this list once the index lands.
+  function castOf(p) {
+    var who = [], seen = {};
+    var add = function (n) { n = String(n || '').trim(); if (n && !seen[n]) { seen[n] = 1; who.push(n); } };
+    if (p.player) add(p.player);
+    (p.components || []).forEach(function (c) { add(c && c.player); });
+    return who;
   }
   function storyHtml(p, lead) {
-    var who = subjectOf(p), series = p.title || 'The desk';
+    var cast = castOf(p), series = p.title || 'The desk';
     var when = p.publishedAt ? ago(p.publishedAt) : (p.week ? 'Week ' + p.week : '');
     var meta = [when, p.byline && p.byline.name].filter(Boolean).join(' · ');
-    return '<a class="hm-story' + (lead ? ' lead' : '') + '" href="' + esc(p.url) + '">'
-      + '<span class="hm-story-pic"' + (who ? ' data-face-name="' + esc(who) + '"' : '') + ' aria-hidden="true">'
+    return '<article class="hm-story' + (lead ? ' lead' : '') + '">'
+      + '<span class="hm-story-pic" data-story-cast="' + esc(cast.join('|')) + '" data-story-head="' + esc(headlineOf(p)) + '" aria-hidden="true">'
       + '<span class="hm-story-alt">' + esc(series) + '</span>'
       + '<span class="hm-story-chip">' + esc(series) + '</span></span>'
-      + '<span class="hm-story-txt"><span class="hm-story-head">' + esc(headlineOf(p)) + '</span>'
-      + '<span class="hm-story-meta">' + esc(meta) + '</span></span>'
-      + '</a>';
+      + '<span class="hm-story-txt"><a class="hm-story-head" href="' + esc(p.url) + '">' + esc(headlineOf(p)) + '</a>'
+      + '<span class="hm-story-meta">' + esc(meta) + '</span>'
+      + '<span class="hm-story-credit"></span></span>'
+      + '</article>';
+  }
+  // THE PICTURE: a game photograph of the first player in the cast who has
+  // one (/it-action.js, Wikimedia Commons, openly licensed), then the first
+  // player's headshot, then the series on navy. The credit follows the
+  // picture that LOADED: a CC BY or CC BY-SA photograph is shown only with
+  // its photographer, its license and links to both, and the credit comes off
+  // the moment the image falls back to a headshot, which carries none.
+  function creditHtml(a) {
+    return 'Photo: <a href="' + esc(a.s || a.u) + '" rel="noopener">' + esc(a.a || 'Wikimedia Commons') + '</a>'
+      + (a.l ? ', <a href="' + esc(a.lu || a.s || a.u) + '" rel="license noopener">' + esc(a.l) + '</a>' : '')
+      + ', via Wikimedia Commons' + (a.a ? '; cropped to fit.' : '.');
+  }
+  // NO PICTURE TWICE IN ONE GRID. A finding card is often about the same
+  // player as the story beside it, and two copies of one photograph in a row
+  // of four read as a mistake. Reset each time the grid is painted.
+  var storyShown = {};
+  function mountStoryArt() {
+    var PS = window.ITPlayerSearch;
+    if (!PS || !PS.resolve) return;
+    var boxes = document.querySelectorAll('.hm-story-pic[data-story-cast]:not([data-face-done])');
+    for (var i = 0; i < boxes.length; i++) {
+      var box = boxes[i], names = (box.getAttribute('data-story-cast') || '').split('|').filter(Boolean);
+      var head = box.getAttribute('data-story-head') || '';
+      if (PS.players && names.length < 4) {
+        PS.players.forEach(function (q) {
+          if (names.length < 4 && q.n.indexOf(' ') > 0 && head.indexOf(q.n) >= 0 && names.indexOf(q.n) < 0) names.push(q.n);
+        });
+      }
+      var people = [];
+      names.forEach(function (n) { var hit = null; try { hit = PS.resolve(n); } catch (e) {} if (hit && people.indexOf(hit) < 0) people.push(hit); });
+      box.setAttribute('data-face-done', '1');
+      if (!people.length) continue;
+      var shot = null, who = null;
+      for (var k = 0; k < people.length && !shot; k++) {
+        var a = PS.action ? PS.action(people[k].k) : null;
+        if (a && !storyShown[a.u]) { shot = a; who = people[k]; }
+      }
+      for (var m = 0; m < people.length && !who; m++) if (!storyShown[people[m].k]) who = people[m];
+      if (!who) who = people[0];
+      storyShown[who.k] = 1;
+      if (shot) storyShown[shot.u] = 1;
+      box.setAttribute('data-face-name', who.n);
+      var srcs = [];
+      if (shot) srcs.push(shot.u);
+      if (who.e) srcs.push(FACE_ESPN + who.e + '.png');
+      if (who.h) srcs.push(FACE_NFL + who.h);
+      if (!srcs.length) continue;
+      (function (el, list, shot) {
+        var credit = el.parentNode.querySelector('.hm-story-credit');
+        var img = document.createElement('img'), at = 0;
+        img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
+        img.onerror = function () {
+          if (credit) credit.innerHTML = '';
+          el.classList.remove('is-action');
+          if (++at < list.length) img.src = list[at]; else { img.remove(); el.classList.remove('has-img'); }
+        };
+        img.onload = function () {
+          var live = !!shot && at === 0;
+          el.classList.add('has-img');
+          el.classList.toggle('is-action', live);
+          if (credit) credit.innerHTML = live ? creditHtml(shot) : '';
+        };
+        img.src = list[0];
+        el.appendChild(img);
+      })(box, srcs, shot);
+    }
+  }
+  document.addEventListener('it-player-search-ready', mountStoryArt);
+  // The slots the feed leaves empty, filled with the findings of the stories
+  // already on the front: the ones under the lead first, then the lead's own.
+  function findingsFor(live, want) {
+    var out = [], order = live.slice(1).concat(live.slice(0, 1));
+    for (var i = 0; i < order.length && out.length < want; i++) {
+      var p = order[i], parts = (p.components || []).filter(function (c) { return c && c.headline && c.n != null; });
+      // A finding whose headline is the story's own adds nothing a reader
+      // has not just read on the card beside it.
+      for (var k = 0; k < parts.length && out.length < want; k++) {
+        if (String(parts[k].headline).trim() === headlineOf(p).trim()) continue;
+        out.push({ title: p.title, headline: parts[k].headline, player: parts[k].player, url: p.url + '#component-' + parts[k].n,
+                   publishedAt: p.publishedAt, week: p.week, byline: p.byline });
+      }
+    }
+    return out;
   }
   function desk(j) {
     var live = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).slice(0, NEWEST);
     if (!live.length) return;
-    $('readGrid').innerHTML = live.map(function (p, i) { return storyHtml(p, i === 0); }).join('');
-    mountFaces();
+    var cards = live.length < NEWEST ? live.concat(findingsFor(live, NEWEST - live.length)) : live;
+    storyShown = {};
+    $('readGrid').innerHTML = cards.map(function (p, i) { return storyHtml(p, i === 0); }).join('');
+    mountStoryArt();
     show($('articles'), true);
     kpi.pieces = (j.pieces || []).filter(function (p) { return p && p.url && p.headline && !p.expired; }).length;
     paintKpi();
