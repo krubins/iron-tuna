@@ -157,7 +157,8 @@
   /* The gutter between a page's body column and a rail beside it. */
   --rail-gap: 56px;
 
-  /* The ribbon alone. The key-phrase line above it adds 24px on a desk. */
+  /* The ribbon alone. The key-phrase line above it and the matching black bar
+     below it add 24px each. */
   --header-h: 60px;
   --line-h: 24px;
 }
@@ -211,6 +212,9 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
      .site-line    a near-black line above the ribbon carrying one key phrase
                    about the product, white, centred, 13px. On a phone only the
                    first sentence shows.
+     ::after       an empty near-black bar under the ribbon, the same height as
+                   the key-phrase line, so the navy band sits between two
+                   matching black rules.
      .site-ribbon  the flat navy ribbon, 60px (56 on a phone), no border and no
                    shadow. The logo sits on a white panel that starts at the
                    left screen edge and ends in an 18px slant. Nav links are
@@ -228,6 +232,7 @@ header.site { position: sticky; top: 0; z-index: 50; background: var(--mast) }
   padding: 0 var(--gutter); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
 .site-line span + span { margin-left: .35em }
+header.site::after { content: ""; display: block; height: var(--line-h); background: var(--text) }
 header.site .site-ribbon, header.site > .wrap {
   display: flex; align-items: stretch; gap: var(--space-4);
   height: var(--header-h); max-width: none; padding: 0 var(--gutter) 0 0;
@@ -759,7 +764,7 @@ a.ledger-row:hover { background: var(--panel); text-decoration: none; color: inh
    is the one sticky enclosed surface: the tinted panel with the navy rule and
    a 52px primary action. */
 .detail { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: var(--space-7) var(--rail-gap); align-items: start }
-.detail-aside { position: sticky; top: calc(var(--header-h) + var(--line-h) + var(--space-4)); background: var(--panel); border-top: 3px solid var(--mast); border-radius: var(--radius-md); padding: var(--space-5) }
+.detail-aside { position: sticky; top: calc(var(--header-h) + 2 * var(--line-h) + var(--space-4)); background: var(--panel); border-top: 3px solid var(--mast); border-radius: var(--radius-md); padding: var(--space-5) }
 .detail-aside .is-val, .detail-aside .key-figure { font-size: var(--fs-44); letter-spacing: -.02em }
 .detail-aside .is-btn { width: 100%; min-height: 52px; margin-top: var(--space-4) }
 @media (max-width: 860px) { .detail { grid-template-columns: minmax(0, 1fr) } .detail-aside { position: static } }
@@ -892,11 +897,11 @@ a.ledger-row:hover { background: var(--panel); text-decoration: none; color: inh
    header and the ribbon under it — or it lands with its own chapter head
    hidden behind them. Scoped to the pages that actually carry one, so an
    anchor on the other ninety keeps landing where it always has. */
-html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + var(--line-h) + 60px) }
-@media (max-width: 860px) { html:has(.is-ribbon) { scroll-padding-top: 108px } }
+html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 2 * var(--line-h) + 60px) }
+@media (max-width: 860px) { html:has(.is-ribbon) { scroll-padding-top: 132px } }
 
 .is-ribbon {
-  position: sticky; top: calc(var(--header-h) + var(--line-h)); z-index: 45;
+  position: sticky; top: calc(var(--header-h) + 2 * var(--line-h)); z-index: 45;
   background: var(--bg); border-bottom: 1px solid var(--line);
 }
 .is-ribbon-in {
@@ -919,7 +924,7 @@ html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + var(--line-h) 
    of this many items comes out three deep, and a sticky bar that tall takes a
    third of the screen away from the thing it exists to navigate. */
 @media (max-width: 860px) {
-  .is-ribbon { top: var(--header-h) }
+  .is-ribbon { top: calc(var(--header-h) + var(--line-h)) }
   .is-ribbon-in {
     padding: 8px 14px; gap: var(--space-2);
     flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
