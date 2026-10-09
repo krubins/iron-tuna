@@ -5,8 +5,8 @@
 // October 2026: "/" is the ledger-style front described in docs/design/brief.md.
 // Five sections, in this order: a white centred hero (one headline, one
 // sentence, the search field, three entry points, a hairline and the row of
-// live market figures), the six position tiles, the six newest desk pieces as
-// a ledger, the three How-it-works cards, and the navy KPI band; then the
+// live market figures), the six position tiles, the five newest desk pieces as
+// story cards, the three How-it-works cards, and the navy KPI band; then the
 // shared footer. The cover rotation, the photograph, the lead story, the two
 // lane cards and the quick-links strip all came off with it.
 //
@@ -116,7 +116,7 @@ const CONTENT = { ok: true, pieces: [
     components: [{ n: 1, player: 'Derrick Henry', headline: 'c' }] },
   { kind: 'rankings-update', title: 'Rankings Update', headline: 'Eleven moves after the injury report',
     week: 3, publishedAt: AGO(5), url: '/in-season/desk/rankings-update/3' },
-  // THE BOAST is split off in a ledger row: the call is the headline.
+  // THE BOAST is split off on a card: the call is the headline.
   { kind: 'scorecard', title: 'What Tuna Got Right', headline: 'YOU’RE WELCOME: the total moved three points in a day',
     week: 3, publishedAt: AGO(18), url: '/in-season/desk/scorecard/3' },
   // No url: not a row.
@@ -221,13 +221,14 @@ const read = page => page.evaluate(() => {
       live: vis(a.querySelector('.hm-tile-live')) ? text(a.querySelector('.hm-tile-live')) : null, svg: !!a.querySelector('svg[aria-hidden="true"]'),
       w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height) })),
     tileTops: [...new Set([...document.querySelectorAll('.hm-tile')].map(a => Math.round(a.getBoundingClientRect().top)))].length,
-    // The ledger.
+    // The story cards.
     articles: vis(byId('articles')),
-    rows: [...document.querySelectorAll('#readGrid .ledger-row')].map(r => ({
-      href: r.getAttribute('href'), name: text(r.querySelector('.ledger-name b')), sub: text(r.querySelector('.ledger-name span')),
-      figs: [...r.querySelectorAll('.ledger-fig')].filter(vis).map(f => ({ k: text(f.querySelector('small')), v: text(f.querySelector('b')), kPx: px(f.querySelector('small')), vPx: px(f.querySelector('b')),
-        right: getComputedStyle(f).textAlign }))
-    })),
+    rows: [...document.querySelectorAll('#readGrid .hm-story')].map(r => {
+      const pic = r.querySelector('.hm-story-pic'), pb = pic.getBoundingClientRect(), tb = r.querySelector('.hm-story-txt').getBoundingClientRect(), b = r.getBoundingClientRect();
+      return { href: r.getAttribute('href'), lead: r.classList.contains('lead'), name: text(r.querySelector('.hm-story-head')), meta: text(r.querySelector('.hm-story-meta')),
+        series: text(r.querySelector('.hm-story-chip')), face: pic.getAttribute('data-face-name'), headPx: px(r.querySelector('.hm-story-head')),
+        picLeft: pb.right <= tb.left + 1, picTop: pb.bottom <= tb.top + 1, top: Math.round(b.top), w: Math.round(b.width), radius: parseFloat(getComputedStyle(r).borderTopLeftRadius) };
+    }),
     // How it works, and the band.
     how: vis(byId('how')),
     howCards: [...document.querySelectorAll('#how .hm-input')].map(c => ({ h: text(c.querySelector('h3')), radius: parseFloat(getComputedStyle(c).borderTopLeftRadius), border: getComputedStyle(c).borderTopWidth })),
@@ -356,18 +357,20 @@ console.log('\nwith the boards answering');
      r.tiles.map(t => t.live).join(' | ') === '34 ranked · 22 priced | 72 ranked · 48 priced | 98 ranked · 65 priced | 42 ranked · 28 priced | 32 ranked · 21 priced | 32 ranked · 21 priced',
      r.tiles.map(t => t.live).join(' | '));
 
-  ok('the newest ledger is shown', r.articles === true);
-  ok('six rows, newest first', r.rows.length === 6 && r.rows.map(x => x.href).join(' ') === '/in-season/desk/final-read/3 /in-season/desk/opportunity-report/3 /in-season/desk/rankings-update/3 /in-season/desk/scorecard/3 /in-season/desk/weekend-game-plan/3 /in-season/desk/waiver-watch/3',
+  ok('the newest stories are shown', r.articles === true);
+  ok('five cards, newest first', r.rows.length === 5 && r.rows.map(x => x.href).join(' ') === '/in-season/desk/final-read/3 /in-season/desk/opportunity-report/3 /in-season/desk/rankings-update/3 /in-season/desk/scorecard/3 /in-season/desk/weekend-game-plan/3',
      r.rows.map(x => x.href).join(' '));
-  ok('a row without a destination or a headline is not a row', !r.rows.some(x => /No destination|Blank/.test(x.name + x.sub)));
-  ok('the boast comes off the headline in a ledger row', r.rows[3] && r.rows[3].name === 'the total moved three points in a day', r.rows[3] && r.rows[3].name);
-  ok('each row is the headline over the series, then three figure columns',
-     r.rows.every(x => x.figs.length === 3 && x.figs.map(f => f.k).join(',') === 'Published,Week,Players named'), JSON.stringify(r.rows[0] && r.rows[0].figs));
-  ok('each figure is a 13px label over a 17px figure, right-aligned',
-     r.rows.every(x => x.figs.every(f => f.kPx === 13 && f.vPx === 17 && f.right === 'right')), JSON.stringify(r.rows[0] && r.rows[0].figs));
-  ok('a piece from minutes ago says so, and one from yesterday too',
-     r.rows[0].figs[0].v === '6m ago' && r.rows[4].figs[0].v === 'Yesterday', r.rows.map(x => x.figs[0].v).join(' / '));
-  ok('and the players a piece names are counted', r.rows[0].figs[2].v === '2' && r.rows[2].figs[2].v === '0', r.rows.map(x => x.figs[2].v).join(','));
+  ok('a piece without a destination or a headline is not a card', !r.rows.some(x => /No destination|Blank/.test(x.name + x.series)));
+  ok('the boast comes off the headline on a card', r.rows[3] && r.rows[3].name === 'the total moved three points in a day', r.rows[3] && r.rows[3].name);
+  ok('the newest is the lead: photograph left, headline right, 28px',
+     r.rows[0].lead && r.rows[0].picLeft && r.rows[0].headPx === 28 && r.rows.filter(x => x.lead).length === 1, JSON.stringify(r.rows[0]));
+  ok('the next four sit in one row under it, photograph on top, rounded 10px',
+     r.rows.slice(1).every(x => !x.lead && x.picTop && x.top > r.rows[0].top && x.radius === 10) && new Set(r.rows.slice(1).map(x => x.top)).size === 1,
+     JSON.stringify(r.rows.slice(1).map(x => [x.top, x.picTop])));
+  ok('each card names its time and byline at the foot',
+     r.rows[0].meta === '6m ago · Iron Tuna desk' && r.rows[4].meta === 'Yesterday', r.rows.map(x => x.meta).join(' / '));
+  ok('the photograph is the first player the piece names; none when it names nobody',
+     r.rows[0].face === 'Puka Nacua' && r.rows[1].face === 'Derrick Henry' && r.rows[2].face === null, r.rows.map(x => x.face).join(','));
   ok('no held draft reaches the front', !/HELD DRAFT/.test(r.body), (r.body.match(/HELD DRAFT \d/) || [''])[0]);
   ok('and no story is on the front twice', new Set(r.rows.map(x => x.href)).size === r.rows.length);
 
@@ -408,7 +411,8 @@ console.log('\non a phone');
   ok('the tile row scrolls sideways, edge to edge, with the first tile on the gutter', row.scrolls && row.ulLeft === 0 && row.left === 16, JSON.stringify(row));
   ok('the market figures stack, one per row', row.figsStacked === 1 && r.figs.length === 4, String(row.figsStacked));
   ok('the tab bar is fixed to the foot of the screen, 68px', row.tab.fixed === 'fixed' && row.tab.h === 68 && row.tab.bottom === 844, JSON.stringify(row.tab));
-  ok('the ledger keeps the published figure beside each headline', r.rows.length === 6 && r.rows.every(x => x.figs.length === 1 && x.figs[0].k === 'Published'), JSON.stringify(r.rows[0] && r.rows[0].figs));
+  ok('the lead stacks its photograph on top, and the four cards go two across',
+     r.rows.length === 5 && r.rows[0].picTop && new Set(r.rows.slice(1).map(x => x.top)).size === 2 && r.rows.slice(1).every(x => x.w < 200), JSON.stringify(r.rows.map(x => [x.top, x.w])));
   ok('and the page does not scroll sideways', r.overflow === 0, String(r.overflow));
   await ctx.close();
 }
@@ -467,7 +471,7 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   ok(`${tag}: the three entry points still stand`, r.entries.length === 3);
   ok(`${tag}: the market row is hidden, not empty`, r.market === false && r.figs.length === 0);
   ok(`${tag}: the tiles stay, without a live line`, r.tiles.length === 6 && r.tiles.every(t => t.live === null), r.tiles.map(t => t.live).join(','));
-  ok(`${tag}: the ledger is hidden, not empty`, r.articles === false && r.rows.length === 0);
+  ok(`${tag}: the story cards are hidden, not empty`, r.articles === false && r.rows.length === 0);
   ok(`${tag}: the method is still there`, r.how === true);
   ok(`${tag}: the KPI band is hidden rather than a band of blanks`, r.kpi === false && r.kpis.length === 0);
   ok(`${tag}: nowhere on the page says it is loading`, !LOADING.test(r.body), (r.body.match(LOADING) || [''])[0]);
