@@ -140,6 +140,88 @@ p{color:var(--sec);margin:0 0 16px}
 .rk-blend-h{display:flex;justify-content:space-between;font-size:13.5px;font-weight:800;color:var(--teal)}
 .rk-blend-h span:nth-child(2){color:var(--text);letter-spacing:0;text-transform:none;font-size:15.5px}
 .rk-blend input[type=range]{width:100%;margin:8px 0 4px;accent-color:var(--teal)}
+/* The table in the front page's dress, matching the sixteen published boards
+   (site.css, "the board in the front page's dress"): one hairline card, cells
+   on the name line rather than floating mid-row, a 19px name with its position
+   beside it, and the delta and confidence as words rather than shouting caps
+   in a box. The face had been set display:block by `td.p span` above, which
+   split its initials from its tile; it is put back on the name line here. */
+.is-scroll:has(> #rkTable){border:1px solid var(--line);border-radius:10px;background:var(--bg);margin-top:16px}
+#rkTable{font-size:17px}
+#rkTable th,#rkTable td{padding:16px 10px;vertical-align:top;border-bottom-color:var(--line)}
+#rkTable tr>:first-child{padding-left:20px} #rkTable tr>:last-child{padding-right:20px}
+#rkTable tbody tr:last-child>td{border-bottom:0}
+#rkTable thead th{font-size:14px;font-weight:600;color:var(--muted);vertical-align:bottom;padding-top:14px;padding-bottom:12px;border-bottom:1px solid var(--line2);white-space:normal;line-height:1.25;min-width:3.5rem}
+#rkTable thead th:hover,#rkTable thead th[aria-sort]{color:var(--text)}
+#rkTable tbody tr:hover>td{background:color-mix(in srgb,var(--panel) 55%,var(--bg))}
+#rkTable tbody td.num:first-child{font-weight:700;color:var(--text)}
+#rkTable td.num b{font-size:19px;font-weight:600}
+#rkTable td.num .is-status{display:block;margin-top:2px}
+.rk-table td.p{white-space:nowrap;min-width:16rem}
+.rk-table td.p>.it-player-face{display:inline-grid;width:28px;height:28px;min-width:28px;margin:-3px 10px 0 0;vertical-align:middle}
+.rk-table td.p>a b{font-size:19px;font-weight:600;letter-spacing:-.01em}
+.rk-table td.p>a:hover{color:var(--teal)}
+.rk-table td.p>span:not(.it-player-face):not(.its-tag){display:inline;margin-left:6px;font-size:14px;letter-spacing:0}
+.rk-table td.p .rk-more{white-space:normal}
+.rk-table td.cls{font-size:14px;font-weight:500;line-height:1.45;text-transform:lowercase}
+.rk-table td.cls .rk-why{text-transform:none;font-size:14px}
+.rk-conf{font-size:14px;font-weight:600;padding:0;border:0;text-transform:lowercase}
+.rk-inj{font-size:14px;font-weight:600;margin-left:0}
+/* The table as cards, on a phone, as the sixteen boards do it (site.css, "the
+   board as cards"). Up to fourteen columns scrolled sideways at 390px, so the
+   projection, the ranks and the delta were all off-screen. Below 640px each
+   row becomes a card by CSS alone:
+
+     line 1   rank, face, name, position, roster tag   (td.p is display:contents)
+     line 2   team and opponent
+     grid     every figure, three to a row, labelled from its column head,
+              which render() copies onto each cell as data-l; the delta, the
+              schedule and the opponents list take a full row each. The grid
+              rule sits in :where() so those full-row rules can beat it
+     fold     Player & opportunity
+
+   The heads stay as a row of sort chips, the only way to re-sort. */
+@media (max-width:640px){
+  #rkTable,#rkTable>thead,#rkTable>tbody{display:block}
+  #rkTable>thead>tr{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px;border-bottom:1px solid var(--line2)}
+  #rkTable>thead>tr::before{content:"Sort";align-self:center;margin-right:2px;font-size:13px;font-weight:600;color:var(--muted)}
+  #rkTable>thead>tr>th{display:block;padding:3px 10px;border:1px solid var(--line2);border-radius:999px;min-width:0;font-size:13px;text-align:left;white-space:nowrap;line-height:1.5}
+  #rkTable>thead>tr>th[data-key="player"],#rkTable>thead>tr>th[data-key="team"],#rkTable>thead>tr>th[data-key="opp"],#rkTable>thead>tr>th[data-key="opps"],#rkTable>thead>tr>th[data-key="byes"],#rkTable>thead>tr>th[data-key="inj"]{display:none}
+  #rkTable>thead>tr>th[aria-sort]{background:var(--text);border-color:var(--text);color:#fff}
+  #rkTable>tbody>tr{display:flex;flex-wrap:wrap;align-items:center;padding:16px 14px;border-bottom:1px solid var(--line)}
+  #rkTable>tbody>tr:last-child{border-bottom:0}
+  #rkTable>tbody>tr>td{padding:0;border:0;min-width:0;background:transparent;text-align:left;line-height:1.4}
+  #rkTable>tbody>tr:hover>td{background:transparent}
+  #rkTable>tbody>tr::before,#rkTable>tbody>tr::after{content:"";flex:0 0 100%;height:0}
+
+  #rkTable td[data-k="rank"]{order:1;flex:0 0 2.5rem;font-size:17px}
+  .rk-table td.p{display:contents}
+  .rk-table td.p>.it-player-face{order:2;margin:0 8px 0 0}
+  .rk-table td.p>a{order:3;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .rk-table td.p>a b{font-size:18px}
+  .rk-table td.p>span:not(.it-player-face){order:4}
+  #rkTable>tbody>tr::before{order:5}
+  #rkTable td[data-k="team"],#rkTable td[data-k="opp"]{order:6;margin-top:2px;font-size:14px;font-weight:600;color:var(--sec)}
+  #rkTable td[data-k="team"]{margin-left:2.5rem}
+  #rkTable td[data-k="team"]:has(+ td[data-k="opp"])::after{content:"\00b7";margin:0 6px;color:var(--muted);font-weight:400}
+  #rkTable>tbody>tr::after{order:7}
+
+  #rkTable>tbody>tr>td:where(:not([data-k="rank"]):not(.p):not([data-k="team"]):not([data-k="opp"])){
+    order:8;flex:0 0 33.33%;margin-top:12px;padding-right:8px;font-size:15px;
+  }
+  #rkTable>tbody>tr>td:where(:not([data-k="rank"]):not(.p):not([data-k="team"]):not([data-k="opp"]))::before{
+    content:attr(data-l);display:block;margin-bottom:2px;font-size:12px;font-weight:600;color:var(--muted);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;
+  }
+  #rkTable td.num b{font-size:17px}
+  /* The season board's head is "Risk / confidence", which a third of a 375px
+     card cuts to "Risk / confiden…". On the card it is just Risk. */
+  #rkTable td[data-k="conf"][data-l="Risk / confidence"]::before{content:"Risk"}
+  #rkTable>tbody>tr>td[data-k="delta"],#rkTable>tbody>tr>td[data-k="sched"],#rkTable>tbody>tr>td[data-k="opps"]{order:9;flex:0 0 100%}
+  #rkTable td[data-k="delta"] .rk-why{max-width:none}
+  .rk-table td.p>.rk-more{order:10;flex:0 0 100%;margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
+  .rk-table td.p .rk-more .rk-read{max-width:none}
+}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/rankings","name":"Weekly Fantasy Rankings for Your League’s Scoring","description":"Rankings are worthless at somebody else’s scoring. Iron Tuna re-ranks every player at your exact settings — PPR, passing TD value, yardage thresholds — and prices the result against the betting market.","url":"https://irontuna.com/rankings","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/rankings"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Weekly Fantasy Rankings for Your League’s Scoring"}]}]}</script>
@@ -501,12 +583,24 @@ p{color:var(--sec);margin:0 0 16px}
     return ITReads.cell(r.p, { horizon: horizon, spellOut: pos === 'FLEX',
       rank: r[f + 'Rank'], points: bp(r), formPpg: formPpg(r.p), ctx: readCtx ? readCtx.ctx : null });
   }
+  // The two lines fold away under the name, as they do on the sixteen
+  // published boards (it-ranks.js, readsBlock): open, they stood every row four
+  // lines tall. The open set is kept by player, because every control on this
+  // page rebuilds the rows.
+  var readOpen = {};
+  function readsBlock(r) {
+    var t = reads(r);
+    if (!t) return '';
+    var k = r.p.key || r.p.name;
+    return '<details class="rk-more" data-read="' + e(k) + '"' + (readOpen[k] ? ' open' : '') + '>' +
+      '<summary>Player &amp; opportunity</summary>' + t + '</details>';
+  }
 
   function cell(r, key, rankField) {
     var p = r.p, w0 = p.weeks && p.weeks.find(function (w) { return !w.bye && !w.out; });
     switch (key) {
       case 'rank': return '<td class="num">' + r[rankField] + '</td>';
-      case 'player': return '<td class="p"><a href="/player/' + slug(p.name) + '"><b>' + e(p.name) + '</b></a><span>' + e(p.position) + '</span>' + rosterTag(p) + reads(r) + '</td>';
+      case 'player': return '<td class="p"><a href="/player/' + slug(p.name) + '"><b>' + e(p.name) + '</b></a><span>' + e(p.position) + '</span>' + rosterTag(p) + readsBlock(r) + '</td>';
       case 'team': return '<td>' + e(p.team) + '</td>';
       case 'opp': return '<td>' + (p.byes.length && !w0 ? '<span class="is-status">BYE</span>' : w0 ? e((w0.home ? 'vs ' : 'at ') + w0.opponent) : '—') + '</td>';
       case 'opps': return '<td>' + e(p.weeks.map(function (w) { return w.bye ? 'BYE' : w.out ? 'OUT' : (w.home ? 'vs ' : '@') + w.opponent; }).join(', ')) + '</td>';
@@ -556,8 +650,8 @@ p{color:var(--sec);margin:0 0 16px}
     if (hideOut && horizon === 'week') rows = rows.filter(function (r) { return !(r.p.weeks[0] && (r.p.weeks[0].out || r.p.weeks[0].bye)); });
     rows.sort(function (a, b) { var x = sortVal(a, sortKey, rankField), y = sortVal(b, sortKey, rankField); return (x < y ? -1 : x > y ? 1 : 0) * sortDir || a[rankField] - b[rankField]; });
     var cols = COLS[horizon];
-    $('rkHead').innerHTML = cols.map(function (c) { return '<th data-key="' + c[0] + '"' + (c[0] === sortKey ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + c[1] + '</th>'; }).join('');
-    $('rkBody').innerHTML = rows.slice(0, 200).map(function (r) { return '<tr>' + cols.map(function (c) { return cell(r, c[0], rankField); }).join('') + '</tr>'; }).join('');
+    $('rkHead').innerHTML = cols.map(function (c) { return '<th data-key="' + c[0] + '"' + (/^(it|ppg|games|crank|vrank)$/.test(c[0]) ? ' class="num"' : '') + (c[0] === sortKey ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + c[1] + '</th>'; }).join('');
+    $('rkBody').innerHTML = rows.slice(0, 200).map(function (r) { return '<tr>' + cols.map(function (c) { return cell(r, c[0], rankField).replace(/^<td/, '<td data-k="' + c[0] + '" data-l="' + c[1] + '"'); }).join('') + '</tr>'; }).join('');
     $('rkTable').hidden = !rows.length; $('rkEmpty').hidden = !!rows.length;
     if (!rows.length) $('rkEmpty').textContent = 'Nothing matches.';
     $('rkBanner').hidden = horizon !== 'playoffs';
@@ -625,6 +719,8 @@ p{color:var(--sec);margin:0 0 16px}
     $('rkPos').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; pos = b.getAttribute('data-pos'); setPressed(this, 'data-pos', pos); render(); });
     $('rkSearch').addEventListener('input', function () { q = this.value.trim(); render(); });
     $('rkHideOut').addEventListener('change', function () { hideOut = this.checked; render(); });
+    // `toggle` does not bubble, so it is caught on the way down.
+    $('rkBody').addEventListener('toggle', function (ev) { var d = ev.target; if (d && d.hasAttribute && d.hasAttribute('data-read')) readOpen[d.getAttribute('data-read')] = d.open; }, true);
     $('rkHead').addEventListener('click', function (ev) { var th = ev.target.closest('th'); if (!th) return; var k = th.getAttribute('data-key'); if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } render(); });
     document.addEventListener('click', function (ev) { var g = ev.target.closest('[data-goto]'); if (!g) return; ev.preventDefault(); horizon = g.getAttribute('data-goto'); setPressed($('rkHorizon'), 'data-horizon', horizon); load(horizon); $('rkHorizon').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     load(horizon); wednesday();

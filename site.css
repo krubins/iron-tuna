@@ -1918,6 +1918,95 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
 .rk-vs tbody > tr:not(.rk-weeks) > td.num:nth-child(2) { font-weight: 700; color: var(--text) }
 .rk-vs td.rk-pts .rk-basis { font-weight: 400 }
 
+/* ── the board in the front page's dress (9 Oct 2026) ─────────────────────
+   After the legibility pass the board still read small and busy: 13px reads
+   under every name stood each row four lines tall, the verdict sat in a grey
+   pill, and the odds pair was a slab of panel grey down the page. The front
+   page's own grammar is white paper, one hairline card, 19px semibold titles
+   and teal for the one thing to click, so the board takes that:
+
+     1. The table sits in one bordered card with the front page's radius.
+     2. Type steps up a size throughout: the name is set like a card title,
+        the projections at the same size, ranks and team one step down.
+     3. The Player and Opportunity lines fold away under the name behind a
+        teal "Player & opportunity" toggle (it-ranks.js, readsBlock), and are
+        set at body size when opened.
+     4. The verdict is words under the number, not a pill; the odds pair keeps
+        a faint teal wash rather than panel grey, and the group heads are
+        underlined in their own colour.
+   The phone card layout below overrides what it needs to and is unchanged. */
+.rk-board .is-scroll:has(> table.rk-vs) {
+  border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg);
+}
+.is-table.rk-vs { font-size: 17px }
+.rk-vs th, .rk-vs td { padding: 16px 12px; border-bottom-color: var(--line) }
+.rk-vs > tbody > tr:last-child > td { border-bottom: 0 }
+.rk-vs > * > tr > :first-child { padding-left: 20px }
+.rk-vs > * > tr > :last-child { padding-right: 20px }
+.rk-vs > thead th { background: var(--bg); color: var(--muted); font-size: var(--fs-14); font-weight: 600; padding-top: 12px; padding-bottom: 12px }
+.rk-vs > thead tr:last-child th { border-bottom: 1px solid var(--line2) }
+.rk-vs thead th[data-key] { cursor: pointer }
+.rk-vs thead th[data-key]:hover { color: var(--text) }
+.rk-vs thead th[aria-sort] { color: var(--text) }
+.rk-vs thead th[aria-sort="ascending"]::after { content: " \2191" }
+.rk-vs thead th[aria-sort="descending"]::after { content: " \2193" }
+.rk-vs th.rk-grp { font-size: var(--fs-16); font-weight: 600; color: var(--text); padding: 18px 12px 8px; background: var(--bg); white-space: nowrap }
+.rk-vs th.rk-grp.fan { border-bottom: 2px solid var(--text) }
+.rk-vs th.rk-grp.mkt { border-bottom: 2px solid var(--teal); color: var(--teal); background: var(--bg) }
+.rk-vs td.rk-mkt, .rk-vs th.rk-mkt { background: color-mix(in srgb, var(--teal) 4%, var(--bg)) }
+.rk-vs tbody > tr:not(.rk-weeks):hover > td { background: color-mix(in srgb, var(--panel) 55%, var(--bg)) }
+.rk-vs tbody > tr:not(.rk-weeks):hover > td.rk-mkt { background: color-mix(in srgb, var(--teal) 8%, var(--bg)) }
+
+.rk-vs tbody > tr:not(.rk-weeks) > td.rk-rank { font-size: 17px; font-weight: 700; color: var(--text); white-space: nowrap }
+/* The name line does not wrap: the hidden Link button (opacity 0, still in
+   flow) and a pooled board's position tag were each breaking to a line of
+   their own and opening a gap above the toggle. The fold wraps as prose. */
+.rk-vs td.rk-who { padding-top: 14px; white-space: nowrap }
+.rk-vs td.rk-who .rk-more { white-space: normal }
+.rk-vs td.rk-who > a { color: var(--text) }
+.rk-vs td.rk-who > a:hover { color: var(--teal); text-decoration: none }
+.rk-vs td.rk-who > a b { font-size: var(--fs-19); font-weight: 600; letter-spacing: -.01em }
+.is-table.rk-vs td.rk-who small { font-size: var(--fs-14); color: var(--muted) }
+.rk-vs td.rk-team { font-size: var(--fs-16); font-weight: 600; color: var(--sec) }
+.rk-vs td.rk-opp { font-size: var(--fs-16); color: var(--sec); white-space: nowrap }
+.rk-vs td.rk-pts { font-size: var(--fs-19); font-weight: 600 }
+.rk-vs td.rk-rnk { font-size: var(--fs-14); font-weight: 500; padding-top: 19px }
+.rk-vs .rk-basis { font-size: var(--fs-13); font-weight: 400; color: var(--muted); margin-top: 2px }
+.rk-vs td.rk-gap b { font-size: 18px; font-weight: 600 }
+.rk-vs td.rk-gap span:not(.rk-slots) {
+  display: block; margin-top: 2px; padding: 0; border: 0; border-radius: 0; background: none;
+  font-size: var(--fs-14); font-weight: 500; color: var(--sec); white-space: nowrap;
+}
+.rk-vs td.rk-gap.up span:not(.rk-slots) { background: none; color: var(--green) }
+.rk-vs td.rk-gap.flat span:not(.rk-slots) { background: none; border: 0; color: var(--muted) }
+.rk-vs td.rk-gap .rk-slots { margin-top: 1px; font-size: var(--fs-13); font-weight: 500; color: var(--muted) }
+.rk-vs td.rk-note { font-size: var(--fs-14); line-height: 1.5; color: var(--sec) }
+
+/* The fold. The summary is the front page's teal link with a chevron that
+   turns when the lines are open; the lines themselves are body text. The
+   /rankings tool folds its lines the same way (.rk-table td.p), and its
+   inline `.rk-table td.p span` rule is out-specified here as above. */
+.rk-vs .rk-more, .rk-table td.p .rk-more { margin-top: 6px }
+.rk-vs .rk-more > summary, .rk-table td.p .rk-more > summary {
+  display: inline-flex; align-items: center; gap: 7px; list-style: none; cursor: pointer;
+  font-size: var(--fs-14); font-weight: 600; color: var(--teal); user-select: none;
+}
+.rk-vs .rk-more > summary::-webkit-details-marker, .rk-table td.p .rk-more > summary::-webkit-details-marker { display: none }
+.rk-vs .rk-more > summary::after, .rk-table td.p .rk-more > summary::after {
+  content: ""; width: 6px; height: 6px; margin-top: -3px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(45deg); transition: transform .15s ease;
+}
+.rk-vs .rk-more[open] > summary::after, .rk-table td.p .rk-more[open] > summary::after { transform: rotate(-135deg); margin-top: 3px }
+.rk-vs .rk-more > summary:hover, .rk-table td.p .rk-more > summary:hover { color: var(--teal-hover); text-decoration: underline }
+.rk-vs .rk-more > summary:focus-visible, .rk-table td.p .rk-more > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px }
+.rk-vs td.rk-who .rk-more .rk-read, .rk-table td.p .rk-more .rk-read {
+  max-width: 38rem; margin-top: 8px; font-size: var(--fs-16); line-height: 1.5; color: var(--sec);
+}
+.rk-vs td.rk-who .rk-more .rk-read-k, .rk-table td.p .rk-more .rk-read-k {
+  display: block; margin: 0 0 1px; font-size: var(--fs-13); font-weight: 600; color: var(--muted);
+}
+
 /* ── the board as cards, on a phone ────────────────────────────────────────
    At 390px the table showed rank, name, team and half the fixture; both
    projections, both ranks and the gap (the reason the page exists) sat
@@ -1940,7 +2029,7 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
   table.rk-vs > thead > tr:first-child { display: none }
   table.rk-vs > thead > tr:last-child {
     display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
-    padding: 0 0 var(--space-3); border-bottom: 1px solid var(--line2);
+    padding: 12px 14px; border-bottom: 1px solid var(--line2);
   }
   table.rk-vs > thead > tr:last-child::before {
     content: "Sort"; margin-right: 2px; font-size: var(--fs-13); font-weight: 600; color: var(--muted);
@@ -1956,7 +2045,7 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
 
   table.rk-vs > tbody > tr:not(.rk-weeks) {
     display: flex; flex-wrap: wrap; align-items: center;
-    padding: 14px 0; border-bottom: 1px solid var(--line);
+    padding: 16px 14px; border-bottom: 1px solid var(--line);
   }
   table.rk-vs > tbody > tr:not(.rk-weeks) > td {
     padding: 0; border: 0; min-width: 0; max-width: none; width: auto;
@@ -1970,7 +2059,8 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
   table.rk-vs > tbody > tr > td.rk-rank { order: 1; flex: 0 0 3.25rem; font-size: var(--fs-16); text-align: left }
   table.rk-vs > tbody > tr > td.rk-who { display: contents }
   table.rk-vs td.rk-who > .it-player-face { order: 2; width: 28px; height: 28px; min-width: 28px; margin: 0 8px 0 0 }
-  table.rk-vs td.rk-who > a { order: 3; font-size: 17px }
+  table.rk-vs td.rk-who > a { order: 3 }
+  table.rk-vs td.rk-who > a b { font-size: 18px }
   table.rk-vs td.rk-who > small { order: 4 }
   table.rk-vs td.rk-who > .rk-share { order: 5; margin-left: auto }
   table.rk-vs > tbody > tr > td.rk-opener { order: 6; margin-left: 8px }
@@ -1992,9 +2082,10 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
     order: 10; align-self: stretch; margin-top: 12px; padding: 8px 8px 9px;
     border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
   }
-  table.rk-vs > tbody > tr > td.rk-pts { flex: 0 0 15%; text-align: left; padding-right: 0 }
-  table.rk-vs > tbody > tr > td.rk-rnk { flex: 0 0 12%; text-align: left; padding-left: 4px; padding-right: 4px }
-  table.rk-vs > tbody > tr > td.rk-mkt { background: var(--panel); border-color: var(--panel) }
+  table.rk-vs > tbody > tr > td.rk-pts { flex: 0 0 19%; text-align: left; padding-right: 0 }
+  table.rk-vs > tbody > tr > td.rk-rnk { flex: 0 0 10%; text-align: left; padding-left: 4px; padding-right: 4px }
+  table.rk-vs > tbody > tr > td.rk-mkt { background: color-mix(in srgb, var(--teal) 5%, var(--bg)); border-color: transparent }
+  table.rk-vs > tbody > tr > td.rk-pts .rk-basis { font-size: var(--fs-12); white-space: nowrap }
   table.rk-vs > tbody > tr > td.rk-gap { flex: 1 1 0; text-align: right; min-width: 0; padding-left: 4px; padding-right: 6px }
   table.rk-vs > tbody > tr > td.rk-pts::before,
   table.rk-vs > tbody > tr > td.rk-rnk::before,
@@ -2007,13 +2098,13 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
   table.rk-vs > tbody > tr > td.rk-gap::before { content: "Gap" }
   table.rk-vs > tbody > tr > td.rk-pts { font-size: 17px }
   table.rk-vs > tbody > tr > td.rk-rnk { font-size: var(--fs-13); padding-top: 11px }
-  table.rk-vs > tbody > tr > td.rk-gap b { display: inline; font-size: 17px }
-  table.rk-vs > tbody > tr > td.rk-gap span:not(.rk-slots) { display: inline-block; margin: 4px 0 0; padding: 1px 4px }
+  table.rk-vs > tbody > tr > td.rk-gap b { display: block; font-size: 17px }
+  table.rk-vs > tbody > tr > td.rk-gap span:not(.rk-slots) { display: block; margin: 2px 0 0; padding: 0; white-space: normal }
   table.rk-vs > tbody > tr > td.rk-gap .rk-slots { display: block; margin-top: 3px }
 
   /* the prose */
-  table.rk-vs td.rk-who > .rk-read { order: 11; flex: 0 0 100%; max-width: none; margin-top: 10px }
-  table.rk-vs td.rk-who > .rk-read + .rk-read { margin-top: 4px }
+  table.rk-vs td.rk-who > .rk-more { order: 11; flex: 0 0 100%; margin-top: 12px }
+  table.rk-vs td.rk-who .rk-more .rk-read { max-width: none; font-size: var(--fs-16) }
   table.rk-vs > tbody > tr > td.rk-note {
     order: 12; flex: 0 0 100%; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line);
   }
