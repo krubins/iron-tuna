@@ -157,10 +157,9 @@
   /* The gutter between a page's body column and a rail beside it. */
   --rail-gap: 56px;
 
-  /* The ribbon alone. The key-phrase line above it and the matching black bar
-     below it add 24px each. */
+  /* The ribbon alone. The black bars above and below it add 12px each. */
   --header-h: 60px;
-  --line-h: 24px;
+  --line-h: 12px;
 }
 @media (max-width: 860px) { :root { --gutter: 16px; --header-h: 56px } }
 
@@ -209,12 +208,10 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
 /* ── header ─────────────────────────────────────────────────────────────────
    In the style of a ticket or sports site, in this site's colours:
 
-     .site-line    a near-black line above the ribbon carrying one key phrase
-                   about the product, white, centred, 13px. On a phone only the
-                   first sentence shows.
-     ::after       an empty near-black bar under the ribbon, the same height as
-                   the key-phrase line, so the navy band sits between two
-                   matching black rules.
+     .site-line    an empty 12px near-black bar above the ribbon. It carried a
+                   key phrase until 2026-10-09.
+     ::after       the matching 12px near-black bar under the ribbon, so the
+                   navy band sits between two black rules.
      .site-ribbon  the flat navy ribbon, 60px (56 on a phone), no border and no
                    shadow. The logo sits on a white panel that starts at the
                    left screen edge and ends in an 18px slant. Nav links are
@@ -226,12 +223,7 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
    The ribbon is sticky and FLAT: no blur, no translucency. A backdrop-filter
    would also make the ribbon the containing block for the fixed tab bar. */
 header.site { position: sticky; top: 0; z-index: 50; background: var(--mast) }
-.site-line {
-  margin: 0; background: var(--text); color: #fff; text-align: center;
-  font-size: var(--fs-13); line-height: var(--line-h); min-height: var(--line-h);
-  padding: 0 var(--gutter); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-}
-.site-line span + span { margin-left: .35em }
+.site-line { margin: 0; height: var(--line-h); background: var(--text) }
 header.site::after { content: ""; display: block; height: var(--line-h); background: var(--text) }
 header.site .site-ribbon, header.site > .wrap {
   display: flex; align-items: stretch; gap: var(--space-4);
@@ -335,9 +327,8 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
   .nav a[aria-current="page"]::after { left: auto; right: 0; top: 0; bottom: 0; width: 3px; height: auto }
   .nav-dd { display: block }
   .nav-dd .nav-dd-menu { position: static; visibility: visible; opacity: 1; display: flex; background: transparent; border: 0; padding: 0 0 0 var(--space-4) }
-  /* Only the first sentence of the key phrase, and no header button: the
-     top bar is the logo and Menu, and the league form has a tab below. */
-  .site-line span + span { display: none }
+  /* No header button: the top bar is the logo and Menu, and the league form
+     has a tab below. */
   header.site a.cta { display: none }
 
   /* The bottom tab bar: 68px, four labelled icon tabs, the active one in the
@@ -898,7 +889,7 @@ a.ledger-row:hover { background: var(--panel); text-decoration: none; color: inh
    hidden behind them. Scoped to the pages that actually carry one, so an
    anchor on the other ninety keeps landing where it always has. */
 html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 2 * var(--line-h) + 60px) }
-@media (max-width: 860px) { html:has(.is-ribbon) { scroll-padding-top: 132px } }
+@media (max-width: 860px) { html:has(.is-ribbon) { scroll-padding-top: 108px } }
 
 .is-ribbon {
   position: sticky; top: calc(var(--header-h) + 2 * var(--line-h)); z-index: 45;

@@ -99,10 +99,9 @@ const NAV = [
 // actually does and lands on that form.
 const CTA = { label: 'Customize My League', href: '/my-league#settings', cta: true };
 
-// The line above the ribbon: one plain-text key phrase about the product,
-// white on near-black, centred, 13px. Two sentences; site.css shows only the
-// first on a phone, which is why each is its own <span>.
-const LINE = ['Every player priced off the betting market first.', 'Restated at your league’s scoring.'];
+// The bar above the ribbon. It carried a key phrase until 2026-10-09; it is now
+// an empty near-black rule matching the one under the ribbon, so it is hidden
+// from assistive tech.
 
 // The phone's bottom tab bar: four labelled icon tabs, the four places a
 // reader goes most. Search is the hero field and the menu; the league form
@@ -194,7 +193,7 @@ function navHtml(file) {
 }
 
 function lineHtml() {
-  return '<p class="site-line">' + LINE.map((t) => '<span>' + esc(t) + '</span>').join(' ') + '</p>';
+  return '<p class="site-line" aria-hidden="true"></p>';
 }
 
 function tabbarHtml(file) {
