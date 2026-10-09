@@ -79,6 +79,15 @@ const PASTE = [
 // ── the server ─────────────────────────────────────────────────────────────
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
 let readerCalls = 0;
+// A saved league, switched on only for the last section: seven teams, so the
+// five-team picker has something to choose between.
+let SYNCED = false;
+const key = (name, pos) => name.toLowerCase().replace(/[^a-z]/g, '') + '|' + pos;
+const LEAGUE_TEAMS = [
+  ['Rival A', [['QB', 5], ['RB', 12], ['WR', 13]]], ['Rival B', [['QB', 6], ['RB', 13], ['WR', 14]]],
+  ['My Squad', [['QB', 0], ['RB', 0], ['RB', 1], ['WR', 15]], true], ['Rival C', [['QB', 7], ['RB', 14], ['WR', 18]]],
+  ['Rival D', [['QB', 8], ['RB', 18], ['WR', 19]]], ['Rival E', [['QB', 9], ['RB', 19], ['TE', 4]]], ['Rival F', [['QB', 10], ['TE', 5], ['TE', 6]]]
+].map(([name, list, isUser]) => ({ name, isUser: !!isUser, players: list.map(([pos, i]) => ({ id: key(NAMES[pos][i], pos), name: NAMES[pos][i], position: pos, ranked: true })) }));
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   if (u.pathname === '/api/boards') {
@@ -102,6 +111,14 @@ const server = http.createServer((req, res) => {
       ] }));
     });
     return;
+  }
+  if (SYNCED && u.pathname === '/api/leagues') {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(JSON.stringify({ ok: true, defaultId: 'L1', leagues: [{ id: 'L1', name: 'Office League', label: 'PPR · 7 teams', isDefault: true, sync: { lastAt: Date.now() - 60000 } }] }));
+  }
+  if (SYNCED && u.pathname === '/api/leagues/L1/advice') {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(JSON.stringify({ ok: true, teams: LEAGUE_TEAMS, slots: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SFLEX: 0 }, trades: [], targets: [], needs: [] }));
   }
   if (u.pathname === '/api/faab/players') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end('{"players":{}}'); }
   let name = u.pathname === '/' ? 'trade-finder.html' : u.pathname.slice(1);
@@ -331,6 +348,44 @@ console.log('\nthe FAAB Advisor, entered by hand');
   await page.waitForSelector('#fa-advisor:not([hidden])', { timeout: 8000 });
   ok('a reload returns to the typed league', await page.$eval('#fa-connect', e => e.hidden));
   ok('nothing on the FAAB page threw', errors.length === 0, errors[0]);
+}
+
+// ── a saved league bigger than five teams ─────────────────────────────────
+console.log('\nthe saved league, five teams picked');
+{
+  SYNCED = true;
+  const c2 = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const pg = await c2.newPage();
+  const errs = [];
+  pg.on('pageerror', e => errs.push(String(e).slice(0, 300)));
+  await pg.goto(BASE + '/trade-finder', { waitUntil: 'load' });
+  await pg.waitForSelector('#tf-synced:not([hidden])', { timeout: 8000 });
+  await pg.click('#tf-load-league');
+  await pg.waitForSelector('#tf-league-pick:not([hidden]) input[data-lt]', { timeout: 8000 });
+  const pick = () => pg.$$eval('#tf-league-teams label', ls => ls.map(l => ({ name: l.textContent, on: l.querySelector('input').checked, off: l.querySelector('input').disabled })));
+  let rows = await pick();
+  ok('every league team is offered', rows.length === 7, String(rows.length));
+  ok('five are ticked to start, the reader’s among them', rows.filter(r => r.on).length === 5 && rows.find(r => /My Squad/.test(r.name)).on);
+  ok('the other two are switched off at the cap', rows.filter(r => !r.on).every(r => r.off));
+  let names = await pg.$$eval('.tf-team input.nm', els => els.map(e => e.value));
+  ok('the five load straight away, the reader’s team first', names.length === 5 && names[0] === 'My Squad', names.join(' | '));
+  ok('and it is marked as the reader’s', await pg.$eval('.tf-team[data-i="0"]', e => e.classList.contains('mine')));
+  ok('the two left out are the last in the league’s order', !names.includes('Rival E') && !names.includes('Rival F'));
+  ok('the count says five of five', /5 of 5/.test(await pg.textContent('#tf-league-count')));
+
+  // Swap Rival A for Rival F.
+  const box = n => pg.$$eval('#tf-league-teams label', (ls, n) => ls.find(l => l.textContent.indexOf(n) >= 0).querySelector('input').click(), n);
+  await box('Rival A');
+  rows = await pick();
+  ok('unticking one switches the rest back on', rows.every(r => !r.off));
+  await box('Rival F');
+  await pg.click('#tf-league-apply');
+  names = await pg.$$eval('.tf-team input.nm', els => els.map(e => e.value));
+  ok('the new pick is what loads', names.length === 5 && names.includes('Rival F') && !names.includes('Rival A') && names[0] === 'My Squad', names.join(' | '));
+  const chips = await pg.$$eval('.tf-team', els => els.map(e => e.querySelectorAll('.chip').length));
+  ok('every loaded team has its roster', chips.every(n => n >= 3), JSON.stringify(chips));
+  ok('the saved league page threw nothing', errs.length === 0, errs[0]);
+  await c2.close();
 }
 
 await browser.close();

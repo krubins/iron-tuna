@@ -13379,12 +13379,18 @@ rosters, then either evaluate a proposed trade or have Iron Tuna recommend one.
   arrives stops at five: `mergeTeams` (screenshots, the reader's text pass, a
   paste) refuses a new name past five and the status line names what was left
   out; a restore is sliced to five; "Add an empty team" disables at five; a
-  saved league loads the reader's team plus the next four as the league lists
-  them, and says the desk's server-side matches still cover the whole league.
+  saved league opens a picker (`#tf-league-pick`): every league team as a
+  checkbox, the reader's team plus the next four ticked and loaded at once, the
+  rest switched off while five are ticked, and "Load these teams" reloads the
+  pick with the reader's team first. The desk's server-side matches still
+  cover the whole league.
   The FAAB Advisor's roster paste is a different page and is not capped.
 - **Settings fold away.** Scoring, board, starters, horizons, balance and package
   size sit under one `<details id="tf-settings">`; every control kept its id.
-- **Tests.** `test-trade-finder.mjs` +9 (the search's top trade judged alone keeps
+- **Tests.** The page test also stubs `/api/leagues` and a seven-team
+  `/advice?module=trades` (only in its last section, in a fresh context) to
+  drive the picker: seven offered, five ticked and loaded, the cap, a swap.
+  `test-trade-finder.mjs` +9 (the search's top trade judged alone keeps
   its gains; an overpay is a loss for one side and a gain for the other; horizons
   per side; an empty trade is even). `test-trade-finder-page.mjs` +14 (folded
   paste, first team is mine, partner-narrowed search, the evaluate flow end to

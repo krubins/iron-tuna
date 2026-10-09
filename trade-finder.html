@@ -187,6 +187,11 @@ select.tf-sel{font:inherit;font-size:15.5px;padding:8px 10px;border:1px solid va
   <h3>Your league, every roster</h3>
   <p class="sub" id="tfSyncSub">Every roster in your room is already here. Load them and the finder searches real managers, or read the matches the desk found first.</p>
   <div class="cta-row"><button class="btn" id="tf-load-league" type="button">Load my league&rsquo;s rosters</button><span class="tf-status" id="tf-load-status"></span></div>
+  <div id="tf-league-pick" hidden>
+    <p class="sub">Pick up to five teams to load. Yours and four others are ticked to start.</p>
+    <div class="tf-picklist" id="tf-league-teams"></div>
+    <div class="cta-row"><button class="btn small" id="tf-league-apply" type="button">Load these teams</button><span class="tf-status" id="tf-league-count"></span></div>
+  </div>
   <div id="tfMatches"></div>
 </div>
 
@@ -627,19 +632,53 @@ Derrick Henry
       var j = res[1];
       if (!j || !j.ok) { status($('tf-load-status'), (j && (j.message || j.note)) || 'Your league did not answer.', true); return; }
       synced = j;
-      // The reader's team first, then the next four as the league lists them.
-      var order = j.teams.filter(function (t) { return t.isUser; }).concat(j.teams.filter(function (t) { return !t.isUser; }));
-      teams = order.slice(0, MAX_TEAMS).map(function (t) { return { name: t.name, players: t.players.map(function (p) { return players[p.id] || null; }).filter(Boolean), unresolved: t.players.filter(function (p) { return p.ranked && !players[p.id]; }).map(function (p) { return p.name; }) }; });
-      mine = order.length && order[0].isUser ? '0' : '';
-      var left = order.slice(MAX_TEAMS).map(function (t) { return t.name; });
       slots = { QB: j.slots.QB, RB: j.slots.RB, WR: j.slots.WR, TE: j.slots.TE, FLEX: j.slots.FLEX, SFLEX: j.slots.SFLEX }; writeState({ slots: slots });
-      paintSettings(); renderTeams();
-      status($('tf-load-status'), teams.length + ' teams loaded from ' + LS.name + '.' + overNote(left, 'the desk’s matches below still cover the whole league.') + ' Scored at your league’s settings on the server for the matches below; the finder’s own search uses the preset above.');
+      paintSettings();
+      // A league is usually bigger than five teams, so the reader picks which
+      // five. The reader's own team and the next four as the league lists them
+      // are ticked and loaded to start, so one click still gets a working page.
+      var start = [];
+      j.teams.forEach(function (t, i) { if (t.isUser) start.push(i); });
+      j.teams.forEach(function (t, i) { if (!t.isUser && start.length < MAX_TEAMS) { start.push(i); } });
+      paintLeaguePick(start);
+      applyLeaguePick();
+      status($('tf-load-status'), j.teams.length + ' teams in ' + LS.name + '. The matches below cover the whole league, scored at its settings on the server; the finder’s own search uses the scoring in its settings below.');
       $('tfMatches').innerHTML = (j.trades.length ? '<h3 style="margin-top:14px">Matches the desk found</h3>' + j.trades.slice(0, 6).map(tradeCard).join('') : '<p class="is-empty">No two-sided trade clears the bar right now: every package that helps you costs the other manager more than it gives. Widen it with the finder below.</p>') +
         (j.targets.length ? '<h3 style="margin-top:14px">Who to target in your league</h3><div class="is-scroll"><table class="is-table"><thead><tr><th>Player</th><th>Owner</th><th class="num">ROS</th><th>Read</th></tr></thead><tbody>' + j.targets.map(targetRow).join('') + '</tbody></table></div><p class="is-note">Your needs: ' + esc(j.needs.map(function (n) { return n.position + ' ' + (n.delta > 0 ? '+' : '') + n.delta + '%'; }).join(', ')) + ' against the league’s average starter.</p>' : '');
-      $('tf-rosters').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }).catch(function () { status($('tf-load-status'), 'Your league did not answer.', true); });
   }
+  function paintLeaguePick(chosen) {
+    $('tf-league-pick').hidden = false;
+    $('tf-league-teams').innerHTML = synced.teams.map(function (t, i) {
+      return '<label><input type="checkbox" data-lt="' + i + '"' + (chosen.indexOf(i) >= 0 ? ' checked' : '') + '> ' + esc(t.name)
+        + (t.isUser ? ' <i>your team</i>' : '') + '<span>' + t.players.length + ' players</span></label>';
+    }).join('');
+    leaguePickLimit();
+  }
+  // At five ticked, the rest are switched off rather than refused after the fact.
+  function leaguePickLimit() {
+    var boxes = [].slice.call($('tf-league-teams').querySelectorAll('input[data-lt]'));
+    var n = boxes.filter(function (b) { return b.checked; }).length;
+    boxes.forEach(function (b) { b.disabled = !b.checked && n >= MAX_TEAMS; });
+    $('tf-league-apply').disabled = !n;
+    status($('tf-league-count'), n + ' of ' + MAX_TEAMS + ' picked');
+  }
+  function applyLeaguePick() {
+    var picked = [].slice.call($('tf-league-teams').querySelectorAll('input[data-lt]:checked')).map(function (b) { return +b.getAttribute('data-lt'); });
+    // The reader's team goes first whatever order it was ticked in.
+    picked.sort(function (a, b) { return (synced.teams[b].isUser ? 1 : 0) - (synced.teams[a].isUser ? 1 : 0) || a - b; });
+    picked = picked.slice(0, MAX_TEAMS);
+    teams = picked.map(function (i) {
+      var t = synced.teams[i];
+      return { name: t.name, players: t.players.map(function (p) { return players[p.id] || null; }).filter(Boolean), unresolved: t.players.filter(function (p) { return p.ranked && !players[p.id]; }).map(function (p) { return p.name; }) };
+    });
+    mine = picked.length && synced.teams[picked[0]].isUser ? '0' : '';
+    partner = ''; send = []; get = [];
+    $('tf-results').hidden = true;
+    renderTeams();
+  }
+  $('tf-league-teams').addEventListener('change', leaguePickLimit);
+  $('tf-league-apply').addEventListener('click', function () { applyLeaguePick(); $('tf-rosters').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   if (window.ITSync) ITSync.load().then(function () {
     ITSync.strip($('tfSync'), { week: true });
     var LS = ITSync.active();
