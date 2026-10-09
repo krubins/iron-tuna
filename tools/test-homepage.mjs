@@ -284,7 +284,7 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   ok(`${tag}: three entry points as text links`, r.entries.join(' ') === '/fantasy /dfs /in-season/desk', r.entries.join(' '));
   // The chrome is the shared one.
   ok(`${tag}: the black bar above the ribbon carries no text`, r.line === '', r.line);
-  ok(`${tag}: the black bar above the ribbon is 12px`, r.lineH === 12, String(r.lineH));
+  ok(`${tag}: the navy bar above the ribbon is 3px`, r.lineH === 3, String(r.lineH));
   ok(`${tag}: the ribbon is ${w > 860 ? 60 : 56}px`, r.ribbonH === (w > 860 ? 60 : 56), r.ribbonH + 'px');
   ok(`${tag}: the nav is the shared five`, r.nav.join(',') === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/player', r.nav.join(','));
   if (w > 860) {
