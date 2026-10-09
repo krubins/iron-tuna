@@ -214,6 +214,9 @@ p{color:var(--sec);margin:0 0 16px}
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;
   }
   #rkTable td.num b{font-size:17px}
+  /* The season board's head is "Risk / confidence", which a third of a 375px
+     card cuts to "Risk / confiden…". On the card it is just Risk. */
+  #rkTable td[data-k="conf"][data-l="Risk / confidence"]::before{content:"Risk"}
   #rkTable>tbody>tr>td[data-k="delta"],#rkTable>tbody>tr>td[data-k="sched"],#rkTable>tbody>tr>td[data-k="opps"]{order:9;flex:0 0 100%}
   #rkTable td[data-k="delta"] .rk-why{max-width:none}
   .rk-table td.p>.rk-more{order:10;flex:0 0 100%;margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
