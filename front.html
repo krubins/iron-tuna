@@ -89,6 +89,12 @@ body{overflow-x:hidden}
 .hm-figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
 .hm-fig{min-width:0;border-left:1px solid var(--line);padding-left:var(--sp-16)}
 .hm-fig:first-child{border-left:0;padding-left:0}
+.hm-fig-txt{display:block;min-width:0}
+/* The player's photograph, off the shared identity index in /player-search.js
+   (ESPN, then NFL, then the initials it is written with). */
+.hm-face{width:56px;height:56px;border-radius:50%;overflow:hidden;position:relative;display:grid;place-items:center;background:var(--line);color:var(--ink-3);margin-bottom:var(--sp-8)}
+.hm-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+.hm-face i{font-style:normal;font-size:var(--fs-13);font-weight:600}
 .hm-fig .k{display:block;font-size:var(--fs-13);color:var(--ink-3);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hm-fig .k b{color:var(--ink);font-weight:600}
 .hm-fig .v{display:block;font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.1;margin:2px 0;font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -405,8 +411,20 @@ footer.site {margin-top:0}
   }
   // A row is valid only with all three projections AND a decision on it. Rows
   // that fail either test are dropped rather than printed with a gap in them.
+  // A gap on an injured player is no market read: it is the injury report
+  // restated, and it reads as a disagreement only because the consensus line
+  // still assumes he plays. Lamar Jackson led this row in Week 5 at "Market
+  // 0.0 · consensus 18.9 · Iron Tuna 0.0". So a player carrying any injury
+  // designation, a player the books have left off a priced game, and any row
+  // with a zero projection on either market side is not a figure here.
+  // Active and Probable are designations that say he plays.
+  function healthy(p) {
+    if (p.injury && !/^(active|probable)$/i.test(String(p.injury))) return false;
+    if (p.marketOut) return false;
+    return Number(p.vegasPoints) > 0 && Number(p.ironTunaPoints) > 0;
+  }
   function usable(p) {
-    return !!(p && p.name
+    return !!(p && p.name && healthy(p)
       && n1(p.consensusPoints) != null && n1(p.vegasPoints) != null && n1(p.ironTunaPoints) != null
       && p.delta && n1(p.delta.points) != null && decide(p));
   }
@@ -426,11 +444,48 @@ footer.site {margin-top:0}
     var d = decide(p);
     var pts = Number(p.delta.points);
     return '<li class="hm-fig">'
+      + faceHtml(p.name)
+      + '<span class="hm-fig-txt">'
       + '<span class="k"><b>' + esc(d.t) + '</b> &middot; ' + esc(p.name) + ', ' + esc(p.position + ' ' + p.team) + (p.opponent ? ' v ' + esc(p.opponent) : '') + '</span>'
       + '<span class="v' + (pts > 0 ? ' good' : '') + '">' + esc(signed(pts)) + ' pts</span>'
       + '<span class="s">Market ' + n1(p.vegasPoints) + ' &middot; consensus ' + n1(p.consensusPoints) + ' &middot; Iron Tuna ' + n1(p.ironTunaPoints) + '</span>'
-      + '</li>';
+      + '</span></li>';
   }
+  // The faces. The markup carries the initials and the NAME; the photograph
+  // is mounted from /player-search.js's index, which is deferred, so it may
+  // land after the row paints. mountFaces runs again when it announces itself,
+  // the same arrangement /dfs uses for its roster.
+  function initials(name) {
+    var parts = String(name || '').replace(/[^A-Za-z .'-]/g, '').split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    return ((parts[0][0] || '') + (parts.length > 1 ? (parts[parts.length - 1][0] || '') : '')).toUpperCase();
+  }
+  function faceHtml(name) {
+    return '<span class="hm-face" data-face-name="' + esc(name) + '" aria-hidden="true"><i>' + esc(initials(name)) + '</i></span>';
+  }
+  var FACE_ESPN = 'https://a.espncdn.com/i/headshots/nfl/players/full/';
+  var FACE_NFL = 'https://static.www.nfl.com/image/upload/f_auto,q_auto/league/';
+  function mountFaces() {
+    var boxes = document.querySelectorAll('.hm-face:not([data-face-done])');
+    for (var i = 0; i < boxes.length; i++) {
+      var box = boxes[i], hit = null;
+      try { if (window.ITPlayerSearch && ITPlayerSearch.resolve) hit = ITPlayerSearch.resolve(box.getAttribute('data-face-name')); } catch (e) { hit = null; }
+      if (!hit) continue;                    // keep the initials; try again when the index lands
+      box.setAttribute('data-face-done', '1');
+      var srcs = [];
+      if (hit.e) srcs.push(FACE_ESPN + hit.e + '.png');
+      if (hit.h) srcs.push(FACE_NFL + hit.h);
+      if (!srcs.length) continue;
+      (function (el, list) {
+        var img = document.createElement('img'), at = 0;
+        img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
+        img.onerror = function () { if (++at < list.length) img.src = list[at]; else img.remove(); };
+        img.src = list[0];
+        el.appendChild(img);
+      })(box, srcs);
+    }
+  }
+  document.addEventListener('it-player-search-ready', mountFaces);
   var oddsStamp = null;
   function fineHtml(week) {
     return '<span class="hm-tag">Estimate</span>'
@@ -447,6 +502,7 @@ footer.site {margin-top:0}
     $('diffFine').innerHTML = fineHtml(marketWeek);
     show($('different'), true);
     relink($('diffBody'));
+    mountFaces();
   });
 
   // ── the tiles and the KPI band ───────────────────────────────────────────

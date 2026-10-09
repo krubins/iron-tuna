@@ -7856,7 +7856,12 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
     consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, ironTunaRank: p.ironTuna.rank,
     consensusPoints: p.consensus.points, vegasPoints: p.vegas.points, ironTunaPoints: p.ironTuna.points,
     opponent: p.weeks && p.weeks[0] ? p.weeks[0].opponent : null,
-    delta: p.marketDelta, confidence: p.vegas.confidence, basis: p.vegas.basis, why: p.why ? p.why.summary : '' });
+    delta: p.marketDelta, confidence: p.vegas.confidence, basis: p.vegas.basis, why: p.why ? p.why.summary : '',
+    // Why a gap can be no disagreement at all: the man is hurt, or the books
+    // have left him off a priced game. A fade on a player ruled out is the
+    // injury report restated, and the homepage's market row must not lead
+    // with one (Lamar Jackson, Market 0.0 and consensus 18.9, Oct. 2026).
+    injury: p.injury ? p.injury.status : null, marketOut: p.marketOut ? p.marketOut.status : null });
   const vsExperts = {
     buys: sig.filter(p => p.marketDelta.points > 0).sort((a, b) => (b.marketDelta.rank || 0) - (a.marketDelta.rank || 0) || b.marketDelta.points - a.marketDelta.points).slice(0, 12).map(brief),
     fades: sig.filter(p => p.marketDelta.points < 0).sort((a, b) => (a.marketDelta.rank || 0) - (b.marketDelta.rank || 0) || a.marketDelta.points - b.marketDelta.points).slice(0, 12).map(brief)
