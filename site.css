@@ -1991,10 +1991,10 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
     order: 10; align-self: stretch; margin-top: 12px; padding: 8px 8px 9px;
     border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
   }
-  table.rk-vs > tbody > tr > td.rk-pts { flex: 0 0 19%; text-align: left; padding-right: 0 }
-  table.rk-vs > tbody > tr > td.rk-rnk { flex: 0 0 13%; text-align: left; padding-left: 4px }
+  table.rk-vs > tbody > tr > td.rk-pts { flex: 0 0 15%; text-align: left; padding-right: 0 }
+  table.rk-vs > tbody > tr > td.rk-rnk { flex: 0 0 12%; text-align: left; padding-left: 4px; padding-right: 4px }
   table.rk-vs > tbody > tr > td.rk-mkt { background: var(--panel); border-color: var(--panel) }
-  table.rk-vs > tbody > tr > td.rk-gap { flex: 1 1 0; text-align: right; min-width: 0 }
+  table.rk-vs > tbody > tr > td.rk-gap { flex: 1 1 0; text-align: right; min-width: 0; padding-left: 4px; padding-right: 6px }
   table.rk-vs > tbody > tr > td.rk-pts::before,
   table.rk-vs > tbody > tr > td.rk-rnk::before,
   table.rk-vs > tbody > tr > td.rk-gap::before {
@@ -2007,7 +2007,7 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
   table.rk-vs > tbody > tr > td.rk-pts { font-size: 17px }
   table.rk-vs > tbody > tr > td.rk-rnk { font-size: var(--fs-13); padding-top: 11px }
   table.rk-vs > tbody > tr > td.rk-gap b { display: inline; font-size: 17px }
-  table.rk-vs > tbody > tr > td.rk-gap span:not(.rk-slots) { display: inline-block; margin: 4px 0 0; white-space: normal; text-align: center }
+  table.rk-vs > tbody > tr > td.rk-gap span:not(.rk-slots) { display: inline-block; margin: 4px 0 0; padding: 1px 4px }
   table.rk-vs > tbody > tr > td.rk-gap .rk-slots { display: block; margin-top: 3px }
 
   /* the prose */
@@ -2017,7 +2017,17 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
     order: 12; flex: 0 0 100%; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line);
   }
 
+  table.rk-vs > tbody > tr > td.rk-note.rk-empty { display: none }
+
+  /* The week drawer: its own six-column table, fitted to the card's width
+     rather than scrolled. Heads wrap ("Fantasy / Consensus") and the cell
+     padding steps down, which is all it takes to clear 390px. */
   table.rk-vs > tbody > tr.rk-weeks, table.rk-vs > tbody > tr.rk-weeks > td { display: block }
+  table.rk-vs > tbody > tr.rk-weeks > td { padding: var(--space-3) var(--space-2) }
+  table.rk-vs .rk-wk { font-size: var(--fs-13) }
+  table.rk-vs .rk-wk th, table.rk-vs .rk-wk td { padding: 6px 5px; white-space: normal; vertical-align: bottom }
+  table.rk-vs .rk-wk td { white-space: nowrap }
+  table.rk-vs .rk-wk tfoot td:first-child { white-space: normal }
 }
 
 /* ── the week-by-week drawer ──────────────────────────────────────────────
