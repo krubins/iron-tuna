@@ -137,6 +137,46 @@ body{overflow-x:hidden}
   .hm-tile{width:100%}
 }
 
+/* ── 2b · today's story ───────────────────────────────────────────────────
+   The desk's lead as one wide tile in the position tiles' idiom: a flat
+   colour field, a line illustration on the right, and the copy in white over
+   a dark fade from the left. The colour turns over with the Eastern day
+   (data-tone), so the band reads as the day's story rather than a fixture.
+   On a phone the fade runs up from the foot and the copy sits under the art,
+   the way a position tile carries its name. */
+#story[hidden]{display:none}
+.hm-story{--s1:#143d59;--s2:#f2c14e;--s3:#cfe3ee;position:relative;display:block;min-height:340px;border-radius:10px;overflow:hidden;color:#fff;background:var(--s1)}
+.hm-story[data-tone="1"]{--s1:#4a2a4f;--s2:#ffb4a2;--s3:#f1dde8}
+.hm-story[data-tone="2"]{--s1:#1f5a3c;--s2:#f2c14e;--s3:#e8e3d0}
+.hm-story:hover{color:#fff;text-decoration:none}
+.hm-story:hover .hm-story-head{text-decoration:underline}
+.hm-story svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hm-story svg .bg{fill:var(--s1)}
+.hm-story svg .sheet{fill:none;stroke:var(--s3);stroke-width:3;opacity:.55}
+.hm-story svg .bar{fill:var(--s3);opacity:.7}
+.hm-story svg .txt{stroke:var(--s3);stroke-width:3;stroke-linecap:round;opacity:.4}
+.hm-story svg .run{fill:none;stroke:var(--s2);stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+.hm-story svg .dot{fill:var(--s2)}
+.hm-story-cap{position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:340px;padding:var(--sp-32);background:linear-gradient(90deg,rgba(0,0,0,.6) 0%,rgba(0,0,0,.36) 45%,rgba(0,0,0,0) 70%)}
+.hm-story-cap > *{max-width:34rem}
+.hm-story-kick{display:block;font-size:var(--fs-13);font-weight:600;color:var(--s2);margin:0 0 var(--sp-8)}
+.hm-story-head{display:block;margin:0 0 var(--sp-12);color:#fff;font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.hm-story-dek{display:block;margin:0 0 var(--sp-16);font-size:var(--fs-16);line-height:1.5;color:rgba(255,255,255,.86)}
+.hm-story-dek:empty{display:none}
+.hm-story-foot{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-12)}
+.hm-story-faces{display:flex}
+.hm-story-faces:empty{display:none}
+.hm-story-faces .hm-face{width:40px;height:40px;margin:0 0 0 -8px;border:2px solid var(--s1);background:var(--s3);color:var(--s1)}
+.hm-story-faces .hm-face:first-child{margin-left:0}
+.hm-story-meta{font-size:var(--fs-13);color:rgba(255,255,255,.86);font-variant-numeric:tabular-nums}
+@media(max-width:860px){
+  .hm-story,.hm-story-cap{min-height:440px}
+  /* The art takes the top of the tile, whole, and the copy sits under it. */
+  .hm-story svg{height:58%}
+  .hm-story-cap{padding:var(--sp-24) var(--sp-16);background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,.6) 75%)}
+  .hm-story-head{font-size:var(--fs-23)}
+}
+
 /* ── 3 · newest, as a ledger ──────────────────────────────────────────────
    The six newest pieces the desk published, newest first. The name column is
    the headline over the series; the figure columns are the week, when it was
@@ -275,6 +315,29 @@ footer.site {margin-top:0}
   </div>
 </section>
 
+<!-- ── 2b · today's story ───────────────────────────────────────────────────
+     The front page's lead off /api/lead-story: in the regular season the
+     desk's newest published piece, otherwise the newest verified generated
+     story. Hidden outright until a real story answers; the desk's "next
+     piece" placeholder is not a story and never shows here. -->
+<section class="hm-sec" id="story" hidden aria-labelledby="storyHead">
+  <div class="wrap">
+    <div class="hm-sec-head">
+      <h2 id="storyHead">Today&rsquo;s story</h2>
+      <a href="/in-season/desk">All articles &rarr;</a>
+    </div>
+    <a class="hm-story" id="storyCard" href="/in-season/desk">
+      <svg viewBox="0 0 640 340" preserveAspectRatio="xMaxYMid meet" aria-hidden="true" focusable="false"><rect class="bg" width="640" height="340"/><rect class="sheet" x="392" y="44" width="196" height="252" rx="6"/><rect class="bar" x="412" y="66" width="156" height="22" rx="3"/><path class="txt" d="M412 112h156M412 132h156M412 152h120M412 184h72M496 184h72M412 204h72M496 204h72M412 224h56M496 224h60"/><path class="run" d="M300 300 L360 250 L398 268 L462 196 L500 214 L588 112"/><circle class="dot" cx="588" cy="112" r="11"/></svg>
+      <span class="hm-story-cap">
+        <span class="hm-story-kick" id="storyKick"></span>
+        <h3 class="hm-story-head" id="storyHeadline"></h3>
+        <span class="hm-story-dek" id="storyDek"></span>
+        <span class="hm-story-foot"><span class="hm-story-faces" id="storyFaces"></span><span class="hm-story-meta" id="storyMeta"></span></span>
+      </span>
+    </a>
+  </div>
+</section>
+
 <!-- ── 3 · newest from the desk ─────────────────────────────────────────────
      Six rows, newest first, off /api/newsroom: the published feed, deduped
      by slug, the one /in-season/desk reads. Never /api/content, which is the
@@ -358,7 +421,7 @@ footer.site {margin-top:0}
 <script src="/player-search.js" defer></script>
 <script>
 // ══ the homepage ═══════════════════════════════════════════════════════════
-// Three live bands, three feeds, one rule: A BAND IS EITHER FULL OF REAL
+// Four live bands, four feeds, one rule: A BAND IS EITHER FULL OF REAL
 // CURRENT DATA OR IT IS HIDDEN. There is no loading copy on this page, no
 // skeleton and no "waiting for this week's slate" — every element that depends
 // on a feed is written `hidden` in the served HTML and is revealed only once
@@ -372,6 +435,7 @@ footer.site {margin-top:0}
 //   /api/rankings     the board behind the sixteen position pages: who is
 //                     ranked, who carries a market line, when the odds were read
 //   /api/newsroom     the desk's current pieces (published, one per story)
+//   /api/lead-story   the front page's lead: the day's story, over the ledger
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -596,8 +660,14 @@ footer.site {margin-top:0}
     (p.components || []).forEach(function (c) { if (c && c.player && out.indexOf(c.player) < 0) out.push(c.player); });
     return out.length;
   }
+  // The ledger never repeats the story the band above it is running: the
+  // lead is the desk's newest piece in the regular season, so without this
+  // the same headline would sit on the front twice. Whichever feed lands
+  // second repaints the ledger.
+  var deskJson = null, leadUrl = null;
   function desk(j) {
-    var live = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).slice(0, NEWEST);
+    deskJson = j;
+    var live = (j.pieces || []).filter(function (p) { return p && p.url && p.headline && p.url !== leadUrl; }).slice(0, NEWEST);
     if (!live.length) return;
     $('readGrid').innerHTML = live.map(function (p) {
       var n = named(p);
@@ -612,15 +682,43 @@ footer.site {margin-top:0}
     kpi.pieces = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).length;
     paintKpi();
   }
+  // ── today's story ────────────────────────────────────────────────────────
+  // /api/lead-story, the front page's lead. A placeholder (the desk's next
+  // piece, named and timed) is not a story, and a row without a destination
+  // or a headline is not one either: the band stays hidden for both.
+  function etDayNo(v) {
+    var d = etDay(v).split('-');
+    return d.length === 3 ? Math.floor(Date.UTC(+d[0], +d[1] - 1, +d[2]) / 86400000) : 0;
+  }
+  function story(j) {
+    var s = j.story;
+    if (!s || s.placeholder || !s.url || !s.title) return;
+    var names = (s.names && s.names.length ? s.names : (s.cast || []).map(function (c) { return c && c.n; })).filter(Boolean).slice(0, 4);
+    var kick = [s.label, s.analyst].filter(Boolean).join(' · ');
+    var at = +s.createdAt || 0;
+    var card = $('storyCard');
+    card.setAttribute('href', s.url);
+    card.setAttribute('data-tone', String(etDayNo(Date.now()) % 3));
+    $('storyKick').textContent = kick || 'The desk';
+    $('storyHeadline').textContent = headlineOf({ headline: s.title });
+    $('storyDek').textContent = s.dek || '';
+    $('storyFaces').innerHTML = names.map(faceHtml).join('');
+    $('storyMeta').textContent = at ? 'Published ' + ago(at) : '';
+    show($('story'), true);
+    mountFaces();
+    if (leadUrl !== s.url) { leadUrl = s.url; if (deskJson) desk(deskJson); }
+  }
+  function storyRead() { grab('/api/lead-story', story); }
   function deskRead() { grab('/api/newsroom?limit=20', desk); }
+  storyRead();
   deskRead();
   // THE OPEN PAGE KEEPS UP. A tab left open re-reads the desk every ten
   // minutes, so a story the desk files reaches the front; a hidden tab skips
   // the read and catches up when it is shown again.
   var DESK_REFRESH_MS = 10 * 60 * 1000, deskStale = false;
-  setInterval(function () { if (document.hidden) deskStale = true; else deskRead(); }, DESK_REFRESH_MS);
+  setInterval(function () { if (document.hidden) deskStale = true; else { storyRead(); deskRead(); } }, DESK_REFRESH_MS);
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden && deskStale) { deskStale = false; deskRead(); }
+    if (!document.hidden && deskStale) { deskStale = false; storyRead(); deskRead(); }
   });
 })();
 </script>
