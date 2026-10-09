@@ -225,6 +225,8 @@ const read = page => page.evaluate(() => {
     articles: vis(byId('articles')),
     rows: [...document.querySelectorAll('#readGrid .ledger-row')].map(r => ({
       href: r.getAttribute('href'), name: text(r.querySelector('.ledger-name b')), sub: text(r.querySelector('.ledger-name span')),
+      namePx: px(r.querySelector('.ledger-name b')), subPx: px(r.querySelector('.ledger-name span')),
+      thumb: (() => { const t = r.querySelector('.hm-thumb'); if (!t || r.firstElementChild !== t) return null; const b = t.getBoundingClientRect(); return { w: Math.round(b.width), h: Math.round(b.height), face: t.getAttribute('data-face-name'), mark: !!t.querySelector('img.mark') }; })(),
       figs: [...r.querySelectorAll('.ledger-fig')].filter(vis).map(f => ({ k: text(f.querySelector('small')), v: text(f.querySelector('b')), kPx: px(f.querySelector('small')), vPx: px(f.querySelector('b')),
         right: getComputedStyle(f).textAlign }))
     })),
@@ -262,8 +264,9 @@ const read = page => page.evaluate(() => {
   };
 });
 
-// The scale the brief fixes: 12 is the disclosure label alone, and 17 is the
-// ledger's figure (a 13px label over a 17px figure) and nothing else.
+// The scale the brief fixes: 12 is the disclosure label alone, and 17 is a
+// board ledger's figure (a 13px label over a 17px figure) and nothing else.
+// The front's desk ledger sets its own figures a step larger (14 over 19).
 const SCALE = new Set([12, 13, 14, 16, 17, 19, 23, 28, 34, 44, 56, 68]);
 
 // ── 1. the hero, at both widths ─────────────────────────────────────────────
@@ -363,8 +366,13 @@ console.log('\nwith the boards answering');
   ok('the boast comes off the headline in a ledger row', r.rows[3] && r.rows[3].name === 'the total moved three points in a day', r.rows[3] && r.rows[3].name);
   ok('each row is the headline over the series, then three figure columns',
      r.rows.every(x => x.figs.length === 3 && x.figs.map(f => f.k).join(',') === 'Published,Week,Players named'), JSON.stringify(r.rows[0] && r.rows[0].figs));
-  ok('each figure is a 13px label over a 17px figure, right-aligned',
-     r.rows.every(x => x.figs.every(f => f.kPx === 13 && f.vPx === 17 && f.right === 'right')), JSON.stringify(r.rows[0] && r.rows[0].figs));
+  ok('each figure is a 14px label over a 19px figure, right-aligned',
+     r.rows.every(x => x.figs.every(f => f.kPx === 14 && f.vPx === 19 && f.right === 'right')), JSON.stringify(r.rows[0] && r.rows[0].figs));
+  ok('the headline is 23px over a 16px series line',
+     r.rows.every(x => x.namePx === 23 && x.subPx === 16), JSON.stringify(r.rows.map(x => [x.namePx, x.subPx])));
+  ok('every row leads with a 112 by 84 picture, the first named player over a fallback mark',
+     r.rows.every(x => x.thumb && x.thumb.w === 112 && x.thumb.h === 84 && x.thumb.mark) && r.rows[0].thumb.face,
+     JSON.stringify(r.rows.map(x => x.thumb)));
   ok('a piece from minutes ago says so, and one from yesterday too',
      r.rows[0].figs[0].v === '6m ago' && r.rows[4].figs[0].v === 'Yesterday', r.rows.map(x => x.figs[0].v).join(' / '));
   ok('and the players a piece names are counted', r.rows[0].figs[2].v === '2' && r.rows[2].figs[2].v === '0', r.rows.map(x => x.figs[2].v).join(','));
