@@ -332,12 +332,12 @@
       // different fact, and one the Opportunity line below would contradict.
       var w0 = p.weeks && p.weeks[0];
       var oppCell = horizon === 'week'
-        ? '<td>' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
+        ? '<td class="rk-opp">' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
             : esc((w0.home ? 'vs ' : 'at ') + w0.opponent) + (w0.out ? ' <span class="is-status">OUT</span>'
               : w0.noLine && w0.noLine.status === 'out' ? ' <span class="is-status">NO LINE</span>' : '')) + '</td>'
-        : '<td class="num">' + (p.games == null ? '—' : p.games) + '</td>';
+        : '<td class="num rk-opp">' + (p.games == null ? '—' : p.games) + '</td>';
       var opener = wantWeeks
-        ? '<td><button class="rk-open" type="button" data-open="' + esc(p.key) + '" aria-expanded="' + (open[p.key] ? 'true' : 'false') +
+        ? '<td class="rk-opener"><button class="rk-open" type="button" data-open="' + esc(p.key) + '" aria-expanded="' + (open[p.key] ? 'true' : 'false') +
           '" aria-label="Show every remaining week for ' + esc(p.name) + '">' + (open[p.key] ? '&minus;' : '+') + '</button></td>'
         : '';
       // The row's own address. The id is what #p-<slug> lands on with no
@@ -345,14 +345,14 @@
       // included, which is the thing a reader actually wants to paste.
       var sl = slug(p.name);
       return '<tr id="p-' + esc(sl) + '"' + (focus && focus === sl ? ' class="rk-hit"' : '') + '>' + opener +
-        '<td class="num">' + (primaryRank(p) == null ? '—' : esc(p.position) + primaryRank(p)) + '</td>' +
+        '<td class="num rk-rank">' + (primaryRank(p) == null ? '—' : esc(p.position) + primaryRank(p)) + '</td>' +
         '<td class="rk-who"><a href="/player/' + sl + '"><b>' + esc(p.name) + '</b></a>' +
           (pos === 'ALL' || pos === 'FLEX' ? '<small>' + esc(p.position) + '</small>' : '') +
           '<button class="rk-share" type="button" data-share="' + esc(sl) +
             '" aria-label="Copy a link to ' + esc(p.name) + ' on this board">Link</button>' +
           reads(p) +
         '</td>' +
-        '<td>' + esc(p.team) + '</td>' + oppCell +
+        '<td class="rk-team">' + esc(p.team) + '</td>' + oppCell +
         '<td class="rk-fan rk-pts">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
         '<td class="rk-fan rk-rnk">' + (rankOf(p, 'consensus') == null ? '—' : esc(p.position) + rankOf(p, 'consensus')) + '</td>' +
         '<td class="rk-mkt rk-pts">' + n1(p.vegas ? p.vegas.points : null) +

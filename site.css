@@ -1917,6 +1917,109 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
 .rk-vs tbody > tr:not(.rk-weeks) > td.num:nth-child(2) { font-weight: 700; color: var(--text) }
 .rk-vs td.rk-pts .rk-basis { font-weight: 400 }
 
+/* ── the board as cards, on a phone ────────────────────────────────────────
+   At 390px the table showed rank, name, team and half the fixture; both
+   projections, both ranks and the gap (the reason the page exists) sat
+   off-screen behind a sideways scroll nothing announced. Below 640px each row
+   becomes a card, by CSS alone, so the desktop table and the pre-render are
+   the same markup:
+
+     line 1   rank, face, name, position, link   (the name cell is
+              display:contents, so its children join the row's flex line)
+     line 2   team and fixture, under the name
+     strip    Consensus | Betting odds | Gap, labelled from CSS
+     prose    the Player and Opportunity reads, then the note
+
+   The two forced line breaks are the row's own ::before and ::after, ordered
+   into place. The column heads stay as a wrapping row of sort chips, since
+   tapping a head is the only way to re-sort the board. Every selector names
+   the child path so the week drawer's own table (.rk-wk) is left alone. */
+@media (max-width: 640px) {
+  table.rk-vs, table.rk-vs > thead, table.rk-vs > tbody { display: block }
+  table.rk-vs > thead > tr:first-child { display: none }
+  table.rk-vs > thead > tr:last-child {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    padding: 0 0 var(--space-3); border-bottom: 1px solid var(--line2);
+  }
+  table.rk-vs > thead > tr:last-child::before {
+    content: "Sort"; margin-right: 2px; font-size: var(--fs-13); font-weight: 600; color: var(--muted);
+  }
+  table.rk-vs > thead > tr > th { display: none }
+  table.rk-vs > thead > tr > th[data-key] {
+    display: block; padding: 3px 10px; border: 1px solid var(--line2); border-radius: 999px;
+    background: var(--bg); color: var(--sec); text-align: left; cursor: pointer;
+  }
+  table.rk-vs > thead > tr > th.rk-fan::before { content: "Consensus " }
+  table.rk-vs > thead > tr > th.rk-mkt::before { content: "Odds " }
+  table.rk-vs > thead > tr > th[aria-sort] { background: var(--text); border-color: var(--text); color: #fff }
+
+  table.rk-vs > tbody > tr:not(.rk-weeks) {
+    display: flex; flex-wrap: wrap; align-items: center;
+    padding: 14px 0; border-bottom: 1px solid var(--line);
+  }
+  table.rk-vs > tbody > tr:not(.rk-weeks) > td {
+    padding: 0; border: 0; min-width: 0; max-width: none; width: auto;
+    background: transparent; line-height: 1.4;
+  }
+  table.rk-vs > tbody > tr:not(.rk-weeks):hover > td { background: transparent }
+  table.rk-vs > tbody > tr:not(.rk-weeks)::before,
+  table.rk-vs > tbody > tr:not(.rk-weeks)::after { content: ""; flex: 0 0 100%; height: 0 }
+
+  /* line 1 */
+  table.rk-vs > tbody > tr > td.rk-rank { order: 1; flex: 0 0 3.25rem; font-size: var(--fs-16); text-align: left }
+  table.rk-vs > tbody > tr > td.rk-who { display: contents }
+  table.rk-vs td.rk-who > .it-player-face { order: 2; width: 28px; height: 28px; min-width: 28px; margin: 0 8px 0 0 }
+  table.rk-vs td.rk-who > a { order: 3; font-size: 17px }
+  table.rk-vs td.rk-who > small { order: 4 }
+  table.rk-vs td.rk-who > .rk-share { order: 5; margin-left: auto }
+  table.rk-vs > tbody > tr > td.rk-opener { order: 6; margin-left: 8px }
+  table.rk-vs > tbody > tr > td.rk-opener .rk-open { width: 28px; height: 28px }
+  table.rk-vs > tbody > tr:not(.rk-weeks)::before { order: 7 }
+
+  /* line 2: under the name, not under the rank */
+  table.rk-vs > tbody > tr > td.rk-team,
+  table.rk-vs > tbody > tr > td.rk-opp { order: 8; margin-top: 2px; font-size: var(--fs-14); color: var(--sec); text-align: left }
+  table.rk-vs > tbody > tr > td.rk-team { margin-left: 3.25rem }
+  table.rk-vs > tbody > tr > td.rk-team::after { content: "\00b7"; margin: 0 6px; color: var(--muted) }
+  table.rk-vs > tbody > tr > td.rk-opp.num::before { content: "Games "; color: var(--muted) }
+  table.rk-vs > tbody > tr:not(.rk-weeks)::after { order: 9 }
+
+  /* the strip */
+  table.rk-vs > tbody > tr > td.rk-fan,
+  table.rk-vs > tbody > tr > td.rk-mkt,
+  table.rk-vs > tbody > tr > td.rk-gap {
+    order: 10; align-self: stretch; margin-top: 12px; padding: 8px 8px 9px;
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  table.rk-vs > tbody > tr > td.rk-pts { flex: 0 0 19%; text-align: left; padding-right: 0 }
+  table.rk-vs > tbody > tr > td.rk-rnk { flex: 0 0 13%; text-align: left; padding-left: 4px }
+  table.rk-vs > tbody > tr > td.rk-mkt { background: var(--panel); border-color: var(--panel) }
+  table.rk-vs > tbody > tr > td.rk-gap { flex: 1 1 0; text-align: right; min-width: 0 }
+  table.rk-vs > tbody > tr > td.rk-pts::before,
+  table.rk-vs > tbody > tr > td.rk-rnk::before,
+  table.rk-vs > tbody > tr > td.rk-gap::before {
+    display: block; margin-bottom: 3px; font-size: var(--fs-13); font-weight: 600; color: var(--muted);
+    content: "\00a0"; white-space: nowrap;
+  }
+  table.rk-vs > tbody > tr > td.rk-fan.rk-pts::before { content: "Consensus" }
+  table.rk-vs > tbody > tr > td.rk-mkt.rk-pts::before { content: "Odds" }
+  table.rk-vs > tbody > tr > td.rk-gap::before { content: "Gap" }
+  table.rk-vs > tbody > tr > td.rk-pts { font-size: 17px }
+  table.rk-vs > tbody > tr > td.rk-rnk { font-size: var(--fs-13); padding-top: 11px }
+  table.rk-vs > tbody > tr > td.rk-gap b { display: inline; font-size: 17px }
+  table.rk-vs > tbody > tr > td.rk-gap span:not(.rk-slots) { display: inline-block; margin: 4px 0 0; white-space: normal; text-align: center }
+  table.rk-vs > tbody > tr > td.rk-gap .rk-slots { display: block; margin-top: 3px }
+
+  /* the prose */
+  table.rk-vs td.rk-who > .rk-read { order: 11; flex: 0 0 100%; max-width: none; margin-top: 10px }
+  table.rk-vs td.rk-who > .rk-read + .rk-read { margin-top: 4px }
+  table.rk-vs > tbody > tr > td.rk-note {
+    order: 12; flex: 0 0 100%; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line);
+  }
+
+  table.rk-vs > tbody > tr.rk-weeks, table.rk-vs > tbody > tr.rk-weeks > td { display: block }
+}
+
 /* ── the week-by-week drawer ──────────────────────────────────────────────
    Season-long only: a rest-of-season total is a sum, and the thing a reader
    actually wants from it is which weeks it came from. The button is a real

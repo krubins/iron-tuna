@@ -10179,18 +10179,18 @@ function rkPreHtml(pre) {
   const rows = pre.payload.players.slice(0, RK_PRERENDER_ROWS).map((p) => {
     const w0 = p.weeks && p.weeks[0];
     const opp = week
-      ? '<td>' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
+      ? '<td class="rk-opp">' + (!w0 || w0.bye ? '<span class="is-status">BYE</span>'
           : e((w0.home ? 'vs ' : 'at ') + w0.opponent) + (w0.out ? ' <span class="is-status">OUT</span>' : '')) + '</td>'
-      : '<td class="num">' + (p.games == null ? '—' : p.games) + '</td>';
+      : '<td class="num rk-opp">' + (p.games == null ? '—' : p.games) + '</td>';
     const d = p.marketDelta || {};
     const cls = d.points == null ? 'flat' : d.points > 0.05 ? 'up' : d.points < -0.05 ? 'down' : 'flat';
     const slots = d.rank == null ? '' : (d.rank > 0 ? '+' : '') + d.rank + ' slots';
     const cr = rankOf(p, 'consensus'), vr = rankOf(p, 'vegas');
     return '<tr id="p-' + e(slug(p.name)) + '">' +
-      '<td class="num">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
+      '<td class="num rk-rank">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
       '<td class="rk-who"><a href="/player/' + e(slug(p.name)) + '"><b>' + e(p.name) + '</b></a>' +
         (pre.pos === 'ALL' || pre.pos === 'FLEX' ? '<small>' + e(p.position) + '</small>' : '') + '</td>' +
-      '<td>' + e(p.team) + '</td>' + opp +
+      '<td class="rk-team">' + e(p.team) + '</td>' + opp +
       '<td class="rk-fan rk-pts">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
       '<td class="rk-fan rk-rnk">' + (cr == null ? '—' : e(p.position) + cr) + '</td>' +
       '<td class="rk-mkt rk-pts">' + n1(p.vegas ? p.vegas.points : null) +
