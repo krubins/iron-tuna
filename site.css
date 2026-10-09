@@ -157,8 +157,7 @@
   /* The gutter between a page's body column and a rail beside it. */
   --rail-gap: 56px;
 
-  /* The ribbon alone. The black bar above it and the navy bar below it add
-     12px each. */
+  /* The ribbon alone. The navy bars above and below it add 12px each. */
   --header-h: 60px;
   --line-h: 12px;
 }
@@ -209,10 +208,11 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
 /* ── header ─────────────────────────────────────────────────────────────────
    In the style of a ticket or sports site, in this site's colours:
 
-     .site-line    an empty 12px near-black bar above the ribbon. It carried a
-                   key phrase until 2026-10-09.
-     ::after       a 12px navy bar under the ribbon, the ribbon's own colour
-                   since 2026-10-09 (it was near-black).
+     .site-line    an empty 12px navy bar above the ribbon. It carried a key
+                   phrase until 2026-10-09.
+     ::after       the matching 12px navy bar under the ribbon. Both bars take
+                   the ribbon's own colour since 2026-10-09 (they were
+                   near-black), so the three read as one navy band.
      .site-ribbon  the flat navy ribbon, 60px (56 on a phone), no border and no
                    shadow. The logo sits on a white panel that starts at the
                    left screen edge and ends in an 18px slant. Nav links are
@@ -224,7 +224,7 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
    The ribbon is sticky and FLAT: no blur, no translucency. A backdrop-filter
    would also make the ribbon the containing block for the fixed tab bar. */
 header.site { position: sticky; top: 0; z-index: 50; background: var(--mast) }
-.site-line { margin: 0; height: var(--line-h); background: var(--text) }
+.site-line { margin: 0; height: var(--line-h); background: var(--mast) }
 header.site::after { content: ""; display: block; height: var(--line-h); background: var(--mast) }
 header.site .site-ribbon, header.site > .wrap {
   display: flex; align-items: stretch; gap: var(--space-4);
