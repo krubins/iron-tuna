@@ -3,12 +3,13 @@
 //   node tools/test-homepage.mjs
 //
 // October 2026: "/" is the ledger-style front described in docs/design/brief.md.
-// Five sections, in this order: a white centred hero (one headline, one
+// Six sections, in this order: a white centred hero (one headline, one
 // sentence, the search field, three entry points, a hairline and the row of
-// live market figures), the six position tiles, the six newest desk pieces as
-// a ledger, the three How-it-works cards, and the navy KPI band; then the
-// shared footer. The cover rotation, the photograph, the lead story, the two
-// lane cards and the quick-links strip all came off with it.
+// live market figures), the six position tiles, today's story (the front
+// page's lead as one wide illustrated tile), the six newest desk pieces as a
+// ledger, the three How-it-works cards, and the navy KPI band; then the
+// shared footer. The cover rotation, the photograph, the two lane cards and
+// the quick-links strip came off in October and stay off.
 //
 // THE RULE THIS EXISTS FOR, and the one the old page broke constantly: A BAND
 // IS EITHER FULL OF REAL CURRENT DATA OR IT IS HIDDEN. So every feed here is
@@ -138,6 +139,19 @@ const ARCHIVE_POISON = { ok: true, pieces: [1, 2, 3, 4, 5].map(v => ({
   headline: 'HELD DRAFT ' + v + ' — must never reach the front',
   week: 3, publishedAt: NOW, url: '/in-season/desk/weekend-preview/3'
 })) };
+// /api/lead-story in the regular season: the desk's newest piece, in the
+// shape deskLeadPayload sends. The ledger must not print it a second time.
+const LEAD = { ok: true, source: 'desk', story: {
+  slug: 'desk:final-read:3', url: '/in-season/desk/final-read/3',
+  title: 'YOU’RE WELCOME: Three lineups the market moved overnight', dek: 'Sunday morning props shifted two flex calls.',
+  label: 'The Final Read', category: 'desk', analyst: 'Iron Tuna desk', createdAt: AGO(0.1),
+  players: [], ppl: [], names: ['Puka Nacua', 'James Cook'], cast: [] }, recent: [] };
+// The desk with nothing published yet: the lead is its NEXT piece, named and
+// timed. That is not a story, and the band must stay hidden for it.
+const LEAD_NEXT = { ok: true, source: 'desk-next', story: {
+  slug: 'desk:next:final-read', url: '/in-season/desk', title: 'Next from the desk: The Final Read', dek: 'Publishes Sunday at 11:00 AM ET.',
+  label: 'The Desk', category: 'desk', placeholder: true, analyst: 'Iron Tuna desk', createdAt: NOW + 3600000, players: [], names: [], cast: [] }, recent: [] };
+let LEAD_BODY = LEAD;
 const SEASON = { ok: true, phase: 'regular', phaseLabel: 'Regular season',
   week: { label: 'Week 3', status: 'upcoming', firstKickoff: Date.UTC(2026, 8, 17, 20, 15) }, counts: { inProgress: 0 } };
 
@@ -153,6 +167,7 @@ const server = http.createServer((req, res) => {
       if (u.pathname === '/api/vegas-edge') body = EDGE;
       else if (u.pathname === '/api/rankings') body = RANK;
       else if (u.pathname === '/api/newsroom') body = CONTENT;
+      else if (u.pathname === '/api/lead-story') body = LEAD_BODY;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
     }
@@ -221,6 +236,14 @@ const read = page => page.evaluate(() => {
       live: vis(a.querySelector('.hm-tile-live')) ? text(a.querySelector('.hm-tile-live')) : null, svg: !!a.querySelector('svg[aria-hidden="true"]'),
       w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height) })),
     tileTops: [...new Set([...document.querySelectorAll('.hm-tile')].map(a => Math.round(a.getBoundingClientRect().top)))].length,
+    // Today's story.
+    story: vis(byId('story')),
+    card: (() => { const a = byId('storyCard'); if (!a || !vis(a)) return null; const b = a.getBoundingClientRect();
+      return { href: a.getAttribute('href'), tone: a.getAttribute('data-tone'), kick: text(byId('storyKick')), head: text(byId('storyHeadline')),
+        dek: text(byId('storyDek')), meta: text(byId('storyMeta')), faces: [...a.querySelectorAll('.hm-face')].map(f => f.getAttribute('data-face-name')),
+        svg: !!a.querySelector('svg[aria-hidden="true"]'), radius: parseFloat(getComputedStyle(a).borderTopLeftRadius),
+        bg: getComputedStyle(a).backgroundColor, color: getComputedStyle(a).color, w: Math.round(b.width), h: Math.round(b.height),
+        headPx: px(byId('storyHeadline')), cap: (() => { const c = a.querySelector('.hm-story-cap').getBoundingClientRect(); return { top: Math.round(c.top - b.top), left: Math.round(c.left - b.left) }; })() }; })(),
     // The ledger.
     articles: vis(byId('articles')),
     rows: [...document.querySelectorAll('#readGrid .ledger-row')].map(r => ({
@@ -303,11 +326,11 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
 }
 
 // ── 2. the outline ──────────────────────────────────────────────────────────
-console.log('\nfive sections, in order, and nothing else');
+console.log('\nsix sections, in order, and nothing else');
 {
   const { page, ctx } = await open(1440, 900);
   const r = await read(page);
-  ok('hero, tiles, newest, method, band', r.allSections.join(' > ') === 'heroBand > positions > articles > how > kpi', r.allSections.join(' > '));
+  ok('hero, tiles, story, newest, method, band', r.allSections.join(' > ') === 'heroBand > positions > story > articles > how > kpi', r.allSections.join(' > '));
   ok('the market figures live inside the hero, not as a sixth section', !r.allSections.includes('different') && !!(await page.$('#heroBand #different')));
   ok('six tiles, one per position, each linking its weekly board',
      r.tiles.map(t => t.href).join(' ') === '/weekly-qb-rankings /weekly-rb-rankings /weekly-wr-rankings /weekly-te-rankings /weekly-k-rankings /weekly-dst-rankings', r.tiles.map(t => t.href).join(' '));
@@ -356,20 +379,36 @@ console.log('\nwith the boards answering');
      r.tiles.map(t => t.live).join(' | ') === '34 ranked · 22 priced | 72 ranked · 48 priced | 98 ranked · 65 priced | 42 ranked · 28 priced | 32 ranked · 21 priced | 32 ranked · 21 priced',
      r.tiles.map(t => t.live).join(' | '));
 
+  ok('today\'s story is shown, directly under the tiles', r.story === true && r.order.indexOf('story') === r.order.indexOf('positions') + 1, r.order.join(' > '));
+  ok('it links the lead and carries its series, byline, dek and age',
+     !!r.card && r.card.href === '/in-season/desk/final-read/3' && r.card.kick === 'The Final Read · Iron Tuna desk'
+       && r.card.dek === 'Sunday morning props shifted two flex calls.' && r.card.meta === 'Published 6m ago', JSON.stringify(r.card));
+  ok('the boast comes off its headline too', !!r.card && r.card.head === 'Three lineups the market moved overnight', r.card && r.card.head);
+  ok('with a face for each player it names', !!r.card && r.card.faces.join(',') === 'Puka Nacua,James Cook', r.card && r.card.faces.join(','));
+  ok('drawn as a tile: wide, rounded 10px, its own illustration, white on a colour field',
+     !!r.card && r.card.svg && r.card.radius === 10 && r.card.w > r.card.h && r.card.color === 'rgb(255, 255, 255)' && r.card.bg !== 'rgba(0, 0, 0, 0)' && /^[012]$/.test(r.card.tone || ''),
+     JSON.stringify(r.card));
+  ok('its headline is 28px on a desk', !!r.card && r.card.headPx === 28, r.card && String(r.card.headPx));
+
   ok('the newest ledger is shown', r.articles === true);
-  ok('six rows, newest first', r.rows.length === 6 && r.rows.map(x => x.href).join(' ') === '/in-season/desk/final-read/3 /in-season/desk/opportunity-report/3 /in-season/desk/rankings-update/3 /in-season/desk/scorecard/3 /in-season/desk/weekend-game-plan/3 /in-season/desk/waiver-watch/3',
+  ok('six rows, newest first, without the story running above them', r.rows.length === 6 && r.rows.map(x => x.href).join(' ') === '/in-season/desk/opportunity-report/3 /in-season/desk/rankings-update/3 /in-season/desk/scorecard/3 /in-season/desk/weekend-game-plan/3 /in-season/desk/waiver-watch/3 /in-season/desk/start-sit/3',
      r.rows.map(x => x.href).join(' '));
   ok('a row without a destination or a headline is not a row', !r.rows.some(x => /No destination|Blank/.test(x.name + x.sub)));
-  ok('the boast comes off the headline in a ledger row', r.rows[3] && r.rows[3].name === 'the total moved three points in a day', r.rows[3] && r.rows[3].name);
+  ok('the boast comes off the headline in a ledger row', r.rows[2] && r.rows[2].name === 'the total moved three points in a day', r.rows[2] && r.rows[2].name);
   ok('each row is the headline over the series, then three figure columns',
      r.rows.every(x => x.figs.length === 3 && x.figs.map(f => f.k).join(',') === 'Published,Week,Players named'), JSON.stringify(r.rows[0] && r.rows[0].figs));
   ok('each figure is a 13px label over a 17px figure, right-aligned',
      r.rows.every(x => x.figs.every(f => f.kPx === 13 && f.vPx === 17 && f.right === 'right')), JSON.stringify(r.rows[0] && r.rows[0].figs));
-  ok('a piece from minutes ago says so, and one from yesterday too',
-     r.rows[0].figs[0].v === '6m ago' && r.rows[4].figs[0].v === 'Yesterday', r.rows.map(x => x.figs[0].v).join(' / '));
-  ok('and the players a piece names are counted', r.rows[0].figs[2].v === '2' && r.rows[2].figs[2].v === '0', r.rows.map(x => x.figs[2].v).join(','));
+  // A piece 26 hours old is "Yesterday" only when it is on the Eastern day
+  // before today; just after midnight ET it is two days back and prints its
+  // day instead. The expectation follows the clock the page uses.
+  const etDay = v => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(v));
+  const twoDaysBack = etDay(AGO(26)) !== etDay(Date.now() - 24 * 3600 * 1000);
+  ok('a piece from hours ago says so, and one from yesterday too',
+     r.rows[0].figs[0].v === '3h ago' && (twoDaysBack ? /^[A-Z][a-z]{2} \d+\/\d+$/.test(r.rows[3].figs[0].v) : r.rows[3].figs[0].v === 'Yesterday'), r.rows.map(x => x.figs[0].v).join(' / '));
+  ok('and the players a piece names are counted', r.rows[0].figs[2].v === '1' && r.rows[1].figs[2].v === '0', r.rows.map(x => x.figs[2].v).join(','));
   ok('no held draft reaches the front', !/HELD DRAFT/.test(r.body), (r.body.match(/HELD DRAFT \d/) || [''])[0]);
-  ok('and no story is on the front twice', new Set(r.rows.map(x => x.href)).size === r.rows.length);
+  ok('and no story is on the front twice', new Set(r.rows.map(x => x.href).concat(r.card ? [r.card.href] : [])).size === r.rows.length + (r.card ? 1 : 0));
 
   ok('the KPI band is shown, navy, with white 44px figures', r.kpi === true && r.kpiBg === 'rgb(0, 30, 71)' && r.kpis.every(k => k.px === 44), JSON.stringify({ bg: r.kpiBg, px: r.kpis.map(k => k.px) }));
   ok('its figures come off the board and the desk',
@@ -393,6 +432,18 @@ console.log('\nwith a board too short to print');
   await ctx.close();
 }
 
+// ── 3b'. the desk's next piece is not a story ───────────────────────────────
+console.log('\nwith only the desk\'s next piece for a lead');
+{
+  LEAD_BODY = LEAD_NEXT;
+  const { page, ctx } = await open(1440, 900);
+  const r = await read(page);
+  ok('a placeholder is not today\'s story: the band is hidden', r.story === false && r.card === null);
+  ok('and the ledger keeps the newest piece', r.rows.length === 6 && r.rows[0].href === '/in-season/desk/final-read/3', r.rows.map(x => x.href).join(' '));
+  LEAD_BODY = LEAD;
+  await ctx.close();
+}
+
 // ── 3c. the phone ───────────────────────────────────────────────────────────
 console.log('\non a phone');
 {
@@ -408,6 +459,8 @@ console.log('\non a phone');
   ok('the tile row scrolls sideways, edge to edge, with the first tile on the gutter', row.scrolls && row.ulLeft === 0 && row.left === 16, JSON.stringify(row));
   ok('the market figures stack, one per row', row.figsStacked === 1 && r.figs.length === 4, String(row.figsStacked));
   ok('the tab bar is fixed to the foot of the screen, 68px', row.tab.fixed === 'fixed' && row.tab.h === 68 && row.tab.bottom === 844, JSON.stringify(row.tab));
+  ok('today\'s story runs full width with its copy under the art, headline at 23px',
+     !!r.card && r.card.w === 358 && r.card.headPx === 23 && r.card.cap.left === 0 && r.card.h >= 440, JSON.stringify(r.card));
   ok('the ledger keeps the published figure beside each headline', r.rows.length === 6 && r.rows.every(x => x.figs.length === 1 && x.figs[0].k === 'Published'), JSON.stringify(r.rows[0] && r.rows[0].figs));
   ok('and the page does not scroll sideways', r.overflow === 0, String(r.overflow));
   await ctx.close();
@@ -444,7 +497,7 @@ console.log('\nkeyboard focus');
 {
   const { page, ctx } = await open(1440, 900);
   const rings = [];
-  for (const sel of ['header.site .nav a', '.hm-entry a', '#different .hm-sec-head a', '.hm-tile', '#readGrid a', '#how .hm-how-more a', '.foot-nav a']) {
+  for (const sel of ['header.site .nav a', '.hm-entry a', '#different .hm-sec-head a', '.hm-tile', '#storyCard', '#readGrid a', '#how .hm-how-more a', '.foot-nav a']) {
     rings.push(await page.evaluate(sel => { const e = document.querySelector(sel); if (!e) return null; e.focus(); const cs = getComputedStyle(e);
       return { sel, style: cs.outlineStyle, width: parseFloat(cs.outlineWidth) }; }, sel));
   }
@@ -467,6 +520,7 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   ok(`${tag}: the three entry points still stand`, r.entries.length === 3);
   ok(`${tag}: the market row is hidden, not empty`, r.market === false && r.figs.length === 0);
   ok(`${tag}: the tiles stay, without a live line`, r.tiles.length === 6 && r.tiles.every(t => t.live === null), r.tiles.map(t => t.live).join(','));
+  ok(`${tag}: today's story is hidden, not an empty tile`, r.story === false && r.card === null);
   ok(`${tag}: the ledger is hidden, not empty`, r.articles === false && r.rows.length === 0);
   ok(`${tag}: the method is still there`, r.how === true);
   ok(`${tag}: the KPI band is hidden rather than a band of blanks`, r.kpi === false && r.kpis.length === 0);
