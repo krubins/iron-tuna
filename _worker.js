@@ -12628,7 +12628,7 @@ function pieceExpired(row, sched, now) {
 // forward piece whose games have kicked off is left out (pieceExpired above);
 // `expired` counts what was held back so a thin feed can be told apart from
 // a desk that did not publish.
-async function newsroomFeedPayload(env, lens, limit) {
+async function newsroomFeedPayload(env, lens, limit, floor) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
   try {
@@ -12646,8 +12646,16 @@ async function newsroomFeedPayload(env, lens, limit) {
     const sched = await scheduleCacheRead(env);
     const now = Date.now();
     const before = rows.length;
+    const spent = rows.filter(r => pieceExpired(r, sched, now));
     rows = rows.filter(r => !pieceExpired(r, sched, now));
     const expired = before - rows.length;
+    // THE FLOOR. A caller that asks for one (the front page asks for three)
+    // never gets fewer stories than that while the desk has published them:
+    // when expiry leaves the feed short, the newest spent pieces top it up,
+    // marked `expired` so a page can tell them apart. Without a floor the
+    // feed is exactly what it was.
+    const want0 = Math.max(0, Math.min(6, floor || 0));
+    if (rows.length < want0) rows = rows.concat(spent.slice(0, want0 - rows.length).map(r => ({ ...r, _spent: true })));
     // The kind's CURRENT lens decides, not the row's: a row stored while its
     // kind still had a DFS lens does not put that kind back in the DFS lane.
     if (lens === 'dfs') rows = rows.filter(r => (r.lens === 'both' || r.lens === 'dfs') && !(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].lens !== 'both'));
@@ -12658,7 +12666,7 @@ async function newsroomFeedPayload(env, lens, limit) {
     // nothing about which game. `components` are the findings the rail breaks
     // the story into once it is no longer the lead.
     return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, expired, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: _lensHead(r, lens), dek: _lensDek(r, lens), version: r.version || 1, edition: _pieceEdition(r), publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry,
-      game: r.game_id || null, perGame: !!(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].perGame), components: parse(r.components) })) };
+      game: r.game_id || null, perGame: !!(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].perGame), components: parse(r.components), ...(r._spent ? { expired: true } : {}) })) };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
 // The front page's lead, in the regular season: the newest published piece,
@@ -16542,7 +16550,7 @@ export default {
     if (url.pathname === '/api/newsroom') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
-      const out = await newsroomFeedPayload(env, url.searchParams.get('lens') === 'dfs' ? 'dfs' : 'weekly', parseInt(url.searchParams.get('limit') || '20', 10) || 20);
+      const out = await newsroomFeedPayload(env, url.searchParams.get('lens') === 'dfs' ? 'dfs' : 'weekly', parseInt(url.searchParams.get('limit') || '20', 10) || 20, parseInt(url.searchParams.get('floor') || '0', 10) || 0);
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=120' });
     }
     // The recap strip above the front page's hero. Sixty seconds, because on a

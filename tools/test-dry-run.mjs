@@ -416,6 +416,15 @@ console.log('\nthe feeds and the front page');
   ok('what happened stays: the Week 1 recaps and What Sunday Taught Us are still listed', all.pieces.some(p => p.kind === 'game-recap' && p.week === 1) && all.pieces.some(p => p.kind === 'what-sunday-taught-us' && p.week === 1));
   ok('a Week 2 piece still ahead of its games is listed', all.pieces.some(p => p.week === 2 && p.kind === 'weekend-preview'));
   ok('the feed says how many it held back', Number.isFinite(all.expired) && all.expired >= 3, String(all.expired));
+  {
+    // The front page asks for a floor of three. When expiry leaves the feed
+    // short of the floor, the newest spent pieces top it up, marked expired;
+    // without a floor the feed is unchanged.
+    const live = all.pieces.length, floor = Math.min(6, live + 2);
+    const topped = await H.newsroomFeedPayload(env, 'weekly', 60, floor);
+    const extra = topped.pieces.filter(p => p.expired);
+    ok('a floor tops a short feed up with spent pieces, marked expired', topped.ok && topped.pieces.length === Math.max(live, floor) && extra.length === Math.max(0, floor - live) && !all.pieces.some(p => p.expired), live + ' -> ' + topped.pieces.length);
+  }
   ok('the front-page lead and its column carry none of them', (() => { const l = [movedLead.story].concat(movedLead.recent); return !l.some(r => FORWARD.some(k => r.slug.startsWith('desk:' + k + ':1:') || r.slug === 'desk:' + k + ':1') || r.slug.startsWith('desk:tnf-preview:2')); })(), JSON.stringify([movedLead.story].concat(movedLead.recent).map(r => r.slug)));
   // ── one row per story, an honest edition, and a draft not rewritten forever ──
   {

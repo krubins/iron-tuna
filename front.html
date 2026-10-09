@@ -138,14 +138,31 @@ body{overflow-x:hidden}
 }
 
 /* ── 3 · newest, as a ledger ──────────────────────────────────────────────
-   The six newest pieces the desk published, newest first. The name column is
-   the headline over the series; the figure columns are the week, when it was
-   published and how many players the piece names. Hidden outright when the
-   desk has nothing current. */
+   The six newest pieces the desk published, newest first, and never fewer
+   than three while the desk has three (the feed's floor). Each row leads with
+   a picture: the first player the piece names, else the home team's mark,
+   else the tuna. The name column is the headline over the series, set larger
+   than a board's ledger because these rows are stories, not figures; the
+   figure columns are when it was published, the week and how many players the
+   piece names. Hidden outright when the desk has nothing. */
 #articles[hidden]{display:none}
 .hm-ledger{--cols:3}
-.hm-ledger .ledger-row{grid-template-columns:minmax(0,1fr) 7rem 7rem 7rem}
-@media(max-width:860px){.hm-ledger .ledger-row{grid-template-columns:minmax(0,1fr) auto}}
+.hm-ledger .ledger-row{grid-template-columns:112px minmax(0,1fr) 7rem 7rem 7rem;gap:var(--sp-12) var(--sp-24);padding:var(--sp-16) 0}
+.hm-ledger .ledger-name b{font-size:var(--fs-23);line-height:1.25;letter-spacing:-.01em}
+.hm-ledger .ledger-name span{font-size:var(--fs-16);margin-top:var(--sp-4)}
+.hm-ledger .ledger-fig small{font-size:var(--fs-14)}
+.hm-ledger .ledger-fig b{font-size:var(--fs-19)}
+.hm-thumb{position:relative;display:grid;place-items:center;width:112px;height:84px;margin:0;border-radius:8px;overflow:hidden;background:var(--line)}
+.hm-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+.hm-thumb img.mark{object-fit:contain;padding:12px}
+.hm-thumb img:not(.mark){background:var(--line)}
+@media(max-width:860px){
+  .hm-ledger .ledger-row{grid-template-columns:80px minmax(0,1fr) auto;gap:var(--sp-8) var(--sp-12)}
+  .hm-ledger .ledger-name b{font-size:var(--fs-19)}
+  .hm-ledger .ledger-name span{font-size:var(--fs-14)}
+  .hm-thumb{width:80px;height:60px}
+  .hm-thumb img.mark{padding:8px}
+}
 
 /* ── 4 · how it works ─────────────────────────────────────────────────────
    Three outlined rounded cards: the three inputs, in order. */
@@ -596,12 +613,35 @@ footer.site {margin-top:0}
     (p.components || []).forEach(function (c) { if (c && c.player && out.indexOf(c.player) < 0) out.push(c.player); });
     return out.length;
   }
+  // THE PICTURE. The first player the piece names, mounted by mountFaces once
+  // /player-search.js can resolve him; under it, the home team's mark off a
+  // "TB at DAL" title, else the tuna, so a row is never a blank box while the
+  // index loads or when a headshot fails.
+  function firstNamed(p) {
+    var c = (p.components || []).filter(function (c) { return c && c.player; })[0];
+    return c ? c.player : null;
+  }
+  var LOGO_ESPN = 'https://a.espncdn.com/i/teamlogos/nfl/500/';
+  var ESPN_TEAM = { WAS: 'wsh' };
+  function markSrc(p) {
+    var m = /\b([A-Z]{2,3}) (?:at|vs\.?) ([A-Z]{2,3})\b/.exec(String(p.title || ''));
+    if (!m) return '/tuna-mark.png';
+    var t = m[2];
+    return LOGO_ESPN + (ESPN_TEAM[t] || t.toLowerCase()) + '.png';
+  }
+  function thumbHtml(p) {
+    var who = firstNamed(p);
+    return '<span class="hm-thumb' + (who ? ' hm-face' : '') + '"' + (who ? ' data-face-name="' + esc(who) + '"' : '') + ' aria-hidden="true">'
+      + '<img class="mark" src="' + esc(markSrc(p)) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=\'/tuna-mark.png\'">'
+      + '</span>';
+  }
   function desk(j) {
     var live = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).slice(0, NEWEST);
     if (!live.length) return;
     $('readGrid').innerHTML = live.map(function (p) {
       var n = named(p);
       return '<a class="ledger-row" href="' + esc(p.url) + '">'
+        + thumbHtml(p)
         + '<span class="ledger-name"><b>' + esc(headlineOf(p)) + '</b><span>' + esc(p.title || 'The desk') + (p.byline && p.byline.name ? ' · ' + esc(p.byline.name) : '') + '</span></span>'
         + '<span class="ledger-fig keep"><small>Published</small><b>' + esc(p.publishedAt ? ago(p.publishedAt) : (p.week ? 'Week ' + p.week : '')) + '</b></span>'
         + '<span class="ledger-fig"><small>Week</small><b>' + esc(p.week != null ? String(p.week) : '') + '</b></span>'
@@ -609,10 +649,11 @@ footer.site {margin-top:0}
         + '</a>';
     }).join('');
     show($('articles'), true);
-    kpi.pieces = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).length;
+    mountFaces();
+    kpi.pieces = (j.pieces || []).filter(function (p) { return p && p.url && p.headline && !p.expired; }).length;
     paintKpi();
   }
-  function deskRead() { grab('/api/newsroom?limit=20', desk); }
+  function deskRead() { grab('/api/newsroom?limit=20&floor=3', desk); }
   deskRead();
   // THE OPEN PAGE KEEPS UP. A tab left open re-reads the desk every ten
   // minutes, so a story the desk files reaches the front; a hidden tab skips
