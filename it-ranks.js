@@ -102,6 +102,7 @@
     var q = '';
     var sortKey = 'rank', sortDir = 1;
     var open = {};               // player key -> drawer open
+    var readOpen = {};           // player key -> Player/Opportunity lines shown
     var allOpen = false;
     var focus = '';              // the row ?player= names, until the reader moves
     var painted = false;         // whether the live board has rendered once
@@ -326,6 +327,18 @@
         points: p.vegas ? p.vegas.points : null, ctx: readCtx });
     }
 
+    // The two lines fold away under the name (9 Oct 2026). Open, they stood
+    // every row four lines tall, so a screen held six players and the numbers,
+    // which are what a reader scans down, were spread across a page of prose.
+    // A <details> needs no script to open and is announced as expandable. The
+    // open set is kept by key, because a sort or a filter rebuilds the rows.
+    function readsBlock(p) {
+      var r = reads(p);
+      if (!r) return '';
+      return '<details class="rk-more" data-read="' + esc(p.key) + '"' + (readOpen[p.key] ? ' open' : '') + '>' +
+        '<summary>Player &amp; opportunity</summary>' + r + '</details>';
+    }
+
     function rowHtml(p) {
       // The week's fixture. A player ruled OUT still has an opponent, and
       // printing BYE over his fixture — which the earlier filter did — is a
@@ -350,7 +363,7 @@
           (pos === 'ALL' || pos === 'FLEX' ? '<small>' + esc(p.position) + '</small>' : '') +
           '<button class="rk-share" type="button" data-share="' + esc(sl) +
             '" aria-label="Copy a link to ' + esc(p.name) + ' on this board">Link</button>' +
-          reads(p) +
+          readsBlock(p) +
         '</td>' +
         '<td class="rk-team">' + esc(p.team) + '</td>' + oppCell +
         '<td class="rk-fan rk-pts">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
@@ -531,6 +544,12 @@
       render();
     });
     input.addEventListener('input', function () { q = this.value.trim(); render(); });
+    // `toggle` does not bubble, so it is caught on the way down.
+    tbody.addEventListener('toggle', function (ev) {
+      var d = ev.target;
+      if (!d || !d.getAttribute || !d.hasAttribute('data-read')) return;
+      readOpen[d.getAttribute('data-read')] = d.open;
+    }, true);
     thead.addEventListener('click', function (ev) {
       var h = ev.target.closest('th[data-key]');
       if (!h) return;
