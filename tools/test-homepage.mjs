@@ -341,8 +341,8 @@ console.log('\nwith the boards answering');
   ok('a player the market agrees about is not a figure', !r.figs.some(f => f.k.includes('Agreeable')));
   ok('no injured player, no player the books left off, and no zero projection is a figure',
      !r.figs.some(f => /Lamar Jackson|Hobbled|Priced Out|Zeroed/.test(f.k)) && !r.figs.some(f => /Market 0\.0|Iron Tuna 0\.0/.test(f.s)), r.figs.map(f => f.k).join(' / '));
-  ok('every figure carries the player\'s photograph, a 56px circle',
-     r.figs.every(f => f.face && f.face.w === 56 && f.face.h === 56 && f.k.includes(f.face.name)), JSON.stringify(r.figs.map(f => f.face)));
+  ok('every figure carries the player\'s photograph, an 88px circle',
+     r.figs.every(f => f.face && f.face.w === 88 && f.face.h === 88 && f.k.includes(f.face.name)), JSON.stringify(r.figs.map(f => f.face)));
   ok('resolved off the shared player index, ESPN first',
      r.figs.every(f => f.face.done) && ['4426502', '4688380', '3043078', '4429096'].every(id => photos.some(u => u.includes('/headshots/nfl/players/full/' + id + '.png'))),
      JSON.stringify(photos.filter(u => /headshots/.test(u))));
