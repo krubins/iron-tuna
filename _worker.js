@@ -12650,12 +12650,13 @@ async function newsroomFeedPayload(env, lens, limit, floor) {
     rows = rows.filter(r => !pieceExpired(r, sched, now));
     const expired = before - rows.length;
     // THE FLOOR. A caller that asks for one (the front page asks for three)
-    // never gets fewer stories than that while the desk has published them:
-    // when expiry leaves the feed short, the newest spent pieces top it up,
-    // marked `expired` so a page can tell them apart. Without a floor the
-    // feed is exactly what it was.
+    // gets the feed topped up to it when expiry leaves it short, and only
+    // with game recaps: a recap reports what happened, so it does not go
+    // stale the way spent advice does (Ken, 2026-10-09). The top-up rows are
+    // marked `expired` so a page can tell them apart. Without a floor, or
+    // with no spent recaps, the feed is exactly what it was.
     const want0 = Math.max(0, Math.min(6, floor || 0));
-    if (rows.length < want0) rows = rows.concat(spent.slice(0, want0 - rows.length).map(r => ({ ...r, _spent: true })));
+    if (rows.length < want0) rows = rows.concat(spent.filter(r => r.kind === 'game-recap').slice(0, want0 - rows.length).map(r => ({ ...r, _spent: true })));
     // The kind's CURRENT lens decides, not the row's: a row stored while its
     // kind still had a DFS lens does not put that kind back in the DFS lane.
     if (lens === 'dfs') rows = rows.filter(r => (r.lens === 'both' || r.lens === 'dfs') && !(CONTENT_KINDS[r.kind] && CONTENT_KINDS[r.kind].lens !== 'both'));

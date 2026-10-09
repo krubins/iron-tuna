@@ -418,12 +418,18 @@ console.log('\nthe feeds and the front page');
   ok('the feed says how many it held back', Number.isFinite(all.expired) && all.expired >= 3, String(all.expired));
   {
     // The front page asks for a floor of three. When expiry leaves the feed
-    // short of the floor, the newest spent pieces top it up, marked expired;
-    // without a floor the feed is unchanged.
-    const live = all.pieces.length, floor = Math.min(6, live + 2);
-    const topped = await H.newsroomFeedPayload(env, 'weekly', 60, floor);
-    const extra = topped.pieces.filter(p => p.expired);
-    ok('a floor tops a short feed up with spent pieces, marked expired', topped.ok && topped.pieces.length === Math.max(live, floor) && extra.length === Math.max(0, floor - live) && !all.pieces.some(p => p.expired), live + ' -> ' + topped.pieces.length);
+    // short of the floor, the newest spent GAME RECAPS top it up, marked
+    // expired, and nothing else does; without a floor the feed is unchanged.
+    // Read on the Tuesday after Week 2, when the Week 1 recaps are spent.
+    const t0 = clock.t, d0 = Date.now;
+    clock.t = ET(2026, 9, 22, 7, 0); Date.now = () => clock.t;
+    try {
+      const bare = await H.newsroomFeedPayload(env, 'weekly', 60);
+      const live = bare.pieces.length, floor = Math.min(6, live + 2);
+      const topped = await H.newsroomFeedPayload(env, 'weekly', 60, floor);
+      const extra = topped.pieces.filter(p => p.expired);
+      ok('a floor tops a short feed up with spent game recaps only, marked expired', topped.ok && extra.length >= 1 && extra.length <= floor - live && extra.every(p => p.kind === 'game-recap') && !bare.pieces.some(p => p.expired), live + ' -> ' + topped.pieces.length + ' ' + extra.map(p => p.kind).join());
+    } finally { clock.t = t0; Date.now = d0; }
   }
   ok('the front-page lead and its column carry none of them', (() => { const l = [movedLead.story].concat(movedLead.recent); return !l.some(r => FORWARD.some(k => r.slug.startsWith('desk:' + k + ':1:') || r.slug === 'desk:' + k + ':1') || r.slug.startsWith('desk:tnf-preview:2')); })(), JSON.stringify([movedLead.story].concat(movedLead.recent).map(r => r.slug)));
   // ── one row per story, an honest edition, and a draft not rewritten forever ──
