@@ -300,11 +300,11 @@
         if (p.injury && p.injury.status) bits.push(esc(p.injury.status) + (p.injury.gamesOut ? ' (' + p.injury.gamesOut + ')' : ''));
         if (p.why && p.why.summary) bits.push(esc(p.why.summary));
         if (!bits.length && p.roleTrend && p.roleTrend.applied) bits.push('usage ' + esc(p.roleTrend.label) + (p.roleTrend.pct != null ? ' ' + (p.roleTrend.pct > 0 ? '+' : '') + p.roleTrend.pct + '%' : ''));
-        return '<td>' + (bits.length ? bits.join(' &middot; ') : '—') + '</td>';
+        return '<td class="rk-note">' + (bits.length ? bits.join(' &middot; ') : '—') + '</td>';
       }
       var s = p.scheduleDifficulty;
       var byes = p.byes && p.byes.length ? ' &middot; bye ' + esc(p.byes.join(', ')) : '';
-      return '<td>' + (s ? esc(s.label) + ' <span class="is-status">' + esc(s.avgOpponentDefRank) + '</span>' : '—') + byes + '</td>';
+      return '<td class="rk-note">' + (s ? esc(s.label) + ' <span class="is-status">' + esc(s.avgOpponentDefRank) + '</span>' : '—') + byes + '</td>';
     }
 
     // THE TWO LINES, from the shared grammar in it-reads.js. All this board has
