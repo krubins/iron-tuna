@@ -429,6 +429,13 @@ Derrick Henry
 
   // ── the rosters ──────────────────────────────────────────────────────────
   var teams = [];        // [{ name, players: [player], unresolved: [line] }]
+  // Five teams, wherever they come from. A trade is a conversation between a
+  // few managers, and five rosters is what the page asks for; every way in
+  // (screenshots, a paste, a saved league, a restore, the add button) stops here.
+  var MAX_TEAMS = 5;
+  function overNote(dropped, tail) {
+    return dropped.length ? ' Five teams is the limit, so ' + dropped.length + ' more ' + (dropped.length === 1 ? 'was' : 'were') + ' left out (' + dropped.join(', ') + '); ' + (tail || 'remove a team to make room.') : '';
+  }
   var mine = st.mine == null ? '' : String(st.mine);
   function persistTeams() {
     writeState({ teams: teams.map(function (t) { return { name: t.name, ids: t.players.map(function (p) { return p.id; }), unresolved: t.unresolved }; }), mine: mine, partner: partner, send: send, get: get });
@@ -437,7 +444,7 @@ Derrick Henry
     if (!st.teams || !pool) return;
     teams = st.teams.map(function (t) {
       return { name: t.name, players: (t.ids || []).map(function (id) { return players[id]; }).filter(Boolean), unresolved: t.unresolved || [] };
-    }).filter(function (t) { return t.players.length || t.unresolved.length; });
+    }).filter(function (t) { return t.players.length || t.unresolved.length; }).slice(0, MAX_TEAMS);
   }
   function status(el, msg, err) { el.textContent = msg || ''; el.classList.toggle('err', !!err); }
 
@@ -446,25 +453,27 @@ Derrick Henry
     if (!text.trim()) { status($('tf-read-status'), 'Paste the rosters first.', true); return; }
     var r = TR.parseRosters(text, pool);
     if (!r.teams.length) { status($('tf-read-status'), 'No player the board knows was found in that paste. Check the names, or let the reader untangle it.', true); $('tf-llm-text').hidden = false; $('tf-teams-actions').hidden = false; return; }
-    mergeTeams(r.teams.map(function (t) { return { name: t.name, players: t.players.map(function (row) { return row.p; }), unresolved: t.unresolved }; }));
+    var dropped = mergeTeams(r.teams.map(function (t) { return { name: t.name, players: t.players.map(function (row) { return row.p; }), unresolved: t.unresolved }; }));
     var placed = 0, missing = 0;
     teams.forEach(function (t) { placed += t.players.length; missing += t.unresolved.length; });
     status($('tf-read-status'), teams.length + ' team' + (teams.length === 1 ? '' : 's') + ', ' + placed + ' players placed'
       + (missing ? ', ' + missing + ' line' + (missing === 1 ? '' : 's') + ' not recognized (fix them below)' : '')
-      + (r.duplicates.length ? '. ' + r.duplicates.length + ' listed twice, kept with the first team' : '') + '.');
+      + (r.duplicates.length ? '. ' + r.duplicates.length + ' listed twice, kept with the first team' : '') + '.' + overNote(dropped));
     $('tf-llm-text').hidden = !(missing > placed / 3);
     writeState({ text: text });
     renderTeams();
   }
   // Names from the reader or a second paste join the teams already here: a
-  // team with the same name gains the new players, a new name is a new team.
+  // team with the same name gains the new players, a new name is a new team
+  // while there is room for one. Returns the names left out.
   function mergeTeams(incoming) {
-    var have = {}, fresh = !teams.length;
+    var have = {}, fresh = !teams.length, dropped = [];
     teams.forEach(function (t) { t.players.forEach(function (p) { have[p.id] = t; }); });
     incoming.forEach(function (it) {
       var key = TR.fold(it.name);
       var t = null;
       teams.forEach(function (x) { if (!t && TR.fold(x.name) === key) t = x; });
+      if (!t && teams.length >= MAX_TEAMS) { dropped.push(it.name); return; }
       if (!t) { t = { name: it.name, players: [], unresolved: [] }; teams.push(t); }
       it.players.forEach(function (p) { if (!have[p.id]) { t.players.push(p); have[p.id] = t; } });
       (it.unresolved || []).forEach(function (u) { if (t.unresolved.indexOf(u) < 0) t.unresolved.push(u); });
@@ -473,6 +482,7 @@ Derrick Henry
     // The page asks for the reader's roster first, so the first team in an
     // empty page is theirs until they say otherwise.
     if (fresh && mine === '' && teams.length) mine = '0';
+    return dropped;
   }
   // The value is the board's own spelling, so a pick goes straight back
   // through TR.resolve and lands; the label is what tells two Williamses apart.
@@ -513,6 +523,7 @@ Derrick Henry
         + '</div>';
     }).join('');
     $('tf-teams-actions').hidden = !teams.length;
+    $('tf-add').disabled = teams.length >= MAX_TEAMS;
     var sel = $('tf-mine-sel');
     sel.innerHTML = (mode === 'evaluate' ? '' : '<option value="">Any two teams (commissioner view)</option>') + teams.map(function (t, i) { return '<option value="' + i + '"' + (String(i) === mine ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('');
     renderPick();
@@ -616,11 +627,14 @@ Derrick Henry
       var j = res[1];
       if (!j || !j.ok) { status($('tf-load-status'), (j && (j.message || j.note)) || 'Your league did not answer.', true); return; }
       synced = j;
-      teams = j.teams.map(function (t) { return { name: t.name, players: t.players.map(function (p) { return players[p.id] || null; }).filter(Boolean), unresolved: t.players.filter(function (p) { return p.ranked && !players[p.id]; }).map(function (p) { return p.name; }) }; });
-      var mi = j.teams.findIndex(function (t) { return t.isUser; }); mine = mi >= 0 ? String(mi) : '';
+      // The reader's team first, then the next four as the league lists them.
+      var order = j.teams.filter(function (t) { return t.isUser; }).concat(j.teams.filter(function (t) { return !t.isUser; }));
+      teams = order.slice(0, MAX_TEAMS).map(function (t) { return { name: t.name, players: t.players.map(function (p) { return players[p.id] || null; }).filter(Boolean), unresolved: t.players.filter(function (p) { return p.ranked && !players[p.id]; }).map(function (p) { return p.name; }) }; });
+      mine = order.length && order[0].isUser ? '0' : '';
+      var left = order.slice(MAX_TEAMS).map(function (t) { return t.name; });
       slots = { QB: j.slots.QB, RB: j.slots.RB, WR: j.slots.WR, TE: j.slots.TE, FLEX: j.slots.FLEX, SFLEX: j.slots.SFLEX }; writeState({ slots: slots });
       paintSettings(); renderTeams();
-      status($('tf-load-status'), teams.length + ' teams loaded from ' + LS.name + '. Scored at your league’s settings on the server for the matches below; the finder’s own search uses the preset above.');
+      status($('tf-load-status'), teams.length + ' teams loaded from ' + LS.name + '.' + overNote(left, 'the desk’s matches below still cover the whole league.') + ' Scored at your league’s settings on the server for the matches below; the finder’s own search uses the preset above.');
       $('tfMatches').innerHTML = (j.trades.length ? '<h3 style="margin-top:14px">Matches the desk found</h3>' + j.trades.slice(0, 6).map(tradeCard).join('') : '<p class="is-empty">No two-sided trade clears the bar right now: every package that helps you costs the other manager more than it gives. Widen it with the finder below.</p>') +
         (j.targets.length ? '<h3 style="margin-top:14px">Who to target in your league</h3><div class="is-scroll"><table class="is-table"><thead><tr><th>Player</th><th>Owner</th><th class="num">ROS</th><th>Read</th></tr></thead><tbody>' + j.targets.map(targetRow).join('') + '</tbody></table></div><p class="is-note">Your needs: ' + esc(j.needs.map(function (n) { return n.position + ' ' + (n.delta > 0 ? '+' : '') + n.delta + '%'; }).join(', ')) + ' against the league’s average starter.</p>' : '');
       $('tf-rosters').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -633,7 +647,7 @@ Derrick Henry
     $('tf-synced').hidden = false;
     $('tf-load-league').addEventListener('click', loadLeague);
   });
-  $('tf-add').addEventListener('click', function () { teams.push({ name: 'Team ' + (teams.length + 1), players: [], unresolved: [] }); renderTeams(); });
+  $('tf-add').addEventListener('click', function () { if (teams.length >= MAX_TEAMS) return; teams.push({ name: 'Team ' + (teams.length + 1), players: [], unresolved: [] }); renderTeams(); });
   $('tf-clear').addEventListener('click', function () { teams = []; mine = ''; partner = ''; send = []; get = []; $('tf-text').value = ''; writeState({ text: '' }); status($('tf-read-status'), ''); renderTeams(); $('tf-results').hidden = true; });
 
   // ── screenshots ──────────────────────────────────────────────────────────
@@ -687,8 +701,8 @@ Derrick Henry
       });
       return out;
     });
-    mergeTeams(incoming);
-    status($('tf-read-status'), 'Read ' + j.teams.length + ' team' + (j.teams.length === 1 ? '' : 's') + ': ' + placed + ' players placed' + (missing ? ', ' + missing + ' not recognized (fix them below)' : '') + '.' + (j.partial ? ' The reader ran out of room, so the last team may be short; send the rest in another screenshot.' : ''));
+    var dropped = mergeTeams(incoming);
+    status($('tf-read-status'), 'Read ' + j.teams.length + ' team' + (j.teams.length === 1 ? '' : 's') + ': ' + placed + ' players placed' + (missing ? ', ' + missing + ' not recognized (fix them below)' : '') + '.' + (j.partial ? ' The reader ran out of room, so the last team may be short; send the rest in another screenshot.' : '') + overNote(dropped));
     renderTeams();
   }
   $('tf-files').addEventListener('change', function () { readImages(this.files); this.value = ''; });

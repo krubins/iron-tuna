@@ -13375,6 +13375,13 @@ rosters, then either evaluate a proposed trade or have Iron Tuna recommend one.
   one-line verdict ("Both sides win. Send it." / "Don't do it." / "Good for you,
   but expect a no." ...) and, when the offer is not a yes for both, shows the top
   three both-sided trades with the same partner.
+- **Five teams, hard cap** (`MAX_TEAMS` in the page script). Every way a team
+  arrives stops at five: `mergeTeams` (screenshots, the reader's text pass, a
+  paste) refuses a new name past five and the status line names what was left
+  out; a restore is sliced to five; "Add an empty team" disables at five; a
+  saved league loads the reader's team plus the next four as the league lists
+  them, and says the desk's server-side matches still cover the whole league.
+  The FAAB Advisor's roster paste is a different page and is not capped.
 - **Settings fold away.** Scoring, board, starters, horizons, balance and package
   size sit under one `<details id="tf-settings">`; every control kept its id.
 - **Tests.** `test-trade-finder.mjs` +9 (the search's top trade judged alone keeps

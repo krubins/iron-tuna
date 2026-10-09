@@ -153,6 +153,13 @@ console.log('\nthe screenshot reader');
   ok('the screenshot’s team joined the others', five[4].name === 'Screenshot Team', five[4].name);
   ok('its readable names resolved on the board', five[4].chips === 2, String(five[4].chips));
   ok('the misread name is offered to fix, never priced', five[4].fix.length === 1 && /Nobody/.test(five[4].fix[0]), JSON.stringify(five[4].fix));
+  // Five is the cap: a sixth team is refused and named, and the add button stops.
+  ok('at five teams the add button is off', await page.$eval('#tf-add', e => e.disabled));
+  await page.fill('#tf-text', 'Sixth Team\n' + NAMES.QB[5] + '\n' + NAMES.RB[12]);
+  await page.click('#tf-parse');
+  ok('a sixth team is left out', (await page.$$('.tf-team')).length === 5);
+  ok('and the status line says which', /Five teams is the limit[^]*Sixth Team/.test(await page.textContent('#tf-read-status')), await page.textContent('#tf-read-status'));
+  await page.fill('#tf-text', PASTE);
   // Fix it by typing, then remove the team so the search below is the four-team league.
   await page.fill('.tf-team[data-i="4"] .tf-fix input', NAMES.WR[13]);
   await page.press('.tf-team[data-i="4"] .tf-fix input', 'Enter');
@@ -161,6 +168,7 @@ console.log('\nthe screenshot reader');
   ok('a typed fix resolves and joins the roster', (await page.$$('.tf-team[data-i="4"] .chip')).length === 3);
   await page.click('.tf-team[data-i="4"] .kill');
   ok('a team can be removed', (await page.$$('.tf-team')).length === 4);
+  ok('and the add button is back', await page.$eval('#tf-add', e => !e.disabled));
 }
 
 // ── the search ─────────────────────────────────────────────────────────────
