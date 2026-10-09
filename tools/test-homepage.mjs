@@ -78,6 +78,15 @@ const EDGE = { ok: true, week: 'Week 3', vsExperts: {
     mk('Blake Corum', 'RB', 'LAR', 'SEA', 11.5, 7.0, 8.4, 'STRONG VEGAS FADE', 41),
     // MARKET AGREES is not a disagreement and must never become a figure.
     mk('Agreeable Wideout', 'WR', 'SEA', 'LAR', 12.0, 12.1, 12.0, 'MARKET AGREES', 20),
+    // An injured man's gap is the injury report, not a market read, and it is
+    // the widest on the board, so it would lead the row (Week 5, 2026: Lamar
+    // Jackson at Market 0.0, consensus 18.9). None of these may be a figure.
+    { ...mk('Lamar Jackson', 'QB', 'BAL', 'ATL', 18.9, 0, 0, 'STRONG VEGAS FADE', 30), injury: 'Out' },
+    { ...mk('Hobbled Runner', 'RB', 'PHI', 'JAX', 16.0, 7.1, 8.0, 'STRONG VEGAS FADE', 6), injury: 'Questionable' },
+    { ...mk('Priced Out Wideout', 'WR', 'PHI', 'JAX', 14.0, 3.0, 4.0, 'STRONG VEGAS FADE', 9), marketOut: 'out' },
+    mk('Zeroed Tight End', 'TE', 'MIA', 'BUF', 9.0, 0, 0, 'STRONG VEGAS FADE', 20),
+    // A designation that says he plays is not an injury.
+    { ...mk('Cleared Receiver', 'WR', 'DEN', 'KC', 10.0, 6.0, 7.0, 'STRONG VEGAS FADE', 40), injury: 'Active' },
     // A row with a hole in it is dropped, not printed with a dash.
     { name: 'Holey Wideout', position: 'WR', team: 'NYG', opponent: 'DAL',
       consensusPoints: 11.0, vegasPoints: null, ironTunaPoints: 9.5, ironTunaRank: 30,
@@ -160,11 +169,12 @@ const BASE = `http://127.0.0.1:${server.address().port}/`;
 
 const browser = await chromium.launch({ executablePath: CHROME });
 const errors = [];
+const photos = [];
 async function open(width, height) {
   const ctx = await browser.newContext({ viewport: { width, height } });
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(`${width}px: ${e.message}`));
-  await page.route(/espncdn\.com|static\.www\.nfl\.com|wikimedia\.org|googletagmanager\.com/, r => r.abort());
+  await page.route(/espncdn\.com|static\.www\.nfl\.com|wikimedia\.org|googletagmanager\.com/, r => { photos.push(r.request().url()); return r.abort(); });
   await page.goto(BASE, { waitUntil: 'networkidle' });
   return { page, ctx };
 }
@@ -200,6 +210,7 @@ const read = page => page.evaluate(() => {
     market: vis(byId('different')),
     figs: [...document.querySelectorAll('#diffBody .hm-fig')].map(f => ({
       k: text(f.querySelector('.k')), v: text(f.querySelector('.v')), s: text(f.querySelector('.s')),
+      face: (() => { const b = f.querySelector('.hm-face'); return b ? { name: b.getAttribute('data-face-name'), done: b.hasAttribute('data-face-done'), w: Math.round(b.getBoundingClientRect().width), h: Math.round(b.getBoundingClientRect().height), ini: text(b.querySelector('i')) } : null; })(),
       good: f.querySelector('.v').classList.contains('good'), vPx: px(f.querySelector('.v')), kPx: px(f.querySelector('.k')),
       color: getComputedStyle(f.querySelector('.v')).color
     })),
@@ -328,6 +339,14 @@ console.log('\nwith the boards answering');
      r.figs.filter(f => f.v.startsWith('+')).every(f => f.good && f.color === 'rgb(10, 106, 76)') && r.figs.filter(f => f.v.startsWith('-')).every(f => !f.good && f.color === 'rgb(17, 20, 24)'),
      JSON.stringify(r.figs.map(f => [f.v, f.color])));
   ok('a player the market agrees about is not a figure', !r.figs.some(f => f.k.includes('Agreeable')));
+  ok('no injured player, no player the books left off, and no zero projection is a figure',
+     !r.figs.some(f => /Lamar Jackson|Hobbled|Priced Out|Zeroed/.test(f.k)) && !r.figs.some(f => /Market 0\.0|Iron Tuna 0\.0/.test(f.s)), r.figs.map(f => f.k).join(' / '));
+  ok('every figure carries the player\'s photograph, a 56px circle',
+     r.figs.every(f => f.face && f.face.w === 56 && f.face.h === 56 && f.k.includes(f.face.name)), JSON.stringify(r.figs.map(f => f.face)));
+  ok('resolved off the shared player index, ESPN first',
+     r.figs.every(f => f.face.done) && ['4426502', '4688380', '3043078', '4429096'].every(id => photos.some(u => u.includes('/headshots/nfl/players/full/' + id + '.png'))),
+     JSON.stringify(photos.filter(u => /headshots/.test(u))));
+  ok('and the initials stand in when the photograph does not load', r.figs.every(f => /^[A-Z]{2}$/.test(f.face.ini || '')), r.figs.map(f => f.face.ini).join(','));
   ok('a row missing a projection is dropped, not printed with a dash', !r.figs.some(f => f.k.includes('Holey')) && !r.figs.some(f => /—/.test(f.k + f.v + f.s)));
   ok('the note says the week, the scoring and when the odds were read',
      /Week 3/.test(r.fine || '') && /default scoring/.test(r.fine || '') && /Odds read .* ET/.test(r.fine || ''), r.fine);
