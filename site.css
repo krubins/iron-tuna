@@ -1983,25 +1983,27 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
 .rk-vs td.rk-note { font-size: var(--fs-14); line-height: 1.5; color: var(--sec) }
 
 /* The fold. The summary is the front page's teal link with a chevron that
-   turns when the lines are open; the lines themselves are body text. */
-.rk-vs .rk-more { margin-top: 6px }
-.rk-vs .rk-more > summary {
+   turns when the lines are open; the lines themselves are body text. The
+   /rankings tool folds its lines the same way (.rk-table td.p), and its
+   inline `.rk-table td.p span` rule is out-specified here as above. */
+.rk-vs .rk-more, .rk-table td.p .rk-more { margin-top: 6px }
+.rk-vs .rk-more > summary, .rk-table td.p .rk-more > summary {
   display: inline-flex; align-items: center; gap: 7px; list-style: none; cursor: pointer;
   font-size: var(--fs-14); font-weight: 600; color: var(--teal); user-select: none;
 }
-.rk-vs .rk-more > summary::-webkit-details-marker { display: none }
-.rk-vs .rk-more > summary::after {
+.rk-vs .rk-more > summary::-webkit-details-marker, .rk-table td.p .rk-more > summary::-webkit-details-marker { display: none }
+.rk-vs .rk-more > summary::after, .rk-table td.p .rk-more > summary::after {
   content: ""; width: 6px; height: 6px; margin-top: -3px;
   border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
   transform: rotate(45deg); transition: transform .15s ease;
 }
-.rk-vs .rk-more[open] > summary::after { transform: rotate(-135deg); margin-top: 3px }
-.rk-vs .rk-more > summary:hover { color: var(--teal-hover); text-decoration: underline }
-.rk-vs .rk-more > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px }
-.rk-vs td.rk-who .rk-more .rk-read {
+.rk-vs .rk-more[open] > summary::after, .rk-table td.p .rk-more[open] > summary::after { transform: rotate(-135deg); margin-top: 3px }
+.rk-vs .rk-more > summary:hover, .rk-table td.p .rk-more > summary:hover { color: var(--teal-hover); text-decoration: underline }
+.rk-vs .rk-more > summary:focus-visible, .rk-table td.p .rk-more > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 2px }
+.rk-vs td.rk-who .rk-more .rk-read, .rk-table td.p .rk-more .rk-read {
   max-width: 38rem; margin-top: 8px; font-size: var(--fs-16); line-height: 1.5; color: var(--sec);
 }
-.rk-vs td.rk-who .rk-more .rk-read-k {
+.rk-vs td.rk-who .rk-more .rk-read-k, .rk-table td.p .rk-more .rk-read-k {
   display: block; margin: 0 0 1px; font-size: var(--fs-13); font-weight: 600; color: var(--muted);
 }
 
