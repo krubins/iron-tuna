@@ -598,7 +598,9 @@ footer.site {margin-top:0}
   // the newest version winning, forward pieces dropped once their games have
   // kicked off. `/api/content` is the archive — held drafts, one row per
   // version — and this page must never read it (that put five drafts of one
-  // preview on the cover in September).
+  // preview on the cover in September). The read asks for a floor of three:
+  // when expiry leaves fewer, the feed tops it up with the newest spent game
+  // recaps and nothing else, marked `expired`, which the KPI count leaves out.
   var NEWEST = 5;
   function etDay(v) {
     try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(v)); } catch (e) { return ''; }
@@ -647,10 +649,10 @@ footer.site {margin-top:0}
     $('readGrid').innerHTML = live.map(function (p, i) { return storyHtml(p, i === 0); }).join('');
     mountFaces();
     show($('articles'), true);
-    kpi.pieces = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).length;
+    kpi.pieces = (j.pieces || []).filter(function (p) { return p && p.url && p.headline && !p.expired; }).length;
     paintKpi();
   }
-  function deskRead() { grab('/api/newsroom?limit=20', desk); }
+  function deskRead() { grab('/api/newsroom?limit=20&floor=3', desk); }
   deskRead();
   // THE OPEN PAGE KEEPS UP. A tab left open re-reads the desk every ten
   // minutes, so a story the desk files reaches the front; a hidden tab skips
