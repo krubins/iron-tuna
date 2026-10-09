@@ -124,6 +124,10 @@ page.on('pageerror', e => errors.push(String(e).slice(0, 300)));
 console.log('\nthe paste');
 await page.goto(BASE + '/trade-finder', { waitUntil: 'load' });
 await page.waitForFunction(() => document.getElementById('tf-read-status').textContent === '', null, { timeout: 8000 });
+// Screenshots are the front door now; the text paste is folded under them.
+ok('the text paste starts folded away', !(await page.$eval('#tf-text-box', e => e.open)));
+ok('the screenshot drop says five teams, yours first', /Up to 5 teams/.test(await page.textContent('#tf-drop')) && /yours first/.test(await page.textContent('#tf-drop')));
+await page.click('#tf-text-box summary');
 await page.fill('#tf-text', PASTE);
 await page.click('#tf-parse');
 await page.waitForSelector('.tf-team', { timeout: 8000 });
@@ -134,6 +138,7 @@ ok('"Team: Clinched" is named Clinched', teams[2].name === 'Clinched', teams[2].
 ok('the reader’s roster landed in full', teams[0].chips.length === 12, String(teams[0].chips.length));
 ok('the defense and kicker are shown as ignored, not as teams', teams[0].chips.some(c => /Bills/.test(c)) && !teams.some(t => /Bills/.test(t.name)));
 ok('nothing unrecognized', teams.every(t => t.fix === 0));
+ok('the first team is taken as the reader’s', await page.$eval('.tf-team[data-i="0"]', e => e.classList.contains('mine')));
 ok('the status line counts it', /4 teams, 4\d players placed/.test(await page.textContent('#tf-read-status')), await page.textContent('#tf-read-status'));
 
 // ── the screenshot path ────────────────────────────────────────────────────
@@ -188,6 +193,7 @@ ok('the bar says so', /In your favor/.test(await page.textContent('#tf-bar')));
 
 // Horizons: the reader on the playoff weeks, the partners on the next three.
 await page.$eval('#tf-tilt', el => { el.value = '50'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+await page.click('#tf-settings summary');
 await page.click('#tf-hA button[data-h="playoffs"]');
 await page.click('#tf-hB button[data-h="next3"]');
 await page.click('#tf-find');
@@ -197,6 +203,14 @@ ok('the reader’s side is scored on the playoffs', trades.every(t => /Fantasy p
 ok('and the partner’s on the next three weeks', trades.every(t => /Next 3 weeks/.test(t.sides[1].horizon)), trades[0] && trades[0].sides[1].horizon);
 ok('the playoff specialist is on the table', trades.some(t => t.sides[0].give.indexOf('Gets') >= 0 && t.sides[0].give.split('Gets')[1].indexOf(SPECIAL) >= 0), trades.map(t => t.title).slice(0, 4).join(' | '));
 
+// A named partner narrows the search to that one manager.
+await page.selectOption('#tf-partner', '1');
+await page.click('#tf-find');
+await page.waitForFunction(() => [...document.querySelectorAll('.tf-trade .with')].every(e => /The Hammers/.test(e.textContent)), null, { timeout: 15000 });
+trades = await read();
+ok('with a partner named, every trade is with that partner', trades.length > 0 && trades.every(t => /The Hammers/.test(t.title)), trades.map(t => t.title).slice(0, 3).join(' | '));
+await page.selectOption('#tf-partner', '');
+
 // Reload: the rosters and settings come back.
 await page.reload({ waitUntil: 'load' });
 await page.waitForSelector('.tf-team', { timeout: 8000 });
@@ -205,6 +219,48 @@ ok('and the reader’s team', await page.$eval('.tf-team[data-i="0"]', e => e.cl
 ok('and the horizons', await page.$eval('#tf-hA button[data-h="playoffs"]', e => e.getAttribute('aria-pressed') === 'true'));
 if (process.env.IT_SHOT) { await page.screenshot({ path: process.env.IT_SHOT, fullPage: true }); console.log('wrote ' + process.env.IT_SHOT); }
 ok('nothing on the Trade Finder threw', errors.length === 0, errors[0]);
+
+// ── evaluating a trade the reader brings ──────────────────────────────────
+console.log('\nevaluate a trade');
+{
+  // Back to one clock for both sides, so the fixture's numbers read plainly.
+  await page.click('#tf-settings summary').catch(() => {});
+  if (!(await page.$eval('#tf-settings', e => e.open))) await page.click('#tf-settings summary');
+  await page.click('#tf-hA button[data-h="ros"]');
+  await page.click('#tf-hB button[data-h="ros"]');
+  await page.click('#tf-mode button[data-mode="evaluate"]');
+  ok('the pick lists open and the search button steps aside', await page.$eval('#tf-pick', e => !e.hidden) && await page.$eval('#tf-find', e => e.hidden) && await page.$eval('#tf-eval', e => !e.hidden));
+  ok('a partner is chosen for the reader', (await page.$eval('#tf-partner', e => e.value)) !== '');
+  await page.selectOption('#tf-partner', '1');
+  const sendNames = await page.$$eval('#tf-send label', ls => ls.map(l => l.textContent));
+  ok('“You send” lists the reader’s roster', sendNames.some(t => t.indexOf(NAMES.RB[0]) >= 0) && sendNames.length === 10, String(sendNames.length));
+  ok('and prices it per week', sendNames.every(t => /\/wk/.test(t)));
+  ok('“You get” lists the partner’s', (await page.$$eval('#tf-get label', ls => ls.map(l => l.textContent))).some(t => t.indexOf(NAMES.WR[0]) >= 0));
+
+  // A fair swap: the reader's fourth back for the partner's fifth receiver.
+  const tick = async (side, name) => page.$$eval('#tf-' + side + ' label', (ls, n) => { const l = ls.find(x => x.textContent.indexOf(n) >= 0); l.querySelector('input').click(); }, name);
+  await tick('send', NAMES.RB[3]); await tick('get', NAMES.WR[6]);
+  await page.click('#tf-eval');
+  await page.waitForSelector('#tf-results:not([hidden]) .tf-verdict', { timeout: 15000 });
+  const v1 = await page.evaluate(() => ({ cls: document.querySelector('.tf-verdict').className, h: document.querySelector('.tf-verdict h3').textContent, gains: [...document.querySelectorAll('.tf-proposed .gain')].map(g => g.textContent) }));
+  ok('a swap that helps both is called a win', /win/.test(v1.cls) && /Both sides win/.test(v1.h), JSON.stringify(v1));
+
+  // An overpay: the reader's only quarterback for the partner's tight end.
+  await tick('send', NAMES.RB[3]); await tick('get', NAMES.WR[6]);
+  await tick('send', NAMES.QB[0]); await tick('get', NAMES.TE[1]);
+  await page.click('#tf-eval');
+  await page.waitForFunction(() => /Don/.test(document.querySelector('.tf-verdict h3').textContent), null, { timeout: 15000 });
+  const v2 = await page.evaluate(() => ({ cls: document.querySelector('.tf-verdict').className, gains: [...document.querySelectorAll('.tf-proposed .gain')].map(g => ({ t: g.textContent, neg: g.classList.contains('neg') })), alt: document.querySelector('.tf-alt') && document.querySelector('.tf-alt').textContent, altTrades: document.querySelectorAll('.tf-trade:not(.tf-proposed)').length }));
+  ok('an overpay is called a loss for the reader', /lose/.test(v2.cls) && v2.gains[0].neg && /^\u2212/.test(v2.gains[0].t), JSON.stringify(v2.gains));
+  ok('and better trades with the same partner are offered', /The Hammers/.test(v2.alt || '') && v2.altTrades > 0, JSON.stringify(v2));
+
+  // Nothing ticked is a question, not an answer.
+  await tick('send', NAMES.QB[0]); await tick('get', NAMES.TE[1]);
+  await page.click('#tf-eval');
+  ok('nothing ticked asks for a player', /at least one player/.test(await page.textContent('#tf-find-status')));
+  await page.click('#tf-mode button[data-mode="recommend"]');
+  ok('nothing threw while evaluating', errors.length === 0, errors[0]);
+}
 
 // ── the FAAB Advisor by hand ───────────────────────────────────────────────
 console.log('\nthe FAAB Advisor, entered by hand');

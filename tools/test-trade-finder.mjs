@@ -416,6 +416,25 @@ console.log('\nthe trade search');
   const nothing = T.findTrades([teams[3], teams[3]], { ...base, mine: 0 });
   ok('identical rosters have no trade', nothing.trades.length === 0, String(nothing.trades.length));
   ok('the team summary carries each side’s horizon and per-week value', split.teams[0].horizon === 'playoffs' && split.teams[5].horizon === 'next3' && split.teams[0].perWeek > 0);
+
+  // A trade the reader brings. The search's own top trade, judged on its own,
+  // has to come back with the same gains: one lineup model, two doors in.
+  console.log('\nthe trade a reader proposes');
+  const ev = T.evaluateTrade(teams, { ...base, a: 0, b: t0.b, giveA: t0.giveA, giveB: t0.giveB });
+  ok('judged alone, the search’s top trade keeps its gains', near(ev.A.gain, t0.gainA, 1e-9) && near(ev.B.gain, t0.gainB, 1e-9), `${ev.A.gain} / ${ev.B.gain}`);
+  ok('and both sides are called gains', ev.both && ev.A.call === 'gain' && ev.B.call === 'gain');
+  // The reader's best back for the mirror's worst receiver: good for the
+  // mirror, bad for the reader.
+  const lopsided = T.evaluateTrade(teams, { ...base, a: 0, b: 1, giveA: [teams[0].players[1]], giveB: [teams[1].players[8]] });
+  ok('an overpay is a loss for the side that overpays', lopsided.A.call === 'loss' && lopsided.A.gain < 0, String(lopsided.A.gain));
+  ok('and a gain for the side that takes it', lopsided.B.call === 'gain', String(lopsided.B.gain));
+  ok('so it is not called a two-sided win', lopsided.both === false);
+  ok('the loss is the lineup delta per week', near(lopsided.A.gain, (val(A.filter(p => p !== teams[0].players[1]).concat([teams[1].players[8]]), 'ros') - val(A, 'ros')) / 12, 1e-9));
+  ok('lineup lines come back for both sides', Array.isArray(lopsided.A.lines.startsNow) && Array.isArray(lopsided.B.lines.stopsStarting));
+  const split2 = T.evaluateTrade(teams, { ...base, a: 0, b: 5, horizon: i => i === 0 ? 'playoffs' : 'next3', giveA: [teams[0].players[3]], giveB: [teams[5].players[3]] });
+  ok('each side is judged on its own horizon', split2.A.h === 'playoffs' && split2.B.h === 'next3' && split2.A.weeks === 3);
+  const nil = T.evaluateTrade(teams, { ...base, a: 0, b: 1, giveA: [], giveB: [] });
+  ok('an empty trade changes nothing and is called even', nil.A.gain === 0 && nil.A.call === 'even' && nil.B.call === 'even');
 }
 
 console.log('\nthe worker’s screenshot reader, without a model');

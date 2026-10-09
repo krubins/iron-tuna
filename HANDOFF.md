@@ -13352,3 +13352,35 @@ week nor the ROS board). Every node gate in `checks.yml` but the dry run was
 run locally: 70 pass. Not verified against production: the sandbox cannot
 reach irontuna.com, so the first live pull after deploy is the proof; the
 hand entry holds Dart off the board on its own either way.
+
+## 122. October 9: the Trade Finder, simplified to screenshots and two modes
+
+**The brief.** Make `/trade-finder` simpler: screenshot up to five teams'
+rosters, then either evaluate a proposed trade or have Iron Tuna recommend one.
+
+- **Screenshots are the front door.** Step 1 is one large paste-or-drop zone
+  ("Up to 5 teams, yours first"). `readImages` now sends at most five images
+  (the worker's own cap stays 8) and says so when more were dropped. The text
+  paste still works, folded under "No screenshots? Paste the rosters as text"
+  (`#tf-text-box`), and opens itself on load when a saved paste exists. The
+  first team into an empty page is taken as the reader's.
+- **Two modes** (`#tf-mode`, persisted as `mode` in `it_trade_v1`). *Recommend*
+  is the old search; a new "Trade with" select (`#tf-partner`) narrows it to one
+  manager by passing just the two rosters to `findTrades`. *Evaluate* shows both
+  rosters as tick lists (`#tf-send`, `#tf-get`, priced per week on each side's
+  horizon) and judges the trade with the new `ITTrade.evaluateTrade`.
+- **`evaluateTrade(teams, opts)`** in `it-trade.js` uses the same lineup fill,
+  per-week scale and per-team horizons as `findTrades`, and calls each side
+  `gain` (≥ +0.75/wk), `loss` (≤ −0.75/wk) or `even`. The page turns that into a
+  one-line verdict ("Both sides win. Send it." / "Don't do it." / "Good for you,
+  but expect a no." ...) and, when the offer is not a yes for both, shows the top
+  three both-sided trades with the same partner.
+- **Settings fold away.** Scoring, board, starters, horizons, balance and package
+  size sit under one `<details id="tf-settings">`; every control kept its id.
+- **Tests.** `test-trade-finder.mjs` +9 (the search's top trade judged alone keeps
+  its gains; an overpay is a loss for one side and a gain for the other; horizons
+  per side; an empty trade is even). `test-trade-finder-page.mjs` +14 (folded
+  paste, first team is mine, partner-narrowed search, the evaluate flow end to
+  end, nothing-ticked prompt). The meta description and JSON-LD were left alone,
+  so `build-seo` has nothing to regenerate. `test-homepage.mjs` fails one
+  date-relative assertion on `main` too, unrelated to this change.

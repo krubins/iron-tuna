@@ -67,7 +67,8 @@ p{color:var(--sec);margin:0 0 16px}
 .tf-slots input{width:56px;font:inherit;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--text)}
 textarea.tf-paste{width:100%;min-height:200px;padding:12px 14px;border-radius:10px;border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;font-size:15.5px;line-height:1.5;resize:vertical}
 textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint)}
-.tf-drop{border:2px dashed var(--line2);border-radius:10px;padding:16px;text-align:center;color:var(--muted);font-size:15px;background:#fff;cursor:pointer}
+.tf-drop{display:flex;flex-direction:column;align-items:center;gap:4px;border:2px dashed var(--line2);border-radius:10px;padding:30px 16px;text-align:center;color:var(--muted);font-size:15px;background:#fff;cursor:pointer}
+.tf-drop b{font-size:18px}
 .tf-drop.over{border-color:var(--teal);background:var(--teal-tint)}
 .tf-drop input{display:none}
 .tf-drop b{color:var(--text)}
@@ -118,7 +119,33 @@ select.tf-sel{font:inherit;font-size:15.5px;padding:8px 10px;border:1px solid va
 .method h3{font-size:17px;margin:0 0 8px}
 .method p{font-size:14.5px;color:var(--muted);line-height:1.65;margin:0 0 9px}
 .method b{color:var(--sec)}
-@media(max-width:640px){.tf-sides{grid-template-columns:1fr}.tf-slider input[type=range]{width:160px}}
+.tf-more{margin-top:14px}
+.tf-more summary{cursor:pointer;color:var(--teal);font-weight:700;font-size:15px}
+.tf-more[open] summary{margin-bottom:10px}
+#tf-settings{border-top:1px solid var(--line);padding-top:12px}
+.tf-modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 10px}
+.tf-modes button{appearance:none;text-align:left;border:1px solid var(--line2);border-radius:10px;background:#fff;color:var(--text);font:inherit;padding:12px 14px;cursor:pointer}
+.tf-modes button b{display:block;font-size:16.5px}
+.tf-modes button small{display:block;font-size:14px;color:var(--muted);margin-top:2px}
+.tf-modes button[aria-pressed="true"]{border-color:var(--teal);background:var(--teal-tint);box-shadow:0 0 0 2px var(--teal-tint)}
+.tf-pair{display:inline-flex;align-items:center;gap:8px}
+.tf-pick-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:8px 0}
+.tf-pick-h{font-size:13px;font-weight:800;color:var(--muted);margin-bottom:6px}
+.tf-picklist{border:1px solid var(--line);border-radius:10px;background:#fff;max-height:340px;overflow:auto}
+.tf-picklist label{display:flex;align-items:center;gap:8px;padding:7px 12px;border-top:1px solid var(--line);font-size:15px;cursor:pointer}
+.tf-picklist label:first-child{border-top:0}
+.tf-picklist label:has(input:checked){background:var(--teal-tint)}
+.tf-picklist label i{font-style:normal;color:var(--muted);font-size:13px}
+.tf-picklist label span{margin-left:auto;color:var(--muted);font-size:13.5px}
+.tf-picklist .none{padding:10px 12px;color:var(--muted);font-size:14.5px}
+.tf-verdict{border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:10px;padding:14px 18px;background:#fff;margin:4px 0 4px}
+.tf-verdict.win{border-left-color:var(--teal)}
+.tf-verdict.lose{border-left-color:var(--danger)}
+.tf-verdict h3{margin:0 0 4px;font-size:19px}
+.tf-verdict p{margin:0;font-size:15px}
+.tf-side .gain.neg{color:var(--danger)}
+.tf-alt{font-size:17px;margin:22px 0 0}
+@media(max-width:640px){.tf-sides,.tf-modes,.tf-pick-grid{grid-template-columns:1fr}.tf-slider input[type=range]{width:160px}}
 </style>
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/trade-finder","name":"Trade Finder: Fantasy Football Trades Both Sides Say Yes To","description":"Paste your league's rosters or drop in screenshots. Iron Tuna scores every lineup at your scoring and finds the trades that make both teams better, each on its own horizon: this week, the next three, the rest of the season, or the fantasy playoffs.","url":"https://irontuna.com/trade-finder","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/trade-finder"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Trade Finder: Fantasy Football Trades Both Sides Say Yes To"}]}]}</script>
 </head>
@@ -152,7 +179,7 @@ select.tf-sel{font:inherit;font-size:15.5px;padding:8px 10px;border:1px solid va
 <div class="art-head">
 <div class="eyebrow">In-season &middot; Trade Finder</div>
 <h1 class="art-h1">Trades both sides say yes to</h1>
-<p class="lede">Paste your league&rsquo;s rosters, or drop in screenshots. Every lineup is scored at your scoring, and the only trades offered are the ones that make <em>both</em> teams better &mdash; each on the horizon it is actually playing for.</p>
+<p class="lede">Screenshot up to five rosters, yours first. Then have Iron Tuna judge a trade you have in mind, or find one for you.</p>
 </div>
 
 <div class="its-strip-sync" id="tfSync" hidden></div>
@@ -162,40 +189,22 @@ select.tf-sel{font:inherit;font-size:15.5px;padding:8px 10px;border:1px solid va
   <div class="cta-row"><button class="btn" id="tf-load-league" type="button">Load my league&rsquo;s rosters</button><span class="tf-status" id="tf-load-status"></span></div>
   <div id="tfMatches"></div>
 </div>
-<div class="tf-step" id="tf-league">
-  <h3>1. Your league</h3>
-  <p class="sub">Scoring and starting slots. A saved league fills these in; otherwise pick a preset and set the lineup.</p>
-  <div class="tf-row"><span class="tf-lab">Scoring</span>
-    <div class="tf-seg" id="tf-scoring" role="group" aria-label="Scoring">
-      <button type="button" data-preset="custom" id="tf-mine">Your league</button>
-      <button type="button" data-preset="ppr">PPR</button>
-      <button type="button" data-preset="half">Half PPR</button>
-      <button type="button" data-preset="standard">Standard</button>
-    </div>
-    <span class="tf-lab">Board</span>
-    <div class="tf-seg" id="tf-board" role="group" aria-label="Board">
-      <button type="button" data-board="ironTuna">Iron Tuna</button>
-      <button type="button" data-board="consensus">Consensus</button>
-      <button type="button" data-board="vegas">Vegas</button>
-    </div>
-  </div>
-  <div class="tf-row"><span class="tf-lab">Starters</span>
-    <div class="tf-slots" id="tf-slots">
-      <label>QB<input type="number" min="0" max="3" data-slot="QB" value="1"></label>
-      <label>RB<input type="number" min="0" max="4" data-slot="RB" value="2"></label>
-      <label>WR<input type="number" min="0" max="5" data-slot="WR" value="2"></label>
-      <label>TE<input type="number" min="0" max="3" data-slot="TE" value="1"></label>
-      <label>Flex<input type="number" min="0" max="4" data-slot="FLEX" value="1"></label>
-      <label>Superflex<input type="number" min="0" max="2" data-slot="SFLEX" value="0"></label>
-    </div>
-  </div>
-  <p class="tf-status" id="tf-league-note"></p>
-</div>
 
 <div class="tf-step" id="tf-rosters">
-  <h3>2. The rosters</h3>
-  <p class="sub">Copy every team&rsquo;s roster from your league site and paste it here, one team after another with the team name above its players. Slot labels, byes and projections are ignored. Or paste a screenshot of each roster page into the same box: a copied image is read as a screenshot, a few teams per image.</p>
-  <textarea class="tf-paste" id="tf-text" placeholder="Team Awesome (Ken)
+  <h3>1. Add the rosters</h3>
+  <p class="sub">Screenshot each team&rsquo;s roster page, up to five, starting with your own. Paste them here with Ctrl+V (&#8984;V on a Mac) or drop them in.</p>
+  <label class="tf-drop" id="tf-drop" for="tf-files"><b>Paste or drop roster screenshots</b><span>Up to 5 teams &middot; yours first &middot; or tap to choose</span><input id="tf-files" type="file" accept="image/*" multiple></label>
+  <p class="tf-status" id="tf-read-status"></p>
+  <div class="tf-teams" id="tf-teams"></div>
+  <div class="cta-row" id="tf-teams-actions" hidden>
+    <button class="btn alt small" id="tf-add" type="button">Add an empty team</button>
+    <button class="btn alt small" id="tf-clear" type="button">Start over</button>
+    <button class="btn alt small" id="tf-llm-text" type="button" hidden>Messy paste? Let the reader untangle it</button>
+  </div>
+  <details class="tf-more" id="tf-text-box">
+    <summary>No screenshots? Paste the rosters as text</summary>
+    <p class="sub">Copy each team&rsquo;s roster from your league site, the team name above its players. Slot labels, byes and projections are ignored.</p>
+    <textarea class="tf-paste" id="tf-text" placeholder="Team Awesome (Ken)
 QB  Josh Allen  BUF
 RB  Bijan Robinson  ATL
 WR  Ja'Marr Chase  CIN
@@ -205,46 +214,83 @@ The Hammers
 Lamar Jackson
 Derrick Henry
 ..." spellcheck="false" aria-label="League rosters"></textarea>
-  <div class="cta-row">
-    <button class="btn" id="tf-parse" type="button">Read the paste</button>
-    <label class="tf-drop" id="tf-drop" for="tf-files"><b>Drop screenshots here</b> or tap to choose &mdash; a few teams per image, up to 8. Or paste a screenshot into the box above.<input id="tf-files" type="file" accept="image/*" multiple></label>
-  </div>
-  <p class="tf-status" id="tf-read-status"></p>
-  <div class="tf-teams" id="tf-teams"></div>
-  <div class="cta-row" id="tf-teams-actions" hidden>
-    <button class="btn alt small" id="tf-add" type="button">Add an empty team</button>
-    <button class="btn alt small" id="tf-clear" type="button">Clear the rosters</button>
-    <button class="btn alt small" id="tf-llm-text" type="button" hidden>Messy paste? Let the reader untangle it</button>
-  </div>
+    <div class="cta-row"><button class="btn" id="tf-parse" type="button">Read the paste</button></div>
+  </details>
 </div>
 
 <div class="tf-step" id="tf-goal">
-  <h3>3. What each side is playing for</h3>
-  <p class="sub">A team chasing a playoff spot needs the next three weeks. A team that has clinched needs weeks 15&ndash;17. Score each side on its own clock and a trade can be right for both at once.</p>
-  <div class="tf-row"><span class="tf-lab">Your team</span><select class="tf-sel" id="tf-mine-sel"><option value="">Any two teams (commissioner view)</option></select></div>
-  <div class="tf-row"><span class="tf-lab">Your horizon</span>
-    <div class="tf-seg" id="tf-hA" role="group" aria-label="Your horizon">
-      <button type="button" data-h="week">This week</button><button type="button" data-h="next3">Next 3 weeks</button><button type="button" data-h="ros">Rest of season</button><button type="button" data-h="playoffs">Fantasy playoffs</button>
+  <h3>2. What do you want to do?</h3>
+  <div class="tf-modes" id="tf-mode" role="group" aria-label="What to do">
+    <button type="button" data-mode="recommend"><b>Recommend a trade</b><small>Iron Tuna finds trades that make both teams better</small></button>
+    <button type="button" data-mode="evaluate"><b>Evaluate a trade</b><small>Pick the players and get a verdict for both sides</small></button>
+  </div>
+  <div class="tf-row">
+    <label class="tf-pair"><span class="tf-lab">Your team</span><select class="tf-sel" id="tf-mine-sel"><option value="">Any two teams (commissioner view)</option></select></label>
+    <label class="tf-pair"><span class="tf-lab">Trade with</span><select class="tf-sel" id="tf-partner"><option value="">Any team</option></select></label>
+  </div>
+  <div id="tf-pick" hidden>
+    <div class="tf-pick-grid">
+      <div><div class="tf-pick-h">You send</div><div class="tf-picklist" id="tf-send"></div></div>
+      <div><div class="tf-pick-h">You get</div><div class="tf-picklist" id="tf-get"></div></div>
     </div>
   </div>
-  <div class="tf-row"><span class="tf-lab">Their horizon</span>
-    <div class="tf-seg" id="tf-hB" role="group" aria-label="Their horizon">
-      <button type="button" data-h="week">This week</button><button type="button" data-h="next3">Next 3 weeks</button><button type="button" data-h="ros">Rest of season</button><button type="button" data-h="playoffs">Fantasy playoffs</button>
+  <div class="cta-row">
+    <button class="btn" id="tf-find" type="button">Find me a trade</button>
+    <button class="btn" id="tf-eval" type="button" hidden>Evaluate this trade</button>
+    <span class="tf-status" id="tf-find-status"></span>
+  </div>
+  <details class="tf-more" id="tf-settings">
+    <summary>Settings: scoring, lineup, horizons, balance</summary>
+    <div class="tf-row"><span class="tf-lab">Scoring</span>
+      <div class="tf-seg" id="tf-scoring" role="group" aria-label="Scoring">
+        <button type="button" data-preset="custom" id="tf-mine">Your league</button>
+        <button type="button" data-preset="ppr">PPR</button>
+        <button type="button" data-preset="half">Half PPR</button>
+        <button type="button" data-preset="standard">Standard</button>
+      </div>
+      <span class="tf-lab">Board</span>
+      <div class="tf-seg" id="tf-board" role="group" aria-label="Board">
+        <button type="button" data-board="ironTuna">Iron Tuna</button>
+        <button type="button" data-board="consensus">Consensus</button>
+        <button type="button" data-board="vegas">Vegas</button>
+      </div>
     </div>
-  </div>
-  <div class="tf-row"><span class="tf-lab">Balance</span>
-    <div class="tf-slider"><span class="end">Even</span><input type="range" id="tf-tilt" min="0" max="100" value="0" aria-label="Balance between even and in your favor"><span class="end">In my favor</span><span id="tf-tilt-note" style="font-size:14px;color:var(--muted)"></span></div>
-  </div>
-  <div class="tf-row"><span class="tf-lab">Package</span>
-    <div class="tf-seg" id="tf-size" role="group" aria-label="Package size">
-      <button type="button" data-size="1">1-for-1 only</button><button type="button" data-size="2">Up to 2-for-2</button><button type="button" data-size="3">Up to 3-for-3</button>
+    <div class="tf-row"><span class="tf-lab">Starters</span>
+      <div class="tf-slots" id="tf-slots">
+        <label>QB<input type="number" min="0" max="3" data-slot="QB" value="1"></label>
+        <label>RB<input type="number" min="0" max="4" data-slot="RB" value="2"></label>
+        <label>WR<input type="number" min="0" max="5" data-slot="WR" value="2"></label>
+        <label>TE<input type="number" min="0" max="3" data-slot="TE" value="1"></label>
+        <label>Flex<input type="number" min="0" max="4" data-slot="FLEX" value="1"></label>
+        <label>Superflex<input type="number" min="0" max="2" data-slot="SFLEX" value="0"></label>
+      </div>
     </div>
-  </div>
-  <div class="cta-row"><button class="btn" id="tf-find" type="button">Find trades</button><span class="tf-status" id="tf-find-status"></span></div>
+    <p class="tf-status" id="tf-league-note"></p>
+    <p class="sub">A team chasing a playoff spot needs the next three weeks; a team that has clinched needs weeks 15&ndash;17. Score each side on its own clock.</p>
+    <div class="tf-row"><span class="tf-lab">Your horizon</span>
+      <div class="tf-seg" id="tf-hA" role="group" aria-label="Your horizon">
+        <button type="button" data-h="week">This week</button><button type="button" data-h="next3">Next 3 weeks</button><button type="button" data-h="ros">Rest of season</button><button type="button" data-h="playoffs">Fantasy playoffs</button>
+      </div>
+    </div>
+    <div class="tf-row"><span class="tf-lab">Their horizon</span>
+      <div class="tf-seg" id="tf-hB" role="group" aria-label="Their horizon">
+        <button type="button" data-h="week">This week</button><button type="button" data-h="next3">Next 3 weeks</button><button type="button" data-h="ros">Rest of season</button><button type="button" data-h="playoffs">Fantasy playoffs</button>
+      </div>
+    </div>
+    <div class="tf-row"><span class="tf-lab">Balance</span>
+      <div class="tf-slider"><span class="end">Even</span><input type="range" id="tf-tilt" min="0" max="100" value="0" aria-label="Balance between even and in your favor"><span class="end">In my favor</span><span id="tf-tilt-note" style="font-size:14px;color:var(--muted)"></span></div>
+    </div>
+    <div class="tf-row"><span class="tf-lab">Package</span>
+      <div class="tf-seg" id="tf-size" role="group" aria-label="Package size">
+        <button type="button" data-size="1">1-for-1 only</button><button type="button" data-size="2">Up to 2-for-2</button><button type="button" data-size="3">Up to 3-for-3</button>
+      </div>
+    </div>
+  </details>
 </div>
 
 <div id="tf-results" hidden>
   <div class="tf-bar" id="tf-bar"></div>
+  <div id="tf-verdict"></div>
   <div class="tf-trades" id="tf-trades"></div>
   <p class="tf-note" id="tf-results-note"></p>
 </div>
@@ -254,6 +300,7 @@ Derrick Henry
   <p><b>A roster is worth what it starts.</b> Every player is projected at your scoring from the same board the rankings use, and each team&rsquo;s lineup is filled the way your league fills it: the named slots first, then flex and superflex from whoever is left. The bench counts a little, as insurance, and a backup quarterback in a one-QB league counts for almost nothing. Kickers and defenses are left out.</p>
   <p><b>Both sides must gain.</b> The engine tries every one-, two- and three-player package between two rosters and keeps only the swaps where both starting lineups get better by at least three quarters of a point a week. That floor never moves. The balance slider decides which of the surviving trades come first: at <em>Even</em> the trade is ranked by the smaller of the two gains, and at <em>In my favor</em> by yours alone. It cannot surface a trade the other manager should refuse.</p>
   <p><b>Horizons are per team.</b> A gain is measured on the weeks that team is playing for &mdash; this week, the next three, the rest of the season, or the fantasy playoffs &mdash; and stated per week so a three-week horizon and a twelve-week one are on the same scale. A player who is ordinary over the season and excellent in weeks 15&ndash;17 is exactly the player a clinched team should buy from a bubble team.</p>
+  <p><b>Judging your own trade.</b> Pick the players and each lineup is filled before and after, on that team&rsquo;s horizon. A side that gains three quarters of a point a week or more is called a gain, one that loses as much a loss, and anything between is about even. When your offer is not a yes for both teams, the finder shows the closest trades with the same manager that are.</p>
   <p><b>What it does not know.</b> It cannot see your league&rsquo;s roster limits, its trade deadline, who is on injured reserve, or which manager is unreachable. A two-for-one leaves the other side needing a roster spot; the card says so. Screenshots are read by a model into names only, and every name is then matched to the board here in your browser, so nothing it read can become a projection on its own.</p>
 </div>
 </main>
@@ -303,6 +350,12 @@ Derrick Henry
   var preset = st.preset || (L && L.has ? 'custom' : 'ppr');
   var board = st.board || 'ironTuna';
   var hA = st.hA || 'ros', hB = st.hB || 'ros', tilt = isFinite(st.tilt) ? st.tilt : 0, size = st.size || 2;
+  // Two things a reader comes here to do: have a trade found, or have one
+  // they already have in mind judged. The settings below serve both and sit
+  // folded away, because the defaults are right for most leagues.
+  var mode = st.mode === 'evaluate' ? 'evaluate' : 'recommend';
+  var partner = st.partner == null ? '' : String(st.partner);
+  var send = st.send || [], get = st.get || [];
   var slots = st.slots || savedSlots();
   function savedSlots() {
     // The draft app's saved roster shape, if there is one.
@@ -330,6 +383,10 @@ Derrick Henry
     setPressed($('tf-board'), 'data-board', board);
     setPressed($('tf-hA'), 'data-h', hA); setPressed($('tf-hB'), 'data-h', hB);
     setPressed($('tf-size'), 'data-size', String(size));
+    setPressed($('tf-mode'), 'data-mode', mode);
+    $('tf-pick').hidden = mode !== 'evaluate';
+    $('tf-find').hidden = mode !== 'recommend';
+    $('tf-eval').hidden = mode !== 'evaluate';
     $('tf-tilt').value = String(Math.round(tilt * 100));
     tiltNote();
     [].forEach.call($('tf-slots').querySelectorAll('input'), function (i) { i.value = slots[i.getAttribute('data-slot')] || 0; });
@@ -374,7 +431,7 @@ Derrick Henry
   var teams = [];        // [{ name, players: [player], unresolved: [line] }]
   var mine = st.mine == null ? '' : String(st.mine);
   function persistTeams() {
-    writeState({ teams: teams.map(function (t) { return { name: t.name, ids: t.players.map(function (p) { return p.id; }), unresolved: t.unresolved }; }), mine: mine });
+    writeState({ teams: teams.map(function (t) { return { name: t.name, ids: t.players.map(function (p) { return p.id; }), unresolved: t.unresolved }; }), mine: mine, partner: partner, send: send, get: get });
   }
   function restoreTeams() {
     if (!st.teams || !pool) return;
@@ -402,7 +459,7 @@ Derrick Henry
   // Names from the reader or a second paste join the teams already here: a
   // team with the same name gains the new players, a new name is a new team.
   function mergeTeams(incoming) {
-    var have = {};
+    var have = {}, fresh = !teams.length;
     teams.forEach(function (t) { t.players.forEach(function (p) { have[p.id] = t; }); });
     incoming.forEach(function (it) {
       var key = TR.fold(it.name);
@@ -413,6 +470,9 @@ Derrick Henry
       (it.unresolved || []).forEach(function (u) { if (t.unresolved.indexOf(u) < 0) t.unresolved.push(u); });
     });
     if (mine !== '' && !teams[Number(mine)]) mine = '';
+    // The page asks for the reader's roster first, so the first team in an
+    // empty page is theirs until they say otherwise.
+    if (fresh && mine === '' && teams.length) mine = '0';
   }
   // The value is the board's own spelling, so a pick goes straight back
   // through TR.resolve and lands; the label is what tells two Williamses apart.
@@ -422,6 +482,9 @@ Derrick Henry
     }).join('');
   }
   function renderTeams() {
+    // Judging a trade needs a side to judge it for; the commissioner view is
+    // a search-only idea.
+    if (mode === 'evaluate' && mine === '' && teams.length) mine = '0';
     var host = $('tf-teams');
     host.innerHTML = teams.map(function (t, i) {
       var starters = t.players.filter(function (p) { return p.pos !== 'K' && p.pos !== 'DEF'; }).length;
@@ -451,13 +514,56 @@ Derrick Henry
     }).join('');
     $('tf-teams-actions').hidden = !teams.length;
     var sel = $('tf-mine-sel');
-    sel.innerHTML = '<option value="">Any two teams (commissioner view)</option>' + teams.map(function (t, i) { return '<option value="' + i + '"' + (String(i) === mine ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('');
+    sel.innerHTML = (mode === 'evaluate' ? '' : '<option value="">Any two teams (commissioner view)</option>') + teams.map(function (t, i) { return '<option value="' + i + '"' + (String(i) === mine ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('');
+    renderPick();
     persistTeams();
   }
+  // The partner list and the two pick lists. Team indexes move when a team is
+  // removed, so the partner and every picked id are re-checked on each paint
+  // rather than trusted from the last one.
+  function renderPick() {
+    if (partner !== '' && (!teams[Number(partner)] || partner === mine)) partner = '';
+    var ps = $('tf-partner');
+    ps.innerHTML = (mode === 'evaluate' ? '' : '<option value="">Any team</option>') + teams.map(function (t, i) {
+      return String(i) === mine ? '' : '<option value="' + i + '"' + (String(i) === partner ? ' selected' : '') + '>' + esc(t.name) + '</option>';
+    }).join('');
+    if (mode === 'evaluate' && partner === '') partner = ps.value || '';
+    var me = mine === '' ? null : teams[Number(mine)], them = partner === '' ? null : teams[Number(partner)];
+    var ids = function (t) { return t ? t.players.map(function (p) { return p.id; }) : []; };
+    var mineIds = ids(me), theirIds = ids(them);
+    send = send.filter(function (id) { return mineIds.indexOf(id) >= 0; });
+    get = get.filter(function (id) { return theirIds.indexOf(id) >= 0; });
+    $('tf-send').innerHTML = pickRows(me, send, 'send', hA);
+    $('tf-get').innerHTML = pickRows(them, get, 'get', hB);
+  }
+  function pickRows(t, chosen, side, h) {
+    if (!t) return '<div class="none">' + (side === 'send' ? 'Pick your team above.' : 'Pick the team you are trading with.') + '</div>';
+    var list = t.players.filter(function (p) { return p.pos !== 'K' && p.pos !== 'DEF'; });
+    if (!list.length) return '<div class="none">No players on this roster yet.</div>';
+    var priced = !!data[h];
+    if (priced) list = list.slice().sort(function (a, b) { return points(b, h) - points(a, h); });
+    return list.map(function (p) {
+      return '<label><input type="checkbox" data-pick="' + side + '" value="' + esc(p.id) + '"' + (chosen.indexOf(p.id) >= 0 ? ' checked' : '') + '> '
+        + esc(p.name) + ' <i>' + esc(p.pos + (p.team ? ' \u00b7 ' + p.team : '')) + '</i>'
+        + (priced ? '<span>' + n1(points(p, h) / weeksOf(h)) + '/wk</span>' : '') + '</label>';
+    }).join('');
+  }
+  $('tf-pick').addEventListener('change', function (ev) {
+    var side = ev.target.getAttribute('data-pick'); if (!side) return;
+    var list = side === 'send' ? send : get, id = ev.target.value, at = list.indexOf(id);
+    if (ev.target.checked && at < 0) list.push(id); else if (!ev.target.checked && at >= 0) list.splice(at, 1);
+    persistTeams();
+  });
+  $('tf-partner').addEventListener('change', function () { partner = this.value; get = []; renderTeams(); });
   $('tf-teams').addEventListener('click', function (ev) {
     var b = ev.target.closest('button'); if (!b) return;
     var v;
-    if ((v = b.getAttribute('data-kill')) != null) { teams.splice(Number(v), 1); if (mine === v) mine = ''; else if (mine !== '' && Number(mine) > Number(v)) mine = String(Number(mine) - 1); renderTeams(); }
+    if ((v = b.getAttribute('data-kill')) != null) {
+      teams.splice(Number(v), 1);
+      if (mine === v) mine = ''; else if (mine !== '' && Number(mine) > Number(v)) mine = String(Number(mine) - 1);
+      if (partner === v) partner = ''; else if (partner !== '' && Number(partner) > Number(v)) partner = String(Number(partner) - 1);
+      renderTeams();
+    }
     else if ((v = b.getAttribute('data-rm'))) { var a = v.split(':'); teams[+a[0]].players.splice(+a[1], 1); renderTeams(); }
     else if ((v = b.getAttribute('data-drop'))) { var d = v.split(':'); teams[+d[0]].unresolved.splice(+d[1], 1); renderTeams(); }
     else if ((v = b.getAttribute('data-mine')) != null) { mine = v; renderTeams(); }
@@ -528,7 +634,7 @@ Derrick Henry
     $('tf-load-league').addEventListener('click', loadLeague);
   });
   $('tf-add').addEventListener('click', function () { teams.push({ name: 'Team ' + (teams.length + 1), players: [], unresolved: [] }); renderTeams(); });
-  $('tf-clear').addEventListener('click', function () { teams = []; mine = ''; $('tf-text').value = ''; writeState({ text: '' }); status($('tf-read-status'), ''); renderTeams(); $('tf-results').hidden = true; });
+  $('tf-clear').addEventListener('click', function () { teams = []; mine = ''; partner = ''; send = []; get = []; $('tf-text').value = ''; writeState({ text: '' }); status($('tf-read-status'), ''); renderTeams(); $('tf-results').hidden = true; });
 
   // ── screenshots ──────────────────────────────────────────────────────────
   // Each image is shrunk in the browser before it goes anywhere: a phone
@@ -551,9 +657,12 @@ Derrick Henry
     });
   }
   function readImages(files) {
-    var list = [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); }).slice(0, 8);
+    // Five at a time: a roster per screenshot, and five teams is as many as a
+    // trade conversation needs. More than that is a longer wait for nothing.
+    var all = [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); });
+    var list = all.slice(0, 5);
     if (!list.length) { status($('tf-read-status'), 'Those are not images.', true); return; }
-    status($('tf-read-status'), 'Reading ' + list.length + ' screenshot' + (list.length === 1 ? '' : 's') + '… a full page can take a minute.');
+    status($('tf-read-status'), 'Reading ' + list.length + ' screenshot' + (list.length === 1 ? '' : 's') + (all.length > 5 ? ' (the first five)' : '') + '… a full page can take a minute.');
     Promise.all(list.map(shrink)).then(function (images) {
       return fetch('/api/roster-read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ images: images }) })
         .then(function (r) { return r.json(); });
@@ -605,17 +714,18 @@ Derrick Henry
   $('tf-llm-text').addEventListener('click', readText);
 
   // ── settings events ──────────────────────────────────────────────────────
-  $('tf-scoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; preset = b.getAttribute('data-preset'); writeState({ preset: preset }); paintSettings(); });
-  $('tf-board').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); writeState({ board: board }); paintSettings(); });
-  $('tf-hA').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; hA = b.getAttribute('data-h'); writeState({ hA: hA }); paintSettings(); });
-  $('tf-hB').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; hB = b.getAttribute('data-h'); writeState({ hB: hB }); paintSettings(); });
+  $('tf-scoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; preset = b.getAttribute('data-preset'); writeState({ preset: preset }); paintSettings(); renderPick(); });
+  $('tf-board').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); writeState({ board: board }); paintSettings(); renderPick(); });
+  $('tf-hA').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; hA = b.getAttribute('data-h'); writeState({ hA: hA }); paintSettings(); loadHorizon(hA).then(renderPick, function () {}); });
+  $('tf-hB').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; hB = b.getAttribute('data-h'); writeState({ hB: hB }); paintSettings(); loadHorizon(hB).then(renderPick, function () {}); });
+  $('tf-mode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mode = b.getAttribute('data-mode'); writeState({ mode: mode }); paintSettings(); renderTeams(); $('tf-results').hidden = true; });
   $('tf-size').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; size = +b.getAttribute('data-size'); writeState({ size: size }); paintSettings(); });
   $('tf-tilt').addEventListener('input', function () { tilt = (+this.value) / 100; writeState({ tilt: tilt }); tiltNote(); });
   $('tf-slots').addEventListener('change', function () {
     [].forEach.call($('tf-slots').querySelectorAll('input'), function (i) { slots[i.getAttribute('data-slot')] = Math.max(0, parseInt(i.value, 10) || 0); });
     writeState({ slots: slots });
   });
-  $('tf-mine-sel').addEventListener('change', function () { mine = this.value; renderTeams(); });
+  $('tf-mine-sel').addEventListener('change', function () { mine = this.value; send = []; renderTeams(); });
 
   // ── the search ───────────────────────────────────────────────────────────
   function find() {
@@ -623,67 +733,137 @@ Derrick Henry
     status($('tf-find-status'), 'Scoring the lineups…');
     var need = mine === '' ? [hA] : [hA, hB];
     Promise.all(need.map(loadHorizon)).then(function () {
-      var mi = mine === '' ? null : Number(mine);
-      var res = TR.findTrades(teams, {
-        slots: slots, points: points, weeks: weeksOf,
-        horizon: function (i) { return mi == null ? hA : (i === mi ? hA : hB); },
-        mine: mi, tilt: tilt, maxSize: size, minGain: 0.75, limit: 12
-      });
+      var mi = mine === '' ? null : Number(mine), list = teams;
+      // A named partner narrows the search to that one manager.
+      if (mi != null && partner !== '' && teams[Number(partner)]) { list = [teams[mi], teams[Number(partner)]]; mi = 0; }
+      var res = search(list, mi, 12);
       status($('tf-find-status'), '');
       renderResults(res, mi);
       try { if (typeof gtag === 'function') gtag('event', 'trade_finder', { teams: teams.length, trades: res.trades.length }); } catch (e) {}
     }).catch(function () { status($('tf-find-status'), 'The board did not answer, so nothing is scored. Try again in a moment.', true); });
   }
+  function search(list, mi, limit) {
+    return TR.findTrades(list, {
+      slots: slots, points: points, weeks: weeksOf,
+      horizon: function (i) { return mi == null ? hA : (i === mi ? hA : hB); },
+      mine: mi, tilt: tilt, maxSize: size, minGain: 0.75, limit: limit
+    });
+  }
+
+  // ── a trade the reader brings ────────────────────────────────────────────
+  function evaluate() {
+    var me = teams[Number(mine)], them = partner === '' ? null : teams[Number(partner)];
+    if (!me || !them) { status($('tf-find-status'), 'Pick your team and the team you are trading with.', true); return; }
+    var byId = function (t, ids) { return ids.map(function (id) { return t.players.filter(function (p) { return p.id === id; })[0]; }).filter(Boolean); };
+    var giveA = byId(me, send), giveB = byId(them, get);
+    if (!giveA.length && !giveB.length) { status($('tf-find-status'), 'Tick at least one player on either side.', true); return; }
+    status($('tf-find-status'), 'Scoring the lineups…');
+    Promise.all([loadHorizon(hA), loadHorizon(hB)]).then(function () {
+      var list = [me, them];
+      var ev = TR.evaluateTrade(list, { a: 0, b: 1, giveA: giveA, giveB: giveB, slots: slots, points: points, weeks: weeksOf,
+        horizon: function (i) { return i === 0 ? hA : hB; }, minGain: 0.75 });
+      // Not a yes for both? Then the useful answer is the nearest trade with
+      // the same manager that is.
+      var alt = ev.both ? null : search(list, 0, 3);
+      status($('tf-find-status'), '');
+      renderEvaluation(ev, alt);
+      try { if (typeof gtag === 'function') gtag('event', 'trade_evaluate', { both: ev.both }); } catch (e) {}
+    }).catch(function () { status($('tf-find-status'), 'The board did not answer, so nothing is scored. Try again in a moment.', true); });
+  }
+
   function chips(list, h) {
+    if (!list.length) return '<span style="color:var(--muted)">nothing</span>';
     return list.map(function (p) { return '<b>' + esc(p.name) + '</b> <span style="color:var(--muted)">' + esc(p.pos) + (h ? ' &middot; ' + n1(points(p, h) / weeksOf(h)) + '/wk' : '') + '</span>'; }).join(', ');
   }
+  function signed(v) { return (v < 0 ? '−' : '+') + n1(Math.abs(v)); }
   function sideCard(who, name, give, get, gain, h, lines, needsSpot) {
     var starts = lines.startsNow.map(function (s) { return esc(s.p.name) + ' at ' + esc(s.slot); });
     var stops = lines.stopsStarting.map(function (s) { return esc(s.p.name); });
     return '<div class="tf-side"><div class="who">' + who + ' &middot; ' + esc(name) + '</div>'
-      + '<div class="gain">+' + n1(gain) + ' <small>pts / week &middot; ' + esc(HORIZONS[h] || h) + '</small></div>'
+      + '<div class="gain' + (gain < 0 ? ' neg' : '') + '">' + signed(gain) + ' <small>pts / week &middot; ' + esc(HORIZONS[h] || h) + '</small></div>'
       + '<div class="give">Sends ' + chips(give, h) + '<br>Gets ' + chips(get, h) + '</div>'
       + '<div class="lines">' + (starts.length ? 'Starts: ' + starts.join(', ') + '. ' : '') + (stops.length ? 'To the bench: ' + stops.join(', ') + '. ' : '') + (needsSpot ? 'Needs a roster spot opened.' : '') + '</div></div>';
+  }
+  function scoringName() { return preset === 'custom' && L && L.label ? L.label() : preset === 'half' ? 'Half PPR' : preset === 'standard' ? 'Standard' : 'PPR'; }
+  function paintBar(name, perWeek, h, judged) {
+    $('tf-bar').innerHTML = (name == null
+        ? '<span><span class="k">View</span><span class="v">Every pair of teams</span></span>'
+        : '<span><span class="k">Your team</span><span class="v">' + esc(name) + '</span></span><span><span class="k">Your lineup</span><span class="v">' + n1(perWeek) + ' <span style="font-size:13.5px;color:var(--muted);font-weight:400">pts/wk, ' + esc(HORIZONS[h]) + '</span></span></span>')
+      + '<span><span class="k">Scoring</span><span class="v">' + esc(scoringName()) + '</span></span>'
+      // The balance only orders a search; a trade the reader brought is judged as it stands.
+      + (judged ? '' : '<span><span class="k">Balance</span><span class="v">' + (tilt < 0.15 ? 'Even' : tilt > 0.85 ? 'In your favor' : Math.round(tilt * 100) + '% your way') + '</span></span>');
+  }
+  function foundCard(t, i, T, mi) {
+    var A = T[t.a], B = T[t.b];
+    var youAreA = mi == null || t.a === mi;
+    var first = youAreA ? sideCard(mi == null ? 'Team' : 'You', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, t.giveB.length > t.giveA.length)
+                        : sideCard('You', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, t.giveA.length > t.giveB.length);
+    var second = youAreA ? sideCard(mi == null ? 'Team' : 'Them', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, t.giveA.length > t.giveB.length)
+                         : sideCard('Them', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, t.giveB.length > t.giveA.length);
+    var label = (youAreA ? t.giveA : t.giveB).map(function (p) { return p.name; }).join(' + ') + ' for ' + (youAreA ? t.giveB : t.giveA).map(function (p) { return p.name; }).join(' + ');
+    return '<div class="tf-trade"><h3>' + (i + 1) + '. ' + esc(label) + '<span class="with">' + (mi == null ? esc(A.name) + ' and ' + esc(B.name) : 'with ' + esc(youAreA ? B.name : A.name)) + '</span></h3><div class="tf-sides">' + first + second + '</div></div>';
+  }
+  function scoredNote() {
+    return (preset === 'custom' ? 'Scored at your saved league.' : 'Scored at ' + esc(preset === 'half' ? 'half PPR' : preset === 'standard' ? 'standard' : 'PPR') + ' &mdash; <a href="/auctiondraft?screen=cheat">save your league</a> and these re-score to your exact settings.')
+      + ' Points are the ' + esc(board === 'ironTuna' ? 'Iron Tuna' : board) + ' board over each side&rsquo;s horizon, stated per week.';
   }
   function renderResults(res, mi) {
     var host = $('tf-results');
     host.hidden = false;
     var T = res.teams;
-    $('tf-bar').innerHTML = (mi == null
-        ? '<span><span class="k">View</span><span class="v">Every pair of teams</span></span>'
-        : '<span><span class="k">Your team</span><span class="v">' + esc(T[mi].name) + '</span></span><span><span class="k">Your lineup</span><span class="v">' + n1(T[mi].perWeek) + ' <span style="font-size:13.5px;color:var(--muted);font-weight:400">pts/wk, ' + esc(HORIZONS[T[mi].horizon]) + '</span></span></span>')
-      + '<span><span class="k">Scoring</span><span class="v">' + esc(preset === 'custom' && L && L.label ? L.label() : preset === 'half' ? 'Half PPR' : preset === 'standard' ? 'Standard' : 'PPR') + '</span></span>'
-      + '<span><span class="k">Balance</span><span class="v">' + (tilt < 0.15 ? 'Even' : tilt > 0.85 ? 'In your favor' : Math.round(tilt * 100) + '% your way') + '</span></span>';
+    if (mi == null) paintBar(null); else paintBar(T[mi].name, T[mi].perWeek, T[mi].horizon);
+    $('tf-verdict').innerHTML = '';
     if (!res.trades.length) {
-      $('tf-trades').innerHTML = '<div class="tf-empty">No trade improves both lineups by at least three quarters of a point a week' + (mi == null ? ' between any two teams' : '') + '. That is a real answer: the rosters are already sorted, or the two horizons want the same players. Try a different partner horizon, or allow bigger packages.</div>';
+      $('tf-trades').innerHTML = '<div class="tf-empty">No trade improves both lineups by at least three quarters of a point a week' + (mi == null ? ' between any two teams' : '') + '. That is a real answer: the rosters are already sorted, or the two horizons want the same players. Try a different partner horizon, or allow bigger packages in the settings.</div>';
     } else {
-      $('tf-trades').innerHTML = res.trades.map(function (t, i) {
-        var A = T[t.a], B = T[t.b];
-        var youAreA = mi == null || t.a === mi;
-        var first = youAreA ? sideCard(mi == null ? 'Team' : 'You', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, t.giveB.length > t.giveA.length)
-                            : sideCard('You', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, t.giveA.length > t.giveB.length);
-        var second = youAreA ? sideCard(mi == null ? 'Team' : 'Them', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, t.giveA.length > t.giveB.length)
-                             : sideCard('Them', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, t.giveB.length > t.giveA.length);
-        var label = (youAreA ? t.giveA : t.giveB).map(function (p) { return p.name; }).join(' + ') + ' for ' + (youAreA ? t.giveB : t.giveA).map(function (p) { return p.name; }).join(' + ');
-        return '<div class="tf-trade"><h3>' + (i + 1) + '. ' + esc(label) + '<span class="with">' + (mi == null ? esc(A.name) + ' and ' + esc(B.name) : 'with ' + esc(youAreA ? B.name : A.name)) + '</span></h3><div class="tf-sides">' + first + second + '</div></div>';
-      }).join('');
+      $('tf-trades').innerHTML = res.trades.map(function (t, i) { return foundCard(t, i, T, mi); }).join('');
     }
-    $('tf-results-note').innerHTML = res.considered + ' swap' + (res.considered === 1 ? '' : 's') + ' improved both sides out of everything tried; the ' + res.trades.length + ' above are the strongest, no more than four with one partner. '
-      + (preset === 'custom' ? 'Scored at your saved league.' : 'Scored at ' + esc(preset === 'half' ? 'half PPR' : preset === 'standard' ? 'standard' : 'PPR') + ' &mdash; <a href="/auctiondraft?screen=cheat">save your league</a> and these re-score to your exact settings.')
-      + ' Points are the ' + esc(board === 'ironTuna' ? 'Iron Tuna' : board) + ' board over each side&rsquo;s horizon, stated per week.';
+    $('tf-results-note').innerHTML = res.considered + ' swap' + (res.considered === 1 ? '' : 's') + ' improved both sides out of everything tried; the ' + res.trades.length + ' above are the strongest, no more than four with one partner. ' + scoredNote();
+    host.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  // The headline is the reader's question answered in a line: should I send
+  // this, and will they take it.
+  function verdictOf(ev) {
+    var you = ev.A, them = ev.B, n = function (v) { return n1(Math.abs(v)) + ' pts a week'; };
+    if (ev.both) return { cls: 'win', h: 'Both sides win. Send it.', p: 'Your lineup gains ' + n(you.gain) + ' and theirs gains ' + n(them.gain) + ', so they have a reason to say yes.' };
+    if (you.call === 'loss') return { cls: 'lose', h: 'Don’t do it.', p: 'It costs your lineup ' + n(you.gain) + (them.call === 'gain' ? ' and hands theirs ' + n(them.gain) + '.' : '.') };
+    if (you.call === 'gain' && them.call === 'loss') return { cls: 'mixed', h: 'Good for you, but expect a no.', p: 'You gain ' + n(you.gain) + '; their lineup loses ' + n(them.gain) + '. A manager who checks the numbers will turn it down.' };
+    if (you.call === 'gain') return { cls: 'mixed', h: 'Good for you, about even for them.', p: 'You gain ' + n(you.gain) + '; their lineup barely moves. They may take it if they like the names.' };
+    if (them.call === 'gain') return { cls: 'mixed', h: 'It helps them more than you.', p: 'Your lineup barely moves; theirs gains ' + n(them.gain) + '. Ask for more.' };
+    return { cls: 'mixed', h: 'A wash.', p: 'Neither lineup moves by as much as three quarters of a point a week.' };
+  }
+  function renderEvaluation(ev, alt) {
+    var host = $('tf-results');
+    host.hidden = false;
+    paintBar(ev.A.name, ev.A.perWeek, ev.A.h, true);
+    var v = verdictOf(ev);
+    $('tf-verdict').innerHTML = '<div class="tf-verdict ' + v.cls + '"><h3>' + esc(v.h) + '</h3><p>' + esc(v.p) + '</p></div>';
+    var label = (ev.giveA.length ? ev.giveA.map(function (p) { return p.name; }).join(' + ') : 'Nothing') + ' for ' + (ev.giveB.length ? ev.giveB.map(function (p) { return p.name; }).join(' + ') : 'nothing');
+    var html = '<div class="tf-trade tf-proposed"><h3>' + esc(label) + '<span class="with">with ' + esc(ev.B.name) + '</span></h3><div class="tf-sides">'
+      + sideCard('You', ev.A.name, ev.giveA, ev.giveB, ev.A.gain, ev.A.h, ev.A.lines, ev.giveB.length > ev.giveA.length)
+      + sideCard('Them', ev.B.name, ev.giveB, ev.giveA, ev.B.gain, ev.B.h, ev.B.lines, ev.giveA.length > ev.giveB.length)
+      + '</div></div>';
+    if (alt) {
+      html += '<h3 class="tf-alt">Trades with ' + esc(ev.B.name) + ' that work for both</h3>'
+        + (alt.trades.length ? alt.trades.map(function (t, i) { return foundCard(t, i, alt.teams, 0); }).join('')
+          : '<div class="tf-empty">No trade with ' + esc(ev.B.name) + ' improves both lineups right now. Try another team, or a different horizon in the settings.</div>');
+    }
+    $('tf-trades').innerHTML = html;
+    $('tf-results-note').innerHTML = 'A side is called a gain at +0.75 pts a week or more, a loss at &minus;0.75 or worse, and about even between. ' + scoredNote();
     host.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   $('tf-find').addEventListener('click', find);
+  $('tf-eval').addEventListener('click', evaluate);
 
   // ── go ───────────────────────────────────────────────────────────────────
   if (!(L && L.has)) { $('tf-mine').disabled = true; $('tf-mine').title = 'Set your league up in the draft app first'; if (preset === 'custom') preset = 'ppr'; }
   paintSettings();
-  if (st.text) $('tf-text').value = st.text;
+  if (st.text) { $('tf-text').value = st.text; $('tf-text-box').open = true; }
   status($('tf-read-status'), 'Reading the board…');
   loadHorizon('ros').then(function () {
     status($('tf-read-status'), '');
     restoreTeams();
-    if (teams.length) renderTeams();
+    renderTeams();
   }).catch(function () {
     loadError = true;
     status($('tf-read-status'), 'The board did not answer, so names cannot be matched yet. Reload in a moment.', true);
