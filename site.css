@@ -694,6 +694,10 @@ textarea.is-input { min-height: 96px; padding: var(--space-3) }
 .pl-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center }
 .pl-face i { font-style: normal; font-size: var(--fs-13); font-weight: 600; color: var(--muted) }
 .pl-empty { padding: 12px 14px; font-size: var(--fs-14); color: var(--muted) }
+/* The homepage box also offers destinations (rankings, trades, DFS, ...): a
+   small label over each group, and an arrow glyph in the face's slot. */
+.pl-group { padding: 10px 13px 4px; font-size: var(--fs-12); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted) }
+.pl-face.pl-tool { color: var(--teal) }
 
 /* ── the search field ────────────────────────────────────────────────────────
    The one pill on a page, and it is a field, not a button. 52px, 16px text,
