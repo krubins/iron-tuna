@@ -200,7 +200,7 @@ const read = page => page.evaluate(() => {
     entries: [...document.querySelectorAll('.hm-entry a')].map(a => a.getAttribute('href')),
     // The header chrome, shared with every other page.
     line: text(document.querySelector('.site-line')),
-    lineSpans: [...document.querySelectorAll('.site-line span')].filter(vis).length,
+    lineH: document.querySelector('.site-line') ? document.querySelector('.site-line').getBoundingClientRect().height : null,
     nav: [...document.querySelectorAll('header.site .nav a')].map(a => a.getAttribute('href')),
     cta: (() => { const c = document.querySelector('header.site a.cta'); return c ? { href: c.getAttribute('href'), text: c.textContent.trim(), shown: vis(c) } : null; })(),
     tabbar: [...document.querySelectorAll('.tabbar a')].filter(vis).map(a => a.getAttribute('href')),
@@ -281,8 +281,8 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   ok(`${tag}: and it is the one pill on the page, 52px tall`, !!r.findInput && r.findInput.h >= 52 && r.findInput.radius > 20 && r.pills.length === 0, JSON.stringify({ h: r.findInput && r.findInput.h, pills: r.pills }));
   ok(`${tag}: three entry points as text links`, r.entries.join(' ') === '/fantasy /dfs /in-season/desk', r.entries.join(' '));
   // The chrome is the shared one.
-  ok(`${tag}: the key phrase line is above the ribbon`, /^Every player priced off the betting market first\./.test(r.line || ''), r.line);
-  ok(`${tag}: ${w > 860 ? 'both sentences show' : 'only the first sentence shows'}`, r.lineSpans === (w > 860 ? 2 : 1), String(r.lineSpans));
+  ok(`${tag}: the black bar above the ribbon carries no text`, r.line === '', r.line);
+  ok(`${tag}: the black bar above the ribbon is 12px`, r.lineH === 12, String(r.lineH));
   ok(`${tag}: the ribbon is ${w > 860 ? 60 : 56}px`, r.ribbonH === (w > 860 ? 60 : 56), r.ribbonH + 'px');
   ok(`${tag}: the nav is the shared five`, r.nav.join(',') === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/player', r.nav.join(','));
   if (w > 860) {
