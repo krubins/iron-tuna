@@ -157,9 +157,9 @@
   /* The gutter between a page's body column and a rail beside it. */
   --rail-gap: 56px;
 
-  /* The ribbon alone. The navy bars above and below it add 12px each. */
+  /* The ribbon alone. The navy bars above and below it add 3px each. */
   --header-h: 60px;
-  --line-h: 12px;
+  --line-h: 3px;
 }
 @media (max-width: 860px) { :root { --gutter: 16px; --header-h: 56px } }
 
@@ -208,9 +208,9 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
 /* ── header ─────────────────────────────────────────────────────────────────
    In the style of a ticket or sports site, in this site's colours:
 
-     .site-line    an empty 12px navy bar above the ribbon. It carried a key
-                   phrase until 2026-10-09.
-     ::after       the matching 12px navy bar under the ribbon. Both bars take
+     .site-line    an empty 3px navy bar above the ribbon (12px, and carrying
+                   a key phrase, until 2026-10-09).
+     ::after       the matching 3px navy bar under the ribbon. Both bars take
                    the ribbon's own colour since 2026-10-09 (they were
                    near-black), so the three read as one navy band.
      .site-ribbon  the flat navy ribbon, 60px (56 on a phone), no border and no
