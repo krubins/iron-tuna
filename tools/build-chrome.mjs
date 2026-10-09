@@ -100,7 +100,7 @@ const NAV = [
 const CTA = { label: 'Customize My League', href: '/my-league#settings', cta: true };
 
 // The bar above the ribbon. It carried a key phrase until 2026-10-09; it is now
-// an empty near-black rule matching the one under the ribbon, so it is hidden
+// an empty navy rule matching the one under the ribbon, so it is hidden
 // from assistive tech.
 
 // The phone's bottom tab bar: four labelled icon tabs, the four places a
