@@ -136,32 +136,46 @@ body{overflow-x:hidden}
   .hm-tile{width:100%}
 }
 
-/* ── 3 · newest, as a ledger ──────────────────────────────────────────────
-   The six newest pieces the desk published, newest first. When expiry leaves
-   fewer than three, the feed's floor tops the band up with the newest spent
-   game recaps, and with nothing else. Each row leads with
-   a picture: the first player the piece names, else the home team's mark,
-   else the tuna. The name column is the headline over the series, set larger
-   than a board's ledger because these rows are stories, not figures; the
-   figure columns are when it was published, the week and how many players the
-   piece names. Hidden outright when the desk has nothing. */
+/* ── 3 · newest, as story cards ───────────────────────────────────────────
+   The five newest pieces the desk published, newest first: the newest as a
+   wide lead card (photograph left, headline right, the time and byline at the
+   foot), the next four as a row of cards with the photograph on top. The
+   photograph is the first player the piece names; a piece that names nobody
+   shows its series on navy instead. The series rides on the picture as a
+   small chip. The cards are the one thing on this page that casts a shadow:
+   a soft lift off the paper, as the reference card row does it.
+   Hidden outright when the desk has nothing current. */
 #articles[hidden]{display:none}
-.hm-ledger{--cols:3}
-.hm-ledger .ledger-row{grid-template-columns:112px minmax(0,1fr) 7rem 7rem 7rem;gap:var(--sp-12) var(--sp-24);padding:var(--sp-16) 0}
-.hm-ledger .ledger-name b{font-size:var(--fs-23);line-height:1.25;letter-spacing:-.01em}
-.hm-ledger .ledger-name span{font-size:var(--fs-16);margin-top:var(--sp-4)}
-.hm-ledger .ledger-fig small{font-size:var(--fs-14)}
-.hm-ledger .ledger-fig b{font-size:var(--fs-19)}
-.hm-thumb{position:relative;display:grid;place-items:center;width:112px;height:84px;margin:0;border-radius:8px;overflow:hidden;background:var(--line)}
-.hm-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
-.hm-thumb img.mark{object-fit:contain;padding:12px}
-.hm-thumb img:not(.mark){background:var(--line)}
+.hm-news{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-24)}
+.hm-story{display:flex;flex-direction:column;min-width:0;border-radius:10px;overflow:hidden;background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(17,20,24,.06),0 4px 14px rgba(17,20,24,.10);transition:box-shadow .15s ease}
+.hm-story:hover{color:var(--ink);text-decoration:none;box-shadow:0 2px 4px rgba(17,20,24,.08),0 8px 24px rgba(17,20,24,.14)}
+.hm-story:hover .hm-story-head{text-decoration:underline}
+.hm-story-pic{position:relative;aspect-ratio:16/9;overflow:hidden;background:linear-gradient(160deg,#0b3a66,var(--mast));color:#fff;display:grid;place-items:center;flex:none}
+.hm-story-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%}
+.hm-story-pic .hm-story-alt{font-size:var(--fs-19);font-weight:700;letter-spacing:-.01em;padding:0 var(--sp-16);text-align:center;line-height:1.2}
+.hm-story-pic.has-img .hm-story-alt{visibility:hidden}
+/* Without a photograph the series is already the picture; the chip would say it twice. */
+.hm-story-pic:not(.has-img) .hm-story-chip{display:none}
+.hm-story-chip{position:absolute;left:var(--sp-12);bottom:var(--sp-12);z-index:1;font-size:var(--fs-13);font-weight:600;line-height:1.4;color:var(--ink);background:rgba(255,255,255,.92);border-radius:6px;padding:2px 8px;max-width:calc(100% - 24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-story-txt{display:flex;flex-direction:column;flex:1;min-width:0;padding:var(--sp-16) var(--sp-16) var(--sp-12)}
+.hm-story-head{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.3;letter-spacing:-.005em}
+.hm-story-meta{display:block;margin-top:auto;padding-top:var(--sp-16);font-size:var(--fs-14);color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The lead spans the row: photograph on the left, a little under half. */
+.hm-story.lead{grid-column:1/-1;flex-direction:row}
+.hm-story.lead .hm-story-pic{width:38%;aspect-ratio:auto;min-height:250px}
+.hm-story.lead .hm-story-txt{padding:var(--sp-24) var(--sp-24) var(--sp-16)}
+.hm-story.lead .hm-story-head{font-size:var(--fs-28);font-weight:700;line-height:1.25;letter-spacing:-.01em}
 @media(max-width:860px){
-  .hm-ledger .ledger-row{grid-template-columns:80px minmax(0,1fr) auto;gap:var(--sp-8) var(--sp-12)}
-  .hm-ledger .ledger-name b{font-size:var(--fs-19)}
-  .hm-ledger .ledger-name span{font-size:var(--fs-14)}
-  .hm-thumb{width:80px;height:60px}
-  .hm-thumb img.mark{padding:8px}
+  .hm-news{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-16)}
+  .hm-story-head{font-size:var(--fs-16)}
+  .hm-story-txt{padding:var(--sp-12)}
+  .hm-story-meta{font-size:var(--fs-13);padding-top:var(--sp-12)}
+}
+@media(max-width:600px){
+  .hm-story.lead{flex-direction:column}
+  .hm-story.lead .hm-story-pic{width:auto;aspect-ratio:16/9;min-height:0}
+  .hm-story.lead .hm-story-txt{padding:var(--sp-16)}
+  .hm-story.lead .hm-story-head{font-size:var(--fs-23)}
 }
 
 /* ── 4 · how it works ─────────────────────────────────────────────────────
@@ -293,16 +307,16 @@ footer.site {margin-top:0}
 </section>
 
 <!-- ── 3 · newest from the desk ─────────────────────────────────────────────
-     Six rows, newest first, off /api/newsroom: the published feed, deduped
+     Five story cards, newest first, off /api/newsroom: the published feed, deduped
      by slug, the one /in-season/desk reads. Never /api/content, which is the
      archive and carries held drafts. Hidden outright when nothing is current. -->
 <section class="hm-sec" id="articles" hidden aria-labelledby="readHead">
   <div class="wrap">
     <div class="hm-sec-head">
-      <h2 id="readHead">Newest from the desk</h2>
+      <h2 id="readHead">From the Desk</h2>
       <a href="/in-season/desk">All articles &rarr;</a>
     </div>
-    <div class="ledger hm-ledger" id="readGrid" data-player-links></div>
+    <div class="hm-news" id="readGrid"></div>
   </div>
 </section>
 
@@ -486,7 +500,7 @@ footer.site {margin-top:0}
   var FACE_ESPN = 'https://a.espncdn.com/i/headshots/nfl/players/full/';
   var FACE_NFL = 'https://static.www.nfl.com/image/upload/f_auto,q_auto/league/';
   function mountFaces() {
-    var boxes = document.querySelectorAll('.hm-face:not([data-face-done])');
+    var boxes = document.querySelectorAll('[data-face-name]:not([data-face-done])');
     for (var i = 0; i < boxes.length; i++) {
       var box = boxes[i], hit = null;
       try { if (window.ITPlayerSearch && ITPlayerSearch.resolve) hit = ITPlayerSearch.resolve(box.getAttribute('data-face-name')); } catch (e) { hit = null; }
@@ -499,7 +513,8 @@ footer.site {margin-top:0}
       (function (el, list) {
         var img = document.createElement('img'), at = 0;
         img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
-        img.onerror = function () { if (++at < list.length) img.src = list[at]; else img.remove(); };
+        img.onerror = function () { if (++at < list.length) img.src = list[at]; else { img.remove(); el.classList.remove('has-img'); } };
+        img.onload = function () { el.classList.add('has-img'); };
         img.src = list[0];
         el.appendChild(img);
       })(box, srcs);
@@ -577,13 +592,16 @@ footer.site {margin-top:0}
   });
 
   // ── newest from the desk ─────────────────────────────────────────────────
-  // Six rows, newest first, and only rows with a destination and a headline
-  // of their own. `/api/newsroom` is the published feed: one row per slug,
+  // Five cards, newest first, and only pieces with a destination and a
+  // headline of their own: the newest as the wide lead, the next four in a
+  // row under it. `/api/newsroom` is the published feed: one row per slug,
   // the newest version winning, forward pieces dropped once their games have
   // kicked off. `/api/content` is the archive — held drafts, one row per
   // version — and this page must never read it (that put five drafts of one
-  // preview on the cover in September).
-  var NEWEST = 6;
+  // preview on the cover in September). The read asks for a floor of three:
+  // when expiry leaves fewer, the feed tops it up with the newest spent game
+  // recaps and nothing else, marked `expired`, which the KPI count leaves out.
+  var NEWEST = 5;
   function etDay(v) {
     try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(v)); } catch (e) { return ''; }
   }
@@ -601,55 +619,36 @@ footer.site {margin-top:0}
     return day(at);
   }
   // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only when
-  // one of its own calls cleared the bar (_voiceBlock, _worker.js). In a ledger
-  // row it is not worth two words of the headline; the call itself is.
+  // one of its own calls cleared the bar (_voiceBlock, _worker.js). On a card
+  // it is not worth two words of the headline; the call itself is.
   var BOAST = /^\s*you['’]re\s+welcome\s*[:–—.!-]*\s*/i;
   function headlineOf(p) {
     var h = String((p && p.headline) || ''), m = BOAST.exec(h);
     return m ? (h.slice(m[0].length).trim() || h) : h;
   }
-  function named(p) {
-    var out = [];
-    (p.components || []).forEach(function (c) { if (c && c.player && out.indexOf(c.player) < 0) out.push(c.player); });
-    return out.length;
-  }
-  // THE PICTURE. The first player the piece names, mounted by mountFaces once
-  // /player-search.js can resolve him; under it, the home team's mark off a
-  // "TB at DAL" title, else the tuna, so a row is never a blank box while the
-  // index loads or when a headshot fails.
-  function firstNamed(p) {
+  // The card's photograph: the first player the piece names.
+  function subjectOf(p) {
     var c = (p.components || []).filter(function (c) { return c && c.player; })[0];
     return c ? c.player : null;
   }
-  var LOGO_ESPN = 'https://a.espncdn.com/i/teamlogos/nfl/500/';
-  var ESPN_TEAM = { WAS: 'wsh' };
-  function markSrc(p) {
-    var m = /\b([A-Z]{2,3}) (?:at|vs\.?) ([A-Z]{2,3})\b/.exec(String(p.title || ''));
-    if (!m) return '/tuna-mark.png';
-    var t = m[2];
-    return LOGO_ESPN + (ESPN_TEAM[t] || t.toLowerCase()) + '.png';
-  }
-  function thumbHtml(p) {
-    var who = firstNamed(p);
-    return '<span class="hm-thumb' + (who ? ' hm-face' : '') + '"' + (who ? ' data-face-name="' + esc(who) + '"' : '') + ' aria-hidden="true">'
-      + '<img class="mark" src="' + esc(markSrc(p)) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=\'/tuna-mark.png\'">'
-      + '</span>';
+  function storyHtml(p, lead) {
+    var who = subjectOf(p), series = p.title || 'The desk';
+    var when = p.publishedAt ? ago(p.publishedAt) : (p.week ? 'Week ' + p.week : '');
+    var meta = [when, p.byline && p.byline.name].filter(Boolean).join(' · ');
+    return '<a class="hm-story' + (lead ? ' lead' : '') + '" href="' + esc(p.url) + '">'
+      + '<span class="hm-story-pic"' + (who ? ' data-face-name="' + esc(who) + '"' : '') + ' aria-hidden="true">'
+      + '<span class="hm-story-alt">' + esc(series) + '</span>'
+      + '<span class="hm-story-chip">' + esc(series) + '</span></span>'
+      + '<span class="hm-story-txt"><span class="hm-story-head">' + esc(headlineOf(p)) + '</span>'
+      + '<span class="hm-story-meta">' + esc(meta) + '</span></span>'
+      + '</a>';
   }
   function desk(j) {
     var live = (j.pieces || []).filter(function (p) { return p && p.url && p.headline; }).slice(0, NEWEST);
     if (!live.length) return;
-    $('readGrid').innerHTML = live.map(function (p) {
-      var n = named(p);
-      return '<a class="ledger-row" href="' + esc(p.url) + '">'
-        + thumbHtml(p)
-        + '<span class="ledger-name"><b>' + esc(headlineOf(p)) + '</b><span>' + esc(p.title || 'The desk') + (p.byline && p.byline.name ? ' · ' + esc(p.byline.name) : '') + '</span></span>'
-        + '<span class="ledger-fig keep"><small>Published</small><b>' + esc(p.publishedAt ? ago(p.publishedAt) : (p.week ? 'Week ' + p.week : '')) + '</b></span>'
-        + '<span class="ledger-fig"><small>Week</small><b>' + esc(p.week != null ? String(p.week) : '') + '</b></span>'
-        + '<span class="ledger-fig"><small>Players named</small><b>' + n + '</b></span>'
-        + '</a>';
-    }).join('');
-    show($('articles'), true);
+    $('readGrid').innerHTML = live.map(function (p, i) { return storyHtml(p, i === 0); }).join('');
     mountFaces();
+    show($('articles'), true);
     kpi.pieces = (j.pieces || []).filter(function (p) { return p && p.url && p.headline && !p.expired; }).length;
     paintKpi();
   }
