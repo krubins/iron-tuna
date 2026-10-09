@@ -124,7 +124,7 @@ const CONTENT = { ok: true, pieces: [
   // No headline of its own: not a row either.
   { kind: 'blank', title: 'Blank', week: 3, publishedAt: AGO(21), url: '/in-season/desk/blank/3' },
   { kind: 'weekend-game-plan', title: 'Weekend Game Plan', headline: 'Too many to print',
-    week: 3, publishedAt: AGO(26), url: '/in-season/desk/weekend-game-plan/3' },
+    week: 3, publishedAt: AGO(24), url: '/in-season/desk/weekend-game-plan/3' },
   { kind: 'waiver-watch', title: 'Waiver Watch', headline: 'Four adds the market already priced in',
     week: 3, publishedAt: AGO(33), url: '/in-season/desk/waiver-watch/3', components: [{ n: 1, player: 'Tank Bigsby', headline: 'e' }] },
   // Seven qualify; six are shown. This one must not be.
@@ -334,15 +334,15 @@ console.log('\nwith the boards answering');
   ok('a strong fade on a bench player is a Fade', by('Blake Corum') && by('Blake Corum').k.startsWith('Fade'));
   ok('and every figure states the three projections under it',
      r.figs.every(f => /^Market \d+\.\d · consensus \d+\.\d · Iron Tuna \d+\.\d$/.test(f.s)), r.figs.map(f => f.s).join(' / '));
-  ok('a 13px label over a 28px figure', r.figs.every(f => f.kPx === 13 && f.vPx === 28), JSON.stringify(r.figs.map(f => [f.kPx, f.vPx])));
+  ok('a 16px label over a 34px figure', r.figs.every(f => f.kPx === 16 && f.vPx === 34), JSON.stringify(r.figs.map(f => [f.kPx, f.vPx])));
   ok('only a positive edge is green, and the negative ones are ink',
      r.figs.filter(f => f.v.startsWith('+')).every(f => f.good && f.color === 'rgb(10, 106, 76)') && r.figs.filter(f => f.v.startsWith('-')).every(f => !f.good && f.color === 'rgb(17, 20, 24)'),
      JSON.stringify(r.figs.map(f => [f.v, f.color])));
   ok('a player the market agrees about is not a figure', !r.figs.some(f => f.k.includes('Agreeable')));
   ok('no injured player, no player the books left off, and no zero projection is a figure',
      !r.figs.some(f => /Lamar Jackson|Hobbled|Priced Out|Zeroed/.test(f.k)) && !r.figs.some(f => /Market 0\.0|Iron Tuna 0\.0/.test(f.s)), r.figs.map(f => f.k).join(' / '));
-  ok('every figure carries the player\'s photograph, a 56px circle',
-     r.figs.every(f => f.face && f.face.w === 56 && f.face.h === 56 && f.k.includes(f.face.name)), JSON.stringify(r.figs.map(f => f.face)));
+  ok('every figure carries the player\'s photograph, an 88px circle',
+     r.figs.every(f => f.face && f.face.w === 88 && f.face.h === 88 && f.k.includes(f.face.name)), JSON.stringify(r.figs.map(f => f.face)));
   ok('resolved off the shared player index, ESPN first',
      r.figs.every(f => f.face.done) && ['4426502', '4688380', '3043078', '4429096'].every(id => photos.some(u => u.includes('/headshots/nfl/players/full/' + id + '.png'))),
      JSON.stringify(photos.filter(u => /headshots/.test(u))));
