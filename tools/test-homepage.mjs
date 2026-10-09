@@ -124,7 +124,7 @@ const CONTENT = { ok: true, pieces: [
   // No headline of its own: not a row either.
   { kind: 'blank', title: 'Blank', week: 3, publishedAt: AGO(21), url: '/in-season/desk/blank/3' },
   { kind: 'weekend-game-plan', title: 'Weekend Game Plan', headline: 'Too many to print',
-    week: 3, publishedAt: AGO(26), url: '/in-season/desk/weekend-game-plan/3' },
+    week: 3, publishedAt: AGO(24), url: '/in-season/desk/weekend-game-plan/3' },
   { kind: 'waiver-watch', title: 'Waiver Watch', headline: 'Four adds the market already priced in',
     week: 3, publishedAt: AGO(33), url: '/in-season/desk/waiver-watch/3', components: [{ n: 1, player: 'Tank Bigsby', headline: 'e' }] },
   // Seven qualify; six are shown. This one must not be.
@@ -334,7 +334,7 @@ console.log('\nwith the boards answering');
   ok('a strong fade on a bench player is a Fade', by('Blake Corum') && by('Blake Corum').k.startsWith('Fade'));
   ok('and every figure states the three projections under it',
      r.figs.every(f => /^Market \d+\.\d · consensus \d+\.\d · Iron Tuna \d+\.\d$/.test(f.s)), r.figs.map(f => f.s).join(' / '));
-  ok('a 13px label over a 28px figure', r.figs.every(f => f.kPx === 13 && f.vPx === 28), JSON.stringify(r.figs.map(f => [f.kPx, f.vPx])));
+  ok('a 16px label over a 34px figure', r.figs.every(f => f.kPx === 16 && f.vPx === 34), JSON.stringify(r.figs.map(f => [f.kPx, f.vPx])));
   ok('only a positive edge is green, and the negative ones are ink',
      r.figs.filter(f => f.v.startsWith('+')).every(f => f.good && f.color === 'rgb(10, 106, 76)') && r.figs.filter(f => f.v.startsWith('-')).every(f => !f.good && f.color === 'rgb(17, 20, 24)'),
      JSON.stringify(r.figs.map(f => [f.v, f.color])));
