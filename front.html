@@ -142,12 +142,13 @@ body{overflow-x:hidden}
    foot), the next four as a row of cards with the photograph on top. The
    photograph is the first player the piece names; a piece that names nobody
    shows its series on navy instead. The series rides on the picture as a
-   small chip. Outlined, not shadowed: nothing on this page casts a shadow.
+   small chip. The cards are the one thing on this page that casts a shadow:
+   a soft lift off the paper, as the reference card row does it.
    Hidden outright when the desk has nothing current. */
 #articles[hidden]{display:none}
 .hm-news{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-24)}
-.hm-story{display:flex;flex-direction:column;min-width:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);color:var(--ink)}
-.hm-story:hover{color:var(--ink);text-decoration:none;border-color:var(--line-2)}
+.hm-story{display:flex;flex-direction:column;min-width:0;border-radius:10px;overflow:hidden;background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(17,20,24,.06),0 4px 14px rgba(17,20,24,.10);transition:box-shadow .15s ease}
+.hm-story:hover{color:var(--ink);text-decoration:none;box-shadow:0 2px 4px rgba(17,20,24,.08),0 8px 24px rgba(17,20,24,.14)}
 .hm-story:hover .hm-story-head{text-decoration:underline}
 .hm-story-pic{position:relative;aspect-ratio:16/9;overflow:hidden;background:linear-gradient(160deg,#0b3a66,var(--mast));color:#fff;display:grid;place-items:center;flex:none}
 .hm-story-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%}
