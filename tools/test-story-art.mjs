@@ -428,7 +428,9 @@ console.log('\nthe pages');
   // so it needs the map, and it needs it before the lookup that reads it.
   // October 2026: front.html is off the list again. The homepage paints no
   // photograph: its hero is a headline, a search field and a row of figures.
-  for (const f of ['desk.html', 'lead.html']) {
+  // 2026-10-09: and back on. The desk's story cards run a game photograph of
+  // a player each piece is about, credited on the card.
+  for (const f of ['desk.html', 'lead.html', 'front.html']) {
     const src = read(f);
     const a = src.indexOf('<script src="/it-action.js" defer>'), b = src.indexOf('<script src="/player-search.js" defer>');
     ok(`${f} loads /it-action.js before player-search.js`, a >= 0 && b > a);

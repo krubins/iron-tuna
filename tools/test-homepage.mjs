@@ -6,7 +6,7 @@
 // Five sections, in this order: a white centred hero (one headline, one
 // sentence, the search field, three entry points, a hairline and the row of
 // live market figures), the six position tiles, the five newest desk pieces as
-// story cards, the three How-it-works cards, and the navy KPI band; then the
+// story cards (game photographs, credited; a thin feed filled from findings), the three How-it-works cards, and the navy KPI band; then the
 // shared footer. The cover rotation, the photograph, the lead story, the two
 // lane cards and the quick-links strip all came off with it.
 //
@@ -138,6 +138,20 @@ const ARCHIVE_POISON = { ok: true, pieces: [1, 2, 3, 4, 5].map(v => ({
   headline: 'HELD DRAFT ' + v + ' — must never reach the front',
   week: 3, publishedAt: NOW, url: '/in-season/desk/weekend-preview/3'
 })) };
+// Three stories and nothing else: what the feed holds once Sunday's forward
+// pieces expire.
+const THIN = { ok: true, pieces: [
+  { kind: 'trade-desk', title: 'Trade Desk', headline: 'Buy the gap: five players the board prices well below consensus',
+    week: 5, publishedAt: AGO(0.4), url: '/in-season/desk/trade-desk/5', byline: { name: 'Evan Brooks' },
+    // A player with no game photograph is named first; one with a photograph second.
+    components: [{ n: 1, player: 'Tank Bigsby', headline: 'Bigsby is a buy' }, { n: 2, player: 'Dak Prescott', headline: 'Prescott is a buy' }] },
+  { kind: 'underrated', title: 'Most Underrated Player', headline: 'Roman Wilson is the most underrated player in Week 5',
+    week: 5, publishedAt: AGO(0.6), url: '/in-season/desk/underrated/5', byline: { name: 'Evan Brooks' },
+    components: [{ n: 1, headline: 'His target share is up four weeks running' }] },
+  { kind: 'week-in-review', title: 'Week 5 in Review', headline: 'Week 5 in review has harder lessons too',
+    week: 5, publishedAt: AGO(0.7), url: '/in-season/desk/week-in-review/5', byline: { name: 'Mike Baines' },
+    components: [{ n: 1, headline: 'Week 5 in review has harder lessons too' }, { n: 2, player: 'Dak Prescott', headline: 'Flournoy beat his ranking' }] }
+]};
 const SEASON = { ok: true, phase: 'regular', phaseLabel: 'Regular season',
   week: { label: 'Week 3', status: 'upcoming', firstKickoff: Date.UTC(2026, 8, 17, 20, 15) }, counts: { inProgress: 0 } };
 
@@ -155,6 +169,10 @@ const server = http.createServer((req, res) => {
       else if (u.pathname === '/api/newsroom') body = CONTENT;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
+    } else if (MODE === 'thin') {
+      if (u.pathname === '/api/newsroom') body = THIN;
+      else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
+      else if (u.pathname === '/api/season') body = SEASON;
     }
     res.writeHead(200, { 'content-type': 'application/json' });
     return res.end(JSON.stringify(body));
@@ -167,6 +185,7 @@ const server = http.createServer((req, res) => {
 await new Promise(r => server.listen(0, r));
 const BASE = `http://127.0.0.1:${server.address().port}/`;
 
+const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
 const browser = await chromium.launch({ executablePath: CHROME });
 const errors = [];
 const photos = [];
@@ -174,7 +193,10 @@ async function open(width, height) {
   const ctx = await browser.newContext({ viewport: { width, height } });
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(`${width}px: ${e.message}`));
-  await page.route(/espncdn\.com|static\.www\.nfl\.com|wikimedia\.org|googletagmanager\.com/, r => { photos.push(r.request().url()); return r.abort(); });
+  // The Commons photographs answer with a real (one-pixel) image, so the card
+  // that has one can be seen printing its credit; every other host refuses.
+  await page.route(/wikimedia\.org/, r => { photos.push(r.request().url()); return r.fulfill({ status: 200, contentType: 'image/png', body: PIXEL }); });
+  await page.route(/espncdn\.com|static\.www\.nfl\.com|googletagmanager\.com/, r => { photos.push(r.request().url()); return r.abort(); });
   await page.goto(BASE, { waitUntil: 'networkidle' });
   return { page, ctx };
 }
@@ -225,7 +247,10 @@ const read = page => page.evaluate(() => {
     articles: vis(byId('articles')),
     rows: [...document.querySelectorAll('#readGrid .hm-story')].map(r => {
       const pic = r.querySelector('.hm-story-pic'), pb = pic.getBoundingClientRect(), tb = r.querySelector('.hm-story-txt').getBoundingClientRect(), b = r.getBoundingClientRect();
-      return { href: r.getAttribute('href'), lead: r.classList.contains('lead'), name: text(r.querySelector('.hm-story-head')), meta: text(r.querySelector('.hm-story-meta')),
+      const link = r.querySelector('a.hm-story-head'), credit = r.querySelector('.hm-story-credit');
+      return { href: link && link.getAttribute('href'), tag: r.tagName, action: pic.classList.contains('is-action'),
+        credit: credit && vis(credit) ? { text: text(credit), links: [...credit.querySelectorAll('a')].map(a => a.getAttribute('href')) } : null,
+        lead: r.classList.contains('lead'), name: text(r.querySelector('.hm-story-head')), meta: text(r.querySelector('.hm-story-meta')),
         series: text(r.querySelector('.hm-story-chip')), face: pic.getAttribute('data-face-name'), headPx: px(r.querySelector('.hm-story-head')),
         picLeft: pb.right <= tb.left + 1, picTop: pb.bottom <= tb.top + 1, top: Math.round(b.top), w: Math.round(b.width), radius: parseFloat(getComputedStyle(r).borderTopLeftRadius), shadow: getComputedStyle(r).boxShadow };
     }),
@@ -373,6 +398,22 @@ console.log('\nwith the boards answering');
      r.rows[0].meta === '6m ago · Iron Tuna desk' && r.rows[4].meta === 'Yesterday', r.rows.map(x => x.meta).join(' / '));
   ok('the photograph is the first player the piece names; none when it names nobody',
      r.rows[0].face === 'Puka Nacua' && r.rows[1].face === 'Derrick Henry' && r.rows[2].face === null, r.rows.map(x => x.face).join(','));
+  ok('a player with a game photograph on file gets the game photograph, not his headshot',
+     r.rows[0].action && r.rows[1].action && photos.some(u => /wikimedia\.org/.test(u)), JSON.stringify(r.rows.map(x => x.action)));
+  ok('and the card prints the credit its license requires: photographer, license, links to both',
+     r.rows[0].credit && /^Photo: .+, CC BY/.test(r.rows[0].credit.text) && /via Wikimedia Commons/.test(r.rows[0].credit.text)
+       && r.rows[0].credit.links.length === 2 && r.rows[0].credit.links.every(h => /^https:\/\//.test(h)), JSON.stringify(r.rows[0].credit));
+  ok('a card with no photograph prints no credit', r.rows[2].credit === null, JSON.stringify(r.rows[2].credit));
+  // The headline's link covers the card: a click in the photograph lands on
+  // it. Each card is scrolled into view first; a point off screen hits nothing.
+  const covers = await page.evaluate(() => [...document.querySelectorAll('#readGrid .hm-story')].map(r => {
+    r.scrollIntoView({ block: 'center' });
+    const pb = r.querySelector('.hm-story-pic').getBoundingClientRect(), link = r.querySelector('a.hm-story-head');
+    const hit = document.elementFromPoint(pb.left + pb.width / 2, pb.top + pb.height / 2);
+    return !!hit && !!link && (hit === link || link.contains(hit));
+  }));
+  ok('a card is an article whose headline link covers it, so the credit links are not nested in a link',
+     r.rows.every(x => x.tag === 'ARTICLE') && covers.every(Boolean), JSON.stringify([r.rows.map(x => x.tag), covers]));
   ok('no held draft reaches the front', !/HELD DRAFT/.test(r.body), (r.body.match(/HELD DRAFT \d/) || [''])[0]);
   ok('and no story is on the front twice', new Set(r.rows.map(x => x.href)).size === r.rows.length);
 
@@ -462,6 +503,33 @@ console.log('\nkeyboard focus');
   ok('the search field shows the accent border and the tint ring on focus', field.border === 'rgb(11, 79, 108)' && /3px/.test(field.shadow), JSON.stringify(field));
   await ctx.close();
 }
+
+// ── 3f. a thin feed ─────────────────────────────────────────────────────────
+// Once the forward pieces expire the feed can hold three stories. The empty
+// slots take the findings of the stories already listed, each linking to its
+// finding on the piece, so the row is never left with holes in it.
+console.log('\na thin feed');
+MODE = 'thin';
+{
+  const { page, ctx } = await open(1440, 900);
+  const r = await read(page);
+  ok('three stories fill all five cards, the extra two from their findings',
+     r.rows.length === 5 && r.rows.slice(0, 3).map(x => x.href).join(' ') === '/in-season/desk/trade-desk/5 /in-season/desk/underrated/5 /in-season/desk/week-in-review/5'
+       && r.rows.slice(3).map(x => x.href).join(' ') === '/in-season/desk/underrated/5#component-1 /in-season/desk/week-in-review/5#component-2',
+     r.rows.map(x => x.href).join(' '));
+  ok('a finding card carries its own headline and its story\'s series and byline',
+     r.rows[3].name === 'His target share is up four weeks running' && r.rows[3].series === 'Most Underrated Player' && /Evan Brooks/.test(r.rows[3].meta), JSON.stringify(r.rows[3]));
+  ok('a finding that only repeats its story\'s headline is skipped', !r.rows.some(x => /#component-1$/.test(x.href) && /week-in-review/.test(x.href)));
+  ok('a piece whose findings name nobody takes its picture from the players its headline names',
+     r.rows[1].face === 'Roman Wilson', String(r.rows[1].face));
+  ok('the lead takes the first player in its cast with a game photograph, not merely the first named',
+     r.rows[0].face === 'Dak Prescott' && r.rows[0].action, JSON.stringify([r.rows[0].face, r.rows[0].action]));
+  ok('no photograph runs twice in the grid: a finding about the lead\'s player takes a different picture',
+     (() => { const shots = r.rows.filter(x => x.action).map(x => x.face); return new Set(shots).size === shots.length; })(), JSON.stringify(r.rows.map(x => [x.face, x.action])));
+  ok('four cards in the row under the lead', new Set(r.rows.slice(1).map(x => x.top)).size === 1, JSON.stringify(r.rows.map(x => x.top)));
+  await ctx.close();
+}
+MODE = 'live';
 
 // ── 4. the refusing pass: the whole point ───────────────────────────────────
 console.log('\nwith every feed refusing');
