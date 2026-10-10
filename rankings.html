@@ -319,9 +319,10 @@ p{color:var(--sec);margin:0 0 16px}
     <div class="rk-controls">
     <div class="rk-seg" id="rkHorizon" role="group" aria-label="Horizon">
     <button type="button" data-horizon="week">This Week</button>
-    <button type="button" data-horizon="next3">Next 3 Weeks</button>
+    <button type="button" data-horizon="next">Next Week</button>
+    <button type="button" data-horizon="untilPlayoffs">Get Me to the Playoffs</button>
+    <button type="button" data-horizon="playoffs">Playoffs</button>
     <button type="button" data-horizon="ros">Rest of Season</button>
-    <button type="button" data-horizon="playoffs">Weeks 15&ndash;17</button>
   </div>
     </div>
   </div>
@@ -397,7 +398,7 @@ p{color:var(--sec);margin:0 0 16px}
 <!-- The two lines under each name, explained where the reader meets them. The
      sixteen published rankings pages carry the same section in their own words;
      the lines themselves come from it-reads.js, shared with them. This one has
-     to cover four horizons rather than two, so it says "a one-week board" and
+     to cover five horizons rather than two, so it says "a one-week board" and
      "a longer one" instead of naming them. -->
 <h2>How to read the two lines under a name</h2>
 <p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is where he ranks at his own position, then the one or two things about his season that are least like the rest of his position, each with his own numbers and his rank: his share of targets or touches, how much of his scoring came from touchdowns, his yards a catch or a carry, how often he catches his targets, his snaps, a swing in his workload last week, a projection well off the rate he has scored at, or betting odds that rank him well away from the consensus. Two players rarely get the same sentence, because two players are rarely unusual in the same way. One game is called one game rather than read, and an injury rides on the rank. Before he has played there is nothing to report, and the line says what a rank like his is worth at his position instead. <b>Opportunity</b> is what is in front of him: on a one-week board the fixture, how hard the defense across from him has been on points allowed, and what the market implies his offense will score against its own season mean; on a longer board whatever stands out most about the rest of his schedule (soft games now and hard ones later or the reverse, how weeks 15 to 17 grade, an offense projected near the top or bottom of the league, or a slate among the softest or hardest at his position), closed by the games and byes he has left. On either, any work a teammate&rsquo;s absence leaves open. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score. Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
@@ -465,7 +466,7 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-reads.js" defer></script>
 <script>
 (function () {
-  // Three boards, four horizons, seven position views, four scoring settings,
+  // Three boards, five horizons, seven position views, four scoring settings,
   // and every column sortable. The API ships stat lines and points at PPR;
   // scoring at the chosen setting is done here with it-league.js (the same
   // engine, pinned by tools/test-scoring.mjs), then the three boards are
@@ -539,7 +540,10 @@ p{color:var(--sec);margin:0 0 16px}
   }
   var COLS = {
     week: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['opp', 'Opponent'], ['it', 'Iron Tuna proj'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury'], ['trend', 'Trend']],
-    next3: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['it', 'Iron Tuna total'], ['ppg', 'Avg / week'], ['games', 'Games'], ['byes', 'Bye'], ['sched', 'Schedule'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury']],
+    // Next week is one fixture, so it reads like this week; the stretch to the
+    // playoffs is a sum over weeks, so it reads like the season.
+    next: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['opp', 'Opponent'], ['it', 'Iron Tuna proj'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury'], ['trend', 'Trend']],
+    untilPlayoffs: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['it', 'Pts to playoffs'], ['ppg', 'Avg / week'], ['games', 'Games'], ['byes', 'Bye'], ['sched', 'Schedule'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury']],
     ros: [['rank', 'ROS rank'], ['player', 'Player'], ['team', 'Team'], ['it', 'Remaining pts'], ['ppg', 'Pts / game'], ['games', 'Games'], ['byes', 'Bye'], ['sched', 'Schedule'], ['trend', 'Role trend'], ['conf', 'Risk / confidence'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['inj', 'Injury']],
     playoffs: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['it', 'Wks 15–17 pts'], ['ppg', 'Avg / game'], ['games', 'Games'], ['opps', 'Opponents'], ['sched', 'Schedule'], ['conf', 'Confidence'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['inj', 'Injury']]
   };
@@ -649,7 +653,7 @@ p{color:var(--sec);margin:0 0 16px}
     var rankField = (board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v') + (pos === 'FLEX' ? 'Flex' : 'Rank');
     rows = rows.filter(function (r) { return pos === 'FLEX' ? /^(RB|WR|TE)$/.test(r.p.position) : r.p.position === pos; });
     if (q) { var qq = q.toLowerCase(); rows = rows.filter(function (r) { return r.p.name.toLowerCase().indexOf(qq) >= 0 || r.p.team.toLowerCase() === qq; }); }
-    if (hideOut && horizon === 'week') rows = rows.filter(function (r) { return !(r.p.weeks[0] && (r.p.weeks[0].out || r.p.weeks[0].bye)); });
+    if (hideOut && (horizon === 'week' || horizon === 'next')) rows = rows.filter(function (r) { return !(r.p.weeks[0] && (r.p.weeks[0].out || r.p.weeks[0].bye)); });
     rows.sort(function (a, b) { var x = sortVal(a, sortKey, rankField), y = sortVal(b, sortKey, rankField); return (x < y ? -1 : x > y ? 1 : 0) * sortDir || a[rankField] - b[rankField]; });
     var cols = COLS[horizon];
     $('rkHead').innerHTML = cols.map(function (c) { return '<th data-key="' + c[0] + '"' + (/^(it|ppg|games|crank|vrank)$/.test(c[0]) ? ' class="num"' : '') + (c[0] === sortKey ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + c[1] + '</th>'; }).join('');
@@ -661,7 +665,7 @@ p{color:var(--sec);margin:0 0 16px}
     var L = window.ITLeague;
     var LS = window.ITSync && ITSync.active();
     $('rkScoringNote').innerHTML = (preset === 'league' && LS ? '<b>Customized for your league:</b> ' + e(LS.name) + ' · ' + e(LS.label) : preset === 'custom' ? 'Scored at <b>' + e(L && L.label ? L.label() : 'your league') + '</b>' : 'Scored at <b>' + (preset === 'standard' ? 'Standard' : preset === 'half' ? 'Half PPR' : 'PPR') + '</b>') +
-      ' &middot; ' + e(payload.horizon.label) + (payload.horizon.weeks.length ? ' (weeks ' + payload.horizon.weeks[0] + (payload.horizon.weeks.length > 1 ? '–' + payload.horizon.weeks[payload.horizon.weeks.length - 1] : '') + ')' : '') +
+      ' &middot; ' + e(payload.horizon.label) + (payload.horizon.weeks.length ? ' (week' + (payload.horizon.weeks.length > 1 ? 's ' + payload.horizon.weeks[0] + '–' + payload.horizon.weeks[payload.horizon.weeks.length - 1] : ' ' + payload.horizon.weeks[0]) + ')' : '') +
       ' &middot; showing the <b>' + (board === 'ironTuna' ? 'Iron Tuna' : board === 'consensus' ? 'Consensus' : board === 'blend' ? (w === 0 ? 'Fantasy Analysis (Brooks)' : w === 1 ? 'Market Intelligence (Vega)' : Math.round((1 - w) * 100) + ' / ' + Math.round(w * 100) + ' Fantasy / Market') : 'Vegas') + '</b> board.';
     $('rkBlend').hidden = board !== 'blend';
     $('rkFoot').innerHTML = 'Vegas basis: <b>props</b> is a priced player prop; <b>gamelines</b> is the posted game line’s scoring environment applied to his line; <b>ratings</b> is a fixture no book has posted yet, projected from fitted team ratings and graded LOW. ' +
@@ -675,7 +679,14 @@ p{color:var(--sec);margin:0 0 16px}
     $('rkEmpty').hidden = false; $('rkEmpty').textContent = 'Reading the board…';
     var url = preset === 'league' ? '/api/leagues/' + encodeURIComponent(LS.id) + '/board?horizon=' + hz : '/api/boards?horizon=' + hz + '&pos=ALL&scoring=ppr';
     fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) { $('rkEmpty').textContent = 'The board did not answer. Nothing is shown rather than a stale ranking.'; return; }
+      if (!j || !j.ok) {
+        // A horizon the clock has run out of says why, instead of "did not answer".
+        $('rkTable').hidden = true;
+        $('rkEmpty').textContent = j && j.error === 'no_weeks'
+          ? (hz === 'next' ? 'There is no week after this one on the schedule. The Playoffs and Rest of Season boards still answer.' : 'The fantasy playoffs have begun, so there is no stretch left to get through. The Playoffs board is the one to read now.')
+          : 'The board did not answer. Nothing is shown rather than a stale ranking.';
+        return;
+      }
       store[hz] = j; if (hz === horizon) render();
     }).catch(function () { $('rkEmpty').textContent = 'The board did not answer.'; });
   }
@@ -683,7 +694,7 @@ p{color:var(--sec);margin:0 0 16px}
     fetch('/api/ros-update').then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok) return;
       var box = $('rkWed'); box.hidden = false;
-      $('rkWedSub').innerHTML = (j.featured && j.featured.builtAt ? 'Updated ' + e(new Date(j.featured.builtAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' })) + ', for Week ' + e(j.featured.week) + '. ' : '') + e(j.snapshotNote || 'Three forward-looking boards, recalculated every Wednesday morning from the weekend’s usage, Monday night, the injury list, and every game line a book has posted.');
+      $('rkWedSub').innerHTML = (j.featured && j.featured.builtAt ? 'Updated ' + e(new Date(j.featured.builtAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' })) + ', for Week ' + e(j.featured.week) + '. ' : '') + e(j.snapshotNote || 'Four forward-looking boards, recalculated every Wednesday morning from the weekend’s usage, Monday night, the injury list, and every game line a book has posted.');
       $('rkWedChoices').innerHTML = j.choices.map(function (c) { return '<div class="is-card" data-goto="' + e(c.horizon) + '"><h3>' + e(c.title) + '</h3><p>' + e(c.blurb) + '</p></div>'; }).join('');
       var movers = '';
       if (j.risers.length || j.fallers.length) {
@@ -709,7 +720,10 @@ p{color:var(--sec);margin:0 0 16px}
       $('rkLeague').hidden = false;
       preset = 'league'; setPressed($('rkScoring'), 'data-preset', preset); load(horizon);
     });
-    var hp = (location.hash.match(/horizon=(\w+)/) || [])[1]; if (hp && /^(week|next3|ros|playoffs)$/.test(hp)) horizon = hp;
+    // `next3` was the row's second button until 10 Oct 2026; a link that
+    // still carries it lands on the nearest board the row offers now.
+    var hp = (location.hash.match(/horizon=(\w+)/) || [])[1]; if (hp === 'next3') hp = 'next';
+    if (hp && /^(week|next|untilPlayoffs|playoffs|ros)$/.test(hp)) horizon = hp;
     setPressed($('rkScoring'), 'data-preset', preset); setPressed($('rkHorizon'), 'data-horizon', horizon);
     setPressed($('rkBoard'), 'data-board', board); setPressed($('rkPos'), 'data-pos', pos);
     $('rkScoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; preset = b.getAttribute('data-preset'); setPressed(this, 'data-preset', preset); render(); });

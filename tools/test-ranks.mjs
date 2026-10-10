@@ -230,7 +230,10 @@ console.log('\nthe board prints the consensus against the odds');
 {
   const js = read('it-ranks.js');
   ok('the two column groups are named in full',
-    js.includes('>Fantasy Consensus<') && js.includes('>Betting Odds<'));
+    js.includes("'Fantasy Consensus'") && js.includes("'Betting Odds'"));
+  ok('and each group name sorts the board on its own rank column',
+    /grp\('crank', 'Fantasy Consensus'/.test(js) && /grp\('vrank', 'Betting Odds'/.test(js) &&
+    /function grp\(key, text, cls\)[\s\S]*?data-key="' \+ key/.test(js));
   ok('the fantasy side reads the consensus block', /p\.consensus\s*\?\s*p\.consensus\.points/.test(js));
   ok('the market side reads the vegas block', /p\.vegas\s*\?\s*p\.vegas\.points/.test(js));
   ok('and prints what the odds are built from, every row', js.includes('rk-basis'));
@@ -296,7 +299,11 @@ console.log('\nevery row says what the player is and what is in front of him');
   ok('and the far end of it does not', /depth|deep-league|waiver/.test(H.tierOf('WR', 90)));
   ok('an unranked player gets no tier at all, rather than the bottom one', H.tierOf('WR', null) === '');
   ok('every horizon either board can ask for has words of its own',
-    ['week', 'next3', 'ros', 'playoffs'].every((k) => H.HZ[k] && H.HZ[k].when && H.HZ[k].slate));
+    ['week', 'next', 'next3', 'untilPlayoffs', 'ros', 'playoffs'].every((k) => H.HZ[k] && H.HZ[k].when && H.HZ[k].slate));
+  ok('and the five the /rankings row offers are the five the worker knows',
+    (() => { const row = read('rankings.html').match(/id="rkHorizon"[\s\S]*?<\/div>/)[0];
+             const keys = [...row.matchAll(/data-horizon="(\w+)"/g)].map((m) => m[1]);
+             return keys.join() === 'week,next,untilPlayoffs,playoffs,ros' && keys.every((k) => H.HZ[k]); })());
 
   // The function's own body, not a window of N characters after its name: a
   // window is a test that fails the next time the function grows a comment.

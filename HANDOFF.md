@@ -433,6 +433,12 @@ It grants, mints the magic link itself, emails it, and reports **what actually h
 
 `node tools/test-admin-comp.mjs` covers the gate, the validation, the mail-shim assertions, every "looks like success and is not" case above — and follows the link the route emits all the way through `/api/auth/verify` to `/api/auth/me`, because a link that does not actually sign anyone in is the whole failure this route exists to prevent. It also asserts `admin.html` still sends the parameters the route reads, since the page is hand-written and a renamed parameter would only show up as a form that silently 400s. Both this and the grant suite run in CI, along with a parse check on `admin.html`'s scripts.
 
+## 9g-ii. The admin password (added 2026-10-10)
+
+`/admin` used to open only with `LEADS_EXPORT_KEY`, a long secret that is awkward to paste from a phone. `adminOk` in `_worker.js` now accepts a second credential, `ADMIN_PASSWORD`, set as a plain var in `wrangler.jsonc` (currently `Claude`). It is the same gate every `/api/admin/*` route, the `?preview=` escape hatch and the Tuna Market refresh go through, so the password opens all of them, exactly as the key does. The key still works; nothing that used it changes.
+
+To change the password, edit the var in `wrangler.jsonc` and deploy. It is deliberately a var and not a secret so the value is in the repo and survives a dashboard reset. That also means it is as public as the repo: treat it as a convenience lock on a page that can grant paid access, post to X and read Stripe, not as the thing that keeps strangers out. `tools/test-admin-grant.mjs` proves the password opens the gate, that it is case-sensitive, that a near miss and an empty key are refused, and that it is inert when the var is unset.
+
 ## 9h. What a quarterback costs (re-cut August 2026)
 
 `LEAGUE_MARKET_CURVE.QB` was drawn from historical auction spending, and it was too rich for a 1-QB room. It put QB1 level with RB1 (both about $40 on a $120-a-team board) and kept quarterbacks in double digits down to QB9.
