@@ -15091,6 +15091,12 @@ const ANALYTICS_MIGRATIONS = [
   'ALTER TABLE page_views ADD COLUMN internal INTEGER NOT NULL DEFAULT 0',
   'ALTER TABLE site_events ADD COLUMN internal INTEGER NOT NULL DEFAULT 0',
 ];
+// The one D1 refusal that is not a bug in the query: the account's free-tier
+// daily row-read allowance is spent and every read is refused until midnight
+// UTC (§120, §125). The admin page names it so the operator does not read an
+// empty dashboard as lost data.
+const D1_READ_LIMIT_RE = /row read limit|daily row read|exceeded D1/i;
+const d1ReadLimit = e => D1_READ_LIMIT_RE.test(String((e && e.message) || e || ''));
 // Cached per isolate, so the DDL costs one batch on cold start and nothing after.
 let __analyticsReady = false;
 async function analyticsReady(env) {
@@ -17886,16 +17892,30 @@ export default {
       try {
         const now = Date.now();
         const since = now - days * 86400000;
-        const rows = async (sql, ...bind) => { try { return ((await db.prepare(sql).bind(...bind).all()).results) || []; } catch (e) { return []; } };
-        const one = async (sql, ...bind) => { try { return (await db.prepare(sql).bind(...bind).first()) || {}; } catch (e) { return {}; } };
+        // A read that fails is remembered, not swallowed. On 2026-10-10 D1
+        // refused every read on this route ("Your account has exceeded D1's
+        // free tier daily row read limit", the §120 failure again) and these
+        // helpers turned each refusal into an empty result, so /admin drew a
+        // dashboard of zeros: no users, no views, "nothing recorded yet". The
+        // operator read it as the data being gone. Nothing was lost; nothing
+        // could be read. The first read decides: when the window total cannot
+        // be read the page is told why instead of being shown an empty site it
+        // has no way to tell from a refused one. A later read failing on its
+        // own is reported on the payload so the page can say it is partial.
+        let readErr = null;
+        const rows = async (sql, ...bind) => { try { return ((await db.prepare(sql).bind(...bind).all()).results) || []; } catch (e) { readErr = readErr || e; return []; } };
+        const one = async (sql, ...bind) => { try { return (await db.prepare(sql).bind(...bind).first()) || {}; } catch (e) { readErr = readErr || e; return {}; } };
+        const errText = e => String((e && e.message) || e || '').slice(0, 200);
         // Every read below is filtered the same way, so no table on the page can
         // disagree with another about who counts.
         const mine = includeMe ? '' : ' AND internal = 0';
         const win = () => 'SELECT COUNT(*) AS views, COUNT(DISTINCT visitor) AS userDays FROM page_views WHERE ts >= ?' + mine;
 
         const out = { ok: true, generatedAt: now, days, includeMe };
+        const winTot = await one(win(), since);
+        if (readErr) return json({ ok: false, error: d1ReadLimit(readErr) ? 'd1_limit' : 'd1_read', detail: errText(readErr) }, 503, head);
         out.totals = {
-          window: await one(win(), since),
+          window: winTot,
           activeNow: ((await one('SELECT COUNT(DISTINCT visitor) AS n FROM page_views WHERE ts >= ?' + mine, now - 1800000)).n) || 0,
         };
         // Daily grid, zero-filled so the chart has a point for every day even
@@ -17983,6 +18003,7 @@ export default {
 
         const first = await one('SELECT MIN(ts) AS t FROM page_views');
         out.collectingSince = first.t || null;
+        if (readErr) out.readError = { limit: d1ReadLimit(readErr), detail: errText(readErr) };
         return json(out, 200, head);
       } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, head); }
     }

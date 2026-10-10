@@ -13501,3 +13501,52 @@ pasting or dropping a screenshot.
   once the back-heavy roster is pasted in), and `#finder` opening the
   Finder both in place and on a fresh load. `test-trade-finder.mjs` and the
   engine are unchanged. The full node suite (less the dry run) passes.
+
+## 125. October 10: /admin read as wiped; D1 had refused every read for the day
+
+**The report.** "On the admin page, all of the prior data is gone." Unique
+users, page views, best day, time on site, every table: zero, "nothing
+recorded yet", a day after §123 made the usage numbers the page.
+
+**What it was.** Nothing had been deleted. A read of the live database from
+this session answered `D1_ERROR: Your account has exceeded D1's free tier
+daily row read limit. Upgrade to a paid plan or wait until tomorrow (midnight
+UTC)`: the §120 failure again, eleven days later. Both analytics tables are
+still in `sqlite_master` with their indexes; the database is 192 MB. The
+reads come back at 00:00 UTC on their own, or at once on Workers Paid.
+
+**Why it looked like loss.** The `rows` and `one` helpers inside
+`/api/admin/traffic` caught every D1 error and answered with `[]` and `{}`,
+so a refused read and an empty site produced the same payload: `ok: true`,
+every count zero, `collectingSince: null`. `renderTraffic` drew it
+faithfully. The same swallowing is deliberate in `logPageView`, where a
+counter that breaks a page view is worse than no counter; on the read side
+it hid the one error the operator needed to see.
+
+- **The route now says so.** The helpers remember the first error. If the
+  window total (the first read) fails, the route answers `503 { ok:false,
+  error: 'd1_limit' | 'd1_read', detail }` instead of a dashboard of zeros;
+  `d1ReadLimit()` recognizes the allowance message. If only a later read
+  fails, the payload is still `ok: true` and carries `readError`, and the
+  page's meta line marks it PARTIAL so an empty table is read as refused,
+  not zero.
+- **The page names the cause.** `trafficUnavailable` on `d1_limit` says the
+  numbers are not gone, when they return, and that the account's D1 Query
+  Insights name what spent the allowance. The gate still unlocks on a
+  refused read (`showDash` runs before the `ok` check), so the operator
+  tools stay reachable.
+- **Not fixed here: what spent it.** This session cannot read D1's query
+  insights (no Cloudflare API token; the MCP read tool reaches the database
+  but not the metrics), and with reads refused it cannot measure a query's
+  `rows_read` either. The suspects, for the owner to check against Query
+  Insights (dashboard → D1 → the database → Query Insights, sort by rows
+  read): `marketHistoryWeek` (§120 left it at up to 40,000 rows per cold
+  board, memoized five minutes per isolate, ~80 boards); the traffic route
+  itself, which makes about nine passes over `page_views` in the window per
+  load and up to 90 days of them; and the October 9 front-page work (#378,
+  #382, #383) if any of it reads a season table per request. Until the
+  burner is found, the free allowance (5M rows/day) will be spent again and
+  the page will say so rather than go blank.
+- **Tests.** `test-analytics.mjs` gains the refused-read cases: a database
+  that rejects every read answers `d1_read`, the allowance message answers
+  `d1_limit`, and one read failing late leaves `ok: true` with `readError`.
