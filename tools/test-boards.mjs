@@ -127,6 +127,14 @@ console.log('\nhorizons');
   ok('the playoffs are exactly 15-17', JSON.stringify(H.horizonWeeks('playoffs', state)) === '[15,16,17]');
   const nov = H.nflSeasonState(SCHED, ET(16, 9, 0));
   ok('NEXT 3 does not run past 18 late in the year', JSON.stringify(H.horizonWeeks('next3', nov)) === '[16,17,18]');
+  ok('NEXT WEEK is the one week after the clock\'s', JSON.stringify(H.horizonWeeks('next', state)) === '[3]');
+  ok('GET ME TO THE PLAYOFFS runs from now to the week before they start', JSON.stringify(H.horizonWeeks('untilPlayoffs', state)) === '[2,3,4,5,6,7,8,9,10,11,12,13,14]');
+  ok('...ends where the league says its playoffs start', JSON.stringify(H.horizonWeeks('untilPlayoffs', state, 13)) === '[2,3,4,5,6,7,8,9,10,11,12,13]');
+  ok('...and is empty once they have begun', H.horizonWeeks('untilPlayoffs', nov).length === 0);
+  const spent = H.buildBoards({ ...ctx(), state: nov }, { horizon: 'untilPlayoffs', preset: 'ppr' });
+  ok('a horizon with no week left is refused, not served as a board of zeros', spent.ok === false && spent.error === 'no_weeks' && spent.players.length === 0);
+  const nx = H.buildBoards(ctx(), { horizon: 'next', preset: 'ppr' });
+  ok('the next-week board is one fixture per player', nx.ok && nx.horizon.weeks.join() === '3' && nx.players.every(p => p.weeks.length === 1 && p.weeks[0].week === 3));
 }
 
 console.log('\nweekly stat lines');

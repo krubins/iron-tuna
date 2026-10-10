@@ -66,11 +66,17 @@
   var POS_LONG = { QB: 'quarterbacks', RB: 'running backs', WR: 'receivers', TE: 'tight ends', K: 'kickers', DST: 'defenses' };
   // How each horizon refers to itself, in the two places a sentence needs it.
   var HZ = {
-    week:     { when: ' this week',                  slate: 'left this week' },
-    next3:    { when: ' over the next three weeks',  slate: 'over the next three weeks' },
-    ros:      { when: ' the rest of the way',        slate: 'left' },
-    playoffs: { when: ' in weeks 15&ndash;17',       slate: 'in weeks 15 to 17' }
+    week:          { when: ' this week',                  slate: 'left this week' },
+    next:          { when: ' next week',                  slate: 'next week' },
+    next3:         { when: ' over the next three weeks',  slate: 'over the next three weeks' },
+    untilPlayoffs: { when: ' between now and the playoffs', slate: 'before the playoffs' },
+    ros:           { when: ' the rest of the way',        slate: 'left' },
+    playoffs:      { when: ' in weeks 15&ndash;17',       slate: 'in weeks 15 to 17' }
   };
+  // A one-week board is a fixture, whichever week it is: `next` (10 Oct 2026)
+  // reads exactly as `week` does, with "next week" where it would say "this".
+  function oneWeek(hz) { return hz === 'week' || hz === 'next'; }
+  function weekWord(hz) { return hz === 'next' ? 'next week' : 'this week'; }
 
   function tierOf(position, rank) {
     var t = TIERS[position];
@@ -372,7 +378,7 @@
     // 0.0 there is an absence, not a projection.
     var pts = o.points;
     var proj = pts != null && isFinite(pts) && p.games > 0
-      ? (hz === 'week' ? n1(pts) : n1(pts / p.games))
+      ? (oneWeek(hz) ? n1(pts) : n1(pts / p.games))
       : null;
     var f = p.form;
     var ppg = f && f.games > 0 ? (o.formPpg == null ? f.ppg : o.formPpg) : null;
@@ -388,20 +394,20 @@
       if (!body.length) {
         var tier = tierOf(p.position, rank);
         body.push('Nothing in his line is far from a typical ' + (POS_LONG[p.position] ? POS_LONG[p.position].replace(/s$/, '') : 'player') +
-          '\'s' + (proj != null ? '; the board has him at ' + proj + (hz === 'week' ? ' this week' : ' a game') : '') +
+          '\'s' + (proj != null ? '; the board has him at ' + proj + (oneWeek(hz) ? ' ' + weekWord(hz) : ' a game') : '') +
           (tier ? ', ' + tier : '') + '.');
       }
     } else if (played) {
       // One game is one game: say what it was and that it is not a read.
       body.push('One game played (' + n1(ppg) + ' points' +
         (f.volume != null && f.volumeUnit ? ' on ' + vol(f.volume, f.volumeUnit) + ' ' + esc(f.volumeUnit) : '') +
-        '), too little to read' + (proj != null ? '; the board projects ' + proj + (hz === 'week' ? ' this week' : ' a game') : '') + '.');
+        '), too little to read' + (proj != null ? '; the board projects ' + proj + (oneWeek(hz) ? ' ' + weekWord(hz) : ' a game') : '') + '.');
     } else {
       // NOTHING PLAYED YET, so the tier is all the board has to say about him.
       var t0 = tierOf(p.position, rank);
       var bits = [];
       if (t0) bits.push(t0);
-      if (proj != null) bits.push(proj + (hz === 'week' ? ' points projected' : ' points a game projected'));
+      if (proj != null) bits.push(proj + (oneWeek(hz) ? ' points projected' : ' points a game projected'));
       if (bits.length) lead += ', ' + bits.join(', ');
     }
     var s = lead;
@@ -413,7 +419,7 @@
     // So does the market's silence (marketOut, from buildBoards): on a one-week
     // board his odds line is zero because no book has posted one, and a reader
     // should hear that before "0.0 points projected".
-    if (hz === 'week' && p.marketOut) s += ', no line posted on him in a game the books have priced';
+    if (oneWeek(hz) && p.marketOut) s += ', no line posted on him in a game the books have priced';
     return s + '.' + (body.length ? ' ' + body.join(' ') : '');
   }
 
@@ -422,10 +428,10 @@
   function opportunity(p, o) {
     o = o || {};
     var hz = HZ[o.horizon] ? o.horizon : 'week';
-    var base = hz === 'week' ? weekOpportunity(p) : slateOpportunity(p, hz, o.ctx);
+    var base = oneWeek(hz) ? weekOpportunity(p, hz) : slateOpportunity(p, hz, o.ctx);
     var more = [];
     // On a season board the vacancy is one of the slate's own signals.
-    var v = hz === 'week' ? vacancy(p, hz, o.ctx) : '';
+    var v = oneWeek(hz) ? vacancy(p, hz, o.ctx) : '';
     if (v) more.push(v);
     return base + (more.length ? ' ' + more.join(' ') : '');
   }
@@ -448,16 +454,16 @@
     // A depth player's two targets a game being "open" is not news.
     if (!(t.volume >= (t.unit === 'touches' ? 8 : 4))) return '';
     return esc(t.name) + ' is ' + (/^(out|ir)/i.test(t.status) ? 'out' : 'listed ' + esc(String(t.status).toLowerCase())) +
-      (hz === 'week' ? ' this week' : ' for ' + plural(t.out, 'game') + ' on this board') + ', leaving his ' + vol(t.volume, t.unit) +
+      (oneWeek(hz) ? ' ' + weekWord(hz) : ' for ' + plural(t.out, 'game') + ' on this board') + ', leaving his ' + vol(t.volume, t.unit) +
       ' ' + esc(t.unit) + ' a game to go elsewhere in this offense.';
   }
 
-  function weekOpportunity(p) {
-    var w = (p.weeks || [])[0];
+  function weekOpportunity(p, hz) {
+    var w = (p.weeks || [])[0], nx = hz === 'next';
     if (!w) return 'No fixture on this board for the week.';
-    if (w.bye) return 'On bye this week, with no game to grade.';
+    if (w.bye) return nx ? 'On bye next week, with no game to grade.' : 'On bye this week, with no game to grade.';
     var at = esc((w.home ? 'vs ' : 'at ') + w.opponent);
-    if (w.out) return 'Out of this week&rsquo;s game ' + at + '.';
+    if (w.out) return (nx ? 'Out of next week&rsquo;s game ' : 'Out of this week&rsquo;s game ') + at + '.';
     var env = w.env || {};
     var posted = !!env.posted;
     // A DEFENSE IS GRADED ON THE OTHER SIDE OF THE FIXTURE. `opponentDefRank`
