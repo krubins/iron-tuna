@@ -8514,10 +8514,10 @@ on hover, and each position has a page of its own.
 
 | URL | What it is |
 |---|---|
-| `/weekly-rankings` | this week, every position pooled |
-| `/weekly-<pos>-rankings` | this week, one position (`qb rb wr te flex k dst`) |
-| `/season-long-rankings` | rest of season, every position pooled |
-| `/season-long-<pos>-rankings` | rest of season, one position |
+| `/weekly-rankings` | this week, the hub; opens on quarterbacks |
+| `/weekly-<pos>-rankings` | this week, one position (`qb rb wr te flex k dst`), or every position pooled (`overall`) |
+| `/season-long-rankings` | rest of season, the hub; opens on quarterbacks |
+| `/season-long-<pos>-rankings` | rest of season, one position, or `overall` |
 | `/stats` | what has actually been played |
 | `/hidden-value` | where the two boards disagree most |
 | `/previews` | every game this week, off the market |

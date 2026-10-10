@@ -84,9 +84,10 @@ const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/r
   '/fantasy', '/stats', '/hidden-value', '/previews', '/the-line', '/weekly-wrap', '/value-coach',
   '/weekly-rankings', '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
   '/weekly-te-rankings', '/weekly-flex-rankings', '/weekly-k-rankings', '/weekly-dst-rankings',
+  '/weekly-overall-rankings',
   '/season-long-rankings', '/season-long-qb-rankings', '/season-long-rb-rankings',
   '/season-long-wr-rankings', '/season-long-te-rankings', '/season-long-flex-rankings',
-  '/season-long-k-rankings', '/season-long-dst-rankings']);
+  '/season-long-k-rankings', '/season-long-dst-rankings', '/season-long-overall-rankings']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
@@ -18349,9 +18350,11 @@ export default {
       }
 
       // The rankings board, pre-rendered into its own host. See ranksPrerender:
-      // the body is only read for the sixteen pages that carry a board, and the
-      // board it builds is read off the page's own data-rk-* attributes.
-      if (/^\/(weekly|season-long)-([a-z]{1,4}-)?rankings$/.test(__seoKey)) {
+      // the body is only read for the eighteen pages that carry a board, and the
+      // board it builds is read off the page's own data-rk-* attributes. The
+      // position segment is any word, not four letters: /weekly-overall-rankings
+      // (10 Oct 2026, the pooled board on its own page) is seven.
+      if (/^\/(weekly|season-long)-([a-z]+-)?rankings$/.test(__seoKey)) {
         let __h = await resp.text();
         const __pre = await ranksPrerender(env, __h);
         if (__pre) {

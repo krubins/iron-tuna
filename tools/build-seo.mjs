@@ -188,8 +188,9 @@ const PARENT = {
   'insights.html': READ, 'insights-vault.html': READ,
   'auction-insights.html': READ, 'snake-insights.html': READ, 'bestball-insights.html': READ,
 };
-// The sixteen position boards all hang off their own overall board.
-for (const p of ['qb', 'rb', 'wr', 'te', 'flex', 'k', 'dst']) {
+// The sixteen position boards, the pooled one included, all hang off their
+// category's hub.
+for (const p of ['qb', 'rb', 'wr', 'te', 'flex', 'k', 'dst', 'overall']) {
   PARENT['weekly-' + p + '-rankings.html'] = { name: 'This week\u2019s rankings', url: SITE + '/weekly-rankings' };
   PARENT['season-long-' + p + '-rankings.html'] = { name: 'Season long rankings', url: SITE + '/season-long-rankings' };
 }

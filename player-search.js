@@ -535,7 +535,7 @@
   // `w` is the words a reader might type for it; matching is by prefix, either
   // way round, so "rank", "rankings" and "rb rankings" all land.
   var TOOLS = [
-    { n: 'This week’s rankings', d: 'Every position, priced off the betting market', h: '/weekly-rankings', w: 'rankings ranks rank weekly week board top' },
+    { n: 'This week’s rankings', d: 'Quarterbacks first, every position a chip away, priced off the betting market', h: '/weekly-rankings', w: 'rankings ranks rank weekly week board top' },
     { n: 'Trade advice', d: 'Trade Tools: judge a trade, or find one both sides say yes to', h: '/trade-finder', w: 'trade trades trading advice value values finder evaluator evaluate offer' },
     { n: 'DFS lineups', d: 'The market read, aimed at one slate', h: '/dfs', w: 'dfs daily lineup lineups draftkings fanduel optimizer salary slate' },
     { n: 'Player lookup', d: 'Every player Iron Tuna prices, one page', h: '/players', w: 'players player lookup search find card cards' },
