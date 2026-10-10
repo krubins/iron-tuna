@@ -63,8 +63,12 @@ for (const p of PAGE_ANALYST_PATTERNS) ok(!!ANALYSTS[p.analyst], `pattern ${p.re
     ok(m[1] === id, `${f} is bylined "${m[1]}"; the assignment says "${id}"`);
     ok(m[2].includes(`>${a.name}</a>`), `${f} does not print ${JSON.stringify(a.name)}`);
     ok(m[2].includes(a.role), `${f} does not print the role ${JSON.stringify(a.role)}`);
-    // One click to the page that says these are personas, not people.
-    ok(m[2].includes(`href="/analysts/${id}"`), `${f} does not link its byline to /analysts/${id}`);
+    // One click to the page that says these are personas, not people. The
+    // link is the desk's public slug, never the storage id, which was once a
+    // fictional surname and must not reach a reader again.
+    ok(!!a.slug && a.slug !== id, `${id} has no public slug distinct from its id`);
+    ok(m[2].includes(`href="/analysts/${a.slug}"`), `${f} does not link its byline to /analysts/${a.slug}`);
+    ok(!m[2].includes(`/analysts/${id}`), `${f} links its byline to the storage id /analysts/${id}`);
     ok(m[2].includes('Iron Tuna'), `${f} drops the publisher from its byline`);
   }
   ok(pages > 85, `only ${pages} static story pages carry a byline, which is fewer than the site publishes`);
@@ -78,7 +82,7 @@ for (const p of PAGE_ANALYST_PATTERNS) ok(!!ANALYSTS[p.analyst], `pattern ${p.re
   const m = worker.match(/\/\^\\\/analysts\\\/\[a-z\]\+\\\/\?\$\//);
   ok(!!m, '_worker.js no longer routes /analysts/<id> — every byline link is now a 404');
   for (const id of new Set(Object.values(PAGE_ANALYST).concat(PAGE_ANALYST_PATTERNS.map((p) => p.analyst)))) {
-    ok(/^[a-z]+$/.test(id), `analyst id ${JSON.stringify(id)} does not match the /analysts/<id> route pattern`);
+    ok(/^[a-z]+$/.test(ANALYSTS[id].slug), `analyst slug ${JSON.stringify(ANALYSTS[id].slug)} does not match the /analysts/<slug> route pattern`);
   }
 }
 

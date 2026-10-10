@@ -500,7 +500,11 @@ console.log('\n/analysts/<id>');
   const seo = lift('function analystSeo(env, pathname) {', '\n}');
   const hdr = lift('function analystHeader(a) {', '\n}');
   const ld = lift('function analystLd(a, url) {', '\n}');
-  const ids = [...(lift('const ANALYSTS = {', '\n};') || '').matchAll(/^  ([a-z]+): \{ id: '([a-z]+)'/gm)].map((m) => m[2]);
+  // The sitemap advertises the public slug, never the storage id: the id was
+  // a fictional surname until 2026-10-10 and must not be a URL again.
+  const staff = [...(lift('const ANALYSTS = {', '\n};') || '').matchAll(/^  ([a-z]+): \{ id: '([a-z]+)', slug: '([a-z]+)'/gm)];
+  const ids = staff.map((m) => m[3]);
+  const storageIds = staff.map((m) => m[2]);
 
   ok('the worker still carries the per-analyst head', !!seo && !!hdr && !!ld);
   ok('the staff table still parses', ids.length === 8, String(ids.length));
@@ -530,6 +534,8 @@ console.log('\n/analysts/<id>');
   const xml = read('sitemap.xml');
   const unlisted = ids.filter((id) => !xml.includes('<loc>https://irontuna.com/analysts/' + id + '</loc>'));
   ok('every analyst URL is in the sitemap', unlisted.length === 0, unlisted.join(', '));
+  const byId = storageIds.filter((id) => !ids.includes(id) && xml.includes('<loc>https://irontuna.com/analysts/' + id + '</loc>'));
+  ok('no analyst is advertised at its storage id', byId.length === 0, byId.join(', '));
   ok('the shell\'s own URL is not', !xml.includes('<loc>https://irontuna.com/analyst</loc>'));
 
   // These are software, and the markup must not claim otherwise to win a rich
@@ -557,7 +563,7 @@ console.log('\nllms.txt');
   ok('every link in llms.txt is a URL the sitemap advertises', unknown.length === 0, unknown.slice(0, 6).join(', '));
 
   // The disclosure has to travel with the bylines. A model that reads this file
-  // and then quotes "Nate Vega" as an analyst has been misled by the file.
+  // and then quotes a desk as a human analyst has been misled by the file.
   ok('llms.txt says the analysts are software', /not people/.test(txt) && txt.includes('https://irontuna.com/analysts'));
   ok('and says who to attribute a quotation to', /attribute anything from this site to \*\*Iron Tuna\*\*/i.test(txt));
 

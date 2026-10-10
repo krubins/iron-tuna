@@ -96,8 +96,13 @@ console.log('\nthe staff and the one rivalry');
 {
   const A = H.ANALYSTS;
   ok('eight analysts', Object.keys(A).length === 8 && ['mercer', 'vega', 'brooks', 'raines', 'dalton', 'grant', 'porter', 'park'].every(k => A[k]));
-  ok('Vega and Brooks are each other\'s rivalry and nobody else has one', A.vega.rivalry === 'brooks' && A.brooks.rivalry === 'vega' && Object.values(A).filter(a => a.rivalry).length === 2);
+  ok('the Market Desk and the Rankings Desk are each other\'s rivalry and nobody else has one', A.vega.rivalry === 'brooks' && A.brooks.rivalry === 'vega' && Object.values(A).filter(a => a.rivalry).length === 2);
   ok('every analyst has a voice, a philosophy and assignments', Object.values(A).every(a => a.voice.length > 40 && a.philosophy && a.assignments.length));
+  // No invented people. A desk is named for its beat and the name says so;
+  // a "First Last" name here is a fictional author, which the site retired.
+  ok('every analyst is a desk, not a person', Object.values(A).every(a => / Desk$/.test(a.name)) && !Object.values(A).some(a => /^(Jack|Nate|Evan|Mike|Chris|Tyler|Sam|Lena) /.test(a.name)));
+  ok('every analyst has a public slug distinct from its storage id', Object.values(A).every(a => /^[a-z]+$/.test(a.slug) && a.slug !== a.id) && new Set(Object.values(A).map(a => a.slug)).size === 8);
+  ok('no voice or philosophy writes about the desk as a person', Object.values(A).every(a => !/\b(he|his|him|she|her)\b/.test(a.voice.replace(/the play-caller’s|who the quarterback/g, '')) || a.id === 'dalton'));
   ok('the disclosure says they are AI personas, not people', /AI-powered editorial personas, not people/.test(H.AI_DISCLOSURE));
   const flags = H.flagReport({});
   // Nothing defaults off any more. The four provider connectors were the only
@@ -159,17 +164,18 @@ console.log('\nthe rivalry column');
   }
   const b = H.blendBoard({ ok: true, players: pool, currentWeek: 3 }, 0.5);
   const c = H.rivalryColumns(b.players, { week: 3 });
-  ok('both men file a column of five', c.vega.picks.length === H.RIVALRY_PICKS && c.brooks.picks.length === H.RIVALRY_PICKS, JSON.stringify([c.vega.picks.length, c.brooks.picks.length]));
-  ok('each column is bylined to its man and points at the other', c.vega.name === 'Nate Vega' && c.vega.against.name === 'Evan Brooks' && c.brooks.against.name === 'Nate Vega' && c.vega.url === '/analysts/vega');
-  ok('a man only pitches players his own end of the slider has higher', c.vega.picks.every(p => p.mineRank < p.theirsRank) && c.brooks.picks.every(p => p.mineRank < p.theirsRank));
+  ok('both desks file a column of five', c.vega.picks.length === H.RIVALRY_PICKS && c.brooks.picks.length === H.RIVALRY_PICKS, JSON.stringify([c.vega.picks.length, c.brooks.picks.length]));
+  ok('each column is bylined to its desk and points at the other', c.vega.name === 'Market Desk' && c.vega.against.name === 'Rankings Desk' && c.brooks.against.name === 'Market Desk' && c.vega.url === '/analysts/market' && c.brooks.url === '/analysts/rankings');
+  ok('a desk only pitches players its own end of the slider has higher', c.vega.picks.every(p => p.mineRank < p.theirsRank) && c.brooks.picks.every(p => p.mineRank < p.theirsRank));
   ok('the two columns cannot be the same column', !c.vega.picks.some(p => c.brooks.picks.some(q => q.key === p.key)));
   ok('nobody is pitched twice in one column', new Set(c.vega.picks.map(p => p.key)).size === 5 && new Set(c.brooks.picks.map(p => p.key)).size === 5);
   ok('every pitch names both ranks and ends on the needle', c.vega.picks.every(p => p.pitch.indexOf(p.position + p.mineRank) > 0 && p.pitch.indexOf(p.position + p.theirsRank) > 0 && /[.!]$/.test(p.pitch)) && c.brooks.picks.every(p => p.pitch.indexOf(p.position + p.mineRank) > 0 && p.pitch.indexOf(p.position + p.theirsRank) > 0));
   ok('no two picks in a column draw the same jab', new Set(c.vega.picks.map(p => p.pitch.split('. ').pop())).size === 5 && new Set(c.brooks.picks.map(p => p.pitch.split('. ').pop())).size === 5);
   ok('the same board on the same week reads the same', JSON.stringify(H.rivalryColumns(b.players, { week: 3 })) === JSON.stringify(c));
   ok('the needles move with the week', JSON.stringify(H.rivalryColumns(b.players, { week: 4 })) !== JSON.stringify(c));
-  ok('Vega never pitches a player no book has priced', c.vega.picks.every(p => p.marketBasis !== 'none'));
-  ok('each man names his rival, not himself', c.vega.picks.every(p => /Brooks|Evan/.test(p.pitch)) && c.brooks.picks.every(p => /Vega|Nate/.test(p.pitch)));
+  ok('the Market Desk never pitches a player no book has priced', c.vega.picks.every(p => p.marketBasis !== 'none'));
+  ok('each desk names its rival, not itself', c.vega.picks.every(p => /Rankings Desk/.test(p.pitch)) && c.brooks.picks.every(p => /Market Desk/.test(p.pitch)));
+  ok('no pitch writes about a desk as a person', ['vega', 'brooks'].every(k => !/\b(Evan|Nate|Brooks|Vega)\b/.test(c[k].standfirst) && c[k].picks.every(p => !/\b(Evan|Nate|Brooks|Vega)\b/.test(p.pitch))));
   ok('the pitches clear the same phrasing bar the writer is held to, em dashes included', ['vega', 'brooks'].every(k => !H.AI_PHRASES.some(re => re.test(c[k].standfirst)) && c[k].picks.every(p => !H.AI_PHRASES.some(re => re.test(p.pitch)))));
   // A week the two ends agree on: the relaxed pass still has to find five, and
   // a board with nothing in it must not invent anybody.
@@ -265,7 +271,7 @@ console.log('\nthe rivalry column on the record');
   ok('every pick is settled once the week publishes', graded.ok && graded.rivalry === 10 && db.t.analyst_calls.every(r => r.outcome), JSON.stringify(graded));
   ok('a player who did not play loses the claim', db.t.analyst_calls[0].outcome === 'miss' && /did not play/.test(db.t.analyst_calls[0].outcome_note));
   ok('a pick that finishes ahead of the rival’s rank is a hit', db.t.analyst_calls.slice(1).every(r => r.outcome === 'hit') && /finished/.test(db.t.analyst_calls[1].outcome_note));
-  ok('the note names the finish and the rank it beat', /finished [A-Z]+\d+ on [\d.]+ points; (Nate Vega|Evan Brooks) had him [A-Z]+\d+/.test(db.t.analyst_calls[1].outcome_note), db.t.analyst_calls[1].outcome_note);
+  ok('the note names the finish and the rank it beat', /finished [A-Z]+\d+ on [\d.]+ points; (Market Desk|Rankings Desk) had him [A-Z]+\d+/.test(db.t.analyst_calls[1].outcome_note), db.t.analyst_calls[1].outcome_note);
 
   // The stats file moves on: week 3's picks are no longer gradeable from it,
   // and a player who played on must not read as a scratch.
@@ -371,11 +377,11 @@ const board = (list) => ({ ok: true, players: list.map((p, i) => ({ ...p, games:
 
 console.log('\nthe packet the writer sees');
 {
-  const big = { meta: { kind: 'weekend-preview' }, freshness: { stale: [] }, rivalry: null, priorCalls: [], playerIndex: { a: 1 }, rivalryBudget: { allowed: true }, colleagues: ['x'], allowed: { names: ['A B'], numbers: ['1'], analysts: ['Sam Porter'] },
+  const big = { meta: { kind: 'weekend-preview' }, freshness: { stale: [] }, rivalry: null, priorCalls: [], playerIndex: { a: 1 }, rivalryBudget: { allowed: true }, colleagues: ['x'], allowed: { names: ['A B'], numbers: ['1'], analysts: ['Matchups Desk'] },
     cards: Array.from({ length: 40 }, (_, i) => ({ game: 'G' + i, rankings: Array.from({ length: 30 }, (_, j) => ({ name: 'P' + j, x: 'y'.repeat(60) })) })), injuries: Array.from({ length: 200 }, (_, i) => ({ name: 'I' + i, note: 'z'.repeat(80) })) };
   const c = H.compactForWriter(big, 20000);
   ok('the compacted packet is whole JSON under the budget', JSON.stringify(c).length <= 20000 && JSON.parse(JSON.stringify(c)) && !c.playerIndex && !c.rivalryBudget);
-  ok('and says what it left out rather than cutting a string mid-object', Array.isArray(c.omittedForLength) && c.omittedForLength.length >= 1 && c.meta && c.allowed.analysts[0] === 'Sam Porter');
+  ok('and says what it left out rather than cutting a string mid-object', Array.isArray(c.omittedForLength) && c.omittedForLength.length >= 1 && c.meta && c.allowed.analysts[0] === 'Matchups Desk');
   ok('a packet inside the budget passes through with its facts intact', !H.compactForWriter({ meta: {}, allowed: { analysts: [] }, facts: [1, 2, 3] }).omittedForLength);
   ok('the writer waits longer than the legacy minute', H.WRITER_TIMEOUT_MS >= 120000 && H.WRITER_PACKET_BUDGET <= 120000);
   const now = Date.now();
@@ -397,16 +403,16 @@ console.log('\nanalyst memory');
 console.log('\nthe fact check');
 {
   const packet = H._finishBrief({ meta: { kind: 'trade-desk', lens: 'both' }, rivalry: null, players: [{ name: 'CeeDee Lamb', targets: 12, share: 34 }] });
-  packet.allowed.names.push('Evan Brooks', 'Lena Park'); packet.allowed.analysts = ['Evan Brooks', 'Lena Park'];
-  const good = { headline: 'Lamb is a target', dek: 'x', dfsHeadline: 'Lamb is the chalk', dfsDek: 'x', weekly: { target: [{ player: 'CeeDee Lamb', why: '12 targets, a 34% share' }], tradeAway: [], reasoning: ['Brooks likes the share.'], marketCounterpoint: [] }, dfs: { attack: [], fade: [], reasoning: ['Park: no salaries loaded.'] }, calls: [] };
+  packet.allowed.names.push('Rankings Desk', 'DFS Desk'); packet.allowed.analysts = ['Rankings Desk', 'DFS Desk'];
+  const good = { headline: 'Lamb is a target', dek: 'x', dfsHeadline: 'Lamb is the chalk', dfsDek: 'x', weekly: { target: [{ player: 'CeeDee Lamb', why: '12 targets, a 34% share' }], tradeAway: [], reasoning: ['Rankings Desk likes the share.'], marketCounterpoint: [] }, dfs: { attack: [], fade: [], reasoning: ['DFS Desk: no salaries loaded.'] }, calls: [] };
   ok('a draft inside the packet, in the right shape, passes', H.factCheck(good, packet).ok, H.factCheck(good, packet).problems.join(';'));
   const bad = JSON.parse(JSON.stringify(good)); bad.weekly.reasoning = ['Jerry Jeudy had 155 yards.'];
   const v = H.factCheck(bad, packet);
   ok('a name and a number the packet lacks are caught', !v.ok && v.problems.includes('name:Jerry Jeudy') && v.problems.includes('number:155'));
-  const riv = JSON.parse(JSON.stringify(good)); riv.weekly.reasoning = ['Vega has him WR5.']; riv.rivalryLine = 'Vega has him WR5.';
+  const riv = JSON.parse(JSON.stringify(good)); riv.weekly.reasoning = ['Market Desk has him WR5.']; riv.rivalryLine = 'Market Desk has him WR5.';
   const rv = H.factCheck(riv, packet);
-  ok('naming Vega without a rivalry in the packet is caught twice: as an analyst and as a rivalry line', !rv.ok && rv.problems.includes('analyst:Nate Vega') && rv.problems.includes('rivalry:not_in_packet'));
-  const withRiv = { ...packet, rivalry: { player: 'CeeDee Lamb' }, allowed: { ...packet.allowed, names: packet.allowed.names.concat('Nate Vega'), analysts: packet.allowed.analysts.concat('Nate Vega') } };
+  ok('naming the Market Desk without a rivalry in the packet is caught twice: as an analyst and as a rivalry line', !rv.ok && rv.problems.includes('analyst:Market Desk') && rv.problems.includes('rivalry:not_in_packet'));
+  const withRiv = { ...packet, rivalry: { player: 'CeeDee Lamb' }, allowed: { ...packet.allowed, names: packet.allowed.names.concat('Market Desk'), analysts: packet.allowed.analysts.concat('Market Desk') } };
   ok('and passes once the packet carries the rivalry', H.factCheck(riv, withRiv).ok, H.factCheck(riv, withRiv).problems.join(';'));
   const ai = JSON.parse(JSON.stringify(good)); ai.weekly.reasoning = ['Buckle up, it is worth noting that Lamb — a target — is a game-changer.'];
   const pv = H.factCheck(ai, packet);
@@ -524,7 +530,7 @@ console.log('\nthe fact check reads a sentence break, a verb and shown arithmeti
     players: [{ name: 'Justin Herbert', salary: 6100 }, { name: 'Kyren Williams', carries: 14 }, { name: 'Matthew Stafford', projected: 17.1, points: 4.2 }],
     dfs: { saver: [{ name: 'Patrick Mahomes', salary: 5500 }, { name: 'Josh Allen', salary: 7000 }, { name: 'Geno Smith', salary: 4600 }, { name: 'Bub Means', salary: 3000 }, { name: 'Saints DST', salary: 2200 }] } });
   const v = s => H.validateDraft(s, p.allowed);
-  ok('a name meeting a sentence break is two sentences', v('The market has Herbert at rank 3. Vega called the buy.').ok, JSON.stringify(v('The market has Herbert at rank 3. Vega called the buy.').names));
+  ok('a name meeting a sentence break is two sentences', v('The market has Herbert at rank 3. Rankings called the buy.').ok, JSON.stringify(v('The market has Herbert at rank 3. Rankings called the buy.').names));
   ok('a verb in front of a packet name is a verb', v('Lock Herbert in cash. Move Williams up.').ok, JSON.stringify(v('Lock Herbert in cash. Move Williams up.').names));
   ok('a difference the draft spells out is arithmetic at any size', v('Projected 17.1, finished 4.2. A 12.9-point miss.').ok, JSON.stringify(v('Projected 17.1, finished 4.2. A 12.9-point miss.').numbers));
   ok('salary savings the draft spells out are arithmetic', v('Mahomes at 5,500 saves 1,500 against Allen at 7,000, and Smith at 4,600 saves 2,400.').ok, JSON.stringify(v('Mahomes at 5,500 saves 1,500 against Allen at 7,000, and Smith at 4,600 saves 2,400.').numbers));
@@ -644,7 +650,7 @@ console.log('\nwhat the site called before kickoff, and how it landed');
   })());
   ok('a recap with nothing called is not held for the section it was told to omit', (() => {
     const without = { meta: { kind: 'game-recap', lens: 'weekly' }, calledIt: H._vindication(null, new Map(), 1),
-                      allowed: { names: [], numbers: [], analysts: ['Mike Raines'] } };
+                      allowed: { names: [], numbers: [], analysts: ['Usage Desk'] } };
     const body = { headline: 'A game', weekly: Object.fromEntries(H.sectionsFor('game-recap', 'weekly', without).map(k => [k, ['x']])) };
     const fc = H.factCheck(body, without);
     return !fc.problems.some(p => /missing:weekly.weCalledIt/.test(p));
@@ -652,7 +658,7 @@ console.log('\nwhat the site called before kickoff, and how it landed');
   ok('but a recap that DID call something is held if it leaves the section out', (() => {
     const frz = { takenAt: 1, kickoff: 2, rows: [{ key: 'p|WR', name: 'A Player', position: 'WR', team: 'AAA', consensusRank: 24, consensusPts: 10, ironTunaRank: 13, ironTunaPts: 18, vegasRank: 10, vegasPts: 12 }] };
     const withCall = { meta: { kind: 'game-recap', lens: 'weekly' }, calledIt: H._vindication(frz, new Map([['p|WR', { points: 22 }]]), 1),
-                       allowed: { names: [], numbers: [], analysts: ['Mike Raines'] } };
+                       allowed: { names: [], numbers: [], analysts: ['Usage Desk'] } };
     const body = { headline: 'A game', weekly: Object.fromEntries(H.sectionsFor('game-recap', 'weekly').filter(k => k !== 'weCalledIt').map(k => [k, ['x']])) };
     return H.factCheck(body, withCall).problems.some(p => /missing:weekly.weCalledIt/.test(p));
   })());
@@ -757,7 +763,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
     ok('a hold and a stash are held off the week\'s record entirely', got.held === 2 && !got.rows.some(r => /Hold|Sher/.test(r.name)));
     ok('the rivalry column is not on this record: it is graded on rank in its own column', !got.rows.some(r => r.kind === H.RIVALRY_COLUMN_KIND));
     ok('another week is not on it either', !got.rows.some(r => r.name === 'Nex Tweek'));
-    ok('each one names its story, its analyst and a URL that resolves', got.rows[0].story === 'Pickup Advisor' && got.rows[0].analystName === 'Mike Raines' && got.rows[0].url === '/in-season/desk/pickup-advisor/1'
+    ok('each one names its story, its analyst and a URL that resolves', got.rows[0].story === 'Pickup Advisor' && got.rows[0].analystName === 'Usage Desk' && got.rows[0].url === '/in-season/desk/pickup-advisor/1'
       && got.rows[1].url === '/in-season/desk/game-recap/1/2026-01-aaa-bbb', JSON.stringify(got.rows.map(r => r.url)));
     ok('the stories are counted, not the calls', got.stories === 2);
     ok('a database that is not there is not an error, it is an empty record', (await H.weekPublishedCalls({}, 2026, 1)).rows.length === 0 && (await H.weekPublishedCalls(env, 2026, null)).rows.length === 0);
@@ -777,7 +783,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   // list, so the Monday piece covers the recommendations a reader acted on
   // and not only the model's numbers.
   const rec = (o) => ({ source: 'story', key: o.key, name: o.name, player: o.name, position: o.pos || 'WR', team: o.team || 'AAA',
-    analyst: o.analyst || 'raines', analystName: o.analystName || 'Mike Raines', kind: o.kind || 'pickup-advisor', slug: 's-' + o.name,
+    analyst: o.analyst || 'raines', analystName: o.analystName || 'Usage Desk', kind: o.kind || 'pickup-advisor', slug: 's-' + o.name,
     story: o.story || 'Pickup Advisor', direction: o.dir || 'start', recommendation: o.rec || 'start him', confidence: 'HIGH' });
 
   // The week's box scores, keyed the way the board keys a player: exactly
@@ -796,7 +802,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   const ctxS = { ...ctx, week: wk };
   const recs = { stories: 2, held: 1, rows: [
     rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }),
-    rec({ key: 'r2|RB', name: 'Fay Fade', pos: 'RB', team: 'CCC', dir: 'fade', rec: 'leave him on the bench', analyst: 'park', analystName: 'Lena Park', kind: 'trade-desk', story: 'The Trade Desk' }),
+    rec({ key: 'r2|RB', name: 'Fay Fade', pos: 'RB', team: 'CCC', dir: 'fade', rec: 'leave him on the bench', analyst: 'park', analystName: 'DFS Desk', kind: 'trade-desk', story: 'The Trade Desk' }),
     rec({ key: 'r3|WR', name: 'Wes Wrong', team: 'DDD' }),
     rec({ key: 'r4|TE', name: 'Pip Push', pos: 'TE', team: 'AAA' }),
     rec({ key: 'r5|WR', name: 'Noc Onsensus', team: 'AAA' })
@@ -810,7 +816,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   ok('both kinds of win rank in ONE list, on the points the call beat its number by', pr.biggestWins.map(w => w.name).join() === 'Cy Huge,Stu Story,Al Big,Fay Fade,Bo Small', pr.biggestWins.map(w => w.name + ':' + w.margin).join());
   ok('every win says which kind it is, and a story win names the story and the analyst', (() => {
     const b = pr.biggestWins.find(w => w.name === 'Cy Huge'), t = pr.biggestWins.find(w => w.name === 'Stu Story');
-    return b.source === 'board' && b.story === null && t.source === 'story' && t.story === 'Pickup Advisor' && t.analystName === 'Mike Raines' && t.recommendation === 'start him';
+    return b.source === 'board' && b.story === null && t.source === 'story' && t.story === 'Pickup Advisor' && t.analystName === 'Usage Desk' && t.recommendation === 'start him';
   })());
   ok('a story win carries the numbers that settle it', (() => {
     const t = pr.biggestWins.find(w => w.name === 'Stu Story');
@@ -821,7 +827,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   ok('ONE ROW PER PLAYER: the same call in several stories is one win, with the rest named on it', (() => {
     const many = { stories: 3, held: 0, rows: [
       rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }),
-      { ...rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }), slug: 's-pickup-2', story: 'Last-Minute Intel', analyst: 'park', analystName: 'Lena Park' },
+      { ...rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }), slug: 's-pickup-2', story: 'Last-Minute Intel', analyst: 'park', analystName: 'DFS Desk' },
       { ...rec({ key: 'r1|WR', name: 'Stu Story', team: 'AAA' }), slug: 's-pickup-3', story: 'The Trade Desk' },
       rec({ key: 'r2|RB', name: 'Fay Fade', pos: 'RB', team: 'CCC', dir: 'fade', rec: 'bench him' })
     ] };
@@ -848,7 +854,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
   ok('the misses mix both kinds too, widest first', pr.misses.map(m => m.name).join() === 'Wes Wrong,Di Miss' && pr.misses[0].source === 'story', pr.misses.map(m => m.name + ':' + m.margin).join());
   ok('a wrong story call still counts by position', pr.byPosition.WR.misses === 2 && pr.byPosition.RB.hits === 2);
   ok('the record is broken out by story and by analyst', (() => {
-    const st = pr.byStory.find(x => x.story === 'Pickup Advisor'), a = pr.byAnalyst.find(x => x.analyst === 'Lena Park');
+    const st = pr.byStory.find(x => x.story === 'Pickup Advisor'), a = pr.byAnalyst.find(x => x.analyst === 'DFS Desk');
     return st && st.calls === 3 && st.hits === 1 && st.misses === 1 && st.pushes === 1 && a && a.calls === 1 && a.hits === 1;
   })());
   ok('a week with no frozen board anywhere still runs on the stories alone', (() => {
@@ -877,7 +883,7 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
                 ...H.packetCalledItWeek(games, [{ game: games[0], calledIt: H._vindication(null, new Map(), 1) }], ctxS, recs, box) };
     const v = H._voiceBlock(q);
     return q.headlineWin.name === 'Stu Story' && q.headlineWin.source === 'story'
-      && /STORY call, not a board call/.test(v) && /Mike Raines published/.test(v) && /Pickup Advisor/.test(v) && /consensus had him at 13 points/.test(v);
+      && /STORY call, not a board call/.test(v) && /Usage Desk published/.test(v) && /Pickup Advisor/.test(v) && /consensus had him at 13 points/.test(v);
   })());
   ok('the writer is given both records separately and told to print both', (() => {
     const v = H._voiceBlock({ meta: { kind: 'what-tuna-got-right', analyst: 'mercer', dfsAnalyst: 'park' }, ...pr });
@@ -885,14 +891,14 @@ console.log('\nthe Monday scorecard: the week\'s wins, biggest first');
       && /2 of 3 decided calls landed \(67%\)/.test(v) && /TOGETHER: 5 of 8 \(71%/.test(v)
       && /1 published position is not on this record at all/.test(v) && /1 more could not be settled/.test(v) && /source "story"/.test(v);
   })());
-  ok('the analysts a story win credits are named people for the piece, so the fact check does not hold the draft', (() => {
+  ok('the desks a story win credits are allowed names for the piece, so the fact check does not hold the draft', (() => {
     const packet = H._finishBrief({ meta: { kind: 'what-tuna-got-right', lens: 'both', analyst: 'mercer', dfsAnalyst: 'park' }, ...pr });
-    return packet.allowed.names.includes('Mike Raines') && packet.allowed.names.includes('Stu Story');
+    return packet.allowed.names.includes('Usage Desk') && packet.allowed.names.includes('Stu Story');
   })());
 
   ok('the fact check asks the scorecard for its sections and holds a draft without them', (() => {
     const packet = H._finishBrief({ meta: { kind: 'what-tuna-got-right', lens: 'both', analyst: 'mercer', dfsAnalyst: 'park' }, ...p });
-    packet.allowed.analysts = ['Jack Mercer', 'Lena Park'];
+    packet.allowed.analysts = ['Editorial Desk', 'DFS Desk'];
     const full = { headline: 'Cy Huge is the week', dek: 'x', dfsHeadline: 'Cy Huge is the price', dfsDek: 'x', weekly: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'weekly', packet).map(k => [k, ['Cy Huge scored 25.']])), dfs: Object.fromEntries(H.sectionsFor('what-tuna-got-right', 'dfs', packet).map(k => [k, ['Cy Huge scored 25.']])) };
     const missing = { ...full, weekly: { theRecord: ['Cy Huge scored 25.'] } };
     return H.factCheck(full, packet).ok && H.factCheck(missing, packet).problems.some(x => /missing:weekly.biggestWins/.test(x));

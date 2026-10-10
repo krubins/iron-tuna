@@ -341,7 +341,7 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="rk-blend" id="rkBlend" hidden>
   <div class="rk-blend-h"><span>Fantasy Analysis</span><span id="rkBlendLabel">50 / 50</span><span>Market Intelligence</span></div>
   <input type="range" id="rkBlendW" min="0" max="100" step="5" value="50" aria-label="Weight between Fantasy Analysis and Market Intelligence">
-  <p class="is-note" id="rkBlendNote">At the left the board is <a href="/analysts/brooks">Evan Brooks</a>&rsquo;s: the consensus projection at your scoring, with the usage role trend once three games have earned it. At the right it is <a href="/analysts/vega">Nate Vega</a>&rsquo;s: the sportsbook read, shrunk toward the fantasy number where no prop is priced (a fitted team rating is a projection of the market, not a market). In between is a weighted point total, recomputed here in the browser from those two components, never a reorder.</p>
+  <p class="is-note" id="rkBlendNote">At the left the board is the <a href="/analysts/rankings">Rankings Desk</a>&rsquo;s: the consensus projection at your scoring, with the usage role trend once three games have earned it. At the right it is <a href="/analysts/market">Market Desk</a>&rsquo;s: the sportsbook read, shrunk toward the fantasy number where no prop is priced (a fitted team rating is a projection of the market, not a market). In between is a weighted point total, recomputed here in the browser from those two components, never a reorder.</p>
 </div>
   <div class="rk-row">
     <span class="rk-lab">Scoring</span>
@@ -665,7 +665,7 @@ p{color:var(--sec);margin:0 0 16px}
     var LS = window.ITSync && ITSync.active();
     $('rkScoringNote').innerHTML = (preset === 'league' && LS ? '<b>Customized for your league:</b> ' + e(LS.name) + ' · ' + e(LS.label) : preset === 'custom' ? 'Scored at <b>' + e(L && L.label ? L.label() : 'your league') + '</b>' : 'Scored at <b>' + (preset === 'standard' ? 'Standard' : preset === 'half' ? 'Half PPR' : 'PPR') + '</b>') +
       ' &middot; ' + e(payload.horizon.label) + (payload.horizon.weeks.length ? ' (week' + (payload.horizon.weeks.length > 1 ? 's ' + payload.horizon.weeks[0] + '–' + payload.horizon.weeks[payload.horizon.weeks.length - 1] : ' ' + payload.horizon.weeks[0]) + ')' : '') +
-      ' &middot; showing the <b>' + (board === 'ironTuna' ? 'Iron Tuna' : board === 'consensus' ? 'Consensus' : board === 'blend' ? (w === 0 ? 'Fantasy Analysis (Brooks)' : w === 1 ? 'Market Intelligence (Vega)' : Math.round((1 - w) * 100) + ' / ' + Math.round(w * 100) + ' Fantasy / Market') : 'Vegas') + '</b> board.';
+      ' &middot; showing the <b>' + (board === 'ironTuna' ? 'Iron Tuna' : board === 'consensus' ? 'Consensus' : board === 'blend' ? (w === 0 ? 'Fantasy Analysis (Rankings Desk)' : w === 1 ? 'Market Intelligence (Market Desk)' : Math.round((1 - w) * 100) + ' / ' + Math.round(w * 100) + ' Fantasy / Market') : 'Vegas') + '</b> board.';
     $('rkBlend').hidden = board !== 'blend';
     $('rkFoot').innerHTML = 'Vegas basis: <b>props</b> is a priced player prop; <b>gamelines</b> is the posted game line’s scoring environment applied to his line; <b>ratings</b> is a fixture no book has posted yet, projected from fitted team ratings and graded LOW. ' +
       (payload.sources && payload.sources.props ? payload.sources.props + ' players carry a prop this week.' : 'No priced player prop has reached this board for the week. Books post them; this feed is not carrying them.') +
