@@ -875,7 +875,11 @@ footer.site {margin-top:0}
       live.hidden = false;
     }
     kpi.players = players.length;
-    kpi.priced = players.filter(function (p) { return p.priced; }).length;
+    // The priced count is a figure only while the worker has a market board
+    // behind it. With no usable odds overlay every row comes back unpriced,
+    // and a zero printed in mint reads as "the market priced nobody" rather
+    // than "the odds have not been read". Null drops the cell (paintKpi).
+    kpi.priced = j.marketBoard ? players.filter(function (p) { return p.priced; }).length : null;
     kpi.week = j.week && j.week.label ? j.week.label : null;
     if (j.oddsAsOf) {
       oddsStamp = when(j.oddsAsOf);

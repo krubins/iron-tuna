@@ -205,6 +205,14 @@ const server = http.createServer((req, res) => {
       else if (u.pathname === '/api/newsroom') body = CONTENT;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
+    } else if (MODE === 'noboard') {
+      // The worker with no usable odds overlay: the board answers, but with
+      // no market behind it every row comes back unpriced.
+      if (u.pathname === '/api/vegas-edge') body = EDGE;
+      else if (u.pathname === '/api/rankings') body = { ...RANK, marketBoard: false, oddsAsOf: null, oddsProvider: null, players: RANK_PLAYERS.map(p => ({ ...p, priced: false })) };
+      else if (u.pathname === '/api/newsroom') body = CONTENT;
+      else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
+      else if (u.pathname === '/api/season') body = SEASON;
     } else if (MODE === 'thin') {
       if (u.pathname === '/api/newsroom') body = THIN;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
@@ -701,6 +709,24 @@ MODE = 'thin';
   ok('no photograph runs twice in the grid: a finding about the lead\'s player takes a different picture',
      (() => { const shots = r.rows.filter(x => x.action).map(x => x.face); return new Set(shots).size === shots.length; })(), JSON.stringify(r.rows.map(x => [x.face, x.action])));
   ok('four cards in the row under the lead', new Set(r.rows.slice(1).map(x => x.top)).size === 1, JSON.stringify(r.rows.map(x => x.top)));
+  await ctx.close();
+}
+MODE = 'live';
+
+// ── 3g. a board with no market behind it ────────────────────────────────────
+// When the worker has no usable odds overlay (marketBoard false) every row is
+// unpriced. That zero is not a figure, it is the odds not having been read, so
+// the KPI band drops the cell rather than printing a mint 0.
+console.log('\na board with no market behind it');
+MODE = 'noboard';
+{
+  const { page, ctx } = await open(1440, 900);
+  const r = await read(page);
+  ok('the KPI band still shows', r.kpi === true && r.kpis.length === 2, JSON.stringify(r.kpis));
+  ok('the priced cell is dropped, not printed as zero',
+     r.kpis.map(k => k.v + ' ' + k.k).join(' | ') === '310 Players ranked this week (Week 3) | 7 Pieces the desk published',
+     r.kpis.map(k => k.v + ' ' + k.k).join(' | '));
+  ok('and nothing on the band is mint', r.kpis.every(k => !k.good));
   await ctx.close();
 }
 MODE = 'live';
