@@ -572,10 +572,10 @@ footer.site {margin-top:0}
   // THE FORWARD TWO ARE CALLS, NOT RECORDS (2026-10-10). A season average set
   // against this week's consensus says only what he has done. A row here is a
   // call on what he will do: the consensus has him at a number, his season
-  // says the number is wrong, and this week's market price does not say
-  // otherwise. A player whose average beats his consensus while the books
-  // price him under it is a hot streak the market is betting against, not a
-  // projected outperformer, and he is no figure.
+  // says the number is wrong, and Iron Tuna's own projection for this week
+  // does not say otherwise. A player whose average beats his consensus while
+  // Iron Tuna projects him under it is a streak the model does not believe,
+  // not a projected outperformer, and he is no figure.
   //
   // FIVE TO A LIST, ELITE AND LONGSHOT BOTH. Ranked on the raw gap alone,
   // a list is all starters, because a 20-point player has more points to be
@@ -603,14 +603,14 @@ footer.site {margin-top:0}
   }
   // A forward row needs everything a weekly row needs except the weekly
   // decision, plus the season average, a gap that points the way its list
-  // says, and a market that does not point the other way: a projected
-  // outperformer the books price under his consensus is no figure.
+  // says, and an Iron Tuna projection that does not point the other way: a
+  // projected outperformer Iron Tuna has under his consensus is no figure.
   function usableForm(p, sign) {
     return !!(p && p.name && healthy(p)
       && n1(p.consensusPoints) != null && n1(p.vegasPoints) != null && n1(p.ironTunaPoints) != null
       && n1(p.seasonPpg) != null && Number(p.seasonGames) > 0
       && n1(p.formGap) != null && Number(p.formGap) * sign > 0
-      && (Number(p.vegasPoints) - Number(p.consensusPoints)) * sign >= 0);
+      && (Number(p.ironTunaPoints) - Number(p.consensusPoints)) * sign >= 0);
   }
   function decideForm(p, sign) {
     if (sign > 0) return { t: elite(p) ? 'Trust' : 'Buy' };
@@ -660,8 +660,8 @@ footer.site {margin-top:0}
   // The forward figure is how far his season average sits over (or under)
   // this week's consensus projection: the room the call says the projection
   // is off by. Green only on the upside, under the same rule. The line under
-  // it leads with the two prices on this week's game, then the season behind
-  // the call.
+  // it leads with the two projections the call weighs for this week, then
+  // the season behind it.
   function formHtml(p, sign) {
     var gap = Number(p.formGap), g = Number(p.seasonGames);
     return '<li class="hm-fig">'
@@ -669,7 +669,7 @@ footer.site {margin-top:0}
       + '<span class="hm-fig-txt">'
       + nameLine(decideForm(p, sign).t, p)
       + '<span class="v' + (gap > 0 ? ' good' : '') + '">' + esc(signed(gap)) + ' pts/g</span>'
-      + '<span class="s">Consensus ' + n1(p.consensusPoints) + ' &middot; market ' + n1(p.vegasPoints) + ' &middot; averaging ' + n1(p.seasonPpg) + ' over ' + g + '</span>'
+      + '<span class="s">Consensus ' + n1(p.consensusPoints) + ' &middot; Iron Tuna ' + n1(p.ironTunaPoints) + ' &middot; averaging ' + n1(p.seasonPpg) + ' over ' + g + '</span>'
       + '</span></li>';
   }
   // The faces. The markup carries the initials and the NAME; the photograph
@@ -711,7 +711,7 @@ footer.site {margin-top:0}
   var oddsStamp = null;
   function fineHtml(week) {
     var cat = cats[catAt];
-    var seasonWhat = 'season points a game (at least ' + (minGames || 3) + ' games played) against the consensus projection' + (week ? ' for ' + esc(week) : '') + ', where the market price does not disagree';
+    var seasonWhat = 'season points a game (at least ' + (minGames || 3) + ' games played) against the consensus projection' + (week ? ' for ' + esc(week) : '') + ', where Iron Tuna\u2019s projection does not disagree';
     var weekWhat = 'weekly fantasy points' + (week ? ' for ' + esc(week) : '');
     var what = cat && cat.key === 'overview'
       ? 'Weekly lists in ' + weekWhat + '; outperform and underperform calls in ' + seasonWhat

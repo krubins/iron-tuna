@@ -113,8 +113,9 @@ seasonForm: { minGames: 3,
     { ...mk('Bench Flier', 'RB', 'ARI', 'SF', 5.0, 5.4, 5.1, 'MARKET AGREES', 44), seasonPpg: 9.2, seasonGames: 3, formGap: 4.2 },
     // A season average against a stale backup's line is the promotion, not form.
     { ...mk('Stale Line', 'QB', 'LV', 'NE', 0.6, 14.0, 11.0, 'STRONG VEGAS BUY', 18), seasonPpg: 18.8, seasonGames: 3, formGap: 18.2 },
-    // A hot streak the books price under his consensus is no call to outperform.
-    { ...mk('Priced Streak', 'WR', 'DAL', 'NYG', 16.0, 14.5, 15.0, 'MARKET AGREES', 7), seasonPpg: 30.0, seasonGames: 5, formGap: 14.0 },
+    // A hot streak Iron Tuna projects under his consensus is no call to
+    // outperform, however high the market has him.
+    { ...mk('Tuna Doubts', 'WR', 'DAL', 'NYG', 16.0, 17.5, 15.0, 'MARKET AGREES', 7), seasonPpg: 30.0, seasonGames: 5, formGap: 14.0 },
     // Hurt is not overperforming, and not overvalued either.
     { ...mk('Sidelined Star', 'RB', 'SF', 'ARI', 17.0, 0, 0, 'STRONG VEGAS FADE', 4), seasonPpg: 30.0, seasonGames: 4, formGap: 13.0, injury: 'Out' }
   ],
@@ -437,9 +438,9 @@ console.log('\nwith the boards answering');
   ok('the starter dealt out for a longshot is the narrowest starter', !ov.figs.some(f => f.k.includes('Elite Fourth')));
   ok('an injured player is not an overperformer', !ov.figs.some(f => f.k.includes('Sidelined')));
   ok('nor is a season average set against a stale line', !ov.figs.some(f => f.k.includes('Stale Line')));
-  ok('nor a hot streak the market prices under his consensus', !ov.figs.some(f => f.k.includes('Priced Streak')), ov.figs.map(f => f.k).join(' / '));
+  ok('nor a hot streak Iron Tuna projects under his consensus', !ov.figs.some(f => f.k.includes('Tuna Doubts')), ov.figs.map(f => f.k).join(' / '));
   ok('each states points a game over the price, green, over the season line',
-     ov.figs.every(f => f.good && /^\+\d+\.\d pts\/g$/.test(f.v) && /^Consensus \d+\.\d · market \d+\.\d · averaging \d+\.\d over \d$/.test(f.s)),
+     ov.figs.every(f => f.good && /^\+\d+\.\d pts\/g$/.test(f.v) && /^Consensus \d+\.\d · Iron Tuna \d+\.\d · averaging \d+\.\d over \d$/.test(f.s)),
      ov.figs.map(f => f.v + ' ' + f.s).join(' / '));
   ok('and the note says what a season figure is', /at least 3 games played/.test(ov.fine || ''), ov.fine);
   await page.click('#diffCats button:nth-child(5)');
