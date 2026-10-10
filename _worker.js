@@ -141,7 +141,8 @@ const WA_MARKET_BLOCKED_HTML = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Betting Market Intel is not available in Washington | Iron Tuna</title>
-<link rel="icon" href="/tuna-mark.png">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/site.css">
 </head>
 <body>
