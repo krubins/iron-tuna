@@ -574,7 +574,7 @@ footer.site {margin-top:0}
   // are on the same /api/vegas-edge read.
   //
   // THE FORWARD CALL (2026-10-10) stands in for each season list when it has
-  // rows enough: "Likely to outperform" for the overperformers and "Likely to
+  // rows enough: "Long term overperform" for the overperformers and "Long term
   // underperform" for the overvalued. The season lists are the record; the forward pair is the
   // call on what comes next, off seasonForm.likelyOver and likelyUnder. A
   // forward row is a season row that Iron Tuna's own projection for this week
@@ -624,7 +624,7 @@ footer.site {margin-top:0}
   function marketCats(j) {
     var vs = j.vsExperts || {}, sf = j.seasonForm || {};
     // NO PLAYER TWICE (2026-10-10). A player can sit on two lists (this
-    // week's value and likely to outperform, say). The lists are built one
+    // week's value and long term overperform, say). The lists are built one
     // at a time, and each skips the players an earlier list already printed,
     // so it deals its next player in their place. Only a list that
     // stands claims its players: one too short to print gives them back.
@@ -652,9 +652,9 @@ footer.site {margin-top:0}
     var side = function (fwd, rec) { return claim(fwd.rows.length >= MARKET_MIN ? fwd : rec); };
     // The season calls claim first, then the week's lists, so a player on
     // both is the season call's; the band still prints in its usual order.
-    var likely = side({ key: 'likely', label: 'Likely to outperform', rows: ahead(sf.likelyOver, 1), html: function (p) { return aheadHtml(p, 1); } },
+    var likely = side({ key: 'likely', label: 'Long term overperform', rows: ahead(sf.likelyOver, 1), html: function (p) { return aheadHtml(p, 1); } },
                       { key: 'over', label: 'Outscoring their projections', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } });
-    var unlikely = side({ key: 'unlikely', label: 'Likely to underperform', rows: ahead(sf.likelyUnder, -1), html: function (p) { return aheadHtml(p, -1); } },
+    var unlikely = side({ key: 'unlikely', label: 'Long term underperform', rows: ahead(sf.likelyUnder, -1), html: function (p) { return aheadHtml(p, -1); } },
                         { key: 'overvalued', label: 'Trailing their projections', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } });
     var value = claim({ key: 'value', label: 'This week\u2019s value', rows: week(vs.buys, 1), html: figHtml });
     var headwinds = claim({ key: 'headwinds', label: 'This week\u2019s headwinds', rows: week(vs.fades, -1), html: figHtml });
