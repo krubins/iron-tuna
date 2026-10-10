@@ -562,13 +562,21 @@ footer.site {margin-top:0}
       && n1(p.consensusPoints) != null && n1(p.vegasPoints) != null && n1(p.ironTunaPoints) != null
       && p.delta && n1(p.delta.points) != null && decide(p));
   }
-  // ── the four lists ───────────────────────────────────────────────────────
+  // ── the lists ────────────────────────────────────────────────────────────
   // The band rotates through four lists (2026-10-10): this week's value (the
   // market's buys), the season's overperformers (averaging more than the
   // consensus projects him for), this week's headwinds (the market's fades),
   // and the season's overvalued (projected for more than he has produced).
   // The weekly two come off vsExperts, the season two off seasonForm; both
   // are on the same /api/vegas-edge read.
+  //
+  // THE FORWARD PAIR (2026-10-10) sits beside each season list: "Likely to
+  // outperform" after the overperformers and "Likely to underperform" after
+  // the overvalued. The season lists are the record; the forward pair is the
+  // call on what comes next, off seasonForm.likelyOver and likelyUnder. A
+  // forward row is a season row that Iron Tuna's own projection for this week
+  // does not contradict: a player beating his consensus whom Iron Tuna has
+  // under it is a streak the model does not believe, and no call.
   //
   // FIVE TO A LIST, ELITE AND LONGSHOT BOTH. Ranked on the raw gap alone,
   // a list is all starters, because a 20-point player has more points to be
@@ -603,6 +611,9 @@ footer.site {margin-top:0}
       && n1(p.seasonPpg) != null && Number(p.seasonGames) > 0
       && n1(p.formGap) != null && Number(p.formGap) * sign > 0);
   }
+  function usableAhead(p, sign) {
+    return usableForm(p, sign) && (Number(p.ironTunaPoints) - Number(p.consensusPoints)) * sign >= 0;
+  }
   function decideForm(p, sign) {
     if (sign > 0) return { t: elite(p) ? 'Trust' : 'Buy' };
     return { t: elite(p) ? 'Sell high' : 'Sell' };
@@ -616,11 +627,16 @@ footer.site {margin-top:0}
     var season = function (list, sign) {
       return dealFive((list || []).filter(function (p) { return usableForm(p, sign); }), function (p) { return Number(p.formGap); });
     };
+    var ahead = function (list, sign) {
+      return dealFive((list || []).filter(function (p) { return usableAhead(p, sign); }), function (p) { return Number(p.formGap); });
+    };
     var lists = [
       { key: 'value', label: 'This week\u2019s value', rows: week(vs.buys, 1), html: figHtml },
       { key: 'over', label: 'Outscoring their projections', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } },
+      { key: 'likely', label: 'Likely to outperform', rows: ahead(sf.likelyOver, 1), html: function (p) { return aheadHtml(p, 1); } },
       { key: 'headwinds', label: 'This week\u2019s headwinds', rows: week(vs.fades, -1), html: figHtml },
-      { key: 'overvalued', label: 'Trailing their projections', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } }
+      { key: 'overvalued', label: 'Trailing their projections', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } },
+      { key: 'unlikely', label: 'Likely to underperform', rows: ahead(sf.likelyUnder, -1), html: function (p) { return aheadHtml(p, -1); } }
     ].filter(function (c) { return c.rows.length >= MARKET_MIN; });
     // THE OVERVIEW (2026-10-10) leads the band once two or more lists stand:
     // the top row of each list, in list order, each figure labelled with the
@@ -658,6 +674,19 @@ footer.site {margin-top:0}
       + nameLine(decideForm(p, sign).t, p)
       + '<span class="v' + (gap > 0 ? ' good' : '') + '">' + esc(signed(gap)) + ' pts/g</span>'
       + '<span class="s">Season ' + n1(p.seasonPpg) + ' a game over ' + g + ' &middot; consensus ' + n1(p.consensusPoints) + ' &middot; market ' + n1(p.vegasPoints) + '</span>'
+      + '</span></li>';
+  }
+  // The forward figure is the same gap, read as the room the call says this
+  // week's consensus is off by. The line under it leads with the two
+  // projections the call weighs, then the season behind it.
+  function aheadHtml(p, sign) {
+    var gap = Number(p.formGap), g = Number(p.seasonGames);
+    return '<li class="hm-fig">'
+      + faceHtml(p.name)
+      + '<span class="hm-fig-txt">'
+      + nameLine(decideForm(p, sign).t, p)
+      + '<span class="v' + (gap > 0 ? ' good' : '') + '">' + esc(signed(gap)) + ' pts/g</span>'
+      + '<span class="s">Consensus ' + n1(p.consensusPoints) + ' &middot; Iron Tuna ' + n1(p.ironTunaPoints) + ' &middot; averaging ' + n1(p.seasonPpg) + ' over ' + g + '</span>'
       + '</span></li>';
   }
   // The faces. The markup carries the initials and the NAME; the photograph
@@ -705,7 +734,9 @@ footer.site {margin-top:0}
       ? 'Weekly lists in ' + weekWhat + '; long-term lists in ' + seasonWhat
       : cat && (cat.key === 'over' || cat.key === 'overvalued')
         ? 'P' + seasonWhat.slice(1)
-        : 'W' + weekWhat.slice(1);
+        : cat && (cat.key === 'likely' || cat.key === 'unlikely')
+          ? 'P' + seasonWhat.slice(1) + ', where Iron Tuna\u2019s projection for the week does not disagree'
+          : 'W' + weekWhat.slice(1);
     return '<span class="hm-tag">Estimate</span>'
       + '<span>' + what + ', at the site’s default scoring.'
       + (oddsStamp ? ' Odds read ' + esc(oddsStamp) + '.' : '') + '</span>'

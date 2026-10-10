@@ -7918,7 +7918,16 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const seasonForm = {
     minGames: LONG_MIN_GAMES,
     over: formed.filter(p => p.form.ppg - p.consensus.points >= LONG_MIN_GAP).sort((a, b) => (b.form.ppg - b.consensus.points) - (a.form.ppg - a.consensus.points)).slice(0, LONG_LIST).map(formBrief),
-    under: formed.filter(p => p.consensus.points - p.form.ppg >= LONG_MIN_GAP).sort((a, b) => (a.form.ppg - a.consensus.points) - (b.form.ppg - b.consensus.points)).slice(0, LONG_LIST).map(formBrief)
+    under: formed.filter(p => p.consensus.points - p.form.ppg >= LONG_MIN_GAP).sort((a, b) => (a.form.ppg - a.consensus.points) - (b.form.ppg - b.consensus.points)).slice(0, LONG_LIST).map(formBrief),
+    // THE FORWARD PAIR (2026-10-10): the same gap read as a call on what he
+    // will do, printed as "Likely to outperform" and "Likely to underperform"
+    // beside the record above. His season says the consensus is off, and Iron
+    // Tuna's own projection for this week must not say the opposite: an
+    // overperformer Iron Tuna projects under his consensus is a streak the
+    // model does not believe, and no call. Drawn from the whole formed pool,
+    // not from the fifteen above, so a disagreement there cannot thin it.
+    likelyOver: formed.filter(p => p.form.ppg - p.consensus.points >= LONG_MIN_GAP && p.ironTuna.points >= p.consensus.points).sort((a, b) => (b.form.ppg - b.consensus.points) - (a.form.ppg - a.consensus.points)).slice(0, LONG_LIST).map(formBrief),
+    likelyUnder: formed.filter(p => p.consensus.points - p.form.ppg >= LONG_MIN_GAP && p.ironTuna.points <= p.consensus.points).sort((a, b) => (a.form.ppg - a.consensus.points) - (b.form.ppg - b.consensus.points)).slice(0, LONG_LIST).map(formBrief)
   };
   // Movers: every player market with a real move, biggest first.
   const movers = [];

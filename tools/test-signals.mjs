@@ -215,6 +215,16 @@ console.log('\nVegas Edge: the season to date against the price');
   }
   ok('no season line, no row', run(null).over.length === 0 && run(null).under.length === 0);
   ok('the floor rides on the payload', hot.minGames === 3);
+  // The forward pair. Steady Man's Iron Tuna projection (9.1) sits over his
+  // consensus (9.0): it backs a call to outperform and contradicts one to
+  // underperform, until it is moved under.
+  ok('an overperformer Iron Tuna projects over his consensus is likely to outperform',
+     hot.likelyOver.length === 1 && hot.likelyOver[0].name === 'Steady Man' && hot.likelyOver[0].formGap === 6.4 && hot.likelyUnder.length === 0, JSON.stringify(hot));
+  ok('an underperformer Iron Tuna projects over his consensus is on the record but no call', cold.under.length === 1 && cold.likelyUnder.length === 0, JSON.stringify(cold));
+  const tunaLow = { ironTuna: { ...WEEK.players.find(p => p.name === 'Steady Man').ironTuna, points: 8.5 } };
+  ok('Iron Tuna under his consensus makes the underperformer a call', run({ games: 5, ppg: 4.0 }, tunaLow).likelyUnder.length === 1);
+  ok('and leaves the overperformer on the record only', (() => { const r = run({ games: 5, ppg: 15.4 }, tunaLow); return r.over.length === 1 && r.likelyOver.length === 0; })());
+  ok('no season line, no call', run(null).likelyOver.length === 0 && run(null).likelyUnder.length === 0);
 }
 
 console.log('\nWednesday movers');
