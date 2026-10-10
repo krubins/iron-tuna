@@ -158,10 +158,10 @@
   --rail-gap: 56px;
 
   /* The ribbon alone. The navy bars above and below it add 3px each. */
-  --header-h: 95px;
+  --header-h: 60px;
   --line-h: 3px;
 }
-@media (max-width: 860px) { :root { --gutter: 16px; --header-h: 53px } }
+@media (max-width: 860px) { :root { --gutter: 16px; --header-h: 44px } }
 
 /* ── base ───────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box }
@@ -213,8 +213,8 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
      ::after       the matching 3px navy bar under the ribbon. Both bars take
                    the ribbon's own colour since 2026-10-09 (they were
                    near-black), so the three read as one navy band.
-     .site-ribbon  the flat navy ribbon, 95px (78 from 1024 to 1239px, 67
-                   from 861 to 1023px, 53 on a phone), no border and no shadow.
+     .site-ribbon  the flat navy ribbon, 60px (54 from 1024 to 1239px, 50
+                   from 861 to 1023px, 44 on a phone), no border and no shadow.
                    The logo sits on a white panel inset 3px from the screen's
                    left edge, ending in a slant. Nav links are 14px bold capitals; the current page
                    gets a 3px white bar at the foot of the ribbon. On the
@@ -227,6 +227,12 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
    and the bar's height all scaled with the mark, so the brand panel keeps its
    shape at 0.84 of the mock; on a phone the bar dropped to 53px around the
    45px silhouette. The links and the button did not shrink with it.
+   Later again on 2026-10-10 the mark was halved (80px to 40px, and the
+   panel's padding and slant with it) and the ribbon cut to 60px: the 44px
+   primary button and the phone's 44px Menu target set the floor under the
+   bar, so it fell by less than the mark. At the two narrower widths the mark
+   stops at 33px and 28px rather than a strict half, which would have put the
+   wordmark under 25px and unreadable.
      .tabbar       on a phone, a 68px bottom bar with four labelled icon tabs.
 
    The ribbon is sticky and FLAT: no blur, no translucency. A backdrop-filter
@@ -249,11 +255,11 @@ header.site .site-ribbon, header.site > .wrap {
    because its own viewBox is the old wordmark's shape; 2.846 is the new
    mark's aspect ratio. */
 .brand {
-  --logo-h: 80px;
+  --logo-h: 40px;
   position: relative; display: inline-flex; align-items: center; flex: 0 0 auto;
   background: #fff; margin-left: var(--line-h);
-  padding: 0 62px 0 44px;
-  clip-path: polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%);
+  padding: 0 31px 0 22px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 15px) 100%, 0 100%);
 }
 .brand:hover { text-decoration: none }
 .brand b { color: var(--mast) }
@@ -293,19 +299,19 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
 
 /* Below 1240px the full-size ribbon (about 1120px of content) does not fit.
    From 1024 to 1239px it drops to the mock at its own 1024px size, less the
-   same 30% (78px ribbon, a 66px mark, 13px links); from 861 to 1023px a
+   same 30%, then halved again (54px ribbon, a 33px mark, 13px links); from 861 to 1023px a
    smaller mark and tighter links keep the ribbon on one line without a
    sideways scroll. */
 @media (min-width: 861px) and (max-width: 1239px) {
-  :root { --header-h: 78px }
-  .brand { --logo-h: 66px; padding: 0 45px 0 35px; clip-path: polygon(0 0, 100% 0, calc(100% - 25px) 100%, 0 100%) }
+  :root { --header-h: 54px }
+  .brand { --logo-h: 33px; padding: 0 23px 0 18px; clip-path: polygon(0 0, 100% 0, calc(100% - 13px) 100%, 0 100%) }
   .nav a { font-size: var(--fs-13); padding: 0 8px }
   header.site a.cta { font-size: var(--fs-13); min-height: 40px; padding: 0 var(--space-3) }
 }
 @media (min-width: 861px) and (max-width: 1023px) {
-  :root { --header-h: 67px }
+  :root { --header-h: 50px }
   header.site .site-ribbon, header.site > .wrap { gap: var(--space-3) }
-  .brand { --logo-h: 45px; padding: 0 28px 0 15px; clip-path: polygon(0 0, 100% 0, calc(100% - 21px) 100%, 0 100%) }
+  .brand { --logo-h: 28px; padding: 0 18px 0 10px; clip-path: polygon(0 0, 100% 0, calc(100% - 13px) 100%, 0 100%) }
   .nav a { padding: 0 6px }
 }
 
@@ -336,12 +342,13 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
   /* The phone ribbon is navy edge to edge since 2026-10-10 (the evening
      change; that morning's had the logo on a white panel and Menu on a white
      parallelogram beside it, and the two white blocks crowded a 390px bar).
-     The mark is the same SVG drawn as a white silhouette, 45px tall (30%
-     under the 64px it had on the panel), and the mark is a mask rather than a
+     The mark is the same SVG drawn as a white silhouette, 28px tall (45px
+     until the evening of 2026-10-10, 64px on the panel before that), in a
+     44px bar, and the mark is a mask rather than a
      background because the file's own fills are navy and steel. Menu is white
      capitals and three white bars, with no box: the one hit target keeps its
      44px minimum. */
-  .brand { --logo-h: 45px; background: transparent; clip-path: none; margin-left: 0; padding: 0 0 0 var(--gutter); flex: 0 0 auto }
+  .brand { --logo-h: 28px; background: transparent; clip-path: none; margin-left: 0; padding: 0 0 0 var(--gutter); flex: 0 0 auto }
   .brand-logo {
     background: #fff;
     -webkit-mask: url(/iron-tuna-logo.svg) no-repeat center / contain;
