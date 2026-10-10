@@ -224,7 +224,7 @@
     $('hvStamp').innerHTML = e(hz.label || '') +
       (j.currentWeek ? ' &middot; week ' + e(j.currentWeek) : '') +
       ' &middot; ' + rows.length + ' disagreement' + (rows.length === 1 ? '' : 's') +
-      ' &middot; the two ends are <a href="/analysts/brooks">Fantasy Analysis</a> and <a href="/analysts/vega">Market Intelligence</a>, scored at PPR';
+      ' &middot; the two ends are <a href="/analysts/rankings">Fantasy Analysis</a> and <a href="/analysts/market">Market Intelligence</a>, scored at PPR';
     $('hvFoot').innerHTML = 'A player is listed when the two ranks are at least <b>' + e(t.minGap != null ? t.minGap : 6) + ' slots</b> apart and at least ' +
       '<b>' + Math.round((t.minPct != null ? t.minPct : 0.25) * 100) + '%</b> of the better rank apart, and the better of the two is inside the startable range at his position. ' +
       'The odds basis under each market number says what the price is built from: <b>props</b> is a quoted player prop, <b>gamelines</b> is the posted game line applied to his line, ' +

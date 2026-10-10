@@ -57,7 +57,7 @@ section{margin:0 0 var(--space-6)}
    .sl-* IN site.css, because /dfs wears the same one. What stays here is
    this page’s own: the standing argument and the tool shelf. */
 
-/* Vega vs. Brooks. Not a table of gaps: two columns, five picks each, each man
+/* Market Desk vs. Rankings Desk. Not a table of gaps: two columns, five picks each, each desk
    arguing the players he expects to beat the other man's ranking on. The ranks
    ride above each pitch as a chip for scanning and inside the pitch as well,
    so a paragraph read on its own still says what it is arguing. */
@@ -281,7 +281,7 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
       <p>Also here</p>
       <a href="#desk">The Newsroom</a>
       <a href="#now">Do this now</a>
-      <a href="#disagree">Vega vs. Brooks</a>
+      <a href="#disagree">Market vs. Rankings</a>
       <a href="#tools">Every tool</a>
     </div>
   </nav>
@@ -510,8 +510,8 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
      when the route has nothing, like every module on this page. -->
 <div class="is-band">
 <div class="wrap">
-  <div class="is-sec" id="disagree"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Vega vs. Brooks</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
-    <p>The desk&rsquo;s one standing argument. <a href="/analysts/vega">Market Intelligence</a> and <a href="/analysts/brooks">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p></div>
+  <div class="is-sec" id="disagree"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Market Desk vs. Rankings Desk</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
+    <p>The desk&rsquo;s one standing argument. <a href="/analysts/market">Market Intelligence</a> and <a href="/analysts/rankings">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p></div>
   <section>
     <div class="is-plate">
       <div class="fn-riv" id="fnDisWrap" hidden></div>
@@ -949,8 +949,8 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
     var kicker = function (p) { return e(p.title) + ' &middot; Week ' + e(p.week); };
     var byline = function (p) {
       var by = p.byline || {};
-      return '<span class="nr-by"><span class="nr-av">' + e(av(by.name)) + '</span><a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' +
-        (p.rivalry ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') +
+      return '<span class="nr-by"><span class="nr-av">' + e(av(by.name)) + '</span><a href="' + e(by.url || '/analysts/' + (by.analyst || '')) + '">' + e(by.name) + '</a>' +
+        (p.rivalry ? '<span class="nr-riv">Market vs. Rankings</span>' : '') +
         (p.publishedAt ? '<span class="nr-time">' + e(ago(p.publishedAt)) + '</span>' : '') + '</span>';
     };
     // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only
@@ -1009,11 +1009,11 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
           var best = w.best ? ' ' + e(w.best.player) + ' finished ' + e(w.best.position + w.best.finish) + ' against ' + e(w.best.position + w.best.theirs) + '.' : '';
           return '<b>' + e(name) + ' went ' + e(w.hit) + ' of ' + e(w.of) + '</b>' + (w.push ? ' (' + e(w.push) + ' pushed)' : '') + '.' + best;
         };
-        var v = line('vega', 'Vega'), b = line('brooks', 'Brooks');
+        var v = line('vega', 'The Market Desk'), b = line('brooks', 'The Rankings Desk');
         if (v || b) told = '<p>Week ' + e(lw.week) + ', settled on the real finishes: ' + [v, b].filter(Boolean).join(' ') + '</p>';
       }
       return '<div class="fn-riv-foot">' + told + '<p>' + (j.locked
-        ? 'These ten picks were locked before kickoff and go on each man&rsquo;s record: a pick is a hit only if the player finishes ahead of the rank the other one gave him.'
+        ? 'These ten picks were locked before kickoff and go on each desk&rsquo;s record: a pick is a hit only if the player finishes ahead of the rank the other one gave him.'
         : 'This week&rsquo;s column is a live read of the two boards. It locks on Thursday morning, before the first kickoff, and only then does it go on the record.') + '</p></div>';
     };
     $('fnDisWrap').innerHTML = wrote.map(function (k) {

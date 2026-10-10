@@ -46,9 +46,9 @@ export function roster() {
   const end = src.indexOf('\nconst ANALYST_HOUSE', at);
   const block = src.slice(at, end > 0 ? end : at + 12000);
   const out = {};
-  const re = /(\w+): \{ id: '(\w+)', name: '([^']+)', role: '([^']+)'/g;
+  const re = /(\w+): \{ id: '(\w+)', slug: '(\w+)', name: '([^']+)', role: '([^']+)'/g;
   let m;
-  while ((m = re.exec(block))) out[m[2]] = { id: m[2], name: m[3], role: m[4] };
+  while ((m = re.exec(block))) out[m[2]] = { id: m[2], slug: m[3], name: m[4], role: m[5] };
   if (!Object.keys(out).length) throw new Error('could not read any analyst out of _worker.js');
   return out;
 }
@@ -89,14 +89,16 @@ export function analystFor(file) {
 // own. `tail` is the page's own trailing detail — the date and the call count on
 // a drop page, nothing at all on an evergreen guide.
 //
-// The name links to the analyst's page, which is where the standing AI
-// disclosure lives: these are editorial personas, not people, and the byline has
-// to be one click from the page that says so.
+// The name links to the desk's page (by its public slug, never the storage
+// id), which is where the standing AI disclosure lives: these are editorial
+// desks, not people, and the byline has to be one click from the page that
+// says so. The data-analyst attribute keeps the id: it is what the tests and
+// the worker key on, and no reader sees it.
 export function bylineHtml(a, tail, house) {
   const dot = '<span class="dot">&middot;</span>';
   const who = house
     ? '<b>Iron Tuna Research</b>'
-    : `<b><a href="/analysts/${a.id}">${a.name}</a></b>${dot}${a.role}`;
+    : `<b><a href="/analysts/${a.slug}">${a.name}</a></b>${dot}${a.role}`;
   const parts = [who, 'Iron Tuna'];
   for (const t of (tail || []).filter(Boolean)) parts.push(t);
   return `<div class="byline" data-analyst="${house ? 'house' : a.id}">${parts.join(dot)}</div>`;
