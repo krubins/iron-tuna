@@ -158,10 +158,10 @@
   --rail-gap: 56px;
 
   /* The ribbon alone. The navy bars above and below it add 3px each. */
-  --header-h: 60px;
+  --header-h: 92px;
   --line-h: 3px;
 }
-@media (max-width: 860px) { :root { --gutter: 16px; --header-h: 56px } }
+@media (max-width: 860px) { :root { --gutter: 16px; --header-h: 64px } }
 
 /* ── base ───────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box }
@@ -213,12 +213,14 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
      ::after       the matching 3px navy bar under the ribbon. Both bars take
                    the ribbon's own colour since 2026-10-09 (they were
                    near-black), so the three read as one navy band.
-     .site-ribbon  the flat navy ribbon, 60px (56 on a phone), no border and no
+     .site-ribbon  the flat navy ribbon, 92px (64 on a phone), no border and no
                    shadow. The logo sits on a white panel that starts at the
-                   left screen edge and ends in an 18px slant. Nav links are
-                   13px bold capitals; the current page gets a 3px white bar at
-                   the foot of the ribbon. On the right, the one flat
-                   square-cornered primary button.
+                   left screen edge and ends in a 30px slant: a navy tuna
+                   silhouette (/tuna-silhouette.svg) with the steel wordmark
+                   laid across it, after the 2026-10-10 mock. Nav links are
+                   14px bold capitals; the current page gets a 3px white bar at
+                   the foot of the ribbon. On the right, the one flat primary
+                   button.
      .tabbar       on a phone, a 68px bottom bar with four labelled icon tabs.
 
    The ribbon is sticky and FLAT: no blur, no translucency. A backdrop-filter
@@ -230,23 +232,34 @@ header.site .site-ribbon, header.site > .wrap {
   display: flex; align-items: stretch; gap: var(--space-4);
   height: var(--header-h); max-width: none; padding: 0 var(--gutter) 0 0;
 }
-/* The brand panel. White, from the screen's left edge to an 18px slant. The
-   wordmark is the same outlined-path SVG every page carries; its gradient fill
-   is overridden here so it is navy on white. Height is the only size set: the
-   SVG has a viewBox and scales. */
+/* The brand panel. White, from the screen's left edge to a 30px slant. The
+   tuna is a background image so the 160 pages' header markup did not have to
+   change; the wordmark is the same outlined-path SVG every page carries, set
+   on top of it in the page's own steel gradient (#wordMetal) with a navy
+   outline, so it reads on the white panel and across the navy fish alike.
+   The lean is a transform, not a font: the mark is paths, and the type rule
+   (nothing italic) is about text. --fish-w sizes the tuna; the wordmark's
+   left padding puts its first letter just behind the fish's eye. */
 .brand {
+  --fish-w: 262px;
   position: relative; display: inline-flex; align-items: center; flex: 0 0 auto;
-  background: #fff; padding: 0 34px 0 var(--gutter);
-  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
+  background: #fff url(/tuna-silhouette.svg) no-repeat;
+  background-size: var(--fish-w) auto;
+  background-position: calc(var(--gutter) - 10px) 50%;
+  padding: 0 64px 0 calc(var(--gutter) + 20px);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%);
 }
 .brand:hover { text-decoration: none }
 .brand b { color: var(--mast) }
-.brand-logo { height: 26px; width: auto; display: block }
-.brand-logo g, .brand-logo path { fill: var(--mast) }
+.brand-logo { height: 42px; width: auto; display: block; overflow: visible; transform: skewX(-8deg) }
+.brand-logo g, .brand-logo path {
+  fill: url(#wordMetal); stroke: var(--mast); stroke-width: 5px;
+  stroke-linejoin: round; paint-order: stroke fill;
+}
 .nav { display: flex; align-items: stretch; gap: var(--space-1); margin-left: var(--space-2) }
 .nav a {
   display: inline-flex; align-items: center; position: relative;
-  color: var(--mast-ink-hi); font-size: var(--fs-13); font-weight: 700; letter-spacing: .05em;
+  color: var(--mast-ink-hi); font-size: var(--fs-14); font-weight: 700; letter-spacing: .04em;
   text-transform: uppercase; white-space: nowrap; padding: 0 var(--space-3);
 }
 .nav a:hover { background: rgba(255, 255, 255, .08); text-decoration: none; color: #fff }
@@ -259,9 +272,9 @@ header.site .site-ribbon, header.site > .wrap {
 .nav-signin { align-self: center; color: #fff; font-size: var(--fs-13); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap }
 .nav-signin:hover { text-decoration: underline; color: #fff }
 header.site a.cta {
-  align-self: center; display: inline-flex; align-items: center; min-height: 40px;
-  padding: 0 var(--space-4); border-radius: 2px; background: var(--mast-btn); color: #fff;
-  font-size: var(--fs-13); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+  align-self: center; display: inline-flex; align-items: center; min-height: 48px;
+  padding: 0 var(--space-5); border-radius: 4px; background: var(--mast-btn); color: #fff;
+  font-size: var(--fs-14); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
   margin-left: auto; flex: 0 0 auto;
 }
 header.site a.cta:hover { background: #196559; text-decoration: none; color: #fff }
@@ -271,6 +284,17 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
   color: #fff; background: transparent;
 }
 .nav-account:hover { border-color: #fff; background: rgba(255, 255, 255, .08) }
+
+/* Between the phone breakpoint and a wide screen (861 to 1180px) the full
+   mark, five links and the button do not fit: a smaller mark and tighter link
+   padding keep the ribbon on one line without a sideways scroll. */
+@media (min-width: 861px) and (max-width: 1180px) {
+  .brand { --fish-w: 210px; padding: 0 52px 0 calc(var(--gutter) + 16px) }
+  .brand-logo { height: 34px }
+  .nav { margin-left: 0; gap: 0 }
+  .nav a { padding: 0 var(--space-2); letter-spacing: .02em }
+  header.site a.cta { padding: 0 var(--space-4); letter-spacing: .02em }
+}
 
 /* ── nav dropdown ───────────────────────────────────────────────────────── */
 /* Inert: the nav is five flat links and no page emits .nav-dd markup any more.
@@ -296,8 +320,13 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
 .tabbar { display: none }
 @media (max-width: 860px) {
   header.site .site-ribbon, header.site > .wrap { gap: 10px; padding-right: var(--gutter) }
-  .brand { padding: 0 26px 0 var(--gutter); flex: 0 1 auto; min-width: 0 }
-  .brand-logo { height: 22px; max-width: 100% }
+  /* The logo panel keeps its own size and the Menu button takes the far
+     right: until 2026-10-10 the button sat against the slant with the rest of
+     the bar empty, because the margin that pushed it right belonged to the
+     header button the phone hides. */
+  .brand { --fish-w: 182px; padding: 0 46px 0 calc(var(--gutter) + 14px); flex: 0 0 auto; clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%) }
+  .brand-logo { height: 29px }
+  .nav-toggle { margin-left: auto }
   header.site a.cta { min-height: 36px; padding: 0 var(--space-3); letter-spacing: .03em }
   .nav-toggle {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px; align-self: center;
@@ -318,7 +347,7 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
     position: absolute; top: 100%; left: 0; right: 0; margin: 0;
     display: none; flex-direction: column; align-items: stretch;
     background: var(--mast); border-top: 1px solid var(--mast-line); border-bottom: 1px solid var(--mast-line);
-    padding: var(--space-2) var(--gutter) var(--space-4); max-height: calc(100vh - 56px);
+    padding: var(--space-2) var(--gutter) var(--space-4); max-height: calc(100vh - var(--header-h) - 2 * var(--line-h));
     overflow-y: auto; gap: 0;
   }
   header.site[data-nav-open="1"] .nav { display: flex }
@@ -349,6 +378,13 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
   .tabbar a:hover { text-decoration: none; background: var(--panel) }
   .tabbar a svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
   .tabbar a[aria-current="page"] { color: var(--teal); font-weight: 700 }
+}
+
+/* The narrowest phones (320 to 380px): a smaller mark, so the logo panel and
+   the Menu button share the bar without either one clipping. */
+@media (max-width: 380px) {
+  .brand { --fish-w: 150px; padding: 0 38px 0 calc(var(--gutter) + 11px) }
+  .brand-logo { height: 24px }
 }
 
 /* ── footer ─────────────────────────────────────────────────────────────────
