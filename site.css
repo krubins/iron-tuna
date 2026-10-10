@@ -416,6 +416,9 @@ footer.site a:hover { color: #fff; text-decoration: underline }
 .foot-note p { margin: 0 0 var(--space-3) }
 .foot-note b { color: #fff; font-weight: 600 }
 .foot-legal { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; color: var(--mast-dim) }
+/* The operator's way in. At the end of the legal line, in the line's own dim
+   grey, so a reader scanning the footer does not take it for a destination. */
+.foot-legal .foot-admin { margin-left: auto; font-size: var(--fs-13); font-weight: 600; color: var(--mast-dim) }
 .foot-21 { color: var(--mast-ink) }
 .foot-21 b { color: #fff }
 

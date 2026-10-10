@@ -79,6 +79,15 @@ console.log('\nevery destination is reachable from every page');
   }
   ok('the nav reaches both lanes, the articles, how it works and search', badNav.length === 0, badNav.slice(0, 6).join('; '));
   ok('the footer reaches privacy, terms, support and the data inventory', badFoot.length === 0, badFoot.slice(0, 6).join('; '));
+
+  // THE OPERATOR'S WAY IN. front.html carried a quiet Admin link in its own
+  // footer; the 2026-10-08 design pass moved the page onto the shared chrome,
+  // which had never had one, and the only link into /admin from the site went
+  // with it. It rides the legal line (not the link row, so the ten-item shape
+  // below holds) with rel=nofollow, because /admin is noindex.
+  const noAdmin = allPages.filter((f) => !/<p class="foot-legal">[\s\S]*?<a class="foot-admin" href="\/admin" rel="nofollow">Admin<\/a>/.test(footer(read(f))));
+  ok('every footer carries the Admin link, nofollow, on the legal line', noAdmin.length === 0, noAdmin.slice(0, 6).join(', '));
+  ok('and the homepage at / has it', /<a class="foot-admin" href="\/admin" rel="nofollow">Admin<\/a>/.test(read('front.html')));
 }
 
 console.log('\nthe chrome leads with two lanes and nothing else');

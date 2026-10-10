@@ -13397,3 +13397,38 @@ rosters, then either evaluate a proposed trade or have Iron Tuna recommend one.
   end, nothing-ticked prompt). The meta description and JSON-LD were left alone,
   so `build-seo` has nothing to regenerate. `test-homepage.mjs` fails one
   date-relative assertion on `main` too, unrelated to this change.
+
+## 123. October 10: the Admin link back on the footer, and /admin is the usage page
+
+**The brief.** Put the "Admin" link back at the bottom of the site, where it
+used to be, and make the page behind it about one thing: how many people use
+the site, what they look at and how long they stay.
+
+- **Where it went.** `front.html` carried `<a class="foot-admin" href="/admin"
+  rel="nofollow">Admin</a>` at the end of its own footer. The 2026-10-08 design
+  pass (§118, `e54df10`) moved the homepage onto the shared chrome footer,
+  which had never had the link, so the only way into `/admin` from the site
+  went with it. (`index.html`, now `/hub`, still has its React copy.)
+- **Where it is now.** `tools/build-chrome.mjs` stamps `ADMIN_LINK` on the
+  `.foot-legal` line of every page, after the copyright: the operator's way
+  in, not a destination, in the line's own dim grey (`site.css`,
+  `.foot-legal .foot-admin`). It rides the legal line rather than the link row
+  so the ten-item footer shape `test-chrome.mjs` pins is unchanged; the same
+  test now asserts the link, nofollow, on every page and on `/`.
+- **`/admin` leads with Users & usage.** The Traffic section (unique users per
+  day, user-days, page views, active now, time on site both ways, the daily
+  chart, top pages, sources, click events) is the page. The key is checked
+  against `/api/admin/traffic`, one D1 round trip, instead of
+  `/api/admin/dashboard`, which pages through Stripe and used to hold the
+  whole page until it finished.
+- **The operator tools are folded, not gone.** Free access, DFS salaries, the
+  health board, newsroom control, saved leagues, editorial, and sales & leads
+  sit under one `<details id="ops">` at the foot, closed by default, with
+  every id and action intact (`test-health`, `test-jobs`, `test-admin-comp`
+  still read them). Nothing under it is fetched until it is opened; Refresh
+  re-reads it only while it is open; Lock closes it. The leads CSV button moved
+  off the header into the Leads card.
+- **Nothing in the worker changed.** The time-spent figures are the ones
+  `/api/admin/traffic` already computes between page views (§time on site);
+  a per-page dwell column would need a `LEAD(ts)` read there and is not in
+  this change.
