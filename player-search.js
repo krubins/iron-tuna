@@ -542,7 +542,6 @@
     { n: 'Start / sit and my lineup', d: 'Your best lineup, matchup and alerts', h: '/my-week', w: 'start sit lineup my week matchup who should' },
     { n: 'Waivers and FAAB', d: 'What to bid on every claim', h: '/waivers', w: 'waivers waiver wire faab pickups pickup adds bid claims' },
     { n: 'Vegas Edge', d: 'Where the market and the rankings disagree', h: '/vegas-edge', w: 'vegas edge betting market odds props sleepers busts' },
-    { n: 'Rest of season rankings', d: 'The board for the rest of the year', h: '/season-long-rankings', w: 'rest of season ros season long dynasty rankings' },
     { n: 'Game lines and totals', d: 'Every line, total and implied score', h: '/game-intel', w: 'games game lines spreads totals implied scores intel schedule' },
     { n: 'Depth charts', d: 'Every NFL depth chart', h: '/depth-charts', w: 'depth charts chart starters backups handcuffs' },
     { n: 'Articles', d: 'The desk’s stories this week', h: '/in-season/desk', w: 'articles news stories desk analysis reads' },
