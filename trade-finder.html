@@ -206,6 +206,34 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-verdict{border:0;border-radius:0;padding:0;background:transparent;margin:0 0 var(--space-5)}
 .tf-verdict h3{margin:0 0 var(--space-2);font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
 .tf-verdict p{margin:0;font-size:var(--fs-16);max-width:72ch}
+/* ── the gauge ──────────────────────────────────────────────────────────────
+   Under the verdict, two columns on a hairline. Left: the call (Go / No go)
+   as the one 34px figure, a sentence, and the meter: a track in the elevated
+   grey, the fill running from the centre to the needle (teal for the
+   reader's gain, the danger brown for a loss, as site.css fills .is-meter
+   and .is-meter.tight), hairline ticks at the ±0.75 pts/week zone edges, the
+   needle in ink. Right: three ledger rows, short term, long term, the
+   reader's situation, each a 13px label, a 19px figure and a sentence. */
+.tf-gauge{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,1.5fr);gap:var(--space-5) var(--space-7);border-top:1px solid var(--line);padding:var(--space-5) 0;margin:0 0 var(--space-2)}
+.tf-gauge .k{font-size:var(--fs-13);font-weight:400;color:var(--muted);display:block;line-height:1.4;margin-bottom:2px}
+.tf-call .v{font-size:var(--fs-34);font-weight:600;letter-spacing:-.02em;line-height:1.1;color:var(--text)}
+.tf-call .v small{font-size:var(--fs-16);font-weight:400;color:var(--muted);letter-spacing:0;margin-left:var(--space-2)}
+.tf-call .s{font-size:var(--fs-16);color:var(--sec);margin:var(--space-2) 0 0;max-width:46ch;line-height:1.5}
+.tf-meter{margin-top:var(--space-4);max-width:420px}
+.tf-meter .track{position:relative;height:10px;background:var(--elev);border-radius:2px}
+.tf-meter .fill{position:absolute;top:0;bottom:0;background:var(--teal)}
+.tf-meter.no .fill{background:var(--danger)}
+.tf-meter .tick{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--line2)}
+.tf-meter .pin{position:absolute;top:-5px;width:4px;height:20px;margin-left:-2px;background:var(--text);border-radius:1px}
+.tf-meter .ends{display:flex;justify-content:space-between;font-size:var(--fs-13);color:var(--muted);margin-top:8px}
+.tf-meter .ends span:nth-child(2){text-align:center}
+.tf-meter .ends span:last-child{text-align:right}
+.tf-gauge-rows .row{display:grid;grid-template-columns:minmax(150px,.9fr) minmax(0,.7fr) minmax(0,1.7fr);gap:var(--space-3);padding:var(--space-3) 0;border-top:1px solid var(--line);align-items:baseline}
+.tf-gauge-rows .row:first-child{border-top:0;padding-top:0}
+.tf-gauge-rows .row .v{font-size:var(--fs-19);font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.2}
+.tf-gauge-rows .row .v small{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
+.tf-gauge-rows .row .w{font-size:var(--fs-14);color:var(--sec);line-height:1.5}
+.tf-gauge-rows .row .w b{color:var(--text);font-weight:600}
 .tf-trades{display:grid;gap:0;margin-top:0}
 .tf-trade{border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-5) 0;background:transparent}
 .tf-trade h3{margin:0 0 var(--space-4);font-size:var(--fs-19);font-weight:600;display:flex;align-items:baseline;gap:var(--space-3);flex-wrap:wrap}
@@ -249,6 +277,8 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 
 @media(max-width:640px){
   .tf-sides,.tf-sides.multi{grid-template-columns:1fr;gap:var(--space-4)}
+  .tf-gauge{grid-template-columns:1fr;gap:var(--space-5)}
+  .tf-gauge-rows .row{grid-template-columns:1fr;gap:4px}
   .tf-side{border-left:0;border-top:1px solid var(--line);padding:var(--space-3) 0 0}
   .tf-side:first-child{border-top:0;padding-top:0}
   .tf-bar{grid-template-columns:1fr 1fr;gap:var(--space-4)}
@@ -388,6 +418,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 <div id="tf-results" hidden>
   <div class="tf-bar" id="tf-bar"></div>
   <div id="tf-verdict"></div>
+  <div class="tf-gauge" id="tf-gauge" hidden></div>
   <div class="tf-trades" id="tf-trades"></div>
   <div id="tf-take" hidden></div>
   <p class="tf-note" id="tf-results-note"></p>
@@ -397,6 +428,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   <h3>How these trades are judged</h3>
   <p><b>A roster is worth what it starts.</b> Every player is projected at your scoring from the same board the rankings use, and each team&rsquo;s lineup is filled the way your league fills it: the named slots first, then flex and superflex from whoever is left. The bench counts a little, as insurance, and a backup quarterback in a one-QB league counts for almost nothing. Kickers and defenses are left out.</p>
   <p><b>The Trade Evaluator scores every team in the deal.</b> For a two-, three- or four-team trade, each team&rsquo;s lineup is filled before and after, counting what it sends and what it receives. A team that gains three quarters of a point a week or more is called a gain, one that loses as much a loss, and anything between is about even. When the deal is not a yes for everyone and the rosters are in, the evaluator shows the closest trades among the same teams that are.</p>
+  <p><b>The gauge is your side of it.</b> Under the verdict, every team in the deal is scored twice more on the same clock: the next three weeks (short term) and the rest of the season (long term; the fantasy playoffs when you have clinched). Each row says which team the trade helps most on that horizon. Your situation decides which of the two counts more: a team that needs wins now is weighed 70/30 toward the next three weeks, a team playing the whole season 35/65 the other way, a team built for the playoffs 25/75. The needle is that weighted gain per week, from three points lost on the left to three gained on the right, and the call is Go at three quarters of a point or better, No go at as much lost, and the roster fit settles the ground between: a trade that raises your weakest starter is a narrow Go, one that opens a hole is a narrow No go.</p>
   <p><b>Rosters are optional in the Evaluator.</b> List only the players and each side is scored on those players alone: what it gets against what it sends, at your scoring, on its horizon. That answers whether the names are fair. Add the rosters and the score becomes the change to the lineup each team actually starts, which is the better answer whenever a two-for-one opens or closes a starting slot, and the card says which of the two it is showing.</p>
   <p><b>The Trade Finder.</b> Fill in two to four rosters and the engine tries every one-, two- and three-player swap between your team and each of the others, keeping only swaps where both lineups improve by at least three quarters of a point a week. The balance slider orders what survives: at <em>Even</em> by the smaller of the two gains, at <em>In my favor</em> by yours alone. It cannot surface a trade the other manager should refuse.</p>
   <p><b>Horizons are per team.</b> A gain is measured on the weeks that team is playing for &mdash; this week, the next three, the rest of the season, or the fantasy playoffs &mdash; and stated per week so a three-week horizon and a twelve-week one are on the same scale. Your notes set a team&rsquo;s horizon when they describe it: &ldquo;clinched&rdquo; or a record of .700 or better means the fantasy playoffs; &ldquo;needs wins,&rdquo; &ldquo;on the bubble&rdquo; or .400 or worse means the next three weeks; &ldquo;must win this week&rdquo; means this week; &ldquo;eliminated&rdquo; or &ldquo;rebuilding&rdquo; means the rest of the season.</p>
@@ -1231,13 +1263,20 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   // question asked of each team in turn: what it sends, what lands on it from
   // everyone else, and its lineup before and after on its own horizon. So
   // each team is scored as one side of evaluateTrade with an empty partner.
-  function sideOf(i, give, get) {
+  // `h` forces a horizon; left out, the team is scored on its own.
+  function sideOf(i, give, get, h) {
+    var hz = h || horizonFor(i);
     var ev = TR.evaluateTrade([teams[i], { name: '', players: [] }], {
       a: 0, b: 1, giveA: give, giveB: get, slots: slots, points: points, weeks: weeksOf,
-      horizon: function () { return horizonFor(i); }, minGain: 0.75
+      horizon: function () { return hz; }, minGain: 0.75
     });
     var s = ev.A; s.i = i; s.give = give; s.get = get; s.entered = rosterEntered(i); return s;
   }
+  // The gauge's two clocks: the next three weeks for every team, and the rest
+  // of the season, or the fantasy playoffs when the reader has clinched,
+  // because a clinched team's long term is weeks 15-17 and nothing before.
+  function longHorizon(mi) { return horizonFor(mi) === 'playoffs' ? 'playoffs' : 'ros'; }
+  function uniq(list) { var seen = {}; return list.filter(function (h) { if (seen[h]) return false; seen[h] = 1; return true; }); }
   function evaluate() {
     if (dealEmpty()) { status($('tf-find-status'), 'Add at least one player to the trade first.', true); return; }
     var senders = active().filter(function (t, i) { return deal[i].length; }).length;
@@ -1245,7 +1284,8 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     active().forEach(function (t, i) { deal[i].forEach(function (x) { receivers[x.to] = 1; }); });
     if (senders + Object.keys(receivers).length < 2) { status($('tf-find-status'), 'A trade needs players going to another team.', true); return; }
     status($('tf-find-status'), 'Scoring the lineups…');
-    Promise.all(horizonsInPlay().map(loadHorizon)).then(function () {
+    var mi0 = Number(mine);
+    Promise.all(uniq(horizonsInPlay().concat(['next3', longHorizon(mi0)])).map(loadHorizon)).then(function () {
       var sides = active().map(function (t, i) {
         var give = deal[i].map(function (x) { return players[x.id]; }).filter(Boolean);
         var get = [];
@@ -1259,9 +1299,10 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
       // none entered, the only players to search are the ones in the deal.
       var entered = active().every(function (t, i) { return rosterEntered(i); });
       var alt = all || !entered ? null : search(active(), mi, 3);
+      var gauge = gaugeOf(sides, mi);
       status($('tf-find-status'), '');
-      renderEvaluation(sides, mi, all, alt, entered);
-      take('evaluate', sides, mi);
+      renderEvaluation(sides, mi, all, alt, entered, gauge);
+      take('evaluate', sides, mi, gauge);
       try { if (typeof gtag === 'function') gtag('event', 'trade_evaluate', { teams: sides.length, all: all }); } catch (e) {}
     }).catch(function () { status($('tf-find-status'), 'The board did not answer, so nothing is scored. Try again in a moment.', true); });
   }
@@ -1312,6 +1353,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     var T = res.teams;
     paintBar(T[mi].name, T[mi].perWeek, T[mi].horizon);
     $('tf-verdict').innerHTML = '';
+    $('tf-gauge').hidden = true; $('tf-gauge').innerHTML = '';
     if (!res.trades.length) {
       $('tf-trades').innerHTML = '<div class="tf-empty">No trade between your team and ' + (count === 2 ? esc(T[1 - mi].name) : 'these teams') + ' improves both lineups by at least three quarters of a point a week. That is a real answer: the rosters are already sorted, or the two horizons want the same players. Try a different horizon, or allow bigger packages in the settings.</div>';
     } else {
@@ -1319,6 +1361,120 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     }
     $('tf-results-note').innerHTML = res.considered + ' swap' + (res.considered === 1 ? '' : 's') + ' improved both sides out of everything tried; the ' + res.trades.length + ' above are the strongest, no more than four with one partner. ' + scoredNote();
     host.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  // ── the gauge: is it worth it for the reader ─────────────────────────────
+  // The verdict says whether everyone wins. The gauge answers a narrower
+  // question, the reader's own: on the clock I am playing for, is this
+  // worth doing? Every side is scored again on two shared horizons, the
+  // next three weeks and the long term, and the reader's two gains are
+  // weighted by their situation: a team that needs wins now is weighed to
+  // the short term, a team that has clinched to the playoffs. The weighted
+  // gain is the needle; ±0.75 pts/week, the engine's own floor, marks the
+  // zone edges; ±3 is the end of the track. Between the edges the roster
+  // fit settles it: a trade that raises the reader's weakest starter is a
+  // narrow go, one that opens a hole a narrow no.
+  var WEIGHTS = { week: [0.8, 0.2], next3: [0.7, 0.3], ros: [0.35, 0.65], playoffs: [0.25, 0.75] };
+  var STATUS = { week: 'Must win now', next3: 'Needs wins', ros: 'Whole season', playoffs: 'Playoff-bound' };
+  var SPAN = 3;
+  // The reader's weakest starter before and after, per week on their clock.
+  // Needs the roster: with none, the "lineup" is the trade's own players.
+  function fitOf(i, give, get, h) {
+    if (!rosterEntered(i)) return null;
+    var pts = function (p) { return points(p, h) / weeksOf(h); };
+    var roster = teams[i].players;
+    var before = TR.lineupValue(roster, slots, pts);
+    var after = TR.lineupValue(roster.filter(function (p) { return give.indexOf(p) < 0; }).concat(get), slots, pts);
+    var weakest = function (lv) { return lv.starters.slice().sort(function (a, b) { return a.v - b.v; })[0] || null; };
+    // A slot nobody fills is the weakest starter there is: a reader who
+    // sends their only quarterback has a hole at QB, not a weak QB, and the
+    // weakest of the starters left would miss it. The slot that lost a body
+    // (or gained one) stands in at zero.
+    var filled = function (lv) { var c = {}; lv.starters.forEach(function (r) { c[r.slot] = (c[r.slot] || 0) + 1; }); return c; };
+    var fb = filled(before), fa = filled(after);
+    var empty = function (from, to) { var k = Object.keys(from).filter(function (x) { return (to[x] || 0) < from[x]; })[0]; return k ? { p: { name: 'nobody' }, slot: k, v: 0, empty: true } : null; };
+    var wb = after.starters.length > before.starters.length ? empty(fa, fb) : null, wa = before.starters.length > after.starters.length ? empty(fb, fa) : null;
+    wb = wb || weakest(before); wa = wa || weakest(after);
+    if (!wb || !wa) return null;
+    return { before: wb, after: wa, delta: wa.v - wb.v };
+  }
+  function gaugeOf(sides, mi) {
+    var longH = longHorizon(mi);
+    var term = function (h) {
+      var list = sides.map(function (s) { return sideOf(s.i, s.give, s.get, h); });
+      return { h: h, sides: list, top: list.slice().sort(function (a, b) { return b.gain - a.gain; })[0] };
+    };
+    var g = { short: term('next3'), long: term(longH), you: null };
+    var you = sides.filter(function (s) { return s.i === mi; })[0];
+    if (!you) return g;
+    var h = horizonFor(mi), w = WEIGHTS[h] || WEIGHTS.ros;
+    var ys = g.short.sides.filter(function (s) { return s.i === mi; })[0], yl = g.long.sides.filter(function (s) { return s.i === mi; })[0];
+    var score = w[0] * ys.gain + w[1] * yl.gain;
+    var fit = fitOf(mi, you.give, you.get, h);
+    var go, clear;
+    if (score >= 0.75) { go = true; clear = true; }
+    else if (score <= -0.75) { go = false; clear = true; }
+    else { clear = false; go = score > 0 && !(fit && fit.delta <= -0.75) || (fit && fit.delta >= 0.75 && score > -0.25); }
+    g.you = { i: mi, h: h, w: w, score: score, pos: 50 + 50 * Math.max(-1, Math.min(1, score / SPAN)), go: !!go, clear: clear, fit: fit, short: ys, long: yl, read: noteRead()[mi] || null };
+    return g;
+  }
+  function gaugeWhy(g, sides) {
+    var y = g.you, pts = n1(Math.abs(y.score)) + ' pts a week';
+    var w = Math.round(y.w[0] * 100) + '/' + Math.round(y.w[1] * 100);
+    var s;
+    if (y.clear && y.go) s = 'A clear gain on your clock: +' + pts + ', weighted ' + w + ' between the next three weeks and ' + HORIZONS[g.long.h].toLowerCase() + '.';
+    else if (y.clear) s = 'A clear loss on your clock: −' + pts + ', weighted ' + w + ' between the next three weeks and ' + HORIZONS[g.long.h].toLowerCase() + '.';
+    else if (y.go) s = 'A small edge, ' + (y.score < 0 ? '−' : '+') + pts + ' on your clock' + (y.fit && y.fit.delta >= 0.75 ? ', and it raises your weakest starter.' : '. Worth doing if you like the names.');
+    else s = 'Not enough in it for you: ' + (y.score < 0 ? '−' : '+') + pts + ' on your clock' + (y.fit && y.fit.delta <= -0.75 ? ', and it opens a hole in your lineup.' : '.');
+    var refuse = sides.filter(function (x) { return x.i !== y.i && x.call === 'loss'; });
+    if (y.go && refuse.length) s += ' Expect a no from ' + refuse.map(function (x) { return x.name; }).join(' and ') + '.';
+    return s;
+  }
+  function termRow(label, t, mi) {
+    var you = t.sides.filter(function (s) { return s.i === mi; })[0];
+    var top = t.top, others = t.sides.filter(function (s) { return s !== top; });
+    var who = top.i === mi ? 'you' : top.name;
+    var w;
+    if (top.gain < 0.75 && t.sides.every(function (s) { return Math.abs(s.gain) < 0.75; })) w = 'About even for everyone: no lineup moves by as much as three quarters of a point a week.';
+    else if (top.gain < 0.75) w = 'Nobody gains here: ' + t.sides.map(function (s) { return (s.i === mi ? 'you ' : esc(s.name) + ' ') + signed(s.gain); }).join(', ') + '.';
+    else w = 'Helps <b>' + esc(who) + '</b> most, ' + signed(top.gain) + ' a week' + (others.length ? ' against ' + others.map(function (s) { return signed(s.gain) + ' for ' + (s.i === mi ? 'you' : esc(s.name)); }).join(', ') : '') + '.';
+    return '<div class="row"><span class="k">' + label + ' &middot; ' + esc(HORIZONS[t.h]) + '</span>'
+      + '<span class="v">' + (you ? signed(you.gain) + ' <small>pts / week for you</small>' : '<small>You are not in this trade</small>') + '</span>'
+      + '<span class="w">' + w + '</span></div>';
+  }
+  function renderGauge(g, sides, mi) {
+    var host = $('tf-gauge');
+    var y = g.you, html = '';
+    if (y) {
+      var pos = Math.round(y.pos * 10) / 10, lo = Math.min(50, pos), wd = Math.abs(pos - 50);
+      var call = y.go ? 'Go' : 'No go', qual = y.clear ? '' : '<small>narrow</small>';
+      var aria = call + (y.clear ? '' : ', narrow') + ': ' + signed(y.score) + ' points a week on your clock, on a scale from −' + SPAN + ' to +' + SPAN + '.';
+      html += '<div class="tf-call"><span class="k">Worth it for you?</span><div class="v" data-call="' + (y.go ? 'go' : 'no') + '">' + call + qual + '</div>'
+        + '<p class="s">' + esc(gaugeWhy(g, sides)) + '</p>'
+        + '<div class="tf-meter' + (y.go ? '' : ' no') + '" role="img" aria-label="' + esc(aria) + '"><div class="track">'
+        + '<i class="fill" style="left:' + lo + '%;width:' + wd + '%"></i>'
+        + '<span class="tick" style="left:37.5%"></span><span class="tick" style="left:62.5%"></span>'
+        + '<b class="pin" style="left:' + pos + '%" data-pos="' + pos + '"></b></div>'
+        + '<div class="ends"><span>Walk away</span><span>About even</span><span>Send it</span></div></div></div>';
+    } else {
+      html += '<div class="tf-call"><span class="k">Worth it for you?</span><div class="v" data-call="none">Not your call</div><p class="s">Your team is not in this trade, so there is nothing for you to send or take. The rows say whom it helps.</p></div>';
+    }
+    var sit = '';
+    if (y) {
+      var fit = y.fit, slotName = function (r) { return r.slot === 'FLEX' ? 'flex' : r.slot === 'SFLEX' ? 'superflex' : r.slot; };
+      sit = '<div class="row"><span class="k">Your situation</span><span class="v">' + esc(STATUS[y.h] || HORIZONS[y.h]) + '</span><span class="w">'
+        + (y.read ? 'From your notes: &ldquo;' + esc(y.read.why) + '&rdquo;. ' : 'From the settings; say how your season is going in step 3 and this adjusts. ')
+        + 'The next three weeks count ' + Math.round(y.w[0] * 100) + '% and ' + esc(HORIZONS[g.long.h].toLowerCase()) + ' ' + Math.round(y.w[1] * 100) + '%. '
+        + (fit ? (fit.after.empty ? '<b>Opens a hole:</b> ' + esc(slotName(fit.after)) + ' goes unfilled; ' + esc(fit.before.p.name) + ' (' + n1(fit.before.v) + ' a week) was starting there.'
+            : fit.before.empty ? '<b>Fills a need:</b> ' + esc(slotName(fit.before)) + ' was empty; ' + esc(fit.after.p.name) + ' starts there now (' + n1(fit.after.v) + ' a week).'
+            : fit.delta >= 0.75 ? '<b>Fills a need:</b> your weakest starter goes from ' + esc(fit.before.p.name) + ' at ' + esc(slotName(fit.before)) + ' (' + n1(fit.before.v) + ') to ' + esc(fit.after.p.name) + ' (' + n1(fit.after.v) + ') a week.'
+            : fit.delta <= -0.75 ? '<b>Opens a hole:</b> your weakest starter falls from ' + esc(fit.before.p.name) + ' at ' + esc(slotName(fit.before)) + ' (' + n1(fit.before.v) + ') to ' + esc(fit.after.p.name) + ' (' + n1(fit.after.v) + ') a week.'
+            : 'Your weakest starting slot is about where it was.')
+          : 'Add your roster in step 2 to see whether it fills a starting slot or opens one.')
+        + '</span></div>';
+    }
+    html += '<div class="tf-gauge-rows">' + termRow('Short term', g.short, mi) + termRow('Long term', g.long, mi) + sit + '</div>';
+    host.innerHTML = html;
+    host.hidden = false;
   }
   // The headline answers the reader's question in a line: should I send
   // this, and will the others take it.
@@ -1339,13 +1495,14 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     if (otherGain.length) return { cls: 'mixed', h: 'It helps ' + (others.length === 1 ? 'them' : 'the others') + ' more than you.', p: 'Your lineup barely moves; ' + otherGain.map(function (s) { return s.name + ' gains ' + n(s.gain); }).join(', ') + '. Ask for more.' };
     return { cls: 'mixed', h: 'A wash.', p: 'No lineup moves by as much as three quarters of a point a week.' };
   }
-  function renderEvaluation(sides, mi, all, alt, entered) {
+  function renderEvaluation(sides, mi, all, alt, entered, gauge) {
     var host = $('tf-results');
     host.hidden = false;
     var you = sides.filter(function (s) { return s.i === mi; })[0] || sideOf(mi, [], []);
     paintBar(you.name, you.perWeek, you.h, true, !you.entered);
     var v = verdictOf(sides, mi);
     $('tf-verdict').innerHTML = '<div class="tf-verdict ' + v.cls + '"><h3>' + esc(v.h) + '</h3><p>' + esc(v.p) + '</p></div>';
+    if (gauge) renderGauge(gauge, sides, mi); else { $('tf-gauge').hidden = true; $('tf-gauge').innerHTML = ''; }
     var title = sides.length === 2
       ? (sides[0].give.length ? sides[0].give.map(function (p) { return p.name; }).join(' + ') : 'Nothing') + ' for ' + (sides[1].give.length ? sides[1].give.map(function (p) { return p.name; }).join(' + ') : 'nothing')
       : sides.length + '-team trade';
@@ -1378,7 +1535,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     + 'Your job is to weigh the manager\'s additional factors (team records, standings, playoff odds, injuries, byes, roster needs) '
     + 'and say in 3 to 6 plain sentences whether they strengthen or change the call, team by team where it matters, '
     + 'ending with a one-line recommendation. No headings, no bullet points, no markdown.';
-  function summarize(kind, res, mi) {
+  function summarize(kind, res, mi, gauge) {
     var out = ['Teams: ' + active().map(function (t, i) { return t.name + (i === mi ? ' (my team)' : '') + ', horizon ' + HORIZONS[horizonFor(i)]; }).join('; ') + '.',
       'Scoring: ' + scoringName() + '.'];
     if (kind === 'evaluate') {
@@ -1389,6 +1546,18 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
           + ': lineup ' + signed(s.gain) + ' pts/week (' + s.call + (s.entered ? '' : '; no roster entered, scored on the players alone') + ').');
       });
       out.push('Engine verdict: ' + verdictOf(res, mi).h);
+      if (gauge) {
+        ['short', 'long'].forEach(function (k) {
+          var t = gauge[k];
+          out.push((k === 'short' ? 'Short term' : 'Long term') + ' (' + HORIZONS[t.h] + '): ' + t.sides.map(function (s) { return s.name + ' ' + signed(s.gain); }).join(', ') + '; helps ' + t.top.name + ' most.');
+        });
+        if (gauge.you) {
+          var y = gauge.you;
+          out.push('My situation: ' + STATUS[y.h] + (y.read ? ' (from my notes: "' + y.read.why + '")' : '') + '; weighted gain ' + signed(y.score) + ' pts/week'
+            + (y.fit ? '; weakest starter ' + (y.fit.delta >= 0.75 ? 'improves' : y.fit.delta <= -0.75 ? 'worsens' : 'about the same') : '')
+            + '. Engine call for me: ' + (y.go ? 'GO' : 'NO GO') + (y.clear ? '' : ' (narrow)') + '.');
+        }
+      }
     } else {
       out.push(res.trades.length ? 'Top trades the engine found (both lineups gain):' : 'The engine found no trade that improves both lineups.');
       res.trades.slice(0, 4).forEach(function (t, k) {
@@ -1399,12 +1568,12 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     }
     return out.join('\n');
   }
-  function take(kind, res, mi) {
+  function take(kind, res, mi, gauge) {
     var host = $('tf-take'), factors = $('tf-factors').value.trim(), seq = ++takeSeq;
     if (!factors) { host.hidden = true; host.innerHTML = ''; return; }
     host.hidden = false;
     host.innerHTML = '<div class="tf-take"><h3>With your notes</h3><p class="tf-take-wait">Reading your notes against the numbers…</p></div>';
-    var msg = summarize(kind, res, mi) + '\n\nThe manager\'s additional factors:\n' + factors.slice(0, 3000);
+    var msg = summarize(kind, res, mi, gauge) + '\n\nThe manager\'s additional factors:\n' + factors.slice(0, 3000);
     fetch('/api/coach', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ system: TAKE_SYSTEM, messages: [{ role: 'user', content: msg }] }) })
       .then(function (r) { return r.json(); })
       .then(function (j) {
