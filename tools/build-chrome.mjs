@@ -139,6 +139,8 @@ const FOOT_LINKS = [
   { label: 'Support', href: '/support' },
 ];
 
+const ADMIN_LINK = '<a class="foot-admin" href="/admin" rel="nofollow">Admin</a>';
+
 const BLURB = 'Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.';
 
 // The site-wide disclaimer, on EVERY page rather than only the pages that print
@@ -217,7 +219,14 @@ function footHtml() {
     '  <div class="foot-note">',
     `   <p>${BLURB}</p>`,
     `   <p class="foot-21">${LEGAL}</p>`,
-    '   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span></p>',
+    // The Admin link rides the legal line, not the link row: /admin is not a
+    // destination a reader navigates to, it is the operator's only way into
+    // the usage numbers from the site. front.html carried exactly this link in
+    // its own footer until the 2026-10-08 design pass put it on the shared
+    // chrome, where it had never been — so the way in vanished with the
+    // redesign. rel=nofollow keeps a noindex page out of the crawl, and
+    // tools/test-chrome.mjs now asserts the link on every page.
+    `   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span>${ADMIN_LINK}</p>`,
     '  </div>',
   ].join('\n');
 }
