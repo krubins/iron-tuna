@@ -166,6 +166,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <div class="card">
       <h2>Top pages</h2>
       <div class="tblwrap"><table id="pagesTbl"></table></div>
+      <div class="note">Time is the average time on the page, measured to the same visitor's next page view within the visit. The last page of a visit cannot be measured, so a page people leave from is averaged over fewer views than it has (hover the figure for the count) and a dash means none could be.</div>
     </div>
     <div class="card">
       <h2>Where users came from</h2>
@@ -675,10 +676,17 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     // Top pages, with a proportional bar so the shape is readable at a glance.
     var pages = d.topPages || [];
     var pMax = pages.reduce(function(m, r){ return Math.max(m, r.views); }, 0) || 1;
+    // Time on page is the average of the views that had a next view to measure
+    // to; an exit page has fewer of those than views, so the count rides along
+    // in the cell's title and a page with none reads as a dash, not 0:00.
     $('pagesTbl').innerHTML = !pages.length ? '<tr><td class="empty">No page views recorded yet.</td></tr>' :
-      '<tr><th>Page</th><th class="num">Views</th><th class="num">Users</th><th></th></tr>' +
+      '<tr><th>Page</th><th class="num">Views</th><th class="num">Users</th><th class="num">Time</th><th></th></tr>' +
       pages.map(function(r){
-        return '<tr><td>' + esc(r.path) + '</td><td class="num">' + num(r.views) + '</td><td class="num">' + num(r.users) + '</td>' +
+        var timed = r.timedViews || 0;
+        var time = timed
+          ? '<span title="' + esc('average of ' + num(timed) + ' of ' + num(r.views) + ' views that went on to another page') + '">' + dur(r.avgSec) + '</span>'
+          : '<span style="color:var(--muted)" title="no view of this page went on to another page">—</span>';
+        return '<tr><td>' + esc(r.path) + '</td><td class="num">' + num(r.views) + '</td><td class="num">' + num(r.users) + '</td><td class="num">' + time + '</td>' +
           '<td style="width:110px"><span class="bar" style="width:' + Math.round(r.views / pMax * 100) + '%"></span></td></tr>';
       }).join('');
 

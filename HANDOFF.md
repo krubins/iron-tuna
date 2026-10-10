@@ -13432,3 +13432,25 @@ the site, what they look at and how long they stay.
   `/api/admin/traffic` already computes between page views (§time on site);
   a per-page dwell column would need a `LEAD(ts)` read there and is not in
   this change.
+
+## 124. October 10: time on each page, on the Top pages table
+
+**The brief.** Add a per-page time column to Top pages on `/admin`.
+
+- **The measure.** `/api/admin/traffic` now gives each `topPages` row
+  `timedViews` and `avgSec`. A view lasts until the SAME visitor's next view,
+  provided that is within `SESSION_GAP_MS` (the time-on-site rule, applied per
+  view: one `LEAD(ts) OVER (PARTITION BY visitor ORDER BY ts)` inside the same
+  grouped read, so views and users are unchanged). The exit page of a visit
+  has no next view and is not measured; the average is over the views that
+  were, never over unmeasured ones at zero. The operator's rows are filtered
+  the same way as everything else on the route.
+- **On the page.** A `Time` column between Users and the bar: `m:ss`, with the
+  count behind it in the cell's title ("average of 70 of 120 views that went
+  on to another page"); a page no view ever left for another page reads as a
+  dash. The note under the table says why an exit page is averaged over fewer
+  views than it has.
+- **Tests.** `test-analytics.mjs` §4c-1 (+7): timed to the next view, exit
+  page is a dash, a gap past the window is not time on the page, the
+  operator is held back and `includeMe=1` puts them back, every figure
+  finite. The full node suite and the four generator checks are clean.

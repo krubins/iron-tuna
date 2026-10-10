@@ -17935,8 +17935,24 @@ export default {
           gapMinutes: SESSION_GAP_MS / 60000,
         };
 
-        out.topPages = (await rows('SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ?' + mine + ' GROUP BY path ORDER BY views DESC LIMIT 25', since))
-          .map(r => ({ path: r.path, views: r.views || 0, users: r.users || 0 }));
+        // Time on each page, by the same rule as time on site: a view lasts until
+        // the SAME visitor's next view, provided that is within SESSION_GAP_MS.
+        // The last page of a visit has no next view, so it is not measured, and
+        // the average is over the views that were (`timedViews`), never over the
+        // unmeasured ones at zero. A page people leave the site from therefore
+        // has fewer timed views than views, which the admin page prints, rather
+        // than a dwell time invented for the exit.
+        out.topPages = (await rows(
+          'WITH v AS (SELECT path, visitor, LEAD(ts) OVER (PARTITION BY visitor ORDER BY ts) - ts AS dwell FROM page_views WHERE ts >= ?' + mine + ') ' +
+          'SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users, ' +
+          'SUM(CASE WHEN dwell IS NOT NULL AND dwell <= ? THEN 1 ELSE 0 END) AS timed, ' +
+          'SUM(CASE WHEN dwell IS NOT NULL AND dwell <= ? THEN dwell ELSE 0 END) AS ms ' +
+          'FROM v GROUP BY path ORDER BY views DESC LIMIT 25',
+          since, SESSION_GAP_MS, SESSION_GAP_MS))
+          .map(r => {
+            const timed = Number(r.timed) || 0;
+            return { path: r.path, views: r.views || 0, users: r.users || 0, timedViews: timed, avgSec: timed ? (Number(r.ms) || 0) / 1000 / timed : 0 };
+          });
         out.sources = (await rows('SELECT source, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ?' + mine + ' GROUP BY source ORDER BY views DESC LIMIT 20', since))
           .map(r => ({ source: r.source || '', views: r.views || 0, users: r.users || 0 }));
         out.countries = (await rows("SELECT country, COUNT(*) AS views FROM page_views WHERE ts >= ? AND country != ''" + mine + ' GROUP BY country ORDER BY views DESC LIMIT 12', since))

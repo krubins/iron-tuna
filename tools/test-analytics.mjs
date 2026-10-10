@@ -221,6 +221,35 @@ const track = (h, body) => h.hit('/api/track', { method: 'POST', headers: { 'use
   ok('includeMe=1 puts their reading back', all.visits === 5 && all.totalSec === 150 + 20 * 60, JSON.stringify(all));
 }
 
+// ── 4c-1. time on each page ──
+// The same rule, applied per view: a view lasts until the same visitor's next
+// view inside the gap, and the exit page of a visit is unmeasured rather than
+// zero. So /guides, which is where everyone lands, is measured on most of its
+// views, and /faq, which is where they leave from, on none.
+{
+  const db = makeDb(), h = harness(makeEnv(db));
+  const T = Date.now() - 2 * 3600000, MIN = 60000;
+  const at = (visitor, off, p, internal = 0) => {
+    const ts = T + off, day = new Date(ts).toISOString().slice(0, 10);
+    db.sqlite.prepare('INSERT INTO page_views (ts, day, path, visitor, source, country, internal) VALUES (?,?,?,?,?,?,?)')
+      .run(ts, day, p, visitor, '', '', internal);
+  };
+  at('v1', 0, '/guides'); at('v1', 30000, '/guides'); at('v1', 90000, '/faq');      // 30s on guides, 60s on guides, exit on faq
+  at('v2', 0, '/guides'); at('v2', 120000, '/faq');                                  // 120s on guides, exit on faq
+  at('v3', 0, '/guides'); at('v3', 45 * MIN, '/guides');                             // 45 minutes apart: two visits, neither measured
+  at('op', 0, '/guides'); at('op', 10 * MIN, '/faq', 1);                             // the operator: the first view is internal=0 but the next is theirs too
+  db.sqlite.prepare("UPDATE page_views SET internal = 1 WHERE visitor = 'op'").run();
+  const by = {}; (await traffic(h)).topPages.forEach(r => { by[r.path] = r; });
+  ok('a view is timed to the same visitor\'s next view', by['/guides'].timedViews === 3 && by['/guides'].avgSec === 70, JSON.stringify(by['/guides']));
+  ok('the views that could not be timed are still counted as views', by['/guides'].views === 5 && by['/guides'].users === 3, JSON.stringify(by['/guides']));
+  ok('an exit page is a dash, not a zero', by['/faq'].views === 2 && by['/faq'].timedViews === 0 && by['/faq'].avgSec === 0, JSON.stringify(by['/faq']));
+  ok('a gap past the window does not count as time on the page', by['/guides'].timedViews === 3, JSON.stringify(by['/guides']));
+  ok('the operator\'s ten minutes are not on the page', by['/guides'].avgSec === 70 && !by['/faq'].timedViews, JSON.stringify(by));
+  const all = {}; (await traffic(h, '&includeMe=1')).topPages.forEach(r => { all[r.path] = r; });
+  ok('includeMe=1 puts them back', all['/guides'].timedViews === 4 && Math.abs(all['/guides'].avgSec - (210 + 600) / 4) < 1e-9, JSON.stringify(all['/guides']));
+  ok('and every figure is a finite number', (await traffic(h)).topPages.every(r => Number.isFinite(r.avgSec) && Number.isFinite(r.timedViews)));
+}
+
 // ── 4c-2. the edges: the gap boundary, and no traffic at all ──
 {
   const db = makeDb(), h = harness(makeEnv(db));
