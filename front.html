@@ -212,6 +212,29 @@ body{overflow-x:hidden}
   .hm-story.lead .hm-story-head{font-size:var(--fs-23)}
 }
 
+/* ── 3b · the two lanes ───────────────────────────────────────────────────
+   Two wide tiles under the desk, in the position tiles' own dress: an
+   illustration in its own palette, the name over a dark fade at the foot,
+   and one line under it saying what the lane is for. DFS links /dfs and
+   season long links /fantasy. Static, so never hidden. Two across at every
+   width: landscape on a desk, square on a phone with the art held to the right. */
+.hm-lanes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
+.hm-lane{position:relative;display:block;aspect-ratio:2/1;border-radius:10px;overflow:hidden;color:#fff;background:var(--t1)}
+.hm-lane:hover{color:#fff;text-decoration:none}
+.hm-lane:hover .hm-lane-name{text-decoration:underline}
+.hm-lane svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hm-lane-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-24) var(--sp-24);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
+.hm-lane-name{display:block;font-size:var(--fs-28);font-weight:600;line-height:1.15;letter-spacing:-.01em}
+.hm-lane-sub{display:block;font-size:var(--fs-16);color:rgba(255,255,255,.86);margin-top:4px}
+@media(max-width:600px){
+  .hm-lanes{gap:var(--sp-12)}
+  .hm-lane{aspect-ratio:1/1}
+  .hm-lane-cap{padding:var(--sp-48) var(--sp-16) var(--sp-16)}
+  .hm-lane-name{font-size:var(--fs-19);line-height:1.2}
+  .hm-lane-sub{font-size:var(--fs-13);margin-top:2px}
+  .hm-lane-bars{display:none}
+}
+
 /* ── 4 · how it works ─────────────────────────────────────────────────────
    Three outlined rounded cards: the three inputs, in order. */
 .hm-tagline{margin:0 0 var(--sp-24);font-size:var(--fs-19);color:var(--ink-2);max-width:60ch}
@@ -362,6 +385,27 @@ footer.site {margin-top:0}
       <a href="/in-season/desk">All articles &rarr;</a>
     </div>
     <div class="hm-news" id="readGrid"></div>
+  </div>
+</section>
+
+<!-- ── 3b · the two lanes ───────────────────────────────────────────────────
+     Two wide tiles in the position tiles' dress, one per way to play: DFS and
+     season long. Static links, nothing off a feed, so never hidden. -->
+<section class="hm-sec" id="lanes" aria-labelledby="lanesHead">
+  <div class="wrap">
+    <div class="hm-sec-head">
+      <h2 id="lanesHead">Play Your Way</h2>
+    </div>
+    <ul class="hm-lanes">
+      <li><a class="hm-lane" href="/dfs" style="--t1:#14365a" data-lane="dfs">
+        <svg viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false"><rect width="400" height="200" fill="#14365a"/><g stroke="#cfe3f5" stroke-width="1" opacity=".22"><path d="M0 40h400M0 80h400M0 120h400M0 160h400"/></g><path d="M20 170 L90 140 L150 152 L220 96 L280 108 L360 34" fill="none" stroke="#7fd1ae" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><g fill="#7fd1ae"><circle cx="90" cy="140" r="6"/><circle cx="220" cy="96" r="6"/><circle cx="360" cy="34" r="9"/></g><g class="hm-lane-bars" fill="#cfe3f5" opacity=".9"><rect x="292" y="120" width="84" height="12" rx="3"/><rect x="292" y="140" width="64" height="12" rx="3"/><rect x="292" y="160" width="74" height="12" rx="3"/></g><text x="282" y="70" fill="#f2c14e" font-family="Geist,system-ui,sans-serif" font-size="34" font-weight="700">$</text></svg>
+        <span class="hm-lane-cap"><span class="hm-lane-name">DFS</span><span class="hm-lane-sub">One slate, one salary cap, one lineup</span></span>
+      </a></li>
+      <li><a class="hm-lane" href="/fantasy" style="--t1:#4a3a1c" data-lane="season">
+        <svg viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false"><rect width="400" height="200" fill="#4a3a1c"/><g fill="#f3e2bf"><rect x="24" y="30" width="34" height="34" rx="4" opacity=".35"/><rect x="66" y="30" width="34" height="34" rx="4" opacity=".45"/><rect x="108" y="30" width="34" height="34" rx="4" opacity=".55"/><rect x="150" y="30" width="34" height="34" rx="4" opacity=".65"/><rect x="24" y="72" width="34" height="34" rx="4" opacity=".7"/><rect x="66" y="72" width="34" height="34" rx="4" opacity=".75"/><rect x="108" y="72" width="34" height="34" rx="4" opacity=".8"/><rect x="150" y="72" width="34" height="34" rx="4" opacity=".85"/><rect x="24" y="114" width="34" height="34" rx="4" opacity=".9"/><rect x="66" y="114" width="34" height="34" rx="4" opacity=".95"/><rect x="108" y="114" width="34" height="34" rx="4"/></g><path d="M290 36h64v28c0 24-14 40-32 40s-32-16-32-40z" fill="#f2c14e"/><path d="M290 46h-18c0 18 8 28 22 30M354 46h18c0 18-8 28-22 30" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round"/><rect x="314" y="104" width="16" height="22" fill="#f2c14e"/><rect x="296" y="126" width="52" height="12" rx="3" fill="#f2c14e"/></svg>
+        <span class="hm-lane-cap"><span class="hm-lane-name">Season long</span><span class="hm-lane-sub">Pickups, trades and lineup decisions</span></span>
+      </a></li>
+    </ul>
   </div>
 </section>
 
