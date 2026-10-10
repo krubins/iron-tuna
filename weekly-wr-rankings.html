@@ -32,7 +32,8 @@
 <meta property="og:url" content="https://irontuna.com/weekly-wr-rankings">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="/tuna-mark.png">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
@@ -91,7 +92,6 @@
 <p class="is-eyebrow">In-Season &middot; Rankings &middot; This week</p>
 <h1>This week’s WR rankings</h1>
 <p class="is-lede">What the fantasy consensus projects for every wide receiver this week, beside what the betting market implies, and the gap between the two.</p>
-<div class="its-strip" data-season-strip></div>
 
 <nav class="rk-chips" aria-label="Position">
   <a class="rkc-chip" href="/weekly-qb-rankings">QB</a>
@@ -148,7 +148,7 @@
   </div>
   <!--/chrome:foot-->
 </div></footer>
-<!-- it-season.js puts the week on the strip above; it-ranks.js is the board.
+<!-- it-season.js is the shared week read; it-ranks.js is the board.
      The scoring engine is NOT loaded here: unlike /rankings, this page asks the
      worker for the board already scored at the chosen preset, because the
      week-by-week drawer prints per-week points the browser has no stat line to

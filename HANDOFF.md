@@ -13550,3 +13550,27 @@ it hid the one error the operator needed to see.
 - **Tests.** `test-analytics.mjs` gains the refused-read cases: a database
   that rejects every read answers `d1_read`, the allowance message answers
   `d1_limit`, and one read failing late leaves `ok: true` with `readError`.
+
+## 126. October 10: the NFL clock strip came off every page
+
+Ken: remove the NFL clock. The strip that `it-season.js` painted on every
+in-season page and the homepage (phase, week, games in progress, next kickoff,
+and "NFL clock unavailable" when `/api/season` did not answer) is gone.
+
+- **Markup.** Every `[data-season-strip]` mount is deleted: the hero datelines
+  on /fantasy, /dfs, /rankings, /my-week and /vegas-edge keep only their
+  eyebrow; the plate under the lede on /waivers, /value-coach, the desk pages
+  and the fourteen generated position pages (`tools/build-ranks.mjs`) is gone;
+  the DFS setup band lost its copy too. The homepage dropped the `.itl-clock`
+  row, its CSS and the React state and effect that filled it.
+- **`it-season.js`** no longer auto-renders anything or stamps
+  `html[data-season]` (nothing read the stamp). It keeps `load`, `get`,
+  `error`, `kickoff`, `dayLabel`, `until`, `statusLabel` and `esc`, which the
+  page scripts on /fantasy, /waivers, /weekly-intel, /game-intel,
+  /player-intel, /my-league and /weekly-wrap still date themselves by. The
+  `strip` and `render` exports are gone with the strip; nothing else called
+  them.
+- **Not touched.** `/api/season` itself, the waiver clock on /fantasy, the
+  `.its-strip` rules in `site.css` (now unused), and every page's
+  `<script src="/it-season.js">`.
+
