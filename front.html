@@ -80,13 +80,13 @@ body{overflow-x:hidden}
 .hm-entry a{font-size:var(--fs-16);font-weight:600}
 .hm-rule{border:0;height:1px;background:var(--line);margin:var(--sp-48) 0 var(--sp-24)}
 
-/* The market figures row. Four cells: a 13px label over the key figure (the
+/* The market figures row. Five cells, one list at a time: a 13px label over the key figure (the
    gap in points, 28px, green only when the market is the higher number), over
    the three projections it came from. Written hidden; shown with three or
-   more real rows. On a phone the cells scroll sideways edge to edge. */
+   more real rows. On a phone the cells stack, one per row. */
 .hm-market{text-align:left}
 .hm-market[hidden]{display:none}
-.hm-figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
+.hm-figs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
 .hm-fig{min-width:0;border-left:1px solid var(--line);padding-left:var(--sp-16)}
 .hm-fig:first-child{border-left:0;padding-left:0}
 .hm-fig-txt{display:block;min-width:0}
@@ -102,6 +102,15 @@ body{overflow-x:hidden}
 .hm-fig .s{display:block;font-size:var(--fs-14);color:var(--ink-3);line-height:1.4;font-variant-numeric:tabular-nums}
 .hm-fine{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-8) var(--sp-12);margin:var(--sp-20) 0 0;font-size:var(--fs-14);color:var(--ink-3)}
 .hm-fine a{font-weight:600}
+/* The four lists the band rotates through, as tabs: this week's buys, the
+   season's overperformers, this week's fades, the season's overvalued. The
+   band advances on its own until the reader picks one. */
+.hm-cats[hidden]{display:none}
+.hm-cats{display:flex;flex-wrap:wrap;gap:var(--sp-8);margin:0 0 var(--sp-20);padding:0}
+.hm-cats button{font:inherit;font-size:var(--fs-14);font-weight:600;color:var(--ink-3);background:none;border:1px solid var(--line2);border-radius:4px;padding:6px 12px;cursor:pointer;line-height:1.3}
+.hm-cats button:hover{color:var(--ink)}
+.hm-cats button[aria-selected="true"]{color:#fff;background:var(--teal);border-color:var(--teal)}
+.hm-cats button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 .hm-tag{display:inline-block;font-size:var(--fs-12);font-weight:600;color:var(--gold-ink);background:var(--gold);border-radius:2px;padding:1px 6px;line-height:1.5}
 @media(max-width:860px){
   .hm-hero{padding-top:var(--sp-48)}
@@ -307,16 +316,20 @@ footer.site {margin-top:0}
       <li><a href="/in-season/desk">Articles &rarr;</a></li>
     </ul>
     <hr class="hm-rule">
-    <!-- The live market figures: the week's widest gaps between what the
-         sportsbook implies and what the consensus projects, each with the
-         decision the gap implies. Hidden until the board answers with at
-         least three rows that carry every number. -->
+    <!-- The live market figures, four lists the band rotates through: this
+         week's value and headwinds (the widest gaps between what the
+         sportsbook implies and what the consensus projects), and the season's
+         overperformers and overvalued (points a game against the consensus
+         price). Five to a list, starters and longshots both, each with the
+         decision the gap implies. A list with fewer than three rows that
+         carry every number is left out; with none left, the band is hidden. -->
     <div class="hm-market" id="different" hidden>
       <div class="hm-sec-head">
         <h2 id="diffHead">Where the market sees something different</h2>
         <a href="/vegas-edge">The whole board &rarr;</a>
       </div>
-      <ul class="hm-figs" id="diffBody"></ul>
+      <div class="hm-cats" id="diffCats" role="tablist" aria-label="Which list"></div>
+      <ul class="hm-figs" id="diffBody" role="tabpanel"></ul>
       <p class="hm-fine" id="diffFine"></p>
     </div>
   </div>
@@ -539,14 +552,69 @@ footer.site {margin-top:0}
       && n1(p.consensusPoints) != null && n1(p.vegasPoints) != null && n1(p.ironTunaPoints) != null
       && p.delta && n1(p.delta.points) != null && decide(p));
   }
-  // The four widest gaps on the board, the widest first. Three is the floor:
-  // under that the row is hidden rather than short.
-  var MARKET_ROW = 4, MARKET_MIN = 3;
-  function marketRows(j) {
-    return [].concat((j.vsExperts && j.vsExperts.buys) || [], (j.vsExperts && j.vsExperts.fades) || [])
-      .filter(usable)
-      .sort(function (a, b) { return Math.abs(b.delta.points) - Math.abs(a.delta.points); })
-      .slice(0, MARKET_ROW);
+  // ── the four lists ───────────────────────────────────────────────────────
+  // The band rotates through four lists (2026-10-10): this week's value (the
+  // market's buys), the season's overperformers (averaging more than the
+  // consensus projects him for), this week's headwinds (the market's fades),
+  // and the season's overvalued (projected for more than he has produced).
+  // The weekly two come off vsExperts, the season two off seasonForm; both
+  // are on the same /api/vegas-edge read.
+  //
+  // FIVE TO A LIST, ELITE AND LONGSHOT BOTH. Ranked on the raw gap alone,
+  // a list is all starters, because a 20-point player has more points to be
+  // wrong by; ranked on the percentage it is all deep bench. So each list is
+  // split at the startable line (STARTABLE, off Iron Tuna's positional rank)
+  // and dealt alternately from the two halves, the larger gap first, then
+  // printed widest first. When one half runs dry the other fills the list.
+  var MARKET_ROW = 5, MARKET_MIN = 3;
+  function elite(p) {
+    var rank = (typeof p.ironTunaRank === 'number' && isFinite(p.ironTunaRank)) ? p.ironTunaRank : null;
+    return rank != null && rank <= (STARTABLE[p.position] || 24);
+  }
+  function dealFive(list, gap) {
+    var top = list.filter(elite), deep = list.filter(function (p) { return !elite(p); }), out = [];
+    var mag = function (p) { return Math.abs(gap(p)); };
+    top.sort(function (a, b) { return mag(b) - mag(a); });
+    deep.sort(function (a, b) { return mag(b) - mag(a); });
+    var next = top.length && (!deep.length || mag(top[0]) >= mag(deep[0])) ? top : deep;
+    while (out.length < MARKET_ROW && (top.length || deep.length)) {
+      if (!next.length) next = next === top ? deep : top;
+      out.push(next.shift());
+      next = next === top ? deep : top;
+    }
+    return out.sort(function (a, b) { return mag(b) - mag(a); });
+  }
+  // A season row needs everything a weekly row needs except the weekly
+  // decision, plus the season average, and a gap that points the way its
+  // list says: an overperformer averaging less than his price is no figure.
+  function usableForm(p, sign) {
+    return !!(p && p.name && healthy(p)
+      && n1(p.consensusPoints) != null && n1(p.vegasPoints) != null && n1(p.ironTunaPoints) != null
+      && n1(p.seasonPpg) != null && Number(p.seasonGames) > 0
+      && n1(p.formGap) != null && Number(p.formGap) * sign > 0);
+  }
+  function decideForm(p, sign) {
+    if (sign > 0) return { t: elite(p) ? 'Trust' : 'Buy' };
+    return { t: elite(p) ? 'Sell high' : 'Sell' };
+  }
+  function marketCats(j) {
+    var vs = j.vsExperts || {}, sf = j.seasonForm || {};
+    var week = function (list, sign) {
+      return dealFive((list || []).filter(function (p) { return usable(p) && Number(p.delta.points) * sign > 0; }),
+        function (p) { return Number(p.delta.points); });
+    };
+    var season = function (list, sign) {
+      return dealFive((list || []).filter(function (p) { return usableForm(p, sign); }), function (p) { return Number(p.formGap); });
+    };
+    return [
+      { key: 'value', label: 'This week\u2019s value', rows: week(vs.buys, 1), html: figHtml },
+      { key: 'over', label: 'Long-term overperformers', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } },
+      { key: 'headwinds', label: 'This week\u2019s headwinds', rows: week(vs.fades, -1), html: figHtml },
+      { key: 'overvalued', label: 'Long-term overvalued', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } }
+    ].filter(function (c) { return c.rows.length >= MARKET_MIN; });
+  }
+  function nameLine(word, p) {
+    return '<span class="k"><b>' + esc(word) + '</b> &middot; ' + esc(p.name) + ', ' + esc(p.position + ' ' + p.team) + (p.opponent ? ' v ' + esc(p.opponent) : '') + '</span>';
   }
   // Only a positive edge is green: the market projecting MORE than the
   // consensus is the one good figure in this domain. A negative gap is ink,
@@ -557,9 +625,21 @@ footer.site {margin-top:0}
     return '<li class="hm-fig">'
       + faceHtml(p.name)
       + '<span class="hm-fig-txt">'
-      + '<span class="k"><b>' + esc(d.t) + '</b> &middot; ' + esc(p.name) + ', ' + esc(p.position + ' ' + p.team) + (p.opponent ? ' v ' + esc(p.opponent) : '') + '</span>'
+      + nameLine(d.t, p)
       + '<span class="v' + (pts > 0 ? ' good' : '') + '">' + esc(signed(pts)) + ' pts</span>'
       + '<span class="s">Market ' + n1(p.vegasPoints) + ' &middot; consensus ' + n1(p.consensusPoints) + ' &middot; Iron Tuna ' + n1(p.ironTunaPoints) + '</span>'
+      + '</span></li>';
+  }
+  // The season figure is points a game over (or under) this week's consensus
+  // projection, green only when he has been beating it, under the same rule.
+  function formHtml(p, sign) {
+    var gap = Number(p.formGap), g = Number(p.seasonGames);
+    return '<li class="hm-fig">'
+      + faceHtml(p.name)
+      + '<span class="hm-fig-txt">'
+      + nameLine(decideForm(p, sign).t, p)
+      + '<span class="v' + (gap > 0 ? ' good' : '') + '">' + esc(signed(gap)) + ' pts/g</span>'
+      + '<span class="s">Season ' + n1(p.seasonPpg) + ' a game over ' + g + ' &middot; consensus ' + n1(p.consensusPoints) + ' &middot; market ' + n1(p.vegasPoints) + '</span>'
       + '</span></li>';
   }
   // The faces. The markup carries the initials and the NAME; the photograph
@@ -600,21 +680,77 @@ footer.site {margin-top:0}
   document.addEventListener('it-player-search-ready', mountFaces);
   var oddsStamp = null;
   function fineHtml(week) {
+    var cat = cats[catAt];
+    var what = cat && (cat.key === 'over' || cat.key === 'overvalued')
+      ? 'Points a game through at least ' + (minGames || 3) + ' games played, against the consensus projection' + (week ? ' for ' + esc(week) : '')
+      : 'Weekly fantasy points' + (week ? ' for ' + esc(week) : '');
     return '<span class="hm-tag">Estimate</span>'
-      + '<span>Weekly fantasy points' + (week ? ' for ' + esc(week) : '') + ', at the site’s default scoring.'
+      + '<span>' + what + ', at the site’s default scoring.'
       + (oddsStamp ? ' Odds read ' + esc(oddsStamp) + '.' : '') + '</span>'
       + '<a href="/my-league#settings">Save your league</a><span>and every board restates these in your own points.</span>';
   }
-  var marketWeek = null;
-  grab('/api/vegas-edge', function (j) {
-    var rows = marketRows(j);
-    if (rows.length < MARKET_MIN) return;
-    marketWeek = j.week || null;
-    $('diffBody').innerHTML = rows.map(figHtml).join('');
+  var marketWeek = null, cats = [], catAt = 0, minGames = null;
+  // The band advances every ROTATE_MS on its own, holds while the pointer or
+  // the keyboard is in it, and stops for good once the reader picks a list:
+  // a list that moves out from under the reader's choice is the page
+  // overruling them. Reduced motion never starts it.
+  var ROTATE_MS = 9000, rotating = false, held = false;
+  function paintCat(i) {
+    catAt = i;
+    var cat = cats[i];
+    $('diffBody').innerHTML = cat.rows.map(cat.html).join('');
+    $('diffBody').setAttribute('aria-label', cat.label);
+    var tabs = $('diffCats').querySelectorAll('button');
+    for (var t = 0; t < tabs.length; t++) {
+      var on = t === i;
+      tabs[t].setAttribute('aria-selected', on ? 'true' : 'false');
+      tabs[t].tabIndex = on ? 0 : -1;
+    }
     $('diffFine').innerHTML = fineHtml(marketWeek);
-    show($('different'), true);
     relink($('diffBody'));
     mountFaces();
+  }
+  grab('/api/vegas-edge', function (j) {
+    cats = marketCats(j);
+    if (!cats.length) return;
+    marketWeek = j.week || null;
+    minGames = j.seasonForm && j.seasonForm.minGames || null;
+    $('diffCats').innerHTML = cats.map(function (c, i) {
+      return '<button type="button" role="tab" data-cat="' + c.key + '" aria-controls="diffBody">' + esc(c.label) + '</button>';
+    }).join('');
+    show($('diffCats'), cats.length > 1);
+    $('diffCats').addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('button[data-cat]') : null;
+      if (!b) return;
+      rotating = false;
+      var tabs = [].slice.call($('diffCats').querySelectorAll('button'));
+      paintCat(tabs.indexOf(b));
+    });
+    $('diffCats').addEventListener('keydown', function (e) {
+      var step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (!step) return;
+      e.preventDefault();
+      rotating = false;
+      paintCat((catAt + step + cats.length) % cats.length);
+      $('diffCats').querySelectorAll('button')[catAt].focus();
+    });
+    paintCat(0);
+    show($('different'), true);
+    var calm = false;
+    try { calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    if (cats.length > 1 && !calm) {
+      rotating = true;
+      var band = $('different');
+      band.addEventListener('mouseenter', function () { held = true; });
+      band.addEventListener('mouseleave', function () { held = false; });
+      band.addEventListener('focusin', function () { held = true; });
+      band.addEventListener('focusout', function () { held = false; });
+      var tick = setInterval(function () {
+        if (!rotating) { clearInterval(tick); return; }
+        if (held || document.hidden) return;
+        paintCat((catAt + 1) % cats.length);
+      }, ROTATE_MS);
+    }
   });
 
   // ── the tiles and the KPI band ───────────────────────────────────────────
