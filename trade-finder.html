@@ -433,7 +433,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   <p><b>The Trade Finder.</b> Fill in two to four rosters and the engine tries every one-, two- and three-player swap between your team and each of the others, keeping only swaps where both lineups improve by at least three quarters of a point a week. The balance slider orders what survives: at <em>Even</em> by the smaller of the two gains, at <em>In my favor</em> by yours alone. It cannot surface a trade the other manager should refuse.</p>
   <p><b>Horizons are per team.</b> A gain is measured on the weeks that team is playing for &mdash; this week, the next three, the rest of the season, or the fantasy playoffs &mdash; and stated per week so a three-week horizon and a twelve-week one are on the same scale. Your notes set a team&rsquo;s horizon when they describe it: &ldquo;clinched&rdquo; or a record of .700 or better means the fantasy playoffs; &ldquo;needs wins,&rdquo; &ldquo;on the bubble&rdquo; or .400 or worse means the next three weeks; &ldquo;must win this week&rdquo; means this week; &ldquo;eliminated&rdquo; or &ldquo;rebuilding&rdquo; means the rest of the season.</p>
   <p><b>Your notes.</b> Beyond setting horizons, the factors you type are read by a language model after the numbers are in. It explains whether they should change the call; it never changes a projection, and the scores stand on their own.</p>
-  <p><b>What it does not know.</b> It cannot see your league&rsquo;s roster limits, its trade deadline, who is on injured reserve, or which manager is unreachable. A team that receives more players than it sends needs roster spots; the card says so. Screenshots are read by a model into names only, and every name is then matched to the board here in your browser, so nothing it read can become a projection on its own.</p>
+  <p><b>What it does not know.</b> It cannot see your league&rsquo;s roster limits, its trade deadline, who is on injured reserve, or which manager is unreachable. A team that receives more players than it sends needs roster spots; the card says so, and scores the side as dropping its weakest player to make room. It cannot see your waiver wire either, so it stands in the best free agent at each position by rank on the board (in a twelve-team league, about the 36th back or receiver and the 15th quarterback or tight end) and counts every player for what he scores over that free agent. A slot a trade empties is filled off the wire, a player a trade adds has to beat it, and a two-for-one that sends your best player for a starter and a throw-in scores as the loss it is. Screenshots are read by a model into names only, and every name is then matched to the board here in your browser, so nothing it read can become a projection on its own.</p>
 </div>
 </main>
 <footer class="site"><div class="wrap">
@@ -554,6 +554,15 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     return L.score(side.stats, p.pos, rules(), row.games) || 0;
   }
   function weeksOf(h) { var d = data[h]; return d && d.horizon && d.horizon.weeks ? Math.max(1, d.horizon.weeks.length) : 1; }
+  // The wire. Every lineup is measured against the best free agent at each
+  // position, found by rank on the board for the league's size (the saved
+  // league's, else twelve teams). Without it a hole in a lineup scored zero,
+  // and a two-for-one that sent the reader's best player for a starter and a
+  // throw-in came back as a gain for both sides (2026-10-10).
+  function boardPool() { return Object.keys(players).map(function (k) { return players[k]; }); }
+  function leagueSize() { var n = L && L.config && Number(L.config.teams); return n >= 2 ? n : 12; }
+  function wire() { return TR.replacementLevel(boardPool(), slots, leagueSize(), points); }
+  function eligibleCount(roster) { return roster.filter(function (p) { return /^(QB|RB|WR|TE)$/.test(String(p.pos || '').toUpperCase()); }).length; }
 
   // ── the teams ────────────────────────────────────────────────────────────
   // A trade is two to four managers, and the reader says which with one
@@ -1253,7 +1262,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   function search(list, mi, limit) {
     return TR.findTrades(list, {
       slots: slots, points: points, weeks: weeksOf,
-      horizon: horizonFor,
+      horizon: horizonFor, pool: boardPool(), leagueSize: leagueSize(),
       mine: mi, tilt: tilt, maxSize: size, minGain: 0.75, limit: limit
     });
   }
@@ -1268,7 +1277,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     var hz = h || horizonFor(i);
     var ev = TR.evaluateTrade([teams[i], { name: '', players: [] }], {
       a: 0, b: 1, giveA: give, giveB: get, slots: slots, points: points, weeks: weeksOf,
-      horizon: function () { return hz; }, minGain: 0.75
+      horizon: function () { return hz; }, minGain: 0.75, pool: boardPool(), leagueSize: leagueSize()
     });
     var s = ev.A; s.i = i; s.give = give; s.get = get; s.entered = rosterEntered(i); return s;
   }
@@ -1315,10 +1324,14 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   function sideCard(who, name, give, get, gain, h, lines, needsSpot, bare) {
     var starts = lines.startsNow.map(function (s) { return esc(s.p.name) + ' at ' + esc(s.slot); });
     var stops = lines.stopsStarting.map(function (s) { return esc(s.p.name); });
+    var cut = (lines.cut || []).map(function (s) { return esc(s.p.name); });
     // With no roster behind it, "starts" and "to the bench" are only the
     // trade's own players changing places, so the line says what was scored.
+    // A side taking more players than it sends is scored as dropping its
+    // weakest to make room, and the line names whom.
     var detail = bare ? 'No roster entered: scored on the players alone.'
-      : (starts.length ? 'Starts: ' + starts.join(', ') + '. ' : '') + (stops.length ? 'To the bench: ' + stops.join(', ') + '. ' : '') + (needsSpot ? 'Needs ' + (needsSpot === 1 ? 'a roster spot' : needsSpot + ' roster spots') + ' opened.' : '');
+      : (starts.length ? 'Starts: ' + starts.join(', ') + '. ' : '') + (stops.length ? 'To the bench: ' + stops.join(', ') + '. ' : '')
+        + (needsSpot ? 'Needs ' + (needsSpot === 1 ? 'a roster spot' : needsSpot + ' roster spots') + ' opened' + (cut.length ? ', scored as dropping ' + cut.join(' and ') : '') + '.' : '');
     return '<div class="tf-side"><div class="who">' + who + ' &middot; ' + esc(name) + '</div>'
       + '<div class="gain' + (gain < 0 ? ' neg' : '') + '">' + signed(gain) + ' <small>pts / week &middot; ' + esc(HORIZONS[h] || h) + '</small></div>'
       + '<div class="give">Sends ' + chips(give, h) + '<br>Gets ' + chips(get, h) + '</div>'
@@ -1345,7 +1358,8 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   }
   function scoredNote() {
     return (preset === 'custom' ? 'Scored at your saved league.' : 'Scored at ' + esc(preset === 'half' ? 'half PPR' : preset === 'standard' ? 'standard' : 'PPR') + ' &mdash; <a href="/auctiondraft?screen=cheat">save your league</a> and these re-score to your exact settings.')
-      + ' Points are the ' + esc(board === 'ironTuna' ? 'Iron Tuna' : board) + ' board over each team&rsquo;s horizon, stated per week.';
+      + ' Points are the ' + esc(board === 'ironTuna' ? 'Iron Tuna' : board) + ' board over each team&rsquo;s horizon, stated per week.'
+      + ' Every player counts for what he scores over the best free agent at his position in a ' + leagueSize() + '-team league, so a slot a trade empties is filled off the wire and a player a trade adds has to beat it.';
   }
   function renderResults(res, mi) {
     var host = $('tf-results');
@@ -1380,19 +1394,26 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
   // Needs the roster: with none, the "lineup" is the trade's own players.
   function fitOf(i, give, get, h) {
     if (!rosterEntered(i)) return null;
-    var pts = function (p) { return points(p, h) / weeksOf(h); };
+    var pts = function (p) { return points(p, h) / weeksOf(h); }, repl = wire();
     var roster = teams[i].players;
-    var before = TR.lineupValue(roster, slots, pts);
-    var after = TR.lineupValue(roster.filter(function (p) { return give.indexOf(p) < 0; }).concat(get), slots, pts);
-    var weakest = function (lv) { return lv.starters.slice().sort(function (a, b) { return a.v - b.v; })[0] || null; };
-    // A slot nobody fills is the weakest starter there is: a reader who
-    // sends their only quarterback has a hole at QB, not a weak QB, and the
-    // weakest of the starters left would miss it. The slot that lost a body
-    // (or gained one) stands in at zero.
-    var filled = function (lv) { var c = {}; lv.starters.forEach(function (r) { c[r.slot] = (c[r.slot] || 0) + 1; }); return c; };
+    var o = { repl: function (pos) { return repl(pos, h) / weeksOf(h); }, size: eligibleCount(roster) };
+    var before = TR.lineupValue(roster, slots, pts, o);
+    var after = TR.lineupValue(roster.filter(function (p) { return give.indexOf(p) < 0; }).concat(get), slots, pts, o);
+    // A slot nobody on the roster fills is held by a free agent off the wire,
+    // and that is the weakest starter there is: a reader who sends their only
+    // quarterback has a hole at QB, not a weak QB, and the weakest of the
+    // starters left would miss it. The slot that lost a body (or gained one)
+    // is the one named, at what the wire scores there.
+    var row = function (r) { return r.free ? { p: { name: 'nobody' }, slot: r.slot, v: r.v, empty: true } : { p: r.p, slot: r.slot, v: r.v }; };
+    var weakest = function (lv) { var r = lv.starters.slice().sort(function (a, b) { return a.v - b.v; })[0]; return r ? row(r) : null; };
+    var filled = function (lv) { var c = {}; lv.starters.forEach(function (r) { if (!r.free) c[r.slot] = (c[r.slot] || 0) + 1; }); return c; };
     var fb = filled(before), fa = filled(after);
-    var empty = function (from, to) { var k = Object.keys(from).filter(function (x) { return (to[x] || 0) < from[x]; })[0]; return k ? { p: { name: 'nobody' }, slot: k, v: 0, empty: true } : null; };
-    var wb = after.starters.length > before.starters.length ? empty(fa, fb) : null, wa = before.starters.length > after.starters.length ? empty(fb, fa) : null;
+    var lost = function (from, to, lv) {
+      var k = Object.keys(from).filter(function (x) { return (to[x] || 0) < from[x]; })[0];
+      var r = k ? lv.starters.filter(function (x) { return x.free && x.slot === k; })[0] : null;
+      return r ? row(r) : null;
+    };
+    var wb = lost(fa, fb, before), wa = lost(fb, fa, after);
     wb = wb || weakest(before); wa = wa || weakest(after);
     if (!wb || !wa) return null;
     return { before: wb, after: wa, delta: wa.v - wb.v };

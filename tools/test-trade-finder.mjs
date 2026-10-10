@@ -437,6 +437,123 @@ console.log('\nthe trade search');
   ok('an empty trade changes nothing and is called even', nil.A.gain === 0 && nil.A.call === 'even' && nil.B.call === 'even');
 }
 
+console.log('\nthe wire');
+{
+  // THE TRADE THAT LOOKED RIGHT AND WAS TERRIBLE. On 2026-10-10 the Finder
+  // offered the reader their best receiver (19.3 a week) for a lesser one
+  // (14.8) plus a bench back (8.1), and called it +3.6 a week for the reader
+  // AND +3.8 for the other side. The reader's RB2 slot was a hole (an injured
+  // back scoring nothing), the hole was scored at zero, so the bench back
+  // "filled" it at his full 8.1 when the best back on waivers would have
+  // filled it for free. The other side lost only a third bench player at
+  // .08 weight. Two sides, both up: an arithmetic that cannot be right. Now
+  // every slot is measured against the wire, and a roster has a fixed
+  // number of spots.
+  const WK = 12;
+  const slots = { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1 };
+  // A board: every position falls off by rank, per week, over a 12-week horizon.
+  const board = [];
+  const mkb = (pos, n, top, step) => { for (let i = 0; i < n; i++) board.push({ id: pos + (i + 1), name: pos + (i + 1), pos, wk: Math.max(1, top - i * step) }); };
+  mkb('QB', 24, 22, 0.5); mkb('RB', 60, 18, 0.3); mkb('WR', 60, 19.3, 0.25); mkb('TE', 24, 12, 0.4);
+  const byId = Object.fromEntries(board.map(p => [p.id, p]));
+  const points = (p, h) => p.wk * WK;
+  const base = { slots, points, weeks: () => WK, horizon: () => 'ros', minGain: 0.75 };
+
+  // The wire itself.
+  const repl = T.replacementLevel(board, slots, 12, points);
+  ok('at the default shape in a 12-team league the wire is QB15, RB36, WR36, TE15',
+     repl('QB', 'ros') === byId.QB15.wk * WK && repl('RB', 'ros') === byId.RB36.wk * WK && repl('WR', 'ros') === byId.WR36.wk * WK && repl('TE', 'ros') === byId.TE15.wk * WK,
+     [repl('QB', 'ros'), repl('RB', 'ros'), repl('WR', 'ros'), repl('TE', 'ros')].join(' '));
+  const sf = T.replacementLevel(board, { ...slots, SFLEX: 1 }, 12, points);
+  ok('a superflex league holds more quarterbacks, so its wire is deeper at QB', sf('QB', 'ros') < repl('QB', 'ros'));
+  const ten = T.replacementLevel(board, slots, 10, points);
+  ok('a ten-team league has a better player on the wire', ten('RB', 'ros') > repl('RB', 'ros'));
+  const thin = T.replacementLevel(board.filter(p => p.pos !== 'RB' || +p.id.slice(2) <= 20), slots, 12, points);
+  ok('a board shorter than the rank uses its last player', thin('RB', 'ros') === byId.RB20.wk * WK);
+  ok('a position the board does not carry is worth nothing on the wire', T.replacementLevel(board.filter(p => p.pos !== 'TE'), slots, 12, points)('TE', 'ros') === 0);
+  ok('a wire is repeatable', repl('RB', 'ros') === repl('RB', 'ros'));
+
+  // The lineup against the wire.
+  const pw = p => p.wk;
+  const r1 = p => repl(p, 'ros') / WK;
+  const hole = [byId.QB3, byId.RB4, byId.WR1, byId.WR9, byId.TE4];   // one back, nothing at RB2 or flex
+  const plain = T.lineupValue(hole, slots, pw);
+  const wired = T.lineupValue(hole, slots, pw, { repl: r1 });
+  ok('without a wire a hole scores zero', plain.starters.length === 5 && !plain.free, String(plain.starters.length));
+  ok('with one, the empty RB slot and the flex are started by free agents', wired.free === 2 && wired.starters.filter(r => r.free).every(r => r.p.name === 'a free agent'), String(wired.free));
+  const faRB = wired.starters.find(r => r.free && r.slot === 'RB');
+  ok('at what the best back on waivers scores', faRB && near(faRB.v, byId.RB36.wk), faRB && String(faRB.v));
+  const faFlex = wired.starters.find(r => r.free && r.slot === 'FLEX');
+  ok('the flex free agent is the best of the three positions', faFlex && near(faFlex.v, Math.max(r1('RB'), r1('WR'), r1('TE'))));
+  ok('the bench is padded with free agents to the weights’ reach', wired.bench.length === T.BENCH_W.length && wired.bench.filter(r => r.free).length === T.BENCH_W.length, String(wired.bench.length));
+  ok('so the lineup is worth more against the wire than against nothing', wired.total > plain.total);
+  ok('and the real starters are the same', wired.starters.filter(r => !r.free).map(r => r.p.id).sort().join() === plain.starters.map(r => r.p.id).sort().join());
+  // The bench QB in a 1-QB league is still barely counted, free agent or not.
+  const faBench = T.lineupValue([byId.QB3, byId.RB4, byId.RB5, byId.WR1, byId.WR9, byId.TE4, byId.WR14], slots, pw, { repl: r1 }).bench;
+  ok('a free agent on the bench is a skill player, not a backup quarterback', faBench.every(r => !r.free || r.pos !== 'QB'));
+
+  // A player below the wire: hurt, scoring nothing the rest of the way. He
+  // held the RB2 slot at zero, and that zero was the whole bug.
+  const out = { id: 'RBX', name: 'RBX', pos: 'RB', wk: 0 };
+  const hurt = T.lineupValue(hole.concat([out]), slots, pw, { repl: r1 });
+  ok('a player below the wire does not start over a free agent', !hurt.starters.some(r => r.p === out) && hurt.starters.some(r => r.free && r.slot === 'RB'));
+  ok('he sits behind the free agents on the bench, weighing nothing', hurt.bench.indexOf(hurt.bench.find(r => r.p === out)) >= T.BENCH_W.length);
+  ok('and is the first cut when the roster is over', T.lineupValue(hole.concat([out, byId.RB33]), slots, pw, { repl: r1, size: 6 }).cut.map(r => r.p.id).join() === 'RBX');
+
+  // The roster's spots.
+  const nine = [byId.QB3, byId.RB4, byId.RB5, byId.RB30, byId.WR1, byId.WR9, byId.WR14, byId.TE4, byId.WR40];
+  const capped = T.lineupValue(nine.concat([byId.RB10]), slots, pw, { size: 9 });
+  ok('a tenth player on a nine-spot roster cuts the weakest bench player', capped.cut.length === 1 && capped.cut[0].p.id === 'RB30', capped.cut.map(r => r.p.id).join());
+  ok('never a starter', capped.starters.length === 7 && capped.cut.every(r => !capped.starters.some(s => s.p === r.p)));
+  const allStart = T.lineupValue([byId.QB3, byId.RB4, byId.RB5, byId.WR1, byId.WR9, byId.TE4, byId.WR14], slots, pw, { size: 6 });
+  ok('with nobody on the bench, nothing is cut', allStart.cut.length === 0 && allStart.starters.length === 7);
+  ok('without a size, nothing is cut', T.lineupValue(nine.concat([byId.RB33]), slots, pw).cut.length === 0);
+
+  // The trade from the screenshot. The reader's RB2 is out for the year
+  // (zero). The partner holds the lesser receiver as a starter and the back
+  // as a third bench player.
+  const reader = { name: 'Reader', players: [byId.QB3, byId.RB4, out, byId.WR1, byId.WR9, byId.TE4, byId.WR14, byId.WR45, byId.TE9] };
+  const partner = { name: 'Partner', players: [byId.QB5, byId.RB2, byId.RB7, byId.WR19, byId.WR12, byId.TE3, byId.WR16, byId.RB22, byId.WR30, byId.RB34] };
+  ok('the fixture is the screenshot: 19.3 for 14.8 plus 8.1', near(byId.WR1.wk, 19.3) && near(byId.WR19.wk, 14.8) && near(byId.RB34.wk, 8.1), [byId.WR19.wk, byId.RB34.wk].join());
+  const deal = { a: 0, b: 1, giveA: [byId.WR1], giveB: [byId.WR19, byId.RB34] };
+  const old = T.evaluateTrade([reader, partner], { ...base, ...deal });
+  ok('scored against nothing, the star for the pair is a gain for BOTH sides (the bug)', old.both && old.A.gain > 0 && old.B.gain > 0, `${old.A.gain} / ${old.B.gain}`);
+  const now = T.evaluateTrade([reader, partner], { ...base, ...deal, pool: board, leagueSize: 12 });
+  ok('scored against the wire, it is a loss for the side sending the star', now.A.call === 'loss' && now.A.gain < -2, String(now.A.gain));
+  ok('and a gain for the side taking him', now.B.call === 'gain', String(now.B.gain));
+  ok('so it is not a two-sided win', now.both === false);
+  // The arithmetic: the reader's RB2 was the wire's back already, so the
+  // back arriving is worth what he scores over the wire, not his whole line.
+  const wireRB = byId.RB36.wk;
+  const expected = (byId.WR19.wk - byId.WR1.wk) + (byId.RB34.wk - wireRB);
+  ok('the reader’s loss is the receivers’ gap less the back’s edge over the wire', near(now.A.gain, expected, 0.3), `${now.A.gain} vs ${expected}`);
+  ok('the back starts for the reader; the free agent does not appear in the lines', now.A.lines.startsNow.some(r => r.p.id === 'RB34') && now.A.lines.startsNow.every(r => !r.p.free) && now.A.lines.stopsStarting.every(r => !r.p.free));
+  ok('the side taking two cuts its weakest player, the hurt back, and the lines say whom', now.A.lines.cut.length === 1 && now.A.lines.cut[0].p.id === 'RBX', now.A.lines.cut.map(r => r.p.id).join());
+  ok('the side sending two cuts nobody', now.B.lines.cut.length === 0);
+  // The same deal with the pool handed in as a function is the same answer.
+  const fn = T.evaluateTrade([reader, partner], { ...base, ...deal, replacement: repl });
+  ok('a replacement function stands in for the pool', near(fn.A.gain, now.A.gain) && near(fn.B.gain, now.B.gain));
+  // And the search no longer offers it.
+  const found = T.findTrades([reader, partner], { ...base, mine: 0, pool: board, leagueSize: 12, limit: 40 });
+  ok('the search does not offer the star for the pair', !found.trades.some(t => t.giveA.length === 1 && t.giveA[0].id === 'WR1' && t.giveB.some(p => p.id === 'RB34')), found.trades.slice(0, 3).map(t => t.giveA.map(p => p.id) + '>' + t.giveB.map(p => p.id)).join(' | '));
+  ok('every trade it does offer still gains both sides against the wire', found.trades.every(t => t.gainA >= 0.75 && t.gainB >= 0.75));
+  // Those gains are the lineup deltas against the wire at the roster's own
+  // size, recomputed here independently.
+  const valW = (ps, size) => T.lineupValue(ps, slots, p => points(p, 'ros'), { repl: pos => repl(pos, 'ros'), size }).total;
+  ok('and are the lineup deltas against the wire', found.trades.every(t => near(t.gainA, (valW(reader.players.filter(p => t.giveA.indexOf(p) < 0).concat(t.giveB), 9) - valW(reader.players, 9)) / WK, 1e-9)));
+  ok('(against nothing, the numbers were the screenshot’s: +3.6 and +3.8)', near(old.A.gain, 3.6, 0.05) && near(old.B.gain, 3.85, 0.05), `${old.A.gain} / ${old.B.gain}`);
+
+  // No roster entered: each side is the trade's own players, and the star
+  // for the pair is still a loss for the side sending him, because the
+  // second player is measured over the wire rather than over nothing.
+  const bare = T.evaluateTrade([{ name: 'A', players: [byId.WR1] }, { name: 'B', players: [byId.WR19, byId.RB34] }], { ...base, ...deal, pool: board, leagueSize: 12 });
+  ok('with no rosters, the star for the pair is a loss for the side sending him', bare.A.call === 'loss' && bare.A.gain < 0, String(bare.A.gain));
+  ok('and the side taking him gains by about the same', bare.B.call === 'gain' && near(bare.B.gain, -bare.A.gain, 1.5), `${bare.A.gain} / ${bare.B.gain}`);
+  // A fair 1-for-1 is still fair.
+  const fair = T.evaluateTrade([reader, partner], { ...base, a: 0, b: 1, giveA: [byId.WR9], giveB: [byId.RB7], pool: board, leagueSize: 12 });
+  ok('a one-for-one is judged on the lineups as before', fair.A.call !== 'loss' || fair.B.call !== 'loss');
+}
+
 console.log('\nthe worker’s screenshot reader, without a model');
 {
   const src = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8');

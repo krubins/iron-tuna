@@ -449,6 +449,8 @@ console.log('\nevaluate a three-team trade, with notes');
   ok('every side in a three-team deal is on each row', g3.rows.slice(0, 2).every(r => /Helps .* most, [+−]\d+\.\d a week against [+−]\d+\.\d for .*, [+−]\d+\.\d for .*\./.test(r.w)), JSON.stringify(g3.rows.slice(0, 2)));
   ok('and the call is made', /^(Go|No go)/.test(g3.call) && g3.pos >= 0 && g3.pos <= 100, JSON.stringify([g3.call, g3.pos]));
   ok('a team taking more players than it sends is told it needs room', /roster spot/.test(await page.textContent('.tf-proposed')));
+  ok('and whom it is scored as dropping to make it', /roster spots? opened, scored as dropping /.test(await page.textContent('.tf-proposed')), (await page.textContent('.tf-proposed')).match(/Needs[^.]*\./)?.[0]);
+  ok('the note says every player is measured against the wire', /over the best free agent at his position in a 12-team league/.test(await page.textContent('#tf-results-note')));
   await page.waitForFunction(() => /notes say/.test(document.getElementById('tf-take').textContent), null, { timeout: 8000 });
   ok('the notes go to the model with the scored trade', coachCalls === 1 && /7-2/.test(coachBody) && /The Hammers sends/.test(coachBody) && /pts\/week/.test(coachBody), coachBody.slice(0, 200));
   ok('and so does the gauge', /Short term \(Next 3 weeks\)/.test(coachBody) && /Long term \(Fantasy playoffs\)/.test(coachBody) && /Engine call for me: (GO|NO GO)/.test(coachBody), coachBody.slice(-400));

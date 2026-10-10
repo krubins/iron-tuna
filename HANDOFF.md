@@ -13754,3 +13754,64 @@ each of those two horizons; and a go / no-go recommendation.
   nothing throws. `playwright-core` is not installed in a fresh remote
   session; a symlink to `/opt/node-tools/node_modules/playwright-core`
   inside an (ignored) `node_modules/` lets the browser gates run.
+
+## 130. October 10: the trade engine measures every slot against the wire
+
+**The brief.** The Finder offered the reader three trades, every one their
+best receiver for a lesser receiver plus a throw-in, and called each a gain
+for both sides (+3.6 a week for the reader, +3.8 for the partner on the
+first). A trade that pays both sides is an arithmetic error, and the reader
+said so.
+
+**The cause.** `lineupValue()` scored a starting slot nobody fills at zero.
+The reader's RB2 was an injured back projecting nothing the rest of the way,
+so he held the slot at zero, and the partner's third bench back "filled" it
+at his whole 8.1 a week when the best back on waivers would have filled it
+for free. The partner lost that back at the third bench weight (.08) and
+gained the better receiver in full. Both sides up. The fixture in
+`test-trade-finder.mjs` ("the wire") reproduces the screenshot's numbers to
+the tenth under the old scoring.
+
+- **The wire.** `replacementLevel(pool, slots, leagueSize, pt)` in
+  `it-trade.js` returns `function(pos, horizon)`: the points of the player
+  at rank N × (starters at the position, with half the flex and a share of
+  a bench round) on the board, the best one nobody in an N-team league
+  holds. At the default shape in a 12-team league that is QB15, RB36, WR36,
+  TE15; a superflex league is deeper at QB, a ten-team league shallower
+  everywhere; a board shorter than the rank uses its last player.
+- **`lineupValue(players, slots, pts, opts)`** takes `opts.repl` and
+  `opts.size`. With `repl`, a slot nobody fills is started by a free agent
+  at the wire (rows carry `free:true`, player "a free agent"), the bench is
+  padded to the three weighted spots with free agents, and a player scoring
+  under the wire at his position never starts over one and is first to be
+  cut: a manager would drop him for the free agent, so a zero on the roster
+  is not a zero in the lineup. With `size`, a roster holding more players
+  than that cuts its weakest bench players down to it (returned as `cut`,
+  never a starter). Without either the scoring is exactly what it was, so
+  the 142 existing engine assertions are untouched.
+- **`findTrades` and `evaluateTrade`** take `pool` (the board's players)
+  and `leagueSize`, or a `replacement` function directly, and score every
+  lineup before and after at the roster's own count of QB/RB/WR/TE. A
+  2-for-1 cuts a bench player on the side taking two and refills the spot
+  off the wire on the side sending two. `lines()` never names a free agent;
+  it adds `cut`.
+- **The page** passes `pool: boardPool()` and `leagueSize()` (the saved
+  league's team count, else 12) to both the search and the judgment, and
+  `fitOf()` reads a free-agent starter as the empty slot, at what the wire
+  scores there. The side card's roster-spot line names whom the side is
+  scored as dropping; the results note and the method say every player
+  counts for what he scores over the best free agent.
+- **What it does to the screenshot's trade.** Judged against the wire the
+  reader's side is −3.9 a week: the receivers' gap (−4.5) less the back's
+  edge over the wire (+0.6). The partner still gains. The Finder no longer
+  offers it; what it offers instead sends the reader's second receiver for
+  the partner's lesser starter plus a real RB2, which is the trade a thin
+  back line actually wants.
+- **Tests.** `test-trade-finder.mjs` 142 → 180: the wire's ranks by league
+  size and shape, free agents in empty slots and on the bench, a player
+  below the wire benched and cut first, the roster cap, the screenshot's
+  trade under the old scoring (both gain, +3.6 / +3.8) and the new (a loss
+  for the reader, not two-sided, gone from the search, the same answer
+  with no rosters entered), and every offered trade recomputed as the
+  lineup delta against the wire. `test-trade-finder-page.mjs` 157 → 159:
+  the drop line and the wire note.
