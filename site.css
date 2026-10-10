@@ -241,26 +241,33 @@ header.site .site-ribbon, header.site > .wrap {
 }
 .brand:hover { text-decoration: none }
 .brand b { color: var(--mast) }
-/* The mark is punched up here, in the panel only: italic to the panel's own
-   slant, each letter outlined in its fill colour so Bebas's thin strokes read
-   heavy, and the letters closed up from the banners' loose tracking. The paths
-   are the shared ones (tools/wordmark.mjs), so the close-up is a translate per
-   letter; the negative margin takes back the viewBox width the move leaves
-   empty, and scales with --wm-h. og.png and the social cards are untouched. */
+/* The mark is a tuna, and the words are its body. The eight letters are the
+   shared outlined paths (tools/wordmark.mjs), resized and moved per letter so
+   their heights trace a fish's profile: thin at the tail, deepest at T and U,
+   easing into the head. Tail, head, eye and finlets are a background drawn in
+   the same 296.6 x 56 viewBox, so they track the letters at any height. Each
+   letter is outlined in its own fill so Bebas's thin strokes read heavy. The
+   fish ends about 238 units in; the negative margin takes back the empty rest
+   of the viewBox and scales with --wm-h. og.png and the social cards keep the
+   plain mark. The background's #001e47 is --mast (a data URI cannot read it).
+   To change the layout, adjust the per-letter transforms below together with
+   the fish parts: they share one coordinate system. */
 .brand-logo {
-  --wm-h: 36px; height: var(--wm-h); width: auto; display: block; overflow: visible;
-  margin-right: calc(var(--wm-h) * -1.68); transform: skewX(-12deg);
+  --wm-h: 48px; height: var(--wm-h); width: auto; display: block; overflow: visible;
+  margin-right: calc(var(--wm-h) * -1.02);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 296.6 56'%3E%3Cg fill='%23001e47'%3E%3Cpath d='M40 24.5C32 22 22 12 6 3C13 14 16 22 17 28C16 34 13 42 6 53C22 44 32 34 40 31.5Z'/%3E%3Cpath d='M192 10.5C212 9 230 17 238 27.5C231 38 215 46 198 46Z'/%3E%3Cpath d='M50 14L56 14L48 10.5Z'/%3E%3Cpath d='M66 10L72 10L63 6.5Z'/%3E%3Cpath d='M50 42L56 42L48 45.5Z'/%3E%3Cpath d='M66 46L72 46L63 49.5Z'/%3E%3C/g%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M207 15Q212.5 28 208 41'/%3E%3Cpath d='M237.5 28.5L229 30.5'/%3E%3C/g%3E%3Ccircle cx='221' cy='22' r='3.6' fill='%23fff'/%3E%3Ccircle cx='221.9' cy='22' r='1.7' fill='%23001e47'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
 }
 .brand-logo g, .brand-logo path {
   fill: var(--mast); stroke: var(--mast); stroke-width: 2.6px; stroke-linejoin: round; paint-order: stroke;
 }
-.brand-logo path:nth-child(2) { transform: translateX(-11.6px) }
-.brand-logo path:nth-child(3) { transform: translateX(-23px) }
-.brand-logo path:nth-child(4) { transform: translateX(-33px) }
-.brand-logo path:nth-child(5) { transform: translateX(-45px) }
-.brand-logo path:nth-child(6) { transform: translateX(-55px) }
-.brand-logo path:nth-child(7) { transform: translateX(-66.4px) }
-.brand-logo path:nth-child(8) { transform: translateX(-78.4px) }
+.brand-logo path:nth-child(1) { transform: translate(39.60px, 19.47px) scale(0.352) }
+.brand-logo path:nth-child(2) { transform: translate(29.36px, 13.46px) scale(0.591) }
+.brand-logo path:nth-child(3) { transform: translate(2.18px, 5.78px) scale(0.889) }
+.brand-logo path:nth-child(4) { transform: translate(-34.81px, -0.96px) scale(1.149) }
+.brand-logo path:nth-child(5) { transform: translate(-75.21px, -3.30px) scale(1.242) }
+.brand-logo path:nth-child(6) { transform: translate(-71.15px, -0.45px) scale(1.127) }
+.brand-logo path:nth-child(7) { transform: translate(-57.51px, 3.57px) scale(0.987) }
+.brand-logo path:nth-child(8) { transform: translate(-11.99px, 9.88px) scale(0.747) }
 .nav { display: flex; align-items: stretch; gap: var(--space-1); margin-left: var(--space-2) }
 .nav a {
   display: inline-flex; align-items: center; position: relative;
@@ -315,7 +322,7 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
 @media (max-width: 860px) {
   header.site .site-ribbon, header.site > .wrap { gap: 10px; padding-right: var(--gutter) }
   .brand { padding: 0 26px 0 var(--gutter); flex: 0 1 auto; min-width: 0 }
-  .brand-logo { --wm-h: 30px }
+  .brand-logo { --wm-h: 38px }
   header.site a.cta { min-height: 36px; padding: 0 var(--space-3); letter-spacing: .03em }
   .nav-toggle {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px; align-self: center;
