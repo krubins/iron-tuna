@@ -3,10 +3,11 @@
 //   node tools/test-homepage.mjs
 //
 // October 2026: "/" is the ledger-style front described in docs/design/brief.md.
-// Five sections, in this order: a white centred hero (one headline, one
+// Six sections, in this order: a white centred hero (one headline, one
 // sentence, the search field, three entry points, a hairline and the row of
 // live market figures), the six position tiles, the five newest desk pieces as
-// story cards (game photographs, credited; a thin feed filled from findings), the three How-it-works cards, and the navy KPI band; then the
+// story cards (game photographs, credited; a thin feed filled from findings),
+// the two lane tiles (DFS and season long), the three How-it-works cards, and the navy KPI band; then the
 // shared footer. The cover rotation, the photograph, the lead story, the two
 // lane cards and the quick-links strip all came off with it.
 //
@@ -243,6 +244,10 @@ const read = page => page.evaluate(() => {
       live: vis(a.querySelector('.hm-tile-live')) ? text(a.querySelector('.hm-tile-live')) : null, svg: !!a.querySelector('svg[aria-hidden="true"]'),
       w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height) })),
     tileTops: [...new Set([...document.querySelectorAll('.hm-tile')].map(a => Math.round(a.getBoundingClientRect().top)))].length,
+    // The two lane tiles.
+    lanes: [...document.querySelectorAll('#lanes .hm-lane')].map(a => ({ href: a.getAttribute('href'), name: text(a.querySelector('.hm-lane-name')), sub: text(a.querySelector('.hm-lane-sub')),
+      svg: !!a.querySelector('svg[aria-hidden="true"]'), top: Math.round(a.getBoundingClientRect().top),
+      w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height) })),
     // The story cards.
     articles: vis(byId('articles')),
     rows: [...document.querySelectorAll('#readGrid .hm-story')].map(r => {
@@ -330,11 +335,15 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
 }
 
 // ── 2. the outline ──────────────────────────────────────────────────────────
-console.log('\nfive sections, in order, and nothing else');
+console.log('\nsix sections, in order, and nothing else');
 {
   const { page, ctx } = await open(1440, 900);
   const r = await read(page);
-  ok('hero, tiles, newest, method, band', r.allSections.join(' > ') === 'heroBand > positions > articles > how > kpi', r.allSections.join(' > '));
+  ok('hero, tiles, newest, lanes, method, band', r.allSections.join(' > ') === 'heroBand > positions > articles > lanes > how > kpi', r.allSections.join(' > '));
+  ok('two lane tiles under the desk: DFS to /dfs, season long to /fantasy',
+     r.lanes.map(l => l.href + ' ' + l.name).join(' | ') === '/dfs DFS | /fantasy Season long', r.lanes.map(l => l.href + ' ' + l.name).join(' | '));
+  ok('each lane is landscape, side by side, with its own illustration and a line under the name',
+     r.lanes.every(l => l.svg && l.w > l.h && l.sub) && new Set(r.lanes.map(l => l.top)).size === 1, JSON.stringify(r.lanes));
   ok('the market figures live inside the hero, not as a sixth section', !r.allSections.includes('different') && !!(await page.$('#heroBand #different')));
   ok('six tiles, one per position, each linking its weekly board',
      r.tiles.map(t => t.href).join(' ') === '/weekly-qb-rankings /weekly-rb-rankings /weekly-wr-rankings /weekly-te-rankings /weekly-k-rankings /weekly-dst-rankings', r.tiles.map(t => t.href).join(' '));
@@ -491,7 +500,7 @@ console.log('\nkeyboard focus');
 {
   const { page, ctx } = await open(1440, 900);
   const rings = [];
-  for (const sel of ['header.site .nav a', '.hm-entry a', '#different .hm-sec-head a', '.hm-tile', '#readGrid a', '#how .hm-how-more a', '.foot-nav a']) {
+  for (const sel of ['header.site .nav a', '.hm-entry a', '#different .hm-sec-head a', '.hm-tile', '#readGrid a', '#lanes .hm-lane', '#how .hm-how-more a', '.foot-nav a']) {
     rings.push(await page.evaluate(sel => { const e = document.querySelector(sel); if (!e) return null; e.focus(); const cs = getComputedStyle(e);
       return { sel, style: cs.outlineStyle, width: parseFloat(cs.outlineWidth) }; }, sel));
   }
