@@ -751,8 +751,11 @@ textarea.is-input { min-height: 96px; padding: var(--space-3) }
 
 /* ── the search field ────────────────────────────────────────────────────────
    The one pill on a page, and it is a field, not a button. 52px, 16px text,
-   the accent border and a 3px tint ring on focus. */
-.search-field { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: 0 var(--space-3) 0 var(--space-4); border: 1px solid var(--line2); border-radius: 999px; background: #fff }
+   the accent border and a 3px tint ring on focus. The idle border is 2px of
+   --sec rather than the 1px --line2 every other control wears: on the paper
+   ground the hairline read as a faint oval and the field did not stand out
+   from the hero copy around it (2026-10-10). Box-sizing keeps it at 52px. */
+.search-field { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: 0 var(--space-3) 0 var(--space-4); border: 2px solid var(--sec); border-radius: 999px; background: #fff }
 .search-field:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-tint) }
 .search-field svg { width: 20px; height: 20px; flex: 0 0 auto; color: var(--muted) }
 .search-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: var(--fs-16); color: var(--text); min-height: 48px }
