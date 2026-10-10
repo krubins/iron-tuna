@@ -13632,3 +13632,60 @@ sentence naming a colleague still carries the old name in the row. The
 byline on those pieces reads the roster at request time and shows the desk;
 the body is the body. Regenerating or rewriting those rows is a data job,
 not a repository change, and is left to the owner.
+
+## 128. October 10: the Trade Evaluator's gauge: short term, long term, the reader's situation, and a Go / No go
+
+**The brief.** Once the players are in, a visual gauge of whether the trade
+is worth it for the reader, weighing the short term, the long term and what
+the reader needs given their current status; which team is helped more on
+each of those two horizons; and a go / no-go recommendation.
+
+- **Two more passes, same engine.** `evaluate()` already scores every side
+  on its own horizon. It now also loads `next3` and the reader's long
+  horizon (`longHorizon(mi)`: the fantasy playoffs when the reader's own
+  horizon is `playoffs`, else `ros`) and scores every side on each, through
+  `sideOf(i, give, get, h)` (the new fourth argument forces a horizon). The
+  engine (`it-trade.js`) is unchanged.
+- **The needle is the reader's weighted gain.** `gaugeOf(sides, mi)`
+  weights the reader's short and long gains by their situation (`WEIGHTS`:
+  week 80/20, next3 70/30, ros 35/65, playoffs 25/75; the situation is
+  `horizonFor(mi)`, so the notes and the settings both reach it). The track
+  runs −3 to +3 pts/week (`SPAN`), the zone edges sit at ±0.75, the
+  engine's own floor. Go at +0.75 or better, No go at −0.75 or worse;
+  between, the roster fit decides and the call is marked "narrow".
+- **Roster fit.** `fitOf()` compares the reader's weakest starter before and
+  after on their horizon, per week, with `TR.lineupValue` directly. A slot
+  nobody fills counts as the weakest starter at zero: a reader sending
+  their only quarterback has a hole at QB, not a weak QB, which the weakest
+  of the starters left would have missed (the page test's overpay case).
+  With no roster entered the fit is unknown and the row says to add one.
+- **The rows.** Short term and long term each state the reader's gain and
+  which team the trade helps most, with every other side's figure ("Helps
+  The Hammers most, +8.3 a week against +5.9 for you"); when nobody clears
+  the floor the row lists every side. The situation row gives the status
+  word (`STATUS`), where it was read from (the notes, quoted, or the
+  settings), the weights, and the fit.
+- **Rendering.** `#tf-gauge` sits between `#tf-verdict` and `#tf-trades`,
+  two columns on a hairline: the call as the 34px figure with
+  `data-call="go|no|none"`, a sentence (`gaugeWhy`, which also names any
+  side that would refuse), the meter (track in `--elev`, fill from the
+  centre in teal or, under `.no`, the danger brown, as `.is-meter` and
+  `.is-meter.tight` in site.css; ticks at 37.5% and 62.5%; the pin in ink
+  with `data-pos`), and the three rows. The meter carries `role="img"` and
+  an `aria-label` with the call and the figure. The Finder empties and
+  hides it. When the reader's team is not in the deal the call reads "Not
+  your call" and the rows still say whom it helps.
+- **The model's brief** (`summarize`) now carries both horizon rows, the
+  situation and the engine's call, so the notes are read against them.
+- **The method** has a paragraph on the gauge.
+- **Tests.** `test-trade-finder-page.mjs` 136 → 157: the gauge under the
+  win (Go, needle past 62.5, teal, rows and situation from the settings,
+  fit read off the lineup, aria), the overpay (No go, needle under 37.5,
+  danger brown, nobody gains, the QB hole), the three-team deal with notes
+  (long term is the playoffs for a clinched reader, situation from the
+  notes at 25/75, the brief carries the gauge), no rosters (No go, fit asks
+  for a roster; Go once the rosters are pasted), and the Finder showing no
+  gauge. `IT_SHOT` also writes `*-gauge.png`. Rendered at 1280 and 390;
+  nothing throws. `playwright-core` is not installed in a fresh remote
+  session; a symlink to `/opt/node-tools/node_modules/playwright-core`
+  inside an (ignored) `node_modules/` lets the browser gates run.
