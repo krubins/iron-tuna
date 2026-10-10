@@ -158,10 +158,10 @@
   --rail-gap: 56px;
 
   /* The ribbon alone. The navy bars above and below it add 3px each. */
-  --header-h: 136px;
+  --header-h: 95px;
   --line-h: 3px;
 }
-@media (max-width: 860px) { :root { --gutter: 16px; --header-h: 76px } }
+@media (max-width: 860px) { :root { --gutter: 16px; --header-h: 53px } }
 
 /* ── base ───────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box }
@@ -213,16 +213,19 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
      ::after       the matching 3px navy bar under the ribbon. Both bars take
                    the ribbon's own colour since 2026-10-09 (they were
                    near-black), so the three read as one navy band.
-     .site-ribbon  the flat navy ribbon, 136px (112 from 1024 to 1239px, 96
-                   from 861 to 1023px, 76 on a phone), no border and no shadow. The logo sits on a white
-                   panel inset 3px from the screen's left edge, ending in a
-                   slant. Nav links are 14px bold capitals; the current page
+     .site-ribbon  the flat navy ribbon, 95px (78 from 1024 to 1239px, 67
+                   from 861 to 1023px, 53 on a phone), no border and no shadow.
+                   The logo sits on a white panel inset 3px from the screen's
+                   left edge, ending in a slant. Nav links are 14px bold capitals; the current page
                    gets a 3px white bar at the foot of the ribbon. On the
                    right, the one flat primary button.
 
-   The proportions are the 2026-10-10 mock's, scaled by 1.2: the mock was a
+   The proportions are the 2026-10-10 mock's, scaled by 1.2 (the mock was a
    screenshot shrunk to 1024px, which put its links at 11px, under the type
-   scale's floor.
+   scale's floor) and then, later the same day, the mark and the ribbon around
+   it cut by 30% at every width: the panel's padding, its slant and the bar's
+   height all scaled with the mark, so the brand panel keeps its shape at
+   0.84 of the mock. The links and the button did not shrink with it.
      .tabbar       on a phone, a 68px bottom bar with four labelled icon tabs.
 
    The ribbon is sticky and FLAT: no blur, no translucency. A backdrop-filter
@@ -245,11 +248,11 @@ header.site .site-ribbon, header.site > .wrap {
    because its own viewBox is the old wordmark's shape; 2.846 is the new
    mark's aspect ratio. */
 .brand {
-  --logo-h: 114px;
+  --logo-h: 80px;
   position: relative; display: inline-flex; align-items: center; flex: 0 0 auto;
   background: #fff; margin-left: var(--line-h);
-  padding: 0 88px 0 63px;
-  clip-path: polygon(0 0, 100% 0, calc(100% - 43px) 100%, 0 100%);
+  padding: 0 62px 0 44px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%);
 }
 .brand:hover { text-decoration: none }
 .brand b { color: var(--mast) }
@@ -287,20 +290,21 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
 }
 .nav-account:hover { border-color: #fff; background: rgba(255, 255, 255, .08) }
 
-/* Below 1240px the full-size ribbon (about 1190px of content) does not fit.
-   From 1024 to 1239px it drops to the mock at its own 1024px size (112px
-   ribbon, a 94px mark, 13px links); from 861 to 1023px a smaller mark and
-   tighter links keep the ribbon on one line without a sideways scroll. */
+/* Below 1240px the full-size ribbon (about 1120px of content) does not fit.
+   From 1024 to 1239px it drops to the mock at its own 1024px size, less the
+   same 30% (78px ribbon, a 66px mark, 13px links); from 861 to 1023px a
+   smaller mark and tighter links keep the ribbon on one line without a
+   sideways scroll. */
 @media (min-width: 861px) and (max-width: 1239px) {
-  :root { --header-h: 112px }
-  .brand { --logo-h: 94px; padding: 0 64px 0 50px; clip-path: polygon(0 0, 100% 0, calc(100% - 36px) 100%, 0 100%) }
+  :root { --header-h: 78px }
+  .brand { --logo-h: 66px; padding: 0 45px 0 35px; clip-path: polygon(0 0, 100% 0, calc(100% - 25px) 100%, 0 100%) }
   .nav a { font-size: var(--fs-13); padding: 0 8px }
   header.site a.cta { font-size: var(--fs-13); min-height: 40px; padding: 0 var(--space-3) }
 }
 @media (min-width: 861px) and (max-width: 1023px) {
-  :root { --header-h: 96px }
+  :root { --header-h: 67px }
   header.site .site-ribbon, header.site > .wrap { gap: var(--space-3) }
-  .brand { --logo-h: 64px; padding: 0 40px 0 22px; clip-path: polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%) }
+  .brand { --logo-h: 45px; padding: 0 28px 0 15px; clip-path: polygon(0 0, 100% 0, calc(100% - 21px) 100%, 0 100%) }
   .nav a { padding: 0 6px }
 }
 
@@ -332,7 +336,7 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
      right: until 2026-10-10 the button sat against the slant with the rest of
      the bar empty, because the margin that pushed it right belonged to the
      header button the phone hides. */
-  .brand { --logo-h: 64px; padding: 0 40px 0 var(--gutter); flex: 0 0 auto; clip-path: polygon(0 0, 100% 0, calc(100% - 25px) 100%, 0 100%) }
+  .brand { --logo-h: 45px; padding: 0 28px 0 var(--gutter); flex: 0 0 auto; clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%) }
   header.site a.cta { min-height: 36px; padding: 0 var(--space-3); letter-spacing: .03em }
   /* The Menu button is the logo panel's twin: a white parallelogram the full
      height of the bar, inset 3px from the screen's right edge so the navy
@@ -343,7 +347,7 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
      focus ring is an inset shadow. The side padding is the slant's half (what
      the cut takes at the bar's midline) plus a 16px inset. */
   .nav-toggle {
-    --slant: 25px;
+    --slant: 18px;
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     align-self: stretch; margin-left: auto; margin-right: var(--line-h); flex: 0 0 auto;
     min-height: 44px; min-width: 44px; padding: 0 calc(var(--slant) / 2 + 16px);
@@ -401,8 +405,8 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
 /* The narrowest phones (320 to 380px): a smaller mark, so the logo panel and
    the Menu button share the bar without either one clipping. */
 @media (max-width: 380px) {
-  .brand { --logo-h: 48px; padding: 0 30px 0 12px; clip-path: polygon(0 0, 100% 0, calc(100% - 20px) 100%, 0 100%) }
-  .nav-toggle { --slant: 20px }
+  .brand { --logo-h: 34px; padding: 0 21px 0 8px; clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%) }
+  .nav-toggle { --slant: 14px }
 }
 
 /* ── footer ─────────────────────────────────────────────────────────────────
@@ -951,7 +955,7 @@ a.ledger-row:hover { background: var(--panel); text-decoration: none; color: inh
    hidden behind them. Scoped to the pages that actually carry one, so an
    anchor on the other ninety keeps landing where it always has. */
 html:has(.is-ribbon) { scroll-padding-top: calc(var(--header-h) + 2 * var(--line-h) + 60px) }
-@media (max-width: 860px) { html:has(.is-ribbon) { scroll-padding-top: 108px } }
+@media (max-width: 860px) { html:has(.is-ribbon) { scroll-padding-top: 85px } }
 
 .is-ribbon {
   position: sticky; top: calc(var(--header-h) + 2 * var(--line-h)); z-index: 45;
