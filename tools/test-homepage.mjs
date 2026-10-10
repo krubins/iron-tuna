@@ -397,13 +397,13 @@ console.log('\nwith the boards answering');
   const { page, ctx } = await open(1440, 900);
   const r = await read(page);
   ok('the market row is shown', r.market === true);
-  ok('the overview, then six lists, in order, the overview showing',
-     r.cats.map(c => c.t).join(' | ') === 'Overview | This week’s value | Outscoring their projections | Likely to outperform | This week’s headwinds | Trailing their projections | Likely to underperform' && r.cats[0].on && r.cats.filter(c => c.on).length === 1,
+  ok('the overview, then four lists, in order, the overview showing',
+     r.cats.map(c => c.t).join(' | ') === 'Overview | This week’s value | Likely to outperform | This week’s headwinds | Likely to underperform' && r.cats[0].on && r.cats.filter(c => c.on).length === 1,
      JSON.stringify(r.cats));
   ok('the overview is the top figure of each list, in list order, each labelled with its list',
-     r.figs.length === 6 && r.figs.map(f => f.c).join(' | ') === 'Overview | This week’s value | Outscoring their projections | Likely to outperform | This week’s headwinds | Trailing their projections | Likely to underperform'.slice('Overview | '.length)
-       && r.figs[0].v === '+4.7 pts' && r.figs[1].k.startsWith('Trust · Puka Nacua') && r.figs[2].k.startsWith('Trust · Puka Nacua')
-       && r.figs[3].v === '-4.7 pts' && r.figs[4].k.startsWith('Sell high · Tyreek Hill') && r.figs[5].k.startsWith('Sell high · Tyreek Hill'),
+     r.figs.length === 4 && r.figs.map(f => f.c).join(' | ') === 'This week’s value | Likely to outperform | This week’s headwinds | Likely to underperform'
+       && r.figs[0].v === '+4.7 pts' && r.figs[1].k.startsWith('Trust · Puka Nacua')
+       && r.figs[2].v === '-4.7 pts' && r.figs[3].k.startsWith('Sell high · Tyreek Hill'),
      JSON.stringify(r.figs.map(f => [f.c, f.k, f.v])));
   ok('and its note covers both kinds of figure', /weekly fantasy points/.test(r.fine || '') && /at least 3 games played/.test(r.fine || ''), r.fine);
   await page.click('#diffCats button:nth-child(2)');
@@ -417,9 +417,9 @@ console.log('\nwith the boards answering');
   ok('a strong buy on a bench player is a Value play', r.figs.some(f => f.k.startsWith('Value play · Tank Bigsby')), r.figs.map(f => f.k).join(' / '));
   // The headwinds, picked by the reader: the decisions below are on that list.
   const weekValue = r;
-  await page.click('#diffCats button:nth-child(5)');
+  await page.click('#diffCats button:nth-child(4)');
   const hw = await read(page);
-  ok('picking a list shows it', hw.cats[4].on && hw.figs.every(f => !f.good) && hw.figs.map(f => f.v).join(' | ') === '-4.7 pts | -4.5 pts | -4.0 pts', hw.figs.map(f => f.v).join(' | '));
+  ok('picking a list shows it', hw.cats[3].on && hw.figs.every(f => !f.good) && hw.figs.map(f => f.v).join(' | ') === '-4.7 pts | -4.5 pts | -4.0 pts', hw.figs.map(f => f.v).join(' | '));
   const by = n => weekValue.figs.concat(hw.figs).find(f => f.k.includes(n));
   ok('a strong buy on a startable player is a Start', by('Drake London') && by('Drake London').k.startsWith('Start'));
   ok('a strong fade on a player you would be starting is a Sit', by('Derrick Henry') && by('Derrick Henry').k.startsWith('Sit'));
@@ -434,39 +434,27 @@ console.log('\nwith the boards answering');
   ok('no injured player, no player the books left off, and no zero projection is a figure',
      !hw.figs.some(f => /Lamar Jackson|Hobbled|Priced Out|Zeroed/.test(f.k)) && !hw.figs.some(f => /Market 0\.0|Iron Tuna 0\.0/.test(f.s)), hw.figs.map(f => f.k).join(' / '));
 
-  // The season lists.
+  // The season sides: one tab each, the forward call standing in for the record.
+  ok('the season record and the forward call are one tab a side, not two',
+     !r.cats.some(c => /their projections/.test(c.t)), r.cats.map(c => c.t).join(' | '));
   await page.click('#diffCats button:nth-child(3)');
-  const ov = await read(page);
-  ok('the overperformers: five, starters and longshots both, widest first',
-     ov.figs.length === 5 && ov.figs.map(f => f.k.split(', ')[0]).join(' / ') === 'Trust · Puka Nacua / Trust · Jahmyr Gibbs / Trust · Josh Allen / Buy · Deep Sleeper / Buy · Bench Flier',
-     ov.figs.map(f => f.k).join(' / '));
-  ok('the starter dealt out for a longshot is the narrowest starter', !ov.figs.some(f => f.k.includes('Elite Fourth')));
-  ok('an injured player is not an overperformer', !ov.figs.some(f => f.k.includes('Sidelined')));
-  ok('nor is a season average set against a stale line', !ov.figs.some(f => f.k.includes('Stale Line')));
-  ok('each states points a game over the price, green, over the season line',
-     ov.figs.every(f => f.good && /^\+\d+\.\d pts\/g$/.test(f.v) && /^Season \d+\.\d a game over \d · consensus \d+\.\d · market \d+\.\d$/.test(f.s)),
-     ov.figs.map(f => f.v + ' ' + f.s).join(' / '));
-  ok('and the note says what a season figure is', /at least 3 games played/.test(ov.fine || ''), ov.fine);
-  await page.click('#diffCats button:nth-child(4)');
   const lo = await read(page);
-  ok('likely to outperform: the season call Iron Tuna backs, five, widest first',
+  ok('likely to outperform: the season call Iron Tuna backs, five, starters and longshots both, widest first',
      lo.figs.length === 5 && lo.figs.map(f => f.k.split(', ')[0]).join(' / ') === 'Trust · Puka Nacua / Trust · Jahmyr Gibbs / Trust · Josh Allen / Buy · Deep Sleeper / Buy · Bench Flier',
      lo.figs.map(f => f.k).join(' / '));
+  ok('the starter dealt out for a longshot is the narrowest starter', !lo.figs.some(f => f.k.includes('Elite Fourth')));
+  ok('an injured player is not a call', !lo.figs.some(f => f.k.includes('Sidelined')));
+  ok('nor is a season average set against a stale line', !lo.figs.some(f => f.k.includes('Stale Line')));
   ok('a hot streak Iron Tuna projects under his consensus is no call', !lo.figs.some(f => f.k.includes('Tuna Doubts')), lo.figs.map(f => f.k).join(' / '));
   ok('each leads with this week\'s two projections, then the season',
      lo.figs.every(f => f.good && /^\+\d+\.\d pts\/g$/.test(f.v) && /^Consensus \d+\.\d · Iron Tuna \d+\.\d · averaging \d+\.\d over \d$/.test(f.s)),
      lo.figs.map(f => f.v + ' ' + f.s).join(' / '));
-  ok('and the note says Iron Tuna has to agree', /Iron Tuna’s projection for the week does not disagree/.test(lo.fine || ''), lo.fine);
-  await page.click('#diffCats button:nth-child(7)');
+  ok('and the note says Iron Tuna has to agree', /at least 3 games played/.test(lo.fine || '') && /Iron Tuna’s projection for the week does not disagree/.test(lo.fine || ''), lo.fine);
+  await page.click('#diffCats button:nth-child(5)');
   const lu = await read(page);
   ok('likely to underperform: Sell high on a starter, Sell on a longshot, in ink',
      lu.figs.map(f => f.k.split(', ')[0] + ' ' + f.v).join(' / ') === 'Sell high · Tyreek Hill -6.9 pts/g / Sell · Faded Vet -5.5 pts/g / Sell high · Slow Starter -4.6 pts/g'
        && lu.figs.every(f => !f.good), lu.figs.map(f => f.k + ' ' + f.v).join(' / '));
-  await page.click('#diffCats button:nth-child(6)');
-  const uv = await read(page);
-  ok('the overvalued: Sell high on a starter, Sell on a longshot, in ink',
-     uv.figs.map(f => f.k.split(', ')[0] + ' ' + f.v).join(' / ') === 'Sell high · Tyreek Hill -6.9 pts/g / Sell · Faded Vet -5.5 pts/g / Sell high · Slow Starter -4.6 pts/g'
-       && uv.figs.every(f => !f.good), uv.figs.map(f => f.k + ' ' + f.v).join(' / '));
   await page.click('#diffCats button:nth-child(2)');
   r.figs = (await read(page)).figs;
   ok('every figure carries the player\'s photograph, an 88px circle',
@@ -498,7 +486,7 @@ console.log('\nwith the boards answering');
   ok('each card names its time and byline at the foot',
      r.rows[0].meta === '6m ago · Iron Tuna desk' && r.rows[4].meta === 'Yesterday', r.rows.map(x => x.meta).join(' / '));
   // The desk's photographs are lazy, and the market band above it now holds
-  // six lists, so at 900px the row under the lead starts below the fold.
+  // four lists, so at 900px the row under the lead starts below the fold.
   // Bring the desk into view, as a reader scrolling to it would, and read it
   // again before asking which photographs loaded.
   await page.evaluate(() => document.querySelector('#readGrid').scrollIntoView({ block: 'center' }));
@@ -553,14 +541,14 @@ console.log('\nthe band rotates');
   const second = await on();
   await page.clock.runFor(9000);
   const third = await on();
-  ok('it opens on the overview and advances through the lists on its own', first === 'Overview' && second === 'This week’s value' && third === 'Outscoring their projections', [first, second, third].join(' → '));
+  ok('it opens on the overview and advances through the lists on its own', first === 'Overview' && second === 'This week’s value' && third === 'Likely to outperform', [first, second, third].join(' → '));
   await page.hover('#diffBody');
   await page.clock.runFor(20000);
-  ok('and holds while the pointer is on it', (await on()) === 'Outscoring their projections', await on());
+  ok('and holds while the pointer is on it', (await on()) === 'Likely to outperform', await on());
   await page.click('#diffCats button:nth-child(3)');
   await page.mouse.move(5, 890);
   await page.clock.runFor(30000);
-  ok('a list the reader picks stays picked', (await on()) === 'Outscoring their projections', await on());
+  ok('a list the reader picks stays picked', (await on()) === 'Likely to outperform', await on());
   await ctx.close();
 }
 
@@ -585,7 +573,13 @@ console.log('\nwith a board too short to print');
   EDGE.vsExperts = { buys: [], fades: [] };
   let { page, ctx } = await open(1440, 900);
   let r = await read(page);
-  ok('with the week empty, the overview and the four season lists are the band', r.market === true && r.cats.map(c => c.t).join(' | ') === 'Overview | Outscoring their projections | Likely to outperform | Trailing their projections | Likely to underperform' && r.figs.length === 4, JSON.stringify(r.cats));
+  ok('with the week empty, the overview and the two season sides are the band', r.market === true && r.cats.map(c => c.t).join(' | ') === 'Overview | Likely to outperform | Likely to underperform' && r.figs.length === 2, JSON.stringify(r.cats));
+  await ctx.close();
+  // A forward call too short to print gives its tab back to the season record.
+  EDGE.seasonForm = { ...fullForm, likelyOver: [], likelyUnder: [] };
+  ({ page, ctx } = await open(1440, 900));
+  r = await read(page);
+  ok('with no forward call, each side falls back to the season record', r.cats.map(c => c.t).join(' | ') === 'Overview | Outscoring their projections | Trailing their projections', JSON.stringify(r.cats));
   await ctx.close();
   EDGE.seasonForm = { ...fullForm, under: [], likelyOver: [], likelyUnder: [] };
   ({ page, ctx } = await open(1440, 900));
@@ -609,7 +603,7 @@ console.log('\non a phone');
       tab: (() => { const t = document.querySelector('.tabbar'); const b = t.getBoundingClientRect(); return { h: Math.round(b.height), bottom: Math.round(b.bottom), fixed: getComputedStyle(t).position }; })() };
   });
   ok('the tile row scrolls sideways, edge to edge, with the first tile on the gutter', row.scrolls && row.ulLeft === 0 && row.left === 16, JSON.stringify(row));
-  ok('the market figures stack, one per row', row.figsStacked === 1 && r.figs.length === 6, String(row.figsStacked));
+  ok('the market figures stack, one per row', row.figsStacked === 1 && r.figs.length === 4, String(row.figsStacked));
   ok('the tab bar is fixed to the foot of the screen, 68px', row.tab.fixed === 'fixed' && row.tab.h === 68 && row.tab.bottom === 844, JSON.stringify(row.tab));
   ok('the lead stacks its photograph on top, and the four cards go two across',
      r.rows.length === 5 && r.rows[0].picTop && new Set(r.rows.slice(1).map(x => x.top)).size === 2 && r.rows.slice(1).every(x => x.w < 200), JSON.stringify(r.rows.map(x => [x.top, x.w])));
