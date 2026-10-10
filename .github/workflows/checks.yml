@@ -776,6 +776,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: node tools/test-league-sync.mjs
 
+      # The CBS browser import (extensions/cbs-connector, HANDOFF §127): the
+      # extension's host and request boundaries, the page reader against DOM
+      # fixtures, the popup against a stubbed browser API, and the page and
+      # worker surfaces it depends on. The worker half of the import runs in
+      # test-league-sync.mjs above against the synthetic snapshot fixture.
+      - name: CBS browser connector
+        if: ${{ !cancelled() }}
+        run: node tools/test-cbs-extension.mjs
+
       # THROWS: every league ever created answered "D1_ERROR: Wrong number of
       # parameter bindings" because one INSERT bound eighteen values into
       # seventeen placeholders. A statement that parses can still be wrong, and

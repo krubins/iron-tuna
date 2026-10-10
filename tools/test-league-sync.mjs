@@ -5,11 +5,14 @@
 // through a small in-memory D1.
 //
 // THERE IS NO NETWORK HERE, and that is the point rather than a convenience.
-// The Sleeper, Yahoo and CBS connectors were removed on 2026-09-18 (HANDOFF
-// §87) and a league now only ever arrives from the reader: the forms and the
-// roster-grid screenshot on /my-league, through POST /api/leagues/manual. The
-// fetch stub below throws, so anything that starts calling a fantasy platform
-// again fails here first.
+// The Sleeper, Yahoo and CBS API connectors were removed on 2026-09-18 (HANDOFF
+// §89) and a league now only ever arrives from the reader: the forms and the
+// roster-grid screenshot on /my-league, through POST /api/leagues/manual, or
+// the CBS browser import (HANDOFF §127), a snapshot the extension reads out of
+// the reader's own CBS tab and posts to /api/leagues/connect. The fetch stub
+// below throws, so anything that starts calling a fantasy platform from the
+// worker again fails here first; the CBS import suite at the end runs the
+// snapshot fixture through that route and never trips it.
 //
 // What is covered: settings normalization and the reader's overrides on top of
 // them, scoring import (PPR, half, standard, TE premium), roster shapes
@@ -165,7 +168,7 @@ const stubs = {
   _availTable: () => ({}), _withAvailability: p => p, _availPool: pool => pool
 };
 const code = deps.join('\n') + '\n' + _oddsRoundSrc + '\nvar boardsPayload = __stubBoards({ scoringRules, PROJECTIONS, teamKey, scoreAny, _oddsNorm, _oddsRound });\n' + region +
-  '\nreturn { leagueReady, leagueNormalizeSettings, leagueEffectiveSettings, leagueScore, leagueScoringKey, leagueSettingsLabel, leagueResolvePlayer, leagueNameSuggestions, leagueRosterCheck, leagueMapPlayers, leagueOptimize, leagueStarterSlots, leagueRosterSize, leagueEmptyRoster, LEAGUE_PROVIDERS, leagueCreateRow, leagueLoad, leagueList, leagueManualUpsert, leagueSetDefault, leagueDisconnect, leagueBoard, leagueLineup, leaguePickups, leagueMatchup, leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailabilityLookup, leagueSummary, leagueRoutes, makeToken, SCORING_BASE, scoringRules, scoreAny, PROJECTIONS, _oddsNorm, teamKey, flagOn, LEAGUE_STALE_MS, leagueRowToLeague };';
+  '\nreturn { leagueReady, leagueNormalizeSettings, leagueEffectiveSettings, leagueScore, leagueScoringKey, leagueSettingsLabel, leagueResolvePlayer, leagueNameSuggestions, leagueRosterCheck, leagueMapPlayers, leagueOptimize, leagueStarterSlots, leagueRosterSize, leagueEmptyRoster, LEAGUE_PROVIDERS, leagueCreateRow, leagueLoad, leagueList, leagueManualUpsert, leagueBrowserImport, leagueSetDefault, leagueDisconnect, leagueBoard, leagueLineup, leaguePickups, leagueMatchup, leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailabilityLookup, leagueSummary, leagueRoutes, makeToken, SCORING_BASE, scoringRules, scoreAny, PROJECTIONS, _oddsNorm, teamKey, flagOn, LEAGUE_STALE_MS, leagueRowToLeague };';
 const H = new Function(...Object.keys(stubs), '__stubBoards', code)(...Object.values(stubs), stubBoards);
 
 // ── a world: rooms of real players, in the shape a reader saves one ───────
@@ -506,6 +509,51 @@ console.log('\nleagues read off a roster grid');
   ok('editing a grid league keeps every other roster instead of dropping the room', ed.body.ok && Lg2.teams.length === 12 && Lg2.rosters.every(r2 => r2.players.length > 0));
   const lu2 = await H.leagueLineup(env, Lg2);
   ok('once slots are typed for the reader’s own team the comparison comes back', lu2.slotsKnown === true && lu2.currentTotal !== null && lu2.improvement !== null);
+}
+
+console.log('\nthe CBS browser import');
+{
+  const fixture = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fixtures/cbs-browser-league.json'), 'utf8'));
+  const provider = H.LEAGUE_PROVIDERS.cbs_browser;
+  const model = provider.normalize(fixture, { season: 2026 }), s = model.settings.scoring;
+  ok('CBS rules preserve the passing threshold and all bonuses', s.passingYardsThreshold === 125 && s.passingYardsPerPoint === 25 && s.passingTD === 6 && s.passingYardBonuses.length === 3);
+  ok('CBS rules preserve positional PPR', s.receptionPoints === 1 && s.rbReceptionPoints === .5 && s.rbReceptionBonuses.length === 2);
+  ok('CBS field-goal and defensive ranges map onto the tiers', s.fieldGoalTiers.length === 5 && s.fieldGoalTiers[0].max === 29 && s.fieldGoalTiers[0].missPoints === -3 && s.pointsAllowed.length === 12 && s.pointsAllowed[6].min === 17);
+  ok('the fixture scoring is fully recognized', !Object.keys(model.settings.extras.unsupported).length);
+  ok('what the import does not carry is said on the league', model.settings.faab === null && /matchups/.test(model.settings.extras.notes.join(' ')) && model.matchups.length === 0);
+  ok('an injured-reserve player stays on the IR slot', model.rosters[1].players.length === 2 && model.rosters[1].players[1].slot === 'ir' && model.settings.roster.IR === 1);
+  ok('an IR section imports without an IR count in the footer', (() => { const f = structuredClone(fixture); delete f.rosters[1].counts.ir; return provider.normalize(f, { season: 2026 }).rosters[1].players.length === 2; })());
+  const con = (snapshot, e) => route(e || env, 'POST', '/api/leagues/connect', { provider: 'cbs_browser', snapshot }, cookie);
+  const before = (await route(env, 'GET', '/api/leagues', null, cookie)).body.leagues.length;
+  const connected = await con(fixture), id = connected.body.league && connected.body.league.id;
+  ok('a snapshot imports as a league and asks which team is the reader’s', connected.status === 200 && connected.body.ok && connected.body.created && connected.body.needsTeam && connected.body.teams.length === 2 && connected.body.imported.players === 3, JSON.stringify(connected.body).slice(0, 300));
+  const L1 = await H.leagueLoad(env, 'ken@example.com', id);
+  ok('the league is a cbs_browser league keyed on the CBS league id, with CBS’s player ids', L1.provider === 'cbs_browser' && L1.providerLeagueId === 'browser-fixture' && L1.rosters.every(r => r.players.every(p => /^\d+$/.test(p.providerPlayerId))));
+  ok('CBS player ids are learned under the cbs crosswalk', [...db.t.player_id_map.values()].some(r => r.provider === 'cbs'));
+  await route(env, 'POST', '/api/leagues/' + id + '/team', { teamId: '8' }, cookie);
+  const again = await con(fixture);
+  ok('a refresh is idempotent and keeps the chosen team', again.body.ok && !again.body.created && again.body.league.id === id && again.body.league.userTeamId === '8');
+  ok('a browser league has no automatic refresh time', again.body.league.sync.nextAt == null && again.body.league.sync.status === 'ok');
+  const refresh = await route(env, 'POST', '/api/leagues/' + id + '/sync', null, cookie);
+  ok('the server cannot refresh it and says to run the extension', refresh.status === 409 && refresh.body.error === 'browser_refresh_required');
+  const previous = JSON.stringify([...db.t.league_roster_players.values()].filter(r => r.league_id === id));
+  let rejected = 0;
+  for (const mutate of [f => f.rosters.pop(), f => f.rosters[0].players = [], f => f.teams[1].teamId = '8', f => f.rules.push(f.rules[0]), f => f.rosters[1].players[0].providerPlayerId = f.rosters[0].players[0].providerPlayerId, f => f.rosters[1].counts.ir = 0, f => f.rosters[1].players[1].slot = 'bench', f => f.season = 9999, f => f.leagueId = 'https://evil.test', f => f.version = 2, f => f.rosters[0].players[0].team = 'nope']) {
+    const bad = structuredClone(fixture); mutate(bad); const r = await con(bad);
+    if (r.status === 400 && r.body.error === 'invalid_browser_import' && JSON.stringify([...db.t.league_roster_players.values()].filter(x => x.league_id === id)) === previous) rejected++;
+  }
+  ok('eleven malformed snapshots are refused before any saved roster moves', rejected === 11, String(rejected));
+  const unknown = structuredClone(fixture); unknown.rules.push({ group: 'SPECIAL SCORING FOR TIGHT ENDS', code: 'Recpt', text: '3 points' });
+  ok('a positional rule the engine does not model stays visible as unsupported', Object.keys(provider.normalize(unknown, { season: 2026 }).settings.extras.unsupported).length === 1);
+  ok('the import is on by default and off by flag', H.flagOn({}, 'CBS_SYNC') && (await con(fixture, { ...env, FLAG_CBS_SYNC: '0' })).status === 503);
+  ok('it needs the Iron Tuna sign-in', (await route(env, 'POST', '/api/leagues/connect', { provider: 'cbs_browser', snapshot: fixture })).status === 401);
+  ok('an unknown provider is refused', (await route(env, 'POST', '/api/leagues/connect', { provider: 'sleeper', snapshot: fixture }, cookie)).status === 400);
+  const after = (await route(env, 'GET', '/api/leagues', null, cookie)).body.leagues;
+  ok('one CBS league on the account, beside the saved ones', after.length === before + 1 && after.filter(l => l.provider === 'cbs_browser').length === 1);
+  const lu = await H.leagueLineup(env, await H.leagueLoad(env, 'ken@example.com', id));
+  ok('the personalized modules read a browser league like any other', lu.ok && lu.slotsKnown === true);
+  const dc = await route(env, 'POST', '/api/leagues/' + id + '/disconnect', null, cookie);
+  ok('deleting it removes the rosters and nothing else is left behind', dc.body.ok && ![...db.t.league_roster_players.values()].some(r => r.league_id === id) && !db.t.league_provider_tokens);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

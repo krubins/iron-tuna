@@ -9812,7 +9812,13 @@ const NEWSROOM_FLAGS = {
   PERSONALIZED_WAIVERS:  { dflt: true,  note: 'the Pickup Advisor on the players actually available in a synced league' },
   PERSONALIZED_LINEUP:   { dflt: true,  note: 'Best Lineup, Your Matchup, roster alerts and playoff readiness from a synced roster' },
   PERSONALIZED_TRADES:   { dflt: true,  note: 'trade partners and targets across a synced league’s rosters' },
-  PERSONALIZED_STORIES:  { dflt: true,  note: 'the On Your Roster / Available in Your League callouts on stories and player cards' }
+  PERSONALIZED_STORIES:  { dflt: true,  note: 'the On Your Roster / Available in Your League callouts on stories and player cards' },
+  // The one connector left, and the one that never stores a credential: a CBS
+  // league read from the reader's own signed-in CBS tab by the extension and
+  // posted here as a snapshot. On by default because the worker only ever
+  // validates and writes what the reader's browser sends; FLAG_CBS_SYNC=0
+  // refuses the route.
+  CBS_SYNC:              { dflt: true,  note: 'the CBS browser import: POST /api/leagues/connect from the Iron Tuna CBS Connector extension' }
 };
 function flagOn(env, name) {
   const f = NEWSROOM_FLAGS[name]; if (!f) return false;
@@ -15199,14 +15205,20 @@ async function pruneAnalytics(env, keepDays) {
 // leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailability) read ONLY the
 // local model plus the site's own boards.
 //
-// THERE IS ONE ADAPTER AND IT IS THE READER. The Sleeper, Yahoo and CBS
+// THE READER IS THE ADAPTER, TWICE OVER. The Sleeper, Yahoo and CBS API
 // connectors and the ESPN placeholder were removed on 2026-09-18 (HANDOFF
 // §89): Sleeper never cleared its non-commercial grant (docs/data-sources.md
-// R2), Yahoo never ran against a live account, CBS never completed an import,
-// and ESPN never had a supported path. Nothing here calls a fantasy platform
-// any more, so there is no OAuth, no stored provider credential and no
-// scheduled refresh. A league arrives from the forms and the roster-grid
-// screenshot on /my-league, through POST /api/leagues/manual, and changes only
+// R2), Yahoo never ran against a live account, the CBS token flow died when
+// CBS stopped exposing a token, and ESPN never had a supported path. Nothing
+// here calls a fantasy platform, so there is no OAuth, no stored provider
+// credential and no scheduled refresh. A league arrives one of two ways, both
+// from the reader's own browser: the forms and the roster-grid screenshot on
+// /my-league, through POST /api/leagues/manual; or the CBS browser import
+// (restored 2026-10-10, HANDOFF §127), where the Iron Tuna CBS Connector
+// extension reads settings, team names and rosters out of the reader's
+// signed-in CBS tab and posts the snapshot to POST /api/leagues/connect. The
+// worker validates that snapshot and writes it through the same model; it
+// never sees a CBS password, cookie or token. Either way a league changes only
 // when the reader changes it.
 const LEAGUE_CONTRACT = 1;
 const LEAGUE_DDL = [
@@ -15593,12 +15605,120 @@ const PROVIDER_MANUAL = {
   async pull() { throw new LeagueProviderError('manual_league', 'A manual league is edited, not synced.'); },
   normalize(raw) { return raw; }
 };
-// One provider, and it is the reader. The Sleeper, Yahoo, CBS and ESPN
-// connectors were removed on 2026-09-18 (HANDOFF §89): none of them ever
-// carried a league in production. The adapter shape stays, because it is what
-// keeps everything downstream from knowing where a league came from, and it is
-// what a future connector would slot into.
-const LEAGUE_PROVIDERS = { manual: PROVIDER_MANUAL };
+// -- the CBS browser import ---------------------------------------------------
+// The extension (extensions/cbs-connector) runs in the reader's signed-in CBS
+// tab, reads /rules, /teams/roster-grid and each /teams/<id> page through
+// same-origin requests, and posts ONE snapshot here. The snapshot is the whole
+// claim: the worker makes no request to CBS, holds nothing that could, and
+// treats every field as untrusted. A snapshot that is incomplete, inconsistent
+// (a roster whose section counts disagree with its footer, a duplicate player,
+// a team without a roster) or outside its bounds is refused whole, before any
+// row is touched, so a failed refresh leaves the last good import in place.
+//
+// What arrives: league name and size, the roster slot counts, the scoring
+// table as CBS prints it (group, code, text), playoff start, team names, and
+// each roster with CBS's own player ids, position, NFL team and the section
+// it sat in. What does not: standings, matchups, transactions and FAAB
+// balances, which the extension does not read. The notes say so on the league.
+function cbsLeagueId(input) {
+  let id = String(input || '').trim().toLowerCase();
+  const m = id.match(/^(?:https:\/\/)?([a-z0-9][a-z0-9-]{0,62})\.football\.cbssports\.com(?:\/[^?#]*)?$/);
+  if (m) id = m[1];
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(id)) throw new LeagueProviderError('league_not_found', 'Enter a CBS league ID or football league URL.');
+  return id;
+}
+function cbsBrowserNormalize(raw, ctx) {
+  const invalid = () => { throw new LeagueProviderError('invalid_browser_import', 'CBS import is incomplete or unsupported. Re-read the league with the updated extension.'); };
+  const str = (v, max) => { if (typeof v !== 'string' || !v.trim() || v.length > max || /[\x00-\x1f]/.test(v)) invalid(); return v.trim(); };
+  const id = v => { if (typeof v !== 'string' || !/^\d{1,12}$/.test(v)) invalid(); return v; };
+  if (!raw || raw.version !== 1 || JSON.stringify(raw).length > 350000) invalid();
+  const leagueId = cbsLeagueId(raw.leagueId);
+  if (leagueId !== raw.leagueId || !Number.isInteger(raw.season) || raw.season < 2020 || raw.season > Number(ctx.season) + 1) invalid();
+  const name = str(raw.name, 160);
+  if (!Number.isInteger(raw.numTeams) || raw.numTeams < 2 || raw.numTeams > 32 || !Array.isArray(raw.teams) || raw.teams.length !== raw.numTeams || !Array.isArray(raw.rosters) || raw.rosters.length !== raw.numTeams) invalid();
+  const teamIds = new Set(), rosterIds = new Set(), playerIds = new Set();
+  const teams = raw.teams.map(t => { const teamId = id(t.teamId); if (teamIds.has(teamId)) invalid(); teamIds.add(teamId); return { teamId, name: str(t.name, 160), ownerId: null, wins: null, losses: null, ties: null, pointsFor: null, pointsAgainst: null, faabLeft: null, waiverPosition: null }; });
+  const rosters = raw.rosters.map(r => {
+    const teamId = id(r.teamId);
+    if (!teamIds.has(teamId) || rosterIds.has(teamId) || !Array.isArray(r.players) || !r.players.length || r.players.length > 60) invalid();
+    const n = s => r.players.filter(p => p.slot === s).length, ir = r.counts && r.counts.ir != null ? r.counts.ir : n('ir');
+    if (!r.counts || !Number.isInteger(r.counts.starter) || !Number.isInteger(r.counts.bench) || !Number.isInteger(ir) || r.counts.starter < 0 || r.counts.bench < 0 || ir < 0 || n('starter') !== r.counts.starter || n('bench') !== r.counts.bench || n('ir') !== ir || r.counts.starter + r.counts.bench + ir !== r.players.length) invalid();
+    rosterIds.add(teamId);
+    return { teamId, players: r.players.map(p => {
+      const providerPlayerId = id(p.providerPlayerId);
+      if (playerIds.has(providerPlayerId) || !['QB','RB','WR','TE','K','DEF'].includes(p.position) || !['starter','bench','ir'].includes(p.slot) || !/^[A-Z]{2,3}$/.test(p.team)) invalid();
+      playerIds.add(providerPlayerId);
+      return { providerPlayerId, name: str(p.name, 100), position: p.position, team: p.team, slot: p.slot, slotLabel: str(p.slotLabel, 16) };
+    }) };
+  });
+  const roster = leagueEmptyRoster();
+  if (!raw.roster || typeof raw.roster !== 'object' || !Object.keys(raw.roster).length) invalid();
+  for (const [k,v] of Object.entries(raw.roster)) { if (!(k in roster) || k === 'other' || !Number.isInteger(v) || v < 0 || v > 20) invalid(); roster[k] = v; }
+  const scoring = leagueDefaultSettings().scoring, unsupported = {}, seen = new Set();
+  for (const k of Object.keys(scoring)) scoring[k] = Array.isArray(scoring[k]) ? [] : 0;
+  const scalar = { FL:'fumbleLost', Fum2PK:'fumble2pt', Fum2PT:'fumble2pt', IFRTD:'individualFumbleRecoveryTD', IKRTD:'individualKickReturnTD', IPRTD:'individualPuntReturnTD', MXP:'missedExtraPoint', Pa2P:'passing2pt', PaInt:'passingInt', PaTD:'passingTD', Re2P:'receiving2pt', ReTD:'receivingTD', Ru2P:'rushing2pt', RuTD:'rushingTD', XP:'extraPoint', DFR:'defensiveFumbleRecovery', DFTD:'defensiveTD', Int:'interception', ST2PT:'specialTeams2pt', STTD:'specialTeamsTD', STY:'safety', STY1PT:'specialTeamsSafety1pt' };
+  const num = '(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))';
+  const goals = {}, missed = {};
+  if (!Array.isArray(raw.rules) || !raw.rules.length || raw.rules.length > 120) invalid();
+  for (const [i,rule] of raw.rules.entries()) {
+    const group = str(rule.group, 80), code = str(rule.code,16), text = str(rule.text,2000).replace(/Plus /g, ' Plus ').trim(), unique = group + ':' + code;
+    if (seen.has(unique)) invalid(); seen.add(unique);
+    let handled = false;
+    const regular = group === 'OFFENSIVE' || group === 'DEFENSIVE';
+    const simple = text.match(new RegExp('^' + num + ' points?$'));
+    if (regular && scalar[code] && simple) {
+      const key = scalar[code], value = Number(simple[1]);
+      if ((code === 'Fum2PT' && seen.has(group + ':Fum2PK') || code === 'Fum2PK' && seen.has(group + ':Fum2PT')) && scoring[key] !== value) invalid();
+      scoring[key] = value; handled = true;
+    }
+    if ((regular && ['PaYd','ReYd','RuYd','Recpt','SACK'].includes(code)) || group === 'SPECIAL SCORING FOR RUNNING BACKS' && code === 'Recpt') {
+      const base = text.match(new RegExp('^(\\d+)\\+ [A-Za-z]+ = ' + num + ' points? for every ' + num + ' [A-Za-z]+'));
+      if (base && Number(base[3]) > 0) {
+        const rest = text.slice(base[0].length).trim(), bonuses = [], re = new RegExp('Plus a ' + num + ' point bonus @ (\\d+)\\+ [A-Za-z]+', 'g');
+        for (const m of rest.matchAll(re)) bonuses.push({ at:Number(m[2]), points:Number(m[1]) });
+        if (!rest.replace(re,'').trim()) {
+          const prefix = { PaYd:'passing', ReYd:'receiving', RuYd:'rushing' }[code];
+          if (prefix && Number(base[2]) > 0) { scoring[prefix+'YardsPerPoint'] = Number(base[3])/Number(base[2]); scoring[prefix+'YardsThreshold'] = Number(base[1]); scoring[prefix+'YardBonuses'] = bonuses; handled = true; }
+          else if (!prefix && Number(base[1]) <= 1) {
+            const key = code === 'SACK' ? 'sack' : group === 'SPECIAL SCORING FOR RUNNING BACKS' ? 'rbReception' : 'reception';
+            scoring[key+'Points'] = Number(base[2])/Number(base[3]); scoring[key+'Bonuses'] = bonuses; handled = true;
+          }
+        }
+      }
+    }
+    if (regular && ['FG','MFG'].includes(code)) {
+      const re = new RegExp('Plus ' + num + ' points? for a ' + code + ' of (\\d+)(?: to (\\d+)|\\+) Yds','g');
+      const matches = [...text.matchAll(re)];
+      if (matches.length && !text.replace(re,'').trim()) { for (const m of matches) (code === 'FG' ? goals : missed)[m[2]+':'+(m[3]||999)] = Number(m[1]); handled = true; }
+    }
+    if (regular && code === 'PA') {
+      const re = new RegExp('(\\d+)(?: - (\\d+)|\\+) PAs? = ' + num + ' points?','g'), matches = [...text.matchAll(re)];
+      if (matches.length && !text.replace(re,'').trim()) { scoring.pointsAllowed = matches.map(m=>({min:Number(m[1]),max:Number(m[2]||999),points:Number(m[3])})); handled = true; }
+    }
+    if (!handled) unsupported['cbs_browser_'+i+'_'+code] = {group,code,text};
+  }
+  if (!seen.has('SPECIAL SCORING FOR RUNNING BACKS:Recpt')) { scoring.rbReceptionPoints = scoring.receptionPoints; scoring.rbReceptionBonuses = scoring.receptionBonuses; }
+  scoring.fieldGoalTiers = Object.entries(goals).map(([range,points])=>{ const [min,max]=range.split(':').map(Number); return {min,max,points,missPoints:missed[range]||0}; }).sort((a,b)=>a.min-b.min);
+  for (const value of Object.values(scoring)) for (const number of Array.isArray(value) ? value.flatMap(v=>Object.values(v)) : [value]) if (!Number.isFinite(number) || Math.abs(number) > 1000000) invalid();
+  if (Object.keys(missed).some(k=>!(k in goals))) unsupported.cbs_missed_ranges = missed;
+  if (scoring.fieldGoalTiers.length !== 5) unsupported.cbs_field_goal_ranges = 'This league does not have the five field-goal ranges required by the kicker model. Review kicker scoring.';
+  const notes = ['Browser import: refresh with the CBS extension. Standings, matchups, transactions and waiver balances are not imported.', 'Confirm playoff team count and league type; CBS browser import does not read those fields.'];
+  if (Object.keys(unsupported).length) notes.push('Some CBS scoring rules are preserved but not scored. Review settings before using recommendations.');
+  const settings = leagueNormalizeSettings({scoring,roster,extras:{unsupported,notes},faab:null,waiverType:'unknown',playoffWeekStart:raw.playoffWeekStart});
+  return { name, season:raw.season, numTeams:teams.length, status:'in_season', userTeamId:null, settings, teams, rosters, matchups:[], transactions:[] };
+}
+const PROVIDER_CBS_BROWSER = {
+  id: 'cbs_browser', label: 'CBS browser import', auth: 'browser', flag: 'CBS_SYNC',
+  terms: 'League tables read by the reader’s own browser from their signed-in CBS league and posted here. Refreshed by running the extension again; no credential is stored.',
+  needs: () => true,
+  async discover() { return { user: null, leagues: [] }; },
+  async pull() { throw new LeagueProviderError('browser_refresh_required', 'Open your CBS league and use the Iron Tuna extension to refresh it.'); },
+  normalize: cbsBrowserNormalize
+};
+// Two providers, and both are the reader: the forms, and the reader's own
+// browser on CBS. The adapter shape is what keeps everything downstream from
+// knowing where a league came from.
+const LEAGUE_PROVIDERS = { manual: PROVIDER_MANUAL, cbs_browser: PROVIDER_CBS_BROWSER };
 // -- storage: the model in D1, idempotently ---------------------------------
 // Provider ids are the primary keys, so a sync that runs twice writes the
 // same rows twice. Rows a sync did not touch (a dropped player, a team that
@@ -15749,6 +15869,27 @@ async function leagueManualUpsert(env, email, body, existingRow) {
   await env.LEADS_DB.prepare('UPDATE leagues SET name=?, season=?, num_teams=?, status=?, settings=?, user_team_id=?, updated_at=?, last_sync_at=?, last_ok_at=?, sync_status=?, last_error=NULL WHERE id=?')
     .bind(name, ctx.season, numTeams, 'in_season', JSON.stringify(settings), userTeamId, ts, ts, ts, 'manual', row.id).run();
   return { id: row.id, unmatched: mapped.unmatched, unresolved: players.filter(p => !(mapped.map.get(p.providerPlayerId) || {}).key).map(p => p.name) };
+}
+// A CBS browser snapshot: validate the whole thing, map CBS's player ids onto
+// the board (recorded under provider 'cbs' so an id learned once is known the
+// next time), then write it under the reader's league row for that CBS league,
+// creating the row on the first import and refreshing it after. The reader's
+// chosen team survives a refresh as long as that team is still in the room;
+// their overrides are a separate column this never touches. Nothing is written
+// until normalization has accepted the snapshot in full.
+async function leagueBrowserImport(env, email, raw) {
+  const ctx = await leagueWeekContext(env);
+  const model = cbsBrowserNormalize(raw, ctx);
+  const players = [];
+  for (const r of model.rosters) for (const p of r.players) players.push(p);
+  const mapped = await leagueMapPlayers(env, 'cbs', players);
+  const { row, created } = await leagueCreateRow(env, email, 'cbs_browser', raw.leagueId, model.name, model.season, { numTeams: model.numTeams, settings: model.settings });
+  const ts = Date.now();
+  await leagueWriteModel(env, row.id, model, mapped.map, ts);
+  const keepTeam = row.user_team_id && model.teams.some(t => t.teamId === row.user_team_id);
+  await env.LEADS_DB.prepare('UPDATE leagues SET name=?, season=?, num_teams=?, status=?, settings=?, user_team_id=?, updated_at=?, last_sync_at=?, last_ok_at=?, sync_status=?, last_error=NULL, next_sync_at=NULL, failures=0 WHERE id=?')
+    .bind(model.name, model.season, model.numTeams, 'in_season', JSON.stringify(model.settings), keepTeam ? row.user_team_id : null, ts, ts, ts, 'ok', row.id).run();
+  return { id: row.id, created, unmatched: mapped.unmatched, players: players.length, teams: model.teams.length };
 }
 async function leagueSetDefault(env, email, id) {
   if (!(await leagueReady(env))) return false;
@@ -16245,7 +16386,9 @@ const LEAGUE_ERRORS = {
   too_many_leagues: 'Twelve leagues is the limit per account.',
   too_soon: 'That league was synced less than two minutes ago.',
   not_signed_in: 'Sign in to connect a league.',
-  no_db: 'League sync is not available right now.'
+  no_db: 'League sync is not available right now.',
+  invalid_browser_import: 'CBS import is incomplete or unsupported. Re-read the league with the updated extension.',
+  browser_refresh_required: 'Open your CBS league and use the Iron Tuna extension to refresh it.'
 };
 function leagueErr(code, detail, status, c) {
   return json({ ok: false, error: code, message: LEAGUE_ERRORS[code] || detail || code, detail: detail || null }, status || 400, c);
@@ -16269,7 +16412,7 @@ async function leagueRoutes(request, env, url, ctx) {
     if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
     if (!(await leagueReady(env))) return json({ ok: false, error: 'no_db' }, 503, c);
     const q = async (sql, ...b) => (((await env.LEADS_DB.prepare(sql).bind(...b).all()).results) || []);
-    const leagues = await q('SELECT id, email, name, season, num_teams, created_at, updated_at FROM leagues ORDER BY updated_at DESC LIMIT 100');
+    const leagues = await q('SELECT id, email, provider, name, season, num_teams, created_at, updated_at, last_ok_at FROM leagues ORDER BY updated_at DESC LIMIT 100');
     const misses = await q('SELECT provider, provider_player_id, name, position, nfl_team, count, last_seen FROM player_map_misses ORDER BY count DESC LIMIT 50');
     return json({ ok: true, contract: LEAGUE_CONTRACT,
                   leagues: leagues.map(l => ({ ...l, email: undefined })), total: leagues.length, misses }, 200, c);
@@ -16283,6 +16426,31 @@ async function leagueRoutes(request, env, url, ctx) {
     const list = await leagueList(env, email);
     return json({ ok: true, contract: LEAGUE_CONTRACT, leagues: list.map(leaguePublic),
                   defaultId: (list.find(l => l.isDefault) || list[0] || {}).id || null }, 200, c);
+  }
+  // The CBS browser import. The extension posts { provider: 'cbs_browser',
+  // snapshot } from the signed-in Iron Tuna tab, so the session cookie is the
+  // whole authorization; the snapshot is validated in full before a row moves,
+  // and a first import that cannot be saved is deleted rather than left empty.
+  if (path === '/api/leagues/connect') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    if (await rl(env, request, 'lgconnect', 30, 600)) return leagueErr('rate_limited', null, 429, c);
+    const body = await readBody();
+    const pid = String(body.provider || '').toLowerCase();
+    const provider = LEAGUE_PROVIDERS[pid];
+    if (!provider || pid === 'manual') return leagueErr('unsupported_provider', 'Unknown provider', 400, c);
+    if (provider.flag && !flagOn(env, provider.flag)) return leagueErr('provider_disabled', 'The CBS browser import is not enabled on Iron Tuna yet.', 503, c);
+    const raw = body.snapshot;
+    try { cbsBrowserNormalize(raw, await leagueWeekContext(env)); } catch (e) { return leagueErr('invalid_browser_import', null, 400, c); }
+    let r = null;
+    try { r = await leagueBrowserImport(env, email, raw); }
+    catch (e) {
+      if (e && e.code === 'too_many_leagues') return leagueErr('too_many_leagues', null, 400, c);
+      const row = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE email=? AND provider=? AND provider_league_id=?').bind(email, pid, cbsLeagueId(raw.leagueId)).first().catch(() => null);
+      if (row && !row.last_ok_at) await leagueDisconnect(env, email, row).catch(() => {});
+      return json({ ok: false, error: (e && e.code) || 'import_failed', message: 'The import could not be saved. Please retry.', detail: String((e && e.message) || e).slice(0, 200) }, 502, c);
+    }
+    const L = await leagueLoad(env, email, r.id);
+    return json({ ok: true, created: r.created, imported: { teams: r.teams, players: r.players, unmatched: r.unmatched }, league: L ? leaguePublic(L) : null, needsTeam: !!(L && !L.userTeamId), teams: L ? L.teams : [] }, 200, c);
   }
   if (path === '/api/leagues/manual') {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
@@ -16304,6 +16472,9 @@ async function leagueRoutes(request, env, url, ctx) {
     const L = await leagueLoad(env, email, id);
     return json({ ok: true, contract: LEAGUE_CONTRACT, league: leaguePublic(L) }, 200, c);
   }
+  // There is no sync route: a manual league is edited, and a CBS browser
+  // league is refreshed by the extension, which is what the 409 says.
+  if (action === 'sync' && row.provider === 'cbs_browser') return leagueErr('browser_refresh_required', null, 409, c);
   if (action === 'default') {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
     await leagueSetDefault(env, email, id);
