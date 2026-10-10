@@ -470,7 +470,9 @@ p{color:var(--sec);margin:0 0 16px}
   // scoring at the chosen setting is done here with it-league.js (the same
   // engine, pinned by tools/test-scoring.mjs), then the three boards are
   // re-ranked and Market Delta recomputed with the thresholds the API shipped.
-  var data = {}, dataL = {}, preset = 'ppr', horizon = 'week', board = 'ironTuna', pos = 'RB', sortKey = 'rank', sortDir = 1, q = '', hideOut = false;
+  // pos opens on QB (10 Oct 2026, with the rankings hubs): the first chip on
+  // every board in the section is the one a reader lands on here too.
+  var data = {}, dataL = {}, preset = 'ppr', horizon = 'week', board = 'ironTuna', pos = 'QB', sortKey = 'rank', sortDir = 1, q = '', hideOut = false;
   // The Fantasy Analysis / Market Intelligence weight, 0 to 1, and the shrink
   // the worker applies to the market side by how much of it is a quoted
   // market (blendComponents in _worker.js; the same table).
