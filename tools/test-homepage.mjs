@@ -178,14 +178,14 @@ const ARCHIVE_POISON = { ok: true, pieces: [1, 2, 3, 4, 5].map(v => ({
 // pieces expire.
 const THIN = { ok: true, pieces: [
   { kind: 'trade-desk', title: 'Trade Desk', headline: 'Buy the gap: five players the board prices well below consensus',
-    week: 5, publishedAt: AGO(0.4), url: '/in-season/desk/trade-desk/5', byline: { name: 'Evan Brooks' },
+    week: 5, publishedAt: AGO(0.4), url: '/in-season/desk/trade-desk/5', byline: { name: 'Rankings Desk' },
     // A player with no game photograph is named first; one with a photograph second.
     components: [{ n: 1, player: 'Tank Bigsby', headline: 'Bigsby is a buy' }, { n: 2, player: 'Dak Prescott', headline: 'Prescott is a buy' }] },
   { kind: 'underrated', title: 'Most Underrated Player', headline: 'Roman Wilson is the most underrated player in Week 5',
-    week: 5, publishedAt: AGO(0.6), url: '/in-season/desk/underrated/5', byline: { name: 'Evan Brooks' },
+    week: 5, publishedAt: AGO(0.6), url: '/in-season/desk/underrated/5', byline: { name: 'Rankings Desk' },
     components: [{ n: 1, headline: 'His target share is up four weeks running' }] },
   { kind: 'week-in-review', title: 'Week 5 in Review', headline: 'Week 5 in review has harder lessons too',
-    week: 5, publishedAt: AGO(0.7), url: '/in-season/desk/week-in-review/5', byline: { name: 'Mike Baines' },
+    week: 5, publishedAt: AGO(0.7), url: '/in-season/desk/week-in-review/5', byline: { name: 'Usage Desk' },
     components: [{ n: 1, headline: 'Week 5 in review has harder lessons too' }, { n: 2, player: 'Dak Prescott', headline: 'Flournoy beat his ranking' }] }
 ]};
 const SEASON = { ok: true, phase: 'regular', phaseLabel: 'Regular season',
@@ -692,7 +692,7 @@ MODE = 'thin';
        && r.rows.slice(3).map(x => x.href).join(' ') === '/in-season/desk/underrated/5#component-1 /in-season/desk/week-in-review/5#component-2',
      r.rows.map(x => x.href).join(' '));
   ok('a finding card carries its own headline and its story\'s series and byline',
-     r.rows[3].name === 'His target share is up four weeks running' && r.rows[3].series === 'Most Underrated Player' && /Evan Brooks/.test(r.rows[3].meta), JSON.stringify(r.rows[3]));
+     r.rows[3].name === 'His target share is up four weeks running' && r.rows[3].series === 'Most Underrated Player' && /Rankings Desk/.test(r.rows[3].meta), JSON.stringify(r.rows[3]));
   ok('a finding that only repeats its story\'s headline is skipped', !r.rows.some(x => /#component-1$/.test(x.href) && /week-in-review/.test(x.href)));
   ok('a piece whose findings name nobody takes its picture from the players its headline names',
      r.rows[1].face === 'Roman Wilson', String(r.rows[1].face));

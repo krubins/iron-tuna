@@ -24,7 +24,7 @@ Permissions are unchanged: temporary access to the CBS tab where you click the e
 
 ## Status (2026-10-10)
 
-The connector was removed from the site on 2026-09-18 with the other platform connectors and restored on 2026-10-10 as the one CBS path (HANDOFF §127): the API-token route it replaced depended on a token CBS no longer exposes. The code here is 0.2.1 unchanged; the worker half was rewritten onto the saved-league model (`leagueBrowserImport`, `POST /api/leagues/connect`). The release check that was never run is still the release check: load this folder unpacked, import the live league once from a signed-in CBS tab, and confirm the league card on My Leagues. A CBS markup change shows up as one of the reader's "No import was sent" messages in the popup, with the page it could not read.
+The connector was removed from the site on 2026-09-18 with the other platform connectors and restored on 2026-10-10 as the one CBS path (HANDOFF §128): the API-token route it replaced depended on a token CBS no longer exposes. The code here is 0.2.1 unchanged; the worker half was rewritten onto the saved-league model (`leagueBrowserImport`, `POST /api/leagues/connect`). The release check that was never run is still the release check: load this folder unpacked, import the live league once from a signed-in CBS tab, and confirm the league card on My Leagues. A CBS markup change shows up as one of the reader's "No import was sent" messages in the popup, with the page it could not read.
 
 ## Validation status
 

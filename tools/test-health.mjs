@@ -42,7 +42,7 @@ const stubs = {
   propsHealth: async () => null,
   availabilityCacheRead: async () => null, rosSnapshots: async () => [], dfsSalariesRead: async () => null, providerReport: () => ({ providers: {}, unavailable: {} }),
   etParts: () => ({ dow: 'Tue', hour: 9, minute: 0 }), contentReady: async () => true,
-  ANALYSTS: { mercer: { id: 'mercer', name: 'Jack Mercer' } }, ANALYST_HOUSE: { id: 'irontuna', name: 'Iron Tuna' }, newsroomStatus: async () => ({ autoPublish: { on: true }, audit: { ok: true, problems: [] }, legacy: [], routines: [] }),
+  ANALYSTS: { mercer: { id: 'mercer', name: 'Editorial Desk' } }, ANALYST_HOUSE: { id: 'irontuna', name: 'Iron Tuna' }, newsroomStatus: async () => ({ autoPublish: { on: true }, audit: { ok: true, problems: [] }, legacy: [], routines: [] }),
   sectionsFor: (k, l) => (l === 'dfs' ? [] : ['recaps']), runNewsScan: async () => ({ ok: true }), runCallsGrade: async () => ({ ok: true }),
   CONTENT_KINDS: { 'team-recaps': { title: 'Team-by-Team Recaps', day: 'Mon', hour: 6, analyst: 'mercer', lens: 'both' }, 'final-read': { title: 'The Final Read', day: 'Thu', hour: 6, analyst: 'mercer', lens: 'both' } },
   CONTENT_SECTIONS: { 'team-recaps': ['recaps'] },

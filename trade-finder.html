@@ -35,138 +35,56 @@
 <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
+/* ── the trade tools, on the October system ───────────────────────────────
+   2026-10-10: this page was swept onto site.css with the rest of the section
+   and still read as a stack of tinted rounded panels with white cards inside
+   them, glow rings on the chosen tab and the reader's team, a colour bar
+   down the left of every result, a dashed emoji button and 800-weight
+   labels. None of that is the homepage's system. The rules below are the
+   homepage's: paper white, hairline rules and whitespace do the grouping,
+   the only enclosed surfaces are the team boxes (a form) and the reader's
+   own box (the tinted plate with the 3px navy rule), squared controls at
+   4px, sentence-case labels at 13 or 14px, and one 28px key figure per cell
+   set in ink. The class names did not change: tools/test-trade-finder-page.mjs
+   drives the page by them. */
 body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-h1{font-size:clamp(30px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
-h2{font-size:clamp(23px,3vw,28px);margin:34px 0 10px;letter-spacing:.01em}
-.lede{font-size:clamp(20px,2.2vw,23px);color:var(--sec);margin:0 0 26px;max-width:680px}
-p{color:var(--sec);margin:0 0 16px}
-.eyebrow{font-size:14.5px;color:var(--teal);margin-top:42px}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;background:var(--teal);color:#fff;font-weight:600;border-radius:4px;padding:0 24px;border:none;cursor:pointer}
-.btn:hover{background:var(--teal-hover,#083a50);color:#fff;text-decoration:none}
-.btn.alt{background:var(--teal-tint);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
-.btn.small{padding:8px 16px;font-size:15px;box-shadow:none}
-.btn[disabled]{opacity:.5;cursor:default;filter:none}
-.cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:16px 0 8px}
 .wrap.wide{max-width:1080px}
 
-/* ── the finder ─────────────────────────────────────────────────────────── */
-.tf-step{border:1px solid var(--line);border-radius:10px;padding:18px 20px;background:var(--panel);margin:18px 0}
-.tf-step h3{margin:0 0 4px;font-size:18px}
-.tf-step p.sub{margin:0 0 12px;font-size:15px;color:var(--muted)}
-.tf-row{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin:8px 0}
-.tf-seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:#fff}
-.tf-seg button{appearance:none;border:0;background:transparent;color:var(--sec);font:inherit;font-size:15px;font-weight:700;padding:8px 13px;cursor:pointer;border-left:1px solid var(--line)}
-.tf-seg button:first-child{border-left:0} .tf-seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
-.tf-seg button[disabled]{opacity:.45;cursor:default}
-.tf-lab{font-size:14px;color:var(--muted);font-weight:700;margin-right:2px}
-.tf-slots{display:flex;gap:8px;flex-wrap:wrap}
-.tf-slots label{font-size:14px;color:var(--sec);display:inline-flex;flex-direction:column;gap:3px;font-weight:700}
-.tf-slots input{width:56px;font:inherit;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--text)}
-textarea.tf-paste{width:100%;min-height:200px;padding:12px 14px;border-radius:10px;border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;font-size:15.5px;line-height:1.5;resize:vertical}
-textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint)}
-.tf-status{font-size:14.5px;color:var(--muted);margin:8px 0 0;min-height:1.2em}
-.tf-status.err{color:var(--danger)}
-.tf-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:14px}
-.tf-team{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff;position:relative}
-.tf-team.mine{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal-tint)}
-.tf-team input.nm{width:100%;font:inherit;font-weight:800;font-size:16px;border:1px solid transparent;border-radius:6px;padding:4px 6px;margin:-4px -6px 6px;background:transparent;color:var(--text)}
-.tf-team input.nm:hover{border-color:var(--line2);background:#fff}
-.tf-chips{display:flex;flex-wrap:wrap;gap:5px}
-.chip{font-size:13.5px;border:1px solid var(--line2);border-radius:4px;padding:3px 8px 3px 9px;background:var(--panel);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
-.chip i{font-style:normal;color:var(--muted);font-size:12px}
-.chip button{appearance:none;border:0;background:transparent;color:var(--muted);cursor:pointer;font:inherit;line-height:1;padding:0 2px}
-.chip button:hover{color:var(--danger)}
-.chip.ignored{opacity:.55}
-.tf-fix{margin-top:8px;font-size:14px;color:var(--danger)}
-.tf-fix div{display:flex;gap:6px;align-items:center;margin-top:4px}
-.tf-fix span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tf-fix input{width:140px;font:inherit;font-size:14px;padding:4px 6px;border:1px solid var(--line2);border-radius:6px;color:var(--text)}
-.tf-team .mine-btn{margin-top:10px;font-size:13.5px;color:var(--teal);background:transparent;border:1px solid var(--teal);border-radius:4px;padding:3px 10px;cursor:pointer;font-weight:700}
-.tf-team.mine .mine-btn{background:var(--teal);color:#fff}
-.tf-team .kill{position:absolute;top:8px;right:10px;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;line-height:1}
-.tf-team .kill:hover{color:var(--danger)}
-.tf-team .cnt{font-size:13px;color:var(--muted);margin-top:8px}
-.tf-slider{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.tf-slider input[type=range]{width:220px;accent-color:var(--teal)}
-.tf-slider .end{font-size:14px;color:var(--muted);font-weight:700}
-select.tf-sel{font:inherit;font-size:15.5px;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;background:#fff;color:var(--text);max-width:100%}
-.tf-bar{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:baseline;border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:10px;padding:14px 18px;background:var(--panel);margin:18px 0 10px}
-.tf-bar .k{font-size:12px;font-weight:800;color:var(--muted);display:block}
-.tf-bar .v{font-size:19px;font-weight:700;line-height:1.2}
-.tf-trades{display:grid;gap:14px;margin-top:14px}
-.tf-trade{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:#fff}
-.tf-trade h3{margin:0 0 10px;font-size:17.5px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.tf-trade h3 .with{font-weight:400;color:var(--muted);font-size:14.5px}
-.tf-sides{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.tf-side{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel)}
-.tf-side .who{font-size:12px;font-weight:800;color:var(--muted)}
-.tf-side .gain{font-size:21px;font-weight:800;color:var(--teal);margin:2px 0 6px}
-.tf-side .gain small{font-size:13.5px;font-weight:400;color:var(--muted)}
-.tf-side .give{font-size:14.5px;color:var(--sec);margin:6px 0 0;line-height:1.55}
-.tf-side .give b{color:var(--text)}
-.tf-side .lines{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.5}
-.tf-note{font-size:14px;color:var(--muted);margin:10px 0 0;line-height:1.6}
-.tf-empty{color:var(--muted);font-size:15.5px;border:1px dashed var(--line2);border-radius:10px;padding:16px;margin-top:14px}
-.method{border-top:1px solid var(--line);margin-top:30px;padding-top:16px}
-.method h3{font-size:17px;margin:0 0 8px}
-.method p{font-size:14.5px;color:var(--muted);line-height:1.65;margin:0 0 9px}
-.method b{color:var(--sec)}
-.tf-more{margin-top:14px}
-.tf-more summary{cursor:pointer;color:var(--teal);font-weight:700;font-size:15px}
-.tf-more[open] summary{margin-bottom:10px}
-.tf-verdict{border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:10px;padding:14px 18px;background:#fff;margin:4px 0 4px}
-.tf-verdict.win{border-left-color:var(--teal)}
-.tf-verdict.lose{border-left-color:var(--danger)}
-.tf-verdict h3{margin:0 0 4px;font-size:19px}
-.tf-verdict p{margin:0;font-size:15px}
-.tf-side .gain.neg{color:var(--danger)}
-.tf-alt{font-size:17px;margin:22px 0 0}
-.tf-pair{display:inline-flex;align-items:center;gap:8px}
-#tf-settings{border-top:1px solid var(--line);padding-top:12px}
-.tf-team-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.tf-team .tf-team-h input.nm{flex:1 1 auto;width:auto;min-width:0;margin:-4px 0 0 -6px}
-.tf-mine-pick{display:inline-flex;align-items:center;gap:4px;font-size:13.5px;font-weight:700;color:var(--teal);white-space:nowrap;cursor:pointer}
-.tf-ac{position:relative;margin-top:8px}
-.tf-type{width:100%;font:inherit;font-size:15px;padding:7px 10px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--text)}
-.tf-type.bad{border-color:var(--danger)}
-.tf-sug{position:absolute;left:0;right:0;top:100%;z-index:20;list-style:none;margin:2px 0 0;padding:4px 0;background:#fff;border:1px solid var(--line2);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto}
-.tf-sug li{display:flex;gap:8px;align-items:baseline;padding:6px 10px;font-size:14.5px;color:var(--text);cursor:pointer}
-.tf-sug li i{margin-left:auto;font-style:normal;font-size:13px;color:var(--muted);white-space:nowrap}
-.tf-sug li.on,.tf-sug li:hover{background:var(--teal-tint)}
-.tf-shot{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:5px 10px;border:1px dashed var(--line2);border-radius:6px;font-size:13.5px;font-weight:700;color:var(--teal);cursor:pointer}
-.tf-shot input{display:none}
-.tf-team.over{border-color:var(--teal);background:var(--teal-tint)}
-.tf-send-h{font-weight:800;font-size:16px;margin-bottom:6px}
-.tf-send-h span{font-weight:400;font-size:14px;color:var(--muted)}
-.tf-send-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0}
-.tf-to{font-size:13.5px;color:var(--muted)}
-.tf-to select{font:inherit;font-size:13.5px;padding:3px 6px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--text)}
-.tf-none{font-size:14px;color:var(--muted)}
-.tf-hz{margin-top:8px;font-size:13.5px;color:var(--muted)}
-.tf-hz.noted b{color:var(--teal)}
-textarea.tf-factors{min-height:110px}
-.tf-sides.multi{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-.tf-take{border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:10px;padding:14px 18px;background:var(--panel);margin-top:14px}
-.tf-take h3{margin:0 0 6px;font-size:17px}
-.tf-take p{margin:0 0 8px;font-size:15px}
-.tf-take .tf-take-note,.tf-take .tf-take-wait{font-size:13.5px;color:var(--muted)}
-/* ── the two tools ──────────────────────────────────────────────────────── */
-/* One page, two tabs, one set of boxes. The tab reorders the steps with flex
-   order and hides the one the other tool has no use for, so a roster typed
-   under the Evaluator is still there under the Finder. */
-.tf-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 4px}
-.tf-tabs button{appearance:none;font:inherit;cursor:pointer;flex:1 1 240px;text-align:left;border:1px solid var(--line2);border-radius:10px;background:#fff;color:var(--text);padding:12px 16px;display:flex;flex-direction:column;gap:3px}
-.tf-tabs button b{font-size:17px}
-.tf-tabs button span{font-size:14px;color:var(--muted);font-weight:400;line-height:1.4}
-.tf-tabs button:hover{border-color:var(--teal)}
-.tf-tabs button[aria-selected="true"]{border-color:var(--teal);background:var(--teal-tint);box-shadow:0 0 0 2px var(--teal-tint)}
-.tf-tabs button[aria-selected="true"] b{color:var(--teal)}
-.tf-tabs button:focus-visible{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint)}
-#tf-flow{display:flex;flex-direction:column;margin-top:14px}
-#tf-flow .tf-step{margin:0 0 18px}
+/* The page head, in the hero's own type: one headline, one sentence. */
+.art-head{padding-top:var(--space-6)}
+.eyebrow{font-size:var(--fs-14);color:var(--muted);margin:0 0 var(--space-3)}
+h1{font-size:clamp(34px,4.2vw,56px);font-weight:700;line-height:1.05;letter-spacing:-.03em;margin:0 0 var(--space-4);max-width:20ch}
+h2{font-size:var(--fs-28);margin:var(--space-6) 0 var(--space-3);letter-spacing:-.01em}
+.lede{font-size:var(--fs-19);color:var(--sec);margin:0 0 var(--space-6);max-width:56ch;line-height:1.5}
+p{color:var(--sec);margin:0 0 var(--space-4)}
+
+/* Buttons: squared, 44px, one primary per view. The secondary is white with
+   the control border, as the system's .btn-secondary. */
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;background:var(--teal);color:#fff;font:inherit;font-size:var(--fs-16);font-weight:600;border-radius:var(--radius-sm);padding:0 var(--space-5);border:1px solid var(--teal);cursor:pointer;line-height:1.2;white-space:nowrap}
+.btn:hover{background:var(--teal-hover);border-color:var(--teal-hover);color:#fff;text-decoration:none}
+.btn.alt{background:#fff;color:var(--text);border-color:var(--line2)}
+.btn.alt:hover{background:var(--panel);color:var(--text)}
+.btn.small{min-height:36px;padding:0 var(--space-3);font-size:var(--fs-14)}
+.btn[disabled]{opacity:.45;cursor:default;filter:none}
+.cta-row{display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:center;margin:var(--space-5) 0 0}
+
+/* ── the two tools ──────────────────────────────────────────────────────────
+   A tab row on a hairline, as the header marks the current page: the chosen
+   tool carries a 3px bar at the foot of its tab, nothing is boxed and nothing
+   glows. The description stays under each name at 14px. */
+.tf-tabs{display:flex;gap:0 var(--space-6);flex-wrap:wrap;margin:0;border-bottom:1px solid var(--line)}
+.tf-tabs button{appearance:none;font:inherit;cursor:pointer;flex:0 1 auto;max-width:34ch;text-align:left;border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--text);padding:var(--space-3) 0 var(--space-4);margin-bottom:-1px;display:flex;flex-direction:column;gap:3px}
+.tf-tabs button b{font-size:var(--fs-19);font-weight:600;line-height:1.2;color:var(--muted)}
+.tf-tabs button span{font-size:var(--fs-14);color:var(--muted);font-weight:400;line-height:1.4}
+.tf-tabs button:hover b{color:var(--text)}
+.tf-tabs button[aria-selected="true"]{border-bottom-color:var(--teal)}
+.tf-tabs button[aria-selected="true"] b,.tf-tabs button[aria-selected="true"] span{color:var(--text)}
+.tf-tabs button:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
+#tf-flow{display:flex;flex-direction:column;margin-top:0}
+#tf-flow .tf-step{margin:0}
 #tf-flow[data-tool="evaluator"] #tf-deal{order:1}
 #tf-flow[data-tool="evaluator"] #tf-rosters{order:2}
 #tf-flow[data-tool="evaluator"] #tf-context{order:3}
@@ -174,9 +92,172 @@ textarea.tf-factors{min-height:110px}
 #tf-flow[data-tool="finder"] #tf-rosters{order:1}
 #tf-flow[data-tool="finder"] #tf-context{order:2}
 #tf-flow[data-tool="evaluator"] #tf-find,#tf-flow[data-tool="finder"] #tf-eval{display:none}
-.tf-step h3 .opt{font-weight:400;color:var(--muted);font-size:15px}
-.tf-side .lines.bare{color:var(--sec);font-style:italic}
-@media(max-width:640px){.tf-sides,.tf-sides.multi{grid-template-columns:1fr}.tf-slider input[type=range]{width:160px}}
+
+/* ── the steps ──────────────────────────────────────────────────────────────
+   Each step is a section under a hairline, not a panel: a 23px heading, the
+   instruction in 16px secondary, then the boxes. */
+.tf-step{border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-6) 0 var(--space-5);background:transparent;margin:0}
+/* The first step under the tab row sits on the row's own hairline. With the
+   synced-league box shown above the flow, that box takes the place and the
+   first step gets its rule back. */
+.tf-step:first-child,#tf-flow .tf-step:first-child,#tf-synced{border-top:0}
+#tf-synced:not([hidden])~#tf-flow .tf-step:first-child{border-top:1px solid var(--line)}
+.tf-step h3{margin:0 0 var(--space-2);font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.tf-step h3 .opt{font-weight:400;color:var(--muted);font-size:var(--fs-16);letter-spacing:0}
+.tf-step p.sub{margin:0 0 var(--space-4);font-size:var(--fs-16);color:var(--sec);max-width:72ch;line-height:1.5}
+.tf-row{display:flex;gap:var(--space-3) var(--space-5);flex-wrap:wrap;align-items:center;margin:var(--space-3) 0}
+.tf-lab{font-size:var(--fs-14);color:var(--text);font-weight:600;margin-right:2px}
+.tf-pair{display:inline-flex;align-items:center;gap:var(--space-2)}
+.tf-status{font-size:var(--fs-14);color:var(--muted);margin:var(--space-2) 0 0;min-height:1.2em}
+.tf-status.err{color:var(--danger)}
+
+/* Segmented controls: squared, the chosen segment ink-filled, as site.css
+   draws .is-seg. */
+.tf-seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:var(--radius-sm);overflow:hidden;background:#fff}
+.tf-seg button{appearance:none;border:0;background:transparent;color:var(--sec);font:inherit;font-size:var(--fs-14);font-weight:600;min-height:40px;padding:0 14px;cursor:pointer;border-left:1px solid var(--line2);white-space:nowrap}
+.tf-seg button:first-child{border-left:0}
+.tf-seg button:hover{background:var(--panel);color:var(--text)}
+.tf-seg button[aria-pressed="true"]{background:var(--text);color:#fff}
+.tf-seg button[disabled]{opacity:.45;cursor:default}
+.tf-seg button:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
+.tf-slots{display:flex;gap:var(--space-2) var(--space-3);flex-wrap:wrap}
+.tf-slots label{font-size:var(--fs-13);color:var(--muted);display:inline-flex;flex-direction:column;gap:4px;font-weight:600}
+.tf-slots input{width:56px;min-height:40px;font:inherit;font-size:var(--fs-16);padding:0 var(--space-2);border:1px solid var(--line2);border-radius:var(--radius-input);background:#fff;color:var(--text)}
+select.tf-sel{font:inherit;font-size:var(--fs-16);min-height:40px;padding:0 var(--space-3);border:1px solid var(--line2);border-radius:var(--radius-input);background:#fff;color:var(--text);max-width:100%}
+.tf-slider{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
+.tf-slider input[type=range]{width:220px;accent-color:var(--teal)}
+.tf-slider .end{font-size:var(--fs-14);color:var(--muted);font-weight:600}
+textarea.tf-paste{width:100%;min-height:200px;padding:var(--space-3);border-radius:var(--radius-input);border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;font-size:var(--fs-16);line-height:1.5;resize:vertical}
+textarea.tf-factors{min-height:110px}
+textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,.tf-slots input:focus,select.tf-sel:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint)}
+.tf-more{margin-top:var(--space-5);border-top:1px solid var(--line);padding-top:var(--space-4)}
+.tf-more summary{cursor:pointer;color:var(--teal);font-weight:600;font-size:var(--fs-16)}
+.tf-more[open] summary{margin-bottom:var(--space-3)}
+#tf-settings{border-top:1px solid var(--line);padding-top:var(--space-4)}
+
+/* ── the team boxes ─────────────────────────────────────────────────────────
+   The form: one outlined box per team, white, a hairline border, 10px. The
+   reader's own team is the tinted plate with the 3px navy rule, which is how
+   every board in the section marks its one enclosed surface; no ring. */
+.tf-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:var(--space-4);margin-top:var(--space-4)}
+.tf-team{border:1px solid var(--line);border-top:3px solid var(--line);border-radius:var(--radius-md);padding:var(--space-4);background:#fff;position:relative}
+.tf-team.mine{border-color:var(--panel);border-top-color:var(--mast);background:var(--panel)}
+.tf-team.over{border-color:var(--teal);background:var(--teal-tint)}
+.tf-team-h{display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2)}
+.tf-team input.nm{width:100%;font:inherit;font-weight:600;font-size:var(--fs-16);border:1px solid transparent;border-radius:var(--radius-input);padding:4px 6px;margin:-4px -6px 6px;background:transparent;color:var(--text)}
+.tf-team .tf-team-h input.nm{flex:1 1 auto;width:auto;min-width:0;margin:-4px 0 0 -6px}
+.tf-team input.nm:hover{border-color:var(--line2);background:#fff}
+.tf-mine-pick{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-13);font-weight:600;color:var(--text);white-space:nowrap;cursor:pointer}
+.tf-mine-pick input{accent-color:var(--teal);margin:0}
+.tf-chips{display:flex;flex-wrap:wrap;gap:6px}
+/* A player on a roster: a name and his position, 14px, white on a hairline.
+   site.css's .chip is a 36px filter button; every one of its traits is set
+   back here. */
+.chip{font-size:var(--fs-14);font-weight:400;min-height:0;border:1px solid var(--line2);border-radius:var(--radius-sm);padding:3px 6px 3px 8px;background:#fff;color:var(--text);white-space:nowrap;display:inline-flex;align-items:center;gap:6px;cursor:default;line-height:1.4}
+.chip:hover{background:#fff;color:var(--text)}
+.chip i{font-style:normal;color:var(--muted);font-size:var(--fs-13)}
+.chip button{appearance:none;border:0;background:transparent;color:var(--muted);cursor:pointer;font:inherit;font-size:var(--fs-16);line-height:1;padding:0 2px;min-width:20px;min-height:20px}
+.chip button:hover{color:var(--text)}
+.chip.ignored{color:var(--muted);border-style:dashed}
+.tf-fix{margin-top:var(--space-2);font-size:var(--fs-14);color:var(--danger)}
+.tf-fix div{display:flex;gap:6px;align-items:center;margin-top:4px}
+.tf-fix span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tf-fix input{width:140px;font:inherit;font-size:var(--fs-14);padding:4px 6px;border:1px solid var(--line2);border-radius:var(--radius-input);color:var(--text)}
+.tf-team .kill{position:absolute;top:8px;right:10px;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;line-height:1}
+.tf-team .kill:hover{color:var(--text)}
+.tf-team .cnt{font-size:var(--fs-13);color:var(--muted);margin-top:var(--space-2)}
+.tf-hz{margin-top:var(--space-2);font-size:var(--fs-13);color:var(--muted)}
+.tf-hz.noted b{color:var(--text)}
+.tf-ac{position:relative;margin-top:var(--space-2)}
+.tf-type{width:100%;font:inherit;font-size:var(--fs-16);min-height:40px;padding:0 var(--space-3);border:1px solid var(--line2);border-radius:var(--radius-input);background:#fff;color:var(--text)}
+.tf-type.bad{border-color:var(--danger)}
+/* The one floating surface on the page: the typeahead list over the box
+   below it needs an edge, so it keeps a hairline and a soft lift. */
+.tf-sug{position:absolute;left:0;right:0;top:100%;z-index:20;list-style:none;margin:2px 0 0;padding:4px 0;background:#fff;border:1px solid var(--line2);border-radius:var(--radius-input);box-shadow:0 4px 14px rgba(17,20,24,.10);max-height:260px;overflow:auto}
+.tf-sug li{display:flex;gap:8px;align-items:baseline;padding:6px 10px;font-size:var(--fs-14);color:var(--text);cursor:pointer}
+.tf-sug li i{margin-left:auto;font-style:normal;font-size:var(--fs-13);color:var(--muted);white-space:nowrap}
+.tf-sug li.on,.tf-sug li:hover{background:var(--teal-tint)}
+/* The screenshot control is a secondary button, not a dashed well. */
+.tf-shot{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin-top:var(--space-3);min-height:36px;padding:0 var(--space-3);border:1px solid var(--line2);border-radius:var(--radius-sm);background:#fff;font-size:var(--fs-14);font-weight:600;color:var(--text);cursor:pointer}
+.tf-shot:hover{background:var(--panel)}
+.tf-team.mine .tf-shot:hover{background:var(--elev)}
+.tf-shot input{display:none}
+.tf-send-h{font-weight:600;font-size:var(--fs-16);margin-bottom:var(--space-2)}
+.tf-send-h span{font-weight:400;font-size:var(--fs-14);color:var(--muted)}
+.tf-send-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin:4px 0}
+.tf-to{font-size:var(--fs-13);color:var(--muted)}
+.tf-to select{font:inherit;font-size:var(--fs-13);padding:3px 6px;border:1px solid var(--line2);border-radius:var(--radius-input);background:#fff;color:var(--text)}
+.tf-none{font-size:var(--fs-14);color:var(--muted)}
+
+/* ── the results ────────────────────────────────────────────────────────────
+   A hairline, then the figure row (a 13px label over the key figure, cells
+   divided by hairlines, as the homepage's market row), the verdict as a
+   heading and a sentence, and each trade as a ledger entry: a hairline above,
+   the two sides as columns with a hairline between. The gain is the one 28px
+   figure and it is set in ink either way: the verdict's words carry the
+   meaning, and green on this site is reserved for a positive market edge. */
+#tf-results{border-top:1px solid var(--line);margin-top:var(--space-6);padding-top:var(--space-5)}
+.tf-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-4) var(--space-5);border:0;border-radius:0;padding:0;background:transparent;margin:0 0 var(--space-6)}
+.tf-bar > span{display:block;min-width:0;border-left:1px solid var(--line);padding-left:var(--space-4)}
+.tf-bar > span:first-child{border-left:0;padding-left:0}
+.tf-bar .k{font-size:var(--fs-13);font-weight:400;color:var(--muted);display:block;line-height:1.4;margin-bottom:2px}
+.tf-bar .v{font-size:var(--fs-23);font-weight:600;line-height:1.15;letter-spacing:-.01em;color:var(--text);overflow-wrap:anywhere}
+.tf-bar .v .s{font-size:var(--fs-14);color:var(--muted);font-weight:400;letter-spacing:0}
+.tf-verdict{border:0;border-radius:0;padding:0;background:transparent;margin:0 0 var(--space-5)}
+.tf-verdict h3{margin:0 0 var(--space-2);font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.tf-verdict p{margin:0;font-size:var(--fs-16);max-width:72ch}
+.tf-trades{display:grid;gap:0;margin-top:0}
+.tf-trade{border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-5) 0;background:transparent}
+.tf-trade h3{margin:0 0 var(--space-4);font-size:var(--fs-19);font-weight:600;display:flex;align-items:baseline;gap:var(--space-3);flex-wrap:wrap}
+.tf-trade h3 .with{font-weight:400;color:var(--muted);font-size:var(--fs-14)}
+/* The player's face on the heading comes from /player-search.js as a 52px
+   rounded square with 800-weight initials; here it is the homepage's face, a
+   circle with the initials at 600. */
+.tf-trade h3 .it-player-face{border-radius:50%;border:0;font-weight:600;font-size:var(--fs-14)}
+.tf-trade h3 .it-player-face i{font-weight:600;font-size:var(--fs-14)}
+.tf-sides{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5)}
+.tf-sides.multi{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.tf-side{border:0;border-left:1px solid var(--line);border-radius:0;padding:0 0 0 var(--space-4);background:transparent;min-width:0}
+.tf-side:first-child{border-left:0;padding-left:0}
+.tf-side .who{font-size:var(--fs-13);font-weight:400;color:var(--muted);line-height:1.4}
+.tf-side .gain{font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.1;color:var(--text);margin:4px 0 var(--space-3);font-variant-numeric:tabular-nums}
+.tf-side .gain.neg{color:var(--text)}
+.tf-side .gain small{font-size:var(--fs-14);font-weight:400;color:var(--muted);letter-spacing:0}
+.tf-side .give{font-size:var(--fs-16);color:var(--sec);margin:0;line-height:1.55}
+.tf-side .give b{color:var(--text)}
+.tf-side .lines{font-size:var(--fs-14);color:var(--muted);margin-top:var(--space-2);line-height:1.5}
+.tf-side .lines.bare{color:var(--sec);font-style:normal}
+.tf-alt{font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;margin:var(--space-6) 0 var(--space-3)}
+.tf-empty{color:var(--muted);font-size:var(--fs-16);border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-5) 0 0;margin-top:0;line-height:1.5}
+.tf-note{font-size:var(--fs-14);color:var(--muted);margin:var(--space-4) 0 0;line-height:1.5;max-width:72ch}
+/* The model's read of the notes: under the numbers, labelled as an estimate
+   with the amber disclosure label, no colour bar. */
+.tf-take{border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-5) 0 0;background:transparent;margin-top:var(--space-5)}
+.tf-take p{max-width:72ch}
+.tf-take h3{margin:0 0 var(--space-3);font-size:var(--fs-19);font-weight:600}
+.tf-take p{margin:0 0 var(--space-3);font-size:var(--fs-16);color:var(--sec)}
+.tf-take .tf-take-note,.tf-take .tf-take-wait{font-size:var(--fs-13);color:var(--muted)}
+.tf-take .is-tag{margin:0 0 var(--space-2)}
+
+/* The method, as prose under a hairline. */
+/* The rule runs the column; the prose stops at 72ch. */
+.method{border-top:1px solid var(--line);margin-top:var(--space-8);padding-top:var(--space-5)}
+.method p{max-width:72ch}
+.method h3{font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;margin:0 0 var(--space-3)}
+.method p{font-size:var(--fs-16);color:var(--sec);line-height:1.55;margin:0 0 var(--space-3)}
+.method b{color:var(--text)}
+
+@media(max-width:640px){
+  .tf-sides,.tf-sides.multi{grid-template-columns:1fr;gap:var(--space-4)}
+  .tf-side{border-left:0;border-top:1px solid var(--line);padding:var(--space-3) 0 0}
+  .tf-side:first-child{border-top:0;padding-top:0}
+  .tf-bar{grid-template-columns:1fr 1fr;gap:var(--space-4)}
+  .tf-bar > span{border-left:0;padding-left:0}
+  .tf-slider input[type=range]{width:160px}
+  .tf-tabs{gap:0 var(--space-5)}
+  .tf-tabs button{flex:1 1 100%;max-width:none;padding-bottom:var(--space-3)}
+  .tf-step{padding:var(--space-5) 0 var(--space-4)}
+}
 </style>
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/trade-finder","name":"Trade Tools: Trade Evaluator and Trade Finder","description":"Judge a trade or find one. The Trade Evaluator scores every team in a proposed deal at your scoring, with the rosters optional. The Trade Finder takes two to four rosters, typed or screenshotted, and returns the trades that improve both lineups, each on its own horizon: this week, the next three, the rest of the season, or the fantasy playoffs.","url":"https://irontuna.com/trade-finder","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/trade-finder"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Trade Tools: Trade Evaluator and Trade Finder"}]}]}</script>
 </head>
@@ -293,7 +374,7 @@ textarea.tf-factors{min-height:110px}
       </div>
     </div>
     <div class="tf-row"><span class="tf-lab">Balance</span>
-      <div class="tf-slider"><span class="end">Even</span><input type="range" id="tf-tilt" min="0" max="100" value="0" aria-label="Balance between even and in your favor"><span class="end">In my favor</span><span id="tf-tilt-note" style="font-size:14px;color:var(--muted)"></span></div>
+      <div class="tf-slider"><span class="end">Even</span><input type="range" id="tf-tilt" min="0" max="100" value="0" aria-label="Balance between even and in your favor"><span class="end">In my favor</span><span id="tf-tilt-note" class="tf-status" style="margin:0"></span></div>
     </div>
     <div class="tf-row"><span class="tf-lab">Package</span>
       <div class="tf-seg" id="tf-size" role="group" aria-label="Package size">
@@ -608,7 +689,7 @@ textarea.tf-factors{min-height:110px}
               + '<datalist id="' + dl + '">' + optionsFor(sug) + '</datalist>'
               + '<button type="button" class="btn alt small" data-drop="' + i + ':' + k + '">drop</button></div>';
           }).join('') + '</div>' : '')
-        + '<label class="tf-shot"><input type="file" accept="image/*" multiple data-shot="' + i + '">&#128247; Add a roster screenshot</label>'
+        + '<label class="tf-shot"><input type="file" accept="image/*" multiple data-shot="' + i + '">Add a roster screenshot</label>'
         + '<div class="tf-hz" data-hz="' + i + '"></div>'
         + '<div class="cnt">' + tradeable + ' tradeable' + (t.players.length !== tradeable ? ' (kickers and defenses ignored)' : '') + '</div>'
         + '</div>';
@@ -869,7 +950,7 @@ textarea.tf-factors{min-height:110px}
   // player by the same key the board uses, so they land on the pool without
   // a parse. The desk's own matches (both lineups must gain) are shown too.
   function tradeCard(t) {
-    return '<div class="is-card" style="margin:10px 0"><span class="is-tag is-live">TRADE MATCH · ' + esc(t.partner) + '</span>' +
+    return '<div class="is-card" style="margin:10px 0"><span class="is-tag is-live">Trade match · ' + esc(t.partner) + '</span>' +
       '<h3>You receive: ' + t.receive.map(function (p) { return esc(p.name) + ' (' + esc(p.position) + ')'; }).join(' + ') + '</h3>' +
       '<p><b>' + esc(t.partner) + ' receives:</b> ' + t.give.map(function (p) { return esc(p.name) + ' (' + esc(p.position) + ')'; }).join(' + ') + '</p>' +
       '<p><b>Why it makes sense:</b></p><ul>' + t.why.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul>' +
@@ -1204,7 +1285,7 @@ textarea.tf-factors{min-height:110px}
   }
   function scoringName() { return preset === 'custom' && L && L.label ? L.label() : preset === 'half' ? 'Half PPR' : preset === 'standard' ? 'Standard' : 'PPR'; }
   function paintBar(name, perWeek, h, judged, bare) {
-    $('tf-bar').innerHTML = '<span><span class="k">Your team</span><span class="v">' + esc(name) + '</span></span><span><span class="k">Your lineup</span><span class="v">' + (bare ? '&mdash; <span style="font-size:13.5px;color:var(--muted);font-weight:400">no roster entered</span>' : n1(perWeek) + ' <span style="font-size:13.5px;color:var(--muted);font-weight:400">pts/wk, ' + esc(HORIZONS[h]) + '</span>') + '</span></span>'
+    $('tf-bar').innerHTML = '<span><span class="k">Your team</span><span class="v">' + esc(name) + '</span></span><span><span class="k">Your lineup</span><span class="v">' + (bare ? '&mdash; <span class="s">no roster entered</span>' : n1(perWeek) + ' <span class="s">pts/wk, ' + esc(HORIZONS[h]) + '</span>') + '</span></span>'
       + '<span><span class="k">Teams</span><span class="v">' + count + '</span></span>'
       + '<span><span class="k">Scoring</span><span class="v">' + esc(scoringName()) + '</span></span>'
       // The balance only orders a search; a trade the reader brought is judged as it stands.

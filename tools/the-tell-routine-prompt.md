@@ -40,7 +40,7 @@ Three verdicts, and they are the chip classes: **Beats his rank** (`chip up`), *
 
 `the-tell.html` is the source of truth. The newest edition goes first, immediately after `<div class="entries">`.
 
-**The voice.** The column is bylined **Artie Kesselman**, a pen name the page discloses in its method box. Write in his register: observational, dry, mildly exasperated, the comedy of noticing a mundane absurdity in a number and saying it plainly. Short sentences. The joke is always the number; never a joke instead of a number. Every entry states its strongest counterargument out loud (the Derrick Henry launch entry is the model: "if the touchdowns come, the rank is right and this entry is wrong"). Roughly a 10th-grade reading level. **Never name or imitate a real writer, comedian or show by name in the copy.** No em dashes in the prose; use a period, a colon or a comma.
+**The voice.** The column runs under the **Rankings Desk** byline, an AI editorial desk, and the page's method box says so. There is no pen name and no invented person: never give the column, or any entry, a human author's name. Write in the column's register: observational, dry, mildly exasperated, the comedy of noticing a mundane absurdity in a number and saying it plainly. Short sentences. The joke is always the number; never a joke instead of a number. Every entry states its strongest counterargument out loud (the Derrick Henry launch entry is the model: "if the touchdowns come, the rank is right and this entry is wrong"). Roughly a 10th-grade reading level. **Never name or imitate a real writer, comedian or show by name in the copy.** No em dashes in the prose; use a period, a colon or a comma.
 
 ## One edition per week — check before you write
 
@@ -121,7 +121,7 @@ Insert exactly one edition block at the top of `<div class="entries">`, matching
 </div>
 
 <div class="method">
-<p><b>The grade on the Month D edition.</b> One or two sentences on how last week's six did as a group, in Artie's voice.</p>
+<p><b>The grade on the Month D edition.</b> One or two sentences on how last week's six did as a group, in the column's voice.</p>
 <table class="grade">
 <thead><tr><th>Player</th><th>Called</th><th>Through</th><th>Actual / g</th><th>Projected / g</th><th>Grade</th></tr></thead>
 <tbody>
@@ -148,7 +148,7 @@ Insert exactly one edition block at the top of `<div class="entries">`, matching
 
 <article class="call tell" id="tell-YYYY-MM-DD-1">
 <div class="cmeta"><span class="chip up">Beats his rank</span><span class="cpos">RB</span><span class="cteam">CIN</span><span class="cdate">Sep 15</span></div>
-<h2>The headline names the player AND the tension, in Artie&rsquo;s voice</h2>
+<h2>The headline names the player AND the tension, in the column&rsquo;s voice</h2>
 <p>Three paragraphs. Open on the number that is absurd. Then the mechanism, with the second number. Then the counterargument, stated as if you believed it, and why the tell still wins.</p>
 <p class="cnum"><span>Touchdown share <b>22.8%</b></span><span>Cincinnati implied <b>26.0</b> ppg, <b>4th</b></span><span>Projected receptions <b>64</b></span></p>
 <p class="who"><b>The tell:</b> <b>Player Name</b> (CIN, RB). One or two sentences: the one number the rank rests on, and why it will or will not hold.</p>

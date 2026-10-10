@@ -7856,11 +7856,13 @@ that failed rather than one that has not published yet.
 
 ### The byline
 
-The column runs under **Artie Kesselman**, a pen name, and the method box says
-so in as many words under "About the byline". The name exists because a standing
-weekly column needs someone answering for last week's calls, and because the
-voice — dry, mildly exasperated, observational — is a voice rather than the
-site's institutional register. **The JSON-LD author stays `Iron Tuna`, the
+The column ran under a pen name until 2026-10-10, when every fictional byline
+on the site was retired (§127); it carries the Rankings Desk byline now, and the
+method box says so under "About the byline". The pen name existed because a
+standing weekly column needs someone answering for last week's calls, and
+because the voice — dry, mildly exasperated, observational — is a voice rather
+than the site's institutional register. The desk answers for the calls now; the
+voice is the column's own. **The JSON-LD author stays `Iron Tuna`, the
 organization.** Do not put the pen name in structured data: a fictional byline
 in prose is a column convention, and a fictional byline in machine-readable
 authorship metadata is a claim about a person who does not exist.
@@ -7996,7 +7998,7 @@ table and the code cannot disagree.
   the regular season and the `/lead` archive stays readable.
 - **Retained (Routines):** the projection updates (data jobs, not stories)
   and The Tell (a distinct function nothing on the calendar duplicates;
-  registered on Evan Brooks's desk, byline unchanged, see 68j).
+  registered on the Rankings Desk, byline unchanged, see 68j).
 - **Retired / merged (desk kinds):** all eleven of §56's kinds. Their rows
   in `content_pieces` stay readable at their old URLs (`/in-season/desk/
   <kind>/<week>` renders a legacy row with its original sections); none can
@@ -8041,11 +8043,11 @@ behavior at the quarter hours.
 
 ### 68d. The staff, and the one rivalry
 
-`ANALYSTS`: Jack Mercer (editor), Nate Vega (market), Evan Brooks
-(rankings), Mike Raines (usage), Chris Dalton (QB/offense), Tyler Grant
-(waivers), Sam Porter (matchups, K/DST), Lena Park (DFS). Each has a beat, a
+`ANALYSTS`: Editorial Desk (editor), Market Desk (market), Rankings Desk
+(rankings), Usage Desk (usage), Quarterback Desk (QB/offense), Waiver Desk
+(waivers), Matchups Desk (matchups, K/DST), DFS Desk (DFS). Each has a beat, a
 personality, a philosophy, assignments and a `voice` the writer is handed.
-`RIVALRY_PAIR` is Vega/Brooks and `newsroomAudit()` fails if a second pair
+`RIVALRY_PAIR` is Market/Rankings and `newsroomAudit()` fails if a second pair
 ever appears. `/analysts` is the staff page with the AI disclosure
 (`AI_DISCLOSURE`, also on every piece payload); `/analysts/<id>` is one
 analyst: beat, recent pieces, the record of calls, and for the two rivals
@@ -8091,7 +8093,7 @@ and at `w`. `/api/blend?horizon=&pos=&scoring=&w=` serves it;
 recomputes in the browser from the same two components (the same shrink
 table, `tools/test-vegas-weight.mjs`-style discipline: a calculation, never
 a reorder). `/api/disagreements` lists where the two ends disagree, and carries the
-week's **Vega vs. Brooks** column (§68q); the front page and `/fantasy`
+week's **Market Desk vs. Rankings Desk** column (§68q); the front page and `/fantasy`
 print that column.
 
 ### 68g. The writer and the fact check
@@ -8138,7 +8140,7 @@ defaults from `?lens=`, the referrer, or the lane the reader last chose on
 the front page), the byline, the rivalry module, the calls, the prior
 calls, the sources-and-freshness table and the packet; `analysts.html`,
 `analyst.html`; the front page's **The Newsroom** band in both lanes and
-**Vega vs. Brooks** in the fantasy lane; `/fantasy` and `/dfs` each carry
+**Market Desk vs. Rankings Desk** in the fantasy lane; `/fantasy` and `/dfs` each carry
 the feed in their lens, `/dfs` the contest selector and the **Value &
 Leverage** board.
 
@@ -8172,10 +8174,10 @@ re-enables the retired social threads.
 ### 68j. Open items, and what was left alone
 
 - **The Tell's byline.** The specification's roster has eight names and no
-  ninth. The Tell is bylined to a pen name, Artie Kesselman, written by the
-  owner hours before this migration. It is registered on Evan Brooks's desk
-  (his page links it and says so) and its Routine, page and prompt are
-  untouched pending the owner's call on re-bylining it.
+  ninth. The Tell was bylined to a pen name, written by the owner hours
+  before this migration. It is registered on the Rankings Desk (its page
+  links it and says so). Resolved 2026-10-10 (§127): the pen name went with
+  every other fictional byline and the column runs under the desk's name.
 - **The projection Routine ends with September.** The ROS boards price off
   the committed set; a weekly Monday cadence through Week 17 is the
   recommendation.
@@ -8390,14 +8392,14 @@ refresh summary if it recurs.
 
 ---
 
-### 68q. Vega vs. Brooks, the column on the record
+### 68q. Market Desk vs. Rankings Desk, the column on the record
 
 The band the front page and `/fantasy` print under the newsroom is not a
 table of rank gaps. Each man files five picks a week — the players his own
 end of the slider ranks ahead of the other man's board — with a pitch in his
 own voice. `rivalryColumns(rows, { week })` builds both: a player qualifies
 only for the man who has him higher, so the two lists cannot be the same
-list, and Vega never pitches a player no book has priced (`marketBasis` of
+list, and the Market Desk never pitches a player no book has priced (`marketBasis` of
 `none` is dropped from his side), because that is the one claim his method
 cannot make. If a week is quiet the thresholds relax once
 (`RIVALRY_LOOSE`, gap 3 and 10%) rather than the column printing three
@@ -9150,7 +9152,7 @@ Taught Us, Thursday Night: What Matters). This adds one per GAME.
 
 ### 73a. The package
 
-`game-recap` in `CONTENT_KINDS`, Mike Raines on the weekly lens and Lena Park
+`game-recap` in `CONTENT_KINDS`, Usage Desk on the weekly lens and DFS Desk
 on DFS, and the first package in the calendar with **`perGame: true`**. It has
 `day: null, hour: null` because it has no weekday slot at all: it fires off
 the feed's own `final`, one piece per game, so a Thursday night game is
@@ -9603,8 +9605,8 @@ for the coming week), the desk should run a series of what Tuna got right,
 with the biggest wins highlighted. Every Monday.
 
 **The piece.** `what-tuna-got-right` in `CONTENT_KINDS`: Monday 6:00 AM ET,
-retrospective, about the week just played (`subject: 'played'`), Jack
-Mercer with Lena Park on the DFS lens, worth-gated. It takes the early
+retrospective, about the week just played (`subject: 'played'`), the
+Editorial Desk with the DFS Desk on the DFS lens, worth-gated. It takes the early
 rankings' slot; `early-rankings` moved to `LEGACY_CONTENT` as merged into
 `ros-rankings`, because Tuesday already ranks the coming week (the next-3
 horizon) and the Monday board was the same week ranked a day earlier. Its
@@ -12682,7 +12684,7 @@ section listing a whole week has no lead to give.
 
 | Where | What |
 |---|---|
-| `fantasy.html` | The Newsroom moves out of the reading band to directly under the hero, unnumbered; `#fnDesk` ships as `.nr-well`; the painter builds the lead card and the rail instead of six cards; the ribbon reorders; Vega vs. Brooks and Everything else become 04 and 05. |
+| `fantasy.html` | The Newsroom moves out of the reading band to directly under the hero, unnumbered; `#fnDesk` ships as `.nr-well`; the painter builds the lead card and the rail instead of six cards; the ribbon reorders; Market Desk vs. Rankings Desk and Everything else become 04 and 05. |
 | `site.css` | `.nr-well`, `.nr-well-solo`, `.nr-lead`, `.nr-lead-go`, `.nr-flag`, `.nr-rail` under the story card block. |
 
 **Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
@@ -12855,7 +12857,7 @@ balance. Rendered in Chromium at 1360px and 430px against a stubbed
 `/api/newsroom?lens=dfs` in three shapes — six pieces, one piece, an empty feed
 — with no page errors and no horizontal overflow. The well paints at y=926 and
 `#sec-lineup` at y=1693, so the order on the rendered page is Setup, the desk,
-the lineup; the byline reads Lena Park and the kicker reads the DFS title.
+the lineup; the byline reads DFS Desk and the kicker reads the DFS title.
 
 ---
 
@@ -12914,7 +12916,7 @@ welcome.' should be more prominent. We want to boast about our successes."
 
 The opening band runs a headline at up to 52px over a 20px lede. Everything
 under it was 14px — section intros, card bodies, the plate's own states, the
-two columns of Vega vs. Brooks — and the deck's card copy and the page's
+two columns of Market Desk vs. Rankings Desk — and the deck's card copy and the page's
 standing notes were 13px. That is a drop of more than a third at the exact
 point where a reader stops scanning the page and starts reading it, and it is
 why the whole page under the band read as fine print.
@@ -13115,7 +13117,7 @@ A piece has exactly one `headline` and one `dek` — single columns on
 only as `body.dfs`, the sections in `NEWSROOM_SECTIONS[kind].dfs`. So
 `/api/newsroom?lens=dfs` hands `/dfs` a piece whose DFS body is real analysis
 and whose headline is the week's fantasy story, and the page prints that
-headline under Lena Park's byline. "The clearest roster add of the week" is a
+headline under DFS Desk's byline. "The clearest roster add of the week" is a
 waiver call; it is not wrong, it is simply not a DFS sentence, and no page
 change can make it one. The fix is a DFS headline and deck of its own, which
 means the writer, the schema and the feed. It is not in this change.
@@ -13143,7 +13145,7 @@ DFS headline."
 §117 could not fix the complaint it recorded. A piece had exactly one
 `headline` and one `dek` — single columns on `content_pieces`, written for the
 Weekly Fantasy lens — so `/dfs` printed "Parker Washington's 43% target share
-makes him the clearest roster add of the week" under Lena Park's byline. The
+makes him the clearest roster add of the week" under DFS Desk's byline. The
 DFS *body* was real analysis; the sentence over it was a waiver call, and no
 page change could make it anything else. A package that runs in both lenses is
 WRITTEN twice and was HEADLINED once.
@@ -13574,9 +13576,68 @@ and "NFL clock unavailable" when `/api/season` did not answer) is gone.
   `.its-strip` rules in `site.css` (now unused), and every page's
   `<script src="/it-season.js">`.
 
+
+## 127. October 10: the fictional bylines are retired
+
+Ken: *"Remove all fictional author names."* Until today the eight analyst
+personas carried invented human names, the surname was the URL
+(`/analysts/vega`), the rivalry column wrote about "each man" and "his
+board", and The Tell ran under a pen name. The AI disclosure said they were
+not people; the bylines read as if they were. Every one of those names is
+gone from the repository.
+
+### What changed
+
+- **The roster.** `ANALYSTS` in `_worker.js` names each desk for its beat:
+  Editorial Desk, Market Desk, Rankings Desk, Usage Desk, Quarterback Desk,
+  Waiver Desk, Matchups Desk, DFS Desk. The roles, beats, philosophies,
+  assignments and voices are unchanged except where a voice wrote about the
+  desk as "he". The avatars are beat initials.
+- **The storage id stays; the URL does not.** `id` (`mercer`, `vega`, …) is
+  what `content_pieces.analyst`, `analyst_calls`, the stored rivalry JSON
+  (`rv.brooks`, `rv.vega`), `RIVALRY_PAIR` and the `data-analyst` attribute
+  on ninety static pages key on, so it is untouched: renaming it is a D1
+  migration, not a rename. Each desk gained a `slug` (`editor`, `market`,
+  `rankings`, `usage`, `quarterback`, `waivers`, `matchups`, `dfs`), which is
+  the only form a reader meets: `analystUrl(a)` builds every link, the byline
+  payload carries `url` and `dfsUrl`, `/api/newsroom` kinds carry
+  `analystUrl`, `/api/analyst?id=` answers to either, and the old surname
+  URLs 301 to the slug (next to the `/wagers` redirect in `fetch()`).
+  `sitemap.xml` advertises the slugs.
+- **The rivalry column** (`RIV_STANDFIRST`, `RIV_NEEDLE`, `_rivEvidence`,
+  `_rivGap`, `gradeRivalryCall`) argues desk against desk. The writer's
+  system prompt and `_voiceBlock` say "the Market Desk" and "the Rankings
+  Desk"; the fact check's bare-surname branch is gone, because a desk is
+  named in full or not at all.
+- **The Tell** carries the Rankings Desk byline, the desk it was registered
+  on since §68j, and its method box says the column is not written by a
+  person. `tools/the-tell-routine-prompt.md` says the same; **the Routine
+  prompt outside the repository must be updated to match**, or Tuesday's
+  edition arrives with the pen name back on it.
+- **The static pages** were restamped with `node tools/build-bylines.mjs`;
+  `tools/analyst-pages.mjs` reads the slug out of the worker and links by it.
+  `tools/test-bylines.mjs` now fails a byline that links to the storage id,
+  and `tools/test-newsroom.mjs` fails a roster entry shaped like a person's
+  name, a desk without a slug, or a pitch that names a man.
+- `llms.txt`, `docs/editorial-migration.md`, `docs/saved-league.md`, the
+  pages that named a desk in prose (`rankings.html`, `dfs.html`, `my-week.html`,
+  `fantasy.html`, `desk.html`, `hidden-value.html`, `analysts.html`,
+  `analyst.html`) and the test fixtures that used invented names.
+
+### What this cannot reach
+
+Pieces already published to D1 were written when the desks had names: a
+stored `rivalry.line`, an `outcome_note` ("… had him WR5") or a prose
+sentence naming a colleague still carries the old name in the row. The
+byline on those pieces reads the roster at request time and shows the desk;
+the body is the body. Regenerating or rewriting those rows is a data job,
+not a repository change, and is left to the owner.
+
 ---
 
-## 127. October 10: the CBS browser import comes back, as the one CBS path
+---
+
+## 128. October 10: the CBS browser import comes back, as the one CBS path
 
 **What was asked.** Another try at pulling a reader's CBS league with
 credentials they enter. **What the record says.** Two live attempts (§89): the

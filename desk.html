@@ -280,7 +280,7 @@ body.dk-tailback #dkTitle{max-width:920px}
     whatChanged: 'What changed', movesUp: 'Moves up', movesDown: 'Moves down', startSit: 'Start / sit', replacements: 'Replacements', longerTerm: 'Longer-term significance', projectionImpact: 'Projection impact', ownershipImpact: 'Ownership impact', cashGame: 'Cash games', tournaments: 'Tournaments', stacks: 'Stacks', pivots: 'Pivots', lateSwap: 'Late swap',
     signal: 'Signal', noise: 'Noise', concerns: 'Concern', buy: 'Buy', watchThis: 'Watch this', waiversAndTrades: 'Waivers and trades', emergingChalk: 'Emerging chalk', priceInefficiencies: 'Price inefficiencies', roleChangesForPricing: 'Role changes not yet in the price', touchdownRegression: 'Touchdown regression', stackImplications: 'Stack implications', leverage: 'Leverage',
     expectations: 'Key expectations', matchups: 'Matchups', usage: 'Usage', marketSignals: 'Market signals', risk: 'Risk and uncertainty', captainOptions: 'Captain / MVP options', value: 'Value', ownership: 'Ownership', contrarianCaptains: 'Contrarian captains', correlation: 'Correlation', gameScripts: 'Game scripts', fades: 'Fades',
-    overview: 'Overview', quarterbacks: 'Quarterbacks', runningBacks: 'Running backs', wideReceivers: 'Wide receivers', tightEnds: 'Tight ends', flex: 'FLEX', kickersAndDefenses: 'Kickers and defenses', whereWeDisagree: 'Where Brooks and Vega disagree', rawVsSalary: 'Raw projection vs. salary', earlyValues: 'Early values', earlyChalk: 'Early chalk', cashVsTournament: 'Cash vs. tournament',
+    overview: 'Overview', quarterbacks: 'Quarterbacks', runningBacks: 'Running backs', wideReceivers: 'Wide receivers', tightEnds: 'Tight ends', flex: 'FLEX', kickersAndDefenses: 'Kickers and defenses', whereWeDisagree: 'Where the Rankings Desk and the Market Desk disagree', rawVsSalary: 'Raw projection vs. salary', earlyValues: 'Early values', earlyChalk: 'Early chalk', cashVsTournament: 'Cash vs. tournament',
     theStory: 'The story', whatTheNumbersSay: 'What the numbers say', whatToDo: 'What to do', buySell: 'Buy / sell', bringBacks: 'Bring-backs', salaryAndRushingUpside: 'Salary and rushing upside',
     whatMondayChanged: 'What Monday night changed', next3: 'Next 3 games', untilPlayoffs: 'Until the fantasy playoffs', playoffsOnly: 'Fantasy playoffs only', priceInefficiencyBoard: 'Early price inefficiency board', whyThePriceIsWrong: 'Why the price is wrong', initialOwnership: 'Initial ownership',
     theDevelopment: 'The development', workloadEvidence: 'Workload evidence', rankingImpact: 'Ranking impact', tradesAndWaivers: 'Trades and waivers', salary: 'Salary', workloadPerDollar: 'Workload per dollar', touchdownEquity: 'Touchdown equity', chalkVsLeverage: 'Chalk vs. leverage', stacking: 'Stacking',
@@ -391,7 +391,7 @@ body.dk-tailback #dkTitle{max-width:920px}
         '<span class="nr-kicker">' + kick + '</span>' +
         '<h3><a href="' + e(href) + '">' + e(p.headline || p.title || k.title) + '</a></h3>' +
         (p.dek ? '<p>' + e(p.dek) + '</p>' : '') +
-        '<span class="nr-by"><span class="nr-av">' + e(initials(by)) + '</span><a href="/analysts/' + e(byId || '') + '">' + e(by) + '</a>' + statusChip(p) +
+        '<span class="nr-by"><span class="nr-av">' + e(initials(by)) + '</span><a href="' + e((p.byline || {}).url || '/analysts/' + (byId || '')) + '">' + e(by) + '</a>' + statusChip(p) +
         '<span class="nr-time">' + e(ago(p.published_at || p.created_at)) + '</span></span></article>';
     }
     function clock() {
@@ -408,10 +408,10 @@ body.dk-tailback #dkTitle{max-width:920px}
       var seen = {}, out = [];
       kinds.forEach(function (k) {
         if (!k.analyst || seen[k.analyst]) { if (k.analyst) seen[k.analyst].beats.push(k.title); return; }
-        seen[k.analyst] = { id: k.analyst, name: k.analystName, beats: [k.title] }; out.push(seen[k.analyst]);
+        seen[k.analyst] = { id: k.analyst, url: k.analystUrl, name: k.analystName, beats: [k.title] }; out.push(seen[k.analyst]);
       });
       return out.map(function (a) {
-        return '<a href="/analysts/' + e(a.id) + '"><span class="dk-av">' + e(initials(a.name)) + '</span><span><b>' + e(a.name) + '</b><span>' + e(a.beats.slice(0, 2).join(' · ')) + (a.beats.length > 2 ? ' · +' + (a.beats.length - 2) : '') + '</span></span></a>';
+        return '<a href="' + e(a.url || '/analysts/' + a.id) + '"><span class="dk-av">' + e(initials(a.name)) + '</span><span><b>' + e(a.name) + '</b><span>' + e(a.beats.slice(0, 2).join(' · ')) + (a.beats.length > 2 ? ' · +' + (a.beats.length - 2) : '') + '</span></span></a>';
       }).join('');
     }
     function paint() {
@@ -492,24 +492,24 @@ body.dk-tailback #dkTitle{max-width:920px}
   }
   function byline(j, lens) {
     var by = j.byline || {};
-    var id = lens === 'dfs' ? by.dfsAnalyst : by.analyst, name = lens === 'dfs' ? by.dfsName : by.name;
+    var id = lens === 'dfs' ? by.dfsAnalyst : by.analyst, name = lens === 'dfs' ? by.dfsName : by.name, url = lens === 'dfs' ? by.dfsUrl : by.url;
     if (!name) return '';
-    return '<p class="dk-byline"><span class="dk-av">' + e((name || '').split(' ').map(function (w) { return w[0]; }).join('')) + '</span> By <a href="/analysts/' + e(id) + '">' + e(name) + '</a>' + (lens === 'dfs' && by.name && by.name !== name ? ' &middot; reporting with <a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' : '') + ' &middot; <span class="dk-ai">AI analyst persona</span></p>';
+    return '<p class="dk-byline"><span class="dk-av">' + e((name || '').split(' ').map(function (w) { return w[0]; }).join('')) + '</span> By <a href="' + e(url || '/analysts/' + id) + '">' + e(name) + '</a>' + (lens === 'dfs' && by.name && by.name !== name ? ' &middot; reporting with <a href="' + e(by.url || '/analysts/' + by.analyst) + '">' + e(by.name) + '</a>' : '') + ' &middot; <span class="dk-ai">AI analyst persona</span></p>';
   }
   function rivalryBox(j) {
     var r = j.rivalry; if (!r) return '';
-    return '<aside class="dk-rival"><div class="dk-rival-h">Vega vs. Brooks</div><div class="dk-rival-p">' + e(r.player) + ' <span>' + e(r.position) + ', ' + e(r.team) + '</span></div>' +
-      '<div class="dk-rival-g"><div><b>Brooks</b><span>' + e(r.position) + e(r.brooks.rank) + '</span><small>Fantasy Analysis</small></div><div><b>Vega</b><span>' + e(r.position) + e(r.vega.rank) + '</span><small>Market Intelligence &middot; ' + e(r.vega.basis) + '</small></div></div>' +
-      (r.line ? '<p>' + e(r.line) + '</p>' : '') + '<a href="/analysts/vega">Vega</a> &middot; <a href="/analysts/brooks">Brooks</a></aside>';
+    return '<aside class="dk-rival"><div class="dk-rival-h">Market Desk vs. Rankings Desk</div><div class="dk-rival-p">' + e(r.player) + ' <span>' + e(r.position) + ', ' + e(r.team) + '</span></div>' +
+      '<div class="dk-rival-g"><div><b>Rankings</b><span>' + e(r.position) + e(r.brooks.rank) + '</span><small>Fantasy Analysis</small></div><div><b>Market</b><span>' + e(r.position) + e(r.vega.rank) + '</span><small>Market Intelligence &middot; ' + e(r.vega.basis) + '</small></div></div>' +
+      (r.line ? '<p>' + e(r.line) + '</p>' : '') + '<a href="/analysts/market">Market Desk</a> &middot; <a href="/analysts/rankings">Rankings Desk</a></aside>';
   }
   function callsBox(j) {
     var calls = j.body && j.body.calls; if (!calls || !calls.length) return '';
     if (j.kind === 'tailback-tuesday') return '<section class="tb-calls"><div class="tb-calls-head"><h2>The calls</h2><p>The decision first. The evidence directly below it.</p></div><div class="tb-call-grid">' +
       calls.map(function (c) { return '<article class="tb-call"' + (c.player ? ' data-player-focus="' + e(c.player) + '"' : '') + '><div class="tb-call-top"><div><div class="tb-call-player" data-player-head>' + e(c.player) + '</div><span class="tb-action">' + e(c.direction || 'call') + (c.rank ? ' &middot; ' + e(c.rank) : '') + '</span></div><span class="tb-confidence">' + e(c.confidence || '—') + '</span></div>' +
         (c.recommendation ? '<p class="tb-recommendation">' + e(c.recommendation) + '</p>' : '') + '<p class="tb-rationale">' + e(c.rationale || '') + '</p></article>'; }).join('') +
-      '</div><p class="is-note">Every call is stored and graded in a later week. <a href="/analysts/' + e((j.byline || {}).analyst) + '">The record &rarr;</a></p></section>';
+      '</div><p class="is-note">Every call is stored and graded in a later week. <a href="' + e((j.byline || {}).url || '/analysts/' + ((j.byline || {}).analyst || '')) + '">The record &rarr;</a></p></section>';
     return '<h2>The calls</h2><div class="is-scroll"><table class="is-table"><thead><tr><th>Player</th><th>Call</th><th>Confidence</th><th>Why</th></tr></thead><tbody>' +
-      calls.map(function (c) { return '<tr><td><b>' + e(c.player) + '</b></td><td>' + e(c.direction) + (c.rank ? ' (' + e(c.rank) + ')' : '') + (c.recommendation ? ': ' + e(c.recommendation) : '') + '</td><td>' + e(c.confidence || '') + '</td><td>' + e(c.rationale || '') + '</td></tr>'; }).join('') + '</tbody></table></div><p class="is-note">Every call is stored and graded in a later week. <a href="/analysts/' + e((j.byline || {}).analyst) + '">The record &rarr;</a></p>';
+      calls.map(function (c) { return '<tr><td><b>' + e(c.player) + '</b></td><td>' + e(c.direction) + (c.rank ? ' (' + e(c.rank) + ')' : '') + (c.recommendation ? ': ' + e(c.recommendation) : '') + '</td><td>' + e(c.confidence || '') + '</td><td>' + e(c.rationale || '') + '</td></tr>'; }).join('') + '</tbody></table></div><p class="is-note">Every call is stored and graded in a later week. <a href="' + e((j.byline || {}).url || '/analysts/' + ((j.byline || {}).analyst || '')) + '">The record &rarr;</a></p>';
   }
   function priorBox(j) {
     var pc = j.brief && j.brief.priorCalls; if (!pc || !pc.length) return '';

@@ -8,7 +8,7 @@
 // The Sleeper, Yahoo and CBS API connectors were removed on 2026-09-18 (HANDOFF
 // §89) and a league now only ever arrives from the reader: the forms and the
 // roster-grid screenshot on /my-league, through POST /api/leagues/manual, or
-// the CBS browser import (HANDOFF §127), a snapshot the extension reads out of
+// the CBS browser import (HANDOFF §128), a snapshot the extension reads out of
 // the reader's own CBS tab and posts to /api/leagues/connect. The fetch stub
 // below throws, so anything that starts calling a fantasy platform from the
 // worker again fails here first; the CBS import suite at the end runs the

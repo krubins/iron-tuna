@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The CBS browser import, end to end in a real browser: the CBS browser
 // connector (extensions/cbs-connector) driven in Chromium against the real
-// _worker.js. Restored 2026-10-10 (HANDOFF §127) with the connector.
+// _worker.js. Restored 2026-10-10 (HANDOFF §128) with the connector.
 //
 //   sudo -E node tools/test-cbs-e2e.mjs
 //

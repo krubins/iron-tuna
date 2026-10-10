@@ -235,7 +235,7 @@ platform host is reachable from the worker.
 A league is the reader's own entry — typed, pasted, or read off a roster
 screenshot by `/api/roster-read` — saved through `POST /api/leagues/manual`;
 or, on CBS, read by the reader's own browser. The Iron Tuna CBS Connector
-extension (`extensions/cbs-connector`, HANDOFF §127) runs in the reader's
+extension (`extensions/cbs-connector`, HANDOFF §128) runs in the reader's
 signed-in CBS tab, reads the league's settings, team names and rosters through
 same-origin requests, and posts one snapshot to `POST /api/leagues/connect`
 under the reader's Iron Tuna sign-in. The request to CBS is the reader's own
