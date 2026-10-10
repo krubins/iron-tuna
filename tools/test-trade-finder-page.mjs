@@ -352,7 +352,31 @@ console.log('\nevaluate a three-team trade, with notes');
   ok('the reader’s players default to the first other team, the rest to the reader', dests.find(d => d.k === '0:0').v === '1' && dests.find(d => d.k === '1:0').v === '0', JSON.stringify(dests));
   await page.selectOption('#tf-sends select[data-to="0:1"]', '2');
   await page.selectOption('#tf-sends select[data-to="2:0"]', '1');
+  // The notes set each team's horizon; each box says how it was read.
+  const hz = () => page.$$eval('#tf-teams .tf-hz', els => els.map(e => e.textContent));
+  ok('with no notes, every box is scored from the settings', (await hz()).every(t => /Rest of season · from the settings/.test(t)), JSON.stringify(await hz()));
+  const reads = [
+    ['Iron Tuna hasn’t clinched yet.', 0, /Next 3 weeks.*hasn't clinched/],
+    ['My team is 8-1.', 0, /Fantasy playoffs.*8-1/],
+    ['The Hammers must win this week or they are done.', 1, /This week.*must win this week/],
+    ['The Hammers lost again. They are eliminated.', 1, /Rest of season.*eliminated/],
+    ['Clinched is 2-7, rebuilding for next year.', 2, /Rest of season.*rebuilding/],
+    ['We are 5-4 and on the bubble.', 0, /Next 3 weeks.*bubble/],
+    ['the hammers are 6-3.', 1, /Rest of season · from the settings/],
+    ['I have clinched a bye; Clinched needs wins.', 2, /Next 3 weeks.*needs wins/]
+  ];
+  for (const [note, i, want] of reads) {
+    await page.fill('#tf-factors', note);
+    const got = (await hz())[i];
+    ok('“' + note + '” is read', want.test(got), got);
+  }
+  await page.fill('#tf-factors', 'Clinched has clinched nothing.');
+  ok('a single-word team name only counts capitalized', /from the settings/.test((await hz())[0]) && /Next 3 weeks|Fantasy playoffs/.test((await hz())[2]), JSON.stringify(await hz()));
   await page.fill('#tf-factors', 'I am 7-2 and have clinched. The Hammers are 3-6 and need wins now.');
+  const h3 = await hz();
+  ok('the reader’s team reads as playoffs from “clinched”', /Fantasy playoffs.*have clinched|Fantasy playoffs.*clinched/.test(h3[0]), h3[0]);
+  ok('The Hammers read as the next three weeks', /Next 3 weeks.*need wins/.test(h3[1]), h3[1]);
+  ok('a team the notes skip keeps the settings', /Rest of season · from the settings/.test(h3[2]), h3[2]);
   await page.click('#tf-eval');
   await page.waitForFunction(() => document.querySelectorAll('.tf-proposed .tf-side').length === 3, null, { timeout: 15000 });
   const v3 = await verdict();
@@ -360,6 +384,8 @@ console.log('\nevaluate a three-team trade, with notes');
   const ham = v3.sides.find(s => /The Hammers/.test(s.who)), cl = v3.sides.find(s => /Clinched/.test(s.who));
   ok('The Hammers get a back and the specialist', /Gets[^]*\b/.test(ham.give) && ham.give.split('Gets')[1].includes(NAMES.RB[3]) && ham.give.split('Gets')[1].includes(SPECIAL), ham.give);
   ok('Clinched gets the other back', cl.give.split('Gets')[1].includes(NAMES.RB[6]), cl.give);
+  const horizons = await page.$$eval('.tf-proposed .tf-side', ss => ss.map(x => x.querySelector('.gain small').textContent));
+  ok('each team is scored on the horizon its notes set', /Fantasy playoffs/.test(horizons[0]) && /Next 3 weeks/.test(horizons[1]) && /Rest of season/.test(horizons[2]), JSON.stringify(horizons));
   ok('the reader gets the receiver and sends two', v3.sides[0].give.split('Gets')[1].includes(NAMES.WR[6]) && /^You/.test(v3.sides[0].who), v3.sides[0].give);
   ok('a team taking more players than it sends is told it needs room', /roster spot/.test(await page.textContent('.tf-proposed')));
   await page.waitForFunction(() => /notes say/.test(document.getElementById('tf-take').textContent), null, { timeout: 8000 });
