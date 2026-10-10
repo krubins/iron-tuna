@@ -218,7 +218,7 @@ console.log('\nVegas Edge: the season to date against the price');
   // The forward pair. Steady Man's Iron Tuna projection (9.1) sits over his
   // consensus (9.0): it backs a call to outperform and contradicts one to
   // underperform, until it is moved under.
-  ok('an overperformer Iron Tuna projects over his consensus is likely to outperform',
+  ok('an overperformer Iron Tuna projects over his consensus is a long term overperform call',
      hot.likelyOver.length === 1 && hot.likelyOver[0].name === 'Steady Man' && hot.likelyOver[0].formGap === 6.4 && hot.likelyUnder.length === 0, JSON.stringify(hot));
   ok('an underperformer Iron Tuna projects over his consensus is on the record but no call', cold.under.length === 1 && cold.likelyUnder.length === 0, JSON.stringify(cold));
   const tunaLow = { ironTuna: { ...WEEK.players.find(p => p.name === 'Steady Man').ironTuna, points: 8.5 } };

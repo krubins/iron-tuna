@@ -7920,7 +7920,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
     over: formed.filter(p => p.form.ppg - p.consensus.points >= LONG_MIN_GAP).sort((a, b) => (b.form.ppg - b.consensus.points) - (a.form.ppg - a.consensus.points)).slice(0, LONG_LIST).map(formBrief),
     under: formed.filter(p => p.consensus.points - p.form.ppg >= LONG_MIN_GAP).sort((a, b) => (a.form.ppg - a.consensus.points) - (b.form.ppg - b.consensus.points)).slice(0, LONG_LIST).map(formBrief),
     // THE FORWARD PAIR (2026-10-10): the same gap read as a call on what he
-    // will do, printed as "Likely to outperform" and "Likely to underperform"
+    // will do, printed as "Long term overperform" and "Long term underperform"
     // beside the record above. His season says the consensus is off, and Iron
     // Tuna's own projection for this week must not say the opposite: an
     // overperformer Iron Tuna projects under his consensus is a streak the
