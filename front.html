@@ -82,6 +82,10 @@ body{overflow-x:hidden}
 .hm-entry{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--sp-8) var(--sp-32);margin:var(--sp-24) 0 0;padding:0;list-style:none}
 .hm-entry a{font-size:var(--fs-16);font-weight:600}
 .hm-rule{border:0;height:1px;background:var(--line);margin:var(--sp-48) 0 var(--sp-24)}
+/* With the market band hidden the rule is the hero's last line, and the full
+   88px section gap under it stranded the position tiles. Close that up to
+   48px, the same air the rule has above it. */
+.hm-hero:has(.hm-market[hidden])+.hm-sec{margin-top:var(--sp-48)}
 
 /* The market figures row. Five cells, one list at a time: a 13px label over the key figure (the
    gap in points, 28px, green only when the market is the higher number), over
