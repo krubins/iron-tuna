@@ -71,7 +71,10 @@ const EDGE = { ok: true, week: 'Week 3', vsExperts: {
     mk('Drake London', 'WR', 'ATL', 'CAR', 12.1, 16.8, 15.2, 'STRONG VEGAS BUY', 14),
     mk('Cam Ward', 'QB', 'TEN', 'IND', 15.2, 19.9, 18.4, 'STRONG VEGAS BUY', 8),
     mk('Tank Bigsby', 'RB', 'JAX', 'HOU', 6.0, 10.4, 9.1, 'STRONG VEGAS BUY', 38),
-    mk('James Cook', 'RB', 'BUF', 'NYJ', 13.4, 15.9, 15.0, 'VEGAS LEANS HIGHER', 9)
+    mk('James Cook', 'RB', 'BUF', 'NYJ', 13.4, 15.9, 15.0, 'VEGAS LEANS HIGHER', 9),
+    // A promoted backup the consensus still projects as a backup: the widest
+    // gap on the board, and only a stale line (Tyson Bagent, Week 5, 2026).
+    mk('Promoted Backup', 'QB', 'CHI', 'GB', 0.2, 15.3, 11.6, 'STRONG VEGAS BUY', 20)
   ],
   fades: [
     mk('Derrick Henry', 'RB', 'BAL', 'CIN', 17.8, 13.1, 14.6, 'STRONG VEGAS FADE', 11),
@@ -87,6 +90,8 @@ const EDGE = { ok: true, week: 'Week 3', vsExperts: {
     mk('Zeroed Tight End', 'TE', 'MIA', 'BUF', 9.0, 0, 0, 'STRONG VEGAS FADE', 20),
     // A designation that says he plays is not an injury.
     { ...mk('Cleared Receiver', 'WR', 'DEN', 'KC', 10.0, 6.0, 7.0, 'STRONG VEGAS FADE', 40), injury: 'Active' },
+    // A stale consensus on a promoted backup is no price (Week 5, 2026).
+    // It is a buy-side row, so it is checked on the value list.
     // A row with a hole in it is dropped, not printed with a dash.
     { name: 'Holey Wideout', position: 'WR', team: 'NYG', opponent: 'DAL',
       consensusPoints: 11.0, vegasPoints: null, ironTunaPoints: 9.5, ironTunaRank: 30,
@@ -105,6 +110,8 @@ seasonForm: { minGames: 3,
     { ...mk('Elite Fourth', 'WR', 'CIN', 'PIT', 15.0, 15.5, 15.2, 'MARKET AGREES', 10), seasonPpg: 21.0, seasonGames: 5, formGap: 6.0 },
     { ...mk('Deep Sleeper', 'WR', 'NO', 'TB', 6.0, 6.5, 6.2, 'MARKET AGREES', 55), seasonPpg: 11.9, seasonGames: 4, formGap: 5.9 },
     { ...mk('Bench Flier', 'RB', 'ARI', 'SF', 5.0, 5.4, 5.1, 'MARKET AGREES', 44), seasonPpg: 9.2, seasonGames: 3, formGap: 4.2 },
+    // A season average against a stale backup's line is the promotion, not form.
+    { ...mk('Stale Line', 'QB', 'LV', 'NE', 0.6, 14.0, 11.0, 'STRONG VEGAS BUY', 18), seasonPpg: 18.8, seasonGames: 3, formGap: 18.2 },
     // Hurt is not overperforming, and not overvalued either.
     { ...mk('Sidelined Star', 'RB', 'SF', 'ARI', 17.0, 0, 0, 'STRONG VEGAS FADE', 4), seasonPpg: 30.0, seasonGames: 4, formGap: 13.0, injury: 'Out' }
   ],
@@ -375,10 +382,11 @@ console.log('\nwith the boards answering');
   const r = await read(page);
   ok('the market row is shown', r.market === true);
   ok('four lists, in order, the first one showing',
-     r.cats.map(c => c.t).join(' | ') === 'This week’s value | Long-term overperformers | This week’s headwinds | Long-term overvalued' && r.cats[0].on && r.cats.filter(c => c.on).length === 1,
+     r.cats.map(c => c.t).join(' | ') === 'This week’s value | Outscoring their projections | This week’s headwinds | Trailing their projections' && r.cats[0].on && r.cats.filter(c => c.on).length === 1,
      JSON.stringify(r.cats));
   ok('this week\'s value is the buys, widest gap first', r.figs.length === 4 && r.figs.map(f => f.v).join(' | ') === '+4.7 pts | +4.7 pts | +4.4 pts | +2.5 pts', r.figs.map(f => f.v).join(' | '));
   ok('and only the buys', r.figs.every(f => f.good));
+  ok('a consensus under 3 points is a stale line, not a price, and not a figure', !r.figs.some(f => f.k.includes('Promoted Backup')), r.figs.map(f => f.k).join(' / '));
   const ACTIONS = new Set(['Start', 'Sit', 'Upgrade', 'Downgrade', 'Value play', 'Fade']);
   ok('every figure leads with one of the six decisions', r.figs.every(f => ACTIONS.has(f.k.split(' · ')[0])), r.figs.map(f => f.k).join(' / '));
   ok('a strong buy on a bench player is a Value play', r.figs.some(f => f.k.startsWith('Value play · Tank Bigsby')), r.figs.map(f => f.k).join(' / '));
@@ -409,6 +417,7 @@ console.log('\nwith the boards answering');
      ov.figs.map(f => f.k).join(' / '));
   ok('the starter dealt out for a longshot is the narrowest starter', !ov.figs.some(f => f.k.includes('Elite Fourth')));
   ok('an injured player is not an overperformer', !ov.figs.some(f => f.k.includes('Sidelined')));
+  ok('nor is a season average set against a stale line', !ov.figs.some(f => f.k.includes('Stale Line')));
   ok('each states points a game over the price, green, over the season line',
      ov.figs.every(f => f.good && /^\+\d+\.\d pts\/g$/.test(f.v) && /^Season \d+\.\d a game over \d · consensus \d+\.\d · market \d+\.\d$/.test(f.s)),
      ov.figs.map(f => f.v + ' ' + f.s).join(' / '));
@@ -497,14 +506,14 @@ console.log('\nthe band rotates');
   const second = await on();
   await page.clock.runFor(9000);
   const third = await on();
-  ok('it advances through the lists on its own', first === 'This week’s value' && second === 'Long-term overperformers' && third === 'This week’s headwinds', [first, second, third].join(' → '));
+  ok('it advances through the lists on its own', first === 'This week’s value' && second === 'Outscoring their projections' && third === 'This week’s headwinds', [first, second, third].join(' → '));
   await page.hover('#diffBody');
   await page.clock.runFor(20000);
   ok('and holds while the pointer is on it', (await on()) === 'This week’s headwinds', await on());
   await page.click('#diffCats button:nth-child(2)');
   await page.mouse.move(5, 890);
   await page.clock.runFor(30000);
-  ok('a list the reader picks stays picked', (await on()) === 'Long-term overperformers', await on());
+  ok('a list the reader picks stays picked', (await on()) === 'Outscoring their projections', await on());
   await ctx.close();
 }
 
@@ -529,7 +538,7 @@ console.log('\nwith a board too short to print');
   EDGE.vsExperts = { buys: [], fades: [] };
   let { page, ctx } = await open(1440, 900);
   let r = await read(page);
-  ok('with the week empty, the two season lists are the band', r.market === true && r.cats.map(c => c.t).join(' | ') === 'Long-term overperformers | Long-term overvalued', JSON.stringify(r.cats));
+  ok('with the week empty, the two season lists are the band', r.market === true && r.cats.map(c => c.t).join(' | ') === 'Outscoring their projections | Trailing their projections', JSON.stringify(r.cats));
   await ctx.close();
   EDGE.seasonForm = { ...fullForm, under: [] };
   ({ page, ctx } = await open(1440, 900));

@@ -7802,7 +7802,10 @@ const EDGE_CONTRACT = 1;
 // The season-to-date lists on /api/vegas-edge (seasonForm): games a player
 // must have played before his average counts, the smallest gap in points a
 // game that is a figure rather than noise, and how many of each to send.
-const LONG_MIN_GAMES = 3, LONG_MIN_GAP = 1.5, LONG_LIST = 15;
+// LONG_CONSENSUS_FLOOR: a consensus under this is a stale line on a backup
+// promoted to starter (Kirk Cousins at 0.6 in Week 5, 2026), not a price, and
+// the gap to his season average would be the promotion restated.
+const LONG_MIN_GAMES = 3, LONG_MIN_GAP = 1.5, LONG_LIST = 15, LONG_CONSENSUS_FLOOR = 3;
 // The prop board: every player market a book has quoted, one row per player
 // per market, in the order a reader scans a slate.
 const PROP_BOARD_ORDER = ['anytimeTD', 'passYd', 'passTD', 'passInt', 'rushYd', 'rushAtt', 'rushTD', 'rec', 'recYd', 'recTD'];
@@ -7884,7 +7887,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   // carry the injury, so the gap would be the report restated (the Lamar
   // Jackson case again). The books leaving him off a priced game is the same.
   const formed = players.filter(p => p.pos !== 'K' && p.pos !== 'DEF' && p.form && p.form.games >= LONG_MIN_GAMES
-    && Number.isFinite(p.form.ppg) && p.consensus.points > 0 && p.vegas.points > 0 && !p.marketOut
+    && Number.isFinite(p.form.ppg) && p.consensus.points >= LONG_CONSENSUS_FLOOR && p.vegas.points > 0 && !p.marketOut
     && !(p.injury && p.injury.status && !/^(active|probable)$/i.test(String(p.injury.status))));
   const formBrief = p => ({ ...brief(p), seasonPpg: p.form.ppg, seasonGames: p.form.games, formGap: _oddsRound(p.form.ppg - p.consensus.points) });
   const seasonForm = {
