@@ -570,9 +570,9 @@ footer.site {margin-top:0}
   // The weekly two come off vsExperts, the season two off seasonForm; both
   // are on the same /api/vegas-edge read.
   //
-  // THE FORWARD PAIR (2026-10-10) sits beside each season list: "Likely to
-  // outperform" after the overperformers and "Likely to underperform" after
-  // the overvalued. The season lists are the record; the forward pair is the
+  // THE FORWARD CALL (2026-10-10) stands in for each season list when it has
+  // rows enough: "Likely to outperform" for the overperformers and "Likely to
+  // underperform" for the overvalued. The season lists are the record; the forward pair is the
   // call on what comes next, off seasonForm.likelyOver and likelyUnder. A
   // forward row is a season row that Iron Tuna's own projection for this week
   // does not contradict: a player beating his consensus whom Iron Tuna has
@@ -630,13 +630,18 @@ footer.site {margin-top:0}
     var ahead = function (list, sign) {
       return dealFive((list || []).filter(function (p) { return usableAhead(p, sign); }), function (p) { return Number(p.formGap); });
     };
+    // ONE TAB PER SEASON SIDE (2026-10-10). The forward list is a subset of
+    // the season list, so side by side they printed the same player at the
+    // same figure twice (overview and tabs both). Each side is now one tab:
+    // the forward call when it stands, else the season record behind it.
+    var side = function (fwd, rec) { return fwd.rows.length >= MARKET_MIN ? fwd : rec; };
     var lists = [
       { key: 'value', label: 'This week\u2019s value', rows: week(vs.buys, 1), html: figHtml },
-      { key: 'over', label: 'Outscoring their projections', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } },
-      { key: 'likely', label: 'Likely to outperform', rows: ahead(sf.likelyOver, 1), html: function (p) { return aheadHtml(p, 1); } },
+      side({ key: 'likely', label: 'Likely to outperform', rows: ahead(sf.likelyOver, 1), html: function (p) { return aheadHtml(p, 1); } },
+           { key: 'over', label: 'Outscoring their projections', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } }),
       { key: 'headwinds', label: 'This week\u2019s headwinds', rows: week(vs.fades, -1), html: figHtml },
-      { key: 'overvalued', label: 'Trailing their projections', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } },
-      { key: 'unlikely', label: 'Likely to underperform', rows: ahead(sf.likelyUnder, -1), html: function (p) { return aheadHtml(p, -1); } }
+      side({ key: 'unlikely', label: 'Likely to underperform', rows: ahead(sf.likelyUnder, -1), html: function (p) { return aheadHtml(p, -1); } },
+           { key: 'overvalued', label: 'Trailing their projections', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } })
     ].filter(function (c) { return c.rows.length >= MARKET_MIN; });
     // THE OVERVIEW (2026-10-10) leads the band once two or more lists stand:
     // the top row of each list, in list order, each figure labelled with the
