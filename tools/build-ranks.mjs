@@ -338,7 +338,6 @@ ${ribbonHtml(href)}
 <p class="is-eyebrow">In-Season &middot; Rankings &middot; ${esc(cat.h1)}</p>
 <h1>${esc(h1)}</h1>
 <p class="is-lede">${dek}</p>
-<div class="its-strip" data-season-strip></div>
 
 ${chipsHtml(cat, pos ? pos.slug : null)}
 
@@ -359,7 +358,7 @@ ${mountHtml(cat, pos)}
 </div>
 </main>
 <footer class="site"><div class="wrap"></div></footer>
-<!-- it-season.js puts the week on the strip above; it-ranks.js is the board.
+<!-- it-season.js is the shared week read; it-ranks.js is the board.
      The scoring engine is NOT loaded here: unlike /rankings, this page asks the
      worker for the board already scored at the chosen preset, because the
      week-by-week drawer prints per-week points the browser has no stat line to
