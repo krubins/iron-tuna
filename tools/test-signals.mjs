@@ -203,8 +203,13 @@ console.log('\nVegas Edge: the season to date against the price');
      hot.over.length === 1 && hot.over[0].name === 'Steady Man' && hot.over[0].formGap === 6.4 && hot.over[0].seasonPpg === 15.4 && hot.over[0].seasonGames === 5 && hot.under.length === 0,
      JSON.stringify(hot));
   ok('and he carries the brief the weekly lists carry', hot.over[0].consensusPoints === 9 && hot.over[0].vegasPoints === 9.2 && typeof hot.over[0].ironTunaRank === 'number');
-  const cold = run({ games: 5, ppg: 4.0 });
-  ok('averaging 4.0 against 9.0 is overvalued', cold.under.length === 1 && cold.under[0].formGap === -5 && cold.over.length === 0, JSON.stringify(cold));
+  // Steady Man's market (9.2) sits over his consensus (9.0), so to be called
+  // to underperform the market must not disagree: priced at 8.5 here.
+  const lowPrice = { vegas: { ...WEEK.players.find(p => p.name === 'Steady Man').vegas, points: 8.5 } };
+  const cold = run({ games: 5, ppg: 4.0 }, lowPrice);
+  ok('averaging 4.0 against 9.0, the market under it too, is likely to underperform', cold.under.length === 1 && cold.under[0].formGap === -5 && cold.over.length === 0, JSON.stringify(cold));
+  ok('but not while the market prices him over his consensus', run({ games: 5, ppg: 4.0 }).under.length === 0);
+  ok('and an overperformer the market prices under his consensus is no call either', run({ games: 5, ppg: 15.4 }, lowPrice).over.length === 0);
   ok('a gap under the floor is neither', (() => { const r = run({ games: 5, ppg: 10.0 }); return r.over.length === 0 && r.under.length === 0; })());
   ok('two games is not a season', run({ games: 2, ppg: 25 }).over.length === 0);
   ok('a player listed Out is not an overperformer', run({ games: 5, ppg: 25 }, { injury: { status: 'Out', gamesOut: 1 } }).over.length === 0);

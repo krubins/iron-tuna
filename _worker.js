@@ -7880,6 +7880,12 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   // keeps putting on him, and the one who keeps falling short of it. The
   // homepage rotates them beside the weekly buys and fades.
   //
+  // THEY ARE FORWARD CALLS (2026-10-10): the homepage prints them as "Likely
+  // to outperform" and "Likely to underperform", so a row must be one. His
+  // season says the consensus is off; this week's market price must not say
+  // the opposite. An overperformer the books price under his consensus is a
+  // streak the market is betting against, and he is left off.
+  //
   // LONG_MIN_GAMES of his own before a season average is a figure: a single
   // big Sunday is not a trend. Skill positions only, for the reason vsExperts
   // gives. A player listed with anything but Active or Probable is left off:
@@ -7892,8 +7898,8 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const formBrief = p => ({ ...brief(p), seasonPpg: p.form.ppg, seasonGames: p.form.games, formGap: _oddsRound(p.form.ppg - p.consensus.points) });
   const seasonForm = {
     minGames: LONG_MIN_GAMES,
-    over: formed.filter(p => p.form.ppg - p.consensus.points >= LONG_MIN_GAP).sort((a, b) => (b.form.ppg - b.consensus.points) - (a.form.ppg - a.consensus.points)).slice(0, LONG_LIST).map(formBrief),
-    under: formed.filter(p => p.consensus.points - p.form.ppg >= LONG_MIN_GAP).sort((a, b) => (a.form.ppg - a.consensus.points) - (b.form.ppg - b.consensus.points)).slice(0, LONG_LIST).map(formBrief)
+    over: formed.filter(p => p.form.ppg - p.consensus.points >= LONG_MIN_GAP && p.vegas.points >= p.consensus.points).sort((a, b) => (b.form.ppg - b.consensus.points) - (a.form.ppg - a.consensus.points)).slice(0, LONG_LIST).map(formBrief),
+    under: formed.filter(p => p.consensus.points - p.form.ppg >= LONG_MIN_GAP && p.vegas.points <= p.consensus.points).sort((a, b) => (a.form.ppg - a.consensus.points) - (b.form.ppg - b.consensus.points)).slice(0, LONG_LIST).map(formBrief)
   };
   // Movers: every player market with a real move, biggest first.
   const movers = [];
