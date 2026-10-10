@@ -375,7 +375,7 @@ console.log('\nwith the boards answering');
   const r = await read(page);
   ok('the market row is shown', r.market === true);
   ok('four lists, in order, the first one showing',
-     r.cats.map(c => c.t).join(' | ') === 'This week’s value | Long-term overperformers | This week’s headwinds | Long-term overvalued' && r.cats[0].on && r.cats.filter(c => c.on).length === 1,
+     r.cats.map(c => c.t).join(' | ') === 'This week’s value | Outscoring their projections | This week’s headwinds | Long-term overvalued' && r.cats[0].on && r.cats.filter(c => c.on).length === 1,
      JSON.stringify(r.cats));
   ok('this week\'s value is the buys, widest gap first', r.figs.length === 4 && r.figs.map(f => f.v).join(' | ') === '+4.7 pts | +4.7 pts | +4.4 pts | +2.5 pts', r.figs.map(f => f.v).join(' | '));
   ok('and only the buys', r.figs.every(f => f.good));
@@ -497,14 +497,14 @@ console.log('\nthe band rotates');
   const second = await on();
   await page.clock.runFor(9000);
   const third = await on();
-  ok('it advances through the lists on its own', first === 'This week’s value' && second === 'Long-term overperformers' && third === 'This week’s headwinds', [first, second, third].join(' → '));
+  ok('it advances through the lists on its own', first === 'This week’s value' && second === 'Outscoring their projections' && third === 'This week’s headwinds', [first, second, third].join(' → '));
   await page.hover('#diffBody');
   await page.clock.runFor(20000);
   ok('and holds while the pointer is on it', (await on()) === 'This week’s headwinds', await on());
   await page.click('#diffCats button:nth-child(2)');
   await page.mouse.move(5, 890);
   await page.clock.runFor(30000);
-  ok('a list the reader picks stays picked', (await on()) === 'Long-term overperformers', await on());
+  ok('a list the reader picks stays picked', (await on()) === 'Outscoring their projections', await on());
   await ctx.close();
 }
 
@@ -529,7 +529,7 @@ console.log('\nwith a board too short to print');
   EDGE.vsExperts = { buys: [], fades: [] };
   let { page, ctx } = await open(1440, 900);
   let r = await read(page);
-  ok('with the week empty, the two season lists are the band', r.market === true && r.cats.map(c => c.t).join(' | ') === 'Long-term overperformers | Long-term overvalued', JSON.stringify(r.cats));
+  ok('with the week empty, the two season lists are the band', r.market === true && r.cats.map(c => c.t).join(' | ') === 'Outscoring their projections | Long-term overvalued', JSON.stringify(r.cats));
   await ctx.close();
   EDGE.seasonForm = { ...fullForm, under: [] };
   ({ page, ctx } = await open(1440, 900));

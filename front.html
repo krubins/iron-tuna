@@ -564,7 +564,7 @@ footer.site {margin-top:0}
     };
     return [
       { key: 'value', label: 'This week\u2019s value', rows: week(vs.buys, 1), html: figHtml },
-      { key: 'over', label: 'Long-term overperformers', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } },
+      { key: 'over', label: 'Outscoring their projections', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } },
       { key: 'headwinds', label: 'This week\u2019s headwinds', rows: week(vs.fades, -1), html: figHtml },
       { key: 'overvalued', label: 'Long-term overvalued', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } }
     ].filter(function (c) { return c.rows.length >= MARKET_MIN; });
