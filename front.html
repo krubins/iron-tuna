@@ -95,6 +95,7 @@ body{overflow-x:hidden}
 .hm-face{width:88px;height:88px;border-radius:50%;overflow:hidden;position:relative;display:grid;place-items:center;background:var(--line);color:var(--ink-3);margin-bottom:var(--sp-12)}
 .hm-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
 .hm-face i{font-style:normal;font-size:var(--fs-19);font-weight:600}
+.hm-fig .c{display:block;font-size:var(--fs-12);font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);line-height:1.4;margin-bottom:2px}
 .hm-fig .k{display:block;font-size:var(--fs-16);color:var(--ink-3);line-height:1.4}
 .hm-fig .k b{color:var(--ink);font-weight:600}
 .hm-fig .v{display:block;font-size:var(--fs-34);font-weight:600;letter-spacing:-.01em;line-height:1.1;margin:var(--sp-6) 0;font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -102,9 +103,10 @@ body{overflow-x:hidden}
 .hm-fig .s{display:block;font-size:var(--fs-14);color:var(--ink-3);line-height:1.4;font-variant-numeric:tabular-nums}
 .hm-fine{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-8) var(--sp-12);margin:var(--sp-20) 0 0;font-size:var(--fs-14);color:var(--ink-3)}
 .hm-fine a{font-weight:600}
-/* The four lists the band rotates through, as tabs: this week's buys, the
-   season's overperformers, this week's fades, the season's overvalued. The
-   band advances on its own until the reader picks one. */
+/* The lists the band rotates through, as tabs: the overview (the top row of
+   each list), this week's buys, the season's overperformers, this week's
+   fades, the season's overvalued. The band advances on its own until the
+   reader picks one. */
 .hm-cats[hidden]{display:none}
 .hm-cats{display:flex;flex-wrap:wrap;gap:var(--sp-8);margin:0 0 var(--sp-20);padding:0}
 .hm-cats button{font:inherit;font-size:var(--fs-14);font-weight:600;color:var(--ink-3);background:none;border:1px solid var(--line2);border-radius:4px;padding:6px 12px;cursor:pointer;line-height:1.3}
@@ -316,7 +318,8 @@ footer.site {margin-top:0}
       <li><a href="/in-season/desk">Articles &rarr;</a></li>
     </ul>
     <hr class="hm-rule">
-    <!-- The live market figures, four lists the band rotates through: this
+    <!-- The live market figures, an overview (the top row of each list) and
+         four lists the band rotates through: this
          week's value and headwinds (the widest gaps between what the
          sportsbook implies and what the consensus projects), and the season's
          overperformers and overvalued (points a game against the consensus
@@ -613,12 +616,20 @@ footer.site {margin-top:0}
     var season = function (list, sign) {
       return dealFive((list || []).filter(function (p) { return usableForm(p, sign); }), function (p) { return Number(p.formGap); });
     };
-    return [
+    var lists = [
       { key: 'value', label: 'This week\u2019s value', rows: week(vs.buys, 1), html: figHtml },
       { key: 'over', label: 'Outscoring their projections', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } },
       { key: 'headwinds', label: 'This week\u2019s headwinds', rows: week(vs.fades, -1), html: figHtml },
       { key: 'overvalued', label: 'Trailing their projections', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } }
     ].filter(function (c) { return c.rows.length >= MARKET_MIN; });
+    // THE OVERVIEW (2026-10-10) leads the band once two or more lists stand:
+    // the top row of each list, in list order, each figure labelled with the
+    // list it came from and drawn the way that list draws it.
+    if (lists.length < 2) return lists;
+    var overview = lists.map(function (c) { return { cat: c, p: c.rows[0] }; });
+    return [{ key: 'overview', label: 'Overview', rows: overview, html: function (o) {
+      return o.cat.html(o.p).replace('<span class="hm-fig-txt">', '<span class="hm-fig-txt"><span class="c">' + esc(o.cat.label) + '</span>');
+    } }].concat(lists);
   }
   function nameLine(word, p) {
     return '<span class="k"><b>' + esc(word) + '</b> &middot; ' + esc(p.name) + ', ' + esc(p.position + ' ' + p.team) + (p.opponent ? ' v ' + esc(p.opponent) : '') + '</span>';
@@ -688,9 +699,13 @@ footer.site {margin-top:0}
   var oddsStamp = null;
   function fineHtml(week) {
     var cat = cats[catAt];
-    var what = cat && (cat.key === 'over' || cat.key === 'overvalued')
-      ? 'Points a game through at least ' + (minGames || 3) + ' games played, against the consensus projection' + (week ? ' for ' + esc(week) : '')
-      : 'Weekly fantasy points' + (week ? ' for ' + esc(week) : '');
+    var seasonWhat = 'points a game through at least ' + (minGames || 3) + ' games played, against the consensus projection' + (week ? ' for ' + esc(week) : '');
+    var weekWhat = 'weekly fantasy points' + (week ? ' for ' + esc(week) : '');
+    var what = cat && cat.key === 'overview'
+      ? 'Weekly lists in ' + weekWhat + '; long-term lists in ' + seasonWhat
+      : cat && (cat.key === 'over' || cat.key === 'overvalued')
+        ? 'P' + seasonWhat.slice(1)
+        : 'W' + weekWhat.slice(1);
     return '<span class="hm-tag">Estimate</span>'
       + '<span>' + what + ', at the site’s default scoring.'
       + (oddsStamp ? ' Odds read ' + esc(oddsStamp) + '.' : '') + '</span>'

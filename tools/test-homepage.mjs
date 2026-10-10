@@ -260,7 +260,7 @@ const read = page => page.evaluate(() => {
     // The market figures.
     market: vis(byId('different')),
     figs: [...document.querySelectorAll('#diffBody .hm-fig')].map(f => ({
-      k: text(f.querySelector('.k')), v: text(f.querySelector('.v')), s: text(f.querySelector('.s')),
+      c: text(f.querySelector('.c')), k: text(f.querySelector('.k')), v: text(f.querySelector('.v')), s: text(f.querySelector('.s')),
       face: (() => { const b = f.querySelector('.hm-face'); return b ? { name: b.getAttribute('data-face-name'), done: b.hasAttribute('data-face-done'), w: Math.round(b.getBoundingClientRect().width), h: Math.round(b.getBoundingClientRect().height), ini: text(b.querySelector('i')) } : null; })(),
       good: f.querySelector('.v').classList.contains('good'), vPx: px(f.querySelector('.v')), kPx: px(f.querySelector('.k')),
       color: getComputedStyle(f.querySelector('.v')).color
@@ -390,9 +390,17 @@ console.log('\nwith the boards answering');
   const { page, ctx } = await open(1440, 900);
   const r = await read(page);
   ok('the market row is shown', r.market === true);
-  ok('four lists, in order, the first one showing',
-     r.cats.map(c => c.t).join(' | ') === 'This week’s value | Outscoring their projections | This week’s headwinds | Trailing their projections' && r.cats[0].on && r.cats.filter(c => c.on).length === 1,
+  ok('the overview, then four lists, in order, the overview showing',
+     r.cats.map(c => c.t).join(' | ') === 'Overview | This week’s value | Outscoring their projections | This week’s headwinds | Trailing their projections' && r.cats[0].on && r.cats.filter(c => c.on).length === 1,
      JSON.stringify(r.cats));
+  ok('the overview is the top figure of each list, in list order, each labelled with its list',
+     r.figs.length === 4 && r.figs.map(f => f.c).join(' | ') === 'This week’s value | Outscoring their projections | This week’s headwinds | Trailing their projections'
+       && r.figs[0].v === '+4.7 pts' && r.figs[1].k.startsWith('Trust · Puka Nacua') && r.figs[2].v === '-4.7 pts' && r.figs[3].k.startsWith('Sell high · Tyreek Hill'),
+     JSON.stringify(r.figs.map(f => [f.c, f.k, f.v])));
+  ok('and its note covers both kinds of figure', /weekly fantasy points/.test(r.fine || '') && /at least 3 games played/.test(r.fine || ''), r.fine);
+  await page.click('#diffCats button:nth-child(2)');
+  Object.assign(r, { figs: (await read(page)).figs });
+  ok('a list figure carries no list label', r.figs.every(f => !f.c), r.figs.map(f => f.c).join(','));
   ok('this week\'s value is the buys, widest gap first', r.figs.length === 4 && r.figs.map(f => f.v).join(' | ') === '+4.7 pts | +4.7 pts | +4.4 pts | +2.5 pts', r.figs.map(f => f.v).join(' | '));
   ok('and only the buys', r.figs.every(f => f.good));
   ok('a consensus under 3 points is a stale line, not a price, and not a figure', !r.figs.some(f => f.k.includes('Promoted Backup')), r.figs.map(f => f.k).join(' / '));
@@ -401,9 +409,9 @@ console.log('\nwith the boards answering');
   ok('a strong buy on a bench player is a Value play', r.figs.some(f => f.k.startsWith('Value play · Tank Bigsby')), r.figs.map(f => f.k).join(' / '));
   // The headwinds, picked by the reader: the decisions below are on that list.
   const weekValue = r;
-  await page.click('#diffCats button:nth-child(3)');
+  await page.click('#diffCats button:nth-child(4)');
   const hw = await read(page);
-  ok('picking a list shows it', hw.cats[2].on && hw.figs.every(f => !f.good) && hw.figs.map(f => f.v).join(' | ') === '-4.7 pts | -4.5 pts | -4.0 pts', hw.figs.map(f => f.v).join(' | '));
+  ok('picking a list shows it', hw.cats[3].on && hw.figs.every(f => !f.good) && hw.figs.map(f => f.v).join(' | ') === '-4.7 pts | -4.5 pts | -4.0 pts', hw.figs.map(f => f.v).join(' | '));
   const by = n => weekValue.figs.concat(hw.figs).find(f => f.k.includes(n));
   ok('a strong buy on a startable player is a Start', by('Drake London') && by('Drake London').k.startsWith('Start'));
   ok('a strong fade on a player you would be starting is a Sit', by('Derrick Henry') && by('Derrick Henry').k.startsWith('Sit'));
@@ -419,7 +427,7 @@ console.log('\nwith the boards answering');
      !hw.figs.some(f => /Lamar Jackson|Hobbled|Priced Out|Zeroed/.test(f.k)) && !hw.figs.some(f => /Market 0\.0|Iron Tuna 0\.0/.test(f.s)), hw.figs.map(f => f.k).join(' / '));
 
   // The season lists.
-  await page.click('#diffCats button:nth-child(2)');
+  await page.click('#diffCats button:nth-child(3)');
   const ov = await read(page);
   ok('the overperformers: five, starters and longshots both, widest first',
      ov.figs.length === 5 && ov.figs.map(f => f.k.split(', ')[0]).join(' / ') === 'Trust · Puka Nacua / Trust · Jahmyr Gibbs / Trust · Josh Allen / Buy · Deep Sleeper / Buy · Bench Flier',
@@ -431,12 +439,12 @@ console.log('\nwith the boards answering');
      ov.figs.every(f => f.good && /^\+\d+\.\d pts\/g$/.test(f.v) && /^Season \d+\.\d a game over \d · consensus \d+\.\d · market \d+\.\d$/.test(f.s)),
      ov.figs.map(f => f.v + ' ' + f.s).join(' / '));
   ok('and the note says what a season figure is', /at least 3 games played/.test(ov.fine || ''), ov.fine);
-  await page.click('#diffCats button:nth-child(4)');
+  await page.click('#diffCats button:nth-child(5)');
   const uv = await read(page);
   ok('the overvalued: Sell high on a starter, Sell on a longshot, in ink',
      uv.figs.map(f => f.k.split(', ')[0] + ' ' + f.v).join(' / ') === 'Sell high · Tyreek Hill -6.9 pts/g / Sell · Faded Vet -5.5 pts/g / Sell high · Slow Starter -4.6 pts/g'
        && uv.figs.every(f => !f.good), uv.figs.map(f => f.k + ' ' + f.v).join(' / '));
-  await page.click('#diffCats button:nth-child(1)');
+  await page.click('#diffCats button:nth-child(2)');
   r.figs = (await read(page)).figs;
   ok('every figure carries the player\'s photograph, an 88px circle',
      r.figs.every(f => f.face && f.face.w === 88 && f.face.h === 88 && f.k.includes(f.face.name)), JSON.stringify(r.figs.map(f => f.face)));
@@ -515,11 +523,11 @@ console.log('\nthe band rotates');
   const second = await on();
   await page.clock.runFor(9000);
   const third = await on();
-  ok('it advances through the lists on its own', first === 'This week’s value' && second === 'Outscoring their projections' && third === 'This week’s headwinds', [first, second, third].join(' → '));
+  ok('it opens on the overview and advances through the lists on its own', first === 'Overview' && second === 'This week’s value' && third === 'Outscoring their projections', [first, second, third].join(' → '));
   await page.hover('#diffBody');
   await page.clock.runFor(20000);
-  ok('and holds while the pointer is on it', (await on()) === 'This week’s headwinds', await on());
-  await page.click('#diffCats button:nth-child(2)');
+  ok('and holds while the pointer is on it', (await on()) === 'Outscoring their projections', await on());
+  await page.click('#diffCats button:nth-child(3)');
   await page.mouse.move(5, 890);
   await page.clock.runFor(30000);
   ok('a list the reader picks stays picked', (await on()) === 'Outscoring their projections', await on());
@@ -547,7 +555,7 @@ console.log('\nwith a board too short to print');
   EDGE.vsExperts = { buys: [], fades: [] };
   let { page, ctx } = await open(1440, 900);
   let r = await read(page);
-  ok('with the week empty, the two season lists are the band', r.market === true && r.cats.map(c => c.t).join(' | ') === 'Outscoring their projections | Trailing their projections', JSON.stringify(r.cats));
+  ok('with the week empty, the overview and the two season lists are the band', r.market === true && r.cats.map(c => c.t).join(' | ') === 'Overview | Outscoring their projections | Trailing their projections' && r.figs.length === 2, JSON.stringify(r.cats));
   await ctx.close();
   EDGE.seasonForm = { ...fullForm, under: [] };
   ({ page, ctx } = await open(1440, 900));
