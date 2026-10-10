@@ -6,7 +6,11 @@
 // tools/test-trade-finder.mjs proves the engine. This proves the PAGE drives
 // it: the paste lands as teams, a screenshot's names come back through the
 // reader and resolve on the board, the horizon and balance controls reach the
-// search, and every trade shown gains both sides. The FAAB manual form is here
+// search, and every trade shown gains both sides. Since 2026-10-10 the page
+// is two tools under one tab bar: the Trade Evaluator (the deal first, the
+// rosters second and optional) and the Trade Finder (rosters only), so the
+// tab, the step order and a trade judged with no roster behind it are proved
+// here too. The FAAB manual form is here
 // too, because it is the same kind of claim: a league typed by hand has to
 // produce the same shape of answer the Sleeper path does, and the typed bid
 // history has to move the going rate.
@@ -167,6 +171,15 @@ const pasteInto = (sel, text) => page.$eval(sel, (el, t) => {
 }, text);
 const names = () => page.$$eval('#tf-teams .tf-team', els => els.map(e => e.querySelector('input.nm').value));
 const chipsOf = i => page.$$eval(R(i) + ' .chip', els => els.map(e => e.textContent));
+// The layout under the current tool: which steps show, in what order, and
+// where the team-count dropdown and the two buttons are.
+const layout = () => page.evaluate(() => ({
+  deal: document.getElementById('tf-deal').getBoundingClientRect().top, rosters: document.getElementById('tf-rosters').getBoundingClientRect().top,
+  dealShown: !!document.getElementById('tf-deal').offsetParent, find: !!document.getElementById('tf-find').offsetParent, evalBtn: !!document.getElementById('tf-eval').offsetParent,
+  countIn: document.getElementById('tf-count').closest('.tf-step').id
+}));
+const selectedTool = () => page.$eval('#tf-tool button[aria-selected="true"]', e => e.getAttribute('data-tool'));
+let lay;
 {
   await page.goto(BASE + '/trade-finder', { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('tf-read-status').textContent === '', null, { timeout: 8000 });
@@ -176,6 +189,14 @@ const chipsOf = i => page.$$eval(R(i) + ' .chip', els => els.map(e => e.textCont
   ok('the first box is the reader’s', await page.$eval(R(0), e => e.classList.contains('mine')));
   ok('evaluate waits for a player in the trade', await page.$eval('#tf-eval', e => e.disabled));
   ok('the factors box is there', !!(await page.$('#tf-factors')));
+
+  // Two tools in one page. The Evaluator is the default and leads with the deal.
+  const tabs = await page.$$eval('#tf-tool button[data-tool]', bs => bs.map(b => b.getAttribute('data-tool') + ':' + b.getAttribute('aria-selected')));
+  ok('two tools in a tab bar, the Evaluator selected', tabs.join() === 'evaluator:true,finder:false', tabs.join());
+  lay = await layout();
+  ok('the Evaluator puts the players in the trade above the rosters', lay.dealShown && lay.deal < lay.rosters, JSON.stringify(lay));
+  ok('the team count sits in that first step, and the rosters are marked optional', lay.countIn === 'tf-deal' && /optional/.test(await page.textContent('#tf-rosters-h')), JSON.stringify(lay));
+  ok('only the Evaluate button shows', lay.evalBtn && !lay.find, JSON.stringify(lay));
 
   await page.selectOption('#tf-count', '4');
   ok('four teams, four of each box', (await page.$$('#tf-teams .tf-team')).length === 4 && (await page.$$('#tf-sends .tf-team')).length === 4);
@@ -246,6 +267,11 @@ console.log('\nthe screenshot reader');
 
 // ── the search ─────────────────────────────────────────────────────────────
 console.log('\nthe search');
+await page.click('#tf-tool button[data-tool="finder"]');
+lay = await layout();
+ok('the Finder tab hides the deal and leads with the rosters', !lay.dealShown && lay.find && !lay.evalBtn && lay.countIn === 'tf-rosters', JSON.stringify(lay));
+ok('and the hash names it', await page.evaluate(() => location.hash) === '#finder');
+ok('the rosters typed under the Evaluator are still there', (await names()).length === 4 && (await chipsOf(0)).length === 12);
 await page.click('#tf-find');
 await page.waitForSelector('#tf-results:not([hidden]) .tf-trade', { timeout: 15000 });
 const read = () => page.$$eval('.tf-trade', els => els.map(e => {
@@ -292,7 +318,8 @@ await page.waitForFunction(() => document.querySelectorAll('#tf-teams .chip').le
 ok('a reload keeps the rosters', (await names()).join() === 'Iron Tuna (Ken),The Hammers');
 ok('and the hidden two', await page.$eval('#tf-count', e => e.value) === '2' && (await (async () => { await page.selectOption('#tf-count', '4'); const n = await names(); await page.selectOption('#tf-count', '2'); return n.length === 4 && n[2] === 'Clinched'; })()));
 ok('and the horizons', await page.$eval('#tf-hA button[data-h="playoffs"]', e => e.getAttribute('aria-pressed') === 'true'));
-if (process.env.IT_SHOT) { await page.screenshot({ path: process.env.IT_SHOT, fullPage: true }); console.log('wrote ' + process.env.IT_SHOT); }
+ok('and the tool', await selectedTool() === 'finder');
+if (process.env.IT_SHOT) { await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: process.env.IT_SHOT, fullPage: true }); console.log('wrote ' + process.env.IT_SHOT); }
 ok('nothing on the Trade Finder threw', errors.length === 0, errors[0]);
 
 // ── evaluating a trade the reader brings ──────────────────────────────────
@@ -302,6 +329,8 @@ const verdict = () => page.evaluate(() => ({ cls: document.querySelector('.tf-ve
   alt: document.querySelector('.tf-alt') && document.querySelector('.tf-alt').textContent, altTrades: document.querySelectorAll('.tf-trade:not(.tf-proposed)').length }));
 const clearDeal = async () => { for (const sel of ['#tf-sends .chip button']) while ((await page.$$(sel)).length) await page.click(sel); };
 {
+  await page.click('#tf-tool button[data-tool="evaluator"]');
+  ok('switching tools puts the result away', await page.$eval('#tf-results', e => e.hidden));
   if (!(await page.$eval('#tf-settings', e => e.open))) await page.click('#tf-settings summary');
   await page.click('#tf-hA button[data-h="ros"]');
   await page.click('#tf-hB button[data-h="ros"]');
@@ -400,6 +429,69 @@ console.log('\nevaluate a three-team trade, with notes');
   ok('nothing threw while evaluating', errors.length === 0, errors[0]);
 }
 
+// ── the Evaluator with no rosters ─────────────────────────────────────────
+// The rosters are optional. A deal typed with nothing behind it is scored on
+// the players alone and says so; the same deal with the rosters pasted in is
+// scored on the lineups.
+console.log('\nevaluate with no rosters entered');
+{
+  await page.evaluate(() => localStorage.clear());
+  await page.goto(BASE + '/trade-finder', { waitUntil: 'load' });
+  await page.waitForFunction(() => document.getElementById('tf-read-status').textContent === '', null, { timeout: 8000 });
+  ok('a fresh page opens on the Evaluator', await selectedTool() === 'evaluator');
+  ok('with empty rosters', (await chipsOf(0)).length === 0 && (await chipsOf(1)).length === 0);
+  // The trade box offers the board when there is no roster behind it.
+  await typeAndPick(sendIn(0), NAMES.RB[3]);
+  ok('a player typed into the trade lands there', (await page.textContent(S(0) + ' .tf-send-list')).includes(NAMES.RB[3]));
+  ok('and joins his team’s roster', (await chipsOf(0)).length === 1, String((await chipsOf(0)).length));
+  // And keeps offering it after the first pick, when the roster is only him.
+  await page.type(sendIn(0), NAMES.RB[6], { delay: 5 });
+  await page.waitForSelector(sendIn(0) + ' + .tf-sug:not([hidden]) li', { timeout: 4000 });
+  const more = await page.$$eval(sendIn(0) + ' + .tf-sug li', ls => ls.map(l => l.textContent));
+  ok('the box still offers the board after the first pick', more.length && more[0].indexOf(NAMES.RB[6]) === 0, more.join(' | '));
+  await page.press(sendIn(0), 'Enter');
+  ok('two in the trade, two on the roster', (await page.$$(S(0) + ' .chip')).length === 2 && (await chipsOf(0)).length === 2);
+  // Taking him back out of the trade takes him off a roster the reader never typed.
+  await page.click(S(0) + ' .tf-send-row:nth-child(2) .chip button');
+  ok('out of the trade, out of the roster too', (await page.$$(S(0) + ' .chip')).length === 1 && (await chipsOf(0)).length === 1, (await chipsOf(0)).join(' | '));
+  await typeAndPick(sendIn(1), NAMES.WR[6]);
+  await page.click('#tf-eval');
+  await page.waitForSelector('#tf-results:not([hidden]) .tf-verdict', { timeout: 15000 });
+  const v0 = await verdict();
+  ok('a trade with no rosters is still judged', v0.sides.length === 2 && /^You/.test(v0.sides[0].who), JSON.stringify(v0));
+  ok('each side says it was scored on the players alone', (await page.$$('.tf-proposed .lines.bare')).length === 2);
+  ok('the bar says no roster was entered', /no roster entered/.test(await page.textContent('#tf-bar')));
+  ok('the note says what the rosters would add, and no search ran', /Add the rosters/.test(await page.textContent('#tf-results-note')) && !(await page.$('.tf-alt')));
+  // The fourth back outscores the seventh receiver, so on the names alone the
+  // reader loses; with the rosters in (a back-heavy team thin at receiver)
+  // the same swap was a win above.
+  ok('on the players alone, the better player going out is a loss', v0.sides[0].neg && /Don/.test(v0.h), JSON.stringify(v0));
+  await pasteInto(rosterIn(0), PASTE);
+  await page.waitForFunction(() => document.querySelectorAll('#tf-teams .tf-team').length === 4, null, { timeout: 4000 });
+  ok('the paste fills the rosters under the Evaluator too', (await names()).join() === 'Iron Tuna (Ken),The Hammers,Clinched,Bubble Boys' && (await chipsOf(0)).length === 12, (await names()).join());
+  ok('the trade is still listed', (await page.$$('#tf-sends .chip')).length === 2);
+  await page.click('#tf-eval');
+  await page.waitForFunction(() => !document.getElementById('tf-results').hidden && !document.querySelector('.tf-proposed .lines.bare'), null, { timeout: 15000 });
+  const v1 = await verdict();
+  ok('with the rosters in, the same deal is scored on the lineups, and wins', /win/.test(v1.cls), JSON.stringify(v1));
+  ok('and the bar prices the lineup', /pts\/wk/.test(await page.textContent('#tf-bar')));
+  // The ribbon is sticky at the top of the window: scrolled to the verdict, it is still at 0.
+  ok('the header ribbon stays anchored to the top while scrolled', await page.evaluate(() => { const h = document.querySelector('header.site'); return window.scrollY > 100 && getComputedStyle(h).position === 'sticky' && Math.round(h.getBoundingClientRect().top) === 0; }), String(await page.evaluate(() => [window.scrollY, document.querySelector('header.site').getBoundingClientRect().top])));
+  // A full-page screenshot is taken from the top, or the sticky ribbon lands mid-picture.
+  if (process.env.IT_SHOT) { const p3 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-evaluator$1'); await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: p3, fullPage: true }); console.log('wrote ' + p3); }
+  // A link can open either tool: the hash switches in place (this goto is a
+  // same-document navigation, so nothing reloads) and a fresh load reads it.
+  await page.goto(BASE + '/trade-finder#finder', { waitUntil: 'load' });
+  ok('a hash change switches the tool in place', await selectedTool() === 'finder' && await page.$eval('#tf-results', e => e.hidden));
+  await page.goto('about:blank');
+  await page.goto(BASE + '/trade-finder#finder', { waitUntil: 'load' });
+  await page.waitForFunction(() => document.getElementById('tf-read-status').textContent === '', null, { timeout: 8000 });
+  lay = await layout();
+  ok('/trade-finder#finder opens the Finder', await selectedTool() === 'finder' && !lay.dealShown && lay.countIn === 'tf-rosters', JSON.stringify(lay));
+  ok('with the rosters and the trade kept', (await names()).length === 4 && (await page.$$('#tf-sends .chip')).length === 2);
+  ok('nothing threw without rosters', errors.length === 0, errors[0]);
+}
+
 // ── the FAAB Advisor by hand ───────────────────────────────────────────────
 console.log('\nthe FAAB Advisor, entered by hand');
 {
@@ -454,7 +546,7 @@ console.log('\nthe FAAB Advisor, entered by hand');
   ok('the going rate moved toward what the room pays', r.rows[0].going != null && r.rows[0].going > goingBefore, `${r.rows[0].going} vs ${goingBefore}`);
   ok('still never above the richest rival', r.rows.every(x => x.going == null || x.going <= 100));
   ok('a "Bid $n" still beats the going rate and is affordable', r.rows.filter(x => /^Bid/.test(x.call)).every(x => { const b = +/\$(\d+)/.exec(x.call)[1]; return b > (x.going || 0) && b <= 80; }));
-  if (process.env.IT_SHOT) { const p2 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-faab$1'); await page.screenshot({ path: p2, fullPage: true }); console.log('wrote ' + p2); }
+  if (process.env.IT_SHOT) { const p2 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-faab$1'); await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: p2, fullPage: true }); console.log('wrote ' + p2); }
 
   // A reload comes straight back to the typed league.
   await page.reload({ waitUntil: 'load' });

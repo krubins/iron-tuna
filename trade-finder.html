@@ -14,20 +14,20 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trade Finder: Fantasy Football Trades Both Sides Say Yes To | Iron Tuna</title>
-<meta name="description" content="Paste your league's rosters or drop in screenshots. Iron Tuna scores every lineup at your scoring and finds the trades that make both teams better, each on its own horizon: this week, the next three, the rest of the season, or the fantasy playoffs.">
+<title>Trade Tools: Trade Evaluator and Trade Finder | Iron Tuna</title>
+<meta name="description" content="Judge a trade or find one. The Trade Evaluator scores every team in a proposed deal at your scoring, with the rosters optional. The Trade Finder takes two to four rosters, typed or screenshotted, and returns the trades that improve both lineups, each on its own horizon: this week, the next three, the rest of the season, or the fantasy playoffs.">
 <link rel="canonical" href="https://irontuna.com/trade-finder">
 <!--seo:meta-->
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
 <meta property="og:site_name" content="Iron Tuna">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:site" content="@irontunafantasy">
-<meta name="twitter:title" content="Trade Finder: Trades Both Sides Say Yes To">
-<meta name="twitter:description" content="Paste the rosters, set your scoring, and get the trades that improve both lineups. Tilt the balance, or score each side on a different horizon.">
+<meta name="twitter:title" content="Trade Tools: Judge a Trade, or Find One Both Sides Say Yes To">
+<meta name="twitter:description" content="The Trade Evaluator scores the players in a deal for every team, rosters optional. The Trade Finder takes the rosters and finds the trades that improve both lineups, each on its own horizon.">
 <meta name="twitter:image" content="https://irontuna.com/og.png">
 <!--/seo:meta-->
-<meta property="og:title" content="Trade Finder: Trades Both Sides Say Yes To">
-<meta property="og:description" content="Paste the rosters, set your scoring, and get the trades that improve both lineups. Tilt the balance, or score each side on a different horizon.">
+<meta property="og:title" content="Trade Tools: Judge a Trade, or Find One Both Sides Say Yes To">
+<meta property="og:description" content="The Trade Evaluator scores the players in a deal for every team, rosters optional. The Trade Finder takes the rosters and finds the trades that improve both lineups, each on its own horizon.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://irontuna.com/trade-finder">
 <meta property="og:image" content="https://irontuna.com/og.png">
@@ -153,9 +153,32 @@ textarea.tf-factors{min-height:110px}
 .tf-take h3{margin:0 0 6px;font-size:17px}
 .tf-take p{margin:0 0 8px;font-size:15px}
 .tf-take .tf-take-note,.tf-take .tf-take-wait{font-size:13.5px;color:var(--muted)}
+/* ── the two tools ──────────────────────────────────────────────────────── */
+/* One page, two tabs, one set of boxes. The tab reorders the steps with flex
+   order and hides the one the other tool has no use for, so a roster typed
+   under the Evaluator is still there under the Finder. */
+.tf-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 4px}
+.tf-tabs button{appearance:none;font:inherit;cursor:pointer;flex:1 1 240px;text-align:left;border:1px solid var(--line2);border-radius:10px;background:#fff;color:var(--text);padding:12px 16px;display:flex;flex-direction:column;gap:3px}
+.tf-tabs button b{font-size:17px}
+.tf-tabs button span{font-size:14px;color:var(--muted);font-weight:400;line-height:1.4}
+.tf-tabs button:hover{border-color:var(--teal)}
+.tf-tabs button[aria-selected="true"]{border-color:var(--teal);background:var(--teal-tint);box-shadow:0 0 0 2px var(--teal-tint)}
+.tf-tabs button[aria-selected="true"] b{color:var(--teal)}
+.tf-tabs button:focus-visible{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint)}
+#tf-flow{display:flex;flex-direction:column;margin-top:14px}
+#tf-flow .tf-step{margin:0 0 18px}
+#tf-flow[data-tool="evaluator"] #tf-deal{order:1}
+#tf-flow[data-tool="evaluator"] #tf-rosters{order:2}
+#tf-flow[data-tool="evaluator"] #tf-context{order:3}
+#tf-flow[data-tool="finder"] #tf-deal{display:none}
+#tf-flow[data-tool="finder"] #tf-rosters{order:1}
+#tf-flow[data-tool="finder"] #tf-context{order:2}
+#tf-flow[data-tool="evaluator"] #tf-find,#tf-flow[data-tool="finder"] #tf-eval{display:none}
+.tf-step h3 .opt{font-weight:400;color:var(--muted);font-size:15px}
+.tf-side .lines.bare{color:var(--sec);font-style:italic}
 @media(max-width:640px){.tf-sides,.tf-sides.multi{grid-template-columns:1fr}.tf-slider input[type=range]{width:160px}}
 </style>
-<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/trade-finder","name":"Trade Finder: Fantasy Football Trades Both Sides Say Yes To","description":"Paste your league's rosters or drop in screenshots. Iron Tuna scores every lineup at your scoring and finds the trades that make both teams better, each on its own horizon: this week, the next three, the rest of the season, or the fantasy playoffs.","url":"https://irontuna.com/trade-finder","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/trade-finder"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Trade Finder: Fantasy Football Trades Both Sides Say Yes To"}]}]}</script>
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/trade-finder","name":"Trade Tools: Trade Evaluator and Trade Finder","description":"Judge a trade or find one. The Trade Evaluator scores every team in a proposed deal at your scoring, with the rosters optional. The Trade Finder takes two to four rosters, typed or screenshotted, and returns the trades that improve both lineups, each on its own horizon: this week, the next three, the rest of the season, or the fantasy playoffs.","url":"https://irontuna.com/trade-finder","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/trade-finder"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Trade Tools: Trade Evaluator and Trade Finder"}]}]}</script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -185,9 +208,14 @@ textarea.tf-factors{min-height:110px}
 </header>
 <main id="main" class="wrap wide">
 <div class="art-head">
-<div class="eyebrow">In-season &middot; Trade Finder</div>
-<h1 class="art-h1">Trades both sides say yes to</h1>
-<p class="lede">Pick how many teams are in the deal, fill in their rosters, and list who goes where. Iron Tuna judges the trade for every team, or finds one for you.</p>
+<div class="eyebrow">In-season &middot; Trade Tools</div>
+<h1 class="art-h1">Judge a trade, or find one</h1>
+<p class="lede">Two tools, one board. The Trade Evaluator takes a deal you have in hand and scores it for every team in it. The Trade Finder takes the rosters and returns the trades the other manager can also say yes to.</p>
+</div>
+
+<div class="tf-tabs" id="tf-tool" role="tablist" aria-label="Trade tools">
+  <button type="button" role="tab" data-tool="evaluator" id="tf-tab-evaluator" aria-selected="true" aria-controls="tf-flow"><b>Trade Evaluator</b><span>Judge a trade on the table. List the players; the rosters are optional.</span></button>
+  <button type="button" role="tab" data-tool="finder" id="tf-tab-finder" aria-selected="false" aria-controls="tf-flow"><b>Trade Finder</b><span>Fill in two to four rosters and Iron Tuna finds the trades both sides say yes to.</span></button>
 </div>
 
 <div class="its-strip-sync" id="tfSync" hidden></div>
@@ -198,30 +226,32 @@ textarea.tf-factors{min-height:110px}
   <div id="tfMatches"></div>
 </div>
 
-<div class="tf-step" id="tf-rosters">
-  <h3>1. The teams and their rosters</h3>
-  <div class="tf-row"><label class="tf-pair"><span class="tf-lab">Teams in the trade</span><select class="tf-sel" id="tf-count" aria-label="How many teams are in the trade">
+<div id="tf-flow" role="tabpanel" data-tool="evaluator">
+<div class="tf-step" id="tf-deal">
+  <h3 id="tf-deal-h">1. The players in the trade</h3>
+  <div class="tf-row" id="tf-count-row"><label class="tf-pair"><span class="tf-lab" id="tf-count-lab">Teams in the trade</span><select class="tf-sel" id="tf-count" aria-label="How many teams">
     <option value="2">2 teams</option><option value="3">3 teams</option><option value="4">4 teams</option>
   </select></label></div>
-  <p class="sub">For each team, type the players (names fill in as you type, and a pasted list works too) or add a screenshot of the roster page.</p>
-  <p class="tf-status" id="tf-read-status"></p>
-  <div class="tf-teams" id="tf-teams"></div>
-  <div class="cta-row"><button class="btn alt small" id="tf-clear" type="button">Start over</button></div>
-</div>
-
-<div class="tf-step" id="tf-deal">
-  <h3>2. Players in the trade</h3>
-  <p class="sub">List who each team sends. Leave every box empty and Iron Tuna finds trades among these teams for you instead.</p>
+  <p class="sub" id="tf-deal-sub">Who sends whom. Type a name and it fills in. With three or four teams, say where each player goes.</p>
+  <p class="tf-status" id="tf-deal-status"></p>
   <div class="tf-teams" id="tf-sends"></div>
 </div>
 
+<div class="tf-step" id="tf-rosters">
+  <h3 id="tf-rosters-h">2. The teams&rsquo; rosters <span class="opt">(optional)</span></h3>
+  <p class="sub" id="tf-rosters-sub">Add each team&rsquo;s full roster and the trade is judged on the lineup it changes rather than on the players alone. Type the names, paste a list, or paste or drop a screenshot of the roster page.</p>
+  <p class="tf-status" id="tf-read-status"></p>
+  <div class="tf-teams" id="tf-teams"></div>
+</div>
+
 <div class="tf-step" id="tf-context">
-  <h3>3. Anything else to weigh?</h3>
+  <h3 id="tf-context-h">3. Anything else to weigh?</h3>
   <p class="sub">Team records, standings, injuries, byes, who is chasing a playoff spot, who has clinched. Name a team (or say &ldquo;I&rdquo; or &ldquo;my team&rdquo; for yours) with its record or situation and its horizon adjusts: a clinched team is scored on the fantasy playoffs, a team that needs wins now on the next three weeks. Each team box shows how it was read.</p>
   <textarea class="tf-paste tf-factors" id="tf-factors" spellcheck="true" aria-label="Additional factors" placeholder="Example: My team is 7-2 and has nearly clinched. The Hammers are 3-6 and need wins now. Their RB1 is questionable this week."></textarea>
   <div class="cta-row">
     <button class="btn" id="tf-eval" type="button">Evaluate this trade</button>
-    <button class="btn alt" id="tf-find" type="button">Find trades for me</button>
+    <button class="btn" id="tf-find" type="button">Find trades for me</button>
+    <button class="btn alt small" id="tf-clear" type="button">Start over</button>
     <span class="tf-status" id="tf-find-status"></span>
   </div>
   <details class="tf-more" id="tf-settings">
@@ -272,6 +302,7 @@ textarea.tf-factors{min-height:110px}
     </div>
   </details>
 </div>
+</div><!-- /#tf-flow -->
 
 <div id="tf-results" hidden>
   <div class="tf-bar" id="tf-bar"></div>
@@ -284,8 +315,9 @@ textarea.tf-factors{min-height:110px}
 <div class="method">
   <h3>How these trades are judged</h3>
   <p><b>A roster is worth what it starts.</b> Every player is projected at your scoring from the same board the rankings use, and each team&rsquo;s lineup is filled the way your league fills it: the named slots first, then flex and superflex from whoever is left. The bench counts a little, as insurance, and a backup quarterback in a one-QB league counts for almost nothing. Kickers and defenses are left out.</p>
-  <p><b>Every team in the deal is scored.</b> For a two-, three- or four-team trade, each team&rsquo;s lineup is filled before and after, counting what it sends and what it receives. A team that gains three quarters of a point a week or more is called a gain, one that loses as much a loss, and anything between is about even. When the deal is not a yes for everyone, the finder shows the closest trades among the same teams that are.</p>
-  <p><b>Finding a trade.</b> Leave the trade boxes empty and the engine tries every one-, two- and three-player swap between your team and each of the others, keeping only swaps where both lineups improve by at least three quarters of a point a week. The balance slider orders what survives: at <em>Even</em> by the smaller of the two gains, at <em>In my favor</em> by yours alone. It cannot surface a trade the other manager should refuse.</p>
+  <p><b>The Trade Evaluator scores every team in the deal.</b> For a two-, three- or four-team trade, each team&rsquo;s lineup is filled before and after, counting what it sends and what it receives. A team that gains three quarters of a point a week or more is called a gain, one that loses as much a loss, and anything between is about even. When the deal is not a yes for everyone and the rosters are in, the evaluator shows the closest trades among the same teams that are.</p>
+  <p><b>Rosters are optional in the Evaluator.</b> List only the players and each side is scored on those players alone: what it gets against what it sends, at your scoring, on its horizon. That answers whether the names are fair. Add the rosters and the score becomes the change to the lineup each team actually starts, which is the better answer whenever a two-for-one opens or closes a starting slot, and the card says which of the two it is showing.</p>
+  <p><b>The Trade Finder.</b> Fill in two to four rosters and the engine tries every one-, two- and three-player swap between your team and each of the others, keeping only swaps where both lineups improve by at least three quarters of a point a week. The balance slider orders what survives: at <em>Even</em> by the smaller of the two gains, at <em>In my favor</em> by yours alone. It cannot surface a trade the other manager should refuse.</p>
   <p><b>Horizons are per team.</b> A gain is measured on the weeks that team is playing for &mdash; this week, the next three, the rest of the season, or the fantasy playoffs &mdash; and stated per week so a three-week horizon and a twelve-week one are on the same scale. Your notes set a team&rsquo;s horizon when they describe it: &ldquo;clinched&rdquo; or a record of .700 or better means the fantasy playoffs; &ldquo;needs wins,&rdquo; &ldquo;on the bubble&rdquo; or .400 or worse means the next three weeks; &ldquo;must win this week&rdquo; means this week; &ldquo;eliminated&rdquo; or &ldquo;rebuilding&rdquo; means the rest of the season.</p>
   <p><b>Your notes.</b> Beyond setting horizons, the factors you type are read by a language model after the numbers are in. It explains whether they should change the call; it never changes a projection, and the scores stand on their own.</p>
   <p><b>What it does not know.</b> It cannot see your league&rsquo;s roster limits, its trade deadline, who is on injured reserve, or which manager is unreachable. A team that receives more players than it sends needs roster spots; the card says so. Screenshots are read by a model into names only, and every name is then matched to the board here in your browser, so nothing it read can become a projection on its own.</p>
@@ -423,6 +455,60 @@ textarea.tf-factors{min-height:110px}
   var deal = [[], [], [], []];
   var mine = st.mine == null ? '0' : String(st.mine);
   var synced = null;     // the saved league's teams, once loaded
+  // A player typed straight into the trade joins his team's roster, because
+  // the engine scores what a team has before and after. He is marked as
+  // having come in that way, so taking him back out of the trade takes him
+  // off a roster the reader never typed, and a roster that holds nothing but
+  // its own trade players is scored as "no roster entered" (2026-10-10: the
+  // Evaluator takes the rosters second and as an option, so this is the
+  // common case, not the edge).
+  var viaDeal = {};
+  function rosterEntered(i) { return teams[i].players.some(function (p) { return !viaDeal[p.id]; }); }
+
+  // ── the two tools ────────────────────────────────────────────────────────
+  // One page, two tools, one set of boxes. The Trade Evaluator leads with the
+  // players in the deal and takes the rosters second, as an option; the Trade
+  // Finder needs the rosters and has no deal to list. The tab moves the steps
+  // rather than duplicating them, so a roster typed under one tool is there
+  // under the other. The hash names the tool (/trade-finder#finder) so a link
+  // can open either; otherwise the one used last comes back.
+  var TOOLS = { evaluator: 1, finder: 1 };
+  function toolFromHash() { var h = (location.hash || '').replace(/^#/, ''); return TOOLS[h] ? h : null; }
+  var tool = toolFromHash() || (TOOLS[st.tool] ? st.tool : 'evaluator');
+  var COPY = {
+    evaluator: {
+      deal: ['1. The players in the trade', 'Who sends whom. Type a name and it fills in. With three or four teams, say where each player goes.'],
+      rosters: ['2. The teams&rsquo; rosters <span class="opt">(optional)</span>', 'Add each team&rsquo;s full roster and the trade is judged on the lineup it changes rather than on the players alone. Type the names, paste a list, or paste or drop a screenshot of the roster page.'],
+      context: '3. Anything else to weigh?', count: 'Teams in the trade'
+    },
+    finder: {
+      rosters: ['1. The teams and their rosters', 'For each team, type the players (names fill in as you type, and a pasted list works too), or paste or drop a screenshot of the roster page. Two rosters is enough; four is the most.'],
+      context: '2. Anything else to weigh?', count: 'Teams to search'
+    }
+  };
+  function paintTool() {
+    var c = COPY[tool];
+    $('tf-flow').setAttribute('data-tool', tool);
+    [].forEach.call($('tf-tool').querySelectorAll('button[data-tool]'), function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tool') === tool ? 'true' : 'false'); });
+    if (c.deal) { $('tf-deal-h').innerHTML = c.deal[0]; $('tf-deal-sub').innerHTML = c.deal[1]; }
+    $('tf-rosters-h').innerHTML = c.rosters[0]; $('tf-rosters-sub').innerHTML = c.rosters[1];
+    $('tf-context-h').textContent = c.context;
+    $('tf-count-lab').textContent = c.count;
+    // The team count belongs to whichever step comes first.
+    var first = tool === 'evaluator' ? $('tf-deal') : $('tf-rosters'), row = $('tf-count-row');
+    if (row.parentNode !== first) first.insertBefore(row, first.querySelector('p.sub'));
+  }
+  function setTool(t) {
+    if (!TOOLS[t] || t === tool) return;
+    tool = t; writeState({ tool: tool });
+    try { history.replaceState(null, '', '#' + tool); } catch (e) {}
+    // A result belongs to the tool that produced it.
+    $('tf-results').hidden = true;
+    status($('tf-find-status'), ''); status($('tf-deal-status'), '');
+    paintTool(); render();
+  }
+  $('tf-tool').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-tool]'); if (b) setTool(b.getAttribute('data-tool')); });
+  window.addEventListener('hashchange', function () { var t = toolFromHash(); if (t) setTool(t); });
   function blankTeam(i) { return { name: 'Team ' + (i + 1), players: [], unresolved: [] }; }
   function isDefaultName(n) { return /^Team \d+$/.test(n || ''); }
   for (var ti = 0; ti < MAX_TEAMS; ti++) teams.push(blankTeam(ti));
@@ -432,7 +518,7 @@ textarea.tf-factors{min-height:110px}
     writeState({
       count: count, mine: mine, factors: $('tf-factors').value,
       teams: teams.map(function (t) { return { name: t.name, ids: t.players.map(function (p) { return p.id; }), unresolved: t.unresolved }; }),
-      deal: deal
+      deal: deal, viaDeal: Object.keys(viaDeal), tool: tool
     });
   }
   function restore() {
@@ -441,6 +527,7 @@ textarea.tf-factors{min-height:110px}
       teams[i] = { name: t.name || ('Team ' + (i + 1)), players: (t.ids || []).map(function (id) { return players[id]; }).filter(Boolean), unresolved: t.unresolved || [] };
     });
     (st.deal || []).slice(0, MAX_TEAMS).forEach(function (d, i) { deal[i] = (d || []).filter(function (x) { return x && players[x.id]; }); });
+    (st.viaDeal || []).forEach(function (id) { if (players[id]) viaDeal[id] = 1; });
     if (st.factors) $('tf-factors').value = st.factors;
   }
   function status(el, msg, err) { el.textContent = msg || ''; el.classList.toggle('err', !!err); }
@@ -449,8 +536,12 @@ textarea.tf-factors{min-height:110px}
     return -1;
   }
   // A player belongs to one roster. Adding him to a second team moves him.
-  function addToRoster(i, p) {
+  // Added through a trade box, a player nobody held is flagged as the deal's
+  // own; added any other way (typed, pasted, read off a screenshot, loaded
+  // from the league) he is the roster's, flag or no flag.
+  function addToRoster(i, p, fromDeal) {
     var at = holder(p.id);
+    if (fromDeal) { if (at < 0) viaDeal[p.id] = 1; } else delete viaDeal[p.id];
     if (at === i) return false;
     if (at >= 0) { teams[at].players = teams[at].players.filter(function (x) { return x.id !== p.id; }); deal[at] = deal[at].filter(function (x) { return x.id !== p.id; }); }
     teams[i].players.push(p);
@@ -461,7 +552,7 @@ textarea.tf-factors{min-height:110px}
   // player in the deal that the team no longer has, or headed nowhere.
   function tidyDeal() {
     for (var i = 0; i < MAX_TEAMS; i++) {
-      if (i >= count) { deal[i] = []; continue; }
+      if (i >= count) { deal[i].forEach(function (x) { dropIfDealOnly(i, x.id); }); deal[i] = []; continue; }
       var ids = teams[i].players.map(function (p) { return p.id; });
       deal[i] = deal[i].filter(function (x) { return ids.indexOf(x.id) >= 0; });
       deal[i].forEach(function (x) {
@@ -470,6 +561,13 @@ textarea.tf-factors{min-height:110px}
         if (count === 2) x.to = 1 - i;
       });
     }
+  }
+  // Out of the trade, a player who only ever came in through it leaves the
+  // roster too; a player the reader put on the roster stays.
+  function dropIfDealOnly(i, id) {
+    if (!viaDeal[id]) return;
+    teams[i].players = teams[i].players.filter(function (p) { return p.id !== id; });
+    delete viaDeal[id];
   }
   function defaultTo(i) {
     var m = Number(mine);
@@ -530,7 +628,7 @@ textarea.tf-factors{min-height:110px}
       return '<div class="tf-team tf-sendbox' + (String(i) === mine ? ' mine' : '') + '" data-i="' + i + '">'
         + '<div class="tf-send-h">' + esc(t.name) + ' sends' + (count === 2 ? ' <span>to ' + esc(teams[1 - i].name) + '</span>' : '') + '</div>'
         + '<div class="tf-send-list">' + (list || '<div class="tf-none">Nobody yet.</div>') + '</div>'
-        + '<div class="tf-ac"><input class="tf-type" data-send="' + i + '" autocomplete="off" spellcheck="false" placeholder="' + (t.players.length ? 'Type a player on this roster' : 'Type a player') + '" aria-label="Add a player ' + esc(t.name) + ' sends"><ul class="tf-sug" hidden></ul></div>'
+        + '<div class="tf-ac"><input class="tf-type" data-send="' + i + '" autocomplete="off" spellcheck="false" placeholder="' + (rosterEntered(i) ? 'Type a player on this roster' : 'Type a player') + '" aria-label="Add a player ' + esc(t.name) + ' sends"><ul class="tf-sug" hidden></ul></div>'
         + '</div>';
     }).join('');
   }
@@ -546,7 +644,10 @@ textarea.tf-factors{min-height:110px}
   // One suggestion list per box, built from the board as the reader types. A
   // roster box offers the whole board, minus anyone already on a roster here;
   // a "sends" box offers that team's own roster first, because that is who it
-  // can send, and the whole board only when the roster is still empty.
+  // can send, then the rest of the board, minus anyone a team in this trade
+  // holds. The board has to stay on offer after the first pick: under the
+  // Evaluator the roster is optional, so a team's roster is often nothing
+  // but the players already typed into the trade.
   function words(s) { return TR.fold(s).split(' ').filter(Boolean); }
   function matchesQuery(name, q) {
     var nw = words(name), qw = words(q);
@@ -558,10 +659,12 @@ textarea.tf-factors{min-height:110px}
     var s = input.getAttribute('data-send');
     if (s != null) {
       var i = +s, t = teams[i], sent = deal[i].map(function (x) { return x.id; });
-      if (t.players.length) {
-        return t.players.filter(function (p) { return sent.indexOf(p.id) < 0 && p.pos !== 'K' && p.pos !== 'DEF' && matchesQuery(p.name, q); }).slice(0, 8);
-      }
-      return TR.suggest(pool, q, 8).map(function (r) { return r.p; }).filter(function (p) { return sent.indexOf(p.id) < 0; });
+      var own = t.players.filter(function (p) { return sent.indexOf(p.id) < 0 && p.pos !== 'K' && p.pos !== 'DEF' && matchesQuery(p.name, q); });
+      var rest = TR.suggest(pool, q, 10).map(function (r) { return r.p; }).filter(function (p) {
+        var at = holder(p.id);
+        return sent.indexOf(p.id) < 0 && own.indexOf(p) < 0 && (at < 0 || at >= count);
+      });
+      return own.concat(rest).slice(0, 8);
     }
     var r = +input.getAttribute('data-roster');
     return TR.suggest(pool, q, 10).map(function (row) { return row.p; }).filter(function (p) { return holder(p.id) !== r; }).slice(0, 8);
@@ -586,8 +689,8 @@ textarea.tf-factors{min-height:110px}
     var s = input.getAttribute('data-send'), r = input.getAttribute('data-roster');
     if (s != null) {
       var i = +s;
-      // A player typed into an empty roster's "sends" box joins that roster too.
-      if (holder(p.id) !== i) addToRoster(i, p);
+      // A player typed into a "sends" box joins that roster too, flagged as the deal's own.
+      if (holder(p.id) !== i) addToRoster(i, p, true);
       if (!deal[i].some(function (x) { return x.id === p.id; })) deal[i].push({ id: p.id, to: defaultTo(i) });
     } else if (r != null) {
       addToRoster(+r, p);
@@ -606,7 +709,7 @@ textarea.tf-factors{min-height:110px}
     var row = TR.resolve(text, pool, null);
     if (row) { pick(input, row.p); return; }
     input.classList.add('bad');
-    status($('tf-read-status'), '“' + text + '” is not on the board. Check the spelling.', true);
+    status($(input.getAttribute('data-send') != null ? 'tf-deal-status' : 'tf-read-status'), '“' + text + '” is not on the board. Check the spelling.', true);
   }
   function onType(ev) {
     var input = ev.target; if (!input.classList || !input.classList.contains('tf-type')) return;
@@ -663,7 +766,18 @@ textarea.tf-factors{min-height:110px}
     incoming.forEach(function (it, n) {
       if (n > 0) {
         target = -1;
-        for (var j = 0; j < MAX_TEAMS && target < 0; j++) if (used.indexOf(j) < 0 && !teams[j].players.length && !teams[j].unresolved.length) target = j;
+        // A box whose trade list already names one of this team's players is
+        // this team's box: under the Evaluator the deal comes first, so "The
+        // Hammers send Chase" is typed before The Hammers' roster arrives, and
+        // landing the roster anywhere else would move Chase and drop him from
+        // the deal. Failing that, the next box with no roster entered.
+        var best = 0;
+        for (var j = 0; j < MAX_TEAMS; j++) {
+          if (used.indexOf(j) >= 0) continue;
+          var hits = it.players.filter(function (p) { return viaDeal[p.id] && holder(p.id) === j; }).length;
+          if (hits > best) { best = hits; target = j; }
+        }
+        for (var j2 = 0; j2 < MAX_TEAMS && target < 0; j2++) if (used.indexOf(j2) < 0 && !rosterEntered(j2) && !teams[j2].unresolved.length) target = j2;
         if (target < 0) { dropped.push(it.name); return; }
         used.push(target);
         if (target >= count) count = target + 1;
@@ -691,7 +805,7 @@ textarea.tf-factors{min-height:110px}
     var v;
     if ((v = b.getAttribute('data-rm'))) {
       var a = v.split(':'), i = +a[1], p = teams[i].players[+a[2]];
-      if (p) { teams[i].players.splice(+a[2], 1); deal[i] = deal[i].filter(function (x) { return x.id !== p.id; }); }
+      if (p) { teams[i].players.splice(+a[2], 1); deal[i] = deal[i].filter(function (x) { return x.id !== p.id; }); delete viaDeal[p.id]; }
       render();
     }
     else if ((v = b.getAttribute('data-drop'))) { var d = v.split(':'); teams[+d[0]].unresolved.splice(+d[1], 1); render(); }
@@ -731,7 +845,9 @@ textarea.tf-factors{min-height:110px}
   $('tf-sends').addEventListener('click', function (ev) {
     var b = ev.target.closest('button'); if (!b) return;
     var v = b.getAttribute('data-rm'); if (!v) return;
-    var a = v.split(':'); deal[+a[1]].splice(+a[2], 1); render();
+    var a = v.split(':'), x = deal[+a[1]].splice(+a[2], 1)[0];
+    if (x) dropIfDealOnly(+a[1], x.id);
+    render();
   });
   $('tf-sends').addEventListener('change', function (ev) {
     var v = ev.target.getAttribute('data-to'); if (!v) return;
@@ -741,8 +857,9 @@ textarea.tf-factors{min-height:110px}
   $('tf-factors').addEventListener('input', function () { writeState({ factors: this.value }); paintHz(); });
   $('tf-clear').addEventListener('click', function () {
     for (var i = 0; i < MAX_TEAMS; i++) { teams[i] = blankTeam(i); deal[i] = []; }
+    viaDeal = {};
     count = 2; mine = '0'; $('tf-factors').value = '';
-    status($('tf-read-status'), ''); status($('tf-find-status'), '');
+    status($('tf-read-status'), ''); status($('tf-find-status'), ''); status($('tf-deal-status'), '');
     $('tf-results').hidden = true;
     render();
   });
@@ -1009,7 +1126,7 @@ textarea.tf-factors{min-height:110px}
   }
   function find() {
     var list = active();
-    if (list.filter(function (t) { return t.players.length; }).length < 2) { status($('tf-find-status'), 'Fill in at least two rosters first.', true); return; }
+    if (list.filter(function (t, i) { return rosterEntered(i); }).length < 2) { status($('tf-find-status'), 'Fill in at least two rosters first.', true); return; }
     status($('tf-find-status'), 'Scoring the lineups…');
     Promise.all(horizonsInPlay().map(loadHorizon)).then(function () {
       var mi = Number(mine);
@@ -1038,10 +1155,10 @@ textarea.tf-factors{min-height:110px}
       a: 0, b: 1, giveA: give, giveB: get, slots: slots, points: points, weeks: weeksOf,
       horizon: function () { return horizonFor(i); }, minGain: 0.75
     });
-    var s = ev.A; s.i = i; s.give = give; s.get = get; return s;
+    var s = ev.A; s.i = i; s.give = give; s.get = get; s.entered = rosterEntered(i); return s;
   }
   function evaluate() {
-    if (dealEmpty()) { status($('tf-find-status'), 'Add at least one player to the trade, or use “Find trades for me”.', true); return; }
+    if (dealEmpty()) { status($('tf-find-status'), 'Add at least one player to the trade first.', true); return; }
     var senders = active().filter(function (t, i) { return deal[i].length; }).length;
     var receivers = {};
     active().forEach(function (t, i) { deal[i].forEach(function (x) { receivers[x.to] = 1; }); });
@@ -1057,10 +1174,12 @@ textarea.tf-factors{min-height:110px}
       var mi = Number(mine);
       var all = sides.every(function (s) { return s.call === 'gain'; });
       // Not a yes for everyone? Then the useful answer is the nearest trades
-      // among the same teams that are.
-      var alt = all ? null : search(active(), mi, 3);
+      // among the same teams that are. That search needs the rosters: with
+      // none entered, the only players to search are the ones in the deal.
+      var entered = active().every(function (t, i) { return rosterEntered(i); });
+      var alt = all || !entered ? null : search(active(), mi, 3);
       status($('tf-find-status'), '');
-      renderEvaluation(sides, mi, all, alt);
+      renderEvaluation(sides, mi, all, alt, entered);
       take('evaluate', sides, mi);
       try { if (typeof gtag === 'function') gtag('event', 'trade_evaluate', { teams: sides.length, all: all }); } catch (e) {}
     }).catch(function () { status($('tf-find-status'), 'The board did not answer, so nothing is scored. Try again in a moment.', true); });
@@ -1071,17 +1190,21 @@ textarea.tf-factors{min-height:110px}
     return list.map(function (p) { return '<b>' + esc(p.name) + '</b> <span style="color:var(--muted)">' + esc(p.pos) + (h ? ' &middot; ' + n1(points(p, h) / weeksOf(h)) + '/wk' : '') + '</span>'; }).join(', ');
   }
   function signed(v) { return (v < 0 ? '−' : '+') + n1(Math.abs(v)); }
-  function sideCard(who, name, give, get, gain, h, lines, needsSpot) {
+  function sideCard(who, name, give, get, gain, h, lines, needsSpot, bare) {
     var starts = lines.startsNow.map(function (s) { return esc(s.p.name) + ' at ' + esc(s.slot); });
     var stops = lines.stopsStarting.map(function (s) { return esc(s.p.name); });
+    // With no roster behind it, "starts" and "to the bench" are only the
+    // trade's own players changing places, so the line says what was scored.
+    var detail = bare ? 'No roster entered: scored on the players alone.'
+      : (starts.length ? 'Starts: ' + starts.join(', ') + '. ' : '') + (stops.length ? 'To the bench: ' + stops.join(', ') + '. ' : '') + (needsSpot ? 'Needs ' + (needsSpot === 1 ? 'a roster spot' : needsSpot + ' roster spots') + ' opened.' : '');
     return '<div class="tf-side"><div class="who">' + who + ' &middot; ' + esc(name) + '</div>'
       + '<div class="gain' + (gain < 0 ? ' neg' : '') + '">' + signed(gain) + ' <small>pts / week &middot; ' + esc(HORIZONS[h] || h) + '</small></div>'
       + '<div class="give">Sends ' + chips(give, h) + '<br>Gets ' + chips(get, h) + '</div>'
-      + '<div class="lines">' + (starts.length ? 'Starts: ' + starts.join(', ') + '. ' : '') + (stops.length ? 'To the bench: ' + stops.join(', ') + '. ' : '') + (needsSpot ? 'Needs ' + (needsSpot === 1 ? 'a roster spot' : needsSpot + ' roster spots') + ' opened.' : '') + '</div></div>';
+      + '<div class="lines' + (bare ? ' bare' : '') + '">' + detail + '</div></div>';
   }
   function scoringName() { return preset === 'custom' && L && L.label ? L.label() : preset === 'half' ? 'Half PPR' : preset === 'standard' ? 'Standard' : 'PPR'; }
-  function paintBar(name, perWeek, h, judged) {
-    $('tf-bar').innerHTML = '<span><span class="k">Your team</span><span class="v">' + esc(name) + '</span></span><span><span class="k">Your lineup</span><span class="v">' + n1(perWeek) + ' <span style="font-size:13.5px;color:var(--muted);font-weight:400">pts/wk, ' + esc(HORIZONS[h]) + '</span></span></span>'
+  function paintBar(name, perWeek, h, judged, bare) {
+    $('tf-bar').innerHTML = '<span><span class="k">Your team</span><span class="v">' + esc(name) + '</span></span><span><span class="k">Your lineup</span><span class="v">' + (bare ? '&mdash; <span style="font-size:13.5px;color:var(--muted);font-weight:400">no roster entered</span>' : n1(perWeek) + ' <span style="font-size:13.5px;color:var(--muted);font-weight:400">pts/wk, ' + esc(HORIZONS[h]) + '</span>') + '</span></span>'
       + '<span><span class="k">Teams</span><span class="v">' + count + '</span></span>'
       + '<span><span class="k">Scoring</span><span class="v">' + esc(scoringName()) + '</span></span>'
       // The balance only orders a search; a trade the reader brought is judged as it stands.
@@ -1135,11 +1258,11 @@ textarea.tf-factors{min-height:110px}
     if (otherGain.length) return { cls: 'mixed', h: 'It helps ' + (others.length === 1 ? 'them' : 'the others') + ' more than you.', p: 'Your lineup barely moves; ' + otherGain.map(function (s) { return s.name + ' gains ' + n(s.gain); }).join(', ') + '. Ask for more.' };
     return { cls: 'mixed', h: 'A wash.', p: 'No lineup moves by as much as three quarters of a point a week.' };
   }
-  function renderEvaluation(sides, mi, all, alt) {
+  function renderEvaluation(sides, mi, all, alt, entered) {
     var host = $('tf-results');
     host.hidden = false;
     var you = sides.filter(function (s) { return s.i === mi; })[0] || sideOf(mi, [], []);
-    paintBar(you.name, you.perWeek, you.h, true);
+    paintBar(you.name, you.perWeek, you.h, true, !you.entered);
     var v = verdictOf(sides, mi);
     $('tf-verdict').innerHTML = '<div class="tf-verdict ' + v.cls + '"><h3>' + esc(v.h) + '</h3><p>' + esc(v.p) + '</p></div>';
     var title = sides.length === 2
@@ -1148,7 +1271,7 @@ textarea.tf-factors{min-height:110px}
     var ordered = sides.slice().sort(function (a, b) { return (b.i === mi) - (a.i === mi) || a.i - b.i; });
     var html = '<div class="tf-trade tf-proposed"><h3>' + esc(title) + '<span class="with">' + esc(sides.map(function (s) { return s.name; }).join(', ')) + '</span></h3><div class="tf-sides' + (sides.length > 2 ? ' multi' : '') + '">'
       + ordered.map(function (s) {
-          return sideCard(s.i === mi ? 'You' : 'Them', s.name, s.give, s.get, s.gain, s.h, s.lines, Math.max(0, s.get.length - s.give.length));
+          return sideCard(s.i === mi ? 'You' : 'Them', s.name, s.give, s.get, s.gain, s.h, s.lines, Math.max(0, s.get.length - s.give.length), !s.entered);
         }).join('')
       + '</div></div>';
     if (alt) {
@@ -1157,7 +1280,8 @@ textarea.tf-factors{min-height:110px}
           : '<div class="tf-empty">No two-team swap among these rosters improves both lineups right now. Try a different horizon in the settings.</div>');
     }
     $('tf-trades').innerHTML = html;
-    $('tf-results-note').innerHTML = 'A team is called a gain at +0.75 pts a week or more, a loss at &minus;0.75 or worse, and about even between. ' + scoredNote();
+    $('tf-results-note').innerHTML = (entered ? '' : 'A side with no roster entered is scored on the players alone: what it gets against what it sends. Add the rosters in step 2 and each side is scored on the lineup it actually starts, and the evaluator also looks for trades among these teams that work for everyone. ')
+      + 'A team is called a gain at +0.75 pts a week or more, a loss at &minus;0.75 or worse, and about even between. ' + scoredNote();
     host.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -1181,7 +1305,7 @@ textarea.tf-factors{min-height:110px}
       res.forEach(function (s) {
         out.push('- ' + s.name + ' sends ' + (s.give.map(function (p) { return p.name + ' (' + p.pos + ')'; }).join(', ') || 'nothing')
           + ', receives ' + (s.get.map(function (p) { return p.name + ' (' + p.pos + ')'; }).join(', ') || 'nothing')
-          + ': lineup ' + signed(s.gain) + ' pts/week (' + s.call + ').');
+          + ': lineup ' + signed(s.gain) + ' pts/week (' + s.call + (s.entered ? '' : '; no roster entered, scored on the players alone') + ').');
       });
       out.push('Engine verdict: ' + verdictOf(res, mi).h);
     } else {
@@ -1220,6 +1344,7 @@ textarea.tf-factors{min-height:110px}
   // ── go ───────────────────────────────────────────────────────────────────
   if (!(L && L.has)) { $('tf-mine').disabled = true; $('tf-mine').title = 'Set your league up in the draft app first'; if (preset === 'custom') preset = 'ppr'; }
   paintSettings();
+  paintTool();
   render();
   status($('tf-read-status'), 'Reading the board…');
   loadHorizon('ros').then(function () {
