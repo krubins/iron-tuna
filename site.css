@@ -1716,8 +1716,8 @@ body.sl-dress .sl-upd-note{padding:0 var(--space-4) var(--space-4);margin-top:va
 body.sl-dress{--sl-r:var(--radius-md)}
 
 /* ── 1 · the nameplate, as the homepage hero ─────────────────────────────
-   White and centred: the dateline, the headline at the hero scale one step
-   down, one sentence, the actions as the homepage's entry links, and a
+   White and centred: the lane's label, the headline at the hero scale one
+   step down, one sentence, the actions as the homepage's entry links, and a
    hairline to close it. The ≥1000px masthead grid comes off with the band. */
 body.sl-dress .sl-mast{background:var(--bg);border:0;border-bottom:1px solid var(--line)}
 body.sl-dress .sl-mast .sl-in{padding-top:var(--space-7);padding-bottom:var(--space-7);text-align:center}
@@ -1726,16 +1726,12 @@ body.sl-dress .sl-mast .sl-in{padding-top:var(--space-7);padding-bottom:var(--sp
   body.sl-dress .sl-mast .sl-in:not(:has(.is-actions)) .sl-deck{margin:var(--space-4) auto 0}
 }
 body.sl-dress .sl-date{justify-content:center;margin:0 0 var(--space-4)}
-body.sl-dress .sl-date .is-eyebrow{color:var(--muted);border-right-color:var(--line2)}
+body.sl-dress .sl-date .is-eyebrow{color:var(--muted)}
 body.sl-dress .sl-mast h1{margin:0 auto;max-width:20ch;font-size:clamp(34px,4.2vw,56px);font-weight:700;
   line-height:1.05;letter-spacing:-.03em;color:var(--text);text-wrap:balance}
 /* No coloured accent words: the sentence stands in roman, in ink. */
 body.sl-dress .sl-mast h1 em{color:var(--text)}
 body.sl-dress .sl-deck{margin:var(--space-4) auto 0;max-width:56ch;font-size:var(--fs-19);line-height:1.5;color:var(--sec)}
-body.sl-dress .sl-mast .its-strip{color:var(--sec);justify-content:center}
-body.sl-dress .sl-mast .its-strip .its-phase,body.sl-dress .sl-mast .its-strip .its-counts,
-body.sl-dress .sl-mast .its-strip .its-next,body.sl-dress .sl-mast .its-strip .its-note{color:var(--muted)}
-body.sl-dress .sl-mast .its-strip .its-week,body.sl-dress .sl-mast .its-strip .its-state{color:var(--text)}
 /* The actions are the homepage's entry links: 16px, 600, teal, an arrow. The
    markup keeps its button classes and ids so the script that hides "Save my
    league" for a reader who has saved one still finds it. */
@@ -1792,7 +1788,6 @@ body.sl-dress .sl-main .is-band{margin:0;padding:0;background:none;border:0;bord
    padding was the gap; without the band it needs the section's. */
 body.sl-dress .sl-main .is-band>.wrap>.is-sec:first-child{margin-top:var(--space-8)}
 @media(max-width:860px){body.sl-dress .sl-main .is-band>.wrap>.is-sec:first-child{margin-top:var(--space-7)}}
-body.sl-dress .is-band .its-strip{background:none}
 
 /* ── 5 · cards and labels ────────────────────────────────────────────────
    Every card is the homepage's outlined card: a hairline, 10px corners,

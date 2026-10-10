@@ -878,6 +878,10 @@ body.sl-dress .df-sub{font-size:var(--fs-2xs);color:var(--muted);line-height:1.5
    or a control. */
 /* the board switch down the rail: 16px, 600, the pressed board marked by a rule */
 .sl-nav .rk-seg button{font-weight:600;font-size:var(--fs-16);letter-spacing:0}
+/* Until the slate is set up the board switch and its label are hidden, and
+   the rail opened on the nav's hairline, a gap, and "Also here" on a second
+   hairline. One rule, not two. */
+body.sl-dress .sl-nav:has(#dfNav[hidden]) .sl-nav-more{margin-top:0;border-top:0}
 @media(min-width:861px){body.sl-dress .sl-nav .rk-seg button{font-size:var(--fs-16)}}
 /* the setup: the system's one form surface, the tinted panel under a navy
    rule, and inside it plain labels — no numbered discs, no teal kicker, the
