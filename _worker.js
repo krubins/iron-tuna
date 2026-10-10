@@ -7799,6 +7799,10 @@ function detectInsights(input) {
 // called to agree. /the-line's floor is this number and not its own.
 const GAP_AGREE = 2.0;
 const EDGE_CONTRACT = 1;
+// The season-to-date lists on /api/vegas-edge (seasonForm): games a player
+// must have played before his average counts, the smallest gap in points a
+// game that is a figure rather than noise, and how many of each to send.
+const LONG_MIN_GAMES = 3, LONG_MIN_GAP = 1.5, LONG_LIST = 15;
 // The prop board: every player market a book has quoted, one row per player
 // per market, in the order a reader scans a slate.
 const PROP_BOARD_ORDER = ['anytimeTD', 'passYd', 'passTD', 'passInt', 'rushYd', 'rushAtt', 'rushTD', 'rec', 'recYd', 'recTD'];
@@ -7865,6 +7869,28 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const vsExperts = {
     buys: sig.filter(p => p.marketDelta.points > 0).sort((a, b) => (b.marketDelta.rank || 0) - (a.marketDelta.rank || 0) || b.marketDelta.points - a.marketDelta.points).slice(0, 12).map(brief),
     fades: sig.filter(p => p.marketDelta.points < 0).sort((a, b) => (a.marketDelta.rank || 0) - (b.marketDelta.rank || 0) || a.marketDelta.points - b.marketDelta.points).slice(0, 12).map(brief)
+  };
+  // SEASON TO DATE AGAINST THE PRICE: what a player has averaged through
+  // the games he has played, set against what the consensus projects him for
+  // this week. The two weekly lists above are one week's disagreement; this is
+  // the long one, the player who keeps beating the number the consensus
+  // keeps putting on him, and the one who keeps falling short of it. The
+  // homepage rotates them beside the weekly buys and fades.
+  //
+  // LONG_MIN_GAMES of his own before a season average is a figure: a single
+  // big Sunday is not a trend. Skill positions only, for the reason vsExperts
+  // gives. A player listed with anything but Active or Probable is left off:
+  // his average is a healthy man's, and this week's consensus may already
+  // carry the injury, so the gap would be the report restated (the Lamar
+  // Jackson case again). The books leaving him off a priced game is the same.
+  const formed = players.filter(p => p.pos !== 'K' && p.pos !== 'DEF' && p.form && p.form.games >= LONG_MIN_GAMES
+    && Number.isFinite(p.form.ppg) && p.consensus.points > 0 && p.vegas.points > 0 && !p.marketOut
+    && !(p.injury && p.injury.status && !/^(active|probable)$/i.test(String(p.injury.status))));
+  const formBrief = p => ({ ...brief(p), seasonPpg: p.form.ppg, seasonGames: p.form.games, formGap: _oddsRound(p.form.ppg - p.consensus.points) });
+  const seasonForm = {
+    minGames: LONG_MIN_GAMES,
+    over: formed.filter(p => p.form.ppg - p.consensus.points >= LONG_MIN_GAP).sort((a, b) => (b.form.ppg - b.consensus.points) - (a.form.ppg - a.consensus.points)).slice(0, LONG_LIST).map(formBrief),
+    under: formed.filter(p => p.consensus.points - p.form.ppg >= LONG_MIN_GAP).sort((a, b) => (a.form.ppg - a.consensus.points) - (b.form.ppg - b.consensus.points)).slice(0, LONG_LIST).map(formBrief)
   };
   // Movers: every player market with a real move, biggest first.
   const movers = [];
@@ -7968,7 +7994,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   return { ok: true, contract: EDGE_CONTRACT, week: state && state.ok ? state.week.label : null, hasProps,
            note: hasProps ? null : 'No priced player prop has reached this board. Books post props; none are in the feed behind this build, so every player number here is derived from the posted game lines. The game board is quoted.',
            played, playedNote,
-           vsExperts, movers: movers.slice(0, 40), tdBoard, volumeBoard,
+           vsExperts, seasonForm, movers: movers.slice(0, 40), tdBoard, volumeBoard,
            propBoard: propBoard.slice(0, PROP_BOARD_CAP), propSummary,
            gameEnvironments, hiddenSignals: hidden };
 }
