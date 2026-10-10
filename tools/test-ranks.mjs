@@ -204,6 +204,11 @@ console.log('\nthe board prints the consensus against the odds');
   ok('the gap comes from the worker\'s own classification, not a rule invented here',
     js.includes('p.marketDelta') && js.includes('d.classification') && !/strongRank|leanRank/.test(js));
   ok('a missing number is a dash, never a zero', js.includes("'—'"));
+  ok('rest of season ranks by total points or by the average per game',
+    js.includes("'Total points'") && js.includes("'Per game'") && /horizon === 'ros'/.test(js));
+  ok('and the averages are the worker\'s, ranked and graded there, not divided here',
+    js.includes('p.perGame') && !/points\s*\/\s*(p\.)?games/.test(js));
+  ok('the choice is in the shared URL', /put\('rank'/.test(js) && /qs\.get\('rank'\)/.test(js));
   ok('the week drawer prints both columns per week',
     js.includes('w.consensusPts') && js.includes('w.vegasPts'));
   ok('a bye and an absence are printed, not skipped', js.includes('w.bye') && js.includes('w.out'));
