@@ -319,7 +319,7 @@ ok('a reload keeps the rosters', (await names()).join() === 'Iron Tuna (Ken),The
 ok('and the hidden two', await page.$eval('#tf-count', e => e.value) === '2' && (await (async () => { await page.selectOption('#tf-count', '4'); const n = await names(); await page.selectOption('#tf-count', '2'); return n.length === 4 && n[2] === 'Clinched'; })()));
 ok('and the horizons', await page.$eval('#tf-hA button[data-h="playoffs"]', e => e.getAttribute('aria-pressed') === 'true'));
 ok('and the tool', await selectedTool() === 'finder');
-if (process.env.IT_SHOT) { await page.screenshot({ path: process.env.IT_SHOT, fullPage: true }); console.log('wrote ' + process.env.IT_SHOT); }
+if (process.env.IT_SHOT) { await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: process.env.IT_SHOT, fullPage: true }); console.log('wrote ' + process.env.IT_SHOT); }
 ok('nothing on the Trade Finder threw', errors.length === 0, errors[0]);
 
 // ── evaluating a trade the reader brings ──────────────────────────────────
@@ -475,7 +475,10 @@ console.log('\nevaluate with no rosters entered');
   const v1 = await verdict();
   ok('with the rosters in, the same deal is scored on the lineups, and wins', /win/.test(v1.cls), JSON.stringify(v1));
   ok('and the bar prices the lineup', /pts\/wk/.test(await page.textContent('#tf-bar')));
-  if (process.env.IT_SHOT) { const p3 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-evaluator$1'); await page.screenshot({ path: p3, fullPage: true }); console.log('wrote ' + p3); }
+  // The ribbon is sticky at the top of the window: scrolled to the verdict, it is still at 0.
+  ok('the header ribbon stays anchored to the top while scrolled', await page.evaluate(() => { const h = document.querySelector('header.site'); return window.scrollY > 100 && getComputedStyle(h).position === 'sticky' && Math.round(h.getBoundingClientRect().top) === 0; }), String(await page.evaluate(() => [window.scrollY, document.querySelector('header.site').getBoundingClientRect().top])));
+  // A full-page screenshot is taken from the top, or the sticky ribbon lands mid-picture.
+  if (process.env.IT_SHOT) { const p3 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-evaluator$1'); await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: p3, fullPage: true }); console.log('wrote ' + p3); }
   // A link can open either tool: the hash switches in place (this goto is a
   // same-document navigation, so nothing reloads) and a fresh load reads it.
   await page.goto(BASE + '/trade-finder#finder', { waitUntil: 'load' });
@@ -543,7 +546,7 @@ console.log('\nthe FAAB Advisor, entered by hand');
   ok('the going rate moved toward what the room pays', r.rows[0].going != null && r.rows[0].going > goingBefore, `${r.rows[0].going} vs ${goingBefore}`);
   ok('still never above the richest rival', r.rows.every(x => x.going == null || x.going <= 100));
   ok('a "Bid $n" still beats the going rate and is affordable', r.rows.filter(x => /^Bid/.test(x.call)).every(x => { const b = +/\$(\d+)/.exec(x.call)[1]; return b > (x.going || 0) && b <= 80; }));
-  if (process.env.IT_SHOT) { const p2 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-faab$1'); await page.screenshot({ path: p2, fullPage: true }); console.log('wrote ' + p2); }
+  if (process.env.IT_SHOT) { const p2 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-faab$1'); await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: p2, fullPage: true }); console.log('wrote ' + p2); }
 
   // A reload comes straight back to the typed league.
   await page.reload({ waitUntil: 'load' });
