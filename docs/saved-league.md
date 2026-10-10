@@ -17,6 +17,14 @@ D1 and the pages read it.
 > Everything below describes what remains, which is the half that works: the
 > normalized model, the player crosswalk, the personalization modules, and the
 > one way a league arrives — the reader's own entry.
+>
+> **The CBS browser import came back on 2026-10-10** (HANDOFF §128). It is the
+> reader's own entry too: the extension reads the signed-in CBS tab and posts a
+> snapshot to `POST /api/leagues/connect`; the worker validates it with
+> `cbsBrowserNormalize` and writes it with `leagueBrowserImport` through the
+> same model. No CBS credential is collected or stored, and the worker still
+> makes no request to CBS. The "CBS browser import" section at the end of this
+> file describes it; the API-token adapter it refers to is gone for good.
 
 Part 1 is the audit of the application the model was built on. Part 2 is the
 design. Part 3 is the status of each piece. HANDOFF.md carries the short
@@ -184,12 +192,12 @@ The September 11 live attempt used an email in the league-address field; it did 
 
 Keep `FLAG_CBS_SYNC` off while validating with a consenting test league. Confirm the token works as `access_token` against each fixed resource (the form now shows which resource failed and what HTTP status or sign-in redirect CBS answered with, without the token or URL), capture only redacted structural samples, compare roster and scoring counts with the CBS UI, exercise a FAAB and priority-waiver league, verify a superflex and a bonus-scoring rule, confirm transaction move IDs/types and timestamps, rotate the token through My Leagues, run the scheduled sync, then disconnect and verify `league_provider_tokens` has no row for that league. If any resource differs, update the normalizer and synthetic fixture before activation.
 
-## CBS browser import (extension 0.2.0)
+## CBS browser import (extension 0.2.1, restored 2026-10-10)
 
-The historical inline-token method failed live. `cbs_browser` is a separate provider in `LEAGUE_PROVIDERS`, gated by the existing off-by-default `CBS_SYNC` flag. It accepts a bounded, signed-in, rate-limited snapshot at `/api/leagues/connect`, validates it before creating or changing the league, and uses the existing model writer and CBS player crosswalk. It stores no CBS authorization. The API-token adapter retains its existing encrypted-token flow.
+The historical inline-token method failed live, and the token it read is no longer exposed by CBS. `cbs_browser` is a provider in `LEAGUE_PROVIDERS` beside `manual`, gated by `CBS_SYNC`, which now defaults **on** (`FLAG_CBS_SYNC=0` refuses the route): the route only validates and writes what the reader's browser posts. It accepts a bounded, signed-in, rate-limited snapshot at `/api/leagues/connect`, validates it in full before creating or changing the league (`cbsBrowserNormalize`), writes it with the existing model writer under provider id `cbs` in the player crosswalk (`leagueBrowserImport`), and keeps the reader's chosen team across refreshes. A first import that cannot be saved is deleted rather than left empty. It stores no CBS authorization, and the API-token adapter is gone.
 
 The extension reads only league name/count, roster limits, playoff start, scoring table, team names and player rosters. It excludes identity details, passwords, cookies, forms, messages and the constitution. A missing team, empty roster, duplicate player, unrecognized roster footer or count mismatch aborts the import. Rosters are read by section (Active, Reserves, and an injured-reserve section on the `ir` slot); the footer's Active and Reserve counts must match, and an injured count in the footer must match when present.
 
 Browser snapshots have no automatic refresh. The job excludes them and the sync endpoint directs users to the extension. Matchups, standings, transactions and waiver balances are absent and labeled as such; playoff team count and league type need reader confirmation. Unknown scoring rules stay in extras.unsupported with an explicit note. Yardage uses the existing fractional scoring engine; verify CBS rounding if comparing final scores. Do not call this a full unattended CBS sync.
 
-Validation: `node tools/test-cbs-extension.mjs`, `node tools/test-league-sync.mjs`, `node tools/test-cbs-ui.mjs`, and the browser run `node tools/test-cbs-e2e.mjs` (Playwright Chromium, binds 443, see the file header). Live rendered DOM checks: 12 teams, 204 players, all roster footer counts and position metadata recognized. The end-to-end run on 2026-09-16 exercised the real extension against the real worker: sign-in, tab discovery, same-origin CBS reads, the authenticated import, team selection, the saved league on My Leagues and the strip on My Week, plus a repeat import. Remaining release check: reload extension 0.2.1 in the owner's browser and import the live league once; any CBS markup drift surfaces as a "No import was sent" message in the popup.
+Validation: `node tools/test-cbs-extension.mjs` (the extension, plus the page and worker surfaces it depends on), the "CBS browser import" suite in `node tools/test-league-sync.mjs` (the route against the snapshot fixture: import, refresh, team kept, eleven malformed snapshots refused, flag, sign-in, delete), and the browser run `node tools/test-cbs-e2e.mjs` (Playwright Chromium, binds 443, see the file header; not in CI). Live rendered DOM checks: 12 teams, 204 players, all roster footer counts and position metadata recognized. The end-to-end run on 2026-09-16 exercised the real extension against the real worker: sign-in, tab discovery, same-origin CBS reads, the authenticated import, team selection, the saved league on My Leagues and the strip on My Week, plus a repeat import. Remaining release check: reload extension 0.2.1 in the owner's browser and import the live league once; any CBS markup drift surfaces as a "No import was sent" message in the popup.

@@ -13633,7 +13633,72 @@ byline on those pieces reads the roster at request time and shows the desk;
 the body is the body. Regenerating or rewriting those rows is a data job,
 not a repository change, and is left to the owner.
 
-## 128. October 10: the Trade Evaluator's gauge: short term, long term, the reader's situation, and a Go / No go
+---
+
+---
+
+## 128. October 10: the CBS browser import comes back, as the one CBS path
+
+**What was asked.** Another try at pulling a reader's CBS league with
+credentials they enter. **What the record says.** Two live attempts (§89): the
+API-token form died on 2026-09-17 when a signed-in CBS league page stopped
+carrying any token, in the served HTML or on `window`, so the technique every
+public token fetcher relies on no longer yields a value; the browser extension
+passed a full end-to-end run on 2026-09-16 and was cut two days later with the
+rest of the connectors, its one live import never run. A password-based
+server login was not built: this session's sandbox cannot reach any CBS host,
+so it would have been a third fixture-tested, never-live attempt, and it would
+have meant holding readers' CBS passwords, which the privacy page and the
+model were written to avoid.
+
+**What came back.** The extension, 0.2.1 unchanged (`extensions/cbs-connector`,
+now in `.assetsignore`), and its worker half rewritten onto the saved-league
+model rather than restored: `cbsLeagueId`, `cbsBrowserNormalize` and
+`PROVIDER_CBS_BROWSER` beside `PROVIDER_MANUAL` in `LEAGUE_PROVIDERS`;
+`leagueBrowserImport`, which validates the whole snapshot first, maps CBS's
+player ids under provider `cbs`, creates the `cbs_browser` row keyed on the
+CBS league id on the first import and refreshes it after, and keeps the
+reader's chosen team while that team is still in the room; and
+`POST /api/leagues/connect`, session-gated, rate-limited, refusing a malformed
+snapshot with `invalid_browser_import` before a row moves and deleting a first
+import that could not be saved. `POST /api/leagues/:id/sync` answers 409
+`browser_refresh_required` for a browser league and is still not a route for
+anything else. `CBS_SYNC` is back in `NEWSROOM_FLAGS`, **on by default**: it
+gates a route that only validates and writes what the reader's own browser
+posts, and `FLAG_CBS_SYNC=0` refuses it. Nothing in the worker contacts CBS;
+`tools/test-data-sources.mjs` still asserts that no fantasy-platform host is
+reachable, and the league suite's fetch stub still throws.
+
+On /my-league, §01 gains a "CBS leagues" box under the list — where the
+extension is, the four steps, what is and is not imported — and a browser
+league's card says "CBS import", names when the extension last read it, and
+drops "Edit league": the by-hand form would re-save the room as a manual
+league with name-matched players in place of CBS's ids. The privacy details
+on the page and the privacy policy both say what the extension sends and what
+it never reads.
+
+**Tests.** `tools/test-league-sync.mjs` ends with "the CBS browser import":
+the snapshot fixture through the route (import, team choice, idempotent
+refresh keeping the team, no automatic refresh time, the 409, eleven malformed
+snapshots refused with the saved rosters untouched, an unmodeled rule kept as
+unsupported, on by default and off by flag, sign-in required, unknown provider
+refused, the personalized modules reading it, delete leaving nothing behind);
+110 assertions. `tools/test-cbs-extension.mjs` is back in CI (the extension's
+boundaries, the reader against DOM fixtures, the popup against a stubbed
+browser API) and now also pins the page and worker surfaces the extension
+depends on. `tools/test-cbs-e2e.mjs` is restored for a local Chromium run (not
+in CI). `test-newsroom` keeps "every flag defaults on" and now names CBS_SYNC
+as the one connector flag that is allowed to exist.
+
+**What this cannot prove, and the release check.** CBS's live markup. The
+harness renders the reader's own expectations back at it. The one step never
+taken is still the one step: load the folder unpacked, open the live league
+signed in, run the popup, and look for the league card on My Leagues. A CBS
+markup change shows as a "No import was sent" message in the popup naming the
+page it could not read; that message is the next bug report, and `reader.js`
+is where it is fixed.
+
+## 129. October 10: the Trade Evaluator's gauge: short term, long term, the reader's situation, and a Go / No go
 
 **The brief.** Once the players are in, a visual gauge of whether the trade
 is worth it for the reader, weighing the short term, the long term and what

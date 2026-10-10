@@ -236,7 +236,7 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="wrap wide">
 <div class="ml-steps">
   <div class="ml-step"><span class="ml-sn"><i>1</i>Describe your league</span><b>Scoring, lineup and budget</b><span>Type it, paste a settings page, or drop in a screenshot. Every platform&rsquo;s wording is read the same way.</span></div>
-  <div class="ml-step"><span class="ml-sn"><i>2</i>Add the rosters</span><b>One screenshot, the whole room</b><span>The middle box of section 02 reads every team off your league&rsquo;s roster grid. No password, no access token, nothing connected.</span></div>
+  <div class="ml-step"><span class="ml-sn"><i>2</i>Add the rosters</span><b>One screenshot, the whole room</b><span>The middle box of section 02 reads every team off your league&rsquo;s roster grid. On CBS, the free browser extension reads settings and every roster from your signed-in league. No password, no access token.</span></div>
   <div class="ml-step"><span class="ml-sn"><i>3</i>Every board re-scores</span><b>Rankings, waivers, DFS, the market</b><span>Each page restates its numbers in your points and your dollars. Delete the league at any time and its data goes with it.</span></div>
 </div>
 </div>
@@ -249,9 +249,10 @@ p{color:var(--sec);margin:0 0 16px}
 <p class="ml-sub">A league saved here follows you across devices, and every in-season board reads it: your exact scoring, your roster, every other roster and the free-agent pool. Rankings, the Pickup Advisor, Best Lineup, the Trade Finder and the stories all read <em>your</em> league instead of a default one. <b>Free.</b> Sign in with an email link; no purchase is required.</p>
 <div id="lsStatus" class="is-note" style="margin:0 0 12px"></div>
 <div id="lsList"></div>
+<div id="lsCbs" hidden></div>
 <div id="lsManual" hidden></div>
 <details class="ml-priv" id="lsPrivacy"><summary>What Iron Tuna keeps, and what it never asks for</summary>
-<p>What you enter: the league&rsquo;s name and size, its scoring and starting lineup, the FAAB budget, team names and the players on each roster. That is all, and it is all typed, pasted or read off a screenshot by you &mdash; Iron Tuna does not connect to Sleeper, Yahoo, ESPN or CBS, holds no password or access token for any of them, and makes no request to any fantasy platform on your behalf. The roster-grid screenshot in section 02 is sent to Iron Tuna&rsquo;s reader to be transcribed and is not kept. Your league is used only to personalize your own guidance and is never shown to other readers. Deleting a league removes its settings, teams, rosters and history. Full details in the <a href="/privacy">privacy policy</a>.</p>
+<p>What you enter: the league&rsquo;s name and size, its scoring and starting lineup, the FAAB budget, team names and the players on each roster. That is all, and it is all typed, pasted or read off a screenshot by you &mdash; Iron Tuna does not connect to Sleeper, Yahoo, ESPN or CBS, holds no password or access token for any of them, and makes no request to any fantasy platform on your behalf. The CBS browser extension runs in your own browser, in the CBS tab you are already signed in to, and sends Iron Tuna only league settings, team names and rosters; your CBS password, cookies and sign-in never leave your browser. The roster-grid screenshot in section 02 is sent to Iron Tuna&rsquo;s reader to be transcribed and is not kept. Your league is used only to personalize your own guidance and is never shown to other readers. Deleting a league removes its settings, teams, rosters and history. Full details in the <a href="/privacy">privacy policy</a>.</p>
 </details>
 </section>
 
@@ -524,18 +525,21 @@ function rosterGrid(el) {
     return ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SFLEX', 'REC_FLEX', 'WRRB_FLEX', 'K', 'DEF', 'BN', 'IR', 'TAXI'].map(function (k) { var o = (ov || []).indexOf('roster.' + k) >= 0; return '<label style="display:inline-flex;flex-direction:column;margin:4px 8px 4px 0;font-size:13.5px;font-weight:700">' + esc(slotLabel(k)) + (o ? ' *' : '') + '<input class="is-input" style="width:56px" type="number" min="0" max="20" data-ro="' + k + '" value="' + esc(S.roster[k] || 0) + '"></label>'; }).join('') + (Object.keys(S.roster.other || {}).length ? '<p class="is-note">Other slots kept but not used in lineups: ' + esc(Object.keys(S.roster.other).map(function (k) { return k + ' ×' + S.roster.other[k]; }).join(', ')) + '</p>' : '');
   }
   function card(L) {
-    var s = L.sync || {};
+    var s = L.sync || {}, cbs = L.provider === 'cbs_browser';
     return '<div class="is-card" data-id="' + esc(L.id) + '" style="margin:10px 0">' +
-      '<span class="is-tag is-live">Saved' + (L.isDefault ? ' · default' : '') + '</span>' +
+      '<span class="is-tag is-live">' + (cbs ? 'CBS import' : 'Saved') + (L.isDefault ? ' · default' : '') + '</span>' +
       '<h3>' + esc(L.name) + ' <span class="is-status">' + esc(L.numTeams || '?') + ' teams · ' + esc(L.season || '') + '</span></h3>' +
       '<p>' + esc(L.label) + '</p>' +
-      '<p class="is-note" style="margin:6px 0 0">' + esc(ITSync.syncLine(L)) + '</p>' +
+      '<p class="is-note" style="margin:6px 0 0">' + esc(ITSync.syncLine(L)) + (cbs ? ' Read from your CBS league by the browser extension' + (s.lastOkAt ? ' on ' + esc(new Date(s.lastOkAt).toLocaleString()) : '') + '. To refresh, open the league on CBS and run the extension again; standings, matchups and transactions are not part of the import.' : '') + '</p>' +
       (!L.userTeamId ? '<p style="color:var(--danger);margin:8px 0 0"><b>Which team is yours?</b> Iron Tuna could not tell. <button type="button" class="is-btn sec" data-act="teams">Pick my team</button></p>' : '') +
       '<div class="is-btns" style="margin-top:10px">' +
         // panel() has always handled 'edit'; the button that asks for it went
         // missing, and with it the only way back to the by-hand form once a
         // league was saved — team names, your own starters, the roster grid.
-        '<button type="button" class="is-btn primary" data-act="edit">Edit league</button>' +
+        // A CBS import is refreshed by the extension, not typed over: the
+        // by-hand form would re-save the room as a manual league with
+        // name-matched players in place of CBS's ids.
+        (cbs ? '' : '<button type="button" class="is-btn primary" data-act="edit">Edit league</button>') +
         (L.isDefault ? '' : '<button type="button" class="is-btn sec" data-act="default">Make default</button>') +
         '<button type="button" class="is-btn sec" data-act="settings">Review settings</button>' +
         (L.userTeamId ? '<button type="button" class="is-btn sec" data-act="teams">Change my team</button>' : '') +
@@ -569,10 +573,26 @@ function rosterGrid(el) {
       $('lsList').innerHTML = st.leagues.map(card).join('') + '<p class="is-note" style="margin:8px 0 0">' + st.leagues.length + ' league' + (st.leagues.length === 1 ? '' : 's') + ' saved. The default league is what every page uses unless you switch it in the League selector.</p><div class="is-btns"><button type="button" class="is-btn sec" data-add>Add another league</button></div>';
     }
     $('lsList').querySelectorAll('[data-add]').forEach(function (b) { b.addEventListener('click', addLeague); });
+    cbsBox();
     // Opened, not scrolled to, and with no Cancel: there is no earlier state
     // for a first league to go back to, and a page that jumped here would
     // fight the anchor the reader arrived on.
     if (!st.leagues.length) manualForm(null, { scroll: false, cancel: false });
+  }
+  // ── the CBS browser import ────────────────────────────────────────────────
+  // CBS exposes no token and its roster grid is not one screenshot, so a CBS
+  // league comes in through the free extension: it reads settings, team names
+  // and every roster out of the reader's own signed-in CBS tab and posts the
+  // snapshot to /api/leagues/connect from this page's sign-in. This box is the
+  // instructions; the import itself happens in the extension's popup.
+  function cbsBox() {
+    var el = $('lsCbs'); if (!el) return;
+    var has = (st.leagues || []).some(function (L) { return L.provider === 'cbs_browser'; });
+    el.hidden = false;
+    el.innerHTML = '<div class="is-card" style="margin:10px 0"><span class="is-tag">CBS leagues</span><h3>' + (has ? 'Refresh your CBS league' : 'Play on CBS? Import your league') + '</h3>' +
+      '<p>The free <a href="https://github.com/krubins/iron-tuna/tree/main/extensions/cbs-connector" target="_blank" rel="noopener">Iron Tuna CBS Connector</a> reads your league&rsquo;s scoring, roster slots, team names and every roster from the CBS league you are signed in to, and saves it here. Your CBS password and cookies stay in your browser; Iron Tuna never sees them, and never contacts CBS itself.</p>' +
+      '<ol class="is-note" style="margin:0 0 8px 18px;padding:0"><li>Download the extension folder and load it unpacked at <code>chrome://extensions</code> or <code>edge://extensions</code> (Developer mode, then Load unpacked).</li><li>Keep this page open, signed in.</li><li>Open your CBS football league in another tab and click the extension. Confirm the season, press <b>Import to Iron Tuna</b>, then pick your team.</li><li>Come back here and reload. Run the extension again whenever rosters change.</li></ol>' +
+      '<p class="is-note" style="margin:0">Imported: scoring, roster slots, playoff start, team names, players and starter/bench/IR slots. Not imported: standings, matchups, transactions and FAAB balances; set the budget under Review settings.</p></div>';
   }
   // The section this page was asked for. Both sections below the masthead
   // render after their fetch, so the browser's own jump to #settings or

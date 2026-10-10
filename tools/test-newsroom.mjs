@@ -106,11 +106,13 @@ console.log('\nthe staff and the one rivalry');
   ok('the disclosure says they are AI personas, not people', /AI-powered editorial personas, not people/.test(H.AI_DISCLOSURE));
   const flags = H.flagReport({});
   // Nothing defaults off any more. The four provider connectors were the only
-  // flags that did, and they went with the connectors (HANDOFF §87), so an
+  // flags that did, and they went with the connectors (HANDOFF §89), so an
   // off-by-default flag appearing here again is a deliberate decision someone
-  // has to make rather than a leftover.
+  // has to make rather than a leftover. CBS_SYNC came back on 2026-10-10 for
+  // the browser import (HANDOFF §128), on by default: it gates a route that
+  // only validates what the reader's own browser posts, and stores no credential.
   ok('every flag defaults on', Object.entries(flags).every(([, f]) => f.on && f.source === 'default'));
-  ok('and no provider connector flag is left behind', !['SLEEPER_SYNC', 'YAHOO_SYNC', 'CBS_SYNC', 'ESPN_SYNC'].some(k => flags[k]));
+  ok('and no platform-credential connector flag is left behind', !['SLEEPER_SYNC', 'YAHOO_SYNC', 'ESPN_SYNC'].some(k => flags[k]) && flags.CBS_SYNC && flags.CBS_SYNC.on);
   ok('a flag reads off the env', !H.flagOn({ FLAG_RIVALRY: '0' }, 'RIVALRY') && H.flagOn({ FLAG_RIVALRY: 'on' }, 'RIVALRY') && !H.flagOn({}, 'NOPE'));
 }
 
