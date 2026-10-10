@@ -6799,9 +6799,15 @@ function scoreAny(stats, position, rules, games, opts) {
 const BOARDS_CONTRACT = 1;
 const ROS_LAST_WEEK_DEFAULT = 17;          // Week 18 is out unless the league says otherwise
 const PLAYOFF_WEEKS = [15, 16, 17];
+// Two more on 10 Oct 2026 for /rankings, whose horizon row became the five
+// a manager actually reasons in: this week, next week, the stretch to the
+// playoffs, the playoffs, the season. `next3` stays for the newsroom, the
+// trade finder and the Wednesday snapshot, which were built on it.
 const HORIZONS = {
   week: { key: 'week', label: 'This Week' },
+  next: { key: 'next', label: 'Next Week', span: 1 },
   next3: { key: 'next3', label: 'Next 3 Weeks', span: 3 },
+  untilPlayoffs: { key: 'untilPlayoffs', label: 'Get Me to the Playoffs' },
   ros: { key: 'ros', label: 'Rest of Season' },
   playoffs: { key: 'playoffs', label: 'Fantasy Playoffs: Weeks 15-17', weeks: PLAYOFF_WEEKS }
 };
@@ -7042,6 +7048,12 @@ function horizonWeeks(horizon, state, through) {
   if (cur == null) return [];
   // A week that is active still counts: its games have not all been played.
   if (horizon === 'week') return [cur];
+  // NEXT WEEK is one week, the one after the clock's, and in Week 18 there is
+  // none. UNTIL THE PLAYOFFS runs from now to the week before they start
+  // (a league's own start, when it says one, arrives as `through`); once
+  // they have begun there is no stretch left and the list is empty.
+  if (horizon === 'next') return cur + 1 <= 18 ? [cur + 1] : [];
+  if (horizon === 'untilPlayoffs') { const stop = Math.max(1, Math.min(18, Number(through) || PLAYOFF_WEEKS[0] - 1)); const o = []; for (let w = cur; w <= stop; w++) o.push(w); return o; }
   if (horizon === 'next3') { const o = []; for (let w = cur; w <= 18 && o.length < 3; w++) o.push(w); return o; }
   const o = []; for (let w = cur; w <= last; w++) o.push(w); return o;
 }
@@ -7245,6 +7257,12 @@ function buildBoards(ctx, opts) {
   const weeks = horizonWeeks(horizon, state, o.through);
   const ratings = ctx.ratings;
   const curWeek = state && state.ok && state.week.type === 'REG' ? state.week.number : null;
+  // A horizon with no week left in it (Next Week in Week 18, Get Me to the
+  // Playoffs once they have begun) is refused outright rather than served as
+  // a board of zeros, on which every player would rank first.
+  if (!weeks.length && (horizon === 'next' || horizon === 'untilPlayoffs')) {
+    return { ok: false, error: 'no_weeks', contract: BOARDS_CONTRACT, horizon: { ...HORIZONS[horizon], weeks: [], through: null }, currentWeek: curWeek, players: [] };
+  }
   const wantPos = o.position ? String(o.position).toUpperCase() : null;
   const posMatch = p => !wantPos || wantPos === 'ALL' || p === wantPos ||
     (wantPos === 'FLEX' && (p === 'RB' || p === 'WR' || p === 'TE')) || (wantPos === 'DST' && p === 'DEF');
@@ -7523,7 +7541,7 @@ function buildBoards(ctx, opts) {
   }
   return {
     ok: rows.length > 0, contract: BOARDS_CONTRACT,
-    horizon: { ...HORIZONS[horizon], weeks, through: horizon === 'ros' ? (Number(o.through) || ROS_LAST_WEEK_DEFAULT) : null },
+    horizon: { ...HORIZONS[horizon], weeks, through: horizon === 'ros' ? (Number(o.through) || ROS_LAST_WEEK_DEFAULT) : horizon === 'untilPlayoffs' ? (Number(o.through) || PLAYOFF_WEEKS[0] - 1) : null },
     season: ctx.sched ? ctx.sched.season : null,
     currentWeek: curWeek, phase: state && state.ok ? state.phase : null,
     scoring: { preset: o.preset || 'ppr', label: SCORING_PRESET_LABEL[o.preset || 'ppr'] || 'PPR' },
@@ -8517,10 +8535,12 @@ async function rosUpdatePayload(env, opts) {
   }
   return { ok: live.ok, contract: 1, season: live.season, currentWeek: live.currentWeek,
            featured: { builtAt: cur ? cur.builtAt : null, week: cur ? cur.week : null, previousWeek: prev ? prev.week : null },
+           // The cards on /rankings, one per forward horizon its row offers.
            choices: [
-             { horizon: 'next3', title: 'Next 3 Weeks', blurb: 'For managers making immediate lineup, trade and roster decisions.' },
-             { horizon: 'ros', title: 'Rest of Season', blurb: 'Overall player value for the remainder of the fantasy season.' },
-             { horizon: 'playoffs', title: 'Fantasy Playoffs: Weeks 15-17', blurb: 'Players ranked specifically for the fantasy playoffs.' } ],
+             { horizon: 'next', title: 'Next Week', blurb: 'The week after this one, before the books have priced it.' },
+             { horizon: 'untilPlayoffs', title: 'Get Me to the Playoffs', blurb: 'Every week from now until the fantasy playoffs begin, for managers who have to get there first.' },
+             { horizon: 'playoffs', title: 'Playoffs: Weeks 15-17', blurb: 'Players ranked specifically for the fantasy playoffs.' },
+             { horizon: 'ros', title: 'Rest of Season', blurb: 'Overall player value for the remainder of the fantasy season.' } ],
            risers: movers.risers, fallers: movers.fallers, marketVsRos: marketVsRos.slice(0, 20),
            snapshotNote: cur && prev ? null : cur ? 'One weekly snapshot exists; risers and fallers appear once a second Wednesday has run.' : 'No Wednesday snapshot has run yet.' };
 }
@@ -15739,7 +15759,7 @@ async function leagueDisconnect(env, email, row) {
 // how much does it help, short-term or rest-of-season, and playoff impact.
 // Confidence is graded from the margin, never asserted: a half-point edge is
 // a lean, not an order.
-const LEAGUE_HORIZONS = ['week', 'next3', 'ros', 'playoffs'];
+const LEAGUE_HORIZONS = ['week', 'next', 'next3', 'untilPlayoffs', 'ros', 'playoffs'];
 function leagueRankRows(rows) {
   const rankIn = (list, field) => { list.slice().sort((x, y) => y[field].points - x[field].points || (x.name < y.name ? -1 : 1)).forEach((r, i) => { r[field].rank = i + 1; }); };
   const groups = {};
@@ -15754,7 +15774,11 @@ function leagueRankRows(rows) {
 async function leagueBoard(env, L, horizon, through) {
   const hz = LEAGUE_HORIZONS.includes(horizon) ? horizon : 'week';
   const custom = { ...L.settings.scoring };
-  const out = await boardsPayload(env, { horizon: hz, position: 'ALL', preset: 'custom', custom, through: through || null, customKey: leagueScoringKey(L.settings) });
+  // The stretch to the playoffs ends where THIS league's playoffs begin, not
+  // where the site's default does, unless the caller named a week itself.
+  const pws = Number(L.settings.playoffWeekStart);
+  const thr = through || (hz === 'untilPlayoffs' && pws >= 2 ? pws - 1 : null);
+  const out = await boardsPayload(env, { horizon: hz, position: 'ALL', preset: 'custom', custom, through: thr, customKey: leagueScoringKey(L.settings) });
   if (!out || !out.ok) return out || { ok: false, error: 'no_board' };
   const te = Number(L.settings.extras && L.settings.extras.tePremium) || 0;
   const idx = leagueRosterIndex(L);
