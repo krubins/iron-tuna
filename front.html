@@ -74,6 +74,9 @@ body{overflow-x:hidden}
    hairline, then one row of live market figures with a link to the board. */
 .hm-hero{padding:var(--sp-64) 0 0;text-align:center}
 .hm-hero h1{margin:0 auto var(--sp-16);font-size:var(--fs-hero);font-weight:700;letter-spacing:-.03em;line-height:1.02;max-width:20ch;text-wrap:balance}
+/* 44px cannot hold the headline to two lines under ~430px; 34px holds it
+   down to a 320px screen and stays on the type scale. */
+@media(max-width:480px){.hm-hero h1{font-size:var(--fs-34)}}
 .hm-lede{margin:0 auto var(--sp-32);font-size:var(--fs-19);color:var(--ink-2);max-width:56ch;line-height:1.5}
 .hm-find{max-width:640px;margin:0 auto}
 .hm-entry{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--sp-8) var(--sp-32);margin:var(--sp-24) 0 0;padding:0;list-style:none}

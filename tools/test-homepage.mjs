@@ -340,7 +340,9 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   const { page, ctx } = await open(w, h);
   const r = await read(page);
   ok(`${tag}: the one h1 is the thesis`, r.h1 === 'Every player, priced off the betting market.', r.h1);
-  ok(`${tag}: it is drawn, centred, at 44 to 68px, 700`, r.h1Drawn && r.h1Centered && r.h1Px >= 44 && r.h1Px <= 68 && r.h1Weight === '700', `${r.h1Px}px ${r.h1Weight} centred=${r.h1Centered}`);
+  // 34px on a phone is what holds the headline to two lines there.
+  const h1Min = w > 480 ? 44 : 34;
+  ok(`${tag}: it is drawn, centred, at ${h1Min} to 68px, 700`, r.h1Drawn && r.h1Centered && r.h1Px >= h1Min && r.h1Px <= 68 && r.h1Weight === '700', `${r.h1Px}px ${r.h1Weight} centred=${r.h1Centered}`);
   ok(`${tag}: one sentence under it, 19px, inside the measure`,
      /^Sportsbook lines and player props become fantasy point projections/.test(r.lede || '') && r.ledePx === 19 && r.ledeW <= 60, `${r.ledePx}px ${r.ledeW.toFixed(1)}ch`);
   ok(`${tag}: the search field is a real form posting ?q= to /player`, r.find === true);
