@@ -865,6 +865,80 @@ body.sl-dress .df-sub{font-size:var(--fs-2xs);color:var(--muted);line-height:1.5
 .df-main>#sec-lineup:first-of-type>.is-sec:first-child{margin-top:var(--space-5)}
 .df-main>#sec-lineup>.is-sec+#dfLineups>:first-child{margin-top:0}
 .df-est{display:inline-block;margin-left:4px;font-style:normal;font-size:10px;font-weight:800;color:#b7791f;vertical-align:2px}
+/* ══ THE PAPER PASS — THIS PAGE'S OWN HALF (2026-10-10) ═══════════════════
+   The shared half sits at the foot of the scoreboard dress in site.css and
+   says why: the homepage moved onto paper on 2026-10-08 and this page still
+   wore the September dress. An inline sheet outranks site.css at equal
+   specificity, so the objects only this page has the markup for are
+   restated here in the homepage's materials: the rail's board switch, the
+   slate setup, the Play of the Week, the academy cards, the fine-tune and
+   Must include boxes and the coach. 10px corners, hairlines, 600 where the
+   dress said 800, labels instead of chips, and gold nowhere, because on
+   this site gold is the disclosure label. Nothing here moves markup, an id
+   or a control. */
+/* the board switch down the rail: 16px, 600, the pressed board marked by a rule */
+.sl-nav .rk-seg button{font-weight:600;font-size:var(--fs-16);letter-spacing:0}
+/* Until the slate is set up the board switch and its label are hidden, and
+   the rail opened on the nav's hairline, a gap, and "Also here" on a second
+   hairline. One rule, not two. */
+body.sl-dress .sl-nav:has(#dfNav[hidden]) .sl-nav-more{margin-top:0;border-top:0}
+@media(min-width:861px){body.sl-dress .sl-nav .rk-seg button{font-size:var(--fs-16)}}
+/* the setup: the system's one form surface, the tinted panel under a navy
+   rule, and inside it plain labels — no numbered discs, no teal kicker, the
+   selects at the input radius */
+body.sl-dress .df-config{margin:var(--space-5) 0 0;border:0;border-top:3px solid var(--mast);border-radius:var(--radius-md);background:var(--panel)}
+.df-config-title{background:none;border-bottom:1px solid var(--line2);padding:var(--space-4) var(--space-5)}
+body.sl-dress .df-config-title span{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
+body.sl-dress .df-config-title b{font-size:var(--fs-19);font-weight:600}
+.df-select-block{border-left-color:var(--line2)}
+.df-select-kicker{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
+.df-select-kicker i{display:none}
+.df-select-block.done .df-select-kicker{color:var(--muted)}
+.df-select-label{font-size:var(--fs-16);font-weight:600}
+.df-select-block select{border-radius:var(--radius-input);font-weight:400;font-size:var(--fs-16);min-height:48px}
+.df-select-help{font-size:var(--fs-13)}
+.df-custom-games,.df-setup-foot{background:none;border-top-color:var(--line2)}
+.df-setup-state{background:none;font-size:var(--fs-14)}
+.df-setup-state.ready{font-weight:600;color:var(--text)}
+.df-setup-coach{font-weight:600;font-size:var(--fs-14);border-radius:var(--radius-sm);background:var(--bg)}
+@media(max-width:850px){.df-select-block{border-top-color:var(--line2)}}
+/* the play of the week: an outlined card, not a gold plate */
+body.sl-dress .df-play-week{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--bg);padding:var(--space-5);margin:var(--space-6) 0}
+body.sl-dress .df-play-week-label{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
+body.sl-dress .df-play-week h2{font-size:var(--fs-28);line-height:1.15;letter-spacing:-.01em;margin:var(--space-1) 0 var(--space-2)}
+body.sl-dress .df-play-week-dek{font-size:var(--fs-16);line-height:1.5;color:var(--sec)}
+body.sl-dress .df-play-week-copy{font-size:var(--fs-16);line-height:1.5}
+.df-play-week-score{border-left-color:var(--line)}
+body.sl-dress .df-play-week-score b{font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em}
+.df-play-week-score span{font-size:var(--fs-13)}
+@media(max-width:850px){.df-play-week-score{border-top-color:var(--line)}}
+/* the academy: a section head and two outlined cards */
+.df-reading{margin:var(--space-8) 0 0}
+.df-reading-head{display:block;margin-bottom:var(--space-4)}
+.df-reading-head span{display:block;margin-bottom:var(--space-1)}
+body.sl-dress .df-reading-head span{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
+body.sl-dress .df-reading-head b{font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.df-reading-grid{gap:var(--space-5)}
+body.sl-dress .df-reading-card{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--bg);padding:var(--space-5)}
+.df-reading-card:hover{border-color:var(--line2)}
+.df-reading-card>span{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
+body.sl-dress .df-reading-card h3{font-size:var(--fs-19);margin:var(--space-1) 0 var(--space-2)}
+body.sl-dress .df-reading-card p{font-size:var(--fs-16);line-height:1.5;color:var(--sec)}
+/* the standfirsts, the boxes under the roster, the controls and the coach */
+body.sl-dress .df-sub{font-size:var(--fs-16);color:var(--sec);line-height:1.5;max-width:60ch}
+body.sl-dress .df-tune{border-radius:var(--radius-md);border-color:var(--line);background:var(--bg)}
+.df-tune>summary{font-weight:600}
+body.sl-dress .df-must{border-radius:var(--radius-md);border-color:var(--line);background:var(--bg)}
+.df-must-head>b{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
+.rk-seg{border-radius:var(--radius-sm);background:var(--bg)}
+.rk-seg button{font-weight:600;font-size:var(--fs-14)}
+.df-lineup,.df-strategy-card,.df-game-style,.df-game-scope,.df-advanced-panel,.df-player-metric,.df-formatline,.df-props,.df-benched,.df-approx{background:var(--bg)}
+body.sl-dress .df-stack{border-radius:var(--radius-md);border-color:var(--line);background:var(--bg)}
+.df-card,.df-lineup,.df-strategy-card{border-radius:var(--radius-md);border-color:var(--line)}
+.df-coach{background:var(--bg)}
+.df-coach-title{font-size:var(--fs-19);font-weight:600}
+.df-coach-live{font-weight:600;border-radius:var(--radius-sm)}
+.df-coach-fab{font-weight:600;letter-spacing:0}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/dfs","name":"DFS: The Market Read, Aimed at One Slate","description":"Daily fantasy is one slate, one set of game lines, and a salary cap. Iron Tuna reads the same betting market its season-long board is priced from, aimed at the games being played this week.","url":"https://irontuna.com/dfs","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/dfs"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"DFS: The Market Read, Aimed at One Slate"}]}]}</script>
