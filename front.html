@@ -621,9 +621,9 @@ footer.site {margin-top:0}
   function marketCats(j) {
     var vs = j.vsExperts || {}, sf = j.seasonForm || {};
     // NO PLAYER TWICE (2026-10-10). A player can sit on two lists (this
-    // week's value and likely to outperform, say). The lists are built in
-    // band order, and each one skips the players an earlier list already
-    // printed, so it deals its next player in their place. Only a list that
+    // week's value and likely to outperform, say). The lists are built one
+    // at a time, and each skips the players an earlier list already printed,
+    // so it deals its next player in their place. Only a list that
     // stands claims its players: one too short to print gives them back.
     var used = {};
     var fresh = function (p) { return !used[p.name]; };
@@ -647,13 +647,15 @@ footer.site {margin-top:0}
     // same figure twice (overview and tabs both). Each side is now one tab:
     // the forward call when it stands, else the season record behind it.
     var side = function (fwd, rec) { return claim(fwd.rows.length >= MARKET_MIN ? fwd : rec); };
-    var lists = [];
-    lists.push(claim({ key: 'value', label: 'This week\u2019s value', rows: week(vs.buys, 1), html: figHtml }));
-    lists.push(side({ key: 'likely', label: 'Likely to outperform', rows: ahead(sf.likelyOver, 1), html: function (p) { return aheadHtml(p, 1); } },
-                    { key: 'over', label: 'Outscoring their projections', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } }));
-    lists.push(claim({ key: 'headwinds', label: 'This week\u2019s headwinds', rows: week(vs.fades, -1), html: figHtml }));
-    lists.push(side({ key: 'unlikely', label: 'Likely to underperform', rows: ahead(sf.likelyUnder, -1), html: function (p) { return aheadHtml(p, -1); } },
-                    { key: 'overvalued', label: 'Trailing their projections', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } }));
+    // The season calls claim first, then the week's lists, so a player on
+    // both is the season call's; the band still prints in its usual order.
+    var likely = side({ key: 'likely', label: 'Likely to outperform', rows: ahead(sf.likelyOver, 1), html: function (p) { return aheadHtml(p, 1); } },
+                      { key: 'over', label: 'Outscoring their projections', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } });
+    var unlikely = side({ key: 'unlikely', label: 'Likely to underperform', rows: ahead(sf.likelyUnder, -1), html: function (p) { return aheadHtml(p, -1); } },
+                        { key: 'overvalued', label: 'Trailing their projections', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } });
+    var value = claim({ key: 'value', label: 'This week\u2019s value', rows: week(vs.buys, 1), html: figHtml });
+    var headwinds = claim({ key: 'headwinds', label: 'This week\u2019s headwinds', rows: week(vs.fades, -1), html: figHtml });
+    var lists = [value, likely, headwinds, unlikely];
     lists = lists.filter(Boolean);
     // THE OVERVIEW (2026-10-10) leads the band once two or more lists stand:
     // the top row of each list, in list order, each figure labelled with the
