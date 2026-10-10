@@ -646,8 +646,19 @@ footer.site {margin-top:0}
     // THE OVERVIEW (2026-10-10) leads the band once two or more lists stand:
     // the top row of each list, in list order, each figure labelled with the
     // list it came from and drawn the way that list draws it.
+    //
+    // NO PLAYER TWICE (2026-10-10). A player can lead two lists (this week's
+    // value and likely to outperform, say), and the overview printed him
+    // twice. Each card takes the top row no earlier card has used; a list
+    // whose every row is taken sits the overview out.
     if (lists.length < 2) return lists;
-    var overview = lists.map(function (c) { return { cat: c, p: c.rows[0] }; });
+    var used = {}, overview = [];
+    lists.forEach(function (c) {
+      var p = c.rows.filter(function (r) { return !used[r.name]; })[0];
+      if (!p) return;
+      used[p.name] = true;
+      overview.push({ cat: c, p: p });
+    });
     return [{ key: 'overview', label: 'Overview', rows: overview, html: function (o) {
       return o.cat.html(o.p).replace('<span class="hm-fig-txt">', '<span class="hm-fig-txt"><span class="c">' + esc(o.cat.label) + '</span>');
     } }].concat(lists);

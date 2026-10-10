@@ -581,6 +581,17 @@ console.log('\nwith a board too short to print');
   r = await read(page);
   ok('with no forward call, each side falls back to the season record', r.cats.map(c => c.t).join(' | ') === 'Overview | Outscoring their projections | Trailing their projections', JSON.stringify(r.cats));
   await ctx.close();
+  // A player who leads two lists is printed once: the later list's card
+  // takes its next player instead.
+  EDGE.vsExperts = full;
+  EDGE.seasonForm = { ...fullForm, likelyOver: [{ ...fullForm.over[0], name: 'Drake London', position: 'WR', team: 'ATL', opponent: 'CAR', formGap: 9.9 }, ...fullForm.likelyOver] };
+  ({ page, ctx } = await open(1440, 900));
+  r = await read(page);
+  const names = r.figs.map(f => f.k.split(' · ')[1].split(',')[0]);
+  ok('a player leading two lists is on the overview once, the second list showing its next player',
+     r.figs.length === 4 && new Set(names).size === 4 && names[0] === 'Drake London' && names[1] === 'Puka Nacua', JSON.stringify(names));
+  await ctx.close();
+  EDGE.vsExperts = { buys: [], fades: [] };
   EDGE.seasonForm = { ...fullForm, under: [], likelyOver: [], likelyUnder: [] };
   ({ page, ctx } = await open(1440, 900));
   r = await read(page);
