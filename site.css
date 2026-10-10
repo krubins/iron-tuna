@@ -158,10 +158,10 @@
   --rail-gap: 56px;
 
   /* The ribbon alone. The navy bars above and below it add 3px each. */
-  --header-h: 92px;
+  --header-h: 136px;
   --line-h: 3px;
 }
-@media (max-width: 860px) { :root { --gutter: 16px; --header-h: 64px } }
+@media (max-width: 860px) { :root { --gutter: 16px; --header-h: 76px } }
 
 /* ── base ───────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box }
@@ -213,14 +213,16 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
      ::after       the matching 3px navy bar under the ribbon. Both bars take
                    the ribbon's own colour since 2026-10-09 (they were
                    near-black), so the three read as one navy band.
-     .site-ribbon  the flat navy ribbon, 92px (64 on a phone), no border and no
-                   shadow. The logo sits on a white panel that starts at the
-                   left screen edge and ends in a 30px slant: a navy tuna
-                   silhouette (/tuna-silhouette.svg) with the steel wordmark
-                   laid across it, after the 2026-10-10 mock. Nav links are
-                   14px bold capitals; the current page gets a 3px white bar at
-                   the foot of the ribbon. On the right, the one flat primary
-                   button.
+     .site-ribbon  the flat navy ribbon, 136px (112 from 1024 to 1239px, 96
+                   from 861 to 1023px, 76 on a phone), no border and no shadow. The logo sits on a white
+                   panel inset 3px from the screen's left edge, ending in a
+                   slant. Nav links are 14px bold capitals; the current page
+                   gets a 3px white bar at the foot of the ribbon. On the
+                   right, the one flat primary button.
+
+   The proportions are the 2026-10-10 mock's, scaled by 1.2: the mock was a
+   screenshot shrunk to 1024px, which put its links at 11px, under the type
+   scale's floor.
      .tabbar       on a phone, a 68px bottom bar with four labelled icon tabs.
 
    The ribbon is sticky and FLAT: no blur, no translucency. A backdrop-filter
@@ -232,35 +234,35 @@ header.site .site-ribbon, header.site > .wrap {
   display: flex; align-items: stretch; gap: var(--space-4);
   height: var(--header-h); max-width: none; padding: 0 var(--gutter) 0 0;
 }
-/* The brand panel. White, from the screen's left edge to a 30px slant. The
-   tuna is a background image so the 160 pages' header markup did not have to
-   change; the wordmark is the same outlined-path SVG every page carries, set
-   on top of it in the page's own steel gradient (#wordMetal) with a navy
-   outline, so it reads on the white panel and across the navy fish alike.
-   The lean is a transform, not a font: the mark is paths, and the type rule
-   (nothing italic) is about text. --fish-w sizes the tuna; the wordmark's
-   left padding puts its first letter just behind the fish's eye. */
+/* The brand panel: white, inset 3px from the screen's left edge so the navy
+   frames it on three sides, ending in a slant.
+
+   THE MARK IS /iron-tuna-logo.svg: the tuna and the heavy italic steel
+   wordmark of the 2026-10-10 mock, traced from it as two filled paths. It is
+   the background of the <svg class="brand-logo"> every page already carries,
+   and that SVG's own letters are hidden, so no page's markup changed and the
+   element keeps its role="img" and aria-label. The SVG's width is set here
+   because its own viewBox is the old wordmark's shape; 2.846 is the new
+   mark's aspect ratio. */
 .brand {
-  --fish-w: 262px;
+  --logo-h: 114px;
   position: relative; display: inline-flex; align-items: center; flex: 0 0 auto;
-  background: #fff url(/tuna-silhouette.svg) no-repeat;
-  background-size: var(--fish-w) auto;
-  background-position: calc(var(--gutter) - 10px) 50%;
-  padding: 0 64px 0 calc(var(--gutter) + 20px);
-  clip-path: polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%);
+  background: #fff; margin-left: var(--line-h);
+  padding: 0 88px 0 63px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 43px) 100%, 0 100%);
 }
 .brand:hover { text-decoration: none }
 .brand b { color: var(--mast) }
-.brand-logo { height: 42px; width: auto; display: block; overflow: visible; transform: skewX(-8deg) }
-.brand-logo g, .brand-logo path {
-  fill: url(#wordMetal); stroke: var(--mast); stroke-width: 5px;
-  stroke-linejoin: round; paint-order: stroke fill;
+.brand-logo {
+  display: block; height: var(--logo-h); width: calc(var(--logo-h) * 2.846);
+  background: url(/iron-tuna-logo.svg) no-repeat center / contain;
 }
-.nav { display: flex; align-items: stretch; gap: var(--space-1); margin-left: var(--space-2) }
+.brand-logo > * { display: none }
+.nav { display: flex; align-items: stretch; gap: 0; margin-left: var(--space-1) }
 .nav a {
   display: inline-flex; align-items: center; position: relative;
-  color: var(--mast-ink-hi); font-size: var(--fs-14); font-weight: 700; letter-spacing: .04em;
-  text-transform: uppercase; white-space: nowrap; padding: 0 var(--space-3);
+  color: var(--mast-ink-hi); font-size: var(--fs-14); font-weight: 700; letter-spacing: .02em;
+  text-transform: uppercase; white-space: nowrap; padding: 0 14px;
 }
 .nav a:hover { background: rgba(255, 255, 255, .08); text-decoration: none; color: #fff }
 /* The page you are on: a 3px white bar at the foot of the ribbon. */
@@ -272,9 +274,9 @@ header.site .site-ribbon, header.site > .wrap {
 .nav-signin { align-self: center; color: #fff; font-size: var(--fs-13); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap }
 .nav-signin:hover { text-decoration: underline; color: #fff }
 header.site a.cta {
-  align-self: center; display: inline-flex; align-items: center; min-height: 48px;
-  padding: 0 var(--space-5); border-radius: 4px; background: var(--mast-btn); color: #fff;
-  font-size: var(--fs-14); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+  align-self: center; display: inline-flex; align-items: center; min-height: 44px;
+  padding: 0 var(--space-4); border-radius: 3px; background: var(--mast-btn); color: #fff;
+  font-size: var(--fs-14); font-weight: 700; letter-spacing: .02em; text-transform: uppercase; white-space: nowrap;
   margin-left: auto; flex: 0 0 auto;
 }
 header.site a.cta:hover { background: #196559; text-decoration: none; color: #fff }
@@ -285,15 +287,21 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
 }
 .nav-account:hover { border-color: #fff; background: rgba(255, 255, 255, .08) }
 
-/* Between the phone breakpoint and a wide screen (861 to 1180px) the full
-   mark, five links and the button do not fit: a smaller mark and tighter link
-   padding keep the ribbon on one line without a sideways scroll. */
-@media (min-width: 861px) and (max-width: 1180px) {
-  .brand { --fish-w: 210px; padding: 0 52px 0 calc(var(--gutter) + 16px) }
-  .brand-logo { height: 34px }
-  .nav { margin-left: 0; gap: 0 }
-  .nav a { padding: 0 var(--space-2); letter-spacing: .02em }
-  header.site a.cta { padding: 0 var(--space-4); letter-spacing: .02em }
+/* Below 1240px the full-size ribbon (about 1190px of content) does not fit.
+   From 1024 to 1239px it drops to the mock at its own 1024px size (112px
+   ribbon, a 94px mark, 13px links); from 861 to 1023px a smaller mark and
+   tighter links keep the ribbon on one line without a sideways scroll. */
+@media (min-width: 861px) and (max-width: 1239px) {
+  :root { --header-h: 112px }
+  .brand { --logo-h: 94px; padding: 0 64px 0 50px; clip-path: polygon(0 0, 100% 0, calc(100% - 36px) 100%, 0 100%) }
+  .nav a { font-size: var(--fs-13); padding: 0 8px }
+  header.site a.cta { font-size: var(--fs-13); min-height: 40px; padding: 0 var(--space-3) }
+}
+@media (min-width: 861px) and (max-width: 1023px) {
+  :root { --header-h: 96px }
+  header.site .site-ribbon, header.site > .wrap { gap: var(--space-3) }
+  .brand { --logo-h: 64px; padding: 0 40px 0 22px; clip-path: polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%) }
+  .nav a { padding: 0 6px }
 }
 
 /* ── nav dropdown ───────────────────────────────────────────────────────── */
@@ -324,8 +332,7 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
      right: until 2026-10-10 the button sat against the slant with the rest of
      the bar empty, because the margin that pushed it right belonged to the
      header button the phone hides. */
-  .brand { --fish-w: 182px; padding: 0 46px 0 calc(var(--gutter) + 14px); flex: 0 0 auto; clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%) }
-  .brand-logo { height: 29px }
+  .brand { --logo-h: 64px; padding: 0 40px 0 var(--gutter); flex: 0 0 auto; clip-path: polygon(0 0, 100% 0, calc(100% - 25px) 100%, 0 100%) }
   .nav-toggle { margin-left: auto }
   header.site a.cta { min-height: 36px; padding: 0 var(--space-3); letter-spacing: .03em }
   .nav-toggle {
@@ -383,8 +390,7 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
 /* The narrowest phones (320 to 380px): a smaller mark, so the logo panel and
    the Menu button share the bar without either one clipping. */
 @media (max-width: 380px) {
-  .brand { --fish-w: 150px; padding: 0 38px 0 calc(var(--gutter) + 11px) }
-  .brand-logo { height: 24px }
+  .brand { --logo-h: 48px; padding: 0 30px 0 12px; clip-path: polygon(0 0, 100% 0, calc(100% - 20px) 100%, 0 100%) }
 }
 
 /* ── footer ─────────────────────────────────────────────────────────────────
