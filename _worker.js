@@ -6500,8 +6500,25 @@ async function buildMarketRecords(env, opts) {
 //
 // Three lines per player, because the whole point of the product is the gap:
 // what the projections say, what the odds alone say, and what the site ships.
-const RANKINGS_CONTRACT = 1;
+// Contract 2 (2026-10-10): `priced` means a book quoted a market on THIS man
+// THIS week, read off the prop store the week boards price from. Under
+// contract 1 it meant the season overlay had moved his line, which counted
+// every man on a club with a game spread and went to zero for a fortnight's
+// outage of one daily job. `marketBoard` still describes statsMarket.
+const RANKINGS_CONTRACT = 2;
 let _RANK_CACHE = null, _RANK_AT = 0;
+// How many of a player's markets at least one book is currently quoting, and
+// when a book last touched any of them. Off the in-memory week history, so the
+// whole board costs the one read marketHistoryWeek already makes.
+function _propsQuoted(hist) {
+  let markets = 0, asOf = 0;
+  for (const h of Object.values(hist || {})) {
+    if (!h || !(h.perBook || []).length) continue;
+    markets++;
+    if (h.lastSeen > asOf) asOf = h.lastSeen;
+  }
+  return { markets, asOf: asOf || null };
+}
 async function rankingsPayload(env) {
   if (_RANK_CACHE && Date.now() - _RANK_AT < 900000) return _RANK_CACHE;
   const sched = await scheduleCacheRead(env);
@@ -6510,6 +6527,14 @@ async function rankingsPayload(env) {
   const tctx = cached ? await oddsCtxRead(env) : null;
   const board = cached && cached.overlay ? buildVegasBoard(cached.overlay, tctx) : { ok: false, rows: [] };
   const avail = await availabilityTable(env);
+  // THIS WEEK'S PROPS: one read for the whole board, the same store and the
+  // same join (normalized name, ambiguous names get nothing) buildMarketRecords
+  // uses, so the front page cannot call a man priced whom the week board does
+  // not. No current week, or an empty store, and nobody is priced.
+  const week = state.ok ? state.week.number : null;
+  const weekMarkets = sched && week != null ? await marketHistoryWeek(env, sched.season, week) : {};
+  const nameIndex = _oddsProjectionIndex();
+  let pricedCount = 0, propsAsOf = 0;
   // Who plays whom this week, so a ranking can say the opponent and the bye
   // without a second call.
   const byTeam = new Map();
@@ -6530,12 +6555,17 @@ async function rankingsPayload(env) {
     const team = teamKey(p.team);
     const slot = byTeam.get(team) || null;
     const a = avail[k] || null;
+    const nk = _oddsNorm(p.name);
+    const quoted = _propsQuoted(nameIndex.get(nk) === null ? null : weekMarkets[nk]);
+    if (quoted.markets) pricedCount++;
+    if (quoted.asOf > propsAsOf) propsAsOf = quoted.asOf;
     players.push({
       name: p.name, position: p.position, team,
       statsConsensus: r ? r.statsConsensus : _colStatLine(p.projectedStats),
       statsMarket: r ? r.statsMarket : null,
       statsIronTuna: r ? r.statsIronTuna : _colStatLine(p.projectedStats),
-      priced: r ? !!r.priced : false,
+      priced: quoted.markets > 0,
+      propMarkets: quoted.markets,
       opponent: slot ? slot.opponent : null,
       home: slot ? slot.home : null,
       teamImplied: slot ? slot.implied : null,
@@ -6557,6 +6587,12 @@ async function rankingsPayload(env) {
     oddsAsOf: cached ? cached.updatedAt : null,
     oddsProvider: cached ? cached.provider : null,
     marketBoard: !!(board && board.ok),
+    // The prop store behind `priced`: live when at least one board player
+    // carries a quoted market this week. A page prints the priced count only
+    // under `live`; an empty store is the odds not having been read, not a
+    // market that priced nobody.
+    props: { live: pricedCount > 0, season: sched ? sched.season : null, week,
+             players: pricedCount, asOf: propsAsOf || null },
     players
   };
   _RANK_CACHE = out; _RANK_AT = Date.now();

@@ -138,7 +138,9 @@ Object.entries(RANK_N).forEach(([pos, n]) => {
   for (let k = 0; k < n; k++) RANK_PLAYERS.push({ name: pos + ' Player ' + k, position: pos, team: 'T' + (k % 16), priced: k % 3 !== 0 });
 });
 const RANK = { ok: true, week: { label: 'Week 3', number: 3, type: 'REG', status: 'upcoming' },
-  oddsAsOf: Date.UTC(2026, 8, 17, 18, 42), oddsProvider: 'propline', marketBoard: true, players: RANK_PLAYERS };
+  oddsAsOf: Date.UTC(2026, 8, 17, 18, 42), oddsProvider: 'propline', marketBoard: true,
+  props: { live: true, season: 2026, week: 3, players: RANK_PLAYERS.filter(p => p.priced).length, asOf: Date.UTC(2026, 8, 17, 18, 42) },
+  players: RANK_PLAYERS };
 const NOW = Date.now();
 const AGO = h => NOW - h * 3600 * 1000;
 const CONTENT = { ok: true, pieces: [
@@ -206,10 +208,11 @@ const server = http.createServer((req, res) => {
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
     } else if (MODE === 'noboard') {
-      // The worker with no usable odds overlay: the board answers, but with
-      // no market behind it every row comes back unpriced.
+      // The worker with nothing in this week's prop store: the board answers,
+      // but with no book quoting anyone every row comes back unpriced.
       if (u.pathname === '/api/vegas-edge') body = EDGE;
-      else if (u.pathname === '/api/rankings') body = { ...RANK, marketBoard: false, oddsAsOf: null, oddsProvider: null, players: RANK_PLAYERS.map(p => ({ ...p, priced: false })) };
+      else if (u.pathname === '/api/rankings') body = { ...RANK, marketBoard: false, oddsAsOf: null, oddsProvider: null,
+        props: { live: false, season: 2026, week: 3, players: 0, asOf: null }, players: RANK_PLAYERS.map(p => ({ ...p, priced: false })) };
       else if (u.pathname === '/api/newsroom') body = CONTENT;
       else if (u.pathname === '/api/content') body = ARCHIVE_POISON;
       else if (u.pathname === '/api/season') body = SEASON;
@@ -525,9 +528,9 @@ console.log('\nwith the boards answering');
 
   ok('the KPI band is shown, navy, with white 44px figures', r.kpi === true && r.kpiBg === 'rgb(0, 30, 71)' && r.kpis.every(k => k.px === 44), JSON.stringify({ bg: r.kpiBg, px: r.kpis.map(k => k.px) }));
   ok('its figures come off the board and the desk',
-     r.kpis.map(k => k.v + ' ' + k.k).join(' | ') === '310 Players ranked this week (Week 3) | 205 Priced off a market line | 7 Pieces the desk published',
+     r.kpis.map(k => k.v + ' ' + k.k).join(' | ') === '310 Players ranked this week (Week 3) | 205 Priced off a prop this week | 7 Pieces the desk published',
      r.kpis.map(k => k.v + ' ' + k.k).join(' | '));
-  ok('only the market-priced count is mint', r.kpis.filter(k => k.good).map(k => k.k).join() === 'Priced off a market line');
+  ok('only the market-priced count is mint', r.kpis.filter(k => k.good).map(k => k.k).join() === 'Priced off a prop this week');
   ok('and no loading copy survives anywhere on the page', !LOADING.test(r.body), (r.body.match(LOADING) || [''])[0]);
   await ctx.close();
 }
@@ -714,9 +717,10 @@ MODE = 'thin';
 MODE = 'live';
 
 // ── 3g. a board with no market behind it ────────────────────────────────────
-// When the worker has no usable odds overlay (marketBoard false) every row is
-// unpriced. That zero is not a figure, it is the odds not having been read, so
-// the KPI band drops the cell rather than printing a mint 0.
+// When this week's prop store is empty (props.live false) every row is
+// unpriced. That zero is not a figure, it is the props not having been read,
+// so the KPI band drops the cell and the tiles drop their priced count rather
+// than printing a 0.
 console.log('\na board with no market behind it');
 MODE = 'noboard';
 {
@@ -727,6 +731,8 @@ MODE = 'noboard';
      r.kpis.map(k => k.v + ' ' + k.k).join(' | ') === '310 Players ranked this week (Week 3) | 7 Pieces the desk published',
      r.kpis.map(k => k.v + ' ' + k.k).join(' | '));
   ok('and nothing on the band is mint', r.kpis.every(k => !k.good));
+  ok('the tiles keep their ranked count and drop the priced one',
+     r.tiles.map(t => t.live).join(' | ') === '34 ranked | 72 ranked | 98 ranked | 42 ranked | 32 ranked | 32 ranked', r.tiles.map(t => t.live).join(' | '));
   await ctx.close();
 }
 MODE = 'live';

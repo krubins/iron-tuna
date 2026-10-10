@@ -13495,3 +13495,55 @@ pasting or dropping a screenshot.
   once the back-heavy roster is pasted in), and `#finder` opening the
   Finder both in place and on a fresh load. `test-trade-finder.mjs` and the
   engine are unchanged. The full node suite (less the dry run) passes.
+
+---
+
+## 125. October 10: the front page prices off this week's props, and the zero that was not a figure
+
+Ken: *"Why are 0 priced off of the market line?"* The band read "345 Players
+ranked this week" beside a mint "0 Priced off a market line".
+
+**What the zero was.** The count came off `priced` on `/api/rankings`, which
+under contract 1 meant the SEASON overlay (`odds_overlay` row 1, written by
+the 7 AM `odds-refresh`) had moved the man's line. `oddsCacheRead` ignores a
+row older than `ODDS_MAX_AGE_MS` (14 days), so a fortnight of the daily pull
+failing takes the count from ~280 to 0 with no signal in between, and
+`paintKpi` printed the 0 in mint as if the market had priced nobody. Run
+offline against today's nflverse file the pull itself succeeds (93 priced
+games, 373 players matched), so the failure is the one §68p already named: the
+worker is on the legacy Bundled usage model and the cron invocation is being
+killed mid-job. The missing "(Week N)" beside the ranked count said the
+schedule row was gone the same way.
+
+**Two separate pipelines, and the front page was on the wrong one.** PropLine
+(`TMS_PROVIDER=propline`, free current-odds tier, §98) polls hourly and writes
+`odds_snapshots`, which `marketHistoryWeek` reads and the week boards, Vegas
+Edge, DFS and The Line price from. None of that reached the season overlay, so
+the homepage could count a man priced off a team scoring factor while the week
+board priced him off his own prop, or vice versa.
+
+**What changed.**
+- `rankingsPayload` is **contract 2**: `priced` means a book quoted a market on
+  this man this week, off the same read and the same join (normalized name,
+  ambiguous names get nothing) `buildMarketRecords` uses. Each row carries
+  `propMarkets`; the payload carries `props: { live, season, week, players,
+  asOf }`, `live` when at least one board player is quoted. `marketBoard` and
+  `statsMarket` still describe the season overlay. `_propsQuoted` is the
+  helper.
+- `front.html` reads `props.live`: the cell is "Priced off a prop this week",
+  it is dropped (null) when the store is empty, and the position tiles print
+  "N ranked" without a priced count in the same state. The band never prints
+  a 0 it cannot stand behind.
+- `tools/test-homepage.mjs` carries `props` on the rankings fixture and a
+  "board with no market behind it" scenario (154 → 155).
+
+**What is still the owner's.** Nothing here revives the odds until the worker
+is switched to the Standard usage model (dashboard: Workers, iron-tuna,
+Settings, Usage Model) and `"limits": { "cpu_ms": 300000 }` goes back into
+`wrangler.jsonc` (§68p). After that: `props` on `GET /api/health` must read
+`live`; `empty` after a poll cycle means the `PROPLINE_API_KEY` secret is not
+set on the worker. `/api/admin/odds-status?key=&refresh=1` and
+`/api/admin/season-status?key=&refresh=1` seed the season overlay and the
+schedule row without waiting for the morning. The Odds API stays unconfigured;
+PropLine covers the props and is the feed the boards already read.
+
