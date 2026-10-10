@@ -241,8 +241,26 @@ header.site .site-ribbon, header.site > .wrap {
 }
 .brand:hover { text-decoration: none }
 .brand b { color: var(--mast) }
-.brand-logo { height: 26px; width: auto; display: block }
-.brand-logo g, .brand-logo path { fill: var(--mast) }
+/* The mark is punched up here, in the panel only: italic to the panel's own
+   slant, each letter outlined in its fill colour so Bebas's thin strokes read
+   heavy, and the letters closed up from the banners' loose tracking. The paths
+   are the shared ones (tools/wordmark.mjs), so the close-up is a translate per
+   letter; the negative margin takes back the viewBox width the move leaves
+   empty, and scales with --wm-h. og.png and the social cards are untouched. */
+.brand-logo {
+  --wm-h: 36px; height: var(--wm-h); width: auto; display: block; overflow: visible;
+  margin-right: calc(var(--wm-h) * -1.68); transform: skewX(-12deg);
+}
+.brand-logo g, .brand-logo path {
+  fill: var(--mast); stroke: var(--mast); stroke-width: 2.6px; stroke-linejoin: round; paint-order: stroke;
+}
+.brand-logo path:nth-child(2) { transform: translateX(-11.6px) }
+.brand-logo path:nth-child(3) { transform: translateX(-23px) }
+.brand-logo path:nth-child(4) { transform: translateX(-33px) }
+.brand-logo path:nth-child(5) { transform: translateX(-45px) }
+.brand-logo path:nth-child(6) { transform: translateX(-55px) }
+.brand-logo path:nth-child(7) { transform: translateX(-66.4px) }
+.brand-logo path:nth-child(8) { transform: translateX(-78.4px) }
 .nav { display: flex; align-items: stretch; gap: var(--space-1); margin-left: var(--space-2) }
 .nav a {
   display: inline-flex; align-items: center; position: relative;
@@ -297,7 +315,7 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
 @media (max-width: 860px) {
   header.site .site-ribbon, header.site > .wrap { gap: 10px; padding-right: var(--gutter) }
   .brand { padding: 0 26px 0 var(--gutter); flex: 0 1 auto; min-width: 0 }
-  .brand-logo { height: 22px; max-width: 100% }
+  .brand-logo { --wm-h: 30px }
   header.site a.cta { min-height: 36px; padding: 0 var(--space-3); letter-spacing: .03em }
   .nav-toggle {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px; align-self: center;
