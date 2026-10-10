@@ -13274,3 +13274,73 @@ queries by rows read and are the check that this was the whole bill. The
 owner should also move the account to Workers Paid, whose D1 allowance is
 orders of magnitude larger; this change makes the free allowance survivable,
 not generous.
+
+## 127. October 10: the D1 read allowance, spent a third time; the market digest
+
+**The report.** "On the trade evaluator tool, I am typing in a player's name,
+but it is not auto populating." On a phone. The type-ahead was fine (its own
+phone bug, the list opening under the keyboard, is PR #414); the box had no
+players because `/api/boards` was answering `503 no_schedule`, and so was
+`/api/season`, on most requests and not all. A read of the live database from
+this session named the cause again: `D1_ERROR: Your account has exceeded D1's
+free tier daily row read limit`. The schedule row (odds_overlay 4) was there
+and 13 hours old; the hourly refresh had been failing for as long, for the
+same reason. The requests that still answered 200 came from isolates holding a
+schedule memo; every isolate whose memo expired read D1, was refused, and
+served `no_schedule` until midnight UTC.
+
+**What spent it.** Not one query but a cadence. Three reads over
+`odds_snapshots` ran on the request path and in cron, each bounded by an
+index and each repeated on a timer: the week's history (`_marketHistoryWeekRead`,
+up to 40,000 rows) under a five-minute memo per isolate; the prior weeks'
+subjects (`marketSubjectsBefore`) under ten; the slate's game lines
+(`marketHistoryGames`) with no memo of its own. Every warm isolate paid them
+again every five minutes, every cold isolate (a visitor or crawler landing on a
+new colo) paid them on arrival, and the quarter-hour cron paid them on every
+tick in its own isolate, where the memo had always expired. One warm isolate
+re-reading a 20,000-row week every five minutes is 5.8M rows a day on its own;
+the allowance is 5M. Section 120's fix (the GROUP BY on every pull) was real,
+and left this standing. Not polling: nothing on the site polls a D1-backed
+route, and the admin traffic page, which makes nine passes over `page_views`
+per load, only loads on demand.
+
+**The change: the pull builds a digest, everything else reads it.**
+`odds_snapshots` changes only when `runMarketSnapshot` writes it (eight to
+fifteen times a day), so that is the one place that reads it. After every
+pull, `runMarketDigest` → `marketDigestBuild` reads the week's history, the
+prior weeks' subject set and the slate's game lines once, and stores the
+result (`{ v, builtAt, season, week, markets, priorKey, priorSubjects,
+gameIds, games }`) in `market_digest`, chunked at 1.5 MB per row because D1
+caps a row at 2 MB, written as one batch so a reader never sees half of it.
+
+- **Readers.** `marketHistoryWeek`, `marketSubjectsBefore` and
+  `marketHistoryGames` take the digest first (`marketDigestRead`, a two- or
+  three-row read memoized five minutes per isolate) and fall back to the store
+  exactly as before only for what it does not hold: a requested past week
+  (`/api/market?week=`), a game outside the digested slate, or the hours
+  between the week turning on Tuesday and the next pull.
+- **The prior-week set** is reused from the stored digest while its weeks are
+  unchanged, so that read costs once a week rather than once a pull.
+- **The job.** `market-digest` is in `JOB_FNS` for the admin rerun button; it
+  is not scheduled on its own, because a run costs the three reads and the
+  pull already runs it. The health board reports `updates.marketDigest`
+  (built when, for which week, how many subjects and games, and `current`,
+  false when the clock has moved past the digested week).
+- **The bill.** Request isolates and cron ticks now read a few rows per five
+  minutes instead of tens of thousands. The pull reads the week once per run:
+  at 15 runs on a Sunday and a 40,000-row week that is 600,000 rows, inside
+  the allowance with room for the rest of the site.
+
+**Not changed.** `marketHistoryAll` on the player card reads one subject
+through `ix_snap_subject`, a few hundred to two thousand rows per card; a
+crawler walking every card is the next thing to look at if the allowance is
+spent again. The admin traffic route is unchanged. Workers Paid is still the
+right move: it makes the free allowance a non-event and the store's growth
+stops being a daily risk.
+
+**Tests.** `tools/test-market.mjs` gains the digest: a store with two pulls
+across three weeks and two games is digested; the three readers answer from
+it with zero snapshot rows scanned and the same answers the store gives; a
+past week, a game outside the slate, and a store with no digest fall back to
+the store; the digest survives being chunked across rows; the prior-week set
+is reused when its weeks are unchanged and rebuilt when they are not.

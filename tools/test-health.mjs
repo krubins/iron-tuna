@@ -33,6 +33,9 @@ const stubs = {
   runOddsRefresh: async () => { calls.push('odds'); throw new Error('the books did not answer'); },
   runAvailabilityRefresh: async () => ({ ok: false, error: 'espn 403' }),
   runMarketSnapshot: async () => ({ ok: true, written: 12 }),
+  // The digest the pull builds (HANDOFF §127): the job is a stub here, and the
+  // health board's read of it answers "none", the state before the first pull.
+  runMarketDigest: async () => ({ ok: true }), marketDigestRead: async () => null,
   runUsageRefresh: async () => ({ ok: true }), runPriorUsageRefresh: async () => ({ ok: true }), runDfsRefresh: async () => ({ ok: true }), runDepthChartRefresh: async () => ({ ok: true }),
   runRosSnapshot: async () => ({ ok: true }), snapshotPrune: async () => ({ ok: true }), pruneAnalytics: async () => ({ ok: true }), runContentTick: async () => ({ ok: true, results: [] }),
   SNAP_KEEP_DAYS: 200, DEPTH_ROW: 6, MARKET_PRIOR_ROW: 7,

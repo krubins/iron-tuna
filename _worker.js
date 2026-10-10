@@ -5242,7 +5242,11 @@ const SNAP_DDL = [
   // ago reads as 52 hours old the moment the market goes quiet, and the health
   // board could not tell a stopped poll from a settled one. One row per subject
   // type, stamped by every pull that reaches the store.
-  'CREATE TABLE IF NOT EXISTS odds_snapshot_pulls (subject_type TEXT PRIMARY KEY, ts INTEGER NOT NULL, seen INTEGER, changed INTEGER)'
+  'CREATE TABLE IF NOT EXISTS odds_snapshot_pulls (subject_type TEXT PRIMARY KEY, ts INTEGER NOT NULL, seen INTEGER, changed INTEGER)',
+  // THE WEEK'S MARKETS, DIGESTED, written by the pull that changes them and
+  // read by everything else. See marketDigestBuild for why the request path
+  // must not read the store itself. Chunked: D1 caps a row at 2 MB.
+  'CREATE TABLE IF NOT EXISTS market_digest (key TEXT NOT NULL, part INTEGER NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (key, part))'
 ];
 // Additive migrations for a table that may already exist. Each is a no-op
 // once applied and is allowed to fail (D1 raises on a duplicate column).
@@ -5560,6 +5564,11 @@ const MARKET_WEEK_ROW_CAP = 40000;
 // caller handing in a different store never reads another's rows.
 let _MKT_WEEK_MEMO = { db: null, key: '', at: 0, out: null };
 async function marketHistoryWeek(env, season, week) {
+  // The digest first: one small read, built by the last pull. The store is
+  // read only for a week the digest does not hold (a requested past week, or
+  // the hours between the week turning and the next pull).
+  const d = await marketDigestRead(env);
+  if (d && _digestCovers(d, season, week)) return d.markets || {};
   const mkey = season + '|' + week;
   const db = env && env.LEADS_DB;
   if (db && _MKT_WEEK_MEMO.db === db && _MKT_WEEK_MEMO.key === mkey && Date.now() - _MKT_WEEK_MEMO.at < 300000) return _MKT_WEEK_MEMO.out;
@@ -5576,23 +5585,33 @@ async function marketHistoryWeek(env, season, week) {
 // its own memo so the week read's single-key memo is not thrashed.
 const MARKET_PRIOR_WEEKS = 2;
 let _MKT_PRIOR_MEMO = { db: null, key: '', at: 0, out: null };
-async function marketSubjectsBefore(env, season, week) {
-  const cur = Number(week);
-  if (!Number.isFinite(cur) || cur <= 1) return new Set();
-  const weeks = [];
+function _marketPriorWeeks(week) {
+  const cur = Number(week), weeks = [];
+  if (!Number.isFinite(cur) || cur <= 1) return weeks;
   for (let w = cur - 1; w >= Math.max(1, cur - MARKET_PRIOR_WEEKS); w--) weeks.push(w);
+  return weeks;
+}
+async function marketSubjectsBefore(env, season, week) {
+  const weeks = _marketPriorWeeks(week);
+  if (!weeks.length) return new Set();
+  const d = await marketDigestRead(env);
+  if (d && _digestCovers(d, season, week)) return new Set(d.priorSubjects || []);
   const mkey = season + '|' + weeks.join(',');
   const db = env && env.LEADS_DB;
   if (db && _MKT_PRIOR_MEMO.db === db && _MKT_PRIOR_MEMO.key === mkey && Date.now() - _MKT_PRIOR_MEMO.at < 600000) return _MKT_PRIOR_MEMO.out;
-  if (!(await snapshotReady(env))) return new Set();
+  const out = await _marketSubjectsBeforeRead(env, season, weeks);
+  if (db) _MKT_PRIOR_MEMO = { db, key: mkey, at: Date.now(), out };
+  return out;
+}
+async function _marketSubjectsBeforeRead(env, season, weeks) {
   const out = new Set();
+  if (!weeks.length || !(await snapshotReady(env))) return out;
   try {
     const q = await env.LEADS_DB.prepare(
       'SELECT DISTINCT subject FROM odds_snapshots WHERE season IS ? AND week IN (' + weeks.map(() => '?').join(',') + ") AND subject_type = 'player'")
       .bind(season == null ? null : Number(season), ...weeks).all();
     for (const r of (q.results || [])) if (r && r.subject) out.add(String(r.subject));
   } catch (e) { return new Set(); }
-  if (db) _MKT_PRIOR_MEMO = { db, key: mkey, at: Date.now(), out };
   return out;
 }
 async function _marketHistoryWeekRead(env, season, week) {
@@ -5643,6 +5662,19 @@ function marketPropsFrom(hist) {
 // so the game id, not the week column, is the key here.
 async function marketHistoryGames(env, gameIds) {
   const ids = (gameIds || []).map(String).filter(Boolean).slice(0, 40);
+  if (!ids.length) return {};
+  // The digest covers a fixed set of games (the week's slate when it was
+  // built). A request inside that set is answered from it; one that names a
+  // game outside it reads the store, as before.
+  const d = await marketDigestRead(env);
+  if (d && Array.isArray(d.gameIds) && ids.every(id => d.gameIds.indexOf(id) >= 0)) {
+    const out = {};
+    for (const id of ids) if (d.games && d.games[id]) out[id] = d.games[id];
+    return out;
+  }
+  return _marketHistoryGamesRead(env, ids);
+}
+async function _marketHistoryGamesRead(env, ids) {
   if (!ids.length || !(await snapshotReady(env))) return {};
   try {
     const q = await env.LEADS_DB.prepare(
@@ -5655,6 +5687,83 @@ async function marketHistoryGames(env, gameIds) {
     for (const [g, mk] of Object.entries(by)) { out[g] = {}; for (const [m, rows] of Object.entries(mk)) out[g][m] = marketHistoryFrom(rows); }
     return out;
   } catch (e) { return {}; }
+}
+// ── the market digest ─────────────────────────────────────────────────────
+// WHY. D1 bills rows scanned, and the free allowance is five million a day.
+// Until 2026-10-10 the three reads above ran on the request path: the week's
+// history (up to 40,000 rows) under a five-minute memo per isolate, the prior
+// weeks' subjects under ten, and the game lines with none of their own. Every
+// isolate paid them again every five minutes, every cold isolate paid them on
+// arrival, and the quarter-hour cron paid them on every tick. One warm isolate
+// alone could spend the day's allowance; the account did, three times in
+// twelve days (HANDOFF §120, §125, §127), and when D1 refused reads the
+// schedule row went with it and every in-season page read "The board did not
+// answer."
+//
+// The store only changes when a pull writes it (runMarketSnapshot, eight to
+// fifteen times a day), so the pull is the one place that reads it: it builds
+// everything the request path used to compute -- the week's markets, the
+// prior weeks' subject set, the slate's game lines -- and stores the result
+// as one row set. Readers take that (a handful of rows, memoized five minutes)
+// and touch odds_snapshots only for what the digest does not hold.
+const MARKET_DIGEST_KEY = 'week';
+const MARKET_DIGEST_PART = 1500000;          // bytes per row; D1 caps a row at 2 MB
+const MARKET_DIGEST_MEMO_MS = 300000;
+const _digestCovers = (d, season, week) => d && Number(d.season) === Number(season) && Number(d.week) === Number(week);
+let _MKT_DIGEST_MEMO = { db: null, at: 0, out: null };
+async function marketDigestRead(env) {
+  const db = env && env.LEADS_DB;
+  if (!db) return null;
+  if (_MKT_DIGEST_MEMO.db === db && Date.now() - _MKT_DIGEST_MEMO.at < MARKET_DIGEST_MEMO_MS) return _MKT_DIGEST_MEMO.out;
+  if (!(await snapshotReady(env))) return null;
+  let out = null;
+  try {
+    const q = await db.prepare('SELECT part, payload FROM market_digest WHERE key = ? ORDER BY part ASC').bind(MARKET_DIGEST_KEY).all();
+    const parts = (q.results || []).map(r => String(r.payload));
+    if (parts.length) {
+      const j = JSON.parse(parts.join(''));
+      if (j && j.v === 1 && j.markets && typeof j.markets === 'object') out = j;
+    }
+  } catch (e) { out = null; }
+  // A refused or empty read is not memoized: the next caller tries again, so
+  // a digest written moments later is seen inside the memo window.
+  if (out) _MKT_DIGEST_MEMO = { db, at: Date.now(), out };
+  return out;
+}
+// Build and store the digest for one week and one slate. `opts.partBytes`
+// is for the tests; the prior-week subject set is reused from the stored
+// digest while its weeks are the same, so that read costs once a week.
+async function marketDigestBuild(env, season, week, gameIds, opts) {
+  const db = env && env.LEADS_DB;
+  if (!db) return { ok: false, error: 'no_db' };
+  if (!Number.isFinite(Number(week))) return { ok: false, error: 'no_week' };
+  if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
+  const o = opts || {};
+  const ids = (gameIds || []).map(String).filter(Boolean).slice(0, 40);
+  const weeks = _marketPriorWeeks(week);
+  const priorKey = season + '|' + weeks.join(',');
+  const prev = await marketDigestRead(env);
+  let priorSubjects, priorReused = false;
+  if (prev && prev.priorKey === priorKey && Array.isArray(prev.priorSubjects)) { priorSubjects = prev.priorSubjects; priorReused = true; }
+  else priorSubjects = [...(await _marketSubjectsBeforeRead(env, season, weeks))].sort();
+  const [markets, games] = await Promise.all([
+    _marketHistoryWeekRead(env, season, week),
+    ids.length ? _marketHistoryGamesRead(env, ids) : {}
+  ]);
+  const digest = { v: 1, builtAt: Date.now(), season: season == null ? null : Number(season), week: Number(week),
+                   markets, priorKey, priorSubjects, gameIds: ids, games };
+  const text = JSON.stringify(digest);
+  const size = Math.max(1000, Number(o.partBytes) || MARKET_DIGEST_PART);
+  const stmts = [db.prepare('DELETE FROM market_digest WHERE key = ?').bind(MARKET_DIGEST_KEY)];
+  const ins = db.prepare('INSERT INTO market_digest (key, part, payload, updated_at) VALUES (?, ?, ?, ?)');
+  let parts = 0;
+  for (let i = 0; i < text.length; i += size) stmts.push(ins.bind(MARKET_DIGEST_KEY, parts++, text.slice(i, i + size), digest.builtAt));
+  try { await db.batch(stmts); }
+  catch (e) { return { ok: false, error: (e && e.message) || 'write_failed' }; }
+  // This isolate has the fresh copy in hand; the next reader here takes it.
+  _MKT_DIGEST_MEMO = { db, at: Date.now(), out: digest };
+  return { ok: true, season: digest.season, week: digest.week, subjects: Object.keys(markets).length,
+           priorSubjects: priorSubjects.length, priorReused, games: Object.keys(games).length, bytes: text.length, parts };
 }
 // How far a game's line has moved, and off what. THE BOOK'S OWN OPEN WINS: the
 // snapshot store can only call "open" the first row it recorded, so a history
@@ -6623,9 +6732,25 @@ async function runMarketSnapshot(env) {
   const rows = [];
   for (const r of run.results) for (const x of r.rows || []) rows.push(x);
   const wrote = await snapshotWrite(env, rows, ctx);
+  // The store changed (or may have); the digest every reader takes is
+  // rebuilt here, the one place that pays to read the store.
+  const digest = await runMarketDigest(env, { sched, state }).catch(e => ({ ok: false, error: (e && e.message) || 'failed' }));
   return { ok: !!wrote.ok, ...ctx, providers: run.results.map(r => ({
     provider: r.provider, rows: r.count || 0, skipped: r.skipped || null, error: r.error || null })),
-    ...wrote };
+    ...wrote, digest };
+}
+// The digest for the current week and slate: after every pull, and on its own
+// as the 'market-digest' job (the admin rerun button) when the week has turned
+// and the next pull is hours off.
+async function runMarketDigest(env, pre) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  const sched = (pre && pre.sched) || await scheduleCacheRead(env);
+  if (!sched) return { ok: false, error: 'no_schedule' };
+  const state = (pre && pre.state) || nflSeasonState(sched, Date.now());
+  const week = state && state.ok && state.week && state.week.type === 'REG' ? state.week.number : null;
+  if (week == null) return { ok: false, error: 'no_week' };
+  const ids = state.ok ? (state.games || []).map(g => g && g.id).filter(Boolean) : [];
+  return marketDigestBuild(env, sched.season, week, ids);
 }
 
 // -- kickers and defenses, scored -------------------------------------------
@@ -14064,6 +14189,7 @@ const JOB_FNS = {
   'odds-refresh':         env => runOddsRefresh(env),
   'availability-refresh': env => runAvailabilityRefresh(env),
   'market-snapshot':      env => runMarketSnapshot(env),
+  'market-digest':        env => runMarketDigest(env),
   'usage-refresh':        env => runUsageRefresh(env),
   'usage-prior-refresh':  env => runPriorUsageRefresh(env),
   'depth-charts':         env => runDepthChartRefresh(env),
@@ -14289,6 +14415,7 @@ async function healthPayload(env, opts) {
     jobBoard(env, now)
   ]);
   const props = await propsHealth(env, sched ? sched.season : null, week).catch(() => null);
+  const digest = await marketDigestRead(env).catch(() => null);
   const snapMeta = m => m ? { season: m.season, week: m.week, builtAt: m.builtAt, rows: (m.rows || []).length } : null;
   const updates = {
     schedule: sched ? { updatedAt: sched.updatedAt, provider: sched.provider, season: sched.season, games: sched.games.length } : null,
@@ -14298,6 +14425,10 @@ async function healthPayload(env, opts) {
     // answers whether THIS week's props are reaching the board, and says which
     // link is broken when they are not.
     props: props && props.ok ? props : null,
+    // What the request path actually reads for this week's markets. Built by
+    // the pull; a week behind the clock means readers are back on the store.
+    marketDigest: digest ? { builtAt: digest.builtAt, season: digest.season, week: digest.week, subjects: Object.keys(digest.markets || {}).length,
+                             priorSubjects: (digest.priorSubjects || []).length, games: (digest.gameIds || []).length, current: week == null || Number(digest.week) === Number(week) } : null,
     usage: usage ? { updatedAt: usage.updatedAt, season: usage.season, throughWeek: usage.throughWeek, players: Object.keys(usage.players || {}).length } : null,
     // Last season's copy of the same overlay, which /stats serves behind its
     // season buttons. Missing is not a fault -- the daily job builds it -- but
