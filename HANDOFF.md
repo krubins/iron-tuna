@@ -13537,13 +13537,22 @@ board priced him off his own prop, or vice versa.
 - `tools/test-homepage.mjs` carries `props` on the rankings fixture and a
   "board with no market behind it" scenario (154 → 155).
 
-**What is still the owner's.** Nothing here revives the odds until the worker
-is switched to the Standard usage model (dashboard: Workers, iron-tuna,
-Settings, Usage Model) and `"limits": { "cpu_ms": 300000 }` goes back into
-`wrangler.jsonc` (§68p). After that: `props` on `GET /api/health` must read
-`live`; `empty` after a poll cycle means the `PROPLINE_API_KEY` secret is not
-set on the worker. `/api/admin/odds-status?key=&refresh=1` and
-`/api/admin/season-status?key=&refresh=1` seed the season overlay and the
-schedule row without waiting for the morning. The Odds API stays unconfigured;
-PropLine covers the props and is the feed the boards already read.
+**The real cause, and §68p corrected.** The dashboard's Usage page showed
+"Requests today 7,513 / 100,000" and an Upgrade button: the account was on
+the Workers FREE plan, not a legacy Bundled model. Free gives 10 ms of CPU per
+request and per cron invocation and cannot be raised, which is why `limits`
+was refused in September and why every pull that parses a file died with no
+exception. The ten days to October 10 read 737,990 ms of CPU over 69,620
+invocations, about 10.6 ms each: a worker pinned at the ceiling. Ken upgraded
+to Workers Paid on 2026-10-10 (30 s default, 10M requests and 30M CPU ms
+included; this site runs about 210k requests and 2.2M CPU ms a month) and
+`"limits": { "cpu_ms": 300000 }` is in `wrangler.jsonc` again.
+
+**What to watch after the deploy.** `props` on `GET /api/health` must read
+`live` within a poll cycle; `empty` means the `PROPLINE_API_KEY` secret is not
+set on the worker. The schedule row refills on the hourly tick and the season
+overlay at 7 AM ET; `/api/admin/odds-status?key=&refresh=1` and
+`/api/admin/season-status?key=&refresh=1` seed both without waiting. The Odds
+API stays unconfigured; PropLine covers the props and is the feed the boards
+already read.
 
