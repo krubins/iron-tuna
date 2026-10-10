@@ -13432,3 +13432,66 @@ the site, what they look at and how long they stay.
   `/api/admin/traffic` already computes between page views (§time on site);
   a per-page dwell column would need a `LEAD(ts)` read there and is not in
   this change.
+
+## 124. October 10: Trade Tools, two tabs: the Trade Evaluator leads with the deal, the Trade Finder with the rosters
+
+**The brief.** A "Trade Tools" entry with two tools under it, Trade Evaluator
+and Trade Finder. The Evaluator is the existing form with the players in the
+trade first; the teams' rosters come second and are optional, entered by
+typing (with the same fill-in the trade boxes have), by pasting text, or by
+pasting or dropping a screenshot.
+
+- **One page, two tabs.** `/trade-finder` keeps its URL and its one script.
+  A tab bar (`#tf-tool`, two `role="tab"` buttons) sits under the lede and
+  the three steps live inside `#tf-flow[data-tool]`. The tab reorders the
+  steps with flex `order` and hides what the other tool has no use for: the
+  Evaluator shows the deal (`#tf-deal`, "1. The players in the trade"), then
+  the rosters ("2. The teams' rosters (optional)"), then the notes and the
+  Evaluate button; the Finder hides the deal and leads with the rosters
+  ("1. The teams and their rosters"), then the notes and the Find button.
+  The team-count dropdown (`#tf-count-row`) is moved into whichever step is
+  first. Nothing is duplicated, so a roster typed under one tool is there
+  under the other. The tool is `tool` in `it_trade_v2`; `#evaluator` /
+  `#finder` on the URL name one directly (hashchange switches in place) and
+  the Evaluator is the default. Switching tools hides the last result.
+- **Rosters optional in the Evaluator.** A player typed into a trade box
+  joins his team's roster (the engine scores a team before and after) and
+  is flagged in `viaDeal`; the flag clears the moment he arrives any other
+  way (typed in the roster box, pasted, read off a screenshot, loaded from
+  the league). `rosterEntered(i)` is "holds a player not so flagged". Taking
+  a flagged player out of the trade takes him off the roster too
+  (`dropIfDealOnly`), as does shrinking the team count past his team. The
+  trade box's type-ahead offers the team's own un-sent players first and
+  then the board, minus anyone a team in the trade holds; it used to offer
+  the board only while the roster was empty, which under this order meant
+  one pick and then nothing.
+- **What a bare side is scored on.** With no roster entered, a side is what
+  it sends against what it gets, filled into the slots: fair-names, not
+  lineup change. The side card says "No roster entered: scored on the
+  players alone" in place of the starts/bench line, the bar shows no lineup
+  figure, the note says what adding the rosters changes, the model's brief
+  carries the same caveat, and the "trades among these teams that work for
+  both" search runs only when every active team has a roster (with none, the
+  only players to search would be the deal's own). The Finder's "fill in two
+  rosters" guard reads `rosterEntered` too.
+- **A paste lands on the right box.** `fill()` used to put the second and
+  later teams of a paste into the next *empty* boxes. Under the Evaluator a
+  box is rarely empty (it holds the players already typed into the trade),
+  and the old rule skipped it, put the team one box over, moved the traded
+  player there and dropped him from the deal. A pasted team now goes first
+  to an unused box whose trade list already names one of its players, then
+  to the next box with no roster entered.
+- **Links.** The Fantasy hub deck tile and shelf entry, the in-season list,
+  the Waivers, Value Coach, Weekly Intel and My Week cards, the search index
+  (`player-search.js`) and `llms.txt` say "Trade Tools" and describe both.
+  Title, description and og copy changed, so `build-seo` regenerated the
+  twitter meta and the JSON-LD; `build-seo --check` is clean.
+- **Tests.** `test-trade-finder-page.mjs` 106 → 135: the tab bar and the
+  default, the step order and the dropdown's home under each tool, the hash,
+  a reload keeping the tool, and a new section with no rosters: the trade
+  box offers the board before and after the first pick, a player taken out
+  of the trade leaves the roster, a bare deal is judged and says so (the
+  fourth back for the seventh receiver is a loss on the names and a win
+  once the back-heavy roster is pasted in), and `#finder` opening the
+  Finder both in place and on a fresh load. `test-trade-finder.mjs` and the
+  engine are unchanged. The full node suite (less the dry run) passes.
