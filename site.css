@@ -1838,6 +1838,11 @@ main:has(> .rk-board) > .is-grid { margin-bottom: var(--space-7) }
 .rk-vs th.rk-grp { text-align: center; border-bottom: 1px solid var(--line2) }
 .rk-vs th.rk-grp.fan { color: var(--text) }
 .rk-vs th.rk-grp.mkt { color: var(--text) }
+/* A group name is a sort too (it-ranks.js headHtml). The rule under it is
+   what marks it active; the arrow belongs to the Rank column beneath, which
+   sorts on the same key, so one arrow per sort and not two stacked. */
+.rk-vs th.rk-grp[aria-sort] { border-bottom: 2px solid var(--text) }
+.rk-vs thead th.rk-grp[aria-sort]::after { content: none }
 .rk-vs td.rk-fan, .rk-vs th.rk-fan { background: transparent }
 .rk-vs td.rk-mkt, .rk-vs th.rk-mkt { background: var(--panel) }
 .rk-vs td.rk-pts { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text) }

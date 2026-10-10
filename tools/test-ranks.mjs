@@ -197,7 +197,10 @@ console.log('\nthe board prints the consensus against the odds');
 {
   const js = read('it-ranks.js');
   ok('the two column groups are named in full',
-    js.includes('>Fantasy Consensus<') && js.includes('>Betting Odds<'));
+    js.includes("'Fantasy Consensus'") && js.includes("'Betting Odds'"));
+  ok('and each group name sorts the board on its own rank column',
+    /grp\('crank', 'Fantasy Consensus'/.test(js) && /grp\('vrank', 'Betting Odds'/.test(js) &&
+    /function grp\(key, text, cls\)[\s\S]*?data-key="' \+ key/.test(js));
   ok('the fantasy side reads the consensus block', /p\.consensus\s*\?\s*p\.consensus\.points/.test(js));
   ok('the market side reads the vegas block', /p\.vegas\s*\?\s*p\.vegas\.points/.test(js));
   ok('and prints what the odds are built from, every row', js.includes('rk-basis'));

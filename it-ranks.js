@@ -307,7 +307,12 @@
 
     // ── the columns ───────────────────────────────────────────────────────
     // Two spanning groups over the pair that matters, so the eye reads
-    // "consensus vs odds" and not "eleven numbers".
+    // "consensus vs odds" and not "eleven numbers". The group names sort too
+    // (10 Oct 2026): a reader who wants the board in consensus order clicks
+    // the words "Fantasy Consensus", not the small "Rank" under them, and a
+    // click that did nothing read as a broken page. Each group carries the
+    // key of its own rank column, so the group and the column below it are
+    // one sort, flip together and light up together.
     function headHtml() {
       var ptsHead = perGameShown ? 'Per gm' : 'Proj';
       var lead = [
@@ -319,8 +324,8 @@
       ].join('');
       var group = '<tr>' +
         '<th colspan="' + (wantWeeks ? 5 : 4) + '"></th>' +
-        '<th class="rk-grp fan" colspan="2" scope="colgroup">Fantasy Consensus</th>' +
-        '<th class="rk-grp mkt" colspan="2" scope="colgroup">Betting Odds</th>' +
+        grp('crank', 'Fantasy Consensus', 'rk-grp fan') +
+        grp('vrank', 'Betting Odds', 'rk-grp mkt') +
         '<th colspan="2"></th>' +
         '</tr>';
       var cols = '<tr>' + lead +
@@ -334,6 +339,11 @@
     function th(key, text, cls) {
       var on = key === sortKey;
       return '<th scope="col" data-key="' + key + '"' + (cls ? ' class="' + cls + '"' : '') +
+        (on ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + esc(text) + '</th>';
+    }
+    function grp(key, text, cls) {
+      var on = key === sortKey;
+      return '<th scope="colgroup" colspan="2" data-key="' + key + '" class="' + cls + '"' +
         (on ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + esc(text) + '</th>';
     }
 
