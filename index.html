@@ -74,11 +74,12 @@ function gtag_report_conversion(url) {
        module: it sets window.ITPlayerSearch, which the app reads from an
        effect. Same file the front page runs, so the two boxes cannot drift. -->
   <script src="/player-search.js"></script>
-  <!-- The NFL clock and the reader's in-season league. Both are plain scripts
-       that set a window global the app reads from an effect, and both are the
-       SAME files /in-season, /fantasy and /dfs run — so the homepage
+  <!-- The NFL week read and the reader's in-season league. Both are plain
+       scripts that set a window global the app reads from an effect, and both
+       are the SAME files /in-season, /fantasy and /dfs run — so the homepage
        cannot disagree with the section about what week it is or what league
-       the reader plays in. -->
+       the reader plays in. The clock strip the week read used to paint under
+       the ribbon came off on 2026-10-10 (Ken: remove the NFL clock). -->
   <script src="/it-season.js"></script>
   <script src="/it-league.js"></script>
   <script src="/it-inseason.js"></script>
@@ -2505,27 +2506,6 @@ input:focus, select:focus { border-color: var(--accent); }
   padding: 10px 16px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; flex: 0 0 auto;
 }
 .itl-cta:hover { filter: brightness(1.07); }
-
-/* the NFL clock strip — the same it-season.js markup the section pages carry,
-   restated on this ground. One row, cells divided by a hairline. */
-.itl-clock {
-  display: flex; flex-wrap: wrap; align-items: stretch; margin: 24px 0 0;
-  border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-panel);
-  font-family: var(--font-body); font-size: 14.5px; line-height: 20px; letter-spacing: 0.06em; text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-.itl-clock > span { padding: 8px 16px; border-left: 1px solid var(--border-subtle); }
-.itl-clock > span:first-child { border-left: 0; }
-.itl-clock .its-phase { color: var(--positive); font-weight: 700; }
-.itl-clock .its-phase.its-off { color: var(--text-muted); }
-.itl-clock .its-week { color: var(--text-primary); font-weight: 700; }
-.itl-clock .its-state { color: var(--text-primary); }
-.itl-clock .its-state.its-live { color: var(--positive); font-weight: 700; }
-.itl-clock .its-counts, .itl-clock .its-next, .itl-clock .its-note {
-  color: var(--text-muted); text-transform: none; letter-spacing: 0.01em;
-}
-.itl-clock .its-note { flex: 1; }
-.itl-clock .its-next { margin-left: auto; }
 
 /* hero */
 .itl-hero { padding: clamp(40px, 7vw, 84px) 0 clamp(32px, 5vw, 60px); }
@@ -23359,29 +23339,11 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
   const h = React.createElement;
   const [referOpen, setReferOpen] = useState(false);
   // Each feed carries its own state so one silent API cannot blank the page.
-  const [clock, setClock] = useState({ st: 'load', html: '' });
   const [edge, setEdge] = useState({ st: 'load' });
   const [slate, setSlate] = useState({ st: 'load' });
   const [desk, setDesk] = useState({ st: 'load' });
   const [league, setLeague] = useState(null);
 
-  // The NFL clock, from the same /api/season and the same renderer every
-  // in-season page uses, so no two surfaces can disagree about the week.
-  useEffect(() => {
-    let live = true;
-    const paint = () => {
-      const S = window.ITSeason;
-      if (!S) { if (live) setClock({ st: 'off', html: '' }); return; }
-      S.load((s) => { if (live) setClock({ st: s ? 'ok' : 'off', html: S.strip(s) }); });
-    };
-    if (window.ITSeason) paint();
-    else {
-      const t = setInterval(() => { if (window.ITSeason) { clearInterval(t); paint(); } }, 120);
-      setTimeout(() => clearInterval(t), 8000);
-      return () => { live = false; clearInterval(t); };
-    }
-    return () => { live = false; };
-  }, []);
 
   useEffect(() => {
     setLeague(window.ITInSeason ? window.ITInSeason.get() : null);
@@ -23555,11 +23517,6 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
         h('a', { className: 'itl-cta', href: '/my-league#settings' }, 'Customize My League'))),
 
       h('div', { className: 'itl-main' }, h('div', { className: 'itl-wrap' },
-
-        // ── the NFL clock ─────────────────────────────────────────────────
-        h('div', { className: 'itl-clock', 'data-season-ready': clock.st === 'ok' ? '1' : '0',
-                   dangerouslySetInnerHTML: { __html: clock.st === 'load'
-                     ? '<span class="its-note">Reading the NFL schedule…</span>' : clock.html } }),
 
         // ── hero ──────────────────────────────────────────────────────────
         h('section', { className: 'itl-hero' },

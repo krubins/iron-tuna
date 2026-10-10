@@ -1270,7 +1270,9 @@ html:has(.sl-shell){scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 .sl-mast{background:var(--panel);border-top:3px solid var(--mast);border-bottom:1px solid var(--line)}
 .sl-mast .sl-in{padding-top:var(--space-5);padding-bottom:var(--space-4)}
 .sl-date{display:flex;flex-wrap:wrap;align-items:center;gap:4px var(--space-3);margin:0 0 var(--space-3)}
-.sl-date .is-eyebrow{color:var(--muted);padding-right:var(--space-3);border-right:1px solid var(--line2)}
+/* No hairline after the label: the NFL clock it divided the label from came
+   off on 2026-10-10 (Ken: remove the NFL clock). */
+.sl-date .is-eyebrow{color:var(--muted)}
 /* max-width:none is not decoration. Several pages set their own
    `h1{max-width:22ch}` for a headline that used to sit on a reading column;
    that rule is (0,0,1) and this one is (0,1,1), but a rule only overrides what
@@ -1284,10 +1286,7 @@ html:has(.sl-shell){scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 .sl-mast h1 em{font-style:normal;color:var(--text)}
 .sl-deck{margin:var(--space-3) 0 0;max-width:82ch;font-size:var(--fs-md);line-height:1.6}
 .sl-mast .is-actions{margin:var(--space-4) 0 0}
-/* The dateline's hairline divides two things. On a phone the clock wraps
-   under the label and the rule is left dividing the label from nothing. */
-@media(max-width:560px){.sl-mast h1{font-size:var(--fs-34)}
-.sl-date .is-eyebrow{border-right:0;padding-right:0}}
+@media(max-width:560px){.sl-mast h1{font-size:var(--fs-34)}}
 
 /* ── the shell ──────────────────────────────────────────────────────────────
    Rail, front, rail. The left rail is where you are going, the middle is what
@@ -1570,10 +1569,6 @@ body.sl-dress .sl-mast .is-btn.ghost:hover{border-color:#fff;color:#fff;backgrou
   body.sl-dress .sl-mast .sl-in:not(:has(.is-actions)) .sl-deck{grid-row:2/4;align-self:center}
 }
 @media(max-width:560px){body.sl-dress .sl-mast h1{font-size:var(--fs-34);max-width:none}}
-/* The dateline's hairline divides two things. site.css drops it at 560px;
-   the clock wraps under the label from about 900 on this plate, so from 900
-   it is a rule dividing the label from nothing. */
-@media(max-width:900px){body.sl-dress .sl-date .is-eyebrow{border-right:0;padding-right:0}}
 
 /* ── 2 · section heads ──────────────────────────────────────────────────── */
 /* A section head is a label. It was a 28px display line with a 56px teal nub
