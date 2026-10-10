@@ -584,6 +584,35 @@ console.log('\nthe saved league, teams typed by name');
   await c2.close();
 }
 
+// ── a phone, keyboard up ───────────────────────────────────────────────────
+// The on-screen keyboard leaves a short visual viewport, and the sticky
+// masthead and the fixed tab bar cover the ends of it. A box in the bottom
+// half opens its list straight under the keyboard unless the page moves the
+// box up first, so the list has to land inside what is on screen.
+console.log('\na phone with the keyboard up');
+{
+  const c3 = await browser.newContext({ viewport: { width: 390, height: 320 }, isMobile: true, hasTouch: true });
+  const pg = await c3.newPage();
+  const errs = [];
+  pg.on('pageerror', e => errs.push(String(e).slice(0, 300)));
+  await pg.goto(BASE + '/trade-finder#evaluator', { waitUntil: 'load' });
+  await pg.waitForFunction(() => document.getElementById('tf-read-status').textContent === '', null, { timeout: 8000 });
+  const box = '#tf-sends .tf-team[data-i="1"] .tf-type';
+  // Where the keyboard would put the box: at the foot of the visible screen.
+  await pg.$eval(box, el => { el.scrollIntoView({ block: 'end' }); el.focus(); });
+  await pg.type(box, NAMES.WR[2].slice(0, 4), { delay: 5 });
+  await pg.waitForSelector(box + ' + .tf-sug:not([hidden]) li', { timeout: 4000 });
+  const fit = await pg.$eval(box, el => {
+    const ul = el.parentNode.querySelector('.tf-sug'), r = ul.getBoundingClientRect(), b = el.getBoundingClientRect();
+    const head = document.querySelector('header.site').getBoundingClientRect(), tab = document.querySelector('.tabbar').getBoundingClientRect();
+    return { listTop: r.top, listBottom: r.bottom, boxTop: b.top, headBottom: head.bottom, tabTop: tab.top, h: innerHeight };
+  });
+  ok('the list opens on screen, above the tab bar', fit.listBottom <= fit.tabTop && fit.listBottom <= fit.h, JSON.stringify(fit));
+  ok('and the box is not pushed under the masthead', fit.boxTop >= fit.headBottom, JSON.stringify(fit));
+  ok('the phone page threw nothing', errs.length === 0, errs[0]);
+  await c3.close();
+}
+
 await browser.close();
 server.close();
 console.log(`\n${pass} passed, ${fail} failed`);
