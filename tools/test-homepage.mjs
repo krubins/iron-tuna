@@ -283,7 +283,11 @@ const read = page => page.evaluate(() => {
     // The two lane tiles.
     lanes: [...document.querySelectorAll('#lanes .hm-lane')].map(a => ({ href: a.getAttribute('href'), name: text(a.querySelector('.hm-lane-name')), sub: text(a.querySelector('.hm-lane-sub')),
       svg: !!a.querySelector('svg[aria-hidden="true"]'), top: Math.round(a.getBoundingClientRect().top),
-      w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height) })),
+      w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height),
+      // The four function boxes under the lane, in the lane's own dress.
+      kit: [...a.parentElement.querySelectorAll('.hm-lane-kit .hm-lane-fn')].map(f => ({ href: f.getAttribute('href'), name: text(f.querySelector('.hm-lane-fn-name')),
+        svg: !!f.querySelector('svg[aria-hidden="true"]'), top: Math.round(f.getBoundingClientRect().top), bottom: Math.round(f.getBoundingClientRect().bottom),
+        w: Math.round(f.getBoundingClientRect().width), h: Math.round(f.getBoundingClientRect().height) })) })),
     // The story cards.
     articles: vis(byId('articles')),
     rows: [...document.querySelectorAll('#readGrid .hm-story')].map(r => {
@@ -382,6 +386,17 @@ console.log('\nsix sections, in order, and nothing else');
      r.lanes.map(l => l.href + ' ' + l.name).join(' | ') === '/dfs DFS | /fantasy Season long', r.lanes.map(l => l.href + ' ' + l.name).join(' | '));
   ok('each lane is landscape, side by side, with its own illustration and a line under the name',
      r.lanes.every(l => l.svg && l.w > l.h && l.sub) && new Set(r.lanes.map(l => l.top)).size === 1, JSON.stringify(r.lanes));
+  // Four smaller boxes under each lane, one per key function, each with its own
+  // illustration and the name at the foot. The DFS four open the four boards
+  // /dfs switches between (the hash names the board); the season four are the
+  // lane's tools. On a desk all eight sit in one row under the two lanes.
+  ok('four function boxes under each lane: the DFS boards, then the season tools',
+     r.lanes.map(l => l.kit.map(f => f.href + ' ' + f.name).join(' | ')).join(' || ')
+       === '/dfs#lineup The Lineup | /dfs#values Vegas Values | /dfs#stacks Game Stacks | /dfs#td TD Board || /rankings Rankings | /fantasy#startsit Start / Sit | /waivers Waivers | /trade-finder Trade Tools',
+     r.lanes.map(l => l.kit.map(f => f.href + ' ' + f.name).join(' | ')).join(' || '));
+  ok('the eight boxes line up in one row under the lanes, each illustrated, square and narrower than its lane',
+     r.lanes.every(l => l.kit.length === 4 && l.kit.every(f => f.svg && Math.abs(f.w - f.h) <= 1 && f.w < l.w / 3 && f.top > l.top + l.h))
+       && new Set(r.lanes.flatMap(l => l.kit.map(f => f.top))).size === 1, JSON.stringify(r.lanes.map(l => l.kit)));
   ok('the market figures live inside the hero, not as a sixth section', !r.allSections.includes('different') && !!(await page.$('#heroBand #different')));
   ok('six tiles, one per position, each linking its weekly board',
      r.tiles.map(t => t.href).join(' ') === '/weekly-qb-rankings /weekly-rb-rankings /weekly-wr-rankings /weekly-te-rankings /weekly-k-rankings /weekly-dst-rankings', r.tiles.map(t => t.href).join(' '));
