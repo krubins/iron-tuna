@@ -7857,7 +7857,7 @@ that failed rather than one that has not published yet.
 ### The byline
 
 The column ran under a pen name until 2026-10-10, when every fictional byline
-on the site was retired (§126); it carries the Rankings Desk byline now, and the
+on the site was retired (§127); it carries the Rankings Desk byline now, and the
 method box says so under "About the byline". The pen name existed because a
 standing weekly column needs someone answering for last week's calls, and
 because the voice — dry, mildly exasperated, observational — is a voice rather
@@ -8176,7 +8176,7 @@ re-enables the retired social threads.
 - **The Tell's byline.** The specification's roster has eight names and no
   ninth. The Tell was bylined to a pen name, written by the owner hours
   before this migration. It is registered on the Rankings Desk (its page
-  links it and says so). Resolved 2026-10-10 (§126): the pen name went with
+  links it and says so). Resolved 2026-10-10 (§127): the pen name went with
   every other fictional byline and the column runs under the desk's name.
 - **The projection Routine ends with September.** The ROS boards price off
   the committed set; a weekly Monday cadence through Week 17 is the
@@ -8522,10 +8522,10 @@ on hover, and each position has a page of its own.
 
 | URL | What it is |
 |---|---|
-| `/weekly-rankings` | this week, every position pooled |
-| `/weekly-<pos>-rankings` | this week, one position (`qb rb wr te flex k dst`) |
-| `/season-long-rankings` | rest of season, every position pooled |
-| `/season-long-<pos>-rankings` | rest of season, one position |
+| `/weekly-rankings` | this week, the hub; opens on quarterbacks |
+| `/weekly-<pos>-rankings` | this week, one position (`qb rb wr te flex k dst`), or every position pooled (`overall`) |
+| `/season-long-rankings` | rest of season, the hub; opens on quarterbacks |
+| `/season-long-<pos>-rankings` | rest of season, one position, or `overall` |
 | `/stats` | what has actually been played |
 | `/hidden-value` | where the two boards disagree most |
 | `/previews` | every game this week, off the market |
@@ -13553,7 +13553,31 @@ it hid the one error the operator needed to see.
   that rejects every read answers `d1_read`, the allowance message answers
   `d1_limit`, and one read failing late leaves `ok: true` with `readError`.
 
-## 126. October 10: the fictional bylines are retired
+## 126. October 10: the NFL clock strip came off every page
+
+Ken: remove the NFL clock. The strip that `it-season.js` painted on every
+in-season page and the homepage (phase, week, games in progress, next kickoff,
+and "NFL clock unavailable" when `/api/season` did not answer) is gone.
+
+- **Markup.** Every `[data-season-strip]` mount is deleted: the hero datelines
+  on /fantasy, /dfs, /rankings, /my-week and /vegas-edge keep only their
+  eyebrow; the plate under the lede on /waivers, /value-coach, the desk pages
+  and the fourteen generated position pages (`tools/build-ranks.mjs`) is gone;
+  the DFS setup band lost its copy too. The homepage dropped the `.itl-clock`
+  row, its CSS and the React state and effect that filled it.
+- **`it-season.js`** no longer auto-renders anything or stamps
+  `html[data-season]` (nothing read the stamp). It keeps `load`, `get`,
+  `error`, `kickoff`, `dayLabel`, `until`, `statusLabel` and `esc`, which the
+  page scripts on /fantasy, /waivers, /weekly-intel, /game-intel,
+  /player-intel, /my-league and /weekly-wrap still date themselves by. The
+  `strip` and `render` exports are gone with the strip; nothing else called
+  them.
+- **Not touched.** `/api/season` itself, the waiver clock on /fantasy, the
+  `.its-strip` rules in `site.css` (now unused), and every page's
+  `<script src="/it-season.js">`.
+
+
+## 127. October 10: the fictional bylines are retired
 
 Ken: *"Remove all fictional author names."* Until today the eight analyst
 personas carried invented human names, the surname was the URL

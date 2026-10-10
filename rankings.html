@@ -257,13 +257,12 @@ p{color:var(--sec);margin:0 0 16px}
 <!-- the opening band. Same words, same ids, same script; .is-hero is in
      site.css because the in-season pages all open on it now. It sits between
      the masthead and the generated section ribbon, which is exactly where the
-     homepage puts its own copy of that ribbon. The NFL clock comes up into it
-     as the dateline instead of sitting under the lede as a plate. -->
+     homepage puts its own copy of that ribbon. The NFL clock that used to
+     ride the dateline came off on 2026-10-10 (Ken: remove the NFL clock). -->
 <section class="is-hero">
   <div class="wrap wide">
     <p class="is-hero-date">
       <span class="is-eyebrow">In-Season &middot; Rankings</span>
-      <span class="its-strip" data-season-strip></span>
     </p>
     <h1>A ranking is only worth <em>what your scoring says it is</em></h1>
     <p class="is-lede">Half PPR moves running backs. Six-point passing touchdowns move quarterbacks past every other position. A tight-end premium re-cuts a whole tier. Iron Tuna re-scores and re-ranks the board at your settings rather than publishing one list for everybody.</p>
@@ -280,11 +279,11 @@ p{color:var(--sec);margin:0 0 16px}
     <a class="rkr-link rkr-item" href="/stats">Stats</a>
     <span class="rkr-item rkr-has-menu">
       <a class="rkr-link" href="/weekly-rankings">This Week&rsquo;s Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-rankings">Overall</a><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defense / special teams</a></span>
+      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defense / special teams</a><a href="/weekly-overall-rankings">Overall</a></span>
     </span>
     <span class="rkr-item rkr-has-menu">
       <a class="rkr-link" href="/season-long-rankings">Season Long Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-rankings">Overall</a><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defense / special teams</a></span>
+      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defense / special teams</a><a href="/season-long-overall-rankings">Overall</a></span>
     </span>
     <a class="rkr-link rkr-item" href="/hidden-value">Hidden Value</a>
     <a class="rkr-link rkr-item" href="/previews">Previews</a>
@@ -471,7 +470,9 @@ p{color:var(--sec);margin:0 0 16px}
   // scoring at the chosen setting is done here with it-league.js (the same
   // engine, pinned by tools/test-scoring.mjs), then the three boards are
   // re-ranked and Market Delta recomputed with the thresholds the API shipped.
-  var data = {}, dataL = {}, preset = 'ppr', horizon = 'week', board = 'ironTuna', pos = 'RB', sortKey = 'rank', sortDir = 1, q = '', hideOut = false;
+  // pos opens on QB (10 Oct 2026, with the rankings hubs): the first chip on
+  // every board in the section is the one a reader lands on here too.
+  var data = {}, dataL = {}, preset = 'ppr', horizon = 'week', board = 'ironTuna', pos = 'QB', sortKey = 'rank', sortDir = 1, q = '', hideOut = false;
   // The Fantasy Analysis / Market Intelligence weight, 0 to 1, and the shrink
   // the worker applies to the market side by how much of it is a quoted
   // market (blendComponents in _worker.js; the same table).
