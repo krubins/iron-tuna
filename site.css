@@ -244,18 +244,20 @@ header.site .site-ribbon, header.site > .wrap {
 /* The mark is a tuna, and the words are its body. The eight letters are the
    shared outlined paths (tools/wordmark.mjs), resized and moved per letter so
    their heights trace a fish's profile: thin at the tail, deepest at T and U,
-   easing into the head. Tail, head, eye and finlets are a background drawn in
+   easing into the head. The fish is built to look mean: a swept sickle tail, a
+   slanted angry eye, a toothed open jaw, and a forward lean (the skew).
+   Tail, head, eye, jaw and finlets are a background drawn in
    the same 296.6 x 56 viewBox, so they track the letters at any height. Each
    letter is outlined in its own fill so Bebas's thin strokes read heavy. The
-   fish ends about 238 units in; the negative margin takes back the empty rest
+   fish ends about 241 units in; the negative margin takes back the empty rest
    of the viewBox and scales with --wm-h. og.png and the social cards keep the
    plain mark. The background's #001e47 is --mast (a data URI cannot read it).
    To change the layout, adjust the per-letter transforms below together with
    the fish parts: they share one coordinate system. */
 .brand-logo {
   --wm-h: 48px; height: var(--wm-h); width: auto; display: block; overflow: visible;
-  margin-right: calc(var(--wm-h) * -1.02);
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 296.6 56'%3E%3Cg fill='%23001e47'%3E%3Cpath d='M40 24.5C32 22 22 12 6 3C13 14 16 22 17 28C16 34 13 42 6 53C22 44 32 34 40 31.5Z'/%3E%3Cpath d='M192 10.5C212 9 230 17 238 27.5C231 38 215 46 198 46Z'/%3E%3Cpath d='M50 14L56 14L48 10.5Z'/%3E%3Cpath d='M66 10L72 10L63 6.5Z'/%3E%3Cpath d='M50 42L56 42L48 45.5Z'/%3E%3Cpath d='M66 46L72 46L63 49.5Z'/%3E%3C/g%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M207 15Q212.5 28 208 41'/%3E%3Cpath d='M237.5 28.5L229 30.5'/%3E%3C/g%3E%3Ccircle cx='221' cy='22' r='3.6' fill='%23fff'/%3E%3Ccircle cx='221.9' cy='22' r='1.7' fill='%23001e47'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  margin-right: calc(var(--wm-h) * -0.98); transform: skewX(-8deg);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 296.6 56'%3E%3Cg fill='%23001e47'%3E%3Cpath d='M40 24.5C30 21 18 10 2 .5C10 12 14 21 15 28C14 35 10 44 2 55.5C18 46 30 35 40 31.5Z'/%3E%3Cpath d='M192 10.5C213 7 236 11 250 23L247.9 27.4L243.8 24.9L241.7 29.3L237.5 26.8L235.4 31.1L231.2 28.6L229.2 33.0L225.0 30.5L229.6 28.1L232.0 32.7L236.6 30.3L239.0 34.8L243.6 32.5L246.0 37.0C232 43 214 47 198 46Z'/%3E%3Cpath d='M50 14L57 14L47 10Z'/%3E%3Cpath d='M66 10L73 10L62 6Z'/%3E%3Cpath d='M50 42L57 42L47 46Z'/%3E%3Cpath d='M66 46L73 46L62 50Z'/%3E%3C/g%3E%3Cpath d='M205 14Q211 28 206 42' fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round'/%3E%3Cpath d='M214 14.5L231 20.5C230 24.5 226.5 26.5 222.5 26C217.5 25.3 214.5 21 214 14.5Z' fill='%23fff'/%3E%3Ccircle cx='225' cy='22.4' r='2' fill='%23001e47'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
 }
 .brand-logo g, .brand-logo path {
   fill: var(--mast); stroke: var(--mast); stroke-width: 2.6px; stroke-linejoin: round; paint-order: stroke;
