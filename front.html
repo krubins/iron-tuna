@@ -112,6 +112,18 @@ body{overflow-x:hidden}
   .hm-fig{border-left:0;padding:var(--sp-12) 0;border-top:1px solid var(--line)}
   .hm-fig:first-child{border-top:0;padding-top:0}
 }
+@media(max-width:600px){
+  /* On an iPhone the 88px face stacked over its text made each figure a
+     screen-tall column of grey circles (2026-10-09). The face sits beside the
+     text instead, at 56px, and the figure drops to 28px, so all four rows
+     read in about one screen. */
+  .hm-fig{display:grid;grid-template-columns:56px minmax(0,1fr);column-gap:var(--sp-16);align-items:center}
+  .hm-face{width:56px;height:56px;margin-bottom:0}
+  .hm-face i{font-size:var(--fs-16)}
+  .hm-fig .k{font-size:var(--fs-14)}
+  .hm-fig .v{font-size:var(--fs-28);margin:2px 0}
+  .hm-fig .s{font-size:var(--fs-13)}
+}
 
 /* ── 2 · the position tiles ───────────────────────────────────────────────
    Six portrait tiles, one per position, each a link to that position's
@@ -199,7 +211,7 @@ body{overflow-x:hidden}
 .hm-input h3{margin:0 0 var(--sp-8);font-size:var(--fs-19);font-weight:600}
 .hm-input p{margin:0;font-size:var(--fs-16);color:var(--ink-2);line-height:1.5}
 .hm-how-more{margin:var(--sp-24) 0 0;font-size:var(--fs-16)}
-.hm-how-more a{font-weight:600}
+.hm-how-more a{font-weight:600;white-space:nowrap}
 @media(max-width:860px){.hm-how-grid{grid-template-columns:1fr}}
 
 /* ── 5 · the KPI band ─────────────────────────────────────────────────────
@@ -208,6 +220,13 @@ body{overflow-x:hidden}
 .hm-kpi{margin-top:var(--sec-gap)}
 .hm-kpi .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:860px){.hm-kpi .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Three figures in a two-up grid left the third alone on its own row. On a
+   phone all three sit in one row at 34px. */
+@media(max-width:600px){
+  .hm-kpi .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-16) var(--sp-12)}
+  .hm-kpi b{font-size:var(--fs-34)}
+  .hm-kpi span{font-size:var(--fs-13)}
+}
 footer.site {margin-top:0}
 </style>
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://irontuna.com/#website","name":"Iron Tuna","url":"https://irontuna.com/","inLanguage":"en-US","publisher":{"@id":"https://irontuna.com/#organization"},"description":"Analytics consistently beats intuition. Iron Tuna combines market intel, advanced analytics and AI analysis: the betting market read first, the consensus second, and your league’s scoring on top of both. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup."},{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna prices every NFL player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring — weekly rankings, waiver prices, DFS values and model-vs-market game lines in season, and custom draft values before it.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
@@ -256,7 +275,7 @@ footer.site {margin-top:0}
          and typing filters those and the players together. -->
     <form class="search-field hm-find" role="search" autocomplete="off" action="/player" method="get">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
-      <input id="hmFind" name="q" type="search" placeholder="Rankings, trade advice, DFS lineups or a player" aria-label="Find rankings, trade advice, DFS lineups or a player"
+      <input id="hmFind" name="q" type="search" placeholder="Rankings, trades, DFS or a player" aria-label="Find rankings, trade advice, DFS lineups or a player"
              role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="front" data-search-tools>
     </form>
     <ul class="hm-entry">
@@ -574,7 +593,7 @@ footer.site {margin-top:0}
       ['Pieces the desk published', kpi.pieces, '']
     ].filter(function (c) { return c[1] != null; });
     $('kpiGrid').innerHTML = cells.map(function (c) {
-      return '<div><b' + (c[2] ? ' class="' + c[2] + '"' : '') + '>' + esc(String(c[1])) + '</b><span>' + esc(c[0]) + (kpi.week && c[0] === 'Players ranked this week' ? ' (' + esc(kpi.week) + ')' : '') + '</span></div>';
+      return '<div><b' + (c[2] ? ' class="' + c[2] + '"' : '') + '>' + esc(String(c[1])) + '</b><span>' + esc(c[0]) + (kpi.week && c[0] === 'Players ranked this week' ? ' (' + esc(kpi.week).replace(/ /g, '\u00a0') + ')' : '') + '</span></div>';
     }).join('');
     show($('kpi'), true);
   }
