@@ -7496,6 +7496,31 @@ function buildBoards(ctx, opts) {
       r.why = r.marketOut ? _explainMarketOut(r) : explainDelta(r, mv, wk ? wk.env : null, r.marketDelta);
     }
   }
+  // Rest of season, a second ranking on the AVERAGE per game (10 Oct 2026).
+  // A total rewards games left as much as the player: an equal starter with
+  // his bye still to come, or a back returning from injury, sits under one
+  // with more games in the sum. The rest-of-season pages let the reader rank
+  // either way. Drawn here, beside the totals and by the same rules (points
+  // descending, name breaking a tie; within position, FLEX pooled), and
+  // classified by marketDelta itself, so the board in the browser divides
+  // nothing and invents no threshold. A player with no games left has no
+  // average and no rank.
+  if (horizon === 'ros') {
+    const F = ['consensus', 'vegas', 'ironTuna'];
+    for (const r of rows) {
+      r.perGame = {};
+      for (const f of F) r.perGame[f] = { points: r.games > 0 && Number.isFinite(r[f].points) ? _oddsRound(r[f].points / r.games) : null, rank: null, flexRank: null };
+    }
+    const avg = (list, f, out) => list.filter(r => r.perGame[f].points != null)
+      .sort((x, y) => (y.games > 0 ? y[f].points / y.games : 0) - (x.games > 0 ? x[f].points / x.games : 0) || (x.name < y.name ? -1 : 1))
+      .forEach((r, i) => { r.perGame[f][out] = i + 1; });
+    for (const g of Object.values(groups)) for (const f of F) avg(g, f, 'rank');
+    for (const f of F) avg(flex, f, 'flexRank');
+    for (const r of rows) {
+      const pg = r.perGame;
+      pg.marketDelta = marketDelta(pg.consensus.points, pg.consensus.rank, pg.vegas.points, pg.vegas.rank);
+    }
+  }
   return {
     ok: rows.length > 0, contract: BOARDS_CONTRACT,
     horizon: { ...HORIZONS[horizon], weeks, through: horizon === 'ros' ? (Number(o.through) || ROS_LAST_WEEK_DEFAULT) : null },

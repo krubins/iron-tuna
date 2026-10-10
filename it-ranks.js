@@ -65,6 +65,9 @@
 
   var PRESETS = [['standard', 'Standard'], ['half', 'Half PPR'], ['ppr', 'PPR']];
   var STORE = 'it.ranks.scoring';
+  // Rest of season only: rank on the total over the games left, or on the
+  // average per game. Remembered like the scoring choice.
+  var RATE_STORE = 'it.ranks.rate';
   // The columns ?sort= may name. A closed list, because the value lands in
   // sortVal's switch and an unknown key would silently sort by nothing.
   var SORT_KEYS = ['rank', 'player', 'team', 'opp', 'games', 'cpts', 'crank',
@@ -91,6 +94,45 @@
     catch (e) { return 'ppr'; }
   }
   function remember(v) { try { localStorage.setItem(STORE, v); } catch (e) {} }
+  function rememberedRate() {
+    try { return localStorage.getItem(RATE_STORE) === 'game' ? 'game' : 'total'; }
+    catch (e) { return 'total'; }
+  }
+  function rememberRate(v) { try { localStorage.setItem(RATE_STORE, v); } catch (e) {} }
+
+  // THE PER-GAME BOARD (10 Oct 2026). A rest-of-season total rewards games
+  // left as much as it rewards the player: a starter with a bye still to come
+  // sits a slot or two under an equal starter whose bye has passed, and a back
+  // returning from injury reads as worse than he is because he has fewer games
+  // in the sum. Dividing by the games he is projected to play asks the other
+  // question, how good is he when he plays, and both are fair, so the reader
+  // chooses.
+  //
+  // The worker ranks and classifies the averages (p.perGame, beside the
+  // totals in buildBoards), so this only lays them over the row: the gap
+  // verdict stays the worker's rule, never one re-derived here. The row keeps
+  // its totals under `total` for the drawer and the two lines, which are
+  // written about the season's sum.
+  function perGameBoard(payload) {
+    return payload.players.map(function (p) {
+      var pg = p.perGame || {};
+      var r = {};
+      for (var k in p) if (Object.prototype.hasOwnProperty.call(p, k)) r[k] = p[k];
+      r.total = p;
+      ['consensus', 'vegas', 'ironTuna'].forEach(function (f) {
+        var o = {};
+        var b = p[f] || {};
+        for (var x in b) if (Object.prototype.hasOwnProperty.call(b, x)) o[x] = b[x];
+        var a = pg[f] || {};
+        o.points = a.points == null ? null : a.points;
+        o.rank = a.rank == null ? null : a.rank;
+        o.flexRank = a.flexRank == null ? null : a.flexRank;
+        r[f] = o;
+      });
+      r.marketDelta = pg.marketDelta || null;
+      return r;
+    });
+  }
 
   function Board(host) {
     var horizon = host.getAttribute('data-rk-horizon') === 'ros' ? 'ros' : 'week';
@@ -98,6 +140,8 @@
     var wantWeeks = host.getAttribute('data-rk-weeks') === '1';
     var label = host.getAttribute('data-rk-label') || '';
     var preset = remembered();
+    var rate = horizon === 'ros' ? rememberedRate() : 'total';
+    var perGameShown = false;    // whether the rows on screen are the averages
     var cache = {};              // preset -> payload
     var q = '';
     var sortKey = 'rank', sortDir = 1;
@@ -130,6 +174,11 @@
       try { qs = new URLSearchParams(location.search); } catch (e) { return; }
       var sc = qs.get('scoring');
       if (/^(standard|half|ppr)$/.test(sc || '')) preset = sc;
+      if (horizon === 'ros') {
+        var ra = qs.get('rank');
+        if (ra === 'game') rate = 'game';
+        else if (ra === 'total') rate = 'total';
+      }
       var so = qs.get('sort');
       if (so && SORT_KEYS.indexOf(so) >= 0) sortKey = so;
       if (qs.get('dir') === 'desc') sortDir = -1;
@@ -150,6 +199,10 @@
       try { qs = new URLSearchParams(location.search); } catch (e) { qs = new URLSearchParams(); }
       var put = function (k, v) { if (v) qs.set(k, v); else qs.delete(k); };
       put('scoring', preset !== 'ppr' ? preset : '');
+      // Written whenever the reader is off the default, and also when their
+      // remembered choice is per game, so a shared link opens on the view
+      // the sender saw rather than on the recipient's own habit.
+      if (horizon === 'ros') put('rank', rate === 'game' ? 'game' : '');
       put('sort', sortKey !== 'rank' ? sortKey : '');
       put('dir', sortDir < 0 ? 'desc' : '');
       put('q', q);
@@ -189,6 +242,18 @@
       b.setAttribute('data-preset', p[0]);
       seg.appendChild(b);
     });
+    var rateSeg = null;
+    if (horizon === 'ros') {
+      rateSeg = el('div', 'rk-seg2');
+      rateSeg.setAttribute('role', 'group');
+      rateSeg.setAttribute('aria-label', 'Rank by');
+      [['total', 'Total points'], ['game', 'Per game']].forEach(function (r) {
+        var b = el('button', null, r[1]);
+        b.type = 'button';
+        b.setAttribute('data-rate', r[0]);
+        rateSeg.appendChild(b);
+      });
+    }
     var find = el('label', 'rk-find');
     var input = document.createElement('input');
     input.type = 'search';
@@ -214,6 +279,7 @@
       expand.style.color = 'var(--sec)';
     }
     tools.appendChild(seg);
+    if (rateSeg) tools.appendChild(rateSeg);
     if (expand) tools.appendChild(expand);
     tools.appendChild(find);
 
@@ -243,6 +309,7 @@
     // Two spanning groups over the pair that matters, so the eye reads
     // "consensus vs odds" and not "eleven numbers".
     function headHtml() {
+      var ptsHead = perGameShown ? 'Per gm' : 'Proj';
       var lead = [
         wantWeeks ? '<th scope="col"><span class="is-status">Wks</span></th>' : '',
         th('rank', '#'),
@@ -257,8 +324,8 @@
         '<th colspan="2"></th>' +
         '</tr>';
       var cols = '<tr>' + lead +
-        th('cpts', 'Proj', 'rk-fan num') + th('crank', 'Rank', 'rk-fan num') +
-        th('vpts', 'Proj', 'rk-mkt num') + th('vrank', 'Rank', 'rk-mkt num') +
+        th('cpts', ptsHead, 'rk-fan num') + th('crank', 'Rank', 'rk-fan num') +
+        th('vpts', ptsHead, 'rk-mkt num') + th('vrank', 'Rank', 'rk-mkt num') +
         th('gap', 'Gap', 'num') +
         th('extra', horizon === 'week' ? 'Note' : 'Schedule') +
         '</tr>';
@@ -322,6 +389,10 @@
     var readCtx = null;
     function reads(p) {
       if (!window.ITReads) return '';
+      // The two lines are written about the season's total ("projects 212
+      // points over 11 games"), so on the per-game view they are fed the
+      // total row they were written for, not the averages.
+      if (p.total) p = p.total;
       return ITReads.cell(p, { horizon: horizon, spellOut: pos === 'FLEX',
         rank: p.vegas ? p.vegas.rank : null,
         points: p.vegas ? p.vegas.points : null, ctx: readCtx });
@@ -390,10 +461,16 @@
           '<td class="num">' + n1(w.ironTunaPts) + '</td>' +
           '<td><span class="is-status">' + esc(w.basis || '') + '</span></td></tr>';
       }).join('');
-      var totals = '<tfoot><tr><td colspan="2">Total over ' + (p.games || 0) + ' game' + (p.games === 1 ? '' : 's') + '</td>' +
-        '<td class="num">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
-        '<td class="num">' + n1(p.vegas ? p.vegas.points : null) + '</td>' +
-        '<td class="num">' + n1(p.ironTuna ? p.ironTuna.points : null) + '</td><td></td></tr></tfoot>';
+      var t = p.total || p;
+      var totals = '<tfoot><tr><td colspan="2">Total over ' + (t.games || 0) + ' game' + (t.games === 1 ? '' : 's') + '</td>' +
+        '<td class="num">' + n1(t.consensus ? t.consensus.points : null) + '</td>' +
+        '<td class="num">' + n1(t.vegas ? t.vegas.points : null) + '</td>' +
+        '<td class="num">' + n1(t.ironTuna ? t.ironTuna.points : null) + '</td><td></td></tr>' +
+        (p.total ? '<tr><td colspan="2">Per game</td>' +
+          '<td class="num">' + n1(p.consensus ? p.consensus.points : null) + '</td>' +
+          '<td class="num">' + n1(p.vegas ? p.vegas.points : null) + '</td>' +
+          '<td class="num">' + n1(p.ironTuna ? p.ironTuna.points : null) + '</td><td></td></tr>' : '') +
+        '</tfoot>';
       return '<tr class="rk-weeks"><td colspan="' + span + '">' +
         '<h4>' + esc(p.name) + ' &middot; every week still to come</h4>' +
         '<div class="is-scroll"><table class="rk-wk"><thead><tr>' +
@@ -428,10 +505,17 @@
       [].forEach.call(seg.querySelectorAll('button'), function (b) {
         b.setAttribute('aria-pressed', b.getAttribute('data-preset') === preset ? 'true' : 'false');
       });
+      if (rateSeg) [].forEach.call(rateSeg.querySelectorAll('button'), function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-rate') === rate ? 'true' : 'false');
+      });
 
       if (window.ITReads && ITReads.context && !payload.readCtx) payload.readCtx = ITReads.context(payload.players);
       readCtx = payload.readCtx || null;
-      var rows = payload.players.slice();
+      // A payload from before the worker carried averages has none to show,
+      // and a column of dashes is worse than the totals it would replace.
+      var perGame = rate === 'game' && payload.players.some(function (p) { return p.perGame; });
+      if (perGame && !payload.perGameRows) payload.perGameRows = perGameBoard(payload);
+      var rows = (perGame ? payload.perGameRows : payload.players).slice();
       if (q) {
         var qq = q.toLowerCase();
         rows = rows.filter(function (p) {
@@ -452,6 +536,7 @@
       if (focus && !painted && wantWeeks) {
         rows.forEach(function (p) { if (slug(p.name) === focus) open[p.key] = true; });
       }
+      perGameShown = perGame;
       thead.innerHTML = headHtml();
       tbody.innerHTML = rows.slice(0, 250).map(function (p) {
         return rowHtml(p) + (wantWeeks && open[p.key] ? weeksHtml(p, span) : '');
@@ -465,6 +550,7 @@
       stamp.innerHTML = 'Scored at <b>' + esc(payload.scoring ? payload.scoring.label : preset) + '</b> &middot; ' +
         esc(label || hz.label || '') +
         (weeks.length ? ' (week' + (weeks.length > 1 ? 's ' + weeks[0] + '&ndash;' + weeks[weeks.length - 1] : ' ' + weeks[0]) + ')' : '') +
+        (horizon === 'ros' ? ' &middot; ranked by <b>' + (perGame ? 'points per game' : 'total points') + '</b>' : '') +
         ' &middot; ' + rows.length + ' player' + (rows.length === 1 ? '' : 's') +
         (payload.season ? ' &middot; ' + esc(payload.season) + ' season' : '') +
         (payload.played ? ' &middot; ' + payload.played + ' player' + (payload.played === 1 ? ' whose game has' : 's whose games have') + ' kicked off are off the board' : '');
@@ -541,6 +627,13 @@
       if (!b) return;
       preset = b.getAttribute('data-preset');
       remember(preset);
+      render();
+    });
+    if (rateSeg) rateSeg.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button');
+      if (!b) return;
+      rate = b.getAttribute('data-rate');
+      rememberRate(rate);
       render();
     });
     input.addEventListener('input', function () { q = this.value.trim(); render(); });
