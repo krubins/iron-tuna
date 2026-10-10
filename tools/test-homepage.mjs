@@ -590,6 +590,15 @@ console.log('\nwith a board too short to print');
   const names = r.figs.map(f => f.k.split(' · ')[1].split(',')[0]);
   ok('a player leading two lists is on the overview once, the second list showing its next player',
      r.figs.length === 4 && new Set(names).size === 4 && names[0] === 'Drake London' && names[1] === 'Puka Nacua', JSON.stringify(names));
+  // And across the tabs: every list skips a player an earlier list printed.
+  const tabNames = [];
+  for (let i = 2; i <= 5; i++) {
+    await page.click(`#diffCats button:nth-child(${i})`);
+    tabNames.push(...(await read(page)).figs.map(f => f.k.split(' · ')[1].split(',')[0]));
+  }
+  ok('no player is on two tabs, and the later list deals its next player in his place',
+     new Set(tabNames).size === tabNames.length && tabNames.filter(n => n === 'Drake London').length === 1 && tabNames.includes('Bench Flier'),
+     JSON.stringify(tabNames));
   await ctx.close();
   EDGE.vsExperts = { buys: [], fades: [] };
   EDGE.seasonForm = { ...fullForm, under: [], likelyOver: [], likelyUnder: [] };
