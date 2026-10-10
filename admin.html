@@ -596,9 +596,15 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   }
   // A missing table just means nothing has been recorded yet — say that
   // plainly instead of showing an error the first time it is opened.
+  // d1_limit is the one refusal that is not a fault in the site: Cloudflare has
+  // stopped reading the account's D1 for the day. On 2026-10-10 the route
+  // answered it with zeros and the page read as if every number had been
+  // wiped; the numbers were there, D1 would not read them until midnight UTC.
   function trafficUnavailable(j){
     $('trafMeta').textContent = j && j.error === 'no_tables'
       ? 'No traffic recorded yet — the counter starts with the next page view.'
+      : j && j.error === 'd1_limit'
+      ? 'The numbers are not gone — Cloudflare has stopped reading them for today. The account has spent D1\'s free-tier daily row-read allowance, so every read on this page is refused until midnight UTC, when they come back on their own. Moving the account to Workers Paid (Cloudflare dashboard) brings them back now; the database\'s Query Insights there name what spent the allowance. Detail: ' + (j.detail || '')
       : 'Traffic unavailable: ' + ((j && (j.detail || j.error)) || 'unknown error');
   }
 
@@ -609,7 +615,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
     $('trafMeta').textContent = 'Last ' + d.days + ' days · generated ' + new Date(d.generatedAt || Date.now()).toLocaleString() +
       (d.collectingSince ? ' · collecting since ' + new Date(d.collectingSince).toLocaleDateString() : '') +
-      (d.includeMe ? ' · including your own visits' : '');
+      (d.includeMe ? ' · including your own visits' : '') +
+      (d.readError ? ' · PARTIAL: a read was refused' + (d.readError.limit ? ' (D1 daily read allowance spent)' : '') + ', so some tables below are empty, not zero: ' + (d.readError.detail || '') : '');
 
     // Today's headline is a real unique count, so it leads. Everything wider than
     // a day is user-days and is labeled that way rather than passed off as people.
