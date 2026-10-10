@@ -167,7 +167,14 @@ function postDraftPreview(env, url, request) {
   if (adminOk(env, url.searchParams.get('preview'))) return true;
   try { return adminOk(env, parseCookie(request.headers.get('Cookie'))['it_pd_preview']); } catch (e) { return false; }
 }
-function adminOk(env, key) { return !!env.LEADS_EXPORT_KEY && timingSafeEq(String(key || ''), env.LEADS_EXPORT_KEY); }
+// The one gate in front of every /api/admin/* route, the ?preview= escape hatch
+// and the market refresh. Two credentials open it: LEADS_EXPORT_KEY, the long
+// owner secret the automations use, and ADMIN_PASSWORD, a short word set in
+// wrangler.jsonc so /admin can be opened from a phone without pasting a key
+// (added 2026-10-10). Either one alone is enough; an unset credential never
+// matches, so an empty env still refuses everything. One line on purpose:
+// tools/test-league-sync.mjs lifts this function out of the source by line.
+function adminOk(env, key) { const k = String(key || ''); return !!k && ((!!env.LEADS_EXPORT_KEY && timingSafeEq(k, String(env.LEADS_EXPORT_KEY))) || (!!env.ADMIN_PASSWORD && timingSafeEq(k, String(env.ADMIN_PASSWORD)))); }
 let _GITHUB_OIDC_KEYS = null;
 let _GITHUB_OIDC_KEYS_AT = 0;
 const _b64urlBytes = value => Uint8Array.from(atob(String(value || '').replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(String(value || '').length / 4) * 4, '=')), c => c.charCodeAt(0));

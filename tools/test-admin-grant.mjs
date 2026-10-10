@@ -62,6 +62,24 @@ console.log('\nthe key gate');
   ok('a refused call writes nothing', db.raw.prepare('SELECT COUNT(*) c FROM entitlements').get().c === 0);
 }
 
+// ── the admin password ─────────────────────────────────────────────────────
+// ADMIN_PASSWORD (wrangler.jsonc) opens the same gate as LEADS_EXPORT_KEY, so
+// /admin can be unlocked from a phone. It must match exactly, must not leak
+// through when unset, and must never make an empty key acceptable.
+console.log('\nthe admin password');
+{
+  const db = makeDb();
+  const withPw = (p, env) => worker.fetch(new Request('https://irontuna.com' + p), Object.assign({ LEADS_DB: db, LEADS_EXPORT_KEY: KEY, AUTH_SECRET: 's', ADMIN_PASSWORD: 'Claude' }, env || {}), ctx);
+  const r = await withPw('/api/admin/grant?key=Claude&email=pw@example.com');
+  ok('the password opens the gate', r.status === 200, String(r.status));
+  ok('the key still opens the gate beside it', (await withPw(`/api/admin/grant?key=${KEY}&email=pw@example.com`)).status === 200);
+  ok('the password is case-sensitive', (await withPw('/api/admin/grant?key=claude&email=pw@example.com')).status === 403);
+  ok('a near miss is refused', (await withPw('/api/admin/grant?key=Claude1&email=pw@example.com')).status === 403);
+  ok('an empty key is refused with the password set', (await withPw('/api/admin/grant?key=&email=pw@example.com')).status === 403);
+  ok('the password is inert when ADMIN_PASSWORD is unset', (await call(db, '/api/admin/grant?key=Claude&email=pw@example.com')).status === 403);
+  ok('the password alone works with no LEADS_EXPORT_KEY', (await withPw('/api/admin/revoke?key=Claude&email=pw@example.com', { LEADS_EXPORT_KEY: undefined })).status === 200);
+}
+
 // ── input validation ───────────────────────────────────────────────────────
 console.log('\ninput validation');
 {

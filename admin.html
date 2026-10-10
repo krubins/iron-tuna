@@ -126,8 +126,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 <section id="gate">
   <div class="card">
     <h2>Admin access</h2>
-    <p style="color:var(--sec);font-size:15.5px;margin:0">Enter the admin key (<code>LEADS_EXPORT_KEY</code>) to see who is using the site: how many people, what they looked at and how long they stayed. It stays in this browser only.</p>
-    <input id="keyInput" type="password" placeholder="Admin key" autocomplete="off">
+    <p style="color:var(--sec);font-size:15.5px;margin:0">Enter the admin password to see who is using the site: how many people, what they looked at and how long they stayed. The owner key (<code>LEADS_EXPORT_KEY</code>) works here too. It stays in this browser only.</p>
+    <input id="keyInput" type="password" placeholder="Password" autocomplete="off">
     <div id="gateErr"></div>
     <button class="btn primary" id="unlockBtn" type="button">Unlock dashboard</button>
   </div>
@@ -400,7 +400,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     fetch('/api/admin/traffic?days=' + trafDays + '&key=' + encodeURIComponent(key))
       .then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
       .then(function(res){
-        if (res.status === 403 || (res.j && res.j.error === 'forbidden')) { setKey(''); showGate('That key was rejected. Try again.'); return; }
+        if (res.status === 403 || (res.j && res.j.error === 'forbidden')) { setKey(''); showGate('That password was rejected. Try again.'); return; }
         showDash();
         if (!res.j || !res.j.ok) { trafficUnavailable(res.j); return; }
         renderTraffic(res.j);
@@ -416,7 +416,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     fetch('/api/admin/dashboard?key=' + encodeURIComponent(key))
       .then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
       .then(function(res){
-        if (res.status === 403 || (res.j && res.j.error === 'forbidden')) { setKey(''); showGate('That key was rejected. Try again.'); return; }
+        if (res.status === 403 || (res.j && res.j.error === 'forbidden')) { setKey(''); showGate('That password was rejected. Try again.'); return; }
         if (!res.j || !res.j.ok) { $('metaLine').textContent = 'Sales and leads unavailable: ' + ((res.j && (res.j.error + (res.j.detail ? ' — ' + res.j.detail : ''))) || res.status); return; }
         render(res.j);
       })
@@ -701,7 +701,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   }
 
   // wire up
-  $('unlockBtn').addEventListener('click', function(){ var k = $('keyInput').value.trim(); if (!k) { $('gateErr').textContent = 'Enter the key.'; return; } setKey(k); load(); });
+  $('unlockBtn').addEventListener('click', function(){ var k = $('keyInput').value.trim(); if (!k) { $('gateErr').textContent = 'Enter the password.'; return; } setKey(k); load(); });
   $('keyInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('unlockBtn').click(); });
   $('reloadBtn').addEventListener('click', function(){ load(); });
   $('ops').addEventListener('toggle', function(){ if ($('ops').open && !opsLoaded && getKey()) opsLoad(); });
@@ -754,7 +754,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       .then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
       .then(function(res){
         var j = res.j || {};
-        if (res.status === 403 || j.error === 'forbidden') { setKey(''); showGate('That key was rejected. Try again.'); return; }
+        if (res.status === 403 || j.error === 'forbidden') { setKey(''); showGate('That password was rejected. Try again.'); return; }
         if (!j.ok) {
           var why = { invalid_email:'That is not a valid email address.', no_db:'No database is bound, so access cannot be granted.',
             no_auth_secret:'AUTH_SECRET is not set, so no sign-in link can be signed.', bad_days:'Pick a link lifetime between 1 and 90 days.',
