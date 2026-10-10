@@ -182,6 +182,8 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-shot:hover{background:var(--panel)}
 .tf-team.mine .tf-shot:hover{background:var(--elev)}
 .tf-shot input{display:none}
+button.tf-shot{font-family:inherit;line-height:inherit}
+.tf-shots{display:flex;flex-wrap:wrap;gap:0 var(--space-2)}
 .tf-send-h{font-weight:600;font-size:var(--fs-16);margin-bottom:var(--space-2)}
 .tf-send-h span{font-weight:400;font-size:var(--fs-14);color:var(--muted)}
 .tf-send-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin:4px 0}
@@ -721,7 +723,8 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
               + '<datalist id="' + dl + '">' + optionsFor(sug) + '</datalist>'
               + '<button type="button" class="btn alt small" data-drop="' + i + ':' + k + '">drop</button></div>';
           }).join('') + '</div>' : '')
-        + '<label class="tf-shot"><input type="file" accept="image/*" multiple data-shot="' + i + '">Add a roster screenshot</label>'
+        + '<div class="tf-shots"><label class="tf-shot"><input type="file" accept="image/*" multiple data-shot="' + i + '">Add a roster screenshot</label>'
+        + '<button type="button" class="tf-shot" data-paste="' + i + '" title="Read a screenshot off the clipboard">Paste a screenshot</button></div>'
         + '<div class="tf-hz" data-hz="' + i + '"></div>'
         + '<div class="cnt">' + tradeable + ' tradeable' + (t.players.length !== tradeable ? ' (kickers and defenses ignored)' : '') + '</div>'
         + '</div>';
@@ -922,6 +925,7 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
       render();
     }
     else if ((v = b.getAttribute('data-drop'))) { var d = v.split(':'); teams[+d[0]].unresolved.splice(+d[1], 1); render(); }
+    else if ((v = b.getAttribute('data-paste')) != null) pasteFromClipboard(+v);
   });
   $('tf-teams').addEventListener('change', function (ev) {
     var el = ev.target, v;
@@ -1083,6 +1087,29 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
     var b = e.target.closest('.tf-team');
     if (b && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) readImages(e.dataTransfer.files, +b.getAttribute('data-i'));
   });
+  // The Paste button reads the clipboard itself, where the browser lets a page
+  // do that (Chrome and Edge ask once; Safari and Firefox put up their own
+  // Paste callout to confirm). Ctrl+V already worked, but nothing on the card
+  // said so, and a phone has no Ctrl+V at all: its Paste menu only appears
+  // over a text field and hands that field the words, not the image, so a
+  // reader on a phone had to save the screenshot and pick it from the gallery
+  // (2026-10-10). Where the browser offers no reader, or the reader is refused,
+  // the box is focused and the shortcut named, so the next Ctrl+V lands in
+  // this box through the document listener below.
+  function pasteFromClipboard(at) {
+    lastBox = at;
+    var hint = 'Press Ctrl+V (\u2318V on a Mac) with this box selected to paste a screenshot.';
+    var input = $('tf-teams').querySelector('.tf-type[data-roster="' + at + '"]'); if (input) input.focus();
+    if (!(navigator.clipboard && navigator.clipboard.read)) { status($('tf-read-status'), 'This browser does not let a button read the clipboard. ' + hint, true); return; }
+    navigator.clipboard.read().then(function (items) {
+      var blobs = [];
+      [].forEach.call(items || [], function (it) {
+        [].forEach.call(it.types || [], function (t) { if (/^image\//.test(t)) blobs.push(it.getType(t)); });
+      });
+      if (!blobs.length) { status($('tf-read-status'), 'There is no image on the clipboard. Copy the screenshot first, then press the button again.', true); return; }
+      return Promise.all(blobs).then(function (files) { readImages(files, at); });
+    }).catch(function () { status($('tf-read-status'), 'The browser did not hand over the clipboard. ' + hint, true); });
+  }
   // A screenshot on the clipboard goes to the team box the reader last worked
   // in, or the first empty one. Only pastes carrying image files are taken.
   document.addEventListener('paste', function (e) {
