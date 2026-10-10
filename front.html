@@ -498,9 +498,16 @@ footer.site {margin-top:0}
   // designation, a player the books have left off a priced game, and any row
   // with a zero projection on either market side is not a figure here.
   // Active and Probable are designations that say he plays.
+  // A CONSENSUS UNDER CONSENSUS_FLOOR IS A STALE LINE, NOT A PRICE
+  // (2026-10-10). A backup promoted to starter keeps his backup's projection
+  // until the consensus catches up, so Tyson Bagent (0.2) and Kirk Cousins
+  // (0.6) led both value lists in Week 5 by a gap that was only the
+  // promotion. Same floor the worker applies to seasonForm.
+  var CONSENSUS_FLOOR = 3;
   function healthy(p) {
     if (p.injury && !/^(active|probable)$/i.test(String(p.injury))) return false;
     if (p.marketOut) return false;
+    if (!(Number(p.consensusPoints) >= CONSENSUS_FLOOR)) return false;
     return Number(p.vegasPoints) > 0 && Number(p.ironTunaPoints) > 0;
   }
   function usable(p) {
@@ -566,7 +573,7 @@ footer.site {margin-top:0}
       { key: 'value', label: 'This week\u2019s value', rows: week(vs.buys, 1), html: figHtml },
       { key: 'over', label: 'Outscoring their projections', rows: season(sf.over, 1), html: function (p) { return formHtml(p, 1); } },
       { key: 'headwinds', label: 'This week\u2019s headwinds', rows: week(vs.fades, -1), html: figHtml },
-      { key: 'overvalued', label: 'Long-term overvalued', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } }
+      { key: 'overvalued', label: 'Trailing their projections', rows: season(sf.under, -1), html: function (p) { return formHtml(p, -1); } }
     ].filter(function (c) { return c.rows.length >= MARKET_MIN; });
   }
   function nameLine(word, p) {

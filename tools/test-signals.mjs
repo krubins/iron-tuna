@@ -209,6 +209,10 @@ console.log('\nVegas Edge: the season to date against the price');
   ok('two games is not a season', run({ games: 2, ppg: 25 }).over.length === 0);
   ok('a player listed Out is not an overperformer', run({ games: 5, ppg: 25 }, { injury: { status: 'Out', gamesOut: 1 } }).over.length === 0);
   ok('but Probable is a designation that says he plays', run({ games: 5, ppg: 25 }, { injury: { status: 'Probable', gamesOut: 0 } }).over.length === 1);
+  {
+    const stale = H.buildVegasEdge({ ...WEEK, players: WEEK.players.map(p => p.name === 'Steady Man' ? { ...p, consensus: { ...p.consensus, points: 0.6 }, form: { games: 3, ppg: 18.8 } } : p) }, {}, {}, STATE, { insights: [] }).seasonForm;
+    ok('a consensus under the floor is a stale line, and no price to beat', stale.over.length === 0 && stale.under.length === 0, JSON.stringify(stale));
+  }
   ok('no season line, no row', run(null).over.length === 0 && run(null).under.length === 0);
   ok('the floor rides on the payload', hot.minGames === 3);
 }
