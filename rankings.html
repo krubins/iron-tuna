@@ -14,8 +14,8 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Weekly Fantasy Rankings for Your League’s Scoring | Iron Tuna</title>
-<meta name="description" content="Rankings are worthless at somebody else’s scoring. Iron Tuna re-ranks every player at your exact settings — PPR, passing TD value, yardage thresholds — and prices the result against the betting market.">
+<title>Fantasy Football Rankings at Your League’s Scoring | Iron Tuna</title>
+<meta name="description" content="Rankings are worthless at somebody else’s scoring. Iron Tuna re-ranks every player at your exact settings — PPR, passing TD value, yardage thresholds — for this week, the next three, the playoffs or the rest of the season, and prices the result against the betting market.">
 <link rel="canonical" href="https://irontuna.com/rankings">
 <!--seo:meta-->
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
@@ -42,96 +42,129 @@ body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-/* ══ the page's own chrome ═══════════════════════════════════════════
-   /rankings already carried the generated section ribbon; what it did not
-   carry was anything above it. The page opened on an h1 on the same white
-   ground as the table, with the NFL clock as a grey plate under the lede, and
-   then FOUR loose rows of segmented controls stacked in the column with no
-   container — horizon, board, scoring, position, a filter and a checkbox, all
-   at the same weight as each other and as the table below them.
+/* ══ the page, in the homepage's dress ═══════════════════════════════════════
+   11 Oct 2026 (Ken: the rankings page should look like the landing page, and
+   there is one rankings page, not a weekly one and a season one). Until then
+   the page opened on a navy band, boxed its six controls in a plate under a
+   title bar, and closed on a tinted chapter with numbered heads: the dress the
+   in-season section wore before the October redesign. The homepage is paper
+   white, centred, and groups with hairlines and air; its one pill is the
+   search field, its colour is the six illustrated position tiles, and it
+   closes on the navy KPI band. This page now does the same, in this order:
 
-   Three changes, all layout:
+     1. THE HERO    white, centred: the one headline, one sentence, the filter
+                    field (the page's one pill, and it is a field), two entry
+                    points as text links, a hairline.
+     2. THE HORIZON a centred row of four tabs under the rule: This Week, Next 3
+                    Weeks, Playoffs, Rest of Season. One page, four sorts of it;
+                    "weekly" and "rest of season" are no longer two pages.
+     3. THE TILES   the homepage's illustrated position tiles, as the position
+                    control: seven buttons, the one on screen ringed in teal,
+                    each carrying how many players the board ranks there.
+     4. THE BOARD   whose numbers and at what scoring, as two labelled rows of
+                    tabs between hairlines, then the table in the dress the
+                    published boards wear.
+     5. MORE / METHOD  two sections with the homepage's section head: a 28px h2
+                    and a right-hand link on one baseline. No tinted band, no
+                    chapter numbers.
+     6. THE KPI BAND   navy, three figures off the board on screen.
 
-     1. THE OPENING BAND (.is-hero, site.css), between the masthead and the
-        ribbon, which is exactly where the homepage puts its own. The clock
-        goes up into it as the dateline.
-     2. THE CONTROLS BECOME ONE PLATE. Six controls governing one table are a
-        control panel, not six things on a page. Same ids, same buttons, same
-        handlers; a border, a title bar and a ground around them.
-     3. CHAPTER HEADS on the two closing sections, which were bare h2s while
-        every other page in the section numbers its chapters, and the tinted
-        band under the first of them.
-
-   And the measure widens to .wrap.wide with the rest of the section. This is
-   the page that needed it most: the board is a nine-column table and it was
-   being asked to fit in 820px. */
-h1{font-size:clamp(30px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:6px 0 14px}
-h2{font-size:clamp(23px,3vw,28px);margin:34px 0 10px;letter-spacing:.01em}
-/* An in-page anchor has to clear the sticky header. The ribbon on this page
-   is the generated one, which is not sticky, so the header is all there is. */
+   Same ids, same handlers; the markup around them is new. The tokens are
+   site.css's (--text/--sec/--muted, --space-*, --fs-*); the homepage's own
+   aliases are not redeclared here. */
+/* On body, not :root: a content page declares no palette of its own
+   (tools/test-reading-view.mjs), and these two are measures, not colours. */
+body{--rk-fs-hero:clamp(40px,4.8vw,64px);--rk-sec-gap:72px}
+@media(max-width:860px){body{--rk-sec-gap:48px}}
 html{scroll-padding-top:calc(var(--header-h) + 14px)}
 @media(max-width:860px){html{scroll-padding-top:66px}}
-
-/* ── the board controls, as one plate ───────────────────────────────────── */
-.rk-setup{margin:var(--space-5) 0 var(--space-4);border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--bg);overflow:hidden}
-.rk-setup-title{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin:0;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
-.rk-setup-title span{font-size:var(--fs-3xs);font-weight:800;color:var(--teal)}
-.rk-setup-title b{font-size:var(--fs-md);color:var(--text)}
-.rk-setup-body{padding:var(--space-4) 18px var(--space-3)}
-/* Each control row is a labelled line inside the plate rather than a free
-   row in the page, so a reader can see what the six switches are FOR. */
-.rk-row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
-.rk-row:first-child{border-top:0;padding-top:2px}
-.rk-row > .rk-lab{flex:0 0 74px;font-size:var(--fs-3xs);font-weight:700;color:var(--muted)}
-.rk-setup .rk-controls{margin:0;flex:1 1 auto;gap:10px}
-.rk-setup .rk-blend{margin:11px 0 0}
-.rk-setup .is-note{margin:0}
-/* The plate's foot holds the scoring note and the playoffs prompt, both of
-   which are often empty or hidden. An empty tinted strip under the controls
-   is worse than no strip, so it only exists when it has something in it. */
-.rk-setup-foot{display:none;padding:10px 18px;border-top:1px solid var(--line);background:var(--panel)}
-.rk-setup-foot:has(> p:not(:empty):not([hidden])){display:block}
-.rk-setup-foot .is-note,.rk-setup-foot .rk-playoff-cta{margin:0}
-.rk-setup-foot > * + *{margin-top:6px}
-/* The sync strip is a light-palette object /it-sync.js styles itself; it sits
-   above the plate rather than inside its rows. */
-.rk-sync:empty{display:none}
-@media(max-width:560px){.rk-row > .rk-lab{flex:1 1 100%}}
 p{color:var(--sec);margin:0 0 16px}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;background:var(--teal);color:#fff;font-weight:600;border-radius:4px;padding:0 24px;border:none;cursor:pointer}
-.btn:hover{background:var(--teal-hover,#083a50);color:#fff;text-decoration:none}
-.btn.alt{background:var(--teal-tint);color:var(--teal);border:1px solid var(--teal)}
-.cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
-.rk-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:20px 0 10px}
-.rk-seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:var(--panel)}
-.rk-seg button{appearance:none;border:0;background:transparent;color:var(--sec);font:inherit;font-size:15.5px;font-weight:700;padding:9px 15px;cursor:pointer;border-left:1px solid var(--line)}
-.rk-seg button:first-child{border-left:0}
-.rk-seg button:hover{background:var(--elev);color:var(--text)}
-.rk-seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
-.rk-seg button[disabled]{opacity:.45;cursor:not-allowed}
-.rk-seg.rk-pos button{padding:9px 13px;font-size:14.5px}
-/* ── the horizon chips ──────────────────────────────────────────────────
-   The first row of the plate decides what the board IS, so it is a row of
-   chips in the front page's dress (front.html, .hm-cats: the "Which list" row
-   under the hero's market figures) rather than one more segmented control
-   among three: a hairline box at 4px, 14px/600 grey text, teal when chosen.
-   Four of them: this week, the run-in to the playoffs, the playoffs, the rest
-   of the season. Next Week came off the row on 11 Oct 2026 (Ken: four chips);
-   its board stays in the worker for the newsroom and the player pages. */
-.rk-chips-h{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;flex:1 1 auto}
-.rk-chips-h button{appearance:none;font:inherit;font-size:var(--fs-14);font-weight:600;line-height:1.3;color:var(--sec);background:none;border:1px solid var(--line2);border-radius:4px;padding:6px 12px;cursor:pointer}
-.rk-chips-h button:hover{color:var(--text)}
-.rk-chips-h button[aria-pressed="true"]{color:#fff;background:var(--teal);border-color:var(--teal)}
-.rk-chips-h button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
-.rk-chips-h button[disabled]{opacity:.45;cursor:not-allowed}
+
+/* ── 1 · the hero ─────────────────────────────────────────────────────────── */
+.rk-hero{padding:var(--space-8) 0 0;text-align:center}
+.rk-hero h1{margin:0 auto var(--space-4);font-size:var(--rk-fs-hero);font-weight:700;letter-spacing:-.03em;line-height:1.02;max-width:20ch;text-wrap:balance;color:var(--text)}
+@media(max-width:480px){.rk-hero h1{font-size:var(--fs-34)}}
+.rk-lede{margin:0 auto var(--space-6);font-size:var(--fs-19);color:var(--sec);max-width:56ch;line-height:1.5}
+.rk-find{max-width:640px;margin:0 auto}
+.rk-entry{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--space-2) var(--space-6);margin:var(--space-5) 0 0;padding:0;list-style:none}
+.rk-entry a{font-size:var(--fs-16);font-weight:600}
+.rk-rule{border:0;height:1px;background:var(--line);margin:var(--space-7) 0 var(--space-5)}
+
+/* ── 2 · the horizon ──────────────────────────────────────────────────────── */
+/* The homepage's list tabs (.hm-cats), one step larger because these four are
+   the page's first decision rather than a band's. */
+.rk-tabs{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:0;padding:0}
+.rk-tabs button{font:inherit;font-size:var(--fs-14);font-weight:600;color:var(--muted);background:none;border:1px solid var(--line2);border-radius:4px;padding:6px 12px;cursor:pointer;line-height:1.3}
+.rk-tabs button:hover{color:var(--text)}
+.rk-tabs button[aria-pressed="true"]{color:#fff;background:var(--teal);border-color:var(--teal)}
+.rk-tabs button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.rk-tabs button[disabled]{opacity:.45;cursor:not-allowed}
+.rk-horizon{justify-content:center}
+.rk-horizon button{font-size:var(--fs-16);padding:10px 18px}
+@media(max-width:600px){.rk-horizon button{font-size:var(--fs-14);padding:8px 12px}}
+
+/* ── the section head, as the homepage draws it ───────────────────────────── */
+.rk-sec{margin:var(--rk-sec-gap) 0 0}
+.rk-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin:0 0 var(--space-4)}
+.rk-sec-head h2{margin:0;font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.rk-sec-head a{font-size:var(--fs-14);font-weight:600;white-space:nowrap}
+.rk-sub{margin:0 0 var(--space-5);font-size:var(--fs-16);color:var(--sec);max-width:60ch}
+
+/* ── 3 · the position tiles ───────────────────────────────────────────────── */
+/* The homepage's tiles, as buttons. Seven across on a desk, so they are square
+   rather than portrait (seven portraits would stand 200px tall above the
+   table); the art is anchored to the top so the caption over the fade does not
+   bury it. The tile on screen is ringed in teal, the rest are not dimmed: a
+   greyed tile reads as unavailable, and all seven are. On a phone the row
+   scrolls sideways edge to edge, first tile on the gutter. */
+.rk-tiles{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--space-4);margin:0;padding:0;list-style:none}
+.rk-tile{position:relative;display:block;width:100%;aspect-ratio:1/1;border:0;border-radius:10px;overflow:hidden;color:#fff;background:var(--t1);padding:0;font:inherit;text-align:left;cursor:pointer}
+.rk-tile:hover{color:#fff}
+.rk-tile:hover .rk-tile-name{text-decoration:underline}
+.rk-tile svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.rk-tile-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--space-7) var(--space-3) var(--space-3);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
+.rk-tile-name{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.2}
+.rk-tile-live{display:block;font-size:var(--fs-13);color:rgba(255,255,255,.86);margin-top:2px;font-variant-numeric:tabular-nums;min-height:1.4em}
+.rk-tile[aria-pressed="true"]{outline:3px solid var(--teal);outline-offset:3px}
+.rk-tile:focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+@media(max-width:1100px){.rk-tile-name{font-size:var(--fs-16)}}
+@media(max-width:860px){
+  .rk-tiles{display:flex;overflow-x:auto;margin:0 calc(-1 * var(--gutter));padding:4px var(--gutter);gap:var(--space-3);scrollbar-width:none;scroll-snap-type:x proximity;scroll-padding-inline:var(--gutter)}
+  .rk-tiles::-webkit-scrollbar{display:none}
+  .rk-tiles li{flex:0 0 34%;scroll-snap-align:start}
+}
+@media(max-width:480px){.rk-tiles li{flex:0 0 42%}}
+
+/* ── 4 · the board ────────────────────────────────────────────────────────── */
+/* Two labelled rows of tabs between hairlines: whose numbers, at what scoring.
+   A label, then the tabs, then on the scoring row the one checkbox. The sync
+   strip from /it-sync.js sits above the rows and styles itself. */
+.rk-sync:empty{display:none}
+.rk-set{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 0 var(--space-4)}
+.rk-set-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3) var(--space-4);padding:var(--space-3) 0}
+.rk-set-row + .rk-set-row{border-top:1px solid var(--line)}
+.rk-set-l{flex:0 0 7rem;font-size:var(--fs-13);font-weight:600;color:var(--muted)}
+.rk-check{font-size:var(--fs-14);color:var(--sec);display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+.rk-check input{accent-color:var(--teal)}
+.rk-check:has(input[disabled]){opacity:.5}
+@media(max-width:600px){.rk-set-l{flex:1 1 100%}.rk-check{margin-left:0}}
+.rk-blend{border:1px solid var(--line);border-radius:10px;padding:var(--space-3) var(--space-4);margin:0 0 var(--space-4)}
+.rk-blend-h{display:flex;justify-content:space-between;font-size:var(--fs-13);font-weight:600;color:var(--teal)}
+.rk-blend-h span:nth-child(2){color:var(--text);font-size:var(--fs-16)}
+.rk-blend input[type=range]{width:100%;margin:8px 0 4px;accent-color:var(--teal)}
+.rk-blend .is-note{margin:0}
+/* The line under the rows: what is on screen, in one sentence. */
+.rk-fine{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin:0 0 var(--space-2);font-size:var(--fs-14);color:var(--muted);max-width:none}
+.rk-fine b{color:var(--text);font-weight:600}
+.rk-fine:empty,.rk-playoff-cta[hidden]{display:none}
+.rk-playoff-cta{margin:0 0 var(--space-2);font-size:var(--fs-14)}
+.rk-h2{font-size:var(--fs-23);margin:var(--space-7) 0 var(--space-3);letter-spacing:-.01em}
 .rk-table td.p b{color:var(--text)}
 .rk-table td.p span{display:block;font-size:13.5px;color:var(--muted);letter-spacing:.03em}
 .rk-table td.gap.up{color:var(--teal);font-weight:700}
 .rk-table td.gap.dn{color:var(--danger);font-weight:700}
 .rk-table tr.bye td{opacity:.6}
 .rk-inj{font-size:12.5px;font-weight:800;color:var(--danger);margin-left:6px}
-.rk-filter input{font:inherit;font-size:15.5px;padding:8px 12px;border:1px solid var(--line2);border-radius:8px;background:var(--panel);color:var(--text);min-width:200px}
-.rk-check{font-size:14.5px;color:var(--sec);display:inline-flex;align-items:center;gap:6px}
 .rk-table th{cursor:pointer;user-select:none;white-space:nowrap}
 .rk-table th[aria-sort="descending"]::after{content:" \25BE"} .rk-table th[aria-sort="ascending"]::after{content:" \25B4"}
 .rk-table td.cls{font-size:12.5px;font-weight:800;white-space:nowrap}
@@ -139,28 +172,15 @@ p{color:var(--sec);margin:0 0 16px}
 .rk-conf{font-size:12px;font-weight:800;padding:2px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--sec)}
 .rk-conf.HIGH{color:var(--teal);border-color:var(--teal)} .rk-conf.LOW{color:var(--muted)}
 .rk-trend.up{color:var(--teal);font-weight:700} .rk-trend.down{color:var(--danger);font-weight:700}
-.rk-banner{background:var(--gold);color:#231700;border-radius:10px;padding:14px 18px;margin:14px 0 6px;font-size:clamp(20px,2.4vw,26px)}
-.rk-playoff-cta{margin:8px 0 0;font-size:15.5px}
-.rk-wed{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin:18px 0}
-.rk-wed h2{margin:6px 0 4px}
-.rk-wed .is-card{cursor:pointer}
-.rk-wed .is-card:hover{border-color:var(--teal)}
-.rk-movers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px}
-.rk-movers ol{margin:6px 0 0;padding-left:20px;font-size:15.5px;color:var(--sec)}
-.rk-movers li{margin-bottom:6px} .rk-movers b{color:var(--text)}
-.rk-movers small{display:block;color:var(--muted);font-size:13.5px}
 .rk-why{font-size:13.5px;color:var(--sec);max-width:360px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;margin-top:3px}
-.rk-table td.p a{color:var(--text);text-decoration:none} .rk-table td.p .rk-blend{border:1px solid var(--line2);border-radius:10px;padding:12px 16px;margin:0 0 14px}
-.rk-blend-h{display:flex;justify-content:space-between;font-size:13.5px;font-weight:800;color:var(--teal)}
-.rk-blend-h span:nth-child(2){color:var(--text);letter-spacing:0;text-transform:none;font-size:15.5px}
-.rk-blend input[type=range]{width:100%;margin:8px 0 4px;accent-color:var(--teal)}
+.rk-table td.p a{color:var(--text);text-decoration:none}
 /* The table in the front page's dress, matching the sixteen published boards
    (site.css, "the board in the front page's dress"): one hairline card, cells
    on the name line rather than floating mid-row, a 19px name with its position
    beside it, and the delta and confidence as words rather than shouting caps
    in a box. The face had been set display:block by `td.p span` above, which
    split its initials from its tile; it is put back on the name line here. */
-.is-scroll:has(> #rkTable){border:1px solid var(--line);border-radius:10px;background:var(--bg);margin-top:16px}
+.is-scroll:has(> #rkTable){border:1px solid var(--line);border-radius:10px;background:var(--bg);margin-top:var(--space-3)}
 #rkTable{font-size:17px}
 #rkTable th,#rkTable td{padding:16px 10px;vertical-align:top;border-bottom-color:var(--line)}
 #rkTable tr>:first-child{padding-left:20px} #rkTable tr>:last-child{padding-right:20px}
@@ -236,9 +256,28 @@ p{color:var(--sec);margin:0 0 16px}
   .rk-table td.p>.rk-more{order:10;flex:0 0 100%;margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
   .rk-table td.p .rk-more .rk-read{max-width:none}
 }
+
+/* ── 5 · more, and the method ─────────────────────────────────────────────── */
+.rk-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-5)}
+.rk-cards .is-card h3{font-size:var(--fs-19);font-weight:600}
+@media(max-width:1000px){.rk-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.rk-cards{grid-template-columns:1fr;gap:var(--space-3)}}
+#method p{font-size:var(--fs-16);line-height:1.6;max-width:72ch}
+
+/* ── 6 · the KPI band ─────────────────────────────────────────────────────── */
+/* site.css .kpi. Hidden until the board answers, then three figures off the
+   board on screen; last thing before the footer, flush against it. */
+.rk-kpi{margin-top:var(--rk-sec-gap)}
+.rk-kpi .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:860px){.rk-kpi .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){
+  .rk-kpi .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4) var(--space-3)}
+  .rk-kpi b{font-size:var(--fs-34)}
+  .rk-kpi span{font-size:var(--fs-13)}
+}
 </style>
 
-<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/rankings","name":"Weekly Fantasy Rankings for Your League’s Scoring","description":"Rankings are worthless at somebody else’s scoring. Iron Tuna re-ranks every player at your exact settings — PPR, passing TD value, yardage thresholds — and prices the result against the betting market.","url":"https://irontuna.com/rankings","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/rankings"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Weekly Fantasy Rankings for Your League’s Scoring"}]}]}</script>
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/rankings","name":"Fantasy Football Rankings at Your League’s Scoring","description":"Rankings are worthless at somebody else’s scoring. Iron Tuna re-ranks every player at your exact settings — PPR, passing TD value, yardage thresholds — for this week, the next three, the playoffs or the rest of the season, and prices the result against the betting market.","url":"https://irontuna.com/rankings","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/rankings"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Fantasy Football Rankings at Your League’s Scoring"}]}]}</script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -266,38 +305,13 @@ p{color:var(--sec);margin:0 0 16px}
   </nav>
 <!--/chrome:tabbar-->
 </header>
-<!-- The section ribbon. Generated by tools/build-ranks.mjs from one link set —
-     the same band that sits under the hero on the front page. -->
-<!-- the opening band. Same words, same ids, same script; .is-hero is in
-     site.css because the in-season pages all open on it now. It sits between
-     the masthead and the generated section ribbon, which is exactly where the
-     homepage puts its own copy of that ribbon. The NFL clock that used to
-     ride the dateline came off on 2026-10-10 (Ken: remove the NFL clock). -->
-<section class="is-hero">
-  <div class="wrap wide">
-    <p class="is-hero-date">
-      <span class="is-eyebrow">In-Season &middot; Rankings</span>
-    </p>
-    <h1>A ranking is only worth <em>what your scoring says it is</em></h1>
-    <p class="is-lede">Half PPR moves running backs. Six-point passing touchdowns move quarterbacks past every other position. A tight-end premium re-cuts a whole tier. Iron Tuna re-scores and re-ranks the board at your settings rather than publishing one list for everybody.</p>
-    <div class="is-actions">
-      <a class="is-btn primary" href="/my-league#settings">Score it at my league</a>
-    </div>
-    <a class="is-hero-how" href="#method">Where these numbers come from</a>
-  </div>
-</section>
-
 <!--ranks:ribbon-->
 <nav class="rk-ribbon" aria-label="Rankings and intel">
   <div class="rk-ribbon-in">
     <a class="rkr-link rkr-item" href="/stats">Stats</a>
     <span class="rkr-item rkr-has-menu">
-      <a class="rkr-link" href="/weekly-rankings">This Week&rsquo;s Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defense / special teams</a><a href="/weekly-overall-rankings">Overall</a></span>
-    </span>
-    <span class="rkr-item rkr-has-menu">
-      <a class="rkr-link" href="/season-long-rankings">Season Long Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defense / special teams</a><a href="/season-long-overall-rankings">Overall</a></span>
+      <a class="rkr-link" href="/rankings" aria-current="page">Rankings</a>
+      <span class="rkr-menu" role="group" aria-label="Rankings by position"><a href="/rankings#pos=QB">Quarterbacks</a><a href="/rankings#pos=RB">Running backs</a><a href="/rankings#pos=WR">Wide receivers</a><a href="/rankings#pos=TE">Tight ends</a><a href="/rankings#pos=FLEX">Flex (RB/WR/TE)</a><a href="/rankings#pos=K">Kickers</a><a href="/rankings#pos=DST">Defense / special teams</a></span>
     </span>
     <a class="rkr-link rkr-item" href="/hidden-value">Hidden Value</a>
     <a class="rkr-link rkr-item" href="/previews">Previews</a>
@@ -306,143 +320,185 @@ p{color:var(--sec);margin:0 0 16px}
 </nav>
 <!--/ranks:ribbon-->
 <main id="main">
-<div class="wrap wide">
 
-<div class="rk-wed" id="rkWed" hidden>
-  <span class="is-tag is-live">Rest of Season update</span>
-  <h2 id="rkWedTitle">Rest of Season rankings</h2>
-  <p id="rkWedSub" class="is-note"></p>
-  <div class="is-grid" id="rkWedChoices"></div>
-</div>
-
-<div class="rk-sync">
-  <div class="its-strip-sync" id="rkSync" hidden></div>
-</div>
-
-<!-- ── the board controls ──────────────────────────────────────────────
-     Six switches that all govern one table, in one plate with a line each,
-     instead of four unlabelled rows loose in the column. Same ids, same
-     buttons, same handlers; the markup around them is new and nothing else. -->
-<div class="rk-setup">
-  <div class="rk-setup-title"><span>The board</span><b>What is being ranked, and at whose scoring</b></div>
-  <div class="rk-setup-body">
-
-  <div class="rk-row">
-    <span class="rk-lab">Horizon</span>
-    <div class="rk-controls">
-    <div class="rk-chips-h" id="rkHorizon" role="group" aria-label="Horizon">
+<!-- ── 1 · the hero ─────────────────────────────────────────────────────────
+     White and centred, as the homepage opens: the one h1, one sentence, the
+     filter field (the page's one pill; it narrows the board below as you
+     type), two entry points, a hairline, and under it the horizon. -->
+<section class="rk-hero" aria-labelledby="rkTitle">
+  <div class="wrap">
+    <h1 id="rkTitle">Every player, ranked at your league&rsquo;s scoring.</h1>
+    <p class="rk-lede">Half PPR moves running backs, six-point passing touchdowns move quarterbacks, and a tight-end premium re-cuts a whole tier. The board re-scores every projection at your settings and prices it against the betting market, for this week or the rest of the season.</p>
+    <div class="search-field rk-find" role="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+      <input type="search" id="rkSearch" placeholder="Filter the board by player or team" aria-label="Filter the board by player or team" autocomplete="off">
+    </div>
+    <ul class="rk-entry">
+      <li><a href="/my-league#settings">Score it at my league &rarr;</a></li>
+      <li><a href="#method">Where these numbers come from &rarr;</a></li>
+    </ul>
+    <hr class="rk-rule">
+    <!-- ── 2 · the horizon ───────────────────────────────────────────────
+         One rankings page, four ways to sort it. The keys are the worker's
+         (HORIZONS in _worker.js); tools/test-ranks.mjs holds this row to them. -->
+    <div class="rk-tabs rk-horizon" id="rkHorizon" role="group" aria-label="Horizon">
       <button type="button" data-horizon="week">This Week</button>
-      <button type="button" data-horizon="untilPlayoffs">Get Me to the Playoffs</button>
+      <button type="button" data-horizon="next3">Next 3 Weeks</button>
       <button type="button" data-horizon="playoffs">Playoffs</button>
       <button type="button" data-horizon="ros">Rest of Season</button>
     </div>
+  </div>
+</section>
+
+<!-- ── 3 · the position tiles ───────────────────────────────────────────────
+     The homepage's six illustrated tiles plus the pooled flex slot, as the
+     position control. Each carries how many players the board ranks there,
+     filled from the payload on screen and hidden until it answers. -->
+<section class="rk-sec" id="positions" aria-labelledby="posHead">
+  <div class="wrap">
+    <div class="rk-sec-head">
+      <h2 id="posHead">By position</h2>
+      <p class="rk-fine" id="rkScoringNote"></p>
+    </div>
+    <ul class="rk-tiles" id="rkPos" role="group" aria-label="Position">
+      <li><button type="button" class="rk-tile" data-pos="QB" style="--t1:#0f4c5c">
+        <svg viewBox="0 0 150 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#0f4c5c"/><path d="M-10 170 C 30 60, 90 40, 170 20" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/><path d="M-10 190 C 30 90, 90 70, 170 50" fill="none" stroke="#f2c14e" stroke-width="2" opacity=".45"/><ellipse cx="112" cy="58" rx="22" ry="13" transform="rotate(-28 112 58)" fill="#8c4a2b" stroke="#f6e7d2" stroke-width="2"/><path d="M104 52l14 8M106 48l14 8M108 44l14 8" stroke="#f6e7d2" stroke-width="1.5"/></svg>
+        <span class="rk-tile-cap"><span class="rk-tile-name">Quarterbacks</span><span class="rk-tile-live"></span></span>
+      </button></li>
+      <li><button type="button" class="rk-tile" data-pos="RB" style="--t1:#1f5a3c">
+        <svg viewBox="0 0 150 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#1f5a3c"/><g stroke="#e8e3d0" stroke-width="1.5" opacity=".7"><path d="M0 40h150M0 70h150M0 100h150M0 130h150M0 160h150"/></g><path d="M20 190 L55 150 L45 115 L85 80 L75 45 L120 10" fill="none" stroke="#e8e3d0" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="120" cy="10" r="9" fill="#f2c14e"/></svg>
+        <span class="rk-tile-cap"><span class="rk-tile-name">Running backs</span><span class="rk-tile-live"></span></span>
+      </button></li>
+      <li><button type="button" class="rk-tile" data-pos="WR" style="--t1:#2f2a68">
+        <svg viewBox="0 0 150 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#2f2a68"/><g fill="none" stroke="#ffb4a2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M75 195V120"/><path d="M75 120L30 80"/><path d="M75 120L120 80"/><path d="M75 120V60"/><path d="M75 60L45 25"/><path d="M75 60L105 25"/><path d="M75 60V15"/></g><g fill="#ffb4a2"><circle cx="30" cy="80" r="5"/><circle cx="120" cy="80" r="5"/><circle cx="45" cy="25" r="5"/><circle cx="105" cy="25" r="5"/><circle cx="75" cy="15" r="5"/></g></svg>
+        <span class="rk-tile-cap"><span class="rk-tile-name">Wide receivers</span><span class="rk-tile-live"></span></span>
+      </button></li>
+      <li><button type="button" class="rk-tile" data-pos="TE" style="--t1:#7a3e2b">
+        <svg viewBox="0 0 150 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#7a3e2b"/><rect x="22" y="40" width="106" height="26" rx="3" fill="#f5d7c4"/><rect x="62" y="66" width="26" height="110" rx="3" fill="#f5d7c4"/><path d="M22 140h30M98 140h30" stroke="#f5d7c4" stroke-width="4" stroke-linecap="round" opacity=".6"/></svg>
+        <span class="rk-tile-cap"><span class="rk-tile-name">Tight ends</span><span class="rk-tile-live"></span></span>
+      </button></li>
+      <li><button type="button" class="rk-tile" data-pos="K" style="--t1:#324b6e">
+        <svg viewBox="0 0 150 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#324b6e"/><g fill="none" stroke="#dbe4f2" stroke-width="6" stroke-linecap="round"><path d="M40 20v70M110 20v70M40 90h70M75 90v100"/></g><ellipse cx="62" cy="150" rx="12" ry="8" transform="rotate(-60 62 150)" fill="#ffd166"/><path d="M62 150 C 68 120, 72 108, 76 96" fill="none" stroke="#ffd166" stroke-width="2" stroke-dasharray="3 4"/></svg>
+        <span class="rk-tile-cap"><span class="rk-tile-name">Kickers</span><span class="rk-tile-live"></span></span>
+      </button></li>
+      <li><button type="button" class="rk-tile" data-pos="DST" style="--t1:#3b3f46">
+        <svg viewBox="0 0 150 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#3b3f46"/><path d="M75 22 L122 40 V98 C122 134 100 158 75 172 C50 158 28 134 28 98 V40 Z" fill="none" stroke="#9fe0c4" stroke-width="5" stroke-linejoin="round"/><path d="M48 70h54M48 92h54M48 114h40" stroke="#9fe0c4" stroke-width="5" stroke-linecap="round"/></svg>
+        <span class="rk-tile-cap"><span class="rk-tile-name">Defenses</span><span class="rk-tile-live"></span></span>
+      </button></li>
+      <li><button type="button" class="rk-tile" data-pos="FLEX" style="--t1:#4b3f6b">
+        <svg viewBox="0 0 150 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="150" height="200" fill="#4b3f6b"/><rect x="18" y="38" width="62" height="86" rx="7" fill="#7fd1ae" opacity=".55" transform="rotate(-12 49 81)"/><rect x="44" y="30" width="62" height="86" rx="7" fill="#ffb4a2" opacity=".75" transform="rotate(-4 75 73)"/><rect x="70" y="26" width="62" height="86" rx="7" fill="#f5d7c4" transform="rotate(6 101 69)"/><path d="M84 52h34M84 66h26M84 80h30" stroke="#4b3f6b" stroke-width="4" stroke-linecap="round" transform="rotate(6 101 69)"/></svg>
+        <span class="rk-tile-cap"><span class="rk-tile-name">Flex</span><span class="rk-tile-live"></span></span>
+      </button></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ── 4 · the board ────────────────────────────────────────────────────────
+     Whose numbers, at what scoring, then the table. Same ids, same handlers
+     as before; the plate and its title bar are gone, two hairline rows stand
+     where it did. -->
+<section class="rk-sec" id="board" aria-labelledby="boardHead">
+  <div class="wrap">
+    <div class="rk-sec-head">
+      <h2 id="boardHead">The board</h2>
+      <a href="/my-league#settings">Customize my league &rarr;</a>
+    </div>
+
+    <div class="rk-sync">
+      <div class="its-strip-sync" id="rkSync" hidden></div>
+    </div>
+
+    <div class="rk-set">
+      <div class="rk-set-row">
+        <span class="rk-set-l">Whose numbers</span>
+        <div class="rk-tabs" id="rkBoard" role="group" aria-label="Board">
+          <button type="button" data-board="ironTuna">Iron Tuna</button>
+          <button type="button" data-board="consensus">Consensus</button>
+          <button type="button" data-board="vegas">Vegas</button>
+          <button type="button" data-board="blend">Fantasy &harr; Market</button>
+        </div>
+      </div>
+      <div class="rk-set-row">
+        <span class="rk-set-l">Scoring</span>
+        <div class="rk-tabs" id="rkScoring" role="group" aria-label="Scoring settings">
+          <button type="button" data-preset="standard">Standard</button>
+          <button type="button" data-preset="half">Half PPR</button>
+          <button type="button" data-preset="ppr">PPR</button>
+          <button type="button" data-preset="custom" id="rkMine">My League</button>
+          <button type="button" data-preset="league" id="rkLeague" hidden>Your league (synced)</button>
+        </div>
+        <label class="rk-check"><input type="checkbox" id="rkHideOut"> Hide players out this week</label>
+      </div>
+    </div>
+
+    <div class="rk-blend" id="rkBlend" hidden>
+      <div class="rk-blend-h"><span>Fantasy Analysis</span><span id="rkBlendLabel">50 / 50</span><span>Market Intelligence</span></div>
+      <input type="range" id="rkBlendW" min="0" max="100" step="5" value="50" aria-label="Weight between Fantasy Analysis and Market Intelligence">
+      <p class="is-note" id="rkBlendNote">At the left the board is the <a href="/analysts/rankings">Rankings Desk</a>&rsquo;s: the consensus projection at your scoring, with the usage role trend once three games have earned it. At the right it is <a href="/analysts/market">Market Desk</a>&rsquo;s: the sportsbook read, shrunk toward the fantasy number where no prop is priced (a fitted team rating is a projection of the market, not a market). In between is a weighted point total, recomputed here in the browser from those two components, never a reorder.</p>
+    </div>
+
+    <p class="rk-playoff-cta" id="rkPlayoffCta" hidden>Ranking for the playoffs? <a href="#" data-goto="playoffs">See the Playoffs board: Weeks 15&ndash;17 &rarr;</a></p>
+
+    <div class="is-scroll"><table class="is-table rk-table" id="rkTable" hidden>
+      <thead><tr id="rkHead"></tr></thead>
+      <tbody id="rkBody"></tbody>
+    </table></div>
+    <p class="is-empty" id="rkEmpty">Reading the board&hellip;</p>
+    <p class="is-note" id="rkFoot"></p>
+
+    <!-- The two lines under each name, explained where the reader meets them. The
+         sixteen published rankings pages carry the same section in their own words;
+         the lines themselves come from it-reads.js, shared with them. This one has
+         to cover four horizons rather than two, so it says "a one-week board" and
+         "a longer one" instead of naming them. -->
+    <h2 class="rk-h2">How to read the two lines under a name</h2>
+    <p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is where he ranks at his own position, then the one or two things about his season that are least like the rest of his position, each with his own numbers and his rank: his share of targets or touches, how much of his scoring came from touchdowns, his yards a catch or a carry, how often he catches his targets, his snaps, a swing in his workload last week, a projection well off the rate he has scored at, or betting odds that rank him well away from the consensus. Two players rarely get the same sentence, because two players are rarely unusual in the same way. One game is called one game rather than read, and an injury rides on the rank. Before he has played there is nothing to report, and the line says what a rank like his is worth at his position instead. <b>Opportunity</b> is what is in front of him: on a one-week board the fixture, how hard the defense across from him has been on points allowed, and what the market implies his offense will score against its own season mean; on a longer board whatever stands out most about the rest of his schedule (soft games now and hard ones later or the reverse, how weeks 15 to 17 grade, an offense projected near the top or bottom of the league, or a slate among the softest or hardest at his position), closed by the games and byes he has left. On either, any work a teammate&rsquo;s absence leaves open. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score. Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
+  </div>
+</section>
+
+<!-- ── 5 · the rest of the section ──────────────────────────────────────────
+     Where else to go, as outlined cards under the homepage's section head. -->
+<section class="rk-sec" id="more" aria-labelledby="moreHead">
+  <div class="wrap">
+    <div class="rk-sec-head">
+      <h2 id="moreHead">The rest of the section</h2>
+      <a href="/in-season">In-season overview &rarr;</a>
+    </div>
+    <div class="rk-cards">
+      <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week itself: who is on bye, what the slate looks like, and every tool below in one place.</p></div>
+      <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
+      <div class="is-card"><h3><a href="/what-they-arent-telling-you">What They Aren't Telling You</a></h3><p>What the disagreement adds up to across the whole board, counted rather than written.</p></div>
+      <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offense is implied to score.</p></div>
+      <div class="is-card"><h3><a href="/waivers">Waivers</a></h3><p>What a claim is worth and what it will take to win it, priced in your league’s FAAB dollars.</p></div>
+      <div class="is-card"><h3><a href="/dfs">DFS</a></h3><p>The same market read, aimed at a single slate rather than a season-long roster.</p></div>
+      <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
     </div>
   </div>
+</section>
 
-  <div class="rk-row">
-    <span class="rk-lab">Whose</span>
-    <div class="rk-controls">
-    <div class="rk-seg" id="rkBoard" role="group" aria-label="Board">
-      <button type="button" data-board="ironTuna">Iron Tuna</button>
-      <button type="button" data-board="consensus">Consensus</button>
-      <button type="button" data-board="vegas">Vegas</button>
-      <button type="button" data-board="blend">Fantasy &harr; Market</button>
+<!-- ── the method ─────────────────────────────────────────────────────────── -->
+<section class="rk-sec" id="method" aria-labelledby="methodHead">
+  <div class="wrap">
+    <div class="rk-sec-head">
+      <h2 id="methodHead">Where these numbers come from</h2>
+      <a href="/data">Data &amp; sources &rarr;</a>
     </div>
-    </div>
+    <p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
+    <p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
   </div>
-
-<div class="rk-blend" id="rkBlend" hidden>
-  <div class="rk-blend-h"><span>Fantasy Analysis</span><span id="rkBlendLabel">50 / 50</span><span>Market Intelligence</span></div>
-  <input type="range" id="rkBlendW" min="0" max="100" step="5" value="50" aria-label="Weight between Fantasy Analysis and Market Intelligence">
-  <p class="is-note" id="rkBlendNote">At the left the board is the <a href="/analysts/rankings">Rankings Desk</a>&rsquo;s: the consensus projection at your scoring, with the usage role trend once three games have earned it. At the right it is <a href="/analysts/market">Market Desk</a>&rsquo;s: the sportsbook read, shrunk toward the fantasy number where no prop is priced (a fitted team rating is a projection of the market, not a market). In between is a weighted point total, recomputed here in the browser from those two components, never a reorder.</p>
-</div>
-  <div class="rk-row">
-    <span class="rk-lab">Scoring</span>
-    <div class="rk-controls">
-    <div class="rk-seg" id="rkScoring" role="group" aria-label="Scoring settings">
-    <button type="button" data-preset="standard">Standard</button>
-    <button type="button" data-preset="half">Half PPR</button>
-    <button type="button" data-preset="ppr">PPR</button>
-    <button type="button" data-preset="custom" id="rkMine">My League</button>
-    <button type="button" data-preset="league" id="rkLeague" hidden>Your league (synced)</button>
-  </div>
-    </div>
-  </div>
-
-  <div class="rk-row">
-    <span class="rk-lab">Position</span>
-    <div class="rk-controls">
-    <div class="rk-seg rk-pos" id="rkPos" role="group" aria-label="Position">
-    <button type="button" data-pos="QB">QB</button>
-    <button type="button" data-pos="RB">RB</button>
-    <button type="button" data-pos="WR">WR</button>
-    <button type="button" data-pos="TE">TE</button>
-    <button type="button" data-pos="FLEX">FLEX</button>
-    <button type="button" data-pos="K">K</button>
-    <button type="button" data-pos="DST">DST</button>
-  </div>
-    </div>
-  </div>
-
-  <div class="rk-row">
-    <span class="rk-lab">Narrow it</span>
-    <div class="rk-controls">
-      <label class="rk-filter"><input type="search" id="rkSearch" placeholder="Filter by player or team" aria-label="Filter by player or team"></label>
-      <label class="rk-check"><input type="checkbox" id="rkHideOut"> Hide players out this week</label>
-    </div>
-  </div>
-
-  </div><!-- /.rk-setup-body -->
-  <div class="rk-setup-foot">
-    <p class="is-note" id="rkScoringNote"></p>
-    <p class="rk-playoff-cta" id="rkPlayoffCta" hidden>Ranking for the playoffs? <a href="#" data-goto="playoffs">See Fantasy Playoff Rankings: Weeks 15&ndash;17 &rarr;</a></p>
-  </div>
-</div><!-- /.rk-setup -->
-<h2 class="rk-banner" id="rkBanner" hidden>FANTASY PLAYOFFS: WEEKS 15&ndash;17</h2>
-
-<div class="is-scroll"><table class="is-table rk-table" id="rkTable" hidden>
-  <thead><tr id="rkHead"></tr></thead>
-  <tbody id="rkBody"></tbody>
-</table></div>
-<p class="is-empty" id="rkEmpty">Reading the board&hellip;</p>
-<p class="is-note" id="rkFoot"></p>
-
-<!-- The two lines under each name, explained where the reader meets them. The
-     sixteen published rankings pages carry the same section in their own words;
-     the lines themselves come from it-reads.js, shared with them. This one has
-     to cover four horizons rather than two, so it says "a one-week board" and
-     "a longer one" instead of naming them. -->
-<h2>How to read the two lines under a name</h2>
-<p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is where he ranks at his own position, then the one or two things about his season that are least like the rest of his position, each with his own numbers and his rank: his share of targets or touches, how much of his scoring came from touchdowns, his yards a catch or a carry, how often he catches his targets, his snaps, a swing in his workload last week, a projection well off the rate he has scored at, or betting odds that rank him well away from the consensus. Two players rarely get the same sentence, because two players are rarely unusual in the same way. One game is called one game rather than read, and an injury rides on the rank. Before he has played there is nothing to report, and the line says what a rank like his is worth at his position instead. <b>Opportunity</b> is what is in front of him: on a one-week board the fixture, how hard the defense across from him has been on points allowed, and what the market implies his offense will score against its own season mean; on a longer board whatever stands out most about the rest of his schedule (soft games now and hard ones later or the reverse, how weeks 15 to 17 grade, an offense projected near the top or bottom of the league, or a slate among the softest or hardest at his position), closed by the games and byes he has left. On either, any work a teammate&rsquo;s absence leaves open. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score. Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
-
-</div><!-- /.wrap -->
-
-<!-- Everything after the board, on the tinted surface: where else to go, and
-     where the numbers come from. Both were bare h2s while every other page in
-     the section numbers its chapters. -->
-<div class="is-band">
-<div class="wrap wide">
-<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">More</span><h2>The rest of the section</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
-<div class="is-grid">
-  <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week itself: who is on bye, what the slate looks like, and every tool below in one place.</p></div>
-  <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
-  <div class="is-card"><h3><a href="/what-they-arent-telling-you">What They Aren't Telling You</a></h3><p>What the disagreement adds up to across the whole board, counted rather than written.</p></div>
-  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offense is implied to score.</p></div>
-  <div class="is-card"><h3><a href="/waivers">Waivers</a></h3><p>What a claim is worth and what it will take to win it, priced in your league’s FAAB dollars.</p></div>
-  <div class="is-card"><h3><a href="/dfs">DFS</a></h3><p>The same market read, aimed at a single slate rather than a season-long roster.</p></div>
-  <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
-</div>
-
-</div>
-</div><!-- /.is-band -->
-
-<div class="wrap wide">
-<div class="is-sec" id="method"><div class="is-sec-top"><span class="is-sec-n">Method</span><h2>Where these numbers come from</h2><a class="is-sec-more" href="/data">Data &amp; sources &rarr;</a></div></div>
-<p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
-<p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
-</div><!-- /.wrap -->
+</section>
 
 </main>
+
+<!-- ── 6 · the KPI band ─────────────────────────────────────────────────────
+     Navy, white figures, as the homepage closes. Written hidden; shown once
+     the board on screen has answered, with its own figures. -->
+<section class="kpi rk-kpi" id="rkKpi" hidden aria-labelledby="rkKpiHead">
+  <div class="wrap">
+    <h2 id="rkKpiHead" class="sr-only">The board on screen</h2>
+    <div class="kpi-grid" id="rkKpiGrid"></div>
+  </div>
+</section>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
   <nav class="foot-nav" aria-label="Footer">
@@ -478,8 +534,11 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-reads.js" defer></script>
 <script>
 (function () {
-  // Three boards, four horizons, seven position views, four scoring settings,
-  // and every column sortable. The API ships stat lines and points at PPR;
+  // Four boards, four horizons, seven position views, four scoring settings,
+  // and every column sortable. One rankings page: the horizon row sorts it as
+  // this week, the next three weeks, the playoffs or the rest of the season
+  // (11 Oct 2026; it had been five horizons across this page and two more
+  // categories of published pages). The API ships stat lines and points at PPR;
   // scoring at the chosen setting is done here with it-league.js (the same
   // engine, pinned by tools/test-scoring.mjs), then the three boards are
   // re-ranked and Market Delta recomputed with the thresholds the API shipped.
@@ -552,10 +611,9 @@ p{color:var(--sec);margin:0 0 16px}
   }
   var COLS = {
     week: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['opp', 'Opponent'], ['it', 'Iron Tuna proj'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury'], ['trend', 'Trend']],
-    // Next week is one fixture, so it reads like this week; the stretch to the
-    // playoffs is a sum over weeks, so it reads like the season.
-    next: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['opp', 'Opponent'], ['it', 'Iron Tuna proj'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury'], ['trend', 'Trend']],
-    untilPlayoffs: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['it', 'Pts to playoffs'], ['ppg', 'Avg / week'], ['games', 'Games'], ['byes', 'Bye'], ['sched', 'Schedule'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury']],
+    // The next three weeks are a sum over weeks, so the board reads like the
+    // season's: a total, an average, the games and the bye inside the window.
+    next3: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['it', 'Pts, next 3 wks'], ['ppg', 'Avg / week'], ['games', 'Games'], ['byes', 'Bye'], ['sched', 'Schedule'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury']],
     ros: [['rank', 'ROS rank'], ['player', 'Player'], ['team', 'Team'], ['it', 'Remaining pts'], ['ppg', 'Pts / game'], ['games', 'Games'], ['byes', 'Bye'], ['sched', 'Schedule'], ['trend', 'Role trend'], ['conf', 'Risk / confidence'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['inj', 'Injury']],
     playoffs: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['it', 'Wks 15–17 pts'], ['ppg', 'Avg / game'], ['games', 'Games'], ['opps', 'Opponents'], ['sched', 'Schedule'], ['conf', 'Confidence'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['inj', 'Injury']]
   };
@@ -662,6 +720,7 @@ p{color:var(--sec);margin:0 0 16px}
     var payload = (preset === 'league' ? dataL : data)[horizon]; if (!payload) { load(horizon); return; }
     var rows = scored(payload);
     readContext(payload);
+    tiles(rows); kpi(rows, payload);
     var rankField = (board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v') + (pos === 'FLEX' ? 'Flex' : 'Rank');
     rows = rows.filter(function (r) { return pos === 'FLEX' ? /^(RB|WR|TE)$/.test(r.p.position) : r.p.position === pos; });
     if (q) { var qq = q.toLowerCase(); rows = rows.filter(function (r) { return r.p.name.toLowerCase().indexOf(qq) >= 0 || r.p.team.toLowerCase() === qq; }); }
@@ -672,7 +731,9 @@ p{color:var(--sec);margin:0 0 16px}
     $('rkBody').innerHTML = rows.slice(0, 200).map(function (r) { return '<tr>' + cols.map(function (c) { return cell(r, c[0], rankField).replace(/^<td/, '<td data-k="' + c[0] + '" data-l="' + c[1] + '"'); }).join('') + '</tr>'; }).join('');
     $('rkTable').hidden = !rows.length; $('rkEmpty').hidden = !!rows.length;
     if (!rows.length) $('rkEmpty').textContent = 'Nothing matches.';
-    $('rkBanner').hidden = horizon !== 'playoffs';
+    // The out-this-week switch is a one-week question; on a longer board it is
+    // left in place but off, rather than quietly doing nothing.
+    $('rkHideOut').disabled = horizon !== 'week';
     $('rkPlayoffCta').hidden = horizon !== 'ros';
     var L = window.ITLeague;
     var LS = window.ITSync && ITSync.active();
@@ -695,30 +756,51 @@ p{color:var(--sec);margin:0 0 16px}
         // A horizon the clock has run out of says why, instead of "did not answer".
         $('rkTable').hidden = true;
         $('rkEmpty').textContent = j && j.error === 'no_weeks'
-          ? (hz === 'next' ? 'There is no week after this one on the schedule. The Playoffs and Rest of Season boards still answer.' : 'The fantasy playoffs have begun, so there is no stretch left to get through. The Playoffs board is the one to read now.')
+          ? 'There is no week left on the schedule for this horizon. The Playoffs and Rest of Season boards still answer.'
           : 'The board did not answer. Nothing is shown rather than a stale ranking.';
         return;
       }
       store[hz] = j; if (hz === horizon) render();
     }).catch(function () { $('rkEmpty').textContent = 'The board did not answer.'; });
   }
-  function wednesday() {
-    fetch('/api/ros-update').then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) return;
-      var box = $('rkWed'); box.hidden = false;
-      $('rkWedSub').innerHTML = (j.featured && j.featured.builtAt ? 'Updated ' + e(new Date(j.featured.builtAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' })) + ', for Week ' + e(j.featured.week) + '. ' : '') + e(j.snapshotNote || 'Four forward-looking boards, recalculated every Wednesday morning from the weekend’s usage, Monday night, the injury list, and every game line a book has posted.');
-      // Only the horizons the chip row offers get a card: the worker still
-      // lists Next Week, which has no chip here.
-      $('rkWedChoices').innerHTML = j.choices.filter(function (c) { return !!$('rkHorizon').querySelector('[data-horizon="' + c.horizon + '"]'); }).map(function (c) { return '<div class="is-card" data-goto="' + e(c.horizon) + '"><h3>' + e(c.title) + '</h3><p>' + e(c.blurb) + '</p></div>'; }).join('');
-      var movers = '';
-      if (j.risers.length || j.fallers.length) {
-        movers += '<div class="rk-movers"><div><h3>Biggest risers</h3><ol>' + j.risers.slice(0, 8).map(function (m) { return '<li><b>' + e(m.name) + '</b> ' + e(m.position) + ' · ' + e(m.team) + ': ' + e(m.position) + m.previousRank + ' → ' + e(m.position) + m.currentRank + '<small>' + e(m.reasons.join('; ')) + '</small></li>'; }).join('') + '</ol></div>' +
-          '<div><h3>Biggest fallers</h3><ol>' + j.fallers.slice(0, 8).map(function (m) { return '<li><b>' + e(m.name) + '</b> ' + e(m.position) + ' · ' + e(m.team) + ': ' + e(m.position) + m.previousRank + ' → ' + e(m.position) + m.currentRank + '<small>' + e(m.reasons.join('; ')) + '</small></li>'; }).join('') + '</ol></div>';
-        if (j.marketVsRos.length) movers += '<div><h3>Market vs. ROS</h3><ol>' + j.marketVsRos.slice(0, 8).map(function (m) { return '<li><b>' + e(m.name) + '</b>: this week’s market ' + e(m.verdict) + ' his ROS ' + e(m.position) + m.rosRank + ' (' + e(m.weekDelta.classification.toLowerCase()) + ', ' + e(m.weekBasis) + ')</li>'; }).join('') + '</ol></div>';
-        movers += '</div>';
-      }
-      $('rkWedChoices').insertAdjacentHTML('afterend', movers);
-    }).catch(function () {});
+  // THE TILES AND THE KPI BAND, both off the rows just scored, so the count
+  // under a tile and the band's figure cannot disagree about who is ranked.
+  // The count is at the reader's scoring and on the horizon on screen: a
+  // player with no stat line to score is not on the board and is not counted.
+  function tiles(rows) {
+    var by = {};
+    rows.forEach(function (r) { by[r.p.position] = (by[r.p.position] || 0) + 1; });
+    by.FLEX = (by.RB || 0) + (by.WR || 0) + (by.TE || 0);
+    [].forEach.call($('rkPos').querySelectorAll('.rk-tile'), function (t) {
+      var n = by[t.getAttribute('data-pos')] || 0, live = t.querySelector('.rk-tile-live');
+      if (live) live.textContent = n ? n + ' ranked' : '';
+    });
+  }
+  function kpi(rows, payload) {
+    var hz = payload.horizon && payload.horizon.label ? String(payload.horizon.label).toLowerCase() : '';
+    var src = payload.sources || {};
+    // A count of priced props is a figure only while a book has posted some;
+    // a zero in mint reads as "nobody is priced" rather than "no feed".
+    var cells = [
+      [rows.length, 'Players ranked' + (hz ? ', ' + hz : ''), ''],
+      [src.props > 0 ? src.props : null, 'Priced off a player prop this week', 'good'],
+      [src.usage ? 'Wk ' + src.usage : null, 'Usage read through', '']
+    ].filter(function (c) { return c[0] != null; });
+    $('rkKpiGrid').innerHTML = cells.map(function (c) { return '<div><b' + (c[2] ? ' class="' + c[2] + '"' : '') + '>' + e(c[0]) + '</b><span>' + e(c[1]) + '</span></div>'; }).join('');
+    $('rkKpi').hidden = !cells.length;
+  }
+  // The view in the URL: #horizon=ros&pos=RB. The ribbon's menu links every
+  // position here this way, and a reader on this page already follows it
+  // through hashchange rather than a reload. The two keys the row no longer
+  // offers (next, untilPlayoffs; until 11 Oct 2026) land on the nearest board.
+  function fromHash() {
+    var h = location.hash, changed = false;
+    var hp = (h.match(/horizon=(\w+)/) || [])[1];
+    if (hp === 'next') hp = 'next3'; else if (hp === 'untilPlayoffs') hp = 'ros';
+    if (hp && /^(week|next3|playoffs|ros)$/.test(hp) && hp !== horizon) { horizon = hp; changed = true; }
+    var pp = (h.match(/pos=(\w+)/) || [])[1]; if (pp) pp = pp.toUpperCase(); if (pp === 'DEF') pp = 'DST';
+    if (pp && /^(QB|RB|WR|TE|FLEX|K|DST)$/.test(pp) && pp !== pos) { pos = pp; changed = true; }
+    return changed;
   }
   function boot() {
     var L = window.ITLeague, mine = $('rkMine');
@@ -734,13 +816,13 @@ p{color:var(--sec);margin:0 0 16px}
       $('rkLeague').hidden = false;
       preset = 'league'; setPressed($('rkScoring'), 'data-preset', preset); load(horizon);
     });
-    // `next3` was the row's second button until 10 Oct 2026; a link that
-    // still carries it lands on the nearest board the row offers now.
-    // Next Week has no chip since 11 Oct 2026; an old deep link to it, or to
-    // the newsroom's next3, opens on this week rather than on a board no chip
-    // is pressed for.
-    var hp = (location.hash.match(/horizon=(\w+)/) || [])[1]; if (hp === 'next' || hp === 'next3') hp = 'week';
-    if (hp && /^(week|untilPlayoffs|playoffs|ros)$/.test(hp)) horizon = hp;
+    fromHash();
+    window.addEventListener('hashchange', function () {
+      if (!fromHash()) return;
+      setPressed($('rkHorizon'), 'data-horizon', horizon); setPressed($('rkPos'), 'data-pos', pos);
+      sortKey = 'rank'; sortDir = 1; load(horizon);
+      $('positions').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     setPressed($('rkScoring'), 'data-preset', preset); setPressed($('rkHorizon'), 'data-horizon', horizon);
     setPressed($('rkBoard'), 'data-board', board); setPressed($('rkPos'), 'data-pos', pos);
     $('rkScoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; preset = b.getAttribute('data-preset'); setPressed(this, 'data-preset', preset); render(); });
@@ -756,7 +838,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('rkBody').addEventListener('toggle', function (ev) { var d = ev.target; if (d && d.hasAttribute && d.hasAttribute('data-read')) readOpen[d.getAttribute('data-read')] = d.open; }, true);
     $('rkHead').addEventListener('click', function (ev) { var th = ev.target.closest('th'); if (!th) return; var k = th.getAttribute('data-key'); if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } render(); });
     document.addEventListener('click', function (ev) { var g = ev.target.closest('[data-goto]'); if (!g) return; ev.preventDefault(); horizon = g.getAttribute('data-goto'); setPressed($('rkHorizon'), 'data-horizon', horizon); load(horizon); $('rkHorizon').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
-    load(horizon); wednesday();
+    load(horizon);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

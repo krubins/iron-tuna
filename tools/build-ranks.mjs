@@ -1,56 +1,46 @@
 #!/usr/bin/env node
-// The RANKINGS SECTION: the ribbon that sits under the hero, and the per-position
-// pages the two rankings menus drop down to.
+// The RANKINGS SECTION's ribbon: the band under the header on every in-season
+// page that carries it.
 //
 //   node tools/build-ranks.mjs           writes the files
 //   node tools/build-ranks.mjs --check   writes nothing, exits 1 if anything is stale
 //
 // EVERY EDIT IS IDEMPOTENT — running it twice changes nothing. Run it after
 // changing the ribbon or the position list, alongside `node tools/build-chrome.mjs`
-// and `node tools/build-seo.mjs` (in that order: this tool scaffolds a page, the
-// chrome tool gives it a header and a footer, the SEO tool tags it).
+// and `node tools/build-seo.mjs`.
 //
-// WHY A GENERATOR. The ribbon is one link set that has to be identical on
-// nineteen pages, and the two menus under it drop down to sixteen pages that
-// differ only by a position and a horizon. Hand-writing either is how the site's
-// nav drifted into ten variants before build-chrome.mjs existed; the same
-// sentinel discipline is used here, so this tool finds and replaces only its own
-// output and never touches a page's body.
+// 11 Oct 2026 (Ken): THERE IS ONE RANKINGS PAGE. The ribbon carries one
+// "Rankings" item, /rankings, whose menu drops every position onto that page
+// (#pos=RB), where the horizon row sorts the one board as this week, the next
+// three weeks, the playoffs or the rest of the season. Until then this tool
+// also scaffolded sixteen per-position pages and two hubs (/weekly-<pos>-rankings,
+// /season-long-<pos>-rankings) and the ribbon listed them as two destinations;
+// those pages are gone from the repo and _worker.js 301s their addresses onto
+// /rankings with the horizon and the position in the hash.
+//
+// WHY A GENERATOR. The ribbon is one link set that has to be identical on every
+// page that carries it. Hand-writing it is how the site's nav drifted into ten
+// variants before build-chrome.mjs existed; the same sentinel discipline is
+// used here, so this tool finds and replaces only its own output and never
+// touches a page's body.
 //
 // WHAT IT OWNS
 //   <!--ranks:ribbon--> … <!--/ranks:ribbon-->   the section ribbon, on every
 //                                                page that carries the sentinel
 //   /* ranks:css */ … /* /ranks:css */           the ribbon's stylesheet, in
-//                                                site.css. front.html carried a
-//                                                second copy inline while the
-//                                                ribbon sat on the front page;
-//                                                the front page shows the
-//                                                choose-your-game band there
-//                                                now, so site.css is the only
-//                                                carrier
-//   the sixteen position pages and two hubs      SCAFFOLDED ONCE, then left
-//                                                alone apart from their ribbon,
-//                                                chip row and board mount:
-//                                                build-chrome and build-seo edit
-//                                                them afterwards, so regenerating
-//                                                a whole file on every run would
-//                                                undo those two on every run.
+//                                                site.css
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { WORDMARK_LETTERS } from './wordmark.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = process.argv.includes('--check');
 
 // ── the position list ────────────────────────────────────────────────────────
-// `key` is what /api/boards is asked for; `slug` is the URL; `label` is the
-// ribbon menu's word and `long` the page's own. FLEX is a pooled RB/WR/TE rank
-// rather than a position, which is why its page says so in as many words.
-//
-// This list is duplicated as literal strings in _worker.js's POST_DRAFT_PAGES —
-// deliberately, and there is a comment there saying why (two test suites parse
-// that set out of the source text). Adding a position is an edit in both places.
+// `key` is what /rankings reads out of #pos= (and asks /api/boards for);
+// `label` is the ribbon menu's word. FLEX is a pooled RB/WR/TE rank rather
+// than a position. `slug`, `short` and `long` named the per-position pages
+// this tool no longer writes and are kept for the record.
 const POSITIONS = [
   { key: 'QB', slug: 'qb', label: 'Quarterbacks', short: 'QB', long: 'Quarterback' },
   { key: 'RB', slug: 'rb', label: 'Running backs', short: 'RB', long: 'Running back' },
@@ -61,67 +51,30 @@ const POSITIONS = [
   { key: 'DST', slug: 'dst', label: 'Defense / special teams', short: 'DST', long: 'Defense / special teams' },
 ];
 
-// The pooled board: every position on one list, each player tagged with his
-// own. It is a page of its own rather than the category's hub because of what
-// the hub is for. 10 Oct 2026: the hub opened on the pooled board, and a reader
-// landing on "This week's rankings" met QB1, RB1, WR1, TE1 and D1 interleaved
-// before any one position he could read top to bottom. The hub now opens on
-// quarterbacks — the first chip, the first menu item, the position the rest of
-// the site leads with — and the pooled board sits at the end of the chip row
-// under its own name. Not in POSITIONS: it is not a position, the front page
-// does not tile it, and /api/boards is asked for it as ALL.
-const OVERALL = { key: 'ALL', slug: 'overall', label: 'Overall', short: 'Overall', long: 'Every position' };
-// What the hub shows. The hub's own file keeps the category's name and URL;
-// only its board is this position's.
-const HUB_POS = POSITIONS[0];
-
-// The two rankings categories. `horizon` is the /api/boards horizon; `weeks` says
-// whether a row can be expanded into the weeks ahead — only the season-long
-// board can, because "this week" is one week and there is nothing to open.
-const CATEGORIES = [
-  {
-    id: 'week', horizon: 'week', slug: 'weekly', menu: 'This Week&rsquo;s Rankings',
-    hub: '/weekly-rankings', hubFile: 'weekly-rankings.html', weeks: false,
-    noun: 'this week', title: 'Week', h1: 'This week',
-  },
-  {
-    id: 'season', horizon: 'ros', slug: 'season-long', menu: 'Season Long Rankings',
-    hub: '/season-long-rankings', hubFile: 'season-long-rankings.html', weeks: true,
-    noun: 'the rest of the season', title: 'Rest of season', h1: 'Rest of season',
-  },
-];
-
-// The Opportunity half of the "two lines under a name" explainer. It is the one
-// sentence on these pages that differs by category, because an opportunity is a
-// fixture on a week board and a slate on a season one. The lines themselves are
-// built in it-ranks.js; this is only the page's description of them, and the two
-// have to be changed together.
-const WEEK_OPP = 'the fixture, how hard the defense across from him has been on points allowed, what the market implies his offense will score against its own season mean, and any work a teammate&rsquo;s absence leaves open. A defense is graded on the other side of the fixture, on what the offense it faces is implied to score.';
-const SEASON_OPP = 'what is unusual about the rest of his schedule, led by whatever stands out most: a teammate out whose work is open, soft games now and hard ones later or the reverse, how weeks 15 to 17 grade for the fantasy playoffs, an offense projected near the top or bottom of the league, or a slate among the softest or hardest at his position. The games and byes he has left close the line. A defense is graded on the other side of the fixture, on what the offenses ahead of it are implied to score.';
-
-const pageFile = (cat, pos) => cat.slug + '-' + pos.slug + '-rankings.html';
-const pageHref = (cat, pos) => '/' + cat.slug + '-' + pos.slug + '-rankings';
-
 // ── the ribbon ───────────────────────────────────────────────────────────────
-// Six destinations. Two of them carry every position under them, which is the
-// whole reason this band exists: a reader who wants receivers this week should
-// not have to load a rankings page and then work a segmented control.
+// Five destinations. One of them, Rankings, carries every position under it,
+// which is the whole reason this band exists: a reader who wants receivers
+// should not have to load the rankings page and then find the control.
 //
-// The menus open on HOVER and on FOCUS, in CSS, with no script — the same
+// The menu opens on HOVER and on FOCUS, in CSS, with no script — the same
 // mechanism the header's own dropdowns use (site.css, .nav-dd). On a phone a
-// hover menu is unreachable, so the trigger is a real link to the category's hub
-// page and the hub lists every position as a chip; the same chip row is on every
-// position page, so the menu is a shortcut rather than the only way through.
+// hover menu is unreachable, so the trigger is a real link to /rankings, whose
+// position tiles are the first thing under its hero; the menu is a shortcut
+// rather than the only way through.
 const RIBBON_OPEN = '<!--ranks:ribbon-->', RIBBON_CLOSE = '<!--/ranks:ribbon-->';
 
-function menuHtml(cat) {
-  // The trigger above this menu is the hub, which opens on the first position
-  // here, so the menu lists the positions and then the pooled board.
-  const kids = POSITIONS.concat(OVERALL).map((p) => `<a href="${pageHref(cat, p)}">${p.label}</a>`).join('');
+// The one rankings destination. Every position lands on the one page with the
+// position in the hash; the page reads it on load and on hashchange. DST is the
+// page's own key for the defense tile, as it is /api/boards'.
+const RANKINGS = { href: '/rankings', menu: 'Rankings' };
+const toolHref = (p) => `${RANKINGS.href}#pos=${p.key}`;
+
+function menuHtml(current) {
+  const kids = POSITIONS.map((p) => `<a href="${toolHref(p)}">${p.label}</a>`).join('');
   return [
     '    <span class="rkr-item rkr-has-menu">',
-    `      <a class="rkr-link" href="${cat.hub}">${cat.menu}</a>`,
-    `      <span class="rkr-menu" role="group" aria-label="${cat.menu.replace(/&rsquo;/g, "’")} by position">${kids}</span>`,
+    `      <a class="rkr-link" href="${RANKINGS.href}"${current === RANKINGS.href ? ' aria-current="page"' : ''}>${RANKINGS.menu}</a>`,
+    `      <span class="rkr-menu" role="group" aria-label="${RANKINGS.menu} by position">${kids}</span>`,
     '    </span>',
   ].join('\n');
 }
@@ -134,8 +87,7 @@ function ribbonHtml(current) {
     '<nav class="rk-ribbon" aria-label="Rankings and intel">',
     '  <div class="rk-ribbon-in">',
     link('/stats', 'Stats'),
-    menuHtml(CATEGORIES[0]),
-    menuHtml(CATEGORIES[1]),
+    menuHtml(current),
     link('/hidden-value', 'Hidden Value'),
     link('/previews', 'Previews'),
     link('/the-line', 'The Line'),
@@ -160,7 +112,7 @@ const RIBBON_CSS = `${CSS_OPEN}
 /* ── the section ribbon (generated by tools/build-ranks.mjs) ─────────────────
    Under the header on every page that carries the sentinel. The front page is
    not one of them: it shows the choose-your-game band in this slot. Five
-   destinations; the two rankings menus drop every position down on hover and on
+   destinations; the Rankings menu drops every position down on hover and on
    keyboard focus. Do not hand-edit — run the tool. */
 .rk-ribbon {
   --rkr-ink: var(--ink, var(--text, #111418));
@@ -219,8 +171,8 @@ const RIBBON_CSS = `${CSS_OPEN}
 }
 .rk-ribbon .rkr-menu a[aria-current="page"] { color: var(--rkr-brand); font-weight: 600 }
 /* A hover menu is unreachable on touch, so below the desktop breakpoint the
-   trigger is simply a link to the category's hub — which lists every position as
-   a chip, as does every position page. Nothing is lost; the menu was a shortcut. */
+   trigger is simply a link to /rankings, whose position tiles sit under its
+   hero. Nothing is lost; the menu was a shortcut. */
 @media (max-width: 860px) {
   .rk-ribbon .rkr-menu { display: none }
   /* And with the menu gone, so is the caret: an arrow that opens nothing is a
@@ -234,149 +186,8 @@ const RIBBON_CSS = `${CSS_OPEN}
 }
 ${CSS_CLOSE}`;
 
-// ── the generated pages ──────────────────────────────────────────────────────
-const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-// The chip row: every position in this category, on every page in it. This is
-// the touch path to a position page and the desktop path between two of them.
-// The hub (currentSlug null) shows HUB_POS's board, so that chip is the one
-// marked on it; the pooled board closes the row.
-function chipsHtml(cat, currentSlug) {
-  const one = (href, label, on) =>
-    `<a class="rkc-chip${on ? ' on' : ''}" href="${href}"${on ? ' aria-current="page"' : ''}>${label}</a>`;
-  const onSlug = currentSlug === null ? HUB_POS.slug : currentSlug;
-  return ['<nav class="rk-chips" aria-label="Position">',
-    ...POSITIONS.concat(OVERALL).map((p) => '  ' + one(pageHref(cat, p), p.short, onSlug === p.slug)),
-    '</nav>'].join('\n');
-}
-
-// The board's mount. The worker's ranksPrerender and tools/test-seo.mjs both
-// find it by this exact opening, so the shape is fixed here and nowhere else.
-function mountHtml(cat, pos) {
-  return ['<div class="rk-board"',
-    '     data-rk-board',
-    `     data-rk-horizon="${cat.horizon}"`,
-    `     data-rk-pos="${pos ? pos.key : HUB_POS.key}"`,
-    `     data-rk-weeks="${cat.weeks ? '1' : '0'}"`,
-    `     data-rk-label="${esc(cat.h1)}"></div>`].join('\n');
-}
-
-function titleFor(cat, pos) {
-  if (!pos) return cat.id === 'week' ? 'This Week’s Fantasy Football Rankings' : 'Rest of Season Fantasy Football Rankings';
-  if (pos === OVERALL) return cat.id === 'week' ? 'This Week’s Overall Fantasy Football Rankings' : 'Rest of Season Overall Fantasy Football Rankings';
-  return (cat.id === 'week' ? 'This Week’s ' : 'Rest of Season ') + pos.short + ' Rankings';
-}
-
-// The hub's dek names the board it opens on and says where the rest are: a
-// page called "this week's rankings" that shows one position owes the reader
-// that sentence.
-function dekFor(cat, pos) {
-  const who = pos
-    ? (pos === OVERALL ? 'every position on one pooled board'
-      : pos.key === 'FLEX' ? 'every running back, receiver and tight end on one pooled board'
-      : 'every ' + pos.long.toLowerCase())
-    : 'every ' + HUB_POS.long.toLowerCase();
-  const rest = pos ? '' : ' Every other position is a chip away, and Overall pools them all.';
-  return cat.id === 'week'
-    ? `What the fantasy consensus projects for ${who} this week, beside what the betting market implies, and the gap between the two.${rest}`
-    : `What the fantasy consensus projects for ${who} across the rest of the season, beside what the betting market implies — with every remaining week openable on any row.${rest}`;
-}
-
-function pageHtml(cat, pos) {
-  const href = pos ? pageHref(cat, pos) : cat.hub;
-  const title = titleFor(cat, pos);
-  const dek = dekFor(cat, pos);
-  const h1 = pos
-    ? (cat.id === 'week' ? 'This week’s ' : 'Rest-of-season ') + (pos === OVERALL ? 'overall' : pos.short) + ' rankings'
-    : (cat.id === 'week' ? 'This week’s rankings' : 'Rest-of-season rankings');
-  return `<!doctype html>
-<html lang="en">
-<head>
-<!-- Google tag (gtag.js). tools/build-seo.mjs ADDS the GA4 destination to an
-     existing tag but never writes the tag itself, so a scaffolded page has to
-     ship with both configs or it is silently untagged forever. -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'AW-18397866361');
-  gtag('config', 'G-KLBZBZSJ25');
-</script>
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)} | Iron Tuna</title>
-<meta name="description" content="${esc(dek)}">
-<link rel="canonical" href="https://irontuna.com${href}">
-<meta property="og:type" content="website">
-<meta property="og:title" content="${esc(title)} | Iron Tuna">
-<meta property="og:description" content="${esc(dek)}">
-<meta property="og:url" content="https://irontuna.com${href}">
-<meta property="og:image" content="https://irontuna.com/og.png">
-<meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="/favicon.ico" sizes="32x32">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/site.css">
-<style>
-/* Every rule this page needs is in site.css (.rk-* and .is-*). The block is kept
-   because tools/build-chrome.mjs anchors the shared stylesheet link and its
-   strip-owned pass on it. */
-</style>
-</head>
-<body>
-<header class="site"><div class="wrap">
-    <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs>${WORDMARK_LETTERS}</svg></a>
-    <nav class="nav" id="sitenav" aria-label="Main"></nav>
-</div></header>
-${ribbonHtml(href)}
-<!-- .wide, like /fantasy and /dfs: a two-group board is eleven columns and
-     820px turns every one of them into a sideways scroll. -->
-<main id="main" class="wrap wide">
-<p class="is-eyebrow">In-Season &middot; Rankings &middot; ${esc(cat.h1)}</p>
-<h1>${esc(h1)}</h1>
-<p class="is-lede">${dek}</p>
-
-${chipsHtml(cat, pos ? pos.slug : null)}
-
-${mountHtml(cat, pos)}
-
-<h2>How to read the two lines under a name</h2>
-<p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is where he ranks at his own position, then the one or two things about his season that are least like the rest of his position, each with his own numbers and his rank: his share of targets or touches, how much of his scoring came from touchdowns, his yards a catch or a carry, how often he catches his targets, his snaps, a swing in his workload last week, a projection well off the rate he has scored at, or betting odds that rank him well away from the consensus. Two players rarely get the same sentence, because two players are rarely unusual in the same way. One game is called one game rather than read, and an injury rides on the rank. Before he has played there is nothing to report, and the line says what a rank like his is worth at his position instead. <b>Opportunity</b> is what is in front of him: ${cat.id === 'season' ? SEASON_OPP : WEEK_OPP} Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
-
-<h2>How to read the two columns</h2>
-<p class="is-note"><b>Fantasy Consensus</b> is the projection consensus, scored at the setting you choose and nudged by a player&rsquo;s live usage once three games have earned it. <b>Betting Odds</b> is the same player priced off the sportsbook: his own posted props where a book has quoted them, otherwise the posted game line&rsquo;s scoring environment applied to his line, otherwise a fitted team rating for a fixture nobody has posted yet. The <b>Gap</b> column is the second minus the first, in points and in rank slots, and the verdict beside it is the site&rsquo;s standing classification of that gap. Neither column is a tip. They are two honest readings of the same player, and the argument between them is the useful part.</p>
-
-<h2>The rest of the section</h2>
-<div class="is-grid">
-  <div class="is-card"><h3><a href="/rankings">The full rankings tool</a></h3><p>Every horizon, every board and your own league&rsquo;s scoring in one place.</p></div>
-  <div class="is-card"><h3><a href="/hidden-value">Hidden Value</a></h3><p>Where the two columns on this page disagree by enough to act on.</p></div>
-  <div class="is-card"><h3><a href="/stats">Stats</a></h3><p>What has actually been played, rather than what is projected.</p></div>
-  <div class="is-card"><h3><a href="/previews">Previews</a></h3><p>Every game this week with its line, its total and the points each offense is implied to score.</p></div>
-</div>
-</main>
-<footer class="site"><div class="wrap"></div></footer>
-<!-- it-season.js is the shared week read; it-ranks.js is the board.
-     The scoring engine is NOT loaded here: unlike /rankings, this page asks the
-     worker for the board already scored at the chosen preset, because the
-     week-by-week drawer prints per-week points the browser has no stat line to
-     recompute. One fetch per preset, edge-cached, instead of two engines to keep
-     in step. it-reads.js is the two lines under each name, shared with
-     /rankings so the tiers and the grades cannot drift between them; it is
-     loaded first because it-ranks.js calls it on the first render. -->
-<script src="/it-season.js" defer></script>
-<script src="/it-reads.js" defer></script>
-<script src="/it-ranks.js" defer></script>
-</body>
-</html>
-`;
-}
-
 // ── the edits ────────────────────────────────────────────────────────────────
 const changed = [];
-const created = [];
 
 function putRibbon(html, current) {
   const block = ribbonHtml(current);
@@ -385,18 +196,6 @@ function putRibbon(html, current) {
     new RegExp(RIBBON_OPEN + '[\\s\\S]*?' + RIBBON_CLOSE.replace(/\//g, '\\/')),
     () => block,
   );
-}
-
-// The chip row and the board's mount on a page that already exists. Both are
-// one tag with no sentinel, found by their own opening the way the worker finds
-// the mount, and replaced whole: moving the pooled board to its own page meant
-// a new chip on eighteen pages and a new position on two, which is exactly the
-// hand edit this tool exists to prevent.
-function putChips(html, cat, pos) {
-  return html.replace(/<nav class="rk-chips"[\s\S]*?<\/nav>/, () => chipsHtml(cat, pos ? pos.slug : null));
-}
-function putMount(html, cat, pos) {
-  return html.replace(/<div class="rk-board"[\s\S]*?><\/div>/, () => mountHtml(cat, pos));
 }
 
 function putCss(text) {
@@ -411,39 +210,15 @@ function write(file, next, before) {
   if (!CHECK) fs.writeFileSync(path.join(ROOT, file), next);
 }
 
-// 1. the pages. Scaffolded once; after that only their ribbon, their chip row
-//    and their board's mount are maintained, because build-chrome.mjs and
-//    build-seo.mjs own regions of the same files.
-const wanted = [];
-for (const cat of CATEGORIES) {
-  wanted.push({ file: cat.hubFile, cat, pos: null });
-  for (const pos of POSITIONS.concat(OVERALL)) wanted.push({ file: pageFile(cat, pos), cat, pos });
-}
-
-for (const w of wanted) {
-  const full = path.join(ROOT, w.file);
-  if (!fs.existsSync(full)) {
-    created.push(w.file);
-    if (!CHECK) fs.writeFileSync(full, pageHtml(w.cat, w.pos));
-    continue;
-  }
-  const before = fs.readFileSync(full, 'utf8');
-  const next = putMount(putChips(putRibbon(before, w.pos ? pageHref(w.cat, w.pos) : w.cat.hub), w.cat, w.pos), w.cat, w.pos);
-  write(w.file, next, before);
-}
-
-// 2. the ribbon on every other page that asks for it, and the CSS in the two
-//    files that carry it.
-const others = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html')).sort()
-  .filter((f) => !wanted.some((w) => w.file === f));
-for (const f of others) {
+// 1. the ribbon on every page that asks for it. A page in the ribbon's own
+//    link set marks itself; everything else marks nothing.
+for (const f of fs.readdirSync(ROOT).filter((f) => f.endsWith('.html')).sort()) {
   const before = fs.readFileSync(path.join(ROOT, f), 'utf8');
   if (!before.includes(RIBBON_OPEN)) continue;
-  // A page in the ribbon's own link set marks itself; everything else marks
-  // nothing.
   write(f, putRibbon(before, '/' + f.replace(/\.html$/, '')), before);
 }
 
+// 2. the CSS, in the one file that carries it.
 for (const f of ['site.css']) {
   const before = fs.readFileSync(path.join(ROOT, f), 'utf8');
   if (!before.includes(CSS_OPEN)) {
@@ -455,15 +230,12 @@ for (const f of ['site.css']) {
 
 // ── report ───────────────────────────────────────────────────────────────────
 if (CHECK) {
-  if (created.length || changed.length) {
-    console.error('build-ranks --check: the rankings section is stale. Run: node tools/build-ranks.mjs');
-    created.forEach((f) => console.error('  missing  ' + f));
+  if (changed.length) {
+    console.error('build-ranks --check: the rankings ribbon is stale. Run: node tools/build-ranks.mjs');
     changed.forEach((f) => console.error('  stale    ' + f));
     process.exit(1);
   }
-  console.log(`build-ranks --check: up to date (${wanted.length} pages, ${POSITIONS.length} positions)`);
+  console.log(`build-ranks --check: up to date (${POSITIONS.length} positions)`);
 } else {
-  console.log(created.length ? `build-ranks: created ${created.length} page(s):\n  ${created.join('\n  ')}` : 'build-ranks: no page created');
   console.log(changed.length ? `build-ranks: updated ${changed.length} file(s)` : 'build-ranks: no change');
-  if (created.length) console.log('Now run: node tools/build-chrome.mjs && node tools/build-seo.mjs');
 }

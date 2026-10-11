@@ -433,21 +433,10 @@ console.log('\nthe boards link the card');
   // Every surface that renders a player row or chip. Named rather than
   // globbed: a new board that links players is meant to fail this list once,
   // and be added to it deliberately.
-  //
-  // _worker.js is read through rkPreHtml alone. The file renders board rows
-  // there AND renders the card's own in-season button, which is SUPPOSED to
-  // point at /in-season/player/<slug> — reading the whole file would fail the
-  // rule on the one link the rule does not cover.
   const BOARDS = ['rankings.html', 'vegas-edge.html', 'stats.html', 'hidden-value.html',
-                  'weekly-intel.html', 'it-ranks.js', '_worker.js'];
-  const rowsOf = (f) => {
-    const src = read(f);
-    if (f !== '_worker.js') return src;
-    const i = src.indexOf('function rkPreHtml(pre) {');
-    return i < 0 ? '' : src.slice(i, src.indexOf('\n}', i));
-  };
+                  'weekly-intel.html'];
   for (const f of BOARDS) {
-    const src = rowsOf(f);
+    const src = read(f);
     ok(`${f} links /player/<slug>`, /href="\/player\/' \+ /.test(src));
     // The old address, and the dead query that rode along with it: nothing on
     // the card has ever read ?pos=.
@@ -469,8 +458,10 @@ console.log('\nthe card leads back to the week');
   const cta = worker.slice(worker.indexOf('function playerCta(p) {'));
   ok('its first button is this week’s intel for this player',
      cta.indexOf("/in-season/player/") > 0
-     && cta.indexOf("/in-season/player/") < cta.indexOf("/weekly-"));
-  ok('its second is that player’s own board', /\/weekly-' \+ board \+ '-rankings/.test(cta));
+     && cta.indexOf("/in-season/player/") < cta.indexOf("/rankings#pos="));
+  // The one rankings page, opened on his position (11 Oct 2026; the
+  // per-position pages it used to open are gone and 301 there).
+  ok('its second is the rankings page on his position', /\/rankings#pos=' \+ board \+ '"/.test(cta));
   // Only while the season is open. /in-season/player/<slug> is gated on the
   // same flag, so writing the link when it is off would point at the
   // waiting-list gate.
@@ -493,9 +484,10 @@ console.log('\nthe card leads back to the week');
   for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) {
     ok(`a ${pos} card knows its board`, new RegExp(pos + ": '").test(map));
   }
-  // ...and each of those boards is a page that exists.
-  for (const b of ['qb', 'rb', 'wr', 'te', 'k', 'dst']) {
-    ok(`/weekly-${b}-rankings is a real page`, fs.existsSync(path.join(ROOT, `weekly-${b}-rankings.html`)));
+  // ...and each of those is a position the page's own tiles offer.
+  const tiles = [...read('rankings.html').matchAll(/class="rk-tile" data-pos="([A-Z]+)"/g)].map((m) => m[1]);
+  for (const b of ['QB', 'RB', 'WR', 'TE', 'K', 'DST']) {
+    ok(`/rankings#pos=${b} is a tile on the page`, tiles.includes(b));
   }
 }
 
