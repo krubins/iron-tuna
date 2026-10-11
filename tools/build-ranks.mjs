@@ -1,6 +1,16 @@
 #!/usr/bin/env node
 // The RANKINGS SECTION: the ribbon that sits under the hero, and the per-position
-// pages the two rankings menus drop down to.
+// pages that stand behind it.
+//
+// 11 Oct 2026 (Ken): THERE IS ONE RANKINGS PAGE. The ribbon no longer lists
+// "This Week's Rankings" and "Season Long Rankings" as two destinations with a
+// menu each; it carries one "Rankings" item, /rankings, whose menu drops every
+// position onto that page (#pos=RB), where the horizon row sorts the one board
+// as this week, the next three weeks, the playoffs or the rest of the season.
+// The sixteen per-position pages and their two hubs still exist and still
+// serve (they are indexed, gated, pre-rendered and linked from player cards),
+// so this tool still maintains their ribbon, chip row and mount; they are no
+// longer the ribbon's destinations.
 //
 //   node tools/build-ranks.mjs           writes the files
 //   node tools/build-ranks.mjs --check   writes nothing, exits 1 if anything is stale
@@ -11,8 +21,8 @@
 // chrome tool gives it a header and a footer, the SEO tool tags it).
 //
 // WHY A GENERATOR. The ribbon is one link set that has to be identical on
-// nineteen pages, and the two menus under it drop down to sixteen pages that
-// differ only by a position and a horizon. Hand-writing either is how the site's
+// twenty-three pages, and the sixteen position pages behind it differ only by a
+// position and a horizon. Hand-writing either is how the site's
 // nav drifted into ten variants before build-chrome.mjs existed; the same
 // sentinel discipline is used here, so this tool finds and replaces only its own
 // output and never touches a page's body.
@@ -75,9 +85,11 @@ const OVERALL = { key: 'ALL', slug: 'overall', label: 'Overall', short: 'Overall
 // only its board is this position's.
 const HUB_POS = POSITIONS[0];
 
-// The two rankings categories. `horizon` is the /api/boards horizon; `weeks` says
-// whether a row can be expanded into the weeks ahead — only the season-long
-// board can, because "this week" is one week and there is nothing to open.
+// The two categories of published position pages. `horizon` is the /api/boards
+// horizon; `weeks` says whether a row can be expanded into the weeks ahead —
+// only the season-long board can, because "this week" is one week and there is
+// nothing to open. `menu` and `hub` are the pages' own names and addresses; the
+// ribbon stopped listing them on 11 Oct 2026 (see the head of this file).
 const CATEGORIES = [
   {
     id: 'week', horizon: 'week', slug: 'weekly', menu: 'This Week&rsquo;s Rankings',
@@ -103,25 +115,29 @@ const pageFile = (cat, pos) => cat.slug + '-' + pos.slug + '-rankings.html';
 const pageHref = (cat, pos) => '/' + cat.slug + '-' + pos.slug + '-rankings';
 
 // ── the ribbon ───────────────────────────────────────────────────────────────
-// Six destinations. Two of them carry every position under them, which is the
-// whole reason this band exists: a reader who wants receivers this week should
-// not have to load a rankings page and then work a segmented control.
+// Five destinations. One of them, Rankings, carries every position under it,
+// which is the whole reason this band exists: a reader who wants receivers
+// should not have to load the rankings page and then find the control.
 //
-// The menus open on HOVER and on FOCUS, in CSS, with no script — the same
+// The menu opens on HOVER and on FOCUS, in CSS, with no script — the same
 // mechanism the header's own dropdowns use (site.css, .nav-dd). On a phone a
-// hover menu is unreachable, so the trigger is a real link to the category's hub
-// page and the hub lists every position as a chip; the same chip row is on every
-// position page, so the menu is a shortcut rather than the only way through.
+// hover menu is unreachable, so the trigger is a real link to /rankings, whose
+// position tiles are the first thing under its hero; the menu is a shortcut
+// rather than the only way through.
 const RIBBON_OPEN = '<!--ranks:ribbon-->', RIBBON_CLOSE = '<!--/ranks:ribbon-->';
 
-function menuHtml(cat) {
-  // The trigger above this menu is the hub, which opens on the first position
-  // here, so the menu lists the positions and then the pooled board.
-  const kids = POSITIONS.concat(OVERALL).map((p) => `<a href="${pageHref(cat, p)}">${p.label}</a>`).join('');
+// The one rankings destination. Every position lands on the one page with the
+// position in the hash; the page reads it on load and on hashchange. DST is the
+// page's own key for the defense tile, as it is /api/boards'.
+const RANKINGS = { href: '/rankings', menu: 'Rankings' };
+const toolHref = (p) => `${RANKINGS.href}#pos=${p.key}`;
+
+function menuHtml(current) {
+  const kids = POSITIONS.map((p) => `<a href="${toolHref(p)}">${p.label}</a>`).join('');
   return [
     '    <span class="rkr-item rkr-has-menu">',
-    `      <a class="rkr-link" href="${cat.hub}">${cat.menu}</a>`,
-    `      <span class="rkr-menu" role="group" aria-label="${cat.menu.replace(/&rsquo;/g, "’")} by position">${kids}</span>`,
+    `      <a class="rkr-link" href="${RANKINGS.href}"${current === RANKINGS.href ? ' aria-current="page"' : ''}>${RANKINGS.menu}</a>`,
+    `      <span class="rkr-menu" role="group" aria-label="${RANKINGS.menu} by position">${kids}</span>`,
     '    </span>',
   ].join('\n');
 }
@@ -134,8 +150,7 @@ function ribbonHtml(current) {
     '<nav class="rk-ribbon" aria-label="Rankings and intel">',
     '  <div class="rk-ribbon-in">',
     link('/stats', 'Stats'),
-    menuHtml(CATEGORIES[0]),
-    menuHtml(CATEGORIES[1]),
+    menuHtml(current),
     link('/hidden-value', 'Hidden Value'),
     link('/previews', 'Previews'),
     link('/the-line', 'The Line'),
@@ -160,7 +175,7 @@ const RIBBON_CSS = `${CSS_OPEN}
 /* ── the section ribbon (generated by tools/build-ranks.mjs) ─────────────────
    Under the header on every page that carries the sentinel. The front page is
    not one of them: it shows the choose-your-game band in this slot. Five
-   destinations; the two rankings menus drop every position down on hover and on
+   destinations; the Rankings menu drops every position down on hover and on
    keyboard focus. Do not hand-edit — run the tool. */
 .rk-ribbon {
   --rkr-ink: var(--ink, var(--text, #111418));
@@ -219,8 +234,8 @@ const RIBBON_CSS = `${CSS_OPEN}
 }
 .rk-ribbon .rkr-menu a[aria-current="page"] { color: var(--rkr-brand); font-weight: 600 }
 /* A hover menu is unreachable on touch, so below the desktop breakpoint the
-   trigger is simply a link to the category's hub — which lists every position as
-   a chip, as does every position page. Nothing is lost; the menu was a shortcut. */
+   trigger is simply a link to /rankings, whose position tiles sit under its
+   hero. Nothing is lost; the menu was a shortcut. */
 @media (max-width: 860px) {
   .rk-ribbon .rkr-menu { display: none }
   /* And with the menu gone, so is the caret: an arrow that opens nothing is a

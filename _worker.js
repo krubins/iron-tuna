@@ -150,7 +150,7 @@ const WA_MARKET_BLOCKED_HTML = `<!doctype html>
 <p class="is-eyebrow">Iron Tuna &middot; Betting Market Intel</p>
 <h1>Betting Market Intel is not available in Washington</h1>
 <p class="is-lede">Iron Tuna does not serve its betting-market section, current odds, props, spreads, totals or line-movement data to requests located in Washington State.</p>
-<p>The fantasy tools remain available. <a href="/weekly-rankings">This week&rsquo;s rankings</a>, <a href="/season-long-rankings">season-long rankings</a>, waiver tools and league-specific analysis continue to work without transmitting the current betting-market board.</p>
+<p>The fantasy tools remain available. <a href="/rankings">Rankings</a>, waiver tools and league-specific analysis continue to work without transmitting the current betting-market board.</p>
 <p class="is-note">If you believe you are seeing this in error, it is because the network you are on places you in Washington. Iron Tuna takes no wagers, holds no funds and is not a sportsbook. If gambling has stopped being entertainment, the National Problem Gambling Helpline is 1-800-MY-RESET, free and confidential.</p>
 <p><a href="/">Back to Iron Tuna</a></p>
 </main>

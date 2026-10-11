@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // The rankings section: the ribbon under the header, the per-position pages
-// under its two menus, and the board that fills them.
+// behind it, and the board that fills them. Since 11 Oct 2026 the ribbon lists
+// ONE rankings destination (/rankings, every position in its menu) rather than
+// a weekly category and a season-long one; the sixteen position pages and their
+// two hubs still serve and are still held to their contract here.
 //   node tools/test-ranks.mjs
 //
 // WHAT THIS EXISTS FOR. Three failures here are silent — the page renders, the
@@ -140,18 +143,22 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
 
   const rib = read('rankings.html').match(RIB)[1];
   const links = [...rib.matchAll(/<a[^>]*class="rkr-link[^"]*"[^>]*>([\s\S]*?)<\/a>/g)].map((m) => m[1].trim());
-  ok('it carries the six destinations, in order',
-    links.join('|') === 'Stats|This Week&rsquo;s Rankings|Season Long Rankings|Hidden Value|Previews|The Line', links.join('|'));
+  ok('it carries the five destinations, in order',
+    links.join('|') === 'Stats|Rankings|Hidden Value|Previews|The Line', links.join('|'));
+  ok('and lists the rankings once, not as a weekly page and a season-long one',
+    !/Week|Season/.test(links.join('|')), links.join('|'));
 
   const menus = [...rib.matchAll(/<span class="rkr-menu"[^>]*>([\s\S]*?)<\/span>/g)].map((m) => m[1]);
-  ok('two of them drop down', menus.length === 2, String(menus.length));
-  for (const [i, c] of CATS.entries()) {
-    const hrefs = [...(menus[i] || '').matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
-    // The trigger above the menu is the hub, which opens on the first position,
-    // so the menu is the positions and then the pooled board; the hub itself is
-    // not repeated inside it.
-    const want = BOARDS.map((p) => `/${c.slug}-${p}-rankings`);
-    ok(`the ${c.slug} menu drops every position, the pooled board last`, hrefs.join(',') === want.join(','), hrefs.join(','));
+  ok('one of them drops down', menus.length === 1, String(menus.length));
+  {
+    const hrefs = [...(menus[0] || '').matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
+    // Every position lands on the one rankings page with the position in the
+    // hash, which the page reads on load and on hashchange; the tool's own
+    // keys, so DST not DEF.
+    const want = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'K', 'DST'].map((p) => `/rankings#pos=${p}`);
+    ok('the Rankings menu drops every position onto the one page', hrefs.join(',') === want.join(','), hrefs.join(','));
+    const trig = (rib.match(/<a class="rkr-link" href="\/rankings"[^>]*>/) || [''])[0];
+    ok('and the trigger is the page itself, marked current there', /aria-current="page"/.test(trig), trig);
   }
 }
 
@@ -168,8 +175,9 @@ console.log('\nwhat sits under the front page\u2019s hero');
   const nextSec = front.indexOf('<section', heroEnd);
   ok('the hero band is still the first section', heroStart > 0 && heroStart === front.indexOf('<section'));
   ok('the position tiles are the section after it', tilesAt > heroEnd && tilesAt === nextSec, `hero ends ${heroEnd}, tiles at ${tilesAt}, next ${nextSec}`);
-  ok('and every weekly position page is a tile',
-     POSITIONS.filter((p) => p !== 'flex').every((p) => front.includes('href="/weekly-' + p + '-rankings"')));
+  ok('and every position tile opens the one rankings page on that position',
+     POSITIONS.filter((p) => p !== 'flex').every((p) => front.includes('href="/rankings#pos=' + p.toUpperCase() + '"')));
+  ok('no tile links a weekly page', !/href="\/weekly-[a-z]+-rankings"/.test(front));
   // The homepage's own in-page anchor ribbon — the sticky bar of lane tabs and
   // section jumps — came off with the sections it pointed at in the September
   // 2026 rewrite, and the generated rankings ribbon came off this slot after
@@ -300,10 +308,12 @@ console.log('\nevery row says what the player is and what is in front of him');
   ok('an unranked player gets no tier at all, rather than the bottom one', H.tierOf('WR', null) === '');
   ok('every horizon either board can ask for has words of its own',
     ['week', 'next', 'next3', 'untilPlayoffs', 'ros', 'playoffs'].every((k) => H.HZ[k] && H.HZ[k].when && H.HZ[k].slate));
-  ok('and the five the /rankings row offers are the five the worker knows',
+  ok('and the four the /rankings row offers are four the worker knows',
     (() => { const row = read('rankings.html').match(/id="rkHorizon"[\s\S]*?<\/div>/)[0];
              const keys = [...row.matchAll(/data-horizon="(\w+)"/g)].map((m) => m[1]);
-             return keys.join() === 'week,next,untilPlayoffs,playoffs,ros' && keys.every((k) => H.HZ[k]); })());
+             return keys.join() === 'week,next3,playoffs,ros' && keys.every((k) => H.HZ[k]); })());
+  ok('the one page sorts, and is not two pages: no weekly or rest-of-season rankings page is linked from it',
+    !/href="\/(?:weekly|season-long)-[a-z-]*rankings"/.test(read('rankings.html').replace(/<!--ranks:ribbon-->[\s\S]*?<!--\/ranks:ribbon-->/, '')));
 
   // The function's own body, not a window of N characters after its name: a
   // window is a test that fails the next time the function grows a comment.
