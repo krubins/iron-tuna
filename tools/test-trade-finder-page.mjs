@@ -260,6 +260,48 @@ console.log('\nthe screenshot reader');
   await page.dispatchEvent(R(3) + ' .tf-fix input', 'change').catch(() => {});
   await page.waitForFunction(sel => document.querySelectorAll(sel + ' .chip').length === 3, R(3), { timeout: 4000 }).catch(() => {});
   ok('a typed fix resolves and joins the roster', (await page.$$(R(3) + ' .chip')).length === 3);
+
+  // The same screenshot pasted rather than picked. Ctrl+V with the cursor in
+  // a box lands in that box through the document listener; the Paste button
+  // reads the clipboard itself (stubbed here: headless Chromium has no system
+  // clipboard to put a PNG on); and a browser with no clipboard reader is told
+  // the shortcut and left with the cursor in the box, so the shortcut works.
+  const emptyBox3 = async () => {
+    while ((await page.$$(R(3) + ' .chip button')).length) await page.click(R(3) + ' .chip button');
+    while ((await page.$$(R(3) + ' .tf-fix button[data-drop]')).length) await page.click(R(3) + ' .tf-fix button[data-drop]');
+    await page.fill(R(3) + ' input.nm', ''); await page.press(R(3) + ' input.nm', 'Tab');
+    await page.$eval('#tf-read-status', e => { e.textContent = ''; });
+  };
+  const readBack = () => page.waitForFunction(() => /From the screenshot/.test(document.getElementById('tf-read-status').textContent), null, { timeout: 8000 });
+  const pasteImage = sel => page.$eval(sel, (el, b64) => {
+    const bin = atob(b64), arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const dt = new DataTransfer(); dt.items.add(new File([arr], 'shot.png', { type: 'image/png' }));
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, png.toString('base64'));
+  await emptyBox3();
+  await page.focus(rosterIn(3)); await pasteImage(rosterIn(3));
+  await readBack();
+  ok('a screenshot pasted with Ctrl+V lands in the box the cursor was in', readerCalls === 2 && (await names())[3] === 'Screenshot Team' && (await chipsOf(3)).length === 2, readerCalls + ' ' + (await names())[3]);
+  await emptyBox3();
+  await page.evaluate(b64 => {
+    const bin = atob(b64), arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const blob = new Blob([arr], { type: 'image/png' });
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read: () => Promise.resolve([{ types: ['text/plain', 'image/png'], getType: () => Promise.resolve(blob) }]) } });
+  }, png.toString('base64'));
+  await page.click(R(3) + ' button[data-paste]');
+  await readBack();
+  ok('the Paste button reads the clipboard into its own box', readerCalls === 3 && (await names())[3] === 'Screenshot Team' && (await chipsOf(3)).length === 2, readerCalls + ' ' + (await names())[3]);
+  await page.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read: () => Promise.resolve([{ types: ['text/plain'], getType: () => Promise.reject(new Error('no')) }]) } }); });
+  await page.click(R(3) + ' button[data-paste]');
+  await page.waitForFunction(() => /no image on the clipboard/.test(document.getElementById('tf-read-status').textContent), null, { timeout: 4000 });
+  ok('words on the clipboard are not sent to the reader', readerCalls === 3, String(readerCalls));
+  await page.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {} }); });
+  await page.click(R(3) + ' button[data-paste]');
+  const noReader = await page.textContent('#tf-read-status');
+  ok('without a clipboard reader the button names the shortcut', /Ctrl\+V/.test(noReader) && readerCalls === 3, noReader);
+  ok('and leaves the cursor in that box for it', await page.$eval(rosterIn(3), e => e === document.activeElement));
+  await page.evaluate(() => { delete navigator.clipboard; });
+  await emptyBox3();
   // Put the fourth team back the way the paste had it, for the search below.
   while ((await page.$$(R(3) + ' .chip button')).length) await page.click(R(3) + ' .chip button');
   await page.fill(R(3) + ' input.nm', 'Bubble Boys'); await page.press(R(3) + ' input.nm', 'Tab');
