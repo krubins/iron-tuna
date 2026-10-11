@@ -93,5 +93,10 @@ figure. It is gone, and the band is three figures that change.
   eyebrows, tracking, monospace, pills, drop shadows and gradients taken off
   at the rule level). Each should still be read on its own; a sweep cannot
   judge a layout.
+  /fantasy and /dfs were read on 2026-10-10: the September scoreboard dress
+  (navy nameplate, navy rail bars, tinted bands, coloured card rules, chips,
+  4px corners) came off in favour of the homepage's materials. The pass is
+  the block at the foot of the dress in site.css plus one block per page;
+  the three-column shell and the table density stay.
 - The player card's search box keeps the page's own 42px field. It should
   become the shared 52px field when that page is next touched.

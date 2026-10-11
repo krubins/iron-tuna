@@ -32,7 +32,8 @@
 <meta property="og:url" content="https://irontuna.com/season-long-te-rankings">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="/tuna-mark.png">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
@@ -75,11 +76,11 @@
     <a class="rkr-link rkr-item" href="/stats">Stats</a>
     <span class="rkr-item rkr-has-menu">
       <a class="rkr-link" href="/weekly-rankings">This Week&rsquo;s Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-rankings">Overall</a><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defense / special teams</a></span>
+      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defense / special teams</a><a href="/weekly-overall-rankings">Overall</a></span>
     </span>
     <span class="rkr-item rkr-has-menu">
       <a class="rkr-link" href="/season-long-rankings">Season Long Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-rankings">Overall</a><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defense / special teams</a></span>
+      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defense / special teams</a><a href="/season-long-overall-rankings">Overall</a></span>
     </span>
     <a class="rkr-link rkr-item" href="/hidden-value">Hidden Value</a>
     <a class="rkr-link rkr-item" href="/previews">Previews</a>
@@ -91,10 +92,8 @@
 <p class="is-eyebrow">In-Season &middot; Rankings &middot; Rest of season</p>
 <h1>Rest-of-season TE rankings</h1>
 <p class="is-lede">What the fantasy consensus projects for every tight end across the rest of the season, beside what the betting market implies — with every remaining week openable on any row.</p>
-<div class="its-strip" data-season-strip></div>
 
 <nav class="rk-chips" aria-label="Position">
-  <a class="rkc-chip" href="/season-long-rankings">Overall</a>
   <a class="rkc-chip" href="/season-long-qb-rankings">QB</a>
   <a class="rkc-chip" href="/season-long-rb-rankings">RB</a>
   <a class="rkc-chip" href="/season-long-wr-rankings">WR</a>
@@ -102,6 +101,7 @@
   <a class="rkc-chip" href="/season-long-flex-rankings">FLEX</a>
   <a class="rkc-chip" href="/season-long-k-rankings">K</a>
   <a class="rkc-chip" href="/season-long-dst-rankings">DST</a>
+  <a class="rkc-chip" href="/season-long-overall-rankings">Overall</a>
 </nav>
 
 <div class="rk-board"
@@ -148,7 +148,7 @@
   </div>
   <!--/chrome:foot-->
 </div></footer>
-<!-- it-season.js puts the week on the strip above; it-ranks.js is the board.
+<!-- it-season.js is the shared week read; it-ranks.js is the board.
      The scoring engine is NOT loaded here: unlike /rankings, this page asks the
      worker for the board already scored at the chosen preset, because the
      week-by-week drawer prints per-week points the browser has no stat line to

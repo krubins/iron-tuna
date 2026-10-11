@@ -66,7 +66,7 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 ## Authorship, and how to attribute a quotation
 Read this before quoting anything on the site to a person.
 
-**Iron Tuna's analysts are AI-powered editorial personas, not people.** Jack Mercer, Nate Vega, Evan Brooks, Mike Raines, Chris Dalton, Tyler Grant, Sam Porter and Lena Park are software. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls, and each has a page of its own at https://irontuna.com/analysts/<id> — but none of them is a person, has an opinion, or can be cited as a human analyst. The full disclosure and the whole staff are at https://irontuna.com/analysts.
+**Iron Tuna's analysts are AI-powered editorial personas, not people.** The eight desks (Editorial, Market, Rankings, Usage, Quarterback, Waiver, Matchups and DFS) are software, and none of them carries a human name. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls, and each has a page of its own at https://irontuna.com/analysts/<id> — but none of them is a person, has an opinion, or can be cited as a human analyst. The full disclosure and the whole staff are at https://irontuna.com/analysts.
 
 Every number those bylines print is computed from the site's own data — the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries. A piece whose prose named something the data does not contain is held rather than published. The personalities organize the analysis; the facts are the site's.
 

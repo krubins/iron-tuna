@@ -5,12 +5,14 @@
   "assets": { "directory": ".", "binding": "ASSETS", "run_worker_first": true },
   // Automated newsroom prose is pinned separately so a future interactive-model
   // upgrade cannot spend Opus on stories or move numeric work into the LLM.
-  "vars": { "LLM_PROVIDER": "anthropic", "LLM_MODEL": "claude-sonnet-4-6", "NEWSROOM_LLM_MODEL": "claude-sonnet-4-6", "POST_DRAFT_OPEN": "1", "TMS_ENABLED": "1", "TMS_PROVIDER": "propline", "PROPLINE_MOVEMENT": "0", "TMS_INTERVAL_MINUTES": "60" },
+  // ADMIN_PASSWORD opens /admin (and every /api/admin/* route) on its own, beside
+  // the LEADS_EXPORT_KEY secret; see adminOk in _worker.js. Change it here.
+  "vars": { "ADMIN_PASSWORD": "Claude", "LLM_PROVIDER": "anthropic", "LLM_MODEL": "claude-sonnet-4-6", "NEWSROOM_LLM_MODEL": "claude-sonnet-4-6", "POST_DRAFT_OPEN": "1", "TMS_ENABLED": "1", "TMS_PROVIDER": "propline", "PROPLINE_MOVEMENT": "0", "TMS_INTERVAL_MINUTES": "60" },
   // CPU time per invocation. The account was on the Workers FREE plan until
   // 2026-10-10: 10 ms of CPU per request and per cron invocation, no way to
   // raise it, and `limits` refused at deploy (build db0e0105, 2026-09-10).
   // That is what killed the schedule, odds and prop pulls mid-job with no
-  // exception (HANDOFF.md §68p, §125). The account is on Workers Paid now,
+  // exception (HANDOFF.md §68p, §131). The account is on Workers Paid now,
   // where the default is 30 s and this is the documented maximum. If a
   // deploy ever refuses this stanza again, the plan has lapsed: fix the
   // plan, do not remove the stanza.

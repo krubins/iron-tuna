@@ -257,13 +257,12 @@ p{color:var(--sec);margin:0 0 16px}
 <!-- the opening band. Same words, same ids, same script; .is-hero is in
      site.css because the in-season pages all open on it now. It sits between
      the masthead and the generated section ribbon, which is exactly where the
-     homepage puts its own copy of that ribbon. The NFL clock comes up into it
-     as the dateline instead of sitting under the lede as a plate. -->
+     homepage puts its own copy of that ribbon. The NFL clock that used to
+     ride the dateline came off on 2026-10-10 (Ken: remove the NFL clock). -->
 <section class="is-hero">
   <div class="wrap wide">
     <p class="is-hero-date">
       <span class="is-eyebrow">In-Season &middot; Rankings</span>
-      <span class="its-strip" data-season-strip></span>
     </p>
     <h1>A ranking is only worth <em>what your scoring says it is</em></h1>
     <p class="is-lede">Half PPR moves running backs. Six-point passing touchdowns move quarterbacks past every other position. A tight-end premium re-cuts a whole tier. Iron Tuna re-scores and re-ranks the board at your settings rather than publishing one list for everybody.</p>
@@ -280,11 +279,11 @@ p{color:var(--sec);margin:0 0 16px}
     <a class="rkr-link rkr-item" href="/stats">Stats</a>
     <span class="rkr-item rkr-has-menu">
       <a class="rkr-link" href="/weekly-rankings">This Week&rsquo;s Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-rankings">Overall</a><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defense / special teams</a></span>
+      <span class="rkr-menu" role="group" aria-label="This Week’s Rankings by position"><a href="/weekly-qb-rankings">Quarterbacks</a><a href="/weekly-rb-rankings">Running backs</a><a href="/weekly-wr-rankings">Wide receivers</a><a href="/weekly-te-rankings">Tight ends</a><a href="/weekly-flex-rankings">Flex (RB/WR/TE)</a><a href="/weekly-k-rankings">Kickers</a><a href="/weekly-dst-rankings">Defense / special teams</a><a href="/weekly-overall-rankings">Overall</a></span>
     </span>
     <span class="rkr-item rkr-has-menu">
       <a class="rkr-link" href="/season-long-rankings">Season Long Rankings</a>
-      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-rankings">Overall</a><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defense / special teams</a></span>
+      <span class="rkr-menu" role="group" aria-label="Season Long Rankings by position"><a href="/season-long-qb-rankings">Quarterbacks</a><a href="/season-long-rb-rankings">Running backs</a><a href="/season-long-wr-rankings">Wide receivers</a><a href="/season-long-te-rankings">Tight ends</a><a href="/season-long-flex-rankings">Flex (RB/WR/TE)</a><a href="/season-long-k-rankings">Kickers</a><a href="/season-long-dst-rankings">Defense / special teams</a><a href="/season-long-overall-rankings">Overall</a></span>
     </span>
     <a class="rkr-link rkr-item" href="/hidden-value">Hidden Value</a>
     <a class="rkr-link rkr-item" href="/previews">Previews</a>
@@ -342,7 +341,7 @@ p{color:var(--sec);margin:0 0 16px}
 <div class="rk-blend" id="rkBlend" hidden>
   <div class="rk-blend-h"><span>Fantasy Analysis</span><span id="rkBlendLabel">50 / 50</span><span>Market Intelligence</span></div>
   <input type="range" id="rkBlendW" min="0" max="100" step="5" value="50" aria-label="Weight between Fantasy Analysis and Market Intelligence">
-  <p class="is-note" id="rkBlendNote">At the left the board is <a href="/analysts/brooks">Evan Brooks</a>&rsquo;s: the consensus projection at your scoring, with the usage role trend once three games have earned it. At the right it is <a href="/analysts/vega">Nate Vega</a>&rsquo;s: the sportsbook read, shrunk toward the fantasy number where no prop is priced (a fitted team rating is a projection of the market, not a market). In between is a weighted point total, recomputed here in the browser from those two components, never a reorder.</p>
+  <p class="is-note" id="rkBlendNote">At the left the board is the <a href="/analysts/rankings">Rankings Desk</a>&rsquo;s: the consensus projection at your scoring, with the usage role trend once three games have earned it. At the right it is <a href="/analysts/market">Market Desk</a>&rsquo;s: the sportsbook read, shrunk toward the fantasy number where no prop is priced (a fitted team rating is a projection of the market, not a market). In between is a weighted point total, recomputed here in the browser from those two components, never a reorder.</p>
 </div>
   <div class="rk-row">
     <span class="rk-lab">Scoring</span>
@@ -471,7 +470,9 @@ p{color:var(--sec);margin:0 0 16px}
   // scoring at the chosen setting is done here with it-league.js (the same
   // engine, pinned by tools/test-scoring.mjs), then the three boards are
   // re-ranked and Market Delta recomputed with the thresholds the API shipped.
-  var data = {}, dataL = {}, preset = 'ppr', horizon = 'week', board = 'ironTuna', pos = 'RB', sortKey = 'rank', sortDir = 1, q = '', hideOut = false;
+  // pos opens on QB (10 Oct 2026, with the rankings hubs): the first chip on
+  // every board in the section is the one a reader lands on here too.
+  var data = {}, dataL = {}, preset = 'ppr', horizon = 'week', board = 'ironTuna', pos = 'QB', sortKey = 'rank', sortDir = 1, q = '', hideOut = false;
   // The Fantasy Analysis / Market Intelligence weight, 0 to 1, and the shrink
   // the worker applies to the market side by how much of it is a quoted
   // market (blendComponents in _worker.js; the same table).
@@ -664,7 +665,7 @@ p{color:var(--sec);margin:0 0 16px}
     var LS = window.ITSync && ITSync.active();
     $('rkScoringNote').innerHTML = (preset === 'league' && LS ? '<b>Customized for your league:</b> ' + e(LS.name) + ' · ' + e(LS.label) : preset === 'custom' ? 'Scored at <b>' + e(L && L.label ? L.label() : 'your league') + '</b>' : 'Scored at <b>' + (preset === 'standard' ? 'Standard' : preset === 'half' ? 'Half PPR' : 'PPR') + '</b>') +
       ' &middot; ' + e(payload.horizon.label) + (payload.horizon.weeks.length ? ' (week' + (payload.horizon.weeks.length > 1 ? 's ' + payload.horizon.weeks[0] + '–' + payload.horizon.weeks[payload.horizon.weeks.length - 1] : ' ' + payload.horizon.weeks[0]) + ')' : '') +
-      ' &middot; showing the <b>' + (board === 'ironTuna' ? 'Iron Tuna' : board === 'consensus' ? 'Consensus' : board === 'blend' ? (w === 0 ? 'Fantasy Analysis (Brooks)' : w === 1 ? 'Market Intelligence (Vega)' : Math.round((1 - w) * 100) + ' / ' + Math.round(w * 100) + ' Fantasy / Market') : 'Vegas') + '</b> board.';
+      ' &middot; showing the <b>' + (board === 'ironTuna' ? 'Iron Tuna' : board === 'consensus' ? 'Consensus' : board === 'blend' ? (w === 0 ? 'Fantasy Analysis (Rankings Desk)' : w === 1 ? 'Market Intelligence (Market Desk)' : Math.round((1 - w) * 100) + ' / ' + Math.round(w * 100) + ' Fantasy / Market') : 'Vegas') + '</b> board.';
     $('rkBlend').hidden = board !== 'blend';
     $('rkFoot').innerHTML = 'Vegas basis: <b>props</b> is a priced player prop; <b>gamelines</b> is the posted game line’s scoring environment applied to his line; <b>ratings</b> is a fixture no book has posted yet, projected from fitted team ratings and graded LOW. ' +
       (payload.sources && payload.sources.props ? payload.sources.props + ' players carry a prop this week.' : 'No priced player prop has reached this board for the week. Books post them; this feed is not carrying them.') +

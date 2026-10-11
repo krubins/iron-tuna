@@ -535,14 +535,13 @@
   // `w` is the words a reader might type for it; matching is by prefix, either
   // way round, so "rank", "rankings" and "rb rankings" all land.
   var TOOLS = [
-    { n: 'Rankings', d: 'Every position, priced off the betting market', h: '/weekly-rankings', w: 'rankings ranks rank weekly week board top' },
+    { n: 'Rankings', d: 'Quarterbacks first, every position a chip away, priced off the betting market', h: '/weekly-rankings', w: 'rankings ranks rank weekly week board top' },
     { n: 'Trade advice', d: 'Trade Tools: judge a trade, or find one both sides say yes to', h: '/trade-finder', w: 'trade trades trading advice value values finder evaluator evaluate offer' },
     { n: 'DFS lineups', d: 'The market read, aimed at one slate', h: '/dfs', w: 'dfs daily lineup lineups draftkings fanduel optimizer salary slate' },
     { n: 'Player lookup', d: 'Every player Iron Tuna prices, one page', h: '/players', w: 'players player lookup search find card cards' },
     { n: 'Start / sit and my lineup', d: 'Your best lineup, matchup and alerts', h: '/my-week', w: 'start sit lineup my week matchup who should' },
     { n: 'Waivers and FAAB', d: 'What to bid on every claim', h: '/waivers', w: 'waivers waiver wire faab pickups pickup adds bid claims' },
     { n: 'Vegas Edge', d: 'Where the market and the rankings disagree', h: '/vegas-edge', w: 'vegas edge betting market odds props sleepers busts' },
-    { n: 'Rest of season rankings', d: 'The board for the rest of the year', h: '/season-long-rankings', w: 'rest of season ros season long dynasty rankings' },
     { n: 'Game lines and totals', d: 'Every line, total and implied score', h: '/game-intel', w: 'games game lines spreads totals implied scores intel schedule' },
     { n: 'Depth charts', d: 'Every NFL depth chart', h: '/depth-charts', w: 'depth charts chart starters backups handcuffs' },
     { n: 'Articles', d: 'The desk’s stories this week', h: '/in-season/desk', w: 'articles news stories desk analysis reads' },

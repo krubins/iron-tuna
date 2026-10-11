@@ -226,7 +226,15 @@ body{overflow-x:hidden}
    illustration in its own palette, the name over a dark fade at the foot,
    and one line under it saying what the lane is for. DFS links /dfs and
    season long links /fantasy. Static, so never hidden. Two across at every
-   width: landscape on a desk, square on a phone with the art held to the right. */
+   width: landscape on a desk, square on a phone with the art held to the right.
+   Under each lane, a row of four smaller boxes in the same dress (the lane's
+   palette, the name over the fade), one per key function: four across under
+   the lane on a desk, so the eight line up laterally; two by two on a phone,
+   where four across would leave each box too narrow to read. Square on a
+   desk with the art anchored to the top of the box (xMidYMin), so the caption
+   over the fade does not bury it; 4:3 on a phone, where the row is two boxes
+   wide and a square would be taller than the lane above it. The one-line
+   subtitle goes once the box is under ~120px wide. */
 .hm-lanes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
 .hm-lane{position:relative;display:block;aspect-ratio:2/1;border-radius:10px;overflow:hidden;color:#fff;background:var(--t1)}
 .hm-lane:hover{color:#fff;text-decoration:none}
@@ -235,6 +243,17 @@ body{overflow-x:hidden}
 .hm-lane-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-24) var(--sp-24);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
 .hm-lane-name{display:block;font-size:var(--fs-28);font-weight:600;line-height:1.15;letter-spacing:-.01em}
 .hm-lane-sub{display:block;font-size:var(--fs-16);color:rgba(255,255,255,.86);margin-top:4px}
+.hm-lane-kit{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-12);margin:var(--sp-12) 0 0;padding:0;list-style:none}
+.hm-lane-fn{position:relative;display:block;aspect-ratio:1/1;border-radius:8px;overflow:hidden;color:#fff;background:var(--t1)}
+.hm-lane-fn:hover{color:#fff;text-decoration:none}
+.hm-lane-fn:hover .hm-lane-fn-name{text-decoration:underline}
+.hm-lane-fn svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hm-lane-fn-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-24) var(--sp-12) var(--sp-12);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
+.hm-lane-fn-name{display:block;font-size:var(--fs-16);font-weight:600;line-height:1.2}
+.hm-lane-fn-sub{display:block;font-size:var(--fs-13);color:rgba(255,255,255,.86);margin-top:2px}
+@media(max-width:1100px){
+  .hm-lane-fn-sub{display:none}
+}
 @media(max-width:600px){
   .hm-lanes{gap:var(--sp-12)}
   .hm-lane{aspect-ratio:1/1}
@@ -242,6 +261,10 @@ body{overflow-x:hidden}
   .hm-lane-name{font-size:var(--fs-19);line-height:1.2}
   .hm-lane-sub{font-size:var(--fs-13);margin-top:2px}
   .hm-lane-bars{display:none}
+  .hm-lane-kit{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-8);margin-top:var(--sp-8)}
+  .hm-lane-fn{aspect-ratio:4/3}
+  .hm-lane-fn-cap{padding:var(--sp-16) var(--sp-8) var(--sp-8)}
+  .hm-lane-fn-name{font-size:var(--fs-14)}
 }
 
 /* ── 4 · how it works ─────────────────────────────────────────────────────
@@ -400,7 +423,11 @@ footer.site {margin-top:0}
 
 <!-- ── 3b · the two lanes ───────────────────────────────────────────────────
      Two wide tiles in the position tiles' dress, one per way to play: DFS and
-     season long. Static links, nothing off a feed, so never hidden. -->
+     season long, and under each a row of four smaller boxes in the same dress,
+     one per key function of that lane. The DFS four are the boards /dfs
+     switches between (the hash names the board, so #lineup opens it); the
+     season four are the lane's own tools. Static links, nothing off a feed,
+     so never hidden. -->
 <section class="hm-sec" id="lanes" aria-labelledby="lanesHead">
   <div class="wrap">
     <div class="hm-sec-head">
@@ -410,11 +437,49 @@ footer.site {margin-top:0}
       <li><a class="hm-lane" href="/dfs" style="--t1:#14365a" data-lane="dfs">
         <svg viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false"><rect width="400" height="200" fill="#14365a"/><g stroke="#cfe3f5" stroke-width="1" opacity=".22"><path d="M0 40h400M0 80h400M0 120h400M0 160h400"/></g><path d="M20 170 L90 140 L150 152 L220 96 L280 108 L360 34" fill="none" stroke="#7fd1ae" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><g fill="#7fd1ae"><circle cx="90" cy="140" r="6"/><circle cx="220" cy="96" r="6"/><circle cx="360" cy="34" r="9"/></g><g class="hm-lane-bars" fill="#cfe3f5" opacity=".9"><rect x="292" y="120" width="84" height="12" rx="3"/><rect x="292" y="140" width="64" height="12" rx="3"/><rect x="292" y="160" width="74" height="12" rx="3"/></g><text x="282" y="70" fill="#f2c14e" font-family="Geist,system-ui,sans-serif" font-size="34" font-weight="700">$</text></svg>
         <span class="hm-lane-cap"><span class="hm-lane-name">DFS</span><span class="hm-lane-sub">One slate, one salary cap, one lineup</span></span>
-      </a></li>
+      </a>
+      <ul class="hm-lane-kit" aria-label="DFS tools">
+        <li><a class="hm-lane-fn" href="/dfs#lineup" style="--t1:#14365a" data-fn="lineup">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#14365a"/><g stroke="#cfe3f5" stroke-width="1" opacity=".22"><path d="M0 40h200M0 80h200M0 120h200M0 160h200"/></g><g transform="translate(20 6) scale(.8)"><g fill="#cfe3f5" opacity=".9"><rect x="28" y="22" width="96" height="12" rx="3"/><rect x="28" y="44" width="76" height="12" rx="3"/><rect x="28" y="66" width="86" height="12" rx="3"/></g><rect x="28" y="92" width="144" height="12" rx="6" fill="#cfe3f5" opacity=".35"/><rect x="28" y="92" width="112" height="12" rx="6" fill="#7fd1ae"/><text x="144" y="40" fill="#f2c14e" font-family="Geist,system-ui,sans-serif" font-size="30" font-weight="700">$</text></g></svg>
+          <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">The Lineup</span><span class="hm-lane-fn-sub">Build the lineup</span></span>
+        </a></li>
+        <li><a class="hm-lane-fn" href="/dfs#values" style="--t1:#14365a" data-fn="values">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#14365a"/><g stroke="#cfe3f5" stroke-width="1" opacity=".22"><path d="M0 40h200M0 80h200M0 120h200M0 160h200"/></g><g transform="translate(20 6) scale(.8)"><g fill="#cfe3f5" opacity=".55"><rect x="30" y="80" width="18" height="40" rx="3"/><rect x="74" y="64" width="18" height="56" rx="3"/><rect x="118" y="92" width="18" height="28" rx="3"/><rect x="162" y="48" width="18" height="72" rx="3"/></g><g fill="#7fd1ae"><rect x="50" y="60" width="18" height="60" rx="3"/><rect x="94" y="36" width="18" height="84" rx="3"/><rect x="138" y="100" width="18" height="20" rx="3"/><rect x="182" y="24" width="18" height="96" rx="3"/></g><text x="24" y="40" fill="#f2c14e" font-family="Geist,system-ui,sans-serif" font-size="30" font-weight="700">$</text></g></svg>
+          <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Vegas Values</span><span class="hm-lane-fn-sub">Salary vs. market</span></span>
+        </a></li>
+        <li><a class="hm-lane-fn" href="/dfs#stacks" style="--t1:#14365a" data-fn="stacks">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#14365a"/><g stroke="#cfe3f5" stroke-width="1" opacity=".22"><path d="M0 40h200M0 80h200M0 120h200M0 160h200"/></g><g transform="translate(20 6) scale(.8)"><g fill="#cfe3f5" opacity=".9"><rect x="34" y="30" width="54" height="22" rx="5"/><rect x="34" y="58" width="54" height="22" rx="5"/><rect x="34" y="86" width="54" height="22" rx="5"/></g><g fill="#7fd1ae"><rect x="118" y="44" width="54" height="22" rx="5"/><rect x="118" y="72" width="54" height="22" rx="5"/></g><path d="M88 69h30" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/><path d="M88 97c20 0 20-14 30-14" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/></g></svg>
+          <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Game Stacks</span><span class="hm-lane-fn-sub">Correlated plays</span></span>
+        </a></li>
+        <li><a class="hm-lane-fn" href="/dfs#td" style="--t1:#14365a" data-fn="td">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#14365a"/><g stroke="#cfe3f5" stroke-width="1" opacity=".22"><path d="M0 40h200M0 80h200M0 120h200M0 160h200"/></g><g transform="translate(20 6) scale(.8)"><path d="M64 34v76M136 34v76M64 70h72M100 70v46" fill="none" stroke="#f2c14e" stroke-width="7" stroke-linecap="round"/><rect x="80" y="116" width="40" height="10" rx="3" fill="#f2c14e"/><ellipse cx="100" cy="46" rx="16" ry="10" fill="#7fd1ae"/><path d="M92 46h16" stroke="#14365a" stroke-width="2.5" stroke-linecap="round"/></g></svg>
+          <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">TD Board</span><span class="hm-lane-fn-sub">Who scores</span></span>
+        </a></li>
+      </ul>
+      </li>
       <li><a class="hm-lane" href="/fantasy" style="--t1:#4a3a1c" data-lane="season">
         <svg viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false"><rect width="400" height="200" fill="#4a3a1c"/><g fill="#f3e2bf"><rect x="24" y="30" width="34" height="34" rx="4" opacity=".35"/><rect x="66" y="30" width="34" height="34" rx="4" opacity=".45"/><rect x="108" y="30" width="34" height="34" rx="4" opacity=".55"/><rect x="150" y="30" width="34" height="34" rx="4" opacity=".65"/><rect x="24" y="72" width="34" height="34" rx="4" opacity=".7"/><rect x="66" y="72" width="34" height="34" rx="4" opacity=".75"/><rect x="108" y="72" width="34" height="34" rx="4" opacity=".8"/><rect x="150" y="72" width="34" height="34" rx="4" opacity=".85"/><rect x="24" y="114" width="34" height="34" rx="4" opacity=".9"/><rect x="66" y="114" width="34" height="34" rx="4" opacity=".95"/><rect x="108" y="114" width="34" height="34" rx="4"/></g><path d="M290 36h64v28c0 24-14 40-32 40s-32-16-32-40z" fill="#f2c14e"/><path d="M290 46h-18c0 18 8 28 22 30M354 46h18c0 18-8 28-22 30" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round"/><rect x="314" y="104" width="16" height="22" fill="#f2c14e"/><rect x="296" y="126" width="52" height="12" rx="3" fill="#f2c14e"/></svg>
         <span class="hm-lane-cap"><span class="hm-lane-name">Season long</span><span class="hm-lane-sub">Pickups, trades and lineup decisions</span></span>
-      </a></li>
+      </a>
+      <ul class="hm-lane-kit" aria-label="Season long tools">
+        <li><a class="hm-lane-fn" href="/rankings" style="--t1:#4a3a1c" data-fn="rankings">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#4a3a1c"/><g transform="translate(20 6) scale(.8)"><g fill="#f2c14e"><text x="26" y="48" font-family="Geist,system-ui,sans-serif" font-size="22" font-weight="700">1</text><text x="26" y="84" font-family="Geist,system-ui,sans-serif" font-size="22" font-weight="700" opacity=".8">2</text><text x="26" y="120" font-family="Geist,system-ui,sans-serif" font-size="22" font-weight="700" opacity=".6">3</text></g><g fill="#f3e2bf"><rect x="52" y="34" width="124" height="16" rx="4" opacity=".95"/><rect x="52" y="70" width="98" height="16" rx="4" opacity=".75"/><rect x="52" y="106" width="76" height="16" rx="4" opacity=".55"/></g></g></svg>
+          <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Rankings</span><span class="hm-lane-fn-sub">Every horizon</span></span>
+        </a></li>
+        <li><a class="hm-lane-fn" href="/fantasy#startsit" style="--t1:#4a3a1c" data-fn="startsit">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#4a3a1c"/><g transform="translate(20 6) scale(.8)"><rect x="30" y="32" width="60" height="86" rx="6" fill="#f3e2bf"/><path d="M46 76l10 10 20-24" fill="none" stroke="#4a3a1c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><rect x="110" y="32" width="60" height="86" rx="6" fill="#f3e2bf" opacity=".4"/><path d="M128 64l24 24M152 64l-24 24" fill="none" stroke="#4a3a1c" stroke-width="6" stroke-linecap="round" opacity=".7"/></g></svg>
+          <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Start / Sit</span><span class="hm-lane-fn-sub">The lineup call</span></span>
+        </a></li>
+        <li><a class="hm-lane-fn" href="/waivers" style="--t1:#4a3a1c" data-fn="waivers">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#4a3a1c"/><g transform="translate(20 6) scale(.8)"><path d="M56 38h64l40 37-40 37H56z" fill="#f3e2bf"/><circle cx="72" cy="75" r="8" fill="#4a3a1c"/><text x="98" y="88" fill="#4a3a1c" font-family="Geist,system-ui,sans-serif" font-size="34" font-weight="700">$</text></g></svg>
+          <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Waivers</span><span class="hm-lane-fn-sub">Price every claim</span></span>
+        </a></li>
+        <li><a class="hm-lane-fn" href="/trade-finder" style="--t1:#4a3a1c" data-fn="trades">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false"><rect width="200" height="200" fill="#4a3a1c"/><g transform="translate(20 6) scale(.8)"><rect x="28" y="32" width="44" height="60" rx="6" fill="#f3e2bf" opacity=".9"/><rect x="128" y="58" width="44" height="60" rx="6" fill="#f3e2bf" opacity=".9"/><path d="M80 50h40l-12-12M120 50l-12 12" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M120 100H80l12-12M80 100l12 12" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
+          <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Trade Tools</span><span class="hm-lane-fn-sub">Judge or find one</span></span>
+        </a></li>
+      </ul>
+      </li>
     </ul>
   </div>
 </section>

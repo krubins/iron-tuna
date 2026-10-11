@@ -57,7 +57,7 @@ section{margin:0 0 var(--space-6)}
    .sl-* IN site.css, because /dfs wears the same one. What stays here is
    this page’s own: the standing argument and the tool shelf. */
 
-/* Vega vs. Brooks. Not a table of gaps: two columns, five picks each, each man
+/* Market Desk vs. Rankings Desk. Not a table of gaps: two columns, five picks each, each desk
    arguing the players he expects to beat the other man's ranking on. The ranks
    ride above each pitch as a chip for scanning and inside the pitch as well,
    so a paragraph read on its own still says what it is arguing. */
@@ -198,6 +198,59 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
   body.fn-page .sl-shell{grid-template-columns:212px minmax(0,1fr) 296px;column-gap:var(--space-6)}
 }
 @media(min-width:1400px){body.fn-page .sl-shell{column-gap:var(--space-7)}}
+/* ══ THE PAPER PASS — THIS PAGE'S OWN HALF (2026-10-10) ═══════════════════
+   The shared half sits at the foot of the scoreboard dress in site.css and
+   says why: the homepage moved onto paper on 2026-10-08 and this page still
+   wore the September dress. An inline sheet outranks site.css at equal
+   specificity, so the objects only this page has the markup for — the
+   plates, the deck, the AI Edge card, the rivalry columns and the tool
+   shelf — are restated here in the homepage's materials: 10px corners,
+   hairlines, 600 where the dress said 800, no coloured rule on a card, no
+   italic, 19px headings over 16px text. Nothing here moves markup or a
+   control. */
+/* the plates: white, a hairline, the head and foot on the same white */
+body.fn-page .is-plate{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--bg)}
+body.fn-page .is-plate-head{background:var(--bg);border-bottom-color:var(--line)}
+body.fn-page .is-plate-head>span{font-weight:600;font-size:var(--fs-16)}
+body.fn-page .is-plate-head>span b{font-weight:600;color:var(--text)}
+body.fn-page .is-plate-head>div{border-left-color:var(--line)}
+body.fn-page .is-seg label{font-weight:600;font-size:var(--fs-14)}
+body.fn-page .is-plate-foot{background:var(--bg);border-top-color:var(--line)}
+body.fn-page .is-plate-foot p{font-size:var(--fs-14)}
+body.fn-page .is-plate-foot .is-btn{font-weight:600;font-size:var(--fs-14)}
+/* the deck: four outlined cards, no top rule in any colour */
+body.fn-page .is-deck{gap:var(--space-5);margin:var(--space-5) 0 0}
+body.fn-page .is-act{border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-5);gap:var(--space-2)}
+body.fn-page .is-act.gold,body.fn-page .is-act.flat{border-top-color:var(--line)}
+body.fn-page .is-act-k{font-size:var(--fs-13)}
+body.fn-page .is-act-h{font-size:var(--fs-19);line-height:1.3}
+body.fn-page .is-act p{font-size:var(--fs-16);line-height:1.5}
+body.fn-page .is-act-go{font-size:var(--fs-14)}
+/* the bands this page wraps the deck and the argument in: gone */
+body.fn-page .sl-main .is-band{margin:0;padding:0;border:0;border-radius:0;background:none}
+/* AI Edge */
+body.fn-page .sl-edge{border-radius:var(--radius-md);border-color:var(--line);padding:var(--space-5)}
+body.fn-page .sl-edge-k{font-size:var(--fs-13)}
+body.fn-page .sl-edge h3{font-size:var(--fs-23)}
+body.fn-page .sl-edge p{font-size:var(--fs-16);line-height:1.5}
+body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14)}
+/* Market Desk vs. Rankings Desk: the heads on a hairline, the initials on the grey the
+   homepage uses for a face with no photograph, the standing line in roman */
+body.fn-page .fn-riv-head{border-bottom:1px solid var(--line)}
+body.fn-page .fn-riv-head b{font-size:var(--fs-19)}
+body.fn-page .fn-riv-av{background:var(--elev);color:var(--text);font-weight:600;font-size:var(--fs-13)}
+body.fn-page .fn-riv-head small{color:var(--muted);font-weight:400;font-size:var(--fs-13)}
+body.fn-page .fn-riv-rec{letter-spacing:0;font-weight:400;font-size:var(--fs-13)}
+body.fn-page .fn-riv-stand{font-style:normal;font-size:var(--fs-16);line-height:1.5}
+body.fn-page .fn-riv-ranks{letter-spacing:0;font-weight:400;font-size:var(--fs-13)}
+body.fn-page .fn-riv-pick h3{font-size:var(--fs-19)}
+body.fn-page .fn-riv-pick p,body.fn-page .fn-riv-foot{font-size:var(--fs-16);line-height:1.5}
+/* the shelf: outlined cards at the deck's own weight */
+body.fn-page .fn-tools{gap:var(--space-5)}
+body.fn-page .fn-tool{border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-5);transition:none}
+body.fn-page .fn-tool:hover{border-color:var(--line2)}
+body.fn-page .fn-tool b{font-size:var(--fs-19);margin-bottom:var(--space-2)}
+body.fn-page .fn-tool span{font-size:var(--fs-16);line-height:1.5}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://irontuna.com/fantasy","name":"Season Long Fantasy Football: The Odds Makers’ Edge","description":"Season long fantasy football read off the betting market first: weekly rankings, a rest-of-season board, the next five weeks, the week’s start/sit call and the signal engine’s own read — all restated at your league’s scoring.","url":"https://irontuna.com/fantasy","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/fantasy"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Season Long Fantasy Football: The Odds Makers’ Edge"}]}]}</script>
@@ -235,7 +288,8 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
      re-scored every week", a 52px headline, a lede at full measure, two
      buttons and a how-it-works link. Ken, 2026-09-21: remove the whole box.
 
-     The lane's name, what the lane is FOR, and the NFL clock as the dateline.
+     The lane's name and what the lane is FOR. The NFL clock that used to ride
+     the dateline came off on 2026-10-10 (Ken: remove the NFL clock).
      The one action the page improves with rides under it, and the scoring
      note that has to sit beside it (the script hides the button for a reader
      who has already saved a league) rides with it. -->
@@ -243,7 +297,6 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
   <div class="sl-in">
     <p class="sl-date">
       <span class="is-eyebrow">In-Season &middot; Season Long</span>
-      <span class="its-strip" data-season-strip></span>
     </p>
     <h1>Season Long: <em>the odds makers&rsquo; edge</em> to pickups, trades and lineup decisions</h1>
     <p class="sl-deck">Every player priced off the betting market first and the consensus projections second, then restated at your league&rsquo;s scoring &mdash; so the claim, the deal and the flex call all come off one number.</p>
@@ -262,11 +315,14 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
 <div class="sl-shell">
 
 <!-- ── the left rail ──────────────────────────────────────────────────────
-     The page's whole-page control, and the ribbon's replacement. Five
+     The page's whole-page control, and the ribbon's replacement. Seven
      destinations, in the order a manager works: what is happening this week,
      what the season looks like, the window a pickup has to pay back inside,
-     the lineup call, and the machine's own read. Two of them leave the page
-     and say so with an arrow. -->
+     the lineup call, the machine's own read, and then the two tools the
+     rosters unlock. Ken, 2026-10-10: the Trade Tools and the Waiver Advisor
+     were only reachable from the "Do this now" deck and the tool grid at the
+     foot; they belong on the rail too. Four of the seven leave the page and
+     say so with an arrow. -->
 <aside class="sl-left">
   <nav class="sl-nav" aria-label="Season Long">
     <p class="sl-nav-h">Season Long</p>
@@ -276,12 +332,14 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
       <li><a href="#next5"><b>Next 5 Weeks</b><span>The window a claim or a deal has to pay back in</span></a></li>
       <li><a href="#startsit"><b>Start / Sit</b><span>The week&rsquo;s two calls, and the clock they run against</span></a></li>
       <li><a href="#aiedge"><b>AI Edge</b><span>The week written out of the signal engine</span></a></li>
+      <li><a class="sl-out" href="/trade-finder"><b>Trade Tools</b><span>Judge the deal on the table, or find one both sides say yes to</span></a></li>
+      <li><a class="sl-out" href="/faab"><b>Waiver Advisor</b><span>What a claim is worth in your league&rsquo;s dollars</span></a></li>
     </ul>
     <div class="sl-nav-more">
       <p>Also here</p>
       <a href="#desk">The Newsroom</a>
       <a href="#now">Do this now</a>
-      <a href="#disagree">Vega vs. Brooks</a>
+      <a href="#disagree">Market vs. Rankings</a>
       <a href="#tools">Every tool</a>
     </div>
   </nav>
@@ -510,8 +568,8 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
      when the route has nothing, like every module on this page. -->
 <div class="is-band">
 <div class="wrap">
-  <div class="is-sec" id="disagree"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Vega vs. Brooks</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
-    <p>The desk&rsquo;s one standing argument. <a href="/analysts/vega">Market Intelligence</a> and <a href="/analysts/brooks">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p></div>
+  <div class="is-sec" id="disagree"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Market Desk vs. Rankings Desk</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
+    <p>The desk&rsquo;s one standing argument. <a href="/analysts/market">Market Intelligence</a> and <a href="/analysts/rankings">Fantasy Analysis</a> take five players each every week, the ones each of them expects to beat the other one&rsquo;s ranking, and make the case from the same board.</p></div>
   <section>
     <div class="is-plate">
       <div class="fn-riv" id="fnDisWrap" hidden></div>
@@ -949,8 +1007,8 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
     var kicker = function (p) { return e(p.title) + ' &middot; Week ' + e(p.week); };
     var byline = function (p) {
       var by = p.byline || {};
-      return '<span class="nr-by"><span class="nr-av">' + e(av(by.name)) + '</span><a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' +
-        (p.rivalry ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') +
+      return '<span class="nr-by"><span class="nr-av">' + e(av(by.name)) + '</span><a href="' + e(by.url || '/analysts/' + (by.analyst || '')) + '">' + e(by.name) + '</a>' +
+        (p.rivalry ? '<span class="nr-riv">Market vs. Rankings</span>' : '') +
         (p.publishedAt ? '<span class="nr-time">' + e(ago(p.publishedAt)) + '</span>' : '') + '</span>';
     };
     // THE BOAST. The desk may open a headline with "YOU'RE WELCOME:" only
@@ -1009,11 +1067,11 @@ body.fn-page .fn-tool span{font-size:var(--fs-2xs);line-height:1.45}
           var best = w.best ? ' ' + e(w.best.player) + ' finished ' + e(w.best.position + w.best.finish) + ' against ' + e(w.best.position + w.best.theirs) + '.' : '';
           return '<b>' + e(name) + ' went ' + e(w.hit) + ' of ' + e(w.of) + '</b>' + (w.push ? ' (' + e(w.push) + ' pushed)' : '') + '.' + best;
         };
-        var v = line('vega', 'Vega'), b = line('brooks', 'Brooks');
+        var v = line('vega', 'The Market Desk'), b = line('brooks', 'The Rankings Desk');
         if (v || b) told = '<p>Week ' + e(lw.week) + ', settled on the real finishes: ' + [v, b].filter(Boolean).join(' ') + '</p>';
       }
       return '<div class="fn-riv-foot">' + told + '<p>' + (j.locked
-        ? 'These ten picks were locked before kickoff and go on each man&rsquo;s record: a pick is a hit only if the player finishes ahead of the rank the other one gave him.'
+        ? 'These ten picks were locked before kickoff and go on each desk&rsquo;s record: a pick is a hit only if the player finishes ahead of the rank the other one gave him.'
         : 'This week&rsquo;s column is a live read of the two boards. It locks on Thursday morning, before the first kickoff, and only then does it go on the record.') + '</p></div>';
     };
     $('fnDisWrap').innerHTML = wrote.map(function (k) {

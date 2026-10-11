@@ -33,6 +33,9 @@ const stubs = {
   runOddsRefresh: async () => { calls.push('odds'); throw new Error('the books did not answer'); },
   runAvailabilityRefresh: async () => ({ ok: false, error: 'espn 403' }),
   runMarketSnapshot: async () => ({ ok: true, written: 12 }),
+  // The digest the pull builds (HANDOFF §130): the job is a stub here, and the
+  // health board's read of it answers "none", the state before the first pull.
+  runMarketDigest: async () => ({ ok: true }), marketDigestRead: async () => null,
   runUsageRefresh: async () => ({ ok: true }), runPriorUsageRefresh: async () => ({ ok: true }), runDfsRefresh: async () => ({ ok: true }), runDepthChartRefresh: async () => ({ ok: true }),
   runRosSnapshot: async () => ({ ok: true }), snapshotPrune: async () => ({ ok: true }), pruneAnalytics: async () => ({ ok: true }), runContentTick: async () => ({ ok: true, results: [] }),
   SNAP_KEEP_DAYS: 200, DEPTH_ROW: 6, MARKET_PRIOR_ROW: 7,
@@ -42,7 +45,7 @@ const stubs = {
   propsHealth: async () => null,
   availabilityCacheRead: async () => null, rosSnapshots: async () => [], dfsSalariesRead: async () => null, providerReport: () => ({ providers: {}, unavailable: {} }),
   etParts: () => ({ dow: 'Tue', hour: 9, minute: 0 }), contentReady: async () => true,
-  ANALYSTS: { mercer: { id: 'mercer', name: 'Jack Mercer' } }, ANALYST_HOUSE: { id: 'irontuna', name: 'Iron Tuna' }, newsroomStatus: async () => ({ autoPublish: { on: true }, audit: { ok: true, problems: [] }, legacy: [], routines: [] }),
+  ANALYSTS: { mercer: { id: 'mercer', name: 'Editorial Desk' } }, ANALYST_HOUSE: { id: 'irontuna', name: 'Iron Tuna' }, newsroomStatus: async () => ({ autoPublish: { on: true }, audit: { ok: true, problems: [] }, legacy: [], routines: [] }),
   sectionsFor: (k, l) => (l === 'dfs' ? [] : ['recaps']), runNewsScan: async () => ({ ok: true }), runCallsGrade: async () => ({ ok: true }),
   CONTENT_KINDS: { 'team-recaps': { title: 'Team-by-Team Recaps', day: 'Mon', hour: 6, analyst: 'mercer', lens: 'both' }, 'final-read': { title: 'The Final Read', day: 'Thu', hour: 6, analyst: 'mercer', lens: 'both' } },
   CONTENT_SECTIONS: { 'team-recaps': ['recaps'] },

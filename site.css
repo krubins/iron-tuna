@@ -158,10 +158,10 @@
   --rail-gap: 56px;
 
   /* The ribbon alone. The navy bars above and below it add 3px each. */
-  --header-h: 95px;
+  --header-h: 60px;
   --line-h: 3px;
 }
-@media (max-width: 860px) { :root { --gutter: 16px; --header-h: 53px } }
+@media (max-width: 860px) { :root { --gutter: 16px; --header-h: 44px } }
 
 /* ── base ───────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box }
@@ -213,8 +213,8 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
      ::after       the matching 3px navy bar under the ribbon. Both bars take
                    the ribbon's own colour since 2026-10-09 (they were
                    near-black), so the three read as one navy band.
-     .site-ribbon  the flat navy ribbon, 95px (78 from 1024 to 1239px, 67
-                   from 861 to 1023px, 53 on a phone), no border and no shadow.
+     .site-ribbon  the flat navy ribbon, 60px (54 from 1024 to 1239px, 50
+                   from 861 to 1023px, 44 on a phone), no border and no shadow.
                    The logo sits on a white panel inset 3px from the screen's
                    left edge, ending in a slant. Nav links are 14px bold capitals; the current page
                    gets a 3px white bar at the foot of the ribbon. On the
@@ -227,6 +227,12 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
    and the bar's height all scaled with the mark, so the brand panel keeps its
    shape at 0.84 of the mock; on a phone the bar dropped to 53px around the
    45px silhouette. The links and the button did not shrink with it.
+   Later again on 2026-10-10 the mark was halved (80px to 40px, and the
+   panel's padding and slant with it) and the ribbon cut to 60px: the 44px
+   primary button and the phone's 44px Menu target set the floor under the
+   bar, so it fell by less than the mark. At the two narrower widths the mark
+   stops at 33px and 28px rather than a strict half, which would have put the
+   wordmark under 25px and unreadable.
      .tabbar       on a phone, a 68px bottom bar with four labelled icon tabs.
 
    The ribbon is sticky and FLAT: no blur, no translucency. A backdrop-filter
@@ -249,11 +255,11 @@ header.site .site-ribbon, header.site > .wrap {
    because its own viewBox is the old wordmark's shape; 2.846 is the new
    mark's aspect ratio. */
 .brand {
-  --logo-h: 80px;
+  --logo-h: 40px;
   position: relative; display: inline-flex; align-items: center; flex: 0 0 auto;
   background: #fff; margin-left: var(--line-h);
-  padding: 0 62px 0 44px;
-  clip-path: polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%);
+  padding: 0 31px 0 22px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 15px) 100%, 0 100%);
 }
 .brand:hover { text-decoration: none }
 .brand b { color: var(--mast) }
@@ -293,19 +299,19 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
 
 /* Below 1240px the full-size ribbon (about 1120px of content) does not fit.
    From 1024 to 1239px it drops to the mock at its own 1024px size, less the
-   same 30% (78px ribbon, a 66px mark, 13px links); from 861 to 1023px a
+   same 30%, then halved again (54px ribbon, a 33px mark, 13px links); from 861 to 1023px a
    smaller mark and tighter links keep the ribbon on one line without a
    sideways scroll. */
 @media (min-width: 861px) and (max-width: 1239px) {
-  :root { --header-h: 78px }
-  .brand { --logo-h: 66px; padding: 0 45px 0 35px; clip-path: polygon(0 0, 100% 0, calc(100% - 25px) 100%, 0 100%) }
+  :root { --header-h: 54px }
+  .brand { --logo-h: 33px; padding: 0 23px 0 18px; clip-path: polygon(0 0, 100% 0, calc(100% - 13px) 100%, 0 100%) }
   .nav a { font-size: var(--fs-13); padding: 0 8px }
   header.site a.cta { font-size: var(--fs-13); min-height: 40px; padding: 0 var(--space-3) }
 }
 @media (min-width: 861px) and (max-width: 1023px) {
-  :root { --header-h: 67px }
+  :root { --header-h: 50px }
   header.site .site-ribbon, header.site > .wrap { gap: var(--space-3) }
-  .brand { --logo-h: 45px; padding: 0 28px 0 15px; clip-path: polygon(0 0, 100% 0, calc(100% - 21px) 100%, 0 100%) }
+  .brand { --logo-h: 28px; padding: 0 18px 0 10px; clip-path: polygon(0 0, 100% 0, calc(100% - 13px) 100%, 0 100%) }
   .nav a { padding: 0 6px }
 }
 
@@ -336,12 +342,13 @@ header.site a.cta:hover { background: #196559; text-decoration: none; color: #ff
   /* The phone ribbon is navy edge to edge since 2026-10-10 (the evening
      change; that morning's had the logo on a white panel and Menu on a white
      parallelogram beside it, and the two white blocks crowded a 390px bar).
-     The mark is the same SVG drawn as a white silhouette, 45px tall (30%
-     under the 64px it had on the panel), and the mark is a mask rather than a
+     The mark is the same SVG drawn as a white silhouette, 28px tall (45px
+     until the evening of 2026-10-10, 64px on the panel before that), in a
+     44px bar, and the mark is a mask rather than a
      background because the file's own fills are navy and steel. Menu is white
      capitals and three white bars, with no box: the one hit target keeps its
      44px minimum. */
-  .brand { --logo-h: 45px; background: transparent; clip-path: none; margin-left: 0; padding: 0 0 0 var(--gutter); flex: 0 0 auto }
+  .brand { --logo-h: 28px; background: transparent; clip-path: none; margin-left: 0; padding: 0 0 0 var(--gutter); flex: 0 0 auto }
   .brand-logo {
     background: #fff;
     -webkit-mask: url(/iron-tuna-logo.svg) no-repeat center / contain;
@@ -751,8 +758,11 @@ textarea.is-input { min-height: 96px; padding: var(--space-3) }
 
 /* ── the search field ────────────────────────────────────────────────────────
    The one pill on a page, and it is a field, not a button. 52px, 16px text,
-   the accent border and a 3px tint ring on focus. */
-.search-field { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: 0 var(--space-3) 0 var(--space-4); border: 1px solid var(--line2); border-radius: 999px; background: #fff }
+   the accent border and a 3px tint ring on focus. The idle border is 2px of
+   --sec rather than the 1px --line2 every other control wears: on the paper
+   ground the hairline read as a faint oval and the field did not stand out
+   from the hero copy around it (2026-10-10). Box-sizing keeps it at 52px. */
+.search-field { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: 0 var(--space-3) 0 var(--space-4); border: 2px solid var(--sec); border-radius: 999px; background: #fff }
 .search-field:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-tint) }
 .search-field svg { width: 20px; height: 20px; flex: 0 0 auto; color: var(--muted) }
 .search-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: var(--fs-16); color: var(--text); min-height: 48px }
@@ -1270,7 +1280,9 @@ html:has(.sl-shell){scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 .sl-mast{background:var(--panel);border-top:3px solid var(--mast);border-bottom:1px solid var(--line)}
 .sl-mast .sl-in{padding-top:var(--space-5);padding-bottom:var(--space-4)}
 .sl-date{display:flex;flex-wrap:wrap;align-items:center;gap:4px var(--space-3);margin:0 0 var(--space-3)}
-.sl-date .is-eyebrow{color:var(--muted);padding-right:var(--space-3);border-right:1px solid var(--line2)}
+/* No hairline after the label: the NFL clock it divided the label from came
+   off on 2026-10-10 (Ken: remove the NFL clock). */
+.sl-date .is-eyebrow{color:var(--muted)}
 /* max-width:none is not decoration. Several pages set their own
    `h1{max-width:22ch}` for a headline that used to sit on a reading column;
    that rule is (0,0,1) and this one is (0,1,1), but a rule only overrides what
@@ -1284,10 +1296,7 @@ html:has(.sl-shell){scroll-padding-top:calc(var(--header-h) + var(--space-4))}
 .sl-mast h1 em{font-style:normal;color:var(--text)}
 .sl-deck{margin:var(--space-3) 0 0;max-width:82ch;font-size:var(--fs-md);line-height:1.6}
 .sl-mast .is-actions{margin:var(--space-4) 0 0}
-/* The dateline's hairline divides two things. On a phone the clock wraps
-   under the label and the rule is left dividing the label from nothing. */
-@media(max-width:560px){.sl-mast h1{font-size:var(--fs-34)}
-.sl-date .is-eyebrow{border-right:0;padding-right:0}}
+@media(max-width:560px){.sl-mast h1{font-size:var(--fs-34)}}
 
 /* ── the shell ──────────────────────────────────────────────────────────────
    Rail, front, rail. The left rail is where you are going, the middle is what
@@ -1570,10 +1579,6 @@ body.sl-dress .sl-mast .is-btn.ghost:hover{border-color:#fff;color:#fff;backgrou
   body.sl-dress .sl-mast .sl-in:not(:has(.is-actions)) .sl-deck{grid-row:2/4;align-self:center}
 }
 @media(max-width:560px){body.sl-dress .sl-mast h1{font-size:var(--fs-34);max-width:none}}
-/* The dateline's hairline divides two things. site.css drops it at 560px;
-   the clock wraps under the label from about 900 on this plate, so from 900
-   it is a rule dividing the label from nothing. */
-@media(max-width:900px){body.sl-dress .sl-date .is-eyebrow{border-right:0;padding-right:0}}
 
 /* ── 2 · section heads ──────────────────────────────────────────────────── */
 /* A section head is a label. It was a 28px display line with a 56px teal nub
@@ -1696,6 +1701,123 @@ body.sl-dress .sl-upd-note{padding:0 var(--space-4) var(--space-4);margin-top:va
   body.sl-dress .sl-upd{border:1px solid var(--line2);border-radius:var(--sl-r)}
   body.sl-dress .sl-upd-note{padding:0}
 }
+
+/* ══ THE PAPER PASS (2026-10-10) ═══════════════════════════════════════════
+   The homepage moved onto paper on 2026-10-08 (docs/design/brief.md): a white
+   ground, one centred headline over one sentence, the entry points as text
+   links, hairline rules for grouping, outlined 10px cards, and nothing tinted
+   or boxed that is not a form, a ledger or the one sticky panel. /fantasy and
+   /dfs still wore the September scoreboard dress above it: a navy nameplate
+   with buttons on it, navy header bars on both rails, grey bands with white
+   cards inside them, coloured top rules on the deck, chips for labels, 800
+   weights and 4px corners. Two doors off the front page read as a different
+   site from the page that links to them.
+
+   Every rule here restates one of those objects in the homepage's materials
+   and nothing else: no markup moves, no id or control changes, and the
+   dress's density pass (42px rows, names that do not wrap) is kept, because
+   a table is still a table. It comes AFTER the dress at the same specificity
+   so it wins without !important; a page's own inline <style> still outranks
+   it, which is why each page carries a matching block for the objects only
+   it has the markup for. */
+body.sl-dress{--sl-r:var(--radius-md)}
+
+/* ── 1 · the nameplate, as the homepage hero ─────────────────────────────
+   White and centred: the lane's label, the headline at the hero scale one
+   step down, one sentence, the actions as the homepage's entry links, and a
+   hairline to close it. The ≥1000px masthead grid comes off with the band. */
+body.sl-dress .sl-mast{background:var(--bg);border:0;border-bottom:1px solid var(--line)}
+body.sl-dress .sl-mast .sl-in{padding-top:var(--space-7);padding-bottom:var(--space-7);text-align:center}
+@media(min-width:1000px){
+  body.sl-dress .sl-mast .sl-in{display:block}
+  body.sl-dress .sl-mast .sl-in:not(:has(.is-actions)) .sl-deck{margin:var(--space-4) auto 0}
+}
+body.sl-dress .sl-date{justify-content:center;margin:0 0 var(--space-4)}
+body.sl-dress .sl-date .is-eyebrow{color:var(--muted)}
+body.sl-dress .sl-mast h1{margin:0 auto;max-width:20ch;font-size:clamp(34px,4.2vw,56px);font-weight:700;
+  line-height:1.05;letter-spacing:-.03em;color:var(--text);text-wrap:balance}
+/* No coloured accent words: the sentence stands in roman, in ink. */
+body.sl-dress .sl-mast h1 em{color:var(--text)}
+body.sl-dress .sl-deck{margin:var(--space-4) auto 0;max-width:56ch;font-size:var(--fs-19);line-height:1.5;color:var(--sec)}
+/* The actions are the homepage's entry links: 16px, 600, teal, an arrow. The
+   markup keeps its button classes and ids so the script that hides "Save my
+   league" for a reader who has saved one still finds it. */
+body.sl-dress .sl-mast .is-actions{justify-content:center;gap:var(--space-2) var(--space-6);margin:var(--space-5) 0 0}
+body.sl-dress .sl-mast .is-actions .is-btn{min-height:0;padding:0;border:0;border-radius:0;background:none;
+  color:var(--teal);font-size:var(--fs-16);font-weight:600;line-height:1.5}
+body.sl-dress .sl-mast .is-actions .is-btn::after{content:"\00a0\2192"}
+body.sl-dress .sl-mast .is-actions .is-btn:hover{background:none;color:var(--teal-hover);text-decoration:underline}
+body.sl-dress .sl-mast .is-hint{flex:1 1 100%;margin:var(--space-2) 0 0;color:var(--muted);font-size:var(--fs-14)}
+body.sl-dress .sl-mast .is-hint b{color:var(--text)}
+@media(max-width:560px){
+  body.sl-dress .sl-mast .sl-in{padding-top:var(--space-6);padding-bottom:var(--space-6)}
+  body.sl-dress .sl-mast h1{font-size:var(--fs-34)}
+}
+
+/* ── 2 · the rails ───────────────────────────────────────────────────────
+   No box and no navy bar: a 13px label, the list, hairlines between rows.
+   The player rail keeps an outline because it is the one sticky panel the
+   system allows one; its header is a hairline, not a band. */
+body.sl-dress .sl-left{background:none;border:0;border-radius:0;padding:0;overflow:visible}
+body.sl-dress .sl-nav{border-top:1px solid var(--line);padding-top:var(--space-3)}
+body.sl-dress .sl-nav-h{padding:0 0 var(--space-2);background:none;color:var(--muted);font-weight:400}
+body.sl-dress .sl-nav ul{padding:0}
+body.sl-dress .sl-left .sl-nav li{border-bottom-color:var(--line)}
+body.sl-dress .sl-nav b{font-size:var(--fs-16)}
+body.sl-dress .sl-nav-more{margin-top:var(--space-4);padding:var(--space-3) 0 0;background:none;border-top:1px solid var(--line)}
+body.sl-dress .sl-nav-more p{color:var(--muted);font-weight:400}
+body.sl-dress .sl-nav-more a{font-size:var(--fs-14)}
+body.sl-dress .sl-right,body.sl-dress .sl-updrail{background:none;border:0;border-radius:0;padding:0;overflow:visible}
+body.sl-dress .sl-upd{border:1px solid var(--line);border-radius:var(--radius-md)}
+body.sl-dress .sl-upd-h{background:none;border-bottom:1px solid var(--line);padding:var(--space-3) var(--space-4)}
+body.sl-dress .sl-upd-h b{color:var(--text)}
+body.sl-dress .sl-upd-n{color:var(--muted)}
+body.sl-dress .sl-right>.is-vacant,body.sl-dress .sl-updrail>.is-vacant{border:1px solid var(--line);border-radius:var(--radius-md)}
+body.sl-dress .sl-upd-note{padding:0}
+
+/* ── 3 · section heads ───────────────────────────────────────────────────
+   The homepage's: the title at 28px and the link out at 14px on one
+   baseline, the standfirst at 16px under them, and air above the head
+   instead of a rule under it. */
+body.sl-dress .is-sec{margin:var(--space-8) 0 var(--space-4);padding-bottom:0;border-bottom:0}
+body.sl-dress .is-sec-top{align-items:baseline;gap:var(--space-4)}
+body.sl-dress .is-sec h2{font-size:var(--fs-28);line-height:1.15;letter-spacing:-.01em}
+body.sl-dress .is-sec p{margin-top:var(--space-2);font-size:var(--fs-16);line-height:1.5;color:var(--sec);max-width:60ch}
+body.sl-dress .is-sec p a{font-weight:600}
+@media(max-width:860px){body.sl-dress .is-sec{margin-top:var(--space-7)}}
+
+/* ── 4 · no tinted bands ─────────────────────────────────────────────────
+   The homepage groups with whitespace and hairlines. A grey band with white
+   cards inside it is a box in a box, and it was the first thing on both
+   pages after the stories. */
+body.sl-dress .sl-main .is-band{margin:0;padding:0;background:none;border:0;border-radius:0}
+/* The head that opened a band had no gap above it because the band's own
+   padding was the gap; without the band it needs the section's. */
+body.sl-dress .sl-main .is-band>.wrap>.is-sec:first-child{margin-top:var(--space-8)}
+@media(max-width:860px){body.sl-dress .sl-main .is-band>.wrap>.is-sec:first-child{margin-top:var(--space-7)}}
+
+/* ── 5 · cards and labels ────────────────────────────────────────────────
+   Every card is the homepage's outlined card: a hairline, 10px corners,
+   white, 24px of padding, a 19px heading over 16px text. No coloured top
+   rule, no tint and no lift; hover darkens the hairline and nothing else.
+   The kicker on a card is a 13px muted label, the way the homepage labels a
+   figure, not a chip. (The amber disclosure chip inside a table row keeps
+   its own rule, which outranks this one.) */
+body.sl-dress .is-card,body.sl-dress .is-act,body.sl-dress .sl-story,body.sl-dress .sl-edge,body.sl-dress .is-vacant{
+  border:1px solid var(--line);border-radius:var(--radius-md);background:var(--bg);box-shadow:none}
+body.sl-dress .is-card,body.sl-dress .is-act,body.sl-dress .sl-edge,body.sl-dress .sl-story,body.sl-dress .sl-story.lead{padding:var(--space-5)}
+body.sl-dress .is-card:hover,body.sl-dress .is-act:hover,body.sl-dress .sl-story:hover{border-color:var(--line2);background:var(--bg);box-shadow:none}
+body.sl-dress .is-act.gold,body.sl-dress .is-act.flat{border-color:var(--line)}
+body.sl-dress .is-act-k,body.sl-dress .sl-edge-k{font-size:var(--fs-13);font-weight:400;color:var(--muted)}
+body.sl-dress .is-act-h{font-size:var(--fs-19);line-height:1.3}
+body.sl-dress .is-act-h em{color:inherit}
+body.sl-dress .is-act p,body.sl-dress .is-card p,body.sl-dress .sl-edge p{font-size:var(--fs-16);line-height:1.5;color:var(--sec)}
+body.sl-dress .is-act-go{font-size:var(--fs-14)}
+body.sl-dress .sl-story.is-boast{background:var(--bg);border-color:var(--line)}
+body.sl-dress .is-tag{background:none;padding:0;margin-bottom:var(--space-1);border-radius:0;
+  font-size:var(--fs-13);font-weight:400;color:var(--muted)}
+body.sl-dress .is-note{font-size:var(--fs-14)}
+body.sl-dress .is-btns .is-btn,body.sl-dress .is-vacant .is-btn{font-size:var(--fs-16)}
 
 /* ══ THE RANKINGS SECTION ══════════════════════════════════════════════════
    The ribbon's own block is GENERATED by tools/build-ranks.mjs and lives

@@ -38,6 +38,13 @@ const ok = (name, cond, extra = '') => {
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 const POSITIONS = ['qb', 'rb', 'wr', 'te', 'flex', 'k', 'dst'];
+// The pooled board. A page like the seven above, asked for as ALL; not a
+// position, so the front page does not tile it. The hub opens on the first
+// position rather than on this (10 Oct 2026: a reader landing on "this week's
+// rankings" met QB1, RB1, WR1, TE1 and D1 interleaved, and wanted quarterbacks).
+const OVERALL = 'overall';
+const HUB_POS = POSITIONS[0];
+const BOARDS = POSITIONS.concat(OVERALL);
 const CATS = [
   { slug: 'weekly', horizon: 'week', weeks: '0' },
   { slug: 'season-long', horizon: 'ros', weeks: '1' },
@@ -45,36 +52,59 @@ const CATS = [
 const LANES = ['stats.html', 'hidden-value.html', 'previews.html'];
 const pageFile = (c, p) => `${c.slug}-${p}-rankings.html`;
 const hubFile = (c) => `${c.slug}-rankings.html`;
-const allBoards = CATS.flatMap((c) => [hubFile(c), ...POSITIONS.map((p) => pageFile(c, p))]);
+const allBoards = CATS.flatMap((c) => [hubFile(c), ...BOARDS.map((p) => pageFile(c, p))]);
 
 // ── the pages exist and ask for the right board ──────────────────────────────
 console.log('\nevery position in the menu has a page of its own');
 {
   const missing = allBoards.filter((f) => !fs.existsSync(path.join(ROOT, f)));
-  ok('all sixteen rankings pages exist', missing.length === 0, missing.join(', '));
+  ok('all eighteen rankings pages exist', missing.length === 0, missing.join(', '));
 
+  // The hub asks for the first position's board; the pooled page asks for ALL.
+  const wantPos = (p) => p === null ? HUB_POS.toUpperCase() : p === OVERALL ? 'ALL' : p.toUpperCase();
   const wrong = [];
   for (const c of CATS) {
-    for (const p of [null, ...POSITIONS]) {
+    for (const p of [null, ...BOARDS]) {
       const f = p ? pageFile(c, p) : hubFile(c);
       if (!fs.existsSync(path.join(ROOT, f))) continue;
       const h = read(f);
       const mount = (h.match(/<div class="rk-board"[\s\S]*?><\/div>/) || [''])[0];
       const attr = (k) => (mount.match(new RegExp(`data-rk-${k}="([^"]*)"`)) || [, ''])[1];
       if (attr('horizon') !== c.horizon) wrong.push(`${f}: horizon=${attr('horizon')} want ${c.horizon}`);
-      if (attr('pos') !== (p ? p.toUpperCase() : 'ALL')) wrong.push(`${f}: pos=${attr('pos')}`);
+      if (attr('pos') !== wantPos(p)) wrong.push(`${f}: pos=${attr('pos')} want ${wantPos(p)}`);
       if (attr('weeks') !== c.weeks) wrong.push(`${f}: weeks=${attr('weeks')} want ${c.weeks}`);
     }
   }
   ok('each one asks the board for its own horizon and position', wrong.length === 0, wrong.slice(0, 4).join('; '));
+  ok('and the hubs open on ' + HUB_POS.toUpperCase() + ', not on the pooled board',
+    CATS.every((c) => fs.existsSync(path.join(ROOT, hubFile(c))) && new RegExp(`data-rk-pos="${HUB_POS.toUpperCase()}"`).test(read(hubFile(c)))));
+
+  // The chip row is the touch path between the boards: every position, then
+  // the pooled board last, and the chip marked on a page is the board it shows
+  // — on the hub, that is the first position's chip.
+  const chipsWrong = [];
+  for (const c of CATS) {
+    for (const p of [null, ...BOARDS]) {
+      const f = p ? pageFile(c, p) : hubFile(c);
+      if (!fs.existsSync(path.join(ROOT, f))) continue;
+      const nav = (read(f).match(/<nav class="rk-chips"[\s\S]*?<\/nav>/) || [''])[0];
+      const hrefs = [...nav.matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
+      const want = BOARDS.map((b) => `/${c.slug}-${b}-rankings`);
+      if (hrefs.join(',') !== want.join(',')) chipsWrong.push(`${f}: ${hrefs.join(',')}`);
+      const on = [...nav.matchAll(/<a class="rkc-chip on" href="([^"]*)"/g)].map((m) => m[1]);
+      const wantOn = `/${c.slug}-${p === null ? HUB_POS : p}-rankings`;
+      if (on.join(',') !== wantOn) chipsWrong.push(`${f}: on=${on.join(',')} want ${wantOn}`);
+    }
+  }
+  ok('every page carries the same chip row, with the board it shows marked on', chipsWrong.length === 0, chipsWrong.slice(0, 3).join('; '));
 
   // Only the season-long boards can open a row: "this week" is one week, and a
   // drawer holding a single row is a control that does nothing.
-  const weekOpens = CATS[0] && [hubFile(CATS[0]), ...POSITIONS.map((p) => pageFile(CATS[0], p))]
+  const weekOpens = CATS[0] && [hubFile(CATS[0]), ...BOARDS.map((p) => pageFile(CATS[0], p))]
     .filter((f) => fs.existsSync(path.join(ROOT, f)) && /data-rk-weeks="1"/.test(read(f)));
   ok('no weekly board offers a week-by-week drawer', weekOpens.length === 0, weekOpens.join(', '));
 
-  const noDrawer = [hubFile(CATS[1]), ...POSITIONS.map((p) => pageFile(CATS[1], p))]
+  const noDrawer = [hubFile(CATS[1]), ...BOARDS.map((p) => pageFile(CATS[1], p))]
     .filter((f) => fs.existsSync(path.join(ROOT, f)) && !/data-rk-weeks="1"/.test(read(f)));
   ok('every season-long board does', noDrawer.length === 0, noDrawer.join(', '));
 
@@ -93,7 +123,7 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
   // asked which game they play before they are offered a board.
   ok('the ribbon is off the front page', !carriers.includes('front.html'));
   ok('on the full rankings tool', carriers.includes('rankings.html'));
-  ok('on all sixteen rankings pages', allBoards.every((f) => carriers.includes(f)));
+  ok('on all eighteen rankings pages', allBoards.every((f) => carriers.includes(f)));
   ok('and on the three other destinations', LANES.every((f) => carriers.includes(f)));
 
   // Byte for byte, once the one legitimate per-page difference — which item is
@@ -117,8 +147,11 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
   ok('two of them drop down', menus.length === 2, String(menus.length));
   for (const [i, c] of CATS.entries()) {
     const hrefs = [...(menus[i] || '').matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
-    const want = ['/' + c.slug + '-rankings', ...POSITIONS.map((p) => `/${c.slug}-${p}-rankings`)];
-    ok(`the ${c.slug} menu drops every position`, hrefs.join(',') === want.join(','), hrefs.join(','));
+    // The trigger above the menu is the hub, which opens on the first position,
+    // so the menu is the positions and then the pooled board; the hub itself is
+    // not repeated inside it.
+    const want = BOARDS.map((p) => `/${c.slug}-${p}-rankings`);
+    ok(`the ${c.slug} menu drops every position, the pooled board last`, hrefs.join(',') === want.join(','), hrefs.join(','));
   }
 }
 
@@ -435,7 +468,7 @@ console.log('\nevery row says what the player is and what is in front of him');
   }
 
   const noRead = allBoards.filter((f) => !read(f).includes('How to read the two lines under a name'));
-  ok('and all sixteen pages tell the reader what the two lines are', noRead.length === 0, noRead.join(', '));
+  ok('and all eighteen pages tell the reader what the two lines are', noRead.length === 0, noRead.join(', '));
   ok('so does the tool', /the two lines under a name/i.test(tool));
 }
 

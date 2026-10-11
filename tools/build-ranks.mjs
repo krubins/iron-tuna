@@ -11,7 +11,7 @@
 // chrome tool gives it a header and a footer, the SEO tool tags it).
 //
 // WHY A GENERATOR. The ribbon is one link set that has to be identical on
-// nineteen pages, and the two menus under it drop down to fourteen pages that
+// nineteen pages, and the two menus under it drop down to sixteen pages that
 // differ only by a position and a horizon. Hand-writing either is how the site's
 // nav drifted into ten variants before build-chrome.mjs existed; the same
 // sentinel discipline is used here, so this tool finds and replaces only its own
@@ -28,8 +28,9 @@
 //                                                choose-your-game band there
 //                                                now, so site.css is the only
 //                                                carrier
-//   the fourteen position pages                  SCAFFOLDED ONCE, then left
-//                                                alone apart from their ribbon:
+//   the sixteen position pages and two hubs      SCAFFOLDED ONCE, then left
+//                                                alone apart from their ribbon,
+//                                                chip row and board mount:
 //                                                build-chrome and build-seo edit
 //                                                them afterwards, so regenerating
 //                                                a whole file on every run would
@@ -59,6 +60,20 @@ const POSITIONS = [
   { key: 'K', slug: 'k', label: 'Kickers', short: 'K', long: 'Kicker' },
   { key: 'DST', slug: 'dst', label: 'Defense / special teams', short: 'DST', long: 'Defense / special teams' },
 ];
+
+// The pooled board: every position on one list, each player tagged with his
+// own. It is a page of its own rather than the category's hub because of what
+// the hub is for. 10 Oct 2026: the hub opened on the pooled board, and a reader
+// landing on "This week's rankings" met QB1, RB1, WR1, TE1 and D1 interleaved
+// before any one position he could read top to bottom. The hub now opens on
+// quarterbacks — the first chip, the first menu item, the position the rest of
+// the site leads with — and the pooled board sits at the end of the chip row
+// under its own name. Not in POSITIONS: it is not a position, the front page
+// does not tile it, and /api/boards is asked for it as ALL.
+const OVERALL = { key: 'ALL', slug: 'overall', label: 'Overall', short: 'Overall', long: 'Every position' };
+// What the hub shows. The hub's own file keeps the category's name and URL;
+// only its board is this position's.
+const HUB_POS = POSITIONS[0];
 
 // The two rankings categories. `horizon` is the /api/boards horizon; `weeks` says
 // whether a row can be expanded into the weeks ahead — only the season-long
@@ -100,9 +115,9 @@ const pageHref = (cat, pos) => '/' + cat.slug + '-' + pos.slug + '-rankings';
 const RIBBON_OPEN = '<!--ranks:ribbon-->', RIBBON_CLOSE = '<!--/ranks:ribbon-->';
 
 function menuHtml(cat) {
-  const kids = [`<a href="${cat.hub}">Overall</a>`]
-    .concat(POSITIONS.map((p) => `<a href="${pageHref(cat, p)}">${p.label}</a>`))
-    .join('');
+  // The trigger above this menu is the hub, which opens on the first position
+  // here, so the menu lists the positions and then the pooled board.
+  const kids = POSITIONS.concat(OVERALL).map((p) => `<a href="${pageHref(cat, p)}">${p.label}</a>`).join('');
   return [
     '    <span class="rkr-item rkr-has-menu">',
     `      <a class="rkr-link" href="${cat.hub}">${cat.menu}</a>`,
@@ -224,34 +239,55 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 // The chip row: every position in this category, on every page in it. This is
 // the touch path to a position page and the desktop path between two of them.
+// The hub (currentSlug null) shows HUB_POS's board, so that chip is the one
+// marked on it; the pooled board closes the row.
 function chipsHtml(cat, currentSlug) {
   const one = (href, label, on) =>
     `<a class="rkc-chip${on ? ' on' : ''}" href="${href}"${on ? ' aria-current="page"' : ''}>${label}</a>`;
+  const onSlug = currentSlug === null ? HUB_POS.slug : currentSlug;
   return ['<nav class="rk-chips" aria-label="Position">',
-    '  ' + one(cat.hub, 'Overall', currentSlug === null),
-    ...POSITIONS.map((p) => '  ' + one(pageHref(cat, p), p.short, currentSlug === p.slug)),
+    ...POSITIONS.concat(OVERALL).map((p) => '  ' + one(pageHref(cat, p), p.short, onSlug === p.slug)),
     '</nav>'].join('\n');
+}
+
+// The board's mount. The worker's ranksPrerender and tools/test-seo.mjs both
+// find it by this exact opening, so the shape is fixed here and nowhere else.
+function mountHtml(cat, pos) {
+  return ['<div class="rk-board"',
+    '     data-rk-board',
+    `     data-rk-horizon="${cat.horizon}"`,
+    `     data-rk-pos="${pos ? pos.key : HUB_POS.key}"`,
+    `     data-rk-weeks="${cat.weeks ? '1' : '0'}"`,
+    `     data-rk-label="${esc(cat.h1)}"></div>`].join('\n');
 }
 
 function titleFor(cat, pos) {
   if (!pos) return cat.id === 'week' ? 'This Week’s Fantasy Football Rankings' : 'Rest of Season Fantasy Football Rankings';
+  if (pos === OVERALL) return cat.id === 'week' ? 'This Week’s Overall Fantasy Football Rankings' : 'Rest of Season Overall Fantasy Football Rankings';
   return (cat.id === 'week' ? 'This Week’s ' : 'Rest of Season ') + pos.short + ' Rankings';
 }
 
+// The hub's dek names the board it opens on and says where the rest are: a
+// page called "this week's rankings" that shows one position owes the reader
+// that sentence.
 function dekFor(cat, pos) {
-  const who = pos ? (pos.key === 'FLEX' ? 'every running back, receiver and tight end on one pooled board' : 'every ' + pos.long.toLowerCase()) : 'every position';
+  const who = pos
+    ? (pos === OVERALL ? 'every position on one pooled board'
+      : pos.key === 'FLEX' ? 'every running back, receiver and tight end on one pooled board'
+      : 'every ' + pos.long.toLowerCase())
+    : 'every ' + HUB_POS.long.toLowerCase();
+  const rest = pos ? '' : ' Every other position is a chip away, and Overall pools them all.';
   return cat.id === 'week'
-    ? `What the fantasy consensus projects for ${who} this week, beside what the betting market implies, and the gap between the two.`
-    : `What the fantasy consensus projects for ${who} across the rest of the season, beside what the betting market implies — with every remaining week openable on any row.`;
+    ? `What the fantasy consensus projects for ${who} this week, beside what the betting market implies, and the gap between the two.${rest}`
+    : `What the fantasy consensus projects for ${who} across the rest of the season, beside what the betting market implies — with every remaining week openable on any row.${rest}`;
 }
 
 function pageHtml(cat, pos) {
   const href = pos ? pageHref(cat, pos) : cat.hub;
   const title = titleFor(cat, pos);
   const dek = dekFor(cat, pos);
-  const posKey = pos ? pos.key : 'ALL';
   const h1 = pos
-    ? (cat.id === 'week' ? 'This week’s ' : 'Rest-of-season ') + pos.short + ' rankings'
+    ? (cat.id === 'week' ? 'This week’s ' : 'Rest-of-season ') + (pos === OVERALL ? 'overall' : pos.short) + ' rankings'
     : (cat.id === 'week' ? 'This week’s rankings' : 'Rest-of-season rankings');
   return `<!doctype html>
 <html lang="en">
@@ -280,7 +316,8 @@ function pageHtml(cat, pos) {
 <meta property="og:url" content="https://irontuna.com${href}">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="/tuna-mark.png">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
@@ -301,16 +338,10 @@ ${ribbonHtml(href)}
 <p class="is-eyebrow">In-Season &middot; Rankings &middot; ${esc(cat.h1)}</p>
 <h1>${esc(h1)}</h1>
 <p class="is-lede">${dek}</p>
-<div class="its-strip" data-season-strip></div>
 
 ${chipsHtml(cat, pos ? pos.slug : null)}
 
-<div class="rk-board"
-     data-rk-board
-     data-rk-horizon="${cat.horizon}"
-     data-rk-pos="${posKey}"
-     data-rk-weeks="${cat.weeks ? '1' : '0'}"
-     data-rk-label="${esc(cat.h1)}"></div>
+${mountHtml(cat, pos)}
 
 <h2>How to read the two lines under a name</h2>
 <p class="is-note">Every row carries two sentences under the player&rsquo;s name. <b>Player</b> is where he ranks at his own position, then the one or two things about his season that are least like the rest of his position, each with his own numbers and his rank: his share of targets or touches, how much of his scoring came from touchdowns, his yards a catch or a carry, how often he catches his targets, his snaps, a swing in his workload last week, a projection well off the rate he has scored at, or betting odds that rank him well away from the consensus. Two players rarely get the same sentence, because two players are rarely unusual in the same way. One game is called one game rather than read, and an injury rides on the rank. Before he has played there is nothing to report, and the line says what a rank like his is worth at his position instead. <b>Opportunity</b> is what is in front of him: ${cat.id === 'season' ? SEASON_OPP : WEEK_OPP} Both sentences are built from the same numbers as the columns beside them, and a clause whose number the board does not carry is left out rather than guessed at.</p>
@@ -327,7 +358,7 @@ ${chipsHtml(cat, pos ? pos.slug : null)}
 </div>
 </main>
 <footer class="site"><div class="wrap"></div></footer>
-<!-- it-season.js puts the week on the strip above; it-ranks.js is the board.
+<!-- it-season.js is the shared week read; it-ranks.js is the board.
      The scoring engine is NOT loaded here: unlike /rankings, this page asks the
      worker for the board already scored at the chosen preset, because the
      week-by-week drawer prints per-week points the browser has no stat line to
@@ -356,6 +387,18 @@ function putRibbon(html, current) {
   );
 }
 
+// The chip row and the board's mount on a page that already exists. Both are
+// one tag with no sentinel, found by their own opening the way the worker finds
+// the mount, and replaced whole: moving the pooled board to its own page meant
+// a new chip on eighteen pages and a new position on two, which is exactly the
+// hand edit this tool exists to prevent.
+function putChips(html, cat, pos) {
+  return html.replace(/<nav class="rk-chips"[\s\S]*?<\/nav>/, () => chipsHtml(cat, pos ? pos.slug : null));
+}
+function putMount(html, cat, pos) {
+  return html.replace(/<div class="rk-board"[\s\S]*?><\/div>/, () => mountHtml(cat, pos));
+}
+
 function putCss(text) {
   if (!text.includes(CSS_OPEN)) return text;
   const re = new RegExp(CSS_OPEN.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&') + '[\\s\\S]*?' + CSS_CLOSE.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'));
@@ -368,12 +411,13 @@ function write(file, next, before) {
   if (!CHECK) fs.writeFileSync(path.join(ROOT, file), next);
 }
 
-// 1. the pages. Scaffolded once; after that only their ribbon is maintained,
-//    because build-chrome.mjs and build-seo.mjs own regions of the same files.
+// 1. the pages. Scaffolded once; after that only their ribbon, their chip row
+//    and their board's mount are maintained, because build-chrome.mjs and
+//    build-seo.mjs own regions of the same files.
 const wanted = [];
 for (const cat of CATEGORIES) {
   wanted.push({ file: cat.hubFile, cat, pos: null });
-  for (const pos of POSITIONS) wanted.push({ file: pageFile(cat, pos), cat, pos });
+  for (const pos of POSITIONS.concat(OVERALL)) wanted.push({ file: pageFile(cat, pos), cat, pos });
 }
 
 for (const w of wanted) {
@@ -384,7 +428,8 @@ for (const w of wanted) {
     continue;
   }
   const before = fs.readFileSync(full, 'utf8');
-  write(w.file, putRibbon(before, w.pos ? pageHref(w.cat, w.pos) : w.cat.hub), before);
+  const next = putMount(putChips(putRibbon(before, w.pos ? pageHref(w.cat, w.pos) : w.cat.hub), w.cat, w.pos), w.cat, w.pos);
+  write(w.file, next, before);
 }
 
 // 2. the ribbon on every other page that asks for it, and the CSS in the two

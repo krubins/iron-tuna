@@ -223,17 +223,24 @@ them, and the runtime already takes that path when a fetch fails.
 - [x] Caching. §14.5. ESPN and Sleeper pulls are `cf.cacheTtl` cached; odds are on the job clock.
 - [ ] No Kalshi or prediction-market data anywhere. §13.4. Holds today — nothing to remove — keep it that way.
 
-### R7 — League-platform connectors (removed 2026-09-18)
+### R7 — League-platform connectors (removed 2026-09-18; CBS browser import restored 2026-10-10)
 
-There are none. The Sleeper, Yahoo and CBS league connectors, the OAuth flow
-and the sealed provider tokens were removed: no provider ever carried a
-reader's league in production. Iron Tuna makes no request to any fantasy
-platform on a reader's behalf, holds no password or access token for one, and
-stores no provider credential of any kind.
+The Sleeper, Yahoo and CBS API connectors, the OAuth flow and the sealed
+provider tokens were removed: no provider ever carried a reader's league in
+production. Iron Tuna makes no request to any fantasy platform on a reader's
+behalf, holds no password or access token for one, and stores no provider
+credential of any kind. `tools/test-data-sources.mjs` asserts that no fantasy
+platform host is reachable from the worker.
 
-A league is the reader's own entry now — typed, pasted, or read off a roster
-screenshot by `/api/roster-read` — saved through `POST /api/leagues/manual`.
-See `docs/saved-league.md`.
+A league is the reader's own entry — typed, pasted, or read off a roster
+screenshot by `/api/roster-read` — saved through `POST /api/leagues/manual`;
+or, on CBS, read by the reader's own browser. The Iron Tuna CBS Connector
+extension (`extensions/cbs-connector`, HANDOFF §128) runs in the reader's
+signed-in CBS tab, reads the league's settings, team names and rosters through
+same-origin requests, and posts one snapshot to `POST /api/leagues/connect`
+under the reader's Iron Tuna sign-in. The request to CBS is the reader's own
+browser reading the reader's own league; the worker validates the snapshot and
+writes it, and never contacts CBS. See `docs/saved-league.md`.
 
 `api.sleeper.app` stays on the inventory above for the **players id/metadata
 map only**, which predates the connectors and carries the same R2 question.
