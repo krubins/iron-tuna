@@ -49,148 +49,23 @@ header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
    already saved one. front.html and /dfs carry the same one-line fix. */
 [hidden]{display:none !important}
 
-/* ══ THE HOMEPAGE'S MATERIALS (2026-10-11) ═════════════════════════════════
-   Ken: the lane page "looks very AI". It did: a tinted nameplate with an
-   eyebrow and two buttons, then nine labelled sections of outlined cards at
-   one weight, each with a kicker, a heading, a paragraph and an arrow, down
-   three columns. The homepage (front.html) does not read that way, and this
-   page now wears its composition: a white centred hero (one headline, one
-   sentence, the search field, three text links), the six illustrated position
-   tiles, outlined cards only where there is a sentence to carry, the lane's
-   own illustrated tool tiles, hairlines and whitespace doing the grouping.
-   The left rail stays; the right rail folded into it. Every rule below is a
-   value front.html declares, restated here because that page keeps its sheet
-   inline; when one moves, both move. They are declared on the body, not on
-   :root: a content page may not carry a palette of its own
-   (tools/test-reading-view.mjs), and these are spacing and type tokens
-   under front.html's names, not colours site.css does not already set. */
-body.fn-page{
-  --ink:#111418;--ink-2:#454c57;--ink-3:#5f6672;--card:#ffffff;--good:#0a6a4c;
-  --fs-hero:clamp(44px,5.2vw,68px);
-  --sp-4:4px;--sp-8:8px;--sp-12:12px;--sp-16:16px;--sp-24:24px;--sp-32:32px;--sp-48:48px;--sp-64:64px;
-  --sec-gap:72px;
-}
-@media(max-width:860px){body.fn-page{--sec-gap:48px}}
-.hm-sec{margin:var(--sec-gap) 0 0}
-.sl-main>.hm-sec:first-child{margin-top:0}
-.hm-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-16);flex-wrap:wrap;margin:0 0 var(--sp-16)}
-.hm-sec-head h2{margin:0;font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
-.hm-sec-head a{font-size:var(--fs-14);font-weight:600;white-space:nowrap}
-.hm-sub{margin:0 0 var(--sp-24);font-size:var(--fs-16);color:var(--ink-2);max-width:60ch;line-height:1.5}
-.hm-sub a{font-weight:600}
-
-/* ── 1 · the hero ─────────────────────────────────────────────────────────
-   White, centred: the headline, one sentence, the search field (the one pill
-   on the page, and it is a field), the entry points as text links, the
-   scoring note, a hairline. The ids fnSaveBtn and fnScoring are the ones the
-   league script writes to; they moved from a button row into the links. */
-.hm-hero{padding:var(--sp-64) 0 0;text-align:center}
-.hm-hero h1{margin:0 auto var(--sp-16);font-size:var(--fs-hero);font-weight:700;letter-spacing:-.03em;line-height:1.02;max-width:20ch;text-wrap:balance}
-@media(max-width:480px){.hm-hero h1{font-size:var(--fs-34)}}
-.hm-lede{margin:0 auto var(--sp-32);font-size:var(--fs-19);color:var(--ink-2);max-width:56ch;line-height:1.5}
-.hm-find{max-width:640px;margin:0 auto}
-.hm-entry{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--sp-8) var(--sp-32);margin:var(--sp-24) 0 0;padding:0;list-style:none}
-.hm-entry a{font-size:var(--fs-16);font-weight:600}
-.hm-entry li[hidden]{display:none}
-.hm-fine{margin:var(--sp-12) 0 0;font-size:var(--fs-14);color:var(--ink-3)}
-.hm-fine b{color:var(--ink);font-weight:600}
-.hm-rule{border:0;height:1px;background:var(--line);margin:var(--sp-48) 0 0}
-@media(max-width:860px){.hm-hero{padding-top:var(--sp-48)}.hm-rule{margin-top:var(--sp-32)}}
-/* The league strip rides between the rule and the shell, at the shell's width. */
-.fn-state{padding-top:var(--sp-16)}
-.fn-state:empty,.fn-state:has(> [hidden]:only-child){display:none}
-
-/* ── 2 · the shell: the rail, and one wide column ─────────────────────────
-   site.css draws three columns for this page. The player rail now sits in
-   the left rail under the navigation, so the shell is the rail and the
-   front. The restatement is inside min-width, because the shell's own
-   two-step collapse is written (0,1,0) and an unconditional (0,2,0) here
-   would hold the phone at two columns. */
-@media(min-width:861px){
-  body.fn-page .sl-shell{grid-template-columns:232px minmax(0,1fr);grid-template-areas:"nav main";column-gap:var(--sp-48)}
-}
-@media(min-width:1181px){body.fn-page .sl-shell{grid-template-columns:248px minmax(0,1fr);column-gap:var(--sp-64)}}
-body.fn-page .sl-shell{padding-top:var(--sp-32)}
-/* The rail on paper: no shade, no box. Whitespace and hairlines group it,
-   the same way the homepage groups everything. */
-body.fn-page .sl-left{background:none;border:0;border-radius:0;padding:0}
-body.fn-page .sl-nav{border-top:0;padding-top:0}
-body.fn-page .sl-nav-h{font-size:var(--fs-14);color:var(--ink-3);margin-bottom:var(--sp-8)}
-body.fn-page .sl-nav li{border-bottom-color:var(--line)}
-body.fn-page .sl-nav li:first-child{border-top:1px solid var(--line)}
-body.fn-page .sl-nav a{padding:10px 0}
-body.fn-page .sl-nav b{font-size:var(--fs-16)}
-body.fn-page .sl-nav span{font-size:var(--fs-13);color:var(--ink-3)}
-body.fn-page .sl-nav-more{border-top-color:var(--line)}
-body.fn-page .sl-nav-more p{color:var(--ink-3)}
-/* The player rail, under the navigation. */
-.fn-rail-upd{margin-top:var(--sp-32)}
-body.fn-page .sl-upd{border-color:var(--line);border-radius:10px}
-body.fn-page .sl-upd-h{background:var(--card);border-bottom-color:var(--line)}
-body.fn-page .sl-upd-note{font-size:var(--fs-13);color:var(--ink-3);line-height:1.5;margin:var(--sp-12) 0 0}
-@media(max-width:860px){
-  body.fn-page .sl-nav li:first-child{border-top:0}
-  /* The updates module is a column object; between a chip row and the front
-     on a phone it would be the first thing on the screen. It goes to the
-     foot of the page there, with the rest of the rail's "also here". */
-  .fn-rail-upd{display:none}
-}
-
-/* ── 3 · the position tiles ───────────────────────────────────────────────
-   front.html's, as they are: six portrait tiles, each a link to that
-   position's weekly board, the name over a dark fade at the foot. */
-.hm-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
-.hm-tile{position:relative;display:block;aspect-ratio:3/4;border-radius:10px;overflow:hidden;color:#fff;background:var(--t1)}
-.hm-tile:hover{color:#fff;text-decoration:none}
-.hm-tile:hover .hm-tile-name{text-decoration:underline}
-.hm-tile svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-.hm-tile-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-16) var(--sp-16);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
-.hm-tile-name{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.2}
-.hm-tile-live{display:block;font-size:var(--fs-13);color:rgba(255,255,255,.86);margin-top:2px;font-variant-numeric:tabular-nums}
-@media(max-width:1180px){.hm-tiles{gap:var(--sp-12)}.hm-tile-name{font-size:var(--fs-14);overflow-wrap:anywhere}.hm-tile-cap{padding:var(--sp-32) var(--sp-12) var(--sp-12)}}
-@media(max-width:860px){
-  .hm-tiles{display:flex;overflow-x:auto;margin:0 calc(-1 * var(--space-4));padding:0 var(--space-4);gap:var(--sp-12);scrollbar-width:none;scroll-snap-type:x proximity;scroll-padding-inline:var(--space-4)}
-  .hm-tiles::-webkit-scrollbar{display:none}
-  .hm-tiles li{flex:0 0 44%;scroll-snap-align:start}
-  .hm-tile{width:100%}
-}
-/* The board under the tiles is the ledger the tiles open onto. */
-.hm-tiles+.is-plate{margin-top:var(--sp-24)}
-
-/* ── 4 · the cards ────────────────────────────────────────────────────────
-   front.html's How-it-works cards: outlined, 10px, a heading over a
-   sentence. The only enclosed surface on the page that is not a ledger, and
-   used only where a live sentence has to sit somewhere: the two calls open
-   this week, and the start/sit column. A card that is a link is the whole
-   card; nothing inside it says "→". */
-.hm-how-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-24)}
-.hm-how-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
-.hm-input{display:block;border:1px solid var(--line);border-radius:10px;padding:var(--sp-24);background:var(--card);color:var(--ink);min-width:0}
-a.hm-input:hover{text-decoration:none;border-color:var(--line2);color:var(--ink)}
-a.hm-input:hover h3{text-decoration:underline}
-.hm-input .k{display:block;margin:0 0 var(--sp-8);font-size:var(--fs-14);color:var(--ink-3)}
-.hm-input h3{margin:0 0 var(--sp-8);font-size:var(--fs-19);font-weight:600;line-height:1.3;letter-spacing:-.005em}
-.hm-input h3 em{font-style:normal;color:var(--teal)}
-.hm-input p{margin:0;font-size:var(--fs-16);color:var(--ink-2);line-height:1.5}
-.hm-input p+p{margin-top:var(--sp-8)}
-.hm-input .is-note{font-size:var(--fs-14);color:var(--ink-3)}
-.hm-input .is-btns{margin-top:var(--sp-16)}
-.hm-input .is-btn{border-radius:4px}
-@media(max-width:1100px){.hm-how-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:700px){.hm-how-grid,.hm-how-grid.two{grid-template-columns:1fr;gap:var(--sp-16)}}
+/* ══ THIS PAGE'S OWN HALF (2026-10-11) ════════════════════════════════════
+   The lane front — the hero, the shell, the rail, the tiles, the cards, the
+   empty states and the desk — is `body.ln-front` in site.css, because /dfs
+   wears the same one. What stays here is what only this page has the markup
+   for: the Do-this-now row, the FAAB figures, the two ledgers, AI Edge, the
+   rivalry columns. */
+/* ── the Do-this-now row, and the FAAB figures ────────────────────────── */
 /* Four across: the two live calls, the waiver price, and the rest of the
    lane as a list in the last card. */
-.hm-how-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
-.fn-now .hm-input h3 em{font-weight:400}
-.fn-now .hm-input p{font-size:var(--fs-14)}
+body.fn-page .fn-now .hm-input h3 em{font-weight:400}
+body.fn-page .fn-now .hm-input p{font-size:var(--fs-14)}
 .fn-more ul{list-style:none;margin:0;padding:0}
 .fn-more li{padding:7px 0;border-top:1px solid var(--line);line-height:1.3}
 .fn-more li:first-child{border-top:0;padding-top:0}
 .fn-more li a{font-size:var(--fs-16);font-weight:600;color:var(--ink)}
 .fn-more li a:hover{color:var(--teal)}
 .fn-more li span{display:block;margin-top:1px;font-size:var(--fs-13);color:var(--ink-3)}
-@media(max-width:1100px){.hm-how-grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:700px){.hm-how-grid.four{grid-template-columns:1fr}}
 /* The three FAAB figures, as the homepage sets a figure: a label over a number. */
 .is-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-16);margin:var(--sp-4) 0 var(--sp-16);padding:0}
 .is-stat{min-width:0;border-left:1px solid var(--line);padding-left:var(--sp-12)}
@@ -198,7 +73,9 @@ a.hm-input:hover h3{text-decoration:underline}
 .is-stat b{display:block;font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--ink)}
 .is-stat span{display:block;margin-top:2px;font-size:var(--fs-13);color:var(--ink-3)}
 
-/* ── 5 · the ledgers ──────────────────────────────────────────────────────
+/* The board under the tiles is the ledger the tiles open onto. */
+.hm-tiles+.is-plate{margin-top:var(--sp-24)}
+/* ── the ledgers ──────────────────────────────────────────────────────────
    The two boards are the page's ledgers: white, one hairline, the head and
    foot on the same white, the position switch as tabs. The dress in site.css
    keeps its 42px rows. */
@@ -218,41 +95,14 @@ body.fn-page .is-plate-foot p{font-size:var(--fs-14);color:var(--ink-3);line-hei
 body.fn-page .is-plate-foot .is-btn{padding:7px 10px;border-radius:4px;font-size:var(--fs-14);font-weight:600}
 body.fn-page .is-plate-state{padding:var(--sp-24) var(--sp-16);font-size:var(--fs-16);color:var(--ink-3)}
 
-/* ── 6 · what is empty says so, in a sentence ─────────────────────────────
-   Not a box with an icon: a line of text where the thing would be, and the
-   link to where it is. */
-body.fn-page .is-vacant{border:0;border-radius:0;background:none;padding:var(--sp-8) 0;gap:var(--sp-16)}
-body.fn-page .is-vacant b{font-size:var(--fs-16);font-weight:600;color:var(--ink)}
-body.fn-page .is-vacant span{font-size:var(--fs-14);color:var(--ink-3)}
-body.fn-page .is-vacant .is-btn{border-radius:4px}
-
-/* ── 7 · the desk ─────────────────────────────────────────────────────────
-   front.html's story cards: white, 10px, a soft lift off the paper, the
-   newest as the wide lead and the two under it in a row. */
-body.fn-page .sl-stories{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-24);margin:0}
-body.fn-page .sl-story{border:0;border-radius:10px;padding:var(--sp-24);gap:var(--sp-12);
-  box-shadow:0 1px 2px rgba(17,20,24,.06),0 4px 14px rgba(17,20,24,.10);transition:box-shadow .15s ease}
-body.fn-page .sl-story:hover{border:0;box-shadow:0 2px 4px rgba(17,20,24,.08),0 8px 24px rgba(17,20,24,.14)}
-body.fn-page .sl-story.lead{grid-column:1/-1;padding:var(--sp-32)}
-body.fn-page .sl-story.lead h3{font-size:var(--fs-28);font-weight:700;line-height:1.25;letter-spacing:-.01em}
-body.fn-page .sl-story.lead p{font-size:var(--fs-16);line-height:1.5}
-body.fn-page .sl-story h3{font-size:var(--fs-19);line-height:1.3}
-body.fn-page .sl-story p{font-size:var(--fs-14);line-height:1.5}
-body.fn-page .sl-story .nr-kicker{font-size:var(--fs-13);color:var(--ink-3);font-weight:400;letter-spacing:0;text-transform:none}
-body.fn-page .sl-story .nr-flag{display:none}
-body.fn-page .sl-story .nr-by{border-top-color:var(--line)}
-body.fn-page .sl-story.is-boast{background:var(--card)}
-@media(max-width:700px){body.fn-page .sl-stories{grid-template-columns:1fr;gap:var(--sp-16)}
-  body.fn-page .sl-story.lead{padding:var(--sp-24)}body.fn-page .sl-story.lead h3{font-size:var(--fs-23)}}
-
-/* ── 8 · AI Edge: a column of prose on a hairline, not a card ─────────── */
+/* ── AI Edge: a column of prose on a hairline, not a card ───────────────── */
 body.fn-page .sl-edge{border:0;border-radius:0;padding:0;max-width:72ch}
 body.fn-page .sl-edge-k{font-size:var(--fs-14);color:var(--ink-3)}
 body.fn-page .sl-edge h3{font-size:var(--fs-23)}
 body.fn-page .sl-edge p{font-size:var(--fs-16);line-height:1.55;color:var(--ink-2)}
 body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
 
-/* ── 9 · Market Desk vs. Rankings Desk ────────────────────────────────────
+/* ── Market Desk vs. Rankings Desk ────────────────────────────────────────
    Two columns, five picks each, on hairlines. The heads carry the initials
    on the grey the homepage uses for a face with no photograph. */
 .fn-riv{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-32) var(--sp-48);padding:0}
@@ -276,32 +126,11 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
 .fn-riv-pick p{margin:0;font-size:var(--fs-16);line-height:1.5;color:var(--ink-2)}
 @media(max-width:760px){.fn-riv{grid-template-columns:1fr;gap:var(--sp-32)}}
 
-/* ── 10 · the tools ───────────────────────────────────────────────────────
-   The lane's four tools as front.html draws them under the Season long lane
-   tile (the same illustrations, in the lane's own brown), four across; then
-   the rest of the lane as an index, two columns of links on hairlines. */
-.hm-lane-kit{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;list-style:none}
-.hm-lane-fn{position:relative;display:block;aspect-ratio:4/3;border-radius:10px;overflow:hidden;color:#fff;background:var(--t1)}
-.hm-lane-fn:hover{color:#fff;text-decoration:none}
-.hm-lane-fn:hover .hm-lane-fn-name{text-decoration:underline}
-.hm-lane-fn svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-.hm-lane-fn-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-16) var(--sp-16);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
-.hm-lane-fn-name{display:block;font-size:var(--fs-19);font-weight:600;line-height:1.2}
-.hm-lane-fn-sub{display:block;font-size:var(--fs-14);color:rgba(255,255,255,.86);margin-top:2px}
-@media(max-width:1100px){.hm-lane-kit{gap:var(--sp-12)}.hm-lane-fn-name{font-size:var(--fs-16)}.hm-lane-fn-sub{font-size:var(--fs-13)}}
-@media(max-width:600px){.hm-lane-kit{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-lane-fn-cap{padding:var(--sp-24) var(--sp-12) var(--sp-12)}}
-.fn-index{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--sp-48);margin:var(--sp-32) 0 0;padding:0;list-style:none;border-top:1px solid var(--line)}
-.fn-index a{display:block;padding:12px 0;border-bottom:1px solid var(--line);color:var(--ink)}
-.fn-index a:hover{text-decoration:none}
-.fn-index a:hover b{text-decoration:underline}
-.fn-index b{display:block;font-size:var(--fs-16);font-weight:600;line-height:1.3}
-.fn-index span{display:block;margin-top:2px;font-size:var(--fs-14);color:var(--ink-3);line-height:1.45}
-@media(max-width:700px){.fn-index{grid-template-columns:1fr}}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://irontuna.com/fantasy","name":"Season Long Fantasy Football: The Odds Makers’ Edge","description":"Season long fantasy football read off the betting market first: weekly rankings, a rest-of-season board, the next five weeks, the week’s start/sit call and the signal engine’s own read — all restated at your league’s scoring.","url":"https://irontuna.com/fantasy","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/fantasy"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Season Long Fantasy Football: The Odds Makers’ Edge"}]}]}</script>
 </head>
-<body class="fn-page sl-dress">
+<body class="fn-page sl-dress ln-front">
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site"><!--chrome:line--><p class="site-line" aria-hidden="true"></p><!--/chrome:line--><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
@@ -335,7 +164,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
      buttons the nameplate carried are the first two links; the script that
      hides "Save my league" for a reader who has saved one, and renames it
      for one who has, writes to the same ids it always did. -->
-<section class="hm-hero" aria-labelledby="heroHead">
+<section class="sl-mast hm-hero" aria-labelledby="heroHead">
   <div class="wrap">
     <h1 id="heroHead">Season long, priced off the betting market.</h1>
     <p class="hm-lede">Weekly rankings, the next five weeks, rest of season, the start/sit call and the price of a waiver claim, each read off sportsbook lines first and restated at your league&rsquo;s scoring.</p>
@@ -354,7 +183,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
   </div>
 </section>
 
-<div class="sl-in fn-state">
+<div class="sl-in ln-state">
 <div class="its-strip-sync" id="fnSync" hidden></div>
 </div>
 
@@ -390,7 +219,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
       <a href="#tools">Every tool</a>
     </div>
   </nav>
-  <div class="fn-rail-upd">
+  <div class="ln-rail-upd">
     <div class="sl-upd" id="slUpd" hidden>
       <div class="sl-upd-h"><b>Player updates</b><span class="sl-upd-n" id="slUpdN"></span></div>
       <div class="sl-upd-body" id="slUpdBody" aria-live="polite"></div>
@@ -675,7 +504,7 @@ body.fn-page .sl-edge .sl-edge-note{font-size:var(--fs-14);color:var(--ink-3)}
       <span class="hm-lane-fn-cap"><span class="hm-lane-fn-name">Trade Tools</span><span class="hm-lane-fn-sub">Judge or find one</span></span>
     </a></li>
   </ul>
-  <ul class="fn-index" aria-label="Everything else in the lane">
+  <ul class="ln-index" aria-label="Everything else in the lane">
     <li><a href="/depth-charts"><b>Depth Charts</b><span>Every club&rsquo;s published order, refreshed daily, with each man&rsquo;s injury designation on his name.</span></a></li>
     <li><a href="/game-intel"><b>Game Intel</b><span>Every game with its line, total and the points each offense is implied to score.</span></a></li>
     <li><a href="/weekly-intel"><b>Weekly Intel</b><span>The week, the byes, the slate, and every tool in one place.</span></a></li>

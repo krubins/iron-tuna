@@ -106,5 +106,9 @@ figure. It is gone, and the band is three figures that change.
   the weekly ledger, outlined cards only where a live sentence has to sit,
   the lane's four illustrated tool tiles over a link index. The left rail
   stays and the player rail folded into it, so the shell is two columns.
+  /dfs followed the same day, and the composition moved into site.css as
+  `body.ln-front` (the lane front) because two pages now wear it: hero, shell,
+  rail, tiles, cards, empty states and the desk. Each page keeps only the
+  rules for the objects it alone has the markup for.
 - The player card's search box keeps the page's own 42px field. It should
   become the shared 52px field when that page is next touched.
