@@ -13936,3 +13936,82 @@ overlay at 7 AM ET; `/api/admin/odds-status?key=&refresh=1` and
 `/api/admin/season-status?key=&refresh=1` seed both without waiting. The Odds
 API stays unconfigured; PropLine covers the props and is the feed the boards
 already read.
+
+## 132. October 11: the Trade Finder argues each side before it offers a trade
+
+Ken: *"The trade finder is proposing stupid trades that no one would ever
+accept. Before presenting any trade, do a full analysis from each side's
+perspective on why that team would want the trade. Unless your analysis shows
+from that party's perspective that they would want the deal, don't recommend
+it."*
+
+**What was being offered.** The search (§61a) kept every swap where both
+lineups gained `minGain` a week on their own horizon, and the slider at *In my
+favor* ranked the survivors by the reader's gain alone. On the test fixture
+that put this first: the reader's fourth back and a bench receiver for the
+Mirror's best player and a starting back. The Mirror's lineup "gained" 0.63 a
+week, because the receiver it lost was replaced by its fourth receiver and
+the back it got started. It also sent the best player in the deal and five
+points a week more projection than came back, and no manager does that for a
+rounding error. The lineup floor was necessary and not sufficient; the bench
+weights (0.25 / 0.15 / 0.08, then nothing) were the hole, since a deep team's
+fourth starter-grade back was worth nothing to the engine and therefore free
+to send.
+
+**The case (`judgeSide` in `it-trade.js`).** One side of a trade, argued from
+that manager's chair, returning `{ accept, why, against, ... }` with the
+reasons as sentences the page prints. A side is refused when:
+
+- the lineup does not gain the floor on its own horizon (unchanged);
+- it sends the best player in the deal (by points a week on *its* clock) and
+  the lineup gains less than twice the floor for it;
+- it sends more projection than it gets back by more than the floor and more
+  than twice what the lineup gains;
+- it must open a roster spot for a player worth no more than the one it would
+  cut to make room (the cut line is the least valuable player on the roster
+  after the trade, one per spot opened);
+- the trade opens a hole at a position it had filled;
+- its gain is under two points a week and under thirty percent of the other
+  side's;
+- it is scored on this week or the next three, and the deal costs it more over
+  the season (`opts.season`, default `ros`) than twice what it earns now. A
+  bubble team buys now; it does not give the season away for a rental.
+
+A thin bench afterward is noted in `against`, not disqualifying. `findTrades`
+runs both cases on every swap that clears the floor, drops the trade if either
+side refuses, and returns `refused` beside `considered`. It also drops
+**padding**: a package carrying a pair neither side would start swapped for
+each other, or two near-equal players at one position swapped straight across
+(under twice the floor on both clocks). Such a pair is worth a fraction of a
+point of bench weight, enough to rank the padded package above the clean one,
+so the clean one is what gets offered. `evaluateTrade` carries `A.case` and
+`B.case` and an `accept`; `opts.otherGain` (a number or `{ a, b }`) lets a
+caller scoring one team of a bigger deal pass in what the others gain.
+`opts.label(h)` supplies the words for a horizon in the reasons.
+
+**The page.** Under each side's lineup lines, *Why you would do it* / *Why
+they would do it* lists that side's reasons; a trade the reader typed can come
+back *Why they would say no* with the objections first, and the verdict then
+reads "Both lineups gain, but expect a no." with the first objection, and the
+alternatives search runs. The Finder loads the `ros` board alongside the
+horizons in play so the season check has points; the Evaluator judges in two
+passes so each side's case knows the most any other side gains. The results
+note and empty state say how many swaps improved both lineups on paper and
+were set aside. The notes-to-model summary hands over each side's case so the
+read cannot argue a trade the other manager would refuse. A paragraph under
+*How these trades are judged* states the rules.
+
+**Tests.** `tools/test-trade-finder.mjs` (168): the fixture's old top tilted
+trade is refused by the Mirror for all three reasons, and the reader's case
+for it is printed; the clean one-for-one is accepted by both with no
+objection; a throw-in under the cut line is refused; a bubble team is told
+what a rental costs over the season; at tilt 0 and 1 every trade found
+carries two accepted cases, nobody sends the best player for under twice the
+floor, nobody is paid under thirty percent without a clear win of their own,
+`refused` is reported, and the lineup lines are the case's lines; no package
+carries a lateral same-position swap; `judgeSide` stands alone and agrees
+with `evaluateTrade`. `tools/test-trade-finder-page.mjs` (170, browser, not
+in CI): every side card carries an accepted case headed for the right
+manager, the first reason is the lineup on that team's horizon, the note says
+why swaps were set aside, and at full tilt no partner is paid a fraction of
+the reader's gain.

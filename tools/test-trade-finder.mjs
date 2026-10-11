@@ -437,6 +437,87 @@ console.log('\nthe trade search');
   ok('an empty trade changes nothing and is called even', nil.A.gain === 0 && nil.A.call === 'even' && nil.B.call === 'even');
 }
 
+// ── the case each side would make ──────────────────────────────────────────
+// A lineup gain for both is necessary and not sufficient. The trades below
+// all cleared the floor and were the ones readers called stupid: nobody
+// gives up the best player in the deal, or forty points of projection, for
+// a bump. judgeSide argues each side from that manager's chair and the
+// search drops a trade either side would refuse.
+console.log('\nthe case each side would make');
+{
+  const mk = (id, pos, ros, late, week) => ({ id, name: id, pos, ros, late: late == null ? ros * 3 / 12 : late, week: week == null ? ros / 12 : week });
+  const teams = [
+    { name: 'Reader', players: [mk('Q0', 'QB', 300), mk('R0a', 'RB', 260), mk('R0b', 'RB', 240), mk('R0c', 'RB', 220), mk('R0d', 'RB', 200), mk('W0a', 'WR', 150), mk('W0b', 'WR', 120), mk('W0c', 'WR', 60), mk('T0', 'TE', 120)] },
+    { name: 'Mirror', players: [mk('Q1', 'QB', 290), mk('R1a', 'RB', 150), mk('R1b', 'RB', 110), mk('R1c', 'RB', 60), mk('W1a', 'WR', 270), mk('W1b', 'WR', 250), mk('W1c', 'WR', 230), mk('W1d', 'WR', 210), mk('T1', 'TE', 110)] },
+    { name: 'Balanced', players: [mk('Q2', 'QB', 310), mk('R2a', 'RB', 230), mk('R2b', 'RB', 200), mk('R2c', 'RB', 150), mk('W2a', 'WR', 240), mk('W2b', 'WR', 200), mk('W2c', 'WR', 150), mk('T2', 'TE', 130)] }
+  ];
+  const by = id => teams.flatMap(t => t.players).find(p => p.id === id);
+  const slots = { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1 };
+  const WEEKS = { week: 1, next3: 3, ros: 12, playoffs: 3 };
+  const points = (p, h) => h === 'playoffs' ? p.late : h === 'week' ? p.week : h === 'next3' ? p.ros * 3 / 12 : p.ros;
+  const base = { slots, points, weeks: h => WEEKS[h], horizon: () => 'ros', minGain: 0.5, label: h => ({ ros: 'the rest of the season', next3: 'the next three weeks', week: 'this week', playoffs: 'the playoff weeks' })[h] };
+
+  // The one the slider used to put first: the reader's fourth back and a
+  // bench receiver for the Mirror's best player and a starting back. The
+  // Mirror's lineup gains 0.63 a week on paper, giving up the best player in
+  // the deal and five points a week of projection to do it.
+  const dumb = T.evaluateTrade(teams, { ...base, a: 0, b: 1, giveA: [by('R0d'), by('W0b')], giveB: [by('W1a'), by('R1b')] });
+  ok('both lineups gain on paper', dumb.both && dumb.A.gain > 10 && dumb.B.gain > 0.5, `${dumb.A.gain} / ${dumb.B.gain}`);
+  ok('but the Mirror refuses it', dumb.accept === false && dumb.B.case.accept === false);
+  ok('because it sends the best player for a bump', dumb.B.case.best.side === 'gives' && dumb.B.case.against.some(t => /best player in the deal, W1a/.test(t)), dumb.B.case.against.join(' | '));
+  ok('and sends more projection than comes back', dumb.B.case.sent > dumb.B.case.got && dumb.B.case.against.some(t => /of projection and gets/.test(t)));
+  ok('and gains a fraction of what the reader gains', dumb.B.case.against.some(t => /while the other side gains/.test(t)));
+  ok('the reader would take it, and the case says why', dumb.A.case.accept && dumb.A.case.best.side === 'gets' && dumb.A.case.why.some(t => /Gets the best player in the deal, W1a/.test(t)) && dumb.A.case.why.some(t => /W1a at WR/.test(t)), dumb.A.case.why.join(' | '));
+  ok('every reason is a sentence', dumb.A.case.why.concat(dumb.B.case.against).every(t => /^[A-Z].*\.$/.test(t)));
+
+  // The clean version: the reader's best back for the Mirror's best receiver.
+  const clean = T.evaluateTrade(teams, { ...base, a: 0, b: 1, giveA: [by('R0a')], giveB: [by('W1a')] });
+  ok('a surplus-for-need swap of near-equal players is accepted by both', clean.accept && clean.A.case.accept && clean.B.case.accept, JSON.stringify([clean.A.case.against, clean.B.case.against]));
+  ok('the Mirror sends a little more projection and the case says the lineup covers it', clean.B.case.why.some(t => /^The lineup gains/.test(t)) && clean.B.case.why.some(t => /more projection than it gets, which the lineup gain covers/.test(t)), clean.B.case.why.join(' | '));
+  ok('and no objection either side', clean.A.case.against.length === 0 && clean.B.case.against.length === 0, JSON.stringify([clean.A.case.against, clean.B.case.against]));
+
+  // A throw-in the other side would only cut: the reader's fourth receiver
+  // (60) on top of a fair one-for-one, so the Mirror must open a roster spot
+  // for a player below everyone it keeps.
+  const cut = T.evaluateTrade(teams, { ...base, a: 0, b: 2, giveA: [by('R0b'), by('W0c')], giveB: [by('W2a')] });
+  ok('a throw-in the other side would cut is refused', cut.B.case.accept === false && cut.B.case.filler.length === 1 && cut.B.case.filler[0].id === 'W0c' && cut.B.case.against.some(t => /open a roster spot for W0c/.test(t)), cut.B.case.against.join(' | '));
+
+  // The season check: a team scored on the next three weeks is not talked
+  // into giving the season away for a rental. Team 1 has a receiver who is
+  // ordinary over the season but huge in the next three weeks.
+  const rental = [
+    { name: 'Bubble', players: [mk('Q', 'QB', 280), mk('Ra', 'RB', 200), mk('Rb', 'RB', 120), mk('Wa', 'WR', 240), mk('Wb', 'WR', 220), mk('Wc', 'WR', 90), mk('T', 'TE', 100)] },
+    { name: 'Seller', players: [mk('Q9', 'QB', 250), mk('R9a', 'RB', 230), mk('R9b', 'RB', 150), mk('W9a', 'WR', 130, null, null), mk('W9b', 'WR', 180), mk('T9', 'TE', 90)] }
+  ];
+  // Over the next three weeks the seller's back is worth a 300-point back; over the season he is 230.
+  const pts2 = (p, h) => h === 'next3' ? (p.id === 'R9a' ? 90 : p.ros * 3 / 12) : points(p, h);
+  const ren = T.evaluateTrade(rental, { ...base, points: pts2, a: 0, b: 1, horizon: i => i === 0 ? 'next3' : 'ros', giveA: [by.call(null, 'x') || rental[0].players[3]], giveB: [rental[1].players[1]] });
+  ok('a bubble team sending its best receiver for a three-week back is told what the season costs', ren.A.h === 'next3' && ren.A.case.season && ren.A.case.season.h === 'ros', JSON.stringify(ren.A.case.season));
+  ok('and the objection names it', ren.A.case.against.some(t => /over the rest of the season/.test(t)) || ren.A.case.why.some(t => /over the rest of the season/.test(t)), ren.A.case.against.concat(ren.A.case.why).join(' | '));
+
+  // The search itself: nothing it returns is a trade either side refuses,
+  // every trade carries both cases, and the slider at full tilt cannot push
+  // the partner under thirty percent of the reader's gain unless the partner
+  // clears two points a week on its own.
+  for (const tilt of [0, 1]) {
+    const r = T.findTrades(teams, { ...base, mine: 0, tilt, maxSize: 3, limit: 40 });
+    ok(`tilt ${tilt}: every trade found carries two accepted cases`, r.trades.length > 0 && r.trades.every(t => t.caseA && t.caseB && t.caseA.accept && t.caseB.accept), String(r.trades.length));
+    ok(`tilt ${tilt}: nobody sends the best player for less than twice the floor`, r.trades.every(t => (t.caseA.best.side !== 'gives' || t.gainA >= 1) && (t.caseB.best.side !== 'gives' || t.gainB >= 1)));
+    ok(`tilt ${tilt}: nobody gains under thirty percent of the other side without a clear win of their own`, r.trades.every(t => Math.min(t.gainA, t.gainB) >= 2 || Math.min(t.gainA, t.gainB) >= 0.3 * Math.max(t.gainA, t.gainB)), JSON.stringify(r.trades.map(t => [t.gainA, t.gainB]).slice(0, 4)));
+    ok(`tilt ${tilt}: the count of refused swaps is reported`, r.refused > 0 && r.considered > 0, `${r.considered} kept, ${r.refused} refused`);
+    ok(`tilt ${tilt}: the lineup lines are the case's lines`, r.trades.every(t => t.linesA === t.caseA.lines && t.linesB === t.caseB.lines));
+  }
+  // Padding: no trade carries a bench-for-bench pair or a lateral same-position swap.
+  const r3 = T.findTrades(teams, { ...base, mine: 0, tilt: 0.5, maxSize: 3, limit: 40 });
+  const lateral = r3.trades.filter(t => t.giveA.some(p => t.giveB.some(q => p.pos === q.pos && Math.abs(p.ros - q.ros) / 12 < 1)) && t.giveA.length + t.giveB.length > 2);
+  ok('no package carries a lateral same-position swap as padding', lateral.length === 0, lateral.map(t => t.giveA.map(p => p.id) + ' for ' + t.giveB.map(p => p.id)).join(' | '));
+  ok('a one-for-one still comes through', r3.trades.some(t => t.giveA.length === 1 && t.giveB.length === 1));
+  // judgeSide stands on its own for a caller that builds the side itself.
+  const side = { name: 'Reader', h: 'ros', wk: 12, roster: teams[0].players, slots };
+  const js = T.judgeSide(side, [by('R0a')], [by('W1a')], points, { minGain: 0.5, season: 'ros', weeks: h => WEEKS[h] }, 5.4);
+  ok('judgeSide is exported and agrees with evaluateTrade', js.accept === true && near(js.gain, clean.A.gain, 1e-9) && js.starts['W1a'] === 'WR', JSON.stringify(js.starts));
+}
+
 console.log('\nthe worker’s screenshot reader, without a model');
 {
   const src = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8');
