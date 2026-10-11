@@ -357,7 +357,9 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   // The chrome is the shared one.
   ok(`${tag}: the black bar above the ribbon carries no text`, r.line === '', r.line);
   ok(`${tag}: the navy bar above the ribbon is 3px`, r.lineH === 3, String(r.lineH));
-  ok(`${tag}: the ribbon is ${w > 860 ? 95 : 53}px`, r.ribbonH === (w > 860 ? 95 : 53), r.ribbonH + 'px');
+  // 60px above 860px and 44px on a phone since the evening of 2026-10-10, when
+  // the mark was halved and the bar cut with it (95 and 53 before).
+  ok(`${tag}: the ribbon is ${w > 860 ? 60 : 44}px`, r.ribbonH === (w > 860 ? 60 : 44), r.ribbonH + 'px');
   ok(`${tag}: the nav is the shared five`, r.nav.join(',') === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/player', r.nav.join(','));
   if (w > 860) {
     ok(`${tag}: the one header button customizes the league`, !!r.cta && r.cta.shown && r.cta.href === '/my-league#settings' && r.cta.text === 'Customize My League', JSON.stringify(r.cta));
