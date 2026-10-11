@@ -12,7 +12,7 @@
 // tab, the step order and a trade judged with no roster behind it are proved
 // here too, and so is the gauge under the verdict (every side scored again
 // on the next three weeks and the long term, the reader's weighted needle,
-// the Go / No go call and the situation row). The FAAB manual form is here
+// the Go / No go call, the situation row and the lineup fit). The FAAB manual form is here
 // too, because it is the same kind of claim: a league typed by hand has to
 // produce the same shape of answer the Sleeper path does, and the typed bid
 // history has to move the going rate.
@@ -378,7 +378,7 @@ const verdict = () => page.evaluate(() => ({ cls: document.querySelector('.tf-ve
 const clearDeal = async () => { for (const sel of ['#tf-sends .chip button']) while ((await page.$$(sel)).length) await page.click(sel); };
 // The gauge: the call, the needle's place on the track (0 is three points a
 // week lost, 100 three gained, the zone edges at 37.5 and 62.5), the fill's
-// colour, and the three rows' text.
+// colour, and the four rows' text.
 const gauge = () => page.evaluate(() => {
   const g = document.getElementById('tf-gauge'), pin = g.querySelector('.pin'), meter = g.querySelector('.tf-meter');
   return { hidden: g.hidden, call: (g.querySelector('.tf-call .v') || {}).textContent, data: (g.querySelector('.tf-call .v') || { getAttribute: () => null }).getAttribute('data-call'),
@@ -410,13 +410,14 @@ const gauge = () => page.evaluate(() => {
   ok('a swap that helps both is called a win', /win/.test(v1.cls) && /Both sides win/.test(v1.h), JSON.stringify(v1));
   ok('the reader’s side reads first', /^You/.test(v1.sides[0].who) && v1.sides.length === 2);
   let g = await gauge();
-  ok('the gauge is shown under the verdict', !g.hidden && g.rows.length === 3, JSON.stringify(g));
+  ok('the gauge is shown under the verdict', !g.hidden && g.rows.length === 4, JSON.stringify(g));
   ok('a clear gain for the reader is a Go', g.data === 'go' && /^Go$/.test(g.call) && /clear gain/.test(g.why), JSON.stringify([g.call, g.why]));
   ok('with the needle in the Send it zone, filled in teal', g.pos > 62.5 && g.pos <= 100 && !g.no && g.fill === 'rgb(11, 79, 108)', JSON.stringify([g.pos, g.fill]));
-  ok('the short-term row scores the next three weeks for everyone', /Short term · Next 3 weeks/.test(g.rows[0].k) && /^\+\d/.test(g.rows[0].v) && /Helps The Hammers most/.test(g.rows[0].w), JSON.stringify(g.rows[0]));
-  ok('the long-term row scores the rest of the season', /Long term · Rest of season/.test(g.rows[1].k) && /^\+\d/.test(g.rows[1].v) && /Helps The Hammers most, \+\d+\.\d a week against \+\d+\.\d for you\./.test(g.rows[1].w), JSON.stringify(g.rows[1]));
-  ok('the situation row reads the settings and weighs 35/65', /Your situation/.test(g.rows[2].k) && /Whole season/.test(g.rows[2].v) && /From the settings/.test(g.rows[2].w) && /count 35% and rest of season 65%/.test(g.rows[2].w), JSON.stringify(g.rows[2]));
-  ok('and the roster fit is read off the lineup', /weakest start/.test(g.rows[2].w) && !/Add your roster/.test(g.rows[2].w), g.rows[2].w);
+  ok('the first row scores the next three weeks for everyone', /^Next 3 weeks$/.test(g.rows[0].k) && /^\+\d+\.\d for you$/.test(g.rows[0].v) && /^The Hammers \+\d+\.\d\.$/.test(g.rows[0].w), JSON.stringify(g.rows[0]));
+  ok('with the team helped most in bold', await page.$eval('#tf-gauge .tf-gauge-rows .row .w b', b => /^The Hammers \+\d+\.\d$/.test(b.textContent)));
+  ok('the second row scores the rest of the season', /^Rest of season$/.test(g.rows[1].k) && /^\+\d+\.\d for you$/.test(g.rows[1].v) && /^The Hammers \+\d+\.\d\.$/.test(g.rows[1].w), JSON.stringify(g.rows[1]));
+  ok('the situation row reads the settings and weighs 35/65', /Your situation/.test(g.rows[2].k) && /Whole season/.test(g.rows[2].v) && /From the settings/.test(g.rows[2].w) && /next 3 weeks 35% and rest of season 65%/.test(g.rows[2].w), JSON.stringify(g.rows[2]));
+  ok('and the lineup fit is read off the lineup', /Lineup fit/.test(g.rows[3].k) && /^(Fills a need|Opens a hole|No change)$/.test(g.rows[3].v) && /weakest start/.test(g.rows[3].w) && !/Add your roster/.test(g.rows[3].w), JSON.stringify(g.rows[3]));
   ok('the meter is described for a screen reader', /^Go: \+\d+\.\d points a week/.test(g.aria), g.aria);
 
   // An overpay: the reader's only quarterback for the partner's tight end.
@@ -431,9 +432,9 @@ const gauge = () => page.evaluate(() => {
   g = await gauge();
   ok('an overpay is a No go', g.data === 'no' && /^No go$/.test(g.call) && /clear loss/.test(g.why), JSON.stringify([g.call, g.why]));
   ok('with the needle in the Walk away zone, filled in the danger brown', g.pos >= 0 && g.pos < 37.5 && g.no && g.fill === 'rgb(138, 59, 0)', JSON.stringify([g.pos, g.fill]));
-  ok('the rows say nobody gains, with every side’s figure', g.rows.slice(0, 2).every(r => /^−\d/.test(r.v) && /Nobody gains here: you −\d+\.\d, The Hammers [+−]\d+\.\d\./.test(r.w)), JSON.stringify(g.rows));
-  ok('and that the only quarterback leaving opens a hole at QB', /Opens a hole: QB goes unfilled; .* was starting there/.test(g.rows[2].w), g.rows[2].w);
-  if (process.env.IT_SHOT) { const p4 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-gauge$1'); await page.$eval('#tf-gauge', e => e.scrollIntoView()); await page.locator('#tf-gauge').screenshot({ path: p4 }); console.log('wrote ' + p4); }
+  ok('the rows say nobody gains, with every side’s figure', g.rows.slice(0, 2).every(r => /^−\d+\.\d for you$/.test(r.v) && /^(Nobody gains|About even)\. The Hammers [+−]\d+\.\d\.$/.test(r.w)), JSON.stringify(g.rows));
+  ok('and that the only quarterback leaving opens a hole at QB', /^Opens a hole$/.test(g.rows[3].v) && /^QB goes unfilled; .* was starting there\.$/.test(g.rows[3].w), JSON.stringify(g.rows[3]));
+  if (process.env.IT_SHOT) { const p4 = process.env.IT_SHOT.replace(/(\.\w+)?$/, '-gauge$1'); await page.locator('#tf-results').screenshot({ path: p4 }); console.log('wrote ' + p4); }
   await clearDeal();
   ok('an empty trade turns evaluate back off', await page.$eval('#tf-eval', e => e.disabled));
 }
@@ -491,9 +492,9 @@ console.log('\nevaluate a three-team trade, with notes');
   ok('each team is scored on the horizon its notes set', /Fantasy playoffs/.test(horizons[0]) && /Next 3 weeks/.test(horizons[1]) && /Rest of season/.test(horizons[2]), JSON.stringify(horizons));
   ok('the reader gets the receiver and sends two', v3.sides[0].give.split('Gets')[1].includes(NAMES.WR[6]) && /^You/.test(v3.sides[0].who), v3.sides[0].give);
   const g3 = await gauge();
-  ok('a clinched reader’s long term is the fantasy playoffs', /Long term · Fantasy playoffs/.test(g3.rows[1].k) && /Short term · Next 3 weeks/.test(g3.rows[0].k), JSON.stringify(g3.rows.map(r => r.k)));
-  ok('the situation row reads the notes and weighs 25/75', /Playoff-bound/.test(g3.rows[1 + 1].v) && /From your notes: “[^”]*clinched”/.test(g3.rows[2].w) && /count 25% and fantasy playoffs 75%/.test(g3.rows[2].w), JSON.stringify(g3.rows[2]));
-  ok('every side in a three-team deal is on each row', g3.rows.slice(0, 2).every(r => /Helps .* most, [+−]\d+\.\d a week against [+−]\d+\.\d for .*, [+−]\d+\.\d for .*\./.test(r.w)), JSON.stringify(g3.rows.slice(0, 2)));
+  ok('a clinched reader’s long term is the fantasy playoffs', /^Fantasy playoffs$/.test(g3.rows[1].k) && /^Next 3 weeks$/.test(g3.rows[0].k), JSON.stringify(g3.rows.map(r => r.k)));
+  ok('every side in a three-team deal is on each row, the one helped most named', g3.rows.slice(0, 2).every(r => /^(Helps (you|\S.*) most\. |Nobody gains\. |About even\. )?(The Hammers|Clinched) [+−]\d+\.\d, (The Hammers|Clinched) [+−]\d+\.\d\.$/.test(r.w)), JSON.stringify(g3.rows.slice(0, 2)));
+  ok('the situation row reads the notes and weighs 25/75', /Playoff-bound/.test(g3.rows[2].v) && /From your notes: “[^”]*clinched”/.test(g3.rows[2].w) && /next 3 weeks 25% and fantasy playoffs 75%/.test(g3.rows[2].w), JSON.stringify(g3.rows[2]));
   ok('and the call is made', /^(Go|No go)/.test(g3.call) && g3.pos >= 0 && g3.pos <= 100, JSON.stringify([g3.call, g3.pos]));
   ok('a team taking more players than it sends is told it needs room', /roster spot/.test(await page.textContent('.tf-proposed')));
   await page.waitForFunction(() => /notes say/.test(document.getElementById('tf-take').textContent), null, { timeout: 8000 });
@@ -548,7 +549,7 @@ console.log('\nevaluate with no rosters entered');
   ok('on the players alone, the better player going out is a loss', v0.sides[0].neg && /Don/.test(v0.h), JSON.stringify(v0));
   const g0 = await gauge();
   ok('and the gauge says No go', g0.data === 'no' && g0.pos < 50, JSON.stringify([g0.call, g0.pos]));
-  ok('with no roster, the fit asks for one', /Add your roster in step 2/.test(g0.rows[2].w), g0.rows[2].w);
+  ok('with no roster, the fit asks for one', /^Not known$/.test(g0.rows[3].v) && /Add your roster in step 2/.test(g0.rows[3].w), JSON.stringify(g0.rows[3]));
   await pasteInto(rosterIn(0), PASTE);
   await page.waitForFunction(() => document.querySelectorAll('#tf-teams .tf-team').length === 4, null, { timeout: 4000 });
   ok('the paste fills the rosters under the Evaluator too', (await names()).join() === 'Iron Tuna (Ken),The Hammers,Clinched,Bubble Boys' && (await chipsOf(0)).length === 12, (await names()).join());
@@ -558,7 +559,7 @@ console.log('\nevaluate with no rosters entered');
   const v1 = await verdict();
   ok('with the rosters in, the same deal is scored on the lineups, and wins', /win/.test(v1.cls), JSON.stringify(v1));
   const g1 = await gauge();
-  ok('and the gauge turns to Go', g1.data === 'go' && g1.pos > 62.5 && /weakest start/.test(g1.rows[2].w), JSON.stringify([g1.call, g1.pos, g1.rows[2].w]));
+  ok('and the gauge turns to Go', g1.data === 'go' && g1.pos > 62.5 && /weakest start/.test(g1.rows[3].w), JSON.stringify([g1.call, g1.pos, g1.rows[3].w]));
   ok('and the bar prices the lineup', /pts\/wk/.test(await page.textContent('#tf-bar')));
   // The ribbon is sticky at the top of the window: scrolled to the verdict, it is still at 0.
   ok('the header ribbon stays anchored to the top while scrolled', await page.evaluate(() => { const h = document.querySelector('header.site'); return window.scrollY > 100 && getComputedStyle(h).position === 'sticky' && Math.round(h.getBoundingClientRect().top) === 0; }), String(await page.evaluate(() => [window.scrollY, document.querySelector('header.site').getBoundingClientRect().top])));
