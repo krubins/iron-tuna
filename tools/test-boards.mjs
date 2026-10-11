@@ -221,6 +221,7 @@ console.log('\nbyes, injuries and the multi-week sums');
   const bbbWeeks = games.filter(g => g.week >= 2 && g.week <= 17 && (g.home === 'BBB' || g.away === 'BBB')).length;
   ok('games played counts neither', beta.games === bbbWeeks - 2, beta.games + ' vs ' + (bbbWeeks - 2));
   ok('the injury is on the row', beta.injury && beta.injury.status === 'IR' && beta.injury.gamesOut === 2);
+  ok('...with the games he sits inside this horizon', beta.injury.weeksOut === 2, JSON.stringify(beta.injury));
   const alpha = b.players.find(p => p.name === 'Alpha Quarterback');
   const aaaWeeks = games.filter(g => g.week >= 2 && g.week <= 17 && (g.home === 'AAA' || g.away === 'AAA')).length;
   ok('a healthy player plays every week he has a game', alpha.games === aaaWeeks && alpha.byes.includes(7));
@@ -241,14 +242,16 @@ console.log('\nbyes, injuries and the multi-week sums');
      JSON.stringify(beta.perGame.marketDelta) === JSON.stringify(H.marketDelta(beta.perGame.consensus.points, beta.perGame.consensus.rank, beta.perGame.vegas.points, beta.perGame.vegas.rank)));
   ok('the week board carries no average', !H.buildBoards(ctx({ avail }), { horizon: 'week', preset: 'ppr' }).players.some(p => p.perGame));
   // The season line was PRO-RATED for the listed player (as the app ships it);
-  // his per-game line must be the full line over the games he plays, not the
-  // pro-rated line over 17.
+  // his per-game line must be the full 17-game line over 17 (the games he
+  // sits come off the window, not out of the divisor), not the pro-rated line
+  // over 17 and not, as until 11 Oct 2026, the full line over the games he
+  // can still play, which paid him his whole season in fewer games.
   const week = H.buildBoards(ctx({ avail: { 'gammaback|RB': { status: 'Out', gamesOut: 4 } },
     pool: POOL.map(p => p.name === 'Gamma Back' ? { ...p, projectedStats: { rushYd: 900 * 13 / 17, rushTD: 6 * 13 / 17, rec: 60 * 13 / 17, recYd: 450 * 13 / 17, recTD: 3 * 13 / 17 } } : p) }),
     { horizon: 'playoffs', preset: 'ppr' });
   const gamma = week.players.find(p => p.name === 'Gamma Back');
   ok('a four-game absence from Week 2 does not reach the playoffs', gamma.games === 3 && gamma.weeks.every(w => !w.out), JSON.stringify(gamma.weeks.map(w => [w.week, !!w.out, !!w.bye])));
-  ok('a pro-rated row is un-rated before it is divided', near(gamma.consensus.stats.rushYd / gamma.games, _oddsRound(900 / 13), 0.2), String(gamma.consensus.stats.rushYd / gamma.games));
+  ok('a pro-rated row is un-rated before it is divided, and divided by 17', near(gamma.consensus.stats.rushYd / gamma.games, _oddsRound(900 / 17), 0.2), String(gamma.consensus.stats.rushYd / gamma.games));
   ok('the playoff horizon is three weeks and never 18', week.horizon.weeks.join() === '15,16,17');
   ok('far-out weeks have no posted line and say so', gamma.vegas.basis === 'ratings' && gamma.vegas.confidence === 'LOW', gamma.vegas.basis + ' ' + gamma.vegas.confidence);
   ok('schedule difficulty is reported', !!gamma.scheduleDifficulty && ['Easy', 'Average', 'Hard'].includes(gamma.scheduleDifficulty.label));

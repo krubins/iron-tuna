@@ -11,7 +11,7 @@
     "(the season line comes back), then delete the entry after the next projections merge.",
     "Apply with `node tools/apply-availability.mjs`; CI runs it with --check."
   ],
-  "asOf": "2026-10-07",
+  "asOf": "2026-10-11",
   "seasonGames": 17,
   "players": [
     {
@@ -337,6 +337,24 @@
         "rec": 6,
         "recYd": 53,
         "recTD": 1
+      }
+    },
+    {
+      "name": "Baker Mayfield",
+      "position": "QB",
+      "team": "TB",
+      "status": "Out",
+      "asOf": "2026-09-29",
+      "gamesOut": 4,
+      "note": "Dislocated right thumb in the Week 3 loss to the Vikings (Sept. 27); not placed on injured reserve. Bowles gave a 3-to-6 week timetable on Sept. 28 and said three weeks is the minimum. Missed Weeks 4 and 5; Jalon Daniels named the Week 6 starter. Counted out through Week 7, the four-week mark, with Week 8 (Nov. 1) the first realistic return; the Week 10 bye is the outer bound.",
+      "source": "ESPN (Sept. 28 and Oct. 5, 2026), USA Today (Oct. 8), Tampa Bay Times via ESPN injury feed (Oct. 9-11, 2026); feed lists him Out with a placeholder return date, not IR",
+      "season": {
+        "passYd": 3823,
+        "passTD": 24.6,
+        "passInt": 11.6,
+        "rushYd": 323,
+        "rushTD": 1.4,
+        "fumLost": 4.4
       }
     }
   ]

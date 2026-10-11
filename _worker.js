@@ -313,7 +313,7 @@ const PROJECTIONS = [
   { name: "Justin Herbert", position: "QB", team: "LAC", projectedStats: { passYd: 3850, passTD: 25.6, passInt: 11, rushYd: 406, rushTD: 2.4, fumLost: 3.6 }},
   { name: "Jared Goff", position: "QB", team: "DET", projectedStats: { passYd: 4216, passTD: 29, passInt: 10, rushYd: 49, fumLost: 3.4 }},
   { name: "Caleb Williams", position: "QB", team: "CHI", projectedStats: { passYd: 3821, passTD: 25.3, passInt: 9.9, rushYd: 382, rushTD: 2.3, fumLost: 4 }},
-  { name: "Baker Mayfield", position: "QB", team: "TB", projectedStats: { passYd: 3823, passTD: 24.6, passInt: 11.6, rushYd: 323, rushTD: 1.4, fumLost: 4.4 }},
+  { name: "Baker Mayfield", position: "QB", team: "TB", projectedStats: { passYd: 2923, passTD: 18.8, passInt: 8.9, rushYd: 247, rushTD: 1.1, fumLost: 3.4 }},
   { name: "Malik Willis", position: "QB", team: "MIA", projectedStats: { passYd: 3560, passTD: 13.2, passInt: 10.4, rushYd: 546, rushTD: 3.4, fumLost: 6.2 }},
   { name: "Sam Darnold", position: "QB", team: "SEA", projectedStats: { passYd: 4013, passTD: 24, passInt: 12.4, rushYd: 126, fumLost: 4.6 }},
   { name: "Bo Nix", position: "QB", team: "DEN", projectedStats: { passYd: 3877, passTD: 26.5, passInt: 11.1, rushYd: 356, rushTD: 4, fumLost: 3.1 }},
@@ -2088,7 +2088,8 @@ const AVAILABILITY = {
   "christiankirk|WR": {"status":"IR","gamesOut":4,"note":"Calf injury from July 26; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
   "isaacguerendo|RB": {"status":"PUP","gamesOut":4,"note":"Pectoral; reserve/PUP, misses at least the first four games.","asOf":"2026-09-02"},
   "zachcharbonnet|RB": {"status":"PUP","gamesOut":4,"note":"January ACL tear; reserve/PUP, misses at least the first four games and is described as still far from returning.","asOf":"2026-09-02"},
-  "jeremymcnichols|RB": {"status":"IR","gamesOut":4,"note":"Quadriceps; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"}
+  "jeremymcnichols|RB": {"status":"IR","gamesOut":4,"note":"Quadriceps; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
+  "bakermayfield|QB": {"status":"Out","gamesOut":4,"note":"Dislocated right thumb in the Week 3 loss to the Vikings (Sept. 27); not placed on injured reserve. Bowles gave a 3-to-6 week timetable on Sept. 28 and said three weeks is the minimum. Missed Weeks 4 and 5; Jalon Daniels named the Week 6 starter. Counted out through Week 7, the four-week mark, with Week 8 (Nov. 1) the first realistic return; the Week 10 bye is the outer bound.","asOf":"2026-09-29"}
 };
 // ── live availability (ESPN's public injury report, pulled by the 11:00Z cron) ──
 // The committed block above is only as current as the last hand edit, and the
@@ -2291,12 +2292,39 @@ function buildAvailabilityOverlay(feed, prior) {
 // committed ∪ live, live winning per player except downward on gamesOut (see the
 // note at the top of this block). Every entry records the committed number so
 // the row factor can be the DIFFERENCE, not the whole factor twice.
+//
+// The two count games out from different places: a live entry from Week 1
+// (kickoff to ESPN's return date), a hand entry from the week of its own asOf.
+// For every preseason entry those are the same frame and max() compares like
+// with like. For a hand entry written mid-season they are not: the feed's
+// return date on a plain "Out" is the next game, so on 11 Oct 2026 a
+// quarterback three weeks into a six-week thumb injury was "out Weeks 1-5"
+// to the feed while the file said Weeks 4-7, and max(5, 4) handed the window
+// to the feed. So for a hand entry that starts after Week 1 the LAST week each
+// window covers is what is compared, and when the file's window reaches
+// further the file's entry is served whole (its asOf keeps the start week;
+// buildBoards counts a hand entry from there) with the feed's view riding
+// along as `feed` for the report. A hand entry that starts in Week 1 is in
+// the feed's own frame and keeps the rule above: live status and note, the
+// larger count.
+function _availStartWeek(asOf) {
+  const ms = Date.parse(String(asOf || ''));
+  const year = Number(String(asOf || '').slice(0, 4));
+  return Number.isFinite(ms) && Number.isFinite(year) ? _availWeekAt(ms, _availKickoff(year)) : 1;
+}
+function _availLastWeek(gamesOut, asOf) { return _availStartWeek(asOf) - 1 + (Number(gamesOut) || 0); }
 function availabilityMerge(committed, live) {
   const out = {};
   for (const [k, c] of Object.entries(committed || {})) out[k] = { ...c, committedGamesOut: Number(c.gamesOut) || 0 };
   for (const [k, l] of Object.entries(live || {})) {
-    const cg = out[k] ? out[k].committedGamesOut : 0;
-    out[k] = { status: l.status, gamesOut: Math.max(Number(l.gamesOut) || 0, cg), note: l.note || '',
+    const c = out[k];
+    const cg = c ? c.committedGamesOut : 0;
+    const lg = Number(l.gamesOut) || 0;
+    if (c && cg > 0 && _availStartWeek(c.asOf) > 1 && _availLastWeek(cg, c.asOf) > lg) {
+      out[k] = { ...c, feed: { status: l.status, gamesOut: lg, asOf: l.asOf || '', note: l.note || '' } };
+      continue;
+    }
+    out[k] = { status: l.status, gamesOut: Math.max(lg, cg), note: l.note || '',
                asOf: l.asOf || '', source: l.source || '', live: true, committedGamesOut: cg,
                ...(l.carried ? { carried: true } : {}) };   // the feed stopped mentioning him; see buildAvailabilityOverlay
   }
@@ -7467,11 +7495,15 @@ function buildBoards(ctx, opts) {
     const gamesOut = a ? Number(a.gamesOut) || 0 : 0;
     const wr = curWeek != null ? weekReport(k) : null;
     const wrOut = !!(wr && (wr.status === 'Out' || wr.status === 'Doubtful'));
-    // Games he can play across the season: the availability list, or the
-    // whole schedule. His per-game line is the season line over THIS.
-    const playable = Math.max(1, AVAILABILITY_GAMES - gamesOut);
     // The FULL season line: the committed row is pro-rated for a listed
-    // player (§48), so it is un-rated here and divided by the games he plays.
+    // player (§48), so it is un-rated here. His per-game line is that 17-game
+    // line over 17, whatever he is listed to miss: the games he sits come off
+    // the window below (outWeeks), not out of the divisor. Until 11 Oct 2026
+    // the full line was divided by the games he could still play, which paid
+    // a listed player his whole season in fewer games: a quarterback the feed
+    // ruled out for Week 5 (a live entry counts Weeks 1-5) was divided by 12
+    // and ranked first for the rest of the season at 17/12 of his line, and
+    // every preseason reserve placement was inflated by 17/13 the same way.
     const af = a ? _availF(gamesOut) : 1;
     const full = af > 0 && af < 1 ? Object.fromEntries(Object.entries(p.projectedStats || {}).map(([kk, v]) => [kk, Number.isFinite(v) ? v / af : v])) : (p.projectedStats || {});
     if (af <= 0) continue;                         // out for the year: nothing to rank
@@ -7525,7 +7557,7 @@ function buildBoards(ctx, opts) {
       games++;
       if (env.opponentDefRank) { oppAllowedSum += env.opponentDefRank; oppN++; }
       // CONSENSUS: flat per-game share of the season line. No market in it.
-      const c = weeklyStats(full, p.position, playable, { factor: 1, allowedFactor: 1 });
+      const c = weeklyStats(full, p.position, AVAILABILITY_GAMES, { factor: 1, allowedFactor: 1 });
       // VEGAS: a prop for this week if there is one, else the environment.
       let v = null, basis = env.basis, conf = 'LOW';
       const props = (w === curWeek && ctx.weekMarkets) ? ctx.weekMarkets[_oddsNorm(p.name)] : null;
@@ -7534,7 +7566,7 @@ function buildBoards(ctx, opts) {
         const mk = marketPropsFrom(props);
         vp = vegasProjection(mk.props, p.position, rules, { asOf: mk.asOf, injuryStatus: wr ? wr.status : a ? a.status : null });
         if (vp.ok) {
-          v = { ...weeklyStats(full, p.position, playable, env), ...vp.stats };   // priced stats replace the environment's
+          v = { ...weeklyStats(full, p.position, AVAILABILITY_GAMES, env), ...vp.stats };   // priced stats replace the environment's
           // ...and so does the touchdown price, which used to reach the block
           // beside the line and never the line itself. A priced TD COUNT still
           // wins: a count carries the two-score games a binary cannot.
@@ -7553,7 +7585,7 @@ function buildBoards(ctx, opts) {
           // game total split across an offense. So the environment is the
           // baseline and the quoted pieces are laid on top of it. It is named
           // for what it is: game lines, with props where there are props.
-          v = applyMarketTd({ ...weeklyStats(full, p.position, playable, env), ...(vp.stats || {}) }, p.position, vp.td);
+          v = applyMarketTd({ ...weeklyStats(full, p.position, AVAILABILITY_GAMES, env), ...(vp.stats || {}) }, p.position, vp.td);
           basis = 'gamelines+props';
           conf = 'MEDIUM'; thinWeeks++;
           if (a && a.status && VEGAS_OUT_RE.test(String(a.status))) conf = 'LOW';
@@ -7575,7 +7607,7 @@ function buildBoards(ctx, opts) {
         marketOut = { week: w, ...absent };
       }
       if (!v) {
-        v = weeklyStats(full, p.position, playable, env);
+        v = weeklyStats(full, p.position, AVAILABILITY_GAMES, env);
         if (basis === 'gamelines') { conf = 'MEDIUM'; postedWeeks++; }
         else if (basis === 'ratings') { conf = 'LOW'; fittedWeeks++; }
         else { conf = 'LOW'; }
@@ -7635,8 +7667,12 @@ function buildBoards(ctx, opts) {
       name: p.name, position: p.position === 'DEF' ? 'DST' : p.position, pos: p.position, team, key: k,
       games, byes, weeks: weekRows,
       // The season list first (it carries the games), else this week's report.
-      injury: a ? { status: a.status, gamesOut, note: a.note || '', ...(wr ? { thisWeek: wr.status } : {}) }
-        : wr ? { status: wr.status, gamesOut: 0, note: wr.note || '', thisWeek: wr.status } : null,
+      // `weeksOut` is the games he sits INSIDE this horizon, which is what a
+      // reader of this board wants to hear; `gamesOut` is the season-list
+      // count, from Week 1 for a live entry, and read as "the next N games"
+      // it said five of a man ruled out for one.
+      injury: a ? { status: a.status, gamesOut, weeksOut: weekRows.filter(w => w.out).length, note: a.note || '', ...(wr ? { thisWeek: wr.status } : {}) }
+        : wr ? { status: wr.status, gamesOut: 0, weeksOut: weekRows.filter(w => w.out).length, note: wr.note || '', thisWeek: wr.status } : null,
       roleTrend: role, form,
       scheduleDifficulty: oppN ? { avgOpponentDefRank: _oddsRound(oppAllowedSum / oppN),
         label: (oppAllowedSum / oppN) <= 11 ? 'Hard' : (oppAllowedSum / oppN) >= 22 ? 'Easy' : 'Average' } : null,

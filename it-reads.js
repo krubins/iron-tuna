@@ -414,9 +414,13 @@
     }
     var s = lead;
     // An injury is the fact that changes a lineup, so it rides on the lead.
+    // The count is the games he sits inside THIS board's window (weeksOut,
+    // from buildBoards) when the row carries it; the season list's gamesOut
+    // counts from Week 1 for a live entry and overstated a one-game absence.
     if (p.injury && p.injury.status) {
+      var ng = typeof p.injury.weeksOut === 'number' ? p.injury.weeksOut : p.injury.gamesOut;
       s += ', listed ' + esc(p.injury.status) +
-        (p.injury.gamesOut ? ' for the next ' + (p.injury.gamesOut === 1 ? 'game' : p.injury.gamesOut + ' games') : '');
+        (ng ? ' for the next ' + (ng === 1 ? 'game' : ng + ' games') : '');
     }
     // So does the market's silence (marketOut, from buildBoards): on a one-week
     // board his odds line is zero because no book has posted one, and a reader
