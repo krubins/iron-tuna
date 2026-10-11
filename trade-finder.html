@@ -35,34 +35,70 @@
 <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
-/* ── the trade tools, on the October system ───────────────────────────────
-   2026-10-10: this page was swept onto site.css with the rest of the section
-   and still read as a stack of tinted rounded panels with white cards inside
-   them, glow rings on the chosen tab and the reader's team, a colour bar
-   down the left of every result, a dashed emoji button and 800-weight
-   labels. None of that is the homepage's system. The rules below are the
-   homepage's: paper white, hairline rules and whitespace do the grouping,
-   the only enclosed surfaces are the team boxes (a form) and the reader's
-   own box (the tinted plate with the 3px navy rule), squared controls at
-   4px, sentence-case labels at 13 or 14px, and one 28px key figure per cell
-   set in ink. The class names did not change: tools/test-trade-finder-page.mjs
-   drives the page by them. */
+/* ── the trade tools, in the homepage's composition ─────────────────────────
+   2026-10-10 swept this page onto site.css's materials (paper, hairlines,
+   squared controls) and it still read as a form document: a left-aligned
+   eyebrow and headline in a narrow column, a text tab bar, three numbered
+   panels of boxes and a wall of method prose. Ken, 2026-10-11: make it look
+   like the landing page. So the page now wears what front.html wears, by
+   way of `body.ln-front` in site.css (the block /fantasy and /dfs took the
+   same day): the white centred hero with the one headline, one sentence,
+   the search field and text-link entry points; section heads at 28px with
+   the one link on the right; the two tools as illustrated tiles in the
+   season-long lane's own palette (the "Trade Tools" tile on the homepage is
+   where a reader came from); the steps as sections on hairlines with the
+   team boxes as the homepage's outlined cards; and the method as the
+   How-it-works row, a tagline over three cards. Every id and class the page
+   script and tools/test-trade-finder-page.mjs drive is unchanged; what moved
+   is the markup around them and the rules below. */
 body{overflow-x:hidden}
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-.wrap.wide{max-width:1080px}
+/* The UA sheet's [hidden] is (0,1,0), the same as any class, and loses to an
+   author sheet at a tie: `.tf-gauge{display:grid}` would show an emptied
+   gauge. front.html, /fantasy and /dfs carry the same one-line fix. */
+[hidden]{display:none !important}
 
-/* The page head, in the hero's own type: one headline, one sentence. */
-.art-head{padding-top:var(--space-6)}
-.eyebrow{font-size:var(--fs-14);color:var(--muted);margin:0 0 var(--space-3)}
-h1{font-size:clamp(34px,4.2vw,56px);font-weight:700;line-height:1.05;letter-spacing:-.03em;margin:0 0 var(--space-4);max-width:20ch}
-h2{font-size:var(--fs-28);margin:var(--space-6) 0 var(--space-3);letter-spacing:-.01em}
-.lede{font-size:var(--fs-19);color:var(--sec);margin:0 0 var(--space-6);max-width:56ch;line-height:1.5}
-p{color:var(--sec);margin:0 0 var(--space-4)}
+/* ── 1 · the hero ─────────────────────────────────────────────────────────
+   site.css draws it (body.ln-front .hm-hero and its children). The rule is
+   the hero's last line and the first section sits 48px under it, the air the
+   homepage gives the position tiles when the market band is hidden. */
+.hm-rule+.ln-state+.hm-sec,.hm-rule+.hm-sec{margin-top:var(--sp-48)}
+/* The league strip rides between the rule and the first section. */
+.ln-state{padding-top:var(--sp-16)}
+.ln-state:has(> [hidden]:only-child){display:none}
 
-/* Buttons: squared, 44px, one primary per view. The secondary is white with
-   the control border, as the system's .btn-secondary. */
+/* ── 2 · the two tools, as tiles ──────────────────────────────────────────
+   The tab list is two buttons; each is one of the homepage's lane tiles, the
+   illustration in the season-long palette, the name and one line over the
+   dark fade at the foot. The chosen tool carries the 3px teal bar under its
+   tile, which is how the header marks the current page; the other tile
+   stands back at 62% until it is hovered. Nothing glows and nothing is
+   boxed. */
+.tf-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-24);margin:0;padding:0;border:0}
+.tf-tabs button{appearance:none;display:block;width:100%;margin:0;padding:0 0 var(--sp-12);border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:#fff;font:inherit;text-align:left;cursor:pointer}
+.tf-tile{position:relative;display:block;aspect-ratio:2/1;border-radius:10px;overflow:hidden;background:var(--t1);transition:opacity .15s ease}
+.tf-tile svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tf-tile-cap{position:absolute;left:0;right:0;bottom:0;padding:var(--sp-48) var(--sp-24) var(--sp-24);background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72))}
+.tf-tile-cap b{display:block;font-size:var(--fs-28);font-weight:600;line-height:1.15;letter-spacing:-.01em;color:#fff}
+.tf-tile-cap span{display:block;font-size:var(--fs-16);color:rgba(255,255,255,.86);margin-top:4px;line-height:1.4}
+.tf-tabs button[aria-selected="false"] .tf-tile{opacity:.62}
+.tf-tabs button:hover .tf-tile{opacity:1}
+.tf-tabs button:hover .tf-tile-cap b{text-decoration:underline}
+.tf-tabs button[aria-selected="true"]{border-bottom-color:var(--teal)}
+.tf-tabs button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+@media(max-width:600px){
+  .tf-tabs{gap:var(--sp-12)}
+  .tf-tile{aspect-ratio:1/1}
+  .tf-tile-cap{padding:var(--sp-48) var(--sp-16) var(--sp-16)}
+  .tf-tile-cap b{font-size:var(--fs-19);line-height:1.2}
+  .tf-tile-cap span{font-size:var(--fs-13);margin-top:2px}
+  .tf-tile-bars{display:none}
+}
+
+/* The primary button and its secondary: squared, 44px, one primary per view,
+   as site.css's .btn-primary and .btn-secondary. */
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;background:var(--teal);color:#fff;font:inherit;font-size:var(--fs-16);font-weight:600;border-radius:var(--radius-sm);padding:0 var(--space-5);border:1px solid var(--teal);cursor:pointer;line-height:1.2;white-space:nowrap}
 .btn:hover{background:var(--teal-hover);border-color:var(--teal-hover);color:#fff;text-decoration:none}
 .btn.alt{background:#fff;color:var(--text);border-color:var(--line2)}
@@ -71,20 +107,21 @@ p{color:var(--sec);margin:0 0 var(--space-4)}
 .btn[disabled]{opacity:.45;cursor:default;filter:none}
 .cta-row{display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:center;margin:var(--space-5) 0 0}
 
-/* ── the two tools ──────────────────────────────────────────────────────────
-   A tab row on a hairline, as the header marks the current page: the chosen
-   tool carries a 3px bar at the foot of its tab, nothing is boxed and nothing
-   glows. The description stays under each name at 14px. */
-.tf-tabs{display:flex;gap:0 var(--space-6);flex-wrap:wrap;margin:0;border-bottom:1px solid var(--line)}
-.tf-tabs button{appearance:none;font:inherit;cursor:pointer;flex:0 1 auto;max-width:34ch;text-align:left;border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--text);padding:var(--space-3) 0 var(--space-4);margin-bottom:-1px;display:flex;flex-direction:column;gap:3px}
-.tf-tabs button b{font-size:var(--fs-19);font-weight:600;line-height:1.2;color:var(--muted)}
-.tf-tabs button span{font-size:var(--fs-14);color:var(--muted);font-weight:400;line-height:1.4}
-.tf-tabs button:hover b{color:var(--text)}
-.tf-tabs button[aria-selected="true"]{border-bottom-color:var(--teal)}
-.tf-tabs button[aria-selected="true"] b,.tf-tabs button[aria-selected="true"] span{color:var(--text)}
-.tf-tabs button:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
-#tf-flow{display:flex;flex-direction:column;margin-top:0}
-#tf-flow .tf-step{margin:0}
+/* ── 3 · the synced league ────────────────────────────────────────────────
+   One of the homepage's outlined cards, because a live sentence has to sit
+   somewhere: shown only once the reader's league has answered. */
+#tf-synced .hm-input h3{margin:0 0 var(--sp-8);font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;line-height:1.2}
+#tf-synced .hm-input>p{margin:0;font-size:var(--fs-16);color:var(--ink-2);line-height:1.5;max-width:72ch}
+#tf-synced .cta-row{margin-top:var(--sp-16)}
+#tfMatches h3{font-size:var(--fs-19);font-weight:600;margin:var(--sp-24) 0 var(--sp-8)}
+
+/* ── 4 · the steps ────────────────────────────────────────────────────────
+   Each step is a section on a hairline, headed the way the homepage heads a
+   section: the name at 28px on the left and the one control that belongs to
+   the head (the team count, which the script moves to whichever step comes
+   first) on the right. The instruction is one sentence under the head in
+   the secondary ink, then the boxes. */
+#tf-flow{display:flex;flex-direction:column}
 #tf-flow[data-tool="evaluator"] #tf-deal{order:1}
 #tf-flow[data-tool="evaluator"] #tf-rosters{order:2}
 #tf-flow[data-tool="evaluator"] #tf-context{order:3}
@@ -92,24 +129,22 @@ p{color:var(--sec);margin:0 0 var(--space-4)}
 #tf-flow[data-tool="finder"] #tf-rosters{order:1}
 #tf-flow[data-tool="finder"] #tf-context{order:2}
 #tf-flow[data-tool="evaluator"] #tf-find,#tf-flow[data-tool="finder"] #tf-eval{display:none}
-
-/* ── the steps ──────────────────────────────────────────────────────────────
-   Each step is a section under a hairline, not a panel: a 23px heading, the
-   instruction in 16px secondary, then the boxes. */
-.tf-step{border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-6) 0 var(--space-5);background:transparent;margin:0}
-/* The first step under the tab row sits on the row's own hairline. With the
-   synced-league box shown above the flow, that box takes the place and the
-   first step gets its rule back. */
-.tf-step:first-child,#tf-flow .tf-step:first-child,#tf-synced{border-top:0}
-#tf-synced:not([hidden])~#tf-flow .tf-step:first-child{border-top:1px solid var(--line)}
-.tf-step h3{margin:0 0 var(--space-2);font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;line-height:1.2}
-.tf-step h3 .opt{font-weight:400;color:var(--muted);font-size:var(--fs-16);letter-spacing:0}
-.tf-step p.sub{margin:0 0 var(--space-4);font-size:var(--fs-16);color:var(--sec);max-width:72ch;line-height:1.5}
+.tf-step{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--sp-24);align-items:baseline;margin:var(--sp-48) 0 0;padding:var(--sp-32) 0 0;border-top:1px solid var(--line);background:transparent;border-radius:0}
+.tf-step>*{grid-column:1/-1;min-width:0}
+.tf-step>h3{grid-column:1;margin:0 0 var(--sp-12);font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.tf-step>h3 .opt{font-weight:400;color:var(--ink-3);font-size:var(--fs-16);letter-spacing:0}
+.tf-step>#tf-count-row{grid-column:2;grid-row:1;justify-self:end;margin:0 0 var(--sp-12)}
+.tf-step p.sub{margin:0 0 var(--sp-16);font-size:var(--fs-16);color:var(--ink-2);max-width:72ch;line-height:1.5}
 .tf-row{display:flex;gap:var(--space-3) var(--space-5);flex-wrap:wrap;align-items:center;margin:var(--space-3) 0}
 .tf-lab{font-size:var(--fs-14);color:var(--text);font-weight:600;margin-right:2px}
 .tf-pair{display:inline-flex;align-items:center;gap:var(--space-2)}
-.tf-status{font-size:var(--fs-14);color:var(--muted);margin:var(--space-2) 0 0;min-height:1.2em}
+.tf-status{font-size:var(--fs-14);color:var(--muted);margin:0 0 var(--space-2);min-height:1.2em}
+.tf-status:empty{display:none}
 .tf-status.err{color:var(--danger)}
+@media(max-width:640px){
+  .tf-step{grid-template-columns:1fr;margin-top:var(--sp-32);padding-top:var(--sp-24)}
+  .tf-step>#tf-count-row{grid-column:1;grid-row:auto;justify-self:start}
+}
 
 /* Segmented controls: squared, the chosen segment ink-filled, as site.css
    draws .is-seg. */
@@ -144,23 +179,24 @@ select.tf-sel{font:inherit;font-size:var(--fs-16);min-height:40px;padding:0 var(
 .tf-focus-stops button:focus-visible{outline:3px solid var(--focus);outline-offset:1px;border-radius:2px}
 .tf-focus-note{font-size:var(--fs-14);color:var(--muted);margin:4px 0 0;min-height:1.2em}
 textarea.tf-paste{width:100%;min-height:200px;padding:var(--space-3);border-radius:var(--radius-input);border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;font-size:var(--fs-16);line-height:1.5;resize:vertical}
-textarea.tf-factors{min-height:110px}
+/* The notes box is a paragraph's width, not the page's. */
+textarea.tf-factors{min-height:110px;max-width:880px;display:block}
 textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,.tf-slots input:focus,select.tf-sel:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint)}
 .tf-more{margin-top:var(--space-5);border-top:1px solid var(--line);padding-top:var(--space-4)}
 .tf-more summary{cursor:pointer;color:var(--teal);font-weight:600;font-size:var(--fs-16)}
 .tf-more[open] summary{margin-bottom:var(--space-3)}
-#tf-settings{border-top:1px solid var(--line);padding-top:var(--space-4)}
 
-/* ── the team boxes ─────────────────────────────────────────────────────────
-   The form: one outlined box per team, white, a hairline border, 10px. The
-   reader's own team is the tinted plate with the 3px navy rule, which is how
-   every board in the section marks its one enclosed surface; no ring. */
-.tf-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:var(--space-4);margin-top:var(--space-4)}
-.tf-team{border:1px solid var(--line);border-top:3px solid var(--line);border-radius:var(--radius-md);padding:var(--space-4);background:#fff;position:relative}
+/* ── 5 · the team boxes ───────────────────────────────────────────────────
+   The homepage's outlined card (white, a hairline, 10px, 24px inside) once
+   per team. The reader's own team is the tinted plate with the 3px navy
+   rule, which is how every board in the section marks its one enclosed
+   surface; no ring. */
+.tf-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--sp-24);margin-top:var(--sp-8)}
+.tf-team{border:1px solid var(--line);border-top:3px solid var(--line);border-radius:10px;padding:var(--sp-24);background:var(--card);position:relative;min-width:0}
 .tf-team.mine{border-color:var(--panel);border-top-color:var(--mast);background:var(--panel)}
 .tf-team.over{border-color:var(--teal);background:var(--teal-tint)}
 .tf-team-h{display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2)}
-.tf-team input.nm{width:100%;font:inherit;font-weight:600;font-size:var(--fs-16);border:1px solid transparent;border-radius:var(--radius-input);padding:4px 6px;margin:-4px -6px 6px;background:transparent;color:var(--text)}
+.tf-team input.nm{width:100%;font:inherit;font-weight:600;font-size:var(--fs-19);letter-spacing:-.005em;border:1px solid transparent;border-radius:var(--radius-input);padding:4px 6px;margin:-4px -6px 6px;background:transparent;color:var(--text)}
 .tf-team .tf-team-h input.nm{flex:1 1 auto;width:auto;min-width:0;margin:-4px 0 0 -6px}
 .tf-team input.nm:hover{border-color:var(--line2);background:#fff}
 .tf-mine-pick{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-13);font-weight:600;color:var(--text);white-space:nowrap;cursor:pointer}
@@ -200,21 +236,22 @@ textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus,.tf-type:focus,
 .tf-shot input{display:none}
 button.tf-shot{font-family:inherit;line-height:inherit}
 .tf-shots{display:flex;flex-wrap:wrap;gap:0 var(--space-2)}
-.tf-send-h{font-weight:600;font-size:var(--fs-16);margin-bottom:var(--space-2)}
+.tf-send-h{font-weight:600;font-size:var(--fs-19);letter-spacing:-.005em;margin-bottom:var(--space-2)}
 .tf-send-h span{font-weight:400;font-size:var(--fs-14);color:var(--muted)}
 .tf-send-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin:4px 0}
 .tf-to{font-size:var(--fs-13);color:var(--muted)}
 .tf-to select{font:inherit;font-size:var(--fs-13);padding:3px 6px;border:1px solid var(--line2);border-radius:var(--radius-input);background:#fff;color:var(--text)}
 .tf-none{font-size:var(--fs-14);color:var(--muted)}
 
-/* ── the results ────────────────────────────────────────────────────────────
-   A hairline, then the figure row (a 13px label over the key figure, cells
-   divided by hairlines, as the homepage's market row), the verdict as a
-   heading and a sentence, and each trade as a ledger entry: a hairline above,
-   the two sides as columns with a hairline between. The gain is the one 28px
-   figure and it is set in ink either way: the verdict's words carry the
-   meaning, and green on this site is reserved for a positive market edge. */
-#tf-results{border-top:1px solid var(--line);margin-top:var(--space-6);padding-top:var(--space-5)}
+/* ── 6 · the results ──────────────────────────────────────────────────────
+   A section on a hairline: the figure row (a 13px label over the key
+   figure, cells divided by hairlines, as the homepage's market row), the
+   verdict as a heading and a sentence, and each trade as a ledger entry,
+   the two sides as columns with a hairline between. The gain is the one
+   28px figure and it is set in ink either way: the verdict's words carry
+   the meaning, and green on this site is reserved for a positive market
+   edge. */
+#tf-results{border-top:1px solid var(--line);margin-top:var(--sp-48);padding-top:var(--sp-32)}
 .tf-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-4) var(--space-5);border:0;border-radius:0;padding:0;background:transparent;margin:0 0 var(--space-6)}
 .tf-bar > span{display:block;min-width:0;border-left:1px solid var(--line);padding-left:var(--space-4)}
 .tf-bar > span:first-child{border-left:0;padding-left:0}
@@ -223,7 +260,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
 .tf-bar .v .s{font-size:var(--fs-14);color:var(--muted);font-weight:400;letter-spacing:0}
 .tf-verdict{border:0;border-radius:0;padding:0;background:transparent;margin:0 0 var(--space-5)}
 .tf-verdict h3{margin:0 0 var(--space-2);font-size:var(--fs-28);font-weight:600;letter-spacing:-.01em;line-height:1.15}
-.tf-verdict p{margin:0;font-size:var(--fs-16);max-width:72ch}
+.tf-verdict p{margin:0;font-size:var(--fs-16);color:var(--ink-2);max-width:72ch;line-height:1.5}
 /* ── the gauge ──────────────────────────────────────────────────────────────
    Under the verdict, two columns on a hairline. Left: the call (Go / No go)
    as the one 34px figure, a sentence, and the meter: a track in the elevated
@@ -285,19 +322,22 @@ button.tf-shot{font-family:inherit;line-height:inherit}
 /* The model's read of the notes: under the numbers, labelled as an estimate
    with the amber disclosure label, no colour bar. */
 .tf-take{border:0;border-top:1px solid var(--line);border-radius:0;padding:var(--space-5) 0 0;background:transparent;margin-top:var(--space-5)}
-.tf-take p{max-width:72ch}
 .tf-take h3{margin:0 0 var(--space-3);font-size:var(--fs-19);font-weight:600}
-.tf-take p{margin:0 0 var(--space-3);font-size:var(--fs-16);color:var(--sec)}
+.tf-take p{margin:0 0 var(--space-3);font-size:var(--fs-16);color:var(--sec);max-width:72ch}
 .tf-take .tf-take-note,.tf-take .tf-take-wait{font-size:var(--fs-13);color:var(--muted)}
 .tf-take .is-tag{margin:0 0 var(--space-2)}
 
-/* The method, as prose under a hairline. */
-/* The rule runs the column; the prose stops at 72ch. */
-.method{border-top:1px solid var(--line);margin-top:var(--space-8);padding-top:var(--space-5)}
-.method p{max-width:72ch}
-.method h3{font-size:var(--fs-23);font-weight:600;letter-spacing:-.01em;margin:0 0 var(--space-3)}
-.method p{font-size:var(--fs-16);color:var(--sec);line-height:1.55;margin:0 0 var(--space-3)}
-.method b{color:var(--text)}
+/* ── 7 · the method, as How it works ──────────────────────────────────────
+   The homepage's last section: a 28px head, a 19px tagline, three outlined
+   cards (what a roster is worth, what the Evaluator scores, what the Finder
+   tries), and the rest of the method as prose in two columns under a
+   hairline, the lead of each paragraph in ink. */
+.method .hm-tagline{margin:0 0 var(--sp-24);font-size:var(--fs-19);color:var(--ink-2);max-width:60ch}
+.method .hm-input p{font-size:var(--fs-16)}
+.method-more{margin-top:var(--sp-32);padding-top:var(--sp-24);border-top:1px solid var(--line);columns:2;column-gap:var(--sp-48)}
+.method-more p{break-inside:avoid;margin:0 0 var(--sp-16);font-size:var(--fs-16);color:var(--ink-2);line-height:1.55}
+.method-more b,.method .hm-input b{color:var(--ink)}
+@media(max-width:860px){.method-more{columns:1}}
 
 @media(max-width:640px){
   .tf-sides,.tf-sides.multi{grid-template-columns:1fr;gap:var(--space-4)}
@@ -308,14 +348,13 @@ button.tf-shot{font-family:inherit;line-height:inherit}
   .tf-bar{grid-template-columns:1fr 1fr;gap:var(--space-4)}
   .tf-bar > span{border-left:0;padding-left:0}
   .tf-slider input[type=range]{width:160px}
-  .tf-tabs{gap:0 var(--space-5)}
-  .tf-tabs button{flex:1 1 100%;max-width:none;padding-bottom:var(--space-3)}
-  .tf-step{padding:var(--space-5) 0 var(--space-4)}
+  .tf-teams{gap:var(--sp-16)}
+  .tf-team{padding:var(--sp-16)}
 }
 </style>
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","@id":"https://irontuna.com/trade-finder","name":"Trade Tools: Trade Evaluator and Trade Finder","description":"Judge a trade or find one. The Trade Evaluator scores every team in a proposed deal at your scoring, with the rosters optional. The Trade Finder takes two to four rosters, typed or screenshotted, and returns the trades that improve both lineups, each on its own horizon: this week, the next three, the rest of the season, or the fantasy playoffs.","url":"https://irontuna.com/trade-finder","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/trade-finder"},"image":"https://irontuna.com/og.png","inLanguage":"en-US","isAccessibleForFree":true,"isPartOf":{"@id":"https://irontuna.com/#website"},"applicationCategory":"SportsApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","@id":"https://irontuna.com/#organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"In-Season","item":"https://irontuna.com/in-season"},{"@type":"ListItem","position":3,"name":"Trade Tools: Trade Evaluator and Trade Finder"}]}]}</script>
 </head>
-<body>
+<body class="ln-front">
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site"><!--chrome:line--><p class="site-line" aria-hidden="true"></p><!--/chrome:line--><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient></defs><g fill="url(#wordMetal)"><path d="M6.83 47L6.83 1.50L13.97 1.50L13.97 47"/><path d="M31.55 44.90L31.55 4.30L41 4.30Q45.94 4.30 48.20 6.59Q50.46 8.88 50.46 13.64L50.46 16.13Q50.46 22.45 46.28 24.14L46.28 24.25Q48.60 24.95 49.56 27.09Q50.52 29.24 50.52 32.84L50.52 39.97Q50.52 41.71 50.63 42.78Q50.75 43.86 51.21 44.90L44.72 44.90Q44.37 43.91 44.25 43.04Q44.14 42.17 44.14 39.91L44.14 32.49Q44.14 29.70 43.24 28.60Q42.34 27.50 40.13 27.50L37.93 27.50L37.93 44.90L31.55 44.90M37.93 21.70L40.25 21.70Q42.16 21.70 43.12 20.71Q44.08 19.73 44.08 17.41L44.08 14.28Q44.08 12.07 43.30 11.09Q42.51 10.10 40.83 10.10L37.93 10.10"/><path d="M76.92 43Q72.87 43 70.72 40.70Q68.57 38.40 68.57 34.20L68.57 15.80Q68.57 11.60 70.72 9.30Q72.87 7 76.92 7Q80.97 7 83.12 9.30Q85.27 11.60 85.27 15.80L85.27 34.20Q85.27 38.40 83.12 40.70Q80.97 43 76.92 43M76.92 38Q79.77 38 79.77 34.55L79.77 15.45Q79.77 12 76.92 12Q74.07 12 74.07 15.45L74.07 34.55Q74.07 38 76.92 38"/><path d="M101.20 41.30L101.20 9.10L107.55 9.10L112.48 28.37L112.57 28.37L112.57 9.10L117.08 9.10L117.08 41.30L111.88 41.30L105.81 17.79L105.71 17.79L105.71 41.30"/><path d="M152.55 41.30L152.55 13.70L147.26 13.70L147.26 9.10L162.90 9.10L162.90 13.70L157.61 13.70L157.61 41.30"/><path d="M187.30 43Q183.30 43 181.20 40.73Q179.10 38.45 179.10 34.20L179.10 7.50L184.60 7.50L184.60 34.60Q184.60 36.40 185.32 37.20Q186.05 38 187.40 38Q188.75 38 189.47 37.20Q190.20 36.40 190.20 34.60L190.20 7.50L195.50 7.50L195.50 34.20Q195.50 38.45 193.40 40.73Q191.30 43 187.30 43"/><path d="M212.91 44L212.91 5.50L220.50 5.50L226.39 28.55L226.50 28.55L226.50 5.50L231.89 5.50L231.89 44L225.67 44L218.41 15.89L218.30 15.89L218.30 44"/><path d="M250.05 47L257.46 1.50L267.14 1.50L274.55 47L267.40 47L266.10 37.97L266.10 38.09L257.98 38.09L256.68 47L250.05 47M258.82 31.92L265.26 31.92L262.07 9.43L261.94 9.43"/></g></svg></a>
@@ -341,28 +380,73 @@ button.tf-shot{font-family:inherit;line-height:inherit}
   </nav>
 <!--/chrome:tabbar-->
 </header>
-<main id="main" class="wrap wide">
-<div class="art-head">
-<div class="eyebrow">In-season &middot; Trade Tools</div>
-<h1 class="art-h1">Judge a trade, or find one</h1>
-<p class="lede">Two tools, one board. The Trade Evaluator takes a deal you have in hand and scores it for every team in it. The Trade Finder takes the rosters and returns the trades the other manager can also say yes to.</p>
-</div>
+<main id="main" class="wrap">
 
-<div class="tf-tabs" id="tf-tool" role="tablist" aria-label="Trade tools">
-  <button type="button" role="tab" data-tool="evaluator" id="tf-tab-evaluator" aria-selected="true" aria-controls="tf-flow"><b>Trade Evaluator</b><span>Judge a trade on the table. List the players; the rosters are optional.</span></button>
-  <button type="button" role="tab" data-tool="finder" id="tf-tab-finder" aria-selected="false" aria-controls="tf-flow"><b>Trade Finder</b><span>Fill in two to four rosters and Iron Tuna finds the trades both sides say yes to.</span></button>
-</div>
+<!-- ── 1 · the hero ─────────────────────────────────────────────────────────
+     front.html's, for this page: the one h1, one sentence, the search field
+     (the site's front door, with the shared typeahead off /player-search.js),
+     the entry points as text links, and the hairline. -->
+<section class="hm-hero" aria-labelledby="heroHead">
+  <h1 id="heroHead">Judge a trade, or find one.</h1>
+  <p class="hm-lede">The Trade Evaluator scores a deal on the table for every team in it. The Trade Finder takes the rosters and returns the trades the other manager can also say yes to. Both priced off the betting market, at your league&rsquo;s scoring.</p>
+  <form class="search-field hm-find" role="search" autocomplete="off" action="/player" method="get">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+    <input id="tfFind" name="q" type="search" placeholder="Rankings, waivers, DFS or a player" aria-label="Find rankings, waiver prices, DFS lineups or a player"
+           role="combobox" aria-expanded="false" aria-autocomplete="list" data-player-search="trade-finder" data-search-tools>
+  </form>
+  <ul class="hm-entry">
+    <li><a href="/rankings">Rankings &rarr;</a></li>
+    <li><a href="/faab">Waiver prices &rarr;</a></li>
+    <li><a href="/fantasy">Season long &rarr;</a></li>
+  </ul>
+  <hr class="hm-rule">
+</section>
 
-<div class="its-strip-sync" id="tfSync" hidden></div>
-<div class="tf-step" id="tf-synced" hidden>
-  <h3>Your league is synced</h3>
-  <p class="sub" id="tfSyncSub">Load your league and every team box below fills itself: type a team&rsquo;s name and its roster comes with it. The desk&rsquo;s own matches show here too.</p>
-  <div class="cta-row"><button class="btn" id="tf-load-league" type="button">Load my league&rsquo;s rosters</button><span class="tf-status" id="tf-load-status"></span></div>
-  <div id="tfMatches"></div>
-</div>
+<div class="ln-state"><div class="its-strip-sync" id="tfSync" hidden></div></div>
 
+<!-- ── 2 · the two tools ────────────────────────────────────────────────────
+     The tab list, as two of the homepage's lane tiles in the season-long
+     palette (the "Trade Tools" tile on the homepage is where a reader came
+     from). The chosen tool carries the 3px bar under its tile. The ids, the
+     roles and the data-tool attributes are what the page script and
+     tools/test-trade-finder-page.mjs drive. -->
+<section class="hm-sec" id="tools" aria-labelledby="toolsHead">
+  <div class="hm-sec-head">
+    <h2 id="toolsHead">Two tools, one board</h2>
+    <a href="#method">How the trades are judged &rarr;</a>
+  </div>
+  <div class="tf-tabs" id="tf-tool" role="tablist" aria-label="Trade tools">
+    <button type="button" role="tab" data-tool="evaluator" id="tf-tab-evaluator" aria-selected="true" aria-controls="tf-flow" style="--t1:#4a3a1c">
+      <span class="tf-tile">
+        <svg viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false"><rect width="400" height="200" fill="#4a3a1c"/><g transform="rotate(-7 300 70)"><path d="M232 70h136" stroke="#f3e2bf" stroke-width="7" stroke-linecap="round"/><path d="M232 70l-18 48M232 70l18 48" stroke="#f3e2bf" stroke-width="3" opacity=".8"/><path d="M368 70l-18 48M368 70l18 48" stroke="#f3e2bf" stroke-width="3" opacity=".8"/><rect x="204" y="118" width="56" height="8" rx="4" fill="#f3e2bf"/><rect x="340" y="118" width="56" height="8" rx="4" fill="#f3e2bf"/><rect x="220" y="92" width="24" height="26" rx="4" fill="#f2c14e"/><rect x="350" y="98" width="16" height="20" rx="3" fill="#f3e2bf" opacity=".7"/><rect x="370" y="104" width="16" height="14" rx="3" fill="#f3e2bf" opacity=".7"/></g><rect x="296" y="70" width="8" height="90" rx="3" fill="#f3e2bf"/><rect x="270" y="156" width="60" height="10" rx="4" fill="#f3e2bf"/><g class="tf-tile-bars" fill="#f3e2bf" opacity=".55"><rect x="40" y="128" width="84" height="12" rx="3"/><rect x="40" y="148" width="64" height="12" rx="3"/><rect x="40" y="168" width="74" height="12" rx="3"/></g></svg>
+        <span class="tf-tile-cap"><b>Trade Evaluator</b><span>Judge a trade on the table. List the players; the rosters are optional.</span></span>
+      </span>
+    </button>
+    <button type="button" role="tab" data-tool="finder" id="tf-tab-finder" aria-selected="false" aria-controls="tf-flow" style="--t1:#4a3a1c">
+      <span class="tf-tile">
+        <svg viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false"><rect width="400" height="200" fill="#4a3a1c"/><g fill="#f3e2bf"><rect x="196" y="34" width="64" height="14" rx="4" opacity=".55"/><rect x="196" y="58" width="64" height="14" rx="4" opacity=".7"/><rect x="196" y="82" width="64" height="14" rx="4" fill="#f2c14e"/><rect x="196" y="106" width="64" height="14" rx="4" opacity=".7"/><rect x="196" y="130" width="64" height="14" rx="4" opacity=".55"/><rect x="326" y="34" width="64" height="14" rx="4" opacity=".55"/><rect x="326" y="58" width="64" height="14" rx="4" fill="#f2c14e"/><rect x="326" y="82" width="64" height="14" rx="4" opacity=".7"/><rect x="326" y="106" width="64" height="14" rx="4" opacity=".7"/><rect x="326" y="130" width="64" height="14" rx="4" opacity=".55"/></g><path d="M272 74h42l-12-12M314 74l-12 12" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M314 104h-42l12-12M272 104l12 12" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><g class="tf-tile-bars" fill="#f3e2bf" opacity=".55"><rect x="40" y="128" width="84" height="12" rx="3"/><rect x="40" y="148" width="64" height="12" rx="3"/><rect x="40" y="168" width="74" height="12" rx="3"/></g></svg>
+        <span class="tf-tile-cap"><b>Trade Finder</b><span>Fill in two to four rosters and Iron Tuna finds the trades both sides say yes to.</span></span>
+      </span>
+    </button>
+  </div>
+</section>
+
+<!-- ── 3 · the synced league ────────────────────────────────────────────────
+     One outlined card, shown once the reader's league has answered. -->
+<section class="hm-sec" id="tf-synced" hidden aria-labelledby="tfSyncHead">
+  <div class="hm-input">
+    <h3 id="tfSyncHead">Your league is synced</h3>
+    <p id="tfSyncSub">Load your league and every team box below fills itself: type a team&rsquo;s name and its roster comes with it. The desk&rsquo;s own matches show here too.</p>
+    <div class="cta-row"><button class="btn" id="tf-load-league" type="button">Load my league&rsquo;s rosters</button><span class="tf-status" id="tf-load-status"></span></div>
+    <div id="tfMatches"></div>
+  </div>
+</section>
+
+<!-- ── 4 · the steps ────────────────────────────────────────────────────────
+     Sections on hairlines. The script orders them by tool and moves the
+     team-count control into whichever step comes first. -->
 <div id="tf-flow" role="tabpanel" data-tool="evaluator">
-<div class="tf-step" id="tf-deal">
+<section class="tf-step" id="tf-deal">
   <h3 id="tf-deal-h">1. The players in the trade</h3>
   <div class="tf-row" id="tf-count-row"><label class="tf-pair"><span class="tf-lab" id="tf-count-lab">Teams in the trade</span><select class="tf-sel" id="tf-count" aria-label="How many teams">
     <option value="2">2 teams</option><option value="3">3 teams</option><option value="4">4 teams</option>
@@ -370,16 +454,16 @@ button.tf-shot{font-family:inherit;line-height:inherit}
   <p class="sub" id="tf-deal-sub">Who sends whom. Type a name and it fills in. With three or four teams, say where each player goes.</p>
   <p class="tf-status" id="tf-deal-status"></p>
   <div class="tf-teams" id="tf-sends"></div>
-</div>
+</section>
 
-<div class="tf-step" id="tf-rosters">
+<section class="tf-step" id="tf-rosters">
   <h3 id="tf-rosters-h">2. The teams&rsquo; rosters <span class="opt">(optional)</span></h3>
   <p class="sub" id="tf-rosters-sub">Add each team&rsquo;s full roster and the trade is judged on the lineup it changes rather than on the players alone. Type the names, paste a list, or paste or drop a screenshot of the roster page.</p>
   <p class="tf-status" id="tf-read-status"></p>
   <div class="tf-teams" id="tf-teams"></div>
-</div>
+</section>
 
-<div class="tf-step" id="tf-context">
+<section class="tf-step" id="tf-context">
   <h3 id="tf-context-h">3. Anything else to weigh?</h3>
   <p class="sub">Team records, standings, injuries, byes, who is chasing a playoff spot, who has clinched. Name a team (or say &ldquo;I&rdquo; or &ldquo;my team&rdquo; for yours) with its record or situation and its horizon adjusts: a clinched team is scored on the fantasy playoffs, a team that needs wins now on the next three weeks. Each team box shows how it was read.</p>
   <textarea class="tf-paste tf-factors" id="tf-factors" spellcheck="true" aria-label="Additional factors" placeholder="Example: My team is 7-2 and has nearly clinched. The Hammers are 3-6 and need wins now. Their RB1 is questionable this week."></textarea>
@@ -441,7 +525,7 @@ button.tf-shot{font-family:inherit;line-height:inherit}
       </div>
     </div>
   </details>
-</div>
+</section>
 </div><!-- /#tf-flow -->
 
 <div id="tf-results" hidden>
@@ -453,18 +537,38 @@ button.tf-shot{font-family:inherit;line-height:inherit}
   <p class="tf-note" id="tf-results-note"></p>
 </div>
 
-<div class="method">
-  <h3>How these trades are judged</h3>
-  <p><b>A roster is worth what it starts.</b> Every player is projected at your scoring from the same board the rankings use, and each team&rsquo;s lineup is filled the way your league fills it: the named slots first, then flex and superflex from whoever is left. The bench counts a little, as insurance, and a backup quarterback in a one-QB league counts for almost nothing. Kickers and defenses are left out.</p>
-  <p><b>The Trade Evaluator scores every team in the deal.</b> For a two-, three- or four-team trade, each team&rsquo;s lineup is filled before and after, counting what it sends and what it receives. A team that gains three quarters of a point a week or more is called a gain, one that loses as much a loss, and anything between is about even. When the deal is not a yes for everyone and the rosters are in, the evaluator shows the closest trades among the same teams that are.</p>
-  <p><b>The gauge is your side of it.</b> Under the verdict, every team in the deal is scored twice more on the same clock: the next three weeks and the rest of the season (the fantasy playoffs when you have clinched). Each row shows every team&rsquo;s gain on that horizon and marks the team the trade helps most. Your situation decides which of the two counts more: a team that needs wins now is weighed 70/30 toward the next three weeks, a team playing the whole season 35/65 the other way, a team built for the playoffs 25/75. The needle is that weighted gain per week, from three points lost on the left to three gained on the right, and the call is Go at three quarters of a point or better, No go at as much lost, and the lineup fit settles the ground between: a trade that raises your weakest starter is a narrow Go, one that opens a hole is a narrow No go.</p>
-  <p><b>Rosters are optional in the Evaluator.</b> List only the players and each side is scored on those players alone: what it gets against what it sends, at your scoring, on its horizon. That answers whether the names are fair. Add the rosters and the score becomes the change to the lineup each team actually starts, which is the better answer whenever a two-for-one opens or closes a starting slot, and the card says which of the two it is showing.</p>
-  <p><b>The Trade Finder.</b> Fill in two to four rosters and the engine tries every one-, two- and three-player swap between your team and each of the others, keeping only swaps where both lineups improve by at least three quarters of a point a week. The balance slider orders what survives: at <em>Even</em> by the smaller of the two gains, at <em>In my favor</em> by yours alone. It cannot surface a trade the other manager should refuse.</p>
-  <p><b>Each side has to want it.</b> A lineup gain is necessary, not sufficient: a manager asked to send the best player in the deal, or forty points more of projection than comes back, for half a point a week says no, whatever the lineup math says. So before a trade is shown, each side is argued from that manager&rsquo;s chair: the lineup gain on their own horizon; who gets the best player in the deal; projected points sent against received; whether a throw-in they must open a roster spot for would only be the next cut; the depth left at each position; for a team scored on the next few weeks, what the deal costs over the season; and whether their gain is a fraction of yours. A side that sends the best player needs at least a point and a half a week for it. A side that sends more projection than it gets needs a lineup gain of at least half the difference. A side gaining under two points a week needs at least thirty percent of what the other side gains. A trade is offered only when both cases hold, and the case is printed under each side so you can make it to the other manager in their words. The Evaluator runs the same test on the trade you typed and says when the other side would refuse, and why.</p>
-  <p><b>Horizons are per team.</b> A gain is measured on the weeks that team is playing for &mdash; this week, the next three, the rest of the season, or the fantasy playoffs &mdash; and stated per week so a three-week horizon and a twelve-week one are on the same scale. Your notes set a team&rsquo;s horizon when they describe it: &ldquo;clinched&rdquo; or a record of .700 or better means the fantasy playoffs; &ldquo;needs wins,&rdquo; &ldquo;on the bubble&rdquo; or .400 or worse means the next three weeks; &ldquo;must win this week&rdquo; means this week; &ldquo;eliminated&rdquo; or &ldquo;rebuilding&rdquo; means the rest of the season.</p>
-  <p><b>Your notes.</b> Beyond setting horizons, the factors you type are read by a language model after the numbers are in. It explains whether they should change the call; it never changes a projection, and the scores stand on their own.</p>
-  <p><b>What it does not know.</b> It cannot see your league&rsquo;s roster limits, its trade deadline, who is on injured reserve, or which manager is unreachable. A team that receives more players than it sends needs roster spots; the card says so. Screenshots are read by a model into names only, and every name is then matched to the board here in your browser, so nothing it read can become a projection on its own.</p>
-</div>
+<!-- ── 5 · the method, as How it works ──────────────────────────────────────
+     The homepage's closing section: a head, a tagline, three cards, and the
+     rest of the method as prose. -->
+<section class="hm-sec method" id="method" aria-labelledby="methodHead">
+  <div class="hm-sec-head">
+    <h2 id="methodHead">How these trades are judged</h2>
+    <a href="/faq#faq-start">How the number is made &rarr;</a>
+  </div>
+  <p class="hm-tagline">A trade is a change to two lineups, not a swap of two names.</p>
+  <div class="hm-how-grid">
+    <div class="hm-input">
+      <h3>A roster is worth what it starts</h3>
+      <p>Every player is projected at your scoring from the same board the rankings use, and each team&rsquo;s lineup is filled the way your league fills it: the named slots first, then flex and superflex from whoever is left. The bench counts a little, as insurance, and a backup quarterback in a one-QB league counts for almost nothing. Kickers and defenses are left out.</p>
+    </div>
+    <div class="hm-input">
+      <h3>The Evaluator scores every team in the deal</h3>
+      <p>For a two-, three- or four-team trade, each team&rsquo;s lineup is filled before and after, counting what it sends and what it receives. A team that gains three quarters of a point a week or more is called a gain, one that loses as much a loss, and anything between is about even. When the deal is not a yes for everyone and the rosters are in, the evaluator shows the closest trades among the same teams that are.</p>
+    </div>
+    <div class="hm-input">
+      <h3>The Finder tries every swap</h3>
+      <p>Fill in two to four rosters and the engine tries every one-, two- and three-player swap between your team and each of the others, keeping only swaps where both lineups improve by at least three quarters of a point a week. The balance slider orders what survives: at <em>Even</em> by the smaller of the two gains, at <em>In my favor</em> by yours alone. It cannot surface a trade the other manager should refuse.</p>
+    </div>
+  </div>
+  <div class="method-more">
+    <p><b>Each side has to want it.</b> A lineup gain is necessary, not sufficient: a manager asked to send the best player in the deal, or forty points more of projection than comes back, for half a point a week says no, whatever the lineup math says. So before a trade is shown, each side is argued from that manager&rsquo;s chair: the lineup gain on their own horizon; who gets the best player in the deal; projected points sent against received; whether a throw-in they must open a roster spot for would only be the next cut; the depth left at each position; for a team scored on the next few weeks, what the deal costs over the season; and whether their gain is a fraction of yours. A side that sends the best player needs at least a point and a half a week for it. A side that sends more projection than it gets needs a lineup gain of at least half the difference. A side gaining under two points a week needs at least thirty percent of what the other side gains. A trade is offered only when both cases hold, and the case is printed under each side so you can make it to the other manager in their words. The Evaluator runs the same test on the trade you typed and says when the other side would refuse, and why.</p>
+    <p><b>The gauge is your side of it.</b> Under the verdict, every team in the deal is scored twice more on the same clock: the next three weeks and the rest of the season (the fantasy playoffs when you have clinched). Each row shows every team&rsquo;s gain on that horizon and marks the team the trade helps most. Your situation decides which of the two counts more: a team that needs wins now is weighed 70/30 toward the next three weeks, a team playing the whole season 35/65 the other way, a team built for the playoffs 25/75. The needle is that weighted gain per week, from three points lost on the left to three gained on the right, and the call is Go at three quarters of a point or better, No go at as much lost, and the lineup fit settles the ground between: a trade that raises your weakest starter is a narrow Go, one that opens a hole is a narrow No go.</p>
+    <p><b>Rosters are optional in the Evaluator.</b> List only the players and each side is scored on those players alone: what it gets against what it sends, at your scoring, on its horizon. That answers whether the names are fair. Add the rosters and the score becomes the change to the lineup each team actually starts, which is the better answer whenever a two-for-one opens or closes a starting slot, and the card says which of the two it is showing.</p>
+    <p><b>Horizons are per team.</b> A gain is measured on the weeks that team is playing for: this week, the next three, the rest of the season, or the fantasy playoffs, and stated per week so a three-week horizon and a twelve-week one are on the same scale. Your notes set a team&rsquo;s horizon when they describe it: &ldquo;clinched&rdquo; or a record of .700 or better means the fantasy playoffs; &ldquo;needs wins,&rdquo; &ldquo;on the bubble&rdquo; or .400 or worse means the next three weeks; &ldquo;must win this week&rdquo; means this week; &ldquo;eliminated&rdquo; or &ldquo;rebuilding&rdquo; means the rest of the season.</p>
+    <p><b>Your notes.</b> Beyond setting horizons, the factors you type are read by a language model after the numbers are in. It explains whether they should change the call; it never changes a projection, and the scores stand on their own.</p>
+    <p><b>What it does not know.</b> It cannot see your league&rsquo;s roster limits, its trade deadline, who is on injured reserve, or which manager is unreachable. A team that receives more players than it sends needs roster spots; the card says so. Screenshots are read by a model into names only, and every name is then matched to the board here in your browser, so nothing it read can become a projection on its own.</p>
+  </div>
+</section>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -492,6 +596,8 @@ button.tf-shot{font-family:inherit;line-height:inherit}
 <script src="/it-league.js"></script>
 <script src="/it-sync.js"></script>
 <script src="/it-trade.js"></script>
+<!-- The hero search field takes the shared typeahead; deferred and guarded, as on front.html. -->
+<script src="/player-search.js" defer></script>
 <script>
 (function () {
   'use strict';

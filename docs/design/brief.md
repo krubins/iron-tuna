@@ -110,5 +110,16 @@ figure. It is gone, and the band is three figures that change.
   `body.ln-front` (the lane front) because two pages now wear it: hero, shell,
   rail, tiles, cards, empty states and the desk. Each page keeps only the
   rules for the objects it alone has the markup for.
+  /trade-finder followed on 2026-10-11 (Ken: make it look like the landing
+  page). It had been swept onto the materials the day before and still read
+  as a form document: a left-aligned eyebrow and headline in a narrow column,
+  a text tab bar, three numbered panels and a wall of method prose. It now
+  wears `body.ln-front` without the rail or `sl-dress`: the centred hero with
+  the search field and text-link entry points, the two tools as lane tiles
+  in the season-long palette with the 3px bar under the chosen one, the
+  steps as sections on hairlines with the team boxes as outlined cards, and
+  the method as the How-it-works row (a tagline, three cards, the rest as
+  two columns of prose). Every id and class the page script and its browser
+  test drive is unchanged.
 - The player card's search box keeps the page's own 42px field. It should
   become the shared 52px field when that page is next touched.

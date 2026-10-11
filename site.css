@@ -2486,7 +2486,8 @@ tbody tr[id^="g-"]:target > td:first-child { box-shadow: inset 3px 0 0 var(--tea
 
 /* ══ THE LANE FRONT (2026-10-11) ═══════════════════════════════════════════
    Worn by adding `ln-front` to <body>, beside `sl-dress`. /fantasy and /dfs
-   wear it; nothing else does.
+   wear it, and /trade-finder (no rail, no `sl-dress`: the hero, the section
+   heads, the cards and the tile dress) since the same day; nothing else does.
 
    WHY IT EXISTS. Ken, 2026-10-11, of /fantasy: it still "looks very AI".
    The homepage (front.html) had moved onto paper on 2026-10-08 and the two
