@@ -341,7 +341,11 @@ ok('and every partner still gains', trades.every(t => t.sides[1].gain > 0));
 
 await page.$eval('#tf-tilt', el => { el.value = '50'; el.dispatchEvent(new Event('input', { bubbles: true })); });
 await page.click('#tf-settings summary');
-await page.click('#tf-hA button[data-h="playoffs"]');
+// The reader's focus is a slider: four stops, this week → get me to the
+// playoffs → playoffs → rest of the season. Drag it to the third stop.
+await page.$eval('#tf-focus-range', el => { el.value = '2'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+ok('the focus slider names its stop', await page.$eval('#tf-focus-range', e => e.getAttribute('aria-valuetext')) === 'Playoffs' && await page.$eval('#tf-hA button[data-h="playoffs"]', e => e.getAttribute('aria-pressed') === 'true'));
+ok('and says what it scores', /fantasy playoff weeks/.test(await page.textContent('#tf-focus-note')));
 await page.click('#tf-hB button[data-h="next3"]');
 await page.click('#tf-find');
 await page.waitForFunction(() => /Fantasy playoffs/.test(document.querySelector('#tf-bar').textContent), null, { timeout: 15000 });
@@ -361,7 +365,7 @@ await page.reload({ waitUntil: 'load' });
 await page.waitForFunction(() => document.querySelectorAll('#tf-teams .chip').length > 0, null, { timeout: 8000 });
 ok('a reload keeps the rosters', (await names()).join() === 'Iron Tuna (Ken),The Hammers');
 ok('and the hidden two', await page.$eval('#tf-count', e => e.value) === '2' && (await (async () => { await page.selectOption('#tf-count', '4'); const n = await names(); await page.selectOption('#tf-count', '2'); return n.length === 4 && n[2] === 'Clinched'; })()));
-ok('and the horizons', await page.$eval('#tf-hA button[data-h="playoffs"]', e => e.getAttribute('aria-pressed') === 'true'));
+ok('and the horizons', await page.$eval('#tf-hA button[data-h="playoffs"]', e => e.getAttribute('aria-pressed') === 'true') && await page.$eval('#tf-focus-range', e => e.value) === '2');
 ok('and the tool', await selectedTool() === 'finder');
 if (process.env.IT_SHOT) { await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: process.env.IT_SHOT, fullPage: true }); console.log('wrote ' + process.env.IT_SHOT); }
 ok('nothing on the Trade Finder threw', errors.length === 0, errors[0]);
@@ -386,7 +390,8 @@ const gauge = () => page.evaluate(() => {
   await page.click('#tf-tool button[data-tool="evaluator"]');
   ok('switching tools puts the result away', await page.$eval('#tf-results', e => e.hidden));
   if (!(await page.$eval('#tf-settings', e => e.open))) await page.click('#tf-settings summary');
-  await page.click('#tf-hA button[data-h="ros"]');
+  await page.click('#tf-hA button[data-h="ros"]');   // a tap on a stop label moves the slider too
+  ok('a stop label moves the focus slider', await page.$eval('#tf-focus-range', e => e.value) === '3');
   await page.click('#tf-hB button[data-h="ros"]');
   ok('each trade box is named for its team', /Iron Tuna \(Ken\) sends/.test(await page.textContent(S(0))) && /The Hammers sends/.test(await page.textContent(S(1))));
   // The sends box offers that team's own players first.
