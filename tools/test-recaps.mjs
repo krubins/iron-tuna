@@ -28,7 +28,7 @@ const mk = (opts = {}) => new Function('contentReady', 'newsroomReady', '_pieceU
   async () => {},
   r => '/in-season/desk/' + r.kind + '/' + r.week + '/' + String(r.game_id || '').toLowerCase(),
   r => String(r.title || r.kind),
-  () => ({ name: 'Rhea Vega' }),
+  () => ({ name: 'Market Desk' }),
   weekCase
 );
 // D1's prepare().bind().all() shape, narrowed to what the payload uses.

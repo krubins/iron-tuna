@@ -7856,11 +7856,13 @@ that failed rather than one that has not published yet.
 
 ### The byline
 
-The column runs under **Artie Kesselman**, a pen name, and the method box says
-so in as many words under "About the byline". The name exists because a standing
-weekly column needs someone answering for last week's calls, and because the
-voice — dry, mildly exasperated, observational — is a voice rather than the
-site's institutional register. **The JSON-LD author stays `Iron Tuna`, the
+The column ran under a pen name until 2026-10-10, when every fictional byline
+on the site was retired (§127); it carries the Rankings Desk byline now, and the
+method box says so under "About the byline". The pen name existed because a
+standing weekly column needs someone answering for last week's calls, and
+because the voice — dry, mildly exasperated, observational — is a voice rather
+than the site's institutional register. The desk answers for the calls now; the
+voice is the column's own. **The JSON-LD author stays `Iron Tuna`, the
 organization.** Do not put the pen name in structured data: a fictional byline
 in prose is a column convention, and a fictional byline in machine-readable
 authorship metadata is a claim about a person who does not exist.
@@ -7996,7 +7998,7 @@ table and the code cannot disagree.
   the regular season and the `/lead` archive stays readable.
 - **Retained (Routines):** the projection updates (data jobs, not stories)
   and The Tell (a distinct function nothing on the calendar duplicates;
-  registered on Evan Brooks's desk, byline unchanged, see 68j).
+  registered on the Rankings Desk, byline unchanged, see 68j).
 - **Retired / merged (desk kinds):** all eleven of §56's kinds. Their rows
   in `content_pieces` stay readable at their old URLs (`/in-season/desk/
   <kind>/<week>` renders a legacy row with its original sections); none can
@@ -8041,11 +8043,11 @@ behavior at the quarter hours.
 
 ### 68d. The staff, and the one rivalry
 
-`ANALYSTS`: Jack Mercer (editor), Nate Vega (market), Evan Brooks
-(rankings), Mike Raines (usage), Chris Dalton (QB/offense), Tyler Grant
-(waivers), Sam Porter (matchups, K/DST), Lena Park (DFS). Each has a beat, a
+`ANALYSTS`: Editorial Desk (editor), Market Desk (market), Rankings Desk
+(rankings), Usage Desk (usage), Quarterback Desk (QB/offense), Waiver Desk
+(waivers), Matchups Desk (matchups, K/DST), DFS Desk (DFS). Each has a beat, a
 personality, a philosophy, assignments and a `voice` the writer is handed.
-`RIVALRY_PAIR` is Vega/Brooks and `newsroomAudit()` fails if a second pair
+`RIVALRY_PAIR` is Market/Rankings and `newsroomAudit()` fails if a second pair
 ever appears. `/analysts` is the staff page with the AI disclosure
 (`AI_DISCLOSURE`, also on every piece payload); `/analysts/<id>` is one
 analyst: beat, recent pieces, the record of calls, and for the two rivals
@@ -8091,7 +8093,7 @@ and at `w`. `/api/blend?horizon=&pos=&scoring=&w=` serves it;
 recomputes in the browser from the same two components (the same shrink
 table, `tools/test-vegas-weight.mjs`-style discipline: a calculation, never
 a reorder). `/api/disagreements` lists where the two ends disagree, and carries the
-week's **Vega vs. Brooks** column (§68q); the front page and `/fantasy`
+week's **Market Desk vs. Rankings Desk** column (§68q); the front page and `/fantasy`
 print that column.
 
 ### 68g. The writer and the fact check
@@ -8138,7 +8140,7 @@ defaults from `?lens=`, the referrer, or the lane the reader last chose on
 the front page), the byline, the rivalry module, the calls, the prior
 calls, the sources-and-freshness table and the packet; `analysts.html`,
 `analyst.html`; the front page's **The Newsroom** band in both lanes and
-**Vega vs. Brooks** in the fantasy lane; `/fantasy` and `/dfs` each carry
+**Market Desk vs. Rankings Desk** in the fantasy lane; `/fantasy` and `/dfs` each carry
 the feed in their lens, `/dfs` the contest selector and the **Value &
 Leverage** board.
 
@@ -8172,10 +8174,10 @@ re-enables the retired social threads.
 ### 68j. Open items, and what was left alone
 
 - **The Tell's byline.** The specification's roster has eight names and no
-  ninth. The Tell is bylined to a pen name, Artie Kesselman, written by the
-  owner hours before this migration. It is registered on Evan Brooks's desk
-  (his page links it and says so) and its Routine, page and prompt are
-  untouched pending the owner's call on re-bylining it.
+  ninth. The Tell was bylined to a pen name, written by the owner hours
+  before this migration. It is registered on the Rankings Desk (its page
+  links it and says so). Resolved 2026-10-10 (§127): the pen name went with
+  every other fictional byline and the column runs under the desk's name.
 - **The projection Routine ends with September.** The ROS boards price off
   the committed set; a weekly Monday cadence through Week 17 is the
   recommendation.
@@ -8390,14 +8392,14 @@ refresh summary if it recurs.
 
 ---
 
-### 68q. Vega vs. Brooks, the column on the record
+### 68q. Market Desk vs. Rankings Desk, the column on the record
 
 The band the front page and `/fantasy` print under the newsroom is not a
 table of rank gaps. Each man files five picks a week — the players his own
 end of the slider ranks ahead of the other man's board — with a pitch in his
 own voice. `rivalryColumns(rows, { week })` builds both: a player qualifies
 only for the man who has him higher, so the two lists cannot be the same
-list, and Vega never pitches a player no book has priced (`marketBasis` of
+list, and the Market Desk never pitches a player no book has priced (`marketBasis` of
 `none` is dropped from his side), because that is the one claim his method
 cannot make. If a week is quiet the thresholds relax once
 (`RIVALRY_LOOSE`, gap 3 and 10%) rather than the column printing three
@@ -9150,7 +9152,7 @@ Taught Us, Thursday Night: What Matters). This adds one per GAME.
 
 ### 73a. The package
 
-`game-recap` in `CONTENT_KINDS`, Mike Raines on the weekly lens and Lena Park
+`game-recap` in `CONTENT_KINDS`, Usage Desk on the weekly lens and DFS Desk
 on DFS, and the first package in the calendar with **`perGame: true`**. It has
 `day: null, hour: null` because it has no weekday slot at all: it fires off
 the feed's own `final`, one piece per game, so a Thursday night game is
@@ -9603,8 +9605,8 @@ for the coming week), the desk should run a series of what Tuna got right,
 with the biggest wins highlighted. Every Monday.
 
 **The piece.** `what-tuna-got-right` in `CONTENT_KINDS`: Monday 6:00 AM ET,
-retrospective, about the week just played (`subject: 'played'`), Jack
-Mercer with Lena Park on the DFS lens, worth-gated. It takes the early
+retrospective, about the week just played (`subject: 'played'`), the
+Editorial Desk with the DFS Desk on the DFS lens, worth-gated. It takes the early
 rankings' slot; `early-rankings` moved to `LEGACY_CONTENT` as merged into
 `ros-rankings`, because Tuesday already ranks the coming week (the next-3
 horizon) and the Monday board was the same week ranked a day earlier. Its
@@ -12682,7 +12684,7 @@ section listing a whole week has no lead to give.
 
 | Where | What |
 |---|---|
-| `fantasy.html` | The Newsroom moves out of the reading band to directly under the hero, unnumbered; `#fnDesk` ships as `.nr-well`; the painter builds the lead card and the rail instead of six cards; the ribbon reorders; Vega vs. Brooks and Everything else become 04 and 05. |
+| `fantasy.html` | The Newsroom moves out of the reading band to directly under the hero, unnumbered; `#fnDesk` ships as `.nr-well`; the painter builds the lead card and the rail instead of six cards; the ribbon reorders; Market Desk vs. Rankings Desk and Everything else become 04 and 05. |
 | `site.css` | `.nr-well`, `.nr-well-solo`, `.nr-lead`, `.nr-lead-go`, `.nr-flag`, `.nr-rail` under the story card block. |
 
 **Checked:** every node gate in `checks.yml` passes, `test-dry-run` included,
@@ -12855,7 +12857,7 @@ balance. Rendered in Chromium at 1360px and 430px against a stubbed
 `/api/newsroom?lens=dfs` in three shapes — six pieces, one piece, an empty feed
 — with no page errors and no horizontal overflow. The well paints at y=926 and
 `#sec-lineup` at y=1693, so the order on the rendered page is Setup, the desk,
-the lineup; the byline reads Lena Park and the kicker reads the DFS title.
+the lineup; the byline reads DFS Desk and the kicker reads the DFS title.
 
 ---
 
@@ -12914,7 +12916,7 @@ welcome.' should be more prominent. We want to boast about our successes."
 
 The opening band runs a headline at up to 52px over a 20px lede. Everything
 under it was 14px — section intros, card bodies, the plate's own states, the
-two columns of Vega vs. Brooks — and the deck's card copy and the page's
+two columns of Market Desk vs. Rankings Desk — and the deck's card copy and the page's
 standing notes were 13px. That is a drop of more than a third at the exact
 point where a reader stops scanning the page and starts reading it, and it is
 why the whole page under the band read as fine print.
@@ -13115,7 +13117,7 @@ A piece has exactly one `headline` and one `dek` — single columns on
 only as `body.dfs`, the sections in `NEWSROOM_SECTIONS[kind].dfs`. So
 `/api/newsroom?lens=dfs` hands `/dfs` a piece whose DFS body is real analysis
 and whose headline is the week's fantasy story, and the page prints that
-headline under Lena Park's byline. "The clearest roster add of the week" is a
+headline under DFS Desk's byline. "The clearest roster add of the week" is a
 waiver call; it is not wrong, it is simply not a DFS sentence, and no page
 change can make it one. The fix is a DFS headline and deck of its own, which
 means the writer, the schema and the feed. It is not in this change.
@@ -13143,7 +13145,7 @@ DFS headline."
 §117 could not fix the complaint it recorded. A piece had exactly one
 `headline` and one `dek` — single columns on `content_pieces`, written for the
 Weekly Fantasy lens — so `/dfs` printed "Parker Washington's 43% target share
-makes him the clearest roster add of the week" under Lena Park's byline. The
+makes him the clearest roster add of the week" under DFS Desk's byline. The
 DFS *body* was real analysis; the sentence over it was a waiver call, and no
 page change could make it anything else. A package that runs in both lenses is
 WRITTEN twice and was HEADLINED once.
@@ -13574,3 +13576,181 @@ and "NFL clock unavailable" when `/api/season` did not answer) is gone.
   `.its-strip` rules in `site.css` (now unused), and every page's
   `<script src="/it-season.js">`.
 
+
+## 127. October 10: the fictional bylines are retired
+
+Ken: *"Remove all fictional author names."* Until today the eight analyst
+personas carried invented human names, the surname was the URL
+(`/analysts/vega`), the rivalry column wrote about "each man" and "his
+board", and The Tell ran under a pen name. The AI disclosure said they were
+not people; the bylines read as if they were. Every one of those names is
+gone from the repository.
+
+### What changed
+
+- **The roster.** `ANALYSTS` in `_worker.js` names each desk for its beat:
+  Editorial Desk, Market Desk, Rankings Desk, Usage Desk, Quarterback Desk,
+  Waiver Desk, Matchups Desk, DFS Desk. The roles, beats, philosophies,
+  assignments and voices are unchanged except where a voice wrote about the
+  desk as "he". The avatars are beat initials.
+- **The storage id stays; the URL does not.** `id` (`mercer`, `vega`, …) is
+  what `content_pieces.analyst`, `analyst_calls`, the stored rivalry JSON
+  (`rv.brooks`, `rv.vega`), `RIVALRY_PAIR` and the `data-analyst` attribute
+  on ninety static pages key on, so it is untouched: renaming it is a D1
+  migration, not a rename. Each desk gained a `slug` (`editor`, `market`,
+  `rankings`, `usage`, `quarterback`, `waivers`, `matchups`, `dfs`), which is
+  the only form a reader meets: `analystUrl(a)` builds every link, the byline
+  payload carries `url` and `dfsUrl`, `/api/newsroom` kinds carry
+  `analystUrl`, `/api/analyst?id=` answers to either, and the old surname
+  URLs 301 to the slug (next to the `/wagers` redirect in `fetch()`).
+  `sitemap.xml` advertises the slugs.
+- **The rivalry column** (`RIV_STANDFIRST`, `RIV_NEEDLE`, `_rivEvidence`,
+  `_rivGap`, `gradeRivalryCall`) argues desk against desk. The writer's
+  system prompt and `_voiceBlock` say "the Market Desk" and "the Rankings
+  Desk"; the fact check's bare-surname branch is gone, because a desk is
+  named in full or not at all.
+- **The Tell** carries the Rankings Desk byline, the desk it was registered
+  on since §68j, and its method box says the column is not written by a
+  person. `tools/the-tell-routine-prompt.md` says the same; **the Routine
+  prompt outside the repository must be updated to match**, or Tuesday's
+  edition arrives with the pen name back on it.
+- **The static pages** were restamped with `node tools/build-bylines.mjs`;
+  `tools/analyst-pages.mjs` reads the slug out of the worker and links by it.
+  `tools/test-bylines.mjs` now fails a byline that links to the storage id,
+  and `tools/test-newsroom.mjs` fails a roster entry shaped like a person's
+  name, a desk without a slug, or a pitch that names a man.
+- `llms.txt`, `docs/editorial-migration.md`, `docs/saved-league.md`, the
+  pages that named a desk in prose (`rankings.html`, `dfs.html`, `my-week.html`,
+  `fantasy.html`, `desk.html`, `hidden-value.html`, `analysts.html`,
+  `analyst.html`) and the test fixtures that used invented names.
+
+### What this cannot reach
+
+Pieces already published to D1 were written when the desks had names: a
+stored `rivalry.line`, an `outcome_note` ("… had him WR5") or a prose
+sentence naming a colleague still carries the old name in the row. The
+byline on those pieces reads the roster at request time and shows the desk;
+the body is the body. Regenerating or rewriting those rows is a data job,
+not a repository change, and is left to the owner.
+
+---
+
+---
+
+## 128. October 10: the CBS browser import comes back, as the one CBS path
+
+**What was asked.** Another try at pulling a reader's CBS league with
+credentials they enter. **What the record says.** Two live attempts (§89): the
+API-token form died on 2026-09-17 when a signed-in CBS league page stopped
+carrying any token, in the served HTML or on `window`, so the technique every
+public token fetcher relies on no longer yields a value; the browser extension
+passed a full end-to-end run on 2026-09-16 and was cut two days later with the
+rest of the connectors, its one live import never run. A password-based
+server login was not built: this session's sandbox cannot reach any CBS host,
+so it would have been a third fixture-tested, never-live attempt, and it would
+have meant holding readers' CBS passwords, which the privacy page and the
+model were written to avoid.
+
+**What came back.** The extension, 0.2.1 unchanged (`extensions/cbs-connector`,
+now in `.assetsignore`), and its worker half rewritten onto the saved-league
+model rather than restored: `cbsLeagueId`, `cbsBrowserNormalize` and
+`PROVIDER_CBS_BROWSER` beside `PROVIDER_MANUAL` in `LEAGUE_PROVIDERS`;
+`leagueBrowserImport`, which validates the whole snapshot first, maps CBS's
+player ids under provider `cbs`, creates the `cbs_browser` row keyed on the
+CBS league id on the first import and refreshes it after, and keeps the
+reader's chosen team while that team is still in the room; and
+`POST /api/leagues/connect`, session-gated, rate-limited, refusing a malformed
+snapshot with `invalid_browser_import` before a row moves and deleting a first
+import that could not be saved. `POST /api/leagues/:id/sync` answers 409
+`browser_refresh_required` for a browser league and is still not a route for
+anything else. `CBS_SYNC` is back in `NEWSROOM_FLAGS`, **on by default**: it
+gates a route that only validates and writes what the reader's own browser
+posts, and `FLAG_CBS_SYNC=0` refuses it. Nothing in the worker contacts CBS;
+`tools/test-data-sources.mjs` still asserts that no fantasy-platform host is
+reachable, and the league suite's fetch stub still throws.
+
+On /my-league, §01 gains a "CBS leagues" box under the list — where the
+extension is, the four steps, what is and is not imported — and a browser
+league's card says "CBS import", names when the extension last read it, and
+drops "Edit league": the by-hand form would re-save the room as a manual
+league with name-matched players in place of CBS's ids. The privacy details
+on the page and the privacy policy both say what the extension sends and what
+it never reads.
+
+**Tests.** `tools/test-league-sync.mjs` ends with "the CBS browser import":
+the snapshot fixture through the route (import, team choice, idempotent
+refresh keeping the team, no automatic refresh time, the 409, eleven malformed
+snapshots refused with the saved rosters untouched, an unmodeled rule kept as
+unsupported, on by default and off by flag, sign-in required, unknown provider
+refused, the personalized modules reading it, delete leaving nothing behind);
+110 assertions. `tools/test-cbs-extension.mjs` is back in CI (the extension's
+boundaries, the reader against DOM fixtures, the popup against a stubbed
+browser API) and now also pins the page and worker surfaces the extension
+depends on. `tools/test-cbs-e2e.mjs` is restored for a local Chromium run (not
+in CI). `test-newsroom` keeps "every flag defaults on" and now names CBS_SYNC
+as the one connector flag that is allowed to exist.
+
+**What this cannot prove, and the release check.** CBS's live markup. The
+harness renders the reader's own expectations back at it. The one step never
+taken is still the one step: load the folder unpacked, open the live league
+signed in, run the popup, and look for the league card on My Leagues. A CBS
+markup change shows as a "No import was sent" message in the popup naming the
+page it could not read; that message is the next bug report, and `reader.js`
+is where it is fixed.
+
+## 129. October 10: the Trade Evaluator's gauge: short term, long term, the reader's situation, and a Go / No go
+
+**The brief.** Once the players are in, a visual gauge of whether the trade
+is worth it for the reader, weighing the short term, the long term and what
+the reader needs given their current status; which team is helped more on
+each of those two horizons; and a go / no-go recommendation.
+
+- **Two more passes, same engine.** `evaluate()` already scores every side
+  on its own horizon. It now also loads `next3` and the reader's long
+  horizon (`longHorizon(mi)`: the fantasy playoffs when the reader's own
+  horizon is `playoffs`, else `ros`) and scores every side on each, through
+  `sideOf(i, give, get, h)` (the new fourth argument forces a horizon). The
+  engine (`it-trade.js`) is unchanged.
+- **The needle is the reader's weighted gain.** `gaugeOf(sides, mi)`
+  weights the reader's short and long gains by their situation (`WEIGHTS`:
+  week 80/20, next3 70/30, ros 35/65, playoffs 25/75; the situation is
+  `horizonFor(mi)`, so the notes and the settings both reach it). The track
+  runs −3 to +3 pts/week (`SPAN`), the zone edges sit at ±0.75, the
+  engine's own floor. Go at +0.75 or better, No go at −0.75 or worse;
+  between, the roster fit decides and the call is marked "narrow".
+- **Roster fit.** `fitOf()` compares the reader's weakest starter before and
+  after on their horizon, per week, with `TR.lineupValue` directly. A slot
+  nobody fills counts as the weakest starter at zero: a reader sending
+  their only quarterback has a hole at QB, not a weak QB, which the weakest
+  of the starters left would have missed (the page test's overpay case).
+  With no roster entered the fit is unknown and the row says to add one.
+- **The rows.** Short term and long term each state the reader's gain and
+  which team the trade helps most, with every other side's figure ("Helps
+  The Hammers most, +8.3 a week against +5.9 for you"); when nobody clears
+  the floor the row lists every side. The situation row gives the status
+  word (`STATUS`), where it was read from (the notes, quoted, or the
+  settings), the weights, and the fit.
+- **Rendering.** `#tf-gauge` sits between `#tf-verdict` and `#tf-trades`,
+  two columns on a hairline: the call as the 34px figure with
+  `data-call="go|no|none"`, a sentence (`gaugeWhy`, which also names any
+  side that would refuse), the meter (track in `--elev`, fill from the
+  centre in teal or, under `.no`, the danger brown, as `.is-meter` and
+  `.is-meter.tight` in site.css; ticks at 37.5% and 62.5%; the pin in ink
+  with `data-pos`), and the three rows. The meter carries `role="img"` and
+  an `aria-label` with the call and the figure. The Finder empties and
+  hides it. When the reader's team is not in the deal the call reads "Not
+  your call" and the rows still say whom it helps.
+- **The model's brief** (`summarize`) now carries both horizon rows, the
+  situation and the engine's call, so the notes are read against them.
+- **The method** has a paragraph on the gauge.
+- **Tests.** `test-trade-finder-page.mjs` 136 → 157: the gauge under the
+  win (Go, needle past 62.5, teal, rows and situation from the settings,
+  fit read off the lineup, aria), the overpay (No go, needle under 37.5,
+  danger brown, nobody gains, the QB hole), the three-team deal with notes
+  (long term is the playoffs for a clinched reader, situation from the
+  notes at 25/75, the brief carries the gauge), no rosters (No go, fit asks
+  for a roster; Go once the rosters are pasted), and the Finder showing no
+  gauge. `IT_SHOT` also writes `*-gauge.png`. Rendered at 1280 and 390;
+  nothing throws. `playwright-core` is not installed in a fresh remote
+  session; a symlink to `/opt/node-tools/node_modules/playwright-core`
+  inside an (ignored) `node_modules/` lets the browser gates run.

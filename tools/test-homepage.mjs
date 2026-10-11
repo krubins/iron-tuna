@@ -178,14 +178,14 @@ const ARCHIVE_POISON = { ok: true, pieces: [1, 2, 3, 4, 5].map(v => ({
 // pieces expire.
 const THIN = { ok: true, pieces: [
   { kind: 'trade-desk', title: 'Trade Desk', headline: 'Buy the gap: five players the board prices well below consensus',
-    week: 5, publishedAt: AGO(0.4), url: '/in-season/desk/trade-desk/5', byline: { name: 'Evan Brooks' },
+    week: 5, publishedAt: AGO(0.4), url: '/in-season/desk/trade-desk/5', byline: { name: 'Rankings Desk' },
     // A player with no game photograph is named first; one with a photograph second.
     components: [{ n: 1, player: 'Tank Bigsby', headline: 'Bigsby is a buy' }, { n: 2, player: 'Dak Prescott', headline: 'Prescott is a buy' }] },
   { kind: 'underrated', title: 'Most Underrated Player', headline: 'Roman Wilson is the most underrated player in Week 5',
-    week: 5, publishedAt: AGO(0.6), url: '/in-season/desk/underrated/5', byline: { name: 'Evan Brooks' },
+    week: 5, publishedAt: AGO(0.6), url: '/in-season/desk/underrated/5', byline: { name: 'Rankings Desk' },
     components: [{ n: 1, headline: 'His target share is up four weeks running' }] },
   { kind: 'week-in-review', title: 'Week 5 in Review', headline: 'Week 5 in review has harder lessons too',
-    week: 5, publishedAt: AGO(0.7), url: '/in-season/desk/week-in-review/5', byline: { name: 'Mike Baines' },
+    week: 5, publishedAt: AGO(0.7), url: '/in-season/desk/week-in-review/5', byline: { name: 'Usage Desk' },
     components: [{ n: 1, headline: 'Week 5 in review has harder lessons too' }, { n: 2, player: 'Dak Prescott', headline: 'Flournoy beat his ranking' }] }
 ]};
 const SEASON = { ok: true, phase: 'regular', phaseLabel: 'Regular season',
@@ -283,7 +283,11 @@ const read = page => page.evaluate(() => {
     // The two lane tiles.
     lanes: [...document.querySelectorAll('#lanes .hm-lane')].map(a => ({ href: a.getAttribute('href'), name: text(a.querySelector('.hm-lane-name')), sub: text(a.querySelector('.hm-lane-sub')),
       svg: !!a.querySelector('svg[aria-hidden="true"]'), top: Math.round(a.getBoundingClientRect().top),
-      w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height) })),
+      w: Math.round(a.getBoundingClientRect().width), h: Math.round(a.getBoundingClientRect().height),
+      // The four function boxes under the lane, in the lane's own dress.
+      kit: [...a.parentElement.querySelectorAll('.hm-lane-kit .hm-lane-fn')].map(f => ({ href: f.getAttribute('href'), name: text(f.querySelector('.hm-lane-fn-name')),
+        svg: !!f.querySelector('svg[aria-hidden="true"]'), top: Math.round(f.getBoundingClientRect().top), bottom: Math.round(f.getBoundingClientRect().bottom),
+        w: Math.round(f.getBoundingClientRect().width), h: Math.round(f.getBoundingClientRect().height) })) })),
     // The story cards.
     articles: vis(byId('articles')),
     rows: [...document.querySelectorAll('#readGrid .hm-story')].map(r => {
@@ -353,7 +357,9 @@ for (const [w, h, tag] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
   // The chrome is the shared one.
   ok(`${tag}: the black bar above the ribbon carries no text`, r.line === '', r.line);
   ok(`${tag}: the navy bar above the ribbon is 3px`, r.lineH === 3, String(r.lineH));
-  ok(`${tag}: the ribbon is ${w > 860 ? 95 : 53}px`, r.ribbonH === (w > 860 ? 95 : 53), r.ribbonH + 'px');
+  // 60px above 860px and 44px on a phone since the evening of 2026-10-10, when
+  // the mark was halved and the bar cut with it (95 and 53 before).
+  ok(`${tag}: the ribbon is ${w > 860 ? 60 : 44}px`, r.ribbonH === (w > 860 ? 60 : 44), r.ribbonH + 'px');
   ok(`${tag}: the nav is the shared five`, r.nav.join(',') === '/fantasy,/dfs,/in-season/desk,/faq#faq-start,/player', r.nav.join(','));
   if (w > 860) {
     ok(`${tag}: the one header button customizes the league`, !!r.cta && r.cta.shown && r.cta.href === '/my-league#settings' && r.cta.text === 'Customize My League', JSON.stringify(r.cta));
@@ -382,6 +388,17 @@ console.log('\nsix sections, in order, and nothing else');
      r.lanes.map(l => l.href + ' ' + l.name).join(' | ') === '/dfs DFS | /fantasy Season long', r.lanes.map(l => l.href + ' ' + l.name).join(' | '));
   ok('each lane is landscape, side by side, with its own illustration and a line under the name',
      r.lanes.every(l => l.svg && l.w > l.h && l.sub) && new Set(r.lanes.map(l => l.top)).size === 1, JSON.stringify(r.lanes));
+  // Four smaller boxes under each lane, one per key function, each with its own
+  // illustration and the name at the foot. The DFS four open the four boards
+  // /dfs switches between (the hash names the board); the season four are the
+  // lane's tools. On a desk all eight sit in one row under the two lanes.
+  ok('four function boxes under each lane: the DFS boards, then the season tools',
+     r.lanes.map(l => l.kit.map(f => f.href + ' ' + f.name).join(' | ')).join(' || ')
+       === '/dfs#lineup The Lineup | /dfs#values Vegas Values | /dfs#stacks Game Stacks | /dfs#td TD Board || /rankings Rankings | /fantasy#startsit Start / Sit | /waivers Waivers | /trade-finder Trade Tools',
+     r.lanes.map(l => l.kit.map(f => f.href + ' ' + f.name).join(' | ')).join(' || '));
+  ok('the eight boxes line up in one row under the lanes, each illustrated, square and narrower than its lane',
+     r.lanes.every(l => l.kit.length === 4 && l.kit.every(f => f.svg && Math.abs(f.w - f.h) <= 1 && f.w < l.w / 3 && f.top > l.top + l.h))
+       && new Set(r.lanes.flatMap(l => l.kit.map(f => f.top))).size === 1, JSON.stringify(r.lanes.map(l => l.kit)));
   ok('the market figures live inside the hero, not as a sixth section', !r.allSections.includes('different') && !!(await page.$('#heroBand #different')));
   ok('six tiles, one per position, each linking its weekly board',
      r.tiles.map(t => t.href).join(' ') === '/weekly-qb-rankings /weekly-rb-rankings /weekly-wr-rankings /weekly-te-rankings /weekly-k-rankings /weekly-dst-rankings', r.tiles.map(t => t.href).join(' '));
@@ -692,7 +709,7 @@ MODE = 'thin';
        && r.rows.slice(3).map(x => x.href).join(' ') === '/in-season/desk/underrated/5#component-1 /in-season/desk/week-in-review/5#component-2',
      r.rows.map(x => x.href).join(' '));
   ok('a finding card carries its own headline and its story\'s series and byline',
-     r.rows[3].name === 'His target share is up four weeks running' && r.rows[3].series === 'Most Underrated Player' && /Evan Brooks/.test(r.rows[3].meta), JSON.stringify(r.rows[3]));
+     r.rows[3].name === 'His target share is up four weeks running' && r.rows[3].series === 'Most Underrated Player' && /Rankings Desk/.test(r.rows[3].meta), JSON.stringify(r.rows[3]));
   ok('a finding that only repeats its story\'s headline is skipped', !r.rows.some(x => /#component-1$/.test(x.href) && /week-in-review/.test(x.href)));
   ok('a piece whose findings name nobody takes its picture from the players its headline names',
      r.rows[1].face === 'Roman Wilson', String(r.rows[1].face));
